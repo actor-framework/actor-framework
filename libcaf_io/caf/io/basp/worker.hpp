@@ -23,6 +23,8 @@
 #include <vector>
 
 #include "caf/config.hpp"
+#include "caf/detail/abstract_worker.hpp"
+#include "caf/detail/worker_hub.hpp"
 #include "caf/fwd.hpp"
 #include "caf/io/basp/fwd.hpp"
 #include "caf/io/basp/header.hpp"
@@ -35,25 +37,27 @@ namespace io {
 namespace basp {
 
 /// Deserializes payloads for BASP messages asynchronously.
-class worker : public resumable,
-               public remote_message_handler<worker>,
-               public ref_counted {
+class worker : public detail::abstract_worker,
+               public remote_message_handler<worker> {
 public:
   // -- friends ----------------------------------------------------------------
-
-  friend worker_hub;
 
   friend remote_message_handler<worker>;
 
   // -- member types -----------------------------------------------------------
 
-  using atomic_pointer = std::atomic<worker*>;
+  using super = detail::abstract_worker;
 
   using scheduler_type = scheduler::abstract_coordinator;
 
   using buffer_type = std::vector<char>;
 
+  using hub_type = detail::worker_hub<worker>;
+
   // -- constructors, destructors, and assignment operators --------------------
+
+  /// Only the ::worker_hub has access to the construtor.
+  worker(hub_type& hub, message_queue& queue, proxy_registry& proxies);
 
   ~worker() override;
 
@@ -64,25 +68,13 @@ public:
 
   // -- implementation of resumable --------------------------------------------
 
-  subtype_t subtype() const override;
-
   resume_result resume(execution_unit* ctx, size_t) override;
 
-  void intrusive_ptr_add_ref_impl() override;
-
-  void intrusive_ptr_release_impl() override;
-
 private:
-  // -- constructors, destructors, and assignment operators --------------------
-
-  /// Only the ::worker_hub has access to the construtor.
-  worker(worker_hub& hub, message_queue& queue, proxy_registry& proxies);
-
   // -- constants and assertions -----------------------------------------------
 
   /// Stores how many bytes the "first half" of this object requires.
-  static constexpr size_t pointer_members_size = sizeof(atomic_pointer)
-                                                 + sizeof(worker_hub*)
+  static constexpr size_t pointer_members_size = sizeof(hub_type*)
                                                  + sizeof(message_queue*)
                                                  + sizeof(proxy_registry*)
                                                  + sizeof(actor_system*);
@@ -92,11 +84,8 @@ private:
 
   // -- member variables -------------------------------------------------------
 
-  /// Points to the next worker in the hub.
-  atomic_pointer next_;
-
   /// Points to our home hub.
-  worker_hub* hub_;
+  hub_type* hub_;
 
   /// Points to the queue for establishing strict ordering.
   message_queue* queue_;

@@ -18,67 +18,45 @@
 
 #pragma once
 
-#include <atomic>
-#include <condition_variable>
-#include <mutex>
-
 #include "caf/fwd.hpp"
-#include "caf/io/basp/fwd.hpp"
+#include "caf/ref_counted.hpp"
+#include "caf/resumable.hpp"
 
 namespace caf {
-namespace io {
-namespace basp {
+namespace detail {
 
-/// A central place where BASP workers return to after finishing a task. A hub
-/// supports any number of workers that call `push`, but only a single master
-/// that calls `pop`. The hub takes ownership of all workers. Workers register
-/// at the hub during construction and get destroyed when the hub gets
-/// destroyed.
-class worker_hub {
+class worker : public ref_counted, public resumable {
 public:
-  // -- member types -----------------------------------------------------------
+  // -- friends ----------------------------------------------------------------
 
-  using pointer = worker*;
+  friend worker_hub;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  worker_hub();
+  worker();
 
-  ~worker_hub();
+  ~worker() override;
 
-  // -- properties -------------------------------------------------------------
+  // -- implementation of resumable --------------------------------------------
 
-  /// Creates a new worker and adds it to the hub.
-  void add_new_worker(message_queue&, proxy_registry&);
+  subtype_t subtype() const override;
 
-  /// Add a worker to the hub.
-  void push(pointer ptr);
+  void intrusive_ptr_add_ref_impl() override;
 
-  /// Get a worker from the hub.
-  /// @returns the next available worker (in LIFO order) or `nullptr` if the
-  ///          hub is currently empty.
-  pointer pop();
-
-  /// Check which worker would `pop` currently return.
-  /// @returns the next available worker (in LIFO order) or `nullptr` if the
-  ///          hub is currently empty.
-  pointer peek();
-
-  /// Waits until all workers are back at the hub.
-  void await_workers();
+  void intrusive_ptr_release_impl() override;
 
 private:
   // -- member variables -------------------------------------------------------
 
-  std::atomic<pointer> head_;
+  /// Points to the next worker in the hub.
+  std::atomic<worker*> next_;
 
-  std::atomic<size_t> running_;
+  /// Points to our home hub.
+  worker_hub* hub_;
 
-  std::mutex mtx_;
-
-  std::condition_variable cv_;
+  /// Points to the parent system.
+  actor_system* system_;
 };
 
-} // namespace basp
-} // namespace io
+} // namespace detail
 } // namespace caf

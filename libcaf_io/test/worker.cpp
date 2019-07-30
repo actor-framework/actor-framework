@@ -27,7 +27,6 @@
 #include "caf/actor_system.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/io/basp/message_queue.hpp"
-#include "caf/io/basp/worker_hub.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/proxy_registry.hpp"
 
@@ -76,7 +75,7 @@ private:
 };
 
 struct fixture : test_coordinator_fixture<> {
-  io::basp::worker_hub hub;
+  detail::worker_hub<io::basp::worker> hub;
   io::basp::message_queue queue;
   mock_proxy_registry_backend proxies_backend;
   proxy_registry proxies;

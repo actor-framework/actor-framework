@@ -11,6 +11,8 @@ set(LIBCAF_CORE_SRCS
   src/abstract_composable_behavior.cpp
   src/abstract_coordinator.cpp
   src/abstract_group.cpp
+  src/abstract_worker.cpp
+  src/abstract_worker_hub.cpp
   src/actor.cpp
   src/actor_addr.cpp
   src/actor_clock.cpp

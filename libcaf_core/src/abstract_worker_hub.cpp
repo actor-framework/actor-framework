@@ -16,21 +16,20 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/io/basp/worker_hub.hpp"
+#include "caf/detail/abstract_worker_hub.hpp"
 
-#include "caf/io/basp/worker.hpp"
+#include "caf/detail/abstract_worker.hpp"
 
 namespace caf {
-namespace io {
-namespace basp {
+namespace detail {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-worker_hub::worker_hub() : head_(nullptr), running_(0) {
+abstract_worker_hub::abstract_worker_hub() : head_(nullptr), running_(0) {
   // nop
 }
 
-worker_hub::~worker_hub() {
+abstract_worker_hub::~abstract_worker_hub() {
   await_workers();
   auto head = head_.load();
   while (head != nullptr) {
@@ -40,10 +39,17 @@ worker_hub::~worker_hub() {
   }
 }
 
-// -- properties ---------------------------------------------------------------
+// -- synchronization ----------------------------------------------------------
 
-void worker_hub::add_new_worker(message_queue& queue, proxy_registry& proxies) {
-  auto ptr = new worker(*this, queue, proxies);
+void abstract_worker_hub::await_workers() {
+  std::unique_lock<std::mutex> guard{mtx_};
+  while (running_ != 0)
+    cv_.wait(guard);
+}
+
+// -- worker management --------------------------------------------------------
+
+void abstract_worker_hub::push_new(abstract_worker* ptr) {
   auto next = head_.load();
   for (;;) {
     ptr->next_ = next;
@@ -52,7 +58,7 @@ void worker_hub::add_new_worker(message_queue& queue, proxy_registry& proxies) {
   }
 }
 
-void worker_hub::push(pointer ptr) {
+void abstract_worker_hub::push_returning(abstract_worker* ptr) {
   auto next = head_.load();
   for (;;) {
     ptr->next_ = next;
@@ -66,7 +72,7 @@ void worker_hub::push(pointer ptr) {
   }
 }
 
-worker_hub::pointer worker_hub::pop() {
+abstract_worker* abstract_worker_hub::pop_impl() {
   auto result = head_.load();
   if (result == nullptr)
     return nullptr;
@@ -80,16 +86,9 @@ worker_hub::pointer worker_hub::pop() {
   }
 }
 
-worker_hub::pointer worker_hub::peek() {
+abstract_worker* abstract_worker_hub::peek_impl() {
   return head_.load();
 }
 
-void worker_hub::await_workers() {
-  std::unique_lock<std::mutex> guard{mtx_};
-  while (running_ != 0)
-    cv_.wait(guard);
-}
-
-} // namespace basp
-} // namespace io
+} // namespace detail
 } // namespace caf
