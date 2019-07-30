@@ -23,6 +23,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/callback.hpp"
+#include "caf/detail/worker_hub.hpp"
 #include "caf/error.hpp"
 #include "caf/io/basp/buffer_type.hpp"
 #include "caf/io/basp/connection_state.hpp"
@@ -30,7 +31,7 @@
 #include "caf/io/basp/message_queue.hpp"
 #include "caf/io/basp/message_type.hpp"
 #include "caf/io/basp/routing_table.hpp"
-#include "caf/io/basp/worker_hub.hpp"
+#include "caf/io/basp/worker.hpp"
 #include "caf/io/middleman.hpp"
 #include "caf/variant.hpp"
 
@@ -208,7 +209,7 @@ public:
     return this_node_;
   }
 
-  worker_hub& hub() {
+  detail::worker_hub<worker>& hub() {
     return hub_;
   }
 
@@ -236,7 +237,7 @@ private:
   node_id this_node_;
   callee& callee_;
   message_queue queue_;
-  worker_hub hub_;
+  detail::worker_hub<worker> hub_;
 };
 
 /// @}

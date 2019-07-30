@@ -18,67 +18,47 @@
 
 #pragma once
 
-#include <atomic>
-#include <condition_variable>
-#include <mutex>
-
-#include "caf/fwd.hpp"
-#include "caf/io/basp/fwd.hpp"
+#include "caf/detail/abstract_worker_hub.hpp"
 
 namespace caf {
-namespace io {
-namespace basp {
+namespace detail {
 
-/// A central place where BASP workers return to after finishing a task. A hub
-/// supports any number of workers that call `push`, but only a single master
-/// that calls `pop`. The hub takes ownership of all workers. Workers register
-/// at the hub during construction and get destroyed when the hub gets
-/// destroyed.
-class worker_hub {
+template <class Worker>
+class worker_hub : public abstract_worker_hub {
 public:
   // -- member types -----------------------------------------------------------
 
-  using pointer = worker*;
+  using super = abstract_worker_hub;
 
-  // -- constructors, destructors, and assignment operators --------------------
+  using worker_type = Worker;
 
-  worker_hub();
-
-  ~worker_hub();
-
-  // -- properties -------------------------------------------------------------
+  // -- worker management ------------------------------------------------------
 
   /// Creates a new worker and adds it to the hub.
-  void add_new_worker(message_queue&, proxy_registry&);
+  template <class... Ts>
+  void add_new_worker(Ts&&... xs) {
+    super::push_new(new worker_type(*this, std::forward<Ts>(xs)...));
+  }
 
-  /// Add a worker to the hub.
-  void push(pointer ptr);
+  /// Returns a worker to the hub.
+  void push(worker_type* ptr) {
+    super::push_returning(ptr);
+  }
 
-  /// Get a worker from the hub.
+  /// Gets a worker from the hub.
   /// @returns the next available worker (in LIFO order) or `nullptr` if the
   ///          hub is currently empty.
-  pointer pop();
+  worker_type* pop() {
+    return static_cast<worker_type*>(super::pop_impl());
+  }
 
-  /// Check which worker would `pop` currently return.
+  /// Checks which worker would `pop` currently return.
   /// @returns the next available worker (in LIFO order) or `nullptr` if the
   ///          hub is currently empty.
-  pointer peek();
-
-  /// Waits until all workers are back at the hub.
-  void await_workers();
-
-private:
-  // -- member variables -------------------------------------------------------
-
-  std::atomic<pointer> head_;
-
-  std::atomic<size_t> running_;
-
-  std::mutex mtx_;
-
-  std::condition_variable cv_;
+  worker_type* peek() {
+    return static_cast<worker_type*>(super::peek_impl());
+  }
 };
 
-} // namespace basp
-} // namespace io
+} // namespace detail
 } // namespace caf

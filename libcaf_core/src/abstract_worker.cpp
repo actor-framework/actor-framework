@@ -16,52 +16,34 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/io/basp/worker.hpp"
-
-#include "caf/actor_system.hpp"
-#include "caf/io/basp/message_queue.hpp"
-#include "caf/proxy_registry.hpp"
-#include "caf/scheduler/abstract_coordinator.hpp"
+#include "caf/detail/abstract_worker.hpp"
 
 namespace caf {
-namespace io {
-namespace basp {
+namespace detail {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-worker::worker(hub_type& hub, message_queue& queue, proxy_registry& proxies)
-  : hub_(&hub), queue_(&queue), proxies_(&proxies), system_(&proxies.system()) {
-  CAF_IGNORE_UNUSED(pad_);
-}
-
-worker::~worker() {
+abstract_worker::abstract_worker() : next_(nullptr) {
   // nop
 }
 
-// -- management ---------------------------------------------------------------
-
-void worker::launch(const node_id& last_hop, const basp::header& hdr,
-                    const buffer_type& payload) {
-  CAF_ASSERT(hdr.dest_actor != 0);
-  CAF_ASSERT(hdr.operation == basp::message_type::direct_message
-             || hdr.operation == basp::message_type::routed_message);
-  msg_id_ = queue_->new_id();
-  last_hop_ = last_hop;
-  memcpy(&hdr_, &hdr, sizeof(basp::header));
-  payload_.assign(payload.begin(), payload.end());
-  ref();
-  system_->scheduler().enqueue(this);
+abstract_worker::~abstract_worker() {
+  // nop
 }
 
 // -- implementation of resumable ----------------------------------------------
 
-resumable::resume_result worker::resume(execution_unit* ctx, size_t) {
-  ctx->proxy_registry_ptr(proxies_);
-  handle_remote_message(ctx);
-  hub_->push(this);
-  return resumable::awaiting_message;
+resumable::subtype_t abstract_worker::subtype() const {
+  return resumable::function_object;
 }
 
-} // namespace basp
-} // namespace io
+void abstract_worker::intrusive_ptr_add_ref_impl() {
+  ref();
+}
+
+void abstract_worker::intrusive_ptr_release_impl() {
+  deref();
+}
+
+} // namespace detail
 } // namespace caf

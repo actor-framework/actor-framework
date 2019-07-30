@@ -250,6 +250,8 @@ namespace detail {
 template <class> class type_erased_value_impl;
 template <class> class stream_distribution_tree;
 
+class abstract_worker;
+class abstract_worker_hub;
 class disposer;
 class dynamic_message_data;
 class group_manager;
