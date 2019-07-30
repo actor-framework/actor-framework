@@ -7,6 +7,8 @@ file(GLOB_RECURSE LIBCAF_NET_HDRS "caf/*.hpp")
 
 # list cpp files excluding platform-dependent files
 set(LIBCAF_NET_SRCS
+  src/actor_proxy_impl.cpp
+  src/datagram_socket.cpp
   src/endpoint_manager.cpp
   src/host.cpp
   src/multiplexer.cpp

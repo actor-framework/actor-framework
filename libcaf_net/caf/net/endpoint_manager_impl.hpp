@@ -69,21 +69,23 @@ public:
   }
 
   bool handle_write_event() override {
-    if (!this->events_.empty()) {
-      this->events_.fetch_more();
-      auto& q = this->events_.queue();
-      q.inc_deficit(q.total_task_size());
-      for (auto ptr = q.next(); ptr != nullptr; ptr = q.next()) {
-        using timeout = endpoint_manager::event::timeout;
-        using resolve_request = endpoint_manager::event::resolve_request;
-        if (auto rr = get_if<resolve_request>(&ptr->value)) {
-          transport_.resolve(*this, std::move(rr->path),
-                             std::move(rr->listener));
-        } else {
-          auto& t = get<timeout>(ptr->value);
-          transport_.timeout(*this, t.type, t.id);
+    if (!this->events_.blocked() && !this->events_.empty()) {
+      do {
+        this->events_.fetch_more();
+        auto& q = this->events_.queue();
+        q.inc_deficit(q.total_task_size());
+        for (auto ptr = q.next(); ptr != nullptr; ptr = q.next()) {
+          using timeout = endpoint_manager::event::timeout;
+          using resolve_request = endpoint_manager::event::resolve_request;
+          if (auto rr = get_if<resolve_request>(&ptr->value)) {
+            transport_.resolve(*this, std::move(rr->path),
+                               std::move(rr->listener));
+          } else {
+            auto& t = get<timeout>(ptr->value);
+            transport_.timeout(*this, t.type, t.id);
+          }
         }
-      }
+      } while (!this->events_.try_block());
     }
     return transport_.handle_write_event(*this);
   }
@@ -92,9 +94,13 @@ public:
     transport_.handle_error(application_, code);
   }
 
+  serialize_fun_type serialize_fun() const noexcept override {
+    return application_type::serialize;
+  }
+
 private:
-  Transport transport_;
-  Application application_;
+  transport_type transport_;
+  application_type application_;
 };
 
 } // namespace net

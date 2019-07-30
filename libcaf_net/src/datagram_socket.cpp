@@ -16,57 +16,49 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#include "caf/net/datagram_socket.hpp"
 
-#include <string>
-#include <system_error>
-#include <type_traits>
-
-#include "caf/config.hpp"
-#include "caf/fwd.hpp"
-#include "caf/net/abstract_socket.hpp"
-#include "caf/net/socket_id.hpp"
+#include "caf/detail/net_syscall.hpp"
+#include "caf/detail/socket_sys_includes.hpp"
+#include "caf/logger.hpp"
 
 namespace caf {
 namespace net {
 
-/// An internal endpoint for sending or receiving data. Can be either a
-/// ::network_socket, ::pipe_socket, ::stream_socket, or ::datagram_socket.
-struct socket : abstract_socket<socket> {
-  using super = abstract_socket<socket>;
+#ifdef CAF_WINDOWS
 
-  using super::super;
-};
-
-/// Denotes the invalid socket.
-constexpr auto invalid_socket = socket{invalid_socket_id};
-
-/// Converts between different socket types.
-template <class To, class From>
-To socket_cast(From x) {
-  return To{x.id};
+error allow_connreset(datagram_socket x, bool new_value) {
+  CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG(new_value));
+  DWORD bytes_returned = 0;
+  CAF_NET_SYSCALL("WSAIoctl", res, !=, 0,
+                  WSAIoctl(x.id, _WSAIOW(IOC_VENDOR, 12), &new_value,
+                           sizeof(new_value), NULL, 0, &bytes_returned, NULL,
+                           NULL));
+  return none;
 }
 
-/// Close socket `x`.
-/// @relates socket
-void close(socket x);
+#else // CAF_WINDOWS
 
-/// Returns the last socket error in this thread as an integer.
-/// @relates socket
-std::errc last_socket_error();
+error allow_connreset(datagram_socket x, bool) {
+  if (x == invalid_socket)
+    return sec::socket_invalid;
+  // nop; SIO_UDP_CONNRESET only exists on Windows
+  return none;
+}
 
-/// Returns the last socket error as human-readable string.
-/// @relates socket
-std::string last_socket_error_as_string();
+#endif // CAF_WINDOWS
 
-/// Sets x to be inherited by child processes if `new_value == true`
-/// or not if `new_value == false`.  Not implemented on Windows.
-/// @relates socket
-error child_process_inherit(socket x, bool new_value);
-
-/// Enables or disables nonblocking I/O on `x`.
-/// @relates socket
-error nonblocking(socket x, bool new_value);
+variant<size_t, sec>
+check_datagram_socket_io_res(std::make_signed<size_t>::type res) {
+  if (res < 0) {
+    auto code = last_socket_error();
+    if (code == std::errc::operation_would_block
+        || code == std::errc::resource_unavailable_try_again)
+      return sec::unavailable_or_would_block;
+    return sec::socket_operation_failed;
+  }
+  return static_cast<size_t>(res);
+}
 
 } // namespace net
 } // namespace caf

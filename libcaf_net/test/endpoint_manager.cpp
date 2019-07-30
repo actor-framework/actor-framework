@@ -24,7 +24,10 @@
 
 #include "host_fixture.hpp"
 
+#include "caf/binary_serializer.hpp"
 #include "caf/detail/scope_guard.hpp"
+#include "caf/make_actor.hpp"
+#include "caf/net/actor_proxy_impl.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/stream_socket.hpp"
@@ -45,10 +48,25 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
       CAF_FAIL("mpx->init failed: " << sys.render(err));
   }
 
+  bool handle_io_event() override {
+    mpx->handle_updates();
+    return mpx->poll_once(false);
+  }
+
   multiplexer_ptr mpx;
 };
 
-class dummy_application {};
+class dummy_application {
+public:
+  static expected<std::vector<char>> serialize(actor_system& sys,
+                                               const type_erased_tuple& x) {
+    std::vector<char> result;
+    binary_serializer sink{sys, result};
+    if (auto err = message::save(sink, x))
+      return err;
+    return result;
+  }
+};
 
 class dummy_transport {
 public:
@@ -80,7 +98,11 @@ public:
   }
 
   template <class Manager>
-  bool handle_write_event(Manager&) {
+  bool handle_write_event(Manager& mgr) {
+    for (auto x = mgr.next_message(); x != nullptr; x = mgr.next_message()) {
+      auto& payload = x->payload;
+      write_buf_.insert(write_buf_.end(), payload.begin(), payload.end());
+    }
     auto res = write(handle_, write_buf_.data(), write_buf_.size());
     if (auto num_bytes = get_if<size_t>(&res)) {
       write_buf_.erase(write_buf_.begin(), write_buf_.begin() + *num_bytes);
@@ -95,9 +117,14 @@ public:
   }
 
   template <class Manager>
-  void resolve(Manager&, std::string path, actor listener) {
-    anon_send(listener, resolve_atom::value, std::move(path),
-              make_error(sec::feature_disabled));
+  void resolve(Manager& mgr, std::string path, actor listener) {
+    actor_id aid = 42;
+    node_id nid{42, "00112233445566778899aa00112233445566778899aa"};
+    actor_config cfg;
+    auto p = make_actor<actor_proxy_impl, strong_actor_ptr>(aid, nid,
+                                                            &mgr.system(), cfg,
+                                                            &mgr);
+    anon_send(listener, resolve_atom::value, std::move(path), p);
   }
 
   template <class Manager>
@@ -137,12 +164,51 @@ CAF_TEST(send and receive) {
   CAF_CHECK_EQUAL(write(sockets.second, hello_manager.data(),
                         hello_manager.size()),
                   hello_manager.size());
-  while (mpx->poll_once(false))
-    ; // Repeat.
+  run();
   CAF_CHECK_EQUAL(string_view(buf->data(), buf->size()), hello_manager);
   CAF_CHECK_EQUAL(read(sockets.second, read_buf.data(), read_buf.size()),
                   hello_test.size());
   CAF_CHECK_EQUAL(string_view(read_buf.data(), hello_test.size()), hello_test);
+}
+
+CAF_TEST(resolve and proxy communication) {
+  std::vector<char> read_buf(1024);
+  auto buf = std::make_shared<std::vector<char>>();
+  auto sockets = unbox(make_stream_socket_pair());
+  nonblocking(sockets.second, true);
+  auto guard = detail::make_scope_guard([&] { close(sockets.second); });
+  auto mgr = make_endpoint_manager(mpx, sys,
+                                   dummy_transport{sockets.first, buf},
+                                   dummy_application{});
+  CAF_CHECK_EQUAL(mgr->init(), none);
+  mpx->handle_updates();
+  run();
+  CAF_CHECK_EQUAL(read(sockets.second, read_buf.data(), read_buf.size()),
+                  hello_test.size());
+  mgr->resolve("/id/42", self);
+  run();
+  self->receive(
+    [&](resolve_atom, const std::string&, const strong_actor_ptr& p) {
+      CAF_MESSAGE("got a proxy, send a message to it");
+      self->send(actor_cast<actor>(p), "hello proxy!");
+    },
+    after(std::chrono::seconds(0)) >>
+      [&] { CAF_FAIL("manager did not respond with a proxy."); });
+  run();
+  auto read_res = read(sockets.second, read_buf.data(), read_buf.size());
+  if (!holds_alternative<size_t>(read_res)) {
+    CAF_ERROR("read() returned an error: " << sys.render(get<sec>(read_res)));
+    return;
+  }
+  read_buf.resize(get<size_t>(read_res));
+  CAF_MESSAGE("receive buffer contains " << read_buf.size() << " bytes");
+  message msg;
+  binary_deserializer source{sys, read_buf};
+  CAF_CHECK_EQUAL(source(msg), none);
+  if (msg.match_elements<std::string>())
+    CAF_CHECK_EQUAL(msg.get_as<std::string>(0), "hello proxy!");
+  else
+    CAF_ERROR("expected a string, got: " << to_string(msg));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

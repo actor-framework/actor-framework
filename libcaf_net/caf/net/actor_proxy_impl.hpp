@@ -18,55 +18,33 @@
 
 #pragma once
 
-#include <string>
-#include <system_error>
-#include <type_traits>
-
-#include "caf/config.hpp"
-#include "caf/fwd.hpp"
-#include "caf/net/abstract_socket.hpp"
-#include "caf/net/socket_id.hpp"
+#include "caf/actor_proxy.hpp"
+#include "caf/net/endpoint_manager.hpp"
 
 namespace caf {
 namespace net {
 
-/// An internal endpoint for sending or receiving data. Can be either a
-/// ::network_socket, ::pipe_socket, ::stream_socket, or ::datagram_socket.
-struct socket : abstract_socket<socket> {
-  using super = abstract_socket<socket>;
+/// Implements a simple proxy forwarding all operations to a manager.
+class actor_proxy_impl : public actor_proxy {
+public:
+  using super = actor_proxy;
 
-  using super::super;
+  actor_proxy_impl(actor_config& cfg, endpoint_manager_ptr dst);
+
+  ~actor_proxy_impl() override;
+
+  void enqueue(mailbox_element_ptr what, execution_unit* context) override;
+
+  bool add_backlink(abstract_actor* x) override;
+
+  bool remove_backlink(abstract_actor* x) override;
+
+  void kill_proxy(execution_unit* ctx, error rsn) override;
+
+private:
+  endpoint_manager::serialize_fun_type sf_;
+  endpoint_manager_ptr dst_;
 };
-
-/// Denotes the invalid socket.
-constexpr auto invalid_socket = socket{invalid_socket_id};
-
-/// Converts between different socket types.
-template <class To, class From>
-To socket_cast(From x) {
-  return To{x.id};
-}
-
-/// Close socket `x`.
-/// @relates socket
-void close(socket x);
-
-/// Returns the last socket error in this thread as an integer.
-/// @relates socket
-std::errc last_socket_error();
-
-/// Returns the last socket error as human-readable string.
-/// @relates socket
-std::string last_socket_error_as_string();
-
-/// Sets x to be inherited by child processes if `new_value == true`
-/// or not if `new_value == false`.  Not implemented on Windows.
-/// @relates socket
-error child_process_inherit(socket x, bool new_value);
-
-/// Enables or disables nonblocking I/O on `x`.
-/// @relates socket
-error nonblocking(socket x, bool new_value);
 
 } // namespace net
 } // namespace caf
