@@ -19,11 +19,27 @@
 #pragma once
 
 #include <string>
+#include <type_traits>
+
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 namespace detail {
 
 void append_hex(std::string& result, const uint8_t* xs, size_t n);
+
+template <class T>
+enable_if_t<has_data_member<T>::value> append_hex(std::string& result,
+                                                  const T& x) {
+  return append_hex(result, reinterpret_cast<const uint8_t*>(x.data()),
+                    x.size());
+}
+
+template <class T>
+enable_if_t<std::is_integral<T>::value> append_hex(std::string& result,
+                                                   const T& x) {
+  return append_hex(result, reinterpret_cast<const uint8_t*>(&x), sizeof(T));
+}
 
 } // namespace detail
 } // namespace caf

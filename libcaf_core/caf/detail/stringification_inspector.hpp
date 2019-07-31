@@ -276,8 +276,7 @@ public:
   template <class T, class... Ts>
   void traverse(const meta::hex_formatted_t&, const T& x, const Ts&... xs) {
     sep();
-    append_hex(result_, reinterpret_cast<uint8_t*>(deconst(x).data()),
-               x.size());
+    append_hex(result_, x);
     traverse(xs...);
   }
 
