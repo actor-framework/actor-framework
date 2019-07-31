@@ -68,9 +68,9 @@ public:
 
   template <class Parent>
   bool handle_read_event(Parent& parent) {
-    CAF_LOG_TRACE(CAF_ARG(handle_.id()) << CAF_ARG(len));
     void* buf = read_buf_.data() + collected_;
     size_t len = read_threshold_ - collected_;
+    CAF_LOG_TRACE(CAF_ARG(handle_.id) << CAF_ARG(len));
     auto rres = read(handle_, buf, len);
     if (rres.is<caf::sec>()) {
       // Make sure WSAGetLastError gets called immediately on Windows.
@@ -107,10 +107,10 @@ public:
 
   template <class Parent>
   bool write_some(Parent& parent) {
-    CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
     if (write_buf_.empty()) return false;
     auto len = write_buf_.size() - written_;
     void* buf = write_buf_.data() + written_;
+    CAF_LOG_TRACE(CAF_ARG(handle_.id) << CAF_ARG(len));
     auto sres = net::write(handle_, buf, len);
     if (sres.is<caf::sec>()) {
       CAF_LOG_ERROR("send failed");
@@ -118,7 +118,8 @@ public:
       return false;
     }
     CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id) << CAF_ARG(sres));
-    auto result = (get<size_t>(sres) > 0) ? static_cast<size_t>(get<size_t>(sres)) : 0;
+    auto result = (get<size_t>(sres) > 0) ?
+        static_cast<size_t>(get<size_t>(sres)) : 0;
 
     // update state
     written_ += result;
