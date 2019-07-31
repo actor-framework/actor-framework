@@ -29,6 +29,7 @@
 #include "caf/intrusive_ptr.hpp"
 #include "caf/none.hpp"
 #include "caf/ref_counted.hpp"
+#include "caf/uri.hpp"
 
 namespace caf {
 
@@ -125,6 +126,47 @@ public:
     host_id_type host_;
   };
 
+  // A technology-agnostic node identifier using an URI.
+  class uri_data final : public data {
+  public:
+    // -- constants ------------------------------------------------------------
+
+    /// Identifies this data implementation type.
+    static constexpr atom_value class_id = atom("uri");
+
+    // -- constructors, destructors, and assignment operators ------------------
+
+    explicit uri_data(uri value);
+
+    // -- properties -----------------------------------------------------------
+
+    const uri& value() const noexcept {
+      return value_;
+    }
+
+    // -- interface implementation ---------------------------------------------
+
+    bool valid() const noexcept override;
+
+    size_t hash_code() const noexcept override;
+
+    atom_value implementation_id() const noexcept override;
+
+    int compare(const data& other) const noexcept override;
+
+    void print(std::string& dst) const override;
+
+    error serialize(serializer& sink) const override;
+
+    error deserialize(deserializer& source) override;
+
+  private:
+    // -- member variables -----------------------------------------------------
+
+    uri value_;
+  };
+
+
   // -- constructors, destructors, and assignment operators --------------------
 
   constexpr node_id() noexcept {
@@ -206,6 +248,10 @@ void append_to_string(std::string& str, const node_id& x);
 /// Converts `x` into a human-readable string representation.
 /// @relates node_id
 std::string to_string(const node_id& x);
+
+/// Creates a node ID from the URI `from`.
+/// @relates node_id
+node_id make_node_id(uri from);
 
 /// Creates a node ID from `process_id` and `host_id`.
 /// @param process_id System-wide unique process identifier.

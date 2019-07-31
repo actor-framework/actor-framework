@@ -123,6 +123,48 @@ error node_id::default_data::deserialize(deserializer& source) {
   return source(pid_, host_);
 }
 
+node_id::uri_data::uri_data(uri value) : value_(std::move(value)) {
+  // nop
+}
+
+bool node_id::uri_data::valid() const noexcept {
+  return !value_.empty();
+}
+
+size_t node_id::uri_data::hash_code() const noexcept {
+  std::hash<uri> f;
+  return f(value_);
+}
+
+atom_value node_id::uri_data::implementation_id() const noexcept {
+  return class_id;
+}
+
+int node_id::uri_data::compare(const data& other) const noexcept {
+  if (this == &other)
+    return 0;
+  auto other_id = other.implementation_id();
+  if (class_id != other_id)
+    return caf::compare(class_id, other_id);
+  return value_.compare(static_cast<const uri_data&>(other).value_);
+}
+
+void node_id::uri_data::print(std::string& dst) const {
+  if (!valid()) {
+    dst += "invalid-node";
+    return;
+  }
+  dst += to_string(value_);
+}
+
+error node_id::uri_data::serialize(serializer& sink) const {
+  return sink(value_);
+}
+
+error node_id::uri_data::deserialize(deserializer& source) {
+  return source(value_);
+}
+
 node_id& node_id::operator=(const none_t&) {
   data_.reset();
   return *this;
@@ -201,6 +243,11 @@ std::string to_string(const node_id& x) {
   std::string result;
   append_to_string(result, x);
   return result;
+}
+
+node_id make_node_id(uri from) {
+  auto ptr = make_counted<node_id::uri_data>(std::move(from));
+  return node_id{std::move(ptr)};
 }
 
 node_id make_node_id(uint32_t process_id,

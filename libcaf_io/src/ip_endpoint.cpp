@@ -18,10 +18,10 @@
 
 #include "caf/io/network/ip_endpoint.hpp"
 
-#include "caf/sec.hpp"
-#include "caf/logger.hpp"
-
+#include "caf/detail/fnv_hash.hpp"
 #include "caf/io/network/native_socket.hpp"
+#include "caf/logger.hpp"
+#include "caf/sec.hpp"
 
 #ifdef CAF_WINDOWS
 # include <winsock2.h>
@@ -41,41 +41,8 @@
 using sa_family_t = short;
 #endif
 
-namespace {
-
-template <class SizeType = size_t>
-struct hash_conf {
-  template <class T = SizeType>
-  static constexpr caf::detail::enable_if_t<(sizeof(T) == 4), size_t> basis() {
-    return 2166136261u;
-  }
-  template <class T = SizeType>
-  static constexpr caf::detail::enable_if_t<(sizeof(T) == 4), size_t> prime() {
-    return 16777619u;
-  }
-  template <class T = SizeType>
-  static constexpr caf::detail::enable_if_t<(sizeof(T) == 8), size_t> basis() {
-    return 14695981039346656037u;
-  }
-  template <class T = SizeType>
-  static constexpr caf::detail::enable_if_t<(sizeof(T) == 8), size_t> prime() {
-    return 1099511628211u;
-  }
-};
-
-constexpr uint8_t static_bytes[] = {
-  0x00, 0x00, 0x00, 0x00,
-  0x00, 0x00, 0x00, 0x00,
-  0x00, 0x00, 0xFF, 0xFF
-};
-
-constexpr size_t prehash(int i = 11) {
-  return (i > 0)
-    ? (prehash(i - 1) * hash_conf<>::prime()) ^ static_bytes[i]
-    : (hash_conf<>::basis() * hash_conf<>::prime()) ^ static_bytes[i];
-}
-
-} // namespace <anonymous>
+using caf::detail::fnv_hash;
+using caf::detail::fnv_hash_append;
 
 namespace caf {
 namespace io {
@@ -145,32 +112,16 @@ size_t ep_hash::operator()(const sockaddr& sa) const noexcept {
 }
 
 size_t ep_hash::hash(const sockaddr_in* sa) const noexcept {
-  auto& addr = sa->sin_addr;
-  size_t res = prehash();
-  // the first loop was replaces with `constexpr size_t prehash()`
-  for (int i = 0; i < 4; ++i) {
-    res = res * hash_conf<>::prime();
-    res = res ^ ((addr.s_addr >> i) & 0xFF);
-  }
-  res = res * hash_conf<>::prime();
-  res = res ^ (sa->sin_port >> 1);
-  res = res * hash_conf<>::prime();
-  res = res ^ (sa->sin_port & 0xFF);
-  return res;
+  auto result = fnv_hash(sa->sin_addr.s_addr);
+  result = fnv_hash_append(result, sa->sin_port);
+  return result;
 }
 
 size_t ep_hash::hash(const sockaddr_in6* sa) const noexcept {
-  auto& addr = sa->sin6_addr;
-  size_t res = hash_conf<>::basis();
-  for (int i = 0; i < 16; ++i) {
-    res = res * hash_conf<>::prime();
-    res = res ^ addr.s6_addr[i];
-  }
-  res = res * hash_conf<>::prime();
-  res = res ^ (sa->sin6_port >> 1);
-  res = res * hash_conf<>::prime();
-  res = res ^ (sa->sin6_port & 0xFF);
-  return res;
+  auto& addr = sa->sin6_addr.s6_addr;
+  auto result = fnv_hash(addr, addr + 16);
+  result = fnv_hash_append(result, sa->sin6_port);
+  return result;
 }
 
 bool operator==(const ip_endpoint& lhs, const ip_endpoint& rhs) {
