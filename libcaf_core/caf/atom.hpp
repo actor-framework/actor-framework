@@ -40,7 +40,11 @@ std::string to_string(const atom_value& what);
 /// @relates atom_value
 atom_value to_lowercase(atom_value x);
 
+/// @relates atom_value
 atom_value atom_from_string(string_view x);
+
+/// @relates atom_value
+int compare(atom_value x, atom_value y);
 
 /// Creates an atom from given string literal.
 template <size_t Size>
@@ -219,4 +223,3 @@ struct hash<caf::atom_value> {
 };
 
 } // namespace std
-

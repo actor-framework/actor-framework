@@ -84,8 +84,9 @@ struct fixture : test_coordinator_fixture<> {
 
   fixture()
     : proxies_backend(sys),
-      proxies(sys, proxies_backend),
-      last_hop(123, "0011223344556677889900112233445566778899") {
+      proxies(sys, proxies_backend) {
+    auto tmp = make_node_id(123, "0011223344556677889900112233445566778899");
+    last_hop = unbox(std::move(tmp));
     testee = sys.spawn<lazy_init>(testee_impl);
     sys.registry().put(testee.id(), testee);
   }

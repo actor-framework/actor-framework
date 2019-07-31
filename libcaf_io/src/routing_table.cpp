@@ -62,7 +62,7 @@ node_id routing_table::lookup_direct(const connection_handle& hdl) const {
   auto i = direct_by_hdl_.find(hdl);
   if (i != direct_by_hdl_.end())
     return i->second;
-  return none;
+  return {};
 }
 
 optional<connection_handle>
@@ -71,24 +71,24 @@ routing_table::lookup_direct(const node_id& nid) const {
   auto i = direct_by_nid_.find(nid);
   if (i != direct_by_nid_.end())
     return i->second;
-  return none;
+  return {};
 }
 
 node_id routing_table::lookup_indirect(const node_id& nid) const {
   std::unique_lock<std::mutex> guard{mtx_};
   auto i = indirect_.find(nid);
   if (i == indirect_.end())
-    return none;
+    return {};
   if (!i->second.empty())
     return *i->second.begin();
-  return none;
+  return {};
 }
 
 node_id routing_table::erase_direct(const connection_handle& hdl) {
   std::unique_lock<std::mutex> guard{mtx_};
   auto i = direct_by_hdl_.find(hdl);
   if (i == direct_by_hdl_.end())
-    return none;
+    return {};
   direct_by_nid_.erase(i->second);
   node_id result = std::move(i->second);
   direct_by_hdl_.erase(i->first);

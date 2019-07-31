@@ -20,16 +20,16 @@
 
 #include <atomic>
 
-#include "caf/fwd.hpp"
+#include "caf/config.hpp"
 #include "caf/error.hpp"
-#include "caf/node_id.hpp"
+#include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/weak_intrusive_ptr.hpp"
-
-#include "caf/meta/type_name.hpp"
-#include "caf/meta/save_callback.hpp"
 #include "caf/meta/load_callback.hpp"
 #include "caf/meta/omittable_if_none.hpp"
+#include "caf/meta/save_callback.hpp"
+#include "caf/meta/type_name.hpp"
+#include "caf/node_id.hpp"
+#include "caf/weak_intrusive_ptr.hpp"
 
 namespace caf {
 
