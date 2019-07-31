@@ -150,7 +150,10 @@ std::istream& operator>>(std::istream& in, node_id& x) {
   string node_hex_id;
   uint32_t pid;
   if (in >> rd_line(node_hex_id, '#') >> pid) {
-    x = node_id{pid, node_hex_id};
+    if (auto nid = make_node_id(pid, node_hex_id))
+      x = std::move(*nid);
+    else
+      in.setstate(std::ios::failbit);
   }
   return in;
 }
