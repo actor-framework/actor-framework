@@ -25,6 +25,7 @@
 #include <caf/logger.hpp>
 #include <caf/sec.hpp>
 #include <caf/variant.hpp>
+#include <caf/net/endpoint_manager.hpp>
 
 #ifdef CAF_WINDOWS
 # include <winsock2.h>
@@ -41,7 +42,14 @@ namespace policy {
 
 class scribe_policy {
 public:
-  scribe_policy(net::stream_socket handle) : handle_(handle) {
+  explicit scribe_policy(net::stream_socket handle) :
+    handle_(handle),
+    max_consecutive_reads_(0),
+    read_threshold_(1024),
+    collected_(0),
+    max_(1024),
+    rd_flag_(net::receive_policy_flag::exactly),
+    written_(0) {
     // nop
   }
 
@@ -52,7 +60,9 @@ public:
   }
 
   template <class Parent>
-  error init(Parent&) {
+  error init(Parent& parent) {
+    prepare_next_read();
+    parent.mask_add(net::operation::read_write);
     return none;
   }
 
@@ -64,6 +74,7 @@ public:
     auto rres = read(handle_, buf, len);
     if (rres.is<caf::sec>()) {
       // Make sure WSAGetLastError gets called immediately on Windows.
+      CAF_LOG_DEBUG("receive failed" << CAF_ARG(get<sec>(rres)));
       handle_error(parent, get<caf::sec>(rres));
       return false;
     }
@@ -73,7 +84,8 @@ public:
                   static_cast<size_t>(get<size_t>(rres)) : 0;
     collected_ += result;
     if (collected_ >= read_threshold_) {
-      collected_ = 0;
+      parent.application().process(read_buf_, *this, parent);
+      prepare_next_read();
       return false;
     } else {
       return true;
@@ -82,16 +94,12 @@ public:
 
   template <class Parent>
   bool handle_write_event(Parent& parent) {
-    if (!write_buf_.empty())
-      while(write_some(parent)); // write while write_buf not empty
-    
-    // check for new messages in parents message_queue
-    auto& msg_queue = parent.message_queue();
-    while (!msg_queue.empty()) {
-      // TODO: would be nice to have some kind of `get_next_elem()` function
-      auto& elem = msg_queue.dequeue();
-      // TODO parameter list from proposal -> pass to application
-      parent->application().prepare(elem, *this, parent);
+    while(write_some(parent)); // write while write_buf not empty
+
+    // check new messages in parents message_queue
+    std::unique_ptr<caf::net::endpoint_manager::message> msg;
+    while ((msg = parent.next_message())) {
+      parent.application().prepare(std::move(msg), *this, parent);
     }
     // write prepared data
     return write_some(parent);
@@ -100,6 +108,7 @@ public:
   template <class Parent>
   bool write_some(Parent& parent) {
     CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(len));
+    if (write_buf_.empty()) return false;
     auto len = write_buf_.size() - written_;
     void* buf = write_buf_.data() + written_;
     auto sres = net::write(handle_, buf, len);
@@ -124,61 +133,29 @@ public:
 
   template <class Parent>
   void resolve(Parent& parent, const std::string& path, actor listener) {
-    parent->application().resolve(*this, path, listener);
+    parent.application().resolve(*this, path, listener);
     // TODO should parent be passed as well?
   }
 
   template <class Parent>
   void timeout(Parent& parent, atom_value value, uint64_t id) {
-    parent->application().timeout(*this, value, id);
+    parent.application().timeout(*this, value, id);
     // TODO should parent be passed as well?
   }
 
-  template <class Parent>
-  void handle_error(Parent& parent, sec code) {
-    parent.application().handle_error(code);
+  template <class Application>
+  void handle_error(Application& application, sec code) {
+    application.handle_error(code);
   }
 
-  void prepare_next_read() {
-    collected_ = 0;
-    // This cast does nothing, but prevents a weird compiler error on GCC <= 4.9.
-    // TODO: remove cast when dropping support for GCC 4.9.
-    switch (static_cast<net::receive_policy_flag>(rd_flag_)) {
-      case net::receive_policy_flag::exactly:
-        if (read_buf_.size() != max_)
-          read_buf_.resize(max_);
-        read_threshold_ = max_;
-        break;
-      case net::receive_policy_flag::at_most:
-        if (read_buf_.size() != max_)
-          read_buf_.resize(max_);
-        read_threshold_ = 1;
-        break;
-      case net::receive_policy_flag::at_least: {
-        // read up to 10% more, but at least allow 100 bytes more
-        auto max_size = max_ + std::max<size_t>(100, max_ / 10);
-        if (read_buf_.size() != max_size)
-          read_buf_.resize(max_size);
-        read_threshold_ = max_;
-        break;
-      }
-    }
-  }
+  void prepare_next_read();
 
-  void configure_read(net::receive_policy::config cfg) {
-    rd_flag_ = cfg.first;
-    max_ = cfg.second;
-    prepare_next_read();
-  }
+  void configure_read(net::receive_policy::config cfg);
 
-  std::vector<char>& wr_buf() {
-    return write_buf_;
-  }
-
+  std::vector<char>& wr_buf();
 
 private:
   std::vector<char> read_buf_;
-  
   std::vector<char> write_buf_;
 
   size_t max_consecutive_reads_;
