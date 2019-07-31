@@ -166,7 +166,6 @@ public:
     uri value_;
   };
 
-
   // -- constructors, destructors, and assignment operators --------------------
 
   constexpr node_id() noexcept {

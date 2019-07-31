@@ -55,7 +55,7 @@ namespace {
 
 std::atomic<uint8_t> system_id;
 
-} // <anonymous>
+} // namespace
 
 node_id node_id::default_data::local(const actor_system_config&) {
   CAF_LOG_TRACE("");
