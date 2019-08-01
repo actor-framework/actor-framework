@@ -34,8 +34,7 @@
 namespace caf {
 
 /// A node ID is an opaque value for representing CAF instances in the network.
-class node_id : detail::comparable<node_id>,
-                detail::comparable<node_id, none_t> {
+class node_id {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -195,11 +194,6 @@ public:
   /// @returns -1 if `*this < other`, 0 if `*this == other`, and 1 otherwise.
   int compare(const node_id& other) const noexcept;
 
-  /// Compares this instance as if comparing to a default-constructed
-  /// `node_id`.
-  /// @returns `compare(node_id{})`.
-  int compare(const none_t&) const;
-
   /// Exchanges the value of this object with `other`.
   void swap(node_id& other);
 
@@ -230,6 +224,56 @@ public:
 private:
   intrusive_ptr<data> data_;
 };
+
+/// @relates node_id
+inline bool operator==(const node_id& x, const node_id& y) noexcept {
+  return x.compare(y) == 0;
+}
+
+/// @relates node_id
+inline bool operator!=(const node_id& x, const node_id& y) noexcept {
+  return x.compare(y) != 0;
+}
+
+/// @relates node_id
+inline bool operator<(const node_id& x, const node_id& y) noexcept {
+  return x.compare(y) < 0;
+}
+
+/// @relates node_id
+inline bool operator<=(const node_id& x, const node_id& y) noexcept {
+  return x.compare(y) <= 0;
+}
+
+/// @relates node_id
+inline bool operator>(const node_id& x, const node_id& y) noexcept {
+  return x.compare(y) > 0;
+}
+
+/// @relates node_id
+inline bool operator>=(const node_id& x, const node_id& y) noexcept {
+  return x.compare(y) >= 0;
+}
+
+/// @relates node_id
+inline bool operator==(const node_id& x, const none_t&) noexcept {
+  return !x;
+}
+
+/// @relates node_id
+inline bool operator==(const none_t&, const node_id& x) noexcept {
+  return !x;
+}
+
+/// @relates node_id
+inline bool operator!=(const node_id& x, const none_t&) noexcept {
+  return static_cast<bool>(x);
+}
+
+/// @relates node_id
+inline bool operator!=(const none_t&, const node_id& x) noexcept {
+  return static_cast<bool>(x);
+}
 
 /// @relates node_id
 error inspect(serializer& sink, const node_id& x);

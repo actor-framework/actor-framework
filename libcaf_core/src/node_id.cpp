@@ -182,11 +182,6 @@ node_id::operator bool() const {
   return static_cast<bool>(data_);
 }
 
-int node_id::compare(const none_t&) const {
-  // Invalid instances are always smaller.
-  return data_ ? 1 : 0;
-}
-
 int node_id::compare(const node_id& other) const noexcept {
   if (this == &other || data_ == other.data_)
     return 0;
