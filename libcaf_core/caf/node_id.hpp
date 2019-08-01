@@ -41,8 +41,6 @@ public:
   // A reference counted, implementation-specific implementation of a node ID.
   class data : public ref_counted {
   public:
-    // static intrusive_ptr<data> create_singleton();
-
     ~data() override;
 
     virtual bool valid() const noexcept = 0;
@@ -280,9 +278,6 @@ error inspect(serializer& sink, const node_id& x);
 
 /// @relates node_id
 error inspect(deserializer& source, node_id& x);
-
-/// @relates node_id
-std::string to_string(const node_id& x);
 
 /// Appends `x` in human-readable string representation to `str`.
 /// @relates node_id
