@@ -94,10 +94,18 @@ public:
 
   template <class Parent>
   bool handle_write_event(Parent& parent) {
+    // try to write leftover data!
+    write_some(parent);
+    // get new data from parent
     for (auto msg = parent.next_message(); msg != nullptr; msg = parent.next_message()) {
       parent.application().prepare(std::move(msg), *this);
     }
+    // write prepared data
+    return write_some(parent);
+  }
 
+  template <class Parent>
+  bool write_some(Parent& parent) {
     // write prepared data
     if (write_buf_.empty())
       return false;
@@ -111,7 +119,7 @@ public:
       return false;
     }
     CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id)
-                                      << CAF_ARG(sres));
+                               << CAF_ARG(sres));
     auto result = (get<size_t>(sres) > 0)
                   ? static_cast<size_t>(get<size_t>(sres))
                   : 0;
