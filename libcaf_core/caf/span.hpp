@@ -51,7 +51,7 @@ public:
 
   using iterator = pointer;
 
-  using const_iterator = const pointer;
+  using const_iterator = const_pointer;
 
   using reverse_iterator = std::reverse_iterator<iterator>;
 
@@ -94,7 +94,7 @@ public:
     return begin_;
   }
 
-  constexpr iterator cbegin() const noexcept {
+  constexpr const_iterator cbegin() const noexcept {
     return begin_;
   }
 
@@ -102,24 +102,24 @@ public:
     return begin() + size_;
   }
 
-  constexpr iterator cend() const noexcept {
-    return begin() + size_;
+  constexpr const_iterator cend() const noexcept {
+    return cbegin() + size_;
   }
 
   constexpr reverse_iterator rbegin() const noexcept {
     return reverse_iterator{end()};
   }
 
-  constexpr reverse_iterator crbegin() const noexcept {
-    return reverse_iterator{end()};
+  constexpr const_reverse_iterator crbegin() const noexcept {
+    return const_reverse_iterator{end()};
   }
 
   constexpr reverse_iterator rend() const noexcept {
     return reverse_iterator{begin()};
   }
 
-  constexpr reverse_iterator crend() const noexcept {
-    return reverse_iterator{begin()};
+  constexpr const_reverse_iterator crend() const noexcept {
+    return const_reverse_iterator{begin()};
   }
 
   // -- element access ---------------------------------------------------------
