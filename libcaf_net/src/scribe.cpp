@@ -16,7 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/policy/scribe_policy.hpp"
+#include "caf/policy/scribe.hpp"
 
 #include <system_error>
 
@@ -26,7 +26,7 @@
 namespace caf {
 namespace policy {
 
-void scribe_policy::prepare_next_read() {
+void scribe::prepare_next_read() {
   collected_ = 0;
   // This cast does nothing, but prevents a weird compiler error on GCC <= 4.9.
   // TODO: remove cast when dropping support for GCC 4.9.
@@ -52,13 +52,13 @@ void scribe_policy::prepare_next_read() {
   }
 }
 
-void scribe_policy::configure_read(net::receive_policy::config cfg) {
+void scribe::configure_read(net::receive_policy::config cfg) {
   rd_flag_ = cfg.first;
   max_ = cfg.second;
   prepare_next_read();
 }
 
-std::vector<char>& scribe_policy::wr_buf() {
+std::vector<char>& scribe::wr_buf() {
   return write_buf_;
 }
 

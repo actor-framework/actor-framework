@@ -18,38 +18,37 @@
 
 #pragma once
 
-#include <caf/fwd.hpp>
-#include <caf/net/stream_socket.hpp>
-#include <caf/net/receive_policy.hpp>
 #include <caf/error.hpp>
+#include <caf/fwd.hpp>
 #include <caf/logger.hpp>
+#include <caf/net/endpoint_manager.hpp>
+#include <caf/net/receive_policy.hpp>
+#include <caf/net/stream_socket.hpp>
 #include <caf/sec.hpp>
 #include <caf/variant.hpp>
-#include <caf/net/endpoint_manager.hpp>
 
 #ifdef CAF_WINDOWS
-# include <winsock2.h>
+#  include <winsock2.h>
 #else
-# include <sys/types.h>
-# include <sys/socket.h>
-#include <caf/actor.hpp>
+#  include <caf/actor.hpp>
+#  include <sys/socket.h>
+#  include <sys/types.h>
 
 #endif
-
 
 namespace caf {
 namespace policy {
 
-class scribe_policy {
+class scribe {
 public:
-  explicit scribe_policy(net::stream_socket handle) :
-    handle_(handle),
-    max_consecutive_reads_(0),
-    read_threshold_(1024),
-    collected_(0),
-    max_(1024),
-    rd_flag_(net::receive_policy_flag::exactly),
-    written_(0) {
+  explicit scribe(net::stream_socket handle)
+    : handle_(handle),
+      max_consecutive_reads_(0),
+      read_threshold_(1024),
+      collected_(0),
+      max_(1024),
+      rd_flag_(net::receive_policy_flag::exactly),
+      written_(0) {
     // nop
   }
 
@@ -80,8 +79,9 @@ public:
     }
 
     CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id) << CAF_ARG(rres));
-    auto result = (get<size_t>(rres) > 0) ?
-                  static_cast<size_t>(get<size_t>(rres)) : 0;
+    auto result = (get<size_t>(rres) > 0)
+                    ? static_cast<size_t>(get<size_t>(rres))
+                    : 0;
     collected_ += result;
     if (collected_ >= read_threshold_) {
       parent.application().process(read_buf_, *this, parent);
@@ -94,20 +94,13 @@ public:
 
   template <class Parent>
   bool handle_write_event(Parent& parent) {
-    while(write_some(parent)); // write while write_buf not empty
-
-    // check new messages in parents message_queue
-    std::unique_ptr<caf::net::endpoint_manager::message> msg;
-    while ((msg = parent.next_message())) {
-      parent.application().prepare(std::move(msg), *this, parent);
+    for (auto msg = parent.next_message(); msg != nullptr; msg = parent.next_message()) {
+      parent.application().prepare(std::move(msg), *this);
     }
-    // write prepared data
-    return write_some(parent);
-  }
 
-  template <class Parent>
-  bool write_some(Parent& parent) {
-    if (write_buf_.empty()) return false;
+    // write prepared data
+    if (write_buf_.empty())
+      return false;
     auto len = write_buf_.size() - written_;
     void* buf = write_buf_.data() + written_;
     CAF_LOG_TRACE(CAF_ARG(handle_.id) << CAF_ARG(len));
@@ -117,9 +110,11 @@ public:
       handle_error(parent, get<caf::sec>(sres));
       return false;
     }
-    CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id) << CAF_ARG(sres));
-    auto result = (get<size_t>(sres) > 0) ?
-        static_cast<size_t>(get<size_t>(sres)) : 0;
+    CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id)
+                                      << CAF_ARG(sres));
+    auto result = (get<size_t>(sres) > 0)
+                  ? static_cast<size_t>(get<size_t>(sres))
+                  : 0;
 
     // update state
     written_ += result;
@@ -128,13 +123,13 @@ public:
       write_buf_.clear();
       return false;
     } else {
-      return true;      
+      return true;
     }
   }
 
   template <class Parent>
   void resolve(Parent& parent, const std::string& path, actor listener) {
-    parent.application().resolve(*this, path, listener);
+    parent.application().resolve(parent, path, listener);
     // TODO should parent be passed as well?
   }
 
@@ -167,7 +162,6 @@ private:
 
   size_t written_;
 };
-
 
 } // namespace policy
 } // namespace caf
