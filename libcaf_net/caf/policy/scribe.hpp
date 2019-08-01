@@ -97,7 +97,8 @@ public:
     // try to write leftover data!
     write_some(parent);
     // get new data from parent
-    for (auto msg = parent.next_message(); msg != nullptr; msg = parent.next_message()) {
+    for (auto msg = parent.next_message(); msg != nullptr;
+         msg = parent.next_message()) {
       parent.application().prepare(std::move(msg), *this);
     }
     // write prepared data
@@ -118,11 +119,10 @@ public:
       handle_error(parent, get<caf::sec>(sres));
       return false;
     }
-    CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id)
-                               << CAF_ARG(sres));
+    CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id) << CAF_ARG(sres));
     auto result = (get<size_t>(sres) > 0)
-                  ? static_cast<size_t>(get<size_t>(sres))
-                  : 0;
+                    ? static_cast<size_t>(get<size_t>(sres))
+                    : 0;
 
     // update state
     written_ += result;

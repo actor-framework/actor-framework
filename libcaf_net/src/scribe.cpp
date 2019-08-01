@@ -62,6 +62,5 @@ std::vector<char>& scribe::wr_buf() {
   return write_buf_;
 }
 
-
 } // namespace policy
 } // namespace caf
