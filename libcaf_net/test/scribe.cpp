@@ -60,18 +60,19 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
 class dummy_application {
 public:
   dummy_application(std::shared_ptr<std::vector<char>> rec_buf)
-    : rec_buf_(std::move(rec_buf)) {
-    // nop
-  };
+    : rec_buf_(std::move(rec_buf)){
+      // nop
+    };
 
   ~dummy_application() = default;
 
   template <class Transport>
-  void prepare(std::unique_ptr<endpoint_manager::message> msg, Transport& transport) {
+  void prepare(std::unique_ptr<endpoint_manager::message> msg,
+               Transport& transport) {
     auto& buf = transport.wr_buf();
     auto& msg_buf = msg->payload;
-    buf.resize(buf.size()+msg_buf.size());
-    buf.insert(buf.end(), msg_buf.begin(), msg_buf.end());
+    buf.resize(msg_buf.size());
+    buf.insert(buf.begin(), msg_buf.begin(), msg_buf.end());
   }
 
   template <class Transport>
@@ -86,8 +87,8 @@ public:
     node_id nid{42, "00112233445566778899aa00112233445566778899aa"};
     actor_config cfg;
     auto p = make_actor<actor_proxy_impl, strong_actor_ptr>(aid, nid,
-                                                            &manager.system(), cfg,
-                                                            &manager);
+                                                            &manager.system(),
+                                                            cfg, &manager);
     anon_send(listener, resolve_atom::value, std::move(path), p);
   }
 
@@ -116,7 +117,7 @@ private:
 } // namespace
 
 CAF_TEST_FIXTURE_SCOPE(endpoint_manager_tests, fixture)
-/*
+
 CAF_TEST(receive) {
   std::vector<char> read_buf(1024);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
@@ -130,9 +131,7 @@ CAF_TEST(receive) {
   CAF_MESSAGE("configure scribe_policy");
   policy::scribe scribe{sockets.first};
   scribe.configure_read(net::receive_policy::exactly(hello_manager.size()));
-  auto mgr = make_endpoint_manager(mpx, sys,
-                                   scribe,
-                                   dummy_application{buf});
+  auto mgr = make_endpoint_manager(mpx, sys, scribe, dummy_application{buf});
   CAF_CHECK_EQUAL(mgr->init(), none);
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
@@ -143,7 +142,7 @@ CAF_TEST(receive) {
                   hello_manager.size());
   run();
   CAF_CHECK_EQUAL(string_view(buf->data(), buf->size()), hello_manager);
-}*/
+}
 
 CAF_TEST(resolve and proxy communication) {
   std::vector<char> read_buf(1024);
@@ -151,14 +150,11 @@ CAF_TEST(resolve and proxy communication) {
   auto sockets = unbox(make_stream_socket_pair());
   nonblocking(sockets.second, true);
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
-  auto mgr = make_endpoint_manager(mpx, sys,
-                                   policy::scribe{sockets.first},
+  auto mgr = make_endpoint_manager(mpx, sys, policy::scribe{sockets.first},
                                    dummy_application{buf});
   CAF_CHECK_EQUAL(mgr->init(), none);
   mpx->handle_updates();
   run();
-  /*CAF_CHECK_EQUAL(read(sockets.second, read_buf.data(), read_buf.size()),
-                  hello_test.size());*/
   mgr->resolve("/id/42", self);
   run();
   self->receive(
@@ -167,7 +163,7 @@ CAF_TEST(resolve and proxy communication) {
       self->send(actor_cast<actor>(p), "hello proxy!");
     },
     after(std::chrono::seconds(0)) >>
-                                   [&] { CAF_FAIL("manager did not respond with a proxy."); });
+      [&] { CAF_FAIL("manager did not respond with a proxy."); });
   run();
   auto read_res = read(sockets.second, read_buf.data(), read_buf.size());
   if (!holds_alternative<size_t>(read_res)) {
