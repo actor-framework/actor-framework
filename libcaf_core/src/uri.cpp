@@ -19,6 +19,7 @@
 #include "caf/uri.hpp"
 
 #include "caf/deserializer.hpp"
+#include "caf/detail/fnv_hash.hpp"
 #include "caf/detail/parser/read_uri.hpp"
 #include "caf/detail/uri_impl.hpp"
 #include "caf/error.hpp"
@@ -62,6 +63,10 @@ const uri::query_map& uri::query() const noexcept {
 
 string_view uri::fragment() const noexcept {
   return impl_->fragment;
+}
+
+size_t uri::hash_code() const noexcept {
+  return detail::fnv_hash(str());
 }
 
 // -- comparison ---------------------------------------------------------------

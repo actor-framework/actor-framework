@@ -105,6 +105,9 @@ public:
   /// Returns the fragment component.
   string_view fragment() const noexcept;
 
+  /// Returns a hash code over all components.
+  size_t hash_code() const noexcept;
+
   // -- comparison -------------------------------------------------------------
 
   int compare(const uri& other) const noexcept;
@@ -135,3 +138,14 @@ std::string to_string(const uri& x);
 error parse(string_view str, uri& dest);
 
 } // namespace caf
+
+namespace std {
+
+template <>
+struct hash<caf::uri> {
+  size_t operator()(const caf::uri& x) const noexcept {
+    return x.hash_code();
+  }
+};
+
+} // namespace std

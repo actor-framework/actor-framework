@@ -384,8 +384,8 @@ void middleman::init(actor_system_config& cfg) {
      .add_message_type<connection_handle>("@connection_handle")
      .add_message_type<connection_passivated_msg>("@connection_passivated_msg")
      .add_message_type<acceptor_passivated_msg>("@acceptor_passivated_msg");
-  // compute and set ID for this network node
-  node_id this_node{node_id::data::create_singleton()};
+  // Compute and set ID for this network node.
+  auto this_node = node_id::default_data::local(cfg);
   system().node_.swap(this_node);
   // give config access to slave mode implementation
   cfg.slave_mode_fun = &middleman::exec_slave_mode;

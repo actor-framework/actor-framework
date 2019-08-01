@@ -129,12 +129,13 @@ public:
     registry_ = &sys.registry();
     registry_->put((*self_)->id(), actor_cast<strong_actor_ptr>(*self_));
     // first remote node is everything of this_node + 1, then +2, etc.
+    auto pid = static_cast<node_id::default_data&>(*this_node_).process_id();
+    auto hid = static_cast<node_id::default_data&>(*this_node_).host_id();
     for (uint32_t i = 0; i < num_remote_nodes; ++i) {
       auto& n = nodes_[i];
-      node_id::host_id_type tmp = this_node_.host_id();
-      for (auto& c : tmp)
-        c = static_cast<uint8_t>(c + i + 1);
-      n.id = node_id{this_node_.process_id() + i + 1, tmp};
+      for (auto& c : hid)
+        ++c;
+      n.id = make_node_id(++pid, hid);
       n.connection = connection_handle::from_int(i + 1);
       new (&n.dummy_actor) scoped_actor(sys);
       // register all pseudo remote actors in the registry

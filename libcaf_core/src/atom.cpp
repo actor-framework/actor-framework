@@ -71,4 +71,8 @@ std::string to_string(const atom_value& x) {
   return std::string(str.begin(), str.begin() + len);
 }
 
+int compare(atom_value x, atom_value y) {
+  return memcmp(&x, &y, sizeof(atom_value));
+}
+
 } // namespace caf

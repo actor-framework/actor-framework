@@ -541,7 +541,7 @@ void basp_broker::set_context(connection_handle hdl) {
                      invalid_actor_id};
     i = ctx
           .emplace(hdl, basp::endpoint_context{basp::await_header, hdr, hdl,
-                                               none, 0, 0, none})
+                                               node_id{}, 0, 0, none})
           .first;
   }
   this_context = &i->second;
