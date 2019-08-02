@@ -30,6 +30,7 @@
 #ifdef CAF_WINDOWS
 #  include <winsock2.h>
 #else
+
 #  include <caf/actor.hpp>
 #  include <sys/socket.h>
 #  include <sys/types.h>
@@ -61,7 +62,7 @@ public:
   template <class Parent>
   error init(Parent& parent) {
     prepare_next_read();
-    parent.mask_add(net::operation::read_write);
+    parent.mask_add(net::operation::read);
     return none;
   }
 
@@ -70,25 +71,23 @@ public:
     void* buf = read_buf_.data() + collected_;
     size_t len = read_threshold_ - collected_;
     CAF_LOG_TRACE(CAF_ARG(handle_.id) << CAF_ARG(len));
-    auto rres = read(handle_, buf, len);
-    if (rres.is<caf::sec>()) {
-      // Make sure WSAGetLastError gets called immediately on Windows.
-      CAF_LOG_DEBUG("receive failed" << CAF_ARG(get<sec>(rres)));
-      handle_error(parent, get<caf::sec>(rres));
-      return false;
-    }
-
-    CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id) << CAF_ARG(rres));
-    auto result = (get<size_t>(rres) > 0)
-                    ? static_cast<size_t>(get<size_t>(rres))
-                    : 0;
-    collected_ += result;
-    if (collected_ >= read_threshold_) {
-      parent.application().process(read_buf_, *this, parent);
-      prepare_next_read();
-      return false;
+    variant<size_t, sec> ret = read(handle_, buf, len);
+    if (auto num_bytes = get_if<size_t>(&ret)) {
+      CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id) << CAF_ARG(*num_bytes));
+      collected_ += *num_bytes;
+      if (collected_ >= read_threshold_) {
+        parent.application().process(read_buf_, *this, parent);
+        prepare_next_read();
+        return false;
+      } else {
+        return true;
+      }
     } else {
-      return true;
+      // Make sure WSAGetLastError gets called immediately on Windows.
+      auto err = get<sec>(ret);
+      CAF_LOG_DEBUG("receive failed" << CAF_ARG(err));
+      handle_error(parent, err);
+      return false;
     }
   }
 
@@ -107,31 +106,27 @@ public:
 
   template <class Parent>
   bool write_some(Parent& parent) {
-    // write prepared data
     if (write_buf_.empty())
       return false;
     auto len = write_buf_.size() - written_;
     void* buf = write_buf_.data() + written_;
     CAF_LOG_TRACE(CAF_ARG(handle_.id) << CAF_ARG(len));
-    auto sres = net::write(handle_, buf, len);
-    if (sres.is<caf::sec>()) {
-      CAF_LOG_ERROR("send failed");
-      handle_error(parent, get<caf::sec>(sres));
-      return false;
-    }
-    CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id) << CAF_ARG(sres));
-    auto result = (get<size_t>(sres) > 0)
-                    ? static_cast<size_t>(get<size_t>(sres))
-                    : 0;
-
-    // update state
-    written_ += result;
-    if (written_ >= write_buf_.size()) {
-      written_ = 0;
-      write_buf_.clear();
-      return false;
+    auto ret = net::write(handle_, buf, len);
+    if (auto num_bytes = get_if<size_t>(&ret)) {
+      CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id) << CAF_ARG(*num_bytes));
+      // update state
+      written_ += *num_bytes;
+      if (written_ >= write_buf_.size()) {
+        written_ = 0;
+        write_buf_.clear();
+        return false;
+      } else {
+        return true;
+      }
     } else {
-      return true;
+      CAF_LOG_ERROR("send failed");
+      handle_error(parent, get<sec>(ret));
+      return false;
     }
   }
 

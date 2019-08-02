@@ -97,7 +97,7 @@ public:
     // nop
   }
 
-  void handle_error(caf::sec) {
+  void handle_error(sec) {
     // nop
   }
 
