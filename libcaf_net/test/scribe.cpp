@@ -67,24 +67,22 @@ public:
   ~dummy_application() = default;
 
   template <class Transport>
-  void prepare(std::unique_ptr<endpoint_manager::message> msg,
-               Transport& transport) {
-    auto& buf = transport.wr_buf();
-    auto& msg_buf = msg->payload;
-    buf.resize(msg_buf.size());
-    buf.insert(buf.begin(), msg_buf.begin(), msg_buf.end());
+  void write_message(Transport& transport,
+                     std::unique_ptr<endpoint_manager::message> msg) {
+    transport.write_packet(msg->payload);
   }
 
-  template <class Transport>
-  void process(std::vector<char> payload, Transport&, socket_manager&) {
+  template <class Parent>
+  void handle_data(Parent&, span<char> data) {
     rec_buf_->clear();
-    rec_buf_->insert(rec_buf_->begin(), payload.begin(), payload.end());
+    rec_buf_->insert(rec_buf_->begin(), data.begin(), data.end());
   }
 
   template <class Manager>
   void resolve(Manager& manager, const std::string& path, actor listener) {
     actor_id aid = 42;
-    node_id nid{42, "00112233445566778899aa00112233445566778899aa"};
+    auto hid = "0011223344556677889900112233445566778899";
+    auto nid = unbox(make_node_id(42, hid));
     actor_config cfg;
     auto p = make_actor<actor_proxy_impl, strong_actor_ptr>(aid, nid,
                                                             &manager.system(),
