@@ -25,16 +25,15 @@
 #include <caf/net/receive_policy.hpp>
 #include <caf/net/stream_socket.hpp>
 #include <caf/sec.hpp>
+#include <caf/span.hpp>
 #include <caf/variant.hpp>
 
 #ifdef CAF_WINDOWS
 #  include <winsock2.h>
 #else
-
 #  include <caf/actor.hpp>
 #  include <sys/socket.h>
 #  include <sys/types.h>
-
 #endif
 
 namespace caf {
@@ -42,16 +41,7 @@ namespace policy {
 
 class scribe {
 public:
-  explicit scribe(net::stream_socket handle)
-    : handle_(handle),
-      max_consecutive_reads_(0),
-      read_threshold_(1024),
-      collected_(0),
-      max_(1024),
-      rd_flag_(net::receive_policy_flag::exactly),
-      written_(0) {
-    // nop
-  }
+  explicit scribe(net::stream_socket handle);
 
   net::stream_socket handle_;
 
@@ -76,7 +66,7 @@ public:
       CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id) << CAF_ARG(*num_bytes));
       collected_ += *num_bytes;
       if (collected_ >= read_threshold_) {
-        parent.application().process(read_buf_, *this, parent);
+        parent.application().handle_data(*this, read_buf_);
         prepare_next_read();
         return false;
       } else {
@@ -98,7 +88,7 @@ public:
     // get new data from parent
     for (auto msg = parent.next_message(); msg != nullptr;
          msg = parent.next_message()) {
-      parent.application().prepare(std::move(msg), *this);
+      parent.application().write_message(*this, std::move(msg));
     }
     // write prepared data
     return write_some(parent);
@@ -151,7 +141,7 @@ public:
 
   void configure_read(net::receive_policy::config cfg);
 
-  std::vector<char>& wr_buf();
+  void write_packet(span<char> buf);
 
 private:
   std::vector<char> read_buf_;

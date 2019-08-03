@@ -21,10 +21,20 @@
 #include <system_error>
 
 #include "caf/config.hpp"
-#include "caf/variant.hpp"
 
 namespace caf {
 namespace policy {
+
+scribe::scribe(caf::net::stream_socket handle)
+  : handle_(handle),
+    max_consecutive_reads_(0),
+    read_threshold_(1024),
+    collected_(0),
+    max_(1024),
+    rd_flag_(net::receive_policy_flag::exactly),
+    written_(0) {
+  // nop
+}
 
 void scribe::prepare_next_read() {
   collected_ = 0;
@@ -58,8 +68,8 @@ void scribe::configure_read(net::receive_policy::config cfg) {
   prepare_next_read();
 }
 
-std::vector<char>& scribe::wr_buf() {
-  return write_buf_;
+void scribe::write_packet(span<char> buf) {
+  write_buf_.insert(write_buf_.end(), buf.begin(), buf.end());
 }
 
 } // namespace policy
