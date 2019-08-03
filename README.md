@@ -8,7 +8,6 @@ network transparent messaging, and more.
 [![Jenkins][jenkins-badge]](https://jenkins.inet.haw-hamburg.de/job/CAF/job/actor-framework/job/master)
 [![Documentation Status][docs-badge]](http://actor-framework.readthedocs.io/en/latest/?badge=latest)
 [![Coverity][coverity-badge]](https://scan.coverity.com/projects/5555)
-[![In Progress][in-progress-badge]](https://waffle.io/actor-framework/actor-framework)
 
 ## Online Resources
 
@@ -178,5 +177,3 @@ http://dx.doi.org/10.1016/j.cl.2016.01.002.
 [coverity-badge]: https://scan.coverity.com/projects/5555/badge.svg?flat=1
 
 [gitter-badge]: https://img.shields.io/badge/gitter-join%20chat%20%E2%86%92-brightgreen.svg
-
-[in-progress-badge]: https://badge.waffle.io/actor-framework/actor-framework.png?label=In%20Progress&title=Issues%20in%20progress
