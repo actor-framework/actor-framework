@@ -31,7 +31,7 @@
 namespace caf {
 namespace policy {
 
-/// Implements a scribe policy that manages a stream-socket.
+/// Implements a scribe policy that manages a stream socket.
 class scribe {
 public:
   explicit scribe(net::stream_socket handle);
