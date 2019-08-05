@@ -28,24 +28,15 @@
 #include <caf/span.hpp>
 #include <caf/variant.hpp>
 
-#ifdef CAF_WINDOWS
-#  include <winsock2.h>
-#else
-#  include <caf/actor.hpp>
-#  include <sys/socket.h>
-#  include <sys/types.h>
-#endif
-
 namespace caf {
 namespace policy {
 
+/// Implements a scribe policy that manages a stream-socket.
 class scribe {
 public:
   explicit scribe(net::stream_socket handle);
 
-  net::stream_socket handle_;
-
-  net::stream_socket handle() {
+  net::stream_socket handle() const noexcept {
     return handle_;
   }
 
@@ -61,7 +52,8 @@ public:
     void* buf = read_buf_.data() + collected_;
     size_t len = read_threshold_ - collected_;
     CAF_LOG_TRACE(CAF_ARG(handle_.id) << CAF_ARG(len));
-    variant<size_t, sec> ret = read(handle_, buf, len);
+    auto ret = read(handle_, buf, len);
+    // Update state.
     if (auto num_bytes = get_if<size_t>(&ret)) {
       CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id) << CAF_ARG(*num_bytes));
       collected_ += *num_bytes;
@@ -71,24 +63,23 @@ public:
       }
       return true;
     } else {
-      // Make sure WSAGetLastError gets called immediately on Windows.
       auto err = get<sec>(ret);
       CAF_LOG_DEBUG("receive failed" << CAF_ARG(err));
-      handle_error(parent, err);
+      parent.application().handle_error(err);
       return false;
     }
   }
 
   template <class Parent>
   bool handle_write_event(Parent& parent) {
-    // try to write leftover data!
+    // Try to write leftover data.
     write_some(parent);
-    // get new data from parent
+    // Get new data from parent.
     for (auto msg = parent.next_message(); msg != nullptr;
          msg = parent.next_message()) {
       parent.application().write_message(*this, std::move(msg));
     }
-    // write prepared data
+    // Write prepared data.
     return write_some(parent);
   }
 
@@ -102,32 +93,30 @@ public:
     auto ret = net::write(handle_, buf, len);
     if (auto num_bytes = get_if<size_t>(&ret)) {
       CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id) << CAF_ARG(*num_bytes));
-      // update state
+      // Update state.
       written_ += *num_bytes;
       if (written_ >= write_buf_.size()) {
         written_ = 0;
         write_buf_.clear();
         return false;
-      } else {
-        return true;
       }
     } else {
-      CAF_LOG_ERROR("send failed");
-      handle_error(parent, get<sec>(ret));
+      auto err = get<sec>(ret);
+      CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
+      parent.application().handle_error(err);
       return false;
     }
+    return true;
   }
 
   template <class Parent>
   void resolve(Parent& parent, const std::string& path, actor listener) {
     parent.application().resolve(parent, path, listener);
-    // TODO should parent be passed as well?
   }
 
   template <class Parent>
   void timeout(Parent& parent, atom_value value, uint64_t id) {
     parent.application().timeout(*this, value, id);
-    // TODO should parent be passed as well?
   }
 
   template <class Application>
@@ -142,6 +131,8 @@ public:
   void write_packet(span<char> buf);
 
 private:
+  net::stream_socket handle_;
+
   std::vector<char> read_buf_;
   std::vector<char> write_buf_;
 

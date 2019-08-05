@@ -192,7 +192,6 @@ CAF_TEST(receive) {
   nonblocking(sockets.second, true);
   CAF_CHECK_EQUAL(read(sockets.second, read_buf.data(), read_buf.size()),
                   sec::unavailable_or_would_block);
-
   CAF_MESSAGE("adding both endpoint managers");
   auto mgr1 = make_endpoint_manager(mpx, sys, policy::scribe{sockets.first},
                                     stream_string_application{sys, buf});
@@ -204,7 +203,6 @@ CAF_TEST(receive) {
   CAF_CHECK_EQUAL(mgr2->init(), none);
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 3u);
-
   CAF_MESSAGE("resolve actor-proxy");
   mgr1->resolve("/id/42", self);
   run();

@@ -18,8 +18,7 @@
 
 #define CAF_SUITE scribe_policy
 
-#include "caf/net/endpoint_manager.hpp"
-#include <caf/policy/scribe.hpp>
+#include "caf/policy/scribe.hpp"
 
 #include "caf/test/dsl.hpp"
 
@@ -29,6 +28,7 @@
 #include "caf/detail/scope_guard.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/net/actor_proxy_impl.hpp"
+#include "caf/net/endpoint_manager.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/stream_socket.hpp"
@@ -38,9 +38,7 @@ using namespace caf::net;
 
 namespace {
 
-string_view hello_manager{"hello manager!"};
-
-string_view hello_test{"hello test!"};
+constexpr string_view hello_manager = "hello manager!";
 
 struct fixture : test_coordinator_fixture<>, host_fixture {
   fixture() {
@@ -130,7 +128,6 @@ CAF_TEST(receive) {
   CAF_CHECK_EQUAL(read(sockets.second, read_buf.data(), read_buf.size()),
                   sec::unavailable_or_would_block);
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
-
   CAF_MESSAGE("configure scribe_policy");
   policy::scribe scribe{sockets.first};
   scribe.configure_read(net::receive_policy::exactly(hello_manager.size()));
@@ -138,7 +135,6 @@ CAF_TEST(receive) {
   CAF_CHECK_EQUAL(mgr->init(), none);
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
-
   CAF_MESSAGE("sending data to scribe_policy");
   CAF_CHECK_EQUAL(write(sockets.second, hello_manager.data(),
                         hello_manager.size()),
@@ -169,10 +165,8 @@ CAF_TEST(resolve and proxy communication) {
       [&] { CAF_FAIL("manager did not respond with a proxy."); });
   run();
   auto read_res = read(sockets.second, read_buf.data(), read_buf.size());
-  if (!holds_alternative<size_t>(read_res)) {
-    CAF_ERROR("read() returned an error: " << sys.render(get<sec>(read_res)));
-    return;
-  }
+  if (!holds_alternative<size_t>(read_res))
+    CAF_FAIL("read() returned an error: " << sys.render(get<sec>(read_res)));
   read_buf.resize(get<size_t>(read_res));
   CAF_MESSAGE("receive buffer contains " << read_buf.size() << " bytes");
   message msg;

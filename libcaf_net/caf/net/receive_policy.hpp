@@ -41,17 +41,17 @@ public:
 
   using config = std::pair<receive_policy_flag, size_t>;
 
-  static inline config at_least(size_t num_bytes) {
+  static config at_least(size_t num_bytes) {
     CAF_ASSERT(num_bytes > 0);
     return {receive_policy_flag::at_least, num_bytes};
   }
 
-  static inline config at_most(size_t num_bytes) {
+  static config at_most(size_t num_bytes) {
     CAF_ASSERT(num_bytes > 0);
     return {receive_policy_flag::at_most, num_bytes};
   }
 
-  static inline config exactly(size_t num_bytes) {
+  static config exactly(size_t num_bytes) {
     CAF_ASSERT(num_bytes > 0);
     return {receive_policy_flag::exactly, num_bytes};
   }
