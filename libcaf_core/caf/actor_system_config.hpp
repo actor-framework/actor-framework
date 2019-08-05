@@ -350,7 +350,7 @@ private:
   error adjust_content();
 };
 
-/// @private
+/// Returns all user-provided configuration parameters.
 const settings& content(const actor_system_config& cfg);
 
 /// Tries to retrieve the value associated to `name` from `cfg`.

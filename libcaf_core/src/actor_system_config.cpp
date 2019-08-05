@@ -254,12 +254,8 @@ error actor_system_config::parse(string_list args, std::istream& ini) {
   using std::make_move_iterator;
   auto res = custom_options_.parse(content, args);
   if (res.second != args.end()) {
-    if (res.first != pec::success) {
+    if (res.first != pec::success && starts_with(*res.second, "-"))
       return make_error(res.first, *res.second);
-      std::cerr << "error: at argument \"" << *res.second
-                << "\": " << to_string(res.first) << std::endl;
-      cli_helptext_printed = true;
-    }
     auto first = args.begin();
     first += std::distance(args.cbegin(), res.second);
     remainder.insert(remainder.end(), make_move_iterator(first),
