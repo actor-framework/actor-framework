@@ -37,6 +37,7 @@ scribe::scribe(caf::net::stream_socket handle)
 }
 
 void scribe::prepare_next_read() {
+  read_buf_.clear();
   collected_ = 0;
   // This cast does nothing, but prevents a weird compiler error on GCC <= 4.9.
   // TODO: remove cast when dropping support for GCC 4.9.

@@ -20,7 +20,6 @@
 
 #include "caf/net/endpoint_manager.hpp"
 #include <caf/policy/scribe.hpp>
-#include <caf/policy/string_application.hpp>
 
 #include "caf/test/dsl.hpp"
 
@@ -66,6 +65,11 @@ public:
     };
 
   ~dummy_application() = default;
+
+  template <class Parent>
+  error init(Parent&) {
+    return none;
+  }
 
   template <class Transport>
   void write_message(Transport& transport,

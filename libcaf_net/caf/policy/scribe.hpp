@@ -51,7 +51,7 @@ public:
 
   template <class Parent>
   error init(Parent& parent) {
-    prepare_next_read();
+    parent.application().init(parent);
     parent.mask_add(net::operation::read);
     return none;
   }
@@ -68,10 +68,8 @@ public:
       if (collected_ >= read_threshold_) {
         parent.application().handle_data(*this, read_buf_);
         prepare_next_read();
-        return false;
-      } else {
-        return true;
       }
+      return true;
     } else {
       // Make sure WSAGetLastError gets called immediately on Windows.
       auto err = get<sec>(ret);
