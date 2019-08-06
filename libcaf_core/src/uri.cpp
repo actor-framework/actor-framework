@@ -101,6 +101,13 @@ std::string to_string(const uri& x) {
   return result;
 }
 
+void parse(detail::parser::state<string_view::iterator> ps, uri& dest) {
+  uri_builder builder;
+  read_uri(ps, builder);
+  if (ps.code <= pec::trailing_character)
+    dest = builder.make();
+}
+
 error parse(string_view str, uri& dest) {
   using namespace detail::parser;
   uri_builder builder;
