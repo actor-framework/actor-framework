@@ -45,7 +45,8 @@ namespace parser {
 ///                    the pre-decimal value.
 template <class Iterator, class Sentinel, class Consumer, class ValueType>
 void read_floating_point(state<Iterator, Sentinel>& ps, Consumer& consumer,
-                         optional<ValueType> start_value) {
+                         optional<ValueType> start_value,
+                         bool negative = false) {
   // Any exponent larger than 511 always overflows.
   static constexpr int max_double_exponent = 511;
   // We assume a simple integer until proven wrong.
@@ -58,6 +59,9 @@ void read_floating_point(state<Iterator, Sentinel>& ps, Consumer& consumer,
   } else if (*start_value < 0) {
     sign = minus;
     result = -*start_value;
+  } else if (negative) {
+    sign = minus;
+    result = *start_value;
   } else {
     sign = plus;
     result = *start_value;
