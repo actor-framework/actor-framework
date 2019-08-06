@@ -18,7 +18,9 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
+#include <string>
 
 #include "caf/fwd.hpp"
 
@@ -74,7 +76,7 @@ error make_error(pec code, size_t line, size_t column);
 
 /// Returns an error object from given error code with additional context
 /// information for where the parser stopped in the argument.
-error make_error(pec code, std::string argument);
+error make_error(pec code, string_view argument);
 
 /// @relates pec
 const char* to_string(pec x);

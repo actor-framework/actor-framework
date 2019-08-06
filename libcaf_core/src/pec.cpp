@@ -21,6 +21,7 @@
 #include "caf/config_value.hpp"
 #include "caf/error.hpp"
 #include "caf/make_message.hpp"
+#include "caf/string_view.hpp"
 
 namespace {
 
@@ -61,9 +62,9 @@ error make_error(pec code, size_t line, size_t column) {
           make_message(std::move(context))};
 }
 
-error make_error(pec code, std::string argument) {
+error make_error(pec code, string_view argument) {
   config_value::dictionary context;
-  context["argument"] = std::move(argument);
+  context["argument"] = std::string{argument.begin(), argument.end()};
   return {static_cast<uint8_t>(code), atom("parser"),
           make_message(std::move(context))};
 }
