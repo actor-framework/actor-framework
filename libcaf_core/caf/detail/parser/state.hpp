@@ -34,15 +34,15 @@ struct state {
   int32_t line;
   int32_t column;
 
-  state() : i(), e(), code(pec::success), line(1), column(1) {
+  state() noexcept : i(), e(), code(pec::success), line(1), column(1) {
     // nop
   }
 
-  explicit state(Iterator first) : state() {
+  explicit state(Iterator first) noexcept : state() {
     i = first;
   }
 
-  state(Iterator first, Sentinel last) : state() {
+  state(Iterator first, Sentinel last) noexcept : state() {
     i = first;
     e = last;
   }
