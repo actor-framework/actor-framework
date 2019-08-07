@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <cstring>
 
+// clang-format off
 #ifdef CAF_WINDOWS
 #  ifndef _WIN32_WINNT
 #    define _WIN32_WINNT 0x0600
@@ -41,6 +42,7 @@
 #  include <sys/ioctl.h>
 #  include <arpa/inet.h>
 #endif
+// clang-format on
 
 #include <map>
 #include <memory>
