@@ -19,10 +19,15 @@
 #pragma once
 
 #include <cstdint>
+#include <iterator>
+#include <utility>
+#include <vector>
 
 #include "caf/detail/parser/state.hpp"
+#include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/string_view.hpp"
+#include "caf/unit.hpp"
 
 namespace caf {
 namespace detail {
@@ -58,6 +63,58 @@ void parse(parse_state& ps, double& x);
 // -- CAF types ----------------------------------------------------------------
 
 void parse(parse_state& ps, atom_value& x);
+
+// -- container types ----------------------------------------------------------
+
+template <class First, class Second>
+void parse(parse_state& ps, std::pair<First, Second>& kvp) {
+  parse(ps, kvp.first);
+  if (ps.code > pec::trailing_character)
+    return;
+  if (!ps.consume('=')) {
+    ps.code = pec::unexpected_character;
+    return;
+  }
+  parse(ps, kvp.second);
+}
+
+template <class T>
+enable_if_tt<is_iterable<T>> parse(parse_state& ps, T& xs) {
+  using value_type = deconst_kvp_pair_t<typename T::value_type>;
+  static constexpr auto is_map_type = is_pair<value_type>::value;
+  static constexpr auto opening_char = is_map_type ? '{' : '[';
+  static constexpr auto closing_char = is_map_type ? '}' : ']';
+  auto out = std::inserter(xs, xs.end());
+  if (ps.consume(opening_char)) {
+    do {
+      if (ps.consume(closing_char)) {
+        ps.skip_whitespaces();
+        ps.code = ps.at_end() ? pec::success : pec::trailing_character;
+        return;
+      }
+      value_type tmp;
+      parse(ps, tmp);
+      if (ps.code > pec::trailing_character)
+        return;
+      *out++ = std::move(tmp);
+    } while (ps.consume(','));
+    if (ps.consume(closing_char)) {
+      ps.skip_whitespaces();
+      ps.code = ps.at_end() ? pec::success : pec::trailing_character;
+    } else {
+      ps.code = pec::unexpected_character;
+    }
+    return;
+  }
+  do {
+    value_type tmp;
+    parse(ps, tmp);
+    if (ps.code > pec::trailing_character)
+      return;
+    *out++ = std::move(tmp);
+  } while (ps.consume(','));
+  ps.code = ps.at_end() ? pec::success : pec::trailing_character;
+}
 
 } // namespace detail
 } // namespace caf

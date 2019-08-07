@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <cctype>
 #include <cstdint>
 
 #include "caf/pec.hpp"
@@ -66,6 +67,28 @@ struct state {
   /// Returns the null terminator if `i == e`, otherwise the current character.
   char current() const noexcept {
     return i != e ? *i : '\0';
+  }
+
+  /// Checks whether `i == e`.
+  bool at_end() const noexcept {
+    return current() == '\0';
+  }
+
+  /// Skips any whitespaces characters in the input.
+  void skip_whitespaces() noexcept {
+    auto c = current();
+    while (isspace(c))
+      c = next();
+  }
+
+  /// Tries to read `x` as the next character (skips any whitespaces).
+  bool consume(char x) noexcept {
+    skip_whitespaces();
+    if (current() == x) {
+      next();
+      return true;
+    }
+    return false;
   }
 };
 

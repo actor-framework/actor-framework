@@ -36,7 +36,7 @@ expected<T> read(string_view str) {
   detail::parse(ps, result);
   if (ps.code == pec::success)
     return result;
-  return ps.code;
+  return make_error(ps.code, ps.line, ps.column);
 }
 
 } // namespace
@@ -127,4 +127,25 @@ CAF_TEST(valid atom value) {
   CAF_CHECK_EQUAL(read<atom_value>("foooooooooo"), pec::too_many_characters);
   CAF_CHECK_EQUAL(read<atom_value>("foo,bar"), pec::trailing_character);
   CAF_CHECK_EQUAL(read<atom_value>("$"), pec::unexpected_character);
+}
+
+CAF_TEST(lists) {
+  using int_list = std::vector<int>;
+  using atom_list = std::vector<atom_value>;
+  CAF_CHECK_EQUAL(read<int_list>("1, 2, 3"), int_list({1, 2, 3}));
+  CAF_CHECK_EQUAL(read<int_list>("[1, 2, 3]"), int_list({1, 2, 3}));
+  CAF_CHECK_EQUAL(read<atom_list>("foo, bar, baz"),
+                  atom_list({atom("foo"), atom("bar"), atom("baz")}));
+  CAF_CHECK_EQUAL(read<atom_list>("'foo', bar, 'baz'"),
+                  atom_list({atom("foo"), atom("bar"), atom("baz")}));
+  CAF_CHECK_EQUAL(read<atom_list>("[ foo , 'bar', 'baz']    "),
+                  atom_list({atom("foo"), atom("bar"), atom("baz")}));
+}
+
+CAF_TEST(maps) {
+  using int_map = std::map<atom_value, int>;
+  CAF_CHECK_EQUAL(read<int_map>("a=1, 'b' = 42"),
+                  int_map({{atom("a"), 1}, {atom("b"), 42}}));
+  CAF_CHECK_EQUAL(read<int_map>("{   a  = 1  , 'b'   =    42   ,} \t "),
+                  int_map({{atom("a"), 1}, {atom("b"), 42}}));
 }
