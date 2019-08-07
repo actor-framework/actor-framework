@@ -90,12 +90,8 @@ caf::expected<socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
                                reinterpret_cast<setsockopt_ptr>(&on),
                                static_cast<socket_size_type>(sizeof(on))));
   }
-  using sockaddr_type =
-    typename std::conditional<
-      Family == AF_INET,
-      sockaddr_in,
-      sockaddr_in6
-    >::type;
+  using sockaddr_type = typename std::conditional<
+    Family == AF_INET, sockaddr_in, sockaddr_in6>::type;
   sockaddr_type sa;
   memset(&sa, 0, sizeof(sockaddr_type));
   family_of(sa) = Family;
@@ -105,8 +101,8 @@ caf::expected<socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
                   inet_pton(Family, addr, &addr_of(sa)));
   port_of(sa) = htons(port);
   CAF_NET_SYSCALL("bind", res, !=, 0,
-            bind(fd, reinterpret_cast<sockaddr*>(&sa),
-                 static_cast<socket_size_type>(sizeof(sa))));
+                  bind(fd, reinterpret_cast<sockaddr*>(&sa),
+                       static_cast<socket_size_type>(sizeof(sa))));
   return sguard.release();
 }
 
@@ -114,22 +110,18 @@ template <int Family>
 bool ip_connect(socket fd, const std::string& host, uint16_t port,
                 bool nonblock = true) {
   CAF_LOG_TRACE("Family =" << (Family == AF_INET ? "AF_INET" : "AF_INET6")
-                << CAF_ARG(fd.id) << CAF_ARG(host));
+                           << CAF_ARG(fd.id) << CAF_ARG(host));
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
-  using sockaddr_type =
-    typename std::conditional<
-      Family == AF_INET,
-      sockaddr_in,
-      sockaddr_in6
-    >::type;
+  using sockaddr_type = typename std::conditional<
+    Family == AF_INET, sockaddr_in, sockaddr_in6>::type;
   sockaddr_type sa;
   memset(&sa, 0, sizeof(sockaddr_type));
   inet_pton(Family, host.c_str(), &addr_of(sa));
   family_of(sa) = Family;
-  port_of(sa)   = htons(port);
+  port_of(sa) = htons(port);
   using sa_ptr = const sockaddr*;
   return ::connect(fd.id, reinterpret_cast<sa_ptr>(&sa), sizeof(sa)) == 0
-    || (nonblock && errno == EINPROGRESS);
+         || (nonblock && errno == EINPROGRESS);
 }
 
 } // namespace
@@ -147,8 +139,9 @@ expected<stream_socket> tcp::make_accept_socket(uint16_t port, const char* addr,
   for (auto& elem : addrs) {
     auto hostname = elem.first.c_str();
     auto p = elem.second == ip::v4
-           ? new_ip_acceptor_impl<AF_INET>(port, hostname, reuse_addr, any)
-           : new_ip_acceptor_impl<AF_INET6>(port, hostname, reuse_addr, any);
+               ? new_ip_acceptor_impl<AF_INET>(port, hostname, reuse_addr, any)
+               : new_ip_acceptor_impl<AF_INET6>(port, hostname, reuse_addr,
+                                                any);
     if (!p) {
       CAF_LOG_DEBUG(p.error());
       continue;
@@ -158,9 +151,9 @@ expected<stream_socket> tcp::make_accept_socket(uint16_t port, const char* addr,
   }
   if (fd == invalid_socket_id) {
     CAF_LOG_WARNING("could not open tcp socket on:" << CAF_ARG(port)
-                    << CAF_ARG(addr_str));
-    return make_error(sec::cannot_open_port, "tcp socket creation failed",
-                      port, addr_str);
+                                                    << CAF_ARG(addr_str));
+    return make_error(sec::cannot_open_port, "tcp socket creation failed", port,
+                      addr_str);
   }
   socket_guard sguard{fd};
   CAF_NET_SYSCALL("listen", tmp, !=, 0, listen(fd.id, SOMAXCONN));
@@ -169,9 +162,9 @@ expected<stream_socket> tcp::make_accept_socket(uint16_t port, const char* addr,
   return socket_cast<stream_socket>(sguard.release());
 }
 
-expected<stream_socket>
-tcp::make_connected_socket(std::string host, uint16_t port,
-                           optional<ip> preferred) {
+expected<stream_socket> tcp::make_connected_socket(std::string host,
+                                                   uint16_t port,
+                                                   optional<ip> preferred) {
   CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port) << CAF_ARG(preferred));
   CAF_LOG_DEBUG("try to connect to:" << CAF_ARG(host) << CAF_ARG(port));
   auto res = interfaces::native_address(host, std::move(preferred));
@@ -192,8 +185,8 @@ tcp::make_connected_socket(std::string host, uint16_t port,
   socket_guard sguard(fd);
   if (proto == ip::v6) {
     if (ip_connect<AF_INET6>(fd, res->first, port)) {
-      CAF_LOG_INFO("successfully connected to (IPv6):"
-                  << CAF_ARG(host) << CAF_ARG(port));
+      CAF_LOG_INFO("successfully connected to (IPv6):" << CAF_ARG(host)
+                                                       << CAF_ARG(port));
       return socket_cast<stream_socket>(sguard.release());
     }
     sguard.close();
@@ -202,11 +195,11 @@ tcp::make_connected_socket(std::string host, uint16_t port,
   }
   if (!ip_connect<AF_INET>(fd, res->first, port)) {
     CAF_LOG_WARNING("could not connect to:" << CAF_ARG(host) << CAF_ARG(port));
-    return make_error(sec::cannot_connect_to_node,
-                      "ip_connect failed", host, port);
+    return make_error(sec::cannot_connect_to_node, "ip_connect failed", host,
+                      port);
   }
-  CAF_LOG_INFO("successfully connected to (IPv4):"
-              << CAF_ARG(host) << CAF_ARG(port));
+  CAF_LOG_INFO("successfully connected to (IPv4):" << CAF_ARG(host)
+                                                   << CAF_ARG(port));
   return socket_cast<stream_socket>(sguard.release());
 }
 

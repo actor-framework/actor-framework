@@ -18,11 +18,11 @@
 
 #define CAF_SUITE doorman
 
+#include "caf/policy/doorman.hpp"
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/tcp.hpp"
-#include "caf/policy/doorman.hpp"
 
 #include "caf/test/dsl.hpp"
 
@@ -77,7 +77,8 @@ public:
 
   template <class Transport>
   void resolve(Transport&, std::string path, actor listener) {
-    anon_send(listener, resolve_atom::value, "the resolved path is still " + path);
+    anon_send(listener, resolve_atom::value,
+              "the resolved path is still " + path);
   }
 
   template <class Transport>
@@ -127,8 +128,7 @@ CAF_TEST(doorman accept) {
   auto acceptor = unbox(tcp::make_accept_socket(0, nullptr, false));
   auto port = unbox(local_port(socket_cast<network_socket>(acceptor)));
   CAF_MESSAGE("opened acceptor on port " << port);
-  auto mgr = make_endpoint_manager(mpx, sys,
-                                   policy::doorman{acceptor},
+  auto mgr = make_endpoint_manager(mpx, sys, policy::doorman{acceptor},
                                    dummy_application_factory{});
   CAF_CHECK_EQUAL(mgr->init(), none);
   handle_io_event();

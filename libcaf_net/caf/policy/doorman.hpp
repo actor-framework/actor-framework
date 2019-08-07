@@ -28,7 +28,6 @@
 #include "caf/policy/scribe.hpp"
 #include "caf/send.hpp"
 
-
 namespace caf {
 namespace policy {
 
@@ -54,18 +53,19 @@ public:
 
   template <class Parent>
   bool handle_read_event(Parent& parent) {
-    auto sck = net::tcp::accept(net::socket_cast<net::stream_socket>(acceptor_));
+    auto sck = net::tcp::accept(
+      net::socket_cast<net::stream_socket>(acceptor_));
     if (!sck) {
       CAF_LOG_ERROR("accept failed:" << sck.error());
       return false;
     }
     auto mpx = parent.multiplexer();
     if (!mpx) {
-      CAF_LOG_DEBUG("could not acquire multiplexer to create a new endpoint manager");
+      CAF_LOG_DEBUG(
+        "could not acquire multiplexer to create a new endpoint manager");
       return false;
     }
-    auto child = make_endpoint_manager(mpx, parent.system(),
-                                       scribe{*sck},
+    auto child = make_endpoint_manager(mpx, parent.system(), scribe{*sck},
                                        parent.application().make());
     if (auto err = child->init()) {
       return false;

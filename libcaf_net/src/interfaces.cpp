@@ -18,33 +18,33 @@
 
 #include "caf/net/interfaces.hpp"
 
+#include <algorithm>
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
-#include <algorithm>
 
 #ifdef CAF_WINDOWS
-# ifndef _WIN32_WINNT
-#   define _WIN32_WINNT 0x0600
-# endif
-# include <iostream>
-# include <winsock2.h>
-# include <ws2tcpip.h>
-# include <iphlpapi.h>
+#  ifndef _WIN32_WINNT
+#    define _WIN32_WINNT 0x0600
+#  endif
+#  include <iostream>
+#  include <winsock2.h>
+#  include <ws2tcpip.h>
+#  include <iphlpapi.h>
 #else
-# include <sys/socket.h>
-# include <netinet/in.h>
-# include <net/if.h>
-# include <unistd.h>
-# include <netdb.h>
-# include <ifaddrs.h>
-# include <sys/ioctl.h>
-# include <arpa/inet.h>
+#  include <sys/socket.h>
+#  include <netinet/in.h>
+#  include <net/if.h>
+#  include <unistd.h>
+#  include <netdb.h>
+#  include <ifaddrs.h>
+#  include <sys/ioctl.h>
+#  include <arpa/inet.h>
 #endif
 
 #include <map>
-#include <string>
 #include <memory>
+#include <string>
 #include <utility>
 
 #include "caf/detail/socket_sys_includes.hpp"
@@ -69,24 +69,22 @@ void* fetch_in_addr(int family, sockaddr* addr) {
   return vptr(&reinterpret_cast<sockaddr_in6*>(addr)->sin6_addr);
 }
 
-int fetch_addr_str(bool get_ipv4, bool get_ipv6,
-                   char (&buf)[INET6_ADDRSTRLEN],
+int fetch_addr_str(bool get_ipv4, bool get_ipv6, char (&buf)[INET6_ADDRSTRLEN],
                    sockaddr* addr) {
   if (addr == nullptr)
     return AF_UNSPEC;
   auto family = addr->sa_family;
   auto in_addr = fetch_in_addr(family, addr);
   return ((family == AF_INET && get_ipv4) || (family == AF_INET6 && get_ipv6))
-         && inet_ntop(family, in_addr, buf, INET6_ADDRSTRLEN) == buf
-         ? family
-         : AF_UNSPEC;
+             && inet_ntop(family, in_addr, buf, INET6_ADDRSTRLEN) == buf
+           ? family
+           : AF_UNSPEC;
 }
 
 } // namespace
 
 optional<std::pair<std::string, ip>>
-interfaces::native_address(const std::string& host,
-                           optional<ip> preferred) {
+interfaces::native_address(const std::string& host, optional<ip> preferred) {
   addrinfo hint;
   memset(&hint, 0, sizeof(hint));
   hint.ai_socktype = SOCK_STREAM;
@@ -100,8 +98,7 @@ interfaces::native_address(const std::string& host,
   for (auto i = addrs.get(); i != nullptr; i = i->ai_next) {
     auto family = fetch_addr_str(true, true, buffer, i->ai_addr);
     if (family != AF_UNSPEC)
-      return std::make_pair(buffer, family == AF_INET ? ip::v4
-                                                      : ip::v6);
+      return std::make_pair(buffer, family == AF_INET ? ip::v4 : ip::v6);
   }
   return none;
 }

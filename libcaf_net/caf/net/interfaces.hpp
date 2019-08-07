@@ -32,8 +32,7 @@ class interfaces {
 public:
   /// Returns a native IPv4 or IPv6 translation of `host`.
   static optional<std::pair<std::string, ip>>
-  native_address(const std::string& host,
-                 optional<ip> preferred = none);
+  native_address(const std::string& host, optional<ip> preferred = none);
 
   /// Returns the host and protocol available for a local server socket
   static std::vector<std::pair<std::string, ip>>

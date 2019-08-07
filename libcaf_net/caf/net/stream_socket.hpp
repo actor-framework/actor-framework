@@ -18,12 +18,11 @@
 
 #pragma once
 
-
 #include "caf/expected.hpp"
-#include "caf/variant.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/network_socket.hpp"
 #include "caf/sec.hpp"
+#include "caf/variant.hpp"
 
 namespace caf {
 namespace net {

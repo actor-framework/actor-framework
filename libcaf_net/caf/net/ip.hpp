@@ -25,10 +25,7 @@ namespace caf {
 namespace net {
 
 // IP version tag.
-enum class ip {
-  v4,
-  v6
-};
+enum class ip { v4, v6 };
 
 /// @relates ip
 inline std::string to_string(ip x) {
