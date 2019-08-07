@@ -21,6 +21,7 @@
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/multiplexer.hpp"
+#include "caf/net/tcp.hpp"
 #include "caf/policy/doorman.hpp"
 
 #include "caf/test/dsl.hpp"
@@ -64,13 +65,14 @@ public:
   }
 
   template <class Transport>
-  bool handle_read_event(Transport&) {
-    return false;
+  void write_message(Transport& transport,
+                     std::unique_ptr<endpoint_manager::message> msg) {
+    transport.write_packet(msg->payload);
   }
 
-  template <class Transport>
-  bool handle_write_event(Transport&) {
-    return false;
+  template <class Parent>
+  void handle_data(Parent&, span<char>) {
+    // nop
   }
 
   template <class Transport>
@@ -95,6 +97,11 @@ public:
     return dummy_application::serialize(sys, x);
   }
 
+  template <class Parent>
+  void init(Parent&) {
+    // nop
+  }
+
   dummy_application make() const {
     return dummy_application{};
   }
@@ -104,11 +111,36 @@ public:
 
 CAF_TEST_FIXTURE_SCOPE(doorman_tests, fixture)
 
-CAF_TEST(doorman creation) {
-  auto acceptor = unbox(make_accept_socket(0, nullptr, false));
+CAF_TEST(tcp connect) {
+  auto acceptor = unbox(tcp::make_accept_socket(0, nullptr, false));
+  auto port = unbox(local_port(socket_cast<network_socket>(acceptor)));
+  CAF_MESSAGE("opened acceptor on port " << port);
+  auto con_fd = unbox(tcp::make_connected_socket("localhost", port));
+  auto acc_fd = unbox(tcp::accept(acceptor));
+  CAF_MESSAGE("accepted connection");
+  close(con_fd);
+  close(acc_fd);
+  close(acceptor);
+}
+
+CAF_TEST(doorman accept) {
+  auto acceptor = unbox(tcp::make_accept_socket(0, nullptr, false));
+  auto port = unbox(local_port(socket_cast<network_socket>(acceptor)));
+  CAF_MESSAGE("opened acceptor on port " << port);
   auto mgr = make_endpoint_manager(mpx, sys,
                                    policy::doorman{acceptor},
                                    dummy_application_factory{});
+  CAF_CHECK_EQUAL(mgr->init(), none);
+  handle_io_event();
+  auto before = mpx->num_socket_managers();
+  CAF_MESSAGE("connecting to doorman");
+  auto fd = unbox(tcp::make_connected_socket("localhost", port));
+  CAF_MESSAGE("waiting for connection");
+  while (mpx->num_socket_managers() != before + 1)
+    handle_io_event();
+  CAF_MESSAGE("connected");
+  close(acceptor);
+  close(fd);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -24,8 +24,10 @@
 #include "caf/logger.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/net/stream_socket.hpp"
+#include "caf/net/tcp.hpp"
 #include "caf/policy/scribe.hpp"
 #include "caf/send.hpp"
+
 
 namespace caf {
 namespace policy {
@@ -44,20 +46,17 @@ public:
   }
 
   template <class Parent>
-  error init(Parent&) {
+  error init(Parent& parent) {
+    parent.application().init(parent);
+    parent.mask_add(net::operation::read);
     return none;
   }
 
   template <class Parent>
   bool handle_read_event(Parent& parent) {
-    auto sck = accept(acceptor_.id, nullptr, nullptr);
-    if (sck == net::invalid_socket_id) {
-      auto err = net::last_socket_error();
-      if (err != std::errc::operation_would_block
-          && err != std::errc::resource_unavailable_try_again) {
-        CAF_LOG_ERROR("accept failed:" << net::socket_error_as_string(err));
-        return false;
-      }
+    auto sck = net::tcp::accept(net::socket_cast<net::stream_socket>(acceptor_));
+    if (!sck) {
+      CAF_LOG_ERROR("accept failed:" << sck.error());
       return false;
     }
     auto mpx = parent.multiplexer();
@@ -65,8 +64,8 @@ public:
       CAF_LOG_DEBUG("could not acquire multiplexer to create a new endpoint manager");
       return false;
     }
-    auto child = make_endpoint_manager(std::move(mpx), parent.system(),
-                                       scribe{sck},
+    auto child = make_endpoint_manager(mpx, parent.system(),
+                                       scribe{*sck},
                                        parent.application().make());
     if (auto err = child->init()) {
       return false;
