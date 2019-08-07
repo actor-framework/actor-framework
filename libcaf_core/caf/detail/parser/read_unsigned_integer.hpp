@@ -42,8 +42,9 @@ namespace parser {
 /// Reads a number, i.e., on success produces either an `int64_t` or a
 /// `double`.
 template <class Iterator, class Sentinel, class Consumer>
-void read_unsigned_integer(state<Iterator, Sentinel>& ps, Consumer& consumer) {
-  using value_type = typename Consumer::value_type;
+void read_unsigned_integer(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
+  using consumer_type = typename std::decay<Consumer>::type;
+  using value_type = typename consumer_type::value_type;
   static_assert(std::is_integral<value_type>::value
                   && std::is_unsigned<value_type>::value,
                 "expected an unsigned integer type");
@@ -60,46 +61,45 @@ void read_unsigned_integer(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   state(init) {
     transition(init, " \t")
     transition(has_plus, '+')
-    transition(pos_zero, '0')
     epsilon(has_plus)
   }
   // "+" or "-" alone aren't numbers.
   state(has_plus) {
-    transition(pos_zero, '0')
-    epsilon(pos_dec)
+    transition(zero, '0')
+    epsilon(dec, decimal_chars)
   }
   // Disambiguate base.
-  term_state(pos_zero) {
-    transition(start_pos_bin, "bB")
-    transition(start_pos_hex, "xX")
-    epsilon(pos_oct)
+  term_state(zero) {
+    transition(start_bin, "bB")
+    transition(start_hex, "xX")
+    epsilon(oct)
   }
   // Binary integers.
-  state(start_pos_bin) {
-    epsilon(pos_bin)
+  state(start_bin) {
+    epsilon(bin, "01")
   }
-  term_state(pos_bin) {
-    transition(pos_bin, "01", add_ascii<2>(result, ch), pec::integer_overflow)
+  term_state(bin) {
+    transition(bin, "01", add_ascii<2>(result, ch), pec::integer_overflow)
   }
   // Octal integers.
-  state(start_pos_oct) {
-    epsilon(pos_oct)
+  state(start_oct) {
+    epsilon(oct, octal_chars)
   }
-  term_state(pos_oct) {
-    transition(pos_oct, octal_chars, add_ascii<8>(result, ch),
+  term_state(oct) {
+    transition(oct, octal_chars, add_ascii<8>(result, ch),
                pec::integer_overflow)
   }
   // Hexal integers.
-  state(start_pos_hex) {
-    epsilon(pos_hex)
+  state(start_hex) {
+    epsilon(hex, hexadecimal_chars)
   }
-  term_state(pos_hex) {
-    transition(pos_hex, hexadecimal_chars, add_ascii<16>(result, ch),
+  term_state(hex) {
+    transition(hex, hexadecimal_chars, add_ascii<16>(result, ch),
                pec::integer_overflow)
   }
   // Reads the integer part of the mantissa or a positive decimal integer.
-  term_state(pos_dec) {
-    transition(pos_dec, decimal_chars, add_ascii<10>(result, ch),
+  term_state(dec) {
+    transition(dec, decimal_chars, add_ascii<10>(result, ch),
                pec::integer_overflow)
   }
   fin();

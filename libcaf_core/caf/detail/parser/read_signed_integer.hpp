@@ -42,8 +42,9 @@ namespace parser {
 /// Reads a number, i.e., on success produces either an `int64_t` or a
 /// `double`.
 template <class Iterator, class Sentinel, class Consumer>
-void read_signed_integer(state<Iterator, Sentinel>& ps, Consumer& consumer) {
-  using value_type = typename Consumer::value_type;
+void read_signed_integer(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
+  using consumer_type = typename std::decay<Consumer>::type;
+  using value_type = typename consumer_type::value_type;
   static_assert(std::is_integral<value_type>::value
                   && std::is_signed<value_type>::value,
                 "expected a signed integer type");
@@ -61,17 +62,16 @@ void read_signed_integer(state<Iterator, Sentinel>& ps, Consumer& consumer) {
     transition(init, " \t")
     transition(has_plus, '+')
     transition(has_minus, '-')
-    transition(pos_zero, '0')
     epsilon(has_plus)
   }
   // "+" or "-" alone aren't numbers.
   state(has_plus) {
     transition(pos_zero, '0')
-    epsilon(pos_dec)
+    epsilon(pos_dec, decimal_chars)
   }
   state(has_minus) {
     transition(neg_zero, '0')
-    epsilon(neg_dec)
+    epsilon(neg_dec, decimal_chars)
   }
   // Disambiguate base.
   term_state(pos_zero) {
@@ -86,27 +86,27 @@ void read_signed_integer(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   }
   // Binary integers.
   state(start_pos_bin) {
-    epsilon(pos_bin)
+    epsilon(pos_bin, "01")
   }
   term_state(pos_bin) {
     transition(pos_bin, "01", add_ascii<2>(result, ch), pec::integer_overflow)
   }
   state(start_neg_bin) {
-    epsilon(neg_bin)
+    epsilon(neg_bin, "01")
   }
   term_state(neg_bin) {
     transition(neg_bin, "01", sub_ascii<2>(result, ch), pec::integer_underflow)
   }
   // Octal integers.
   state(start_pos_oct) {
-    epsilon(pos_oct)
+    epsilon(pos_oct, octal_chars)
   }
   term_state(pos_oct) {
     transition(pos_oct, octal_chars, add_ascii<8>(result, ch),
                pec::integer_overflow)
   }
   state(start_neg_oct) {
-    epsilon(neg_oct)
+    epsilon(neg_oct, octal_chars)
   }
   term_state(neg_oct) {
     transition(neg_oct, octal_chars, sub_ascii<8>(result, ch),
@@ -114,14 +114,14 @@ void read_signed_integer(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   }
   // Hexal integers.
   state(start_pos_hex) {
-    epsilon(pos_hex)
+    epsilon(pos_hex, hexadecimal_chars)
   }
   term_state(pos_hex) {
     transition(pos_hex, hexadecimal_chars, add_ascii<16>(result, ch),
                pec::integer_overflow)
   }
   state(start_neg_hex) {
-    epsilon(neg_hex)
+    epsilon(neg_hex, hexadecimal_chars)
   }
   term_state(neg_hex) {
     transition(neg_hex, hexadecimal_chars, sub_ascii<16>(result, ch),
