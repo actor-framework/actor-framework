@@ -19,6 +19,7 @@
 #include "caf/detail/parse.hpp"
 
 #include "caf/detail/consumer.hpp"
+#include "caf/detail/parser/read_atom.hpp"
 #include "caf/detail/parser/read_floating_point.hpp"
 #include "caf/detail/parser/read_signed_integer.hpp"
 #include "caf/detail/parser/read_unsigned_integer.hpp"
@@ -50,6 +51,10 @@ PARSE_IMPL(uint64_t, unsigned_integer)
 PARSE_IMPL(float, floating_point)
 
 PARSE_IMPL(double, floating_point)
+
+void parse(parse_state& ps, atom_value& x) {
+  parser::read_atom(ps, make_consumer(x), true);
+}
 
 } // namespace detail
 } // namespace caf

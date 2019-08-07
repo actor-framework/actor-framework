@@ -120,3 +120,11 @@ CAF_TEST(invalid floating point numbers) {
   CHECK_INVALID(double, "--0.01e10", pec::unexpected_character);
   CHECK_INVALID(double, "++10e-10", pec::unexpected_character);
 }
+
+CAF_TEST(valid atom value) {
+  CAF_CHECK_EQUAL(read<atom_value>("foo"), atom("foo"));
+  CAF_CHECK_EQUAL(read<atom_value>("'foo'"), atom("foo"));
+  CAF_CHECK_EQUAL(read<atom_value>("foooooooooo"), pec::too_many_characters);
+  CAF_CHECK_EQUAL(read<atom_value>("foo,bar"), pec::trailing_character);
+  CAF_CHECK_EQUAL(read<atom_value>("$"), pec::unexpected_character);
+}

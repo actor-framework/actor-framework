@@ -41,7 +41,8 @@ namespace parser {
 /// Reads a number, i.e., on success produces either an `int64_t` or a
 /// `double`.
 template <class Iterator, class Sentinel, class Consumer>
-void read_atom(state<Iterator, Sentinel>& ps, Consumer& consumer) {
+void read_atom(state<Iterator, Sentinel>& ps, Consumer&& consumer,
+               bool accept_unquoted = false) {
   size_t pos = 0;
   char buf[11];
   memset(buf, 0, sizeof(buf));
@@ -58,10 +59,12 @@ void read_atom(state<Iterator, Sentinel>& ps, Consumer& consumer) {
     if (ps.code <= pec::trailing_character)
       consumer.value(atom(buf));
   });
+  // clang-format off
   start();
   state(init) {
     transition(init, " \t")
     transition(read_chars, '\'')
+    epsilon_if(accept_unquoted, read_unquoted_chars, is_legal)
   }
   state(read_chars) {
     transition(done, '\'')
@@ -70,7 +73,11 @@ void read_atom(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   term_state(done) {
     transition(done, " \t")
   }
+  term_state(read_unquoted_chars) {
+    transition(read_unquoted_chars, is_legal, append(ch), pec::too_many_characters)
+  }
   fin();
+  // clang-format on
 }
 
 } // namespace parser
