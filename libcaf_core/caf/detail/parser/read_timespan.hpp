@@ -23,17 +23,12 @@
 #include <string>
 
 #include "caf/config.hpp"
-#include "caf/detail/parser/chars.hpp"
-#include "caf/detail/parser/is_char.hpp"
-#include "caf/detail/parser/read_number.hpp"
-#include "caf/detail/parser/read_timespan.hpp"
+#include "caf/detail/parser/read_signed_integer.hpp"
 #include "caf/detail/parser/state.hpp"
 #include "caf/detail/scope_guard.hpp"
-#include "caf/none.hpp"
 #include "caf/optional.hpp"
 #include "caf/pec.hpp"
 #include "caf/timestamp.hpp"
-#include "caf/variant.hpp"
 
 CAF_PUSH_UNUSED_LABEL_WARNING
 
@@ -43,48 +38,51 @@ namespace caf {
 namespace detail {
 namespace parser {
 
-/// Reads a number or a duration, i.e., on success produces an `int64_t`, a
-/// `double`, or a `timespan`.
+/// Reads a timespan.
 template <class Iterator, class Sentinel, class Consumer>
-void read_number_or_timespan(state<Iterator, Sentinel>& ps,
-                             Consumer& consumer) {
+void read_timespan(state<Iterator, Sentinel>& ps, Consumer& consumer,
+                   optional<int64_t> num = none) {
   using namespace std::chrono;
   struct interim_consumer {
-    variant<none_t, int64_t, double> interim;
-    void value(int64_t x) {
-      interim = x;
+    using value_type = int64_t;
+
+    void value(int64_t y) {
+      x = y;
     }
-    void value(double x) {
-      interim = x;
-    }
+
+    int64_t x = 0;
   };
   interim_consumer ic;
-  auto has_int = [&] { return holds_alternative<int64_t>(ic.interim); };
-  auto has_dbl = [&] { return holds_alternative<double>(ic.interim); };
-  auto get_int = [&] { return get<int64_t>(ic.interim); };
+  timespan result;
   auto g = make_scope_guard([&] {
-    if (ps.code <= pec::trailing_character) {
-      if (has_dbl())
-        consumer.value(get<double>(ic.interim));
-      else if (has_int())
-        consumer.value(get_int());
-    }
+    if (ps.code <= pec::trailing_character)
+      consumer.value(result);
   });
   // clang-format off
   start();
   state(init) {
-    fsm_epsilon(read_number(ps, ic), has_number)
+    epsilon_if(num, has_integer, any_char, ic.x = *num)
+    fsm_epsilon(read_signed_integer(ps, ic), has_integer)
   }
-  term_state(has_number) {
-    epsilon_if(has_int(), has_integer)
-    epsilon_if(has_dbl(), has_double)
+  state(has_integer) {
+    transition(have_u, 'u')
+    transition(have_n, 'n')
+    transition(have_m, 'm')
+    transition(done, 's', result = seconds(ic.x))
+    transition(done, 'h', result = hours(ic.x))
   }
-  term_state(has_double) {
-    error_transition(pec::fractional_timespan, "unmsh")
+  state(have_u) {
+    transition(done, 's', result = microseconds(ic.x))
   }
-  term_state(has_integer) {
-    fsm_epsilon(read_timespan(ps, consumer, get_int()),
-                done, "unmsh", g.disable())
+  state(have_n) {
+    transition(done, 's', result = nanoseconds(ic.x))
+  }
+  state(have_m) {
+    transition(have_mi, 'i')
+    transition(done, 's', result = milliseconds(ic.x))
+  }
+  state(have_mi) {
+    transition(done, 'n', result = minutes(ic.x))
   }
   term_state(done) {
     // nop
