@@ -19,6 +19,7 @@
 #pragma once
 
 #include <cstdint>
+#include <type_traits>
 
 #include "caf/config.hpp"
 #include "caf/detail/parser/add_ascii.hpp"
@@ -28,6 +29,7 @@
 #include "caf/detail/parser/state.hpp"
 #include "caf/detail/parser/sub_ascii.hpp"
 #include "caf/detail/scope_guard.hpp"
+#include "caf/optional.hpp"
 #include "caf/pec.hpp"
 
 CAF_PUSH_UNUSED_LABEL_WARNING
@@ -44,7 +46,7 @@ namespace parser {
 /// @param start_value Allows another parser to pre-initialize this parser with
 ///                    the pre-decimal value.
 template <class Iterator, class Sentinel, class Consumer, class ValueType>
-void read_floating_point(state<Iterator, Sentinel>& ps, Consumer& consumer,
+void read_floating_point(state<Iterator, Sentinel>& ps, Consumer&& consumer,
                          optional<ValueType> start_value,
                          bool negative = false) {
   // Any exponent larger than 511 always overflows.
@@ -184,8 +186,9 @@ void read_floating_point(state<Iterator, Sentinel>& ps, Consumer& consumer,
 }
 
 template <class Iterator, class Sentinel, class Consumer>
-void read_floating_point(state<Iterator, Sentinel>& ps, Consumer& consumer) {
-  using value_type = typename Consumer::value_type;
+void read_floating_point(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
+  using consumer_type = typename std::decay<Consumer>::type;
+  using value_type = typename consumer_type::value_type;
   return read_floating_point(ps, consumer, optional<value_type>{});
 }
 

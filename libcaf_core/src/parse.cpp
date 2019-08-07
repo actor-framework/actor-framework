@@ -19,6 +19,7 @@
 #include "caf/detail/parse.hpp"
 
 #include "caf/detail/consumer.hpp"
+#include "caf/detail/parser/read_floating_point.hpp"
 #include "caf/detail/parser/read_signed_integer.hpp"
 #include "caf/detail/parser/read_unsigned_integer.hpp"
 
@@ -45,6 +46,10 @@ PARSE_IMPL(uint16_t, unsigned_integer)
 PARSE_IMPL(uint32_t, unsigned_integer)
 
 PARSE_IMPL(uint64_t, unsigned_integer)
+
+PARSE_IMPL(float, floating_point)
+
+PARSE_IMPL(double, floating_point)
 
 } // namespace detail
 } // namespace caf
