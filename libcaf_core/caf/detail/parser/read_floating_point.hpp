@@ -21,8 +21,8 @@
 #include <cstdint>
 
 #include "caf/config.hpp"
-#include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/add_ascii.hpp"
+#include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/is_digit.hpp"
 #include "caf/detail/parser/state.hpp"
