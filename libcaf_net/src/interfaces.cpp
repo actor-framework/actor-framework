@@ -84,6 +84,28 @@ int fetch_addr_str(bool get_ipv4, bool get_ipv6,
 
 } // namespace
 
+optional<std::pair<std::string, ip>>
+interfaces::native_address(const std::string& host,
+                           optional<ip> preferred) {
+  addrinfo hint;
+  memset(&hint, 0, sizeof(hint));
+  hint.ai_socktype = SOCK_STREAM;
+  if (preferred)
+    hint.ai_family = *preferred == ip::v4 ? AF_INET : AF_INET6;
+  addrinfo* tmp = nullptr;
+  if (getaddrinfo(host.c_str(), nullptr, &hint, &tmp) != 0)
+    return none;
+  std::unique_ptr<addrinfo, decltype(freeaddrinfo)*> addrs{tmp, freeaddrinfo};
+  char buffer[INET6_ADDRSTRLEN];
+  for (auto i = addrs.get(); i != nullptr; i = i->ai_next) {
+    auto family = fetch_addr_str(true, true, buffer, i->ai_addr);
+    if (family != AF_UNSPEC)
+      return std::make_pair(buffer, family == AF_INET ? ip::v4
+                                                      : ip::v6);
+  }
+  return none;
+}
+
 std::vector<std::pair<std::string, ip>>
 interfaces::server_address(uint16_t port, const char* host,
                            optional<ip> preferred) {

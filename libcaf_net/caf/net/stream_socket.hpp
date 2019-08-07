@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include <cstdint>
 
 #include "caf/expected.hpp"
 #include "caf/variant.hpp"
@@ -63,7 +62,7 @@ error nodelay(stream_socket x, bool new_value);
 /// @param buf Points to destination buffer.
 /// @param buf_size Specifies the maximum size of the buffer in bytes.
 /// @returns The number of received bytes on success, an error code otherwise.
-/// @relates pipe_socket
+/// @relates stream_socket
 /// @post either the result is a `sec` or a positive (non-zero) integer
 variant<size_t, sec> read(stream_socket x, span<byte> buf);
 
@@ -72,7 +71,7 @@ variant<size_t, sec> read(stream_socket x, span<byte> buf);
 /// @param buf Points to the message to send.
 /// @param buf_size Specifies the size of the buffer in bytes.
 /// @returns The number of written bytes on success, otherwise an error code.
-/// @relates pipe_socket
+/// @relates stream_socket
 /// @post either the result is a `sec` or a positive (non-zero) integer
 variant<size_t, sec> write(stream_socket x, span<const byte> buf);
 
@@ -81,14 +80,6 @@ variant<size_t, sec> write(stream_socket x, span<const byte> buf);
 /// @relates stream_socket
 variant<size_t, sec>
 check_stream_socket_io_res(std::make_signed<size_t>::type res);
-
-/// Creates a new TCP socket to accept connections on a given `port`
-/// optionally limiting connections initiated from `addr`. Setting
-/// `reuse_addr` to true allows rebinding to a port already in use.
-/// @relates stream_socket
-expected<stream_socket> make_accept_socket(uint16_t port,
-                                           const char* addr = nullptr,
-                                           bool reuse_addr = false);
 
 } // namespace net
 } // namespace caf

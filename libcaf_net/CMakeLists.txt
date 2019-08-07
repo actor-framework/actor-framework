@@ -21,6 +21,7 @@ set(LIBCAF_NET_SRCS
   src/socket_manager.cpp
   src/stream_socket.cpp
   src/scribe.cpp
+  src/tcp.cpp
 )
 
 add_custom_target(libcaf_net)
