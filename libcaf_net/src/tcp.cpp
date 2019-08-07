@@ -107,8 +107,7 @@ caf::expected<socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
 }
 
 template <int Family>
-bool ip_connect(socket fd, const std::string& host, uint16_t port,
-                bool nonblock = true) {
+bool ip_connect(socket fd, const std::string& host, uint16_t port) {
   CAF_LOG_TRACE("Family =" << (Family == AF_INET ? "AF_INET" : "AF_INET6")
                            << CAF_ARG(fd.id) << CAF_ARG(host));
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
@@ -120,8 +119,7 @@ bool ip_connect(socket fd, const std::string& host, uint16_t port,
   family_of(sa) = Family;
   port_of(sa) = htons(port);
   using sa_ptr = const sockaddr*;
-  return ::connect(fd.id, reinterpret_cast<sa_ptr>(&sa), sizeof(sa)) == 0
-         || (nonblock && errno == EINPROGRESS);
+  return ::connect(fd.id, reinterpret_cast<sa_ptr>(&sa), sizeof(sa)) == 0;
 }
 
 } // namespace
@@ -181,7 +179,6 @@ expected<stream_socket> tcp::make_connected_socket(std::string host,
   CAF_NET_SYSCALL("socket", fd, ==, -1,
                   ::socket(proto == ip::v4 ? AF_INET : AF_INET6, socktype, 0));
   child_process_inherit(fd, false);
-  nonblocking(fd, true);
   socket_guard sguard(fd);
   if (proto == ip::v6) {
     if (ip_connect<AF_INET6>(fd, res->first, port)) {
