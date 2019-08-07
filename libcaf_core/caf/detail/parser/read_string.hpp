@@ -38,7 +38,7 @@ namespace parser {
 /// Reads a quoted or unquoted string. Quoted strings allow escaping, while
 /// unquoted strings may only include alphanumeric characters.
 template <class Iterator, class Sentinel, class Consumer>
-void read_string(state<Iterator, Sentinel>& ps, Consumer& consumer) {
+void read_string(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   std::string res;
   auto g = caf::detail::make_scope_guard([&] {
     if (ps.code <= pec::trailing_character)

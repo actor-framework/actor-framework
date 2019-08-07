@@ -20,12 +20,11 @@
 
 #include "caf/deserializer.hpp"
 #include "caf/detail/fnv_hash.hpp"
-#include "caf/detail/parser/read_uri.hpp"
+#include "caf/detail/parse.hpp"
 #include "caf/detail/uri_impl.hpp"
 #include "caf/error.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/serializer.hpp"
-#include "caf/uri_builder.hpp"
 
 namespace caf {
 
@@ -101,24 +100,13 @@ std::string to_string(const uri& x) {
   return result;
 }
 
-void parse(detail::parser::state<string_view::iterator> ps, uri& dest) {
-  uri_builder builder;
-  read_uri(ps, builder);
-  if (ps.code <= pec::trailing_character)
-    dest = builder.make();
-}
-
 error parse(string_view str, uri& dest) {
-  using namespace detail::parser;
-  uri_builder builder;
-  state<string_view::iterator> res{str.begin(), str.end()};
-  read_uri(res, builder);
-  if (res.code == pec::success) {
-    dest = builder.make();
+  detail::parse_state ps{str.begin(), str.end()};
+  parse(ps, dest);
+  if (ps.code == pec::success)
     return none;
-  }
-  return make_error(res.code, static_cast<size_t>(res.line),
-                    static_cast<size_t>(res.column));
+  return make_error(ps.code, static_cast<size_t>(ps.line),
+                    static_cast<size_t>(ps.column));
 }
 
 } // namespace caf

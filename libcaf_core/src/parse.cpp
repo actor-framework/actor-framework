@@ -19,10 +19,14 @@
 #include "caf/detail/parse.hpp"
 
 #include "caf/detail/consumer.hpp"
+#include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/read_atom.hpp"
 #include "caf/detail/parser/read_floating_point.hpp"
 #include "caf/detail/parser/read_signed_integer.hpp"
+#include "caf/detail/parser/read_string.hpp"
 #include "caf/detail/parser/read_unsigned_integer.hpp"
+#include "caf/detail/parser/read_uri.hpp"
+#include "caf/uri_builder.hpp"
 
 #define PARSE_IMPL(type, parser_name)                                          \
   void parse(parse_state& ps, type& x) {                                       \
@@ -54,6 +58,39 @@ PARSE_IMPL(double, floating_point)
 
 void parse(parse_state& ps, atom_value& x) {
   parser::read_atom(ps, make_consumer(x), true);
+}
+
+void parse(parse_state& ps, uri& x) {
+  uri_builder builder;
+  if (ps.consume('<')) {
+    parser::read_uri(ps, builder);
+    if (ps.code > pec::trailing_character)
+      return;
+    if (!ps.consume('>')) {
+      ps.code = pec::unexpected_character;
+      return;
+    }
+  } else {
+    read_uri(ps, builder);
+  }
+  if (ps.code <= pec::trailing_character)
+    x = builder.make();
+}
+
+void parse(parse_state& ps, std::string& x) {
+  ps.skip_whitespaces();
+  if (ps.current() == '"') {
+    parser::read_string(ps, make_consumer(x));
+    return;
+  }
+  auto c = ps.current();
+  while (c != '\0' && (isalnum(c) || isspace(c))) {
+    x += c;
+    c = ps.next();
+  }
+  while (!x.empty() && isspace(x.back()))
+    x.pop_back();
+  ps.code = ps.at_end() ? pec::success : pec::trailing_character;
 }
 
 } // namespace detail

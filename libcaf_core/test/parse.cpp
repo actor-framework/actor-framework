@@ -24,6 +24,7 @@
 
 #include "caf/expected.hpp"
 #include "caf/string_view.hpp"
+#include "caf/uri.hpp"
 
 using namespace caf;
 
@@ -121,7 +122,7 @@ CAF_TEST(invalid floating point numbers) {
   CHECK_INVALID(double, "++10e-10", pec::unexpected_character);
 }
 
-CAF_TEST(valid atom value) {
+CAF_TEST(valid atom values) {
   CAF_CHECK_EQUAL(read<atom_value>("foo"), atom("foo"));
   CAF_CHECK_EQUAL(read<atom_value>("'foo'"), atom("foo"));
   CAF_CHECK_EQUAL(read<atom_value>("foooooooooo"), pec::too_many_characters);
@@ -129,9 +130,16 @@ CAF_TEST(valid atom value) {
   CAF_CHECK_EQUAL(read<atom_value>("$"), pec::unexpected_character);
 }
 
+CAF_TEST(strings) {
+  CAF_CHECK_EQUAL(read<std::string>("    foo\t  "), "foo");
+  CAF_CHECK_EQUAL(read<std::string>("  \"  foo\t\"  "), "  foo\t");
+}
+
 CAF_TEST(lists) {
   using int_list = std::vector<int>;
   using atom_list = std::vector<atom_value>;
+  using string_list = std::vector<std::string>;
+  CAF_CHECK_EQUAL(read<int_list>("1"), int_list({1}));
   CAF_CHECK_EQUAL(read<int_list>("1, 2, 3"), int_list({1, 2, 3}));
   CAF_CHECK_EQUAL(read<int_list>("[1, 2, 3]"), int_list({1, 2, 3}));
   CAF_CHECK_EQUAL(read<atom_list>("foo, bar, baz"),
@@ -140,6 +148,8 @@ CAF_TEST(lists) {
                   atom_list({atom("foo"), atom("bar"), atom("baz")}));
   CAF_CHECK_EQUAL(read<atom_list>("[ foo , 'bar', 'baz']    "),
                   atom_list({atom("foo"), atom("bar"), atom("baz")}));
+  CAF_CHECK_EQUAL(read<string_list>("a, b , \" c \""),
+                  string_list({"a", "b", " c "}));
 }
 
 CAF_TEST(maps) {
@@ -148,4 +158,23 @@ CAF_TEST(maps) {
                   int_map({{atom("a"), 1}, {atom("b"), 42}}));
   CAF_CHECK_EQUAL(read<int_map>("{   a  = 1  , 'b'   =    42   ,} \t "),
                   int_map({{atom("a"), 1}, {atom("b"), 42}}));
+}
+
+CAF_TEST(uris) {
+  using uri_list = std::vector<uri>;
+  auto x_res = read<uri>("foo:bar");
+  if (x_res == none) {
+    CAF_ERROR("my:path not recognized as URI");
+    return;
+  }
+  auto x = *x_res;
+  CAF_CHECK_EQUAL(x.scheme(), "foo");
+  CAF_CHECK_EQUAL(x.path(), "bar");
+  auto ls = unbox(read<uri_list>("foo:bar, <http://actor-framework.org/doc>"));
+  CAF_REQUIRE_EQUAL(ls.size(), 2u);
+  CAF_CHECK_EQUAL(ls[0].scheme(), "foo");
+  CAF_CHECK_EQUAL(ls[0].path(), "bar");
+  CAF_CHECK_EQUAL(ls[1].scheme(), "http");
+  CAF_CHECK_EQUAL(ls[1].authority().host, std::string{"actor-framework.org"});
+  CAF_CHECK_EQUAL(ls[1].path(), "doc");
 }

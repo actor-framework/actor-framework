@@ -64,6 +64,12 @@ void parse(parse_state& ps, double& x);
 
 void parse(parse_state& ps, atom_value& x);
 
+void parse(parse_state& ps, uri& x);
+
+// -- STL types ----------------------------------------------------------------
+
+void parse(parse_state& ps, std::string& x);
+
 // -- container types ----------------------------------------------------------
 
 template <class First, class Second>

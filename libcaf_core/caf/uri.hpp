@@ -136,10 +136,6 @@ typename Inspector::result_type inspect(Inspector& f, uri::authority_type& x) {
 std::string to_string(const uri& x);
 
 /// @relates uri
-/// @private
-void parse(detail::parser::state<string_view::iterator> ps, uri& dest);
-
-/// @relates uri
 error parse(string_view str, uri& dest);
 
 } // namespace caf
