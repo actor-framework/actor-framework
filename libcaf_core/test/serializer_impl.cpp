@@ -15,13 +15,15 @@
  * http://opensource.org/licenses/BSD-3-Clause and                            *
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
-/*
+
 #include "caf/config.hpp"
 
-#define CAF_SUITE serialization
+#define CAF_SUITE serializer_impl
+
 #include "caf/test/unit_test.hpp"
 
 #include <algorithm>
+#include <caf/byte.hpp>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -57,6 +59,7 @@
 #include "caf/proxy_registry.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/serializer.hpp"
+#include "caf/serializer_impl.hpp"
 #include "caf/stream_deserializer.hpp"
 #include "caf/stream_serializer.hpp"
 #include "caf/streambuf.hpp"
@@ -75,6 +78,12 @@ using caf::detail::type_erased_value_impl;
 
 namespace {
 
+enum class test_enum {
+  a,
+  b,
+  c,
+};
+
 struct test_data {
   int32_t i32 = -345;
   int64_t i64 = -1234567890123456789ll;
@@ -84,136 +93,62 @@ struct test_data {
   timestamp ts = timestamp{timestamp::duration{1478715821 * 1000000000ll}};
   test_enum te = test_enum::b;
   string str = "Lorem ipsum dolor sit amet.";
-  raw_struct rs;
-  test_array ta{
-    {0, 1, 2, 3},
-    {{0, 1, 2, 3}, {4, 5, 6, 7}},
-  };
 };
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, test_data& x) {
-  return f(x.value, x.value2);
+  return f(meta::type_name("test_data"), x.i32, x.i64, x.f32, x.f64, x.dur,
+           x.ts, x.te, x.str);
 }
-
-template <class Serializer, class Deserializer>
-struct fixture {
-  int32_t i32 = -345;
-  int64_t i64 = -1234567890123456789ll;
-  float f32 = 3.45f;
-  double f64 = 54.3;
-  duration dur = duration{time_unit::seconds, 123};
-  timestamp ts = timestamp{timestamp::duration{1478715821 * 1000000000ll}};
-  test_enum te = test_enum::b;
-  string str = "Lorem ipsum dolor sit amet.";
-  raw_struct rs;
-  test_array ta{
-    {0, 1, 2, 3},
-    {{0, 1, 2, 3}, {4, 5, 6, 7}},
-  };
-  int ra[3] = {1, 2, 3};
-
-  test_data testData{
-
-  };
-
-  config cfg;
-  actor_system system;
-  message msg;
-  message recursive;
-
-  template <class T, class... Ts>
-  vector<char> serialize(T& x, Ts&... xs) {
-    vector<char> buf;
-    binary_serializer sink{system, buf};
-    if (auto err = sink(x, xs...))
-      CAF_FAIL("serialization failed: "
-               << system.render(err) << ", data: "
-               << deep_to_string(std::forward_as_tuple(x, xs...)));
-    return buf;
-  }
-
-  template <class T, class... Ts>
-  void deserialize(const vector<char>& buf, T& x, Ts&... xs) {
-    binary_deserializer source{system, buf};
-    if (auto err = source(x, xs...))
-      CAF_FAIL("deserialization failed: " << system.render(err));
-  }
-
-  // serializes `x` and then deserializes and returns the serialized value
-  template <class T>
-  T roundtrip(T x) {
-    T result;
-    deserialize(serialize(x), result);
-    return result;
-  }
-
-  // converts `x` to a message, serialize it, then deserializes it, and
-  // finally returns unboxed value
-  template <class T>
-  T msg_roundtrip(const T& x) {
-    message result;
-    auto tmp = make_message(x);
-    deserialize(serialize(tmp), result);
-    if (!result.match_elements<T>())
-      CAF_FAIL("expected: " << x << ", got: " << result);
-    return result.get_as<T>(0);
-  }
-
-  fixture() : system(cfg) {
-    rs.str.assign(string(str.rbegin(), str.rend()));
-    msg = make_message(i32, i64, dur, ts, te, str, rs);
-    config_value::dictionary dict;
-    put(dict, "scheduler.policy", atom("none"));
-    put(dict, "scheduler.max-threads", 42);
-    put(dict, "nodes.preload",
-        make_config_value_list("sun", "venus", "mercury", "earth", "mars"));
-    recursive = make_message(config_value{std::move(dict)});
-  }
-};
-
 } // namespace
 
-#define SERIALIZATION_TEST(name)                                               \
-  template <class Serializer, class Deserializer>                              \
-  struct name##_tpl : fixture<Serializer, Deserializer> {                      \
-    using super = fixture<Serializer, Deserializer>;                           \
-    using super::i32;                                                          \
-    using super::i64;                                                          \
-    using super::f32;                                                          \
-    using super::f64;                                                          \
-    using super::dur;                                                          \
-    using super::ts;                                                           \
-    using super::te;                                                           \
-    using super::str;                                                          \
-    using super::rs;                                                           \
-    using super::ta;                                                           \
-    using super::ra;                                                           \
-    using super::system;                                                       \
-    using super::msg;                                                          \
-    using super::recursive;                                                    \
-    using super::serialize;                                                    \
-    using super::deserialize;                                                  \
-    using super::roundtrip;                                                    \
-    using super::msg_roundtrip;                                                \
-    void run_test_impl();                                                      \
-  };                                                                           \
-  namespace {                                                                  \
-  using name##_binary = name##_tpl<binary_serializer, binary_deserializer>;    \
-  using name##_stream = name##_tpl<stream_serializer<vectorbuf>,               \
-                                   stream_deserializer<charbuf>>;              \
-  ::caf::test::detail::adder<::caf::test::test_impl<name##_binary>>            \
-    CAF_UNIQUE(a_binary){CAF_XSTR(CAF_SUITE), CAF_XSTR(name##_binary), false}; \
-  ::caf::test::detail::adder<::caf::test::test_impl<name##_stream>>            \
-    CAF_UNIQUE(a_stream){CAF_XSTR(CAF_SUITE), CAF_XSTR(name##_stream), false}; \
-  }                                                                            \
-  template <class Serializer, class Deserializer>                              \
-  void name##_tpl<Serializer, Deserializer>::run_test_impl()
-
-SERIALIZATION_TEST(i32_values) {
-  auto buf = serialize(i32);
-  int32_t x;
-  deserialize(buf, x);
-  CAF_CHECK_EQUAL(i32, x);
+CAF_TEST("serialize to std::vector<char>") {
+  using container_type = std::vector<char>;
+  actor_system_config cfg;
+  actor_system sys{cfg};
+  test_data data;
+  std::vector<char> binary_serializer_buffer;
+  container_type serializer_impl_buffer;
+  binary_serializer binarySerializer{sys, binary_serializer_buffer};
+  serializer_impl<container_type> serializerImpl{sys, serializer_impl_buffer};
+  binarySerializer(data);
+  serializerImpl(data);
+  CAF_CHECK_EQUAL(memcmp(binary_serializer_buffer.data(),
+                         serializer_impl_buffer.data(),
+                         binary_serializer_buffer.size()),
+                  0);
 }
-*/
+
+CAF_TEST("serialize to std::vector<byte>") {
+  using container_type = std::vector<byte>;
+  actor_system_config cfg;
+  actor_system sys{cfg};
+  test_data data;
+  std::vector<char> binary_serializer_buffer;
+  container_type serializer_impl_buffer;
+  binary_serializer binarySerializer{sys, binary_serializer_buffer};
+  serializer_impl<container_type> serializerImpl{sys, serializer_impl_buffer};
+  binarySerializer(data);
+  serializerImpl(data);
+  CAF_CHECK_EQUAL(memcmp(binary_serializer_buffer.data(),
+                         serializer_impl_buffer.data(),
+                         binary_serializer_buffer.size()),
+                  0);
+}
+
+CAF_TEST("serialize to std::vector<uint8_t>") {
+  using container_type = std::vector<uint8_t>;
+  actor_system_config cfg;
+  actor_system sys{cfg};
+  test_data data;
+  std::vector<char> binary_serializer_buffer;
+  container_type serializer_impl_buffer;
+  binary_serializer binarySerializer{sys, binary_serializer_buffer};
+  serializer_impl<container_type> serializerImpl{sys, serializer_impl_buffer};
+  binarySerializer(data);
+  serializerImpl(data);
+  CAF_CHECK_EQUAL(memcmp(binary_serializer_buffer.data(),
+                         serializer_impl_buffer.data(),
+                         binary_serializer_buffer.size()),
+                  0);
+}

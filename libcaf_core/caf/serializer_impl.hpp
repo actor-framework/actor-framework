@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <caf/detail/network_order.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <iomanip>
@@ -104,7 +105,7 @@ public:
 
   error apply_raw(size_t num_bytes, void* data) override {
     CAF_ASSERT(write_pos_ <= buf_.size());
-    auto ptr = reinterpret_cast<char*>(data);
+    auto ptr = reinterpret_cast<typename container_type::value_type*>(data);
     auto buf_size = buf_.size();
     if (write_pos_ == buf_size) {
       buf_.insert(buf_.end(), ptr, ptr + num_bytes);
@@ -221,6 +222,12 @@ protected:
   }
 
 private:
+  template <class T>
+  error apply_int(serializer_impl<Container>& bs, T x) {
+    auto y = detail::to_network_order(x);
+    return bs.apply_raw(sizeof(T), &y);
+  }
+
   container_type& buf_;
   size_t write_pos_;
 };
