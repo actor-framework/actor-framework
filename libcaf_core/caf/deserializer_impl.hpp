@@ -175,7 +175,7 @@ protected:
     iss >> x;
     return none;
   }
-  
+
   error apply_impl(std::string& x) override {
     size_t str_size;
     if (auto err = begin_sequence(str_size))
