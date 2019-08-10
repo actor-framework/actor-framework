@@ -30,6 +30,28 @@ using namespace caf;
 
 namespace {
 
+using std::chrono::duration_cast;
+
+timespan operator"" _ns(unsigned long long x) {
+  return duration_cast<timespan>(std::chrono::nanoseconds(x));
+}
+
+timespan operator"" _us(unsigned long long x) {
+  return duration_cast<timespan>(std::chrono::microseconds(x));
+}
+
+timespan operator"" _ms(unsigned long long x) {
+  return duration_cast<timespan>(std::chrono::milliseconds(x));
+}
+
+timespan operator"" _s(unsigned long long x) {
+  return duration_cast<timespan>(std::chrono::seconds(x));
+}
+
+timespan operator"" _h(unsigned long long x) {
+  return duration_cast<timespan>(std::chrono::hours(x));
+}
+
 template <class T>
 expected<T> read(string_view str) {
   T result;
@@ -120,6 +142,22 @@ CAF_TEST(invalid floating point numbers) {
   CHECK_INVALID(double, "1e", pec::unexpected_eof);
   CHECK_INVALID(double, "--0.01e10", pec::unexpected_character);
   CHECK_INVALID(double, "++10e-10", pec::unexpected_character);
+}
+
+CAF_TEST(valid timespans) {
+  CAF_CHECK_EQUAL(read<timespan>("12ns"), 12_ns);
+  CAF_CHECK_EQUAL(read<timespan>("34us"), 34_us);
+  CAF_CHECK_EQUAL(read<timespan>("56ms"), 56_ms);
+  CAF_CHECK_EQUAL(read<timespan>("78s"), 78_s);
+  CAF_CHECK_EQUAL(read<timespan>("60min"), 1_h);
+  CAF_CHECK_EQUAL(read<timespan>("90h"), 90_h);
+}
+
+CAF_TEST(invalid timespans) {
+  CAF_CHECK_EQUAL(read<timespan>("12"), pec::unexpected_eof);
+  CAF_CHECK_EQUAL(read<timespan>("12nas"), pec::unexpected_character);
+  CAF_CHECK_EQUAL(read<timespan>("34usec"), pec::trailing_character);
+  CAF_CHECK_EQUAL(read<timespan>("56m"), pec::unexpected_eof);
 }
 
 CAF_TEST(valid atom values) {

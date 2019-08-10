@@ -62,6 +62,8 @@ void parse(parse_state& ps, double& x);
 
 // -- CAF types ----------------------------------------------------------------
 
+void parse(parse_state& ps, timespan& x);
+
 void parse(parse_state& ps, atom_value& x);
 
 void parse(parse_state& ps, uri& x);

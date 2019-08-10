@@ -40,7 +40,7 @@ namespace parser {
 
 /// Reads a timespan.
 template <class Iterator, class Sentinel, class Consumer>
-void read_timespan(state<Iterator, Sentinel>& ps, Consumer& consumer,
+void read_timespan(state<Iterator, Sentinel>& ps, Consumer&& consumer,
                    optional<int64_t> num = none) {
   using namespace std::chrono;
   struct interim_consumer {
@@ -56,7 +56,7 @@ void read_timespan(state<Iterator, Sentinel>& ps, Consumer& consumer,
   timespan result;
   auto g = make_scope_guard([&] {
     if (ps.code <= pec::trailing_character)
-      consumer.value(result);
+      consumer.value(std::move(result));
   });
   // clang-format off
   start();
