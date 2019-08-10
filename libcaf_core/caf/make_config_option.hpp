@@ -22,6 +22,7 @@
 
 #include "caf/config_option.hpp"
 #include "caf/config_value.hpp"
+#include "caf/detail/parse.hpp"
 #include "caf/detail/type_name.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
@@ -34,34 +35,47 @@ namespace caf {
 namespace detail {
 
 template <class T>
-error default_config_option_check(const config_value& x) {
+error check_impl(const config_value& x) {
   if (holds_alternative<T>(x))
     return none;
   return make_error(pec::type_mismatch);
 }
 
 template <class T>
-void default_config_option_store(void* ptr, const config_value& x) {
+void store_impl(void* ptr, const config_value& x) {
   *static_cast<T*>(ptr) = get<T>(x);
 }
 
 template <class T>
-expected<config_value> default_config_option_parse(void* ptr, string_view str) {
-  auto result = config_value::parse(str.begin(), str.end());
-  if (result) {
-    if (!holds_alternative<T>(*result))
-      return make_error(pec::type_mismatch);
-    if (ptr != nullptr)
-      *static_cast<T*>(ptr) = get<T>(*result);
+config_value get_impl(const void* ptr) {
+  return config_value{*reinterpret_cast<const T*>(ptr)};
+}
+
+template <class T>
+expected<config_value> parse_impl(T* ptr, string_view str) {
+  if (ptr != nullptr) {
+    if (auto err = parse(str, *ptr))
+      return err;
+    return config_value{*ptr};
   }
-  return result;
+  T tmp;
+  if (auto err = parse(str, tmp))
+    return err;
+  return config_value{std::move(tmp)};
+}
+
+expected<config_value> parse_impl(std::string* ptr, string_view str);
+
+template <class T>
+expected<config_value> parse_impl_delegate(void* ptr, string_view str) {
+  return parse_impl(reinterpret_cast<T*>(ptr), str);
 }
 
 template <class T>
 config_option::meta_state* option_meta_state_instance() {
-  static config_option::meta_state obj{
-    default_config_option_check<T>, default_config_option_store<T>, nullptr,
-    default_config_option_parse<T>, detail::type_name<T>()};
+  static config_option::meta_state obj{check_impl<T>, store_impl<T>,
+                                       get_impl<T>, parse_impl_delegate<T>,
+                                       detail::type_name<T>()};
   return &obj;
 }
 
@@ -100,33 +114,5 @@ config_option make_ms_resolution_config_option(size_t& storage,
                                                string_view category,
                                                string_view name,
                                                string_view description);
-
-// -- specializations for common types -----------------------------------------
-
-#define CAF_SPECIALIZE_META_STATE(type)                                        \
-  extern config_option::meta_state type##_meta_state;                          \
-  template <>                                                                  \
-  inline config_option::meta_state* option_meta_state_instance<type>() {       \
-    return &type##_meta_state;                                                 \
-  }
-
-namespace detail {
-
-CAF_SPECIALIZE_META_STATE(atom_value)
-
-CAF_SPECIALIZE_META_STATE(bool)
-
-CAF_SPECIALIZE_META_STATE(size_t)
-
-extern config_option::meta_state string_meta_state;
-
-template <>
-inline config_option::meta_state* option_meta_state_instance<std::string>() {
-  return &string_meta_state;
-}
-
-} // namespace detail
-
-#undef CAF_SPECIALIZE_META_STATE
 
 } // namespace caf

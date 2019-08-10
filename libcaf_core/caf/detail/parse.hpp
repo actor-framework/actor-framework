@@ -20,12 +20,16 @@
 
 #include <cstdint>
 #include <iterator>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "caf/detail/parser/state.hpp"
+#include "caf/detail/squashed_int.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/error.hpp"
 #include "caf/fwd.hpp"
+#include "caf/none.hpp"
 #include "caf/string_view.hpp"
 #include "caf/unit.hpp"
 
@@ -33,6 +37,10 @@ namespace caf {
 namespace detail {
 
 using parse_state = parser::state<string_view::iterator>;
+
+// -- boolean type -------------------------------------------------------------
+
+void parse(parse_state& ps, bool& x);
 
 // -- signed integer types -----------------------------------------------------
 
@@ -53,6 +61,14 @@ void parse(parse_state& ps, uint16_t& x);
 void parse(parse_state& ps, uint32_t& x);
 
 void parse(parse_state& ps, uint64_t& x);
+
+// -- non-fixed size integer types ---------------------------------------------
+
+template <class T>
+detail::enable_if_t<std::is_integral<T>::value> parse(parse_state& ps, T& x) {
+  using squashed_type = squashed_int_t<T>;
+  return parse(ps, reinterpret_cast<squashed_type&>(x));
+}
 
 // -- floating point types -----------------------------------------------------
 
@@ -122,6 +138,17 @@ enable_if_tt<is_iterable<T>> parse(parse_state& ps, T& xs) {
     *out++ = std::move(tmp);
   } while (ps.consume(','));
   ps.code = ps.at_end() ? pec::success : pec::trailing_character;
+}
+
+// -- convenience functions ----------------------------------------------------
+
+template <class T>
+error parse(string_view str, T& x) {
+  parse_state ps{str.begin(), str.end()};
+  parse(ps, x);
+  if (ps.code == pec::success)
+    return none;
+  return make_error(ps.code, str);
 }
 
 } // namespace detail

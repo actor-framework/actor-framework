@@ -154,21 +154,21 @@ CAF_TEST(type int64_t) {
 
 CAF_TEST(type float) {
   CAF_CHECK_EQUAL(unbox(read<float>("-1.0")),  -1.0f);
-  CAF_CHECK_EQUAL(unbox(read<float>("-0.1")),  -0.1f);
-  CAF_CHECK_EQUAL(read<float>("0"),  none);
+  CAF_CHECK_EQUAL(unbox(read<float>("-0.1")), -0.1f);
+  CAF_CHECK_EQUAL(read<float>("0"), 0.f);
   CAF_CHECK_EQUAL(read<float>("\"0.1\""),  none);
 }
 
 CAF_TEST(type double) {
   CAF_CHECK_EQUAL(unbox(read<double>("-1.0")),  -1.0);
   CAF_CHECK_EQUAL(unbox(read<double>("-0.1")),  -0.1);
-  CAF_CHECK_EQUAL(read<double>("0"),  none);
+  CAF_CHECK_EQUAL(read<double>("0"), 0.);
   CAF_CHECK_EQUAL(read<double>("\"0.1\""),  none);
 }
 
 CAF_TEST(type string) {
   CAF_CHECK_EQUAL(unbox(read<string>("foo")), "foo");
-  CAF_CHECK_EQUAL(unbox(read<string>("\"foo\"")), "\"foo\"");
+  CAF_CHECK_EQUAL(unbox(read<string>("\"foo\"")), "foo");
 }
 
 CAF_TEST(type atom) {

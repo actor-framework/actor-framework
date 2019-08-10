@@ -124,20 +124,20 @@ CAF_TEST(atom parameters) {
 CAF_TEST(string parameters) {
   opts.add<std::string>("value,v", "some value");
   CAF_MESSAGE("test string option with and without quotes");
-  CAF_CHECK_EQUAL(read<std::string>({"--value=\"foobar\""}), "\"foobar\"");
+  CAF_CHECK_EQUAL(read<std::string>({"--value=\"foo\\tbar\""}), "foo\tbar");
   CAF_CHECK_EQUAL(read<std::string>({"--value=foobar"}), "foobar");
-  CAF_CHECK_EQUAL(read<std::string>({"-v", "\"foobar\""}), "\"foobar\"");
+  CAF_CHECK_EQUAL(read<std::string>({"-v", "\"foobar\""}), "foobar");
   CAF_CHECK_EQUAL(read<std::string>({"-v", "foobar"}), "foobar");
-  CAF_CHECK_EQUAL(read<std::string>({"-v\"foobar\""}), "\"foobar\"");
+  CAF_CHECK_EQUAL(read<std::string>({"-v\"foobar\""}), "foobar");
   CAF_CHECK_EQUAL(read<std::string>({"-vfoobar"}), "foobar");
-  CAF_CHECK_EQUAL(read<std::string>({"--value=\"'abc'\""}), "\"'abc'\"");
+  CAF_CHECK_EQUAL(read<std::string>({"--value=\"'abc'\""}), "'abc'");
   CAF_CHECK_EQUAL(read<std::string>({"--value='abc'"}), "'abc'");
-  CAF_CHECK_EQUAL(read<std::string>({"-v", "\"'abc'\""}), "\"'abc'\"");
+  CAF_CHECK_EQUAL(read<std::string>({"-v", "\"'abc'\""}), "'abc'");
   CAF_CHECK_EQUAL(read<std::string>({"-v", "'abc'"}), "'abc'");
   CAF_CHECK_EQUAL(read<std::string>({"-v'abc'"}), "'abc'");
-  CAF_CHECK_EQUAL(read<std::string>({"--value=\"123\""}), "\"123\"");
+  CAF_CHECK_EQUAL(read<std::string>({"--value=\"123\""}), "123");
   CAF_CHECK_EQUAL(read<std::string>({"--value=123"}), "123");
-  CAF_CHECK_EQUAL(read<std::string>({"-v", "\"123\""}), "\"123\"");
+  CAF_CHECK_EQUAL(read<std::string>({"-v", "\"123\""}), "123");
   CAF_CHECK_EQUAL(read<std::string>({"-v", "123"}), "123");
   CAF_CHECK_EQUAL(read<std::string>({"-v123"}), "123");
 }

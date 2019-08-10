@@ -20,6 +20,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <iterator>
 #include <map>
 #include <string>
 #include <type_traits>
@@ -127,22 +128,22 @@ public:
   const char* type_name() const noexcept;
 
   /// Returns the underlying variant.
-  inline variant_type& get_data() {
+  variant_type& get_data() {
     return data_;
   }
 
   /// Returns the underlying variant.
-  inline const variant_type& get_data() const {
+  const variant_type& get_data() const {
     return data_;
   }
 
   /// Returns a pointer to the underlying variant.
-  inline variant_type* get_data_ptr() {
+  variant_type* get_data_ptr() {
     return &data_;
   }
 
   /// Returns a pointer to the underlying variant.
-  inline const variant_type* get_data_ptr() const {
+  const variant_type* get_data_ptr() const {
     return &data_;
   }
 
@@ -153,15 +154,15 @@ private:
 
   // -- auto conversion of related types ---------------------------------------
 
-  inline void set(bool x) {
+  void set(bool x) {
     data_ = x;
   }
 
-  inline void set(float x) {
+  void set(float x) {
     data_ = static_cast<double>(x);
   }
 
-  inline void set(const char* x) {
+  void set(const char* x) {
     data_ = std::string{x};
   }
 
@@ -170,6 +171,29 @@ private:
                                         list, dictionary>::value>
   set(T x) {
     data_ = std::move(x);
+  }
+
+  template <class T>
+  void set_range(T& xs, std::true_type) {
+    auto& dict = as_dictionary();
+    for (auto& kvp : xs)
+      dict.emplace(kvp.first, std::move(kvp.second));
+  }
+
+  template <class T>
+  void set_range(T& xs, std::false_type) {
+    auto& ls = as_list();
+    ls.insert(ls.begin(), std::make_move_iterator(xs.begin()),
+              std::make_move_iterator(xs.end()));
+  }
+
+  template <class T>
+  detail::enable_if_t<detail::is_iterable<T>::value
+                      && !detail::is_one_of<T, string, list, dictionary>::value>
+  set(T xs) {
+    using value_type = typename T::value_type;
+    detail::bool_token<detail::is_pair<value_type>::value> is_map_type;
+    set_range(xs, is_map_type);
   }
 
   template <class T>

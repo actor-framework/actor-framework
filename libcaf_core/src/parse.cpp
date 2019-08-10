@@ -21,6 +21,7 @@
 #include "caf/detail/consumer.hpp"
 #include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/read_atom.hpp"
+#include "caf/detail/parser/read_bool.hpp"
 #include "caf/detail/parser/read_floating_point.hpp"
 #include "caf/detail/parser/read_signed_integer.hpp"
 #include "caf/detail/parser/read_string.hpp"
@@ -36,6 +37,8 @@
 
 namespace caf {
 namespace detail {
+
+PARSE_IMPL(bool, bool)
 
 PARSE_IMPL(int8_t, signed_integer)
 

@@ -38,11 +38,11 @@ namespace parser {
 
 /// Reads a boolean.
 template <class Iterator, class Sentinel, class Consumer>
-void read_bool(state<Iterator, Sentinel>& ps, Consumer& consumer) {
+void read_bool(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   bool res = false;
   auto g = make_scope_guard([&] {
     if (ps.code <= pec::trailing_character)
-      consumer.value(res);
+      consumer.value(std::move(res));
   });
   start();
   state(init) {
