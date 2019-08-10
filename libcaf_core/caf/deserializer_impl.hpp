@@ -63,7 +63,7 @@ public:
   }
   // -- overridden member functions --------------------------------------------
 
-  error begin_object(uint16_t& nr, std::string& name) {
+  error begin_object(uint16_t& nr, std::string& name) override {
     if (auto err = apply(nr))
       return err;
     if (nr != 0)
@@ -71,15 +71,15 @@ public:
     return apply(name);
   }
 
-  error end_object() {
+  error end_object() override {
     return none;
   }
 
-  error begin_sequence(size_t& list_size) {
+  error begin_sequence(size_t& list_size) override {
     // Use varbyte encoding to compress sequence size on the wire.
     uint32_t x = 0;
     int n = 0;
-    uint8_t low7;
+    uint8_t low7 = 0;
     do {
       if (auto err = apply_impl(low7))
         return err;
@@ -90,11 +90,11 @@ public:
     return none;
   }
 
-  error end_sequence() {
+  error end_sequence() override {
     return none;
   }
 
-  error apply_raw(size_t num_bytes, void* storage) {
+  error apply_raw(size_t num_bytes, void* storage) override {
     if (!range_check(num_bytes))
       return sec::end_of_stream;
     memcpy(storage, current_, num_bytes);
@@ -125,47 +125,47 @@ public:
   }
 
 protected:
-  error apply_impl(int8_t& x) {
+  error apply_impl(int8_t& x) override {
     return apply_raw(sizeof(int8_t), &x);
   }
 
-  error apply_impl(uint8_t& x) {
+  error apply_impl(uint8_t& x) override {
     return apply_raw(sizeof(uint8_t), &x);
   }
 
-  error apply_impl(int16_t& x) {
+  error apply_impl(int16_t& x) override {
     return apply_int(*this, x);
   }
 
-  error apply_impl(uint16_t& x) {
+  error apply_impl(uint16_t& x) override {
     return apply_int(*this, x);
   }
 
-  error apply_impl(int32_t& x) {
+  error apply_impl(int32_t& x) override {
     return apply_int(*this, x);
   }
 
-  error apply_impl(uint32_t& x) {
+  error apply_impl(uint32_t& x) override {
     return apply_int(*this, x);
   }
 
-  error apply_impl(int64_t& x) {
+  error apply_impl(int64_t& x) override {
     return apply_int(*this, x);
   }
 
-  error apply_impl(uint64_t& x) {
+  error apply_impl(uint64_t& x) override {
     return apply_int(*this, x);
   }
 
-  error apply_impl(float& x) {
+  error apply_impl(float& x) override {
     return apply_float(*this, x);
   }
 
-  error apply_impl(double& x) {
+  error apply_impl(double& x) override {
     return apply_float(*this, x);
   }
 
-  error apply_impl(long double& x) {
+  error apply_impl(long double& x) override {
     // The IEEE-754 conversion does not work for long double
     // => fall back to string serialization (even though it sucks).
     std::string tmp;
@@ -175,7 +175,8 @@ protected:
     iss >> x;
     return none;
   }
-  error apply_impl(std::string& x) {
+  
+  error apply_impl(std::string& x) override {
     size_t str_size;
     if (auto err = begin_sequence(str_size))
       return err;
@@ -186,7 +187,7 @@ protected:
     return end_sequence();
   }
 
-  error apply_impl(std::u16string& x) {
+  error apply_impl(std::u16string& x) override {
     auto str_size = x.size();
     if (auto err = begin_sequence(str_size))
       return err;
@@ -200,7 +201,7 @@ protected:
     return none;
   }
 
-  error apply_impl(std::u32string& x) {
+  error apply_impl(std::u32string& x) override {
     auto str_size = x.size();
     if (auto err = begin_sequence(str_size))
       return err;
