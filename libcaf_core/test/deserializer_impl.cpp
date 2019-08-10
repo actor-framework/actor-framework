@@ -24,12 +24,12 @@
 
 #include <vector>
 
-#include "serialization_fixture.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/serializer_impl.hpp"
-#include "caf/deserializer_impl.hpp"
 #include "caf/byte.hpp"
+#include "caf/deserializer_impl.hpp"
+#include "caf/serializer_impl.hpp"
+#include "serialization_fixture.hpp"
 
 using namespace caf;
 

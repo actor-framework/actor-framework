@@ -20,8 +20,8 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/timestamp.hpp"
 #include "caf/duration.hpp"
+#include "caf/timestamp.hpp"
 
 enum class test_enum {
   a,
