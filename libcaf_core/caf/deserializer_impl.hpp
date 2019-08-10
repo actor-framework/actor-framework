@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <caf/detail/ieee_754.hpp>
+#include <caf/detail/network_order.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -40,23 +42,23 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  serializer_impl(actor_system& sys, const value_type* buf, size_t buf_size)
+  deserializer_impl(actor_system& sys, const value_type* buf, size_t buf_size)
     : super(sys), current_(buf), end_(buf + buf_size) {
     // nop
   }
 
-  serializer_impl(execution_unit* ctx, const value_type* buf, size_t buf_size)
+  deserializer_impl(execution_unit* ctx, const value_type* buf, size_t buf_size)
     : super(ctx), current_(buf), end_(buf + buf_size) {
     // nop
   }
 
-  serializer_impl(actor_system& sys, const container_type& buf)
-    : serializer_impl(sys, buf.data(), buf.size()) {
+  deserializer_impl(actor_system& sys, const container_type& buf)
+    : deserializer_impl(sys, buf.data(), buf.size()) {
     // nop
   }
 
-  serializer_impl(execution_unit* ctx, const container_type& buf)
-    : serializer_impl(ctx, buf.data(), buf.size()) {
+  deserializer_impl(execution_unit* ctx, const container_type& buf)
+    : deserializer_impl(ctx, buf.data(), buf.size()) {
     // nop
   }
   // -- overridden member functions --------------------------------------------
@@ -179,7 +181,7 @@ protected:
       return err;
     if (!range_check(str_size))
       return sec::end_of_stream;
-    x.assign(current_, current_ + str_size);
+    x.assign((char*) current_, (char*) current_ + str_size);
     current_ += str_size;
     return end_sequence();
   }
