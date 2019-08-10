@@ -20,6 +20,7 @@
 
 #define CAF_SUITE serializer_impl
 
+#include <cstring>
 #include <vector>
 
 #include "caf/binary_serializer.hpp"
