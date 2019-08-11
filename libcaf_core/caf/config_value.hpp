@@ -176,6 +176,7 @@ private:
   template <class T>
   void set_range(T& xs, std::true_type) {
     auto& dict = as_dictionary();
+    dict.clear();
     for (auto& kvp : xs)
       dict.emplace(kvp.first, std::move(kvp.second));
   }
@@ -183,7 +184,8 @@ private:
   template <class T>
   void set_range(T& xs, std::false_type) {
     auto& ls = as_list();
-    ls.insert(ls.begin(), std::make_move_iterator(xs.begin()),
+    ls.clear();
+    ls.insert(ls.end(), std::make_move_iterator(xs.begin()),
               std::make_move_iterator(xs.end()));
   }
 

@@ -109,6 +109,7 @@ enable_if_tt<is_iterable<T>> parse(parse_state& ps, T& xs) {
   static constexpr auto opening_char = is_map_type ? '{' : '[';
   static constexpr auto closing_char = is_map_type ? '}' : ']';
   auto out = std::inserter(xs, xs.end());
+  // List/map using [] or {} notation.
   if (ps.consume(opening_char)) {
     do {
       if (ps.consume(closing_char)) {
@@ -130,6 +131,10 @@ enable_if_tt<is_iterable<T>> parse(parse_state& ps, T& xs) {
     }
     return;
   }
+  // An empty string simply results in an empty list/map.
+  if (ps.at_end())
+    return;
+  // List/map without [] or {}.
   do {
     value_type tmp;
     parse(ps, tmp);

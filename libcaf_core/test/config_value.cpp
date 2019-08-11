@@ -132,6 +132,8 @@ CAF_TEST(timespan) {
 CAF_TEST(list) {
   using integer_list = std::vector<int64_t>;
   auto xs = make_config_value_list(1, 2, 3);
+  auto ys = config_value{integer_list{1, 2, 3}};
+  CAF_CHECK_EQUAL(xs, ys);
   CAF_CHECK_EQUAL(to_string(xs), "[1, 2, 3]");
   CAF_CHECK_EQUAL(xs.type_name(), "list"_s);
   CAF_CHECK_EQUAL(holds_alternative<config_value::list>(xs), true);
