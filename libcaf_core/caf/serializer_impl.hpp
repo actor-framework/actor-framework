@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include <caf/detail/network_order.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <iomanip>
@@ -26,6 +25,7 @@
 #include <vector>
 
 #include "caf/detail/ieee_754.hpp"
+#include "caf/detail/network_order.hpp"
 #include "caf/serializer.hpp"
 
 namespace caf {
@@ -39,6 +39,8 @@ public:
   using super = serializer;
 
   using container_type = Container;
+
+  using value_type = typename container_type::value_type;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -105,7 +107,8 @@ public:
 
   error apply_raw(size_t num_bytes, void* data) override {
     CAF_ASSERT(write_pos_ <= buf_.size());
-    auto ptr = reinterpret_cast<typename container_type::value_type*>(data);
+    static_assert((sizeof(value_type) == 1), "sizeof(value_type) > 1");
+    auto ptr = reinterpret_cast<value_type*>(data);
     auto buf_size = buf_.size();
     if (write_pos_ == buf_size) {
       buf_.insert(buf_.end(), ptr, ptr + num_bytes);
@@ -214,7 +217,7 @@ protected:
     if (auto err = begin_sequence(str_size))
       return err;
     for (auto c : x) {
-      // The standard does not guarantee that char16_t is exactly 16 bits.
+      // The standard does not guarantee that char32_t is exactly 16 bits.
       if (auto err = apply_int(*this, static_cast<uint32_t>(c)))
         return err;
     }

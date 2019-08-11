@@ -16,68 +16,66 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE serializer_impl
+
+#include "caf/serializer_impl.hpp"
+
+#include "caf/test/dsl.hpp"
+
+#include "serialization_fixture.hpp"
 
 #include <cstring>
 #include <vector>
 
 #include "caf/binary_serializer.hpp"
 #include "caf/byte.hpp"
-#include "caf/serializer_impl.hpp"
-#include "caf/test/unit_test.hpp"
-#include "serialization_fixture.hpp"
 
 using namespace caf;
 
-CAF_TEST_FIXTURE_SCOPE(deserialization_tests, serialization_fixture)
+CAF_TEST_FIXTURE_SCOPE(serialization_tests, serialization_fixture)
 
-CAF_TEST("serialize to std::vector<char>") {
+CAF_TEST(serialize to std::vector<char>) {
   using container_type = std::vector<char>;
   std::vector<char> binary_serializer_buffer;
   container_type serializer_impl_buffer;
-  binary_serializer binarySerializer{sys, binary_serializer_buffer};
-  serializer_impl<container_type> serializerImpl{sys, serializer_impl_buffer};
-  if (auto err = binarySerializer(source))
-    CAF_FAIL(
-      "serialisation failed with binary_serializer: " << sys.render(err));
-  if (auto err = serializerImpl(source))
-    CAF_FAIL("serialisation failed with serializer_impl: " << sys.render(err));
+  binary_serializer sink1{sys, binary_serializer_buffer};
+  serializer_impl<container_type> sink2{sys, serializer_impl_buffer};
+  if (auto err = sink1(source))
+    CAF_FAIL("serialization failed: " << sys.render(err));
+  if (auto err = sink2(source))
+    CAF_FAIL("serialization failed: " << sys.render(err));
   CAF_CHECK_EQUAL(memcmp(binary_serializer_buffer.data(),
                          serializer_impl_buffer.data(),
                          binary_serializer_buffer.size()),
                   0);
 }
 
-CAF_TEST("serialize to std::vector<byte>") {
+CAF_TEST(serialize to std::vector<byte>) {
   using container_type = std::vector<byte>;
   std::vector<char> binary_serializer_buffer;
   container_type serializer_impl_buffer;
-  binary_serializer binarySerializer{sys, binary_serializer_buffer};
-  serializer_impl<container_type> serializerImpl{sys, serializer_impl_buffer};
-  if (auto err = binarySerializer(source))
-    CAF_FAIL(
-      "serialisation failed with binary_serializer: " << sys.render(err));
-  if (auto err = serializerImpl(source))
-    CAF_FAIL("serialisation failed with serializer_impl: " << sys.render(err));
+  binary_serializer sink1{sys, binary_serializer_buffer};
+  serializer_impl<container_type> sink2{sys, serializer_impl_buffer};
+  if (auto err = sink1(source))
+    CAF_FAIL("serialization failed: " << sys.render(err));
+  if (auto err = sink2(source))
+    CAF_FAIL("serialization failed: " << sys.render(err));
   CAF_CHECK_EQUAL(memcmp(binary_serializer_buffer.data(),
                          serializer_impl_buffer.data(),
                          binary_serializer_buffer.size()),
                   0);
 }
 
-CAF_TEST("serialize to std::vector<uint8_t>") {
+CAF_TEST(serialize to std::vector<uint8_t>) {
   using container_type = std::vector<uint8_t>;
   std::vector<char> binary_serializer_buffer;
   container_type serializer_impl_buffer;
-  binary_serializer binarySerializer{sys, binary_serializer_buffer};
-  serializer_impl<container_type> serializerImpl{sys, serializer_impl_buffer};
-  if (auto err = binarySerializer(source))
-    CAF_FAIL(
-      "serialisation failed with binary_serializer: " << sys.render(err));
-  if (auto err = serializerImpl(source))
-    CAF_FAIL("serialisation failed with serializer_impl: " << sys.render(err));
+  binary_serializer sink1{sys, binary_serializer_buffer};
+  serializer_impl<container_type> sink2{sys, serializer_impl_buffer};
+  if (auto err = sink1(source))
+    CAF_FAIL("serialization failed: " << sys.render(err));
+  if (auto err = sink2(source))
+    CAF_FAIL("serialization failed: " << sys.render(err));
   CAF_CHECK_EQUAL(memcmp(binary_serializer_buffer.data(),
                          serializer_impl_buffer.data(),
                          binary_serializer_buffer.size()),

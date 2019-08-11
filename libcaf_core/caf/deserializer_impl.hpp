@@ -18,13 +18,13 @@
 
 #pragma once
 
-#include <caf/detail/ieee_754.hpp>
-#include <caf/detail/network_order.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
 
 #include "caf/deserializer.hpp"
+#include "caf/detail/ieee_754.hpp"
+#include "caf/detail/network_order.hpp"
 
 namespace caf {
 
