@@ -32,7 +32,7 @@
 
 using namespace caf;
 
-CAF_TEST_FIXTURE_SCOPE(serialization_tests, serialization_fixture)
+CAF_TEST_FIXTURE_SCOPE(serializer_impl_tests, serialization_fixture)
 
 CAF_TEST(serialize to std::vector<char>) {
   using container_type = std::vector<char>;

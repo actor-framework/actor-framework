@@ -218,7 +218,7 @@ protected:
     if (auto err = begin_sequence(str_size))
       return err;
     for (auto c : x) {
-      // The standard does not guarantee that char32_t is exactly 16 bits.
+      // The standard does not guarantee that char32_t is exactly 32 bits.
       if (auto err = apply_int(*this, static_cast<uint32_t>(c)))
         return err;
     }
