@@ -18,6 +18,7 @@
 
 #include "caf/net/endpoint_manager.hpp"
 
+#include "caf/byte.hpp"
 #include "caf/intrusive/inbox_result.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
@@ -36,7 +37,7 @@ endpoint_manager::event::event(atom_value type, uint64_t id)
 }
 
 endpoint_manager::message::message(mailbox_element_ptr msg,
-                                   std::vector<char> payload)
+                                   std::vector<byte> payload)
   : msg(std::move(msg)), payload(std::move(payload)) {
   // nop
 }
@@ -86,7 +87,7 @@ void endpoint_manager::resolve(std::string path, actor listener) {
 }
 
 void endpoint_manager::enqueue(mailbox_element_ptr msg,
-                               std::vector<char> payload) {
+                               std::vector<byte> payload) {
   auto ptr = new message(std::move(msg), std::move(payload));
   if (messages_.push_back(ptr) == intrusive::inbox_result::unblocked_reader)
     mask_add(operation::write);

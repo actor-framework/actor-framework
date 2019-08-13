@@ -24,13 +24,14 @@
 
 #include "host_fixture.hpp"
 
-#include "caf/binary_serializer.hpp"
+#include "caf/byte.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/net/actor_proxy_impl.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/stream_socket.hpp"
+#include "caf/serializer_impl.hpp"
 
 using namespace caf;
 using namespace caf::net;
@@ -58,10 +59,10 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
 
 class dummy_application {
 public:
-  static expected<std::vector<char>> serialize(actor_system& sys,
+  static expected<std::vector<byte>> serialize(actor_system& sys,
                                                const type_erased_tuple& x) {
-    std::vector<char> result;
-    binary_serializer sink{sys, result};
+    std::vector<byte> result;
+    serializer_impl<std::vector<byte>> sink{sys, result};
     if (auto err = message::save(sink, x))
       return err;
     return result;
@@ -70,7 +71,7 @@ public:
 
 class dummy_transport {
 public:
-  dummy_transport(stream_socket handle, std::shared_ptr<std::vector<char>> data)
+  dummy_transport(stream_socket handle, std::shared_ptr<std::vector<byte>> data)
     : handle_(handle), data_(data), read_buf_(1024) {
     // nop
   }
@@ -81,7 +82,9 @@ public:
 
   template <class Manager>
   error init(Manager& manager) {
-    write_buf_.insert(write_buf_.end(), hello_test.begin(), hello_test.end());
+    write_buf_.insert(write_buf_.end(),
+                      reinterpret_cast<const byte*>(hello_test.begin()),
+                      reinterpret_cast<const byte*>(hello_test.end()));
     CAF_CHECK(manager.mask_add(operation::read_write));
     return none;
   }
@@ -136,11 +139,11 @@ public:
 private:
   stream_socket handle_;
 
-  std::shared_ptr<std::vector<char>> data_;
+  std::shared_ptr<std::vector<byte>> data_;
 
-  std::vector<char> read_buf_;
+  std::vector<byte> read_buf_;
 
-  std::vector<char> write_buf_;
+  std::vector<byte> write_buf_;
 };
 
 } // namespace
@@ -148,9 +151,9 @@ private:
 CAF_TEST_FIXTURE_SCOPE(endpoint_manager_tests, fixture)
 
 CAF_TEST(send and receive) {
-  std::vector<char> read_buf(1024);
+  std::vector<byte> read_buf(1024);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
-  auto buf = std::make_shared<std::vector<char>>();
+  auto buf = std::make_shared<std::vector<byte>>();
   auto sockets = unbox(make_stream_socket_pair());
   nonblocking(sockets.second, true);
   CAF_CHECK_EQUAL(read(sockets.second, read_buf.data(), read_buf.size()),
@@ -166,15 +169,19 @@ CAF_TEST(send and receive) {
                         hello_manager.size()),
                   hello_manager.size());
   run();
-  CAF_CHECK_EQUAL(string_view(buf->data(), buf->size()), hello_manager);
+  CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(buf->data()),
+                              buf->size()),
+                  hello_manager);
   CAF_CHECK_EQUAL(read(sockets.second, read_buf.data(), read_buf.size()),
                   hello_test.size());
-  CAF_CHECK_EQUAL(string_view(read_buf.data(), hello_test.size()), hello_test);
+  CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(read_buf.data()),
+                              hello_test.size()),
+                  hello_test);
 }
 
 CAF_TEST(resolve and proxy communication) {
-  std::vector<char> read_buf(1024);
-  auto buf = std::make_shared<std::vector<char>>();
+  std::vector<byte> read_buf(1024);
+  auto buf = std::make_shared<std::vector<byte>>();
   auto sockets = unbox(make_stream_socket_pair());
   nonblocking(sockets.second, true);
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });

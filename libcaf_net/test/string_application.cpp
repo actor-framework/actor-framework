@@ -18,31 +18,27 @@
 
 #define CAF_SUITE string_application
 
-#include "caf/net/endpoint_manager.hpp"
-#include <caf/policy/scribe.hpp>
-
-#include "caf/test/dsl.hpp"
-
-#include "host_fixture.hpp"
+#include <vector>
 
 #include "caf/binary_deserializer.hpp"
-#include "caf/binary_serializer.hpp"
+#include "caf/byte.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/net/actor_proxy_impl.hpp"
+#include "caf/net/endpoint_manager.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/stream_socket.hpp"
+#include "caf/policy/scribe.hpp"
+#include "caf/serializer_impl.hpp"
+#include "caf/test/dsl.hpp"
+#include "host_fixture.hpp"
 
 using namespace caf;
 using namespace caf::net;
 using namespace caf::policy;
 
 namespace {
-
-string_view hello_manager{"hello manager!"};
-
-string_view hello_test{"hello test!"};
 
 struct fixture : test_coordinator_fixture<>, host_fixture {
   fixture() {
@@ -74,7 +70,7 @@ class string_application {
 public:
   using header_type = string_application_header;
 
-  string_application(actor_system& sys, std::shared_ptr<std::vector<char>> buf)
+  string_application(actor_system& sys, std::shared_ptr<std::vector<byte>> buf)
     : sys_(sys), buf_(std::move(buf)) {
     // nop
   }
@@ -85,21 +81,23 @@ public:
   }
 
   template <class Parent>
-  void handle_packet(Parent&, header_type&, span<char> payload) {
-    binary_deserializer source{sys_, payload.data(), payload.size()};
+  void handle_packet(Parent&, header_type&, span<byte> payload) {
+    binary_deserializer source{sys_, payload};
     message msg;
     if (auto err = msg.load(source))
       CAF_FAIL("unable to deserialize message: " << err);
     if (!msg.match_elements<std::string>())
       CAF_FAIL("unexpected message: " << msg);
     auto& str = msg.get_as<std::string>(0);
-    buf_->insert(buf_->end(), str.begin(), str.end());
+    auto str_ptr = str.data();
+    auto byte_ptr = reinterpret_cast<const byte*>(str_ptr);
+    buf_->insert(buf_->end(), byte_ptr, byte_ptr + str.size());
   }
 
   template <class Parent>
   void write_message(Parent& parent,
                      std::unique_ptr<net::endpoint_manager::message> msg) {
-    std::vector<char> buf;
+    std::vector<byte> buf;
     header_type header{static_cast<uint32_t>(msg->payload.size())};
     buf.resize(sizeof(header_type));
     memcpy(buf.data(), &header, buf.size());
@@ -107,10 +105,10 @@ public:
     parent.write_packet(buf);
   }
 
-  static expected<std::vector<char>> serialize(actor_system& sys,
+  static expected<std::vector<byte>> serialize(actor_system& sys,
                                                const type_erased_tuple& x) {
-    std::vector<char> result;
-    binary_serializer sink{sys, result};
+    std::vector<byte> result;
+    serializer_impl<std::vector<byte>> sink{sys, result};
     if (auto err = message::save(sink, x))
       return err;
     return result;
@@ -118,13 +116,13 @@ public:
 
 private:
   actor_system& sys_;
-  std::shared_ptr<std::vector<char>> buf_;
+  std::shared_ptr<std::vector<byte>> buf_;
 };
 
 class stream_string_application : public string_application {
 public:
   stream_string_application(actor_system& sys,
-                            std::shared_ptr<std::vector<char>> buf)
+                            std::shared_ptr<std::vector<byte>> buf)
     : string_application(sys, std::move(buf)), await_payload_(false) {
     // nop
   }
@@ -137,7 +135,7 @@ public:
   }
 
   template <class Parent>
-  void handle_data(Parent& parent, span<char> data) {
+  void handle_data(Parent& parent, span<byte> data) {
     if (await_payload_) {
       handle_packet(parent, header_, data);
       await_payload_ = false;
@@ -146,7 +144,7 @@ public:
         CAF_FAIL("");
       memcpy(&header_, data.data(), sizeof(header_type));
       if (header_.payload == 0)
-        handle_packet(parent, header_, span<char>{});
+        handle_packet(parent, header_, span<byte>{});
       else
         parent.configure_read(net::receive_policy::exactly(header_.payload));
       await_payload_ = true;
@@ -185,9 +183,9 @@ private:
 CAF_TEST_FIXTURE_SCOPE(endpoint_manager_tests, fixture)
 
 CAF_TEST(receive) {
-  std::vector<char> read_buf(1024);
+  std::vector<byte> read_buf(1024);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
-  auto buf = std::make_shared<std::vector<char>>();
+  auto buf = std::make_shared<std::vector<byte>>();
   auto sockets = unbox(make_stream_socket_pair());
   nonblocking(sockets.second, true);
   CAF_CHECK_EQUAL(read(sockets.second, read_buf.data(), read_buf.size()),
@@ -214,7 +212,9 @@ CAF_TEST(receive) {
     after(std::chrono::seconds(0)) >>
       [&] { CAF_FAIL("manager did not respond with a proxy."); });
   run();
-  CAF_CHECK_EQUAL(string_view(buf->data(), buf->size()), "hello proxy!");
+  CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(buf->data()),
+                              buf->size()),
+                  "hello proxy!");
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

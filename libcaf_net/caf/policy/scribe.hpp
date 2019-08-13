@@ -18,15 +18,16 @@
 
 #pragma once
 
-#include <caf/error.hpp>
-#include <caf/fwd.hpp>
-#include <caf/logger.hpp>
-#include <caf/net/endpoint_manager.hpp>
-#include <caf/net/receive_policy.hpp>
-#include <caf/net/stream_socket.hpp>
-#include <caf/sec.hpp>
-#include <caf/span.hpp>
-#include <caf/variant.hpp>
+#include "caf/byte.hpp"
+#include "caf/error.hpp"
+#include "caf/fwd.hpp"
+#include "caf/logger.hpp"
+#include "caf/net/endpoint_manager.hpp"
+#include "caf/net/receive_policy.hpp"
+#include "caf/net/stream_socket.hpp"
+#include "caf/sec.hpp"
+#include "caf/span.hpp"
+#include "caf/variant.hpp"
 
 namespace caf {
 namespace policy {
@@ -75,6 +76,7 @@ public:
     // Try to write leftover data.
     write_some(parent);
     // Get new data from parent.
+    // TODO: dont read all messages at once - get one by one.
     for (auto msg = parent.next_message(); msg != nullptr;
          msg = parent.next_message()) {
       parent.application().write_message(*this, std::move(msg));
@@ -128,15 +130,15 @@ public:
 
   void configure_read(net::receive_policy::config cfg);
 
-  void write_packet(span<char> buf);
+  void write_packet(span<byte> buf);
 
 private:
   net::stream_socket handle_;
 
-  std::vector<char> read_buf_;
-  std::vector<char> write_buf_;
+  std::vector<byte> read_buf_;
+  std::vector<byte> write_buf_;
 
-  size_t max_consecutive_reads_;
+  size_t max_consecutive_reads_; // TODO use this field!
   size_t read_threshold_;
   size_t collected_;
   size_t max_;
