@@ -129,12 +129,6 @@ actor_system_config::actor_system_config()
                "schedule utility actors instead of dedicating threads")
     .add<bool>("manual-multiplexing",
                "disables background activity of the multiplexer")
-    .add<size_t>("cached-udp-buffers",
-                 "maximum for cached UDP send buffers (default: 10)")
-    .add<size_t>("max-pending-messages",
-                 "maximum for reordering of UDP receive buffers (default: 10)")
-    .add<bool>("disable-tcp", "disables communication via TCP")
-    .add<bool>("enable-udp", "enable communication via UDP")
     .add<size_t>("workers", "number of deserialization workers");
   opt_group(custom_options_, "opencl")
     .add<std::vector<size_t>>("device-ids", "whitelist for OpenCL devices");
