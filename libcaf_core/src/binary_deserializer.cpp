@@ -26,7 +26,6 @@
 #include "caf/detail/network_order.hpp"
 #include "caf/sec.hpp"
 
-
 namespace caf {
 
 namespace {
@@ -49,29 +48,7 @@ error apply_float(binary_deserializer& bs, T& x) {
   return none;
 }
 
-} // namespace <anonmyous>
-
-binary_deserializer::binary_deserializer(actor_system& sys, const char* buf,
-                                         size_t buf_size)
-  : super(sys), current_(buf), end_(buf + buf_size) {
-  // nop
-}
-
-binary_deserializer::binary_deserializer(execution_unit* ctx, const char* buf,
-                                         size_t buf_size)
-  : super(ctx), current_(buf), end_(buf + buf_size) {
-  // nop
-}
-
-binary_deserializer::binary_deserializer(actor_system& sys, const buffer& buf)
-  : binary_deserializer(sys, buf.data(), buf.size()) {
-  // nop
-}
-
-binary_deserializer::binary_deserializer(execution_unit* ctx, const buffer& buf)
-  : binary_deserializer(ctx, buf.data(), buf.size()) {
-  // nop
-}
+} // namespace
 
 error binary_deserializer::begin_object(uint16_t& nr, std::string& name) {
   if (auto err = apply(nr))
@@ -172,7 +149,8 @@ error binary_deserializer::apply_impl(std::string& x) {
     return err;
   if (!range_check(str_size))
     return sec::end_of_stream;
-  x.assign(current_, current_ + str_size);
+  x.assign(reinterpret_cast<char*>(const_cast<byte*>(current_)),
+           reinterpret_cast<char*>(const_cast<byte*>(current_)) + str_size);
   current_ += str_size;
   return end_sequence();
 }

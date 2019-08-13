@@ -88,67 +88,79 @@ typename Inspector::result_type inspect(Inspector& f, test_data& x) {
 struct serialization_fixture {
   caf::actor_system_config cfg;
   caf::actor_system sys{cfg};
-  test_data source;
-  test_data sink{0,
-                 0,
-                 0,
-                 0,
-                 caf::duration(caf::time_unit::seconds, 0),
-                 caf::timestamp{caf::timestamp::duration{0}},
-                 test_enum::a,
-                 ""};
+  test_data data_to_serialize;
+  test_data deserialized_data{0,
+                              0,
+                              0,
+                              0,
+                              caf::duration(caf::time_unit::seconds, 0),
+                              caf::timestamp{caf::timestamp::duration{0}},
+                              test_enum::a,
+                              ""};
 };
 
 } // namespace
 
 CAF_TEST_FIXTURE_SCOPE(serializer_impl_tests, serialization_fixture)
 
-CAF_TEST(serialize to std::vector<char>) {
+CAF_TEST(serialize and deserialize with std::vector<char>) {
   using container_type = std::vector<char>;
   std::vector<char> binary_serializer_buffer;
   container_type serializer_impl_buffer;
   binary_serializer sink1{sys, binary_serializer_buffer};
   serializer_impl<container_type> sink2{sys, serializer_impl_buffer};
-  if (auto err = sink1(source))
+  if (auto err = sink1(data_to_serialize))
     CAF_FAIL("serialization failed: " << sys.render(err));
-  if (auto err = sink2(source))
+  if (auto err = sink2(data_to_serialize))
     CAF_FAIL("serialization failed: " << sys.render(err));
   CAF_CHECK_EQUAL(memcmp(binary_serializer_buffer.data(),
                          serializer_impl_buffer.data(),
                          binary_serializer_buffer.size()),
                   0);
+  binary_deserializer source(sys, serializer_impl_buffer);
+  if (auto err = source(deserialized_data))
+    CAF_FAIL("deserialization failed: " << sys.render(err));
+  CAF_CHECK_EQUAL(data_to_serialize, deserialized_data);
 }
 
-CAF_TEST(serialize to std::vector<byte>) {
+CAF_TEST(serialize and deserialize with std::vector<byte>) {
   using container_type = std::vector<byte>;
   std::vector<char> binary_serializer_buffer;
   container_type serializer_impl_buffer;
   binary_serializer sink1{sys, binary_serializer_buffer};
   serializer_impl<container_type> sink2{sys, serializer_impl_buffer};
-  if (auto err = sink1(source))
+  if (auto err = sink1(data_to_serialize))
     CAF_FAIL("serialization failed: " << sys.render(err));
-  if (auto err = sink2(source))
+  if (auto err = sink2(data_to_serialize))
     CAF_FAIL("serialization failed: " << sys.render(err));
   CAF_CHECK_EQUAL(memcmp(binary_serializer_buffer.data(),
                          serializer_impl_buffer.data(),
                          binary_serializer_buffer.size()),
                   0);
+  binary_deserializer source(sys, serializer_impl_buffer);
+  if (auto err = source(deserialized_data))
+    CAF_FAIL("deserialization failed: " << sys.render(err));
+  CAF_CHECK_EQUAL(data_to_serialize, deserialized_data);
 }
 
-CAF_TEST(serialize to std::vector<uint8_t>) {
+CAF_TEST(serialize and deserialize with std::vector<uint8_t>) {
   using container_type = std::vector<uint8_t>;
   std::vector<char> binary_serializer_buffer;
   container_type serializer_impl_buffer;
   binary_serializer sink1{sys, binary_serializer_buffer};
   serializer_impl<container_type> sink2{sys, serializer_impl_buffer};
-  if (auto err = sink1(source))
+  if (auto err = sink1(data_to_serialize))
     CAF_FAIL("serialization failed: " << sys.render(err));
-  if (auto err = sink2(source))
+  if (auto err = sink2(data_to_serialize))
     CAF_FAIL("serialization failed: " << sys.render(err));
   CAF_CHECK_EQUAL(memcmp(binary_serializer_buffer.data(),
                          serializer_impl_buffer.data(),
                          binary_serializer_buffer.size()),
                   0);
+  binary_deserializer source(sys, serializer_impl_buffer);
+  if (auto err = source(deserialized_data))
+    CAF_FAIL("deserialization failed: " << sys.render(err));
+  CAF_CHECK_EQUAL(data_to_serialize, deserialized_data);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END();

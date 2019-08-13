@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "caf/byte.hpp"
 #include "caf/deserializer.hpp"
 
 namespace caf {
@@ -33,17 +34,36 @@ public:
 
   using super = deserializer;
 
-  using buffer = std::vector<char>;
-
   // -- constructors, destructors, and assignment operators --------------------
 
-  binary_deserializer(actor_system& sys, const char* buf, size_t buf_size);
+  template <class ValueType>
+  binary_deserializer(actor_system& sys, const ValueType* buf, size_t buf_size)
+    : super(sys),
+      current_(reinterpret_cast<const byte*>(buf)),
+      end_(reinterpret_cast<const byte*>(buf) + buf_size) {
+    static_assert(sizeof(ValueType) == 1, "sizeof(Value type) > 1");
+  }
 
-  binary_deserializer(execution_unit* ctx, const char* buf, size_t buf_size);
+  template <class ValueType>
+  binary_deserializer(execution_unit* ctx, const ValueType* buf,
+                      size_t buf_size)
+    : super(ctx),
+      current_(reinterpret_cast<const byte*>(buf)),
+      end_(reinterpret_cast<const byte*>(buf) + buf_size) {
+    static_assert(sizeof(ValueType) == 1, "sizeof(Value type) > 1");
+  }
 
-  binary_deserializer(actor_system& sys, const buffer& buf);
+  template <class BufferType>
+  binary_deserializer(actor_system& sys, const BufferType& buf)
+    : binary_deserializer(sys, buf.data(), buf.size()) {
+    // nop
+  }
 
-  binary_deserializer(execution_unit* ctx, const buffer& buf);
+  template <class BufferType>
+  binary_deserializer(execution_unit* ctx, const BufferType& buf)
+    : binary_deserializer(ctx, buf.data(), buf.size()) {
+    // nop
+  }
 
   // -- overridden member functions --------------------------------------------
 
@@ -60,12 +80,12 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Returns the current read position.
-  const char* current() const {
+  const byte* current() const {
     return current_;
   }
 
   /// Returns the past-the-end iterator.
-  const char* end() const {
+  const byte* end() const {
     return end_;
   }
 
@@ -77,7 +97,6 @@ public:
   void skip(size_t num_bytes) {
     current_ += num_bytes;
   }
-
 
 protected:
   error apply_impl(int8_t&) override;
@@ -113,8 +132,8 @@ private:
     return current_ + read_size <= end_;
   }
 
-  const char* current_;
-  const char* end_;
+  const byte* current_;
+  const byte* end_;
 };
 
 } // namespace caf
