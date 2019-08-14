@@ -169,8 +169,8 @@ error message::save(serializer& sink, const type_erased_tuple& x) {
   auto n = x.size();
   for (size_t i = 0; i < n; ++i) {
     auto rtti = x.type(i);
-    auto ptr = types.portable_name(rtti);
-    if (ptr == nullptr) {
+    const auto& portable_name = types.portable_name(rtti);
+    if (portable_name == types.default_type_name()) {
       std::cerr << "[ERROR]: cannot serialize message because a type was "
                    "not added to the types list, typeid name: "
                 << (rtti.second != nullptr ? rtti.second->name()
@@ -181,7 +181,7 @@ error message::save(serializer& sink, const type_erased_tuple& x) {
                                            : "-not-available-");
     }
     tname += '+';
-    tname += *ptr;
+    tname += portable_name;
   }
   auto save_loop = [&]() -> error {
     for (size_t i = 0; i < n; ++i) {
