@@ -24,6 +24,7 @@
 
 #include "caf/byte.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/span.hpp"
 
 namespace caf {
 
@@ -36,32 +37,25 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  template <class ValueType>
-  binary_deserializer(actor_system& sys, const ValueType* buf, size_t buf_size)
-    : super(sys),
-      current_(reinterpret_cast<const byte*>(buf)),
-      end_(reinterpret_cast<const byte*>(buf) + buf_size) {
-    static_assert(sizeof(ValueType) == 1, "sizeof(Value type) > 1");
-  }
-
-  template <class ValueType>
-  binary_deserializer(execution_unit* ctx, const ValueType* buf,
-                      size_t buf_size)
-    : super(ctx),
-      current_(reinterpret_cast<const byte*>(buf)),
-      end_(reinterpret_cast<const byte*>(buf) + buf_size) {
-    static_assert(sizeof(ValueType) == 1, "sizeof(Value type) > 1");
-  }
-
-  template <class BufferType>
-  binary_deserializer(actor_system& sys, const BufferType& buf)
-    : binary_deserializer(sys, buf.data(), buf.size()) {
+  binary_deserializer(actor_system& sys, span<const byte> bytes)
+    : super(sys), current_(bytes.begin()), end_(bytes.end()) {
     // nop
   }
 
-  template <class BufferType>
-  binary_deserializer(execution_unit* ctx, const BufferType& buf)
-    : binary_deserializer(ctx, buf.data(), buf.size()) {
+  binary_deserializer(execution_unit* ctx, span<const byte> bytes)
+    : super(ctx), current_(bytes.begin()), end_(bytes.end()) {
+    // nop
+  }
+
+  template <class T>
+  binary_deserializer(actor_system& sys, const std::vector<T>& buf)
+    : binary_deserializer(sys, as_bytes(make_span(buf.data(), buf.size()))) {
+    // nop
+  }
+
+  template <class T>
+  binary_deserializer(execution_unit* ctx, const std::vector<T>& buf)
+    : binary_deserializer(ctx, as_bytes(make_span(buf.data(), buf.size()))) {
     // nop
   }
 

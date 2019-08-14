@@ -149,8 +149,8 @@ error binary_deserializer::apply_impl(std::string& x) {
     return err;
   if (!range_check(str_size))
     return sec::end_of_stream;
-  x.assign(reinterpret_cast<char*>(const_cast<byte*>(current_)),
-           reinterpret_cast<char*>(const_cast<byte*>(current_)) + str_size);
+  x.assign(reinterpret_cast<const char*>(current_),
+           reinterpret_cast<const char*>(current_) + str_size);
   current_ += str_size;
   return end_sequence();
 }
