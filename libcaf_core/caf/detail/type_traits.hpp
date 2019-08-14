@@ -735,48 +735,30 @@ struct always_false : std::false_type {};
 
 // -- traits to check for STL-style type aliases -------------------------------
 
-namespace trait {
-
 CAF_HAS_ALIAS_TRAIT(value_type);
 
 CAF_HAS_ALIAS_TRAIT(key_type);
 
 CAF_HAS_ALIAS_TRAIT(mapped_type);
 
-} // namespace trait
-
 // -- constexpr functions for use in enable_if & friends -----------------------
-
-/// Checks whether T behaves like a `std::map`.
-template <class T>
-constexpr bool is_container_type() {
-  return is_iterable<T>::value;
-}
 
 /// Checks whether T behaves like a `std::map` or a `std::unordered_map`.
 template <class T>
-constexpr bool map_like() {
-  return is_container_type<T>() && trait::has_key_type_alias<T>::value
-         && trait::has_mapped_type_alias<T>::value;
-}
+struct is_map_like {
+  static constexpr bool value = is_iterable<T>::value
+                                && has_key_type_alias<T>::value
+                                && has_mapped_type_alias<T>::value;
+};
 
 /// Checks whether T behaves like a `std::vector` or a `std::list`.
 template <class T>
-constexpr bool list_like() {
-  return is_container_type<T>() && trait::has_value_type_alias<T>::value
-         && !trait::has_key_type_alias<T>::value
-         && !trait::has_mapped_type_alias<T>::value;
-}
-
-template <class A, class B>
-constexpr bool same() {
-  return std::is_same<A, B>::value;
-}
-
-template <class T, class... Ts>
-constexpr bool one_of() {
-  return is_one_of<T, Ts...>::value;
-}
+struct is_list_like {
+  static constexpr bool value = is_iterable<T>::value
+                                && has_value_type_alias<T>::value
+                                && !has_key_type_alias<T>::value
+                                && !has_mapped_type_alias<T>::value;
+};
 
 } // namespace detail
 } // namespace caf

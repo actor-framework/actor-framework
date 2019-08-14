@@ -177,8 +177,8 @@ private:
   }
 
   template <class T>
-  detail::enable_if_t<detail::list_like<detail::decay_t<T>>()
-                      && !detail::same<detail::decay_t<T>, list>()>
+  detail::enable_if_t<detail::is_list_like<detail::decay_t<T>>::value
+                      && !std::is_same<detail::decay_t<T>, list>::value>
   set(T&& xs) {
     // Move values from the old list into the new list if `xs` is an rvalue.
     using namespace detail;
@@ -193,8 +193,8 @@ private:
   }
 
   template <class T>
-  detail::enable_if_t<detail::map_like<detail::decay_t<T>>()
-                      && !detail::same<detail::decay_t<T>, dictionary>()>
+  detail::enable_if_t<detail::is_map_like<detail::decay_t<T>>::value
+                      && !std::is_same<detail::decay_t<T>, dictionary>::value>
   set(T&& xs) {
     // Move values from the old list into the new list if `xs` is an rvalue.
     using namespace detail;
