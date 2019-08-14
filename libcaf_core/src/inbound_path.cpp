@@ -79,7 +79,7 @@ inbound_path::inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
   mgr->register_input_path(this);
   CAF_STREAM_LOG_DEBUG(mgr->self()->name()
                        << "opens input stream with element type"
-                       << *mgr->self()->system().types().portable_name(in_type)
+                       << mgr->self()->system().types().portable_name(in_type)
                        << "at slot" << id.receiver << "from" << hdl);
 }
 
