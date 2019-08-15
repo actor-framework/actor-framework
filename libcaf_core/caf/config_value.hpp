@@ -127,22 +127,22 @@ public:
   const char* type_name() const noexcept;
 
   /// Returns the underlying variant.
-  inline variant_type& get_data() {
+  variant_type& get_data() {
     return data_;
   }
 
   /// Returns the underlying variant.
-  inline const variant_type& get_data() const {
+  const variant_type& get_data() const {
     return data_;
   }
 
   /// Returns a pointer to the underlying variant.
-  inline variant_type* get_data_ptr() {
+  variant_type* get_data_ptr() {
     return &data_;
   }
 
   /// Returns a pointer to the underlying variant.
-  inline const variant_type* get_data_ptr() const {
+  const variant_type* get_data_ptr() const {
     return &data_;
   }
 
@@ -153,16 +153,20 @@ private:
 
   // -- auto conversion of related types ---------------------------------------
 
-  inline void set(bool x) {
+  void set(bool x) {
     data_ = x;
   }
 
-  inline void set(float x) {
+  void set(float x) {
     data_ = static_cast<double>(x);
   }
 
-  inline void set(const char* x) {
+  void set(const char* x) {
     data_ = std::string{x};
+  }
+
+  void set(string_view x) {
+    data_ = std::string{x.begin(), x.end()};
   }
 
   template <class T>
@@ -170,6 +174,38 @@ private:
                                         list, dictionary>::value>
   set(T x) {
     data_ = std::move(x);
+  }
+
+  template <class T>
+  detail::enable_if_t<detail::is_list_like<detail::decay_t<T>>::value
+                      && !std::is_same<detail::decay_t<T>, list>::value>
+  set(T&& xs) {
+    // Move values from the old list into the new list if `xs` is an rvalue.
+    using namespace detail;
+    using xs_type = decltype(xs);
+    using value_type = typename decay_t<T>::value_type;
+    using fwd_type = conditional_t<std::is_rvalue_reference<xs_type>::value,
+                                   value_type&&, const value_type&>;
+    auto& lst = as_list();
+    lst.clear();
+    for (auto& x : xs)
+      lst.emplace_back(config_value{static_cast<fwd_type>(x)});
+  }
+
+  template <class T>
+  detail::enable_if_t<detail::is_map_like<detail::decay_t<T>>::value
+                      && !std::is_same<detail::decay_t<T>, dictionary>::value>
+  set(T&& xs) {
+    // Move values from the old list into the new list if `xs` is an rvalue.
+    using namespace detail;
+    using xs_type = decltype(xs);
+    using mapped_type = typename decay_t<T>::mapped_type;
+    using fwd_type = conditional_t<std::is_rvalue_reference<xs_type>::value,
+                                   mapped_type&&, const mapped_type&>;
+    auto& dict = as_dictionary();
+    dict.clear();
+    for (auto& kvp : xs)
+      dict.emplace(kvp.first, static_cast<fwd_type>(kvp.second));
   }
 
   template <class T>

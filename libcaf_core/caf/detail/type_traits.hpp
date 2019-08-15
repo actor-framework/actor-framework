@@ -33,26 +33,51 @@
 #include "caf/detail/type_list.hpp"
 
 #define CAF_HAS_MEMBER_TRAIT(name)                                             \
-template <class T>                                                             \
-struct has_##name##_member {                                                   \
-  template <class U>                                                           \
-  static auto sfinae(U* x) -> decltype(x->name(), std::true_type());           \
+  template <class T>                                                           \
+  class has_##name##_member {                                                  \
+  private:                                                                     \
+    template <class U>                                                         \
+    static auto sfinae(U* x) -> decltype(x->name(), std::true_type());         \
                                                                                \
-  template <class U>                                                           \
-  static auto sfinae(...) -> std::false_type;                                  \
+    template <class U>                                                         \
+    static auto sfinae(...) -> std::false_type;                                \
                                                                                \
-  using type = decltype(sfinae<T>(nullptr));                                   \
-  static constexpr bool value = type::value;                                   \
-}
+    using sfinae_type = decltype(sfinae<T>(nullptr));                          \
+                                                                               \
+  public:                                                                      \
+    static constexpr bool value = sfinae_type::value;                          \
+  }
+
+#define CAF_HAS_ALIAS_TRAIT(name)                                              \
+  template <class T>                                                           \
+  class has_##name##_alias {                                                   \
+  private:                                                                     \
+    template <class C>                                                         \
+    static std::true_type sfinae(C* ptr, typename C::name* arg = nullptr);     \
+                                                                               \
+    static std::false_type sfinae(void* ptr);                                  \
+                                                                               \
+    using sfinae_type = decltype(sfinae(static_cast<T*>(nullptr)));            \
+                                                                               \
+  public:                                                                      \
+    static constexpr bool value = sfinae_type::value;                          \
+  }
 
 namespace caf {
 namespace detail {
 
+// -- backport of C++14 additions ----------------------------------------------
+
 template <class T>
 using decay_t = typename std::decay<T>::type;
 
+template <bool B, class T, class F>
+using conditional_t = typename std::conditional<B, T, F>::type;
+
 template <bool V, class T = void>
 using enable_if_t = typename std::enable_if<V, T>::type;
+
+// -- custom traits ------------------------------------------------------------
 
 template <class Trait, class T = void>
 using enable_if_tt = typename std::enable_if<Trait::value, T>::type;
@@ -708,6 +733,35 @@ struct is_same_ish
 template <class>
 struct always_false : std::false_type {};
 
+// -- traits to check for STL-style type aliases -------------------------------
+
+CAF_HAS_ALIAS_TRAIT(value_type);
+
+CAF_HAS_ALIAS_TRAIT(key_type);
+
+CAF_HAS_ALIAS_TRAIT(mapped_type);
+
+// -- constexpr functions for use in enable_if & friends -----------------------
+
+/// Checks whether T behaves like a `std::map` or a `std::unordered_map`.
+template <class T>
+struct is_map_like {
+  static constexpr bool value = is_iterable<T>::value
+                                && has_key_type_alias<T>::value
+                                && has_mapped_type_alias<T>::value;
+};
+
+/// Checks whether T behaves like a `std::vector` or a `std::list`.
+template <class T>
+struct is_list_like {
+  static constexpr bool value = is_iterable<T>::value
+                                && has_value_type_alias<T>::value
+                                && !has_key_type_alias<T>::value
+                                && !has_mapped_type_alias<T>::value;
+};
+
 } // namespace detail
 } // namespace caf
 
+#undef CAF_HAS_MEMBER_TRAIT
+#undef CAF_HAS_ALIAS_TRAIT

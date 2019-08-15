@@ -22,6 +22,25 @@
 
 namespace caf {
 
+const config_value* get_if(const settings* xs, string_view name) {
+  // Access the key directly unless the user specified a dot-separated path.
+  auto pos = name.find('.');
+  if (pos == std::string::npos) {
+    auto i = xs->find(name);
+    if (i == xs->end())
+      return nullptr;
+    // We can't simply return the result here, because it might be a pointer.
+    return &i->second;
+  }
+  // We're dealing with a `<category>.<key>`-formatted string, extract the
+  // sub-settings by category and recurse.
+  auto i = xs->find(name.substr(0, pos));
+  if (i == xs->end() || !holds_alternative<config_value::dictionary>(i->second))
+    return nullptr;
+  return get_if(&get<config_value::dictionary>(i->second),
+                name.substr(pos + 1));
+}
+
 std::string get_or(const settings& xs, string_view name,
                    string_view default_value) {
   auto result = get_if<std::string>(&xs, name);

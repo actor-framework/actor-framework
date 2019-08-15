@@ -32,27 +32,16 @@ using settings = dictionary<config_value>;
 
 /// Tries to retrieve the value associated to `name` from `xs`.
 /// @relates config_value
+const config_value* get_if(const settings* xs, string_view name);
+
+/// Tries to retrieve the value associated to `name` from `xs`.
+/// @relates config_value
 template <class T>
 optional<T> get_if(const settings* xs, string_view name) {
-  // Access the key directly unless the user specified a dot-separated path.
-  auto pos = name.find('.');
-  if (pos == std::string::npos) {
-    auto i = xs->find(name);
-    if (i == xs->end())
-      return none;
-    // We can't simply return the result here, because it might be a pointer.
-    auto result = get_if<T>(&i->second);
-    if (result)
-      return *result;
-    return none;
-  }
-  // We're dealing with a `<category>.<key>`-formatted string, extract the
-  // sub-settings by category and recurse.
-  auto i = xs->find(name.substr(0, pos));
-  if (i == xs->end() || !holds_alternative<config_value::dictionary>(i->second))
-    return none;
-  return get_if<T>(&get<config_value::dictionary>(i->second),
-                   name.substr(pos + 1));
+  if (auto value = get_if(xs, name))
+    if (auto ptr = get_if<T>(value))
+      return *ptr;
+  return none;
 }
 
 template <class T>
@@ -90,6 +79,19 @@ template <class T>
 config_value& put(settings& dict, string_view key, T&& value) {
   config_value tmp{std::forward<T>(value)};
   return put_impl(dict, key, tmp);
+}
+
+/// Converts `value` to a `config_value` and assigns it to `key` if `value` is
+/// currently missing in `xs`.
+/// @param xs Dictionary of key-value pairs.
+/// @param key Human-readable nested keys in the form `category.key`.
+/// @param value New value for given `key`.
+template <class T>
+void put_missing(settings& xs, string_view key, T&& value) {
+  if (get_if(&xs, key) != nullptr)
+    return;
+  config_value tmp{std::forward<T>(value)};
+  put_impl(xs, key, tmp);
 }
 
 /// Inserts a new list named `name` into the dictionary `xs` and returns
