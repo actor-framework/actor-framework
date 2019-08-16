@@ -20,6 +20,7 @@
 
 #include "caf/net/multiplexer.hpp"
 #include "caf/sec.hpp"
+#include "caf/span.hpp"
 #include "caf/variant.hpp"
 
 namespace caf {
@@ -38,7 +39,7 @@ pollset_updater::~pollset_updater() {
 
 bool pollset_updater::handle_read_event() {
   for (;;) {
-    auto res = read(handle(), buf_.data(), buf_.size() - buf_size_);
+    auto res = read(handle(), make_span(buf_.data(), buf_.size() - buf_size_));
     if (auto num_bytes = get_if<size_t>(&res)) {
       buf_size_ += *num_bytes;
       if (buf_.size() == buf_size_) {

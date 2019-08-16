@@ -18,8 +18,10 @@
 
 #pragma once
 
+#include "caf/byte.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/network_socket.hpp"
+#include "caf/span.hpp"
 
 namespace caf {
 namespace net {
@@ -60,7 +62,7 @@ error nodelay(stream_socket x, bool new_value);
 /// @returns The number of received bytes on success, an error code otherwise.
 /// @relates pipe_socket
 /// @post either the result is a `sec` or a positive (non-zero) integer
-variant<size_t, sec> read(stream_socket x, void* buf, size_t buf_size);
+variant<size_t, sec> read(stream_socket x, span<byte> buf);
 
 /// Transmits data from `x` to its peer.
 /// @param x Connected endpoint.
@@ -69,7 +71,7 @@ variant<size_t, sec> read(stream_socket x, void* buf, size_t buf_size);
 /// @returns The number of written bytes on success, otherwise an error code.
 /// @relates pipe_socket
 /// @post either the result is a `sec` or a positive (non-zero) integer
-variant<size_t, sec> write(stream_socket x, const void* buf, size_t buf_size);
+variant<size_t, sec> write(stream_socket x, span<const byte> buf);
 
 /// Converts the result from I/O operation on a ::stream_socket to either an
 /// error code or a non-zero positive integer.

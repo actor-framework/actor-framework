@@ -22,13 +22,16 @@
 #include <cstdlib>
 #include <utility>
 
+#include "caf/byte.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/net_syscall.hpp"
+#include "caf/detail/socket_sys_aliases.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/net/stream_socket.hpp"
 #include "caf/sec.hpp"
+#include "caf/span.hpp"
 #include "caf/variant.hpp"
 
 namespace caf {
@@ -49,14 +52,14 @@ expected<std::pair<pipe_socket, pipe_socket>> make_pipe() {
   }
 }
 
-variant<size_t, sec> write(pipe_socket x, const void* buf, size_t buf_size) {
+variant<size_t, sec> write(pipe_socket x, span<const byte> buf) {
   // On Windows, a pipe consists of two stream sockets.
-  return write(socket_cast<stream_socket>(x), buf, buf_size);
+  return write(socket_cast<stream_socket>(x), buf);
 }
 
-variant<size_t, sec> read(pipe_socket x, void* buf, size_t buf_size) {
+variant<size_t, sec> read(pipe_socket x, span<byte> buf) {
   // On Windows, a pipe consists of two stream sockets.
-  return read(socket_cast<stream_socket>(x), buf, buf_size);
+  return read(socket_cast<stream_socket>(x), buf);
 }
 
 #else // CAF_WINDOWS
@@ -80,13 +83,15 @@ expected<std::pair<pipe_socket, pipe_socket>> make_pipe() {
   return std::make_pair(pipe_socket{pipefds[0]}, pipe_socket{pipefds[1]});
 }
 
-variant<size_t, sec> write(pipe_socket x, const void* buf, size_t buf_size) {
-  auto res = ::write(x.id, buf, buf_size);
+variant<size_t, sec> write(pipe_socket x, span<const byte> buf) {
+  auto res = ::write(x.id, reinterpret_cast<socket_send_ptr>(buf.data()),
+                     buf.size());
   return check_pipe_socket_io_res(res);
 }
 
-variant<size_t, sec> read(pipe_socket x, void* buf, size_t buf_size) {
-  auto res = ::read(x.id, buf, buf_size);
+variant<size_t, sec> read(pipe_socket x, span<byte> buf) {
+  auto res = ::read(x.id, reinterpret_cast<socket_recv_ptr>(buf.data()),
+                    buf.size());
   return check_pipe_socket_io_res(res);
 }
 

@@ -32,6 +32,7 @@
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/stream_socket.hpp"
 #include "caf/serializer_impl.hpp"
+#include "caf/span.hpp"
 
 using namespace caf;
 using namespace caf::net;
@@ -91,7 +92,7 @@ public:
 
   template <class Manager>
   bool handle_read_event(Manager&) {
-    auto res = read(handle_, read_buf_.data(), read_buf_.size());
+    auto res = read(handle_, make_span(read_buf_));
     if (auto num_bytes = get_if<size_t>(&res)) {
       data_->insert(data_->end(), read_buf_.begin(),
                     read_buf_.begin() + *num_bytes);
@@ -106,7 +107,7 @@ public:
       auto& payload = x->payload;
       write_buf_.insert(write_buf_.end(), payload.begin(), payload.end());
     }
-    auto res = write(handle_, write_buf_.data(), write_buf_.size());
+    auto res = write(handle_, as_bytes(make_span(write_buf_)));
     if (auto num_bytes = get_if<size_t>(&res)) {
       write_buf_.erase(write_buf_.begin(), write_buf_.begin() + *num_bytes);
       return write_buf_.size() > 0;
@@ -156,7 +157,7 @@ CAF_TEST(send and receive) {
   auto buf = std::make_shared<std::vector<byte>>();
   auto sockets = unbox(make_stream_socket_pair());
   nonblocking(sockets.second, true);
-  CAF_CHECK_EQUAL(read(sockets.second, read_buf.data(), read_buf.size()),
+  CAF_CHECK_EQUAL(read(sockets.second, make_span(read_buf)),
                   sec::unavailable_or_would_block);
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
   auto mgr = make_endpoint_manager(mpx, sys,
@@ -165,15 +166,15 @@ CAF_TEST(send and receive) {
   CAF_CHECK_EQUAL(mgr->init(), none);
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
-  CAF_CHECK_EQUAL(write(sockets.second, hello_manager.data(),
-                        hello_manager.size()),
+  CAF_CHECK_EQUAL(write(sockets.second,
+                        as_bytes(make_span(hello_manager.data(),
+                                           hello_manager.size()))),
                   hello_manager.size());
   run();
   CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(buf->data()),
                               buf->size()),
                   hello_manager);
-  CAF_CHECK_EQUAL(read(sockets.second, read_buf.data(), read_buf.size()),
-                  hello_test.size());
+  CAF_CHECK_EQUAL(read(sockets.second, make_span(read_buf)), hello_test.size());
   CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(read_buf.data()),
                               hello_test.size()),
                   hello_test);
@@ -191,8 +192,7 @@ CAF_TEST(resolve and proxy communication) {
   CAF_CHECK_EQUAL(mgr->init(), none);
   mpx->handle_updates();
   run();
-  CAF_CHECK_EQUAL(read(sockets.second, read_buf.data(), read_buf.size()),
-                  hello_test.size());
+  CAF_CHECK_EQUAL(read(sockets.second, make_span(read_buf)), hello_test.size());
   mgr->resolve("/id/42", self);
   run();
   self->receive(
@@ -203,7 +203,7 @@ CAF_TEST(resolve and proxy communication) {
     after(std::chrono::seconds(0)) >>
       [&] { CAF_FAIL("manager did not respond with a proxy."); });
   run();
-  auto read_res = read(sockets.second, read_buf.data(), read_buf.size());
+  auto read_res = read(sockets.second, make_span(read_buf));
   if (!holds_alternative<size_t>(read_res)) {
     CAF_ERROR("read() returned an error: " << sys.render(get<sec>(read_res)));
     return;

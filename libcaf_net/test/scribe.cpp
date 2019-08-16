@@ -20,6 +20,10 @@
 
 #include "caf/policy/scribe.hpp"
 
+#include "caf/test/dsl.hpp"
+
+#include "host_fixture.hpp"
+
 #include "caf/binary_deserializer.hpp"
 #include "caf/byte.hpp"
 #include "caf/detail/scope_guard.hpp"
@@ -30,8 +34,7 @@
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/stream_socket.hpp"
 #include "caf/serializer_impl.hpp"
-#include "caf/test/dsl.hpp"
-#include "host_fixture.hpp"
+#include "caf/span.hpp"
 
 using namespace caf;
 using namespace caf::net;
@@ -76,7 +79,7 @@ public:
   }
 
   template <class Parent>
-  void handle_data(Parent&, span<byte> data) {
+  void handle_data(Parent&, span<const byte> data) {
     rec_buf_->clear();
     rec_buf_->insert(rec_buf_->begin(), data.begin(), data.end());
   }
@@ -125,7 +128,7 @@ CAF_TEST(receive) {
   auto buf = std::make_shared<std::vector<byte>>();
   auto sockets = unbox(make_stream_socket_pair());
   nonblocking(sockets.second, true);
-  CAF_CHECK_EQUAL(read(sockets.second, read_buf.data(), read_buf.size()),
+  CAF_CHECK_EQUAL(read(sockets.second, make_span(read_buf)),
                   sec::unavailable_or_would_block);
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
   CAF_MESSAGE("configure scribe_policy");
@@ -136,8 +139,9 @@ CAF_TEST(receive) {
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
   CAF_MESSAGE("sending data to scribe_policy");
-  CAF_CHECK_EQUAL(write(sockets.second, hello_manager.data(),
-                        hello_manager.size()),
+  CAF_CHECK_EQUAL(write(sockets.second,
+                        as_bytes(make_span(hello_manager.data(),
+                                           hello_manager.size()))),
                   hello_manager.size());
   run();
   CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(buf->data()),
@@ -166,7 +170,7 @@ CAF_TEST(resolve and proxy communication) {
     after(std::chrono::seconds(0)) >>
       [&] { CAF_FAIL("manager did not respond with a proxy."); });
   run();
-  auto read_res = read(sockets.second, read_buf.data(), read_buf.size());
+  auto read_res = read(sockets.second, make_span(read_buf));
   if (!holds_alternative<size_t>(read_res))
     CAF_FAIL("read() returned an error: " << sys.render(get<sec>(read_res)));
   read_buf.resize(get<size_t>(read_res));

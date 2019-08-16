@@ -24,6 +24,9 @@
 
 #include "host_fixture.hpp"
 
+#include "caf/byte.hpp"
+#include "caf/span.hpp"
+
 using namespace caf;
 using namespace caf::net;
 
@@ -37,8 +40,9 @@ CAF_TEST(invalid socket) {
 }
 
 CAF_TEST(connected socket pair) {
-  std::vector<char> wr_buf{1, 2, 4, 8, 16, 32, 64};
-  std::vector<char> rd_buf(124);
+  std::vector<byte> wr_buf{byte(1),  byte(2),  byte(4), byte(8),
+                           byte(16), byte(32), byte(64)};
+  std::vector<byte> rd_buf(124);
   CAF_MESSAGE("create sockets and configure nonblocking I/O");
   auto x = unbox(make_stream_socket_pair());
   CAF_CHECK_EQUAL(nonblocking(x.first, true), caf::none);
@@ -46,24 +50,23 @@ CAF_TEST(connected socket pair) {
   CAF_CHECK_NOT_EQUAL(unbox(send_buffer_size(x.first)), 0u);
   CAF_CHECK_NOT_EQUAL(unbox(send_buffer_size(x.second)), 0u);
   CAF_MESSAGE("verify nonblocking communication");
-  CAF_CHECK_EQUAL(read(x.first, rd_buf.data(), rd_buf.size()),
+  CAF_CHECK_EQUAL(read(x.first, make_span(rd_buf)),
                   sec::unavailable_or_would_block);
-  CAF_CHECK_EQUAL(read(x.second, rd_buf.data(), rd_buf.size()),
+  CAF_CHECK_EQUAL(read(x.second, make_span(rd_buf)),
                   sec::unavailable_or_would_block);
   CAF_MESSAGE("transfer data from first to second socket");
-  CAF_CHECK_EQUAL(write(x.first, wr_buf.data(), wr_buf.size()), wr_buf.size());
-  CAF_CHECK_EQUAL(read(x.second, rd_buf.data(), rd_buf.size()), wr_buf.size());
+  CAF_CHECK_EQUAL(write(x.first, as_bytes(make_span(wr_buf))), wr_buf.size());
+  CAF_CHECK_EQUAL(read(x.second, make_span(rd_buf)), wr_buf.size());
   CAF_CHECK(std::equal(wr_buf.begin(), wr_buf.end(), rd_buf.begin()));
-  rd_buf.assign(rd_buf.size(), 0);
+  rd_buf.assign(rd_buf.size(), byte(0));
   CAF_MESSAGE("transfer data from second to first socket");
-  CAF_CHECK_EQUAL(write(x.second, wr_buf.data(), wr_buf.size()), wr_buf.size());
-  CAF_CHECK_EQUAL(read(x.first, rd_buf.data(), rd_buf.size()), wr_buf.size());
+  CAF_CHECK_EQUAL(write(x.second, as_bytes(make_span(wr_buf))), wr_buf.size());
+  CAF_CHECK_EQUAL(read(x.first, make_span(rd_buf)), wr_buf.size());
   CAF_CHECK(std::equal(wr_buf.begin(), wr_buf.end(), rd_buf.begin()));
-  rd_buf.assign(rd_buf.size(), 0);
+  rd_buf.assign(rd_buf.size(), byte(0));
   CAF_MESSAGE("shut down first socket and observe shutdown on the second one");
   close(x.first);
-  CAF_CHECK_EQUAL(read(x.second, rd_buf.data(), rd_buf.size()),
-                  sec::socket_disconnected);
+  CAF_CHECK_EQUAL(read(x.second, make_span(rd_buf)), sec::socket_disconnected);
   CAF_MESSAGE("done (cleanup)");
   close(x.second);
 }

@@ -20,7 +20,9 @@
 
 #include <system_error>
 
+#include "caf/byte.hpp"
 #include "caf/config.hpp"
+#include "caf/span.hpp"
 
 namespace caf {
 namespace policy {

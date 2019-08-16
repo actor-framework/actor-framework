@@ -18,6 +18,12 @@
 
 #define CAF_SUITE string_application
 
+#include "caf/policy/scribe.hpp"
+
+#include "caf/test/dsl.hpp"
+
+#include "host_fixture.hpp"
+
 #include <vector>
 
 #include "caf/binary_deserializer.hpp"
@@ -29,10 +35,8 @@
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/stream_socket.hpp"
-#include "caf/policy/scribe.hpp"
 #include "caf/serializer_impl.hpp"
-#include "caf/test/dsl.hpp"
-#include "host_fixture.hpp"
+#include "caf/span.hpp"
 
 using namespace caf;
 using namespace caf::net;
@@ -81,7 +85,7 @@ public:
   }
 
   template <class Parent>
-  void handle_packet(Parent&, header_type&, span<byte> payload) {
+  void handle_packet(Parent&, header_type&, span<const byte> payload) {
     binary_deserializer source{sys_, payload};
     message msg;
     if (auto err = msg.load(source))
@@ -89,8 +93,7 @@ public:
     if (!msg.match_elements<std::string>())
       CAF_FAIL("unexpected message: " << msg);
     auto& str = msg.get_as<std::string>(0);
-    auto str_ptr = str.data();
-    auto byte_ptr = reinterpret_cast<const byte*>(str_ptr);
+    auto byte_ptr = reinterpret_cast<const byte*>(str.data());
     buf_->insert(buf_->end(), byte_ptr, byte_ptr + str.size());
   }
 
@@ -135,7 +138,7 @@ public:
   }
 
   template <class Parent>
-  void handle_data(Parent& parent, span<byte> data) {
+  void handle_data(Parent& parent, span<const byte> data) {
     if (await_payload_) {
       handle_packet(parent, header_, data);
       await_payload_ = false;
@@ -144,7 +147,7 @@ public:
         CAF_FAIL("");
       memcpy(&header_, data.data(), sizeof(header_type));
       if (header_.payload == 0)
-        handle_packet(parent, header_, span<byte>{});
+        handle_packet(parent, header_, span<const byte>{});
       else
         parent.configure_read(net::receive_policy::exactly(header_.payload));
       await_payload_ = true;
@@ -188,7 +191,7 @@ CAF_TEST(receive) {
   auto buf = std::make_shared<std::vector<byte>>();
   auto sockets = unbox(make_stream_socket_pair());
   nonblocking(sockets.second, true);
-  CAF_CHECK_EQUAL(read(sockets.second, read_buf.data(), read_buf.size()),
+  CAF_CHECK_EQUAL(read(sockets.second, make_span(read_buf)),
                   sec::unavailable_or_would_block);
   CAF_MESSAGE("adding both endpoint managers");
   auto mgr1 = make_endpoint_manager(mpx, sys, policy::scribe{sockets.first},

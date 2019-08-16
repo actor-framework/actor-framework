@@ -22,10 +22,12 @@
 #include <system_error>
 #include <utility>
 
+#include "caf/byte.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/abstract_socket.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/net/socket_id.hpp"
+#include "caf/span.hpp"
 
 namespace caf {
 namespace net {
@@ -52,7 +54,7 @@ expected<std::pair<pipe_socket, pipe_socket>> make_pipe();
 /// @param buf_size Specifies the size of the buffer in bytes.
 /// @returns The number of written bytes on success, otherwise an error code.
 /// @relates pipe_socket
-variant<size_t, sec> write(pipe_socket x, const void* buf, size_t buf_size);
+variant<size_t, sec> write(pipe_socket x, span<const byte> buf);
 
 /// Receives data from `x`.
 /// @param x Connected endpoint.
@@ -60,7 +62,7 @@ variant<size_t, sec> write(pipe_socket x, const void* buf, size_t buf_size);
 /// @param buf_size Specifies the maximum size of the buffer in bytes.
 /// @returns The number of received bytes on success, otherwise an error code.
 /// @relates pipe_socket
-variant<size_t, sec> read(pipe_socket x, void* buf, size_t buf_size);
+variant<size_t, sec> read(pipe_socket x, span<byte>);
 
 /// Converts the result from I/O operation on a ::pipe_socket to either an
 /// error code or a non-zero positive integer.

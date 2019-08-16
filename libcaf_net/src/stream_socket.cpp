@@ -18,11 +18,13 @@
 
 #include "caf/net/stream_socket.hpp"
 
+#include "caf/byte.hpp"
 #include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_aliases.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/expected.hpp"
 #include "caf/logger.hpp"
+#include "caf/span.hpp"
 #include "caf/variant.hpp"
 
 namespace caf {
@@ -161,15 +163,15 @@ error nodelay(stream_socket x, bool new_value) {
   return none;
 }
 
-variant<size_t, sec> read(stream_socket x, void* buf, size_t buf_size) {
-  auto res = ::recv(x.id, reinterpret_cast<socket_recv_ptr>(buf), buf_size,
-                    no_sigpipe_io_flag);
+variant<size_t, sec> read(stream_socket x, span<byte> buf) {
+  auto res = ::recv(x.id, reinterpret_cast<socket_recv_ptr>(buf.data()),
+                    buf.size(), no_sigpipe_io_flag);
   return check_stream_socket_io_res(res);
 }
 
-variant<size_t, sec> write(stream_socket x, const void* buf, size_t buf_size) {
-  auto res = ::send(x.id, reinterpret_cast<socket_send_ptr>(buf), buf_size,
-                    no_sigpipe_io_flag);
+variant<size_t, sec> write(stream_socket x, span<const byte> buf) {
+  auto res = ::send(x.id, reinterpret_cast<socket_send_ptr>(buf.data()),
+                    buf.size(), no_sigpipe_io_flag);
   return check_stream_socket_io_res(res);
 }
 

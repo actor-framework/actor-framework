@@ -50,10 +50,10 @@ public:
 
   template <class Parent>
   bool handle_read_event(Parent& parent) {
-    void* buf = read_buf_.data() + collected_;
+    auto buf = read_buf_.data() + collected_;
     size_t len = read_threshold_ - collected_;
     CAF_LOG_TRACE(CAF_ARG(handle_.id) << CAF_ARG(len));
-    auto ret = read(handle_, buf, len);
+    auto ret = read(handle_, make_span(buf, len));
     // Update state.
     if (auto num_bytes = get_if<size_t>(&ret)) {
       CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id) << CAF_ARG(*num_bytes));
@@ -90,9 +90,9 @@ public:
     if (write_buf_.empty())
       return false;
     auto len = write_buf_.size() - written_;
-    const void* buf = write_buf_.data() + written_;
+    auto buf = write_buf_.data() + written_;
     CAF_LOG_TRACE(CAF_ARG(handle_.id) << CAF_ARG(len));
-    auto ret = net::write(handle_, buf, len);
+    auto ret = net::write(handle_, as_bytes(make_span(buf, len)));
     if (auto num_bytes = get_if<size_t>(&ret)) {
       CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id) << CAF_ARG(*num_bytes));
       // Update state.
