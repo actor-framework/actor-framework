@@ -90,7 +90,7 @@ public:
     if (write_buf_.empty())
       return false;
     auto len = write_buf_.size() - written_;
-    void* buf = write_buf_.data() + written_;
+    const void* buf = write_buf_.data() + written_;
     CAF_LOG_TRACE(CAF_ARG(handle_.id) << CAF_ARG(len));
     auto ret = net::write(handle_, buf, len);
     if (auto num_bytes = get_if<size_t>(&ret)) {
@@ -130,7 +130,7 @@ public:
 
   void configure_read(net::receive_policy::config cfg);
 
-  void write_packet(span<byte> buf);
+  void write_packet(span<const byte> buf);
 
 private:
   net::stream_socket handle_;

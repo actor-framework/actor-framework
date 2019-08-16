@@ -69,7 +69,7 @@ void scribe::configure_read(net::receive_policy::config cfg) {
   prepare_next_read();
 }
 
-void scribe::write_packet(const span<byte> buf) {
+void scribe::write_packet(span<const byte> buf) {
   write_buf_.insert(write_buf_.end(), buf.begin(), buf.end());
 }
 
