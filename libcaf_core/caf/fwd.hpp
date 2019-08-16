@@ -22,12 +22,15 @@
 #include <map>
 #include <memory>
 #include <tuple>
+#include <vector>
 
 #include "caf/detail/is_one_of.hpp"
 #include "caf/detail/is_primitive_config_value.hpp"
 #include "caf/timespan.hpp"
 
 namespace caf {
+
+// clang-format off
 
 // -- 1 param templates --------------------------------------------------------
 
@@ -39,6 +42,7 @@ template <class> class intrusive_cow_ptr;
 template <class> class intrusive_ptr;
 template <class> class optional;
 template <class> class param;
+template <class> class serializer_impl;
 template <class> class stream;
 template <class> class stream_sink;
 template <class> class stream_source;
@@ -72,6 +76,8 @@ template <class...> class typed_response_promise;
 //
 template <class, class...> class output_stream;
 
+// clang-format on
+
 // -- classes ------------------------------------------------------------------
 
 class abstract_actor;
@@ -89,7 +95,6 @@ class actor_system;
 class actor_system_config;
 class behavior;
 class binary_deserializer;
-class binary_serializer;
 class blocking_actor;
 class config_option;
 class config_option_adder;
@@ -173,11 +178,11 @@ enum class stream_priority;
 // -- aliases ------------------------------------------------------------------
 
 using actor_id = uint64_t;
+using binary_serializer = serializer_impl<std::vector<char>>;
 using ip_address = ipv6_address;
 using ip_subnet = ipv6_subnet;
-using stream_slot = uint16_t;
-
 using settings = dictionary<config_value>;
+using stream_slot = uint16_t;
 
 // -- functions ----------------------------------------------------------------
 

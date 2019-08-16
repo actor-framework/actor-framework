@@ -26,7 +26,6 @@
 #include "caf/detail/network_order.hpp"
 #include "caf/sec.hpp"
 
-
 namespace caf {
 
 namespace {
@@ -49,27 +48,31 @@ error apply_float(binary_deserializer& bs, T& x) {
   return none;
 }
 
-} // namespace <anonmyous>
+} // namespace
+
+binary_deserializer::binary_deserializer(actor_system& sys,
+                                         span<const byte> bytes)
+  : super(sys), current_(bytes.data()), end_(bytes.data() + bytes.size()) {
+  // nop
+}
+
+binary_deserializer::binary_deserializer(execution_unit* ctx,
+                                         span<const byte> bytes)
+  : super(ctx), current_(bytes.data()), end_(bytes.data() + bytes.size()) {
+  // nop
+}
 
 binary_deserializer::binary_deserializer(actor_system& sys, const char* buf,
                                          size_t buf_size)
-  : super(sys), current_(buf), end_(buf + buf_size) {
+  : binary_deserializer(sys, make_span(reinterpret_cast<const byte*>(buf),
+                                       buf_size)) {
   // nop
 }
 
 binary_deserializer::binary_deserializer(execution_unit* ctx, const char* buf,
                                          size_t buf_size)
-  : super(ctx), current_(buf), end_(buf + buf_size) {
-  // nop
-}
-
-binary_deserializer::binary_deserializer(actor_system& sys, const buffer& buf)
-  : binary_deserializer(sys, buf.data(), buf.size()) {
-  // nop
-}
-
-binary_deserializer::binary_deserializer(execution_unit* ctx, const buffer& buf)
-  : binary_deserializer(ctx, buf.data(), buf.size()) {
+  : binary_deserializer(ctx, make_span(reinterpret_cast<const byte*>(buf),
+                                       buf_size)) {
   // nop
 }
 
@@ -112,8 +115,17 @@ error binary_deserializer::apply_raw(size_t num_bytes, void* storage) {
   return none;
 }
 
-size_t binary_deserializer::remaining() const {
-  return static_cast<size_t>(end_ - current_);
+const char* binary_deserializer::current() const {
+  return reinterpret_cast<const char*>(current_);
+}
+
+const char* binary_deserializer::end() const {
+  return reinterpret_cast<const char*>(end_);
+}
+
+void binary_deserializer::skip(size_t num_bytes) {
+  CAF_ASSERT(num_bytes <= remaining());
+  current_ += num_bytes;
 }
 
 error binary_deserializer::apply_impl(int8_t& x) {
@@ -172,7 +184,7 @@ error binary_deserializer::apply_impl(std::string& x) {
     return err;
   if (!range_check(str_size))
     return sec::end_of_stream;
-  x.assign(current_, current_ + str_size);
+  x.assign(reinterpret_cast<const char*>(current_), str_size);
   current_ += str_size;
   return end_sequence();
 }

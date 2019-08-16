@@ -22,7 +22,9 @@
 #include <cstdint>
 #include <vector>
 
+#include "caf/byte.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/span.hpp"
 
 namespace caf {
 
@@ -33,17 +35,27 @@ public:
 
   using super = deserializer;
 
-  using buffer = std::vector<char>;
-
   // -- constructors, destructors, and assignment operators --------------------
+
+  binary_deserializer(actor_system& sys, span<const byte> bytes);
+
+  binary_deserializer(execution_unit* ctx, span<const byte> bytes);
+
+  template <class T>
+  binary_deserializer(actor_system& sys, const std::vector<T>& buf)
+    : binary_deserializer(sys, as_bytes(make_span(buf))) {
+    // nop
+  }
+
+  template <class T>
+  binary_deserializer(execution_unit* ctx, const std::vector<T>& buf)
+    : binary_deserializer(ctx, as_bytes(make_span(buf))) {
+    // nop
+  }
 
   binary_deserializer(actor_system& sys, const char* buf, size_t buf_size);
 
   binary_deserializer(execution_unit* ctx, const char* buf, size_t buf_size);
-
-  binary_deserializer(actor_system& sys, const buffer& buf);
-
-  binary_deserializer(execution_unit* ctx, const buffer& buf);
 
   // -- overridden member functions --------------------------------------------
 
@@ -60,24 +72,24 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Returns the current read position.
-  const char* current() const {
-    return current_;
-  }
+  const char* current() const CAF_DEPRECATED_MSG("use remaining() instead");
 
   /// Returns the past-the-end iterator.
-  const char* end() const {
-    return end_;
-  }
+  const char* end() const CAF_DEPRECATED_MSG("use remaining() instead");
 
   /// Returns how many bytes are still available to read.
-  size_t remaining() const;
+  size_t remaining() const noexcept {
+    return static_cast<size_t>(end_ - current_);
+  }
+
+  /// Returns the remaining bytes.
+  span<const byte> remainder() const noexcept {
+    return make_span(current_, end_);
+  }
 
   /// Jumps `num_bytes` forward.
   /// @pre `num_bytes <= remaining()`
-  void skip(size_t num_bytes) {
-    current_ += num_bytes;
-  }
-
+  void skip(size_t num_bytes);
 
 protected:
   error apply_impl(int8_t&) override;
@@ -113,8 +125,8 @@ private:
     return current_ + read_size <= end_;
   }
 
-  const char* current_;
-  const char* end_;
+  const byte* current_;
+  const byte* end_;
 };
 
 } // namespace caf
