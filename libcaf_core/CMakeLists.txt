@@ -32,7 +32,6 @@ set(LIBCAF_CORE_SRCS
   src/behavior_impl.cpp
   src/behavior_stack.cpp
   src/binary_deserializer.cpp
-  src/binary_serializer.cpp
   src/blocking_actor.cpp
   src/blocking_behavior.cpp
   src/chars.cpp
