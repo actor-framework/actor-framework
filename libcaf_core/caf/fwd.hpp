@@ -30,6 +30,8 @@
 
 namespace caf {
 
+// clang-format off
+
 // -- 1 param templates --------------------------------------------------------
 
 template <class> class behavior_type_of;
@@ -73,6 +75,8 @@ template <class...> class typed_response_promise;
 // -- variadic templates with fixed arguments ----------------------------------
 //
 template <class, class...> class output_stream;
+
+// clang-format on
 
 // -- classes ------------------------------------------------------------------
 

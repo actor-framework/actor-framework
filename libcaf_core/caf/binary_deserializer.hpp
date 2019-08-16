@@ -78,7 +78,7 @@ public:
   const char* end() const CAF_DEPRECATED_MSG("use remaining() instead");
 
   /// Returns how many bytes are still available to read.
-  size_t remaining() const noexcept{
+  size_t remaining() const noexcept {
     return static_cast<size_t>(end_ - current_);
   }
 
