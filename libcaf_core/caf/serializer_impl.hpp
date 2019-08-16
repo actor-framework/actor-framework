@@ -43,6 +43,11 @@ public:
 
   using value_type = typename container_type::value_type;
 
+  // -- invariants -------------------------------------------------------------
+
+  static_assert(sizeof(value_type) == 1,
+                "container must have a byte-sized value type");
+
   // -- constructors, destructors, and assignment operators --------------------
 
   serializer_impl(actor_system& sys, container_type& buf)

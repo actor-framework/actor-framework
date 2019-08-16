@@ -57,6 +57,9 @@ using enable_if_t = typename std::enable_if<V, T>::type;
 template <class Trait, class T = void>
 using enable_if_tt = typename std::enable_if<Trait::value, T>::type;
 
+template <class T>
+using remove_reference_t = typename std::remove_reference<T>::type;
+
 /// Checks whether `T` is inspectable by `Inspector`.
 template <class Inspector, class T>
 class is_inspectable {

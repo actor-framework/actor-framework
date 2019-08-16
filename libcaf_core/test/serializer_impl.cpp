@@ -53,6 +53,7 @@ struct test_data {
       ts_(ts),
       te_(te),
       str_(str) {
+    // nop
   }
 
   test_data()
@@ -61,6 +62,7 @@ struct test_data {
                 caf::timestamp{
                   caf::timestamp::duration{1478715821 * 1000000000ll}},
                 test_enum::b, "Lorem ipsum dolor sit amet.") {
+    // nop
   }
 
   int32_t i32_;
