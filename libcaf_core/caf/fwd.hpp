@@ -63,14 +63,15 @@ template <class, class, class> class broadcast_downstream_manager;
 
 // -- variadic templates -------------------------------------------------------
 
-template <class...> class result;
-template <class...> class variant;
+template <class...> class cow_tuple;
 template <class...> class delegated;
+template <class...> class result;
 template <class...> class result;
 template <class...> class typed_actor;
 template <class...> class typed_actor_pointer;
 template <class...> class typed_event_based_actor;
 template <class...> class typed_response_promise;
+template <class...> class variant;
 
 // -- variadic templates with fixed arguments ----------------------------------
 //
