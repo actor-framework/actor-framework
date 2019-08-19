@@ -99,8 +99,8 @@ public:
   }
 
   template <class Parent>
-  void init(Parent&) {
-    // nop
+  error init(Parent&) {
+    return none;
   }
 
   dummy_application make() const {
