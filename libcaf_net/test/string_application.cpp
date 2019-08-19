@@ -70,8 +70,6 @@ typename Inspector::result_type inspect(Inspector& f,
   return f(meta::type_name("sa_header"), hdr.payload);
 }
 
-struct end_application {};
-
 class string_application {
 public:
   using header_type = string_application_header;
@@ -199,16 +197,14 @@ CAF_TEST(receive) {
                   sec::unavailable_or_would_block);
   CAF_MESSAGE("adding both endpoint managers");
   auto mgr1 = make_endpoint_manager(mpx, sys, policy::scribe{sockets.first},
-                                    stream_string_application<
-                                      string_application,
-                                      end_application>{sys, buf});
+                                    extend<string_application>::with<
+                                      stream_string_application>{sys, buf});
   CAF_CHECK_EQUAL(mgr1->init(), none);
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
   auto mgr2 = make_endpoint_manager(mpx, sys, policy::scribe{sockets.second},
-                                    stream_string_application<
-                                      string_application,
-                                      end_application>{sys, buf});
+                                    extend<string_application>::with<
+                                      stream_string_application>{sys, buf});
   CAF_CHECK_EQUAL(mgr2->init(), none);
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 3u);
