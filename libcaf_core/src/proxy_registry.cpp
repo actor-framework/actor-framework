@@ -88,34 +88,57 @@ bool proxy_registry::empty() const {
 
 void proxy_registry::erase(const node_id& nid) {
   CAF_LOG_TRACE(CAF_ARG(nid));
-  std::unique_lock<std::mutex> guard{mtx_};
-  auto i = proxies_.find(nid);
-  if (i == proxies_.end())
-    return;
-  for (auto& kvp : i->second)
+  // Move submap for `nid` to a local variable.
+  proxy_map tmp;
+  {
+    using std::swap;
+    std::unique_lock<std::mutex> guard{mtx_};
+    auto i = proxies_.find(nid);
+    if (i == proxies_.end())
+      return;
+    swap(i->second, tmp);
+    proxies_.erase(i);
+  }
+  // Call kill_proxy outside the critical section.
+  for (auto& kvp : tmp)
     kill_proxy(kvp.second, exit_reason::remote_link_unreachable);
-  proxies_.erase(i);
 }
 
 void proxy_registry::erase(const node_id& nid, actor_id aid, error rsn) {
   CAF_LOG_TRACE(CAF_ARG(nid) << CAF_ARG(aid));
-  std::unique_lock<std::mutex> guard{mtx_};
-  auto i = proxies_.find(nid);
-  if (i != proxies_.end()) {
-    auto& submap = i->second;
-    auto j = submap.find(aid);
-    if (j == submap.end())
-      return;
-    kill_proxy(j->second, std::move(rsn));
-    submap.erase(j);
-    if (submap.empty())
-      proxies_.erase(i);
+  // Try to find the actor handle in question.
+  strong_actor_ptr erased_proxy;
+  {
+    using std::swap;
+    std::unique_lock<std::mutex> guard{mtx_};
+    auto i = proxies_.find(nid);
+    if (i != proxies_.end()) {
+      auto& submap = i->second;
+      auto j = submap.find(aid);
+      if (j == submap.end())
+        return;
+      swap(j->second, erased_proxy);
+      submap.erase(j);
+      if (submap.empty())
+        proxies_.erase(i);
+    }
   }
+  // Call kill_proxy outside the critical section.
+  if (erased_proxy != nullptr)
+    kill_proxy(erased_proxy, std::move(rsn));
 }
 
 void proxy_registry::clear() {
-  std::unique_lock<std::mutex> guard{mtx_};
-  for (auto& kvp : proxies_)
+  CAF_LOG_TRACE("");
+  // Move the content of proxies_ to a local variable.
+  std::unordered_map<node_id, proxy_map> tmp;
+  {
+    using std::swap;
+    std::unique_lock<std::mutex> guard{mtx_};
+    swap(proxies_, tmp);
+  }
+  // Call kill_proxy outside the critical section.
+  for (auto& kvp : tmp)
     for (auto& sub_kvp : kvp.second)
       kill_proxy(sub_kvp.second, exit_reason::remote_link_unreachable);
   proxies_.clear();
