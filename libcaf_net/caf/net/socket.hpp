@@ -55,10 +55,6 @@ void close(socket x);
 /// @relates socket
 std::errc last_socket_error();
 
-/// Returns the string representation of a given socket error code.
-/// @relates socket
-std::string socket_error_as_string(std::errc err);
-
 /// Returns the last socket error as human-readable string.
 /// @relates socket
 std::string last_socket_error_as_string();

@@ -150,10 +150,6 @@ std::errc last_socket_error() {
   return static_cast<std::errc>(errno);
 }
 
-std::string socket_error_as_string(std::errc err) {
-  return strerror(static_cast<int>(err));
-}
-
 std::string last_socket_error_as_string() {
   return strerror(errno);
 }
