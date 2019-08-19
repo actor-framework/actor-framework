@@ -188,6 +188,8 @@ private:
 CAF_TEST_FIXTURE_SCOPE(endpoint_manager_tests, fixture)
 
 CAF_TEST(receive) {
+  using application_type = extend<string_application>::with<
+    stream_string_application>;
   std::vector<char> read_buf(1024);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
   auto buf = std::make_shared<std::vector<char>>();
@@ -197,14 +199,12 @@ CAF_TEST(receive) {
                   sec::unavailable_or_would_block);
   CAF_MESSAGE("adding both endpoint managers");
   auto mgr1 = make_endpoint_manager(mpx, sys, policy::scribe{sockets.first},
-                                    extend<string_application>::with<
-                                      stream_string_application>{sys, buf});
+                                    application_type{sys, buf});
   CAF_CHECK_EQUAL(mgr1->init(), none);
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
   auto mgr2 = make_endpoint_manager(mpx, sys, policy::scribe{sockets.second},
-                                    extend<string_application>::with<
-                                      stream_string_application>{sys, buf});
+                                    application_type{sys, buf});
   CAF_CHECK_EQUAL(mgr2->init(), none);
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 3u);
