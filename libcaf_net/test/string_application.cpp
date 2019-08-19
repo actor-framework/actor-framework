@@ -70,6 +70,8 @@ typename Inspector::result_type inspect(Inspector& f,
   return f(meta::type_name("sa_header"), hdr.payload);
 }
 
+struct end_application {};
+
 class string_application {
 public:
   using header_type = string_application_header;
@@ -121,11 +123,14 @@ private:
   std::shared_ptr<std::vector<char>> buf_;
 };
 
-class stream_string_application : public string_application {
+template <class Base, class Subtype>
+class stream_string_application : public Base {
 public:
+  using header_type = typename Base::header_type;
+
   stream_string_application(actor_system& sys,
                             std::shared_ptr<std::vector<char>> buf)
-    : string_application(sys, std::move(buf)), await_payload_(false) {
+    : Base(sys, std::move(buf)), await_payload_(false) {
     // nop
   }
 
@@ -133,20 +138,20 @@ public:
   error init(Parent& parent) {
     parent.transport().configure_read(
       net::receive_policy::exactly(sizeof(header_type)));
-    return string_application::init(parent);
+    return Base::init(parent);
   }
 
   template <class Parent>
   void handle_data(Parent& parent, span<char> data) {
     if (await_payload_) {
-      handle_packet(parent, header_, data);
+      Base::handle_packet(parent, header_, data);
       await_payload_ = false;
     } else {
       if (data.size() != sizeof(header_type))
         CAF_FAIL("");
       memcpy(&header_, data.data(), sizeof(header_type));
       if (header_.payload == 0)
-        handle_packet(parent, header_, span<char>{});
+        Base::handle_packet(parent, header_, span<char>{});
       else
         parent.configure_read(net::receive_policy::exactly(header_.payload));
       await_payload_ = true;
@@ -194,12 +199,16 @@ CAF_TEST(receive) {
                   sec::unavailable_or_would_block);
   CAF_MESSAGE("adding both endpoint managers");
   auto mgr1 = make_endpoint_manager(mpx, sys, policy::scribe{sockets.first},
-                                    stream_string_application{sys, buf});
+                                    stream_string_application<
+                                      string_application,
+                                      end_application>{sys, buf});
   CAF_CHECK_EQUAL(mgr1->init(), none);
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
   auto mgr2 = make_endpoint_manager(mpx, sys, policy::scribe{sockets.second},
-                                    stream_string_application{sys, buf});
+                                    stream_string_application<
+                                      string_application,
+                                      end_application>{sys, buf});
   CAF_CHECK_EQUAL(mgr2->init(), none);
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 3u);
