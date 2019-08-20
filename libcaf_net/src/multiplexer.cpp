@@ -119,8 +119,7 @@ void multiplexer::update(const socket_manager_ptr& mgr) {
     { // Lifetime scope of guard.
       std::lock_guard<std::mutex> guard{write_lock_};
       if (write_handle_ != invalid_socket)
-        res = write(write_handle_,
-                    as_bytes(make_span(&value, 1)));
+        res = write(write_handle_, as_bytes(make_span(&value, 1)));
       else
         res = sec::socket_invalid;
     }

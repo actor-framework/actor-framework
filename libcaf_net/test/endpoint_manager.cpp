@@ -165,8 +165,7 @@ CAF_TEST(send and receive) {
   CAF_CHECK_EQUAL(mgr->init(), none);
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
-  CAF_CHECK_EQUAL(write(sockets.second,
-                        as_bytes(make_span(hello_manager))),
+  CAF_CHECK_EQUAL(write(sockets.second, as_bytes(make_span(hello_manager))),
                   hello_manager.size());
   run();
   CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(buf->data()),
