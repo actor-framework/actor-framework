@@ -162,18 +162,34 @@ class caf_handle : caf::detail::comparable<caf_handle>,
 public:
   using pointer = caf::abstract_actor*;
 
-  constexpr caf_handle() : ptr_(nullptr) {
+  constexpr caf_handle(pointer ptr = nullptr) : ptr_(ptr) {
     // nop
   }
 
-  template <class T>
-  caf_handle(const T& x) {
-    *this = x;
+  caf_handle(const caf::strong_actor_ptr& x) {
+    set(x);
+  }
+
+  caf_handle(const caf::actor& x) {
+    set(x);
+  }
+
+  caf_handle(const caf::actor_addr& x) {
+    set(x);
+  }
+
+  caf_handle(const caf::scoped_actor& x) {
+    set(x);
+  }
+
+  template <class... Ts>
+  caf_handle(const caf::typed_actor<Ts...>& x) {
+    set(x);
   }
 
   caf_handle(const caf_handle&) = default;
 
-  inline caf_handle& operator=(caf::abstract_actor* x)  {
+  caf_handle& operator=(pointer x) {
     ptr_ = x;
     return *this;
   }
@@ -181,7 +197,7 @@ public:
   template <class T,
             class E = caf::detail::enable_if_t<!std::is_pointer<T>::value>>
   caf_handle& operator=(const T& x) {
-    ptr_ = caf::actor_cast<pointer>(x);
+    set(x);
     return *this;
   }
 
@@ -205,6 +221,11 @@ public:
   }
 
 private:
+  template <class T>
+  void set(const T& x) {
+    ptr_ = caf::actor_cast<pointer>(x);
+  }
+
   caf::abstract_actor* ptr_;
 };
 
