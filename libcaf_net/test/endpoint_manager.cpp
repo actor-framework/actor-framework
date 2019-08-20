@@ -83,9 +83,8 @@ public:
 
   template <class Manager>
   error init(Manager& manager) {
-    write_buf_.insert(write_buf_.end(),
-                      reinterpret_cast<const byte*>(hello_test.begin()),
-                      reinterpret_cast<const byte*>(hello_test.end()));
+    auto test_bytes = as_bytes(make_span(hello_test));
+    write_buf_.insert(write_buf_.end(), test_bytes.begin(), test_bytes.end());
     CAF_CHECK(manager.mask_add(operation::read_write));
     return none;
   }
@@ -167,8 +166,7 @@ CAF_TEST(send and receive) {
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
   CAF_CHECK_EQUAL(write(sockets.second,
-                        as_bytes(make_span(hello_manager.data(),
-                                           hello_manager.size()))),
+                        as_bytes(make_span(hello_manager))),
                   hello_manager.size());
   run();
   CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(buf->data()),

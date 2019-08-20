@@ -93,8 +93,8 @@ public:
     if (!msg.match_elements<std::string>())
       CAF_FAIL("unexpected message: " << msg);
     auto& str = msg.get_as<std::string>(0);
-    auto byte_ptr = reinterpret_cast<const byte*>(str.data());
-    buf_->insert(buf_->end(), byte_ptr, byte_ptr + str.size());
+    auto bytes = as_bytes(make_span(str));
+    buf_->insert(buf_->end(), bytes.begin(), bytes.end());
   }
 
   template <class Parent>

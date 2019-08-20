@@ -87,13 +87,12 @@ public:
   }
 
   void send(string_view x) {
-    wr_buf_.insert(wr_buf_.end(), reinterpret_cast<const byte*>(x.begin()),
-                   reinterpret_cast<const byte*>(x.end()));
+    auto x_bytes = as_bytes(make_span(x));
+    wr_buf_.insert(wr_buf_.end(), x_bytes.begin(), x_bytes.end());
   }
 
   std::string receive() {
-    std::string result(reinterpret_cast<char*>(rd_buf_.data()),
-                       reinterpret_cast<char*>(read_position_begin()));
+    std::string result(reinterpret_cast<char*>(rd_buf_.data()), rd_buf_pos_);
     rd_buf_pos_ = 0;
     return result;
   }

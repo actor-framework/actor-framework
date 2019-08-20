@@ -140,8 +140,7 @@ CAF_TEST(receive) {
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
   CAF_MESSAGE("sending data to scribe_policy");
   CAF_CHECK_EQUAL(write(sockets.second,
-                        as_bytes(make_span(hello_manager.data(),
-                                           hello_manager.size()))),
+                        as_bytes(make_span(hello_manager))),
                   hello_manager.size());
   run();
   CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(buf->data()),
