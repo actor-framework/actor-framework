@@ -43,6 +43,7 @@ template <class> class intrusive_ptr;
 template <class> class optional;
 template <class> class param;
 template <class> class serializer_impl;
+template <class> class span;
 template <class> class stream;
 template <class> class stream_sink;
 template <class> class stream_source;
@@ -65,7 +66,6 @@ template <class, class, class> class broadcast_downstream_manager;
 
 template <class...> class cow_tuple;
 template <class...> class delegated;
-template <class...> class result;
 template <class...> class result;
 template <class...> class typed_actor;
 template <class...> class typed_actor_pointer;
@@ -173,6 +173,7 @@ config_option make_config_option(T& storage, string_view category,
 // -- enums --------------------------------------------------------------------
 
 enum class atom_value : uint64_t;
+enum class byte : uint8_t;
 enum class sec : uint8_t;
 enum class stream_priority;
 
