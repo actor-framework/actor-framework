@@ -19,6 +19,7 @@
 #include "caf/uri.hpp"
 
 #include "caf/deserializer.hpp"
+#include "caf/detail/append_uri.hpp"
 #include "caf/detail/fnv_hash.hpp"
 #include "caf/detail/parser/read_uri.hpp"
 #include "caf/detail/uri_impl.hpp"
@@ -99,6 +100,27 @@ std::string to_string(const uri& x) {
   auto x_str = x.str();
   std::string result{x_str.begin(), x_str.end()};
   return result;
+}
+
+std::string to_string(const uri::authority_type& x) {
+  std::string str;
+  if (!x.userinfo.empty()) {
+    detail::append_uri(str, x.userinfo);
+    str += '@';
+  }
+  auto addr = get_if<ip_address>(&x.host);
+  if (addr == nullptr) {
+    detail::append_uri(str, get<std::string>(x.host));
+  } else {
+    str += '[';
+    str += to_string(*addr);
+    str += ']';
+  }
+  if (x.port != 0) {
+    str += ':';
+    str += std::to_string(x.port);
+  }
+  return str;
 }
 
 error parse(string_view str, uri& dest) {

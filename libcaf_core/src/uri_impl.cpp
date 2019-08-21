@@ -18,6 +18,7 @@
 
 #include "caf/detail/uri_impl.hpp"
 
+#include "caf/detail/append_uri.hpp"
 #include "caf/detail/parser/read_uri.hpp"
 #include "caf/error.hpp"
 #include "caf/ip_address.hpp"
@@ -39,41 +40,26 @@ uri_impl uri_impl::default_instance;
 // -- modifiers ----------------------------------------------------------------
 
 void uri_impl::assemble_str() {
-  add_encoded(scheme);
+  append_uri(str, scheme);
   str += ':';
   if (authority.empty()) {
     CAF_ASSERT(!path.empty());
-    add_encoded(path, true);
+    append_uri(str, path, true);
   } else {
     str += "//";
-    if (!authority.userinfo.empty()) {
-      add_encoded(authority.userinfo);
-      str += '@';
-    }
-    auto addr = get_if<ip_address>(&authority.host);
-    if (addr == nullptr) {
-      add_encoded(get<std::string>(authority.host));
-    } else {
-      str += '[';
-      str += to_string(*addr);
-      str += ']';
-    }
-    if (authority.port != 0) {
-      str += ':';
-      str += std::to_string(authority.port);
-    }
+    str += to_string(authority);
     if (!path.empty()) {
       str += '/';
-      add_encoded(path, true);
+      append_uri(str, path, true);
     }
   }
   if (!query.empty()) {
     str += '?';
     auto i = query.begin();
     auto add_kvp = [&](decltype(*i) kvp) {
-      add_encoded(kvp.first);
+      append_uri(str, kvp.first);
       str += '=';
-      add_encoded(kvp.second);
+      append_uri(str, kvp.second);
     };
     add_kvp(*i);
     for (++i; i != query.end(); ++i) {
@@ -83,44 +69,8 @@ void uri_impl::assemble_str() {
   }
   if (!fragment.empty()) {
     str += '#';
-    add_encoded(fragment);
+    append_uri(str, fragment);
   }
-}
-
-void uri_impl::add_encoded(string_view x, bool is_path) {
-  for (auto ch : x)
-    switch (ch) {
-      case '/':
-        if (is_path) {
-          str += ch;
-          break;
-        }
-        CAF_ANNOTATE_FALLTHROUGH;
-      case ' ':
-      case ':':
-      case '?':
-      case '#':
-      case '[':
-      case ']':
-      case '@':
-      case '!':
-      case '$':
-      case '&':
-      case '\'':
-      case '"':
-      case '(':
-      case ')':
-      case '*':
-      case '+':
-      case ',':
-      case ';':
-      case '=':
-        str += '%';
-        detail::append_hex(str, reinterpret_cast<uint8_t*>(&ch), 1);
-        break;
-      default:
-        str += ch;
-    }
 }
 
 // -- friend functions ---------------------------------------------------------
