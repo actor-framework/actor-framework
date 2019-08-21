@@ -4,6 +4,14 @@ project(caf C CXX)
 include(CheckCSourceCompiles)
 include(CheckCSourceRuns)
 
+get_directory_property(_parent PARENT_DIRECTORY)
+if(_parent)
+  set(caf_is_subproject ON)
+else()
+  set(caf_is_subproject OFF)
+endif()
+unset(_parent)
+
 # Be nice to VIM users and Clang tools.
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
@@ -50,7 +58,9 @@ else()
 endif()
 
 # add helper target that simplifies re-running configure
-add_custom_target(configure COMMAND ${CMAKE_CURRENT_BINARY_DIR}/config.status)
+if(NOT caf_is_subproject)
+  add_custom_target(configure COMMAND ${CMAKE_CURRENT_BINARY_DIR}/config.status)
+endif()
 
 ################################################################################
 #                              utility functions                               #
