@@ -22,12 +22,10 @@
 #include <system_error>
 #include <utility>
 
-#include "caf/byte.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/abstract_socket.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/net/socket_id.hpp"
-#include "caf/span.hpp"
 
 namespace caf {
 namespace net {

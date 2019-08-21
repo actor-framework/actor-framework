@@ -106,7 +106,7 @@ public:
       auto& payload = x->payload;
       write_buf_.insert(write_buf_.end(), payload.begin(), payload.end());
     }
-    auto res = write(handle_, as_bytes(make_span(write_buf_)));
+    auto res = write(handle_, make_span(write_buf_));
     if (auto num_bytes = get_if<size_t>(&res)) {
       write_buf_.erase(write_buf_.begin(), write_buf_.begin() + *num_bytes);
       return write_buf_.size() > 0;

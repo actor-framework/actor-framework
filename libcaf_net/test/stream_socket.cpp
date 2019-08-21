@@ -55,12 +55,12 @@ CAF_TEST(connected socket pair) {
   CAF_CHECK_EQUAL(read(x.second, make_span(rd_buf)),
                   sec::unavailable_or_would_block);
   CAF_MESSAGE("transfer data from first to second socket");
-  CAF_CHECK_EQUAL(write(x.first, as_bytes(make_span(wr_buf))), wr_buf.size());
+  CAF_CHECK_EQUAL(write(x.first, make_span(wr_buf)), wr_buf.size());
   CAF_CHECK_EQUAL(read(x.second, make_span(rd_buf)), wr_buf.size());
   CAF_CHECK(std::equal(wr_buf.begin(), wr_buf.end(), rd_buf.begin()));
   rd_buf.assign(rd_buf.size(), byte(0));
   CAF_MESSAGE("transfer data from second to first socket");
-  CAF_CHECK_EQUAL(write(x.second, as_bytes(make_span(wr_buf))), wr_buf.size());
+  CAF_CHECK_EQUAL(write(x.second, make_span(wr_buf)), wr_buf.size());
   CAF_CHECK_EQUAL(read(x.first, make_span(rd_buf)), wr_buf.size());
   CAF_CHECK(std::equal(wr_buf.begin(), wr_buf.end(), rd_buf.begin()));
   rd_buf.assign(rd_buf.size(), byte(0));

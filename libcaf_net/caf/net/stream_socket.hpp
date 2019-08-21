@@ -18,10 +18,8 @@
 
 #pragma once
 
-#include "caf/byte.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/network_socket.hpp"
-#include "caf/span.hpp"
 
 namespace caf {
 namespace net {

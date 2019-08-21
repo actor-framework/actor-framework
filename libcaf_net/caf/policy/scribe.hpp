@@ -92,7 +92,7 @@ public:
     auto len = write_buf_.size() - written_;
     auto buf = write_buf_.data() + written_;
     CAF_LOG_TRACE(CAF_ARG(handle_.id) << CAF_ARG(len));
-    auto ret = net::write(handle_, as_bytes(make_span(buf, len)));
+    auto ret = net::write(handle_, make_span(buf, len));
     if (auto num_bytes = get_if<size_t>(&ret)) {
       CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id) << CAF_ARG(*num_bytes));
       // Update state.
