@@ -8,7 +8,7 @@
  * Copyright 2011-2019 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
- * (at your option) under th#e terms and conditions of the Boost Software      *
+ * (at your option) under the terms and conditions of the Boost Software      *
  * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
  * If you did not receive a copy of the license files, see                    *
