@@ -16,24 +16,49 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/detail/append_percent_encoded.hpp"
+
+#include "caf/config.hpp"
 #include "caf/detail/append_hex.hpp"
+#include "caf/string_view.hpp"
 
 namespace caf {
 namespace detail {
 
-void append_hex(std::string& result, const uint8_t* xs, size_t n) {
-  if (n == 0) {
-    result += "00";
-    return;
-  }
-  auto tbl = "0123456789ABCDEF";
-  char buf[3] = {0, 0, 0};
-  for (size_t i = 0; i < n; ++i) {
-    auto c = xs[i];
-    buf[0] = tbl[c >> 4];
-    buf[1] = tbl[c & 0x0F];
-    result += buf;
-  }
+void append_percent_encoded(std::string& str, string_view x, bool is_path) {
+  for (auto ch : x)
+    switch (ch) {
+      case '/':
+        if (is_path) {
+          str += ch;
+          break;
+        }
+        CAF_ANNOTATE_FALLTHROUGH;
+      case ' ':
+      case ':':
+      case '?':
+      case '#':
+      case '[':
+      case ']':
+      case '@':
+      case '!':
+      case '$':
+      case '&':
+      case '\'':
+      case '"':
+      case '(':
+      case ')':
+      case '*':
+      case '+':
+      case ',':
+      case ';':
+      case '=':
+        str += '%';
+        append_hex(str, reinterpret_cast<uint8_t*>(&ch), 1);
+        break;
+      default:
+        str += ch;
+    }
 }
 
 } // namespace detail

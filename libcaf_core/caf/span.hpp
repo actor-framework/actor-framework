@@ -84,6 +84,12 @@ public:
     // nop
   }
 
+  template <class C,
+            class E = detail::enable_if_t<detail::has_data_member<C>::value>>
+  span(const C& xs) noexcept : begin_(xs.data()), size_(xs.size()) {
+    // nop
+  }
+
   constexpr span(const span&) noexcept = default;
 
   span& operator=(const span&) noexcept = default;

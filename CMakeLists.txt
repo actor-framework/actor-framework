@@ -4,6 +4,14 @@ project(caf C CXX)
 include(CheckCSourceCompiles)
 include(CheckCSourceRuns)
 
+get_directory_property(_parent PARENT_DIRECTORY)
+if(_parent)
+  set(caf_is_subproject ON)
+else()
+  set(caf_is_subproject OFF)
+endif()
+unset(_parent)
+
 # Be nice to VIM users and Clang tools.
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
@@ -50,7 +58,9 @@ else()
 endif()
 
 # add helper target that simplifies re-running configure
-add_custom_target(configure COMMAND ${CMAKE_CURRENT_BINARY_DIR}/config.status)
+if(NOT caf_is_subproject)
+  add_custom_target(configure COMMAND ${CMAKE_CURRENT_BINARY_DIR}/config.status)
+endif()
 
 ################################################################################
 #                              utility functions                               #
@@ -159,14 +169,14 @@ endif()
 # set module path appropriately
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 # set binary output path if not defined by user
-if(EXECUTABLE_OUTPUT_PATH STREQUAL "")
+if(NOT EXECUTABLE_OUTPUT_PATH)
   set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/bin")
 endif()
 # set library output path if not defined by user, but always set
 # library output path to binary output path for Xcode projects
 if(CMAKE_GENERATOR STREQUAL "Xcode")
   set(LIBRARY_OUTPUT_PATH "${EXECUTABLE_OUTPUT_PATH}")
-elseif(LIBRARY_OUTPUT_PATH STREQUAL "")
+elseif(NOT LIBRARY_OUTPUT_PATH)
   set(LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/lib")
 endif()
 
@@ -404,11 +414,14 @@ install(DIRECTORY libcaf_test/caf/ DESTINATION include/caf
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
                "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
                IMMEDIATE @ONLY)
-# add uninstall target
-add_custom_target(uninstall
-                  COMMAND "${CMAKE_COMMAND}" -P
-                  "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
-
+# add uninstall target if it does not exist yet
+if(NOT TARGET uninstall)
+  add_custom_target(uninstall)
+endif()
+add_custom_command(TARGET uninstall
+                   PRE_BUILD
+                   COMMAND "${CMAKE_COMMAND}" -P
+                   "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
 
 ################################################################################
 #                       set inclue paths for subprojects                       #
