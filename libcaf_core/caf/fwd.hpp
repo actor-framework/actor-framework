@@ -22,12 +22,15 @@
 #include <map>
 #include <memory>
 #include <tuple>
+#include <vector>
 
 #include "caf/detail/is_one_of.hpp"
 #include "caf/detail/is_primitive_config_value.hpp"
 #include "caf/timespan.hpp"
 
 namespace caf {
+
+// clang-format off
 
 // -- 1 param templates --------------------------------------------------------
 
@@ -39,6 +42,8 @@ template <class> class intrusive_cow_ptr;
 template <class> class intrusive_ptr;
 template <class> class optional;
 template <class> class param;
+template <class> class serializer_impl;
+template <class> class span;
 template <class> class stream;
 template <class> class stream_sink;
 template <class> class stream_source;
@@ -59,18 +64,20 @@ template <class, class, class> class broadcast_downstream_manager;
 
 // -- variadic templates -------------------------------------------------------
 
-template <class...> class result;
-template <class...> class variant;
+template <class...> class cow_tuple;
 template <class...> class delegated;
 template <class...> class result;
 template <class...> class typed_actor;
 template <class...> class typed_actor_pointer;
 template <class...> class typed_event_based_actor;
 template <class...> class typed_response_promise;
+template <class...> class variant;
 
 // -- variadic templates with fixed arguments ----------------------------------
 //
 template <class, class...> class output_stream;
+
+// clang-format on
 
 // -- classes ------------------------------------------------------------------
 
@@ -89,7 +96,6 @@ class actor_system;
 class actor_system_config;
 class behavior;
 class binary_deserializer;
-class binary_serializer;
 class blocking_actor;
 class config_option;
 class config_option_adder;
@@ -167,17 +173,18 @@ config_option make_config_option(T& storage, string_view category,
 // -- enums --------------------------------------------------------------------
 
 enum class atom_value : uint64_t;
+enum class byte : uint8_t;
 enum class sec : uint8_t;
 enum class stream_priority;
 
 // -- aliases ------------------------------------------------------------------
 
 using actor_id = uint64_t;
+using binary_serializer = serializer_impl<std::vector<char>>;
 using ip_address = ipv6_address;
 using ip_subnet = ipv6_subnet;
-using stream_slot = uint16_t;
-
 using settings = dictionary<config_value>;
+using stream_slot = uint16_t;
 
 // -- functions ----------------------------------------------------------------
 

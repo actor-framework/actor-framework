@@ -82,15 +82,15 @@ public:
     using type = detail::decay_t<decltype(*i)>;
     // Ship full batches.
     while (std::distance(i, e) >= desired_batch_size) {
-      std::vector<type> tmp{std::make_move_iterator(i),
-                            std::make_move_iterator(i + desired_batch_size)};
+      std::vector<type> tmp(std::make_move_iterator(i),
+                            std::make_move_iterator(i + desired_batch_size));
       emit_batch(self, desired_batch_size, make_message(std::move(tmp)));
       i += desired_batch_size;
     }
     // Ship underful batch only if `force_underful` is set.
     if (i != e && force_underfull) {
-      std::vector<type> tmp{std::make_move_iterator(i),
-                            std::make_move_iterator(e)};
+      std::vector<type> tmp(std::make_move_iterator(i),
+                            std::make_move_iterator(e));
       auto tmp_size = static_cast<int32_t>(tmp.size());
       emit_batch(self, tmp_size, make_message(std::move(tmp)));
       return e;

@@ -106,6 +106,10 @@ public:
   /// @private
   settings content;
 
+  /// Extracts all parameters from the config, including entries with default
+  /// values.
+  virtual settings dump_content() const;
+
   /// Sets a config by using its INI name `config_name` to `config_value`.
   template <class T>
   actor_system_config& set(string_view name, T&& value) {
@@ -350,7 +354,7 @@ private:
   error adjust_content();
 };
 
-/// @private
+/// Returns all user-provided configuration parameters.
 const settings& content(const actor_system_config& cfg);
 
 /// Tries to retrieve the value associated to `name` from `cfg`.

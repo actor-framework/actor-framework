@@ -75,32 +75,45 @@ public:
 
   /// Returns the portable name for given type information or `nullptr`
   /// if no mapping was found.
-  const std::string* portable_name(uint16_t nr, const std::type_info* ti) const;
+  const std::string& portable_name(uint16_t nr, const std::type_info* ti) const;
 
   /// Returns the portable name for given type information or `nullptr`
   /// if no mapping was found.
-  inline const std::string*
+  const std::string&
   portable_name(const std::pair<uint16_t, const std::type_info*>& x) const {
     return portable_name(x.first, x.second);
   }
 
   /// Returns the enclosing actor system.
-  inline actor_system& system() const {
+  actor_system& system() const {
     return system_;
+  }
+
+  /// Returns the default type name for unknown types.
+  const std::string& default_type_name() const {
+    return default_type_name_;
   }
 
 private:
   uniform_type_info_map(actor_system& sys);
 
+  /// Reference to the parent system.
   actor_system& system_;
 
-  // message types
+  /// Value factories for builtin types.
   std::array<value_factory_kvp, type_nrs - 1> builtin_;
+
+  /// Values factories for user-defined types.
   value_factories_by_name ad_hoc_;
+
+  /// Lock for accessing `ad_hoc_`.`
   mutable detail::shared_spinlock ad_hoc_mtx_;
 
-  // message type names
+  /// Names of builtin types.
   std::array<std::string, type_nrs - 1> builtin_names_;
+
+  /// Displayed name for unknown types.
+  std::string default_type_name_;
 };
 
 } // namespace caf

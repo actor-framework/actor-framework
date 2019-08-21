@@ -166,6 +166,10 @@ private:
     data_ = std::string{x};
   }
 
+  void set(string_view x) {
+    data_ = std::string{x.begin(), x.end()};
+  }
+
   template <class T>
   detail::enable_if_t<detail::is_one_of<T, real, atom, timespan, uri, string,
                                         list, dictionary>::value>

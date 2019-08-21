@@ -148,21 +148,22 @@ uniform_type_info_map::make_value(const std::type_info& x) const {
   return nullptr;
 }
 
-const std::string*
+const std::string&
 uniform_type_info_map::portable_name(uint16_t nr,
                                      const std::type_info* ti) const {
   if (nr != 0)
-    return &builtin_names_[nr - 1];
+    return builtin_names_[nr - 1];
   if (ti == nullptr)
-    return nullptr;
+    return default_type_name_;
   auto& custom_names = system().config().type_names_by_rtti;
   auto i = custom_names.find(std::type_index(*ti));
   if (i != custom_names.end())
-    return &(i->second);
-  return nullptr;
+    return i->second;
+  return default_type_name_;
 }
 
-uniform_type_info_map::uniform_type_info_map(actor_system& sys) : system_(sys) {
+uniform_type_info_map::uniform_type_info_map(actor_system& sys)
+  : system_(sys), default_type_name_("???") {
   sorted_builtin_types list;
   fill_builtins(builtin_, list, 0);
   for (size_t i = 0; i < builtin_names_.size(); ++i)

@@ -56,15 +56,12 @@ namespace caf {
 template <class T>
 struct mpi_field_access {
   std::string operator()(const uniform_type_info_map& types) {
-    auto nr = type_nr<T>::value;
-    if (nr != 0)
-      return *types.portable_name(nr, nullptr);
-    auto ptr = types.portable_name(0, &typeid(T));
-    if (ptr != nullptr)
-      return *ptr;
-    std::string result = "<invalid-type[typeid ";
-    result += typeid(T).name();
-    result += "]>";
+    auto result = types.portable_name(type_nr<T>::value, &typeid(T));
+    if (result == types.default_type_name()) {
+      result = "<invalid-type[typeid ";
+      result += typeid(T).name();
+      result += "]>";
+    }
     return result;
   }
 };
