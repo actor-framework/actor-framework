@@ -38,7 +38,7 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  /// Returns the IPv6 address.
+  /// Returns the IPv4 address.
   ipv4_address address() const noexcept;
 
   /// Sets the address of this endpoint.

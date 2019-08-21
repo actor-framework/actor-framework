@@ -18,11 +18,6 @@
 
 #pragma once
 
-#include <deque>
-#include <functional>
-#include <string>
-#include <vector>
-
 #include "caf/ipv6_address.hpp"
 #include "caf/meta/type_name.hpp"
 

@@ -20,24 +20,6 @@
 
 #include "caf/detail/fnv_hash.hpp"
 
-#ifdef CAF_WINDOWS
-#  include <windows.h>
-#  include <winsock2.h>
-#  include <ws2ipdef.h>
-#  include <ws2tcpip.h>
-#else
-#  include <arpa/inet.h>
-#  include <cerrno>
-#  include <netinet/in.h>
-#  include <netinet/ip.h>
-#  include <sys/socket.h>
-#  include <unistd.h>
-#endif
-
-#ifdef CAF_WINDOWS
-using sa_family_t = short;
-#endif
-
 using caf::detail::fnv_hash;
 using caf::detail::fnv_hash_append;
 
