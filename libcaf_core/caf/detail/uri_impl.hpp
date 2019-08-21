@@ -76,10 +76,6 @@ public:
   /// Assembles the human-readable string representation for this URI.
   void assemble_str();
 
-  // Escapes all reserved characters according to RFC 3986 in `x` and
-  // adds the encoded string to `str`.
-  void add_encoded(string_view x, bool is_path = false);
-
   // -- friend functions -------------------------------------------------------
 
   friend void intrusive_ptr_add_ref(const uri_impl* p);

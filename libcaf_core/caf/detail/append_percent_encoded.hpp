@@ -16,25 +16,18 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#pragma once
+
 #include "caf/detail/append_hex.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 namespace detail {
 
-void append_hex(std::string& result, const uint8_t* xs, size_t n) {
-  if (n == 0) {
-    result += "00";
-    return;
-  }
-  auto tbl = "0123456789ABCDEF";
-  char buf[3] = {0, 0, 0};
-  for (size_t i = 0; i < n; ++i) {
-    auto c = xs[i];
-    buf[0] = tbl[c >> 4];
-    buf[1] = tbl[c & 0x0F];
-    result += buf;
-  }
-}
+// Escapes all reserved characters according to RFC 3986 in `x` and
+// adds the encoded string to `str`.
+void append_percent_encoded(std::string& str, string_view x,
+                            bool is_path = false);
 
 } // namespace detail
 } // namespace caf
