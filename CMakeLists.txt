@@ -159,14 +159,14 @@ endif()
 # set module path appropriately
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 # set binary output path if not defined by user
-if(EXECUTABLE_OUTPUT_PATH STREQUAL "")
+if(NOT EXECUTABLE_OUTPUT_PATH)
   set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/bin")
 endif()
 # set library output path if not defined by user, but always set
 # library output path to binary output path for Xcode projects
 if(CMAKE_GENERATOR STREQUAL "Xcode")
   set(LIBRARY_OUTPUT_PATH "${EXECUTABLE_OUTPUT_PATH}")
-elseif(LIBRARY_OUTPUT_PATH STREQUAL "")
+elseif(NOT LIBRARY_OUTPUT_PATH)
   set(LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/lib")
 endif()
 
