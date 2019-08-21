@@ -18,12 +18,13 @@
 
 #pragma once
 
+#include "caf/detail/comparable.hpp"
 #include "caf/ipv6_address.hpp"
 #include "caf/meta/type_name.hpp"
 
 namespace caf {
 
-/// A hashable endpoint abstraction for ipv6.
+/// An IP endpoint that contains an ::ipv6_address and a port.
 struct ipv6_endpoint : detail::comparable<ipv6_endpoint> {
 public:
   // -- constructors -----------------------------------------------------------
@@ -53,8 +54,9 @@ public:
   /// Returns a hash for this object.
   size_t hash_code() const noexcept;
 
-  /// compares This endpoint to another.
-  /// Returns 0 if equal, otherwise >0 if this > x and <0 if this < x.
+  /// Compares this endpoint to `x`.
+  /// @returns 0 if `*this == x`, a positive value if `*this > x` and a negative
+  /// value otherwise.
   long compare(ipv6_endpoint x) const noexcept;
 
   template <class Inspector>
@@ -64,8 +66,10 @@ public:
   }
 
 private:
-  ipv6_address address_; /// The address of this endpoint.
-  uint16_t port_;        /// The port of this endpoint.
+  /// The address of this endpoint.
+  ipv6_address address_;
+  /// The port of this endpoint.
+  uint16_t port_;
 };
 
 std::string to_string(const ipv6_endpoint& ep);

@@ -22,7 +22,7 @@
 
 namespace caf {
 
-/// An IP endpoint that contains an ipv6_address and a port.
+/// An IP endpoint that contains an ::ipv6_address and a port.
 using ip_endpoint = ipv6_endpoint;
 
 } // namespace caf

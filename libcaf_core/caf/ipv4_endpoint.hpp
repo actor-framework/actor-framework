@@ -18,12 +18,13 @@
 
 #pragma once
 
+#include "caf/detail/comparable.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/meta/type_name.hpp"
 
 namespace caf {
 
-/// A hashable endpoint abstraction for ipv4
+/// An IP endpoint that contains an ::ipv4_address and a port.
 struct ipv4_endpoint : detail::comparable<ipv4_endpoint> {
 public:
   // -- constructors -----------------------------------------------------------
@@ -53,8 +54,9 @@ public:
   /// Returns a hash for this object
   size_t hash_code() const noexcept;
 
-  /// compares This endpoint to another.
-  /// Returns 0 if equal, otherwise >0 if this > x and <0 if this < x
+  /// Compares this endpoint to `x`.
+  /// @returns 0 if `*this == x`, a positive value if `*this > x` and a negative
+  /// value otherwise.
   long compare(ipv4_endpoint x) const noexcept;
 
   template <class Inspector>

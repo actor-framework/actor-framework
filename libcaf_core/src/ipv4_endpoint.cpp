@@ -20,9 +20,6 @@
 
 #include "caf/detail/fnv_hash.hpp"
 
-using caf::detail::fnv_hash;
-using caf::detail::fnv_hash_append;
-
 namespace caf {
 
 ipv4_endpoint::ipv4_endpoint(ipv4_address address, uint16_t port)
@@ -47,16 +44,13 @@ void ipv4_endpoint::port(uint16_t x) noexcept {
 }
 
 size_t ipv4_endpoint::hash_code() const noexcept {
-  auto result = fnv_hash(address_.data());
-  return fnv_hash_append(result, port_);
+  auto result = detail::fnv_hash(address_.data());
+  return detail::fnv_hash_append(result, port_);
 }
 
 long ipv4_endpoint::compare(ipv4_endpoint x) const noexcept {
   auto res = address_.compare(x.address());
-  if (res != 0)
-    return port_ - x.port();
-  else
-    return res;
+  return res == 0 ? port_ - x.port() : res;
 }
 
 std::string to_string(const ipv4_endpoint& ep) {
