@@ -91,7 +91,8 @@ foreach (comp ${CAF_FIND_COMPONENTS})
                      /usr/local/lib
                      /opt/local/lib
                      /sw/lib
-                     ${CMAKE_INSTALL_PREFIX}/lib)
+                     ${CMAKE_INSTALL_PREFIX}/lib
+                     ${CMAKE_INSTALL_PREFIX}/lib/${CMAKE_BUILD_TYPE})
       mark_as_advanced(CAF_LIBRARY_${UPPERCOMP})
       if ("${CAF_LIBRARY_${UPPERCOMP}}"
           STREQUAL "CAF_LIBRARY_${UPPERCOMP}-NOTFOUND")
