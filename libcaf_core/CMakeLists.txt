@@ -68,6 +68,7 @@ set(LIBCAF_CORE_SRCS
   src/ipv4_endpoint.cpp
   src/ipv4_subnet.cpp
   src/ipv6_address.cpp
+  src/ipv6_endpoint.cpp
   src/ipv6_subnet.cpp
   src/local_actor.cpp
   src/logger.cpp
