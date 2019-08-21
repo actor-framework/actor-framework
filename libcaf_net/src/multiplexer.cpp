@@ -20,6 +20,7 @@
 
 #include <algorithm>
 
+#include "caf/byte.hpp"
 #include "caf/config.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
@@ -28,6 +29,7 @@
 #include "caf/net/pollset_updater.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/sec.hpp"
+#include "caf/span.hpp"
 #include "caf/variant.hpp"
 
 #ifndef CAF_WINDOWS
@@ -117,7 +119,7 @@ void multiplexer::update(const socket_manager_ptr& mgr) {
     { // Lifetime scope of guard.
       std::lock_guard<std::mutex> guard{write_lock_};
       if (write_handle_ != invalid_socket)
-        res = write(write_handle_, &value, sizeof(intptr_t));
+        res = write(write_handle_, as_bytes(make_span(&value, 1)));
       else
         res = sec::socket_invalid;
     }

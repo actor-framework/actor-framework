@@ -20,7 +20,9 @@
 
 #include <system_error>
 
+#include "caf/byte.hpp"
 #include "caf/config.hpp"
+#include "caf/span.hpp"
 
 namespace caf {
 namespace policy {
@@ -69,7 +71,7 @@ void scribe::configure_read(net::receive_policy::config cfg) {
   prepare_next_read();
 }
 
-void scribe::write_packet(span<char> buf) {
+void scribe::write_packet(span<const byte> buf) {
   write_buf_.insert(write_buf_.end(), buf.begin(), buf.end());
 }
 

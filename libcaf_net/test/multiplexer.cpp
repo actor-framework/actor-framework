@@ -28,8 +28,10 @@
 #include <tuple>
 #include <vector>
 
+#include "caf/byte.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/stream_socket.hpp"
+#include "caf/span.hpp"
 
 using namespace caf;
 using namespace caf::net;
@@ -58,7 +60,8 @@ public:
   bool handle_read_event() override {
     if (read_capacity() < 1024)
       rd_buf_.resize(rd_buf_.size() + 2048);
-    auto res = read(handle(), read_position_begin(), read_capacity());
+    auto res = read(handle(),
+                    make_span(read_position_begin(), read_capacity()));
     if (auto num_bytes = get_if<size_t>(&res)) {
       CAF_ASSERT(*num_bytes > 0);
       rd_buf_pos_ += *num_bytes;
@@ -70,7 +73,7 @@ public:
   bool handle_write_event() override {
     if (wr_buf_.size() == 0)
       return false;
-    auto res = write(handle(), wr_buf_.data(), wr_buf_.size());
+    auto res = write(handle(), make_span(wr_buf_));
     if (auto num_bytes = get_if<size_t>(&res)) {
       CAF_ASSERT(*num_bytes > 0);
       wr_buf_.erase(wr_buf_.begin(), wr_buf_.begin() + *num_bytes);
@@ -84,21 +87,22 @@ public:
   }
 
   void send(string_view x) {
-    wr_buf_.insert(wr_buf_.end(), x.begin(), x.end());
+    auto x_bytes = as_bytes(make_span(x));
+    wr_buf_.insert(wr_buf_.end(), x_bytes.begin(), x_bytes.end());
   }
 
   std::string receive() {
-    std::string result(rd_buf_.data(), read_position_begin());
+    std::string result(reinterpret_cast<char*>(rd_buf_.data()), rd_buf_pos_);
     rd_buf_pos_ = 0;
     return result;
   }
 
 private:
-  char* read_position_begin() {
+  byte* read_position_begin() {
     return rd_buf_.data() + rd_buf_pos_;
   }
 
-  char* read_position_end() {
+  byte* read_position_end() {
     return rd_buf_.data() + rd_buf_.size();
   }
 
@@ -110,9 +114,9 @@ private:
 
   size_t rd_buf_pos_;
 
-  std::vector<char> wr_buf_;
+  std::vector<byte> wr_buf_;
 
-  std::vector<char> rd_buf_;
+  std::vector<byte> rd_buf_;
 };
 
 using dummy_manager_ptr = intrusive_ptr<dummy_manager>;

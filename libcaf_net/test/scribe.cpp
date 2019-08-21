@@ -24,7 +24,8 @@
 
 #include "host_fixture.hpp"
 
-#include "caf/binary_serializer.hpp"
+#include "caf/binary_deserializer.hpp"
+#include "caf/byte.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/net/actor_proxy_impl.hpp"
@@ -32,6 +33,8 @@
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/stream_socket.hpp"
+#include "caf/serializer_impl.hpp"
+#include "caf/span.hpp"
 
 using namespace caf;
 using namespace caf::net;
@@ -57,7 +60,7 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
 
 class dummy_application {
 public:
-  dummy_application(std::shared_ptr<std::vector<char>> rec_buf)
+  dummy_application(std::shared_ptr<std::vector<byte>> rec_buf)
     : rec_buf_(std::move(rec_buf)){
       // nop
     };
@@ -76,7 +79,7 @@ public:
   }
 
   template <class Parent>
-  void handle_data(Parent&, span<char> data) {
+  void handle_data(Parent&, span<const byte> data) {
     rec_buf_->clear();
     rec_buf_->insert(rec_buf_->begin(), data.begin(), data.end());
   }
@@ -102,17 +105,17 @@ public:
     // nop
   }
 
-  static expected<std::vector<char>> serialize(actor_system& sys,
+  static expected<std::vector<byte>> serialize(actor_system& sys,
                                                const type_erased_tuple& x) {
-    std::vector<char> result;
-    binary_serializer sink{sys, result};
+    std::vector<byte> result;
+    serializer_impl<std::vector<byte>> sink{sys, result};
     if (auto err = message::save(sink, x))
       return err;
     return result;
   }
 
 private:
-  std::shared_ptr<std::vector<char>> rec_buf_;
+  std::shared_ptr<std::vector<byte>> rec_buf_;
 };
 
 } // namespace
@@ -120,12 +123,12 @@ private:
 CAF_TEST_FIXTURE_SCOPE(endpoint_manager_tests, fixture)
 
 CAF_TEST(receive) {
-  std::vector<char> read_buf(1024);
+  std::vector<byte> read_buf(1024);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
-  auto buf = std::make_shared<std::vector<char>>();
+  auto buf = std::make_shared<std::vector<byte>>();
   auto sockets = unbox(make_stream_socket_pair());
   nonblocking(sockets.second, true);
-  CAF_CHECK_EQUAL(read(sockets.second, read_buf.data(), read_buf.size()),
+  CAF_CHECK_EQUAL(read(sockets.second, make_span(read_buf)),
                   sec::unavailable_or_would_block);
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
   CAF_MESSAGE("configure scribe_policy");
@@ -136,16 +139,17 @@ CAF_TEST(receive) {
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
   CAF_MESSAGE("sending data to scribe_policy");
-  CAF_CHECK_EQUAL(write(sockets.second, hello_manager.data(),
-                        hello_manager.size()),
+  CAF_CHECK_EQUAL(write(sockets.second, as_bytes(make_span(hello_manager))),
                   hello_manager.size());
   run();
-  CAF_CHECK_EQUAL(string_view(buf->data(), buf->size()), hello_manager);
+  CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(buf->data()),
+                              buf->size()),
+                  hello_manager);
 }
 
 CAF_TEST(resolve and proxy communication) {
-  std::vector<char> read_buf(1024);
-  auto buf = std::make_shared<std::vector<char>>();
+  std::vector<byte> read_buf(1024);
+  auto buf = std::make_shared<std::vector<byte>>();
   auto sockets = unbox(make_stream_socket_pair());
   nonblocking(sockets.second, true);
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
@@ -164,7 +168,7 @@ CAF_TEST(resolve and proxy communication) {
     after(std::chrono::seconds(0)) >>
       [&] { CAF_FAIL("manager did not respond with a proxy."); });
   run();
-  auto read_res = read(sockets.second, read_buf.data(), read_buf.size());
+  auto read_res = read(sockets.second, make_span(read_buf));
   if (!holds_alternative<size_t>(read_res))
     CAF_FAIL("read() returned an error: " << sys.render(get<sec>(read_res)));
   read_buf.resize(get<size_t>(read_res));

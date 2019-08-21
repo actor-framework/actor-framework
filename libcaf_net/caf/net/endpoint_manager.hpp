@@ -23,6 +23,7 @@
 #include <memory>
 
 #include "caf/actor.hpp"
+#include "caf/byte.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/drr_queue.hpp"
 #include "caf/intrusive/fifo_inbox.hpp"
@@ -42,7 +43,7 @@ public:
   using super = socket_manager;
 
   /// Represents either an error or a serialized payload.
-  using maybe_buffer = expected<std::vector<char>>;
+  using maybe_buffer = expected<std::vector<byte>>;
 
   /// A function type for serializing message payloads.
   using serialize_fun_type = maybe_buffer (*)(actor_system&,
@@ -90,9 +91,9 @@ public:
     mailbox_element_ptr msg;
 
     /// Serialized representation of of `msg->content()`.
-    std::vector<char> payload;
+    std::vector<byte> payload;
 
-    message(mailbox_element_ptr msg, std::vector<char> payload);
+    message(mailbox_element_ptr msg, std::vector<byte> payload);
   };
 
   struct message_policy {
@@ -134,7 +135,7 @@ public:
   void resolve(std::string path, actor listener);
 
   /// Enqueues a message to the endpoint.
-  void enqueue(mailbox_element_ptr msg, std::vector<char> payload);
+  void enqueue(mailbox_element_ptr msg, std::vector<byte> payload);
 
   // -- pure virtual member functions ------------------------------------------
 
