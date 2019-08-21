@@ -19,8 +19,9 @@
 #include "caf/uri.hpp"
 
 #include "caf/deserializer.hpp"
-#include "caf/detail/append_uri.hpp"
+#include "caf/detail/append_percent_encoded.hpp"
 #include "caf/detail/fnv_hash.hpp"
+#include "caf/detail/overload.hpp"
 #include "caf/detail/parser/read_uri.hpp"
 #include "caf/detail/uri_impl.hpp"
 #include "caf/error.hpp"
@@ -105,17 +106,24 @@ std::string to_string(const uri& x) {
 std::string to_string(const uri::authority_type& x) {
   std::string str;
   if (!x.userinfo.empty()) {
-    detail::append_uri(str, x.userinfo);
+    detail::append_percent_encoded(str, x.userinfo);
     str += '@';
   }
-  auto addr = get_if<ip_address>(&x.host);
-  if (addr == nullptr) {
-    detail::append_uri(str, get<std::string>(x.host));
-  } else {
-    str += '[';
-    str += to_string(*addr);
-    str += ']';
-  }
+  auto f = caf::detail::make_overload(
+    [&](const ip_address& addr) {
+      if (addr.embeds_v4()) {
+        str += to_string(addr);
+      } else {
+        str += '[';
+        str += to_string(addr);
+        str += ']';
+      }
+    },
+    [&](const std::string& host) {
+      detail::append_percent_encoded(str, host);
+    }
+  );
+  visit(f, x.host);
   if (x.port != 0) {
     str += ':';
     str += std::to_string(x.port);

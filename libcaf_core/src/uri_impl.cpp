@@ -18,7 +18,7 @@
 
 #include "caf/detail/uri_impl.hpp"
 
-#include "caf/detail/append_uri.hpp"
+#include "caf/detail/append_percent_encoded.hpp"
 #include "caf/detail/parser/read_uri.hpp"
 #include "caf/error.hpp"
 #include "caf/ip_address.hpp"
@@ -40,26 +40,26 @@ uri_impl uri_impl::default_instance;
 // -- modifiers ----------------------------------------------------------------
 
 void uri_impl::assemble_str() {
-  append_uri(str, scheme);
+  append_percent_encoded(str, scheme);
   str += ':';
   if (authority.empty()) {
     CAF_ASSERT(!path.empty());
-    append_uri(str, path, true);
+    append_percent_encoded(str, path, true);
   } else {
     str += "//";
     str += to_string(authority);
     if (!path.empty()) {
       str += '/';
-      append_uri(str, path, true);
+      append_percent_encoded(str, path, true);
     }
   }
   if (!query.empty()) {
     str += '?';
     auto i = query.begin();
     auto add_kvp = [&](decltype(*i) kvp) {
-      append_uri(str, kvp.first);
+      append_percent_encoded(str, kvp.first);
       str += '=';
-      append_uri(str, kvp.second);
+      append_percent_encoded(str, kvp.second);
     };
     add_kvp(*i);
     for (++i; i != query.end(); ++i) {
@@ -69,7 +69,7 @@ void uri_impl::assemble_str() {
   }
   if (!fragment.empty()) {
     str += '#';
-    append_uri(str, fragment);
+    append_percent_encoded(str, fragment);
   }
 }
 

@@ -16,50 +16,17 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/detail/append_uri.hpp"
+#pragma once
 
-#include "caf/config.hpp"
 #include "caf/detail/append_hex.hpp"
-#include "caf/string_view.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 namespace detail {
 
-void append_uri(std::string& str, string_view x, bool is_path) {
-  for (auto ch : x)
-    switch (ch) {
-      case '/':
-        if (is_path) {
-          str += ch;
-          break;
-        }
-        CAF_ANNOTATE_FALLTHROUGH;
-      case ' ':
-      case ':':
-      case '?':
-      case '#':
-      case '[':
-      case ']':
-      case '@':
-      case '!':
-      case '$':
-      case '&':
-      case '\'':
-      case '"':
-      case '(':
-      case ')':
-      case '*':
-      case '+':
-      case ',':
-      case ';':
-      case '=':
-        str += '%';
-        append_hex(str, reinterpret_cast<uint8_t*>(&ch), 1);
-        break;
-      default:
-        str += ch;
-    }
-}
+// Escapes all reserved characters according to RFC 3986 in `x` and
+// adds the encoded string to `str`.
+void append_percent_encoded(std::string& str, string_view x, bool is_path = false);
 
-} // namespacvec detail
+} // namespace detail
 } // namespace caf
