@@ -16,7 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/detail/stringification_inspector.hpp"
+#include "caf/detail/append_hex.hpp"
 
 namespace caf {
 namespace detail {
