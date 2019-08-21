@@ -121,8 +121,7 @@ std::string to_string(const uri::authority_type& x) {
     },
     [&](const std::string& host) {
       detail::append_percent_encoded(str, host);
-    }
-  );
+    });
   visit(f, x.host);
   if (x.port != 0) {
     str += ':';
