@@ -27,22 +27,6 @@ ipv4_endpoint::ipv4_endpoint(ipv4_address address, uint16_t port)
   // nop
 }
 
-ipv4_address ipv4_endpoint::address() const noexcept {
-  return address_;
-}
-
-void ipv4_endpoint::address(ipv4_address x) noexcept {
-  address_ = x;
-}
-
-uint16_t ipv4_endpoint::port() const noexcept {
-  return port_;
-}
-
-void ipv4_endpoint::port(uint16_t x) noexcept {
-  port_ = x;
-}
-
 size_t ipv4_endpoint::hash_code() const noexcept {
   auto result = detail::fnv_hash(address_.data());
   return detail::fnv_hash_append(result, port_);

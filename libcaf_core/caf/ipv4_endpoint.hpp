@@ -40,16 +40,24 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Returns the IPv4 address.
-  ipv4_address address() const noexcept;
+  ipv4_address address() const noexcept {
+    return address_;
+  }
 
   /// Sets the address of this endpoint.
-  void address(ipv4_address x) noexcept;
+  void address(ipv4_address x) noexcept {
+    address_ = x;
+  }
 
   /// Returns the port of this endpoint.
-  uint16_t port() const noexcept;
+  uint16_t port() const noexcept {
+    return port_;
+  }
 
   /// Sets the port of this endpoint.
-  void port(uint16_t x) noexcept;
+  void port(uint16_t x) noexcept {
+    port_ = x;
+  }
 
   /// Returns a hash for this object
   size_t hash_code() const noexcept;
