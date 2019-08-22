@@ -25,7 +25,7 @@
 namespace caf {
 
 /// An IP endpoint that contains an ::ipv4_address and a port.
-struct ipv4_endpoint : detail::comparable<ipv4_endpoint> {
+class ipv4_endpoint : detail::comparable<ipv4_endpoint> {
 public:
   // -- constructors -----------------------------------------------------------
 

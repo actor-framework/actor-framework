@@ -25,7 +25,7 @@
 namespace caf {
 
 /// An IP endpoint that contains an ::ipv6_address and a port.
-struct ipv6_endpoint : detail::comparable<ipv6_endpoint> {
+class ipv6_endpoint : detail::comparable<ipv6_endpoint> {
 public:
   // -- constructors -----------------------------------------------------------
 
