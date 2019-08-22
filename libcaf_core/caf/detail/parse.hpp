@@ -104,7 +104,7 @@ void parse(parse_state& ps, std::pair<First, Second>& kvp) {
 
 template <class T>
 enable_if_tt<is_iterable<T>> parse(parse_state& ps, T& xs) {
-  using value_type = deconst_kvp_pair_t<typename T::value_type>;
+  using value_type = deconst_kvp_t<typename T::value_type>;
   static constexpr auto is_map_type = is_pair<value_type>::value;
   static constexpr auto opening_char = is_map_type ? '{' : '[';
   static constexpr auto closing_char = is_map_type ? '}' : ']';

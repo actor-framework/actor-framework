@@ -738,17 +738,17 @@ struct always_false : std::false_type {};
 
 /// Utility trait for removing const inside a `map<K, V>::value_type`.
 template <class T>
-struct deconst_kvp_pair {
+struct deconst_kvp {
   using type = T;
 };
 
 template <class K, class V>
-struct deconst_kvp_pair<std::pair<const K, V>> {
+struct deconst_kvp<std::pair<const K, V>> {
   using type = std::pair<K, V>;
 };
 
 template <class T>
-using deconst_kvp_pair_t = typename deconst_kvp_pair<T>::type;
+using deconst_kvp_t = typename deconst_kvp<T>::type;
 
 /// Utility trait for checking whether T is a `std::pair`.
 template <class T>

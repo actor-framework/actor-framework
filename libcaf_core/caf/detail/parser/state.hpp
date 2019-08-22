@@ -71,7 +71,7 @@ struct state {
 
   /// Checks whether `i == e`.
   bool at_end() const noexcept {
-    return current() == '\0';
+    return i == e;
   }
 
   /// Skips any whitespaces characters in the input.
