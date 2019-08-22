@@ -39,17 +39,17 @@ struct default_sum_type_access {
 
   template <class U, int Pos>
   static bool is(const T& x, sum_type_token<U, Pos> token) {
-    return x.get_data().is(token.pos);
+    return x.get_data().is(pos(token));
   }
 
   template <class U, int Pos>
   static U& get(T& x, sum_type_token<U, Pos> token) {
-    return x.get_data().get(token.pos);
+    return x.get_data().get(pos(token));
   }
 
   template <class U, int Pos>
   static const U& get(const T& x, sum_type_token<U, Pos> token) {
-    return x.get_data().get(token.pos);
+    return x.get_data().get(pos(token));
   }
 
   template <class U, int Pos>
