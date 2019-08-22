@@ -475,18 +475,19 @@ pybind11::tuple tuple_from_message(const type_erased_tuple& msg) {
   auto& self = s_context->self;
   auto& bindings = s_context->cfg.portable_bindings();
   pybind11::tuple result(msg.size());
+  auto& types = self->system().types();
   for (size_t i = 0; i  < msg.size(); ++i) {
     auto rtti = msg.type(i);
-    auto str_ptr = self->system().types().portable_name(rtti);
-    if (str_ptr == nullptr) {
+    auto str = types.portable_name(rtti);
+    if (str == types.default_type_name()) {
       set_py_exception("Unable to extract element #", i, " from message: ",
                        "could not get portable name of ", rtti.second->name());
       return pybind11::tuple{};
     }
-    auto kvp = bindings.find(*str_ptr);
+    auto kvp = bindings.find(str);
     if (kvp == bindings.end()) {
-      set_py_exception(R"(Unable to add element of type ")",
-                       *str_ptr, R"(" to message: type is unknown to CAF)");
+      set_py_exception(R"(Unable to add element of type ")", str,
+                       R"(" to message: type is unknown to CAF)");
       return pybind11::tuple{};
     }
     auto obj = kvp->second->to_object(msg, i);
