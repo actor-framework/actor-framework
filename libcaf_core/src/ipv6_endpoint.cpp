@@ -41,7 +41,7 @@ std::string to_string(const ipv6_endpoint& x) {
   std::string result;
   auto addr = x.address();
   if (addr.embeds_v4()) {
-    result += to_string(x);
+    result += to_string(addr);
     result += ":";
     result += std::to_string(x.port());
   } else {
