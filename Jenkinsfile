@@ -88,7 +88,7 @@ config = [
     ],
     // Configures what binary the coverage report uses and what paths to exclude.
     coverage: [
-        binary: 'build/caf-test',
+        binary: 'build/bin/caf-test',
         relativeExcludePaths: [
             'examples',
             'tools',

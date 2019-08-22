@@ -19,7 +19,9 @@
 #include "caf/uri.hpp"
 
 #include "caf/deserializer.hpp"
+#include "caf/detail/append_percent_encoded.hpp"
 #include "caf/detail/fnv_hash.hpp"
+#include "caf/detail/overload.hpp"
 #include "caf/detail/parser/read_uri.hpp"
 #include "caf/detail/uri_impl.hpp"
 #include "caf/error.hpp"
@@ -99,6 +101,33 @@ std::string to_string(const uri& x) {
   auto x_str = x.str();
   std::string result{x_str.begin(), x_str.end()};
   return result;
+}
+
+std::string to_string(const uri::authority_type& x) {
+  std::string str;
+  if (!x.userinfo.empty()) {
+    detail::append_percent_encoded(str, x.userinfo);
+    str += '@';
+  }
+  auto f = caf::detail::make_overload(
+    [&](const ip_address& addr) {
+      if (addr.embeds_v4()) {
+        str += to_string(addr);
+      } else {
+        str += '[';
+        str += to_string(addr);
+        str += ']';
+      }
+    },
+    [&](const std::string& host) {
+      detail::append_percent_encoded(str, host);
+    });
+  visit(f, x.host);
+  if (x.port != 0) {
+    str += ':';
+    str += std::to_string(x.port);
+  }
+  return str;
 }
 
 error parse(string_view str, uri& dest) {
