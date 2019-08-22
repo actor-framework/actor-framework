@@ -64,7 +64,7 @@ struct fixture {
     if (auto err = sink(x))
       CAF_FAIL("serialization failed: " << sys.render(err));
     binary_deserializer source(sys, make_span(buf));
-    ipv4_endpoint y;
+    T y;
     if (auto err = source(y))
       CAF_FAIL("deserialization failed: " << sys.render(err));
     return y;
