@@ -18,15 +18,17 @@
 
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <string>
 
 #include "caf/config.hpp"
-#include "caf/detail/parser/chars.hpp"
-#include "caf/detail/parser/is_char.hpp"
+#include "caf/detail/parser/read_signed_integer.hpp"
 #include "caf/detail/parser/state.hpp"
 #include "caf/detail/scope_guard.hpp"
+#include "caf/optional.hpp"
 #include "caf/pec.hpp"
+#include "caf/timestamp.hpp"
 
 CAF_PUSH_UNUSED_LABEL_WARNING
 
@@ -36,44 +38,57 @@ namespace caf {
 namespace detail {
 namespace parser {
 
-/// Reads a boolean.
+/// Reads a timespan.
 template <class Iterator, class Sentinel, class Consumer>
-void read_bool(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
-  bool res = false;
+void read_timespan(state<Iterator, Sentinel>& ps, Consumer&& consumer,
+                   optional<int64_t> num = none) {
+  using namespace std::chrono;
+  struct interim_consumer {
+    using value_type = int64_t;
+
+    void value(int64_t y) {
+      x = y;
+    }
+
+    int64_t x = 0;
+  };
+  interim_consumer ic;
+  timespan result;
   auto g = make_scope_guard([&] {
     if (ps.code <= pec::trailing_character)
-      consumer.value(std::move(res));
+      consumer.value(std::move(result));
   });
+  // clang-format off
   start();
   state(init) {
-    transition(has_f, 'f')
-    transition(has_t, 't')
+    epsilon_if(num, has_integer, any_char, ic.x = *num)
+    fsm_epsilon(read_signed_integer(ps, ic), has_integer)
   }
-  state(has_f) {
-    transition(has_fa, 'a')
+  state(has_integer) {
+    transition(have_u, 'u')
+    transition(have_n, 'n')
+    transition(have_m, 'm')
+    transition(done, 's', result = seconds(ic.x))
+    transition(done, 'h', result = hours(ic.x))
   }
-  state(has_fa) {
-    transition(has_fal, 'l')
+  state(have_u) {
+    transition(done, 's', result = microseconds(ic.x))
   }
-  state(has_fal) {
-    transition(has_fals, 's')
+  state(have_n) {
+    transition(done, 's', result = nanoseconds(ic.x))
   }
-  state(has_fals) {
-    transition(done, 'e', res = false)
+  state(have_m) {
+    transition(have_mi, 'i')
+    transition(done, 's', result = milliseconds(ic.x))
   }
-  state(has_t) {
-    transition(has_tr, 'r')
-  }
-  state(has_tr) {
-    transition(has_tru, 'u')
-  }
-  state(has_tru) {
-    transition(done, 'e', res = true)
+  state(have_mi) {
+    transition(done, 'n', result = minutes(ic.x))
   }
   term_state(done) {
     // nop
   }
   fin();
+  // clang-format on
 }
 
 } // namespace parser

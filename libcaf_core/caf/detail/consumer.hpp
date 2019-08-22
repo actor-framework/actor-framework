@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2019 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,68 +18,32 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
-
-#include "caf/config.hpp"
-#include "caf/detail/parser/chars.hpp"
-#include "caf/detail/parser/is_char.hpp"
-#include "caf/detail/parser/state.hpp"
-#include "caf/detail/scope_guard.hpp"
-#include "caf/pec.hpp"
-
-CAF_PUSH_UNUSED_LABEL_WARNING
-
-#include "caf/detail/parser/fsm.hpp"
+#include <utility>
 
 namespace caf {
 namespace detail {
-namespace parser {
 
-/// Reads a boolean.
-template <class Iterator, class Sentinel, class Consumer>
-void read_bool(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
-  bool res = false;
-  auto g = make_scope_guard([&] {
-    if (ps.code <= pec::trailing_character)
-      consumer.value(std::move(res));
-  });
-  start();
-  state(init) {
-    transition(has_f, 'f')
-    transition(has_t, 't')
-  }
-  state(has_f) {
-    transition(has_fa, 'a')
-  }
-  state(has_fa) {
-    transition(has_fal, 'l')
-  }
-  state(has_fal) {
-    transition(has_fals, 's')
-  }
-  state(has_fals) {
-    transition(done, 'e', res = false)
-  }
-  state(has_t) {
-    transition(has_tr, 'r')
-  }
-  state(has_tr) {
-    transition(has_tru, 'u')
-  }
-  state(has_tru) {
-    transition(done, 'e', res = true)
-  }
-  term_state(done) {
+template <class T>
+class consumer {
+public:
+  using value_type = T;
+
+  explicit consumer(T& x) : x_(x) {
     // nop
   }
-  fin();
+
+  void value(T&& y) {
+    x_ = std::move(y);
+  }
+
+private:
+  T& x_;
+};
+
+template <class T>
+consumer<T> make_consumer(T& x) {
+  return consumer<T>{x};
 }
 
-} // namespace parser
 } // namespace detail
 } // namespace caf
-
-#include "caf/detail/parser/fsm_undef.hpp"
-
-CAF_POP_WARNINGS

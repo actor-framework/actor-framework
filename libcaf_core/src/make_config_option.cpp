@@ -32,40 +32,50 @@ using std::string;
 
 namespace caf {
 
+namespace detail {
+
+expected<config_value> parse_impl(std::string* ptr, string_view str) {
+  // Parse quoted strings, otherwise consume the entire string.
+  auto e = str.end();
+  auto i = std::find_if(str.begin(), e, [](char c) { return !isspace(c); });
+  if (i == e) {
+    if (ptr != nullptr)
+      ptr->assign(i, e);
+    return config_value{std::string{i, e}};
+  }
+  if (*i == '"') {
+    if (ptr == nullptr) {
+      std::string tmp;
+      if (auto err = parse(str, tmp))
+        return err;
+      return config_value{std::move(tmp)};
+    } else {
+      if (auto err = parse(str, *ptr))
+        return err;
+      return config_value{*ptr};
+    }
+  }
+  if (ptr != nullptr)
+    ptr->assign(str.begin(), str.end());
+  return config_value{std::string{str.begin(), str.end()}};
+}
+
+} // namespace detail
+
 namespace {
 
 using meta_state = config_option::meta_state;
 
-template <class T>
-config_value get_impl(const void* ptr) {
-  CAF_ASSERT(ptr != nullptr);
-  return config_value{*static_cast<const T*>(ptr)};
-}
-
-error bool_check(const config_value& x) {
-  if (holds_alternative<bool>(x))
-    return none;
-  return make_error(pec::type_mismatch);
-}
-
-void bool_store(void* ptr, const config_value& x) {
-  *static_cast<bool*>(ptr) = get<bool>(x);
-}
-
 void bool_store_neg(void* ptr, const config_value& x) {
   *static_cast<bool*>(ptr) = !get<bool>(x);
-}
-
-config_value bool_get(const void* ptr) {
-  return config_value{*static_cast<const bool*>(ptr)};
 }
 
 config_value bool_get_neg(const void* ptr) {
   return config_value{!*static_cast<const bool*>(ptr)};
 }
 
-meta_state bool_neg_meta{bool_check, bool_store_neg, bool_get_neg, nullptr,
-                         detail::type_name<bool>()};
+meta_state bool_neg_meta{detail::check_impl<bool>, bool_store_neg, bool_get_neg,
+                         nullptr, detail::type_name<bool>()};
 
 meta_state us_res_meta{
   [](const config_value& x) -> error {
@@ -86,62 +96,24 @@ meta_state us_res_meta{
   detail::type_name<timespan>()
 };
 
-meta_state ms_res_meta{
-  [](const config_value& x) -> error {
-    if (holds_alternative<timespan>(x))
-      return none;
-    return make_error(pec::type_mismatch);
-  },
-  [](void* ptr, const config_value& x) {
-    *static_cast<size_t*>(ptr) = static_cast<size_t>(get<timespan>(x).count()
-                                                     / 1000000);
-  },
-  [](const void* ptr) -> config_value {
-    auto ival = static_cast<int64_t>(*static_cast<const size_t*>(ptr));
-    timespan val{ival * 1000000};
-    return config_value{val};
-  },
-  nullptr,
-  detail::type_name<timespan>()};
-
-expected<config_value> parse_atom(void* ptr, string_view str) {
-  if (str.size() > 10)
-    return make_error(pec::too_many_characters);
-  auto is_illegal = [](char c) {
-    return !(isalnum(c) || c == '_' || c == ' ');
-  };
-  auto i = std::find_if(str.begin(), str.end(), is_illegal);
-  if (i != str.end())
-    return make_error(pec::unexpected_character,
-                      std::string{"invalid character: "} + *i);
-  auto result = atom_from_string(str);
-  if (ptr != nullptr)
-    *reinterpret_cast<atom_value*>(ptr) = result;
-  return config_value{result};
-}
-
-expected<config_value> parse_string(void* ptr, string_view str) {
-  std::string result{str.begin(), str.end()};
-  if (ptr != nullptr)
-    *reinterpret_cast<std::string*>(ptr) = result;
-  return config_value{std::move(result)};
-}
+meta_state ms_res_meta{[](const config_value& x) -> error {
+                         if (holds_alternative<timespan>(x))
+                           return none;
+                         return make_error(pec::type_mismatch);
+                       },
+                       [](void* ptr, const config_value& x) {
+                         *static_cast<size_t*>(ptr) = static_cast<size_t>(
+                           get<timespan>(x).count() / 1000000);
+                       },
+                       [](const void* ptr) -> config_value {
+                         auto ival = static_cast<int64_t>(
+                           *static_cast<const size_t*>(ptr));
+                         timespan val{ival * 1000000};
+                         return config_value{val};
+                       },
+                       nullptr, detail::type_name<timespan>()};
 
 } // namespace
-
-namespace detail {
-
-DEFAULT_META(atom_value, parse_atom)
-
-DEFAULT_META(size_t, default_config_option_parse<size_t>)
-
-DEFAULT_META(string, parse_string)
-
-config_option::meta_state bool_meta_state{bool_check, bool_store, bool_get,
-                                          default_config_option_parse<bool>,
-                                          detail::type_name<bool>()};
-
-} // namespace detail
 
 config_option make_negated_config_option(bool& storage, string_view category,
                                          string_view name,

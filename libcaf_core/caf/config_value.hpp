@@ -20,6 +20,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <iterator>
 #include <map>
 #include <string>
 #include <type_traits>
@@ -177,35 +178,28 @@ private:
   }
 
   template <class T>
-  detail::enable_if_t<detail::is_list_like<detail::decay_t<T>>::value
-                      && !std::is_same<detail::decay_t<T>, list>::value>
-  set(T&& xs) {
-    // Move values from the old list into the new list if `xs` is an rvalue.
-    using namespace detail;
-    using xs_type = decltype(xs);
-    using value_type = typename decay_t<T>::value_type;
-    using fwd_type = conditional_t<std::is_rvalue_reference<xs_type>::value,
-                                   value_type&&, const value_type&>;
-    auto& lst = as_list();
-    lst.clear();
-    for (auto& x : xs)
-      lst.emplace_back(config_value{static_cast<fwd_type>(x)});
-  }
-
-  template <class T>
-  detail::enable_if_t<detail::is_map_like<detail::decay_t<T>>::value
-                      && !std::is_same<detail::decay_t<T>, dictionary>::value>
-  set(T&& xs) {
-    // Move values from the old list into the new list if `xs` is an rvalue.
-    using namespace detail;
-    using xs_type = decltype(xs);
-    using mapped_type = typename decay_t<T>::mapped_type;
-    using fwd_type = conditional_t<std::is_rvalue_reference<xs_type>::value,
-                                   mapped_type&&, const mapped_type&>;
+  void set_range(T& xs, std::true_type) {
     auto& dict = as_dictionary();
     dict.clear();
     for (auto& kvp : xs)
-      dict.emplace(kvp.first, static_cast<fwd_type>(kvp.second));
+      dict.emplace(kvp.first, std::move(kvp.second));
+  }
+
+  template <class T>
+  void set_range(T& xs, std::false_type) {
+    auto& ls = as_list();
+    ls.clear();
+    ls.insert(ls.end(), std::make_move_iterator(xs.begin()),
+              std::make_move_iterator(xs.end()));
+  }
+
+  template <class T>
+  detail::enable_if_t<detail::is_iterable<T>::value
+                      && !detail::is_one_of<T, string, list, dictionary>::value>
+  set(T xs) {
+    using value_type = typename T::value_type;
+    detail::bool_token<detail::is_pair<value_type>::value> is_map_type;
+    set_range(xs, is_map_type);
   }
 
   template <class T>

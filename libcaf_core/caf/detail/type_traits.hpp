@@ -736,6 +736,28 @@ struct is_same_ish
 template <class>
 struct always_false : std::false_type {};
 
+/// Utility trait for removing const inside a `map<K, V>::value_type`.
+template <class T>
+struct deconst_kvp {
+  using type = T;
+};
+
+template <class K, class V>
+struct deconst_kvp<std::pair<const K, V>> {
+  using type = std::pair<K, V>;
+};
+
+template <class T>
+using deconst_kvp_t = typename deconst_kvp<T>::type;
+
+/// Utility trait for checking whether T is a `std::pair`.
+template <class T>
+struct is_pair : std::false_type {};
+
+/// Utility trait for checking whether T is a `std::pair`.
+template <class First, class Second>
+struct is_pair<std::pair<First, Second>> : std::true_type {};
+
 // -- traits to check for STL-style type aliases -------------------------------
 
 CAF_HAS_ALIAS_TRAIT(value_type);

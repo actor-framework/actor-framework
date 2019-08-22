@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/parser/state.hpp"
 #include "caf/detail/unordered_flat_map.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"

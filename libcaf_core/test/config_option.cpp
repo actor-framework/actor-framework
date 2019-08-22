@@ -49,7 +49,8 @@ optional<T> read(string_view arg) {
   auto co = make_config_option<T>(category, name, explanation);
   auto res = co.parse(arg);
   if (res && holds_alternative<T>(*res)) {
-    CAF_CHECK_EQUAL(co.check(*res), none);
+    if (co.check(*res) != none)
+      CAF_ERROR("co.parse() produced the wrong type!");
     return get<T>(*res);
   }
   return none;
@@ -154,21 +155,21 @@ CAF_TEST(type int64_t) {
 
 CAF_TEST(type float) {
   CAF_CHECK_EQUAL(unbox(read<float>("-1.0")),  -1.0f);
-  CAF_CHECK_EQUAL(unbox(read<float>("-0.1")),  -0.1f);
-  CAF_CHECK_EQUAL(read<float>("0"),  none);
+  CAF_CHECK_EQUAL(unbox(read<float>("-0.1")), -0.1f);
+  CAF_CHECK_EQUAL(read<float>("0"), 0.f);
   CAF_CHECK_EQUAL(read<float>("\"0.1\""),  none);
 }
 
 CAF_TEST(type double) {
   CAF_CHECK_EQUAL(unbox(read<double>("-1.0")),  -1.0);
   CAF_CHECK_EQUAL(unbox(read<double>("-0.1")),  -0.1);
-  CAF_CHECK_EQUAL(read<double>("0"),  none);
+  CAF_CHECK_EQUAL(read<double>("0"), 0.);
   CAF_CHECK_EQUAL(read<double>("\"0.1\""),  none);
 }
 
 CAF_TEST(type string) {
   CAF_CHECK_EQUAL(unbox(read<string>("foo")), "foo");
-  CAF_CHECK_EQUAL(unbox(read<string>("\"foo\"")), "\"foo\"");
+  CAF_CHECK_EQUAL(unbox(read<string>("\"foo\"")), "foo");
 }
 
 CAF_TEST(type atom) {
@@ -180,6 +181,14 @@ CAF_TEST(type atom) {
 CAF_TEST(type timespan) {
   timespan dur{500};
   CAF_CHECK_EQUAL(unbox(read<timespan>("500ns")), dur);
+}
+
+CAF_TEST(lists) {
+  using int_list = std::vector<int>;
+  CAF_CHECK_EQUAL(read<int_list>(""), int_list({}));
+  CAF_CHECK_EQUAL(read<int_list>("[]"), int_list({}));
+  CAF_CHECK_EQUAL(read<int_list>("1, 2, 3"), int_list({1, 2, 3}));
+  CAF_CHECK_EQUAL(read<int_list>("[1, 2, 3]"), int_list({1, 2, 3}));
 }
 
 CAF_TEST(flat CLI parsing) {

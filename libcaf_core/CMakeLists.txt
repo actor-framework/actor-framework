@@ -84,6 +84,7 @@ set(LIBCAF_CORE_SRCS
   src/monitorable_actor.cpp
   src/node_id.cpp
   src/outbound_path.cpp
+  src/parse.cpp
   src/pec.cpp
   src/pretty_type_name.cpp
   src/private_thread.cpp

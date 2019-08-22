@@ -26,6 +26,7 @@
 #include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/read_number.hpp"
+#include "caf/detail/parser/read_timespan.hpp"
 #include "caf/detail/parser/state.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/none.hpp"
@@ -57,23 +58,19 @@ void read_number_or_timespan(state<Iterator, Sentinel>& ps,
       interim = x;
     }
   };
-  optional<timespan> res;
   interim_consumer ic;
   auto has_int = [&] { return holds_alternative<int64_t>(ic.interim); };
   auto has_dbl = [&] { return holds_alternative<double>(ic.interim); };
   auto get_int = [&] { return get<int64_t>(ic.interim); };
   auto g = make_scope_guard([&] {
     if (ps.code <= pec::trailing_character) {
-      if (res != none) {
-        consumer.value(*res);
-      } else if (!holds_alternative<none_t>(ic.interim)) {
-        if (has_int())
-          consumer.value(get_int());
-        else
-          consumer.value(get<double>(ic.interim));
-      }
+      if (has_dbl())
+        consumer.value(get<double>(ic.interim));
+      else if (has_int())
+        consumer.value(get_int());
     }
   });
+  // clang-format off
   start();
   state(init) {
     fsm_epsilon(read_number(ps, ic), has_number)
@@ -83,31 +80,17 @@ void read_number_or_timespan(state<Iterator, Sentinel>& ps,
     epsilon_if(has_dbl(), has_double)
   }
   term_state(has_double) {
-    error_transition(pec::fractional_timespan, "unms")
+    error_transition(pec::fractional_timespan, "unmsh")
   }
   term_state(has_integer) {
-    transition(have_u, 'u')
-    transition(have_n, 'n')
-    transition(have_m, 'm')
-    transition(done, 's', res = seconds(get_int()))
-  }
-  state(have_u) {
-    transition(done, 's', res = microseconds(get_int()))
-  }
-  state(have_n) {
-    transition(done, 's', res = nanoseconds(get_int()))
-  }
-  state(have_m) {
-    transition(have_mi, 'i')
-    transition(done, 's', res = milliseconds(get_int()))
-  }
-  state(have_mi) {
-    transition(done, 'n', res = minutes(get_int()))
+    fsm_epsilon(read_timespan(ps, consumer, get_int()),
+                done, "unmsh", g.disable())
   }
   term_state(done) {
     // nop
   }
   fin();
+  // clang-format on
 }
 
 } // namespace parser

@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <cctype>
 #include <cstdint>
 
 #include "caf/pec.hpp"
@@ -34,15 +35,15 @@ struct state {
   int32_t line;
   int32_t column;
 
-  state() : i(), e(), code(pec::success), line(1), column(1) {
+  state() noexcept : i(), e(), code(pec::success), line(1), column(1) {
     // nop
   }
 
-  explicit state(Iterator first) : state() {
+  explicit state(Iterator first) noexcept : state() {
     i = first;
   }
 
-  state(Iterator first, Sentinel last) : state() {
+  state(Iterator first, Sentinel last) noexcept : state() {
     i = first;
     e = last;
   }
@@ -66,6 +67,28 @@ struct state {
   /// Returns the null terminator if `i == e`, otherwise the current character.
   char current() const noexcept {
     return i != e ? *i : '\0';
+  }
+
+  /// Checks whether `i == e`.
+  bool at_end() const noexcept {
+    return i == e;
+  }
+
+  /// Skips any whitespaces characters in the input.
+  void skip_whitespaces() noexcept {
+    auto c = current();
+    while (isspace(c))
+      c = next();
+  }
+
+  /// Tries to read `x` as the next character (skips any whitespaces).
+  bool consume(char x) noexcept {
+    skip_whitespaces();
+    if (current() == x) {
+      next();
+      return true;
+    }
+    return false;
   }
 };
 
