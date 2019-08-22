@@ -37,8 +37,20 @@ long ipv6_endpoint::compare(ipv6_endpoint x) const noexcept {
   return res == 0 ? port_ - x.port() : res;
 }
 
-std::string to_string(const ipv6_endpoint& ep) {
-  return "[" + to_string(ep.address()) + "]:" + std::to_string(ep.port());
+std::string to_string(const ipv6_endpoint& x) {
+  std::string result;
+  auto addr = x.address();
+  if (addr.embeds_v4()) {
+    result += to_string(x);
+    result += ":";
+    result += std::to_string(x.port());
+  } else {
+    result += '[';
+    result += to_string(addr);
+    result += "]:";
+    result += std::to_string(x.port());
+  }
+  return result;
 }
 
 } // namespace caf
