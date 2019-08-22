@@ -41,10 +41,10 @@ namespace parser {
 
 struct read_ipv4_octet_consumer {
   std::array<uint8_t, 4> bytes;
-  int octets = 0;
+  size_t octets = 0;
 
   void value(uint8_t octet) {
-    bytes[static_cast<size_t>(octets++)] = octet;
+    bytes[octets++] = octet;
   }
 };
 
@@ -73,14 +73,15 @@ void read_ipv4_octet(state<Iterator, Sentinel>& ps, Consumer& consumer) {
 /// Reads a number, i.e., on success produces either an `int64_t` or a
 /// `double`.
 template <class Iterator, class Sentinel, class Consumer>
-void read_ipv4_address(state<Iterator, Sentinel>& ps, Consumer& consumer) {
+void read_ipv4_address(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   read_ipv4_octet_consumer f;
   auto g = make_scope_guard([&] {
     if (ps.code <= pec::trailing_character) {
       ipv4_address result{f.bytes};
-      consumer.value(result);
+      consumer.value(std::move(result));
     }
   });
+  // clang-format off
   start();
   state(init) {
     fsm_epsilon(read_ipv4_octet(ps, f), rd_dot, decimal_chars)
@@ -90,12 +91,13 @@ void read_ipv4_address(state<Iterator, Sentinel>& ps, Consumer& consumer) {
   }
   state(rd_oct) {
     fsm_epsilon_if(f.octets < 3, read_ipv4_octet(ps, f), rd_dot, decimal_chars)
-    fsm_epsilon_if(f.octets == 3, read_ipv4_octet(ps, f), done)
+    fsm_epsilon_if(f.octets == 3, read_ipv4_octet(ps, f), done, decimal_chars)
   }
   term_state(done) {
     // nop
   }
   fin();
+  // clang-format on
 }
 
 } // namespace parser

@@ -174,7 +174,7 @@ read_ipv6_address_piece_consumer<F> make_read_ipv6_address_piece_consumer(F f) {
 /// Reads a number, i.e., on success produces either an `int64_t` or a
 /// `double`.
 template <class Iterator, class Sentinel, class Consumer>
-void read_ipv6_address(state<Iterator, Sentinel>& ps, Consumer& consumer) {
+void read_ipv6_address(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   // IPv6 allows omitting blocks of zeros, splitting the string into a part
   // before the zeros (prefix) and a part after the zeros (suffix). For example,
   // ff::1 is 00FF0000000000000000000000000001
@@ -194,7 +194,7 @@ void read_ipv6_address(state<Iterator, Sentinel>& ps, Consumer& consumer) {
       for (size_t i = 0; i < ipv6_address::num_bytes; ++i)
         bytes[i] = prefix[i] | suffix[i];
       ipv6_address result{bytes};
-      consumer.value(result);
+      consumer.value(std::move(result));
     }
   });
   // We need to parse 2-byte hexadecimal numbers (x) and also keep track of

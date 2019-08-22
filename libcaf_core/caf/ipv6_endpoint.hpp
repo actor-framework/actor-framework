@@ -18,18 +18,25 @@
 
 #pragma once
 
+#include <cstdint>
+#include <functional>
+
 #include "caf/detail/comparable.hpp"
+#include "caf/fwd.hpp"
 #include "caf/ipv6_address.hpp"
 #include "caf/meta/type_name.hpp"
 
 namespace caf {
 
 /// An IP endpoint that contains an ::ipv6_address and a port.
-class ipv6_endpoint : detail::comparable<ipv6_endpoint> {
+class ipv6_endpoint : detail::comparable<ipv6_endpoint>,
+                      detail::comparable<ipv6_endpoint, ipv4_endpoint> {
 public:
   // -- constructors -----------------------------------------------------------
 
   ipv6_endpoint(ipv6_address address, uint16_t port);
+
+  ipv6_endpoint(ipv4_address address, uint16_t port);
 
   ipv6_endpoint() = default;
 
@@ -66,6 +73,11 @@ public:
   /// @returns 0 if `*this == x`, a positive value if `*this > x` and a negative
   /// value otherwise.
   long compare(ipv6_endpoint x) const noexcept;
+
+  /// Compares this endpoint to `x`.
+  /// @returns 0 if `*this == x`, a positive value if `*this > x` and a negative
+  /// value otherwise.
+  long compare(ipv4_endpoint x) const noexcept;
 
   template <class Inspector>
   friend typename Inspector::result_type inspect(Inspector& f,
