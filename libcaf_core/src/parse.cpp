@@ -89,11 +89,25 @@ void parse(parse_state& ps, std::string& x) {
     parser::read_string(ps, make_consumer(x));
     return;
   }
-  auto c = ps.current();
-  while (c != '\0' && (isalnum(c) || isspace(c))) {
+  for (auto c = ps.current(); c != '\0'; c = ps.next())
     x += c;
-    c = ps.next();
+  while (!x.empty() && isspace(x.back()))
+    x.pop_back();
+  ps.code = pec::success;
+}
+
+void parse_element(parse_state& ps, std::string& x,
+                   const char* char_blacklist) {
+  ps.skip_whitespaces();
+  if (ps.current() == '"') {
+    parser::read_string(ps, make_consumer(x));
+    return;
   }
+  auto is_legal = [=](char c) {
+    return c != '\0' && strchr(char_blacklist, c) == nullptr;
+  };
+  for (auto c = ps.current(); is_legal(c); c = ps.next())
+    x += c;
   while (!x.empty() && isspace(x.back()))
     x.pop_back();
   ps.code = ps.at_end() ? pec::success : pec::trailing_character;
