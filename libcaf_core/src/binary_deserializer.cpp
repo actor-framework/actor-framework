@@ -128,6 +128,11 @@ void binary_deserializer::skip(size_t num_bytes) {
   current_ += num_bytes;
 }
 
+void binary_deserializer::reset(span<const byte> bytes) {
+  current_ = bytes.data();
+  end_ = current_ + bytes.size();
+}
+
 error binary_deserializer::apply_impl(int8_t& x) {
   return apply_raw(sizeof(int8_t), &x);
 }

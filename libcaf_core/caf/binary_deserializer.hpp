@@ -91,6 +91,9 @@ public:
   /// @pre `num_bytes <= remaining()`
   void skip(size_t num_bytes);
 
+  /// Assings a new input.
+  void reset(span<const byte> bytes);
+
 protected:
   error apply_impl(int8_t&) override;
 
