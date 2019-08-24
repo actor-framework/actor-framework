@@ -20,11 +20,11 @@
 
 #include <vector>
 
-#include "caf/detail/socket_sys_includes.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/net/stream_socket.hpp"
-#include "caf/net/tcp.hpp"
+#include "caf/net/tcp_accept_socket.hpp"
+#include "caf/net/tcp_stream_socket.hpp"
 #include "caf/policy/scribe.hpp"
 #include "caf/send.hpp"
 
@@ -34,11 +34,11 @@ namespace policy {
 /// A doorman accepts TCP connections and creates scribes to handle them.
 class doorman {
 public:
-  doorman(net::stream_socket acceptor) : acceptor_(acceptor) {
+  doorman(net::tcp_accept_socket acceptor) : acceptor_(acceptor) {
     // nop
   }
 
-  net::socket acceptor_;
+  net::tcp_accept_socket acceptor_;
 
   net::socket handle() {
     return acceptor_;
@@ -54,23 +54,20 @@ public:
 
   template <class Parent>
   bool handle_read_event(Parent& parent) {
-    auto sck = net::tcp::accept(
-      net::socket_cast<net::stream_socket>(acceptor_));
+    auto sck = net::accept(acceptor_);
     if (!sck) {
       CAF_LOG_ERROR("accept failed:" << sck.error());
       return false;
     }
     auto mpx = parent.multiplexer();
     if (!mpx) {
-      CAF_LOG_DEBUG(
-        "could not acquire multiplexer to create a new endpoint manager");
+      CAF_LOG_DEBUG("unable to get multiplexer from parent");
       return false;
     }
     auto child = make_endpoint_manager(mpx, parent.system(), scribe{*sck},
                                        parent.application().make());
-    if (auto err = child->init()) {
+    if (auto err = child->init())
       return false;
-    }
     return true;
   }
 

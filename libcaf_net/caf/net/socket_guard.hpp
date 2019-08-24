@@ -24,19 +24,39 @@ namespace caf {
 namespace net {
 
 /// Closes the guarded socket when destroyed.
+template <class Socket>
 class socket_guard {
 public:
-  explicit socket_guard(net::socket fd);
+  explicit socket_guard(Socket fd) : fd_(fd) {
+    // nop
+  }
 
-  ~socket_guard();
+  ~socket_guard() {
+    close();
+  }
 
-  net::socket release();
+  Socket release() {
+    auto fd = fd_;
+    fd_ = Socket{};
+    return fd;
+  }
 
-  void close();
+  void close() {
+    if (fd_.id != net::invalid_socket) {
+      CAF_LOG_DEBUG("close socket" << CAF_ARG(fd_));
+      net::close(fd_);
+      fd_ = Socket{};
+    }
+  }
 
 private:
-  net::socket fd_;
+  Socket fd_;
 };
+
+template <class Socket>
+socket_guard<Socket> make_socket_guard(Socket sock) {
+  return socket_guard<Socket>{sock};
+}
 
 } // namespace net
 } // namespace caf

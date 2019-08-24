@@ -18,19 +18,24 @@
 
 #pragma once
 
-#include <cstddef>
 #include <string>
+#include <vector>
+
+#include "caf/fwd.hpp"
 
 namespace caf {
 namespace net {
+namespace ip {
 
-// IP version tag.
-enum class ip { v4, v6 };
+/// Returns the ip addresses assigned to `host`.
+std::vector<ip_address> resolve(const std::string& host);
 
-/// @relates ip
-inline std::string to_string(ip x) {
-  return x == ip::v4 ? "IPv4" : "IPv6";
-}
+/// Returns the ip addresses for the local hostname.
+std::vector<ip_address> local_addrs(const std::string& host);
 
+/// Returns the hostname of this device.
+std::string hostname();
+
+} // namespace ip
 } // namespace net
 } // namespace caf

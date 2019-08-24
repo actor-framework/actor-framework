@@ -18,27 +18,34 @@
 
 #pragma once
 
-#include <cstdint>
-#include <vector>
-
-#include "caf/net/ip.hpp"
-#include "caf/optional.hpp"
+#include "caf/detail/socket_sys_includes.hpp"
 
 namespace caf {
-namespace net {
+namespace detail {
 
-/// Utility class bundling access to network interface names and addresses.
-class interfaces {
-public:
-  /// Returns a native IPv4 or IPv6 translation of `host`.
-  static optional<std::pair<std::string, ip>>
-  native_address(const std::string& host, optional<ip> preferred = none);
+inline auto addr_of(sockaddr_in& what) -> decltype(what.sin_addr)& {
+  return what.sin_addr;
+}
 
-  /// Returns the host and protocol available for a local server socket
-  static std::vector<std::pair<std::string, ip>>
-  server_address(uint16_t port, const char* host,
-                 optional<ip> preferred = none);
-};
+inline auto family_of(sockaddr_in& what) -> decltype(what.sin_family)& {
+  return what.sin_family;
+}
 
-} // namespace net
+inline auto port_of(sockaddr_in& what) -> decltype(what.sin_port)& {
+  return what.sin_port;
+}
+
+inline auto addr_of(sockaddr_in6& what) -> decltype(what.sin6_addr)& {
+  return what.sin6_addr;
+}
+
+inline auto family_of(sockaddr_in6& what) -> decltype(what.sin6_family)& {
+  return what.sin6_family;
+}
+
+inline auto port_of(sockaddr_in6& what) -> decltype(what.sin6_port)& {
+  return what.sin6_port;
+}
+
+} // namespace detail
 } // namespace caf

@@ -18,41 +18,52 @@
 
 #pragma once
 
-#include <cstdint>
-
-#include "caf/expected.hpp"
-#include "caf/net/ip.hpp"
+#include "caf/net/abstract_socket.hpp"
+#include "caf/net/network_socket.hpp"
+#include "caf/net/socket.hpp"
 #include "caf/net/stream_socket.hpp"
+#include "caf/uri.hpp"
 
 namespace caf {
 namespace net {
 
-struct tcp {
-  /// Creates a new TCP socket to accept connections on a given port.
-  /// @param port The port to listen on.
-  /// @param addr Only accepts connections originating from this address.
-  /// @param reuse_addr Optionally sets the SO_REUSEADDR option on the socket.
-  /// @relates stream_socket
-  static expected<stream_socket> make_accept_socket(uint16_t port,
-                                                    const char* addr = nullptr,
-                                                    bool reuse_addr = false);
-  /// Create a `stream_socket` connected to `host`:`port` via the
-  /// `preferred` IP version.
-  /// @param host The remote host to connecto to.
-  /// @param port The port on the remote host to connect to.
-  /// @preferred Preferred IP version.
-  /// @returns The connected socket or an error.
-  /// @relates stream_socket
-  static expected<stream_socket>
-  make_connected_socket(std::string host, uint16_t port,
-                        optional<ip> preferred = none);
+/// Represents a TCP connection. Can be implicitly converted to a
+/// `stream_socket` for sending and receiving, or `network_socket`
+/// for inspection.
+struct tcp_stream_socket : abstract_socket<tcp_stream_socket> {
+  using super = abstract_socket<tcp_stream_socket>;
 
-  /// Accept a connection on `x`.
-  /// @param x Listening endpoint.
-  /// @returns The socket that handles the accepted connection.
-  /// @relates stream_socket
-  static expected<stream_socket> accept(stream_socket x);
+  using super::super;
+
+  constexpr operator socket() const noexcept {
+    return socket{id};
+  }
+
+  constexpr operator network_socket() const noexcept {
+    return network_socket{id};
+  }
+
+  constexpr operator stream_socket() const noexcept {
+    return stream_socket{id};
+  }
 };
+
+/// Create a `stream_socket` connected to `host`:`port`.
+/// @param host The remote host to connecto to.
+/// @param port The port on the remote host to connect to.
+/// @preferred Preferred IP version.
+/// @returns The connected socket or an error.
+/// @relates stream_socket
+expected<stream_socket>
+make_connected_socket(ip_address host, uint16_t port);
+
+/// Create a `stream_socket` connected to `auth`.
+/// @param authority The remote host to connecto to.
+/// @preferred Preferred IP version.
+/// @returns The connected socket or an error.
+/// @relates stream_socket
+expected<stream_socket>
+make_connected_socket(const uri::authority_type& auth);
 
 } // namespace net
 } // namespace caf

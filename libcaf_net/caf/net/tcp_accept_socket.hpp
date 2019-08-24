@@ -18,16 +18,21 @@
 
 #pragma once
 
-#include "caf/fwd.hpp"
+#include "caf/net/abstract_socket.hpp"
 #include "caf/net/network_socket.hpp"
+#include "caf/net/socket.hpp"
+#include "caf/net/stream_socket.hpp"
+#include "caf/net/tcp_stream_socket.hpp"
+#include "caf/uri.hpp"
 
 namespace caf {
 namespace net {
 
-/// A connection-oriented network communication endpoint for bidirectional byte
-/// streams.
-struct stream_socket : abstract_socket<stream_socket> {
-  using super = abstract_socket<stream_socket>;
+/// Represents an open TCP endpoint. Can be implicitly converted to a
+/// `stream_socket` for sending and receiving, or `network_socket`
+/// for inspection.
+struct tcp_accept_socket : abstract_socket<tcp_accept_socket> {
+  using super = abstract_socket<tcp_accept_socket>;
 
   using super::super;
 
@@ -38,44 +43,33 @@ struct stream_socket : abstract_socket<stream_socket> {
   constexpr operator network_socket() const noexcept {
     return network_socket{id};
   }
+
+  constexpr operator stream_socket() const noexcept {
+    return stream_socket{id};
+  }
 };
 
-/// Creates two connected sockets to mimic network communication (usually for
-/// testing purposes).
+/// Creates a new TCP socket to accept connections on a given port.
+/// @param port The port to listen on.
+/// @param addr Only accepts connections originating from this address.
+/// @param reuse_addr Optionally sets the SO_REUSEADDR option on the socket.
 /// @relates stream_socket
-expected<std::pair<stream_socket, stream_socket>> make_stream_socket_pair();
+expected<tcp_accept_socket> make_accept_socket(ip_address host, uint16_t port,
+                                               bool reuse_addr);
 
-/// Enables or disables keepalive on `x`.
-/// @relates network_socket
-error keepalive(stream_socket x, bool new_value);
-
-/// Enables or disables Nagle's algorithm on `x`.
+/// Creates a new TCP socket to accept connections on a given port.
+/// @param port The port to listen on.
+/// @param addr Only accepts connections originating from this address.
+/// @param reuse_addr Optionally sets the SO_REUSEADDR option on the socket.
 /// @relates stream_socket
-error nodelay(stream_socket x, bool new_value);
+expected<tcp_accept_socket> make_accept_socket(const uri::authority_type& auth,
+                                               bool reuse_addr = false);
 
-/// Receives data from `x`.
-/// @param x Connected endpoint.
-/// @param buf Points to destination buffer.
-/// @param buf_size Specifies the maximum size of the buffer in bytes.
-/// @returns The number of received bytes on success, an error code otherwise.
+/// Accept a connection on `x`.
+/// @param x Listening endpoint.
+/// @returns The socket that handles the accepted connection.
 /// @relates stream_socket
-/// @post either the result is a `sec` or a positive (non-zero) integer
-variant<size_t, sec> read(stream_socket x, span<byte> buf);
-
-/// Transmits data from `x` to its peer.
-/// @param x Connected endpoint.
-/// @param buf Points to the message to send.
-/// @param buf_size Specifies the size of the buffer in bytes.
-/// @returns The number of written bytes on success, otherwise an error code.
-/// @relates stream_socket
-/// @post either the result is a `sec` or a positive (non-zero) integer
-variant<size_t, sec> write(stream_socket x, span<const byte> buf);
-
-/// Converts the result from I/O operation on a ::stream_socket to either an
-/// error code or a non-zero positive integer.
-/// @relates stream_socket
-variant<size_t, sec>
-check_stream_socket_io_res(std::make_signed<size_t>::type res);
+expected<tcp_stream_socket> accept(tcp_accept_socket x);
 
 } // namespace net
 } // namespace caf

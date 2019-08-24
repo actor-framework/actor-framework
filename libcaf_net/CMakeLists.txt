@@ -11,17 +11,17 @@ set(LIBCAF_NET_SRCS
   src/datagram_socket.cpp
   src/endpoint_manager.cpp
   src/host.cpp
-  src/interfaces.cpp
+  src/ip.cpp
   src/multiplexer.cpp
   src/network_socket.cpp
   src/pipe_socket.cpp
   src/pollset_updater.cpp
   src/socket.cpp
-  src/socket_guard.cpp
   src/socket_manager.cpp
   src/stream_socket.cpp
   src/scribe.cpp
-  src/tcp.cpp
+  src/tcp_accept_socket.cpp
+  src/tcp_stream_socket.cpp
 )
 
 add_custom_target(libcaf_net)
