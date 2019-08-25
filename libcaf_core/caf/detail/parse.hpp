@@ -19,6 +19,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring>
 #include <iterator>
 #include <type_traits>
 #include <utility>
@@ -102,16 +103,33 @@ void parse(parse_state& ps, std::string& x);
 
 // -- container types ----------------------------------------------------------
 
-template <class First, class Second>
-void parse(parse_state& ps, std::pair<First, Second>& kvp) {
-  parse(ps, kvp.first);
+void parse_element(parse_state& ps, std::string& x, const char* char_blacklist);
+
+template <class T>
+enable_if_t<!is_pair<T>::value> parse_element(parse_state& ps, T& x,
+                                              const char*) {
+  parse(ps, x);
+}
+
+template <class First, class Second, size_t N>
+void parse_element(parse_state& ps, std::pair<First, Second>& kvp,
+                   const char (&char_blacklist)[N]) {
+  static_assert(N > 0, "empty array");
+  // TODO: consider to guard the blacklist computation with
+  //       `if constexpr (is_same_v<First, string>)` when switching to C++17.
+  char key_blacklist[N + 1];
+  if (N > 1)
+    memcpy(key_blacklist, char_blacklist, N - 1);
+  key_blacklist[N - 1] = '=';
+  key_blacklist[N] = '\0';
+  parse_element(ps, kvp.first, key_blacklist);
   if (ps.code > pec::trailing_character)
     return;
   if (!ps.consume('=')) {
     ps.code = pec::unexpected_character;
     return;
   }
-  parse(ps, kvp.second);
+  parse_element(ps, kvp.second, char_blacklist);
 }
 
 template <class T>
@@ -123,6 +141,7 @@ enable_if_tt<is_iterable<T>> parse(parse_state& ps, T& xs) {
   auto out = std::inserter(xs, xs.end());
   // List/map using [] or {} notation.
   if (ps.consume(opening_char)) {
+    char char_blacklist[] = {closing_char, ',', '\0'};
     do {
       if (ps.consume(closing_char)) {
         ps.skip_whitespaces();
@@ -130,7 +149,7 @@ enable_if_tt<is_iterable<T>> parse(parse_state& ps, T& xs) {
         return;
       }
       value_type tmp;
-      parse(ps, tmp);
+      parse_element(ps, tmp, char_blacklist);
       if (ps.code > pec::trailing_character)
         return;
       *out++ = std::move(tmp);
@@ -148,8 +167,9 @@ enable_if_tt<is_iterable<T>> parse(parse_state& ps, T& xs) {
     return;
   // List/map without [] or {}.
   do {
+    char char_blacklist[] = {',', '\0'};
     value_type tmp;
-    parse(ps, tmp);
+    parse_element(ps, tmp, char_blacklist);
     if (ps.code > pec::trailing_character)
       return;
     *out++ = std::move(tmp);
