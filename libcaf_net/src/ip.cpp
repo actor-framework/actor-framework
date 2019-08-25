@@ -180,8 +180,7 @@ std::string hostname() {
   char buf[HOST_NAME_MAX + 1];
   buf[HOST_NAME_MAX] = '\0';
   gethostname(buf, HOST_NAME_MAX);
-  struct hostent* h;
-  h = gethostbyname(buf);
+  gethostbyname(buf);
   return std::string{buf};
 }
 
