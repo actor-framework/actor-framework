@@ -94,7 +94,8 @@ void parse(parse_state& ps, std::string& x);
 void parse_element(parse_state& ps, std::string& x, const char* char_blacklist);
 
 template <class T>
-void parse_element(parse_state& ps, T& x, const char*) {
+enable_if_t<!is_pair<T>::value> parse_element(parse_state& ps, T& x,
+                                              const char*) {
   parse(ps, x);
 }
 
