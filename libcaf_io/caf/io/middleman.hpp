@@ -50,12 +50,20 @@ public:
   expected<uint16_t> open(uint16_t port, const char* in = nullptr,
                           bool reuse = false);
 
+  /// Tries to open a port for other CAF instances to connect to.
+  /// @experimental
+  expected<uint16_t> open(const uri& x);
+
   /// Closes port `port` regardless of whether an actor is published to it.
   expected<void> close(uint16_t port);
 
   /// Tries to connect to given node.
   /// @experimental
   expected<node_id> connect(std::string host, uint16_t port);
+
+  /// Tries to connect to given node.
+  /// @experimental
+  expected<node_id> connect(const uri& x);
 
   /// Tries to publish `whom` at `port` and returns either an
   /// `error` or the bound port.
@@ -66,11 +74,23 @@ public:
   /// @returns The actual port the OS uses after `bind()`. If `port == 0`
   ///          the OS chooses a random high-level port.
   template <class Handle>
-  expected<uint16_t> publish(Handle&& whom, uint16_t port,
+  expected<uint16_t> publish(Handle&& whom, uint16_t port = 0,
                              const char* in = nullptr, bool reuse = false) {
     detail::type_list<typename std::decay<Handle>::type> tk;
     return publish(actor_cast<strong_actor_ptr>(std::forward<Handle>(whom)),
                    system().message_types(tk), port, in, reuse);
+  }
+
+  /// Tries to publish `whom` and returns either an `error` or the bound port.
+  /// @param whom Actor that should be published at `port`.
+  /// @param where Encodes IP address to listen to and port.
+  /// @returns The actual port the OS uses after `bind()`. If `port == 0`
+  ///          the OS chooses a random high-level port.
+  template <class Handle>
+  expected<uint16_t> publish(Handle&& whom, const uri& where) {
+    detail::type_list<typename std::decay<Handle>::type> tk;
+    return publish(actor_cast<strong_actor_ptr>(std::forward<Handle>(whom)),
+                   system().message_types(tk), where);
   }
 
   /// Makes *all* local groups accessible via network
@@ -80,6 +100,11 @@ public:
   expected<uint16_t> publish_local_groups(uint16_t port,
                                           const char* in = nullptr,
                                           bool reuse = false);
+
+  /// Makes *all* local groups accessible via network at given location.
+  /// @returns The actual port the OS uses after `bind()`. If `port == 0`
+  ///          the OS chooses a random high-level port.
+  expected<uint16_t> publish_local_groups(const uri& where);
 
   /// Unpublishes `whom` by closing `port` or all assigned ports if `port == 0`.
   /// @param whom Actor that should be unpublished at `port`.
@@ -104,6 +129,20 @@ public:
     return actor_cast<ActorHandle>(std::move(*x));
   }
 
+  /// Establish a new connection to a remote node.
+  /// @param node URI containing a valid IP address and TCP port.
+  /// @returns An `actor` to the proxy instance representing
+  ///          a remote actor or an `error`.
+  template <class ActorHandle = actor>
+  expected<ActorHandle> remote_actor(const uri& node) {
+    detail::type_list<ActorHandle> tk;
+    auto x = remote_actor(system().message_types(tk), node);
+    if (!x)
+      return x.error();
+    CAF_ASSERT(x && *x);
+    return actor_cast<ActorHandle>(std::move(*x));
+  }
+
   /// <group-name>@<host>:<port>
   expected<group> remote_group(const std::string& group_uri);
 
@@ -111,12 +150,12 @@ public:
                                const std::string& host, uint16_t port);
 
   /// Returns the enclosing actor system.
-  inline actor_system& system() {
+  actor_system& system() {
     return system_;
   }
 
   /// Returns the systemw-wide configuration.
-  inline const actor_system_config& config() const {
+  const actor_system_config& config() const {
     return system_.config();
   }
 
@@ -313,10 +352,16 @@ private:
                              std::set<std::string> sigs,
                              uint16_t port, const char* cstr, bool ru);
 
+  expected<uint16_t> publish(const strong_actor_ptr& whom,
+                             std::set<std::string> sigs, const uri& where);
+
   expected<void> unpublish(const actor_addr& whom, uint16_t port);
 
   expected<strong_actor_ptr> remote_actor(std::set<std::string> ifs,
                                           std::string host, uint16_t port);
+
+  expected<strong_actor_ptr> remote_actor(std::set<std::string> ifs,
+                                          const uri& node);
 
   static int exec_slave_mode(actor_system&, const actor_system_config&);
 

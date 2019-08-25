@@ -33,8 +33,6 @@ using namespace caf;
 
 namespace {
 
-constexpr char local_host[] = "127.0.0.1";
-
 class config : public actor_system_config {
 public:
   config() {
@@ -61,8 +59,16 @@ struct fixture {
         server_side_mm(server_side.middleman()),
         client_side(client_side_config),
         client_side_mm(client_side.middleman()) {
-    // nop
+    localhost = "127.0.0.1";
+    localhost_uri = unbox(uri::from_string("tcp://127.0.0.1"));
   }
+
+  uri make_uri(uint16_t port) {
+    return unbox(uri::from_string("tcp://127.0.0.1:" + std::to_string(port)));
+  }
+
+  const char* localhost;
+  uri localhost_uri;
 };
 
 behavior make_pong_behavior() {
@@ -143,45 +149,61 @@ behavior linking_actor(event_based_actor* self, const actor& buddy) {
 CAF_TEST_FIXTURE_SCOPE(dynamic_remote_actor_tests, fixture)
 
 CAF_TEST(identity_semantics) {
-  // server side
+  // Server side.
   auto server = server_side.spawn(make_pong_behavior);
-  auto port1 = unbox(server_side_mm.publish(server, 0, local_host));
-  auto port2 = unbox(server_side_mm.publish(server, 0, local_host));
+  auto port1 = unbox(server_side_mm.publish(server, 0, localhost));
+  auto port2 = unbox(server_side_mm.publish(server, 0, localhost));
+  auto port3 = unbox(server_side_mm.publish(server, localhost_uri));
   CAF_REQUIRE_NOT_EQUAL(port1, port2);
-  auto same_server = unbox(server_side_mm.remote_actor(local_host, port2));
-  CAF_REQUIRE_EQUAL(same_server, server);
-  CAF_CHECK_EQUAL(same_server->node(), server_side.node());
-  auto server1 = unbox(client_side_mm.remote_actor(local_host, port1));
-  auto server2 = unbox(client_side_mm.remote_actor(local_host, port2));
-  CAF_CHECK_EQUAL(server1, client_side_mm.remote_actor(local_host, port1));
-  CAF_CHECK_EQUAL(server2, client_side_mm.remote_actor(local_host, port2));
+  CAF_REQUIRE_NOT_EQUAL(port1, port3);
+  auto same_server_1 = unbox(server_side_mm.remote_actor(localhost, port2));
+  auto same_server_2 = unbox(server_side_mm.remote_actor(make_uri(port2)));
+  CAF_REQUIRE_EQUAL(server, same_server_1);
+  CAF_REQUIRE_EQUAL(server, same_server_2);
+  CAF_CHECK_EQUAL(same_server_1.node(), server_side.node());
+  CAF_CHECK_EQUAL(same_server_2.node(), server_side.node());
+  auto server1 = unbox(client_side_mm.remote_actor(localhost, port1));
+  auto server2 = unbox(client_side_mm.remote_actor(localhost, port2));
+  auto server3 = unbox(client_side_mm.remote_actor(make_uri(port2)));
+  CAF_CHECK_EQUAL(server1, client_side_mm.remote_actor(localhost, port1));
+  CAF_CHECK_EQUAL(server2, client_side_mm.remote_actor(localhost, port2));
+  CAF_CHECK_EQUAL(server3, client_side_mm.remote_actor(make_uri(port2)));
   anon_send_exit(server, exit_reason::user_shutdown);
 }
 
 CAF_TEST(ping_pong) {
-  // server side
-  auto port = unbox(server_side_mm.publish(
-    server_side.spawn(make_pong_behavior), 0, local_host));
-  // client side
-  auto pong = unbox(client_side_mm.remote_actor(local_host, port));
+  // Server side.
+  auto pong_orig = server_side.spawn(make_pong_behavior);
+  auto port = unbox(server_side_mm.publish(pong_orig, 0, localhost));
+  // Client side.
+  auto pong = unbox(client_side_mm.remote_actor(localhost, port));
+  client_side.spawn(make_ping_behavior, pong);
+}
+
+CAF_TEST(ping_pong uri API) {
+  // Server side.
+  auto pong_orig = server_side.spawn(make_pong_behavior);
+  auto port = unbox(server_side_mm.publish(pong_orig, localhost_uri));
+  // Client side.
+  auto pong = unbox(client_side_mm.remote_actor(make_uri(port)));
   client_side.spawn(make_ping_behavior, pong);
 }
 
 CAF_TEST(custom_message_type) {
-  // server side
-  auto port = unbox(server_side_mm.publish(
-    server_side.spawn(make_sort_behavior), 0, local_host));
-  // client side
-  auto sorter = unbox(client_side_mm.remote_actor(local_host, port));
+  // Server side.
+  auto sorter_orig = server_side.spawn(make_sort_behavior);
+  auto port = unbox(server_side_mm.publish(sorter_orig, 0, localhost));
+  // Client side.
+  auto sorter = unbox(client_side_mm.remote_actor(localhost, port));
   client_side.spawn(make_sort_requester_behavior, sorter);
 }
 
 CAF_TEST(remote_link) {
-  // server side
-  auto port = unbox(
-    server_side_mm.publish(server_side.spawn(fragile_mirror), 0, local_host));
-  // client side
-  auto mirror = unbox(client_side_mm.remote_actor(local_host, port));
+  // Server side.
+  auto mirror_orig = server_side.spawn(fragile_mirror);
+  auto port = unbox(server_side_mm.publish(mirror_orig, 0, localhost));
+  // Client side.
+  auto mirror = unbox(client_side_mm.remote_actor(localhost, port));
   auto linker = client_side.spawn(linking_actor, mirror);
   scoped_actor self{client_side};
   self->wait_for(linker);

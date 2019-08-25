@@ -124,6 +124,10 @@ enum class sec : uint8_t {
   socket_operation_failed = 45,
   /// A resource is temporarily unavailable or would block.
   unavailable_or_would_block,
+  /// Got an URI with an unsupported schema.
+  unsupported_scheme,
+  /// Got an URI with a missing component.
+  missing_component,
 };
 
 /// @relates sec

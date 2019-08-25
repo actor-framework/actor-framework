@@ -72,6 +72,8 @@ const char* sec_strings[] = {
   "socket_disconnected",
   "socket_operation_failed",
   "unavailable_or_would_block",
+  "unsupported_scheme",
+  "missing_component",
 };
 
 } // namespace <anonymous>

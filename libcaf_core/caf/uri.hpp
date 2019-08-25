@@ -83,6 +83,8 @@ public:
 
   explicit uri(impl_ptr ptr);
 
+  static expected<uri> from_string(string_view str);
+
   // -- properties -------------------------------------------------------------
 
   /// Returns whether all components of this URI are empty.

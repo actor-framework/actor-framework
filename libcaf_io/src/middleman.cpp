@@ -18,45 +18,42 @@
 
 #include "caf/io/middleman.hpp"
 
-#include <tuple>
 #include <cerrno>
-#include <memory>
 #include <cstring>
+#include <memory>
 #include <sstream>
 #include <stdexcept>
+#include <tuple>
 
-#include "caf/sec.hpp"
-#include "caf/send.hpp"
 #include "caf/actor.hpp"
+#include "caf/actor_proxy.hpp"
+#include "caf/actor_registry.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/after.hpp"
 #include "caf/config.hpp"
-#include "caf/logger.hpp"
-#include "caf/node_id.hpp"
 #include "caf/defaults.hpp"
-#include "caf/actor_proxy.hpp"
-#include "caf/make_counted.hpp"
-#include "caf/scoped_actor.hpp"
-#include "caf/function_view.hpp"
-#include "caf/actor_registry.hpp"
-#include "caf/event_based_actor.hpp"
-#include "caf/actor_system_config.hpp"
-#include "caf/raw_event_based_actor.hpp"
-#include "caf/typed_event_based_actor.hpp"
-
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/system_messages.hpp"
-
-#include "caf/io/network/interfaces.hpp"
-#include "caf/io/network/test_multiplexer.hpp"
-#include "caf/io/network/default_multiplexer.hpp"
-
-#include "caf/scheduler/abstract_coordinator.hpp"
-
+#include "caf/detail/get_mac_addresses.hpp"
+#include "caf/detail/get_root_uuid.hpp"
 #include "caf/detail/ripemd_160.hpp"
 #include "caf/detail/safe_equal.hpp"
-#include "caf/detail/get_root_uuid.hpp"
 #include "caf/detail/set_thread_name.hpp"
-#include "caf/detail/get_mac_addresses.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/function_view.hpp"
+#include "caf/io/basp_broker.hpp"
+#include "caf/io/network/default_multiplexer.hpp"
+#include "caf/io/network/interfaces.hpp"
+#include "caf/io/network/test_multiplexer.hpp"
+#include "caf/io/system_messages.hpp"
+#include "caf/logger.hpp"
+#include "caf/make_counted.hpp"
+#include "caf/node_id.hpp"
+#include "caf/raw_event_based_actor.hpp"
+#include "caf/scheduler/abstract_coordinator.hpp"
+#include "caf/scoped_actor.hpp"
+#include "caf/sec.hpp"
+#include "caf/send.hpp"
+#include "caf/typed_event_based_actor.hpp"
+#include "caf/uri.hpp"
 
 #ifdef CAF_WINDOWS
 #include <io.h>
@@ -82,6 +79,19 @@ public:
 private:
   T backend_;
 };
+
+bool has_reuse_flag(const uri& x) {
+  const auto& qm = x.query();
+  auto i = qm.find("reuse-address");
+  return i != qm.end() && i->second == "true";
+}
+
+std::string host_as_string(const uri& x) {
+  const auto& authority = x.authority();
+  if (holds_alternative<ip_address>(authority.host))
+    return to_string(get<ip_address>(authority.host));
+  return get<std::string>(authority.host);
+}
 
 } // namespace <anonymous>
 
@@ -118,6 +128,13 @@ expected<uint16_t> middleman::open(uint16_t port, const char* in, bool reuse) {
   return f(open_atom::value, port, std::move(str), reuse);
 }
 
+expected<uint16_t> middleman::open(const uri& x) {
+  if (x.scheme() != "tcp")
+    return make_error(sec::unsupported_scheme, "expected 'tcp'");
+  auto in = host_as_string(x);
+  return open(x.authority().port, in.c_str(), has_reuse_flag(x));
+}
+
 expected<void> middleman::close(uint16_t port) {
   auto f = make_function_view(actor_handle());
   return f(close_atom::value, port);
@@ -131,6 +148,15 @@ expected<node_id> middleman::connect(std::string host, uint16_t port) {
   return std::get<0>(*res);
 }
 
+expected<node_id> middleman::connect(const uri& where) {
+  if (where.scheme() != "tcp")
+    return make_error(sec::unsupported_scheme, "expected 'tcp'");
+  auto host = host_as_string(where);
+  if (host.empty())
+    return make_error(sec::missing_component, "no host in authority component");
+  return connect(host, where.authority().port);
+}
+
 expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
                                       std::set<std::string> sigs, uint16_t port,
                                       const char* cstr, bool ru) {
@@ -142,6 +168,21 @@ expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
     in = cstr;
   auto f = make_function_view(actor_handle());
   return f(publish_atom::value, port, std::move(whom), std::move(sigs), in, ru);
+}
+
+expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
+                                      std::set<std::string> sigs,
+                                      const uri& where) {
+  CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(where));
+  // Sanity checks.
+  if (!whom)
+    return sec::cannot_publish_invalid_actor;
+  if (where.scheme() != "tcp")
+    return make_error(sec::unsupported_scheme, "expected 'tcp'");
+  // Dispatch to low-level function.
+  auto in = host_as_string(where);
+  return publish(whom, std::move(sigs), where.authority().port, in.c_str(),
+                 has_reuse_flag(where));
 }
 
 expected<uint16_t> middleman::publish_local_groups(uint16_t port,
@@ -162,6 +203,16 @@ expected<uint16_t> middleman::publish_local_groups(uint16_t port,
   else
     anon_send_exit(gn, exit_reason::user_shutdown);
   return result;
+}
+
+expected<uint16_t> middleman::publish_local_groups(const uri& where) {
+  CAF_LOG_TRACE(CAF_ARG(where));
+  if (where.scheme() != "tcp")
+    return make_error(sec::unsupported_scheme, "expected 'tcp'");
+  // Dispatch to low-level function.
+  auto in = host_as_string(where);
+  return publish_local_groups(where.authority().port, in.c_str(),
+                              has_reuse_flag(where));
 }
 
 expected<void> middleman::unpublish(const actor_addr& whom, uint16_t port) {
@@ -185,6 +236,19 @@ expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
     return make_error(sec::unexpected_actor_messaging_interface, std::move(ifs),
                       std::move(std::get<2>(*res)));
   return ptr;
+}
+
+expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
+                                                   const uri& node) {
+  CAF_LOG_TRACE(CAF_ARG(ifs) << CAF_ARG(node));
+  // Sanity checks.
+  if (node.scheme() != "tcp")
+    return make_error(sec::unsupported_scheme, "expected 'tcp'");
+  auto host = host_as_string(node);
+  if (host.empty())
+    return make_error(sec::missing_component, "no host in authority component");
+  // Dispatch to low-level function.
+  return remote_actor(std::move(ifs), host, node.authority().port);
 }
 
 expected<group> middleman::remote_group(const std::string& group_uri) {

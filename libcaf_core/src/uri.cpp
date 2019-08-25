@@ -26,6 +26,7 @@
 #include "caf/detail/parser/read_uri.hpp"
 #include "caf/detail/uri_impl.hpp"
 #include "caf/error.hpp"
+#include "caf/expected.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/serializer.hpp"
 
@@ -37,6 +38,13 @@ uri::uri() : impl_(&detail::uri_impl::default_instance) {
 
 uri::uri(impl_ptr ptr) : impl_(std::move(ptr)) {
   CAF_ASSERT(impl_ != nullptr);
+}
+
+expected<uri> uri::from_string(string_view str) {
+  uri result;
+  if (auto err = parse(str, result))
+    return err;
+  return result;
 }
 
 bool uri::empty() const noexcept {
