@@ -56,7 +56,7 @@ expected<stream_socket> make_connected_socket(ip_address host, uint16_t port) {
   CAF_LOG_DEBUG("try to connect to:" << CAF_ARG(to_string(host))
                                      << CAF_ARG(port));
   auto proto = host.embeds_v4() ? AF_INET : AF_INET6;
-  auto socktype = SOCK_STREAM;
+  int socktype = SOCK_STREAM;
 #ifdef SOCK_CLOEXEC
   socktype |= SOCK_CLOEXEC;
 #endif
