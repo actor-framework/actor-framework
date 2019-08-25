@@ -54,16 +54,14 @@ struct tcp_stream_socket : abstract_socket<tcp_stream_socket> {
 /// @preferred Preferred IP version.
 /// @returns The connected socket or an error.
 /// @relates stream_socket
-expected<stream_socket>
-make_connected_socket(ip_address host, uint16_t port);
+expected<stream_socket> make_connected_socket(ip_address host, uint16_t port);
 
 /// Create a `stream_socket` connected to `auth`.
 /// @param authority The remote host to connecto to.
 /// @preferred Preferred IP version.
 /// @returns The connected socket or an error.
 /// @relates stream_socket
-expected<stream_socket>
-make_connected_socket(const uri::authority_type& auth);
+expected<stream_socket> make_connected_socket(const uri::authority_type& auth);
 
 } // namespace net
 } // namespace caf

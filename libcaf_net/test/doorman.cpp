@@ -21,11 +21,11 @@
 #include "caf/policy/doorman.hpp"
 
 #include "caf/net/endpoint_manager.hpp"
+#include "caf/net/ip.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/uri.hpp"
-#include "caf/net/ip.hpp"
 
 #include "caf/test/dsl.hpp"
 

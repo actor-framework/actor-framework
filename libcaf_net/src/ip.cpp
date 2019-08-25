@@ -46,12 +46,12 @@
 #include "caf/string_view.hpp"
 
 #ifndef HOST_NAME_MAX
-#define HOST_NAME_MAX 255
+#  define HOST_NAME_MAX 255
 #endif
 
+using std::pair;
 using std::string;
 using std::vector;
-using std::pair;
 
 namespace caf {
 namespace net {
@@ -128,10 +128,10 @@ std::vector<ip_address> resolve(const std::string& host) {
     }
   }
   // TODO: Should we just prefer ipv6 or use a config option?
-  //std::stable_sort(std::begin(results), std::end(results),
-  //                 [](const ip_address& lhs, const ip_address& rhs) {
-  //                   return !lhs.embeds_v4() && rhs.embeds_v4();
-  //                 });
+  // std::stable_sort(std::begin(results), std::end(results),
+  //                  [](const ip_address& lhs, const ip_address& rhs) {
+  //                    return !lhs.embeds_v4() && rhs.embeds_v4();
+  //                  });
   return results;
 }
 
