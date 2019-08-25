@@ -56,10 +56,10 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
 
 class dummy_application {
 public:
-  static expected<std::vector<char>> serialize(actor_system& sys,
+  static expected<std::vector<byte>> serialize(actor_system& sys,
                                                const type_erased_tuple& x) {
-    std::vector<char> result;
-    binary_serializer sink{sys, result};
+    std::vector<byte> result;
+    serializer_impl<std::vector<byte>> sink{sys, result};
     if (auto err = message::save(sink, x))
       return err;
     return result;
@@ -77,7 +77,7 @@ public:
   }
 
   template <class Parent>
-  void handle_data(Parent&, span<char>) {
+  void handle_data(Parent&, span<byte>) {
     // nop
   }
 
@@ -99,7 +99,7 @@ public:
 
 class dummy_application_factory {
 public:
-  static expected<std::vector<char>> serialize(actor_system& sys,
+  static expected<std::vector<byte>> serialize(actor_system& sys,
                                                const type_erased_tuple& x) {
     return dummy_application::serialize(sys, x);
   }
