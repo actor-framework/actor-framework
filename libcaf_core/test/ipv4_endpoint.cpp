@@ -30,6 +30,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/byte.hpp"
+#include "caf/detail/parse.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/serializer_impl.hpp"
 #include "caf/span.hpp"
@@ -38,18 +39,11 @@ using namespace caf;
 
 namespace {
 
-ipv4_endpoint operator"" _ep(const char* str, size_t) {
-  std::array<uint8_t, 4> bytes;
-  char* next = nullptr;
-  bytes[0] = static_cast<uint8_t>(strtol(str, &next, 10));
-  for (size_t n = 1; n < 4; ++n) {
-    assert(*next == '.');
-    str = next + 1;
-    bytes[n] = static_cast<uint8_t>(strtol(str, &next, 10));
-  }
-  assert(*next == ':');
-  auto port = static_cast<uint16_t>(strtol(next + 1, nullptr, 10));
-  return ipv4_endpoint{ipv4_address{bytes}, port};
+ipv4_endpoint operator"" _ep(const char* str, size_t size) {
+  ipv4_endpoint result;
+  if (auto err = detail::parse(string_view{str, size}, result))
+    CAF_FAIL("unable to parse input: " << err);
+  return result;
 }
 
 struct fixture {

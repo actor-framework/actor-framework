@@ -82,6 +82,18 @@ void parse(parse_state& ps, timespan& x);
 
 void parse(parse_state& ps, atom_value& x);
 
+void parse(parse_state& ps, ipv4_address& x);
+
+void parse(parse_state& ps, ipv4_subnet& x);
+
+void parse(parse_state& ps, ipv4_endpoint& x);
+
+void parse(parse_state& ps, ipv6_address& x);
+
+void parse(parse_state& ps, ipv6_subnet& x);
+
+void parse(parse_state& ps, ipv6_endpoint& x);
+
 void parse(parse_state& ps, uri& x);
 
 // -- STL types ----------------------------------------------------------------

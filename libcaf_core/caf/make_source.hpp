@@ -16,53 +16,14 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/ipv6_endpoint.hpp"
-
-#include "caf/detail/fnv_hash.hpp"
-#include "caf/ipv4_address.hpp"
-#include "caf/ipv4_endpoint.hpp"
+#pragma once
 
 namespace caf {
 
-ipv6_endpoint::ipv6_endpoint(ipv6_address address, uint16_t port)
-  : address_(address), port_(port) {
-  // nop
-}
-
-ipv6_endpoint::ipv6_endpoint(ipv4_address address, uint16_t port)
-  : address_(address), port_(port) {
-  // nop
-}
-
-size_t ipv6_endpoint::hash_code() const noexcept {
-  auto result = detail::fnv_hash(address_.data());
-  return detail::fnv_hash_append(result, port_);
-}
-
-long ipv6_endpoint::compare(ipv6_endpoint x) const noexcept {
-  auto res = address_.compare(x.address());
-  return res == 0 ? port_ - x.port() : res;
-}
-
-long ipv6_endpoint::compare(ipv4_endpoint x) const noexcept {
-  ipv6_endpoint y{x.address(), x.port()};
-  return compare(y);
-}
-
-std::string to_string(const ipv6_endpoint& x) {
-  std::string result;
-  auto addr = x.address();
-  if (addr.embeds_v4()) {
-    result += to_string(addr);
-    result += ":";
-    result += std::to_string(x.port());
-  } else {
-    result += '[';
-    result += to_string(addr);
-    result += "]:";
-    result += std::to_string(x.port());
-  }
-  return result;
-}
+class make_source {
+public:
+  make_source();
+  ~make_source();
+};
 
 } // namespace caf

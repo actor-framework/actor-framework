@@ -29,6 +29,8 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/byte.hpp"
+#include "caf/ipv4_address.hpp"
+#include "caf/ipv4_endpoint.hpp"
 #include "caf/ipv6_address.hpp"
 #include "caf/serializer_impl.hpp"
 #include "caf/span.hpp"
@@ -37,47 +39,11 @@ using namespace caf;
 
 namespace {
 
-ipv6_endpoint operator"" _ep(const char* str, size_t) {
-  union {
-    std::array<uint8_t, 16> xs_bytes;
-    std::array<uint16_t, 8> xs;
-  };
-  union {
-    std::array<uint8_t, 16> ys_bytes;
-    std::array<uint16_t, 8> ys;
-  };
-  memset(xs_bytes.data(), 0, xs_bytes.size());
-  memset(ys_bytes.data(), 0, xs_bytes.size());
-  assert(*str == '[');
-  ++str;
-  char* next = nullptr;
-  auto pull = [&] {
-    auto x = static_cast<uint16_t>(strtol(str, &next, 16));
-    return detail::to_network_order(x);
-  };
-  size_t n = 0;
-  do {
-    xs[n++] = pull();
-    assert(next != nullptr);
-    str = next + 1;
-  } while (*str != ':' && *str != ']');
-  if (*str == ':') {
-    ++str;
-    do {
-      ys[0] = pull();
-      std::rotate(ys.begin(), ys.begin() + 1, ys.end());
-      assert(next != nullptr);
-      str = next + 1;
-    } while (*next != ']');
-  }
-  assert(*next == ']');
-  assert(*str == ':');
-  ++str;
-  auto port = static_cast<uint16_t>(strtol(str, nullptr, 10));
-  std::array<uint8_t, 16> bytes;
-  for (size_t i = 0; i < 16; ++i)
-    bytes[i] = xs_bytes[i] | ys_bytes[i];
-  return ipv6_endpoint{ipv6_address{bytes}, port};
+ipv6_endpoint operator"" _ep(const char* str, size_t size) {
+  ipv6_endpoint result;
+  if (auto err = detail::parse(string_view{str, size}, result))
+    CAF_FAIL("unable to parse input: " << err);
+  return result;
 }
 
 struct fixture {
@@ -136,6 +102,13 @@ CAF_TEST(constructing assigning and hash_code) {
   CAF_CHECK_EQUAL(ep2.port(), port);
   CAF_CHECK_EQUAL(ep1, ep2);
   CAF_CHECK_EQUAL(ep1.hash_code(), ep2.hash_code());
+}
+
+CAF_TEST(comparison to IPv4) {
+  ipv4_endpoint v4{ipv4_address({127, 0, 0, 1}), 8080};
+  ipv6_endpoint v6{v4.address(), v4.port()};
+  CAF_CHECK_EQUAL(v4, v6);
+  CAF_CHECK_EQUAL(v6, v4);
 }
 
 CAF_TEST(to_string) {

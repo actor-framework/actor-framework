@@ -18,6 +18,9 @@
 
 #pragma once
 
+#include <cstdint>
+#include <functional>
+
 #include "caf/detail/comparable.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/meta/type_name.hpp"

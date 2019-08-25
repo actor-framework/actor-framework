@@ -23,6 +23,12 @@
 #include "caf/test/dsl.hpp"
 
 #include "caf/expected.hpp"
+#include "caf/ipv4_address.hpp"
+#include "caf/ipv4_endpoint.hpp"
+#include "caf/ipv4_subnet.hpp"
+#include "caf/ipv6_address.hpp"
+#include "caf/ipv6_endpoint.hpp"
+#include "caf/ipv6_subnet.hpp"
 #include "caf/string_view.hpp"
 #include "caf/uri.hpp"
 
@@ -215,4 +221,52 @@ CAF_TEST(uris) {
   CAF_CHECK_EQUAL(ls[1].scheme(), "http");
   CAF_CHECK_EQUAL(ls[1].authority().host, std::string{"actor-framework.org"});
   CAF_CHECK_EQUAL(ls[1].path(), "doc");
+}
+
+CAF_TEST(IPv4 address) {
+  CAF_CHECK_EQUAL(read<ipv4_address>("1.2.3.4"), ipv4_address({1, 2, 3, 4}));
+  CAF_CHECK_EQUAL(read<ipv4_address>("127.0.0.1"),
+                  ipv4_address({127, 0, 0, 1}));
+  CAF_CHECK_EQUAL(read<ipv4_address>("256.0.0.1"), pec::integer_overflow);
+}
+
+CAF_TEST(IPv4 subnet) {
+  CAF_CHECK_EQUAL(read<ipv4_subnet>("1.2.3.0/24"),
+                  ipv4_subnet(ipv4_address({1, 2, 3, 0}), 24));
+  CAF_CHECK_EQUAL(read<ipv4_subnet>("1.2.3.0/33"), pec::integer_overflow);
+}
+
+CAF_TEST(IPv4 endpoint) {
+  CAF_CHECK_EQUAL(read<ipv4_endpoint>("127.0.0.1:0"),
+                  ipv4_endpoint(ipv4_address({127, 0, 0, 1}), 0));
+  CAF_CHECK_EQUAL(read<ipv4_endpoint>("127.0.0.1:65535"),
+                  ipv4_endpoint(ipv4_address({127, 0, 0, 1}), 65535));
+  CAF_CHECK_EQUAL(read<ipv4_endpoint>("127.0.0.1:65536"),
+                  pec::integer_overflow);
+}
+
+CAF_TEST(IPv6 address) {
+  CAF_CHECK_EQUAL(read<ipv6_address>("1.2.3.4"), ipv4_address({1, 2, 3, 4}));
+  CAF_CHECK_EQUAL(read<ipv6_address>("1::"), ipv6_address({{1}, {}}));
+  CAF_CHECK_EQUAL(read<ipv6_address>("::2"), ipv6_address({{}, {2}}));
+  CAF_CHECK_EQUAL(read<ipv6_address>("1::2"), ipv6_address({{1}, {2}}));
+}
+
+CAF_TEST(IPv6 subnet) {
+  CAF_CHECK_EQUAL(read<ipv6_subnet>("1.2.3.0/24"),
+                  ipv6_subnet(ipv4_address({1, 2, 3, 0}), 24));
+  CAF_CHECK_EQUAL(read<ipv6_subnet>("1::/128"),
+                  ipv6_subnet(ipv6_address({1}, {}), 128));
+  CAF_CHECK_EQUAL(read<ipv6_subnet>("1::/129"), pec::integer_overflow);
+}
+
+CAF_TEST(IPv6 endpoint) {
+  CAF_CHECK_EQUAL(read<ipv6_endpoint>("127.0.0.1:0"),
+                  ipv6_endpoint(ipv4_address({127, 0, 0, 1}), 0));
+  CAF_CHECK_EQUAL(read<ipv6_endpoint>("127.0.0.1:65535"),
+                  ipv6_endpoint(ipv4_address({127, 0, 0, 1}), 65535));
+  CAF_CHECK_EQUAL(read<ipv6_endpoint>("127.0.0.1:65536"),
+                  pec::integer_overflow);
+  CAF_CHECK_EQUAL(read<ipv6_endpoint>("[1::2]:8080"),
+                  ipv6_endpoint({{1}, {2}}, 8080));
 }
