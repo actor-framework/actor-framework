@@ -48,6 +48,11 @@ namespace detail {
 
 struct literal {
   string_view str;
+
+  template <size_t N>
+  literal(const char (&cstr)[N]) : str(cstr, N - 1) {
+    // nop
+  }
 };
 
 void parse(parse_state& ps, literal& x) {

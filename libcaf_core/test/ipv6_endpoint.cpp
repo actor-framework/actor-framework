@@ -108,6 +108,7 @@ CAF_TEST(comparison to IPv4) {
   ipv4_endpoint v4{ipv4_address({127, 0, 0, 1}), 8080};
   ipv6_endpoint v6{v4.address(), v4.port()};
   CAF_CHECK_EQUAL(v4, v6);
+  CAF_CHECK_EQUAL(v6, v4);
 }
 
 CAF_TEST(to_string) {
