@@ -24,23 +24,21 @@
 #include <vector>
 
 #include "caf/atom.hpp"
-#include "caf/error.hpp"
-#include "caf/none.hpp"
-#include "caf/string_view.hpp"
-#include "caf/timespan.hpp"
-#include "caf/timestamp.hpp"
-
-#include "caf/meta/type_name.hpp"
-#include "caf/meta/omittable.hpp"
-#include "caf/meta/annotation.hpp"
-#include "caf/meta/hex_formatted.hpp"
-#include "caf/meta/omittable_if_none.hpp"
-#include "caf/meta/omittable_if_empty.hpp"
-
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/error.hpp"
+#include "caf/meta/annotation.hpp"
+#include "caf/meta/hex_formatted.hpp"
+#include "caf/meta/omittable.hpp"
+#include "caf/meta/omittable_if_empty.hpp"
+#include "caf/meta/omittable_if_none.hpp"
+#include "caf/meta/type_name.hpp"
+#include "caf/none.hpp"
+#include "caf/string_view.hpp"
+#include "caf/timespan.hpp"
+#include "caf/timestamp.hpp"
 
 namespace caf {
 namespace detail {
@@ -154,7 +152,23 @@ public:
   }
 
   template <class T>
-  enable_if_t<is_iterable<T>::value
+  enable_if_t<is_map_like<T>::value
+              && !is_inspectable<stringification_inspector, T>::value
+              && !std::is_convertible<T, string_view>::value
+              && !has_to_string<T>::value>
+  consume(T& xs) {
+    result_ += '{';
+    for (const auto& kvp : xs) {
+      sep();
+      consume(deconst(kvp.first));
+      result_ += " = ";
+      consume(deconst(kvp.second));
+    }
+    result_ += '}';
+  }
+
+  template <class T>
+  enable_if_t<is_list_like<T>::value
               && !is_inspectable<stringification_inspector, T>::value
               && !std::is_convertible<T, string_view>::value
               && !has_to_string<T>::value>
