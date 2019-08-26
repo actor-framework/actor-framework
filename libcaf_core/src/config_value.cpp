@@ -19,6 +19,8 @@
 
 #include "caf/config_value.hpp"
 
+#include <ostream>
+
 #include "caf/detail/ini_consumer.hpp"
 #include "caf/detail/parser/read_ini.hpp"
 #include "caf/detail/type_traits.hpp"
@@ -136,5 +138,8 @@ std::string to_string(const config_value& x) {
   return deep_to_string(x.get_data());
 }
 
-} // namespace caf
+std::ostream& operator<<(std::ostream& out, const config_value& x) {
+  return out << to_string(x);
+}
 
+} // namespace caf

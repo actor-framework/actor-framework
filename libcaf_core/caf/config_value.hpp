@@ -20,6 +20,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <iosfwd>
 #include <iterator>
 #include <map>
 #include <string>
@@ -451,6 +452,9 @@ inline bool operator!=(const config_value& x, const config_value& y) {
 
 /// @relates config_value
 std::string to_string(const config_value& x);
+
+/// @relates config_value
+std::ostream& operator<<(std::ostream& out, const config_value& x);
 
 template <class... Ts>
 config_value make_config_value_list(Ts&&... xs) {
