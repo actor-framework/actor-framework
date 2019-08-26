@@ -21,6 +21,15 @@
 #include <utility>
 #include <vector>
 
+#include "caf/config.hpp"
+#include "caf/detail/socket_sys_includes.hpp"
+#include "caf/error.hpp"
+#include "caf/ip_address.hpp"
+#include "caf/ipv4_address.hpp"
+#include "caf/logger.hpp"
+#include "caf/string_algorithms.hpp"
+#include "caf/string_view.hpp"
+
 // clang-format off
 #ifdef CAF_WINDOWS
 #  ifndef _WIN32_WINNT
@@ -36,14 +45,6 @@
 #  include <sys/types.h>
 #endif
 // clang-format on
-
-#include "caf/detail/socket_sys_includes.hpp"
-#include "caf/error.hpp"
-#include "caf/ip_address.hpp"
-#include "caf/ipv4_address.hpp"
-#include "caf/logger.hpp"
-#include "caf/string_algorithms.hpp"
-#include "caf/string_view.hpp"
 
 #ifndef HOST_NAME_MAX
 #  define HOST_NAME_MAX 255
