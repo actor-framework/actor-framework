@@ -28,6 +28,7 @@ void stringification_inspector::sep() {
     switch (result_.back()) {
       case '(':
       case '[':
+      case '{':
       case ' ': // only at back if we've printed ", " before
         break;
       default:

@@ -233,7 +233,7 @@ CAF_TEST(unary visit) {
   x = string{"hello world"};
   CAF_CHECK_EQUAL(visit(stringify, x), "hello world");
   x = map_type{{1, 1}, {2, 2}};
-  CAF_CHECK_EQUAL(visit(stringify, x), "[(1, 1), (2, 2)]");
+  CAF_CHECK_EQUAL(visit(stringify, x), "{1 = 1, 2 = 2}");
 }
 
 CAF_TEST(binary visit) {
@@ -253,5 +253,5 @@ CAF_TEST(ternary visit) {
   x = 42;
   y = string{"foo"};
   z = map_type{{1, 1}, {2, 2}};
-  CAF_CHECK_EQUAL(visit(stringify, x, y, z), "42, foo, [(1, 1), (2, 2)]");
+  CAF_CHECK_EQUAL(visit(stringify, x, y, z), "42, foo, {1 = 1, 2 = 2}");
 }
