@@ -53,11 +53,12 @@
   class has_##name##_alias {                                                   \
   private:                                                                     \
     template <class C>                                                         \
-    static std::true_type sfinae(C* ptr, typename C::name* arg = nullptr);     \
+    static std::true_type sfinae(typename C::name*);                           \
                                                                                \
-    static std::false_type sfinae(void* ptr);                                  \
+    template <class>                                                           \
+    static std::false_type sfinae(...);                                        \
                                                                                \
-    using sfinae_type = decltype(sfinae(static_cast<T*>(nullptr)));            \
+    using sfinae_type = decltype(sfinae<T>(nullptr));                          \
                                                                                \
   public:                                                                      \
     static constexpr bool value = sfinae_type::value;                          \
@@ -768,7 +769,7 @@ CAF_HAS_ALIAS_TRAIT(mapped_type);
 
 // -- constexpr functions for use in enable_if & friends -----------------------
 
-/// Checks whether T behaves like a `std::map` or a `std::unordered_map`.
+/// Checks whether T behaves like `std::map`.
 template <class T>
 struct is_map_like {
   static constexpr bool value = is_iterable<T>::value
@@ -776,12 +777,11 @@ struct is_map_like {
                                 && has_mapped_type_alias<T>::value;
 };
 
-/// Checks whether T behaves like a `std::vector` or a `std::list`.
+/// Checks whether T behaves like `std::vector`, `std::list`, or `std::set`.
 template <class T>
 struct is_list_like {
   static constexpr bool value = is_iterable<T>::value
                                 && has_value_type_alias<T>::value
-                                && !has_key_type_alias<T>::value
                                 && !has_mapped_type_alias<T>::value;
 };
 
