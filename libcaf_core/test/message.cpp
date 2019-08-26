@@ -261,7 +261,7 @@ CAF_TEST(strings_to_string) {
 CAF_TEST(maps_to_string) {
   map<int, int> m1{{1, 10}, {2, 20}, {3, 30}};
   auto msg1 = make_message(move(m1));
-  CAF_CHECK_EQUAL(to_string(msg1), "([(1, 10), (2, 20), (3, 30)])");
+  CAF_CHECK_EQUAL(to_string(msg1), "({1 = 10, 2 = 20, 3 = 30})");
 }
 
 CAF_TEST(tuples_to_string) {
