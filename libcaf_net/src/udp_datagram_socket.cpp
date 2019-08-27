@@ -21,6 +21,7 @@
 #include "caf/byte.hpp"
 #include "caf/detail/convert_ip_endpoint.hpp"
 #include "caf/detail/net_syscall.hpp"
+#include "caf/detail/socket_sys_aliases.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/expected.hpp"
 #include "caf/ip_endpoint.hpp"
@@ -57,8 +58,9 @@ variant<std::pair<size_t, ip_endpoint>, sec> read(udp_datagram_socket x,
                                                   span<byte> buf) {
   sockaddr_in6 addr = {};
   socklen_t len = sizeof(sockaddr_in);
-  auto res = ::recvfrom(x.id, buf.data(), buf.size(), 0,
-                        reinterpret_cast<sockaddr*>(&addr), &len);
+  auto res = ::recvfrom(x.id, reinterpret_cast<socket_recv_ptr>(buf.data()),
+                        buf.size(), 0, reinterpret_cast<sockaddr*>(&addr),
+                        &len);
   auto ret = check_udp_datagram_socket_io_res(res);
   if (auto num_bytes = get_if<size_t>(&ret)) {
     if (*num_bytes == 0)
@@ -77,8 +79,9 @@ variant<std::pair<size_t, ip_endpoint>, sec> read(udp_datagram_socket x,
 variant<size_t, sec> write(udp_datagram_socket x, span<const byte> buf,
                            ip_endpoint ep) {
   auto addr = detail::to_sockaddr(ep);
-  auto res = ::sendto(x.id, buf.data(), buf.size(), 0,
-                      reinterpret_cast<sockaddr*>(&addr), sizeof(sockaddr_in6));
+  auto res = ::sendto(x.id, reinterpret_cast<socket_send_ptr>(buf.data()),
+                      buf.size(), 0, reinterpret_cast<sockaddr*>(&addr),
+                      sizeof(sockaddr_in6));
   auto ret = check_udp_datagram_socket_io_res(res);
   if (auto num_bytes = get_if<size_t>(&ret))
     return *num_bytes;
