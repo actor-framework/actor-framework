@@ -25,9 +25,7 @@
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/error.hpp"
 #include "caf/ip_address.hpp"
-#include "caf/ipv4_address.hpp"
 #include "caf/logger.hpp"
-#include "caf/string_algorithms.hpp"
 #include "caf/string_view.hpp"
 
 // clang-format off
