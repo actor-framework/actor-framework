@@ -23,8 +23,11 @@
 namespace caf {
 
 template <class T, int Pos>
-struct sum_type_token {
-  static constexpr auto pos = std::integral_constant<int, Pos>{};
-};
+struct sum_type_token {};
+
+template <class T, int Pos>
+constexpr std::integral_constant<int, Pos> pos(sum_type_token<T, Pos>) {
+  return {};
+}
 
 } // namespace caf
