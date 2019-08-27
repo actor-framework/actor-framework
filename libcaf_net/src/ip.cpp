@@ -60,10 +60,6 @@ namespace ip {
 
 namespace {
 
-constexpr auto v4_any_addr = "0.0.0.0";
-constexpr auto v6_any_addr = "::";
-constexpr auto localhost = "localhost";
-
 template <class T>
 void* vptr(T* ptr) {
   return static_cast<void*>(ptr);
@@ -86,20 +82,6 @@ int fetch_addr_str(bool get_ipv4, bool get_ipv6, char (&buf)[INET6_ADDRSTRLEN],
              && inet_ntop(family, in_addr, buf, INET6_ADDRSTRLEN) == buf
            ? family
            : AF_UNSPEC;
-}
-
-void find_by_name(const vector<pair<string, ip_address>>& interfaces,
-                  const string& name, vector<ip_address>& results) {
-  for (auto& p : interfaces)
-    if (p.first == name)
-      results.push_back(p.second);
-}
-
-void find_by_addr(const vector<pair<string, ip_address>>& interfaces,
-                  ip_address addr, vector<ip_address>& results) {
-  for (auto& p : interfaces)
-    if (p.second == addr)
-      results.push_back(p.second);
 }
 
 } // namespace
@@ -136,46 +118,16 @@ std::vector<ip_address> resolve(const std::string& host) {
   return results;
 }
 
-std::vector<ip_address> local_addrs(const std::string& host) {
-  std::vector<ip_address> results;
-  // The string is not returned by getifaddrs, let's just do that ourselves.
-  if (host == localhost)
-    return {ip_address{{0}, {0x1}},
-            ipv6_address{make_ipv4_address(127, 0, 0, 1)}};
-  if (host == v4_any_addr || host == v6_any_addr)
-    return {ip_address{}};
-  ifaddrs* tmp = nullptr;
-  if (getifaddrs(&tmp) != 0)
-    return {};
-  std::unique_ptr<ifaddrs, decltype(freeifaddrs)*> addrs{tmp, freeifaddrs};
-  char buffer[INET6_ADDRSTRLEN];
-  // Unless explicitly specified we are going to skip link-local addresses.
-  auto is_link_local = starts_with(host, "fe80:");
-  std::vector<std::pair<std::string, ip_address>> interfaces;
-  for (auto i = addrs.get(); i != nullptr; i = i->ifa_next) {
-    auto family = fetch_addr_str(true, true, buffer, i->ifa_addr);
-    if (family != AF_UNSPEC) {
-      ip_address ip;
-      if (!is_link_local && starts_with(buffer, "fe80:")) {
-        CAF_LOG_DEBUG("skipping link-local address: " << buffer);
-        continue;
-      } else if (auto err = parse(buffer, ip)) {
-        CAF_LOG_ERROR("could not parse into ip address " << buffer);
-        continue;
-      }
-      interfaces.emplace_back(std::string{i->ifa_name}, ip);
-    }
-  }
-  ip_address host_addr;
-  if (host.empty() || host == v4_any_addr || host == v6_any_addr)
-    for (auto& p : interfaces)
-      results.push_back(std::move(p.second));
-  else if (auto err = parse(host, host_addr))
-    find_by_name(interfaces, host, results);
-  else
-    find_by_addr(interfaces, host_addr, results);
-  return results;
+#ifdef CAF_WINDOWS
+
+std::string hostname() {
+  TCHAR buf[MAX_COMPUTERNAME_LENGTH + 1];
+  DWORD size = MAX_COMPUTERNAME_LENGTH;
+  GetComputerName(buf, &size);
+  return std::string{buf};
 }
+
+#else // CAF_WINDOWS
 
 std::string hostname() {
   char buf[HOST_NAME_MAX + 1];
@@ -184,6 +136,8 @@ std::string hostname() {
   gethostbyname(buf);
   return std::string{buf};
 }
+
+#endif // CAF_WINDOWS
 
 } // namespace ip
 } // namespace net

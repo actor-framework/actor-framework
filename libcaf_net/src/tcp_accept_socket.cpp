@@ -116,7 +116,7 @@ expected<tcp_accept_socket> make_accept_socket(const uri::authority_type& auth,
   if (auto ip = get_if<ip_address>(&auth.host))
     return make_accept_socket(*ip, auth.port, reuse_addr);
   auto host = get<std::string>(auth.host);
-  auto addrs = ip::local_addrs(host);
+  auto addrs = ip::resolve(host);
   if (addrs.empty())
     return make_error(sec::cannot_open_port, "No local interface available",
                       to_string(auth));

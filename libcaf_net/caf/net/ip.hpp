@@ -30,9 +30,6 @@ namespace ip {
 /// Returns the ip addresses assigned to `host`.
 std::vector<ip_address> resolve(const std::string& host);
 
-/// Returns the ip addresses for the local hostname.
-std::vector<ip_address> local_addrs(const std::string& host);
-
 /// Returns the hostname of this device.
 std::string hostname();
 
