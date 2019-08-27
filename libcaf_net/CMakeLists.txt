@@ -20,6 +20,7 @@ set(LIBCAF_NET_SRCS
   src/stream_socket.cpp
   src/scribe.cpp
   src/convert_ip_endpoint.cpp
+  src/udp_datagram_socket.cpp
 )
 
 add_custom_target(libcaf_net)
