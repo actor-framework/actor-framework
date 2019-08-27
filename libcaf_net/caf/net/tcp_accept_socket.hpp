@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/ip_endpoint.hpp"
 #include "caf/net/abstract_socket.hpp"
 #include "caf/net/network_socket.hpp"
 #include "caf/net/socket.hpp"
@@ -28,9 +29,7 @@
 namespace caf {
 namespace net {
 
-/// Represents an open TCP endpoint. Can be implicitly converted to a
-/// `stream_socket` for sending and receiving, or `network_socket`
-/// for inspection.
+/// Represents a TCP acceptr in listening mode.
 struct tcp_accept_socket : abstract_socket<tcp_accept_socket> {
   using super = abstract_socket<tcp_accept_socket>;
 
@@ -43,32 +42,29 @@ struct tcp_accept_socket : abstract_socket<tcp_accept_socket> {
   constexpr operator network_socket() const noexcept {
     return network_socket{id};
   }
-
-  constexpr operator stream_socket() const noexcept {
-    return stream_socket{id};
-  }
 };
 
 /// Creates a new TCP socket to accept connections on a given port.
-/// @param port The port to listen on.
-/// @param addr Only accepts connections originating from this address.
-/// @param reuse_addr Optionally sets the SO_REUSEADDR option on the socket.
-/// @relates stream_socket
-expected<tcp_accept_socket> make_accept_socket(ip_address host, uint16_t port,
-                                               bool reuse_addr);
+/// @param node The endpoint to listen on and the filter for incoming addresses.
+/// Passing the address `0.0.0.0` will accept incoming connection from any host.
+/// @relates tcp_accept_socket
+expected<tcp_accept_socket> make_tcp_accept_socket(ip_endpoint node,
+                                                   bool reuse_addr = false);
 
 /// Creates a new TCP socket to accept connections on a given port.
-/// @param port The port to listen on.
-/// @param addr Only accepts connections originating from this address.
+/// @param node The endpoint to listen on and the filter for incoming addresses.
+/// Passing the address `0.0.0.0` will accept incoming connection from any host.
 /// @param reuse_addr Optionally sets the SO_REUSEADDR option on the socket.
-/// @relates stream_socket
-expected<tcp_accept_socket> make_accept_socket(const uri::authority_type& auth,
-                                               bool reuse_addr = false);
+/// @relates tcp_accept_socket
+expected<tcp_accept_socket>
+make_tcp_accept_socket(const uri::authority_type& node,
+                       bool reuse_addr = false);
 
-/// Accept a connection on `x`.
+/// Accepts a connection on `x`.
 /// @param x Listening endpoint.
-/// @returns The socket that handles the accepted connection.
-/// @relates stream_socket
+/// @returns The socket that handles the accepted connection on success, an
+/// error otherwise.
+/// @relates tcp_accept_socket
 expected<tcp_stream_socket> accept(tcp_accept_socket x);
 
 } // namespace net

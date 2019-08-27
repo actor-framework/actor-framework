@@ -24,6 +24,7 @@
 #include "caf/net/ip.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/multiplexer.hpp"
+#include "caf/net/socket_guard.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/uri.hpp"
 
@@ -119,23 +120,22 @@ public:
 CAF_TEST_FIXTURE_SCOPE(doorman_tests, fixture)
 
 CAF_TEST(tcp connect) {
-  auto acceptor = unbox(make_accept_socket(auth, false));
+  auto acceptor = unbox(make_tcp_accept_socket(auth, false));
   auto port = unbox(local_port(socket_cast<network_socket>(acceptor)));
+  auto acceptor_guard = make_socket_guard(acceptor);
   CAF_MESSAGE("opened acceptor on port " << port);
   uri::authority_type dst;
   dst.port = port;
   dst.host = std::string{"localhost"};
-  auto con_fd = unbox(make_connected_socket(dst));
-  auto acc_fd = unbox(accept(acceptor));
+  auto conn = make_socket_guard(unbox(make_connected_tcp_stream_socket(dst)));
+  auto accepted = make_socket_guard(unbox(accept(acceptor)));
   CAF_MESSAGE("accepted connection");
-  close(con_fd);
-  close(acc_fd);
-  close(acceptor);
 }
 
 CAF_TEST(doorman accept) {
-  auto acceptor = unbox(make_accept_socket(auth, false));
+  auto acceptor = unbox(make_tcp_accept_socket(auth, false));
   auto port = unbox(local_port(socket_cast<network_socket>(acceptor)));
+  auto acceptor_guard = make_socket_guard(acceptor);
   CAF_MESSAGE("opened acceptor on port " << port);
   auto mgr = make_endpoint_manager(mpx, sys, policy::doorman{acceptor},
                                    dummy_application_factory{});
@@ -146,13 +146,11 @@ CAF_TEST(doorman accept) {
   uri::authority_type dst;
   dst.port = port;
   dst.host = std::string{"localhost"};
-  auto fd = unbox(make_connected_socket(dst));
+  auto conn = make_socket_guard(unbox(make_connected_tcp_stream_socket(dst)));
   CAF_MESSAGE("waiting for connection");
   while (mpx->num_socket_managers() != before + 1)
     handle_io_event();
   CAF_MESSAGE("connected");
-  close(acceptor);
-  close(fd);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -52,47 +52,46 @@ bool ip_connect(stream_socket fd, std::string host, uint16_t port) {
 
 } // namespace
 
-expected<stream_socket> make_connected_socket(ip_address host, uint16_t port) {
-  CAF_LOG_DEBUG("try to connect to:" << CAF_ARG(to_string(host))
-                                     << CAF_ARG(port));
-  auto proto = host.embeds_v4() ? AF_INET : AF_INET6;
+expected<tcp_stream_socket> make_connected_tcp_stream_socket(ip_endpoint node) {
+  CAF_LOG_DEBUG("try to connect to: " << to_string(node));
+  auto proto = node.address().embeds_v4() ? AF_INET : AF_INET6;
   int socktype = SOCK_STREAM;
 #ifdef SOCK_CLOEXEC
   socktype |= SOCK_CLOEXEC;
 #endif
   CAF_NET_SYSCALL("socket", fd, ==, -1, ::socket(proto, socktype, 0));
   child_process_inherit(fd, false);
-  auto sguard = make_socket_guard(stream_socket{fd});
+  auto sguard = make_socket_guard(tcp_stream_socket{fd});
   if (proto == AF_INET6) {
-    if (ip_connect<AF_INET6>(fd, to_string(host), port)) {
-      CAF_LOG_INFO("successfully connected to (IPv6):" << CAF_ARG(host)
-                                                       << CAF_ARG(port));
+    if (ip_connect<AF_INET6>(fd, to_string(node.address()), node.port())) {
+      CAF_LOG_INFO("successfully connected to (IPv6):" << to_string(node));
       return sguard.release();
     }
-  } else if (ip_connect<AF_INET>(fd, to_string(host.embedded_v4()), port)) {
+  } else if (ip_connect<AF_INET>(fd, to_string(node.address().embedded_v4()),
+                                 node.port())) {
     return sguard.release();
   }
-  CAF_LOG_WARNING("could not connect to:" << CAF_ARG(host) << CAF_ARG(port));
-  sguard.close();
+  CAF_LOG_WARNING("could not connect to: " << to_string(node));
   return make_error(sec::cannot_connect_to_node);
 }
 
-expected<stream_socket> make_connected_socket(const uri::authority_type& auth) {
-  auto port = auth.port;
+expected<tcp_stream_socket>
+make_connected_tcp_stream_socket(const uri::authority_type& node) {
+  auto port = node.port;
   if (port == 0)
     return make_error(sec::cannot_connect_to_node, "port is zero");
   std::vector<ip_address> addrs;
-  if (auto str = get_if<std::string>(&auth.host))
+  if (auto str = get_if<std::string>(&node.host))
     addrs = ip::resolve(std::move(*str));
-  else if (auto addr = get_if<ip_address>(&auth.host))
+  else if (auto addr = get_if<ip_address>(&node.host))
     addrs.push_back(*addr);
   if (addrs.empty())
-    return make_error(sec::cannot_connect_to_node, "empty authority");
+    return make_error(sec::cannot_connect_to_node, "empty nodeority");
   for (auto& addr : addrs) {
-    if (auto sock = make_connected_socket(addr, port))
+    if (auto sock = make_connected_tcp_stream_socket(ip_endpoint{addr, port}))
       return *sock;
   }
-  return make_error(sec::cannot_connect_to_node, to_string(auth));
+  return make_error(sec::cannot_connect_to_node, to_string(node));
 }
 
 } // namespace net

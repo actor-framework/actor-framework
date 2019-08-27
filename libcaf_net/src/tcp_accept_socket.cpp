@@ -36,35 +36,36 @@ namespace net {
 
 namespace {
 
-expected<void> set_inaddr_any(socket, sockaddr_in& sa) {
+error set_inaddr_any(socket, sockaddr_in& sa) {
   sa.sin_addr.s_addr = INADDR_ANY;
-  return unit;
+  return none;
 }
 
-expected<void> set_inaddr_any(socket x, sockaddr_in6& sa) {
+error set_inaddr_any(socket x, sockaddr_in6& sa) {
   sa.sin6_addr = in6addr_any;
-  // also accept ipv4 requests on this socket
+  // Also accept ipv4 connections on this socket.
   int off = 0;
   CAF_NET_SYSCALL("setsockopt", res, !=, 0,
                   setsockopt(x.id, IPPROTO_IPV6, IPV6_V6ONLY,
                              reinterpret_cast<setsockopt_ptr>(&off),
                              static_cast<socket_size_type>(sizeof(off))));
-  return unit;
+  return none;
 }
 
-template <int Family, int SockType = SOCK_STREAM>
-caf::expected<socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
-                                           bool reuse_addr, bool any) {
+template <int Family>
+expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
+                                                  const char* addr,
+                                                  bool reuse_addr, bool any) {
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
-  int socktype = SockType;
+  int socktype = SOCK_STREAM;
 #ifdef SOCK_CLOEXEC
   socktype |= SOCK_CLOEXEC;
 #endif
   CAF_NET_SYSCALL("socket", fd, ==, -1, ::socket(Family, socktype, 0));
   child_process_inherit(fd, false);
   // sguard closes the socket in case of exception
-  auto sguard = make_socket_guard(socket{fd});
+  auto sguard = make_socket_guard(tcp_accept_socket{fd});
   if (reuse_addr) {
     int on = 1;
     CAF_NET_SYSCALL("setsockopt", tmp1, !=, 0,
@@ -78,7 +79,8 @@ caf::expected<socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
   memset(&sa, 0, sizeof(sockaddr_type));
   detail::family_of(sa) = Family;
   if (any)
-    set_inaddr_any(fd, sa);
+    if (auto err = set_inaddr_any(fd, sa))
+      return err;
   CAF_NET_SYSCALL("inet_pton", tmp, !=, 1,
                   inet_pton(Family, addr, &detail::addr_of(sa)));
   detail::port_of(sa) = htons(port);
@@ -90,42 +92,43 @@ caf::expected<socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
 
 } // namespace
 
-expected<tcp_accept_socket> make_accept_socket(ip_address addr, uint16_t port,
-                                               bool reuse_addr) {
-  CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << to_string(addr));
-  auto h = addr.embeds_v4() ? to_string(addr.embedded_v4()) : to_string(addr);
-  bool any = addr.zero();
-  auto p = addr.embeds_v4()
-             ? new_ip_acceptor_impl<AF_INET>(port, h.c_str(), reuse_addr, any)
-             : new_ip_acceptor_impl<AF_INET6>(port, h.c_str(), reuse_addr, any);
+expected<tcp_accept_socket> make_tcp_accept_socket(ip_endpoint node,
+                                                   bool reuse_addr) {
+  CAF_LOG_TRACE(CAF_ARG(node));
+  auto addr = to_string(node.address());
+  auto make_acceptor = node.address().embeds_v4()
+                         ? new_tcp_acceptor_impl<AF_INET>
+                         : new_tcp_acceptor_impl<AF_INET6>;
+  auto p = make_acceptor(node.port(), addr.c_str(), reuse_addr,
+                         node.address().zero());
   if (!p) {
-    CAF_LOG_WARNING("could not open tcp socket on:" << CAF_ARG(port)
-                                                    << CAF_ARG(h));
-    return make_error(sec::cannot_open_port, "tcp socket creation failed", port,
-                      h);
+    CAF_LOG_WARNING("could not open tcp socket on: " << to_string(node));
+    return make_error(sec::cannot_open_port, "tcp socket creation failed",
+                      to_string(node));
   }
-  auto fd = socket_cast<tcp_accept_socket>(*p);
-  auto sguard = make_socket_guard(fd);
-  CAF_NET_SYSCALL("listen", tmp, !=, 0, listen(fd.id, SOMAXCONN));
-  CAF_LOG_DEBUG(CAF_ARG(fd.id));
+  auto sock = socket_cast<tcp_accept_socket>(*p);
+  auto sguard = make_socket_guard(sock);
+  CAF_NET_SYSCALL("listen", tmp, !=, 0, listen(sock.id, SOMAXCONN));
+  CAF_LOG_DEBUG(CAF_ARG(sock.id));
   return sguard.release();
 }
 
-expected<tcp_accept_socket> make_accept_socket(const uri::authority_type& auth,
-                                               bool reuse_addr) {
-  if (auto ip = get_if<ip_address>(&auth.host))
-    return make_accept_socket(*ip, auth.port, reuse_addr);
-  auto host = get<std::string>(auth.host);
+expected<tcp_accept_socket>
+make_tcp_accept_socket(const uri::authority_type& node, bool reuse_addr) {
+  if (auto ip = get_if<ip_address>(&node.host))
+    return make_tcp_accept_socket(ip_endpoint{*ip, node.port}, reuse_addr);
+  auto host = get<std::string>(node.host);
   auto addrs = ip::resolve(host);
   if (addrs.empty())
     return make_error(sec::cannot_open_port, "No local interface available",
-                      to_string(auth));
+                      to_string(node));
   for (auto& addr : addrs) {
-    if (auto sock = make_accept_socket(addr, auth.port, reuse_addr))
+    if (auto sock = make_tcp_accept_socket(ip_endpoint{addr, node.port},
+                                           reuse_addr))
       return *sock;
   }
   return make_error(sec::cannot_open_port, "tcp socket creation failed",
-                    to_string(auth));
+                    to_string(node));
 }
 
 expected<tcp_stream_socket> accept(tcp_accept_socket x) {

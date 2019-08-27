@@ -44,7 +44,7 @@ public:
   template <class Parent>
   error init(Parent& parent) {
     if (auto err = parent.application().init(parent))
-      return std::move(err);
+      return err;
     parent.mask_add(net::operation::read);
     return none;
   }

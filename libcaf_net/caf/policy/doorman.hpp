@@ -40,23 +40,23 @@ public:
 
   net::tcp_accept_socket acceptor_;
 
-  net::socket handle() {
+  net::tcp_accept_socket handle() {
     return acceptor_;
   }
 
   template <class Parent>
   error init(Parent& parent) {
     if (auto err = parent.application().init(parent))
-      return std::move(err);
+      return err;
     parent.mask_add(net::operation::read);
     return none;
   }
 
   template <class Parent>
   bool handle_read_event(Parent& parent) {
-    auto sck = net::accept(acceptor_);
-    if (!sck) {
-      CAF_LOG_ERROR("accept failed:" << sck.error());
+    auto x = net::accept(acceptor_);
+    if (!x) {
+      CAF_LOG_ERROR("accept failed:" << parent.system().render(x.error()));
       return false;
     }
     auto mpx = parent.multiplexer();
@@ -64,7 +64,7 @@ public:
       CAF_LOG_DEBUG("unable to get multiplexer from parent");
       return false;
     }
-    auto child = make_endpoint_manager(mpx, parent.system(), scribe{*sck},
+    auto child = make_endpoint_manager(mpx, parent.system(), scribe{*x},
                                        parent.application().make());
     if (auto err = child->init())
       return false;
@@ -80,7 +80,7 @@ public:
   template <class Parent>
   void resolve(Parent&, const std::string& path, actor listener) {
     CAF_LOG_ERROR("doorman called to resolve" << CAF_ARG(path));
-    anon_send(listener, resolve_atom::value, "doorman cannot resolve paths");
+    anon_send(listener, resolve_atom::value, "doormen cannot resolve paths");
   }
 
   template <class Parent>
@@ -91,8 +91,8 @@ public:
   }
 
   template <class Application>
-  void handle_error(Application&, sec) {
-    close(acceptor_);
+  void handle_error(Application&, sec err) {
+    CAF_LOG_ERROR("doorman encounterd error: " << err);
   }
 };
 

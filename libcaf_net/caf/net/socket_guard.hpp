@@ -27,30 +27,25 @@ namespace net {
 template <class Socket>
 class socket_guard {
 public:
-  explicit socket_guard(Socket fd) : fd_(fd) {
+  explicit socket_guard(Socket sock) : sock_(sock) {
     // nop
   }
 
   ~socket_guard() {
-    close();
-  }
-
-  Socket release() {
-    auto fd = fd_;
-    fd_ = Socket{};
-    return fd;
-  }
-
-  void close() {
-    if (fd_.id != net::invalid_socket) {
-      CAF_LOG_DEBUG("close socket" << CAF_ARG(fd_));
-      net::close(fd_);
-      fd_ = Socket{};
+    if (sock_.id != invalid_socket_id) {
+      net::close(sock_);
+      sock_.id = invalid_socket_id;
     }
   }
 
+  Socket release() {
+    auto sock = sock_;
+    sock_.id = invalid_socket_id;
+    return sock;
+  }
+
 private:
-  Socket fd_;
+  Socket sock_;
 };
 
 template <class Socket>

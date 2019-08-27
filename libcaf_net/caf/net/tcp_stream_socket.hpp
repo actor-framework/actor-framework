@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/ip_endpoint.hpp"
 #include "caf/net/abstract_socket.hpp"
 #include "caf/net/network_socket.hpp"
 #include "caf/net/socket.hpp"
@@ -27,9 +28,7 @@
 namespace caf {
 namespace net {
 
-/// Represents a TCP connection. Can be implicitly converted to a
-/// `stream_socket` for sending and receiving, or `network_socket`
-/// for inspection.
+/// Represents a TCP connection.
 struct tcp_stream_socket : abstract_socket<tcp_stream_socket> {
   using super = abstract_socket<tcp_stream_socket>;
 
@@ -48,20 +47,18 @@ struct tcp_stream_socket : abstract_socket<tcp_stream_socket> {
   }
 };
 
-/// Create a `stream_socket` connected to `host`:`port`.
-/// @param host The remote host to connecto to.
-/// @param port The port on the remote host to connect to.
-/// @preferred Preferred IP version.
+/// Creates a `tcp_stream_socket` connected to given remote node.
+/// @param node Host and port of the remote node
 /// @returns The connected socket or an error.
-/// @relates stream_socket
-expected<stream_socket> make_connected_socket(ip_address host, uint16_t port);
+/// @relates tcp_stream_socket
+expected<tcp_stream_socket> make_connected_tcp_stream_socket(ip_endpoint node);
 
-/// Create a `stream_socket` connected to `auth`.
-/// @param authority The remote host to connecto to.
-/// @preferred Preferred IP version.
+/// Create a `tcp_stream_socket` connected to `auth`.
+/// @param node Host and port of the remote node
 /// @returns The connected socket or an error.
-/// @relates stream_socket
-expected<stream_socket> make_connected_socket(const uri::authority_type& auth);
+/// @relates tcp_stream_socket
+expected<tcp_stream_socket>
+make_connected_tcp_stream_socket(const uri::authority_type& node);
 
 } // namespace net
 } // namespace caf

@@ -35,7 +35,6 @@
 #  ifndef _WIN32_WINNT
 #    define _WIN32_WINNT 0x0600
 #  endif
-#  include <iostream>
 #  include <iphlpapi.h>
 #else
 #  include <net/if.h>
@@ -60,15 +59,10 @@ namespace ip {
 
 namespace {
 
-template <class T>
-void* vptr(T* ptr) {
-  return static_cast<void*>(ptr);
-}
-
 void* fetch_in_addr(int family, sockaddr* addr) {
   if (family == AF_INET)
-    return vptr(&reinterpret_cast<sockaddr_in*>(addr)->sin_addr);
-  return vptr(&reinterpret_cast<sockaddr_in6*>(addr)->sin6_addr);
+    return &reinterpret_cast<sockaddr_in*>(addr)->sin_addr;
+  return &reinterpret_cast<sockaddr_in6*>(addr)->sin6_addr;
 }
 
 // TODO: Use getnameinfo instead?
@@ -86,7 +80,7 @@ int fetch_addr_str(bool get_ipv4, bool get_ipv6, char (&buf)[INET6_ADDRSTRLEN],
 
 } // namespace
 
-std::vector<ip_address> resolve(const std::string& host) {
+std::vector<ip_address> resolve(string_view host) {
   addrinfo hint;
   memset(&hint, 0, sizeof(hint));
   hint.ai_socktype = SOCK_STREAM;
@@ -94,7 +88,8 @@ std::vector<ip_address> resolve(const std::string& host) {
   if (host.empty())
     hint.ai_flags = AI_PASSIVE;
   addrinfo* tmp = nullptr;
-  if (getaddrinfo(host.c_str(), nullptr, &hint, &tmp) != 0)
+  std::string host_str{host.begin(), host.end()};
+  if (getaddrinfo(host_str.c_str(), nullptr, &hint, &tmp) != 0)
     return {};
   std::unique_ptr<addrinfo, decltype(freeaddrinfo)*> addrs{tmp, freeaddrinfo};
   char buffer[INET6_ADDRSTRLEN];
@@ -103,11 +98,10 @@ std::vector<ip_address> resolve(const std::string& host) {
     auto family = fetch_addr_str(true, true, buffer, i->ai_addr);
     if (family != AF_UNSPEC) {
       ip_address ip;
-      if (auto err = parse(buffer, ip)) {
-        CAF_LOG_ERROR("could not parse into ip address " << buffer);
-        continue;
-      }
-      results.emplace_back(ip);
+      if (auto err = parse(buffer, ip))
+        CAF_LOG_ERROR("could not parse IP address: " << buffer);
+      else
+        results.emplace_back(ip);
     }
   }
   // TODO: Should we just prefer ipv6 or use a config option?
@@ -124,7 +118,7 @@ std::string hostname() {
   TCHAR buf[MAX_COMPUTERNAME_LENGTH + 1];
   DWORD size = MAX_COMPUTERNAME_LENGTH;
   GetComputerName(buf, &size);
-  return std::string{buf};
+  return buf;
 }
 
 #else // CAF_WINDOWS
@@ -134,7 +128,7 @@ std::string hostname() {
   buf[HOST_NAME_MAX] = '\0';
   gethostname(buf, HOST_NAME_MAX);
   gethostbyname(buf);
-  return std::string{buf};
+  return buf;
 }
 
 #endif // CAF_WINDOWS
