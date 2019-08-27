@@ -104,7 +104,8 @@ variant<size_t, sec>
 check_udp_datagram_socket_io_res(std::make_signed<size_t>::type res) {
   if (res < 0) {
     auto code = last_socket_error();
-    if (code == std::errc::operation_would_block)
+    if (code == std::errc::operation_would_block
+        || code == std::errc::resource_unavailable_try_again)
       return sec::unavailable_or_would_block;
     return sec::socket_operation_failed;
   }
