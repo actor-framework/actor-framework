@@ -24,11 +24,13 @@
 #include <iterator>
 #include <map>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <vector>
 
 #include "caf/atom.hpp"
 #include "caf/detail/bounds_checker.hpp"
+#include "caf/detail/move_if_not_ptr.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"
@@ -384,6 +386,77 @@ struct config_value_access<std::vector<T>> {
     if (!result)
       CAF_RAISE_ERROR("invalid type found");
     return std::move(*result);
+  }
+};
+
+/// Implements automagic unboxing of `std::tuple<Ts...>` from a heterogeneous
+///`config_value::list`.
+/// @relates config_value
+template <class... Ts>
+struct config_value_access<std::tuple<Ts...>> {
+  using tuple_type = std::tuple<Ts...>;
+
+  static constexpr bool specialized = true;
+
+  static bool is(const config_value& x) {
+    if (auto lst = caf::get_if<config_value::list>(&x)) {
+      if (lst->size() != sizeof...(Ts))
+        return false;
+      return rec_is(*lst, detail::int_token<0>(), detail::type_list<Ts...>());
+    }
+    return false;
+  }
+
+  static optional<tuple_type> get_if(const config_value* x) {
+    if (auto lst = caf::get_if<config_value::list>(x)) {
+      if (lst->size() != sizeof...(Ts))
+        return none;
+      tuple_type result;
+      if (rec_get(*lst, result, detail::int_token<0>(),
+                  detail::type_list<Ts...>()))
+        return result;
+    }
+    return none;
+  }
+
+  static tuple_type get(const config_value& x) {
+    if (auto result = get_if(&x))
+      return std::move(*result);
+    CAF_RAISE_ERROR("invalid type found");
+  }
+
+private:
+  template <int Pos>
+  static bool rec_is(const config_value::list&, detail::int_token<Pos>,
+                     detail::type_list<>) {
+    // End of recursion.
+    return true;
+  }
+
+  template <int Pos, class U, class... Us>
+  static bool rec_is(const config_value::list& xs, detail::int_token<Pos>,
+                     detail::type_list<U, Us...>) {
+    if (!holds_alternative<U>(xs[Pos]))
+      return false;
+    return rec_is(xs, detail::int_token<Pos + 1>(), detail::type_list<Us...>());
+  }
+
+  template <int Pos>
+  static bool rec_get(const config_value::list&, tuple_type&,
+                      detail::int_token<Pos>, detail::type_list<>) {
+    // End of recursion.
+    return true;
+  }
+
+  template <int Pos, class U, class... Us>
+  static bool rec_get(const config_value::list& xs, tuple_type& result,
+                      detail::int_token<Pos>, detail::type_list<U, Us...>) {
+    if (auto value = caf::get_if<U>(&xs[Pos])) {
+      std::get<Pos>(result) = detail::move_if_not_ptr(value);
+      return rec_get(xs, result, detail::int_token<Pos + 1>(),
+                     detail::type_list<Us...>());
+    }
+    return false;
   }
 };
 

@@ -129,7 +129,7 @@ CAF_TEST(timespan) {
   CAF_CHECK_NOT_EQUAL(get_if<timespan>(&x), nullptr);
 }
 
-CAF_TEST(list) {
+CAF_TEST(homogeneous list) {
   using integer_list = std::vector<int64_t>;
   auto xs = make_config_value_list(1, 2, 3);
   auto ys = config_value{integer_list{1, 2, 3}};
@@ -139,6 +139,16 @@ CAF_TEST(list) {
   CAF_CHECK_EQUAL(holds_alternative<config_value::list>(xs), true);
   CAF_CHECK_EQUAL(holds_alternative<integer_list>(xs), true);
   CAF_CHECK_EQUAL(get<integer_list>(xs), integer_list({1, 2, 3}));
+}
+
+CAF_TEST(heterogeneous list) {
+  auto xs_value = make_config_value_list(1, "two", 3.0);
+  auto& xs = xs_value.as_list();
+  CAF_CHECK_EQUAL(xs_value.type_name(), "list"_s);
+  CAF_REQUIRE_EQUAL(xs.size(), 3u);
+  CAF_CHECK_EQUAL(xs[0], 1);
+  CAF_CHECK_EQUAL(xs[1], "two"_s);
+  CAF_CHECK_EQUAL(xs[2], 3.0);
 }
 
 CAF_TEST(convert_to_list) {
@@ -251,4 +261,25 @@ CAF_TEST(unsuccessful parsing) {
   CAF_CHECK_EQUAL(parse("{a=,"), pec::unexpected_character);
   CAF_CHECK_EQUAL(parse("{a=1,"), pec::unexpected_eof);
   CAF_CHECK_EQUAL(parse("{a=1 b=2}"), pec::unexpected_character);
+}
+
+CAF_TEST(conversion to simple tuple) {
+  using tuple_type = std::tuple<size_t, std::string>;
+  config_value x{42};
+  x.as_list().emplace_back("hello world");
+  CAF_REQUIRE(holds_alternative<tuple_type>(x));
+  CAF_REQUIRE_NOT_EQUAL(get_if<tuple_type>(&x), none);
+  CAF_CHECK_EQUAL(get<tuple_type>(x),
+                  std::make_tuple(size_t{42}, "hello world"_s));
+}
+
+CAF_TEST(conversion to nested tuple) {
+  using inner_tuple_type = std::tuple<int, int>;
+  using tuple_type = std::tuple<size_t, inner_tuple_type>;
+  config_value x{42};
+  x.as_list().emplace_back(make_config_value_list(2, 40));
+  CAF_REQUIRE(holds_alternative<tuple_type>(x));
+  CAF_REQUIRE_NOT_EQUAL(get_if<tuple_type>(&x), none);
+  CAF_CHECK_EQUAL(get<tuple_type>(x),
+                  std::make_tuple(size_t{42}, std::make_tuple(2, 40)));
 }
