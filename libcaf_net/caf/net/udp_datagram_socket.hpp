@@ -42,7 +42,7 @@ struct udp_datagram_socket : abstract_socket<udp_datagram_socket> {
 };
 
 /// Enables or disables `SIO_UDP_CONNRESET` error on `x`.
-/// @relates datagram_socket
+/// @relates udp_datagram_socket
 error allow_connreset(udp_datagram_socket x, bool new_value);
 
 /// Receives data from `x`.
@@ -68,7 +68,9 @@ variant<size_t, sec> write(udp_datagram_socket x, span<const byte> buf,
 /// Binds given socket to given ip_endpoint.
 /// @param x the socket that should be bound.
 /// @param ep the endpoint to which the socket should be bound.
-error bind(udp_datagram_socket x, ip_endpoint ep);
+/// @returns The port that was actually bound.
+/// @Relates udp_datagram_socket
+expected<uint16_t> bind(udp_datagram_socket x, ip_endpoint ep);
 
 /// Converts the result from I/O operation on a ::udp_datagram_socket to either
 /// an error code or a non-zero positive integer.

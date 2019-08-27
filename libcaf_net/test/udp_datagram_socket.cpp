@@ -53,7 +53,7 @@ CAF_TEST_FIXTURE_SCOPE(udp_datagram_socket_test, fixture)
 CAF_TEST(send and receive) {
   std::vector<byte> buf(1024);
   ip_endpoint ep;
-  if (auto err = detail::parse("[::1]:55555", ep))
+  if (auto err = detail::parse("[::1]:0", ep))
     CAF_FAIL("unable to parse input: " << err);
   auto sender = unbox(make_socket());
   auto receiver = unbox(make_socket());
@@ -61,8 +61,9 @@ CAF_TEST(send and receive) {
     close(socket_cast<net::socket>(sender));
     close(socket_cast<net::socket>(receiver));
   });
-  if (auto err = bind(receiver, ep))
-    CAF_FAIL("unable to bind socket" << err);
+  auto port = unbox(bind(receiver, ep));
+  CAF_MESSAGE("socket bound to port " << port);
+  ep.port(htons(port));
   if (nonblocking(socket_cast<net::socket>(receiver), true))
     CAF_FAIL("nonblocking failed");
   auto test_read_res = read(receiver, make_span(buf));

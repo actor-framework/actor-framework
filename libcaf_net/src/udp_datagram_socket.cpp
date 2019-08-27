@@ -89,12 +89,15 @@ variant<size_t, sec> write(udp_datagram_socket x, span<const byte> buf,
     return get<sec>(ret);
 }
 
-error bind(udp_datagram_socket x, ip_endpoint ep) {
+expected<uint16_t> bind(udp_datagram_socket x, ip_endpoint ep) {
   auto addr = to_sockaddr(ep);
   CAF_NET_SYSCALL("bind", err, !=, 0,
                   ::bind(x.id, reinterpret_cast<sockaddr*>(&addr),
                          sizeof(sockaddr_in6)));
-  return none;
+  socklen_t len = sizeof(sockaddr_in6);
+  CAF_NET_SYSCALL("getsockname", erro, !=, 0,
+                  getsockname(x.id, reinterpret_cast<sockaddr*>(&addr), &len));
+  return addr.sin6_port;
 }
 
 variant<size_t, sec>
