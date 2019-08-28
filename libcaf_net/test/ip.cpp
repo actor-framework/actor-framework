@@ -20,12 +20,17 @@
 
 #include "caf/net/ip.hpp"
 
-#include "caf/ipv4_address.hpp"
-#include "caf/ip_address.hpp"
 #include "caf/test/dsl.hpp"
+
+#include "host_fixture.hpp"
+
+#include "caf/ip_address.hpp"
+#include "caf/ipv4_address.hpp"
 
 using namespace caf;
 using namespace caf::net;
+
+CAF_TEST_FIXTURE_SCOPE(ip_tests, host_fixture)
 
 CAF_TEST(resolve) {
   ip_address v4_local{make_ipv4_address(127, 0, 0, 1)};
@@ -33,7 +38,9 @@ CAF_TEST(resolve) {
   auto addrs = ip::resolve("localhost");
   CAF_CHECK(!addrs.empty());
   auto contains = [&](ip_address x) {
-    return std::find(std::begin(addrs), std::end(addrs), x) != std::end(addrs);
+    return std::count(addrs.begin(), addrs.end(), x) > 0;
   };
   CAF_CHECK(contains(v4_local) || contains(v6_local));
 }
+
+CAF_TEST_FIXTURE_SCOPE_END()

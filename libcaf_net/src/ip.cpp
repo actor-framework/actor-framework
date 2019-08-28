@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2019 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -34,12 +34,14 @@
 #    define _WIN32_WINNT 0x0600
 #  endif
 #  include <iphlpapi.h>
+#  include <winsock.h>
 #else
+#  include <sys/types.h>
+#  include <arpa/inet.h>
 #  include <net/if.h>
 #  include <netdb.h>
 #  include <ifaddrs.h>
 #  include <sys/ioctl.h>
-#  include <sys/types.h>
 #endif
 // clang-format on
 
@@ -63,14 +65,12 @@ void* fetch_in_addr(int family, sockaddr* addr) {
   return &reinterpret_cast<sockaddr_in6*>(addr)->sin6_addr;
 }
 
-// TODO: Use getnameinfo instead?
-int fetch_addr_str(bool get_ipv4, bool get_ipv6, char (&buf)[INET6_ADDRSTRLEN],
-                   sockaddr* addr) {
+int fetch_addr_str(char (&buf)[INET6_ADDRSTRLEN], sockaddr* addr) {
   if (addr == nullptr)
     return AF_UNSPEC;
   auto family = addr->sa_family;
   auto in_addr = fetch_in_addr(family, addr);
-  return ((family == AF_INET && get_ipv4) || (family == AF_INET6 && get_ipv6))
+  return (family == AF_INET || family == AF_INET6)
              && inet_ntop(family, in_addr, buf, INET6_ADDRSTRLEN) == buf
            ? family
            : AF_UNSPEC;
@@ -93,7 +93,7 @@ std::vector<ip_address> resolve(string_view host) {
   char buffer[INET6_ADDRSTRLEN];
   std::vector<ip_address> results;
   for (auto i = addrs.get(); i != nullptr; i = i->ai_next) {
-    auto family = fetch_addr_str(true, true, buffer, i->ai_addr);
+    auto family = fetch_addr_str(buffer, i->ai_addr);
     if (family != AF_UNSPEC) {
       ip_address ip;
       if (auto err = parse(buffer, ip))
@@ -110,26 +110,12 @@ std::vector<ip_address> resolve(string_view host) {
   return results;
 }
 
-#ifdef CAF_WINDOWS
-
-std::string hostname() {
-  TCHAR buf[MAX_COMPUTERNAME_LENGTH + 1];
-  DWORD size = MAX_COMPUTERNAME_LENGTH;
-  GetComputerName(buf, &size);
-  return buf;
-}
-
-#else // CAF_WINDOWS
-
 std::string hostname() {
   char buf[HOST_NAME_MAX + 1];
   buf[HOST_NAME_MAX] = '\0';
   gethostname(buf, HOST_NAME_MAX);
-  gethostbyname(buf);
   return buf;
 }
-
-#endif // CAF_WINDOWS
 
 } // namespace ip
 } // namespace net
