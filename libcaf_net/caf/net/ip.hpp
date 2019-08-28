@@ -16,41 +16,23 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-// This convenience header pulls in platform-specific headers for the C socket
-// API. Do *not* include this header in other headers.
-
 #pragma once
 
-#include "caf/config.hpp"
+#include <string>
+#include <vector>
 
-// clang-format off
-#ifdef CAF_WINDOWS
-#  ifndef WIN32_LEAN_AND_MEAN
-#    define WIN32_LEAN_AND_MEAN
-#  endif // CAF_WINDOWS
-#  ifndef NOMINMAX
-#    define NOMINMAX
-#  endif // NOMINMAX
-#  ifdef CAF_MINGW
-#    undef _WIN32_WINNT
-#    undef WINVER
-#    define _WIN32_WINNT WindowsVista
-#    define WINVER WindowsVista
-#    include <w32api.h>
-#  endif // CAF_MINGW
-#  include <windows.h>
-#  include <winsock2.h>
-#  include <ws2ipdef.h>
-#  include <ws2tcpip.h>
-#else // CAF_WINDOWS
-#  include <sys/types.h>
-#  include <arpa/inet.h>
-#  include <cerrno>
-#  include <fcntl.h>
-#  include <netinet/in.h>
-#  include <netinet/ip.h>
-#  include <netinet/tcp.h>
-#  include <sys/socket.h>
-#  include <unistd.h>
-#endif
-// clang-format on
+#include "caf/fwd.hpp"
+
+namespace caf {
+namespace net {
+namespace ip {
+
+/// Returns all IP addresses of to `host` (if any).
+std::vector<ip_address> resolve(string_view host);
+
+/// Returns the hostname of this device.
+std::string hostname();
+
+} // namespace ip
+} // namespace net
+} // namespace caf
