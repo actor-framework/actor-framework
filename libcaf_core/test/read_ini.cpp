@@ -242,6 +242,14 @@ const auto ini1_log = make_log(
 );
 // clang-format on
 
+const char* ini2 = "#";
+
+const auto ini2_log = make_log();
+
+const char* ini3 = "; foobar\n!";
+
+const auto ini3_log = make_log();
+
 } // namespace <anonymous>
 
 CAF_TEST_FIXTURE_SCOPE(read_ini_tests, fixture)
@@ -262,6 +270,11 @@ CAF_TEST(section with valid key-value pairs) {
   CAF_CHECK_EQUAL(parse("\n[a-b];foo\n;bar"), make_log("key: a-b", "{", "}"));
   CAF_CHECK_EQUAL(parse(ini0), ini0_log);
   CAF_CHECK_EQUAL(parse(ini1), ini1_log);
+}
+
+CAF_TEST(invalid inis) {
+  CAF_CHECK_EQUAL(parse(ini2), ini2_log);
+  CAF_CHECK_EQUAL(parse(ini3), ini3_log);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
