@@ -12,6 +12,10 @@ else()
 endif()
 unset(_parent)
 
+set(CMAKE_INSTALL_CMAKEBASEDIR "lib/cmake" CACHE PATH
+  "Base directory for installing cmake specific artifacts")
+set(INSTALL_CAF_CMAKEDIR "${CMAKE_INSTALL_CMAKEBASEDIR}/caf")
+
 # Be nice to VIM users and Clang tools.
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
