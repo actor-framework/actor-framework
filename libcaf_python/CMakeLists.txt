@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.12)
 project(caf_cash CXX)
 
 # check whether submodules are available
@@ -47,8 +47,7 @@ if(NOT CAF_NO_PYTHON)
   add_executable(caf-python ${CAF_PYTHON_SRCS} ${CAF_PYTHON_HDRS})
   target_link_libraries(caf-python
                         ${CAF_EXTRA_LDFLAGS}
-                        ${CAF_LIBRARY_CORE}
-                        ${CAF_LIBRARY_IO}
+                        caf::core caf::io
                         ${CAF_LIBRARY_RIAC}
                         ${PTHREAD_LIBRARIES}
                         ${LIBEDIT_LIBRARIES}

@@ -12,6 +12,8 @@ else()
 endif()
 unset(_parent)
 
+option(BUILD_SHARED_LIBS "" ON)
+
 set(CMAKE_INSTALL_CMAKEBASEDIR "lib/cmake" CACHE PATH
   "Base directory for installing cmake specific artifacts")
 set(INSTALL_CAF_CMAKEDIR "${CMAKE_INSTALL_CMAKEBASEDIR}/caf")
@@ -462,26 +464,11 @@ include_directories("${LIBCAF_INCLUDE_DIRS}")
 ################################################################################
 
 macro(add_caf_lib name)
-  string(TOUPPER ${name} upper_name)
   set(full_name libcaf_${name})
-  set(shared_target ${full_name}_shared)
-  set(static_target ${full_name}_static)
   add_subdirectory(${full_name})
-  set(lib_varname CAF_LIBRARY_${upper_name})
-  set(lib_varname_static ${lib_varname}_STATIC)
-  if(NOT CAF_BUILD_STATIC_ONLY)
-    set(${lib_varname} ${shared_target})
-    set(CAF_LIBRARIES ${CAF_LIBRARIES} ${shared_target})
-  else()
-    set(${lib_varname} ${static_target})
-    set(CAF_LIBRARIES ${CAF_LIBRARIES} ${static_target})
-  endif()
-  if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
-    set(${lib_varname_static} ${static_target})
-  endif()
   add_unit_tests("${full_name}/test/*.cpp")
   # add headers to include directories so other subprojects can use them
-  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/libcaf_${name}")
+  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/${full_name}")
 endmacro()
 
 macro(add_optional_caf_lib name)
@@ -588,6 +575,27 @@ add_optional_caf_binaries(examples)
 
 # build tools if not being told otherwise
 add_optional_caf_binaries(tools)
+
+export(EXPORT CAFTargets FILE CAFTargets.cmake NAMESPACE caf::)
+
+install(EXPORT CAFTargets
+        DESTINATION "${INSTALL_CAF_CMAKEDIR}"
+        NAMESPACE caf::)
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/CAFConfigVersion.cmake"
+  VERSION ${CAF_VERSION}
+  COMPATIBILITY ExactVersion)
+
+configure_package_config_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CAFConfig.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/CAFConfig.cmake" INSTALL_DESTINATION
+  "${INSTALL_CAF_CMAKEDIR}")
+
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/CAFConfig.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/CAFConfigVersion.cmake"
+  DESTINATION "${INSTALL_CAF_CMAKEDIR}")
 
 ################################################################################
 #                               unit tests setup                               #

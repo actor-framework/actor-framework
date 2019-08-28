@@ -49,41 +49,32 @@ set(LIBCAF_IO_SRCS
   src/worker.cpp
 )
 
-add_custom_target(libcaf_io)
+add_library(libcaf_io ${LIBCAF_IO_SRCS} ${LIBCAF_IO_HDRS})
+target_link_libraries(libcaf_io PUBLIC caf::core)
+target_include_directories(libcaf_io PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<INSTALL_INTERFACE:include>
+)
+set_target_properties(libcaf_io
+  PROPERTIES
+  EXPORT_NAME io
+  SOVERSION ${CAF_VERSION}
+  VERSION ${CAF_VERSION}
+  OUTPUT_NAME caf_io
+)
 
-# build shared library if not compiling static only
-if (NOT CAF_BUILD_STATIC_ONLY)
-  add_library(libcaf_io_shared SHARED ${LIBCAF_IO_SRCS} ${LIBCAF_IO_HDRS})
-  target_link_libraries(libcaf_io_shared ${CAF_EXTRA_LDFLAGS} ${CAF_LIBRARY_CORE})
-  target_include_directories(libcaf_io_shared PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    $<INSTALL_INTERFACE:include>
-  )
-  set_target_properties(libcaf_io_shared
-                        PROPERTIES
-                        SOVERSION ${CAF_VERSION}
-                        VERSION ${CAF_VERSION}
-                        OUTPUT_NAME caf_io)
-  install(TARGETS libcaf_io_shared
-          RUNTIME DESTINATION bin
-          LIBRARY DESTINATION lib)
-  add_dependencies(libcaf_io_shared libcaf_io)
-endif ()
-
-# build static library only if --build-static or --build-static-only was set
-if (CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
-  add_library(libcaf_io_static STATIC ${LIBCAF_IO_HDRS} ${LIBCAF_IO_SRCS})
-  target_link_libraries(libcaf_io_static ${CAF_EXTRA_LDFLAGS} ${CAF_LIBRARY_CORE_STATIC})
-  target_include_directories(libcaf_io_static PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    $<INSTALL_INTERFACE:include>
-  )
-  set_target_properties(libcaf_io_static PROPERTIES OUTPUT_NAME caf_io_static)
-  install(TARGETS libcaf_io_static ARCHIVE DESTINATION lib)
-  add_dependencies(libcaf_io_static libcaf_io)
-endif ()
-
-# install includes
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/caf
+install(TARGETS libcaf_io
+  EXPORT CAFTargets
+  ARCHIVE DESTINATION lib COMPONENT io
+  RUNTIME DESTINATION bin COMPONENT io
+  LIBRARY DESTINATION lib COMPONENT io
+)
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
         DESTINATION include
-        FILES_MATCHING PATTERN "*.hpp")
+        COMPONENT io
+        FILES_MATCHING PATTERN "*.hpp"
+)
+
+add_library(caf::io ALIAS libcaf_io)
+list(APPEND CAF_LIBRARIES libcaf_io)
+set(CAF_LIBRARIES ${CAF_LIBRARIES} PARENT_SCOPE)

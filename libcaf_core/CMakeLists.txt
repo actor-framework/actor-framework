@@ -149,45 +149,33 @@ list(APPEND LIBCAF_CORE_HDRS
   "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
 )
 
-add_custom_target(libcaf_core)
+add_library(libcaf_core ${LIBCAF_CORE_SRCS} ${LIBCAF_CORE_HDRS})
+target_link_libraries(libcaf_core PUBLIC ${CAF_EXTRA_LDFLAGS})
+target_include_directories(libcaf_core PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<INSTALL_INTERFACE:include>
+)
+set_target_properties(libcaf_core
+  PROPERTIES
+  EXPORT_NAME core
+  SOVERSION ${CAF_VERSION}
+  VERSION ${CAF_VERSION}
+  OUTPUT_NAME caf_core
+)
 
-# build shared library if not compiling static only
-if (NOT CAF_BUILD_STATIC_ONLY)
-  add_library(libcaf_core_shared SHARED ${LIBCAF_CORE_SRCS} ${LIBCAF_CORE_HDRS})
-  target_link_libraries(libcaf_core_shared ${CAF_EXTRA_LDFLAGS})
-  target_include_directories(libcaf_core_shared PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    $<INSTALL_INTERFACE:include>
-  )
-  set_target_properties(libcaf_core_shared
-    PROPERTIES
-    SOVERSION ${CAF_VERSION}
-    VERSION ${CAF_VERSION}
-    OUTPUT_NAME caf_core
-  )
-  install(TARGETS libcaf_core_shared
-    RUNTIME DESTINATION bin
-    LIBRARY DESTINATION lib
-  )
-  add_dependencies(libcaf_core_shared libcaf_core)
-endif ()
-
-# build static library only if --build-static or --build-static-only was set
-if (CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
-  add_library(libcaf_core_static STATIC ${LIBCAF_CORE_HDRS} ${LIBCAF_CORE_SRCS})
-  target_link_libraries(libcaf_core_static ${CAF_EXTRA_LDFLAGS})
-  target_include_directories(libcaf_core_static PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    $<INSTALL_INTERFACE:include>
-  )
-  set_target_properties(libcaf_core_static PROPERTIES OUTPUT_NAME caf_core_static)
-  install(TARGETS libcaf_core_static ARCHIVE DESTINATION lib)
-  add_dependencies(libcaf_core_static libcaf_core)
-endif ()
-
+install(TARGETS libcaf_core
+  EXPORT CAFTargets
+  ARCHIVE DESTINATION lib COMPONENT core
+  RUNTIME DESTINATION bin COMPONENT core
+  LIBRARY DESTINATION lib COMPONENT core
+)
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
         DESTINATION include
+        COMPONENT core
         FILES_MATCHING PATTERN "*.hpp"
 )
+
+add_library(caf::core ALIAS libcaf_core)
+list(APPEND CAF_LIBRARIES libcaf_core)
+set(CAF_LIBRARIES ${CAF_LIBRARIES} PARENT_SCOPE)
