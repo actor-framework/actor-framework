@@ -185,6 +185,7 @@ enum class stream_priority;
 using actor_id = uint64_t;
 using binary_serializer = serializer_impl<std::vector<char>>;
 using ip_address = ipv6_address;
+using ip_endpoint = ipv6_endpoint;
 using ip_subnet = ipv6_subnet;
 using settings = dictionary<config_value>;
 using stream_slot = uint16_t;
