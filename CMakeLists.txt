@@ -12,7 +12,17 @@ else()
 endif()
 unset(_parent)
 
-option(BUILD_SHARED_LIBS "" ON)
+set(CAF_LINKAGE_DEFAULT_SHARED ON)
+if(WIN32)
+  # Shared libs are currently not supported on Windows.
+  set(CAF_LINKAGE_DEFAULT_SHARED OFF)
+endif()
+option(BUILD_SHARED_LIBS "" ${CAF_LINKAGE_DEFAULT_SHARED})
+if(BUILD_SHARED_LIBS)
+  set(LINK_TYPE "shared")
+else()
+  set(LINK_TYPE "static")
+endif()
 
 set(CMAKE_INSTALL_CMAKEBASEDIR "lib/cmake" CACHE PATH
   "Base directory for installing cmake specific artifacts")
@@ -24,12 +34,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 # Silence policy CMP0042 warning by enabling RPATH explicitly.
 if(APPLE AND NOT DEFINED CMAKE_MACOSX_RPATH)
   set(CMAKE_MACOSX_RPATH true)
-endif()
-
-# Shared libs are currently not supported on Windows.
-if(WIN32 AND NOT CAF_BUILD_STATIC_ONLY)
-  message(STATUS "CAF currently only supports static-only builds on Windows")
-  set(CAF_BUILD_STATIC_ONLY yes)
 endif()
 
 if(CAF_BUILD_STATIC_RUNTIME)
@@ -128,8 +132,6 @@ pretty_yes("CAF_FORCE_NO_EXCEPTIONS")
 pretty_no("CAF_ENABLE_RUNTIME_CHECKS")
 pretty_no("CAF_NO_MEM_MANAGEMENT")
 pretty_no("CAF_NO_EXCEPTIONS")
-pretty_no("CAF_BUILD_STATIC_ONLY")
-pretty_no("CAF_BUILD_STATIC")
 pretty_no("CAF_NO_OPENCL")
 pretty_no("CAF_NO_OPENSSL")
 pretty_no("CAF_NO_PYTHON")
@@ -343,8 +345,6 @@ if(MINGW)
   build_string("EXTRA_FLAGS" "-static")
 elseif(CYGWIN)
   build_string("EXTRA_FLAGS" "-U__STRICT_ANSI__")
-elseif(NOT CAF_BUILD_STATIC_ONLY)
-  build_string("EXTRA_FLAGS" "-fPIC")
 endif()
 if (WIN32)
   list(APPEND CAF_EXTRA_LDFLAGS ws2_32 iphlpapi)
@@ -735,8 +735,7 @@ if(NOT CAF_NO_SUMMARY)
         "\nCAF version:           ${CAF_VERSION}"
         "\n"
         "\nBuild type:            ${CMAKE_BUILD_TYPE}"
-        "\nBuild static:          ${CAF_BUILD_STATIC}"
-        "\nBuild static only:     ${CAF_BUILD_STATIC_ONLY}"
+        "\nLink type:             ${LINK_TYPE}"
         "\nBuild static runtime:  ${CAF_BUILD_STATIC_RUNTIME}"
         "\nRuntime checks:        ${CAF_ENABLE_RUNTIME_CHECKS}"
         "\nLog level:             ${CAF_LOG_LEVEL}"
