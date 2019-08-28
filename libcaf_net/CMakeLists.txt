@@ -11,6 +11,7 @@ set(LIBCAF_NET_SRCS
   src/datagram_socket.cpp
   src/endpoint_manager.cpp
   src/host.cpp
+  src/ip.cpp
   src/multiplexer.cpp
   src/network_socket.cpp
   src/pipe_socket.cpp
