@@ -28,7 +28,6 @@
 #include "caf/logger.hpp"
 #include "caf/string_view.hpp"
 
-// clang-format off
 #ifdef CAF_WINDOWS
 #  ifndef _WIN32_WINNT
 #    define _WIN32_WINNT 0x0600
@@ -36,14 +35,11 @@
 #  include <iphlpapi.h>
 #  include <winsock.h>
 #else
-#  include <sys/types.h>
-#  include <arpa/inet.h>
+#  include <ifaddrs.h>
 #  include <net/if.h>
 #  include <netdb.h>
-#  include <ifaddrs.h>
 #  include <sys/ioctl.h>
 #endif
-// clang-format on
 
 #ifndef HOST_NAME_MAX
 #  define HOST_NAME_MAX 255
