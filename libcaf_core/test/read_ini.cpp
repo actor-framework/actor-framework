@@ -106,7 +106,7 @@ log_type make_log(Ts&&... xs) {
 }
 
 // Tests basic functionality.
-const char* ini0 = R"(
+const auto ini0 = R"(
 [1group]
 1value=321
 [_foo]
@@ -205,7 +205,7 @@ const auto ini0_log = make_log(
 // clang-format on
 
 // Tests nested parameters.
-const char* ini1 = R"(
+const auto ini1 = R"(
 foo {
   bar = {
     value1 = 1
@@ -242,11 +242,11 @@ const auto ini1_log = make_log(
 );
 // clang-format on
 
-const char* ini2 = "#";
+const auto ini2 = "#";
 
 const auto ini2_log = make_log();
 
-const char* ini3 = "; foobar\n!";
+const auto ini3 = "; foobar\n!";
 
 const auto ini3_log = make_log();
 
