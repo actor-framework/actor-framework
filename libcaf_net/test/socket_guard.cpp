@@ -51,31 +51,36 @@ void close(dummy_socket x) {
   x.closed = true;
 }
 
+struct fixture {
+  fixture() : id{dummy_id}, closed{false}, sock{id, closed} {
+    // nop
+  }
+
+  socket_id id;
+  bool closed;
+  dummy_socket sock;
+};
+
 } // namespace
 
+CAF_TEST_FIXTURE_SCOPE(socket_guard_tests, fixture)
+
 CAF_TEST(cleanup) {
-  auto id = dummy_id;
-  auto closed = false;
-  dummy_socket sock{id, closed};
   {
     auto guard = make_socket_guard(sock);
     CAF_CHECK_EQUAL(sock.id, dummy_id);
   }
-  CAF_CHECK_EQUAL(sock.id, invalid_socket_id);
   CAF_CHECK(sock.closed);
 }
 
 CAF_TEST(release) {
-  auto id = dummy_id;
-  auto closed = false;
-  dummy_socket sock{id, closed};
   {
     auto guard = make_socket_guard(sock);
     CAF_CHECK_EQUAL(sock.id, dummy_id);
-    auto released = guard.release();
+    guard.release();
     CAF_CHECK_EQUAL(sock.id, invalid_socket_id);
-    sock = released;
   }
-  // Cannot check socket.id because it is a reference and will be invalidated.
   CAF_CHECK_EQUAL(sock.closed, false);
 }
+
+CAF_TEST_FIXTURE_SCOPE_END()

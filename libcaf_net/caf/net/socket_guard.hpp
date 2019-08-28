@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "caf/net/socket.hpp"
+#include "caf/net/socket_id.hpp"
 
 namespace caf {
 namespace net {
@@ -32,11 +32,8 @@ public:
   }
 
   ~socket_guard() {
-    using net::close;
-    if (sock_.id != invalid_socket_id) {
+    if (sock_.id != invalid_socket_id)
       close(sock_);
-      sock_.id = invalid_socket_id;
-    }
   }
 
   Socket release() {
