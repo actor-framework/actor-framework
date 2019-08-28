@@ -22,25 +22,24 @@
 #include "caf/logger.hpp"
 
 #ifdef CAF_WINDOWS
-# include <winsock2.h>
+#  include <winsock2.h>
 #else
-# include <sys/types.h>
-# include <sys/socket.h>
+#  include <sys/socket.h>
+#  include <sys/types.h>
 #endif
 
 using caf::io::network::is_error;
-using caf::io::network::ip_endpoint;
+using caf::io::network::last_socket_error;
 using caf::io::network::native_socket;
 using caf::io::network::signed_size_type;
-using caf::io::network::socket_size_type;
-using caf::io::network::last_socket_error;
 using caf::io::network::socket_error_as_string;
+using caf::io::network::socket_size_type;
 
 namespace caf {
 namespace policy {
 
 bool udp::read_datagram(size_t& result, native_socket fd, void* buf,
-                        size_t buf_len, ip_endpoint& ep) {
+                        size_t buf_len, io::network::ip_endpoint& ep) {
   CAF_LOG_TRACE(CAF_ARG(fd));
   memset(ep.address(), 0, sizeof(sockaddr_storage));
   socket_size_type len = sizeof(sockaddr_storage);
@@ -64,7 +63,7 @@ bool udp::read_datagram(size_t& result, native_socket fd, void* buf,
 }
 
 bool udp::write_datagram(size_t& result, native_socket fd, void* buf,
-                         size_t buf_len, const ip_endpoint& ep) {
+                         size_t buf_len, const io::network::ip_endpoint& ep) {
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(buf_len));
   socket_size_type len = static_cast<socket_size_type>(*ep.clength());
   auto sres = ::sendto(fd, reinterpret_cast<io::network::socket_send_ptr>(buf),
