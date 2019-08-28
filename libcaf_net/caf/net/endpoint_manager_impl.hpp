@@ -23,7 +23,7 @@
 namespace caf {
 namespace net {
 
-template <class Transport, class Application>
+template <class Transport>
 class endpoint_manager_impl : public endpoint_manager {
 public:
   // -- member types -----------------------------------------------------------
@@ -32,15 +32,13 @@ public:
 
   using transport_type = Transport;
 
-  using application_type = Application;
+  using application_type = typename transport_type::application_type;
 
   // -- constructors, destructors, and assignment operators --------------------
 
   endpoint_manager_impl(const multiplexer_ptr& parent, actor_system& sys,
-                        Transport trans, Application app)
-    : super(trans.handle(), parent, sys),
-      transport_(std::move(trans)),
-      application_(std::move(app)) {
+                        Transport trans)
+    : super(trans.handle(), parent, sys), transport_(std::move(trans)) {
     // nop
   }
 
@@ -52,10 +50,6 @@ public:
 
   transport_type& transport() {
     return transport_;
-  }
-
-  application_type& application() {
-    return application_;
   }
 
   // -- interface functions ----------------------------------------------------
@@ -91,7 +85,7 @@ public:
   }
 
   void handle_error(sec code) override {
-    transport_.handle_error(application_, code);
+    transport_.handle_error(code);
   }
 
   serialize_fun_type serialize_fun() const noexcept override {
@@ -100,7 +94,6 @@ public:
 
 private:
   transport_type transport_;
-  application_type application_;
 };
 
 } // namespace net

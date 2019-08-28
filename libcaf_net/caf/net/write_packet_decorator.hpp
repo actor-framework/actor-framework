@@ -18,6 +18,9 @@
 
 #pragma once
 
+#include "caf/byte.hpp"
+#include "caf/span.hpp"
+
 namespace caf {
 namespace net {
 
@@ -26,34 +29,36 @@ namespace net {
 template <class Object, class Parent>
 class write_packet_decorator {
 public:
-  dispatcher(Object& object, Parent& parent)
+  using transport_type = typename Parent::transport_type;
+
+  using application_type = typename Parent::application_type;
+
+  write_packet_decorator(Object& object, Parent& parent)
     : object_(object), parent_(parent) {
     // nop
   }
 
-  template <class Header>
-  void write_packet(const Header& header, span<const byte> payload) {
-    object_.write_packet(parent_, header, payload);
+  template <class Header, class... Ts>
+  void write_packet(const Header& header, span<const byte> payload,
+                    Ts&&... xs) {
+    object_.write_packet(parent_, header, payload, std::forward<Ts>(xs)...);
   }
 
   actor_system& system() {
-    parent_.system();
+    return parent_.system();
   }
 
   void cancel_timeout(atom_value type, uint64_t id) {
     parent_.cancel_timeout(type, id);
   }
 
-  void set_timeout(timestamp tout, atom_value type, uint64_t id) {
-    parent_.set_timeout(tout, type, id);
+  template <class... Ts>
+  uint64_t set_timeout(timestamp tout, atom_value type, Ts&&... xs) {
+    return parent_.set_timeout(tout, type, std::forward<Ts>(xs)...);
   }
 
-  typename parent::transport_type& transport() {
-    return parent_.transport_;
-  }
-
-  typename parent::application_type& application() {
-    return parent_.application_;
+  transport_type& transport() {
+    return parent_.transport();
   }
 
 private:

@@ -72,6 +72,8 @@ public:
 
 class dummy_transport {
 public:
+  using application_type = dummy_application;
+
   dummy_transport(stream_socket handle, std::shared_ptr<std::vector<byte>> data)
     : handle_(handle), data_(data), read_buf_(1024) {
     // nop
@@ -114,8 +116,7 @@ public:
     return get<sec>(res) == sec::unavailable_or_would_block;
   }
 
-  template <class Manager>
-  void handle_error(Manager&, sec) {
+  void handle_error(sec) {
     // nop
   }
 
@@ -160,8 +161,7 @@ CAF_TEST(send and receive) {
                   sec::unavailable_or_would_block);
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
   auto mgr = make_endpoint_manager(mpx, sys,
-                                   dummy_transport{sockets.first, buf},
-                                   dummy_application{});
+                                   dummy_transport{sockets.first, buf});
   CAF_CHECK_EQUAL(mgr->init(), none);
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
@@ -184,8 +184,7 @@ CAF_TEST(resolve and proxy communication) {
   nonblocking(sockets.second, true);
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
   auto mgr = make_endpoint_manager(mpx, sys,
-                                   dummy_transport{sockets.first, buf},
-                                   dummy_application{});
+                                   dummy_transport{sockets.first, buf});
   CAF_CHECK_EQUAL(mgr->init(), none);
   mpx->handle_updates();
   run();

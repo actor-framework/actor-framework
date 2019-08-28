@@ -25,12 +25,11 @@
 namespace caf {
 namespace net {
 
-template <class Transport, class Application>
+template <class Transport>
 endpoint_manager_ptr make_endpoint_manager(const multiplexer_ptr& mpx,
-                                           actor_system& sys, Transport trans,
-                                           Application app) {
-  using impl = endpoint_manager_impl<Transport, Application>;
-  return make_counted<impl>(mpx, sys, std::move(trans), std::move(app));
+                                           actor_system& sys, Transport trans) {
+  using impl = endpoint_manager_impl<Transport>;
+  return make_counted<impl>(mpx, sys, std::move(trans));
 }
 
 } // namespace net

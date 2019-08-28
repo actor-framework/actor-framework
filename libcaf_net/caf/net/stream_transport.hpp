@@ -25,26 +25,49 @@
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/stream_socket.hpp"
+#include "caf/net/transport_worker.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
 #include "caf/variant.hpp"
 
 namespace caf {
-namespace policy {
+namespace net {
 
 /// Implements a scribe policy that manages a stream socket.
-class scribe {
+template <class Application>
+class stream_transport {
 public:
-  explicit scribe(net::stream_socket handle);
+  // -- member types -----------------------------------------------------------
 
-  net::stream_socket handle() const noexcept {
+  using application_type = Application;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  stream_transport(stream_socket handle, application_type application)
+    : worker_(std::move(application)),
+      handle_(handle),
+      // max_consecutive_reads_(0),
+      read_threshold_(1024),
+      collected_(0),
+      max_(1024),
+      rd_flag_(net::receive_policy_flag::exactly),
+      written_(0) {
+    // nop
+  }
+
+  // -- properties -------------------------------------------------------------
+
+  stream_socket handle() const noexcept {
     return handle_;
   }
 
+  // -- member functions -------------------------------------------------------
+
   template <class Parent>
   error init(Parent& parent) {
-    parent.application().init(parent);
-    parent.mask_add(net::operation::read);
+    auto decorator = make_write_packet_decorator(*this, parent);
+    worker_.init(decorator);
+    parent.mask_add(operation::read);
     return none;
   }
 
@@ -59,14 +82,15 @@ public:
       CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id) << CAF_ARG(*num_bytes));
       collected_ += *num_bytes;
       if (collected_ >= read_threshold_) {
-        parent.application().handle_data(*this, read_buf_);
+        auto decorator = make_write_packet_decorator(*this, parent);
+        worker_.handle_data(decorator, read_buf_);
         prepare_next_read();
       }
       return true;
     } else {
       auto err = get<sec>(ret);
       CAF_LOG_DEBUG("receive failed" << CAF_ARG(err));
-      parent.application().handle_error(err);
+      worker_.handle_error(err);
       return false;
     }
   }
@@ -74,25 +98,82 @@ public:
   template <class Parent>
   bool handle_write_event(Parent& parent) {
     // Try to write leftover data.
-    write_some(parent);
+    write_some();
     // Get new data from parent.
     // TODO: dont read all messages at once - get one by one.
     for (auto msg = parent.next_message(); msg != nullptr;
          msg = parent.next_message()) {
-      parent.application().write_message(*this, std::move(msg));
+      auto decorator = make_write_packet_decorator(*this, parent);
+      worker_.write_message(decorator, std::move(msg));
     }
     // Write prepared data.
-    return write_some(parent);
+    return write_some();
   }
 
   template <class Parent>
-  bool write_some(Parent& parent) {
+  void resolve(Parent& parent, const std::string& path, actor listener) {
+    worker_.resolve(parent, path, listener);
+  }
+
+  template <class Parent>
+  void timeout(Parent& parent, atom_value value, uint64_t id) {
+    auto decorator = make_write_packet_decorator(*this, parent);
+    worker_.timeout(decorator, value, id);
+  }
+
+  void handle_error(sec code) {
+    worker_.handle_error(code);
+  }
+
+  void prepare_next_read() {
+    read_buf_.clear();
+    collected_ = 0;
+    // This cast does nothing, but prevents a weird compiler error on GCC
+    // <= 4.9.
+    // TODO: remove cast when dropping support for GCC 4.9.
+    switch (static_cast<net::receive_policy_flag>(rd_flag_)) {
+      case net::receive_policy_flag::exactly:
+        if (read_buf_.size() != max_)
+          read_buf_.resize(max_);
+        read_threshold_ = max_;
+        break;
+      case net::receive_policy_flag::at_most:
+        if (read_buf_.size() != max_)
+          read_buf_.resize(max_);
+        read_threshold_ = 1;
+        break;
+      case net::receive_policy_flag::at_least: {
+        // read up to 10% more, but at least allow 100 bytes more
+        auto max_size = max_ + std::max<size_t>(100, max_ / 10);
+        if (read_buf_.size() != max_size)
+          read_buf_.resize(max_size);
+        read_threshold_ = max_;
+        break;
+      }
+    }
+  }
+
+  void configure_read(receive_policy::config cfg) {
+    rd_flag_ = cfg.first;
+    max_ = cfg.second;
+    prepare_next_read();
+  }
+
+  template <class Parent>
+  void write_packet(Parent&, span<const byte> header, span<const byte> payload,
+                    unit_t) {
+    write_buf_.insert(write_buf_.end(), header.begin(), header.end());
+    write_buf_.insert(write_buf_.end(), payload.begin(), payload.end());
+  }
+
+private:
+  bool write_some() {
     if (write_buf_.empty())
       return false;
     auto len = write_buf_.size() - written_;
     auto buf = write_buf_.data() + written_;
     CAF_LOG_TRACE(CAF_ARG(handle_.id) << CAF_ARG(len));
-    auto ret = net::write(handle_, make_span(buf, len));
+    auto ret = write(handle_, make_span(buf, len));
     if (auto num_bytes = get_if<size_t>(&ret)) {
       CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id) << CAF_ARG(*num_bytes));
       // Update state.
@@ -105,47 +186,28 @@ public:
     } else {
       auto err = get<sec>(ret);
       CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
-      parent.application().handle_error(err);
+      worker_.handle_error(err);
       return false;
     }
     return true;
   }
 
-  template <class Parent>
-  void resolve(Parent& parent, const std::string& path, actor listener) {
-    parent.application().resolve(parent, path, listener);
-  }
+  transport_worker<application_type> worker_;
 
-  template <class Parent>
-  void timeout(Parent& parent, atom_value value, uint64_t id) {
-    parent.application().timeout(*this, value, id);
-  }
-
-  template <class Application>
-  void handle_error(Application& application, sec code) {
-    application.handle_error(code);
-  }
-
-  void prepare_next_read();
-
-  void configure_read(net::receive_policy::config cfg);
-
-  void write_packet(span<const byte> buf);
-
-private:
-  net::stream_socket handle_;
+  stream_socket handle_;
 
   std::vector<byte> read_buf_;
   std::vector<byte> write_buf_;
 
-  size_t max_consecutive_reads_; // TODO use this field!
+  // TODO implement retries using this member!
+  // size_t max_consecutive_reads_;
   size_t read_threshold_;
   size_t collected_;
   size_t max_;
-  net::receive_policy_flag rd_flag_;
+  receive_policy_flag rd_flag_;
 
   size_t written_;
 };
 
-} // namespace policy
+} // namespace net
 } // namespace caf
