@@ -37,13 +37,18 @@ using namespace caf::net;
 
 namespace {
 
+// TODO: switch to std::operator""s when switching to C++14
+std::string operator"" _s(const char* str, size_t size) {
+  return std::string(str, size);
+}
+
 struct fixture : test_coordinator_fixture<>, host_fixture {
   fixture() {
     mpx = std::make_shared<multiplexer>();
     if (auto err = mpx->init())
       CAF_FAIL("mpx->init failed: " << sys.render(err));
     auth.port = 0;
-    auth.host = std::string{"0.0.0.0"};
+    auth.host = "0.0.0.0"_s;
   }
 
   bool handle_io_event() override {
@@ -126,7 +131,7 @@ CAF_TEST(tcp connect) {
   CAF_MESSAGE("opened acceptor on port " << port);
   uri::authority_type dst;
   dst.port = port;
-  dst.host = std::string{"localhost"};
+  dst.host = "localhost"_s;
   auto conn = make_socket_guard(unbox(make_connected_tcp_stream_socket(dst)));
   auto accepted = make_socket_guard(unbox(accept(acceptor)));
   CAF_MESSAGE("accepted connection");
@@ -145,7 +150,7 @@ CAF_TEST(doorman accept) {
   CAF_MESSAGE("connecting to doorman");
   uri::authority_type dst;
   dst.port = port;
-  dst.host = std::string{"localhost"};
+  dst.host = "localhost"_s;
   auto conn = make_socket_guard(unbox(make_connected_tcp_stream_socket(dst)));
   CAF_MESSAGE("waiting for connection");
   while (mpx->num_socket_managers() != before + 1)
