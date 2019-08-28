@@ -308,7 +308,8 @@ void read_ini(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
     transition(init, " \t\n")
     fsm_epsilon(read_ini_comment(ps, consumer), init, ';')
     transition(start_section, '[')
-    fsm_epsilon_if(tmp == "global", read_ini_section(ps, begin_section()), return_to_global)
+    fsm_epsilon_if(tmp == "global", read_ini_section(ps, begin_section()),
+                   return_to_global, alnum)
   }
   // Read the section key after reading an '['.
   state(start_section) {
