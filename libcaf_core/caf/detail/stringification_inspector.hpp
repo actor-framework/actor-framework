@@ -168,7 +168,7 @@ public:
   }
 
   template <class T>
-  enable_if_t<is_list_like<T>::value
+  enable_if_t<is_iterable<T>::value && !is_map_like<T>::value
               && !is_inspectable<stringification_inspector, T>::value
               && !std::is_convertible<T, string_view>::value
               && !has_to_string<T>::value>
