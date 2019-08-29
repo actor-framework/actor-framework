@@ -115,7 +115,7 @@ public:
   }
 
   template <class... Ts>
-  uint64_t set_timeout(uint64_t, Ts&&...) {
+  void set_timeout(uint64_t, Ts&&...) {
     // nop
   }
 

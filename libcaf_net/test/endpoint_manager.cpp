@@ -86,7 +86,7 @@ public:
   template <class Manager>
   error init(Manager& manager) {
     auto test_bytes = as_bytes(make_span(hello_test));
-    write_buf_.insert(write_buf_.end(), test_bytes.begin(), test_bytes.end());
+    buf_.insert(buf_.end(), test_bytes.begin(), test_bytes.end());
     CAF_CHECK(manager.mask_add(operation::read_write));
     return none;
   }
@@ -106,12 +106,12 @@ public:
   bool handle_write_event(Manager& mgr) {
     for (auto x = mgr.next_message(); x != nullptr; x = mgr.next_message()) {
       auto& payload = x->payload;
-      write_buf_.insert(write_buf_.end(), payload.begin(), payload.end());
+      buf_.insert(buf_.end(), payload.begin(), payload.end());
     }
-    auto res = write(handle_, make_span(write_buf_));
+    auto res = write(handle_, make_span(buf_));
     if (auto num_bytes = get_if<size_t>(&res)) {
-      write_buf_.erase(write_buf_.begin(), write_buf_.begin() + *num_bytes);
-      return write_buf_.size() > 0;
+      buf_.erase(buf_.begin(), buf_.begin() + *num_bytes);
+      return buf_.size() > 0;
     }
     return get<sec>(res) == sec::unavailable_or_would_block;
   }
@@ -144,7 +144,7 @@ private:
 
   std::vector<byte> read_buf_;
 
-  std::vector<byte> write_buf_;
+  std::vector<byte> buf_;
 };
 
 } // namespace
