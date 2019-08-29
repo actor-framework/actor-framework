@@ -25,7 +25,6 @@
 namespace caf {
 namespace detail {
 
-
 /// Moves the value from `x` if it is not a pointer (e.g., `optional` or
 /// `expected`), returns `*x` otherwise.
 template <class T>
@@ -36,11 +35,9 @@ T& move_if_not_ptr(T* x) {
 /// Moves the value from `x` if it is not a pointer (e.g., `optional` or
 /// `expected`), returns `*x` otherwise.
 template <class T, class E = enable_if_t<!std::is_pointer<T>::value>>
-T&& move_if_not_ptr(T& x) {
+auto move_if_not_ptr(T& x) -> decltype(std::move(*x)) {
   return std::move(*x);
 }
 
 } // namespace detail
 } // namespace caf
-
-
