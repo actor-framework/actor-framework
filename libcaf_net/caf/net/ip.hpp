@@ -18,28 +18,21 @@
 
 #pragma once
 
-#include <memory>
+#include <string>
+#include <vector>
 
-#include "caf/intrusive_ptr.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 namespace net {
+namespace ip {
 
-class multiplexer;
-class socket_manager;
+/// Returns all IP addresses of to `host` (if any).
+std::vector<ip_address> resolve(string_view host);
 
-struct network_socket;
-struct pipe_socket;
-struct socket;
-struct stream_socket;
-struct tcp_stream_socket;
-struct tcp_accept_socket;
+/// Returns the hostname of this device.
+std::string hostname();
 
-using socket_manager_ptr = intrusive_ptr<socket_manager>;
-
-using multiplexer_ptr = std::shared_ptr<multiplexer>;
-
-using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
-
+} // namespace ip
 } // namespace net
 } // namespace caf
