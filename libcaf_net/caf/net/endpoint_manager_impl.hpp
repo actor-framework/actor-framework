@@ -52,6 +52,17 @@ public:
     return transport_;
   }
 
+  // -- timeout management -----------------------------------------------------
+
+  template <class... Ts>
+  uint64_t set_timeout(actor_clock::time_point tp, atom_value type,
+                       Ts&&... xs) {
+    auto act = actor_cast<abstract_actor*>(timeout_proxy_);
+    CAF_ASSERT(act != nullptr);
+    sys_.clock().set_multi_timeout(tp, act, type, next_timeout_id_);
+    transport_.set_timeout(next_timeout_id_, std::forward<Ts>(xs)...);
+    return next_timeout_id_++;
+  }
   // -- interface functions ----------------------------------------------------
 
   error init() override {
@@ -94,6 +105,9 @@ public:
 
 private:
   transport_type transport_;
+
+  /// Stores the id for the next timeout.
+  uint64_t next_timeout_id_;
 };
 
 } // namespace net

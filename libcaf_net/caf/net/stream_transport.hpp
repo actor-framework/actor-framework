@@ -33,7 +33,7 @@
 namespace caf {
 namespace net {
 
-/// Implements a scribe policy that manages a stream socket.
+/// Implements a stream_transport that manages a stream socket.
 template <class Application>
 class stream_transport {
 public:
@@ -65,8 +65,7 @@ public:
 
   template <class Parent>
   error init(Parent& parent) {
-    auto decorator = make_write_packet_decorator(*this, parent);
-    worker_.init(decorator);
+    worker_.init(parent);
     parent.mask_add(operation::read);
     return none;
   }
@@ -115,10 +114,14 @@ public:
     worker_.resolve(parent, path, listener);
   }
 
+  template <class... Ts>
+  uint64_t set_timeout(uint64_t, Ts&&...) {
+    // nop
+  }
+
   template <class Parent>
   void timeout(Parent& parent, atom_value value, uint64_t id) {
-    auto decorator = make_write_packet_decorator(*this, parent);
-    worker_.timeout(decorator, value, id);
+    worker_.timeout(parent, value, id);
   }
 
   void handle_error(sec code) {
@@ -167,6 +170,8 @@ public:
   }
 
 private:
+  // -- private member functions -----------------------------------------------
+
   bool write_some() {
     if (write_buf_.empty())
       return false;
@@ -193,7 +198,6 @@ private:
   }
 
   transport_worker<application_type> worker_;
-
   stream_socket handle_;
 
   std::vector<byte> read_buf_;
