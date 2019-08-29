@@ -90,8 +90,9 @@ private:
   id_type id_;
 };
 
-template <class Application>
-using transport_worker_ptr = std::shared_ptr<transport_worker<Application>>;
+template <class Application, class IdType = unit_t>
+using transport_worker_ptr = std::shared_ptr<
+  transport_worker<Application, IdType>>;
 
 } // namespace net
 } // namespace caf
