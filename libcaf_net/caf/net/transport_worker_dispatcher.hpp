@@ -94,7 +94,7 @@ public:
       add_new_worker(nid, id_type{});
       it = workers_by_node_.find(nid);
     }
-    auto worker = *it->second;
+    auto worker = it->second;
     // parent should be a decorator with parent and parent->parent.
     worker->write_message(parent, std::move(msg));
   }
@@ -135,9 +135,9 @@ public:
 
   void add_new_worker(node_id node, id_type id) {
     auto application = factory_.make();
-    auto worker = worker_type{std::move(application), std::move(id)};
-    workers_by_id_.emplace(id, worker);
-    workers_by_node_.emplace(node, std::move(worker));
+    auto worker = std::make_shared<worker_type>(std::move(application), id);
+    workers_by_id_.emplace(std::move(id), worker);
+    workers_by_node_.emplace(std::move(node), std::move(worker));
   }
 
 private:
