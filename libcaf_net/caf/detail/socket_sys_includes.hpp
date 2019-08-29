@@ -23,6 +23,7 @@
 
 #include "caf/config.hpp"
 
+// clang-format off
 #ifdef CAF_WINDOWS
 #  ifndef WIN32_LEAN_AND_MEAN
 #    define WIN32_LEAN_AND_MEAN
@@ -42,6 +43,7 @@
 #  include <ws2ipdef.h>
 #  include <ws2tcpip.h>
 #else // CAF_WINDOWS
+#  include <sys/types.h>
 #  include <arpa/inet.h>
 #  include <cerrno>
 #  include <fcntl.h>
@@ -51,3 +53,4 @@
 #  include <sys/socket.h>
 #  include <unistd.h>
 #endif
+// clang-format on
