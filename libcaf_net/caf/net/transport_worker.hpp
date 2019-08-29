@@ -50,8 +50,7 @@ public:
 
   template <class Parent>
   error init(Parent& parent) {
-    application_.init(parent);
-    return none;
+    return application_.init(parent);
   }
 
   template <class Parent>
