@@ -123,8 +123,8 @@ struct testdata {
   ip_endpoint ep;
 };
 
-struct dummy {
-  using transport_type = dummy;
+struct dummy_transport {
+  using transport_type = dummy_transport;
 
   using application_type = dummy_application;
 };
@@ -193,7 +193,7 @@ struct fixture : host_fixture {
 
   std::shared_ptr<std::vector<byte>> buf;
   dispatcher_type dispatcher;
-  dummy dummy;
+  dummy_transport dummy;
 
   std::vector<testdata> test_data{
     {0, make_node_id("http:file"_u), "[::1]:1"_ep},
