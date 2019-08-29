@@ -50,8 +50,7 @@ public:
 
   template <class Parent>
   error init(Parent& parent) {
-    auto decorator = make_write_packet_decorator(*this, parent);
-    application_.init(decorator);
+    application_.init(parent);
     return none;
   }
 

@@ -29,23 +29,35 @@ namespace net {
 template <class Object, class Parent>
 class write_packet_decorator {
 public:
+  // -- member types -----------------------------------------------------------
+
   using transport_type = typename Parent::transport_type;
 
   using application_type = typename Parent::application_type;
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   write_packet_decorator(Object& object, Parent& parent)
     : object_(object), parent_(parent) {
     // nop
   }
 
+  // -- properties -------------------------------------------------------------
+
+  actor_system& system() {
+    return parent_.system();
+  }
+
+  transport_type& transport() {
+    return parent_.transport();
+  }
+
+  // -- member functions -------------------------------------------------------
+
   template <class Header, class... Ts>
   void write_packet(const Header& header, span<const byte> payload,
                     Ts&&... xs) {
     object_.write_packet(parent_, header, payload, std::forward<Ts>(xs)...);
-  }
-
-  actor_system& system() {
-    return parent_.system();
   }
 
   void cancel_timeout(atom_value type, uint64_t id) {
@@ -55,10 +67,6 @@ public:
   template <class... Ts>
   uint64_t set_timeout(timestamp tout, atom_value type, Ts&&... xs) {
     return parent_.set_timeout(tout, type, std::forward<Ts>(xs)...);
-  }
-
-  transport_type& transport() {
-    return parent_.transport();
   }
 
 private:

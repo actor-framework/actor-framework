@@ -16,7 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE scribe_policy
+#define CAF_SUITE stream_transport
 
 #include "caf/net/stream_transport.hpp"
 
@@ -128,20 +128,20 @@ CAF_TEST(receive) {
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
   auto buf = std::make_shared<std::vector<byte>>();
   auto sockets = unbox(make_stream_socket_pair());
-  nonblocking(sockets.second, true);
+  if (auto err = nonblocking(sockets.second, true))
+    CAF_FAIL("nonblocking() returned an error: " << err);
   CAF_CHECK_EQUAL(read(sockets.second, make_span(read_buf)),
                   sec::unavailable_or_would_block);
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
-  CAF_MESSAGE("configure scribe_policy");
   transport_type transport{sockets.first, dummy_application{buf}};
   transport.configure_read(net::receive_policy::exactly(hello_manager.size()));
   auto mgr = make_endpoint_manager(mpx, sys, transport);
   CAF_CHECK_EQUAL(mgr->init(), none);
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
-  CAF_MESSAGE("sending data to scribe_policy");
   CAF_CHECK_EQUAL(write(sockets.second, as_bytes(make_span(hello_manager))),
                   hello_manager.size());
+  CAF_MESSAGE("wrote " << hello_manager.size() << " bytes.");
   run();
   CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(buf->data()),
                               buf->size()),
