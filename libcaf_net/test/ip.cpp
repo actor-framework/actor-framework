@@ -30,16 +30,31 @@
 using namespace caf;
 using namespace caf::net;
 
-CAF_TEST_FIXTURE_SCOPE(ip_tests, host_fixture)
+namespace {
+
+struct fixture : host_fixture {
+  fixture() : v6_local{{0}, {0x1}} {
+    v4_local = ip_address{make_ipv4_address(127, 0, 0, 1)};
+  }
+
+  bool contains(ip_address x) {
+    return std::count(addrs.begin(), addrs.end(), x) > 0;
+  }
+
+  ip_address any_addr;
+  ip_address v4_local;
+  ip_address v6_local;
+
+  std::vector<ip_address> addrs;
+};
+
+} // namespace
+
+CAF_TEST_FIXTURE_SCOPE(ip_tests, fixture)
 
 CAF_TEST(resolve localhost) {
-  ip_address v4_local{make_ipv4_address(127, 0, 0, 1)};
-  ip_address v6_local{{0}, {0x1}};
-  auto addrs = ip::resolve("localhost");
+  addrs = ip::resolve("localhost");
   CAF_CHECK(!addrs.empty());
-  auto contains = [&](ip_address x) {
-    return std::count(addrs.begin(), addrs.end(), x) > 0;
-  };
   CAF_CHECK(contains(v4_local) || contains(v6_local));
 }
 
@@ -52,6 +67,23 @@ CAF_TEST(resolve any) {
     return std::count(addrs.begin(), addrs.end(), x) > 0;
   };
   CAF_CHECK(contains(v4_any) || contains(v6_any));
+}
+
+CAF_TEST(local addresses) {
+  // This is not that easy to test. There are few hard-coded addresses we can
+  // check.
+  CAF_MESSAGE("check: v6");
+  addrs = ip::local_addresses("::");
+  CAF_CHECK(!addrs.empty());
+  CAF_CHECK(contains(any_addr));
+  CAF_MESSAGE("check: v4");
+  addrs = ip::local_addresses("0.0.0.0");
+  CAF_CHECK(!addrs.empty());
+  CAF_CHECK(contains(any_addr));
+  CAF_MESSAGE("check: localhost");
+  addrs = ip::local_addresses("localhost");
+  CAF_CHECK(!addrs.empty());
+  CAF_CHECK(contains(v4_local) && contains(v6_local));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -25,7 +25,9 @@
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/error.hpp"
 #include "caf/ip_address.hpp"
+#include "caf/ipv4_address.hpp"
 #include "caf/logger.hpp"
+#include "caf/string_algorithms.hpp"
 #include "caf/string_view.hpp"
 
 #ifdef CAF_WINDOWS
@@ -57,6 +59,9 @@ namespace {
 
 // Dummy port to resolve empty string with getaddrinfo.
 constexpr auto dummy_port = "42";
+constexpr auto v4_any_addr = "0.0.0.0";
+constexpr auto v6_any_addr = "::";
+constexpr auto localhost = "localhost";
 
 void* fetch_in_addr(int family, sockaddr* addr) {
   if (family == AF_INET)
@@ -73,6 +78,20 @@ int fetch_addr_str(char (&buf)[INET6_ADDRSTRLEN], sockaddr* addr) {
              && inet_ntop(family, in_addr, buf, INET6_ADDRSTRLEN) == buf
            ? family
            : AF_UNSPEC;
+}
+
+void find_by_name(const vector<pair<string, ip_address>>& interfaces,
+                  string_view name, vector<ip_address>& results) {
+  for (auto& p : interfaces)
+    if (p.first == name)
+      results.push_back(p.second);
+}
+
+void find_by_addr(const vector<pair<string, ip_address>>& interfaces,
+                  ip_address addr, vector<ip_address>& results) {
+  for (auto& p : interfaces)
+    if (p.second == addr)
+      results.push_back(p.second);
 }
 
 } // namespace
@@ -117,6 +136,58 @@ std::string hostname() {
   gethostname(buf, HOST_NAME_MAX);
   return buf;
 }
+
+#ifdef CAF_WINDOWS
+
+std::vector<ip_address> local_addresses(string_view host) {
+  std::vector<ip_address> results;
+  return results;
+}
+
+#else // CAF_WINDOWS
+
+std::vector<ip_address> local_addresses(string_view host) {
+  std::vector<ip_address> results;
+  // The string is not returned by getifaddrs, let's just do that ourselves.
+  if (host.compare(localhost) == 0)
+    return {ip_address{{0}, {0x1}},
+            ipv6_address{make_ipv4_address(127, 0, 0, 1)}};
+  if (host.compare(v4_any_addr) == 0 || host.compare(v6_any_addr) == 0)
+    return {ip_address{}};
+  ifaddrs* tmp = nullptr;
+  if (getifaddrs(&tmp) != 0)
+    return {};
+  std::unique_ptr<ifaddrs, decltype(freeifaddrs)*> addrs{tmp, freeifaddrs};
+  char buffer[INET6_ADDRSTRLEN];
+  // Unless explicitly specified we are going to skip link-local addresses.
+  auto is_link_local = starts_with(host, "fe80:");
+  std::vector<std::pair<std::string, ip_address>> interfaces;
+  for (auto i = addrs.get(); i != nullptr; i = i->ifa_next) {
+    auto family = fetch_addr_str(buffer, i->ifa_addr);
+    if (family != AF_UNSPEC) {
+      ip_address ip;
+      if (!is_link_local && starts_with(buffer, "fe80:")) {
+        CAF_LOG_DEBUG("skipping link-local address: " << buffer);
+        continue;
+      } else if (auto err = parse(buffer, ip)) {
+        CAF_LOG_ERROR("could not parse into ip address " << buffer);
+        continue;
+      }
+      interfaces.emplace_back(std::string{i->ifa_name}, ip);
+    }
+  }
+  ip_address host_addr;
+  if (host.empty())
+    for (auto& p : interfaces)
+      results.push_back(std::move(p.second));
+  else if (auto err = parse(host, host_addr))
+    find_by_name(interfaces, host, results);
+  else
+    find_by_addr(interfaces, host_addr, results);
+  return results;
+}
+
+#endif // CAF_WINDOWS
 
 } // namespace ip
 } // namespace net
