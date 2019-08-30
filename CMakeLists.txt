@@ -629,45 +629,11 @@ endif()
 
 # -- Fetch branch name and SHA if available ------------------------------------
 
-if(EXISTS "release.txt")
-  file(READ "release.txt" CAF_VESION)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/release.txt")
+  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/release.txt" CAF_RELEASE)
+  string(REGEX REPLACE "\n" "" CAF_RELEASE "${CAF_RELEASE}")
 else()
   set(CAF_RELEASE "${CAF_VERSION}")
-  find_package(Git QUIET)
-  if(GIT_FOUND)
-    # retrieve current branch name for CAF
-    execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
-                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                    RESULT_VARIABLE gitBranchResult
-                    OUTPUT_VARIABLE gitBranch
-                    ERROR_QUIET
-                    OUTPUT_STRIP_TRAILING_WHITESPACE)
-    # retrieve current SHA1 hash for CAF
-    execute_process(COMMAND ${GIT_EXECUTABLE} log --pretty=format:%h -n 1
-                    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                    RESULT_VARIABLE gitShaResult
-                    OUTPUT_VARIABLE gitSha
-                    ERROR_QUIET
-                    OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if(gitBranchResult EQUAL 0 AND gitShaResult EQUAL 0)
-      # generate semantic CAF version for manual
-      set(CAF_RELEASE "${CAF_VERSION}+exp.sha.${gitSha}")
-      # check whether we're building the manual for a stable release
-      if(gitBranch STREQUAL "master")
-        # retrieve current tag name for CAF
-        execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags --contains ${gitSha}
-                        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                        RESULT_VARIABLE gitTagResult
-                        OUTPUT_VARIABLE gitTag
-                        ERROR_QUIET
-                        OUTPUT_STRIP_TRAILING_WHITESPACE)
-        # tags indicate stable releases -> use tag name as release version
-        if(gitTagResult EQUAL 0)
-          set(CAF_RELEASE "${gitTag}")
-        endif()
-      endif()
-    endif()
-  endif()
 endif()
 
 message(STATUS "Set release version for all documentation to ${CAF_RELEASE}.")
