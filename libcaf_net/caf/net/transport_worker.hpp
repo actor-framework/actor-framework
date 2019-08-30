@@ -30,7 +30,7 @@ namespace caf {
 namespace net {
 
 /// Implements a worker for transport protocols.
-template <class Application, class IdType = unit_t>
+template <class Application, class IdType>
 class transport_worker {
 public:
   // -- member types -----------------------------------------------------------

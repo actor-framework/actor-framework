@@ -27,7 +27,7 @@ namespace net {
 
 class multiplexer;
 class socket_manager;
-template <class Application, class IdType>
+template <class Application, class IdType = unit_t>
 class transport_worker;
 
 struct network_socket;
