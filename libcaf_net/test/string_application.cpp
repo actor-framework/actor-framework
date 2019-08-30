@@ -18,7 +18,7 @@
 
 #define CAF_SUITE string_application
 
-#include "caf/policy/scribe.hpp"
+#include "caf/net/stream_transport.hpp"
 
 #include "caf/test/dsl.hpp"
 
@@ -100,12 +100,9 @@ public:
   template <class Parent>
   void write_message(Parent& parent,
                      std::unique_ptr<net::endpoint_manager::message> msg) {
-    std::vector<byte> buf;
     header_type header{static_cast<uint32_t>(msg->payload.size())};
-    buf.resize(sizeof(header_type));
-    memcpy(buf.data(), &header, buf.size());
-    buf.insert(buf.end(), msg->payload.begin(), msg->payload.end());
-    parent.write_packet(buf);
+    std::vector<byte> payload(msg->payload.begin(), msg->payload.end());
+    parent.write_packet(as_bytes(make_span(&header, 1)), make_span(payload));
   }
 
   static expected<std::vector<byte>> serialize(actor_system& sys,
@@ -152,7 +149,8 @@ public:
       if (header_.payload == 0)
         Base::handle_packet(parent, header_, span<const byte>{});
       else
-        parent.configure_read(net::receive_policy::exactly(header_.payload));
+        parent.transport().configure_read(
+          net::receive_policy::exactly(header_.payload));
       await_payload_ = true;
     }
   }
@@ -191,6 +189,7 @@ CAF_TEST_FIXTURE_SCOPE(endpoint_manager_tests, fixture)
 CAF_TEST(receive) {
   using application_type = extend<string_application>::with<
     stream_string_application>;
+  using transport_type = stream_transport<application_type>;
   std::vector<byte> read_buf(1024);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
   auto buf = std::make_shared<std::vector<byte>>();
@@ -199,13 +198,15 @@ CAF_TEST(receive) {
   CAF_CHECK_EQUAL(read(sockets.second, make_span(read_buf)),
                   sec::unavailable_or_would_block);
   CAF_MESSAGE("adding both endpoint managers");
-  auto mgr1 = make_endpoint_manager(mpx, sys, policy::scribe{sockets.first},
-                                    application_type{sys, buf});
+  auto mgr1 = make_endpoint_manager(mpx, sys,
+                                    transport_type{sockets.first,
+                                                   application_type{sys, buf}});
   CAF_CHECK_EQUAL(mgr1->init(), none);
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
-  auto mgr2 = make_endpoint_manager(mpx, sys, policy::scribe{sockets.second},
-                                    application_type{sys, buf});
+  auto mgr2 = make_endpoint_manager(mpx, sys,
+                                    transport_type{sockets.second,
+                                                   application_type{sys, buf}});
   CAF_CHECK_EQUAL(mgr2->init(), none);
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 3u);

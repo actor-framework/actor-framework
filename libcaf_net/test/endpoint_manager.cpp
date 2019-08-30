@@ -72,6 +72,8 @@ public:
 
 class dummy_transport {
 public:
+  using application_type = dummy_application;
+
   dummy_transport(stream_socket handle, std::shared_ptr<std::vector<byte>> data)
     : handle_(handle), data_(data), read_buf_(1024) {
     // nop
@@ -84,7 +86,7 @@ public:
   template <class Manager>
   error init(Manager& manager) {
     auto test_bytes = as_bytes(make_span(hello_test));
-    write_buf_.insert(write_buf_.end(), test_bytes.begin(), test_bytes.end());
+    buf_.insert(buf_.end(), test_bytes.begin(), test_bytes.end());
     CAF_CHECK(manager.mask_add(operation::read_write));
     return none;
   }
@@ -104,18 +106,17 @@ public:
   bool handle_write_event(Manager& mgr) {
     for (auto x = mgr.next_message(); x != nullptr; x = mgr.next_message()) {
       auto& payload = x->payload;
-      write_buf_.insert(write_buf_.end(), payload.begin(), payload.end());
+      buf_.insert(buf_.end(), payload.begin(), payload.end());
     }
-    auto res = write(handle_, make_span(write_buf_));
+    auto res = write(handle_, make_span(buf_));
     if (auto num_bytes = get_if<size_t>(&res)) {
-      write_buf_.erase(write_buf_.begin(), write_buf_.begin() + *num_bytes);
-      return write_buf_.size() > 0;
+      buf_.erase(buf_.begin(), buf_.begin() + *num_bytes);
+      return buf_.size() > 0;
     }
     return get<sec>(res) == sec::unavailable_or_would_block;
   }
 
-  template <class Manager>
-  void handle_error(Manager&, sec) {
+  void handle_error(sec) {
     // nop
   }
 
@@ -143,7 +144,7 @@ private:
 
   std::vector<byte> read_buf_;
 
-  std::vector<byte> write_buf_;
+  std::vector<byte> buf_;
 };
 
 } // namespace
@@ -160,8 +161,7 @@ CAF_TEST(send and receive) {
                   sec::unavailable_or_would_block);
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
   auto mgr = make_endpoint_manager(mpx, sys,
-                                   dummy_transport{sockets.first, buf},
-                                   dummy_application{});
+                                   dummy_transport{sockets.first, buf});
   CAF_CHECK_EQUAL(mgr->init(), none);
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
@@ -184,8 +184,7 @@ CAF_TEST(resolve and proxy communication) {
   nonblocking(sockets.second, true);
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
   auto mgr = make_endpoint_manager(mpx, sys,
-                                   dummy_transport{sockets.first, buf},
-                                   dummy_application{});
+                                   dummy_transport{sockets.first, buf});
   CAF_CHECK_EQUAL(mgr->init(), none);
   mpx->handle_updates();
   run();

@@ -23,7 +23,7 @@
 namespace caf {
 namespace net {
 
-template <class Transport, class Application>
+template <class Transport>
 class endpoint_manager_impl : public endpoint_manager {
 public:
   // -- member types -----------------------------------------------------------
@@ -32,15 +32,13 @@ public:
 
   using transport_type = Transport;
 
-  using application_type = Application;
+  using application_type = typename transport_type::application_type;
 
   // -- constructors, destructors, and assignment operators --------------------
 
   endpoint_manager_impl(const multiplexer_ptr& parent, actor_system& sys,
-                        Transport trans, Application app)
-    : super(trans.handle(), parent, sys),
-      transport_(std::move(trans)),
-      application_(std::move(app)) {
+                        Transport trans)
+    : super(trans.handle(), parent, sys), transport_(std::move(trans)) {
     // nop
   }
 
@@ -54,8 +52,16 @@ public:
     return transport_;
   }
 
-  application_type& application() {
-    return application_;
+  // -- timeout management -----------------------------------------------------
+
+  template <class... Ts>
+  uint64_t set_timeout(actor_clock::time_point tp, atom_value type,
+                       Ts&&... xs) {
+    auto act = actor_cast<abstract_actor*>(timeout_proxy_);
+    CAF_ASSERT(act != nullptr);
+    sys_.clock().set_multi_timeout(tp, act, type, next_timeout_id_);
+    transport_.set_timeout(next_timeout_id_, std::forward<Ts>(xs)...);
+    return next_timeout_id_++;
   }
 
   // -- interface functions ----------------------------------------------------
@@ -91,7 +97,7 @@ public:
   }
 
   void handle_error(sec code) override {
-    transport_.handle_error(application_, code);
+    transport_.handle_error(code);
   }
 
   serialize_fun_type serialize_fun() const noexcept override {
@@ -100,7 +106,9 @@ public:
 
 private:
   transport_type transport_;
-  application_type application_;
+
+  /// Stores the id for the next timeout.
+  uint64_t next_timeout_id_;
 };
 
 } // namespace net

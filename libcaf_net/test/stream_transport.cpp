@@ -16,9 +16,9 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE scribe_policy
+#define CAF_SUITE stream_transport
 
-#include "caf/policy/scribe.hpp"
+#include "caf/net/stream_transport.hpp"
 
 #include "caf/test/dsl.hpp"
 
@@ -75,7 +75,7 @@ public:
   template <class Transport>
   void write_message(Transport& transport,
                      std::unique_ptr<endpoint_manager::message> msg) {
-    transport.write_packet(msg->payload);
+    transport.write_packet(span<byte>{}, msg->payload);
   }
 
   template <class Parent>
@@ -123,24 +123,25 @@ private:
 CAF_TEST_FIXTURE_SCOPE(endpoint_manager_tests, fixture)
 
 CAF_TEST(receive) {
+  using transport_type = stream_transport<dummy_application>;
   std::vector<byte> read_buf(1024);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
   auto buf = std::make_shared<std::vector<byte>>();
   auto sockets = unbox(make_stream_socket_pair());
-  nonblocking(sockets.second, true);
+  if (auto err = nonblocking(sockets.second, true))
+    CAF_FAIL("nonblocking() returned an error: " << err);
   CAF_CHECK_EQUAL(read(sockets.second, make_span(read_buf)),
                   sec::unavailable_or_would_block);
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
-  CAF_MESSAGE("configure scribe_policy");
-  policy::scribe scribe{sockets.first};
-  scribe.configure_read(net::receive_policy::exactly(hello_manager.size()));
-  auto mgr = make_endpoint_manager(mpx, sys, scribe, dummy_application{buf});
+  transport_type transport{sockets.first, dummy_application{buf}};
+  transport.configure_read(net::receive_policy::exactly(hello_manager.size()));
+  auto mgr = make_endpoint_manager(mpx, sys, transport);
   CAF_CHECK_EQUAL(mgr->init(), none);
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
-  CAF_MESSAGE("sending data to scribe_policy");
   CAF_CHECK_EQUAL(write(sockets.second, as_bytes(make_span(hello_manager))),
                   hello_manager.size());
+  CAF_MESSAGE("wrote " << hello_manager.size() << " bytes.");
   run();
   CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(buf->data()),
                               buf->size()),
@@ -148,13 +149,15 @@ CAF_TEST(receive) {
 }
 
 CAF_TEST(resolve and proxy communication) {
+  using transport_type = stream_transport<dummy_application>;
   std::vector<byte> read_buf(1024);
   auto buf = std::make_shared<std::vector<byte>>();
   auto sockets = unbox(make_stream_socket_pair());
   nonblocking(sockets.second, true);
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
-  auto mgr = make_endpoint_manager(mpx, sys, policy::scribe{sockets.first},
-                                   dummy_application{buf});
+  auto mgr = make_endpoint_manager(mpx, sys,
+                                   transport_type{sockets.first,
+                                                  dummy_application{buf}});
   CAF_CHECK_EQUAL(mgr->init(), none);
   mpx->handle_updates();
   run();

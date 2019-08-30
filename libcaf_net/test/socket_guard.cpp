@@ -37,6 +37,8 @@ struct dummy_socket {
     // nop
   }
 
+  dummy_socket(const dummy_socket&) = default;
+
   dummy_socket& operator=(const dummy_socket& other) {
     id = other.id;
     closed = other.closed;
