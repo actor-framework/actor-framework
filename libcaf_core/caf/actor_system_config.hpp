@@ -368,7 +368,7 @@ public:
   static expected<settings> parse_config(std::istream& source);
 
   /// Parses the content of `source` using CAF's config format. Also
-  //  type-checks user-defined parameters in `opts`.
+  /// type-checks user-defined parameters in `opts`.
   /// @param source Character sequence in CAF's config format.
   /// @param opts User-defined config options for type checking.
   /// @returns A ::settings dictionary with the parsed content of `source` on
