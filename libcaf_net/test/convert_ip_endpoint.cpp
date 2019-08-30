@@ -36,7 +36,7 @@ CAF_TEST(sockaddr_in6 roundtrip) {
   source_addr.sin6_family = AF_INET6;
   source_addr.sin6_port = htons(23);
   source_addr.sin6_addr = in6addr_loopback;
-  auto ep = to_ip_endpoint(source_addr);
+  auto ep = to_ip_endpoint(reinterpret_cast<sockaddr_storage&>(source_addr));
   auto dest_addr = to_sockaddr(ep);
   CAF_CHECK_EQUAL(memcmp(&source_addr, &dest_addr, sizeof(sockaddr_in6)), 0);
 }
@@ -55,13 +55,13 @@ CAF_TEST(sockaddr_in4 roundtrip) {
   source_addr.sin_family = AF_INET;
   source_addr.sin_port = htons(23);
   source_addr.sin_addr.s_addr = INADDR_LOOPBACK;
-  auto ep = to_ip_endpoint(source_addr);
+  auto ep = to_ip_endpoint(reinterpret_cast<sockaddr_storage&>(source_addr));
   auto dest_addr = to_sockaddr(ep);
   CAF_CHECK_EQUAL(memcmp(&source_addr, &dest_addr, sizeof(sockaddr_in)), 0);
 }
 
 CAF_TEST(ipv4_endpoint roundtrip) {
-  ipv4_endpoint source_ep;
+  ipv6_endpoint source_ep;
   if (auto err = detail::parse("127.0.0.1:55555", source_ep))
     CAF_FAIL("unable to parse input: " << err);
   auto addr = to_sockaddr(source_ep);

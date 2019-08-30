@@ -19,42 +19,41 @@
 #include "caf/detail/convert_ip_endpoint.hpp"
 #include "caf/ipv4_endpoint.hpp"
 #include "caf/ipv6_endpoint.hpp"
+#include <iostream>
 
 namespace caf {
 namespace detail {
 
-sockaddr_in6 to_sockaddr(const ipv6_endpoint& ep) {
-  sockaddr_in6 addr = {};
-  addr.sin6_family = AF_INET6;
-  addr.sin6_port = ntohs(ep.port());
-  memcpy(&addr.sin6_addr, ep.address().bytes().data(), ep.address().size());
-  return addr;
+sockaddr_storage to_sockaddr(const ip_endpoint& ep) {
+  sockaddr_storage sockaddr = {};
+  if (ep.address().embeds_v4()) {
+    auto sockaddr4 = reinterpret_cast<sockaddr_in*>(&sockaddr);
+    sockaddr4->sin_family = AF_INET;
+    sockaddr4->sin_port = ntohs(ep.port());
+    sockaddr4->sin_addr.s_addr = ep.address().embedded_v4().bits();
+  } else {
+    auto sockaddr6 = reinterpret_cast<sockaddr_in6*>(&sockaddr);
+    sockaddr6->sin6_family = AF_INET6;
+    sockaddr6->sin6_port = ntohs(ep.port());
+    memcpy(&sockaddr6->sin6_addr, ep.address().bytes().data(),
+           ep.address().bytes().size());
+  }
+  return sockaddr;
 }
 
-ipv6_endpoint to_ip_endpoint(const sockaddr_in6& addr) {
-  ip_endpoint ep;
-  ep.port(htons(addr.sin6_port));
-  ipv6_address ip_addr;
-  memcpy(ip_addr.bytes().data(), &addr.sin6_addr, ip_addr.size());
-  ep.address(ip_addr);
-  return ep;
-}
-
-sockaddr_in to_sockaddr(const ipv4_endpoint& ep) {
-  sockaddr_in addr = {};
-  addr.sin_family = AF_INET;
-  addr.sin_port = ntohs(ep.port());
-  memcpy(&addr.sin_addr, ep.address().bytes().data(), ep.address().size());
-  return addr;
-}
-
-ipv4_endpoint to_ip_endpoint(const sockaddr_in& addr) {
-  ipv4_endpoint ep;
-  ep.port(htons(addr.sin_port));
-  ipv4_address ip_addr;
-  memcpy(ip_addr.bytes().data(), &addr.sin_addr, ip_addr.size());
-  ep.address(ip_addr);
-  return ep;
+ip_endpoint to_ip_endpoint(const sockaddr_storage& addr) {
+  if (addr.ss_family == AF_INET) {
+    auto sockaddr4 = reinterpret_cast<const sockaddr_in*>(&addr);
+    ipv4_address ipv4_addr;
+    memcpy(ipv4_addr.data().data(), &sockaddr4->sin_addr, ipv4_addr.size());
+    return {ipv4_addr, htons(sockaddr4->sin_port)};
+  } else {
+    auto sockaddr6 = reinterpret_cast<const sockaddr_in6*>(&addr);
+    ipv6_address ipv6_addr;
+    memcpy(ipv6_addr.bytes().data(), &sockaddr6->sin6_addr,
+           ipv6_addr.bytes().size());
+    return {ipv6_addr, htons(sockaddr6->sin6_port)};
+  }
 }
 
 } // namespace detail

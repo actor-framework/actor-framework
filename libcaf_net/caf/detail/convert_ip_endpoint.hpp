@@ -24,13 +24,9 @@
 namespace caf {
 namespace detail {
 
-sockaddr_in6 to_sockaddr(const ipv6_endpoint& ep);
+sockaddr_storage to_sockaddr(const ip_endpoint& ep);
 
-ipv6_endpoint to_ip_endpoint(const sockaddr_in6& addr);
-
-sockaddr_in to_sockaddr(const ipv4_endpoint& ep);
-
-ipv4_endpoint to_ip_endpoint(const sockaddr_in& addr);
+ip_endpoint to_ip_endpoint(const sockaddr_storage& addr);
 
 } // namespace detail
 } // namespace caf
