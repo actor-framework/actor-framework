@@ -104,6 +104,7 @@ void read_ini_map(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   auto alnum_or_dash = [](char x) {
     return isalnum(x) || x == '-' || x == '_';
   };
+  // clang-format off
   start();
   state(init) {
     epsilon(await_key_name)
@@ -123,6 +124,7 @@ void read_ini_map(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   state(await_assignment) {
     transition(await_assignment, " \t")
     transition(await_value, '=', consumer.key(std::move(key)))
+    epsilon(await_value, '{', consumer.key(std::move(key)))
   }
   // Reads the value in a "key=value" line.
   state(await_value) {
@@ -149,6 +151,7 @@ void read_ini_map(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
     //nop
   }
   fin();
+  // clang-format on
 }
 
 template <class Iterator, class Sentinel, class Consumer>
