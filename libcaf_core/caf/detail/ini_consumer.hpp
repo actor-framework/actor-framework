@@ -192,7 +192,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  ini_consumer(config_option_set& options, settings& cfg);
+  ini_consumer(const config_option_set& options, settings& cfg);
 
   ini_consumer(ini_consumer&&) = default;
 
@@ -207,7 +207,7 @@ public:
 private:
   // -- member variables -------------------------------------------------------
 
-  config_option_set& options_;
+  const config_option_set& options_;
   settings& cfg_;
   std::string current_key_;
   std::vector<error> warnings_;
