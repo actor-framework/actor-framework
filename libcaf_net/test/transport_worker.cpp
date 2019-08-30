@@ -173,9 +173,7 @@ CAF_TEST(construction and initialization) {
 }
 
 CAF_TEST(handle_data) {
-  auto test_span = make_span(reinterpret_cast<byte*>(
-                               const_cast<char*>(hello_test.data())),
-                             hello_test.size());
+  auto test_span = as_bytes(make_span(hello_test));
   worker.handle_data(transport, test_span);
   auto& buf = application_results->data_buffer;
   string_view result{reinterpret_cast<char*>(buf.data()), buf.size()};

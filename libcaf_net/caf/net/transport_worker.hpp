@@ -54,7 +54,7 @@ public:
   }
 
   template <class Parent>
-  void handle_data(Parent& parent, span<byte> data) {
+  void handle_data(Parent& parent, span<const byte> data) {
     application_.handle_data(parent, data);
   }
 
