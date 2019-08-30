@@ -27,64 +27,87 @@
 #include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/ip_address.hpp"
+#include "caf/ipv4_address.hpp"
+#include "caf/net/ip.hpp"
 
 using namespace caf;
 using namespace caf::net;
 
 namespace {
 
-expected<udp_datagram_socket> make_socket() {
-  CAF_NET_SYSCALL("socket", fd, ==, invalid_socket_id,
-                  ::socket(AF_INET6, SOCK_DGRAM, 0));
-  return udp_datagram_socket{fd};
-}
+constexpr string_view hello_test = "Hello test!";
 
 struct fixture : host_fixture {
+  fixture()
+    : host_fixture(),
+      v4_local{make_ipv4_address(127, 0, 0, 1)},
+      v6_local{{0}, {0x1}},
+      addrs{net::ip::resolve("localhost")} {
+  }
+
+  bool contains(ip_address x) {
+    return std::count(addrs.begin(), addrs.end(), x) > 0;
+  }
+
+  void test_send_receive(ip_address addr) {
+    std::vector<byte> buf(1024);
+    ip_endpoint ep(addr, 0);
+    auto sender = unbox(make_udp_datagram_socket(ep));
+    ep.port(0);
+    auto receiver = unbox(make_udp_datagram_socket(ep));
+    CAF_MESSAGE("sending data to: " << to_string(ep));
+    auto guard = detail::make_scope_guard([&] {
+      close(socket_cast<net::socket>(sender));
+      close(socket_cast<net::socket>(receiver));
+    });
+    if (auto err = nonblocking(socket_cast<net::socket>(receiver), true))
+      CAF_FAIL("nonblocking returned an error" << err);
+    auto test_read_res = read(receiver, make_span(buf));
+    if (auto err = get_if<sec>(&test_read_res))
+      CAF_CHECK_EQUAL(*err, sec::unavailable_or_would_block);
+    else
+      CAF_FAIL("read should have failed");
+    auto write_ret = write(sender, as_bytes(make_span(hello_test)), ep);
+    if (auto num_bytes = get_if<size_t>(&write_ret))
+      CAF_CHECK_EQUAL(*num_bytes, hello_test.size());
+    else
+      CAF_FAIL("write returned an error: " << sys.render(get<sec>(write_ret)));
+    auto read_ret = read(receiver, make_span(buf));
+    if (auto read_res = get_if<std::pair<size_t, ip_endpoint>>(&read_ret)) {
+      CAF_CHECK_EQUAL(read_res->first, hello_test.size());
+      buf.resize(read_res->first);
+    } else {
+      CAF_FAIL("write returned an error: " << sys.render(get<sec>(read_ret)));
+    }
+    string_view buf_view{reinterpret_cast<const char*>(buf.data()), buf.size()};
+    CAF_CHECK_EQUAL(buf_view, hello_test);
+  }
+
   actor_system_config cfg;
   actor_system sys{cfg};
+  ip_address v4_local;
+  ip_address v6_local;
+  std::vector<ip_address> addrs;
 };
-
-constexpr string_view hello_test = "Hello test!";
 
 } // namespace
 
 CAF_TEST_FIXTURE_SCOPE(udp_datagram_socket_test, fixture)
 
-CAF_TEST(send and receive) {
-  std::vector<byte> buf(1024);
-  ip_endpoint ep;
-  if (auto err = detail::parse("[::1]:0", ep))
-    CAF_FAIL("unable to parse input: " << err);
-  auto sender = unbox(make_socket());
-  auto receiver = unbox(make_socket());
-  auto guard = detail::make_scope_guard([&] {
-    close(socket_cast<net::socket>(sender));
-    close(socket_cast<net::socket>(receiver));
-  });
-  auto port = unbox(bind(receiver, ep));
-  CAF_MESSAGE("socket bound to port " << port);
-  ep.port(htons(port));
-  if (nonblocking(socket_cast<net::socket>(receiver), true))
-    CAF_FAIL("nonblocking failed");
-  auto test_read_res = read(receiver, make_span(buf));
-  if (auto err = get_if<sec>(&test_read_res))
-    CAF_CHECK_EQUAL(*err, sec::unavailable_or_would_block);
-  else
-    CAF_FAIL("read should have failed");
-  auto write_ret = write(sender, as_bytes(make_span(hello_test)), ep);
-  if (auto num_bytes = get_if<size_t>(&write_ret))
-    CAF_CHECK_EQUAL(*num_bytes, hello_test.size());
-  else
-    CAF_FAIL("write returned an error: " << sys.render(get<sec>(write_ret)));
-  auto read_ret = read(receiver, make_span(buf));
-  if (auto read_res = get_if<std::pair<size_t, ip_endpoint>>(&read_ret)) {
-    CAF_CHECK_EQUAL(read_res->first, hello_test.size());
-    buf.resize(read_res->first);
+CAF_TEST(send and receive IPv4) {
+  if (!contains(v4_local)) {
+    CAF_MESSAGE("this host does not have av IPv4 address");
   } else {
-    CAF_FAIL("write returned an error: " << sys.render(get<sec>(read_ret)));
+    test_send_receive(v4_local);
   }
-  string_view buf_view{reinterpret_cast<const char*>(buf.data()), buf.size()};
-  CAF_CHECK_EQUAL(buf_view, hello_test);
+}
+
+CAF_TEST(send and receive IPv6) {
+  if (!contains(v6_local)) {
+    CAF_MESSAGE("this host does not have av IPv6 address");
+  } else {
+    test_send_receive(v6_local);
+  }
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

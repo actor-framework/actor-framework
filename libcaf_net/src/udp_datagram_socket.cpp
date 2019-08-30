@@ -26,6 +26,7 @@
 #include "caf/expected.hpp"
 #include "caf/ip_endpoint.hpp"
 #include "caf/logger.hpp"
+#include "caf/net/socket_guard.hpp"
 #include "caf/span.hpp"
 
 namespace caf {
@@ -54,10 +55,34 @@ error allow_connreset(udp_datagram_socket x, bool) {
 
 #endif // CAF_WINDOWS
 
+expected<udp_datagram_socket> make_udp_datagram_socket(ip_endpoint& node,
+                                                       bool reuse_addr) {
+  CAF_LOG_TRACE(CAF_ARG(node));
+  auto addr = to_sockaddr(node);
+  CAF_NET_SYSCALL("socket", fd, ==, invalid_socket_id,
+                  ::socket(addr.ss_family, SOCK_DGRAM, 0));
+  udp_datagram_socket sock{fd};
+  auto sguard = make_socket_guard(sock);
+  socklen_t len = (addr.ss_family == AF_INET) ? sizeof(sockaddr_in)
+                                              : sizeof(sockaddr_in6);
+  CAF_NET_SYSCALL("bind", err, !=, 0,
+                  ::bind(sock.id, reinterpret_cast<sockaddr*>(&addr), len));
+  CAF_NET_SYSCALL("getsockname", erro, !=, 0,
+                  getsockname(sock.id, reinterpret_cast<sockaddr*>(&addr),
+                              &len));
+
+  CAF_LOG_DEBUG(CAF_ARG(sock.id));
+  auto port = addr.ss_family == AF_INET
+                ? reinterpret_cast<sockaddr_in*>(&addr)->sin_port
+                : reinterpret_cast<sockaddr_in6*>(&addr)->sin6_port;
+  node.port(ntohs(port));
+  return sguard.release();
+}
+
 variant<std::pair<size_t, ip_endpoint>, sec> read(udp_datagram_socket x,
                                                   span<byte> buf) {
-  sockaddr_in6 addr = {};
-  socklen_t len = sizeof(sockaddr_in);
+  sockaddr_storage addr = {};
+  socklen_t len = sizeof(sockaddr_storage);
   auto res = ::recvfrom(x.id, reinterpret_cast<socket_recv_ptr>(buf.data()),
                         buf.size(), 0, reinterpret_cast<sockaddr*>(&addr),
                         &len);
@@ -81,23 +106,13 @@ variant<size_t, sec> write(udp_datagram_socket x, span<const byte> buf,
   auto addr = detail::to_sockaddr(ep);
   auto res = ::sendto(x.id, reinterpret_cast<socket_send_ptr>(buf.data()),
                       buf.size(), 0, reinterpret_cast<sockaddr*>(&addr),
-                      sizeof(sockaddr_in6));
+                      ep.address().embeds_v4() ? sizeof(sockaddr_in)
+                                               : sizeof(sockaddr_in6));
   auto ret = check_udp_datagram_socket_io_res(res);
   if (auto num_bytes = get_if<size_t>(&ret))
     return *num_bytes;
   else
     return get<sec>(ret);
-}
-
-expected<uint16_t> bind(udp_datagram_socket x, ip_endpoint ep) {
-  auto addr = to_sockaddr(ep);
-  CAF_NET_SYSCALL("bind", err, !=, 0,
-                  ::bind(x.id, reinterpret_cast<sockaddr*>(&addr),
-                         sizeof(sockaddr_in6)));
-  socklen_t len = sizeof(sockaddr_in6);
-  CAF_NET_SYSCALL("getsockname", erro, !=, 0,
-                  getsockname(x.id, reinterpret_cast<sockaddr*>(&addr), &len));
-  return addr.sin6_port;
 }
 
 variant<size_t, sec>

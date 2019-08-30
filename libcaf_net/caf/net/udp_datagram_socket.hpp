@@ -41,6 +41,13 @@ struct udp_datagram_socket : abstract_socket<udp_datagram_socket> {
   }
 };
 
+/// Creates a `tcp_stream_socket` connected to given remote node.
+/// @param node Host and port of the remote node.
+/// @returns The connected socket or an error.
+/// @relates tcp_stream_socket
+expected<udp_datagram_socket> make_udp_datagram_socket(ip_endpoint& node,
+                                                       bool reuse_addr = false);
+
 /// Enables or disables `SIO_UDP_CONNRESET` error on `x`.
 /// @relates udp_datagram_socket
 error allow_connreset(udp_datagram_socket x, bool new_value);
@@ -64,13 +71,6 @@ variant<std::pair<size_t, ip_endpoint>, sec> read(udp_datagram_socket x,
 /// @post either the result is a `sec` or a positive (non-zero) integer
 variant<size_t, sec> write(udp_datagram_socket x, span<const byte> buf,
                            ip_endpoint ep);
-
-/// Binds given socket to given ip_endpoint.
-/// @param x the socket that should be bound.
-/// @param ep the endpoint to which the socket should be bound.
-/// @returns The port that was actually bound.
-/// @Relates udp_datagram_socket
-expected<uint16_t> bind(udp_datagram_socket x, ip_endpoint ep);
 
 /// Converts the result from I/O operation on a ::udp_datagram_socket to either
 /// an error code or a non-zero positive integer.
