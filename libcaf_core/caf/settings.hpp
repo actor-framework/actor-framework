@@ -81,8 +81,8 @@ config_value& put(settings& dict, string_view key, T&& value) {
   return put_impl(dict, key, tmp);
 }
 
-/// Converts `value` to a `config_value` and assigns it to `key` if `value` is
-/// currently missing in `xs`.
+/// Converts `value` to a `config_value` and assigns it to `key` unless `xs`
+/// already contains `key` (does nothing in this case).
 /// @param xs Dictionary of key-value pairs.
 /// @param key Human-readable nested keys in the form `category.key`.
 /// @param value New value for given `key`.
