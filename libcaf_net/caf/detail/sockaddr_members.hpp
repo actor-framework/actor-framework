@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2019 Dominik Charousset                                     *
+ * Copyright 2011-2018 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,28 +18,34 @@
 
 #pragma once
 
-#include <memory>
-
-#include "caf/intrusive_ptr.hpp"
+#include "caf/detail/socket_sys_includes.hpp"
 
 namespace caf {
-namespace net {
+namespace detail {
 
-class multiplexer;
-class socket_manager;
+inline auto addr_of(sockaddr_in& what) -> decltype(what.sin_addr)& {
+  return what.sin_addr;
+}
 
-struct network_socket;
-struct pipe_socket;
-struct socket;
-struct stream_socket;
-struct tcp_stream_socket;
-struct tcp_accept_socket;
+inline auto family_of(sockaddr_in& what) -> decltype(what.sin_family)& {
+  return what.sin_family;
+}
 
-using socket_manager_ptr = intrusive_ptr<socket_manager>;
+inline auto port_of(sockaddr_in& what) -> decltype(what.sin_port)& {
+  return what.sin_port;
+}
 
-using multiplexer_ptr = std::shared_ptr<multiplexer>;
+inline auto addr_of(sockaddr_in6& what) -> decltype(what.sin6_addr)& {
+  return what.sin6_addr;
+}
 
-using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
+inline auto family_of(sockaddr_in6& what) -> decltype(what.sin6_family)& {
+  return what.sin6_family;
+}
 
-} // namespace net
+inline auto port_of(sockaddr_in6& what) -> decltype(what.sin6_port)& {
+  return what.sin6_port;
+}
+
+} // namespace detail
 } // namespace caf

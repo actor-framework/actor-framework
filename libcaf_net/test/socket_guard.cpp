@@ -16,30 +16,71 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#define CAF_SUITE socket_guard
 
-#include <memory>
+#include "caf/net/socket_guard.hpp"
 
-#include "caf/intrusive_ptr.hpp"
+#include "caf/test/dsl.hpp"
 
-namespace caf {
-namespace net {
+#include "caf/net/abstract_socket.hpp"
+#include "caf/net/socket_id.hpp"
 
-class multiplexer;
-class socket_manager;
+using namespace caf;
+using namespace caf::net;
 
-struct network_socket;
-struct pipe_socket;
-struct socket;
-struct stream_socket;
-struct tcp_stream_socket;
-struct tcp_accept_socket;
+namespace {
 
-using socket_manager_ptr = intrusive_ptr<socket_manager>;
+constexpr socket_id dummy_id = 13;
 
-using multiplexer_ptr = std::shared_ptr<multiplexer>;
+struct dummy_socket {
+  dummy_socket(socket_id& id, bool& closed) : id(id), closed(closed) {
+    // nop
+  }
 
-using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
+  dummy_socket& operator=(const dummy_socket& other) {
+    id = other.id;
+    closed = other.closed;
+    return *this;
+  }
 
-} // namespace net
-} // namespace caf
+  socket_id& id;
+  bool& closed;
+};
+
+void close(dummy_socket x) {
+  x.closed = true;
+}
+
+struct fixture {
+  fixture() : id{dummy_id}, closed{false}, sock{id, closed} {
+    // nop
+  }
+
+  socket_id id;
+  bool closed;
+  dummy_socket sock;
+};
+
+} // namespace
+
+CAF_TEST_FIXTURE_SCOPE(socket_guard_tests, fixture)
+
+CAF_TEST(cleanup) {
+  {
+    auto guard = make_socket_guard(sock);
+    CAF_CHECK_EQUAL(sock.id, dummy_id);
+  }
+  CAF_CHECK(sock.closed);
+}
+
+CAF_TEST(release) {
+  {
+    auto guard = make_socket_guard(sock);
+    CAF_CHECK_EQUAL(sock.id, dummy_id);
+    guard.release();
+    CAF_CHECK_EQUAL(sock.id, invalid_socket_id);
+  }
+  CAF_CHECK_EQUAL(sock.closed, false);
+}
+
+CAF_TEST_FIXTURE_SCOPE_END()

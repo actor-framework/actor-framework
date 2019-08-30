@@ -16,30 +16,31 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#define CAF_SUITE ip
 
-#include <memory>
+#include "caf/net/ip.hpp"
 
-#include "caf/intrusive_ptr.hpp"
+#include "caf/test/dsl.hpp"
 
-namespace caf {
-namespace net {
+#include "host_fixture.hpp"
 
-class multiplexer;
-class socket_manager;
+#include "caf/ip_address.hpp"
+#include "caf/ipv4_address.hpp"
 
-struct network_socket;
-struct pipe_socket;
-struct socket;
-struct stream_socket;
-struct tcp_stream_socket;
-struct tcp_accept_socket;
+using namespace caf;
+using namespace caf::net;
 
-using socket_manager_ptr = intrusive_ptr<socket_manager>;
+CAF_TEST_FIXTURE_SCOPE(ip_tests, host_fixture)
 
-using multiplexer_ptr = std::shared_ptr<multiplexer>;
+CAF_TEST(resolve) {
+  ip_address v4_local{make_ipv4_address(127, 0, 0, 1)};
+  ip_address v6_local{{0}, {0x1}};
+  auto addrs = ip::resolve("localhost");
+  CAF_CHECK(!addrs.empty());
+  auto contains = [&](ip_address x) {
+    return std::count(addrs.begin(), addrs.end(), x) > 0;
+  };
+  CAF_CHECK(contains(v4_local) || contains(v6_local));
+}
 
-using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
-
-} // namespace net
-} // namespace caf
+CAF_TEST_FIXTURE_SCOPE_END()

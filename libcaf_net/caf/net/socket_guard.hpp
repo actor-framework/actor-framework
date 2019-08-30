@@ -18,28 +18,38 @@
 
 #pragma once
 
-#include <memory>
-
-#include "caf/intrusive_ptr.hpp"
+#include "caf/net/socket_id.hpp"
 
 namespace caf {
 namespace net {
 
-class multiplexer;
-class socket_manager;
+/// Closes the guarded socket when destroyed.
+template <class Socket>
+class socket_guard {
+public:
+  explicit socket_guard(Socket sock) : sock_(sock) {
+    // nop
+  }
 
-struct network_socket;
-struct pipe_socket;
-struct socket;
-struct stream_socket;
-struct tcp_stream_socket;
-struct tcp_accept_socket;
+  ~socket_guard() {
+    if (sock_.id != invalid_socket_id)
+      close(sock_);
+  }
 
-using socket_manager_ptr = intrusive_ptr<socket_manager>;
+  Socket release() {
+    auto sock = sock_;
+    sock_.id = invalid_socket_id;
+    return sock;
+  }
 
-using multiplexer_ptr = std::shared_ptr<multiplexer>;
+private:
+  Socket sock_;
+};
 
-using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
+template <class Socket>
+socket_guard<Socket> make_socket_guard(Socket sock) {
+  return socket_guard<Socket>{sock};
+}
 
 } // namespace net
 } // namespace caf
