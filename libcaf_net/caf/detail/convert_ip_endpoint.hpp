@@ -19,14 +19,18 @@
 #pragma once
 
 #include "caf/detail/socket_sys_includes.hpp"
-#include "caf/ip_endpoint.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 namespace detail {
 
-sockaddr_in6 to_sockaddr(const ip_endpoint& ep);
+sockaddr_in6 to_sockaddr(const ipv6_endpoint& ep);
 
-ip_endpoint to_ip_endpoint(const sockaddr_in6& addr);
+ipv6_endpoint to_ip_endpoint(const sockaddr_in6& addr);
+
+sockaddr_in to_sockaddr(const ipv4_endpoint& ep);
+
+ipv4_endpoint to_ip_endpoint(const sockaddr_in& addr);
 
 } // namespace detail
 } // namespace caf
