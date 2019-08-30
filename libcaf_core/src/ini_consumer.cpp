@@ -152,10 +152,8 @@ ini_consumer* ini_category_consumer::dparent() {
 
 // -- ini_consumer -------------------------------------------------------------
 
-ini_consumer::ini_consumer(config_option_set& options, settings& cfg)
-    : options_(options),
-      cfg_(cfg),
-      current_key_("global") {
+ini_consumer::ini_consumer(const config_option_set& options, settings& cfg)
+  : options_(options), cfg_(cfg), current_key_("global") {
   // nop
 }
 

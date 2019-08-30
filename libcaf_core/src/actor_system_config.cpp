@@ -342,14 +342,9 @@ void print(const config_value::dictionary& xs, indentation indent) {
 
 error actor_system_config::parse(string_list args, std::istream& ini) {
   // Content of the INI file overrides hard-coded defaults.
-  if (ini.good()) {
-    detail::ini_consumer consumer{custom_options_, content};
-    detail::parser::state<ini_iter, ini_sentinel> res;
-    res.i = ini_iter{&ini};
-    detail::parser::read_ini(res, consumer);
-    if (res.i != res.e)
-      return make_error(res.code, res.line, res.column);
-  }
+  if (ini.good())
+    if (auto err = parse_config(ini, custom_options_, content))
+      return err;
   // CLI options override the content of the INI file.
   using std::make_move_iterator;
   auto res = custom_options_.parse(content, args);
@@ -462,6 +457,49 @@ std::string actor_system_config::render_pec(uint8_t x, atom_value,
   auto tmp = static_cast<pec>(x);
   return deep_to_string(meta::type_name("parser_error"), tmp,
                         meta::omittable_if_empty(), xs);
+}
+
+expected<settings>
+actor_system_config::parse_config_file(const char* filename) {
+  config_option_set dummy;
+  return parse_config_file(filename, dummy);
+}
+
+expected<settings>
+actor_system_config::parse_config_file(const char* filename,
+                                       const config_option_set& opts) {
+  std::ifstream f{filename};
+  if (!f.is_open())
+    return make_error(sec::cannot_open_file, filename);
+  return parse_config(f, opts);
+}
+
+expected<settings> actor_system_config::parse_config(std::istream& source) {
+  config_option_set dummy;
+  return parse_config(source, dummy);
+}
+
+expected<settings>
+actor_system_config::parse_config(std::istream& source,
+                                  const config_option_set& opts) {
+  settings result;
+  if (auto err = parse_config(source, opts, result))
+    return err;
+  return result;
+}
+
+error actor_system_config::parse_config(std::istream& source,
+                                        const config_option_set& opts,
+                                        settings& result) {
+  if (!source)
+    return make_error(sec::runtime_error, "source stream invalid");
+  detail::ini_consumer consumer{opts, result};
+  detail::parser::state<ini_iter, ini_sentinel> res;
+  res.i = ini_iter{&source};
+  detail::parser::read_ini(res, consumer);
+  if (res.i != res.e)
+    return make_error(res.code, res.line, res.column);
+  return none;
 }
 
 error actor_system_config::extract_config_file_path(string_list& args) {
