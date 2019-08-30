@@ -29,7 +29,7 @@
 namespace caf {
 namespace net {
 
-/// implements a worker for the udp_transport policy
+/// Implements a worker for transport protocols.
 template <class Application, class IdType = unit_t>
 class transport_worker {
 public:

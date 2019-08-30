@@ -122,8 +122,8 @@ public:
     // nop
   }
 
-  template <class Header>
-  void write_packet(Header header, span<const byte> payload, ip_endpoint ep) {
+  void write_packet(span<const byte> header, span<const byte> payload,
+                    ip_endpoint ep) {
     auto& buf = res_->packet_buffer;
     buf.insert(buf.begin(), header.begin(), header.end());
     buf.insert(buf.begin(), payload.begin(), payload.end());
