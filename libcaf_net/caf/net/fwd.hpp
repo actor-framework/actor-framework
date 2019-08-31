@@ -29,6 +29,8 @@ class multiplexer;
 class socket_manager;
 template <class Application, class IdType = unit_t>
 class transport_worker;
+template <class Application, class IdType>
+class transport_worker_dispatcher;
 
 struct network_socket;
 struct pipe_socket;
