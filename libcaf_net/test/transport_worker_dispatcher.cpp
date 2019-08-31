@@ -34,6 +34,8 @@ using namespace caf::net;
 
 namespace {
 
+constexpr string_view hello_test = "hello_test";
+
 struct dummy_actor : public monitorable_actor {
   dummy_actor(actor_config& cfg) : monitorable_actor(cfg) {
     // nop
@@ -56,12 +58,15 @@ public:
 
   template <class Parent>
   error init(Parent&) {
+    rec_buf_->push_back(static_cast<byte>(id_));
     return none;
   }
 
   template <class Transport>
-  void write_message(Transport&, std::unique_ptr<endpoint_manager::message>) {
+  void write_message(Transport& transport,
+                     std::unique_ptr<endpoint_manager::message> msg) {
     rec_buf_->push_back(static_cast<byte>(id_));
+    transport.write_packet(span<byte>{}, make_span(msg->payload));
   }
 
   template <class Parent>
@@ -71,22 +76,21 @@ public:
 
   template <class Manager>
   void resolve(Manager&, const std::string&, actor) {
-    // nop
+    rec_buf_->push_back(static_cast<byte>(id_));
   }
 
   template <class Transport>
   void timeout(Transport&, atom_value, uint64_t) {
-    // nop
+    rec_buf_->push_back(static_cast<byte>(id_));
   }
 
   void handle_error(sec) {
-    // nop
+    rec_buf_->push_back(static_cast<byte>(id_));
   }
 
   static expected<std::vector<byte>> serialize(actor_system&,
                                                const type_erased_tuple&) {
     return std::vector<byte>{};
-    // nop
   }
 
 private:
@@ -112,6 +116,24 @@ private:
   uint8_t application_cnt_;
 };
 
+struct dummy_transport {
+  using transport_type = dummy_transport;
+
+  using application_type = dummy_application;
+
+  dummy_transport(std::shared_ptr<std::vector<byte>> buf) : buf_(buf) {
+  }
+
+  template <class IdType>
+  void write_packet(span<const byte> header, span<const byte> payload, IdType) {
+    buf_->insert(buf_->end(), header.begin(), header.end());
+    buf_->insert(buf_->end(), payload.begin(), payload.end());
+  }
+
+private:
+  std::shared_ptr<std::vector<byte>> buf_;
+};
+
 struct testdata {
   testdata(uint8_t worker_id, node_id id, ip_endpoint ep)
     : worker_id(worker_id), nid(id), ep(ep) {
@@ -121,12 +143,6 @@ struct testdata {
   uint8_t worker_id;
   node_id nid;
   ip_endpoint ep;
-};
-
-struct dummy_transport {
-  using transport_type = dummy_transport;
-
-  using application_type = dummy_application;
 };
 
 // TODO: switch to std::operator""s when switching to C++14
@@ -153,8 +169,9 @@ struct fixture : host_fixture {
 
   fixture()
     : buf{std::make_shared<std::vector<byte>>()},
-      dispatcher{dummy_application_factory{buf}} {
-    // nop
+      dispatcher{dummy_application_factory{buf}},
+      dummy{buf} {
+    add_new_workers();
   }
 
   std::unique_ptr<net::endpoint_manager::message>
@@ -162,7 +179,8 @@ struct fixture : host_fixture {
     actor_id aid = 42;
     actor_config cfg;
     auto p = make_actor<dummy_actor, strong_actor_ptr>(aid, nid, &sys, cfg);
-    std::vector<byte> payload;
+    auto test_span = as_bytes(make_span(hello_test));
+    std::vector<byte> payload(test_span.begin(), test_span.end());
     auto strong_actor = actor_cast<strong_actor_ptr>(p);
     mailbox_element::forwarding_stack stack;
     auto elem = make_mailbox_element(std::move(strong_actor),
@@ -172,9 +190,7 @@ struct fixture : host_fixture {
                                                           payload);
   }
 
-  template <class Application, class IdType>
-  void add_new_workers(
-    transport_worker_dispatcher<Application, IdType>& dispatcher) {
+  void add_new_workers() {
     for (auto& data : test_data) {
       dispatcher.add_new_worker(data.nid, data.ep);
     }
@@ -184,7 +200,6 @@ struct fixture : host_fixture {
     auto msg = make_dummy_message(testcase.nid);
     if (!msg->msg->sender)
       CAF_FAIL("sender is null");
-    dispatcher.add_new_worker(testcase.nid, "[::1]:1"_ep);
     dispatcher.write_message(dummy, std::move(msg));
   }
 
@@ -203,14 +218,24 @@ struct fixture : host_fixture {
   };
 };
 
-#define CHECK_HANDLE_DATA(dispatcher, dummy, testcase, buf)                    \
+#define CHECK_HANDLE_DATA(testcase)                                            \
   dispatcher.handle_data(dummy, span<byte>{}, testcase.ep);                    \
   CAF_CHECK_EQUAL(buf->size(), 1u);                                            \
   CAF_CHECK_EQUAL(static_cast<byte>(testcase.worker_id), buf->at(0));          \
   buf->clear();
 
-#define CHECK_WRITE_MESSAGE(dispatcher, dummy, testcase, buf)                  \
+#define CHECK_WRITE_MESSAGE(testcase)                                          \
   test_write_message(testcase);                                                \
+  CAF_CHECK_EQUAL(buf->size(), hello_test.size() + 1u);                        \
+  CAF_CHECK_EQUAL(static_cast<byte>(testcase.worker_id), buf->at(0));          \
+  CAF_CHECK_EQUAL(memcmp(buf->data() + 1, hello_test.data(),                   \
+                         hello_test.size()),                                   \
+                  0);                                                          \
+  buf->clear();
+
+#define CHECK_TIMEOUT(testcase)                                                \
+  dispatcher.set_timeout(1u, testcase.ep);                                     \
+  dispatcher.timeout(dummy, atom("dummy"), 1u);                                \
   CAF_CHECK_EQUAL(buf->size(), 1u);                                            \
   CAF_CHECK_EQUAL(static_cast<byte>(testcase.worker_id), buf->at(0));          \
   buf->clear();
@@ -219,18 +244,54 @@ struct fixture : host_fixture {
 
 CAF_TEST_FIXTURE_SCOPE(transport_worker_dispatcher_test, fixture)
 
-CAF_TEST(handle_data) {
-  CHECK_HANDLE_DATA(dispatcher, dummy, test_data.at(0), buf);
-  CHECK_HANDLE_DATA(dispatcher, dummy, test_data.at(1), buf);
-  CHECK_HANDLE_DATA(dispatcher, dummy, test_data.at(2), buf);
-  CHECK_HANDLE_DATA(dispatcher, dummy, test_data.at(3), buf);
+CAF_TEST(init) {
+  auto contains = [&](byte x) {
+    return std::count(buf->begin(), buf->end(), x) > 0;
+  };
+  if (auto err = dispatcher.init(dummy))
+    CAF_FAIL("init failed with error: " << err);
+  CAF_CHECK_EQUAL(buf->size(), 4u);
+  CAF_CHECK(contains(byte(0)));
+  CAF_CHECK(contains(byte(1)));
+  CAF_CHECK(contains(byte(2)));
+  CAF_CHECK(contains(byte(3)));
 }
 
-CAF_TEST(write_message) {
-  CHECK_WRITE_MESSAGE(dispatcher, dummy, test_data.at(0), buf);
-  CHECK_WRITE_MESSAGE(dispatcher, dummy, test_data.at(1), buf);
-  CHECK_WRITE_MESSAGE(dispatcher, dummy, test_data.at(2), buf);
-  CHECK_WRITE_MESSAGE(dispatcher, dummy, test_data.at(3), buf);
+CAF_TEST(handle_data) {
+  CHECK_HANDLE_DATA(test_data.at(0));
+  CHECK_HANDLE_DATA(test_data.at(1));
+  CHECK_HANDLE_DATA(test_data.at(2));
+  CHECK_HANDLE_DATA(test_data.at(3));
+}
+
+CAF_TEST(write_message write_packet) {
+  CHECK_WRITE_MESSAGE(test_data.at(0));
+  CHECK_WRITE_MESSAGE(test_data.at(1));
+  CHECK_WRITE_MESSAGE(test_data.at(2));
+  CHECK_WRITE_MESSAGE(test_data.at(3));
+}
+
+CAF_TEST(resolve) {
+  // TODO think of a test for this
+}
+
+CAF_TEST(timeout) {
+  CHECK_TIMEOUT(test_data.at(0));
+  CHECK_TIMEOUT(test_data.at(1));
+  CHECK_TIMEOUT(test_data.at(2));
+  CHECK_TIMEOUT(test_data.at(3));
+}
+
+CAF_TEST(handle_error) {
+  auto contains = [&](byte x) {
+    return std::count(buf->begin(), buf->end(), x) > 0;
+  };
+  dispatcher.handle_error(sec::unavailable_or_would_block);
+  CAF_CHECK_EQUAL(buf->size(), 4u);
+  CAF_CHECK(contains(byte(0)));
+  CAF_CHECK(contains(byte(1)));
+  CAF_CHECK(contains(byte(2)));
+  CAF_CHECK(contains(byte(3)));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -62,7 +62,8 @@ public:
   /// @return error if something went wrong sec::none when init() worked.
   template <class Parent>
   error init(Parent& parent) {
-    for (auto worker : workers_by_id_) {
+    for (const auto& p : workers_by_id_) {
+      auto worker = p.second;
       if (auto err = worker->init(parent))
         return err;
     }
@@ -122,14 +123,14 @@ public:
   template <class Parent>
   void timeout(Parent& parent, atom_value value, uint64_t id) {
     auto worker = workers_by_timeout_id_.at(id);
-    worker->application_.timeout(parent, value, id);
+    worker->timeout(parent, value, id);
     workers_by_timeout_id_.erase(id);
   }
 
   void handle_error(sec error) {
-    for (auto worker : workers_by_id_) {
-      if (auto err = worker->handle_error(error))
-        return err;
+    for (const auto& p : workers_by_id_) {
+      auto worker = p.second;
+      worker->handle_error(error);
     }
   }
 
