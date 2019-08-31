@@ -23,6 +23,7 @@
 #include <memory>
 
 #include "caf/actor.hpp"
+#include "caf/actor_clock.hpp"
 #include "caf/byte.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/drr_queue.hpp"
@@ -137,6 +138,9 @@ public:
   /// Enqueues a message to the endpoint.
   void enqueue(mailbox_element_ptr msg, std::vector<byte> payload);
 
+  /// Enqueues a timeout to the endpoint.
+  void enqueue(timeout_msg msg);
+
   // -- pure virtual member functions ------------------------------------------
 
   /// Initializes the manager before adding it to the multiplexer's event loop.
@@ -154,6 +158,9 @@ protected:
 
   /// Stores outbound messages.
   message_queue_type messages_;
+
+  /// Stores a proxy for interacting with the actor clock.
+  actor timeout_proxy_;
 };
 
 using endpoint_manager_ptr = intrusive_ptr<endpoint_manager>;
