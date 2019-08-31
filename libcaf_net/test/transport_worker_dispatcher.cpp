@@ -190,6 +190,10 @@ struct fixture : host_fixture {
                                                           payload);
   }
 
+  bool contains(byte x) {
+    return std::count(buf->begin(), buf->end(), x) > 0;
+  }
+
   void add_new_workers() {
     for (auto& data : test_data) {
       dispatcher.add_new_worker(data.nid, data.ep);
@@ -245,9 +249,6 @@ struct fixture : host_fixture {
 CAF_TEST_FIXTURE_SCOPE(transport_worker_dispatcher_test, fixture)
 
 CAF_TEST(init) {
-  auto contains = [&](byte x) {
-    return std::count(buf->begin(), buf->end(), x) > 0;
-  };
   if (auto err = dispatcher.init(dummy))
     CAF_FAIL("init failed with error: " << err);
   CAF_CHECK_EQUAL(buf->size(), 4u);
@@ -283,9 +284,6 @@ CAF_TEST(timeout) {
 }
 
 CAF_TEST(handle_error) {
-  auto contains = [&](byte x) {
-    return std::count(buf->begin(), buf->end(), x) > 0;
-  };
   dispatcher.handle_error(sec::unavailable_or_would_block);
   CAF_CHECK_EQUAL(buf->size(), 4u);
   CAF_CHECK(contains(byte(0)));
