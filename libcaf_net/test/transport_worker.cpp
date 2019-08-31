@@ -122,8 +122,8 @@ public:
     // nop
   }
 
-  template <class Header>
-  void write_packet(Header header, span<const byte> payload, ip_endpoint ep) {
+  void write_packet(span<const byte> header, span<const byte> payload,
+                    ip_endpoint ep) {
     auto& buf = res_->packet_buffer;
     buf.insert(buf.begin(), header.begin(), header.end());
     buf.insert(buf.begin(), payload.begin(), payload.end());
@@ -173,9 +173,7 @@ CAF_TEST(construction and initialization) {
 }
 
 CAF_TEST(handle_data) {
-  auto test_span = make_span(reinterpret_cast<byte*>(
-                               const_cast<char*>(hello_test.data())),
-                             hello_test.size());
+  auto test_span = as_bytes(make_span(hello_test));
   worker.handle_data(transport, test_span);
   auto& buf = application_results->data_buffer;
   string_view result{reinterpret_cast<char*>(buf.data()), buf.size()};
@@ -193,9 +191,8 @@ CAF_TEST(write_message) {
                                const_cast<char*>(hello_test.data())),
                              hello_test.size());
   std::vector<byte> payload(test_span.begin(), test_span.end());
-  auto message = caf::detail::make_unique<endpoint_manager::message>(std::move(
-                                                                       elem),
-                                                                     payload);
+  auto message = detail::make_unique<endpoint_manager::message>(std::move(elem),
+                                                                payload);
   worker.write_message(transport, std::move(message));
   auto& buf = transport_results->packet_buffer;
   string_view result{reinterpret_cast<char*>(buf.data()), buf.size()};

@@ -29,8 +29,8 @@
 namespace caf {
 namespace net {
 
-/// implements a worker for the udp_transport policy
-template <class Application, class IdType = unit_t>
+/// Implements a worker for transport protocols.
+template <class Application, class IdType>
 class transport_worker {
 public:
   // -- member types -----------------------------------------------------------
@@ -54,7 +54,7 @@ public:
   }
 
   template <class Parent>
-  void handle_data(Parent& parent, span<byte> data) {
+  void handle_data(Parent& parent, span<const byte> data) {
     application_.handle_data(parent, data);
   }
 

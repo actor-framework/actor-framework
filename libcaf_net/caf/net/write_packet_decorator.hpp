@@ -54,8 +54,8 @@ public:
 
   // -- member functions -------------------------------------------------------
 
-  template <class Header, class... Ts>
-  void write_packet(const Header& header, span<const byte> payload,
+  template <class... Ts>
+  void write_packet(span<const byte> header, span<const byte> payload,
                     Ts&&... xs) {
     object_.write_packet(parent_, header, payload, std::forward<Ts>(xs)...);
   }

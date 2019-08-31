@@ -101,10 +101,8 @@ public:
   void write_message(Parent& parent,
                      std::unique_ptr<net::endpoint_manager::message> msg) {
     header_type header{static_cast<uint32_t>(msg->payload.size())};
-    std::vector<byte> header_buf(sizeof(header_type));
     std::vector<byte> payload(msg->payload.begin(), msg->payload.end());
-    memcpy(header_buf.data(), &header, header_buf.size());
-    parent.write_packet(make_span(header_buf), make_span(payload));
+    parent.write_packet(as_bytes(make_span(&header, 1)), make_span(payload));
   }
 
   static expected<std::vector<byte>> serialize(actor_system& sys,

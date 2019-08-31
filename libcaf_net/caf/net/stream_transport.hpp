@@ -65,7 +65,8 @@ public:
 
   template <class Parent>
   error init(Parent& parent) {
-    worker_.init(parent);
+    if (auto err = worker_.init(parent))
+      return err;
     parent.mask_add(operation::read);
     return none;
   }
