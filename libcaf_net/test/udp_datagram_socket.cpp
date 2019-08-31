@@ -29,6 +29,7 @@
 #include "caf/ip_address.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/net/ip.hpp"
+#include "caf/net/socket_guard.hpp"
 
 using namespace caf;
 using namespace caf::net;
@@ -56,10 +57,8 @@ struct fixture : host_fixture {
     ep.port(0);
     auto receiver = unbox(make_udp_datagram_socket(ep));
     CAF_MESSAGE("sending data to: " << to_string(ep));
-    auto guard = detail::make_scope_guard([&] {
-      close(socket_cast<net::socket>(sender));
-      close(socket_cast<net::socket>(receiver));
-    });
+    auto send_guard = make_socket_guard(sender);
+    auto receive_guard = make_socket_guard(receiver);
     if (auto err = nonblocking(socket_cast<net::socket>(receiver), true))
       CAF_FAIL("nonblocking returned an error" << err);
     auto test_read_res = read(receiver, make_span(buf));
@@ -94,19 +93,13 @@ struct fixture : host_fixture {
 
 CAF_TEST_FIXTURE_SCOPE(udp_datagram_socket_test, fixture)
 
-CAF_TEST(send and receive IPv4) {
-  if (!contains(v4_local)) {
-    CAF_MESSAGE("this host does not have av IPv4 address");
-  } else {
+CAF_TEST(send and receive) {
+  if (contains(v4_local)) {
     test_send_receive(v4_local);
-  }
-}
-
-CAF_TEST(send and receive IPv6) {
-  if (!contains(v6_local)) {
-    CAF_MESSAGE("this host does not have av IPv6 address");
-  } else {
+  } else if (contains(v6_local)) {
     test_send_receive(v6_local);
+  } else {
+    CAF_FAIL("could not resolve 'localhost'");
   }
 }
 
