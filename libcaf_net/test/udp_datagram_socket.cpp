@@ -43,6 +43,7 @@ struct fixture : host_fixture {
     : host_fixture(),
       v4_local{make_ipv4_address(127, 0, 0, 1)},
       v6_local{{0}, {0x1}},
+      // TODO: use local_addresses() when merged
       addrs{net::ip::resolve("localhost")} {
   }
 
@@ -94,6 +95,8 @@ struct fixture : host_fixture {
 CAF_TEST_FIXTURE_SCOPE(udp_datagram_socket_test, fixture)
 
 CAF_TEST(send and receive) {
+  // TODO: check which versions exist and test existing versions accordingly
+  // -> local_addresses()
   if (contains(v4_local)) {
     test_send_receive(v4_local);
   } else if (contains(v6_local)) {

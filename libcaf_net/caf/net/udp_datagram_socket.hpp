@@ -25,7 +25,7 @@
 namespace caf {
 namespace net {
 
-/// A non connection-oriented network communication endpoint for bidirectional
+/// A datagram-oriented network communication endpoint for bidirectional
 /// byte transmission.
 struct udp_datagram_socket : abstract_socket<udp_datagram_socket> {
   using super = abstract_socket<udp_datagram_socket>;
@@ -41,11 +41,13 @@ struct udp_datagram_socket : abstract_socket<udp_datagram_socket> {
   }
 };
 
-/// Creates a `tcp_stream_socket` connected to given remote node.
-/// @param node Host and port of the remote node.
+/// Creates a `udp_datagram_socket` bound to given port.
+/// @param node ip_endpoint that contains the port to bind to. Pass port '0' to
+/// bind to any unused port - The endpoint will be updated with the specific
+/// port that was bound.
 /// @returns The connected socket or an error.
-/// @relates tcp_stream_socket
-expected<udp_datagram_socket> make_udp_datagram_socket(ip_endpoint& node,
+/// @relates udp_datagram_socket
+expected<udp_datagram_socket> make_udp_datagram_socket(ip_endpoint& ep,
                                                        bool reuse_addr = false);
 
 /// Enables or disables `SIO_UDP_CONNRESET` error on `x`.
@@ -63,7 +65,7 @@ error allow_connreset(udp_datagram_socket x, bool new_value);
 variant<std::pair<size_t, ip_endpoint>, sec> read(udp_datagram_socket x,
                                                   span<byte> buf);
 
-/// Transmits data from `x` to its peer.
+/// Transmits data from `x` to given eendpoint.
 /// @param x udp_datagram_socket.
 /// @param buf Points to the message to send.
 /// @returns The number of written bytes on success, otherwise an error code.
