@@ -32,11 +32,9 @@ namespace {
 
 behavior testee_impl(event_based_actor* self) {
   self->set_default_handler(drop);
-  return {
-    [] {
-      // nop
-    }
-  };
+  return {[] {
+    // nop
+  }};
 }
 
 struct fixture : test_coordinator_fixture<> {
@@ -53,7 +51,7 @@ struct fixture : test_coordinator_fixture<> {
   }
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(sender_tests, fixture)
 
