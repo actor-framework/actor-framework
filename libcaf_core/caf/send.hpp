@@ -19,17 +19,19 @@
 #pragma once
 
 #include "caf/actor.hpp"
-#include "caf/message.hpp"
-#include "caf/actor_cast.hpp"
 #include "caf/actor_addr.hpp"
-#include "caf/message_id.hpp"
-#include "caf/typed_actor.hpp"
+#include "caf/actor_cast.hpp"
+#include "caf/check_typed_input.hpp"
+#include "caf/is_message_sink.hpp"
 #include "caf/local_actor.hpp"
+#include "caf/mailbox_element.hpp"
+#include "caf/message.hpp"
+#include "caf/message_id.hpp"
+#include "caf/message_priority.hpp"
+#include "caf/no_stages.hpp"
 #include "caf/response_type.hpp"
 #include "caf/system_messages.hpp"
-#include "caf/is_message_sink.hpp"
-#include "caf/message_priority.hpp"
-#include "caf/check_typed_input.hpp"
+#include "caf/typed_actor.hpp"
 
 namespace caf {
 
@@ -106,6 +108,38 @@ void anon_send(const Dest& dest, Ts&&... xs) {
   if (dest)
     dest->eq_impl(make_message_id(P), nullptr, nullptr,
                   std::forward<Ts>(xs)...);
+}
+
+template <message_priority P = message_priority::normal, class Dest = actor,
+          class Rep = int, class Period = std::ratio<1>, class... Ts>
+detail::enable_if_t<!std::is_same<Dest, group>::value>
+delayed_anon_send(const Dest& dest, std::chrono::duration<Rep, Period> rtime,
+                  Ts&&... xs) {
+  static_assert(sizeof...(Ts) > 0, "no message to send");
+  using token = detail::type_list<typename detail::implicit_conversions<
+    typename std::decay<Ts>::type>::type...>;
+  static_assert(response_type_unbox<signatures_of_t<Dest>, token>::valid,
+                "receiver does not accept given message");
+  if (dest) {
+    auto& clock = dest->home_system().clock();
+    auto timeout = clock.now() + rtime;
+    clock.schedule_message(timeout, actor_cast<strong_actor_ptr>(dest),
+                           make_mailbox_element(nullptr, make_message_id(P),
+                                                no_stages,
+                                                std::forward<Ts>(xs)...));
+  }
+}
+
+template <class Rep = int, class Period = std::ratio<1>, class... Ts>
+void delayed_anon_send(const group& dest,
+                       std::chrono::duration<Rep, Period> rtime, Ts&&... xs) {
+  static_assert(sizeof...(Ts) > 0, "no message to send");
+  if (dest) {
+    auto& clock = dest->system().clock();
+    auto timeout = clock.now() + rtime;
+    clock.schedule_message(timeout, dest,
+                           make_message(std::forward<Ts>(xs)...));
+  }
 }
 
 /// Anonymously sends `dest` an exit message.

@@ -57,7 +57,7 @@ timer::behavior_type timer_impl(timer::stateful_pointer<timer_state> self) {
 
 timer::behavior_type timer_impl2(timer::pointer self) {
   auto had_reset = std::make_shared<bool>(false);
-  self->delayed_anon_send(self, ms(100), reset_atom::value);
+  delayed_anon_send(self, ms(100), reset_atom::value);
   return {
     [=](reset_atom) {
       CAF_MESSAGE("timer reset");
