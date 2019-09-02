@@ -60,24 +60,8 @@ public:
   template <message_priority P = message_priority::normal,
             class Dest = actor, class... Ts>
   void send(const Dest& dest, Ts&&... xs) {
-    using detail::type_list;
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    using res_t = response_type<
-                    signatures_of_t<Dest>,
-                    detail::implicit_conversions_t<
-                      typename std::decay<Ts>::type
-                    >...>;
-    static_assert(!statically_typed<Subtype>() || statically_typed<Dest>(),
-                  "statically typed actors can only send() to other "
-                  "statically typed actors; use anon_send() or request() when "
-                  "communicating with dynamically typed actors");
-    static_assert(res_t::valid, "receiver does not accept given message");
-    static_assert(is_void_response<typename res_t::type>::value
-                  || response_type_unbox<
-                       signatures_of_t<Subtype>,
-                       typename res_t::type
-                     >::valid,
-                  "this actor does not accept the response message");
+    detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
+    type_check(dest, args_token);
     if (dest)
       dest->eq_impl(make_message_id(P), dptr()->ctrl(),
                     dptr()->context(), std::forward<Ts>(xs)...);
@@ -100,63 +84,19 @@ public:
   template <message_priority P = message_priority::normal,
             class Dest = actor, class... Ts>
   void anon_send(const Dest& dest, Ts&&... xs) {
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    using token =
-      detail::type_list<
-        typename detail::implicit_conversions<
-          typename std::decay<Ts>::type
-        >::type...>;
-    static_assert(response_type_unbox<
-                    signatures_of_t<Dest>,
-                    token
-                  >::valid,
-                  "receiver does not accept given message");
-    if (dest)
-      dest->eq_impl(make_message_id(P), nullptr,
-                    dptr()->context(), std::forward<Ts>(xs)...);
+    caf::anon_send(dest, std::forward<Ts>(xs)...);
   }
 
-  template <message_priority P = message_priority::normal, class Rep = int,
-            class Period = std::ratio<1>, class Dest = actor, class... Ts>
+  /// Sends a message after an absolute timeout.
+  template <message_priority P = message_priority::normal, class Dest = actor,
+            class... Ts>
   detail::enable_if_t<!std::is_same<Dest, group>::value>
-  delayed_send(const Dest& dest, std::chrono::duration<Rep, Period> rtime,
-               Ts&&... xs) {
-    using token =
-      detail::type_list<
-        typename detail::implicit_conversions<
-          typename std::decay<Ts>::type
-        >::type...>;
-    static_assert(!statically_typed<Subtype>() || statically_typed<Dest>(),
-                  "statically typed actors are only allowed to send() to other "
-                  "statically typed actors; use anon_send() or request() when "
-                  "communicating with dynamically typed actors");
-    static_assert(response_type_unbox<
-                    signatures_of_t<Dest>,
-                    token
-                  >::valid,
-                  "receiver does not accept given message");
-    // TODO: this only checks one way, we should check for loops
-    static_assert(is_void_response<
-                    typename response_type<
-                      signatures_of_t<Dest>,
-                      detail::implicit_conversions_t<
-                        typename std::decay<Ts>::type
-                      >...
-                    >::type
-                  >::value
-                  ||  response_type_unbox<
-                        signatures_of_t<Subtype>,
-                        typename response_type<
-                          signatures_of_t<Dest>,
-                          detail::implicit_conversions_t<
-                            typename std::decay<Ts>::type
-                          >...
-                        >::type
-                      >::valid,
-                  "this actor does not accept the response message");
+  scheduled_send(const Dest& dest, actor_clock::time_point timeout,
+                 Ts&&... xs) {
+    detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
+    type_check(dest, args_token);
     if (dest) {
       auto& clock = dptr()->system().clock();
-      auto timeout = clock.now() + rtime;
       clock.schedule_message(timeout, actor_cast<strong_actor_ptr>(dest),
                              make_mailbox_element(dptr()->ctrl(),
                                                   make_message_id(P), no_stages,
@@ -164,6 +104,39 @@ public:
     }
   }
 
+  /// Sends a message after an absolute timeout. Sends the message immediately
+  /// if the timeout has already past.
+  template <class... Ts>
+  void scheduled_send(const group& dest, actor_clock::time_point timeout,
+                      Ts&&... xs) {
+    static_assert(!statically_typed<Subtype>(),
+                  "statically typed actors are not allowed to send to groups");
+    if (dest) {
+      auto& clock = dptr()->system().clock();
+      clock.schedule_message(timeout, dest, dptr()->ctrl(),
+                             make_message(std::forward<Ts>(xs)...));
+    }
+  }
+
+  /// Sends a message after a relative timeout.
+  template <message_priority P = message_priority::normal, class Rep = int,
+            class Period = std::ratio<1>, class Dest = actor, class... Ts>
+  detail::enable_if_t<!std::is_same<Dest, group>::value>
+  delayed_send(const Dest& dest, std::chrono::duration<Rep, Period> rel_timeout,
+               Ts&&... xs) {
+    detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
+    type_check(dest, args_token);
+    if (dest) {
+      auto& clock = dptr()->system().clock();
+      auto timeout = clock.now() + rel_timeout;
+      clock.schedule_message(timeout, actor_cast<strong_actor_ptr>(dest),
+                             make_mailbox_element(dptr()->ctrl(),
+                                                  make_message_id(P), no_stages,
+                                                  std::forward<Ts>(xs)...));
+    }
+  }
+
+  /// Sends a message after a relative timeout.
   template <class Rep = int, class Period = std::ratio<1>, class Dest = actor,
             class... Ts>
   void delayed_send(const group& dest, std::chrono::duration<Rep, Period> rtime,
@@ -194,6 +167,21 @@ public:
   }
 
 private:
+  template <class Dest, class ArgTypes>
+  static void type_check(const Dest&, ArgTypes) {
+    static_assert(!statically_typed<Subtype>() || statically_typed<Dest>(),
+                  "statically typed actors are only allowed to send() to other "
+                  "statically typed actors; use anon_send() or request() when "
+                  "communicating with dynamically typed actors");
+    using rt = response_type_unbox<signatures_of_t<Dest>, ArgTypes>;
+    static_assert(rt::valid, "receiver does not accept given message");
+    // TODO: this only checks one way, we should check for loops
+    static_assert(is_void_response<typename rt::type>::value
+                    || response_type_unbox<signatures_of_t<Subtype>,
+                                           typename rt::type>::valid,
+                  "this actor does not accept the response message");
+  }
+
   Subtype* dptr() {
     return static_cast<Subtype*>(this);
   }
