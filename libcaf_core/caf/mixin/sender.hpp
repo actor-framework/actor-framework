@@ -154,15 +154,13 @@ public:
   template <message_priority P = message_priority::normal, class Dest = actor,
             class Rep = int, class Period = std::ratio<1>, class... Ts>
   void delayed_anon_send(const Dest& dest,
-                         std::chrono::duration<Rep, Period> rtime, Ts&&... xs)
-    CAF_DEPRECATED_MSG("use the free function instead") {
+                         std::chrono::duration<Rep, Period> rtime, Ts&&... xs) {
     caf::delayed_anon_send<P>(dest, rtime, std::forward<Ts>(xs)...);
   }
 
   template <class Rep = int, class Period = std::ratio<1>, class... Ts>
   void delayed_anon_send(const group& dest,
-                         std::chrono::duration<Rep, Period> rtime, Ts&&... xs)
-    CAF_DEPRECATED_MSG("use the free function instead") {
+                         std::chrono::duration<Rep, Period> rtime, Ts&&... xs) {
     caf::delayed_anon_send(dest, rtime, std::forward<Ts>(xs)...);
   }
 
@@ -189,4 +187,3 @@ private:
 
 } // namespace mixin
 } // namespace caf
-
