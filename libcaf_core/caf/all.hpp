@@ -34,6 +34,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/after.hpp"
 #include "caf/atom.hpp"
+#include "caf/attach_continuous_stream_source.hpp"
 #include "caf/attach_stream_source.hpp"
 #include "caf/attachable.hpp"
 #include "caf/behavior.hpp"

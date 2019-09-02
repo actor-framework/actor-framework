@@ -495,9 +495,7 @@ public:
                        std::move(pull), std::move(done), std::move(fin), token);
   }
 
-  /// Creates a new continuous stream source by instantiating the default
-  /// source implementation with `Driver. `The returned manager is not
-  /// connected to any slot and thus not stored by the actor automatically.
+  /// @deprecated Please use `attach_continuous_stream_source` instead.
   template <class Driver, class Init, class Pull, class Done,
             class Finalize = unit_t>
   typename Driver::source_ptr_type
@@ -510,9 +508,7 @@ public:
     return mgr;
   }
 
-  /// Creates a new continuous stream source by instantiating the default
-  /// source implementation with `Driver. `The returned manager is not
-  /// connected to any slot and thus not stored by the actor automatically.
+  /// @deprecated Please use `attach_continuous_stream_source` instead.
   template <class Init, class Pull, class Done, class Finalize = unit_t,
             class DownstreamManager = broadcast_downstream_manager<
               typename stream_source_trait_t<Pull>::output>>
