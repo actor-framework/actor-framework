@@ -420,14 +420,7 @@ public:
 
   // -- stream management ------------------------------------------------------
 
-  /// Creates a new stream source by instantiating the default source
-  /// implementation with `Driver`.
-  /// @param xs User-defined handshake payload.
-  /// @param init Function object for initializing the state of the source.
-  /// @param pull Generator function object for producing downstream messages.
-  /// @param done Predicate returning `true` when generator is done.
-  /// @param fin Cleanup handler.
-  /// @returns The allocated `stream_manager` and the output slot.
+  /// @deprecated Please use `attach_stream_source` instead.
   template <class Driver, class... Ts, class Init, class Pull, class Done,
             class Finalize = unit_t>
   make_source_result_t<typename Driver::downstream_manager_type, Ts...>
@@ -441,13 +434,7 @@ public:
     return {slot, std::move(mgr)};
   }
 
-  /// Creates a new stream source from given arguments.
-  /// @param xs User-defined handshake payload.
-  /// @param init Function object for initializing the state of the source.
-  /// @param pull Generator function object for producing downstream messages.
-  /// @param done Predicate returning `true` when generator is done.
-  /// @param fin Cleanup handler.
-  /// @returns The allocated `stream_manager` and the output slot.
+  /// @deprecated Please use `attach_stream_source` instead.
   template <class... Ts, class Init, class Pull, class Done,
             class Finalize = unit_t,
             class DownstreamManager = broadcast_downstream_manager<
@@ -461,6 +448,7 @@ public:
                                std::move(done), std::move(fin));
   }
 
+  /// @deprecated Please use `attach_stream_source` instead.
   template <class Init, class Pull, class Done, class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Pull>,
             class Trait = stream_source_trait_t<Pull>>
@@ -472,7 +460,7 @@ public:
                        token);
   }
 
-  /// Creates a new stream source and adds `dest` as first outbound path to it.
+  /// @deprecated Please use `attach_stream_source` instead.
   template <class ActorHandle, class... Ts, class Init, class Pull, class Done,
             class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Pull>,
@@ -493,7 +481,7 @@ public:
     return {slot, std::move(mgr)};
   }
 
-  /// Creates a new stream source and adds `dest` as first outbound path to it.
+  /// @deprecated Please use `attach_stream_source` instead.
   template <class ActorHandle, class Init, class Pull, class Done,
             class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Pull>,

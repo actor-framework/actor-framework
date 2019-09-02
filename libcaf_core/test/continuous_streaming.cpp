@@ -50,7 +50,8 @@ VARARGS_TESTEE(file_reader, size_t buf_size) {
     [=](string& fname) -> output_stream<int, string> {
       CAF_CHECK_EQUAL(fname, "numbers.txt");
       CAF_CHECK_EQUAL(self->mailbox().empty(), true);
-      return self->make_source(
+      return attach_stream_source(
+        self,
         // forward file name in handshake to next stage
         std::forward_as_tuple(std::move(fname)),
         // initialize state

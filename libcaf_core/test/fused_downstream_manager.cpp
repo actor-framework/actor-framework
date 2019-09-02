@@ -16,7 +16,9 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE fused_streaming
+#define CAF_SUITE fused_downstream_manager
+
+#include "caf/fused_downstream_manager.hpp"
 
 #include "caf/test/dsl.hpp"
 
@@ -26,7 +28,6 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/fused_downstream_manager.hpp"
 #include "caf/stateful_actor.hpp"
 
 using std::string;
@@ -56,48 +57,38 @@ void push(std::deque<T>& xs, downstream<T>& out, size_t num) {
 
 VARARGS_TESTEE(int_file_reader, size_t buf_size) {
   using buf = std::deque<int32_t>;
-  return {
-    [=](string& fname) -> output_stream<int32_t> {
-      CAF_CHECK_EQUAL(fname, "numbers.txt");
-      return self->make_source(
-        // initialize state
-        [=](buf& xs) {
-          xs.resize(buf_size);
-          std::iota(xs.begin(), xs.end(), 1);
-        },
-        // get next element
-        [](buf& xs, downstream<int32_t>& out, size_t num) {
-          push(xs, out, num);
-        },
-        // check whether we reached the end
-        [=](const buf& xs) {
-          return xs.empty();
-        });
-    }
-  };
+  return {[=](string& fname) -> output_stream<int32_t> {
+    CAF_CHECK_EQUAL(fname, "numbers.txt");
+    return attach_stream_source(
+      self,
+      // initialize state
+      [=](buf& xs) {
+        xs.resize(buf_size);
+        std::iota(xs.begin(), xs.end(), 1);
+      },
+      // get next element
+      [](buf& xs, downstream<int32_t>& out, size_t num) { push(xs, out, num); },
+      // check whether we reached the end
+      [=](const buf& xs) { return xs.empty(); });
+  }};
 }
 
 VARARGS_TESTEE(string_file_reader, size_t buf_size) {
   using buf = std::deque<string>;
-  return {
-    [=](string& fname) -> output_stream<string> {
-      CAF_CHECK_EQUAL(fname, "strings.txt");
-      return self->make_source(
-        // initialize state
-        [=](buf& xs) {
-          for (size_t i = 0; i < buf_size; ++i)
-            xs.emplace_back("some string data");
-        },
-        // get next element
-        [](buf& xs, downstream<string>& out, size_t num) {
-          push(xs, out, num);
-        },
-        // check whether we reached the end
-        [=](const buf& xs) {
-          return xs.empty();
-        });
-    }
-  };
+  return {[=](string& fname) -> output_stream<string> {
+    CAF_CHECK_EQUAL(fname, "strings.txt");
+    return attach_stream_source(
+      self,
+      // initialize state
+      [=](buf& xs) {
+        for (size_t i = 0; i < buf_size; ++i)
+          xs.emplace_back("some string data");
+      },
+      // get next element
+      [](buf& xs, downstream<string>& out, size_t num) { push(xs, out, num); },
+      // check whether we reached the end
+      [=](const buf& xs) { return xs.empty(); });
+  }};
 }
 
 TESTEE_STATE(sum_up) {
@@ -106,30 +97,23 @@ TESTEE_STATE(sum_up) {
 
 TESTEE(sum_up) {
   using intptr = int*;
-  return {
-    [=](stream<int32_t>& in) {
-      return self->make_sink(
-        // input stream
-        in,
-        // initialize state
-        [=](intptr& x) {
-          x = &self->state.x;
-        },
-        // processing step
-        [](intptr& x, int32_t y) {
-          *x += y;
-        },
-        // cleanup and produce result message
-        [=](intptr&, const error&) {
-          CAF_MESSAGE(self->name() << " is done");
-        }
-      );
-    },
-    [=](join_atom, actor src) {
-      CAF_MESSAGE(self->name() << " joins a stream");
-      self->send(self * src, join_atom::value, ints_atom::value);
-    }
-  };
+  return {[=](stream<int32_t>& in) {
+            return self->make_sink(
+              // input stream
+              in,
+              // initialize state
+              [=](intptr& x) { x = &self->state.x; },
+              // processing step
+              [](intptr& x, int32_t y) { *x += y; },
+              // cleanup and produce result message
+              [=](intptr&, const error&) {
+                CAF_MESSAGE(self->name() << " is done");
+              });
+          },
+          [=](join_atom, actor src) {
+            CAF_MESSAGE(self->name() << " joins a stream");
+            self->send(self * src, join_atom::value, ints_atom::value);
+          }};
 }
 
 TESTEE_STATE(collect) {
@@ -137,38 +121,35 @@ TESTEE_STATE(collect) {
 };
 
 TESTEE(collect) {
-  return {
-    [=](stream<string>& in) {
-      return self->make_sink(
-        // input stream
-        in,
-        // initialize state
-        [](unit_t&) {
-          // nop
-        },
-        // processing step
-        [=](unit_t&, string y) {
-          self->state.strings.emplace_back(std::move(y));
-        },
-        // cleanup and produce result message
-        [=](unit_t&, const error&) {
-          CAF_MESSAGE(self->name() << " is done");
-        }
-      );
-    },
-    [=](join_atom, actor src) {
-      CAF_MESSAGE(self->name() << " joins a stream");
-      self->send(self * src, join_atom::value, strings_atom::value);
-    }
-  };
+  return {[=](stream<string>& in) {
+            return self->make_sink(
+              // input stream
+              in,
+              // initialize state
+              [](unit_t&) {
+                // nop
+              },
+              // processing step
+              [=](unit_t&, string y) {
+                self->state.strings.emplace_back(std::move(y));
+              },
+              // cleanup and produce result message
+              [=](unit_t&, const error&) {
+                CAF_MESSAGE(self->name() << " is done");
+              });
+          },
+          [=](join_atom, actor src) {
+            CAF_MESSAGE(self->name() << " joins a stream");
+            self->send(self * src, join_atom::value, strings_atom::value);
+          }};
 }
 
 using int_downstream_manager = broadcast_downstream_manager<int>;
 
 using string_downstream_manager = broadcast_downstream_manager<string>;
 
-using fused_manager =
-  fused_downstream_manager<int_downstream_manager, string_downstream_manager>;
+using fused_manager = fused_downstream_manager<int_downstream_manager,
+                                               string_downstream_manager>;
 
 class fused_stage : public stream_manager {
 public:
@@ -226,30 +207,28 @@ TESTEE_STATE(stream_multiplexer) {
 
 TESTEE(stream_multiplexer) {
   self->state.stage = make_counted<fused_stage>(self);
-  return {
-    [=](join_atom, ints_atom) {
-      auto& stg = self->state.stage;
-      CAF_MESSAGE("received 'join' request for integers");
-      auto result = stg->add_unchecked_outbound_path<int>();
-      stg->out().assign<int_downstream_manager>(result);
-      return result;
-    },
-    [=](join_atom, strings_atom) {
-      auto& stg = self->state.stage;
-      CAF_MESSAGE("received 'join' request for strings");
-      auto result = stg->add_unchecked_outbound_path<string>();
-      stg->out().assign<string_downstream_manager>(result);
-      return result;
-    },
-    [=](const stream<int32_t>& in) {
-      CAF_MESSAGE("received handshake for integers");
-      return self->state.stage->add_unchecked_inbound_path(in);
-    },
-    [=](const stream<string>& in) {
-      CAF_MESSAGE("received handshake for strings");
-      return self->state.stage->add_unchecked_inbound_path(in);
-    }
-  };
+  return {[=](join_atom, ints_atom) {
+            auto& stg = self->state.stage;
+            CAF_MESSAGE("received 'join' request for integers");
+            auto result = stg->add_unchecked_outbound_path<int>();
+            stg->out().assign<int_downstream_manager>(result);
+            return result;
+          },
+          [=](join_atom, strings_atom) {
+            auto& stg = self->state.stage;
+            CAF_MESSAGE("received 'join' request for strings");
+            auto result = stg->add_unchecked_outbound_path<string>();
+            stg->out().assign<string_downstream_manager>(result);
+            return result;
+          },
+          [=](const stream<int32_t>& in) {
+            CAF_MESSAGE("received handshake for integers");
+            return self->state.stage->add_unchecked_inbound_path(in);
+          },
+          [=](const stream<string>& in) {
+            CAF_MESSAGE("received handshake for strings");
+            return self->state.stage->add_unchecked_inbound_path(in);
+          }};
 }
 
 struct config : actor_system_config {
@@ -260,11 +239,11 @@ struct config : actor_system_config {
 
 using fixture = test_coordinator_fixture<>;
 
-} // namespace <anonymous>
+} // namespace
 
 // -- unit tests ---------------------------------------------------------------
 
-CAF_TEST_FIXTURE_SCOPE(fused_streaming_tests, fixture)
+CAF_TEST_FIXTURE_SCOPE(fused_downstream_manager_tests, fixture)
 
 CAF_TEST(depth_3_pipeline_with_fork) {
   auto src1 = sys.spawn(int_file_reader, 50u);

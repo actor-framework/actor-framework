@@ -785,6 +785,38 @@ struct is_list_like {
                                 && !has_mapped_type_alias<T>::value;
 };
 
+template <class F, class... Ts>
+struct is_invocable {
+private:
+  template <class U>
+  static auto sfinae(U* f)
+    -> decltype((*f)(std::declval<Ts>()...), std::true_type());
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using sfinae_type = decltype(sfinae<F>(nullptr));
+
+public:
+  static constexpr bool value = sfinae_type::value;
+};
+
+template <class R, class F, class... Ts>
+struct is_invocable_r {
+private:
+  template <class U>
+  static auto sfinae(U* f)
+    -> std::is_same<R, decltype((*f)(std::declval<Ts>()...))>;
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using sfinae_type = decltype(sfinae<F>(nullptr));
+
+public:
+  static constexpr bool value = sfinae_type::value;
+};
+
 } // namespace detail
 } // namespace caf
 

@@ -26,6 +26,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/atom.hpp"
+#include "caf/attach_stream_source.hpp"
 #include "caf/broadcast_downstream_manager.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/stateful_actor.hpp"
@@ -36,13 +37,7 @@ using namespace caf;
 
 namespace {
 
-enum class level {
-  all,
-  trace,
-  debug,
-  warning,
-  error
-};
+enum class level { all, trace, debug, warning, error };
 
 using value_type = std::pair<level, string>;
 
@@ -55,7 +50,7 @@ struct select {
   }
 };
 
-using downstream_manager = broadcast_downstream_manager<value_type, level, select>;
+using manager_type = broadcast_downstream_manager<value_type, level, select>;
 
 using buf = std::vector<value_type>;
 
@@ -76,43 +71,38 @@ buf make_log(level lvl) {
 TESTEE_SETUP();
 
 TESTEE(log_producer) {
-  return {
-    [=](level lvl) -> output_stream<value_type> {
-      auto res = self->make_source(
-        // initialize state
-        [=](buf& xs) {
-          xs = make_log(lvl);
-        },
-        // get next element
-        [](buf& xs, downstream<value_type>& out, size_t num) {
-          CAF_MESSAGE("push " << num << " messages downstream");
-          auto n = std::min(num, xs.size());
-          for (size_t i = 0; i < n; ++i)
-            out.push(xs[i]);
-          xs.erase(xs.begin(), xs.begin() + static_cast<ptrdiff_t>(n));
-        },
-        // check whether we reached the end
-        [=](const buf& xs) {
-          if (xs.empty()) {
-            CAF_MESSAGE(self->name() << " is done");
-            return true;
-          }
-          return false;
-        },
-        unit,
-        policy::arg<downstream_manager>::value
-      );
-      auto& out = res.ptr()->out();
-      static_assert(std::is_same<decltype(out), downstream_manager&>::value,
-                    "source has wrong downstream_manager type");
-      out.set_filter(res.outbound_slot(), lvl);
-      return res;
-    }
-  };
+  return {[=](level lvl) -> output_stream<value_type> {
+    auto res = attach_stream_source(
+      self,
+      // initialize state
+      [=](buf& xs) { xs = make_log(lvl); },
+      // get next element
+      [](buf& xs, downstream<value_type>& out, size_t num) {
+        CAF_MESSAGE("push " << num << " messages downstream");
+        auto n = std::min(num, xs.size());
+        for (size_t i = 0; i < n; ++i)
+          out.push(xs[i]);
+        xs.erase(xs.begin(), xs.begin() + static_cast<ptrdiff_t>(n));
+      },
+      // check whether we reached the end
+      [=](const buf& xs) {
+        if (xs.empty()) {
+          CAF_MESSAGE(self->name() << " is done");
+          return true;
+        }
+        return false;
+      },
+      unit, policy::arg<manager_type>::value);
+    auto& out = res.ptr()->out();
+    static_assert(std::is_same<decltype(out), manager_type&>::value,
+                  "source has wrong manager_type type");
+    out.set_filter(res.outbound_slot(), lvl);
+    return res;
+  }};
 }
 
 TESTEE_STATE(log_dispatcher) {
-  stream_stage_ptr<value_type, downstream_manager> stage;
+  stream_stage_ptr<value_type, manager_type> stage;
 };
 
 TESTEE(log_dispatcher) {
@@ -126,23 +116,18 @@ TESTEE(log_dispatcher) {
       out.push(std::move(x));
     },
     // cleanup
-    [=](unit_t&, const error&) {
-      CAF_MESSAGE(self->name() << " is done");
-    },
-    policy::arg<downstream_manager>::value
-  );
-  return {
-    [=](join_atom, level lvl) {
-      auto& stg = self->state.stage;
-      CAF_MESSAGE("received 'join' request");
-      auto result = stg->add_outbound_path();
-      stg->out().set_filter(result, lvl);
-      return result;
-    },
-    [=](const stream<value_type>& in) {
-      self->state.stage->add_inbound_path(in);
-    }
-  };
+    [=](unit_t&, const error&) { CAF_MESSAGE(self->name() << " is done"); },
+    policy::arg<manager_type>::value);
+  return {[=](join_atom, level lvl) {
+            auto& stg = self->state.stage;
+            CAF_MESSAGE("received 'join' request");
+            auto result = stg->add_outbound_path();
+            stg->out().set_filter(result, lvl);
+            return result;
+          },
+          [=](const stream<value_type>& in) {
+            self->state.stage->add_inbound_path(in);
+          }};
 }
 
 TESTEE_STATE(log_consumer) {
@@ -150,26 +135,21 @@ TESTEE_STATE(log_consumer) {
 };
 
 TESTEE(log_consumer) {
-  return {
-    [=](stream<value_type>& in) {
-      return self->make_sink(
-        // input stream
-        in,
-        // initialize state
-        [=](unit_t&) {
-          // nop
-        },
-        // processing step
-        [=](unit_t&, value_type x) {
-          self->state.log.emplace_back(std::move(x));
-        },
-        // cleanup and produce result message
-        [=](unit_t&, const error&) {
-          CAF_MESSAGE(self->name() << " is done");
-        }
-      );
-    }
-  };
+  return {[=](stream<value_type>& in) {
+    return self->make_sink(
+      // input stream
+      in,
+      // initialize state
+      [=](unit_t&) {
+        // nop
+      },
+      // processing step
+      [=](unit_t&, value_type x) {
+        self->state.log.emplace_back(std::move(x));
+      },
+      // cleanup and produce result message
+      [=](unit_t&, const error&) { CAF_MESSAGE(self->name() << " is done"); });
+  }};
 }
 
 struct config : actor_system_config {
@@ -180,7 +160,7 @@ struct config : actor_system_config {
 
 using fixture = test_coordinator_fixture<config>;
 
-} // namespace <anonymous>
+} // namespace
 
 // -- unit tests ---------------------------------------------------------------
 
