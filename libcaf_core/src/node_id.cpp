@@ -213,7 +213,7 @@ error node_id::deserialize(deserializer& source) {
   }
   if (impl == atom("default")) {
     if (data_ == nullptr || data_->implementation_id() != atom("default"))
-      data_.reset(new default_data);
+      data_.reset(new default_data, false);
     return data_->deserialize(source);
   }
   return sec::unknown_type;
