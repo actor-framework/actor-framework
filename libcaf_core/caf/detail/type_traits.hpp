@@ -769,6 +769,19 @@ CAF_HAS_ALIAS_TRAIT(mapped_type);
 
 // -- constexpr functions for use in enable_if & friends -----------------------
 
+template <class List1, class List2>
+struct all_constructible : std::false_type {};
+
+template <>
+struct all_constructible<type_list<>, type_list<>> : std::true_type {};
+
+template <class T, class... Ts, class U, class... Us>
+struct all_constructible<type_list<T, Ts...>, type_list<U, Us...>> {
+  static constexpr bool value = std::is_constructible<T, U>::value
+                                && all_constructible<type_list<Ts...>,
+                                                     type_list<Us...>>::value;
+};
+
 /// Checks whether T behaves like `std::map`.
 template <class T>
 struct is_map_like {

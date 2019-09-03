@@ -34,8 +34,8 @@ template <class MPI>
 class composable_behavior_base;
 
 template <class... Xs, class... Ys>
-class composable_behavior_base<typed_mpi<detail::type_list<Xs...>,
-                                         output_tuple<Ys...>>> {
+class composable_behavior_base<
+  typed_mpi<detail::type_list<Xs...>, output_tuple<Ys...>>> {
 public:
   virtual ~composable_behavior_base() noexcept {
     // nop
@@ -44,16 +44,16 @@ public:
   virtual result<Ys...> operator()(param_t<Xs>...) = 0;
 
   // C++14 and later
-# if __cplusplus > 201103L
+#if __cplusplus > 201103L
   auto make_callback() {
     return [=](param_t<Xs>... xs) { return (*this)(std::move(xs)...); };
   }
-# else
+#else
   // C++11
-  std::function<result<Ys...> (param_t<Xs>...)> make_callback() {
+  std::function<result<Ys...>(param_t<Xs>...)> make_callback() {
     return [=](param_t<Xs>... xs) { return (*this)(std::move(xs)...); };
   }
-# endif
+#endif
 };
 
 /// Base type for composable actor states.
@@ -67,11 +67,7 @@ class composable_behavior<typed_actor<Clauses...>>
 public:
   using signatures = detail::type_list<Clauses...>;
 
-  using handle_type =
-    typename detail::tl_apply<
-      signatures,
-      typed_actor
-    >::type;
+  using handle_type = typename detail::tl_apply<signatures, typed_actor>::type;
 
   using actor_base = typename handle_type::base;
 

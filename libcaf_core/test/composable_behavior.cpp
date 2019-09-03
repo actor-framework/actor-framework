@@ -40,11 +40,9 @@ using i3_actor = typed_actor<replies_to<int, int, int>::with<int>>;
 
 using d_actor = typed_actor<replies_to<double>::with<double, double>>;
 
-using source_actor = typed_actor<
-  replies_to<open_atom>::with<output_stream<int>>>;
+using source_actor = typed_actor<replies_to<open_atom>::with<stream<int>>>;
 
-using stage_actor = typed_actor<
-  replies_to<stream<int>>::with<output_stream<int>>>;
+using stage_actor = typed_actor<replies_to<stream<int>>::with<stream<int>>>;
 
 using sink_actor = typed_actor<reacts_to<stream<int>>>;
 
@@ -92,7 +90,8 @@ struct foo_actor_state2
 };
 
 class source_actor_state : public composable_behavior<source_actor> {
-  result<output_stream<int>> operator()(open_atom) override {
+public:
+  result<stream<int>> operator()(open_atom) override {
     return attach_stream_source(
       self, [](size_t& counter) { counter = 0; },
       [](size_t& counter, downstream<int>& out, size_t hint) {
@@ -105,7 +104,8 @@ class source_actor_state : public composable_behavior<source_actor> {
 };
 
 class stage_actor_state : public composable_behavior<stage_actor> {
-  result<output_stream<int>> operator()(stream<int> in) override {
+public:
+  result<stream<int>> operator()(stream<int> in) override {
     return attach_stream_stage(
       self, in,
       [](unit_t&) {
@@ -119,6 +119,7 @@ class stage_actor_state : public composable_behavior<stage_actor> {
 };
 
 class sink_actor_state : public composable_behavior<sink_actor> {
+public:
   std::vector<int> buf;
 
   result<void> operator()(stream<int> in) override {
@@ -399,13 +400,26 @@ CAF_TEST(dynamic_spawning) {
 }
 
 CAF_TEST(streaming) {
-  // TODO: currently broken
-  // auto src = sys.spawn<source_actor_state>();
-  // auto stg = sys.spawn<stage_actor_state>();
-  // auto snk = sys.spawn<sink_actor_state>();
-  // auto pipeline = snk * stg * src;
-  // self->send(pipeline, open_atom::value);
-  // sched.run();
+  auto src = sys.spawn<source_actor_state>();
+  auto stg = sys.spawn<stage_actor_state>();
+  auto snk = sys.spawn<sink_actor_state>();
+  using src_to_stg = typed_actor<replies_to<open_atom>::with<stream<int>>>;
+  using stg_to_snk = typed_actor<reacts_to<stream<int>>>;
+  static_assert(std::is_same<decltype(stg * src), src_to_stg>::value,
+                "stg * src produces the wrong type");
+  static_assert(std::is_same<decltype(snk * stg), stg_to_snk>::value,
+                "stg * src produces the wrong type");
+  auto pipeline = snk * stg * src;
+  self->send(pipeline, open_atom::value);
+  run();
+  using sink_actor = composable_behavior_based_actor<sink_actor_state>;
+  auto& st = deref<sink_actor>(snk).state;
+  CAF_CHECK_EQUAL(st.buf.size(), 50u);
+  auto is_even = [](int x) { return x % 2 == 0; };
+  CAF_CHECK(std::all_of(st.buf.begin(), st.buf.end(), is_even));
+  anon_send_exit(src, exit_reason::user_shutdown);
+  anon_send_exit(stg, exit_reason::user_shutdown);
+  anon_send_exit(snk, exit_reason::user_shutdown);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

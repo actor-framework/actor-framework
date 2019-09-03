@@ -31,7 +31,6 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/make_message.hpp"
 #include "caf/message_builder.hpp"
-#include "caf/output_stream.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/stream.hpp"
 #include "caf/stream_slot.hpp"

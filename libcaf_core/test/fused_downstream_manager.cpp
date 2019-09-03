@@ -58,7 +58,7 @@ void push(std::deque<T>& xs, downstream<T>& out, size_t num) {
 
 VARARGS_TESTEE(int_file_reader, size_t buf_size) {
   using buf = std::deque<int32_t>;
-  return {[=](string& fname) -> output_stream<int32_t> {
+  return {[=](string& fname) -> result<stream<int32_t>> {
     CAF_CHECK_EQUAL(fname, "numbers.txt");
     return attach_stream_source(
       self,
@@ -76,7 +76,7 @@ VARARGS_TESTEE(int_file_reader, size_t buf_size) {
 
 VARARGS_TESTEE(string_file_reader, size_t buf_size) {
   using buf = std::deque<string>;
-  return {[=](string& fname) -> output_stream<string> {
+  return {[=](string& fname) -> result<stream<string>> {
     CAF_CHECK_EQUAL(fname, "strings.txt");
     return attach_stream_source(
       self,

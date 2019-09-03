@@ -73,7 +73,7 @@ buf make_log(level lvl) {
 TESTEE_SETUP();
 
 TESTEE(log_producer) {
-  return {[=](level lvl) -> output_stream<value_type> {
+  return {[=](level lvl) -> result<stream<value_type>> {
     auto res = attach_stream_source(
       self,
       // initialize state

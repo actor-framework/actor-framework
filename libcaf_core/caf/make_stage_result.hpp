@@ -18,19 +18,22 @@
 
 #pragma once
 
+#include <tuple>
+
+#include "caf/delegated.hpp"
+#include "caf/detail/implicit_conversions.hpp"
 #include "caf/fwd.hpp"
-#include "caf/output_stream.hpp"
+#include "caf/stream.hpp"
 #include "caf/stream_slot.hpp"
 #include "caf/stream_stage.hpp"
-
-#include "caf/detail/implicit_conversions.hpp"
 
 namespace caf {
 
 /// Returns a stream stage with the slot IDs of its first in- and outbound
 /// paths.
 template <class In, class DownstreamManager, class... Ts>
-class make_stage_result {
+class make_stage_result
+  : public delegated<stream<typename DownstreamManager::output_type>, Ts...> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -47,7 +50,10 @@ public:
   using stage_ptr_type = intrusive_ptr<stage_type>;
 
   /// The return type for `scheduled_actor::make_stage`.
-  using output_stream_type = output_stream<output_type, Ts...>;
+  using stream_type = stream<output_type>;
+
+  /// Type of user-defined handshake arguments.
+  using handshake_arguments = std::tuple<Ts...>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -67,27 +73,21 @@ public:
   make_stage_result& operator=(make_stage_result&&) = default;
   make_stage_result& operator=(const make_stage_result&) = default;
 
-  // -- conversion operators ---------------------------------------------------
-
-  inline operator output_stream_type() const noexcept {
-    return {};
-  }
-
   // -- properties -------------------------------------------------------------
 
-  inline stream_slot inbound_slot() const noexcept {
+  stream_slot inbound_slot() const noexcept {
     return inbound_slot_;
   }
 
-  inline stream_slot outbound_slot() const noexcept {
+  stream_slot outbound_slot() const noexcept {
     return outbound_slot_;
   }
 
-  inline stage_ptr_type& ptr() noexcept {
+  stage_ptr_type& ptr() noexcept {
     return ptr_;
   }
 
-  inline const stage_ptr_type& ptr() const noexcept {
+  const stage_ptr_type& ptr() const noexcept {
     return ptr_;
   }
 

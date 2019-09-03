@@ -253,34 +253,6 @@ CAF_TEST(typed_behavior_assignment) {
                                                      h5, h6, h7, h8));
 }
 
-CAF_TEST(composed_types) {
-  // message type for test message #1
-  auto msg_1 = tk<type_list<int>>();
-  // message type for test message #1
-  auto msg_2 = tk<type_list<double>>();
-  // interface type a
-  auto if_a = tk<type_list<replies_to<int>::with<double>,
-                           replies_to<double, double>::with<int, int>>>();
-  // interface type b
-  auto if_b = tk<type_list<replies_to<double>::with<std::string>>>();
-  // interface type c
-  auto if_c = tk<type_list<replies_to<int>::with_stream<double>>>();
-  // interface type b . a
-  auto if_ba = tk<typed_actor<replies_to<int>::with<std::string>>>();
-  // interface type b . c
-  auto if_bc = tk<typed_actor<replies_to<int>::with_stream<std::string>>>();
-  CAF_MESSAGE("check whether actors return the correct types");
-  auto nil = tk<none_t>();
-  auto dbl = tk<type_list<double>>();
-  //auto dbl_stream = tk<output_stream<double>>();
-  CAF_CHECK_EQUAL(res(if_a, msg_1), dbl);
-  CAF_CHECK_EQUAL(res(if_a, msg_2), nil);
-  //CAF_CHECK_EQUAL(res(if_c, msg_1), dbl_stream);
-  CAF_MESSAGE("check types of actor compositions");
-  CAF_CHECK_EQUAL(dot_op(if_b, if_a), if_ba);
-  CAF_CHECK_EQUAL(dot_op(if_b, if_c), if_bc);
-}
-
 struct foo {};
 struct bar {};
 bool operator==(const bar&, const bar&);

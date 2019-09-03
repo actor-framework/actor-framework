@@ -44,7 +44,6 @@
 #include "caf/make_source_result.hpp"
 #include "caf/make_stage_result.hpp"
 #include "caf/no_stages.hpp"
-#include "caf/output_stream.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/sec.hpp"

@@ -18,10 +18,9 @@
 
 #pragma once
 
+#include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
 #include "caf/replies_to.hpp"
-
-#include "caf/detail/type_list.hpp"
 
 namespace caf {
 
@@ -58,82 +57,36 @@ struct composed_type<detail::type_list<>, Ys, Zs, detail::type_list<Rs...>> {
 // end of inner loop Ys (Zs)
 template <class X, class... Xs, class Ys, class Rs>
 struct composed_type<detail::type_list<X, Xs...>, Ys, detail::type_list<>, Rs>
-    : composed_type<detail::type_list<Xs...>, Ys, Ys, Rs> {};
+  : composed_type<detail::type_list<Xs...>, Ys, Ys, Rs> {};
 
 // case #1
-template <class... In, class... Out, class... Xs, class Ys,
-          class... MapsTo, class... Zs, class... Rs>
-struct composed_type<detail::type_list<typed_mpi<detail::type_list<In...>,
-                                            output_tuple<Out...>>, Xs...>,
-                     Ys,
-                     detail::type_list<typed_mpi<detail::type_list<Out...>,
-                                            output_tuple<MapsTo...>>, Zs...>,
-                     detail::type_list<Rs...>>
-    : composed_type<detail::type_list<Xs...>, Ys, Ys,
-                    detail::type_list<Rs..., typed_mpi<detail::type_list<In...>,
-                                                  output_tuple<MapsTo...>>>> {};
-
-// case #2
-template <class... In, class... Out, class... Xs, class Ys,
-          class M, class... Ms, class... Zs, class... Rs>
-struct composed_type<detail::type_list<typed_mpi<detail::type_list<In...>,
-                                                 output_tuple<Out...>>, Xs...>,
-                     Ys,
-                     detail::type_list<typed_mpi<detail::type_list<Out...>,
-                                                 output_stream<M, Ms...>>,
-                                       Zs...>,
-                     detail::type_list<Rs...>>
-    : composed_type<detail::type_list<Xs...>, Ys, Ys,
-                    detail::type_list<Rs...,
-                                      typed_mpi<detail::type_list<In...>,
-                                                output_stream<M, Ms...>>>> {
-};
-
-// case #3
-template <class... In, class O, class... Out, class... Xs, class Ys,
-          class M, class... Ms, class... Zs, class... Rs>
-struct composed_type<detail::type_list<typed_mpi<detail::type_list<In...>,
-                                            output_stream<O, Out...>>, Xs...>,
-                     Ys,
-                     detail::type_list<typed_mpi<detail::type_list<O, Out...>,
-                                            output_tuple<M, Ms...>>, Zs...>,
-                     detail::type_list<Rs...>>
-    : composed_type<detail::type_list<Xs...>, Ys, Ys,
-                    detail::type_list<Rs...,
-                                      typed_mpi<detail::type_list<In...>,
-                                                output_stream<M, Ms...>>>> {
-};
-
-// case #4
-template <class... In, class O, class... Out, class... Xs, class Ys,
-          class M, class... Ms, class... Zs, class... Rs>
-struct composed_type<detail::type_list<typed_mpi<detail::type_list<In...>,
-                                            output_stream<O, Out...>>, Xs...>,
-                     Ys,
-                     detail::type_list<typed_mpi<detail::type_list<O, Out...>,
-                                            output_stream<M, Ms...>>, Zs...>,
-                     detail::type_list<Rs...>>
-    : composed_type<detail::type_list<Xs...>, Ys, Ys,
-                    detail::type_list<Rs...,
-                                      typed_mpi<detail::type_list<In...>,
-                                                output_stream<M, Ms...>>>> {
+template <class... In, class... Out, class... Xs, class Ys, class... MapsTo,
+          class... Zs, class... Rs>
+struct composed_type<
+  detail::type_list<typed_mpi<detail::type_list<In...>, output_tuple<Out...>>,
+                    Xs...>,
+  Ys,
+  detail::type_list<
+    typed_mpi<detail::type_list<Out...>, output_tuple<MapsTo...>>, Zs...>,
+  detail::type_list<Rs...>>
+  : composed_type<
+      detail::type_list<Xs...>, Ys, Ys,
+      detail::type_list<
+        Rs..., typed_mpi<detail::type_list<In...>, output_tuple<MapsTo...>>>> {
 };
 
 // default case (recurse over Zs)
-template <class In, class Out, class... Xs, class Ys,
-          class Unrelated, class MapsTo, class... Zs, class Rs>
-struct composed_type<detail::type_list<typed_mpi<In, Out>, Xs...>,
-                     Ys,
-                     detail::type_list<typed_mpi<Unrelated, MapsTo>, Zs...>,
-                     Rs>
-    : composed_type<detail::type_list<typed_mpi<In, Out>, Xs...>,
-                    Ys, detail::type_list<Zs...>, Rs> {};
+template <class In, class Out, class... Xs, class Ys, class Unrelated,
+          class MapsTo, class... Zs, class Rs>
+struct composed_type<detail::type_list<typed_mpi<In, Out>, Xs...>, Ys,
+                     detail::type_list<typed_mpi<Unrelated, MapsTo>, Zs...>, Rs>
+  : composed_type<detail::type_list<typed_mpi<In, Out>, Xs...>, Ys,
+                  detail::type_list<Zs...>, Rs> {};
 
 /// Convenience type alias.
 /// @relates composed_type
 template <class F, class G>
-using composed_type_t =
-  typename composed_type<G, F, F, detail::type_list<>>::type;
+using composed_type_t = typename composed_type<G, F, F,
+                                               detail::type_list<>>::type;
 
 } // namespace caf
-

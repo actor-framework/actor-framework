@@ -18,15 +18,17 @@
 
 #pragma once
 
-#include "caf/fwd.hpp"
-#include "caf/none.hpp"
-#include "caf/skip.hpp"
+#include <type_traits>
+
+#include "caf/delegated.hpp"
+#include "caf/detail/type_list.hpp"
+#include "caf/detail/type_traits.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
+#include "caf/fwd.hpp"
 #include "caf/message.hpp"
-#include "caf/delegated.hpp"
-
-#include "caf/detail/type_list.hpp"
+#include "caf/none.hpp"
+#include "caf/skip.hpp"
 
 namespace caf {
 
@@ -40,13 +42,15 @@ enum result_runtime_type {
 template <class... Ts>
 class result {
 public:
-  result(Ts... xs) : flag(rt_value), value(make_message(std::move(xs)...)) {
-    // nop
-  }
-
-  template <class U, class... Us>
-  result(U x, Us... xs) : flag(rt_value) {
-    init(std::move(x), std::move(xs)...);
+  // clang-format off
+  template <class... Us,
+            class = detail::enable_if_tt<
+                     detail::all_constructible<
+                       detail::type_list<Ts...>,
+                       detail::type_list<detail::decay_t<Us>...>>>>
+  // clang-format on
+  result(Us&&... xs) : flag(rt_value) {
+    value = make_message(Ts{std::forward<Us>(xs)}...);
   }
 
   template <class E, class = enable_if_has_make_error_t<E>>
@@ -58,16 +62,11 @@ public:
     // nop
   }
 
-  template <
-    class T,
-    class = typename std::enable_if<
-      sizeof...(Ts) == 1
-      && std::is_convertible<
-           T,
-           detail::tl_head_t<detail::type_list<Ts...>>
-         >::value
-    >::type
-  >
+  template <class T,
+            class = typename std::enable_if<
+              sizeof...(Ts) == 1
+              && std::is_convertible<
+                T, detail::tl_head_t<detail::type_list<Ts...>>>::value>::type>
   result(expected<T> x) {
     if (x) {
       flag = rt_value;

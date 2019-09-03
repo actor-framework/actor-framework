@@ -20,8 +20,6 @@
 
 #include <cstdint>
 
-#include "caf/output_stream.hpp"
-
 #include "caf/detail/comparable.hpp"
 
 namespace caf {
@@ -35,7 +33,7 @@ constexpr stream_slot invalid_stream_slot = 0;
 
 /// Maps two `stream_slot` values into a pair for storing sender and receiver
 /// slot information.
-struct stream_slots : detail::comparable<stream_slots>{
+struct stream_slots : detail::comparable<stream_slots> {
   stream_slot sender;
   stream_slot receiver;
 
@@ -46,8 +44,7 @@ struct stream_slots : detail::comparable<stream_slots>{
   }
 
   constexpr stream_slots(stream_slot sender_slot, stream_slot receiver_slot)
-      : sender(sender_slot),
-        receiver(receiver_slot) {
+    : sender(sender_slot), receiver(receiver_slot) {
     // nop
   }
 
@@ -82,7 +79,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  constexpr inbound_stream_slot(stream_slot value = 0): value_(value) {
+  constexpr inbound_stream_slot(stream_slot value = 0) : value_(value) {
     // nop
   }
 
@@ -117,25 +114,27 @@ public:
   /// Type of a single element.
   using output_type = OutputType;
 
-  /// The return type for `scheduled_actor::make_source`.
-  using output_stream_type = output_stream<output_type, HandshakeArgs...>;
+  /// Type of a stream over the elements.
+  using stream_type = stream<output_type>;
+
+  /// Type of user-defined handshake arguments.
+  using handshake_arguments = std::tuple<HandshakeArgs...>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  constexpr outbound_stream_slot(stream_slot value = 0): value_(value) {
+  constexpr outbound_stream_slot(stream_slot value = 0) : value_(value) {
     // nop
   }
 
   outbound_stream_slot(outbound_stream_slot&&) = default;
+
   outbound_stream_slot(const outbound_stream_slot&) = default;
+
   outbound_stream_slot& operator=(outbound_stream_slot&&) = default;
+
   outbound_stream_slot& operator=(const outbound_stream_slot&) = default;
 
   // -- conversion operators ---------------------------------------------------
-
-  constexpr operator output_stream_type() const noexcept {
-    return {};
-  }
 
   constexpr operator stream_slot() const noexcept {
     return value_;

@@ -48,7 +48,7 @@ TESTEE_STATE(file_reader) {
 };
 
 VARARGS_TESTEE(file_reader, size_t buf_size) {
-  return {[=](string& fname) -> output_stream<int, string> {
+  return {[=](string& fname) -> result<stream<int>, string> {
     CAF_CHECK_EQUAL(fname, "numbers.txt");
     CAF_CHECK_EQUAL(self->mailbox().empty(), true);
     return attach_stream_source(
