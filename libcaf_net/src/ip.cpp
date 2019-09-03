@@ -43,6 +43,10 @@
 #  include <sys/ioctl.h>
 #endif
 
+#ifdef CAF_WINDOWS
+#  pragma comment(lib, "IPHLPAPI.lib")
+#endif
+
 #ifndef HOST_NAME_MAX
 #  define HOST_NAME_MAX 255
 #endif
@@ -94,6 +98,15 @@ void find_by_addr(const vector<pair<string, ip_address>>& interfaces,
       results.push_back(p.second);
 }
 
+void find_localhost(const vector<pair<string, ip_address>>& interfaces,
+                    vector<ip_address>& results) {
+  auto v4_local = ip_address{{0}, {0x1}};
+  auto v6_local = ip_address{make_ipv4_address(127, 0, 0, 1)};
+  for (auto& p : interfaces)
+    if (p.second == v4_local || p.second == v6_local)
+      results.push_back(p.second);
+}
+
 } // namespace
 
 std::vector<ip_address> resolve(string_view host) {
@@ -140,20 +153,73 @@ std::string hostname() {
 #ifdef CAF_WINDOWS
 
 std::vector<ip_address> local_addresses(string_view host) {
+  using adapters_ptr = std::unique_ptr<IP_ADAPTER_ADDRESSES, void (*)(void*)>;
+  using wbuf_ptr = std::unique_ptr<IP_ADAPTER_ADDRESSES, void (*)(void*)>;
+  if (!host.empty() && host.compare(v4_any_addr) == 0)
+    return {ip_address{make_ipv4_address(0, 0, 0, 0)}};
+  if (!host.empty() && host.compare(v6_any_addr) == 0)
+    return {ip_address{}};
+  ULONG len = 0;
+  auto err = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, nullptr,
+                                  nullptr, &len);
+  if (err != ERROR_BUFFER_OVERFLOW) {
+    CAF_LOG_ERROR("failed to get adapter addresses buffer length");
+    return {};
+  }
+  auto adapters = adapters_ptr{reinterpret_cast<IP_ADAPTER_ADDRESSES*>(
+                                 ::new uint8_t[len]),
+                               free};
+  if (!adapters) {
+    CAF_LOG_ERROR("malloc failed");
+    return {};
+  }
+  // TODO: The API example propopses to try three times.
+  err = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, nullptr,
+                             adapters.get(), &len);
+  if (err != ERROR_SUCCESS) {
+    CAF_LOG_ERROR("failed to get adapter addresses");
+    return {};
+  }
+  char ip_buf[INET6_ADDRSTRLEN];
+  char name_buf[HOST_NAME_MAX];
+  std::vector<std::pair<std::string, ip_address>> interfaces;
+  for (auto* it = adapters.get(); it != nullptr; it = it->Next) {
+    memset(name_buf, 0, HOST_NAME_MAX);
+    WideCharToMultiByte(CP_ACP, 0, it->FriendlyName, wcslen(it->FriendlyName),
+                        name_buf, HOST_NAME_MAX, nullptr, nullptr);
+    std::string name{name_buf};
+    for (auto* addr = it->FirstUnicastAddress; addr != nullptr;
+         addr = addr->Next) {
+      memset(ip_buf, 0, INET6_ADDRSTRLEN);
+      getnameinfo(addr->Address.lpSockaddr, addr->Address.iSockaddrLength,
+                  ip_buf, sizeof(ip_buf), nullptr, 0, NI_NUMERICHOST);
+      ip_address ip;
+      if (auto err = parse(ip_buf, ip))
+        continue;
+      interfaces.emplace_back(name_buf, ip);
+    }
+  }
   std::vector<ip_address> results;
+  ip_address host_addr;
+  if (host.empty())
+    for (auto& p : interfaces)
+      results.push_back(std::move(p.second));
+  else if (host.compare(localhost) == 0)
+    find_localhost(interfaces, results);
+  else if (auto err = parse(host, host_addr))
+    find_by_name(interfaces, host, results);
+  else
+    find_by_addr(interfaces, host_addr, results);
   return results;
 }
 
 #else // CAF_WINDOWS
 
 std::vector<ip_address> local_addresses(string_view host) {
-  std::vector<ip_address> results;
-  // The string is not returned by getifaddrs, let's just do that ourselves.
-  if (host.compare(localhost) == 0)
-    return {ip_address{{0}, {0x1}},
-            ipv6_address{make_ipv4_address(127, 0, 0, 1)}};
-  if (host.compare(v4_any_addr) == 0 || host.compare(v6_any_addr) == 0)
-    return {ip_address{}};
+  if (!host.empty() && host.compare(v4_any_addr) == 0)
+    return { ip_address{ make_ipv4_address(0, 0, 0, 0) } };
+  if (!host.empty() && host.compare(v6_any_addr) == 0)
+    return { ip_address{} };
   ifaddrs* tmp = nullptr;
   if (getifaddrs(&tmp) != 0)
     return {};
@@ -176,10 +242,13 @@ std::vector<ip_address> local_addresses(string_view host) {
       interfaces.emplace_back(std::string{i->ifa_name}, ip);
     }
   }
+  std::vector<ip_address> results;
   ip_address host_addr;
   if (host.empty())
     for (auto& p : interfaces)
       results.push_back(std::move(p.second));
+  else if (host.compare(localhost) == 0)
+    find_localhost(interfaces, results);
   else if (auto err = parse(host, host_addr))
     find_by_name(interfaces, host, results);
   else

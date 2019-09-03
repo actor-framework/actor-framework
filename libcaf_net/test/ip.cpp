@@ -35,13 +35,15 @@ namespace {
 struct fixture : host_fixture {
   fixture() : v6_local{{0}, {0x1}} {
     v4_local = ip_address{make_ipv4_address(127, 0, 0, 1)};
+    v4_any_addr = ip_address{ make_ipv4_address(0, 0, 0, 0) };
   }
 
   bool contains(ip_address x) {
     return std::count(addrs.begin(), addrs.end(), x) > 0;
   }
 
-  ip_address any_addr;
+  ip_address v4_any_addr;
+  ip_address v6_any_addr;
   ip_address v4_local;
   ip_address v6_local;
 
@@ -70,16 +72,14 @@ CAF_TEST(resolve any) {
 }
 
 CAF_TEST(local addresses) {
-  // This is not that easy to test. There are few hard-coded addresses we can
-  // check.
-  CAF_MESSAGE("check: v6");
-  addrs = ip::local_addresses("::");
-  CAF_CHECK(!addrs.empty());
-  CAF_CHECK(contains(any_addr));
   CAF_MESSAGE("check: v4");
   addrs = ip::local_addresses("0.0.0.0");
   CAF_CHECK(!addrs.empty());
-  CAF_CHECK(contains(any_addr));
+  CAF_CHECK(contains(v4_any_addr));
+  CAF_MESSAGE("check: v6");
+  addrs = ip::local_addresses("::");
+  CAF_CHECK(!addrs.empty());
+  CAF_CHECK(contains(v6_any_addr));
   CAF_MESSAGE("check: localhost");
   addrs = ip::local_addresses("localhost");
   CAF_CHECK(!addrs.empty());
