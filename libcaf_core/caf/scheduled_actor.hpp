@@ -594,9 +594,7 @@ public:
                       std::move(fin), token);
   }
 
-  /// Returns a stream manager (implementing a continuous stage) without in- or
-  /// outbound path. The returned manager is not connected to any slot and thus
-  /// not stored by the actor automatically.
+  /// @deprecated Please use `attach_continuous_stream_stage` instead.
   template <class Driver, class... Ts>
   typename Driver::stage_ptr_type make_continuous_stage(Ts&&... xs) {
     auto ptr = detail::make_stream_stage<Driver>(this, std::forward<Ts>(xs)...);
@@ -604,6 +602,7 @@ public:
     return ptr;
   }
 
+  /// @deprecated Please use `attach_continuous_stream_stage` instead.
   template <class Init, class Fun, class Cleanup,
             class DownstreamManager = default_downstream_manager_t<Fun>,
             class Trait = stream_stage_trait_t<Fun>>

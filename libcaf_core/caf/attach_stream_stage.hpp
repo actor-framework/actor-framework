@@ -27,6 +27,7 @@
 #include "caf/policy/arg.hpp"
 #include "caf/stream.hpp"
 #include "caf/stream_source.hpp"
+#include "caf/unit.hpp"
 
 namespace caf {
 

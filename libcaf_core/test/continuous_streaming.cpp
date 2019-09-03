@@ -25,6 +25,7 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/attach_continuous_stream_stage.hpp"
 #include "caf/attach_stream_sink.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/stateful_actor.hpp"
@@ -112,7 +113,8 @@ TESTEE_STATE(stream_multiplexer) {
 };
 
 TESTEE(stream_multiplexer) {
-  self->state.stage = self->make_continuous_stage(
+  self->state.stage = attach_continuous_stream_stage(
+    self,
     // initialize state
     [](unit_t&) {
       // nop

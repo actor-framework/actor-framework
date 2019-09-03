@@ -26,6 +26,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/atom.hpp"
+#include "caf/attach_continuous_stream_stage.hpp"
 #include "caf/attach_stream_sink.hpp"
 #include "caf/attach_stream_source.hpp"
 #include "caf/broadcast_downstream_manager.hpp"
@@ -107,7 +108,8 @@ TESTEE_STATE(log_dispatcher) {
 };
 
 TESTEE(log_dispatcher) {
-  self->state.stage = self->make_continuous_stage(
+  self->state.stage = attach_continuous_stream_stage(
+    self,
     // initialize state
     [](unit_t&) {
       // nop
