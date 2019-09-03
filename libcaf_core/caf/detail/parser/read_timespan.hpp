@@ -46,11 +46,11 @@ void read_timespan(state<Iterator, Sentinel>& ps, Consumer&& consumer,
   struct interim_consumer {
     using value_type = int64_t;
 
-    void value(int64_t y) {
+    void value(value_type y) {
       x = y;
     }
 
-    int64_t x = 0;
+    value_type x = 0;
   };
   interim_consumer ic;
   timespan result;

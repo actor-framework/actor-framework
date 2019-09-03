@@ -187,7 +187,7 @@ public:
               && !is_iterable<T>::value // pick begin()/end() over peek_all
               && !is_inspectable<stringification_inspector, T>::value
               && !has_to_string<T>::value>
-  consume(T& xs) {
+  consume(const T& xs) {
     result_ += '[';
     xs.peek_all(*this);
     result_ += ']';

@@ -336,7 +336,7 @@ void print(const config_value::dictionary& xs, indentation indent) {
       cout << indent << kvp.first << " = " << to_string(kvp.second) << '\n';
     }
   }
-};
+}
 
 } // namespace <anonymous>
 
