@@ -217,9 +217,9 @@ std::vector<ip_address> local_addresses(string_view host) {
 
 std::vector<ip_address> local_addresses(string_view host) {
   if (!host.empty() && host.compare(v4_any_addr) == 0)
-    return { ip_address{ make_ipv4_address(0, 0, 0, 0) } };
+    return {ip_address{make_ipv4_address(0, 0, 0, 0)}};
   if (!host.empty() && host.compare(v6_any_addr) == 0)
-    return { ip_address{} };
+    return {ip_address{}};
   ifaddrs* tmp = nullptr;
   if (getifaddrs(&tmp) != 0)
     return {};

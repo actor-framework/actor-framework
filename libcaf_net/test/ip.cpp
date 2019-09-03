@@ -35,7 +35,7 @@ namespace {
 struct fixture : host_fixture {
   fixture() : v6_local{{0}, {0x1}} {
     v4_local = ip_address{make_ipv4_address(127, 0, 0, 1)};
-    v4_any_addr = ip_address{ make_ipv4_address(0, 0, 0, 0) };
+    v4_any_addr = ip_address{make_ipv4_address(0, 0, 0, 0)};
   }
 
   bool contains(ip_address x) {
@@ -83,7 +83,7 @@ CAF_TEST(local addresses) {
   CAF_MESSAGE("check: localhost");
   addrs = ip::local_addresses("localhost");
   CAF_CHECK(!addrs.empty());
-  CAF_CHECK(contains(v4_local) && contains(v6_local));
+  CAF_CHECK(contains(v4_local) || contains(v6_local));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
