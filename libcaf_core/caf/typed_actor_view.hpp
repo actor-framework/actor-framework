@@ -112,23 +112,27 @@ public:
 
   /// Returns a pointer to the sender of the current message.
   /// @pre `current_mailbox_element() != nullptr`
-  inline strong_actor_ptr& current_sender() {
+  strong_actor_ptr& current_sender() {
     return self_->current_sender();
   }
 
   /// Returns a pointer to the currently processed mailbox element.
-  inline mailbox_element* current_mailbox_element() {
+  mailbox_element* current_mailbox_element() {
     return self_->current_mailbox_element();
   }
 
   /// @private
-  actor_control_block* ctrl() const {
+  actor_control_block* ctrl() const noexcept {
     CAF_ASSERT(self_ != nullptr);
     return actor_control_block::from(self_);;
   }
 
   /// @private
-  scheduled_actor* internal_ptr() const {
+  scheduled_actor* internal_ptr() const noexcept {
+    return self_;
+  }
+
+  operator scheduled_actor*() const noexcept {
     return self_;
   }
 
@@ -137,4 +141,3 @@ private:
 };
 
 } // namespace caf
-

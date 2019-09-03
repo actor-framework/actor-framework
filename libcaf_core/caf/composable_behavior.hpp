@@ -18,12 +18,12 @@
 
 #pragma once
 
-#include "caf/param.hpp"
+#include "caf/abstract_composable_behavior.hpp"
 #include "caf/behavior.hpp"
+#include "caf/param.hpp"
 #include "caf/replies_to.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_actor_pointer.hpp"
-#include "caf/abstract_composable_behavior.hpp"
 
 namespace caf {
 
@@ -106,4 +106,3 @@ public:
 };
 
 } // namespace caf
-

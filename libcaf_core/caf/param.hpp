@@ -84,15 +84,27 @@ private:
   flag flag_;
 };
 
-/// Convenience alias that wraps `T` into `param<T>`
-/// unless `T` is arithmetic or an atom constant.
+/// Converts `T` to `param<T>` unless `T` is arithmetic, an atom constant, or
+/// a stream handshake.
 template <class T>
-using param_t =
-  typename std::conditional<
-    std::is_arithmetic<T>::value || is_atom_constant<T>::value,
-    T,
-    param<T>
-  >::type;
+struct add_param : std::conditional<std::is_arithmetic<T>::value, T, param<T>> {
+  // nop
+};
+
+template <atom_value V>
+struct add_param<atom_constant<V>> {
+  using type = atom_constant<V>;
+};
+
+template <class T>
+struct add_param<stream<T>> {
+  using type = stream<T>;
+};
+
+/// Convenience alias that wraps `T` into `param<T>` unless `T` is arithmetic,
+/// a stream handshake or an atom constant.
+template <class T>
+using param_t = typename add_param<T>::type;
 
 /// Unpacks `param<T>` to `T`.
 template <class T>
@@ -112,4 +124,3 @@ struct param_decay {
 };
 
 } // namespace caf
-
