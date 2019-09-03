@@ -26,6 +26,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/atom.hpp"
+#include "caf/attach_stream_sink.hpp"
 #include "caf/attach_stream_source.hpp"
 #include "caf/broadcast_downstream_manager.hpp"
 #include "caf/event_based_actor.hpp"
@@ -136,7 +137,8 @@ TESTEE_STATE(log_consumer) {
 
 TESTEE(log_consumer) {
   return {[=](stream<value_type>& in) {
-    return self->make_sink(
+    return attach_stream_sink(
+      self,
       // input stream
       in,
       // initialize state

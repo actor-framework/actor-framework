@@ -2,7 +2,7 @@
  *     Basic, non-interactive streaming example for processing integers.      *
  ******************************************************************************/
 
-// Manual refs: lines 17-46, 48-78, 80-106, 120-124 (Streaming)
+// Manual refs: lines 17-46, 48-78, 80-107, 121-125 (Streaming)
 
 #include <iostream>
 #include <vector>
@@ -81,7 +81,8 @@ behavior int_sink(event_based_actor* self) {
   return {[=](stream<int> in) {
     // Create a stream manager for implementing a stream sink. Once more, we
     // have to provide three functions: Initializer, Consumer, Finalizer.
-    return self->make_sink(
+    return attach_stream_sink(
+      self,
       // Our input source.
       in,
       // Initializer. Here, we store all values we receive. Note that streams

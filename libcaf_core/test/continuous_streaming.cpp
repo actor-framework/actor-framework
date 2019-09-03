@@ -25,6 +25,7 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/attach_stream_sink.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/stateful_actor.hpp"
 
@@ -46,39 +47,37 @@ TESTEE_STATE(file_reader) {
 };
 
 VARARGS_TESTEE(file_reader, size_t buf_size) {
-  return {
-    [=](string& fname) -> output_stream<int, string> {
-      CAF_CHECK_EQUAL(fname, "numbers.txt");
-      CAF_CHECK_EQUAL(self->mailbox().empty(), true);
-      return attach_stream_source(
-        self,
-        // forward file name in handshake to next stage
-        std::forward_as_tuple(std::move(fname)),
-        // initialize state
-        [=](unit_t&) {
-          auto& xs = self->state.buf;
-          xs.resize(buf_size);
-          std::iota(xs.begin(), xs.end(), 1);
-        },
-        // get next element
-        [=](unit_t&, downstream<int>& out, size_t num) {
-          auto& xs = self->state.buf;
-          CAF_MESSAGE("push " << num << " messages downstream");
-          auto n = std::min(num, xs.size());
-          for (size_t i = 0; i < n; ++i)
-            out.push(xs[i]);
-          xs.erase(xs.begin(), xs.begin() + static_cast<ptrdiff_t>(n));
-        },
-        // check whether we reached the end
-        [=](const unit_t&) {
-          if (self->state.buf.empty()) {
-            CAF_MESSAGE(self->name() << " is done");
-            return true;
-          }
-          return false;
-        });
-    }
-  };
+  return {[=](string& fname) -> output_stream<int, string> {
+    CAF_CHECK_EQUAL(fname, "numbers.txt");
+    CAF_CHECK_EQUAL(self->mailbox().empty(), true);
+    return attach_stream_source(
+      self,
+      // forward file name in handshake to next stage
+      std::forward_as_tuple(std::move(fname)),
+      // initialize state
+      [=](unit_t&) {
+        auto& xs = self->state.buf;
+        xs.resize(buf_size);
+        std::iota(xs.begin(), xs.end(), 1);
+      },
+      // get next element
+      [=](unit_t&, downstream<int>& out, size_t num) {
+        auto& xs = self->state.buf;
+        CAF_MESSAGE("push " << num << " messages downstream");
+        auto n = std::min(num, xs.size());
+        for (size_t i = 0; i < n; ++i)
+          out.push(xs[i]);
+        xs.erase(xs.begin(), xs.begin() + static_cast<ptrdiff_t>(n));
+      },
+      // check whether we reached the end
+      [=](const unit_t&) {
+        if (self->state.buf.empty()) {
+          CAF_MESSAGE(self->name() << " is done");
+          return true;
+        }
+        return false;
+      });
+  }};
 }
 
 TESTEE_STATE(sum_up) {
@@ -86,32 +85,26 @@ TESTEE_STATE(sum_up) {
 };
 
 TESTEE(sum_up) {
-  return {
-    [=](stream<int>& in, const string& fname) {
-      CAF_CHECK_EQUAL(fname, "numbers.txt");
-      using int_ptr = int*;
-      return self->make_sink(
-        // input stream
-        in,
-        // initialize state
-        [=](int_ptr& x) {
-          x = &self->state.x;
-        },
-        // processing step
-        [](int_ptr& x , int y) {
-          *x += y;
-        },
-        // cleanup
-        [=](int_ptr&, const error&) {
-          CAF_MESSAGE(self->name() << " is done");
-        }
-      );
-    },
-    [=](join_atom atm, actor src) {
-      CAF_MESSAGE(self->name() << " joins a stream");
-      self->send(self * src, atm);
-    }
-  };
+  return {[=](stream<int>& in, const string& fname) {
+            CAF_CHECK_EQUAL(fname, "numbers.txt");
+            using int_ptr = int*;
+            return attach_stream_sink(
+              self,
+              // input stream
+              in,
+              // initialize state
+              [=](int_ptr& x) { x = &self->state.x; },
+              // processing step
+              [](int_ptr& x, int y) { *x += y; },
+              // cleanup
+              [=](int_ptr&, const error&) {
+                CAF_MESSAGE(self->name() << " is done");
+              });
+          },
+          [=](join_atom atm, actor src) {
+            CAF_MESSAGE(self->name() << " joins a stream");
+            self->send(self * src, atm);
+          }};
 }
 
 TESTEE_STATE(stream_multiplexer) {
@@ -125,14 +118,9 @@ TESTEE(stream_multiplexer) {
       // nop
     },
     // processing step
-    [](unit_t&, downstream<int>& out, int x) {
-      out.push(x);
-    },
+    [](unit_t&, downstream<int>& out, int x) { out.push(x); },
     // cleanup
-    [=](unit_t&, const error&) {
-      CAF_MESSAGE(self->name() << " is done");
-    }
-  );
+    [=](unit_t&, const error&) { CAF_MESSAGE(self->name() << " is done"); });
   return {
     [=](join_atom) {
       CAF_MESSAGE("received 'join' request");
@@ -152,7 +140,7 @@ TESTEE(stream_multiplexer) {
 
 using fixture = test_coordinator_fixture<>;
 
-} // namespace <anonymous>
+} // namespace
 
 // -- unit tests ---------------------------------------------------------------
 

@@ -25,6 +25,7 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/attach_stream_sink.hpp"
 #include "caf/attach_stream_stage.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/stateful_actor.hpp"
@@ -111,7 +112,8 @@ TESTEE_STATE(sum_up) {
 TESTEE(sum_up) {
   using intptr = int*;
   return {[=](stream<int>& in) {
-    return self->make_sink(
+    return attach_stream_sink(
+      self,
       // input stream
       in,
       // initialize state
@@ -131,7 +133,8 @@ TESTEE(delayed_sum_up) {
   return {[=](ok_atom) {
     self->become([=](stream<int>& in) {
       self->set_default_handler(print_and_drop);
-      return self->make_sink(
+      return attach_stream_sink(
+        self,
         // input stream
         in,
         // initialize state

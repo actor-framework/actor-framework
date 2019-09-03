@@ -35,6 +35,7 @@
 #include "caf/after.hpp"
 #include "caf/atom.hpp"
 #include "caf/attach_continuous_stream_source.hpp"
+#include "caf/attach_stream_sink.hpp"
 #include "caf/attach_stream_source.hpp"
 #include "caf/attach_stream_stage.hpp"
 #include "caf/attachable.hpp"

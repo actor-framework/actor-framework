@@ -521,6 +521,7 @@ public:
                                           std::move(done), std::move(fin));
   }
 
+  /// @deprecated Please use `attach_stream_sink` instead.
   template <class Driver, class... Ts>
   make_sink_result<typename Driver::input_type>
   make_sink(const stream<typename Driver::input_type>& src, Ts&&... xs) {
@@ -529,6 +530,7 @@ public:
     return {slot, std::move(mgr)};
   }
 
+  /// @deprecated Please use `attach_stream_sink` instead.
   template <class In, class Init, class Fun, class Finalize = unit_t,
             class Trait = stream_sink_trait_t<Fun>>
   make_sink_result<In> make_sink(const stream<In>& in, Init init, Fun fun,
