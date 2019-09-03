@@ -165,4 +165,4 @@ CAF_TEST(serialize and deserialize with std::vector<uint8_t>) {
   CAF_CHECK_EQUAL(data_to_serialize, deserialized_data);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END();
+CAF_TEST_FIXTURE_SCOPE_END()
