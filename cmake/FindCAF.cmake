@@ -71,7 +71,7 @@ foreach (comp ${CAF_FIND_COMPONENTS})
         message(WARNING "Found all.hpp for CAF core, but not build_config.hpp")
         set(CAF_${comp}_FOUND false)
       else()
-        list(APPEND CAF_INCLUDE_DIRS "${caf_build_header_path}")
+        list(APPEND CAF_INCLUDE_DIR_${UPPERCOMP} "${caf_build_header_path}")
       endif()
     endif()
     list(APPEND CAF_INCLUDE_DIRS "${CAF_INCLUDE_DIR_${UPPERCOMP}}")
@@ -84,7 +84,6 @@ foreach (comp ${CAF_FIND_COMPONENTS})
       find_library(CAF_LIBRARY_${UPPERCOMP}
                    NAMES
                      "caf_${comp}"
-                     "caf_${comp}_static"
                    HINTS
                      ${library_hints}
                      /usr/lib
@@ -120,3 +119,43 @@ mark_as_advanced(CAF_ROOT_DIR
                  CAF_LIBRARIES
                  CAF_INCLUDE_DIRS)
 
+if (CAF_core_FOUND AND NOT TARGET caf::core)
+  add_library(caf::core UNKNOWN IMPORTED)
+  set_target_properties(caf::core PROPERTIES
+    IMPORTED_LOCATION "${CAF_LIBRARY_CORE}"
+    INTERFACE_INCLUDE_DIRECTORIES "${CAF_INCLUDE_DIR_CORE}")
+endif ()
+if (CAF_io_FOUND AND NOT TARGET caf::io)
+  add_library(caf::io UNKNOWN IMPORTED)
+  set_target_properties(caf::io PROPERTIES
+    IMPORTED_LOCATION "${CAF_LIBRARY_IO}"
+    INTERFACE_INCLUDE_DIRECTORIES "${CAF_INCLUDE_DIR_IO}"
+    INTERFACE_LINK_LIBRARIES "caf::core")
+endif ()
+if (CAF_openssl_FOUND AND NOT TARGET caf::openssl)
+  add_library(caf::openssl UNKNOWN IMPORTED)
+  set_target_properties(caf::openssl PROPERTIES
+    IMPORTED_LOCATION "${CAF_LIBRARY_OPENSSL}"
+    INTERFACE_INCLUDE_DIRECTORIES "${CAF_INCLUDE_DIR_OPENSSL}"
+    INTERFACE_LINK_LIBRARIES "caf::core;caf::io")
+  if (NOT BUILD_SHARED_LIBS)
+    include(CMakeFindDependencyMacro)
+    set(OPENSSL_USE_STATIC_LIBS TRUE)
+    find_dependency(OpenSSL)
+    set_property(TARGET caf::openssl APPEND PROPERTY
+      INTERFACE_LINK_LIBRARIES "OpenSSL::SSL")
+  endif ()
+endif ()
+if (CAF_opencl_FOUND AND NOT TARGET caf::opencl)
+  add_library(caf::opencl UNKNOWN IMPORTED)
+  set_target_properties(caf::opencl PROPERTIES
+    IMPORTED_LOCATION "${CAF_LIBRARY_OPENCL}"
+    INTERFACE_INCLUDE_DIRECTORIES "${CAF_INCLUDE_DIR_OPENCL}"
+    INTERFACE_LINK_LIBRARIES "caf::core")
+endif ()
+if (CAF_test_FOUND AND NOT TARGET caf::test)
+  add_library(caf::test INTERFACE IMPORTED)
+  set_target_properties(caf::test PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${CAF_INCLUDE_DIR_TEST}"
+    INTERFACE_LINK_LIBRARIES "caf::core")
+endif ()
