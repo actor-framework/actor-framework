@@ -2,7 +2,7 @@
  *     Basic, non-interactive streaming example for processing integers.      *
  ******************************************************************************/
 
-// Manual refs: lines 17-46, 43-72, 73-100, 119-123 (Streaming)
+// Manual refs: lines 17-46, 48-78, 80-106, 120-124 (Streaming)
 
 #include <iostream>
 #include <vector>
@@ -51,7 +51,8 @@ behavior int_selector(event_based_actor* self) {
     // Create a stream manager for implementing a stream stage. Similar to
     // `make_source`, we need three functions: initialzer, processor, and
     // finalizer.
-    return self->make_stage(
+    return attach_stream_stage(
+      self,
       // Our input source.
       in,
       // Initializer. Here, we don't need any state and simply use unit_t.

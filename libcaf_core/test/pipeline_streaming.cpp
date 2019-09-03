@@ -25,6 +25,7 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/attach_stream_stage.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/stateful_actor.hpp"
 
@@ -153,7 +154,8 @@ TESTEE(broken_sink) {
 TESTEE(filter) {
   CAF_IGNORE_UNUSED(self);
   return {[=](stream<int>& in) {
-    return self->make_stage(
+    return attach_stream_stage(
+      self,
       // input stream
       in,
       // initialize state
@@ -173,7 +175,8 @@ TESTEE(filter) {
 TESTEE(doubler) {
   CAF_IGNORE_UNUSED(self);
   return {[=](stream<int>& in) {
-    return self->make_stage(
+    return attach_stream_stage(
+      self,
       // input stream
       in,
       // initialize state

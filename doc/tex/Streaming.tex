@@ -67,7 +67,7 @@ producing values, and \emph{predicate} for signaling the end of the stream.
 
 \subsection{Defining Stages}
 
-\cppexample[43-72]{streaming/integer_stream}
+\cppexample[48-78]{streaming/integer_stream}
 
 The function \lstinline^make_stage^ also takes three lambdas but additionally
 the received input stream handshake as first argument. Instead of a predicate,
@@ -78,7 +78,7 @@ data on its own and a stream terminates if no more sources exist.
 
 \subsection{Defining Sinks}
 
-\cppexample[73-100]{streaming/integer_stream}
+\cppexample[80-106]{streaming/integer_stream}
 
 The function \lstinline^make_sink^ is similar to \lstinline^make_stage^, except
 that is does not produce outputs.
@@ -87,7 +87,7 @@ that is does not produce outputs.
 
 \subsection{Initiating Streams}
 
-\cppexample[119-123]{streaming/integer_stream}
+\cppexample[120-124]{streaming/integer_stream}
 
 In our example, we always have a source \lstinline^int_source^ and a sink
 \lstinline^int_sink^ with an optional stage \lstinline^int_selector^. Sending

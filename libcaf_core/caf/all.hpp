@@ -36,6 +36,7 @@
 #include "caf/atom.hpp"
 #include "caf/attach_continuous_stream_source.hpp"
 #include "caf/attach_stream_source.hpp"
+#include "caf/attach_stream_stage.hpp"
 #include "caf/attachable.hpp"
 #include "caf/behavior.hpp"
 #include "caf/behavior_policy.hpp"

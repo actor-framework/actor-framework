@@ -538,6 +538,7 @@ public:
                              std::move(fin));
   }
 
+  /// @deprecated Please use `attach_stream_stage` instead.
   template <class Driver, class In, class... Ts, class... Us>
   make_stage_result_t<In, typename Driver::downstream_manager_type, Ts...>
   make_stage(const stream<In>& src, std::tuple<Ts...> xs, Us&&... ys) {
@@ -548,6 +549,7 @@ public:
     return {in, out, std::move(mgr)};
   }
 
+  /// @deprecated Please use `attach_stream_stage` instead.
   template <class In, class... Ts, class Init, class Fun,
             class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Fun>,
@@ -579,6 +581,7 @@ public:
                               std::move(fun), std::move(fin));
   }
 
+  /// @deprecated Please use `attach_stream_stage` instead.
   template <class In, class Init, class Fun, class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Fun>,
             class Trait = stream_stage_trait_t<Fun>>
