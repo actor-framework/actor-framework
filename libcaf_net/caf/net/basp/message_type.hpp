@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include <string>
 #include <cstdint>
+#include <string>
 
 namespace caf {
 namespace net {
@@ -43,12 +43,12 @@ enum class message_type : uint8_t {
   /// Tries to resolve a path on the receiving node.
   ///
   /// ![](resolve_request.png)
-  resolve_request= 0x02,
+  resolve_request = 0x02,
 
   /// Transmits the result of a path lookup.
   ///
   /// ![](resolve_response.png)
-  resolve_response= 0x03,
+  resolve_response = 0x03,
 
   /// Informs the receiving node that the sending node has created a proxy
   /// instance for one of its actors. Causes the receiving node to attach a

@@ -43,7 +43,8 @@ public:
   // -- interface functions ----------------------------------------------------
 
   template <class Parent>
-  error init(Parent&) {
+  error init(Parent& parent) {
+    system_ = &parent.system();
     return none;
   }
 
@@ -83,6 +84,10 @@ public:
     return state_;
   }
 
+  actor_system& system() const noexcept {
+    return *system_;
+  }
+
 private:
   // -- message handling -------------------------------------------------------
 
@@ -93,6 +98,9 @@ private:
   error handle_handshake(header hdr, span<const byte> payload);
 
   // -- member variables -------------------------------------------------------
+
+  /// Stores a pointer to the parent actor system.
+  actor_system* system_ = nullptr;
 
   /// Stores what we are expecting to receive next.
   connection_state state_ = connection_state::await_magic_number;

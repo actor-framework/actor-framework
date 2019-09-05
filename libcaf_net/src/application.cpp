@@ -21,8 +21,10 @@
 #include <vector>
 
 #include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/byte.hpp"
+#include "caf/defaults.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
@@ -46,9 +48,9 @@ expected<std::vector<byte>> application::serialize(actor_system& sys,
 }
 
 error application::handle(span<const byte> bytes) {
-  switch(state_) {
+  switch (state_) {
     case connection_state::await_magic_number: {
-      if (bytes.size() !=sizeof(uint32_t))
+      if (bytes.size() != sizeof(uint32_t))
         return ec::unexpected_number_of_bytes;
       auto xptr = reinterpret_cast<const uint32_t*>(bytes.data());
       auto x = detail::from_network_order(*xptr);
@@ -58,9 +60,33 @@ error application::handle(span<const byte> bytes) {
       return none;
     }
     case connection_state::await_handshake_header: {
+      if (bytes.size() != header_size)
+        return ec::unexpected_number_of_bytes;
+      hdr_ = header::from_bytes(bytes);
+      if (hdr_.type != message_type::handshake)
+        return ec::missing_handshake;
+      if (hdr_.operation_data != version)
+        return ec::version_mismatch;
+      if (hdr_.payload_len == 0)
+        return ec::missing_payload;
+      state_ = connection_state::await_handshake_payload;
       return none;
     }
     case connection_state::await_handshake_payload: {
+      node_id nid;
+      std::vector<std::string> app_ids;
+      binary_deserializer source{system(), bytes};
+      if (auto err = source(nid, app_ids))
+        return err;
+      if (!nid || app_ids.empty())
+        return ec::invalid_handshake;
+      auto ids = get_or(system().config(), "middleman.app-identifiers",
+                        defaults::middleman::app_identifiers);
+      auto predicate = [=](const std::string& x) {
+        return std::find(ids.begin(), ids.end(), x) != ids.end();
+      };
+      if (std::none_of(app_ids.begin(), app_ids.end(), predicate))
+        return ec::app_identifiers_mismatch;
       return none;
     }
     case connection_state::await_header: {

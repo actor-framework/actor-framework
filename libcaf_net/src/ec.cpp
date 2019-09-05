@@ -38,6 +38,7 @@ const char* ec_names[] = {
   "missing_handshake",
   "version_mismatch",
   "unimplemented",
+  "app_identifiers_mismatch",
 };
 
 } // namespace
