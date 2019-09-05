@@ -27,8 +27,8 @@ namespace basp {
 namespace {
 
 string_view message_type_names[] = {
-  "client_handshake", "server_handshake", "actor_message", "resolve_request",
-  "resolve_response", "monitor_message",  "down_message",  "heartbeat",
+  "handshake",       "actor_message", "resolve_request", "resolve_response",
+  "monitor_message", "down_message",  "heartbeat",
 };
 
 } // namespace

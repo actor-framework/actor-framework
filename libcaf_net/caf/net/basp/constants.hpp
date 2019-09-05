@@ -28,7 +28,10 @@ namespace basp {
 
 /// The current BASP version.
 /// @note BASP is not backwards compatible.
-constexpr uint64_t version = 4;
+constexpr uint64_t version = 1;
+
+/// The very first thing clients send before the first header.
+constexpr uint32_t magic_number = 0xCAFC0DE5;
 
 /// @}
 

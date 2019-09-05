@@ -16,44 +16,41 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/net/basp/header.hpp"
+#pragma once
 
-#include <cstring>
-
-#include "caf/detail/network_order.hpp"
+#include <string>
 
 namespace caf {
 namespace net {
 namespace basp {
 
-int header::compare(header other) const noexcept {
-  auto x = to_bytes(*this);
-  auto y = to_bytes(other);
-  return memcmp(x.data(), y.data(), header_size);
-}
+/// @addtogroup BASP
 
-header header::from_bytes(span<const byte> bytes) {
-  CAF_ASSERT(bytes.size() == header_size);
-  header result;
-  auto ptr = bytes.data();
-  result.type = *reinterpret_cast<const message_type*>(ptr);
-  auto payload_len = *reinterpret_cast<const uint32_t*>(ptr + 1);
-  result.payload_len = detail::from_network_order(payload_len);
-  auto operation_data = *reinterpret_cast<const uint64_t*>(ptr + 5);
-  result.operation_data = detail::from_network_order(operation_data);
-  return result;
-}
+/// Stores the state of a connection in a `basp::application`.
+enum class connection_state {
+  /// Indicates that we have just accepted or opened a connection and await the
+  /// magic number.
+  await_magic_number,
+  /// Indicates that we successfully checked the magic number and now wait for
+  /// the handshake header.
+  await_handshake_header,
+  /// Indicates that we received the header for the handshake and now wait for
+  /// the payload.
+  await_handshake_payload,
+  /// Indicates that a connection is established and this node is waiting for
+  /// the next BASP header.
+  await_header,
+  /// Indicates that this node has received a header with non-zero payload and
+  /// is waiting for the data.
+  await_payload,
+  /// Indicates that we are about to close this connection.
+  shutdown,
+};
 
-std::array<byte, header_size> to_bytes(header x) {
-  std::array<byte, header_size> result;
-  auto ptr = result.data();
-  *ptr = static_cast<byte>(x.type);
-  auto payload_len = detail::to_network_order(x.payload_len);
-  memcpy(ptr + 1, &payload_len, sizeof(payload_len));
-  auto operation_data = detail::to_network_order(x.operation_data);
-  memcpy(ptr + 5, &operation_data, sizeof(operation_data));
-  return result;
-}
+/// @relates connection_state
+std::string to_string(connection_state x);
+
+/// @}
 
 } // namespace basp
 } // namespace net

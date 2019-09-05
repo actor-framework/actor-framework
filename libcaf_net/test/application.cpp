@@ -16,45 +16,26 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/net/basp/header.hpp"
+#define CAF_SUITE application
 
-#include <cstring>
+#include "caf/net/basp/application.hpp"
 
-#include "caf/detail/network_order.hpp"
+#include "caf/test/dsl.hpp"
 
-namespace caf {
-namespace net {
-namespace basp {
+using namespace caf;
 
-int header::compare(header other) const noexcept {
-  auto x = to_bytes(*this);
-  auto y = to_bytes(other);
-  return memcmp(x.data(), y.data(), header_size);
+namespace {
+
+struct fixture {
+
+};
+
+} // namespace
+
+CAF_TEST_FIXTURE_SCOPE(application_tests, fixture)
+
+CAF_TEST(todo) {
+  // implement me
 }
 
-header header::from_bytes(span<const byte> bytes) {
-  CAF_ASSERT(bytes.size() == header_size);
-  header result;
-  auto ptr = bytes.data();
-  result.type = *reinterpret_cast<const message_type*>(ptr);
-  auto payload_len = *reinterpret_cast<const uint32_t*>(ptr + 1);
-  result.payload_len = detail::from_network_order(payload_len);
-  auto operation_data = *reinterpret_cast<const uint64_t*>(ptr + 5);
-  result.operation_data = detail::from_network_order(operation_data);
-  return result;
-}
-
-std::array<byte, header_size> to_bytes(header x) {
-  std::array<byte, header_size> result;
-  auto ptr = result.data();
-  *ptr = static_cast<byte>(x.type);
-  auto payload_len = detail::to_network_order(x.payload_len);
-  memcpy(ptr + 1, &payload_len, sizeof(payload_len));
-  auto operation_data = detail::to_network_order(x.operation_data);
-  memcpy(ptr + 5, &operation_data, sizeof(operation_data));
-  return result;
-}
-
-} // namespace basp
-} // namespace net
-} // namespace caf
+CAF_TEST_FIXTURE_SCOPE_END()

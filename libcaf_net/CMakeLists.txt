@@ -8,7 +8,10 @@ file(GLOB_RECURSE LIBCAF_NET_HDRS "caf/*.hpp")
 # list cpp files excluding platform-dependent files
 set(LIBCAF_NET_SRCS
   src/actor_proxy_impl.cpp
+  src/application.cpp
+  src/connection_state.cpp
   src/datagram_socket.cpp
+  src/ec.cpp
   src/endpoint_manager.cpp
   src/header.cpp
   src/host.cpp
@@ -21,8 +24,8 @@ set(LIBCAF_NET_SRCS
   src/socket.cpp
   src/socket_manager.cpp
   src/stream_socket.cpp
-  src/tcp_stream_socket.cpp
   src/tcp_accept_socket.cpp
+  src/tcp_stream_socket.cpp
 )
 
 add_custom_target(libcaf_net)

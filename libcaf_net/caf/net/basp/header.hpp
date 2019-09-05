@@ -18,12 +18,15 @@
 
 #pragma once
 
+#include <array>
 #include <cstdint>
 
+#include "caf/byte.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/meta/hex_formatted.hpp"
 #include "caf/meta/type_name.hpp"
 #include "caf/net/basp/message_type.hpp"
+#include "caf/span.hpp"
 
 namespace caf {
 namespace net {
@@ -37,7 +40,7 @@ struct header : detail::comparable<header> {
   uint64_t operation_data;
 
   constexpr header() noexcept
-    : type(message_type::client_handshake), payload_len(0), operation_data(0) {
+    : type(message_type::handshake), payload_len(0), operation_data(0) {
     // nop
   }
 
@@ -51,11 +54,17 @@ struct header : detail::comparable<header> {
 
   header& operator=(const header&) noexcept = default;
 
-  int compare(const header& other) const noexcept;
+  int compare(header other) const noexcept;
+
+  /// @pre `bytes.size() == header_size`
+  static header from_bytes(span<const byte> bytes);
 };
 
 /// Size of a BASP header in serialized form
 constexpr size_t header_size = 13;
+
+/// @relates header
+std::array<byte, header_size> to_bytes(header x);
 
 /// @relates header
 template <class Inspector>
