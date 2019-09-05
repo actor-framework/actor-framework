@@ -79,6 +79,10 @@ public:
   static expected<std::vector<byte>> serialize(actor_system& sys,
                                                const type_erased_tuple& x);
 
+  connection_state state() const noexcept {
+    return state_;
+  }
+
 private:
   // -- message handling -------------------------------------------------------
 
@@ -91,7 +95,7 @@ private:
   // -- member variables -------------------------------------------------------
 
   /// Stores what we are expecting to receive next.
-  connection_state state_ = connection_state::shutdown;
+  connection_state state_ = connection_state::await_magic_number;
 
   /// Caches the last header;we need to store it when waiting for the payload.
   header hdr_;
