@@ -173,21 +173,18 @@ void stringification_inspector::consume(const char* cstr) {
   result_ += '"';
 }
 
-void stringification_inspector::consume(float x) {
-  result_ += std::to_string(x);
+void stringification_inspector::consume(const std::vector<bool>& xs) {
+  result_ += '[';
+  for (bool x : xs) {
+    sep();
+    consume(x);
+  }
+  result_ += ']';
 }
 
-void stringification_inspector::consume(double x) {
-  result_ += std::to_string(x);
-}
-
-void stringification_inspector::consume(long double x) {
-  result_ += std::to_string(x);
-}
-
-void stringification_inspector::consume(int64_t x) {
+void stringification_inspector::consume_int(int64_t x) {
   if (x >= 0)
-    return consume(static_cast<uint64_t>(x));
+    return consume_int(static_cast<uint64_t>(x));
   result_ += '-';
   auto begin = result_.size();
   result_ += -(x % 10) + '0';
@@ -199,7 +196,7 @@ void stringification_inspector::consume(int64_t x) {
   std::reverse(result_.begin() + begin, result_.end());
 }
 
-void stringification_inspector::consume(uint64_t x) {
+void stringification_inspector::consume_int(uint64_t x) {
   auto begin = result_.size();
   result_ += (x % 10) + '0';
   x /= 10;

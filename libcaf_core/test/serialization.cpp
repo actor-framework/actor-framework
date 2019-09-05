@@ -554,7 +554,7 @@ SERIALIZATION_TEST(bool_vector_size_0) {
 
 SERIALIZATION_TEST(bool_vector_size_1) {
   std::vector<bool> xs{true};
-  CAF_CHECK_EQUAL(deep_to_string(xs), "[1]");
+  CAF_CHECK_EQUAL(deep_to_string(xs), "[true]");
   CAF_CHECK_EQUAL(xs, roundtrip(xs));
   CAF_CHECK_EQUAL(xs, msg_roundtrip(xs));
 }
@@ -563,11 +563,14 @@ SERIALIZATION_TEST(bool_vector_size_63) {
   std::vector<bool> xs;
   for (int i = 0; i < 63; ++i)
     xs.push_back(i % 3 == 0);
-  CAF_CHECK_EQUAL(deep_to_string(xs),
-                  "[1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, "
-                  "0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, "
-                  "1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, "
-                  "0, 1, 0, 0]");
+  CAF_CHECK_EQUAL(
+    deep_to_string(xs),
+    "[true, false, false, true, false, false, true, false, false, true, false, "
+    "false, true, false, false, true, false, false, true, false, false, true, "
+    "false, false, true, false, false, true, false, false, true, false, false, "
+    "true, false, false, true, false, false, true, false, false, true, false, "
+    "false, true, false, false, true, false, false, true, false, false, true, "
+    "false, false, true, false, false, true, false, false]");
   CAF_CHECK_EQUAL(xs, roundtrip(xs));
   CAF_CHECK_EQUAL(xs, msg_roundtrip(xs));
 }
@@ -577,10 +580,14 @@ SERIALIZATION_TEST(bool_vector_size_64) {
   for (int i = 0; i < 64; ++i)
     xs.push_back(i % 5 == 0);
   CAF_CHECK_EQUAL(deep_to_string(xs),
-                  "[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, "
-                  "0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, "
-                  "0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, "
-                  "0, 1, 0, 0, 0]");
+                  "[true, false, false, false, false, true, false, false, "
+                  "false, false, true, false, false, false, false, true, "
+                  "false, false, false, false, true, false, false, false, "
+                  "false, true, false, false, false, false, true, false, "
+                  "false, false, false, true, false, false, false, false, "
+                  "true, false, false, false, false, true, false, false, "
+                  "false, false, true, false, false, false, false, true, "
+                  "false, false, false, false, true, false, false, false]");
   CAF_CHECK_EQUAL(xs, roundtrip(xs));
   CAF_CHECK_EQUAL(xs, msg_roundtrip(xs));
 }
@@ -589,11 +596,14 @@ SERIALIZATION_TEST(bool_vector_size_65) {
   std::vector<bool> xs;
   for (int i = 0; i < 65; ++i)
     xs.push_back(!(i % 7 == 0));
-  CAF_CHECK_EQUAL(deep_to_string(xs),
-                  "[0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, "
-                  "1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, "
-                  "1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, "
-                  "1, 1, 1, 1, 0, 1]");
+  CAF_CHECK_EQUAL(
+    deep_to_string(xs),
+    "[false, true, true, true, true, true, true, false, true, true, true, "
+    "true, true, true, false, true, true, true, true, true, true, false, true, "
+    "true, true, true, true, true, false, true, true, true, true, true, true, "
+    "false, true, true, true, true, true, true, false, true, true, true, true, "
+    "true, true, false, true, true, true, true, true, true, false, true, true, "
+    "true, true, true, true, false, true]");
   CAF_CHECK_EQUAL(xs, roundtrip(xs));
   CAF_CHECK_EQUAL(xs, msg_roundtrip(xs));
 }

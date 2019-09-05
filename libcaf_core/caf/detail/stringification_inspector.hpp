@@ -22,6 +22,7 @@
 #include <functional>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/apply_args.hpp"
@@ -80,26 +81,23 @@ public:
 
   void consume(const char* cstr);
 
-  void consume(float x);
+  void consume(const std::vector<bool>& xs);
 
-  void consume(double x);
-
-  void consume(long double x);
-
-  void consume(int64_t x);
-
-  void consume(uint64_t x);
+  template <class T>
+  enable_if_t<std::is_floating_point<T>::value> consume(T x) {
+    result_ += std::to_string(x);
+  }
 
   template <class T>
   enable_if_t<std::is_integral<T>::value && std::is_signed<T>::value>
   consume(T x) {
-    consume(static_cast<int64_t>(x));
+    consume_int(static_cast<int64_t>(x));
   }
 
   template <class T>
   enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value>
   consume(T x) {
-    consume(static_cast<uint64_t>(x));
+    consume_int(static_cast<uint64_t>(x));
   }
 
   template <class Clock, class Duration>
@@ -165,6 +163,16 @@ public:
     result_ += '}';
   }
 
+  template <class Iterator>
+  void consume_range(Iterator first, Iterator last) {
+    result_ += '[';
+    while (first != last) {
+      sep();
+      consume(*first++);
+    }
+    result_ += ']';
+  }
+
   template <class T>
   enable_if_t<is_iterable<T>::value && !is_map_like<T>::value
               && !is_inspectable<stringification_inspector, T>::value
@@ -172,14 +180,12 @@ public:
               && !is_inspectable<stringification_inspector, T>::value
               && !has_to_string<T>::value>
   consume(const T& xs) {
-    result_ += '[';
-    // use a hand-written for loop instead of for-each to avoid
-    // range-loop-analysis warnings when using this function with vector<bool>
-    for (auto i = xs.begin(); i != xs.end(); ++i) {
-      sep();
-      consume(*i);
-    }
-    result_ += ']';
+    consume_range(xs.begin(), xs.end());
+  }
+
+  template <class T, size_t S>
+  void consume(const T (&xs)[S]) {
+    return consume_range(xs, xs + S);
   }
 
   template <class T>
@@ -191,26 +197,6 @@ public:
     result_ += '[';
     xs.peek_all(*this);
     result_ += ']';
-  }
-
-  template <class T>
-  void consume(const T* xs, size_t n) {
-    result_ += '(';
-    for (size_t i = 0; i < n; ++i) {
-      sep();
-      consume(xs[i]);
-    }
-    result_ += ')';
-  }
-
-  template <class T, size_t S>
-  void consume(const std::array<T, S>& xs) {
-    return consume(xs.data(), S);
-  }
-
-  template <class T, size_t S>
-  void consume(const T (&xs)[S]) {
-    return consume(xs, S);
   }
 
   template <class T>
@@ -304,6 +290,10 @@ public:
   }
 
 private:
+  void consume_int(int64_t x);
+
+  void consume_int(uint64_t x);
+
   std::string& result_;
 };
 
