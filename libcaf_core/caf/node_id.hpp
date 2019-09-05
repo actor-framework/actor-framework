@@ -133,6 +133,8 @@ public:
 
     // -- constructors, destructors, and assignment operators ------------------
 
+    uri_data() = default;
+
     explicit uri_data(uri value);
 
     // -- properties -----------------------------------------------------------

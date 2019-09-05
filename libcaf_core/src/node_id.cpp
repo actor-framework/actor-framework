@@ -211,9 +211,14 @@ error node_id::deserialize(deserializer& source) {
     data_.reset();
     return none;
   }
-  if (impl == atom("default")) {
-    if (data_ == nullptr || data_->implementation_id() != atom("default"))
-      data_.reset(new default_data, false);
+  if (impl == default_data::class_id) {
+    if (data_ == nullptr
+        || data_->implementation_id() != default_data::class_id)
+      data_ = make_counted<default_data>();
+    return data_->deserialize(source);
+  } else if (impl == uri_data::class_id) {
+    if (data_ == nullptr || data_->implementation_id() != uri_data::class_id)
+      data_ = make_counted<uri_data>();
     return data_->deserialize(source);
   }
   return sec::unknown_type;
