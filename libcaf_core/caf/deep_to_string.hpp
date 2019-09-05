@@ -18,47 +18,37 @@
 
 #pragma once
 
-#include <array>
-#include <tuple>
 #include <string>
-#include <utility>
-#include <functional>
-#include <type_traits>
+#include <tuple>
 
-#include "caf/atom.hpp"
-#include "caf/detail/apply_args.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/detail/stringification_inspector.hpp"
 
 namespace caf {
-
-class deep_to_string_t {
-public:
-  constexpr deep_to_string_t() {
-    // nop
-  }
-
-  template <class... Ts>
-  std::string operator()(Ts&&... xs) const {
-    std::string result;
-    detail::stringification_inspector f{result};
-    f(std::forward<Ts>(xs)...);
-    return result;
-  }
-};
 
 /// Unrolls collections such as vectors/maps, decomposes
 /// tuples/pairs/arrays, auto-escapes strings and calls
 /// `to_string` for user-defined types via argument-dependent
 /// loopkup (ADL). Any user-defined type that does not
 /// provide a `to_string` is mapped to `<unprintable>`.
-constexpr deep_to_string_t deep_to_string = deep_to_string_t{};
+template <class... Ts>
+std::string deep_to_string(const Ts&... xs) {
+  std::string result;
+  detail::stringification_inspector f{result};
+  f(xs...);
+  return result;
+}
+
+struct deep_to_string_t {
+  template <class... Ts>
+  std::string operator()(const Ts&... xs) const {
+    return deep_to_string(xs...);
+  }
+};
 
 /// Convenience function for `deep_to_string(std::forward_as_tuple(xs...))`.
 template <class... Ts>
-std::string deep_to_string_as_tuple(Ts&&... xs) {
-  return deep_to_string(std::forward_as_tuple(std::forward<Ts>(xs)...));
+std::string deep_to_string_as_tuple(const Ts&... xs) {
+  return deep_to_string(std::forward_as_tuple(xs...));
 }
 
 } // namespace caf
-

@@ -272,10 +272,10 @@ CAF_TEST(tuples_to_string) {
 }
 
 CAF_TEST(arrays_to_string) {
-  CAF_CHECK_EQUAL(msg_as_string(s1{}), "((10, 20, 30))");
+  CAF_CHECK_EQUAL(msg_as_string(s1{}), "([10, 20, 30])");
   auto msg2 = make_message(s2{});
   s2 tmp;
   tmp.value[0][1] = 100;
-  CAF_CHECK_EQUAL(to_string(msg2), "(((1, 10), (2, 20), (3, 30), (4, 40)))");
-  CAF_CHECK_EQUAL(msg_as_string(s3{}), "((1, 2, 3, 4))");
+  CAF_CHECK_EQUAL(to_string(msg2), "([[1, 10], [2, 20], [3, 30], [4, 40]])");
+  CAF_CHECK_EQUAL(msg_as_string(s3{}), "([1, 2, 3, 4])");
 }
