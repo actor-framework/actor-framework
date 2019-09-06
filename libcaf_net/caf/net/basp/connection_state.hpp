@@ -28,9 +28,6 @@ namespace basp {
 
 /// Stores the state of a connection in a `basp::application`.
 enum class connection_state {
-  /// Indicates that we have just accepted or opened a connection and await the
-  /// magic number.
-  await_magic_number,
   /// Indicates that we successfully checked the magic number and now wait for
   /// the handshake header.
   await_handshake_header,

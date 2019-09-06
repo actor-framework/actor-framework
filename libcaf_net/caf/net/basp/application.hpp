@@ -26,10 +26,12 @@
 #include "caf/byte.hpp"
 #include "caf/error.hpp"
 #include "caf/net/basp/connection_state.hpp"
+#include "caf/net/basp/constants.hpp"
 #include "caf/net/basp/header.hpp"
 #include "caf/net/basp/message_type.hpp"
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/node_id.hpp"
+#include "caf/serializer_impl.hpp"
 #include "caf/span.hpp"
 
 namespace caf {
@@ -40,11 +42,20 @@ class application {
 public:
   // -- member types -----------------------------------------------------------
 
+  using buffer_type = std::vector<byte>;
+
   // -- interface functions ----------------------------------------------------
 
   template <class Parent>
   error init(Parent& parent) {
+    // Initialize member variables.
     system_ = &parent.system();
+    // Write handshake.
+    if (auto err = generate_handshake())
+      return err;
+    auto hdr = to_bytes(header{message_type::handshake,
+                               static_cast<uint32_t>(buf_.size()), version});
+    parent.write_packet(hdr, buf_);
     return none;
   }
 
@@ -97,16 +108,22 @@ private:
 
   error handle_handshake(header hdr, span<const byte> payload);
 
+  /// Writes the handshake payload to `buf_`.
+  error generate_handshake();
+
   // -- member variables -------------------------------------------------------
 
   /// Stores a pointer to the parent actor system.
   actor_system* system_ = nullptr;
 
   /// Stores what we are expecting to receive next.
-  connection_state state_ = connection_state::await_magic_number;
+  connection_state state_ = connection_state::await_handshake_header;
 
   /// Caches the last header;we need to store it when waiting for the payload.
   header hdr_;
+
+  /// Re-usable buffer for storing payloads.
+  buffer_type buf_;
 
   /// Stores our own ID.
   node_id id_;

@@ -30,9 +30,6 @@ namespace basp {
 /// @note BASP is not backwards compatible.
 constexpr uint64_t version = 1;
 
-/// The very first thing clients send before the first header.
-constexpr uint32_t magic_number = 0xCAFC0DE5;
-
 /// @}
 
 } // namespace basp

@@ -49,16 +49,6 @@ expected<std::vector<byte>> application::serialize(actor_system& sys,
 
 error application::handle(span<const byte> bytes) {
   switch (state_) {
-    case connection_state::await_magic_number: {
-      if (bytes.size() != sizeof(uint32_t))
-        return ec::unexpected_number_of_bytes;
-      auto xptr = reinterpret_cast<const uint32_t*>(bytes.data());
-      auto x = detail::from_network_order(*xptr);
-      if (x != magic_number)
-        return ec::invalid_magic_number;
-      state_ = connection_state::await_handshake_header;
-      return none;
-    }
     case connection_state::await_handshake_header: {
       if (bytes.size() != header_size)
         return ec::unexpected_number_of_bytes;
@@ -87,6 +77,7 @@ error application::handle(span<const byte> bytes) {
       };
       if (std::none_of(app_ids.begin(), app_ids.end(), predicate))
         return ec::app_identifiers_mismatch;
+      state_ = connection_state::await_header;
       return none;
     }
     case connection_state::await_header: {
@@ -109,8 +100,13 @@ error application::handle(span<const byte> bytes) {
   }
 }
 
-error application::handle(header, span<const byte>) {
-  return ec::unimplemented;
+error application::handle(header hdr, span<const byte>) {
+  switch (hdr.type) {
+    case message_type::heartbeat:
+      return none;
+    default:
+      return ec::unimplemented;
+  }
 }
 
 error application::handle_handshake(header hdr, span<const byte> payload) {
@@ -127,6 +123,13 @@ error application::handle_handshake(header hdr, span<const byte> payload) {
   peer_id_ = std::move(peer_id);
   state_ = connection_state::await_header;
   return none;
+}
+
+error application::generate_handshake() {
+  serializer_impl<buffer_type> sink{system(), buf_};
+  return sink(system().node(),
+              get_or(system().config(), "middleman.app-identifiers",
+                     defaults::middleman::app_identifiers));
 }
 
 } // namespace basp

@@ -63,10 +63,9 @@ struct fixture : test_coordinator_fixture<> {
     input = to_buf(xs...);
   }
 
-  void handle_magic_number() {
-    CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_magic_number);
-    set_input(basp::magic_number);
-    REQUIRE_OK(app.handle_data(*this, input));
+  void write_packet(span<const byte> hdr, span<const byte> payload) {
+    output.insert(output.end(), hdr.begin(), hdr.end());
+    output.insert(output.end(), payload.begin(), payload.end());
   }
 
   void handle_handshake() {
@@ -80,6 +79,24 @@ struct fixture : test_coordinator_fixture<> {
     CAF_CHECK_EQUAL(app.state(),
                     basp::connection_state::await_handshake_payload);
     REQUIRE_OK(app.handle_data(*this, payload));
+  }
+
+  void consume_handshake() {
+    if (output.size() < basp::header_size)
+      CAF_FAIL("BASP application did not write a handshake header");
+    auto hdr = basp::header::from_bytes(output);
+    if (hdr.type != basp::message_type::handshake || hdr.payload_len == 0
+        || hdr.operation_data != basp::version)
+      CAF_FAIL("invalid handshake header");
+    node_id nid;
+    std::vector<std::string> app_ids;
+    binary_deserializer source{sys, output};
+    source.skip(basp::header_size);
+    if (auto err = source(nid, app_ids))
+      CAF_FAIL("unable to deserialize payload: " << sys.render(err));
+    if (source.remaining() > 0)
+      CAF_FAIL("trailing bytes after reading payload");
+    output.clear();
   }
 
   actor_system& system() {
@@ -99,36 +116,25 @@ struct fixture : test_coordinator_fixture<> {
 
 CAF_TEST_FIXTURE_SCOPE(application_tests, fixture)
 
-CAF_TEST(invalid magic number) {
-  CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_magic_number);
-  set_input(basp::magic_number + 1);
-  CAF_CHECK_EQUAL(app.handle_data(*this, input),
-                  basp::ec::invalid_magic_number);
-}
-
 CAF_TEST(missing handshake) {
-  handle_magic_number();
   CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_handshake_header);
   set_input(basp::header{basp::message_type::heartbeat, 0, 0});
   CAF_CHECK_EQUAL(app.handle_data(*this, input), basp::ec::missing_handshake);
 }
 
 CAF_TEST(version mismatch) {
-  handle_magic_number();
   CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_handshake_header);
   set_input(basp::header{basp::message_type::handshake, 0, 0});
   CAF_CHECK_EQUAL(app.handle_data(*this, input), basp::ec::version_mismatch);
 }
 
 CAF_TEST(missing payload in handshake) {
-  handle_magic_number();
   CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_handshake_header);
   set_input(basp::header{basp::message_type::handshake, 0, basp::version});
   CAF_CHECK_EQUAL(app.handle_data(*this, input), basp::ec::missing_payload);
 }
 
 CAF_TEST(invalid handshake) {
-  handle_magic_number();
   CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_handshake_header);
   node_id no_nid;
   std::vector<std::string> no_ids;
@@ -141,7 +147,6 @@ CAF_TEST(invalid handshake) {
 }
 
 CAF_TEST(app identifier mismatch) {
-  handle_magic_number();
   CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_handshake_header);
   std::vector<std::string> wrong_ids{"YOLO!!!"};
   auto payload = to_buf(mars, wrong_ids);
@@ -151,6 +156,16 @@ CAF_TEST(app identifier mismatch) {
   CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_handshake_payload);
   CAF_CHECK_EQUAL(app.handle_data(*this, payload),
                   basp::ec::app_identifiers_mismatch);
+}
+
+CAF_TEST(heartbeat message) {
+  handle_handshake();
+  consume_handshake();
+  CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_header);
+  auto bytes = to_bytes(basp::header{basp::message_type::heartbeat, 0, 0});
+  set_input(bytes);
+  REQUIRE_OK(app.handle_data(*this, input));
+  CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_header);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

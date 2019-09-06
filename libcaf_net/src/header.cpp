@@ -33,7 +33,7 @@ int header::compare(header other) const noexcept {
 }
 
 header header::from_bytes(span<const byte> bytes) {
-  CAF_ASSERT(bytes.size() == header_size);
+  CAF_ASSERT(bytes.size() >= header_size);
   header result;
   auto ptr = bytes.data();
   result.type = *reinterpret_cast<const message_type*>(ptr);
