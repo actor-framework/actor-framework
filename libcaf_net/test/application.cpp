@@ -158,6 +158,20 @@ CAF_TEST(app identifier mismatch) {
                   basp::ec::app_identifiers_mismatch);
 }
 
+CAF_TEST(repeated handshake) {
+  handle_handshake();
+  consume_handshake();
+  CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_header);
+  node_id no_nid;
+  std::vector<std::string> no_ids;
+  auto payload = to_buf(no_nid, no_ids);
+  set_input(basp::header{basp::message_type::handshake,
+                         static_cast<uint32_t>(payload.size()), basp::version});
+  CAF_CHECK_EQUAL(app.handle_data(*this, input), none);
+  CAF_CHECK_EQUAL(app.handle_data(*this, payload),
+                  basp::ec::unexpected_handshake);
+}
+
 CAF_TEST(heartbeat message) {
   handle_handshake();
   consume_handshake();

@@ -102,6 +102,8 @@ error application::handle(span<const byte> bytes) {
 
 error application::handle(header hdr, span<const byte>) {
   switch (hdr.type) {
+    case message_type::handshake:
+      return ec::unexpected_handshake;
     case message_type::heartbeat:
       return none;
     default:

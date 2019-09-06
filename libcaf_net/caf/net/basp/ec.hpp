@@ -36,6 +36,7 @@ enum class ec : uint8_t {
   illegal_state,
   invalid_handshake,
   missing_handshake,
+  unexpected_handshake,
   version_mismatch,
   unimplemented,
   app_identifiers_mismatch,
