@@ -42,6 +42,11 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
 )
 
 add_library(caf::opencl ALIAS libcaf_opencl)
+if (BUILD_SHARED_LIBS)
+  add_library(libcaf_opencl_shared ALIAS libcaf_opencl)
+else ()
+  add_library(libcaf_opencl_static ALIAS libcaf_opencl)
+endif ()
 list(APPEND CAF_LIBRARIES libcaf_opencl)
 set(CAF_LIBRARIES ${CAF_LIBRARIES} PARENT_SCOPE)
 

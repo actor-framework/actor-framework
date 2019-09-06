@@ -43,5 +43,10 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
 )
 
 add_library(caf::openssl ALIAS libcaf_openssl)
+if (BUILD_SHARED_LIBS)
+  add_library(libcaf_openssl_shared ALIAS libcaf_openssl)
+else ()
+  add_library(libcaf_openssl_static ALIAS libcaf_openssl)
+endif ()
 list(APPEND CAF_LIBRARIES libcaf_openssl)
 set(CAF_LIBRARIES ${CAF_LIBRARIES} PARENT_SCOPE)

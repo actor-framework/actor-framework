@@ -76,5 +76,10 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
 )
 
 add_library(caf::io ALIAS libcaf_io)
+if (BUILD_SHARED_LIBS)
+  add_library(libcaf_io_shared ALIAS libcaf_io)
+else ()
+  add_library(libcaf_io_static ALIAS libcaf_io)
+endif ()
 list(APPEND CAF_LIBRARIES libcaf_io)
 set(CAF_LIBRARIES ${CAF_LIBRARIES} PARENT_SCOPE)
