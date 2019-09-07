@@ -124,6 +124,8 @@ enum class sec : uint8_t {
   socket_operation_failed = 45,
   /// A resource is temporarily unavailable or would block.
   unavailable_or_would_block,
+  /// Resolving a path on a remote node failed.
+  remote_lookup_failed,
 };
 
 /// @relates sec
