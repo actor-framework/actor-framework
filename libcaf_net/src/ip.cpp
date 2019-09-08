@@ -96,8 +96,8 @@ void find_by_addr(const vector<pair<string, ip_address>>& interfaces,
 
 void find_localhost(const vector<pair<string, ip_address>>& interfaces,
                     vector<ip_address>& results) {
-  auto v4_local = ip_address{{0}, {0x1}};
-  auto v6_local = ip_address{make_ipv4_address(127, 0, 0, 1)};
+  auto v6_local = ip_address{{0}, {0x1}};
+  auto v4_local = ip_address{make_ipv4_address(127, 0, 0, 1)};
   for (auto& p : interfaces)
     if (p.second == v4_local || p.second == v6_local)
       results.push_back(p.second);
