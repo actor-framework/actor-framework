@@ -38,8 +38,9 @@ enum class ec : uint8_t {
   missing_handshake,
   unexpected_handshake,
   version_mismatch,
-  unimplemented,
+  unimplemented = 10,
   app_identifiers_mismatch,
+  invalid_payload,
 };
 
 /// @relates ec

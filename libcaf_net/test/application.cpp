@@ -63,7 +63,8 @@ struct fixture : test_coordinator_fixture<> {
     input = to_buf(xs...);
   }
 
-  void write_packet(span<const byte> hdr, span<const byte> payload) {
+  void write_packet(fixture&, span<const byte> hdr, span<const byte> payload,
+                    unit_t) {
     output.insert(output.end(), hdr.begin(), hdr.end());
     output.insert(output.end(), payload.begin(), payload.end());
   }
@@ -113,6 +114,29 @@ struct fixture : test_coordinator_fixture<> {
 };
 
 } // namespace
+
+#define MOCK(kind, op, ...)                                                    \
+  do {                                                                         \
+    auto payload = to_buf(__VA_ARGS__);                                        \
+    set_input(basp::header{kind, static_cast<uint32_t>(payload.size()), op});  \
+    if (auto err = app.handle_data(*this, input))                              \
+      CAF_FAIL("application-under-test failed to process header: "             \
+               << sys.render(err));                                            \
+    if (auto err = app.handle_data(*this, payload))                            \
+      CAF_FAIL("application-under-test failed to process payload: "            \
+               << sys.render(err));                                            \
+  } while (false)
+
+#define RECEIVE(msg_type, op_data, ...)                                        \
+  do {                                                                         \
+    serializer_impl<buffer_type> source{sys, output};                          \
+    basp::header hdr;                                                          \
+    if (auto err = source(hdr, __VA_ARGS__))                                   \
+      CAF_FAIL("failed to receive data: " << sys.render(err));                 \
+    CAF_CHECK_EQUAL(hdr.type, msg_type);                                       \
+    CAF_CHECK_EQUAL(hdr.operation_data, op_data);                              \
+    output.clear();                                                            \
+  } while (false)
 
 CAF_TEST_FIXTURE_SCOPE(application_tests, fixture)
 
@@ -170,6 +194,19 @@ CAF_TEST(repeated handshake) {
   CAF_CHECK_EQUAL(app.handle_data(*this, input), none);
   CAF_CHECK_EQUAL(app.handle_data(*this, payload),
                   basp::ec::unexpected_handshake);
+}
+
+CAF_TEST(resolve request without result) {
+  handle_handshake();
+  consume_handshake();
+  CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_header);
+  MOCK(basp::message_type::resolve_request, 42, std::string{"/foo/bar"});
+  CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_header);
+  actor_id aid;
+  std::set<std::string> ifs;
+  RECEIVE(basp::message_type::resolve_response, 42u, aid, ifs);
+  CAF_CHECK_EQUAL(aid, 0u);
+  CAF_CHECK(ifs.empty());
 }
 
 CAF_TEST(heartbeat message) {

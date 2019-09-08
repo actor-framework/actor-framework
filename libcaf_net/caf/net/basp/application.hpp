@@ -18,12 +18,14 @@
 
 #pragma once
 
+#include <cstdint>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 #include "caf/actor_addr.hpp"
 #include "caf/byte.hpp"
+#include "caf/callback.hpp"
 #include "caf/error.hpp"
 #include "caf/net/basp/connection_state.hpp"
 #include "caf/net/basp/constants.hpp"
@@ -33,6 +35,7 @@
 #include "caf/node_id.hpp"
 #include "caf/serializer_impl.hpp"
 #include "caf/span.hpp"
+#include "caf/unit.hpp"
 
 namespace caf {
 namespace net {
@@ -43,6 +46,10 @@ public:
   // -- member types -----------------------------------------------------------
 
   using buffer_type = std::vector<byte>;
+
+  using byte_span = span<const byte>;
+
+  using write_packet_callback = callback<byte_span, byte_span>;
 
   // -- interface functions ----------------------------------------------------
 
@@ -55,7 +62,7 @@ public:
       return err;
     auto hdr = to_bytes(header{message_type::handshake,
                                static_cast<uint32_t>(buf_.size()), version});
-    parent.write_packet(hdr, buf_);
+    parent.write_packet(parent, hdr, buf_, unit);
     return none;
   }
 
@@ -66,17 +73,25 @@ public:
                static_cast<uint32_t>(ptr->payload.size()),
                ptr->msg->mid.integer_value()};
     auto bytes = to_bytes(hdr);
-    parent.write_packet(make_span(bytes), ptr->payload);
+    parent.write_packet(parent, make_span(bytes), ptr->payload, unit);
   }
 
   template <class Parent>
-  error handle_data(Parent&, span<const byte> bytes) {
-    return handle(bytes);
+  error handle_data(Parent& parent, byte_span bytes) {
+    auto write_packet = make_callback([&](byte_span hdr, byte_span payload) {
+      parent.write_packet(parent, hdr, payload, unit);
+      return none;
+    });
+    return handle(write_packet, bytes);
   }
 
   template <class Parent>
-  void resolve(Parent&, const std::string&, actor) {
-    // TODO: implement me
+  void resolve(Parent& parent, string_view path, actor listener) {
+    auto write_packet = make_callback([&](byte_span hdr, byte_span payload) {
+      parent.write_packet(parent, hdr, payload, unit);
+      return none;
+    });
+    resolve_remote_path(write_packet, path, listener);
   }
 
   template <class Transport>
@@ -91,6 +106,15 @@ public:
   static expected<std::vector<byte>> serialize(actor_system& sys,
                                                const type_erased_tuple& x);
 
+  // -- utility functions ------------------------------------------------------
+
+  strong_actor_ptr resolve_local_path(string_view path);
+
+  void resolve_remote_path(write_packet_callback& write_packet,
+                           string_view path, actor listener);
+
+  // -- properties -------------------------------------------------------------
+
   connection_state state() const noexcept {
     return state_;
   }
@@ -102,11 +126,19 @@ public:
 private:
   // -- message handling -------------------------------------------------------
 
-  error handle(span<const byte> bytes);
+  error handle(write_packet_callback& write_packet, byte_span bytes);
 
-  error handle(header hdr, span<const byte> payload);
+  error handle(write_packet_callback& write_packet, header hdr,
+               byte_span payload);
 
-  error handle_handshake(header hdr, span<const byte> payload);
+  error handle_handshake(write_packet_callback& write_packet, header hdr,
+                         byte_span payload);
+
+  error handle_resolve_request(write_packet_callback& write_packet, header hdr,
+                               byte_span payload);
+
+  error handle_resolve_response(write_packet_callback& write_packet, header hdr,
+                                byte_span payload);
 
   /// Writes the handshake payload to `buf_`.
   error generate_handshake();
@@ -133,6 +165,12 @@ private:
 
   /// Keeps track of which local actors our peer monitors.
   std::unordered_set<actor_addr> monitored_actors_;
+
+  /// Caches actor handles obtained via `resolve`.
+  std::unordered_map<uint64_t, response_promise> pending_resolves_;
+
+  /// Ascending ID generator for requests to our peer.
+  uint64_t next_request_id_ = 1;
 };
 
 } // namespace basp

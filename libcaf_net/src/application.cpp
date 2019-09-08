@@ -30,7 +30,9 @@
 #include "caf/expected.hpp"
 #include "caf/net/basp/constants.hpp"
 #include "caf/net/basp/ec.hpp"
+#include "caf/no_stages.hpp"
 #include "caf/none.hpp"
+#include "caf/sec.hpp"
 #include "caf/serializer_impl.hpp"
 #include "caf/type_erased_tuple.hpp"
 
@@ -47,7 +49,32 @@ expected<std::vector<byte>> application::serialize(actor_system& sys,
   return result;
 }
 
-error application::handle(span<const byte> bytes) {
+strong_actor_ptr application::resolve_local_path(string_view) {
+  return nullptr;
+}
+
+void application::resolve_remote_path(write_packet_callback& write_packet,
+                                      string_view path, actor listener) {
+  buf_.clear();
+  serializer_impl<buffer_type> sink{system(), buf_};
+  if (auto err = sink(path)) {
+    CAF_LOG_ERROR("unable to serialize path");
+    return;
+  }
+  auto req_id = next_request_id_++;
+  auto hdr = to_bytes(header{message_type::resolve_request,
+                             static_cast<uint32_t>(buf_.size()), req_id});
+  if (auto err = write_packet(hdr, buf_)) {
+    CAF_LOG_ERROR("unable to serialize path");
+    return;
+  }
+  response_promise rp{nullptr, actor_cast<strong_actor_ptr>(listener),
+                      no_stages, make_message_id()};
+  pending_resolves_.emplace(req_id, std::move(rp));
+}
+
+error application::handle(write_packet_callback& write_packet,
+                          byte_span bytes) {
   switch (state_) {
     case connection_state::await_handshake_header: {
       if (bytes.size() != header_size)
@@ -85,7 +112,7 @@ error application::handle(span<const byte> bytes) {
         return ec::unexpected_number_of_bytes;
       hdr_ = header::from_bytes(bytes);
       if (hdr_.payload_len == 0)
-        return handle(hdr_, span<const byte>{});
+        return handle(write_packet, hdr_, byte_span{});
       else
         state_ = connection_state::await_payload;
       return none;
@@ -93,17 +120,23 @@ error application::handle(span<const byte> bytes) {
     case connection_state::await_payload: {
       if (bytes.size() != hdr_.payload_len)
         return ec::unexpected_number_of_bytes;
-      return handle(hdr_, bytes);
+      state_ = connection_state::await_header;
+      return handle(write_packet, hdr_, bytes);
     }
     default:
       return ec::illegal_state;
   }
 }
 
-error application::handle(header hdr, span<const byte>) {
+error application::handle(write_packet_callback& write_packet, header hdr,
+                          byte_span payload) {
   switch (hdr.type) {
     case message_type::handshake:
       return ec::unexpected_handshake;
+    case message_type::resolve_request:
+      return handle_resolve_request(write_packet, hdr, payload);
+    case message_type::resolve_response:
+      return handle_resolve_response(write_packet, hdr, payload);
     case message_type::heartbeat:
       return none;
     default:
@@ -111,7 +144,8 @@ error application::handle(header hdr, span<const byte>) {
   }
 }
 
-error application::handle_handshake(header hdr, span<const byte> payload) {
+error application::handle_handshake(write_packet_callback&, header hdr,
+                                    byte_span payload) {
   if (hdr.type != message_type::handshake)
     return ec::missing_handshake;
   if (hdr.operation_data != version)
@@ -125,6 +159,60 @@ error application::handle_handshake(header hdr, span<const byte> payload) {
   peer_id_ = std::move(peer_id);
   state_ = connection_state::await_header;
   return none;
+}
+
+error application::handle_resolve_request(write_packet_callback& write_packet,
+                                          header hdr, byte_span payload) {
+  CAF_ASSERT(hdr.type == message_type::resolve_request);
+  size_t path_size = 0;
+  binary_deserializer source{system(), payload};
+  if (auto err = source.begin_sequence(path_size))
+    return err;
+  // We expect the payload to consist only of the path.
+  if (path_size != source.remaining())
+    return ec::invalid_payload;
+  auto remainder = source.remainder();
+  string_view path{reinterpret_cast<const char*>(remainder.data()),
+                   remainder.size()};
+  // Write result.
+  auto result = resolve_local_path(path);
+  buf_.clear();
+  actor_id aid = result ? result->id() : 0;
+  std::set<std::string> ifs;
+  // TODO: figure out how to obtain messaging interface.
+  serializer_impl<buffer_type> sink{system(), buf_};
+  if (auto err = sink(aid, ifs))
+    return err;
+  auto out_hdr = to_bytes(header{message_type::resolve_response,
+                                 static_cast<uint32_t>(buf_.size()),
+                                 hdr.operation_data});
+  return write_packet(out_hdr, buf_);
+}
+
+error application::handle_resolve_response(write_packet_callback&, header hdr,
+                                           byte_span payload) {
+  CAF_ASSERT(hdr.type == message_type::resolve_response);
+  auto i = pending_resolves_.find(hdr.operation_data);
+  if (i == pending_resolves_.end()) {
+    CAF_LOG_ERROR("received unknown ID in resolve_response message");
+    return none;
+  }
+  auto guard = detail::make_scope_guard([&] {
+    if (i->second.pending())
+      i->second.deliver(sec::remote_lookup_failed);
+    pending_resolves_.erase(i);
+  });
+  actor_id aid;
+  std::set<std::string> ifs;
+  binary_deserializer source{system(), payload};
+  if (auto err = source(aid, ifs))
+    return err;
+  if (aid == 0) {
+    i->second.deliver(strong_actor_ptr{nullptr});
+    return none;
+  }
+  // TODO: generate proxies and deal with proxy_registry
+  return ec::unimplemented;
 }
 
 error application::generate_handshake() {

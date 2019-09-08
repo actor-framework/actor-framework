@@ -39,6 +39,7 @@ const char* ec_names[] = {
   "version_mismatch",
   "unimplemented",
   "app_identifiers_mismatch",
+  "invalid_payload",
 };
 
 } // namespace
