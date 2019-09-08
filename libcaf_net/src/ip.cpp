@@ -43,10 +43,6 @@
 #  include <sys/ioctl.h>
 #endif
 
-#ifdef CAF_WINDOWS
-#  pragma comment(lib, "IPHLPAPI.lib")
-#endif
-
 #ifndef HOST_NAME_MAX
 #  define HOST_NAME_MAX 255
 #endif
@@ -173,7 +169,9 @@ std::vector<ip_address> local_addresses(string_view host) {
     CAF_LOG_ERROR("malloc failed");
     return {};
   }
-  // TODO: The API example propopses to try three times.
+  // TODO: The Microsoft WIN32 API example propopses to try three times, other
+  // examples online just perform the call once. If we notice the call to be
+  // unreliable, we might adapt that behavior.
   err = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, nullptr,
                              adapters.get(), &len);
   if (err != ERROR_SUCCESS) {
