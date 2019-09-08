@@ -105,6 +105,7 @@ set(LIBCAF_CORE_SRCS
   src/scoped_execution_unit.cpp
   src/sec.cpp
   src/sequencer.cpp
+  src/serialized_size.cpp
   src/serializer.cpp
   src/set_thread_name.cpp
   src/settings.cpp
