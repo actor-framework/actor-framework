@@ -58,10 +58,10 @@ namespace ip {
 namespace {
 
 // Dummy port to resolve empty string with getaddrinfo.
-constexpr auto dummy_port = "42";
-constexpr auto v4_any_addr = "0.0.0.0";
-constexpr auto v6_any_addr = "::";
-constexpr auto localhost = "localhost";
+constexpr string_view dummy_port = "42";
+constexpr string_view v4_any_addr = "0.0.0.0";
+constexpr string_view v6_any_addr = "::";
+constexpr string_view localhost = "localhost";
 
 void* fetch_in_addr(int family, sockaddr* addr) {
   if (family == AF_INET)
@@ -115,7 +115,7 @@ std::vector<ip_address> resolve(string_view host) {
   addrinfo* tmp = nullptr;
   std::string host_str{host.begin(), host.end()};
   if (getaddrinfo(host.empty() ? nullptr : host_str.c_str(),
-                  host.empty() ? dummy_port : nullptr, &hint, &tmp)
+                  host.empty() ? dummy_port.data() : nullptr, &hint, &tmp)
       != 0)
     return {};
   std::unique_ptr<addrinfo, decltype(freeaddrinfo)*> addrs{tmp, freeaddrinfo};
@@ -151,9 +151,9 @@ std::string hostname() {
 std::vector<ip_address> local_addresses(string_view host) {
   using adapters_ptr = std::unique_ptr<IP_ADAPTER_ADDRESSES, void (*)(void*)>;
   using wbuf_ptr = std::unique_ptr<IP_ADAPTER_ADDRESSES, void (*)(void*)>;
-  if (!host.empty() && host.compare(v4_any_addr) == 0)
+  if (host == v4_any_addr)
     return {ip_address{make_ipv4_address(0, 0, 0, 0)}};
-  if (!host.empty() && host.compare(v6_any_addr) == 0)
+  if (host == v6_any_addr)
     return {ip_address{}};
   ULONG len = 0;
   auto err = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, nullptr,
@@ -214,9 +214,9 @@ std::vector<ip_address> local_addresses(string_view host) {
 #else // CAF_WINDOWS
 
 std::vector<ip_address> local_addresses(string_view host) {
-  if (!host.empty() && host.compare(v4_any_addr) == 0)
+  if (host == v4_any_addr)
     return {ip_address{make_ipv4_address(0, 0, 0, 0)}};
-  if (!host.empty() && host.compare(v6_any_addr) == 0)
+  if (host == v6_any_addr)
     return {ip_address{}};
   ifaddrs* tmp = nullptr;
   if (getifaddrs(&tmp) != 0)
