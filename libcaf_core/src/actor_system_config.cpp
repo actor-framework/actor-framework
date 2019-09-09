@@ -82,7 +82,9 @@ actor_system_config::actor_system_config()
     .add<timespan>(stream_max_batch_delay, "max-batch-delay",
                    "maximum delay for partial batches")
     .add<timespan>(stream_credit_round_interval, "credit-round-interval",
-                   "time between emitting credit");
+                   "time between emitting credit")
+    .add<atom_value>("credit-policy",
+                     "selects an algorithm for credit computation");
   opt_group{custom_options_, "scheduler"}
     .add<atom_value>("policy", "'stealing' (default) or 'sharing'")
     .add<size_t>("max-threads", "maximum number of worker threads")
@@ -158,6 +160,7 @@ settings actor_system_config::dump_content() const {
               defaults::stream::max_batch_delay);
   put_missing(stream_group, "credit-round-interval",
               defaults::stream::credit_round_interval);
+  put_missing(stream_group, "credit-policy", defaults::stream::credit_policy);
   // -- scheduler parameters
   auto& scheduler_group = result["scheduler"].as_dictionary();
   put_missing(scheduler_group, "policy", defaults::scheduler::policy);

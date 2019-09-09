@@ -36,6 +36,7 @@ namespace stream {
 extern const timespan desired_batch_complexity;
 extern const timespan max_batch_delay;
 extern const timespan credit_round_interval;
+extern const atom_value credit_policy;
 
 } // namespace streaming
 

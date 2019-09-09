@@ -49,6 +49,7 @@ namespace stream {
 const timespan desired_batch_complexity = us(50);
 const timespan max_batch_delay = ms(5);
 const timespan credit_round_interval = ms(10);
+const atom_value credit_policy = atom("complexity");
 
 } // namespace stream
 
