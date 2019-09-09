@@ -24,9 +24,9 @@
 namespace caf {
 namespace detail {
 
-sockaddr_storage to_sockaddr(const ip_endpoint& ep);
+void convert(const ip_endpoint& src, sockaddr_storage& dst);
 
-ip_endpoint to_ip_endpoint(const sockaddr_storage& addr);
+error convert(const sockaddr_storage& src, ip_endpoint& dst);
 
 } // namespace detail
 } // namespace caf

@@ -54,25 +54,29 @@ struct fixture : host_fixture {
   void test_send_receive(ip_address addr) {
     std::vector<byte> buf(1024);
     ip_endpoint ep(addr, 0);
-    auto sender = unbox(make_udp_datagram_socket(ep));
-    ep.port(0);
-    auto receiver = unbox(make_udp_datagram_socket(ep));
+    auto send_pair = unbox(make_udp_datagram_socket(ep));
+    auto send_socket = send_pair.first;
+    auto receive_pair = unbox(make_udp_datagram_socket(ep));
+    auto receive_socket = receive_pair.first;
+    ep.port(ntohs(receive_pair.second));
     CAF_MESSAGE("sending data to: " << to_string(ep));
-    auto send_guard = make_socket_guard(sender);
-    auto receive_guard = make_socket_guard(receiver);
-    if (auto err = nonblocking(socket_cast<net::socket>(receiver), true))
+    auto send_guard = make_socket_guard(send_socket);
+    auto receive_guard = make_socket_guard(receive_socket);
+    if (auto err = nonblocking(socket_cast<net::socket>(receive_socket), true))
       CAF_FAIL("nonblocking returned an error" << err);
-    auto test_read_res = read(receiver, make_span(buf));
+    auto test_read_res = read(receive_socket, make_span(buf));
     if (auto err = get_if<sec>(&test_read_res))
       CAF_CHECK_EQUAL(*err, sec::unavailable_or_would_block);
     else
       CAF_FAIL("read should have failed");
-    auto write_ret = write(sender, as_bytes(make_span(hello_test)), ep);
+
+    auto write_ret = write(send_socket, as_bytes(make_span(hello_test)), ep);
     if (auto num_bytes = get_if<size_t>(&write_ret))
       CAF_CHECK_EQUAL(*num_bytes, hello_test.size());
     else
       CAF_FAIL("write returned an error: " << sys.render(get<sec>(write_ret)));
-    auto read_ret = read(receiver, make_span(buf));
+
+    auto read_ret = read(receive_socket, make_span(buf));
     if (auto read_res = get_if<std::pair<size_t, ip_endpoint>>(&read_ret)) {
       CAF_CHECK_EQUAL(read_res->first, hello_test.size());
       buf.resize(read_res->first);

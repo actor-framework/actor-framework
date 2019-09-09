@@ -47,30 +47,29 @@ struct udp_datagram_socket : abstract_socket<udp_datagram_socket> {
 /// port that was bound.
 /// @returns The connected socket or an error.
 /// @relates udp_datagram_socket
-expected<udp_datagram_socket> make_udp_datagram_socket(ip_endpoint& ep,
-                                                       bool reuse_addr = false);
+expected<std::pair<udp_datagram_socket, uint16_t>>
+make_udp_datagram_socket(ip_endpoint ep, bool reuse_addr = false);
 
 /// Enables or disables `SIO_UDP_CONNRESET` error on `x`.
 /// @relates udp_datagram_socket
 error allow_connreset(udp_datagram_socket x, bool new_value);
 
-/// Receives data from `x`.
-/// @param x udp_datagram_socket.
-/// @param buf Points to destination buffer.
-/// @returns The number of received bytes and the ip_endpoint on success, an
-/// error code otherwise.
+/// Receives the next datagram on socket `x`.
+/// @param x The UDP socket for receiving datagrams.
+/// @param buf Writable output buffer.
+/// @returns The number of received bytes and the sender as `ip_endpoint` on
+/// success, an error code otherwise.
 /// @relates udp_datagram_socket
-/// @post either the result is a `sec` or a pair of positive (non-zero) integer
-/// and ip_endpoint
+/// @post buf was modified and the resulting integer represents the length of
+/// the received datagram, even if it did not fit into the given buffer.
 variant<std::pair<size_t, ip_endpoint>, sec> read(udp_datagram_socket x,
                                                   span<byte> buf);
 
-/// Transmits data from `x` to given eendpoint.
-/// @param x udp_datagram_socket.
-/// @param buf Points to the message to send.
+/// Sends the content of `buf` as a datagram to the endpoint `ep` on socket `x`.
+/// @param x The UDP socket for sending datagrams.
+/// @param buf The buffer to send.
 /// @returns The number of written bytes on success, otherwise an error code.
 /// @relates udp_datagram_socket
-/// @post either the result is a `sec` or a positive (non-zero) integer
 variant<size_t, sec> write(udp_datagram_socket x, span<const byte> buf,
                            ip_endpoint ep);
 

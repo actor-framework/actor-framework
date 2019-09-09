@@ -55,10 +55,11 @@ error allow_connreset(udp_datagram_socket x, bool) {
 
 #endif // CAF_WINDOWS
 
-expected<udp_datagram_socket> make_udp_datagram_socket(ip_endpoint& ep,
-                                                       bool reuse_addr) {
+expected<std::pair<udp_datagram_socket, uint16_t>>
+make_udp_datagram_socket(ip_endpoint ep, bool reuse_addr) {
   CAF_LOG_TRACE(CAF_ARG(ep));
-  auto addr = to_sockaddr(ep);
+  sockaddr_storage addr;
+  detail::convert(ep, addr);
   CAF_NET_SYSCALL("socket", fd, ==, invalid_socket_id,
                   ::socket(addr.ss_family, SOCK_DGRAM, 0));
   udp_datagram_socket sock{fd};
@@ -81,8 +82,7 @@ expected<udp_datagram_socket> make_udp_datagram_socket(ip_endpoint& ep,
   auto port = addr.ss_family == AF_INET
                 ? reinterpret_cast<sockaddr_in*>(&addr)->sin_port
                 : reinterpret_cast<sockaddr_in6*>(&addr)->sin6_port;
-  ep.port(ntohs(port));
-  return sguard.release();
+  return std::make_pair(sguard.release(), port);
 }
 
 variant<std::pair<size_t, ip_endpoint>, sec> read(udp_datagram_socket x,
@@ -94,13 +94,15 @@ variant<std::pair<size_t, ip_endpoint>, sec> read(udp_datagram_socket x,
                         &len);
   auto ret = check_udp_datagram_socket_io_res(res);
   if (auto num_bytes = get_if<size_t>(&ret)) {
-    if (*num_bytes == 0)
-      CAF_LOG_INFO("Received empty datagram");
-    else if (*num_bytes > buf.size())
-      CAF_LOG_WARNING("recvfrom cut of message, only received "
-                      << CAF_ARG(buf.size()) << " of " << CAF_ARG(num_bytes)
-                      << " bytes");
-    auto ep = detail::to_ip_endpoint(addr);
+    CAF_LOG_INFO_IF(*num_bytes == 0, "Received empty datagram");
+    CAF_LOG_WARNING_IF(*num_bytes > buf.size(),
+                       "recvfrom cut of message, only received "
+                         << CAF_ARG(buf.size()) << " of " << CAF_ARG(num_bytes)
+                         << " bytes");
+    ip_endpoint ep;
+    // TODO: how to properly pass error further?
+    if (auto err = detail::convert(addr, ep))
+      return sec::runtime_error;
     return std::pair<size_t, ip_endpoint>(*num_bytes, ep);
   } else {
     return get<sec>(ret);
@@ -109,7 +111,8 @@ variant<std::pair<size_t, ip_endpoint>, sec> read(udp_datagram_socket x,
 
 variant<size_t, sec> write(udp_datagram_socket x, span<const byte> buf,
                            ip_endpoint ep) {
-  auto addr = detail::to_sockaddr(ep);
+  sockaddr_storage addr;
+  detail::convert(ep, addr);
   auto res = ::sendto(x.id, reinterpret_cast<socket_send_ptr>(buf.data()),
                       buf.size(), 0, reinterpret_cast<sockaddr*>(&addr),
                       ep.address().embeds_v4() ? sizeof(sockaddr_in)
