@@ -19,10 +19,11 @@
 #include "caf/error.hpp"
 
 #include "caf/config.hpp"
+#include "caf/deep_to_string.hpp"
+#include "caf/deserializer.hpp"
+#include "caf/make_message.hpp"
 #include "caf/message.hpp"
 #include "caf/serializer.hpp"
-#include "caf/deserializer.hpp"
-#include "caf/deep_to_string.hpp"
 
 namespace caf {
 
@@ -55,8 +56,11 @@ error& error::operator=(error&& x) noexcept {
   return *this;
 }
 
-error::error(const error& x) : data_(x ? new data(*x.data_) : nullptr) {
-  // nop
+error::error(const error& x) {
+  if (x)
+    data_ = new data(*x.data_);
+  else
+    data_ = nullptr;
 }
 
 error& error::operator=(const error& x) {
@@ -73,13 +77,12 @@ error& error::operator=(const error& x) {
   return *this;
 }
 
-error::error(uint8_t x, atom_value y)
-    : data_(x != 0 ? new data{x, y, none} : nullptr) {
+error::error(uint8_t x, atom_value y) : error(x, y, make_message()) {
   // nop
 }
 
 error::error(uint8_t x, atom_value y, message z)
-    : data_(x != 0 ? new data{x, y, std::move(z)} : nullptr) {
+  : data_(x != 0 ? new data{x, y, std::move(z)} : nullptr) {
   // nop
 }
 
@@ -139,6 +142,16 @@ int error::compare(uint8_t x, atom_value y) const noexcept {
 
 // -- modifiers --------------------------------------------------------------
 
+uint8_t& error::code() noexcept {
+  CAF_ASSERT(data_ != nullptr);
+  return data_->code;
+}
+
+atom_value& error::category() noexcept {
+  CAF_ASSERT(data_ != nullptr);
+  return data_->category;
+}
+
 message& error::context() noexcept {
   CAF_ASSERT(data_ != nullptr);
   return data_->context;
@@ -151,25 +164,27 @@ void error::clear() noexcept {
   }
 }
 
-// -- inspection support -----------------------------------------------------
-
-error error::apply(const inspect_fun& f) {
-  data tmp{0, atom(""), message{}};
-  data& ref = data_ != nullptr ? *data_ : tmp;
-  auto result = f(meta::type_name("error"), ref.code, ref.category,
-                  meta::omittable_if_empty(), ref.context);
-  if (ref.code == 0)
-    clear();
-  else if (&tmp == &ref)
-    data_ = new data(std::move(tmp));
-  return result;
+void error::assign(uint8_t code, atom_value category) {
+  return assign(code, category, make_message());
 }
+
+void error::assign(uint8_t code, atom_value category, message context) {
+  if (data_ == nullptr) {
+    data_ = new data{code, category, std::move(context)};
+  } else {
+    data_->code = code;
+    data_->category = category;
+    data_->context = std::move(context);
+  }
+}
+
+// -- operators and free functions ---------------------------------------------
 
 std::string to_string(const error& x) {
   if (!x)
     return "none";
-  return deep_to_string(meta::type_name("error"), x.code(), x.category(),
-                        meta::omittable_if_empty(), x.context());
+  deep_to_string_t f;
+  return inspect(f, x);
 }
 
 } // namespace caf

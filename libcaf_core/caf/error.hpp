@@ -19,18 +19,17 @@
 #pragma once
 
 #include <cstdint>
-#include <utility>
 #include <functional>
+#include <utility>
 
-#include "caf/fwd.hpp"
 #include "caf/atom.hpp"
-#include "caf/none.hpp"
-#include "caf/atom.hpp"
-
-#include "caf/meta/type_name.hpp"
-#include "caf/meta/omittable_if_empty.hpp"
-
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/type_traits.hpp"
+#include "caf/fwd.hpp"
+#include "caf/meta/load_callback.hpp"
+#include "caf/meta/omittable_if_empty.hpp"
+#include "caf/meta/type_name.hpp"
+#include "caf/none.hpp"
 
 namespace caf {
 
@@ -56,8 +55,8 @@ public:
 
 /// Convenience alias for `std::enable_if<has_make_error<T>::value, U>::type`.
 template <class T, class U = void>
-using enable_if_has_make_error_t
-  = typename std::enable_if<has_make_error<T>::value, U>::type;
+using enable_if_has_make_error_t = typename std::enable_if<
+  has_make_error<T>::value, U>::type;
 
 /// A serializable type for storing error codes with category and optional,
 /// human-readable context information. Unlike error handling classes from
@@ -91,13 +90,6 @@ using enable_if_has_make_error_t
 /// rendering error messages via `actor_system::render(const error&)`.
 class error : detail::comparable<error> {
 public:
-  // -- member types -----------------------------------------------------------
-
-  using inspect_fun = std::function<error (meta::type_name_t,
-                                           uint8_t&, atom_value&,
-                                           meta::omittable_if_empty_t,
-                                           message&)>;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   error() noexcept;
@@ -141,12 +133,12 @@ public:
   const message& context() const noexcept;
 
   /// Returns `*this != none`.
-  inline explicit operator bool() const noexcept {
+  explicit operator bool() const noexcept {
     return data_ != nullptr;
   }
 
   /// Returns `*this == none`.
-  inline bool operator!() const noexcept {
+  bool operator!() const noexcept {
     return data_ == nullptr;
   }
 
@@ -156,6 +148,14 @@ public:
 
   // -- modifiers --------------------------------------------------------------
 
+  /// Returns the category-specific error code, whereas `0` means "no error".
+  /// @pre `*this != none`
+  uint8_t& code() noexcept;
+
+  /// Returns the category of this error.
+  /// @pre `*this != none`
+  atom_value& category() noexcept;
+
   /// Returns context information to this error.
   /// @pre `*this != none`
   message& context() noexcept;
@@ -163,46 +163,74 @@ public:
   /// Sets the error code to 0.
   void clear() noexcept;
 
+  /// Assigns new code and category to this error.
+  void assign(uint8_t code, atom_value category);
+
+  /// Assigns new code, category and context to this error.
+  void assign(uint8_t code, atom_value category, message context);
+
   // -- static convenience functions -------------------------------------------
 
   /// @cond PRIVATE
 
-  static inline error eval() {
+  static error eval() {
     return none;
   }
 
   template <class F, class... Fs>
   static error eval(F&& f, Fs&&... fs) {
-    auto x = f();
-    return x ? x : eval(std::forward<Fs>(fs)...);
+    if (auto err = f())
+      return err;
+    return eval(std::forward<Fs>(fs)...);
   }
 
   /// @endcond
-
-  // -- friend functions -------------------------------------------------------
-
-  template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f, error& x) {
-    auto fun = [&](meta::type_name_t x0, uint8_t& x1, atom_value& x2,
-                   meta::omittable_if_empty_t x3, message& x4) -> error{
-      return f(x0, x1, x2, x3, x4);
-    };
-    return x.apply(fun);
-  }
-
-private:
-  // -- inspection support -----------------------------------------------------
-
-  error apply(const inspect_fun& f);
 
   // -- nested classes ---------------------------------------------------------
 
   struct data;
 
+  struct inspect_helper {
+    uint8_t code;
+    error& err;
+  };
+
+private:
   // -- member variables -------------------------------------------------------
 
   data* data_;
 };
+
+// -- operators and free functions ---------------------------------------------
+
+/// @relates error
+template <class Inspector>
+detail::enable_if_t<Inspector::reads_state, typename Inspector::result_type>
+inspect(Inspector& f, const error& x) {
+  if (x)
+    return f(meta::type_name("error"), x.code(), x.category(),
+             meta::omittable_if_empty(), x.context());
+  return f(meta::type_name("error"), uint8_t{0});
+}
+
+template <class Inspector>
+detail::enable_if_t<Inspector::writes_state, typename Inspector::result_type>
+inspect(Inspector& f, error::inspect_helper& x) {
+  if (x.code == 0) {
+    x.err.clear();
+    return f();
+  }
+  x.err.assign(x.code, atom(""));
+  return f(x.err.category(), x.err.context());
+}
+
+/// @relates error
+template <class Inspector>
+detail::enable_if_t<Inspector::writes_state, typename Inspector::result_type>
+inspect(Inspector& f, error& x) {
+  error::inspect_helper helper{0, x};
+  return f(helper.code, helper);
+}
 
 /// @relates error
 std::string to_string(const error& x);
@@ -252,4 +280,3 @@ bool operator!=(E x, const error& y) {
 }
 
 } // namespace caf
-
