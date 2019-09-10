@@ -54,7 +54,7 @@ public:
     auto this_worker = this;
     this_thread_ = std::thread{[this_worker] {
       CAF_SET_LOGGER_SYS(&this_worker->system());
-      detail::set_thread_name("caf.multiplexer");
+      detail::set_thread_name("caf.worker");
       this_worker->system().thread_started();
       this_worker->run();
       this_worker->system().thread_terminates();
