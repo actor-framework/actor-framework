@@ -152,11 +152,8 @@ CAF_TEST(receive) {
   auto receive_guard = make_socket_guard(receiver);
   if (auto err = nonblocking(receiver, true))
     CAF_FAIL("nonblocking() returned an error: " << err);
-  auto test_read_res = read(receiver, make_span(*buf));
-  if (auto p = get_if<std::pair<size_t, ip_endpoint>>(&test_read_res))
-    CAF_CHECK_EQUAL(p->first, 0u);
-  else
-    CAF_FAIL("read returned an error: " << get<sec>(test_read_res));
+  CAF_CHECK_EQUAL(read(receiver, make_span(*buf)),
+                  sec::unavailable_or_would_block);
   transport_type transport{receiver, dummy_application_factory{buf}};
   transport.configure_read(net::receive_policy::exactly(hello_manager.size()));
   auto mgr = make_endpoint_manager(mpx, sys, transport);
