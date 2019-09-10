@@ -64,11 +64,11 @@ public:
 
   group(intrusive_ptr<abstract_group> gptr);
 
-  inline explicit operator bool() const noexcept {
+  explicit operator bool() const noexcept {
     return static_cast<bool>(ptr_);
   }
 
-  inline bool operator!() const noexcept {
+  bool operator!() const noexcept {
     return !ptr_;
   }
 
@@ -76,7 +76,7 @@ public:
 
   intptr_t compare(const group& other) const noexcept;
 
-  inline intptr_t compare(const invalid_group_t&) const noexcept {
+  intptr_t compare(const invalid_group_t&) const noexcept {
     return ptr_ ? 1 : 0;
   }
 
@@ -98,11 +98,15 @@ public:
 
   friend error inspect(deserializer&, group&);
 
-  inline abstract_group* get() const noexcept {
+  abstract_group* get() const noexcept {
     return ptr_.get();
   }
 
   /// @cond PRIVATE
+
+  actor_system& system() const {
+    return ptr_->system();
+  }
 
   template <class... Ts>
   void eq_impl(message_id mid, strong_actor_ptr sender,
@@ -113,27 +117,25 @@ public:
                     make_message(std::forward<Ts>(xs)...), ctx);
   }
 
-  inline bool subscribe(strong_actor_ptr who) const {
+  bool subscribe(strong_actor_ptr who) const {
     if (!ptr_)
       return false;
     return ptr_->subscribe(std::move(who));
   }
 
-  inline void unsubscribe(const actor_control_block* who) const {
+  void unsubscribe(const actor_control_block* who) const {
     if (ptr_)
       ptr_->unsubscribe(who);
   }
 
-  /// CAF's messaging primitives assume a non-null guarantee. A group
-  /// object indirects pointer-like access to a group to prevent UB.
-  inline const group* operator->() const noexcept {
+  const group* operator->() const noexcept {
     return this;
   }
 
   /// @endcond
 
 private:
-  inline abstract_group* release() noexcept {
+  abstract_group* release() noexcept {
     return ptr_.release();
   }
 
@@ -150,7 +152,7 @@ std::string to_string(const group& x);
 namespace std {
 template <>
 struct hash<caf::group> {
-  inline size_t operator()(const caf::group& x) const {
+  size_t operator()(const caf::group& x) const {
     // groups are singleton objects, the address is thus the best possible hash
     return !x ? 0 : reinterpret_cast<size_t>(x.get());
   }

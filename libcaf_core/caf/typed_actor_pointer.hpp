@@ -48,7 +48,11 @@ public:
     return &view_;
   }
 
-  inline explicit operator bool() const {
+  const typed_actor_view<Sigs...>* operator->() const {
+    return &view_;
+  }
+
+  explicit operator bool() const {
     return static_cast<bool>(view_.internal_ptr());
   }
 
