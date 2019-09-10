@@ -1161,8 +1161,10 @@ scheduled_actor::advance_streams(actor_clock::time_point now) {
     auto& qs = get_downstream_queue().queues();
     for (auto& kvp : qs) {
       auto inptr = kvp.second.policy().handler.get();
-      auto tts = static_cast<int32_t>(kvp.second.total_task_size());
-      inptr->emit_ack_batch(this, tts, now, cycle);
+      if (inptr != nullptr) {
+        auto tts = static_cast<int32_t>(kvp.second.total_task_size());
+        inptr->emit_ack_batch(this, tts, now, cycle);
+      }
     }
   }
   return stream_ticks_.next_timeout(now, {max_batch_delay_ticks_,
