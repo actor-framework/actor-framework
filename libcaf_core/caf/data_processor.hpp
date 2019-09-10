@@ -242,7 +242,7 @@ public:
     for (auto& x : xs) {
       using value_type = typename std::remove_reference<decltype(x)>::type;
       using mutable_type = typename std::remove_const<value_type>::type;
-      if (auto err = apply_derived(const_cast<mutable_type&>(x)))
+      if (auto err = dref().apply(const_cast<mutable_type&>(x)))
         return err;
     }
     return none;
@@ -252,7 +252,7 @@ public:
   template <class U, class T>
   error consume_range_c(T& xs) {
     for (U x : xs) {
-      if (auto err = apply_derived(x))
+      if (auto err = dref().apply(x))
         return err;
     }
     return none;
@@ -264,7 +264,7 @@ public:
     auto insert_iter = std::inserter(xs, xs.end());
     for (size_t i = 0; i < num_elements; ++i) {
       typename std::remove_const<typename T::value_type>::type x;
-      if (auto err = apply_derived(x))
+      if (auto err = dref().apply(x))
         return err;
       *insert_iter++ = std::move(x);
     }
@@ -278,7 +278,7 @@ public:
     auto insert_iter = std::inserter(xs, xs.end());
     for (size_t i = 0; i < num_elements; ++i) {
       U x;
-      if (auto err = apply_derived(x))
+      if (auto err = dref().apply(x))
         return err;
       *insert_iter++ = std::move(x);
     }
@@ -375,8 +375,9 @@ public:
     using t0 = typename std::remove_const<F>::type;
     // This cast allows the data processor to cope with
     // `pair<const K, V>` value types used by `std::map`.
-    return error::eval([&] { return apply_derived(const_cast<t0&>(xs.first)); },
-                       [&] { return apply_derived(xs.second); });
+    if (auto err = dref().apply(const_cast<t0&>(xs.first)))
+      return err;
+    return dref().apply(xs.second);
   }
 
   template <class... Ts>
@@ -470,29 +471,31 @@ public:
 
   // -- operator() -------------------------------------------------------------
 
-  inline error operator()() {
+  error operator()() {
     return none;
   }
 
   template <class F, class... Ts>
   error operator()(meta::save_callback_t<F> x, Ts&&... xs) {
-    error e;
+    // TODO: use `if constexpr` when switching to C++17.
     if (Derived::reads_state)
-      e = x.fun();
-    return e ? e : (*this)(std::forward<Ts>(xs)...);
+      if (auto err = x.fun())
+        return err;
+    return dref()(std::forward<Ts>(xs)...);
   }
 
   template <class F, class... Ts>
   error operator()(meta::load_callback_t<F> x, Ts&&... xs) {
-    error e;
+    // TODO: use `if constexpr` when switching to C++17.
     if (Derived::writes_state)
-      e = x.fun();
-    return e ? e : (*this)(std::forward<Ts>(xs)...);
+      if (auto err = x.fun())
+        return err;
+    return dref()(std::forward<Ts>(xs)...);
   }
 
   template <class... Ts>
   error operator()(const meta::annotation&, Ts&&... xs) {
-    return (*this)(std::forward<Ts>(xs)...);
+    return dref()(std::forward<Ts>(xs)...);
   }
 
   template <class T, class... Ts>
@@ -501,7 +504,7 @@ public:
     error
   >::type
   operator()(const T&, Ts&&... xs) {
-    return (*this)(std::forward<Ts>(xs)...);
+    return dref()(std::forward<Ts>(xs)...);
   }
 
   template <class T, class... Ts>
@@ -519,7 +522,7 @@ public:
                   "a loading inspector requires mutable lvalue references");
     if (auto err = apply(deconst(x)))
       return err;
-    return apply_derived(std::forward<Ts>(xs)...);
+    return dref()(std::forward<Ts>(xs)...);
   }
 
 protected:
@@ -576,12 +579,6 @@ private:
   // Returns a reference to the derived type.
   Derived& dref() {
     return *static_cast<Derived*>(this);
-  }
-
-  // Applies `xs...` to `dref()`.
-  template <class... Ts>
-  error apply_derived(Ts&&... xs) {
-    return dref()(std::forward<Ts>(xs)...);
   }
 
   execution_unit* context_;
