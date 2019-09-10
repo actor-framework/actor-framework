@@ -161,6 +161,10 @@ settings actor_system_config::dump_content() const {
   put_missing(stream_group, "credit-round-interval",
               defaults::stream::credit_round_interval);
   put_missing(stream_group, "credit-policy", defaults::stream::credit_policy);
+  put_missing(stream_group, "size-policy.buffer-capacity",
+              defaults::stream::size_policy::buffer_capacity);
+  put_missing(stream_group, "size-policy.bytes-per-batch",
+              defaults::stream::size_policy::bytes_per_batch);
   // -- scheduler parameters
   auto& scheduler_group = result["scheduler"].as_dictionary();
   put_missing(scheduler_group, "policy", defaults::scheduler::policy);

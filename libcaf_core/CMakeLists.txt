@@ -140,6 +140,7 @@ set(LIBCAF_CORE_SRCS
   src/sec.cpp
   src/serializer.cpp
   src/settings.cpp
+  src/size_based_credit_controller.cpp
   src/skip.cpp
   src/stream_aborter.cpp
   src/stream_manager.cpp

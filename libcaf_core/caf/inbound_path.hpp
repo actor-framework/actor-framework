@@ -55,19 +55,22 @@ public:
   stream_slots slots;
 
   /// Stores the last computed desired batch size.
-  int32_t desired_batch_size;
+  int32_t desired_batch_size = 0;
 
   /// Amount of credit we have signaled upstream.
-  int32_t assigned_credit;
+  int32_t assigned_credit = 0;
+
+  /// Upstream capacity for limiting the amount of credit we can give.
+  int32_t downstream_capacity = 0;
 
   /// Priority of incoming batches from this source.
-  stream_priority prio;
+  stream_priority prio = stream_priority::normal;
 
   /// ID of the last acknowledged batch ID.
-  int64_t last_acked_batch_id;
+  int64_t last_acked_batch_id = 0;
 
   /// ID of the last received batch.
-  int64_t last_batch_id;
+  int64_t last_batch_id = 0;
 
   /// Controller for assigning credit to the source.
   std::unique_ptr<credit_controller> controller_;
@@ -124,12 +127,9 @@ public:
                                       const strong_actor_ptr& hdl,
                                       error reason);
 
-private:
+  /// Returns a pointer to the parent actor.
   scheduled_actor* self();
 
-  actor_system& system();
-
-  actor_clock& clock();
 };
 
 /// @relates inbound_path

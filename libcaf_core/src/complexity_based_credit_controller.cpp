@@ -71,7 +71,8 @@ credit_controller::assignment impl::compute(timespan cycle) {
   // Instead of C * (N / t) we calculate (C * N) / t to avoid double conversion
   // and rounding errors.
   assignment result;
-  result.credit = clamp((cycle.count() * num_elements_) / total_ns);
+  // Give enough credit to last 2 cycles.
+  result.credit = 2 * clamp((cycle.count() * num_elements_) / total_ns);
   result.batch_size = clamp((complexity_.count() * num_elements_) / total_ns);
   // Reset state and return.
   num_elements_ = 0;

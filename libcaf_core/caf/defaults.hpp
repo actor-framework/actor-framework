@@ -38,6 +38,13 @@ extern const timespan max_batch_delay;
 extern const timespan credit_round_interval;
 extern const atom_value credit_policy;
 
+namespace size_policy {
+
+extern const int32_t bytes_per_batch;
+extern const int32_t buffer_capacity;
+
+} // namespace size_policy
+
 } // namespace streaming
 
 namespace scheduler {

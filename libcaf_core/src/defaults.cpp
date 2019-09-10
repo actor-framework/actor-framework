@@ -51,6 +51,13 @@ const timespan max_batch_delay = ms(5);
 const timespan credit_round_interval = ms(10);
 const atom_value credit_policy = atom("complexity");
 
+namespace size_policy {
+
+const int32_t bytes_per_batch = 4 * 1024;  // 4 kB
+const int32_t buffer_capacity = 64 * 1024; // 64 kB
+
+} // namespace size_policy
+
 } // namespace stream
 
 namespace scheduler {
