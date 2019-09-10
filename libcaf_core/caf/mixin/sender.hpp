@@ -60,6 +60,7 @@ public:
   template <message_priority P = message_priority::normal,
             class Dest = actor, class... Ts>
   void send(const Dest& dest, Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
     detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
     type_check(dest, args_token);
     if (dest)
@@ -87,12 +88,14 @@ public:
     caf::anon_send(dest, std::forward<Ts>(xs)...);
   }
 
-  /// Sends a message after an absolute timeout.
+  /// Sends a message at given time point (or immediately if `timeout` has
+  /// passed already).
   template <message_priority P = message_priority::normal, class Dest = actor,
             class... Ts>
   detail::enable_if_t<!std::is_same<Dest, group>::value>
   scheduled_send(const Dest& dest, actor_clock::time_point timeout,
                  Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
     detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
     type_check(dest, args_token);
     if (dest) {
@@ -104,11 +107,12 @@ public:
     }
   }
 
-  /// Sends a message after an absolute timeout. Sends the message immediately
-  /// if the timeout has already past.
+  /// Sends a message at given time point (or immediately if `timeout` has
+  /// passed already).
   template <class... Ts>
   void scheduled_send(const group& dest, actor_clock::time_point timeout,
                       Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
     static_assert(!statically_typed<Subtype>(),
                   "statically typed actors are not allowed to send to groups");
     if (dest) {
@@ -124,6 +128,7 @@ public:
   detail::enable_if_t<!std::is_same<Dest, group>::value>
   delayed_send(const Dest& dest, std::chrono::duration<Rep, Period> rel_timeout,
                Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
     detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
     type_check(dest, args_token);
     if (dest) {
@@ -141,6 +146,7 @@ public:
             class... Ts>
   void delayed_send(const group& dest, std::chrono::duration<Rep, Period> rtime,
                     Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
     static_assert(!statically_typed<Subtype>(),
                   "statically typed actors are not allowed to send to groups");
     if (dest) {
