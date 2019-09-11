@@ -19,8 +19,6 @@
 #pragma once
 
 #include <cstdint>
-#include <functional>
-#include <utility>
 
 #include "caf/atom.hpp"
 #include "caf/detail/comparable.hpp"

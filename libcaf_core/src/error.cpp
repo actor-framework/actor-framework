@@ -18,12 +18,11 @@
 
 #include "caf/error.hpp"
 
-#include "caf/config.hpp"
+#include <utility>
+
 #include "caf/deep_to_string.hpp"
-#include "caf/deserializer.hpp"
 #include "caf/make_message.hpp"
 #include "caf/message.hpp"
-#include "caf/serializer.hpp"
 
 namespace caf {
 
