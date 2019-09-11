@@ -36,12 +36,18 @@ CAF_TEST(serialization) {
     CAF_CHECK_EQUAL(sink(x), none);
   }
   CAF_CHECK_EQUAL(buf.size(), basp::header_size);
+  auto buf2 = to_bytes(x);
+  CAF_REQUIRE_EQUAL(buf.size(), buf2.size());
+  CAF_CHECK(std::equal(buf.begin(), buf.end(), buf2.begin()));
   basp::header y;
   {
     binary_deserializer source{nullptr, buf};
     CAF_CHECK_EQUAL(source(y), none);
   }
   CAF_CHECK_EQUAL(x, y);
+  auto z = basp::header::from_bytes(buf);
+  CAF_CHECK_EQUAL(x, z);
+  CAF_CHECK_EQUAL(y, z);
 }
 
 CAF_TEST(to_string) {

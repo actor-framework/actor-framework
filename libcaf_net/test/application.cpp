@@ -129,10 +129,13 @@ struct fixture : test_coordinator_fixture<> {
 
 #define RECEIVE(msg_type, op_data, ...)                                        \
   do {                                                                         \
-    serializer_impl<buffer_type> source{sys, output};                          \
+    binary_deserializer source{sys, output};                                   \
     basp::header hdr;                                                          \
     if (auto err = source(hdr, __VA_ARGS__))                                   \
       CAF_FAIL("failed to receive data: " << sys.render(err));                 \
+    if (source.remaining() != 0)                                               \
+      CAF_FAIL("unable to read entire message, " << source.remaining()         \
+                                                 << " bytes left in buffer");  \
     CAF_CHECK_EQUAL(hdr.type, msg_type);                                       \
     CAF_CHECK_EQUAL(hdr.operation_data, op_data);                              \
     output.clear();                                                            \
