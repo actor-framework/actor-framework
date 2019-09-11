@@ -571,6 +571,7 @@ public:
       CAF_FAIL("failed to parse config: " << to_string(err));
     cfg.set("scheduler.policy", caf::atom("testing"));
     cfg.set("logger.inline-output", true);
+    cfg.set("logger.file-verbosity", caf::atom("quiet"));
     cfg.set("middleman.network-backend", caf::atom("testing"));
     cfg.set("middleman.workers", size_t{0});
     return cfg;
