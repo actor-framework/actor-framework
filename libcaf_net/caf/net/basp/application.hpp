@@ -33,6 +33,7 @@
 #include "caf/net/basp/message_type.hpp"
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/node_id.hpp"
+#include "caf/response_promise.hpp"
 #include "caf/serializer_impl.hpp"
 #include "caf/span.hpp"
 #include "caf/unit.hpp"
