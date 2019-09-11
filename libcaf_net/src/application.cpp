@@ -26,6 +26,7 @@
 #include "caf/byte.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/network_order.hpp"
+#include "caf/detail/parse.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/net/basp/constants.hpp"
@@ -34,6 +35,7 @@
 #include "caf/none.hpp"
 #include "caf/sec.hpp"
 #include "caf/serializer_impl.hpp"
+#include "caf/string_algorithms.hpp"
 #include "caf/type_erased_tuple.hpp"
 
 namespace caf {
@@ -49,7 +51,24 @@ expected<std::vector<byte>> application::serialize(actor_system& sys,
   return result;
 }
 
-strong_actor_ptr application::resolve_local_path(string_view) {
+strong_actor_ptr application::resolve_local_path(string_view path) {
+  // We currently support two path formats: `id/<actor_id>` and `name/<atom>`.
+  static constexpr string_view id_prefix = "id/";
+  if (starts_with(path, id_prefix)) {
+    path.remove_prefix(id_prefix.size());
+    actor_id aid;
+    if (auto err = detail::parse(path, aid))
+      return nullptr;
+    return system().registry().get(aid);
+  }
+  static constexpr string_view name_prefix = "name/";
+  if (starts_with(path, name_prefix)) {
+    path.remove_prefix(name_prefix.size());
+    atom_value name;
+    if (auto err = detail::parse(path, name))
+      return nullptr;
+    return system().registry().get(name);
+  }
   return nullptr;
 }
 

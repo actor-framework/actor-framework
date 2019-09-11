@@ -203,12 +203,42 @@ CAF_TEST(resolve request without result) {
   handle_handshake();
   consume_handshake();
   CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_header);
-  MOCK(basp::message_type::resolve_request, 42, std::string{"/foo/bar"});
+  MOCK(basp::message_type::resolve_request, 42, std::string{"foo/bar"});
   CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_header);
   actor_id aid;
   std::set<std::string> ifs;
   RECEIVE(basp::message_type::resolve_response, 42u, aid, ifs);
   CAF_CHECK_EQUAL(aid, 0u);
+  CAF_CHECK(ifs.empty());
+}
+
+CAF_TEST(resolve request on id with result) {
+  handle_handshake();
+  consume_handshake();
+  sys.registry().put(self->id(), self);
+  auto path = "id/" + std::to_string(self->id());
+  CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_header);
+  MOCK(basp::message_type::resolve_request, 42, path);
+  CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_header);
+  actor_id aid;
+  std::set<std::string> ifs;
+  RECEIVE(basp::message_type::resolve_response, 42u, aid, ifs);
+  CAF_CHECK_EQUAL(aid, self->id());
+  CAF_CHECK(ifs.empty());
+}
+
+CAF_TEST(resolve request on name with result) {
+  handle_handshake();
+  consume_handshake();
+  sys.registry().put(atom("foo"), self);
+  std::string path = "name/foo";
+  CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_header);
+  MOCK(basp::message_type::resolve_request, 42, path);
+  CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_header);
+  actor_id aid;
+  std::set<std::string> ifs;
+  RECEIVE(basp::message_type::resolve_response, 42u, aid, ifs);
+  CAF_CHECK_EQUAL(aid, self->id());
   CAF_CHECK(ifs.empty());
 }
 
