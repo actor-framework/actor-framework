@@ -194,8 +194,6 @@ public:
 
   ini_consumer(const config_option_set& options, settings& cfg);
 
-  ini_consumer(ini_consumer&&) = default;
-
   // -- properties -------------------------------------------------------------
 
   ini_category_consumer begin_map();
