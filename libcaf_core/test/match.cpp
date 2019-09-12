@@ -104,7 +104,7 @@ struct fixture {
     auto last = end(invoked);
     auto i = find(first, last, true);
     if (i != last) {
-      CAF_REQUIRE_EQUAL(count(i, last, true), 1u);
+      CAF_REQUIRE(count(i, last, true) == 1);
       return distance(first, i);
     }
     return -1;
