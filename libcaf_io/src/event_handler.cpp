@@ -33,10 +33,11 @@ namespace io {
 namespace network {
 
 event_handler::event_handler(default_multiplexer& dm, native_socket sockfd)
-    : fd_(sockfd),
-      state_{true, false, false, false, receive_policy_flag::at_least},
-      eventbf_(0),
-      backend_(dm) {
+  : fd_(sockfd),
+    state_{true, false, false, false,
+           to_integer(receive_policy_flag::at_least)},
+    eventbf_(0),
+    backend_(dm) {
   set_fd_flags();
 }
 
