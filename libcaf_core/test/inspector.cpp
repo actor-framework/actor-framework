@@ -228,22 +228,49 @@ CAF_TEST(stringification_inspector) {
 }
 
 namespace {
+
+template <class T>
+struct is_integral_or_enum {
+  static constexpr bool value = std::is_integral<T>::value
+                                || std::is_enum<T>::value;
+};
+
 struct binary_serialization_policy {
   execution_unit& context;
 
   template <class T>
-  bool operator()(T& x) {
-    std::vector<char> buf;
-    binary_serializer f{&context, buf};
-    f(x);
-    binary_deserializer g{&context, buf};
+  std::vector<char> to_buf(const T& x) {
+    std::vector<char> result;
+    binary_serializer f{&context, result};
+    if (auto err = f(x))
+      CAF_FAIL("failed to serialize " << x << ": " << err);
+    return result;
+  }
+
+  template <class T>
+  detail::enable_if_t<is_integral_or_enum<T>::value, bool> operator()(T& x) {
+    auto buf = to_buf(x);
+    binary_deserializer f{&context, buf};
+    auto y = static_cast<T>(0);
+    if (auto err = f(y))
+      CAF_FAIL("failed to deserialize from buffer: " << err);
+    CAF_CHECK_EQUAL(x, y);
+    return detail::safe_equal(x, y);
+  }
+
+  template <class T>
+  detail::enable_if_t<!is_integral_or_enum<T>::value, bool> operator()(T& x) {
+    auto buf = to_buf(x);
+    binary_deserializer f{&context, buf};
     T y;
-    g(y);
+    if (auto err = f(y))
+      CAF_FAIL("failed to deserialize from buffer: " << err);
     CAF_CHECK_EQUAL(x, y);
     return detail::safe_equal(x, y);
   }
 };
-} // namespace <anonymous>
+
+} // namespace
 
 CAF_TEST(binary_serialization_inspectors) {
   actor_system_config cfg;

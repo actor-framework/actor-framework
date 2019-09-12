@@ -176,7 +176,7 @@ public:
         lhs = static_cast<underlying>(rhs);
       }
     } assign;
-    underlying tmp;
+    underlying tmp = 0;
     return convert_apply(dref(), x, tmp, assign);
   }
 
