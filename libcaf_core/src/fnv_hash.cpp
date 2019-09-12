@@ -18,41 +18,42 @@
 
 #include "caf/detail/fnv_hash.hpp"
 
+#include <cstdint>
+
 namespace caf {
 namespace detail {
 
 namespace {
 
-template <size_t IntegerSize>
-struct hash_conf_helper;
+#if SIZE_MAX == 0xFFFFFFFF
 
-template <>
-struct hash_conf_helper<4> {
-  static constexpr size_t basis = 2166136261u;
+constexpr size_t basis = 2166136261u;
 
-  static constexpr size_t prime = 16777619u;
-};
+constexpr size_t prime = 16777619u;
 
-template <>
-struct hash_conf_helper<8> {
-  static constexpr size_t basis = 14695981039346656037u;
+#elif SIZE_MAX == 0xFFFFFFFFFFFFFFFF
 
-  static constexpr size_t prime = 1099511628211u;
-};
+constexpr size_t basis = 14695981039346656037u;
 
-struct hash_conf : hash_conf_helper<sizeof(size_t)> {};
+constexpr size_t prime = 1099511628211u;
+
+#else
+
+#  error Platform and/or compiler not supported
+
+#endif
 
 } // namespace
 
 size_t fnv_hash(const unsigned char* first, const unsigned char* last) {
-  return fnv_hash_append(hash_conf::basis, first, last);
+  return fnv_hash_append(basis, first, last);
 }
 
 size_t fnv_hash_append(size_t intermediate, const unsigned char* first,
                        const unsigned char* last) {
   auto result = intermediate;
   for (; first != last; ++first) {
-    result *= hash_conf::prime;
+    result *= prime;
     result ^= *first;
   }
   return result;
