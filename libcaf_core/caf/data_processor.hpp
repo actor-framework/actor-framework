@@ -227,7 +227,7 @@ public:
         lhs.resize((rhs.size() - 1) / 8 + 1, 0);
         for (bool b: rhs) {
           if (b)
-            lhs[k / 8] |= (1 << (k % 8));
+            lhs[k / 8] |= static_cast<uint8_t>(1 << (k % 8));
           ++k;
         }
       }
