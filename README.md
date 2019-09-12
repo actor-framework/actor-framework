@@ -83,8 +83,7 @@ options are using [CMake](http://www.cmake.org/) directly or
 
 The script is a convenient frontend for `CMake`. See `configure -h`
 for a list of available options or read the
-[online documentation]
-(https://github.com/actor-framework/actor-framework/wiki/Configure-Options).
+[online documentation](https://github.com/actor-framework/actor-framework/wiki/Configure-Options).
 
 ```sh
 ./configure
