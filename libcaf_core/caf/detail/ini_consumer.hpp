@@ -193,8 +193,6 @@ public:
 
   ini_consumer(config_option_set& options, config_map& cfg);
 
-  ini_consumer(ini_consumer&&) = default;
-
   // -- properties -------------------------------------------------------------
 
   ini_category_consumer begin_map();
