@@ -197,7 +197,7 @@ CAF_TEST_FIXTURE_SCOPE(authentication, fixture)
 using openssl::remote_actor;
 using openssl::publish;
 
-CAF_TEST(authentication_success) {
+CAF_TEST_DISABLED(authentication_success) {
   if (!init(false))
     return;
   // server side
@@ -221,7 +221,7 @@ CAF_TEST(authentication_success) {
   exec_loop();
 }
 
-CAF_TEST(authentication_failure) {
+CAF_TEST_DISABLED(authentication_failure) {
   if (!init(true))
     return;
   // server side
