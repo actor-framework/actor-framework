@@ -30,7 +30,7 @@ if(NOT CAF_BUILD_STATIC_ONLY)
                         SOVERSION "${CAF_VERSION}"
                         VERSION "${CAF_VERSION}"
                         OUTPUT_NAME caf_opencl)
-  install(TARGETS libcaf_opencl_shared LIBRARY DESTINATION lib)
+  install(TARGETS libcaf_opencl_shared LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
 
 # build static library only if --build-static or --build-static-only was set
@@ -46,10 +46,10 @@ if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
     $<INSTALL_INTERFACE:include>
   )
   set_target_properties(libcaf_opencl_static PROPERTIES OUTPUT_NAME caf_opencl_static)
-  install(TARGETS libcaf_opencl_static ARCHIVE DESTINATION lib)
+  install(TARGETS libcaf_opencl_static ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
 
 # install includes
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/caf
-        DESTINATION include
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         FILES_MATCHING PATTERN "*.hpp")

@@ -65,8 +65,8 @@ if (NOT CAF_BUILD_STATIC_ONLY)
                         VERSION ${CAF_VERSION}
                         OUTPUT_NAME caf_io)
   install(TARGETS libcaf_io_shared
-          RUNTIME DESTINATION bin
-          LIBRARY DESTINATION lib)
+          RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+          LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
   add_dependencies(libcaf_io_shared libcaf_io)
 endif ()
 
@@ -79,11 +79,11 @@ if (CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
     $<INSTALL_INTERFACE:include>
   )
   set_target_properties(libcaf_io_static PROPERTIES OUTPUT_NAME caf_io_static)
-  install(TARGETS libcaf_io_static ARCHIVE DESTINATION lib)
+  install(TARGETS libcaf_io_static ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
   add_dependencies(libcaf_io_static libcaf_io)
 endif ()
 
 # install includes
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/caf
-        DESTINATION include
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         FILES_MATCHING PATTERN "*.hpp")
