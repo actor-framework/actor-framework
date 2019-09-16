@@ -26,40 +26,36 @@ namespace caf {
 
 /// Computes the type for f*g (actor composition).
 ///
-/// ~~~
-/// let output_type x = case x of Stream y -> y ; Single y -> y
+/// This metaprogramming function implements the following pseudo-code (with
+/// `f` and `g` modelled as pairs where the first element is the input type and
+/// the second type is the output type).
 ///
-/// let propagate_stream from to = case from of
-///                                  Stream _ -> Stream (output_type to)
-///                                  Single _ -> to
+/// ~~~
 /// let composed_type f g =
-///   [(fst x, propagate_stream (snd x) (snd y)) | x <- g, y <- f,
-///                                                output_type (snd x) == fst y]
+///   [(fst x, snd y) | x <- g, y <- f,
+///                     snd x == fst y]
 /// ~~~
 ///
-/// This class implements the list comprehension above in a
-/// single shot with worst case n*m template instantiations using an
-/// inner and outer loop, where n is the size
-/// of Xs and m the size of Ys. Zs is a helper that models the
-/// "inner loop variable" for generating the cross product of Xs and Ys.
-/// The helper function propagate_stream is integrated into the loop with
-/// four cases for the matching case. Rs collects the results.
-
+/// This class implements the list comprehension above in a single shot with
+/// worst case n*m template instantiations using an inner and outer loop, where
+/// n is the size of `Xs` and m the size of `Ys`. `Zs` is a helper that models
+/// the "inner loop variable" for generating the cross product of `Xs` and
+/// `Ys`. `Rs` collects the results.
 template <class Xs, class Ys, class Zs, class Rs>
 struct composed_type;
 
-// end of outer loop over Xs
+// End of outer loop over Xs.
 template <class Ys, class Zs, class... Rs>
 struct composed_type<detail::type_list<>, Ys, Zs, detail::type_list<Rs...>> {
   using type = typed_actor<Rs...>;
 };
 
-// end of inner loop Ys (Zs)
+// End of inner loop Ys (Zs).
 template <class X, class... Xs, class Ys, class Rs>
 struct composed_type<detail::type_list<X, Xs...>, Ys, detail::type_list<>, Rs>
   : composed_type<detail::type_list<Xs...>, Ys, Ys, Rs> {};
 
-// case #1
+// Output type matches the input type of the next actor.
 template <class... In, class... Out, class... Xs, class Ys, class... MapsTo,
           class... Zs, class... Rs>
 struct composed_type<
@@ -75,7 +71,7 @@ struct composed_type<
         Rs..., typed_mpi<detail::type_list<In...>, output_tuple<MapsTo...>>>> {
 };
 
-// default case (recurse over Zs)
+// No match, recurse over Zs.
 template <class In, class Out, class... Xs, class Ys, class Unrelated,
           class MapsTo, class... Zs, class Rs>
 struct composed_type<detail::type_list<typed_mpi<In, Out>, Xs...>, Ys,
