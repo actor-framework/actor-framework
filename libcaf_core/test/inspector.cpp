@@ -241,8 +241,8 @@ struct binary_serialization_policy {
   template <class T>
   std::vector<char> to_buf(const T& x) {
     std::vector<char> result;
-    binary_serializer f{&context, result};
-    if (auto err = f(x))
+    binary_serializer sink{&context, result};
+    if (auto err = sink(x))
       CAF_FAIL("failed to serialize " << x << ": " << err);
     return result;
   }
@@ -250,9 +250,9 @@ struct binary_serialization_policy {
   template <class T>
   detail::enable_if_t<is_integral_or_enum<T>::value, bool> operator()(T& x) {
     auto buf = to_buf(x);
-    binary_deserializer f{&context, buf};
+    binary_deserializer source{&context, buf};
     auto y = static_cast<T>(0);
-    if (auto err = f(y))
+    if (auto err = source(y))
       CAF_FAIL("failed to deserialize from buffer: " << err);
     CAF_CHECK_EQUAL(x, y);
     return detail::safe_equal(x, y);
@@ -261,9 +261,9 @@ struct binary_serialization_policy {
   template <class T>
   detail::enable_if_t<!is_integral_or_enum<T>::value, bool> operator()(T& x) {
     auto buf = to_buf(x);
-    binary_deserializer f{&context, buf};
+    binary_deserializer source{&context, buf};
     T y;
-    if (auto err = f(y))
+    if (auto err = source(y))
       CAF_FAIL("failed to deserialize from buffer: " << err);
     CAF_CHECK_EQUAL(x, y);
     return detail::safe_equal(x, y);
