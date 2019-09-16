@@ -31,6 +31,7 @@
 #include "caf/is_actor_handle.hpp"
 #include "caf/make_source_result.hpp"
 #include "caf/policy/arg.hpp"
+#include "caf/response_type.hpp"
 #include "caf/stream_source.hpp"
 
 namespace caf {
@@ -119,7 +120,11 @@ detail::enable_if_t<is_actor_handle<ActorHandle>::value,
 attach_stream_source(scheduled_actor* self, const ActorHandle& dest,
                      std::tuple<Ts...> xs, Init init, Pull pull, Done done,
                      Finalize fin = {}, policy::arg<DownstreamManager> = {}) {
-  // TODO: type checking of dest
+  using namespace detail;
+  using token = type_list<stream<typename DownstreamManager::output_type>,
+                          strip_and_convert_t<Ts>...>;
+  static_assert(response_type_unbox<signatures_of_t<ActorHandle>, token>::valid,
+                "receiver does not accept the stream handshake");
   using driver = detail::stream_source_driver_impl<DownstreamManager, Pull,
                                                    Done, Finalize>;
   auto mgr = detail::make_stream_source<driver>(self, std::move(init),
