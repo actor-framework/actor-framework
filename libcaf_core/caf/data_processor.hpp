@@ -475,6 +475,76 @@ public:
     return none;
   }
 
+  static_assert(__cpp_fold_expressions, "C++ fold-expressions required");
+#if __cpp_fold_expressions
+
+  template <class F> inline
+  error safe_callback_action(meta::save_callback_t<F> x) {
+    return Derived::reads_state ? x.fun() : none;
+  }
+
+  template <class F> inline
+  error load_callback_action(meta::load_callback_t<F> x) {
+    return Derived::writes_state ? x.fun() : none;
+  }
+
+  inline
+  error annotation_action(const meta::annotation&) {
+    return none;
+  }
+
+  template<typename T> inline
+  typename std::enable_if<is_allowed_unsafe_message_type<T>::value, error>::type
+  allowed_unsafe_message_type_action(const T&) {
+    return none;
+  }
+
+  template <class T> inline
+  typename std::enable_if<!meta::is_annotation<T>::value && !is_allowed_unsafe_message_type<T>::value, error>::type
+  action(T&& x) {
+    static_assert(Derived::reads_state || (!std::is_rvalue_reference<T&&>::value && !std::is_const<typename std::remove_reference<T>::type>::value), "a loading inspector requires mutable lvalue references");
+    return apply(deconst(x));
+  }
+
+  struct FoldLeft {
+    Derived& derived;
+    error err = none;
+
+    template<class F> inline
+    FoldLeft& operator<<(meta::save_callback_t<F> x) {
+      if (not err) err = derived.safe_callback_action(std::move(x));
+      return *this;
+    }
+    template<class F> inline
+    FoldLeft& operator<<(meta::load_callback_t<F> x) {
+      if (not err) err = derived.load_callback_action(std::move(x));
+      return *this;
+    }
+    inline
+    FoldLeft& operator<<(const meta::annotation& x) {
+      if (not err) err = derived.annotation_action(x);
+      return *this;
+    }
+    template<typename T> inline
+    typename std::enable_if<is_allowed_unsafe_message_type<T>::value, FoldLeft&>::type
+    operator<<(const T& x) {
+      if (not err) err = derived.allowed_unsafe_message_type_action(x);
+      return *this;
+    }
+    template<typename T> inline
+    typename std::enable_if<!meta::is_annotation<T>::value && !is_allowed_unsafe_message_type<T>::value, FoldLeft&>::type
+    operator<<(T&& x) {
+      if (not err) err = derived.action(std::forward<T>(x));
+      return *this;
+    }
+  };
+
+  template <class... Ts> inline
+  error operator()(Ts&&... xs) {
+    return (FoldLeft{dref()} << ... << xs).err;
+  }
+
+#else // __cpp_fold_expressions
   template <class F, class... Ts>
   error operator()(meta::save_callback_t<F> x, Ts&&... xs) {
     // TODO: use `if constexpr` when switching to C++17.
@@ -524,6 +594,7 @@ public:
       return err;
     return dref()(std::forward<Ts>(xs)...);
   }
+#endif // __cpp_fold_expressions
 
 protected:
   virtual error apply_impl(int8_t&) = 0;
