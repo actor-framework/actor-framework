@@ -18,15 +18,13 @@
 
 #pragma once
 
-#include "caf/default_downstream_manager.hpp"
 #include "caf/detail/stream_sink_driver_impl.hpp"
 #include "caf/detail/stream_sink_impl.hpp"
-#include "caf/downstream_manager.hpp"
 #include "caf/fwd.hpp"
 #include "caf/make_sink_result.hpp"
 #include "caf/policy/arg.hpp"
 #include "caf/stream.hpp"
-#include "caf/stream_source.hpp"
+#include "caf/stream_sink.hpp"
 
 namespace caf {
 
