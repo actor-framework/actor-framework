@@ -10,7 +10,7 @@ macro(add folder name)
                         ${CAF_EXTRA_LDFLAGS}
                         ${CAF_LIBRARIES}
                         ${PTHREAD_LIBRARIES})
-  install(FILES ${folder}/${name}.cpp DESTINATION share/caf/examples/${folder})
+  install(FILES ${folder}/${name}.cpp DESTINATION ${CMAKE_INSTALL_DATADIR}/caf/examples/${folder})
   add_dependencies(${name} all_examples)
 endmacro()
 

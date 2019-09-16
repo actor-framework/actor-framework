@@ -66,7 +66,7 @@ foreach (comp ${CAF_FIND_COMPONENTS})
                   /usr/local/include
                   /opt/local/include
                   /sw/include
-                  ${CMAKE_INSTALL_PREFIX}/include)
+                  ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR})
       if ("${caf_build_header_path}" STREQUAL "caf_build_header_path-NOTFOUND")
         message(WARNING "Found all.hpp for CAF core, but not build_config.hpp")
         set(CAF_${comp}_FOUND false)
@@ -91,8 +91,8 @@ foreach (comp ${CAF_FIND_COMPONENTS})
                      /usr/local/lib
                      /opt/local/lib
                      /sw/lib
-                     ${CMAKE_INSTALL_PREFIX}/lib
-                     ${CMAKE_INSTALL_PREFIX}/lib/${CMAKE_BUILD_TYPE})
+                     ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}
+                     ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/${CMAKE_BUILD_TYPE})
       mark_as_advanced(CAF_LIBRARY_${UPPERCOMP})
       if ("${CAF_LIBRARY_${UPPERCOMP}}"
           STREQUAL "CAF_LIBRARY_${UPPERCOMP}-NOTFOUND")

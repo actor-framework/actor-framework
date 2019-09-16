@@ -143,7 +143,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/../cmake/build_config.hpp.in"
                "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
                @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
-        DESTINATION include/caf/detail
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/caf/detail
 )
 list(APPEND LIBCAF_CORE_HDRS
   "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
@@ -167,8 +167,8 @@ if (NOT CAF_BUILD_STATIC_ONLY)
     OUTPUT_NAME caf_core
   )
   install(TARGETS libcaf_core_shared
-    RUNTIME DESTINATION bin
-    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )
   add_dependencies(libcaf_core_shared libcaf_core)
 endif ()
@@ -183,11 +183,11 @@ if (CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
     $<INSTALL_INTERFACE:include>
   )
   set_target_properties(libcaf_core_static PROPERTIES OUTPUT_NAME caf_core_static)
-  install(TARGETS libcaf_core_static ARCHIVE DESTINATION lib)
+  install(TARGETS libcaf_core_static ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
   add_dependencies(libcaf_core_static libcaf_core)
 endif ()
 
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
-        DESTINATION include
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} 
         FILES_MATCHING PATTERN "*.hpp"
 )
