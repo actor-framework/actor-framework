@@ -37,12 +37,12 @@ bool add_ascii(T& x, char c, enable_if_tt<std::is_integral<T>, int> u = 0) {
   CAF_IGNORE_UNUSED(u);
   if (x > (std::numeric_limits<T>::max() / Base))
     return false;
-  x *= Base;
+  x *= static_cast<T>(Base);
   ascii_to_int<Base, T> f;
   auto y = f(c);
   if (x > (std::numeric_limits<T>::max() - y))
     return false;
-  x += y;
+  x += static_cast<T>(y);
   return true;
 }
 
@@ -58,4 +58,3 @@ bool add_ascii(T& x, char c,
 } // namespace parser
 } // namespace detail
 } // namespace caf
-

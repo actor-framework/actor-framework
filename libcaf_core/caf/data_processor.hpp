@@ -176,7 +176,7 @@ public:
         lhs = static_cast<underlying>(rhs);
       }
     } assign;
-    underlying tmp;
+    underlying tmp = 0;
     return convert_apply(dref(), x, tmp, assign);
   }
 
@@ -227,7 +227,7 @@ public:
         lhs.resize((rhs.size() - 1) / 8 + 1, 0);
         for (bool b: rhs) {
           if (b)
-            lhs[k / 8] |= (1 << (k % 8));
+            lhs[k / 8] |= static_cast<uint8_t>(1 << (k % 8));
           ++k;
         }
       }

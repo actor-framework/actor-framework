@@ -45,7 +45,7 @@ public:
     bool shutting_down : 1;
 
     /// Stores what receive policy is currently active.
-    receive_policy_flag rd_flag : 2;
+    unsigned rd_flag : 2;
   };
 
   event_handler(default_multiplexer& dm, native_socket sockfd);

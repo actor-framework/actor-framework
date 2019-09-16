@@ -204,7 +204,7 @@ error node_id::serialize(serializer& sink) const {
 }
 
 error node_id::deserialize(deserializer& source) {
-  atom_value impl;
+  auto impl = static_cast<atom_value>(0);
   if (auto err = source(impl))
     return err;
   if (impl == atom("")) {

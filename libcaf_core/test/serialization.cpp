@@ -240,6 +240,7 @@ struct is_message {
 } // namespace <anonymous>
 
 #define SERIALIZATION_TEST(name)                                               \
+  namespace {                                                                  \
   template <class Serializer, class Deserializer>                              \
   struct name##_tpl : fixture<Serializer, Deserializer> {                      \
     using super = fixture<Serializer, Deserializer>;                           \
@@ -263,7 +264,6 @@ struct is_message {
     using super::msg_roundtrip;                                                \
     void run_test_impl();                                                      \
   };                                                                           \
-  namespace {                                                                  \
   using name##_binary = name##_tpl<binary_serializer, binary_deserializer>;    \
   using name##_stream = name##_tpl<stream_serializer<vectorbuf>,               \
                                    stream_deserializer<charbuf>>;              \
