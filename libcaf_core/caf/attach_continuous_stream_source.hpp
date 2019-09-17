@@ -29,9 +29,9 @@
 
 namespace caf {
 
-/// Creates a new continuous stream source by instantiating the default
-/// source implementation with `Driver. `The returned manager is not
-/// connected to any slot and thus not stored by the actor automatically.
+/// Creates a new continuous stream source by instantiating the default source
+/// implementation with `Driver`. The returned manager is not connected to any
+/// slot and thus not stored by the actor automatically.
 /// @param self Points to the hosting actor.
 /// @param init Function object for initializing the state of the source.
 /// @param pull Generator function object for producing downstream messages.
@@ -50,9 +50,9 @@ attach_continuous_stream_source(scheduled_actor* self, Init init, Pull pull,
   return mgr;
 }
 
-/// Creates a new continuous stream source by instantiating the default
-/// source implementation with `Driver. `The returned manager is not
-/// connected to any slot and thus not stored by the actor automatically.
+/// Creates a new continuous stream source by instantiating the default source
+/// implementation with `Driver`. The returned manager is not connected to any
+/// slot and thus not stored by the actor automatically.
 /// @param self Points to the hosting actor.
 /// @param init Function object for initializing the state of the source.
 /// @param pull Generator function object for producing downstream messages.
