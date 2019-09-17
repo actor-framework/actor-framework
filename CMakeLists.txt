@@ -237,7 +237,8 @@ if(CAF_MORE_WARNINGS)
                "-Wno-c++98-compat-pedantic -Wno-unused-member-function "
                "-Wno-unused-const-variable -Wno-switch-enum "
                "-Wno-abstract-vbase-init -Wno-shadow "
-               "-Wno-missing-noreturn -Wno-covered-switch-default")
+               "-Wno-missing-noreturn -Wno-covered-switch-default "
+               "-Wno-return-std-move-in-c++11")
   elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set(WFLAGS "-Waddress -Wall -Warray-bounds "
                "-Wattributes -Wbuiltin-macro-redefined -Wcast-align "
