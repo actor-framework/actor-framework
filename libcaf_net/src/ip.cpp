@@ -150,20 +150,19 @@ std::string hostname() {
 
 std::vector<ip_address> local_addresses(string_view host) {
   using adapters_ptr = std::unique_ptr<IP_ADAPTER_ADDRESSES, void (*)(void*)>;
-  using wbuf_ptr = std::unique_ptr<IP_ADAPTER_ADDRESSES, void (*)(void*)>;
   if (host == v4_any_addr)
     return {ip_address{make_ipv4_address(0, 0, 0, 0)}};
   if (host == v6_any_addr)
     return {ip_address{}};
   ULONG len = 0;
-  auto err = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, nullptr,
-                                  nullptr, &len);
-  if (err != ERROR_BUFFER_OVERFLOW) {
+  if (GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, nullptr, nullptr,
+                           &len)
+      != ERROR_BUFFER_OVERFLOW) {
     CAF_LOG_ERROR("failed to get adapter addresses buffer length");
     return {};
   }
   auto adapters = adapters_ptr{reinterpret_cast<IP_ADAPTER_ADDRESSES*>(
-                                 ::new uint8_t[len]),
+                                 ::malloc(len),
                                free};
   if (!adapters) {
     CAF_LOG_ERROR("malloc failed");
@@ -172,9 +171,9 @@ std::vector<ip_address> local_addresses(string_view host) {
   // TODO: The Microsoft WIN32 API example propopses to try three times, other
   // examples online just perform the call once. If we notice the call to be
   // unreliable, we might adapt that behavior.
-  err = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, nullptr,
-                             adapters.get(), &len);
-  if (err != ERROR_SUCCESS) {
+  if (GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, nullptr,
+                           adapters.get(), &len)
+      != ERROR_SUCCESS) {
     CAF_LOG_ERROR("failed to get adapter addresses");
     return {};
   }
