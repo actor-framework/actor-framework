@@ -58,12 +58,8 @@ public:
   // -- member functions -------------------------------------------------------
 
   template <class Parent>
-  error init(Parent& parent) {
-    for (const auto& p : workers_by_id_) {
-      auto worker = p.second;
-      if (auto err = worker->init(parent))
-        return err;
-    }
+  error init(Parent&) {
+    CAF_ASSERT(workers_by_id_.empty());
     return none;
   }
 
@@ -72,7 +68,7 @@ public:
     auto it = workers_by_id_.find(id);
     if (it == workers_by_id_.end()) {
       // TODO: where to get node_id from here?
-      add_new_worker(node_id{}, id);
+      add_new_worker(parent, node_id{}, id);
       it = workers_by_id_.find(id);
     }
     auto worker = it->second;
@@ -89,7 +85,7 @@ public:
     auto it = workers_by_node_.find(nid);
     if (it == workers_by_node_.end()) {
       // TODO: where to get id_type from here?
-      add_new_worker(nid, id_type{});
+      add_new_worker(parent, nid, id_type{});
       it = workers_by_node_.find(nid);
     }
     auto worker = it->second;
@@ -132,9 +128,11 @@ public:
     }
   }
 
-  void add_new_worker(node_id node, id_type id) {
+  template <class Parent>
+  void add_new_worker(Parent& parent, node_id node, id_type id) {
     auto application = factory_.make();
     auto worker = std::make_shared<worker_type>(std::move(application), id);
+    worker->init(parent);
     workers_by_id_.emplace(std::move(id), worker);
     workers_by_node_.emplace(std::move(node), std::move(worker));
   }

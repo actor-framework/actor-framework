@@ -196,8 +196,9 @@ struct fixture : host_fixture {
 
   void add_new_workers() {
     for (auto& data : test_data) {
-      dispatcher.add_new_worker(data.nid, data.ep);
+      dispatcher.add_new_worker(dummy, data.nid, data.ep);
     }
+    buf->clear();
   }
 
   void test_write_message(testdata& testcase) {
@@ -249,13 +250,9 @@ struct fixture : host_fixture {
 CAF_TEST_FIXTURE_SCOPE(transport_worker_dispatcher_test, fixture)
 
 CAF_TEST(init) {
+  dispatcher_type dispatcher{dummy_application_factory{buf}};
   if (auto err = dispatcher.init(dummy))
     CAF_FAIL("init failed with error: " << err);
-  CAF_CHECK_EQUAL(buf->size(), 4u);
-  CAF_CHECK(contains(byte(0)));
-  CAF_CHECK(contains(byte(1)));
-  CAF_CHECK(contains(byte(2)));
-  CAF_CHECK(contains(byte(3)));
 }
 
 CAF_TEST(handle_data) {
