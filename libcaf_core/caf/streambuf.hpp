@@ -220,7 +220,7 @@ protected:
     auto available = this->epptr() - this->pptr();
     auto actual = std::min(n, static_cast<std::streamsize>(available));
     std::memcpy(this->pptr(), s,
-                static_cast<size_t>(actual) * sizeof(char_type));
+                static_cast<size_t>(actual * sizeof(char_type)));
     this->safe_pbump(actual);
     return actual;
   }
@@ -231,7 +231,7 @@ protected:
     auto available = this->egptr() - this->gptr();
     auto actual = std::min(n, static_cast<std::streamsize>(available));
     std::memcpy(s, this->gptr(),
-                static_cast<size_t>(actual) * sizeof(char_type));
+                static_cast<size_t>(actual * sizeof(char_type)));
     this->safe_gbump(actual);
     return actual;
   }
@@ -349,7 +349,7 @@ protected:
     auto available = this->egptr() - this->gptr();
     auto actual = std::min(n, static_cast<std::streamsize>(available));
     std::memcpy(s, this->gptr(),
-                static_cast<size_t>(actual) * sizeof(char_type));
+                static_cast<size_t>(actual * sizeof(char_type)));
     this->safe_gbump(actual);
     return actual;
   }
