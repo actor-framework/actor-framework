@@ -16,6 +16,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#include "caf/net/ip.hpp"
+
 #include <cstddef>
 #include <string>
 #include <utility>
@@ -25,6 +27,7 @@
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/error.hpp"
 #include "caf/ip_address.hpp"
+#include "caf/ip_subnet.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/logger.hpp"
 #include "caf/string_algorithms.hpp"
@@ -59,8 +62,6 @@ namespace {
 
 // Dummy port to resolve empty string with getaddrinfo.
 constexpr string_view dummy_port = "42";
-constexpr string_view v4_any_addr = "0.0.0.0";
-constexpr string_view v6_any_addr = "::";
 constexpr string_view localhost = "localhost";
 
 void* fetch_in_addr(int family, sockaddr* addr) {
@@ -116,6 +117,10 @@ std::vector<ip_address> resolve(string_view host) {
   return results;
 }
 
+std::vector<ip_address> resolve(ip_address host) {
+  return resolve(to_string(host));
+}
+
 std::string hostname() {
   char buf[HOST_NAME_MAX + 1];
   buf[HOST_NAME_MAX] = '\0';
@@ -126,7 +131,7 @@ std::string hostname() {
 #ifdef CAF_WINDOWS
 
 template <class F>
-void for_each_adapter(F f, bool is_link_local) {
+void for_each_adapter(F f, bool is_link_local = false) {
   using adapters_ptr = std::unique_ptr<IP_ADAPTER_ADDRESSES, void (*)(void*)>;
   ULONG len = 0;
   if (GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, nullptr, nullptr,
@@ -178,7 +183,7 @@ void for_each_adapter(F f, bool is_link_local) {
 #else // CAF_WINDOWS
 
 template <class F>
-void for_each_adapter(F f, bool is_link_local) {
+void for_each_adapter(F f, bool is_link_local = false) {
   ifaddrs* tmp = nullptr;
   if (getifaddrs(&tmp) != 0)
     return;
@@ -204,37 +209,47 @@ void for_each_adapter(F f, bool is_link_local) {
 #endif // CAF_WINDOWS
 
 std::vector<ip_address> local_addresses(string_view host) {
-  // TODO: If is any addr, call resolve with PR #23.
-  if (host == v4_any_addr)
-    return {ip_address{make_ipv4_address(0, 0, 0, 0)}};
-  if (host == v6_any_addr)
-    return {ip_address{}};
-  // Unless explicitly specified we are going to skip link-local addresses.
-  auto is_link_local = starts_with(host, "fe80:");
+  ip_address host_ip;
   std::vector<ip_address> results;
-  ip_address host_addr;
   if (host.empty()) {
     for_each_adapter([&](string_view, ip_address ip) {
       results.push_back(ip);
-    }, is_link_local);
+    });
   } else if (host == localhost) {
     auto v6_local = ip_address{{0}, {0x1}};
     auto v4_local = ip_address{make_ipv4_address(127, 0, 0, 1)};
     for_each_adapter([&](string_view, ip_address ip) {
       if (ip == v4_local || ip == v6_local)
         results.push_back(ip);
-    }, is_link_local);
-  } else if (auto err = parse(host, host_addr)) {
+    });
+  } else if (auto err = parse(host, host_ip)) {
     for_each_adapter([&](string_view iface, ip_address ip) {
       if (iface == host)
         results.push_back(ip);
-    }, is_link_local);
+    });
   } else {
-    for_each_adapter([&](string_view, ip_address ip) {
-      if (host_addr == ip)
-        results.push_back(ip);
-    }, is_link_local);
+    return local_addresses(host_ip);
   }
+  return results;
+}
+
+std::vector<ip_address> local_addresses(ip_address host) {
+  auto v6_any = ip_address{{0}, {0}};
+  auto v4_any = ip_address{make_ipv4_address(0, 0, 0, 0)};
+  // TODO: If is any addr, call resolve with PR #23.
+  if (host == v4_any)
+    return {ip_address{make_ipv4_address(0, 0, 0, 0)}};
+  if (host == v6_any)
+    return {ip_address{}};
+  auto link_local = ip_address({0xfe, 0x8, 0x0, 0x0}, {0x0, 0x0, 0x0, 0x0});
+  auto ll_prefix = ip_subnet(link_local, 10);
+  // Unless explicitly specified we are going to skip link-local addresses.
+  auto is_link_local = ll_prefix.contains(host);
+  std::vector<ip_address> results;
+  for_each_adapter([&](string_view, ip_address ip) {
+    if (host == ip)
+      results.push_back(ip);
+  }, is_link_local);
   return results;
 }
 
