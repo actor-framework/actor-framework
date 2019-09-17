@@ -129,12 +129,14 @@ public:
   }
 
   template <class Parent>
-  void add_new_worker(Parent& parent, node_id node, id_type id) {
+  error add_new_worker(Parent& parent, node_id node, id_type id) {
     auto application = factory_.make();
     auto worker = std::make_shared<worker_type>(std::move(application), id);
-    worker->init(parent);
+    if (auto err = worker->init(parent))
+      return err;
     workers_by_id_.emplace(std::move(id), worker);
     workers_by_node_.emplace(std::move(node), std::move(worker));
+    return none;
   }
 
 private:

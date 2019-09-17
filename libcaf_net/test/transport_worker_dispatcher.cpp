@@ -196,7 +196,8 @@ struct fixture : host_fixture {
 
   void add_new_workers() {
     for (auto& data : test_data) {
-      dispatcher.add_new_worker(dummy, data.nid, data.ep);
+      if (auto err = dispatcher.add_new_worker(dummy, data.nid, data.ep))
+        CAF_FAIL("add_new_worker returned an error: " << err);
     }
     buf->clear();
   }
