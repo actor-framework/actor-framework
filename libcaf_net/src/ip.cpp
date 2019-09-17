@@ -81,53 +81,6 @@ int fetch_addr_str(char (&buf)[INET6_ADDRSTRLEN], sockaddr* addr) {
            : AF_UNSPEC;
 }
 
-} // namespace
-
-std::vector<ip_address> resolve(string_view host) {
-  addrinfo hint;
-  memset(&hint, 0, sizeof(hint));
-  hint.ai_socktype = SOCK_STREAM;
-  hint.ai_family = AF_UNSPEC;
-  if (host.empty())
-    hint.ai_flags = AI_PASSIVE;
-  addrinfo* tmp = nullptr;
-  std::string host_str{host.begin(), host.end()};
-  if (getaddrinfo(host.empty() ? nullptr : host_str.c_str(),
-                  host.empty() ? dummy_port.data() : nullptr, &hint, &tmp)
-      != 0)
-    return {};
-  std::unique_ptr<addrinfo, decltype(freeaddrinfo)*> addrs{tmp, freeaddrinfo};
-  char buffer[INET6_ADDRSTRLEN];
-  std::vector<ip_address> results;
-  for (auto i = addrs.get(); i != nullptr; i = i->ai_next) {
-    auto family = fetch_addr_str(buffer, i->ai_addr);
-    if (family != AF_UNSPEC) {
-      ip_address ip;
-      if (auto err = parse(buffer, ip))
-        CAF_LOG_ERROR("could not parse IP address: " << buffer);
-      else
-        results.emplace_back(ip);
-    }
-  }
-  // TODO: Should we just prefer ipv6 or use a config option?
-  // std::stable_sort(std::begin(results), std::end(results),
-  //                  [](const ip_address& lhs, const ip_address& rhs) {
-  //                    return !lhs.embeds_v4() && rhs.embeds_v4();
-  //                  });
-  return results;
-}
-
-std::vector<ip_address> resolve(ip_address host) {
-  return resolve(to_string(host));
-}
-
-std::string hostname() {
-  char buf[HOST_NAME_MAX + 1];
-  buf[HOST_NAME_MAX] = '\0';
-  gethostname(buf, HOST_NAME_MAX);
-  return buf;
-}
-
 #ifdef CAF_WINDOWS
 
 template <class F>
@@ -208,13 +161,52 @@ void for_each_adapter(F f, bool is_link_local = false) {
 
 #endif // CAF_WINDOWS
 
+} // namespace
+
+std::vector<ip_address> resolve(string_view host) {
+  addrinfo hint;
+  memset(&hint, 0, sizeof(hint));
+  hint.ai_socktype = SOCK_STREAM;
+  hint.ai_family = AF_UNSPEC;
+  if (host.empty())
+    hint.ai_flags = AI_PASSIVE;
+  addrinfo* tmp = nullptr;
+  std::string host_str{host.begin(), host.end()};
+  if (getaddrinfo(host.empty() ? nullptr : host_str.c_str(),
+                  host.empty() ? dummy_port.data() : nullptr, &hint, &tmp)
+      != 0)
+    return {};
+  std::unique_ptr<addrinfo, decltype(freeaddrinfo)*> addrs{tmp, freeaddrinfo};
+  char buffer[INET6_ADDRSTRLEN];
+  std::vector<ip_address> results;
+  for (auto i = addrs.get(); i != nullptr; i = i->ai_next) {
+    auto family = fetch_addr_str(buffer, i->ai_addr);
+    if (family != AF_UNSPEC) {
+      ip_address ip;
+      if (auto err = parse(buffer, ip))
+        CAF_LOG_ERROR("could not parse IP address: " << buffer);
+      else
+        results.emplace_back(ip);
+    }
+  }
+  // TODO: Should we just prefer ipv6 or use a config option?
+  // std::stable_sort(std::begin(results), std::end(results),
+  //                  [](const ip_address& lhs, const ip_address& rhs) {
+  //                    return !lhs.embeds_v4() && rhs.embeds_v4();
+  //                  });
+  return results;
+}
+
+std::vector<ip_address> resolve(ip_address host) {
+  return resolve(to_string(host));
+}
+
 std::vector<ip_address> local_addresses(string_view host) {
   ip_address host_ip;
   std::vector<ip_address> results;
   if (host.empty()) {
-    for_each_adapter([&](string_view, ip_address ip) {
-      results.push_back(ip);
-    });
+    for_each_adapter(
+      [&](string_view, ip_address ip) { results.push_back(ip); });
   } else if (host == localhost) {
     auto v6_local = ip_address{{0}, {0x1}};
     auto v4_local = ip_address{make_ipv4_address(127, 0, 0, 1)};
@@ -246,11 +238,20 @@ std::vector<ip_address> local_addresses(ip_address host) {
   // Unless explicitly specified we are going to skip link-local addresses.
   auto is_link_local = ll_prefix.contains(host);
   std::vector<ip_address> results;
-  for_each_adapter([&](string_view, ip_address ip) {
-    if (host == ip)
-      results.push_back(ip);
-  }, is_link_local);
+  for_each_adapter(
+    [&](string_view, ip_address ip) {
+      if (host == ip)
+        results.push_back(ip);
+    },
+    is_link_local);
   return results;
+}
+
+std::string hostname() {
+  char buf[HOST_NAME_MAX + 1];
+  buf[HOST_NAME_MAX] = '\0';
+  gethostname(buf, HOST_NAME_MAX);
+  return buf;
 }
 
 } // namespace ip
