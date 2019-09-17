@@ -118,7 +118,11 @@ namespace network {
   }
 
   bool would_block_or_temporarily_unavailable(int errcode) {
+#if EAGAIN == EWOULDBLOCK
+    return errcode == EAGAIN;
+#else
     return errcode == EAGAIN || errcode == EWOULDBLOCK;
+#endif
   }
 
   string last_socket_error_as_string() {
