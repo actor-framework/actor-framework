@@ -62,7 +62,7 @@ public:
 
   // -- constructors, destructors, and assignment operators -------------------
 
-  task_queue(policy_type p)
+  task_queue(policy_type p) noexcept
       : old_last_(nullptr),
         new_head_(nullptr),
         policy_(std::move(p)) {

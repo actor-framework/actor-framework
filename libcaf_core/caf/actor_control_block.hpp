@@ -231,22 +231,20 @@ typename Inspector::result_type inspect(Inspector& f, weak_actor_ptr& x) {
 
 } // namespace caf
 
-// allow actor pointers to be used in hash maps
 namespace std {
 
 template <>
 struct hash<caf::strong_actor_ptr> {
-  inline size_t operator()(const caf::strong_actor_ptr& ptr) const {
+  size_t operator()(const caf::strong_actor_ptr& ptr) const noexcept {
     return ptr ? static_cast<size_t>(ptr->id()) : 0;
   }
 };
 
 template <>
 struct hash<caf::weak_actor_ptr> {
-  inline size_t operator()(const caf::weak_actor_ptr& ptr) const {
+  size_t operator()(const caf::weak_actor_ptr& ptr) const noexcept {
     return ptr ? static_cast<size_t>(ptr->id()) : 0;
   }
 };
 
 } // namespace std
-

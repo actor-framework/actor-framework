@@ -59,21 +59,19 @@ public:
 
   // -- constructors, destructors, and assignment operators -------------------
 
-  drr_cached_queue(policy_type p)
-      : list_(p),
-        deficit_(0),
-        cache_(std::move(p)) {
+  drr_cached_queue(policy_type p) noexcept
+      : list_(p), deficit_(0), cache_(std::move(p)) {
     // nop
   }
 
-  drr_cached_queue(drr_cached_queue&& other)
+  drr_cached_queue(drr_cached_queue&& other) noexcept
       : list_(std::move(other.list_)),
         deficit_(other.deficit_),
         cache_(std::move(other.cache_)) {
     // nop
   }
 
-  drr_cached_queue& operator=(drr_cached_queue&& other) {
+  drr_cached_queue& operator=(drr_cached_queue&& other) noexcept {
     list_ = std::move(other.list_);
     deficit_ = other.deficit_;
     cache_ = std::move(other.cache_);

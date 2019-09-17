@@ -147,7 +147,7 @@ namespace std {
 
 template <>
 struct hash<counting_string> {
-  inline size_t operator()(const counting_string& ref) const {
+  size_t operator()(const counting_string& ref) const noexcept {
     hash<string> f;
     return f(ref.str());
   }

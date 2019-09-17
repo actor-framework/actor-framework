@@ -203,11 +203,10 @@ namespace std {
 
 template <>
 struct hash<caf::atom_value> {
-  size_t operator()(caf::atom_value x) const {
+  size_t operator()(caf::atom_value x) const noexcept {
     hash<uint64_t> f;
     return f(static_cast<uint64_t>(x));
   }
 };
 
 } // namespace std
-

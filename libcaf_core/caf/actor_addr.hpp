@@ -161,13 +161,13 @@ inline bool operator!=(std::nullptr_t, const actor_addr& x) {
 
 } // namespace caf
 
-// allow actor_addr to be used in hash maps
 namespace std {
+
 template <>
 struct hash<caf::actor_addr> {
-  inline size_t operator()(const caf::actor_addr& ref) const {
+  size_t operator()(const caf::actor_addr& ref) const noexcept {
     return static_cast<size_t>(ref.id());
   }
 };
-} // namespace std
 
+} // namespace std

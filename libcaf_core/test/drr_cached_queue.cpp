@@ -33,9 +33,15 @@ namespace {
 
 struct inode : singly_linked<inode> {
   int value;
-  inode(int x = 0) : value(x) {
+
+  inode(int x = 0) noexcept : value(x) {
     // nop
   }
+
+  inode() noexcept : inode(0) {
+    // nop
+  }
+
 };
 
 std::string to_string(const inode& x) {
@@ -53,7 +59,9 @@ struct inode_policy {
 
   using unique_pointer = std::unique_ptr<mapped_type, deleter_type>;
 
-  static inline task_size_type task_size(const mapped_type&) noexcept {
+  inode_policy() noexcept = default;
+
+  static task_size_type task_size(const mapped_type&) noexcept {
     return 1;
   }
 };
@@ -62,6 +70,7 @@ using queue_type = drr_cached_queue<inode_policy>;
 
 struct fixture {
   inode_policy policy;
+
   queue_type queue{policy};
 
   template <class Queue>

@@ -148,12 +148,13 @@ std::string to_string(const group& x);
 } // namespace caf
 
 namespace std {
+
 template <>
 struct hash<caf::group> {
-  inline size_t operator()(const caf::group& x) const {
+  size_t operator()(const caf::group& x) const noexcept {
     // groups are singleton objects, the address is thus the best possible hash
     return !x ? 0 : reinterpret_cast<size_t>(x.get());
   }
 };
-} // namespace std
 
+} // namespace std

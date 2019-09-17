@@ -46,15 +46,15 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  drr_queue(policy_type p) : super(std::move(p)), deficit_(0) {
+  drr_queue(policy_type p) noexcept : super(std::move(p)), deficit_(0) {
     // nop
   }
 
-  drr_queue(drr_queue&& other) : super(std::move(other)), deficit_(0) {
+  drr_queue(drr_queue&& other) noexcept : super(std::move(other)), deficit_(0) {
     // nop
   }
 
-  drr_queue& operator=(drr_queue&& other) {
+  drr_queue& operator=(drr_queue&& other) noexcept {
     super::operator=(std::move(other));
     return *this;
   }

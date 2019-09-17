@@ -52,7 +52,8 @@ public:
   using queue_type = typename queue_map_type::mapped_type;
 
   template <class... Ps>
-  wdrr_dynamic_multiplexed_queue(policy_type p) : policy_(p) {
+  wdrr_dynamic_multiplexed_queue(policy_type p) noexcept
+    : policy_(std::move(p)) {
     // nop
   }
 
