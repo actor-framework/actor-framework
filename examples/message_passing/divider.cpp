@@ -5,13 +5,13 @@
 // Manual refs: 19-25, 35-48, 68-77 (MessagePassing);
 //              19-34, 50-58 (Error)
 
+#include <cmath>
 #include <iostream>
 
 #include "caf/all.hpp"
 
 using std::cout;
 using std::endl;
-using std::flush;
 using namespace caf;
 
 namespace {
@@ -40,10 +40,10 @@ using divider = typed_actor<replies_to<div_atom, double, double>::with<double>>;
 divider::behavior_type divider_impl() {
   return {
     [](div_atom, double x, double y) -> result<double> {
-      if (y == 0.0)
+      if (std::fpclassify(y) == FP_ZERO)
         return math_error::division_by_zero;
       return x / y;
-    }
+    },
   };
 }
 
@@ -60,9 +60,9 @@ public:
 void caf_main(actor_system& system, const config&) {
   double x;
   double y;
-  cout << "x: " << flush;
+  cout << "x: " << std::flush;
   std::cin >> x;
-  cout << "y: " << flush;
+  cout << "y: " << std::flush;
   std::cin >> y;
   auto div = system.spawn(divider_impl);
   scoped_actor self{system};
