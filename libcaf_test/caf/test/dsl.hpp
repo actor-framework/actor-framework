@@ -18,12 +18,13 @@
 
 #pragma once
 
+#include <type_traits>
+
 #include "caf/all.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/gcd.hpp"
 #include "caf/meta/annotation.hpp"
 #include "caf/test/unit_test.hpp"
-
-#include "caf/detail/gcd.hpp"
 
 CAF_PUSH_WARNINGS
 
@@ -373,6 +374,71 @@ protected:
   caf::strong_actor_ptr src_;
   caf::abstract_actor* dest_;
   std::function<void ()> peek_;
+};
+
+template <class... Ts>
+class inject_clause {
+public:
+  inject_clause(caf::scheduler::test_coordinator& sched)
+    : sched_(sched), dest_(nullptr) {
+    // nop
+  }
+
+  inject_clause(inject_clause&& other) = default;
+
+  template <class Handle>
+  inject_clause& from(const Handle& whom) {
+    src_ = caf::actor_cast<caf::strong_actor_ptr>(whom);
+    return *this;
+  }
+
+  template <class Handle>
+  inject_clause& to(const Handle& whom) {
+    dest_ = caf::actor_cast<caf::strong_actor_ptr>(whom);
+    return *this;
+  }
+
+  inject_clause& to(const caf::scoped_actor& whom) {
+    dest_ = whom.ptr();
+    return *this;
+  }
+
+  void with(Ts... xs) {
+    if (src_ == nullptr)
+      CAF_FAIL("missing .from() in inject() statement");
+    if (dest_ == nullptr)
+      CAF_FAIL("missing .to() in inject() statement");
+    caf::send_as(caf::actor_cast<caf::actor>(src_),
+                 caf::actor_cast<caf::actor>(dest_), xs...);
+    CAF_REQUIRE(sched_.prioritize(dest_));
+    auto dest_ptr = &sched_.next_job<caf::abstract_actor>();
+    auto ptr = dest_ptr->peek_at_next_mailbox_element();
+    CAF_REQUIRE(ptr != nullptr);
+    CAF_REQUIRE_EQUAL(ptr->sender, src_);
+    // TODO: replace this workaround with the make_tuple() line when dropping
+    //       support for GCC 4.8.
+    std::tuple<Ts...> tmp{std::move(xs)...};
+    using namespace caf::detail;
+    elementwise_compare_inspector<decltype(tmp)> inspector{tmp};
+    auto ys = extract<Ts...>(dest_);
+    auto ys_indices = get_indices(ys);
+    CAF_REQUIRE(apply_args(inspector, ys_indices, ys));
+    run_once();
+  }
+
+protected:
+  void run_once() {
+    auto ptr = caf::actor_cast<caf::abstract_actor*>(dest_);
+    auto dptr = dynamic_cast<caf::blocking_actor*>(ptr);
+    if (dptr == nullptr)
+      sched_.run_once();
+    else
+      dptr->dequeue(); // Drop message.
+  }
+
+  caf::scheduler::test_coordinator& sched_;
+  caf::strong_actor_ptr src_;
+  caf::strong_actor_ptr dest_;
 };
 
 template <class... Ts>
@@ -795,6 +861,12 @@ T unbox(T* x) {
   do {                                                                         \
     CAF_MESSAGE("expect" << #types << "." << #fields);                         \
     expect_clause<CAF_EXPAND(CAF_DSL_LIST types)>{sched}.fields;               \
+  } while (false)
+
+#define inject(types, fields)                                                  \
+  do {                                                                         \
+    CAF_MESSAGE("inject" << #types << "." << #fields);                         \
+    inject_clause<CAF_EXPAND(CAF_DSL_LIST types)>{sched}.fields;               \
   } while (false)
 
 /// Convenience macro for defining allow clauses.

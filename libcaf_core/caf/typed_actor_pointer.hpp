@@ -62,7 +62,11 @@ public:
   }
 
   /// @private
-  scheduled_actor* internal_ptr() const {
+  scheduled_actor* internal_ptr() const noexcept {
+    return view_.internal_ptr();
+  }
+
+  operator scheduled_actor*() const noexcept {
     return view_.internal_ptr();
   }
 

@@ -20,13 +20,7 @@
 
 #include <string>
 
-#include "caf/illegal_message_element.hpp"
-#include "caf/output_stream.hpp"
-#include "caf/stream.hpp"
-
 #include "caf/detail/type_list.hpp"
-#include "caf/detail/type_pair.hpp"
-#include "caf/detail/type_traits.hpp"
 
 namespace caf {
 
@@ -47,15 +41,9 @@ template <class... Is>
 struct replies_to {
   template <class... Os>
   using with = typed_mpi<detail::type_list<Is...>, output_tuple<Os...>>;
-
-  /// @private
-  template <class O, class... Os>
-  using with_stream = typed_mpi<detail::type_list<Is...>,
-                                output_stream<O, Os...>>;
 };
 
 template <class... Is>
 using reacts_to = typed_mpi<detail::type_list<Is...>, output_tuple<void>>;
 
 } // namespace caf
-

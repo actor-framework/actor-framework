@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/delegated.hpp"
 #include "caf/fwd.hpp"
 #include "caf/stream_sink.hpp"
 #include "caf/stream_slot.hpp"
@@ -26,7 +27,7 @@ namespace caf {
 
 /// Returns a stream sink with the slot ID of its first inbound path.
 template <class In>
-class make_sink_result {
+class make_sink_result : public delegated<void> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -38,9 +39,6 @@ public:
 
   /// Pointer to a fully typed stream manager.
   using sink_ptr_type = intrusive_ptr<sink_type>;
-
-  /// The return type for `scheduled_actor::make_sink`.
-  using output_stream_type = stream<input_type>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -61,15 +59,15 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  inline stream_slot inbound_slot() const noexcept {
+  stream_slot inbound_slot() const noexcept {
     return slot_;
   }
 
-  inline sink_ptr_type& ptr() noexcept {
+  sink_ptr_type& ptr() noexcept {
     return ptr_;
   }
 
-  inline const sink_ptr_type& ptr() const noexcept {
+  const sink_ptr_type& ptr() const noexcept {
     return ptr_;
   }
 

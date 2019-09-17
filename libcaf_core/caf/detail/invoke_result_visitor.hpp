@@ -142,12 +142,6 @@ public:
 
   /// Calls `(*this)()`.
   template <class Out, class... Ts>
-  void operator()(output_stream<Out, Ts...>&) {
-    (*this)();
-  }
-
-  /// Calls `(*this)()`.
-  template <class Out, class... Ts>
   void operator()(outbound_stream_slot<Out, Ts...>&) {
     (*this)();
   }

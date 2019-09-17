@@ -56,18 +56,18 @@ data to the next available worker.
 
 \subsection{Defining Sources}
 
-\cppexample[17-52]{streaming/integer_stream}
+\cppexample[17-46]{streaming/integer_stream}
 
-The simplest way to defining a source is to use the \lstinline^make_source^
-function and pass it three arguments: \emph{initializer} for the state,
-\emph{generator} for producing values, and \emph{predicate} for signaling the
-end of the stream.
+The simplest way to defining a source is to use the
+\lstinline^attach_stream_source^ function and pass it four arguments: a pointer
+to \emph{self}, \emph{initializer} for the state, \emph{generator} for
+producing values, and \emph{predicate} for signaling the end of the stream.
 
 \clearpage
 
 \subsection{Defining Stages}
 
-\cppexample[54-87]{streaming/integer_stream}
+\cppexample[48-78]{streaming/integer_stream}
 
 The function \lstinline^make_stage^ also takes three lambdas but additionally
 the received input stream handshake as first argument. Instead of a predicate,
@@ -78,7 +78,7 @@ data on its own and a stream terminates if no more sources exist.
 
 \subsection{Defining Sinks}
 
-\cppexample[89-120]{streaming/integer_stream}
+\cppexample[80-106]{streaming/integer_stream}
 
 The function \lstinline^make_sink^ is similar to \lstinline^make_stage^, except
 that is does not produce outputs.
@@ -87,7 +87,7 @@ that is does not produce outputs.
 
 \subsection{Initiating Streams}
 
-\cppexample[133-139]{streaming/integer_stream}
+\cppexample[121-125]{streaming/integer_stream}
 
 In our example, we always have a source \lstinline^int_source^ and a sink
 \lstinline^int_sink^ with an optional stage \lstinline^int_selector^. Sending

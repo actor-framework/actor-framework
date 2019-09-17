@@ -44,7 +44,6 @@
 #include "caf/make_source_result.hpp"
 #include "caf/make_stage_result.hpp"
 #include "caf/no_stages.hpp"
-#include "caf/output_stream.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/sec.hpp"
@@ -420,14 +419,7 @@ public:
 
   // -- stream management ------------------------------------------------------
 
-  /// Creates a new stream source by instantiating the default source
-  /// implementation with `Driver`.
-  /// @param xs User-defined handshake payload.
-  /// @param init Function object for initializing the state of the source.
-  /// @param pull Generator function object for producing downstream messages.
-  /// @param done Predicate returning `true` when generator is done.
-  /// @param fin Cleanup handler.
-  /// @returns The allocated `stream_manager` and the output slot.
+  /// @deprecated Please use `attach_stream_source` instead.
   template <class Driver, class... Ts, class Init, class Pull, class Done,
             class Finalize = unit_t>
   make_source_result_t<typename Driver::downstream_manager_type, Ts...>
@@ -441,13 +433,7 @@ public:
     return {slot, std::move(mgr)};
   }
 
-  /// Creates a new stream source from given arguments.
-  /// @param xs User-defined handshake payload.
-  /// @param init Function object for initializing the state of the source.
-  /// @param pull Generator function object for producing downstream messages.
-  /// @param done Predicate returning `true` when generator is done.
-  /// @param fin Cleanup handler.
-  /// @returns The allocated `stream_manager` and the output slot.
+  /// @deprecated Please use `attach_stream_source` instead.
   template <class... Ts, class Init, class Pull, class Done,
             class Finalize = unit_t,
             class DownstreamManager = broadcast_downstream_manager<
@@ -461,6 +447,7 @@ public:
                                std::move(done), std::move(fin));
   }
 
+  /// @deprecated Please use `attach_stream_source` instead.
   template <class Init, class Pull, class Done, class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Pull>,
             class Trait = stream_source_trait_t<Pull>>
@@ -472,7 +459,7 @@ public:
                        token);
   }
 
-  /// Creates a new stream source and adds `dest` as first outbound path to it.
+  /// @deprecated Please use `attach_stream_source` instead.
   template <class ActorHandle, class... Ts, class Init, class Pull, class Done,
             class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Pull>,
@@ -493,7 +480,7 @@ public:
     return {slot, std::move(mgr)};
   }
 
-  /// Creates a new stream source and adds `dest` as first outbound path to it.
+  /// @deprecated Please use `attach_stream_source` instead.
   template <class ActorHandle, class Init, class Pull, class Done,
             class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Pull>,
@@ -507,9 +494,7 @@ public:
                        std::move(pull), std::move(done), std::move(fin), token);
   }
 
-  /// Creates a new continuous stream source by instantiating the default
-  /// source implementation with `Driver. `The returned manager is not
-  /// connected to any slot and thus not stored by the actor automatically.
+  /// @deprecated Please use `attach_continuous_stream_source` instead.
   template <class Driver, class Init, class Pull, class Done,
             class Finalize = unit_t>
   typename Driver::source_ptr_type
@@ -522,9 +507,7 @@ public:
     return mgr;
   }
 
-  /// Creates a new continuous stream source by instantiating the default
-  /// source implementation with `Driver. `The returned manager is not
-  /// connected to any slot and thus not stored by the actor automatically.
+  /// @deprecated Please use `attach_continuous_stream_source` instead.
   template <class Init, class Pull, class Done, class Finalize = unit_t,
             class DownstreamManager = broadcast_downstream_manager<
               typename stream_source_trait_t<Pull>::output>>
@@ -537,6 +520,7 @@ public:
                                           std::move(done), std::move(fin));
   }
 
+  /// @deprecated Please use `attach_stream_sink` instead.
   template <class Driver, class... Ts>
   make_sink_result<typename Driver::input_type>
   make_sink(const stream<typename Driver::input_type>& src, Ts&&... xs) {
@@ -545,6 +529,7 @@ public:
     return {slot, std::move(mgr)};
   }
 
+  /// @deprecated Please use `attach_stream_sink` instead.
   template <class In, class Init, class Fun, class Finalize = unit_t,
             class Trait = stream_sink_trait_t<Fun>>
   make_sink_result<In> make_sink(const stream<In>& in, Init init, Fun fun,
@@ -554,6 +539,7 @@ public:
                              std::move(fin));
   }
 
+  /// @deprecated Please use `attach_stream_stage` instead.
   template <class Driver, class In, class... Ts, class... Us>
   make_stage_result_t<In, typename Driver::downstream_manager_type, Ts...>
   make_stage(const stream<In>& src, std::tuple<Ts...> xs, Us&&... ys) {
@@ -564,6 +550,7 @@ public:
     return {in, out, std::move(mgr)};
   }
 
+  /// @deprecated Please use `attach_stream_stage` instead.
   template <class In, class... Ts, class Init, class Fun,
             class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Fun>,
@@ -595,6 +582,7 @@ public:
                               std::move(fun), std::move(fin));
   }
 
+  /// @deprecated Please use `attach_stream_stage` instead.
   template <class In, class Init, class Fun, class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Fun>,
             class Trait = stream_stage_trait_t<Fun>>
@@ -605,9 +593,7 @@ public:
                       std::move(fin), token);
   }
 
-  /// Returns a stream manager (implementing a continuous stage) without in- or
-  /// outbound path. The returned manager is not connected to any slot and thus
-  /// not stored by the actor automatically.
+  /// @deprecated Please use `attach_continuous_stream_stage` instead.
   template <class Driver, class... Ts>
   typename Driver::stage_ptr_type make_continuous_stage(Ts&&... xs) {
     auto ptr = detail::make_stream_stage<Driver>(this, std::forward<Ts>(xs)...);
@@ -615,6 +601,7 @@ public:
     return ptr;
   }
 
+  /// @deprecated Please use `attach_continuous_stream_stage` instead.
   template <class Init, class Fun, class Cleanup,
             class DownstreamManager = default_downstream_manager_t<Fun>,
             class Trait = stream_stage_trait_t<Fun>>

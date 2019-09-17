@@ -73,10 +73,6 @@ template <class...> class typed_event_based_actor;
 template <class...> class typed_response_promise;
 template <class...> class variant;
 
-// -- variadic templates with fixed arguments ----------------------------------
-//
-template <class, class...> class output_stream;
-
 // clang-format on
 
 // -- classes ------------------------------------------------------------------
