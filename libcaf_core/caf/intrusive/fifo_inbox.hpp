@@ -160,7 +160,7 @@ public:
   /// Closes this inbox and moves all elements to the queue.
   /// @warning Call only from the reader (owner).
   void close() {
-    auto f = [&](pointer x) {
+    auto f = [&](pointer x) noexcept {
       queue_.lifo_append(x);
     };
     inbox_.close(f);

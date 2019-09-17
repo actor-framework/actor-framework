@@ -36,7 +36,11 @@ struct singly_linked {
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  singly_linked(node_pointer n = nullptr) : next(n) {
+  singly_linked() noexcept : next(nullptr) {
+    // nop
+  }
+
+  explicit singly_linked(node_pointer n) noexcept : next(n) {
     // nop
   }
 
@@ -48,13 +52,13 @@ struct singly_linked {
 
 /// Casts a node type to its value type.
 template <class T>
-T* promote(singly_linked<T>* ptr) {
+T* promote(singly_linked<T>* ptr) noexcept {
   return static_cast<T*>(ptr);
 }
 
 /// Casts a node type to its value type.
 template <class T>
-const T* promote(const singly_linked<T>* ptr) {
+const T* promote(const singly_linked<T>* ptr) noexcept {
   return static_cast<const T*>(ptr);
 }
 

@@ -69,7 +69,7 @@ public:
     init();
   }
 
-  task_queue(task_queue&& other) : task_queue(other.policy()) {
+  task_queue(task_queue&& other) noexcept : task_queue(other.policy()) {
     if (other.empty()) {
       init();
     } else {
@@ -81,7 +81,7 @@ public:
     }
   }
 
-  task_queue& operator=(task_queue&& other) {
+  task_queue& operator=(task_queue&& other) noexcept {
     deinit();
     if (other.empty()) {
       init();
@@ -261,7 +261,7 @@ public:
 
   /// Transfers all element from `other` to the front of this queue.
   template <class Container>
-  void prepend(Container& other) {
+  void prepend(Container& other) noexcept {
     if (other.empty())
       return;
     if (empty()) {
@@ -276,7 +276,7 @@ public:
 
   /// Transfers all element from `other` to the back of this queue.
   template <class Container>
-  void append(Container& other) {
+  void append(Container& other) noexcept {
     if (other.empty())
       return;
     if (empty()) {
@@ -296,7 +296,7 @@ public:
   /// @warning leaves the queue in an invalid state until calling
   ///          `stop_lifo_append`.
   /// @private
-  void lifo_append(node_pointer ptr) {
+  void lifo_append(node_pointer ptr) noexcept {
     if (old_last_ == nullptr) {
       old_last_ = back();
       push_back(promote(ptr));
