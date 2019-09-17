@@ -80,29 +80,6 @@ int fetch_addr_str(char (&buf)[INET6_ADDRSTRLEN], sockaddr* addr) {
            : AF_UNSPEC;
 }
 
-void find_by_name(const vector<pair<string, ip_address>>& interfaces,
-                  string_view name, vector<ip_address>& results) {
-  for (auto& p : interfaces)
-    if (p.first == name)
-      results.push_back(p.second);
-}
-
-void find_by_addr(const vector<pair<string, ip_address>>& interfaces,
-                  ip_address addr, vector<ip_address>& results) {
-  for (auto& p : interfaces)
-    if (p.second == addr)
-      results.push_back(p.second);
-}
-
-void find_localhost(const vector<pair<string, ip_address>>& interfaces,
-                    vector<ip_address>& results) {
-  auto v6_local = ip_address{{0}, {0x1}};
-  auto v4_local = ip_address{make_ipv4_address(127, 0, 0, 1)};
-  for (auto& p : interfaces)
-    if (p.second == v4_local || p.second == v6_local)
-      results.push_back(p.second);
-}
-
 } // namespace
 
 std::vector<ip_address> resolve(string_view host) {
@@ -148,25 +125,22 @@ std::string hostname() {
 
 #ifdef CAF_WINDOWS
 
-std::vector<ip_address> local_addresses(string_view host) {
+template <class F>
+void for_each_adapter(F f, bool is_link_local) {
   using adapters_ptr = std::unique_ptr<IP_ADAPTER_ADDRESSES, void (*)(void*)>;
-  if (host == v4_any_addr)
-    return {ip_address{make_ipv4_address(0, 0, 0, 0)}};
-  if (host == v6_any_addr)
-    return {ip_address{}};
   ULONG len = 0;
   if (GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, nullptr, nullptr,
                            &len)
       != ERROR_BUFFER_OVERFLOW) {
     CAF_LOG_ERROR("failed to get adapter addresses buffer length");
-    return {};
+    return;
   }
   auto adapters = adapters_ptr{reinterpret_cast<IP_ADAPTER_ADDRESSES*>(
                                  ::malloc(len),
                                free};
   if (!adapters) {
     CAF_LOG_ERROR("malloc failed");
-    return {};
+    return;
   }
   // TODO: The Microsoft WIN32 API example propopses to try three times, other
   // examples online just perform the call once. If we notice the call to be
@@ -175,7 +149,7 @@ std::vector<ip_address> local_addresses(string_view host) {
                            adapters.get(), &len)
       != ERROR_SUCCESS) {
     CAF_LOG_ERROR("failed to get adapter addresses");
-    return {};
+    return;
   }
   char ip_buf[INET6_ADDRSTRLEN];
   char name_buf[HOST_NAME_MAX];
@@ -191,39 +165,25 @@ std::vector<ip_address> local_addresses(string_view host) {
       getnameinfo(addr->Address.lpSockaddr, addr->Address.iSockaddrLength,
                   ip_buf, sizeof(ip_buf), nullptr, 0, NI_NUMERICHOST);
       ip_address ip;
-      if (auto err = parse(ip_buf, ip))
+      if (!is_link_local && starts_with(if_buf, "fe80:")) {
+        CAF_LOG_DEBUG("skipping link-local address: " << ip_buf);
         continue;
-      interfaces.emplace_back(name_buf, ip);
+      } else if (auto err = parse(ip_buf, ip))
+        continue;
+      f(name_buf, ip);
     }
   }
-  std::vector<ip_address> results;
-  ip_address host_addr;
-  if (host.empty())
-    for (auto& p : interfaces)
-      results.push_back(std::move(p.second));
-  else if (host.compare(localhost) == 0)
-    find_localhost(interfaces, results);
-  else if (auto err = parse(host, host_addr))
-    find_by_name(interfaces, host, results);
-  else
-    find_by_addr(interfaces, host_addr, results);
-  return results;
 }
 
 #else // CAF_WINDOWS
 
-std::vector<ip_address> local_addresses(string_view host) {
-  if (host == v4_any_addr)
-    return {ip_address{make_ipv4_address(0, 0, 0, 0)}};
-  if (host == v6_any_addr)
-    return {ip_address{}};
+template <class F>
+void for_each_adapter(F f, bool is_link_local) {
   ifaddrs* tmp = nullptr;
   if (getifaddrs(&tmp) != 0)
-    return {};
+    return;
   std::unique_ptr<ifaddrs, decltype(freeifaddrs)*> addrs{tmp, freeifaddrs};
   char buffer[INET6_ADDRSTRLEN];
-  // Unless explicitly specified we are going to skip link-local addresses.
-  auto is_link_local = starts_with(host, "fe80:");
   std::vector<std::pair<std::string, ip_address>> interfaces;
   for (auto i = addrs.get(); i != nullptr; i = i->ifa_next) {
     auto family = fetch_addr_str(buffer, i->ifa_addr);
@@ -236,24 +196,47 @@ std::vector<ip_address> local_addresses(string_view host) {
         CAF_LOG_ERROR("could not parse into ip address " << buffer);
         continue;
       }
-      interfaces.emplace_back(std::string{i->ifa_name}, ip);
+      f({i->ifa_name, strlen(i->ifa_name)}, ip);
     }
   }
-  std::vector<ip_address> results;
-  ip_address host_addr;
-  if (host.empty())
-    for (auto& p : interfaces)
-      results.push_back(std::move(p.second));
-  else if (host.compare(localhost) == 0)
-    find_localhost(interfaces, results);
-  else if (auto err = parse(host, host_addr))
-    find_by_name(interfaces, host, results);
-  else
-    find_by_addr(interfaces, host_addr, results);
-  return results;
 }
 
 #endif // CAF_WINDOWS
+
+std::vector<ip_address> local_addresses(string_view host) {
+  // TODO: If is any addr, call resolve with PR #23.
+  if (host == v4_any_addr)
+    return {ip_address{make_ipv4_address(0, 0, 0, 0)}};
+  if (host == v6_any_addr)
+    return {ip_address{}};
+  // Unless explicitly specified we are going to skip link-local addresses.
+  auto is_link_local = starts_with(host, "fe80:");
+  std::vector<ip_address> results;
+  ip_address host_addr;
+  if (host.empty()) {
+    for_each_adapter([&](string_view, ip_address ip) {
+      results.push_back(ip);
+    }, is_link_local);
+  } else if (host == localhost) {
+    auto v6_local = ip_address{{0}, {0x1}};
+    auto v4_local = ip_address{make_ipv4_address(127, 0, 0, 1)};
+    for_each_adapter([&](string_view, ip_address ip) {
+      if (ip == v4_local || ip == v6_local)
+        results.push_back(ip);
+    }, is_link_local);
+  } else if (auto err = parse(host, host_addr)) {
+    for_each_adapter([&](string_view iface, ip_address ip) {
+      if (iface == host)
+        results.push_back(ip);
+    }, is_link_local);
+  } else {
+    for_each_adapter([&](string_view, ip_address ip) {
+      if (host_addr == ip)
+        results.push_back(ip);
+    }, is_link_local);
+  }
+  return results;
+}
 
 } // namespace ip
 } // namespace net
