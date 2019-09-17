@@ -99,7 +99,7 @@ public:
         for (size_t i = 0; i < n; ++i)
           out.push(counter++);
       },
-      [](const int& counter) { return counter < 100; });
+      [](const size_t& counter) { return counter < 100; });
   }
 };
 
