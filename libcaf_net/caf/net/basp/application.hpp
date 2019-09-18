@@ -76,13 +76,29 @@ public:
   }
 
   template <class Parent>
-  void write_message(Parent& parent,
-                     std::unique_ptr<endpoint_manager::message> ptr) {
-    header hdr{message_type::actor_message,
-               static_cast<uint32_t>(ptr->payload.size()),
+  error write_message(Parent& parent,
+                      std::unique_ptr<endpoint_manager::message> ptr) {
+    // TODO: avoid extra copy of the payload
+    buf_.clear();
+    serializer_impl<buffer_type> sink{system(), buf_};
+    const auto& src = ptr->msg->sender;
+    const auto& dst = ptr->receiver;
+    if (dst == nullptr) {
+      // TODO: valid?
+      return none;
+    }
+    if (src != nullptr) {
+      if (auto err = sink(src->node(), src->id(), dst->id(), ptr->msg->stages))
+        return err;
+    } else {
+      if (auto err = sink(node_id{}, actor_id{0}, dst->id(), ptr->msg->stages))
+        return err;
+    }
+    buf_.insert(buf_.end(), ptr->payload.begin(), ptr->payload.end());
+    header hdr{message_type::actor_message, static_cast<uint32_t>(buf_.size()),
                ptr->msg->mid.integer_value()};
     auto bytes = to_bytes(hdr);
-    parent.write_packet(parent, make_span(bytes), ptr->payload, unit);
+    parent.write_packet(parent, make_span(bytes), make_span(buf_), unit);
   }
 
   template <class Parent>

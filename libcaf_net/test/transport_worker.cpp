@@ -192,6 +192,7 @@ CAF_TEST(write_message) {
                              hello_test.size());
   std::vector<byte> payload(test_span.begin(), test_span.end());
   auto message = detail::make_unique<endpoint_manager::message>(std::move(elem),
+                                                                nullptr,
                                                                 payload);
   worker.write_message(transport, std::move(message));
   auto& buf = transport_results->packet_buffer;
