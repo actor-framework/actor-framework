@@ -48,6 +48,10 @@ public:
 
   // -- properties -------------------------------------------------------------
 
+  application_type& application() {
+    return transport_.application();
+  }
+
   transport_type& transport() {
     return transport_;
   }
