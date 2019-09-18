@@ -18,32 +18,15 @@
 
 #pragma once
 
-#include <memory>
-
-#include "caf/intrusive_ptr.hpp"
+#include "caf/detail/socket_sys_includes.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
-namespace net {
+namespace detail {
 
-class multiplexer;
-class socket_manager;
-template <class Application, class IdType = unit_t>
-class transport_worker;
-template <class Application, class IdType = unit_t>
-class transport_worker_dispatcher;
+void convert(const ip_endpoint& src, sockaddr_storage& dst);
 
-struct network_socket;
-struct pipe_socket;
-struct socket;
-struct stream_socket;
-struct tcp_stream_socket;
-struct tcp_accept_socket;
+error convert(const sockaddr_storage& src, ip_endpoint& dst);
 
-using socket_manager_ptr = intrusive_ptr<socket_manager>;
-
-using multiplexer_ptr = std::shared_ptr<multiplexer>;
-
-using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
-
-} // namespace net
+} // namespace detail
 } // namespace caf

@@ -10,6 +10,7 @@ set(LIBCAF_NET_SRCS
   src/actor_proxy_impl.cpp
   src/application.cpp
   src/connection_state.cpp
+  src/convert_ip_endpoint.cpp
   src/datagram_socket.cpp
   src/ec.cpp
   src/endpoint_manager.cpp
@@ -26,6 +27,8 @@ set(LIBCAF_NET_SRCS
   src/stream_socket.cpp
   src/tcp_accept_socket.cpp
   src/tcp_stream_socket.cpp
+  src/tcp_stream_socket.cpp
+  src/udp_datagram_socket.cpp
 )
 
 add_custom_target(libcaf_net)
