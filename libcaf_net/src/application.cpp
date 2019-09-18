@@ -190,26 +190,32 @@ error application::handle_handshake(write_packet_callback&, header hdr,
 error application::handle_actor_message(write_packet_callback&, header hdr,
                                         byte_span payload) {
   // Deserialize payload.
-  actor_id src;
-  actor_id dst;
+  actor_id src_id;
+  node_id src_node;
+  actor_id dst_id;
   std::vector<strong_actor_ptr> fwd_stack;
   message content;
   binary_deserializer source{system(), payload};
-  if (auto err = source(src, dst, fwd_stack, content))
+  if (auto err = source(src_node, src_id, dst_id, fwd_stack, content))
     return err;
   // Sanity checks.
-  if (dst == 0)
+  if (dst_id == 0)
     return ec::invalid_payload;
   // Try to fetch the receiver.
-  auto src_hdl = system().registry().get(dst);
-  if (src_hdl == nullptr) {
+  auto dst_hdl = system().registry().get(dst_id);
+  if (dst_hdl == nullptr) {
     CAF_LOG_DEBUG("no actor found for given ID, drop message");
     return caf::none;
   }
+  // Try to fetch the sender.
+  strong_actor_ptr src_hdl;
+  if (src_node != none && src_id != 0)
+    src_hdl = proxies_->get_or_put(src_node, src_id);
   // Ship the message.
-  src_hdl->get()->eq_impl(make_message_id(hdr.operation_data),
-                          proxies_->get_or_put(peer_id_, src), nullptr,
-                          std::move(content));
+  auto ptr = make_mailbox_element(std::move(src_hdl),
+                                  make_message_id(hdr.operation_data),
+                                  std::move(fwd_stack), std::move(content));
+  dst_hdl->get()->enqueue(std::move(ptr), nullptr);
   return none;
 }
 

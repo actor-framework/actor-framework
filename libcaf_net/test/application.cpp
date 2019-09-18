@@ -217,7 +217,7 @@ CAF_TEST(actor message) {
   sys.registry().put(self->id(), self);
   CAF_REQUIRE_EQUAL(self->mailbox().size(), 0u);
   MOCK(basp::message_type::actor_message, make_message_id().integer_value(),
-       actor_id{42}, self->id(), std::vector<strong_actor_ptr>{},
+       mars, actor_id{42}, self->id(), std::vector<strong_actor_ptr>{},
        make_message("hello world!"));
   allow((atom_value, strong_actor_ptr),
         from(_).to(self).with(atom("monitor"), _));
