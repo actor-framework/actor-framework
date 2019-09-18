@@ -41,6 +41,10 @@ public:
 
   using application_type = Application;
 
+  using transport_type = stream_transport;
+
+  using worker_type = transport_worker<application_type>;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   stream_transport(stream_socket handle, application_type application)
@@ -51,7 +55,8 @@ public:
       collected_(0),
       max_(1024),
       rd_flag_(net::receive_policy_flag::exactly),
-      written_(0) {
+      written_(0),
+      manager_(nullptr) {
     // nop
   }
 
@@ -61,18 +66,35 @@ public:
     return handle_;
   }
 
+  actor_system& system() {
+    return manager().system();
+  }
+
+  application_type& application() {
+    return worker_.application();
+  }
+
+  transport_type& transport() {
+    return *this;
+  }
+
+  endpoint_manager& manager() {
+    return *manager_;
+  }
+
   // -- member functions -------------------------------------------------------
 
   template <class Parent>
   error init(Parent& parent) {
-    if (auto err = worker_.init(parent))
+    manager_ = &parent;
+    if (auto err = worker_.init(*this))
       return err;
     parent.mask_add(operation::read);
     return none;
   }
 
   template <class Parent>
-  bool handle_read_event(Parent& parent) {
+  bool handle_read_event(Parent&) {
     auto buf = read_buf_.data() + collected_;
     size_t len = read_threshold_ - collected_;
     CAF_LOG_TRACE(CAF_ARG(handle_.id) << CAF_ARG(len));
@@ -82,8 +104,7 @@ public:
       CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id) << CAF_ARG(*num_bytes));
       collected_ += *num_bytes;
       if (collected_ >= read_threshold_) {
-        auto decorator = make_write_packet_decorator(*this, parent);
-        worker_.handle_data(decorator, read_buf_);
+        worker_.handle_data(*this, read_buf_);
         prepare_next_read();
       }
       return true;
@@ -103,16 +124,15 @@ public:
     // TODO: dont read all messages at once - get one by one.
     for (auto msg = parent.next_message(); msg != nullptr;
          msg = parent.next_message()) {
-      auto decorator = make_write_packet_decorator(*this, parent);
-      worker_.write_message(decorator, std::move(msg));
+      worker_.write_message(*this, std::move(msg));
     }
     // Write prepared data.
     return write_some();
   }
 
   template <class Parent>
-  void resolve(Parent& parent, const std::string& path, actor listener) {
-    worker_.resolve(parent, path, listener);
+  void resolve(Parent&, const std::string& path, actor listener) {
+    worker_.resolve(*this, path, listener);
   }
 
   template <class... Ts>
@@ -121,8 +141,8 @@ public:
   }
 
   template <class Parent>
-  void timeout(Parent& parent, atom_value value, uint64_t id) {
-    worker_.timeout(parent, value, id);
+  void timeout(Parent&, atom_value value, uint64_t id) {
+    worker_.timeout(*this, value, id);
   }
 
   void handle_error(sec code) {
@@ -163,9 +183,8 @@ public:
     prepare_next_read();
   }
 
-  template <class Parent>
-  void write_packet(Parent&, span<const byte> header, span<const byte> payload,
-                    unit_t) {
+  void write_packet(span<const byte> header, span<const byte> payload,
+                    typename worker_type::id_type) {
     write_buf_.insert(write_buf_.end(), header.begin(), header.end());
     write_buf_.insert(write_buf_.end(), payload.begin(), payload.end());
   }
@@ -198,7 +217,7 @@ private:
     return true;
   }
 
-  transport_worker<application_type> worker_;
+  worker_type worker_;
   stream_socket handle_;
 
   std::vector<byte> read_buf_;
@@ -212,6 +231,8 @@ private:
   receive_policy_flag rd_flag_;
 
   size_t written_;
+
+  endpoint_manager* manager_;
 };
 
 } // namespace net

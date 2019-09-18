@@ -64,8 +64,7 @@ struct fixture : test_coordinator_fixture<>, proxy_registry::backend {
     input = to_buf(xs...);
   }
 
-  void write_packet(fixture&, span<const byte> hdr, span<const byte> payload,
-                    unit_t) {
+  void write_packet(span<const byte> hdr, span<const byte> payload) {
     output.insert(output.end(), hdr.begin(), hdr.end());
     output.insert(output.end(), payload.begin(), payload.end());
   }

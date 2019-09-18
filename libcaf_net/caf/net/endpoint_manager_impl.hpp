@@ -18,6 +18,10 @@
 
 #pragma once
 
+#include "caf/abstract_actor.hpp"
+#include "caf/actor_cast.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/atom.hpp"
 #include "caf/net/endpoint_manager.hpp"
 
 namespace caf {
@@ -54,6 +58,10 @@ public:
 
   transport_type& transport() {
     return transport_;
+  }
+
+  endpoint_manager_impl& manager() {
+    return *this;
   }
 
   // -- timeout management -----------------------------------------------------

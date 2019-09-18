@@ -70,10 +70,10 @@ public:
     return none;
   }
 
-  template <class Transport>
-  void write_message(Transport& transport,
+  template <class Parent>
+  void write_message(Parent& parent,
                      std::unique_ptr<endpoint_manager::message> msg) {
-    transport.write_packet(span<byte>{}, msg->payload);
+    parent.write_packet(span<const byte>{}, msg->payload);
   }
 
   template <class Parent>

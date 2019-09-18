@@ -71,7 +71,7 @@ public:
       return err;
     auto hdr = to_bytes(header{message_type::handshake,
                                static_cast<uint32_t>(buf_.size()), version});
-    parent.write_packet(parent, hdr, buf_, unit);
+    parent.write_packet(hdr, buf_);
     return none;
   }
 
@@ -98,13 +98,14 @@ public:
     header hdr{message_type::actor_message, static_cast<uint32_t>(buf_.size()),
                ptr->msg->mid.integer_value()};
     auto bytes = to_bytes(hdr);
-    parent.write_packet(parent, make_span(bytes), make_span(buf_), unit);
+    parent.write_packet(make_span(bytes), make_span(buf_));
+    return none;
   }
 
   template <class Parent>
   error handle_data(Parent& parent, byte_span bytes) {
     auto write_packet = make_callback([&](byte_span hdr, byte_span payload) {
-      parent.write_packet(parent, hdr, payload, unit);
+      parent.write_packet(hdr, payload);
       return none;
     });
     return handle(write_packet, bytes);
@@ -113,7 +114,7 @@ public:
   template <class Parent>
   void resolve(Parent& parent, string_view path, actor listener) {
     auto write_packet = make_callback([&](byte_span hdr, byte_span payload) {
-      parent.write_packet(parent, hdr, payload, unit);
+      parent.write_packet(hdr, payload);
       return none;
     });
     resolve_remote_path(write_packet, path, listener);
