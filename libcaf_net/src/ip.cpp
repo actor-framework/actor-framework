@@ -94,7 +94,7 @@ void for_each_adapter(F f, bool is_link_local = false) {
     return;
   }
   auto adapters = adapters_ptr{reinterpret_cast<IP_ADAPTER_ADDRESSES*>(
-                                 ::malloc(len),
+                                 ::malloc(len)),
                                free};
   if (!adapters) {
     CAF_LOG_ERROR("malloc failed");
@@ -123,7 +123,7 @@ void for_each_adapter(F f, bool is_link_local = false) {
       getnameinfo(addr->Address.lpSockaddr, addr->Address.iSockaddrLength,
                   ip_buf, sizeof(ip_buf), nullptr, 0, NI_NUMERICHOST);
       ip_address ip;
-      if (!is_link_local && starts_with(if_buf, "fe80:")) {
+      if (!is_link_local && starts_with(ip_buf, "fe80:")) {
         CAF_LOG_DEBUG("skipping link-local address: " << ip_buf);
         continue;
       } else if (auto err = parse(ip_buf, ip))
