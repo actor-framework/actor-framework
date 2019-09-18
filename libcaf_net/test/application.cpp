@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "caf/byte.hpp"
+#include "caf/forwarding_actor_proxy.hpp"
 #include "caf/net/basp/connection_state.hpp"
 #include "caf/net/basp/constants.hpp"
 #include "caf/net/basp/ec.hpp"
@@ -40,10 +41,10 @@ using namespace caf::net;
 
 namespace {
 
-struct fixture : test_coordinator_fixture<> {
+struct fixture : test_coordinator_fixture<>, proxy_registry::backend {
   using buffer_type = std::vector<byte>;
 
-  fixture() {
+  fixture() : app(std::make_shared<proxy_registry>(sys, *this)) {
     REQUIRE_OK(app.init(*this));
     uri mars_uri;
     REQUIRE_OK(parse("tcp://mars", mars_uri));
@@ -102,6 +103,17 @@ struct fixture : test_coordinator_fixture<> {
 
   actor_system& system() {
     return sys;
+  }
+
+  strong_actor_ptr make_proxy(node_id nid, actor_id aid) override {
+    using impl_type = forwarding_actor_proxy;
+    using hdl_type = strong_actor_ptr;
+    actor_config cfg;
+    return make_actor<impl_type, hdl_type>(aid, nid, &sys, cfg, self);
+  }
+
+  void set_last_hop(node_id*) override {
+    // nop
   }
 
   buffer_type input;
@@ -199,6 +211,19 @@ CAF_TEST(repeated handshake) {
                   basp::ec::unexpected_handshake);
 }
 
+CAF_TEST(actor message) {
+  handle_handshake();
+  consume_handshake();
+  sys.registry().put(self->id(), self);
+  CAF_REQUIRE_EQUAL(self->mailbox().size(), 0u);
+  MOCK(basp::message_type::actor_message, make_message_id().integer_value(),
+       actor_id{42}, self->id(), std::vector<strong_actor_ptr>{},
+       make_message("hello world!"));
+  allow((atom_value, strong_actor_ptr),
+        from(_).to(self).with(atom("monitor"), _));
+  expect((std::string), from(_).to(self).with("hello world!"));
+}
+
 CAF_TEST(resolve request without result) {
   handle_handshake();
   consume_handshake();
@@ -240,6 +265,39 @@ CAF_TEST(resolve request on name with result) {
   RECEIVE(basp::message_type::resolve_response, 42u, aid, ifs);
   CAF_CHECK_EQUAL(aid, self->id());
   CAF_CHECK(ifs.empty());
+}
+
+CAF_TEST(resolve response with invalid actor handle) {
+  handle_handshake();
+  consume_handshake();
+  app.resolve(*this, "foo/bar", self);
+  std::string path;
+  RECEIVE(basp::message_type::resolve_request, 1u, path);
+  CAF_CHECK_EQUAL(path, "foo/bar");
+  actor_id aid = 0;
+  std::set<std::string> ifs;
+  MOCK(basp::message_type::resolve_response, 1u, aid, ifs);
+  self->receive([&](strong_actor_ptr& hdl, std::set<std::string>& hdl_ifs) {
+    CAF_CHECK_EQUAL(hdl, nullptr);
+    CAF_CHECK_EQUAL(ifs, hdl_ifs);
+  });
+}
+
+CAF_TEST(resolve response with valid actor handle) {
+  handle_handshake();
+  consume_handshake();
+  app.resolve(*this, "foo/bar", self);
+  std::string path;
+  RECEIVE(basp::message_type::resolve_request, 1u, path);
+  CAF_CHECK_EQUAL(path, "foo/bar");
+  actor_id aid = 42;
+  std::set<std::string> ifs;
+  MOCK(basp::message_type::resolve_response, 1u, aid, ifs);
+  self->receive([&](strong_actor_ptr& hdl, std::set<std::string>& hdl_ifs) {
+    CAF_REQUIRE(hdl != nullptr);
+    CAF_CHECK_EQUAL(ifs, hdl_ifs);
+    CAF_CHECK_EQUAL(hdl->id(), aid);
+  });
 }
 
 CAF_TEST(heartbeat message) {

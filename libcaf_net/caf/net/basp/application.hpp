@@ -19,6 +19,7 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -33,6 +34,7 @@
 #include "caf/net/basp/message_type.hpp"
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/node_id.hpp"
+#include "caf/proxy_registry.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/serializer_impl.hpp"
 #include "caf/span.hpp"
@@ -51,6 +53,12 @@ public:
   using byte_span = span<const byte>;
 
   using write_packet_callback = callback<byte_span, byte_span>;
+
+  using proxy_registry_ptr = std::shared_ptr<proxy_registry>;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  explicit application(proxy_registry_ptr proxies);
 
   // -- interface functions ----------------------------------------------------
 
@@ -135,6 +143,9 @@ private:
   error handle_handshake(write_packet_callback& write_packet, header hdr,
                          byte_span payload);
 
+  error handle_actor_message(write_packet_callback& write_packet, header hdr,
+                             byte_span payload);
+
   error handle_resolve_request(write_packet_callback& write_packet, header hdr,
                                byte_span payload);
 
@@ -172,6 +183,9 @@ private:
 
   /// Ascending ID generator for requests to our peer.
   uint64_t next_request_id_ = 1;
+
+  /// Points to the factory object for generating proxies.
+  proxy_registry_ptr proxies_;
 };
 
 } // namespace basp

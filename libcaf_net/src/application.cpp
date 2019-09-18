@@ -42,6 +42,11 @@ namespace caf {
 namespace net {
 namespace basp {
 
+application::application(proxy_registry_ptr proxies)
+  : proxies_(std::move(proxies)) {
+  // nop
+}
+
 expected<std::vector<byte>> application::serialize(actor_system& sys,
                                                    const type_erased_tuple& x) {
   std::vector<byte> result;
@@ -152,6 +157,8 @@ error application::handle(write_packet_callback& write_packet, header hdr,
   switch (hdr.type) {
     case message_type::handshake:
       return ec::unexpected_handshake;
+    case message_type::actor_message:
+      return handle_actor_message(write_packet, hdr, payload);
     case message_type::resolve_request:
       return handle_resolve_request(write_packet, hdr, payload);
     case message_type::resolve_response:
@@ -177,6 +184,32 @@ error application::handle_handshake(write_packet_callback&, header hdr,
   // TODO: verify peer_id and app_ids
   peer_id_ = std::move(peer_id);
   state_ = connection_state::await_header;
+  return none;
+}
+
+error application::handle_actor_message(write_packet_callback&, header hdr,
+                                        byte_span payload) {
+  // Deserialize payload.
+  actor_id src;
+  actor_id dst;
+  std::vector<strong_actor_ptr> fwd_stack;
+  message content;
+  binary_deserializer source{system(), payload};
+  if (auto err = source(src, dst, fwd_stack, content))
+    return err;
+  // Sanity checks.
+  if (dst == 0)
+    return ec::invalid_payload;
+  // Try to fetch the receiver.
+  auto src_hdl = system().registry().get(dst);
+  if (src_hdl == nullptr) {
+    CAF_LOG_DEBUG("no actor found for given ID, drop message");
+    return caf::none;
+  }
+  // Ship the message.
+  src_hdl->get()->eq_impl(make_message_id(hdr.operation_data),
+                          proxies_->get_or_put(peer_id_, src), nullptr,
+                          std::move(content));
   return none;
 }
 
@@ -227,11 +260,11 @@ error application::handle_resolve_response(write_packet_callback&, header hdr,
   if (auto err = source(aid, ifs))
     return err;
   if (aid == 0) {
-    i->second.deliver(strong_actor_ptr{nullptr});
+    i->second.deliver(strong_actor_ptr{nullptr}, std::move(ifs));
     return none;
   }
-  // TODO: generate proxies and deal with proxy_registry
-  return ec::unimplemented;
+  i->second.deliver(proxies_->get_or_put(peer_id_, aid), std::move(ifs));
+  return none;
 }
 
 error application::generate_handshake() {
