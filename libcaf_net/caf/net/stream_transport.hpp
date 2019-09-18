@@ -185,6 +185,8 @@ public:
 
   void write_packet(span<const byte> header, span<const byte> payload,
                     typename worker_type::id_type) {
+    if (write_buf_.empty())
+      manager().mask_add(operation::write);
     write_buf_.insert(write_buf_.end(), header.begin(), header.end());
     write_buf_.insert(write_buf_.end(), payload.begin(), payload.end());
   }

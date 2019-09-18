@@ -97,7 +97,8 @@ void application::resolve_remote_path(write_packet_callback& write_packet,
   pending_resolves_.emplace(req_id, std::move(rp));
 }
 
-error application::handle(write_packet_callback& write_packet,
+error application::handle(size_t& next_read_size,
+                          write_packet_callback& write_packet,
                           byte_span bytes) {
   switch (state_) {
     case connection_state::await_handshake_header: {
@@ -111,6 +112,7 @@ error application::handle(write_packet_callback& write_packet,
       if (hdr_.payload_len == 0)
         return ec::missing_payload;
       state_ = connection_state::await_handshake_payload;
+      next_read_size = hdr_.payload_len;
       return none;
     }
     case connection_state::await_handshake_payload: {
@@ -137,8 +139,8 @@ error application::handle(write_packet_callback& write_packet,
       hdr_ = header::from_bytes(bytes);
       if (hdr_.payload_len == 0)
         return handle(write_packet, hdr_, byte_span{});
-      else
-        state_ = connection_state::await_payload;
+      next_read_size = hdr_.payload_len;
+      state_ = connection_state::await_payload;
       return none;
     }
     case connection_state::await_payload: {

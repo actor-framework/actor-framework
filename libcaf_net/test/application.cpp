@@ -104,6 +104,15 @@ struct fixture : test_coordinator_fixture<>, proxy_registry::backend {
     return sys;
   }
 
+  fixture& transport() {
+    return *this;
+  }
+
+  template <class... Ts>
+  void configure_read(Ts...) {
+    // nop
+  }
+
   strong_actor_ptr make_proxy(node_id nid, actor_id aid) override {
     using impl_type = forwarding_actor_proxy;
     using hdl_type = strong_actor_ptr;

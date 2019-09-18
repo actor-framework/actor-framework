@@ -33,6 +33,7 @@
 #include "caf/net/basp/header.hpp"
 #include "caf/net/basp/message_type.hpp"
 #include "caf/net/endpoint_manager.hpp"
+#include "caf/net/receive_policy.hpp"
 #include "caf/node_id.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/response_promise.hpp"
@@ -72,6 +73,7 @@ public:
     auto hdr = to_bytes(header{message_type::handshake,
                                static_cast<uint32_t>(buf_.size()), version});
     parent.write_packet(hdr, buf_);
+    parent.transport().configure_read(receive_policy::exactly(header_size));
     return none;
   }
 
@@ -108,7 +110,11 @@ public:
       parent.write_packet(hdr, payload);
       return none;
     });
-    return handle(write_packet, bytes);
+    size_t next_read_size = header_size;
+    if (auto err = handle(next_read_size, write_packet, bytes))
+      return err;
+    parent.transport().configure_read(receive_policy::exactly(next_read_size));
+    return none;
   }
 
   template <class Parent>
@@ -152,7 +158,8 @@ public:
 private:
   // -- message handling -------------------------------------------------------
 
-  error handle(write_packet_callback& write_packet, byte_span bytes);
+  error handle(size_t& next_read_size, write_packet_callback& write_packet,
+               byte_span bytes);
 
   error handle(write_packet_callback& write_packet, header hdr,
                byte_span payload);
