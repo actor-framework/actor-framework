@@ -25,8 +25,11 @@ namespace basp {
 namespace {
 
 const char* connection_state_names[] = {
-  "await_magic_number", "await_handshake_header", "await_handshake_payload",
-  "await_header",       "await_payload",          "shutdown",
+  "await_handshake_header",
+  "await_handshake_payload",
+  "await_header",
+  "await_payload",
+  "shutdown",
 };
 
 } // namespace
