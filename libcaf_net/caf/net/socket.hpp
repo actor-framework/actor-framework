@@ -24,7 +24,6 @@
 
 #include "caf/config.hpp"
 #include "caf/fwd.hpp"
-#include "caf/net/abstract_socket.hpp"
 #include "caf/net/socket_id.hpp"
 
 namespace caf {
@@ -32,11 +31,47 @@ namespace net {
 
 /// An internal endpoint for sending or receiving data. Can be either a
 /// ::network_socket, ::pipe_socket, ::stream_socket, or ::datagram_socket.
-struct socket : abstract_socket<socket> {
-  using super = abstract_socket<socket>;
+struct socket {
+  socket_id id;
 
-  using super::super;
+  constexpr socket() : id(invalid_socket_id) {
+    // nop
+  }
+
+  constexpr explicit socket(socket_id id) : id(id) {
+    // nop
+  }
+
+  constexpr socket(const socket& other) : id(other.id) {
+    // nop
+  }
+
+  socket& operator=(const socket& other) {
+    id = other.id;
+    return *this;
+  }
 };
+
+/// @relates socket
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, socket& x) {
+  return f(x.id);
+}
+
+/// @relates socket
+constexpr bool operator==(socket x, socket y) {
+  return x.id == y.id;
+}
+
+/// @relates socket
+constexpr bool operator!=(socket x, socket y) {
+  return x.id != y.id;
+}
+
+/// @relates socket
+constexpr bool operator<(socket x, socket y) {
+  return x.id < y.id;
+}
 
 /// Denotes the invalid socket.
 constexpr auto invalid_socket = socket{invalid_socket_id};

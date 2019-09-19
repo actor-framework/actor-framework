@@ -22,7 +22,6 @@
 
 #include "caf/test/dsl.hpp"
 
-#include "caf/net/abstract_socket.hpp"
 #include "caf/net/socket_id.hpp"
 
 using namespace caf;

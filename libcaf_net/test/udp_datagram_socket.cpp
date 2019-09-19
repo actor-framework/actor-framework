@@ -27,6 +27,7 @@
 #include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/ip_address.hpp"
+#include "caf/ip_endpoint.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/net/ip.hpp"
 #include "caf/net/socket_guard.hpp"

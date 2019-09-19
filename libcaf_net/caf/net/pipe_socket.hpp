@@ -23,7 +23,6 @@
 #include <utility>
 
 #include "caf/fwd.hpp"
-#include "caf/net/abstract_socket.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/net/socket_id.hpp"
 
@@ -31,14 +30,10 @@ namespace caf {
 namespace net {
 
 /// A unidirectional communication endpoint for inter-process communication.
-struct pipe_socket : abstract_socket<pipe_socket> {
-  using super = abstract_socket<pipe_socket>;
+struct pipe_socket : socket {
+  using super = socket;
 
   using super::super;
-
-  constexpr operator socket() const noexcept {
-    return socket{id};
-  }
 };
 
 /// Creates two connected sockets. The first socket is the read handle and the
