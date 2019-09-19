@@ -32,7 +32,7 @@ using namespace caf::net;
 
 namespace {
 
-byte operator""_b(unsigned long long x) {
+byte operator"" _b(unsigned long long x) {
   return static_cast<byte>(x);
 }
 
