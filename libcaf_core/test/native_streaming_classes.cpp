@@ -616,7 +616,7 @@ vector<int> make_iota(int first, int last) {
   return result;
 }
 
-} // namespace <anonymous>
+} // namespace
 
 // -- unit tests ---------------------------------------------------------------
 

@@ -164,7 +164,7 @@ kernel void phase_3(global uint* restrict data,
 }
 )__";
 
-} // namespace <anonymous>
+} // namespace
 
 template <class T, class E = caf::detail::enable_if_t<is_integral<T>::value>>
 T round_up(T numToRound, T multiple)  {

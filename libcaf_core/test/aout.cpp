@@ -55,7 +55,7 @@ struct fixture {
   scoped_actor self{system, true};
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(adapter_tests, fixture)
 

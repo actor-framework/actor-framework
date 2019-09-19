@@ -277,7 +277,7 @@ struct upstream_msg_visitor {
   }
 };
 
-} // namespace <anonymous>
+} // namespace
 
 intrusive::task_result scheduled_actor::mailbox_visitor::
 operator()(size_t, upstream_queue&, mailbox_element& x) {
@@ -335,7 +335,7 @@ struct downstream_msg_visitor {
   }
 };
 
-} // namespace <anonymous>
+} // namespace
 
 intrusive::task_result scheduled_actor::mailbox_visitor::
 operator()(size_t, downstream_queue& qs, stream_slot,

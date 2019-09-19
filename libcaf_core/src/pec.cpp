@@ -46,7 +46,7 @@ constexpr const char* tbl[] = {
   "illegal_category",
 };
 
-} // namespace <anonymous>
+} // namespace
 
 namespace caf {
 

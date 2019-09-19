@@ -44,7 +44,7 @@ struct ipv4_address_consumer {
   }
 };
 
-} // namespace <anonymous>
+} // namespace
 
 // -- constructors, destructors, and assignment operators ----------------------
 

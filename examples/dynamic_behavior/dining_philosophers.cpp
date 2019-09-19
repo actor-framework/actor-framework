@@ -190,7 +190,7 @@ private:
   behavior    eating_;   // wait for some time, then go thinking again
 };
 
-} // namespace <anonymous>
+} // namespace
 
 void caf_main(actor_system& system) {
   scoped_actor self{system};

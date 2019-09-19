@@ -33,7 +33,7 @@ ipv4_subnet operator/(ipv4_address addr, uint8_t prefix) {
   return {addr, prefix};
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(constructing) {
   ipv4_subnet zero{addr(0, 0, 0, 0), 32};

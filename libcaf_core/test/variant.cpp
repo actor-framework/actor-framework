@@ -136,7 +136,7 @@ struct test_visitor {
   }
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(constructors) {
   variant<int, string> a{42};

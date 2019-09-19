@@ -40,7 +40,7 @@ public:
 // calculator_bhvr can be inherited from or composed further
 using calculator_bhvr = composed_behavior<adder_bhvr, multiplier_bhvr>;
 
-} // namespace <anonymous>
+} // namespace
 
 void caf_main(actor_system& system) {
   auto f = make_function_view(system.spawn<calculator_bhvr>());

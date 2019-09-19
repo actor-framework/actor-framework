@@ -31,7 +31,7 @@ struct foo {
   int y;
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(make_rtti_pair) {
   auto n = type_nr<int32_t>::value;

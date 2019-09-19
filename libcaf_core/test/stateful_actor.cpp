@@ -126,7 +126,7 @@ struct fixture {
   }
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(dynamic_stateful_actor_tests, fixture)
 

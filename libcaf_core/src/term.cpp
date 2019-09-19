@@ -130,7 +130,7 @@ bool is_tty(const std::ostream& out) {
   return false;
 }
 
-} // namespace <anonymous>
+} // namespace
 
 std::ostream& operator<<(std::ostream& out, term x) {
   if (is_tty(out))

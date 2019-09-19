@@ -29,7 +29,7 @@ struct fixture {
 
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(sum_type_token_tests, fixture)
 

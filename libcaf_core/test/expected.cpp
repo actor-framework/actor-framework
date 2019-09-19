@@ -42,7 +42,7 @@ namespace {
 using e_int = expected<int>;
 using e_str = expected<std::string>;
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(both_engaged_equal) {
   e_int x{42};

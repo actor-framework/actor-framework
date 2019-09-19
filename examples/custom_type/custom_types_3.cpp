@@ -113,6 +113,6 @@ void caf_main(actor_system& system, const config&) {
   anon_send(system.spawn(testee), foo{1, 2});
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_MAIN()

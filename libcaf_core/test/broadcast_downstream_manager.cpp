@@ -280,7 +280,7 @@ receive_checker<F> operator<<(receive_checker<F> xs, not_empty_t) {
   return xs;
 }
 
-} // namespace <anonymous>
+} // namespace
 
 // -- DSL for near-natural-language testing ------------------------------------
 

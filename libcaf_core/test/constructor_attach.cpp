@@ -84,7 +84,7 @@ private:
   actor testee_;
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(constructor_attach) {
   actor_system_config cfg;

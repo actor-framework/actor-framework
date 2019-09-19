@@ -37,7 +37,7 @@ inline void yield() noexcept {
   req.tv_nsec = 1;
   nanosleep(&req, nullptr);
 }
-} // namespace anonymous>
+} // namespace
 } // namespace this_thread
 } // namespace std
 #endif
@@ -57,7 +57,7 @@ inline void sleep_for(const chrono::duration<Rep, Period>& rt) {
   req.tv_nsec = nsec.count();
   nanosleep(&req, nullptr);
 }
-} // namespace anonymous>
+} // namespace
 } // namespace this_thread
 } // namespace std
 #endif

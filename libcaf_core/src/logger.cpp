@@ -230,7 +230,7 @@ inline logger* get_current_logger() {
 
 #endif // CAF_NO_THREAD_LOCAL
 
-} // namespace <anonymous>
+} // namespace
 
 logger::config::config()
     : verbosity(CAF_LOG_LEVEL),

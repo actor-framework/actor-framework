@@ -180,7 +180,7 @@ void test_impl(Policy& p) {
   CAF_CHECK(check(variant<none_t, int, std::string>{std::string{"foo"}}));
 }
 
-} // namespace <anonymous>
+} // namespace
 
 namespace {
 struct stringification_inspector_policy {
@@ -220,7 +220,7 @@ struct stringification_inspector_policy {
     return true;
   }
 };
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(stringification_inspector) {
   stringification_inspector_policy p;

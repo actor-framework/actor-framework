@@ -237,7 +237,7 @@ struct is_message {
   }
 };
 
-} // namespace <anonymous>
+} // namespace
 
 #define SERIALIZATION_TEST(name)                                               \
   namespace {                                                                  \

@@ -83,6 +83,6 @@ void caf_main(actor_system& system) {
   system.spawn(tester, system.spawn<typed_calculator_class>());
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_MAIN()

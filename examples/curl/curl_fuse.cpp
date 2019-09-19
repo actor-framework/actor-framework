@@ -333,7 +333,7 @@ behavior curl_master(stateful_actor<master_state>* self) {
 // signal handling for ctrl+c
 std::atomic<bool> shutdown_flag{false};
 
-} // namespace <anonymous>
+} // namespace
 
 void caf_main(actor_system& system) {
   // install signal handler

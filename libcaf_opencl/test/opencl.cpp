@@ -181,7 +181,7 @@ constexpr const char* kernel_source_compiler_flag = R"__(
   }
 )__";
 
-} // namespace <anonymous>
+} // namespace
 
 template<size_t Size>
 class square_matrix {

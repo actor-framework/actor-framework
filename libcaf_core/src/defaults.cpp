@@ -40,7 +40,7 @@ constexpr caf::timespan ms(ms_t::rep x) {
   return std::chrono::duration_cast<caf::timespan>(ms_t{x});
 }
 
-} // namespace <anonymous>
+} // namespace
 
 namespace caf {
 namespace defaults {

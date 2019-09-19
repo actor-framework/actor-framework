@@ -43,7 +43,7 @@ protected:
   std::unordered_map<string, string> values_;
 };
 
-} // namespace <anonymous>
+} // namespace
 
 void caf_main(actor_system& system) {
   auto f = make_function_view(system.spawn<dict_behavior>());

@@ -142,7 +142,7 @@ private:
   };
 };
 
-} // namespace <anonymous>
+} // namespace
 
 namespace caf {
 
@@ -184,7 +184,7 @@ struct stringify_t {
 
 constexpr stringify_t stringify = stringify_t{};
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(holds_alternative) {
   union_type x;

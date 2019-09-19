@@ -218,7 +218,7 @@ bool operator "" _i(const char* cstr, size_t cstr_len) {
   return err != none;
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(uri_tests, fixture)
 

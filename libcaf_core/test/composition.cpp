@@ -56,7 +56,7 @@ behavior float_adder(float x) {
 
 using fixture = test_coordinator_fixture<>;
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(composition_tests, fixture)
 

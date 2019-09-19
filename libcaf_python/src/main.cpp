@@ -87,7 +87,7 @@ def receive(timeout = None, msg_filter = no_receive_filter):
 
 )__";
 
-} // namespace <anonymous>
+} // namespace
 
 namespace caf {
 
@@ -429,7 +429,7 @@ namespace {
 
 py_context* s_context;
 
-} // namespace <anonymous>
+} // namespace
 
 inline void set_py_exception_fill(std::ostream&) {
   // end of recursion
@@ -574,8 +574,7 @@ CAF_MODULE_INIT_RES caf_module_init() {
   CAF_MODULE_INIT_RET(m.ptr())
 }
 
-
-} // namespace <anonymous>
+} // namespace
 } // namespace python
 } // namespace caf
 
@@ -627,6 +626,6 @@ void caf_main(actor_system& system, const config& cfg) {
   Py_Finalize();
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_MAIN()

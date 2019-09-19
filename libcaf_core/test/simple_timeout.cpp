@@ -71,7 +71,7 @@ timer::behavior_type timer_impl2(timer::pointer self) {
   };
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(simple_timeout_tests, test_coordinator_fixture<>)
 

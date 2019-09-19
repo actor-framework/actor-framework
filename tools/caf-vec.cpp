@@ -886,7 +886,7 @@ void caf_main(actor_system& sys, const config& cfg) {
   sys.await_all_actors_done();
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_MAIN()
 

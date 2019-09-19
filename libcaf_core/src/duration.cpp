@@ -44,7 +44,7 @@ const char* time_unit_short_strings[] = {
   "ns"
 };
 
-} // namespace <anonymous>
+} // namespace
 
 std::string to_string(time_unit x) {
   return detail::enum_to_string(x, time_unit_strings);

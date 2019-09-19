@@ -16,12 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE serial_reply
-#include "caf/test/unit_test.hpp"
 
 #include "caf/all.hpp"
+
+#include "caf/test/unit_test.hpp"
 
 using namespace caf;
 
@@ -35,8 +34,7 @@ using sub2_atom = atom_constant<atom("sub2")>;
 using sub3_atom = atom_constant<atom("sub3")>;
 using sub4_atom = atom_constant<atom("sub4")>;
 
-} // namespace <anonymous>
-
+} // namespace
 
 CAF_TEST(test_serial_reply) {
   actor_system_config cfg;

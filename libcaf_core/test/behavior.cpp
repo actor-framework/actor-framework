@@ -63,7 +63,7 @@ struct fixture {
   message m3 = make_message(1, 2, 3);
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(behavior_tests, fixture)
 

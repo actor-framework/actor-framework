@@ -32,7 +32,7 @@ message make(abstract_actor* self, const error& reason) {
   return make_message(MsgType{self->address(), reason});
 }
 
-} // namespace <anonymous>
+} // namespace
 
 void default_attachable::actor_exited(const error& rsn, execution_unit* host) {
   CAF_ASSERT(observed_ != observer_);

@@ -92,6 +92,6 @@ void caf_main(actor_system& system, const config& cfg) {
   anon_send_exit(*server_actor, exit_reason::user_shutdown);
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_MAIN(io::middleman)

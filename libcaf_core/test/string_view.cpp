@@ -31,7 +31,7 @@ struct fixture {
 
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(string_view_tests, fixture)
 

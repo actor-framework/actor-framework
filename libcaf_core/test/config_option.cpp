@@ -96,7 +96,7 @@ void compare(const config_option& lhs, const config_option& rhs) {
   CAF_CHECK_EQUAL(lhs.full_name(), rhs.full_name());
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(copy constructor) {
   auto one = make_config_option<int>("cat1", "one", "option 1");

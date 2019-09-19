@@ -192,7 +192,7 @@ public:
   }
 };
 
-} // namespace <anonymous>
+} // namespace
 
 actor_system::module::~module() {
   // nop

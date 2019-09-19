@@ -97,7 +97,7 @@ struct fixture {
   }
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(counting_no_system) {
   assumed_init_calls = 0;

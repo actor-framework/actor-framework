@@ -40,7 +40,7 @@ constexpr char decoding_table[] = " 0123456789"
                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ_"
                                   "abcdefghijklmnopqrstuvwxyz";
 
-} // namespace <anonymous>
+} // namespace
 
 constexpr uint64_t next_interim(uint64_t current, size_t char_code) {
   return (current << 6) | encoding_table[(char_code <= 0x7F) ? char_code : 0];

@@ -37,8 +37,7 @@ const char* exit_reason_strings[] = {
   "unreachable"
 };
 
-} // namespace <anonymous>
-
+} // namespace
 
 std::string to_string(exit_reason x) {
   return detail::enum_to_string(x, exit_reason_strings);

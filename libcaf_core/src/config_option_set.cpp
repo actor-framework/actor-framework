@@ -48,7 +48,7 @@ void insert(string_builder& builder, size_t count, char ch) {
   builder.result.insert(builder.result.end(), count, ch);
 }
 
-} // namespace <anonymous>
+} // namespace
 
 namespace caf {
 

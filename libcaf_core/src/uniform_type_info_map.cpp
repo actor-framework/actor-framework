@@ -117,7 +117,7 @@ void fill_builtins(builtins& arr, List, size_t pos) {
   fill_builtins(arr, next, pos + 1);
 }
 
-} // namespace <anonymous>
+} // namespace
 
 type_erased_value_ptr uniform_type_info_map::make_value(uint16_t nr) const {
   return builtin_[nr - 1].second();

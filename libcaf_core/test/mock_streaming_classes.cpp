@@ -472,7 +472,7 @@ struct fixture {
   }
 };
 
-} // namespace <anonymous>
+} // namespace
 
 // -- unit tests ---------------------------------------------------------------
 

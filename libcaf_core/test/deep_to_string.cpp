@@ -30,7 +30,7 @@ void foobar() {
   // nop
 }
 
-} // namespace <anonymous>
+} // namespace
 
 #define CHECK_DEEP_TO_STRING(val, str) CAF_CHECK_EQUAL(deep_to_string(val), str)
 

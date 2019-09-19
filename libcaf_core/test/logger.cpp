@@ -131,7 +131,7 @@ struct tpl {
 
 constexpr const char* file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(logger_tests, fixture)
 

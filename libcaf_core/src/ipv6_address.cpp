@@ -77,7 +77,7 @@ inline uint64_t net_order_64(uint64_t value) {
 
 std::array<uint32_t, 3> v4_prefix{{0, 0, net_order_32(0x0000FFFFu)}};
 
-} // namespace <anonymous>
+} // namespace
 
 // -- constructors, destructors, and assignment operators ----------------------
 
@@ -171,7 +171,7 @@ u16_range longest_streak(u16_iterator first, u16_iterator last) {
   return range_size(result) >= range_size(next_streak) ? result : next_streak;
 }
 
-} // namespace <anonymous>
+} // namespace
 
 std::string to_string(ipv6_address x) {
   // Shortcut for embedded v4 addresses.

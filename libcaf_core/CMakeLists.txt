@@ -9,10 +9,7 @@ set(LIBCAF_CORE_SRCS
   src/abstract_actor.cpp
   src/abstract_channel.cpp
   src/abstract_composable_behavior.cpp
-  src/abstract_coordinator.cpp
   src/abstract_group.cpp
-  src/abstract_worker.cpp
-  src/abstract_worker_hub.cpp
   src/actor.cpp
   src/actor_addr.cpp
   src/actor_clock.cpp
@@ -25,46 +22,66 @@ set(LIBCAF_CORE_SRCS
   src/actor_registry.cpp
   src/actor_system.cpp
   src/actor_system_config.cpp
-  src/append_hex.cpp
-  src/append_percent_encoded.cpp
   src/atom.cpp
   src/attachable.cpp
   src/behavior.cpp
-  src/behavior_impl.cpp
-  src/behavior_stack.cpp
   src/binary_deserializer.cpp
   src/blocking_actor.cpp
-  src/blocking_behavior.cpp
-  src/chars.cpp
-  src/concatenated_tuple.cpp
   src/config_option.cpp
   src/config_option_adder.cpp
   src/config_option_set.cpp
   src/config_value.cpp
-  src/decorated_tuple.cpp
+  src/decorator/sequencer.cpp
+  src/decorator/splitter.cpp
   src/default_attachable.cpp
   src/defaults.cpp
   src/deserializer.cpp
+  src/detail/abstract_worker.cpp
+  src/detail/abstract_worker_hub.cpp
+  src/detail/append_hex.cpp
+  src/detail/append_percent_encoded.cpp
+  src/detail/behavior_impl.cpp
+  src/detail/behavior_stack.cpp
+  src/detail/blocking_behavior.cpp
+  src/detail/concatenated_tuple.cpp
+  src/detail/decorated_tuple.cpp
+  src/detail/dynamic_message_data.cpp
+  src/detail/fnv_hash.cpp
+  src/detail/get_mac_addresses.cpp
+  src/detail/get_process_id.cpp
+  src/detail/get_root_uuid.cpp
+  src/detail/ini_consumer.cpp
+  src/detail/invoke_result_visitor.cpp
+  src/detail/merged_tuple.cpp
+  src/detail/message_data.cpp
+  src/detail/parse.cpp
+  src/detail/parser/chars.cpp
+  src/detail/pretty_type_name.cpp
+  src/detail/private_thread.cpp
+  src/detail/ripemd_160.cpp
+  src/detail/serialized_size.cpp
+  src/detail/set_thread_name.cpp
+  src/detail/shared_spinlock.cpp
+  src/detail/simple_actor_clock.cpp
+  src/detail/stringification_inspector.cpp
+  src/detail/sync_request_bouncer.cpp
+  src/detail/test_actor_clock.cpp
+  src/detail/thread_safe_actor_clock.cpp
+  src/detail/tick_emitter.cpp
+  src/detail/try_match.cpp
+  src/detail/uri_impl.cpp
   src/downstream_manager.cpp
   src/downstream_manager_base.cpp
-  src/downstream_messages.cpp
   src/duration.cpp
-  src/dynamic_message_data.cpp
   src/error.cpp
   src/event_based_actor.cpp
   src/execution_unit.cpp
   src/exit_reason.cpp
-  src/fnv_hash.cpp
   src/forwarding_actor_proxy.cpp
-  src/get_mac_addresses.cpp
-  src/get_process_id.cpp
-  src/get_root_uuid.cpp
   src/group.cpp
   src/group_manager.cpp
   src/group_module.cpp
   src/inbound_path.cpp
-  src/ini_consumer.cpp
-  src/invoke_result_visitor.cpp
   src/ipv4_address.cpp
   src/ipv4_endpoint.cpp
   src/ipv4_subnet.cpp
@@ -77,19 +94,18 @@ set(LIBCAF_CORE_SRCS
   src/make_config_option.cpp
   src/match_case.cpp
   src/memory_managed.cpp
-  src/merged_tuple.cpp
   src/message.cpp
   src/message_builder.cpp
-  src/message_data.cpp
   src/message_handler.cpp
   src/message_view.cpp
   src/monitorable_actor.cpp
   src/node_id.cpp
   src/outbound_path.cpp
-  src/parse.cpp
   src/pec.cpp
-  src/pretty_type_name.cpp
-  src/private_thread.cpp
+  src/policy/downstream_messages.cpp
+  src/policy/unprofiled.cpp
+  src/policy/work_sharing.cpp
+  src/policy/work_stealing.cpp
   src/proxy_registry.cpp
   src/raise_error.cpp
   src/raw_event_based_actor.cpp
@@ -97,46 +113,30 @@ set(LIBCAF_CORE_SRCS
   src/replies_to.cpp
   src/response_promise.cpp
   src/resumable.cpp
-  src/ripemd_160.cpp
   src/rtti_pair.cpp
   src/runtime_settings_map.cpp
   src/scheduled_actor.cpp
+  src/scheduler/abstract_coordinator.cpp
+  src/scheduler/test_coordinator.cpp
   src/scoped_actor.cpp
   src/scoped_execution_unit.cpp
   src/sec.cpp
-  src/sequencer.cpp
-  src/serialized_size.cpp
   src/serializer.cpp
-  src/set_thread_name.cpp
   src/settings.cpp
-  src/shared_spinlock.cpp
-  src/simple_actor_clock.cpp
   src/skip.cpp
-  src/splitter.cpp
   src/stream_aborter.cpp
   src/stream_manager.cpp
   src/stream_priority.cpp
   src/string_algorithms.cpp
   src/string_view.cpp
-  src/stringification_inspector.cpp
-  src/sync_request_bouncer.cpp
   src/term.cpp
-  src/test_actor_clock.cpp
-  src/test_coordinator.cpp
   src/thread_hook.cpp
-  src/thread_safe_actor_clock.cpp
-  src/tick_emitter.cpp
   src/timestamp.cpp
-  src/try_match.cpp
   src/type_erased_tuple.cpp
   src/type_erased_value.cpp
   src/uniform_type_info_map.cpp
-  src/unprofiled.cpp
   src/uri.cpp
   src/uri_builder.cpp
-  src/uri_impl.cpp
-  src/work_sharing.cpp
-  src/work_stealing.cpp
 )
 
 # configure build_config.hpp header
@@ -189,6 +189,6 @@ if (CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
 endif ()
 
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} 
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         FILES_MATCHING PATTERN "*.hpp"
 )

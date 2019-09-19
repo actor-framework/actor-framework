@@ -75,7 +75,7 @@ const char* sec_strings[] = {
   "remote_lookup_failed",
 };
 
-} // namespace <anonymous>
+} // namespace
 
 std::string to_string(sec x) {
   return detail::enum_to_string(x, sec_strings);

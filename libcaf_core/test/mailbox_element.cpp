@@ -53,7 +53,7 @@ optional<tuple<Ts...>> fetch(const mailbox_element& x) {
   return fetch<Ts...>(x.content());
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(empty_message) {
   auto m1 = make_mailbox_element(nullptr, make_message_id(),

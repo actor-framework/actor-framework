@@ -75,7 +75,7 @@ string operator"" _s(const char* str, size_t size) {
   return string(str, size);
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(default_constructed) {
   config_value x;
