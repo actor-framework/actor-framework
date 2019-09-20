@@ -132,4 +132,3 @@ CAF_TEST(invalid timespans) {
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
-

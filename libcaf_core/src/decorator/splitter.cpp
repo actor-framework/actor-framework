@@ -19,10 +19,10 @@
 #include "caf/decorator/splitter.hpp"
 
 #include "caf/actor_system.hpp"
-#include "caf/stateful_actor.hpp"
-#include "caf/response_promise.hpp"
-#include "caf/event_based_actor.hpp"
 #include "caf/default_attachable.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/response_promise.hpp"
+#include "caf/stateful_actor.hpp"
 
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
@@ -47,21 +47,21 @@ behavior fan_out_fan_in(stateful_actor<splitter_state>* self,
     // request().await() has LIFO ordering
     for (auto i = workers.rbegin(); i != workers.rend(); ++i)
       // TODO: maybe infer some useful timeout or use config parameter?
-      self->request(actor_cast<actor>(*i), infinite, msg).await(
-        [=]() {
-          // nop
-        },
-        [=](error& err) mutable {
-          if (err == sec::unexpected_response) {
-            self->state.result += std::move(err.context());
-            if (--self->state.pending == 0)
-              self->state.rp.deliver(std::move(self->state.result));
-          } else {
-            self->state.rp.deliver(err);
-            self->quit();
-          }
-        }
-      );
+      self->request(actor_cast<actor>(*i), infinite, msg)
+        .await(
+          [=]() {
+            // nop
+          },
+          [=](error& err) mutable {
+            if (err == sec::unexpected_response) {
+              self->state.result += std::move(err.context());
+              if (--self->state.pending == 0)
+                self->state.rp.deliver(std::move(self->state.result));
+            } else {
+              self->state.rp.deliver(err);
+              self->quit();
+            }
+          });
     return delegated<message>{};
   };
   self->set_default_handler(f);
@@ -74,10 +74,10 @@ behavior fan_out_fan_in(stateful_actor<splitter_state>* self,
 
 splitter::splitter(std::vector<strong_actor_ptr> workers,
                    message_types_set msg_types)
-    : monitorable_actor(actor_config{}.add_flag(is_actor_dot_decorator_flag)),
-      num_workers(workers.size()),
-      workers_(std::move(workers)),
-      msg_types_(std::move(msg_types)) {
+  : monitorable_actor(actor_config{}.add_flag(is_actor_dot_decorator_flag)),
+    num_workers(workers.size()),
+    workers_(std::move(workers)),
+    msg_types_(std::move(msg_types)) {
   // composed actor has dependency on constituent actors by default;
   // if either constituent actor is already dead upon establishing
   // the dependency, the actor is spawned dead

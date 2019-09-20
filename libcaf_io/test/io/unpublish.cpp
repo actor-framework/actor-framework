@@ -21,9 +21,9 @@
 #define CAF_SUITE io_unpublish
 #include "caf/test/dsl.hpp"
 
+#include <atomic>
 #include <new>
 #include <thread>
-#include <atomic>
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
@@ -45,11 +45,9 @@ public:
   }
 
   behavior make_behavior() override {
-    return {
-      [] {
-        // nop
-      }
-    };
+    return {[] {
+      // nop
+    }};
   }
 };
 
@@ -78,17 +76,18 @@ struct fixture {
                      bool expect_fail = false) {
     actor result;
     scoped_actor self{system, true};
-    self->request(system.middleman().actor_handle(), infinite,
-                  connect_atom::value, hostname, port).receive(
-      [&](node_id&, strong_actor_ptr& res, std::set<std::string>& xs) {
-        CAF_REQUIRE(xs.empty());
-        if (res)
-          result = actor_cast<actor>(std::move(res));
-      },
-      [&](error&) {
-        // nop
-      }
-    );
+    self
+      ->request(system.middleman().actor_handle(), infinite,
+                connect_atom::value, hostname, port)
+      .receive(
+        [&](node_id&, strong_actor_ptr& res, std::set<std::string>& xs) {
+          CAF_REQUIRE(xs.empty());
+          if (res)
+            result = actor_cast<actor>(std::move(res));
+        },
+        [&](error&) {
+          // nop
+        });
     if (expect_fail)
       CAF_REQUIRE(!result);
     else
@@ -97,7 +96,9 @@ struct fixture {
   }
 
   config cfg;
-  union { actor_system system; }; // manually control ctor/dtor
+  union {
+    actor_system system;
+  }; // manually control ctor/dtor
   actor testee;
 };
 

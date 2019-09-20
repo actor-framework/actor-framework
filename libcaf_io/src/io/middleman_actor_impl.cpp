@@ -18,32 +18,31 @@
 
 #include "caf/io/middleman_actor_impl.hpp"
 
-#include <tuple>
 #include <stdexcept>
+#include <tuple>
 #include <utility>
 
-#include "caf/sec.hpp"
-#include "caf/send.hpp"
 #include "caf/actor.hpp"
-#include "caf/logger.hpp"
-#include "caf/node_id.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/logger.hpp"
+#include "caf/node_id.hpp"
+#include "caf/sec.hpp"
+#include "caf/send.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
 #include "caf/io/basp_broker.hpp"
 #include "caf/io/system_messages.hpp"
 
-#include "caf/io/network/interfaces.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
+#include "caf/io/network/interfaces.hpp"
 
 namespace caf {
 namespace io {
 
 middleman_actor_impl::middleman_actor_impl(actor_config& cfg,
                                            actor default_broker)
-    : middleman_actor::base(cfg),
-      broker_(std::move(default_broker)) {
+  : middleman_actor::base(cfg), broker_(std::move(default_broker)) {
   set_down_handler([=](down_msg& dm) {
     auto i = cached_tcp_.begin();
     auto e = cached_tcp_.end();
@@ -154,9 +153,9 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
     [=](spawn_atom atm, node_id& nid, std::string& str, message& msg,
         std::set<std::string>& ifs) -> delegated<strong_actor_ptr> {
       CAF_LOG_TRACE("");
-      delegate(
-        broker_, forward_atom::value, nid, atom("SpawnServ"),
-        make_message(atm, std::move(str), std::move(msg), std::move(ifs)));
+      delegate(broker_, forward_atom::value, nid, atom("SpawnServ"),
+               make_message(atm, std::move(str), std::move(msg),
+                            std::move(ifs)));
       return {};
     },
     [=](get_atom atm,
@@ -164,15 +163,15 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
       CAF_LOG_TRACE("");
       delegate(broker_, atm, std::move(nid));
       return {};
-    }
+    },
   };
 }
 
 middleman_actor_impl::put_res
 middleman_actor_impl::put(uint16_t port, strong_actor_ptr& whom, mpi_set& sigs,
                           const char* in, bool reuse_addr) {
-  CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(whom) << CAF_ARG(sigs)
-                << CAF_ARG(in) << CAF_ARG(reuse_addr));
+  CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(whom) << CAF_ARG(sigs) << CAF_ARG(in)
+                              << CAF_ARG(reuse_addr));
   uint16_t actual_port;
   // treat empty strings like nullptr
   if (in != nullptr && in[0] == '\0')
@@ -190,8 +189,8 @@ middleman_actor_impl::put(uint16_t port, strong_actor_ptr& whom, mpi_set& sigs,
 middleman_actor_impl::put_res
 middleman_actor_impl::put_udp(uint16_t port, strong_actor_ptr& whom,
                               mpi_set& sigs, const char* in, bool reuse_addr) {
-  CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(whom) << CAF_ARG(sigs)
-                << CAF_ARG(in) << CAF_ARG(reuse_addr));
+  CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(whom) << CAF_ARG(sigs) << CAF_ARG(in)
+                              << CAF_ARG(reuse_addr));
   uint16_t actual_port;
   // treat empty strings like nullptr
   if (in != nullptr && in[0] == '\0')
@@ -240,8 +239,8 @@ middleman_actor_impl::contact(const std::string& host, uint16_t port) {
   return system().middleman().backend().new_remote_udp_endpoint(host, port);
 }
 
-expected<doorman_ptr>
-middleman_actor_impl::open(uint16_t port, const char* addr, bool reuse) {
+expected<doorman_ptr> middleman_actor_impl::open(uint16_t port,
+                                                 const char* addr, bool reuse) {
   return system().middleman().backend().new_tcp_doorman(port, addr, reuse);
 }
 

@@ -25,8 +25,7 @@ namespace io {
 namespace network {
 
 acceptor::acceptor(default_multiplexer& backend_ref, native_socket sockfd)
-    : event_handler(backend_ref, sockfd),
-      sock_(invalid_native_socket) {
+  : event_handler(backend_ref, sockfd), sock_(invalid_native_socket) {
   // nop
 }
 

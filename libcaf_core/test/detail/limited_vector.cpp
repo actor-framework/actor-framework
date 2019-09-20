@@ -28,13 +28,14 @@ using caf::detail::limited_vector;
 
 CAF_TEST(basics) {
   using std::equal;
-  int arr1[] {1, 2, 3, 4};
-  limited_vector<int, 4> vec1 {1, 2, 3, 4};
-  limited_vector<int, 5> vec2 {4, 3, 2, 1};
+  int arr1[]{1, 2, 3, 4};
+  limited_vector<int, 4> vec1{1, 2, 3, 4};
+  limited_vector<int, 5> vec2{4, 3, 2, 1};
   limited_vector<int, 4> vec3;
-  for (int i = 1; i <= 4; ++i) vec3.push_back(i);
-  limited_vector<int, 4> vec4 {1, 2};
-  limited_vector<int, 2> vec5 {3, 4};
+  for (int i = 1; i <= 4; ++i)
+    vec3.push_back(i);
+  limited_vector<int, 4> vec4{1, 2};
+  limited_vector<int, 2> vec5{3, 4};
   vec4.insert(vec4.end(), vec5.begin(), vec5.end());
   auto vec6 = vec4;
   CAF_CHECK_EQUAL(vec1.size(), 4u);
@@ -54,22 +55,22 @@ CAF_TEST(basics) {
   CAF_CHECK(std::equal(vec4.begin(), vec4.end(), arr1));
   CAF_CHECK(std::equal(vec6.begin(), vec6.end(), arr1));
   CAF_CHECK(std::equal(vec6.begin(), vec6.end(), vec2.rbegin()));
-  limited_vector<int, 10> vec7 {5, 9};
-  limited_vector<int, 10> vec8 {1, 2, 3, 4};
-  limited_vector<int, 10> vec9 {6, 7, 8};
+  limited_vector<int, 10> vec7{5, 9};
+  limited_vector<int, 10> vec8{1, 2, 3, 4};
+  limited_vector<int, 10> vec9{6, 7, 8};
   vec7.insert(vec7.begin() + 1, vec9.begin(), vec9.end());
   vec7.insert(vec7.begin(), vec8.begin(), vec8.end());
   CAF_CHECK_EQUAL(vec7.full(), false);
-  limited_vector<int, 1> vec10 {10};
+  limited_vector<int, 1> vec10{10};
   vec7.insert(vec7.end(), vec10.begin(), vec10.end());
   CAF_CHECK_EQUAL(vec7.full(), true);
   CAF_CHECK((std::is_sorted(vec7.begin(), vec7.end())));
-  int arr2[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  int arr2[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   CAF_CHECK((std::equal(vec7.begin(), vec7.end(), std::begin(arr2))));
   vec7.assign(std::begin(arr2), std::end(arr2));
   CAF_CHECK((std::equal(vec7.begin(), vec7.end(), std::begin(arr2))));
   vec7.assign(5, 0);
   CAF_CHECK_EQUAL(vec7.size(), 5u);
-  CAF_CHECK((std::all_of(vec7.begin(), vec7.end(),
-              [](int i) { return i == 0; })));
+  CAF_CHECK(
+    (std::all_of(vec7.begin(), vec7.end(), [](int i) { return i == 0; })));
 }

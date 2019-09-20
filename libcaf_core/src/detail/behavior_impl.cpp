@@ -20,8 +20,8 @@
 
 #include "caf/detail/behavior_impl.hpp"
 
-#include "caf/message_handler.hpp"
 #include "caf/make_type_erased_tuple_view.hpp"
+#include "caf/message_handler.hpp"
 
 namespace caf {
 namespace detail {
@@ -43,9 +43,7 @@ public:
   }
 
   combinator(pointer p0, const pointer& p1)
-      : behavior_impl(p1->timeout()),
-        first(std::move(p0)),
-        second(p1) {
+    : behavior_impl(p1->timeout()), first(std::move(p0)), second(p1) {
     // nop
   }
 
@@ -82,9 +80,7 @@ behavior_impl::~behavior_impl() {
 }
 
 behavior_impl::behavior_impl(duration tout)
-    : timeout_(tout),
-      begin_(nullptr),
-      end_(nullptr) {
+  : timeout_(tout), begin_(nullptr), end_(nullptr) {
   // nop
 }
 

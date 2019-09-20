@@ -21,12 +21,12 @@
 #define CAF_SUITE io_remote_spawn
 #include "caf/test/dsl.hpp"
 
-#include <thread>
-#include <string>
 #include <cstring>
-#include <sstream>
-#include <iostream>
 #include <functional>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <thread>
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
@@ -43,13 +43,9 @@ using calculator = typed_actor<replies_to<add_atom, int, int>::with<int>,
 
 // function-based, dynamically typed, event-based API
 behavior calculator_fun(event_based_actor*) {
-  return behavior{
-    [](add_atom, int a, int b) {
-      return a + b;
-    },
-    [](sub_atom, int a, int b) {
-      return a - b;
-    }
+  return {
+    [](add_atom, int a, int b) { return a + b; },
+    [](sub_atom, int a, int b) { return a - b; },
   };
 }
 
@@ -61,12 +57,8 @@ public:
 
   behavior make_behavior() override {
     return {
-      [](add_atom, int a, int b) {
-        return a + b;
-      },
-      [](sub_atom, int a, int b) {
-        return a - b;
-      }
+      [](add_atom, int a, int b) { return a + b; },
+      [](sub_atom, int a, int b) { return a - b; },
     };
   }
 };
@@ -74,12 +66,8 @@ public:
 // function-based, statically typed, event-based API
 calculator::behavior_type typed_calculator_fun() {
   return {
-    [](add_atom, int a, int b) {
-      return a + b;
-    },
-    [](sub_atom, int a, int b) {
-      return a - b;
-    }
+    [](add_atom, int a, int b) { return a + b; },
+    [](sub_atom, int a, int b) { return a - b; },
   };
 }
 
@@ -113,15 +101,12 @@ void run_client(int argc, char** argv, uint16_t port) {
   CAF_REQUIRE_EQUAL(f1(sub_atom::value, 10, 20), -10);
   f1.reset();
   anon_send_exit(*calc, exit_reason::kill);
-  auto dyn_calc = unbox(mm.remote_spawn<actor>(*nid, "calculator-class", make_message()));
+  auto dyn_calc = unbox(
+    mm.remote_spawn<actor>(*nid, "calculator-class", make_message()));
   CAF_REQUIRE(dyn_calc);
-  self->request(dyn_calc, infinite, add_atom::value, 10, 20).receive(
-    [](int result) {
-      CAF_CHECK_EQUAL(result, 30);
-    },
-    [&](const error& err) {
-      CAF_FAIL("error: " << sys.render(err));
-    });
+  self->request(dyn_calc, infinite, add_atom::value, 10, 20)
+    .receive([](int result) { CAF_CHECK_EQUAL(result, 30); },
+             [&](const error& err) { CAF_FAIL("error: " << sys.render(err)); });
   anon_send_exit(dyn_calc, exit_reason::kill);
   mm.close(port);
 }

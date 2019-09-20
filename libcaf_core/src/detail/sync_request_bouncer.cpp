@@ -16,14 +16,14 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/sec.hpp"
-#include "caf/atom.hpp"
 #include "caf/actor.hpp"
-#include "caf/config.hpp"
 #include "caf/actor_cast.hpp"
-#include "caf/message_id.hpp"
+#include "caf/atom.hpp"
+#include "caf/config.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/mailbox_element.hpp"
+#include "caf/message_id.hpp"
+#include "caf/sec.hpp"
 #include "caf/system_messages.hpp"
 
 #include "caf/detail/sync_request_bouncer.hpp"

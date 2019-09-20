@@ -21,10 +21,10 @@
 #define CAF_SUITE io_dynamic_remote_actor
 #include "caf/test/dsl.hpp"
 
-#include <vector>
+#include <algorithm>
 #include <sstream>
 #include <utility>
-#include <algorithm>
+#include <vector>
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
@@ -57,10 +57,10 @@ struct fixture {
   io::middleman& client_side_mm;
 
   fixture()
-      : server_side(server_side_config),
-        server_side_mm(server_side.middleman()),
-        client_side(client_side_config),
-        client_side_mm(client_side.middleman()) {
+    : server_side(server_side_config),
+      server_side_mm(server_side.middleman()),
+      client_side(client_side_config),
+      client_side_mm(client_side.middleman()) {
     // nop
   }
 };
@@ -71,26 +71,23 @@ behavior make_pong_behavior() {
       ++val;
       CAF_MESSAGE("pong with " << val);
       return val;
-    }
+    },
   };
 }
 
 behavior make_ping_behavior(event_based_actor* self, const actor& pong) {
   CAF_MESSAGE("ping with " << 0);
   self->send(pong, 0);
-  return {
-    [=](int val) -> int {
-      if (val == 3) {
-        CAF_MESSAGE("ping with exit");
-        self->send_exit(self->current_sender(),
-                        exit_reason::user_shutdown);
-        CAF_MESSAGE("ping quits");
-        self->quit();
-      }
-      CAF_MESSAGE("ping with " << val);
-      return val;
+  return {[=](int val) -> int {
+    if (val == 3) {
+      CAF_MESSAGE("ping with exit");
+      self->send_exit(self->current_sender(), exit_reason::user_shutdown);
+      CAF_MESSAGE("ping quits");
+      self->quit();
     }
-  };
+    CAF_MESSAGE("ping with " << val);
+    return val;
+  }};
 }
 
 behavior make_sort_behavior() {
@@ -100,7 +97,7 @@ behavior make_sort_behavior() {
       std::sort(vec.begin(), vec.end());
       CAF_MESSAGE("sorter sent: " << deep_to_string(vec));
       return std::move(vec);
-    }
+    },
   };
 }
 
@@ -114,7 +111,7 @@ behavior make_sort_requester_behavior(event_based_actor* self,
       CAF_CHECK_EQUAL(vec, expected_vec);
       self->send_exit(sorter, exit_reason::user_shutdown);
       self->quit();
-    }
+    },
   };
 }
 
@@ -123,7 +120,7 @@ behavior fragile_mirror(event_based_actor* self) {
     [=](int i) {
       self->quit(exit_reason::user_shutdown);
       return i;
-    }
+    },
   };
 }
 
@@ -132,9 +129,7 @@ behavior linking_actor(event_based_actor* self, const actor& buddy) {
   self->link_to(buddy);
   self->send(buddy, 42);
   return {
-    [](int i) {
-      CAF_CHECK_EQUAL(i, 42);
-    }
+    [](int i) { CAF_CHECK_EQUAL(i, 42); },
   };
 }
 
@@ -160,8 +155,9 @@ CAF_TEST(identity_semantics) {
 
 CAF_TEST(ping_pong) {
   // server side
-  auto port = unbox(server_side_mm.publish(
-    server_side.spawn(make_pong_behavior), 0, local_host));
+  auto port = unbox(
+    server_side_mm.publish(server_side.spawn(make_pong_behavior), 0,
+                           local_host));
   // client side
   auto pong = unbox(client_side_mm.remote_actor(local_host, port));
   client_side.spawn(make_ping_behavior, pong);
@@ -169,8 +165,9 @@ CAF_TEST(ping_pong) {
 
 CAF_TEST(custom_message_type) {
   // server side
-  auto port = unbox(server_side_mm.publish(
-    server_side.spawn(make_sort_behavior), 0, local_host));
+  auto port = unbox(
+    server_side_mm.publish(server_side.spawn(make_sort_behavior), 0,
+                           local_host));
   // client side
   auto sorter = unbox(client_side_mm.remote_actor(local_host, port));
   client_side.spawn(make_sort_requester_behavior, sorter);

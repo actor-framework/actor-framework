@@ -19,9 +19,9 @@
 #include "caf/detail/socket_guard.hpp"
 
 #ifdef CAF_WINDOWS
-# include <winsock2.h>
+#  include <winsock2.h>
 #else
-# include <unistd.h>
+#  include <unistd.h>
 #endif
 
 #include "caf/logger.hpp"
@@ -52,4 +52,4 @@ void socket_guard::close() {
 }
 
 } // namespace detail
-} // namespace detail
+} // namespace caf

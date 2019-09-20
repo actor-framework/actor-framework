@@ -32,7 +32,7 @@ namespace {
 
 struct atom_parser_consumer {
   atom_value x;
-  inline void value(atom_value y) {
+  void value(atom_value y) {
     x = y;
   }
 };
@@ -70,7 +70,7 @@ CAF_TEST(empty atom) {
   CAF_CHECK_EQUAL(p("\t '' \t\t\t "), atom(""));
 }
 
-CAF_TEST(non-empty atom) {
+CAF_TEST(valid atom) {
   CAF_CHECK_EQUAL(p("'abc'"), atom("abc"));
   CAF_CHECK_EQUAL(p("'a b c'"), atom("a b c"));
   CAF_CHECK_EQUAL(p("   'abcdef'   "), atom("abcdef"));

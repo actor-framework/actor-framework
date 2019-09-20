@@ -35,7 +35,7 @@ struct fixture {
   receive_buffer b;
   std::vector<char> vec;
 
-  fixture() :  b(1024ul), vec{'h', 'a', 'l', 'l', 'o'} {
+  fixture() : b(1024ul), vec{'h', 'a', 'l', 'l', 'o'} {
     // nop
   }
 
@@ -101,27 +101,24 @@ CAF_TEST(resize) {
   a.resize(1024);
   std::fill(a.begin(), a.end(), 'a');
   auto cnt = 0;
-  CAF_CHECK(std::all_of(a.begin(), a.end(),
-                        [&](char c) {
-                          ++cnt;
-                          return c == 'a';
-                        }));
+  CAF_CHECK(std::all_of(a.begin(), a.end(), [&](char c) {
+    ++cnt;
+    return c == 'a';
+  }));
   CAF_CHECK_EQUAL(cnt, 1024);
   a.resize(10);
   cnt = 0;
-  CAF_CHECK(std::all_of(a.begin(), a.end(),
-                        [&](char c) {
-                          ++cnt;
-                          return c == 'a';
-                        }));
+  CAF_CHECK(std::all_of(a.begin(), a.end(), [&](char c) {
+    ++cnt;
+    return c == 'a';
+  }));
   CAF_CHECK_EQUAL(cnt, 10);
   a.resize(1024);
   cnt = 0;
-  CAF_CHECK(std::all_of(a.begin(), a.end(),
-                        [&](char c) {
-                          ++cnt;
-                          return c == 'a';
-                        }));
+  CAF_CHECK(std::all_of(a.begin(), a.end(), [&](char c) {
+    ++cnt;
+    return c == 'a';
+  }));
   CAF_CHECK_EQUAL(cnt, 1024);
 }
 
@@ -136,7 +133,7 @@ CAF_TEST(push_back) {
 }
 
 CAF_TEST(insert) {
-  for (auto c: vec)
+  for (auto c : vec)
     a.insert(a.end(), c);
   CAF_CHECK_EQUAL(as_string(a), "hallo");
   a.insert(a.begin(), '!');

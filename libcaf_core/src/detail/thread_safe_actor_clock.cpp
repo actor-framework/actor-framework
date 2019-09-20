@@ -68,8 +68,9 @@ void thread_safe_actor_clock::schedule_message(time_point t,
 void thread_safe_actor_clock::schedule_message(time_point t, group target,
                                                strong_actor_ptr sender,
                                                message content) {
-  push(new group_msg(t, std::move(target), std::move(sender),
-                     std::move(content)));
+  auto ptr = new group_msg(t, std::move(target), std::move(sender),
+                           std::move(content));
+  push(ptr);
 }
 
 void thread_safe_actor_clock::cancel_all() {

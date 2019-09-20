@@ -18,13 +18,13 @@
 
 #include "caf/io/middleman_actor.hpp"
 
-#include <tuple>
 #include <stdexcept>
+#include <tuple>
 #include <utility>
 
 #include "caf/actor_system.hpp"
-#include "caf/spawn_options.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/spawn_options.hpp"
 
 #include "caf/io/middleman_actor_impl.hpp"
 
@@ -33,8 +33,8 @@ namespace io {
 
 middleman_actor make_middleman_actor(actor_system& sys, actor db) {
   return get_or(sys.config(), "middleman.attach-utility-actors", false)
-         ? sys.spawn<middleman_actor_impl, hidden>(std::move(db))
-         : sys.spawn<middleman_actor_impl, detached + hidden>(std::move(db));
+           ? sys.spawn<middleman_actor_impl, hidden>(std::move(db))
+           : sys.spawn<middleman_actor_impl, detached + hidden>(std::move(db));
 }
 
 } // namespace io

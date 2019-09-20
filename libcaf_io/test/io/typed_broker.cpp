@@ -21,8 +21,8 @@
 #define CAF_SUITE io_typed_broker
 #include "caf/test/dsl.hpp"
 
-#include <memory>
 #include <iostream>
+#include <memory>
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
@@ -43,11 +43,14 @@ using kickoff_atom = caf::atom_constant<atom("kickoff")>;
 using peer = connection_handler::extend<reacts_to<ping_atom, int>,
                                         reacts_to<pong_atom, int>>;
 
-using acceptor = accept_handler::extend<replies_to<publish_atom>::with<uint16_t>>;
+using acceptor = accept_handler::extend<
+  replies_to<publish_atom>::with<uint16_t>>;
 
-using ping_actor = typed_actor<replies_to<pong_atom, int>::with<ping_atom, int>>;
+using ping_actor = typed_actor<
+  replies_to<pong_atom, int>::with<ping_atom, int>>;
 
-using pong_actor = typed_actor<replies_to<ping_atom, int>::with<pong_atom, int>>;
+using pong_actor = typed_actor<
+  replies_to<ping_atom, int>::with<pong_atom, int>>;
 
 behavior ping(event_based_actor* self, size_t num_pings) {
   CAF_MESSAGE("num_pings: " << num_pings);
@@ -56,17 +59,14 @@ behavior ping(event_based_actor* self, size_t num_pings) {
     [=](kickoff_atom, const peer& pong) {
       CAF_MESSAGE("received `kickoff_atom`");
       self->send(pong, ping_atom::value, 1);
-      self->become(
-        [=](pong_atom, int value) -> std::tuple<ping_atom, int> {
-          if (++*count >= num_pings) {
-            CAF_MESSAGE("received " << num_pings
-                        << " pings, call self->quit");
-            self->quit();
-          }
-          return std::make_tuple(ping_atom::value, value + 1);
+      self->become([=](pong_atom, int value) -> std::tuple<ping_atom, int> {
+        if (++*count >= num_pings) {
+          CAF_MESSAGE("received " << num_pings << " pings, call self->quit");
+          self->quit();
         }
-      );
-    }
+        return std::make_tuple(ping_atom::value, value + 1);
+      });
+    },
   };
 }
 
@@ -81,15 +81,13 @@ behavior pong(event_based_actor* self) {
       CAF_MESSAGE("received: 'ping', " << value);
       self->monitor(self->current_sender());
       // set next behavior
-      self->become(
-        [](ping_atom, int val) {
-          //CAF_MESSAGE("received: 'ping', " << val);
-          return std::make_tuple(pong_atom::value, val);
-        }
-      );
+      self->become([](ping_atom, int val) {
+        // CAF_MESSAGE("received: 'ping', " << val);
+        return std::make_tuple(pong_atom::value, val);
+      });
       // reply to 'ping'
       return std::make_tuple(pong_atom::value, value);
-    }
+    },
   };
 }
 
@@ -99,8 +97,8 @@ peer::behavior_type peer_fun(peer::broker_pointer self, connection_handle hdl,
   self->monitor(buddy);
   // assume exactly one connection
   CAF_REQUIRE_EQUAL(self->connections().size(), 1u);
-  self->configure_read(
-    hdl, receive_policy::exactly(sizeof(atom_value) + sizeof(int)));
+  self->configure_read(hdl, receive_policy::exactly(sizeof(atom_value)
+                                                    + sizeof(int)));
   auto write = [=](atom_value x, int y) {
     auto& buf = self->wr_buf(hdl);
     binary_serializer sink{self->system(), buf};
@@ -137,7 +135,7 @@ peer::behavior_type peer_fun(peer::broker_pointer self, connection_handle hdl,
     [=](pong_atom, int value) {
       CAF_MESSAGE("received: 'pong', " << value);
       write(pong_atom::value, value);
-    }
+    },
   };
 }
 
@@ -158,7 +156,7 @@ acceptor::behavior_type acceptor_fun(acceptor::broker_pointer self,
       if (dm)
         return get<1>(*dm);
       return std::move(dm.error());
-    }
+    },
   };
 }
 
@@ -170,8 +168,8 @@ void run_client(int argc, char** argv, uint16_t port) {
   actor_system system{cfg};
   auto p = system.spawn(ping, size_t{10});
   CAF_MESSAGE("spawn_client_typed...");
-  auto cl = unbox(system.middleman().spawn_client(peer_fun,
-                                                  "localhost", port, p));
+  auto cl = unbox(
+    system.middleman().spawn_client(peer_fun, "localhost", port, p));
   CAF_MESSAGE("spawn_client_typed finished");
   anon_send(p, kickoff_atom::value, cl);
   CAF_MESSAGE("`kickoff_atom` has been send");
@@ -186,17 +184,13 @@ void run_server(int argc, char** argv) {
   scoped_actor self{system};
   auto serv = system.middleman().spawn_broker(acceptor_fun, system.spawn(pong));
   std::thread child;
-  self->request(serv, infinite, publish_atom::value).receive(
-    [&](uint16_t port) {
-      CAF_MESSAGE("server is running on port " << port);
-      child = std::thread([=] {
-        run_client(argc, argv, port);
-      });
-    },
-    [&](error& err) {
-      CAF_FAIL("error: " << system.render(err));
-    }
-  );
+  self->request(serv, infinite, publish_atom::value)
+    .receive(
+      [&](uint16_t port) {
+        CAF_MESSAGE("server is running on port " << port);
+        child = std::thread([=] { run_client(argc, argv, port); });
+      },
+      [&](error& err) { CAF_FAIL("error: " << system.render(err)); });
   self->await_all_other_actors_done();
   CAF_MESSAGE("wait for client system");
   child.join();

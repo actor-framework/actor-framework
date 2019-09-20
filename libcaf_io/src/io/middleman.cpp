@@ -18,49 +18,49 @@
 
 #include "caf/io/middleman.hpp"
 
-#include <tuple>
 #include <cerrno>
-#include <memory>
 #include <cstring>
+#include <memory>
 #include <sstream>
 #include <stdexcept>
+#include <tuple>
 
-#include "caf/sec.hpp"
-#include "caf/send.hpp"
 #include "caf/actor.hpp"
+#include "caf/actor_proxy.hpp"
+#include "caf/actor_registry.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/after.hpp"
 #include "caf/config.hpp"
-#include "caf/logger.hpp"
-#include "caf/node_id.hpp"
 #include "caf/defaults.hpp"
-#include "caf/actor_proxy.hpp"
-#include "caf/make_counted.hpp"
-#include "caf/scoped_actor.hpp"
-#include "caf/function_view.hpp"
-#include "caf/actor_registry.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/actor_system_config.hpp"
+#include "caf/function_view.hpp"
+#include "caf/logger.hpp"
+#include "caf/make_counted.hpp"
+#include "caf/node_id.hpp"
 #include "caf/raw_event_based_actor.hpp"
+#include "caf/scoped_actor.hpp"
+#include "caf/sec.hpp"
+#include "caf/send.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
 #include "caf/io/basp_broker.hpp"
 #include "caf/io/system_messages.hpp"
 
+#include "caf/io/network/default_multiplexer.hpp"
 #include "caf/io/network/interfaces.hpp"
 #include "caf/io/network/test_multiplexer.hpp"
-#include "caf/io/network/default_multiplexer.hpp"
 
 #include "caf/scheduler/abstract_coordinator.hpp"
 
+#include "caf/detail/get_mac_addresses.hpp"
+#include "caf/detail/get_root_uuid.hpp"
 #include "caf/detail/ripemd_160.hpp"
 #include "caf/detail/safe_equal.hpp"
-#include "caf/detail/get_root_uuid.hpp"
 #include "caf/detail/set_thread_name.hpp"
-#include "caf/detail/get_mac_addresses.hpp"
 
 #ifdef CAF_WINDOWS
-#include <io.h>
-#include <fcntl.h>
+#  include <fcntl.h>
+#  include <io.h>
 #endif // CAF_WINDOWS
 
 namespace caf {
@@ -106,8 +106,8 @@ expected<strong_actor_ptr> middleman::remote_spawn_impl(const node_id& nid,
                                                         std::set<std::string> s,
                                                         duration timeout) {
   auto f = make_function_view(actor_handle(), timeout);
-  return f(spawn_atom::value, nid, std::move(name),
-           std::move(args), std::move(s));
+  return f(spawn_atom::value, nid, std::move(name), std::move(args),
+           std::move(s));
 }
 
 expected<uint16_t> middleman::open(uint16_t port, const char* in, bool reuse) {
@@ -151,7 +151,7 @@ expected<uint16_t> middleman::publish_local_groups(uint16_t port,
     return {
       [self](get_atom, const std::string& name) {
         return self->system().groups().get_local(name);
-      }
+      },
     };
   };
   auto gn = system().spawn<hidden + lazy_init>(group_nameserver);
@@ -217,34 +217,25 @@ expected<group> middleman::remote_group(const std::string& group_identifier,
         /// terminate the actor after both requests finish.
         self->unbecome();
         auto rp = self->make_response_promise();
-        self->request(mm, infinite, connect_atom::value, host, port).then(
-          [=](const node_id&, strong_actor_ptr& ptr,
-              const std::set<std::string>&) mutable {
+        self->request(mm, infinite, connect_atom::value, host, port)
+          .then([=](const node_id&, strong_actor_ptr& ptr,
+                    const std::set<std::string>&) mutable {
             auto hdl = actor_cast<actor>(ptr);
             self->request(hdl, infinite, get_atom::value, group_identifier)
-            .then(
-              [=](group& result) mutable {
-                rp.deliver(std::move(result));
-              }
-            );
-          }
-        );
-      }
+              .then(
+                [=](group& result) mutable { rp.deliver(std::move(result)); });
+          });
+      },
     };
   };
   // Spawn the helper actor and wait for the result.
   expected<group> result{sec::cannot_connect_to_node};
   scoped_actor self{system(), true};
-  self->request(self->spawn<lazy_init>(two_step_lookup, actor_handle()),
-                infinite, get_atom::value)
-  .receive(
-    [&](group& grp) {
-      result = std::move(grp);
-    },
-    [&](error& err) {
-      result = std::move(err);
-    }
-  );
+  self
+    ->request(self->spawn<lazy_init>(two_step_lookup, actor_handle()), infinite,
+              get_atom::value)
+    .receive([&](group& grp) { result = std::move(grp); },
+             [&](error& err) { result = std::move(err); });
   return result;
 }
 
@@ -257,14 +248,11 @@ strong_actor_ptr middleman::remote_lookup(atom_value name, const node_id& nid) {
   scoped_actor self{system(), true};
   self->send(basp, forward_atom::value, nid, atom("ConfigServ"),
              make_message(get_atom::value, name));
-  self->receive(
-    [&](strong_actor_ptr& addr) {
-      result = std::move(addr);
-    },
-    after(std::chrono::minutes(5)) >> [] {
-      // nop
-    }
-  );
+  self->receive([&](strong_actor_ptr& addr) { result = std::move(addr); },
+                after(std::chrono::minutes(5)) >>
+                  [] {
+                    // nop
+                  });
   return result;
 }
 
@@ -281,7 +269,7 @@ void middleman::start() {
     std::atomic<bool> init_done{false};
     std::mutex mtx;
     std::condition_variable cv;
-    thread_ = std::thread{[&,this] {
+    thread_ = std::thread{[&, this] {
       CAF_SET_LOGGER_SYS(&system());
       detail::set_thread_name("caf.multiplexer");
       system().thread_started();
@@ -342,14 +330,13 @@ void middleman::init(actor_system_config& cfg) {
                                 defaults::middleman::network_backend);
   if (network_backend == atom("testing")) {
     cfg.set("middleman.attach-utility-actors", true)
-       .set("middleman.manual-multiplexing", true);
+      .set("middleman.manual-multiplexing", true);
   }
   // add remote group module to config
   struct remote_groups : group_module {
   public:
     remote_groups(middleman& parent)
-        : group_module(parent.system(), "remote"),
-          parent_(parent) {
+      : group_module(parent.system(), "remote"), parent_(parent) {
       // nop
     }
 
@@ -374,16 +361,16 @@ void middleman::init(actor_system_config& cfg) {
   // logging not available at this stage
   // add I/O-related types to config
   cfg.add_message_type<network::protocol>("@protocol")
-     .add_message_type<network::address_listing>("@address_listing")
-     .add_message_type<network::receive_buffer>("@receive_buffer")
-     .add_message_type<new_data_msg>("@new_data_msg")
-     .add_message_type<new_connection_msg>("@new_connection_msg")
-     .add_message_type<acceptor_closed_msg>("@acceptor_closed_msg")
-     .add_message_type<connection_closed_msg>("@connection_closed_msg")
-     .add_message_type<accept_handle>("@accept_handle")
-     .add_message_type<connection_handle>("@connection_handle")
-     .add_message_type<connection_passivated_msg>("@connection_passivated_msg")
-     .add_message_type<acceptor_passivated_msg>("@acceptor_passivated_msg");
+    .add_message_type<network::address_listing>("@address_listing")
+    .add_message_type<network::receive_buffer>("@receive_buffer")
+    .add_message_type<new_data_msg>("@new_data_msg")
+    .add_message_type<new_connection_msg>("@new_connection_msg")
+    .add_message_type<acceptor_closed_msg>("@acceptor_closed_msg")
+    .add_message_type<connection_closed_msg>("@connection_closed_msg")
+    .add_message_type<accept_handle>("@accept_handle")
+    .add_message_type<connection_handle>("@connection_handle")
+    .add_message_type<connection_passivated_msg>("@connection_passivated_msg")
+    .add_message_type<acceptor_passivated_msg>("@acceptor_passivated_msg");
   // Compute and set ID for this network node.
   auto this_node = node_id::default_data::local(cfg);
   system().node_.swap(this_node);

@@ -57,7 +57,7 @@ struct fixture {
 };
 
 // TODO: remove and use "..."s from the STL when switching to C++14
-std::string operator "" _s(const char* str, size_t str_len) {
+std::string operator"" _s(const char* str, size_t str_len) {
   std::string result;
   result.assign(str, str_len);
   return result;
@@ -77,7 +77,7 @@ CAF_TEST(empty string) {
   CAF_CHECK_EQUAL(p("\t \"\" \t\t\t "), ""_s);
 }
 
-CAF_TEST(non-empty quoted string) {
+CAF_TEST(non - empty quoted string) {
   CAF_CHECK_EQUAL(p(R"("abc")"), "abc"_s);
   CAF_CHECK_EQUAL(p(R"("a b c")"), "a b c"_s);
   CAF_CHECK_EQUAL(p(R"(   "abcdefABCDEF"   )"), "abcdefABCDEF"_s);

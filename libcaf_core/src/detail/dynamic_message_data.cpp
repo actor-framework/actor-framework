@@ -30,15 +30,13 @@ dynamic_message_data::dynamic_message_data() : type_token_(0xFFFFFFFF) {
 }
 
 dynamic_message_data::dynamic_message_data(elements&& data)
-    : elements_(std::move(data)),
-      type_token_(0xFFFFFFFF) {
+  : elements_(std::move(data)), type_token_(0xFFFFFFFF) {
   for (auto& e : elements_)
     add_to_type_token(e->type().first);
 }
 
 dynamic_message_data::dynamic_message_data(const dynamic_message_data& other)
-    : detail::message_data(other),
-      type_token_(0xFFFFFFFF) {
+  : detail::message_data(other), type_token_(0xFFFFFFFF) {
   for (auto& e : other.elements_) {
     add_to_type_token(e->type().first);
     elements_.emplace_back(e->copy());

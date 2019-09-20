@@ -29,4 +29,3 @@ datagram_manager::~datagram_manager() {
 } // namespace network
 } // namespace io
 } // namespace caf
-

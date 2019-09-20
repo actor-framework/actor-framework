@@ -24,12 +24,10 @@ namespace caf {
 namespace detail {
 
 decorated_tuple::decorated_tuple(cow_ptr&& d, vector_type&& v)
-    : decorated_(std::move(d)),
-      mapping_(std::move(v)),
-      type_token_(0xFFFFFFFF) {
+  : decorated_(std::move(d)), mapping_(std::move(v)), type_token_(0xFFFFFFFF) {
   CAF_ASSERT(mapping_.empty()
-              || *(std::max_element(mapping_.begin(), mapping_.end()))
-                 < static_cast<const cow_ptr&>(decorated_)->size());
+             || *(std::max_element(mapping_.begin(), mapping_.end()))
+                  < static_cast<const cow_ptr&>(decorated_)->size());
   // calculate type token
   for (unsigned long i : mapping_) {
     type_token_ <<= 6;

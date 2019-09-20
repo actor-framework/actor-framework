@@ -35,7 +35,7 @@ namespace {
 
 struct inode : singly_linked<inode> {
   int value;
-  inode(int x = 0) : value(x) {
+  inode(int x = 0) noexcept : value(x) {
     // nop
   }
 };
@@ -55,7 +55,7 @@ struct nested_inode_policy {
 
   using unique_pointer = std::unique_ptr<mapped_type, deleter_type>;
 
-  static inline task_size_type task_size(const mapped_type&) {
+  static task_size_type task_size(const mapped_type&) noexcept {
     return 1;
   }
 
@@ -65,8 +65,8 @@ struct nested_inode_policy {
     // nop
   }
 
-  nested_inode_policy(nested_inode_policy&&) = default;
-  nested_inode_policy& operator=(nested_inode_policy&&) = default;
+  nested_inode_policy(nested_inode_policy&&) noexcept = default;
+  nested_inode_policy& operator=(nested_inode_policy&&) noexcept = default;
 };
 
 struct inode_policy {
@@ -86,15 +86,15 @@ struct inode_policy {
 
   using queue_map_type = std::map<key_type, queue_type>;
 
-  static inline key_type id_of(const inode& x) {
+  static key_type id_of(const inode& x) noexcept {
     return x.value % 3;
   }
 
-  static inline bool enabled(const queue_type&) {
+  static bool enabled(const queue_type&) noexcept {
     return true;
   }
 
-  deficit_type quantum(const queue_type& q, deficit_type x) {
+  deficit_type quantum(const queue_type& q, deficit_type x) noexcept {
     return enable_priorities && *q.policy().queue_id == 0 ? 2 * x : x;
   }
 
@@ -209,6 +209,5 @@ CAF_TEST(to_string) {
   fill(queue, 1, 2, 3, 4);
   CAF_CHECK_EQUAL(deep_to_string(queue), "[3, 1, 4, 2]");
 }
-
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -21,12 +21,12 @@
 #define CAF_SUITE io_typed_remote_actor
 #include "caf/test/dsl.hpp"
 
-#include <thread>
-#include <string>
 #include <cstring>
-#include <sstream>
-#include <iostream>
 #include <functional>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <thread>
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
@@ -65,19 +65,17 @@ using server_type = typed_actor<replies_to<ping>::with<pong>>;
 using client_type = typed_actor<>;
 
 server_type::behavior_type server() {
-  return {
-    [](const ping & p) -> pong {
-      CAF_CHECK_EQUAL(p.value, 42);
-      return pong{p.value};
-    }
-  };
+  return {[](const ping& p) -> pong {
+    CAF_CHECK_EQUAL(p.value, 42);
+    return pong{p.value};
+  }};
 }
 
 void run_client(int argc, char** argv, uint16_t port) {
   actor_system_config cfg;
   cfg.load<io::middleman>()
-     .add_message_type<ping>("ping")
-     .add_message_type<pong>("pong");
+    .add_message_type<ping>("ping")
+    .add_message_type<pong>("pong");
   if (auto err = cfg.parse(argc, argv))
     CAF_FAIL("failed to parse config: " << to_string(err));
   actor_system sys{cfg};
@@ -88,8 +86,8 @@ void run_client(int argc, char** argv, uint16_t port) {
   CAF_REQUIRE(!res);
   CAF_MESSAGE(sys.render(res.error()));
   CAF_MESSAGE("connect to typed_remote_actor");
-  auto serv = unbox(sys.middleman().remote_actor<server_type>("127.0.0.1",
-                                                              port));
+  auto serv = unbox(
+    sys.middleman().remote_actor<server_type>("127.0.0.1", port));
   auto f = make_function_view(serv);
   CAF_CHECK_EQUAL(f(ping{42}), pong{42});
   anon_send_exit(serv, exit_reason::user_shutdown);
@@ -98,9 +96,9 @@ void run_client(int argc, char** argv, uint16_t port) {
 void run_server(int argc, char** argv) {
   actor_system_config cfg;
   cfg.load<io::middleman>()
-     .add_message_type<ping>("ping")
-     .add_message_type<pong>("pong")
-     .parse(argc, argv);
+    .add_message_type<ping>("ping")
+    .add_message_type<pong>("pong")
+    .parse(argc, argv);
   actor_system sys{cfg};
   auto port = unbox(sys.middleman().publish(sys.spawn(server), 0, "127.0.0.1"));
   CAF_REQUIRE(port != 0);
@@ -114,4 +112,3 @@ CAF_TEST(test_typed_remote_actor) {
   auto argv = test::engine::argv();
   run_server(argc, argv);
 }
-

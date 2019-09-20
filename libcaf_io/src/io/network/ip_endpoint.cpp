@@ -24,17 +24,17 @@
 #include "caf/sec.hpp"
 
 #ifdef CAF_WINDOWS
-# include <winsock2.h>
-# include <windows.h>
-# include <ws2tcpip.h>
-# include <ws2ipdef.h>
+#  include <windows.h>
+#  include <winsock2.h>
+#  include <ws2ipdef.h>
+#  include <ws2tcpip.h>
 #else
-# include <unistd.h>
-# include <cerrno>
-# include <arpa/inet.h>
-# include <sys/socket.h>
-# include <netinet/in.h>
-# include <netinet/ip.h>
+#  include <arpa/inet.h>
+#  include <cerrno>
+#  include <netinet/in.h>
+#  include <netinet/ip.h>
+#  include <sys/socket.h>
+#  include <unistd.h>
 #endif
 
 #ifdef CAF_WINDOWS
@@ -91,7 +91,7 @@ void ip_endpoint::clear() {
   ptr_->len = 0;
 }
 
-void ip_endpoint::impl_deleter::operator()(ip_endpoint::impl *ptr) const {
+void ip_endpoint::impl_deleter::operator()(ip_endpoint::impl* ptr) const {
   delete ptr;
 }
 
@@ -126,8 +126,8 @@ size_t ep_hash::hash(const sockaddr_in6* sa) const noexcept {
 
 bool operator==(const ip_endpoint& lhs, const ip_endpoint& rhs) {
   auto same = false;
-  if (*lhs.clength() == *rhs.clength() &&
-      lhs.caddress()->sa_family == rhs.caddress()->sa_family) {
+  if (*lhs.clength() == *rhs.clength()
+      && lhs.caddress()->sa_family == rhs.caddress()->sa_family) {
     switch (lhs.caddress()->sa_family) {
       case AF_INET: {
         auto* la = reinterpret_cast<const sockaddr_in*>(lhs.caddress());
@@ -158,15 +158,19 @@ std::string host(const ip_endpoint& ep) {
   char addr[INET6_ADDRSTRLEN];
   if (*ep.clength() == 0)
     return "";
-  switch(ep.caddress()->sa_family) {
+  switch (ep.caddress()->sa_family) {
     case AF_INET:
       inet_ntop(AF_INET,
-                &const_cast<sockaddr_in*>(reinterpret_cast<const sockaddr_in*>(ep.caddress()))->sin_addr,
+                &const_cast<sockaddr_in*>(
+                   reinterpret_cast<const sockaddr_in*>(ep.caddress()))
+                   ->sin_addr,
                 addr, static_cast<socket_size_type>(*ep.clength()));
       break;
     case AF_INET6:
       inet_ntop(AF_INET6,
-                &const_cast<sockaddr_in6*>(reinterpret_cast<const sockaddr_in6*>(ep.caddress()))->sin6_addr,
+                &const_cast<sockaddr_in6*>(
+                   reinterpret_cast<const sockaddr_in6*>(ep.caddress()))
+                   ->sin6_addr,
                 addr, static_cast<socket_size_type>(*ep.clength()));
       break;
     default:
@@ -180,12 +184,14 @@ uint16_t port(const ip_endpoint& ep) {
   uint16_t port = 0;
   if (*ep.clength() == 0)
     return 0;
-  switch(ep.caddress()->sa_family) {
+  switch (ep.caddress()->sa_family) {
     case AF_INET:
-      port = ntohs(reinterpret_cast<const sockaddr_in*>(ep.caddress())->sin_port);
+      port = ntohs(
+        reinterpret_cast<const sockaddr_in*>(ep.caddress())->sin_port);
       break;
     case AF_INET6:
-      port = ntohs(reinterpret_cast<const sockaddr_in6*>(ep.caddress())->sin6_port);
+      port = ntohs(
+        reinterpret_cast<const sockaddr_in6*>(ep.caddress())->sin6_port);
       break;
     default:
       // nop
@@ -200,12 +206,12 @@ uint32_t family(const ip_endpoint& ep) {
   return ep.caddress()->sa_family;
 }
 
-error load_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h,
-                    uint16_t& p, size_t& l) {
+error load_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h, uint16_t& p,
+                    size_t& l) {
   ep.clear();
   if (l > 0) {
     *ep.length() = l;
-    switch(f) {
+    switch (f) {
       case AF_INET: {
         auto* addr = reinterpret_cast<sockaddr_in*>(ep.address());
         inet_pton(AF_INET, h.c_str(), &addr->sin_addr);
@@ -227,8 +233,8 @@ error load_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h,
   return none;
 }
 
-error save_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h,
-                    uint16_t& p, size_t& l) {
+error save_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h, uint16_t& p,
+                    size_t& l) {
   if (*ep.length() > 0) {
     f = family(ep);
     h = host(ep);

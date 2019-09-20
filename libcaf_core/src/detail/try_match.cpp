@@ -40,8 +40,7 @@ bool match_atom_constant(const meta_element& me, const type_erased_tuple& xs,
   return me.v == *reinterpret_cast<const atom_value*>(ptr);
 }
 
-bool try_match(const type_erased_tuple& xs,
-               pattern_iterator iter, size_t ps) {
+bool try_match(const type_erased_tuple& xs, pattern_iterator iter, size_t ps) {
   if (xs.size() != ps)
     return false;
   for (size_t i = 0; i < ps; ++i, ++iter)

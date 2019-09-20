@@ -24,8 +24,7 @@
 
 #include "caf/all.hpp"
 
-#define ERROR_HANDLER                                                          \
-  [&](error& err) { CAF_FAIL(system.render(err)); }
+#define ERROR_HANDLER [&](error& err) { CAF_FAIL(system.render(err)); }
 
 using namespace caf;
 
@@ -33,12 +32,8 @@ namespace {
 
 behavior testee(event_based_actor* self) {
   return {
-    [](int v) {
-      return 2 * v;
-    },
-    [=] {
-      self->quit();
-    }
+    [](int v) { return 2 * v; },
+    [=] { self->quit(); },
   };
 }
 
@@ -46,14 +41,14 @@ using first_stage = typed_actor<replies_to<int>::with<double, double>>;
 using second_stage = typed_actor<replies_to<double, double>::with<double>>;
 
 first_stage::behavior_type typed_first_stage() {
-  return [](int i) {
-    return std::make_tuple(i * 2.0, i * 4.0);
+  return {
+    [](int i) { return std::make_tuple(i * 2.0, i * 4.0); },
   };
 }
 
 second_stage::behavior_type typed_second_stage() {
-  return [](double x, double y) {
-    return x * y;
+  return {
+    [](double x, double y) { return x * y; },
   };
 }
 
@@ -140,14 +135,12 @@ CAF_TEST(request_response_promise) {
   auto h = f * g;
   anon_send_exit(h, exit_reason::kill);
   CAF_CHECK(exited(h));
-  self->request(h, infinite, 1).receive(
-    [](int) {
-      CAF_CHECK(false);
-    },
-    [](error err) {
-      CAF_CHECK_EQUAL(err.code(), static_cast<uint8_t>(sec::request_receiver_down));
-    }
-  );
+  self->request(h, infinite, 1)
+    .receive([](int) { CAF_CHECK(false); },
+             [](error err) {
+               CAF_CHECK_EQUAL(err.code(), static_cast<uint8_t>(
+                                             sec::request_receiver_down));
+             });
 }
 
 // single composition of distinct actors
@@ -155,25 +148,17 @@ CAF_TEST(dot_composition_1) {
   auto first = system.spawn(typed_first_stage);
   auto second = system.spawn(typed_second_stage);
   auto first_then_second = second * first;
-  self->request(first_then_second, infinite, 42).receive(
-    [](double res) {
-      CAF_CHECK_EQUAL(res, (42 * 2.0) * (42 * 4.0));
-    },
-    ERROR_HANDLER
-  );
+  self->request(first_then_second, infinite, 42)
+    .receive([](double res) { CAF_CHECK_EQUAL(res, (42 * 2.0) * (42 * 4.0)); },
+             ERROR_HANDLER);
 }
 
 // multiple self composition
 CAF_TEST(dot_composition_2) {
   auto dbl_actor = system.spawn(testee);
-  auto dbl_x4_actor = dbl_actor * dbl_actor
-                      * dbl_actor * dbl_actor;
-  self->request(dbl_x4_actor, infinite, 1).receive(
-    [](int v) {
-      CAF_CHECK_EQUAL(v, 16);
-    },
-    ERROR_HANDLER
-  );
+  auto dbl_x4_actor = dbl_actor * dbl_actor * dbl_actor * dbl_actor;
+  self->request(dbl_x4_actor, infinite, 1)
+    .receive([](int v) { CAF_CHECK_EQUAL(v, 16); }, ERROR_HANDLER);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

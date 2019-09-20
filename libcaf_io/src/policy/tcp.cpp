@@ -24,19 +24,19 @@
 #include "caf/logger.hpp"
 
 #ifdef CAF_WINDOWS
-# include <winsock2.h>
+#  include <winsock2.h>
 #else
-# include <sys/types.h>
-# include <sys/socket.h>
+#  include <sys/socket.h>
+#  include <sys/types.h>
 #endif
 
 using caf::io::network::is_error;
-using caf::io::network::rw_state;
-using caf::io::network::native_socket;
-using caf::io::network::socket_size_type;
 using caf::io::network::last_socket_error;
+using caf::io::network::native_socket;
 using caf::io::network::no_sigpipe_io_flag;
+using caf::io::network::rw_state;
 using caf::io::network::socket_error_as_string;
+using caf::io::network::socket_size_type;
 
 namespace caf {
 namespace policy {

@@ -21,8 +21,8 @@
 #define CAF_SUITE io_dynamic_remote_group
 #include "caf/test/io_dsl.hpp"
 
-#include <vector>
 #include <algorithm>
+#include <vector>
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
@@ -49,11 +49,7 @@ size_t received_messages = 0u;
 
 behavior group_receiver(event_based_actor* self) {
   self->set_default_handler(reflect_and_quit);
-  return {
-    [](ok_atom) {
-      ++received_messages;
-    }
-  };
+  return {[](ok_atom) { ++received_messages; }};
 }
 
 // Our server is `mars` and our client is `earth`.

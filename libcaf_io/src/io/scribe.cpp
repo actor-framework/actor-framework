@@ -71,10 +71,10 @@ void scribe::data_transferred(execution_unit* ctx, size_t written,
             mailbox_element::forwarding_stack{},
             transferred_t{hdl(), written, remaining}};
   invoke_mailbox_element_impl(ctx, tmp);
-  //data_transferred_msg tmp{hdl(), written, remaining};
-  //auto ptr = make_mailbox_element(nullptr, invalid_message_id, {}, tmp);
-  //parent()->context(ctx);
-  //parent()->consume(std::move(ptr));
+  // data_transferred_msg tmp{hdl(), written, remaining};
+  // auto ptr = make_mailbox_element(nullptr, invalid_message_id, {}, tmp);
+  // parent()->context(ctx);
+  // parent()->consume(std::move(ptr));
 }
 
 } // namespace io

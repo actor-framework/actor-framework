@@ -27,10 +27,10 @@ namespace caf {
 namespace detail {
 
 private_thread::private_thread(scheduled_actor* self)
-    : self_destroyed_(false),
-      self_(self),
-      state_(active),
-      system_(self->system()) {
+  : self_destroyed_(false),
+    self_(self),
+    state_(active),
+    system_(self->system()) {
   intrusive_ptr_add_ref(self->ctrl());
   system_.inc_detached_threads();
 }

@@ -29,8 +29,7 @@ namespace io {
 namespace network {
 
 doorman_impl::doorman_impl(default_multiplexer& mx, native_socket sockfd)
-    : doorman(network::accept_hdl_from_socket(sockfd)),
-      acceptor_(mx, sockfd) {
+  : doorman(network::accept_hdl_from_socket(sockfd)), acceptor_(mx, sockfd) {
   // nop
 }
 

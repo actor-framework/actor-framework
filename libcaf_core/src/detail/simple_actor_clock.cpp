@@ -177,9 +177,8 @@ size_t simple_actor_clock::trigger_expired_timeouts() {
   return result;
 }
 
-void
-simple_actor_clock::add_schedule_entry(time_point t,
-                                       std::unique_ptr<ordinary_timeout> x) {
+void simple_actor_clock::add_schedule_entry(
+  time_point t, std::unique_ptr<ordinary_timeout> x) {
   auto aid = x->self->id();
   auto type = x->type;
   auto pred = [&](const actor_lookup_map::value_type& kvp) {

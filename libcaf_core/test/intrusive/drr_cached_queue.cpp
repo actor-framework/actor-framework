@@ -169,7 +169,7 @@ CAF_TEST(take_front) {
 }
 
 CAF_TEST(alternating_consumer) {
-  using fun_type = std::function<task_result (inode&)>;
+  using fun_type = std::function<task_result(inode&)>;
   fun_type f;
   fun_type g;
   fun_type* selected = &f;
@@ -191,9 +191,7 @@ CAF_TEST(alternating_consumer) {
     return task_result::resume;
   };
   /// Define a function object that alternates between f and g.
-  auto h = [&](inode& x) {
-    return (*selected)(x);
-  };
+  auto h = [&](inode& x) { return (*selected)(x); };
   // Fill and consume queue, h leaves 9 in the cache since it reads (odd, even)
   // sequences and no odd value to read after 7 is available.
   fill(queue, 1, 2, 3, 4, 5, 6, 7, 8, 9);
@@ -235,6 +233,5 @@ CAF_TEST(to_string) {
   queue.flush_cache();
   CAF_CHECK_EQUAL(deep_to_string(queue), "[1, 2, 3, 4]");
 }
-
 
 CAF_TEST_FIXTURE_SCOPE_END()

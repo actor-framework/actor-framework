@@ -29,9 +29,9 @@ namespace io {
 namespace network {
 
 scribe_impl::scribe_impl(default_multiplexer& mx, native_socket sockfd)
-    : scribe(network::conn_hdl_from_socket(sockfd)),
-      launched_(false),
-      stream_(mx, sockfd) {
+  : scribe(network::conn_hdl_from_socket(sockfd)),
+    launched_(false),
+    stream_(mx, sockfd) {
   // nop
 }
 

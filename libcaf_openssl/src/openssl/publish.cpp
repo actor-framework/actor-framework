@@ -20,11 +20,11 @@
 
 #include <set>
 
+#include "caf/actor_control_block.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/atom.hpp"
 #include "caf/expected.hpp"
-#include "caf/actor_system.hpp"
 #include "caf/function_view.hpp"
-#include "caf/actor_control_block.hpp"
 
 #include "caf/openssl/manager.hpp"
 
@@ -46,4 +46,3 @@ expected<uint16_t> publish(actor_system& sys, const strong_actor_ptr& whom,
 
 } // namespace openssl
 } // namespace caf
-

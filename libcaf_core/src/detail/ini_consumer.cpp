@@ -26,7 +26,7 @@ namespace detail {
 // -- abstract_ini_consumer ----------------------------------------------------
 
 abstract_ini_consumer::abstract_ini_consumer(abstract_ini_consumer* parent)
-    : parent_(parent) {
+  : parent_(parent) {
   // nop
 }
 
@@ -45,13 +45,12 @@ ini_list_consumer abstract_ini_consumer::begin_list() {
 // -- map_consumer -------------------------------------------------------------
 
 ini_map_consumer::ini_map_consumer(abstract_ini_consumer* parent)
-    : super(parent),
-      i_(xs_.end()) {
+  : super(parent), i_(xs_.end()) {
   CAF_ASSERT(parent != nullptr);
 }
 
 ini_map_consumer::ini_map_consumer(ini_map_consumer&& other)
-    : super(other.parent()) {
+  : super(other.parent()) {
 }
 
 ini_map_consumer::~ini_map_consumer() {
@@ -74,13 +73,12 @@ void ini_map_consumer::value_impl(config_value&& x) {
 // -- ini_list_consumer --------------------------------------------------------
 
 ini_list_consumer::ini_list_consumer(abstract_ini_consumer* parent)
-    : super(parent) {
+  : super(parent) {
   CAF_ASSERT(parent != nullptr);
 }
 
 ini_list_consumer::ini_list_consumer(ini_list_consumer&& other)
-    : super(other.parent()),
-      xs_(std::move(other.xs_)) {
+  : super(other.parent()), xs_(std::move(other.xs_)) {
   // nop
 }
 
@@ -95,7 +93,7 @@ void ini_list_consumer::value_impl(config_value&& x) {
 // -- ini_value_consumer -------------------------------------------------------
 
 ini_value_consumer::ini_value_consumer(abstract_ini_consumer* parent)
-    : super(parent) {
+  : super(parent) {
   // nop
 }
 
@@ -107,16 +105,15 @@ void ini_value_consumer::value_impl(config_value&& x) {
 
 ini_category_consumer::ini_category_consumer(ini_consumer* parent,
                                              std::string category)
-    : super(parent),
-      category_(std::move(category)) {
+  : super(parent), category_(std::move(category)) {
   CAF_ASSERT(parent_ != nullptr);
 }
 
 ini_category_consumer::ini_category_consumer(ini_category_consumer&& other)
-    : super(other.parent()),
-      category_(std::move(other.category_)),
-      xs_(std::move(other.xs_)),
-      current_key(std::move(other.current_key)) {
+  : super(other.parent()),
+    category_(std::move(other.category_)),
+    xs_(std::move(other.xs_)),
+    current_key(std::move(other.current_key)) {
   CAF_ASSERT(parent_ != nullptr);
 }
 
@@ -169,13 +166,14 @@ void ini_consumer::value_impl(config_value&& x) {
   using dict_type = config_value::dictionary;
   auto dict = get_if<dict_type>(&x);
   if (dict == nullptr) {
-    warnings_.emplace_back(make_error(pec::type_mismatch,
-                                      "expected a dictionary at top level"));
+    warnings_.emplace_back(
+      make_error(pec::type_mismatch, "expected a dictionary at top level"));
     return;
   }
   if (current_key_ != "global") {
     auto& dst = cfg_.emplace(current_key_, dict_type{}).first->second;
-    if (dict != nullptr && !dict->empty() && holds_alternative<dict_type>(dst)) {
+    if (dict != nullptr && !dict->empty()
+        && holds_alternative<dict_type>(dst)) {
       auto& dst_dict = get<dict_type>(dst);
       // We need to "merge" values into the destination, because it can already
       // contain any number of unrelated entries.

@@ -20,19 +20,19 @@
 
 #include <utility>
 
+#include "caf/actor_system_config.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
-#include "caf/optional.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/actor_system_config.hpp"
+#include "caf/optional.hpp"
 
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
-#include "caf/io/network/protocol.hpp"
-#include "caf/io/network/interfaces.hpp"
-#include "caf/io/network/scribe_impl.hpp"
-#include "caf/io/network/doorman_impl.hpp"
 #include "caf/io/network/datagram_servant_impl.hpp"
+#include "caf/io/network/doorman_impl.hpp"
+#include "caf/io/network/interfaces.hpp"
+#include "caf/io/network/protocol.hpp"
+#include "caf/io/network/scribe_impl.hpp"
 
 #include "caf/detail/call_cfun.hpp"
 #include "caf/detail/socket_guard.hpp"
@@ -40,42 +40,42 @@
 #include "caf/scheduler/abstract_coordinator.hpp"
 
 #ifdef CAF_WINDOWS
-# ifndef WIN32_LEAN_AND_MEAN
-#   define WIN32_LEAN_AND_MEAN
-# endif // WIN32_LEAN_AND_MEAN
-# ifndef NOMINMAX
-#   define NOMINMAX
-# endif
-# ifdef CAF_MINGW
-#   undef _WIN32_WINNT
-#   undef WINVER
-#   define _WIN32_WINNT WindowsVista
-#   define WINVER WindowsVista
-#   include <w32api.h>
-# endif
-# include <io.h>
-# include <windows.h>
-# include <winsock2.h>
-# include <ws2ipdef.h>
-# include <ws2tcpip.h>
+#  ifndef WIN32_LEAN_AND_MEAN
+#    define WIN32_LEAN_AND_MEAN
+#  endif // WIN32_LEAN_AND_MEAN
+#  ifndef NOMINMAX
+#    define NOMINMAX
+#  endif
+#  ifdef CAF_MINGW
+#    undef _WIN32_WINNT
+#    undef WINVER
+#    define _WIN32_WINNT WindowsVista
+#    define WINVER WindowsVista
+#    include <w32api.h>
+#  endif
+#  include <io.h>
+#  include <windows.h>
+#  include <winsock2.h>
+#  include <ws2ipdef.h>
+#  include <ws2tcpip.h>
 #else
-# include <unistd.h>
-# include <arpa/inet.h>
-# include <cerrno>
-# include <fcntl.h>
-# include <netdb.h>
-# include <netinet/in.h>
-# include <netinet/ip.h>
-# include <netinet/tcp.h>
-# include <sys/socket.h>
-# include <sys/types.h>
-#ifdef CAF_POLL_MULTIPLEXER
-# include <poll.h>
-#elif defined(CAF_EPOLL_MULTIPLEXER)
-# include <sys/epoll.h>
-#else
-# error "neither CAF_POLL_MULTIPLEXER nor CAF_EPOLL_MULTIPLEXER defined"
-#endif
+#  include <arpa/inet.h>
+#  include <cerrno>
+#  include <fcntl.h>
+#  include <netdb.h>
+#  include <netinet/in.h>
+#  include <netinet/ip.h>
+#  include <netinet/tcp.h>
+#  include <sys/socket.h>
+#  include <sys/types.h>
+#  include <unistd.h>
+#  ifdef CAF_POLL_MULTIPLEXER
+#    include <poll.h>
+#  elif defined(CAF_EPOLL_MULTIPLEXER)
+#    include <sys/epoll.h>
+#  else
+#    error "neither CAF_POLL_MULTIPLEXER nor CAF_EPOLL_MULTIPLEXER defined"
+#  endif
 
 #endif
 
@@ -119,344 +119,339 @@ namespace network {
 
 // poll vs epoll backend
 #ifdef CAF_POLL_MULTIPLEXER
-# ifndef POLLRDHUP
-#   define POLLRDHUP POLLHUP
-# endif
-# ifndef POLLPRI
-#   define POLLPRI POLLIN
-# endif
-# ifdef CAF_WINDOWS
-    // From the MSDN: If the POLLPRI flag is set on a socket for the Microsoft
-    //                Winsock provider, the WSAPoll function will fail.
-    const event_mask_type input_mask  = POLLIN;
-# else
-    const event_mask_type input_mask = POLLIN | POLLPRI;
-# endif
-  const event_mask_type error_mask = POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
-  const event_mask_type output_mask = POLLOUT;
+#  ifndef POLLRDHUP
+#    define POLLRDHUP POLLHUP
+#  endif
+#  ifndef POLLPRI
+#    define POLLPRI POLLIN
+#  endif
+#  ifdef CAF_WINDOWS
+// From the MSDN: If the POLLPRI flag is set on a socket for the Microsoft
+//                Winsock provider, the WSAPoll function will fail.
+const event_mask_type input_mask = POLLIN;
+#  else
+const event_mask_type input_mask = POLLIN | POLLPRI;
+#  endif
+const event_mask_type error_mask = POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
+const event_mask_type output_mask = POLLOUT;
 #else
-  const event_mask_type input_mask = EPOLLIN;
-  const event_mask_type error_mask  = EPOLLRDHUP | EPOLLERR | EPOLLHUP;
-  const event_mask_type output_mask = EPOLLOUT;
+const event_mask_type input_mask = EPOLLIN;
+const event_mask_type error_mask = EPOLLRDHUP | EPOLLERR | EPOLLHUP;
+const event_mask_type output_mask = EPOLLOUT;
 #endif
 
 // -- Platform-dependent abstraction over epoll() or poll() --------------------
 
 #ifdef CAF_EPOLL_MULTIPLEXER
 
-  // In this implementation, shadow_ is the number of sockets we have
-  // registered to epoll.
+// In this implementation, shadow_ is the number of sockets we have
+// registered to epoll.
 
-  default_multiplexer::default_multiplexer(actor_system* sys)
-      : multiplexer(sys),
-        epollfd_(invalid_native_socket),
-        shadow_(1),
-        pipe_reader_(*this),
-        servant_ids_(0),
-        max_throughput_(0 ){
-    init();
-    epollfd_ = epoll_create1(EPOLL_CLOEXEC);
-    if (epollfd_ == -1) {
-      CAF_LOG_ERROR("epoll_create1: " << strerror(errno));
-      exit(errno);
-    }
-    // handle at most 64 events at a time
-    pollset_.resize(64);
-    pipe_ = create_pipe();
-    pipe_reader_.init(pipe_.first);
-    epoll_event ee;
-    ee.events = input_mask;
-    ee.data.ptr = &pipe_reader_;
-    if (epoll_ctl(epollfd_, EPOLL_CTL_ADD, pipe_reader_.fd(), &ee) < 0) {
-      CAF_LOG_ERROR("epoll_ctl: " << strerror(errno));
-      exit(errno);
-    }
+default_multiplexer::default_multiplexer(actor_system* sys)
+  : multiplexer(sys),
+    epollfd_(invalid_native_socket),
+    shadow_(1),
+    pipe_reader_(*this),
+    servant_ids_(0),
+    max_throughput_(0) {
+  init();
+  epollfd_ = epoll_create1(EPOLL_CLOEXEC);
+  if (epollfd_ == -1) {
+    CAF_LOG_ERROR("epoll_create1: " << strerror(errno));
+    exit(errno);
   }
+  // handle at most 64 events at a time
+  pollset_.resize(64);
+  pipe_ = create_pipe();
+  pipe_reader_.init(pipe_.first);
+  epoll_event ee;
+  ee.events = input_mask;
+  ee.data.ptr = &pipe_reader_;
+  if (epoll_ctl(epollfd_, EPOLL_CTL_ADD, pipe_reader_.fd(), &ee) < 0) {
+    CAF_LOG_ERROR("epoll_ctl: " << strerror(errno));
+    exit(errno);
+  }
+}
 
-  bool default_multiplexer::poll_once_impl(bool block) {
-    CAF_LOG_TRACE("epoll()-based multiplexer");
-    CAF_ASSERT(block == false || internally_posted_.empty());
-    // Keep running in case of `EINTR`.
-    for (;;) {
-      int presult = epoll_wait(epollfd_, pollset_.data(),
-                               static_cast<int>(pollset_.size()),
-                               block ? -1 : 0);
-      CAF_LOG_DEBUG("epoll_wait() on"      << shadow_
-                    << "sockets reported" << presult << "event(s)");
-      if (presult < 0) {
-        switch (errno) {
-          case EINTR: {
-            // a signal was caught
-            // just try again
-            continue;
-          }
-          default: {
-            perror("epoll_wait() failed");
-            CAF_CRITICAL("epoll_wait() failed");
-          }
+bool default_multiplexer::poll_once_impl(bool block) {
+  CAF_LOG_TRACE("epoll()-based multiplexer");
+  CAF_ASSERT(block == false || internally_posted_.empty());
+  // Keep running in case of `EINTR`.
+  for (;;) {
+    int presult = epoll_wait(epollfd_, pollset_.data(),
+                             static_cast<int>(pollset_.size()), block ? -1 : 0);
+    CAF_LOG_DEBUG("epoll_wait() on" << shadow_ << "sockets reported" << presult
+                                    << "event(s)");
+    if (presult < 0) {
+      switch (errno) {
+        case EINTR: {
+          // a signal was caught
+          // just try again
+          continue;
+        }
+        default: {
+          perror("epoll_wait() failed");
+          CAF_CRITICAL("epoll_wait() failed");
         }
       }
-      if (presult == 0)
-        return false;
-      auto iter = pollset_.begin();
-      auto last = iter + presult;
-      for (; iter != last; ++iter) {
-        auto ptr = reinterpret_cast<event_handler*>(iter->data.ptr);
-        auto fd = ptr ? ptr->fd() : pipe_.first;
-        handle_socket_event(fd, static_cast<int>(iter->events), ptr);
-      }
-      handle_internal_events();
-      return true;
     }
+    if (presult == 0)
+      return false;
+    auto iter = pollset_.begin();
+    auto last = iter + presult;
+    for (; iter != last; ++iter) {
+      auto ptr = reinterpret_cast<event_handler*>(iter->data.ptr);
+      auto fd = ptr ? ptr->fd() : pipe_.first;
+      handle_socket_event(fd, static_cast<int>(iter->events), ptr);
+    }
+    handle_internal_events();
+    return true;
   }
+}
 
-  void default_multiplexer::run() {
-    CAF_LOG_TRACE("epoll()-based multiplexer");
-    while (shadow_ > 0)
-      poll_once(true);
+void default_multiplexer::run() {
+  CAF_LOG_TRACE("epoll()-based multiplexer");
+  while (shadow_ > 0)
+    poll_once(true);
+}
+
+void default_multiplexer::handle(const default_multiplexer::event& e) {
+  CAF_LOG_TRACE("e.fd = " << CAF_ARG(e.fd) << ", mask = " << CAF_ARG(e.mask));
+  // ptr is only allowed to nullptr if fd is our pipe
+  // read handle which is only registered for input
+  CAF_ASSERT(e.ptr != nullptr || e.fd == pipe_.first);
+  if (e.ptr && e.ptr->eventbf() == e.mask) {
+    // nop
+    return;
   }
-
-  void default_multiplexer::handle(const default_multiplexer::event& e) {
-    CAF_LOG_TRACE("e.fd = " << CAF_ARG(e.fd) << ", mask = "
+  auto old = e.ptr ? e.ptr->eventbf() : input_mask;
+  if (e.ptr) {
+    e.ptr->eventbf(e.mask);
+  }
+  epoll_event ee;
+  ee.events = static_cast<uint32_t>(e.mask);
+  ee.data.ptr = e.ptr;
+  int op;
+  if (e.mask == 0) {
+    CAF_LOG_DEBUG("attempt to remove socket " << CAF_ARG(e.fd)
+                                              << " from epoll");
+    op = EPOLL_CTL_DEL;
+    --shadow_;
+  } else if (old == 0) {
+    CAF_LOG_DEBUG("attempt to add socket " << CAF_ARG(e.fd) << " to epoll");
+    op = EPOLL_CTL_ADD;
+    ++shadow_;
+  } else {
+    CAF_LOG_DEBUG("modify epoll event mask for socket "
+                  << CAF_ARG(e.fd) << ": " << CAF_ARG(old) << " -> "
                   << CAF_ARG(e.mask));
-    // ptr is only allowed to nullptr if fd is our pipe
-    // read handle which is only registered for input
-    CAF_ASSERT(e.ptr != nullptr || e.fd == pipe_.first);
-    if (e.ptr && e.ptr->eventbf() == e.mask) {
-      // nop
-      return;
+    op = EPOLL_CTL_MOD;
+  }
+  if (epoll_ctl(epollfd_, op, e.fd, &ee) < 0) {
+    switch (last_socket_error()) {
+      // supplied file descriptor is already registered
+      case EEXIST:
+        CAF_LOG_ERROR("file descriptor registered twice");
+        --shadow_;
+        break;
+      // op was EPOLL_CTL_MOD or EPOLL_CTL_DEL,
+      // and fd is not registered with this epoll instance.
+      case ENOENT:
+        CAF_LOG_ERROR("cannot delete file descriptor "
+                      "because it isn't registered");
+        if (e.mask == 0) {
+          ++shadow_;
+        }
+        break;
+      default:
+        CAF_LOG_ERROR(strerror(errno));
+        perror("epoll_ctl() failed");
+        CAF_CRITICAL("epoll_ctl() failed");
     }
-    auto old = e.ptr ? e.ptr->eventbf() : input_mask;
-    if (e.ptr){
-      e.ptr->eventbf(e.mask);
-    }
-    epoll_event ee;
-    ee.events = static_cast<uint32_t>(e.mask);
-    ee.data.ptr = e.ptr;
-    int op;
-    if (e.mask == 0) {
-      CAF_LOG_DEBUG("attempt to remove socket " << CAF_ARG(e.fd)
-                    << " from epoll");
-      op = EPOLL_CTL_DEL;
-      --shadow_;
-    } else if (old == 0) {
-      CAF_LOG_DEBUG("attempt to add socket " << CAF_ARG(e.fd) << " to epoll");
-      op = EPOLL_CTL_ADD;
-      ++shadow_;
-    } else {
-      CAF_LOG_DEBUG("modify epoll event mask for socket " << CAF_ARG(e.fd)
-                    << ": " << CAF_ARG(old) << " -> " << CAF_ARG(e.mask));
-      op = EPOLL_CTL_MOD;
-    }
-    if (epoll_ctl(epollfd_, op, e.fd, &ee) < 0) {
+  }
+  if (e.ptr) {
+    auto remove_from_loop_if_needed = [&](int flag, operation flag_op) {
+      if ((old & flag) && !(e.mask & flag)) {
+        e.ptr->removed_from_loop(flag_op);
+      }
+    };
+    remove_from_loop_if_needed(input_mask, operation::read);
+    remove_from_loop_if_needed(output_mask, operation::write);
+  }
+}
+
+size_t default_multiplexer::num_socket_handlers() const noexcept {
+  return shadow_;
+}
+
+#else // CAF_EPOLL_MULTIPLEXER
+
+// Let's be honest: the API of poll() sucks. When dealing with 1000 sockets
+// and the very last socket in your pollset triggers, you have to traverse
+// all elements only to find a single event. Even worse, poll() does
+// not give you a way of storing a user-defined pointer in the pollset.
+// Hence, you need to find a pointer to the actual object managing the
+// socket. When using a map, your already dreadful O(n) turns into
+// a worst case of O(n * log n). To deal with this nonsense, we have two
+// vectors in this implementation: pollset_ and shadow_. The former
+// stores our pollset, the latter stores our pointers. Both vectors
+// are sorted by the file descriptor. This allows us to quickly,
+// i.e., O(1), access the actual object when handling socket events.
+
+default_multiplexer::default_multiplexer(actor_system* sys)
+  : multiplexer(sys), epollfd_(-1), pipe_reader_(*this), servant_ids_(0) {
+  init();
+  // initial setup
+  pipe_ = create_pipe();
+  pipe_reader_.init(pipe_.first);
+  pollfd pipefd;
+  pipefd.fd = pipe_reader_.fd();
+  pipefd.events = input_mask;
+  pipefd.revents = 0;
+  pollset_.push_back(pipefd);
+  shadow_.push_back(&pipe_reader_);
+}
+
+bool default_multiplexer::poll_once_impl(bool block) {
+  CAF_LOG_TRACE("poll()-based multiplexer");
+  CAF_ASSERT(block == false || internally_posted_.empty());
+  // we store the results of poll() in a separate vector , because
+  // altering the pollset while traversing it is not exactly a
+  // bright idea ...
+  struct fd_event {
+    native_socket fd;   // our file descriptor
+    short mask;         // the event mask returned by poll()
+    event_handler* ptr; // nullptr in case of a pipe event
+  };
+  std::vector<fd_event> poll_res;
+  for (;;) {
+    int presult;
+#  ifdef CAF_WINDOWS
+    presult = ::WSAPoll(pollset_.data(), static_cast<ULONG>(pollset_.size()),
+                        block ? -1 : 0);
+#  else
+    presult = ::poll(pollset_.data(), static_cast<nfds_t>(pollset_.size()),
+                     block ? -1 : 0);
+#  endif
+    if (presult < 0) {
       switch (last_socket_error()) {
-        // supplied file descriptor is already registered
-        case EEXIST:
-          CAF_LOG_ERROR("file descriptor registered twice");
-          --shadow_;
+        case EINTR: {
+          CAF_LOG_DEBUG("received EINTR, try again");
+          // a signal was caught
+          // just try again
           break;
-        // op was EPOLL_CTL_MOD or EPOLL_CTL_DEL,
-        // and fd is not registered with this epoll instance.
-        case ENOENT:
-          CAF_LOG_ERROR(
-            "cannot delete file descriptor "
-            "because it isn't registered");
-          if (e.mask == 0) {
-            ++shadow_;
-          }
+        }
+        case ENOMEM: {
+          CAF_LOG_ERROR("poll() failed for reason ENOMEM");
+          // there's not much we can do other than try again
+          // in hope someone else releases memory
           break;
-        default:
-          CAF_LOG_ERROR(strerror(errno));
-          perror("epoll_ctl() failed");
-          CAF_CRITICAL("epoll_ctl() failed");
+        }
+        default: {
+          perror("poll() failed");
+          CAF_CRITICAL("poll() failed");
+        }
+      }
+      continue; // rinse and repeat
+    }
+    CAF_LOG_DEBUG("poll() on" << pollset_.size() << "sockets reported"
+                              << presult << "event(s)");
+    if (presult == 0)
+      return false;
+    // scan pollset for events first, because we might alter pollset_
+    // while running callbacks (not a good idea while traversing it)
+    CAF_LOG_DEBUG("scan pollset for socket events");
+    for (size_t i = 0; i < pollset_.size() && presult > 0; ++i) {
+      auto& pfd = pollset_[i];
+      if (pfd.revents != 0) {
+        CAF_LOG_DEBUG("event on socket:" << CAF_ARG(pfd.fd)
+                                         << CAF_ARG(pfd.revents));
+        poll_res.push_back({pfd.fd, pfd.revents, shadow_[i]});
+        pfd.revents = 0;
+        --presult; // stop as early as possible
       }
     }
-    if (e.ptr) {
+    CAF_LOG_DEBUG(CAF_ARG(poll_res.size()));
+    for (auto& e : poll_res) {
+      // we try to read/write as much as possible by ignoring
+      // error states as long as there are still valid
+      // operations possible on the socket
+      handle_socket_event(e.fd, e.mask, e.ptr);
+    }
+    poll_res.clear();
+    handle_internal_events();
+    return true;
+  }
+}
+
+void default_multiplexer::run() {
+  CAF_LOG_TRACE("poll()-based multiplexer:" << CAF_ARG(input_mask)
+                                            << CAF_ARG(output_mask)
+                                            << CAF_ARG(error_mask));
+  while (!pollset_.empty())
+    poll_once(true);
+}
+
+void default_multiplexer::handle(const default_multiplexer::event& e) {
+  CAF_ASSERT(e.fd != invalid_native_socket);
+  CAF_ASSERT(pollset_.size() == shadow_.size());
+  CAF_LOG_TRACE(CAF_ARG(e.fd) << CAF_ARG(e.mask));
+  auto last = pollset_.end();
+  auto i = std::lower_bound(pollset_.begin(), last, e.fd,
+                            [](const pollfd& lhs, native_socket rhs) {
+                              return lhs.fd < rhs;
+                            });
+  pollfd new_element;
+  new_element.fd = e.fd;
+  new_element.events = static_cast<short>(e.mask);
+  new_element.revents = 0;
+  int old_mask = 0;
+  if (e.ptr != nullptr) {
+    old_mask = e.ptr->eventbf();
+    e.ptr->eventbf(e.mask);
+  }
+  // calculate shadow of i
+  multiplexer_poll_shadow_data::iterator j;
+  if (i == last) {
+    j = shadow_.end();
+  } else {
+    j = shadow_.begin();
+    std::advance(j, distance(pollset_.begin(), i));
+  }
+  // modify vectors
+  if (i == last) { // append
+    if (e.mask != 0) {
+      pollset_.push_back(new_element);
+      shadow_.push_back(e.ptr);
+    }
+  } else if (i->fd == e.fd) { // modify
+    if (e.mask == 0) {
+      // delete item
+      pollset_.erase(i);
+      shadow_.erase(j);
+    } else {
+      // update event mask of existing entry
+      CAF_ASSERT(*j == e.ptr);
+      i->events = static_cast<short>(e.mask);
+    }
+    if (e.ptr != nullptr) {
       auto remove_from_loop_if_needed = [&](int flag, operation flag_op) {
-        if ((old & flag) && !(e.mask & flag)) {
+        if (((old_mask & flag) != 0) && ((e.mask & flag) == 0)) {
           e.ptr->removed_from_loop(flag_op);
         }
       };
       remove_from_loop_if_needed(input_mask, operation::read);
       remove_from_loop_if_needed(output_mask, operation::write);
     }
+  } else { // insert at iterator pos
+    pollset_.insert(i, new_element);
+    shadow_.insert(j, e.ptr);
   }
+}
 
-  size_t default_multiplexer::num_socket_handlers() const noexcept {
-    return shadow_;
-  }
-
-#else // CAF_EPOLL_MULTIPLEXER
-
-  // Let's be honest: the API of poll() sucks. When dealing with 1000 sockets
-  // and the very last socket in your pollset triggers, you have to traverse
-  // all elements only to find a single event. Even worse, poll() does
-  // not give you a way of storing a user-defined pointer in the pollset.
-  // Hence, you need to find a pointer to the actual object managing the
-  // socket. When using a map, your already dreadful O(n) turns into
-  // a worst case of O(n * log n). To deal with this nonsense, we have two
-  // vectors in this implementation: pollset_ and shadow_. The former
-  // stores our pollset, the latter stores our pointers. Both vectors
-  // are sorted by the file descriptor. This allows us to quickly,
-  // i.e., O(1), access the actual object when handling socket events.
-
-  default_multiplexer::default_multiplexer(actor_system* sys)
-      : multiplexer(sys),
-        epollfd_(-1),
-        pipe_reader_(*this),
-        servant_ids_(0) {
-    init();
-    // initial setup
-    pipe_ = create_pipe();
-    pipe_reader_.init(pipe_.first);
-    pollfd pipefd;
-    pipefd.fd = pipe_reader_.fd();
-    pipefd.events = input_mask;
-    pipefd.revents = 0;
-    pollset_.push_back(pipefd);
-    shadow_.push_back(&pipe_reader_);
-  }
-
-  bool default_multiplexer::poll_once_impl(bool block) {
-    CAF_LOG_TRACE("poll()-based multiplexer");
-    CAF_ASSERT(block == false || internally_posted_.empty());
-    // we store the results of poll() in a separate vector , because
-    // altering the pollset while traversing it is not exactly a
-    // bright idea ...
-    struct fd_event {
-      native_socket  fd;      // our file descriptor
-      short          mask;    // the event mask returned by poll()
-      event_handler* ptr;     // nullptr in case of a pipe event
-    };
-    std::vector<fd_event> poll_res;
-    for(;;) {
-      int presult;
-#     ifdef CAF_WINDOWS
-        presult = ::WSAPoll(pollset_.data(),
-                            static_cast<ULONG>(pollset_.size()),
-                            block ? -1 : 0);
-#     else
-        presult = ::poll(pollset_.data(),
-                         static_cast<nfds_t>(pollset_.size()), block ? -1 : 0);
-#     endif
-      if (presult < 0) {
-        switch (last_socket_error()) {
-          case EINTR: {
-            CAF_LOG_DEBUG("received EINTR, try again");
-            // a signal was caught
-            // just try again
-            break;
-          }
-          case ENOMEM: {
-            CAF_LOG_ERROR("poll() failed for reason ENOMEM");
-            // there's not much we can do other than try again
-            // in hope someone else releases memory
-            break;
-          }
-          default: {
-            perror("poll() failed");
-            CAF_CRITICAL("poll() failed");
-          }
-        }
-        continue; // rinse and repeat
-      }
-      CAF_LOG_DEBUG("poll() on" << pollset_.size()
-                    << "sockets reported" << presult << "event(s)");
-      if (presult == 0)
-        return false;
-      // scan pollset for events first, because we might alter pollset_
-      // while running callbacks (not a good idea while traversing it)
-      CAF_LOG_DEBUG("scan pollset for socket events");
-      for (size_t i = 0; i < pollset_.size() && presult > 0; ++i) {
-        auto& pfd = pollset_[i];
-        if (pfd.revents != 0) {
-          CAF_LOG_DEBUG("event on socket:" << CAF_ARG(pfd.fd)
-                        << CAF_ARG(pfd.revents));
-          poll_res.push_back({pfd.fd, pfd.revents, shadow_[i]});
-          pfd.revents = 0;
-          --presult; // stop as early as possible
-        }
-      }
-      CAF_LOG_DEBUG(CAF_ARG(poll_res.size()));
-      for (auto& e : poll_res) {
-        // we try to read/write as much as possible by ignoring
-        // error states as long as there are still valid
-        // operations possible on the socket
-        handle_socket_event(e.fd, e.mask, e.ptr);
-      }
-      poll_res.clear();
-      handle_internal_events();
-      return true;
-    }
-  }
-
-  void default_multiplexer::run() {
-    CAF_LOG_TRACE("poll()-based multiplexer:" << CAF_ARG(input_mask)
-                  << CAF_ARG(output_mask) << CAF_ARG(error_mask));
-    while (!pollset_.empty())
-      poll_once(true);
-  }
-
-  void default_multiplexer::handle(const default_multiplexer::event& e) {
-    CAF_ASSERT(e.fd != invalid_native_socket);
-    CAF_ASSERT(pollset_.size() == shadow_.size());
-    CAF_LOG_TRACE(CAF_ARG(e.fd) << CAF_ARG(e.mask));
-    auto last = pollset_.end();
-    auto i = std::lower_bound(pollset_.begin(), last, e.fd,
-                              [](const pollfd& lhs, native_socket rhs) {
-                                return lhs.fd < rhs;
-                              });
-    pollfd new_element;
-    new_element.fd = e.fd;
-    new_element.events = static_cast<short>(e.mask);
-    new_element.revents = 0;
-    int old_mask = 0;
-    if (e.ptr != nullptr) {
-      old_mask = e.ptr->eventbf();
-      e.ptr->eventbf(e.mask);
-    }
-    // calculate shadow of i
-    multiplexer_poll_shadow_data::iterator j;
-    if (i == last) {
-      j = shadow_.end();
-    } else {
-      j = shadow_.begin();
-      std::advance(j, distance(pollset_.begin(), i));
-    }
-    // modify vectors
-    if (i == last) { // append
-      if (e.mask != 0) {
-        pollset_.push_back(new_element);
-        shadow_.push_back(e.ptr);
-      }
-    } else if (i->fd == e.fd) { // modify
-      if (e.mask == 0) {
-        // delete item
-        pollset_.erase(i);
-        shadow_.erase(j);
-      } else {
-        // update event mask of existing entry
-        CAF_ASSERT(*j == e.ptr);
-        i->events = static_cast<short>(e.mask);
-      }
-      if (e.ptr != nullptr) {
-        auto remove_from_loop_if_needed = [&](int flag, operation flag_op) {
-          if (((old_mask & flag) != 0) && ((e.mask & flag) == 0)) {
-            e.ptr->removed_from_loop(flag_op);
-          }
-        };
-        remove_from_loop_if_needed(input_mask, operation::read);
-        remove_from_loop_if_needed(output_mask, operation::write);
-      }
-    } else { // insert at iterator pos
-      pollset_.insert(i, new_element);
-      shadow_.insert(j, e.ptr);
-    }
-  }
-
-  size_t default_multiplexer::num_socket_handlers() const noexcept {
-    return pollset_.size();
-  }
+size_t default_multiplexer::num_socket_handlers() const noexcept {
+  return pollset_.size();
+}
 
 #endif // CAF_EPOLL_MULTIPLEXER
 
@@ -515,19 +510,19 @@ void default_multiplexer::del(operation op, native_socket fd,
   CAF_ASSERT(fd != invalid_native_socket);
   // ptr == nullptr is only allowed when removing our pipe read handle
   CAF_ASSERT(ptr != nullptr || fd == pipe_.first);
-  CAF_LOG_TRACE(CAF_ARG(op)<< CAF_ARG(fd));
+  CAF_LOG_TRACE(CAF_ARG(op) << CAF_ARG(fd));
   new_event(del_flag, op, fd, ptr);
 }
 
 void default_multiplexer::wr_dispatch_request(resumable* ptr) {
   intptr_t ptrval = reinterpret_cast<intptr_t>(ptr);
   // on windows, we actually have sockets, otherwise we have file handles
-# ifdef CAF_WINDOWS
+#ifdef CAF_WINDOWS
   auto res = ::send(pipe_.second, reinterpret_cast<socket_send_ptr>(&ptrval),
                     sizeof(ptrval), no_sigpipe_io_flag);
-# else
+#else
   auto res = ::write(pipe_.second, &ptrval, sizeof(ptrval));
-# endif
+#endif
   if (res <= 0) {
     // pipe closed, discard resumable
     intrusive_ptr_release(ptr);
@@ -548,6 +543,7 @@ multiplexer::supervisor_ptr default_multiplexer::make_supervisor() {
       auto ptr = this_;
       ptr->dispatch([=] { ptr->close_pipe(); });
     }
+
   private:
     default_multiplexer* this_;
   };
@@ -586,12 +582,12 @@ void default_multiplexer::handle_socket_event(native_socket fd, int mask,
 }
 
 void default_multiplexer::init() {
-# ifdef CAF_WINDOWS
+#ifdef CAF_WINDOWS
   WSADATA WinsockData;
   if (WSAStartup(MAKEWORD(2, 2), &WinsockData) != 0) {
-      CAF_CRITICAL("WSAStartup failed");
+    CAF_CRITICAL("WSAStartup failed");
   }
-# endif
+#endif
   namespace sr = defaults::scheduler;
   max_throughput_ = get_or(system().config(), "scheduler.max-throughput",
                            sr::max_throughput);
@@ -629,8 +625,7 @@ void default_multiplexer::resume(intrusive_ptr<resumable> ptr) {
       // Don't touch reference count of shutdown helpers.
       ptr.release();
       break;
-    default:
-      ; // Done. Release reference to resumable.
+    default:; // Done. Release reference to resumable.
   }
 }
 
@@ -649,9 +644,9 @@ default_multiplexer::~default_multiplexer() {
   // do cleanup for pipe reader manually, since WSACleanup needs to happen last
   close_socket(pipe_reader_.fd());
   pipe_reader_.init(invalid_native_socket);
-# ifdef CAF_WINDOWS
+#ifdef CAF_WINDOWS
   WSACleanup();
-# endif
+#endif
 }
 
 void default_multiplexer::exec_later(resumable* ptr) {
@@ -749,19 +744,15 @@ void default_multiplexer::handle_internal_events() {
 template <int Family>
 bool ip_connect(native_socket fd, const std::string& host, uint16_t port) {
   CAF_LOG_TRACE("Family =" << (Family == AF_INET ? "AF_INET" : "AF_INET6")
-                << CAF_ARG(fd) << CAF_ARG(host));
+                           << CAF_ARG(fd) << CAF_ARG(host));
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
-  using sockaddr_type =
-    typename std::conditional<
-      Family == AF_INET,
-      sockaddr_in,
-      sockaddr_in6
-    >::type;
+  using sockaddr_type = typename std::conditional<
+    Family == AF_INET, sockaddr_in, sockaddr_in6>::type;
   sockaddr_type sa;
   memset(&sa, 0, sizeof(sockaddr_type));
   inet_pton(Family, host.c_str(), &addr_of(sa));
   family_of(sa) = Family;
-  port_of(sa)   = htons(port);
+  port_of(sa) = htons(port);
   return connect(fd, reinterpret_cast<const sockaddr*>(&sa), sizeof(sa)) == 0;
 }
 
@@ -787,8 +778,8 @@ new_tcp_connection(const std::string& host, uint16_t port,
   detail::socket_guard sguard(fd);
   if (proto == ipv6) {
     if (ip_connect<AF_INET6>(fd, res->first, port)) {
-      CAF_LOG_INFO("successfully connected to (IPv6):"
-                  << CAF_ARG(host) << CAF_ARG(port));
+      CAF_LOG_INFO("successfully connected to (IPv6):" << CAF_ARG(host)
+                                                       << CAF_ARG(port));
       return sguard.release();
     }
     sguard.close();
@@ -797,11 +788,11 @@ new_tcp_connection(const std::string& host, uint16_t port,
   }
   if (!ip_connect<AF_INET>(fd, res->first, port)) {
     CAF_LOG_WARNING("could not connect to:" << CAF_ARG(host) << CAF_ARG(port));
-    return make_error(sec::cannot_connect_to_node,
-                      "ip_connect failed", host, port);
+    return make_error(sec::cannot_connect_to_node, "ip_connect failed", host,
+                      port);
   }
-  CAF_LOG_INFO("successfully connected to (IPv4):"
-              << CAF_ARG(host) << CAF_ARG(port));
+  CAF_LOG_INFO("successfully connected to (IPv4):" << CAF_ARG(host)
+                                                   << CAF_ARG(port));
   return sguard.release();
 }
 
@@ -849,12 +840,8 @@ expected<native_socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
                          reinterpret_cast<setsockopt_ptr>(&on),
                          static_cast<socket_size_type>(sizeof(on))));
   }
-  using sockaddr_type =
-    typename std::conditional<
-      Family == AF_INET,
-      sockaddr_in,
-      sockaddr_in6
-    >::type;
+  using sockaddr_type = typename std::conditional<
+    Family == AF_INET, sockaddr_in, sockaddr_in6>::type;
   sockaddr_type sa;
   memset(&sa, 0, sizeof(sockaddr_type));
   family_of(sa) = Family;
@@ -882,8 +869,9 @@ expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
   for (auto& elem : addrs) {
     auto hostname = elem.first.c_str();
     auto p = elem.second == ipv4
-           ? new_ip_acceptor_impl<AF_INET>(port, hostname, reuse_addr, any)
-           : new_ip_acceptor_impl<AF_INET6>(port, hostname, reuse_addr, any);
+               ? new_ip_acceptor_impl<AF_INET>(port, hostname, reuse_addr, any)
+               : new_ip_acceptor_impl<AF_INET6>(port, hostname, reuse_addr,
+                                                any);
     if (!p) {
       CAF_LOG_DEBUG(p.error());
       continue;
@@ -893,9 +881,9 @@ expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
   }
   if (fd == invalid_native_socket) {
     CAF_LOG_WARNING("could not open tcp socket on:" << CAF_ARG(port)
-                    << CAF_ARG(addr_str));
-    return make_error(sec::cannot_open_port, "tcp socket creation failed",
-                      port, addr_str);
+                                                    << CAF_ARG(addr_str));
+    return make_error(sec::cannot_open_port, "tcp socket creation failed", port,
+                      addr_str);
   }
   detail::socket_guard sguard{fd};
   CALL_CFUN(tmp2, detail::cc_zero, "listen", listen(fd, SOMAXCONN));
@@ -935,8 +923,10 @@ new_local_udp_endpoint_impl(uint16_t port, const char* addr, bool reuse,
   for (auto& elem : addrs) {
     auto host = elem.first.c_str();
     auto p = elem.second == ipv4
-           ? new_ip_acceptor_impl<AF_INET, SOCK_DGRAM>(port, host, reuse, any)
-           : new_ip_acceptor_impl<AF_INET6, SOCK_DGRAM>(port, host, reuse, any);
+               ? new_ip_acceptor_impl<AF_INET, SOCK_DGRAM>(port, host, reuse,
+                                                           any)
+               : new_ip_acceptor_impl<AF_INET6, SOCK_DGRAM>(port, host, reuse,
+                                                            any);
     if (!p) {
       CAF_LOG_DEBUG(p.error());
       continue;
@@ -947,9 +937,9 @@ new_local_udp_endpoint_impl(uint16_t port, const char* addr, bool reuse,
   }
   if (fd == invalid_native_socket) {
     CAF_LOG_WARNING("could not open udp socket on:" << CAF_ARG(port)
-                    << CAF_ARG(addr_str));
-    return make_error(sec::cannot_open_port, "udp socket creation failed",
-                      port, addr_str);
+                                                    << CAF_ARG(addr_str));
+    return make_error(sec::cannot_open_port, "udp socket creation failed", port,
+                      addr_str);
   }
   CAF_LOG_DEBUG(CAF_ARG(fd));
   return std::make_pair(fd, proto);

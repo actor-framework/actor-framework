@@ -86,10 +86,8 @@ public:
 
 using nested_queue_type = drr_queue<inode_policy>;
 
-using queue_type = wdrr_fixed_multiplexed_queue<inode_policy,
-                                                high_prio_queue,
-                                                nested_queue_type,
-                                                nested_queue_type>;
+using queue_type = wdrr_fixed_multiplexed_queue<
+  inode_policy, high_prio_queue, nested_queue_type, nested_queue_type>;
 
 struct fetch_helper {
   std::string result;

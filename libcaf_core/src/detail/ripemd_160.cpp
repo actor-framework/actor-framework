@@ -54,8 +54,8 @@
  *                                                                            *
 \******************************************************************************/
 
-#include <cstring>
 #include "caf/detail/ripemd_160.hpp"
+#include <cstring>
 
 namespace {
 
@@ -378,7 +378,7 @@ void MDfinish(dword* MDbuf, const byte* strptr, dword lswlen, dword mswlen) {
   compress(MDbuf, X);
 }
 
-} // namespace <anonmyous>
+} // namespace
 
 namespace caf {
 namespace detail {

@@ -38,4 +38,3 @@ const char octal_chars[9] = "01234567";
 } // namespace parser
 } // namespace detail
 } // namespace caf
-

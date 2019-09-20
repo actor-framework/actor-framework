@@ -32,8 +32,8 @@ CAF_POP_WARNINGS
 // Unfortunately there's no sane way to configure OpenSSL properly.
 #ifdef CAF_LINUX
 
-#include "caf/detail/scope_guard.hpp"
-#include <signal.h>
+#  include "caf/detail/scope_guard.hpp"
+#  include <signal.h>
 
 #  define CAF_BLOCK_SIGPIPE()                                                  \
     sigset_t sigpipe_mask;                                                     \
@@ -55,7 +55,7 @@ CAF_POP_WARNINGS
 
 #else
 
-#define CAF_BLOCK_SIGPIPE() static_cast<void>(0)
+#  define CAF_BLOCK_SIGPIPE() static_cast<void>(0)
 
 #endif // CAF_LINUX
 
@@ -74,11 +74,11 @@ int pem_passwd_cb(char* buf, int size, int, void* ptr) {
 } // namespace
 
 session::session(actor_system& sys)
-    : sys_(sys),
-      ctx_(nullptr),
-      ssl_(nullptr),
-      connecting_(false),
-      accepting_(false) {
+  : sys_(sys),
+    ctx_(nullptr),
+    ssl_(nullptr),
+    connecting_(false),
+    accepting_(false) {
   // nop
 }
 
@@ -231,10 +231,10 @@ SSL_CTX* session::create_ssl_context() {
                                        SSL_FILETYPE_PEM)
              != 1)
       CAF_RAISE_ERROR("cannot load private key");
-    auto cafile =
-      (cfg.openssl_cafile.size() > 0 ? cfg.openssl_cafile.c_str() : nullptr);
-    auto capath =
-      (cfg.openssl_capath.size() > 0 ? cfg.openssl_capath.c_str() : nullptr);
+    auto cafile = (cfg.openssl_cafile.size() > 0 ? cfg.openssl_cafile.c_str()
+                                                 : nullptr);
+    auto capath = (cfg.openssl_capath.size() > 0 ? cfg.openssl_capath.c_str()
+                                                 : nullptr);
     if (cafile || capath) {
       if (SSL_CTX_load_verify_locations(ctx, cafile, capath) != 1)
         CAF_RAISE_ERROR("cannot load trusted CA certificates");

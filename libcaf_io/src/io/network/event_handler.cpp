@@ -23,9 +23,9 @@
 #include "caf/io/network/default_multiplexer.hpp"
 
 #ifdef CAF_WINDOWS
-# include <winsock2.h>
+#  include <winsock2.h>
 #else
-# include <sys/socket.h>
+#  include <sys/socket.h>
 #endif
 
 namespace caf {

@@ -132,9 +132,7 @@ CAF_TEST(unblock) {
 CAF_TEST(await) {
   std::mutex mx;
   std::condition_variable cv;
-  std::thread t{[&] {
-    inbox.synchronized_emplace_back(mx, cv, 1);
-  }};
+  std::thread t{[&] { inbox.synchronized_emplace_back(mx, cv, 1); }};
   inbox.synchronized_await(mx, cv);
   CAF_REQUIRE_EQUAL(close_and_fetch(), "1");
   t.join();
@@ -152,9 +150,7 @@ CAF_TEST(timed_await) {
   CAF_REQUIRE_EQUAL(res, true);
   CAF_CHECK_EQUAL(fetch(), "1");
   tout += std::chrono::hours(1000);
-  std::thread t{[&] {
-    inbox.synchronized_emplace_back(mx, cv, 2);
-  }};
+  std::thread t{[&] { inbox.synchronized_emplace_back(mx, cv, 2); }};
   res = inbox.synchronized_await(mx, cv, tout);
   CAF_REQUIRE_EQUAL(res, true);
   CAF_REQUIRE_EQUAL(close_and_fetch(), "2");

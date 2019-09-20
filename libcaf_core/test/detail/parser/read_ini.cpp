@@ -261,7 +261,7 @@ CAF_TEST(empty inis) {
   CAF_CHECK_EQUAL(parse(";hello\n;world"), make_log());
 }
 
-CAF_TEST(section with valid key-value pairs) {
+CAF_TEST(section with valid key - value pairs) {
   CAF_CHECK_EQUAL(parse("[foo]"), make_log("key: foo", "{", "}"));
   CAF_CHECK_EQUAL(parse("  [foo]"), make_log("key: foo", "{", "}"));
   CAF_CHECK_EQUAL(parse("  [  foo]  "), make_log("key: foo", "{", "}"));

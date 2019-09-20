@@ -18,9 +18,9 @@
 
 #include <iterator>
 
-#include "caf/none.hpp"
-#include "caf/local_actor.hpp"
 #include "caf/detail/behavior_stack.hpp"
+#include "caf/local_actor.hpp"
+#include "caf/none.hpp"
 
 namespace caf {
 namespace detail {

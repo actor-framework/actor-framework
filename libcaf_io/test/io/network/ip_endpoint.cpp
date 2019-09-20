@@ -45,29 +45,26 @@ public:
 };
 
 struct fixture {
+  template <class T, class... Ts>
+  std::vector<char> serialize(T& x, Ts&... xs) {
+    std::vector<char> buf;
+    binary_serializer bs{&context, buf};
+    bs(x, xs...);
+    return buf;
+  }
 
-template <class T, class... Ts>
-std::vector<char> serialize(T& x, Ts&... xs) {
-  std::vector<char> buf;
-  binary_serializer bs{&context, buf};
-  bs(x, xs...);
-  return buf;
-}
+  template <class T, class... Ts>
+  void deserialize(const std::vector<char>& buf, T& x, Ts&... xs) {
+    binary_deserializer bd{&context, buf};
+    bd(x, xs...);
+  }
 
-template <class T, class... Ts>
-void deserialize(const std::vector<char>& buf, T& x, Ts&... xs) {
-  binary_deserializer bd{&context, buf};
-  bd(x, xs...);
-}
+  fixture() : cfg(), system(cfg), context(&system) {
+  }
 
-fixture() : cfg(), system(cfg), context(&system) {
-
-}
-
-config cfg;
-actor_system system;
-scoped_execution_unit context;
-
+  config cfg;
+  actor_system system;
+  scoped_execution_unit context;
 };
 
 } // namespace

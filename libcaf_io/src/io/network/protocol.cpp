@@ -33,4 +33,3 @@ std::string to_string(const protocol& x) {
 } // namespace network
 } // namespace io
 } // namespace caf
-

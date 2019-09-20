@@ -16,13 +16,13 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
 #include "caf/detail/get_root_uuid.hpp"
+#include "caf/config.hpp"
 
 #ifndef CAF_MACOS // not needed on Mac OS X
 namespace {
 constexpr char uuid_format[] = "FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF";
-} // namespace <anonmyous>
+} // namespace
 #endif // CAF_MACOS
 
 #if defined(CAF_MACOS)
@@ -35,9 +35,8 @@ inline void erase_trailing_newline(std::string& str) {
   }
 }
 
-constexpr const char* s_get_uuid =
-  "/usr/sbin/diskutil info / | "
-  "/usr/bin/awk '$0 ~ /UUID/ { print $3 }'";
+constexpr const char* s_get_uuid = "/usr/sbin/diskutil info / | "
+                                   "/usr/bin/awk '$0 ~ /UUID/ { print $3 }'";
 
 } // namespace
 
@@ -62,28 +61,27 @@ std::string get_root_uuid() {
 
 #elif defined(CAF_LINUX) || defined(CAF_BSD) || defined(CAF_CYGWIN)
 
-#include <vector>
-#include <string>
-#include <fstream>
-#include <sstream>
-#include <iostream>
-#include <iterator>
-#include <algorithm>
-#include <iostream>
+#  include <algorithm>
+#  include <fstream>
+#  include <iostream>
+#  include <iterator>
+#  include <sstream>
+#  include <string>
+#  include <vector>
 
-#include "caf/string_algorithms.hpp"
+#  include "caf/string_algorithms.hpp"
 
-using std::vector;
-using std::string;
 using std::ifstream;
+using std::string;
+using std::vector;
 
 namespace caf {
 namespace detail {
 
 namespace {
 
-struct columns_iterator : std::iterator<std::forward_iterator_tag,
-                                        vector<string>> {
+struct columns_iterator
+  : std::iterator<std::forward_iterator_tag, vector<string>> {
   columns_iterator(ifstream* s = nullptr) : fs(s) {
     // nop
   }
@@ -145,12 +143,12 @@ std::string get_root_uuid() {
 
 #elif defined(CAF_WINDOWS)
 
-#include <string>
-#include <iostream>
-#include <algorithm>
+#  include <algorithm>
+#  include <iostream>
+#  include <string>
 
-#include <windows.h>
-#include <tchar.h>
+#  include <tchar.h>
+#  include <windows.h>
 
 namespace caf {
 namespace detail {
@@ -167,8 +165,8 @@ void mv(std::string& lhs, std::string&& rhs) {
 // if TCHAR is defined as WCHAR, we have to do unicode conversion
 void mv(std::string& lhs, const std::basic_string<WCHAR>& rhs) {
   auto size_needed = WideCharToMultiByte(CP_UTF8, 0, rhs.c_str(),
-                                         static_cast<int>(rhs.size()),
-                                         nullptr, 0, nullptr, nullptr);
+                                         static_cast<int>(rhs.size()), nullptr,
+                                         0, nullptr, nullptr);
   lhs.resize(size_needed);
   WideCharToMultiByte(CP_UTF8, 0, rhs.c_str(), static_cast<int>(rhs.size()),
                       &lhs[0], size_needed, nullptr, nullptr);
@@ -210,12 +208,11 @@ std::string get_root_uuid() {
 } // namespace detail
 } // namespace caf
 
-
 #elif defined(CAF_IOS) || defined(CAF_ANDROID)
 
 // return a randomly-generated UUID on mobile devices
 
-#include <random>
+#  include <random>
 
 namespace caf {
 namespace detail {

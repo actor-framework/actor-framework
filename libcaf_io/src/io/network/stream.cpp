@@ -31,13 +31,13 @@ namespace io {
 namespace network {
 
 stream::stream(default_multiplexer& backend_ref, native_socket sockfd)
-    : event_handler(backend_ref, sockfd),
-      max_consecutive_reads_(
-        get_or(backend().system().config(), "middleman.max-consecutive-reads",
-               defaults::middleman::max_consecutive_reads)),
-      read_threshold_(1),
-      collected_(0),
-      written_(0) {
+  : event_handler(backend_ref, sockfd),
+    max_consecutive_reads_(get_or(backend().system().config(),
+                                  "middleman.max-consecutive-reads",
+                                  defaults::middleman::max_consecutive_reads)),
+    read_threshold_(1),
+    collected_(0),
+    written_(0) {
   configure_read(receive_policy::at_most(1024));
 }
 
@@ -62,7 +62,7 @@ void stream::configure_read(receive_policy::config config) {
 void stream::write(const void* buf, size_t num_bytes) {
   CAF_LOG_TRACE(CAF_ARG(num_bytes));
   auto first = reinterpret_cast<const char*>(buf);
-  auto last  = first + num_bytes;
+  auto last = first + num_bytes;
   wr_offline_buf_.insert(wr_offline_buf_.end(), first, last);
 }
 
@@ -80,9 +80,13 @@ void stream::flush(const manager_ptr& mgr) {
 void stream::removed_from_loop(operation op) {
   CAF_LOG_TRACE(CAF_ARG2("fd", fd_) << CAF_ARG(op));
   switch (op) {
-    case operation::read:  reader_.reset(); break;
-    case operation::write: writer_.reset(); break;
-    case operation::propagate_error: ; // nop
+    case operation::read:
+      reader_.reset();
+      break;
+    case operation::write:
+      writer_.reset();
+      break;
+    case operation::propagate_error:; // nop
   }
 }
 
@@ -159,8 +163,7 @@ bool stream::handle_read_result(rw_state read_result, size_t rb) {
         return false;
       collected_ += rb;
       if (collected_ >= read_threshold_) {
-        auto res = reader_->consume(&backend(), rd_buf_.data(),
-                                    collected_);
+        auto res = reader_->consume(&backend(), rd_buf_.data(), collected_);
         prepare_next_read();
         if (!res) {
           passivate();

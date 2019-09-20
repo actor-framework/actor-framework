@@ -39,13 +39,13 @@ namespace network {
 
 datagram_handler::datagram_handler(default_multiplexer& backend_ref,
                                    native_socket sockfd)
-    : event_handler(backend_ref, sockfd),
-      max_consecutive_reads_(
-        get_or(backend().system().config(), "middleman.max-consecutive-reads",
-               defaults::middleman::max_consecutive_reads)),
-      max_datagram_size_(receive_buffer_size),
-      rd_buf_(receive_buffer_size),
-      send_buffer_size_(0) {
+  : event_handler(backend_ref, sockfd),
+    max_consecutive_reads_(get_or(backend().system().config(),
+                                  "middleman.max-consecutive-reads",
+                                  defaults::middleman::max_consecutive_reads)),
+    max_datagram_size_(receive_buffer_size),
+    rd_buf_(receive_buffer_size),
+    send_buffer_size_(0) {
   allow_udp_connreset(sockfd, false);
   auto es = send_buffer_size(sockfd);
   if (!es)
@@ -74,7 +74,8 @@ void datagram_handler::write(datagram_handle hdl, const void* buf,
   wr_offline_buf_.back().first = hdl;
   auto cbuf = reinterpret_cast<const char*>(buf);
   wr_offline_buf_.back().second.assign(cbuf,
-                                       cbuf + static_cast<ptrdiff_t>(num_bytes));
+                                       cbuf
+                                         + static_cast<ptrdiff_t>(num_bytes));
 }
 
 void datagram_handler::flush(const manager_ptr& mgr) {
@@ -88,7 +89,8 @@ void datagram_handler::flush(const manager_ptr& mgr) {
   }
 }
 
-std::unordered_map<datagram_handle, ip_endpoint>& datagram_handler::endpoints() {
+std::unordered_map<datagram_handle, ip_endpoint>&
+datagram_handler::endpoints() {
   return ep_by_hdl_;
 }
 
@@ -124,9 +126,13 @@ void datagram_handler::remove_endpoint(datagram_handle hdl) {
 
 void datagram_handler::removed_from_loop(operation op) {
   switch (op) {
-    case operation::read: reader_.reset(); break;
-    case operation::write: writer_.reset(); break;
-    case operation::propagate_error: ; // nop
+    case operation::read:
+      reader_.reset();
+      break;
+    case operation::write:
+      writer_.reset();
+      break;
+    case operation::propagate_error:; // nop
   };
 }
 
@@ -184,7 +190,8 @@ bool datagram_handler::handle_read_result(bool read_result) {
   return true;
 }
 
-void datagram_handler::handle_write_result(bool write_result, datagram_handle id,
+void datagram_handler::handle_write_result(bool write_result,
+                                           datagram_handle id,
                                            std::vector<char>& buf, size_t wb) {
   if (!write_result) {
     writer_->io_failure(&backend(), operation::write);

@@ -36,14 +36,12 @@ merged_tuple::cow_ptr merged_tuple::make(message x, message y) {
     else
       mapping.emplace_back(0, i);
   }
-  return cow_ptr{make_counted<merged_tuple>(std::move(data),
-                                            std::move(mapping))};
+  return cow_ptr{
+    make_counted<merged_tuple>(std::move(data), std::move(mapping))};
 }
 
 merged_tuple::merged_tuple(data_type xs, mapping_type ys)
-    : data_(std::move(xs)),
-      type_token_(0xFFFFFFFF),
-      mapping_(std::move(ys)) {
+  : data_(std::move(xs)), type_token_(0xFFFFFFFF), mapping_(std::move(ys)) {
   CAF_ASSERT(!data_.empty());
   CAF_ASSERT(!mapping_.empty());
   // calculate type token

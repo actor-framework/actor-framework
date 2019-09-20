@@ -24,8 +24,7 @@
 
 #include "caf/all.hpp"
 
-#define ERROR_HANDLER                                                          \
-  [&](error& err) { CAF_FAIL(system.render(err)); }
+#define ERROR_HANDLER [&](error& err) { CAF_FAIL(system.render(err)); }
 
 using namespace caf;
 
@@ -36,19 +35,15 @@ using second_stage = typed_actor<replies_to<double, double>::with<double>,
                                  replies_to<double>::with<double>>;
 
 first_stage::behavior_type typed_first_stage() {
-  return [](double x) {
-    return std::make_tuple(x * 2.0, x * 4.0);
+  return {
+    [](double x) { return std::make_tuple(x * 2.0, x * 4.0); },
   };
 }
 
 second_stage::behavior_type typed_second_stage() {
   return {
-    [](double x, double y) {
-      return x * y;
-    },
-    [](double x) {
-      return 23.0 * x;
-    }
+    [](double x, double y) { return x * y; },
+    [](double x) { return 23.0 * x; },
   };
 }
 
@@ -105,14 +100,14 @@ CAF_TEST(kill_second) {
 
 CAF_TEST(untyped_splicing) {
   init_untyped();
-  self->request(first_and_second, infinite, 42.0).receive(
-    [](double x, double y, double z) {
-      CAF_CHECK_EQUAL(x, (42.0 * 2.0));
-      CAF_CHECK_EQUAL(y, (42.0 * 4.0));
-      CAF_CHECK_EQUAL(z, (23.0 * 42.0));
-    },
-    ERROR_HANDLER
-  );
+  self->request(first_and_second, infinite, 42.0)
+    .receive(
+      [](double x, double y, double z) {
+        CAF_CHECK_EQUAL(x, (42.0 * 2.0));
+        CAF_CHECK_EQUAL(y, (42.0 * 4.0));
+        CAF_CHECK_EQUAL(z, (23.0 * 42.0));
+      },
+      ERROR_HANDLER);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

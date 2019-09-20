@@ -72,8 +72,8 @@ CAF_TEST(ticks) {
   auto cycle = detail::gcd(credit_interval.count(),
                            force_batch_interval.count());
   CAF_CHECK_EQUAL(cycle, 50);
-  auto force_batch_frequency =
-    static_cast<size_t>(force_batch_interval.count() / cycle);
+  auto force_batch_frequency = static_cast<size_t>(force_batch_interval.count()
+                                                   / cycle);
   auto credit_frequency = static_cast<size_t>(credit_interval.count() / cycle);
   detail::tick_emitter tctrl{time_point{timespan{100}}};
   tctrl.interval(timespan{cycle});
@@ -149,4 +149,3 @@ CAF_TEST(next_timeout) {
   next = tctrl.next_timeout(now, {5, 7});
   CAF_CHECK_EQUAL(next, start + timespan((2 * 7) * interval));
 }
-

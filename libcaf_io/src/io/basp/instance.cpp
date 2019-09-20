@@ -33,7 +33,7 @@ namespace io {
 namespace basp {
 
 instance::callee::callee(actor_system& sys, proxy_registry::backend& backend)
-    : namespace_(sys, backend) {
+  : namespace_(sys, backend) {
   // nop
 }
 
@@ -42,9 +42,7 @@ instance::callee::~callee() {
 }
 
 instance::instance(abstract_broker* parent, callee& lstnr)
-    : tbl_(parent),
-      this_node_(parent->system().node()),
-      callee_(lstnr) {
+  : tbl_(parent), this_node_(parent->system().node()), callee_(lstnr) {
   CAF_ASSERT(this_node_ != none);
   auto workers = get_or(config(), "middleman.workers",
                         defaults::middleman::workers);
@@ -52,9 +50,8 @@ instance::instance(abstract_broker* parent, callee& lstnr)
     hub_.add_new_worker(queue_, proxies());
 }
 
-connection_state instance::handle(execution_unit* ctx,
-                                  new_data_msg& dm, header& hdr,
-                                  bool is_payload) {
+connection_state instance::handle(execution_unit* ctx, new_data_msg& dm,
+                                  header& hdr, bool is_payload) {
   CAF_LOG_TRACE(CAF_ARG(dm) << CAF_ARG(is_payload));
   // function object providing cleanup code on errors
   auto err = [&]() -> connection_state {
@@ -90,7 +87,7 @@ connection_state instance::handle(execution_unit* ctx,
 
 void instance::handle_heartbeat(execution_unit* ctx) {
   CAF_LOG_TRACE("");
-  for (auto& kvp: tbl_.direct_by_hdl_) {
+  for (auto& kvp : tbl_.direct_by_hdl_) {
     CAF_LOG_TRACE(CAF_ARG(kvp.first) << CAF_ARG(kvp.second));
     write_heartbeat(ctx, callee_.get_buffer(kvp.first));
     callee_.flush(kvp.first);
@@ -116,8 +113,8 @@ void instance::write(execution_unit* ctx, const routing_table::route& r,
 void instance::add_published_actor(uint16_t port,
                                    strong_actor_ptr published_actor,
                                    std::set<std::string> published_interface) {
-  CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(published_actor)
-                << CAF_ARG(published_interface));
+  CAF_LOG_TRACE(CAF_ARG(port)
+                << CAF_ARG(published_actor) << CAF_ARG(published_interface));
   using std::swap;
   auto& entry = published_actors_[port];
   swap(entry.first, published_actor);
@@ -136,8 +133,7 @@ size_t instance::remove_published_actor(uint16_t port,
   return 1;
 }
 
-size_t instance::remove_published_actor(const actor_addr& whom,
-                                        uint16_t port,
+size_t instance::remove_published_actor(const actor_addr& whom, uint16_t port,
                                         removed_published_actor* cb) {
   CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
   size_t result = 0;
@@ -169,23 +165,30 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
                         const std::vector<strong_actor_ptr>& forwarding_stack,
                         const node_id& dest_node, uint64_t dest_actor,
                         uint8_t flags, message_id mid, const message& msg) {
-  CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(dest_node) << CAF_ARG(mid)
-                << CAF_ARG(msg));
+  CAF_LOG_TRACE(CAF_ARG(sender)
+                << CAF_ARG(dest_node) << CAF_ARG(mid) << CAF_ARG(msg));
   CAF_ASSERT(dest_node && this_node_ != dest_node);
   auto path = lookup(dest_node);
   if (!path)
     return false;
   auto& source_node = sender ? sender->node() : this_node_;
   if (dest_node == path->next_hop && source_node == this_node_) {
-    header hdr{message_type::direct_message, flags, 0, mid.integer_value(),
-               sender ? sender->id() : invalid_actor_id, dest_actor};
-    auto writer = make_callback([&](serializer& sink) -> error {
-      return sink(forwarding_stack, msg);
-    });
+    header hdr{message_type::direct_message,
+               flags,
+               0,
+               mid.integer_value(),
+               sender ? sender->id() : invalid_actor_id,
+               dest_actor};
+    auto writer = make_callback(
+      [&](serializer& sink) -> error { return sink(forwarding_stack, msg); });
     write(ctx, callee_.get_buffer(path->hdl), hdr, &writer);
   } else {
-    header hdr{message_type::routed_message, flags, 0, mid.integer_value(),
-               sender ? sender->id() : invalid_actor_id, dest_actor};
+    header hdr{message_type::routed_message,
+               flags,
+               0,
+               mid.integer_value(),
+               sender ? sender->id() : invalid_actor_id,
+               dest_actor};
     auto writer = make_callback([&](serializer& sink) -> error {
       return sink(source_node, dest_node, forwarding_stack, msg);
     });
@@ -195,8 +198,8 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
   return true;
 }
 
-void instance::write(execution_unit* ctx, buffer_type& buf,
-                     header& hdr, payload_writer* pw) {
+void instance::write(execution_unit* ctx, buffer_type& buf, header& hdr,
+                     payload_writer* pw) {
   CAF_LOG_TRACE(CAF_ARG(hdr));
   binary_serializer sink{ctx, buf};
   if (pw != nullptr) {
@@ -235,26 +238,32 @@ void instance::write_server_handshake(execution_unit* ctx, buffer_type& out_buf,
     }
     return sink(this_node_, app_ids, aid, iface);
   });
-  header hdr{message_type::server_handshake, 0, 0, version,
-             invalid_actor_id, invalid_actor_id};
+  header hdr{message_type::server_handshake,
+             0,
+             0,
+             version,
+             invalid_actor_id,
+             invalid_actor_id};
   write(ctx, out_buf, hdr, &writer);
 }
 
 void instance::write_client_handshake(execution_unit* ctx, buffer_type& buf) {
-  auto writer = make_callback([&](serializer& sink) -> error {
-    return sink(this_node_);
-  });
-  header hdr{message_type::client_handshake, 0, 0, 0,
-             invalid_actor_id, invalid_actor_id};
+  auto writer = make_callback(
+    [&](serializer& sink) -> error { return sink(this_node_); });
+  header hdr{message_type::client_handshake,
+             0,
+             0,
+             0,
+             invalid_actor_id,
+             invalid_actor_id};
   write(ctx, buf, hdr, &writer);
 }
 
 void instance::write_monitor_message(execution_unit* ctx, buffer_type& buf,
                                      const node_id& dest_node, actor_id aid) {
   CAF_LOG_TRACE(CAF_ARG(dest_node) << CAF_ARG(aid));
-  auto writer = make_callback([&](serializer& sink) -> error {
-    return sink(this_node_, dest_node);
-  });
+  auto writer = make_callback(
+    [&](serializer& sink) -> error { return sink(this_node_, dest_node); });
   header hdr{message_type::monitor_message, 0, 0, 0, invalid_actor_id, aid};
   write(ctx, buf, hdr, &writer);
 }
@@ -322,8 +331,8 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
       }
       // Close this connection if we already have a direct connection.
       if (tbl_.lookup_direct(source_node)) {
-        CAF_LOG_DEBUG("close redundant direct connection:"
-                      << CAF_ARG(source_node));
+        CAF_LOG_DEBUG(
+          "close redundant direct connection:" << CAF_ARG(source_node));
         callee_.finalize_handshake(source_node, aid, sigs);
         return false;
       }
@@ -354,8 +363,8 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
       }
       // Drop repeated handshakes.
       if (tbl_.lookup_direct(source_node)) {
-        CAF_LOG_DEBUG("received repeated client handshake:"
-                     << CAF_ARG(source_node));
+        CAF_LOG_DEBUG(
+          "received repeated client handshake:" << CAF_ARG(source_node));
         break;
       }
       // Add direct route to this node and remove any indirect entry.

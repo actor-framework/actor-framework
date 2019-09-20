@@ -23,8 +23,8 @@ CAF_PUSH_WARNINGS
 #include <openssl/ssl.h>
 CAF_POP_WARNINGS
 
-#include <vector>
 #include <mutex>
+#include <vector>
 
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_system.hpp"
@@ -33,8 +33,8 @@ CAF_POP_WARNINGS
 #include "caf/raise_error.hpp"
 #include "caf/scoped_actor.hpp"
 
-#include "caf/io/middleman.hpp"
 #include "caf/io/basp_broker.hpp"
+#include "caf/io/middleman.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
 
 #include "caf/openssl/middleman_actor.hpp"
@@ -97,8 +97,10 @@ manager::~manager() {
 
 void manager::start() {
   CAF_LOG_TRACE("");
-  manager_ = make_middleman_actor(
-    system(), system().middleman().named_broker<io::basp_broker>(atom("BASP")));
+  manager_ = make_middleman_actor(system(), system()
+                                              .middleman()
+                                              .named_broker<io::basp_broker>(
+                                                atom("BASP")));
 }
 
 void manager::stop() {

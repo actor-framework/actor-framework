@@ -16,16 +16,16 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
+#define CAF_SUITE io.triggering
 
-#define CAF_SUITE io_triggering
+#include "caf/io/all.hpp"
+
 #include "caf/test/unit_test.hpp"
 
-#include <memory>
 #include <iostream>
+#include <memory>
 
 #include "caf/all.hpp"
-#include "caf/io/all.hpp"
 
 using namespace std;
 using namespace caf;
@@ -44,12 +44,8 @@ behavior client(broker* self, connection_handle hdl) {
   self->configure_read(hdl, receive_policy::at_least(1));
   self->flush(hdl);
   return {
-    [=](const new_data_msg&) {
-      CAF_FAIL("server unexpectedly sent data");
-    },
-    [=](const connection_closed_msg&) {
-      self->quit();
-    }
+    [=](const new_data_msg&) { CAF_FAIL("server unexpectedly sent data"); },
+    [=](const connection_closed_msg&) { self->quit(); },
   };
 }
 
@@ -76,7 +72,7 @@ behavior server1_stage4(stateful_actor<server1_state, broker>* self) {
       // delay new tokens to force MM to remove this broker from its loop
       CAF_MESSAGE("server is done");
       self->quit();
-    }
+    },
   };
 }
 
@@ -98,9 +94,7 @@ behavior server1_stage3(stateful_actor<server1_state, broker>* self) {
       // delay new tokens to force MM to remove this broker from its loop
       self->send(self, ok_atom::value);
     },
-    [=](ok_atom) {
-      self->become(server1_stage4(self));
-    }
+    [=](ok_atom) { self->become(server1_stage4(self)); },
   };
 }
 
@@ -118,7 +112,7 @@ behavior server1_stage2(stateful_actor<server1_state, broker>* self) {
       CAF_REQUIRE_EQUAL(self->state.received, 5u);
       CAF_REQUIRE_NOT_EQUAL(self->state.peer, invalid_connection_handle);
       self->become(server1_stage3(self));
-    }
+    },
   };
 }
 
@@ -130,7 +124,7 @@ behavior server1(stateful_actor<server1_state, broker>* self) {
       self->state.peer = nc.handle;
       self->configure_read(nc.handle, receive_policy::exactly(10));
       self->become(server1_stage2(self));
-    }
+    },
   };
 }
 
@@ -144,14 +138,12 @@ struct server2_state {
 behavior server2_stage4(stateful_actor<server2_state, broker>* self) {
   CAF_MESSAGE("enter server stage 4");
   return {
-    [=](const new_connection_msg&) {
-      self->state.accepted += 1;
-    },
+    [=](const new_connection_msg&) { self->state.accepted += 1; },
     [=](const acceptor_passivated_msg&) {
       CAF_REQUIRE_EQUAL(self->state.accepted, 16u);
       CAF_MESSAGE("server is done");
       self->quit();
-    }
+    },
   };
 }
 
@@ -161,9 +153,7 @@ behavior server2_stage4(stateful_actor<server2_state, broker>* self) {
 behavior server2_stage3(stateful_actor<server2_state, broker>* self) {
   CAF_MESSAGE("enter server stage 3");
   return {
-    [=](const new_connection_msg&) {
-      self->state.accepted += 1;
-    },
+    [=](const new_connection_msg&) { self->state.accepted += 1; },
     [=](const acceptor_passivated_msg& cp) {
       CAF_REQUIRE_EQUAL(self->state.accepted, 11u);
       // delay new tokens to force MM to remove this broker from its loop
@@ -172,7 +162,7 @@ behavior server2_stage3(stateful_actor<server2_state, broker>* self) {
     [=](ok_atom, accept_handle hdl) {
       self->trigger(hdl, 5);
       self->become(server2_stage4(self));
-    }
+    },
   };
 }
 
@@ -181,14 +171,12 @@ behavior server2_stage2(stateful_actor<server2_state, broker>* self) {
   CAF_MESSAGE("enter server stage 2");
   CAF_REQUIRE_EQUAL(self->state.accepted, 1u);
   return {
-    [=](const new_connection_msg&) {
-      self->state.accepted += 1;
-    },
+    [=](const new_connection_msg&) { self->state.accepted += 1; },
     [=](const acceptor_passivated_msg& cp) {
       CAF_REQUIRE_EQUAL(self->state.accepted, 6u);
       self->trigger(cp.handle, 5);
       self->become(server2_stage3(self));
-    }
+    },
   };
 }
 
@@ -199,7 +187,7 @@ behavior server2(stateful_actor<server2_state, broker>* self) {
       self->state.accepted += 1;
       self->trigger(nc.source, 5);
       self->become(server2_stage2(self));
-    }
+    },
   };
 }
 
@@ -253,8 +241,8 @@ CAF_TEST(trigger_acceptor) {
   std::thread child{[&] {
     // 16 clients will succeed to connect
     for (int i = 0; i < 16; ++i) {
-      auto cl = client_system.middleman().spawn_client(client,
-                                                       "localhost", port);
+      auto cl = client_system.middleman().spawn_client(client, "localhost",
+                                                       port);
       CAF_REQUIRE(cl);
     }
   }};

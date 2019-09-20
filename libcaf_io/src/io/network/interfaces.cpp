@@ -20,28 +20,28 @@
 
 #include "caf/config.hpp"
 
+#include <algorithm>
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
-#include <algorithm>
 
 #ifdef CAF_WINDOWS
-# ifndef _WIN32_WINNT
-#   define _WIN32_WINNT 0x0600
-# endif
-# include <iostream>
-# include <winsock2.h>
-# include <ws2tcpip.h>
-# include <iphlpapi.h>
+#  ifndef _WIN32_WINNT
+#    define _WIN32_WINNT 0x0600
+#  endif
+#  include <iostream>
+#  include <iphlpapi.h>
+#  include <winsock2.h>
+#  include <ws2tcpip.h>
 #else
-# include <sys/socket.h>
-# include <netinet/in.h>
-# include <net/if.h>
-# include <unistd.h>
-# include <netdb.h>
-# include <ifaddrs.h>
-# include <sys/ioctl.h>
-# include <arpa/inet.h>
+#  include <arpa/inet.h>
+#  include <ifaddrs.h>
+#  include <net/if.h>
+#  include <netdb.h>
+#  include <netinet/in.h>
+#  include <sys/ioctl.h>
+#  include <sys/socket.h>
+#  include <unistd.h>
 #endif
 
 #include <memory>
@@ -56,9 +56,8 @@ namespace io {
 namespace network {
 
 // {interface_name => {protocol => address}}
-using interfaces_map = std::map<std::string,
-                                std::map<protocol::network,
-                                         std::vector<std::string>>>;
+using interfaces_map = std::map<
+  std::string, std::map<protocol::network, std::vector<std::string>>>;
 
 template <class T>
 void* vptr(T* ptr) {
@@ -71,17 +70,16 @@ void* fetch_in_addr(int family, sockaddr* addr) {
   return vptr(&reinterpret_cast<sockaddr_in6*>(addr)->sin6_addr);
 }
 
-int fetch_addr_str(bool get_ipv4, bool get_ipv6,
-                   char (&buf)[INET6_ADDRSTRLEN],
+int fetch_addr_str(bool get_ipv4, bool get_ipv6, char (&buf)[INET6_ADDRSTRLEN],
                    sockaddr* addr) {
   if (addr == nullptr)
     return AF_UNSPEC;
   auto family = addr->sa_family;
   auto in_addr = fetch_in_addr(family, addr);
   return ((family == AF_INET && get_ipv4) || (family == AF_INET6 && get_ipv6))
-         && inet_ntop(family, in_addr, buf, INET6_ADDRSTRLEN) == buf
-         ? family
-         : AF_UNSPEC;
+             && inet_ntop(family, in_addr, buf, INET6_ADDRSTRLEN) == buf
+           ? family
+           : AF_UNSPEC;
 }
 
 #ifdef CAF_WINDOWS
@@ -100,21 +98,21 @@ void for_each_address(bool get_ipv4, bool get_ipv6, F fun) {
     tmp = reinterpret_cast<IP_ADAPTER_ADDRESSES*>(malloc(tmp_size));
     if (!tmp)
       CAF_RAISE_ERROR("malloc() failed");
-    retval = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX,
-                                  nullptr, tmp, &tmp_size);
+    retval = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, nullptr,
+                                  tmp, &tmp_size);
   } while (retval == ERROR_BUFFER_OVERFLOW && ++try_nr < max_tries);
   std::unique_ptr<IP_ADAPTER_ADDRESSES, decltype(free)*> ifs{tmp, free};
   if (retval != NO_ERROR) {
-    std::cerr << "Call to GetAdaptersAddresses failed with error: "
-              << retval << std::endl;
+    std::cerr << "Call to GetAdaptersAddresses failed with error: " << retval
+              << std::endl;
     if (retval == ERROR_NO_DATA) {
       std::cerr << "No addresses were found for the requested parameters"
                 << std::endl;
     } else {
       void* msgbuf = nullptr;
       if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER
-                        | FORMAT_MESSAGE_FROM_SYSTEM
-                        | FORMAT_MESSAGE_IGNORE_INSERTS,
+                          | FORMAT_MESSAGE_FROM_SYSTEM
+                          | FORMAT_MESSAGE_IGNORE_INSERTS,
                         nullptr, retval,
                         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                         (LPTSTR) &msgbuf, 0, nullptr)) {
@@ -152,8 +150,7 @@ void for_each_address(bool get_ipv4, bool get_ipv6, F fun) {
     auto family = fetch_addr_str(get_ipv4, get_ipv6, buffer, i->ifa_addr);
     if (family != AF_UNSPEC)
       fun(i->ifa_name, family == AF_INET ? protocol::ipv4 : protocol::ipv6,
-          (i->ifa_flags & IFF_LOOPBACK) != 0,
-          buffer);
+          (i->ifa_flags & IFF_LOOPBACK) != 0, buffer);
   }
 }
 
@@ -181,24 +178,24 @@ void interfaces::traverse(consumer f) {
 
 interfaces_map interfaces::list_all(bool include_localhost) {
   interfaces_map result;
-  traverse_impl(
-    {protocol::ipv4, protocol::ipv6},
-    [&](const char* name, protocol::network p, bool lo, const char* addr) {
-      if (include_localhost || !lo)
-        result[name][p].emplace_back(addr);
-    });
+  traverse_impl({protocol::ipv4, protocol::ipv6},
+                [&](const char* name, protocol::network p, bool lo,
+                    const char* addr) {
+                  if (include_localhost || !lo)
+                    result[name][p].emplace_back(addr);
+                });
   return result;
 }
 
 std::map<protocol::network, std::vector<std::string>>
 interfaces::list_addresses(bool include_localhost) {
   std::map<protocol::network, std::vector<std::string>> result;
-  traverse_impl(
-    {protocol::ipv4, protocol::ipv6},
-    [&](const char*, protocol::network p, bool lo, const char* addr) {
-      if (include_localhost || !lo)
-        result[p].emplace_back(addr);
-    });
+  traverse_impl({protocol::ipv4, protocol::ipv6},
+                [&](const char*, protocol::network p, bool lo,
+                    const char* addr) {
+                  if (include_localhost || !lo)
+                    result[p].emplace_back(addr);
+                });
   return result;
 }
 
@@ -266,8 +263,7 @@ interfaces::server_address(uint16_t port, const char* host,
     auto family = fetch_addr_str(true, true, buffer, i->ai_addr);
     if (family != AF_UNSPEC) {
       results.emplace_back(std::string{buffer},
-                           family == AF_INET ? protocol::ipv4
-                                             : protocol::ipv6);
+                           family == AF_INET ? protocol::ipv4 : protocol::ipv6);
     }
   }
   std::stable_sort(std::begin(results), std::end(results),

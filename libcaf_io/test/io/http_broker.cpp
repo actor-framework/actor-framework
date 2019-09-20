@@ -21,14 +21,14 @@
 #define CAF_SUITE io_http_broker
 #include "caf/test/unit_test.hpp"
 
-#include <cassert>
 #include <algorithm>
+#include <cassert>
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
-using std::cout;
 using std::cerr;
+using std::cout;
 using std::endl;
 
 using namespace caf;
@@ -131,17 +131,19 @@ behavior http_worker(http_broker* self, connection_handle hdl) {
       } else if (msg.buf.back() == '\n') {
         self->state.ps = receive_new_line; // we've got a clean cut
       } else {
-        self->state.ps = receive_continued_line; // interrupted in the middle
+        self->state.ps = receive_continued_line; // interrupted in the
+                                                 // middle
       }
       // we don't need to check for completion in any intermediate state
       if (self->state.ps != receive_new_line)
         return;
-      // we have received the HTTP header if we have an empty line at the end
+      // we have received the HTTP header if we have an empty line at the
+      // end
       if (lines.size() > 1 && lines.back().empty()) {
         auto& out = self->wr_buf(hdl);
-        // we only look at the first line in our example and reply with our
-        // OK message if we receive exactly "GET / HTTP/1.1", otherwise
-        // we send a 404 HTTP response
+        // we only look at the first line in our example and reply with
+        // our OK message if we receive exactly "GET / HTTP/1.1",
+        // otherwise we send a 404 HTTP response
         if (lines.front() == http_valid_get)
           out.insert(out.end(), std::begin(http_ok), std::end(http_ok));
         else
@@ -151,9 +153,7 @@ behavior http_worker(http_broker* self, connection_handle hdl) {
         self->quit();
       }
     },
-    [=](const connection_closed_msg&) {
-      self->quit();
-    }
+    [=](const connection_closed_msg&) { self->quit(); },
   };
 }
 
@@ -163,15 +163,16 @@ behavior server(broker* self) {
     [=](const new_connection_msg& ncm) {
       CAF_MESSAGE("fork on new connection");
       self->fork(http_worker, ncm.handle);
-    }
+    },
   };
 }
 
-
 class fixture {
 public:
+  using multiplexer_type = network::test_multiplexer;
+
   fixture() : system(cfg.load<io::middleman, network::test_multiplexer>()) {
-    mpx_ = dynamic_cast<network::test_multiplexer*>(&system.middleman().backend());
+    mpx_ = dynamic_cast<multiplexer_type*>(&system.middleman().backend());
     CAF_REQUIRE(mpx_ != nullptr);
     // spawn the actor-under-test
     aut_ = system.middleman().spawn_broker(server);
@@ -202,10 +203,10 @@ public:
 
     mock_t& expect(const std::string& x) {
       auto& buf = this_->mpx_->output_buffer(this_->connection_);
-      CAF_REQUIRE((buf.size() >= x.size()));
-      CAF_REQUIRE((std::equal(buf.begin(),
-                              buf.begin() + static_cast<ptrdiff_t>(x.size()),
-                              x.begin())));
+      CAF_REQUIRE(buf.size() >= x.size());
+      CAF_REQUIRE(std::equal(buf.begin(),
+                             buf.begin() + static_cast<ptrdiff_t>(x.size()),
+                             x.begin()));
       buf.erase(buf.begin(), buf.begin() + static_cast<ptrdiff_t>(x.size()));
       return *this;
     }

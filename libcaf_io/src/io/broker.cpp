@@ -16,12 +16,12 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/none.hpp"
 #include "caf/config.hpp"
 #include "caf/make_counted.hpp"
+#include "caf/none.hpp"
 
-#include "caf/logger.hpp"
 #include "caf/detail/scope_guard.hpp"
+#include "caf/logger.hpp"
 
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
@@ -37,7 +37,7 @@ void broker::initialize() {
   init_broker();
   auto bhvr = make_behavior();
   CAF_LOG_DEBUG_IF(!bhvr, "make_behavior() did not return a behavior:"
-                          << CAF_ARG2("alive", alive()));
+                            << CAF_ARG2("alive", alive()));
   if (bhvr) {
     // make_behavior() did return a behavior instead of using become()
     CAF_LOG_DEBUG("make_behavior() did return a valid behavior");
@@ -48,7 +48,6 @@ void broker::initialize() {
 broker::broker(actor_config& cfg) : super(cfg) {
   // nop
 }
-
 
 behavior broker::make_behavior() {
   behavior res;

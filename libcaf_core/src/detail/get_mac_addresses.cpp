@@ -23,21 +23,21 @@
 
 #if defined(CAF_MACOS) || defined(CAF_BSD) || defined(CAF_IOS)
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <sys/sysctl.h>
-#include <net/if.h>
-#include <net/if_dl.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <cerrno>
-#include <cstdio>
-#include <cstdlib>
-#include <memory>
-#include <sstream>
+#  include <arpa/inet.h>
+#  include <cerrno>
+#  include <cstdio>
+#  include <cstdlib>
+#  include <memory>
+#  include <net/if.h>
+#  include <net/if_dl.h>
+#  include <netinet/in.h>
+#  include <sstream>
+#  include <sys/ioctl.h>
+#  include <sys/socket.h>
+#  include <sys/sysctl.h>
+#  include <sys/types.h>
 
-#include <iostream>
+#  include <iostream>
 
 namespace caf {
 namespace detail {
@@ -99,22 +99,21 @@ std::vector<iface_info> get_mac_addresses() {
 
 #elif defined(CAF_LINUX) || defined(CAF_ANDROID) || defined(CAF_CYGWIN)
 
-#include <vector>
-#include <string>
-#include <cctype>
-#include <fstream>
-#include <sstream>
-#include <iostream>
-#include <iterator>
-#include <algorithm>
-#include <stdio.h>
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <net/if.h>
-#include <cstring>
-#include <unistd.h>
-#include <iostream>
+#  include <algorithm>
+#  include <cctype>
+#  include <cstring>
+#  include <fstream>
+#  include <iostream>
+#  include <iterator>
+#  include <net/if.h>
+#  include <sstream>
+#  include <stdio.h>
+#  include <string>
+#  include <sys/ioctl.h>
+#  include <sys/socket.h>
+#  include <sys/types.h>
+#  include <unistd.h>
+#  include <vector>
 
 namespace caf {
 namespace detail {
@@ -122,17 +121,15 @@ namespace detail {
 std::vector<iface_info> get_mac_addresses() {
   // get a socket handle
   int socktype = SOCK_DGRAM;
-#ifdef SOCK_CLOEXEC
+#  ifdef SOCK_CLOEXEC
   socktype |= SOCK_CLOEXEC;
-#endif
+#  endif
   int sck = socket(AF_INET, socktype, 0);
   if (sck < 0) {
     perror("socket");
     return {};
   }
-  auto g = make_scope_guard([&] {
-    close(sck);
-  });
+  auto g = make_scope_guard([&] { close(sck); });
   // query available interfaces
   char buf[1024] = {0};
   ifconf ifc;
@@ -143,9 +140,7 @@ std::vector<iface_info> get_mac_addresses() {
     return {};
   }
   std::vector<iface_info> result;
-  auto ctoi = [](char c) -> unsigned {
-    return static_cast<unsigned char>(c);
-  };
+  auto ctoi = [](char c) -> unsigned { return static_cast<unsigned char>(c); };
   // iterate through interfaces
   auto ifr = ifc.ifc_req;
   auto num_ifaces = static_cast<size_t>(ifc.ifc_len) / sizeof(ifreq);
@@ -180,22 +175,22 @@ std::vector<iface_info> get_mac_addresses() {
 
 // windows
 
-#include <ws2tcpip.h>
-#include <winsock2.h>
-#include <iphlpapi.h>
+#  include <iphlpapi.h>
+#  include <winsock2.h>
+#  include <ws2tcpip.h>
 
-#include <memory>
-#include <vector>
-#include <string>
-#include <cctype>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <fstream>
-#include <sstream>
-#include <iostream>
-#include <iterator>
-#include <algorithm>
+#  include <algorithm>
+#  include <cctype>
+#  include <cstdio>
+#  include <cstdlib>
+#  include <cstring>
+#  include <fstream>
+#  include <iostream>
+#  include <iterator>
+#  include <memory>
+#  include <sstream>
+#  include <string>
+#  include <vector>
 
 namespace {
 
@@ -230,7 +225,7 @@ std::vector<iface_info> get_mac_addresses() {
   // break condition
   size_t iterations = 0;
   do {
-    addresses.reset((IP_ADAPTER_ADDRESSES*)malloc(addresses_len));
+    addresses.reset((IP_ADAPTER_ADDRESSES*) malloc(addresses_len));
     if (!addresses) {
       perror("Memory allocation failed for IP_ADAPTER_ADDRESSES struct");
       exit(1);

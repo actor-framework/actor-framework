@@ -21,9 +21,9 @@
 #include "caf/config.hpp"
 
 #if defined(CAF_LINUX) || defined(CAF_MACOS)
-#include <unistd.h>
-#include <cxxabi.h>
-#include <sys/types.h>
+#  include <cxxabi.h>
+#  include <sys/types.h>
+#  include <unistd.h>
 #endif
 
 #include "caf/string_algorithms.hpp"
@@ -32,7 +32,7 @@ namespace caf {
 namespace detail {
 
 void prettify_type_name(std::string& class_name) {
-  //replace_all(class_name, " ", "");
+  // replace_all(class_name, " ", "");
   replace_all(class_name, "::", ".");
   replace_all(class_name, "(anonymous namespace)", "ANON");
   replace_all(class_name, ".__1.", "."); // gets rid of weird Clang-lib names
@@ -58,15 +58,15 @@ void prettify_type_name(std::string& class_name) {
 }
 
 void prettify_type_name(std::string& class_name, const char* c_class_name) {
-# if defined(CAF_LINUX) || defined(CAF_MACOS)
+#if defined(CAF_LINUX) || defined(CAF_MACOS)
   int stat = 0;
   std::unique_ptr<char, decltype(free)*> real_class_name{nullptr, free};
   auto tmp = abi::__cxa_demangle(c_class_name, nullptr, nullptr, &stat);
   real_class_name.reset(tmp);
   class_name = stat == 0 ? real_class_name.get() : c_class_name;
-# else
+#else
   class_name = c_class_name;
-# endif
+#endif
   prettify_type_name(class_name);
 }
 

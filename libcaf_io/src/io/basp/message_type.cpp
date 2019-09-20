@@ -27,13 +27,8 @@ namespace basp {
 namespace {
 
 const char* message_type_strings[] = {
-  "server_handshake",
-  "client_handshake",
-  "direct_message",
-  "routed_message",
-  "proxy_creation",
-  "proxy_destruction",
-  "heartbeat"
+  "server_handshake", "client_handshake",  "direct_message", "routed_message",
+  "proxy_creation",   "proxy_destruction", "heartbeat",
 };
 
 } // namespace

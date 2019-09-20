@@ -20,7 +20,7 @@
 
 #include "caf/config.hpp"
 
- #ifdef CAF_WINDOWS
+#ifdef CAF_WINDOWS
 #  include <windows.h>
 #else
 #  include <sys/types.h>
@@ -31,11 +31,11 @@ namespace caf {
 namespace detail {
 
 unsigned get_process_id() {
-# ifdef CAF_WINDOWS
+#ifdef CAF_WINDOWS
   return GetCurrentProcessId();
-# else
+#else
   return static_cast<unsigned>(getpid());
-# endif
+#endif
 }
 
 } // namespace detail

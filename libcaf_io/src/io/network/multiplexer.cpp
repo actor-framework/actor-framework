@@ -24,8 +24,7 @@ namespace io {
 namespace network {
 
 multiplexer::multiplexer(actor_system* sys)
-    : execution_unit(sys),
-      tid_(std::this_thread::get_id()) {
+  : execution_unit(sys), tid_(std::this_thread::get_id()) {
   // nop
 }
 

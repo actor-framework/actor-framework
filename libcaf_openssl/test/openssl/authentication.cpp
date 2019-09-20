@@ -62,46 +62,42 @@ public:
   }
 
   static std::string data_dir() {
-     std::string path{::caf::test::engine::path()};
-     path = path.substr(0, path.find_last_of("/"));
-     // TODO: https://github.com/actor-framework/actor-framework/issues/555
-     path += "/../../libcaf_openssl/test";
-     char rpath[PATH_MAX];
+    std::string path{::caf::test::engine::path()};
+    path = path.substr(0, path.find_last_of("/"));
+    // TODO: https://github.com/actor-framework/actor-framework/issues/555
+    path += "/../../libcaf_openssl/test";
+    char rpath[PATH_MAX];
 #ifndef CAF_WINDOWS
-     auto rp = realpath(path.c_str(), rpath);
+    auto rp = realpath(path.c_str(), rpath);
 #else
-     auto rp = GetFullPathName(path.c_str(), PATH_MAX, rpath, nullptr);
+    auto rp = GetFullPathName(path.c_str(), PATH_MAX, rpath, nullptr);
 #endif
-     std::string result;
-     if (rp)
-       result = rpath;
-     return result;
+    std::string result;
+    if (rp)
+      result = rpath;
+    return result;
   }
 };
 
 behavior make_pong_behavior() {
-  return {
-    [](int val) -> int {
-      ++val;
-      CAF_MESSAGE("pong " << val);
-      return val;
-    }
-  };
+  return {[](int val) -> int {
+    ++val;
+    CAF_MESSAGE("pong " << val);
+    return val;
+  }};
 }
 
 behavior make_ping_behavior(event_based_actor* self, const actor& pong) {
   CAF_MESSAGE("ping " << 0);
   self->send(pong, 0);
-  return {
-    [=](int val) -> int {
-      CAF_MESSAGE("ping " << val);
-      if (val >= 3) {
-        CAF_MESSAGE("terminate ping");
-        self->quit();
-      }
-      return val;
+  return {[=](int val) -> int {
+    CAF_MESSAGE("ping " << val);
+    if (val >= 3) {
+      CAF_MESSAGE("terminate ping");
+      self->quit();
     }
-  };
+    return val;
+  }};
 }
 
 struct fixture {
@@ -110,8 +106,12 @@ struct fixture {
   config server_side_config;
   config client_side_config;
   bool initialized;
-  union { actor_system server_side; };
-  union { actor_system client_side; };
+  union {
+    actor_system server_side;
+  };
+  union {
+    actor_system client_side;
+  };
   sched_t* ssched;
   sched_t* csched;
 
@@ -132,15 +132,14 @@ struct fixture {
     server_side_config.openssl_passphrase = "12345";
     // check whether all files exist before setting config parameters
     std::string dummy;
-    std::pair<const char*, std::string*> cfg[] {
-      {"ca.pem", &server_side_config.openssl_cafile},
-      {"cert.1.pem", &server_side_config.openssl_certificate},
-      {"key.1.enc.pem", &server_side_config.openssl_key},
-      {"ca.pem", skip_client_side_ca ? &dummy
-                                     : &client_side_config.openssl_cafile},
-      {"cert.2.pem", &client_side_config.openssl_certificate},
-      {"key.2.pem", &client_side_config.openssl_key}
-    };
+    std::pair<const char*, std::string*>
+      cfg[]{{"ca.pem", &server_side_config.openssl_cafile},
+            {"cert.1.pem", &server_side_config.openssl_certificate},
+            {"key.1.enc.pem", &server_side_config.openssl_key},
+            {"ca.pem",
+             skip_client_side_ca ? &dummy : &client_side_config.openssl_cafile},
+            {"cert.2.pem", &client_side_config.openssl_certificate},
+            {"key.2.pem", &client_side_config.openssl_key}};
     // return if any file is unreadable or non-existend
     for (auto& x : cfg) {
       auto path = cd + x.first;
@@ -195,8 +194,8 @@ struct fixture {
 
 CAF_TEST_FIXTURE_SCOPE(authentication, fixture)
 
-using openssl::remote_actor;
 using openssl::publish;
+using openssl::remote_actor;
 
 CAF_TEST(authentication_success) {
   if (!init(false))

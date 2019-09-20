@@ -59,7 +59,7 @@ struct mailbox_policy {
 
 using mailbox_type = intrusive::fifo_inbox<mailbox_policy>;
 
-struct fixture{};
+struct fixture {};
 
 struct consumer {
   std::vector<int> ints;
@@ -75,7 +75,7 @@ struct consumer {
 
   template <class Key, class Queue, class... Ts>
   intrusive::task_result operator()(const Key&, const Queue&, const Ts&...) {
-    CAF_FAIL("unexepected message type");// << typeid(Ts).name());
+    CAF_FAIL("unexepected message type"); // << typeid(Ts).name());
     return intrusive::task_result::resume;
   }
 };

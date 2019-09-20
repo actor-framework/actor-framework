@@ -23,10 +23,10 @@
 #define CAF_SUITE openssl_dynamic_remote_actor
 #include "caf/test/dsl.hpp"
 
-#include <vector>
+#include <algorithm>
 #include <sstream>
 #include <utility>
-#include <algorithm>
+#include <vector>
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
@@ -44,8 +44,7 @@ public:
     load<io::middleman>();
     load<openssl::manager>();
     add_message_type<std::vector<int>>("std::vector<int>");
-    actor_system_config::parse(test::engine::argc(),
-                               test::engine::argv());
+    actor_system_config::parse(test::engine::argc(), test::engine::argv());
     // Setting the "max consecutive reads" to 1 is highly likely to cause
     // OpenSSL to buffer data internally and report "pending" data after a read
     // operation. This will trigger `must_read_more` in the SSL read policy
@@ -72,7 +71,7 @@ behavior make_pong_behavior() {
       ++val;
       CAF_MESSAGE("pong with " << val);
       return val;
-    }
+    },
   };
 }
 
@@ -83,14 +82,13 @@ behavior make_ping_behavior(event_based_actor* self, const actor& pong) {
     [=](int val) -> int {
       if (val == 3) {
         CAF_MESSAGE("ping with exit");
-        self->send_exit(self->current_sender(),
-                        exit_reason::user_shutdown);
+        self->send_exit(self->current_sender(), exit_reason::user_shutdown);
         CAF_MESSAGE("ping quits");
         self->quit();
       }
       CAF_MESSAGE("ping with " << val);
       return val;
-    }
+    },
   };
 }
 
@@ -109,11 +107,12 @@ behavior make_sort_behavior() {
       std::sort(vec.begin(), vec.end());
       CAF_MESSAGE("sorter sent: " << to_string(vec));
       return std::move(vec);
-    }
+    },
   };
 }
 
-behavior make_sort_requester_behavior(event_based_actor* self, const actor& sorter) {
+behavior make_sort_requester_behavior(event_based_actor* self,
+                                      const actor& sorter) {
   self->send(sorter, std::vector<int>{5, 4, 3, 2, 1});
   return {
     [=](const std::vector<int>& vec) {
@@ -122,7 +121,7 @@ behavior make_sort_requester_behavior(event_based_actor* self, const actor& sort
         CAF_CHECK_EQUAL(static_cast<int>(i), vec[i - 1]);
       self->send_exit(sorter, exit_reason::user_shutdown);
       self->quit();
-    }
+    },
   };
 }
 
@@ -131,7 +130,7 @@ behavior fragile_mirror(event_based_actor* self) {
     [=](int i) {
       self->quit(exit_reason::user_shutdown);
       return i;
-    }
+    },
   };
 }
 
@@ -140,9 +139,7 @@ behavior linking_actor(event_based_actor* self, const actor& buddy) {
   self->link_to(buddy);
   self->send(buddy, 42);
   return {
-    [](int i) {
-      CAF_CHECK_EQUAL(i, 42);
-    }
+    [](int i) { CAF_CHECK_EQUAL(i, 42); },
   };
 }
 
@@ -150,8 +147,8 @@ behavior linking_actor(event_based_actor* self, const actor& buddy) {
 
 CAF_TEST_FIXTURE_SCOPE(dynamic_remote_actor_tests, fixture)
 
-using openssl::remote_actor;
 using openssl::publish;
+using openssl::remote_actor;
 
 CAF_TEST_DISABLED(identity_semantics) {
   // server side
@@ -171,8 +168,8 @@ CAF_TEST_DISABLED(identity_semantics) {
 
 CAF_TEST_DISABLED(ping_pong) {
   // server side
-  auto port = unbox(publish(server_side.spawn(make_pong_behavior),
-                            0, local_host));
+  auto port = unbox(
+    publish(server_side.spawn(make_pong_behavior), 0, local_host));
   // client side
   auto pong = unbox(remote_actor(client_side, local_host, port));
   client_side.spawn(make_ping_behavior, pong);
@@ -180,8 +177,8 @@ CAF_TEST_DISABLED(ping_pong) {
 
 CAF_TEST_DISABLED(custom_message_type) {
   // server side
-  auto port = unbox(publish(server_side.spawn(make_sort_behavior),
-                            0, local_host));
+  auto port = unbox(
+    publish(server_side.spawn(make_sort_behavior), 0, local_host));
   // client side
   auto sorter = unbox(remote_actor(client_side, local_host, port));
   client_side.spawn(make_sort_requester_behavior, sorter);

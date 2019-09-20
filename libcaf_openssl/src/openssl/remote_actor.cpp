@@ -18,10 +18,10 @@
 
 #include "caf/openssl/remote_actor.hpp"
 
-#include "caf/sec.hpp"
 #include "caf/atom.hpp"
 #include "caf/expected.hpp"
 #include "caf/function_view.hpp"
+#include "caf/sec.hpp"
 
 #include "caf/openssl/manager.hpp"
 
@@ -54,4 +54,3 @@ expected<strong_actor_ptr> remote_actor(actor_system& sys,
 
 } // namespace openssl
 } // namespace caf
-

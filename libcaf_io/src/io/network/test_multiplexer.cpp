@@ -36,44 +36,39 @@ constexpr size_t receive_buffer_size = std::numeric_limits<uint16_t>::max();
 
 test_multiplexer::scribe_data::scribe_data(shared_buffer_type input,
                                            shared_buffer_type output)
-    : vn_buf_ptr(std::move(input)),
-      wr_buf_ptr(std::move(output)),
-      vn_buf(*vn_buf_ptr),
-      wr_buf(*wr_buf_ptr),
-      stopped_reading(false),
-      passive_mode(false),
-      ack_writes(false) {
+  : vn_buf_ptr(std::move(input)),
+    wr_buf_ptr(std::move(output)),
+    vn_buf(*vn_buf_ptr),
+    wr_buf(*wr_buf_ptr),
+    stopped_reading(false),
+    passive_mode(false),
+    ack_writes(false) {
   // nop
 }
 
 test_multiplexer::doorman_data::doorman_data()
-    : port(0),
-      stopped_reading(false),
-      passive_mode(false) {
+  : port(0), stopped_reading(false), passive_mode(false) {
   // nop
 }
 
-test_multiplexer::datagram_data::
-  datagram_data(shared_job_queue_type input,
-                        shared_job_queue_type output)
-    : vn_buf_ptr(std::move(input)),
-      wr_buf_ptr(std::move(output)),
-      vn_buf(*vn_buf_ptr),
-      wr_buf(*wr_buf_ptr),
-      rd_buf(datagram_handle::from_int(0), receive_buffer_size),
-      stopped_reading(false),
-      passive_mode(false),
-      ack_writes(false),
-      port(0),
-      local_port(0),
-      datagram_size(receive_buffer_size) {
+test_multiplexer::datagram_data::datagram_data(shared_job_queue_type input,
+                                               shared_job_queue_type output)
+  : vn_buf_ptr(std::move(input)),
+    wr_buf_ptr(std::move(output)),
+    vn_buf(*vn_buf_ptr),
+    wr_buf(*wr_buf_ptr),
+    rd_buf(datagram_handle::from_int(0), receive_buffer_size),
+    stopped_reading(false),
+    passive_mode(false),
+    ack_writes(false),
+    port(0),
+    local_port(0),
+    datagram_size(receive_buffer_size) {
   // nop
 }
 
 test_multiplexer::test_multiplexer(actor_system* sys)
-    : multiplexer(sys),
-      inline_runnables_(0),
-      servant_ids_(0) {
+  : multiplexer(sys), inline_runnables_(0), servant_ids_(0) {
   CAF_ASSERT(sys != nullptr);
 }
 
@@ -126,6 +121,7 @@ scribe_ptr test_multiplexer::new_scribe(connection_handle hdl) {
     void remove_from_loop() override {
       mpx_->passive_mode(hdl()) = true;
     }
+
   private:
     test_multiplexer* mpx_;
   };
@@ -203,6 +199,7 @@ doorman_ptr test_multiplexer::new_doorman(accept_handle hdl, uint16_t port) {
     void remove_from_loop() override {
       mpx_->passive_mode(hdl()) = true;
     }
+
   private:
     test_multiplexer* mpx_;
   };
@@ -251,15 +248,17 @@ expected<doorman_ptr> test_multiplexer::new_tcp_doorman(uint16_t desired_port,
 
 datagram_servant_ptr test_multiplexer::new_datagram_servant(native_socket) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
-  CAF_CRITICAL("test_multiplexer::new_datagram_servant called with native socket");
+  CAF_CRITICAL(
+    "test_multiplexer::new_datagram_servant called with native socket");
 }
 
 datagram_servant_ptr
 test_multiplexer::new_datagram_servant_for_endpoint(native_socket,
                                                     const ip_endpoint&) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
-  CAF_CRITICAL("test_multiplexer::new_datagram_servant_for_endpoint called with "
-               "native socket");
+  CAF_CRITICAL(
+    "test_multiplexer::new_datagram_servant_for_endpoint called with "
+    "native socket");
 }
 
 expected<datagram_servant_ptr>
@@ -289,8 +288,8 @@ test_multiplexer::new_remote_udp_endpoint(const std::string& host,
 }
 
 expected<datagram_servant_ptr>
-test_multiplexer::new_local_udp_endpoint(uint16_t desired_port,
-                                         const char*, bool) {
+test_multiplexer::new_local_udp_endpoint(uint16_t desired_port, const char*,
+                                         bool) {
   CAF_LOG_TRACE(CAF_ARG(desired_port));
   datagram_handle hdl;
   uint16_t port = 0;
@@ -327,7 +326,7 @@ datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle hdl,
   class impl : public datagram_servant {
   public:
     impl(datagram_handle dh, test_multiplexer* mpx)
-        : datagram_servant(dh), mpx_(mpx) {
+      : datagram_servant(dh), mpx_(mpx) {
       // nop
     }
     bool new_endpoint(network::receive_buffer& buf) override {
@@ -355,8 +354,7 @@ datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle hdl,
       buf.first = dh;
       return buf.second;
     }
-    void enqueue_datagram(datagram_handle dh,
-                          std::vector<char> buf) override {
+    void enqueue_datagram(datagram_handle dh, std::vector<char> buf) override {
       auto& q = mpx_->output_queue(dh);
       q.emplace_back(dh, std::move(buf));
     }
@@ -398,7 +396,8 @@ datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle hdl,
       mpx_->passive_mode(hdl()) = true;
     }
     void add_endpoint(const ip_endpoint&, datagram_handle) override {
-      CAF_CRITICAL("datagram_servant impl::add_endpoint called with ip_endpoint");
+      CAF_CRITICAL(
+        "datagram_servant impl::add_endpoint called with ip_endpoint");
     }
     void remove_endpoint(datagram_handle dh) override {
       auto data = mpx_->data_for_hdl(hdl());
@@ -417,6 +416,7 @@ datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle hdl,
       data->servants.clear();
       data->servants.emplace(hdl());
     }
+
   private:
     test_multiplexer* mpx_;
   };
@@ -441,7 +441,6 @@ datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle,
 int64_t test_multiplexer::next_endpoint_id() {
   return servant_ids_++;
 }
-
 
 bool test_multiplexer::is_known_port(uint16_t x) const {
   auto pred1 = [&](const doorman_data_map::value_type& y) {
@@ -471,8 +470,9 @@ bool test_multiplexer::is_known_handle(datagram_handle x) const {
     return x == y.second;
   };
   return datagram_data_.count(x) > 0
-    || std::any_of(local_endpoints_.begin(), local_endpoints_.end(), pred1)
-    || std::any_of(remote_endpoints_.begin(), remote_endpoints_.end(), pred2);
+         || std::any_of(local_endpoints_.begin(), local_endpoints_.end(), pred1)
+         || std::any_of(remote_endpoints_.begin(), remote_endpoints_.end(),
+                        pred2);
 }
 
 auto test_multiplexer::make_supervisor() -> supervisor_ptr {
@@ -669,7 +669,7 @@ void test_multiplexer::prepare_connection(accept_handle src,
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_ASSERT(this != &peer);
   CAF_LOG_TRACE(CAF_ARG(src) << CAF_ARG(hdl) << CAF_ARG(host) << CAF_ARG(port)
-                << CAF_ARG(peer_hdl));
+                             << CAF_ARG(peer_hdl));
   auto input = std::make_shared<buffer_type>();
   auto output = std::make_shared<buffer_type>();
   CAF_LOG_DEBUG("insert scribe data for" << CAF_ARG(hdl));
@@ -681,8 +681,9 @@ void test_multiplexer::prepare_connection(accept_handle src,
   if (!res2.second)
     CAF_RAISE_ERROR("prepare_connection: peer handle already in use");
   CAF_LOG_INFO("acceptor" << src << "has connection" << hdl
-               << "ready for incoming connect from" << host << ":"
-               << port << "from peer with connection handle" << peer_hdl);
+                          << "ready for incoming connect from" << host << ":"
+                          << port << "from peer with connection handle"
+                          << peer_hdl);
   if (doormen_.count(port) == 0)
     provide_acceptor(port, src);
   add_pending_connect(src, hdl);
@@ -711,8 +712,7 @@ bool test_multiplexer::has_pending_scribe(std::string x, uint16_t y) {
   return scribes_.count(std::make_pair(std::move(x), y)) > 0;
 }
 
-bool test_multiplexer::has_pending_remote_endpoint(std::string x,
-                                                   uint16_t y) {
+bool test_multiplexer::has_pending_remote_endpoint(std::string x, uint16_t y) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   guard_type guard{mx_};
   return remote_endpoints_.count(std::make_pair(std::move(x), y)) > 0;
@@ -894,7 +894,8 @@ bool test_multiplexer::read_data(datagram_handle hdl) {
     return false;
   auto ditr = datagram_data_.find(hdl);
   if (ditr == datagram_data_.end() || ditr->second->ptr->parent() == nullptr
-      || !ditr->second->ptr->parent()->getf(abstract_actor::is_initialized_flag))
+      || !ditr->second->ptr->parent()->getf(
+        abstract_actor::is_initialized_flag))
     return false;
   auto& data = ditr->second;
   if (data->vn_buf.back().second.empty())
@@ -1032,8 +1033,7 @@ void test_multiplexer::exec(resumable_ptr& ptr) {
     case resumable::awaiting_message:
       intrusive_ptr_release(ptr.get());
       break;
-    default:
-      ; // ignored
+    default:; // ignored
   }
 }
 

@@ -29,20 +29,23 @@ namespace decorator {
 
 sequencer::sequencer(strong_actor_ptr f, strong_actor_ptr g,
                      message_types_set msg_types)
-    : monitorable_actor(actor_config{}.add_flag(is_actor_dot_decorator_flag)),
-      f_(std::move(f)),
-      g_(std::move(g)),
-      msg_types_(std::move(msg_types)) {
+  : monitorable_actor(actor_config{}.add_flag(is_actor_dot_decorator_flag)),
+    f_(std::move(f)),
+    g_(std::move(g)),
+    msg_types_(std::move(msg_types)) {
   CAF_ASSERT(f_);
   CAF_ASSERT(g_);
   // composed actor has dependency on constituent actors by default;
   // if either constituent actor is already dead upon establishing
   // the dependency, the actor is spawned dead
-  f_->get()->attach(default_attachable::make_monitor(actor_cast<actor_addr>(f_),
-                                                     address()));
-  if (g_ != f_)
-    g_->get()->attach(default_attachable::make_monitor(actor_cast<actor_addr>(g_),
-                                                       address()));
+  auto monitor1 = default_attachable::make_monitor(actor_cast<actor_addr>(f_),
+                                                   address());
+  f_->get()->attach(std::move(monitor1));
+  if (g_ != f_) {
+    auto monitor2 = default_attachable::make_monitor(actor_cast<actor_addr>(g_),
+                                                     address());
+    g_->get()->attach(std::move(monitor2));
+  }
 }
 
 void sequencer::enqueue(mailbox_element_ptr what, execution_unit* context) {

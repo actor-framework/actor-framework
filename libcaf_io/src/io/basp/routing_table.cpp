@@ -24,8 +24,7 @@ namespace caf {
 namespace io {
 namespace basp {
 
-routing_table::routing_table(abstract_broker* parent)
-  : parent_(parent) {
+routing_table::routing_table(abstract_broker* parent) : parent_(parent) {
   // nop
 }
 

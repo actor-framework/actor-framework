@@ -33,9 +33,7 @@ namespace io {
 namespace network {
 
 receive_buffer::receive_buffer() noexcept
-    : buffer_(nullptr),
-      capacity_(0),
-      size_(0) {
+  : buffer_(nullptr), capacity_(0), size_(0) {
   // nop
 }
 
@@ -44,12 +42,12 @@ receive_buffer::receive_buffer(size_type count) : receive_buffer() {
 }
 
 receive_buffer::receive_buffer(receive_buffer&& other) noexcept
-    : receive_buffer() {
+  : receive_buffer() {
   swap(other);
 }
 
 receive_buffer::receive_buffer(const receive_buffer& other)
-    : receive_buffer(other.size()) {
+  : receive_buffer(other.size()) {
   std::copy(other.cbegin(), other.cend(), buffer_.get());
 }
 
@@ -72,7 +70,7 @@ void receive_buffer::resize(size_type new_size) {
 
 void receive_buffer::reserve(size_type new_size) {
   if (new_size > capacity_)
-    increase_by(new_size  - capacity_);
+    increase_by(new_size - capacity_);
 }
 
 void receive_buffer::shrink_to_fit() {
@@ -126,7 +124,8 @@ void receive_buffer::shrink_by(size_t bytes) {
   capacity_ = new_size;
 }
 
-receive_buffer::iterator receive_buffer::insert(iterator pos, value_type value) {
+receive_buffer::iterator receive_buffer::insert(iterator pos,
+                                                value_type value) {
   if (size_ == capacity_) {
     auto dist = (pos == nullptr) ? 0 : std::distance(begin(), pos);
     increase_by(std::max(capacity_, min_size));
@@ -138,6 +137,6 @@ receive_buffer::iterator receive_buffer::insert(iterator pos, value_type value) 
   return pos;
 }
 
-} // namepsace network
+} // namespace network
 } // namespace io
 } // namespace caf

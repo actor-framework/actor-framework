@@ -18,14 +18,14 @@
 
 #include "caf/scheduler/abstract_coordinator.hpp"
 
-#include <ios>
-#include <thread>
 #include <atomic>
 #include <chrono>
-#include <fstream>
-#include <iostream>
-#include <unordered_map>
 #include <condition_variable>
+#include <fstream>
+#include <ios>
+#include <iostream>
+#include <thread>
+#include <unordered_map>
 
 #include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"
@@ -51,7 +51,7 @@ namespace scheduler {
 
 namespace {
 
-using string_sink = std::function<void (std::string&&)>;
+using string_sink = std::function<void(std::string&&)>;
 
 // the first value is the use count, the last ostream_handle that
 // decrements it to 0 removes the ostream pointer from the map
@@ -127,7 +127,7 @@ string_sink make_sink(actor_system& sys, const std::string& fn, int flags) {
                       : std::ios_base::out);
   if (fs->is_open())
     return [fs](std::string&& out) { *fs << out; };
-std::cerr << "cannot open file: " << fn << std::endl;
+  std::cerr << "cannot open file: " << fn << std::endl;
   return nullptr;
 }
 
@@ -197,9 +197,7 @@ public:
           flush(d, false);
         }
       },
-      [&](flush_atom, actor_id aid) {
-        flush(get_data(aid, false), true);
-      },
+      [&](flush_atom, actor_id aid) { flush(get_data(aid, false), true); },
       [&](delete_atom, actor_id aid) {
         auto data_ptr = get_data(aid, false);
         if (data_ptr != nullptr) {
@@ -218,8 +216,8 @@ public:
       [&](exit_msg& em) {
         fail_state(std::move(em.reason));
         done = true;
-      }
-    ).until([&] { return done; });
+      })
+      .until([&] { return done; });
   }
 
   const char* name() const override {
@@ -271,10 +269,7 @@ void abstract_coordinator::stop_actors() {
 }
 
 abstract_coordinator::abstract_coordinator(actor_system& sys)
-    : next_worker_(0),
-      max_throughput_(0),
-      num_workers_(0),
-      system_(sys) {
+  : next_worker_(0), max_throughput_(0), num_workers_(0), system_(sys) {
   // nop
 }
 

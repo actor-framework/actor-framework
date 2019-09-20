@@ -75,4 +75,3 @@ void datagram_servant::datagram_sent(execution_unit* ctx, datagram_handle hdl,
 
 } // namespace io
 } // namespace caf
-

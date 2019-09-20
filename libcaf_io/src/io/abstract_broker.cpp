@@ -16,11 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/none.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/config.hpp"
 #include "caf/logger.hpp"
-#include "caf/actor_system.hpp"
 #include "caf/make_counted.hpp"
+#include "caf/none.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
 #include "caf/io/broker.hpp"
@@ -34,8 +34,8 @@
 namespace caf {
 namespace io {
 
-void abstract_broker::enqueue(strong_actor_ptr src, message_id mid,
-                              message msg, execution_unit*) {
+void abstract_broker::enqueue(strong_actor_ptr src, message_id mid, message msg,
+                              execution_unit*) {
   enqueue(make_mailbox_element(std::move(src), mid, {}, std::move(msg)),
           &backend());
 }
@@ -137,8 +137,7 @@ void abstract_broker::enqueue_datagram(datagram_handle hdl,
   x->enqueue_datagram(hdl, std::move(buf));
 }
 
-void abstract_broker::write(datagram_handle hdl, size_t bs,
-                            const void* buf) {
+void abstract_broker::write(datagram_handle hdl, size_t bs, const void* buf) {
   auto& out = wr_buf(hdl);
   auto first = reinterpret_cast<const char*>(buf);
   auto last = first + bs;
@@ -225,7 +224,8 @@ void abstract_broker::add_hdl_for_datagram_servant(datagram_servant_ptr ptr,
   get_map(hdl).emplace(hdl, std::move(ptr));
 }
 
-datagram_handle abstract_broker::add_datagram_servant(network::native_socket fd) {
+datagram_handle
+abstract_broker::add_datagram_servant(network::native_socket fd) {
   CAF_LOG_TRACE(CAF_ARG(fd));
   auto ptr = backend().new_datagram_servant(fd);
   auto hdl = ptr->hdl();
@@ -233,9 +233,8 @@ datagram_handle abstract_broker::add_datagram_servant(network::native_socket fd)
   return hdl;
 }
 
-datagram_handle
-abstract_broker::add_datagram_servant_for_endpoint(network::native_socket fd,
-                                                   const network::ip_endpoint& ep) {
+datagram_handle abstract_broker::add_datagram_servant_for_endpoint(
+  network::native_socket fd, const network::ip_endpoint& ep) {
   CAF_LOG_TRACE(CAF_ARG(fd));
   auto ptr = backend().new_datagram_servant_for_endpoint(fd, ep);
   auto hdl = ptr->hdl();
@@ -356,8 +355,8 @@ resumable::subtype_t abstract_broker::subtype() const {
   return io_actor;
 }
 
-resumable::resume_result
-abstract_broker::resume(execution_unit* ctx, size_t mt) {
+resumable::resume_result abstract_broker::resume(execution_unit* ctx,
+                                                 size_t mt) {
   CAF_ASSERT(ctx != nullptr);
   CAF_ASSERT(ctx == &backend());
   return scheduled_actor::resume(ctx, mt);

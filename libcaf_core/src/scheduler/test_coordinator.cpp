@@ -33,8 +33,7 @@ namespace {
 class dummy_worker : public execution_unit {
 public:
   dummy_worker(test_coordinator* parent)
-      : execution_unit(&parent->system()),
-        parent_(parent) {
+    : execution_unit(&parent->system()), parent_(parent) {
     // nop
   }
 
@@ -50,10 +49,7 @@ class dummy_printer : public monitorable_actor {
 public:
   dummy_printer(actor_config& cfg) : monitorable_actor(cfg) {
     mh_.assign(
-      [&](add_atom, actor_id, const std::string& str) {
-        std::cout << str;
-      }
-    );
+      [&](add_atom, actor_id, const std::string& str) { std::cout << str; });
   }
 
   void enqueue(mailbox_element_ptr what, execution_unit*) override {
@@ -82,8 +78,9 @@ void test_coordinator::start() {
   dummy_worker worker{this};
   actor_config cfg{&worker};
   auto& sys = system();
-  utility_actors_[printer_id] = make_actor<dummy_printer, actor>(
-    sys.next_actor_id(), sys.node(), &sys, cfg);
+  utility_actors_[printer_id] = make_actor<dummy_printer,
+                                           actor>(sys.next_actor_id(),
+                                                  sys.node(), &sys, cfg);
 }
 
 void test_coordinator::stop() {
@@ -161,6 +158,5 @@ void test_coordinator::inline_all_enqueues_helper() {
   after_next_enqueue([=] { inline_all_enqueues_helper(); });
 }
 
-} // namespace caf
 } // namespace scheduler
-
+} // namespace caf

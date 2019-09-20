@@ -30,7 +30,7 @@ int fourty_two() {
   return 42;
 }
 
-class instance_counting_wrapper final: public int_fun::wrapper {
+class instance_counting_wrapper final : public int_fun::wrapper {
 public:
   instance_counting_wrapper(size_t* instance_counter)
     : instance_counter_(instance_counter) {

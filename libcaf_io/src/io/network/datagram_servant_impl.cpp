@@ -30,20 +30,20 @@ namespace network {
 
 datagram_servant_impl::datagram_servant_impl(default_multiplexer& mx,
                                              native_socket sockfd, int64_t id)
-    : datagram_servant(datagram_handle::from_int(id)),
-      launched_(false),
-      handler_(mx, sockfd) {
+  : datagram_servant(datagram_handle::from_int(id)),
+    launched_(false),
+    handler_(mx, sockfd) {
   // nop
 }
 
 bool datagram_servant_impl::new_endpoint(network::receive_buffer& buf) {
   CAF_LOG_TRACE("");
   if (detached())
-     // We are already disconnected from the broker while the multiplexer
-     // did not yet remove the socket, this can happen if an I/O event
-     // causes the broker to call close_all() while the pollset contained
-     // further activities for the broker.
-     return false;
+    // We are already disconnected from the broker while the multiplexer
+    // did not yet remove the socket, this can happen if an I/O event
+    // causes the broker to call close_all() while the pollset contained
+    // further activities for the broker.
+    return false;
   // A datagram that has a source port of zero is valid and never requires a
   // reply. In the case of CAF we can simply drop it as nothing but the
   // handshake could be communicated which we could not reply to.
@@ -140,7 +140,6 @@ void datagram_servant_impl::add_to_loop() {
 void datagram_servant_impl::remove_from_loop() {
   handler_.passivate();
 }
-
 
 void datagram_servant_impl::detach_handles() {
   for (auto& p : handler_.endpoints()) {

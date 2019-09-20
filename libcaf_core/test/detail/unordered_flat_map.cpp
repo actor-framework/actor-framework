@@ -117,14 +117,14 @@ CAF_TEST(default_constructed) {
 }
 
 CAF_TEST(initializer_list_constructed) {
-  unordered_flat_map<int,  int> zs{{1, 10}, {2, 20}, {3, 30}, {4, 40}};
+  unordered_flat_map<int, int> zs{{1, 10}, {2, 20}, {3, 30}, {4, 40}};
   CAF_CHECK_EQUAL(zs.size(), 4u);
   CAF_CHECK_EQUAL(zs, ivec({{1, 10}, {2, 20}, {3, 30}, {4, 40}}));
 }
 
 CAF_TEST(range_constructed) {
   kvp_vec<int> tmp{{1, 10}, {2, 20}, {3, 30}, {4, 40}};
-  unordered_flat_map<int,  int> zs(tmp.begin(), tmp.end());
+  unordered_flat_map<int, int> zs(tmp.begin(), tmp.end());
   CAF_CHECK_EQUAL(zs.size(), 4u);
   CAF_CHECK_EQUAL(zs, tmp);
 }
@@ -171,11 +171,9 @@ CAF_TEST(exceptions) {
   try {
     auto x = xs.at(10);
     CAF_FAIL("got an unexpected value: " << x);
-  }
-  catch (std::out_of_range&) {
+  } catch (std::out_of_range&) {
     CAF_MESSAGE("got expected out_of_range exception");
-  }
-  catch (...) {
+  } catch (...) {
     CAF_FAIL("got an expected exception");
   }
 }

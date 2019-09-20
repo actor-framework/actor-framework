@@ -25,9 +25,7 @@ namespace caf {
 namespace detail {
 
 tick_emitter::tick_emitter()
-    : start_(duration_type{0}),
-      interval_(0),
-      last_tick_id_(0) {
+  : start_(duration_type{0}), interval_(0), last_tick_id_(0) {
   // nop
 }
 
@@ -56,8 +54,8 @@ void tick_emitter::interval(duration_type x) {
 
 size_t tick_emitter::timeouts(time_point now,
                               std::initializer_list<size_t> periods) {
-  CAF_LOG_TRACE(CAF_ARG(now) << CAF_ARG(periods)
-                << CAF_ARG(interval_) << CAF_ARG(start_));
+  CAF_LOG_TRACE(CAF_ARG(now)
+                << CAF_ARG(periods) << CAF_ARG(interval_) << CAF_ARG(start_));
   CAF_ASSERT(now >= start_);
   size_t result = 0;
   auto f = [&](size_t tick) {
