@@ -39,7 +39,7 @@ string_view ec_names[] = {
   "missing_handshake",
   "unexpected_handshake",
   "version_mismatch",
-  "unimplemented = 10",
+  "unimplemented",
   "app_identifiers_mismatch",
   "invalid_payload",
 };
