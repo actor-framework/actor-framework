@@ -25,14 +25,15 @@
 #include <cstdlib>
 #include <cstring>
 
+// clang-format off
 #ifdef CAF_WINDOWS
 #  ifndef _WIN32_WINNT
 #    define _WIN32_WINNT 0x0600
 #  endif
 #  include <iostream>
-#  include <iphlpapi.h>
 #  include <winsock2.h>
 #  include <ws2tcpip.h>
+#  include <iphlpapi.h>
 #else
 #  include <arpa/inet.h>
 #  include <ifaddrs.h>
@@ -43,6 +44,7 @@
 #  include <sys/socket.h>
 #  include <unistd.h>
 #endif
+// clang-format on
 
 #include <memory>
 #include <utility>

@@ -23,11 +23,12 @@
 #include "caf/logger.hpp"
 #include "caf/sec.hpp"
 
+// clang-format off
 #ifdef CAF_WINDOWS
-#  include <windows.h>
 #  include <winsock2.h>
-#  include <ws2ipdef.h>
+#  include <windows.h>
 #  include <ws2tcpip.h>
+#  include <ws2ipdef.h>
 #else
 #  include <arpa/inet.h>
 #  include <cerrno>
@@ -36,6 +37,7 @@
 #  include <sys/socket.h>
 #  include <unistd.h>
 #endif
+// clang-format on
 
 #ifdef CAF_WINDOWS
 using sa_family_t = short;

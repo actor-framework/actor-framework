@@ -175,9 +175,11 @@ std::vector<iface_info> get_mac_addresses() {
 
 // windows
 
-#  include <iphlpapi.h>
-#  include <winsock2.h>
+// clang-format off
 #  include <ws2tcpip.h>
+#  include <winsock2.h>
+#  include <iphlpapi.h>
+// clang-format on
 
 #  include <algorithm>
 #  include <cctype>
