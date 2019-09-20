@@ -237,7 +237,7 @@ struct binary_serialization_policy {
     binary_serializer f{&context, buf};
     f(x);
     binary_deserializer g{&context, buf};
-    T y;
+    auto y = T{};
     g(y);
     CAF_CHECK_EQUAL(x, y);
     return detail::safe_equal(x, y);
@@ -252,5 +252,4 @@ CAF_TEST(binary_serialization_inspectors) {
   scoped_execution_unit context;
   binary_serialization_policy p{context};
   test_impl(p);
-
 }

@@ -120,7 +120,7 @@ peer::behavior_type peer_fun(peer::broker_pointer self, connection_handle hdl,
     },
     [=](const new_data_msg& msg) {
       CAF_MESSAGE("received new_data_msg");
-      atom_value x;
+      atom_value x = static_cast<atom_value>(0);
       int y;
       binary_deserializer source{self->system(), msg.buf};
       auto e = source(x, y);

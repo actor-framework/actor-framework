@@ -179,7 +179,7 @@ struct fixture {
   // serializes `x` and then deserializes and returns the serialized value
   template <class T>
   T roundtrip(T x) {
-    T result;
+    auto result = T{};
     deserialize(serialize(x), result);
     return result;
   }
@@ -288,7 +288,7 @@ CAF_TEST(timestamp_values) {
 
 CAF_TEST(enum_classes) {
   auto buf = serialize(te);
-  test_enum x;
+  auto x = static_cast<test_enum>(0);
   deserialize(buf, x);
   CAF_CHECK_EQUAL(te, x);
 }
@@ -374,7 +374,7 @@ CAF_TEST(messages) {
 CAF_TEST(multiple_messages) {
   auto m = make_message(rs, te);
   auto buf = serialize(te, m, msg);
-  test_enum t;
+  auto t = static_cast<test_enum>(0);
   message m1;
   message m2;
   deserialize(buf, t, m1, m2);

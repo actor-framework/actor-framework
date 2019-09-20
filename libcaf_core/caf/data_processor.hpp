@@ -198,7 +198,7 @@ public:
         lhs = static_cast<underlying>(rhs);
       }
     } assign;
-    underlying tmp;
+    underlying tmp = 0;
     return convert_apply(dref(), x, tmp, assign);
   }
 
@@ -221,7 +221,7 @@ public:
         lhs = rhs ? 1 : 0;
       }
     } assign;
-    uint8_t tmp;
+    uint8_t tmp = 0;
     return convert_apply(dref(), x, tmp, assign);
   }
 
@@ -288,7 +288,7 @@ public:
     xs.clear();
     auto insert_iter = std::inserter(xs, xs.end());
     for (size_t i = 0; i < num_elements; ++i) {
-      typename std::remove_const<typename T::value_type>::type x;
+      typename std::remove_const<typename T::value_type>::type x = {};
       auto err = apply(x);
       if (err)
         return err;
@@ -445,7 +445,7 @@ public:
         lhs = rhs.count();
       }
     } assign;
-    Rep tmp;
+    Rep tmp = 0;
     return convert_apply(dref(), x, tmp, assign);
   }
 
