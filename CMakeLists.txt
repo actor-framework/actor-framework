@@ -249,7 +249,7 @@ if(CAF_MORE_WARNINGS)
                "-Wempty-body -Wendif-labels -Wenum-compare -Wextra "
                "-Wfloat-equal -Wformat -Wfree-nonheap-object "
                "-Wignored-qualifiers -Winit-self "
-               "-Winline -Wint-to-pointer-cast -Winvalid-memory-model "
+               "-Wint-to-pointer-cast -Winvalid-memory-model "
                "-Winvalid-offsetof -Wlogical-op -Wmain -Wmaybe-uninitialized "
                "-Wmissing-braces -Wmultichar "
                "-Wnarrowing -Wnoexcept -Wnon-template-friend "
