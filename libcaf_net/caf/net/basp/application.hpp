@@ -45,6 +45,7 @@ namespace caf {
 namespace net {
 namespace basp {
 
+/// An implementation of BASP as an application layer protocol.
 class application {
 public:
   // -- member types -----------------------------------------------------------
@@ -184,10 +185,10 @@ private:
   /// Stores a pointer to the parent actor system.
   actor_system* system_ = nullptr;
 
-  /// Stores what we are expecting to receive next.
+  /// Stores the expected type of the next incoming message.
   connection_state state_ = connection_state::await_handshake_header;
 
-  /// Caches the last header;we need to store it when waiting for the payload.
+  /// Caches the last header while waiting for the matching payload.
   header hdr_;
 
   /// Re-usable buffer for storing payloads.
@@ -199,7 +200,7 @@ private:
   /// Stores the ID of our peer.
   node_id peer_id_;
 
-  /// Keeps track of which local actors our peer monitors.
+  /// Tracks which local actors our peer monitors.
   std::unordered_set<actor_addr> monitored_actors_;
 
   /// Caches actor handles obtained via `resolve`.

@@ -34,8 +34,8 @@ string_view message_type_names[] = {
 } // namespace
 
 std::string to_string(message_type x) {
-  auto sv = message_type_names[static_cast<uint8_t>(x)];
-  return std::string{sv.begin(), sv.end()};
+  auto result = message_type_names[static_cast<uint8_t>(x)];
+  return std::string{result.begin(), result.end()};
 }
 
 } // namespace basp

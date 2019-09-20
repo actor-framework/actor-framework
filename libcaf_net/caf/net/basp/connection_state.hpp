@@ -28,11 +28,10 @@ namespace basp {
 
 /// Stores the state of a connection in a `basp::application`.
 enum class connection_state {
-  /// Indicates that we successfully checked the magic number and now wait for
-  /// the handshake header.
+  /// Initial state for any connection to wait for the peer's handshake.
   await_handshake_header,
-  /// Indicates that we received the header for the handshake and now wait for
-  /// the payload.
+  /// Indicates that the header for the peer's handshake arrived and BASP
+  /// requires the payload next.
   await_handshake_payload,
   /// Indicates that a connection is established and this node is waiting for
   /// the next BASP header.
@@ -40,7 +39,7 @@ enum class connection_state {
   /// Indicates that this node has received a header with non-zero payload and
   /// is waiting for the data.
   await_payload,
-  /// Indicates that we are about to close this connection.
+  /// Indicates that the connection is about to shut down.
   shutdown,
 };
 

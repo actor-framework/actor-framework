@@ -20,7 +20,9 @@
 
 #include <cstring>
 
+#include "caf/byte.hpp"
 #include "caf/detail/network_order.hpp"
+#include "caf/span.hpp"
 
 namespace caf {
 namespace net {

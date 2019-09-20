@@ -20,6 +20,7 @@
 
 #include "caf/atom.hpp"
 #include "caf/error.hpp"
+#include "caf/string_view.hpp"
 
 namespace caf {
 namespace net {
@@ -27,7 +28,7 @@ namespace basp {
 
 namespace {
 
-const char* ec_names[] = {
+string_view ec_names[] = {
   "none",
   "invalid_magic_number",
   "unexpected_number_of_bytes",
@@ -36,8 +37,9 @@ const char* ec_names[] = {
   "illegal_state",
   "invalid_handshake",
   "missing_handshake",
+  "unexpected_handshake",
   "version_mismatch",
-  "unimplemented",
+  "unimplemented = 10",
   "app_identifiers_mismatch",
   "invalid_payload",
 };
@@ -45,7 +47,8 @@ const char* ec_names[] = {
 } // namespace
 
 std::string to_string(ec x) {
-  return ec_names[static_cast<uint8_t>(x)];
+  auto result = ec_names[static_cast<uint8_t>(x)];
+  return std::string{result.begin(), result.end()};
 }
 
 error make_error(ec x) {

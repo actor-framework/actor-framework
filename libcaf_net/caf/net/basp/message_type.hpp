@@ -33,41 +33,41 @@ enum class message_type : uint8_t {
   /// Sends supported BASP version and node information to the server.
   ///
   /// ![](client_handshake.png)
-  handshake = 0x00,
+  handshake = 0,
 
   /// Transmits an actor-to-actor messages.
   ///
   /// ![](direct_message.png)
-  actor_message = 0x01,
+  actor_message = 1,
 
   /// Tries to resolve a path on the receiving node.
   ///
   /// ![](resolve_request.png)
-  resolve_request = 0x02,
+  resolve_request = 2,
 
   /// Transmits the result of a path lookup.
   ///
   /// ![](resolve_response.png)
-  resolve_response = 0x03,
+  resolve_response = 3,
 
   /// Informs the receiving node that the sending node has created a proxy
   /// instance for one of its actors. Causes the receiving node to attach a
   /// functor to the actor that triggers a down_message on termination.
   ///
   /// ![](monitor_message.png)
-  monitor_message = 0x04,
+  monitor_message = 4,
 
   /// Informs the receiving node that it has a proxy for an actor that has been
   /// terminated.
   ///
   /// ![](down_message.png)
-  down_message = 0x05,
+  down_message = 5,
 
   /// Used to generate periodic traffic between two nodes in order to detect
   /// disconnects.
   ///
   /// ![](heartbeat.png)
-  heartbeat = 0x06,
+  heartbeat = 6,
 };
 
 /// @relates message_type

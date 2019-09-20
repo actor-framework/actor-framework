@@ -89,7 +89,7 @@ void application::resolve_remote_path(write_packet_callback& write_packet,
   auto hdr = to_bytes(header{message_type::resolve_request,
                              static_cast<uint32_t>(buf_.size()), req_id});
   if (auto err = write_packet(hdr, buf_)) {
-    CAF_LOG_ERROR("unable to serialize path");
+    CAF_LOG_ERROR("unable to write resolve_request header");
     return;
   }
   response_promise rp{nullptr, actor_cast<strong_actor_ptr>(listener),
@@ -116,20 +116,8 @@ error application::handle(size_t& next_read_size,
       return none;
     }
     case connection_state::await_handshake_payload: {
-      node_id nid;
-      std::vector<std::string> app_ids;
-      binary_deserializer source{system(), bytes};
-      if (auto err = source(nid, app_ids))
+      if (auto err = handle_handshake(write_packet, hdr_, bytes))
         return err;
-      if (!nid || app_ids.empty())
-        return ec::invalid_handshake;
-      auto ids = get_or(system().config(), "middleman.app-identifiers",
-                        defaults::middleman::app_identifiers);
-      auto predicate = [=](const std::string& x) {
-        return std::find(ids.begin(), ids.end(), x) != ids.end();
-      };
-      if (std::none_of(app_ids.begin(), app_ids.end(), predicate))
-        return ec::app_identifiers_mismatch;
       state_ = connection_state::await_header;
       return none;
     }
@@ -178,12 +166,20 @@ error application::handle_handshake(write_packet_callback&, header hdr,
     return ec::missing_handshake;
   if (hdr.operation_data != version)
     return ec::version_mismatch;
-  binary_deserializer source{nullptr, payload};
   node_id peer_id;
   std::vector<std::string> app_ids;
+  binary_deserializer source{system(), payload};
   if (auto err = source(peer_id, app_ids))
     return err;
-  // TODO: verify peer_id and app_ids
+  if (!peer_id || app_ids.empty())
+    return ec::invalid_handshake;
+  auto ids = get_or(system().config(), "middleman.app-identifiers",
+                    defaults::middleman::app_identifiers);
+  auto predicate = [=](const std::string& x) {
+    return std::find(ids.begin(), ids.end(), x) != ids.end();
+  };
+  if (std::none_of(app_ids.begin(), app_ids.end(), predicate))
+    return ec::app_identifiers_mismatch;
   peer_id_ = std::move(peer_id);
   state_ = connection_state::await_header;
   return none;
@@ -276,6 +272,7 @@ error application::handle_resolve_response(write_packet_callback&, header hdr,
 }
 
 error application::generate_handshake() {
+  buf_.clear();
   serializer_impl<buffer_type> sink{system(), buf_};
   return sink(system().node(),
               get_or(system().config(), "middleman.app-identifiers",

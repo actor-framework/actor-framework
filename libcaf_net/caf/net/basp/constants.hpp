@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 namespace caf {
@@ -29,6 +30,9 @@ namespace basp {
 /// The current BASP version.
 /// @note BASP is not backwards compatible.
 constexpr uint64_t version = 1;
+
+/// Size of a BASP header in serialized form.
+constexpr size_t header_size = 13;
 
 /// @}
 

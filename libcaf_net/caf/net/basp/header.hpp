@@ -21,12 +21,12 @@
 #include <array>
 #include <cstdint>
 
-#include "caf/byte.hpp"
 #include "caf/detail/comparable.hpp"
+#include "caf/fwd.hpp"
 #include "caf/meta/hex_formatted.hpp"
 #include "caf/meta/type_name.hpp"
+#include "caf/net/basp/constants.hpp"
 #include "caf/net/basp/message_type.hpp"
-#include "caf/span.hpp"
 
 namespace caf {
 namespace net {
@@ -34,10 +34,9 @@ namespace basp {
 
 /// @addtogroup BASP
 
+/// The header of a Binary Actor System Protocol (BASP) message.
 struct header : detail::comparable<header> {
-  message_type type;
-  uint32_t payload_len;
-  uint64_t operation_data;
+  // -- constructors, destructors, and assignment operators --------------------
 
   constexpr header() noexcept
     : type(message_type::handshake), payload_len(0), operation_data(0) {
@@ -54,15 +53,28 @@ struct header : detail::comparable<header> {
 
   header& operator=(const header&) noexcept = default;
 
-  int compare(header other) const noexcept;
+  // -- factory functions ------------------------------------------------------
 
   /// @pre `bytes.size() == header_size`
   static header from_bytes(span<const byte> bytes);
+
+  // -- comparison -------------------------------------------------------------
+
+  int compare(header other) const noexcept;
+
+  // -- member variables -------------------------------------------------------
+
+  /// Denotes the BASP operation and how `operation_data` gets interpreted.
+  message_type type;
+
+  /// Stores the size in bytes for the payload that follows this header.
+  uint32_t payload_len;
+
+  /// Stores type-specific information such as the BASP version in handshakes.
+  uint64_t operation_data;
 };
 
-/// Size of a BASP header in serialized form
-constexpr size_t header_size = 13;
-
+/// Serializes a header to a byte representation.
 /// @relates header
 std::array<byte, header_size> to_bytes(header x);
 
