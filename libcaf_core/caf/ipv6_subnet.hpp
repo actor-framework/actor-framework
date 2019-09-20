@@ -33,8 +33,8 @@ public:
   // -- constants --------------------------------------------------------------
 
   /// Stores the offset of an embedded IPv4 subnet in bits.
-  static constexpr uint8_t v4_offset =
-    static_cast<uint8_t>(ipv6_address::num_bytes - ipv4_address::num_bytes) * 8;
+  static constexpr size_t v4_offset =
+    (ipv6_address::num_bytes - ipv4_address::num_bytes) * 8;
 
   // -- constructors, destructors, and assignment operators --------------------
 

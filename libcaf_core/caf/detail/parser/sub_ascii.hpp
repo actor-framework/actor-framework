@@ -36,12 +36,12 @@ bool sub_ascii(T& x, char c, enable_if_tt<std::is_integral<T>, int> u = 0) {
   CAF_IGNORE_UNUSED(u);
   if (x < (std::numeric_limits<T>::min() / Base))
     return false;
-  x *= Base;
+  x = static_cast<T>(x * Base);
   ascii_to_int<Base, T> f;
   auto y = f(c);
   if (x < (std::numeric_limits<T>::min() + y))
     return false;
-  x -= y;
+  x = static_cast<T>(x - y);
   return true;
 }
 
@@ -50,12 +50,10 @@ bool sub_ascii(T& x, char c,
                enable_if_tt<std::is_floating_point<T>, int> u = 0) {
   CAF_IGNORE_UNUSED(u);
   ascii_to_int<Base, T> f;
-  x = (x * Base) - f(c);
+  x = static_cast<T>((x * Base) - f(c));
   return true;
 }
 
 } // namespace parser
 } // namespace detail
 } // namespace caf
-
-

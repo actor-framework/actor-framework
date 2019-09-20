@@ -23,9 +23,9 @@
 #include "caf/io/network/default_multiplexer.hpp"
 
 #ifdef CAF_WINDOWS
-# include <winsock2.h>
+#include <winsock2.h>
 #else
-# include <sys/socket.h>
+#include <sys/socket.h>
 #endif
 
 namespace caf {
@@ -33,11 +33,11 @@ namespace io {
 namespace network {
 
 event_handler::event_handler(default_multiplexer& dm, native_socket sockfd)
-  : fd_(sockfd),
-    state_{true, false, false, false,
-           to_integer(receive_policy_flag::at_least)},
-    eventbf_(0),
-    backend_(dm) {
+    : fd_(sockfd),
+      state_{true, false, false, false,
+             to_integer(receive_policy_flag::at_least) & 0x2u},
+      eventbf_(0),
+      backend_(dm) {
   set_fd_flags();
 }
 

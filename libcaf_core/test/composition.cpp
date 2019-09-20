@@ -83,7 +83,7 @@ CAF_TEST(depth3) {
 
 CAF_TEST(depth2_type_mismatch) {
   auto stage1 = sys.spawn(multiplier, 4);
-  auto stage2 = sys.spawn(float_adder, 10);
+  auto stage2 = sys.spawn(float_adder, 10.f);
   auto testee = stage2 * stage1;
   self->send(testee, 1);
   expect((int), from(self).to(stage1).with(1));

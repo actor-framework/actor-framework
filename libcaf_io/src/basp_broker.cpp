@@ -556,7 +556,7 @@ bool basp_broker_state::deliver_pending(execution_unit* ctx,
                          ep.hdr, payload, false, ep, none))
       return false;
     i = ep.pending.erase(i);
-    ep.seq_incoming += 1;
+    ++ep.seq_incoming;
   }
   // Set a timeout if there are still pending messages.
   if (!ep.pending.empty() && !ep.did_set_timeout)

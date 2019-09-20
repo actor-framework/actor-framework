@@ -386,9 +386,9 @@ void logger::init(actor_system_config& cfg) {
   file_verbosity = get_or(cfg, "logger.file-verbosity", file_verbosity);
   console_verbosity =
     get_or(cfg, "logger.console-verbosity", console_verbosity);
-  cfg_.file_verbosity = to_level_int(file_verbosity);
-  cfg_.console_verbosity = to_level_int(console_verbosity);
-  cfg_.verbosity = std::max(cfg_.file_verbosity, cfg_.console_verbosity);
+  cfg_.file_verbosity = to_level_int(file_verbosity) & 0xFu;
+  cfg_.console_verbosity = to_level_int(console_verbosity) & 0xFu;
+  cfg_.verbosity = std::max(cfg_.file_verbosity, cfg_.console_verbosity) & 0xFu;
   // Parse the format string.
   file_format_ =
     parse_format(get_or(cfg, "logger.file-format", lg::file_format));

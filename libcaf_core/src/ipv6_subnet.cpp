@@ -29,14 +29,14 @@ ipv6_subnet::ipv6_subnet() : prefix_length_(0) {
 }
 
 ipv6_subnet::ipv6_subnet(ipv4_subnet subnet)
-    : address_(ipv6_address{subnet.network_address()}),
-      prefix_length_(v4_offset + subnet.prefix_length()){
+    : address_(ipv6_address{subnet.network_address()}) {
+  prefix_length_ = static_cast<uint8_t>(v4_offset + subnet.prefix_length());
   detail::mask_bits(address_.bytes(), prefix_length_);
 }
 
 ipv6_subnet::ipv6_subnet(ipv4_address network_address, uint8_t prefix_length)
-    : address_(network_address),
-      prefix_length_(prefix_length + v4_offset) {
+    : address_(network_address) {
+  prefix_length_ = static_cast<uint8_t>(prefix_length + v4_offset);
   detail::mask_bits(address_.bytes(), prefix_length_);
 }
 

@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 
@@ -81,44 +82,44 @@ public:
   // -- bitwise member operators -----------------------------------------------
 
   /// Bitwise ANDs `*this` and `other`.
-  Derived& operator&=(const Derived& other) {
+  Derived& operator&=(const Derived& other) noexcept {
     auto& buf = dref().bytes();
     for (size_t index = 0; index < Derived::num_bytes; ++index)
-      buf[index] &= other[index];
+      buf[index] = static_cast<uint8_t>(buf[index] & other[index]);
     return dref();
   }
 
   /// Bitwise ORs `*this` and `other`.
-  Derived& operator|=(const Derived& other) {
+  Derived& operator|=(const Derived& other) noexcept {
     auto& buf = dref().bytes();
     for (size_t index = 0; index < Derived::num_bytes; ++index)
-      buf[index] |= other[index];
+      buf[index] = static_cast<uint8_t>(buf[index] | other[index]);
     return dref();
   }
 
   /// Bitwise XORs `*this` and `other`.
-  Derived& operator^=(const Derived& other) {
+  Derived& operator^=(const Derived& other) noexcept {
     auto& buf = dref().bytes();
     for (size_t index = 0; index < Derived::num_bytes; ++index)
-      buf[index] ^= other[index];
+      buf[index] = static_cast<uint8_t>(buf[index] ^ other[index]);
     return dref();
   }
 
   // -- bitwise free operators -------------------------------------------------
 
-  friend Derived operator&(const Derived& x, const Derived& y) {
+  friend Derived operator&(const Derived& x, const Derived& y) noexcept {
     Derived result{x};
     result &= y;
     return result;
   }
 
-  friend Derived operator|(const Derived& x, const Derived& y) {
+  friend Derived operator|(const Derived& x, const Derived& y) noexcept {
     Derived result{x};
     result |= y;
     return result;
   }
 
-  friend Derived operator^(const Derived& x, const Derived& y) {
+  friend Derived operator^(const Derived& x, const Derived& y) noexcept {
     Derived result{x};
     result ^= y;
     return result;

@@ -238,7 +238,7 @@ public:
         size_t cpt = 0;
         for (auto v: rhs) {
           for (int k = 0; k < 8; ++k) {
-            lhs[cpt] = ((v & (1 << k)) != 0);
+            lhs[cpt] = (v & (1 << k)) != 0;
             if (++cpt >= len)
               return;
           }
@@ -249,7 +249,7 @@ public:
         lhs.resize((rhs.size() - 1) / 8 + 1, 0);
         for (bool b: rhs) {
           if (b)
-            lhs[k / 8] |= (1 << (k % 8));
+            lhs[k / 8] = static_cast<uint8_t>(lhs[k / 8] | (1 << (k % 8)));
           ++k;
         }
       }

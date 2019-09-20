@@ -29,13 +29,14 @@
 #include <sys/resource.h>
 #endif
 
-#include <cmath>
-#include <mutex>
 #include <chrono>
-#include <vector>
+#include <cmath>
+#include <cstdint>
 #include <fstream>
 #include <iomanip>
+#include <mutex>
 #include <unordered_map>
+#include <vector>
 
 #include "caf/actor_system_config.hpp"
 #include "caf/defaults.hpp"
@@ -262,7 +263,7 @@ public:
   }
 
   template <class Time, class Label>
-  void record(Time t, Label label, size_t rec_id, const measurement& m) {
+  void record(Time t, Label label, uint64_t rec_id, const measurement& m) {
     using std::setw;
     file_ << setw(21) << t.time_since_epoch().count()
            << setw(10) << label

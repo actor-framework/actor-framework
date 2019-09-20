@@ -179,8 +179,9 @@ public:
     using other_signatures = detail::type_list<Ts...>;
     using m = interface_mismatch_t<other_signatures, signatures>;
     // trigger static assert on mismatch
-    detail::static_error_printer<sizeof...(Ts), m::value,
-                                 typename m::xs, typename m::ys> guard;
+    detail::static_error_printer<static_cast<int>(sizeof...(Ts)), m::value,
+                                 typename m::xs, typename m::ys>
+      guard;
     CAF_IGNORE_UNUSED(guard);
   }
 
@@ -200,7 +201,7 @@ public:
   // -- modifiers --------------------------------------------------------------
 
   /// Exchanges the contents of this and other.
-  inline void swap(typed_behavior& other) {
+  void swap(typed_behavior& other) {
     bhvr_.swap(other.bhvr_);
   }
 
@@ -242,8 +243,9 @@ private:
     using found_signatures = detail::type_list<deduce_mpi_t<Ts>...>;
     using m = interface_mismatch_t<found_signatures, signatures>;
     // trigger static assert on mismatch
-    detail::static_error_printer<sizeof...(Ts), m::value,
-                                 typename m::xs, typename m::ys> guard;
+    detail::static_error_printer<static_cast<int>(sizeof...(Ts)), m::value,
+                                 typename m::xs, typename m::ys>
+      guard;
     CAF_IGNORE_UNUSED(guard);
     // final (type-erasure) step
     intrusive_ptr<detail::behavior_impl> ptr = std::move(bp);
@@ -260,4 +262,3 @@ template <class... Sigs>
 struct is_typed_behavior<typed_behavior<Sigs...>> : std::true_type { };
 
 } // namespace caf
-

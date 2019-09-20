@@ -79,7 +79,7 @@ protected:
 
   pos_type default_seekoff(off_type off, std::ios_base::seekdir dir,
                            std::ios_base::openmode which) {
-    auto new_off = pos_type(off_type(-1));
+    auto new_off = off_type{-1};
     auto get = (which & std::ios_base::in) == std::ios_base::in;
     auto put = (which & std::ios_base::out) == std::ios_base::out;
     if (!(get || put))
@@ -220,7 +220,7 @@ protected:
     auto available = this->epptr() - this->pptr();
     auto actual = std::min(n, static_cast<std::streamsize>(available));
     std::memcpy(this->pptr(), s,
-                static_cast<size_t>(actual * sizeof(char_type)));
+                static_cast<size_t>(actual) * sizeof(char_type));
     this->safe_pbump(actual);
     return actual;
   }
@@ -231,7 +231,7 @@ protected:
     auto available = this->egptr() - this->gptr();
     auto actual = std::min(n, static_cast<std::streamsize>(available));
     std::memcpy(s, this->gptr(),
-                static_cast<size_t>(actual * sizeof(char_type)));
+                static_cast<size_t>(actual) * sizeof(char_type));
     this->safe_gbump(actual);
     return actual;
   }
@@ -349,7 +349,7 @@ protected:
     auto available = this->egptr() - this->gptr();
     auto actual = std::min(n, static_cast<std::streamsize>(available));
     std::memcpy(s, this->gptr(),
-                static_cast<size_t>(actual * sizeof(char_type)));
+                static_cast<size_t>(actual) * sizeof(char_type));
     this->safe_gbump(actual);
     return actual;
   }

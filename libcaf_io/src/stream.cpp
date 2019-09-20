@@ -55,7 +55,7 @@ void stream::activate(stream_manager* mgr) {
 }
 
 void stream::configure_read(receive_policy::config config) {
-  state_.rd_flag = to_integer(config.first);
+  state_.rd_flag = to_integer(config.first) & 0x2;
   max_ = config.second;
 }
 

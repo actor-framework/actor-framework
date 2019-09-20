@@ -174,7 +174,7 @@ bool instance::handle(execution_unit* ctx, new_datagram_msg& dm,
     return true;
   }
   // This is the expected message.
-  ep.seq_incoming += 1;
+  ++ep.seq_incoming;
   // TODO: add optional reliability here
   if (!is_handshake(ep.hdr) && !is_heartbeat(ep.hdr)
       && ep.hdr.dest_node != this_node_) {

@@ -975,8 +975,8 @@ uint64_t scheduled_actor::set_timeout(atom_value type,
 
 stream_slot scheduled_actor::next_slot() {
   stream_slot result = 1;
-  auto nslot = [](const stream_manager_map& x) -> stream_slot {
-    return x.rbegin()->first + 1;
+  auto nslot = [](const stream_manager_map& x) {
+    return static_cast<stream_slot>(x.rbegin()->first + 1);
   };
   if (!stream_managers_.empty())
     result = std::max(nslot(stream_managers_), result);

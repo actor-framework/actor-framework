@@ -114,10 +114,10 @@ protected:
     uint8_t buf[16];
     auto i = buf;
     while (x > 0x7f) {
-      *i++ = (static_cast<uint8_t>(x) & 0x7f) | 0x80;
+      *i++ = static_cast<uint8_t>((x & 0x7f) | 0x80);
       x >>= 7;
     }
-    *i++ = static_cast<uint8_t>(x) & 0x7f;
+    *i++ = static_cast<uint8_t>(x & 0x7f);
     auto res = streambuf_.sputn(reinterpret_cast<char_type*>(buf),
                                 static_cast<std::streamsize>(i - buf));
     if (res != (i - buf))
