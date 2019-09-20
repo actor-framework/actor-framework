@@ -255,8 +255,7 @@ protected:
   std::streamsize xsputn(const char_type* s, std::streamsize n) override {
     auto available = this->epptr() - this->pptr();
     auto actual = std::min(n, static_cast<std::streamsize>(available));
-    std::memcpy(this->pptr(), s,
-                static_cast<size_t>(actual) * sizeof(char_type));
+    std::copy(s, s + actual, this->pptr());
     this->safe_pbump(actual);
     return actual;
   }
@@ -266,8 +265,7 @@ protected:
   std::streamsize xsgetn(char_type* s, std::streamsize n) override {
     auto available = this->egptr() - this->gptr();
     auto actual = std::min(n, static_cast<std::streamsize>(available));
-    std::memcpy(s, this->gptr(),
-                static_cast<size_t>(actual) * sizeof(char_type));
+    std::copy(this->gptr(), this->gptr() + actual, s);
     this->safe_gbump(actual);
     return actual;
   }
