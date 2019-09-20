@@ -44,35 +44,71 @@ protected:
   /// architectures. All stream buffer implementations should therefore use
   /// these function instead. For a detailed discussion, see:
   /// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=47921
-  template <class T = int>
-  typename std::enable_if<sizeof(T) == 4>::type
-  safe_pbump(std::streamsize n) {
-    while (n > std::numeric_limits<int>::max()) {
+  template <class T>
+  detail::enable_if_t<std::is_signed<T>::value && (sizeof(T) > sizeof(int))>
+  safe_pbump(T n) {
+    auto max_int = static_cast<T>(std::numeric_limits<int>::max());
+    while (n > max_int) {
       this->pbump(std::numeric_limits<int>::max());
-      n -= std::numeric_limits<int>::max();
+      n -= max_int;
     }
     this->pbump(static_cast<int>(n));
   }
 
   template <class T = int>
-  typename std::enable_if<sizeof(T) == 8>::type
+  detail::enable_if_t<std::is_signed<T>::value && (sizeof(T) <= sizeof(int))>
+  safe_pbump(std::streamsize n) {
+    this->pbump(static_cast<int>(n));
+  }
+
+  template <class T>
+  detail::enable_if_t<std::is_unsigned<T>::value && (sizeof(T) >= sizeof(int))>
+  safe_pbump(T n) {
+    auto max_int = static_cast<T>(std::numeric_limits<int>::max());
+    while (n > max_int) {
+      this->pbump(std::numeric_limits<int>::max());
+      n -= max_int;
+    }
+    this->pbump(static_cast<int>(n));
+  }
+
+  template <class T = int>
+  detail::enable_if_t<std::is_unsigned<T>::value && (sizeof(T) < sizeof(int))>
   safe_pbump(std::streamsize n) {
     this->pbump(static_cast<int>(n));
   }
 
   // As above, but for the get area.
-  template <class T = int>
-  typename std::enable_if<sizeof(T) == 4>::type
-  safe_gbump(std::streamsize n) {
-    while (n > std::numeric_limits<int>::max()) {
+  template <class T>
+  detail::enable_if_t<std::is_signed<T>::value && (sizeof(T) > sizeof(int))>
+  safe_gbump(T n) {
+    auto max_int = static_cast<T>(std::numeric_limits<int>::max());
+    while (n > max_int) {
       this->gbump(std::numeric_limits<int>::max());
-      n -= std::numeric_limits<int>::max();
+      n -= max_int;
     }
     this->gbump(static_cast<int>(n));
   }
 
   template <class T = int>
-  typename std::enable_if<sizeof(T) == 8>::type
+  detail::enable_if_t<std::is_signed<T>::value && (sizeof(T) <= sizeof(int))>
+  safe_gbump(std::streamsize n) {
+    this->gbump(static_cast<int>(n));
+  }
+
+  template <class T>
+  detail::enable_if_t<std::is_unsigned<T>::value && (sizeof(T) >= sizeof(int))>
+  safe_gbump(T n) {
+    auto max_int = static_cast<T>(std::numeric_limits<int>::max());
+    while (n > max_int) {
+      this->gbump(std::numeric_limits<int>::max());
+      n -= max_int;
+    }
+    this->gbump(static_cast<int>(n));
+  }
+
+  template <class T = int>
+  detail::enable_if_t<std::is_unsigned<T>::value && (sizeof(T) < sizeof(int))>
   safe_gbump(std::streamsize n) {
     this->gbump(static_cast<int>(n));
   }
