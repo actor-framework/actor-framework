@@ -19,7 +19,6 @@
 #pragma once
 
 #include "caf/fwd.hpp"
-#include "caf/ip_endpoint.hpp"
 #include "caf/net/network_socket.hpp"
 
 namespace caf {
@@ -27,18 +26,10 @@ namespace net {
 
 /// A datagram-oriented network communication endpoint for bidirectional
 /// byte transmission.
-struct udp_datagram_socket : abstract_socket<udp_datagram_socket> {
-  using super = abstract_socket<udp_datagram_socket>;
+struct udp_datagram_socket : network_socket {
+  using super = network_socket;
 
   using super::super;
-
-  constexpr operator socket() const noexcept {
-    return socket{id};
-  }
-
-  constexpr operator network_socket() const noexcept {
-    return network_socket{id};
-  }
 };
 
 /// Creates a `udp_datagram_socket` bound to given port.

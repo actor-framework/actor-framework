@@ -23,8 +23,8 @@
 #include <type_traits>
 
 #include "caf/config.hpp"
+#include "caf/detail/comparable.hpp"
 #include "caf/fwd.hpp"
-#include "caf/net/abstract_socket.hpp"
 #include "caf/net/socket_id.hpp"
 
 namespace caf {
@@ -32,11 +32,32 @@ namespace net {
 
 /// An internal endpoint for sending or receiving data. Can be either a
 /// ::network_socket, ::pipe_socket, ::stream_socket, or ::datagram_socket.
-struct socket : abstract_socket<socket> {
-  using super = abstract_socket<socket>;
+struct socket : detail::comparable<socket> {
+  socket_id id;
 
-  using super::super;
+  constexpr socket() noexcept : id(invalid_socket_id) {
+    // nop
+  }
+
+  constexpr explicit socket(socket_id id) noexcept : id(id) {
+    // nop
+  }
+
+  constexpr socket(const socket& other) noexcept = default;
+
+  socket& operator=(const socket& other) noexcept = default;
+
+  constexpr signed_socket_id compare(socket other) const noexcept {
+    return static_cast<signed_socket_id>(id)
+           - static_cast<signed_socket_id>(other.id);
+  }
 };
+
+/// @relates socket
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, socket& x) {
+  return f(x.id);
+}
 
 /// Denotes the invalid socket.
 constexpr auto invalid_socket = socket{invalid_socket_id};

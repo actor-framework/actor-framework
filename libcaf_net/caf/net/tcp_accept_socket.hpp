@@ -19,28 +19,18 @@
 #pragma once
 
 #include "caf/fwd.hpp"
-#include "caf/net/abstract_socket.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/network_socket.hpp"
-#include "caf/net/socket.hpp"
 #include "caf/uri.hpp"
 
 namespace caf {
 namespace net {
 
 /// Represents a TCP acceptor in listening mode.
-struct tcp_accept_socket : abstract_socket<tcp_accept_socket> {
-  using super = abstract_socket<tcp_accept_socket>;
+struct tcp_accept_socket : network_socket {
+  using super = network_socket;
 
   using super::super;
-
-  constexpr operator socket() const noexcept {
-    return socket{id};
-  }
-
-  constexpr operator network_socket() const noexcept {
-    return network_socket{id};
-  }
 };
 
 /// Creates a new TCP socket to accept connections on a given port.

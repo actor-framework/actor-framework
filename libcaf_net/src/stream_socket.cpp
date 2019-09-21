@@ -115,7 +115,7 @@ expected<std::pair<stream_socket, stream_socket>> make_stream_socket_pair() {
                   accept(listener, nullptr, nullptr));
   close(socket{listener});
   guard.disable();
-  return std::make_pair(read_fd, write_fd);
+  return std::make_pair(stream_socket{read_fd}, stream_socket{write_fd});
 }
 
 error keepalive(stream_socket x, bool new_value) {

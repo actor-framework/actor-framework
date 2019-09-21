@@ -63,9 +63,10 @@ expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
   socktype |= SOCK_CLOEXEC;
 #endif
   CAF_NET_SYSCALL("socket", fd, ==, -1, ::socket(Family, socktype, 0));
-  child_process_inherit(fd, false);
+  tcp_accept_socket sock{fd};
   // sguard closes the socket in case of exception
   auto sguard = make_socket_guard(tcp_accept_socket{fd});
+  child_process_inherit(sock, false);
   if (reuse_addr) {
     int on = 1;
     CAF_NET_SYSCALL("setsockopt", tmp1, !=, 0,
@@ -79,7 +80,7 @@ expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
   memset(&sa, 0, sizeof(sockaddr_type));
   detail::family_of(sa) = Family;
   if (any)
-    if (auto err = set_inaddr_any(fd, sa))
+    if (auto err = set_inaddr_any(sock, sa))
       return err;
   CAF_NET_SYSCALL("inet_pton", tmp, !=, 1,
                   inet_pton(Family, addr, &detail::addr_of(sa)));
@@ -141,7 +142,7 @@ expected<tcp_stream_socket> accept(tcp_accept_socket x) {
     }
     return caf::make_error(sec::socket_operation_failed, "tcp accept failed");
   }
-  return {sock};
+  return tcp_stream_socket{sock};
 }
 
 } // namespace net

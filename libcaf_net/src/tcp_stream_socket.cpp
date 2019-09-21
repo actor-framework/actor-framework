@@ -60,14 +60,15 @@ expected<tcp_stream_socket> make_connected_tcp_stream_socket(ip_endpoint node) {
   socktype |= SOCK_CLOEXEC;
 #endif
   CAF_NET_SYSCALL("socket", fd, ==, -1, ::socket(proto, socktype, 0));
-  child_process_inherit(fd, false);
-  auto sguard = make_socket_guard(tcp_stream_socket{fd});
+  tcp_stream_socket sock{fd};
+  child_process_inherit(sock, false);
+  auto sguard = make_socket_guard(sock);
   if (proto == AF_INET6) {
-    if (ip_connect<AF_INET6>(fd, to_string(node.address()), node.port())) {
+    if (ip_connect<AF_INET6>(sock, to_string(node.address()), node.port())) {
       CAF_LOG_INFO("successfully connected to (IPv6):" << to_string(node));
       return sguard.release();
     }
-  } else if (ip_connect<AF_INET>(fd, to_string(node.address().embedded_v4()),
+  } else if (ip_connect<AF_INET>(sock, to_string(node.address().embedded_v4()),
                                  node.port())) {
     CAF_LOG_INFO("successfully connected to (IPv4):" << to_string(node));
     return sguard.release();

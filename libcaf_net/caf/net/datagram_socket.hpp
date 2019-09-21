@@ -25,18 +25,10 @@ namespace caf {
 namespace net {
 
 /// A datagram-oriented network communication endpoint.
-struct datagram_socket : abstract_socket<datagram_socket> {
-  using super = abstract_socket<datagram_socket>;
+struct datagram_socket : network_socket {
+  using super = network_socket;
 
   using super::super;
-
-  constexpr operator socket() const noexcept {
-    return socket{id};
-  }
-
-  constexpr operator network_socket() const noexcept {
-    return network_socket{id};
-  }
 };
 
 /// Enables or disables `SIO_UDP_CONNRESET` error on `x`.
