@@ -23,6 +23,7 @@
 #include <type_traits>
 
 #include "caf/config.hpp"
+#include "caf/detail/comparable.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/socket_id.hpp"
 
@@ -31,24 +32,24 @@ namespace net {
 
 /// An internal endpoint for sending or receiving data. Can be either a
 /// ::network_socket, ::pipe_socket, ::stream_socket, or ::datagram_socket.
-struct socket {
+struct socket : detail::comparable<socket> {
   socket_id id;
 
-  constexpr socket() : id(invalid_socket_id) {
+  constexpr socket() noexcept : id(invalid_socket_id) {
     // nop
   }
 
-  constexpr explicit socket(socket_id id) : id(id) {
+  constexpr explicit socket(socket_id id) noexcept : id(id) {
     // nop
   }
 
-  constexpr socket(const socket& other) : id(other.id) {
-    // nop
-  }
+  constexpr socket(const socket& other) noexcept = default;
 
-  socket& operator=(const socket& other) {
-    id = other.id;
-    return *this;
+  socket& operator=(const socket& other) noexcept = default;
+
+  constexpr signed_socket_id compare(socket other) const noexcept {
+    return static_cast<signed_socket_id>(id)
+           - static_cast<signed_socket_id>(other.id);
   }
 };
 
@@ -56,21 +57,6 @@ struct socket {
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, socket& x) {
   return f(x.id);
-}
-
-/// @relates socket
-constexpr bool operator==(socket x, socket y) {
-  return x.id == y.id;
-}
-
-/// @relates socket
-constexpr bool operator!=(socket x, socket y) {
-  return x.id != y.id;
-}
-
-/// @relates socket
-constexpr bool operator<(socket x, socket y) {
-  return x.id < y.id;
 }
 
 /// Denotes the invalid socket.

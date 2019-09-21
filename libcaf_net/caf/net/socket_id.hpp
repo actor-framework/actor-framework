@@ -20,6 +20,7 @@
 
 #include <cstddef>
 #include <limits>
+#include <type_traits>
 
 #include "caf/config.hpp"
 
@@ -45,6 +46,10 @@ using socket_id = int;
 constexpr socket_id invalid_socket_id = -1;
 
 #endif // CAF_WINDOWS
+
+/// Signed counterpart of `socket_id`.
+/// @relates socket
+using signed_socket_id = std::make_signed<socket_id>::type;
 
 } // namespace net
 } // namespace caf
