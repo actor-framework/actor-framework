@@ -84,15 +84,17 @@ public:
     rec_buf_->insert(rec_buf_->begin(), data.begin(), data.end());
   }
 
-  template <class Manager>
-  void resolve(Manager& manager, const std::string& path, actor listener) {
+  template <class Parent>
+  void resolve(Parent& parent, const std::string& path, actor listener) {
     actor_id aid = 42;
     auto hid = "0011223344556677889900112233445566778899";
     auto nid = unbox(make_node_id(42, hid));
     actor_config cfg;
+    endpoint_manager_ptr ptr{&parent.manager()};
     auto p = make_actor<actor_proxy_impl, strong_actor_ptr>(aid, nid,
-                                                            &manager.system(),
-                                                            cfg, &manager);
+                                                            &parent.system(),
+                                                            cfg,
+                                                            std::move(ptr));
     anon_send(listener, resolve_atom::value, std::move(path), p);
   }
 

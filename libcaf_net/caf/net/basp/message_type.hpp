@@ -16,57 +16,65 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/net/actor_proxy_impl.hpp"
+#pragma once
 
-#include "caf/actor_system.hpp"
-#include "caf/expected.hpp"
-#include "caf/logger.hpp"
+#include <cstdint>
+#include <string>
 
 namespace caf {
 namespace net {
+namespace basp {
 
-actor_proxy_impl::actor_proxy_impl(actor_config& cfg, endpoint_manager_ptr dst)
-  : super(cfg), sf_(dst->serialize_fun()), dst_(std::move(dst)) {
-  // nop
-}
+/// @addtogroup BASP
 
-actor_proxy_impl::~actor_proxy_impl() {
-  // nop
-}
+/// Describes the first header field of a BASP message and determines the
+/// interpretation of the other header fields.
+enum class message_type : uint8_t {
+  /// Sends supported BASP version and node information to the server.
+  ///
+  /// ![](client_handshake.png)
+  handshake = 0,
 
-void actor_proxy_impl::enqueue(mailbox_element_ptr what, execution_unit*) {
-  CAF_PUSH_AID(0);
-  CAF_ASSERT(what != nullptr);
-  if (auto payload = sf_(home_system(), what->content()))
-    dst_->enqueue(std::move(what), ctrl(), std::move(*payload));
-  else
-    CAF_LOG_ERROR(
-      "unable to serialize payload: " << home_system().render(payload.error()));
-}
+  /// Transmits an actor-to-actor messages.
+  ///
+  /// ![](direct_message.png)
+  actor_message = 1,
 
-bool actor_proxy_impl::add_backlink(abstract_actor* x) {
-  if (monitorable_actor::add_backlink(x)) {
-    enqueue(make_mailbox_element(ctrl(), make_message_id(), {},
-                                 link_atom::value, x->ctrl()),
-            nullptr);
-    return true;
-  }
-  return false;
-}
+  /// Tries to resolve a path on the receiving node.
+  ///
+  /// ![](resolve_request.png)
+  resolve_request = 2,
 
-bool actor_proxy_impl::remove_backlink(abstract_actor* x) {
-  if (monitorable_actor::remove_backlink(x)) {
-    enqueue(make_mailbox_element(ctrl(), make_message_id(), {},
-                                 unlink_atom::value, x->ctrl()),
-            nullptr);
-    return true;
-  }
-  return false;
-}
+  /// Transmits the result of a path lookup.
+  ///
+  /// ![](resolve_response.png)
+  resolve_response = 3,
 
-void actor_proxy_impl::kill_proxy(execution_unit* ctx, error rsn) {
-  cleanup(std::move(rsn), ctx);
-}
+  /// Informs the receiving node that the sending node has created a proxy
+  /// instance for one of its actors. Causes the receiving node to attach a
+  /// functor to the actor that triggers a down_message on termination.
+  ///
+  /// ![](monitor_message.png)
+  monitor_message = 4,
 
+  /// Informs the receiving node that it has a proxy for an actor that has been
+  /// terminated.
+  ///
+  /// ![](down_message.png)
+  down_message = 5,
+
+  /// Used to generate periodic traffic between two nodes in order to detect
+  /// disconnects.
+  ///
+  /// ![](heartbeat.png)
+  heartbeat = 6,
+};
+
+/// @relates message_type
+std::string to_string(message_type);
+
+/// @}
+
+} // namespace basp
 } // namespace net
 } // namespace caf

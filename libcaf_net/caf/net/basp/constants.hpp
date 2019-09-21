@@ -16,57 +16,26 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/net/actor_proxy_impl.hpp"
+#pragma once
 
-#include "caf/actor_system.hpp"
-#include "caf/expected.hpp"
-#include "caf/logger.hpp"
+#include <cstddef>
+#include <cstdint>
 
 namespace caf {
 namespace net {
+namespace basp {
 
-actor_proxy_impl::actor_proxy_impl(actor_config& cfg, endpoint_manager_ptr dst)
-  : super(cfg), sf_(dst->serialize_fun()), dst_(std::move(dst)) {
-  // nop
-}
+/// @addtogroup BASP
 
-actor_proxy_impl::~actor_proxy_impl() {
-  // nop
-}
+/// The current BASP version.
+/// @note BASP is not backwards compatible.
+constexpr uint64_t version = 1;
 
-void actor_proxy_impl::enqueue(mailbox_element_ptr what, execution_unit*) {
-  CAF_PUSH_AID(0);
-  CAF_ASSERT(what != nullptr);
-  if (auto payload = sf_(home_system(), what->content()))
-    dst_->enqueue(std::move(what), ctrl(), std::move(*payload));
-  else
-    CAF_LOG_ERROR(
-      "unable to serialize payload: " << home_system().render(payload.error()));
-}
+/// Size of a BASP header in serialized form.
+constexpr size_t header_size = 13;
 
-bool actor_proxy_impl::add_backlink(abstract_actor* x) {
-  if (monitorable_actor::add_backlink(x)) {
-    enqueue(make_mailbox_element(ctrl(), make_message_id(), {},
-                                 link_atom::value, x->ctrl()),
-            nullptr);
-    return true;
-  }
-  return false;
-}
+/// @}
 
-bool actor_proxy_impl::remove_backlink(abstract_actor* x) {
-  if (monitorable_actor::remove_backlink(x)) {
-    enqueue(make_mailbox_element(ctrl(), make_message_id(), {},
-                                 unlink_atom::value, x->ctrl()),
-            nullptr);
-    return true;
-  }
-  return false;
-}
-
-void actor_proxy_impl::kill_proxy(execution_unit* ctx, error rsn) {
-  cleanup(std::move(rsn), ctx);
-}
-
+} // namespace basp
 } // namespace net
 } // namespace caf

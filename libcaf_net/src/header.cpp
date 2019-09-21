@@ -16,57 +16,47 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/net/actor_proxy_impl.hpp"
+#include "caf/net/basp/header.hpp"
 
-#include "caf/actor_system.hpp"
-#include "caf/expected.hpp"
-#include "caf/logger.hpp"
+#include <cstring>
+
+#include "caf/byte.hpp"
+#include "caf/detail/network_order.hpp"
+#include "caf/span.hpp"
 
 namespace caf {
 namespace net {
+namespace basp {
 
-actor_proxy_impl::actor_proxy_impl(actor_config& cfg, endpoint_manager_ptr dst)
-  : super(cfg), sf_(dst->serialize_fun()), dst_(std::move(dst)) {
-  // nop
+int header::compare(header other) const noexcept {
+  auto x = to_bytes(*this);
+  auto y = to_bytes(other);
+  return memcmp(x.data(), y.data(), header_size);
 }
 
-actor_proxy_impl::~actor_proxy_impl() {
-  // nop
+header header::from_bytes(span<const byte> bytes) {
+  CAF_ASSERT(bytes.size() >= header_size);
+  header result;
+  auto ptr = bytes.data();
+  result.type = *reinterpret_cast<const message_type*>(ptr);
+  auto payload_len = *reinterpret_cast<const uint32_t*>(ptr + 1);
+  result.payload_len = detail::from_network_order(payload_len);
+  auto operation_data = *reinterpret_cast<const uint64_t*>(ptr + 5);
+  result.operation_data = detail::from_network_order(operation_data);
+  return result;
 }
 
-void actor_proxy_impl::enqueue(mailbox_element_ptr what, execution_unit*) {
-  CAF_PUSH_AID(0);
-  CAF_ASSERT(what != nullptr);
-  if (auto payload = sf_(home_system(), what->content()))
-    dst_->enqueue(std::move(what), ctrl(), std::move(*payload));
-  else
-    CAF_LOG_ERROR(
-      "unable to serialize payload: " << home_system().render(payload.error()));
+std::array<byte, header_size> to_bytes(header x) {
+  std::array<byte, header_size> result;
+  auto ptr = result.data();
+  *ptr = static_cast<byte>(x.type);
+  auto payload_len = detail::to_network_order(x.payload_len);
+  memcpy(ptr + 1, &payload_len, sizeof(payload_len));
+  auto operation_data = detail::to_network_order(x.operation_data);
+  memcpy(ptr + 5, &operation_data, sizeof(operation_data));
+  return result;
 }
 
-bool actor_proxy_impl::add_backlink(abstract_actor* x) {
-  if (monitorable_actor::add_backlink(x)) {
-    enqueue(make_mailbox_element(ctrl(), make_message_id(), {},
-                                 link_atom::value, x->ctrl()),
-            nullptr);
-    return true;
-  }
-  return false;
-}
-
-bool actor_proxy_impl::remove_backlink(abstract_actor* x) {
-  if (monitorable_actor::remove_backlink(x)) {
-    enqueue(make_mailbox_element(ctrl(), make_message_id(), {},
-                                 unlink_atom::value, x->ctrl()),
-            nullptr);
-    return true;
-  }
-  return false;
-}
-
-void actor_proxy_impl::kill_proxy(execution_unit* ctx, error rsn) {
-  cleanup(std::move(rsn), ctx);
-}
-
+} // namespace basp
 } // namespace net
 } // namespace caf

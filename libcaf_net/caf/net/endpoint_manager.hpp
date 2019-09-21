@@ -91,10 +91,14 @@ public:
     /// Original message to a remote actor.
     mailbox_element_ptr msg;
 
+    /// ID of the receiving actor.
+    strong_actor_ptr receiver;
+
     /// Serialized representation of of `msg->content()`.
     std::vector<byte> payload;
 
-    message(mailbox_element_ptr msg, std::vector<byte> payload);
+    message(mailbox_element_ptr msg, strong_actor_ptr receiver,
+            std::vector<byte> payload);
   };
 
   struct message_policy {
@@ -136,7 +140,8 @@ public:
   void resolve(std::string path, actor listener);
 
   /// Enqueues a message to the endpoint.
-  void enqueue(mailbox_element_ptr msg, std::vector<byte> payload);
+  void enqueue(mailbox_element_ptr msg, strong_actor_ptr receiver,
+               std::vector<byte> payload);
 
   /// Enqueues a timeout to the endpoint.
   void enqueue(timeout_msg msg);

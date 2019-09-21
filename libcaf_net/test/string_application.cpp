@@ -155,16 +155,16 @@ public:
     }
   }
 
-  template <class Manager>
-  void resolve(Manager& manager, const std::string& path, actor listener) {
+  template <class Parent>
+  void resolve(Parent& parent, const std::string& path, actor listener) {
     actor_id aid = 42;
     auto hid = "0011223344556677889900112233445566778899";
     auto nid = unbox(make_node_id(aid, hid));
     actor_config cfg;
-    auto p = make_actor<net::actor_proxy_impl, strong_actor_ptr>(aid, nid,
-                                                                 &manager
-                                                                    .system(),
-                                                                 cfg, &manager);
+    auto sys = &parent.system();
+    auto mgr = &parent.manager();
+    auto p = make_actor<net::actor_proxy_impl, strong_actor_ptr>(aid, nid, sys,
+                                                                 cfg, mgr);
     anon_send(listener, resolve_atom::value, std::move(path), p);
   }
 

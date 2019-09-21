@@ -16,57 +16,45 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/net/actor_proxy_impl.hpp"
+#include "caf/net/basp/ec.hpp"
 
-#include "caf/actor_system.hpp"
-#include "caf/expected.hpp"
-#include "caf/logger.hpp"
+#include "caf/atom.hpp"
+#include "caf/error.hpp"
+#include "caf/string_view.hpp"
 
 namespace caf {
 namespace net {
+namespace basp {
 
-actor_proxy_impl::actor_proxy_impl(actor_config& cfg, endpoint_manager_ptr dst)
-  : super(cfg), sf_(dst->serialize_fun()), dst_(std::move(dst)) {
-  // nop
+namespace {
+
+string_view ec_names[] = {
+  "none",
+  "invalid_magic_number",
+  "unexpected_number_of_bytes",
+  "unexpected_payload",
+  "missing_payload",
+  "illegal_state",
+  "invalid_handshake",
+  "missing_handshake",
+  "unexpected_handshake",
+  "version_mismatch",
+  "unimplemented",
+  "app_identifiers_mismatch",
+  "invalid_payload",
+};
+
+} // namespace
+
+std::string to_string(ec x) {
+  auto result = ec_names[static_cast<uint8_t>(x)];
+  return std::string{result.begin(), result.end()};
 }
 
-actor_proxy_impl::~actor_proxy_impl() {
-  // nop
+error make_error(ec x) {
+  return {static_cast<uint8_t>(x), atom("basp")};
 }
 
-void actor_proxy_impl::enqueue(mailbox_element_ptr what, execution_unit*) {
-  CAF_PUSH_AID(0);
-  CAF_ASSERT(what != nullptr);
-  if (auto payload = sf_(home_system(), what->content()))
-    dst_->enqueue(std::move(what), ctrl(), std::move(*payload));
-  else
-    CAF_LOG_ERROR(
-      "unable to serialize payload: " << home_system().render(payload.error()));
-}
-
-bool actor_proxy_impl::add_backlink(abstract_actor* x) {
-  if (monitorable_actor::add_backlink(x)) {
-    enqueue(make_mailbox_element(ctrl(), make_message_id(), {},
-                                 link_atom::value, x->ctrl()),
-            nullptr);
-    return true;
-  }
-  return false;
-}
-
-bool actor_proxy_impl::remove_backlink(abstract_actor* x) {
-  if (monitorable_actor::remove_backlink(x)) {
-    enqueue(make_mailbox_element(ctrl(), make_message_id(), {},
-                                 unlink_atom::value, x->ctrl()),
-            nullptr);
-    return true;
-  }
-  return false;
-}
-
-void actor_proxy_impl::kill_proxy(execution_unit* ctx, error rsn) {
-  cleanup(std::move(rsn), ctx);
-}
-
+} // namespace basp
 } // namespace net
 } // namespace caf

@@ -187,6 +187,7 @@ struct fixture : host_fixture {
                                      make_message_id(12345), std::move(stack),
                                      make_message());
     return detail::make_unique<endpoint_manager::message>(std::move(elem),
+                                                          strong_actor,
                                                           payload);
   }
 

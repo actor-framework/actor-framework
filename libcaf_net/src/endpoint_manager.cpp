@@ -37,8 +37,11 @@ endpoint_manager::event::event(atom_value type, uint64_t id)
 }
 
 endpoint_manager::message::message(mailbox_element_ptr msg,
+                                   strong_actor_ptr receiver,
                                    std::vector<byte> payload)
-  : msg(std::move(msg)), payload(std::move(payload)) {
+  : msg(std::move(msg)),
+    receiver(std::move(receiver)),
+    payload(std::move(payload)) {
   // nop
 }
 
@@ -87,8 +90,10 @@ void endpoint_manager::resolve(std::string path, actor listener) {
 }
 
 void endpoint_manager::enqueue(mailbox_element_ptr msg,
+                               strong_actor_ptr receiver,
                                std::vector<byte> payload) {
-  auto ptr = new message(std::move(msg), std::move(payload));
+  auto ptr = new message(std::move(msg), std::move(receiver),
+                         std::move(payload));
   if (messages_.push_back(ptr) == intrusive::inbox_result::unblocked_reader)
     mask_add(operation::write);
 }

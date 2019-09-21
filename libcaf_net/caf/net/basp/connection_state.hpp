@@ -16,57 +16,38 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/net/actor_proxy_impl.hpp"
+#pragma once
 
-#include "caf/actor_system.hpp"
-#include "caf/expected.hpp"
-#include "caf/logger.hpp"
+#include <string>
 
 namespace caf {
 namespace net {
+namespace basp {
 
-actor_proxy_impl::actor_proxy_impl(actor_config& cfg, endpoint_manager_ptr dst)
-  : super(cfg), sf_(dst->serialize_fun()), dst_(std::move(dst)) {
-  // nop
-}
+/// @addtogroup BASP
 
-actor_proxy_impl::~actor_proxy_impl() {
-  // nop
-}
+/// Stores the state of a connection in a `basp::application`.
+enum class connection_state {
+  /// Initial state for any connection to wait for the peer's handshake.
+  await_handshake_header,
+  /// Indicates that the header for the peer's handshake arrived and BASP
+  /// requires the payload next.
+  await_handshake_payload,
+  /// Indicates that a connection is established and this node is waiting for
+  /// the next BASP header.
+  await_header,
+  /// Indicates that this node has received a header with non-zero payload and
+  /// is waiting for the data.
+  await_payload,
+  /// Indicates that the connection is about to shut down.
+  shutdown,
+};
 
-void actor_proxy_impl::enqueue(mailbox_element_ptr what, execution_unit*) {
-  CAF_PUSH_AID(0);
-  CAF_ASSERT(what != nullptr);
-  if (auto payload = sf_(home_system(), what->content()))
-    dst_->enqueue(std::move(what), ctrl(), std::move(*payload));
-  else
-    CAF_LOG_ERROR(
-      "unable to serialize payload: " << home_system().render(payload.error()));
-}
+/// @relates connection_state
+std::string to_string(connection_state x);
 
-bool actor_proxy_impl::add_backlink(abstract_actor* x) {
-  if (monitorable_actor::add_backlink(x)) {
-    enqueue(make_mailbox_element(ctrl(), make_message_id(), {},
-                                 link_atom::value, x->ctrl()),
-            nullptr);
-    return true;
-  }
-  return false;
-}
+/// @}
 
-bool actor_proxy_impl::remove_backlink(abstract_actor* x) {
-  if (monitorable_actor::remove_backlink(x)) {
-    enqueue(make_mailbox_element(ctrl(), make_message_id(), {},
-                                 unlink_atom::value, x->ctrl()),
-            nullptr);
-    return true;
-  }
-  return false;
-}
-
-void actor_proxy_impl::kill_proxy(execution_unit* ctx, error rsn) {
-  cleanup(std::move(rsn), ctx);
-}
-
+} // namespace basp
 } // namespace net
 } // namespace caf
