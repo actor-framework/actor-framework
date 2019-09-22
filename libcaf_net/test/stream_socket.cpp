@@ -80,6 +80,7 @@ CAF_TEST(read on empty sockets) {
   CAF_CHECK_EQUAL(read(second, make_span(rd_buf)),
                   sec::unavailable_or_would_block);
 }
+
 CAF_TEST(transfer data from first to second socket) {
   std::vector<byte> wr_buf{1_b, 2_b, 4_b, 8_b, 16_b, 32_b, 64_b};
   CAF_MESSAGE("transfer data from first to second socket");
