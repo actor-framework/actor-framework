@@ -226,13 +226,10 @@ std::vector<ip_address> local_addresses(string_view host) {
 }
 
 std::vector<ip_address> local_addresses(ip_address host) {
-  auto v6_any = ip_address{{0}, {0}};
-  auto v4_any = ip_address{make_ipv4_address(0, 0, 0, 0)};
-  // TODO: If is any addr, call resolve with PR #23.
-  if (host == v4_any)
-    return {ip_address{make_ipv4_address(0, 0, 0, 0)}};
-  if (host == v6_any)
-    return {ip_address{}};
+  static auto v6_any = ip_address{{0}, {0}};
+  static auto v4_any = ip_address{make_ipv4_address(0, 0, 0, 0)};
+  if (host == v4_any || host == v6_any)
+    return resolve("");
   auto link_local = ip_address({0xfe, 0x8, 0x0, 0x0}, {0x0, 0x0, 0x0, 0x0});
   auto ll_prefix = ip_subnet(link_local, 10);
   // Unless explicitly specified we are going to skip link-local addresses.
