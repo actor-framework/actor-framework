@@ -93,12 +93,6 @@ public:
   }
 
   template <class Parent>
-  void write_packet(Parent& parent, span<const byte> header,
-                    span<const byte> payload, id_type id) {
-    parent.write_packet(header, payload, id);
-  }
-
-  template <class Parent>
   void resolve(Parent& parent, const std::string& path, actor listener) {
     // TODO path should be uri to lookup the corresponding worker
     // if enpoint is known -> resolve actor through worker

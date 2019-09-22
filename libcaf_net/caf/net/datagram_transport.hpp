@@ -48,6 +48,8 @@ public:
 
   using factory_type = Factory;
 
+  using transport_type = datagram_transport;
+
   using application_type = typename Factory::application_type;
 
   using dispatcher_type = transport_worker_dispatcher<factory_type,
@@ -104,8 +106,7 @@ public:
     // Get new data from parent.
     for (auto msg = parent.next_message(); msg != nullptr;
          msg = parent.next_message()) {
-      auto decorator = make_write_packet_decorator(*this, parent);
-      dispatcher_.write_message(decorator, std::move(msg));
+      dispatcher_.write_message(*this, std::move(msg));
     }
     // Write prepared data.
     return write_some();
@@ -169,14 +170,13 @@ public:
     prepare_next_read();
   }
 
-  template <class Parent>
-  void write_packet(Parent&, span<const byte> header, span<const byte> payload,
-                    ip_endpoint ep) {
+  void write_packet(span<const byte> header, span<const byte> payload,
+                    typename dispatcher_type::id_type id) {
     std::vector<byte> buf;
     buf.reserve(header.size() + payload.size());
     buf.insert(buf.end(), header.begin(), header.end());
     buf.insert(buf.end(), payload.begin(), payload.end());
-    packet_queue_.emplace_back(ep, std::move(buf));
+    packet_queue_.emplace_back(id, std::move(buf));
   }
 
   struct packet {
