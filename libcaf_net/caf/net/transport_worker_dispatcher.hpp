@@ -32,7 +32,7 @@
 namespace caf {
 namespace net {
 
-/// implements a dispatcher that dispatches calls to the right worker
+/// implements a dispatcher that dispatches between transport and workers.
 template <class ApplicationFactory, class IdType>
 class transport_worker_dispatcher {
 public:
@@ -57,16 +57,9 @@ public:
 
   // -- member functions -------------------------------------------------------
 
-  /// Initializes all contained contained workers.
-  /// @param The parent of this Dispatcher
-  /// @return error if something went wrong sec::none when init() worked.
   template <class Parent>
-  error init(Parent& parent) {
-    for (const auto& p : workers_by_id_) {
-      auto worker = p.second;
-      if (auto err = worker->init(parent))
-        return err;
-    }
+  error init(Parent&) {
+    CAF_ASSERT(workers_by_id_.empty());
     return none;
   }
 
@@ -74,8 +67,8 @@ public:
   void handle_data(Parent& parent, span<byte> data, id_type id) {
     auto it = workers_by_id_.find(id);
     if (it == workers_by_id_.end()) {
-      // TODO: where to get node_id from in this scope.
-      add_new_worker(node_id{}, id);
+      // TODO: where to get node_id from here?
+      add_new_worker(parent, node_id{}, id);
       it = workers_by_id_.find(id);
     }
     auto worker = it->second;
@@ -91,12 +84,11 @@ public:
     auto nid = sender->node();
     auto it = workers_by_node_.find(nid);
     if (it == workers_by_node_.end()) {
-      // TODO: where to get id_type from in this scope.
-      add_new_worker(nid, id_type{});
+      // TODO: where to get id_type from here?
+      add_new_worker(parent, nid, id_type{});
       it = workers_by_node_.find(nid);
     }
     auto worker = it->second;
-    // parent should be a decorator with parent and parent->parent.
     worker->write_message(parent, std::move(msg));
   }
 
@@ -108,7 +100,9 @@ public:
 
   template <class Parent>
   void resolve(Parent& parent, const std::string& path, actor listener) {
-    // TODO: How to find the right worker? use path somehow?
+    // TODO path should be uri to lookup the corresponding worker
+    // if enpoint is known -> resolve actor through worker
+    // if not connect to endpoint?!
     if (workers_by_id_.empty())
       return;
     auto worker = workers_by_id_.begin()->second;
@@ -134,11 +128,15 @@ public:
     }
   }
 
-  void add_new_worker(node_id node, id_type id) {
+  template <class Parent>
+  error add_new_worker(Parent& parent, node_id node, id_type id) {
     auto application = factory_.make();
     auto worker = std::make_shared<worker_type>(std::move(application), id);
+    if (auto err = worker->init(parent))
+      return err;
     workers_by_id_.emplace(std::move(id), worker);
     workers_by_node_.emplace(std::move(node), std::move(worker));
+    return none;
   }
 
 private:
@@ -148,9 +146,8 @@ private:
   std::unordered_map<node_id, worker_ptr> workers_by_node_;
   std::unordered_map<uint64_t, worker_ptr> workers_by_timeout_id_;
 
-  /// Factory to make application instances for transport_workers
   factory_type factory_;
-}; // namespace net
+};
 
 } // namespace net
 } // namespace caf

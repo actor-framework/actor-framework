@@ -18,50 +18,63 @@
 
 #pragma once
 
-#include <cstddef>
-#include <system_error>
-#include <utility>
-
-#include "caf/fwd.hpp"
-#include "caf/net/socket.hpp"
-#include "caf/net/socket_id.hpp"
+#include <cstdint>
+#include <string>
 
 namespace caf {
 namespace net {
+namespace basp {
 
-/// A unidirectional communication endpoint for inter-process communication.
-struct pipe_socket : socket {
-  using super = socket;
+/// @addtogroup BASP
 
-  using super::super;
+/// Describes the first header field of a BASP message and determines the
+/// interpretation of the other header fields.
+enum class message_type : uint8_t {
+  /// Sends supported BASP version and node information to the server.
+  ///
+  /// ![](client_handshake.png)
+  handshake = 0,
+
+  /// Transmits an actor-to-actor messages.
+  ///
+  /// ![](direct_message.png)
+  actor_message = 1,
+
+  /// Tries to resolve a path on the receiving node.
+  ///
+  /// ![](resolve_request.png)
+  resolve_request = 2,
+
+  /// Transmits the result of a path lookup.
+  ///
+  /// ![](resolve_response.png)
+  resolve_response = 3,
+
+  /// Informs the receiving node that the sending node has created a proxy
+  /// instance for one of its actors. Causes the receiving node to attach a
+  /// functor to the actor that triggers a down_message on termination.
+  ///
+  /// ![](monitor_message.png)
+  monitor_message = 4,
+
+  /// Informs the receiving node that it has a proxy for an actor that has been
+  /// terminated.
+  ///
+  /// ![](down_message.png)
+  down_message = 5,
+
+  /// Used to generate periodic traffic between two nodes in order to detect
+  /// disconnects.
+  ///
+  /// ![](heartbeat.png)
+  heartbeat = 6,
 };
 
-/// Creates two connected sockets. The first socket is the read handle and the
-/// second socket is the write handle.
-/// @relates pipe_socket
-expected<std::pair<pipe_socket, pipe_socket>> make_pipe();
+/// @relates message_type
+std::string to_string(message_type);
 
-/// Transmits data from `x` to its peer.
-/// @param x Connected endpoint.
-/// @param buf Points to the message to send.
-/// @param buf_size Specifies the size of the buffer in bytes.
-/// @returns The number of written bytes on success, otherwise an error code.
-/// @relates pipe_socket
-variant<size_t, sec> write(pipe_socket x, span<const byte> buf);
+/// @}
 
-/// Receives data from `x`.
-/// @param x Connected endpoint.
-/// @param buf Points to destination buffer.
-/// @param buf_size Specifies the maximum size of the buffer in bytes.
-/// @returns The number of received bytes on success, otherwise an error code.
-/// @relates pipe_socket
-variant<size_t, sec> read(pipe_socket x, span<byte>);
-
-/// Converts the result from I/O operation on a ::pipe_socket to either an
-/// error code or a non-zero positive integer.
-/// @relates pipe_socket
-variant<size_t, sec>
-check_pipe_socket_io_res(std::make_signed<size_t>::type res);
-
+} // namespace basp
 } // namespace net
 } // namespace caf

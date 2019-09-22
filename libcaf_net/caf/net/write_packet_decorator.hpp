@@ -52,12 +52,17 @@ public:
     return parent_.transport();
   }
 
+  endpoint_manager& manager() {
+    return parent_.manager();
+  }
+
   // -- member functions -------------------------------------------------------
 
   template <class... Ts>
   void write_packet(span<const byte> header, span<const byte> payload,
                     Ts&&... xs) {
-    object_.write_packet(parent_, header, payload, std::forward<Ts>(xs)...);
+    parent_.write_packet(header, payload, std::forward<Ts>(xs)...,
+                         object_.id());
   }
 
   void cancel_timeout(atom_value type, uint64_t id) {

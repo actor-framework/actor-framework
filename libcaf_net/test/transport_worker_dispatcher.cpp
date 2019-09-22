@@ -187,13 +187,20 @@ struct fixture : host_fixture {
                                      make_message_id(12345), std::move(stack),
                                      make_message());
     return detail::make_unique<endpoint_manager::message>(std::move(elem),
+                                                          strong_actor,
                                                           payload);
+  }
+
+  bool contains(byte x) {
+    return std::count(buf->begin(), buf->end(), x) > 0;
   }
 
   void add_new_workers() {
     for (auto& data : test_data) {
-      dispatcher.add_new_worker(data.nid, data.ep);
+      if (auto err = dispatcher.add_new_worker(dummy, data.nid, data.ep))
+        CAF_FAIL("add_new_worker returned an error: " << err);
     }
+    buf->clear();
   }
 
   void test_write_message(testdata& testcase) {
@@ -245,16 +252,9 @@ struct fixture : host_fixture {
 CAF_TEST_FIXTURE_SCOPE(transport_worker_dispatcher_test, fixture)
 
 CAF_TEST(init) {
-  auto contains = [&](byte x) {
-    return std::count(buf->begin(), buf->end(), x) > 0;
-  };
+  dispatcher_type dispatcher{dummy_application_factory{buf}};
   if (auto err = dispatcher.init(dummy))
     CAF_FAIL("init failed with error: " << err);
-  CAF_CHECK_EQUAL(buf->size(), 4u);
-  CAF_CHECK(contains(byte(0)));
-  CAF_CHECK(contains(byte(1)));
-  CAF_CHECK(contains(byte(2)));
-  CAF_CHECK(contains(byte(3)));
 }
 
 CAF_TEST(handle_data) {
@@ -283,9 +283,6 @@ CAF_TEST(timeout) {
 }
 
 CAF_TEST(handle_error) {
-  auto contains = [&](byte x) {
-    return std::count(buf->begin(), buf->end(), x) > 0;
-  };
   dispatcher.handle_error(sec::unavailable_or_would_block);
   CAF_CHECK_EQUAL(buf->size(), 4u);
   CAF_CHECK(contains(byte(0)));

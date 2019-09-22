@@ -46,16 +46,32 @@ public:
     // nop
   }
 
+  // -- properties -------------------------------------------------------------
+
+  application_type& application() noexcept {
+    return application_;
+  }
+
+  const application_type& application() const noexcept {
+    return application_;
+  }
+
+  const id_type& id() const noexcept {
+    return id_;
+  }
+
   // -- member functions -------------------------------------------------------
 
   template <class Parent>
   error init(Parent& parent) {
-    return application_.init(parent);
+    auto decorator = make_write_packet_decorator(*this, parent);
+    return application_.init(decorator);
   }
 
   template <class Parent>
   void handle_data(Parent& parent, span<const byte> data) {
-    application_.handle_data(parent, data);
+    auto decorator = make_write_packet_decorator(*this, parent);
+    application_.handle_data(decorator, data);
   }
 
   template <class Parent>
@@ -66,19 +82,15 @@ public:
   }
 
   template <class Parent>
-  void write_packet(Parent& parent, span<const byte> header,
-                    span<const byte> payload) {
-    parent.write_packet(header, payload, id_);
-  }
-
-  template <class Parent>
   void resolve(Parent& parent, const std::string& path, actor listener) {
-    application_.resolve(parent, path, listener);
+    auto decorator = make_write_packet_decorator(*this, parent);
+    application_.resolve(decorator, path, listener);
   }
 
   template <class Parent>
   void timeout(Parent& parent, atom_value value, uint64_t id) {
-    application_.timeout(parent, value, id);
+    auto decorator = make_write_packet_decorator(*this, parent);
+    application_.timeout(decorator, value, id);
   }
 
   void handle_error(sec error) {

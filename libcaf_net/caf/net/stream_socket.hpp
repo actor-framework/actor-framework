@@ -26,18 +26,10 @@ namespace net {
 
 /// A connection-oriented network communication endpoint for bidirectional byte
 /// streams.
-struct stream_socket : abstract_socket<stream_socket> {
-  using super = abstract_socket<stream_socket>;
+struct stream_socket : network_socket {
+  using super = network_socket;
 
   using super::super;
-
-  constexpr operator socket() const noexcept {
-    return socket{id};
-  }
-
-  constexpr operator network_socket() const noexcept {
-    return network_socket{id};
-  }
 };
 
 /// Creates two connected sockets to mimic network communication (usually for

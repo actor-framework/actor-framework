@@ -19,56 +19,48 @@
 #pragma once
 
 #include "caf/fwd.hpp"
-#include "caf/ip_endpoint.hpp"
 #include "caf/net/network_socket.hpp"
 
 namespace caf {
 namespace net {
 
-/// A non connection-oriented network communication endpoint for bidirectional
+/// A datagram-oriented network communication endpoint for bidirectional
 /// byte transmission.
-struct udp_datagram_socket : abstract_socket<udp_datagram_socket> {
-  using super = abstract_socket<udp_datagram_socket>;
+struct udp_datagram_socket : network_socket {
+  using super = network_socket;
 
   using super::super;
-
-  constexpr operator socket() const noexcept {
-    return socket{id};
-  }
-
-  constexpr operator network_socket() const noexcept {
-    return network_socket{id};
-  }
 };
 
-/// Creates a `tcp_stream_socket` connected to given remote node.
-/// @param node Host and port of the remote node.
+/// Creates a `udp_datagram_socket` bound to given port.
+/// @param node ip_endpoint that contains the port to bind to. Pass port '0' to
+/// bind to any unused port - The endpoint will be updated with the specific
+/// port that was bound.
 /// @returns The connected socket or an error.
-/// @relates tcp_stream_socket
-expected<udp_datagram_socket> make_udp_datagram_socket(ip_endpoint& node,
-                                                       bool reuse_addr = false);
+/// @relates udp_datagram_socket
+expected<std::pair<udp_datagram_socket, uint16_t>>
+make_udp_datagram_socket(ip_endpoint ep, bool reuse_addr = false);
 
 /// Enables or disables `SIO_UDP_CONNRESET` error on `x`.
 /// @relates udp_datagram_socket
 error allow_connreset(udp_datagram_socket x, bool new_value);
 
-/// Receives data from `x`.
-/// @param x udp_datagram_socket.
-/// @param buf Points to destination buffer.
-/// @returns The number of received bytes and the ip_endpoint on success, an
-/// error code otherwise.
+/// Receives the next datagram on socket `x`.
+/// @param x The UDP socket for receiving datagrams.
+/// @param buf Writable output buffer.
+/// @returns The number of received bytes and the sender as `ip_endpoint` on
+/// success, an error code otherwise.
 /// @relates udp_datagram_socket
-/// @post either the result is a `sec` or a pair of positive (non-zero) integer
-/// and ip_endpoint
+/// @post buf was modified and the resulting integer represents the length of
+/// the received datagram, even if it did not fit into the given buffer.
 variant<std::pair<size_t, ip_endpoint>, sec> read(udp_datagram_socket x,
                                                   span<byte> buf);
 
-/// Transmits data from `x` to its peer.
-/// @param x udp_datagram_socket.
-/// @param buf Points to the message to send.
+/// Sends the content of `buf` as a datagram to the endpoint `ep` on socket `x`.
+/// @param x The UDP socket for sending datagrams.
+/// @param buf The buffer to send.
 /// @returns The number of written bytes on success, otherwise an error code.
 /// @relates udp_datagram_socket
-/// @post either the result is a `sec` or a positive (non-zero) integer
 variant<size_t, sec> write(udp_datagram_socket x, span<const byte> buf,
                            ip_endpoint ep);
 

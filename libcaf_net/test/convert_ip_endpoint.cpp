@@ -22,6 +22,8 @@
 
 #include "caf/test/dsl.hpp"
 
+#include "host_fixture.hpp"
+
 #include <cstring>
 
 #include "caf/detail/socket_sys_includes.hpp"
@@ -31,40 +33,80 @@
 using namespace caf;
 using namespace caf::detail;
 
+namespace {
+
+struct fixture : host_fixture {
+  fixture() : host_fixture() {
+    memset(&sockaddr6_src, 0, sizeof(sockaddr_in6));
+    memset(&sockaddr6_dst, 0, sizeof(sockaddr_in6));
+    sockaddr6_src.sin6_family = AF_INET6;
+    sockaddr6_src.sin6_port = htons(23);
+    sockaddr6_src.sin6_addr = in6addr_loopback;
+    memset(&sockaddr4_src, 0, sizeof(sockaddr_in));
+    memset(&sockaddr4_dst, 0, sizeof(sockaddr_in));
+    sockaddr4_src.sin_family = AF_INET;
+    sockaddr4_src.sin_port = htons(23);
+    sockaddr4_src.sin_addr.s_addr = INADDR_LOOPBACK;
+  }
+
+  sockaddr_in6 sockaddr6_src;
+  sockaddr_in6 sockaddr6_dst;
+  sockaddr_in sockaddr4_src;
+  sockaddr_in sockaddr4_dst;
+  ip_endpoint ep_src;
+  ip_endpoint ep_dst;
+};
+
+} // namespace
+
+CAF_TEST_FIXTURE_SCOPE(convert_ip_endpoint_tests, fixture)
+
 CAF_TEST(sockaddr_in6 roundtrip) {
-  sockaddr_in6 source_addr = {};
-  source_addr.sin6_family = AF_INET6;
-  source_addr.sin6_port = htons(23);
-  source_addr.sin6_addr = in6addr_loopback;
-  auto ep = to_ip_endpoint(reinterpret_cast<sockaddr_storage&>(source_addr));
-  auto dest_addr = to_sockaddr(ep);
-  CAF_CHECK_EQUAL(memcmp(&source_addr, &dest_addr, sizeof(sockaddr_in6)), 0);
+  ip_endpoint ep;
+  CAF_MESSAGE("converting sockaddr_in6 to ip_endpoint");
+  CAF_CHECK_EQUAL(convert(reinterpret_cast<sockaddr_storage&>(sockaddr6_src),
+                          ep),
+                  none);
+  CAF_MESSAGE("converting ip_endpoint to sockaddr_in6");
+  convert(ep, reinterpret_cast<sockaddr_storage&>(sockaddr6_dst));
+  CAF_CHECK_EQUAL(memcmp(&sockaddr6_src, &sockaddr6_dst, sizeof(sockaddr_in6)),
+                  0);
 }
 
 CAF_TEST(ipv6_endpoint roundtrip) {
-  ipv6_endpoint source_ep;
-  if (auto err = detail::parse("[::1]:55555", source_ep))
+  sockaddr_storage addr;
+  memset(&addr, 0, sizeof(sockaddr_storage));
+  if (auto err = detail::parse("[::1]:55555", ep_src))
     CAF_FAIL("unable to parse input: " << err);
-  auto addr = to_sockaddr(source_ep);
-  auto dest_ep = to_ip_endpoint(addr);
-  CAF_CHECK_EQUAL(source_ep, dest_ep);
+  CAF_MESSAGE("converting ip_endpoint to sockaddr_in6");
+  convert(ep_src, addr);
+  CAF_MESSAGE("converting sockaddr_in6 to ip_endpoint");
+  CAF_CHECK_EQUAL(convert(addr, ep_dst), none);
+  CAF_CHECK_EQUAL(ep_src, ep_dst);
 }
 
 CAF_TEST(sockaddr_in4 roundtrip) {
-  sockaddr_in source_addr = {};
-  source_addr.sin_family = AF_INET;
-  source_addr.sin_port = htons(23);
-  source_addr.sin_addr.s_addr = INADDR_LOOPBACK;
-  auto ep = to_ip_endpoint(reinterpret_cast<sockaddr_storage&>(source_addr));
-  auto dest_addr = to_sockaddr(ep);
-  CAF_CHECK_EQUAL(memcmp(&source_addr, &dest_addr, sizeof(sockaddr_in)), 0);
+  ip_endpoint ep;
+  CAF_MESSAGE("converting sockaddr_in to ip_endpoint");
+  CAF_CHECK_EQUAL(convert(reinterpret_cast<sockaddr_storage&>(sockaddr4_src),
+                          ep),
+                  none);
+  CAF_MESSAGE("converting ip_endpoint to sockaddr_in");
+  convert(ep, reinterpret_cast<sockaddr_storage&>(sockaddr4_dst));
+  CAF_CHECK_EQUAL(memcmp(&sockaddr4_src, &sockaddr4_dst, sizeof(sockaddr_in)),
+                  0);
 }
 
 CAF_TEST(ipv4_endpoint roundtrip) {
-  ipv6_endpoint source_ep;
-  if (auto err = detail::parse("127.0.0.1:55555", source_ep))
+  sockaddr_storage addr;
+  memset(&addr, 0, sizeof(sockaddr_storage));
+  if (auto err = detail::parse("127.0.0.1:55555", ep_src))
     CAF_FAIL("unable to parse input: " << err);
-  auto addr = to_sockaddr(source_ep);
-  auto dest_ep = to_ip_endpoint(addr);
-  CAF_CHECK_EQUAL(source_ep, dest_ep);
+  CAF_MESSAGE("converting ip_endpoint to sockaddr_in");
+  convert(ep_src, addr);
+  CAF_MESSAGE("converting sockaddr_in to ip_endpoint");
+  CAF_CHECK_EQUAL(convert(addr, ep_dst), none);
+  CAF_CHECK_EQUAL(ep_src, ep_dst);
 }
+
+CAF_TEST_FIXTURE_SCOPE_END();

@@ -16,40 +16,47 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#include "caf/net/basp/header.hpp"
 
-#include <cstddef>
-#include <limits>
-#include <type_traits>
+#include <cstring>
 
-#include "caf/config.hpp"
+#include "caf/byte.hpp"
+#include "caf/detail/network_order.hpp"
+#include "caf/span.hpp"
 
 namespace caf {
 namespace net {
+namespace basp {
 
-#ifdef CAF_WINDOWS
+int header::compare(header other) const noexcept {
+  auto x = to_bytes(*this);
+  auto y = to_bytes(other);
+  return memcmp(x.data(), y.data(), header_size);
+}
 
-/// Platform-specific representation of a socket.
-/// @relates socket
-using socket_id = size_t;
+header header::from_bytes(span<const byte> bytes) {
+  CAF_ASSERT(bytes.size() >= header_size);
+  header result;
+  auto ptr = bytes.data();
+  result.type = *reinterpret_cast<const message_type*>(ptr);
+  auto payload_len = *reinterpret_cast<const uint32_t*>(ptr + 1);
+  result.payload_len = detail::from_network_order(payload_len);
+  auto operation_data = *reinterpret_cast<const uint64_t*>(ptr + 5);
+  result.operation_data = detail::from_network_order(operation_data);
+  return result;
+}
 
-/// Identifies the invalid socket.
-constexpr socket_id invalid_socket_id = std::numeric_limits<socket_id>::max();
+std::array<byte, header_size> to_bytes(header x) {
+  std::array<byte, header_size> result;
+  auto ptr = result.data();
+  *ptr = static_cast<byte>(x.type);
+  auto payload_len = detail::to_network_order(x.payload_len);
+  memcpy(ptr + 1, &payload_len, sizeof(payload_len));
+  auto operation_data = detail::to_network_order(x.operation_data);
+  memcpy(ptr + 5, &operation_data, sizeof(operation_data));
+  return result;
+}
 
-#else // CAF_WINDOWS
-
-/// Platform-specific representation of a socket.
-/// @relates socket
-using socket_id = int;
-
-/// Identifies the invalid socket.
-constexpr socket_id invalid_socket_id = -1;
-
-#endif // CAF_WINDOWS
-
-/// Signed counterpart of `socket_id`.
-/// @relates socket
-using signed_socket_id = std::make_signed<socket_id>::type;
-
+} // namespace basp
 } // namespace net
 } // namespace caf

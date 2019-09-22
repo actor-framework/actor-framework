@@ -16,40 +16,45 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#include "caf/net/basp/ec.hpp"
 
-#include <cstddef>
-#include <limits>
-#include <type_traits>
-
-#include "caf/config.hpp"
+#include "caf/atom.hpp"
+#include "caf/error.hpp"
+#include "caf/string_view.hpp"
 
 namespace caf {
 namespace net {
+namespace basp {
 
-#ifdef CAF_WINDOWS
+namespace {
 
-/// Platform-specific representation of a socket.
-/// @relates socket
-using socket_id = size_t;
+string_view ec_names[] = {
+  "none",
+  "invalid_magic_number",
+  "unexpected_number_of_bytes",
+  "unexpected_payload",
+  "missing_payload",
+  "illegal_state",
+  "invalid_handshake",
+  "missing_handshake",
+  "unexpected_handshake",
+  "version_mismatch",
+  "unimplemented",
+  "app_identifiers_mismatch",
+  "invalid_payload",
+};
 
-/// Identifies the invalid socket.
-constexpr socket_id invalid_socket_id = std::numeric_limits<socket_id>::max();
+} // namespace
 
-#else // CAF_WINDOWS
+std::string to_string(ec x) {
+  auto result = ec_names[static_cast<uint8_t>(x)];
+  return std::string{result.begin(), result.end()};
+}
 
-/// Platform-specific representation of a socket.
-/// @relates socket
-using socket_id = int;
+error make_error(ec x) {
+  return {static_cast<uint8_t>(x), atom("basp")};
+}
 
-/// Identifies the invalid socket.
-constexpr socket_id invalid_socket_id = -1;
-
-#endif // CAF_WINDOWS
-
-/// Signed counterpart of `socket_id`.
-/// @relates socket
-using signed_socket_id = std::make_signed<socket_id>::type;
-
+} // namespace basp
 } // namespace net
 } // namespace caf

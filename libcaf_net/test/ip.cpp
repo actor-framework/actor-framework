@@ -32,7 +32,7 @@ using namespace caf::net;
 
 CAF_TEST_FIXTURE_SCOPE(ip_tests, host_fixture)
 
-CAF_TEST(resolve) {
+CAF_TEST(resolve localhost) {
   ip_address v4_local{make_ipv4_address(127, 0, 0, 1)};
   ip_address v6_local{{0}, {0x1}};
   auto addrs = ip::resolve("localhost");
@@ -41,6 +41,17 @@ CAF_TEST(resolve) {
     return std::count(addrs.begin(), addrs.end(), x) > 0;
   };
   CAF_CHECK(contains(v4_local) || contains(v6_local));
+}
+
+CAF_TEST(resolve any) {
+  ip_address v4_any{make_ipv4_address(0, 0, 0, 0)};
+  ip_address v6_any{{0}, {0}};
+  auto addrs = ip::resolve("");
+  CAF_CHECK(!addrs.empty());
+  auto contains = [&](ip_address x) {
+    return std::count(addrs.begin(), addrs.end(), x) > 0;
+  };
+  CAF_CHECK(contains(v4_any) || contains(v6_any));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

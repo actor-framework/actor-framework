@@ -55,6 +55,9 @@ namespace ip {
 
 namespace {
 
+// Dummy port to resolve empty string with getaddrinfo.
+constexpr auto dummy_port = "42";
+
 void* fetch_in_addr(int family, sockaddr* addr) {
   if (family == AF_INET)
     return &reinterpret_cast<sockaddr_in*>(addr)->sin_addr;
@@ -83,7 +86,9 @@ std::vector<ip_address> resolve(string_view host) {
     hint.ai_flags = AI_PASSIVE;
   addrinfo* tmp = nullptr;
   std::string host_str{host.begin(), host.end()};
-  if (getaddrinfo(host_str.c_str(), nullptr, &hint, &tmp) != 0)
+  if (getaddrinfo(host.empty() ? nullptr : host_str.c_str(),
+                  host.empty() ? dummy_port : nullptr, &hint, &tmp)
+      != 0)
     return {};
   std::unique_ptr<addrinfo, decltype(freeaddrinfo)*> addrs{tmp, freeaddrinfo};
   char buffer[INET6_ADDRSTRLEN];

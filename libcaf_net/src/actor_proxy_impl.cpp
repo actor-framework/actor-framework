@@ -27,18 +27,18 @@ namespace net {
 
 actor_proxy_impl::actor_proxy_impl(actor_config& cfg, endpoint_manager_ptr dst)
   : super(cfg), sf_(dst->serialize_fun()), dst_(std::move(dst)) {
-  // anon_send(broker_, monitor_atom::value, ctrl());
+  // nop
 }
 
 actor_proxy_impl::~actor_proxy_impl() {
-  // anon_send(broker_, make_message(delete_atom::value, node(), id()));
+  // nop
 }
 
 void actor_proxy_impl::enqueue(mailbox_element_ptr what, execution_unit*) {
   CAF_PUSH_AID(0);
   CAF_ASSERT(what != nullptr);
   if (auto payload = sf_(home_system(), what->content()))
-    dst_->enqueue(std::move(what), std::move(*payload));
+    dst_->enqueue(std::move(what), ctrl(), std::move(*payload));
   else
     CAF_LOG_ERROR(
       "unable to serialize payload: " << home_system().render(payload.error()));
