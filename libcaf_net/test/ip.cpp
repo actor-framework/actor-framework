@@ -61,29 +61,23 @@ CAF_TEST(resolve localhost) {
 }
 
 CAF_TEST(resolve any) {
-  ip_address v4_any{make_ipv4_address(0, 0, 0, 0)};
-  ip_address v6_any{{0}, {0}};
-  auto addrs = ip::resolve("");
+  addrs = ip::resolve("");
   CAF_CHECK(!addrs.empty());
-  auto contains = [&](ip_address x) {
-    return std::count(addrs.begin(), addrs.end(), x) > 0;
-  };
-  CAF_CHECK(contains(v4_any) || contains(v6_any));
+  CAF_CHECK(contains(v4_any_addr) || contains(v6_any_addr));
 }
 
-CAF_TEST(local addresses) {
-  CAF_MESSAGE("check: v4");
-  addrs = ip::local_addresses("0.0.0.0");
-  CAF_CHECK(!addrs.empty());
-  CAF_CHECK(contains(v4_any_addr));
-  CAF_MESSAGE("check: v6");
-  addrs = ip::local_addresses("::");
-  CAF_CHECK(!addrs.empty());
-  CAF_CHECK(contains(v6_any_addr));
-  CAF_MESSAGE("check: localhost");
+CAF_TEST(local addresses localhost) {
   addrs = ip::local_addresses("localhost");
   CAF_CHECK(!addrs.empty());
   CAF_CHECK(contains(v4_local) || contains(v6_local));
+}
+
+CAF_TEST(local addresses any) {
+  addrs = ip::local_addresses("0.0.0.0");
+  auto tmp = ip::local_addresses("::");
+  addrs.insert(addrs.end(), tmp.begin(), tmp.end());
+  CAF_CHECK(!addrs.empty());
+  CAF_CHECK(contains(v4_any_addr) || contains(v6_any_addr));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
