@@ -152,8 +152,6 @@ CAF_TEST(receive) {
   auto receive_guard = make_socket_guard(receiver);
   if (auto err = nonblocking(receiver, true))
     CAF_FAIL("nonblocking() returned an error: " << err);
-  CAF_CHECK_EQUAL(read(receiver, make_span(*buf)),
-                  sec::unavailable_or_would_block);
   transport_type transport{receiver, dummy_application_factory{buf}};
   transport.configure_read(net::receive_policy::exactly(hello_manager.size()));
   auto mgr = make_endpoint_manager(mpx, sys, transport);
