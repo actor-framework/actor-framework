@@ -217,9 +217,38 @@ private:
 
 // -- SumType-like access ------------------------------------------------------
 
+template <class T>
+struct default_config_value_access {
+  static bool is(const config_value& x) {
+    return holds_alternative<T>(x.get_data());
+  }
+
+  static const T* get_if(const config_value* x) {
+    return caf::get_if<T>(&(x->get_data()));
+  }
+
+  static T get(const config_value& x) {
+    return caf::get<T>(x.get_data());
+  }
+};
+
 /// @relates config_value
 template <class T>
 struct config_value_access;
+
+#define CAF_DEFAULT_CONFIG_VALUE_ACCESS(type)                                  \
+  template <>                                                                  \
+  struct config_value_access<type> : default_config_value_access<type> {}
+
+CAF_DEFAULT_CONFIG_VALUE_ACCESS(bool);
+CAF_DEFAULT_CONFIG_VALUE_ACCESS(double);
+CAF_DEFAULT_CONFIG_VALUE_ACCESS(atom_value);
+CAF_DEFAULT_CONFIG_VALUE_ACCESS(timespan);
+CAF_DEFAULT_CONFIG_VALUE_ACCESS(std::string);
+CAF_DEFAULT_CONFIG_VALUE_ACCESS(config_value::list);
+CAF_DEFAULT_CONFIG_VALUE_ACCESS(config_value::dictionary);
+
+#undef CAF_DEFAULT_CONFIG_VALUE_ACCESS
 
 /// Delegates to config_value_access for all specialized versions.
 template <class T, bool IsIntegral = std::is_integral<T>::value>
@@ -328,8 +357,6 @@ struct sum_type_access<config_value> {
 
 template <>
 struct config_value_access<float> {
-  static constexpr bool specialized = true;
-
   static bool is(const config_value& x) {
     return holds_alternative<double>(x.get_data());
   }
@@ -352,8 +379,6 @@ struct config_value_access<float> {
 template <class T>
 struct config_value_access<std::vector<T>> {
   using vector_type = std::vector<T>;
-
-  static constexpr bool specialized = true;
 
   static bool is(const config_value& x) {
     auto lst = caf::get_if<config_value::list>(&x);
@@ -395,8 +420,6 @@ struct config_value_access<std::vector<T>> {
 template <class... Ts>
 struct config_value_access<std::tuple<Ts...>> {
   using tuple_type = std::tuple<Ts...>;
-
-  static constexpr bool specialized = true;
 
   static bool is(const config_value& x) {
     if (auto lst = caf::get_if<config_value::list>(&x)) {
@@ -468,8 +491,6 @@ struct config_value_access<dictionary<V>> {
   using map_type = dictionary<V>;
 
   using kvp = std::pair<const std::string, config_value>;
-
-  static constexpr bool specialized = true;
 
   static bool is(const config_value& x) {
     auto lst = caf::get_if<config_value::dictionary>(&x);
