@@ -25,24 +25,34 @@
 namespace caf {
 namespace net {
 
-class multiplexer;
-class socket_manager;
+// -- templates ----------------------------------------------------------------
+
 template <class Application, class IdType = unit_t>
 class transport_worker;
+
 template <class Application, class IdType = unit_t>
 class transport_worker_dispatcher;
+
+// -- classes ------------------------------------------------------------------
+
+class endpoint_manager;
+class multiplexer;
+class socket_manager;
+
+// -- structs ------------------------------------------------------------------
 
 struct network_socket;
 struct pipe_socket;
 struct socket;
 struct stream_socket;
-struct tcp_stream_socket;
 struct tcp_accept_socket;
+struct tcp_stream_socket;
 
-using socket_manager_ptr = intrusive_ptr<socket_manager>;
+// -- smart pointers -----------------------------------------------------------
 
+using endpoint_manager_ptr = intrusive_ptr<endpoint_manager>;
 using multiplexer_ptr = std::shared_ptr<multiplexer>;
-
+using socket_manager_ptr = intrusive_ptr<socket_manager>;
 using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
 
 } // namespace net
