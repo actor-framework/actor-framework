@@ -27,8 +27,18 @@ namespace caf {
 namespace net {
 namespace ip {
 
-/// Returns all IP addresses of to `host` (if any).
+/// Returns all IP addresses of `host` (if any).
 std::vector<ip_address> resolve(string_view host);
+
+/// Returns all IP addresses of `host` (if any).
+std::vector<ip_address> resolve(ip_address host);
+
+/// Returns the IP addresses for a local endpoint, which is either an address,
+/// an interface name, or the string "localhost".
+std::vector<ip_address> local_addresses(string_view host);
+
+/// Returns the IP addresses for a local endpoint address.
+std::vector<ip_address> local_addresses(ip_address host);
 
 /// Returns the hostname of this device.
 std::string hostname();
