@@ -57,7 +57,7 @@ constexpr const char* kernel_source = R"__(
   }
 )__";
 
-} // namespace <anonymous>
+} // namespace
 
 template<size_t Size>
 class square_matrix {

@@ -136,7 +136,7 @@ struct fixture {
   foo_actor foo;
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(typed_spawn_tests, fixture)
 

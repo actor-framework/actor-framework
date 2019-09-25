@@ -30,7 +30,7 @@ namespace {
 // TODO: consider making this parameter configurable
 constexpr int32_t max_batch_size = 128 * 1024;
 
-} // namespace <anonymous>
+} // namespace
 
 outbound_path::outbound_path(stream_slot sender_slot,
                              strong_actor_ptr receiver_hdl)

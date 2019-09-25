@@ -81,7 +81,7 @@ void handle_err(const error& err) {
   CAF_FAIL("AUT responded with an error: " + to_string(err));
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(actor_pool_tests, fixture)
 

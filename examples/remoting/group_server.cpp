@@ -41,6 +41,6 @@ void caf_main(actor_system& system, const config& cfg) {
       cerr << "illegal command" << endl;
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_MAIN(io::middleman)

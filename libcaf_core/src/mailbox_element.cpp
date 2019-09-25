@@ -70,7 +70,7 @@ private:
   message msg_;
 };
 
-} // namespace <anonymous>
+} // namespace
 
 mailbox_element::mailbox_element() {
   // nop

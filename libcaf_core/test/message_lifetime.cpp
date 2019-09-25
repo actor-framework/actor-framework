@@ -111,7 +111,7 @@ typename Inspector::result_type inspect(Inspector& f, fail_on_copy& x) {
   return f(x.value);
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(message_lifetime_tests, fixture)
 

@@ -36,7 +36,7 @@ behavior dummy() {
 
 using foo_atom = atom_constant<atom("foo")>;
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(actor_registry_tests, test_coordinator_fixture<>)
 

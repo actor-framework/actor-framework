@@ -222,7 +222,7 @@ std::string msg_as_string(Ts&&... xs) {
   return to_string(make_message(std::forward<Ts>(xs)...));
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(compare_custom_types) {
   s2 tmp;

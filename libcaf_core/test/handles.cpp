@@ -88,7 +88,7 @@ struct fixture {
   handle_set a2{sys.spawn(st_testee)};
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(handle_tests, fixture)
 

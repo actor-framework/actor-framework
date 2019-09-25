@@ -94,6 +94,6 @@ void caf_main(actor_system& system) {
   self->send_exit(st, exit_reason::user_shutdown);
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_MAIN()

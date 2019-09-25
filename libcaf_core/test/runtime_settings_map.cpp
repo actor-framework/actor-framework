@@ -35,7 +35,7 @@ struct fixture {
   void (*funptr)() = my_fun;
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(runtime_settings_map_tests, fixture)
 

@@ -77,6 +77,6 @@ void caf_main(actor_system& system, const config&) {
   );
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_MAIN()

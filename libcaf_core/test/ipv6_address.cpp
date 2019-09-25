@@ -37,7 +37,7 @@ ipv6_address addr(std::initializer_list<uint16_t> prefix,
   return ipv6_address{prefix, suffix};
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(constructing) {
   ipv6_address::array_type localhost_bytes{{0, 0, 0, 0, 0, 0, 0, 0,

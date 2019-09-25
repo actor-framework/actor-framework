@@ -118,6 +118,6 @@ void caf_main(actor_system& system, const config&) {
   self->send(t, foo_pair2{3, 4});
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_MAIN()

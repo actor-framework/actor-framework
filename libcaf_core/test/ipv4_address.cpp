@@ -33,7 +33,7 @@ namespace {
 
 const auto addr = make_ipv4_address;
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(constructing) {
   auto localhost = addr(127, 0, 0, 1);

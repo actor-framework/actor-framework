@@ -150,6 +150,6 @@ void caf_main(actor_system& system, const config& cfg) {
   f(system, cfg);
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_MAIN(io::middleman)

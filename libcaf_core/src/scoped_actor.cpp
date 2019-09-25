@@ -51,7 +51,7 @@ public:
   }
 };
 
-} // namespace <anonymous>
+} // namespace
 
 scoped_actor::scoped_actor(actor_system& sys, bool hide) : context_(&sys) {
   CAF_SET_LOGGER_SYS(&sys);

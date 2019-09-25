@@ -46,7 +46,7 @@ size_t decode(atom_value_buf& buf, atom_value what) {
   return pos;
 }
 
-} // namespace <anonymous>
+} // namespace
 
 atom_value to_lowercase(atom_value x) {
   atom_value_buf buf;

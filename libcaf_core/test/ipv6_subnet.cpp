@@ -31,7 +31,7 @@ ipv6_subnet operator/(ipv6_address addr, uint8_t prefix) {
   return {addr, prefix};
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(constructing) {
   auto zero = ipv6_address() / 128;

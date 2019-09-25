@@ -263,7 +263,7 @@ behavior ping_multiplexed3(ping_actor* self, bool* had_timeout,
   return {};
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(request_timeout_tests, test_coordinator_fixture<>)
 

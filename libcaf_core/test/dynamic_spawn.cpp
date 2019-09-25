@@ -310,7 +310,7 @@ struct fixture {
   }
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(dynamic_spawn_tests, test_coordinator_fixture<>)
 

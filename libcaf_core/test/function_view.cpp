@@ -96,7 +96,7 @@ struct fixture {
   actor_system system;
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(function_view_tests, fixture)
 

@@ -256,7 +256,7 @@ struct config : actor_system_config {
   string wdir;
 };
 
-} // namespace <anonymous>
+} // namespace
 
 int main(int argc, char** argv) {
   config cfg;

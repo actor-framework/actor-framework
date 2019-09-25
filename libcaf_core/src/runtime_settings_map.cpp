@@ -24,7 +24,7 @@ namespace {
 
 using mapped_type = caf::runtime_settings_map::mapped_type;
 
-} // namespace <anonymous>
+} // namespace
 
 namespace caf {
 

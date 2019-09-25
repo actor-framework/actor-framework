@@ -104,7 +104,7 @@ struct fixture {
   array_type invoked;
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(atom_constants_tests, fixture)
 

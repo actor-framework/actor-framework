@@ -73,7 +73,7 @@ behavior pseudo_mm(event_based_actor* self, const actor& dest) {
   };
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(migrate_locally) {
   actor_system system;

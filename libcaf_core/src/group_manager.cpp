@@ -437,7 +437,7 @@ error local_group::save(serializer& sink) const {
 
 std::atomic<size_t> s_ad_hoc_id;
 
-} // namespace <anonymous>
+} // namespace
 
 void group_manager::init(actor_system_config& cfg) {
   CAF_LOG_TRACE("");

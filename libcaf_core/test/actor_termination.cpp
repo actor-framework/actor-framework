@@ -53,7 +53,7 @@ struct fixture :  test_coordinator_fixture<> {
   }
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(actor_termination_tests, fixture)
 

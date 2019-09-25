@@ -59,7 +59,7 @@ void broadcast_dispatch(actor_system&, actor_pool::uplock&,
     worker->enqueue(ptr->sender, ptr->mid, msg, host);
 }
 
-} // namespace <anonymous>
+} // namespace
 
 actor_pool::policy actor_pool::broadcast() {
   return broadcast_dispatch;

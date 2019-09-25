@@ -53,7 +53,7 @@ struct fixture {
   std::string key = "value";
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(config_option_set_tests, fixture)
 

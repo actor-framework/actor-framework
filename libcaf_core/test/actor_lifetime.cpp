@@ -181,7 +181,7 @@ struct fixture {
   }
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(destructor_call) {
   { // lifetime scope of actor systme

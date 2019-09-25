@@ -44,7 +44,7 @@ namespace {
 using exclusive_guard = unique_lock<detail::shared_spinlock>;
 using shared_guard = shared_lock<detail::shared_spinlock>;
 
-} // namespace <anonymous>
+} // namespace
 
 actor_registry::~actor_registry() {
   // nop

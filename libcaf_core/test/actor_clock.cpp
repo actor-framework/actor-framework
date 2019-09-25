@@ -92,7 +92,7 @@ inline bool operator==(const timeout_msg& x, const tid& y) {
   return x.timeout_id == y.value;
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(timer_tests, fixture)
 

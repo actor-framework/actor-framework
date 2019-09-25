@@ -79,7 +79,7 @@ struct fixture {
   }
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
 

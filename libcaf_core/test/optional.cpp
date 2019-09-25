@@ -40,7 +40,7 @@ bool operator==(const qwertz& lhs, const qwertz& rhs) {
   return lhs.x_ == rhs.x_ && lhs.y_ == rhs.y_;
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(empty) {
   optional<int> x;

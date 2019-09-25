@@ -43,7 +43,7 @@ const char* type_names[] {
   "dictionary",
 };
 
-} // namespace <anonymous>
+} // namespace
 
 // -- constructors, destructors, and assignment operators ----------------------
 

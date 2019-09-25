@@ -65,7 +65,7 @@ struct test_actor_one_arg : event_based_actor {
   }
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(add_actor_type_tests, fixture)
 

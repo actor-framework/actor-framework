@@ -59,7 +59,7 @@ struct fixture {
   scoped_actor self{system};
 };
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST_FIXTURE_SCOPE(group_tests, fixture)
 

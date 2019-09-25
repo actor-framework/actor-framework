@@ -128,7 +128,7 @@ std::string to_string_impl(const actor_control_block* x) {
   return result;
 }
 
-} // namespace <anonymous>
+} // namespace
 
 std::string to_string(const strong_actor_ptr& x) {
   return to_string_impl(x.get());

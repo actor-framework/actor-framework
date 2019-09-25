@@ -45,7 +45,7 @@ struct is_int : std::false_type {};
 template <>
 struct is_int<int> : std::true_type {};
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(metaprogramming) {
   using std::is_same;

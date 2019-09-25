@@ -54,7 +54,7 @@ constexpr const char* kernel_source = R"__(
   }
 )__";
 
-} // namespace <anonymous>
+} // namespace
 
 void print_as_matrix(const fvec& matrix) {
   for (size_t column = 0; column < matrix_size; ++column) {

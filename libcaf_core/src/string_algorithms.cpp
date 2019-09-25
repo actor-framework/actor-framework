@@ -38,7 +38,7 @@ void split_impl(F consume, string_view str, string_view delims, bool keep_all) {
     consume(string_view{});
 }
 
-} // namespace <anonymous>
+} // namespace
 
 void split(std::vector<std::string>& result, string_view str,
            string_view delims, bool keep_all) {

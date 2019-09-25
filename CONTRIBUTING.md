@@ -68,7 +68,7 @@ conventions used by the C++ Standard Library.
 Example for the Impatient
 -------------------------
 
-```cpp
+```c++
 // libcaf_example/caf/example/my_class.hpp
 
 #pragma once
@@ -119,8 +119,8 @@ private:
 } // namespace caf
 ```
 
-```cpp
-// libcaf_example/src/my_class.cpp
+```c++
+// libcaf_example/src/example/my_class.cpp
 
 #include "caf/example/my_class.hpp"
 
@@ -133,7 +133,7 @@ namespace {
 
 constexpr const char default_name[] = "my object";
 
-} // namespace <anonymous>
+} // namespace
 
 my_class::my_class() : name_(default_name) {
   // nop
@@ -178,7 +178,32 @@ void my_class::do_something_else() noexcept {
 
 } // namespace example
 } // namespace caf
+```
 
+```c++
+// libcaf_example/test/example/my_class.cpp
+
+#define CAF_SUITE example.my_class    // name of this test suite
+
+#include "caf/example/my_class.hpp"   // header-under-test
+
+#include "caf/test/dsl.hpp"           // caf::test includes
+
+#include <iostream>                   // standard includes
+
+// ...                                // other CAF includes
+
+namespace {
+
+struct fixture {};
+
+} // namespace
+
+CAF_TEST_FIXTURE_SCOPE(my_class_tests, fixture)
+
+// ... any number of CAF_TEST ...
+
+CAF_TEST_FIXTURE_SCOPE_END()
 ```
 
 General
@@ -219,7 +244,7 @@ General
 
 - Put opening braces on the same line:
 
-  ```cpp
+  ```c++
   void foo() {
     // ...
   }
@@ -231,7 +256,7 @@ General
   headers if you need to include platform-dependent headers. Use angle brackets
   for system includes and doublequotes otherwise.
 
-  ```cpp
+  ```c++
   // example.hpp
 
   #include <vector>
@@ -245,7 +270,7 @@ General
 
   Put the implemented header always first in a `.cpp` file.
 
-  ```cpp
+  ```c++
   // example.cpp
 
   #include "caf/example.hpp" // header for this .cpp file
@@ -290,7 +315,7 @@ Naming
 - Private and protected member variables use the suffix `_` while getter *and*
   setter functions use the name without suffix:
 
-  ```cpp
+  ```c++
   class person {
   public:
     person(std::string name) : name_(std::move(name)) {
@@ -314,7 +339,7 @@ Naming
   for generic function arguments. Suffix both with `s` for
   template parameter packs and lists:
 
-  ```cpp
+  ```c++
   template <class... Ts>
   void print(const Ts&... xs) {
     // ...
@@ -331,18 +356,18 @@ Headers
 - Each `.cpp` file has an associated `.hpp` file.
   Exceptions to this rule are unit tests and `main.cpp` files.
 
-- Each class has its own pair of header and implementation
-  files and the relative path for the header file is derived from its full name.
-  For example, the header file for `caf::example::my_class` of `libcaf_example`
-  is located at `libcaf_example/caf/example/my_class.hpp` and the
-  source file at `libcaf_example/src/my_class.cpp`.
+- Each class has its own pair of header and implementation files and the
+  relative path for the files are derived from the full class name. For
+  example, the header file for `caf::example::my_class` of `libcaf_example` is
+  located at `libcaf_example/caf/example/my_class.hpp` and the source file at
+  `libcaf_example/src/example/my_class.cpp`.
 
 - All header files use `#pragma once` to prevent multiple inclusion.
 
 - Do not `#include` when a forward declaration suffices.
 
 - Each library component must provide a `fwd.hpp` header providing forward
-  declartations for all types used in the user API.
+  declarations for all types used in the user API.
 
 - Each library component should provide an `all.hpp` header that contains the
   main page for the documentation and includes all headers for the user API.
@@ -356,7 +381,7 @@ Breaking Statements
   indentation, and place each initializer on its own line (unless you don't
   need to break at all):
 
-  ```cpp
+  ```c++
   my_class::my_class()
     : my_base_class(some_function()),
       greeting_("Hello there! This is my_class!"),
@@ -370,7 +395,7 @@ Breaking Statements
 
 - Break function arguments after the comma for both declaration and invocation:
 
-  ```cpp
+  ```c++
   intptr_t channel::compare(const abstract_channel* lhs,
                             const abstract_channel* rhs) {
     // ...
@@ -379,7 +404,7 @@ Breaking Statements
 
 - Break before tenary operators and before binary operators:
 
-  ```cpp
+  ```c++
   if (today_is_a_sunny_day()
       && it_is_not_too_hot_to_go_swimming()) {
     // ...
@@ -406,7 +431,7 @@ extra rules for formatting metaprogramming code.
 - Use one level of indentation per "open" template and place the closing `>`,
   `>::type` or `>::value` on its own line. For example:
 
-  ```cpp
+  ```c++
   using optional_result_type =
     typename std::conditional<
       std::is_same<result_type, void>::value,
@@ -426,7 +451,7 @@ extra rules for formatting metaprogramming code.
   When dealing with "ordinary" templates, indenting based on the position of
   the opening `<` is ok, e.g.:
 
-  ```cpp
+  ```c++
   using response_handle_type = response_handle<Subtype, message,
                                                ResponseHandleTag>;
   ```

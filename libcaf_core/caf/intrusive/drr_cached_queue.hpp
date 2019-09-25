@@ -23,6 +23,7 @@
 
 #include "caf/config.hpp"
 
+#include "caf/intrusive/new_round_result.hpp"
 #include "caf/intrusive/task_queue.hpp"
 #include "caf/intrusive/task_result.hpp"
 

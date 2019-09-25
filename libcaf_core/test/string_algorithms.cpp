@@ -47,7 +47,7 @@ std::string join(str_list vec) {
   return caf::join(vec, ",");
 }
 
-} // namespace <anonymous>
+} // namespace
 
 CAF_TEST(splitting) {
   CAF_CHECK_EQUAL(split(""), str_list({""}));

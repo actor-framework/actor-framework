@@ -338,7 +338,7 @@ void print(const config_value::dictionary& xs, indentation indent) {
   }
 }
 
-} // namespace <anonymous>
+} // namespace
 
 error actor_system_config::parse(string_list args, std::istream& ini) {
   // Content of the INI file overrides hard-coded defaults.
