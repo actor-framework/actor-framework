@@ -155,6 +155,8 @@ error application::handle(write_packet_callback& write_packet, header hdr,
       return handle_resolve_response(write_packet, hdr, payload);
     case message_type::heartbeat:
       return none;
+    case message_type::down_message:
+      return handle_down_message(write_packet, hdr, payload);
     default:
       return ec::unimplemented;
   }
@@ -268,6 +270,16 @@ error application::handle_resolve_response(write_packet_callback&, header hdr,
     return none;
   }
   i->second.deliver(proxies_->get_or_put(peer_id_, aid), std::move(ifs));
+  return none;
+}
+
+error application::handle_down_message(write_packet_callback&, header hdr,
+                                       byte_span payload) {
+  error reason;
+  binary_deserializer source{system(), payload};
+  if (auto err = source(reason))
+    return err;
+  proxies_->erase(peer_id_, hdr.operation_data, std::move(reason));
   return none;
 }
 

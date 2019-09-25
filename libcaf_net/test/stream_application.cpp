@@ -164,37 +164,52 @@ struct fixture : test_coordinator_fixture<>,
   stream_socket sock;
 
   basp::application* app;
+
+  unit_t no_payload;
 };
 
 } // namespace
 
 #define MOCK(kind, op, ...)                                                    \
   do {                                                                         \
-    auto payload = to_buf(__VA_ARGS__);                                        \
-    mock(basp::header{kind, static_cast<uint32_t>(payload.size()), op});       \
-    write(sock, make_span(payload));                                           \
+    CAF_MESSAGE("mock " << kind);                                              \
+    if (!std::is_same<decltype(std::make_tuple(__VA_ARGS__)),                  \
+                      std::tuple<unit_t>>::value) {                            \
+      auto payload = to_buf(__VA_ARGS__);                                      \
+      mock(basp::header{kind, static_cast<uint32_t>(payload.size()), op});     \
+      write(sock, make_span(payload));                                         \
+    } else {                                                                   \
+      mock(basp::header{kind, 0, op});                                         \
+    }                                                                          \
     run();                                                                     \
   } while (false)
 
 #define RECEIVE(msg_type, op_data, ...)                                        \
   do {                                                                         \
+    CAF_MESSAGE("receive " << msg_type);                                       \
     buffer_type buf(basp::header_size);                                        \
     if (fetch_size(read(sock, make_span(buf))) != basp::header_size)           \
       CAF_FAIL("unable to read " << basp::header_size << " bytes");            \
     auto hdr = basp::header::from_bytes(buf);                                  \
     CAF_CHECK_EQUAL(hdr.type, msg_type);                                       \
     CAF_CHECK_EQUAL(hdr.operation_data, op_data);                              \
-    buf.resize(hdr.payload_len);                                               \
-    if (fetch_size(read(sock, make_span(buf))) != size_t{hdr.payload_len})     \
-      CAF_FAIL("unable to read " << hdr.payload_len << " bytes");              \
-    binary_deserializer source{sys, buf};                                      \
-    if (auto err = source(__VA_ARGS__))                                        \
-      CAF_FAIL("failed to receive data: " << sys.render(err));                 \
+    if (!std::is_same<decltype(std::make_tuple(__VA_ARGS__)),                  \
+                      std::tuple<unit_t>>::value) {                            \
+      buf.resize(hdr.payload_len);                                             \
+      if (fetch_size(read(sock, make_span(buf))) != size_t{hdr.payload_len})   \
+        CAF_FAIL("unable to read " << hdr.payload_len << " bytes");            \
+      binary_deserializer source{sys, buf};                                    \
+      if (auto err = source(__VA_ARGS__))                                      \
+        CAF_FAIL("failed to receive data: " << sys.render(err));               \
+    } else {                                                                   \
+      if (hdr.payload_len != 0)                                                \
+        CAF_FAIL("unexpected payload");                                        \
+    }                                                                          \
   } while (false)
 
 CAF_TEST_FIXTURE_SCOPE(application_tests, fixture)
 
-CAF_TEST(actor message) {
+CAF_TEST(actor message and down message) {
   handle_handshake();
   consume_handshake();
   sys.registry().put(self->id(), self);
@@ -202,9 +217,19 @@ CAF_TEST(actor message) {
   MOCK(basp::message_type::actor_message, make_message_id().integer_value(),
        mars, actor_id{42}, self->id(), std::vector<strong_actor_ptr>{},
        make_message("hello world!"));
-  allow((atom_value, strong_actor_ptr),
-        from(_).to(self).with(atom("monitor"), _));
-  expect((std::string), from(_).to(self).with("hello world!"));
+  MOCK(basp::message_type::monitor_message, 42u, no_payload);
+  strong_actor_ptr proxy;
+  self->receive([&](const std::string& str) {
+    CAF_CHECK_EQUAL(str, "hello world!");
+    proxy = self->current_sender();
+    CAF_REQUIRE_NOT_EQUAL(proxy, nullptr);
+    self->monitor(proxy);
+  });
+  MOCK(basp::message_type::down_message, 42u,
+       error{exit_reason::user_shutdown});
+  expect((down_msg),
+         from(_).to(self).with(down_msg{actor_cast<actor_addr>(proxy),
+                                        exit_reason::user_shutdown}));
 }
 
 CAF_TEST(resolve request without result) {

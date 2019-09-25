@@ -100,6 +100,9 @@ public:
   template <class Parent>
   void write_message(Parent& parent,
                      std::unique_ptr<net::endpoint_manager::message> msg) {
+    // Ignore proxy announcement messages.
+    if (msg->msg == nullptr)
+      return;
     header_type header{static_cast<uint32_t>(msg->payload.size())};
     std::vector<byte> payload(msg->payload.begin(), msg->payload.end());
     parent.write_packet(as_bytes(make_span(&header, 1)), make_span(payload));

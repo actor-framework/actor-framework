@@ -113,7 +113,8 @@ public:
     using queue_type = intrusive::drr_queue<message_policy>;
 
     task_size_type task_size(const message& x) const noexcept {
-      return x.payload.size();
+      // Return at least 1 if the payload is empty.
+      return x.payload.size() + static_cast<task_size_type>(x.payload.empty());
     }
   };
 

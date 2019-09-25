@@ -81,7 +81,18 @@ public:
   template <class Parent>
   error write_message(Parent& parent,
                       std::unique_ptr<endpoint_manager::message> ptr) {
-    // TODO: avoid extra copy of the payload
+    // There is one special case: actor_proxy_impl sends a message without
+    // mailbox element on construction to trigger monitoring messages.
+    if (ptr->msg == nullptr) {
+      CAF_ASSERT(ptr->payload.empty());
+      CAF_ASSERT(ptr->receiver != nullptr);
+      CAF_ASSERT(ptr->receiver->node() == peer_id_);
+      header hdr{message_type::monitor_message, 0,
+                 static_cast<uint64_t>(ptr->receiver->id())};
+      auto bytes = to_bytes(hdr);
+      parent.write_packet(make_span(bytes), span<const byte>{});
+      return none;
+    }
     buf_.clear();
     serializer_impl<buffer_type> sink{system(), buf_};
     const auto& src = ptr->msg->sender;
@@ -97,6 +108,7 @@ public:
       if (auto err = sink(node_id{}, actor_id{0}, dst->id(), ptr->msg->stages))
         return err;
     }
+    // TODO: avoid extra copy of the payload
     buf_.insert(buf_.end(), ptr->payload.begin(), ptr->payload.end());
     header hdr{message_type::actor_message, static_cast<uint32_t>(buf_.size()),
                ptr->msg->mid.integer_value()};
@@ -176,6 +188,9 @@ private:
 
   error handle_resolve_response(write_packet_callback& write_packet, header hdr,
                                 byte_span payload);
+
+  error handle_down_message(write_packet_callback& write_packet, header hdr,
+                            byte_span payload);
 
   /// Writes the handshake payload to `buf_`.
   error generate_handshake();
