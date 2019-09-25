@@ -109,6 +109,11 @@ public:
   /// Returns a hash code over all components.
   size_t hash_code() const noexcept;
 
+  /// Returns a new URI with the `authority` component only.
+  /// @returns A new URI in the form `scheme://authority` if the authority
+  ///          exists, otherwise `none`.`
+  optional<uri> authority_only() const;
+
   // -- comparison -------------------------------------------------------------
 
   int compare(const uri& other) const noexcept;
