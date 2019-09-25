@@ -28,6 +28,7 @@
 
 #include "caf/byte.hpp"
 #include "caf/forwarding_actor_proxy.hpp"
+#include "caf/net/actor_proxy_impl.hpp"
 #include "caf/net/basp/connection_state.hpp"
 #include "caf/net/basp/constants.hpp"
 #include "caf/net/basp/ec.hpp"
@@ -144,10 +145,10 @@ struct fixture : test_coordinator_fixture<>,
   }
 
   strong_actor_ptr make_proxy(node_id nid, actor_id aid) override {
-    using impl_type = forwarding_actor_proxy;
+    using impl_type = actor_proxy_impl;
     using hdl_type = strong_actor_ptr;
     actor_config cfg;
-    return make_actor<impl_type, hdl_type>(aid, nid, &sys, cfg, self);
+    return make_actor<impl_type, hdl_type>(aid, nid, &sys, cfg, mgr);
   }
 
   void set_last_hop(node_id*) override {
