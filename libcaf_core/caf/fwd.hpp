@@ -223,6 +223,14 @@ struct header;
 
 } // namespace io
 
+// -- networking classes -------------------------------------------------------
+
+namespace net {
+
+class middleman;
+
+} // namespace net
+
 // -- OpenCL classes -----------------------------------------------------------
 
 namespace opencl {

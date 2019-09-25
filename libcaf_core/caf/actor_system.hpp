@@ -117,6 +117,7 @@ class actor_system {
 public:
   friend class logger;
   friend class io::middleman;
+  friend class net::middleman;
   friend class abstract_actor;
 
   /// The number of actors implictly spawned by the actor system on startup.
@@ -151,6 +152,7 @@ public:
       middleman,
       opencl_manager,
       openssl_manager,
+      network_manager,
       num_ids
     };
 
@@ -278,6 +280,13 @@ public:
   /// Returns the manager instance from the OpenSSL module.
   /// @throws `std::logic_error` if module is not loaded.
   openssl::manager& openssl_manager() const;
+
+  /// Returns `true` if the network module is available, `false` otherwise.
+  bool has_network_manager() const noexcept;
+
+  /// Returns the network manager (middleman) instance.
+  /// @throws `std::logic_error` if module is not loaded.
+  net::middleman& network_manager();
 
   /// Returns a dummy execution unit that forwards
   /// everything to the scheduler.

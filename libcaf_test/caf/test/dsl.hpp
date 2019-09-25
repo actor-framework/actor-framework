@@ -639,6 +639,7 @@ public:
     cfg.set("logger.inline-output", true);
     cfg.set("logger.file-verbosity", caf::atom("quiet"));
     cfg.set("middleman.network-backend", caf::atom("testing"));
+    cfg.set("middleman.manual-multiplexing", true);
     cfg.set("middleman.workers", size_t{0});
     return cfg;
   }
