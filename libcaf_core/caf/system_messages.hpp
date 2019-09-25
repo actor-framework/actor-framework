@@ -59,6 +59,16 @@ struct down_msg {
 };
 
 /// @relates down_msg
+inline bool operator==(const down_msg& x, const down_msg& y) noexcept {
+  return x.source == y.source && x.reason == y.reason;
+}
+
+/// @relates down_msg
+inline bool operator!=(const down_msg& x, const down_msg& y) noexcept {
+  return !(x == y);
+}
+
+/// @relates down_msg
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, down_msg& x) {
   return f(meta::type_name("down_msg"), x.source, x.reason);
