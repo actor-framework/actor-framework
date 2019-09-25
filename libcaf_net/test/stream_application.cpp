@@ -33,6 +33,7 @@
 #include "caf/net/basp/constants.hpp"
 #include "caf/net/basp/ec.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
+#include "caf/net/middleman.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/stream_socket.hpp"
 #include "caf/net/stream_transport.hpp"
@@ -58,26 +59,31 @@ size_t fetch_size(variant<size_t, sec> x) {
   return get<size_t>(x);
 }
 
-struct fixture : test_coordinator_fixture<>,
+struct config : actor_system_config {
+  config() {
+    put(content, "middleman.this-node", unbox(make_uri("test:earth")));
+    load<middleman>();
+  }
+};
+
+struct fixture : test_coordinator_fixture<config>,
                  host_fixture,
                  proxy_registry::backend {
   fixture() {
     uri mars_uri;
-    REQUIRE_OK(parse("tcp://mars", mars_uri));
+    REQUIRE_OK(parse("test:mars", mars_uri));
     mars = make_node_id(mars_uri);
-    mpx = std::make_shared<multiplexer>();
-    if (auto err = mpx->init())
-      CAF_FAIL("mpx->init failed: " << sys.render(err));
     auto proxies = std::make_shared<proxy_registry>(sys, *this);
     auto sockets = unbox(make_stream_socket_pair());
     sock = sockets.first;
     nonblocking(sockets.first, true);
     nonblocking(sockets.second, true);
+    auto mpx = sys.network_manager().mpx();
     mgr = make_endpoint_manager(mpx, sys,
                                 transport_type{sockets.second,
                                                basp::application{proxies}});
     REQUIRE_OK(mgr->init());
-    mpx->handle_updates();
+    handle_io_event();
     CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
     auto& dref = dynamic_cast<endpoint_manager_impl<transport_type>&>(*mgr);
     app = &dref.application();
@@ -88,6 +94,7 @@ struct fixture : test_coordinator_fixture<>,
   }
 
   bool handle_io_event() override {
+    auto mpx = sys.network_manager().mpx();
     mpx->handle_updates();
     return mpx->poll_once(false);
   }
@@ -156,8 +163,6 @@ struct fixture : test_coordinator_fixture<>,
   }
 
   node_id mars;
-
-  multiplexer_ptr mpx;
 
   endpoint_manager_ptr mgr;
 

@@ -19,6 +19,7 @@ set(LIBCAF_NET_SRCS
   src/ip.cpp
   src/message_type.cpp
   src/multiplexer.cpp
+  src/net/middleman.cpp
   src/network_socket.cpp
   src/pipe_socket.cpp
   src/pollset_updater.cpp
@@ -26,7 +27,6 @@ set(LIBCAF_NET_SRCS
   src/socket_manager.cpp
   src/stream_socket.cpp
   src/tcp_accept_socket.cpp
-  src/tcp_stream_socket.cpp
   src/tcp_stream_socket.cpp
   src/udp_datagram_socket.cpp
 )
