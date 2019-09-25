@@ -26,8 +26,8 @@
 namespace caf {
 namespace net {
 
-endpoint_manager::event::event(std::string path, actor listener)
-  : value(resolve_request{std::move(path), std::move(listener)}) {
+endpoint_manager::event::event(uri locator, actor listener)
+  : value(resolve_request{std::move(locator), std::move(listener)}) {
   // nop
 }
 
@@ -74,9 +74,9 @@ std::unique_ptr<endpoint_manager::message> endpoint_manager::next_message() {
   return result;
 }
 
-void endpoint_manager::resolve(std::string path, actor listener) {
+void endpoint_manager::resolve(uri locator, actor listener) {
   using intrusive::inbox_result;
-  auto ptr = new event(std::move(path), std::move(listener));
+  auto ptr = new event(std::move(locator), std::move(listener));
   switch (events_.push_back(ptr)) {
     default:
       break;

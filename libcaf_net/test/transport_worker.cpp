@@ -84,9 +84,9 @@ public:
   }
 
   template <class Parent>
-  void resolve(Parent&, const std::string& path, actor listener) {
-    res_->resolve_path = path;
-    res_->resolve_listener = std::move(listener);
+  void resolve(Parent&, string_view path, const actor& listener) {
+    res_->resolve_path.assign(path.begin(), path.end());
+    res_->resolve_listener = listener;
   }
 
   template <class Parent>

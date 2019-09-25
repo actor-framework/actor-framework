@@ -41,6 +41,8 @@ enum class ec : uint8_t {
   unimplemented = 10,
   app_identifiers_mismatch,
   invalid_payload,
+  invalid_scheme,
+  invalid_locator,
 };
 
 /// @relates ec

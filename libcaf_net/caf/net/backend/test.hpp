@@ -50,6 +50,8 @@ public:
 
   endpoint_manager_ptr peer(const node_id& id) override;
 
+  void resolve(const uri& locator, const actor& listener) override;
+
   strong_actor_ptr make_proxy(node_id nid, actor_id aid) override;
 
   void set_last_hop(node_id*) override;

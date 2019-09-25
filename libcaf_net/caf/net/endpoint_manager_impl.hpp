@@ -96,8 +96,7 @@ public:
           using timeout = endpoint_manager::event::timeout;
           using resolve_request = endpoint_manager::event::resolve_request;
           if (auto rr = get_if<resolve_request>(&ptr->value)) {
-            transport_.resolve(*this, std::move(rr->path),
-                               std::move(rr->listener));
+            transport_.resolve(*this, rr->locator, rr->listener);
           } else {
             auto& t = get<timeout>(ptr->value);
             transport_.timeout(*this, t.type, t.id);

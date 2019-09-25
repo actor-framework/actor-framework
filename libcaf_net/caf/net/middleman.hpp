@@ -66,6 +66,11 @@ public:
     return result.release();
   }
 
+  // -- remoting ---------------------------------------------------------------
+
+  /// Resolves a path to a remote actor.
+  void resolve(const uri& locator, const actor& listener);
+
   // -- properties -------------------------------------------------------------
 
   actor_system& system() {

@@ -52,7 +52,7 @@ public:
 
   struct event : intrusive::singly_linked<event> {
     struct resolve_request {
-      std::string path;
+      uri locator;
       actor listener;
     };
 
@@ -61,7 +61,7 @@ public:
       uint64_t id;
     };
 
-    event(std::string path, actor listener);
+    event(uri locator, actor listener);
 
     event(atom_value type, uint64_t id);
 
@@ -138,7 +138,7 @@ public:
   // -- event management -------------------------------------------------------
 
   /// Resolves a path to a remote actor.
-  void resolve(std::string path, actor listener);
+  void resolve(uri locator, actor listener);
 
   /// Enqueues a message to the endpoint.
   void enqueue(mailbox_element_ptr msg, strong_actor_ptr receiver,

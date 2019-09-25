@@ -131,8 +131,8 @@ public:
   }
 
   template <class Parent>
-  void resolve(Parent&, const std::string& path, actor listener) {
-    worker_.resolve(*this, path, listener);
+  void resolve(Parent&, const uri& locator, const actor& listener) {
+    worker_.resolve(*this, locator.path(), listener);
   }
 
   template <class... Ts>

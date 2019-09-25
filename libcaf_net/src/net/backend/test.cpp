@@ -21,10 +21,12 @@
 #include "caf/expected.hpp"
 #include "caf/net/actor_proxy_impl.hpp"
 #include "caf/net/basp/application.hpp"
+#include "caf/net/basp/ec.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/stream_transport.hpp"
 #include "caf/raise_error.hpp"
+#include "caf/send.hpp"
 
 namespace caf {
 namespace net {
@@ -48,6 +50,14 @@ error test::init() {
 
 endpoint_manager_ptr test::peer(const node_id& id) {
   return get_peer(id).second;
+}
+
+void test::resolve(const uri& locator, const actor& listener) {
+  auto id = locator.authority_only();
+  if (id)
+    peer(make_node_id(*id))->resolve(locator, listener);
+  else
+    anon_send(listener, error(basp::ec::invalid_locator));
 }
 
 strong_actor_ptr test::make_proxy(node_id nid, actor_id aid) {

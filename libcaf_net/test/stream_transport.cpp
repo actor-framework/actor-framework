@@ -85,7 +85,7 @@ public:
   }
 
   template <class Parent>
-  void resolve(Parent& parent, const std::string& path, actor listener) {
+  void resolve(Parent& parent, string_view path, actor listener) {
     actor_id aid = 42;
     auto hid = "0011223344556677889900112233445566778899";
     auto nid = unbox(make_node_id(42, hid));
@@ -95,7 +95,8 @@ public:
                                                             &parent.system(),
                                                             cfg,
                                                             std::move(ptr));
-    anon_send(listener, resolve_atom::value, std::move(path), p);
+    anon_send(listener, resolve_atom::value,
+              std::string{path.begin(), path.end()}, p);
   }
 
   template <class Transport>
@@ -163,7 +164,7 @@ CAF_TEST(resolve and proxy communication) {
   CAF_CHECK_EQUAL(mgr->init(), none);
   mpx->handle_updates();
   run();
-  mgr->resolve("/id/42", self);
+  mgr->resolve(unbox(make_uri("test:/id/42")), self);
   run();
   self->receive(
     [&](resolve_atom, const std::string&, const strong_actor_ptr& p) {

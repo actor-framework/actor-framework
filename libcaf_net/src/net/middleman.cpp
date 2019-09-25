@@ -19,9 +19,11 @@
 #include "caf/net/middleman.hpp"
 
 #include "caf/actor_system_config.hpp"
+#include "caf/net/basp/ec.hpp"
 #include "caf/net/middleman_backend.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/raise_error.hpp"
+#include "caf/send.hpp"
 #include "caf/uri.hpp"
 
 namespace caf {
@@ -68,6 +70,14 @@ middleman::module::id_t middleman::id() const {
 
 void* middleman::subtype_ptr() {
   return this;
+}
+
+void middleman::resolve(const uri& locator, const actor& listener) {
+  auto ptr = backend(locator.scheme());
+  if (ptr != nullptr)
+    ptr->resolve(locator, listener);
+  else
+    anon_send(listener, error{basp::ec::invalid_scheme});
 }
 
 middleman_backend* middleman::backend(string_view scheme) const noexcept {

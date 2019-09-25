@@ -82,7 +82,7 @@ public:
   }
 
   template <class Parent>
-  void resolve(Parent& parent, const std::string& path, actor listener) {
+  void resolve(Parent& parent, string_view path, const actor& listener) {
     auto decorator = make_write_packet_decorator(*this, parent);
     application_.resolve(decorator, path, listener);
   }

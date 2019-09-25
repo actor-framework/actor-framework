@@ -121,7 +121,7 @@ public:
   }
 
   template <class Manager>
-  void resolve(Manager& mgr, std::string path, actor listener) {
+  void resolve(Manager& mgr, const uri& locator, const actor& listener) {
     actor_id aid = 42;
     auto hid = "0011223344556677889900112233445566778899";
     auto nid = unbox(make_node_id(42, hid));
@@ -129,6 +129,7 @@ public:
     auto p = make_actor<actor_proxy_impl, strong_actor_ptr>(aid, nid,
                                                             &mgr.system(), cfg,
                                                             &mgr);
+    std::string path{locator.path().begin(), locator.path().end()};
     anon_send(listener, resolve_atom::value, std::move(path), p);
   }
 
@@ -189,7 +190,7 @@ CAF_TEST(resolve and proxy communication) {
   mpx->handle_updates();
   run();
   CAF_CHECK_EQUAL(read(sockets.second, make_span(read_buf)), hello_test.size());
-  mgr->resolve("/id/42", self);
+  mgr->resolve(unbox(make_uri("test:id/42")), self);
   run();
   self->receive(
     [&](resolve_atom, const std::string&, const strong_actor_ptr& p) {
