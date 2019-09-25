@@ -56,11 +56,9 @@ public:
 
   using write_packet_callback = callback<byte_span, byte_span>;
 
-  using proxy_registry_ptr = std::shared_ptr<proxy_registry>;
-
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit application(proxy_registry_ptr proxies);
+  explicit application(proxy_registry& proxies);
 
   // -- interface functions ----------------------------------------------------
 
@@ -225,7 +223,7 @@ private:
   uint64_t next_request_id_ = 1;
 
   /// Points to the factory object for generating proxies.
-  proxy_registry_ptr proxies_;
+  proxy_registry& proxies_;
 };
 
 } // namespace basp

@@ -29,11 +29,13 @@
 #include "caf/byte.hpp"
 #include "caf/forwarding_actor_proxy.hpp"
 #include "caf/net/actor_proxy_impl.hpp"
+#include "caf/net/backend/test.hpp"
 #include "caf/net/basp/connection_state.hpp"
 #include "caf/net/basp/constants.hpp"
 #include "caf/net/basp/ec.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/middleman.hpp"
+#include "caf/net/middleman_backend.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/stream_socket.hpp"
 #include "caf/net/stream_transport.hpp"
@@ -62,35 +64,18 @@ size_t fetch_size(variant<size_t, sec> x) {
 struct config : actor_system_config {
   config() {
     put(content, "middleman.this-node", unbox(make_uri("test:earth")));
-    load<middleman>();
+    load<middleman, backend::test>();
   }
 };
 
-struct fixture : test_coordinator_fixture<config>,
-                 host_fixture,
-                 proxy_registry::backend {
-  fixture() {
-    uri mars_uri;
-    REQUIRE_OK(parse("test:mars", mars_uri));
-    mars = make_node_id(mars_uri);
-    auto proxies = std::make_shared<proxy_registry>(sys, *this);
-    auto sockets = unbox(make_stream_socket_pair());
-    sock = sockets.first;
-    nonblocking(sockets.first, true);
-    nonblocking(sockets.second, true);
-    auto mpx = sys.network_manager().mpx();
-    mgr = make_endpoint_manager(mpx, sys,
-                                transport_type{sockets.second,
-                                               basp::application{proxies}});
-    REQUIRE_OK(mgr->init());
-    handle_io_event();
-    CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
+struct fixture : test_coordinator_fixture<config>, host_fixture {
+  fixture() : mars(make_node_id(unbox(make_uri("test:mars")))) {
+    auto& mm = sys.network_manager();
+    auto backend = dynamic_cast<backend::test*>(mm.backend("test"));
+    auto mgr = backend->peer(mars);
     auto& dref = dynamic_cast<endpoint_manager_impl<transport_type>&>(*mgr);
     app = &dref.application();
-  }
-
-  ~fixture() {
-    close(sock);
+    sock = backend->socket(mars);
   }
 
   bool handle_io_event() override {
@@ -151,20 +136,7 @@ struct fixture : test_coordinator_fixture<config>,
     return sys;
   }
 
-  strong_actor_ptr make_proxy(node_id nid, actor_id aid) override {
-    using impl_type = actor_proxy_impl;
-    using hdl_type = strong_actor_ptr;
-    actor_config cfg;
-    return make_actor<impl_type, hdl_type>(aid, nid, &sys, cfg, mgr);
-  }
-
-  void set_last_hop(node_id*) override {
-    // nop
-  }
-
   node_id mars;
-
-  endpoint_manager_ptr mgr;
 
   stream_socket sock;
 

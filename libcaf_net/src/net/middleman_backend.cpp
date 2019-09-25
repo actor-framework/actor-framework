@@ -16,47 +16,18 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
-
-#include <memory>
-
-#include "caf/intrusive_ptr.hpp"
+#include "caf/net/middleman_backend.hpp"
 
 namespace caf {
 namespace net {
 
-// -- templates ----------------------------------------------------------------
+middleman_backend::middleman_backend(std::string id) : id_(std::move(id)) {
+  // nop
+}
 
-template <class Application, class IdType = unit_t>
-class transport_worker;
-
-template <class Application, class IdType = unit_t>
-class transport_worker_dispatcher;
-
-// -- classes ------------------------------------------------------------------
-
-class endpoint_manager;
-class middleman;
-class middleman_backend;
-class multiplexer;
-class socket_manager;
-
-// -- structs ------------------------------------------------------------------
-
-struct network_socket;
-struct pipe_socket;
-struct socket;
-struct stream_socket;
-struct tcp_accept_socket;
-struct tcp_stream_socket;
-
-// -- smart pointers -----------------------------------------------------------
-
-using endpoint_manager_ptr = intrusive_ptr<endpoint_manager>;
-using middleman_backend_ptr = std::unique_ptr<middleman_backend>;
-using multiplexer_ptr = std::shared_ptr<multiplexer>;
-using socket_manager_ptr = intrusive_ptr<socket_manager>;
-using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
+middleman_backend::~middleman_backend() {
+  // nop
+}
 
 } // namespace net
 } // namespace caf

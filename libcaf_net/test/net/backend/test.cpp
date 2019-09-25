@@ -16,47 +16,26 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#define CAF_SUITE net.backend.test
 
-#include <memory>
+#include "caf/net/backend/test.hpp"
 
-#include "caf/intrusive_ptr.hpp"
+#include "caf/test/dsl.hpp"
 
-namespace caf {
-namespace net {
+using namespace caf;
 
-// -- templates ----------------------------------------------------------------
+namespace {
 
-template <class Application, class IdType = unit_t>
-class transport_worker;
+struct fixture {
 
-template <class Application, class IdType = unit_t>
-class transport_worker_dispatcher;
+};
 
-// -- classes ------------------------------------------------------------------
+} // namespace
 
-class endpoint_manager;
-class middleman;
-class middleman_backend;
-class multiplexer;
-class socket_manager;
+CAF_TEST_FIXTURE_SCOPE(test_tests, fixture)
 
-// -- structs ------------------------------------------------------------------
+CAF_TEST(todo) {
+  // implement me
+}
 
-struct network_socket;
-struct pipe_socket;
-struct socket;
-struct stream_socket;
-struct tcp_accept_socket;
-struct tcp_stream_socket;
-
-// -- smart pointers -----------------------------------------------------------
-
-using endpoint_manager_ptr = intrusive_ptr<endpoint_manager>;
-using middleman_backend_ptr = std::unique_ptr<middleman_backend>;
-using multiplexer_ptr = std::shared_ptr<multiplexer>;
-using socket_manager_ptr = intrusive_ptr<socket_manager>;
-using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
-
-} // namespace net
-} // namespace caf
+CAF_TEST_FIXTURE_SCOPE_END()

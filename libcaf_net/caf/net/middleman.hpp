@@ -21,6 +21,8 @@
 #include <thread>
 
 #include "caf/actor_system.hpp"
+#include "caf/detail/type_list.hpp"
+#include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
 
 namespace caf {
@@ -28,6 +30,14 @@ namespace net {
 
 class middleman : public actor_system::module {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using module = actor_system::module;
+
+  using module_ptr = actor_system::module_ptr;
+
+  using middleman_backend_list = std::vector<middleman_backend_ptr>;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   ~middleman() override;
@@ -46,9 +56,21 @@ public:
 
   // -- factory functions ------------------------------------------------------
 
-  static actor_system::module* make(actor_system&, detail::type_list<>);
+  template <class... Ts>
+  static module* make(actor_system& sys, detail::type_list<Ts...> token) {
+    std::unique_ptr<middleman> result{new middleman(sys)};
+    if (sizeof...(Ts) > 0) {
+      result->backends_.reserve(sizeof...(Ts));
+      create_backends(*result, token);
+    }
+    return result.release();
+  }
 
   // -- properties -------------------------------------------------------------
+
+  actor_system& system() {
+    return sys_;
+  }
 
   const actor_system_config& config() const noexcept {
     return sys_.config();
@@ -58,10 +80,24 @@ public:
     return mpx_;
   }
 
+  middleman_backend* backend(string_view scheme) const noexcept;
+
 private:
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit middleman(actor_system& sys);
+
+  // -- utility functions ------------------------------------------------------
+
+  static void create_backends(middleman&, detail::type_list<>) {
+    // End of recursion.
+  }
+
+  template <class T, class... Ts>
+  static void create_backends(middleman& mm, detail::type_list<T, Ts...>) {
+    mm.backends_.emplace_back(new T(mm));
+    create_backends(mm, detail::type_list<Ts...>{});
+  }
 
   // -- member variables -------------------------------------------------------
 
@@ -70,6 +106,9 @@ private:
 
   /// Stores the global socket I/O multiplexer.
   multiplexer_ptr mpx_;
+
+  /// Stores all available backends for managing peers.
+  middleman_backend_list backends_;
 
   /// Runs the multiplexer's event loop
   std::thread mpx_thread_;

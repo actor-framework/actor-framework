@@ -18,45 +18,61 @@
 
 #pragma once
 
-#include <memory>
+#include <map>
 
-#include "caf/intrusive_ptr.hpp"
+#include "caf/net/endpoint_manager.hpp"
+#include "caf/net/fwd.hpp"
+#include "caf/net/middleman_backend.hpp"
+#include "caf/net/stream_socket.hpp"
+#include "caf/node_id.hpp"
 
 namespace caf {
 namespace net {
+namespace backend {
 
-// -- templates ----------------------------------------------------------------
+/// Minimal backend for unit testing.
+/// @warning this backend is *not* thread safe.
+class test : public middleman_backend {
+public:
+  // -- member types -----------------------------------------------------------
 
-template <class Application, class IdType = unit_t>
-class transport_worker;
+  using peer_entry = std::pair<stream_socket, endpoint_manager_ptr>;
 
-template <class Application, class IdType = unit_t>
-class transport_worker_dispatcher;
+  // -- constructors, destructors, and assignment operators --------------------
 
-// -- classes ------------------------------------------------------------------
+  test(middleman& mm);
 
-class endpoint_manager;
-class middleman;
-class middleman_backend;
-class multiplexer;
-class socket_manager;
+  ~test() override;
 
-// -- structs ------------------------------------------------------------------
+  // -- interface functions ----------------------------------------------------
 
-struct network_socket;
-struct pipe_socket;
-struct socket;
-struct stream_socket;
-struct tcp_accept_socket;
-struct tcp_stream_socket;
+  error init() override;
 
-// -- smart pointers -----------------------------------------------------------
+  endpoint_manager_ptr peer(const node_id& id) override;
 
-using endpoint_manager_ptr = intrusive_ptr<endpoint_manager>;
-using middleman_backend_ptr = std::unique_ptr<middleman_backend>;
-using multiplexer_ptr = std::shared_ptr<multiplexer>;
-using socket_manager_ptr = intrusive_ptr<socket_manager>;
-using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
+  strong_actor_ptr make_proxy(node_id nid, actor_id aid) override;
 
+  void set_last_hop(node_id*) override;
+
+  // -- properties -------------------------------------------------------------
+
+  stream_socket socket(const node_id& peer_id) {
+    return get_peer(peer_id).first;
+  }
+
+  peer_entry& emplace(const node_id& peer_id, stream_socket first,
+                      stream_socket second);
+
+private:
+  peer_entry& get_peer(const node_id& id);
+
+  middleman& mm_;
+
+  std::map<node_id, peer_entry> peers_;
+
+  proxy_registry proxies_;
+};
+
+} // namespace backend
 } // namespace net
 } // namespace caf

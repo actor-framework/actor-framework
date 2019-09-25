@@ -18,45 +18,47 @@
 
 #pragma once
 
-#include <memory>
+#include <string>
 
-#include "caf/intrusive_ptr.hpp"
+#include "caf/fwd.hpp"
+#include "caf/net/fwd.hpp"
+#include "caf/proxy_registry.hpp"
 
 namespace caf {
 namespace net {
 
-// -- templates ----------------------------------------------------------------
+/// Technology-specific backend for connecting to and managing peer
+/// connections.
+/// @relates middleman
+class middleman_backend : public proxy_registry::backend {
+public:
+  // -- constructors, destructors, and assignment operators --------------------
 
-template <class Application, class IdType = unit_t>
-class transport_worker;
+  middleman_backend(std::string id);
 
-template <class Application, class IdType = unit_t>
-class transport_worker_dispatcher;
+  virtual ~middleman_backend();
 
-// -- classes ------------------------------------------------------------------
+  // -- interface functions ----------------------------------------------------
 
-class endpoint_manager;
-class middleman;
-class middleman_backend;
-class multiplexer;
-class socket_manager;
+  /// Initializes the backend.
+  virtual error init() = 0;
 
-// -- structs ------------------------------------------------------------------
+  /// @returns The endpoint manager for `peer` on success, `nullptr` otherwise.
+  virtual endpoint_manager_ptr peer(const node_id& id) = 0;
 
-struct network_socket;
-struct pipe_socket;
-struct socket;
-struct stream_socket;
-struct tcp_accept_socket;
-struct tcp_stream_socket;
+  // -- properties -------------------------------------------------------------
 
-// -- smart pointers -----------------------------------------------------------
+  const std::string& id() const noexcept {
+    return id_;
+  }
 
-using endpoint_manager_ptr = intrusive_ptr<endpoint_manager>;
+private:
+  /// Stores the technology-specific identifier.
+  std::string id_;
+};
+
+/// @relates middleman_backend
 using middleman_backend_ptr = std::unique_ptr<middleman_backend>;
-using multiplexer_ptr = std::shared_ptr<multiplexer>;
-using socket_manager_ptr = intrusive_ptr<socket_manager>;
-using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
 
 } // namespace net
 } // namespace caf

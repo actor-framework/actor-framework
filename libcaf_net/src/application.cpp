@@ -42,8 +42,7 @@ namespace caf {
 namespace net {
 namespace basp {
 
-application::application(proxy_registry_ptr proxies)
-  : proxies_(std::move(proxies)) {
+application::application(proxy_registry& proxies) : proxies_(proxies) {
   // nop
 }
 
@@ -210,7 +209,7 @@ error application::handle_actor_message(write_packet_callback&, header hdr,
   // Try to fetch the sender.
   strong_actor_ptr src_hdl;
   if (src_node != none && src_id != 0)
-    src_hdl = proxies_->get_or_put(src_node, src_id);
+    src_hdl = proxies_.get_or_put(src_node, src_id);
   // Ship the message.
   auto ptr = make_mailbox_element(std::move(src_hdl),
                                   make_message_id(hdr.operation_data),
@@ -269,7 +268,7 @@ error application::handle_resolve_response(write_packet_callback&, header hdr,
     i->second.deliver(strong_actor_ptr{nullptr}, std::move(ifs));
     return none;
   }
-  i->second.deliver(proxies_->get_or_put(peer_id_, aid), std::move(ifs));
+  i->second.deliver(proxies_.get_or_put(peer_id_, aid), std::move(ifs));
   return none;
 }
 
@@ -279,7 +278,7 @@ error application::handle_down_message(write_packet_callback&, header hdr,
   binary_deserializer source{system(), payload};
   if (auto err = source(reason))
     return err;
-  proxies_->erase(peer_id_, hdr.operation_data, std::move(reason));
+  proxies_.erase(peer_id_, hdr.operation_data, std::move(reason));
   return none;
 }
 

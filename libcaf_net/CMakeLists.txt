@@ -19,7 +19,9 @@ set(LIBCAF_NET_SRCS
   src/ip.cpp
   src/message_type.cpp
   src/multiplexer.cpp
+  src/net/backend/test.cpp
   src/net/middleman.cpp
+  src/net/middleman_backend.cpp
   src/network_socket.cpp
   src/pipe_socket.cpp
   src/pollset_updater.cpp

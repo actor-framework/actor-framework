@@ -19,6 +19,7 @@
 #include "caf/net/middleman.hpp"
 
 #include "caf/actor_system_config.hpp"
+#include "caf/net/middleman_backend.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/uri.hpp"
@@ -47,7 +48,7 @@ void middleman::stop() {
     mpx_thread_.join();
 }
 
-void middleman::init(actor_system_config&cfg) {
+void middleman::init(actor_system_config& cfg) {
   if (auto err = mpx_->init())
     CAF_RAISE_ERROR("mpx->init failed");
   if (auto node_uri = get_if<uri>(&cfg, "middleman.this-node")) {
@@ -56,9 +57,12 @@ void middleman::init(actor_system_config&cfg) {
   } else {
     CAF_RAISE_ERROR("no valid entry for middleman.this-node found");
   }
+  for (auto& backend : backends_)
+    if (auto err = backend->init())
+      CAF_RAISE_ERROR("failed to initialize backend");
 }
 
-actor_system::module::id_t middleman::id() const {
+middleman::module::id_t middleman::id() const {
   return module::network_manager;
 }
 
@@ -66,8 +70,14 @@ void* middleman::subtype_ptr() {
   return this;
 }
 
-actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
-  return new middleman(sys);
+middleman_backend* middleman::backend(string_view scheme) const noexcept {
+  auto predicate = [&](const middleman_backend_ptr& ptr) {
+    return ptr->id() == scheme;
+  };
+  auto i = std::find_if(backends_.begin(), backends_.end(), predicate);
+  if (i != backends_.end())
+    return i->get();
+  return nullptr;
 }
 
 } // namespace net
