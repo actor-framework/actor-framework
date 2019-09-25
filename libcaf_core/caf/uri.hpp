@@ -141,6 +141,9 @@ std::string to_string(const uri::authority_type& x);
 /// @relates uri
 error parse(string_view str, uri& dest);
 
+/// @relates uri
+expected<uri> make_uri(string_view str);
+
 } // namespace caf
 
 namespace std {

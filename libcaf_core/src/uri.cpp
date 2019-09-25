@@ -26,6 +26,7 @@
 #include "caf/detail/parser/read_uri.hpp"
 #include "caf/detail/uri_impl.hpp"
 #include "caf/error.hpp"
+#include "caf/expected.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/serializer.hpp"
 
@@ -137,6 +138,13 @@ error parse(string_view str, uri& dest) {
     return none;
   return make_error(ps.code, static_cast<size_t>(ps.line),
                     static_cast<size_t>(ps.column));
+}
+
+expected<uri> make_uri(string_view str) {
+  uri result;
+  if (auto err = parse(str, result))
+    return err;
+  return result;
 }
 
 } // namespace caf
