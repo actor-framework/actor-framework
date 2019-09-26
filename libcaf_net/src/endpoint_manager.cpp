@@ -31,6 +31,17 @@ endpoint_manager::event::event(uri locator, actor listener)
   // nop
 }
 
+endpoint_manager::event::event(node_id peer, actor_id proxy_id)
+  : value(new_proxy{peer, proxy_id}) {
+  // nop
+}
+
+endpoint_manager::event::event(node_id observing_peer, actor_id local_actor_id,
+                               error reason)
+  : value(local_actor_down{observing_peer, local_actor_id, std::move(reason)}) {
+  // nop
+}
+
 endpoint_manager::event::event(atom_value type, uint64_t id)
   : value(timeout{type, id}) {
   // nop
@@ -95,6 +106,11 @@ void endpoint_manager::enqueue(mailbox_element_ptr msg,
   auto ptr = new message(std::move(msg), std::move(receiver),
                          std::move(payload));
   if (messages_.push_back(ptr) == intrusive::inbox_result::unblocked_reader)
+    mask_add(operation::write);
+}
+
+void endpoint_manager::enqueue(event* ptr) {
+  if (events_.push_back(ptr) == intrusive::inbox_result::unblocked_reader)
     mask_add(operation::write);
 }
 

@@ -70,8 +70,9 @@ public:
   }
 
   template <class Parent>
-  void handle_data(Parent&, span<const byte>) {
+  error handle_data(Parent&, span<const byte>) {
     rec_buf_->push_back(static_cast<byte>(id_));
+    return none;
   }
 
   template <class Manager>

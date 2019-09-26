@@ -79,9 +79,10 @@ public:
   }
 
   template <class Parent>
-  void handle_data(Parent&, span<const byte> data) {
+  error handle_data(Parent&, span<const byte> data) {
     rec_buf_->clear();
     rec_buf_->insert(rec_buf_->begin(), data.begin(), data.end());
+    return none;
   }
 
   template <class Parent>
@@ -99,8 +100,18 @@ public:
               std::string{path.begin(), path.end()}, p);
   }
 
-  template <class Transport>
-  void timeout(Transport&, atom_value, uint64_t) {
+  template <class Parent>
+  void timeout(Parent&, atom_value, uint64_t) {
+    // nop
+  }
+
+  template <class Parent>
+  void new_proxy(Parent&, actor_id) {
+    // nop
+  }
+
+  template <class Parent>
+  void local_actor_down(Parent&, actor_id, error) {
     // nop
   }
 

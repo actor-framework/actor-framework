@@ -69,9 +69,9 @@ public:
   }
 
   template <class Parent>
-  void handle_data(Parent& parent, span<const byte> data) {
+  error handle_data(Parent& parent, span<const byte> data) {
     auto decorator = make_write_packet_decorator(*this, parent);
-    application_.handle_data(decorator, data);
+    return application_.handle_data(decorator, data);
   }
 
   template <class Parent>
@@ -85,6 +85,19 @@ public:
   void resolve(Parent& parent, string_view path, const actor& listener) {
     auto decorator = make_write_packet_decorator(*this, parent);
     application_.resolve(decorator, path, listener);
+  }
+
+  template <class Parent>
+  void new_proxy(Parent& parent, const node_id&, actor_id id) {
+    auto decorator = make_write_packet_decorator(*this, parent);
+    application_.new_proxy(decorator, id);
+  }
+
+  template <class Parent>
+  void local_actor_down(Parent& parent, const node_id&, actor_id id,
+                        error reason) {
+    auto decorator = make_write_packet_decorator(*this, parent);
+    application_.local_actor_down(decorator, id, std::move(reason));
   }
 
   template <class Parent>

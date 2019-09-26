@@ -22,6 +22,7 @@
 #include "caf/actor_cast.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/atom.hpp"
+#include "caf/detail/overload.hpp"
 #include "caf/net/endpoint_manager.hpp"
 
 namespace caf {
@@ -93,14 +94,21 @@ public:
         auto& q = this->events_.queue();
         q.inc_deficit(q.total_task_size());
         for (auto ptr = q.next(); ptr != nullptr; ptr = q.next()) {
-          using timeout = endpoint_manager::event::timeout;
-          using resolve_request = endpoint_manager::event::resolve_request;
-          if (auto rr = get_if<resolve_request>(&ptr->value)) {
-            transport_.resolve(*this, rr->locator, rr->listener);
-          } else {
-            auto& t = get<timeout>(ptr->value);
-            transport_.timeout(*this, t.type, t.id);
-          }
+          auto f = detail::make_overload(
+            [&](endpoint_manager::event::resolve_request& x) {
+              transport_.resolve(*this, x.locator, x.listener);
+            },
+            [&](endpoint_manager::event::new_proxy& x) {
+              transport_.new_proxy(*this, x.peer, x.id);
+            },
+            [&](endpoint_manager::event::local_actor_down& x) {
+              transport_.local_actor_down(*this, x.observing_peer, x.id,
+                                          std::move(x.reason));
+            },
+            [&](endpoint_manager::event::timeout& x) {
+              transport_.timeout(*this, x.type, x.id);
+            });
+          visit(f, ptr->value);
         }
       } while (!this->events_.try_block());
     }

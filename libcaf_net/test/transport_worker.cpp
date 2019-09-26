@@ -77,10 +77,11 @@ public:
   }
 
   template <class Parent>
-  void handle_data(Parent&, span<const byte> data) {
+  error handle_data(Parent&, span<const byte> data) {
     auto& buf = res_->data_buffer;
     buf.clear();
     buf.insert(buf.begin(), data.begin(), data.end());
+    return none;
   }
 
   template <class Parent>

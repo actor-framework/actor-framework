@@ -28,7 +28,7 @@ namespace net {
 actor_proxy_impl::actor_proxy_impl(actor_config& cfg, endpoint_manager_ptr dst)
   : super(cfg), sf_(dst->serialize_fun()), dst_(std::move(dst)) {
   CAF_ASSERT(dst_ != nullptr);
-  dst_->enqueue(nullptr, ctrl(), {});
+  dst_->enqueue_event(node(), id());
 }
 
 actor_proxy_impl::~actor_proxy_impl() {

@@ -41,7 +41,9 @@ using namespace caf::net;
 
 namespace {
 
-struct fixture : test_coordinator_fixture<>, proxy_registry::backend {
+struct fixture : test_coordinator_fixture<>,
+                 proxy_registry::backend,
+                 basp::application::test_tag {
   using buffer_type = std::vector<byte>;
 
   fixture() : proxies(sys, *this), app(proxies) {
@@ -106,6 +108,10 @@ struct fixture : test_coordinator_fixture<>, proxy_registry::backend {
 
   fixture& transport() {
     return *this;
+  }
+
+  endpoint_manager& manager() {
+    CAF_FAIL("unexpected function call");
   }
 
   template <class... Ts>

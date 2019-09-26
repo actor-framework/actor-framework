@@ -104,7 +104,10 @@ public:
       CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id) << CAF_ARG(*num_bytes));
       collected_ += *num_bytes;
       if (collected_ >= read_threshold_) {
-        worker_.handle_data(*this, read_buf_);
+        if (auto err = worker_.handle_data(*this, read_buf_)) {
+          CAF_LOG_WARNING("handle_data failed:" << CAF_ARG(err));
+          return false;
+        }
         prepare_next_read();
       }
       return true;
@@ -135,14 +138,25 @@ public:
     worker_.resolve(*this, locator.path(), listener);
   }
 
-  template <class... Ts>
-  void set_timeout(uint64_t, Ts&&...) {
-    // nop
+  template <class Parent>
+  void new_proxy(Parent&, const node_id& peer, actor_id id) {
+    worker_.new_proxy(*this, peer, id);
+  }
+
+  template <class Parent>
+  void local_actor_down(Parent&, const node_id& peer, actor_id id,
+                        error reason) {
+    worker_.local_actor_down(*this, peer, id, std::move(reason));
   }
 
   template <class Parent>
   void timeout(Parent&, atom_value value, uint64_t id) {
     worker_.timeout(*this, value, id);
+  }
+
+  template <class... Ts>
+  void set_timeout(uint64_t, Ts&&...) {
+    // nop
   }
 
   void handle_error(sec code) {

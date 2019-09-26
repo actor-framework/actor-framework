@@ -56,6 +56,17 @@ public:
       actor listener;
     };
 
+    struct new_proxy {
+      node_id peer;
+      actor_id id;
+    };
+
+    struct local_actor_down {
+      node_id observing_peer;
+      actor_id id;
+      error reason;
+    };
+
     struct timeout {
       atom_value type;
       uint64_t id;
@@ -63,10 +74,14 @@ public:
 
     event(uri locator, actor listener);
 
+    event(node_id peer, actor_id proxy_id);
+
+    event(node_id observing_peer, actor_id local_actor_id, error reason);
+
     event(atom_value type, uint64_t id);
 
-    /// Either contains a string for `resolve` requests or an `atom_value`
-    variant<resolve_request, timeout> value;
+    /// Holds the event data.
+    variant<resolve_request, new_proxy, local_actor_down, timeout> value;
   };
 
   struct event_policy {
@@ -144,8 +159,11 @@ public:
   void enqueue(mailbox_element_ptr msg, strong_actor_ptr receiver,
                std::vector<byte> payload);
 
-  /// Enqueues a timeout to the endpoint.
-  void enqueue(timeout_msg msg);
+  /// Enqueues an event to the endpoint.
+  template <class... Ts>
+  void enqueue_event(Ts&&... xs) {
+    enqueue(new event(std::forward<Ts>(xs)...));
+  }
 
   // -- pure virtual member functions ------------------------------------------
 
@@ -156,6 +174,8 @@ public:
   virtual serialize_fun_type serialize_fun() const noexcept = 0;
 
 protected:
+  void enqueue(event* ptr);
+
   /// Points to the hosting actor system.
   actor_system& sys_;
 

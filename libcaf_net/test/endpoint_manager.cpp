@@ -138,6 +138,16 @@ public:
     // nop
   }
 
+  template <class Parent>
+  void new_proxy(Parent&, const node_id&, actor_id) {
+    // nop
+  }
+
+  template <class Parent>
+  void local_actor_down(Parent&, const node_id&, actor_id, error) {
+    // nop
+  }
+
 private:
   stream_socket handle_;
 

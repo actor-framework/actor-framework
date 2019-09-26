@@ -20,6 +20,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -56,6 +57,8 @@ public:
 
   using write_packet_callback = callback<byte_span, byte_span>;
 
+  struct test_tag {};
+
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit application(proxy_registry& proxies);
@@ -66,6 +69,10 @@ public:
   error init(Parent& parent) {
     // Initialize member variables.
     system_ = &parent.system();
+    // TODO: use `if constexpr` when switching to C++17.
+    // Allow unit tests to run the application without endpoint manager.
+    if (!std::is_base_of<test_tag, Parent>::value)
+      manager_ = &parent.manager();
     // Write handshake.
     if (auto err = generate_handshake())
       return err;
@@ -79,18 +86,8 @@ public:
   template <class Parent>
   error write_message(Parent& parent,
                       std::unique_ptr<endpoint_manager::message> ptr) {
-    // There is one special case: actor_proxy_impl sends a message without
-    // mailbox element on construction to trigger monitoring messages.
-    if (ptr->msg == nullptr) {
-      CAF_ASSERT(ptr->payload.empty());
-      CAF_ASSERT(ptr->receiver != nullptr);
-      CAF_ASSERT(ptr->receiver->node() == peer_id_);
-      header hdr{message_type::monitor_message, 0,
-                 static_cast<uint64_t>(ptr->receiver->id())};
-      auto bytes = to_bytes(hdr);
-      parent.write_packet(make_span(bytes), span<const byte>{});
-      return none;
-    }
+    CAF_ASSERT(ptr != nullptr);
+    CAF_ASSERT(ptr->msg != nullptr);
     buf_.clear();
     serializer_impl<buffer_type> sink{system(), buf_};
     const auto& src = ptr->msg->sender;
@@ -137,8 +134,27 @@ public:
     resolve_remote_path(write_packet, path, listener);
   }
 
-  template <class Transport>
-  void timeout(Transport&, atom_value, uint64_t) {
+  template <class Parent>
+  void new_proxy(Parent& parent, actor_id id) {
+    header hdr{message_type::monitor_message, 0, static_cast<uint64_t>(id)};
+    auto bytes = to_bytes(hdr);
+    parent.write_packet(make_span(bytes), span<const byte>{});
+  }
+
+  template <class Parent>
+  void local_actor_down(Parent& parent, actor_id id, error reason) {
+    buf_.clear();
+    serializer_impl<buffer_type> sink{system(), buf_};
+    if (auto err = sink(reason))
+      CAF_RAISE_ERROR("unable to serialize an error");
+    header hdr{message_type::down_message, static_cast<uint32_t>(buf_.size()),
+               static_cast<uint64_t>(id)};
+    auto bytes = to_bytes(hdr);
+    parent.write_packet(make_span(bytes), make_span(buf_));
+  }
+
+  template <class Parent>
+  void timeout(Parent&, atom_value, uint64_t) {
     // nop
   }
 
@@ -187,6 +203,9 @@ private:
   error handle_resolve_response(write_packet_callback& write_packet, header hdr,
                                 byte_span payload);
 
+  error handle_monitor_message(write_packet_callback& write_packet, header hdr,
+                               byte_span payload);
+
   error handle_down_message(write_packet_callback& write_packet, header hdr,
                             byte_span payload);
 
@@ -224,6 +243,9 @@ private:
 
   /// Points to the factory object for generating proxies.
   proxy_registry& proxies_;
+
+  /// Points to the endpoint manager that owns this applications.
+  endpoint_manager* manager_ = nullptr;
 };
 
 } // namespace basp
