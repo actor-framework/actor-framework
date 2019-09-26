@@ -45,26 +45,6 @@ void actor_proxy_impl::enqueue(mailbox_element_ptr what, execution_unit*) {
       "unable to serialize payload: " << home_system().render(payload.error()));
 }
 
-bool actor_proxy_impl::add_backlink(abstract_actor* x) {
-  if (monitorable_actor::add_backlink(x)) {
-    enqueue(make_mailbox_element(ctrl(), make_message_id(), {},
-                                 link_atom::value, x->ctrl()),
-            nullptr);
-    return true;
-  }
-  return false;
-}
-
-bool actor_proxy_impl::remove_backlink(abstract_actor* x) {
-  if (monitorable_actor::remove_backlink(x)) {
-    enqueue(make_mailbox_element(ctrl(), make_message_id(), {},
-                                 unlink_atom::value, x->ctrl()),
-            nullptr);
-    return true;
-  }
-  return false;
-}
-
 void actor_proxy_impl::kill_proxy(execution_unit* ctx, error rsn) {
   cleanup(std::move(rsn), ctx);
 }
