@@ -38,6 +38,7 @@
 #include "caf/node_id.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/response_promise.hpp"
+#include "caf/scoped_execution_unit.hpp"
 #include "caf/serializer_impl.hpp"
 #include "caf/span.hpp"
 #include "caf/unit.hpp"
@@ -69,6 +70,8 @@ public:
   error init(Parent& parent) {
     // Initialize member variables.
     system_ = &parent.system();
+    executor_.system_ptr(system_);
+    executor_.proxy_registry_ptr(&proxies_);
     // TODO: use `if constexpr` when switching to C++17.
     // Allow unit tests to run the application without endpoint manager.
     if (!std::is_base_of<test_tag, Parent>::value)
@@ -86,30 +89,11 @@ public:
   template <class Parent>
   error write_message(Parent& parent,
                       std::unique_ptr<endpoint_manager::message> ptr) {
-    CAF_ASSERT(ptr != nullptr);
-    CAF_ASSERT(ptr->msg != nullptr);
-    buf_.clear();
-    serializer_impl<buffer_type> sink{system(), buf_};
-    const auto& src = ptr->msg->sender;
-    const auto& dst = ptr->receiver;
-    if (dst == nullptr) {
-      // TODO: valid?
+    auto write_packet = make_callback([&](byte_span hdr, byte_span payload) {
+      parent.write_packet(hdr, payload);
       return none;
-    }
-    if (src != nullptr) {
-      if (auto err = sink(src->node(), src->id(), dst->id(), ptr->msg->stages))
-        return err;
-    } else {
-      if (auto err = sink(node_id{}, actor_id{0}, dst->id(), ptr->msg->stages))
-        return err;
-    }
-    // TODO: avoid extra copy of the payload
-    buf_.insert(buf_.end(), ptr->payload.begin(), ptr->payload.end());
-    header hdr{message_type::actor_message, static_cast<uint32_t>(buf_.size()),
-               ptr->msg->mid.integer_value()};
-    auto bytes = to_bytes(hdr);
-    parent.write_packet(make_span(bytes), make_span(buf_));
-    return none;
+    });
+    return write(write_packet, std::move(ptr));
   }
 
   template <class Parent>
@@ -183,7 +167,12 @@ public:
   }
 
 private:
-  // -- message handling -------------------------------------------------------
+  // -- handling of outgoing messages ------------------------------------------
+
+  error write(write_packet_callback& write_packet,
+              std::unique_ptr<endpoint_manager::message> ptr);
+
+  // -- handling of incoming messages ------------------------------------------
 
   error handle(size_t& next_read_size, write_packet_callback& write_packet,
                byte_span bytes);
@@ -246,6 +235,10 @@ private:
 
   /// Points to the endpoint manager that owns this applications.
   endpoint_manager* manager_ = nullptr;
+
+  /// Provides pointers to the actor system as well as the registry to
+  /// serializers and deserializer.
+  scoped_execution_unit executor_;
 };
 
 } // namespace basp
