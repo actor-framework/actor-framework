@@ -129,7 +129,6 @@ public:
 
   /// Returns a pointer to the parent actor.
   scheduled_actor* self();
-
 };
 
 /// @relates inbound_path
