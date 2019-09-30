@@ -351,12 +351,6 @@ private:
   // References the parent system.
   actor_system& system_;
 
-  // Guards aids_.
-  detail::shared_spinlock aids_lock_;
-
-  // Maps thread IDs to actor IDs.
-  std::unordered_map<std::thread::id, actor_id> aids_;
-
   // Identifies the thread that called `logger::start`.
   std::thread::id parent_thread_;
 

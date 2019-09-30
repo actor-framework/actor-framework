@@ -295,29 +295,16 @@ std::string logger::line_builder::get() const {
 }
 
 // returns the actor ID for the current thread
+
+thread_local actor_id _currentActoId;
 actor_id logger::thread_local_aid() {
-  shared_lock<detail::shared_spinlock> guard{aids_lock_};
-  auto i = aids_.find(std::this_thread::get_id());
-  if (i != aids_.end())
-    return i->second;
-  return 0;
+  return _currentActoId;
 }
 
 actor_id logger::thread_local_aid(actor_id aid) {
-  auto tid = std::this_thread::get_id();
-  upgrade_lock<detail::shared_spinlock> guard{aids_lock_};
-  auto i = aids_.find(tid);
-  if (i != aids_.end()) {
-    // we modify it despite the shared lock because the elements themselves
-    // are considered thread-local
-    auto res = i->second;
-    i->second = aid;
-    return res;
-  }
-  // upgrade to unique lock and insert new element
-  upgrade_to_unique_lock<detail::shared_spinlock> uguard{guard};
-  aids_.emplace(tid, aid);
-  return 0; // was empty before
+  auto old = _currentActoId;
+  _currentActoId = aid;
+  return old;
 }
 
 void logger::log(event&& x) {
