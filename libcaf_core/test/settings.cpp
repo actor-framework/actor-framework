@@ -82,7 +82,50 @@ const config_value& unpack(const settings& x, string_view key,
                 keys...);
 }
 
+struct foobar {
+  int foo = 0;
+  int bar = 0;
+};
+
 } // namespace
+
+namespace caf {
+
+// Enable users to configure foobar's like this:
+// my-value {
+//   foo = 42
+//   bar = 23
+// }
+template <>
+struct config_value_access<foobar> {
+  static bool is(const config_value& x) {
+    auto dict = caf::get_if<config_value::dictionary>(&x);
+    if (dict != nullptr) {
+      return caf::get_if<int>(dict, "foo") != none
+             && caf::get_if<int>(dict, "bar") != none;
+    }
+    return false;
+  }
+
+  static optional<foobar> get_if(const config_value* x) {
+    foobar result;
+    if (!is(*x))
+      return none;
+    const auto& dict = caf::get<config_value::dictionary>(*x);
+    result.foo = caf::get<int>(dict, "foo");
+    result.bar = caf::get<int>(dict, "bar");
+    return result;
+  }
+
+  static foobar get(const config_value& x) {
+    auto result = get_if(&x);
+    if (!result)
+      CAF_RAISE_ERROR("invalid type found");
+    return std::move(*result);
+  }
+};
+
+} // namespace caf
 
 CAF_TEST_FIXTURE_SCOPE(settings_tests, fixture)
 
@@ -157,6 +200,16 @@ CAF_TEST(get_or) {
   CAF_CHECK_EQUAL(get_or(x, "hello", "nobody"), "world"_s);
   CAF_CHECK_EQUAL(get_or(x, "hello", atom("nobody")), atom("nobody"));
   CAF_CHECK_EQUAL(get_or(x, "goodbye", "nobody"), "nobody"_s);
+}
+
+CAF_TEST(custom type) {
+  put(x, "my-value.foo", 42);
+  put(x, "my-value.bar", 24);
+  CAF_REQUIRE(holds_alternative<foobar>(x, "my-value"));
+  CAF_REQUIRE(get_if<foobar>(&x, "my-value") != caf::none);
+  auto fb = get<foobar>(x, "my-value");
+  CAF_CHECK_EQUAL(fb.foo, 42);
+  CAF_CHECK_EQUAL(fb.bar, 24);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

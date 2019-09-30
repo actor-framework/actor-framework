@@ -44,6 +44,16 @@ optional<T> get_if(const settings* xs, string_view name) {
   return none;
 }
 
+/// Returns whether `xs` associates a value of type `T` to `name`.
+/// @relates config_value
+template <class T>
+bool holds_alternative(const settings& xs, string_view name) {
+  using access = select_config_value_access_t<T>;
+  if (auto value = get_if(&xs, name))
+    return access::is(*value);
+  return false;
+}
+
 template <class T>
 T get(const settings& xs, string_view name) {
   auto result = get_if<T>(&xs, name);
