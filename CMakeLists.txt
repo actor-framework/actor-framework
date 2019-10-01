@@ -4,7 +4,7 @@ project(caf C CXX)
 include(CheckCSourceCompiles)
 include(CheckCSourceRuns)
 
-# Set default install paths. 
+# Set default install paths.
 # See https://cmake.org/cmake/help/latest/module/GNUInstallDirs.html
 include(GNUInstallDirs)
 
@@ -341,7 +341,7 @@ if(MINGW)
   build_string("EXTRA_FLAGS" "-static")
 elseif(CYGWIN)
   build_string("EXTRA_FLAGS" "-U__STRICT_ANSI__")
-elseif(NOT CAF_BUILD_STATIC_ONLY)
+else()
   build_string("EXTRA_FLAGS" "-fPIC")
 endif()
 if (WIN32)
