@@ -55,6 +55,13 @@ public:
 
   using iterator_category = std::forward_iterator_tag;
 
+  // -- static utility functions -----------------------------------------------
+
+  /// Casts a node type to its value type.
+  static pointer promote(node_pointer ptr) noexcept {
+    return static_cast<pointer>(ptr);
+  }
+
   // -- member variables -------------------------------------------------------
 
   node_pointer ptr;

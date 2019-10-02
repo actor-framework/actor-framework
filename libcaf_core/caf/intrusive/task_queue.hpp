@@ -60,6 +60,13 @@ public:
 
   using const_iterator = forward_iterator<const value_type>;
 
+  // -- static utility functions -----------------------------------------------
+
+  /// Casts a node type to its value type.
+  static pointer promote(node_pointer ptr) noexcept {
+    return static_cast<pointer>(ptr);
+  }
+
   // -- constructors, destructors, and assignment operators -------------------
 
   task_queue(policy_type p)
@@ -126,6 +133,13 @@ public:
   pointer peek() noexcept {
     auto ptr = head_.next;
     return ptr != &tail_ ? promote(ptr) : nullptr;
+  }
+
+  /// Applies `f` to each element in the queue.
+  template <class F>
+  void peek_all(F f) const {
+    for (auto i = begin(); i != end(); ++i)
+      f(*i);
   }
 
   // -- modifiers -------------------------------------------------------------

@@ -35,6 +35,8 @@ namespace intrusive {
 template <class Policy>
 class lifo_inbox {
 public:
+  // -- member types -----------------------------------------------------------
+
   using policy_type = Policy;
 
   using value_type = typename policy_type::mapped_type;
@@ -48,6 +50,15 @@ public:
   using unique_pointer = typename policy_type::unique_pointer;
 
   using deleter_type = typename unique_pointer::deleter_type;
+
+  // -- static utility functions -----------------------------------------------
+
+  /// Casts a node type to its value type.
+  static pointer promote(node_pointer ptr) noexcept {
+    return static_cast<pointer>(ptr);
+  }
+
+  // -- modifiers --------------------------------------------------------------
 
   /// Tries to enqueue a new element to the inbox.
   /// @threadsafe
