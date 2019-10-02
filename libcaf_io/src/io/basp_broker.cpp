@@ -253,6 +253,22 @@ behavior basp_broker::make_behavior() {
         system().registry().put(whom->id(), whom);
       instance.add_published_actor(port, whom, std::move(sigs));
     },
+    // received from test code to set up two instances without doorman
+    [=](publish_atom, scribe_ptr& ptr, uint16_t port,
+        const strong_actor_ptr& whom, std::set<std::string>& sigs) {
+      CAF_LOG_TRACE(CAF_ARG(ptr)
+                    << CAF_ARG(port) << CAF_ARG(whom) << CAF_ARG(sigs));
+      CAF_ASSERT(ptr != nullptr);
+      auto hdl = ptr->hdl();
+      add_scribe(std::move(ptr));
+      if (whom)
+        system().registry().put(whom->id(), whom);
+      instance.add_published_actor(port, whom, std::move(sigs));
+      set_context(hdl);
+      instance.write_server_handshake(context(), get_buffer(hdl), port);
+      flush(hdl);
+      configure_read(hdl, receive_policy::exactly(basp::header_size));
+    },
     // received from middleman actor (delegated)
     [=](connect_atom, scribe_ptr& ptr, uint16_t port) {
       CAF_LOG_TRACE(CAF_ARG(ptr) << CAF_ARG(port));
