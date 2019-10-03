@@ -77,13 +77,17 @@ struct fixture : host_fixture {
     else
       CAF_FAIL("write returned an error: " << sys.render(get<sec>(write_ret)));
 
-    auto read_ret = read(receive_socket, make_span(buf));
-    if (auto read_res = get_if<std::pair<size_t, ip_endpoint>>(&read_ret)) {
-      CAF_CHECK_EQUAL(read_res->first, hello_test.size());
-      buf.resize(read_res->first);
-    } else {
-      CAF_FAIL("write returned an error: " << sys.render(get<sec>(read_ret)));
-    }
+    variant<std::pair<size_t, ip_endpoint>, sec> read_ret;
+    do {
+      read_ret = read(receive_socket, make_span(buf));
+      if (auto read_res = get_if<std::pair<size_t, ip_endpoint>>(&read_ret)) {
+        CAF_CHECK_EQUAL(read_res->first, hello_test.size());
+        buf.resize(read_res->first);
+      } else if (get<sec>(read_ret) != sec::unavailable_or_would_block) {
+        CAF_FAIL("read returned an error: " << sys.render(get<sec>(read_ret)));
+      }
+    } while (holds_alternative<sec>(read_ret)
+             && get<sec>(read_ret) == sec::unavailable_or_would_block);
     string_view buf_view{reinterpret_cast<const char*>(buf.data()), buf.size()};
     CAF_CHECK_EQUAL(buf_view, hello_test);
   }
