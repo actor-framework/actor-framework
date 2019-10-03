@@ -25,11 +25,11 @@
 #include "host_fixture.hpp"
 
 #include "caf/detail/net_syscall.hpp"
+#include "caf/detail/socket_sys_includes.hpp"
 #include "caf/ip_address.hpp"
 #include "caf/ip_endpoint.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/net/ip.hpp"
-#include "caf/net/socket_guard.hpp"
 
 using namespace caf;
 using namespace caf::net;
@@ -70,11 +70,11 @@ CAF_TEST_FIXTURE_SCOPE(udp_datagram_socket_test, fixture)
 
 CAF_TEST(send and receive) {
   std::vector<byte> buf(1024);
-  CAF_MESSAGE("sending data to: " << to_string(ep));
   if (auto err = nonblocking(socket_cast<net::socket>(receive_socket), true))
     CAF_FAIL("nonblocking returned an error" << err);
   CAF_CHECK_EQUAL(read(receive_socket, make_span(buf)),
                   sec::unavailable_or_would_block);
+  CAF_MESSAGE("sending data to " << to_string(ep));
   CAF_CHECK_EQUAL(write(send_socket, as_bytes(make_span(hello_test)), ep),
                   hello_test.size());
   variant<std::pair<size_t, ip_endpoint>, sec> read_ret;
