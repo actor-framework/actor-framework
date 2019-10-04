@@ -155,7 +155,8 @@ public:
         if (strategies[k].sleep_duration.count() > 0) {
 #ifdef CAF_MSVC
           // Windows cannot sleep less than 1000 us, so timeout is conveted to 0
-          // inside sleep_for(), but Sleep(0) is dangerous so replace it with yield()
+          // inside sleep_for(), but Sleep(0) is dangerous so replace it with
+          // yield()
           if (strategies[k].sleep_duration.count() < 1000)
             std::this_thread::yield();
           else
@@ -212,4 +213,3 @@ public:
 
 } // namespace policy
 } // namespace caf
-
