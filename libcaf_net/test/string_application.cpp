@@ -53,7 +53,6 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
   }
 
   bool handle_io_event() override {
-    mpx->handle_updates();
     return mpx->poll_once(false);
   }
 
@@ -218,13 +217,11 @@ CAF_TEST(receive) {
                                     transport_type{sockets.first,
                                                    application_type{sys, buf}});
   CAF_CHECK_EQUAL(mgr1->init(), none);
-  mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
   auto mgr2 = make_endpoint_manager(mpx, sys,
                                     transport_type{sockets.second,
                                                    application_type{sys, buf}});
   CAF_CHECK_EQUAL(mgr2->init(), none);
-  mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 3u);
   CAF_MESSAGE("resolve actor-proxy");
   mgr1->resolve(unbox(make_uri("test:/id/42")), self);

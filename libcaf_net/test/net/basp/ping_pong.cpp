@@ -165,8 +165,6 @@ struct fixture : planet_driver {
   }
 
   bool handle_io_event() override {
-    earth.mpx.handle_updates();
-    mars.mpx.handle_updates();
     return earth.mpx.poll_once(false) || mars.mpx.poll_once(false);
   }
 

@@ -89,14 +89,11 @@ public:
   /// Polls until no socket event handler remains.
   void run();
 
-  /// Processes all updates on the socket managers.
-  void handle_updates();
-
 protected:
   // -- utility functions ------------------------------------------------------
 
   /// Handles an I/O event on given manager.
-  void handle(const socket_manager_ptr& mgr, int mask);
+  void handle(pollfd& fd, const socket_manager_ptr& mgr);
 
   /// Adds a new socket manager to the pollset.
   void add(socket_manager_ptr mgr);
@@ -109,9 +106,6 @@ protected:
   /// Maps sockets to their owning managers by storing the managers in the same
   /// order as their sockets appear in `pollset_`.
   manager_list managers_;
-
-  /// Managers that updated their event mask and need updating.
-  manager_list dirty_managers_;
 
   /// Stores the ID of the thread this multiplexer is running in. Set when
   /// calling `init()`.

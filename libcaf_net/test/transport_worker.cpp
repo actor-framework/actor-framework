@@ -152,7 +152,6 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
   }
 
   bool handle_io_event() override {
-    mpx->handle_updates();
     return mpx->poll_once(false);
   }
 

@@ -81,7 +81,6 @@ struct fixture : test_coordinator_fixture<config>, host_fixture {
 
   bool handle_io_event() override {
     auto mpx = sys.network_manager().mpx();
-    mpx->handle_updates();
     return mpx->poll_once(false);
   }
 

@@ -54,7 +54,6 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
   }
 
   bool handle_io_event() override {
-    mpx->handle_updates();
     return mpx->poll_once(false);
   }
 
@@ -178,7 +177,6 @@ CAF_TEST(send and receive) {
   CAF_CHECK_EQUAL(mgr->mask(), operation::none);
   CAF_CHECK_EQUAL(mgr->init(), none);
   CAF_CHECK_EQUAL(mgr->mask(), operation::read_write);
-  mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
   CAF_CHECK_EQUAL(write(sockets.second, as_bytes(make_span(hello_manager))),
                   hello_manager.size());
@@ -202,7 +200,6 @@ CAF_TEST(resolve and proxy communication) {
                                    dummy_transport{sockets.first, buf});
   CAF_CHECK_EQUAL(mgr->init(), none);
   CAF_CHECK_EQUAL(mgr->mask(), operation::read_write);
-  mpx->handle_updates();
   run();
   CAF_CHECK_EQUAL(read(sockets.second, make_span(read_buf)), hello_test.size());
   mgr->resolve(unbox(make_uri("test:id/42")), self);

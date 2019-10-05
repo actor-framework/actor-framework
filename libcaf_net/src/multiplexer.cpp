@@ -108,10 +108,14 @@ ptrdiff_t multiplexer::index_of(const socket_manager_ptr& mgr) {
 
 void multiplexer::register_writing(const socket_manager_ptr& mgr) {
   if (std::this_thread::get_id() == tid_) {
-    if (mgr->mask_add(operation::write)) {
-      auto i = std::find(dirty_managers_.begin(), dirty_managers_.end(), mgr);
-      if (i == dirty_managers_.end())
-        dirty_managers_.emplace_back(mgr);
+    if (mgr->mask() != operation::none) {
+      CAF_ASSERT(index_of(mgr) != -1);
+      if (mgr->mask_add(operation::write)) {
+        auto& fd = pollset_[index_of(mgr)];
+        fd.events |= output_mask;
+      }
+    } else if (mgr->mask_add(operation::write)) {
+      add(mgr);
     }
   } else {
     mgr->ref();
@@ -139,10 +143,13 @@ void multiplexer::close_pipe() {
 
 void multiplexer::register_reading(const socket_manager_ptr& mgr) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
-  if (mgr->mask_add(operation::read)) {
-    auto i = std::find(dirty_managers_.begin(), dirty_managers_.end(), mgr);
-    if (i == dirty_managers_.end())
-      dirty_managers_.emplace_back(mgr);
+  if (mgr->mask() != operation::none) {
+    CAF_ASSERT(index_of(mgr) != -1);
+    mgr->mask_add(operation::read);
+    auto& fd = pollset_[index_of(mgr)];
+    fd.events |= input_mask;
+  } else if (mgr->mask_add(operation::read)) {
+    add(mgr);
   }
 }
 
@@ -192,14 +199,20 @@ bool multiplexer::poll_once(bool blocking) {
       return false;
     // Scan pollset for events.
     CAF_LOG_DEBUG("scan pollset for socket events");
-    for (size_t i = 0; i < pollset_.size() && presult > 0; ++i) {
+    for (size_t i = 0; i < pollset_.size() && presult > 0;) {
       auto& x = pollset_[i];
+      auto& mgr = managers_[i];
       if (x.revents != 0) {
-        handle(managers_[i], x.revents);
+        handle(x, mgr);
         --presult;
+        if (x.events == 0) {
+          pollset_.erase(pollset_.begin() + i);
+          managers_.erase(managers_.begin() + i);
+          continue;
+        }
       }
+      ++i;
     }
-    handle_updates();
     return true;
   }
 }
@@ -214,37 +227,24 @@ void multiplexer::run() {
     poll_once(true);
 }
 
-void multiplexer::handle_updates() {
-  for (auto mgr : dirty_managers_) {
-    auto index = index_of(mgr.get());
-    if (index == -1) {
-      add(std::move(mgr));
-    } else {
-      // Update or remove an existing manager in the pollset.
-      if (mgr->mask() == operation::none) {
-        pollset_.erase(pollset_.begin() + index);
-        managers_.erase(managers_.begin() + index);
-      } else {
-        pollset_[index].events = to_bitmask(mgr->mask());
-      }
-    }
-  }
-  dirty_managers_.clear();
-}
-
-void multiplexer::handle(const socket_manager_ptr& mgr, int mask) {
-  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle()) << CAF_ARG(mask));
+void multiplexer::handle(pollfd& fd, const socket_manager_ptr& mgr) {
+  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle()));
   CAF_ASSERT(mgr != nullptr);
   bool checkerror = true;
+  auto mask = fd.revents;
   if ((mask & input_mask) != 0) {
     checkerror = false;
-    if (!mgr->handle_read_event() && mgr->mask_del(operation::read))
-      dirty_managers_.emplace_back(mgr);
+    if (!mgr->handle_read_event()) {
+      mgr->mask_del(operation::read);
+      fd.events = fd.events & ~input_mask;
+    }
   }
   if ((mask & output_mask) != 0) {
     checkerror = false;
-    if (!mgr->handle_write_event() && mgr->mask_del(operation::write))
-      dirty_managers_.emplace_back(mgr);
+    if (!mgr->handle_write_event()) {
+      mgr->mask_del(operation::write);
+      fd.events = fd.events & ~output_mask;
+    }
   }
   if (checkerror && ((mask & error_mask) != 0)) {
     if (mask & POLLNVAL)
@@ -254,11 +254,12 @@ void multiplexer::handle(const socket_manager_ptr& mgr, int mask) {
     else
       mgr->handle_error(sec::socket_operation_failed);
     mgr->mask_del(operation::read_write);
-    dirty_managers_.emplace_back(mgr);
+    fd.events = 0;
   }
 }
 
 void multiplexer::add(socket_manager_ptr mgr) {
+  CAF_ASSERT(index_of(mgr) == -1);
   pollfd new_entry{socket_cast<socket_id>(mgr->handle()),
                    to_bitmask(mgr->mask()), 0};
   pollset_.emplace_back(new_entry);

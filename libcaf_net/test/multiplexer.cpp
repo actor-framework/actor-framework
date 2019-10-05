@@ -167,11 +167,9 @@ CAF_TEST(send and receive) {
   auto bob = make_counted<dummy_manager>(manager_count, sockets.second, mpx);
   alice->register_reading();
   bob->register_reading();
-  mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 3u);
   alice->send("hello bob");
   alice->register_writing();
-  mpx->handle_updates();
   exhaust();
   CAF_CHECK_EQUAL(bob->receive(), "hello bob");
 }
