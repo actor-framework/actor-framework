@@ -48,6 +48,7 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
     mpx = std::make_shared<multiplexer>();
     if (auto err = mpx->init())
       CAF_FAIL("mpx->init failed: " << sys.render(err));
+    mpx->set_thread_id();
   }
 
   bool handle_io_event() override {
@@ -74,7 +75,7 @@ public:
 
   template <class Transport>
   void write_message(Transport& transport,
-                     std::unique_ptr<endpoint_manager::message> msg) {
+                     std::unique_ptr<endpoint_manager_queue::message> msg) {
     transport.write_packet(span<byte>{}, msg->payload);
   }
 

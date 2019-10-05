@@ -45,5 +45,13 @@ constexpr operation operator~(operation x) {
   return static_cast<operation>(~static_cast<int>(x));
 }
 
+constexpr const char* to_string(operation x) {
+  return x == operation::none
+           ? "none"
+           : (x == operation::read
+                ? "read"
+                : (x == operation::write ? "write" : "read_write"));
+}
+
 } // namespace net
 } // namespace caf

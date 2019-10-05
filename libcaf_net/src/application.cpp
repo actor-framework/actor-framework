@@ -100,9 +100,10 @@ void application::resolve_remote_path(write_packet_callback& write_packet,
 }
 
 error application::write(write_packet_callback& write_packet,
-                         std::unique_ptr<endpoint_manager::message> ptr) {
+                         std::unique_ptr<endpoint_manager_queue::message> ptr) {
   CAF_ASSERT(ptr != nullptr);
   CAF_ASSERT(ptr->msg != nullptr);
+  CAF_LOG_TRACE(CAF_ARG2("content", ptr->msg->content()));
   buf_.clear();
   serializer_impl<buffer_type> sink{system(), buf_};
   const auto& src = ptr->msg->sender;

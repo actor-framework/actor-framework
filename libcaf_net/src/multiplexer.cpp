@@ -90,7 +90,6 @@ error multiplexer::init() {
   auto pipe_handles = make_pipe();
   if (!pipe_handles)
     return std::move(pipe_handles.error());
-  tid_ = std::this_thread::get_id();
   add(make_counted<pollset_updater>(pipe_handles->first, shared_from_this()));
   write_handle_ = pipe_handles->second;
   return none;
@@ -107,11 +106,13 @@ ptrdiff_t multiplexer::index_of(const socket_manager_ptr& mgr) {
   return i == last ? -1 : std::distance(first, i);
 }
 
-void multiplexer::update(const socket_manager_ptr& mgr) {
+void multiplexer::register_writing(const socket_manager_ptr& mgr) {
   if (std::this_thread::get_id() == tid_) {
-    auto i = std::find(dirty_managers_.begin(), dirty_managers_.end(), mgr);
-    if (i == dirty_managers_.end())
-      dirty_managers_.emplace_back(mgr);
+    if (mgr->mask_add(operation::write)) {
+      auto i = std::find(dirty_managers_.begin(), dirty_managers_.end(), mgr);
+      if (i == dirty_managers_.end())
+        dirty_managers_.emplace_back(mgr);
+    }
   } else {
     mgr->ref();
     auto value = reinterpret_cast<intptr_t>(mgr.get());
@@ -133,6 +134,15 @@ void multiplexer::close_pipe() {
   if (write_handle_ != invalid_socket) {
     close(write_handle_);
     write_handle_ = pipe_socket{};
+  }
+}
+
+void multiplexer::register_reading(const socket_manager_ptr& mgr) {
+  CAF_ASSERT(std::this_thread::get_id() == tid_);
+  if (mgr->mask_add(operation::read)) {
+    auto i = std::find(dirty_managers_.begin(), dirty_managers_.end(), mgr);
+    if (i == dirty_managers_.end())
+      dirty_managers_.emplace_back(mgr);
   }
 }
 
@@ -194,7 +204,12 @@ bool multiplexer::poll_once(bool blocking) {
   }
 }
 
+void multiplexer::set_thread_id() {
+  tid_ = std::this_thread::get_id();
+}
+
 void multiplexer::run() {
+  CAF_LOG_TRACE("");
   while (!pollset_.empty())
     poll_once(true);
 }
@@ -223,13 +238,13 @@ void multiplexer::handle(const socket_manager_ptr& mgr, int mask) {
   bool checkerror = true;
   if ((mask & input_mask) != 0) {
     checkerror = false;
-    if (!mgr->handle_read_event())
-      mgr->mask_del(operation::read);
+    if (!mgr->handle_read_event() && mgr->mask_del(operation::read))
+      dirty_managers_.emplace_back(mgr);
   }
   if ((mask & output_mask) != 0) {
     checkerror = false;
-    if (!mgr->handle_write_event())
-      mgr->mask_del(operation::write);
+    if (!mgr->handle_write_event() && mgr->mask_del(operation::write))
+      dirty_managers_.emplace_back(mgr);
   }
   if (checkerror && ((mask & error_mask) != 0)) {
     if (mask & POLLNVAL)
@@ -239,6 +254,7 @@ void multiplexer::handle(const socket_manager_ptr& mgr, int mask) {
     else
       mgr->handle_error(sec::socket_operation_failed);
     mgr->mask_del(operation::read_write);
+    dirty_managers_.emplace_back(mgr);
   }
 }
 

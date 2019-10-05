@@ -88,7 +88,7 @@ public:
 
   template <class Parent>
   error write_message(Parent& parent,
-                      std::unique_ptr<endpoint_manager::message> ptr) {
+                      std::unique_ptr<endpoint_manager_queue::message> ptr) {
     auto write_packet = make_callback([&](byte_span hdr, byte_span payload) {
       parent.write_packet(hdr, payload);
       return none;
@@ -170,7 +170,7 @@ private:
   // -- handling of outgoing messages ------------------------------------------
 
   error write(write_packet_callback& write_packet,
-              std::unique_ptr<endpoint_manager::message> ptr);
+              std::unique_ptr<endpoint_manager_queue::message> ptr);
 
   // -- handling of incoming messages ------------------------------------------
 

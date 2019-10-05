@@ -24,6 +24,7 @@
 #include "caf/net/basp/ec.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/middleman.hpp"
+#include "caf/net/multiplexer.hpp"
 #include "caf/net/stream_transport.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/send.hpp"
@@ -40,8 +41,7 @@ test::test(middleman& mm)
 }
 
 test::~test() {
-  for (auto& kvp : peers_)
-    close(kvp.second.first);
+  // nop
 }
 
 error test::init() {
@@ -75,7 +75,6 @@ void test::set_last_hop(node_id*) {
 test::peer_entry& test::emplace(const node_id& peer_id, stream_socket first,
                                 stream_socket second) {
   using transport_type = stream_transport<basp::application>;
-  nonblocking(first, true);
   nonblocking(second, true);
   auto mpx = mm_.mpx();
   auto mgr = make_endpoint_manager(mpx, mm_.system(),
@@ -83,6 +82,7 @@ test::peer_entry& test::emplace(const node_id& peer_id, stream_socket first,
                                                   basp::application{proxies_}});
   if (auto err = mgr->init())
     CAF_RAISE_ERROR("mgr->init() failed");
+  mpx->register_reading(mgr);
   auto& result = peers_[peer_id];
   result = std::make_pair(first, std::move(mgr));
   return result;

@@ -71,6 +71,7 @@ struct config : actor_system_config {
 struct fixture : test_coordinator_fixture<config>, host_fixture {
   fixture() : mars(make_node_id(unbox(make_uri("test:mars")))) {
     auto& mm = sys.network_manager();
+    mm.mpx()->set_thread_id();
     auto backend = dynamic_cast<backend::test*>(mm.backend("test"));
     auto mgr = backend->peer(mars);
     auto& dref = dynamic_cast<endpoint_manager_impl<transport_type>&>(*mgr);

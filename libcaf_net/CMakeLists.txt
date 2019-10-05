@@ -20,6 +20,7 @@ set(LIBCAF_NET_SRCS
   src/message_type.cpp
   src/multiplexer.cpp
   src/net/backend/test.cpp
+  src/net/endpoint_manager_queue.cpp
   src/net/middleman.cpp
   src/net/middleman_backend.cpp
   src/network_socket.cpp

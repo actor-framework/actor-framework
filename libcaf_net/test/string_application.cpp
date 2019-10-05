@@ -49,6 +49,7 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
     mpx = std::make_shared<multiplexer>();
     if (auto err = mpx->init())
       CAF_FAIL("mpx->init failed: " << sys.render(err));
+    mpx->set_thread_id();
   }
 
   bool handle_io_event() override {
@@ -99,7 +100,7 @@ public:
 
   template <class Parent>
   void write_message(Parent& parent,
-                     std::unique_ptr<net::endpoint_manager::message> msg) {
+                     std::unique_ptr<endpoint_manager_queue::message> msg) {
     // Ignore proxy announcement messages.
     if (msg->msg == nullptr)
       return;

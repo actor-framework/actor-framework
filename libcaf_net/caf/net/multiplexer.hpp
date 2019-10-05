@@ -64,9 +64,9 @@ public:
 
   // -- thread-safe signaling --------------------------------------------------
 
-  /// Causes the multiplexer to update its event bitmask for `mgr`.
+  /// Registers `mgr` for write events.
   /// @thread-safe
-  void update(const socket_manager_ptr& mgr);
+  void register_writing(const socket_manager_ptr& mgr);
 
   /// Closes the pipe for signaling updates to the multiplexer. After closing
   /// the pipe, calls to `update` no longer have any effect.
@@ -75,9 +75,16 @@ public:
 
   // -- control flow -----------------------------------------------------------
 
+  /// Registers `mgr` for read events.
+  /// @pre `std::this_thread::id() == tid_`
+  void register_reading(const socket_manager_ptr& mgr);
+
   /// Polls I/O activity once and runs all socket event handlers that become
   /// ready as a result.
   bool poll_once(bool blocking);
+
+  /// Sets the thread ID to `std::this_thread::id()`.
+  void set_thread_id();
 
   /// Polls until no socket event handler remains.
   void run();

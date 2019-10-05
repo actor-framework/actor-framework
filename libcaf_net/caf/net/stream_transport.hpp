@@ -89,7 +89,6 @@ public:
     manager_ = &parent;
     if (auto err = worker_.init(*this))
       return err;
-    parent.mask_add(operation::read);
     return none;
   }
 
@@ -200,7 +199,7 @@ public:
   void write_packet(span<const byte> header, span<const byte> payload,
                     typename worker_type::id_type) {
     if (write_buf_.empty())
-      manager().mask_add(operation::write);
+      manager().register_writing();
     write_buf_.insert(write_buf_.end(), header.begin(), header.end());
     write_buf_.insert(write_buf_.end(), payload.begin(), payload.end());
   }

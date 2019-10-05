@@ -38,6 +38,7 @@ actor_proxy_impl::~actor_proxy_impl() {
 void actor_proxy_impl::enqueue(mailbox_element_ptr what, execution_unit*) {
   CAF_PUSH_AID(0);
   CAF_ASSERT(what != nullptr);
+  CAF_LOG_SEND_EVENT(what);
   if (auto payload = sf_(home_system(), what->content()))
     dst_->enqueue(std::move(what), ctrl(), std::move(*payload));
   else

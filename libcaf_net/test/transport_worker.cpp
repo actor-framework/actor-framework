@@ -72,7 +72,7 @@ public:
 
   template <class Parent>
   void write_message(Parent& parent,
-                     std::unique_ptr<endpoint_manager::message> msg) {
+                     std::unique_ptr<endpoint_manager_queue::message> msg) {
     parent.write_packet(span<const byte>{}, msg->payload);
   }
 
@@ -192,9 +192,9 @@ CAF_TEST(write_message) {
                                const_cast<char*>(hello_test.data())),
                              hello_test.size());
   std::vector<byte> payload(test_span.begin(), test_span.end());
-  auto message = detail::make_unique<endpoint_manager::message>(std::move(elem),
-                                                                nullptr,
-                                                                payload);
+  using message_type = endpoint_manager_queue::message;
+  auto message = detail::make_unique<message_type>(std::move(elem), nullptr,
+                                                   payload);
   worker.write_message(transport, std::move(message));
   auto& buf = transport_results->packet_buffer;
   string_view result{reinterpret_cast<char*>(buf.data()), buf.size()};

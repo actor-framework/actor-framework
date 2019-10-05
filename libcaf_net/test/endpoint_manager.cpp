@@ -46,8 +46,11 @@ string_view hello_test{"hello test!"};
 struct fixture : test_coordinator_fixture<>, host_fixture {
   fixture() {
     mpx = std::make_shared<multiplexer>();
+    mpx->set_thread_id();
     if (auto err = mpx->init())
       CAF_FAIL("mpx->init failed: " << sys.render(err));
+    if (mpx->num_socket_managers() != 1)
+      CAF_FAIL("mpx->num_socket_managers() != 1");
   }
 
   bool handle_io_event() override {
@@ -87,7 +90,7 @@ public:
   error init(Manager& manager) {
     auto test_bytes = as_bytes(make_span(hello_test));
     buf_.insert(buf_.end(), test_bytes.begin(), test_bytes.end());
-    CAF_CHECK(manager.mask_add(operation::read_write));
+    manager.register_writing();
     return none;
   }
 
@@ -164,7 +167,6 @@ CAF_TEST_FIXTURE_SCOPE(endpoint_manager_tests, fixture)
 
 CAF_TEST(send and receive) {
   std::vector<byte> read_buf(1024);
-  CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
   auto buf = std::make_shared<std::vector<byte>>();
   auto sockets = unbox(make_stream_socket_pair());
   nonblocking(sockets.second, true);
@@ -173,7 +175,9 @@ CAF_TEST(send and receive) {
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
   auto mgr = make_endpoint_manager(mpx, sys,
                                    dummy_transport{sockets.first, buf});
+  CAF_CHECK_EQUAL(mgr->mask(), operation::none);
   CAF_CHECK_EQUAL(mgr->init(), none);
+  CAF_CHECK_EQUAL(mgr->mask(), operation::read_write);
   mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
   CAF_CHECK_EQUAL(write(sockets.second, as_bytes(make_span(hello_manager))),
@@ -197,6 +201,7 @@ CAF_TEST(resolve and proxy communication) {
   auto mgr = make_endpoint_manager(mpx, sys,
                                    dummy_transport{sockets.first, buf});
   CAF_CHECK_EQUAL(mgr->init(), none);
+  CAF_CHECK_EQUAL(mgr->mask(), operation::read_write);
   mpx->handle_updates();
   run();
   CAF_CHECK_EQUAL(read(sockets.second, make_span(read_buf)), hello_test.size());

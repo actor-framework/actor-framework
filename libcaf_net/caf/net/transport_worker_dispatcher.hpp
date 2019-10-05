@@ -77,7 +77,7 @@ public:
 
   template <class Parent>
   void write_message(Parent& parent,
-                     std::unique_ptr<net::endpoint_manager::message> msg) {
+                     std::unique_ptr<endpoint_manager_queue::message> msg) {
     auto sender = msg->msg->sender;
     if (!sender)
       return;

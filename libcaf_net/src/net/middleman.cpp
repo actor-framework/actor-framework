@@ -19,6 +19,7 @@
 #include "caf/net/middleman.hpp"
 
 #include "caf/actor_system_config.hpp"
+#include "caf/detail/set_thread_name.hpp"
 #include "caf/net/basp/ec.hpp"
 #include "caf/net/middleman_backend.hpp"
 #include "caf/net/multiplexer.hpp"
@@ -40,7 +41,15 @@ middleman::~middleman() {
 void middleman::start() {
   if (!get_or(config(), "middleman.manual-multiplexing", false)) {
     auto mpx = mpx_;
-    mpx_thread_ = std::thread{[mpx] { mpx->run(); }};
+    auto sys_ptr = &system();
+    mpx_thread_ = std::thread{[mpx, sys_ptr] {
+      CAF_SET_LOGGER_SYS(sys_ptr);
+      detail::set_thread_name("caf.multiplexer");
+      sys_ptr->thread_started();
+      mpx->set_thread_id();
+      mpx->run();
+      sys_ptr->thread_terminates();
+    }};
   }
 }
 

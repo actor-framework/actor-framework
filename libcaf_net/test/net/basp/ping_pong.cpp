@@ -71,7 +71,7 @@ class planet : public test_coordinator_fixture<config<Node>> {
 public:
   planet(planet_driver& driver)
     : mpx(*this->sys.network_manager().mpx()), driver_(driver) {
-    // nop
+    mpx.set_thread_id();
   }
 
   net::backend::test& backend() {

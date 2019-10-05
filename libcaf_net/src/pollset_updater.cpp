@@ -48,7 +48,7 @@ bool pollset_updater::handle_read_event() {
         auto value = *reinterpret_cast<intptr_t*>(buf_.data());
         socket_manager_ptr mgr{reinterpret_cast<socket_manager*>(value), false};
         if (auto ptr = parent_.lock())
-          ptr->update(mgr);
+          ptr->register_writing(mgr);
       }
     } else {
       return get<sec>(res) == sec::unavailable_or_would_block;

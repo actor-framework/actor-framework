@@ -30,6 +30,7 @@
 #include "caf/intrusive/fifo_inbox.hpp"
 #include "caf/intrusive/singly_linked.hpp"
 #include "caf/mailbox_element.hpp"
+#include "caf/net/endpoint_manager_queue.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/variant.hpp"
 
@@ -50,91 +51,6 @@ public:
   using serialize_fun_type = maybe_buffer (*)(actor_system&,
                                               const type_erased_tuple&);
 
-  struct event : intrusive::singly_linked<event> {
-    struct resolve_request {
-      uri locator;
-      actor listener;
-    };
-
-    struct new_proxy {
-      node_id peer;
-      actor_id id;
-    };
-
-    struct local_actor_down {
-      node_id observing_peer;
-      actor_id id;
-      error reason;
-    };
-
-    struct timeout {
-      atom_value type;
-      uint64_t id;
-    };
-
-    event(uri locator, actor listener);
-
-    event(node_id peer, actor_id proxy_id);
-
-    event(node_id observing_peer, actor_id local_actor_id, error reason);
-
-    event(atom_value type, uint64_t id);
-
-    /// Holds the event data.
-    variant<resolve_request, new_proxy, local_actor_down, timeout> value;
-  };
-
-  struct event_policy {
-    using deficit_type = size_t;
-
-    using task_size_type = size_t;
-
-    using mapped_type = event;
-
-    using unique_pointer = std::unique_ptr<event>;
-
-    using queue_type = intrusive::drr_queue<event_policy>;
-
-    task_size_type task_size(const event&) const noexcept {
-      return 1;
-    }
-  };
-
-  using event_queue_type = intrusive::fifo_inbox<event_policy>;
-
-  struct message : intrusive::singly_linked<message> {
-    /// Original message to a remote actor.
-    mailbox_element_ptr msg;
-
-    /// ID of the receiving actor.
-    strong_actor_ptr receiver;
-
-    /// Serialized representation of of `msg->content()`.
-    std::vector<byte> payload;
-
-    message(mailbox_element_ptr msg, strong_actor_ptr receiver,
-            std::vector<byte> payload);
-  };
-
-  struct message_policy {
-    using deficit_type = size_t;
-
-    using task_size_type = size_t;
-
-    using mapped_type = message;
-
-    using unique_pointer = std::unique_ptr<message>;
-
-    using queue_type = intrusive::drr_queue<message_policy>;
-
-    task_size_type task_size(const message& x) const noexcept {
-      // Return at least 1 if the payload is empty.
-      return x.payload.size() + static_cast<task_size_type>(x.payload.empty());
-    }
-  };
-
-  using message_queue_type = intrusive::fifo_inbox<message_policy>;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   endpoint_manager(socket handle, const multiplexer_ptr& parent,
@@ -148,7 +64,7 @@ public:
     return sys_;
   }
 
-  std::unique_ptr<message> next_message();
+  endpoint_manager_queue::message_ptr next_message();
 
   // -- event management -------------------------------------------------------
 
@@ -162,7 +78,7 @@ public:
   /// Enqueues an event to the endpoint.
   template <class... Ts>
   void enqueue_event(Ts&&... xs) {
-    enqueue(new event(std::forward<Ts>(xs)...));
+    enqueue(new endpoint_manager_queue::event(std::forward<Ts>(xs)...));
   }
 
   // -- pure virtual member functions ------------------------------------------
@@ -174,16 +90,13 @@ public:
   virtual serialize_fun_type serialize_fun() const noexcept = 0;
 
 protected:
-  void enqueue(event* ptr);
+  bool enqueue(endpoint_manager_queue::element* ptr);
 
   /// Points to the hosting actor system.
   actor_system& sys_;
 
-  /// Stores control events.
-  event_queue_type events_;
-
-  /// Stores outbound messages.
-  message_queue_type messages_;
+  /// Stores control events and outbound messages.
+  endpoint_manager_queue::type queue_;
 
   /// Stores a proxy for interacting with the actor clock.
   actor timeout_proxy_;

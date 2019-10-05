@@ -18,8 +18,6 @@
 
 #pragma once
 
-#include <atomic>
-
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
@@ -53,20 +51,25 @@ public:
   }
 
   /// Returns registered operations (read, write, or both).
-  operation mask() const noexcept;
+  operation mask() const noexcept {
+    return mask_;
+  }
 
-  /// Adds given flag(s) to the event mask and updates the parent on success.
+  /// Adds given flag(s) to the event mask.
   /// @returns `false` if `mask() | flag == mask()`, `true` otherwise.
-  /// @pre `has_parent()`
   /// @pre `flag != operation::none`
   bool mask_add(operation flag) noexcept;
 
-  /// Deletes given flag(s) from the event mask and updates the parent on
-  /// success.
+  /// Tries to clear given flag(s) from the event mask.
   /// @returns `false` if `mask() & ~flag == mask()`, `true` otherwise.
-  /// @pre `has_parent()`
   /// @pre `flag != operation::none`
   bool mask_del(operation flag) noexcept;
+
+  // -- event loop management --------------------------------------------------
+
+  void register_reading();
+
+  void register_writing();
 
   // -- pure virtual member functions ------------------------------------------
 
@@ -85,7 +88,7 @@ protected:
 
   socket handle_;
 
-  std::atomic<operation> mask_;
+  operation mask_;
 
   weak_multiplexer_ptr parent_;
 };
