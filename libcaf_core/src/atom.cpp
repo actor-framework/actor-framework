@@ -20,6 +20,7 @@
 
 #include <array>
 #include <cstring>
+#include <ostream>
 
 #include "caf/string_view.hpp"
 
@@ -65,10 +66,17 @@ atom_value atom_from_string(string_view x) {
   return static_cast<atom_value>(detail::atom_val(buf.data()));
 }
 
-std::string to_string(const atom_value& x) {
+std::string to_string(atom_value x) {
   atom_value_buf str;
   auto len = decode(str, x);
   return std::string(str.begin(), str.begin() + len);
+}
+
+std::ostream& operator<<(std::ostream& out, atom_value x) {
+  atom_value_buf str;
+  auto len = decode(str, x);
+  out.write(str.data(), len);
+  return out;
 }
 
 int compare(atom_value x, atom_value y) {

@@ -18,8 +18,9 @@
 
 #pragma once
 
-#include <string>
 #include <functional>
+#include <iosfwd>
+#include <string>
 #include <type_traits>
 
 #include "caf/detail/atom_val.hpp"
@@ -35,7 +36,10 @@ enum class atom_value : uint64_t {
 };
 
 /// @relates atom_value
-std::string to_string(const atom_value& what);
+std::string to_string(atom_value x);
+
+/// @relates atom_value
+std::ostream& operator<<(std::ostream& out, atom_value x);
 
 /// @relates atom_value
 atom_value to_lowercase(atom_value x);

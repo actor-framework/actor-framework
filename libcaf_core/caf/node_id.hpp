@@ -225,6 +225,12 @@ private:
   intrusive_ptr<data> data_;
 };
 
+/// Returns whether `x` contains an URI.
+/// @relates node_id
+inline bool wraps_uri(const node_id& x) noexcept {
+  return x && x->implementation_id() == node_id::uri_data::class_id;
+}
+
 /// @relates node_id
 inline bool operator==(const node_id& x, const node_id& y) noexcept {
   return x.compare(y) == 0;

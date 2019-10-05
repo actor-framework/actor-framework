@@ -114,11 +114,17 @@ namespace {
 
 void append_to_string_impl(std::string& x, const actor_control_block* y) {
   if (y != nullptr) {
-    x += std::to_string(y->aid);
-    x += '@';
-    append_to_string(x, y->nid);
+    if (wraps_uri(y->nid)) {
+      append_to_string(x, y->nid);
+      x += "/id/";
+      x += std::to_string(y->aid);
+    } else {
+      x += std::to_string(y->aid);
+      x += '@';
+      append_to_string(x, y->nid);
+    }
   } else {
-    x += "0@invalid-node";
+    x += "null:pointer";
   }
 }
 
