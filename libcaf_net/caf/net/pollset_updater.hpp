@@ -20,6 +20,7 @@
 
 #include <array>
 #include <cstdint>
+#include <mutex>
 
 #include "caf/byte.hpp"
 #include "caf/net/pipe_socket.hpp"
@@ -33,6 +34,8 @@ public:
   // -- member types -----------------------------------------------------------
 
   using super = socket_manager;
+
+  using msg_buf = std::array<byte, sizeof(intptr_t) + 1>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -56,8 +59,9 @@ public:
   void handle_error(sec code) override;
 
 private:
-  std::array<byte, sizeof(intptr_t)> buf_;
+  msg_buf buf_;
   size_t buf_size_;
+  std::mutex write_lock_;
 };
 
 } // namespace net

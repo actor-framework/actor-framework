@@ -64,6 +64,10 @@ public:
 
   // -- thread-safe signaling --------------------------------------------------
 
+  /// Registers `mgr` for read events.
+  /// @thread-safe
+  void register_reading(const socket_manager_ptr& mgr);
+
   /// Registers `mgr` for write events.
   /// @thread-safe
   void register_writing(const socket_manager_ptr& mgr);
@@ -74,10 +78,6 @@ public:
   void close_pipe();
 
   // -- control flow -----------------------------------------------------------
-
-  /// Registers `mgr` for read events.
-  /// @pre `std::this_thread::id() == tid_`
-  void register_reading(const socket_manager_ptr& mgr);
 
   /// Polls I/O activity once and runs all socket event handlers that become
   /// ready as a result.
@@ -93,10 +93,14 @@ protected:
   // -- utility functions ------------------------------------------------------
 
   /// Handles an I/O event on given manager.
-  void handle(pollfd& fd, const socket_manager_ptr& mgr);
+  short handle(const socket_manager_ptr& mgr, short events, short revents);
 
   /// Adds a new socket manager to the pollset.
   void add(socket_manager_ptr mgr);
+
+  /// Writes `opcode` and pointer to `mgr` the the pipe for handling an event
+  /// later via the pollset updater.
+  void write_to_pipe(uint8_t opcode, const socket_manager_ptr& mgr);
 
   // -- member variables -------------------------------------------------------
 
