@@ -29,85 +29,68 @@
 #include "caf/ip_endpoint.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/net/ip.hpp"
-#include "caf/net/socket_guard.hpp"
 
 using namespace caf;
 using namespace caf::net;
+using namespace caf::net::ip;
 
 namespace {
 
 constexpr string_view hello_test = "Hello test!";
 
 struct fixture : host_fixture {
-  fixture()
-    : host_fixture(),
-      v4_local{make_ipv4_address(127, 0, 0, 1)},
-      v6_local{{0}, {0x1}},
-      // TODO: use local_addresses() when merged
-      addrs{net::ip::resolve("localhost")} {
-  }
-
-  bool contains(ip_address x) {
-    return std::count(addrs.begin(), addrs.end(), x) > 0;
-  }
-
-  void test_send_receive(ip_address addr) {
-    std::vector<byte> buf(1024);
-    ip_endpoint ep(addr, 0);
+  fixture() : host_fixture() {
+    addresses = local_addresses("localhost");
+    CAF_CHECK(!addresses.empty());
+    ep = ip_endpoint(*addresses.begin(), 0);
     auto send_pair = unbox(make_udp_datagram_socket(ep));
-    auto send_socket = send_pair.first;
+    send_socket = send_pair.first;
     auto receive_pair = unbox(make_udp_datagram_socket(ep));
-    auto receive_socket = receive_pair.first;
+    receive_socket = receive_pair.first;
     ep.port(ntohs(receive_pair.second));
-    CAF_MESSAGE("sending data to: " << to_string(ep));
-    auto send_guard = make_socket_guard(send_socket);
-    auto receive_guard = make_socket_guard(receive_socket);
-    if (auto err = nonblocking(socket_cast<net::socket>(receive_socket), true))
-      CAF_FAIL("nonblocking returned an error" << err);
-    auto test_read_res = read(receive_socket, make_span(buf));
-    if (auto err = get_if<sec>(&test_read_res))
-      CAF_CHECK_EQUAL(*err, sec::unavailable_or_would_block);
-    else
-      CAF_FAIL("read should have failed");
-
-    auto write_ret = write(send_socket, as_bytes(make_span(hello_test)), ep);
-    if (auto num_bytes = get_if<size_t>(&write_ret))
-      CAF_CHECK_EQUAL(*num_bytes, hello_test.size());
-    else
-      CAF_FAIL("write returned an error: " << sys.render(get<sec>(write_ret)));
-
-    auto read_ret = read(receive_socket, make_span(buf));
-    if (auto read_res = get_if<std::pair<size_t, ip_endpoint>>(&read_ret)) {
-      CAF_CHECK_EQUAL(read_res->first, hello_test.size());
-      buf.resize(read_res->first);
-    } else {
-      CAF_FAIL("write returned an error: " << sys.render(get<sec>(read_ret)));
-    }
-    string_view buf_view{reinterpret_cast<const char*>(buf.data()), buf.size()};
-    CAF_CHECK_EQUAL(buf_view, hello_test);
   }
 
+  ~fixture() {
+    close(send_socket);
+    close(receive_socket);
+  }
+
+  std::vector<ip_address> addresses;
   actor_system_config cfg;
   actor_system sys{cfg};
-  ip_address v4_local;
-  ip_address v6_local;
-  std::vector<ip_address> addrs;
+  ip_endpoint ep;
+  udp_datagram_socket send_socket;
+  udp_datagram_socket receive_socket;
 };
 
 } // namespace
 
 CAF_TEST_FIXTURE_SCOPE(udp_datagram_socket_test, fixture)
 
-CAF_TEST_DISABLED(send and receive) {
-  // TODO: check which versions exist and test existing versions accordingly
-  // -> local_addresses()
-  if (contains(v4_local)) {
-    test_send_receive(v4_local);
-  } else if (contains(v6_local)) {
-    test_send_receive(v6_local);
-  } else {
-    CAF_FAIL("could not resolve 'localhost'");
-  }
+CAF_TEST(send and receive) {
+  std::vector<byte> buf(1024);
+  if (auto err = nonblocking(socket_cast<net::socket>(receive_socket), true))
+    CAF_FAIL("setting socket to nonblocking failed: " << err);
+  CAF_CHECK_EQUAL(read(receive_socket, make_span(buf)),
+                  sec::unavailable_or_would_block);
+  CAF_MESSAGE("sending data to " << to_string(ep));
+  CAF_CHECK_EQUAL(write(send_socket, as_bytes(make_span(hello_test)), ep),
+                  hello_test.size());
+  int receive_attempts = 0;
+  variant<std::pair<size_t, ip_endpoint>, sec> read_ret;
+  do {
+    read_ret = read(receive_socket, make_span(buf));
+    if (auto read_res = get_if<std::pair<size_t, ip_endpoint>>(&read_ret)) {
+      CAF_CHECK_EQUAL(read_res->first, hello_test.size());
+      buf.resize(read_res->first);
+    } else if (get<sec>(read_ret) != sec::unavailable_or_would_block) {
+      CAF_FAIL("read returned an error: " << sys.render(get<sec>(read_ret)));
+    }
+    if (++receive_attempts > 100)
+      CAF_FAIL("unable to receive data from the UDP socket");
+  } while (read_ret.index() != 0);
+  string_view received{reinterpret_cast<const char*>(buf.data()), buf.size()};
+  CAF_CHECK_EQUAL(received, hello_test);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
