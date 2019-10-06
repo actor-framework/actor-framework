@@ -27,6 +27,7 @@ namespace caf {
 namespace detail {
 
 void convert(const ip_endpoint& src, sockaddr_storage& dst) {
+  memset(&dst, 0, sizeof(sockaddr_storage));
   if (src.address().embeds_v4()) {
     auto sockaddr4 = reinterpret_cast<sockaddr_in*>(&dst);
     sockaddr4->sin_family = AF_INET;
