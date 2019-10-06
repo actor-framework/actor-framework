@@ -21,6 +21,7 @@
 
 #include <ostream>
 
+#include "caf/deep_to_string.hpp"
 #include "caf/detail/ini_consumer.hpp"
 #include "caf/detail/parser/read_ini.hpp"
 #include "caf/detail/type_traits.hpp"

@@ -21,7 +21,13 @@
 #define CAF_SUITE config_value
 #include "caf/test/unit_test.hpp"
 
+#include <list>
+#include <map>
+#include <set>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
@@ -46,8 +52,9 @@ using dictionary = config_value::dictionary;
 struct dictionary_builder {
   dictionary dict;
 
-  dictionary_builder&& add(string_view key, config_value value) && {
-    dict.emplace(key, std::move(value));
+  template <class T>
+  dictionary_builder&& add(string_view key, T&& value) && {
+    dict.emplace(key, config_value{std::forward<T>(value)});
     return std::move(*this);
   }
 
@@ -282,4 +289,76 @@ CAF_TEST(conversion to nested tuple) {
   CAF_REQUIRE_NOT_EQUAL(get_if<tuple_type>(&x), none);
   CAF_CHECK_EQUAL(get<tuple_type>(x),
                   std::make_tuple(size_t{42}, std::make_tuple(2, 40)));
+}
+
+CAF_TEST(conversion to std::vector) {
+  using list_type = std::vector<int>;
+  auto xs = make_config_value_list(1, 2, 3, 4);
+  CAF_CHECK(holds_alternative<list_type>(xs));
+  auto ys = get_if<list_type>(&xs);
+  CAF_REQUIRE(ys);
+  CAF_CHECK_EQUAL(*ys, list_type({1, 2, 3, 4}));
+}
+
+CAF_TEST(conversion to std::list) {
+  using list_type = std::list<int>;
+  auto xs = make_config_value_list(1, 2, 3, 4);
+  CAF_CHECK(holds_alternative<list_type>(xs));
+  auto ys = get_if<list_type>(&xs);
+  CAF_REQUIRE(ys);
+  CAF_CHECK_EQUAL(*ys, list_type({1, 2, 3, 4}));
+}
+
+CAF_TEST(conversion to std::set) {
+  using list_type = std::set<int>;
+  auto xs = make_config_value_list(1, 2, 3, 4);
+  CAF_CHECK(holds_alternative<list_type>(xs));
+  auto ys = get_if<list_type>(&xs);
+  CAF_REQUIRE(ys);
+  CAF_CHECK_EQUAL(*ys, list_type({1, 2, 3, 4}));
+}
+
+CAF_TEST(conversion to std::unordered_set) {
+  using list_type = std::unordered_set<int>;
+  auto xs = make_config_value_list(1, 2, 3, 4);
+  CAF_CHECK(holds_alternative<list_type>(xs));
+  auto ys = get_if<list_type>(&xs);
+  CAF_REQUIRE(ys);
+  CAF_CHECK_EQUAL(*ys, list_type({1, 2, 3, 4}));
+}
+
+CAF_TEST(conversion to std::map) {
+  using map_type = std::map<std::string, int>;
+  auto xs = dict().add("a", 1).add("b", 2).add("c", 3).add("d", 4).make_cv();
+  CAF_CHECK(holds_alternative<map_type>(xs));
+  auto ys = get_if<map_type>(&xs);
+  CAF_REQUIRE(ys);
+  CAF_CHECK_EQUAL(*ys, map_type({{"a", 1}, {"b", 2}, {"c", 3}, {"d", 4}}));
+}
+
+CAF_TEST(conversion to std::multimap) {
+  using map_type = std::multimap<std::string, int>;
+  auto xs = dict().add("a", 1).add("b", 2).add("c", 3).add("d", 4).make_cv();
+  CAF_CHECK(holds_alternative<map_type>(xs));
+  auto ys = get_if<map_type>(&xs);
+  CAF_REQUIRE(ys);
+  CAF_CHECK_EQUAL(*ys, map_type({{"a", 1}, {"b", 2}, {"c", 3}, {"d", 4}}));
+}
+
+CAF_TEST(conversion to std::unordered_map) {
+  using map_type = std::unordered_map<std::string, int>;
+  auto xs = dict().add("a", 1).add("b", 2).add("c", 3).add("d", 4).make_cv();
+  CAF_CHECK(holds_alternative<map_type>(xs));
+  auto ys = get_if<map_type>(&xs);
+  CAF_REQUIRE(ys);
+  CAF_CHECK_EQUAL(*ys, map_type({{"a", 1}, {"b", 2}, {"c", 3}, {"d", 4}}));
+}
+
+CAF_TEST(conversion to std::unordered_multimap) {
+  using map_type = std::unordered_multimap<std::string, int>;
+  auto xs = dict().add("a", 1).add("b", 2).add("c", 3).add("d", 4).make_cv();
+  CAF_CHECK(holds_alternative<map_type>(xs));
+  auto ys = get_if<map_type>(&xs);
+  CAF_REQUIRE(ys);
+  CAF_CHECK_EQUAL(*ys, map_type({{"a", 1}, {"b", 2}, {"c", 3}, {"d", 4}}));
 }
