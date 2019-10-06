@@ -110,9 +110,10 @@ void multiplexer::register_reading(const socket_manager_ptr& mgr) {
   if (std::this_thread::get_id() == tid_) {
     if (mgr->mask() != operation::none) {
       CAF_ASSERT(index_of(mgr) != -1);
-      mgr->mask_add(operation::read);
-      auto& fd = pollset_[index_of(mgr)];
-      fd.events |= input_mask;
+      if (mgr->mask_add(operation::read)) {
+        auto& fd = pollset_[index_of(mgr)];
+        fd.events |= input_mask;
+      }
     } else if (mgr->mask_add(operation::read)) {
       add(mgr);
     }
