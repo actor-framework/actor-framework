@@ -109,13 +109,15 @@ public:
         }
         prepare_next_read();
       }
-      return true;
     } else {
       auto err = get<sec>(ret);
-      CAF_LOG_DEBUG("receive failed" << CAF_ARG(err));
-      worker_.handle_error(err);
-      return false;
+      if (err != sec::unavailable_or_would_block) {
+        CAF_LOG_DEBUG("receive failed" << CAF_ARG(err));
+        worker_.handle_error(err);
+        return false;
+      }
     }
+    return true;
   }
 
   template <class Parent>
@@ -225,9 +227,11 @@ private:
       }
     } else {
       auto err = get<sec>(ret);
-      CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
-      worker_.handle_error(err);
-      return false;
+      if (err != sec::unavailable_or_would_block) {
+        CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
+        worker_.handle_error(err);
+        return false;
+      }
     }
     return true;
   }
