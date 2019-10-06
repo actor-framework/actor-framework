@@ -71,13 +71,13 @@ CAF_TEST_FIXTURE_SCOPE(udp_datagram_socket_test, fixture)
 CAF_TEST(send and receive) {
   std::vector<byte> buf(1024);
   if (auto err = nonblocking(socket_cast<net::socket>(receive_socket), true))
-    CAF_FAIL("nonblocking returned an error" << err);
+    CAF_FAIL("setting socket to nonblocking failed: " << err);
   CAF_CHECK_EQUAL(read(receive_socket, make_span(buf)),
                   sec::unavailable_or_would_block);
   CAF_MESSAGE("sending data to " << to_string(ep));
   CAF_CHECK_EQUAL(write(send_socket, as_bytes(make_span(hello_test)), ep),
                   hello_test.size());
-  int rounds = 0;
+  int receive_attempts = 0;
   variant<std::pair<size_t, ip_endpoint>, sec> read_ret;
   do {
     read_ret = read(receive_socket, make_span(buf));
@@ -87,9 +87,9 @@ CAF_TEST(send and receive) {
     } else if (get<sec>(read_ret) != sec::unavailable_or_would_block) {
       CAF_FAIL("read returned an error: " << sys.render(get<sec>(read_ret)));
     }
-    CAF_CHECK_LESS(++rounds, 100);
-  } while (holds_alternative<sec>(read_ret)
-           && get<sec>(read_ret) == sec::unavailable_or_would_block);
+    if (++receive_attempts > 100)
+      CAF_FAIL("unable to receive data from the UDP socket");
+  } while (read_ret.index() != 0);
   string_view received{reinterpret_cast<const char*>(buf.data()), buf.size()};
   CAF_CHECK_EQUAL(received, hello_test);
 }

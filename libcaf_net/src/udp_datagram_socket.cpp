@@ -100,8 +100,10 @@ variant<std::pair<size_t, ip_endpoint>, sec> read(udp_datagram_socket x,
                          << CAF_ARG(buf.size()) << " of " << CAF_ARG(num_bytes)
                          << " bytes");
     ip_endpoint ep;
-    if (auto err = detail::convert(addr, ep))
+    if (auto err = detail::convert(addr, ep)) {
+      CAF_ASSERT(err.category() == atom("system"));
       return static_cast<sec>(err.code());
+    }
     return std::pair<size_t, ip_endpoint>(*num_bytes, ep);
   } else {
     return get<sec>(ret);
