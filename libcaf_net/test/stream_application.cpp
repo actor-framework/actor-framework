@@ -20,9 +20,8 @@
 
 #include "caf/net/basp/application.hpp"
 
+#include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
-
-#include "host_fixture.hpp"
 
 #include <vector>
 
@@ -68,7 +67,7 @@ struct config : actor_system_config {
   }
 };
 
-struct fixture : test_coordinator_fixture<config>, host_fixture {
+struct fixture : host_fixture, test_coordinator_fixture<config> {
   fixture() : mars(make_node_id(unbox(make_uri("test:mars")))) {
     auto& mm = sys.network_manager();
     mm.mpx()->set_thread_id();

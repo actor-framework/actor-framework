@@ -20,9 +20,8 @@
 
 #include "caf/net/stream_transport.hpp"
 
+#include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
-
-#include "host_fixture.hpp"
 
 #include "caf/binary_deserializer.hpp"
 #include "caf/byte.hpp"

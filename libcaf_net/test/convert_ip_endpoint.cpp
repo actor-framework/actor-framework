@@ -20,9 +20,8 @@
 
 #include "caf/detail/convert_ip_endpoint.hpp"
 
+#include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
-
-#include "host_fixture.hpp"
 
 #include <cstring>
 

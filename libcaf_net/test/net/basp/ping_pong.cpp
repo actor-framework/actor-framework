@@ -18,6 +18,7 @@
 
 #define CAF_SUITE net.basp.ping_pong
 
+#include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
 
 #include "caf/net/backend/test.hpp"
@@ -152,7 +153,7 @@ behavior pong_actor(event_based_actor* self) {
   };
 }
 
-struct fixture : planet_driver {
+struct fixture : host_fixture, planet_driver {
   fixture() : earth(*this), mars(*this) {
     auto sockets = unbox(make_stream_socket_pair());
     earth.backend().emplace(mars.id(), sockets.first, sockets.second);

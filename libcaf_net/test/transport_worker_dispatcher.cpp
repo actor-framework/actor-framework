@@ -20,9 +20,8 @@
 
 #include "caf/net/transport_worker_dispatcher.hpp"
 
+#include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
-
-#include "host_fixture.hpp"
 
 #include "caf/make_actor.hpp"
 #include "caf/monitorable_actor.hpp"

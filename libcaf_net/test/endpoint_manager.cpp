@@ -20,9 +20,8 @@
 
 #include "caf/net/endpoint_manager.hpp"
 
+#include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
-
-#include "host_fixture.hpp"
 
 #include "caf/byte.hpp"
 #include "caf/detail/scope_guard.hpp"
