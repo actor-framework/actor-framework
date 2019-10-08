@@ -236,7 +236,7 @@ private:
   /// Points to the endpoint manager that owns this applications.
   endpoint_manager* manager_ = nullptr;
 
-  /// Provides pointers to the actor system as well as the registry to
+  /// Provides pointers to the actor system as well as the registry,
   /// serializers and deserializer.
   scoped_execution_unit executor_;
 };
