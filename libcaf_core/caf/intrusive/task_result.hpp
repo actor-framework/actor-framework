@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <string>
 #include <type_traits>
 
 #include "caf/fwd.hpp"
@@ -40,6 +41,9 @@ enum class task_result {
   /// subsequent queue shall start a new round.
   stop_all,
 };
+
+/// @relates task_result
+std::string to_string(task_result);
 
 } // namespace intrusive
 } // namespace caf

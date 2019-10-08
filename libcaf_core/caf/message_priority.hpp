@@ -19,6 +19,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 #include <type_traits>
 
 namespace caf {
@@ -37,5 +38,7 @@ using high_message_priority_constant = std::integral_constant<
 using normal_message_priority_constant = std::integral_constant<
   message_priority, message_priority::normal>;
 
-} // namespace caf
+/// @relates message_priority
+std::string to_string(message_priority);
 
+} // namespace caf

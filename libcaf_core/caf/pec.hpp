@@ -78,7 +78,4 @@ error make_error(pec code, size_t line, size_t column);
 /// information for where the parser stopped in the argument.
 error make_error(pec code, string_view argument);
 
-/// @relates pec
-const char* to_string(pec x);
-
 } // namespace caf

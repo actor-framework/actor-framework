@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include <string>
+
 #include "caf/error.hpp"
 
 namespace caf {
@@ -49,10 +51,9 @@ enum class exit_reason : uint8_t {
 };
 
 /// Returns a string representation of given exit reason.
-std::string to_string(exit_reason x);
+std::string to_string(exit_reason);
 
 /// @relates exit_reason
 error make_error(exit_reason);
 
 } // namespace caf
-

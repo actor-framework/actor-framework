@@ -39,7 +39,6 @@
 #include "caf/actor_control_block.hpp"
 
 #include "caf/detail/disposer.hpp"
-#include "caf/detail/enum_to_string.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 
 namespace caf {

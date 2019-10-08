@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include <string>
+
 namespace caf {
 namespace intrusive {
 
@@ -34,9 +36,11 @@ enum class inbox_result {
 
   /// Indicates that the enqueue operation failed because the
   /// queue has been closed by the reader.
-  queue_closed
+  queue_closed,
 };
+
+/// @relates inbox_result
+std::string to_string(inbox_result);
 
 } // namespace intrusive
 } // namespace caf
-
