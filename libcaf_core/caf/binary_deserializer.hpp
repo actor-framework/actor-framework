@@ -29,7 +29,7 @@
 namespace caf {
 
 /// Implements the deserializer interface with a binary serialization protocol.
-class binary_deserializer final : public deserializer {
+class CAF_API binary_deserializer final : public deserializer {
 public:
   // -- member types -----------------------------------------------------------
 
