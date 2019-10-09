@@ -45,6 +45,8 @@ public:
 
   using worker_type = transport_worker<application_type>;
 
+  using buffer_type = std::vector<byte>;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   stream_transport(stream_socket handle, application_type application)
@@ -206,6 +208,26 @@ public:
     write_buf_.insert(write_buf_.end(), payload.begin(), payload.end());
   }
 
+  // -- buffer recycling -------------------------------------------------------
+
+  buffer_type next_header_buffer() {
+    return next_buffer_impl(free_header_bufs_);
+  }
+
+  buffer_type next_buffer() {
+    return next_buffer_impl(free_bufs_);
+  }
+
+  buffer_type next_buffer_impl(std::deque<buffer_type>& container) {
+    if (container.empty()) {
+      return {};
+    } else {
+      auto buf = std::move(container.front());
+      container.pop_front();
+      return buf;
+    }
+  }
+
 private:
   // -- private member functions -----------------------------------------------
 
@@ -239,8 +261,11 @@ private:
   worker_type worker_;
   stream_socket handle_;
 
-  std::vector<byte> read_buf_;
-  std::vector<byte> write_buf_;
+  std::deque<buffer_type> free_header_bufs_;
+  std::deque<buffer_type> free_bufs_;
+
+  buffer_type read_buf_;
+  buffer_type write_buf_;
 
   // TODO implement retries using this member!
   // size_t max_consecutive_reads_;

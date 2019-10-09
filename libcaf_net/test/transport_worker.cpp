@@ -130,6 +130,18 @@ public:
     res_->ep = ep;
   }
 
+  transport_type& transport() {
+    return *this;
+  }
+
+  std::vector<byte> next_buffer() {
+    return {};
+  }
+
+  std::vector<byte> next_header_buffer() {
+    return {};
+  }
+
 private:
   std::shared_ptr<transport_result> res_;
 };

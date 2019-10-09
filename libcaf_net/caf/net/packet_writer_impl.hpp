@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include "caf/net/packet_writer.hpp"
+
 #include "caf/byte.hpp"
 #include "caf/span.hpp"
 
@@ -27,7 +29,7 @@ namespace net {
 /// Implements the interface for transport and application policies and
 /// dispatches member functions either to `decorator` or `parent`.
 template <class Object, class Parent>
-class write_packet_decorator {
+class packet_writer_impl final : public packet_writer {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -37,7 +39,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  write_packet_decorator(Object& object, Parent& parent)
+  packet_writer_impl(Object& object, Parent& parent)
     : object_(object), parent_(parent) {
     // nop
   }
@@ -54,6 +56,14 @@ public:
 
   endpoint_manager& manager() {
     return parent_.manager();
+  }
+
+  buffer_type next_header_buffer() override {
+    return transport().next_header_buffer();
+  }
+
+  buffer_type next_buffer() override {
+    return transport().next_buffer();
   }
 
   // -- member functions -------------------------------------------------------
@@ -74,14 +84,20 @@ public:
     return parent_.set_timeout(tout, type, std::forward<Ts>(xs)...);
   }
 
+protected:
+  // TODO: this should replace the current `write_packet()`
+  void write_impl(span<buffer_type*>) override {
+    // parent_.write_packet(buffers);
+  }
+
 private:
   Object& object_;
   Parent& parent_;
 };
 
 template <class Object, class Parent>
-write_packet_decorator<Object, Parent>
-make_write_packet_decorator(Object& object, Parent& parent) {
+packet_writer_impl<Object, Parent> make_packet_writer_impl(Object& object,
+                                                           Parent& parent) {
   return {object, parent};
 }
 

@@ -130,6 +130,18 @@ struct dummy_transport {
     buf_->insert(buf_->end(), payload.begin(), payload.end());
   }
 
+  transport_type& transport() {
+    return *this;
+  }
+
+  std::vector<byte> next_buffer() {
+    return {};
+  }
+
+  std::vector<byte> next_header_buffer() {
+    return {};
+  }
+
 private:
   std::shared_ptr<std::vector<byte>> buf_;
 };
