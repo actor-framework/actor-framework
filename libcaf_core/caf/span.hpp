@@ -223,6 +223,13 @@ auto make_span(T& xs) -> span<detail::remove_reference_t<decltype(xs[0])>> {
 
 /// Convenience function to make using `caf::span` more convenient without the
 /// deduction guides.
+template <class T, size_t N>
+span<T> make_span(T (&xs)[N]) {
+  return {xs, N};
+}
+
+/// Convenience function to make using `caf::span` more convenient without the
+/// deduction guides.
 template <class T>
 span<T> make_span(T* first, size_t size) {
   return {first, size};
