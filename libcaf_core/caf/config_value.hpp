@@ -238,39 +238,43 @@ struct config_value_access_unspecialized {};
 template <class T>
 struct config_value_access : config_value_access_unspecialized {};
 
-#define CAF_DEFAULT_CONFIG_VALUE_ACCESS(type)                                  \
+#define CAF_DEFAULT_CONFIG_VALUE_ACCESS(type, name)                            \
   template <>                                                                  \
-  struct config_value_access<type> : default_config_value_access<type> {}
+  struct config_value_access<type> : default_config_value_access<type> {       \
+    static std::string type_name() {                                           \
+      return name;                                                             \
+    }                                                                          \
+  }
 
-CAF_DEFAULT_CONFIG_VALUE_ACCESS(bool);
-CAF_DEFAULT_CONFIG_VALUE_ACCESS(double);
-CAF_DEFAULT_CONFIG_VALUE_ACCESS(atom_value);
-CAF_DEFAULT_CONFIG_VALUE_ACCESS(timespan);
-CAF_DEFAULT_CONFIG_VALUE_ACCESS(std::string);
-CAF_DEFAULT_CONFIG_VALUE_ACCESS(config_value::list);
-CAF_DEFAULT_CONFIG_VALUE_ACCESS(config_value::dictionary);
+CAF_DEFAULT_CONFIG_VALUE_ACCESS(bool, "boolean");
+CAF_DEFAULT_CONFIG_VALUE_ACCESS(double, "real64");
+CAF_DEFAULT_CONFIG_VALUE_ACCESS(atom_value, "atom");
+CAF_DEFAULT_CONFIG_VALUE_ACCESS(timespan, "timespan");
+CAF_DEFAULT_CONFIG_VALUE_ACCESS(std::string, "string");
+CAF_DEFAULT_CONFIG_VALUE_ACCESS(config_value::list, "list");
+CAF_DEFAULT_CONFIG_VALUE_ACCESS(config_value::dictionary, "dictionary");
 
 #undef CAF_DEFAULT_CONFIG_VALUE_ACCESS
 
 enum class select_config_value_hint {
-  is_custom,
   is_integral,
-  is_list,
   is_map,
+  is_list,
+  is_custom,
   is_missing,
 };
 
 template <class T>
 constexpr select_config_value_hint select_config_value_oracle() {
-  return !std::is_base_of<config_value_access_unspecialized,
-                          config_value_access<T>>::value
-           ? select_config_value_hint::is_custom
-           : (std::is_integral<T>::value
-                ? select_config_value_hint::is_integral
-                : (detail::is_map_like<T>::value
-                     ? select_config_value_hint::is_map
-                     : (detail::is_list_like<T>::value
-                          ? select_config_value_hint::is_list
+  return std::is_integral<T>::value
+           ? select_config_value_hint::is_integral
+           : (detail::is_map_like<T>::value
+                ? select_config_value_hint::is_map
+                : (detail::is_list_like<T>::value
+                     ? select_config_value_hint::is_list
+                     : (!std::is_base_of<config_value_access_unspecialized,
+                                         config_value_access<T>>::value
+                          ? select_config_value_hint::is_custom
                           : select_config_value_hint::is_missing)));
 }
 
@@ -362,13 +366,25 @@ struct sum_type_access<config_value> {
 template <class T>
 struct select_config_value_access<T, select_config_value_hint::is_integral> {
   struct type {
+    using integer_type = config_value::integer;
+
+    static std::string type_name() {
+      std::string result;
+      if (std::is_signed<T>::value)
+        result = "int";
+      else
+        result = "uint";
+      result += std::to_string(sizeof(T) * 8);
+      return result;
+    }
+
     static bool is(const config_value& x) {
-      auto ptr = caf::get_if<typename config_value::integer>(x.get_data_ptr());
+      auto ptr = caf::get_if<integer_type>(x.get_data_ptr());
       return ptr != nullptr && detail::bounds_checker<T>::check(*ptr);
     }
 
     static optional<T> get_if(const config_value* x) {
-      auto ptr = caf::get_if<typename config_value::integer>(x->get_data_ptr());
+      auto ptr = caf::get_if<integer_type>(x->get_data_ptr());
       if (ptr != nullptr && detail::bounds_checker<T>::check(*ptr))
         return static_cast<T>(*ptr);
       return none;
@@ -390,13 +406,19 @@ struct select_config_value_access<T, select_config_value_hint::is_list> {
 
     using value_type = typename list_type::value_type;
 
+    using value_trait = select_config_value_access_t<value_type>;
+
+    static std::string type_name() {
+      return "list of " + value_trait::type_name();
+    }
+
     static bool is(const config_value& x) {
       auto lst = caf::get_if<config_value::list>(&x);
-      if (lst != nullptr) {
-        return std::all_of(lst->begin(), lst->end(), [](const config_value& y) {
-          return caf::holds_alternative<value_type>(y);
-        });
-      }
+      return lst != nullptr
+             && std::all_of(lst->begin(), lst->end(),
+                            [](const config_value& y) {
+                              return caf::holds_alternative<value_type>(y);
+                            });
       return false;
     }
 
@@ -404,8 +426,7 @@ struct select_config_value_access<T, select_config_value_hint::is_list> {
       list_type result;
       auto out = std::inserter(result, result.end());
       auto extract = [&](const config_value& y) {
-        auto opt = caf::get_if<value_type>(&y);
-        if (opt) {
+        if (auto opt = caf::get_if<value_type>(&y)) {
           *out++ = move_if_optional(opt);
           return true;
         }
@@ -434,14 +455,22 @@ struct select_config_value_access<T, select_config_value_hint::is_map> {
 
     using mapped_type = typename map_type::mapped_type;
 
+    using mapped_trait = select_config_value_access_t<mapped_type>;
+
+    static std::string type_name() {
+      std::string result = "dictionary of ";
+      auto nested_name = mapped_trait::type_name();
+      result.insert(result.end(), nested_name.begin(), nested_name.end());
+      return result;
+    }
+
     static bool is(const config_value& x) {
       using value_type = config_value::dictionary::value_type;
-      auto dict = caf::get_if<config_value::dictionary>(&x);
-      if (dict != nullptr) {
-        return std::all_of(dict->begin(), dict->end(), [](const value_type& y) {
-          return caf::holds_alternative<mapped_type>(y.second);
-        });
-      }
+      auto is_mapped_type = [](const value_type& y) {
+        return caf::holds_alternative<mapped_type>(y.second);
+      };
+      if (auto dict = caf::get_if<config_value::dictionary>(&x))
+        return std::all_of(dict->begin(), dict->end(), is_mapped_type);
       return false;
     }
 
@@ -450,14 +479,14 @@ struct select_config_value_access<T, select_config_value_hint::is_map> {
       map_type result;
       auto extract = [&](const value_type& y) {
         if (auto opt = caf::get_if<mapped_type>(&y.second)) {
-          result.emplace(y.first, *opt);
+          result.emplace(y.first, move_if_optional(opt));
           return true;
         }
         return false;
       };
-      auto dict = caf::get_if<config_value::dictionary>(x);
-      if (dict != nullptr && std::all_of(dict->begin(), dict->end(), extract))
-        return result;
+      if (auto dict = caf::get_if<config_value::dictionary>(x))
+        if (std::all_of(dict->begin(), dict->end(), extract))
+          return result;
       return none;
     }
 
@@ -472,13 +501,16 @@ struct select_config_value_access<T, select_config_value_hint::is_map> {
 
 template <>
 struct config_value_access<float> {
+  static std::string type_name() {
+    return "real32";
+  }
+
   static bool is(const config_value& x) {
     return holds_alternative<double>(x.get_data());
   }
 
   static optional<float> get_if(const config_value* x) {
-    auto res = caf::get_if<double>(&(x->get_data()));
-    if (res)
+    if (auto res = caf::get_if<double>(&(x->get_data())))
       return static_cast<float>(*res);
     return none;
   }
@@ -494,6 +526,13 @@ struct config_value_access<float> {
 template <class... Ts>
 struct config_value_access<std::tuple<Ts...>> {
   using tuple_type = std::tuple<Ts...>;
+
+  static std::string type_name() {
+    auto result = "tuple[";
+    rec_name(result, true, detail::int_token<0>(), detail::type_list<Ts...>());
+    result += ']';
+    return result;
+  }
 
   static bool is(const config_value& x) {
     if (auto lst = caf::get_if<config_value::list>(&x)) {
@@ -524,9 +563,26 @@ struct config_value_access<std::tuple<Ts...>> {
 
 private:
   template <int Pos>
+  static void rec_name(std::string&, bool, detail::int_token<Pos>,
+                       detail::type_list<>) {
+    // nop
+  }
+
+  template <int Pos, class U, class... Us>
+  static void rec_name(std::string& result, bool is_first,
+                       detail::int_token<Pos>, detail::type_list<U, Us...>) {
+    if (!is_first)
+      result += ", ";
+    using nested = config_value_access<U>;
+    auto nested_name = nested::type_name();
+    result.insert(result.end(), nested_name.begin(), nested_name.end());
+    return rec_name(result, false, detail::int_token<Pos + 1>(),
+                    detail::type_list<Us...>());
+  }
+
+  template <int Pos>
   static bool rec_is(const config_value::list&, detail::int_token<Pos>,
                      detail::type_list<>) {
-    // End of recursion.
     return true;
   }
 
@@ -541,7 +597,6 @@ private:
   template <int Pos>
   static bool rec_get(const config_value::list&, tuple_type&,
                       detail::int_token<Pos>, detail::type_list<>) {
-    // End of recursion.
     return true;
   }
 
@@ -554,49 +609,6 @@ private:
                      detail::type_list<Us...>());
     }
     return false;
-  }
-};
-
-/// Implements automagic unboxing of `dictionary<V>` from a homogeneous
-/// `config_value::dictionary`.
-/// @relates config_value
-template <class V>
-struct config_value_access<dictionary<V>> {
-  using map_type = dictionary<V>;
-
-  using kvp = std::pair<const std::string, config_value>;
-
-  static bool is(const config_value& x) {
-    auto lst = caf::get_if<config_value::dictionary>(&x);
-    if (lst != nullptr) {
-      return std::all_of(lst->begin(), lst->end(), [](const kvp& y) {
-        return holds_alternative<V>(y.second);
-      });
-    }
-    return false;
-  }
-
-  static optional<map_type> get_if(const config_value* x) {
-    map_type result;
-    auto extract = [&](const kvp& y) {
-      auto opt = caf::get_if<V>(&(y.second));
-      if (opt) {
-        result.emplace(y.first, std::move(*opt));
-        return true;
-      }
-      return false;
-    };
-    auto lst = caf::get_if<config_value::dictionary>(x);
-    if (lst != nullptr && std::all_of(lst->begin(), lst->end(), extract))
-      return result;
-    return none;
-  }
-
-  static map_type get(const config_value& x) {
-    auto result = get_if(&x);
-    if (!result)
-      CAF_RAISE_ERROR("invalid type found");
-    return std::move(*result);
   }
 };
 
