@@ -99,14 +99,13 @@ endfunction(pretty_yes)
 
 add_executable(caf-generate-enum-strings cmake/caf-generate-enum-strings.cpp)
 
-macro (enum_to_string relative_input_file relative_output_file)
-  set(input_file "${CMAKE_CURRENT_SOURCE_DIR}/${relative_input_file}")
-  set(output_file "${CMAKE_CURRENT_BINARY_DIR}/${relative_output_file}")
-  set(cmd "${EXECUTABLE_OUTPUT_PATH}/caf-generate-enum-strings")
-  add_custom_command(OUTPUT "${output_file}"
-                     COMMAND "${cmd}" "${input_file}" "${output_file}"
-                     DEPENDS caf-generate-enum-strings "${input_file}")
-endmacro ()
+function(enum_to_string relative_input_file relative_output_file)
+  set(input "${CMAKE_CURRENT_SOURCE_DIR}/${relative_input_file}")
+  set(output "${CMAKE_CURRENT_BINARY_DIR}/${relative_output_file}")
+  add_custom_command(OUTPUT "${output}"
+                     COMMAND caf-generate-enum-strings "${input}" "${output}"
+                     DEPENDS caf-generate-enum-strings "${input}")
+endfunction()
 
 ################################################################################
 #                        set prefix paths if available                         #
