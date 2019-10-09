@@ -228,9 +228,9 @@ error application::handle_actor_message(write_packet_callback&, header hdr,
                                         byte_span payload) {
   CAF_LOG_TRACE(CAF_ARG(hdr) << CAF_ARG2("payload.size", payload.size()));
   // Deserialize payload.
-  actor_id src_id;
+  actor_id src_id = 0;
   node_id src_node;
-  actor_id dst_id;
+  actor_id dst_id = 0;
   std::vector<strong_actor_ptr> fwd_stack;
   message content;
   binary_deserializer source{&executor_, payload};

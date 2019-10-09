@@ -60,8 +60,10 @@ void middleman::stop() {
 }
 
 void middleman::init(actor_system_config& cfg) {
-  if (auto err = mpx_->init())
+  if (auto err = mpx_->init()) {
+    CAF_LOG_ERROR("mgr->init() failed: " << system().render(err));
     CAF_RAISE_ERROR("mpx->init failed");
+  }
   if (auto node_uri = get_if<uri>(&cfg, "middleman.this-node")) {
     auto this_node = make_node_id(std::move(*node_uri));
     sys_.node_.swap(this_node);
@@ -69,8 +71,10 @@ void middleman::init(actor_system_config& cfg) {
     CAF_RAISE_ERROR("no valid entry for middleman.this-node found");
   }
   for (auto& backend : backends_)
-    if (auto err = backend->init())
+    if (auto err = backend->init()) {
+      CAF_LOG_ERROR("failed to initialize backend: " << system().render(err));
       CAF_RAISE_ERROR("failed to initialize backend");
+    }
 }
 
 middleman::module::id_t middleman::id() const {
