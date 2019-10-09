@@ -65,6 +65,8 @@ enum class pec : uint8_t {
   missing_argument,
   /// Stopped because the key of a category was taken.
   illegal_category,
+  /// Stopped at an unexpected field name while reading a user-defined type.
+  invalid_field_name,
 };
 
 /// Returns an error object from given error code.

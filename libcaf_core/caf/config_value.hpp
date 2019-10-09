@@ -31,6 +31,7 @@
 #include "caf/atom.hpp"
 #include "caf/detail/bounds_checker.hpp"
 #include "caf/detail/move_if_not_ptr.hpp"
+#include "caf/detail/parse.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"
@@ -74,6 +75,8 @@ public:
                                   string, list, dictionary>;
 
   using variant_type = detail::tl_apply_t<types, variant>;
+
+  using parse_state = detail::parse_state;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -230,6 +233,14 @@ struct default_config_value_access {
   static T get(const config_value& x) {
     return caf::get<T>(x.get_data());
   }
+
+  static T convert(T x) {
+    return x;
+  }
+
+  static void parse(config_value::parse_state& ps, T& x) {
+    detail::parse(ps, x);
+  }
 };
 
 struct config_value_access_unspecialized {};
@@ -266,7 +277,7 @@ enum class select_config_value_hint {
 
 template <class T>
 constexpr select_config_value_hint select_config_value_oracle() {
-  return std::is_integral<T>::value
+  return std::is_integral<T>::value && !std::is_same<T, bool>::value
            ? select_config_value_hint::is_integral
            : (detail::is_map_like<T>::value
                 ? select_config_value_hint::is_map
@@ -288,8 +299,8 @@ struct select_config_value_access {
 };
 
 template <class T>
-using select_config_value_access_t =
-  typename select_config_value_access<T>::type;
+using select_config_value_access_t = typename select_config_value_access<
+  T>::type;
 
 template <>
 struct sum_type_access<config_value> {
@@ -395,6 +406,14 @@ struct select_config_value_access<T, select_config_value_hint::is_integral> {
       CAF_ASSERT(res != none);
       return *res;
     }
+
+    static T convert(T x) {
+      return x;
+    }
+
+    static void parse(config_value::parse_state& ps, T& x) {
+      detail::parse(ps, x);
+    }
   };
 };
 
@@ -443,6 +462,34 @@ struct select_config_value_access<T, select_config_value_hint::is_list> {
       if (!result)
         CAF_RAISE_ERROR("invalid type found");
       return std::move(*result);
+    }
+
+    static config_value::list convert(const list_type& xs) {
+      config_value::list result;
+      for (const auto& x : xs)
+        result.emplace_back(value_trait::convert(x));
+      return result;
+    }
+
+    static void parse(config_value::parse_state& ps, T& xs) {
+      config_value::dictionary result;
+      bool has_open_token = ps.consume('[');
+      do {
+        if (has_open_token && ps.consume(']')) {
+          ps.skip_whitespaces();
+          ps.code = ps.at_end() ? pec::success : pec::trailing_character;
+          return;
+        }
+        value_type tmp;
+        value_trait::parse(ps, tmp);
+        if (ps.code > pec::trailing_character)
+          return;
+        xs.insert(xs.end(), std::move(tmp));
+      } while (ps.consume(','));
+      if (has_open_token && !ps.consume(']'))
+        ps.code = ps.at_end() ? pec::unexpected_eof : pec::unexpected_character;
+      ps.skip_whitespaces();
+      ps.code = ps.at_end() ? pec::success : pec::trailing_character;
     }
   };
 };
@@ -496,27 +543,46 @@ struct select_config_value_access<T, select_config_value_hint::is_map> {
         CAF_RAISE_ERROR("invalid type found");
       return std::move(*result);
     }
+
+    static void parse(config_value::parse_state& ps, map_type& xs) {
+      detail::parse(ps, xs);
+    }
+
+    static config_value::dictionary convert(const map_type& xs) {
+      config_value::dictionary result;
+      for (const auto& x : xs)
+        result.emplace(x.first, mapped_trait::convert(x.second));
+      return result;
+    }
   };
 };
 
 template <>
 struct config_value_access<float> {
-  static std::string type_name() {
+  static inline std::string type_name() {
     return "real32";
   }
 
-  static bool is(const config_value& x) {
+  static inline bool is(const config_value& x) {
     return holds_alternative<double>(x.get_data());
   }
 
-  static optional<float> get_if(const config_value* x) {
+  static inline optional<float> get_if(const config_value* x) {
     if (auto res = caf::get_if<double>(&(x->get_data())))
       return static_cast<float>(*res);
     return none;
   }
 
-  static float get(const config_value& x) {
+  static inline float get(const config_value& x) {
     return static_cast<float>(caf::get<double>(x.get_data()));
+  }
+
+  static inline double convert(float x) {
+    return x;
+  }
+
+  static inline void parse(config_value::parse_state& ps, float& x) {
+    detail::parse(ps, x);
   }
 };
 
@@ -559,6 +625,16 @@ struct config_value_access<std::tuple<Ts...>> {
     if (auto result = get_if(&x))
       return std::move(*result);
     CAF_RAISE_ERROR("invalid type found");
+  }
+
+  static config_value::list convert(const tuple_type& xs) {
+    config_value::list result;
+    rec_convert(result, xs, detail::int_token<0>(), detail::type_list<Ts...>());
+    return result;
+  }
+
+  static void parse(config_value::parse_state& ps, tuple_type& xs) {
+    rec_parse(ps, xs, detail::int_token<0>(), detail::type_list<Ts...>());
   }
 
 private:
@@ -609,6 +685,39 @@ private:
                      detail::type_list<Us...>());
     }
     return false;
+  }
+
+  template <int Pos>
+  static void rec_convert(config_value::list&, const tuple_type&,
+                          detail::int_token<Pos>, detail::type_list<>) {
+    // nop
+  }
+
+  template <int Pos, class U, class... Us>
+  static void rec_convert(config_value::list& result, const tuple_type& xs,
+                          detail::int_token<Pos>, detail::type_list<U, Us...>) {
+    using trait = select_config_value_access_t<U>;
+    result.emplace_back(trait::convert(std::get<Pos>(xs)));
+    return rec_convert(result, xs, detail::int_token<Pos + 1>(),
+                       detail::type_list<Us...>());
+  }
+
+  template <int Pos>
+  static void rec_parse(config_value::parse_state&, tuple_type&,
+                        detail::int_token<Pos>, detail::type_list<>) {
+    // nop
+  }
+
+  template <int Pos, class U, class... Us>
+  static void rec_parse(config_value::parse_state& ps, tuple_type& xs,
+                        detail::int_token<Pos>, detail::type_list<U, Us...>) {
+    using trait = select_config_value_access_t<U>;
+    trait::parse(std::get<Pos>(xs));
+    if (ps.code > pec::trailing_character)
+      return;
+    if (sizeof...(Us) > 0 && !ps.consume(','))
+      ps.code = ps.at_end() ? pec::unexpected_eof : pec::unexpected_character;
+    rec_parse(ps, xs, detail::int_token<Pos + 1>(), detail::type_list<Us...>());
   }
 };
 

@@ -53,15 +53,16 @@ config_value get_impl(const void* ptr) {
 
 template <class T>
 expected<config_value> parse_impl(T* ptr, string_view str) {
-  T tmp;
-  if (auto err = parse(str, tmp))
-    return err;
-  config_value result{std::move(tmp)};
-  if (!holds_alternative<T>(result))
-    return pec::type_mismatch;
-  if (ptr != nullptr)
-    *ptr = get<T>(result);
-  return std::move(result);
+  if (!ptr) {
+    T tmp;
+    return parse_impl(&tmp, str);
+  }
+  using trait = select_config_value_access_t<T>;
+  config_value::parse_state ps{str.begin(), str.end()};
+  trait::parse(ps, *ptr);
+  if (ps.code != pec::success)
+    return ps.make_error(ps.code);
+  return config_value{trait::convert(*ptr)};
 }
 
 expected<config_value> parse_impl(std::string* ptr, string_view str);

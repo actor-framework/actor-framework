@@ -185,7 +185,6 @@ CAF_TEST(type timespan) {
 
 CAF_TEST(lists) {
   using int_list = std::vector<int>;
-  CAF_CHECK_EQUAL(read<int_list>(""), int_list({}));
   CAF_CHECK_EQUAL(read<int_list>("[]"), int_list({}));
   CAF_CHECK_EQUAL(read<int_list>("1, 2, 3"), int_list({1, 2, 3}));
   CAF_CHECK_EQUAL(read<int_list>("[1, 2, 3]"), int_list({1, 2, 3}));

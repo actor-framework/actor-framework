@@ -21,6 +21,7 @@
 #include <cctype>
 #include <cstdint>
 
+#include "caf/error.hpp"
 #include "caf/pec.hpp"
 
 namespace caf {
@@ -89,6 +90,11 @@ struct state {
       return true;
     }
     return false;
+  }
+
+  error make_error(pec code) {
+    return caf::make_error(code, static_cast<size_t>(line),
+                           static_cast<size_t>(column));
   }
 };
 
