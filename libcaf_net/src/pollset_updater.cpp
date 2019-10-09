@@ -27,8 +27,8 @@ namespace caf {
 namespace net {
 
 pollset_updater::pollset_updater(pipe_socket read_handle,
-                                 multiplexer_ptr parent)
-  : super(read_handle, std::move(parent)), buf_size_(0) {
+                                 const multiplexer_ptr& parent)
+  : super(read_handle, parent), buf_size_(0) {
   mask_ = operation::read;
   nonblocking(read_handle, true);
 }

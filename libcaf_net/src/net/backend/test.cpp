@@ -33,8 +33,6 @@ namespace caf {
 namespace net {
 namespace backend {
 
-using transport_type = stream_transport<basp::application>;
-
 test::test(middleman& mm)
   : middleman_backend("test"), mm_(mm), proxies_(mm.system(), *this) {
   // nop
@@ -80,8 +78,10 @@ test::peer_entry& test::emplace(const node_id& peer_id, stream_socket first,
   auto mgr = make_endpoint_manager(mpx, mm_.system(),
                                    transport_type{second,
                                                   basp::application{proxies_}});
-  if (auto err = mgr->init())
+  if (auto err = mgr->init()) {
+    CAF_LOG_ERROR("mgr->init() failed: " << mm_.system().render(err));
     CAF_RAISE_ERROR("mgr->init() failed");
+  }
   mpx->register_reading(mgr);
   auto& result = peers_[peer_id];
   result = std::make_pair(first, std::move(mgr));
@@ -93,8 +93,11 @@ test::peer_entry& test::get_peer(const node_id& id) {
   if (i != peers_.end())
     return i->second;
   auto sockets = make_stream_socket_pair();
-  if (!sockets)
+  if (!sockets) {
+    CAF_LOG_ERROR("make_stream_socket_pair failed: "
+                  << mm_.system().render(sockets.error()));
     CAF_RAISE_ERROR("make_stream_socket_pair failed");
+  }
   return emplace(id, sockets->first, sockets->second);
 }
 

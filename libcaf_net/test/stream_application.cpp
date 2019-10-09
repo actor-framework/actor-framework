@@ -26,19 +26,15 @@
 #include <vector>
 
 #include "caf/byte.hpp"
-#include "caf/forwarding_actor_proxy.hpp"
-#include "caf/net/actor_proxy_impl.hpp"
 #include "caf/net/backend/test.hpp"
 #include "caf/net/basp/connection_state.hpp"
 #include "caf/net/basp/constants.hpp"
 #include "caf/net/basp/ec.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/middleman.hpp"
-#include "caf/net/middleman_backend.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/stream_socket.hpp"
 #include "caf/net/stream_transport.hpp"
-#include "caf/none.hpp"
 #include "caf/uri.hpp"
 
 using namespace caf;

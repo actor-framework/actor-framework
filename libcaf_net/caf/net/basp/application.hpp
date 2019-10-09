@@ -215,9 +215,6 @@ private:
   /// Re-usable buffer for storing payloads.
   buffer_type buf_;
 
-  /// Stores our own ID.
-  node_id id_;
-
   /// Stores the ID of our peer.
   node_id peer_id_;
 

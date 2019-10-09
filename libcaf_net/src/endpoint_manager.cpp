@@ -55,7 +55,7 @@ endpoint_manager_queue::message_ptr endpoint_manager::next_message() {
 void endpoint_manager::resolve(uri locator, actor listener) {
   using intrusive::inbox_result;
   using event_type = endpoint_manager_queue::event;
-  auto ptr = new event_type(std::move(locator), std::move(listener));
+  auto ptr = new event_type(std::move(locator), listener);
   if (!enqueue(ptr))
     anon_send(listener, resolve_atom::value,
               make_error(sec::request_receiver_down));
