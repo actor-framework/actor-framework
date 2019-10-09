@@ -62,7 +62,6 @@
 #include "caf/streambuf.hpp"
 #include "caf/variant.hpp"
 
-#include "caf/detail/enum_to_string.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/int_list.hpp"
@@ -93,13 +92,17 @@ bool operator==(const raw_struct& lhs, const raw_struct& rhs) {
 enum class test_enum : uint32_t {
   a,
   b,
-  c
+  c,
 };
 
-const char* test_enum_strings[] = { "a", "b", "c" };
+const char* test_enum_strings[] = {
+  "a",
+  "b",
+  "c",
+};
 
 std::string to_string(test_enum x) {
-  return detail::enum_to_string(x, test_enum_strings);
+  return test_enum_strings[static_cast<uint32_t>(x)];
 }
 
 struct test_array {

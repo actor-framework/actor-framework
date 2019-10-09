@@ -20,28 +20,7 @@
 
 #include "caf/message.hpp"
 
-#include "caf/detail/enum_to_string.hpp"
-
 namespace caf {
-
-namespace {
-
-const char* exit_reason_strings[] = {
-  "normal",
-  "unhandled_exception",
-  "unknown",
-  "out_of_workers",
-  "user_shutdown",
-  "kill",
-  "remote_link_unreachable",
-  "unreachable"
-};
-
-} // namespace
-
-std::string to_string(exit_reason x) {
-  return detail::enum_to_string(x, exit_reason_strings);
-}
 
 error make_error(exit_reason x) {
   return {static_cast<uint8_t>(x), atom("exit")};

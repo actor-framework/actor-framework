@@ -4,8 +4,23 @@ project(caf_core C CXX)
 # e.g., for creating proper Xcode projects
 file(GLOB_RECURSE LIBCAF_CORE_HDRS "caf/*.hpp")
 
+enum_to_string("caf/exit_reason.hpp" "exit_reason_strings.cpp")
+enum_to_string("caf/intrusive/inbox_result.hpp" "inbox_result_strings.cpp")
+enum_to_string("caf/intrusive/task_result.hpp" "task_result_strings.cpp")
+enum_to_string("caf/message_priority.hpp" "message_priority_strings.cpp")
+enum_to_string("caf/pec.hpp" "pec_strings.cpp")
+enum_to_string("caf/sec.hpp" "sec_strings.cpp")
+enum_to_string("caf/stream_priority.hpp" "stream_priority_strings.cpp")
+
 # list cpp files excluding platform-dependent files
 set(LIBCAF_CORE_SRCS
+  "${CMAKE_CURRENT_BINARY_DIR}/exit_reason_strings.cpp"
+  "${CMAKE_CURRENT_BINARY_DIR}/inbox_result_strings.cpp"
+  "${CMAKE_CURRENT_BINARY_DIR}/message_priority_strings.cpp"
+  "${CMAKE_CURRENT_BINARY_DIR}/pec_strings.cpp"
+  "${CMAKE_CURRENT_BINARY_DIR}/sec_strings.cpp"
+  "${CMAKE_CURRENT_BINARY_DIR}/stream_priority_strings.cpp"
+  "${CMAKE_CURRENT_BINARY_DIR}/task_result_strings.cpp"
   src/abstract_actor.cpp
   src/abstract_channel.cpp
   src/abstract_composable_behavior.cpp
@@ -126,7 +141,6 @@ set(LIBCAF_CORE_SRCS
   src/skip.cpp
   src/stream_aborter.cpp
   src/stream_manager.cpp
-  src/stream_priority.cpp
   src/string_algorithms.cpp
   src/string_view.cpp
   src/term.cpp

@@ -20,8 +20,6 @@
 
 #include "caf/duration.hpp"
 
-#include "caf/detail/enum_to_string.hpp"
-
 namespace caf {
 
 namespace {
@@ -47,14 +45,14 @@ const char* time_unit_short_strings[] = {
 } // namespace
 
 std::string to_string(time_unit x) {
-  return detail::enum_to_string(x, time_unit_strings);
+  return time_unit_strings[static_cast<uint32_t>(x)];
 }
 
 std::string to_string(const duration& x) {
   if (x.unit == time_unit::invalid)
     return "infinite";
   auto result = std::to_string(x.count);
-  result += detail::enum_to_string(x.unit, time_unit_short_strings);
+  result += time_unit_short_strings[static_cast<uint32_t>(x.unit)];
   return result;
 }
 

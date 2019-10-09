@@ -28,14 +28,8 @@ namespace network {
 enum class operation {
   read,
   write,
-  propagate_error
+  propagate_error,
 };
-
-inline std::string to_string(operation op) {
-  return op == operation::read ? "read"
-                               : (op == operation::write ? "write"
-                                                         : "propagate_error");
-}
 
 } // namespace network
 } // namespace io
