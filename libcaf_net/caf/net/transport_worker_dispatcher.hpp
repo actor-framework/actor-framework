@@ -64,7 +64,7 @@ public:
   }
 
   template <class Parent>
-  void handle_data(Parent& parent, span<byte> data, id_type id) {
+  error handle_data(Parent& parent, span<byte> data, id_type id) {
     auto it = workers_by_id_.find(id);
     if (it == workers_by_id_.end()) {
       // TODO: where to get node_id from here?
@@ -72,12 +72,12 @@ public:
       it = workers_by_id_.find(id);
     }
     auto worker = it->second;
-    worker->handle_data(parent, data);
+    return worker->handle_data(parent, data);
   }
 
   template <class Parent>
   void write_message(Parent& parent,
-                     std::unique_ptr<net::endpoint_manager::message> msg) {
+                     std::unique_ptr<endpoint_manager_queue::message> msg) {
     auto sender = msg->msg->sender;
     if (!sender)
       return;

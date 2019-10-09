@@ -20,82 +20,71 @@
 
 #include "caf/byte.hpp"
 #include "caf/intrusive/inbox_result.hpp"
+#include "caf/net/multiplexer.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
 
 namespace caf {
 namespace net {
 
-endpoint_manager::event::event(std::string path, actor listener)
-  : value(resolve_request{std::move(path), std::move(listener)}) {
-  // nop
-}
-
-endpoint_manager::event::event(atom_value type, uint64_t id)
-  : value(timeout{type, id}) {
-  // nop
-}
-
-endpoint_manager::message::message(mailbox_element_ptr msg,
-                                   strong_actor_ptr receiver,
-                                   std::vector<byte> payload)
-  : msg(std::move(msg)),
-    receiver(std::move(receiver)),
-    payload(std::move(payload)) {
-  // nop
-}
-
 endpoint_manager::endpoint_manager(socket handle, const multiplexer_ptr& parent,
                                    actor_system& sys)
-  : super(handle, parent),
-    sys_(sys),
-    events_(event_policy{}),
-    messages_(message_policy{}) {
-  events_.try_block();
-  messages_.try_block();
+  : super(handle, parent), sys_(sys), queue_(unit, unit, unit) {
+  queue_.try_block();
 }
 
 endpoint_manager::~endpoint_manager() {
   // nop
 }
 
-std::unique_ptr<endpoint_manager::message> endpoint_manager::next_message() {
-  if (messages_.blocked())
+endpoint_manager_queue::message_ptr endpoint_manager::next_message() {
+  if (queue_.blocked())
     return nullptr;
-  messages_.fetch_more();
-  auto& q = messages_.queue();
+  queue_.fetch_more();
+  auto& q = std::get<1>(queue_.queue().queues());
   auto ts = q.next_task_size();
   if (ts == 0)
     return nullptr;
   q.inc_deficit(ts);
   auto result = q.next();
-  if (q.empty())
-    messages_.try_block();
+  if (queue_.empty())
+    queue_.try_block();
   return result;
 }
 
-void endpoint_manager::resolve(std::string path, actor listener) {
+void endpoint_manager::resolve(uri locator, actor listener) {
   using intrusive::inbox_result;
-  auto ptr = new event(std::move(path), std::move(listener));
-  switch (events_.push_back(ptr)) {
-    default:
-      break;
-    case inbox_result::unblocked_reader:
-      mask_add(operation::write);
-      break;
-    case inbox_result::queue_closed:
-      anon_send(listener, resolve_atom::value,
-                make_error(sec::request_receiver_down));
-  }
+  using event_type = endpoint_manager_queue::event;
+  auto ptr = new event_type(std::move(locator), std::move(listener));
+  if (!enqueue(ptr))
+    anon_send(listener, resolve_atom::value,
+              make_error(sec::request_receiver_down));
 }
 
 void endpoint_manager::enqueue(mailbox_element_ptr msg,
                                strong_actor_ptr receiver,
                                std::vector<byte> payload) {
-  auto ptr = new message(std::move(msg), std::move(receiver),
-                         std::move(payload));
-  if (messages_.push_back(ptr) == intrusive::inbox_result::unblocked_reader)
-    mask_add(operation::write);
+  using message_type = endpoint_manager_queue::message;
+  auto ptr = new message_type(std::move(msg), std::move(receiver),
+                              std::move(payload));
+  enqueue(ptr);
+}
+
+bool endpoint_manager::enqueue(endpoint_manager_queue::element* ptr) {
+  switch (queue_.push_back(ptr)) {
+    case intrusive::inbox_result::success:
+      return true;
+    case intrusive::inbox_result::unblocked_reader: {
+      auto mpx = parent_.lock();
+      if (mpx) {
+        mpx->register_writing(this);
+        return true;
+      }
+      return false;
+    }
+    default:
+      return false;
+  }
 }
 
 } // namespace net

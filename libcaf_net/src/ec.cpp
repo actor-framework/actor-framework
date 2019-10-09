@@ -42,6 +42,7 @@ string_view ec_names[] = {
   "unimplemented",
   "app_identifiers_mismatch",
   "invalid_payload",
+  "invalid_scheme",
 };
 
 } // namespace

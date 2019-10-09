@@ -1,4 +1,4 @@
-/******************************************************************************
+/******************************************************************************_opt
  *                       ____    _    _____                                   *
  *                      / ___|  / \  |  ___|    C++                           *
  *                     | |     / _ \ | |_       Actor                         *
@@ -18,51 +18,63 @@
 
 #pragma once
 
-#include <array>
-#include <cstdint>
-#include <mutex>
+#include <map>
 
-#include "caf/byte.hpp"
-#include "caf/net/pipe_socket.hpp"
-#include "caf/net/socket_manager.hpp"
+#include "caf/net/endpoint_manager.hpp"
+#include "caf/net/fwd.hpp"
+#include "caf/net/middleman_backend.hpp"
+#include "caf/net/stream_socket.hpp"
+#include "caf/node_id.hpp"
 
 namespace caf {
 namespace net {
+namespace backend {
 
-class pollset_updater : public socket_manager {
+/// Minimal backend for unit testing.
+/// @warning this backend is *not* thread safe.
+class test : public middleman_backend {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = socket_manager;
-
-  using msg_buf = std::array<byte, sizeof(intptr_t) + 1>;
+  using peer_entry = std::pair<stream_socket, endpoint_manager_ptr>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  pollset_updater(pipe_socket read_handle, multiplexer_ptr parent);
+  test(middleman& mm);
 
-  ~pollset_updater() override;
-
-  // -- properties -------------------------------------------------------------
-
-  /// Returns the managed socket.
-  pipe_socket handle() const noexcept {
-    return socket_cast<pipe_socket>(handle_);
-  }
+  ~test() override;
 
   // -- interface functions ----------------------------------------------------
 
-  bool handle_read_event() override;
+  error init() override;
 
-  bool handle_write_event() override;
+  endpoint_manager_ptr peer(const node_id& id) override;
 
-  void handle_error(sec code) override;
+  void resolve(const uri& locator, const actor& listener) override;
+
+  strong_actor_ptr make_proxy(node_id nid, actor_id aid) override;
+
+  void set_last_hop(node_id*) override;
+
+  // -- properties -------------------------------------------------------------
+
+  stream_socket socket(const node_id& peer_id) {
+    return get_peer(peer_id).first;
+  }
+
+  peer_entry& emplace(const node_id& peer_id, stream_socket first,
+                      stream_socket second);
 
 private:
-  msg_buf buf_;
-  size_t buf_size_;
-  std::mutex write_lock_;
+  peer_entry& get_peer(const node_id& id);
+
+  middleman& mm_;
+
+  std::map<node_id, peer_entry> peers_;
+
+  proxy_registry proxies_;
 };
 
+} // namespace backend
 } // namespace net
 } // namespace caf

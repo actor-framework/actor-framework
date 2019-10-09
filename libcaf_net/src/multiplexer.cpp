@@ -90,7 +90,6 @@ error multiplexer::init() {
   auto pipe_handles = make_pipe();
   if (!pipe_handles)
     return std::move(pipe_handles.error());
-  tid_ = std::this_thread::get_id();
   add(make_counted<pollset_updater>(pipe_handles->first, shared_from_this()));
   write_handle_ = pipe_handles->second;
   return none;
@@ -107,24 +106,35 @@ ptrdiff_t multiplexer::index_of(const socket_manager_ptr& mgr) {
   return i == last ? -1 : std::distance(first, i);
 }
 
-void multiplexer::update(const socket_manager_ptr& mgr) {
+void multiplexer::register_reading(const socket_manager_ptr& mgr) {
   if (std::this_thread::get_id() == tid_) {
-    auto i = std::find(dirty_managers_.begin(), dirty_managers_.end(), mgr);
-    if (i == dirty_managers_.end())
-      dirty_managers_.emplace_back(mgr);
-  } else {
-    mgr->ref();
-    auto value = reinterpret_cast<intptr_t>(mgr.get());
-    variant<size_t, sec> res;
-    { // Lifetime scope of guard.
-      std::lock_guard<std::mutex> guard{write_lock_};
-      if (write_handle_ != invalid_socket)
-        res = write(write_handle_, as_bytes(make_span(&value, 1)));
-      else
-        res = sec::socket_invalid;
+    if (mgr->mask() != operation::none) {
+      CAF_ASSERT(index_of(mgr) != -1);
+      if (mgr->mask_add(operation::read)) {
+        auto& fd = pollset_[index_of(mgr)];
+        fd.events |= input_mask;
+      }
+    } else if (mgr->mask_add(operation::read)) {
+      add(mgr);
     }
-    if (holds_alternative<sec>(res))
-      mgr->deref();
+  } else {
+    write_to_pipe(0, mgr);
+  }
+}
+
+void multiplexer::register_writing(const socket_manager_ptr& mgr) {
+  if (std::this_thread::get_id() == tid_) {
+    if (mgr->mask() != operation::none) {
+      CAF_ASSERT(index_of(mgr) != -1);
+      if (mgr->mask_add(operation::write)) {
+        auto& fd = pollset_[index_of(mgr)];
+        fd.events |= output_mask;
+      }
+    } else if (mgr->mask_add(operation::write)) {
+      add(mgr);
+    }
+  } else {
+    write_to_pipe(1, mgr);
   }
 }
 
@@ -182,71 +192,95 @@ bool multiplexer::poll_once(bool blocking) {
       return false;
     // Scan pollset for events.
     CAF_LOG_DEBUG("scan pollset for socket events");
-    for (size_t i = 0; i < pollset_.size() && presult > 0; ++i) {
-      auto& x = pollset_[i];
-      if (x.revents != 0) {
-        handle(managers_[i], x.revents);
+    for (size_t i = 0; i < pollset_.size() && presult > 0;) {
+      auto revents = pollset_[i].revents;
+      if (revents != 0) {
+        auto events = pollset_[i].events;
+        auto mgr = managers_[i];
+        auto new_events = handle(mgr, events, revents);
         --presult;
+        if (new_events == 0) {
+          pollset_.erase(pollset_.begin() + i);
+          managers_.erase(managers_.begin() + i);
+          continue;
+        } else if (new_events != events) {
+          pollset_[i].events = new_events;
+        }
       }
+      ++i;
     }
-    handle_updates();
     return true;
   }
 }
 
+void multiplexer::set_thread_id() {
+  tid_ = std::this_thread::get_id();
+}
+
 void multiplexer::run() {
+  CAF_LOG_TRACE("");
   while (!pollset_.empty())
     poll_once(true);
 }
 
-void multiplexer::handle_updates() {
-  for (auto mgr : dirty_managers_) {
-    auto index = index_of(mgr.get());
-    if (index == -1) {
-      add(std::move(mgr));
-    } else {
-      // Update or remove an existing manager in the pollset.
-      if (mgr->mask() == operation::none) {
-        pollset_.erase(pollset_.begin() + index);
-        managers_.erase(managers_.begin() + index);
-      } else {
-        pollset_[index].events = to_bitmask(mgr->mask());
-      }
-    }
-  }
-  dirty_managers_.clear();
-}
-
-void multiplexer::handle(const socket_manager_ptr& mgr, int mask) {
-  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle()) << CAF_ARG(mask));
+short multiplexer::handle(const socket_manager_ptr& mgr, short events,
+                          short revents) {
+  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle()));
   CAF_ASSERT(mgr != nullptr);
   bool checkerror = true;
-  if ((mask & input_mask) != 0) {
+  if ((revents & input_mask) != 0) {
     checkerror = false;
-    if (!mgr->handle_read_event())
+    if (!mgr->handle_read_event()) {
       mgr->mask_del(operation::read);
+      events &= ~input_mask;
+    }
   }
-  if ((mask & output_mask) != 0) {
+  if ((revents & output_mask) != 0) {
     checkerror = false;
-    if (!mgr->handle_write_event())
+    if (!mgr->handle_write_event()) {
       mgr->mask_del(operation::write);
+      events &= ~output_mask;
+    }
   }
-  if (checkerror && ((mask & error_mask) != 0)) {
-    if (mask & POLLNVAL)
+  if (checkerror && ((revents & error_mask) != 0)) {
+    if (revents & POLLNVAL)
       mgr->handle_error(sec::socket_invalid);
-    else if (mask & POLLHUP)
+    else if (revents & POLLHUP)
       mgr->handle_error(sec::socket_disconnected);
     else
       mgr->handle_error(sec::socket_operation_failed);
     mgr->mask_del(operation::read_write);
+    events = 0;
   }
+  return events;
 }
 
 void multiplexer::add(socket_manager_ptr mgr) {
+  CAF_ASSERT(index_of(mgr) == -1);
   pollfd new_entry{socket_cast<socket_id>(mgr->handle()),
                    to_bitmask(mgr->mask()), 0};
   pollset_.emplace_back(new_entry);
   managers_.emplace_back(std::move(mgr));
+}
+
+void multiplexer::write_to_pipe(uint8_t opcode, const socket_manager_ptr& mgr) {
+  CAF_ASSERT(opcode == 0 || opcode == 1);
+  CAF_ASSERT(mgr != nullptr);
+  pollset_updater::msg_buf buf;
+  mgr->ref();
+  buf[0] = static_cast<byte>(opcode);
+  auto value = reinterpret_cast<intptr_t>(mgr.get());
+  memcpy(buf.data() + 1, &value, sizeof(intptr_t));
+  variant<size_t, sec> res;
+  { // Lifetime scope of guard.
+    std::lock_guard<std::mutex> guard{write_lock_};
+    if (write_handle_ != invalid_socket)
+      res = write(write_handle_, make_span(buf));
+    else
+      res = sec::socket_invalid;
+  }
+  if (holds_alternative<sec>(res))
+    mgr->deref();
 }
 
 } // namespace net

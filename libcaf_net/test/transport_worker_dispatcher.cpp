@@ -20,9 +20,8 @@
 
 #include "caf/net/transport_worker_dispatcher.hpp"
 
+#include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
-
-#include "host_fixture.hpp"
 
 #include "caf/make_actor.hpp"
 #include "caf/monitorable_actor.hpp"
@@ -64,14 +63,15 @@ public:
 
   template <class Transport>
   void write_message(Transport& transport,
-                     std::unique_ptr<endpoint_manager::message> msg) {
+                     std::unique_ptr<endpoint_manager_queue::message> msg) {
     rec_buf_->push_back(static_cast<byte>(id_));
     transport.write_packet(span<byte>{}, make_span(msg->payload));
   }
 
   template <class Parent>
-  void handle_data(Parent&, span<const byte>) {
+  error handle_data(Parent&, span<const byte>) {
     rec_buf_->push_back(static_cast<byte>(id_));
+    return none;
   }
 
   template <class Manager>
@@ -174,7 +174,7 @@ struct fixture : host_fixture {
     add_new_workers();
   }
 
-  std::unique_ptr<net::endpoint_manager::message>
+  std::unique_ptr<net::endpoint_manager_queue::message>
   make_dummy_message(node_id nid) {
     actor_id aid = 42;
     actor_config cfg;
@@ -186,9 +186,9 @@ struct fixture : host_fixture {
     auto elem = make_mailbox_element(std::move(strong_actor),
                                      make_message_id(12345), std::move(stack),
                                      make_message());
-    return detail::make_unique<endpoint_manager::message>(std::move(elem),
-                                                          strong_actor,
-                                                          payload);
+    return detail::make_unique<endpoint_manager_queue::message>(std::move(elem),
+                                                                strong_actor,
+                                                                payload);
   }
 
   bool contains(byte x) {

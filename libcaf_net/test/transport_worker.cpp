@@ -20,9 +20,8 @@
 
 #include "caf/net/transport_worker.hpp"
 
+#include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
-
-#include "host_fixture.hpp"
 
 #include "caf/byte.hpp"
 #include "caf/detail/scope_guard.hpp"
@@ -72,21 +71,22 @@ public:
 
   template <class Parent>
   void write_message(Parent& parent,
-                     std::unique_ptr<endpoint_manager::message> msg) {
+                     std::unique_ptr<endpoint_manager_queue::message> msg) {
     parent.write_packet(span<const byte>{}, msg->payload);
   }
 
   template <class Parent>
-  void handle_data(Parent&, span<const byte> data) {
+  error handle_data(Parent&, span<const byte> data) {
     auto& buf = res_->data_buffer;
     buf.clear();
     buf.insert(buf.begin(), data.begin(), data.end());
+    return none;
   }
 
   template <class Parent>
-  void resolve(Parent&, const std::string& path, actor listener) {
-    res_->resolve_path = path;
-    res_->resolve_listener = std::move(listener);
+  void resolve(Parent&, string_view path, const actor& listener) {
+    res_->resolve_path.assign(path.begin(), path.end());
+    res_->resolve_listener = listener;
   }
 
   template <class Parent>
@@ -151,7 +151,6 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
   }
 
   bool handle_io_event() override {
-    mpx->handle_updates();
     return mpx->poll_once(false);
   }
 
@@ -191,9 +190,9 @@ CAF_TEST(write_message) {
                                const_cast<char*>(hello_test.data())),
                              hello_test.size());
   std::vector<byte> payload(test_span.begin(), test_span.end());
-  auto message = detail::make_unique<endpoint_manager::message>(std::move(elem),
-                                                                nullptr,
-                                                                payload);
+  using message_type = endpoint_manager_queue::message;
+  auto message = detail::make_unique<message_type>(std::move(elem), nullptr,
+                                                   payload);
   worker.write_message(transport, std::move(message));
   auto& buf = transport_results->packet_buffer;
   string_view result{reinterpret_cast<char*>(buf.data()), buf.size()};

@@ -20,9 +20,8 @@
 
 #include "caf/net/ip.hpp"
 
+#include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
-
-#include "host_fixture.hpp"
 
 #include "caf/ip_address.hpp"
 #include "caf/ipv4_address.hpp"
