@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
   // Locate the beginning of the enum.
   for (;;) {
     if (!getline(in, line)) {
-      cerr << "unable to locate enum in file file: " << argv[1] << '\n';
+      cerr << "unable to locate enum in file: " << argv[1] << '\n';
       return EXIT_FAILURE;
     }
     trim(line);
