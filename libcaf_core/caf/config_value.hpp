@@ -76,8 +76,6 @@ public:
 
   using variant_type = detail::tl_apply_t<types, variant>;
 
-  using parse_state = detail::parse_state;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   config_value() = default;
@@ -238,7 +236,7 @@ struct default_config_value_access {
     return x;
   }
 
-  static void parse_cli(config_value::parse_state& ps, T& x) {
+  static void parse_cli(string_parser_state& ps, T& x) {
     detail::parse(ps, x);
   }
 };
@@ -411,7 +409,7 @@ struct select_config_value_access<T, select_config_value_hint::is_integral> {
       return x;
     }
 
-    static void parse_cli(config_value::parse_state& ps, T& x) {
+    static void parse_cli(string_parser_state& ps, T& x) {
       detail::parse(ps, x);
     }
   };
@@ -471,7 +469,7 @@ struct select_config_value_access<T, select_config_value_hint::is_list> {
       return result;
     }
 
-    static void parse_cli(config_value::parse_state& ps, T& xs) {
+    static void parse_cli(string_parser_state& ps, T& xs) {
       config_value::dictionary result;
       bool has_open_token = ps.consume('[');
       do {
@@ -544,7 +542,7 @@ struct select_config_value_access<T, select_config_value_hint::is_map> {
       return std::move(*result);
     }
 
-    static void parse_cli(config_value::parse_state& ps, map_type& xs) {
+    static void parse_cli(string_parser_state& ps, map_type& xs) {
       detail::parse(ps, xs);
     }
 
@@ -581,7 +579,7 @@ struct config_value_access<float> {
     return x;
   }
 
-  static inline void parse_cli(config_value::parse_state& ps, float& x) {
+  static inline void parse_cli(string_parser_state& ps, float& x) {
     detail::parse(ps, x);
   }
 };
@@ -633,7 +631,7 @@ struct config_value_access<std::tuple<Ts...>> {
     return result;
   }
 
-  static void parse_cli(config_value::parse_state& ps, tuple_type& xs) {
+  static void parse_cli(string_parser_state& ps, tuple_type& xs) {
     rec_parse(ps, xs, detail::int_token<0>(), detail::type_list<Ts...>());
   }
 
@@ -703,13 +701,13 @@ private:
   }
 
   template <int Pos>
-  static void rec_parse(config_value::parse_state&, tuple_type&,
+  static void rec_parse(string_parser_state&, tuple_type&,
                         detail::int_token<Pos>, detail::type_list<>) {
     // nop
   }
 
   template <int Pos, class U, class... Us>
-  static void rec_parse(config_value::parse_state& ps, tuple_type& xs,
+  static void rec_parse(string_parser_state& ps, tuple_type& xs,
                         detail::int_token<Pos>, detail::type_list<U, Us...>) {
     using trait = select_config_value_access_t<U>;
     trait::parse_cli(std::get<Pos>(xs));

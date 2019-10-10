@@ -23,7 +23,6 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/parser/chars.hpp"
-#include "caf/detail/parser/state.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/pec.hpp"
 
@@ -37,8 +36,8 @@ namespace parser {
 
 /// Reads a quoted or unquoted string. Quoted strings allow escaping, while
 /// unquoted strings may only include alphanumeric characters.
-template <class Iterator, class Sentinel, class Consumer>
-void read_string(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
+template <class State, class Consumer>
+void read_string(State& ps, Consumer&& consumer) {
   std::string res;
   auto g = caf::detail::make_scope_guard([&] {
     if (ps.code <= pec::trailing_character)

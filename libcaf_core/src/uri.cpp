@@ -146,12 +146,11 @@ std::string to_string(const uri::authority_type& x) {
 }
 
 error parse(string_view str, uri& dest) {
-  detail::parse_state ps{str.begin(), str.end()};
+  string_parser_state ps{str.begin(), str.end()};
   parse(ps, dest);
   if (ps.code == pec::success)
     return none;
-  return make_error(ps.code, static_cast<size_t>(ps.line),
-                    static_cast<size_t>(ps.column));
+  return make_error(ps);
 }
 
 expected<uri> make_uri(string_view str) {

@@ -26,7 +26,6 @@
 #include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/is_digit.hpp"
-#include "caf/detail/parser/state.hpp"
 #include "caf/detail/parser/sub_ascii.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/pec.hpp"
@@ -41,8 +40,8 @@ namespace parser {
 
 /// Reads a number, i.e., on success produces either an `int64_t` or a
 /// `double`.
-template <class Iterator, class Sentinel, class Consumer>
-void read_signed_integer(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
+template <class State, class Consumer>
+void read_signed_integer(State& ps, Consumer&& consumer) {
   using consumer_type = typename std::decay<Consumer>::type;
   using value_type = typename consumer_type::value_type;
   static_assert(std::is_integral<value_type>::value

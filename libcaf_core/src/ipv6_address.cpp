@@ -23,6 +23,7 @@
 #include "caf/detail/parser/read_ipv6_address.hpp"
 #include "caf/error.hpp"
 #include "caf/ipv4_address.hpp"
+#include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
 #include "caf/string_view.hpp"
 
@@ -212,8 +213,8 @@ std::string to_string(ipv6_address x) {
 
 error parse(string_view str, ipv6_address& dest) {
   using namespace detail;
-  parser::state<string_view::iterator> res{str.begin(), str.end()};
   ipv6_address_consumer f{dest};
+  string_parser_state res{str.begin(), str.end()};
   parser::read_ipv6_address(res, f);
   if (res.code == pec::success)
     return none;

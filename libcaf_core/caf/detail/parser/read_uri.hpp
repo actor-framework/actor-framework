@@ -22,7 +22,6 @@
 #include "caf/detail/parser/add_ascii.hpp"
 #include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/read_ipv6_address.hpp"
-#include "caf/detail/parser/state.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/pec.hpp"
 #include "caf/uri.hpp"
@@ -47,8 +46,8 @@ namespace parser {
 // generate ranges for the subcomponents. URIs can't have linebreaks, so we can
 // safely keep track of the position by looking at the column.
 
-template <class Iterator, class Sentinel>
-void read_uri_percent_encoded(state<Iterator, Sentinel>& ps, std::string& str) {
+template <class State>
+void read_uri_percent_encoded(State& ps, std::string& str) {
   uint8_t char_code = 0;
   auto g = make_scope_guard([&] {
     if (ps.code <= pec::trailing_character)
@@ -75,8 +74,8 @@ inline bool uri_unprotected_char(char c) {
   transition(next_state, uri_unprotected_char, dest += ch)                     \
   fsm_transition(read_uri_percent_encoded(ps, dest), next_state, '%')
 
-template <class Iterator, class Sentinel, class Consumer>
-void read_uri_query(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
+template <class State, class Consumer>
+void read_uri_query(State& ps, Consumer&& consumer) {
   // Local variables.
   uri::query_map result;
   std::string key;
@@ -113,8 +112,8 @@ void read_uri_query(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   fin();
 }
 
-template <class Iterator, class Sentinel, class Consumer>
-void read_uri(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
+template <class State, class Consumer>
+void read_uri(State& ps, Consumer&& consumer) {
   // Local variables.
   std::string str;
   uint16_t port = 0;

@@ -56,6 +56,8 @@ template <class> struct timeout_definition;
 
 template <class, class> class stream_stage;
 
+template <class Iterator, class Sentinel = Iterator> struct parser_state;
+
 // -- 3 param templates --------------------------------------------------------
 
 template <class, class, int> class actor_cast_access;

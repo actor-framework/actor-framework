@@ -24,6 +24,8 @@
 
 #include <string>
 
+#include "caf/parser_state.hpp"
+#include "caf/string_view.hpp"
 #include "caf/variant.hpp"
 
 using namespace caf;
@@ -68,11 +70,9 @@ bool operator==(const res_t& x, const res_t& y) {
 }
 
 struct number_or_timespan_parser {
-  res_t operator()(std::string str) {
-    detail::parser::state<std::string::iterator> res;
+  res_t operator()(string_view str) {
     number_or_timespan_parser_consumer f;
-    res.i = str.begin();
-    res.e = str.end();
+    string_parser_state res{str.begin(), str.end()};
     detail::parser::read_number_or_timespan(res, f);
     if (res.code == pec::success)
       return f.x;

@@ -54,7 +54,7 @@ error make_error(pec code) {
   return {static_cast<uint8_t>(code), atom("parser")};
 }
 
-error make_error(pec code, size_t line, size_t column) {
+error make_error(pec code, int32_t line, int32_t column) {
   config_value::dictionary context;
   context["line"] = line;
   context["column"] = column;

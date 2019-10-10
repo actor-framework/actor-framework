@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2019 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -21,30 +21,39 @@
 #include <cctype>
 #include <cstdint>
 
-#include "caf/error.hpp"
+#include "caf/fwd.hpp"
 #include "caf/pec.hpp"
+#include "caf/string_view.hpp"
 
 namespace caf {
-namespace detail {
-namespace parser {
 
-template <class Iterator, class Sentinel = Iterator>
-struct state {
+/// Stores all informations necessary for implementing an FSM-based parser.
+template <class Iterator, class Sentinel>
+struct parser_state {
+  /// Current position of the parser.
   Iterator i;
+
+  /// End-of-input marker.
   Sentinel e;
+
+  /// Current state of the parser.
   pec code;
+
+  /// Current line in the input.
   int32_t line;
+
+  /// Position in the current line.
   int32_t column;
 
-  state() noexcept : i(), e(), code(pec::success), line(1), column(1) {
+  parser_state() noexcept : i(), e(), code(pec::success), line(1), column(1) {
     // nop
   }
 
-  explicit state(Iterator first) noexcept : state() {
+  explicit parser_state(Iterator first) noexcept : parser_state() {
     i = first;
   }
 
-  state(Iterator first, Sentinel last) noexcept : state() {
+  parser_state(Iterator first, Sentinel last) noexcept : parser_state() {
     i = first;
     e = last;
   }
@@ -91,13 +100,17 @@ struct state {
     }
     return false;
   }
-
-  error make_error(pec code) {
-    return caf::make_error(code, static_cast<size_t>(line),
-                           static_cast<size_t>(column));
-  }
 };
 
-} // namespace parser
-} // namespace detail
+/// Returns an error object from the current code in `ps` as well as its
+/// current position.
+template <class Iterator, class Sentinel>
+auto make_error(const parser_state<Iterator, Sentinel>& ps)
+  -> decltype(make_error(ps.code, ps.line, ps.column)) {
+  return make_error(ps.code, ps.line, ps.column);
+}
+
+/// Specialization for parsers operating on string views.
+using string_parser_state = parser_state<string_view::iterator>;
+
 } // namespace caf

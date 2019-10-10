@@ -27,7 +27,6 @@
 #include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/read_number.hpp"
 #include "caf/detail/parser/read_timespan.hpp"
-#include "caf/detail/parser/state.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/none.hpp"
 #include "caf/optional.hpp"
@@ -45,9 +44,8 @@ namespace parser {
 
 /// Reads a number or a duration, i.e., on success produces an `int64_t`, a
 /// `double`, or a `timespan`.
-template <class Iterator, class Sentinel, class Consumer>
-void read_number_or_timespan(state<Iterator, Sentinel>& ps,
-                             Consumer& consumer) {
+template <class State, class Consumer>
+void read_number_or_timespan(State& ps, Consumer& consumer) {
   using namespace std::chrono;
   struct interim_consumer {
     variant<none_t, int64_t, double> interim;

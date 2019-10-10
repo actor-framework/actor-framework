@@ -22,8 +22,9 @@
 
 #include "caf/test/dsl.hpp"
 
-#include "caf/detail/parser/state.hpp"
+#include "caf/parser_state.hpp"
 #include "caf/string_view.hpp"
+#include "caf/variant.hpp"
 
 using namespace caf;
 
@@ -43,7 +44,7 @@ struct signed_integer_consumer {
 template <class T>
 optional<T> read(string_view str) {
   signed_integer_consumer<T> consumer;
-  detail::parser::state<string_view::iterator> ps{str.begin(), str.end()};
+  string_parser_state ps{str.begin(), str.end()};
   detail::parser::read_signed_integer(ps, consumer);
   if (ps.code != pec::success)
     return none;
@@ -53,7 +54,7 @@ optional<T> read(string_view str) {
 template <class T>
 bool underflow(string_view str) {
   signed_integer_consumer<T> consumer;
-  detail::parser::state<string_view::iterator> ps{str.begin(), str.end()};
+  string_parser_state ps{str.begin(), str.end()};
   detail::parser::read_signed_integer(ps, consumer);
   return ps.code == pec::integer_underflow;
 }
@@ -61,7 +62,7 @@ bool underflow(string_view str) {
 template <class T>
 bool overflow(string_view str) {
   signed_integer_consumer<T> consumer;
-  detail::parser::state<string_view::iterator> ps{str.begin(), str.end()};
+  string_parser_state ps{str.begin(), str.end()};
   detail::parser::read_signed_integer(ps, consumer);
   return ps.code == pec::integer_overflow;
 }

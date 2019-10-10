@@ -21,6 +21,7 @@
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/parser/read_ipv4_address.hpp"
 #include "caf/error.hpp"
+#include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
 #include "caf/string_view.hpp"
 
@@ -89,8 +90,8 @@ std::string to_string(const ipv4_address& x) {
 
 error parse(string_view str, ipv4_address& dest) {
   using namespace detail;
-  parser::state<string_view::iterator> res{str.begin(), str.end()};
   ipv4_address_consumer f{dest};
+  string_parser_state res{str.begin(), str.end()};
   parser::read_ipv4_address(res, f);
   if (res.code == pec::success)
     return none;

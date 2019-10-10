@@ -59,10 +59,10 @@ expected<config_value> parse_impl(T* ptr, string_view str) {
     return parse_impl(&tmp, str);
   }
   using trait = select_config_value_access_t<T>;
-  config_value::parse_state ps{str.begin(), str.end()};
+  string_parser_state ps{str.begin(), str.end()};
   trait::parse_cli(ps, *ptr);
   if (ps.code != pec::success)
-    return ps.make_error(ps.code);
+    return make_error(ps);
   return config_value{trait::convert(*ptr)};
 }
 

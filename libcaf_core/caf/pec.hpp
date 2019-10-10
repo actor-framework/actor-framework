@@ -74,7 +74,7 @@ error make_error(pec code);
 
 /// Returns an error object from given error code with additional context
 /// information for where the parser stopped in the input.
-error make_error(pec code, size_t line, size_t column);
+error make_error(pec code, int32_t line, int32_t column);
 
 /// Returns an error object from given error code with additional context
 /// information for where the parser stopped in the argument.
