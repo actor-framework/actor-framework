@@ -259,11 +259,27 @@ CAF_DEFAULT_CONFIG_VALUE_ACCESS(bool, "boolean");
 CAF_DEFAULT_CONFIG_VALUE_ACCESS(double, "real64");
 CAF_DEFAULT_CONFIG_VALUE_ACCESS(atom_value, "atom");
 CAF_DEFAULT_CONFIG_VALUE_ACCESS(timespan, "timespan");
-CAF_DEFAULT_CONFIG_VALUE_ACCESS(std::string, "string");
 CAF_DEFAULT_CONFIG_VALUE_ACCESS(config_value::list, "list");
 CAF_DEFAULT_CONFIG_VALUE_ACCESS(config_value::dictionary, "dictionary");
 
 #undef CAF_DEFAULT_CONFIG_VALUE_ACCESS
+
+template <>
+struct config_value_access<std::string>
+  : default_config_value_access<std::string> {
+  using super = default_config_value_access<std::string>;
+
+  static std::string type_name() {
+    return "string";
+  }
+
+  using super::parse_cli;
+
+  static void parse_cli(string_parser_state& ps, std::string& x,
+                        const char* char_blacklist) {
+    detail::parse_element(ps, x, char_blacklist);
+  }
+};
 
 enum class select_config_value_hint {
   is_integral,

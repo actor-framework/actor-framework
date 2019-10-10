@@ -445,6 +445,7 @@ struct callable_trait<R (Ts...)> {
   using arg_types = type_list<Ts...>;
   using fun_sig = R (Ts...);
   using fun_type = std::function<R (Ts...)>;
+  static constexpr size_t num_args = sizeof...(Ts);
 };
 
 // member const function pointer
@@ -507,6 +508,9 @@ struct get_callable_trait_helper<T, false, false> {};
 /// the call operator.
 template <class T>
 struct get_callable_trait : get_callable_trait_helper<decay_t<T>> {};
+
+template <class T>
+using get_callable_trait_t = typename get_callable_trait<T>::type;
 
 /// Checks wheter `T` is a function or member function.
 template <class T>

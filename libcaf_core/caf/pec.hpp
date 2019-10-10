@@ -67,6 +67,11 @@ enum class pec : uint8_t {
   illegal_category,
   /// Stopped at an unexpected field name while reading a user-defined type.
   invalid_field_name,
+  /// Stopped at a repeated field name while reading a user-defined type.
+  repeated_field_name,
+  /// Stopped while reading a user-defined type with one or more missing
+  /// mandatory fields.
+  missing_field,
 };
 
 /// Returns an error object from given error code.
