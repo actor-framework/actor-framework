@@ -48,7 +48,8 @@ void store_impl(void* ptr, const config_value& x) {
 
 template <class T>
 config_value get_impl(const void* ptr) {
-  return config_value{*reinterpret_cast<const T*>(ptr)};
+  using trait = select_config_value_access_t<T>;
+  return config_value{trait::convert(*reinterpret_cast<const T*>(ptr))};
 }
 
 template <class T>
