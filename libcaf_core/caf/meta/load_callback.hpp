@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <type_traits>
+
 #include "caf/meta/annotation.hpp"
 
 namespace caf {
@@ -35,6 +37,12 @@ struct load_callback_t : annotation {
 
   F fun;
 };
+
+template <class T>
+struct is_load_callback : std::false_type {};
+
+template <class F>
+struct is_load_callback<load_callback_t<F>> : std::true_type {};
 
 /// Returns an annotation that allows inspectors to call
 /// user-defined code after performing load operations.
