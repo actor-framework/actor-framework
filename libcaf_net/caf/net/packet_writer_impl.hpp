@@ -68,13 +68,6 @@ public:
 
   // -- member functions -------------------------------------------------------
 
-  template <class... Ts>
-  void write_packet(span<const byte> header, span<const byte> payload,
-                    Ts&&... xs) {
-    parent_.write_packet(header, payload, std::forward<Ts>(xs)...,
-                         object_.id());
-  }
-
   void cancel_timeout(atom_value type, uint64_t id) {
     parent_.cancel_timeout(type, id);
   }
@@ -85,9 +78,8 @@ public:
   }
 
 protected:
-  // TODO: this should replace the current `write_packet()`
-  void write_impl(span<buffer_type*>) override {
-    // parent_.write_packet(buffers);
+  void write_impl(span<buffer_type*> buffers) override {
+    parent_.write_packet(object_.id(), buffers);
   }
 
 private:

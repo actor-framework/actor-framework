@@ -42,7 +42,7 @@ public:
   // Following buffers are one or more payload buffers for this packet.
   /// @warning takes ownership of `buffers`.
   template <class... Ts>
-  void write_packet(Ts... buffers) {
+  void write_packet(Ts&... buffers) {
     buffer_type* bufs[] = {&buffers...};
     write_impl(make_span(bufs, sizeof...(Ts)));
   }
