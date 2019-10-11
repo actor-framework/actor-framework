@@ -27,19 +27,22 @@
 namespace caf {
 namespace net {
 
+/// Implements an interface for packet writing in application-layers.
 class packet_writer {
 public:
   using buffer_type = std::vector<byte>;
 
-  // virtual ~packet_writer() = default;
+  virtual ~packet_writer() = default;
 
+  /// Returns the next header_buffer from transport
   virtual buffer_type next_header_buffer() = 0;
 
+  /// Returns the next payload_buffer from transport
   virtual buffer_type next_buffer() = 0;
 
-  // TODO: some documentation
-  // First buffer is header.
-  // Following buffers are one or more payload buffers for this packet.
+  /// Convenience function to write a packet consisting of multiple buffers.
+  /// @param buffers the buffers that make up the packet. first buffer should
+  /// contain the header.
   /// @warning takes ownership of `buffers`.
   template <class... Ts>
   void write_packet(Ts&... buffers) {
@@ -48,6 +51,8 @@ public:
   }
 
 protected:
+  /// Actual write_packet implementation.
+  /// @param buffers `span` containing all buffers of a packet.
   virtual void write_impl(span<buffer_type*> buffers) = 0;
 };
 

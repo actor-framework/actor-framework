@@ -27,7 +27,7 @@ namespace caf {
 namespace net {
 
 /// Implements the interface for transport and application policies and
-/// dispatches member functions either to `decorator` or `parent`.
+/// dispatches member functions either to `object` or `parent`.
 template <class Object, class Parent>
 class packet_writer_impl final : public packet_writer {
 public:
