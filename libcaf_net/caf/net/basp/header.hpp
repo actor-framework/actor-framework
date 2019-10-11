@@ -78,6 +78,10 @@ struct header : detail::comparable<header> {
 /// @relates header
 std::array<byte, header_size> to_bytes(header x);
 
+/// Serializes a header to a byte representation.
+/// @relates header
+void to_bytes(header x, std::vector<byte>& buf);
+
 /// @relates header
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, header& x) {
