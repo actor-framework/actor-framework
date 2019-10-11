@@ -34,6 +34,7 @@
 #include "caf/net/basp/header.hpp"
 #include "caf/net/basp/message_type.hpp"
 #include "caf/net/endpoint_manager.hpp"
+#include "caf/net/packet_writer.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/node_id.hpp"
 #include "caf/proxy_registry.hpp"
@@ -77,11 +78,14 @@ public:
     if (!std::is_base_of<test_tag, Parent>::value)
       manager_ = &parent.manager();
     // Write handshake.
-    if (auto err = generate_handshake())
+    auto header_buf = parent.next_header_buffer();
+    auto payload_buf = parent.next_buffer();
+    if (auto err = generate_handshake(payload_buf))
       return err;
-    auto hdr = to_bytes(header{message_type::handshake,
-                               static_cast<uint32_t>(buf_.size()), version});
-    parent.write_packet(hdr, buf_);
+    to_bytes(header{message_type::handshake,
+                    static_cast<uint32_t>(payload_buf.size()), version},
+             header_buf);
+    parent.write_packet(header_buf, payload_buf);
     parent.transport().configure_read(receive_policy::exactly(header_size));
     return none;
   }
@@ -89,52 +93,50 @@ public:
   template <class Parent>
   error write_message(Parent& parent,
                       std::unique_ptr<endpoint_manager_queue::message> ptr) {
-    auto write_packet = make_callback([&](byte_span hdr, byte_span payload) {
-      parent.write_packet(hdr, payload);
-      return none;
-    });
-    return write(write_packet, std::move(ptr));
+    return write(parent, std::move(ptr));
   }
 
   template <class Parent>
   error handle_data(Parent& parent, byte_span bytes) {
-    auto write_packet = make_callback([&](byte_span hdr, byte_span payload) {
-      parent.write_packet(hdr, payload);
-      return none;
-    });
+    static_assert(std::is_base_of<packet_writer, Parent>::value,
+                  "parent must implement packet_writer");
     size_t next_read_size = header_size;
-    if (auto err = handle(next_read_size, write_packet, bytes))
+    if (auto err = handle(next_read_size, parent, bytes))
       return err;
     parent.transport().configure_read(receive_policy::exactly(next_read_size));
     return none;
   }
 
+  // TODO: unessecary indirection
   template <class Parent>
-  void resolve(Parent& parent, string_view path, actor listener) {
-    auto write_packet = make_callback([&](byte_span hdr, byte_span payload) {
-      parent.write_packet(hdr, payload);
-      return none;
-    });
-    resolve_remote_path(write_packet, path, listener);
+  void resolve(Parent& parent, string_view path, const actor& listener) {
+    static_assert(std::is_base_of<packet_writer, Parent>::value,
+                  "parent must implement `packet_writer`");
+    resolve_remote_path(parent, path, listener);
   }
 
+  // TODO: can be packet_writer&?
   template <class Parent>
   void new_proxy(Parent& parent, actor_id id) {
     header hdr{message_type::monitor_message, 0, static_cast<uint64_t>(id)};
-    auto bytes = to_bytes(hdr);
-    parent.write_packet(make_span(bytes), span<const byte>{});
+    auto header_buf = parent.next_header_buffer();
+    to_bytes(hdr, header_buf);
+    parent.write_packet(header_buf);
   }
 
+  // TODO: can be packet_writer&?
   template <class Parent>
   void local_actor_down(Parent& parent, actor_id id, error reason) {
-    buf_.clear();
-    serializer_impl<buffer_type> sink{system(), buf_};
+    auto header_buf = parent.next_header_buffer();
+    auto payload_buf = parent.next_buffer();
+    serializer_impl<buffer_type> sink{system(), payload_buf};
     if (auto err = sink(reason))
       CAF_RAISE_ERROR("unable to serialize an error");
-    header hdr{message_type::down_message, static_cast<uint32_t>(buf_.size()),
+    header hdr{message_type::down_message,
+               static_cast<uint32_t>(payload_buf.size()),
                static_cast<uint64_t>(id)};
-    auto bytes = to_bytes(hdr);
-    parent.write_packet(make_span(bytes), make_span(buf_));
+    to_bytes(hdr, header_buf);
+    parent.write_packet(header_buf, payload_buf);
   }
 
   template <class Parent>
@@ -153,8 +155,8 @@ public:
 
   strong_actor_ptr resolve_local_path(string_view path);
 
-  void resolve_remote_path(write_packet_callback& write_packet,
-                           string_view path, actor listener);
+  void resolve_remote_path(packet_writer& writer, string_view path,
+                           const actor& listener);
 
   // -- properties -------------------------------------------------------------
 
@@ -169,37 +171,34 @@ public:
 private:
   // -- handling of outgoing messages ------------------------------------------
 
-  error write(write_packet_callback& write_packet,
+  error write(packet_writer& writer,
               std::unique_ptr<endpoint_manager_queue::message> ptr);
 
   // -- handling of incoming messages ------------------------------------------
 
-  error handle(size_t& next_read_size, write_packet_callback& write_packet,
-               byte_span bytes);
+  error handle(size_t& next_read_size, packet_writer& writer, byte_span bytes);
 
-  error handle(write_packet_callback& write_packet, header hdr,
-               byte_span payload);
+  error handle(packet_writer& writer, header hdr, byte_span payload);
 
-  error handle_handshake(write_packet_callback& write_packet, header hdr,
-                         byte_span payload);
+  error handle_handshake(packet_writer& writer, header hdr, byte_span payload);
 
-  error handle_actor_message(write_packet_callback& write_packet, header hdr,
+  error handle_actor_message(packet_writer& writer, header hdr,
                              byte_span payload);
 
-  error handle_resolve_request(write_packet_callback& write_packet, header hdr,
+  error handle_resolve_request(packet_writer& writer, header hdr,
                                byte_span payload);
 
-  error handle_resolve_response(write_packet_callback& write_packet, header hdr,
+  error handle_resolve_response(packet_writer& writer, header hdr,
                                 byte_span payload);
 
-  error handle_monitor_message(write_packet_callback& write_packet, header hdr,
+  error handle_monitor_message(packet_writer& writer, header hdr,
                                byte_span payload);
 
-  error handle_down_message(write_packet_callback& write_packet, header hdr,
+  error handle_down_message(packet_writer& writer, header hdr,
                             byte_span payload);
 
   /// Writes the handshake payload to `buf_`.
-  error generate_handshake();
+  error generate_handshake(std::vector<byte>& buf);
 
   // -- member variables -------------------------------------------------------
 
@@ -212,14 +211,11 @@ private:
   /// Caches the last header while waiting for the matching payload.
   header hdr_;
 
-  /// Re-usable buffer for storing payloads.
-  buffer_type buf_;
-
   /// Stores the ID of our peer.
   node_id peer_id_;
 
   /// Tracks which local actors our peer monitors.
-  std::unordered_set<actor_addr> monitored_actors_;
+  std::unordered_set<actor_addr> monitored_actors_; // TODO: this is unused
 
   /// Caches actor handles obtained via `resolve`.
   std::unordered_map<uint64_t, response_promise> pending_resolves_;

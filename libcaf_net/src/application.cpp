@@ -32,6 +32,7 @@
 #include "caf/logger.hpp"
 #include "caf/net/basp/constants.hpp"
 #include "caf/net/basp/ec.hpp"
+#include "caf/net/packet_writer.hpp"
 #include "caf/no_stages.hpp"
 #include "caf/none.hpp"
 #include "caf/sec.hpp"
@@ -78,34 +79,34 @@ strong_actor_ptr application::resolve_local_path(string_view path) {
   return nullptr;
 }
 
-void application::resolve_remote_path(write_packet_callback& write_packet,
-                                      string_view path, actor listener) {
+void application::resolve_remote_path(packet_writer& writer, string_view path,
+                                      const actor& listener) {
   CAF_LOG_TRACE(CAF_ARG(path) << CAF_ARG(listener));
-  buf_.clear();
-  serializer_impl<buffer_type> sink{&executor_, buf_};
+  auto header_buf = writer.next_header_buffer();
+  auto payload_buf = writer.next_buffer();
+  serializer_impl<buffer_type> sink{&executor_, payload_buf};
   if (auto err = sink(path)) {
-    CAF_LOG_ERROR("unable to serialize path");
+    CAF_LOG_ERROR("unable to serialize path" << CAF_ARG(err));
     return;
   }
   auto req_id = next_request_id_++;
-  auto hdr = to_bytes(header{message_type::resolve_request,
-                             static_cast<uint32_t>(buf_.size()), req_id});
-  if (auto err = write_packet(hdr, buf_)) {
-    CAF_LOG_ERROR("unable to write resolve_request header");
-    return;
-  }
+  to_bytes(header{message_type::resolve_request,
+                  static_cast<uint32_t>(payload_buf.size()), req_id},
+           header_buf);
+  writer.write_packet(header_buf, payload_buf);
   response_promise rp{nullptr, actor_cast<strong_actor_ptr>(listener),
                       no_stages, make_message_id()};
   pending_resolves_.emplace(req_id, std::move(rp));
 }
 
-error application::write(write_packet_callback& write_packet,
+error application::write(packet_writer& writer,
                          std::unique_ptr<endpoint_manager_queue::message> ptr) {
   CAF_ASSERT(ptr != nullptr);
   CAF_ASSERT(ptr->msg != nullptr);
   CAF_LOG_TRACE(CAF_ARG2("content", ptr->msg->content()));
-  buf_.clear();
-  serializer_impl<buffer_type> sink{system(), buf_};
+  auto header_buf = writer.next_header_buffer();
+  auto payload_elem_buf = writer.next_buffer();
+  serializer_impl<buffer_type> sink{system(), payload_elem_buf};
   const auto& src = ptr->msg->sender;
   const auto& dst = ptr->receiver;
   if (dst == nullptr) {
@@ -121,16 +122,18 @@ error application::write(write_packet_callback& write_packet,
     if (auto err = sink(node_id{}, actor_id{0}, dst->id(), ptr->msg->stages))
       return err;
   }
-  // TODO: avoid extra copy of the payload
-  buf_.insert(buf_.end(), ptr->payload.begin(), ptr->payload.end());
-  header hdr{message_type::actor_message, static_cast<uint32_t>(buf_.size()),
+  // TODO: Is this size correct?
+  header hdr{message_type::actor_message,
+             static_cast<uint32_t>(payload_elem_buf.size()
+                                   + ptr->payload.size()),
              ptr->msg->mid.integer_value()};
-  auto bytes = to_bytes(hdr);
-  return write_packet(make_span(bytes), make_span(buf_));
+  to_bytes(hdr, header_buf);
+  // TODO: OK to move payload out of message?
+  writer.write_packet(header_buf, payload_elem_buf, ptr->payload);
+  return none;
 }
 
-error application::handle(size_t& next_read_size,
-                          write_packet_callback& write_packet,
+error application::handle(size_t& next_read_size, packet_writer& writer,
                           byte_span bytes) {
   CAF_LOG_TRACE(CAF_ARG(state_) << CAF_ARG2("bytes.size", bytes.size()));
   switch (state_) {
@@ -149,7 +152,7 @@ error application::handle(size_t& next_read_size,
       return none;
     }
     case connection_state::await_handshake_payload: {
-      if (auto err = handle_handshake(write_packet, hdr_, bytes))
+      if (auto err = handle_handshake(writer, hdr_, bytes))
         return err;
       state_ = connection_state::await_header;
       return none;
@@ -159,7 +162,7 @@ error application::handle(size_t& next_read_size,
         return ec::unexpected_number_of_bytes;
       hdr_ = header::from_bytes(bytes);
       if (hdr_.payload_len == 0)
-        return handle(write_packet, hdr_, byte_span{});
+        return handle(writer, hdr_, byte_span{});
       next_read_size = hdr_.payload_len;
       state_ = connection_state::await_payload;
       return none;
@@ -168,29 +171,29 @@ error application::handle(size_t& next_read_size,
       if (bytes.size() != hdr_.payload_len)
         return ec::unexpected_number_of_bytes;
       state_ = connection_state::await_header;
-      return handle(write_packet, hdr_, bytes);
+      return handle(writer, hdr_, bytes);
     }
     default:
       return ec::illegal_state;
   }
 }
 
-error application::handle(write_packet_callback& write_packet, header hdr,
+error application::handle(packet_writer& writer, header hdr,
                           byte_span payload) {
   CAF_LOG_TRACE(CAF_ARG(hdr) << CAF_ARG2("payload.size", payload.size()));
   switch (hdr.type) {
     case message_type::handshake:
       return ec::unexpected_handshake;
     case message_type::actor_message:
-      return handle_actor_message(write_packet, hdr, payload);
+      return handle_actor_message(writer, hdr, payload);
     case message_type::resolve_request:
-      return handle_resolve_request(write_packet, hdr, payload);
+      return handle_resolve_request(writer, hdr, payload);
     case message_type::resolve_response:
-      return handle_resolve_response(write_packet, hdr, payload);
+      return handle_resolve_response(writer, hdr, payload);
     case message_type::monitor_message:
-      return handle_monitor_message(write_packet, hdr, payload);
+      return handle_monitor_message(writer, hdr, payload);
     case message_type::down_message:
-      return handle_down_message(write_packet, hdr, payload);
+      return handle_down_message(writer, hdr, payload);
     case message_type::heartbeat:
       return none;
     default:
@@ -198,7 +201,7 @@ error application::handle(write_packet_callback& write_packet, header hdr,
   }
 }
 
-error application::handle_handshake(write_packet_callback&, header hdr,
+error application::handle_handshake(packet_writer&, header hdr,
                                     byte_span payload) {
   CAF_LOG_TRACE(CAF_ARG(hdr) << CAF_ARG2("payload.size", payload.size()));
   if (hdr.type != message_type::handshake)
@@ -224,7 +227,7 @@ error application::handle_handshake(write_packet_callback&, header hdr,
   return none;
 }
 
-error application::handle_actor_message(write_packet_callback&, header hdr,
+error application::handle_actor_message(packet_writer&, header hdr,
                                         byte_span payload) {
   CAF_LOG_TRACE(CAF_ARG(hdr) << CAF_ARG2("payload.size", payload.size()));
   // Deserialize payload.
@@ -257,8 +260,8 @@ error application::handle_actor_message(write_packet_callback&, header hdr,
   return none;
 }
 
-error application::handle_resolve_request(write_packet_callback& write_packet,
-                                          header hdr, byte_span payload) {
+error application::handle_resolve_request(packet_writer& writer, header hdr,
+                                          byte_span payload) {
   CAF_LOG_TRACE(CAF_ARG(hdr) << CAF_ARG2("payload.size", payload.size()));
   CAF_ASSERT(hdr.type == message_type::resolve_request);
   size_t path_size = 0;
@@ -273,7 +276,8 @@ error application::handle_resolve_request(write_packet_callback& write_packet,
                    remainder.size()};
   // Write result.
   auto result = resolve_local_path(path);
-  buf_.clear();
+  auto header_buf = writer.next_header_buffer();
+  auto payload_buf = writer.next_buffer();
   actor_id aid;
   std::set<std::string> ifs;
   if (result) {
@@ -283,16 +287,18 @@ error application::handle_resolve_request(write_packet_callback& write_packet,
     aid = 0;
   }
   // TODO: figure out how to obtain messaging interface.
-  serializer_impl<buffer_type> sink{&executor_, buf_};
+  serializer_impl<buffer_type> sink{&executor_, payload_buf};
   if (auto err = sink(aid, ifs))
     return err;
-  auto out_hdr = to_bytes(header{message_type::resolve_response,
-                                 static_cast<uint32_t>(buf_.size()),
-                                 hdr.operation_data});
-  return write_packet(out_hdr, buf_);
+  to_bytes(header{message_type::resolve_response,
+                  static_cast<uint32_t>(payload_buf.size()),
+                  hdr.operation_data},
+           header_buf);
+  writer.write_packet(header_buf, payload_buf);
+  return none;
 }
 
-error application::handle_resolve_response(write_packet_callback&, header hdr,
+error application::handle_resolve_response(packet_writer&, header hdr,
                                            byte_span payload) {
   CAF_LOG_TRACE(CAF_ARG(hdr) << CAF_ARG2("payload.size", payload.size()));
   CAF_ASSERT(hdr.type == message_type::resolve_response);
@@ -319,8 +325,8 @@ error application::handle_resolve_response(write_packet_callback&, header hdr,
   return none;
 }
 
-error application::handle_monitor_message(write_packet_callback& write_packet,
-                                          header hdr, byte_span payload) {
+error application::handle_monitor_message(packet_writer& writer, header hdr,
+                                          byte_span payload) {
   CAF_LOG_TRACE(CAF_ARG(hdr) << CAF_ARG2("payload.size", payload.size()));
   if (!payload.empty())
     return ec::unexpected_payload;
@@ -334,19 +340,21 @@ error application::handle_monitor_message(write_packet_callback& write_packet,
     });
   } else {
     error reason = exit_reason::unknown;
-    buf_.clear();
-    serializer_impl<buffer_type> sink{&executor_, buf_};
+    auto header_buf = writer.next_header_buffer();
+    auto payload_buf = writer.next_buffer();
+    serializer_impl<buffer_type> sink{&executor_, payload_buf};
     if (auto err = sink(reason))
       return err;
-    auto out_hdr = to_bytes(header{message_type::down_message,
-                                   static_cast<uint32_t>(buf_.size()),
-                                   hdr.operation_data});
-    return write_packet(out_hdr, buf_);
+    to_bytes(header{message_type::down_message,
+                    static_cast<uint32_t>(payload_buf.size()),
+                    hdr.operation_data},
+             header_buf);
+    writer.write_packet(header_buf, payload_buf);
   }
   return none;
 }
 
-error application::handle_down_message(write_packet_callback&, header hdr,
+error application::handle_down_message(packet_writer&, header hdr,
                                        byte_span payload) {
   CAF_LOG_TRACE(CAF_ARG(hdr) << CAF_ARG2("payload.size", payload.size()));
   error reason;
@@ -357,9 +365,9 @@ error application::handle_down_message(write_packet_callback&, header hdr,
   return none;
 }
 
-error application::generate_handshake() {
-  buf_.clear();
-  serializer_impl<buffer_type> sink{&executor_, buf_};
+error application::generate_handshake(std::vector<byte>& buf) {
+  buf.clear(); // TODO: really necessary?
+  serializer_impl<buffer_type> sink{&executor_, buf};
   return sink(system().node(),
               get_or(system().config(), "middleman.app-identifiers",
                      defaults::middleman::app_identifiers));

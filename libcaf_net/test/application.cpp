@@ -29,6 +29,7 @@
 #include "caf/net/basp/connection_state.hpp"
 #include "caf/net/basp/constants.hpp"
 #include "caf/net/basp/ec.hpp"
+#include "caf/net/packet_writer.hpp"
 #include "caf/none.hpp"
 #include "caf/uri.hpp"
 
@@ -43,7 +44,8 @@ namespace {
 
 struct fixture : test_coordinator_fixture<>,
                  proxy_registry::backend,
-                 basp::application::test_tag {
+                 basp::application::test_tag,
+                 public packet_writer {
   using buffer_type = std::vector<byte>;
 
   fixture() : proxies(sys, *this), app(proxies) {
@@ -64,11 +66,6 @@ struct fixture : test_coordinator_fixture<>,
   template <class... Ts>
   void set_input(const Ts&... xs) {
     input = to_buf(xs...);
-  }
-
-  void write_packet(span<const byte> hdr, span<const byte> payload) {
-    output.insert(output.end(), hdr.begin(), hdr.end());
-    output.insert(output.end(), payload.begin(), payload.end());
   }
 
   void handle_handshake() {
@@ -114,6 +111,14 @@ struct fixture : test_coordinator_fixture<>,
     CAF_FAIL("unexpected function call");
   }
 
+  buffer_type next_buffer() override {
+    return {};
+  }
+
+  buffer_type next_header_buffer() override {
+    return {};
+  }
+
   template <class... Ts>
   void configure_read(Ts...) {
     // nop
@@ -128,6 +133,12 @@ struct fixture : test_coordinator_fixture<>,
 
   void set_last_hop(node_id*) override {
     // nop
+  }
+
+protected:
+  void write_impl(span<buffer_type*> buffers) override {
+    for (auto buf : buffers)
+      output.insert(output.end(), buf->begin(), buf->end());
   }
 
   buffer_type input;
