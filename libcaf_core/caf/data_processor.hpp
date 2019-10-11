@@ -477,7 +477,7 @@ public:
 
 #if defined(__cpp_fold_expressions) && defined(__cpp_if_constexpr)
 
-  template <class... Ts> inline
+  template <class... Ts>
   error operator()(Ts&&... xs) {
     error result;
     auto f = [&result, this](auto&& x) {
