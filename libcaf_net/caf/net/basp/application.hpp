@@ -57,8 +57,6 @@ public:
 
   using byte_span = span<const byte>;
 
-  using write_packet_callback = callback<byte_span, byte_span>;
-
   struct test_tag {};
 
   // -- constructors, destructors, and assignment operators --------------------
@@ -90,11 +88,8 @@ public:
     return none;
   }
 
-  template <class Parent>
-  error write_message(Parent& parent,
-                      std::unique_ptr<endpoint_manager_queue::message> ptr) {
-    return write(parent, std::move(ptr));
-  }
+  error write_message(packet_writer& writer,
+                      std::unique_ptr<endpoint_manager_queue::message> ptr);
 
   template <class Parent>
   error handle_data(Parent& parent, byte_span bytes) {
@@ -107,37 +102,11 @@ public:
     return none;
   }
 
-  // TODO: unessecary indirection
-  template <class Parent>
-  void resolve(Parent& parent, string_view path, const actor& listener) {
-    static_assert(std::is_base_of<packet_writer, Parent>::value,
-                  "parent must implement `packet_writer`");
-    resolve_remote_path(parent, path, listener);
-  }
+  void resolve(packet_writer& writer, string_view path, const actor& listener);
 
-  // TODO: can be packet_writer&?
-  template <class Parent>
-  void new_proxy(Parent& parent, actor_id id) {
-    header hdr{message_type::monitor_message, 0, static_cast<uint64_t>(id)};
-    auto header_buf = parent.next_header_buffer();
-    to_bytes(hdr, header_buf);
-    parent.write_packet(header_buf);
-  }
+  static void new_proxy(packet_writer& writer, actor_id id);
 
-  // TODO: can be packet_writer&?
-  template <class Parent>
-  void local_actor_down(Parent& parent, actor_id id, error reason) {
-    auto header_buf = parent.next_header_buffer();
-    auto payload_buf = parent.next_buffer();
-    serializer_impl<buffer_type> sink{system(), payload_buf};
-    if (auto err = sink(reason))
-      CAF_RAISE_ERROR("unable to serialize an error");
-    header hdr{message_type::down_message,
-               static_cast<uint32_t>(payload_buf.size()),
-               static_cast<uint64_t>(id)};
-    to_bytes(hdr, header_buf);
-    parent.write_packet(header_buf, payload_buf);
-  }
+  void local_actor_down(packet_writer& writer, actor_id id, error reason);
 
   template <class Parent>
   void timeout(Parent&, atom_value, uint64_t) {
@@ -148,15 +117,12 @@ public:
     // nop
   }
 
-  static expected<std::vector<byte>> serialize(actor_system& sys,
-                                               const type_erased_tuple& x);
+  static expected<buffer_type> serialize(actor_system& sys,
+                                         const type_erased_tuple& x);
 
   // -- utility functions ------------------------------------------------------
 
   strong_actor_ptr resolve_local_path(string_view path);
-
-  void resolve_remote_path(packet_writer& writer, string_view path,
-                           const actor& listener);
 
   // -- properties -------------------------------------------------------------
 
@@ -169,11 +135,6 @@ public:
   }
 
 private:
-  // -- handling of outgoing messages ------------------------------------------
-
-  error write(packet_writer& writer,
-              std::unique_ptr<endpoint_manager_queue::message> ptr);
-
   // -- handling of incoming messages ------------------------------------------
 
   error handle(size_t& next_read_size, packet_writer& writer, byte_span bytes);
@@ -198,7 +159,7 @@ private:
                             byte_span payload);
 
   /// Writes the handshake payload to `buf_`.
-  error generate_handshake(std::vector<byte>& buf);
+  error generate_handshake(buffer_type& buf);
 
   // -- member variables -------------------------------------------------------
 

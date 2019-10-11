@@ -48,6 +48,81 @@ application::application(proxy_registry& proxies) : proxies_(proxies) {
   // nop
 }
 
+error application::write_message(
+  packet_writer& writer, std::unique_ptr<endpoint_manager_queue::message> ptr) {
+  CAF_ASSERT(ptr != nullptr);
+  CAF_ASSERT(ptr->msg != nullptr);
+  CAF_LOG_TRACE(CAF_ARG2("content", ptr->msg->content()));
+  auto payload_elem_buf = writer.next_buffer();
+  serializer_impl<buffer_type> sink{system(), payload_elem_buf};
+  const auto& src = ptr->msg->sender;
+  const auto& dst = ptr->receiver;
+  if (dst == nullptr) {
+    // TODO: valid?
+    return none;
+  }
+  if (src != nullptr) {
+    auto src_id = src->id();
+    system().registry().put(src_id, src);
+    if (auto err = sink(src->node(), src_id, dst->id(), ptr->msg->stages))
+      return err;
+  } else {
+    if (auto err = sink(node_id{}, actor_id{0}, dst->id(), ptr->msg->stages))
+      return err;
+  }
+  // TODO: Is this size correct?
+  auto header_buf = writer.next_header_buffer();
+  to_bytes(header{message_type::actor_message,
+                  static_cast<uint32_t>(payload_elem_buf.size()
+                                        + ptr->payload.size()),
+                  ptr->msg->mid.integer_value()},
+           header_buf);
+  // TODO: OK to move payload out of message?
+  writer.write_packet(header_buf, payload_elem_buf, ptr->payload);
+  return none;
+}
+
+void application::resolve(packet_writer& writer, string_view path,
+                          const actor& listener) {
+  CAF_LOG_TRACE(CAF_ARG(path) << CAF_ARG(listener));
+  auto payload_buf = writer.next_buffer();
+  serializer_impl<buffer_type> sink{&executor_, payload_buf};
+  if (auto err = sink(path)) {
+    CAF_LOG_ERROR("unable to serialize path" << CAF_ARG(err));
+    return;
+  }
+  auto req_id = next_request_id_++;
+  auto header_buf = writer.next_header_buffer();
+  to_bytes(header{message_type::resolve_request,
+                  static_cast<uint32_t>(payload_buf.size()), req_id},
+           header_buf);
+  writer.write_packet(header_buf, payload_buf);
+  response_promise rp{nullptr, actor_cast<strong_actor_ptr>(listener),
+                      no_stages, make_message_id()};
+  pending_resolves_.emplace(req_id, std::move(rp));
+}
+
+void application::new_proxy(packet_writer& writer, actor_id id) {
+  auto header_buf = writer.next_header_buffer();
+  to_bytes(header{message_type::monitor_message, 0, static_cast<uint64_t>(id)},
+           header_buf);
+  writer.write_packet(header_buf);
+}
+
+void application::local_actor_down(packet_writer& writer, actor_id id,
+                                   error reason) {
+  auto payload_buf = writer.next_buffer();
+  serializer_impl<buffer_type> sink{system(), payload_buf};
+  if (auto err = sink(reason))
+    CAF_RAISE_ERROR("unable to serialize an error");
+  auto header_buf = writer.next_header_buffer();
+  to_bytes(header{message_type::down_message,
+                  static_cast<uint32_t>(payload_buf.size()),
+                  static_cast<uint64_t>(id)},
+           header_buf);
+  writer.write_packet(header_buf, payload_buf);
+}
+
 expected<std::vector<byte>> application::serialize(actor_system& sys,
                                                    const type_erased_tuple& x) {
   std::vector<byte> result;
@@ -77,60 +152,6 @@ strong_actor_ptr application::resolve_local_path(string_view path) {
     return system().registry().get(name);
   }
   return nullptr;
-}
-
-void application::resolve_remote_path(packet_writer& writer, string_view path,
-                                      const actor& listener) {
-  CAF_LOG_TRACE(CAF_ARG(path) << CAF_ARG(listener));
-  auto header_buf = writer.next_header_buffer();
-  auto payload_buf = writer.next_buffer();
-  serializer_impl<buffer_type> sink{&executor_, payload_buf};
-  if (auto err = sink(path)) {
-    CAF_LOG_ERROR("unable to serialize path" << CAF_ARG(err));
-    return;
-  }
-  auto req_id = next_request_id_++;
-  to_bytes(header{message_type::resolve_request,
-                  static_cast<uint32_t>(payload_buf.size()), req_id},
-           header_buf);
-  writer.write_packet(header_buf, payload_buf);
-  response_promise rp{nullptr, actor_cast<strong_actor_ptr>(listener),
-                      no_stages, make_message_id()};
-  pending_resolves_.emplace(req_id, std::move(rp));
-}
-
-error application::write(packet_writer& writer,
-                         std::unique_ptr<endpoint_manager_queue::message> ptr) {
-  CAF_ASSERT(ptr != nullptr);
-  CAF_ASSERT(ptr->msg != nullptr);
-  CAF_LOG_TRACE(CAF_ARG2("content", ptr->msg->content()));
-  auto header_buf = writer.next_header_buffer();
-  auto payload_elem_buf = writer.next_buffer();
-  serializer_impl<buffer_type> sink{system(), payload_elem_buf};
-  const auto& src = ptr->msg->sender;
-  const auto& dst = ptr->receiver;
-  if (dst == nullptr) {
-    // TODO: valid?
-    return none;
-  }
-  if (src != nullptr) {
-    auto src_id = src->id();
-    system().registry().put(src_id, src);
-    if (auto err = sink(src->node(), src_id, dst->id(), ptr->msg->stages))
-      return err;
-  } else {
-    if (auto err = sink(node_id{}, actor_id{0}, dst->id(), ptr->msg->stages))
-      return err;
-  }
-  // TODO: Is this size correct?
-  header hdr{message_type::actor_message,
-             static_cast<uint32_t>(payload_elem_buf.size()
-                                   + ptr->payload.size()),
-             ptr->msg->mid.integer_value()};
-  to_bytes(hdr, header_buf);
-  // TODO: OK to move payload out of message?
-  writer.write_packet(header_buf, payload_elem_buf, ptr->payload);
-  return none;
 }
 
 error application::handle(size_t& next_read_size, packet_writer& writer,
@@ -276,8 +297,6 @@ error application::handle_resolve_request(packet_writer& writer, header hdr,
                    remainder.size()};
   // Write result.
   auto result = resolve_local_path(path);
-  auto header_buf = writer.next_header_buffer();
-  auto payload_buf = writer.next_buffer();
   actor_id aid;
   std::set<std::string> ifs;
   if (result) {
@@ -287,9 +306,11 @@ error application::handle_resolve_request(packet_writer& writer, header hdr,
     aid = 0;
   }
   // TODO: figure out how to obtain messaging interface.
+  auto payload_buf = writer.next_buffer();
   serializer_impl<buffer_type> sink{&executor_, payload_buf};
   if (auto err = sink(aid, ifs))
     return err;
+  auto header_buf = writer.next_header_buffer();
   to_bytes(header{message_type::resolve_response,
                   static_cast<uint32_t>(payload_buf.size()),
                   hdr.operation_data},
@@ -340,11 +361,11 @@ error application::handle_monitor_message(packet_writer& writer, header hdr,
     });
   } else {
     error reason = exit_reason::unknown;
-    auto header_buf = writer.next_header_buffer();
     auto payload_buf = writer.next_buffer();
     serializer_impl<buffer_type> sink{&executor_, payload_buf};
     if (auto err = sink(reason))
       return err;
+    auto header_buf = writer.next_header_buffer();
     to_bytes(header{message_type::down_message,
                     static_cast<uint32_t>(payload_buf.size()),
                     hdr.operation_data},
@@ -366,7 +387,6 @@ error application::handle_down_message(packet_writer&, header hdr,
 }
 
 error application::generate_handshake(std::vector<byte>& buf) {
-  buf.clear(); // TODO: really necessary?
   serializer_impl<buffer_type> sink{&executor_, buf};
   return sink(system().node(),
               get_or(system().config(), "middleman.app-identifiers",
