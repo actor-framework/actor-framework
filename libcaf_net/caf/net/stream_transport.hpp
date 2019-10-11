@@ -20,6 +20,7 @@
 
 #include "caf/byte.hpp"
 #include "caf/error.hpp"
+#include "caf/expected.hpp"
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/endpoint_manager.hpp"
@@ -200,12 +201,17 @@ public:
     prepare_next_read();
   }
 
-  void write_packet(span<const byte> header, span<const byte> payload,
-                    typename worker_type::id_type) {
-    if (write_buf_.empty())
+  void write_packet(unit_t, span<buffer_type*> buffers) {
+    // Sanity check
+    CAF_ASSERT(!buffers.empty());
+    auto it = buffers.begin();
+    if (write_queue_.empty())
       manager().register_writing();
-    write_buf_.insert(write_buf_.end(), header.begin(), header.end());
-    write_buf_.insert(write_buf_.end(), payload.begin(), payload.end());
+    // move header by itself to keep things sorted.
+    write_queue_.emplace_back(true, std::move(**it++));
+    // payload buffers. just write them
+    for (; it != buffers.end(); ++it)
+      write_queue_.emplace_back(false, std::move(**it));
   }
 
   // -- buffer recycling -------------------------------------------------------
@@ -232,30 +238,50 @@ private:
   // -- private member functions -----------------------------------------------
 
   bool write_some() {
-    if (write_buf_.empty())
+    auto begin = [&]() { return write_queue_.begin(); };
+    // helper to sort empty buffers back into the right queues
+    auto recycle = [&]() {
+      auto is_header = [](std::pair<bool, buffer_type>& p) { return p.first; };
+      begin()->second.clear();
+      if (is_header(*begin()))
+        free_header_bufs_.emplace_back(std::move(begin()->second));
+      else
+        free_bufs_.emplace_back(std::move(begin()->second));
+      write_queue_.pop_front();
+    };
+    // nothing to write
+    if (write_queue_.empty())
       return false;
-    auto len = write_buf_.size() - written_;
-    auto buf = write_buf_.data() + written_;
-    CAF_LOG_TRACE(CAF_ARG(handle_.id) << CAF_ARG(len));
-    auto ret = write(handle_, make_span(buf, len));
-    if (auto num_bytes = get_if<size_t>(&ret)) {
-      CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG(handle_.id) << CAF_ARG(*num_bytes));
-      // Update state.
-      written_ += *num_bytes;
-      if (written_ >= write_buf_.size()) {
-        written_ = 0;
-        write_buf_.clear();
+    do {
+      if (begin()->second.empty()) {
+        recycle();
+        continue;
+      }
+      // get size of send buffer
+      auto ret = send_buffer_size(handle_);
+      if (!ret) {
+        CAF_LOG_ERROR("send_buffer_size returned an error" << CAF_ARG(ret));
         return false;
       }
-    } else {
-      auto err = get<sec>(ret);
-      if (err != sec::unavailable_or_would_block) {
-        CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
-        worker_.handle_error(err);
-        return false;
+      // is send buffer of socket full?
+      if (begin()->second.size() > *ret)
+        return true;
+      CAF_LOG_TRACE(CAF_ARG(handle_.id));
+      auto write_ret = write(handle_, make_span(begin()->second));
+      if (auto num_bytes = get_if<size_t>(&write_ret)) {
+        CAF_LOG_DEBUG(CAF_ARG(handle_.id) << CAF_ARG(*num_bytes));
+        if (*num_bytes >= begin()->second.size())
+          recycle();
+      } else {
+        auto err = get<sec>(write_ret);
+        if (err != sec::unavailable_or_would_block) {
+          CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
+          worker_.handle_error(err);
+          return false;
+        }
       }
-    }
-    return true;
+    } while (!write_queue_.empty());
+    return false;
   }
 
   worker_type worker_;
@@ -265,7 +291,7 @@ private:
   std::deque<buffer_type> free_bufs_;
 
   buffer_type read_buf_;
-  buffer_type write_buf_;
+  std::deque<std::pair<bool, buffer_type>> write_queue_;
 
   // TODO implement retries using this member!
   // size_t max_consecutive_reads_;

@@ -43,6 +43,8 @@ using namespace caf::policy;
 
 namespace {
 
+using buffer_type = std::vector<byte>;
+
 struct fixture : test_coordinator_fixture<>, host_fixture {
   fixture() {
     mpx = std::make_shared<multiplexer>();
@@ -98,13 +100,15 @@ public:
 
   template <class Parent>
   void write_message(Parent& parent,
-                     std::unique_ptr<endpoint_manager_queue::message> msg) {
+                     std::unique_ptr<endpoint_manager_queue::message> ptr) {
     // Ignore proxy announcement messages.
-    if (msg->msg == nullptr)
+    if (ptr->msg == nullptr)
       return;
-    header_type header{static_cast<uint32_t>(msg->payload.size())};
-    std::vector<byte> payload(msg->payload.begin(), msg->payload.end());
-    parent.write_packet(as_bytes(make_span(&header, 1)), make_span(payload));
+    auto header_buf = parent.next_header_buffer();
+    serializer_impl<buffer_type> sink{sys_, header_buf};
+    header_type header{static_cast<uint32_t>(ptr->payload.size())};
+    sink(header);
+    parent.write_packet(header_buf, ptr->payload);
   }
 
   static expected<std::vector<byte>> serialize(actor_system& sys,
@@ -147,7 +151,8 @@ public:
     } else {
       if (data.size() != sizeof(header_type))
         CAF_FAIL("");
-      memcpy(&header_, data.data(), sizeof(header_type));
+      binary_deserializer source{nullptr, data};
+      source(header_);
       if (header_.payload == 0)
         Base::handle_packet(parent, header_, span<const byte>{});
       else
@@ -187,8 +192,8 @@ public:
     // nop
   }
 
-  void handle_error(sec) {
-    // nop
+  void handle_error(sec sec) {
+    CAF_FAIL("handle_error called: " << CAF_ARG(sec));
   }
 
 private:
