@@ -130,15 +130,12 @@ struct fixture {
     foobar x;
     CAF_CHECK_EQUAL(foo_field.name(), "foo");
     CAF_REQUIRE(foo_field.has_default());
-    CAF_CHECK(foo_field.valid(x));
     CAF_CHECK_EQUAL(foo_field.get(x), config_value(0));
     foo_field.set_default(x);
     CAF_CHECK_EQUAL(foo_field.get(x), config_value(42));
-    CAF_CHECK(!foo_field.type_check(config_value(1.)));
-    CAF_CHECK(foo_field.type_check(config_value(-1)));
-    foo_field.set(x, config_value(-1));
-    CAF_CHECK_EQUAL(foo_field.get(x), config_value(-1));
-    CAF_CHECK(!foo_field.valid(x));
+    CAF_CHECK(!foo_field.valid_input(config_value(1.)));
+    CAF_CHECK(!foo_field.valid_input(config_value(-1)));
+    CAF_CHECK(!foo_field.set(x, config_value(-1)));
     string_view input = "123";
     string_parser_state ps{input.begin(), input.end()};
     foo_field.parse_cli(ps, x);

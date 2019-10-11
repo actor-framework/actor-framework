@@ -48,17 +48,19 @@ struct config_value_object_access {
     if (!dict)
       return false;
     for (auto field : Trait::fields()) {
-      auto value = caf::get_if(dict, field->name());
-      if (!value) {
+      if (auto value = caf::get_if(dict, field->name())) {
+        if (dst) {
+          if (!field->set(*dst, *value))
+            return false;
+        } else {
+          if (!field->valid_input(*value))
+            return false;
+        }
+      } else {
         if (!field->has_default())
           return false;
         if (dst)
           field->set_default(*dst);
-      } else if (field->type_check(*value)) {
-        if (dst)
-          field->set(*dst, *value);
-      } else {
-        return false;
       }
     }
     return true;
@@ -154,10 +156,6 @@ struct config_value_object_access {
         return;
       if (ps.at_end()) {
         ps.code = pec::unexpected_eof;
-        return;
-      }
-      if (!fptr->valid(x)) {
-        ps.code = pec::illegal_argument;
         return;
       }
       result[fptr->name()] = fptr->get(x);

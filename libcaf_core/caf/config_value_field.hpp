@@ -33,12 +33,6 @@ public:
 
   // -- observers --------------------------------------------------------------
 
-  /// Checks whether `x` matches the type of this field.
-  virtual bool type_check(const config_value& x) const noexcept = 0;
-
-  /// Returns whether this field in `object` contains valid data.
-  virtual bool valid(const Object& object) const noexcept = 0;
-
   /// Returns whether this field has a default value.
   virtual bool has_default() const noexcept = 0;
 
@@ -48,11 +42,13 @@ public:
   /// Returns the value of this field in `object` as config value.
   virtual config_value get(const Object& object) const = 0;
 
+  /// Returns whether calling `set` with `x` would succeed.
+  virtual bool valid_input(const config_value& x) const = 0;
+
   // -- modifiers --------------------------------------------------------------
 
   /// Sets this field in `object` to `x`.
-  /// @pre `can_set(x)`
-  virtual void set(Object& object, const config_value& x) const = 0;
+  virtual bool set(Object& object, const config_value& x) const = 0;
 
   /// Restores the default value for this field in `object`.
   /// @pre `has_default()`
