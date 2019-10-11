@@ -31,7 +31,8 @@
 #define ERROR_HANDLER                                                          \
   [&](error& err) { CAF_FAIL(system.render(err)); }
 
-using namespace std;
+using std::string;
+
 using namespace caf;
 
 using passed_atom = caf::atom_constant<caf::atom("passed")>;
@@ -423,7 +424,7 @@ CAF_TEST(event_testee_series) {
     [&](const string& str) {
       result = str;
     },
-    after(chrono::minutes(1)) >> [&] {
+    after(std::chrono::minutes(1)) >> [&] {
       CAF_FAIL("event_testee does not reply");
     }
   );
@@ -435,7 +436,7 @@ CAF_TEST(string_delegator_chain) {
   auto aut = self->spawn<monitored>(string_delegator,
                                     system.spawn(string_reverter),
                                     true);
-  set<string> iface{"caf::replies_to<@str>::with<@str>"};
+  std::set<string> iface{"caf::replies_to<@str>::with<@str>"};
   CAF_CHECK_EQUAL(aut->message_types(), iface);
   self->request(aut, infinite, "Hello World!").receive(
     [](const string& answer) {

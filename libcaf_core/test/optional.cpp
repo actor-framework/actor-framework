@@ -23,7 +23,6 @@
 
 #include "caf/optional.hpp"
 
-using namespace std;
 using namespace caf;
 
 namespace {
