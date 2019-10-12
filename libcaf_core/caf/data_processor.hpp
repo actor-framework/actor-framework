@@ -475,6 +475,43 @@ public:
     return none;
   }
 
+#if defined(__cpp_fold_expressions) && defined(__cpp_if_constexpr)
+
+  template <class... Ts>
+  error operator()(Ts&&... xs) {
+    error result;
+    auto f = [&result, this](auto&& x) {
+      using type = detail::decay_t<decltype(x)>;
+      if constexpr (meta::is_save_callback<type>::value) {
+        if constexpr (Derived::reads_state)
+          if (auto err = x.fun()) {
+            result = std::move(err);
+            return false;
+          }
+      } else if constexpr (meta::is_load_callback<type>::value) {
+        if constexpr (Derived::writes_state)
+          if (auto err = x.fun()) {
+            result = std::move(err);
+            return false;
+          }
+      } else if constexpr (meta::is_annotation<type>::value
+                           || is_allowed_unsafe_message_type<type>::value) {
+        // skip element
+      } else {
+        if (auto err = dref().apply(deconst(x))) {
+          result = std::move(err);
+          return false;
+        }
+      }
+      return true;
+    };
+    if ((f(std::forward<Ts>(xs)) && ...))
+      return none;
+    return result;
+  }
+
+#else // defined(__cpp_fold_expressions) && defined(__cpp_if_constexpr)
+
   template <class F, class... Ts>
   error operator()(meta::save_callback_t<F> x, Ts&&... xs) {
     // TODO: use `if constexpr` when switching to C++17.
@@ -524,6 +561,8 @@ public:
       return err;
     return dref()(std::forward<Ts>(xs)...);
   }
+
+#endif // defined(__cpp_fold_expressions) && defined(__cpp_if_constexpr)
 
 protected:
   virtual error apply_impl(int8_t&) = 0;

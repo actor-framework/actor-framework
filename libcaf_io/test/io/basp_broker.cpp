@@ -33,6 +33,14 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
+#include "caf/deep_to_string.hpp"
+
+#include "caf/io/network/interfaces.hpp"
+#include "caf/io/network/test_multiplexer.hpp"
+
+using namespace caf;
+using namespace caf::io;
+
 namespace {
 
 using caf::make_message_id;
@@ -71,14 +79,6 @@ constexpr uint64_t default_operation_data = make_message_id().integer_value();
 constexpr auto basp_atom = caf::atom("BASP");
 constexpr auto spawn_serv_atom = caf::atom("SpawnServ");
 constexpr auto config_serv_atom = caf::atom("ConfigServ");
-
-} // namespace
-
-using namespace std;
-using namespace caf;
-using namespace caf::io;
-
-namespace {
 
 constexpr uint32_t num_remote_nodes = 2;
 
@@ -259,10 +259,9 @@ public:
     return {hdr, std::move(payload)};
   }
 
-  void connect_node(
-    node& n, optional<accept_handle> ax = none,
-    actor_id published_actor_id = invalid_actor_id,
-    const set<string>& published_actor_ifs = std::set<std::string>{}) {
+  void connect_node(node& n, optional<accept_handle> ax = none,
+                    actor_id published_actor_id = invalid_actor_id,
+                    const std::set<std::string>& published_actor_ifs = {}) {
     auto src = ax ? *ax : ahdl_;
     CAF_MESSAGE("connect remote node "
                 << n.name << ", connection ID = " << n.connection.id()
@@ -412,8 +411,8 @@ private:
   accept_handle ahdl_;
   network::test_multiplexer* mpx_;
   node_id this_node_;
-  unique_ptr<scoped_actor> self_;
-  array<node, num_remote_nodes> nodes_;
+  std::unique_ptr<scoped_actor> self_;
+  std::array<node, num_remote_nodes> nodes_;
   /*
   array<node_id, num_remote_nodes> remote_node_;
   array<connection_handle, num_remote_nodes> remote_hdl_;
@@ -493,7 +492,7 @@ CAF_TEST(non_empty_server_handshake) {
   buffer expected_payload;
   binary_serializer bd{nullptr, expected_payload};
   bd(instance().this_node(), defaults::middleman::app_identifiers, self()->id(),
-     set<string>{"caf::replies_to<@u16>::with<@u16>"});
+     std::set<std::string>{"caf::replies_to<@u16>::with<@u16>"});
   CAF_CHECK_EQUAL(hexstr(payload), hexstr(expected_payload));
 }
 
@@ -633,7 +632,7 @@ CAF_TEST(remote_actor_and_send) {
        {basp::message_type::direct_message, 0, 0, 0,
         jupiter().dummy_actor->id(), self()->id()},
        std::vector<strong_actor_ptr>{}, make_message("hi there!"));
-  self()->receive([&](const string& str) {
+  self()->receive([&](const std::string& str) {
     CAF_CHECK_EQUAL(to_string(self()->current_sender()), to_string(result));
     CAF_CHECK_EQUAL(self()->current_sender(), result.address());
     CAF_CHECK_EQUAL(str, "hi there!");
