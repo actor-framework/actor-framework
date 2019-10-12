@@ -39,7 +39,7 @@
 #include "caf/uri_builder.hpp"
 
 #define PARSE_IMPL(type, parser_name)                                          \
-  void parse(parse_state& ps, type& x) {                                       \
+  void parse(string_parser_state& ps, type& x) {                               \
     parser::read_##parser_name(ps, make_consumer(x));                          \
   }
 
@@ -55,7 +55,7 @@ struct literal {
   }
 };
 
-void parse(parse_state& ps, literal& x) {
+void parse(string_parser_state& ps, literal& x) {
   CAF_ASSERT(x.str.size() > 0);
   if (ps.current() != x.str[0]) {
     ps.code = pec::unexpected_character;
@@ -72,12 +72,12 @@ void parse(parse_state& ps, literal& x) {
   ps.code = ps.at_end() ? pec::success : pec::trailing_character;
 }
 
-void parse_sequence(parse_state&) {
+void parse_sequence(string_parser_state&) {
   // End of recursion.
 }
 
 template <class T, class... Ts>
-void parse_sequence(parse_state& ps, T&& x, Ts&&... xs) {
+void parse_sequence(string_parser_state& ps, T&& x, Ts&&... xs) {
   parse(ps, x);
   // TODO: use `if constexpr` when switching to C++17
   if (sizeof...(Ts) > 0) {
@@ -111,11 +111,11 @@ PARSE_IMPL(double, floating_point)
 
 PARSE_IMPL(timespan, timespan)
 
-void parse(parse_state& ps, atom_value& x) {
+void parse(string_parser_state& ps, atom_value& x) {
   parser::read_atom(ps, make_consumer(x), true);
 }
 
-void parse(parse_state& ps, uri& x) {
+void parse(string_parser_state& ps, uri& x) {
   uri_builder builder;
   if (ps.consume('<')) {
     parser::read_uri(ps, builder);
@@ -126,7 +126,7 @@ void parse(parse_state& ps, uri& x) {
       return;
     }
   } else {
-    read_uri(ps, builder);
+    parser::read_uri(ps, builder);
   }
   if (ps.code <= pec::trailing_character)
     x = builder.make();
@@ -134,7 +134,7 @@ void parse(parse_state& ps, uri& x) {
 
 PARSE_IMPL(ipv4_address, ipv4_address)
 
-void parse(parse_state& ps, ipv4_subnet& x) {
+void parse(string_parser_state& ps, ipv4_subnet& x) {
   ipv4_address addr;
   uint8_t prefix_length;
   parse_sequence(ps, addr, literal{"/"}, prefix_length);
@@ -147,7 +147,7 @@ void parse(parse_state& ps, ipv4_subnet& x) {
   }
 }
 
-void parse(parse_state& ps, ipv4_endpoint& x) {
+void parse(string_parser_state& ps, ipv4_endpoint& x) {
   ipv4_address addr;
   uint16_t port;
   parse_sequence(ps, addr, literal{":"}, port);
@@ -157,7 +157,7 @@ void parse(parse_state& ps, ipv4_endpoint& x) {
 
 PARSE_IMPL(ipv6_address, ipv6_address)
 
-void parse(parse_state& ps, ipv6_subnet& x) {
+void parse(string_parser_state& ps, ipv6_subnet& x) {
   // TODO: this algorithm is currently not one-pass. The reason we need to
   // check whether the input is a valid ipv4_subnet first is that "1.2.3.0" is
   // a valid IPv6 address, but "1.2.3.0/16" results in the wrong subnet when
@@ -185,7 +185,7 @@ void parse(parse_state& ps, ipv6_subnet& x) {
   }
 }
 
-void parse(parse_state& ps, ipv6_endpoint& x) {
+void parse(string_parser_state& ps, ipv6_endpoint& x) {
   ipv6_address addr;
   uint16_t port;
   if (ps.consume('[')) {
@@ -200,7 +200,7 @@ void parse(parse_state& ps, ipv6_endpoint& x) {
     x = ipv6_endpoint{addr, port};
 }
 
-void parse(parse_state& ps, std::string& x) {
+void parse(string_parser_state& ps, std::string& x) {
   ps.skip_whitespaces();
   if (ps.current() == '"') {
     parser::read_string(ps, make_consumer(x));
@@ -213,7 +213,7 @@ void parse(parse_state& ps, std::string& x) {
   ps.code = pec::success;
 }
 
-void parse_element(parse_state& ps, std::string& x,
+void parse_element(string_parser_state& ps, std::string& x,
                    const char* char_blacklist) {
   ps.skip_whitespaces();
   if (ps.current() == '"') {

@@ -24,9 +24,11 @@
 #include "caf/optional.hpp"
 
 #define DEFAULT_META(type, parse_fun)                                          \
-  config_option::meta_state type##_meta_state{                                 \
-    default_config_option_check<type>, default_config_option_store<type>,      \
-    get_impl<type>, parse_fun, detail::type_name<type>()};
+  config_option::meta_state                                                    \
+    type##_meta_state{default_config_option_check<type>,                       \
+                      default_config_option_store<type>, get_impl<type>,       \
+                      parse_fun,                                               \
+                      select_config_value_access_t<type>::type_name()};
 
 using std::string;
 
@@ -75,43 +77,34 @@ config_value bool_get_neg(const void* ptr) {
 }
 
 meta_state bool_neg_meta{detail::check_impl<bool>, bool_store_neg, bool_get_neg,
-                         nullptr, detail::type_name<bool>()};
+                         nullptr,
+                         select_config_value_access_t<bool>::type_name()};
 
-meta_state us_res_meta{
-  [](const config_value& x) -> error {
-    if (holds_alternative<timespan>(x))
-      return none;
-    return make_error(pec::type_mismatch);
-  },
-  [](void* ptr, const config_value& x) {
-    *static_cast<size_t*>(ptr) = static_cast<size_t>(get<timespan>(x).count())
-                                 / 1000;
-  },
-  [](const void* ptr) -> config_value {
-    auto ival = static_cast<int64_t>(*static_cast<const size_t*>(ptr));
-    timespan val{ival * 1000};
-    return config_value{val};
-  },
-  nullptr,
-  detail::type_name<timespan>()
-};
+error check_timespan(const config_value& x) {
+  if (holds_alternative<timespan>(x))
+    return none;
+  return make_error(pec::type_mismatch);
+}
 
-meta_state ms_res_meta{[](const config_value& x) -> error {
-                         if (holds_alternative<timespan>(x))
-                           return none;
-                         return make_error(pec::type_mismatch);
-                       },
-                       [](void* ptr, const config_value& x) {
-                         *static_cast<size_t*>(ptr) = static_cast<size_t>(
-                           get<timespan>(x).count() / 1000000);
-                       },
-                       [](const void* ptr) -> config_value {
-                         auto ival = static_cast<int64_t>(
-                           *static_cast<const size_t*>(ptr));
-                         timespan val{ival * 1000000};
-                         return config_value{val};
-                       },
-                       nullptr, detail::type_name<timespan>()};
+template <uint64_t Denominator>
+void store_timespan(void* ptr, const config_value& x) {
+  *static_cast<size_t*>(ptr) = static_cast<size_t>(get<timespan>(x).count())
+                               / Denominator;
+}
+template <uint64_t Denominator>
+config_value get_timespan(const void* ptr) {
+  auto ival = static_cast<int64_t>(*static_cast<const size_t*>(ptr));
+  timespan val{ival * Denominator};
+  return config_value{val};
+}
+
+meta_state us_res_meta{check_timespan, store_timespan<1000>, get_timespan<1000>,
+                       nullptr,
+                       select_config_value_access_t<timespan>::type_name()};
+
+meta_state ms_res_meta{check_timespan, store_timespan<1000000>,
+                       get_timespan<1000000>, nullptr,
+                       select_config_value_access_t<timespan>::type_name()};
 
 } // namespace
 

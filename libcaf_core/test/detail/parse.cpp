@@ -61,11 +61,11 @@ timespan operator"" _h(unsigned long long x) {
 template <class T>
 expected<T> read(string_view str) {
   T result;
-  detail::parse_state ps{str.begin(), str.end()};
+  string_parser_state ps{str.begin(), str.end()};
   detail::parse(ps, result);
   if (ps.code == pec::success)
     return result;
-  return make_error(ps.code, ps.line, ps.column);
+  return make_error(ps);
 }
 
 } // namespace

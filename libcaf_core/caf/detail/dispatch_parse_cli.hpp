@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2019 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,32 +16,47 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/pec.hpp"
+#pragma once
+
+#include <type_traits>
 
 #include "caf/config_value.hpp"
-#include "caf/error.hpp"
-#include "caf/make_message.hpp"
-#include "caf/string_view.hpp"
+#include "caf/detail/type_traits.hpp"
 
 namespace caf {
+namespace detail {
 
-error make_error(pec code) {
-  return {static_cast<uint8_t>(code), atom("parser")};
+template <class Trait>
+struct dispatch_parse_cli_helper {
+  template <class... Ts>
+  auto operator()(Ts&&... xs)
+    -> decltype(Trait::parse_cli(std::forward<Ts>(xs)...)) {
+    return Trait::parse_cli(std::forward<Ts>(xs)...);
+  }
+};
+
+template <class Access, class T>
+void dispatch_parse_cli(std::true_type, string_parser_state& ps, T& x,
+                        const char* char_blacklist) {
+  Access::parse_cli(ps, x, char_blacklist);
 }
 
-error make_error(pec code, int32_t line, int32_t column) {
-  config_value::dictionary context;
-  context["line"] = line;
-  context["column"] = column;
-  return {static_cast<uint8_t>(code), atom("parser"),
-          make_message(std::move(context))};
+template <class Access, class T>
+void dispatch_parse_cli(std::false_type, string_parser_state& ps, T& x,
+                        const char*) {
+  Access::parse_cli(ps, x);
 }
 
-error make_error(pec code, string_view argument) {
-  config_value::dictionary context;
-  context["argument"] = std::string{argument.begin(), argument.end()};
-  return {static_cast<uint8_t>(code), atom("parser"),
-          make_message(std::move(context))};
+template <class T>
+void dispatch_parse_cli(string_parser_state& ps, T& x,
+                        const char* char_blacklist) {
+  using access = caf::select_config_value_access_t<T>;
+  using helper_fun = dispatch_parse_cli_helper<access>;
+  using token_type = bool_token<detail::is_callable_with<
+    helper_fun, string_parser_state&, T&, const char*>::value>;
+  token_type token;
+  dispatch_parse_cli<access>(token, ps, x, char_blacklist);
 }
 
+} // namespace detail
 } // namespace caf

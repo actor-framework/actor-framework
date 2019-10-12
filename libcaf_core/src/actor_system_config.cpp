@@ -494,8 +494,7 @@ error actor_system_config::parse_config(std::istream& source,
   if (!source)
     return make_error(sec::runtime_error, "source stream invalid");
   detail::ini_consumer consumer{opts, result};
-  detail::parser::state<ini_iter, ini_sentinel> res;
-  res.i = ini_iter{&source};
+  parser_state<ini_iter, ini_sentinel> res{ini_iter{&source}};
   detail::parser::read_ini(res, consumer);
   if (res.i != res.e)
     return make_error(res.code, res.line, res.column);

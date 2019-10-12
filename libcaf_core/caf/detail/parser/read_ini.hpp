@@ -58,8 +58,8 @@ namespace parser {
 // }]
 //
 
-template <class Iterator, class Sentinel, class Consumer>
-void read_ini_comment(state<Iterator, Sentinel>& ps, Consumer&&) {
+template <class State, class Consumer>
+void read_ini_comment(State& ps, Consumer&&) {
   start();
   term_state(init) {
     transition(done, '\n')
@@ -71,11 +71,11 @@ void read_ini_comment(state<Iterator, Sentinel>& ps, Consumer&&) {
   fin();
 }
 
-template <class Iterator, class Sentinel, class Consumer>
-void read_ini_value(state<Iterator, Sentinel>& ps, Consumer&& consumer);
+template <class State, class Consumer>
+void read_ini_value(State& ps, Consumer&& consumer);
 
-template <class Iterator, class Sentinel, class Consumer>
-void read_ini_list(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
+template <class State, class Consumer>
+void read_ini_list(State& ps, Consumer&& consumer) {
   start();
   state(init) {
     epsilon(before_value)
@@ -98,8 +98,8 @@ void read_ini_list(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   fin();
 }
 
-template <class Iterator, class Sentinel, class Consumer>
-void read_ini_map(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
+template <class State, class Consumer>
+void read_ini_map(State& ps, Consumer&& consumer) {
   std::string key;
   auto alnum_or_dash = [](char x) {
     return isalnum(x) || x == '-' || x == '_';
@@ -154,8 +154,8 @@ void read_ini_map(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   // clang-format on
 }
 
-template <class Iterator, class Sentinel, class Consumer>
-void read_ini_uri(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
+template <class State, class Consumer>
+void read_ini_uri(State& ps, Consumer&& consumer) {
   uri_builder builder;
   auto g = make_scope_guard([&] {
     if (ps.code <= pec::trailing_character)
@@ -180,8 +180,8 @@ void read_ini_uri(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
   fin();
 }
 
-template <class Iterator, class Sentinel, class Consumer>
-void read_ini_value(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
+template <class State, class Consumer>
+void read_ini_value(State& ps, Consumer&& consumer) {
   start();
   state(init) {
     fsm_epsilon(read_string(ps, consumer), done, '"')
@@ -200,8 +200,8 @@ void read_ini_value(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
 }
 
 /// Reads an INI formatted input.
-template <class Iterator, class Sentinel, class Consumer>
-void read_ini_section(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
+template <class State, class Consumer>
+void read_ini_section(State& ps, Consumer&& consumer) {
   using std::swap;
   std::string tmp;
   auto alnum = [](char x) { return isalnum(x) || x == '_'; };
@@ -254,8 +254,8 @@ void read_ini_section(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
 
 /// Reads a nested group, e.g., "[foo.bar]" would consume "[foo.]" in read_ini
 /// and then delegate to this function for parsing "bar]".
-template <class Iterator, class Sentinel, class Consumer>
-void read_nested_group(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
+template <class State, class Consumer>
+void read_nested_group(State& ps, Consumer&& consumer) {
   using std::swap;
   std::string key;
   auto alnum = [](char x) { return isalnum(x) || x == '_'; };
@@ -290,8 +290,8 @@ void read_nested_group(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
 }
 
 /// Reads an INI formatted input.
-template <class Iterator, class Sentinel, class Consumer>
-void read_ini(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
+template <class State, class Consumer>
+void read_ini(State& ps, Consumer&& consumer) {
   using std::swap;
   std::string tmp{"global"};
   auto alnum = [](char x) { return isalnum(x) || x == '_'; };

@@ -33,7 +33,7 @@ using ls = std::vector<std::string>;
 
 namespace {
 
-const char test_ini[] = R"(
+constexpr const string_view test_ini = R"(
 is_server=true
 port=4242
 nodes=["sun", "venus", ]
@@ -44,7 +44,7 @@ file-name = "foobar.ini" ; our file name
 impl =       'foo';some atom
 )";
 
-const char test_ini2[] = R"(
+constexpr const string_view test_ini2 = R"(
 is_server = true
 logger = {
   file-name = "foobar.ini"
@@ -58,7 +58,6 @@ nodes = ["sun", "venus"]
 )";
 
 struct fixture {
-  detail::parser::state<std::string::const_iterator> res;
   config_option_set options;
   settings config;
 
@@ -78,20 +77,18 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(ini_consumer_tests, fixture)
 
 CAF_TEST(ini_value_consumer) {
-  std::string str = R"("hello world")";
+  string_view str = R"("hello world")";
   detail::ini_value_consumer consumer;
-  res.i = str.begin();
-  res.e = str.end();
+  string_parser_state res{str.begin(), str.end()};
   detail::parser::read_ini_value(res, consumer);
   CAF_CHECK_EQUAL(res.code, pec::success);
   CAF_CHECK_EQUAL(get<string>(consumer.result), "hello world");
 }
 
 CAF_TEST(ini_consumer) {
-  std::string str = test_ini;
+  string_view str = test_ini;
   detail::ini_consumer consumer{options, config};
-  res.i = str.begin();
-  res.e = str.end();
+  string_parser_state res{str.begin(), str.end()};
   detail::parser::read_ini(res, consumer);
   CAF_CHECK_EQUAL(res.code, pec::success);
   CAF_CHECK_EQUAL(get<bool>(config, "is_server"), true);
@@ -103,12 +100,11 @@ CAF_TEST(ini_consumer) {
 }
 
 CAF_TEST(simplified syntax) {
-  std::string str = test_ini;
+  string_view str = test_ini;
   CAF_MESSAGE("read test_ini");
   {
     detail::ini_consumer consumer{options, config};
-    res.i = str.begin();
-    res.e = str.end();
+    string_parser_state res{str.begin(), str.end()};
     detail::parser::read_ini(res, consumer);
     CAF_CHECK_EQUAL(res.code, pec::success);
   }
@@ -117,8 +113,7 @@ CAF_TEST(simplified syntax) {
   CAF_MESSAGE("read test_ini2");
   {
     detail::ini_consumer consumer{options, config2};
-    res.i = str.begin();
-    res.e = str.end();
+    string_parser_state res{str.begin(), str.end()};
     detail::parser::read_ini(res, consumer);
     CAF_CHECK_EQUAL(res.code, pec::success);
   }

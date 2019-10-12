@@ -25,7 +25,6 @@
 #include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/is_digit.hpp"
-#include "caf/detail/parser/state.hpp"
 #include "caf/detail/parser/sub_ascii.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/ipv4_address.hpp"
@@ -48,8 +47,8 @@ struct read_ipv4_octet_consumer {
   }
 };
 
-template <class Iterator, class Sentinel, class Consumer>
-void read_ipv4_octet(state<Iterator, Sentinel>& ps, Consumer& consumer) {
+template <class State, class Consumer>
+void read_ipv4_octet(State& ps, Consumer& consumer) {
   uint8_t res = 0;
   // Reads the a decimal place.
   auto rd_decimal = [&](char c) {
@@ -72,8 +71,8 @@ void read_ipv4_octet(state<Iterator, Sentinel>& ps, Consumer& consumer) {
 
 /// Reads a number, i.e., on success produces either an `int64_t` or a
 /// `double`.
-template <class Iterator, class Sentinel, class Consumer>
-void read_ipv4_address(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
+template <class State, class Consumer>
+void read_ipv4_address(State& ps, Consumer&& consumer) {
   read_ipv4_octet_consumer f;
   auto g = make_scope_guard([&] {
     if (ps.code <= pec::trailing_character) {

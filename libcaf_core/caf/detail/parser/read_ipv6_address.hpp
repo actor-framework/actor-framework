@@ -27,7 +27,6 @@
 #include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/is_digit.hpp"
-#include "caf/detail/parser/state.hpp"
 #include "caf/detail/parser/sub_ascii.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/ipv4_address.hpp"
@@ -57,8 +56,8 @@ namespace parser {
 //  h16         = 1*4HEXDIG
 
 /// Reads 16 (hex) bits of an IPv6 address.
-template <class Iterator, class Sentinel, class Consumer>
-void read_ipv6_h16(state<Iterator, Sentinel>& ps, Consumer& consumer) {
+template <class State, class Consumer>
+void read_ipv6_h16(State& ps, Consumer& consumer) {
   uint16_t res = 0;
   size_t digits = 0;
   // Reads the a hexadecimal place.
@@ -83,8 +82,8 @@ void read_ipv6_h16(state<Iterator, Sentinel>& ps, Consumer& consumer) {
 }
 
 /// Reads 16 (hex) or 32 (IPv4 notation) bits of an IPv6 address.
-template <class Iterator, class Sentinel, class Consumer>
-void read_ipv6_h16_or_l32(state<Iterator, Sentinel>& ps, Consumer& consumer) {
+template <class State, class Consumer>
+void read_ipv6_h16_or_l32(State& ps, Consumer& consumer) {
   enum mode_t { indeterminate, v6_bits, v4_octets };
   mode_t mode = indeterminate;
   uint16_t hex_res = 0;
@@ -173,8 +172,8 @@ read_ipv6_address_piece_consumer<F> make_read_ipv6_address_piece_consumer(F f) {
 
 /// Reads a number, i.e., on success produces either an `int64_t` or a
 /// `double`.
-template <class Iterator, class Sentinel, class Consumer>
-void read_ipv6_address(state<Iterator, Sentinel>& ps, Consumer&& consumer) {
+template <class State, class Consumer>
+void read_ipv6_address(State& ps, Consumer&& consumer) {
   // IPv6 allows omitting blocks of zeros, splitting the string into a part
   // before the zeros (prefix) and a part after the zeros (suffix). For example,
   // ff::1 is 00FF0000000000000000000000000001

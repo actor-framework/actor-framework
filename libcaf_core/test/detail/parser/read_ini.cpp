@@ -25,6 +25,11 @@
 #include <string>
 #include <vector>
 
+#include "caf/config_value.hpp"
+#include "caf/parser_state.hpp"
+#include "caf/pec.hpp"
+#include "caf/string_view.hpp"
+
 using namespace caf;
 
 namespace {
@@ -85,11 +90,9 @@ struct ini_consumer {
 };
 
 struct fixture {
-  expected<log_type> parse(std::string str, bool expect_success = true) {
-    detail::parser::state<std::string::iterator> res;
+  expected<log_type> parse(string_view str, bool expect_success = true) {
     test_consumer f;
-    res.i = str.begin();
-    res.e = str.end();
+    string_parser_state res{str.begin(), str.end()};
     detail::parser::read_ini(res, f);
     if ((res.code == pec::success) != expect_success) {
       CAF_MESSAGE("unexpected parser result state: " << res.code);
@@ -105,7 +108,7 @@ log_type make_log(Ts&&... xs) {
 }
 
 // Tests basic functionality.
-const auto ini0 = R"(
+constexpr const string_view ini0 = R"(
 [1group]
 1value=321
 [_foo]
@@ -204,7 +207,7 @@ const auto ini0_log = make_log(
 // clang-format on
 
 // Tests nested parameters.
-const auto ini1 = R"(
+constexpr const string_view ini1 = R"(
 foo {
   bar = {
     value1 = 1
@@ -241,11 +244,11 @@ const auto ini1_log = make_log(
 );
 // clang-format on
 
-const auto ini2 = "#";
+constexpr const string_view ini2 = "#";
 
 const auto ini2_log = make_log();
 
-const auto ini3 = "; foobar\n!";
+constexpr const string_view ini3 = "; foobar\n!";
 
 const auto ini3_log = make_log();
 

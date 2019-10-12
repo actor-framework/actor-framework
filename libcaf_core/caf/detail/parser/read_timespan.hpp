@@ -24,7 +24,6 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/parser/read_signed_integer.hpp"
-#include "caf/detail/parser/state.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/optional.hpp"
 #include "caf/pec.hpp"
@@ -39,8 +38,8 @@ namespace detail {
 namespace parser {
 
 /// Reads a timespan.
-template <class Iterator, class Sentinel, class Consumer>
-void read_timespan(state<Iterator, Sentinel>& ps, Consumer&& consumer,
+template <class State, class Consumer>
+void read_timespan(State& ps, Consumer&& consumer,
                    optional<int64_t> num = none) {
   using namespace std::chrono;
   struct interim_consumer {

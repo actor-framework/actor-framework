@@ -23,7 +23,7 @@
 #include "caf/config_option.hpp"
 #include "caf/config_value.hpp"
 #include "caf/detail/parse.hpp"
-#include "caf/detail/type_name.hpp"
+#include "caf/detail/type_traits.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
@@ -48,20 +48,22 @@ void store_impl(void* ptr, const config_value& x) {
 
 template <class T>
 config_value get_impl(const void* ptr) {
-  return config_value{*reinterpret_cast<const T*>(ptr)};
+  using trait = select_config_value_access_t<T>;
+  return config_value{trait::convert(*reinterpret_cast<const T*>(ptr))};
 }
 
 template <class T>
 expected<config_value> parse_impl(T* ptr, string_view str) {
-  if (ptr != nullptr) {
-    if (auto err = parse(str, *ptr))
-      return err;
-    return config_value{*ptr};
+  if (!ptr) {
+    T tmp;
+    return parse_impl(&tmp, str);
   }
-  T tmp;
-  if (auto err = parse(str, tmp))
-    return err;
-  return config_value{std::move(tmp)};
+  using trait = select_config_value_access_t<T>;
+  string_parser_state ps{str.begin(), str.end()};
+  trait::parse_cli(ps, *ptr);
+  if (ps.code != pec::success)
+    return make_error(ps);
+  return config_value{trait::convert(*ptr)};
 }
 
 expected<config_value> parse_impl(std::string* ptr, string_view str);
@@ -73,9 +75,10 @@ expected<config_value> parse_impl_delegate(void* ptr, string_view str) {
 
 template <class T>
 config_option::meta_state* option_meta_state_instance() {
+  using trait = select_config_value_access_t<T>;
   static config_option::meta_state obj{check_impl<T>, store_impl<T>,
                                        get_impl<T>, parse_impl_delegate<T>,
-                                       detail::type_name<T>()};
+                                       trait::type_name()};
   return &obj;
 }
 

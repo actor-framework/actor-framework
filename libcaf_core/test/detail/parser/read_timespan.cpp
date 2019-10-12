@@ -24,6 +24,10 @@
 
 #include <chrono>
 
+#include "caf/parser_state.hpp"
+#include "caf/string_view.hpp"
+#include "caf/variant.hpp"
+
 using namespace caf;
 
 namespace {
@@ -62,7 +66,7 @@ struct timespan_consumer {
 
 optional<timespan> read(string_view str) {
   timespan_consumer consumer;
-  detail::parser::state<string_view::iterator> ps{str.begin(), str.end()};
+  string_parser_state ps{str.begin(), str.end()};
   detail::parser::read_timespan(ps, consumer);
   if (ps.code != pec::success)
     return none;

@@ -26,7 +26,6 @@
 #include "caf/config.hpp"
 #include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/is_char.hpp"
-#include "caf/detail/parser/state.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/pec.hpp"
 
@@ -40,9 +39,8 @@ namespace parser {
 
 /// Reads a number, i.e., on success produces either an `int64_t` or a
 /// `double`.
-template <class Iterator, class Sentinel, class Consumer>
-void read_atom(state<Iterator, Sentinel>& ps, Consumer&& consumer,
-               bool accept_unquoted = false) {
+template <class State, class Consumer>
+void read_atom(State& ps, Consumer&& consumer, bool accept_unquoted = false) {
   size_t pos = 0;
   char buf[11];
   memset(buf, 0, sizeof(buf));

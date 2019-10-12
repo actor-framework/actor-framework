@@ -26,7 +26,6 @@
 #include "caf/detail/parser/is_char.hpp"
 #include "caf/detail/parser/is_digit.hpp"
 #include "caf/detail/parser/read_floating_point.hpp"
-#include "caf/detail/parser/state.hpp"
 #include "caf/detail/parser/sub_ascii.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/pec.hpp"
@@ -41,8 +40,8 @@ namespace parser {
 
 /// Reads a number, i.e., on success produces either an `int64_t` or a
 /// `double`.
-template <class Iterator, class Sentinel, class Consumer>
-void read_number(state<Iterator, Sentinel>& ps, Consumer& consumer) {
+template <class State, class Consumer>
+void read_number(State& ps, Consumer& consumer) {
   // Our result when reading an integer number.
   int64_t result = 0;
   // Computes the result on success.
