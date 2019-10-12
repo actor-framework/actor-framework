@@ -508,7 +508,7 @@ struct select_config_value_access<T, select_config_value_hint::is_list> {
   };
 };
 
-/// Catches all non-specialized list types.
+/// Catches all non-specialized map types.
 template <class T>
 struct select_config_value_access<T, select_config_value_hint::is_map> {
   struct type {

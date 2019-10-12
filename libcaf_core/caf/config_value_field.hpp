@@ -36,7 +36,7 @@ public:
   /// Checks whether `x` matches the type of this field.
   virtual bool type_check(const config_value& x) const noexcept = 0;
 
-  /// Returns whether this field in `object` .
+  /// Returns whether this field in `object` contains valid data.
   virtual bool valid(const Object& object) const noexcept = 0;
 
   /// Returns whether this field has a default value.
@@ -50,7 +50,7 @@ public:
 
   // -- modifiers --------------------------------------------------------------
 
-  /// Sets this field in `object` to `x`.`
+  /// Sets this field in `object` to `x`.
   /// @pre `can_set(x)`
   virtual void set(Object& object, const config_value& x) const = 0;
 

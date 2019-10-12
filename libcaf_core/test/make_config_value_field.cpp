@@ -215,8 +215,8 @@ CAF_TEST(oject access from dictionary - foobar) {
     auto fb = get<foobar>(x, "my-value");
     CAF_CHECK_EQUAL(fb.foo, 123);
     CAF_CHECK_EQUAL(fb.bar, "hello");
-    CAF_MESSAGE("with foo member");
   }
+  CAF_MESSAGE("with foo member");
   put(x, "my-value.foo", 42);
   {
     CAF_REQUIRE(holds_alternative<foobar>(x, "my-value"));
@@ -224,7 +224,6 @@ CAF_TEST(oject access from dictionary - foobar) {
     auto fb = get<foobar>(x, "my-value");
     CAF_CHECK_EQUAL(fb.foo, 42);
     CAF_CHECK_EQUAL(fb.bar, "hello");
-    CAF_MESSAGE("with foo member");
   }
 }
 

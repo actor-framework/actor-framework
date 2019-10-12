@@ -94,7 +94,7 @@ void store_timespan(void* ptr, const config_value& x) {
 template <uint64_t Denominator>
 config_value get_timespan(const void* ptr) {
   auto ival = static_cast<int64_t>(*static_cast<const size_t*>(ptr));
-  timespan val{ival * 1000};
+  timespan val{ival * Denominator};
   return config_value{val};
 }
 
