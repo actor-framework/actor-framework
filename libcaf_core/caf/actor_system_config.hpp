@@ -415,14 +415,14 @@ private:
 const settings& content(const actor_system_config& cfg);
 
 /// Tries to retrieve the value associated to `name` from `cfg`.
-/// @relates config_value
+/// @relates actor_system_config
 template <class T>
 optional<T> get_if(const actor_system_config* cfg, string_view name) {
   return get_if<T>(&content(*cfg), name);
 }
 
 /// Retrieves the value associated to `name` from `cfg`.
-/// @relates config_value
+/// @relates actor_system_config
 template <class T>
 T get(const actor_system_config& cfg, string_view name) {
   return get<T>(content(cfg), name);
@@ -430,7 +430,7 @@ T get(const actor_system_config& cfg, string_view name) {
 
 /// Retrieves the value associated to `name` from `cfg` or returns
 /// `default_value`.
-/// @relates config_value
+/// @relates actor_system_config
 template <class T, class = typename std::enable_if<
                      !std::is_pointer<T>::value
                      && !std::is_convertible<T, string_view>::value>::type>
@@ -440,10 +440,17 @@ T get_or(const actor_system_config& cfg, string_view name, T default_value) {
 
 /// Retrieves the value associated to `name` from `cfg` or returns
 /// `default_value`.
-/// @relates config_value
+/// @relates actor_system_config
 inline std::string get_or(const actor_system_config& cfg, string_view name,
                           string_view default_value) {
   return get_or(content(cfg), name, default_value);
+}
+
+/// Returns whether `xs` associates a value of type `T` to `name`.
+/// @relates actor_system_config
+template <class T>
+bool holds_alternative(const actor_system_config& cfg, string_view name) {
+  return holds_alternative<T>(content(cfg), name);
 }
 
 } // namespace caf
