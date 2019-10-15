@@ -22,6 +22,7 @@
 
 #include "caf/test/dsl.hpp"
 
+#include "caf/actor_system_config.hpp"
 #include "caf/config_option_set.hpp"
 #include "caf/config_value_object_access.hpp"
 
@@ -130,15 +131,12 @@ struct fixture {
     foobar x;
     CAF_CHECK_EQUAL(foo_field.name(), "foo");
     CAF_REQUIRE(foo_field.has_default());
-    CAF_CHECK(foo_field.valid(x));
     CAF_CHECK_EQUAL(foo_field.get(x), config_value(0));
     foo_field.set_default(x);
     CAF_CHECK_EQUAL(foo_field.get(x), config_value(42));
-    CAF_CHECK(!foo_field.type_check(config_value(1.)));
-    CAF_CHECK(foo_field.type_check(config_value(-1)));
-    foo_field.set(x, config_value(-1));
-    CAF_CHECK_EQUAL(foo_field.get(x), config_value(-1));
-    CAF_CHECK(!foo_field.valid(x));
+    CAF_CHECK(!foo_field.valid_input(config_value(1.)));
+    CAF_CHECK(!foo_field.valid_input(config_value(-1)));
+    CAF_CHECK(!foo_field.set(x, config_value(-1)));
     string_view input = "123";
     string_parser_state ps{input.begin(), input.end()};
     foo_field.parse_cli(ps, x);
@@ -255,6 +253,67 @@ CAF_TEST(object access from CLI arguments - foobar_foobar) {
   opts.add<fbfb>("value,v", "some value");
   CAF_CHECK_EQUAL(read<fbfb>({"-v{x={bar = hello},y={foo=1,bar=world!},}"}),
                   fbfb({123, "hello"}, {1, "world!"}));
+}
+
+namespace {
+
+constexpr const char* config_text = R"__(
+arg1 = {
+  foo = 42
+  bar = "Don't panic!"
+}
+arg2 = {
+  x = {
+    foo = 1
+    bar = "hello"
+  }
+  y = {
+    foo = 2
+    bar = "world"
+  }
+}
+)__";
+
+struct test_config : actor_system_config {
+  test_config() {
+    opt_group{custom_options_, "global"}
+      .add(fb, "arg1,1", "some foobar")
+      .add(fbfb, "arg2,2", "somme foobar-foobar");
+  }
+  foobar fb;
+  foobar_foobar fbfb;
+};
+
+} // namespace
+
+CAF_TEST(object access from actor system config - file input) {
+  test_config cfg;
+  std::istringstream in{config_text};
+  if (auto err = cfg.parse(0, nullptr, in))
+    CAF_FAIL("cfg.parse failed: " << cfg.render(err));
+  CAF_CHECK_EQUAL(cfg.fb.foo, 42);
+  CAF_CHECK_EQUAL(cfg.fb.bar, "Don't panic!");
+  CAF_CHECK_EQUAL(cfg.fbfb.x.foo, 1);
+  CAF_CHECK_EQUAL(cfg.fbfb.y.foo, 2);
+  CAF_CHECK_EQUAL(cfg.fbfb.x.bar, "hello");
+  CAF_CHECK_EQUAL(cfg.fbfb.y.bar, "world");
+}
+
+CAF_TEST(object access from actor system config - file input and arguments) {
+  std::vector<std::string> args{
+    "-2",
+    "{y = {bar = CAF, foo = 20}, x = {foo = 10, bar = hello}}",
+  };
+  test_config cfg;
+  std::istringstream in{config_text};
+  if (auto err = cfg.parse(std::move(args), in))
+    CAF_FAIL("cfg.parse failed: " << cfg.render(err));
+  CAF_CHECK_EQUAL(cfg.fb.foo, 42);
+  CAF_CHECK_EQUAL(cfg.fb.bar, "Don't panic!");
+  CAF_CHECK_EQUAL(cfg.fbfb.x.foo, 10);
+  CAF_CHECK_EQUAL(cfg.fbfb.y.foo, 20);
+  CAF_CHECK_EQUAL(cfg.fbfb.x.bar, "hello");
+  CAF_CHECK_EQUAL(cfg.fbfb.y.bar, "CAF");
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

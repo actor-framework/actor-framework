@@ -107,30 +107,11 @@ void parse_element(string_parser_state& ps, std::string& x,
 
 template <class T>
 enable_if_t<!is_pair<T>::value> parse_element(string_parser_state& ps, T& x,
-                                              const char*) {
-  parse(ps, x);
-}
+                                              const char*);
 
 template <class First, class Second, size_t N>
 void parse_element(string_parser_state& ps, std::pair<First, Second>& kvp,
-                   const char (&char_blacklist)[N]) {
-  static_assert(N > 0, "empty array");
-  // TODO: consider to guard the blacklist computation with
-  //       `if constexpr (is_same_v<First, string>)` when switching to C++17.
-  char key_blacklist[N + 1];
-  if (N > 1)
-    memcpy(key_blacklist, char_blacklist, N - 1);
-  key_blacklist[N - 1] = '=';
-  key_blacklist[N] = '\0';
-  parse_element(ps, kvp.first, key_blacklist);
-  if (ps.code > pec::trailing_character)
-    return;
-  if (!ps.consume('=')) {
-    ps.code = pec::unexpected_character;
-    return;
-  }
-  parse_element(ps, kvp.second, char_blacklist);
-}
+                   const char (&char_blacklist)[N]);
 
 template <class T>
 enable_if_tt<is_iterable<T>> parse(string_parser_state& ps, T& xs) {
@@ -175,6 +156,33 @@ enable_if_tt<is_iterable<T>> parse(string_parser_state& ps, T& xs) {
     *out++ = std::move(tmp);
   } while (ps.consume(','));
   ps.code = ps.at_end() ? pec::success : pec::trailing_character;
+}
+
+template <class T>
+enable_if_t<!is_pair<T>::value> parse_element(string_parser_state& ps, T& x,
+                                              const char*) {
+  parse(ps, x);
+}
+
+template <class First, class Second, size_t N>
+void parse_element(string_parser_state& ps, std::pair<First, Second>& kvp,
+                   const char (&char_blacklist)[N]) {
+  static_assert(N > 0, "empty array");
+  // TODO: consider to guard the blacklist computation with
+  //       `if constexpr (is_same_v<First, string>)` when switching to C++17.
+  char key_blacklist[N + 1];
+  if (N > 1)
+    memcpy(key_blacklist, char_blacklist, N - 1);
+  key_blacklist[N - 1] = '=';
+  key_blacklist[N] = '\0';
+  parse_element(ps, kvp.first, key_blacklist);
+  if (ps.code > pec::trailing_character)
+    return;
+  if (!ps.consume('=')) {
+    ps.code = pec::unexpected_character;
+    return;
+  }
+  parse_element(ps, kvp.second, char_blacklist);
 }
 
 // -- convenience functions ----------------------------------------------------
