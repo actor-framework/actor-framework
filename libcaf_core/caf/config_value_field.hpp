@@ -47,7 +47,8 @@ public:
 
   // -- modifiers --------------------------------------------------------------
 
-  /// Sets this field in `object` to `x`.
+  /// Tries to set this field in `object` to `x`.
+  /// @returns `true` on success, `false` otherwise.
   virtual bool set(Object& object, const config_value& x) const = 0;
 
   /// Restores the default value for this field in `object`.
