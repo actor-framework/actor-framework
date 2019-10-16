@@ -20,19 +20,19 @@
 
 #include <type_traits>
 
-#include "caf/sec.hpp"
 #include "caf/catch_all.hpp"
 #include "caf/message_id.hpp"
-#include "caf/typed_behavior.hpp"
+#include "caf/sec.hpp"
 #include "caf/system_messages.hpp"
+#include "caf/typed_behavior.hpp"
 
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 
 namespace caf {
 
-/// This helper class identifies an expected response message
-/// and enables `request(...).then(...)`.
+/// This helper class identifies an expected response message and enables
+/// `request(...).then(...)`.
 template <class Self, class Output, bool IsBlocking>
 class response_handle;
 
@@ -55,8 +55,7 @@ public:
     await_impl(f);
   }
 
-  template <class F, class OnError,
-            class E1 = detail::is_callable_t<F>,
+  template <class F, class OnError, class E1 = detail::is_callable_t<F>,
             class E2 = detail::is_handler_for_ef<OnError, error>>
   void await(F f, OnError e) const {
     await_impl(f, e);
@@ -67,8 +66,7 @@ public:
     then_impl(f);
   }
 
-  template <class F, class OnError,
-            class E1 = detail::is_callable_t<F>,
+  template <class F, class OnError, class E1 = detail::is_callable_t<F>,
             class E2 = detail::is_handler_for_ef<OnError, error>>
   void then(F f, OnError e) const {
     then_impl(f, e);
@@ -79,54 +77,40 @@ public:
   }
 
 private:
-  template <class F>
-  void await_impl(F& f) const {
-    static_assert(std::is_same<
-                    void,
-                    typename detail::get_callable_trait<F>::result_type
-                  >::value,
-                  "response handlers are not allowed to have a return "
-                  "type other than void");
-    detail::type_checker<Output, F>::check();
-    self_->add_awaited_response_handler(mid_, message_handler{std::move(f)});
-  }
-
   template <class F, class OnError>
-  void await_impl(F& f, OnError& ef) const {
-    static_assert(std::is_same<
-                    void,
-                    typename detail::get_callable_trait<F>::result_type
-                  >::value,
+  void await_impl(F& f, OnError& g) const {
+    using result_type = typename detail::get_callable_trait<F>::result_type;
+    static_assert(std::is_same<void, result_type>::value,
                   "response handlers are not allowed to have a return "
                   "type other than void");
     detail::type_checker<Output, F>::check();
-    self_->add_awaited_response_handler(mid_, behavior{std::move(f),
-                                                       std::move(ef)});
+    self_->add_awaited_response_handler(mid_,
+                                        behavior{std::move(f), std::move(g)});
   }
 
   template <class F>
-  void then_impl(F& f) const {
-    static_assert(std::is_same<
-                    void,
-                    typename detail::get_callable_trait<F>::result_type
-                  >::value,
-                  "response handlers are not allowed to have a return "
-                  "type other than void");
-    detail::type_checker<Output, F>::check();
-    self_->add_multiplexed_response_handler(mid_, behavior{std::move(f)});
+  void await_impl(F& f) const {
+    auto self = self_;
+    auto on_error = [self](error& err) { self->call_error_handler(err); };
+    return await_impl(f, on_error);
   }
 
   template <class F, class OnError>
-  void then_impl(F& f, OnError& ef) const {
-    static_assert(std::is_same<
-                    void,
-                    typename detail::get_callable_trait<F>::result_type
-                  >::value,
+  void then_impl(F& f, OnError& g) const {
+    using result_type = typename detail::get_callable_trait<F>::result_type;
+    static_assert(std::is_same<void, result_type>::value,
                   "response handlers are not allowed to have a return "
                   "type other than void");
     detail::type_checker<Output, F>::check();
     self_->add_multiplexed_response_handler(mid_, behavior{std::move(f),
-                                                           std::move(ef)});
+                                                           std::move(g)});
+  }
+
+  template <class F>
+  void then_impl(F& f) const {
+    auto self = self_;
+    auto on_error = [self](error& err) { self->call_error_handler(err); };
+    return then_impl(f, on_error);
   }
 
   message_id mid_;
@@ -147,33 +131,30 @@ public:
     // nop
   }
 
-  using error_handler = std::function<void (error&)>;
+  using error_handler = std::function<void(error&)>;
 
   template <class F, class OnError,
             class E = detail::is_handler_for_ef<OnError, error>>
-  detail::is_callable_t<F> receive(F f, OnError ef) {
-    static_assert(std::is_same<
-                    void,
-                    typename detail::get_callable_trait<F>::result_type
-                  >::value,
+  detail::is_callable_t<F> receive(F f, OnError g) {
+    using result_type = typename detail::get_callable_trait<F>::result_type;
+    static_assert(std::is_same<void, result_type>::value,
                   "response handlers are not allowed to have a return "
                   "type other than void");
     detail::type_checker<Output, F>::check();
     typename Self::accept_one_cond rc;
-    self_->varargs_receive(rc, mid_, std::move(f), std::move(ef));
+    self_->varargs_receive(rc, mid_, std::move(f), std::move(g));
   }
 
-  template <class OnError, class F,
-            class E = detail::is_callable_t<F>>
-  detail::is_handler_for_ef<OnError, error> receive(OnError ef, F f) {
-    receive(std::move(f), std::move(ef));
+  template <class OnError, class F, class E = detail::is_callable_t<F>>
+  detail::is_handler_for_ef<OnError, error> receive(OnError g, F f) {
+    receive(std::move(f), std::move(g));
   }
 
   template <class OnError, class F,
             class E = detail::is_handler_for_ef<OnError, error>>
-  void receive(OnError ef, catch_all<F> ca) {
+  void receive(OnError g, catch_all<F> f) {
     typename Self::accept_one_cond rc;
-    self_->varargs_receive(rc, mid_, std::move(ef), std::move(ca));
+    self_->varargs_receive(rc, mid_, std::move(g), std::move(f));
   }
 
   Self* self() {
@@ -186,4 +167,3 @@ private:
 };
 
 } // namespace caf
-

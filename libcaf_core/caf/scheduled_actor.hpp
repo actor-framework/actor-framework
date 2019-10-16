@@ -815,6 +815,10 @@ public:
       swap(g, f);
   }
 
+  void call_error_handler(error& err) {
+    call_handler(error_handler_, this, err);
+  }
+
   // -- timeout management -----------------------------------------------------
 
   /// Requests a new timeout and returns its ID.
