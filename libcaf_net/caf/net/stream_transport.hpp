@@ -18,11 +18,13 @@
 
 #pragma once
 
+#include "caf/actor_system_config.hpp"
 #include "caf/byte.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
+#include "caf/net/defaults.hpp"
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/stream_socket.hpp"
@@ -90,6 +92,10 @@ public:
   template <class Parent>
   error init(Parent& parent) {
     manager_ = &parent;
+    max_output_bufs_ = get_or(system().config(), "middleman.max-output-buffers",
+                              defaults::middleman::max_output_buffers);
+    max_header_bufs_ = get_or(system().config(), "middleman.max-header-buffers",
+                              defaults::middleman::max_header_buffers);
     if (auto err = worker_.init(*this))
       return err;
     return none;
@@ -246,9 +252,9 @@ private:
       auto& buf = front.second;
       written_ = 0;
       buf.clear();
-      if (is_header)
+      if (is_header && free_header_bufs_.size() < max_header_bufs_)
         free_header_bufs_.emplace_back(std::move(buf));
-      else
+      else if (free_bufs_.size() < max_output_bufs_)
         free_bufs_.emplace_back(std::move(buf));
       write_queue_.pop_front();
     };
@@ -291,6 +297,8 @@ private:
 
   std::deque<buffer_type> free_header_bufs_;
   std::deque<buffer_type> free_bufs_;
+  size_t max_output_bufs_;
+  size_t max_header_bufs_;
 
   buffer_type read_buf_;
   std::deque<std::pair<bool, buffer_type>> write_queue_;
@@ -305,7 +313,7 @@ private:
   size_t written_;
 
   endpoint_manager* manager_;
-};
+}; // namespace net
 
 } // namespace net
 } // namespace caf
