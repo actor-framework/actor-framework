@@ -76,14 +76,14 @@ public:
     if (!std::is_base_of<test_tag, Parent>::value)
       manager_ = &parent.manager();
     // Write handshake.
-    auto header_buf = parent.next_header_buffer();
-    auto payload_buf = parent.next_buffer();
-    if (auto err = generate_handshake(payload_buf))
+    auto hdr = parent.next_header_buffer();
+    auto payload = parent.next_buffer();
+    if (auto err = generate_handshake(payload))
       return err;
     to_bytes(header{message_type::handshake,
-                    static_cast<uint32_t>(payload_buf.size()), version},
-             header_buf);
-    parent.write_packet(header_buf, payload_buf);
+                    static_cast<uint32_t>(payload.size()), version},
+             hdr);
+    parent.write_packet(hdr, payload);
     parent.transport().configure_read(receive_policy::exactly(header_size));
     return none;
   }
@@ -146,17 +146,17 @@ private:
   error handle_actor_message(packet_writer& writer, header hdr,
                              byte_span payload);
 
-  error handle_resolve_request(packet_writer& writer, header hdr,
-                               byte_span payload);
+  error handle_resolve_request(packet_writer& writer, header rec_hdr,
+                               byte_span received);
 
-  error handle_resolve_response(packet_writer& writer, header hdr,
-                                byte_span payload);
+  error handle_resolve_response(packet_writer& writer, header received_hdr,
+                                byte_span received);
 
-  error handle_monitor_message(packet_writer& writer, header hdr,
-                               byte_span payload);
+  error handle_monitor_message(packet_writer& writer, header received_hdr,
+                               byte_span received);
 
-  error handle_down_message(packet_writer& writer, header hdr,
-                            byte_span payload);
+  error handle_down_message(packet_writer& writer, header received_hdr,
+                            byte_span received);
 
   /// Writes the handshake payload to `buf_`.
   error generate_handshake(buffer_type& buf);

@@ -29,7 +29,7 @@ namespace net {
 /// Implements the interface for transport and application policies and
 /// dispatches member functions either to `object` or `parent`.
 template <class Object, class Parent>
-class packet_writer_impl final : public packet_writer {
+class packet_writer_decorator final : public packet_writer {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -39,7 +39,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  packet_writer_impl(Object& object, Parent& parent)
+  packet_writer_decorator(Object& object, Parent& parent)
     : object_(object), parent_(parent) {
     // nop
   }
@@ -88,8 +88,8 @@ private:
 };
 
 template <class Object, class Parent>
-packet_writer_impl<Object, Parent> make_packet_writer_impl(Object& object,
-                                                           Parent& parent) {
+packet_writer_decorator<Object, Parent>
+make_packet_writer_decorator(Object& object, Parent& parent) {
   return {object, parent};
 }
 

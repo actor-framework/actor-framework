@@ -238,40 +238,41 @@ private:
   // -- private member functions -----------------------------------------------
 
   bool write_some() {
-    auto begin = [&]() { return write_queue_.begin(); };
+    CAF_LOG_TRACE(CAF_ARG(handle_.id));
     // helper to sort empty buffers back into the right queues
     auto recycle = [&]() {
-      auto is_header = [](std::pair<bool, buffer_type>& p) { return p.first; };
-      begin()->second.clear();
-      if (is_header(*begin()))
-        free_header_bufs_.emplace_back(std::move(begin()->second));
+      auto& front = write_queue_.front();
+      auto& is_header = front.first;
+      auto& buf = front.second;
+      written_ = 0;
+      buf.clear();
+      if (is_header)
+        free_header_bufs_.emplace_back(std::move(buf));
       else
-        free_bufs_.emplace_back(std::move(begin()->second));
+        free_bufs_.emplace_back(std::move(buf));
       write_queue_.pop_front();
     };
     // nothing to write
     if (write_queue_.empty())
       return false;
     do {
-      if (begin()->second.empty()) {
+      auto& buf = write_queue_.front().second;
+      if (buf.empty()) {
         recycle();
         continue;
       }
-      // get size of send buffer
-      auto ret = send_buffer_size(handle_);
-      if (!ret) {
-        CAF_LOG_ERROR("send_buffer_size returned an error" << CAF_ARG(ret));
-        return false;
-      }
-      // is send buffer of socket full?
-      if (begin()->second.size() > *ret)
-        return true;
-      CAF_LOG_TRACE(CAF_ARG(handle_.id));
-      auto write_ret = write(handle_, make_span(begin()->second));
+      auto data = buf.data() + written_;
+      auto len = buf.size() - written_;
+      auto write_ret = write(handle_, make_span(data, len));
       if (auto num_bytes = get_if<size_t>(&write_ret)) {
         CAF_LOG_DEBUG(CAF_ARG(handle_.id) << CAF_ARG(*num_bytes));
-        if (*num_bytes >= begin()->second.size())
+        if (*num_bytes + written_ >= buf.size()) {
           recycle();
+          written_ = 0;
+        } else {
+          written_ = *num_bytes;
+          return false;
+        }
       } else {
         auto err = get<sec>(write_ret);
         if (err != sec::unavailable_or_would_block) {
@@ -279,6 +280,7 @@ private:
           worker_.handle_error(err);
           return false;
         }
+        return true;
       }
     } while (!write_queue_.empty());
     return false;

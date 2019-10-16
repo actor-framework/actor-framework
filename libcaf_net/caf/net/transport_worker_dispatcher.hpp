@@ -24,7 +24,7 @@
 #include "caf/ip_endpoint.hpp"
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/net/fwd.hpp"
-#include "caf/net/packet_writer_impl.hpp"
+#include "caf/net/packet_writer_decorator.hpp"
 #include "caf/net/transport_worker.hpp"
 #include "caf/span.hpp"
 #include "caf/unit.hpp"
