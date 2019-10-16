@@ -222,8 +222,7 @@ expected<group> middleman::remote_group(const std::string& group_identifier,
                     const std::set<std::string>&) mutable {
             auto hdl = actor_cast<actor>(ptr);
             self->request(hdl, infinite, get_atom::value, group_identifier)
-              .then(
-                [=](group& result) mutable { rp.deliver(std::move(result)); });
+              .then([=](group& grp) mutable { rp.deliver(std::move(grp)); });
           });
       },
     };
@@ -231,11 +230,12 @@ expected<group> middleman::remote_group(const std::string& group_identifier,
   // Spawn the helper actor and wait for the result.
   expected<group> result{sec::cannot_connect_to_node};
   scoped_actor self{system(), true};
-  self
-    ->request(self->spawn<lazy_init>(two_step_lookup, actor_handle()), infinite,
-              get_atom::value)
-    .receive([&](group& grp) { result = std::move(grp); },
-             [&](error& err) { result = std::move(err); });
+  auto worker = self->spawn<lazy_init + monitored>(two_step_lookup,
+                                                   actor_handle());
+  self->send(worker, get_atom::value);
+  self->receive([&](group& grp) { result = std::move(grp); },
+                [&](error& err) { result = std::move(err); },
+                [&](down_msg& dm) { result = std::move(dm.reason); });
   return result;
 }
 
