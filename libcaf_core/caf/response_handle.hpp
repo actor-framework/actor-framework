@@ -91,9 +91,7 @@ private:
   template <class F>
   void await_impl(F& f) const {
     auto self = self_;
-    auto on_error = [self](error& err) {
-      self->call_error_handler(err);
-    };
+    auto on_error = [self](error& err) { self->call_error_handler(err); };
     return await_impl(f, on_error);
   }
 
@@ -111,9 +109,7 @@ private:
   template <class F>
   void then_impl(F& f) const {
     auto self = self_;
-    auto on_error = [self](error& err) {
-      self->call_error_handler(err);
-    };
+    auto on_error = [self](error& err) { self->call_error_handler(err); };
     return then_impl(f, on_error);
   }
 
