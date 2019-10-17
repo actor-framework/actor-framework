@@ -29,7 +29,7 @@ struct config_value_adaptor_field {
   /// Type of the field.
   using value_type = T;
 
-  /// Predicate function for .
+  /// Predicate function for verifying user input.
   using predicate_function = bool (*)(const value_type&);
 
   /// Name of the field in configuration files and on the CLI.
