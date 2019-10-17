@@ -41,6 +41,9 @@ public:
 
   using indices = typename detail::il_indices<value_type>::type;
 
+  using fields_tuple = typename detail::select_adaptor_fields<value_type,
+                                                              indices>::type;
+
   using array_type = std::array<config_value_field<value_type>*, sizeof...(Ts)>;
 
   template <class U,
@@ -48,7 +51,8 @@ public:
               !std::is_same<detail::decay_t<U>, config_value_adaptor>::value>,
             class... Us>
   config_value_adaptor(U&& x, Us&&... xs)
-    : fields_(std::forward<U>(x), std::forward<Us>(xs)...) {
+    : fields_(
+      make_fields(indices{}, std::forward<U>(x), std::forward<Us>(xs)...)) {
     init(indices{});
   }
 
@@ -59,12 +63,22 @@ public:
   }
 
 private:
+  // TODO: This is a workaround for GCC <= 5 because initializing fields_
+  //       directly from (xs...) fails. Remove when moving on to newer
+  //       compilers.
+  template <long... Pos, class... Us>
+  fields_tuple make_fields(detail::int_list<Pos...>, Us&&... xs) {
+    return std::make_tuple(
+      detail::config_value_adaptor_field_impl<value_type, Pos>(
+        std::forward<Us>(xs))...);
+  }
+
   template <long... Pos>
   void init(detail::int_list<Pos...>) {
     ptr_fields_ = array_type{{&std::get<Pos>(fields_)...}};
   }
 
-  typename detail::select_adaptor_fields<value_type, indices>::type fields_;
+  fields_tuple fields_;
 
   array_type ptr_fields_;
 };
