@@ -34,6 +34,7 @@ set(LIBCAF_NET_SRCS
   src/udp_datagram_socket.cpp
   src/defaults.cpp
   src/message_queue.cpp 
+  src/worker.cpp
 )
 
 add_custom_target(libcaf_net)
