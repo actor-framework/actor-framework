@@ -4,7 +4,7 @@
  *                     | |     / _ \ | |_       Actor                         *
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
- *                                                                            *
+ *                                                                            *#
  * Copyright 2011-2018 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -252,10 +252,12 @@ private:
       auto& buf = front.second;
       written_ = 0;
       buf.clear();
-      if (is_header && free_header_bufs_.size() < max_header_bufs_)
-        free_header_bufs_.emplace_back(std::move(buf));
-      else if (free_bufs_.size() < max_output_bufs_)
+      if (is_header) {
+        if (free_header_bufs_.size() < max_header_bufs_)
+          free_header_bufs_.emplace_back(std::move(buf));
+      } else if (free_bufs_.size() < max_output_bufs_) {
         free_bufs_.emplace_back(std::move(buf));
+      }
       write_queue_.pop_front();
     };
     // nothing to write
@@ -276,7 +278,7 @@ private:
           recycle();
           written_ = 0;
         } else {
-          written_ = *num_bytes;
+          written_ += *num_bytes;
           return false;
         }
       } else {
@@ -313,7 +315,7 @@ private:
   size_t written_;
 
   endpoint_manager* manager_;
-}; // namespace net
+};
 
 } // namespace net
 } // namespace caf

@@ -287,7 +287,7 @@ error application::handle_resolve_request(packet_writer& writer, header rec_hdr,
   binary_deserializer source{&executor_, received};
   if (auto err = source.begin_sequence(path_size))
     return err;
-  // We expect the received to consist only of the path.
+  // We expect the received buffer to contain the path only.
   if (path_size != source.remaining())
     return ec::invalid_payload;
   auto remainder = source.remainder();
