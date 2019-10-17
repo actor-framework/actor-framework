@@ -26,13 +26,31 @@ namespace caf {
 /// Describes a field of type T of an adaptor.
 template <class T>
 struct config_value_adaptor_field {
+  /// Type of the field.
   using value_type = T;
-  using predicate_function = bool (*)(const T&);
+
+  /// Predicate function for .
+  using predicate_function = bool (*)(const value_type&);
+
+  /// Name of the field in configuration files and on the CLI.
   string_view name;
-  optional<T> default_value;
+
+  /// If set, makes the field optional in configuration files and on the CLI by
+  /// assigning the default whenever the user provides no value.
+  optional<value_type> default_value;
+
+  /// If set, makes the field only accept values that pass this predicate.
   predicate_function predicate;
 };
 
+/// Convenience function for creating a `config_value_adaptor_field`.
+/// @param name name of the field in configuration files and on the CLI.
+/// @param default_value if set, provides a fallback value if the user does not
+///                      provide a value.
+/// @param predicate if set, restricts what values the field accepts.
+/// @returns a `config_value_adaptor_field` object, constructed from given
+///          arguments.
+/// @relates config_value_adaptor_field
 template <class T>
 config_value_adaptor_field<T>
 make_config_value_adaptor_field(string_view name,
