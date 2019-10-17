@@ -52,7 +52,7 @@ struct config_value_adaptor_access {
     using object_type = typename Trait::tuple_type;
 
     static std::string type_name() {
-      Trait::type_name();
+      return Trait::type_name();
     }
 
     static caf::span<config_value_field<object_type>*> fields() {
