@@ -77,5 +77,5 @@ public:
 };
 
 } // namespace basp
-} // namespace io
+} // namespace net
 } // namespace caf

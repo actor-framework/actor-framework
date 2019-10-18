@@ -19,6 +19,7 @@
 #include "caf/net/basp/worker.hpp"
 
 #include "caf/actor_system.hpp"
+#include "caf/byte.hpp"
 #include "caf/net/basp/message_queue.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
@@ -60,5 +61,5 @@ resumable::resume_result worker::resume(execution_unit* ctx, size_t) {
 }
 
 } // namespace basp
-} // namespace io
+} // namespace net
 } // namespace caf

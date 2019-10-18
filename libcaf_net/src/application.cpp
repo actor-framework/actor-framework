@@ -44,7 +44,10 @@ namespace caf {
 namespace net {
 namespace basp {
 
-application::application(proxy_registry& proxies) : proxies_(proxies) {
+application::application(proxy_registry& proxies)
+  : proxies_(proxies),
+    queue_{std::unique_ptr<message_queue>{new message_queue}},
+    hub_{std::unique_ptr<hub_type>{new hub_type}} {
   // nop
 }
 
@@ -248,34 +251,39 @@ error application::handle_handshake(packet_writer&, header hdr,
 
 error application::handle_actor_message(packet_writer&, header hdr,
                                         byte_span payload) {
-  CAF_LOG_TRACE(CAF_ARG(hdr) << CAF_ARG2("payload.size", payload.size()));
-  // Deserialize payload.
-  actor_id src_id = 0;
-  node_id src_node;
-  actor_id dst_id = 0;
-  std::vector<strong_actor_ptr> fwd_stack;
-  message content;
-  binary_deserializer source{&executor_, payload};
-  if (auto err = source(src_node, src_id, dst_id, fwd_stack, content))
-    return err;
-  // Sanity checks.
-  if (dst_id == 0)
-    return ec::invalid_payload;
-  // Try to fetch the receiver.
-  auto dst_hdl = system().registry().get(dst_id);
-  if (dst_hdl == nullptr) {
-    CAF_LOG_DEBUG("no actor found for given ID, drop message");
-    return caf::none;
+  auto worker = hub_->pop();
+  buffer_type buf(payload.begin(), payload.end());
+  if (worker != nullptr) {
+    CAF_LOG_DEBUG("launch BASP worker for deserializing an actor_message");
+    worker->launch(node_id{}, hdr, buf);
+  } else {
+    CAF_LOG_DEBUG(
+      "out of BASP workers, continue deserializing an actor_message");
+    // If no worker is available then we have no other choice than to take
+    // the performance hit and deserialize in this thread.
+    struct handler : remote_message_handler<handler> {
+      handler(message_queue* queue, proxy_registry* proxies,
+              actor_system* system, node_id last_hop, basp::header& hdr,
+              buffer_type& payload)
+        : queue_(queue),
+          proxies_(proxies),
+          system_(system),
+          last_hop_(std::move(last_hop)),
+          hdr_(hdr),
+          payload_(payload) {
+        msg_id_ = queue_->new_id();
+      }
+      message_queue* queue_;
+      proxy_registry* proxies_;
+      actor_system* system_;
+      node_id last_hop_;
+      basp::header& hdr_;
+      buffer_type& payload_;
+      uint64_t msg_id_;
+    };
+    handler f{queue_.get(), &proxies_, system_, node_id{}, hdr, buf};
+    f.handle_remote_message(&executor_);
   }
-  // Try to fetch the sender.
-  strong_actor_ptr src_hdl;
-  if (src_node != none && src_id != 0)
-    src_hdl = proxies_.get_or_put(src_node, src_id);
-  // Ship the message.
-  auto ptr = make_mailbox_element(std::move(src_hdl),
-                                  make_message_id(hdr.operation_data),
-                                  std::move(fwd_stack), std::move(content));
-  dst_hdl->get()->enqueue(std::move(ptr), nullptr);
   return none;
 }
 

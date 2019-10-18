@@ -50,7 +50,7 @@ public:
 
   using scheduler_type = scheduler::abstract_coordinator;
 
-  using buffer_type = std::vector<char>;
+  using buffer_type = std::vector<byte>;
 
   using hub_type = detail::worker_hub<worker>;
 
