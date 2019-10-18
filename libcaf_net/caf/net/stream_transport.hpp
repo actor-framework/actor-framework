@@ -265,10 +265,7 @@ private:
       return false;
     do {
       auto& buf = write_queue_.front().second;
-      if (buf.empty()) {
-        recycle();
-        continue;
-      }
+      CAF_ASSERT(!buf.empty());
       auto data = buf.data() + written_;
       auto len = buf.size() - written_;
       auto write_ret = write(handle_, make_span(data, len));
