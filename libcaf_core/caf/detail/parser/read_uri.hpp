@@ -127,7 +127,7 @@ void read_uri(State& ps, Consumer&& consumer) {
   };
   // Allowed character sets.
   auto path_char = [](char c) {
-    return in_whitelist(alphanumeric_chars, c) || c == '/';
+    return uri_unprotected_char(c) || c == '/';
   };
   // Utility setters for avoiding code duplication.
   auto set_path = [&] {
