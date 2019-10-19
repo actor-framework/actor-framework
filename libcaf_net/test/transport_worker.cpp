@@ -138,11 +138,11 @@ public:
     return *this;
   }
 
-  std::vector<byte> next_buffer() {
+  std::vector<byte> next_header_buffer() {
     return {};
   }
 
-  std::vector<byte> next_header_buffer() {
+  std::vector<byte> next_payload_buffer() {
     return {};
   }
 

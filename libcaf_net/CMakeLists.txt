@@ -12,6 +12,7 @@ set(LIBCAF_NET_SRCS
   src/connection_state.cpp
   src/convert_ip_endpoint.cpp
   src/datagram_socket.cpp
+  src/defaults.cpp
   src/ec.cpp
   src/endpoint_manager.cpp
   src/header.cpp
@@ -23,6 +24,7 @@ set(LIBCAF_NET_SRCS
   src/net/endpoint_manager_queue.cpp
   src/net/middleman.cpp
   src/net/middleman_backend.cpp
+  src/net/packet_writer.cpp
   src/network_socket.cpp
   src/pipe_socket.cpp
   src/pollset_updater.cpp
@@ -32,7 +34,6 @@ set(LIBCAF_NET_SRCS
   src/tcp_accept_socket.cpp
   src/tcp_stream_socket.cpp
   src/udp_datagram_socket.cpp
-  src/defaults.cpp
 )
 
 add_custom_target(libcaf_net)

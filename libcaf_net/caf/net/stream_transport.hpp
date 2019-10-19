@@ -4,7 +4,7 @@
  *                     | |     / _ \ | |_       Actor                         *
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
- *                                                                            *#
+ *                                                                            *
  * Copyright 2011-2018 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
@@ -50,6 +50,8 @@ public:
 
   using buffer_type = std::vector<byte>;
 
+  using buffer_cache_type = std::vector<buffer_type>;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   stream_transport(stream_socket handle, application_type application)
@@ -92,10 +94,13 @@ public:
   template <class Parent>
   error init(Parent& parent) {
     manager_ = &parent;
-    max_output_bufs_ = get_or(system().config(), "middleman.max-output-buffers",
-                              defaults::middleman::max_output_buffers);
-    max_header_bufs_ = get_or(system().config(), "middleman.max-header-buffers",
-                              defaults::middleman::max_header_buffers);
+    auto& cfg = system().config();
+    auto max_header_bufs = get_or(cfg, "middleman.max-header-buffers",
+                                  defaults::middleman::max_header_buffers);
+    header_bufs_.reserve(max_header_bufs);
+    auto max_payload_bufs = get_or(cfg, "middleman.max-payload-buffers",
+                                   defaults::middleman::max_payload_buffers);
+    payload_bufs_.reserve(max_payload_bufs);
     if (auto err = worker_.init(*this))
       return err;
     return none;
@@ -208,44 +213,44 @@ public:
   }
 
   void write_packet(unit_t, span<buffer_type*> buffers) {
-    // Sanity check
     CAF_ASSERT(!buffers.empty());
-    auto it = buffers.begin();
     if (write_queue_.empty())
       manager().register_writing();
-    // move header by itself to keep things sorted.
-    write_queue_.emplace_back(true, std::move(**it++));
-    // payload buffers. just write them
-    for (; it != buffers.end(); ++it)
-      write_queue_.emplace_back(false, std::move(**it));
+    // By convention, the first buffer is a header buffer. Every other buffer is
+    // a payload buffer.
+    auto i = buffers.begin();
+    write_queue_.emplace_back(true, std::move(*(*i++)));
+    while (i != buffers.end())
+      write_queue_.emplace_back(false, std::move(*(*i++)));
   }
 
-  // -- buffer recycling -------------------------------------------------------
+  // -- buffer management ------------------------------------------------------
 
   buffer_type next_header_buffer() {
-    return next_buffer_impl(free_header_bufs_);
+    return next_buffer_impl(header_bufs_);
   }
 
-  buffer_type next_buffer() {
-    return next_buffer_impl(free_bufs_);
-  }
-
-  buffer_type next_buffer_impl(std::deque<buffer_type>& container) {
-    if (container.empty()) {
-      return {};
-    } else {
-      auto buf = std::move(container.front());
-      container.pop_front();
-      return buf;
-    }
+  buffer_type next_payload_buffer() {
+    return next_buffer_impl(payload_bufs_);
   }
 
 private:
-  // -- private member functions -----------------------------------------------
+  // -- utility functions ------------------------------------------------------
+
+  static buffer_type next_buffer_impl(buffer_cache_type cache) {
+    if (cache.empty()) {
+      return {};
+    }
+    auto buf = std::move(cache.back());
+    cache.pop_back();
+    return buf;
+  }
 
   bool write_some() {
     CAF_LOG_TRACE(CAF_ARG(handle_.id));
-    // helper to sort empty buffers back into the right queues
+    if (write_queue_.empty())
+      return false;
+    // Helper function to sort empty buffers back into the right caches.
     auto recycle = [&]() {
       auto& front = write_queue_.front();
       auto& is_header = front.first;
@@ -253,16 +258,14 @@ private:
       written_ = 0;
       buf.clear();
       if (is_header) {
-        if (free_header_bufs_.size() < max_header_bufs_)
-          free_header_bufs_.emplace_back(std::move(buf));
-      } else if (free_bufs_.size() < max_output_bufs_) {
-        free_bufs_.emplace_back(std::move(buf));
+        if (header_bufs_.size() < header_bufs_.capacity())
+          header_bufs_.emplace_back(std::move(buf));
+      } else if (payload_bufs_.size() < payload_bufs_.capacity()) {
+        payload_bufs_.emplace_back(std::move(buf));
       }
       write_queue_.pop_front();
     };
-    // nothing to write
-    if (write_queue_.empty())
-      return false;
+    // Write buffers from the write_queue_ for as long as possible.
     do {
       auto& buf = write_queue_.front().second;
       CAF_ASSERT(!buf.empty());
@@ -294,10 +297,8 @@ private:
   worker_type worker_;
   stream_socket handle_;
 
-  std::deque<buffer_type> free_header_bufs_;
-  std::deque<buffer_type> free_bufs_;
-  size_t max_output_bufs_;
-  size_t max_header_bufs_;
+  buffer_cache_type header_bufs_;
+  buffer_cache_type payload_bufs_;
 
   buffer_type read_buf_;
   std::deque<std::pair<bool, buffer_type>> write_queue_;

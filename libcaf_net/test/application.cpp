@@ -111,7 +111,7 @@ struct fixture : test_coordinator_fixture<>,
     CAF_FAIL("unexpected function call");
   }
 
-  buffer_type next_buffer() override {
+  buffer_type next_payload_buffer() override {
     return {};
   }
 

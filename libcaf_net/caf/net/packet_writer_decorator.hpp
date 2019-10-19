@@ -62,8 +62,8 @@ public:
     return transport().next_header_buffer();
   }
 
-  buffer_type next_buffer() override {
-    return transport().next_buffer();
+  buffer_type next_payload_buffer() override {
+    return transport().next_payload_buffer();
   }
 
   // -- member functions -------------------------------------------------------

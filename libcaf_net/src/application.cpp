@@ -53,7 +53,7 @@ error application::write_message(
   CAF_ASSERT(ptr != nullptr);
   CAF_ASSERT(ptr->msg != nullptr);
   CAF_LOG_TRACE(CAF_ARG2("content", ptr->msg->content()));
-  auto payload_prefix = writer.next_buffer();
+  auto payload_prefix = writer.next_payload_buffer();
   serializer_impl<buffer_type> sink{system(), payload_prefix};
   const auto& src = ptr->msg->sender;
   const auto& dst = ptr->receiver;
@@ -83,7 +83,7 @@ error application::write_message(
 void application::resolve(packet_writer& writer, string_view path,
                           const actor& listener) {
   CAF_LOG_TRACE(CAF_ARG(path) << CAF_ARG(listener));
-  auto payload = writer.next_buffer();
+  auto payload = writer.next_payload_buffer();
   serializer_impl<buffer_type> sink{&executor_, payload};
   if (auto err = sink(path)) {
     CAF_LOG_ERROR("unable to serialize path" << CAF_ARG(err));
@@ -109,7 +109,7 @@ void application::new_proxy(packet_writer& writer, actor_id id) {
 
 void application::local_actor_down(packet_writer& writer, actor_id id,
                                    error reason) {
-  auto payload = writer.next_buffer();
+  auto payload = writer.next_payload_buffer();
   serializer_impl<buffer_type> sink{system(), payload};
   if (auto err = sink(reason))
     CAF_RAISE_ERROR("unable to serialize an error");
@@ -304,7 +304,7 @@ error application::handle_resolve_request(packet_writer& writer, header rec_hdr,
     aid = 0;
   }
   // TODO: figure out how to obtain messaging interface.
-  auto payload = writer.next_buffer();
+  auto payload = writer.next_payload_buffer();
   serializer_impl<buffer_type> sink{&executor_, payload};
   if (auto err = sink(aid, ifs))
     return err;
@@ -362,7 +362,7 @@ error application::handle_monitor_message(packet_writer& writer,
     });
   } else {
     error reason = exit_reason::unknown;
-    auto payload = writer.next_buffer();
+    auto payload = writer.next_payload_buffer();
     serializer_impl<buffer_type> sink{&executor_, payload};
     if (auto err = sink(reason))
       return err;

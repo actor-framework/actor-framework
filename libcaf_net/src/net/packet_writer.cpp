@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2019 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,18 +16,14 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/net/defaults.hpp"
+#include "caf/net/packet_writer.hpp"
 
 namespace caf {
-namespace defaults {
+namespace net {
 
-namespace middleman {
+packet_writer::~packet_writer() {
+  // nop
+}
 
-const size_t max_payload_buffers = 100;
-
-const size_t max_header_buffers = 10;
-
-} // namespace middleman
-
-} // namespace defaults
+} // namespace net
 } // namespace caf
