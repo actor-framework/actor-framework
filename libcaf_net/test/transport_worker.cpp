@@ -37,6 +37,8 @@ using namespace caf::net;
 
 namespace {
 
+using buffer_type = std::vector<byte>;
+
 constexpr string_view hello_test = "hello test!";
 
 struct application_result {
@@ -72,7 +74,8 @@ public:
   template <class Parent>
   void write_message(Parent& parent,
                      std::unique_ptr<endpoint_manager_queue::message> msg) {
-    parent.write_packet(span<const byte>{}, msg->payload);
+    auto header_buffer = parent.next_header_buffer();
+    parent.write_packet(header_buffer, msg->payload);
   }
 
   template <class Parent>
@@ -118,16 +121,29 @@ public:
 
   using application_type = dummy_application;
 
-  dummy_transport(std::shared_ptr<transport_result> res) : res_(res) {
+  dummy_transport(std::shared_ptr<transport_result> res)
+    : res_(std::move(res)) {
     // nop
   }
 
-  void write_packet(span<const byte> header, span<const byte> payload,
-                    ip_endpoint ep) {
-    auto& buf = res_->packet_buffer;
-    buf.insert(buf.begin(), header.begin(), header.end());
-    buf.insert(buf.begin(), payload.begin(), payload.end());
+  void write_packet(ip_endpoint ep, span<buffer_type*> buffers) {
     res_->ep = ep;
+    auto& packet_buf = res_->packet_buffer;
+    packet_buf.clear();
+    for (auto buf : buffers)
+      packet_buf.insert(packet_buf.end(), buf->begin(), buf->end());
+  }
+
+  transport_type& transport() {
+    return *this;
+  }
+
+  std::vector<byte> next_header_buffer() {
+    return {};
+  }
+
+  std::vector<byte> next_payload_buffer() {
+    return {};
   }
 
 private:

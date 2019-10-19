@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include "caf/net/packet_writer.hpp"
+
 #include "caf/byte.hpp"
 #include "caf/span.hpp"
 
@@ -25,9 +27,9 @@ namespace caf {
 namespace net {
 
 /// Implements the interface for transport and application policies and
-/// dispatches member functions either to `decorator` or `parent`.
+/// dispatches member functions either to `object` or `parent`.
 template <class Object, class Parent>
-class write_packet_decorator {
+class packet_writer_decorator final : public packet_writer {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -37,7 +39,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  write_packet_decorator(Object& object, Parent& parent)
+  packet_writer_decorator(Object& object, Parent& parent)
     : object_(object), parent_(parent) {
     // nop
   }
@@ -56,14 +58,15 @@ public:
     return parent_.manager();
   }
 
-  // -- member functions -------------------------------------------------------
-
-  template <class... Ts>
-  void write_packet(span<const byte> header, span<const byte> payload,
-                    Ts&&... xs) {
-    parent_.write_packet(header, payload, std::forward<Ts>(xs)...,
-                         object_.id());
+  buffer_type next_header_buffer() override {
+    return transport().next_header_buffer();
   }
+
+  buffer_type next_payload_buffer() override {
+    return transport().next_payload_buffer();
+  }
+
+  // -- member functions -------------------------------------------------------
 
   void cancel_timeout(atom_value type, uint64_t id) {
     parent_.cancel_timeout(type, id);
@@ -74,14 +77,19 @@ public:
     return parent_.set_timeout(tout, type, std::forward<Ts>(xs)...);
   }
 
+protected:
+  void write_impl(span<buffer_type*> buffers) override {
+    parent_.write_packet(object_.id(), buffers);
+  }
+
 private:
   Object& object_;
   Parent& parent_;
 };
 
 template <class Object, class Parent>
-write_packet_decorator<Object, Parent>
-make_write_packet_decorator(Object& object, Parent& parent) {
+packet_writer_decorator<Object, Parent>
+make_packet_writer_decorator(Object& object, Parent& parent) {
   return {object, parent};
 }
 

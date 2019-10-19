@@ -16,59 +16,45 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/net/basp/header.hpp"
+#pragma once
 
-#include <cstring>
+#include <vector>
 
 #include "caf/byte.hpp"
-#include "caf/detail/network_order.hpp"
+#include "caf/net/fwd.hpp"
 #include "caf/span.hpp"
 
 namespace caf {
 namespace net {
-namespace basp {
 
-namespace {
+/// Implements an interface for packet writing in application-layers.
+class packet_writer {
+public:
+  using buffer_type = std::vector<byte>;
 
-void to_bytes_impl(const header& x, byte* ptr) {
-  *ptr = static_cast<byte>(x.type);
-  auto payload_len = detail::to_network_order(x.payload_len);
-  memcpy(ptr + 1, &payload_len, sizeof(payload_len));
-  auto operation_data = detail::to_network_order(x.operation_data);
-  memcpy(ptr + 5, &operation_data, sizeof(operation_data));
-}
+  virtual ~packet_writer();
 
-} // namespace
+  /// Returns a buffer for writing header information.
+  virtual buffer_type next_header_buffer() = 0;
 
-int header::compare(header other) const noexcept {
-  auto x = to_bytes(*this);
-  auto y = to_bytes(other);
-  return memcmp(x.data(), y.data(), header_size);
-}
+  /// Returns a buffer for writing payload content.
+  virtual buffer_type next_payload_buffer() = 0;
 
-header header::from_bytes(span<const byte> bytes) {
-  CAF_ASSERT(bytes.size() >= header_size);
-  header result;
-  auto ptr = bytes.data();
-  result.type = *reinterpret_cast<const message_type*>(ptr);
-  auto payload_len = *reinterpret_cast<const uint32_t*>(ptr + 1);
-  result.payload_len = detail::from_network_order(payload_len);
-  auto operation_data = *reinterpret_cast<const uint64_t*>(ptr + 5);
-  result.operation_data = detail::from_network_order(operation_data);
-  return result;
-}
+  /// Convenience function to write a packet consisting of multiple buffers.
+  /// @param buffers all buffers for the packet. The first buffer is a header
+  ///                buffer, the other buffers are payload buffer.
+  /// @warning this function takes ownership of `buffers`.
+  template <class... Ts>
+  void write_packet(Ts&... buffers) {
+    buffer_type* bufs[] = {&buffers...};
+    write_impl(make_span(bufs, sizeof...(Ts)));
+  }
 
-std::array<byte, header_size> to_bytes(header x) {
-  std::array<byte, header_size> result{};
-  to_bytes_impl(x, result.data());
-  return result;
-}
+protected:
+  /// Implementing function for `write_packet`.
+  /// @param buffers a `span` containing all buffers of a packet.
+  virtual void write_impl(span<buffer_type*> buffers) = 0;
+};
 
-void to_bytes(header x, std::vector<byte>& buf) {
-  buf.resize(header_size);
-  to_bytes_impl(x, buf.data());
-}
-
-} // namespace basp
 } // namespace net
 } // namespace caf
