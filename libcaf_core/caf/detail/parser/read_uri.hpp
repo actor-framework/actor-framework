@@ -53,6 +53,7 @@ void read_uri_percent_encoded(State& ps, std::string& str) {
     if (ps.code <= pec::trailing_character)
       str += static_cast<char>(char_code);
   });
+  // clang-format off
   start();
   state(init) {
     transition(read_nibble, hexadecimal_chars, add_ascii<16>(char_code, ch))
@@ -64,15 +65,18 @@ void read_uri_percent_encoded(State& ps, std::string& str) {
     // nop
   }
   fin();
+  // clang-format on
 }
 
 inline bool uri_unprotected_char(char c) {
   return in_whitelist(alphanumeric_chars, c) || in_whitelist("-._~", c);
 }
 
+// clang-format off
 #define read_next_char(next_state, dest)                                       \
   transition(next_state, uri_unprotected_char, dest += ch)                     \
   fsm_transition(read_uri_percent_encoded(ps, dest), next_state, '%')
+// clang-format on
 
 template <class State, class Consumer>
 void read_uri_query(State& ps, Consumer&& consumer) {
@@ -87,15 +91,13 @@ void read_uri_query(State& ps, Consumer&& consumer) {
     swap(str, res);
     return res;
   };
-  auto push = [&] {
-    result.emplace(take_str(key), take_str(value));
-  };
+  auto push = [&] { result.emplace(take_str(key), take_str(value)); };
   // Call consumer on exit.
   auto g = make_scope_guard([&] {
     if (ps.code <= pec::trailing_character)
       consumer.query(std::move(result));
   });
-  // FSM declaration.
+  // clang-format off
   start();
   // Query may be empty.
   term_state(init) {
@@ -110,6 +112,7 @@ void read_uri_query(State& ps, Consumer&& consumer) {
     transition(init, '&', push())
   }
   fin();
+  // clang-format on
 }
 
 template <class State, class Consumer>
@@ -126,19 +129,11 @@ void read_uri(State& ps, Consumer&& consumer) {
     return res;
   };
   // Allowed character sets.
-  auto path_char = [](char c) {
-    return in_whitelist(alphanumeric_chars, c) || c == '/';
-  };
+  auto path_char = [](char c) { return uri_unprotected_char(c) || c == '/'; };
   // Utility setters for avoiding code duplication.
-  auto set_path = [&] {
-    consumer.path(take_str());
-  };
-  auto set_host = [&] {
-    consumer.host(take_str());
-  };
-  auto set_userinfo = [&] {
-    consumer.userinfo(take_str());
-  };
+  auto set_path = [&] { consumer.path(take_str()); };
+  auto set_host = [&] { consumer.host(take_str()); };
+  auto set_userinfo = [&] { consumer.userinfo(take_str()); };
   // Consumer for reading IPv6 addresses.
   struct {
     Consumer& f;
@@ -146,7 +141,7 @@ void read_uri(State& ps, Consumer&& consumer) {
       f.host(addr);
     }
   } ip_consumer{consumer};
-  // FSM declaration.
+  // clang-format off
   start();
   state(init) {
     epsilon(read_scheme)
@@ -228,6 +223,7 @@ void read_uri(State& ps, Consumer&& consumer) {
     // nop
   }
   fin();
+  // clang-format on
 }
 
 } // namespace parser
