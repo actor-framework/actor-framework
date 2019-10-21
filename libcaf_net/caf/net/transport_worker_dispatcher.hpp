@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <caf/logger.hpp>
 #include <unordered_map>
 
 #include "caf/byte.hpp"
@@ -33,7 +34,7 @@ namespace caf {
 namespace net {
 
 /// implements a dispatcher that dispatches between transport and workers.
-template <class ApplicationFactory, class IdType>
+template <class Transport, class ApplicationFactory, class IdType>
 class transport_worker_dispatcher {
 public:
   // -- member types -----------------------------------------------------------
@@ -41,6 +42,8 @@ public:
   using id_type = IdType;
 
   using factory_type = ApplicationFactory;
+
+  using transport_type = Transport;
 
   using application_type = typename ApplicationFactory::application_type;
 
@@ -50,7 +53,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  transport_worker_dispatcher(factory_type factory)
+  explicit transport_worker_dispatcher(factory_type factory)
     : factory_(std::move(factory)) {
     // nop
   }
@@ -65,42 +68,48 @@ public:
 
   template <class Parent>
   error handle_data(Parent& parent, span<byte> data, id_type id) {
-    auto it = workers_by_id_.find(id);
-    if (it == workers_by_id_.end()) {
-      // TODO: where to get node_id from here?
+    auto worker = find_by_id(id);
+    if (!worker) {
+      // TODO: where to get id_type from here?
       add_new_worker(parent, node_id{}, id);
-      it = workers_by_id_.find(id);
+      worker = find_by_id(id);
     }
-    auto worker = it->second;
     return worker->handle_data(parent, data);
   }
 
   template <class Parent>
   void write_message(Parent& parent,
                      std::unique_ptr<endpoint_manager_queue::message> msg) {
-    auto sender = msg->msg->sender;
-    if (!sender)
+    auto receiver = msg->receiver;
+    if (!receiver)
       return;
-    auto nid = sender->node();
-    auto it = workers_by_node_.find(nid);
-    if (it == workers_by_node_.end()) {
+    auto nid = receiver->node();
+    auto worker = find_by_node(nid);
+    if (!worker) {
       // TODO: where to get id_type from here?
       add_new_worker(parent, nid, id_type{});
-      it = workers_by_node_.find(nid);
+      worker = find_by_node(nid);
     }
-    auto worker = it->second;
     worker->write_message(parent, std::move(msg));
   }
 
   template <class Parent>
-  void resolve(Parent& parent, const std::string& path, actor listener) {
-    // TODO path should be uri to lookup the corresponding worker
-    // if enpoint is known -> resolve actor through worker
-    // if not connect to endpoint?!
-    if (workers_by_id_.empty())
-      return;
-    auto worker = workers_by_id_.begin()->second;
-    worker->resolve(parent, path, listener);
+  void resolve(Parent& parent, const uri& locator, const actor& listener) {
+    if (auto worker = find_by_node(make_node_id(locator)))
+      worker->resolve(parent, locator.path(), listener);
+  }
+
+  template <class Parent>
+  void new_proxy(Parent&, const node_id& nid, actor_id id) {
+    if (auto worker = find_by_node(nid))
+      worker->new_proxy(*this, nid, id);
+  }
+
+  template <class Parent>
+  void local_actor_down(Parent&, const node_id& nid, actor_id id,
+                        error reason) {
+    if (auto worker = find_by_node(nid))
+      worker->local_actor_down(*this, nid, id, std::move(reason));
   }
 
   template <class... Ts>
@@ -134,6 +143,28 @@ public:
   }
 
 private:
+  worker_ptr find_by_node(const node_id& nid) {
+    if (workers_by_node_.empty())
+      return nullptr;
+    auto it = workers_by_node_.find(nid);
+    if (it == workers_by_node_.end()) {
+      CAF_LOG_ERROR("could not find worker by node: " << CAF_ARG(nid));
+      return nullptr;
+    }
+    return it->second;
+  }
+
+  worker_ptr find_by_id(const IdType& id) {
+    if (workers_by_id_.empty())
+      return nullptr;
+    auto it = workers_by_id_.find(id);
+    if (it == workers_by_id_.end()) {
+      CAF_LOG_ERROR("could not find worker by node: " << CAF_ARG(id));
+      return nullptr;
+    }
+    return it->second;
+  }
+
   // -- worker lookups ---------------------------------------------------------
 
   std::unordered_map<id_type, worker_ptr> workers_by_id_;

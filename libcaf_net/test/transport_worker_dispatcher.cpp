@@ -180,8 +180,8 @@ uri operator"" _u(const char* cstr, size_t cstr_len) {
 }
 
 struct fixture : host_fixture {
-  using dispatcher_type = transport_worker_dispatcher<dummy_application_factory,
-                                                      ip_endpoint>;
+  using dispatcher_type = transport_worker_dispatcher<
+    dummy_transport, dummy_application_factory, ip_endpoint>;
 
   fixture()
     : buf{std::make_shared<buffer_type>()},

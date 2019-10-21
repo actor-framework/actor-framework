@@ -20,9 +20,8 @@
 
 #include "caf/net/datagram_transport.hpp"
 
+#include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
-
-#include "host_fixture.hpp"
 
 #include "caf/byte.hpp"
 #include "caf/make_actor.hpp"
@@ -42,6 +41,8 @@ namespace {
 
 constexpr string_view hello_manager = "hello manager!";
 
+class dummy_application_factory;
+
 struct fixture : test_coordinator_fixture<>, host_fixture {
   fixture() {
     mpx = std::make_shared<multiplexer>();
@@ -50,7 +51,6 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
   }
 
   bool handle_io_event() override {
-    mpx->handle_updates();
     return mpx->poll_once(false);
   }
 
@@ -59,6 +59,8 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
 
 class dummy_application {
 public:
+  using transport_type = datagram_transport<dummy_application_factory>;
+
   dummy_application(std::shared_ptr<std::vector<byte>> rec_buf)
     : rec_buf_(std::move(rec_buf)){
       // nop
@@ -73,18 +75,19 @@ public:
 
   template <class Transport>
   void write_message(Transport& transport,
-                     std::unique_ptr<endpoint_manager::message> msg) {
+                     std::unique_ptr<endpoint_manager_queue::message> msg) {
     transport.write_packet(span<byte>{}, msg->payload);
   }
 
   template <class Parent>
-  void handle_data(Parent&, span<const byte> data) {
+  error handle_data(Parent&, span<const byte> data) {
     rec_buf_->clear();
     rec_buf_->insert(rec_buf_->begin(), data.begin(), data.end());
+    return none;
   }
 
   template <class Parent>
-  void resolve(Parent& parent, const std::string& path, actor listener) {
+  void resolve(Parent& parent, string_view path, const actor& listener) {
     actor_id aid = 42;
     auto hid = "0011223344556677889900112233445566778899";
     auto nid = unbox(make_node_id(42, hid));
@@ -94,7 +97,17 @@ public:
                                                             &parent.system(),
                                                             cfg,
                                                             std::move(ptr));
-    anon_send(listener, resolve_atom::value, std::move(path), p);
+    anon_send(listener, resolve_atom::value, path, p);
+  }
+
+  template <class Parent>
+  void new_proxy(Parent&, actor_id) {
+    // nop
+  }
+
+  template <class Parent>
+  void local_actor_down(Parent&, actor_id, error) {
+    // nop
   }
 
   template <class Transport>
@@ -119,11 +132,12 @@ private:
   std::shared_ptr<std::vector<byte>> rec_buf_;
 };
 
-struct dummy_application_factory {
+class dummy_application_factory {
+public:
   using application_type = dummy_application;
 
-  dummy_application_factory(std::shared_ptr<std::vector<byte>> buf)
-    : buf_(buf) {
+  explicit dummy_application_factory(std::shared_ptr<std::vector<byte>> buf)
+    : buf_(std::move(buf)) {
     // nop
   }
 
@@ -159,7 +173,6 @@ CAF_TEST(receive) {
   transport.configure_read(net::receive_policy::exactly(hello_manager.size()));
   auto mgr = make_endpoint_manager(mpx, sys, transport);
   CAF_CHECK_EQUAL(mgr->init(), none);
-  mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
   CAF_CHECK_EQUAL(write(sender, as_bytes(make_span(hello_manager)), ep),
                   hello_manager.size());
@@ -172,7 +185,6 @@ CAF_TEST(receive) {
 
 // TODO: test is disabled until resolve in transport_worker_dispatcher is
 // implemented correctly.
-// Idea is to use caf::uri instead of std::string.
 /*
 CAF_TEST(resolve and proxy communication) {
   using transport_type = datagram_transport<dummy_application_factory>;

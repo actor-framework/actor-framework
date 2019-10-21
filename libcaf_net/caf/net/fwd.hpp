@@ -30,7 +30,7 @@ namespace net {
 template <class Application, class IdType = unit_t>
 class transport_worker;
 
-template <class Application, class IdType = unit_t>
+template <class Transport, class Application, class IdType = unit_t>
 class transport_worker_dispatcher;
 
 // -- classes ------------------------------------------------------------------
