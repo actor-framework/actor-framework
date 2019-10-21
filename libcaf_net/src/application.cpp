@@ -252,6 +252,8 @@ error application::handle_handshake(packet_writer&, header hdr,
 error application::handle_actor_message(packet_writer&, header hdr,
                                         byte_span payload) {
   auto worker = hub_->pop();
+  // TODO: This copy is nessecary because the worker interface expects a buffer
+  // type...
   buffer_type buf(payload.begin(), payload.end());
   if (worker != nullptr) {
     CAF_LOG_DEBUG("launch BASP worker for deserializing an actor_message");
