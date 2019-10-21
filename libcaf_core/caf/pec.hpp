@@ -74,6 +74,9 @@ enum class pec : uint8_t {
   missing_field,
 };
 
+/// @relates pec
+std::string to_string(pec);
+
 /// Returns an error object from given error code.
 error make_error(pec code);
 
