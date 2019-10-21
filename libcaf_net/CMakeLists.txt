@@ -5,24 +5,33 @@ project(caf_net C CXX)
 # e.g., for creating proper Xcode projects
 file(GLOB_RECURSE LIBCAF_NET_HDRS "caf/*.hpp")
 
+enum_to_string("caf/net/basp/connection_state.hpp" "basp_conn_strings.cpp")
+enum_to_string("caf/net/basp/ec.hpp" "basp_ec_strings.cpp")
+enum_to_string("caf/net/basp/message_type.hpp" "basp_message_type_strings.cpp")
+enum_to_string("caf/net/operation.hpp" "operation_strings.cpp")
+
 # list cpp files excluding platform-dependent files
 set(LIBCAF_NET_SRCS
+  "${CMAKE_CURRENT_BINARY_DIR}/basp_conn_strings.cpp"
+  "${CMAKE_CURRENT_BINARY_DIR}/basp_ec_strings.cpp"
+  "${CMAKE_CURRENT_BINARY_DIR}/basp_message_type_strings.cpp"
+  "${CMAKE_CURRENT_BINARY_DIR}/operation_strings.cpp"
   src/actor_proxy_impl.cpp
   src/application.cpp
-  src/connection_state.cpp
   src/convert_ip_endpoint.cpp
   src/datagram_socket.cpp
+  src/defaults.cpp
   src/ec.cpp
   src/endpoint_manager.cpp
   src/header.cpp
   src/host.cpp
   src/ip.cpp
-  src/message_type.cpp
   src/multiplexer.cpp
   src/net/backend/test.cpp
   src/net/endpoint_manager_queue.cpp
   src/net/middleman.cpp
   src/net/middleman_backend.cpp
+  src/net/packet_writer.cpp
   src/network_socket.cpp
   src/pipe_socket.cpp
   src/pollset_updater.cpp

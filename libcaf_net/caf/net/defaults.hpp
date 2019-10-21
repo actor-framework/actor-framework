@@ -27,7 +27,10 @@ namespace defaults {
 
 namespace middleman {
 
-extern const size_t max_output_buffers;
+/// Maximum number of cached buffers for sending payloads.
+extern const size_t max_payload_buffers;
+
+/// Maximum number of cached buffers for sending headers.
 extern const size_t max_header_buffers;
 
 } // namespace middleman

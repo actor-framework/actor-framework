@@ -89,7 +89,7 @@ public:
       hub_->add_new_worker(*queue_, proxies_);
     // Write handshake.
     auto hdr = parent.next_header_buffer();
-    auto payload = parent.next_buffer();
+    auto payload = parent.next_payload_buffer();
     if (auto err = generate_handshake(payload))
       return err;
     to_bytes(header{message_type::handshake,

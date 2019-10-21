@@ -16,28 +16,14 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/net/basp/message_type.hpp"
-
-#include "caf/string_view.hpp"
+#include "caf/net/packet_writer.hpp"
 
 namespace caf {
 namespace net {
-namespace basp {
 
-namespace {
-
-string_view message_type_names[] = {
-  "handshake",       "actor_message", "resolve_request", "resolve_response",
-  "monitor_message", "down_message",  "heartbeat",
-};
-
-} // namespace
-
-std::string to_string(message_type x) {
-  auto result = message_type_names[static_cast<uint8_t>(x)];
-  return std::string{result.begin(), result.end()};
+packet_writer::~packet_writer() {
+  // nop
 }
 
-} // namespace basp
 } // namespace net
 } // namespace caf

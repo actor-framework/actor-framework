@@ -32,18 +32,18 @@ class packet_writer {
 public:
   using buffer_type = std::vector<byte>;
 
-  virtual ~packet_writer() = default;
+  virtual ~packet_writer();
 
-  /// Returns the next header_buffer from transport
+  /// Returns a buffer for writing header information.
   virtual buffer_type next_header_buffer() = 0;
 
-  /// Returns the next payload_buffer from transport
-  virtual buffer_type next_buffer() = 0;
+  /// Returns a buffer for writing payload content.
+  virtual buffer_type next_payload_buffer() = 0;
 
   /// Convenience function to write a packet consisting of multiple buffers.
-  /// @param buffers the buffers that make up the packet. first buffer should
-  /// contain the header.
-  /// @warning takes ownership of `buffers`.
+  /// @param buffers all buffers for the packet. The first buffer is a header
+  ///                buffer, the other buffers are payload buffer.
+  /// @warning this function takes ownership of `buffers`.
   template <class... Ts>
   void write_packet(Ts&... buffers) {
     buffer_type* bufs[] = {&buffers...};
@@ -51,8 +51,8 @@ public:
   }
 
 protected:
-  /// Actual write_packet implementation.
-  /// @param buffers `span` containing all buffers of a packet.
+  /// Implementing function for `write_packet`.
+  /// @param buffers a `span` containing all buffers of a packet.
   virtual void write_impl(span<buffer_type*> buffers) = 0;
 };
 

@@ -74,8 +74,7 @@ public:
   template <class Parent>
   void write_message(Parent& parent,
                      std::unique_ptr<endpoint_manager_queue::message> ptr) {
-    auto header_buf = parent.next_header_buffer();
-    parent.write_packet(header_buf, ptr->payload);
+    parent.write_packet(ptr->payload);
   }
 
   template <class Parent>

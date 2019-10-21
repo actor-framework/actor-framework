@@ -138,11 +138,11 @@ struct dummy_transport {
     return *this;
   }
 
-  buffer_type next_buffer() {
+  buffer_type next_header_buffer() {
     return {};
   }
 
-  buffer_type next_header_buffer() {
+  buffer_type next_payload_buffer() {
     return {};
   }
 

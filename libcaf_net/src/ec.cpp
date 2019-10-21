@@ -26,32 +26,6 @@ namespace caf {
 namespace net {
 namespace basp {
 
-namespace {
-
-string_view ec_names[] = {
-  "none",
-  "invalid_magic_number",
-  "unexpected_number_of_bytes",
-  "unexpected_payload",
-  "missing_payload",
-  "illegal_state",
-  "invalid_handshake",
-  "missing_handshake",
-  "unexpected_handshake",
-  "version_mismatch",
-  "unimplemented",
-  "app_identifiers_mismatch",
-  "invalid_payload",
-  "invalid_scheme",
-};
-
-} // namespace
-
-std::string to_string(ec x) {
-  auto result = ec_names[static_cast<uint8_t>(x)];
-  return std::string{result.begin(), result.end()};
-}
-
 error make_error(ec x) {
   return {static_cast<uint8_t>(x), atom("basp")};
 }
