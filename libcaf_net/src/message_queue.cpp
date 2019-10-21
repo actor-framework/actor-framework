@@ -73,5 +73,5 @@ uint64_t message_queue::new_id() {
 }
 
 } // namespace basp
-} // namespace io
+} // namespace net
 } // namespace caf
