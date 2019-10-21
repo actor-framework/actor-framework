@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2019 Dominik Charousset                                     *
+ * Copyright 2011-2018 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,28 +16,18 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/net/basp/message_type.hpp"
-
-#include "caf/string_view.hpp"
+#include "caf/net/defaults.hpp"
 
 namespace caf {
-namespace net {
-namespace basp {
+namespace defaults {
 
-namespace {
+namespace middleman {
 
-string_view message_type_names[] = {
-  "handshake",       "actor_message", "resolve_request", "resolve_response",
-  "monitor_message", "down_message",  "heartbeat",
-};
+const size_t max_payload_buffers = 100;
 
-} // namespace
+const size_t max_header_buffers = 10;
 
-std::string to_string(message_type x) {
-  auto result = message_type_names[static_cast<uint8_t>(x)];
-  return std::string{result.begin(), result.end()};
-}
+} // namespace middleman
 
-} // namespace basp
-} // namespace net
+} // namespace defaults
 } // namespace caf

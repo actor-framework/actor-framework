@@ -20,9 +20,8 @@
 
 #include "caf/net/stream_transport.hpp"
 
+#include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
-
-#include "host_fixture.hpp"
 
 #include <vector>
 
@@ -44,15 +43,17 @@ using namespace caf::policy;
 
 namespace {
 
+using buffer_type = std::vector<byte>;
+
 struct fixture : test_coordinator_fixture<>, host_fixture {
   fixture() {
     mpx = std::make_shared<multiplexer>();
     if (auto err = mpx->init())
       CAF_FAIL("mpx->init failed: " << sys.render(err));
+    mpx->set_thread_id();
   }
 
   bool handle_io_event() override {
-    mpx->handle_updates();
     return mpx->poll_once(false);
   }
 
@@ -99,10 +100,15 @@ public:
 
   template <class Parent>
   void write_message(Parent& parent,
-                     std::unique_ptr<net::endpoint_manager::message> msg) {
-    header_type header{static_cast<uint32_t>(msg->payload.size())};
-    std::vector<byte> payload(msg->payload.begin(), msg->payload.end());
-    parent.write_packet(as_bytes(make_span(&header, 1)), make_span(payload));
+                     std::unique_ptr<endpoint_manager_queue::message> ptr) {
+    // Ignore proxy announcement messages.
+    if (ptr->msg == nullptr)
+      return;
+    auto header_buf = parent.next_header_buffer();
+    serializer_impl<buffer_type> sink{sys_, header_buf};
+    header_type header{static_cast<uint32_t>(ptr->payload.size())};
+    sink(header);
+    parent.write_packet(header_buf, ptr->payload);
   }
 
   static expected<std::vector<byte>> serialize(actor_system& sys,
@@ -138,14 +144,15 @@ public:
   }
 
   template <class Parent>
-  void handle_data(Parent& parent, span<const byte> data) {
+  error handle_data(Parent& parent, span<const byte> data) {
     if (await_payload_) {
       Base::handle_packet(parent, header_, data);
       await_payload_ = false;
     } else {
       if (data.size() != sizeof(header_type))
         CAF_FAIL("");
-      memcpy(&header_, data.data(), sizeof(header_type));
+      binary_deserializer source{nullptr, data};
+      source(header_);
       if (header_.payload == 0)
         Base::handle_packet(parent, header_, span<const byte>{});
       else
@@ -153,10 +160,11 @@ public:
           net::receive_policy::exactly(header_.payload));
       await_payload_ = true;
     }
+    return none;
   }
 
   template <class Parent>
-  void resolve(Parent& parent, const std::string& path, actor listener) {
+  void resolve(Parent& parent, string_view path, actor listener) {
     actor_id aid = 42;
     auto hid = "0011223344556677889900112233445566778899";
     auto nid = unbox(make_node_id(aid, hid));
@@ -165,16 +173,27 @@ public:
     auto mgr = &parent.manager();
     auto p = make_actor<net::actor_proxy_impl, strong_actor_ptr>(aid, nid, sys,
                                                                  cfg, mgr);
-    anon_send(listener, resolve_atom::value, std::move(path), p);
+    anon_send(listener, resolve_atom::value,
+              std::string{path.begin(), path.end()}, p);
   }
 
-  template <class Transport>
-  void timeout(Transport&, atom_value, uint64_t) {
+  template <class Parent>
+  void timeout(Parent&, atom_value, uint64_t) {
     // nop
   }
 
-  void handle_error(sec) {
+  template <class Parent>
+  void new_proxy(Parent&, actor_id) {
     // nop
+  }
+
+  template <class Parent>
+  void local_actor_down(Parent&, actor_id, error) {
+    // nop
+  }
+
+  void handle_error(sec sec) {
+    CAF_FAIL("handle_error called: " << CAF_ARG(sec));
   }
 
 private:
@@ -202,16 +221,14 @@ CAF_TEST(receive) {
                                     transport_type{sockets.first,
                                                    application_type{sys, buf}});
   CAF_CHECK_EQUAL(mgr1->init(), none);
-  mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
   auto mgr2 = make_endpoint_manager(mpx, sys,
                                     transport_type{sockets.second,
                                                    application_type{sys, buf}});
   CAF_CHECK_EQUAL(mgr2->init(), none);
-  mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 3u);
   CAF_MESSAGE("resolve actor-proxy");
-  mgr1->resolve("/id/42", self);
+  mgr1->resolve(unbox(make_uri("test:/id/42")), self);
   run();
   self->receive(
     [&](resolve_atom, const std::string&, const strong_actor_ptr& p) {

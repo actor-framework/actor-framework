@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2019 Dominik Charousset                                     *
+ * Copyright 2011-2018 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,28 +16,24 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/net/basp/connection_state.hpp"
+#pragma once
+
+#include <cstddef>
+
+// -- hard-coded default values for various CAF options ------------------------
 
 namespace caf {
-namespace net {
-namespace basp {
+namespace defaults {
 
-namespace {
+namespace middleman {
 
-const char* connection_state_names[] = {
-  "await_handshake_header",
-  "await_handshake_payload",
-  "await_header",
-  "await_payload",
-  "shutdown",
-};
+/// Maximum number of cached buffers for sending payloads.
+extern const size_t max_payload_buffers;
 
-} // namespace
+/// Maximum number of cached buffers for sending headers.
+extern const size_t max_header_buffers;
 
-std::string to_string(connection_state x) {
-  return connection_state_names[static_cast<uint8_t>(x)];
-}
+} // namespace middleman
 
-} // namespace basp
-} // namespace net
+} // namespace defaults
 } // namespace caf

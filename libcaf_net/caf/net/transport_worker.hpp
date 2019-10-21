@@ -22,7 +22,7 @@
 #include "caf/ip_endpoint.hpp"
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/net/fwd.hpp"
-#include "caf/net/write_packet_decorator.hpp"
+#include "caf/net/packet_writer_decorator.hpp"
 #include "caf/span.hpp"
 #include "caf/unit.hpp"
 
@@ -64,33 +64,46 @@ public:
 
   template <class Parent>
   error init(Parent& parent) {
-    auto decorator = make_write_packet_decorator(*this, parent);
-    return application_.init(decorator);
+    auto writer = make_packet_writer_decorator(*this, parent);
+    return application_.init(writer);
   }
 
   template <class Parent>
-  void handle_data(Parent& parent, span<const byte> data) {
-    auto decorator = make_write_packet_decorator(*this, parent);
-    application_.handle_data(decorator, data);
+  error handle_data(Parent& parent, span<const byte> data) {
+    auto writer = make_packet_writer_decorator(*this, parent);
+    return application_.handle_data(writer, data);
   }
 
   template <class Parent>
   void write_message(Parent& parent,
-                     std::unique_ptr<net::endpoint_manager::message> msg) {
-    auto decorator = make_write_packet_decorator(*this, parent);
-    application_.write_message(decorator, std::move(msg));
+                     std::unique_ptr<endpoint_manager_queue::message> msg) {
+    auto writer = make_packet_writer_decorator(*this, parent);
+    application_.write_message(writer, std::move(msg));
   }
 
   template <class Parent>
-  void resolve(Parent& parent, const std::string& path, actor listener) {
-    auto decorator = make_write_packet_decorator(*this, parent);
-    application_.resolve(decorator, path, listener);
+  void resolve(Parent& parent, string_view path, const actor& listener) {
+    auto writer = make_packet_writer_decorator(*this, parent);
+    application_.resolve(writer, path, listener);
+  }
+
+  template <class Parent>
+  void new_proxy(Parent& parent, const node_id&, actor_id id) {
+    auto writer = make_packet_writer_decorator(*this, parent);
+    application_.new_proxy(writer, id);
+  }
+
+  template <class Parent>
+  void local_actor_down(Parent& parent, const node_id&, actor_id id,
+                        error reason) {
+    auto writer = make_packet_writer_decorator(*this, parent);
+    application_.local_actor_down(writer, id, std::move(reason));
   }
 
   template <class Parent>
   void timeout(Parent& parent, atom_value value, uint64_t id) {
-    auto decorator = make_write_packet_decorator(*this, parent);
-    application_.timeout(decorator, value, id);
+    auto writer = make_packet_writer_decorator(*this, parent);
+    application_.timeout(writer, value, id);
   }
 
   void handle_error(sec error) {

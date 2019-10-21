@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <string>
+
 namespace caf {
 namespace net {
 
@@ -44,6 +46,8 @@ constexpr operation operator^(operation x, operation y) {
 constexpr operation operator~(operation x) {
   return static_cast<operation>(~static_cast<int>(x));
 }
+
+std::string to_string(operation x);
 
 } // namespace net
 } // namespace caf

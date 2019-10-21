@@ -28,6 +28,18 @@ namespace caf {
 namespace net {
 namespace basp {
 
+namespace {
+
+void to_bytes_impl(const header& x, byte* ptr) {
+  *ptr = static_cast<byte>(x.type);
+  auto payload_len = detail::to_network_order(x.payload_len);
+  memcpy(ptr + 1, &payload_len, sizeof(payload_len));
+  auto operation_data = detail::to_network_order(x.operation_data);
+  memcpy(ptr + 5, &operation_data, sizeof(operation_data));
+}
+
+} // namespace
+
 int header::compare(header other) const noexcept {
   auto x = to_bytes(*this);
   auto y = to_bytes(other);
@@ -47,14 +59,14 @@ header header::from_bytes(span<const byte> bytes) {
 }
 
 std::array<byte, header_size> to_bytes(header x) {
-  std::array<byte, header_size> result;
-  auto ptr = result.data();
-  *ptr = static_cast<byte>(x.type);
-  auto payload_len = detail::to_network_order(x.payload_len);
-  memcpy(ptr + 1, &payload_len, sizeof(payload_len));
-  auto operation_data = detail::to_network_order(x.operation_data);
-  memcpy(ptr + 5, &operation_data, sizeof(operation_data));
+  std::array<byte, header_size> result{};
+  to_bytes_impl(x, result.data());
   return result;
+}
+
+void to_bytes(header x, std::vector<byte>& buf) {
+  buf.resize(header_size);
+  to_bytes_impl(x, buf.data());
 }
 
 } // namespace basp

@@ -20,9 +20,8 @@
 
 #include "caf/net/transport_worker.hpp"
 
+#include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
-
-#include "host_fixture.hpp"
 
 #include "caf/byte.hpp"
 #include "caf/detail/scope_guard.hpp"
@@ -37,6 +36,8 @@ using namespace caf;
 using namespace caf::net;
 
 namespace {
+
+using buffer_type = std::vector<byte>;
 
 constexpr string_view hello_test = "hello test!";
 
@@ -72,21 +73,23 @@ public:
 
   template <class Parent>
   void write_message(Parent& parent,
-                     std::unique_ptr<endpoint_manager::message> msg) {
-    parent.write_packet(span<const byte>{}, msg->payload);
+                     std::unique_ptr<endpoint_manager_queue::message> msg) {
+    auto header_buffer = parent.next_header_buffer();
+    parent.write_packet(header_buffer, msg->payload);
   }
 
   template <class Parent>
-  void handle_data(Parent&, span<const byte> data) {
+  error handle_data(Parent&, span<const byte> data) {
     auto& buf = res_->data_buffer;
     buf.clear();
     buf.insert(buf.begin(), data.begin(), data.end());
+    return none;
   }
 
   template <class Parent>
-  void resolve(Parent&, const std::string& path, actor listener) {
-    res_->resolve_path = path;
-    res_->resolve_listener = std::move(listener);
+  void resolve(Parent&, string_view path, const actor& listener) {
+    res_->resolve_path.assign(path.begin(), path.end());
+    res_->resolve_listener = listener;
   }
 
   template <class Parent>
@@ -118,16 +121,29 @@ public:
 
   using application_type = dummy_application;
 
-  dummy_transport(std::shared_ptr<transport_result> res) : res_(res) {
+  dummy_transport(std::shared_ptr<transport_result> res)
+    : res_(std::move(res)) {
     // nop
   }
 
-  void write_packet(span<const byte> header, span<const byte> payload,
-                    ip_endpoint ep) {
-    auto& buf = res_->packet_buffer;
-    buf.insert(buf.begin(), header.begin(), header.end());
-    buf.insert(buf.begin(), payload.begin(), payload.end());
+  void write_packet(ip_endpoint ep, span<buffer_type*> buffers) {
     res_->ep = ep;
+    auto& packet_buf = res_->packet_buffer;
+    packet_buf.clear();
+    for (auto buf : buffers)
+      packet_buf.insert(packet_buf.end(), buf->begin(), buf->end());
+  }
+
+  transport_type& transport() {
+    return *this;
+  }
+
+  std::vector<byte> next_header_buffer() {
+    return {};
+  }
+
+  std::vector<byte> next_payload_buffer() {
+    return {};
   }
 
 private:
@@ -151,7 +167,6 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
   }
 
   bool handle_io_event() override {
-    mpx->handle_updates();
     return mpx->poll_once(false);
   }
 
@@ -191,9 +206,9 @@ CAF_TEST(write_message) {
                                const_cast<char*>(hello_test.data())),
                              hello_test.size());
   std::vector<byte> payload(test_span.begin(), test_span.end());
-  auto message = detail::make_unique<endpoint_manager::message>(std::move(elem),
-                                                                nullptr,
-                                                                payload);
+  using message_type = endpoint_manager_queue::message;
+  auto message = detail::make_unique<message_type>(std::move(elem), nullptr,
+                                                   payload);
   worker.write_message(transport, std::move(message));
   auto& buf = transport_results->packet_buffer;
   string_view result{reinterpret_cast<char*>(buf.data()), buf.size()};

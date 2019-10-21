@@ -20,9 +20,8 @@
 
 #include "caf/net/stream_transport.hpp"
 
+#include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
-
-#include "host_fixture.hpp"
 
 #include "caf/binary_deserializer.hpp"
 #include "caf/byte.hpp"
@@ -48,10 +47,10 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
     mpx = std::make_shared<multiplexer>();
     if (auto err = mpx->init())
       CAF_FAIL("mpx->init failed: " << sys.render(err));
+    mpx->set_thread_id();
   }
 
   bool handle_io_event() override {
-    mpx->handle_updates();
     return mpx->poll_once(false);
   }
 
@@ -72,20 +71,21 @@ public:
     return none;
   }
 
-  template <class Transport>
-  void write_message(Transport& transport,
-                     std::unique_ptr<endpoint_manager::message> msg) {
-    transport.write_packet(span<byte>{}, msg->payload);
+  template <class Parent>
+  void write_message(Parent& parent,
+                     std::unique_ptr<endpoint_manager_queue::message> ptr) {
+    parent.write_packet(ptr->payload);
   }
 
   template <class Parent>
-  void handle_data(Parent&, span<const byte> data) {
+  error handle_data(Parent&, span<const byte> data) {
     rec_buf_->clear();
     rec_buf_->insert(rec_buf_->begin(), data.begin(), data.end());
+    return none;
   }
 
   template <class Parent>
-  void resolve(Parent& parent, const std::string& path, actor listener) {
+  void resolve(Parent& parent, string_view path, const actor& listener) {
     actor_id aid = 42;
     auto hid = "0011223344556677889900112233445566778899";
     auto nid = unbox(make_node_id(42, hid));
@@ -95,11 +95,22 @@ public:
                                                             &parent.system(),
                                                             cfg,
                                                             std::move(ptr));
-    anon_send(listener, resolve_atom::value, std::move(path), p);
+    anon_send(listener, resolve_atom::value,
+              std::string{path.begin(), path.end()}, p);
   }
 
-  template <class Transport>
-  void timeout(Transport&, atom_value, uint64_t) {
+  template <class Parent>
+  void timeout(Parent&, atom_value, uint64_t) {
+    // nop
+  }
+
+  template <class Parent>
+  void new_proxy(Parent&, actor_id) {
+    // nop
+  }
+
+  template <class Parent>
+  void local_actor_down(Parent&, actor_id, error) {
     // nop
   }
 
@@ -139,7 +150,6 @@ CAF_TEST(receive) {
   transport.configure_read(net::receive_policy::exactly(hello_manager.size()));
   auto mgr = make_endpoint_manager(mpx, sys, transport);
   CAF_CHECK_EQUAL(mgr->init(), none);
-  mpx->handle_updates();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
   CAF_CHECK_EQUAL(write(sockets.second, as_bytes(make_span(hello_manager))),
                   hello_manager.size());
@@ -161,9 +171,8 @@ CAF_TEST(resolve and proxy communication) {
                                    transport_type{sockets.first,
                                                   dummy_application{buf}});
   CAF_CHECK_EQUAL(mgr->init(), none);
-  mpx->handle_updates();
   run();
-  mgr->resolve("/id/42", self);
+  mgr->resolve(unbox(make_uri("test:/id/42")), self);
   run();
   self->receive(
     [&](resolve_atom, const std::string&, const strong_actor_ptr& p) {

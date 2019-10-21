@@ -27,8 +27,8 @@ namespace caf {
 namespace net {
 
 pollset_updater::pollset_updater(pipe_socket read_handle,
-                                 multiplexer_ptr parent)
-  : super(read_handle, std::move(parent)), buf_size_(0) {
+                                 const multiplexer_ptr& parent)
+  : super(read_handle, parent), buf_size_(0) {
   mask_ = operation::read;
   nonblocking(read_handle, true);
 }
@@ -45,10 +45,18 @@ bool pollset_updater::handle_read_event() {
       buf_size_ += *num_bytes;
       if (buf_.size() == buf_size_) {
         buf_size_ = 0;
-        auto value = *reinterpret_cast<intptr_t*>(buf_.data());
+        auto opcode = static_cast<uint8_t>(buf_[0]);
+        intptr_t value;
+        memcpy(&value, buf_.data() + 1, sizeof(intptr_t));
         socket_manager_ptr mgr{reinterpret_cast<socket_manager*>(value), false};
-        if (auto ptr = parent_.lock())
-          ptr->update(mgr);
+        if (auto ptr = parent_.lock()) {
+          if (opcode == 0) {
+            ptr->register_reading(mgr);
+          } else {
+            CAF_ASSERT(opcode == 1);
+            ptr->register_writing(mgr);
+          }
+        }
       }
     } else {
       return get<sec>(res) == sec::unavailable_or_would_block;

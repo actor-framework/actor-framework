@@ -18,39 +18,43 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
+#include <vector>
 
-#include "caf/fwd.hpp"
+#include "caf/byte.hpp"
+#include "caf/net/fwd.hpp"
+#include "caf/span.hpp"
 
 namespace caf {
 namespace net {
-namespace basp {
 
-/// BASP-specific error codes.
-enum class ec : uint8_t {
-  invalid_magic_number = 1,
-  unexpected_number_of_bytes,
-  unexpected_payload,
-  missing_payload,
-  illegal_state,
-  invalid_handshake,
-  missing_handshake,
-  unexpected_handshake,
-  version_mismatch,
-  unimplemented = 10,
-  app_identifiers_mismatch,
-  invalid_payload,
-  invalid_scheme,
-  invalid_locator,
+/// Implements an interface for packet writing in application-layers.
+class packet_writer {
+public:
+  using buffer_type = std::vector<byte>;
+
+  virtual ~packet_writer();
+
+  /// Returns a buffer for writing header information.
+  virtual buffer_type next_header_buffer() = 0;
+
+  /// Returns a buffer for writing payload content.
+  virtual buffer_type next_payload_buffer() = 0;
+
+  /// Convenience function to write a packet consisting of multiple buffers.
+  /// @param buffers all buffers for the packet. The first buffer is a header
+  ///                buffer, the other buffers are payload buffer.
+  /// @warning this function takes ownership of `buffers`.
+  template <class... Ts>
+  void write_packet(Ts&... buffers) {
+    buffer_type* bufs[] = {&buffers...};
+    write_impl(make_span(bufs, sizeof...(Ts)));
+  }
+
+protected:
+  /// Implementing function for `write_packet`.
+  /// @param buffers a `span` containing all buffers of a packet.
+  virtual void write_impl(span<buffer_type*> buffers) = 0;
 };
 
-/// @relates ec
-std::string to_string(ec x);
-
-/// @relates ec
-error make_error(ec x);
-
-} // namespace basp
 } // namespace net
 } // namespace caf

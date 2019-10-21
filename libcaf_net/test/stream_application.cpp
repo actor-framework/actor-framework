@@ -20,22 +20,21 @@
 
 #include "caf/net/basp/application.hpp"
 
+#include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
-
-#include "host_fixture.hpp"
 
 #include <vector>
 
 #include "caf/byte.hpp"
-#include "caf/forwarding_actor_proxy.hpp"
+#include "caf/net/backend/test.hpp"
 #include "caf/net/basp/connection_state.hpp"
 #include "caf/net/basp/constants.hpp"
 #include "caf/net/basp/ec.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
+#include "caf/net/middleman.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/stream_socket.hpp"
 #include "caf/net/stream_transport.hpp"
-#include "caf/none.hpp"
 #include "caf/uri.hpp"
 
 using namespace caf;
@@ -57,37 +56,26 @@ size_t fetch_size(variant<size_t, sec> x) {
   return get<size_t>(x);
 }
 
-struct fixture : test_coordinator_fixture<>,
-                 host_fixture,
-                 proxy_registry::backend {
-  fixture() {
-    uri mars_uri;
-    REQUIRE_OK(parse("tcp://mars", mars_uri));
-    mars = make_node_id(mars_uri);
-    mpx = std::make_shared<multiplexer>();
-    if (auto err = mpx->init())
-      CAF_FAIL("mpx->init failed: " << sys.render(err));
-    auto proxies = std::make_shared<proxy_registry>(sys, *this);
-    auto sockets = unbox(make_stream_socket_pair());
-    sock = sockets.first;
-    nonblocking(sockets.first, true);
-    nonblocking(sockets.second, true);
-    mgr = make_endpoint_manager(mpx, sys,
-                                transport_type{sockets.second,
-                                               basp::application{proxies}});
-    REQUIRE_OK(mgr->init());
-    mpx->handle_updates();
-    CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
+struct config : actor_system_config {
+  config() {
+    put(content, "middleman.this-node", unbox(make_uri("test:earth")));
+    load<middleman, backend::test>();
+  }
+};
+
+struct fixture : host_fixture, test_coordinator_fixture<config> {
+  fixture() : mars(make_node_id(unbox(make_uri("test:mars")))) {
+    auto& mm = sys.network_manager();
+    mm.mpx()->set_thread_id();
+    auto backend = dynamic_cast<backend::test*>(mm.backend("test"));
+    auto mgr = backend->peer(mars);
     auto& dref = dynamic_cast<endpoint_manager_impl<transport_type>&>(*mgr);
     app = &dref.application();
-  }
-
-  ~fixture() {
-    close(sock);
+    sock = backend->socket(mars);
   }
 
   bool handle_io_event() override {
-    mpx->handle_updates();
+    auto mpx = sys.network_manager().mpx();
     return mpx->poll_once(false);
   }
 
@@ -143,57 +131,57 @@ struct fixture : test_coordinator_fixture<>,
     return sys;
   }
 
-  strong_actor_ptr make_proxy(node_id nid, actor_id aid) override {
-    using impl_type = forwarding_actor_proxy;
-    using hdl_type = strong_actor_ptr;
-    actor_config cfg;
-    return make_actor<impl_type, hdl_type>(aid, nid, &sys, cfg, self);
-  }
-
-  void set_last_hop(node_id*) override {
-    // nop
-  }
-
   node_id mars;
-
-  multiplexer_ptr mpx;
-
-  endpoint_manager_ptr mgr;
 
   stream_socket sock;
 
   basp::application* app;
+
+  unit_t no_payload;
 };
 
 } // namespace
 
 #define MOCK(kind, op, ...)                                                    \
   do {                                                                         \
-    auto payload = to_buf(__VA_ARGS__);                                        \
-    mock(basp::header{kind, static_cast<uint32_t>(payload.size()), op});       \
-    write(sock, make_span(payload));                                           \
+    CAF_MESSAGE("mock " << kind);                                              \
+    if (!std::is_same<decltype(std::make_tuple(__VA_ARGS__)),                  \
+                      std::tuple<unit_t>>::value) {                            \
+      auto payload = to_buf(__VA_ARGS__);                                      \
+      mock(basp::header{kind, static_cast<uint32_t>(payload.size()), op});     \
+      write(sock, make_span(payload));                                         \
+    } else {                                                                   \
+      mock(basp::header{kind, 0, op});                                         \
+    }                                                                          \
     run();                                                                     \
   } while (false)
 
 #define RECEIVE(msg_type, op_data, ...)                                        \
   do {                                                                         \
+    CAF_MESSAGE("receive " << msg_type);                                       \
     buffer_type buf(basp::header_size);                                        \
     if (fetch_size(read(sock, make_span(buf))) != basp::header_size)           \
       CAF_FAIL("unable to read " << basp::header_size << " bytes");            \
     auto hdr = basp::header::from_bytes(buf);                                  \
     CAF_CHECK_EQUAL(hdr.type, msg_type);                                       \
     CAF_CHECK_EQUAL(hdr.operation_data, op_data);                              \
-    buf.resize(hdr.payload_len);                                               \
-    if (fetch_size(read(sock, make_span(buf))) != size_t{hdr.payload_len})     \
-      CAF_FAIL("unable to read " << hdr.payload_len << " bytes");              \
-    binary_deserializer source{sys, buf};                                      \
-    if (auto err = source(__VA_ARGS__))                                        \
-      CAF_FAIL("failed to receive data: " << sys.render(err));                 \
+    if (!std::is_same<decltype(std::make_tuple(__VA_ARGS__)),                  \
+                      std::tuple<unit_t>>::value) {                            \
+      buf.resize(hdr.payload_len);                                             \
+      if (fetch_size(read(sock, make_span(buf))) != size_t{hdr.payload_len})   \
+        CAF_FAIL("unable to read " << hdr.payload_len << " bytes");            \
+      binary_deserializer source{sys, buf};                                    \
+      if (auto err = source(__VA_ARGS__))                                      \
+        CAF_FAIL("failed to receive data: " << sys.render(err));               \
+    } else {                                                                   \
+      if (hdr.payload_len != 0)                                                \
+        CAF_FAIL("unexpected payload");                                        \
+    }                                                                          \
   } while (false)
 
 CAF_TEST_FIXTURE_SCOPE(application_tests, fixture)
 
-CAF_TEST(actor message) {
+CAF_TEST(actor message and down message) {
   handle_handshake();
   consume_handshake();
   sys.registry().put(self->id(), self);
@@ -201,9 +189,19 @@ CAF_TEST(actor message) {
   MOCK(basp::message_type::actor_message, make_message_id().integer_value(),
        mars, actor_id{42}, self->id(), std::vector<strong_actor_ptr>{},
        make_message("hello world!"));
-  allow((atom_value, strong_actor_ptr),
-        from(_).to(self).with(atom("monitor"), _));
-  expect((std::string), from(_).to(self).with("hello world!"));
+  MOCK(basp::message_type::monitor_message, 42u, no_payload);
+  strong_actor_ptr proxy;
+  self->receive([&](const std::string& str) {
+    CAF_CHECK_EQUAL(str, "hello world!");
+    proxy = self->current_sender();
+    CAF_REQUIRE_NOT_EQUAL(proxy, nullptr);
+    self->monitor(proxy);
+  });
+  MOCK(basp::message_type::down_message, 42u,
+       error{exit_reason::user_shutdown});
+  expect((down_msg),
+         from(_).to(self).with(down_msg{actor_cast<actor_addr>(proxy),
+                                        exit_reason::user_shutdown}));
 }
 
 CAF_TEST(resolve request without result) {

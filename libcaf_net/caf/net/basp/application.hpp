@@ -20,6 +20,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -33,10 +34,12 @@
 #include "caf/net/basp/header.hpp"
 #include "caf/net/basp/message_type.hpp"
 #include "caf/net/endpoint_manager.hpp"
+#include "caf/net/packet_writer.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/node_id.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/response_promise.hpp"
+#include "caf/scoped_execution_unit.hpp"
 #include "caf/serializer_impl.hpp"
 #include "caf/span.hpp"
 #include "caf/unit.hpp"
@@ -54,13 +57,11 @@ public:
 
   using byte_span = span<const byte>;
 
-  using write_packet_callback = callback<byte_span, byte_span>;
-
-  using proxy_registry_ptr = std::shared_ptr<proxy_registry>;
+  struct test_tag {};
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit application(proxy_registry_ptr proxies);
+  explicit application(proxy_registry& proxies);
 
   // -- interface functions ----------------------------------------------------
 
@@ -68,67 +69,47 @@ public:
   error init(Parent& parent) {
     // Initialize member variables.
     system_ = &parent.system();
+    executor_.system_ptr(system_);
+    executor_.proxy_registry_ptr(&proxies_);
+    // TODO: use `if constexpr` when switching to C++17.
+    // Allow unit tests to run the application without endpoint manager.
+    if (!std::is_base_of<test_tag, Parent>::value)
+      manager_ = &parent.manager();
     // Write handshake.
-    if (auto err = generate_handshake())
+    auto hdr = parent.next_header_buffer();
+    auto payload = parent.next_payload_buffer();
+    if (auto err = generate_handshake(payload))
       return err;
-    auto hdr = to_bytes(header{message_type::handshake,
-                               static_cast<uint32_t>(buf_.size()), version});
-    parent.write_packet(hdr, buf_);
+    to_bytes(header{message_type::handshake,
+                    static_cast<uint32_t>(payload.size()), version},
+             hdr);
+    parent.write_packet(hdr, payload);
     parent.transport().configure_read(receive_policy::exactly(header_size));
     return none;
   }
 
-  template <class Parent>
-  error write_message(Parent& parent,
-                      std::unique_ptr<endpoint_manager::message> ptr) {
-    // TODO: avoid extra copy of the payload
-    buf_.clear();
-    serializer_impl<buffer_type> sink{system(), buf_};
-    const auto& src = ptr->msg->sender;
-    const auto& dst = ptr->receiver;
-    if (dst == nullptr) {
-      // TODO: valid?
-      return none;
-    }
-    if (src != nullptr) {
-      if (auto err = sink(src->node(), src->id(), dst->id(), ptr->msg->stages))
-        return err;
-    } else {
-      if (auto err = sink(node_id{}, actor_id{0}, dst->id(), ptr->msg->stages))
-        return err;
-    }
-    buf_.insert(buf_.end(), ptr->payload.begin(), ptr->payload.end());
-    header hdr{message_type::actor_message, static_cast<uint32_t>(buf_.size()),
-               ptr->msg->mid.integer_value()};
-    auto bytes = to_bytes(hdr);
-    parent.write_packet(make_span(bytes), make_span(buf_));
-    return none;
-  }
+  error write_message(packet_writer& writer,
+                      std::unique_ptr<endpoint_manager_queue::message> ptr);
 
   template <class Parent>
   error handle_data(Parent& parent, byte_span bytes) {
-    auto write_packet = make_callback([&](byte_span hdr, byte_span payload) {
-      parent.write_packet(hdr, payload);
-      return none;
-    });
+    static_assert(std::is_base_of<packet_writer, Parent>::value,
+                  "parent must implement packet_writer");
     size_t next_read_size = header_size;
-    if (auto err = handle(next_read_size, write_packet, bytes))
+    if (auto err = handle(next_read_size, parent, bytes))
       return err;
     parent.transport().configure_read(receive_policy::exactly(next_read_size));
     return none;
   }
 
-  template <class Parent>
-  void resolve(Parent& parent, string_view path, actor listener) {
-    auto write_packet = make_callback([&](byte_span hdr, byte_span payload) {
-      parent.write_packet(hdr, payload);
-      return none;
-    });
-    resolve_remote_path(write_packet, path, listener);
-  }
+  void resolve(packet_writer& writer, string_view path, const actor& listener);
 
-  template <class Transport>
-  void timeout(Transport&, atom_value, uint64_t) {
+  static void new_proxy(packet_writer& writer, actor_id id);
+
+  void local_actor_down(packet_writer& writer, actor_id id, error reason);
+
+  template <class Parent>
+  void timeout(Parent&, atom_value, uint64_t) {
     // nop
   }
 
@@ -136,15 +117,12 @@ public:
     // nop
   }
 
-  static expected<std::vector<byte>> serialize(actor_system& sys,
-                                               const type_erased_tuple& x);
+  static expected<buffer_type> serialize(actor_system& sys,
+                                         const type_erased_tuple& x);
 
   // -- utility functions ------------------------------------------------------
 
   strong_actor_ptr resolve_local_path(string_view path);
-
-  void resolve_remote_path(write_packet_callback& write_packet,
-                           string_view path, actor listener);
 
   // -- properties -------------------------------------------------------------
 
@@ -157,28 +135,31 @@ public:
   }
 
 private:
-  // -- message handling -------------------------------------------------------
+  // -- handling of incoming messages ------------------------------------------
 
-  error handle(size_t& next_read_size, write_packet_callback& write_packet,
-               byte_span bytes);
+  error handle(size_t& next_read_size, packet_writer& writer, byte_span bytes);
 
-  error handle(write_packet_callback& write_packet, header hdr,
-               byte_span payload);
+  error handle(packet_writer& writer, header hdr, byte_span payload);
 
-  error handle_handshake(write_packet_callback& write_packet, header hdr,
-                         byte_span payload);
+  error handle_handshake(packet_writer& writer, header hdr, byte_span payload);
 
-  error handle_actor_message(write_packet_callback& write_packet, header hdr,
+  error handle_actor_message(packet_writer& writer, header hdr,
                              byte_span payload);
 
-  error handle_resolve_request(write_packet_callback& write_packet, header hdr,
-                               byte_span payload);
+  error handle_resolve_request(packet_writer& writer, header rec_hdr,
+                               byte_span received);
 
-  error handle_resolve_response(write_packet_callback& write_packet, header hdr,
-                                byte_span payload);
+  error handle_resolve_response(packet_writer& writer, header received_hdr,
+                                byte_span received);
+
+  error handle_monitor_message(packet_writer& writer, header received_hdr,
+                               byte_span received);
+
+  error handle_down_message(packet_writer& writer, header received_hdr,
+                            byte_span received);
 
   /// Writes the handshake payload to `buf_`.
-  error generate_handshake();
+  error generate_handshake(buffer_type& buf);
 
   // -- member variables -------------------------------------------------------
 
@@ -191,17 +172,11 @@ private:
   /// Caches the last header while waiting for the matching payload.
   header hdr_;
 
-  /// Re-usable buffer for storing payloads.
-  buffer_type buf_;
-
-  /// Stores our own ID.
-  node_id id_;
-
   /// Stores the ID of our peer.
   node_id peer_id_;
 
   /// Tracks which local actors our peer monitors.
-  std::unordered_set<actor_addr> monitored_actors_;
+  std::unordered_set<actor_addr> monitored_actors_; // TODO: this is unused
 
   /// Caches actor handles obtained via `resolve`.
   std::unordered_map<uint64_t, response_promise> pending_resolves_;
@@ -210,7 +185,14 @@ private:
   uint64_t next_request_id_ = 1;
 
   /// Points to the factory object for generating proxies.
-  proxy_registry_ptr proxies_;
+  proxy_registry& proxies_;
+
+  /// Points to the endpoint manager that owns this applications.
+  endpoint_manager* manager_ = nullptr;
+
+  /// Provides pointers to the actor system as well as the registry,
+  /// serializers and deserializer.
+  scoped_execution_unit executor_;
 };
 
 } // namespace basp

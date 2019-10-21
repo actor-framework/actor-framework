@@ -20,9 +20,8 @@
 
 #include "caf/net/endpoint_manager.hpp"
 
+#include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
-
-#include "host_fixture.hpp"
 
 #include "caf/byte.hpp"
 #include "caf/detail/scope_guard.hpp"
@@ -46,12 +45,14 @@ string_view hello_test{"hello test!"};
 struct fixture : test_coordinator_fixture<>, host_fixture {
   fixture() {
     mpx = std::make_shared<multiplexer>();
+    mpx->set_thread_id();
     if (auto err = mpx->init())
       CAF_FAIL("mpx->init failed: " << sys.render(err));
+    if (mpx->num_socket_managers() != 1)
+      CAF_FAIL("mpx->num_socket_managers() != 1");
   }
 
   bool handle_io_event() override {
-    mpx->handle_updates();
     return mpx->poll_once(false);
   }
 
@@ -87,7 +88,7 @@ public:
   error init(Manager& manager) {
     auto test_bytes = as_bytes(make_span(hello_test));
     buf_.insert(buf_.end(), test_bytes.begin(), test_bytes.end());
-    CAF_CHECK(manager.mask_add(operation::read_write));
+    manager.register_writing();
     return none;
   }
 
@@ -121,7 +122,7 @@ public:
   }
 
   template <class Manager>
-  void resolve(Manager& mgr, std::string path, actor listener) {
+  void resolve(Manager& mgr, const uri& locator, const actor& listener) {
     actor_id aid = 42;
     auto hid = "0011223344556677889900112233445566778899";
     auto nid = unbox(make_node_id(42, hid));
@@ -129,11 +130,22 @@ public:
     auto p = make_actor<actor_proxy_impl, strong_actor_ptr>(aid, nid,
                                                             &mgr.system(), cfg,
                                                             &mgr);
+    std::string path{locator.path().begin(), locator.path().end()};
     anon_send(listener, resolve_atom::value, std::move(path), p);
   }
 
   template <class Manager>
   void timeout(Manager&, atom_value, uint64_t) {
+    // nop
+  }
+
+  template <class Parent>
+  void new_proxy(Parent&, const node_id&, actor_id) {
+    // nop
+  }
+
+  template <class Parent>
+  void local_actor_down(Parent&, const node_id&, actor_id, error) {
     // nop
   }
 
@@ -153,7 +165,6 @@ CAF_TEST_FIXTURE_SCOPE(endpoint_manager_tests, fixture)
 
 CAF_TEST(send and receive) {
   std::vector<byte> read_buf(1024);
-  CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
   auto buf = std::make_shared<std::vector<byte>>();
   auto sockets = unbox(make_stream_socket_pair());
   nonblocking(sockets.second, true);
@@ -162,8 +173,9 @@ CAF_TEST(send and receive) {
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
   auto mgr = make_endpoint_manager(mpx, sys,
                                    dummy_transport{sockets.first, buf});
+  CAF_CHECK_EQUAL(mgr->mask(), operation::none);
   CAF_CHECK_EQUAL(mgr->init(), none);
-  mpx->handle_updates();
+  CAF_CHECK_EQUAL(mgr->mask(), operation::read_write);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
   CAF_CHECK_EQUAL(write(sockets.second, as_bytes(make_span(hello_manager))),
                   hello_manager.size());
@@ -186,10 +198,10 @@ CAF_TEST(resolve and proxy communication) {
   auto mgr = make_endpoint_manager(mpx, sys,
                                    dummy_transport{sockets.first, buf});
   CAF_CHECK_EQUAL(mgr->init(), none);
-  mpx->handle_updates();
+  CAF_CHECK_EQUAL(mgr->mask(), operation::read_write);
   run();
   CAF_CHECK_EQUAL(read(sockets.second, make_span(read_buf)), hello_test.size());
-  mgr->resolve("/id/42", self);
+  mgr->resolve(unbox(make_uri("test:id/42")), self);
   run();
   self->receive(
     [&](resolve_atom, const std::string&, const strong_actor_ptr& p) {

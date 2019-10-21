@@ -20,9 +20,8 @@
 
 #include "caf/net/multiplexer.hpp"
 
+#include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
-
-#include "host_fixture.hpp"
 
 #include <new>
 #include <tuple>
@@ -123,7 +122,7 @@ using dummy_manager_ptr = intrusive_ptr<dummy_manager>;
 
 struct fixture : host_fixture {
   fixture() : manager_count(0), mpx(std::make_shared<multiplexer>()) {
-    // nop
+    mpx->set_thread_id();
   }
 
   ~fixture() {
@@ -165,13 +164,11 @@ CAF_TEST(send and receive) {
   auto sockets = unbox(make_stream_socket_pair());
   auto alice = make_counted<dummy_manager>(manager_count, sockets.first, mpx);
   auto bob = make_counted<dummy_manager>(manager_count, sockets.second, mpx);
-  alice->mask_add(operation::read);
-  bob->mask_add(operation::read);
-  mpx->handle_updates();
+  alice->register_reading();
+  bob->register_reading();
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 3u);
   alice->send("hello bob");
-  alice->mask_add(operation::write);
-  mpx->handle_updates();
+  alice->register_writing();
   exhaust();
   CAF_CHECK_EQUAL(bob->receive(), "hello bob");
 }
