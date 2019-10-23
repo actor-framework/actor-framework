@@ -276,12 +276,13 @@ private:
       }
       packet_queue_.pop_front();
     };
-    // TODO: Implement this with span<vector*>
-
-    // Write buffers from the write_queue_ for as long as possible.
-    /*while (!packet_queue_.empty()) {
+    // Write as many bytes as possible.
+    while (!packet_queue_.empty()) {
       auto& packet = packet_queue_.front();
-      auto write_ret = write(handle_, make_span(packet.bytes),
+      std::vector<std::vector<byte>*> ptrs;
+      for(auto& buf : packet.bytes)
+        ptrs.emplace_back(&buf);
+      auto write_ret = write(handle_, make_span(ptrs),
                              packet.destination);
       if (auto num_bytes = get_if<size_t>(&write_ret)) {
         CAF_LOG_DEBUG(CAF_ARG(handle_.id) << CAF_ARG(*num_bytes));
@@ -297,7 +298,7 @@ private:
         }
         return true;
       }
-    }*/
+    }
     return false;
   }
 
