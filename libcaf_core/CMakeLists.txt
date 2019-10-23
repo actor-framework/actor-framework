@@ -35,6 +35,7 @@ set(LIBCAF_CORE_SRCS
   src/actor_control_block.cpp
   src/actor_ostream.cpp
   src/actor_pool.cpp
+  src/actor_profiler.cpp
   src/actor_proxy.cpp
   src/actor_registry.cpp
   src/actor_system.cpp

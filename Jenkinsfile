@@ -13,6 +13,7 @@ defaultReleaseBuildFlags = [
 defaultDebugBuildFlags = defaultReleaseBuildFlags + [
     'CAF_ENABLE_ADDRESS_SANITIZER:BOOL=yes',
     'CAF_LOG_LEVEL:STRING=TRACE',
+    'CAF_ENABLE_ACTOR_PROFILER:BOOL=yes',
 ]
 
 // Configures the behavior of our stages.

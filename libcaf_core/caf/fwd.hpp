@@ -88,6 +88,7 @@ class actor_companion;
 class actor_config;
 class actor_control_block;
 class actor_pool;
+class actor_profiler;
 class actor_proxy;
 class actor_registry;
 class actor_system;

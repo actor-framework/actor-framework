@@ -18,29 +18,29 @@
 
 #include "caf/local_actor.hpp"
 
-#include <string>
 #include <condition_variable>
+#include <string>
 
-#include "caf/sec.hpp"
-#include "caf/atom.hpp"
-#include "caf/logger.hpp"
-#include "caf/scheduler.hpp"
-#include "caf/resumable.hpp"
 #include "caf/actor_cast.hpp"
-#include "caf/exit_reason.hpp"
-#include "caf/actor_system.hpp"
 #include "caf/actor_ostream.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/atom.hpp"
+#include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/default_attachable.hpp"
-#include "caf/binary_deserializer.hpp"
+#include "caf/exit_reason.hpp"
+#include "caf/logger.hpp"
+#include "caf/resumable.hpp"
+#include "caf/scheduler.hpp"
+#include "caf/sec.hpp"
 
 namespace caf {
 
 local_actor::local_actor(actor_config& cfg)
-    : monitorable_actor(cfg),
-      context_(cfg.host),
-      current_element_(nullptr),
-      initial_behavior_fac_(std::move(cfg.init_fun)) {
+  : monitorable_actor(cfg),
+    context_(cfg.host),
+    current_element_(nullptr),
+    initial_behavior_fac_(std::move(cfg.init_fun)) {
   // nop
 }
 
@@ -50,6 +50,9 @@ local_actor::~local_actor() {
 
 void local_actor::on_destroy() {
   CAF_PUSH_AID_FROM_PTR(this);
+#ifdef CAF_ENABLE_ACTOR_PROFILER
+  system().profiler_remove_actor(*this);
+#endif
   if (!getf(is_cleaned_up_flag)) {
     on_exit();
     cleanup(exit_reason::unreachable, nullptr);
@@ -68,15 +71,16 @@ void local_actor::request_response_timeout(const duration& d, message_id mid) {
 
 void local_actor::monitor(abstract_actor* ptr, message_priority priority) {
   if (ptr != nullptr)
-    ptr->attach(default_attachable::make_monitor(ptr->address(), address(),
-                                                 priority));
+    ptr->attach(
+      default_attachable::make_monitor(ptr->address(), address(), priority));
 }
 
 void local_actor::demonitor(const actor_addr& whom) {
   CAF_LOG_TRACE(CAF_ARG(whom));
   auto ptr = actor_cast<strong_actor_ptr>(whom);
   if (ptr) {
-    default_attachable::observe_token tk{address(), default_attachable::monitor};
+    default_attachable::observe_token tk{address(),
+                                         default_attachable::monitor};
     ptr->get()->detach(tk);
   }
 }

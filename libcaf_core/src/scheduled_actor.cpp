@@ -285,9 +285,11 @@ scheduled_actor::mailbox_visitor::operator()(size_t, upstream_queue&,
   CAF_ASSERT(x.content().type_token() == make_type_token<upstream_msg>());
   self->current_mailbox_element(&x);
   CAF_LOG_RECEIVE_EVENT((&x));
+  CAF_BEFORE_PROCESSING(self, x);
   auto& um = x.content().get_mutable_as<upstream_msg>(0);
   upstream_msg_visitor f{self, um};
   visit(f, um.content);
+  CAF_AFTER_PROCESSING(self, invoke_message_result::consumed);
   return ++handled_msgs < max_throughput ? intrusive::task_result::resume
                                          : intrusive::task_result::stop_all;
 }
@@ -343,10 +345,12 @@ intrusive::task_result scheduled_actor::mailbox_visitor::operator()(
   CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG(handled_msgs));
   self->current_mailbox_element(&x);
   CAF_LOG_RECEIVE_EVENT((&x));
+  CAF_BEFORE_PROCESSING(self, x);
   CAF_ASSERT(x.content().type_token() == make_type_token<downstream_msg>());
   auto& dm = x.content().get_mutable_as<downstream_msg>(0);
   downstream_msg_visitor f{self, qs, q, dm};
   auto res = visit(f, dm.content);
+  CAF_AFTER_PROCESSING(self, invoke_message_result::consumed);
   return ++handled_msgs < max_throughput ? res
                                          : intrusive::task_result::stop_all;
 }
@@ -625,6 +629,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   current_element_ = &x;
   CAF_LOG_RECEIVE_EVENT(current_element_);
+  CAF_BEFORE_PROCESSING(this, x);
   // Helper function for dispatching a message to a response handler.
   using ptr_t = scheduled_actor*;
   using fun_t = bool (*)(ptr_t, behavior&, mailbox_element&);
@@ -637,8 +642,10 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
     auto invoke = select_invoke_fun();
     auto& pr = awaited_responses_.front();
     // skip all messages until we receive the currently awaited response
-    if (x.mid != pr.first)
+    if (x.mid != pr.first) {
+      CAF_AFTER_PROCESSING(this, invoke_message_result::skipped);
       return invoke_message_result::skipped;
+    }
     auto f = std::move(pr.second);
     awaited_responses_.pop_front();
     if (!invoke(this, f, x)) {
@@ -647,6 +654,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
         make_error(sec::unexpected_response, x.move_content_to_message()));
       f(msg);
     }
+    CAF_AFTER_PROCESSING(this, invoke_message_result::consumed);
     return invoke_message_result::consumed;
   }
   // Handle multiplexed responses.
@@ -654,8 +662,10 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
     auto invoke = select_invoke_fun();
     auto mrh = multiplexed_responses_.find(x.mid);
     // neither awaited nor multiplexed, probably an expired timeout
-    if (mrh == multiplexed_responses_.end())
+    if (mrh == multiplexed_responses_.end()) {
+      CAF_AFTER_PROCESSING(this, invoke_message_result::dropped);
       return invoke_message_result::dropped;
+    }
     auto bhvr = std::move(mrh->second);
     multiplexed_responses_.erase(mrh);
     if (!invoke(this, bhvr, x)) {
@@ -664,14 +674,17 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
         make_error(sec::unexpected_response, x.move_content_to_message()));
       bhvr(msg);
     }
+    CAF_AFTER_PROCESSING(this, invoke_message_result::consumed);
     return invoke_message_result::consumed;
   }
   // Dispatch on the content of x.
   switch (categorize(x)) {
     case message_category::skipped:
+      CAF_AFTER_PROCESSING(this, invoke_message_result::skipped);
       return invoke_message_result::skipped;
     case message_category::internal:
       CAF_LOG_DEBUG("handled system message");
+      CAF_AFTER_PROCESSING(this, invoke_message_result::consumed);
       return invoke_message_result::consumed;
     case message_category::ordinary: {
       detail::default_invoke_result_visitor<scheduled_actor> visitor{this};
@@ -699,8 +712,10 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       };
       if (bhvr_stack_.empty()) {
         call_default_handler();
-        return !skipped ? invoke_message_result::consumed
-                        : invoke_message_result::skipped;
+        auto result = !skipped ? invoke_message_result::consumed
+                               : invoke_message_result::skipped;
+        CAF_AFTER_PROCESSING(this, result);
+        return result;
       }
       auto& bhvr = bhvr_stack_.back();
       switch (bhvr(visitor, x.content())) {
@@ -712,8 +727,10 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
         case match_case::no_match:
           call_default_handler();
       }
-      return !skipped ? invoke_message_result::consumed
-                      : invoke_message_result::skipped;
+      auto result = !skipped ? invoke_message_result::consumed
+                             : invoke_message_result::skipped;
+      CAF_AFTER_PROCESSING(this, result);
+      return result;
     }
   }
   // Unreachable.

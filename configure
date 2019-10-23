@@ -81,6 +81,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --with-asan                 alias for --with-address-sanitier
     --enable-asan               alias for --with-address-sanitier
     --with-gcov                 build with gcov coverage enabled
+    --with-actor-profiler       enables the (experimental) actor_profiler API
 
   Convenience options:
     --dev-mode                  sets --build-type=debug, --no-examples,
@@ -249,6 +250,9 @@ while [ $# -ne 0 ]; do
             ;;
         --with-gcov)
             append_cache_entry CAF_ENABLE_GCOV BOOL yes
+            ;;
+        --with-actor-profiler)
+            append_cache_entry CAF_ENABLE_ACTOR_PROFILER BOOL yes
             ;;
         --no-memory-management)
             append_cache_entry CAF_NO_MEM_MANAGEMENT BOOL yes

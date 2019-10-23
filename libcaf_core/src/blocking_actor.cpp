@@ -26,6 +26,7 @@
 #include "caf/detail/invoke_result_visitor.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
+#include "caf/invoke_message_result.hpp"
 #include "caf/logger.hpp"
 
 namespace caf {
@@ -159,6 +160,7 @@ intrusive::task_result
 blocking_actor::mailbox_visitor:: operator()(mailbox_element& x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   CAF_LOG_RECEIVE_EVENT((&x));
+  CAF_BEFORE_PROCESSING(self, x);
   auto check_if_done = [&]() -> intrusive::task_result {
     // Stop consuming items when reaching the end of the user-defined receive
     // loop either via post or pre condition.
@@ -170,10 +172,12 @@ blocking_actor::mailbox_visitor:: operator()(mailbox_element& x) {
   // Skip messages that don't match our message ID.
   if (mid.is_response()) {
     if (mid != x.mid) {
+      CAF_AFTER_PROCESSING(self, invoke_message_result::skipped);
       CAF_LOG_SKIP_EVENT();
       return intrusive::task_result::skip;
     }
   } else if (x.mid.is_response()) {
+    CAF_AFTER_PROCESSING(self, invoke_message_result::skipped);
     CAF_LOG_SKIP_EVENT();
     return intrusive::task_result::skip;
   }
@@ -190,11 +194,13 @@ blocking_actor::mailbox_visitor:: operator()(mailbox_element& x) {
   detail::default_invoke_result_visitor<blocking_actor> visitor{self};
   switch (bhvr.nested(visitor, x.content())) {
     default:
+      CAF_AFTER_PROCESSING(self, invoke_message_result::consumed);
       return check_if_done();
     case match_case::no_match:
       { // Blocking actors can have fallback handlers for catch-all rules.
         auto sres = bhvr.fallback(*self->current_element_);
         if (sres.flag != rt_skip) {
+          CAF_AFTER_PROCESSING(self, invoke_message_result::consumed);
           visitor.visit(sres);
           CAF_LOG_FINALIZE_EVENT();
           return check_if_done();
@@ -209,11 +215,13 @@ blocking_actor::mailbox_visitor:: operator()(mailbox_element& x) {
                                         std::move(x.stages), err};
         self->current_element_ = &tmp;
         bhvr.nested(tmp.content());
+        CAF_AFTER_PROCESSING(self, invoke_message_result::consumed);
         CAF_LOG_FINALIZE_EVENT();
         return check_if_done();
       }
       CAF_ANNOTATE_FALLTHROUGH;
     case match_case::skip:
+      CAF_AFTER_PROCESSING(self, invoke_message_result::skipped);
       CAF_LOG_SKIP_EVENT();
       return intrusive::task_result::skip;
   }
