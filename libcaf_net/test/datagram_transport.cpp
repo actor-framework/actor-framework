@@ -48,6 +48,7 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
     mpx = std::make_shared<multiplexer>();
     if (auto err = mpx->init())
       CAF_FAIL("mpx->init failed: " << sys.render(err));
+    mpx->set_thread_id();
   }
 
   bool handle_io_event() override {
@@ -95,7 +96,8 @@ public:
                                                             &parent.system(),
                                                             cfg,
                                                             std::move(ptr));
-    anon_send(listener, resolve_atom::value, path, p);
+    anon_send(listener, resolve_atom::value,
+              std::string{path.begin(), path.end()}, p);
   }
 
   template <class Parent>
@@ -113,8 +115,8 @@ public:
     // nop
   }
 
-  void handle_error(sec) {
-    // nop
+  void handle_error(sec sec) {
+    CAF_FAIL("handle_error called" << to_string(sec));
   }
 
   static expected<std::vector<byte>> serialize(actor_system& sys,
@@ -169,7 +171,7 @@ CAF_TEST(receive) {
     CAF_FAIL("nonblocking() returned an error: " << sys.render(err));
   transport_type transport{receiver, dummy_application_factory{buf}};
   transport.configure_read(net::receive_policy::exactly(hello_manager.size()));
-  auto mgr = make_endpoint_manager(mpx, sys, transport);
+  auto mgr = make_endpoint_manager(mpx, sys, std::move(transport));
   CAF_CHECK_EQUAL(mgr->init(), none);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
   CAF_CHECK_EQUAL(write(sender, as_bytes(make_span(hello_manager)), ep),
