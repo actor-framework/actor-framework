@@ -276,8 +276,10 @@ private:
       }
       packet_queue_.pop_front();
     };
+    // TODO: Implement this with span<vector*>
+
     // Write buffers from the write_queue_ for as long as possible.
-    while (!packet_queue_.empty()) {
+    /*while (!packet_queue_.empty()) {
       auto& packet = packet_queue_.front();
       auto write_ret = write(handle_, make_span(packet.bytes),
                              packet.destination);
@@ -295,7 +297,7 @@ private:
         }
         return true;
       }
-    }
+    }*/
     return false;
   }
 

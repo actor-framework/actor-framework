@@ -39,7 +39,7 @@ namespace {
 constexpr string_view hello_test = "Hello test!";
 
 struct fixture : host_fixture {
-  fixture() : host_fixture() {
+  fixture() : host_fixture(), buf(1024) {
     addresses = local_addresses("localhost");
     CAF_CHECK(!addresses.empty());
     ep = ip_endpoint(*addresses.begin(), 0);
@@ -61,14 +61,48 @@ struct fixture : host_fixture {
   ip_endpoint ep;
   udp_datagram_socket send_socket;
   udp_datagram_socket receive_socket;
+  std::vector<byte> buf;
+};
+
+error read_from_socket(udp_datagram_socket sock, std::vector<byte>& buf) {
+  uint8_t receive_attempts = 0;
+  variant<std::pair<size_t, ip_endpoint>, sec> read_ret;
+  do {
+    read_ret = read(sock, make_span(buf));
+    if (auto read_res = get_if<std::pair<size_t, ip_endpoint>>(&read_ret)) {
+      buf.resize(read_res->first);
+    } else if (get<sec>(read_ret) != sec::unavailable_or_would_block) {
+      return make_error(get<sec>(read_ret), "read failed");
+    }
+    if (++receive_attempts > 100)
+      return make_error(sec::runtime_error,
+                        "too many unavailable_or_would_blocks");
+  } while (read_ret.index() != 0);
+  return none;
+}
+
+struct header {
+  header(size_t payload_size) : payload_size(payload_size) {
+    // nop
+  }
+
+  header() : header(0) {
+    // nop
+  }
+
+  template <class Inspector>
+  friend typename Inspector::result_type inspect(Inspector& f, header& x) {
+    return f(meta::type_name("header"), x.payload_size);
+  }
+
+  size_t payload_size;
 };
 
 } // namespace
 
 CAF_TEST_FIXTURE_SCOPE(udp_datagram_socket_test, fixture)
 
-CAF_TEST(send and receive) {
-  std::vector<byte> buf(1024);
+CAF_TEST(read / write using span<byte>) {
   if (auto err = nonblocking(socket_cast<net::socket>(receive_socket), true))
     CAF_FAIL("setting socket to nonblocking failed: " << err);
   CAF_CHECK_EQUAL(read(receive_socket, make_span(buf)),
@@ -76,20 +110,34 @@ CAF_TEST(send and receive) {
   CAF_MESSAGE("sending data to " << to_string(ep));
   CAF_CHECK_EQUAL(write(send_socket, as_bytes(make_span(hello_test)), ep),
                   hello_test.size());
-  int receive_attempts = 0;
-  variant<std::pair<size_t, ip_endpoint>, sec> read_ret;
-  do {
-    read_ret = read(receive_socket, make_span(buf));
-    if (auto read_res = get_if<std::pair<size_t, ip_endpoint>>(&read_ret)) {
-      CAF_CHECK_EQUAL(read_res->first, hello_test.size());
-      buf.resize(read_res->first);
-    } else if (get<sec>(read_ret) != sec::unavailable_or_would_block) {
-      CAF_FAIL("read returned an error: " << sys.render(get<sec>(read_ret)));
-    }
-    if (++receive_attempts > 100)
-      CAF_FAIL("unable to receive data from the UDP socket");
-  } while (read_ret.index() != 0);
+  CAF_CHECK_EQUAL(read_from_socket(receive_socket, buf), none);
   string_view received{reinterpret_cast<const char*>(buf.data()), buf.size()};
+  CAF_CHECK_EQUAL(received, hello_test);
+}
+
+CAF_TEST(read / write using span<std::vector<byte>>) {
+  // generate header and payload in separate buffers
+  header hdr{hello_test.size()};
+  std::vector<byte> hdr_buf;
+  serializer_impl<std::vector<byte>> sink(sys, hdr_buf);
+  if (auto err = sink(hdr))
+    CAF_FAIL("serializing payload failed" << sys.render(err));
+  auto bytes = as_bytes(make_span(hello_test));
+  std::vector<byte> payload_buf(bytes.begin(), bytes.end());
+  auto packet_size = hdr_buf.size() + payload_buf.size();
+  std::vector<std::vector<byte>*> bufs{&hdr_buf, &payload_buf};
+  CAF_CHECK_EQUAL(write(send_socket, make_span(bufs), ep), packet_size);
+  // receive both as one single packet.
+  buf.resize(packet_size);
+  CAF_CHECK_EQUAL(read_from_socket(receive_socket, buf), none);
+  CAF_CHECK_EQUAL(buf.size(), packet_size);
+  binary_deserializer source(nullptr, buf);
+  header recv_hdr;
+  source(recv_hdr);
+  CAF_CHECK_EQUAL(hdr.payload_size, recv_hdr.payload_size);
+  string_view received{reinterpret_cast<const char*>(buf.data())
+                         + sizeof(header),
+                       buf.size() - sizeof(header)};
   CAF_CHECK_EQUAL(received, hello_test);
 }
 

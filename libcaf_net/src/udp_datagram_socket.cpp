@@ -111,11 +111,11 @@ variant<std::pair<size_t, ip_endpoint>, sec> read(udp_datagram_socket x,
   }
 }
 
-variant<size_t, sec> write(udp_datagram_socket x, span<std::vector<byte>> bufs,
+variant<size_t, sec> write(udp_datagram_socket x, span<std::vector<byte>*> bufs,
                            ip_endpoint ep) {
   CAF_ASSERT(bufs.size() < 10);
-  auto convert = [](std::vector<byte> buf) {
-    return iovec{const_cast<byte*>(buf.data()), buf.size()};
+  auto convert = [](std::vector<byte>* buf) {
+    return iovec{const_cast<byte*>(buf->data()), buf->size()};
   };
   sockaddr_storage addr = {};
   detail::convert(ep, addr);
