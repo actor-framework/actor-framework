@@ -65,7 +65,7 @@ public:
     type_check(dest, args_token);
     if (dest)
       dest->eq_impl(make_message_id(P), dptr()->ctrl(),
-                    dptr()->context(), std::forward<Ts>(xs)...);
+                    nullptr, std::forward<Ts>(xs)...);
   }
 
   /// Sends `{xs...}` as an asynchronous message to `dest` with priority `mp`.
@@ -79,7 +79,7 @@ public:
                   "communicating with dynamically typed actors");
     if (dest)
       dest->get()->eq_impl(make_message_id(P), dptr()->ctrl(),
-                           dptr()->context(), std::forward<Ts>(xs)...);
+                           nullptr, std::forward<Ts>(xs)...);
   }
 
   template <message_priority P = message_priority::normal,
