@@ -40,7 +40,7 @@ public:
   virtual void add_actor(const local_actor& self, const local_actor* parent)
     = 0;
 
-  /// Called whenever the actor system spawns a new actor.
+  /// Called before the actor system calls the destructor for `self`.
   /// @param ptr Points to an actor that is about to get destroyed.
   /// @thread-safe
   virtual void remove_actor(const local_actor& self) = 0;
