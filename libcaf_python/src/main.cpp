@@ -99,7 +99,7 @@ void register_class(atom_value*, pybind11::module& m,
   auto cmp = [](atom_value x, atom_value y) {
     return x == y;
   };
-  std::string (*to_string_fun)(const atom_value&) = &to_string;
+  std::string (*to_string_fun)(atom_value) = &to_string;
   pybind11::class_<atom_value>(m, name.c_str())
   .def("__str__", to_string_fun)
   .def("__repr__", repr_fun)
