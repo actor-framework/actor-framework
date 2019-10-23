@@ -53,17 +53,17 @@ public:
 
   using factory_type = Factory;
 
-  using transport_type = datagram_transport;
+  using transport_type = datagram_transport<Factory>;
+
+  using dispatcher_type = transport_worker_dispatcher<transport_type,
+                                                      ip_endpoint>;
 
   using application_type = typename Factory::application_type;
-
-  using dispatcher_type = transport_worker_dispatcher<
-    datagram_transport, factory_type, ip_endpoint>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
   datagram_transport(udp_datagram_socket handle, factory_type factory)
-    : dispatcher_(std::move(factory)),
+    : dispatcher_(*this, std::move(factory)),
       handle_(handle),
       max_consecutive_reads_(0),
       read_threshold_(1024),
@@ -100,6 +100,7 @@ public:
 
   template <class Parent>
   error init(Parent& parent) {
+    manager_ = &parent;
     auto& cfg = system().config();
     auto max_header_bufs = get_or(cfg, "middleman.max-header-buffers",
                                   defaults::middleman::max_header_buffers);
@@ -107,21 +108,21 @@ public:
     auto max_payload_bufs = get_or(cfg, "middleman.max-payload-buffers",
                                    defaults::middleman::max_payload_buffers);
     payload_bufs_.reserve(max_payload_bufs);
-    if (auto err = dispatcher_.init(parent))
+    if (auto err = dispatcher_.init(*this))
       return err;
-    parent.mask_add(operation::read);
+    // parent.mask_add(operation::read);
     return none;
   }
 
   template <class Parent>
-  bool handle_read_event(Parent& parent) {
+  bool handle_read_event(Parent&) {
     CAF_LOG_TRACE(CAF_ARG(handle_.id));
     auto ret = read(handle_, make_span(read_buf_));
     if (auto res = get_if<std::pair<size_t, ip_endpoint>>(&ret)) {
       auto num_bytes = res->first;
       auto ep = res->second;
       read_buf_.resize(num_bytes);
-      dispatcher_.handle_data(parent, make_span(read_buf_), std::move(ep));
+      dispatcher_.handle_data(*this, make_span(read_buf_), std::move(ep));
       prepare_next_read();
     } else {
       auto err = get<sec>(ret);
@@ -231,14 +232,16 @@ public:
   /// Helper struct for managing outgoing packets
   struct packet {
     ip_endpoint destination;
-    size_t payload_buf_num;
     buffer_cache_type bytes;
+    size_t size;
 
     packet(ip_endpoint destination, span<buffer_type*> bufs)
       : destination(destination) {
-      payload_buf_num = bufs.size() - 1;
-      for (auto buf : bufs)
-        bytes.emplace_back(false, std::move(*buf));
+      size = 0;
+      for (auto buf : bufs) {
+        size += buf->size();
+        bytes.emplace_back(std::move(*buf));
+      }
     }
   };
 
@@ -255,18 +258,43 @@ private:
   }
 
   bool write_some() {
+    CAF_LOG_TRACE(CAF_ARG(handle_.id));
+    // Helper function to sort empty buffers back into the right caches.
+    auto recycle = [&]() {
+      auto& front = packet_queue_.front();
+      auto& bufs = front.bytes;
+      auto it = bufs.begin();
+      if (header_bufs_.size() < header_bufs_.capacity()) {
+        it->clear();
+        header_bufs_.emplace_back(std::move(*it++));
+      }
+      for (;
+           it != bufs.end() && payload_bufs_.size() < payload_bufs_.capacity();
+           ++it) {
+        it->clear();
+        payload_bufs_.emplace_back(std::move(*it));
+      }
+      packet_queue_.pop_front();
+    };
+    // Write buffers from the write_queue_ for as long as possible.
     while (!packet_queue_.empty()) {
-      auto& next_packet = packet_queue_.front();
-      auto send_res = write(handle_, next_packet.bytes,
-                            next_packet.destination);
-      if (auto num_bytes = get_if<size_t>(&send_res)) {
+      auto& packet = packet_queue_.front();
+      auto write_ret = write(handle_, make_span(packet.bytes),
+                             packet.destination);
+      if (auto num_bytes = get_if<size_t>(&write_ret)) {
         CAF_LOG_DEBUG(CAF_ARG(handle_.id) << CAF_ARG(*num_bytes));
-        packet_queue_.pop_front();
+        CAF_LOG_WARNING_IF(*num_bytes < packet.size,
+                           "packet was not sent completely");
+        recycle();
+      } else {
+        auto err = get<sec>(write_ret);
+        if (err != sec::unavailable_or_would_block) {
+          CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
+          dispatcher_.handle_error(err);
+          return false;
+        }
         return true;
       }
-      auto err = get<sec>(send_res);
-      CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
-      dispatcher_.handle_error(err);
     }
     return false;
   }

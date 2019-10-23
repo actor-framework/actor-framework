@@ -34,18 +34,18 @@ namespace caf {
 namespace net {
 
 /// implements a dispatcher that dispatches between transport and workers.
-template <class Transport, class ApplicationFactory, class IdType>
+template <class Transport, class IdType>
 class transport_worker_dispatcher {
 public:
   // -- member types -----------------------------------------------------------
 
   using id_type = IdType;
 
-  using factory_type = ApplicationFactory;
-
   using transport_type = Transport;
 
-  using application_type = typename ApplicationFactory::application_type;
+  using factory_type = typename transport_type::factory_type;
+
+  using application_type = typename factory_type::application_type;
 
   using worker_type = transport_worker<application_type, id_type>;
 
@@ -53,8 +53,8 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit transport_worker_dispatcher(factory_type factory)
-    : factory_(std::move(factory)) {
+  transport_worker_dispatcher(transport_type& transport, factory_type factory)
+    : factory_(std::move(factory)), transport_(&transport) {
     // nop
   }
 
@@ -100,16 +100,16 @@ public:
   }
 
   template <class Parent>
-  void new_proxy(Parent&, const node_id& nid, actor_id id) {
+  void new_proxy(Parent& parent, const node_id& nid, actor_id id) {
     if (auto worker = find_by_node(nid))
-      worker->new_proxy(*this, nid, id);
+      worker->new_proxy(parent, nid, id);
   }
 
   template <class Parent>
-  void local_actor_down(Parent&, const node_id& nid, actor_id id,
+  void local_actor_down(Parent& parent, const node_id& nid, actor_id id,
                         error reason) {
     if (auto worker = find_by_node(nid))
-      worker->local_actor_down(*this, nid, id, std::move(reason));
+      worker->local_actor_down(parent, nid, id, std::move(reason));
   }
 
   template <class... Ts>
@@ -172,6 +172,7 @@ private:
   std::unordered_map<uint64_t, worker_ptr> workers_by_timeout_id_;
 
   factory_type factory_;
+  transport_type* transport_;
 };
 
 } // namespace net

@@ -248,8 +248,6 @@ private:
 
   bool write_some() {
     CAF_LOG_TRACE(CAF_ARG(handle_.id));
-    if (write_queue_.empty())
-      return false;
     // Helper function to sort empty buffers back into the right caches.
     auto recycle = [&]() {
       auto& front = write_queue_.front();
@@ -266,7 +264,7 @@ private:
       write_queue_.pop_front();
     };
     // Write buffers from the write_queue_ for as long as possible.
-    do {
+    while (!write_queue_.empty()) {
       auto& buf = write_queue_.front().second;
       CAF_ASSERT(!buf.empty());
       auto data = buf.data() + written_;
@@ -290,7 +288,7 @@ private:
         }
         return true;
       }
-    } while (!write_queue_.empty());
+    }
     return false;
   }
 

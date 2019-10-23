@@ -122,6 +122,8 @@ private:
 struct dummy_transport {
   using transport_type = dummy_transport;
 
+  using factory_type = dummy_application_factory;
+
   using application_type = dummy_application;
 
   dummy_transport(std::shared_ptr<buffer_type> buf) : buf_(std::move(buf)) {
@@ -180,12 +182,12 @@ uri operator"" _u(const char* cstr, size_t cstr_len) {
 }
 
 struct fixture : host_fixture {
-  using dispatcher_type = transport_worker_dispatcher<
-    dummy_transport, dummy_application_factory, ip_endpoint>;
+  using dispatcher_type = transport_worker_dispatcher<dummy_transport,
+                                                      ip_endpoint>;
 
   fixture()
     : buf{std::make_shared<buffer_type>()},
-      dispatcher{dummy_application_factory{buf}},
+      dispatcher{dummy, dummy_application_factory{buf}},
       dummy{buf} {
     add_new_workers();
   }
@@ -268,7 +270,7 @@ struct fixture : host_fixture {
 CAF_TEST_FIXTURE_SCOPE(transport_worker_dispatcher_test, fixture)
 
 CAF_TEST(init) {
-  dispatcher_type dispatcher{dummy_application_factory{buf}};
+  dispatcher_type dispatcher{dummy, dummy_application_factory{buf}};
   if (auto err = dispatcher.init(dummy))
     CAF_FAIL("init failed with error: " << err);
 }

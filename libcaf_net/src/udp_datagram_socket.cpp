@@ -17,6 +17,7 @@
  ******************************************************************************/
 
 #include "caf/net/udp_datagram_socket.hpp"
+#include <sys/uio.h>
 
 #include "caf/byte.hpp"
 #include "caf/detail/convert_ip_endpoint.hpp"
@@ -58,7 +59,7 @@ error allow_connreset(udp_datagram_socket x, bool) {
 expected<std::pair<udp_datagram_socket, uint16_t>>
 make_udp_datagram_socket(ip_endpoint ep, bool reuse_addr) {
   CAF_LOG_TRACE(CAF_ARG(ep));
-  sockaddr_storage addr;
+  sockaddr_storage addr = {};
   detail::convert(ep, addr);
   CAF_NET_SYSCALL("socket", fd, ==, invalid_socket_id,
                   ::socket(addr.ss_family, SOCK_DGRAM, 0));
@@ -110,14 +111,35 @@ variant<std::pair<size_t, ip_endpoint>, sec> read(udp_datagram_socket x,
   }
 }
 
+variant<size_t, sec> write(udp_datagram_socket x, span<std::vector<byte>> bufs,
+                           ip_endpoint ep) {
+  CAF_ASSERT(bufs.size() < 10);
+  auto convert = [](std::vector<byte> buf) {
+    return iovec{const_cast<byte*>(buf.data()), buf.size()};
+  };
+  sockaddr_storage addr = {};
+  detail::convert(ep, addr);
+  iovec buf_array[10];
+  std::transform(bufs.begin(), bufs.end(), std::begin(buf_array), convert);
+  msghdr message = {};
+  memset(&message, 0, sizeof(msghdr));
+  message.msg_name = &addr;
+  message.msg_namelen = ep.address().embeds_v4() ? sizeof(sockaddr_in)
+                                                 : sizeof(sockaddr_in6);
+  message.msg_iov = buf_array;
+  message.msg_iovlen = bufs.size();
+  auto res = sendmsg(x.id, &message, 0);
+  return check_udp_datagram_socket_io_res(res);
+}
+
 variant<size_t, sec> write(udp_datagram_socket x, span<const byte> buf,
                            ip_endpoint ep) {
-  sockaddr_storage addr;
+  sockaddr_storage addr = {};
   detail::convert(ep, addr);
+  auto len = ep.address().embeds_v4() ? sizeof(sockaddr_in)
+                                      : sizeof(sockaddr_in6);
   auto res = ::sendto(x.id, reinterpret_cast<socket_send_ptr>(buf.data()),
-                      buf.size(), 0, reinterpret_cast<sockaddr*>(&addr),
-                      ep.address().embeds_v4() ? sizeof(sockaddr_in)
-                                               : sizeof(sockaddr_in6));
+                      buf.size(), 0, reinterpret_cast<sockaddr*>(&addr), len);
   auto ret = check_udp_datagram_socket_io_res(res);
   if (auto num_bytes = get_if<size_t>(&ret))
     return *num_bytes;

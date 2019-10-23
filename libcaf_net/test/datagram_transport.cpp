@@ -59,8 +59,6 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
 
 class dummy_application {
 public:
-  using transport_type = datagram_transport<dummy_application_factory>;
-
   dummy_application(std::shared_ptr<std::vector<byte>> rec_buf)
     : rec_buf_(std::move(rec_buf)){
       // nop
@@ -76,7 +74,7 @@ public:
   template <class Transport>
   void write_message(Transport& transport,
                      std::unique_ptr<endpoint_manager_queue::message> msg) {
-    transport.write_packet(span<byte>{}, msg->payload);
+    transport.write_packet(msg->payload);
   }
 
   template <class Parent>
@@ -110,8 +108,8 @@ public:
     // nop
   }
 
-  template <class Transport>
-  void timeout(Transport&, atom_value, uint64_t) {
+  template <class Parent>
+  void timeout(Parent&, atom_value, uint64_t) {
     // nop
   }
 
@@ -159,7 +157,7 @@ CAF_TEST(receive) {
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
   ip_endpoint ep;
   if (auto err = parse("127.0.0.1:0", ep))
-    CAF_FAIL("parse returned an error: " << err);
+    CAF_FAIL("parse returned an error: " << sys.render(err));
   auto send_pair = unbox(make_udp_datagram_socket(ep));
   auto sender = send_pair.first;
   auto receive_pair = unbox(make_udp_datagram_socket(ep));
@@ -168,7 +166,7 @@ CAF_TEST(receive) {
   auto send_guard = make_socket_guard(sender);
   auto receive_guard = make_socket_guard(receiver);
   if (auto err = nonblocking(receiver, true))
-    CAF_FAIL("nonblocking() returned an error: " << err);
+    CAF_FAIL("nonblocking() returned an error: " << sys.render(err));
   transport_type transport{receiver, dummy_application_factory{buf}};
   transport.configure_read(net::receive_policy::exactly(hello_manager.size()));
   auto mgr = make_endpoint_manager(mpx, sys, transport);
