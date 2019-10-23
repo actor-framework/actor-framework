@@ -69,8 +69,8 @@ public:
 #  define CAF_AFTER_PROCESSING(self, result)                                   \
     self->system().profiler_after_processing(*self, result)
 #else
-#  define CAF_BEFORE_PROCESSING() CAF_VOID_STMT
-#  define CAF_AFTER_PROCESSING(result) CAF_VOID_STMT
+#  define CAF_BEFORE_PROCESSING(self, msg) CAF_VOID_STMT
+#  define CAF_AFTER_PROCESSING(self, result) CAF_VOID_STMT
 #endif
 
 } // namespace caf
