@@ -60,13 +60,13 @@ void manager::detach(execution_unit*, bool invoke_disconnect_message) {
       auto mptr = make_mailbox_element(nullptr, make_message_id(), {},
                                        detach_message());
       switch (raw_ptr->consume(*mptr)) {
-        case im_success:
+        case invoke_message_result::consumed:
           raw_ptr->finalize();
           break;
-        case im_skipped:
+        case invoke_message_result::skipped:
           raw_ptr->push_to_cache(std::move(mptr));
           break;
-        case im_dropped:
+        case invoke_message_result::dropped:
           CAF_LOG_INFO("broker dropped disconnect message");
           break;
       }

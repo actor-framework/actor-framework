@@ -23,7 +23,7 @@
 namespace caf {
 
 raw_event_based_actor::raw_event_based_actor(actor_config& cfg)
-    : event_based_actor(cfg) {
+  : event_based_actor(cfg) {
   // nop
 }
 
@@ -36,30 +36,30 @@ invoke_message_result raw_event_based_actor::consume(mailbox_element& x) {
     auto& pr = awaited_responses_.front();
     // skip all messages until we receive the currently awaited response
     if (x.mid != pr.first)
-      return im_skipped;
+      return invoke_message_result::skipped;
     if (!pr.second(x.content())) {
       // try again with error if first attempt failed
-      auto msg = make_message(make_error(sec::unexpected_response,
-                                         x.move_content_to_message()));
+      auto msg = make_message(
+        make_error(sec::unexpected_response, x.move_content_to_message()));
       pr.second(msg);
     }
     awaited_responses_.pop_front();
-    return im_success;
+    return invoke_message_result::consumed;
   }
   // handle multiplexed responses
   if (x.mid.is_response()) {
     auto mrh = multiplexed_responses_.find(x.mid);
     // neither awaited nor multiplexed, probably an expired timeout
     if (mrh == multiplexed_responses_.end())
-      return im_dropped;
+      return invoke_message_result::dropped;
     if (!mrh->second(x.content())) {
       // try again with error if first attempt failed
-      auto msg = make_message(make_error(sec::unexpected_response,
-                                         x.move_content_to_message()));
+      auto msg = make_message(
+        make_error(sec::unexpected_response, x.move_content_to_message()));
       mrh->second(msg);
     }
     multiplexed_responses_.erase(mrh);
-    return im_success;
+    return invoke_message_result::consumed;
   }
   auto& content = x.content();
   //  handle timeout messages
@@ -70,12 +70,12 @@ invoke_message_result raw_event_based_actor::consume(mailbox_element& x) {
     if (is_active_receive_timeout(tid)) {
       CAF_LOG_DEBUG("handle timeout message");
       if (bhvr_stack_.empty())
-        return im_dropped;
+        return invoke_message_result::dropped;
       bhvr_stack_.back().handle_timeout();
-      return im_success;
+      return invoke_message_result::consumed;
     }
     CAF_LOG_DEBUG("dropped expired timeout message");
-    return im_dropped;
+    return invoke_message_result::dropped;
   }
   // handle everything else as ordinary message
   detail::default_invoke_result_visitor<event_based_actor> visitor{this};
@@ -103,7 +103,8 @@ invoke_message_result raw_event_based_actor::consume(mailbox_element& x) {
   };
   if (bhvr_stack_.empty()) {
     call_default_handler();
-    return !skipped ? im_success : im_skipped;
+    return !skipped ? invoke_message_result::consumed
+                    : invoke_message_result::skipped;
   }
   auto& bhvr = bhvr_stack_.back();
   switch (bhvr(visitor, x.content())) {
@@ -115,7 +116,8 @@ invoke_message_result raw_event_based_actor::consume(mailbox_element& x) {
     case match_case::no_match:
       call_default_handler();
   }
-  return !skipped ? im_success : im_skipped;
+  return !skipped ? invoke_message_result::consumed
+                  : invoke_message_result::skipped;
   // should be unreachable
   CAF_CRITICAL("invalid message type");
 }

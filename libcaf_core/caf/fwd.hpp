@@ -177,6 +177,7 @@ enum class atom_value : uint64_t;
 enum class byte : uint8_t;
 enum class sec : uint8_t;
 enum class stream_priority;
+enum class invoke_message_result;
 
 // -- aliases ------------------------------------------------------------------
 
