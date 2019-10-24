@@ -199,13 +199,14 @@ struct fixture : host_fixture {
     auto p = make_actor<dummy_actor, strong_actor_ptr>(aid, nid, &sys, cfg);
     auto test_span = as_bytes(make_span(hello_test));
     buffer_type payload(test_span.begin(), test_span.end());
-    auto strong_actor = actor_cast<strong_actor_ptr>(p);
+    auto receiver = actor_cast<strong_actor_ptr>(p);
+    if (!receiver)
+      CAF_FAIL("receiver cast failed");
     mailbox_element::forwarding_stack stack;
-    auto elem = make_mailbox_element(std::move(strong_actor),
-                                     make_message_id(12345), std::move(stack),
-                                     make_message());
+    auto elem = make_mailbox_element(nullptr, make_message_id(12345),
+                                     std::move(stack), make_message());
     return detail::make_unique<endpoint_manager_queue::message>(std::move(elem),
-                                                                strong_actor,
+                                                                receiver,
                                                                 payload);
   }
 
@@ -223,8 +224,8 @@ struct fixture : host_fixture {
 
   void test_write_message(testdata& testcase) {
     auto msg = make_dummy_message(testcase.nid);
-    if (!msg->msg->sender)
-      CAF_FAIL("sender is null");
+    if (!msg->receiver)
+      CAF_FAIL("receiver is null");
     dispatcher.write_message(dummy, std::move(msg));
   }
 

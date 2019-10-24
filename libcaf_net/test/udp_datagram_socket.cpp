@@ -115,7 +115,7 @@ CAF_TEST(read / write using span<byte>) {
   CAF_CHECK_EQUAL(received, hello_test);
 }
 
-CAF_TEST(read / write using span<std::vector<byte>>) {
+CAF_TEST(read / write using span<std::vector<byte>*>) {
   // generate header and payload in separate buffers
   header hdr{hello_test.size()};
   std::vector<byte> hdr_buf;
