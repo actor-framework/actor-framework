@@ -27,6 +27,7 @@
 #include "caf/make_actor.hpp"
 #include "caf/net/actor_proxy_impl.hpp"
 #include "caf/net/endpoint_manager.hpp"
+#include "caf/net/endpoint_manager_impl.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_guard.hpp"
@@ -44,11 +45,27 @@ constexpr string_view hello_manager = "hello manager!";
 class dummy_application_factory;
 
 struct fixture : test_coordinator_fixture<>, host_fixture {
-  fixture() {
+  fixture() : recv_buf(std::make_shared<std::vector<byte>>(1024)) {
     mpx = std::make_shared<multiplexer>();
     if (auto err = mpx->init())
       CAF_FAIL("mpx->init failed: " << sys.render(err));
     mpx->set_thread_id();
+    CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
+    if (auto err = parse("127.0.0.1:0", ep))
+      CAF_FAIL("parse returned an error: " << sys.render(err));
+    auto send_pair = unbox(make_udp_datagram_socket(ep));
+    send_socket = send_pair.first;
+    auto receive_pair = unbox(make_udp_datagram_socket(ep));
+    recv_socket = receive_pair.first;
+    ep.port(htons(receive_pair.second));
+    CAF_MESSAGE("sending message to " << CAF_ARG(ep));
+    if (auto err = nonblocking(recv_socket, true))
+      CAF_FAIL("nonblocking() returned an error: " << err);
+  }
+
+  ~fixture() {
+    close(send_socket);
+    close(recv_socket);
   }
 
   bool handle_io_event() override {
@@ -56,6 +73,10 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
   }
 
   multiplexer_ptr mpx;
+  std::shared_ptr<std::vector<byte>> recv_buf;
+  ip_endpoint ep;
+  udp_datagram_socket send_socket;
+  udp_datagram_socket recv_socket;
 };
 
 class dummy_application {
@@ -88,8 +109,8 @@ public:
   template <class Parent>
   void resolve(Parent& parent, string_view path, const actor& listener) {
     actor_id aid = 42;
-    auto hid = "0011223344556677889900112233445566778899";
-    auto nid = unbox(make_node_id(42, hid));
+    auto uri = unbox(make_uri("test:/id/42"));
+    auto nid = make_node_id(uri);
     actor_config cfg;
     endpoint_manager_ptr ptr{&parent.manager()};
     auto p = make_actor<actor_proxy_impl, strong_actor_ptr>(aid, nid,
@@ -116,7 +137,7 @@ public:
   }
 
   void handle_error(sec sec) {
-    CAF_FAIL("handle_error called" << to_string(sec));
+    CAF_FAIL("handle_error called: " << to_string(sec));
   }
 
   static expected<std::vector<byte>> serialize(actor_system& sys,
@@ -155,64 +176,35 @@ CAF_TEST_FIXTURE_SCOPE(datagram_transport_tests, fixture)
 
 CAF_TEST(receive) {
   using transport_type = datagram_transport<dummy_application_factory>;
-  auto buf = std::make_shared<std::vector<byte>>();
-  CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
-  ip_endpoint ep;
-  if (auto err = parse("127.0.0.1:0", ep))
-    CAF_FAIL("parse returned an error: " << sys.render(err));
-  auto send_pair = unbox(make_udp_datagram_socket(ep));
-  auto sender = send_pair.first;
-  auto receive_pair = unbox(make_udp_datagram_socket(ep));
-  auto receiver = receive_pair.first;
-  ep.port(htons(receive_pair.second));
-  auto send_guard = make_socket_guard(sender);
-  auto receive_guard = make_socket_guard(receiver);
-  if (auto err = nonblocking(receiver, true))
+  if (auto err = nonblocking(recv_socket, true))
     CAF_FAIL("nonblocking() returned an error: " << sys.render(err));
-  transport_type transport{receiver, dummy_application_factory{buf}};
+  transport_type transport{recv_socket, dummy_application_factory{recv_buf}};
   transport.configure_read(net::receive_policy::exactly(hello_manager.size()));
   auto mgr = make_endpoint_manager(mpx, sys, std::move(transport));
   CAF_CHECK_EQUAL(mgr->init(), none);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
-  CAF_CHECK_EQUAL(write(sender, as_bytes(make_span(hello_manager)), ep),
+  CAF_CHECK_EQUAL(write(send_socket, as_bytes(make_span(hello_manager)), ep),
                   hello_manager.size());
   CAF_MESSAGE("wrote " << hello_manager.size() << " bytes.");
   run();
-  CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(buf->data()),
-                              buf->size()),
+  CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(recv_buf->data()),
+                              recv_buf->size()),
                   hello_manager);
 }
 
-// TODO: test is disabled until resolve in transport_worker_dispatcher is
-// implemented correctly.
-/*
 CAF_TEST(resolve and proxy communication) {
   using transport_type = datagram_transport<dummy_application_factory>;
-  auto buf = std::make_shared<std::vector<byte>>();
-  CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
-  ip_endpoint ep;
-  if (auto err = parse("127.0.0.1:0", ep))
-    CAF_FAIL("parse returned an error: " << err);
-  auto sender = unbox(make_udp_datagram_socket(ep));
-  ep.port(0);
-  auto receiver = unbox(make_udp_datagram_socket(ep));
-  auto send_guard = make_socket_guard(sender);
-  auto receive_guard = make_socket_guard(receiver);
-  if (auto err = nonblocking(receiver, true))
-    CAF_FAIL("nonblocking() returned an error: " << err);
-  auto test_read_res = read(receiver, make_span(*buf));
-  if (auto p = get_if<std::pair<size_t, ip_endpoint>>(&test_read_res))
-    CAF_CHECK_EQUAL(p->first, 0u);
-  else
-    CAF_FAIL("read returned an error: " << get<sec>(test_read_res));
+  auto uri = unbox(make_uri("test:/id/42"));
   auto mgr = make_endpoint_manager(mpx, sys,
-                                   transport_type{sender,
+                                   transport_type{send_socket,
                                                   dummy_application_factory{
-                                                    buf}});
+                                                    recv_buf}});
   CAF_CHECK_EQUAL(mgr->init(), none);
-  mpx->handle_updates();
+  auto mgr_impl = mgr.downcast<endpoint_manager_impl<transport_type>>();
+  auto& transport = mgr_impl->transport();
+  transport.add_new_worker(make_node_id(uri), ep);
   run();
-  mgr->resolve("/id/42", self);
+  mgr->resolve(uri, self);
   run();
   self->receive(
     [&](resolve_atom, const std::string&, const strong_actor_ptr& p) {
@@ -222,19 +214,20 @@ CAF_TEST(resolve and proxy communication) {
     after(std::chrono::seconds(0)) >>
       [&] { CAF_FAIL("manager did not respond with a proxy."); });
   run();
-  auto read_res = read(receiver, make_span(*buf));
+  auto read_res = read(recv_socket, make_span(*recv_buf));
   if (!holds_alternative<std::pair<size_t, ip_endpoint>>(read_res))
     CAF_FAIL("read() returned an error: " << sys.render(get<sec>(read_res)));
-  buf->resize(get<std::pair<size_t, ip_endpoint>>(read_res).first);
-  CAF_MESSAGE("receive buffer contains " << buf->size() << " bytes");
+  recv_buf->resize(get<std::pair<size_t, ip_endpoint>>(read_res).first);
+  CAF_MESSAGE("received message from " << to_string(
+                get<std::pair<size_t, ip_endpoint>>(read_res).second));
+  CAF_MESSAGE("receive buffer contains " << recv_buf->size() << " bytes");
   message msg;
-  binary_deserializer source{sys, *buf};
+  binary_deserializer source{sys, *recv_buf};
   CAF_CHECK_EQUAL(source(msg), none);
   if (msg.match_elements<std::string>())
     CAF_CHECK_EQUAL(msg.get_as<std::string>(0), "hello proxy!");
   else
     CAF_ERROR("expected a string, got: " << to_string(msg));
 }
-*/
 
 CAF_TEST_FIXTURE_SCOPE_END()

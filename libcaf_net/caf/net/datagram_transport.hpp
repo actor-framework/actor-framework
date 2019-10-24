@@ -85,7 +85,8 @@ public:
 
   application_type& application() {
     // TODO: This wont work. We need information on which application is wanted
-    return dispatcher_.application();
+    return application_type{};
+    // dispatcher_.application();
   }
 
   transport_type& transport() {
@@ -110,7 +111,6 @@ public:
     payload_bufs_.reserve(max_payload_bufs);
     if (auto err = dispatcher_.init(*this))
       return err;
-    // parent.mask_add(operation::read);
     return none;
   }
 
@@ -175,6 +175,10 @@ public:
 
   void handle_error(sec code) {
     dispatcher_.handle_error(code);
+  }
+
+  error add_new_worker(node_id node, ip_endpoint id) {
+    return dispatcher_.add_new_worker(*this, node, id);
   }
 
   void prepare_next_read() {
@@ -280,10 +284,9 @@ private:
     while (!packet_queue_.empty()) {
       auto& packet = packet_queue_.front();
       std::vector<std::vector<byte>*> ptrs;
-      for(auto& buf : packet.bytes)
+      for (auto& buf : packet.bytes)
         ptrs.emplace_back(&buf);
-      auto write_ret = write(handle_, make_span(ptrs),
-                             packet.destination);
+      auto write_ret = write(handle_, make_span(ptrs), packet.destination);
       if (auto num_bytes = get_if<size_t>(&write_ret)) {
         CAF_LOG_DEBUG(CAF_ARG(handle_.id) << CAF_ARG(*num_bytes));
         CAF_LOG_WARNING_IF(*num_bytes < packet.size,
