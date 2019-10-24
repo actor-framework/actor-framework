@@ -316,7 +316,7 @@ private:
 
   size_t max_consecutive_reads_;
   size_t read_threshold_;
-  // size_t collected_;
+
   size_t max_;
   receive_policy_flag rd_flag_;
 

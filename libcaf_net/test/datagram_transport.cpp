@@ -72,6 +72,23 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
     return mpx->poll_once(false);
   }
 
+  error read_from_socket(udp_datagram_socket sock, std::vector<byte>& buf) {
+    uint8_t receive_attempts = 0;
+    variant<std::pair<size_t, ip_endpoint>, sec> read_ret;
+    do {
+      read_ret = read(sock, make_span(buf));
+      if (auto read_res = get_if<std::pair<size_t, ip_endpoint>>(&read_ret)) {
+        buf.resize(read_res->first);
+      } else if (get<sec>(read_ret) != sec::unavailable_or_would_block) {
+        return make_error(get<sec>(read_ret), "read failed");
+      }
+      if (++receive_attempts > 100)
+        return make_error(sec::runtime_error,
+                          "too many unavailable_or_would_blocks");
+    } while (read_ret.index() != 0);
+    return none;
+  }
+
   multiplexer_ptr mpx;
   std::shared_ptr<std::vector<byte>> recv_buf;
   ip_endpoint ep;
@@ -214,12 +231,7 @@ CAF_TEST(resolve and proxy communication) {
     after(std::chrono::seconds(0)) >>
       [&] { CAF_FAIL("manager did not respond with a proxy."); });
   run();
-  auto read_res = read(recv_socket, make_span(*recv_buf));
-  if (!holds_alternative<std::pair<size_t, ip_endpoint>>(read_res))
-    CAF_FAIL("read() returned an error: " << sys.render(get<sec>(read_res)));
-  recv_buf->resize(get<std::pair<size_t, ip_endpoint>>(read_res).first);
-  CAF_MESSAGE("received message from " << to_string(
-                get<std::pair<size_t, ip_endpoint>>(read_res).second));
+  CAF_CHECK_EQUAL(read_from_socket(recv_socket, *recv_buf), none);
   CAF_MESSAGE("receive buffer contains " << recv_buf->size() << " bytes");
   message msg;
   binary_deserializer source{sys, *recv_buf};
