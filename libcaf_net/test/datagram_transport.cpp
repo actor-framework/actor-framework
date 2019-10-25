@@ -45,7 +45,11 @@ constexpr string_view hello_manager = "hello manager!";
 class dummy_application_factory;
 
 struct fixture : test_coordinator_fixture<>, host_fixture {
-  fixture() : recv_buf(std::make_shared<std::vector<byte>>(1024)) {
+  using buffer_type = std::vector<byte>;
+
+  using buffer_ptr = std::shared_ptr<buffer_type>;
+
+  fixture() : shared_buf(std::make_shared<buffer_type>(1024)) {
     mpx = std::make_shared<multiplexer>();
     if (auto err = mpx->init())
       CAF_FAIL("mpx->init failed: " << sys.render(err));
@@ -72,7 +76,7 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
     return mpx->poll_once(false);
   }
 
-  error read_from_socket(udp_datagram_socket sock, std::vector<byte>& buf) {
+  error read_from_socket(udp_datagram_socket sock, buffer_type& buf) {
     uint8_t receive_attempts = 0;
     variant<std::pair<size_t, ip_endpoint>, sec> read_ret;
     do {
@@ -90,15 +94,19 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
   }
 
   multiplexer_ptr mpx;
-  std::shared_ptr<std::vector<byte>> recv_buf;
+  buffer_ptr shared_buf;
   ip_endpoint ep;
   udp_datagram_socket send_socket;
   udp_datagram_socket recv_socket;
 };
 
 class dummy_application {
+  using buffer_type = std::vector<byte>;
+
+  using buffer_ptr = std::shared_ptr<buffer_type>;
+
 public:
-  dummy_application(std::shared_ptr<std::vector<byte>> rec_buf)
+  dummy_application(buffer_ptr rec_buf)
     : rec_buf_(std::move(rec_buf)){
       // nop
     };
@@ -157,25 +165,26 @@ public:
     CAF_FAIL("handle_error called: " << to_string(sec));
   }
 
-  static expected<std::vector<byte>> serialize(actor_system& sys,
-                                               const type_erased_tuple& x) {
-    std::vector<byte> result;
-    serializer_impl<std::vector<byte>> sink{sys, result};
+  static expected<buffer_type> serialize(actor_system& sys,
+                                         const type_erased_tuple& x) {
+    buffer_type result;
+    serializer_impl<buffer_type> sink{sys, result};
     if (auto err = message::save(sink, x))
       return err;
     return result;
   }
 
 private:
-  std::shared_ptr<std::vector<byte>> rec_buf_;
+  buffer_ptr rec_buf_;
 };
 
 class dummy_application_factory {
+  using buffer_ptr = std::shared_ptr<std::vector<byte>>;
+
 public:
   using application_type = dummy_application;
 
-  explicit dummy_application_factory(std::shared_ptr<std::vector<byte>> buf)
-    : buf_(std::move(buf)) {
+  explicit dummy_application_factory(buffer_ptr buf) : buf_(std::move(buf)) {
     // nop
   }
 
@@ -184,7 +193,7 @@ public:
   }
 
 private:
-  std::shared_ptr<std::vector<byte>> buf_;
+  buffer_ptr buf_;
 };
 
 } // namespace
@@ -195,29 +204,36 @@ CAF_TEST(receive) {
   using transport_type = datagram_transport<dummy_application_factory>;
   if (auto err = nonblocking(recv_socket, true))
     CAF_FAIL("nonblocking() returned an error: " << sys.render(err));
-  transport_type transport{recv_socket, dummy_application_factory{recv_buf}};
-  transport.configure_read(net::receive_policy::exactly(hello_manager.size()));
-  auto mgr = make_endpoint_manager(mpx, sys, std::move(transport));
+  auto mgr = make_endpoint_manager(mpx, sys,
+                                   transport_type{recv_socket,
+                                                  dummy_application_factory{
+                                                    shared_buf}});
   CAF_CHECK_EQUAL(mgr->init(), none);
+  auto mgr_impl = mgr.downcast<endpoint_manager_impl<transport_type>>();
+  CAF_CHECK(mgr_impl != nullptr);
+  auto& transport = mgr_impl->transport();
+  transport.configure_read(net::receive_policy::exactly(hello_manager.size()));
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
   CAF_CHECK_EQUAL(write(send_socket, as_bytes(make_span(hello_manager)), ep),
                   hello_manager.size());
   CAF_MESSAGE("wrote " << hello_manager.size() << " bytes.");
   run();
-  CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(recv_buf->data()),
-                              recv_buf->size()),
+  CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(shared_buf->data()),
+                              shared_buf->size()),
                   hello_manager);
 }
 
 CAF_TEST(resolve and proxy communication) {
   using transport_type = datagram_transport<dummy_application_factory>;
+  buffer_type recv_buf(1024);
   auto uri = unbox(make_uri("test:/id/42"));
   auto mgr = make_endpoint_manager(mpx, sys,
                                    transport_type{send_socket,
                                                   dummy_application_factory{
-                                                    recv_buf}});
+                                                    shared_buf}});
   CAF_CHECK_EQUAL(mgr->init(), none);
   auto mgr_impl = mgr.downcast<endpoint_manager_impl<transport_type>>();
+  CAF_CHECK(mgr_impl != nullptr);
   auto& transport = mgr_impl->transport();
   transport.add_new_worker(make_node_id(uri), ep);
   run();
@@ -231,10 +247,10 @@ CAF_TEST(resolve and proxy communication) {
     after(std::chrono::seconds(0)) >>
       [&] { CAF_FAIL("manager did not respond with a proxy."); });
   run();
-  CAF_CHECK_EQUAL(read_from_socket(recv_socket, *recv_buf), none);
-  CAF_MESSAGE("receive buffer contains " << recv_buf->size() << " bytes");
+  CAF_CHECK_EQUAL(read_from_socket(recv_socket, recv_buf), none);
+  CAF_MESSAGE("receive buffer contains " << recv_buf.size() << " bytes");
   message msg;
-  binary_deserializer source{sys, *recv_buf};
+  binary_deserializer source{sys, recv_buf};
   CAF_CHECK_EQUAL(source(msg), none);
   if (msg.match_elements<std::string>())
     CAF_CHECK_EQUAL(msg.get_as<std::string>(0), "hello proxy!");
