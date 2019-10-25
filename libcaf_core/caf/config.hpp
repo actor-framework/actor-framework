@@ -209,6 +209,8 @@
 #  endif
 #elif defined(__FreeBSD__)
 #  define CAF_BSD
+#elif defined(__OpenBSD__)
+#  define CAF_BSD
 #elif defined(__CYGWIN__)
 #  define CAF_CYGWIN
 #elif defined(WIN32) || defined(_WIN32)

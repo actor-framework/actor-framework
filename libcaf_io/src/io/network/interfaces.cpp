@@ -288,8 +288,10 @@ bool interfaces::get_endpoint(const std::string& host, uint16_t port,
   hint.ai_socktype = SOCK_DGRAM;
   if (preferred)
     hint.ai_family = *preferred == protocol::network::ipv4 ? AF_INET : AF_INET6;
+#ifndef __OpenBSD__
   if (hint.ai_family == AF_INET6)
     hint.ai_flags = AI_V4MAPPED;
+#endif
   addrinfo* tmp = nullptr;
   if (getaddrinfo(host.c_str(), port_hint, &hint, &tmp) != 0)
     return false;
