@@ -94,9 +94,14 @@ namespace network {
 
 // platform-dependent SIGPIPE setup
 #if defined(CAF_MACOS) || defined(CAF_IOS) || defined(CAF_BSD)
-  // Use the socket option but no flags to recv/send on macOS/iOS/BSD.
-  const int no_sigpipe_socket_flag = SO_NOSIGPIPE;
-  const int no_sigpipe_io_flag = 0;
+// Use the socket option but no flags to recv/send on macOS/iOS/BSD.
+// (OpenBSD doesn't have SO_NOSIGPIPE)
+#ifndef __OpenBSD__
+const int no_sigpipe_socket_flag = SO_NOSIGPIPE;
+#else
+const int no_sigpipe_socket_flag = 0;
+#endif
+const int no_sigpipe_io_flag = 0;
 #elif defined(CAF_WINDOWS)
   // Do nothing on Windows (SIGPIPE does not exist).
   const int no_sigpipe_socket_flag = 0;
