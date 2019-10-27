@@ -303,7 +303,7 @@ public:
 
   /// Provides system-wide callbacks for several actor operations.
   /// @experimental
-  /// @note has no effect unless building CAF with CAF_ENABLE_ACTOR_PROFILER
+  /// @note Has no effect unless building CAF with CAF_ENABLE_ACTOR_PROFILER.
   actor_profiler* profiler = nullptr;
 
   // -- run-time type information ----------------------------------------------

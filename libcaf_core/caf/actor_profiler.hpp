@@ -32,7 +32,7 @@ public:
 
   /// Called whenever the actor system spawns a new actor. The system calls this
   /// member function after the constructor of `self` has completed but before
-  /// constructing the behavior .
+  /// constructing the behavior.
   /// @param self The new actor.
   /// @param parent Points to the parent actor unless `self` is a top-level
   ///               actor (in this case, `parent` has the value `nullptr`).
@@ -53,7 +53,7 @@ public:
                                  const mailbox_element& element)
     = 0;
 
-  /// Called whenever an actor processed an element from its mailbox.
+  /// Called after an actor processed an element from its mailbox.
   /// @param self The current actor.
   /// @param result Stores whether the actor consumed, skipped or dropped the
   ///               message.

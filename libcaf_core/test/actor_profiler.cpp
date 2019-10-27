@@ -140,7 +140,7 @@ CAF_TEST(record actor messaging) {
     auto b = self->spawn(bar);
     self->send(b, "hello bar");
     return {
-      [](const std::string& str) mutable { CAF_CHECK_EQUAL(str, "hello foo"); },
+      [](const std::string& str) { CAF_CHECK_EQUAL(str, "hello foo"); },
     };
   };
   sys.spawn(foo);
