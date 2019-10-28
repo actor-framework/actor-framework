@@ -161,8 +161,7 @@ void stream_manager::advance() {
       // Ignore inbound paths of other managers.
       if (inptr->mgr.get() == this) {
         auto bs = static_cast<int32_t>(kvp.second.total_task_size());
-        inptr->emit_ack_batch(self_, bs, out().max_capacity(), now, interval,
-                              bc);
+        inptr->emit_ack_batch(self_, bs, now, interval, bc);
       }
     }
   }

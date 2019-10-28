@@ -144,10 +144,10 @@ public:
   /// @param self Points to the parent actor, i.e., sender of the message.
   /// @param queued_items Accumulated size of all batches that are currently
   ///                     waiting in the mailbox.
+  /// @param now Current timestamp.
   /// @param cycle Time between credit rounds.
   /// @param desired_batch_complexity Desired processing time per batch.
   void emit_ack_batch(local_actor* self, int32_t queued_items,
-                      int32_t max_downstream_capacity,
                       actor_clock::time_point now, timespan cycle,
                       timespan desired_batch_complexity);
 
