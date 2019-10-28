@@ -133,12 +133,10 @@ void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
 }
 
 void inbound_path::emit_ack_batch(local_actor* self, int32_t queued_items,
-                                  int32_t max_downstream_capacity,
                                   actor_clock::time_point now, timespan cycle,
                                   timespan complexity) {
-  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(queued_items)
-                << CAF_ARG(max_downstream_capacity) << CAF_ARG(cycle)
-                << CAF_ARG(complexity));
+  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(queued_items) << CAF_ARG(cycle)
+                               << CAF_ARG(complexity));
   CAF_IGNORE_UNUSED(queued_items);
   // Update timestamps.
   last_credit_decision = now;
@@ -147,22 +145,28 @@ void inbound_path::emit_ack_batch(local_actor* self, int32_t queued_items,
   // the downstream capacity.
   auto x = stats.calculate(cycle, complexity);
   auto stats_guard = detail::make_scope_guard([&] { stats.reset(); });
-  auto max_capacity = std::min(x.max_throughput * 2, max_downstream_capacity);
+  auto& out = mgr->out();
+  auto max_capacity = std::min(x.max_throughput * 2, out.max_capacity());
   CAF_ASSERT(max_capacity > 0);
   // Protect against overflow on `assigned_credit`.
   auto max_new_credit = std::numeric_limits<int32_t>::max() - assigned_credit;
   // Compute the amount of credit we grant in this round.
-  auto credit = std::min(std::max(max_capacity - assigned_credit, 0),
+  auto credit = std::min(std::max(max_capacity
+                                    - static_cast<int32_t>(out.buffered())
+                                    - assigned_credit,
+                                  0),
                          max_new_credit);
   CAF_ASSERT(credit >= 0);
   // The manager can restrict or adjust the amount of credit.
   credit = std::min(mgr->acquire_credit(this, credit), max_new_credit);
-  CAF_STREAM_LOG_DEBUG(mgr->self()->name() << "grants" << credit
-                       << "new credit at slot" << slots.receiver
-                       << "after receiving" << stats.num_elements
-                       << "elements that took" << stats.processing_time
+  CAF_STREAM_LOG_DEBUG(mgr->self()->name()
+                       << "grants" << credit << "new credit at slot"
+                       << slots.receiver << "after receiving"
+                       << stats.num_elements << "elements that took"
+                       << stats.processing_time
                        << CAF_ARG2("max_throughput", x.max_throughput)
-                       << CAF_ARG(max_downstream_capacity)
+                       << CAF_ARG2("max_downstream_capacity",
+                                   out.max_capacity())
                        << CAF_ARG(assigned_credit));
   if (credit == 0 && up_to_date())
     return;
