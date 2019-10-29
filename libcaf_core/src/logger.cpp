@@ -388,6 +388,7 @@ void logger::init(actor_system_config& cfg) {
   } else if (to_lowercase(con_atm) != atom("uncolored")) {
     // Disable console output if neither 'colored' nor 'uncolored' are present.
     cfg_.console_verbosity = CAF_LOG_LEVEL_QUIET;
+    cfg_.verbosity = cfg_.file_verbosity;
   }
 }
 
