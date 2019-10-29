@@ -154,7 +154,7 @@ struct fixture {
     if (x == none)
       return sec::invalid_argument;
     return *x;
-  };
+  }
 };
 
 } // namespace
