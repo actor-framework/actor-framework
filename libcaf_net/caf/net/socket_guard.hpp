@@ -27,6 +27,10 @@ namespace net {
 template <class Socket>
 class socket_guard {
 public:
+  socket_guard() : sock_(invalid_socket_id) {
+    // nop
+  }
+
   explicit socket_guard(Socket sock) : sock_(sock) {
     // nop
   }
@@ -36,10 +40,28 @@ public:
       close(sock_);
   }
 
+  void reset(Socket x) noexcept {
+    if (sock_.id != invalid_socket_id)
+      close(sock_);
+    sock_ = x;
+  }
+
   Socket release() {
     auto sock = sock_;
     sock_.id = invalid_socket_id;
     return sock;
+  }
+
+  Socket* get() noexcept {
+    return &sock_;
+  }
+
+  Socket* operator->() noexcept {
+    return &sock_;
+  }
+
+  Socket& operator*() noexcept {
+    return sock_;
   }
 
 private:
