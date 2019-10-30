@@ -302,6 +302,7 @@ struct downstream_msg_visitor {
 
   template <class T>
   intrusive::task_result operator()(T& x) {
+    CAF_LOG_TRACE(CAF_ARG(x));
     auto& inptr = q_ref.policy().handler;
     if (inptr == nullptr)
       return intrusive::task_result::stop;
@@ -320,6 +321,7 @@ struct downstream_msg_visitor {
       qs_ref.erase_later(dm.slots.receiver);
       selfptr->erase_stream_manager(dm.slots.receiver);
       if (mgr->done()) {
+        CAF_LOG_DEBUG("path is done receiving and closes its manager");
         selfptr->erase_stream_manager(mgr);
         mgr->stop();
       }
