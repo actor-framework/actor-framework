@@ -91,18 +91,20 @@ TESTEE(infinite_source) {
 }
 
 VARARGS_TESTEE(file_reader, size_t buf_size) {
-  return {[=](string& fname) -> result<stream<int>> {
-            CAF_CHECK_EQUAL(fname, "numbers.txt");
-            CAF_CHECK_EQUAL(self->mailbox().empty(), true);
-            return attach_stream_source(self, init(buf_size), push_from_buf,
-                                        is_done(self), fin<buf>(self));
-          },
-          [=](string& fname, actor next) {
-            CAF_CHECK_EQUAL(fname, "numbers.txt");
-            CAF_CHECK_EQUAL(self->mailbox().empty(), true);
-            attach_stream_source(self, next, init(buf_size), push_from_buf,
-                                 is_done(self), fin<buf>(self));
-          }};
+  return {
+    [=](string& fname) -> result<stream<int>> {
+      CAF_CHECK_EQUAL(fname, "numbers.txt");
+      CAF_CHECK_EQUAL(self->mailbox().empty(), true);
+      return attach_stream_source(self, init(buf_size), push_from_buf,
+                                  is_done(self), fin<buf>(self));
+    },
+    [=](string& fname, actor next) {
+      CAF_CHECK_EQUAL(fname, "numbers.txt");
+      CAF_CHECK_EQUAL(self->mailbox().empty(), true);
+      attach_stream_source(self, next, init(buf_size), push_from_buf,
+                           is_done(self), fin<buf>(self));
+    },
+  };
 }
 
 TESTEE_STATE(sum_up) {
@@ -111,16 +113,18 @@ TESTEE_STATE(sum_up) {
 
 TESTEE(sum_up) {
   using intptr = int*;
-  return {[=](stream<int>& in) {
-    return attach_stream_sink(
-      self,
-      // input stream
-      in,
-      // initialize state
-      [=](intptr& x) { x = &self->state.x; },
-      // processing step
-      [](intptr& x, int y) { *x += y; }, fin<intptr>(self));
-  }};
+  return {
+    [=](stream<int>& in) {
+      return attach_stream_sink(
+        self,
+        // input stream
+        in,
+        // initialize state
+        [=](intptr& x) { x = &self->state.x; },
+        // processing step
+        [](intptr& x, int y) { *x += y; }, fin<intptr>(self));
+    },
+  };
 }
 
 TESTEE_STATE(delayed_sum_up) {
@@ -130,67 +134,75 @@ TESTEE_STATE(delayed_sum_up) {
 TESTEE(delayed_sum_up) {
   using intptr = int*;
   self->set_default_handler(skip);
-  return {[=](ok_atom) {
-    self->become([=](stream<int>& in) {
-      self->set_default_handler(print_and_drop);
-      return attach_stream_sink(
-        self,
-        // input stream
-        in,
-        // initialize state
-        [=](intptr& x) { x = &self->state.x; },
-        // processing step
-        [](intptr& x, int y) { *x += y; },
-        // cleanup
-        fin<intptr>(self));
-    });
-  }};
+  return {
+    [=](ok_atom) {
+      self->become([=](stream<int>& in) {
+        self->set_default_handler(print_and_drop);
+        return attach_stream_sink(
+          self,
+          // input stream
+          in,
+          // initialize state
+          [=](intptr& x) { x = &self->state.x; },
+          // processing step
+          [](intptr& x, int y) { *x += y; },
+          // cleanup
+          fin<intptr>(self));
+      });
+    },
+  };
 }
 
 TESTEE(broken_sink) {
   CAF_IGNORE_UNUSED(self);
-  return {[=](stream<int>&, const actor&) {
-    // nop
-  }};
+  return {
+    [=](stream<int>&, const actor&) {
+      // nop
+    },
+  };
 }
 
 TESTEE(filter) {
   CAF_IGNORE_UNUSED(self);
-  return {[=](stream<int>& in) {
-    return attach_stream_stage(
-      self,
-      // input stream
-      in,
-      // initialize state
-      [](unit_t&) {
-        // nop
-      },
-      // processing step
-      [](unit_t&, downstream<int>& out, int x) {
-        if ((x & 0x01) != 0)
-          out.push(x);
-      },
-      // cleanup
-      fin<unit_t>(self));
-  }};
+  return {
+    [=](stream<int>& in) {
+      return attach_stream_stage(
+        self,
+        // input stream
+        in,
+        // initialize state
+        [](unit_t&) {
+          // nop
+        },
+        // processing step
+        [](unit_t&, downstream<int>& out, int x) {
+          if ((x & 0x01) != 0)
+            out.push(x);
+        },
+        // cleanup
+        fin<unit_t>(self));
+    },
+  };
 }
 
 TESTEE(doubler) {
   CAF_IGNORE_UNUSED(self);
-  return {[=](stream<int>& in) {
-    return attach_stream_stage(
-      self,
-      // input stream
-      in,
-      // initialize state
-      [](unit_t&) {
-        // nop
-      },
-      // processing step
-      [](unit_t&, downstream<int>& out, int x) { out.push(x * 2); },
-      // cleanup
-      fin<unit_t>(self));
-  }};
+  return {
+    [=](stream<int>& in) {
+      return attach_stream_stage(
+        self,
+        // input stream
+        in,
+        // initialize state
+        [](unit_t&) {
+          // nop
+        },
+        // processing step
+        [](unit_t&, downstream<int>& out, int x) { out.push(x * 2); },
+        // cleanup
+        fin<unit_t>(self));
+    },
+  };
 }
 
 struct fixture : test_coordinator_fixture<> {
