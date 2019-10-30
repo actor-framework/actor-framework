@@ -376,6 +376,65 @@ protected:
   std::function<void ()> peek_;
 };
 
+template <>
+class expect_clause<void> {
+public:
+  expect_clause(caf::scheduler::test_coordinator& sched)
+    : sched_(sched), dest_(nullptr) {
+    // nop
+  }
+
+  expect_clause(expect_clause&& other) = default;
+
+  ~expect_clause() {
+    auto ptr = dest_->peek_at_next_mailbox_element();
+    if (ptr == nullptr)
+      CAF_FAIL("no message found");
+    if (!ptr->content().empty())
+      CAF_FAIL("non-empty message found: " << to_string(ptr->content()));
+    run_once();
+  }
+
+  expect_clause& from(const wildcard&) {
+    return *this;
+  }
+
+  template <class Handle>
+  expect_clause& from(const Handle& whom) {
+    src_ = caf::actor_cast<caf::strong_actor_ptr>(whom);
+    return *this;
+  }
+
+  template <class Handle>
+  expect_clause& to(const Handle& whom) {
+    CAF_REQUIRE(sched_.prioritize(whom));
+    dest_ = &sched_.next_job<caf::abstract_actor>();
+    auto ptr = dest_->peek_at_next_mailbox_element();
+    CAF_REQUIRE(ptr != nullptr);
+    if (src_)
+      CAF_REQUIRE_EQUAL(ptr->sender, src_);
+    return *this;
+  }
+
+  expect_clause& to(const caf::scoped_actor& whom) {
+    dest_ = whom.ptr();
+    return *this;
+  }
+
+protected:
+  void run_once() {
+    auto dptr = dynamic_cast<caf::blocking_actor*>(dest_);
+    if (dptr == nullptr)
+      sched_.run_once();
+    else
+      dptr->dequeue(); // Drop message.
+  }
+
+  caf::scheduler::test_coordinator& sched_;
+  caf::strong_actor_ptr src_;
+  caf::abstract_actor* dest_;
+};
+
 template <class... Ts>
 class inject_clause {
 public:
@@ -715,6 +774,13 @@ public:
   ///          timeouts triggerd.
   size_t run() {
     return run_until([] { return false; });
+  }
+
+  /// Consume ones message or triggers the next timeout.
+  /// @returns `true` if a message was consumed or timeouts was triggered,
+  ///          `false` otherwise.
+  bool run_once() {
+    return run_until([] { return true; }) > 0;
   }
 
   /// Consume messages and trigger timeouts until `pred` becomes `true` or
