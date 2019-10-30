@@ -72,7 +72,11 @@ public:
     then_impl(f, e);
   }
 
-  Self* self() {
+  message_id id() const noexcept {
+    return mid_;
+  }
+
+  Self* self() noexcept {
     return self_;
   }
 
@@ -157,7 +161,11 @@ public:
     self_->varargs_receive(rc, mid_, std::move(g), std::move(f));
   }
 
-  Self* self() {
+  message_id id() const noexcept {
+    return mid_;
+  }
+
+  Self* self() noexcept {
     return self_;
   }
 
