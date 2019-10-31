@@ -33,7 +33,7 @@ namespace {
 using string_list = std::vector<std::string>;
 
 struct recorder : actor_profiler {
-  void add_actor(const local_actor& self, const local_actor* parent) {
+  void add_actor(const local_actor& self, const local_actor* parent) override {
     log.emplace_back("new: ");
     auto& str = log.back();
     str += self.name();
@@ -43,25 +43,43 @@ struct recorder : actor_profiler {
     }
   }
 
-  void remove_actor(const local_actor& self) {
+  void remove_actor(const local_actor& self) override {
     log.emplace_back("delete: ");
     log.back() += self.name();
   }
 
   void before_processing(const local_actor& self,
-                         const mailbox_element& element) {
+                         const mailbox_element& element) override {
     log.emplace_back(self.name());
     auto& str = log.back();
     str += " got: ";
     str += to_string(element.content());
   }
 
-  void after_processing(const local_actor& self, invoke_message_result result) {
+  void after_processing(const local_actor& self,
+                        invoke_message_result result) override {
     log.emplace_back(self.name());
     auto& str = log.back();
     str += " ";
     str += to_string(result);
     str += " the message";
+  }
+
+  void before_sending(const local_actor& self,
+                      mailbox_element& element) override {
+    log.emplace_back(self.name());
+    auto& str = log.back();
+    str += " sends: ";
+    str += to_string(element.content());
+  }
+
+  void before_sending_scheduled(const local_actor& self,
+                                actor_clock::time_point,
+                                mailbox_element& element) override {
+    log.emplace_back(self.name());
+    auto& str = log.back();
+    str += " sends (scheduled): ";
+    str += to_string(element.content());
   }
 
   string_list log;
@@ -148,7 +166,9 @@ CAF_TEST(record actor messaging) {
   CAF_CHECK_EQUAL(string_list({
                     "new: foo",
                     "new: bar, parent: foo",
+                    "foo sends: (\"hello bar\")",
                     "bar got: (\"hello bar\")",
+                    // TODO: "bar sends: (\"hello foo\")",
                     "bar consumed the message",
                     "foo got: (\"hello foo\")",
                     "delete: bar",

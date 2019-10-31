@@ -575,6 +575,19 @@ public:
       profiler_->after_processing(self, result);
   }
 
+  void profiler_before_sending(const local_actor& self,
+                               mailbox_element& element) {
+    if (profiler_)
+      profiler_->before_sending(self, element);
+  }
+
+  void profiler_before_sending_scheduled(const local_actor& self,
+                                         caf::actor_clock::time_point timeout,
+                                         mailbox_element& element) {
+    if (profiler_)
+      profiler_->before_sending_scheduled(self, timeout, element);
+  }
+
   /// @endcond
 
 private:

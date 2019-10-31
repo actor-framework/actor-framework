@@ -18,14 +18,12 @@
 
 #pragma once
 
-#include "caf/scheduled_actor.hpp"
-
-#include "caf/mixin/sender.hpp"
 #include "caf/mixin/requester.hpp"
+#include "caf/mixin/sender.hpp"
+#include "caf/scheduled_actor.hpp"
+#include "caf/typed_actor_view_base.hpp"
 
 namespace caf {
-
-struct typed_actor_view_base { };
 
 template <class... Sigs>
 class typed_actor_view : public extend<typed_actor_view_base,
@@ -34,6 +32,8 @@ class typed_actor_view : public extend<typed_actor_view_base,
 public:
   /// Stores the template parameter pack.
   using signatures = detail::type_list<Sigs...>;
+
+  using pointer = scheduled_actor*;
 
   typed_actor_view(scheduled_actor* ptr) : self_(ptr) {
     // nop
