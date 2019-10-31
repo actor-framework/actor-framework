@@ -27,19 +27,46 @@ namespace net {
 template <class Socket>
 class socket_guard {
 public:
-  explicit socket_guard(Socket sock) : sock_(sock) {
+  socket_guard() noexcept : sock_(invalid_socket_id) {
     // nop
   }
+
+  explicit socket_guard(Socket sock) noexcept : sock_(sock) {
+    // nop
+  }
+
+  socket_guard(socket_guard&& other) noexcept : sock_(other.release()) {
+    // nop
+  }
+
+  socket_guard(const socket_guard&) = delete;
+
+  socket_guard& operator=(socket_guard&& other) noexcept {
+    reset(other.release());
+    return *this;
+  }
+
+  socket_guard& operator=(const socket_guard&) = delete;
 
   ~socket_guard() {
     if (sock_.id != invalid_socket_id)
       close(sock_);
   }
 
-  Socket release() {
+  void reset(Socket x) noexcept {
+    if (sock_.id != invalid_socket_id)
+      close(sock_);
+    sock_ = x;
+  }
+
+  Socket release() noexcept {
     auto sock = sock_;
     sock_.id = invalid_socket_id;
     return sock;
+  }
+
+  Socket socket() const noexcept {
+    return sock_;
   }
 
 private:

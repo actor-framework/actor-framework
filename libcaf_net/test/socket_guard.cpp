@@ -32,7 +32,7 @@ namespace {
 constexpr socket_id dummy_id = 13;
 
 struct dummy_socket {
-  dummy_socket(socket_id& id, bool& closed) : id(id), closed(closed) {
+  dummy_socket(socket_id id, bool& closed) : id(id), closed(closed) {
     // nop
   }
 
@@ -44,20 +44,20 @@ struct dummy_socket {
     return *this;
   }
 
-  socket_id& id;
+  socket_id id;
   bool& closed;
 };
 
 void close(dummy_socket x) {
+  x.id = invalid_socket_id;
   x.closed = true;
 }
 
 struct fixture {
-  fixture() : id{dummy_id}, closed{false}, sock{id, closed} {
+  fixture() : closed{false}, sock{dummy_id, closed} {
     // nop
   }
 
-  socket_id id;
   bool closed;
   dummy_socket sock;
 };
@@ -69,17 +69,29 @@ CAF_TEST_FIXTURE_SCOPE(socket_guard_tests, fixture)
 CAF_TEST(cleanup) {
   {
     auto guard = make_socket_guard(sock);
-    CAF_CHECK_EQUAL(sock.id, dummy_id);
+    CAF_CHECK_EQUAL(guard.socket().id, dummy_id);
   }
   CAF_CHECK(sock.closed);
+}
+
+CAF_TEST(reset) {
+  {
+    auto guard = make_socket_guard(sock);
+    CAF_CHECK_EQUAL(guard.socket().id, dummy_id);
+    guard.release();
+    CAF_CHECK_EQUAL(guard.socket().id, invalid_socket_id);
+    guard.reset(sock);
+    CAF_CHECK_EQUAL(guard.socket().id, dummy_id);
+  }
+  CAF_CHECK_EQUAL(sock.closed, true);
 }
 
 CAF_TEST(release) {
   {
     auto guard = make_socket_guard(sock);
-    CAF_CHECK_EQUAL(sock.id, dummy_id);
+    CAF_CHECK_EQUAL(guard.socket().id, dummy_id);
     guard.release();
-    CAF_CHECK_EQUAL(sock.id, invalid_socket_id);
+    CAF_CHECK_EQUAL(guard.socket().id, invalid_socket_id);
   }
   CAF_CHECK_EQUAL(sock.closed, false);
 }
