@@ -93,22 +93,17 @@ const int ec_out_of_memory = ENOMEM;
 const int ec_interrupted_syscall = EINTR;
 #endif
 
-// platform-dependent SIGPIPE setup
-#if defined(CAF_MACOS) || defined(CAF_IOS) || defined(CAF_BSD)
-// Use the socket option but no flags to recv/send on macOS/iOS/BSD.
-// (OpenBSD doesn't have SO_NOSIGPIPE)
-#ifndef __OpenBSD__
+// Platform-dependent setup for supressing SIGPIPE.
+#if defined(CAF_MACOS) || defined(CAF_IOS) || defined(__FreeBSD__)
+// Set the SO_NOSIGPIPE socket option on macOS, iOS and FreeBSD.
 const int no_sigpipe_socket_flag = SO_NOSIGPIPE;
-#else
-const int no_sigpipe_socket_flag = 0;
-#endif
 const int no_sigpipe_io_flag = 0;
 #elif defined(CAF_WINDOWS)
 // Do nothing on Windows (SIGPIPE does not exist).
 const int no_sigpipe_socket_flag = 0;
 const int no_sigpipe_io_flag = 0;
 #else
-// Use flags to recv/send on Linux/Android but no socket option.
+// Pass MSG_NOSIGNAL to recv/send on Linux/Android/OpenBSD.
 const int no_sigpipe_socket_flag = 0;
 const int no_sigpipe_io_flag = MSG_NOSIGNAL;
 #endif
