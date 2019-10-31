@@ -55,9 +55,9 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
     mpx->set_thread_id();
     CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
     auto sockets = unbox(make_stream_socket_pair());
-    send_socket.reset(sockets.first);
-    recv_socket.reset(sockets.second);
-    if (auto err = nonblocking(*recv_socket, true))
+    send_socket_guard.reset(sockets.first);
+    recv_socket_guard.reset(sockets.second);
+    if (auto err = nonblocking(recv_socket_guard.socket(), true))
       CAF_FAIL("nonblocking returned an error: " << err);
   }
 
@@ -67,8 +67,8 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
 
   multiplexer_ptr mpx;
   buffer_type recv_buf;
-  socket_guard<stream_socket> send_socket;
-  socket_guard<stream_socket> recv_socket;
+  socket_guard<stream_socket> send_socket_guard;
+  socket_guard<stream_socket> recv_socket_guard;
   buffer_ptr shared_buf;
 };
 
@@ -157,7 +157,7 @@ CAF_TEST_FIXTURE_SCOPE(endpoint_manager_tests, fixture)
 CAF_TEST(receive) {
   using transport_type = stream_transport<dummy_application>;
   auto mgr = make_endpoint_manager(mpx, sys,
-                                   transport_type{recv_socket.release(),
+                                   transport_type{recv_socket_guard.release(),
                                                   dummy_application{
                                                     shared_buf}});
   CAF_CHECK_EQUAL(mgr->init(), none);
@@ -166,7 +166,8 @@ CAF_TEST(receive) {
   auto& transport = mgr_impl->transport();
   transport.configure_read(receive_policy::exactly(hello_manager.size()));
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
-  CAF_CHECK_EQUAL(write(*send_socket, as_bytes(make_span(hello_manager))),
+  CAF_CHECK_EQUAL(write(send_socket_guard.socket(),
+                        as_bytes(make_span(hello_manager))),
                   hello_manager.size());
   CAF_MESSAGE("wrote " << hello_manager.size() << " bytes.");
   run();
@@ -178,7 +179,7 @@ CAF_TEST(receive) {
 CAF_TEST(resolve and proxy communication) {
   using transport_type = stream_transport<dummy_application>;
   auto mgr = make_endpoint_manager(mpx, sys,
-                                   transport_type{send_socket.release(),
+                                   transport_type{send_socket_guard.release(),
                                                   dummy_application{
                                                     shared_buf}});
   CAF_CHECK_EQUAL(mgr->init(), none);
@@ -193,7 +194,7 @@ CAF_TEST(resolve and proxy communication) {
     after(std::chrono::seconds(0)) >>
       [&] { CAF_FAIL("manager did not respond with a proxy."); });
   run();
-  auto read_res = read(*recv_socket, make_span(recv_buf));
+  auto read_res = read(recv_socket_guard.socket(), make_span(recv_buf));
   if (!holds_alternative<size_t>(read_res))
     CAF_FAIL("read() returned an error: " << sys.render(get<sec>(read_res)));
   recv_buf.resize(get<size_t>(read_res));
