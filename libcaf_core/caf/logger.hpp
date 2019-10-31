@@ -594,6 +594,14 @@ bool operator==(const logger::field& x, const logger::field& y);
 #define CAF_LOG_FINALIZE_EVENT()                                               \
   CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG, "FINALIZE")
 
+#define CAF_LOG_SKIP_OR_FINALIZE_EVENT(invoke_result)                          \
+  do {                                                                         \
+    if (invoke_result == caf::invoke_message_result::skipped)                  \
+      CAF_LOG_SKIP_EVENT();                                                    \
+    else                                                                       \
+      CAF_LOG_FINALIZE_EVENT();                                                \
+  } while (false)
+
 #define CAF_LOG_TERMINATE_EVENT(thisptr, rsn)                                  \
   CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                    \
                "TERMINATE ; ID =" << thisptr->id()                             \
@@ -615,6 +623,8 @@ bool operator==(const logger::field& x, const logger::field& y);
 #define CAF_LOG_DROP_EVENT() CAF_VOID_STMT
 
 #define CAF_LOG_SKIP_EVENT() CAF_VOID_STMT
+
+#define CAF_LOG_SKIP_OR_FINALIZE_EVENT(unused) CAF_VOID_STMT
 
 #define CAF_LOG_FINALIZE_EVENT() CAF_VOID_STMT
 

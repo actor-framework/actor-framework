@@ -630,111 +630,107 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
   current_element_ = &x;
   CAF_LOG_RECEIVE_EVENT(current_element_);
   CAF_BEFORE_PROCESSING(this, x);
-  // Helper function for dispatching a message to a response handler.
-  using ptr_t = scheduled_actor*;
-  using fun_t = bool (*)(ptr_t, behavior&, mailbox_element&);
-  auto ordinary_invoke = [](ptr_t, behavior& f, mailbox_element& in) -> bool {
-    return f(in.content()) != none;
-  };
-  auto select_invoke_fun = [&]() -> fun_t { return ordinary_invoke; };
-  // Short-circuit awaited responses.
-  if (!awaited_responses_.empty()) {
-    auto invoke = select_invoke_fun();
-    auto& pr = awaited_responses_.front();
-    // skip all messages until we receive the currently awaited response
-    if (x.mid != pr.first) {
-      CAF_AFTER_PROCESSING(this, invoke_message_result::skipped);
-      return invoke_message_result::skipped;
-    }
-    auto f = std::move(pr.second);
-    awaited_responses_.pop_front();
-    if (!invoke(this, f, x)) {
-      // try again with error if first attempt failed
-      auto msg = make_message(
-        make_error(sec::unexpected_response, x.move_content_to_message()));
-      f(msg);
-    }
-    CAF_AFTER_PROCESSING(this, invoke_message_result::consumed);
-    return invoke_message_result::consumed;
-  }
-  // Handle multiplexed responses.
-  if (x.mid.is_response()) {
-    auto invoke = select_invoke_fun();
-    auto mrh = multiplexed_responses_.find(x.mid);
-    // neither awaited nor multiplexed, probably an expired timeout
-    if (mrh == multiplexed_responses_.end()) {
-      CAF_AFTER_PROCESSING(this, invoke_message_result::dropped);
-      return invoke_message_result::dropped;
-    }
-    auto bhvr = std::move(mrh->second);
-    multiplexed_responses_.erase(mrh);
-    if (!invoke(this, bhvr, x)) {
-      // try again with error if first attempt failed
-      auto msg = make_message(
-        make_error(sec::unexpected_response, x.move_content_to_message()));
-      bhvr(msg);
-    }
-    CAF_AFTER_PROCESSING(this, invoke_message_result::consumed);
-    return invoke_message_result::consumed;
-  }
-  // Dispatch on the content of x.
-  switch (categorize(x)) {
-    case message_category::skipped:
-      CAF_AFTER_PROCESSING(this, invoke_message_result::skipped);
-      return invoke_message_result::skipped;
-    case message_category::internal:
-      CAF_LOG_DEBUG("handled system message");
-      CAF_AFTER_PROCESSING(this, invoke_message_result::consumed);
+  // Wrap the actual body for the function.
+  auto body = [this, &x] {
+    // Helper function for dispatching a message to a response handler.
+    using ptr_t = scheduled_actor*;
+    using fun_t = bool (*)(ptr_t, behavior&, mailbox_element&);
+    auto ordinary_invoke = [](ptr_t, behavior& f, mailbox_element& in) -> bool {
+      return f(in.content()) != none;
+    };
+    auto select_invoke_fun = [&]() -> fun_t { return ordinary_invoke; };
+    // Short-circuit awaited responses.
+    if (!awaited_responses_.empty()) {
+      auto invoke = select_invoke_fun();
+      auto& pr = awaited_responses_.front();
+      // skip all messages until we receive the currently awaited response
+      if (x.mid != pr.first)
+        return invoke_message_result::skipped;
+      auto f = std::move(pr.second);
+      awaited_responses_.pop_front();
+      if (!invoke(this, f, x)) {
+        // try again with error if first attempt failed
+        auto msg = make_message(
+          make_error(sec::unexpected_response, x.move_content_to_message()));
+        f(msg);
+      }
       return invoke_message_result::consumed;
-    case message_category::ordinary: {
-      detail::default_invoke_result_visitor<scheduled_actor> visitor{this};
-      bool skipped = false;
-      auto had_timeout = getf(has_timeout_flag);
-      if (had_timeout)
-        unsetf(has_timeout_flag);
-      // restore timeout at scope exit if message was skipped
-      auto timeout_guard = detail::make_scope_guard([&] {
-        if (skipped && had_timeout)
-          setf(has_timeout_flag);
-      });
-      auto call_default_handler = [&] {
-        auto sres = call_handler(default_handler_, this, x);
-        switch (sres.flag) {
+    }
+    // Handle multiplexed responses.
+    if (x.mid.is_response()) {
+      auto invoke = select_invoke_fun();
+      auto mrh = multiplexed_responses_.find(x.mid);
+      // neither awaited nor multiplexed, probably an expired timeout
+      if (mrh == multiplexed_responses_.end())
+        return invoke_message_result::dropped;
+      auto bhvr = std::move(mrh->second);
+      multiplexed_responses_.erase(mrh);
+      if (!invoke(this, bhvr, x)) {
+        // try again with error if first attempt failed
+        auto msg = make_message(
+          make_error(sec::unexpected_response, x.move_content_to_message()));
+        bhvr(msg);
+      }
+      return invoke_message_result::consumed;
+    }
+    // Dispatch on the content of x.
+    switch (categorize(x)) {
+      case message_category::skipped:
+        return invoke_message_result::skipped;
+      case message_category::internal:
+        CAF_LOG_DEBUG("handled system message");
+        return invoke_message_result::consumed;
+      case message_category::ordinary: {
+        detail::default_invoke_result_visitor<scheduled_actor> visitor{this};
+        bool skipped = false;
+        auto had_timeout = getf(has_timeout_flag);
+        if (had_timeout)
+          unsetf(has_timeout_flag);
+        // restore timeout at scope exit if message was skipped
+        auto timeout_guard = detail::make_scope_guard([&] {
+          if (skipped && had_timeout)
+            setf(has_timeout_flag);
+        });
+        auto call_default_handler = [&] {
+          auto sres = call_handler(default_handler_, this, x);
+          switch (sres.flag) {
+            default:
+              break;
+            case rt_error:
+            case rt_value:
+              visitor.visit(sres);
+              break;
+            case rt_skip:
+              skipped = true;
+          }
+        };
+        if (bhvr_stack_.empty()) {
+          call_default_handler();
+          return !skipped ? invoke_message_result::consumed
+                          : invoke_message_result::skipped;
+        }
+        auto& bhvr = bhvr_stack_.back();
+        switch (bhvr(visitor, x.content())) {
           default:
             break;
-          case rt_error:
-          case rt_value:
-            visitor.visit(sres);
-            break;
-          case rt_skip:
+          case match_case::skip:
             skipped = true;
+            break;
+          case match_case::no_match:
+            call_default_handler();
         }
-      };
-      if (bhvr_stack_.empty()) {
-        call_default_handler();
-        auto result = !skipped ? invoke_message_result::consumed
-                               : invoke_message_result::skipped;
-        CAF_AFTER_PROCESSING(this, result);
-        return result;
+        return !skipped ? invoke_message_result::consumed
+                        : invoke_message_result::skipped;
       }
-      auto& bhvr = bhvr_stack_.back();
-      switch (bhvr(visitor, x.content())) {
-        default:
-          break;
-        case match_case::skip:
-          skipped = true;
-          break;
-        case match_case::no_match:
-          call_default_handler();
-      }
-      auto result = !skipped ? invoke_message_result::consumed
-                             : invoke_message_result::skipped;
-      CAF_AFTER_PROCESSING(this, result);
-      return result;
     }
-  }
-  // Unreachable.
-  CAF_CRITICAL("invalid message type");
+    // Unreachable.
+    CAF_CRITICAL("invalid message type");
+  };
+  // Post-process the returned value from the function body.
+  auto result = body();
+  CAF_AFTER_PROCESSING(this, result);
+  CAF_LOG_SKIP_OR_FINALIZE_EVENT(result);
+  return result;
 }
 
 /// Tries to consume `x`.

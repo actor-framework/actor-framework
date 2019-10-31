@@ -157,74 +157,75 @@ void blocking_actor::fail_state(error err) {
 }
 
 intrusive::task_result
-blocking_actor::mailbox_visitor:: operator()(mailbox_element& x) {
+blocking_actor::mailbox_visitor::operator()(mailbox_element& x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   CAF_LOG_RECEIVE_EVENT((&x));
   CAF_BEFORE_PROCESSING(self, x);
-  auto check_if_done = [&]() -> intrusive::task_result {
-    // Stop consuming items when reaching the end of the user-defined receive
-    // loop either via post or pre condition.
-    if (rcc.post() && rcc.pre())
-      return intrusive::task_result::resume;
-    done = true;
-    return intrusive::task_result::stop;
-  };
-  // Skip messages that don't match our message ID.
-  if (mid.is_response()) {
-    if (mid != x.mid) {
-      CAF_AFTER_PROCESSING(self, invoke_message_result::skipped);
-      CAF_LOG_SKIP_EVENT();
+  // Wrap the actual body for the function.
+  auto body = [this, &x] {
+    auto check_if_done = [&]() -> intrusive::task_result {
+      // Stop consuming items when reaching the end of the user-defined receive
+      // loop either via post or pre condition.
+      if (rcc.post() && rcc.pre())
+        return intrusive::task_result::resume;
+      done = true;
+      return intrusive::task_result::stop;
+    };
+    // Skip messages that don't match our message ID.
+    if (mid.is_response()) {
+      if (mid != x.mid) {
+        return intrusive::task_result::skip;
+      }
+    } else if (x.mid.is_response()) {
       return intrusive::task_result::skip;
     }
-  } else if (x.mid.is_response()) {
-    CAF_AFTER_PROCESSING(self, invoke_message_result::skipped);
-    CAF_LOG_SKIP_EVENT();
-    return intrusive::task_result::skip;
-  }
-  // Automatically unlink from actors after receiving an exit.
-  if (x.content().match_elements<exit_msg>())
-    self->unlink_from(x.content().get_as<exit_msg>(0).source);
-  // Blocking actors can nest receives => push/pop `current_element_`
-  auto prev_element = self->current_element_;
-  self->current_element_ = &x;
-  auto g = detail::make_scope_guard([&] {
-    self->current_element_ = prev_element;
-  });
-  // Dispatch on x.
-  detail::default_invoke_result_visitor<blocking_actor> visitor{self};
-  switch (bhvr.nested(visitor, x.content())) {
-    default:
-      CAF_AFTER_PROCESSING(self, invoke_message_result::consumed);
-      return check_if_done();
-    case match_case::no_match:
-      { // Blocking actors can have fallback handlers for catch-all rules.
+    // Automatically unlink from actors after receiving an exit.
+    if (x.content().match_elements<exit_msg>())
+      self->unlink_from(x.content().get_as<exit_msg>(0).source);
+    // Blocking actors can nest receives => push/pop `current_element_`
+    auto prev_element = self->current_element_;
+    self->current_element_ = &x;
+    auto g = detail::make_scope_guard(
+      [&] { self->current_element_ = prev_element; });
+    // Dispatch on x.
+    detail::default_invoke_result_visitor<blocking_actor> visitor{self};
+    switch (bhvr.nested(visitor, x.content())) {
+      default:
+        return check_if_done();
+      case match_case::no_match: { // Blocking actors can have fallback handlers
+                                   // for catch-all rules.
         auto sres = bhvr.fallback(*self->current_element_);
         if (sres.flag != rt_skip) {
-          CAF_AFTER_PROCESSING(self, invoke_message_result::consumed);
           visitor.visit(sres);
-          CAF_LOG_FINALIZE_EVENT();
           return check_if_done();
         }
       }
-      // Response handlers must get re-invoked with an error when receiving an
-      // unexpected message.
-      if (mid.is_response()) {
-        auto err = make_error(sec::unexpected_response,
-                              x.move_content_to_message());
-        mailbox_element_view<error> tmp{std::move(x.sender), x.mid,
-                                        std::move(x.stages), err};
-        self->current_element_ = &tmp;
-        bhvr.nested(tmp.content());
-        CAF_AFTER_PROCESSING(self, invoke_message_result::consumed);
-        CAF_LOG_FINALIZE_EVENT();
-        return check_if_done();
-      }
-      CAF_ANNOTATE_FALLTHROUGH;
-    case match_case::skip:
-      CAF_AFTER_PROCESSING(self, invoke_message_result::skipped);
-      CAF_LOG_SKIP_EVENT();
-      return intrusive::task_result::skip;
+        // Response handlers must get re-invoked with an error when receiving an
+        // unexpected message.
+        if (mid.is_response()) {
+          auto err = make_error(sec::unexpected_response,
+                                x.move_content_to_message());
+          mailbox_element_view<error> tmp{std::move(x.sender), x.mid,
+                                          std::move(x.stages), err};
+          self->current_element_ = &tmp;
+          bhvr.nested(tmp.content());
+          return check_if_done();
+        }
+        CAF_ANNOTATE_FALLTHROUGH;
+      case match_case::skip:
+        return intrusive::task_result::skip;
+    }
+  };
+  // Post-process the returned value from the function body.
+  auto result = body();
+  if (result == intrusive::task_result::skip) {
+    CAF_AFTER_PROCESSING(self, invoke_message_result::skipped);
+    CAF_LOG_SKIP_EVENT();
+  } else {
+    CAF_AFTER_PROCESSING(self, invoke_message_result::consumed);
+    CAF_LOG_FINALIZE_EVENT();
   }
+  return result;
 }
 
 void blocking_actor::receive_impl(receive_cond& rcc,
