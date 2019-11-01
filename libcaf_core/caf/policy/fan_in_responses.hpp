@@ -36,7 +36,7 @@ namespace caf {
 namespace detail {
 
 template <class F, class T>
-struct fan_in_helper {
+struct fan_in_responses_helper {
   std::vector<T> results;
   std::shared_ptr<size_t> pending;
   F f;
@@ -50,7 +50,7 @@ struct fan_in_helper {
   }
 
   template <class Fun>
-  fan_in_helper(size_t pending, Fun&& f)
+  fan_in_responses_helper(size_t pending, Fun&& f)
     : pending(std::make_shared<size_t>(pending)), f(std::forward<Fun>(f)) {
     results.reserve(pending);
   }
@@ -62,7 +62,7 @@ struct fan_in_helper {
 };
 
 template <class F, class... Ts>
-struct fan_in_tuple_helper {
+struct fan_in_responses_tuple_helper {
   using value_type = std::tuple<Ts...>;
   std::vector<value_type> results;
   std::shared_ptr<size_t> pending;
@@ -77,7 +77,7 @@ struct fan_in_tuple_helper {
   }
 
   template <class Fun>
-  fan_in_tuple_helper(size_t pending, Fun&& f)
+  fan_in_responses_tuple_helper(size_t pending, Fun&& f)
     : pending(std::make_shared<size_t>(pending)), f(std::forward<Fun>(f)) {
     results.reserve(pending);
   }
@@ -89,28 +89,29 @@ struct fan_in_tuple_helper {
 };
 
 template <class F, class = typename detail::get_callable_trait<F>::arg_types>
-struct select_fan_in_helper;
+struct select_fan_in_responses_helper;
 
 template <class F, class... Ts>
-struct select_fan_in_helper<F,
-                            detail::type_list<std::vector<std::tuple<Ts...>>>> {
-  using type = fan_in_tuple_helper<F, Ts...>;
+struct select_fan_in_responses_helper<
+  F, detail::type_list<std::vector<std::tuple<Ts...>>>> {
+  using type = fan_in_responses_tuple_helper<F, Ts...>;
 };
 
 template <class F, class T>
-struct select_fan_in_helper<F, detail::type_list<std::vector<T>>> {
-  using type = fan_in_helper<F, T>;
+struct select_fan_in_responses_helper<F, detail::type_list<std::vector<T>>> {
+  using type = fan_in_responses_helper<F, T>;
 };
 
 template <class F>
-using fan_in_helper_t = typename select_fan_in_helper<F>::type;
+using fan_in_responses_helper_t =
+  typename select_fan_in_responses_helper<F>::type;
 
 // TODO: Replace with a lambda when switching to C++17 (move g into lambda).
 template <class G>
-class fan_in_error_handler {
+class fan_in_responses_error_handler {
 public:
   template <class Fun>
-  fan_in_error_handler(Fun&& fun, std::shared_ptr<size_t> pending)
+  fan_in_responses_error_handler(Fun&& fun, std::shared_ptr<size_t> pending)
     : handler(std::forward<Fun>(fun)), pending(std::move(pending)) {
     // nop
   }
@@ -138,9 +139,9 @@ namespace policy {
 /// @relates mixin::requester
 /// @relates response_handle
 template <class ResponseType>
-class fan_in {
+class fan_in_responses {
 public:
-  fan_in(std::vector<message_id> ids) : ids_(std::move(ids)) {
+  fan_in_responses(std::vector<message_id> ids) : ids_(std::move(ids)) {
     CAF_ASSERT(ids_.size()
                <= static_cast<size_t>(std::numeric_limits<int>::max()));
   }
@@ -161,7 +162,7 @@ public:
 
   template <class Self, class F, class OnError>
   void receive(Self* self, F&& f, OnError&& g) {
-    using helper_type = detail::fan_in_helper_t<detail::decay_t<F>>;
+    using helper_type = detail::fan_in_responses_helper_t<detail::decay_t<F>>;
     helper_type helper{ids_.size(), std::forward<F>(f)};
     detail::type_checker<ResponseType, helper_type>::check();
     auto error_handler = [&](error& err) {
@@ -182,8 +183,8 @@ private:
   template <class F, class OnError>
   behavior make_behavior(F&& f, OnError&& g) {
     using namespace detail;
-    using helper_type = fan_in_helper_t<decay_t<F>>;
-    using error_handler_type = fan_in_error_handler<decay_t<OnError>>;
+    using helper_type = fan_in_responses_helper_t<decay_t<F>>;
+    using error_handler_type = fan_in_responses_error_handler<decay_t<OnError>>;
     helper_type helper{ids_.size(), std::move(f)};
     type_checker<ResponseType, helper_type>::check();
     error_handler_type err_helper{std::forward<OnError>(g), helper.pending};
