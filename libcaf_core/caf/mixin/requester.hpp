@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include <tuple>
 #include <chrono>
+#include <tuple>
 
 #include "caf/actor.hpp"
 #include "caf/check_typed_input.hpp"
@@ -29,14 +29,12 @@
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/message_priority.hpp"
+#include "caf/policy/single_response.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/response_type.hpp"
 
 namespace caf {
 namespace mixin {
-
-template <class T>
-struct is_blocking_requester : std::false_type { };
 
 /// A `requester` is an actor that supports
 /// `self->request(...).{then|await|receive}`.
@@ -60,22 +58,12 @@ public:
   /// @returns A handle identifying a future-like handle to the response.
   /// @warning The returned handle is actor specific and the response to the
   ///          sent message cannot be received by another actor.
-  template <message_priority P = message_priority::normal,
-            class Handle = actor, class... Ts>
-  response_handle<Subtype,
-                  response_type_t<
-                    typename Handle::signatures,
-                    typename detail::implicit_conversions<
-                      typename std::decay<Ts>::type
-                    >::type...>,
-                  is_blocking_requester<Subtype>::value>
-  request(const Handle& dest, const duration& timeout, Ts&&... xs) {
+  template <message_priority P = message_priority::normal, class Handle = actor,
+            class... Ts>
+  auto request(const Handle& dest, const duration& timeout, Ts&&... xs) {
+    using namespace detail;
     static_assert(sizeof...(Ts) > 0, "no message to send");
-    using token =
-      detail::type_list<
-        typename detail::implicit_conversions<
-          typename std::decay<Ts>::type
-        >::type...>;
+    using token = type_list<implicit_conversions_t<decay_t<Ts>>...>;
     static_assert(response_type_unbox<signatures_of_t<Handle>, token>::valid,
                   "receiver does not accept given message");
     auto self = static_cast<Subtype*>(this);
@@ -88,29 +76,25 @@ public:
       self->eq_impl(req_id.response_id(), self->ctrl(), self->context(),
                     make_error(sec::invalid_argument));
     }
-    return {req_id.response_id(), self};
-   }
+    using response_type
+      = response_type_t<typename Handle::signatures,
+                        detail::implicit_conversions_t<detail::decay_t<Ts>>...>;
+    using handle_type
+      = response_handle<Subtype, policy::single_response<response_type>>;
+    return handle_type{self, req_id.response_id()};
+  }
 
   /// Sends `{xs...}` as a synchronous message to `dest` with priority `mp`.
   /// @returns A handle identifying a future-like handle to the response.
   /// @warning The returned handle is actor specific and the response to the
   ///          sent message cannot be received by another actor.
-  template <message_priority P = message_priority::normal,
-            class Rep = int, class Period = std::ratio<1>,
-            class Handle = actor, class... Ts>
-  response_handle<Subtype,
-                  response_type_t<
-                    typename Handle::signatures,
-                    typename detail::implicit_conversions<
-                      typename std::decay<Ts>::type
-                    >::type...>,
-                  is_blocking_requester<Subtype>::value>
-  request(const Handle& dest, std::chrono::duration<Rep, Period> timeout,
-          Ts&&... xs) {
+  template <message_priority P = message_priority::normal, class Rep = int,
+            class Period = std::ratio<1>, class Handle = actor, class... Ts>
+  auto request(const Handle& dest, std::chrono::duration<Rep, Period> timeout,
+               Ts&&... xs) {
     return request(dest, duration{timeout}, std::forward<Ts>(xs)...);
   }
 };
 
 } // namespace mixin
 } // namespace caf
-
