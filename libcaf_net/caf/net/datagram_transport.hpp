@@ -83,10 +83,6 @@ public:
     return manager().system();
   }
 
-  application_type& application() {
-    return dispatcher_.application();
-  }
-
   transport_type& transport() {
     return *this;
   }
@@ -147,8 +143,8 @@ public:
   }
 
   template <class Parent>
-  error resolve(Parent&, const uri& locator, const actor& listener) {
-    return dispatcher_.resolve(*this, locator, listener);
+  void resolve(Parent&, const uri& locator, const actor& listener) {
+    dispatcher_.resolve(*this, locator, listener);
   }
 
   template <class Parent>

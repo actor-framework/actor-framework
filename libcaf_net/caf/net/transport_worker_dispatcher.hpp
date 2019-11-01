@@ -28,6 +28,7 @@
 #include "caf/net/fwd.hpp"
 #include "caf/net/packet_writer_decorator.hpp"
 #include "caf/net/transport_worker.hpp"
+#include "caf/send.hpp"
 #include "caf/span.hpp"
 #include "caf/unit.hpp"
 
@@ -71,6 +72,7 @@ public:
   error handle_data(Parent& parent, span<byte> data, id_type id) {
     if (auto worker = find_worker(id))
       return worker->handle_data(parent, data);
+    // TODO: Where to get node_id from here?
     auto worker = add_new_worker(parent, node_id{}, id);
     if (worker)
       return (*worker)->handle_data(parent, data);
@@ -89,36 +91,31 @@ public:
       worker->write_message(parent, std::move(msg));
       return;
     }
+    // TODO: where to get id_type from here?
     if (auto worker = add_new_worker(parent, nid, id_type{}))
       (*worker)->write_message(parent, std::move(msg));
   }
 
   template <class Parent>
-  error resolve(Parent& parent, const uri& locator, const actor& listener) {
+  void resolve(Parent& parent, const uri& locator, const actor& listener) {
     auto worker = find_worker(make_node_id(locator));
     if (worker == nullptr)
-      return make_error(sec::runtime_error, "could not find worker");
+      anon_send(listener,
+                make_error(sec::runtime_error, "could not resolve node"));
     worker->resolve(parent, locator.path(), listener);
-    return none;
   }
 
   template <class Parent>
-  error new_proxy(Parent& parent, const node_id& nid, actor_id id) {
-    auto worker = find_worker(nid);
-    if (worker == nullptr)
-      return make_error(sec::runtime_error, "could not find worker");
-    worker->new_proxy(parent, nid, id);
-    return none;
+  void new_proxy(Parent& parent, const node_id& nid, actor_id id) {
+    if (auto worker = find_worker(nid))
+      worker->new_proxy(parent, nid, id);
   }
 
   template <class Parent>
-  error local_actor_down(Parent& parent, const node_id& nid, actor_id id,
-                         error reason) {
-    auto worker = find_worker(nid);
-    if (worker == nullptr)
-      return make_error(sec::runtime_error, "could not find worker");
-    worker->local_actor_down(parent, nid, id, std::move(reason));
-    return none;
+  void local_actor_down(Parent& parent, const node_id& nid, actor_id id,
+                        error reason) {
+    if (auto worker = find_worker(nid))
+      worker->local_actor_down(parent, nid, id, std::move(reason));
   }
 
   template <class... Ts>
@@ -171,8 +168,7 @@ private:
     return map.at(key);
   }
 
-  // -- worker lookups
-  // ---------------------------------------------------------
+  // -- worker lookups ---------------------------------------------------------
 
   std::unordered_map<id_type, worker_ptr> workers_by_id_;
   std::unordered_map<node_id, worker_ptr> workers_by_node_;
