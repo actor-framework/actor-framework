@@ -47,12 +47,12 @@ public:
   /// outbound paths exist.
   static constexpr int is_continuous_flag = 0x0001;
 
-  /// Denotes whether the stream is about to stop, only sending already
-  /// buffered elements.
+  /// Denotes whether the stream is about to stop, only sending buffered
+  /// elements.
   static constexpr int is_shutting_down_flag = 0x0002;
 
-  /// Denotes whether the manager has already stopped. Calling member functions
-  /// such as stop() or abort() on it no longer has any effect.
+  /// Denotes whether the manager has stopped. Calling member functions such as
+  /// stop() or abort() on it no longer has any effect.
   static constexpr int is_stopped_flag = 0x0004;
 
   // -- member types -----------------------------------------------------------
@@ -147,14 +147,9 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  /// Returns whether this stream is shutting down.
-  bool shutting_down() const noexcept {
-    return getf(is_shutting_down_flag);
-  }
-
-  /// Returns whether this manager has already stopped.
-  bool stopped() const noexcept {
-    return getf(is_stopped_flag);
+  /// Returns whether this stream is neither shutting down nor has stopped.
+  bool running() const noexcept {
+    return getf(is_shutting_down_flag | is_stopped_flag) == 0;
   }
 
   /// Returns whether this stream remains open even if no in- or outbound paths
@@ -167,7 +162,7 @@ public:
   /// Sets whether this stream remains open even if no in- or outbound paths
   /// exist.
   void continuous(bool x) noexcept {
-    if (!shutting_down()) {
+    if (running()) {
       if (x)
         setf(is_continuous_flag);
       else

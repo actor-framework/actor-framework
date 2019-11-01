@@ -125,7 +125,7 @@ void stream_manager::handle(stream_slots slots, upstream_msg::forced_drop& x) {
 
 void stream_manager::stop(error reason) {
   CAF_LOG_TRACE(CAF_ARG(reason));
-  if (stopped())
+  if (getf(is_stopped_flag))
     return;
   flags_ = is_stopped_flag;
   if (reason)
@@ -138,7 +138,7 @@ void stream_manager::stop(error reason) {
 
 void stream_manager::shutdown() {
   CAF_LOG_TRACE("");
-  if (getf(is_shutting_down_flag | is_stopped_flag))
+  if (!running())
     return;
   flags_ = is_shutting_down_flag;
   CAF_LOG_DEBUG("emit shutdown messages on"
