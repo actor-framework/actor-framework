@@ -29,7 +29,7 @@
 CAF_PUSH_WARNINGS
 
 /// The type of `_`.
-struct wildcard { };
+struct wildcard {};
 
 /// Allows ignoring individual messages elements in `expect` clauses, e.g.
 /// `expect((int, int), from(foo).to(bar).with(1, _))`.
@@ -76,7 +76,7 @@ bool operator==(const message& x, const T& y) {
 } // namespace caf
 
 // dummy function to force ADL later on
-//int inspect(int, int);
+// int inspect(int, int);
 
 template <class T>
 struct has_outer_type {
@@ -106,7 +106,7 @@ public:
   template <size_t X>
   using pos = std::integral_constant<size_t, X>;
 
-  elementwise_compare_inspector(const Tup& xs) : xs_(xs) {
+  explicit elementwise_compare_inspector(const Tup& xs) : xs_(xs) {
     // nop
   }
 
@@ -123,19 +123,13 @@ private:
   }
 
   template <size_t X, class T, class... Ts>
-  typename std::enable_if<
-    caf::meta::is_annotation<T>::value,
-    bool
-  >::type
+  typename std::enable_if<caf::meta::is_annotation<T>::value, bool>::type
   iterate(pos<X> pos, const T&, const Ts&... ys) {
     return iterate(pos, ys...);
   }
 
   template <size_t X, class T, class... Ts>
-  typename std::enable_if<
-    !caf::meta::is_annotation<T>::value,
-    bool
-  >::type
+  typename std::enable_if<!caf::meta::is_annotation<T>::value, bool>::type
   iterate(pos<X>, const T& y, const Ts&... ys) {
     std::integral_constant<size_t, X + 1> next;
     check(y, get<X>(xs_));
@@ -286,8 +280,8 @@ std::tuple<T, Ts...> extract(caf_handle x) {
     auto ptr = x->peek_at_next_mailbox_element();
     if (ptr == nullptr)
       CAF_FAIL("Mailbox is empty");
-    CAF_FAIL("Message does not match expected pattern: "
-             << to_string(ptr->content()));
+    CAF_FAIL(
+      "Message does not match expected pattern: " << to_string(ptr->content()));
   }
   return std::move(*result);
 }
@@ -300,9 +294,8 @@ bool received(caf_handle x) {
 template <class... Ts>
 class expect_clause {
 public:
-  expect_clause(caf::scheduler::test_coordinator& sched)
-      : sched_(sched),
-        dest_(nullptr) {
+  explicit expect_clause(caf::scheduler::test_coordinator& sched)
+    : sched_(sched), dest_(nullptr) {
     peek_ = [=] {
       /// The extractor will call CAF_FAIL on a type mismatch, essentially
       /// performing a type check when ignoring the result.
@@ -350,7 +343,7 @@ public:
     // TODO: replace this workaround with the make_tuple() line when dropping
     //       support for GCC 4.8.
     std::tuple<typename std::decay<Us>::type...> tmp{std::forward<Us>(xs)...};
-    //auto tmp = std::make_tuple(std::forward<Us>(xs)...);
+    // auto tmp = std::make_tuple(std::forward<Us>(xs)...);
     // TODO: move tmp into lambda when switching to C++14
     peek_ = [=] {
       using namespace caf::detail;
@@ -373,13 +366,72 @@ protected:
   caf::scheduler::test_coordinator& sched_;
   caf::strong_actor_ptr src_;
   caf::abstract_actor* dest_;
-  std::function<void ()> peek_;
+  std::function<void()> peek_;
+};
+
+template <>
+class expect_clause<void> {
+public:
+  explicit expect_clause(caf::scheduler::test_coordinator& sched)
+    : sched_(sched), dest_(nullptr) {
+    // nop
+  }
+
+  expect_clause(expect_clause&& other) = default;
+
+  ~expect_clause() {
+    auto ptr = dest_->peek_at_next_mailbox_element();
+    if (ptr == nullptr)
+      CAF_FAIL("no message found");
+    if (!ptr->content().empty())
+      CAF_FAIL("non-empty message found: " << to_string(ptr->content()));
+    run_once();
+  }
+
+  expect_clause& from(const wildcard&) {
+    return *this;
+  }
+
+  template <class Handle>
+  expect_clause& from(const Handle& whom) {
+    src_ = caf::actor_cast<caf::strong_actor_ptr>(whom);
+    return *this;
+  }
+
+  template <class Handle>
+  expect_clause& to(const Handle& whom) {
+    CAF_REQUIRE(sched_.prioritize(whom));
+    dest_ = &sched_.next_job<caf::abstract_actor>();
+    auto ptr = dest_->peek_at_next_mailbox_element();
+    CAF_REQUIRE(ptr != nullptr);
+    if (src_)
+      CAF_REQUIRE_EQUAL(ptr->sender, src_);
+    return *this;
+  }
+
+  expect_clause& to(const caf::scoped_actor& whom) {
+    dest_ = whom.ptr();
+    return *this;
+  }
+
+protected:
+  void run_once() {
+    auto dptr = dynamic_cast<caf::blocking_actor*>(dest_);
+    if (dptr == nullptr)
+      sched_.run_once();
+    else
+      dptr->dequeue(); // Drop message.
+  }
+
+  caf::scheduler::test_coordinator& sched_;
+  caf::strong_actor_ptr src_;
+  caf::abstract_actor* dest_;
 };
 
 template <class... Ts>
 class inject_clause {
 public:
-  inject_clause(caf::scheduler::test_coordinator& sched)
+  explicit inject_clause(caf::scheduler::test_coordinator& sched)
     : sched_(sched), dest_(nullptr) {
     // nop
   }
@@ -444,9 +496,8 @@ protected:
 template <class... Ts>
 class allow_clause {
 public:
-  allow_clause(caf::scheduler::test_coordinator& sched)
-      : sched_(sched),
-        dest_(nullptr) {
+  explicit allow_clause(caf::scheduler::test_coordinator& sched)
+    : sched_(sched), dest_(nullptr) {
     peek_ = [=] {
       if (dest_ != nullptr)
         return try_extract<Ts...>(dest_) != caf::none;
@@ -522,7 +573,7 @@ protected:
   caf::scheduler::test_coordinator& sched_;
   caf::strong_actor_ptr src_;
   caf::abstract_actor* dest_;
-  std::function<bool ()> peek_;
+  std::function<bool()> peek_;
 };
 
 template <class... Ts>
@@ -589,7 +640,7 @@ public:
 protected:
   caf_handle src_;
   caf_handle dest_;
-  std::function<void ()> check_;
+  std::function<void()> check_;
 };
 
 template <class... Ts>
@@ -598,9 +649,10 @@ struct test_coordinator_fixture_fetch_helper {
   std::tuple<Ts...>
   operator()(caf::response_handle<Self, Interface, true>& from) const {
     std::tuple<Ts...> result;
-    from.receive(
-      [&](Ts&... xs) { result = std::make_tuple(std::move(xs)...); },
-      [&](caf::error& err) { FAIL(from.self()->system().render(err)); });
+    from.receive([&](Ts&... xs) { result = std::make_tuple(std::move(xs)...); },
+                 [&](caf::error& err) {
+                   FAIL(from.self()->system().render(err));
+                 });
     return result;
   }
 };
@@ -610,9 +662,10 @@ struct test_coordinator_fixture_fetch_helper<T> {
   template <class Self, class Interface>
   T operator()(caf::response_handle<Self, Interface, true>& from) const {
     T result;
-    from.receive(
-      [&](T& x) { result = std::move(x); },
-      [&](caf::error& err) { FAIL(from.self()->system().render(err)); });
+    from.receive([&](T& x) { result = std::move(x); },
+                 [&](caf::error& err) {
+                   FAIL(from.self()->system().render(err));
+                 });
     return result;
   }
 };
@@ -646,10 +699,10 @@ public:
 
   template <class... Ts>
   explicit test_coordinator_fixture(Ts&&... xs)
-      : cfg(std::forward<Ts>(xs)...),
-        sys(init_config(cfg)),
-        self(sys, true),
-        sched(dynamic_cast<scheduler_type&>(sys.scheduler())) {
+    : cfg(std::forward<Ts>(xs)...),
+      sys(init_config(cfg)),
+      self(sys, true),
+      sched(dynamic_cast<scheduler_type&>(sys.scheduler())) {
     // Configure the clock to measure each batch item with 1us.
     sched.clock().time_per_unit.emplace(caf::atom("batch"),
                                         caf::timespan{1000});
@@ -715,6 +768,13 @@ public:
   ///          timeouts triggerd.
   size_t run() {
     return run_until([] { return false; });
+  }
+
+  /// Consume ones message or triggers the next timeout.
+  /// @returns `true` if a message was consumed or timeouts was triggered,
+  ///          `false` otherwise.
+  bool run_once() {
+    return run_until([] { return true; }) > 0;
   }
 
   /// Consume messages and trigger timeouts until `pred` becomes `true` or
