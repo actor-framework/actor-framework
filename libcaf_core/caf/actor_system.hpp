@@ -33,6 +33,7 @@
 #include "caf/actor_clock.hpp"
 #include "caf/actor_config.hpp"
 #include "caf/actor_marker.hpp"
+#include "caf/actor_profiler.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/composable_behavior_based_actor.hpp"
 #include "caf/detail/init_fun_factory.hpp"
@@ -545,8 +546,33 @@ public:
     auto res = make_actor<C>(next_actor_id(), node(), this,
                              cfg, std::forward<Ts>(xs)...);
     auto ptr = static_cast<C*>(actor_cast<abstract_actor*>(res));
+#ifdef CAF_ENABLE_ACTOR_PROFILER
+    profiler_add_actor(*ptr, cfg.parent);
+#endif
     ptr->launch(cfg.host, has_lazy_init_flag(Os), has_hide_flag(Os));
     return res;
+  }
+
+  void profiler_add_actor(const local_actor& self, const local_actor* parent) {
+    if (profiler_)
+      profiler_->add_actor(self, parent);
+  }
+
+  void profiler_remove_actor(const local_actor& self) {
+    if (profiler_)
+      profiler_->remove_actor(self);
+  }
+
+  void profiler_before_processing(const local_actor& self,
+                                  const mailbox_element& element) {
+    if (profiler_)
+      profiler_->before_processing(self, element);
+  }
+
+  void profiler_after_processing(const local_actor& self,
+                                 invoke_message_result result) {
+    if (profiler_)
+      profiler_->after_processing(self, result);
   }
 
   /// @endcond
@@ -576,6 +602,9 @@ private:
   }
 
   // -- member variables -------------------------------------------------------
+
+  /// Provides system-wide callbacks for several actor operations.
+  actor_profiler* profiler_;
 
   /// Used to generate ascending actor IDs.
   std::atomic<size_t> ids_;
@@ -634,4 +663,3 @@ private:
 };
 
 } // namespace caf
-

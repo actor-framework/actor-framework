@@ -22,17 +22,21 @@
 
 namespace caf {
 
-enum invoke_message_result {
-  im_success,
-  im_skipped,
-  im_dropped
+/// Stores the result of a message invocation.
+enum class invoke_message_result {
+  /// Indicates that the actor consumed the message.
+  consumed,
+
+  /// Indicates that the actor left the message in the mailbox.
+  skipped,
+
+  /// Indicates that the actor discarded the message based on meta data. For
+  /// example, timeout messages for already received requests usually get
+  /// dropped without calling any user-defined code.
+  dropped,
 };
 
-inline std::string to_string(invoke_message_result x) {
-  return x == im_success ? "im_success"
-                         : (x == im_skipped ? "im_skipped" : "im_dropped" );
-}
+/// @relates invoke_message_result
+std::string to_string(invoke_message_result);
 
 } // namespace caf
-
-

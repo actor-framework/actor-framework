@@ -37,11 +37,13 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit actor_config(execution_unit* ptr = nullptr);
+  explicit actor_config(execution_unit* host = nullptr,
+                        local_actor* parent = nullptr);
 
   // -- member variables -------------------------------------------------------
 
   execution_unit* host;
+  local_actor* parent;
   int flags;
   input_range<const group>* groups;
   detail::unique_function<behavior(local_actor*)> init_fun;

@@ -88,6 +88,7 @@ class actor_companion;
 class actor_config;
 class actor_control_block;
 class actor_pool;
+class actor_profiler;
 class actor_proxy;
 class actor_registry;
 class actor_system;
@@ -177,6 +178,7 @@ enum class atom_value : uint64_t;
 enum class byte : uint8_t;
 enum class sec : uint8_t;
 enum class stream_priority;
+enum class invoke_message_result;
 
 // -- aliases ------------------------------------------------------------------
 

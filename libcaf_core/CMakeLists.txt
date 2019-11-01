@@ -7,6 +7,7 @@ file(GLOB_RECURSE LIBCAF_CORE_HDRS "caf/*.hpp")
 enum_to_string("caf/exit_reason.hpp" "exit_reason_strings.cpp")
 enum_to_string("caf/intrusive/inbox_result.hpp" "inbox_result_strings.cpp")
 enum_to_string("caf/intrusive/task_result.hpp" "task_result_strings.cpp")
+enum_to_string("caf/invoke_message_result.hpp" "invoke_msg_result_strings.cpp")
 enum_to_string("caf/message_priority.hpp" "message_priority_strings.cpp")
 enum_to_string("caf/pec.hpp" "pec_strings.cpp")
 enum_to_string("caf/sec.hpp" "sec_strings.cpp")
@@ -16,6 +17,7 @@ enum_to_string("caf/stream_priority.hpp" "stream_priority_strings.cpp")
 set(LIBCAF_CORE_SRCS
   "${CMAKE_CURRENT_BINARY_DIR}/exit_reason_strings.cpp"
   "${CMAKE_CURRENT_BINARY_DIR}/inbox_result_strings.cpp"
+  "${CMAKE_CURRENT_BINARY_DIR}/invoke_msg_result_strings.cpp"
   "${CMAKE_CURRENT_BINARY_DIR}/message_priority_strings.cpp"
   "${CMAKE_CURRENT_BINARY_DIR}/pec_strings.cpp"
   "${CMAKE_CURRENT_BINARY_DIR}/sec_strings.cpp"
@@ -33,6 +35,7 @@ set(LIBCAF_CORE_SRCS
   src/actor_control_block.cpp
   src/actor_ostream.cpp
   src/actor_pool.cpp
+  src/actor_profiler.cpp
   src/actor_proxy.cpp
   src/actor_registry.cpp
   src/actor_system.cpp

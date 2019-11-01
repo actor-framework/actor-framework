@@ -96,15 +96,17 @@ public:
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
   infer_handle_from_class_t<T> spawn(Ts&&... xs) {
-    actor_config cfg{context()};
-    return eval_opts(Os, system().spawn_class<T, make_unbound(Os)>(
-                           cfg, std::forward<Ts>(xs)...));
+    actor_config cfg{context(), this};
+    return eval_opts(Os,
+                     system().spawn_class<T, make_unbound(Os)>(cfg,
+                                                               std::forward<Ts>(
+                                                                 xs)...));
   }
 
   template <class T, spawn_options Os = no_spawn_options>
   infer_handle_from_state_t<T> spawn() {
     using impl = composable_behavior_based_actor<T>;
-    actor_config cfg{context()};
+    actor_config cfg{context(), this};
     return eval_opts(Os, system().spawn_class<impl, make_unbound(Os)>(cfg));
   }
 
@@ -114,7 +116,7 @@ public:
     static constexpr bool spawnable = detail::spawnable<F, impl, Ts...>();
     static_assert(spawnable,
                   "cannot spawn function-based actor with given arguments");
-    actor_config cfg{context()};
+    actor_config cfg{context(), this};
     static constexpr spawn_options unbound = make_unbound(Os);
     detail::bool_token<spawnable> enabled;
     return eval_opts(Os,
@@ -125,50 +127,65 @@ public:
   template <class T, spawn_options Os = no_spawn_options, class Groups,
             class... Ts>
   actor spawn_in_groups(const Groups& gs, Ts&&... xs) {
-    actor_config cfg{context()};
-    return eval_opts(Os, system().spawn_class_in_groups<T, make_unbound(Os)>(
-                           cfg, gs.begin(), gs.end(), std::forward<Ts>(xs)...));
+    actor_config cfg{context(), this};
+    return eval_opts(Os, system()
+                           .spawn_class_in_groups<
+                             T, make_unbound(Os)>(cfg, gs.begin(), gs.end(),
+                                                  std::forward<Ts>(xs)...));
   }
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
   actor spawn_in_groups(std::initializer_list<group> gs, Ts&&... xs) {
-    actor_config cfg{context()};
-    return eval_opts(Os, system().spawn_class_in_groups<T, make_unbound(Os)>(
-                           cfg, gs.begin(), gs.end(), std::forward<Ts>(xs)...));
+    actor_config cfg{context(), this};
+    return eval_opts(Os, system()
+                           .spawn_class_in_groups<
+                             T, make_unbound(Os)>(cfg, gs.begin(), gs.end(),
+                                                  std::forward<Ts>(xs)...));
   }
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
   actor spawn_in_group(const group& grp, Ts&&... xs) {
-    actor_config cfg{context()};
+    actor_config cfg{context(), this};
     auto first = &grp;
-    return eval_opts(Os, system().spawn_class_in_groups<T, make_unbound(Os)>(
-                           cfg, first, first + 1, std::forward<Ts>(xs)...));
+    return eval_opts(Os, system()
+                           .spawn_class_in_groups<
+                             T, make_unbound(Os)>(cfg, first, first + 1,
+                                                  std::forward<Ts>(xs)...));
   }
 
   template <spawn_options Os = no_spawn_options, class Groups, class F,
             class... Ts>
   actor spawn_in_groups(const Groups& gs, F fun, Ts&&... xs) {
-    actor_config cfg{context()};
-    return eval_opts(
-      Os, system().spawn_fun_in_groups<make_unbound(Os)>(
-            cfg, gs.begin(), gs.end(), fun, std::forward<Ts>(xs)...));
+    actor_config cfg{context(), this};
+    return eval_opts(Os,
+                     system()
+                       .spawn_fun_in_groups<make_unbound(Os)>(cfg, gs.begin(),
+                                                              gs.end(), fun,
+                                                              std::forward<Ts>(
+                                                                xs)...));
   }
 
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
   actor spawn_in_groups(std::initializer_list<group> gs, F fun, Ts&&... xs) {
-    actor_config cfg{context()};
-    return eval_opts(
-      Os, system().spawn_fun_in_groups<make_unbound(Os)>(
-            cfg, gs.begin(), gs.end(), fun, std::forward<Ts>(xs)...));
+    actor_config cfg{context(), this};
+    return eval_opts(Os,
+                     system()
+                       .spawn_fun_in_groups<make_unbound(Os)>(cfg, gs.begin(),
+                                                              gs.end(), fun,
+                                                              std::forward<Ts>(
+                                                                xs)...));
   }
 
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
   actor spawn_in_group(const group& grp, F fun, Ts&&... xs) {
-    actor_config cfg{context()};
+    actor_config cfg{context(), this};
     auto first = &grp;
     return eval_opts(Os,
-                     system().spawn_fun_in_groups<make_unbound(Os)>(
-                       cfg, first, first + 1, fun, std::forward<Ts>(xs)...));
+                     system()
+                       .spawn_fun_in_groups<make_unbound(Os)>(cfg, first,
+                                                              first + 1, fun,
+                                                              std::forward<Ts>(
+                                                                xs)...));
   }
 
   // -- sending asynchronous messages ------------------------------------------
@@ -290,7 +307,7 @@ public:
 
   /// Returns a pointer to the currently processed mailbox element.
   /// @private
-  inline  void current_mailbox_element(mailbox_element* ptr) {
+  inline void current_mailbox_element(mailbox_element* ptr) {
     current_element_ = ptr;
   }
 
@@ -333,10 +350,8 @@ public:
   /// Return type is deduced from arguments.
   /// Return value is implicitly convertible to untyped response promise.
   template <class... Ts,
-            class R =
-              typename detail::make_response_promise_helper<
-                typename std::decay<Ts>::type...
-              >::type>
+            class R = typename detail::make_response_promise_helper<
+              typename std::decay<Ts>::type...>::type>
   R response(Ts&&... xs) {
     auto promise = make_response_promise<R>();
     promise.deliver(std::forward<Ts>(xs)...);
@@ -382,27 +397,23 @@ public:
     return (mid.is_request()) ? mid.response_id() : message_id();
   }
 
-  template <message_priority P = message_priority::normal,
-            class Handle = actor, class... Ts>
-  typename response_type<
-    typename Handle::signatures,
-    detail::implicit_conversions_t<typename std::decay<Ts>::type>...
-  >::delegated_type
+  template <message_priority P = message_priority::normal, class Handle = actor,
+            class... Ts>
+  typename response_type<typename Handle::signatures,
+                         detail::implicit_conversions_t<
+                           typename std::decay<Ts>::type>...>::delegated_type
   delegate(const Handle& dest, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "nothing to delegate");
-    using token =
-      detail::type_list<
-        typename detail::implicit_conversions<
-          typename std::decay<Ts>::type
-        >::type...>;
+    using token = detail::type_list<typename detail::implicit_conversions<
+      typename std::decay<Ts>::type>::type...>;
     static_assert(response_type_unbox<signatures_of_t<Handle>, token>::valid,
                   "receiver does not accept given message");
     auto mid = current_element_->mid;
     current_element_->mid = P == message_priority::high
-                            ? mid.with_high_priority()
-                            : mid.with_normal_priority();
-    dest->enqueue(make_mailbox_element(std::move(current_element_->sender),
-                                       mid, std::move(current_element_->stages),
+                              ? mid.with_high_priority()
+                              : mid.with_normal_priority();
+    dest->enqueue(make_mailbox_element(std::move(current_element_->sender), mid,
+                                       std::move(current_element_->stages),
                                        std::forward<Ts>(xs)...),
                   context());
     return {};
