@@ -632,12 +632,12 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   static Config& init_config(Config& cfg) {
+    cfg.set("logger.file-verbosity", caf::atom("quiet"));
     if (auto err = cfg.parse(caf::test::engine::argc(),
                              caf::test::engine::argv()))
       CAF_FAIL("failed to parse config: " << to_string(err));
     cfg.set("scheduler.policy", caf::atom("testing"));
     cfg.set("logger.inline-output", true);
-    cfg.set("logger.file-verbosity", caf::atom("quiet"));
     cfg.set("middleman.network-backend", caf::atom("testing"));
     cfg.set("middleman.manual-multiplexing", true);
     cfg.set("middleman.workers", size_t{0});

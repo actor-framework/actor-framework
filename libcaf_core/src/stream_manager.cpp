@@ -37,10 +37,7 @@
 namespace caf {
 
 stream_manager::stream_manager(scheduled_actor* selfptr, stream_priority prio)
-    : self_(selfptr),
-      pending_handshakes_(0),
-      priority_(prio),
-      flags_(0) {
+  : self_(selfptr), pending_handshakes_(0), priority_(prio), flags_(0) {
   // nop
 }
 
@@ -116,15 +113,21 @@ void stream_manager::handle(stream_slots slots, upstream_msg::ack_batch& x) {
 }
 
 void stream_manager::handle(stream_slots slots, upstream_msg::drop&) {
+  CAF_LOG_TRACE(CAF_ARG(slots));
   out().close(slots.receiver);
 }
 
 void stream_manager::handle(stream_slots slots, upstream_msg::forced_drop& x) {
+  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(x));
   if (out().remove_path(slots.receiver, x.reason, true))
     stop(std::move(x.reason));
 }
 
 void stream_manager::stop(error reason) {
+  CAF_LOG_TRACE(CAF_ARG(reason));
+  if (getf(is_stopped_flag))
+    return;
+  flags_ = is_stopped_flag;
   if (reason)
     out().abort(reason);
   else
@@ -135,12 +138,12 @@ void stream_manager::stop(error reason) {
 
 void stream_manager::shutdown() {
   CAF_LOG_TRACE("");
-  // Mark as shutting down and reset other flags.
-  if (shutting_down())
+  if (!running())
     return;
   flags_ = is_shutting_down_flag;
-  CAF_LOG_DEBUG("emit shutdown messages on" << inbound_paths_.size()
-                << "inbound paths;" << CAF_ARG2("out.clean", out().clean())
+  CAF_LOG_DEBUG("emit shutdown messages on"
+                << inbound_paths_.size() << "inbound paths;"
+                << CAF_ARG2("out.clean", out().clean())
                 << CAF_ARG2("out.paths", out().num_paths()));
   for (auto ipath : inbound_paths_)
     ipath->emit_regular_shutdown(self_);
@@ -233,14 +236,11 @@ void stream_manager::remove_input_path(stream_slot slot, error reason,
 }
 
 inbound_path* stream_manager::get_inbound_path(stream_slot x) const noexcept {
-  auto pred = [=](inbound_path* ptr) {
-    return ptr->slots.receiver == x;
-  };
+  auto pred = [=](inbound_path* ptr) { return ptr->slots.receiver == x; };
   auto e = inbound_paths_.end();
   auto i = std::find_if(inbound_paths_.begin(), e, pred);
   return i != e ? *i : nullptr;
 }
-
 
 bool stream_manager::inbound_paths_idle() const noexcept {
   auto f = [](inbound_path* x) {

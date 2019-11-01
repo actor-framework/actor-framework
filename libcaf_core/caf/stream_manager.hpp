@@ -47,9 +47,13 @@ public:
   /// outbound paths exist.
   static constexpr int is_continuous_flag = 0x0001;
 
-  /// Denotes whether the stream is about to stop, only sending already
-  /// buffered elements.
+  /// Denotes whether the stream is about to stop, only sending buffered
+  /// elements.
   static constexpr int is_shutting_down_flag = 0x0002;
+
+  /// Denotes whether the manager has stopped. Calling member functions such as
+  /// stop() or abort() on it no longer has any effect.
+  static constexpr int is_stopped_flag = 0x0004;
 
   // -- member types -----------------------------------------------------------
 
@@ -143,22 +147,22 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  /// Returns whether this stream is shutting down.
-  bool shutting_down() const noexcept {
-    return getf(is_shutting_down_flag);
+  /// Returns whether this stream is neither shutting down nor has stopped.
+  bool running() const noexcept {
+    return getf(is_shutting_down_flag | is_stopped_flag) == 0;
   }
 
   /// Returns whether this stream remains open even if no in- or outbound paths
   /// exist. The default is `false`. Does not keep a source alive past the
   /// point where its driver returns `done() == true`.
-  inline bool continuous() const noexcept {
+  bool continuous() const noexcept {
     return getf(is_continuous_flag);
   }
 
   /// Sets whether this stream remains open even if no in- or outbound paths
   /// exist.
-  inline void continuous(bool x) noexcept {
-    if (!shutting_down()) {
+  void continuous(bool x) noexcept {
+    if (running()) {
       if (x)
         setf(is_continuous_flag);
       else
@@ -167,7 +171,7 @@ public:
   }
 
   /// Returns the list of inbound paths.
-  inline const inbound_paths_list& inbound_paths() const  noexcept{
+  const inbound_paths_list& inbound_paths() const noexcept {
     return inbound_paths_;
   }
 
@@ -179,7 +183,7 @@ public:
   bool inbound_paths_idle() const noexcept;
 
   /// Returns the parent actor.
-  inline scheduled_actor* self() {
+  scheduled_actor* self() {
     return self_;
   }
 
@@ -265,7 +269,7 @@ public:
 
   /// Adds the current sender as an inbound path.
   /// @pre Current message is an `open_stream_msg`.
-stream_slot add_unchecked_inbound_path_impl(rtti_pair rtti);
+  stream_slot add_unchecked_inbound_path_impl(rtti_pair rtti);
 
 protected:
   // -- modifiers for self -----------------------------------------------------
@@ -322,9 +326,9 @@ private:
     flags_ = x & ~flag;
   }
 
-   bool getf(int flag) const noexcept {
-     return (flags_ & flag) != 0;
-   }
+  bool getf(int flag) const noexcept {
+    return (flags_ & flag) != 0;
+  }
 };
 
 /// A reference counting pointer to a `stream_manager`.
