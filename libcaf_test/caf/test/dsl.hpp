@@ -106,7 +106,7 @@ public:
   template <size_t X>
   using pos = std::integral_constant<size_t, X>;
 
-  elementwise_compare_inspector(const Tup& xs) : xs_(xs) {
+  explicit elementwise_compare_inspector(const Tup& xs) : xs_(xs) {
     // nop
   }
 
@@ -294,7 +294,7 @@ bool received(caf_handle x) {
 template <class... Ts>
 class expect_clause {
 public:
-  expect_clause(caf::scheduler::test_coordinator& sched)
+  explicit expect_clause(caf::scheduler::test_coordinator& sched)
     : sched_(sched), dest_(nullptr) {
     peek_ = [=] {
       /// The extractor will call CAF_FAIL on a type mismatch, essentially
@@ -372,7 +372,7 @@ protected:
 template <>
 class expect_clause<void> {
 public:
-  expect_clause(caf::scheduler::test_coordinator& sched)
+  explicit expect_clause(caf::scheduler::test_coordinator& sched)
     : sched_(sched), dest_(nullptr) {
     // nop
   }
@@ -431,7 +431,7 @@ protected:
 template <class... Ts>
 class inject_clause {
 public:
-  inject_clause(caf::scheduler::test_coordinator& sched)
+  explicit inject_clause(caf::scheduler::test_coordinator& sched)
     : sched_(sched), dest_(nullptr) {
     // nop
   }
@@ -496,7 +496,7 @@ protected:
 template <class... Ts>
 class allow_clause {
 public:
-  allow_clause(caf::scheduler::test_coordinator& sched)
+  explicit allow_clause(caf::scheduler::test_coordinator& sched)
     : sched_(sched), dest_(nullptr) {
     peek_ = [=] {
       if (dest_ != nullptr)

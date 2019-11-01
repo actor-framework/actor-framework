@@ -22,8 +22,6 @@
 
 #include "caf/test/dsl.hpp"
 
-#include <utility>
-
 #include "caf/event_based_actor.hpp"
 
 using namespace caf;
