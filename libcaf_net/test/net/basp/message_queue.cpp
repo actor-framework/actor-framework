@@ -16,7 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE basp.message_queue
+#define CAF_SUITE net.basp.message_queue
 
 #include "caf/net/basp/message_queue.hpp"
 
@@ -31,9 +31,11 @@ using namespace caf;
 namespace {
 
 behavior testee_impl() {
-  return {[](ok_atom, int) {
-    // nop
-  }};
+  return {
+    [](ok_atom, int) {
+      // nop
+    },
+  };
 }
 
 struct fixture : test_coordinator_fixture<> {

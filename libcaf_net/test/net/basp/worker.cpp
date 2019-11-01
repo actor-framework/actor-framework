@@ -16,7 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE basp.worker
+#define CAF_SUITE net.basp.worker
 
 #include "caf/net/basp/worker.hpp"
 
@@ -35,9 +35,11 @@ using namespace caf;
 namespace {
 
 behavior testee_impl() {
-  return {[](ok_atom) {
-    // nop
-  }};
+  return {
+    [](ok_atom) {
+      // nop
+    },
+  };
 }
 
 class mock_actor_proxy : public actor_proxy {

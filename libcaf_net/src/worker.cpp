@@ -42,7 +42,7 @@ worker::~worker() {
 // -- management ---------------------------------------------------------------
 
 void worker::launch(const node_id& last_hop, const basp::header& hdr,
-                    const buffer_type& payload) {
+                    span<const byte> payload) {
   msg_id_ = queue_->new_id();
   last_hop_ = last_hop;
   memcpy(&hdr_, &hdr, sizeof(basp::header));

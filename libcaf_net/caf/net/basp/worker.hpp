@@ -64,7 +64,7 @@ public:
   // -- management -------------------------------------------------------------
 
   void launch(const node_id& last_hop, const basp::header& hdr,
-              const buffer_type& payload);
+              span<const byte> payload);
 
   // -- implementation of resumable --------------------------------------------
 

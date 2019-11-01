@@ -45,9 +45,7 @@ namespace net {
 namespace basp {
 
 application::application(proxy_registry& proxies)
-  : proxies_(proxies),
-    queue_{std::unique_ptr<message_queue>{new message_queue}},
-    hub_{std::unique_ptr<hub_type>{new hub_type}} {
+  : proxies_(proxies), queue_{new message_queue}, hub_{new hub_type} {
   // nop
 }
 
@@ -252,12 +250,9 @@ error application::handle_handshake(packet_writer&, header hdr,
 error application::handle_actor_message(packet_writer&, header hdr,
                                         byte_span payload) {
   auto worker = hub_->pop();
-  // TODO: This copy is nessecary because the worker interface expects a buffer
-  // type...
-  buffer_type buf(payload.begin(), payload.end());
   if (worker != nullptr) {
     CAF_LOG_DEBUG("launch BASP worker for deserializing an actor_message");
-    worker->launch(node_id{}, hdr, buf);
+    worker->launch(node_id{}, hdr, payload);
   } else {
     CAF_LOG_DEBUG(
       "out of BASP workers, continue deserializing an actor_message");
@@ -266,7 +261,7 @@ error application::handle_actor_message(packet_writer&, header hdr,
     struct handler : remote_message_handler<handler> {
       handler(message_queue* queue, proxy_registry* proxies,
               actor_system* system, node_id last_hop, basp::header& hdr,
-              buffer_type& payload)
+              byte_span payload)
         : queue_(queue),
           proxies_(proxies),
           system_(system),
@@ -280,10 +275,10 @@ error application::handle_actor_message(packet_writer&, header hdr,
       actor_system* system_;
       node_id last_hop_;
       basp::header& hdr_;
-      buffer_type& payload_;
+      byte_span payload_;
       uint64_t msg_id_;
     };
-    handler f{queue_.get(), &proxies_, system_, node_id{}, hdr, buf};
+    handler f{queue_.get(), &proxies_, system_, node_id{}, hdr, payload};
     f.handle_remote_message(&executor_);
   }
   return none;
