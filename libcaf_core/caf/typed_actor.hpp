@@ -141,16 +141,11 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   }
 
   // allow `handle_type{this}` for typed actors
-  template <class T>
-  typed_actor(T* ptr,
-              typename std::enable_if<
-                std::is_base_of<statically_typed_actor_base, T>::value
-              >::type* = 0)
-      : ptr_(ptr->ctrl()) {
-    static_assert(detail::tl_subset_of<
-                    signatures,
-                    typename T::signatures
-                  >::value,
+  template <class T,
+            class = detail::enable_if_t<actor_traits<T>::is_statically_typed>>
+  typed_actor(T* ptr) : ptr_(ptr->ctrl()) {
+    static_assert(detail::tl_subset_of<signatures,
+                                       typename T::signatures>::value,
                   "Cannot assign T* to incompatible handle type");
     CAF_ASSERT(ptr != nullptr);
   }

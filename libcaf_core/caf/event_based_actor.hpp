@@ -20,10 +20,10 @@
 
 #include <type_traits>
 
-#include "caf/fwd.hpp"
+#include "caf/actor_traits.hpp"
 #include "caf/extend.hpp"
+#include "caf/fwd.hpp"
 #include "caf/local_actor.hpp"
-#include "caf/actor_marker.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/scheduled_actor.hpp"
 

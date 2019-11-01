@@ -32,6 +32,7 @@
 #include "caf/actor_proxy.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/actor_traits.hpp"
 #include "caf/after.hpp"
 #include "caf/atom.hpp"
 #include "caf/attach_continuous_stream_source.hpp"
