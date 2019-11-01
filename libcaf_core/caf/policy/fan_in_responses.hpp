@@ -135,33 +135,43 @@ namespace caf {
 namespace policy {
 
 /// Enables a `response_handle` to fan-in multiple responses into a single
-/// result (a `vector` of Individual values) for the client.
+/// result (a `vector` of individual values) for the client.
 /// @relates mixin::requester
 /// @relates response_handle
 template <class ResponseType>
 class fan_in_responses {
 public:
-  fan_in_responses(std::vector<message_id> ids) : ids_(std::move(ids)) {
+  static constexpr bool is_trivial = false;
+
+  using response_type = ResponseType;
+
+  using message_id_list = std::vector<message_id>;
+
+  explicit fan_in_responses(message_id_list ids) : ids_(std::move(ids)) {
     CAF_ASSERT(ids_.size()
                <= static_cast<size_t>(std::numeric_limits<int>::max()));
   }
 
+  fan_in_responses(fan_in_responses&&) noexcept = default;
+
+  fan_in_responses& operator=(fan_in_responses&&) noexcept = default;
+
   template <class Self, class F, class OnError>
-  void await(Self* self, F&& f, OnError&& g) {
+  void await(Self* self, F&& f, OnError&& g) const {
     auto bhvr = make_behavior(std::forward<F>(f), std::forward<OnError>(g));
     for (auto id : ids_)
       self->add_awaited_response_handler(id, bhvr);
   }
 
   template <class Self, class F, class OnError>
-  void then(Self* self, F&& f, OnError&& g) {
+  void then(Self* self, F&& f, OnError&& g) const {
     auto bhvr = make_behavior(std::forward<F>(f), std::forward<OnError>(g));
     for (auto id : ids_)
       self->add_multiplexed_response_handler(id, bhvr);
   }
 
-  template <class Self, class F, class OnError>
-  void receive(Self* self, F&& f, OnError&& g) {
+  template <class Self, class F, class G>
+  void receive(Self* self, F&& f, G&& g) const {
     using helper_type = detail::fan_in_responses_helper_t<detail::decay_t<F>>;
     helper_type helper{ids_.size(), std::forward<F>(f)};
     detail::type_checker<ResponseType, helper_type>::check();
@@ -179,9 +189,13 @@ public:
     }
   }
 
+  const message_id_list& ids() const noexcept {
+    return ids_;
+  }
+
 private:
   template <class F, class OnError>
-  behavior make_behavior(F&& f, OnError&& g) {
+  behavior make_behavior(F&& f, OnError&& g) const {
     using namespace detail;
     using helper_type = fan_in_responses_helper_t<decay_t<F>>;
     using error_handler_type = fan_in_responses_error_handler<decay_t<OnError>>;
@@ -194,7 +208,7 @@ private:
     };
   }
 
-  std::vector<message_id> ids_;
+  message_id_list ids_;
 };
 
 } // namespace policy
