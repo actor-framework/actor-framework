@@ -19,17 +19,10 @@
 #pragma once
 
 #include <type_traits>
+#include <utility>
 
-#include "caf/actor_traits.hpp"
 #include "caf/behavior_policy.hpp"
 #include "caf/fwd.hpp"
-#include "caf/local_actor.hpp"
-#include "caf/message_id.hpp"
-#include "caf/response_handle.hpp"
-#include "caf/typed_behavior.hpp"
-
-#include "caf/mixin/sender.hpp"
-#include "caf/mixin/requester.hpp"
 
 namespace caf {
 namespace mixin {
@@ -64,19 +57,16 @@ public:
 
   template <class T0, class T1, class... Ts>
   typename std::enable_if<
-    !std::is_same<keep_behavior_t, typename std::decay<T0>::type>::value
-  >::type
+    !std::is_same<keep_behavior_t, typename std::decay<T0>::type>::value>::type
   become(T0&& x0, T1&& x1, Ts&&... xs) {
-    behavior_type bhvr{std::forward<T0>(x0),
-                       std::forward<T1>(x1),
+    behavior_type bhvr{std::forward<T0>(x0), std::forward<T1>(x1),
                        std::forward<Ts>(xs)...};
     dptr()->do_become(std::move(bhvr.unbox()), true);
   }
 
   template <class T0, class T1, class... Ts>
   void become(const keep_behavior_t&, T0&& x0, T1&& x1, Ts&&... xs) {
-    behavior_type bhvr{std::forward<T0>(x0),
-                       std::forward<T1>(x1),
+    behavior_type bhvr{std::forward<T0>(x0), std::forward<T1>(x1),
                        std::forward<Ts>(xs)...};
     dptr()->do_become(std::move(bhvr.unbox()), false);
   }
@@ -93,4 +83,3 @@ private:
 
 } // namespace mixin
 } // namespace caf
-
