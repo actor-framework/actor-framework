@@ -20,13 +20,13 @@
 
 #include <type_traits>
 
-#include "caf/fwd.hpp"
-#include "caf/message_id.hpp"
-#include "caf/local_actor.hpp"
-#include "caf/actor_marker.hpp"
-#include "caf/typed_behavior.hpp"
+#include "caf/actor_traits.hpp"
 #include "caf/behavior_policy.hpp"
+#include "caf/fwd.hpp"
+#include "caf/local_actor.hpp"
+#include "caf/message_id.hpp"
 #include "caf/response_handle.hpp"
+#include "caf/typed_behavior.hpp"
 
 #include "caf/mixin/sender.hpp"
 #include "caf/mixin/requester.hpp"

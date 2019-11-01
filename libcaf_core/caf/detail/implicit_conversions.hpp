@@ -21,8 +21,8 @@
 #include <string>
 #include <type_traits>
 
+#include "caf/actor_traits.hpp"
 #include "caf/fwd.hpp"
-#include "caf/actor_marker.hpp"
 
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"

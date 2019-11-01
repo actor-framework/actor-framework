@@ -23,7 +23,7 @@
 #include <condition_variable>
 
 #include "caf/actor_config.hpp"
-#include "caf/actor_marker.hpp"
+#include "caf/actor_traits.hpp"
 #include "caf/after.hpp"
 #include "caf/behavior.hpp"
 #include "caf/extend.hpp"
@@ -72,11 +72,14 @@ namespace caf {
 /// receive rather than a behavior-stack based message processing.
 /// @extends local_actor
 class blocking_actor
-    : public extend<local_actor, blocking_actor>::
-             with<mixin::requester,
-                  mixin::sender,
-                  mixin::subscriber>,
-      public dynamically_typed_actor_base {
+  // clang-format off
+  : public extend<local_actor, blocking_actor>::
+           with<mixin::requester,
+                mixin::sender,
+                mixin::subscriber>,
+    public dynamically_typed_actor_base,
+    public blocking_actor_base {
+  // clang-format on
 public:
   // -- nested and member types ------------------------------------------------
 

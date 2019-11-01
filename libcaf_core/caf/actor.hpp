@@ -18,40 +18,22 @@
 
 #pragma once
 
-#include <string>
 #include <cstddef>
 #include <cstdint>
-#include <utility>
+#include <string>
 #include <type_traits>
+#include <utility>
 
-#include "caf/config.hpp"
-
-#include "caf/fwd.hpp"
-#include "caf/message.hpp"
-#include "caf/actor_marker.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_control_block.hpp"
-
+#include "caf/actor_traits.hpp"
+#include "caf/config.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/fwd.hpp"
+#include "caf/message.hpp"
 
 namespace caf {
-
-template <class T>
-struct is_convertible_to_actor {
-  static constexpr bool value =
-      !std::is_base_of<statically_typed_actor_base, T>::value
-      && (std::is_base_of<actor_proxy, T>::value
-          || std::is_base_of<local_actor, T>::value);
-};
-
-template <>
-struct is_convertible_to_actor<scoped_actor> : std::true_type {
-  // nop
-};
-
-template <class T>
-struct is_convertible_to_actor<T*> : is_convertible_to_actor<T> {};
 
 /// Identifies an untyped actor. Can be used with derived types
 /// of `event_based_actor`, `blocking_actor`, and `actor_proxy`.
@@ -82,24 +64,22 @@ public:
   actor(const scoped_actor&);
 
   template <class T,
-            class = typename std::enable_if<
-                      std::is_base_of<dynamically_typed_actor_base, T>::value
-                    >::type>
+            class = detail::enable_if_t<actor_traits<T>::is_dynamically_typed>>
   actor(T* ptr) : ptr_(ptr->ctrl()) {
     CAF_ASSERT(ptr != nullptr);
   }
 
-  template <class T>
-  typename std::enable_if<is_convertible_to_actor<T>::value, actor&>::type
-  operator=(intrusive_ptr<T> ptr) {
+  template <class T,
+            class = detail::enable_if_t<actor_traits<T>::is_dynamically_typed>>
+  actor& operator=(intrusive_ptr<T> ptr) {
     actor tmp{std::move(ptr)};
     swap(tmp);
     return *this;
   }
 
-  template <class T>
-  typename std::enable_if<is_convertible_to_actor<T>::value, actor&>::type
-  operator=(T* ptr) {
+  template <class T,
+            class = detail::enable_if_t<actor_traits<T>::is_dynamically_typed>>
+  actor& operator=(T* ptr) {
     actor tmp{ptr};
     swap(tmp);
     return *this;

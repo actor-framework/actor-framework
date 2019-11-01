@@ -18,12 +18,13 @@
 
 #pragma once
 
-#include "caf/none.hpp"
 #include "caf/actor_cast.hpp"
-#include "caf/actor_system.hpp"
 #include "caf/actor_storage.hpp"
-#include "caf/intrusive_ptr.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/actor_traits.hpp"
 #include "caf/blocking_actor.hpp"
+#include "caf/intrusive_ptr.hpp"
+#include "caf/none.hpp"
 #include "caf/scoped_execution_unit.hpp"
 
 namespace caf {
@@ -83,7 +84,7 @@ private:
   strong_actor_ptr self_;
 };
 
+/// @relates scoped_actor
 std::string to_string(const scoped_actor& x);
 
 } // namespace caf
-

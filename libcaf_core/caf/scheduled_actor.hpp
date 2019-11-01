@@ -29,7 +29,7 @@
 #include <type_traits>
 #include <unordered_map>
 
-#include "caf/actor_marker.hpp"
+#include "caf/actor_traits.hpp"
 #include "caf/broadcast_downstream_manager.hpp"
 #include "caf/default_downstream_manager.hpp"
 #include "caf/error.hpp"
@@ -106,7 +106,9 @@ result<message> drop(scheduled_actor*, message_view&);
 
 /// A cooperatively scheduled, event-based actor implementation.
 /// @extends local_actor
-class scheduled_actor : public local_actor, public resumable {
+class scheduled_actor : public local_actor,
+                        public resumable,
+                        public non_blocking_actor_base {
 public:
   // -- nested enums -----------------------------------------------------------
 

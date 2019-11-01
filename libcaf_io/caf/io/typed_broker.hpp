@@ -70,11 +70,14 @@ using accept_handler = typed_actor<reacts_to<new_connection_msg>,
 /// components in the network.
 /// @extends local_actor
 template <class... Sigs>
-class typed_broker : public extend<abstract_broker,
-                                   typed_broker<Sigs...>>::template
-                            with<mixin::sender, mixin::requester,
-                                 mixin::behavior_changer>,
-                     public statically_typed_actor_base {
+class typed_broker
+  // clang-format off
+  : public extend<abstract_broker, typed_broker<Sigs...>>::template
+           with<mixin::sender,
+                mixin::requester,
+                mixin::behavior_changer>,
+    public statically_typed_actor_base {
+  // clang-format on
 public:
   using signatures = detail::type_list<Sigs...>;
 
