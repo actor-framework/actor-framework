@@ -201,7 +201,7 @@ struct fixture : host_fixture {
     buffer_type payload(test_span.begin(), test_span.end());
     auto receiver = actor_cast<strong_actor_ptr>(p);
     if (!receiver)
-      CAF_FAIL("receiver cast failed");
+      CAF_FAIL("failed to cast receiver to a strong_actor_ptr");
     mailbox_element::forwarding_stack stack;
     auto elem = make_mailbox_element(nullptr, make_message_id(12345),
                                      std::move(stack), make_message());
@@ -216,8 +216,9 @@ struct fixture : host_fixture {
 
   void add_new_workers() {
     for (auto& data : test_data) {
-      if (auto err = dispatcher.add_new_worker(dummy, data.nid, data.ep))
-        CAF_FAIL("add_new_worker returned an error: " << err);
+      auto worker = dispatcher.add_new_worker(dummy, data.nid, data.ep);
+      if (!worker)
+        CAF_FAIL("add_new_worker returned an error: " << worker.error());
     }
     buf->clear();
   }
@@ -272,8 +273,7 @@ CAF_TEST_FIXTURE_SCOPE(transport_worker_dispatcher_test, fixture)
 
 CAF_TEST(init) {
   dispatcher_type dispatcher{dummy, dummy_application_factory{buf}};
-  if (auto err = dispatcher.init(dummy))
-    CAF_FAIL("init failed with error: " << err);
+  CAF_CHECK_EQUAL(dispatcher.init(dummy), none);
 }
 
 CAF_TEST(handle_data) {

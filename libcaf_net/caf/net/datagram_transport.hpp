@@ -22,8 +22,6 @@
 #include <unordered_map>
 
 #include "caf/byte.hpp"
-#include "caf/detail/socket_sys_aliases.hpp"
-#include "caf/detail/socket_sys_includes.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/ip_endpoint.hpp"
@@ -45,6 +43,10 @@ namespace net {
 template <class Factory>
 class datagram_transport {
 public:
+  // Maximal UDP-packet size
+  static constexpr size_t max_datagram_size = std::numeric_limits<
+    uint16_t>::max();
+
   // -- member types -----------------------------------------------------------
 
   using id_type = ip_endpoint;
@@ -66,10 +68,7 @@ public:
   datagram_transport(udp_datagram_socket handle, factory_type factory)
     : dispatcher_(*this, std::move(factory)),
       handle_(handle),
-      max_consecutive_reads_(0),
-      read_threshold_(1024),
-      max_(1024),
-      rd_flag_(receive_policy_flag::exactly),
+      read_buf_(max_datagram_size),
       manager_(nullptr) {
     // nop
   }
@@ -85,9 +84,7 @@ public:
   }
 
   application_type& application() {
-    // TODO: This wont work. We need information on which application is wanted
-    return application_type{};
-    // dispatcher_.application();
+    return dispatcher_.application();
   }
 
   transport_type& transport() {
@@ -150,8 +147,8 @@ public:
   }
 
   template <class Parent>
-  void resolve(Parent&, const uri& locator, const actor& listener) {
-    dispatcher_.resolve(*this, locator, listener);
+  error resolve(Parent&, const uri& locator, const actor& listener) {
+    return dispatcher_.resolve(*this, locator, listener);
   }
 
   template <class Parent>
@@ -179,40 +176,19 @@ public:
   }
 
   error add_new_worker(node_id node, id_type id) {
-    return dispatcher_.add_new_worker(*this, node, id);
+    auto worker = dispatcher_.add_new_worker(*this, node, id);
+    if (!worker)
+      return worker.error();
+    return none;
   }
 
   void prepare_next_read() {
     read_buf_.clear();
-    // This cast does nothing, but prevents a weird compiler error on GCC
-    // <= 4.9.
-    // TODO: remove cast when dropping support for GCC 4.9.
-    switch (static_cast<receive_policy_flag>(rd_flag_)) {
-      case receive_policy_flag::exactly:
-        if (read_buf_.size() != max_)
-          read_buf_.resize(max_);
-        read_threshold_ = max_;
-        break;
-      case receive_policy_flag::at_most:
-        if (read_buf_.size() != max_)
-          read_buf_.resize(max_);
-        read_threshold_ = 1;
-        break;
-      case receive_policy_flag::at_least: {
-        // read up to 10% more, but at least allow 100 bytes more
-        auto max_size = max_ + std::max<size_t>(100, max_ / 10);
-        if (read_buf_.size() != max_size)
-          read_buf_.resize(max_size);
-        read_threshold_ = max_;
-        break;
-      }
-    }
+    read_buf_.resize(max_datagram_size);
   }
 
-  void configure_read(receive_policy::config cfg) {
-    rd_flag_ = cfg.first;
-    max_ = cfg.second;
-    prepare_next_read();
+  void configure_read(receive_policy::config) {
+    // nop
   }
 
   void write_packet(id_type id, span<buffer_type*> buffers) {
@@ -313,12 +289,6 @@ private:
 
   std::vector<byte> read_buf_;
   std::deque<packet> packet_queue_;
-
-  size_t max_consecutive_reads_;
-  size_t read_threshold_;
-
-  size_t max_;
-  receive_policy_flag rd_flag_;
 
   endpoint_manager* manager_;
 };

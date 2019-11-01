@@ -58,13 +58,12 @@ variant<std::pair<size_t, ip_endpoint>, sec> read(udp_datagram_socket x,
 
 /// Sends the content of `bufs` as a datagram to the endpoint `ep` on socket
 /// `x`.
-/// @param x x The UDP socket for sending datagrams.
+/// @param x The UDP socket for sending datagrams.
 /// @param bufs Points to the datagram to send, scattered across up to 10
 ///             buffers.
 /// @param ep The enpoint to send the datagram to.
 /// @returns The number of written bytes on success, otherwise an error code.
 /// @relates udp_datagram_socket
-/// @post either the result is a `sec` or a positive (non-zero) integer
 /// @pre `bufs.size() < 10`
 variant<size_t, sec> write(udp_datagram_socket x, span<std::vector<byte>*> bufs,
                            ip_endpoint ep);

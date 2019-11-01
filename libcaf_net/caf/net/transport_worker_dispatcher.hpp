@@ -19,6 +19,7 @@
 #pragma once
 
 #include <caf/logger.hpp>
+#include <caf/sec.hpp>
 #include <unordered_map>
 
 #include "caf/byte.hpp"
@@ -33,7 +34,7 @@
 namespace caf {
 namespace net {
 
-/// implements a dispatcher that dispatches between transport and workers.
+/// Implements a dispatcher that dispatches between transport and workers.
 template <class Transport, class IdType>
 class transport_worker_dispatcher {
 public:
@@ -68,13 +69,13 @@ public:
 
   template <class Parent>
   error handle_data(Parent& parent, span<byte> data, id_type id) {
-    auto worker = find_by_id(id);
-    if (!worker) {
-      // TODO: where to get id_type from here?
-      add_new_worker(parent, node_id{}, id);
-      worker = find_by_id(id);
-    }
-    return worker->handle_data(parent, data);
+    if (auto worker = find_worker(id))
+      return worker->handle_data(parent, data);
+    auto worker = add_new_worker(parent, node_id{}, id);
+    if (worker)
+      return (*worker)->handle_data(parent, data);
+    else
+      return std::move(worker.error());
   }
 
   template <class Parent>
@@ -84,32 +85,40 @@ public:
     if (!receiver)
       return;
     auto nid = receiver->node();
-    auto worker = find_by_node(nid);
-    if (!worker) {
-      // TODO: where to get id_type from here?
-      add_new_worker(parent, nid, id_type{});
-      worker = find_by_node(nid);
+    if (auto worker = find_worker(nid)) {
+      worker->write_message(parent, std::move(msg));
+      return;
     }
-    worker->write_message(parent, std::move(msg));
+    if (auto worker = add_new_worker(parent, nid, id_type{}))
+      (*worker)->write_message(parent, std::move(msg));
   }
 
   template <class Parent>
-  void resolve(Parent& parent, const uri& locator, const actor& listener) {
-    if (auto worker = find_by_node(make_node_id(locator)))
-      worker->resolve(parent, locator.path(), listener);
+  error resolve(Parent& parent, const uri& locator, const actor& listener) {
+    auto worker = find_worker(make_node_id(locator));
+    if (worker == nullptr)
+      return make_error(sec::runtime_error, "could not find worker");
+    worker->resolve(parent, locator.path(), listener);
+    return none;
   }
 
   template <class Parent>
-  void new_proxy(Parent& parent, const node_id& nid, actor_id id) {
-    if (auto worker = find_by_node(nid))
-      worker->new_proxy(parent, nid, id);
+  error new_proxy(Parent& parent, const node_id& nid, actor_id id) {
+    auto worker = find_worker(nid);
+    if (worker == nullptr)
+      return make_error(sec::runtime_error, "could not find worker");
+    worker->new_proxy(parent, nid, id);
+    return none;
   }
 
   template <class Parent>
-  void local_actor_down(Parent& parent, const node_id& nid, actor_id id,
-                        error reason) {
-    if (auto worker = find_by_node(nid))
-      worker->local_actor_down(parent, nid, id, std::move(reason));
+  error local_actor_down(Parent& parent, const node_id& nid, actor_id id,
+                         error reason) {
+    auto worker = find_worker(nid);
+    if (worker == nullptr)
+      return make_error(sec::runtime_error, "could not find worker");
+    worker->local_actor_down(parent, nid, id, std::move(reason));
+    return none;
   }
 
   template <class... Ts>
@@ -132,40 +141,38 @@ public:
   }
 
   template <class Parent>
-  error add_new_worker(Parent& parent, node_id node, id_type id) {
+  expected<worker_ptr> add_new_worker(Parent& parent, node_id node,
+                                      id_type id) {
     auto application = factory_.make();
     auto worker = std::make_shared<worker_type>(std::move(application), id);
     if (auto err = worker->init(parent))
       return err;
     workers_by_id_.emplace(std::move(id), worker);
-    workers_by_node_.emplace(std::move(node), std::move(worker));
-    return none;
+    workers_by_node_.emplace(std::move(node), worker);
+    return worker;
   }
 
 private:
-  worker_ptr find_by_node(const node_id& nid) {
-    if (workers_by_node_.empty())
-      return nullptr;
-    auto it = workers_by_node_.find(nid);
-    if (it == workers_by_node_.end()) {
-      CAF_LOG_ERROR("could not find worker by node: " << CAF_ARG(nid));
-      return nullptr;
-    }
-    return it->second;
+  worker_ptr find_worker(const node_id& nid) {
+    return find_worker_impl(workers_by_node_, nid);
   }
 
-  worker_ptr find_by_id(const IdType& id) {
-    if (workers_by_id_.empty())
-      return nullptr;
-    auto it = workers_by_id_.find(id);
-    if (it == workers_by_id_.end()) {
-      CAF_LOG_ERROR("could not find worker by node: " << CAF_ARG(id));
-      return nullptr;
-    }
-    return it->second;
+  worker_ptr find_worker(const id_type& id) {
+    return find_worker_impl(workers_by_id_, id);
   }
 
-  // -- worker lookups ---------------------------------------------------------
+  template <class Key>
+  worker_ptr find_worker_impl(const std::unordered_map<Key, worker_ptr>& map,
+                              const Key& key) {
+    if (map.count(key) == 0) {
+      CAF_LOG_DEBUG("could not find worker: " << CAF_ARG(key));
+      return nullptr;
+    }
+    return map.at(key);
+  }
+
+  // -- worker lookups
+  // ---------------------------------------------------------
 
   std::unordered_map<id_type, worker_ptr> workers_by_id_;
   std::unordered_map<node_id, worker_ptr> workers_by_node_;
@@ -173,7 +180,7 @@ private:
 
   factory_type factory_;
   transport_type* transport_;
-};
+}; // namespace net
 
 } // namespace net
 } // namespace caf

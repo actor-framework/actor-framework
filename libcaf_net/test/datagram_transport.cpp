@@ -24,19 +24,21 @@
 #include "caf/test/dsl.hpp"
 
 #include "caf/byte.hpp"
+#include "caf/detail/socket_sys_includes.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/net/actor_proxy_impl.hpp"
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/net/endpoint_manager_impl.hpp"
+#include "caf/net/ip.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/multiplexer.hpp"
-#include "caf/net/socket_guard.hpp"
 #include "caf/net/udp_datagram_socket.hpp"
 #include "caf/serializer_impl.hpp"
 #include "caf/span.hpp"
 
 using namespace caf;
 using namespace caf::net;
+using namespace caf::net::ip;
 
 namespace {
 
@@ -55,8 +57,9 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
       CAF_FAIL("mpx->init failed: " << sys.render(err));
     mpx->set_thread_id();
     CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
-    if (auto err = parse("127.0.0.1:0", ep))
-      CAF_FAIL("parse returned an error: " << sys.render(err));
+    auto addresses = local_addresses("localhost");
+    CAF_CHECK(!addresses.empty());
+    ep = ip_endpoint(*addresses.begin(), 0);
     auto send_pair = unbox(make_udp_datagram_socket(ep));
     send_socket = send_pair.first;
     auto receive_pair = unbox(make_udp_datagram_socket(ep));
@@ -106,12 +109,10 @@ class dummy_application {
   using buffer_ptr = std::shared_ptr<buffer_type>;
 
 public:
-  dummy_application(buffer_ptr rec_buf)
+  explicit dummy_application(buffer_ptr rec_buf)
     : rec_buf_(std::move(rec_buf)){
       // nop
     };
-
-  ~dummy_application() = default;
 
   template <class Parent>
   error init(Parent&) {
