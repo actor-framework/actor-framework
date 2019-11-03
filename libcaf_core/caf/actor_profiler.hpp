@@ -19,6 +19,7 @@
 #pragma once
 
 #include "caf/actor_clock.hpp"
+#include "caf/config.hpp"
 #include "caf/detail/build_config.hpp"
 #include "caf/fwd.hpp"
 
