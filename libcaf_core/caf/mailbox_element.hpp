@@ -19,25 +19,25 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 
-#include "caf/extend.hpp"
-#include "caf/message.hpp"
-#include "caf/message_id.hpp"
-#include "caf/ref_counted.hpp"
-#include "caf/make_message.hpp"
-#include "caf/message_view.hpp"
-#include "caf/memory_managed.hpp"
-#include "caf/type_erased_tuple.hpp"
 #include "caf/actor_control_block.hpp"
-
-#include "caf/intrusive/singly_linked.hpp"
-
-#include "caf/meta/type_name.hpp"
-#include "caf/meta/omittable_if_empty.hpp"
-
+#include "caf/config.hpp"
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/tuple_vals.hpp"
 #include "caf/detail/type_erased_tuple_view.hpp"
+#include "caf/extend.hpp"
+#include "caf/intrusive/singly_linked.hpp"
+#include "caf/make_message.hpp"
+#include "caf/memory_managed.hpp"
+#include "caf/message.hpp"
+#include "caf/message_id.hpp"
+#include "caf/message_view.hpp"
+#include "caf/meta/omittable_if_empty.hpp"
+#include "caf/meta/type_name.hpp"
+#include "caf/ref_counted.hpp"
+#include "caf/tracing_data.hpp"
+#include "caf/type_erased_tuple.hpp"
 
 namespace caf {
 
@@ -56,6 +56,13 @@ public:
   /// `stages.back()` is the next actor in the forwarding chain,
   /// if this is empty then the original sender receives the response.
   forwarding_stack stages;
+
+#ifdef CAF_ENABLE_ACTOR_PROFILER
+  /// Optional tracing information. This field is unused by default, but an
+  /// @ref actor_profiler can make use of it to inject application-specific
+  /// instrumentation.
+  tracing_data_ptr tracing_id;
+#endif // CAF_ENABLE_ACTOR_PROFILER
 
   mailbox_element();
 
@@ -101,7 +108,11 @@ struct mailbox_category_corrector<upstream_msg> {
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, mailbox_element& x) {
   return f(meta::type_name("mailbox_element"), x.sender, x.mid,
-           meta::omittable_if_empty(), x.stages, x.content());
+           meta::omittable_if_empty(), x.stages,
+#ifdef CAF_ENABLE_ACTOR_PROFILER
+           x.tracing_id,
+#endif // CAF_ENABLE_ACTOR_PROFILER
+           x.content());
 }
 
 /// Encapsulates arbitrary data in a message element.
