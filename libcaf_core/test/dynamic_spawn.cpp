@@ -568,6 +568,10 @@ CAF_TEST(move_only_argument) {
   CAF_CHECK_EQUAL(to_string(f(1.f)), "(42)");
 }
 
+CAF_TEST_FIXTURE_SCOPE_END()
+
+CAF_TEST_FIXTURE_SCOPE(dynamic_spawn_tests_2, test_coordinator_fixture<>)
+
 CAF_TEST(move-only function object) {
   struct move_only_fun {
     move_only_fun() = default;
@@ -578,10 +582,20 @@ CAF_TEST(move-only function object) {
       return {};
     }
   };
-  actor_system_config cfg;
-  actor_system sys{cfg};
   move_only_fun f;
   sys.spawn(std::move(f));
+  run();
+}
+
+#define SUBTEST(message)                                                       \
+  CAF_MESSAGE(message);                                                        \
+  for (int subtest_dummy = 0; subtest_dummy < 1; ++subtest_dummy, run())
+
+CAF_TEST(sys.spawn implicitly converts arguments) {
+  SUBTEST("spawn accepts functions taking pointers") {
+    auto f = [](int* ptr) { CAF_CHECK_EQUAL(ptr, nullptr); };
+    sys.spawn(f, nullptr);
+  }
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
