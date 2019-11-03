@@ -111,32 +111,34 @@ public:
   bool async() const;
 
   /// Queries whether this promise is a valid promise that is not satisfied yet.
-  inline bool pending() const {
+  bool pending() const {
     return source_ != nullptr || !stages_.empty();
   }
 
   /// Returns the source of the corresponding request.
-  inline const strong_actor_ptr& source() const {
+  const strong_actor_ptr& source() const {
     return source_;
   }
 
   /// Returns the remaining stages for the corresponding request.
-  inline const forwarding_stack& stages() const {
+  const forwarding_stack& stages() const {
     return stages_;
   }
 
   /// Returns the actor that will receive the response, i.e.,
   /// `stages().front()` if `!stages().empty()` or `source()` otherwise.
-  inline strong_actor_ptr next() const {
+  strong_actor_ptr next() const {
     return stages_.empty() ? source_ : stages_.front();
   }
 
   /// Returns the message ID of the corresponding request.
-  inline message_id id() const {
+  message_id id() const {
     return id_;
   }
 
 private:
+  local_actor* self_ptr() const;
+
   execution_unit* context();
 
   void deliver_impl(message msg);

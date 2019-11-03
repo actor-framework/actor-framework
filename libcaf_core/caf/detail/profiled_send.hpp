@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "caf/abstract_actor.hpp"
+#include "caf/actor_cast.hpp"
 #include "caf/actor_clock.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_profiler.hpp"
@@ -32,27 +33,26 @@
 namespace caf {
 namespace detail {
 
-template <class Self, class Handle, class... Ts>
-void profiled_send(Self* self, actor_control_block* sender,
-                   const Handle& receiver, message_id msg_id,
-                   std::vector<strong_actor_ptr> stages,
+template <class Self, class Sender, class Handle, class... Ts>
+void profiled_send(Self* self, Sender&& sender, const Handle& receiver,
+                   message_id msg_id, std::vector<strong_actor_ptr> stages,
                    execution_unit* context, Ts&&... xs) {
   if (receiver) {
-    auto element = make_mailbox_element(sender, msg_id, std::move(stages),
+    auto element = make_mailbox_element(std::forward<Sender>(sender), msg_id,
+                                        std::move(stages),
                                         std::forward<Ts>(xs)...);
     CAF_BEFORE_SENDING(self, *element);
     receiver->enqueue(std::move(element), context);
   }
 }
 
-template <class Self, class Handle, class... Ts>
-void profiled_send(Self* self, actor_control_block* sender,
-                   const Handle& receiver, actor_clock& clock,
-                   actor_clock::time_point timeout, message_id msg_id,
-                   Ts&&... xs) {
+template <class Self, class Sender, class Handle, class... Ts>
+void profiled_send(Self* self, Sender&& sender, const Handle& receiver,
+                   actor_clock& clock, actor_clock::time_point timeout,
+                   message_id msg_id, Ts&&... xs) {
   if (receiver) {
-    auto element = make_mailbox_element(sender, msg_id, no_stages,
-                                        std::forward<Ts>(xs)...);
+    auto element = make_mailbox_element(std::forward<Sender>(sender), msg_id,
+                                        no_stages, std::forward<Ts>(xs)...);
     CAF_BEFORE_SENDING_SCHEDULED(self, timeout, *element);
     clock.schedule_message(timeout, actor_cast<strong_actor_ptr>(receiver),
                            std::move(element));

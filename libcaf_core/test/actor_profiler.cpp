@@ -168,7 +168,7 @@ CAF_TEST(record actor messaging) {
                     "new: bar, parent: foo",
                     "foo sends: (\"hello bar\")",
                     "bar got: (\"hello bar\")",
-                    // TODO: "bar sends: (\"hello foo\")",
+                    "bar sends: (\"hello foo\")",
                     "bar consumed the message",
                     "foo got: (\"hello foo\")",
                     "delete: bar",
