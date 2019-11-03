@@ -89,14 +89,10 @@ public:
     CAF_LOG_TRACE(""); // serializing who would cause a deadlock
     exclusive_guard guard(mtx_);
     auto e = subscribers_.end();
-#if __cplusplus > 201103L
-    auto i = subscribers_.find(who);
-#else
     auto cmp = [&](const strong_actor_ptr& lhs) {
       return lhs.get() == who;
     };
     auto i = std::find_if(subscribers_.begin(), e, cmp);
-#endif
     if(i == e)
       return {false, subscribers_.size()};
     subscribers_.erase(i);
