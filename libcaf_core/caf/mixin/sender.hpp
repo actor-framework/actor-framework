@@ -27,6 +27,7 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/check_typed_input.hpp"
 #include "caf/detail/profiled_send.hpp"
+#include "caf/detail/type_traits.hpp"
 #include "caf/duration.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
@@ -75,23 +76,10 @@ public:
   }
 
   /// Sends `{xs...}` as an asynchronous message to `dest` with priority `mp`.
-  template <message_priority P = message_priority::normal, class... Ts>
-  void send(const strong_actor_ptr& dest, Ts&&... xs) {
-    using detail::type_list;
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    static_assert(!statically_typed<Subtype>(),
-                  "statically typed actors can only send() to other "
-                  "statically typed actors; use anon_send() or request() when "
-                  "communicating with dynamically typed actors");
-    auto self = dptr();
-    detail::profiled_send(self, dest, self->ctrl(), make_message_id(P), {},
-                          std::forward<Ts>(xs)...);
-  }
-
-  /// Sends `{xs...}` as an asynchronous message to `dest` with priority `mp`.
-  template <message_priority P = message_priority::normal, class Dest = actor,
+  template <message_priority P = message_priority::normal, class Dest,
             class... Ts>
-  void send(const Dest& dest, Ts&&... xs) {
+  detail::enable_if_t<!std::is_same<group, Dest>::value> send(const Dest& dest,
+                                                              Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
     type_check(dest, args_token);
