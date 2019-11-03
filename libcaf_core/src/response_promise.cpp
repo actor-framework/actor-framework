@@ -108,4 +108,20 @@ void response_promise::deliver_impl(message msg) {
   CAF_LOG_WARNING("malformed response promise: self != nullptr && !pending()");
 }
 
+void response_promise::delegate_impl(abstract_actor* receiver, message msg) {
+  CAF_LOG_TRACE(CAF_ARG(msg));
+  if (receiver == nullptr) {
+    CAF_LOG_DEBUG("drop response: invalid delegation target");
+    return;
+  }
+  if (self_ == nullptr) {
+    CAF_LOG_DEBUG("drop response: invalid promise");
+    return;
+  }
+  auto self = self_ptr();
+  detail::profiled_send(self, std::move(source_), receiver, id_,
+                        std::move(stages_), self->context(), std::move(msg));
+  self_.reset();
+}
+
 } // namespace caf

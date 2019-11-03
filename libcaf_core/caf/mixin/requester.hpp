@@ -21,15 +21,16 @@
 #include <tuple>
 #include <chrono>
 
-#include "caf/fwd.hpp"
 #include "caf/actor.hpp"
-#include "caf/message.hpp"
-#include "caf/duration.hpp"
-#include "caf/message_id.hpp"
-#include "caf/response_type.hpp"
-#include "caf/response_handle.hpp"
-#include "caf/message_priority.hpp"
 #include "caf/check_typed_input.hpp"
+#include "caf/detail/profiled_send.hpp"
+#include "caf/duration.hpp"
+#include "caf/fwd.hpp"
+#include "caf/message.hpp"
+#include "caf/message_id.hpp"
+#include "caf/message_priority.hpp"
+#include "caf/response_handle.hpp"
+#include "caf/response_type.hpp"
 
 namespace caf {
 namespace mixin {
@@ -77,17 +78,17 @@ public:
         >::type...>;
     static_assert(response_type_unbox<signatures_of_t<Handle>, token>::valid,
                   "receiver does not accept given message");
-    auto dptr = static_cast<Subtype*>(this);
-    auto req_id = dptr->new_request_id(P);
+    auto self = static_cast<Subtype*>(this);
+    auto req_id = self->new_request_id(P);
     if (dest) {
-      dest->eq_impl(req_id, dptr->ctrl(), dptr->context(),
-                    std::forward<Ts>(xs)...);
-      dptr->request_response_timeout(timeout, req_id);
+      detail::profiled_send(self, self->ctrl(), dest, req_id, {},
+                            self->context(), std::forward<Ts>(xs)...);
+      self->request_response_timeout(timeout, req_id);
     } else {
-      dptr->eq_impl(req_id.response_id(), dptr->ctrl(), dptr->context(),
+      self->eq_impl(req_id.response_id(), self->ctrl(), self->context(),
                     make_error(sec::invalid_argument));
     }
-    return {req_id.response_id(), dptr};
+    return {req_id.response_id(), self};
    }
 
   /// Sends `{xs...}` as a synchronous message to `dest` with priority `mp`.

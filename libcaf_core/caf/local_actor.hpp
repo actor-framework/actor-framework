@@ -403,20 +403,8 @@ public:
                          detail::implicit_conversions_t<
                            typename std::decay<Ts>::type>...>::delegated_type
   delegate(const Handle& dest, Ts&&... xs) {
-    static_assert(sizeof...(Ts) > 0, "nothing to delegate");
-    using token = detail::type_list<typename detail::implicit_conversions<
-      typename std::decay<Ts>::type>::type...>;
-    static_assert(response_type_unbox<signatures_of_t<Handle>, token>::valid,
-                  "receiver does not accept given message");
-    auto mid = current_element_->mid;
-    current_element_->mid = P == message_priority::high
-                              ? mid.with_high_priority()
-                              : mid.with_normal_priority();
-    dest->enqueue(make_mailbox_element(std::move(current_element_->sender), mid,
-                                       std::move(current_element_->stages),
-                                       std::forward<Ts>(xs)...),
-                  context());
-    return {};
+    auto rp = make_response_promise();
+    return rp.template delegate<P>(dest, std::forward<Ts>(xs)...);
   }
 
   virtual void initialize();
