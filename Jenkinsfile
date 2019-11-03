@@ -29,19 +29,38 @@ config = [
     ],
     // Our build matrix. Keys are the operating system labels and values are build configurations.
     buildMatrix: [
-        ['Linux', [
-            builds: ['debug'],
-            tools: ['gcc4.8', 'gcc4.9', 'gcc5', 'gcc6', 'gcc7'],
+        // Various Linux builds for debug and release.
+        ['debian-8', [
+            builds: ['debug', 'release'],
+            tools: ['clang-4'],
         ]],
-        ['Linux', [
+        ['centos-6', [
+            builds: ['debug', 'release'],
+            tools: ['gcc-7'],
+        ]],
+        ['centos-7', [
+            builds: ['debug', 'release'],
+            tools: ['gcc-7'],
+        ]],
+        ['ubuntu-16.04', [
+            builds: ['debug', 'release'],
+            tools: ['clang-4'],
+        ]],
+        ['ubuntu-18.04', [
+            builds: ['debug', 'release'],
+            tools: ['gcc-7'],
+        ]],
+        // On Fedora 28, our debug build also produces the coverage report.
+        ['fedora-28', [
             builds: ['debug'],
-            tools: ['gcc8'],
+            tools: ['gcc-8'],
             extraSteps: ['coverageReport'],
         ]],
-        ['Linux', [
+        ['fedora-28', [
             builds: ['release'],
-            tools: ['gcc8', 'clang'],
+            tools: ['gcc-8'],
         ]],
+        // Other UNIX systems.
         ['macOS', [
             builds: ['debug', 'release'],
             tools: ['clang'],
@@ -50,6 +69,7 @@ config = [
             builds: ['debug', 'release'],
             tools: ['clang'],
         ]],
+        // Non-UNIX systems.
         ['Windows', [
             // TODO: debug build currently broken
             //builds: ['debug', 'release'],

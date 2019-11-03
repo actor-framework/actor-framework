@@ -448,6 +448,15 @@ struct callable_trait<R (Ts...)> {
   static constexpr size_t num_args = sizeof...(Ts);
 };
 
+// member noexcept const function pointer
+template <class C, typename R, class... Ts>
+struct callable_trait<R (C::*)(Ts...) const noexcept>
+  : callable_trait<R(Ts...)> {};
+
+// member noexcept function pointer
+template <class C, typename R, class... Ts>
+struct callable_trait<R (C::*)(Ts...) noexcept> : callable_trait<R(Ts...)> {};
+
 // member const function pointer
 template <class C, typename R, class... Ts>
 struct callable_trait<R (C::*)(Ts...) const> : callable_trait<R (Ts...)> {};
@@ -455,6 +464,10 @@ struct callable_trait<R (C::*)(Ts...) const> : callable_trait<R (Ts...)> {};
 // member function pointer
 template <class C, typename R, class... Ts>
 struct callable_trait<R (C::*)(Ts...)> : callable_trait<R (Ts...)> {};
+
+// good ol' noexcept function pointer
+template <class R, class... Ts>
+struct callable_trait<R (*)(Ts...) noexcept> : callable_trait<R(Ts...)> {};
 
 // good ol' function pointer
 template <class R, class... Ts>
