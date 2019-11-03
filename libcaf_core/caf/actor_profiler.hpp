@@ -102,10 +102,10 @@ public:
 #  define CAF_BEFORE_SENDING_SCHEDULED(self, timeout, msg)                     \
     self->system().profiler_before_sending_scheduled(*self, timeout, msg)
 #else
-#  define CAF_BEFORE_PROCESSING(self, msg) CAF_VOID_STMT
-#  define CAF_AFTER_PROCESSING(self, result) CAF_VOID_STMT
-#  define CAF_BEFORE_SENDING(self, msg) CAF_VOID_STMT
-#  define CAF_BEFORE_SENDING_DELAYED(self, msg) CAF_VOID_STMT
+#  define CAF_BEFORE_PROCESSING(self, msg) static_cast<void>(0)
+#  define CAF_AFTER_PROCESSING(self, result) static_cast<void>(0)
+#  define CAF_BEFORE_SENDING(self, msg) static_cast<void>(0)
+#  define CAF_BEFORE_SENDING_DELAYED(self, msg) static_cast<void>(0)
 #endif
 
 } // namespace caf
