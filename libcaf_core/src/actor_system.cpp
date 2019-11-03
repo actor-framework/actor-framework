@@ -226,7 +226,8 @@ actor_system::actor_system(actor_system_config& cfg)
     await_actors_before_shutdown_(true),
     detached_(0),
     cfg_(cfg),
-    logger_dtor_done_(false) {
+    logger_dtor_done_(false),
+    tracing_context_(cfg.tracing_context) {
   CAF_SET_LOGGER_SYS(this);
   for (auto& hook : cfg.thread_hooks_)
     hook->init(*this);

@@ -126,6 +126,8 @@ enum class sec : uint8_t {
   unavailable_or_would_block,
   /// Resolving a path on a remote node failed.
   remote_lookup_failed,
+  /// Serialization failed because actor_system::tracing_context is null.
+  no_tracing_context,
 };
 
 /// @relates sec

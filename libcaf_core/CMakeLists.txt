@@ -149,6 +149,8 @@ set(LIBCAF_CORE_SRCS
   src/term.cpp
   src/thread_hook.cpp
   src/timestamp.cpp
+  src/tracing_data.cpp
+  src/tracing_data_factory.cpp
   src/type_erased_tuple.cpp
   src/type_erased_value.cpp
   src/uniform_type_info_map.cpp
