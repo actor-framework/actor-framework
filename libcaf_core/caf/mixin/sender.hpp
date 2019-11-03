@@ -26,6 +26,7 @@
 #include "caf/actor_clock.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/check_typed_input.hpp"
+#include "caf/detail/profiled_send.hpp"
 #include "caf/duration.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
@@ -66,9 +67,11 @@ public:
                   "statically typed actors; use anon_send() when "
                   "communicating to groups");
     // TODO: consider whether it's feasible to track messages to groups
-    if (dest)
-      dest->eq_impl(make_message_id(P), dptr()->ctrl(), dptr()->context(),
+    if (dest) {
+      auto self = dptr();
+      dest->eq_impl(make_message_id(P), self->ctrl(), self->context(),
                     std::forward<Ts>(xs)...);
+    }
   }
 
   /// Sends `{xs...}` as an asynchronous message to `dest` with priority `mp`.
@@ -80,12 +83,9 @@ public:
                   "statically typed actors can only send() to other "
                   "statically typed actors; use anon_send() or request() when "
                   "communicating with dynamically typed actors");
-    if (dest) {
-      auto element = make_mailbox_element(dptr()->ctrl(), make_message_id(P),
-                                          {}, std::forward<Ts>(xs)...);
-      CAF_BEFORE_SENDING(dptr(), *element);
-      dest->enqueue(std::move(element), dptr()->context());
-    }
+    auto self = dptr();
+    detail::profiled_send(self, dest, self->ctrl(), make_message_id(P), {},
+                          std::forward<Ts>(xs)...);
   }
 
   /// Sends `{xs...}` as an asynchronous message to `dest` with priority `mp`.
@@ -95,12 +95,9 @@ public:
     static_assert(sizeof...(Ts) > 0, "no message to send");
     detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
     type_check(dest, args_token);
-    if (dest) {
-      auto element = make_mailbox_element(dptr()->ctrl(), make_message_id(P),
-                                          {}, std::forward<Ts>(xs)...);
-      CAF_BEFORE_SENDING(dptr(), *element);
-      dest->enqueue(std::move(element), dptr()->context());
-    }
+    auto self = dptr();
+    detail::profiled_send(self, self->ctrl(), dest, make_message_id(P), {},
+                          self->context(), std::forward<Ts>(xs)...);
   }
 
   template <message_priority P = message_priority::normal, class Dest = actor,
@@ -110,12 +107,9 @@ public:
     using token = detail::type_list<detail::strip_and_convert_t<Ts>...>;
     static_assert(response_type_unbox<signatures_of_t<Dest>, token>::valid,
                   "receiver does not accept given message");
-    if (dest) {
-      auto element = make_mailbox_element(nullptr, make_message_id(P), {},
-                                          std::forward<Ts>(xs)...);
-      CAF_BEFORE_SENDING(dptr(), *element);
-      dest->enqueue(std::move(element), dptr()->context());
-    }
+    auto self = dptr();
+    detail::profiled_send(self, self->ctrl(), dest, make_message_id(P), {},
+                          self->context(), std::forward<Ts>(xs)...);
   }
 
   /// Sends a message at given time point (or immediately if `timeout` has
@@ -125,8 +119,12 @@ public:
   detail::enable_if_t<!std::is_same<Dest, group>::value>
   scheduled_send(const Dest& dest, actor_clock::time_point timeout,
                  Ts&&... xs) {
-    scheduled_send_impl(make_message_id(P), dest, dptr()->system().clock(),
-                        timeout, std::forward<Ts>(xs)...);
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
+    type_check(dest, args_token);
+    auto self = dptr();
+    detail::profiled_send(self, self->ctrl(), dest, self->system().clock(),
+                          timeout, make_message_id(P), std::forward<Ts>(xs)...);
   }
 
   /// Sends a message at given time point (or immediately if `timeout` has
@@ -139,8 +137,9 @@ public:
                   "statically typed actors are not allowed to send to groups");
     // TODO: consider whether it's feasible to track messages to groups
     if (dest) {
-      auto& clock = dptr()->system().clock();
-      clock.schedule_message(timeout, dest, dptr()->ctrl(),
+      auto self = dptr();
+      auto& clock = self->system().clock();
+      clock.schedule_message(timeout, dest, self->ctrl(),
                              make_message(std::forward<Ts>(xs)...));
     }
   }
@@ -151,10 +150,14 @@ public:
   detail::enable_if_t<!std::is_same<Dest, group>::value>
   delayed_send(const Dest& dest, std::chrono::duration<Rep, Period> rel_timeout,
                Ts&&... xs) {
-    auto& clock = dptr()->system().clock();
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
+    type_check(dest, args_token);
+    auto self = dptr();
+    auto& clock = self->system().clock();
     auto timeout = clock.now() + rel_timeout;
-    scheduled_send_impl(make_message_id(P), dest, dptr()->system().clock(),
-                        timeout, std::forward<Ts>(xs)...);
+    detail::profiled_send(self, self->ctrl(), dest, clock, timeout,
+                          make_message_id(P), std::forward<Ts>(xs)...);
   }
 
   /// Sends a message after a relative timeout.
@@ -167,9 +170,10 @@ public:
                   "statically typed actors are not allowed to send to groups");
     // TODO: consider whether it's feasible to track messages to groups
     if (dest) {
-      auto& clock = dptr()->system().clock();
+      auto self = dptr();
+      auto& clock = self->system().clock();
       auto timeout = clock.now() + rtime;
-      clock.schedule_message(timeout, dest, dptr()->ctrl(),
+      clock.schedule_message(timeout, dest, self->ctrl(),
                              make_message(std::forward<Ts>(xs)...));
     }
   }
@@ -178,8 +182,12 @@ public:
             class... Ts>
   void scheduled_anon_send(const Dest& dest, actor_clock::time_point timeout,
                            Ts&&... xs) {
-    scheduled_anon_send_impl(make_message_id(P), dest, dptr()->system().clock(),
-                             timeout, std::forward<Ts>(xs)...);
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
+    type_check(dest, args_token);
+    auto self = dptr();
+    detail::profiled_send(self, self->ctrl(), dest, self->system().clock(),
+                          timeout, make_message_id(P), std::forward<Ts>(xs)...);
   }
 
   template <message_priority P = message_priority::normal, class Dest = actor,
@@ -187,10 +195,14 @@ public:
   void delayed_anon_send(const Dest& dest,
                          std::chrono::duration<Rep, Period> rel_timeout,
                          Ts&&... xs) {
-    auto& clock = dptr()->system().clock();
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
+    type_check(dest, args_token);
+    auto self = dptr();
+    auto& clock = self->system().clock();
     auto timeout = clock.now() + rel_timeout;
-    scheduled_anon_send(make_message_id(P), dest, clock, timeout,
-                        std::forward<Ts>(xs)...);
+    detail::profiled_send(self, self->ctrl(), dest, clock, timeout,
+                          make_message_id(P), std::forward<Ts>(xs)...);
   }
 
   template <class Rep = int, class Period = std::ratio<1>, class... Ts>
@@ -206,13 +218,9 @@ private:
     static_assert(sizeof...(Ts) > 0, "no message to send");
     detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
     type_check(dest, args_token);
-    if (dest) {
-      auto element = make_mailbox_element(dptr()->ctrl(), mid, no_stages,
-                                          std::forward<Ts>(xs)...);
-      CAF_BEFORE_SENDING_SCHEDULED(dptr(), timeout, *element);
-      clock.schedule_message(timeout, actor_cast<strong_actor_ptr>(dest),
-                             std::move(element));
-    }
+    auto self = dptr();
+    detail::profiled_send(self, self->ctrl(), dest, clock, timeout, mid,
+                          std::forward<Ts>(xs)...);
   }
 
   template <class Dest, class... Ts>
@@ -222,13 +230,9 @@ private:
     static_assert(sizeof...(Ts) > 0, "no message to send");
     detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
     type_check(dest, args_token);
-    if (dest) {
-      auto element = make_mailbox_element(nullptr, mid, no_stages,
-                                          std::forward<Ts>(xs)...);
-      CAF_BEFORE_SENDING_SCHEDULED(dptr(), timeout, *element);
-      clock.schedule_message(timeout, actor_cast<strong_actor_ptr>(dest),
-                             std::move(element));
-    }
+    auto self = dptr();
+    detail::profiled_send(self, nullptr, dest, clock, timeout, mid,
+                          std::forward<Ts>(xs)...);
   }
 
   template <class Dest, class ArgTypes>
