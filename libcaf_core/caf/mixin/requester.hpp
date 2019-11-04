@@ -151,8 +151,8 @@ public:
     using response_type
       = response_type_t<typename handle_type::signatures,
                         detail::implicit_conversions_t<detail::decay_t<Ts>>...>;
-    using handle_type = response_handle<Subtype, MergePolicy<response_type>>;
-    return handle_type{dptr, std::move(ids)};
+    using result_type = response_handle<Subtype, MergePolicy<response_type>>;
+    return result_type{dptr, std::move(ids)};
   }
 
   /// @copydoc fan_out_request
