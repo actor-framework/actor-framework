@@ -124,20 +124,20 @@ User Manual\\
 
 \newcommand{\cppexample}[2][]{%
 \ifthenelse{\isempty{#1}}%
-{\lstinputlisting{../../examples/#2.cpp}}%
-{\lstinputlisting[language=C++,linerange={#1}]{../../examples/#2.cpp}}%
+{\lstinputlisting{\cafroot/examples/#2.cpp}}%
+{\lstinputlisting[language=C++,linerange={#1}]{\cafroot/examples/#2.cpp}}%
 }
 
 \newcommand{\iniexample}[2][]{%
 \ifthenelse{\isempty{#1}}%
-{\lstinputlisting[language=ini]{../../examples/#2.ini}}%
-{\lstinputlisting[language=ini,linerange={#1}]{../../examples/#2.ini}}%
+{\lstinputlisting[language=ini]{\cafroot/examples/#2.ini}}%
+{\lstinputlisting[language=ini,linerange={#1}]{\cafroot/examples/#2.ini}}%
 }
 
 \newcommand{\sourcefile}[2][]{%
 \ifthenelse{\isempty{#1}}%
-{\lstinputlisting[language=C++]{../../#2}}%
-{\lstinputlisting[language=C++,linerange={#1}]{../../#2}}%
+{\lstinputlisting[language=C++]{\cafroot/#2}}%
+{\lstinputlisting[language=C++,linerange={#1}]{\cafroot/#2}}%
 }
 
 % highlight for INI file syntax

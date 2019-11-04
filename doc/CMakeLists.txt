@@ -1,7 +1,3 @@
-cmake_minimum_required(VERSION 2.8.12)
-
-project(doc NONE)
-
 add_custom_target(doc)
 
 # -- list all .tex source files ------------------------------------------------
