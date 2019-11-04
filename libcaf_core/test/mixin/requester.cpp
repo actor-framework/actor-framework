@@ -23,6 +23,7 @@
 #include "caf/test/dsl.hpp"
 
 #include "caf/event_based_actor.hpp"
+#include "caf/policy/fan_in_responses.hpp"
 
 using namespace caf;
 
@@ -148,6 +149,33 @@ CAF_TEST(delegated request with integer result) {
   expect((int, int), from(client).to(worker).with(1, 2));
   expect((int), from(worker).to(client).with(3));
   CAF_CHECK_EQUAL(*result, 3);
+}
+
+CAF_TEST(requesters support fan_out_request) {
+  using policy::fan_in_responses;
+  std::vector<adding_server_type> workers{
+    adding_server = make_server([](int x, int y) { return x + y; }),
+    adding_server = make_server([](int x, int y) { return x + y; }),
+    adding_server = make_server([](int x, int y) { return x + y; }),
+  };
+  run();
+  auto sum = std::make_shared<int>(0);
+  auto client = sys.spawn([=](event_based_actor* self) {
+    self->fan_out_request<fan_in_responses>(workers, infinite, 1, 2)
+      .then([=](std::vector<int> results) {
+        for (auto result : results)
+          CAF_CHECK_EQUAL(result, 3);
+        *sum = std::accumulate(results.begin(), results.end(), 0);
+      });
+  });
+  run_once();
+  expect((int, int), from(client).to(workers[0]).with(1, 2));
+  expect((int, int), from(client).to(workers[1]).with(1, 2));
+  expect((int, int), from(client).to(workers[2]).with(1, 2));
+  expect((int), from(client).to(workers[0]).with(3));
+  expect((int), from(client).to(workers[1]).with(3));
+  expect((int), from(client).to(workers[2]).with(3));
+  CAF_CHECK_EQUAL(*sum, 9);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
