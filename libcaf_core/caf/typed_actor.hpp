@@ -144,9 +144,9 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
   template <class T,
             class = detail::enable_if_t<actor_traits<T>::is_statically_typed>>
   typed_actor(T* ptr) : ptr_(ptr->ctrl()) {
-    static_assert(detail::tl_subset_of<signatures,
-                                       typename T::signatures>::value,
-                  "Cannot assign T* to incompatible handle type");
+    static_assert(
+      detail::tl_subset_of<signatures, typename T::signatures>::value,
+      "Cannot assign T* to incompatible handle type");
     CAF_ASSERT(ptr != nullptr);
   }
 
