@@ -26,13 +26,19 @@
 #include <vector>
 
 #include "caf/actor_addr.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/byte.hpp"
 #include "caf/callback.hpp"
+#include "caf/defaults.hpp"
+#include "caf/detail/worker_hub.hpp"
 #include "caf/error.hpp"
 #include "caf/net/basp/connection_state.hpp"
 #include "caf/net/basp/constants.hpp"
 #include "caf/net/basp/header.hpp"
+#include "caf/net/basp/message_queue.hpp"
 #include "caf/net/basp/message_type.hpp"
+#include "caf/net/basp/worker.hpp"
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/net/packet_writer.hpp"
 #include "caf/net/receive_policy.hpp"
@@ -57,6 +63,8 @@ public:
 
   using byte_span = span<const byte>;
 
+  using hub_type = detail::worker_hub<worker>;
+
   struct test_tag {};
 
   // -- constructors, destructors, and assignment operators --------------------
@@ -75,6 +83,10 @@ public:
     // Allow unit tests to run the application without endpoint manager.
     if (!std::is_base_of<test_tag, Parent>::value)
       manager_ = &parent.manager();
+    auto workers = get_or(system_->config(), "middleman.workers",
+                          defaults::middleman::workers);
+    for (size_t i = 0; i < workers; ++i)
+      hub_->add_new_worker(*queue_, proxies_);
     // Write handshake.
     auto hdr = parent.next_header_buffer();
     auto payload = parent.next_payload_buffer();
@@ -193,6 +205,10 @@ private:
   /// Provides pointers to the actor system as well as the registry,
   /// serializers and deserializer.
   scoped_execution_unit executor_;
+
+  std::unique_ptr<message_queue> queue_;
+
+  std::unique_ptr<hub_type> hub_;
 };
 
 } // namespace basp
