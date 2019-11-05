@@ -39,22 +39,48 @@
 namespace caf {
 namespace detail {
 
-template <class T0,       typename T1  = unit_t, typename T2  = unit_t,
-     typename T3  = unit_t, typename T4  = unit_t, typename T5  = unit_t,
-     typename T6  = unit_t, typename T7  = unit_t, typename T8  = unit_t,
-     typename T9  = unit_t, typename T10 = unit_t, typename T11 = unit_t,
-     typename T12 = unit_t, typename T13 = unit_t, typename T14 = unit_t,
-     typename T15 = unit_t, typename T16 = unit_t, typename T17 = unit_t,
-     typename T18 = unit_t, typename T19 = unit_t, typename T20 = unit_t>
+template <class T0 = unit_t, class T1 = unit_t, class T2 = unit_t,
+          class T3 = unit_t, class T4 = unit_t, class T5 = unit_t,
+          class T6 = unit_t, class T7 = unit_t, class T8 = unit_t,
+          class T9 = unit_t, class T10 = unit_t, class T11 = unit_t,
+          class T12 = unit_t, class T13 = unit_t, class T14 = unit_t,
+          class T15 = unit_t, class T16 = unit_t, class T17 = unit_t,
+          class T18 = unit_t, class T19 = unit_t, class T20 = unit_t,
+          class T21 = unit_t, class T22 = unit_t, class T23 = unit_t,
+          class T24 = unit_t, class T25 = unit_t, class T26 = unit_t,
+          class T27 = unit_t, class T28 = unit_t, class T29 = unit_t>
 struct variant_data {
   union {
-    T0  v0;  T1  v1;  T2  v2;
-    T3  v3;  T4  v4;  T5  v5;
-    T6  v6;  T7  v7;  T8  v8;
-    T9  v9;  T10 v10; T11 v11;
-    T12 v12; T13 v13; T14 v14;
-    T15 v15; T16 v16; T17 v17;
-    T18 v18; T19 v19; T20 v20;
+    T0 v0;
+    T1 v1;
+    T2 v2;
+    T3 v3;
+    T4 v4;
+    T5 v5;
+    T6 v6;
+    T7 v7;
+    T8 v8;
+    T9 v9;
+    T10 v10;
+    T11 v11;
+    T12 v12;
+    T13 v13;
+    T14 v14;
+    T15 v15;
+    T16 v16;
+    T17 v17;
+    T18 v18;
+    T19 v19;
+    T20 v20;
+    T21 v21;
+    T22 v22;
+    T23 v23;
+    T24 v24;
+    T25 v25;
+    T26 v26;
+    T27 v27;
+    T28 v28;
+    T29 v29;
   };
 
   variant_data() {
@@ -86,6 +112,15 @@ struct variant_data {
   CAF_VARIANT_DATA_GETTER(18)
   CAF_VARIANT_DATA_GETTER(19)
   CAF_VARIANT_DATA_GETTER(20)
+  CAF_VARIANT_DATA_GETTER(21)
+  CAF_VARIANT_DATA_GETTER(22)
+  CAF_VARIANT_DATA_GETTER(23)
+  CAF_VARIANT_DATA_GETTER(24)
+  CAF_VARIANT_DATA_GETTER(25)
+  CAF_VARIANT_DATA_GETTER(26)
+  CAF_VARIANT_DATA_GETTER(27)
+  CAF_VARIANT_DATA_GETTER(28)
+  CAF_VARIANT_DATA_GETTER(29)
 };
 
 struct variant_data_destructor {

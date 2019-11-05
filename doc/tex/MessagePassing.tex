@@ -153,13 +153,15 @@ When passing the \lstinline^cells^ vector to our three different
 implementations, we observe three outputs. Our \lstinline^waiting_testee^ actor
 will always print:
 
-{\footnotesize\begin{verbatim}
+\begin{footnotesize}
+\begin{verbatim}
 cell #9 -> 16
 cell #8 -> 9
 cell #7 -> 4
 cell #6 -> 1
 cell #5 -> 0
-\end{verbatim}}
+\end{verbatim}
+\end{footnotesize}
 
 This is because \lstinline^await^ puts the one-shots handlers onto a stack and
 enforces LIFO order by re-ordering incoming response messages.
@@ -170,13 +172,15 @@ immediately.
 
 Finally, the \lstinline^blocking_testee^ implementation will always print:
 
-{\footnotesize\begin{verbatim}
+\begin{footnotesize}
+\begin{verbatim}
 cell #5 -> 0
 cell #6 -> 1
 cell #7 -> 4
 cell #8 -> 9
 cell #9 -> 16
-\end{verbatim}}
+\end{verbatim}
+\end{footnotesize}
 
 Both event-based approaches send all requests, install a series of one-shot
 handlers, and then return from the implementing function. In contrast, the

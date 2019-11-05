@@ -32,6 +32,8 @@ IndentWidth: 2
 IndentWrappedFunctionNames: false
 KeepEmptyLinesAtTheStartOfBlocks: false
 Language: Cpp
+MacroBlockBegin: "^BEGIN_STATE$"
+MacroBlockEnd: "^END_STATE$"
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
 PenaltyBreakAssignment: 1000
