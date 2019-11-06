@@ -98,11 +98,11 @@ public:
 
   template <class Parent>
   void resolve(Parent& parent, const uri& locator, const actor& listener) {
-    auto worker = find_worker(make_node_id(locator));
-    if (worker == nullptr)
+    if (auto worker = find_worker(make_node_id(locator)))
+      worker->resolve(parent, locator.path(), listener);
+    else
       anon_send(listener,
                 make_error(sec::runtime_error, "could not resolve node"));
-    worker->resolve(parent, locator.path(), listener);
   }
 
   template <class Parent>
@@ -125,9 +125,10 @@ public:
 
   template <class Parent>
   void timeout(Parent& parent, atom_value value, uint64_t id) {
-    auto worker = workers_by_timeout_id_.at(id);
-    worker->timeout(parent, value, id);
-    workers_by_timeout_id_.erase(id);
+    if (auto worker = workers_by_timeout_id_.at(id)) {
+      worker->timeout(parent, value, id);
+      workers_by_timeout_id_.erase(id);
+    }
   }
 
   void handle_error(sec error) {
@@ -176,7 +177,7 @@ private:
 
   factory_type factory_;
   transport_type* transport_;
-}; // namespace net
+};
 
 } // namespace net
 } // namespace caf
