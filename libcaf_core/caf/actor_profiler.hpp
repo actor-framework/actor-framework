@@ -105,7 +105,7 @@ public:
 #  define CAF_BEFORE_PROCESSING(self, msg) static_cast<void>(0)
 #  define CAF_AFTER_PROCESSING(self, result) static_cast<void>(0)
 #  define CAF_BEFORE_SENDING(self, msg) static_cast<void>(0)
-#  define CAF_BEFORE_SENDING_SCHEDULED(self, msg) static_cast<void>(0)
+#  define CAF_BEFORE_SENDING_SCHEDULED(self, timeout, msg) static_cast<void>(0)
 #endif
 
 } // namespace caf
