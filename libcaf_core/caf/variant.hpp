@@ -146,7 +146,7 @@ public:
 
   // -- sanity checks ----------------------------------------------------------
 
-  static_assert(sizeof...(Ts) <= 20, "Too many template arguments given.");
+  static_assert(sizeof...(Ts) <= 30, "Too many template arguments given.");
 
   static_assert(sizeof...(Ts) > 0, "No template argument given.");
 
@@ -284,6 +284,16 @@ public:
       CAF_VARIANT_CASE(17);
       CAF_VARIANT_CASE(18);
       CAF_VARIANT_CASE(19);
+      CAF_VARIANT_CASE(20);
+      CAF_VARIANT_CASE(21);
+      CAF_VARIANT_CASE(22);
+      CAF_VARIANT_CASE(23);
+      CAF_VARIANT_CASE(24);
+      CAF_VARIANT_CASE(25);
+      CAF_VARIANT_CASE(26);
+      CAF_VARIANT_CASE(27);
+      CAF_VARIANT_CASE(28);
+      CAF_VARIANT_CASE(29);
     }
   }
 
@@ -481,6 +491,16 @@ inspect(Inspector& f, variant_writer<variant<Ts...>>& x) {
     CAF_VARIANT_ASSIGN_CASE(17);
     CAF_VARIANT_ASSIGN_CASE(18);
     CAF_VARIANT_ASSIGN_CASE(19);
+    CAF_VARIANT_ASSIGN_CASE(20);
+    CAF_VARIANT_ASSIGN_CASE(21);
+    CAF_VARIANT_ASSIGN_CASE(22);
+    CAF_VARIANT_ASSIGN_CASE(23);
+    CAF_VARIANT_ASSIGN_CASE(24);
+    CAF_VARIANT_ASSIGN_CASE(25);
+    CAF_VARIANT_ASSIGN_CASE(26);
+    CAF_VARIANT_ASSIGN_CASE(27);
+    CAF_VARIANT_ASSIGN_CASE(28);
+    CAF_VARIANT_ASSIGN_CASE(29);
   }
 }
 

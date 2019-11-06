@@ -654,11 +654,6 @@ message(STATUS "Set release version for all documentation to ${CAF_RELEASE}.")
 
 # -- Setup for building manual and API documentation ---------------------------
 
-# we need the examples and some headers relative to the build/doc/tex directory
-file(COPY examples/ DESTINATION examples)
-file(COPY libcaf_core/caf/exit_reason.hpp DESTINATION libcaf_core/caf/)
-file(COPY libcaf_core/caf/sec.hpp DESTINATION libcaf_core/caf/)
-
 add_subdirectory(doc)
 
 ################################################################################

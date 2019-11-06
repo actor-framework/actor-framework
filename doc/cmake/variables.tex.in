@@ -1,2 +1,3 @@
 \newcommand{\cafrelease}{@CAF_RELEASE@}
 \newcommand{\cafsha}{@CAF_SHA@}
+\newcommand{\cafroot}{@PROJECT_SOURCE_DIR@}
