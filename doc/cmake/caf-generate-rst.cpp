@@ -577,7 +577,7 @@ void read_tex_list(State& ps, Consumer& consumer) {
 }
 
 template <class State, class Consumer>
-void read_tex_list(State& ps, Consumer& consumer, const string& cmd_name) {
+void read_tex_list(State& ps, Consumer&& consumer, const string& cmd_name) {
   if (cmd_name == "itemize") {
     list_builder<itemize> builder{&consumer};
     read_tex_list(ps, builder);
