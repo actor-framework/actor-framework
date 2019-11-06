@@ -342,9 +342,14 @@ void print(const config_value::dictionary& xs, indentation indent) {
 
 error actor_system_config::parse(string_list args, std::istream& ini) {
   // Content of the INI file overrides hard-coded defaults.
-  if (ini.good())
+  if (ini.good()) {
     if (auto err = parse_config(ini, custom_options_, content))
       return err;
+  } else {
+    // Not finding an explicitly defined config file is an error.
+    if (auto fname = get_if<std::string>(&content, "config-file"))
+      return make_error(sec::cannot_open_file, *fname);
+  }
   // CLI options override the content of the INI file.
   using std::make_move_iterator;
   auto res = custom_options_.parse(content, args);
@@ -516,6 +521,7 @@ error actor_system_config::extract_config_file_path(string_list& args) {
   auto evalue = ptr->parse(path);
   if (!evalue)
     return std::move(evalue.error());
+  put(content, "config-file", *evalue);
   ptr->store(*evalue);
   return none;
 }
