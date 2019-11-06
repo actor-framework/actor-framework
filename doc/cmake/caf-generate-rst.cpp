@@ -841,55 +841,6 @@ BEGIN_STATE(await_section)
 
 END_STATE(await_section)
 
-BEGIN_STATE(await_section_label)
-
-  void entry(const std::string& section_name, char highlighting) {
-    spaces.clear();
-    this->section_name = section_name;
-    this->highlighting = highlighting;
-  }
-
-  void operator()(label& x) {
-    out() << ".. _" << x.name << ":\n\n"
-          << section_name << '\n'
-          << std::string(section_name.size(), highlighting) << "\n\n";
-    transition(parent_->read_body);
-  }
-
-  void operator()(text& x) {
-    // Ignore whitespaces between \section and \label commands.
-    if (x.str.empty())
-      return;
-    if (!spaces.empty()) {
-      x.str.insert(x.str.begin(), spaces.begin(), spaces.end());
-      delegate();
-      return;
-    }
-    if (std::all_of(x.str.begin(), x.str.end(), ::isspace))
-      spaces = std::move(x.str);
-    else
-      delegate();
-  }
-
-  template <class T>
-  void operator()(T&) {
-    delegate();
-  }
-
-  void delegate() {
-    out() << section_name << '\n'
-          << std::string(section_name.size(), highlighting) << "\n\n";
-    epsilon(parent_->read_body);
-  }
-
-  std::string section_name;
-
-  std::string spaces;
-
-  char highlighting;
-
-END_STATE(await_section_label)
-
 struct string_stream {
   std::string& result;
 };
@@ -973,8 +924,12 @@ Out& operator<<(Out& out, experimental&) {
 } // namespace rst_ops
 
 template <class Out>
-struct rst_ops_visitor {
+struct rst_ops_visitor : abstract_consumer {
   Out& out;
+
+  rst_ops_visitor(Out& out) : out(out) {
+    // nop
+  }
 
   template <class T>
   detail::enable_if_t<is_inline<T>::value> operator()(T& x) {
@@ -986,7 +941,77 @@ struct rst_ops_visitor {
   detail::enable_if_t<!is_inline<T>::value> operator()(T&) {
     throw std::runtime_error("expected an inline command");
   }
+
+  void consume(node x) override {
+    caf::visit(*this, x);
+  }
+
+  template <class T>
+  void consume(T x) {
+    (*this)(x);
+  }
+
+  void cmd(const std::string& name, std::vector<std::string> args) {
+    consume(make_node(name, std::move(args)));
+  }
 };
+
+BEGIN_STATE(await_section_label)
+
+  void entry(const std::string& section_name, char highlighting) {
+    spaces.clear();
+    this->section_name.clear();
+    this->highlighting = highlighting;
+    // TODO: The tokenzier should parse TeX inside section names, too. Remove
+    //       this hack once the sections contains nodes instead of just a
+    //       string.
+    string_stream str_out{this->section_name};
+    rst_ops_visitor<string_stream> v{str_out};
+    using iterator_type = std::string::const_iterator;
+    parser_state<iterator_type> res{section_name.begin(), section_name.end()};
+    read_tex(res, v);
+  }
+
+  void operator()(label& x) {
+    out() << ".. _" << x.name << ":\n\n"
+          << section_name << '\n'
+          << std::string(section_name.size(), highlighting) << "\n\n";
+    transition(parent_->read_body);
+  }
+
+  void operator()(text& x) {
+    // Ignore whitespaces between \section and \label commands.
+    if (x.str.empty())
+      return;
+    if (!spaces.empty()) {
+      x.str.insert(x.str.begin(), spaces.begin(), spaces.end());
+      delegate();
+      return;
+    }
+    if (std::all_of(x.str.begin(), x.str.end(), ::isspace))
+      spaces = std::move(x.str);
+    else
+      delegate();
+  }
+
+  template <class T>
+  void operator()(T&) {
+    delegate();
+  }
+
+  void delegate() {
+    out() << section_name << '\n'
+          << std::string(section_name.size(), highlighting) << "\n\n";
+    epsilon(parent_->read_body);
+  }
+
+  std::string section_name;
+
+  std::string spaces;
+
+  char highlighting;
+
+END_STATE(await_section_label)
 
 BEGIN_STATE(read_body)
 
