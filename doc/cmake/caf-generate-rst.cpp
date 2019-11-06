@@ -726,6 +726,7 @@ public:
     current_node_ = nullptr;
   }
 
+protected:
   template <class T, class... Ts>
   void epsilon(const std::unique_ptr<T>& target, Ts&&... xs) {
     auto& st = target->parent()->state;
@@ -737,7 +738,7 @@ public:
   }
 
   template <class T>
-  void operator()(T&) {
+  void unexpected(T&) {
     auto cstr = type_name<T>::value;
     parse_failure::raise(dref().name(), "unexpected command: ", cstr);
   }
@@ -812,7 +813,6 @@ void rst_writer_state::exit() {
     using super = rst_writer_state_base<rst_writer::type##_state>;             \
     type##_state(rst_writer* parent) : super(parent) {                         \
     }                                                                          \
-    using super::operator();                                                   \
     const char* name() const noexcept override {                               \
       return #type;                                                            \
     }
@@ -832,6 +832,11 @@ BEGIN_STATE(await_section)
 
   void operator()(section& x) {
     transition(parent_->await_section_label, x.name, '=');
+  }
+
+  template <class T>
+  void operator()(T& x) {
+    unexpected(x);
   }
 
 END_STATE(await_section)
@@ -997,7 +1002,7 @@ BEGIN_STATE(read_body)
 
   template <class T>
   detail::enable_if_t<!is_inline<T>::value> operator()(T& x) {
-    super::operator()(x);
+    unexpected(x);
   }
 
   void operator()(subsection& x) {
@@ -1188,8 +1193,6 @@ struct config : actor_system_config {
       .add(input, "input,i", "input .tex file")
       .add(output, "output,o", "output .rst file")
       .add(project_root, "project-root,r", "project root for C++ examples");
-    set("logger.verbosity", atom("quiet"));
-    set("scheduler.max-threads", 1);
   }
 
   std::string input;
@@ -1197,16 +1200,26 @@ struct config : actor_system_config {
   std::string project_root;
 };
 
-void caf_main(actor_system&, const config& cfg) {
+} // namespace
+
+int main(int argc, char** argv) {
+  // Read CAF configuration.
+  config cfg;
+  if (auto err = cfg.parse(argc, argv)) {
+    std::cerr << "unable to parse CAF config: " << cfg.render(err) << '\n';
+    return EXIT_FAILURE;
+  }
+  if (cfg.cli_helptext_printed)
+    return EXIT_SUCCESS;
   if (cfg.input.empty() || cfg.output.empty()) {
     std::cerr << "input or output path missing\n";
-    exit(EXIT_FAILURE);
+    return EXIT_FAILURE;
   }
   rst_writer consumer;
   consumer.out.open(cfg.output);
   if (!consumer.out) {
     std::cerr << "unable to open output file: " << cfg.output << '\n';
-    exit(EXIT_FAILURE);
+    return EXIT_FAILURE;
   }
   consumer.project_root = cfg.project_root;
   std::ifstream input{cfg.input};
@@ -1216,23 +1229,19 @@ void caf_main(actor_system&, const config& cfg) {
     if (res.i != res.e) {
       std::cerr << "error in line " << res.line << " on column " << res.column
                 << ": " << to_string(res.code) << '\n';
-      exit(EXIT_FAILURE);
+      return EXIT_FAILURE;
     }
   } catch (parse_failure& x) {
     std::cerr << "error in line " << res.line << " on column " << res.column
               << " while in state " << x.state_name << ": " << x.what() << '\n';
-    exit(EXIT_FAILURE);
+    return EXIT_FAILURE;
   } catch (std::exception& x) {
     std::cerr << "error in line " << res.line << " on column " << res.column
               << ": " << x.what() << '\n';
-    exit(EXIT_FAILURE);
+    return EXIT_FAILURE;
   } catch (...) {
     std::cerr << "unknown error in line " << res.line << " on column "
               << res.column << '\n';
-    exit(EXIT_FAILURE);
+    return EXIT_FAILURE;
   }
 }
-
-} // namespace
-
-CAF_MAIN()
