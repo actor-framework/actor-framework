@@ -20,7 +20,6 @@
 
 #include <vector>
 
-#include "caf/abstract_actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_clock.hpp"
 #include "caf/actor_control_block.hpp"

@@ -68,7 +68,7 @@ bool response_promise::async() const {
   return id_.is_async();
 }
 
-local_actor* response_promise::self_ptr() const {
+local_actor* response_promise::self_dptr() const {
   // TODO: We require that self_ was constructed by using a local_actor*. The
   //       type erasure performed by strong_actor_ptr hides that fact. We
   //       probably should use a different pointer type such as
@@ -80,7 +80,7 @@ local_actor* response_promise::self_ptr() const {
 }
 
 execution_unit* response_promise::context() {
-  return self_ == nullptr ? nullptr : self_ptr()->context();
+  return self_ == nullptr ? nullptr : self_dptr()->context();
 }
 
 void response_promise::deliver_impl(message msg) {
@@ -89,18 +89,18 @@ void response_promise::deliver_impl(message msg) {
     CAF_LOG_DEBUG("drop response: invalid promise");
     return;
   }
-  auto self = self_ptr();
+  auto dptr = self_dptr();
   if (!stages_.empty()) {
     auto next = std::move(stages_.back());
     stages_.pop_back();
-    detail::profiled_send(self, std::move(source_), next, id_,
-                          std::move(stages_), self->context(), std::move(msg));
+    detail::profiled_send(dptr, std::move(source_), next, id_,
+                          std::move(stages_), dptr->context(), std::move(msg));
     self_.reset();
     return;
   }
   if (source_) {
-    detail::profiled_send(self, self_, source_, id_.response_id(), no_stages,
-                          self->context(), std::move(msg));
+    detail::profiled_send(dptr, self_, source_, id_.response_id(), no_stages,
+                          dptr->context(), std::move(msg));
     self_.reset();
     source_.reset();
     return;
@@ -118,9 +118,9 @@ void response_promise::delegate_impl(abstract_actor* receiver, message msg) {
     CAF_LOG_DEBUG("drop response: invalid promise");
     return;
   }
-  auto self = self_ptr();
-  detail::profiled_send(self, std::move(source_), receiver, id_,
-                        std::move(stages_), self->context(), std::move(msg));
+  auto dptr = self_dptr();
+  detail::profiled_send(dptr, std::move(source_), receiver, id_,
+                        std::move(stages_), dptr->context(), std::move(msg));
   self_.reset();
 }
 

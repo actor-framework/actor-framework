@@ -132,7 +132,8 @@ public:
   }
 
 private:
-  local_actor* self_ptr() const;
+  /// Returns a downcasted version of `self_`.
+  local_actor* self_dptr() const;
 
   execution_unit* context();
 
