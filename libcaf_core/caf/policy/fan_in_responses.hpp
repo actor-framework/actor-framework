@@ -30,6 +30,7 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/error.hpp"
+#include "caf/logger.hpp"
 #include "caf/message_id.hpp"
 
 namespace caf {
@@ -42,6 +43,7 @@ struct fan_in_responses_helper {
   F f;
 
   void operator()(T& x) {
+    CAF_LOG_TRACE(CAF_ARG2("pending", *pending));
     if (*pending > 0) {
       results.emplace_back(std::move(x));
       if (--*pending == 0)
@@ -69,6 +71,7 @@ struct fan_in_responses_tuple_helper {
   F f;
 
   void operator()(Ts&... xs) {
+    CAF_LOG_TRACE(CAF_ARG2("pending", *pending));
     if (*pending > 0) {
       results.emplace_back(std::move(xs)...);
       if (--*pending == 0)
@@ -117,6 +120,7 @@ public:
   }
 
   void operator()(error& err) {
+    CAF_LOG_TRACE(CAF_ARG2("pending", *pending));
     if (*pending > 0) {
       *pending = 0;
       handler(err);
@@ -162,6 +166,7 @@ public:
 
   template <class Self, class F, class OnError>
   void await(Self* self, F&& f, OnError&& g) const {
+    CAF_LOG_TRACE(CAF_ARG(ids_));
     auto bhvr = make_behavior(std::forward<F>(f), std::forward<OnError>(g));
     for (auto id : ids_)
       self->add_awaited_response_handler(id, bhvr);
@@ -169,6 +174,7 @@ public:
 
   template <class Self, class F, class OnError>
   void then(Self* self, F&& f, OnError&& g) const {
+    CAF_LOG_TRACE(CAF_ARG(ids_));
     auto bhvr = make_behavior(std::forward<F>(f), std::forward<OnError>(g));
     for (auto id : ids_)
       self->add_multiplexed_response_handler(id, bhvr);
@@ -176,6 +182,7 @@ public:
 
   template <class Self, class F, class G>
   void receive(Self* self, F&& f, G&& g) const {
+    CAF_LOG_TRACE(CAF_ARG(ids_));
     using helper_type = detail::fan_in_responses_helper_t<detail::decay_t<F>>;
     helper_type helper{ids_.size(), std::forward<F>(f)};
     auto error_handler = [&](error& err) {
