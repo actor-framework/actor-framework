@@ -147,6 +147,10 @@ public:
 
   using message_id_list = std::vector<message_id>;
 
+  template <class Fun>
+  using type_checker = detail::type_checker<
+    response_type, detail::fan_in_responses_helper_t<detail::decay_t<Fun>>>;
+
   explicit fan_in_responses(message_id_list ids) : ids_(std::move(ids)) {
     CAF_ASSERT(ids_.size()
                <= static_cast<size_t>(std::numeric_limits<int>::max()));
@@ -174,7 +178,6 @@ public:
   void receive(Self* self, F&& f, G&& g) const {
     using helper_type = detail::fan_in_responses_helper_t<detail::decay_t<F>>;
     helper_type helper{ids_.size(), std::forward<F>(f)};
-    detail::type_checker<ResponseType, helper_type>::check();
     auto error_handler = [&](error& err) {
       if (*helper.pending > 0) {
         *helper.pending = 0;
@@ -200,7 +203,6 @@ private:
     using helper_type = fan_in_responses_helper_t<decay_t<F>>;
     using error_handler_type = fan_in_responses_error_handler<decay_t<OnError>>;
     helper_type helper{ids_.size(), std::move(f)};
-    type_checker<ResponseType, helper_type>::check();
     error_handler_type err_helper{std::forward<OnError>(g), helper.pending};
     return {
       std::move(helper),

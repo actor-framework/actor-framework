@@ -80,7 +80,7 @@ public:
     static_assert(std::is_same<void, result_type>::value,
                   "response handlers are not allowed to have a return "
                   "type other than void");
-    detail::type_checker<response_type, F>::check();
+    policy_type::template type_checker<F>::check();
     policy_.await(self_, std::move(f), std::move(g));
   }
 
@@ -103,7 +103,7 @@ public:
     static_assert(std::is_same<void, result_type>::value,
                   "response handlers are not allowed to have a return "
                   "type other than void");
-    detail::type_checker<response_type, F>::check();
+    policy_type::template type_checker<F>::check();
     policy_.then(self_, std::move(f), std::move(g));
   }
 
@@ -128,7 +128,7 @@ public:
     static_assert(std::is_same<void, result_type>::value,
                   "response handlers are not allowed to have a return "
                   "type other than void");
-    detail::type_checker<response_type, F>::check();
+    policy_type::template type_checker<F>::check();
     policy_.receive(self_, std::move(f), std::move(g));
   }
 

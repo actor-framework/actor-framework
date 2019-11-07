@@ -39,6 +39,9 @@ public:
 
   using response_type = ResponseType;
 
+  template <class Fun>
+  using type_checker = detail::type_checker<response_type, Fun>;
+
   explicit single_response(message_id mid) noexcept : mid_(mid) {
     // nop
   }
