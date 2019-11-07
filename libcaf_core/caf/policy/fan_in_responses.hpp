@@ -192,10 +192,9 @@ public:
         g(err);
       }
     };
-    auto wrapped_helper = helper.wrap();
     for (auto id : ids_) {
       typename Self::accept_one_cond rc;
-      self->varargs_receive(rc, id, wrapped_helper, error_handler);
+      self->varargs_receive(rc, id, helper.wrap(), error_handler);
     }
   }
 
