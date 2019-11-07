@@ -140,13 +140,13 @@ public:
       dest->eq_impl(req_id, dptr->ctrl(), dptr->context(),
                     std::forward<Ts>(xs)...);
       dptr->request_response_timeout(timeout, req_id);
-      ids.emplace_back(req_id);
+      ids.emplace_back(req_id.response_id());
     }
     if (ids.empty()) {
       auto req_id = dptr->new_request_id(Prio);
       dptr->eq_impl(req_id.response_id(), dptr->ctrl(), dptr->context(),
                     make_error(sec::invalid_argument));
-      ids.emplace_back(req_id);
+      ids.emplace_back(req_id.response_id());
     }
     using response_type
       = response_type_t<typename handle_type::signatures,

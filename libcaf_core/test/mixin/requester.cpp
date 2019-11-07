@@ -170,11 +170,11 @@ CAF_TEST(requesters support fan_out_request) {
   });
   run_once();
   expect((int, int), from(client).to(workers[0]).with(1, 2));
+  expect((int), from(workers[0]).to(client).with(3));
   expect((int, int), from(client).to(workers[1]).with(1, 2));
+  expect((int), from(workers[1]).to(client).with(3));
   expect((int, int), from(client).to(workers[2]).with(1, 2));
-  expect((int), from(client).to(workers[0]).with(3));
-  expect((int), from(client).to(workers[1]).with(3));
-  expect((int), from(client).to(workers[2]).with(3));
+  expect((int), from(workers[2]).to(client).with(3));
   CAF_CHECK_EQUAL(*sum, 9);
 }
 
