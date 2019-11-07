@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include "caf/actor_clock.hpp"
+#include "caf/config.hpp"
 #include "caf/detail/build_config.hpp"
 #include "caf/fwd.hpp"
 
@@ -61,6 +63,33 @@ public:
   virtual void after_processing(const local_actor& self,
                                 invoke_message_result result)
     = 0;
+
+  /// Called whenever an actor is about to send a message. Allows the profiler
+  /// to inject arbitrary meta data before putting the mailbox element into the
+  /// mailbox of the receiver.
+  /// @param self The current actor.
+  /// @param element The outgoing mailbox element.
+  /// @note The profiler gets a mutable reference to `element`, but it is only
+  ///       supposed to inject meta data. Not to alter the message itself. Doing
+  ///       so is an easy way to introduce bugs that are very hard to track
+  ///       down.
+  /// @thread-safe
+  virtual void before_sending(const local_actor& self, mailbox_element& element)
+    = 0;
+
+  /// Analoguous to `before_sending`, but called whenever an actor is about to
+  /// call `actor_clock::schedule_message`.
+  /// @param self The current actor.
+  /// @param timeout Time point for the message delivery.
+  /// @param element The outgoing mailbox element.
+  /// @thread-safe
+  virtual void before_sending_scheduled(const local_actor& self,
+                                        caf::actor_clock::time_point timeout,
+                                        mailbox_element& element)
+    = 0;
+
+  // TODO: the instrumentation currently only works for actor-to-actor messages,
+  //       but not when using group communication.
 };
 
 #ifdef CAF_ENABLE_ACTOR_PROFILER
@@ -68,9 +97,15 @@ public:
     self->system().profiler_before_processing(*self, msg)
 #  define CAF_AFTER_PROCESSING(self, result)                                   \
     self->system().profiler_after_processing(*self, result)
+#  define CAF_BEFORE_SENDING(self, msg)                                        \
+    self->system().profiler_before_sending(*self, msg)
+#  define CAF_BEFORE_SENDING_SCHEDULED(self, timeout, msg)                     \
+    self->system().profiler_before_sending_scheduled(*self, timeout, msg)
 #else
-#  define CAF_BEFORE_PROCESSING(self, msg) CAF_VOID_STMT
-#  define CAF_AFTER_PROCESSING(self, result) CAF_VOID_STMT
+#  define CAF_BEFORE_PROCESSING(self, msg) static_cast<void>(0)
+#  define CAF_AFTER_PROCESSING(self, result) static_cast<void>(0)
+#  define CAF_BEFORE_SENDING(self, msg) static_cast<void>(0)
+#  define CAF_BEFORE_SENDING_SCHEDULED(self, timeout, msg) static_cast<void>(0)
 #endif
 
 } // namespace caf

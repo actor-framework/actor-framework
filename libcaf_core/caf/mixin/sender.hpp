@@ -18,14 +18,16 @@
 
 #pragma once
 
-#include <tuple>
 #include <chrono>
+#include <tuple>
 
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_clock.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/check_typed_input.hpp"
+#include "caf/detail/profiled_send.hpp"
+#include "caf/detail/type_traits.hpp"
 #include "caf/duration.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
@@ -35,6 +37,7 @@
 #include "caf/response_type.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/send.hpp"
+#include "caf/typed_actor_view_base.hpp"
 
 namespace caf {
 namespace mixin {
@@ -57,35 +60,44 @@ public:
   // -- send function family ---------------------------------------------------
 
   /// Sends `{xs...}` as an asynchronous message to `dest` with priority `mp`.
-  template <message_priority P = message_priority::normal,
-            class Dest = actor, class... Ts>
-  void send(const Dest& dest, Ts&&... xs) {
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
-    type_check(dest, args_token);
-    if (dest)
-      dest->eq_impl(make_message_id(P), dptr()->ctrl(),
-                    dptr()->context(), std::forward<Ts>(xs)...);
-  }
-
-  /// Sends `{xs...}` as an asynchronous message to `dest` with priority `mp`.
   template <message_priority P = message_priority::normal, class... Ts>
-  void send(const strong_actor_ptr& dest, Ts&&... xs) {
-    using detail::type_list;
+  void send(const group& dest, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     static_assert(!statically_typed<Subtype>(),
                   "statically typed actors can only send() to other "
-                  "statically typed actors; use anon_send() or request() when "
-                  "communicating with dynamically typed actors");
-    if (dest)
-      dest->get()->eq_impl(make_message_id(P), dptr()->ctrl(),
-                           dptr()->context(), std::forward<Ts>(xs)...);
+                  "statically typed actors; use anon_send() when "
+                  "communicating to groups");
+    // TODO: consider whether it's feasible to track messages to groups
+    if (dest) {
+      auto self = dptr();
+      dest->eq_impl(make_message_id(P), self->ctrl(), self->context(),
+                    std::forward<Ts>(xs)...);
+    }
   }
 
-  template <message_priority P = message_priority::normal,
-            class Dest = actor, class... Ts>
+  /// Sends `{xs...}` as an asynchronous message to `dest` with priority `mp`.
+  template <message_priority P = message_priority::normal, class Dest,
+            class... Ts>
+  detail::enable_if_t<!std::is_same<group, Dest>::value> send(const Dest& dest,
+                                                              Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
+    type_check(dest, args_token);
+    auto self = dptr();
+    detail::profiled_send(self, self->ctrl(), dest, make_message_id(P), {},
+                          self->context(), std::forward<Ts>(xs)...);
+  }
+
+  template <message_priority P = message_priority::normal, class Dest = actor,
+            class... Ts>
   void anon_send(const Dest& dest, Ts&&... xs) {
-    caf::anon_send(dest, std::forward<Ts>(xs)...);
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    using token = detail::type_list<detail::strip_and_convert_t<Ts>...>;
+    static_assert(response_type_unbox<signatures_of_t<Dest>, token>::valid,
+                  "receiver does not accept given message");
+    auto self = dptr();
+    detail::profiled_send(self, self->ctrl(), dest, make_message_id(P), {},
+                          self->context(), std::forward<Ts>(xs)...);
   }
 
   /// Sends a message at given time point (or immediately if `timeout` has
@@ -98,13 +110,9 @@ public:
     static_assert(sizeof...(Ts) > 0, "no message to send");
     detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
     type_check(dest, args_token);
-    if (dest) {
-      auto& clock = dptr()->system().clock();
-      clock.schedule_message(timeout, actor_cast<strong_actor_ptr>(dest),
-                             make_mailbox_element(dptr()->ctrl(),
-                                                  make_message_id(P), no_stages,
-                                                  std::forward<Ts>(xs)...));
-    }
+    auto self = dptr();
+    detail::profiled_send(self, self->ctrl(), dest, self->system().clock(),
+                          timeout, make_message_id(P), std::forward<Ts>(xs)...);
   }
 
   /// Sends a message at given time point (or immediately if `timeout` has
@@ -115,9 +123,11 @@ public:
     static_assert(sizeof...(Ts) > 0, "no message to send");
     static_assert(!statically_typed<Subtype>(),
                   "statically typed actors are not allowed to send to groups");
+    // TODO: consider whether it's feasible to track messages to groups
     if (dest) {
-      auto& clock = dptr()->system().clock();
-      clock.schedule_message(timeout, dest, dptr()->ctrl(),
+      auto self = dptr();
+      auto& clock = self->system().clock();
+      clock.schedule_message(timeout, dest, self->ctrl(),
                              make_message(std::forward<Ts>(xs)...));
     }
   }
@@ -131,14 +141,11 @@ public:
     static_assert(sizeof...(Ts) > 0, "no message to send");
     detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
     type_check(dest, args_token);
-    if (dest) {
-      auto& clock = dptr()->system().clock();
-      auto timeout = clock.now() + rel_timeout;
-      clock.schedule_message(timeout, actor_cast<strong_actor_ptr>(dest),
-                             make_mailbox_element(dptr()->ctrl(),
-                                                  make_message_id(P), no_stages,
-                                                  std::forward<Ts>(xs)...));
-    }
+    auto self = dptr();
+    auto& clock = self->system().clock();
+    auto timeout = clock.now() + rel_timeout;
+    detail::profiled_send(self, self->ctrl(), dest, clock, timeout,
+                          make_message_id(P), std::forward<Ts>(xs)...);
   }
 
   /// Sends a message after a relative timeout.
@@ -149,28 +156,73 @@ public:
     static_assert(sizeof...(Ts) > 0, "no message to send");
     static_assert(!statically_typed<Subtype>(),
                   "statically typed actors are not allowed to send to groups");
+    // TODO: consider whether it's feasible to track messages to groups
     if (dest) {
-      auto& clock = dptr()->system().clock();
+      auto self = dptr();
+      auto& clock = self->system().clock();
       auto timeout = clock.now() + rtime;
-      clock.schedule_message(timeout, dest, dptr()->ctrl(),
+      clock.schedule_message(timeout, dest, self->ctrl(),
                              make_message(std::forward<Ts>(xs)...));
     }
   }
 
   template <message_priority P = message_priority::normal, class Dest = actor,
+            class... Ts>
+  void scheduled_anon_send(const Dest& dest, actor_clock::time_point timeout,
+                           Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
+    type_check(dest, args_token);
+    auto self = dptr();
+    detail::profiled_send(self, self->ctrl(), dest, self->system().clock(),
+                          timeout, make_message_id(P), std::forward<Ts>(xs)...);
+  }
+
+  template <message_priority P = message_priority::normal, class Dest = actor,
             class Rep = int, class Period = std::ratio<1>, class... Ts>
   void delayed_anon_send(const Dest& dest,
-                         std::chrono::duration<Rep, Period> rtime, Ts&&... xs) {
-    caf::delayed_anon_send<P>(dest, rtime, std::forward<Ts>(xs)...);
+                         std::chrono::duration<Rep, Period> rel_timeout,
+                         Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
+    type_check(dest, args_token);
+    auto self = dptr();
+    auto& clock = self->system().clock();
+    auto timeout = clock.now() + rel_timeout;
+    detail::profiled_send(self, self->ctrl(), dest, clock, timeout,
+                          make_message_id(P), std::forward<Ts>(xs)...);
   }
 
   template <class Rep = int, class Period = std::ratio<1>, class... Ts>
   void delayed_anon_send(const group& dest,
                          std::chrono::duration<Rep, Period> rtime, Ts&&... xs) {
-    caf::delayed_anon_send(dest, rtime, std::forward<Ts>(xs)...);
+    delayed_anon_send_impl(dest, rtime, std::forward<Ts>(xs)...);
   }
 
 private:
+  template <class Dest, class... Ts>
+  void scheduled_send_impl(message_id mid, const Dest& dest, actor_clock& clock,
+                           actor_clock::time_point timeout, Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
+    type_check(dest, args_token);
+    auto self = dptr();
+    detail::profiled_send(self, self->ctrl(), dest, clock, timeout, mid,
+                          std::forward<Ts>(xs)...);
+  }
+
+  template <class Dest, class... Ts>
+  void scheduled_anon_send_impl(message_id mid, const Dest& dest,
+                                actor_clock& clock,
+                                actor_clock::time_point timeout, Ts&&... xs) {
+    static_assert(sizeof...(Ts) > 0, "no message to send");
+    detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
+    type_check(dest, args_token);
+    auto self = dptr();
+    detail::profiled_send(self, nullptr, dest, clock, timeout, mid,
+                          std::forward<Ts>(xs)...);
+  }
+
   template <class Dest, class ArgTypes>
   static void type_check(const Dest&, ArgTypes) {
     static_assert(!statically_typed<Subtype>() || statically_typed<Dest>(),
@@ -186,8 +238,16 @@ private:
                   "this actor does not accept the response message");
   }
 
-  Subtype* dptr() {
+  template <class T = Base>
+  detail::enable_if_t<std::is_base_of<abstract_actor, T>::value, Subtype*>
+  dptr() {
     return static_cast<Subtype*>(this);
+  }
+
+  template <class T = Subtype, class = detail::enable_if_t<std::is_base_of<
+                                 typed_actor_view_base, T>::value>>
+  typename T::pointer dptr() {
+    return static_cast<Subtype*>(this)->internal_ptr();
   }
 };
 

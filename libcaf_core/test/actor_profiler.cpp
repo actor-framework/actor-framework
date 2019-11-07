@@ -33,7 +33,7 @@ namespace {
 using string_list = std::vector<std::string>;
 
 struct recorder : actor_profiler {
-  void add_actor(const local_actor& self, const local_actor* parent) {
+  void add_actor(const local_actor& self, const local_actor* parent) override {
     log.emplace_back("new: ");
     auto& str = log.back();
     str += self.name();
@@ -43,25 +43,43 @@ struct recorder : actor_profiler {
     }
   }
 
-  void remove_actor(const local_actor& self) {
+  void remove_actor(const local_actor& self) override {
     log.emplace_back("delete: ");
     log.back() += self.name();
   }
 
   void before_processing(const local_actor& self,
-                         const mailbox_element& element) {
+                         const mailbox_element& element) override {
     log.emplace_back(self.name());
     auto& str = log.back();
     str += " got: ";
     str += to_string(element.content());
   }
 
-  void after_processing(const local_actor& self, invoke_message_result result) {
+  void after_processing(const local_actor& self,
+                        invoke_message_result result) override {
     log.emplace_back(self.name());
     auto& str = log.back();
     str += " ";
     str += to_string(result);
     str += " the message";
+  }
+
+  void before_sending(const local_actor& self,
+                      mailbox_element& element) override {
+    log.emplace_back(self.name());
+    auto& str = log.back();
+    str += " sends: ";
+    str += to_string(element.content());
+  }
+
+  void before_sending_scheduled(const local_actor& self,
+                                actor_clock::time_point,
+                                mailbox_element& element) override {
+    log.emplace_back(self.name());
+    auto& str = log.back();
+    str += " sends (scheduled): ";
+    str += to_string(element.content());
   }
 
   string_list log;
@@ -92,19 +110,22 @@ struct fixture {
   scheduler_type& sched;
 };
 
-struct foo_state {
-  const char* name = "foo";
-};
+#  define NAMED_ACTOR_STATE(type)                                              \
+    struct type##_state {                                                      \
+      const char* name = #type;                                                \
+    }
 
-struct bar_state {
-  const char* name = "bar";
-};
+NAMED_ACTOR_STATE(bar);
+NAMED_ACTOR_STATE(client);
+NAMED_ACTOR_STATE(foo);
+NAMED_ACTOR_STATE(server);
+NAMED_ACTOR_STATE(worker);
 
 } // namespace
 
 CAF_TEST_FIXTURE_SCOPE(actor_profiler_tests, fixture)
 
-CAF_TEST(record actor construction) {
+CAF_TEST(profilers record actor construction) {
   CAF_MESSAGE("fully initialize CAF, ignore system-internal actors");
   run();
   rec.log.clear();
@@ -123,7 +144,7 @@ CAF_TEST(record actor construction) {
                   rec.log);
 }
 
-CAF_TEST(record actor messaging) {
+CAF_TEST(profilers record asynchronous messaging) {
   CAF_MESSAGE("fully initialize CAF, ignore system-internal actors");
   run();
   rec.log.clear();
@@ -148,12 +169,59 @@ CAF_TEST(record actor messaging) {
   CAF_CHECK_EQUAL(string_list({
                     "new: foo",
                     "new: bar, parent: foo",
+                    "foo sends: (\"hello bar\")",
                     "bar got: (\"hello bar\")",
+                    "bar sends: (\"hello foo\")",
                     "bar consumed the message",
                     "foo got: (\"hello foo\")",
                     "delete: bar",
                     "foo consumed the message",
                     "delete: foo",
+                  }),
+                  rec.log);
+}
+
+CAF_TEST(profilers record request / response messaging) {
+  CAF_MESSAGE("fully initialize CAF, ignore system-internal actors");
+  run();
+  rec.log.clear();
+  CAF_MESSAGE("spawn a client and a server with one worker");
+  auto worker = [](stateful_actor<worker_state>*) -> behavior {
+    return {
+      [](int x, int y) { return x + y; },
+    };
+  };
+  auto server = [](stateful_actor<server_state>* self, actor work) -> behavior {
+    return {
+      [=](int x, int y) { return self->delegate(work, x, y); },
+    };
+  };
+  auto client = [](stateful_actor<client_state>* self, actor serv) {
+    self->request(serv, infinite, 19, 23).then([](int result) {
+      CAF_CHECK_EQUAL(result, 42);
+    });
+  };
+  sys.spawn(client, sys.spawn(server, sys.spawn(worker)));
+  run();
+  for (const auto& line : rec.log) {
+    CAF_MESSAGE(line);
+  }
+  CAF_CHECK_EQUAL(string_list({
+                    "new: worker",
+                    "new: server",
+                    "new: client",
+                    "client sends: (19, 23)",
+                    "server got: (19, 23)",
+                    "server sends: (19, 23)",
+                    "server consumed the message",
+                    "delete: server",
+                    "worker got: (19, 23)",
+                    "worker sends: (42)",
+                    "worker consumed the message",
+                    "client got: (42)",
+                    "client consumed the message",
+                    "delete: worker",
+                    "delete: client",
                   }),
                   rec.log);
 }
