@@ -16,10 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#define CAF_SUITE io.remote_spawn
+
 #include "caf/config.hpp"
 
-#define CAF_SUITE io_remote_spawn
-#include "caf/test/dsl.hpp"
+#include "caf/test/io_dsl.hpp"
 
 #include <cstring>
 #include <functional>
@@ -72,8 +73,7 @@ calculator::behavior_type typed_calculator_fun() {
 }
 
 struct config : actor_system_config {
-  config(int argc, char** argv) {
-    parse(argc, argv);
+  config() {
     load<io::middleman>();
     add_actor_type<calculator_class>("calculator-class");
     add_actor_type("calculator", calculator_fun);
@@ -81,48 +81,48 @@ struct config : actor_system_config {
   }
 };
 
-void run_client(int argc, char** argv, uint16_t port) {
-  config cfg{argc, argv};
-  actor_system sys{cfg};
-  scoped_actor self{sys};
-  auto& mm = sys.middleman();
-  auto nid = mm.connect("localhost", port);
-  CAF_REQUIRE(nid);
-  CAF_REQUIRE_NOT_EQUAL(sys.node(), *nid);
-  auto calc = mm.remote_spawn<calculator>(*nid, "calculator", make_message());
-  CAF_REQUIRE(!calc);
-  CAF_REQUIRE_EQUAL(calc.error().category(), atom("system"));
-  CAF_REQUIRE_EQUAL(static_cast<sec>(calc.error().code()),
-                    sec::unexpected_actor_messaging_interface);
-  calc = mm.remote_spawn<calculator>(*nid, "typed_calculator", make_message());
-  CAF_REQUIRE(calc);
-  auto f1 = make_function_view(*calc);
-  CAF_REQUIRE_EQUAL(f1(add_atom::value, 10, 20), 30);
-  CAF_REQUIRE_EQUAL(f1(sub_atom::value, 10, 20), -10);
-  f1.reset();
-  anon_send_exit(*calc, exit_reason::kill);
-  auto dyn_calc = unbox(
-    mm.remote_spawn<actor>(*nid, "calculator-class", make_message()));
-  CAF_REQUIRE(dyn_calc);
-  self->request(dyn_calc, infinite, add_atom::value, 10, 20)
-    .receive([](int result) { CAF_CHECK_EQUAL(result, 30); },
-             [&](const error& err) { CAF_FAIL("error: " << sys.render(err)); });
-  anon_send_exit(dyn_calc, exit_reason::kill);
-  mm.close(port);
-}
-
-void run_server(int argc, char** argv) {
-  config cfg{argc, argv};
-  actor_system system{cfg};
-  auto port = unbox(system.middleman().open(0));
-  std::thread child{[=] { run_client(argc, argv, port); }};
-  child.join();
-}
+struct fixture : point_to_point_fixture<test_coordinator_fixture<config>> {
+  fixture() {
+    prepare_connection(mars, earth, "mars", 8080);
+    // ssp = std::make_shared<suite_state>();
+  }
+};
 
 } // namespace
 
-CAF_TEST(remote_spawn) {
-  auto argc = test::engine::argc();
-  auto argv = test::engine::argv();
-  run_server(argc, argv);
+CAF_TEST_FIXTURE_SCOPE(dynamic_remote_actor_tests, fixture)
+
+CAF_TEST(nodes can spawn actors remotely) {
+  loop_after_next_enqueue(mars);
+  CAF_CHECK_EQUAL(unbox(mars.mm.open(8080)), 8080);
+  loop_after_next_enqueue(earth);
+  auto nid = unbox(earth.mm.connect("mars", 8080));
+  CAF_REQUIRE_EQUAL(nid, mars.sys.node());
+  CAF_MESSAGE("remote_spawn perform type checks on the handle");
+  loop_after_next_enqueue(earth);
+  auto calc = earth.mm.remote_spawn<calculator>(nid, "calculator",
+                                                make_message());
+  CAF_REQUIRE_EQUAL(calc, sec::unexpected_actor_messaging_interface);
+  loop_after_next_enqueue(earth);
+  calc = earth.mm.remote_spawn<calculator>(nid, "typed_calculator",
+                                           make_message());
+  CAF_MESSAGE("remotely spawned actors respond to messages");
+  earth.self->send(*calc, add_atom::value, 10, 20);
+  run();
+  expect_on(earth, (int), from(*calc).to(earth.self).with(30));
+  earth.self->send(*calc, sub_atom::value, 10, 20);
+  run();
+  expect_on(earth, (int), from(*calc).to(earth.self).with(-10));
+  anon_send_exit(*calc, exit_reason::user_shutdown);
+  CAF_MESSAGE("remote_spawn works with class-based actors as well");
+  loop_after_next_enqueue(earth);
+  auto dyn_calc = earth.mm.remote_spawn<actor>(nid, "calculator-class",
+                                               make_message());
+  CAF_REQUIRE(dyn_calc);
+  earth.self->send(*dyn_calc, add_atom::value, 10, 20);
+  run();
+  expect_on(earth, (int), from(*dyn_calc).to(earth.self).with(30));
+  anon_send_exit(*dyn_calc, exit_reason::user_shutdown);
 }
+
+CAF_TEST_FIXTURE_SCOPE_END()

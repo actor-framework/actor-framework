@@ -16,10 +16,9 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
+#define CAF_SUITE io.remote_actor
 
-#define CAF_SUITE io_dynamic_remote_actor
-#include "caf/test/dsl.hpp"
+#include "caf/test/io_dsl.hpp"
 
 #include <algorithm>
 #include <sstream>
@@ -33,89 +32,55 @@ using namespace caf;
 
 namespace {
 
-constexpr char local_host[] = "127.0.0.1";
+using ping_atom = caf::atom_constant<caf::atom("ping")>;
+using pong_atom = caf::atom_constant<caf::atom("pong")>;
+using publish_atom = caf::atom_constant<caf::atom("publish")>;
+using kickoff_atom = caf::atom_constant<caf::atom("kickoff")>;
 
-class config : public actor_system_config {
-public:
-  config() {
-    load<io::middleman>();
-    add_message_type<std::vector<int>>("std::vector<int>");
-    if (auto err = parse(test::engine::argc(), test::engine::argv()))
-      CAF_FAIL("failed to parse config: " << to_string(err));
-  }
+struct suite_state {
+  int pings = 0;
+  int pongs = 0;
+  error linking_result;
+  suite_state() = default;
 };
 
-struct fixture {
-  // State for the server.
-  config server_side_config;
-  actor_system server_side;
-  io::middleman& server_side_mm;
+using suite_state_ptr = std::shared_ptr<suite_state>;
 
-  // State for the client.
-  config client_side_config;
-  actor_system client_side;
-  io::middleman& client_side_mm;
-
-  fixture()
-    : server_side(server_side_config),
-      server_side_mm(server_side.middleman()),
-      client_side(client_side_config),
-      client_side_mm(client_side.middleman()) {
-    // nop
-  }
-};
-
-behavior make_pong_behavior() {
+behavior ping(event_based_actor* self, suite_state_ptr ssp) {
   return {
-    [](int val) -> int {
-      ++val;
-      CAF_MESSAGE("pong with " << val);
-      return val;
+    [=](kickoff_atom, const actor& pong) {
+      CAF_MESSAGE("received `kickoff_atom`");
+      ++ssp->pings;
+      self->send(pong, ping_atom::value);
+      self->become([=](pong_atom) {
+        CAF_MESSAGE("ping: received pong");
+        self->send(pong, ping_atom::value);
+        if (++ssp->pings == 10) {
+          self->quit();
+          CAF_MESSAGE("ping is done");
+        }
+      });
     },
   };
 }
 
-behavior make_ping_behavior(event_based_actor* self, const actor& pong) {
-  CAF_MESSAGE("ping with " << 0);
-  self->send(pong, 0);
-  return {[=](int val) -> int {
-    if (val == 3) {
-      CAF_MESSAGE("ping with exit");
-      self->send_exit(self->current_sender(), exit_reason::user_shutdown);
-      CAF_MESSAGE("ping quits");
-      self->quit();
-    }
-    CAF_MESSAGE("ping with " << val);
-    return val;
-  }};
-}
-
-behavior make_sort_behavior() {
+behavior pong(event_based_actor* self, suite_state_ptr ssp) {
   return {
-    [](std::vector<int>& vec) -> std::vector<int> {
-      CAF_MESSAGE("sorter received: " << deep_to_string(vec));
-      std::sort(vec.begin(), vec.end());
-      CAF_MESSAGE("sorter sent: " << deep_to_string(vec));
-      return std::move(vec);
+    [=](ping_atom) -> atom_value {
+      CAF_MESSAGE("pong: received ping");
+      if (++ssp->pongs == 10) {
+        self->quit();
+        CAF_MESSAGE("pong is done");
+      }
+      return pong_atom::value;
     },
   };
 }
 
-behavior make_sort_requester_behavior(event_based_actor* self,
-                                      const actor& sorter) {
-  self->send(sorter, std::vector<int>{5, 4, 3, 2, 1});
-  return {
-    [=](const std::vector<int>& vec) {
-      CAF_MESSAGE("sort requester received: " << deep_to_string(vec));
-      std::vector<int> expected_vec{1, 2, 3, 4, 5};
-      CAF_CHECK_EQUAL(vec, expected_vec);
-      self->send_exit(sorter, exit_reason::user_shutdown);
-      self->quit();
-    },
-  };
-}
+using fragile_mirror_actor = typed_actor<replies_to<int>::with<int>>;
 
-behavior fragile_mirror(event_based_actor* self) {
+fragile_mirror_actor::behavior_type
+fragile_mirror(fragile_mirror_actor::pointer self) {
   return {
     [=](int i) {
       self->quit(exit_reason::user_shutdown);
@@ -124,67 +89,60 @@ behavior fragile_mirror(event_based_actor* self) {
   };
 }
 
-behavior linking_actor(event_based_actor* self, const actor& buddy) {
+behavior linking_actor(event_based_actor* self,
+                       const fragile_mirror_actor& buddy, suite_state_ptr ssp) {
   CAF_MESSAGE("link to mirror and send dummy message");
-  self->link_to(buddy);
   self->send(buddy, 42);
+  self->link_to(buddy);
+  self->set_exit_handler([=](exit_msg& msg) {
+    // Record exit reason for checking it later.
+    ssp->linking_result = msg.reason;
+    self->quit(std::move(msg.reason));
+  });
   return {
     [](int i) { CAF_CHECK_EQUAL(i, 42); },
   };
 }
+
+struct fixture : point_to_point_fixture<> {
+  fixture() {
+    prepare_connection(mars, earth, "mars", 8080);
+    ssp = std::make_shared<suite_state>();
+  }
+
+  suite_state_ptr ssp;
+};
 
 } // namespace
 
 CAF_TEST_FIXTURE_SCOPE(dynamic_remote_actor_tests, fixture)
 
 CAF_TEST(identity_semantics) {
-  // server side
-  auto server = server_side.spawn(make_pong_behavior);
-  auto port1 = unbox(server_side_mm.publish(server, 0, local_host));
-  auto port2 = unbox(server_side_mm.publish(server, 0, local_host));
-  CAF_REQUIRE_NOT_EQUAL(port1, port2);
-  auto same_server = unbox(server_side_mm.remote_actor(local_host, port2));
+  auto server = mars.sys.spawn(pong, ssp);
+  auto port = mars.publish(server, 8080);
+  CAF_CHECK_EQUAL(port, 8080u);
+  auto same_server = earth.remote_actor("mars", 8080);
   CAF_REQUIRE_EQUAL(same_server, server);
-  CAF_CHECK_EQUAL(same_server->node(), server_side.node());
-  auto server1 = unbox(client_side_mm.remote_actor(local_host, port1));
-  auto server2 = unbox(client_side_mm.remote_actor(local_host, port2));
-  CAF_CHECK_EQUAL(server1, client_side_mm.remote_actor(local_host, port1));
-  CAF_CHECK_EQUAL(server2, client_side_mm.remote_actor(local_host, port2));
   anon_send_exit(server, exit_reason::user_shutdown);
 }
 
 CAF_TEST(ping_pong) {
-  // server side
-  auto port = unbox(
-    server_side_mm.publish(server_side.spawn(make_pong_behavior), 0,
-                           local_host));
-  // client side
-  auto pong = unbox(client_side_mm.remote_actor(local_host, port));
-  client_side.spawn(make_ping_behavior, pong);
-}
-
-CAF_TEST(custom_message_type) {
-  // server side
-  auto port = unbox(
-    server_side_mm.publish(server_side.spawn(make_sort_behavior), 0,
-                           local_host));
-  // client side
-  auto sorter = unbox(client_side_mm.remote_actor(local_host, port));
-  client_side.spawn(make_sort_requester_behavior, sorter);
+  auto port = mars.publish(mars.sys.spawn(pong, ssp), 8080);
+  CAF_CHECK_EQUAL(port, 8080u);
+  auto remote_pong = earth.remote_actor("mars", 8080);
+  anon_send(earth.sys.spawn(ping, ssp), kickoff_atom::value, remote_pong);
+  run();
+  CAF_CHECK_EQUAL(ssp->pings, 10);
+  CAF_CHECK_EQUAL(ssp->pongs, 10);
 }
 
 CAF_TEST(remote_link) {
-  // server side
-  auto port = unbox(
-    server_side_mm.publish(server_side.spawn(fragile_mirror), 0, local_host));
-  // client side
-  auto mirror = unbox(client_side_mm.remote_actor(local_host, port));
-  auto linker = client_side.spawn(linking_actor, mirror);
-  scoped_actor self{client_side};
-  self->wait_for(linker);
-  CAF_MESSAGE("linker exited");
-  self->wait_for(mirror);
-  CAF_MESSAGE("mirror exited");
+  auto port = mars.publish(mars.sys.spawn(fragile_mirror), 8080);
+  CAF_CHECK_EQUAL(port, 8080u);
+  auto mirror = earth.remote_actor<fragile_mirror_actor>("mars", 8080);
+  earth.sys.spawn(linking_actor, mirror, ssp);
+  run();
+  CAF_CHECK_EQUAL(ssp->linking_result, exit_reason::user_shutdown);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

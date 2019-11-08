@@ -79,27 +79,4 @@ CAF_TEST(doorman io_failure) {
   CAF_CHECK_EQUAL(server.mpx.num_socket_handlers(), 1u);
 }
 
-CAF_TEST(scribe io_failure) {
-  CAF_MESSAGE("add doorman to server");
-  CAF_CHECK_EQUAL(server.mpx.num_socket_handlers(), 1u);
-  auto doorman = unbox(server.mpx.new_tcp_doorman(0, nullptr, false));
-  doorman->add_to_loop();
-  server.mpx.handle_internal_events();
-  CAF_CHECK_EQUAL(server.mpx.num_socket_handlers(), 2u);
-  CAF_MESSAGE("connect to server (add scribe to client)");
-  auto scribe = unbox(client.mpx.new_tcp_scribe("localhost", doorman->port()));
-  CAF_CHECK_EQUAL(client.mpx.num_socket_handlers(), 1u);
-  scribe->add_to_loop();
-  client.mpx.handle_internal_events();
-  CAF_CHECK_EQUAL(client.mpx.num_socket_handlers(), 2u);
-  CAF_MESSAGE("trigger I/O failure in scribe");
-  scribe->io_failure(&client.mpx, io::network::operation::propagate_error);
-  client.mpx.handle_internal_events();
-  CAF_CHECK_EQUAL(client.mpx.num_socket_handlers(), 1u);
-  CAF_MESSAGE("trigger I/O failure in doorman");
-  doorman->io_failure(&server.mpx, io::network::operation::propagate_error);
-  server.mpx.handle_internal_events();
-  CAF_CHECK_EQUAL(server.mpx.num_socket_handlers(), 1u);
-}
-
 CAF_TEST_FIXTURE_SCOPE_END()

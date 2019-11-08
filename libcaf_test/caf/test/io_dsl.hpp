@@ -25,6 +25,15 @@
 
 #include "caf/test/dsl.hpp"
 
+class test_node_fixture_config : public caf::actor_system_config {
+public:
+  test_node_fixture_config() {
+    load<caf::io::middleman>();
+  }
+};
+
+using io_base_fixture = test_coordinator_fixture<test_node_fixture_config>;
+
 /// Ensures that `test_node_fixture` can override `run_exhaustively` even if
 /// the base fixture does not declare these member functions virtual.
 template <class BaseFixture>
@@ -46,10 +55,9 @@ public:
 };
 
 /// A fixture containing all required state to simulate a single CAF node.
-template <class BaseFixture =
-            test_coordinator_fixture<caf::actor_system_config>>
+template <class BaseFixture = io_base_fixture>
 class test_node_fixture : public BaseFixture,
-                          test_node_fixture_base<BaseFixture> {
+                          public test_node_fixture_base<BaseFixture> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -224,10 +232,9 @@ private:
 
 /// A simple fixture that includes two nodes (`earth` and `mars`) that can
 /// connect to each other.
-template <class BaseFixture =
-            test_coordinator_fixture<caf::actor_system_config>>
+template <class BaseFixture = io_base_fixture>
 class point_to_point_fixture
-    : public test_network_fixture_base<test_node_fixture<BaseFixture>> {
+  : public test_network_fixture_base<test_node_fixture<BaseFixture>> {
 public:
   using planet_type = test_node_fixture<BaseFixture>;
 
@@ -243,14 +250,21 @@ public:
     // Run initialization code.
     this->exec_all();
   }
+
+  ~point_to_point_fixture() {
+    run();
+  }
+
+  void run() {
+    this->exec_all();
+  }
 };
 
 /// A simple fixture that includes three nodes (`earth`, `mars`, and `jupiter`)
 /// that can connect to each other.
-template <class BaseFixture =
-            test_coordinator_fixture<caf::actor_system_config>>
+template <class BaseFixture = io_base_fixture>
 class belt_fixture
-    : public test_network_fixture_base<test_node_fixture<BaseFixture>> {
+  : public test_network_fixture_base<test_node_fixture<BaseFixture>> {
 public:
   using planet_type = test_node_fixture<BaseFixture>;
 

@@ -16,7 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE io_basp_message_queue
+#define CAF_SUITE io.basp.message_queue
 
 #include "caf/io/basp/message_queue.hpp"
 
