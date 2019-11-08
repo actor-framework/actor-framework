@@ -36,6 +36,7 @@ template <class Self, class Sender, class Handle, class... Ts>
 void profiled_send(Self* self, Sender&& sender, const Handle& receiver,
                    message_id msg_id, std::vector<strong_actor_ptr> stages,
                    execution_unit* context, Ts&&... xs) {
+  CAF_IGNORE_UNUSED(self);
   if (receiver) {
     auto element = make_mailbox_element(std::forward<Sender>(sender), msg_id,
                                         std::move(stages),
@@ -49,6 +50,7 @@ template <class Self, class Sender, class Handle, class... Ts>
 void profiled_send(Self* self, Sender&& sender, const Handle& receiver,
                    actor_clock& clock, actor_clock::time_point timeout,
                    message_id msg_id, Ts&&... xs) {
+  CAF_IGNORE_UNUSED(self);
   if (receiver) {
     auto element = make_mailbox_element(std::forward<Sender>(sender), msg_id,
                                         no_stages, std::forward<Ts>(xs)...);
