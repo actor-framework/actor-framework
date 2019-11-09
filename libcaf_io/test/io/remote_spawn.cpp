@@ -84,7 +84,6 @@ struct config : actor_system_config {
 struct fixture : point_to_point_fixture<test_coordinator_fixture<config>> {
   fixture() {
     prepare_connection(mars, earth, "mars", 8080);
-    // ssp = std::make_shared<suite_state>();
   }
 };
 
