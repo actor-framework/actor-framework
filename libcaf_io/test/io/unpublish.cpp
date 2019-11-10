@@ -16,12 +16,14 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#define CAF_SUITE io.unpublish
+
 #include "caf/config.hpp"
 
-#define CAF_SUITE io_unpublish
-#include "caf/test/dsl.hpp"
+#include "caf/test/io_dsl.hpp"
 
 #include <atomic>
+#include <memory>
 #include <new>
 #include <thread>
 
@@ -32,16 +34,22 @@ using namespace caf;
 
 namespace {
 
-std::atomic<long> s_dtor_called;
+struct suite_state {
+  long dtors_called = 0;
+  suite_state() = default;
+};
+
+using suite_state_ptr = std::shared_ptr<suite_state>;
 
 class dummy : public event_based_actor {
 public:
-  dummy(actor_config& cfg) : event_based_actor(cfg) {
+  dummy(actor_config& cfg, suite_state_ptr ssp)
+    : event_based_actor(cfg), ssp_(std::move(ssp)) {
     // nop
   }
 
   ~dummy() override {
-    ++s_dtor_called;
+    ssp_->dtors_called += 1;
   }
 
   behavior make_behavior() override {
@@ -49,85 +57,54 @@ public:
       // nop
     }};
   }
+
+private:
+  suite_state_ptr ssp_;
 };
 
-struct config : actor_system_config {
-  config() {
-    load<io::middleman>();
-    if (auto err = parse(test::engine::argc(), test::engine::argv()))
-      CAF_FAIL("failed to parse config: " << to_string(err));
-  }
-};
-
-struct fixture {
+struct fixture : point_to_point_fixture<> {
   fixture() {
-    new (&system) actor_system(cfg);
-    testee = system.spawn<dummy>();
+    prepare_connection(mars, earth, "mars", 8080);
+    ssp = std::make_shared<suite_state>();
   }
 
   ~fixture() {
-    anon_send_exit(testee, exit_reason::user_shutdown);
-    destroy(testee);
-    system.~actor_system();
-    CAF_CHECK_EQUAL(s_dtor_called.load(), 2);
+    run();
+    CAF_CHECK_EQUAL(ssp->dtors_called, 2);
   }
 
-  actor remote_actor(const char* hostname, uint16_t port,
-                     bool expect_fail = false) {
-    actor result;
-    scoped_actor self{system, true};
-    self
-      ->request(system.middleman().actor_handle(), infinite,
-                connect_atom::value, hostname, port)
-      .receive(
-        [&](node_id&, strong_actor_ptr& res, std::set<std::string>& xs) {
-          CAF_REQUIRE(xs.empty());
-          if (res)
-            result = actor_cast<actor>(std::move(res));
-        },
-        [&](error&) {
-          // nop
-        });
-    if (expect_fail)
-      CAF_REQUIRE(!result);
-    else
-      CAF_REQUIRE(result);
-    return result;
-  }
-
-  config cfg;
-  union {
-    actor_system system;
-  }; // manually control ctor/dtor
-  actor testee;
+  suite_state_ptr ssp;
 };
 
 } // namespace
 
 CAF_TEST_FIXTURE_SCOPE(unpublish_tests, fixture)
 
-CAF_TEST(unpublishing) {
-  auto port = unbox(system.middleman().publish(testee, 0));
-  CAF_REQUIRE(port != 0);
-  CAF_MESSAGE("published actor on port " << port);
-  CAF_MESSAGE("test invalid unpublish");
-  auto testee2 = system.spawn<dummy>();
-  system.middleman().unpublish(testee2, port);
-  auto x0 = remote_actor("127.0.0.1", port);
-  CAF_CHECK_NOT_EQUAL(x0, testee2);
-  CAF_CHECK_EQUAL(x0, testee);
-  anon_send_exit(testee2, exit_reason::kill);
-  CAF_MESSAGE("unpublish testee");
-  system.middleman().unpublish(testee, port);
-  CAF_MESSAGE("check whether testee is still available via cache");
-  auto x1 = remote_actor("127.0.0.1", port);
-  CAF_CHECK_EQUAL(x1, testee);
-  CAF_MESSAGE("fake death of testee and check if testee becomes unavailable");
-  anon_send(actor_cast<actor>(system.middleman().actor_handle()),
-            down_msg{testee.address(), exit_reason::normal});
-  // must fail now
-  auto x2 = remote_actor("127.0.0.1", port, true);
-  CAF_CHECK(!x2);
+CAF_TEST(actors can become unpublished) {
+  auto testee = mars.sys.spawn<dummy>(ssp);
+  auto guard = detail::make_scope_guard([&] {
+    // The MM holds a reference to this actor publishing it, so we need to kill
+    // it manually.
+    anon_send_exit(testee, exit_reason::user_shutdown);
+  });
+  loop_after_next_enqueue(mars);
+  auto port = unbox(mars.mm.publish(testee, 8080));
+  CAF_REQUIRE_EQUAL(port, 8080);
+  CAF_MESSAGE("the middleman ignores invalid unpublish() calls");
+  auto testee2 = mars.sys.spawn<dummy>(ssp);
+  loop_after_next_enqueue(mars);
+  auto res = mars.mm.unpublish(testee2, 8080);
+  CAF_CHECK(!res && res.error() == sec::no_actor_published_at_port);
+  anon_send_exit(testee2, exit_reason::user_shutdown);
+  CAF_MESSAGE("after unpublishing an actor, remotes can no longer connect");
+  loop_after_next_enqueue(mars);
+  CAF_CHECK(mars.mm.unpublish(testee, 8080));
+  // TODO: ideally, we'd check that remote actors in fact can no longer connect.
+  //       However, the test multiplexer does not support "closing" connections
+  //       and the remote_actor blocks forever.
+  // run();
+  // loop_after_next_enqueue(earth);
+  // CAF_CHECK(!earth.mm.remote_actor("mars", 8080));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
