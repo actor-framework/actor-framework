@@ -54,7 +54,7 @@ public:
   callback_impl& operator=(callback_impl&&) = default;
 
   error operator()(Ts... xs) override {
-    return f_(xs...);
+    return f_(std::forward<Ts>(xs)...);
   }
 
 private:
