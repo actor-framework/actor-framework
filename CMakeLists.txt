@@ -168,7 +168,12 @@ math(EXPR CAF_VERSION_PATCH "${VERSION_INT} % 100")
 # create full version string
 set(CAF_VERSION
     "${CAF_VERSION_MAJOR}.${CAF_VERSION_MINOR}.${CAF_VERSION_PATCH}")
-
+# set the library version for our shared library targets
+if(CMAKE_HOST_SYSTEM_NAME MATCHES "OpenBSD")
+  set(CAF_LIB_VERSION "${CAF_VERSION_MAJOR}.${CAF_VERSION_MINOR}")
+else()
+  set(CAF_LIB_VERSION "${CAF_VERSION}")
+endif()
 
 ################################################################################
 #   set output paths for binaries and libraries if not provided by the user    #

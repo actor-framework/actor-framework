@@ -181,7 +181,7 @@ if (NOT CAF_BUILD_STATIC_ONLY)
   set_target_properties(libcaf_core_shared
     PROPERTIES
     SOVERSION ${CAF_VERSION}
-    VERSION ${CAF_VERSION}
+    VERSION ${CAF_LIB_VERSION}
     OUTPUT_NAME caf_core
   )
   install(TARGETS libcaf_core_shared
