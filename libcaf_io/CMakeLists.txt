@@ -62,7 +62,7 @@ if (NOT CAF_BUILD_STATIC_ONLY)
   set_target_properties(libcaf_io_shared
                         PROPERTIES
                         SOVERSION ${CAF_VERSION}
-                        VERSION ${CAF_VERSION}
+                        VERSION ${CAF_LIB_VERSION}
                         OUTPUT_NAME caf_io)
   install(TARGETS libcaf_io_shared
           RUNTIME DESTINATION bin
