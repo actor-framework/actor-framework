@@ -138,7 +138,6 @@ pretty_no("CAF_NO_MEM_MANAGEMENT")
 pretty_no("CAF_NO_EXCEPTIONS")
 pretty_no("CAF_BUILD_STATIC_ONLY")
 pretty_no("CAF_BUILD_STATIC")
-pretty_no("CAF_NO_OPENCL")
 pretty_no("CAF_NO_OPENSSL")
 pretty_no("CAF_NO_PYTHON")
 pretty_no("CAF_NO_TOOLS")
@@ -451,11 +450,6 @@ set(LIBCAF_INCLUDE_DIRS
     "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_core"
     "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_io"
     "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_test")
-# path to caf opencl headers
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
-  set(LIBCAF_INCLUDE_DIRS
-      "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/" "${LIBCAF_INCLUDE_DIRS}")
-endif()
 # enable tests if not disabled
 if(NOT CAF_NO_UNIT_TESTS)
   enable_testing()
@@ -576,23 +570,6 @@ if(NOT CAF_NO_OPENSSL)
   endif(OPENSSL_FOUND)
 endif()
 
-# build opencl library if not told otherwise and OpenCL package was found
-if(NOT CAF_NO_OPENCL)
-  if(${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} GREATER 3.0)
-    find_package(OpenCL)
-    if(OpenCL_FOUND)
-      include_directories(BEFORE ${OpenCL_INCLUDE_DIRS})
-      add_optional_caf_lib(opencl)
-      add_optional_caf_binaries(libcaf_opencl/examples)
-    else()
-      set(CAF_NO_OPENCL yes)
-    endif()
-  else()
-    set(CAF_NO_OPENCL yes)
-    message(STATUS "Could NOT find OpenCL, requires Cmake >= 3.1.")
-  endif()
-endif()
-
 # build Python binding if not being told otherwise
 if(NOT CAF_NO_PYTHON AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_python/CMakeLists.txt")
   add_subdirectory(libcaf_python)
@@ -687,7 +664,6 @@ invertYesNo(CAF_NO_TOOLS CAF_BUILD_TOOLS)
 invertYesNo(CAF_NO_UNIT_TESTS CAF_BUILD_UNIT_TESTS)
 invertYesNo(CAF_NO_EXCEPTIONS CAF_BUILD_WITH_EXCEPTIONS)
 invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
-invertYesNo(CAF_NO_OPENCL CAF_BUILD_OPENCL)
 invertYesNo(CAF_NO_OPENSSL CAF_BUILD_OPENSSL)
 invertYesNo(CAF_NO_PYTHON CAF_BUILD_PYTHON)
 # collect all compiler flags
@@ -715,7 +691,6 @@ if(NOT CAF_NO_SUMMARY)
         "\nBuild tools:           ${CAF_BUILD_TOOLS}"
         "\nBuild examples:        ${CAF_BUILD_EXAMPLES}"
         "\nBuild unit tests:      ${CAF_BUILD_UNIT_TESTS}"
-        "\nBuild OpenCL:          ${CAF_BUILD_OPENCL}"
         "\nBuild OpenSSL:         ${CAF_BUILD_OPENSSL}"
         "\nBuild Python:          ${CAF_BUILD_PYTHON}"
         "\n"
