@@ -18,7 +18,6 @@ set(sources
   tex/Messages.tex
   tex/MigrationGuides.tex
   tex/NetworkTransparency.tex
-  tex/OpenCL.tex
   tex/ReferenceCounting.tex
   tex/Registry.tex
   tex/RemoteSpawn.tex
