@@ -70,7 +70,7 @@ struct fixture : host_fixture, test_coordinator_fixture<config> {
     auto backend = dynamic_cast<backend::test*>(mm.backend("test"));
     auto mgr = backend->peer(mars);
     auto& dref = dynamic_cast<endpoint_manager_impl<transport_type>&>(*mgr);
-    app = &dref.application();
+    app = &dref.transport().application();
     sock = backend->socket(mars);
   }
 

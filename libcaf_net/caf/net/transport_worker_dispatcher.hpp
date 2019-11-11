@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <caf/logger.hpp>
+#include <caf/sec.hpp>
 #include <unordered_map>
 
 #include "caf/byte.hpp"
@@ -26,23 +28,26 @@
 #include "caf/net/fwd.hpp"
 #include "caf/net/packet_writer_decorator.hpp"
 #include "caf/net/transport_worker.hpp"
+#include "caf/send.hpp"
 #include "caf/span.hpp"
 #include "caf/unit.hpp"
 
 namespace caf {
 namespace net {
 
-/// implements a dispatcher that dispatches between transport and workers.
-template <class ApplicationFactory, class IdType>
+/// Implements a dispatcher that dispatches between transport and workers.
+template <class Transport, class IdType>
 class transport_worker_dispatcher {
 public:
   // -- member types -----------------------------------------------------------
 
   using id_type = IdType;
 
-  using factory_type = ApplicationFactory;
+  using transport_type = Transport;
 
-  using application_type = typename ApplicationFactory::application_type;
+  using factory_type = typename transport_type::factory_type;
+
+  using application_type = typename factory_type::application_type;
 
   using worker_type = transport_worker<application_type, id_type>;
 
@@ -50,8 +55,8 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  transport_worker_dispatcher(factory_type factory)
-    : factory_(std::move(factory)) {
+  transport_worker_dispatcher(transport_type& transport, factory_type factory)
+    : factory_(std::move(factory)), transport_(&transport) {
     // nop
   }
 
@@ -65,48 +70,52 @@ public:
 
   template <class Parent>
   error handle_data(Parent& parent, span<byte> data, id_type id) {
-    auto it = workers_by_id_.find(id);
-    if (it == workers_by_id_.end()) {
-      // TODO: where to get node_id from here?
-      add_new_worker(parent, node_id{}, id);
-      it = workers_by_id_.find(id);
-    }
-    auto worker = it->second;
-    return worker->handle_data(parent, data);
+    if (auto worker = find_worker(id))
+      return worker->handle_data(parent, data);
+    // TODO: Where to get node_id from here?
+    auto worker = add_new_worker(parent, node_id{}, id);
+    if (worker)
+      return (*worker)->handle_data(parent, data);
+    else
+      return std::move(worker.error());
   }
 
   template <class Parent>
   void write_message(Parent& parent,
                      std::unique_ptr<endpoint_manager_queue::message> msg) {
-    auto sender = msg->msg->sender;
-    if (!sender)
+    auto receiver = msg->receiver;
+    if (!receiver)
       return;
-    auto nid = sender->node();
-    auto it = workers_by_node_.find(nid);
-    if (it == workers_by_node_.end()) {
-      // TODO: where to get id_type from here?
-      add_new_worker(parent, nid, id_type{});
-      it = workers_by_node_.find(nid);
+    auto nid = receiver->node();
+    if (auto worker = find_worker(nid)) {
+      worker->write_message(parent, std::move(msg));
+      return;
     }
-    auto worker = it->second;
-    worker->write_message(parent, std::move(msg));
+    // TODO: where to get id_type from here?
+    if (auto worker = add_new_worker(parent, nid, id_type{}))
+      (*worker)->write_message(parent, std::move(msg));
   }
 
   template <class Parent>
-  void write_packet(Parent& parent, span<const byte> header,
-                    span<const byte> payload, id_type id) {
-    parent.write_packet(header, payload, id);
+  void resolve(Parent& parent, const uri& locator, const actor& listener) {
+    if (auto worker = find_worker(make_node_id(locator)))
+      worker->resolve(parent, locator.path(), listener);
+    else
+      anon_send(listener,
+                make_error(sec::runtime_error, "could not resolve node"));
   }
 
   template <class Parent>
-  void resolve(Parent& parent, const std::string& path, actor listener) {
-    // TODO path should be uri to lookup the corresponding worker
-    // if enpoint is known -> resolve actor through worker
-    // if not connect to endpoint?!
-    if (workers_by_id_.empty())
-      return;
-    auto worker = workers_by_id_.begin()->second;
-    worker->resolve(parent, path, listener);
+  void new_proxy(Parent& parent, const node_id& nid, actor_id id) {
+    if (auto worker = find_worker(nid))
+      worker->new_proxy(parent, nid, id);
+  }
+
+  template <class Parent>
+  void local_actor_down(Parent& parent, const node_id& nid, actor_id id,
+                        error reason) {
+    if (auto worker = find_worker(nid))
+      worker->local_actor_down(parent, nid, id, std::move(reason));
   }
 
   template <class... Ts>
@@ -116,9 +125,10 @@ public:
 
   template <class Parent>
   void timeout(Parent& parent, atom_value value, uint64_t id) {
-    auto worker = workers_by_timeout_id_.at(id);
-    worker->timeout(parent, value, id);
-    workers_by_timeout_id_.erase(id);
+    if (auto worker = workers_by_timeout_id_.at(id)) {
+      worker->timeout(parent, value, id);
+      workers_by_timeout_id_.erase(id);
+    }
   }
 
   void handle_error(sec error) {
@@ -129,17 +139,36 @@ public:
   }
 
   template <class Parent>
-  error add_new_worker(Parent& parent, node_id node, id_type id) {
+  expected<worker_ptr> add_new_worker(Parent& parent, node_id node,
+                                      id_type id) {
     auto application = factory_.make();
     auto worker = std::make_shared<worker_type>(std::move(application), id);
     if (auto err = worker->init(parent))
       return err;
     workers_by_id_.emplace(std::move(id), worker);
-    workers_by_node_.emplace(std::move(node), std::move(worker));
-    return none;
+    workers_by_node_.emplace(std::move(node), worker);
+    return worker;
   }
 
 private:
+  worker_ptr find_worker(const node_id& nid) {
+    return find_worker_impl(workers_by_node_, nid);
+  }
+
+  worker_ptr find_worker(const id_type& id) {
+    return find_worker_impl(workers_by_id_, id);
+  }
+
+  template <class Key>
+  worker_ptr find_worker_impl(const std::unordered_map<Key, worker_ptr>& map,
+                              const Key& key) {
+    if (map.count(key) == 0) {
+      CAF_LOG_DEBUG("could not find worker: " << CAF_ARG(key));
+      return nullptr;
+    }
+    return map.at(key);
+  }
+
   // -- worker lookups ---------------------------------------------------------
 
   std::unordered_map<id_type, worker_ptr> workers_by_id_;
@@ -147,6 +176,7 @@ private:
   std::unordered_map<uint64_t, worker_ptr> workers_by_timeout_id_;
 
   factory_type factory_;
+  transport_type* transport_;
 };
 
 } // namespace net

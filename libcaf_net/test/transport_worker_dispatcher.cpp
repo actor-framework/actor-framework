@@ -122,6 +122,8 @@ private:
 struct dummy_transport {
   using transport_type = dummy_transport;
 
+  using factory_type = dummy_application_factory;
+
   using application_type = dummy_application;
 
   dummy_transport(std::shared_ptr<buffer_type> buf) : buf_(std::move(buf)) {
@@ -180,12 +182,12 @@ uri operator"" _u(const char* cstr, size_t cstr_len) {
 }
 
 struct fixture : host_fixture {
-  using dispatcher_type = transport_worker_dispatcher<dummy_application_factory,
+  using dispatcher_type = transport_worker_dispatcher<dummy_transport,
                                                       ip_endpoint>;
 
   fixture()
     : buf{std::make_shared<buffer_type>()},
-      dispatcher{dummy_application_factory{buf}},
+      dispatcher{dummy, dummy_application_factory{buf}},
       dummy{buf} {
     add_new_workers();
   }
@@ -197,13 +199,14 @@ struct fixture : host_fixture {
     auto p = make_actor<dummy_actor, strong_actor_ptr>(aid, nid, &sys, cfg);
     auto test_span = as_bytes(make_span(hello_test));
     buffer_type payload(test_span.begin(), test_span.end());
-    auto strong_actor = actor_cast<strong_actor_ptr>(p);
+    auto receiver = actor_cast<strong_actor_ptr>(p);
+    if (!receiver)
+      CAF_FAIL("failed to cast receiver to a strong_actor_ptr");
     mailbox_element::forwarding_stack stack;
-    auto elem = make_mailbox_element(std::move(strong_actor),
-                                     make_message_id(12345), std::move(stack),
-                                     make_message());
+    auto elem = make_mailbox_element(nullptr, make_message_id(12345),
+                                     std::move(stack), make_message());
     return detail::make_unique<endpoint_manager_queue::message>(std::move(elem),
-                                                                strong_actor,
+                                                                receiver,
                                                                 payload);
   }
 
@@ -213,16 +216,17 @@ struct fixture : host_fixture {
 
   void add_new_workers() {
     for (auto& data : test_data) {
-      if (auto err = dispatcher.add_new_worker(dummy, data.nid, data.ep))
-        CAF_FAIL("add_new_worker returned an error: " << err);
+      auto worker = dispatcher.add_new_worker(dummy, data.nid, data.ep);
+      if (!worker)
+        CAF_FAIL("add_new_worker returned an error: " << worker.error());
     }
     buf->clear();
   }
 
   void test_write_message(testdata& testcase) {
     auto msg = make_dummy_message(testcase.nid);
-    if (!msg->msg->sender)
-      CAF_FAIL("sender is null");
+    if (!msg->receiver)
+      CAF_FAIL("receiver is null");
     dispatcher.write_message(dummy, std::move(msg));
   }
 
@@ -268,9 +272,8 @@ struct fixture : host_fixture {
 CAF_TEST_FIXTURE_SCOPE(transport_worker_dispatcher_test, fixture)
 
 CAF_TEST(init) {
-  dispatcher_type dispatcher{dummy_application_factory{buf}};
-  if (auto err = dispatcher.init(dummy))
-    CAF_FAIL("init failed with error: " << err);
+  dispatcher_type dispatcher{dummy, dummy_application_factory{buf}};
+  CAF_CHECK_EQUAL(dispatcher.init(dummy), none);
 }
 
 CAF_TEST(handle_data) {
