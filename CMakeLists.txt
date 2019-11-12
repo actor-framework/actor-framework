@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 project(caf C CXX)
 
 include(CheckCSourceCompiles)
@@ -8,6 +8,7 @@ include(CheckCSourceRuns)
 # See https://cmake.org/cmake/help/latest/module/GNUInstallDirs.html
 include(GNUInstallDirs)
 
+# Check whether we are running as CMake subdirectory.
 get_directory_property(_parent PARENT_DIRECTORY)
 if(_parent)
   set(caf_is_subproject ON)
@@ -15,6 +16,38 @@ else()
   set(caf_is_subproject OFF)
 endif()
 unset(_parent)
+
+if(NOT CMAKE_CROSSCOMPILING)
+  # Check whether the user already provided flags that enable C++ >= 17.
+  try_compile(caf_has_cxx_17
+              "${CMAKE_CURRENT_BINARY_DIR}"
+              "${CMAKE_CURRENT_SOURCE_DIR}/cmake/check-compiler-features.cpp")
+  # Try enabling C++17 mode if user-provided flags aren't sufficient.
+  if(NOT caf_has_cxx_17)
+    if(MSVC)
+      set(cxx_flag "/std:c++17")
+    else()
+      if(CMAKE_CXX_COMPILER_ID MATCHES "Clang"
+         AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5)
+        set(cxx_flag "-std=c++1z")
+      else()
+        set(cxx_flag "-std=c++17")
+      endif()
+    endif()
+    # Re-run compiler check.
+    try_compile(caf_has_cxx_17
+                "${CMAKE_CURRENT_BINARY_DIR}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/cmake/check-compiler-features.cpp"
+                COMPILE_DEFINITIONS "${cxx_flag}"
+                OUTPUT_VARIABLE cxx_check_output)
+    if(NOT caf_has_cxx_17)
+      MESSAGE(FATAL_ERROR "\nFatal error: unable activate C++17 mode!\
+                           \nPlease see README.md for supported compilers.\
+                           \n\ntry_compile output:\n${cxx_check_output}")
+    endif()
+    add_compile_options("${cxx_flag}")
+  endif()
+endif()
 
 # Be nice to VIM users and Clang tools.
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
@@ -203,37 +236,12 @@ endif()
 #                                compiler setup                                #
 ################################################################################
 
-# check for g++ >= 4.8 or clang++ > = 3.2
-if(NOT WIN32 AND NOT CAF_NO_COMPILER_CHECK AND NOT CMAKE_CROSSCOMPILING)
-  try_run(ProgramResult
-          CompilationSucceeded
-          "${CMAKE_CURRENT_BINARY_DIR}"
-          "${CMAKE_CURRENT_SOURCE_DIR}/cmake/get_compiler_version.cpp"
-          RUN_OUTPUT_VARIABLE CompilerVersion)
-  if(NOT CompilationSucceeded OR NOT ProgramResult EQUAL 0)
-    message(FATAL_ERROR "Cannot determine compiler version")
-  elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    if(CompilerVersion VERSION_GREATER 4.7)
-      message(STATUS "Found g++ version ${CompilerVersion}")
-    else()
-      message(FATAL_ERROR "g++ >= 4.8 required (found: ${CompilerVersion})")
-    endif()
-  elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    if(CompilerVersion VERSION_GREATER 3.1)
-      message(STATUS "Found clang++ version ${CompilerVersion}")
-    else()
-      message(FATAL_ERROR "clang++ >= 3.2 required (found: ${CompilerVersion})")
-    endif()
-  else()
-    message(FATAL_ERROR "Your C++ compiler does not support C++11 "
-                        "or is not supported")
-  endif()
-endif()
 # set optional build flags
 # increase max. template depth on GCC and Clang
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang"
    OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  build_string("EXTRA_FLAGS" "-ftemplate-depth=512 -ftemplate-backtrace-limit=0")
+  add_compile_options("-ftemplate-depth=512"
+                      "-ftemplate-backtrace-limit=0")
 endif()
 # explicitly disable obnoxious GCC warnings
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
@@ -304,42 +312,11 @@ else()
   endif()
 endif()
 
-# add -stdlib=libc++ when using Clang if possible
-if(NOT CAF_NO_AUTO_LIBCPP AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  set(CXXFLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
-  set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++")
-  try_run(ProgramResult
-          CompilationSucceeded
-          "${CMAKE_CURRENT_BINARY_DIR}"
-          "${CMAKE_CURRENT_SOURCE_DIR}/cmake/get_compiler_version.cpp"
-          RUN_OUTPUT_VARIABLE CompilerVersion)
-  if(NOT CompilationSucceeded OR NOT ProgramResult EQUAL 0)
-    message(STATUS "Use clang with GCC' libstdc++")
-  else()
-    message(STATUS "Automatically added '-stdlib=libc++' flag "
-                   "(CAF_NO_AUTO_LIBCPP not defined)")
-  build_string("EXTRA_FLAGS" "-stdlib=libc++")
-  endif()
-  # restore CXX flags
-  set(CMAKE_CXX_FLAGS "${CXXFLAGS_BACKUP}")
-endif()
 # enable address sanitizer if requested by the user
 if(CAF_ENABLE_ADDRESS_SANITIZER AND NOT WIN32)
-  # check whether address sanitizer is available
-  set(CXXFLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
-  set(CMAKE_CXX_FLAGS "-fsanitize=address -fno-omit-frame-pointer")
-  try_run(ProgramResult
-          CompilationSucceeded
-          "${CMAKE_CURRENT_BINARY_DIR}"
-          "${CMAKE_CURRENT_SOURCE_DIR}/cmake/get_compiler_version.cpp")
-  if(NOT CompilationSucceeded)
-    message(WARNING "Address Sanitizer is not available on selected compiler")
-  else()
-    message(STATUS "Enable Address Sanitizer")
-    build_string("EXTRA_FLAGS" "-fsanitize=address -fno-omit-frame-pointer")
-  endif()
-  # restore CXX flags
-  set(CMAKE_CXX_FLAGS "${CXXFLAGS_BACKUP}")
+  add_compile_options("-fsanitize=address"
+                      "-fno-omit-frame-pointer")
+  list(APPEND CAF_EXTRA_LDFLAGS "-fsanitize=address")
 endif()
 # -pthread is ignored on MacOSX but required on other platforms
 if(NOT APPLE AND NOT WIN32)
@@ -376,11 +353,7 @@ if(CAF_IOS_DEPLOYMENT_TARGET)
 endif()
 # check if the user provided CXXFLAGS, set defaults otherwise
 if(NOT CMAKE_CXX_FLAGS)
-  set(CMAKE_CXX_FLAGS                   "-std=c++11 -Wextra -Wall -pedantic ${EXTRA_FLAGS}")
-endif()
-if (NOT "${CMAKE_CXX_FLAGS}" MATCHES "-std=")
-  message(STATUS "Supplied CXXFLAGS do not contain a C++ standard, setting std to c++11")
-  set(CMAKE_CXX_FLAGS                   "-std=c++11 ${CMAKE_CXX_FLAGS}")
+  set(CMAKE_CXX_FLAGS                   "-Wextra -Wall -pedantic ${EXTRA_FLAGS}")
 endif()
 if(NOT CMAKE_CXX_FLAGS_DEBUG)
   set(CMAKE_CXX_FLAGS_DEBUG             "-O0 -g")
