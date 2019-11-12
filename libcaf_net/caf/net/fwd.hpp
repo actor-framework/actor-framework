@@ -22,8 +22,7 @@
 
 #include "caf/intrusive_ptr.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 // -- templates ----------------------------------------------------------------
 
@@ -32,6 +31,9 @@ class transport_worker;
 
 template <class Transport, class IdType = unit_t>
 class transport_worker_dispatcher;
+
+template <class Application>
+class stream_transport;
 
 // -- classes ------------------------------------------------------------------
 
@@ -58,5 +60,4 @@ using multiplexer_ptr = std::shared_ptr<multiplexer>;
 using socket_manager_ptr = intrusive_ptr<socket_manager>;
 using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

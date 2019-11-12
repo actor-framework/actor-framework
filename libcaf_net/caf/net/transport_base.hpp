@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2019 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -33,10 +33,10 @@
 #include "caf/span.hpp"
 #include "caf/variant.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
-template <class NextLayer, class Handle, class Application, class IdType>
+template <class Transport, class NextLayer, class Handle, class Application,
+          class IdType>
 class transport_base {
 public:
   // -- member types -----------------------------------------------------------
@@ -44,6 +44,8 @@ public:
   using next_layer_type = NextLayer;
 
   using handle_type = Handle;
+
+  using transport_type = Transport;
 
   using application_type = Application;
 
@@ -82,8 +84,8 @@ public:
     return next_layer_.application();
   }
 
-  transport_base& transport() {
-    return *this;
+  transport_type& transport() {
+    return *reinterpret_cast<transport_type*>(this);
   }
 
   endpoint_manager& manager() {
@@ -216,5 +218,4 @@ protected:
   endpoint_manager* manager_;
 };
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net
