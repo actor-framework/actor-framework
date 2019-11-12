@@ -191,7 +191,7 @@ private:
   std::unordered_set<actor_addr> monitored_actors_; // TODO: this is unused
 
   /// Caches actor handles obtained via `resolve`.
-  std::unordered_map<uint64_t, response_promise> pending_resolves_;
+  std::unordered_map<uint64_t, actor> pending_resolves_;
 
   /// Ascending ID generator for requests to our peer.
   uint64_t next_request_id_ = 1;

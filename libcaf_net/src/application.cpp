@@ -36,6 +36,7 @@
 #include "caf/no_stages.hpp"
 #include "caf/none.hpp"
 #include "caf/sec.hpp"
+#include "caf/send.hpp"
 #include "caf/serializer_impl.hpp"
 #include "caf/string_algorithms.hpp"
 #include "caf/type_erased_tuple.hpp"
@@ -96,9 +97,7 @@ void application::resolve(packet_writer& writer, string_view path,
                   static_cast<uint32_t>(payload.size()), req_id},
            hdr);
   writer.write_packet(hdr, payload);
-  response_promise rp{nullptr, actor_cast<strong_actor_ptr>(listener),
-                      no_stages, make_message_id()};
-  pending_resolves_.emplace(req_id, std::move(rp));
+  pending_resolves_.emplace(req_id, listener);
 }
 
 void application::new_proxy(packet_writer& writer, actor_id id) {
@@ -332,21 +331,19 @@ error application::handle_resolve_response(packet_writer&, header received_hdr,
     CAF_LOG_ERROR("received unknown ID in resolve_response message");
     return none;
   }
-  auto guard = detail::make_scope_guard([&] {
-    if (i->second.pending())
-      i->second.deliver(sec::remote_lookup_failed);
-    pending_resolves_.erase(i);
-  });
+  auto guard = detail::make_scope_guard([&] { pending_resolves_.erase(i); });
   actor_id aid;
   std::set<std::string> ifs;
   binary_deserializer source{&executor_, received};
-  if (auto err = source(aid, ifs))
+  if (auto err = source(aid, ifs)) {
+    anon_send(i->second, sec::remote_lookup_failed);
     return err;
+  }
   if (aid == 0) {
-    i->second.deliver(strong_actor_ptr{nullptr}, std::move(ifs));
+    anon_send(i->second, strong_actor_ptr{nullptr}, std::move(ifs));
     return none;
   }
-  i->second.deliver(proxies_.get_or_put(peer_id_, aid), std::move(ifs));
+  anon_send(i->second, proxies_.get_or_put(peer_id_, aid), std::move(ifs));
   return none;
 }
 
