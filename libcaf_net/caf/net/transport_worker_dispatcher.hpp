@@ -18,19 +18,15 @@
 
 #pragma once
 
-#include <caf/logger.hpp>
-#include <caf/sec.hpp>
 #include <unordered_map>
 
-#include "caf/byte.hpp"
-#include "caf/ip_endpoint.hpp"
-#include "caf/net/endpoint_manager.hpp"
+#include "caf/logger.hpp"
+#include "caf/net/endpoint_manager_queue.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/packet_writer_decorator.hpp"
 #include "caf/net/transport_worker.hpp"
+#include "caf/sec.hpp"
 #include "caf/send.hpp"
-#include "caf/span.hpp"
-#include "caf/unit.hpp"
 
 namespace caf::net {
 
@@ -52,7 +48,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  transport_worker_dispatcher(factory_type factory)
+  explicit transport_worker_dispatcher(factory_type factory)
     : factory_(std::move(factory)) {
     // nop
   }
@@ -138,6 +134,7 @@ public:
   template <class Parent>
   expected<worker_ptr> add_new_worker(Parent& parent, node_id node,
                                       id_type id) {
+    CAF_LOG_TRACE(CAF_ARG(node) << CAF_ARG(id));
     auto application = factory_.make();
     auto worker = std::make_shared<worker_type>(std::move(application), id);
     if (auto err = worker->init(parent))

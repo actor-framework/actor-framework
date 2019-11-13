@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "caf/fwd.hpp"
+#include "caf/ip_endpoint.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/net/fwd.hpp"
