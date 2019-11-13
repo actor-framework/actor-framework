@@ -18,24 +18,15 @@
 
 #pragma once
 
-#include "caf/actor_system_config.hpp"
-#include "caf/byte.hpp"
 #include "caf/detail/overload.hpp"
-#include "caf/error.hpp"
-#include "caf/expected.hpp"
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/defaults.hpp"
-#include "caf/net/endpoint_manager.hpp"
 #include "caf/net/receive_policy.hpp"
-#include "caf/net/stream_socket.hpp"
-#include "caf/net/transport_worker.hpp"
-#include "caf/sec.hpp"
-#include "caf/span.hpp"
-#include "caf/variant.hpp"
 
 namespace caf::net {
 
+/// Implements base class for transports.
 template <class Transport, class NextLayer, class Handle, class Application,
           class IdType>
 class transport_base {
@@ -88,9 +79,10 @@ public:
     return *manager_;
   }
 
-  // -- member functions -------------------------------------------------------
+  // -- transport member functions ---------------------------------------------
 
   virtual error init(endpoint_manager& parent) {
+    CAF_LOG_TRACE("");
     manager_ = &parent;
     auto& cfg = system().config();
     auto max_header_bufs = get_or(cfg, "middleman.max-header-buffers",
@@ -104,11 +96,8 @@ public:
     return none;
   }
 
-  virtual bool handle_read_event(endpoint_manager&) = 0;
-
-  virtual bool handle_write_event(endpoint_manager& parent) = 0;
-
   auto resolve(endpoint_manager&, const uri& locator, const actor& listener) {
+    CAF_LOG_TRACE(CAF_ARG(locator) << CAF_ARG(listener));
     auto f = detail::make_overload(
       [&](auto& layer) -> decltype(layer.resolve(*this, locator, listener)) {
         return layer.resolve(*this, locator, listener);
@@ -141,9 +130,15 @@ public:
     next_layer_.handle_error(code);
   }
 
+  // -- (pure) virtual functions -----------------------------------------------
+
   virtual void configure_read(receive_policy::config){
     // nop
   };
+
+  virtual bool handle_read_event(endpoint_manager&) = 0;
+
+  virtual bool handle_write_event(endpoint_manager& parent) = 0;
 
   virtual void write_packet(id_type id, span<buffer_type*> buffers) = 0;
 
@@ -170,14 +165,15 @@ private:
   }
 
 protected:
-  NextLayer next_layer_;
-  Handle handle_;
+  next_layer_type next_layer_;
+  handle_type handle_;
 
   buffer_cache_type header_bufs_;
   buffer_cache_type payload_bufs_;
 
   buffer_type read_buf_;
-  // TODO implement retries using this member!
+
+  // TODO implement retries using this member! Should this go into stream_trans?
   // size_t max_consecutive_reads_;
 
   endpoint_manager* manager_;

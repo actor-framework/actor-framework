@@ -18,10 +18,9 @@
 
 #pragma once
 
-#include "caf/actor_system_config.hpp"
-#include "caf/byte.hpp"
-#include "caf/error.hpp"
-#include "caf/expected.hpp"
+#include <deque>
+#include <vector>
+
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/defaults.hpp"
@@ -33,7 +32,6 @@
 #include "caf/net/transport_worker.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
-#include "caf/variant.hpp"
 
 namespace caf::net {
 
@@ -50,17 +48,15 @@ public:
 
   using application_type = Application;
 
-  using transport_type = stream_transport<application_type>;
-
   using worker_type = transport_worker<application_type>;
-
-  using buffer_type = std::vector<byte>;
-
-  using buffer_cache_type = std::vector<buffer_type>;
 
   using id_type = unit_t;
 
   using super = stream_transport_base<application_type>;
+
+  using buffer_type = typename super::buffer_type;
+
+  using write_queue_type = std::deque<std::pair<bool, buffer_type>>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -76,15 +72,11 @@ public:
 
   // -- member functions -------------------------------------------------------
 
-  error init(endpoint_manager& parent) override {
-    // call init function from base class
-    return super::init(parent);
-  }
-
   bool handle_read_event(endpoint_manager&) override {
     auto buf = this->read_buf_.data() + this->collected_;
     size_t len = this->read_threshold_ - this->collected_;
-    CAF_LOG_TRACE(CAF_ARG(this->handle().id) << CAF_ARG(len));
+    CAF_LOG_TRACE(CAF_ARG2("handle", this->handle().id)
+                  << CAF_ARG2("missing", len));
     auto ret = read(this->handle_, make_span(buf, len));
     // Update state.
     if (auto num_bytes = get_if<size_t>(&ret)) {
@@ -93,7 +85,7 @@ public:
       this->collected_ += *num_bytes;
       if (this->collected_ >= this->read_threshold_) {
         if (auto err = this->next_layer_.handle_data(*this, this->read_buf_)) {
-          CAF_LOG_WARNING("handle_data failed:" << CAF_ARG(err));
+          CAF_LOG_ERROR("handle_data failed: " << CAF_ARG(err));
           return false;
         }
         this->prepare_next_read();
@@ -101,7 +93,7 @@ public:
     } else {
       auto err = get<sec>(ret);
       if (err != sec::unavailable_or_would_block) {
-        CAF_LOG_DEBUG("receive failed" << CAF_ARG(err));
+        CAF_LOG_DEBUG("read failed" << CAF_ARG(err));
         this->next_layer_.handle_error(err);
         return false;
       }
@@ -110,6 +102,7 @@ public:
   }
 
   bool handle_write_event(endpoint_manager& parent) override {
+    CAF_LOG_TRACE(CAF_ARG2("handle", this->handle().id));
     // Try to write leftover data.
     write_some();
     // Get new data from parent.
@@ -123,6 +116,7 @@ public:
   }
 
   void write_packet(id_type, span<buffer_type*> buffers) override {
+    CAF_LOG_TRACE("");
     CAF_ASSERT(!buffers.empty());
     if (this->write_queue_.empty())
       this->manager().register_writing();
@@ -145,10 +139,7 @@ private:
 
   void prepare_next_read() {
     collected_ = 0;
-    // This cast does nothing, but prevents a weird compiler error on GCC
-    // <= 4.9.
-    // TODO: remove cast when dropping support for GCC 4.9.
-    switch (static_cast<net::receive_policy_flag>(rd_flag_)) {
+    switch (rd_flag_) {
       case net::receive_policy_flag::exactly:
         if (this->read_buf_.size() != max_)
           this->read_buf_.resize(max_);
@@ -171,7 +162,7 @@ private:
   }
 
   bool write_some() {
-    CAF_LOG_TRACE(CAF_ARG(this->handle_.id));
+    CAF_LOG_TRACE(CAF_ARG2("handle", this->handle_.id));
     // Helper function to sort empty buffers back into the right caches.
     auto recycle = [&]() {
       auto& front = this->write_queue_.front();
@@ -216,8 +207,7 @@ private:
     return false;
   }
 
-  std::deque<std::pair<bool, buffer_type>> write_queue_;
-
+  write_queue_type write_queue_;
   size_t written_;
   size_t read_threshold_;
   size_t collected_;

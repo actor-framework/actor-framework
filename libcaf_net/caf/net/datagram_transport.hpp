@@ -19,22 +19,17 @@
 #pragma once
 
 #include <deque>
-#include <unordered_map>
+#include <vector>
 
-#include "caf/byte.hpp"
-#include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
-#include "caf/net/defaults.hpp"
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/net/fwd.hpp"
-#include "caf/net/receive_policy.hpp"
 #include "caf/net/transport_base.hpp"
 #include "caf/net/transport_worker_dispatcher.hpp"
 #include "caf/net/udp_datagram_socket.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
-#include "caf/variant.hpp"
 
 namespace caf::net {
 
@@ -76,6 +71,7 @@ public:
   // -- public member functions ------------------------------------------------
 
   error init(endpoint_manager& manager) override {
+    CAF_LOG_TRACE("");
     if (auto err = super::init(manager))
       return err;
     prepare_next_read();
@@ -87,6 +83,7 @@ public:
     auto ret = read(this->handle_, make_span(this->read_buf_));
     if (auto res = get_if<std::pair<size_t, ip_endpoint>>(&ret)) {
       auto num_bytes = res->first;
+      CAF_LOG_DEBUG("received " << num_bytes << " bytes");
       auto ep = res->second;
       this->read_buf_.resize(num_bytes);
       this->next_layer_.handle_data(*this, make_span(this->read_buf_),
@@ -115,6 +112,7 @@ public:
     return write_some();
   }
 
+  // TODO: remove this function. `resolve` should add workers when needed.
   error add_new_worker(node_id node, id_type id) {
     auto worker = this->next_layer_.add_new_worker(*this, node, id);
     if (!worker)
@@ -123,6 +121,7 @@ public:
   }
 
   void write_packet(id_type id, span<buffer_type*> buffers) override {
+    CAF_LOG_TRACE("");
     CAF_ASSERT(!buffers.empty());
     if (packet_queue_.empty())
       this->manager().register_writing();
@@ -144,6 +143,13 @@ public:
         bytes.emplace_back(std::move(*buf));
       }
     }
+
+    std::vector<std::vector<byte>*> get_buffer_ptrs() {
+      std::vector<std::vector<byte>*> ptrs;
+      for (auto& buf : bytes)
+        ptrs.emplace_back(&buf);
+      return ptrs;
+    }
   };
 
 private:
@@ -154,7 +160,7 @@ private:
   }
 
   bool write_some() {
-    CAF_LOG_TRACE(CAF_ARG(this->handle_.id));
+    CAF_LOG_TRACE(CAF_ARG2("handle", this->handle_.id));
     // Helper function to sort empty buffers back into the right caches.
     auto recycle = [&]() {
       auto& front = packet_queue_.front();
@@ -175,9 +181,7 @@ private:
     // Write as many bytes as possible.
     while (!packet_queue_.empty()) {
       auto& packet = packet_queue_.front();
-      std::vector<std::vector<byte>*> ptrs;
-      for (auto& buf : packet.bytes)
-        ptrs.emplace_back(&buf);
+      auto ptrs = packet.get_buffer_ptrs();
       auto write_ret = write(this->handle_, make_span(ptrs), packet.id);
       if (auto num_bytes = get_if<size_t>(&write_ret)) {
         CAF_LOG_DEBUG(CAF_ARG(this->handle_.id) << CAF_ARG(*num_bytes));
@@ -187,10 +191,11 @@ private:
       } else {
         auto err = get<sec>(write_ret);
         if (err != sec::unavailable_or_would_block) {
-          CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
+          CAF_LOG_ERROR("write failed" << CAF_ARG(err));
           this->next_layer_.handle_error(err);
           return false;
         }
+        CAF_LOG_DEBUG("write returned `unavailable_or_would_block`");
         return true;
       }
     }
