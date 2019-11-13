@@ -24,24 +24,29 @@
 #include "caf/byte.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
-#include "caf/ip_endpoint.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/defaults.hpp"
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/receive_policy.hpp"
+#include "caf/net/transport_base.hpp"
 #include "caf/net/transport_worker_dispatcher.hpp"
 #include "caf/net/udp_datagram_socket.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
 #include "caf/variant.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
+
+template <class Factory>
+using datagram_transport_base = transport_base<
+  datagram_transport<Factory>,
+  transport_worker_dispatcher<Factory, ip_endpoint>, udp_datagram_socket,
+  Factory, ip_endpoint>;
 
 /// Implements a udp_transport policy that manages a datagram socket.
 template <class Factory>
-class datagram_transport {
+class datagram_transport : public datagram_transport_base<Factory> {
 public:
   // Maximal UDP-packet size
   static constexpr size_t max_datagram_size = std::numeric_limits<
@@ -49,161 +54,81 @@ public:
 
   // -- member types -----------------------------------------------------------
 
-  using id_type = ip_endpoint;
-
-  using buffer_type = std::vector<byte>;
-
-  using buffer_cache_type = std::vector<buffer_type>;
-
   using factory_type = Factory;
 
-  using transport_type = datagram_transport<Factory>;
+  using id_type = ip_endpoint;
 
-  using dispatcher_type = transport_worker_dispatcher<transport_type, id_type>;
+  using application_type = typename factory_type::application_type;
 
-  using application_type = typename Factory::application_type;
+  using super = datagram_transport_base<factory_type>;
+
+  using buffer_type = typename super::buffer_type;
+
+  using buffer_cache_type = typename super::buffer_cache_type;
 
   // -- constructors, destructors, and assignment operators --------------------
 
   datagram_transport(udp_datagram_socket handle, factory_type factory)
-    : dispatcher_(*this, std::move(factory)),
-      handle_(handle),
-      read_buf_(max_datagram_size),
-      manager_(nullptr) {
+    : super(handle, std::move(factory)) {
     // nop
-  }
-
-  // -- properties -------------------------------------------------------------
-
-  udp_datagram_socket handle() const noexcept {
-    return handle_;
-  }
-
-  actor_system& system() {
-    return manager().system();
-  }
-
-  transport_type& transport() {
-    return *this;
-  }
-
-  endpoint_manager& manager() {
-    return *manager_;
   }
 
   // -- public member functions ------------------------------------------------
 
-  template <class Parent>
-  error init(Parent& parent) {
-    manager_ = &parent;
-    auto& cfg = system().config();
-    auto max_header_bufs = get_or(cfg, "middleman.max-header-buffers",
-                                  defaults::middleman::max_header_buffers);
-    header_bufs_.reserve(max_header_bufs);
-    auto max_payload_bufs = get_or(cfg, "middleman.max-payload-buffers",
-                                   defaults::middleman::max_payload_buffers);
-    payload_bufs_.reserve(max_payload_bufs);
-    if (auto err = dispatcher_.init(*this))
+  error init(endpoint_manager& manager) override {
+    if (auto err = super::init(manager))
       return err;
+    prepare_next_read();
     return none;
   }
 
-  template <class Parent>
-  bool handle_read_event(Parent&) {
-    CAF_LOG_TRACE(CAF_ARG(handle_.id));
-    auto ret = read(handle_, make_span(read_buf_));
+  bool handle_read_event(endpoint_manager&) override {
+    CAF_LOG_TRACE(CAF_ARG(this->handle_.id));
+    auto ret = read(this->handle_, make_span(this->read_buf_));
     if (auto res = get_if<std::pair<size_t, ip_endpoint>>(&ret)) {
       auto num_bytes = res->first;
       auto ep = res->second;
-      read_buf_.resize(num_bytes);
-      dispatcher_.handle_data(*this, make_span(read_buf_), std::move(ep));
+      this->read_buf_.resize(num_bytes);
+      this->next_layer_.handle_data(*this, make_span(this->read_buf_),
+                                    std::move(ep));
       prepare_next_read();
     } else {
       auto err = get<sec>(ret);
       CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
-      dispatcher_.handle_error(err);
+      this->next_layer_.handle_error(err);
       return false;
     }
     return true;
   }
 
-  template <class Parent>
-  bool handle_write_event(Parent& parent) {
-    CAF_LOG_TRACE(CAF_ARG(handle_.id)
+  bool handle_write_event(endpoint_manager& manager) override {
+    CAF_LOG_TRACE(CAF_ARG(this->handle_.id)
                   << CAF_ARG2("queue-size", packet_queue_.size()));
     // Try to write leftover data.
     write_some();
     // Get new data from parent.
-    for (auto msg = parent.next_message(); msg != nullptr;
-         msg = parent.next_message()) {
-      dispatcher_.write_message(*this, std::move(msg));
+    for (auto msg = manager.next_message(); msg != nullptr;
+         msg = manager.next_message()) {
+      this->next_layer_.write_message(*this, std::move(msg));
     }
     // Write prepared data.
     return write_some();
   }
 
-  template <class Parent>
-  void resolve(Parent&, const uri& locator, const actor& listener) {
-    dispatcher_.resolve(*this, locator, listener);
-  }
-
-  template <class Parent>
-  void new_proxy(Parent&, const node_id& peer, actor_id id) {
-    dispatcher_.new_proxy(*this, peer, id);
-  }
-
-  template <class Parent>
-  void local_actor_down(Parent&, const node_id& peer, actor_id id,
-                        error reason) {
-    dispatcher_.local_actor_down(*this, peer, id, std::move(reason));
-  }
-
-  template <class Parent>
-  void timeout(Parent&, atom_value value, uint64_t id) {
-    dispatcher_.timeout(*this, value, id);
-  }
-
-  void set_timeout(uint64_t timeout_id, id_type id) {
-    dispatcher_.set_timeout(timeout_id, id);
-  }
-
-  void handle_error(sec code) {
-    dispatcher_.handle_error(code);
-  }
-
   error add_new_worker(node_id node, id_type id) {
-    auto worker = dispatcher_.add_new_worker(*this, node, id);
+    auto worker = this->next_layer_.add_new_worker(*this, node, id);
     if (!worker)
       return worker.error();
     return none;
   }
 
-  void prepare_next_read() {
-    read_buf_.clear();
-    read_buf_.resize(max_datagram_size);
-  }
-
-  void configure_read(receive_policy::config) {
-    // nop
-  }
-
-  void write_packet(id_type id, span<buffer_type*> buffers) {
+  void write_packet(id_type id, span<buffer_type*> buffers) override {
     CAF_ASSERT(!buffers.empty());
     if (packet_queue_.empty())
-      manager().register_writing();
+      this->manager().register_writing();
     // By convention, the first buffer is a header buffer. Every other buffer is
     // a payload buffer.
     packet_queue_.emplace_back(id, buffers);
-  }
-
-  // -- buffer management ------------------------------------------------------
-
-  buffer_type next_header_buffer() {
-    return next_buffer_impl(header_bufs_);
-  }
-
-  buffer_type next_payload_buffer() {
-    return next_buffer_impl(payload_bufs_);
   }
 
   /// Helper struct for managing outgoing packets
@@ -224,31 +149,26 @@ public:
 private:
   // -- utility functions ------------------------------------------------------
 
-  static buffer_type next_buffer_impl(buffer_cache_type cache) {
-    if (cache.empty()) {
-      return {};
-    }
-    auto buf = std::move(cache.back());
-    cache.pop_back();
-    return buf;
+  void prepare_next_read() {
+    this->read_buf_.resize(max_datagram_size);
   }
 
   bool write_some() {
-    CAF_LOG_TRACE(CAF_ARG(handle_.id));
+    CAF_LOG_TRACE(CAF_ARG(this->handle_.id));
     // Helper function to sort empty buffers back into the right caches.
     auto recycle = [&]() {
       auto& front = packet_queue_.front();
       auto& bufs = front.bytes;
       auto it = bufs.begin();
-      if (header_bufs_.size() < header_bufs_.capacity()) {
+      if (this->header_bufs_.size() < this->header_bufs_.capacity()) {
         it->clear();
-        header_bufs_.emplace_back(std::move(*it++));
+        this->header_bufs_.emplace_back(std::move(*it++));
       }
-      for (;
-           it != bufs.end() && payload_bufs_.size() < payload_bufs_.capacity();
+      for (; it != bufs.end()
+             && this->payload_bufs_.size() < this->payload_bufs_.capacity();
            ++it) {
         it->clear();
-        payload_bufs_.emplace_back(std::move(*it));
+        this->payload_bufs_.emplace_back(std::move(*it));
       }
       packet_queue_.pop_front();
     };
@@ -258,9 +178,9 @@ private:
       std::vector<std::vector<byte>*> ptrs;
       for (auto& buf : packet.bytes)
         ptrs.emplace_back(&buf);
-      auto write_ret = write(handle_, make_span(ptrs), packet.id);
+      auto write_ret = write(this->handle_, make_span(ptrs), packet.id);
       if (auto num_bytes = get_if<size_t>(&write_ret)) {
-        CAF_LOG_DEBUG(CAF_ARG(handle_.id) << CAF_ARG(*num_bytes));
+        CAF_LOG_DEBUG(CAF_ARG(this->handle_.id) << CAF_ARG(*num_bytes));
         CAF_LOG_WARNING_IF(*num_bytes < packet.size,
                            "packet was not sent completely");
         recycle();
@@ -268,7 +188,7 @@ private:
         auto err = get<sec>(write_ret);
         if (err != sec::unavailable_or_would_block) {
           CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
-          dispatcher_.handle_error(err);
+          this->next_layer_.handle_error(err);
           return false;
         }
         return true;
@@ -277,17 +197,7 @@ private:
     return false;
   }
 
-  dispatcher_type dispatcher_;
-  udp_datagram_socket handle_;
-
-  buffer_cache_type header_bufs_;
-  buffer_cache_type payload_bufs_;
-
-  std::vector<byte> read_buf_;
   std::deque<packet> packet_queue_;
-
-  endpoint_manager* manager_;
 };
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

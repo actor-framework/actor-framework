@@ -32,20 +32,17 @@
 #include "caf/span.hpp"
 #include "caf/unit.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// Implements a dispatcher that dispatches between transport and workers.
-template <class Transport, class IdType>
+template <class Factory, class IdType>
 class transport_worker_dispatcher {
 public:
   // -- member types -----------------------------------------------------------
 
   using id_type = IdType;
 
-  using transport_type = Transport;
-
-  using factory_type = typename transport_type::factory_type;
+  using factory_type = Factory;
 
   using application_type = typename factory_type::application_type;
 
@@ -55,8 +52,8 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  transport_worker_dispatcher(transport_type& transport, factory_type factory)
-    : factory_(std::move(factory)), transport_(&transport) {
+  transport_worker_dispatcher(factory_type factory)
+    : factory_(std::move(factory)) {
     // nop
   }
 
@@ -176,8 +173,6 @@ private:
   std::unordered_map<uint64_t, worker_ptr> workers_by_timeout_id_;
 
   factory_type factory_;
-  transport_type* transport_;
 };
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

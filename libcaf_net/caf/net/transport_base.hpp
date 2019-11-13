@@ -20,6 +20,7 @@
 
 #include "caf/actor_system_config.hpp"
 #include "caf/byte.hpp"
+#include "caf/detail/overload.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
@@ -57,15 +58,10 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  transport_base(Handle handle, application_type application)
+  transport_base(handle_type handle, application_type application)
     : next_layer_(std::move(application)),
       handle_(handle),
       // max_consecutive_reads_(0),
-      read_threshold_(1024),
-      collected_(0),
-      max_(1024),
-      rd_flag_(net::receive_policy_flag::exactly),
-      written_(0),
       manager_(nullptr) {
     // nop
   }
@@ -112,8 +108,16 @@ public:
 
   virtual bool handle_write_event(endpoint_manager& parent) = 0;
 
-  void resolve(endpoint_manager&, const uri& locator, const actor& listener) {
-    next_layer_.resolve(*this, locator.path(), listener);
+  auto resolve(endpoint_manager&, const uri& locator, const actor& listener) {
+    auto f = detail::make_overload(
+      [&](auto& layer) -> decltype(layer.resolve(*this, locator, listener)) {
+        return layer.resolve(*this, locator, listener);
+      },
+      [&](auto& layer) -> decltype(
+                         layer.resolve(*this, locator.path(), listener)) {
+        return layer.resolve(*this, locator.path(), listener);
+      });
+    f(next_layer_);
   }
 
   void new_proxy(endpoint_manager&, const node_id& peer, actor_id id) {
@@ -129,49 +133,18 @@ public:
     next_layer_.timeout(*this, value, id);
   }
 
-  template <class... Ts>
-  void set_timeout(uint64_t, Ts&&...) {
-    // TODO: implement me!
+  void set_timeout(uint64_t timeout_id, id_type id) {
+    next_layer_.set_timeout(timeout_id, id);
   }
 
   void handle_error(sec code) {
     next_layer_.handle_error(code);
   }
 
-  void prepare_next_read() {
-    collected_ = 0;
-    // This cast does nothing, but prevents a weird compiler error on GCC
-    // <= 4.9.
-    // TODO: remove cast when dropping support for GCC 4.9.
-    switch (static_cast<net::receive_policy_flag>(rd_flag_)) {
-      case net::receive_policy_flag::exactly:
-        if (read_buf_.size() != max_)
-          read_buf_.resize(max_);
-        read_threshold_ = max_;
-        break;
-      case net::receive_policy_flag::at_most:
-        if (read_buf_.size() != max_)
-          read_buf_.resize(max_);
-        read_threshold_ = 1;
-        break;
-      case net::receive_policy_flag::at_least: {
-        // read up to 10% more, but at least allow 100 bytes more
-        auto max_size = max_ + std::max<size_t>(100, max_ / 10);
-        if (read_buf_.size() != max_size)
-          read_buf_.resize(max_size);
-        read_threshold_ = max_;
-        break;
-      }
-    }
-  }
+  virtual void configure_read(receive_policy::config){
+    // nop
+  };
 
-  void configure_read(receive_policy::config cfg) {
-    rd_flag_ = cfg.first;
-    max_ = cfg.second;
-    prepare_next_read();
-  }
-
-  // TODO: make this work for both datagram and stream oriented transports.
   virtual void write_packet(id_type id, span<buffer_type*> buffers) = 0;
 
   // -- buffer management ------------------------------------------------------
@@ -204,16 +177,8 @@ protected:
   buffer_cache_type payload_bufs_;
 
   buffer_type read_buf_;
-  std::deque<std::pair<bool, buffer_type>> write_queue_;
-
   // TODO implement retries using this member!
   // size_t max_consecutive_reads_;
-  size_t read_threshold_;
-  size_t collected_;
-  size_t max_;
-  receive_policy_flag rd_flag_;
-
-  size_t written_;
 
   endpoint_manager* manager_;
 };

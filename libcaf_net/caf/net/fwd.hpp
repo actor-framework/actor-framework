@@ -26,14 +26,17 @@ namespace caf::net {
 
 // -- templates ----------------------------------------------------------------
 
+template <class Application>
+class stream_transport;
+
+template <class Factory>
+class datagram_transport;
+
 template <class Application, class IdType = unit_t>
 class transport_worker;
 
 template <class Transport, class IdType = unit_t>
 class transport_worker_dispatcher;
-
-template <class Application>
-class stream_transport;
 
 // -- classes ------------------------------------------------------------------
 
@@ -51,6 +54,8 @@ struct socket;
 struct stream_socket;
 struct tcp_accept_socket;
 struct tcp_stream_socket;
+struct datagram_socket;
+struct udp_datagram_socket;
 
 // -- smart pointers -----------------------------------------------------------
 
