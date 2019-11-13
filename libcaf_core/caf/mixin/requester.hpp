@@ -98,17 +98,17 @@ public:
   /// the `MergePolicy`.
   /// @tparam MergePolicy Configures how individual response messages get
   ///                     combined by the actor. The policy makes sure that the
-  ///                     response handler gets invokes at most once. In case of
+  ///                     response handler gets invoked at most once. In case of
   ///                     one or more errors, the policy calls the error handler
   ///                     exactly once, with the first error occurred.
   /// @tparam Prio Specifies the priority of the synchronous messages.
   /// @tparam Container A container type for holding actor handles. Must provide
-  ///                   the type aliase `value_type` as well as the member
+  ///                   the type alias `value_type` as well as the member
   ///                   functions `begin()`, `end()`, and `size()`.
   /// @param destinations A container holding handles to all destination actors.
   /// @param timeout Maximum duration before dropping the request. The runtime
   ///                system will send an error message to the actor in case the
-  ///                receives does not respond in time.
+  ///                receiver does not respond in time.
   /// @returns A helper object that takes response handlers via `.await()`,
   ///          `.then()`, or `.receive()`.
   /// @note The returned handle is actor-specific. Only the actor that called
