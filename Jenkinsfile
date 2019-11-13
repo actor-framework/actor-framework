@@ -98,14 +98,6 @@ config = [
                 'OPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include',
             ],
         ],
-        Windows: [
-            debug: defaultDebugBuildFlags + [
-                'CAF_BUILD_STATIC_ONLY:BOOL=yes',
-            ],
-            release: defaultReleaseBuildFlags + [
-                'CAF_BUILD_STATIC_ONLY:BOOL=yes',
-            ],
-        ],
     ],
     // Configures what binary the coverage report uses and what paths to exclude.
     coverage: [
