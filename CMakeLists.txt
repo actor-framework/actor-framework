@@ -49,18 +49,35 @@ if(NOT CMAKE_CROSSCOMPILING)
   endif()
 endif()
 
+set(CAF_LINKAGE_DEFAULT_SHARED ON)
+if(WIN32)
+  # Shared libs are currently not supported on Windows.
+  set(CAF_LINKAGE_DEFAULT_SHARED OFF)
+endif()
+option(BUILD_SHARED_LIBS "" ${CAF_LINKAGE_DEFAULT_SHARED})
+if (DEFINED CAF_BUILD_STATIC OR DEFINED CAF_BUILD_STATIC_ONLY)
+  if (CAF_BUILD_STATIC OR CAF_BUILD_STATIC_ONLY)
+    set(BUILD_SHARED_LIBS OFF)
+  else ()
+    set(BUILD_SHARED_LIBS ON)
+  endif ()
+endif ()
+if(BUILD_SHARED_LIBS)
+  set(LINK_TYPE "shared")
+else()
+  set(LINK_TYPE "static")
+endif()
+
+set(CMAKE_INSTALL_CMAKEBASEDIR "${CMAKE_INSTALL_LIBDIR}/cmake" CACHE PATH
+    "Base directory for installing cmake specific artifacts")
+set(INSTALL_CAF_CMAKEDIR "${CMAKE_INSTALL_CMAKEBASEDIR}/caf")
+
 # Be nice to VIM users and Clang tools.
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 # Silence policy CMP0042 warning by enabling RPATH explicitly.
 if(APPLE AND NOT DEFINED CMAKE_MACOSX_RPATH)
   set(CMAKE_MACOSX_RPATH true)
-endif()
-
-# Shared libs are currently not supported on Windows.
-if(WIN32 AND NOT CAF_BUILD_STATIC_ONLY)
-  message(STATUS "CAF currently only supports static-only builds on Windows")
-  set(CAF_BUILD_STATIC_ONLY yes)
 endif()
 
 if(CAF_BUILD_STATIC_RUNTIME)
@@ -169,8 +186,6 @@ pretty_yes("CAF_FORCE_NO_EXCEPTIONS")
 pretty_no("CAF_ENABLE_RUNTIME_CHECKS")
 pretty_no("CAF_NO_MEM_MANAGEMENT")
 pretty_no("CAF_NO_EXCEPTIONS")
-pretty_no("CAF_BUILD_STATIC_ONLY")
-pretty_no("CAF_BUILD_STATIC")
 pretty_no("CAF_NO_OPENSSL")
 pretty_no("CAF_NO_PYTHON")
 pretty_no("CAF_NO_TOOLS")
@@ -332,8 +347,6 @@ if(MINGW)
   build_string("EXTRA_FLAGS" "-static")
 elseif(CYGWIN)
   build_string("EXTRA_FLAGS" "-U__STRICT_ANSI__")
-else()
-  build_string("EXTRA_FLAGS" "-fPIC")
 endif()
 if (WIN32)
   list(APPEND CAF_EXTRA_LDFLAGS ws2_32 iphlpapi)
@@ -444,26 +457,11 @@ include_directories("${LIBCAF_INCLUDE_DIRS}")
 ################################################################################
 
 macro(add_caf_lib name)
-  string(TOUPPER ${name} upper_name)
   set(full_name libcaf_${name})
-  set(shared_target ${full_name}_shared)
-  set(static_target ${full_name}_static)
   add_subdirectory(${full_name})
-  set(lib_varname CAF_LIBRARY_${upper_name})
-  set(lib_varname_static ${lib_varname}_STATIC)
-  if(NOT CAF_BUILD_STATIC_ONLY)
-    set(${lib_varname} ${shared_target})
-    set(CAF_LIBRARIES ${CAF_LIBRARIES} ${shared_target})
-  else()
-    set(${lib_varname} ${static_target})
-    set(CAF_LIBRARIES ${CAF_LIBRARIES} ${static_target})
-  endif()
-  if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
-    set(${lib_varname_static} ${static_target})
-  endif()
   add_unit_tests("${full_name}/test/*.cpp")
   # add headers to include directories so other subprojects can use them
-  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/libcaf_${name}")
+  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/${full_name}")
 endmacro()
 
 macro(add_optional_caf_lib name)
@@ -553,6 +551,27 @@ add_optional_caf_binaries(examples)
 
 # build tools if not being told otherwise
 add_optional_caf_binaries(tools)
+
+export(EXPORT CAFTargets FILE CAFTargets.cmake NAMESPACE caf::)
+
+install(EXPORT CAFTargets
+        DESTINATION "${INSTALL_CAF_CMAKEDIR}"
+        NAMESPACE caf::)
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/CAFConfigVersion.cmake"
+  VERSION ${CAF_VERSION}
+  COMPATIBILITY ExactVersion)
+
+configure_package_config_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CAFConfig.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/CAFConfig.cmake" INSTALL_DESTINATION
+  "${INSTALL_CAF_CMAKEDIR}")
+
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/CAFConfig.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/CAFConfigVersion.cmake"
+  DESTINATION "${INSTALL_CAF_CMAKEDIR}")
 
 ################################################################################
 #                               unit tests setup                               #
@@ -652,8 +671,7 @@ if(NOT CAF_NO_SUMMARY)
         "\nCAF version:           ${CAF_VERSION}"
         "\n"
         "\nBuild type:            ${CMAKE_BUILD_TYPE}"
-        "\nBuild static:          ${CAF_BUILD_STATIC}"
-        "\nBuild static only:     ${CAF_BUILD_STATIC_ONLY}"
+        "\nLink type:             ${LINK_TYPE}"
         "\nBuild static runtime:  ${CAF_BUILD_STATIC_RUNTIME}"
         "\nRuntime checks:        ${CAF_ENABLE_RUNTIME_CHECKS}"
         "\nLog level:             ${CAF_LOG_LEVEL}"
