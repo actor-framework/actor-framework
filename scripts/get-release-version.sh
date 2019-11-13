@@ -11,8 +11,10 @@ if git describe --tags --contains $git_sha 1>release.txt 2>/dev/null
 then
   # Tags indicate stable release -> use tag version.
   # On success, we'll have the tag version in release.txt now, so we're done.
-  exit 0
+  echo "build a tagged release: $caf_version"
+else
+  # Generate default release version.
+  caf_release_version="$caf_version+exp.sha.$git_sha"
+  echo "build a commit version: $caf_release_version"
+  echo "$caf_release_version" >release.txt
 fi
-
-# Generate default release version.
-echo "$caf_version+exp.sha.$git_sha" >release.txt
