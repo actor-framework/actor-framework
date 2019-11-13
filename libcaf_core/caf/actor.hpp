@@ -29,6 +29,7 @@
 #include "caf/actor_traits.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
@@ -37,9 +38,9 @@ namespace caf {
 
 /// Identifies an untyped actor. Can be used with derived types
 /// of `event_based_actor`, `blocking_actor`, and `actor_proxy`.
-class actor : detail::comparable<actor>,
-              detail::comparable<actor, actor_addr>,
-              detail::comparable<actor, strong_actor_ptr> {
+class CAF_CORE_EXPORT actor : detail::comparable<actor>,
+                              detail::comparable<actor, actor_addr>,
+                              detail::comparable<actor, strong_actor_ptr> {
 public:
   // -- friend types that need access to private ctors
   friend class local_actor;
@@ -173,7 +174,7 @@ private:
 };
 
 /// Combine `f` and `g` so that `(f*g)(x) = f(g(x))`.
-actor operator*(actor f, actor g);
+CAF_CORE_EXPORT actor operator*(actor f, actor g);
 
 /// @relates actor
 template <class... Ts>
@@ -182,16 +183,16 @@ actor splice(const actor& x, const actor& y, const Ts&... zs) {
 }
 
 /// @relates actor
-bool operator==(const actor& lhs, abstract_actor* rhs);
+CAF_CORE_EXPORT bool operator==(const actor& lhs, abstract_actor* rhs);
 
 /// @relates actor
-bool operator==(abstract_actor* lhs, const actor& rhs);
+CAF_CORE_EXPORT bool operator==(abstract_actor* lhs, const actor& rhs);
 
 /// @relates actor
-bool operator!=(const actor& lhs, abstract_actor* rhs);
+CAF_CORE_EXPORT bool operator!=(const actor& lhs, abstract_actor* rhs);
 
 /// @relates actor
-bool operator!=(abstract_actor* lhs, const actor& rhs);
+CAF_CORE_EXPORT bool operator!=(abstract_actor* lhs, const actor& rhs);
 
 } // namespace caf
 
@@ -204,4 +205,3 @@ struct hash<caf::actor> {
   }
 };
 } // namespace std
-

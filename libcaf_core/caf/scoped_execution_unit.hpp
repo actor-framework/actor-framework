@@ -18,13 +18,14 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
 #include "caf/execution_unit.hpp"
 
 namespace caf {
 
 /// Identifies an execution unit, e.g., a worker thread of the scheduler. By
 /// querying its execution unit, an actor can access other context information.
-class scoped_execution_unit : public execution_unit {
+class CAF_CORE_EXPORT scoped_execution_unit : public execution_unit {
 public:
   using super = execution_unit;
 
@@ -41,4 +42,3 @@ public:
 };
 
 } // namespace caf
-

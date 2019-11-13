@@ -25,12 +25,9 @@
 
 namespace caf {
 
-class stream_aborter : public attachable {
+class CAF_CORE_EXPORT stream_aborter : public attachable {
 public:
-  enum mode {
-    source_aborter,
-    sink_aborter
-  };
+  enum mode { source_aborter, sink_aborter };
 
   struct token {
     const actor_addr& observer;
@@ -39,8 +36,8 @@ public:
     static constexpr size_t token_type = attachable::token::stream_aborter;
   };
 
-  stream_aborter(actor_addr&& observed, actor_addr&& observer,
-                 stream_slot slot, mode m);
+  stream_aborter(actor_addr&& observed, actor_addr&& observer, stream_slot slot,
+                 mode m);
 
   ~stream_aborter() override;
 
@@ -49,8 +46,8 @@ public:
   bool matches(const attachable::token& what) override;
 
   /// Adds a stream aborter to `observed`.
-  static void add(strong_actor_ptr observed, actor_addr observer,
-                  stream_slot slot, mode m);
+  static void
+  add(strong_actor_ptr observed, actor_addr observer, stream_slot slot, mode m);
 
   /// Removes a stream aborter from `observed`.
   static void del(strong_actor_ptr observed, const actor_addr& observer,
@@ -63,9 +60,9 @@ private:
   mode mode_;
 };
 
-attachable_ptr make_stream_aborter(actor_addr observed, actor_addr observer,
-                                   stream_slot slot, stream_aborter::mode m);
+CAF_CORE_EXPORT attachable_ptr make_stream_aborter(actor_addr observed,
+                                                   actor_addr observer,
+                                                   stream_slot slot,
+                                                   stream_aborter::mode m);
 
 } // namespace caf
-
-

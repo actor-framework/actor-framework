@@ -49,4 +49,3 @@ overload<Fs...> make_overload(Fs... fs) {
 
 } // namespace detail
 } // namespace caf
-

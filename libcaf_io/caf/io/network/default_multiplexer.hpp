@@ -24,29 +24,28 @@
 #include <vector>
 
 #include "caf/config.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/extend.hpp"
-#include "caf/ref_counted.hpp"
-
-#include "caf/io/fwd.hpp"
-#include "caf/io/scribe.hpp"
-#include "caf/io/doorman.hpp"
 #include "caf/io/accept_handle.hpp"
-#include "caf/io/receive_policy.hpp"
+#include "caf/io/connection_handle.hpp"
 #include "caf/io/datagram_handle.hpp"
 #include "caf/io/datagram_servant.hpp"
-#include "caf/io/connection_handle.hpp"
-
-#include "caf/io/network/rw_state.hpp"
-#include "caf/io/network/operation.hpp"
-#include "caf/io/network/ip_endpoint.hpp"
-#include "caf/io/network/multiplexer.hpp"
-#include "caf/io/network/pipe_reader.hpp"
-#include "caf/io/network/native_socket.hpp"
-#include "caf/io/network/event_handler.hpp"
-#include "caf/io/network/receive_buffer.hpp"
-#include "caf/io/network/stream_manager.hpp"
+#include "caf/io/doorman.hpp"
+#include "caf/io/fwd.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
 #include "caf/io/network/datagram_manager.hpp"
+#include "caf/io/network/event_handler.hpp"
+#include "caf/io/network/ip_endpoint.hpp"
+#include "caf/io/network/multiplexer.hpp"
+#include "caf/io/network/native_socket.hpp"
+#include "caf/io/network/operation.hpp"
+#include "caf/io/network/pipe_reader.hpp"
+#include "caf/io/network/receive_buffer.hpp"
+#include "caf/io/network/rw_state.hpp"
+#include "caf/io/network/stream_manager.hpp"
+#include "caf/io/receive_policy.hpp"
+#include "caf/io/scribe.hpp"
+#include "caf/ref_counted.hpp"
 
 #include "caf/logger.hpp"
 
@@ -85,15 +84,15 @@ using multiplexer_poll_shadow_data = native_socket;
 #endif // CAF_POLL_MULTIPLEXER
 
 /// Defines the bitmask for input (read) socket events.
-extern const event_mask_type input_mask;
+CAF_IO_EXPORT extern const event_mask_type input_mask;
 
 /// Defines the bitmask for output (write) socket events.
-extern const event_mask_type output_mask;
+CAF_IO_EXPORT extern const event_mask_type output_mask;
 
 /// Defines the bitmask for error socket events.
-extern const event_mask_type error_mask;
+CAF_IO_EXPORT extern const event_mask_type error_mask;
 
-class default_multiplexer : public multiplexer {
+class CAF_IO_EXPORT default_multiplexer : public multiplexer {
 public:
   friend class io::middleman; // disambiguate reference
   friend class supervisor;
@@ -268,18 +267,18 @@ inline accept_handle accept_hdl_from_socket(native_socket fd) {
   return accept_handle::from_int(int64_from_native_socket(fd));
 }
 
-expected<native_socket>
+CAF_IO_EXPORT expected<native_socket>
 new_tcp_connection(const std::string& host, uint16_t port,
                    optional<protocol::network> preferred = none);
 
-expected<native_socket>
+CAF_IO_EXPORT expected<native_socket>
 new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr);
 
-expected<std::pair<native_socket, ip_endpoint>>
+CAF_IO_EXPORT expected<std::pair<native_socket, ip_endpoint>>
 new_remote_udp_endpoint_impl(const std::string& host, uint16_t port,
                              optional<protocol::network> preferred = none);
 
-expected<std::pair<native_socket, protocol::network>>
+CAF_IO_EXPORT expected<std::pair<native_socket, protocol::network>>
 new_local_udp_endpoint_impl(uint16_t port, const char* addr,
                             bool reuse_addr = false,
                             optional<protocol::network> preferred = none);

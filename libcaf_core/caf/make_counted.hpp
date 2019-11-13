@@ -20,10 +20,9 @@
 
 #include <type_traits>
 
-#include "caf/ref_counted.hpp"
-#include "caf/intrusive_ptr.hpp"
-
 #include "caf/detail/type_traits.hpp"
+#include "caf/intrusive_ptr.hpp"
+#include "caf/ref_counted.hpp"
 
 namespace caf {
 
@@ -36,4 +35,3 @@ intrusive_ptr<T> make_counted(Ts&&... xs) {
 }
 
 } // namespace caf
-

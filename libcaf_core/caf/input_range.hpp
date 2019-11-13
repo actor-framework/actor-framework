@@ -121,4 +121,3 @@ input_range_impl<I> make_input_range(I first, I last) {
 }
 
 } // namespace caf
-

@@ -18,21 +18,22 @@
 
 #pragma once
 
-#include <memory>
 #include <cstdint>
+#include <memory>
 #include <typeinfo>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
-#include "caf/optional.hpp"
-#include "caf/exit_reason.hpp"
 #include "caf/execution_unit.hpp"
+#include "caf/exit_reason.hpp"
+#include "caf/optional.hpp"
 
 namespace caf {
 
 class abstract_actor;
 
 /// Callback utility class.
-class attachable {
+class CAF_CORE_EXPORT attachable {
 public:
   attachable() = default;
   attachable(const attachable&) = delete;
@@ -89,4 +90,3 @@ public:
 using attachable_ptr = std::unique_ptr<attachable>;
 
 } // namespace caf
-

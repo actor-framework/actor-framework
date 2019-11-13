@@ -22,13 +22,14 @@
 #include "caf/actor_storage.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/blocking_actor.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/none.hpp"
 #include "caf/scoped_execution_unit.hpp"
 
 namespace caf {
 
 /// A scoped handle to a blocking actor.
-class scoped_actor {
+class CAF_CORE_EXPORT scoped_actor {
 public:
   // allow conversion via actor_cast
   template <class, class, int>
@@ -72,7 +73,6 @@ public:
   blocking_actor* ptr() const;
 
 private:
-
   inline actor_control_block* get() const {
     return self_.get();
   }
@@ -83,6 +83,6 @@ private:
 };
 
 /// @relates scoped_actor
-std::string to_string(const scoped_actor& x);
+CAF_CORE_EXPORT std::string to_string(const scoped_actor& x);
 
 } // namespace caf

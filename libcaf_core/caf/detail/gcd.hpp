@@ -35,5 +35,3 @@ T gcd(T a, T b) {
 
 } // namespace detail
 } // namespace caf
-
-

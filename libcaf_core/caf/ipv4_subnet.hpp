@@ -21,11 +21,12 @@
 #include <cstdint>
 
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/ipv4_address.hpp"
 
 namespace caf {
 
-class ipv4_subnet : detail::comparable<ipv4_subnet> {
+class CAF_CORE_EXPORT ipv4_subnet : detail::comparable<ipv4_subnet> {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -69,6 +70,6 @@ private:
 // -- related free functions ---------------------------------------------------
 
 /// @relates ipv4_subnet
-std::string to_string(ipv4_subnet x);
+CAF_CORE_EXPORT std::string to_string(ipv4_subnet x);
 
 } // namespace caf

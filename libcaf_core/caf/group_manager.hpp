@@ -23,16 +23,17 @@
 #include <thread>
 #include <unordered_map>
 
-#include "caf/fwd.hpp"
-#include "caf/optional.hpp"
-#include "caf/expected.hpp"
-#include "caf/group_module.hpp"
 #include "caf/abstract_group.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/shared_spinlock.hpp"
+#include "caf/expected.hpp"
+#include "caf/fwd.hpp"
+#include "caf/group_module.hpp"
+#include "caf/optional.hpp"
 
 namespace caf {
 
-class group_manager {
+class CAF_CORE_EXPORT group_manager {
 public:
   // -- friends ----------------------------------------------------------------
 
@@ -40,8 +41,8 @@ public:
 
   // -- member types -----------------------------------------------------------
 
-  using modules_map = std::unordered_map<std::string,
-                                         std::unique_ptr<group_module>>;
+  using modules_map
+    = std::unordered_map<std::string, std::unique_ptr<group_module>>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -94,4 +95,3 @@ private:
 };
 
 } // namespace caf
-

@@ -20,21 +20,20 @@
 
 #include <cstddef>
 
-#include "caf/actor.hpp"
-#include "caf/make_actor.hpp"
-#include "caf/actor_cast.hpp"
-#include "caf/replies_to.hpp"
-#include "caf/actor_system.hpp"
-#include "caf/intrusive_ptr.hpp"
-#include "caf/composed_type.hpp"
 #include "caf/abstract_actor.hpp"
+#include "caf/actor.hpp"
+#include "caf/actor_cast.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/composed_type.hpp"
+#include "caf/decorator/sequencer.hpp"
+#include "caf/decorator/splitter.hpp"
+#include "caf/detail/mpi_splice.hpp"
+#include "caf/intrusive_ptr.hpp"
+#include "caf/make_actor.hpp"
+#include "caf/replies_to.hpp"
 #include "caf/stateful_actor.hpp"
 #include "caf/typed_behavior.hpp"
 #include "caf/typed_response_promise.hpp"
-
-#include "caf/detail/mpi_splice.hpp"
-#include "caf/decorator/splitter.hpp"
-#include "caf/decorator/sequencer.hpp"
 
 namespace caf {
 
@@ -56,7 +55,7 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
                     detail::comparable<typed_actor<Sigs...>, actor>,
                     detail::comparable<typed_actor<Sigs...>, actor_addr>,
                     detail::comparable<typed_actor<Sigs...>, strong_actor_ptr> {
- public:
+public:
   static_assert(sizeof...(Sigs) > 0, "Empty typed actor handle");
 
   // -- friend types that need access to private ctors
@@ -117,13 +116,11 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
 
   /// Identifies the broker_base class for this kind of actor with actor.
   template <class State>
-  using stateful_broker_base =
-    stateful_actor<State, broker_base>;
+  using stateful_broker_base = stateful_actor<State, broker_base>;
 
   /// Identifies the broker_base class for this kind of actor with actor.
   template <class State>
-  using stateful_broker_pointer =
-    stateful_actor<State, broker_base>*;
+  using stateful_broker_pointer = stateful_actor<State, broker_base>*;
 
   typed_actor() = default;
   typed_actor(typed_actor&&) = default;
@@ -133,30 +130,26 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
 
   template <class... Ts>
   typed_actor(const typed_actor<Ts...>& other) : ptr_(other.ptr_) {
-    static_assert(detail::tl_subset_of<
-                    signatures,
-                    detail::type_list<Ts...>
-                  >::value,
-                  "Cannot assign incompatible handle");
+    static_assert(
+      detail::tl_subset_of<signatures, detail::type_list<Ts...>>::value,
+      "Cannot assign incompatible handle");
   }
 
   // allow `handle_type{this}` for typed actors
   template <class T,
             class = detail::enable_if_t<actor_traits<T>::is_statically_typed>>
   typed_actor(T* ptr) : ptr_(ptr->ctrl()) {
-    static_assert(detail::tl_subset_of<signatures,
-                                       typename T::signatures>::value,
-                  "Cannot assign T* to incompatible handle type");
+    static_assert(
+      detail::tl_subset_of<signatures, typename T::signatures>::value,
+      "Cannot assign T* to incompatible handle type");
     CAF_ASSERT(ptr != nullptr);
   }
 
   template <class... Ts>
   typed_actor& operator=(const typed_actor<Ts...>& other) {
-    static_assert(detail::tl_subset_of<
-                    signatures,
-                    detail::type_list<Ts...>
-                  >::value,
-                  "Cannot assign incompatible handle");
+    static_assert(
+      detail::tl_subset_of<signatures, detail::type_list<Ts...>>::value,
+      "Cannot assign incompatible handle");
     ptr_ = other.ptr_;
     return *this;
   }
@@ -273,7 +266,8 @@ template <class... Xs, class... Ys>
 bool operator==(const typed_actor<Xs...>& x,
                 const typed_actor<Ys...>& y) noexcept {
   return actor_addr::compare(actor_cast<actor_control_block*>(x),
-                             actor_cast<actor_control_block*>(y)) == 0;
+                             actor_cast<actor_control_block*>(y))
+         == 0;
 }
 
 /// @relates typed_actor
@@ -312,8 +306,8 @@ bool operator!=(std::nullptr_t, const typed_actor<Xs...>& x) noexcept {
 template <class... Xs, class... Ys>
 composed_type_t<detail::type_list<Xs...>, detail::type_list<Ys...>>
 operator*(typed_actor<Xs...> f, typed_actor<Ys...> g) {
-  using result = composed_type_t<detail::type_list<Xs...>,
-                                 detail::type_list<Ys...>>;
+  using result
+    = composed_type_t<detail::type_list<Xs...>, detail::type_list<Ys...>>;
   auto& sys = g->home_system();
   auto mts = sys.message_types(detail::type_list<result>{});
   return make_actor<decorator::sequencer, result>(
@@ -323,26 +317,18 @@ operator*(typed_actor<Xs...> f, typed_actor<Ys...> g) {
 }
 
 template <class... Xs, class... Ts>
-typename detail::mpi_splice<
-  typed_actor,
-  detail::type_list<Xs...>,
-  typename Ts::signatures...
->::type
+typename detail::mpi_splice<typed_actor, detail::type_list<Xs...>,
+                            typename Ts::signatures...>::type
 splice(const typed_actor<Xs...>& x, const Ts&... xs) {
   using result =
-    typename detail::mpi_splice<
-      typed_actor,
-      detail::type_list<Xs...>,
-      typename Ts::signatures...
-    >::type;
+    typename detail::mpi_splice<typed_actor, detail::type_list<Xs...>,
+                                typename Ts::signatures...>::type;
   std::vector<strong_actor_ptr> tmp{actor_cast<strong_actor_ptr>(x),
                                     actor_cast<strong_actor_ptr>(xs)...};
   auto& sys = x->home_system();
   auto mts = sys.message_types(detail::type_list<result>{});
-  return make_actor<decorator::splitter, result>(sys.next_actor_id(),
-                                                 sys.node(), &sys,
-                                                 std::move(tmp),
-                                                 std::move(mts));
+  return make_actor<decorator::splitter, result>(
+    sys.next_actor_id(), sys.node(), &sys, std::move(tmp), std::move(mts));
 }
 
 } // namespace caf
@@ -356,4 +342,3 @@ struct hash<caf::typed_actor<Sigs...>> {
   }
 };
 } // namespace std
-

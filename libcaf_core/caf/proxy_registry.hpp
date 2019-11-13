@@ -26,6 +26,7 @@
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_proxy.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/fwd.hpp"
 #include "caf/node_id.hpp"
@@ -34,7 +35,7 @@ namespace caf {
 
 /// Groups a (distributed) set of actors and allows actors
 /// in the same namespace to exchange messages.
-class proxy_registry {
+class CAF_CORE_EXPORT proxy_registry {
 public:
   /// Responsible for creating proxy actors.
   class backend {

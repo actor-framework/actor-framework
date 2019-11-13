@@ -20,8 +20,8 @@
 
 #include "caf/config.hpp"
 
-#include <new>
 #include <memory>
+#include <new>
 #include <ostream>
 #include <type_traits>
 
@@ -65,9 +65,10 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class U>
-  expected(U x,
-           typename std::enable_if<std::is_convertible<U, T>::value>::type* = nullptr)
-      : engaged_(true) {
+  expected(
+    U x,
+    typename std::enable_if<std::is_convertible<U, T>::value>::type* = nullptr)
+    : engaged_(true) {
     new (std::addressof(value_)) T(std::move(x));
   }
 
@@ -138,7 +139,6 @@ public:
     }
     return *this;
   }
-
 
   expected& operator=(T&& x) noexcept(nothrow_move) {
     if (engaged_) {
@@ -280,7 +280,7 @@ private:
 /// @relates expected
 template <class T>
 auto operator==(const expected<T>& x, const expected<T>& y)
--> decltype(*x == *y) {
+  -> decltype(*x == *y) {
   return x && y ? *x == *y : (!x && !y ? x.error() == y.error() : false);
 }
 
@@ -323,7 +323,7 @@ enable_if_has_make_error_t<E, bool> operator==(E x, const expected<T>& y) {
 /// @relates expected
 template <class T>
 auto operator!=(const expected<T>& x, const expected<T>& y)
--> decltype(*x == *y) {
+  -> decltype(*x == *y) {
   return !(x == y);
 }
 
@@ -382,7 +382,7 @@ public:
     // nop
   }
 
-  expected(const expected& other)  noexcept : error_(other.error_) {
+  expected(const expected& other) noexcept : error_(other.error_) {
     // nop
   }
 
@@ -449,7 +449,7 @@ namespace std {
 
 template <class T>
 auto operator<<(ostream& oss, const caf::expected<T>& x)
--> decltype(oss << *x) {
+  -> decltype(oss << *x) {
   if (x)
     oss << *x;
   else
@@ -458,4 +458,3 @@ auto operator<<(ostream& oss, const caf::expected<T>& x)
 }
 
 } // namespace std
-

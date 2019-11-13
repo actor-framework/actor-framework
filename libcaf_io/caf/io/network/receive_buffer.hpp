@@ -23,13 +23,14 @@
 #include <memory>
 
 #include "caf/allowed_unsafe_message_type.hpp"
+#include "caf/detail/io_export.hpp"
 
 namespace caf {
 namespace io {
 namespace network {
 
 /// A container that does not call constructors and destructors for its values.
-class receive_buffer {
+class CAF_IO_EXPORT receive_buffer {
 public:
   using value_type = char;
   using size_type = size_t;
@@ -210,4 +211,3 @@ private:
 } // namepsace network
 } // namespace io
 } // namespace caf
-

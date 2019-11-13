@@ -19,12 +19,11 @@
 #pragma once
 
 #include <cstdint>
-#include <typeinfo>
 #include <functional>
-
-#include "caf/type_erased_value.hpp"
+#include <typeinfo>
 
 #include "caf/detail/type_erased_value_impl.hpp"
+#include "caf/type_erased_value.hpp"
 
 namespace caf {
 
@@ -42,9 +41,9 @@ type_erased_value_ptr make_type_erased_value(Ts&&... xs) {
 struct type_erased_value_factory {
   template <class T>
   type_erased_value_ptr operator()(T&& x) const {
-    return make_type_erased_value<typename std::decay<T>::type>(std::forward<T>(x));
+    return make_type_erased_value<typename std::decay<T>::type>(
+      std::forward<T>(x));
   }
 };
 
 } // namespace caf
-

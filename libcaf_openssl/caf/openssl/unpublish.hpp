@@ -20,13 +20,13 @@
 
 #include <cstdint>
 
-#include "caf/sec.hpp"
+#include "caf/actor_cast.hpp"
+#include "caf/actor_control_block.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
-#include "caf/actor_cast.hpp"
-#include "caf/typed_actor.hpp"
 #include "caf/function_view.hpp"
-#include "caf/actor_control_block.hpp"
+#include "caf/sec.hpp"
+#include "caf/typed_actor.hpp"
 
 #include "caf/openssl/manager.hpp"
 
@@ -47,4 +47,3 @@ expected<void> unpublish(const Handle& whom, uint16_t port = 0) {
 
 } // namespace openssl
 } // namespace caf
-

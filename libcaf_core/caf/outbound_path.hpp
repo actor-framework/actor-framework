@@ -18,27 +18,26 @@
 
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <vector>
-#include <cstdint>
-#include <cstddef>
 
 #include "caf/actor_control_block.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/type_traits.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
+#include "caf/meta/type_name.hpp"
 #include "caf/stream_aborter.hpp"
 #include "caf/stream_slot.hpp"
 #include "caf/system_messages.hpp"
 
-#include "caf/detail/type_traits.hpp"
-
-#include "caf/meta/type_name.hpp"
-
 namespace caf {
 
 /// State for a single path to a sink of a `downstream_manager`.
-class outbound_path {
+class CAF_CORE_EXPORT outbound_path {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -66,9 +65,9 @@ public:
   // -- downstream communication -----------------------------------------------
 
   /// Sends an `open_stream_msg` handshake.
-  static void emit_open(local_actor* self, stream_slot slot,
-                        strong_actor_ptr to, message handshake_data,
-                        stream_priority prio);
+  static void
+  emit_open(local_actor* self, stream_slot slot, strong_actor_ptr to,
+            message handshake_data, stream_priority prio);
 
   /// Sends a `downstream_msg::batch` on this path. Decrements `open_credit` by
   /// `xs_size` and increments `next_batch_id` by 1.
@@ -101,18 +100,18 @@ public:
   /// Calls `emit_batch` for each chunk in the cache, whereas each chunk is of
   /// size `desired_batch_size`. Does nothing for pending paths.
   template <class T>
-  void emit_batches(local_actor* self, std::vector<T>& cache,
-                    bool force_underfull) {
+  void
+  emit_batches(local_actor* self, std::vector<T>& cache, bool force_underfull) {
     CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(open_credit) << CAF_ARG(cache)
-                  << CAF_ARG(force_underfull));
+                                 << CAF_ARG(force_underfull));
     if (pending())
       return;
     CAF_ASSERT(open_credit >= 0);
     CAF_ASSERT(desired_batch_size > 0);
     CAF_ASSERT(cache.size() <= std::numeric_limits<int32_t>::max());
     auto first = cache.begin();
-    auto last = first + std::min(open_credit,
-                                 static_cast<int32_t>(cache.size()));
+    auto last
+      = first + std::min(open_credit, static_cast<int32_t>(cache.size()));
     if (first == last)
       return;
     auto i = emit_batches_impl(self, first, last, force_underfull);
@@ -130,9 +129,9 @@ public:
   void emit_irregular_shutdown(local_actor* self, error reason);
 
   /// Sends a `downstream_msg::forced_close`.
-  static void emit_irregular_shutdown(local_actor* self, stream_slots slots,
-                                      const strong_actor_ptr& hdl,
-                                      error reason);
+  static void
+  emit_irregular_shutdown(local_actor* self, stream_slots slots,
+                          const strong_actor_ptr& hdl, error reason);
 
   // -- properties -------------------------------------------------------------
 
@@ -189,4 +188,3 @@ typename Inspector::result_type inspect(Inspector& f, outbound_path& x) {
 }
 
 } // namespace caf
-

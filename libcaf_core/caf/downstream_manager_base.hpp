@@ -21,16 +21,16 @@
 #include <cstddef>
 #include <memory>
 
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/unordered_flat_map.hpp"
 #include "caf/downstream_manager.hpp"
 #include "caf/outbound_path.hpp"
-
-#include "caf/detail/unordered_flat_map.hpp"
 
 namespace caf {
 
 /// The default downstream manager base stores outbound paths in an unordered
 /// map. It always takes ownership of the pahts by using unique pointers.
-class downstream_manager_base : public downstream_manager {
+class CAF_CORE_EXPORT downstream_manager_base : public downstream_manager {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -60,8 +60,8 @@ public:
 
   size_t num_paths() const noexcept override;
 
-  bool remove_path(stream_slot slots, error reason,
-                   bool silent) noexcept override;
+  bool
+  remove_path(stream_slot slots, error reason, bool silent) noexcept override;
 
   path_ptr path(stream_slot slots) noexcept override;
 
@@ -72,8 +72,8 @@ protected:
 
   void for_each_path_impl(path_visitor& f) override;
 
-  bool check_paths_impl(path_algorithm algo,
-                        path_predicate& pred) const noexcept override;
+  bool check_paths_impl(path_algorithm algo, path_predicate& pred) const
+    noexcept override;
 
   // -- member variables -------------------------------------------------------
 
@@ -81,4 +81,3 @@ protected:
 };
 
 } // namespace caf
-

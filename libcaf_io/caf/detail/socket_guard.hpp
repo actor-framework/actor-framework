@@ -18,12 +18,13 @@
 
 #pragma once
 
+#include "caf/detail/io_export.hpp"
 #include "caf/io/network/native_socket.hpp"
 
 namespace caf {
 namespace detail {
 
-class socket_guard {
+class CAF_IO_EXPORT socket_guard {
 public:
   explicit socket_guard(io::network::native_socket fd);
 

@@ -18,11 +18,12 @@
 
 #pragma once
 
+#include <cstddef>
 #include <string>
-#include <cstddef> // size_t
 #include <type_traits>
 
 #include "caf/data_processor.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/raise_error.hpp"
 
@@ -30,7 +31,7 @@ namespace caf {
 
 /// @ingroup TypeSystem
 /// Technology-independent serialization interface.
-class serializer : public data_processor<serializer> {
+class CAF_CORE_EXPORT serializer : public data_processor<serializer> {
 public:
   using super = data_processor<serializer>;
 
@@ -50,11 +51,8 @@ public:
 
 template <class T>
 typename std::enable_if<
-  std::is_same<
-    error,
-    decltype(std::declval<serializer&>().apply(std::declval<T&>()))
-  >::value
->::type
+  std::is_same<error, decltype(std::declval<serializer&>().apply(
+                        std::declval<T&>()))>::value>::type
 operator&(serializer& sink, const T& x) {
   // implementations are required to never modify `x` while saving
   auto e = sink.apply(const_cast<T&>(x));
@@ -64,16 +62,12 @@ operator&(serializer& sink, const T& x) {
 
 template <class T>
 typename std::enable_if<
-  std::is_same<
-    error,
-    decltype(std::declval<serializer&>().apply(std::declval<T&>()))
-  >::value,
-  serializer&
->::type
+  std::is_same<error, decltype(std::declval<serializer&>().apply(
+                        std::declval<T&>()))>::value,
+  serializer&>::type
 operator<<(serializer& sink, const T& x) {
-  sink & x;
+  sink& x;
   return sink;
 }
 
 } // namespace caf
-

@@ -21,18 +21,19 @@
 #include <algorithm>
 
 #include "caf/buffered_downstream_manager.hpp"
-#include "caf/outbound_path.hpp"
-#include "caf/raise_error.hpp"
-
 #include "caf/detail/algorithms.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/path_state.hpp"
 #include "caf/detail/select_all.hpp"
 #include "caf/detail/unordered_flat_map.hpp"
+#include "caf/outbound_path.hpp"
+#include "caf/raise_error.hpp"
 
 namespace caf {
 
 template <class T, class Filter = unit_t, class Select = detail::select_all>
-class broadcast_downstream_manager : public buffered_downstream_manager<T> {
+class CAF_CORE_EXPORT broadcast_downstream_manager
+  : public buffered_downstream_manager<T> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -218,11 +219,10 @@ public:
   }
 
 protected:
-  void about_to_erase(outbound_path* ptr, bool silent,
-                      error* reason) override {
+  void about_to_erase(outbound_path* ptr, bool silent, error* reason) override {
     CAF_ASSERT(ptr != nullptr);
-    CAF_LOG_TRACE(CAF_ARG2("slot", ptr->slots.sender) << CAF_ARG(silent) <<
-                  CAF_ARG(reason));
+    CAF_LOG_TRACE(CAF_ARG2("slot", ptr->slots.sender)
+                  << CAF_ARG(silent) << CAF_ARG(reason));
     state_map_.erase(ptr->slots.sender);
     super::about_to_erase(ptr, silent, reason);
   }
@@ -245,10 +245,9 @@ private:
       auto cache_size = y.second.buf.size();
       return std::min(interim, credit > cache_size ? credit - cache_size : 0u);
     };
-    auto chunk_size = detail::zip_fold_if(f, not_closing,
-                                          std::numeric_limits<size_t>::max(),
-                                          this->paths_.container(),
-                                          state_map_.container());
+    auto chunk_size
+      = detail::zip_fold_if(f, not_closing, std::numeric_limits<size_t>::max(),
+                            this->paths_.container(), state_map_.container());
     if (chunk_size == std::numeric_limits<size_t>::max()) {
       // All paths are closing, simply try forcing out more data and return.
       auto g = [&](typename map_type::value_type& x,
@@ -298,4 +297,3 @@ private:
 };
 
 } // namespace caf
-

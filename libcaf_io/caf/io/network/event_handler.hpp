@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/detail/io_export.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/operation.hpp"
@@ -28,7 +29,7 @@ namespace io {
 namespace network {
 
 /// A socket I/O event handler.
-class event_handler {
+class CAF_IO_EXPORT event_handler {
 public:
   /// Stores various status flags and user-defined config parameters.
   struct state {

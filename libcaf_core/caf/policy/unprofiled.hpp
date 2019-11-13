@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
 namespace caf {
@@ -28,7 +29,7 @@ namespace policy {
 /// By deriving from it, actual policy classes only need to implement/override
 /// the customization points they need. This class also serves as a place to
 /// factor common utilities for implementing actual policies.
-class unprofiled {
+class CAF_CORE_EXPORT unprofiled {
 public:
   virtual ~unprofiled();
 
@@ -68,4 +69,3 @@ protected:
 
 } // namespace policy
 } // namespace caf
-

@@ -20,21 +20,15 @@
 
 #include <string>
 
-#include "caf/error.hpp"
 #include "caf/deep_to_string.hpp"
-
-#include "caf/detail/type_traits.hpp"
 #include "caf/detail/stringification_inspector.hpp"
+#include "caf/detail/type_traits.hpp"
+#include "caf/error.hpp"
 
 namespace caf {
 
-template <class T,
-          class E = typename std::enable_if<
-                      detail::is_inspectable<
-                        detail::stringification_inspector,
-                        T
-                      >::value
-                    >::type>
+template <class T, class E = typename std::enable_if<detail::is_inspectable<
+                     detail::stringification_inspector, T>::value>::type>
 std::string to_string(const T& x) {
   std::string res;
   detail::stringification_inspector f{res};
@@ -43,4 +37,3 @@ std::string to_string(const T& x) {
 }
 
 } // namespace caf
-

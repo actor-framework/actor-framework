@@ -18,17 +18,17 @@
 
 #pragma once
 
-#include <vector>
 #include <functional>
+#include <vector>
 
-#include "caf/locks.hpp"
 #include "caf/actor.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/shared_spinlock.hpp"
+#include "caf/detail/split_join.hpp"
 #include "caf/execution_unit.hpp"
+#include "caf/locks.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/monitorable_actor.hpp"
-
-#include "caf/detail/split_join.hpp"
-#include "caf/detail/shared_spinlock.hpp"
 
 namespace caf {
 
@@ -54,13 +54,13 @@ namespace caf {
 /// messages with as little overhead as possible, because the dispatching
 /// runs in the context of the sender.
 /// @experimental
-class actor_pool : public monitorable_actor {
+class CAF_CORE_EXPORT actor_pool : public monitorable_actor {
 public:
   using uplock = upgrade_lock<detail::shared_spinlock>;
   using actor_vec = std::vector<actor>;
-  using factory = std::function<actor ()>;
-  using policy = std::function<void (actor_system&, uplock&, const actor_vec&,
-                                     mailbox_element_ptr&, execution_unit*)>;
+  using factory = std::function<actor()>;
+  using policy = std::function<void(actor_system&, uplock&, const actor_vec&,
+                                    mailbox_element_ptr&, execution_unit*)>;
 
   /// Returns a simple round robin dispatching policy.
   static policy round_robin();
@@ -96,7 +96,8 @@ public:
 
   /// Returns an actor pool with `n` workers created by the factory
   /// function `fac` using the dispatch policy `pol`.
-  static actor make(execution_unit* eu, size_t num_workers, const factory& fac, policy pol);
+  static actor
+  make(execution_unit* eu, size_t num_workers, const factory& fac, policy pol);
 
   void enqueue(mailbox_element_ptr what, execution_unit* eu) override;
 
@@ -108,9 +109,9 @@ protected:
   void on_cleanup(const error& reason) override;
 
 private:
-  bool filter(upgrade_lock<detail::shared_spinlock>&,
-              const strong_actor_ptr& sender, message_id mid,
-              message_view& mv, execution_unit* eu);
+  bool
+  filter(upgrade_lock<detail::shared_spinlock>&, const strong_actor_ptr& sender,
+         message_id mid, message_view& mv, execution_unit* eu);
 
   // call without workers_mtx_ held
   void quit(execution_unit* host);
@@ -122,4 +123,3 @@ private:
 };
 
 } // namespace caf
-

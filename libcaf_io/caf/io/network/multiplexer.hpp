@@ -22,19 +22,18 @@
 #include <thread>
 #include <functional>
 
-#include "caf/extend.hpp"
-#include "caf/expected.hpp"
-#include "caf/resumable.hpp"
-#include "caf/make_counted.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/execution_unit.hpp"
-
-#include "caf/io/fwd.hpp"
+#include "caf/expected.hpp"
+#include "caf/extend.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/connection_handle.hpp"
-
-#include "caf/io/network/protocol.hpp"
+#include "caf/io/fwd.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/native_socket.hpp"
+#include "caf/io/network/protocol.hpp"
+#include "caf/make_counted.hpp"
+#include "caf/resumable.hpp"
 
 namespace caf {
 namespace io {
@@ -43,7 +42,7 @@ namespace network {
 class multiplexer_backend;
 
 /// Low-level backend for IO multiplexing.
-class multiplexer : public execution_unit {
+class CAF_IO_EXPORT multiplexer : public execution_unit {
 public:
   explicit multiplexer(actor_system* sys);
 
@@ -89,7 +88,7 @@ public:
                          bool reuse_addr = false) = 0;
 
   /// Simple wrapper for runnables
-  class runnable : public resumable, public ref_counted {
+  class CAF_IO_EXPORT runnable : public resumable, public ref_counted {
   public:
     subtype_t subtype() const override;
     void intrusive_ptr_add_ref_impl() override;
@@ -98,7 +97,7 @@ public:
 
   /// Makes sure the multipler does not exit its event loop until
   /// the destructor of `supervisor` has been called.
-  class supervisor {
+  class CAF_IO_EXPORT supervisor {
   public:
     virtual ~supervisor();
   };
@@ -172,4 +171,3 @@ using multiplexer_ptr = std::unique_ptr<multiplexer>;
 } // namespace network
 } // namespace io
 } // namespace caf
-

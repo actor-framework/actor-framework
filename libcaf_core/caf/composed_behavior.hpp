@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include "caf/param.hpp"
 #include "caf/composable_behavior.hpp"
+#include "caf/param.hpp"
 #include "caf/typed_actor_pointer.hpp"
 
 namespace caf {
@@ -30,11 +30,7 @@ public:
   using signatures =
     typename detail::tl_union<typename Ts::signatures...>::type;
 
-  using handle_type =
-    typename detail::tl_apply<
-      signatures,
-      typed_actor
-    >::type;
+  using handle_type = typename detail::tl_apply<signatures, typed_actor>::type;
 
   using behavior_type = typename handle_type::behavior_type;
 
@@ -43,10 +39,7 @@ public:
   using broker_base = typename handle_type::broker_base;
 
   using self_pointer =
-    typename detail::tl_apply<
-      signatures,
-      typed_actor_pointer
-    >::type;
+    typename detail::tl_apply<signatures, typed_actor_pointer>::type;
 
   composed_behavior() : self(nullptr) {
     // nop
@@ -72,4 +65,3 @@ protected:
 };
 
 } // namespace caf
-

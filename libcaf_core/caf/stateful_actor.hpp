@@ -40,8 +40,7 @@ class stateful_actor : public Base {
 public:
   template <class... Ts>
   explicit stateful_actor(actor_config& cfg, Ts&&... xs)
-      : Base(cfg, std::forward<Ts>(xs)...),
-        state(state_) {
+    : Base(cfg, std::forward<Ts>(xs)...), state(state_) {
     if (detail::is_serializable<State>::value)
       this->setf(Base::is_serializable_flag);
     cr_state(this);
@@ -83,7 +82,7 @@ public:
 private:
   template <class Inspector, class T>
   auto serialize_state(Inspector* f, T& x, unsigned int)
-  -> decltype(inspect(*f, x)) {
+    -> decltype(inspect(*f, x)) {
     return inspect(*f, x);
   }
 
@@ -125,8 +124,9 @@ private:
     return Base::name();
   }
 
-  union { State state_; };
+  union {
+    State state_;
+  };
 };
 
 } // namespace caf
-

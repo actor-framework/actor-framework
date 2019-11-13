@@ -20,15 +20,13 @@
 
 #include "caf/actor_addr.hpp"
 #include "caf/attachable.hpp"
+#include "caf/detail/core_export.hpp"
 
 namespace caf {
 
-class default_attachable : public attachable {
+class CAF_CORE_EXPORT default_attachable : public attachable {
 public:
-  enum observe_type {
-    monitor,
-    link
-  };
+  enum observe_type { monitor, link };
 
   struct observe_token {
     actor_addr observer;
@@ -48,19 +46,18 @@ public:
   }
 
   static attachable_ptr make_link(actor_addr observed, actor_addr observer) {
-    return attachable_ptr{new default_attachable(std::move(observed),
-                                                 std::move(observer), link)};
+    return attachable_ptr{
+      new default_attachable(std::move(observed), std::move(observer), link)};
   }
 
   class predicate {
   public:
-    inline predicate(actor_addr observer, observe_type type)
-        : observer_(std::move(observer)),
-          type_(type) {
+    predicate(actor_addr observer, observe_type type)
+      : observer_(std::move(observer)), type_(type) {
       // nop
     }
 
-    inline bool operator()(const attachable_ptr& ptr) const {
+    bool operator()(const attachable_ptr& ptr) const {
       return ptr->matches(observe_token{observer_, type_});
     }
 
@@ -88,5 +85,3 @@ private:
 };
 
 } // namespace caf
-
-

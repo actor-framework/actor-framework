@@ -18,12 +18,13 @@
 
 #pragma once
 
-#include "caf/io/fwd.hpp"
+#include <cstdint>
+
+#include "caf/detail/io_export.hpp"
 #include "caf/io/datagram_servant.hpp"
-
-#include "caf/io/network/native_socket.hpp"
+#include "caf/io/fwd.hpp"
 #include "caf/io/network/datagram_handler_impl.hpp"
-
+#include "caf/io/network/native_socket.hpp"
 #include "caf/policy/udp.hpp"
 
 namespace caf {
@@ -31,12 +32,12 @@ namespace io {
 namespace network {
 
 /// Default datagram servant implementation.
-class datagram_servant_impl : public datagram_servant {
+class CAF_IO_EXPORT datagram_servant_impl : public datagram_servant {
+public:
   using id_type = int64_t;
 
-public:
   datagram_servant_impl(default_multiplexer& mx, native_socket sockfd,
-                        int64_t id);
+                        id_type id);
 
   bool new_endpoint(network::receive_buffer& buf) override;
 

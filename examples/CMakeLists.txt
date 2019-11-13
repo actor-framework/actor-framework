@@ -1,5 +1,3 @@
-project(caf_examples CXX)
-
 add_custom_target(all_examples)
 
 include_directories(${LIBCAF_INCLUDE_DIRS})

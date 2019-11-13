@@ -18,12 +18,19 @@
 
 #pragma once
 
-#include <tuple>
 #include <sstream>
+#include <tuple>
 #include <type_traits>
 
 #include "caf/atom.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/apply_args.hpp"
+#include "caf/detail/comparable.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/implicit_conversions.hpp"
+#include "caf/detail/int_list.hpp"
+#include "caf/detail/message_data.hpp"
+#include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/index_mapping.hpp"
 #include "caf/make_counted.hpp"
@@ -32,19 +39,12 @@
 #include "caf/skip.hpp"
 #include "caf/type_nr.hpp"
 
-#include "caf/detail/apply_args.hpp"
-#include "caf/detail/comparable.hpp"
-#include "caf/detail/implicit_conversions.hpp"
-#include "caf/detail/int_list.hpp"
-#include "caf/detail/message_data.hpp"
-#include "caf/detail/type_traits.hpp"
-
 namespace caf {
 class message_handler;
 
 /// Describes a fixed-length, copy-on-write, type-erased
 /// tuple with elements of any type.
-class message : public type_erased_tuple {
+class CAF_CORE_EXPORT message : public type_erased_tuple {
 public:
   // -- nested types -----------------------------------------------------------
 
@@ -61,7 +61,7 @@ public:
   using data_ptr = detail::message_data::cow_ptr;
 
   /// Function object for generating CLI argument help text.
-  using help_factory = std::function<std::string (const std::vector<cli_arg>&)>;
+  using help_factory = std::function<std::string(const std::vector<cli_arg>&)>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -72,7 +72,7 @@ public:
 
   message(message&&) noexcept;
   message& operator=(message&&) noexcept;
-  explicit message(data_ptr  ptr) noexcept;
+  explicit message(data_ptr ptr) noexcept;
 
   ~message() override;
 
@@ -220,8 +220,7 @@ public:
   ///          (i.e. unmatched elements), a set containing the names of all
   ///          used arguments, and the generated help text.
   /// @throws std::invalid_argument if no name or more than one long name is set
-  cli_res extract_opts(std::vector<cli_arg> xs,
-                       const help_factory& f = nullptr,
+  cli_res extract_opts(std::vector<cli_arg> xs, const help_factory& f = nullptr,
                        bool no_help = false) const;
 
   // -- inline observers -------------------------------------------------------
@@ -315,9 +314,9 @@ struct message::cli_res {
 
 /// Stores the name of a command line option ("<long name>[,<short name>]")
 /// along with a description and a callback.
-struct message::cli_arg {
+struct CAF_CORE_EXPORT message::cli_arg {
   /// Returns `true` on a match, `false` otherwise.
-  using consumer = std::function<bool (const std::string&)>;
+  using consumer = std::function<bool(const std::string&)>;
 
   /// Full name of this CLI argument using format "<long name>[,<short name>]"
   std::string name;
@@ -360,9 +359,7 @@ struct message::cli_arg {
   /// storing its matched argument in `dest`.
   template <class T>
   cli_arg(std::string nstr, std::string tstr, T& arg)
-      : name(std::move(nstr)),
-        text(std::move(tstr)),
-        flag(nullptr) {
+    : name(std::move(nstr)), text(std::move(tstr)), flag(nullptr) {
     fun = [&arg](const std::string& str) -> bool {
       T x;
       // TODO: using this stream is a workaround for the missing
@@ -381,9 +378,7 @@ struct message::cli_arg {
   /// appending matched arguments to `dest`.
   template <class T>
   cli_arg(std::string nstr, std::string tstr, std::vector<T>& arg)
-      : name(std::move(nstr)),
-        text(std::move(tstr)),
-        flag(nullptr) {
+    : name(std::move(nstr)), text(std::move(tstr)), flag(nullptr) {
     fun = [&arg](const std::string& str) -> bool {
       T x;
       std::istringstream iss{str};
@@ -399,13 +394,13 @@ struct message::cli_arg {
 // -- related non-members ------------------------------------------------------
 
 /// @relates message
-error inspect(serializer& sink, message& msg);
+CAF_CORE_EXPORT error inspect(serializer& sink, message& msg);
 
 /// @relates message
-error inspect(deserializer& source, message& msg);
+CAF_CORE_EXPORT error inspect(deserializer& source, message& msg);
 
 /// @relates message
-std::string to_string(const message& msg);
+CAF_CORE_EXPORT std::string to_string(const message& msg);
 
 /// @relates message
 inline message operator+(const message& lhs, const message& rhs) {
@@ -413,4 +408,3 @@ inline message operator+(const message& lhs, const message& rhs) {
 }
 
 } // namespace caf
-

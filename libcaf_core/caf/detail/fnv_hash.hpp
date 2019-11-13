@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <type_traits>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
@@ -32,10 +33,12 @@ namespace detail {
 /// See:
 /// - https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
 /// - http://www.isthe.com/chongo/tech/comp/fnv/index.html
-size_t fnv_hash(const unsigned char* first, const unsigned char* last);
+CAF_CORE_EXPORT size_t fnv_hash(const unsigned char* first,
+                                const unsigned char* last);
 
-size_t fnv_hash_append(size_t intermediate, const unsigned char* first,
-                       const unsigned char* last);
+CAF_CORE_EXPORT size_t fnv_hash_append(size_t intermediate,
+                                       const unsigned char* first,
+                                       const unsigned char* last);
 
 template <class T>
 enable_if_t<has_data_member<T>::value, size_t> fnv_hash(const T& x) {
@@ -61,8 +64,8 @@ enable_if_t<std::is_integral<T>::value, size_t> fnv_hash(const T& x) {
 }
 
 template <class T>
-enable_if_t<std::is_integral<T>::value, size_t> fnv_hash_append(size_t interim,
-                                                                const T& x) {
+enable_if_t<std::is_integral<T>::value, size_t>
+fnv_hash_append(size_t interim, const T& x) {
   auto first = reinterpret_cast<const uint8_t*>(&x);
   return fnv_hash_append(interim, first, first + sizeof(T));
 }

@@ -18,9 +18,8 @@
 
 #pragma once
 
-#include "caf/typed_actor_view.hpp"
-
 #include "caf/detail/type_list.hpp"
+#include "caf/typed_actor_view.hpp"
 
 namespace caf {
 
@@ -33,11 +32,9 @@ public:
   template <class Supertype>
   typed_actor_pointer(Supertype* selfptr) : view_(selfptr) {
     using namespace caf::detail;
-    static_assert(tl_subset_of<
-                    type_list<Sigs...>,
-                    typename Supertype::signatures
-                  >::value,
-                  "cannot create a pointer view to an unrelated actor type");
+    static_assert(
+      tl_subset_of<type_list<Sigs...>, typename Supertype::signatures>::value,
+      "cannot create a pointer view to an unrelated actor type");
   }
 
   typed_actor_pointer(std::nullptr_t) : view_(nullptr) {
@@ -73,11 +70,9 @@ public:
   template <class Supertype>
   typed_actor_pointer& operator=(Supertype* ptr) {
     using namespace caf::detail;
-    static_assert(tl_subset_of<
-                    type_list<Sigs...>,
-                    typename Supertype::signatures
-                  >::value,
-                  "cannot assign pointer of unrelated actor type");
+    static_assert(
+      tl_subset_of<type_list<Sigs...>, typename Supertype::signatures>::value,
+      "cannot assign pointer of unrelated actor type");
     view_ = ptr;
     return *this;
   }
@@ -87,4 +82,3 @@ private:
 };
 
 } // namespace caf
-

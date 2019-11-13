@@ -36,6 +36,7 @@
 #include "caf/actor_registry.hpp"
 #include "caf/actor_traits.hpp"
 #include "caf/composable_behavior_based_actor.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/init_fun_factory.hpp"
 #include "caf/detail/spawn_fwd.hpp"
 #include "caf/detail/spawnable.hpp"
@@ -90,8 +91,8 @@ template <class T>
 struct typed_mpi_access;
 
 template <class... Is, class... Ls>
-struct typed_mpi_access<typed_mpi<detail::type_list<Is...>,
-                                  output_tuple<Ls...>>> {
+struct typed_mpi_access<
+  typed_mpi<detail::type_list<Is...>, output_tuple<Ls...>>> {
   std::string operator()(const uniform_type_info_map& types) const {
     static_assert(sizeof...(Is) > 0, "typed MPI without inputs");
     static_assert(sizeof...(Ls) > 0, "typed MPI without outputs");
@@ -114,7 +115,7 @@ std::string get_rtti_from_mpi(const uniform_type_info_map& types) {
 
 /// Actor environment including scheduler, registry, and optional components
 /// such as a middleman.
-class actor_system {
+class CAF_CORE_EXPORT actor_system {
 public:
   friend class logger;
   friend class io::middleman;
@@ -206,8 +207,8 @@ public:
   }
 
   template <class T,
-            class E =
-              typename std::enable_if<!detail::is_type_list<T>::value>::type>
+            class E
+            = typename std::enable_if<!detail::is_type_list<T>::value>::type>
   mpi message_types(const T&) const {
     detail::type_list<T> token;
     return message_types(token);
@@ -308,8 +309,7 @@ public:
   /// @param cfg To-be-filled config for the actor.
   /// @param xs Constructor arguments for `C`.
   template <class C, spawn_options Os, class... Ts>
-  infer_handle_from_class_t<C>
-  spawn_class(actor_config& cfg, Ts&&... xs) {
+  infer_handle_from_class_t<C> spawn_class(actor_config& cfg, Ts&&... xs) {
     return spawn_impl<C, Os>(cfg, detail::spawn_fwd<Ts>(xs)...);
   }
 
@@ -336,8 +336,8 @@ public:
   /// @param xs Arguments for `fun`.
   /// @private
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
-  infer_handle_from_fun_t<F> spawn_functor(std::true_type, actor_config& cfg,
-                                           F& fun, Ts&&... xs) {
+  infer_handle_from_fun_t<F>
+  spawn_functor(std::true_type, actor_config& cfg, F& fun, Ts&&... xs) {
     using impl = infer_impl_from_fun_t<F>;
     detail::init_fun_factory<impl, F> fac;
     cfg.init_fun = fac(std::move(fun), std::forward<Ts>(xs)...);
@@ -347,8 +347,8 @@ public:
   /// Fallback no-op overload.
   /// @private
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
-  infer_handle_from_fun_t<F> spawn_functor(std::false_type, actor_config&, F&,
-                                           Ts&&...) {
+  infer_handle_from_fun_t<F>
+  spawn_functor(std::false_type, actor_config&, F&, Ts&&...) {
     return {};
   }
 
@@ -357,8 +357,7 @@ public:
   /// The behavior of `spawn` can be modified by setting `Os`, e.g.,
   /// to opt-out of the cooperative scheduling.
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
-  infer_handle_from_fun_t<F>
-  spawn(F fun, Ts&&... xs) {
+  infer_handle_from_fun_t<F> spawn(F fun, Ts&&... xs) {
     using impl = infer_impl_from_fun_t<F>;
     check_invariants<impl>();
     static constexpr bool spawnable = detail::spawnable<F, impl, Ts...>();
@@ -374,10 +373,9 @@ public:
   /// @experimental
   template <class Handle,
             class E = typename std::enable_if<is_handle<Handle>::value>::type>
-  expected<Handle> spawn(const std::string& name, message args,
-                         execution_unit* ctx = nullptr,
-                         bool check_interface = true,
-                         const mpi* expected_ifs = nullptr) {
+  expected<Handle>
+  spawn(const std::string& name, message args, execution_unit* ctx = nullptr,
+        bool check_interface = true, const mpi* expected_ifs = nullptr) {
     mpi tmp;
     if (check_interface && !expected_ifs) {
       tmp = message_types<Handle>();
@@ -408,8 +406,8 @@ public:
   /// @private
   template <spawn_options Os, class Iter, class F, class... Ts>
   infer_handle_from_fun_t<F>
-  spawn_fun_in_groups(actor_config& cfg, Iter first, Iter second,
-                      F& fun, Ts&&... xs) {
+  spawn_fun_in_groups(actor_config& cfg, Iter first, Iter second, F& fun,
+                      Ts&&... xs) {
     using impl = infer_impl_from_fun_t<F>;
     check_invariants<impl>();
     using traits = actor_traits<impl>;
@@ -436,8 +434,7 @@ public:
 
   /// Returns a new functor-based actor subscribed to all groups in `gs`.
   template <spawn_options Os = no_spawn_options, class Gs, class F, class... Ts>
-  infer_handle_from_fun_t<F>
-  spawn_in_groups(const Gs& gs, F fun, Ts&&... xs) {
+  infer_handle_from_fun_t<F> spawn_in_groups(const Gs& gs, F fun, Ts&&... xs) {
     actor_config cfg;
     return spawn_fun_in_groups<Os>(cfg, gs.begin(), gs.end(), fun,
                                    std::forward<Ts>(xs)...);
@@ -447,8 +444,7 @@ public:
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
   infer_handle_from_fun_t<F>
   spawn_in_group(const group& grp, F fun, Ts&&... xs) {
-    return spawn_in_groups<Os>({grp}, std::move(fun),
-                               std::forward<Ts>(xs)...);
+    return spawn_in_groups<Os>({grp}, std::move(fun), std::forward<Ts>(xs)...);
   }
 
   /// Returns a new class-based actor subscribed to all groups in `gs`.
@@ -462,8 +458,7 @@ public:
 
   /// Returns a new class-based actor subscribed to all groups in `gs`.
   template <class T, spawn_options Os = no_spawn_options, class Gs, class... Ts>
-  infer_handle_from_class_t<T>
-  spawn_in_groups(const Gs& gs, Ts&&... xs) {
+  infer_handle_from_class_t<T> spawn_in_groups(const Gs& gs, Ts&&... xs) {
     actor_config cfg;
     return spawn_class_in_groups<T, Os>(cfg, gs.begin(), gs.end(),
                                         std::forward<Ts>(xs)...);
@@ -471,8 +466,7 @@ public:
 
   /// Returns a new class-based actor subscribed to all groups in `gs`.
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
-  infer_handle_from_class_t<T>
-  spawn_in_group(const group& grp, Ts&&... xs) {
+  infer_handle_from_class_t<T> spawn_in_group(const group& grp, Ts&&... xs) {
     return spawn_in_groups<T, Os>({grp}, std::forward<Ts>(xs)...);
   }
 
@@ -531,8 +525,7 @@ public:
   void thread_terminates();
 
   template <class C, spawn_options Os, class... Ts>
-  infer_handle_from_class_t<C>
-  spawn_impl(actor_config& cfg, Ts&&... xs) {
+  infer_handle_from_class_t<C> spawn_impl(actor_config& cfg, Ts&&... xs) {
     static_assert(is_unbound(Os),
                   "top-level spawns cannot have monitor or link flag");
     // TODO: use `if constexpr` when switching to C++17
@@ -543,8 +536,8 @@ public:
     if (cfg.host == nullptr)
       cfg.host = dummy_execution_unit();
     CAF_SET_LOGGER_SYS(this);
-    auto res = make_actor<C>(next_actor_id(), node(), this,
-                             cfg, std::forward<Ts>(xs)...);
+    auto res = make_actor<C>(next_actor_id(), node(), this, cfg,
+                             std::forward<Ts>(xs)...);
     auto ptr = static_cast<C*>(actor_cast<abstract_actor*>(res));
 #ifdef CAF_ENABLE_ACTOR_PROFILER
     profiler_add_actor(*ptr, cfg.parent);
@@ -575,8 +568,8 @@ public:
       profiler_->after_processing(self, result);
   }
 
-  void profiler_before_sending(const local_actor& self,
-                               mailbox_element& element) {
+  void
+  profiler_before_sending(const local_actor& self, mailbox_element& element) {
     if (profiler_)
       profiler_->before_sending(self, element);
   }
@@ -598,11 +591,9 @@ private:
                   "Probably you have tried to spawn a broker or opencl actor.");
   }
 
-  expected<strong_actor_ptr> dyn_spawn_impl(const std::string& name,
-                                            message& args,
-                                            execution_unit* ctx,
-                                            bool check_interface,
-                                            optional<const mpi&> expected_ifs);
+  expected<strong_actor_ptr>
+  dyn_spawn_impl(const std::string& name, message& args, execution_unit* ctx,
+                 bool check_interface, optional<const mpi&> expected_ifs);
 
   /// Sets the internal actor for dynamic spawn operations.
   void spawn_serv(strong_actor_ptr x) {

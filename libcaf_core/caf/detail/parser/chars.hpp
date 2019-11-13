@@ -21,6 +21,7 @@
 #include <cstring>
 
 #include "caf/config.hpp"
+#include "caf/detail/core_export.hpp"
 
 namespace caf {
 namespace detail {
@@ -46,17 +47,16 @@ inline bool in_whitelist(bool (*filter)(char), char ch) {
   return filter(ch);
 }
 
-CAF_API extern const char alphanumeric_chars[63];
+CAF_CORE_EXPORT extern const char alphanumeric_chars[63];
 
-CAF_API extern const char alphabetic_chars[53];
+CAF_CORE_EXPORT extern const char alphabetic_chars[53];
 
-CAF_API extern const char hexadecimal_chars[23];
+CAF_CORE_EXPORT extern const char hexadecimal_chars[23];
 
-CAF_API extern const char decimal_chars[11];
+CAF_CORE_EXPORT extern const char decimal_chars[11];
 
-CAF_API extern const char octal_chars[9];
+CAF_CORE_EXPORT extern const char octal_chars[9];
 
 } // namespace parser
 } // namespace detail
 } // namespace caf
-

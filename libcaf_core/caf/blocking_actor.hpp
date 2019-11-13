@@ -19,59 +19,56 @@
 #pragma once
 
 #include <chrono>
-#include <mutex>
 #include <condition_variable>
+#include <mutex>
 
 #include "caf/actor_config.hpp"
 #include "caf/actor_traits.hpp"
 #include "caf/after.hpp"
 #include "caf/behavior.hpp"
+#include "caf/detail/apply_args.hpp"
+#include "caf/detail/blocking_behavior.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/type_list.hpp"
+#include "caf/detail/type_traits.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
+#include "caf/intrusive/drr_cached_queue.hpp"
+#include "caf/intrusive/drr_queue.hpp"
+#include "caf/intrusive/fifo_inbox.hpp"
+#include "caf/intrusive/wdrr_dynamic_multiplexed_queue.hpp"
+#include "caf/intrusive/wdrr_fixed_multiplexed_queue.hpp"
 #include "caf/is_timeout_or_catch_all.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/mailbox_element.hpp"
+#include "caf/mixin/requester.hpp"
+#include "caf/mixin/sender.hpp"
+#include "caf/mixin/subscriber.hpp"
 #include "caf/none.hpp"
-#include "caf/send.hpp"
-#include "caf/typed_actor.hpp"
-
 #include "caf/policy/arg.hpp"
 #include "caf/policy/categorized.hpp"
 #include "caf/policy/downstream_messages.hpp"
 #include "caf/policy/normal_messages.hpp"
 #include "caf/policy/upstream_messages.hpp"
 #include "caf/policy/urgent_messages.hpp"
-
-#include "caf/detail/apply_args.hpp"
-#include "caf/detail/blocking_behavior.hpp"
-#include "caf/detail/type_list.hpp"
-#include "caf/detail/type_traits.hpp"
-
-#include "caf/intrusive/drr_cached_queue.hpp"
-#include "caf/intrusive/drr_queue.hpp"
-#include "caf/intrusive/fifo_inbox.hpp"
-#include "caf/intrusive/wdrr_dynamic_multiplexed_queue.hpp"
-#include "caf/intrusive/wdrr_fixed_multiplexed_queue.hpp"
-
-#include "caf/mixin/requester.hpp"
-#include "caf/mixin/sender.hpp"
-#include "caf/mixin/subscriber.hpp"
+#include "caf/send.hpp"
+#include "caf/typed_actor.hpp"
 
 namespace caf {
 namespace mixin {
 
 template <>
-struct is_blocking_requester<blocking_actor> : std::true_type { };
+struct is_blocking_requester<blocking_actor> : std::true_type {};
 
-} // namespace caf
 } // namespace mixin
+} // namespace caf
 
 namespace caf {
 
 /// A thread-mapped or context-switching actor using a blocking
 /// receive rather than a behavior-stack based message processing.
 /// @extends local_actor
-class blocking_actor
+class CAF_CORE_EXPORT blocking_actor
   // clang-format off
   : public extend<local_actor, blocking_actor>::
            with<mixin::requester,
@@ -103,8 +100,9 @@ public:
 
     using unique_pointer = mailbox_element_ptr;
 
-    using queue_type = intrusive::wdrr_fixed_multiplexed_queue<
-      policy::categorized, normal_queue, urgent_queue>;
+    using queue_type
+      = intrusive::wdrr_fixed_multiplexed_queue<policy::categorized,
+                                                normal_queue, urgent_queue>;
 
     static constexpr size_t normal_queue_index = 0;
 
@@ -154,7 +152,7 @@ public:
     template <class... Ts>
     void operator()(Ts&&... xs) {
       static_assert(sizeof...(Ts) > 0,
-              "operator() requires at least one argument");
+                    "operator() requires at least one argument");
       struct cond : receive_cond {
         fun_type stmt;
         cond(fun_type x) : stmt(std::move(x)) {
@@ -198,7 +196,7 @@ public:
 
   /// Implementation helper for `blocking_actor::do_receive`.
   struct do_receive_helper {
-    std::function<void (receive_cond& rc)> cb;
+    std::function<void(receive_cond& rc)> cb;
 
     template <class Statement>
     void until(Statement stmt) {
@@ -312,7 +310,6 @@ public:
   /// ~~~
   receive_while_helper receive_while(const bool& ref);
 
-
   /// Receives messages until `stmt` returns true.
   ///
   /// Semantically equal to:
@@ -349,11 +346,9 @@ public:
     size_t attach_results[] = {attach_functor(xs)...};
     for (auto res : attach_results)
       expected += res;
-    receive_for(i, expected)(
-      [](wait_for_atom) {
-        // nop
-      }
-    );
+    receive_for(i, expected)([](wait_for_atom) {
+      // nop
+    });
   }
 
   /// Sets a user-defined exit reason `err`. This reason
@@ -387,15 +382,12 @@ public:
     // extract how many arguments are actually the behavior part,
     // i.e., neither `after(...) >> ...` nor `others >> ...`.
     using filtered =
-      typename tl_filter_not<
-        type_list<typename std::decay<Ts>::type...>,
-        is_timeout_or_catch_all
-      >::type;
+      typename tl_filter_not<type_list<typename std::decay<Ts>::type...>,
+                             is_timeout_or_catch_all>::type;
     filtered tk;
     behavior bhvr{apply_moved_args(make_behavior_impl, get_indices(tk), tup)};
-    using tail_indices = typename il_range<
-                           tl_size<filtered>::value, sizeof...(Ts)
-                         >::type;
+    using tail_indices =
+      typename il_range<tl_size<filtered>::value, sizeof...(Ts)>::type;
     make_blocking_behavior_t factory;
     auto fun = apply_moved_args_prefixed(factory, tail_indices{}, tup, &bhvr);
     receive_impl(rcc, mid, fun);
@@ -459,4 +451,3 @@ private:
 };
 
 } // namespace caf
-

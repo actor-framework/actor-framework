@@ -21,11 +21,11 @@
 #include <vector>
 
 #include "caf/actor_addr.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/monitorable_actor.hpp"
 
-namespace caf {
-namespace decorator {
+namespace caf::decorator {
 
 /// An actor decorator implementing "dot operator"-like compositions,
 /// i.e., `f.g(x) = f(g(x))`. Composed actors are hidden actors.
@@ -34,7 +34,7 @@ namespace decorator {
 /// by default, and exit of a composed actor has no effect on its
 /// constituent actors. A composed actor is hosted on the same actor
 /// system and node as `g`, the first actor on the forwarding chain.
-class splitter : public monitorable_actor {
+class CAF_CORE_EXPORT splitter : public monitorable_actor {
 public:
   using message_types_set = std::set<std::string>;
 
@@ -53,6 +53,4 @@ private:
   message_types_set msg_types_;
 };
 
-} // namespace decorator
-} // namespace caf
-
+} // namespace caf::decorator

@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/unit.hpp"
@@ -27,7 +28,7 @@ namespace caf {
 namespace policy {
 
 /// Configures a DRR queue for holding upstream messages.
-class upstream_messages {
+class CAF_CORE_EXPORT upstream_messages {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -60,4 +61,3 @@ public:
 
 } // namespace policy
 } // namespace caf
-

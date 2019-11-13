@@ -58,8 +58,7 @@ public:
   }
 
   make_source_result(stream_slot slot, source_ptr_type ptr) noexcept
-      : slot_(slot),
-        ptr_(std::move(ptr)) {
+    : slot_(slot), ptr_(std::move(ptr)) {
     // nop
   }
 
@@ -89,8 +88,7 @@ private:
 
 /// @relates make_source_result
 template <class DownstreamManager, class... Ts>
-using make_source_result_t =
-  make_source_result<DownstreamManager, detail::strip_and_convert_t<Ts>...>;
+using make_source_result_t
+  = make_source_result<DownstreamManager, detail::strip_and_convert_t<Ts>...>;
 
 } // namespace caf
-

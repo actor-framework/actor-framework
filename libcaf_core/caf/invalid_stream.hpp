@@ -27,4 +27,3 @@ struct invalid_stream_t {};
 constexpr invalid_stream_t invalid_stream = invalid_stream_t{};
 
 } // namespace caf
-

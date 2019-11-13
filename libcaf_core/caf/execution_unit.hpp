@@ -21,12 +21,13 @@
 #include "caf/fwd.hpp"
 
 #include "caf/config.hpp"
+#include "caf/detail/core_export.hpp"
 
 namespace caf {
 
 /// Identifies an execution unit, e.g., a worker thread of the scheduler. By
 /// querying its execution unit, an actor can access other context information.
-class execution_unit {
+class CAF_CORE_EXPORT execution_unit {
 public:
   explicit execution_unit(actor_system* sys);
 
@@ -66,4 +67,3 @@ protected:
 };
 
 } // namespace caf
-

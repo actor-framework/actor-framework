@@ -18,19 +18,19 @@
 
 #pragma once
 
-#include "caf/fwd.hpp"
 #include "caf/atom.hpp"
-#include "caf/typed_actor.hpp"
-#include "caf/typed_event_based_actor.hpp"
-
+#include "caf/detail/io_export.hpp"
+#include "caf/fwd.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/middleman_actor.hpp"
+#include "caf/typed_actor.hpp"
+#include "caf/typed_event_based_actor.hpp"
 
 namespace caf {
 namespace io {
 
 /// Default implementation of the `middleman_actor` interface.
-class middleman_actor_impl : public middleman_actor::base {
+class CAF_IO_EXPORT middleman_actor_impl : public middleman_actor::base {
 public:
   using put_res = result<uint16_t>;
 
@@ -61,18 +61,18 @@ protected:
 
   /// Tries to connect to given `host` and `port`. The default implementation
   /// calls `system().middleman().backend().new_udp`.
-  virtual expected<datagram_servant_ptr> contact(const std::string& host,
-                                                 uint16_t port);
+  virtual expected<datagram_servant_ptr>
+  contact(const std::string& host, uint16_t port);
 
   /// Tries to open a local port. The default implementation calls
   /// `system().middleman().backend().new_tcp_doorman(port, addr, reuse)`.
-  virtual expected<doorman_ptr> open(uint16_t port, const char* addr,
-                                     bool reuse);
+  virtual expected<doorman_ptr>
+  open(uint16_t port, const char* addr, bool reuse);
 
   /// Tries to open a local port. The default implementation calls
   /// `system().middleman().backend().new_tcp_doorman(port, addr, reuse)`.
-  virtual expected<datagram_servant_ptr> open_udp(uint16_t port, 
-                                                  const char* addr, bool reuse);
+  virtual expected<datagram_servant_ptr>
+  open_udp(uint16_t port, const char* addr, bool reuse);
 
 private:
   put_res put(uint16_t port, strong_actor_ptr& whom, mpi_set& sigs,
@@ -94,4 +94,3 @@ private:
 
 } // namespace io
 } // namespace caf
-

@@ -32,8 +32,8 @@ namespace detail {
 
 struct stream_stage_trait_invoke_one {
   template <class F, class State, class Out, class In>
-  static void invoke(F& f, State& st, downstream<Out>& out,
-                     std::vector<In>& xs) {
+  static void
+  invoke(F& f, State& st, downstream<Out>& out, std::vector<In>& xs) {
     for (auto& x : xs)
       f(st, out, std::move(x));
   }
@@ -41,8 +41,8 @@ struct stream_stage_trait_invoke_one {
 
 struct stream_stage_trait_invoke_all {
   template <class F, class State, class Out, class In>
-  static void invoke(F& f, State& st, downstream<Out>& out,
-                     std::vector<In>& xs) {
+  static void
+  invoke(F& f, State& st, downstream<Out>& out, std::vector<In>& xs) {
     f(st, out, xs);
   }
 };
@@ -60,7 +60,7 @@ struct stream_stage_trait {
 /// Deduces the input type, output type and the state type for a stream stage
 /// from its `process` implementation.
 template <class State, class In, class Out>
-struct stream_stage_trait<void (State&, downstream<Out>&, In)> {
+struct stream_stage_trait<void(State&, downstream<Out>&, In)> {
   static constexpr bool valid = true;
   using state = State;
   using input = In;
@@ -69,7 +69,7 @@ struct stream_stage_trait<void (State&, downstream<Out>&, In)> {
 };
 
 template <class State, class In, class Out>
-struct stream_stage_trait<void (State&, downstream<Out>&, std::vector<In>&)> {
+struct stream_stage_trait<void(State&, downstream<Out>&, std::vector<In>&)> {
   static constexpr bool valid = true;
   using state = State;
   using input = In;
@@ -82,8 +82,7 @@ struct stream_stage_trait<void (State&, downstream<Out>&, std::vector<In>&)> {
 /// Convenience alias for extracting the function signature from `Process` and
 /// passing it to `stream_stage_trait`.
 template <class Process>
-using stream_stage_trait_t =
-  stream_stage_trait<typename detail::get_callable_trait<Process>::fun_sig>;
+using stream_stage_trait_t
+  = stream_stage_trait<typename detail::get_callable_trait<Process>::fun_sig>;
 
 } // namespace caf
-

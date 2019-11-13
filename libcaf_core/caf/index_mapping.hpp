@@ -18,16 +18,17 @@
 
 #pragma once
 
-#include <tuple>
-#include <string>
 #include <functional>
+#include <string>
+#include <tuple>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/meta/type_name.hpp"
 
 namespace caf {
 
 /// Marker for representing placeholders at runtime.
-struct index_mapping {
+struct CAF_CORE_EXPORT index_mapping {
   int value;
 
   explicit index_mapping(int x) : value(x) {
@@ -35,9 +36,8 @@ struct index_mapping {
   }
 
   template <class T,
-            class E = typename std::enable_if<
-                        std::is_placeholder<T>::value != 0
-                      >::type>
+            class E
+            = typename std::enable_if<std::is_placeholder<T>::value != 0>::type>
   index_mapping(T) : value(std::is_placeholder<T>::value) {
     // nop
   }
@@ -53,4 +53,3 @@ typename Inspector::result_type inspect(Inspector& f, index_mapping& x) {
 }
 
 } // namespace caf
-

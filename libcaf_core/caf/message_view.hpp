@@ -18,13 +18,14 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf {
 
 /// Represents an object pointing to a `type_erased_tuple` that
 /// is convertible to a `message`
-class message_view {
+class CAF_CORE_EXPORT message_view {
 public:
   virtual ~message_view();
 
@@ -38,4 +39,3 @@ public:
 };
 
 } // namespace caf
-

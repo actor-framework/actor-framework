@@ -18,10 +18,10 @@
 
 #pragma once
 
-#include <deque>
-#include <vector>
 #include <cstddef>
+#include <deque>
 #include <iterator>
+#include <vector>
 
 #include "caf/downstream_manager_base.hpp"
 #include "caf/logger.hpp"
@@ -110,4 +110,3 @@ protected:
 };
 
 } // namespace caf
-

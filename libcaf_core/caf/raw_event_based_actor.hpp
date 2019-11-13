@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
 #include "caf/event_based_actor.hpp"
 
 namespace caf {
@@ -27,7 +28,7 @@ namespace caf {
 /// the default handler are ignored. This actor type is for testing and
 /// system-level actors.
 /// @extends event_based_actor
-class raw_event_based_actor : public event_based_actor {
+class CAF_CORE_EXPORT raw_event_based_actor : public event_based_actor {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -45,4 +46,3 @@ public:
 };
 
 } // namespace caf
-

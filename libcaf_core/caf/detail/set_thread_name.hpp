@@ -18,12 +18,14 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
+
 namespace caf {
 namespace detail {
 
 /// Sets the name thread shown by the OS. Not supported on all plattforms
 /// (no-op on Windows).
-void set_thread_name(const char* name);
+CAF_CORE_EXPORT void set_thread_name(const char* name);
 
 } // namespace detail
 } // namespace caf

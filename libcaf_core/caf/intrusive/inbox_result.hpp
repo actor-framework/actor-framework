@@ -21,6 +21,8 @@
 
 #include <string>
 
+#include "caf/detail/core_export.hpp"
+
 namespace caf {
 namespace intrusive {
 
@@ -40,7 +42,7 @@ enum class inbox_result {
 };
 
 /// @relates inbox_result
-std::string to_string(inbox_result);
+CAF_CORE_EXPORT std::string to_string(inbox_result);
 
 } // namespace intrusive
 } // namespace caf

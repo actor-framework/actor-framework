@@ -18,22 +18,21 @@
 
 #pragma once
 
-#include <string>
-#include <limits>
 #include <cstddef>
 #include <cstdint>
 #include <iomanip>
+#include <limits>
 #include <sstream>
 #include <streambuf>
+#include <string>
 #include <type_traits>
 
-#include "caf/sec.hpp"
 #include "caf/config.hpp"
-#include "caf/streambuf.hpp"
-#include "caf/serializer.hpp"
-
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/network_order.hpp"
+#include "caf/sec.hpp"
+#include "caf/serializer.hpp"
+#include "caf/streambuf.hpp"
 
 namespace caf {
 
@@ -49,34 +48,25 @@ class stream_serializer : public serializer {
 public:
   template <class... Ts>
   explicit stream_serializer(actor_system& sys, Ts&&... xs)
-    : serializer(sys),
-      streambuf_{std::forward<Ts>(xs)...} {
+    : serializer(sys), streambuf_{std::forward<Ts>(xs)...} {
   }
 
   template <class... Ts>
   explicit stream_serializer(execution_unit* ctx, Ts&&... xs)
-    : serializer(ctx),
-      streambuf_{std::forward<Ts>(xs)...} {
+    : serializer(ctx), streambuf_{std::forward<Ts>(xs)...} {
   }
 
-  template <
-    class S,
-    class = typename std::enable_if<
-      std::is_same<
-        typename std::remove_reference<S>::type,
-        typename std::remove_reference<Streambuf>::type
-      >::value
-    >::type
-  >
+  template <class S,
+            class = typename std::enable_if<std::is_same<
+              typename std::remove_reference<S>::type,
+              typename std::remove_reference<Streambuf>::type>::value>::type>
   explicit stream_serializer(S&& sb)
-    : serializer(nullptr),
-      streambuf_(std::forward<S>(sb)) {
+    : serializer(nullptr), streambuf_(std::forward<S>(sb)) {
   }
 
   error begin_object(uint16_t& typenr, std::string& name) override {
     return error::eval([&] { return apply(typenr); },
                        [&] { return typenr == 0 ? apply(name) : error{}; });
-
   }
 
   error end_object() override {
@@ -208,4 +198,3 @@ private:
 };
 
 } // namespace caf
-

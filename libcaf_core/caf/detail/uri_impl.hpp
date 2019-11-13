@@ -23,6 +23,7 @@
 #include <string>
 #include <utility>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/meta/load_callback.hpp"
@@ -33,7 +34,7 @@
 namespace caf {
 namespace detail {
 
-class uri_impl {
+class CAF_CORE_EXPORT uri_impl {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -78,9 +79,9 @@ public:
 
   // -- friend functions -------------------------------------------------------
 
-  friend void intrusive_ptr_add_ref(const uri_impl* p);
+  friend CAF_CORE_EXPORT void intrusive_ptr_add_ref(const uri_impl* p);
 
-  friend void intrusive_ptr_release(const uri_impl* p);
+  friend CAF_CORE_EXPORT void intrusive_ptr_release(const uri_impl* p);
 
 private:
   // -- member variables -------------------------------------------------------

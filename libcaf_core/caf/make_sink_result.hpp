@@ -47,8 +47,7 @@ public:
   }
 
   make_sink_result(stream_slot slot, sink_ptr_type ptr) noexcept
-      : slot_(slot),
-        ptr_(std::move(ptr)) {
+    : slot_(slot), ptr_(std::move(ptr)) {
     // nop
   }
 
@@ -79,4 +78,3 @@ private:
 };
 
 } // namespace caf
-

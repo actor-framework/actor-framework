@@ -21,13 +21,12 @@
 #include <string>
 #include <cstdint>
 
+#include "caf/detail/io_export.hpp"
 #include "caf/error.hpp"
-#include "caf/node_id.hpp"
-
+#include "caf/io/basp/message_type.hpp"
 #include "caf/meta/omittable.hpp"
 #include "caf/meta/type_name.hpp"
-
-#include "caf/io/basp/message_type.hpp"
+#include "caf/node_id.hpp"
 
 namespace caf {
 namespace io {
@@ -85,7 +84,7 @@ typename Inspector::result_type inspect(Inspector& f, header& hdr) {
 }
 
 /// @relates header
-bool operator==(const header& lhs, const header& rhs);
+CAF_IO_EXPORT bool operator==(const header& lhs, const header& rhs);
 
 /// @relates header
 inline bool operator!=(const header& lhs, const header& rhs) {
@@ -105,7 +104,7 @@ inline bool is_heartbeat(const header& hdr) {
 
 /// Checks whether given BASP header is valid.
 /// @relates header
-bool valid(const header& hdr);
+CAF_IO_EXPORT bool valid(const header& hdr);
 
 /// Size of a BASP header in serialized form
 constexpr size_t header_size = sizeof(actor_id) * 2

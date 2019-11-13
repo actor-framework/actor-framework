@@ -19,9 +19,10 @@
 #pragma once
 
 #include <atomic>
-#include <mutex>
 #include <condition_variable>
+#include <mutex>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf {
@@ -29,11 +30,7 @@ namespace detail {
 
 class private_thread {
 public:
-  enum worker_state {
-    active,
-    shutdown_requested,
-    await_resume_or_shutdown
-  };
+  enum worker_state { active, shutdown_requested, await_resume_or_shutdown };
 
   explicit private_thread(scheduled_actor* self);
 
@@ -64,4 +61,3 @@ private:
 
 } // namespace detail
 } // namespace caf
-

@@ -22,17 +22,17 @@
 #include <condition_variable>
 #include <mutex>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// A central place where workers return to after finishing a task. A hub
 /// supports any number of workers that call `push`, but only a single master
 /// that calls `pop`. The hub takes ownership of all workers. Workers register
 /// at the hub during construction and get destroyed when the hub gets
 /// destroyed.
-class abstract_worker_hub {
+class CAF_CORE_EXPORT abstract_worker_hub {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -75,5 +75,4 @@ protected:
   std::condition_variable cv_;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

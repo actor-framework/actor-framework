@@ -40,10 +40,10 @@ enum class spawn_options : int {
 
 /// Concatenates two {@link spawn_options}.
 /// @relates spawn_options
-constexpr spawn_options operator+(const spawn_options& lhs,
-                  const spawn_options& rhs) {
-  return static_cast<spawn_options>(static_cast<int>(lhs) |
-                    static_cast<int>(rhs));
+constexpr spawn_options
+operator+(const spawn_options& lhs, const spawn_options& rhs) {
+  return static_cast<spawn_options>(static_cast<int>(lhs)
+                                    | static_cast<int>(rhs));
 }
 
 /// Denotes default settings.
@@ -119,11 +119,10 @@ constexpr bool is_unbound(spawn_options opts) {
 
 constexpr spawn_options make_unbound(spawn_options opts) {
   return static_cast<spawn_options>(
-    (static_cast<int>(opts) &
-     ~(static_cast<int>(linked) | static_cast<int>(monitored))));
+    (static_cast<int>(opts)
+     & ~(static_cast<int>(linked) | static_cast<int>(monitored))));
 }
 
 /// @endcond
 
 } // namespace caf
-

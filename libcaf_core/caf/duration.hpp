@@ -18,11 +18,12 @@
 
 #pragma once
 
-#include <string>
 #include <chrono>
 #include <cstdint>
 #include <stdexcept>
+#include <string>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 
 namespace caf {
@@ -39,7 +40,7 @@ enum class time_unit : uint32_t {
 };
 
 /// Relates time_unit
-std::string to_string(time_unit x);
+CAF_CORE_EXPORT std::string to_string(time_unit x);
 
 // Calculates the index of a time_unit from the denominator of a ratio.
 constexpr intmax_t denom_to_unit_index(intmax_t x, intmax_t offset = 2) {
@@ -85,7 +86,7 @@ struct infinite_t {
 static constexpr infinite_t infinite = infinite_t{};
 
 /// Time duration consisting of a `time_unit` and a 64 bit unsigned integer.
-class duration {
+class CAF_CORE_EXPORT duration {
 public:
   constexpr duration() : unit(time_unit::invalid), count(0) {
     // nop
@@ -102,14 +103,13 @@ public:
   /// Creates a new instance from an STL duration.
   /// @throws std::invalid_argument Thrown if `d.count() is negative.
   template <class Rep, class Period,
-            class E =
-              typename std::enable_if<
-                std::is_integral<Rep>::value
-                && get_time_unit_from_period<Period>() != time_unit::invalid
-              >::type>
+            class E
+            = typename std::enable_if<std::is_integral<Rep>::value
+                                      && get_time_unit_from_period<Period>()
+                                           != time_unit::invalid>::type>
   explicit duration(const std::chrono::duration<Rep, Period>& d)
-      : unit(get_time_unit_from_period<Period>()),
-        count(d.count() < 0 ? 0u : static_cast<uint64_t>(d.count())) {
+    : unit(get_time_unit_from_period<Period>()),
+      count(d.count() < 0 ? 0u : static_cast<uint64_t>(d.count())) {
     // nop
   }
 
@@ -135,10 +135,10 @@ typename Inspector::result_type inspect(Inspector& f, duration& x) {
 }
 
 /// @relates duration
-std::string to_string(const duration& x);
+CAF_CORE_EXPORT std::string to_string(const duration& x);
 
 /// @relates duration
-bool operator==(const duration& lhs, const duration& rhs);
+CAF_CORE_EXPORT bool operator==(const duration& lhs, const duration& rhs);
 
 /// @relates duration
 inline bool operator!=(const duration& lhs, const duration& rhs) {
@@ -172,4 +172,3 @@ operator+=(std::chrono::time_point<Clock, Duration>& lhs, const duration& rhs) {
 }
 
 } // namespace caf
-

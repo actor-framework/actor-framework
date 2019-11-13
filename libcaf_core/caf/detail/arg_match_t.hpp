@@ -25,4 +25,3 @@ struct arg_match_t {};
 
 } // namespace detail
 } // namespace caf
-

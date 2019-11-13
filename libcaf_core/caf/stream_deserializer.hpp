@@ -50,28 +50,20 @@ class stream_deserializer : public deserializer {
 public:
   template <class... Ts>
   explicit stream_deserializer(actor_system& sys, Ts&&... xs)
-    : deserializer(sys),
-      streambuf_(std::forward<Ts>(xs)...) {
+    : deserializer(sys), streambuf_(std::forward<Ts>(xs)...) {
   }
 
   template <class... Ts>
   explicit stream_deserializer(execution_unit* ctx, Ts&&... xs)
-    : deserializer(ctx),
-      streambuf_(std::forward<Ts>(xs)...) {
+    : deserializer(ctx), streambuf_(std::forward<Ts>(xs)...) {
   }
 
-  template <
-    class S,
-    class = typename std::enable_if<
-      std::is_same<
-        typename std::remove_reference<S>::type,
-        typename std::remove_reference<Streambuf>::type
-      >::value
-    >::type
-  >
+  template <class S,
+            class = typename std::enable_if<std::is_same<
+              typename std::remove_reference<S>::type,
+              typename std::remove_reference<Streambuf>::type>::value>::type>
   explicit stream_deserializer(S&& sb)
-    : deserializer(nullptr),
-      streambuf_(std::forward<S>(sb)) {
+    : deserializer(nullptr), streambuf_(std::forward<S>(sb)) {
   }
 
   error begin_object(uint16_t& typenr, std::string& name) override {
@@ -233,4 +225,3 @@ private:
 };
 
 } // namespace caf
-

@@ -46,9 +46,7 @@ using signatures_of_t = typename signatures_of<T>::type;
 template <class T>
 constexpr bool statically_typed() {
   return !std::is_same<
-           none_t,
-           typename std::remove_pointer<T>::type::signatures
-         >::value;
+    none_t, typename std::remove_pointer<T>::type::signatures>::value;
 }
 
 template <class T>
@@ -62,4 +60,3 @@ template <>
 struct is_void_response<none_t> : std::true_type {};
 
 } // namespace caf
-

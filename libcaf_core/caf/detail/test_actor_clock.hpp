@@ -18,12 +18,13 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/simple_actor_clock.hpp"
 
 namespace caf {
 namespace detail {
 
-class test_actor_clock : public simple_actor_clock {
+class CAF_CORE_EXPORT test_actor_clock : public simple_actor_clock {
 public:
   time_point current_time;
 
@@ -64,4 +65,3 @@ public:
 
 } // namespace detail
 } // namespace caf
-

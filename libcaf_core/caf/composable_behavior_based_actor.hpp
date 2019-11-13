@@ -18,15 +18,15 @@
 
 #pragma once
 
-#include "caf/stateful_actor.hpp"
 #include "caf/message_handler.hpp"
+#include "caf/stateful_actor.hpp"
 
 namespace caf {
 
 /// Implementation class for spawning composable states directly as actors.
 template <class State, class Base = typename State::actor_base>
 class composable_behavior_based_actor : public stateful_actor<State, Base> {
- public:
+public:
   static_assert(!std::is_abstract<State>::value,
                 "State is abstract, please make sure to override all "
                 "virtual operator() member functions");
@@ -48,4 +48,3 @@ class composable_behavior_based_actor : public stateful_actor<State, Base> {
 };
 
 } // namespace caf
-

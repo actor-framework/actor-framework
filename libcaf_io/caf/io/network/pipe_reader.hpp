@@ -20,16 +20,17 @@
 
 #include "caf/io/fwd.hpp"
 
-#include "caf/io/network/operation.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/io/network/event_handler.hpp"
 #include "caf/io/network/native_socket.hpp"
+#include "caf/io/network/operation.hpp"
 
 namespace caf {
 namespace io {
 namespace network {
 
 /// An event handler for the internal event pipe.
-class pipe_reader : public event_handler {
+class CAF_IO_EXPORT pipe_reader : public event_handler {
 public:
   pipe_reader(default_multiplexer& dm);
 

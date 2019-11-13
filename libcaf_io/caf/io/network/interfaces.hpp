@@ -25,10 +25,10 @@
 #include <functional>
 #include <initializer_list>
 
-#include "caf/optional.hpp"
-
-#include "caf/io/network/protocol.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
+#include "caf/io/network/protocol.hpp"
+#include "caf/optional.hpp"
 
 namespace caf {
 namespace io {
@@ -41,7 +41,7 @@ using address_listing = std::map<protocol::network, std::vector<std::string>>;
 using interfaces_map = std::map<std::string, address_listing>;
 
 /// Utility class bundling access to network interface names and addresses.
-class interfaces {
+class CAF_IO_EXPORT interfaces {
 public:
   /// Consumes `{interface_name, protocol_type, is_localhost, address}` entries.
   using consumer = std::function<void (const char*, protocol::network,
@@ -87,4 +87,3 @@ public:
 } // namespace network
 } // namespace io
 } // namespace caf
-

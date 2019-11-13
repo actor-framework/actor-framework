@@ -129,10 +129,10 @@ enum class sec : uint8_t {
 };
 
 /// @relates sec
-std::string to_string(sec);
+CAF_CORE_EXPORT std::string to_string(sec);
 
 /// @relates sec
-error make_error(sec);
+CAF_CORE_EXPORT error make_error(sec);
 
 /// @relates sec
 template <class T, class... Ts>
@@ -142,4 +142,3 @@ error make_error(sec code, T&& x, Ts&&... xs) {
 }
 
 } // namespace caf
-

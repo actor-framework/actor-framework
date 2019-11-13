@@ -20,13 +20,13 @@
 
 #include "caf/actor.hpp"
 #include "caf/actor_proxy.hpp"
-
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 
 namespace caf {
 
 /// Implements a simple proxy forwarding all operations to a manager.
-class forwarding_actor_proxy : public actor_proxy {
+class CAF_CORE_EXPORT forwarding_actor_proxy : public actor_proxy {
 public:
   using forwarding_stack = std::vector<strong_actor_ptr>;
 
@@ -51,4 +51,3 @@ private:
 };
 
 } // namespace caf
-

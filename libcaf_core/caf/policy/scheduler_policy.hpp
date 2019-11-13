@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
@@ -26,7 +27,7 @@ namespace policy {
 
 /// This concept class describes a policy for worker
 /// and coordinator of the scheduler.
-class scheduler_policy {
+class CAF_CORE_EXPORT scheduler_policy {
 public:
   /// Policy-specific data fields for the coordinator.
   struct coordinator_data {
@@ -90,4 +91,3 @@ public:
 
 } // namespace policy
 } // namespace caf
-

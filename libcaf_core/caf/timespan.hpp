@@ -27,4 +27,3 @@ namespace caf {
 using timespan = std::chrono::duration<int64_t, std::nano>;
 
 } // namespace caf
-

@@ -19,22 +19,22 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/message_priority.hpp"
-#include "caf/unit.hpp"
-
 #include "caf/policy/downstream_messages.hpp"
 #include "caf/policy/normal_messages.hpp"
 #include "caf/policy/upstream_messages.hpp"
 #include "caf/policy/urgent_messages.hpp"
+#include "caf/unit.hpp"
 
 namespace caf {
 namespace policy {
 
 /// Configures a cached WDRR fixed multiplexed queue for dispatching to four
 /// nested queue (one for each message category type).
-class categorized {
+class CAF_CORE_EXPORT categorized {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -61,8 +61,8 @@ public:
   // -- interface required by wdrr_fixed_multiplexed_queue ---------------------
 
   template <template <class> class Queue>
-  static deficit_type quantum(const Queue<urgent_messages>&,
-                              deficit_type x) noexcept {
+  static deficit_type
+  quantum(const Queue<urgent_messages>&, deficit_type x) noexcept {
     // Allow actors to consume twice as many urgent as normal messages per
     // credit round.
     return x + x;

@@ -68,8 +68,7 @@ struct stream_sink_trait;
 
 /// Specializes the trait for element-wise processing.
 template <class State, class In>
-struct stream_sink_trait<void(State&, In)>
-    : stream_sink_trait_base<State, In> {
+struct stream_sink_trait<void(State&, In)> : stream_sink_trait_base<State, In> {
   /// Defines a helper for dispatching to the processing function object.
   using process = detail::stream_sink_trait_invoke_one;
 };
@@ -77,7 +76,7 @@ struct stream_sink_trait<void(State&, In)>
 /// Specializes the trait for batch-wise processing.
 template <class State, class In>
 struct stream_sink_trait<void(State&, std::vector<In>&)>
-    : stream_sink_trait_base<State, In> {
+  : stream_sink_trait_base<State, In> {
   /// Defines a helper for dispatching to the processing function object.
   using process = detail::stream_sink_trait_invoke_all;
 };
@@ -85,7 +84,7 @@ struct stream_sink_trait<void(State&, std::vector<In>&)>
 /// Specializes the trait for batch-wise processing with const references.
 template <class State, class In>
 struct stream_sink_trait<void(State&, const std::vector<In>&)>
-    : stream_sink_trait_base<State, In> {
+  : stream_sink_trait_base<State, In> {
   /// Defines a helper for dispatching to the processing function object.
   using process = detail::stream_sink_trait_invoke_all;
 };
@@ -94,8 +93,7 @@ struct stream_sink_trait<void(State&, const std::vector<In>&)>
 
 /// Derives a sink trait from the signatures of Fun and Fin.
 template <class Fun>
-using stream_sink_trait_t =
-  stream_sink_trait<typename detail::get_callable_trait<Fun>::fun_sig>;
+using stream_sink_trait_t
+  = stream_sink_trait<typename detail::get_callable_trait<Fun>::fun_sig>;
 
 } // namespace caf
-

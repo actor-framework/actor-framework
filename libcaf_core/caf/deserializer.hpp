@@ -18,12 +18,13 @@
 
 #pragma once
 
-#include <string>
 #include <cstddef>
-#include <utility>
+#include <string>
 #include <type_traits>
+#include <utility>
 
 #include "caf/data_processor.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/raise_error.hpp"
 
@@ -31,7 +32,7 @@ namespace caf {
 
 /// @ingroup TypeSystem
 /// Technology-independent deserialization interface.
-class deserializer : public data_processor<deserializer> {
+class CAF_CORE_EXPORT deserializer : public data_processor<deserializer> {
 public:
   ~deserializer() override;
 
@@ -51,11 +52,8 @@ public:
 
 template <class T>
 typename std::enable_if<
-  std::is_same<
-    error,
-    decltype(std::declval<deserializer&>().apply(std::declval<T&>()))
-  >::value
->::type
+  std::is_same<error, decltype(std::declval<deserializer&>().apply(
+                        std::declval<T&>()))>::value>::type
 operator&(deserializer& source, T& x) {
   auto e = source.apply(x);
   if (e)
@@ -64,16 +62,12 @@ operator&(deserializer& source, T& x) {
 
 template <class T>
 typename std::enable_if<
-  std::is_same<
-    error,
-    decltype(std::declval<deserializer&>().apply(std::declval<T&>()))
-  >::value,
-  deserializer&
->::type
+  std::is_same<error, decltype(std::declval<deserializer&>().apply(
+                        std::declval<T&>()))>::value,
+  deserializer&>::type
 operator>>(deserializer& source, T& x) {
-  source & x;
+  source& x;
   return source;
 }
 
 } // namespace caf
-

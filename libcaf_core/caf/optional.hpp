@@ -22,20 +22,19 @@
 #include <new>
 #include <utility>
 
-#include "caf/none.hpp"
-#include "caf/unit.hpp"
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
-
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/scope_guard.hpp"
+#include "caf/none.hpp"
+#include "caf/unit.hpp"
 
 namespace caf {
 
 /// A C++17 compatible `optional` implementation.
 template <class T>
 class optional {
- public:
+public:
   /// Typdef for `T`.
   using type = T;
 
@@ -46,9 +45,8 @@ class optional {
 
   /// Creates an valid instance from `value`.
   template <class U,
-            class E = typename std::enable_if<
-                        std::is_convertible<U, T>::value
-                      >::type>
+            class E
+            = typename std::enable_if<std::is_convertible<U, T>::value>::type>
   optional(U x) : m_valid(false) {
     cr(std::move(x));
   }
@@ -59,8 +57,8 @@ class optional {
     }
   }
 
-  optional(optional&& other)
-  noexcept(std::is_nothrow_move_constructible<T>::value)
+  optional(optional&& other) noexcept(
+    std::is_nothrow_move_constructible<T>::value)
     : m_valid(false) {
     if (other.m_valid) {
       cr(std::move(other.m_value));
@@ -73,23 +71,25 @@ class optional {
 
   optional& operator=(const optional& other) {
     if (m_valid) {
-      if (other.m_valid) m_value = other.m_value;
-      else destroy();
-    }
-    else if (other.m_valid) {
+      if (other.m_valid)
+        m_value = other.m_value;
+      else
+        destroy();
+    } else if (other.m_valid) {
       cr(other.m_value);
     }
     return *this;
   }
 
-  optional& operator=(optional&& other)
-  noexcept(std::is_nothrow_destructible<T>::value &&
-           std::is_nothrow_move_assignable<T>::value) {
+  optional& operator=(optional&& other) noexcept(
+    std::is_nothrow_destructible<T>::value&&
+      std::is_nothrow_move_assignable<T>::value) {
     if (m_valid) {
-      if (other.m_valid) m_value = std::move(other.m_value);
-      else destroy();
-    }
-    else if (other.m_valid) {
+      if (other.m_valid)
+        m_value = std::move(other.m_value);
+      else
+        destroy();
+    } else if (other.m_valid) {
       cr(std::move(other.m_value));
     }
     return *this;
@@ -146,7 +146,7 @@ class optional {
     return m_valid ? value() : default_value;
   }
 
- private:
+private:
   void destroy() {
     if (m_valid) {
       m_value.~T();
@@ -162,14 +162,16 @@ class optional {
   }
 
   bool m_valid;
-  union { T m_value; };
+  union {
+    T m_value;
+  };
 };
 
 /// Template specialization to allow `optional` to hold a reference
 /// rather than an actual value with minimal overhead.
 template <class T>
 class optional<T&> {
- public:
+public:
   using type = T;
 
   optional(const none_t& = none) : m_value(nullptr) {
@@ -232,13 +234,13 @@ class optional<T&> {
     return default_value;
   }
 
- private:
+private:
   T* m_value;
 };
 
 template <>
 class optional<void> {
- public:
+public:
   using type = unit_t;
 
   optional(none_t = none) : m_value(false) {
@@ -261,7 +263,7 @@ class optional<void> {
     return !m_value;
   }
 
- private:
+private:
   bool m_value;
 };
 
@@ -277,8 +279,8 @@ struct optional_inspect_helper {
   bool& enabled;
   T& storage;
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f,
-                                                 optional_inspect_helper& x) {
+  friend typename Inspector::result_type
+  inspect(Inspector& f, optional_inspect_helper& x) {
     return x.enabled ? f(x.storage) : f();
   }
 };
@@ -325,7 +327,7 @@ T& move_if_optional(T* x) {
 template <class T>
 bool operator==(const optional<T>& lhs, const optional<T>& rhs) {
   return static_cast<bool>(lhs) == static_cast<bool>(rhs)
-      && (!lhs || *lhs == *rhs);
+         && (!lhs || *lhs == *rhs);
 }
 
 /// @relates optional

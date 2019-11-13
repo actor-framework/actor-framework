@@ -24,6 +24,7 @@
 
 #include "caf/config_value_adaptor_field.hpp"
 #include "caf/detail/config_value_adaptor_field_impl.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/optional.hpp"
@@ -41,8 +42,8 @@ public:
 
   using indices = typename detail::il_indices<value_type>::type;
 
-  using fields_tuple = typename detail::select_adaptor_fields<value_type,
-                                                              indices>::type;
+  using fields_tuple =
+    typename detail::select_adaptor_fields<value_type, indices>::type;
 
   using array_type = std::array<config_value_field<value_type>*, sizeof...(Ts)>;
 

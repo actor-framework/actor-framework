@@ -20,6 +20,7 @@
 
 #include <vector>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/make_message.hpp"
 #include "caf/message.hpp"
@@ -29,7 +30,7 @@ namespace caf {
 
 /// Provides a convenient interface for createing `message` objects
 /// from a series of values using the member function `append`.
-class message_builder {
+class CAF_CORE_EXPORT message_builder {
 public:
   friend class message;
 
@@ -57,11 +58,9 @@ public:
   /// Adds `x` to the elements of the buffer.
   template <class T>
   message_builder& append(T&& x) {
-    using type = typename unbox_message_element<
-                   typename detail::implicit_conversions<
-                    typename std::decay<T>::type
-                   >::type
-                 >::type;
+    using type =
+      typename unbox_message_element<typename detail::implicit_conversions<
+        typename std::decay<T>::type>::type>::type;
     return emplace(make_type_erased_value<type>(std::forward<T>(x)));
   }
 
@@ -76,16 +75,16 @@ public:
   }
 
   template <size_t N, class... Ts>
-  message_builder& append_tuple(std::integral_constant<size_t, N>,
-                                std::integral_constant<size_t, N>,
-                                std::tuple<Ts...>&) {
+  message_builder&
+  append_tuple(std::integral_constant<size_t, N>,
+               std::integral_constant<size_t, N>, std::tuple<Ts...>&) {
     return *this;
   }
 
   template <size_t I, size_t N, class... Ts>
-  message_builder& append_tuple(std::integral_constant<size_t, I>,
-                                std::integral_constant<size_t, N> e,
-                                std::tuple<Ts...>& xs) {
+  message_builder&
+  append_tuple(std::integral_constant<size_t, I>,
+               std::integral_constant<size_t, N> e, std::tuple<Ts...>& xs) {
     append(std::move(std::get<I>(xs)));
     return append_tuple(std::integral_constant<size_t, I + 1>{}, e, xs);
   }
@@ -110,9 +109,9 @@ public:
   message extract(message_handler f) const;
 
   /// @copydoc message::extract_opts
-  inline message::cli_res extract_opts(std::vector<message::cli_arg> xs,
-                                       message::help_factory f = nullptr,
-                                       bool no_help = false) const {
+  inline message::cli_res
+  extract_opts(std::vector<message::cli_arg> xs,
+               message::help_factory f = nullptr, bool no_help = false) const {
     return to_message().extract_opts(std::move(xs), std::move(f), no_help);
   }
 
@@ -137,4 +136,3 @@ private:
 };
 
 } // namespace caf
-

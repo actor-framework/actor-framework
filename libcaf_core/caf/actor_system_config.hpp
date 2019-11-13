@@ -19,11 +19,11 @@
 #pragma once
 
 #include <atomic>
-#include <string>
-#include <memory>
-#include <typeindex>
 #include <functional>
+#include <memory>
+#include <string>
 #include <type_traits>
+#include <typeindex>
 #include <unordered_map>
 
 #include "caf/actor_factory.hpp"
@@ -32,6 +32,9 @@
 #include "caf/config_option_adder.hpp"
 #include "caf/config_option_set.hpp"
 #include "caf/config_value.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/safe_equal.hpp"
+#include "caf/detail/type_traits.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"
 #include "caf/is_typed_actor.hpp"
@@ -41,17 +44,14 @@
 #include "caf/thread_hook.hpp"
 #include "caf/type_erased_value.hpp"
 
-#include "caf/detail/safe_equal.hpp"
-#include "caf/detail/type_traits.hpp"
-
 namespace caf {
 
 /// Configures an `actor_system` on startup.
-class actor_system_config {
+class CAF_CORE_EXPORT actor_system_config {
 public:
   // -- member types -----------------------------------------------------------
 
-  using hook_factory = std::function<io::hook* (actor_system&)>;
+  using hook_factory = std::function<io::hook*(actor_system&)>;
 
   using hook_factory_vector = std::vector<hook_factory>;
 
@@ -60,11 +60,11 @@ public:
   template <class K, class V>
   using hash_map = std::unordered_map<K, V>;
 
-  using module_factory = std::function<actor_system::module* (actor_system&)>;
+  using module_factory = std::function<actor_system::module*(actor_system&)>;
 
   using module_factory_vector = std::vector<module_factory>;
 
-  using value_factory = std::function<type_erased_value_ptr ()>;
+  using value_factory = std::function<type_erased_value_ptr()>;
 
   using value_factory_string_map = hash_map<std::string, value_factory>;
 
@@ -74,12 +74,12 @@ public:
 
   using portable_name_map = hash_map<std::type_index, std::string>;
 
-  using error_renderer = std::function<std::string (uint8_t, atom_value,
-                                                    const message&)>;
+  using error_renderer
+    = std::function<std::string(uint8_t, atom_value, const message&)>;
 
   using error_renderer_map = hash_map<atom_value, error_renderer>;
 
-  using group_module_factory = std::function<group_module* ()>;
+  using group_module_factory = std::function<group_module*()>;
 
   using group_module_factory_vector = std::vector<group_module_factory>;
 
@@ -167,12 +167,13 @@ public:
   /// Adds message type `T` with runtime type info `name`.
   template <class T>
   actor_system_config& add_message_type(std::string name) {
-    static_assert(std::is_empty<T>::value
-                  || std::is_same<T, actor>::value // silence add_actor_type err
-                  || is_typed_actor<T>::value
-                  || (std::is_default_constructible<T>::value
-                      && std::is_copy_constructible<T>::value),
-                  "T must provide default and copy constructors");
+    static_assert(
+      std::is_empty<T>::value
+        || std::is_same<T, actor>::value // silence add_actor_type err
+        || is_typed_actor<T>::value
+        || (std::is_default_constructible<T>::value
+            && std::is_copy_constructible<T>::value),
+      "T must provide default and copy constructors");
     std::string stream_name = "stream<";
     stream_name += name;
     stream_name += ">";
@@ -187,8 +188,7 @@ public:
 
   /// Enables the actor system to convert errors of this error category
   /// to human-readable strings via `renderer`.
-  actor_system_config& add_error_category(atom_value x,
-                                          error_renderer y);
+  actor_system_config& add_error_category(atom_value x, error_renderer y);
 
   /// Enables the actor system to convert errors of this error category
   /// to human-readable strings via `to_string(T)`.
@@ -228,9 +228,8 @@ public:
   /// Adds a hook type to the middleman (if loaded).
   template <class Hook>
   actor_system_config& add_hook_type() {
-    return add_hook_factory([](actor_system& sys) -> Hook* {
-      return new Hook(sys);
-    });
+    return add_hook_factory(
+      [](actor_system& sys) -> Hook* { return new Hook(sys); });
   }
 
   /// Adds a hook type to the scheduler.
@@ -351,8 +350,8 @@ public:
   /// @param opts User-defined config options for type checking.
   /// @returns A ::settings dictionary with the parsed content of `filename` on
   ///          success, an ::error otherwise.
-  static expected<settings> parse_config_file(const char* filename,
-                                              const config_option_set& opts);
+  static expected<settings>
+  parse_config_file(const char* filename, const config_option_set& opts);
 
   /// Tries to open `filename`, parses its content as CAF config file and
   /// stores all entries in `result` (overrides conflicting entries). Also
@@ -363,9 +362,9 @@ public:
   ///               partial results if this function returns an error.
   /// @returns A default-constructed ::error on success, the error code of the
   ///          parser otherwise.
-  static error parse_config_file(const char* filename,
-                                 const config_option_set& opts,
-                                 settings& result);
+  static error
+  parse_config_file(const char* filename, const config_option_set& opts,
+                    settings& result);
 
   /// Parses the content of `source` using CAF's config format.
   /// @param source Character sequence in CAF's config format.
@@ -379,8 +378,8 @@ public:
   /// @param opts User-defined config options for type checking.
   /// @returns A ::settings dictionary with the parsed content of `source` on
   ///          success, an ::error otherwise.
-  static expected<settings> parse_config(std::istream& source,
-                                         const config_option_set& opts);
+  static expected<settings>
+  parse_config(std::istream& source, const config_option_set& opts);
 
   /// Parses the content of `source` using CAF's config format and stores all
   /// entries in `result` (overrides conflicting entries). Also type-checks
@@ -403,9 +402,10 @@ private:
   template <class T>
   void add_message_type_impl(std::string name) {
     type_names_by_rtti.emplace(std::type_index(typeid(T)), name);
-    value_factories_by_name.emplace(std::move(name), &make_type_erased_value<T>);
+    value_factories_by_name.emplace(std::move(name),
+                                    &make_type_erased_value<T>);
     value_factories_by_rtti.emplace(std::type_index(typeid(T)),
-                                     &make_type_erased_value<T>);
+                                    &make_type_erased_value<T>);
   }
 
   actor_system_config& set_impl(string_view name, config_value value);
@@ -418,7 +418,7 @@ private:
 };
 
 /// Returns all user-provided configuration parameters.
-const settings& content(const actor_system_config& cfg);
+CAF_CORE_EXPORT const settings& content(const actor_system_config& cfg);
 
 /// Tries to retrieve the value associated to `name` from `cfg`.
 /// @relates actor_system_config

@@ -18,19 +18,20 @@
 
 #pragma once
 
-#include <chrono>
 #include <atomic>
+#include <chrono>
 #include <cstddef>
 
-#include "caf/fwd.hpp"
-#include "caf/atom.hpp"
 #include "caf/actor.hpp"
-#include "caf/message.hpp"
-#include "caf/duration.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_clock.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/atom.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/duration.hpp"
+#include "caf/fwd.hpp"
+#include "caf/message.hpp"
 
 namespace caf {
 namespace scheduler {
@@ -39,12 +40,9 @@ namespace scheduler {
 /// the central printer instance for {@link aout}. It also forwards
 /// sends from detached workers or non-actor threads to randomly
 /// chosen workers.
-class abstract_coordinator : public actor_system::module {
+class CAF_CORE_EXPORT abstract_coordinator : public actor_system::module {
 public:
-  enum utility_actor_id : size_t {
-    printer_id,
-    max_id
-  };
+  enum utility_actor_id : size_t { printer_id, max_id };
 
   explicit abstract_coordinator(actor_system& sys);
 
@@ -107,9 +105,7 @@ protected:
 
   /// Reference to the host system.
   actor_system& system_;
-
 };
 
 } // namespace scheduler
 } // namespace caf
-

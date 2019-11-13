@@ -18,16 +18,16 @@
 
 #pragma once
 
-#include "caf/none.hpp"
-#include "caf/unit.hpp"
-#include "caf/optional.hpp"
 #include "caf/delegated.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/type_traits.hpp"
+#include "caf/none.hpp"
+#include "caf/optional.hpp"
+#include "caf/response_promise.hpp"
 #include "caf/skip.hpp"
 #include "caf/static_visitor.hpp"
-#include "caf/response_promise.hpp"
 #include "caf/typed_response_promise.hpp"
-
-#include "caf/detail/type_traits.hpp"
+#include "caf/unit.hpp"
 
 namespace caf {
 namespace detail {
@@ -42,33 +42,27 @@ struct is_message_id_wrapper {
 };
 
 template <class T>
-struct is_response_promise : std::false_type { };
+struct is_response_promise : std::false_type {};
 
 template <>
-struct is_response_promise<response_promise> : std::true_type { };
+struct is_response_promise<response_promise> : std::true_type {};
 
 template <class... Ts>
-struct is_response_promise<typed_response_promise<Ts...>> : std::true_type { };
+struct is_response_promise<typed_response_promise<Ts...>> : std::true_type {};
 
 template <class... Ts>
-struct is_response_promise<delegated<Ts...>> : std::true_type { };
-
+struct is_response_promise<delegated<Ts...>> : std::true_type {};
 
 template <class T>
 struct optional_message_visitor_enable_tpl {
-  static constexpr bool value =
-      !is_one_of<
-        typename std::remove_const<T>::type,
-        none_t,
-        unit_t,
-        skip_t,
-        optional<skip_t>
-      >::value
-      && !is_message_id_wrapper<T>::value
-      && !is_response_promise<T>::value;
+  static constexpr bool value
+    = !is_one_of<typename std::remove_const<T>::type, none_t, unit_t, skip_t,
+                 optional<skip_t>>::value
+      && !is_message_id_wrapper<T>::value && !is_response_promise<T>::value;
 };
 
-class optional_message_visitor : public static_visitor<optional<message>> {
+class CAF_CORE_EXPORT optional_message_visitor
+  : public static_visitor<optional<message>> {
 public:
   optional_message_visitor() = default;
 
@@ -103,10 +97,8 @@ public:
   }
 
   template <class T, class... Ts>
-  typename std::enable_if<
-    optional_message_visitor_enable_tpl<T>::value,
-    opt_msg
-  >::type
+  typename std::enable_if<optional_message_visitor_enable_tpl<T>::value,
+                          opt_msg>::type
   operator()(T& x, Ts&... xs) const {
     return make_message(std::move(x), std::move(xs)...);
   }
@@ -135,4 +127,3 @@ public:
 
 } // namespace detail
 } // namespace caf
-

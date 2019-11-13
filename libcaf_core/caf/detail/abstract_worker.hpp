@@ -18,14 +18,14 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/resumable.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
-class abstract_worker : public ref_counted, public resumable {
+class CAF_CORE_EXPORT abstract_worker : public ref_counted, public resumable {
 public:
   // -- friends ----------------------------------------------------------------
 
@@ -52,5 +52,4 @@ private:
   std::atomic<abstract_worker*> next_;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

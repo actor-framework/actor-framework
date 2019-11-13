@@ -20,10 +20,9 @@
 
 #include <tuple>
 
+#include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
 #include "caf/replies_to.hpp"
-
-#include "caf/detail/type_list.hpp"
 
 namespace caf {
 
@@ -53,14 +52,14 @@ struct response_type<detail::type_list<>, Xs...> {
 // case #1: no match
 template <class In, class Out, class... Ts, class... Xs>
 struct response_type<detail::type_list<typed_mpi<In, Out>, Ts...>, Xs...>
-    : response_type<detail::type_list<Ts...>, Xs...> {};
+  : response_type<detail::type_list<Ts...>, Xs...> {};
 
 // case #2: match
 template <class... Out, class... Ts, class... Xs>
-struct response_type<detail::type_list<typed_mpi<detail::type_list<Xs...>,
-                                                 output_tuple<Out...>>,
-                                       Ts...>,
-                     Xs...> {
+struct response_type<
+  detail::type_list<typed_mpi<detail::type_list<Xs...>, output_tuple<Out...>>,
+                    Ts...>,
+  Xs...> {
   static constexpr bool valid = true;
   using type = detail::type_list<Out...>;
   using tuple_type = std::tuple<Out...>;
@@ -89,4 +88,3 @@ template <class Ts, class Xs>
 using response_type_unbox_t = typename response_type_unbox<Ts, Xs>::type;
 
 } // namespace caf
-

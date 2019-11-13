@@ -19,14 +19,15 @@
 #pragma once
 
 #include <string>
-#include <vector>
 #include <utility>
+#include <vector>
+
+#include "caf/detail/core_export.hpp"
 
 namespace caf {
 namespace detail {
 
-unsigned get_process_id();
+CAF_CORE_EXPORT unsigned get_process_id();
 
 } // namespace detail
 } // namespace caf
-

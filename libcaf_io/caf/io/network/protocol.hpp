@@ -21,6 +21,7 @@
 #include <cstddef>
 #include <string>
 
+#include "caf/detail/io_export.hpp"
 #include "caf/meta/type_name.hpp"
 
 namespace caf {
@@ -62,9 +63,8 @@ typename Inspector::result_type inspect(Inspector& f, protocol& x) {
 /// Converts a protocol into a transport/network string representation, e.g.,
 /// "TCP/IPv4".
 /// @relates protocol
-std::string to_string(const protocol& x);
+CAF_IO_EXPORT std::string to_string(const protocol& x);
 
 } // namespace network
 } // namespace io
 } // namespace caf
-

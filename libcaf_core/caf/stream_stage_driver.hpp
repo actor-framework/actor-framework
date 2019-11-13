@@ -64,8 +64,9 @@ public:
   // -- virtual functions ------------------------------------------------------
 
   /// Processes a single batch.
-  virtual void process(downstream<output_type>& out,
-                       std::vector<input_type>& batch) = 0;
+  virtual void
+  process(downstream<output_type>& out, std::vector<input_type>& batch)
+    = 0;
 
   /// Cleans up any state.
   virtual void finalize(const error&) {
@@ -91,4 +92,3 @@ protected:
 };
 
 } // namespace caf
-

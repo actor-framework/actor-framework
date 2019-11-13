@@ -21,6 +21,7 @@
 #include <cstdint>
 
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/ipv4_subnet.hpp"
@@ -28,13 +29,14 @@
 
 namespace caf {
 
-class ipv6_subnet : detail::comparable<ipv6_subnet> {
+class CAF_CORE_EXPORT ipv6_subnet : detail::comparable<ipv6_subnet> {
 public:
   // -- constants --------------------------------------------------------------
 
   /// Stores the offset of an embedded IPv4 subnet in bits.
-  static constexpr uint8_t v4_offset =
-    static_cast<uint8_t>(ipv6_address::num_bytes - ipv4_address::num_bytes) * 8;
+  static constexpr uint8_t v4_offset
+    = static_cast<uint8_t>(ipv6_address::num_bytes - ipv4_address::num_bytes)
+      * 8;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -102,7 +104,6 @@ private:
 // -- related free functions ---------------------------------------------------
 
 /// @relates ipv6_subnet
-std::string to_string(ipv6_subnet x);
+CAF_CORE_EXPORT std::string to_string(ipv6_subnet x);
 
 } // namespace caf
-

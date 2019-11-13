@@ -34,6 +34,7 @@
 #include "caf/behavior.hpp"
 #include "caf/check_typed_input.hpp"
 #include "caf/delegated.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/detail/unique_function.hpp"
@@ -56,7 +57,7 @@ namespace caf {
 
 /// Base class for actors running on this node, either
 /// living in an own thread or cooperatively scheduled.
-class local_actor : public monitorable_actor {
+class CAF_CORE_EXPORT local_actor : public monitorable_actor {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -82,9 +83,9 @@ public:
 
   /// Returns the difference between `t0` and `t1`, allowing the clock to
   /// return any arbitrary value depending on the measurement that took place.
-  clock_type::duration difference(atom_value measurement,
-                                  clock_type::time_point t0,
-                                  clock_type::time_point t1);
+  clock_type::duration
+  difference(atom_value measurement, clock_type::time_point t0,
+             clock_type::time_point t1);
 
   // -- timeout management -----------------------------------------------------
 
@@ -97,10 +98,8 @@ public:
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
   infer_handle_from_class_t<T> spawn(Ts&&... xs) {
     actor_config cfg{context(), this};
-    return eval_opts(Os,
-                     system().spawn_class<T, make_unbound(Os)>(cfg,
-                                                               std::forward<Ts>(
-                                                                 xs)...));
+    return eval_opts(Os, system().spawn_class<T, make_unbound(Os)>(
+                           cfg, std::forward<Ts>(xs)...));
   }
 
   template <class T, spawn_options Os = no_spawn_options>
@@ -119,61 +118,48 @@ public:
     actor_config cfg{context(), this};
     static constexpr spawn_options unbound = make_unbound(Os);
     detail::bool_token<spawnable> enabled;
-    return eval_opts(Os,
-                     system().spawn_functor<unbound>(enabled, cfg, fun,
-                                                     std::forward<Ts>(xs)...));
+    return eval_opts(Os, system().spawn_functor<unbound>(
+                           enabled, cfg, fun, std::forward<Ts>(xs)...));
   }
 
   template <class T, spawn_options Os = no_spawn_options, class Groups,
             class... Ts>
   actor spawn_in_groups(const Groups& gs, Ts&&... xs) {
     actor_config cfg{context(), this};
-    return eval_opts(Os, system()
-                           .spawn_class_in_groups<
-                             T, make_unbound(Os)>(cfg, gs.begin(), gs.end(),
-                                                  std::forward<Ts>(xs)...));
+    return eval_opts(Os, system().spawn_class_in_groups<T, make_unbound(Os)>(
+                           cfg, gs.begin(), gs.end(), std::forward<Ts>(xs)...));
   }
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
   actor spawn_in_groups(std::initializer_list<group> gs, Ts&&... xs) {
     actor_config cfg{context(), this};
-    return eval_opts(Os, system()
-                           .spawn_class_in_groups<
-                             T, make_unbound(Os)>(cfg, gs.begin(), gs.end(),
-                                                  std::forward<Ts>(xs)...));
+    return eval_opts(Os, system().spawn_class_in_groups<T, make_unbound(Os)>(
+                           cfg, gs.begin(), gs.end(), std::forward<Ts>(xs)...));
   }
 
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
   actor spawn_in_group(const group& grp, Ts&&... xs) {
     actor_config cfg{context(), this};
     auto first = &grp;
-    return eval_opts(Os, system()
-                           .spawn_class_in_groups<
-                             T, make_unbound(Os)>(cfg, first, first + 1,
-                                                  std::forward<Ts>(xs)...));
+    return eval_opts(Os, system().spawn_class_in_groups<T, make_unbound(Os)>(
+                           cfg, first, first + 1, std::forward<Ts>(xs)...));
   }
 
   template <spawn_options Os = no_spawn_options, class Groups, class F,
             class... Ts>
   actor spawn_in_groups(const Groups& gs, F fun, Ts&&... xs) {
     actor_config cfg{context(), this};
-    return eval_opts(Os,
-                     system()
-                       .spawn_fun_in_groups<make_unbound(Os)>(cfg, gs.begin(),
-                                                              gs.end(), fun,
-                                                              std::forward<Ts>(
-                                                                xs)...));
+    return eval_opts(Os, system().spawn_fun_in_groups<make_unbound(Os)>(
+                           cfg, gs.begin(), gs.end(), fun,
+                           std::forward<Ts>(xs)...));
   }
 
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
   actor spawn_in_groups(std::initializer_list<group> gs, F fun, Ts&&... xs) {
     actor_config cfg{context(), this};
-    return eval_opts(Os,
-                     system()
-                       .spawn_fun_in_groups<make_unbound(Os)>(cfg, gs.begin(),
-                                                              gs.end(), fun,
-                                                              std::forward<Ts>(
-                                                                xs)...));
+    return eval_opts(Os, system().spawn_fun_in_groups<make_unbound(Os)>(
+                           cfg, gs.begin(), gs.end(), fun,
+                           std::forward<Ts>(xs)...));
   }
 
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
@@ -181,11 +167,8 @@ public:
     actor_config cfg{context(), this};
     auto first = &grp;
     return eval_opts(Os,
-                     system()
-                       .spawn_fun_in_groups<make_unbound(Os)>(cfg, first,
-                                                              first + 1, fun,
-                                                              std::forward<Ts>(
-                                                                xs)...));
+                     system().spawn_fun_in_groups<make_unbound(Os)>(
+                       cfg, first, first + 1, fun, std::forward<Ts>(xs)...));
   }
 
   // -- sending asynchronous messages ------------------------------------------
@@ -430,4 +413,3 @@ protected:
 };
 
 } // namespace caf
-

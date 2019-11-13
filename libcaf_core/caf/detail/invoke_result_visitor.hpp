@@ -20,6 +20,10 @@
 
 #include <tuple>
 
+#include "caf/detail/apply_args.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/int_list.hpp"
+#include "caf/detail/type_traits.hpp"
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
 #include "caf/make_message.hpp"
@@ -33,16 +37,12 @@
 #include "caf/skip.hpp"
 #include "caf/unit.hpp"
 
-#include "caf/detail/apply_args.hpp"
-#include "caf/detail/int_list.hpp"
-#include "caf/detail/type_traits.hpp"
-
 namespace caf {
 namespace detail {
 
 /// Inspects the result of message handlers and triggers type-depended actions
 /// such as generating result messages.
-class invoke_result_visitor {
+class CAF_CORE_EXPORT invoke_result_visitor {
 public:
   virtual ~invoke_result_visitor();
 
@@ -219,4 +219,3 @@ public:
 
 } // namespace detail
 } // namespace caf
-

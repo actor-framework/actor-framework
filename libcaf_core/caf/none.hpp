@@ -46,4 +46,3 @@ inline std::string to_string(const none_t&) {
 }
 
 } // namespace caf
-

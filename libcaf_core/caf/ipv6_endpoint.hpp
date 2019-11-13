@@ -22,6 +22,7 @@
 #include <functional>
 
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/ipv6_address.hpp"
 #include "caf/meta/type_name.hpp"
@@ -29,8 +30,9 @@
 namespace caf {
 
 /// An IP endpoint that contains an ::ipv6_address and a port.
-class ipv6_endpoint : detail::comparable<ipv6_endpoint>,
-                      detail::comparable<ipv6_endpoint, ipv4_endpoint> {
+class CAF_CORE_EXPORT ipv6_endpoint
+  : detail::comparable<ipv6_endpoint>,
+    detail::comparable<ipv6_endpoint, ipv4_endpoint> {
 public:
   // -- constructors -----------------------------------------------------------
 
@@ -80,8 +82,8 @@ public:
   long compare(ipv4_endpoint x) const noexcept;
 
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f,
-                                                 ipv6_endpoint& x) {
+  friend typename Inspector::result_type
+  inspect(Inspector& f, ipv6_endpoint& x) {
     return f(meta::type_name("ipv6_endpoint"), x.address_, x.port_);
   }
 
@@ -92,7 +94,7 @@ private:
   uint16_t port_;
 };
 
-std::string to_string(const ipv6_endpoint& ep);
+CAF_CORE_EXPORT std::string to_string(const ipv6_endpoint& ep);
 
 } // namespace caf
 

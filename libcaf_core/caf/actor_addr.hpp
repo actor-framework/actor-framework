@@ -23,20 +23,21 @@
 #include <functional>
 #include <type_traits>
 
-#include "caf/fwd.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_control_block.hpp"
-
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 
 /// Stores the address of typed as well as untyped actors.
-class actor_addr : detail::comparable<actor_addr>,
-                   detail::comparable<actor_addr, weak_actor_ptr>,
-                   detail::comparable<actor_addr, strong_actor_ptr>,
-                   detail::comparable<actor_addr, abstract_actor*>,
-                   detail::comparable<actor_addr, actor_control_block*> {
+class CAF_CORE_EXPORT actor_addr
+  : detail::comparable<actor_addr>,
+    detail::comparable<actor_addr, weak_actor_ptr>,
+    detail::comparable<actor_addr, strong_actor_ptr>,
+    detail::comparable<actor_addr, abstract_actor*>,
+    detail::comparable<actor_addr, actor_control_block*> {
 public:
   // -- friend types that need access to private ctors
 
@@ -83,8 +84,8 @@ public:
 
   /// @cond PRIVATE
 
-  static intptr_t compare(const actor_control_block* lhs,
-                          const actor_control_block* rhs);
+  static intptr_t
+  compare(const actor_control_block* lhs, const actor_control_block* rhs);
 
   intptr_t compare(const actor_addr& other) const noexcept;
 
@@ -168,4 +169,3 @@ struct hash<caf::actor_addr> {
   }
 };
 } // namespace std
-

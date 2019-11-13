@@ -20,6 +20,7 @@
 
 #include <cstddef>
 
+#include "caf/detail/io_export.hpp"
 #include "caf/io/network/manager.hpp"
 
 namespace caf {
@@ -28,7 +29,7 @@ namespace network {
 
 /// A stream manager configures an IO stream and provides callbacks
 /// for incoming data as well as for error handling.
-class stream_manager : public manager {
+class CAF_IO_EXPORT stream_manager : public manager {
 public:
   ~stream_manager() override;
 
@@ -47,4 +48,3 @@ public:
 } // namespace network
 } // namespace io
 } // namespace caf
-

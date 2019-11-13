@@ -37,4 +37,3 @@ struct no_stages_t {
 constexpr no_stages_t no_stages = no_stages_t{};
 
 } // namespace caf
-

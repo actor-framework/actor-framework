@@ -1,14 +1,19 @@
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 project(caf C CXX)
 
-include(CheckCSourceCompiles)
-include(CheckCSourceRuns)
+# -- project options -----------------------------------------------------------
 
-# Set default install paths.
-# See https://cmake.org/cmake/help/latest/module/GNUInstallDirs.html
-include(GNUInstallDirs)
+option(BUILD_SHARED_LIBS "Build all modules as shared library" ON)
 
-# Check whether we are running as CMake subdirectory.
+# -- includes ------------------------------------------------------------------
+
+include(CheckCSourceCompiles) # Check whether compiler works
+include(CheckCSourceRuns)     # Check whether compiler produces binaries
+include(GNUInstallDirs)       # Sets default install paths
+include(GenerateExportHeader) # Auto-generates dllexport macros
+
+# -- check whether we are running as CMake subdirectory ------------------------
+
 get_directory_property(_parent PARENT_DIRECTORY)
 if(_parent)
   set(caf_is_subproject ON)
@@ -16,6 +21,8 @@ else()
   set(caf_is_subproject OFF)
 endif()
 unset(_parent)
+
+# -- make sure we have at least C++17 available --------------------------------
 
 if(NOT CMAKE_CROSSCOMPILING)
   # Check whether the user already provided flags that enable C++ >= 17.
@@ -49,28 +56,18 @@ if(NOT CMAKE_CROSSCOMPILING)
   endif()
 endif()
 
-set(CAF_LINKAGE_DEFAULT_SHARED ON)
-if(WIN32)
-  # Shared libs are currently not supported on Windows.
-  set(CAF_LINKAGE_DEFAULT_SHARED OFF)
-endif()
-option(BUILD_SHARED_LIBS "" ${CAF_LINKAGE_DEFAULT_SHARED})
-if (DEFINED CAF_BUILD_STATIC OR DEFINED CAF_BUILD_STATIC_ONLY)
-  if (CAF_BUILD_STATIC OR CAF_BUILD_STATIC_ONLY)
-    set(BUILD_SHARED_LIBS OFF)
-  else ()
-    set(BUILD_SHARED_LIBS ON)
-  endif ()
-endif ()
-if(BUILD_SHARED_LIBS)
-  set(LINK_TYPE "shared")
-else()
-  set(LINK_TYPE "static")
-endif()
-
 set(CMAKE_INSTALL_CMAKEBASEDIR "${CMAKE_INSTALL_LIBDIR}/cmake" CACHE PATH
     "Base directory for installing cmake specific artifacts")
 set(INSTALL_CAF_CMAKEDIR "${CMAKE_INSTALL_CMAKEBASEDIR}/caf")
+
+if(BUILD_SHARED_LIBS)
+  set(LINK_TYPE "shared")
+  set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+  set(CMAKE_VISIBILITY_INLINES_HIDDEN yes)
+else()
+  set(CAF_STATIC_BUILD yes)
+  set(LINK_TYPE "static")
+endif()
 
 # Be nice to VIM users and Clang tools.
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
@@ -78,11 +75,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 # Silence policy CMP0042 warning by enabling RPATH explicitly.
 if(APPLE AND NOT DEFINED CMAKE_MACOSX_RPATH)
   set(CMAKE_MACOSX_RPATH true)
-endif()
-
-# Auto-export all symbols from Windows DLL
-if(WIN32)
-  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif()
 
 if(CAF_BUILD_STATIC_RUNTIME)
@@ -346,7 +338,6 @@ endif()
 if(MINGW)
   add_definitions(-D_WIN32_WINNT=0x0600)
   add_definitions(-DWIN32)
-  include(GenerateExportHeader)
   list(APPEND CAF_EXTRA_LDFLAGS -lws2_32 -liphlpapi -lpsapi)
   # build static to avoid runtime dependencies to GCC libraries
   build_string("EXTRA_FLAGS" "-static")

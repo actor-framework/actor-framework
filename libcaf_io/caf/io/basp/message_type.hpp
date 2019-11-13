@@ -21,6 +21,8 @@
 #include <string>
 #include <cstdint>
 
+#include "caf/detail/io_export.hpp"
+
 namespace caf {
 namespace io {
 namespace basp {
@@ -74,7 +76,7 @@ enum class message_type : uint8_t {
 };
 
 /// @relates message_type
-std::string to_string(message_type);
+CAF_IO_EXPORT std::string to_string(message_type);
 
 /// @}
 

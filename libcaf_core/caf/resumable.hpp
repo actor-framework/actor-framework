@@ -20,6 +20,7 @@
 
 #include <type_traits>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf {
@@ -29,7 +30,7 @@ namespace caf {
 /// meant as mixin for reference counted object, i.e., the
 /// subclass is required to inherit from `ref_counted`
 /// at some point.
-class resumable {
+class CAF_CORE_EXPORT resumable {
 public:
   /// Denotes the state in which a `resumable`
   /// returned from its last call to `resume`.
@@ -74,21 +75,16 @@ public:
 
 // enables intrusive_ptr<resumable> without introducing ambiguity
 template <class T>
-typename std::enable_if<
-  std::is_same<T*, resumable*>::value
->::type
+typename std::enable_if<std::is_same<T*, resumable*>::value>::type
 intrusive_ptr_add_ref(T* ptr) {
   ptr->intrusive_ptr_add_ref_impl();
 }
 
 // enables intrusive_ptr<resumable> without introducing ambiguity
 template <class T>
-typename std::enable_if<
-  std::is_same<T*, resumable*>::value
->::type
+typename std::enable_if<std::is_same<T*, resumable*>::value>::type
 intrusive_ptr_release(T* ptr) {
   ptr->intrusive_ptr_release_impl();
 }
 
 } // namespace caf
-

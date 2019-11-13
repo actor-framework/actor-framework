@@ -18,20 +18,21 @@
 
 #pragma once
 
+#include <condition_variable>
+#include <cstddef>
 #include <list>
 #include <mutex>
-#include <cstddef>
-#include <condition_variable>
 
-#include "caf/resumable.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/policy/unprofiled.hpp"
+#include "caf/resumable.hpp"
 
 namespace caf {
 namespace policy {
 
 /// Implements scheduling of actors via work sharing (central job queue).
 /// @extends scheduler_policy
-class work_sharing : public unprofiled {
+class CAF_CORE_EXPORT work_sharing : public unprofiled {
 public:
   // A thread-safe queue implementation.
   using queue_type = std::list<resumable*>;
@@ -120,4 +121,3 @@ public:
 
 } // namespace policy
 } // namespace caf
-

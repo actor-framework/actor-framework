@@ -18,12 +18,11 @@
 
 #pragma once
 
-#include "caf/io/fwd.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/io/doorman.hpp"
-
+#include "caf/io/fwd.hpp"
 #include "caf/io/network/acceptor_impl.hpp"
 #include "caf/io/network/native_socket.hpp"
-
 #include "caf/policy/tcp.hpp"
 
 namespace caf {
@@ -31,7 +30,7 @@ namespace io {
 namespace network {
 
 /// Default doorman implementation.
-class doorman_impl : public doorman {
+class CAF_IO_EXPORT doorman_impl : public doorman {
 public:
   doorman_impl(default_multiplexer& mx, native_socket sockfd);
 

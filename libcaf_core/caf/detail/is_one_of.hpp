@@ -38,4 +38,3 @@ struct is_one_of<T, U, Ts...> : is_one_of<T, Ts...> {};
 
 } // namespace detail
 } // namespace caf
-

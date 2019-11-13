@@ -20,16 +20,16 @@
 
 #include <tuple>
 
-#include "caf/fwd.hpp"
-
 #include "caf/detail/apply_args.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/spawn_fwd.hpp"
 #include "caf/detail/unique_function.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 namespace detail {
 
-class init_fun_factory_helper_base
+class CAF_CORE_EXPORT init_fun_factory_helper_base
   : public unique_function<behavior(local_actor*)>::wrapper {
 public:
   // -- member types -----------------------------------------------------------
@@ -61,8 +61,7 @@ template <class Base, class F, class ArgsPtr, bool ReturnsBehavior,
 class init_fun_factory_helper final : public init_fun_factory_helper_base {
 public:
   init_fun_factory_helper(F fun, ArgsPtr args)
-      : fun_(std::move(fun)),
-        args_(std::move(args)) {
+    : fun_(std::move(fun)), args_(std::move(args)) {
     // nop
   }
 
@@ -78,7 +77,6 @@ public:
     return apply(returns_behavior_token, captures_self_token, self);
   }
 
-
 private:
   // behavior (pointer)
   behavior apply(std::true_type, std::true_type, local_actor* ptr) {
@@ -89,8 +87,8 @@ private:
 
   // void (pointer)
   behavior apply(std::false_type, std::true_type, local_actor* ptr) {
-    apply_moved_args_prefixed(fun_, get_indices(*args_),
-                              *args_, static_cast<Base*>(ptr));
+    apply_moved_args_prefixed(fun_, get_indices(*args_), *args_,
+                              static_cast<Base*>(ptr));
     return behavior{};
   }
 
@@ -131,9 +129,9 @@ public:
     using tuple_ptr = std::shared_ptr<tuple_type>;
     using helper = init_fun_factory_helper<Base, F, tuple_ptr, rets, selfptr>;
     return ptr_type{new helper{std::move(f), sizeof...(Ts) > 0
-                                             ? std::make_shared<tuple_type>(
+                                               ? std::make_shared<tuple_type>(
                                                  detail::spawn_fwd<Ts>(xs)...)
-                                             : nullptr}};
+                                               : nullptr}};
   }
 
   template <class... Ts>
@@ -144,4 +142,3 @@ public:
 
 } // namespace detail
 } // namespace caf
-

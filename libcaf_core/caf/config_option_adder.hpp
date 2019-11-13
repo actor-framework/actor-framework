@@ -21,12 +21,13 @@
 #include <vector>
 
 #include "caf/config_option.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf {
 
 /// Adds config options of the same category to a `config_option_set`.
-class config_option_adder {
+class CAF_CORE_EXPORT config_option_adder {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -48,18 +49,18 @@ public:
 
   /// For backward compatibility only. Do not use for new code!
   /// @private
-  config_option_adder& add_neg(bool& ref, string_view name,
-                               string_view description);
+  config_option_adder&
+  add_neg(bool& ref, string_view name, string_view description);
 
   /// For backward compatibility only. Do not use for new code!
   /// @private
-  config_option_adder& add_us(size_t& ref, string_view name,
-                              string_view description);
+  config_option_adder&
+  add_us(size_t& ref, string_view name, string_view description);
 
   /// For backward compatibility only. Do not use for new code!
   /// @private
-  config_option_adder& add_ms(size_t& ref, string_view name,
-                              string_view description);
+  config_option_adder&
+  add_ms(size_t& ref, string_view name, string_view description);
 
 private:
   // -- properties -------------------------------------------------------------

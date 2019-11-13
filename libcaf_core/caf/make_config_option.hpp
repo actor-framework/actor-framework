@@ -66,7 +66,8 @@ expected<config_value> parse_impl(T* ptr, string_view str) {
   return config_value{trait::convert(*ptr)};
 }
 
-expected<config_value> parse_impl(std::string* ptr, string_view str);
+CAF_CORE_EXPORT expected<config_value>
+parse_impl(std::string* ptr, string_view str);
 
 template <class T>
 expected<config_value> parse_impl_delegate(void* ptr, string_view str) {
@@ -102,20 +103,18 @@ config_option make_config_option(T& storage, string_view category,
 // -- backward compatbility, do not use for new code ! -------------------------
 
 // Inverts the value when writing to `storage`.
-config_option make_negated_config_option(bool& storage, string_view category,
-                                         string_view name,
-                                         string_view description);
+CAF_CORE_EXPORT config_option
+make_negated_config_option(bool& storage, string_view category,
+                           string_view name, string_view description);
 
 // Reads timespans, but stores an integer representing microsecond resolution.
-config_option make_us_resolution_config_option(size_t& storage,
-                                               string_view category,
-                                               string_view name,
-                                               string_view description);
+CAF_CORE_EXPORT config_option
+make_us_resolution_config_option(size_t& storage, string_view category,
+                                 string_view name, string_view description);
 
 // Reads timespans, but stores an integer representing millisecond resolution.
-config_option make_ms_resolution_config_option(size_t& storage,
-                                               string_view category,
-                                               string_view name,
-                                               string_view description);
+CAF_CORE_EXPORT config_option
+make_ms_resolution_config_option(size_t& storage, string_view category,
+                                 string_view name, string_view description);
 
 } // namespace caf

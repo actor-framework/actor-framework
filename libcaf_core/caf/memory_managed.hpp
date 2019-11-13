@@ -18,12 +18,14 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
+
 namespace caf {
 
 /// This base enables derived classes to enforce a different
 /// allocation strategy than new/delete by providing a virtual
 /// protected `request_deletion()` function and non-public destructor.
-class memory_managed {
+class CAF_CORE_EXPORT memory_managed {
 public:
   /// Default implementations calls `delete this, but can
   /// be overriden in case deletion depends on some condition or
@@ -39,4 +41,3 @@ protected:
 };
 
 } // namespace caf
-

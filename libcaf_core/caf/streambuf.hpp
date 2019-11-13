@@ -45,8 +45,7 @@ protected:
   /// these function instead. For a detailed discussion, see:
   /// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=47921
   template <class T = int>
-  typename std::enable_if<sizeof(T) == 4>::type
-  safe_pbump(std::streamsize n) {
+  typename std::enable_if<sizeof(T) == 4>::type safe_pbump(std::streamsize n) {
     while (n > std::numeric_limits<int>::max()) {
       this->pbump(std::numeric_limits<int>::max());
       n -= std::numeric_limits<int>::max();
@@ -55,15 +54,13 @@ protected:
   }
 
   template <class T = int>
-  typename std::enable_if<sizeof(T) == 8>::type
-  safe_pbump(std::streamsize n) {
+  typename std::enable_if<sizeof(T) == 8>::type safe_pbump(std::streamsize n) {
     this->pbump(static_cast<int>(n));
   }
 
   // As above, but for the get area.
   template <class T = int>
-  typename std::enable_if<sizeof(T) == 4>::type
-  safe_gbump(std::streamsize n) {
+  typename std::enable_if<sizeof(T) == 4>::type safe_gbump(std::streamsize n) {
     while (n > std::numeric_limits<int>::max()) {
       this->gbump(std::numeric_limits<int>::max());
       n -= std::numeric_limits<int>::max();
@@ -72,8 +69,7 @@ protected:
   }
 
   template <class T = int>
-  typename std::enable_if<sizeof(T) == 8>::type
-  safe_gbump(std::streamsize n) {
+  typename std::enable_if<sizeof(T) == 8>::type safe_gbump(std::streamsize n) {
     this->gbump(static_cast<int>(n));
   }
 
@@ -154,13 +150,10 @@ public:
   /// @param c A contiguous container.
   /// @pre `c.data()` must point to a contiguous sequence of characters having
   ///      length `c.size()`.
-  template <
-    class Container,
-    class = typename std::enable_if<
-      detail::has_data_member<Container>::value
-      && detail::has_size_member<Container>::value
-    >::type
-  >
+  template <class Container,
+            class = typename std::enable_if<
+              detail::has_data_member<Container>::value
+              && detail::has_size_member<Container>::value>::type>
   arraybuf(Container& c)
     : arraybuf(const_cast<char_type*>(c.data()), c.size()) {
     // nop
@@ -203,9 +196,9 @@ protected:
     return this;
   }
 
-  pos_type seekpos(pos_type pos,
-                   std::ios_base::openmode which
-                     = std::ios_base::in | std::ios_base::out) override {
+  pos_type
+  seekpos(pos_type pos, std::ios_base::openmode which
+                        = std::ios_base::in | std::ios_base::out) override {
     return this->default_seekpos(pos, which);
   }
 
@@ -241,15 +234,12 @@ protected:
 /// reading in the same style as `arraybuf`, but is unbounded for output.
 template <class Container>
 class containerbuf
-  : public stream_buffer<
-      typename Container::value_type,
-      std::char_traits<typename Container::value_type>
-    > {
+  : public stream_buffer<typename Container::value_type,
+                         std::char_traits<typename Container::value_type>> {
 public:
-  using base = std::basic_streambuf<
-      typename Container::value_type,
-      std::char_traits<typename Container::value_type>
-    >;
+  using base
+    = std::basic_streambuf<typename Container::value_type,
+                           std::char_traits<typename Container::value_type>>;
   using char_type = typename base::char_type;
   using traits_type = typename base::traits_type;
   using int_type = typename base::int_type;
@@ -258,12 +248,9 @@ public:
 
   /// Constructs a container streambuf.
   /// @param c A contiguous container.
-  template <
-    class C = Container,
-    class = typename std::enable_if<
-      detail::has_data_member<C>::value && detail::has_size_member<C>::value
-    >::type
-  >
+  template <class C = Container, class = typename std::enable_if<
+                                   detail::has_data_member<C>::value
+                                   && detail::has_size_member<C>::value>::type>
   containerbuf(Container& c) : container_(c) {
     // We use a const_cast because C++11 doesn't provide a non-const data()
     // overload. Using std::data(c) would be the right way to write this.
@@ -274,8 +261,7 @@ public:
 
   // See note in arraybuf(arraybuf&&).
   // TODO: remove after having raised the minimum GCC version to 5.
-  containerbuf(containerbuf&& other)
-    : container_(other.container_) {
+  containerbuf(containerbuf&& other) : container_(other.container_) {
     this->setg(other.eback(), other.gptr(), other.egptr());
     other.setg(nullptr, nullptr, nullptr);
   }
@@ -315,9 +301,9 @@ protected:
     return this;
   }
 
-  pos_type seekpos(pos_type pos,
-                   std::ios_base::openmode which
-                     = std::ios_base::in | std::ios_base::out) override {
+  pos_type
+  seekpos(pos_type pos, std::ios_base::openmode which
+                        = std::ios_base::in | std::ios_base::out) override {
     // We only have a get area, so no put area (= out) operations.
     if ((which & std::ios_base::out) == std::ios_base::out)
       return pos_type(off_type(-1));
@@ -377,4 +363,3 @@ using charbuf = arraybuf<char>;
 using vectorbuf = containerbuf<std::vector<char>>;
 
 } // namespace caf
-

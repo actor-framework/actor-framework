@@ -85,4 +85,3 @@ struct unlift_void<unit_t> {
 };
 
 } // namespace caf
-

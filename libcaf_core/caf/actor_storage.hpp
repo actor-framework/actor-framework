@@ -18,18 +18,19 @@
 
 #pragma once
 
-#include <new>
 #include <atomic>
 #include <cstddef>
+#include <new>
 #include <type_traits>
 
-#include "caf/config.hpp"
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_control_block.hpp"
+#include "caf/config.hpp"
+#include "caf/detail/core_export.hpp"
 
 #ifdef CAF_GCC
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Winvalid-offsetof"
 #endif
 
 namespace caf {
@@ -39,7 +40,7 @@ class actor_storage {
 public:
   template <class... Us>
   actor_storage(actor_id x, node_id y, actor_system* sys, Us&&... zs)
-      : ctrl(x, y, sys, data_dtor, block_dtor) {
+    : ctrl(x, y, sys, data_dtor, block_dtor) {
     // construct data member
     new (&data) T(std::forward<Us>(zs)...);
   }
@@ -48,17 +49,17 @@ public:
     // 1) make sure control block fits into a single cache line
     static_assert(sizeof(actor_control_block) < CAF_CACHE_LINE_SIZE,
                   "actor_control_block exceeds a single cache line");
-    // Clang in combination with libc++ on Linux complains about offsetof:
-    //     error: 'actor_storage' does not refer to a value
-    // Until we have found a reliable solution, we disable this safety check.
-    #if !(defined(CAF_CLANG) && defined(CAF_LINUX))
+// Clang in combination with libc++ on Linux complains about offsetof:
+//     error: 'actor_storage' does not refer to a value
+// Until we have found a reliable solution, we disable this safety check.
+#if !(defined(CAF_CLANG) && defined(CAF_LINUX))
     // 2) make sure reinterpret cast of the control block to the storage works
     static_assert(offsetof(actor_storage, ctrl) == 0,
                   "control block is not at the start of the storage");
     // 3) make sure we can obtain a data pointer by jumping one cache line
     static_assert(offsetof(actor_storage, data) == CAF_CACHE_LINE_SIZE,
                   "data is not at cache line size boundary");
-    #else
+#else
     // 4) make sure static_cast and reinterpret_cast
     //    between T* and abstract_actor* are identical
     constexpr abstract_actor* dummy = nullptr;
@@ -66,7 +67,7 @@ public:
     static_assert(derived_dummy == nullptr,
                   "actor subtype has illegal memory alignment "
                   "(probably due to virtual inheritance)");
-    #endif
+#endif
   }
 
   actor_storage(const actor_storage&) = delete;
@@ -77,7 +78,9 @@ public:
 
   actor_control_block ctrl;
   char pad[CAF_CACHE_LINE_SIZE - sizeof(actor_control_block)];
-  union { T data; };
+  union {
+    T data;
+  };
 
 private:
   static void data_dtor(abstract_actor* ptr) {
@@ -139,6 +142,5 @@ void intrusive_ptr_release(actor_storage<T>* x) {
 } // namespace caf
 
 #ifdef CAF_GCC
-#pragma GCC diagnostic pop
+#  pragma GCC diagnostic pop
 #endif
-

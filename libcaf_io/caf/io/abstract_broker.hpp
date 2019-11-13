@@ -18,24 +18,23 @@
 
 #pragma once
 
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
-#include "caf/scheduled_actor.hpp"
-#include "caf/prohibit_top_level_spawn_marker.hpp"
-
-#include "caf/io/fwd.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/io/accept_handle.hpp"
-#include "caf/io/receive_policy.hpp"
-#include "caf/io/datagram_handle.hpp"
-#include "caf/io/system_messages.hpp"
 #include "caf/io/connection_handle.hpp"
-
+#include "caf/io/datagram_handle.hpp"
+#include "caf/io/fwd.hpp"
+#include "caf/io/network/acceptor_manager.hpp"
+#include "caf/io/network/datagram_manager.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/stream_manager.hpp"
-#include "caf/io/network/acceptor_manager.hpp"
-#include "caf/io/network/datagram_manager.hpp"
+#include "caf/io/receive_policy.hpp"
+#include "caf/io/system_messages.hpp"
+#include "caf/prohibit_top_level_spawn_marker.hpp"
+#include "caf/scheduled_actor.hpp"
 
 namespace caf {
 namespace io {
@@ -74,8 +73,8 @@ class middleman;
 
 /// A broker mediates between actor systems and other components in the network.
 /// @ingroup Broker
-class abstract_broker : public scheduled_actor,
-                        public prohibit_top_level_spawn_marker {
+class CAF_IO_EXPORT abstract_broker : public scheduled_actor,
+                                      public prohibit_top_level_spawn_marker {
 public:
   ~abstract_broker() override;
 
@@ -183,8 +182,8 @@ public:
   /// Tries to connect to `host` on given `port` and creates
   /// a new scribe describing the connection afterwards.
   /// @returns The handle of the new `scribe` on success.
-  expected<connection_handle> add_tcp_scribe(const std::string& host,
-                                             uint16_t port);
+  expected<connection_handle>
+  add_tcp_scribe(const std::string& host, uint16_t port);
 
   /// Moves the initialized `scribe` instance `ptr` from another broker to this
   /// broker.
@@ -211,8 +210,8 @@ public:
   void add_datagram_servant(datagram_servant_ptr ptr);
 
   /// Adds the `datagram_servant` under an additional `hdl`.
-  void add_hdl_for_datagram_servant(datagram_servant_ptr ptr,
-                                    datagram_handle hdl);
+  void
+  add_hdl_for_datagram_servant(datagram_servant_ptr ptr, datagram_handle hdl);
 
   /// Creates and assigns a new `datagram_servant` from a given socket `fd`.
   datagram_handle add_datagram_servant(network::native_socket fd);
@@ -223,7 +222,8 @@ public:
   add_datagram_servant_for_endpoint(network::native_socket fd,
                                     const network::ip_endpoint& ep);
 
-  /// Creates a new `datagram_servant` for the remote endpoint `host` and `port`.
+  /// Creates a new `datagram_servant` for the remote endpoint `host` and
+  /// `port`.
   /// @returns The handle to the new `datagram_servant`.
   expected<datagram_handle>
   add_udp_datagram_servant(const std::string& host, uint16_t port);
@@ -358,8 +358,8 @@ protected:
 
   using doorman_map = std::unordered_map<accept_handle, intrusive_ptr<doorman>>;
 
-  using scribe_map = std::unordered_map<connection_handle,
-                                        intrusive_ptr<scribe>>;
+  using scribe_map
+    = std::unordered_map<connection_handle, intrusive_ptr<scribe>>;
 
   using datagram_servant_map
     = std::unordered_map<datagram_handle, intrusive_ptr<datagram_servant>>;
@@ -428,4 +428,3 @@ private:
 
 } // namespace io
 } // namespace caf
-

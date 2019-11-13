@@ -24,6 +24,7 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/abstract_worker.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/detail/worker_hub.hpp"
 #include "caf/fwd.hpp"
 #include "caf/io/basp/fwd.hpp"
@@ -37,8 +38,8 @@ namespace io {
 namespace basp {
 
 /// Deserializes payloads for BASP messages asynchronously.
-class worker : public detail::abstract_worker,
-               public remote_message_handler<worker> {
+class CAF_IO_EXPORT worker : public detail::abstract_worker,
+                             public remote_message_handler<worker> {
 public:
   // -- friends ----------------------------------------------------------------
 

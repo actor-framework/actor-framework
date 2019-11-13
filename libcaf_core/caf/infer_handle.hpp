@@ -18,11 +18,12 @@
 
 #pragma once
 
+#include "caf/abstract_composable_behavior.hpp"
 #include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/stateful_actor.hpp"
 #include "caf/typed_behavior.hpp"
-#include "caf/abstract_composable_behavior.hpp"
 
 namespace caf {
 
@@ -36,23 +37,15 @@ class typed_broker;
 
 } // namespace io
 
-enum class spawn_mode {
-  function,
-  function_with_selfptr,
-  clazz
-};
+enum class spawn_mode { function, function_with_selfptr, clazz };
 
 template <spawn_mode X>
 using spawn_mode_token = std::integral_constant<spawn_mode, X>;
 
 // default: dynamically typed actor without self pointer
-template <class Result,
-          class FirstArg,
-          bool FirstArgValid =
-            std::is_base_of<
-              local_actor,
-              typename std::remove_pointer<FirstArg>::type
-            >::value>
+template <class Result, class FirstArg,
+          bool FirstArgValid = std::is_base_of<
+            local_actor, typename std::remove_pointer<FirstArg>::type>::value>
 struct infer_handle_from_fun_impl {
   using type = actor;
   using impl = event_based_actor;
@@ -91,7 +84,7 @@ struct infer_handle_from_fun_impl<typed_behavior<Sigs...>, Impl, false> {
 template <class... Sigs, class Impl>
 struct infer_handle_from_fun_impl<typed_behavior<Sigs...>, Impl*, true> {
   static_assert(std::is_base_of<typed_event_based_actor<Sigs...>, Impl>::value
-                || std::is_base_of<io::typed_broker<Sigs...>, Impl>::value,
+                  || std::is_base_of<io::typed_broker<Sigs...>, Impl>::value,
                 "Self pointer does not match the returned behavior type.");
   using type = typed_actor<Sigs...>;
   using impl = Impl;
@@ -136,9 +129,7 @@ struct infer_handle_from_behavior<typed_behavior<Sigs...>> {
 template <class T, bool = std::is_base_of<abstract_actor, T>::value>
 struct infer_handle_from_class {
   using type =
-    typename infer_handle_from_behavior<
-      typename T::behavior_type
-    >::type;
+    typename infer_handle_from_behavior<typename T::behavior_type>::type;
   static constexpr spawn_mode mode = spawn_mode::clazz;
 };
 
@@ -152,7 +143,8 @@ struct infer_handle_from_class<T, false> {
 template <class T>
 using infer_handle_from_class_t = typename infer_handle_from_class<T>::type;
 
-template <class T, bool = std::is_base_of<abstract_composable_behavior, T>::value>
+template <class T,
+          bool = std::is_base_of<abstract_composable_behavior, T>::value>
 struct infer_handle_from_state {
   using type = typename T::handle_type;
 };
@@ -180,4 +172,3 @@ template <class... Ts>
 struct is_handle<typed_actor<Ts...>> : std::true_type {};
 
 } // namespace caf
-

@@ -32,6 +32,7 @@
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/arg_wrapper.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/log_level.hpp"
 #include "caf/detail/pretty_type_name.hpp"
 #include "caf/detail/ringbuffer.hpp"
@@ -65,7 +66,7 @@ namespace caf {
 /// Centrally logs events from all actors in an actor system. To enable
 /// logging in your application, you need to define `CAF_LOG_LEVEL`. Per
 /// default, the logger generates log4j compatible output.
-class logger : public ref_counted {
+class CAF_CORE_EXPORT logger : public ref_counted {
 public:
   // -- friends ----------------------------------------------------------------
 
@@ -383,13 +384,13 @@ private:
 };
 
 /// @relates logger::field_type
-std::string to_string(logger::field_type x);
+CAF_CORE_EXPORT std::string to_string(logger::field_type x);
 
 /// @relates logger::field
-std::string to_string(const logger::field& x);
+CAF_CORE_EXPORT std::string to_string(const logger::field& x);
 
 /// @relates logger::field
-bool operator==(const logger::field& x, const logger::field& y);
+CAF_CORE_EXPORT bool operator==(const logger::field& x, const logger::field& y);
 
 } // namespace caf
 
@@ -559,16 +560,14 @@ bool operator==(const logger::field& x, const logger::field& y);
                    << "; GROUPS =" << ::caf::logger::joined_groups_of(ref))
 
 #  define CAF_LOG_SEND_EVENT(ptr)                                              \
-    CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                  \
-                 "SEND ; TO ="                                                 \
-                   << ::caf::deep_to_string(                                   \
-                        ::caf::strong_actor_ptr{this->ctrl()})                 \
-                        .c_str()                                               \
-                   << "; FROM =" << ::caf::deep_to_string(ptr->sender).c_str() \
-                   << "; STAGES ="                                             \
-                   << ::caf::deep_to_string(ptr->stages).c_str()               \
-                   << "; CONTENT ="                                            \
-                   << ::caf::deep_to_string(ptr->content()).c_str())
+    CAF_LOG_IMPL(                                                              \
+      CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                             \
+      "SEND ; TO ="                                                            \
+        << ::caf::deep_to_string(::caf::strong_actor_ptr{this->ctrl()})        \
+             .c_str()                                                          \
+        << "; FROM =" << ::caf::deep_to_string(ptr->sender).c_str()            \
+        << "; STAGES =" << ::caf::deep_to_string(ptr->stages).c_str()          \
+        << "; CONTENT =" << ::caf::deep_to_string(ptr->content()).c_str())
 
 #  define CAF_LOG_RECEIVE_EVENT(ptr)                                           \
     CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                  \

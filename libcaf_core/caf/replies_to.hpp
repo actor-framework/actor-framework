@@ -20,15 +20,15 @@
 
 #include <string>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/type_list.hpp"
 
 namespace caf {
 
 /// @cond PRIVATE
-std::string replies_to_type_name(size_t input_size,
-                                 const std::string* input,
-                                 size_t output_opt1_size,
-                                 const std::string* output_opt1);
+CAF_CORE_EXPORT std::string
+replies_to_type_name(size_t input_size, const std::string* input,
+                     size_t output_size, const std::string* output);
 /// @endcond
 
 template <class...>

@@ -28,6 +28,7 @@
 #include <thread>
 
 #include "caf/actor_system_config.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/double_ended_queue.hpp"
 #include "caf/policy/unprofiled.hpp"
 #include "caf/resumable.hpp"
@@ -38,7 +39,7 @@ namespace policy {
 
 /// Implements scheduling of actors via work stealing.
 /// @extends scheduler_policy
-class work_stealing : public unprofiled {
+class CAF_CORE_EXPORT work_stealing : public unprofiled {
 public:
   ~work_stealing() override;
 
@@ -63,7 +64,7 @@ public:
   // The coordinator has only a counter for round-robin enqueue to its workers.
   struct coordinator_data {
     inline explicit coordinator_data(scheduler::abstract_coordinator*)
-        : next_worker(0) {
+      : next_worker(0) {
       // nop
     }
 
@@ -115,7 +116,7 @@ public:
     { // guard scope
       std::unique_lock<std::mutex> guard(lock);
       // check if the worker is sleeping
-      if (d(self).waitdata.sleeping && !d(self).queue.empty() )
+      if (d(self).waitdata.sleeping && !d(self).queue.empty())
         cv.notify_one();
     }
   }
@@ -140,7 +141,7 @@ public:
     // dequeue attempts
     auto& strategies = d(self).strategies;
     resumable* job = nullptr;
-    for (size_t k = 0; k < 2; ++k) {  // iterate over the first two strategies
+    for (size_t k = 0; k < 2; ++k) { // iterate over the first two strategies
       for (size_t i = 0; i < strategies[k].attempts;
            i += strategies[k].step_size) {
         job = d(self).queue.take_head();
@@ -175,7 +176,7 @@ public:
     auto& lock = d(self).waitdata.lock;
     auto& cv = d(self).waitdata.cv;
     bool notimeout = true;
-    size_t i=1;
+    size_t i = 1;
     do {
       { // guard scope
         std::unique_lock<std::mutex> guard(lock);
@@ -193,7 +194,7 @@ public:
           job = try_steal(self);
       }
       ++i;
-    } while(job == nullptr);
+    } while (job == nullptr);
     return job;
   }
 

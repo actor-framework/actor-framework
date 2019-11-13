@@ -1,8 +1,8 @@
-project(caf_core C CXX)
+# -- get header files for creating "proper" XCode projects ---------------------
 
-# get header files; only needed by CMake generators,
-# e.g., for creating proper Xcode projects
 file(GLOB_RECURSE LIBCAF_CORE_HDRS "caf/*.hpp")
+
+# -- auto generate to_string for enum types ------------------------------------
 
 enum_to_string("caf/exit_reason.hpp" "exit_reason_strings.cpp")
 enum_to_string("caf/intrusive/inbox_result.hpp" "inbox_result_strings.cpp")
@@ -13,7 +13,8 @@ enum_to_string("caf/pec.hpp" "pec_strings.cpp")
 enum_to_string("caf/sec.hpp" "sec_strings.cpp")
 enum_to_string("caf/stream_priority.hpp" "stream_priority_strings.cpp")
 
-# list cpp files excluding platform-dependent files
+# -- list cpp files ------------------------------------------------------------
+
 set(LIBCAF_CORE_SRCS
   "${CMAKE_CURRENT_BINARY_DIR}/exit_reason_strings.cpp"
   "${CMAKE_CURRENT_BINARY_DIR}/inbox_result_strings.cpp"
@@ -156,49 +157,62 @@ set(LIBCAF_CORE_SRCS
   src/uri_builder.cpp
 )
 
-# configure build_config.hpp header
+# -- generate build config header ----------------------------------------------
+
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/../cmake/build_config.hpp.in"
                "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
                @ONLY)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/caf/detail
-)
-list(APPEND LIBCAF_CORE_HDRS
-  "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
-)
+
+# -- add library target --------------------------------------------------------
 
 add_library(libcaf_core ${LIBCAF_CORE_SRCS} ${LIBCAF_CORE_HDRS})
+
+add_library(caf::core ALIAS libcaf_core)
+
+# TODO: only exists for backwards compatibility, remove with CAF 0.19
+if(BUILD_SHARED_LIBS)
+  add_library(libcaf_core_shared ALIAS libcaf_core)
+else()
+  add_library(libcaf_core_static ALIAS libcaf_core)
+endif()
+
 target_link_libraries(libcaf_core PUBLIC ${CAF_EXTRA_LDFLAGS})
+
+generate_export_header(libcaf_core
+                       EXPORT_MACRO_NAME CAF_CORE_EXPORT
+                       EXPORT_FILE_NAME "caf/detail/core_export.hpp"
+                       STATIC_DEFINE CAF_STATIC_BUILD)
+
 target_include_directories(libcaf_core PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-  $<INSTALL_INTERFACE:include>
-)
-set_target_properties(libcaf_core
-  PROPERTIES
-  EXPORT_NAME core
-  SOVERSION ${CAF_VERSION}
-  VERSION ${CAF_LIB_VERSION}
-  OUTPUT_NAME caf_core
-)
+                           $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+                           $<INSTALL_INTERFACE:include>)
+
+set_target_properties(libcaf_core PROPERTIES
+                      EXPORT_NAME core
+                      SOVERSION ${CAF_VERSION}
+                      VERSION ${CAF_LIB_VERSION}
+                      OUTPUT_NAME caf_core)
+
+# -- install library and header files ------------------------------------------
 
 install(TARGETS libcaf_core
-  EXPORT CAFTargets
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT core
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT core
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT core
-)
+        EXPORT CAFTargets
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT core
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT core
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT core)
+
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         COMPONENT core
-        FILES_MATCHING PATTERN "*.hpp"
-)
+        FILES_MATCHING PATTERN "*.hpp")
 
-add_library(caf::core ALIAS libcaf_core)
-if (BUILD_SHARED_LIBS)
-  add_library(libcaf_core_shared ALIAS libcaf_core)
-else ()
-  add_library(libcaf_core_static ALIAS libcaf_core)
-endif ()
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
+              "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/core_export.hpp"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail")
+
+# -- add this library to the global CAF_LIBRARIES ------------------------------
+
 list(APPEND CAF_LIBRARIES libcaf_core)
+
 set(CAF_LIBRARIES ${CAF_LIBRARIES} PARENT_SCOPE)

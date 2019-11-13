@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include "caf/error.hpp"
 #include "caf/config.hpp"
+#include "caf/error.hpp"
 
 #include "caf/detail/type_traits.hpp"
 
@@ -81,4 +81,3 @@ typename select_callback<F>::type make_callback(F fun) {
 } // namespace caf
 
 CAF_POP_WARNINGS
-

@@ -21,27 +21,26 @@
 #include <tuple>
 #include <type_traits>
 
-#include "caf/none.hpp"
-#include "caf/variant.hpp"
-#include "caf/optional.hpp"
-#include "caf/match_case.hpp"
-#include "caf/make_counted.hpp"
-#include "caf/intrusive_ptr.hpp"
-
 #include "caf/atom.hpp"
-#include "caf/message.hpp"
+#include "caf/detail/apply_args.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/int_list.hpp"
+#include "caf/detail/invoke_result_visitor.hpp"
+#include "caf/detail/tail_argument_token.hpp"
+#include "caf/detail/type_traits.hpp"
 #include "caf/duration.hpp"
+#include "caf/intrusive_ptr.hpp"
+#include "caf/make_counted.hpp"
+#include "caf/match_case.hpp"
+#include "caf/message.hpp"
+#include "caf/none.hpp"
+#include "caf/optional.hpp"
 #include "caf/ref_counted.hpp"
-#include "caf/skip.hpp"
 #include "caf/response_promise.hpp"
+#include "caf/skip.hpp"
 #include "caf/timeout_definition.hpp"
 #include "caf/typed_response_promise.hpp"
-
-#include "caf/detail/int_list.hpp"
-#include "caf/detail/apply_args.hpp"
-#include "caf/detail/type_traits.hpp"
-#include "caf/detail/tail_argument_token.hpp"
-#include "caf/detail/invoke_result_visitor.hpp"
+#include "caf/variant.hpp"
 
 namespace caf {
 
@@ -52,7 +51,7 @@ class message_handler;
 namespace caf {
 namespace detail {
 
-class behavior_impl : public ref_counted {
+class CAF_CORE_EXPORT behavior_impl : public ref_counted {
 public:
   using pointer = intrusive_ptr<behavior_impl>;
 
@@ -62,8 +61,8 @@ public:
 
   virtual match_case::result invoke_empty(detail::invoke_result_visitor& f);
 
-  virtual match_case::result invoke(detail::invoke_result_visitor& f,
-                                    type_erased_tuple& xs);
+  virtual match_case::result
+  invoke(detail::invoke_result_visitor& f, type_erased_tuple& xs);
 
   match_case::result invoke(detail::invoke_result_visitor& f, message& xs);
 
@@ -117,13 +116,9 @@ struct with_generic_timeout<false, std::tuple<Ts...>> {
 template <class... Ts>
 struct with_generic_timeout<true, std::tuple<Ts...>> {
   using type =
-    typename tl_apply<
-      typename tl_replace_back<
-        type_list<Ts...>,
-        generic_timeout_definition
-      >::type,
-      std::tuple
-    >::type;
+    typename tl_apply<typename tl_replace_back<
+                        type_list<Ts...>, generic_timeout_definition>::type,
+                      std::tuple>::type;
 };
 
 template <class Tuple>
@@ -141,11 +136,9 @@ public:
   static constexpr size_t num_cases = sizeof...(Ts) - (has_timeout ? 1 : 0);
 
   using cases =
-    typename std::conditional<
-      has_timeout,
-      typename tl_pop_back<type_list<Ts...>>::type,
-      type_list<Ts...>
-    >::type;
+    typename std::conditional<has_timeout,
+                              typename tl_pop_back<type_list<Ts...>>::type,
+                              type_list<Ts...>>::type;
 
   default_behavior_impl(tuple_type&& tup) : cases_(std::move(tup)) {
     init();
@@ -214,8 +207,8 @@ struct make_behavior_t {
   intrusive_ptr<
     default_behavior_impl<std::tuple<typename lift_behavior<Ts>::type...>>>
   operator()(Ts... xs) const {
-    using type =
-      default_behavior_impl<std::tuple<typename lift_behavior<Ts>::type...>>;
+    using type
+      = default_behavior_impl<std::tuple<typename lift_behavior<Ts>::type...>>;
     return make_counted<type>(std::move(xs)...);
   }
 };
@@ -240,4 +233,3 @@ constexpr make_behavior_impl_t make_behavior_impl = make_behavior_impl_t{};
 
 } // namespace detail
 } // namespace caf
-

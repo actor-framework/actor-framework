@@ -1,13 +1,14 @@
-project(caf_io C CXX)
+# -- get header files for creating "proper" XCode projects ---------------------
 
-# get header files; only needed by CMake generators,
-# e.g., for creating proper Xcode projects
 file(GLOB_RECURSE LIBCAF_IO_HDRS "caf/*.hpp")
+
+# -- auto generate to_string for enum types ------------------------------------
 
 enum_to_string("caf/io/basp/message_type.hpp" "message_type_to_string.cpp")
 enum_to_string("caf/io/network/operation.hpp" "operation_to_string.cpp")
 
-# list cpp files excluding platform-dependent files
+# -- list cpp files ------------------------------------------------------------
+
 set(LIBCAF_IO_SRCS
   "${CMAKE_CURRENT_BINARY_DIR}/message_type_to_string.cpp"
   "${CMAKE_CURRENT_BINARY_DIR}/operation_to_string.cpp"
@@ -51,37 +52,56 @@ set(LIBCAF_IO_SRCS
   src/policy/udp.cpp
 )
 
+# -- add library target --------------------------------------------------------
+
 add_library(libcaf_io ${LIBCAF_IO_SRCS} ${LIBCAF_IO_HDRS})
+
+add_library(caf::io ALIAS libcaf_io)
+
+# TODO: only exists for backwards compatibility, remove with CAF 0.19
+if(BUILD_SHARED_LIBS)
+  add_library(libcaf_io_shared ALIAS libcaf_io)
+else()
+  add_library(libcaf_io_static ALIAS libcaf_io)
+endif()
+
 target_link_libraries(libcaf_io PUBLIC caf::core)
+
+generate_export_header(libcaf_io
+                       EXPORT_MACRO_NAME CAF_IO_EXPORT
+                       EXPORT_FILE_NAME "caf/detail/io_export.hpp"
+                       STATIC_DEFINE CAF_STATIC_BUILD)
+
 target_include_directories(libcaf_io PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-  $<INSTALL_INTERFACE:include>
-)
-set_target_properties(libcaf_io
-  PROPERTIES
-  EXPORT_NAME io
-  SOVERSION ${CAF_VERSION}
-  VERSION ${CAF_LIB_VERSION}
-  OUTPUT_NAME caf_io
-)
+                           $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+                           $<INSTALL_INTERFACE:include>)
+
+set_target_properties(libcaf_io PROPERTIES
+                      EXPORT_NAME io
+                      SOVERSION ${CAF_VERSION}
+                      VERSION ${CAF_LIB_VERSION}
+                      OUTPUT_NAME caf_io)
+
+# -- install library and header files ------------------------------------------
+
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/core_export.hpp"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail")
+
 
 install(TARGETS libcaf_io
-  EXPORT CAFTargets
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT io
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT io
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT io
-)
+        EXPORT CAFTargets
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT io
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT io
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT io)
+
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         COMPONENT io
-        FILES_MATCHING PATTERN "*.hpp"
-)
+        FILES_MATCHING PATTERN "*.hpp")
 
-add_library(caf::io ALIAS libcaf_io)
-if (BUILD_SHARED_LIBS)
-  add_library(libcaf_io_shared ALIAS libcaf_io)
-else ()
-  add_library(libcaf_io_static ALIAS libcaf_io)
-endif ()
+# -- add this library to the global CAF_LIBRARIES ------------------------------
+
 list(APPEND CAF_LIBRARIES libcaf_io)
+
 set(CAF_LIBRARIES ${CAF_LIBRARIES} PARENT_SCOPE)

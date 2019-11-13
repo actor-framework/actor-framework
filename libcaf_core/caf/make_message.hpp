@@ -18,15 +18,14 @@
 
 #pragma once
 
-#include <tuple>
 #include <sstream>
+#include <tuple>
 #include <type_traits>
 
-#include "caf/message.hpp"
 #include "caf/allowed_unsafe_message_type.hpp"
-
 #include "caf/detail/tuple_vals.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/message.hpp"
 
 namespace caf {
 
@@ -64,20 +63,14 @@ struct is_serializable_or_whitelisted {
 template <class T, class... Ts>
 typename std::enable_if<
   !std::is_same<message, typename std::decay<T>::type>::value
-  || (sizeof...(Ts) > 0),
-  message
->::type
+    || (sizeof...(Ts) > 0),
+  message>::type
 make_message(T&& x, Ts&&... xs) {
   using namespace caf::detail;
-  using stored_types =
-    type_list<
-      typename unbox_message_element<
-        typename strip_and_convert<T>::type
-      >::type,
-      typename unbox_message_element<
-        typename strip_and_convert<Ts>::type
-      >::type...
-    >;
+  using stored_types = type_list<
+    typename unbox_message_element<typename strip_and_convert<T>::type>::type,
+    typename unbox_message_element<
+      typename strip_and_convert<Ts>::type>::type...>;
   static_assert(tl_forall<stored_types, is_serializable_or_whitelisted>::value,
                 "at least one type is neither inspectable via "
                 "inspect(Inspector&, T&) nor serializable via "
@@ -118,4 +111,3 @@ message make_message_from_tuple(std::tuple<Ts...> xs) {
 }
 
 } // namespace caf
-

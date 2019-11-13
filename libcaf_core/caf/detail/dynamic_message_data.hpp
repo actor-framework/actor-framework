@@ -20,14 +20,14 @@
 
 #include <vector>
 
-#include "caf/type_erased_value.hpp"
-
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/message_data.hpp"
+#include "caf/type_erased_value.hpp"
 
 namespace caf {
 namespace detail {
 
-class dynamic_message_data : public message_data {
+class CAF_CORE_EXPORT dynamic_message_data : public message_data {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -84,12 +84,12 @@ private:
   uint32_t type_token_;
 };
 
-void intrusive_ptr_add_ref(const dynamic_message_data*);
+CAF_CORE_EXPORT void intrusive_ptr_add_ref(const dynamic_message_data*);
 
-void intrusive_ptr_release(const dynamic_message_data*);
+CAF_CORE_EXPORT void intrusive_ptr_release(const dynamic_message_data*);
 
-dynamic_message_data* intrusive_cow_ptr_unshare(dynamic_message_data*&);
+CAF_CORE_EXPORT dynamic_message_data*
+intrusive_cow_ptr_unshare(dynamic_message_data*&);
 
 } // namespace detail
 } // namespace caf
-

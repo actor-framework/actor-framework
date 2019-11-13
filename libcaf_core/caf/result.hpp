@@ -32,12 +32,7 @@
 
 namespace caf {
 
-enum result_runtime_type {
-  rt_value,
-  rt_error,
-  rt_delegated,
-  rt_skip
-};
+enum result_runtime_type { rt_value, rt_error, rt_delegated, rt_skip };
 
 template <class... Ts>
 class result {
@@ -173,7 +168,6 @@ private:
 
 template <>
 struct result<unit_t> : result<void> {
-
   using super = result<void>;
 
   using super::super;
@@ -186,4 +180,3 @@ template <class... Ts>
 struct is_result<result<Ts...>> : std::true_type {};
 
 } // namespace caf
-

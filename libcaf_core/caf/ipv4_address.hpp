@@ -24,11 +24,12 @@
 
 #include "caf/byte_address.hpp"
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf {
 
-class ipv4_address : public byte_address<ipv4_address> {
+class CAF_CORE_EXPORT ipv4_address : public byte_address<ipv4_address> {
 public:
   // -- constants --------------------------------------------------------------
 
@@ -96,7 +97,8 @@ public:
   // -- inspection -------------------------------------------------------------
 
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f, ipv4_address& x) {
+  friend typename Inspector::result_type
+  inspect(Inspector& f, ipv4_address& x) {
     return f(x.bits_);
   }
 
@@ -118,15 +120,15 @@ private:
 
 /// Convenience function for creating an IPv4 address from octets.
 /// @relates ipv4_address
-ipv4_address make_ipv4_address(uint8_t oct1, uint8_t oct2, uint8_t oct3,
-                               uint8_t oct4);
+CAF_CORE_EXPORT ipv4_address make_ipv4_address(uint8_t oct1, uint8_t oct2,
+                                               uint8_t oct3, uint8_t oct4);
 
 /// Returns a human-readable string representation of the address.
 /// @relates ipv4_address
-std::string to_string(const ipv4_address& x);
+CAF_CORE_EXPORT std::string to_string(const ipv4_address& x);
 
 /// Tries to parse the content of `str` into `dest`.
 /// @relates ipv4_address
-error parse(string_view str, ipv4_address& dest);
+CAF_CORE_EXPORT error parse(string_view str, ipv4_address& dest);
 
 } // namespace caf

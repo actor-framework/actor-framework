@@ -39,4 +39,3 @@ struct others_t {
 constexpr others_t others = others_t{};
 
 } // namespace caf
-

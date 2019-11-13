@@ -25,16 +25,15 @@
 namespace caf {
 
 template <class T>
-struct is_message_sink : std::false_type { };
+struct is_message_sink : std::false_type {};
 
 template <>
-struct is_message_sink<actor> : std::true_type { };
+struct is_message_sink<actor> : std::true_type {};
 
 template <>
-struct is_message_sink<group> : std::true_type { };
+struct is_message_sink<group> : std::true_type {};
 
 template <class... Ts>
-struct is_message_sink<typed_actor<Ts...>> : std::true_type { };
+struct is_message_sink<typed_actor<Ts...>> : std::true_type {};
 
 } // namespace caf
-

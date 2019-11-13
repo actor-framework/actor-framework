@@ -18,21 +18,22 @@
 
 #pragma once
 
+#include <cstdint>
 #include <set>
 #include <string>
-#include <cstdint>
 
-#include "caf/fwd.hpp"
-#include "caf/actor_system.hpp"
 #include "caf/actor_control_block.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/detail/openssl_export.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 namespace openssl {
 
 /// @private
-expected<strong_actor_ptr> remote_actor(actor_system& sys,
-                                        const std::set<std::string>& mpi,
-                                        std::string host, uint16_t port);
+CAF_OPENSSL_EXPORT expected<strong_actor_ptr>
+remote_actor(actor_system& sys, const std::set<std::string>& mpi,
+             std::string host, uint16_t port);
 
 /// Establish a new connection to the actor at `host` on given `port`.
 /// @param host Valid hostname or IP address.
@@ -40,8 +41,8 @@ expected<strong_actor_ptr> remote_actor(actor_system& sys,
 /// @returns An `actor` to the proxy instance representing
 ///          a remote actor or an `error`.
 template <class ActorHandle = actor>
-expected<ActorHandle> remote_actor(actor_system& sys, std::string host,
-                                   uint16_t port) {
+expected<ActorHandle>
+remote_actor(actor_system& sys, std::string host, uint16_t port) {
   detail::type_list<ActorHandle> tk;
   auto res = remote_actor(sys, sys.message_types(tk), std::move(host), port);
   if (res)
@@ -51,4 +52,3 @@ expected<ActorHandle> remote_actor(actor_system& sys, std::string host,
 
 } // namespace openssl
 } // namespace caf
-

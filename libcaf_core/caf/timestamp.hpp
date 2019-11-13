@@ -19,9 +19,10 @@
 #pragma once
 
 #include <chrono>
-#include <string>
 #include <cstdint>
+#include <string>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/timespan.hpp"
 
 namespace caf {
@@ -31,13 +32,13 @@ using timestamp = std::chrono::time_point<std::chrono::system_clock, timespan>;
 
 /// Convenience function for returning a `timestamp` representing
 /// the current system time.
-timestamp make_timestamp();
+CAF_CORE_EXPORT timestamp make_timestamp();
 
 /// Prints `x` in ISO 8601 format, e.g., `2018-11-15T06:25:01.462`.
-std::string timestamp_to_string(timestamp x);
+CAF_CORE_EXPORT std::string timestamp_to_string(timestamp x);
 
 /// Appends the timestamp `x` in ISO 8601 format, e.g.,
 /// `2018-11-15T06:25:01.462`, to `y`.
-void append_timestamp_to_string(std::string& x, timestamp y);
+CAF_CORE_EXPORT void append_timestamp_to_string(std::string& x, timestamp y);
 
 } // namespace caf

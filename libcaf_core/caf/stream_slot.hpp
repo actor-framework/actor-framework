@@ -149,8 +149,8 @@ public:
   // -- serialization ----------------------------------------------------------
 
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f,
-                                                 outbound_stream_slot& x) {
+  friend typename Inspector::result_type
+  inspect(Inspector& f, outbound_stream_slot& x) {
     return f(x.value_);
   }
 
@@ -165,4 +165,3 @@ typename Inspector::result_type inspect(Inspector& f, stream_slots& x) {
 }
 
 } // namespace caf
-

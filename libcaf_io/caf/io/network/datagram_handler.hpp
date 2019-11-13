@@ -21,23 +21,22 @@
 #include <vector>
 #include <unordered_map>
 
+#include "caf/detail/io_export.hpp"
+#include "caf/io/fwd.hpp"
+#include "caf/io/network/datagram_manager.hpp"
+#include "caf/io/network/event_handler.hpp"
+#include "caf/io/network/ip_endpoint.hpp"
+#include "caf/io/network/native_socket.hpp"
+#include "caf/io/receive_policy.hpp"
 #include "caf/logger.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/ref_counted.hpp"
-
-#include "caf/io/fwd.hpp"
-#include "caf/io/receive_policy.hpp"
-
-#include "caf/io/network/ip_endpoint.hpp"
-#include "caf/io/network/event_handler.hpp"
-#include "caf/io/network/native_socket.hpp"
-#include "caf/io/network/datagram_manager.hpp"
 
 namespace caf {
 namespace io {
 namespace network {
 
-class datagram_handler : public event_handler {
+class CAF_IO_EXPORT datagram_handler : public event_handler {
 public:
   /// A smart pointer to a datagram manager.
   using manager_ptr = intrusive_ptr<datagram_manager>;

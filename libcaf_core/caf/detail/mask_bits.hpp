@@ -36,8 +36,8 @@ void mask_bits(std::array<uint8_t, NumBytes>& bytes, size_t bits_to_keep) {
   auto byte_cutoff = bits_to_keep % 8;
   auto i = bytes.begin() + bytes_to_keep;
   if (byte_cutoff != 0) {
-    static constexpr uint8_t mask[] = {0x00, 0x80, 0xC0, 0xE0,
-                                       0xF0, 0xF8, 0xFC, 0xFE};
+    static constexpr uint8_t mask[]
+      = {0x00, 0x80, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC, 0xFE};
     *i = *i & mask[byte_cutoff];
     ++i;
   }
@@ -48,5 +48,3 @@ void mask_bits(std::array<uint8_t, NumBytes>& bytes, size_t bits_to_keep) {
 
 } // namespace detail
 } // namespace caf
-
-

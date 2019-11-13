@@ -34,7 +34,7 @@ struct stream_source_trait {
 };
 
 template <class State, class T>
-struct stream_source_trait<void (State&, downstream<T>&, size_t)> {
+struct stream_source_trait<void(State&, downstream<T>&, size_t)> {
   static constexpr bool valid = true;
   using output = T;
   using state = State;
@@ -43,8 +43,7 @@ struct stream_source_trait<void (State&, downstream<T>&, size_t)> {
 /// Convenience alias for extracting the function signature from `Pull` and
 /// passing it to `stream_source_trait`.
 template <class Pull>
-using stream_source_trait_t =
-  stream_source_trait<typename detail::get_callable_trait<Pull>::fun_sig>;
+using stream_source_trait_t
+  = stream_source_trait<typename detail::get_callable_trait<Pull>::fun_sig>;
 
 } // namespace caf
-

@@ -18,12 +18,12 @@
 
 #pragma once
 
-#include "caf/resumable.hpp"
 #include "caf/abstract_actor.hpp"
+#include "caf/resumable.hpp"
 
 namespace caf {
 
-namespace scheduler  {
+namespace scheduler {
 
 template <class>
 class profiled_coordinator;
@@ -68,4 +68,3 @@ struct profiled : Policy {
 
 } // namespace policy
 } // namespace caf
-

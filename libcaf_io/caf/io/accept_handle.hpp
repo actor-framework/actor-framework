@@ -54,8 +54,8 @@ public:
   }
 
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f,
-                                                 accept_handle& x) {
+  friend typename Inspector::result_type
+  inspect(Inspector& f, accept_handle& x) {
     return f(meta::type_name("accept_handle"), x.id_);
   }
 
@@ -65,12 +65,12 @@ private:
   }
 };
 
-} // namespace ios
+} // namespace io
 } // namespace caf
 
-namespace std{
+namespace std {
 
-template<>
+template <>
 struct hash<caf::io::accept_handle> {
   size_t operator()(const caf::io::accept_handle& hdl) const {
     hash<int64_t> f;
@@ -79,4 +79,3 @@ struct hash<caf::io::accept_handle> {
 };
 
 } // namespace std
-

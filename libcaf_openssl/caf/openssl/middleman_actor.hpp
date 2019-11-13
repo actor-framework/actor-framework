@@ -18,14 +18,14 @@
 
 #pragma once
 
+#include "caf/detail/openssl_export.hpp"
 #include "caf/io/middleman_actor.hpp"
 
 namespace caf {
 namespace openssl {
 
-
-io::middleman_actor make_middleman_actor(actor_system& sys, actor db);
+CAF_OPENSSL_EXPORT io::middleman_actor
+make_middleman_actor(actor_system& sys, actor db);
 
 } // namespace openssl
 } // namespace caf
-

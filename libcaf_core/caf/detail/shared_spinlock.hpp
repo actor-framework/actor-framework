@@ -21,16 +21,14 @@
 #include <atomic>
 #include <cstddef>
 
+#include "caf/detail/core_export.hpp"
+
 namespace caf {
 namespace detail {
 
 /// A spinlock implementation providing shared and exclusive locking.
-class shared_spinlock {
-
-  std::atomic<long> flag_;
-
+class CAF_CORE_EXPORT shared_spinlock {
 public:
-
   shared_spinlock();
 
   void lock();
@@ -46,8 +44,9 @@ public:
   void unlock_upgrade_and_lock();
   void unlock_and_lock_upgrade();
 
+private:
+  std::atomic<long> flag_;
 };
 
 } // namespace detail
 } // namespace caf
-

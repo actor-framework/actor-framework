@@ -24,12 +24,13 @@
 
 #include "caf/byte.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/span.hpp"
 
 namespace caf {
 
 /// Implements the deserializer interface with a binary serialization protocol.
-class CAF_API binary_deserializer final : public deserializer {
+class CAF_CORE_EXPORT binary_deserializer final : public deserializer {
 public:
   // -- member types -----------------------------------------------------------
 

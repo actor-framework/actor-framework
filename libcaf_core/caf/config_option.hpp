@@ -21,14 +21,15 @@
 #include <memory>
 #include <string>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/string_view.hpp"
 #include "caf/string_algorithms.hpp"
+#include "caf/string_view.hpp"
 
 namespace caf {
 
 /// Defines a configuration option for the application.
-class config_option {
+class CAF_CORE_EXPORT config_option {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -83,7 +84,7 @@ public:
   string_view short_names() const noexcept;
 
   /// Returns a human-readable description of the option.
-  string_view  description() const noexcept;
+  string_view description() const noexcept;
 
   /// Returns the full name for this config option as "<category>.<long name>".
   string_view full_name() const noexcept;
@@ -130,7 +131,8 @@ private:
 /// and a `ForwardIterator` to `last` with an empty `string_view` otherwise.
 template <class ForwardIterator, class Sentinel>
 std::pair<ForwardIterator, string_view>
-find_by_long_name(const config_option& x, ForwardIterator first, Sentinel last) {
+find_by_long_name(const config_option& x, ForwardIterator first,
+                  Sentinel last) {
   auto long_name = x.long_name();
   for (; first != last; ++first) {
     string_view str{*first};

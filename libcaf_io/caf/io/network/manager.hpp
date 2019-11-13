@@ -18,12 +18,12 @@
 
 #pragma once
 
-#include "caf/message.hpp"
-#include "caf/ref_counted.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/intrusive_ptr.hpp"
-
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/operation.hpp"
+#include "caf/message.hpp"
+#include "caf/ref_counted.hpp"
 
 namespace caf {
 namespace io {
@@ -31,7 +31,7 @@ namespace network {
 
 /// A manager configures an I/O device and provides callbacks
 /// for various I/O operations.
-class manager : public ref_counted {
+class CAF_IO_EXPORT manager : public ref_counted {
 public:
   manager();
 
@@ -81,4 +81,3 @@ protected:
 } // namespace network
 } // namespace io
 } // namespace caf
-

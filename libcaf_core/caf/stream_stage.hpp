@@ -40,9 +40,7 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   stream_stage(scheduled_actor* self)
-      : stream_manager(self),
-        left_super(self),
-        right_super(self) {
+    : stream_manager(self), left_super(self), right_super(self) {
     // nop
   }
 
@@ -69,4 +67,3 @@ template <class In, class DownstreamManager>
 using stream_stage_ptr = intrusive_ptr<stream_stage<In, DownstreamManager>>;
 
 } // namespace caf
-
