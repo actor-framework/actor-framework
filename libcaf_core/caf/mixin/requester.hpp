@@ -116,13 +116,8 @@ public:
   template <template <class> class MergePolicy,
             message_priority Prio = message_priority::normal, class Container,
             class... Ts>
-  // TODO: replace this monstrosity with 'auto' when switching to C++17
-  response_handle<Subtype,
-                  MergePolicy<response_type_t<
-                    typename Container::value_type::signatures,
-                    detail::implicit_conversions_t<detail::decay_t<Ts>>...>>>
-  fan_out_request(const Container& destinations, const duration& timeout,
-                  Ts&&... xs) {
+  auto fan_out_request(const Container& destinations, const duration& timeout,
+                       Ts&&... xs) {
     using handle_type = typename Container::value_type;
     using namespace detail;
     static_assert(sizeof...(Ts) > 0, "no message to send");
@@ -159,13 +154,8 @@ public:
   template <template <class> class MergePolicy,
             message_priority Prio = message_priority::normal, class Rep,
             class Period, class Container, class... Ts>
-  // TODO: replace this monstrosity with 'auto' when switching to C++17
-  response_handle<Subtype,
-                  MergePolicy<response_type_t<
-                    typename Container::value_type::signatures,
-                    detail::implicit_conversions_t<detail::decay_t<Ts>>...>>>
-  fan_out_request(const Container& destinations,
-                  std::chrono::duration<Rep, Period> timeout, Ts&&... xs) {
+  auto fan_out_request(const Container& destinations,
+                       std::chrono::duration<Rep, Period> timeout, Ts&&... xs) {
     return request<MergePolicy, Prio>(destinations, duration{timeout},
                                       std::forward<Ts>(xs)...);
   }

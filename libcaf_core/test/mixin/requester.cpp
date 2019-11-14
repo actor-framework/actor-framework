@@ -154,9 +154,9 @@ CAF_TEST(delegated request with integer result) {
 CAF_TEST(requesters support fan_out_request) {
   using policy::fan_in_responses;
   std::vector<adding_server_type> workers{
-    adding_server = make_server([](int x, int y) { return x + y; }),
-    adding_server = make_server([](int x, int y) { return x + y; }),
-    adding_server = make_server([](int x, int y) { return x + y; }),
+    make_server([](int x, int y) { return x + y; }),
+    make_server([](int x, int y) { return x + y; }),
+    make_server([](int x, int y) { return x + y; }),
   };
   run();
   auto sum = std::make_shared<int>(0);

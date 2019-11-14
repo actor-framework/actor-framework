@@ -57,8 +57,7 @@ struct fan_in_responses_helper {
     results.reserve(pending);
   }
 
-  // TODO: return 'auto' from this function when switching to C++17
-  std::function<void(T&)> wrap() {
+  auto wrap() {
     return [this](T& x) { (*this)(x); };
   }
 };
@@ -85,8 +84,7 @@ struct fan_in_responses_tuple_helper {
     results.reserve(pending);
   }
 
-  // TODO: return 'auto' from this function when switching to C++17
-  std::function<void(Ts&...)> wrap() {
+  auto wrap() {
     return [this](Ts&... xs) { (*this)(xs...); };
   }
 };

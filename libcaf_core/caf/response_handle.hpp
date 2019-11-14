@@ -73,9 +73,8 @@ public:
   void await(F f, OnError g) const {
     static_assert(detail::is_callable<F>::value, "F must provide a single, "
                                                  "non-template operator()");
-    static_assert(detail::is_callable<F>::value,
-                  "OnError must provide a single, non-template operator() "
-                  "that takes a caf::error");
+    static_assert(detail::is_callable_with<OnError, error&>::value,
+                  "OnError must provide an operator() that takes a caf::error");
     using result_type = typename detail::get_callable_trait<F>::result_type;
     static_assert(std::is_same<void, result_type>::value,
                   "response handlers are not allowed to have a return "
@@ -96,9 +95,8 @@ public:
   void then(F f, OnError g) const {
     static_assert(detail::is_callable<F>::value, "F must provide a single, "
                                                  "non-template operator()");
-    static_assert(detail::is_callable<F>::value,
-                  "OnError must provide a single, non-template operator() "
-                  "that takes a caf::error");
+    static_assert(detail::is_callable_with<OnError, error&>::value,
+                  "OnError must provide an operator() that takes a caf::error");
     using result_type = typename detail::get_callable_trait<F>::result_type;
     static_assert(std::is_same<void, result_type>::value,
                   "response handlers are not allowed to have a return "
@@ -121,9 +119,8 @@ public:
   detail::is_handler_for_ef<OnError, error> receive(F f, OnError g) {
     static_assert(detail::is_callable<F>::value, "F must provide a single, "
                                                  "non-template operator()");
-    static_assert(detail::is_callable<F>::value,
-                  "OnError must provide a single, non-template operator() "
-                  "that takes a caf::error");
+    static_assert(detail::is_callable_with<OnError, error&>::value,
+                  "OnError must provide an operator() that takes a caf::error");
     using result_type = typename detail::get_callable_trait<F>::result_type;
     static_assert(std::is_same<void, result_type>::value,
                   "response handlers are not allowed to have a return "
