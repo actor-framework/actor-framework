@@ -186,6 +186,24 @@ Both event-based approaches send all requests, install a series of one-shot
 handlers, and then return from the implementing function. In contrast, the
 blocking function waits for a response before sending another request.
 
+\subsubsection{Sending Multiple Requests}
+
+Sending the same message to a group of workers is a common work flow in actor
+applications. Usually, a manager maintains a set of workers. On request, the
+manager fans-out the request to all of its workers and then collects the
+results. The function \lstinline`fan_out_request` combined with the merge policy
+\lstinline`fan_in_responses` streamlines this exact use case.
+
+In the following snippet, we have a matrix actor (\lstinline`self`) that stores
+worker actors for each cell (each simply storing an integer). For computing the
+average over a row, we use \lstinline`fan_out_request`. The result handler
+passed to \lstinline`then` now gets called only once with a \lstinline`vector`
+holding all collected results. Using a response promise \see{promise} further
+allows us to delay responding to the client until we have collected all worker
+results.
+
+\cppexample[86-98]{message_passing/fan_out_request}
+
 \clearpage
 \subsubsection{Error Handling in Requests}
 \label{error-response}
