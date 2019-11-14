@@ -159,7 +159,7 @@ set(LIBCAF_CORE_SRCS
 
 # -- generate build config header ----------------------------------------------
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/../cmake/build_config.hpp.in"
+configure_file("${PROJECT_SOURCE_DIR}/cmake/build_config.hpp.in"
                "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
                @ONLY)
 

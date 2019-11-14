@@ -85,7 +85,7 @@ set_target_properties(libcaf_io PROPERTIES
 
 # -- install library and header files ------------------------------------------
 
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/core_export.hpp"
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/io_export.hpp"
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail")
 
 

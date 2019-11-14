@@ -61,7 +61,7 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
         COMPONENT openssl
         FILES_MATCHING PATTERN "*.hpp")
 
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/core_export.hpp"
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/openssl_export.hpp"
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail")
 
 # -- add this library to the global CAF_LIBRARIES ------------------------------
