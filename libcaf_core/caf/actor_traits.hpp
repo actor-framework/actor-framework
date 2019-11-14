@@ -76,20 +76,20 @@ template <class T>
 struct default_actor_traits<T, true> {
   /// Denotes whether `T` is dynamically typed.
   static constexpr bool is_dynamically_typed
-    = std::is_base_of_v<dynamically_typed_actor_base, T>;
+    = std::is_base_of<dynamically_typed_actor_base, T>::value;
 
   /// Denotes whether `T` is statically typed.
   static constexpr bool is_statically_typed
-    = std::is_base_of_v<statically_typed_actor_base, T>;
+    = std::is_base_of<statically_typed_actor_base, T>::value;
 
   /// Denotes whether `T` is a blocking actor type.
   static constexpr bool is_blocking
-    = std::is_base_of_v<blocking_actor_base, T> //
+    = std::is_base_of<blocking_actor_base, T>::value
       || mixin::is_blocking_requester<T>::value;
 
   /// Denotes whether `T` is a non-blocking actor type.
   static constexpr bool is_non_blocking
-    = std::is_base_of_v<non_blocking_actor_base, T>;
+    = std::is_base_of<non_blocking_actor_base, T>::value;
 
   /// Denotes whether `T` is an incomplete actor type that misses one or more
   /// markers.
