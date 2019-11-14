@@ -23,6 +23,16 @@
 #include "caf/fwd.hpp"
 
 namespace caf {
+namespace mixin {
+
+// TODO: legacy API. Deprecate with 0.18, remove with 0.19.
+template <class T>
+struct is_blocking_requester : std::false_type {};
+
+} // namespace mixin
+} // namespace caf
+
+namespace caf {
 
 // Note: having marker types for blocking and non-blocking may seem redundant,
 // because an actor is either the one or the other. However, we cannot conclude
@@ -65,26 +75,27 @@ struct default_actor_traits {
 template <class T>
 struct default_actor_traits<T, true> {
   /// Denotes whether `T` is dynamically typed.
-  static constexpr bool is_dynamically_typed = //
-    std::is_base_of<dynamically_typed_actor_base, T>::value;
+  static constexpr bool is_dynamically_typed
+    = std::is_base_of_v<dynamically_typed_actor_base, T>;
 
   /// Denotes whether `T` is statically typed.
-  static constexpr bool is_statically_typed = //
-    std::is_base_of<statically_typed_actor_base, T>::value;
+  static constexpr bool is_statically_typed
+    = std::is_base_of_v<statically_typed_actor_base, T>;
 
   /// Denotes whether `T` is a blocking actor type.
-  static constexpr bool is_blocking = //
-    std::is_base_of<blocking_actor_base, T>::value;
+  static constexpr bool is_blocking
+    = std::is_base_of_v<blocking_actor_base, T> //
+      || mixin::is_blocking_requester<T>::value;
 
   /// Denotes whether `T` is a non-blocking actor type.
-  static constexpr bool is_non_blocking = //
-    std::is_base_of<non_blocking_actor_base, T>::value;
+  static constexpr bool is_non_blocking
+    = std::is_base_of_v<non_blocking_actor_base, T>;
 
   /// Denotes whether `T` is an incomplete actor type that misses one or more
   /// markers.
-  static constexpr bool is_incomplete = //
-    (!is_dynamically_typed && !is_statically_typed)
-    || (!is_blocking && !is_non_blocking);
+  static constexpr bool is_incomplete
+    = (!is_dynamically_typed && !is_statically_typed)
+      || (!is_blocking && !is_non_blocking);
 
   static_assert(!is_dynamically_typed || !is_statically_typed,
                 "an actor cannot be both statically and dynamically typed");
