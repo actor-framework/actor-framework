@@ -30,9 +30,7 @@
 #include "caf/io/network/protocol.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 // {protocol => address}
 using address_listing = std::map<protocol::network, std::vector<std::string>>;
@@ -84,7 +82,5 @@ public:
                optional<protocol::network> preferred = none);
 };
 
-} // namespace network
-} // namespace io
 } // namespace caf
 

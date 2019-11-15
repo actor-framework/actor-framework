@@ -23,8 +23,7 @@
 
 #include "caf/detail/type_traits.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 void append_hex(std::string& result, const uint8_t* xs, size_t n);
 
@@ -41,5 +40,4 @@ enable_if_t<std::is_integral<T>::value> append_hex(std::string& result,
   return append_hex(result, reinterpret_cast<const uint8_t*>(&x), sizeof(T));
 }
 
-} // namespace detail
 } // namespace caf

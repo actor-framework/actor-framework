@@ -35,8 +35,7 @@
 #include "caf/io/middleman_actor.hpp"
 #include "caf/io/network/multiplexer.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 /// Manages brokers and network backends.
 class middleman : public actor_system::module {
@@ -332,6 +331,5 @@ private:
   middleman_actor manager_;
 };
 
-} // namespace io
 } // namespace caf
 

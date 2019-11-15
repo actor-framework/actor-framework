@@ -25,9 +25,7 @@
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/operation.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// A manager configures an I/O device and provides callbacks
 /// for various I/O operations.
@@ -78,7 +76,5 @@ protected:
   strong_actor_ptr parent_;
 };
 
-} // namespace network
-} // namespace io
 } // namespace caf
 

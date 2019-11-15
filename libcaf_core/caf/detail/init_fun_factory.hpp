@@ -26,8 +26,7 @@
 #include "caf/detail/spawn_fwd.hpp"
 #include "caf/detail/unique_function.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class init_fun_factory_helper_base
   : public unique_function<behavior(local_actor*)>::wrapper {
@@ -142,6 +141,5 @@ public:
   }
 };
 
-} // namespace detail
 } // namespace caf
 

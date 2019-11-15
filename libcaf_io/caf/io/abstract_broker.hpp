@@ -37,8 +37,7 @@
 #include "caf/io/network/acceptor_manager.hpp"
 #include "caf/io/network/datagram_manager.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 class middleman;
 
@@ -426,6 +425,5 @@ private:
   std::vector<char> dummy_wr_buf_;
 };
 
-} // namespace io
 } // namespace caf
 

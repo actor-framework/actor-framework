@@ -20,8 +20,7 @@
 
 #include <type_traits>
 
-namespace caf {
-namespace meta {
+namespace caf::meta {
 
 /// Type tag for all meta annotations in CAF.
 struct annotation {
@@ -44,6 +43,5 @@ struct is_annotation<const T&> : is_annotation<T> {};
 template <class T>
 struct is_annotation<T&&> : is_annotation<T> {};
 
-} // namespace meta
 } // namespace caf
 

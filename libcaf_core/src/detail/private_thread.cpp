@@ -23,8 +23,7 @@
 #include "caf/logger.hpp"
 #include "caf/scheduled_actor.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 private_thread::private_thread(scheduled_actor* self)
   : self_destroyed_(false),
@@ -117,5 +116,4 @@ void private_thread::start() {
   std::thread{exec, this}.detach();
 }
 
-} // namespace detail
 } // namespace caf

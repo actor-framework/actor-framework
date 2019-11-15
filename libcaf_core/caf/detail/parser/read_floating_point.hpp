@@ -35,9 +35,7 @@ CAF_PUSH_UNUSED_LABEL_WARNING
 
 #include "caf/detail/parser/fsm.hpp"
 
-namespace caf {
-namespace detail {
-namespace parser {
+namespace caf::detail::parser {
 
 /// Reads a floating point number (`float` or `double`).
 /// @param ps The parser state.
@@ -191,8 +189,6 @@ void read_floating_point(State& ps, Consumer&& consumer) {
   return read_floating_point(ps, consumer, optional<value_type>{});
 }
 
-} // namespace parser
-} // namespace detail
 } // namespace caf
 
 #include "caf/detail/parser/fsm_undef.hpp"

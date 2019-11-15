@@ -31,9 +31,7 @@
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/network/event_handler.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// A stream capable of both reading and writing. The stream's input
 /// data is forwarded to its {@link stream_manager manager}.
@@ -159,6 +157,4 @@ private:
   buffer_type wr_offline_buf_;
 };
 
-} // namespace network
-} // namespace io
 } // namespace caf

@@ -38,9 +38,7 @@ CAF_PUSH_UNUSED_LABEL_WARNING
 
 #include "caf/detail/parser/fsm.hpp"
 
-namespace caf {
-namespace detail {
-namespace parser {
+namespace caf::detail::parser {
 
 /// Reads a number or a duration, i.e., on success produces an `int64_t`, a
 /// `double`, or a `timespan`.
@@ -91,8 +89,6 @@ void read_number_or_timespan(State& ps, Consumer& consumer) {
   // clang-format on
 }
 
-} // namespace parser
-} // namespace detail
 } // namespace caf
 
 #include "caf/detail/parser/fsm_undef.hpp"

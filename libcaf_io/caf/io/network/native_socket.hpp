@@ -24,9 +24,7 @@
 #include "caf/config.hpp"
 #include "caf/expected.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 // Annoying platform-dependent bootstrapping.
 #ifdef CAF_WINDOWS
@@ -139,6 +137,4 @@ void shutdown_write(native_socket fd);
 /// Closes the both read and write channel for a socket.
 void shutdown_both(native_socket fd);
 
-} // namespace network
-} // namespace io
 } // namespace caf

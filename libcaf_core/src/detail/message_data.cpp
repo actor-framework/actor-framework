@@ -20,8 +20,7 @@
 
 #include <cstring>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 message_data::~message_data() {
   // nop
@@ -31,5 +30,4 @@ bool message_data::shared() const noexcept {
   return !unique();
 }
 
-} // namespace detail
 } // namespace caf

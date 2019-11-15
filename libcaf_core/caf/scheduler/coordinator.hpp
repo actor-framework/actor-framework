@@ -30,8 +30,7 @@
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/scheduler/worker.hpp"
 
-namespace caf {
-namespace scheduler {
+namespace caf::scheduler {
 
 /// Policy-based implementation of the abstract coordinator base class.
 template <class Policy>
@@ -170,6 +169,5 @@ private:
   std::thread timer_;
 };
 
-} // namespace scheduler
 } // namespace caf
 

@@ -26,8 +26,7 @@
 #include "caf/logger.hpp"
 #include "caf/resumable.hpp"
 
-namespace caf {
-namespace scheduler {
+namespace caf::scheduler {
 
 template <class Policy>
 class coordinator;
@@ -156,6 +155,5 @@ private:
   Policy policy_;
 };
 
-} // namespace scheduler
 } // namespace caf
 

@@ -30,8 +30,7 @@ CAF_PUSH_WARNINGS
 #include <QApplication>
 CAF_POP_WARNINGS
 
-namespace caf {
-namespace mixin {
+namespace caf::mixin {
 
 template<typename Base, int EventId = static_cast<int>(QEvent::User + 31337)>
 class actor_widget : public Base {
@@ -111,6 +110,5 @@ private:
   bool alive_;
 };
 
-} // namespace mixin
 } // namespace caf
 

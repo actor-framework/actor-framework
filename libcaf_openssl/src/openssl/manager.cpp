@@ -78,8 +78,7 @@ void dynlock_destroy(CRYPTO_dynlock_value* dynlock, const char*, int) {
 
 #endif
 
-namespace caf {
-namespace openssl {
+namespace caf::openssl {
 
 manager::~manager() {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -166,5 +165,4 @@ manager::manager(actor_system& sys) : system_(sys) {
   // nop
 }
 
-} // namespace openssl
 } // namespace caf

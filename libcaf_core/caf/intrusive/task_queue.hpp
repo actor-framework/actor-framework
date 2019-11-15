@@ -25,8 +25,7 @@
 
 #include "caf/intrusive/forward_iterator.hpp"
 
-namespace caf {
-namespace intrusive {
+namespace caf::intrusive {
 
 /// A singly-linked FIFO queue for storing tasks of varying size. This queue is
 /// used as a base type for concrete task abstractions such as `drr_queue` and
@@ -383,6 +382,5 @@ protected:
   policy_type policy_;
 };
 
-} // namespace intrusive
 } // namespace caf
 

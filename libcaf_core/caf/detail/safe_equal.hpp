@@ -22,8 +22,7 @@
 #include <limits>
 #include <type_traits>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Compares two values by using `operator==` unless two floating
 /// point numbers are compared. In the latter case, the function
@@ -58,6 +57,5 @@ safe_equal(const T& lhs, const U& rhs) {
   return std::fabs(lhs - rhs) <= std::numeric_limits<res_type>::epsilon();
 }
 
-} // namespace detail
 } // namespace caf
 

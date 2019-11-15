@@ -26,8 +26,7 @@
 
 #include "caf/meta/type_name.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 struct invalid_datagram_handle_t {
   constexpr invalid_datagram_handle_t() {
@@ -66,7 +65,6 @@ private:
   }
 };
 
-} // namespace io
 } // namespace caf
 
 namespace std {

@@ -24,8 +24,7 @@
 #include "caf/actor.hpp"
 #include "caf/actor_traits.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class T>
 struct spawn_fwd_convert : std::false_type {};
@@ -60,6 +59,5 @@ spawn_fwd(typename std::remove_reference<T>::type&& arg) noexcept {
   return static_cast<T&&>(arg);
 }
 
-} // namespace detail
 } // namespace caf
 

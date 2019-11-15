@@ -36,8 +36,7 @@
     return CAF_VARIANT_DATA_CONCAT(v, pos);                                    \
   }
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class T0 = unit_t, class T1 = unit_t, class T2 = unit_t,
           class T3 = unit_t, class T4 = unit_t, class T5 = unit_t,
@@ -132,6 +131,5 @@ struct variant_data_destructor {
   }
 };
 
-} // namespace detail
 } // namespace caf
 

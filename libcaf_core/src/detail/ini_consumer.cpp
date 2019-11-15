@@ -20,8 +20,7 @@
 
 #include "caf/pec.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 // -- abstract_ini_consumer ----------------------------------------------------
 
@@ -196,5 +195,4 @@ void ini_consumer::value_impl(config_value&& x) {
   }
 }
 
-} // namespace detail
 } // namespace caf

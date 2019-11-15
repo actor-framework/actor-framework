@@ -23,8 +23,7 @@
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/type_list.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 // this utterly useless function works around a bug in Clang that causes
 // the compiler to reject the trailing return type of apply_args because
@@ -74,6 +73,5 @@ auto apply_args_suffxied(F& f, detail::int_list<Is...>, Tuple& tup, Ts&&... xs)
   return f(get<Is>(tup)..., std::forward<Ts>(xs)...);
 }
 
-} // namespace detail
 } // namespace caf
 

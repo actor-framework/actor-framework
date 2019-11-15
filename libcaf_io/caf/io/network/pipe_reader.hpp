@@ -24,9 +24,7 @@
 #include "caf/io/network/event_handler.hpp"
 #include "caf/io/network/native_socket.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// An event handler for the internal event pipe.
 class pipe_reader : public event_handler {
@@ -44,6 +42,4 @@ public:
   resumable* try_read_next();
 };
 
-} // namespace network
-} // namespace io
 } // namespace caf

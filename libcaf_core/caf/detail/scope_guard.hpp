@@ -20,8 +20,7 @@
 
 #include <utility>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// A lightweight scope guard implementation.
 template <class Fun>
@@ -62,6 +61,5 @@ scope_guard<Fun> make_scope_guard(Fun f) {
   return {std::move(f)};
 }
 
-} // namespace detail
 } // namespace caf
 

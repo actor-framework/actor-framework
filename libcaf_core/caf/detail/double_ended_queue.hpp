@@ -62,8 +62,7 @@ inline void sleep_for(const chrono::duration<Rep, Period>& rt) {
 } // namespace std
 #endif
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /*
  * A thread-safe double-ended queue based on http://drdobbs.com/cpp/211601363.
@@ -239,6 +238,5 @@ private:
   };
 };
 
-} // namespace detail
 } // namespace caf
 

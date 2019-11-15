@@ -22,8 +22,7 @@
 #include <limits>
 #include <type_traits>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class To, bool LargeUnsigned = sizeof(To) >= sizeof(int64_t)
                                          && std::is_unsigned<To>::value>
@@ -41,5 +40,4 @@ struct bounds_checker<To, true> {
   }
 };
 
-} // namespace detail
 } // namespace caf

@@ -39,8 +39,7 @@
 #include "caf/detail/arg_wrapper.hpp"
 #include "caf/detail/type_traits.hpp"
 
-namespace caf {
-namespace test {
+namespace caf::test {
 
 // -- Function objects for implementing CAF_CHECK_* macros ---------------------
 
@@ -495,7 +494,6 @@ bool check(test* parent, const char *file, size_t line,
 }
 
 } // namespace detail
-} // namespace test
 } // namespace caf
 
 // on the global namespace so that it can hidden via namespace-scoping

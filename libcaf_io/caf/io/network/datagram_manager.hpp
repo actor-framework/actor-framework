@@ -22,9 +22,7 @@
 #include "caf/io/network/manager.hpp"
 #include "caf/io/network/receive_buffer.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// A datagram manager provides callbacks for outgoing
 /// datagrams as well as for error handling.
@@ -51,7 +49,5 @@ public:
   virtual uint16_t port(datagram_handle) const = 0;
 };
 
-} // namespace network
-} // namespace io
 } // namespace caf
 

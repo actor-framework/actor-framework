@@ -31,8 +31,7 @@
 #include "caf/message_id.hpp"
 #include "caf/variant.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class simple_actor_clock : public actor_clock {
 public:
@@ -364,5 +363,4 @@ protected:
   actor_lookup_map actor_lookup_;
 };
 
-} // namespace detail
 } // namespace caf

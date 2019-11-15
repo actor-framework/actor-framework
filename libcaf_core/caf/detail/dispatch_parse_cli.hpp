@@ -23,8 +23,7 @@
 #include "caf/config_value.hpp"
 #include "caf/detail/type_traits.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class Trait>
 struct dispatch_parse_cli_helper {
@@ -58,5 +57,4 @@ void dispatch_parse_cli(string_parser_state& ps, T& x,
   dispatch_parse_cli<access>(token, ps, x, char_blacklist);
 }
 
-} // namespace detail
 } // namespace caf

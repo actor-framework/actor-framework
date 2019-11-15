@@ -23,8 +23,7 @@
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class F,
           int Args = tl_size<typename get_callable_trait<F>::arg_types>::value>
@@ -64,6 +63,5 @@ struct functor_attachable<F, 0> : attachable {
   }
 };
 
-} // namespace detail
 } // namespace caf
 

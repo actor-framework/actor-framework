@@ -26,9 +26,7 @@
 #include "caf/io/network/multiplexer.hpp"
 #include "caf/io/network/receive_buffer.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 class test_multiplexer : public multiplexer {
 private:
@@ -376,7 +374,5 @@ private:
   int64_t servant_ids_;
 };
 
-} // namespace network
-} // namespace io
 } // namespace caf
 

@@ -20,8 +20,7 @@
 
 #include "caf/make_counted.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 decorated_tuple::decorated_tuple(cow_ptr&& d, vector_type&& v)
   : decorated_(std::move(d)), mapping_(std::move(v)), type_token_(0xFFFFFFFF) {
@@ -94,5 +93,4 @@ error decorated_tuple::save(size_t pos, serializer& sink) const {
   return decorated_->save(mapping_[pos], sink);
 }
 
-} // namespace detail
 } // namespace caf

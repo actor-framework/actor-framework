@@ -20,13 +20,11 @@
 
 #include <memory>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class T, class... Ts>
 std::unique_ptr<T> make_unique(Ts&&... xs) {
   return std::unique_ptr<T>{new T(std::forward<Ts>(xs)...)};
 }
 
-} // namespace detail
 } // namespace caf

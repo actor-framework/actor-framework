@@ -26,8 +26,7 @@
 
 #include "caf/io/middleman.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 /// Establish a new connection to the actor at `host` on given `port`.
 /// @param host Valid hostname or IP address.
@@ -40,6 +39,5 @@ expected<ActorHandle> remote_actor(actor_system& sys, std::string host,
   return sys.middleman().remote_actor<ActorHandle>(std::move(host), port);
 }
 
-} // namespace io
 } // namespace caf
 

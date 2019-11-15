@@ -37,8 +37,7 @@
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/type_traits.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Inspects the result of message handlers and triggers type-depended actions
 /// such as generating result messages.
@@ -217,6 +216,5 @@ public:
   }
 };
 
-} // namespace detail
 } // namespace caf
 

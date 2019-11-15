@@ -26,8 +26,7 @@
 
 #include "caf/detail/type_traits.hpp"
 
-namespace caf {
-namespace intrusive {
+namespace caf::intrusive {
 
 /// A work queue that internally multiplexes any number of DRR queues.
 template <class Policy>
@@ -219,6 +218,5 @@ private:
   std::vector<key_type> erase_list_;
 };
 
-} // namespace intrusive
 } // namespace caf
 

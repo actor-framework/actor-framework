@@ -24,8 +24,7 @@
 #include "caf/io/abstract_broker.hpp"
 #include "caf/io/system_messages.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 /// Base class for `scribe` and `doorman`.
 /// @ingroup Broker
@@ -125,7 +124,6 @@ protected:
   optional<size_t> activity_tokens_;
 };
 
-} // namespace io
 } // namespace caf
 
 

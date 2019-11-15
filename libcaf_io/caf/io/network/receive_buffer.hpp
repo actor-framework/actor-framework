@@ -24,9 +24,7 @@
 
 #include "caf/allowed_unsafe_message_type.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// A container that does not call constructors and destructors for its values.
 class receive_buffer {
@@ -207,7 +205,5 @@ private:
   size_type size_;
 };
 
-} // namepsace network
-} // namespace io
 } // namespace caf
 

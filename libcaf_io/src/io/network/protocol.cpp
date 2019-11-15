@@ -18,9 +18,7 @@
 
 #include "caf/io/network/protocol.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 std::string to_string(const protocol& x) {
   std::string result;
@@ -30,6 +28,4 @@ std::string to_string(const protocol& x) {
   return result;
 }
 
-} // namespace network
-} // namespace io
 } // namespace caf

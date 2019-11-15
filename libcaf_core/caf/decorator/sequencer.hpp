@@ -22,8 +22,7 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/monitorable_actor.hpp"
 
-namespace caf {
-namespace decorator {
+namespace caf::decorator {
 
 /// An actor decorator implementing "dot operator"-like compositions,
 /// i.e., `f.g(x) = f(g(x))`. Composed actors are hidden actors.
@@ -55,6 +54,5 @@ private:
   message_types_set msg_types_;
 };
 
-} // namespace decorator
 } // namespace caf
 

@@ -27,9 +27,7 @@
 #include "caf/io/basp/buffer_type.hpp"
 #include "caf/node_id.hpp"
 
-namespace caf {
-namespace io {
-namespace basp {
+namespace caf::io::basp {
 
 /// @addtogroup BASP
 
@@ -95,6 +93,4 @@ public:
 
 /// @}
 
-} // namespace basp
-} // namespace io
 } // namespace caf

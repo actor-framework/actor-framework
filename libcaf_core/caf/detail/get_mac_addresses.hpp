@@ -22,14 +22,12 @@
 #include <vector>
 #include <utility>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 using iface_info = std::pair<std::string /* interface name */,
                              std::string /* interface address */>;
 
 std::vector<iface_info> get_mac_addresses();
 
-} // namespace detail
 } // namespace caf
 

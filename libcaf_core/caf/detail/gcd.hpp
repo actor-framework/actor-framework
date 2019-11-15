@@ -19,8 +19,7 @@
 
 #pragma once
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class T>
 T gcd(T a, T b) {
@@ -33,7 +32,6 @@ T gcd(T a, T b) {
   return a;
 }
 
-} // namespace detail
 } // namespace caf
 
 

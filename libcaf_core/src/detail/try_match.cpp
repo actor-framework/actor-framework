@@ -20,8 +20,7 @@
 
 #include "caf/type_erased_tuple.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 using pattern_iterator = const meta_element*;
 
@@ -51,5 +50,4 @@ bool try_match(const type_erased_tuple& xs, pattern_iterator iter, size_t ps) {
   return true;
 }
 
-} // namespace detail
 } // namespace caf

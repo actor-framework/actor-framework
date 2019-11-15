@@ -26,8 +26,7 @@
 
 #include "caf/io/middleman.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 /// Tries to publish `whom` at `port` and returns either an `error` or the
 /// bound port.
@@ -46,6 +45,5 @@ expected<uint16_t> publish(const Handle& whom, uint16_t port,
   return sys.middleman().publish(whom, port, in, reuse);
 }
 
-} // namespace io
 } // namespace caf
 

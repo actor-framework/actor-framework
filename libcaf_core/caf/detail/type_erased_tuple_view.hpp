@@ -33,8 +33,7 @@
 #include "caf/detail/try_match.hpp"
 #include "caf/detail/apply_args.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class... Ts>
 class type_erased_tuple_view : public type_erased_tuple {
@@ -135,6 +134,5 @@ private:
   type_erased_value* ptrs_[sizeof...(Ts) == 0 ? 1 : sizeof...(Ts)];
 };
 
-} // namespace detail
 } // namespace caf
 

@@ -35,8 +35,7 @@ using caf::io::network::signed_size_type;
 using caf::io::network::socket_error_as_string;
 using caf::io::network::socket_size_type;
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 bool udp::read_datagram(size_t& result, native_socket fd, void* buf,
                         size_t buf_len, io::network::ip_endpoint& ep) {
@@ -79,5 +78,4 @@ bool udp::write_datagram(size_t& result, native_socket fd, void* buf,
   return true;
 }
 
-} // namespace policy
 } // namespace caf

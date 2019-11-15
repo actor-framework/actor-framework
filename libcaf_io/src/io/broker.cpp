@@ -29,8 +29,7 @@
 #include "caf/actor_registry.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 void broker::initialize() {
   CAF_LOG_TRACE("");
@@ -58,5 +57,4 @@ behavior broker::make_behavior() {
   return res;
 }
 
-} // namespace io
 } // namespace caf

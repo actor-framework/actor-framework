@@ -27,8 +27,7 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/raise_error.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// A map abstraction with an unsorted `std::vector` providing `O(n)` lookup.
 template <class Key, class T,
@@ -328,7 +327,6 @@ bool operator>=(const unordered_flat_map<K, T, A>& xs,
   return !(xs < ys);
 }
 
-} // namespace detail
 } // namespace caf
 
 

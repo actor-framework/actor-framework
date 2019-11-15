@@ -22,8 +22,7 @@
 #include "caf/ref_counted.hpp"
 #include "caf/resumable.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class abstract_worker : public ref_counted, public resumable {
 public:
@@ -52,5 +51,4 @@ private:
   std::atomic<abstract_worker*> next_;
 };
 
-} // namespace detail
 } // namespace caf

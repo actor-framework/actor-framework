@@ -20,12 +20,10 @@
 
 #include "caf/io/middleman_actor.hpp"
 
-namespace caf {
-namespace openssl {
+namespace caf::openssl {
 
 
 io::middleman_actor make_middleman_actor(actor_system& sys, actor db);
 
-} // namespace openssl
 } // namespace caf
 

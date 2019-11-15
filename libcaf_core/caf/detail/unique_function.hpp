@@ -21,8 +21,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// A move-only replacement for `std::function`.
 template <class Signature>
@@ -210,5 +209,4 @@ bool operator!=(std::nullptr_t, const unique_function<T>& x) noexcept {
   return !x.is_nullptr();
 }
 
-} // namespace detail
 } // namespace caf

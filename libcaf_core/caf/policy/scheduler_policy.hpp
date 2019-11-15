@@ -21,8 +21,7 @@
 #include "caf/fwd.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 /// This concept class describes a policy for worker
 /// and coordinator of the scheduler.
@@ -88,6 +87,5 @@ public:
   void foreach_central_resumable(Coordinator* self, UnaryFunction f);
 };
 
-} // namespace policy
 } // namespace caf
 

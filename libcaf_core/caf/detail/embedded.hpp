@@ -21,8 +21,7 @@
 #include "caf/ref_counted.hpp"
 #include "caf/intrusive_ptr.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class Base>
 class embedded final : public Base {
@@ -50,7 +49,6 @@ protected:
   intrusive_ptr<ref_counted> storage_;
 };
 
-} // namespace detail
 } // namespace caf
 
 

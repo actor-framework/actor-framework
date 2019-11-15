@@ -23,8 +23,7 @@
 
 #include "caf/detail/disposer.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 merged_tuple::cow_ptr merged_tuple::make(message x, message y) {
   data_type data{x.vals(), y.vals()};
@@ -109,5 +108,4 @@ const merged_tuple::mapping_type& merged_tuple::mapping() const {
   return mapping_;
 }
 
-} // namespace detail
 } // namespace caf

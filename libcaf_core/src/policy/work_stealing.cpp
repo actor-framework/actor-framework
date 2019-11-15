@@ -27,8 +27,7 @@
   get_or(p->config(), "work-stealing." str_name,                               \
          defaults::work_stealing::var_name)
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 work_stealing::~work_stealing() {
   // nop
@@ -58,5 +57,4 @@ work_stealing::worker_data::worker_data(const worker_data& other)
   // nop
 }
 
-} // namespace policy
 } // namespace caf

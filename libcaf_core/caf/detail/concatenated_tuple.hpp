@@ -23,8 +23,7 @@
 
 #include "caf/detail/decorated_tuple.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class concatenated_tuple : public message_data {
 public:
@@ -84,7 +83,6 @@ private:
   size_t size_;
 };
 
-} // namespace detail
 } // namespace caf
 
 

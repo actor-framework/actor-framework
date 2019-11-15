@@ -22,11 +22,9 @@
 #include <vector>
 #include <utility>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 unsigned get_process_id();
 
-} // namespace detail
 } // namespace caf
 

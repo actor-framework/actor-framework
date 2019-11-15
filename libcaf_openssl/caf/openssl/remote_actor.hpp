@@ -26,8 +26,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_control_block.hpp"
 
-namespace caf {
-namespace openssl {
+namespace caf::openssl {
 
 /// @private
 expected<strong_actor_ptr> remote_actor(actor_system& sys,
@@ -49,6 +48,5 @@ expected<ActorHandle> remote_actor(actor_system& sys, std::string host,
   return std::move(res.error());
 }
 
-} // namespace openssl
 } // namespace caf
 

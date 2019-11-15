@@ -39,8 +39,7 @@
 
 #include "caf/test/unit_test.hpp"
 
-namespace caf {
-namespace test {
+namespace caf::test {
 
 class watchdog {
 public:
@@ -574,7 +573,6 @@ int main(int argc, char** argv) {
   return result ? 0 : 1;
 }
 
-} // namespace test
 } // namespace caf
 
 #ifndef CAF_TEST_NO_MAIN

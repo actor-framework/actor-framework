@@ -25,8 +25,7 @@
 
 #include "caf/detail/type_traits.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 // tuple-like access to an array of void pointers that is
 // also aware of the semantics of param<T>
@@ -120,6 +119,5 @@ get(detail::pseudo_tuple<Ts...>& tv) {
   return f::get(tv, N);
 }
 
-} // namespace detail
 } // namespace caf
 

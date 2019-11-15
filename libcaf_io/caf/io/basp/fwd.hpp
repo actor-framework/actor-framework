@@ -18,9 +18,7 @@
 
 #pragma once
 
-namespace caf {
-namespace io {
-namespace basp {
+namespace caf::io::basp {
 
 struct header;
 
@@ -30,6 +28,4 @@ class message_queue;
 class instance;
 class routing_table;
 
-} // namespace basp
-} // namespace io
 } // namespace caf

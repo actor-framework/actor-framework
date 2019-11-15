@@ -26,8 +26,7 @@
 
 #include "caf/intrusive/drr_queue.hpp"
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 /// Configures a dynamic WDRR queue for holding downstream messages.
 class downstream_messages {
@@ -117,6 +116,5 @@ public:
   }
 };
 
-} // namespace policy
 } // namespace caf
 

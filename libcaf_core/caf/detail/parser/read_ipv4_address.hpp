@@ -34,9 +34,7 @@ CAF_PUSH_UNUSED_LABEL_WARNING
 
 #include "caf/detail/parser/fsm.hpp"
 
-namespace caf {
-namespace detail {
-namespace parser {
+namespace caf::detail::parser {
 
 struct read_ipv4_octet_consumer {
   std::array<uint8_t, 4> bytes;
@@ -99,8 +97,6 @@ void read_ipv4_address(State& ps, Consumer&& consumer) {
   // clang-format on
 }
 
-} // namespace parser
-} // namespace detail
 } // namespace caf
 
 #include "caf/detail/parser/fsm_undef.hpp"

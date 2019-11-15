@@ -26,8 +26,7 @@
 
 #include "caf/meta/type_name.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 struct invalid_accept_handle_t {
   constexpr invalid_accept_handle_t() {
@@ -65,7 +64,6 @@ private:
   }
 };
 
-} // namespace ios
 } // namespace caf
 
 namespace std{

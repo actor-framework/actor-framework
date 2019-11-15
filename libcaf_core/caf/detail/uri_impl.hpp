@@ -30,8 +30,7 @@
 #include "caf/string_view.hpp"
 #include "caf/uri.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class uri_impl {
 public:
@@ -103,5 +102,4 @@ typename Inspector::result_type inspect(Inspector& f, uri_impl& x) {
            meta::load_callback(load));
 }
 
-} // namespace detail
 } // namespace caf

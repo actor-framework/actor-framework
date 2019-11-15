@@ -24,8 +24,7 @@
 #include "caf/stream_stage_driver.hpp"
 #include "caf/stream_stage_trait.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Default implementation for a `stream_stage_driver` that hardwires `message`
 /// as result type and implements `process` and `finalize` using user-provided
@@ -72,6 +71,5 @@ private:
   Finalize fin_;
 };
 
-} // namespace detail
 } // namespace caf
 

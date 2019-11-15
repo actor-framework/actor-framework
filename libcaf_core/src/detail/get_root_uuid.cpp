@@ -75,8 +75,7 @@ using std::ifstream;
 using std::string;
 using std::vector;
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 namespace {
 
@@ -138,7 +137,6 @@ std::string get_root_uuid() {
   return uuid;
 }
 
-} // namespace detail
 } // namespace caf
 
 #elif defined(CAF_WINDOWS)

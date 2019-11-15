@@ -24,9 +24,7 @@
 
 #include "caf/io/network/default_multiplexer.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 datagram_servant_impl::datagram_servant_impl(default_multiplexer& mx,
                                              native_socket sockfd, int64_t id)
@@ -148,6 +146,4 @@ void datagram_servant_impl::detach_handles() {
   }
 }
 
-} // namespace network
-} // namespace io
 } // namespace caf

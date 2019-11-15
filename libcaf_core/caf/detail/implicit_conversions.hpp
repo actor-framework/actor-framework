@@ -27,8 +27,7 @@
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class T,
           bool IsDyn = std::is_base_of<dynamically_typed_actor_base, T>::value,
@@ -143,6 +142,5 @@ struct strip_and_convert {
 template <class T>
 using strip_and_convert_t = typename strip_and_convert<T>::type;
 
-} // namespace detail
 } // namespace caf
 

@@ -33,8 +33,7 @@
 #include "caf/resumable.hpp"
 #include "caf/timespan.hpp"
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 /// Implements scheduling of actors via work stealing.
 /// @extends scheduler_policy
@@ -211,5 +210,4 @@ public:
   }
 };
 
-} // namespace policy
 } // namespace caf

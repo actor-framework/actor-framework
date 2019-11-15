@@ -21,8 +21,7 @@
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/rw_state.hpp"
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 /// Policy object for wrapping default TCP operations.
 struct tcp {
@@ -55,5 +54,4 @@ struct tcp {
   }
 };
 
-} // namespace policy
 } // namespace caf

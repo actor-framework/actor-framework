@@ -18,8 +18,7 @@
 
 #pragma once
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class Processor, class T>
 auto try_serialize(Processor& proc, T* x) -> decltype(proc & *x) {
@@ -31,6 +30,5 @@ void try_serialize(Processor&, void*) {
   // nop
 }
 
-} // namespace detail
 } // namespace caf
 

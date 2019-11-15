@@ -23,8 +23,7 @@
 #include "caf/attachable.hpp"
 #include "caf/abstract_actor.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class merged_tuple : public message_data {
 public:
@@ -86,6 +85,5 @@ private:
   mapping_type mapping_;
 };
 
-} // namespace detail
 } // namespace caf
 

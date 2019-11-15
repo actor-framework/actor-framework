@@ -19,9 +19,7 @@
 #include "caf/io/network/multiplexer.hpp"
 #include "caf/io/network/default_multiplexer.hpp" // default singleton
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 multiplexer::multiplexer(actor_system* sys)
   : execution_unit(sys), tid_(std::this_thread::get_id()) {
@@ -53,6 +51,4 @@ void multiplexer::runnable::intrusive_ptr_release_impl() {
   intrusive_ptr_release(this);
 }
 
-} // namespace network
-} // namespace io
 } // namespace caf

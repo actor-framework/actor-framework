@@ -27,8 +27,7 @@
 #include "caf/config.hpp"
 #include "caf/raise_error.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 // A vector with a fixed maximum size (uses an array internally).
 // @warning This implementation is highly optimized for arithmetic types and
@@ -245,6 +244,5 @@ private:
   T data_[(MaxSize > 0) ? MaxSize : 1];
 };
 
-} // namespace detail
 } // namespace caf
 

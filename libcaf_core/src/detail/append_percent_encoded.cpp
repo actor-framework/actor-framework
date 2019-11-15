@@ -22,8 +22,7 @@
 #include "caf/detail/append_hex.hpp"
 #include "caf/string_view.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 void append_percent_encoded(std::string& str, string_view x, bool is_path) {
   for (auto ch : x)
@@ -61,5 +60,4 @@ void append_percent_encoded(std::string& str, string_view x, bool is_path) {
     }
 }
 
-} // namespace detail
 } // namespace caf

@@ -22,8 +22,7 @@
 
 #include "caf/config.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template<class T>
 bool cas_weak(std::atomic<T>* obj, T* expected, T desired) {
@@ -35,6 +34,5 @@ bool cas_weak(std::atomic<T>* obj, T* expected, T desired) {
 # endif
 }
 
-} // namespace detail
 } // namespace caf
 

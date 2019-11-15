@@ -24,8 +24,7 @@
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 
-namespace caf {
-namespace decorator {
+namespace caf::decorator {
 
 sequencer::sequencer(strong_actor_ptr f, strong_actor_ptr g,
                      message_types_set msg_types)
@@ -84,5 +83,4 @@ void sequencer::on_cleanup(const error&) {
   g_.reset();
 }
 
-} // namespace decorator
 } // namespace caf

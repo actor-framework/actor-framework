@@ -24,9 +24,7 @@
 
 #include "caf/io/network/default_multiplexer.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 doorman_impl::doorman_impl(default_multiplexer& mx, native_socket sockfd)
   : doorman(network::accept_hdl_from_socket(sockfd)), acceptor_(mx, sockfd) {
@@ -81,6 +79,4 @@ void doorman_impl::remove_from_loop() {
   acceptor_.passivate();
 }
 
-} // namespace network
-} // namespace io
 } // namespace caf

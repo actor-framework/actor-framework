@@ -38,8 +38,7 @@ using caf::io::network::rw_state;
 using caf::io::network::socket_error_as_string;
 using caf::io::network::socket_size_type;
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 rw_state tcp::read_some(size_t& result, native_socket fd, void* buf,
                         size_t len) {
@@ -99,5 +98,4 @@ bool tcp::try_accept(native_socket& result, native_socket fd) {
   return true;
 }
 
-} // namespace policy
 } // namespace caf

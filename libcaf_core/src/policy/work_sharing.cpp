@@ -18,12 +18,10 @@
 
 #include "caf/policy/work_sharing.hpp"
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 work_sharing::~work_sharing() {
   // nop
 }
 
-} // namespace policy
 } // namespace caf

@@ -25,8 +25,7 @@
 #include <cmath>
 #include <cstdint>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class T>
 struct ieee_754_trait;
@@ -132,6 +131,5 @@ typename ieee_754_trait<T>::float_type unpack754(T i) {
   return result;
 }
 
-} // namespace detail
 } // namespace caf
 

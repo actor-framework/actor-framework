@@ -38,8 +38,7 @@
   case x:                                                                      \
     return tuple_inspect_delegate<x, sizeof...(Ts)-1>(data_, f)
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 // avoids triggering static asserts when using CAF_TUPLE_VALS_DISPATCH
 template <size_t X, size_t Max, class T, class F>
@@ -210,6 +209,5 @@ public:
   }
 };
 
-} // namespace detail
 } // namespace caf
 

@@ -11,6 +11,17 @@ using std::find_if;
 using std::string;
 using std::vector;
 
+void split(const string& str, const string& separator, vector<string>& dest) {
+  size_t current, previous = 0;
+  current = str.find(separator);
+  while (current != std::string::npos) {
+    dest.emplace_back(str.substr(previous, current - previous));
+    previous = current + separator.size();
+    current = str.find(separator, previous);
+  }
+  dest.push_back(str.substr(previous, current - previous));
+}
+
 void trim(string& str) {
   auto not_space = [](char c) { return isspace(c) == 0; };
   str.erase(str.begin(), find_if(str.begin(), str.end(), not_space));
@@ -71,7 +82,7 @@ int main(int argc, char** argv) {
         line.pop_back();
       line.erase(line.begin(), find(line.begin(), line.end(), ' '));
       trim(line);
-      namespaces.emplace_back(line);
+      split(line, "::", namespaces);
     }
   }
   // Sanity checking.

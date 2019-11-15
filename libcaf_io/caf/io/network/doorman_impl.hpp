@@ -26,9 +26,7 @@
 
 #include "caf/policy/tcp.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// Default doorman implementation.
 class doorman_impl : public doorman {
@@ -53,6 +51,4 @@ protected:
   acceptor_impl<policy::tcp> acceptor_;
 };
 
-} // namespace network
-} // namespace io
 } // namespace caf

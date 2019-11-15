@@ -33,8 +33,7 @@ inline long min_long() {
 
 } // namespace
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 shared_spinlock::shared_spinlock() : flag_(0) {
   // nop
@@ -101,5 +100,4 @@ bool shared_spinlock::try_lock_shared() {
   return (v >= 0) ? cas_weak(&flag_, &v, v + 1) : false;
 }
 
-} // namespace detail
 } // namespace caf

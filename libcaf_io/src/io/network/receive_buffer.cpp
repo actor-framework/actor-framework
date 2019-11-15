@@ -28,9 +28,7 @@ constexpr size_t min_size = 1;
 
 } // namespace
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 receive_buffer::receive_buffer() noexcept
   : buffer_(nullptr), capacity_(0), size_(0) {
@@ -137,6 +135,4 @@ receive_buffer::iterator receive_buffer::insert(iterator pos,
   return pos;
 }
 
-} // namespace network
-} // namespace io
 } // namespace caf

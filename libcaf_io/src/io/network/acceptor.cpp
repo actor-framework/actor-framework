@@ -20,9 +20,7 @@
 
 #include "caf/logger.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 acceptor::acceptor(default_multiplexer& backend_ref, native_socket sockfd)
   : event_handler(backend_ref, sockfd), sock_(invalid_native_socket) {
@@ -58,6 +56,4 @@ void acceptor::graceful_shutdown() {
   shutdown_both(fd_);
 }
 
-} // namespace network
-} // namespace io
 } // namespace caf

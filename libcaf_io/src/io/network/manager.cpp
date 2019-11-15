@@ -22,9 +22,7 @@
 
 #include "caf/io/abstract_broker.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 manager::manager() : parent_(nullptr) {
   // nop
@@ -80,6 +78,4 @@ void manager::io_failure(execution_unit* ctx, operation op) {
   detach(ctx, true);
 }
 
-} // namespace network
-} // namespace io
 } // namespace caf

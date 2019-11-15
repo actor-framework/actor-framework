@@ -24,8 +24,7 @@
 #include "caf/message.hpp"
 #include "caf/raise_error.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 concatenated_tuple::concatenated_tuple(std::initializer_list<cow_ptr> xs) {
   for (auto& x : xs) {
@@ -132,5 +131,4 @@ concatenated_tuple::select(size_t pos) const {
   CAF_RAISE_ERROR(std::out_of_range, "concatenated_tuple::select out of range");
 }
 
-} // namespace detail
 } // namespace caf

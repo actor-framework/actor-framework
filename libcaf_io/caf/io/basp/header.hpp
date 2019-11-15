@@ -29,9 +29,7 @@
 
 #include "caf/io/basp/message_type.hpp"
 
-namespace caf {
-namespace io {
-namespace basp {
+namespace caf::io::basp {
 
 /// @addtogroup BASP
 
@@ -114,7 +112,5 @@ constexpr size_t header_size = sizeof(actor_id) * 2
 
 /// @}
 
-} // namespace basp
-} // namespace io
 } // namespace caf
 

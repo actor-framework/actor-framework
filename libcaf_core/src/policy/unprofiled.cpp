@@ -18,12 +18,10 @@
 
 #include "caf/policy/unprofiled.hpp"
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 unprofiled::~unprofiled() {
   // nop
 }
 
-} // namespace policy
 } // namespace caf

@@ -53,9 +53,7 @@
 #include "caf/io/network/ip_endpoint.hpp"
 #include "caf/raise_error.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 // {interface_name => {protocol => address}}
 using interfaces_map = std::map<
@@ -306,6 +304,4 @@ bool interfaces::get_endpoint(const std::string& host, uint16_t port,
   return false;
 }
 
-} // namespace network
-} // namespace io
 } // namespace caf

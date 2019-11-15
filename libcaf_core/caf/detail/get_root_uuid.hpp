@@ -20,11 +20,9 @@
 
 #include <string>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 std::string get_root_uuid();
 
-} // namespace detail
 } // namespace caf
 

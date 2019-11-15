@@ -26,8 +26,7 @@
 
 #include "caf/io/middleman.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 /// Tries to connect to given node.
 /// @experimental
@@ -37,6 +36,5 @@ inline expected<node_id> connect(actor_system& sys, std::string host,
 }
 
 
-} // namespace io
 } // namespace caf
 

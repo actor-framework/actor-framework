@@ -21,8 +21,7 @@
 
 #include <string>
 
-namespace caf {
-namespace intrusive {
+namespace caf::intrusive {
 
 /// Communicates the state of a LIFO or FIFO inbox after pushing to it.
 enum class inbox_result {
@@ -42,5 +41,4 @@ enum class inbox_result {
 /// @relates inbox_result
 std::string to_string(inbox_result);
 
-} // namespace intrusive
 } // namespace caf

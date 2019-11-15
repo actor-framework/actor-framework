@@ -39,8 +39,7 @@
 #include "caf/io/network/datagram_manager.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 struct connection_helper_state {
   static const char* name;
@@ -48,5 +47,4 @@ struct connection_helper_state {
 
 behavior connection_helper(stateful_actor<connection_helper_state>* self,
                            actor b);
-} // namespace io
 } // namespace caf

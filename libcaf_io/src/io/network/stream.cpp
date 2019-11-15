@@ -26,9 +26,7 @@
 #include "caf/io/network/default_multiplexer.hpp"
 #include "caf/logger.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 stream::stream(default_multiplexer& backend_ref, native_socket sockfd)
   : event_handler(backend_ref, sockfd),
@@ -214,6 +212,4 @@ void stream::send_fin() {
   shutdown_write(fd_);
 }
 
-} // namespace network
-} // namespace io
 } // namespace caf

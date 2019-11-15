@@ -24,8 +24,7 @@
 
 #include "caf/fwd.hpp"
 
-namespace caf {
-namespace intrusive {
+namespace caf::intrusive {
 
 /// Communicates the state of a consumer to a task queue.
 enum class task_result {
@@ -45,6 +44,5 @@ enum class task_result {
 /// @relates task_result
 std::string to_string(task_result);
 
-} // namespace intrusive
 } // namespace caf
 
