@@ -25,9 +25,9 @@
 
 #include "caf/byte.hpp"
 #include "caf/detail/scope_guard.hpp"
+#include "caf/ip_endpoint.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/net/actor_proxy_impl.hpp"
-#include "caf/net/endpoint_manager.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/serializer_impl.hpp"
 #include "caf/span.hpp"

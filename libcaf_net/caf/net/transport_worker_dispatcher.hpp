@@ -18,34 +18,27 @@
 
 #pragma once
 
-#include <caf/logger.hpp>
-#include <caf/sec.hpp>
 #include <unordered_map>
 
-#include "caf/byte.hpp"
-#include "caf/ip_endpoint.hpp"
-#include "caf/net/endpoint_manager.hpp"
+#include "caf/logger.hpp"
+#include "caf/net/endpoint_manager_queue.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/packet_writer_decorator.hpp"
 #include "caf/net/transport_worker.hpp"
+#include "caf/sec.hpp"
 #include "caf/send.hpp"
-#include "caf/span.hpp"
-#include "caf/unit.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// Implements a dispatcher that dispatches between transport and workers.
-template <class Transport, class IdType>
+template <class Factory, class IdType>
 class transport_worker_dispatcher {
 public:
   // -- member types -----------------------------------------------------------
 
   using id_type = IdType;
 
-  using transport_type = Transport;
-
-  using factory_type = typename transport_type::factory_type;
+  using factory_type = Factory;
 
   using application_type = typename factory_type::application_type;
 
@@ -55,8 +48,8 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  transport_worker_dispatcher(transport_type& transport, factory_type factory)
-    : factory_(std::move(factory)), transport_(&transport) {
+  explicit transport_worker_dispatcher(factory_type factory)
+    : factory_(std::move(factory)) {
     // nop
   }
 
@@ -141,6 +134,7 @@ public:
   template <class Parent>
   expected<worker_ptr> add_new_worker(Parent& parent, node_id node,
                                       id_type id) {
+    CAF_LOG_TRACE(CAF_ARG(node) << CAF_ARG(id));
     auto application = factory_.make();
     auto worker = std::make_shared<worker_type>(std::move(application), id);
     if (auto err = worker->init(parent))
@@ -176,8 +170,6 @@ private:
   std::unordered_map<uint64_t, worker_ptr> workers_by_timeout_id_;
 
   factory_type factory_;
-  transport_type* transport_;
 };
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

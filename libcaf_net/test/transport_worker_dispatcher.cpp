@@ -23,6 +23,7 @@
 #include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
 
+#include "caf/ip_endpoint.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/monitorable_actor.hpp"
 #include "caf/node_id.hpp"
@@ -182,12 +183,12 @@ uri operator"" _u(const char* cstr, size_t cstr_len) {
 }
 
 struct fixture : host_fixture {
-  using dispatcher_type = transport_worker_dispatcher<dummy_transport,
+  using dispatcher_type = transport_worker_dispatcher<dummy_application_factory,
                                                       ip_endpoint>;
 
   fixture()
     : buf{std::make_shared<buffer_type>()},
-      dispatcher{dummy, dummy_application_factory{buf}},
+      dispatcher{dummy_application_factory{buf}},
       dummy{buf} {
     add_new_workers();
   }
@@ -272,7 +273,7 @@ struct fixture : host_fixture {
 CAF_TEST_FIXTURE_SCOPE(transport_worker_dispatcher_test, fixture)
 
 CAF_TEST(init) {
-  dispatcher_type dispatcher{dummy, dummy_application_factory{buf}};
+  dispatcher_type dispatcher{dummy_application_factory{buf}};
   CAF_CHECK_EQUAL(dispatcher.init(dummy), none);
 }
 
