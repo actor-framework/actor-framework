@@ -37,7 +37,7 @@ class type_erased_value_impl : public type_erased_value {
 public:
   // -- member types -----------------------------------------------------------
 
-  using value_type = typename std::__strip_reference_wrapper<T>::type;
+  using value_type = typename detail::strip_reference_wrapper<T>::type;
 
   // -- constructors, destructors, and assignment operators --------------------
 

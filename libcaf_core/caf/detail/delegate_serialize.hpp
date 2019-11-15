@@ -32,14 +32,12 @@
 
 #pragma once
 
-#include <utility>
 #include <type_traits>
+#include <utility>
 
 #include "caf/detail/type_traits.hpp"
 
-
-
-
+namespace boost::serialization {} // namespace boost::serialization
 
 namespace caf::detail {
 
@@ -57,10 +55,8 @@ auto delegate_serialize(Processor& proc, U& x, const unsigned int y = 0)
 // ignores anyway.
 
 template <class Processor, class U>
-auto delegate_serialize(Processor& proc, U& x)
-  -> decltype(serialize(proc, x)) {
+auto delegate_serialize(Processor& proc, U& x) -> decltype(serialize(proc, x)) {
   serialize(proc, x);
 }
 
-} // namespace caf
-
+} // namespace caf::detail
