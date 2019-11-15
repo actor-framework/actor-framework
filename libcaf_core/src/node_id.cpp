@@ -21,6 +21,7 @@
 #include <cstdio>
 #include <cstring>
 #include <iterator>
+#include <random>
 #include <sstream>
 
 #include "caf/config.hpp"
@@ -64,12 +65,24 @@ node_id node_id::default_data::local(const actor_system_config&) {
   macs.reserve(ifs.size());
   for (auto& i : ifs)
     macs.emplace_back(std::move(i.second));
-  auto hd_serial_and_mac_addr = join(macs, "") + detail::get_root_uuid();
+  auto seeded_hd_serial_and_mac_addr = join(macs, "") + detail::get_root_uuid();
+  // By adding 8 random ASCII characters, we make sure to assign a new (random)
+  // ID to a node every time we start it. Otherwise, we might run into issues
+  // where a restarted node produces identical actor IDs than the node it
+  // replaces. Especially when running nodes in a container, because then the
+  // process ID is most likely the same.
+  std::random_device rd;
+  std::minstd_rand gen{rd()};
+  std::uniform_int_distribution<char> dis(33, 126);
+  for (int i = 0; i < 8; ++i)
+    seeded_hd_serial_and_mac_addr += dis(gen);
+  // One final tweak: we add another character that makes sure two actor systems
+  // in the same process won't have the same node ID - even if the user
+  // manipulates the system to always produce the same seed for its randomness.
+  auto sys_seed = static_cast<char>(system_id.fetch_add(1) + 33);
+  seeded_hd_serial_and_mac_addr += sys_seed;
   host_id_type hid;
-  detail::ripemd_160(hid, hd_serial_and_mac_addr);
-  // This hack enables multiple actor systems in a single process by overriding
-  // the last byte in the node ID with the actor system "ID".
-  hid.back() = system_id.fetch_add(1);
+  detail::ripemd_160(hid, seeded_hd_serial_and_mac_addr);
   return make_node_id(detail::get_process_id(), hid);
 }
 
