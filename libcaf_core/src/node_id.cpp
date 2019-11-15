@@ -73,9 +73,9 @@ node_id node_id::default_data::local(const actor_system_config&) {
   // process ID is most likely the same.
   std::random_device rd;
   std::minstd_rand gen{rd()};
-  std::uniform_int_distribution<char> dis(33, 126);
+  std::uniform_int_distribution<> dis(33, 126);
   for (int i = 0; i < 8; ++i)
-    seeded_hd_serial_and_mac_addr += dis(gen);
+    seeded_hd_serial_and_mac_addr += static_cast<char>(dis(gen));
   // One final tweak: we add another character that makes sure two actor systems
   // in the same process won't have the same node ID - even if the user
   // manipulates the system to always produce the same seed for its randomness.
