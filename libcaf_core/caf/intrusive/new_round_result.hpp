@@ -23,8 +23,7 @@
 
 #include "caf/fwd.hpp"
 
-namespace caf {
-namespace intrusive {
+namespace caf::intrusive {
 
 /// Returns the state of a consumer from `new_round`.
 struct new_round_result {
@@ -51,6 +50,5 @@ constexpr new_round_result operator|(new_round_result x, new_round_result y) {
   return {x.consumed_items || y.consumed_items, x.stop_all || y.stop_all};
 }
 
-} // namespace intrusive
 } // namespace caf
 

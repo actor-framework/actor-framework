@@ -37,8 +37,7 @@
 #include "caf/io/broker.hpp"
 #include "caf/io/typed_broker.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 /// A broker implementation for the Binary Actor System Protocol (BASP).
 class basp_broker : public broker,
@@ -160,5 +159,4 @@ public:
   monitored_actor_map monitored_actors;
 };
 
-} // namespace io
 } // namespace caf

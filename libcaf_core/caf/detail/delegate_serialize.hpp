@@ -37,14 +37,11 @@
 
 #include "caf/detail/type_traits.hpp"
 
-namespace boost {
-namespace serialization {
 
-} // namespace serialization
-} // namespace boost
 
-namespace caf {
-namespace detail {
+
+
+namespace caf::detail {
 
 // Calls `serialize(...)` with `using namespace boost::serialization`
 // to enable both ADL and picking up existing boost code.
@@ -65,6 +62,5 @@ auto delegate_serialize(Processor& proc, U& x)
   serialize(proc, x);
 }
 
-} // namespace detail
 } // namespace caf
 

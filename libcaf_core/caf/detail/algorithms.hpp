@@ -22,8 +22,7 @@
 
 #include "caf/detail/type_traits.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Like `std::for_each`, but for multiple containers and filters elements by
 /// predicate.
@@ -128,6 +127,5 @@ const typename T::value_type* ptr_find_if(const T& xs, Predicate pred) {
   return nullptr;
 }
 
-} // namespace detail
 } // namespace caf
 

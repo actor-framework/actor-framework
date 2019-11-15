@@ -28,8 +28,7 @@
 
 #include "caf/detail/type_traits.hpp"
 
-namespace caf {
-namespace intrusive {
+namespace caf::intrusive {
 
 /// A work queue that internally multiplexes any number of DRR queues.
 template <class Policy, class Q, class... Qs>
@@ -288,6 +287,5 @@ private:
   Policy policy_;
 };
 
-} // namespace intrusive
 } // namespace caf
 

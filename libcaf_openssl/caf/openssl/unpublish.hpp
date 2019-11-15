@@ -30,8 +30,7 @@
 
 #include "caf/openssl/manager.hpp"
 
-namespace caf {
-namespace openssl {
+namespace caf::openssl {
 
 /// Unpublishes `whom` by closing `port` or all assigned ports if `port == 0`.
 /// @param whom Actor that should be unpublished at `port`.
@@ -45,6 +44,5 @@ expected<void> unpublish(const Handle& whom, uint16_t port = 0) {
   return f(unpublish_atom::value, port);
 }
 
-} // namespace openssl
 } // namespace caf
 

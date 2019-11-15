@@ -33,8 +33,7 @@
 #include "caf/logger.hpp"
 #include "caf/message_id.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class F, class T>
 struct fan_in_responses_helper {
@@ -130,11 +129,9 @@ private:
   std::shared_ptr<size_t> pending;
 };
 
-} // namespace detail
 } // namespace caf
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 /// Enables a `response_handle` to fan-in multiple responses into a single
 /// result (a `vector` of individual values) for the client.
@@ -217,5 +214,4 @@ private:
   message_id_list ids_;
 };
 
-} // namespace policy
 } // namespace caf

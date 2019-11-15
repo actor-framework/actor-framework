@@ -23,8 +23,7 @@
 #include "caf/inbound_path.hpp"
 #include "caf/logger.hpp"
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 namespace {
 
@@ -69,5 +68,4 @@ auto downstream_messages::quantum(const nested_queue_type& q,
   return x * static_cast<deficit_type>(q.policy().handler->desired_batch_size);
 }
 
-} // namespace policy
 } // namespace caf

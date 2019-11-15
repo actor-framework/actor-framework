@@ -27,8 +27,7 @@
 #include "caf/intrusive/task_queue.hpp"
 #include "caf/intrusive/task_result.hpp"
 
-namespace caf {
-namespace intrusive {
+namespace caf::intrusive {
 
 /// A Deficit Round Robin queue with an internal cache for allowing skipping
 /// consumers.
@@ -265,6 +264,5 @@ private:
   cache_type cache_;
 };
 
-} // namespace intrusive
 } // namespace caf
 

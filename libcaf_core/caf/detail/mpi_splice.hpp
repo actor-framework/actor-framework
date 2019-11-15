@@ -25,8 +25,7 @@
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class T, class... Lists>
 struct mpi_splice_by_input;
@@ -85,6 +84,5 @@ struct mpi_splice<Target, type_list<Ts...>, List> {
   using type = typename tl_apply<filtered_list, Target>::type;
 };
 
-} // namespace detail
 } // namespace caf
 

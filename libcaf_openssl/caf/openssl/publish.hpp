@@ -29,8 +29,7 @@
 #include "caf/typed_actor.hpp"
 #include "caf/actor_control_block.hpp"
 
-namespace caf {
-namespace openssl {
+namespace caf::openssl {
 
 /// @private
 expected<uint16_t> publish(actor_system& sys, const strong_actor_ptr& whom,
@@ -55,6 +54,5 @@ expected<uint16_t> publish(const Handle& whom, uint16_t port,
                  sys.message_types(whom), port, in, reuse);
 }
 
-} // namespace openssl
 } // namespace caf
 

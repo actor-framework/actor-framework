@@ -29,8 +29,7 @@
 
 #include "caf/detail/type_traits.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class T>
 struct is_message_id_wrapper {
@@ -133,6 +132,5 @@ public:
   }
 };
 
-} // namespace detail
 } // namespace caf
 

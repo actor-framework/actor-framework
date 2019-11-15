@@ -113,9 +113,7 @@ auto port_of(sockaddr_in6& what) -> decltype(what.sin6_port)& {
 
 } // namespace
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 // poll vs epoll backend
 #ifdef CAF_POLL_MULTIPLEXER
@@ -945,6 +943,4 @@ new_local_udp_endpoint_impl(uint16_t port, const char* addr, bool reuse,
   return std::make_pair(fd, proto);
 }
 
-} // namespace network
-} // namespace io
 } // namespace caf

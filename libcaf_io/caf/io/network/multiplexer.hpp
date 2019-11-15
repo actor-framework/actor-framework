@@ -36,9 +36,7 @@
 #include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/native_socket.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 class multiplexer_backend;
 
@@ -169,7 +167,5 @@ protected:
 
 using multiplexer_ptr = std::unique_ptr<multiplexer>;
 
-} // namespace network
-} // namespace io
 } // namespace caf
 

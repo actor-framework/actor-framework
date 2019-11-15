@@ -27,8 +27,7 @@
 
 #include "caf/detail/shared_spinlock.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 using actor_msg_vec = std::vector<std::pair<actor, message>>;
 
@@ -123,7 +122,6 @@ private:
   Join jf_;  // join function
 };
 
-} // namespace detail
 } // namespace caf
 
 

@@ -21,8 +21,7 @@
 #include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/native_socket.hpp"
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 /// Policy object for wrapping default UDP operations.
 struct udp {
@@ -49,5 +48,4 @@ struct udp {
   }
 };
 
-} // namespace policy
 } // namespace caf

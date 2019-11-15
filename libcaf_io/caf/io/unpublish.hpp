@@ -24,8 +24,7 @@
 
 #include "caf/io/middleman.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 /// Unpublishes `whom` by closing `port` or all assigned ports if `port == 0`.
 /// @param whom Actor that should be unpublished at `port`.
@@ -37,6 +36,5 @@ expected<void> unpublish(const Handle& whom, uint16_t port = 0) {
   return whom.home_system().middleman().unpublish(whom, port);
 }
 
-} // namespace io
 } // namespace caf
 

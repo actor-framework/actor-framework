@@ -28,9 +28,7 @@
 #include "caf/settings.hpp"
 #include "caf/streambuf.hpp"
 
-namespace caf {
-namespace io {
-namespace basp {
+namespace caf::io::basp {
 
 instance::callee::callee(actor_system& sys, proxy_registry::backend& backend)
   : namespace_(sys, backend) {
@@ -507,6 +505,4 @@ void instance::forward(execution_unit* ctx, const node_id& dest_node,
   }
 }
 
-} // namespace basp
-} // namespace io
 } // namespace caf

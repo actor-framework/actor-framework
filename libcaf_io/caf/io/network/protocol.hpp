@@ -23,9 +23,7 @@
 
 #include "caf/meta/type_name.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// Bundles protocol information for network and transport layer communication.
 struct protocol {
@@ -64,7 +62,5 @@ typename Inspector::result_type inspect(Inspector& f, protocol& x) {
 /// @relates protocol
 std::string to_string(const protocol& x);
 
-} // namespace network
-} // namespace io
 } // namespace caf
 

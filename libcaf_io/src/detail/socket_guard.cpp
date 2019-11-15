@@ -26,8 +26,7 @@
 
 #include "caf/logger.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 socket_guard::socket_guard(io::network::native_socket fd) : fd_(fd) {
   // nop
@@ -51,5 +50,4 @@ void socket_guard::close() {
   }
 }
 
-} // namespace detail
 } // namespace caf

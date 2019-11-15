@@ -20,8 +20,7 @@
 
 #include <type_traits>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Checks wheter `T` is in the template parameter pack `Ts`.
 template <class T, class... Ts>
@@ -36,6 +35,5 @@ struct is_one_of<T, T, Ts...> : std::true_type {};
 template <class T, class U, class... Ts>
 struct is_one_of<T, U, Ts...> : is_one_of<T, Ts...> {};
 
-} // namespace detail
 } // namespace caf
 

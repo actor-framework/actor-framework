@@ -23,8 +23,7 @@
 #include "caf/fwd.hpp"
 #include "caf/group.hpp"
 
-namespace caf {
-namespace mixin {
+namespace caf::mixin {
 
 /// Marker for `subscriber`.
 struct subscriber_base {};
@@ -97,6 +96,5 @@ private:
   subscriptions subscriptions_;
 };
 
-} // namespace mixin
 } // namespace caf
 

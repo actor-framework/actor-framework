@@ -39,8 +39,7 @@
 #include "caf/timespan.hpp"
 #include "caf/timestamp.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class stringification_inspector {
 public:
@@ -296,5 +295,4 @@ private:
   std::string& result_;
 };
 
-} // namespace detail
 } // namespace caf

@@ -22,8 +22,7 @@
 
 #include "caf/memory_managed.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class disposer {
 public:
@@ -38,7 +37,6 @@ public:
   }
 };
 
-} // namespace detail
 } // namespace caf
 
 

@@ -22,8 +22,7 @@
 #include "caf/intrusive_cow_ptr.hpp"
 #include "caf/make_counted.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 dynamic_message_data::dynamic_message_data() : type_token_(0xFFFFFFFF) {
   // nop
@@ -120,5 +119,4 @@ dynamic_message_data* intrusive_cow_ptr_unshare(dynamic_message_data*& ptr) {
   return default_intrusive_cow_ptr_unshare(ptr);
 }
 
-} // namespace detail
 } // namespace caf

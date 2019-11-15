@@ -37,9 +37,7 @@ CAF_PUSH_UNUSED_LABEL_WARNING
 
 #include "caf/detail/parser/fsm.hpp"
 
-namespace caf {
-namespace detail {
-namespace parser {
+namespace caf::detail::parser {
 
 // Example input:
 //
@@ -337,8 +335,6 @@ void read_ini(State& ps, Consumer&& consumer) {
   // clang-format on
 }
 
-} // namespace parser
-} // namespace detail
 } // namespace caf
 
 #include "caf/detail/parser/fsm_undef.hpp"

@@ -26,8 +26,7 @@
 #include "caf/io/fwd.hpp"
 #include "caf/io/middleman_actor.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 /// Default implementation of the `middleman_actor` interface.
 class middleman_actor_impl : public middleman_actor::base {
@@ -92,6 +91,5 @@ private:
   std::map<endpoint, std::vector<response_promise>> pending_;
 };
 
-} // namespace io
 } // namespace caf
 

@@ -21,8 +21,7 @@
 #include <iomanip>
 #include <sstream>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 error serialized_size_inspector::begin_object(uint16_t& nr, std::string& name) {
   if (nr != 0)
@@ -144,5 +143,4 @@ error serialized_size_inspector::apply_impl(std::u32string& x) {
   return none;
 }
 
-} // namespace detail
 } // namespace caf

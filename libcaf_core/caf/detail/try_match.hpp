@@ -27,8 +27,7 @@
 
 #include "caf/detail/type_list.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 struct meta_element {
   atom_value v;
@@ -76,6 +75,5 @@ struct meta_elements<type_list<Ts...>> {
 bool try_match(const type_erased_tuple& xs, const meta_element* iter,
                size_t ps);
 
-} // namespace detail
 } // namespace caf
 

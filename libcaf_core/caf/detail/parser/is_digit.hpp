@@ -18,9 +18,7 @@
 
 #pragma once
 
-namespace caf {
-namespace detail {
-namespace parser {
+namespace caf::detail::parser {
 
 /// Returns whether `c` is a valid digit for a given base.
 template <int Base>
@@ -48,7 +46,5 @@ inline bool is_digit<16>(char c) {
          || (c >= 'a' && c <= 'f');
 }
 
-} // namespace parser
-} // namespace detail
 } // namespace caf
 

@@ -65,9 +65,7 @@ struct epoll_event;
 #define CAF_EPOLL_MULTIPLEXER
 #endif
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 // Define type aliases based on backend type.
 #ifdef CAF_POLL_MULTIPLEXER
@@ -284,6 +282,4 @@ new_local_udp_endpoint_impl(uint16_t port, const char* addr,
                             bool reuse_addr = false,
                             optional<protocol::network> preferred = none);
 
-} // namespace network
-} // namespace io
 } // namespace caf

@@ -50,8 +50,7 @@
 #  include <sys/types.h>
 #endif
 
-namespace caf {
-namespace openssl {
+namespace caf::openssl {
 
 namespace {
 
@@ -267,5 +266,4 @@ io::middleman_actor make_middleman_actor(actor_system& sys, actor db) {
            : sys.spawn<middleman_actor_impl, hidden>(std::move(db));
 }
 
-} // namespace openssl
 } // namespace caf

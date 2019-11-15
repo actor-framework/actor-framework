@@ -31,8 +31,7 @@
 
 #include "caf/event_based_actor.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 void abstract_broker::enqueue(strong_actor_ptr src, message_id mid, message msg,
                               execution_unit*) {
@@ -395,5 +394,4 @@ void abstract_broker::launch_servant(datagram_servant_ptr& ptr) {
     ptr->launch();
 }
 
-} // namespace io
 } // namespace caf

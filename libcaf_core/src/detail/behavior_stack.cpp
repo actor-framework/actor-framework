@@ -22,8 +22,7 @@
 #include "caf/local_actor.hpp"
 #include "caf/none.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 void behavior_stack::pop_back() {
   CAF_ASSERT(!elements_.empty());
@@ -43,5 +42,4 @@ void behavior_stack::clear() {
   }
 }
 
-} // namespace detail
 } // namespace caf

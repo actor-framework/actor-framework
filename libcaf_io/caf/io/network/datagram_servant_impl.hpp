@@ -26,9 +26,7 @@
 
 #include "caf/policy/udp.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// Default datagram servant implementation.
 class datagram_servant_impl : public datagram_servant {
@@ -77,6 +75,4 @@ private:
   datagram_handler_impl<policy::udp> handler_;
 };
 
-} // namespace network
-} // namespace io
 } // namespace caf

@@ -23,8 +23,7 @@
 #include <iterator>
 #include <type_traits>
 
-namespace caf {
-namespace intrusive {
+namespace caf::intrusive {
 
 // A forward iterator for intrusive lists.
 template <class T>
@@ -126,6 +125,5 @@ bool operator!=(const forward_iterator<T>& x,
   return x.ptr != y.ptr;
 }
 
-} // namespace intrusive
 } // namespace caf
 

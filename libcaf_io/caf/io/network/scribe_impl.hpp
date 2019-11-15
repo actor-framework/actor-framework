@@ -26,9 +26,7 @@
 
 #include "caf/policy/tcp.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// Default scribe implementation.
 class scribe_impl : public scribe {
@@ -62,6 +60,4 @@ protected:
   stream_impl<policy::tcp> stream_;
 };
 
-} // namespace network
-} // namespace io
 } // namespace caf

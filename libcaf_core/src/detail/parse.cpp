@@ -43,8 +43,7 @@
     parser::read_##parser_name(ps, make_consumer(x));                          \
   }
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 struct literal {
   string_view str;
@@ -230,5 +229,4 @@ void parse_element(string_parser_state& ps, std::string& x,
   ps.code = ps.at_end() ? pec::success : pec::trailing_character;
 }
 
-} // namespace detail
 } // namespace caf

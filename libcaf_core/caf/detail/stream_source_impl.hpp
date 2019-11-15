@@ -27,8 +27,7 @@
 #include "caf/stream_source.hpp"
 #include "caf/stream_source_trait.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class Driver>
 class stream_source_impl : public Driver::source_type {
@@ -94,6 +93,5 @@ typename Driver::source_ptr_type make_stream_source(scheduled_actor* self,
   return make_counted<impl>(self, std::forward<Ts>(xs)...);
 }
 
-} // namespace detail
 } // namespace caf
 

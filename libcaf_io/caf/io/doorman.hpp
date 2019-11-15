@@ -29,8 +29,7 @@
 #include "caf/io/system_messages.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 using doorman_base = broker_servant<network::acceptor_manager, accept_handle,
                                     new_connection_msg>;
@@ -56,7 +55,6 @@ protected:
 
 using doorman_ptr = intrusive_ptr<doorman>;
 
-} // namespace io
 } // namespace caf
 
 // Allows the `middleman_actor` to create a `doorman` and then send it to the

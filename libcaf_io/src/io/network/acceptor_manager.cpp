@@ -18,14 +18,10 @@
 
 #include "caf/io/network/acceptor_manager.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 acceptor_manager::~acceptor_manager() {
   // nop
 }
 
-} // namespace network
-} // namespace io
 } // namespace caf

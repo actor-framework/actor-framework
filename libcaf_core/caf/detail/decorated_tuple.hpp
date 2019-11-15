@@ -29,8 +29,7 @@
 #include "caf/detail/tuple_vals.hpp"
 #include "caf/detail/message_data.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class decorated_tuple : public message_data {
 public:
@@ -96,6 +95,5 @@ private:
   uint32_t type_token_;
 };
 
-} // namespace detail
 } // namespace caf
 

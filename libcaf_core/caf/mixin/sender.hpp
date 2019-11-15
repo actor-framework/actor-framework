@@ -39,8 +39,7 @@
 #include "caf/send.hpp"
 #include "caf/typed_actor_view_base.hpp"
 
-namespace caf {
-namespace mixin {
+namespace caf::mixin {
 
 /// A `sender` is an actor that supports `self->send(...)`.
 template <class Base, class Subtype>
@@ -251,5 +250,4 @@ private:
   }
 };
 
-} // namespace mixin
 } // namespace caf

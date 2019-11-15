@@ -18,9 +18,7 @@
 
 #pragma once
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// Denotes the returned state of read and write operations on sockets.
 enum class rw_state {
@@ -32,6 +30,4 @@ enum class rw_state {
   indeterminate
 };
 
-} // namespace network
-} // namespace io
 } // namespace caf

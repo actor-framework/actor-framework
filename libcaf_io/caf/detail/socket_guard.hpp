@@ -20,8 +20,7 @@
 
 #include "caf/io/network/native_socket.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class socket_guard {
 public:
@@ -37,5 +36,4 @@ private:
   io::network::native_socket fd_;
 };
 
-} // namespace detail
 } // namespace caf

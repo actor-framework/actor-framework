@@ -25,8 +25,7 @@
 
 #include "caf/openssl/manager.hpp"
 
-namespace caf {
-namespace openssl {
+namespace caf::openssl {
 
 /// Establish a new connection to the actor at `host` on given `port`.
 /// @param host Valid hostname or IP address.
@@ -52,5 +51,4 @@ expected<strong_actor_ptr> remote_actor(actor_system& sys,
   return sec::unexpected_actor_messaging_interface;
 }
 
-} // namespace openssl
 } // namespace caf

@@ -29,9 +29,7 @@
 #include "caf/io/basp/header.hpp"
 #include "caf/io/basp/connection_state.hpp"
 
-namespace caf {
-namespace io {
-namespace basp {
+namespace caf::io::basp {
 
 // stores meta information for active endpoints
 struct endpoint_context {
@@ -50,7 +48,5 @@ struct endpoint_context {
   optional<response_promise> callback;
 };
 
-} // namespace basp
-} // namespace io
 } // namespace caf
 

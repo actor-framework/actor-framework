@@ -23,8 +23,7 @@
 #include "caf/defaults.hpp"
 #include "caf/io/basp/instance.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 namespace {
 
@@ -81,5 +80,4 @@ behavior connection_helper(stateful_actor<connection_helper_state>* self,
   };
 }
 
-} // namespace io
 } // namespace caf

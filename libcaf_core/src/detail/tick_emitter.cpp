@@ -21,8 +21,7 @@
 
 #include "caf/logger.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 tick_emitter::tick_emitter()
   : start_(duration_type{0}), interval_(0), last_tick_id_(0) {
@@ -88,5 +87,4 @@ tick_emitter::next_timeout(time_point t,
   return start_ + (interval_ * tick_id);
 }
 
-} // namespace detail
 } // namespace caf

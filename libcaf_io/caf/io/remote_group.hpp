@@ -25,8 +25,7 @@
 
 #include "caf/io/middleman.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 inline expected<group> remote_group(actor_system& sys,
                                     const std::string& group_uri) {
@@ -39,6 +38,5 @@ inline expected<group> remote_group(actor_system& sys,
   return sys.middleman().remote_group(group_identifier, host, port);
 }
 
-} // namespace io
 } // namespace caf
 

@@ -33,9 +33,7 @@ constexpr size_t receive_buffer_size = std::numeric_limits<uint16_t>::max();
 
 } // namespace
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 datagram_handler::datagram_handler(default_multiplexer& backend_ref,
                                    native_socket sockfd)
@@ -216,6 +214,4 @@ void datagram_handler::handle_error() {
   // no need to call backend().del() here
 }
 
-} // namespace network
-} // namespace io
 } // namespace caf

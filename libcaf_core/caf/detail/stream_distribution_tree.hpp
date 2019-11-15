@@ -26,8 +26,7 @@
 #include "caf/scheduled_actor.hpp"
 #include "caf/stream_manager.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// A stream distribution tree consist of peers forming an acyclic graph. The
 /// user is responsible for making sure peers do not form a loop. Data is
@@ -144,6 +143,5 @@ private:
   Policy policy_;
 };
 
-} // namespace detail
 } // namespace caf
 

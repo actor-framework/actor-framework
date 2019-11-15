@@ -22,8 +22,7 @@
 
 #include "caf/deep_to_string.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Enables automagical string conversion for `CAF_ARG`.
 template <class T>
@@ -88,6 +87,5 @@ range_arg_wrapper<Iterator> make_arg_wrapper(const char* name, Iterator first,
   return {name, first, last};
 }
 
-} // namespace detail
 } // namespace caf
 

@@ -18,12 +18,10 @@
 
 #pragma once
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Sets the name thread shown by the OS. Not supported on all plattforms
 /// (no-op on Windows).
 void set_thread_name(const char* name);
 
-} // namespace detail
 } // namespace caf

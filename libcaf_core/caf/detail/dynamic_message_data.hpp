@@ -24,8 +24,7 @@
 
 #include "caf/detail/message_data.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class dynamic_message_data : public message_data {
 public:
@@ -90,6 +89,5 @@ void intrusive_ptr_release(const dynamic_message_data*);
 
 dynamic_message_data* intrusive_cow_ptr_unshare(dynamic_message_data*&);
 
-} // namespace detail
 } // namespace caf
 

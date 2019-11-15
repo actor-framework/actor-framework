@@ -21,9 +21,7 @@
 #include <string>
 #include <cstdint>
 
-namespace caf {
-namespace io {
-namespace basp {
+namespace caf::io::basp {
 
 /// @addtogroup BASP
 
@@ -78,6 +76,4 @@ std::string to_string(message_type);
 
 /// @}
 
-} // namespace basp
-} // namespace io
 } // namespace caf

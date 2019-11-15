@@ -32,8 +32,7 @@
 #include "caf/io/connection_handle.hpp"
 #include "caf/io/network/receive_buffer.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 /// Signalizes a newly accepted connection from a {@link broker}.
 struct new_connection_msg {
@@ -182,6 +181,5 @@ inspect(Inspector& f, datagram_servant_closed_msg& x) {
   return f(meta::type_name("datagram_servant_closed_msg"), x.handles);
 }
 
-} // namespace io
 } // namespace caf
 

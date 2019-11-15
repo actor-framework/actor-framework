@@ -26,8 +26,7 @@
 #include "caf/error.hpp"
 #include "caf/message_id.hpp"
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 /// Trivial policy for handling a single result in a `response_handler`.
 /// @relates mixin::requester
@@ -77,5 +76,4 @@ private:
   message_id mid_;
 };
 
-} // namespace policy
 } // namespace caf

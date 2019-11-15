@@ -24,8 +24,7 @@
 #include "caf/stream_source_driver.hpp"
 #include "caf/stream_source_trait.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Identifies an unbound sequence of messages.
 template <class DownstreamManager, class Pull, class Done, class Finalize>
@@ -69,6 +68,5 @@ private:
   Finalize fin_;
 };
 
-} // namespace detail
 } // namespace caf
 

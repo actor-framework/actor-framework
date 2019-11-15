@@ -44,8 +44,7 @@
 #include "caf/policy/work_stealing.hpp"
 #include "caf/scheduler/coordinator.hpp"
 
-namespace caf {
-namespace scheduler {
+namespace caf::scheduler {
 
 /// A coordinator which keeps fine-grained profiling state about its workers
 /// and their jobs.
@@ -297,6 +296,5 @@ public:
   clock_type::duration last_flush_ = clock_type::duration::zero();
 };
 
-} // namespace scheduler
 } // namespace caf
 

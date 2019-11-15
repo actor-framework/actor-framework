@@ -25,8 +25,7 @@
 #include "caf/intrusive/task_queue.hpp"
 #include "caf/intrusive/task_result.hpp"
 
-namespace caf {
-namespace intrusive {
+namespace caf::intrusive {
 
 /// A Deficit Round Robin queue.
 template <class Policy>
@@ -124,6 +123,5 @@ private:
   deficit_type deficit_ = 0;
 };
 
-} // namespace intrusive
 } // namespace caf
 

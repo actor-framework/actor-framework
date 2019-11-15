@@ -24,9 +24,7 @@
 #include "caf/io/network/operation.hpp"
 #include "caf/io/network/native_socket.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// A concrete acceptor with a technology-dependent policy.
 template <class ProtocolPolicy>
@@ -47,6 +45,4 @@ private:
   ProtocolPolicy policy_;
 };
 
-} // namespace network
-} // namespace io
 } // namespace caf

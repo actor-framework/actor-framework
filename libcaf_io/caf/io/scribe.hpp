@@ -27,8 +27,7 @@
 #include "caf/io/system_messages.hpp"
 #include "caf/io/network/stream_manager.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 using scribe_base = broker_servant<network::stream_manager, connection_handle,
                                    new_data_msg>;
@@ -67,7 +66,6 @@ protected:
 
 using scribe_ptr = intrusive_ptr<scribe>;
 
-} // namespace io
 } // namespace caf
 
 // Allows the `middleman_actor` to create a `scribe` and then send it to the

@@ -18,9 +18,7 @@
 
 #pragma once
 
-namespace caf {
-namespace detail {
-namespace parser {
+namespace caf::detail::parser {
 
 /// Returns whether `c` equals `C`.
 template <char C>
@@ -35,8 +33,6 @@ bool is_ichar(char c) {
   return c == C || c == (C - 32);
 }
 
-} // namespace parser
-} // namespace detail
 } // namespace caf
 
 

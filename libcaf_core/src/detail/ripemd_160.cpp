@@ -380,8 +380,7 @@ void MDfinish(dword* MDbuf, const byte* strptr, dword lswlen, dword mswlen) {
 
 } // namespace
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 void ripemd_160(std::array<uint8_t, 20>& storage, const std::string& data) {
   dword MDbuf[5]; // contains (A, B, C, D(, E))
@@ -411,5 +410,4 @@ void ripemd_160(std::array<uint8_t, 20>& storage, const std::string& data) {
   }
 }
 
-} // namespace detail
 } // namespace caf

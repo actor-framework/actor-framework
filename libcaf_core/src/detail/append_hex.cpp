@@ -18,8 +18,7 @@
 
 #include "caf/detail/append_hex.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 void append_hex(std::string& result, const uint8_t* xs, size_t n) {
   if (n == 0) {
@@ -36,5 +35,4 @@ void append_hex(std::string& result, const uint8_t* xs, size_t n) {
   }
 }
 
-} // namespace detail
 } // namespace caf

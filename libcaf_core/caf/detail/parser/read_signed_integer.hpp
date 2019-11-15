@@ -34,9 +34,7 @@ CAF_PUSH_UNUSED_LABEL_WARNING
 
 #include "caf/detail/parser/fsm.hpp"
 
-namespace caf {
-namespace detail {
-namespace parser {
+namespace caf::detail::parser {
 
 /// Reads a number, i.e., on success produces either an `int64_t` or a
 /// `double`.
@@ -140,8 +138,6 @@ void read_signed_integer(State& ps, Consumer&& consumer) {
   // clang-format on
 }
 
-} // namespace parser
-} // namespace detail
 } // namespace caf
 
 #include "caf/detail/parser/fsm_undef.hpp"

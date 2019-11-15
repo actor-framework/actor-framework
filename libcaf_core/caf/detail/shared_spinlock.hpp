@@ -21,8 +21,7 @@
 #include <atomic>
 #include <cstddef>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// A spinlock implementation providing shared and exclusive locking.
 class shared_spinlock {
@@ -48,6 +47,5 @@ public:
 
 };
 
-} // namespace detail
 } // namespace caf
 

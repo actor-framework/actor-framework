@@ -22,8 +22,7 @@
 
 #include "caf/meta/annotation.hpp"
 
-namespace caf {
-namespace meta {
+namespace caf::meta {
 
 template <class F>
 struct save_callback_t : annotation {
@@ -51,6 +50,5 @@ save_callback_t<F> save_callback(F fun) {
   return {std::move(fun)};
 }
 
-} // namespace meta
 } // namespace caf
 

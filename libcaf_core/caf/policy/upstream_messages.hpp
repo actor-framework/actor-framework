@@ -23,8 +23,7 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/unit.hpp"
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 /// Configures a DRR queue for holding upstream messages.
 class upstream_messages {
@@ -58,6 +57,5 @@ public:
   }
 };
 
-} // namespace policy
 } // namespace caf
 

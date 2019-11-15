@@ -29,8 +29,7 @@
 #include "caf/message_id.hpp"
 #include "caf/no_stages.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class Self, class Sender, class Handle, class... Ts>
 void profiled_send(Self* self, Sender&& sender, const Handle& receiver,
@@ -60,5 +59,4 @@ void profiled_send(Self* self, Sender&& sender, const Handle& receiver,
   }
 }
 
-} // namespace detail
 } // namespace caf

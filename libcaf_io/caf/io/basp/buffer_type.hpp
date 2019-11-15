@@ -20,9 +20,7 @@
 
 #include <vector>
 
-namespace caf {
-namespace io {
-namespace basp {
+namespace caf::io::basp {
 
 /// @addtogroup BASP
 
@@ -31,8 +29,6 @@ using buffer_type = std::vector<char>;
 
 /// @}
 
-} // namespace basp
-} // namespace io
 } // namespace caf
 
 

@@ -35,8 +35,7 @@ class typed_actor;
 
 } // namespace caf
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class Arguments, class Signature>
 struct input_is_eval_impl : std::false_type {};
@@ -140,6 +139,5 @@ struct extend_with_helper<typed_actor<Xs...>, typed_actor<Ys...>, Ts...>
   // nop
 };
 
-} // namespace detail
 } // namespace caf
 

@@ -20,8 +20,7 @@
 
 #include "caf/serializer.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class serialized_size_inspector final : public serializer {
 public:
@@ -83,5 +82,4 @@ size_t serialized_size(actor_system& sys, const T& x) {
   return f.result();
 }
 
-} // namespace detail
 } // namespace caf

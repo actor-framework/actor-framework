@@ -28,8 +28,7 @@
 #include "caf/detail/tbind.hpp"
 #include "caf/detail/type_pair.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// A list of types.
 template <class... Ts>
@@ -1239,5 +1238,4 @@ struct tl_from<T<Ts...>> {
 template <class T>
 using tl_from_t = typename tl_from<T>::type;
 
-} // namespace detail
 } // namespace caf

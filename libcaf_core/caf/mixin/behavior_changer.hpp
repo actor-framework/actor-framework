@@ -24,8 +24,7 @@
 #include "caf/behavior_policy.hpp"
 #include "caf/fwd.hpp"
 
-namespace caf {
-namespace mixin {
+namespace caf::mixin {
 
 /// A `behavior_changer` is an actor that supports
 /// `self->become(...)` and `self->unbecome()`.
@@ -81,5 +80,4 @@ private:
   }
 };
 
-} // namespace mixin
 } // namespace caf

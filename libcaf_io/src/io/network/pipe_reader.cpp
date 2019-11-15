@@ -30,9 +30,7 @@
 #  include <unistd.h>
 #endif
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 pipe_reader::pipe_reader(default_multiplexer& dm)
   : event_handler(dm, invalid_native_socket) {
@@ -75,6 +73,4 @@ void pipe_reader::init(native_socket sock_fd) {
   fd_ = sock_fd;
 }
 
-} // namespace network
-} // namespace io
 } // namespace caf

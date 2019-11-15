@@ -28,8 +28,7 @@
 
 #include "caf/policy/arg.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class Driver>
 class stream_sink_impl : public Driver::sink_type {
@@ -83,6 +82,5 @@ typename Driver::sink_ptr_type make_stream_sink(scheduled_actor* self,
   return make_counted<impl>(self, std::forward<Ts>(xs)...);
 }
 
-} // namespace detail
 } // namespace caf
 

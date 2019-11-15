@@ -24,14 +24,12 @@
 
 #include "caf/io/middleman.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 /// Closes port `port` regardless of whether an actor is published to it.
 inline expected<void> close(actor_system& sys, uint16_t port) {
   return sys.middleman().close(port);
 }
 
-} // namespace io
 } // namespace caf
 

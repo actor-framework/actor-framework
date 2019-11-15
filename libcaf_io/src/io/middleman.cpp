@@ -63,8 +63,7 @@
 #  include <io.h>
 #endif // CAF_WINDOWS
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 namespace {
 
@@ -399,5 +398,4 @@ int middleman::exec_slave_mode(actor_system&, const actor_system_config&) {
   return 0;
 }
 
-} // namespace io
 } // namespace caf

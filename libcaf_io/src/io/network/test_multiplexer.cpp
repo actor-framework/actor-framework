@@ -24,9 +24,7 @@
 #include "caf/raise_error.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 namespace {
 
@@ -1037,6 +1035,4 @@ void test_multiplexer::exec(resumable_ptr& ptr) {
   }
 }
 
-} // namespace network
-} // namespace io
 } // namespace caf

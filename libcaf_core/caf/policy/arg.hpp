@@ -18,8 +18,7 @@
 
 #pragma once
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 /// Provides a wrapper to pass policy types as values to functions.
 template <class... Ts>
@@ -31,6 +30,5 @@ public:
 template <class... Ts>
 const arg<Ts...> arg<Ts...>::value = arg<Ts...>{};
 
-} // namespace policy
 } // namespace caf
 

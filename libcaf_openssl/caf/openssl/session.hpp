@@ -40,8 +40,7 @@ CAF_POP_WARNINGS
 # define CAF_SSL_HAS_ECDH_AUTO
 #endif
 
-namespace caf {
-namespace openssl {
+namespace caf::openssl {
 
 using native_socket = io::network::native_socket;
 
@@ -85,6 +84,5 @@ using session_ptr = std::unique_ptr<session>;
 session_ptr make_session(actor_system& sys, native_socket fd,
                          bool from_accepted_socket);
 
-} // namespace openssl
 } // namespace caf
 

@@ -37,9 +37,7 @@ CAF_PUSH_UNUSED_LABEL_WARNING
 
 #include "caf/detail/parser/fsm.hpp"
 
-namespace caf {
-namespace detail {
-namespace parser {
+namespace caf::detail::parser {
 
 //  IPv6address =                            6( h16 ":" ) ls32
 //              /                       "::" 5( h16 ":" ) ls32
@@ -292,8 +290,6 @@ void read_ipv6_address(State& ps, Consumer&& consumer) {
   fin();
 }
 
-} // namespace parser
-} // namespace detail
 } // namespace caf
 
 #include "caf/detail/parser/fsm_undef.hpp"

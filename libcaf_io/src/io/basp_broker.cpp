@@ -52,8 +52,7 @@ THREAD_LOCAL caf::node_id* t_last_hop = nullptr;
 
 } // namespace
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
@@ -605,5 +604,4 @@ strong_actor_ptr basp_broker::this_actor() {
   return ctrl();
 }
 
-} // namespace io
 } // namespace caf

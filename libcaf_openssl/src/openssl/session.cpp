@@ -59,8 +59,7 @@ CAF_POP_WARNINGS
 
 #endif // CAF_LINUX
 
-namespace caf {
-namespace openssl {
+namespace caf::openssl {
 
 namespace {
 
@@ -313,5 +312,4 @@ session_ptr make_session(actor_system& sys, native_socket fd,
   return ptr;
 }
 
-} // namespace openssl
 } // namespace caf

@@ -18,8 +18,7 @@
 
 #pragma once
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class First, typename Second>
 struct type_pair {
@@ -42,6 +41,5 @@ struct is_type_pair<type_pair<First, Second>> {
   static constexpr bool value = true;
 };
 
-} // namespace detail
 } // namespace caf
 

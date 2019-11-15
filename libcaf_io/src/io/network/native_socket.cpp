@@ -81,9 +81,7 @@ auto port_of(sockaddr& what)
 
 } // namespace
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 #ifdef CAF_WINDOWS
 const int ec_out_of_memory = WSAENOBUFS;
@@ -473,6 +471,4 @@ void shutdown_both(native_socket fd) {
   ::shutdown(fd, both_channels);
 }
 
-} // namespace network
-} // namespace io
 } // namespace caf

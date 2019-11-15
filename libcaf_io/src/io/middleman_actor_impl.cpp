@@ -37,8 +37,7 @@
 #include "caf/io/network/default_multiplexer.hpp"
 #include "caf/io/network/interfaces.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 middleman_actor_impl::middleman_actor_impl(actor_config& cfg,
                                            actor default_broker)
@@ -250,5 +249,4 @@ middleman_actor_impl::open_udp(uint16_t port, const char* addr, bool reuse) {
                                                                reuse);
 }
 
-} // namespace io
 } // namespace caf

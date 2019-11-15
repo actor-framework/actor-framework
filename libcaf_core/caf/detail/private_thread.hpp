@@ -24,8 +24,7 @@
 
 #include "caf/fwd.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class private_thread {
 public:
@@ -62,6 +61,5 @@ private:
   actor_system& system_;
 };
 
-} // namespace detail
 } // namespace caf
 

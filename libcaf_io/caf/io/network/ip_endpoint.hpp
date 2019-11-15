@@ -33,9 +33,7 @@ struct sockaddr_storage;
 struct sockaddr_in;
 struct sockaddr_in6;
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 // hash for char*, see:
 // - https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
@@ -127,8 +125,6 @@ typename Inspector::result_type inspect(Inspector& fun, ip_endpoint& ep) {
              meta::load_callback(load), meta::save_callback(save));
 }
 
-} // namespace network
-} // namespace io
 } // namespace caf
 
 namespace std {

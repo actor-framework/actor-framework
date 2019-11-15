@@ -20,8 +20,7 @@
 
 #include "caf/detail/type_list.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// A list of integers (wraps a long... template parameter pack).
 template <long... Is>
@@ -117,6 +116,5 @@ struct il_range<Last, Last, Is...> {
   using type = int_list<Is...>;
 };
 
-} // namespace detail
 } // namespace caf
 

@@ -23,8 +23,7 @@
 #include "caf/make_type_erased_tuple_view.hpp"
 #include "caf/message_handler.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 namespace {
 
@@ -141,5 +140,4 @@ behavior_impl::pointer behavior_impl::or_else(const pointer& other) {
   return make_counted<combinator>(this, other);
 }
 
-} // namespace detail
 } // namespace caf

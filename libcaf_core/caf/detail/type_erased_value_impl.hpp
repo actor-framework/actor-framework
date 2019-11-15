@@ -28,8 +28,7 @@
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/try_serialize.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// @relates type_erased_value
 /// Default implementation for single type-erased values.
@@ -38,7 +37,7 @@ class type_erased_value_impl : public type_erased_value {
 public:
   // -- member types -----------------------------------------------------------
 
-  using value_type = typename detail::strip_reference_wrapper<T>::type;
+  using value_type = typename std::__strip_reference_wrapper<T>::type;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -169,6 +168,5 @@ private:
   T x_;
 };
 
-} // namespace detail
 } // namespace caf
 

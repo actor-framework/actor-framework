@@ -25,8 +25,7 @@
 #include "caf/io/network/native_socket.hpp"
 #include "caf/sec.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Predicate for `ccall` meaning "expected result of f is 0".
 inline bool cc_zero(int value) {
@@ -64,5 +63,4 @@ inline bool cc_valid_socket(caf::io::network::native_socket fd) {
     abort();                                                                   \
   } static_cast<void>(0)
 
-} // namespace detail
 } // namespace caf

@@ -23,8 +23,7 @@
 
 #include "caf/detail/type_list.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Compile-time list of integer types types.
 using int_types_by_size =
@@ -55,7 +54,6 @@ struct squashed_int {
 template <class T>
 using squashed_int_t = typename squashed_int<T>::type;
 
-} // namespace detail
 } // namespace caf
 
 

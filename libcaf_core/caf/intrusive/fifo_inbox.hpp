@@ -37,8 +37,7 @@
 
 #include "caf/detail/enqueue_result.hpp"
 
-namespace caf {
-namespace intrusive {
+namespace caf::intrusive {
 
 /// A FIFO inbox that combines an efficient thread-safe LIFO inbox with a FIFO
 /// queue for re-ordering incoming messages.
@@ -230,6 +229,5 @@ private:
   queue_type queue_;
 };
 
-} // namespace intrusive
 } // namespace caf
 

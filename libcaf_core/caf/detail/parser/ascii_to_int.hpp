@@ -19,9 +19,7 @@
 
 #pragma once
 
-namespace caf {
-namespace detail {
-namespace parser {
+namespace caf::detail::parser {
 
 template <int Base, class T>
 struct ascii_to_int {
@@ -48,6 +46,4 @@ struct ascii_to_int<16, T> {
   }
 };
 
-} // namespace parser
-} // namespace detail
 } // namespace caf

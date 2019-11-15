@@ -22,8 +22,7 @@
 #include "caf/catch_all.hpp"
 #include "caf/timeout_definition.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class blocking_behavior {
 public:
@@ -142,6 +141,5 @@ struct make_blocking_behavior_t {
 
 constexpr make_blocking_behavior_t make_blocking_behavior = make_blocking_behavior_t{};
 
-} // namespace detail
 } // namespace caf
 

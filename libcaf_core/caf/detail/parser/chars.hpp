@@ -20,9 +20,7 @@
 
 #include <cstring>
 
-namespace caf {
-namespace detail {
-namespace parser {
+namespace caf::detail::parser {
 
 struct any_char_t {};
 
@@ -54,7 +52,5 @@ extern const char decimal_chars[11];
 
 extern const char octal_chars[9];
 
-} // namespace parser
-} // namespace detail
 } // namespace caf
 

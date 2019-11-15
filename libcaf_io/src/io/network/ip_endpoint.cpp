@@ -46,9 +46,7 @@ using sa_family_t = short;
 using caf::detail::fnv_hash;
 using caf::detail::fnv_hash_append;
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 struct ip_endpoint::impl {
   sockaddr_storage addr;
@@ -251,6 +249,4 @@ error save_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h, uint16_t& p,
   return none;
 }
 
-} // namespace network
-} // namespace io
 } // namespace caf

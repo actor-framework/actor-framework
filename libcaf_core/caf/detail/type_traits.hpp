@@ -64,8 +64,7 @@
     static constexpr bool value = sfinae_type::value;                          \
   }
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 // -- backport of C++14 additions ----------------------------------------------
 
@@ -847,7 +846,6 @@ public:
   static constexpr bool value = sfinae_type::value;
 };
 
-} // namespace detail
 } // namespace caf
 
 #undef CAF_HAS_MEMBER_TRAIT

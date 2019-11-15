@@ -26,12 +26,10 @@
 
 #include "caf/detail/pp.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 void log_cstring_error(const char* cstring);
 
-} // namespace detail
 } // namespace caf
 
 #ifdef CAF_NO_EXCEPTIONS

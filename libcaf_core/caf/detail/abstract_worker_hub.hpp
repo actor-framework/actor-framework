@@ -24,8 +24,7 @@
 
 #include "caf/fwd.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// A central place where workers return to after finishing a task. A hub
 /// supports any number of workers that call `push`, but only a single master
@@ -75,5 +74,4 @@ protected:
   std::condition_variable cv_;
 };
 
-} // namespace detail
 } // namespace caf

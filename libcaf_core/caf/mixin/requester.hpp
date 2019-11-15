@@ -34,8 +34,7 @@
 #include "caf/response_handle.hpp"
 #include "caf/response_type.hpp"
 
-namespace caf {
-namespace mixin {
+namespace caf::mixin {
 
 /// A `requester` is an actor that supports
 /// `self->request(...).{then|await|receive}`.
@@ -161,5 +160,4 @@ public:
   }
 };
 
-} // namespace mixin
 } // namespace caf

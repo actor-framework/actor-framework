@@ -20,8 +20,7 @@
 
 #include "caf/logger.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 datagram_servant::datagram_servant(datagram_handle hdl)
   : datagram_servant_base(hdl) {
@@ -73,5 +72,4 @@ void datagram_servant::datagram_sent(execution_unit* ctx, datagram_handle hdl,
   invoke_mailbox_element_impl(ctx, tmp);
 }
 
-} // namespace io
 } // namespace caf

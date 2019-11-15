@@ -33,9 +33,7 @@
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/datagram_manager.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 class datagram_handler : public event_handler {
 public:
@@ -181,6 +179,4 @@ private:
   manager_ptr writer_;
 };
 
-} // namespace network
-} // namespace io
 } // namespace caf

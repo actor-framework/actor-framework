@@ -29,8 +29,7 @@
 #include "caf/io/network/datagram_manager.hpp"
 #include "caf/io/network/receive_buffer.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 using datagram_servant_base = broker_servant<network::datagram_manager,
                                              datagram_handle, new_datagram_msg>;
@@ -90,7 +89,6 @@ protected:
 
 using datagram_servant_ptr = intrusive_ptr<datagram_servant>;
 
-} // namespace io
 } // namespace caf
 
 // Allows the `middleman_actor` to create an `datagram_servant` and then send it

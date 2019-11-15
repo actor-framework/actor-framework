@@ -26,8 +26,7 @@
 #include "caf/abstract_group.hpp"
 #include "caf/abstract_channel.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class raw_access {
 
@@ -70,6 +69,5 @@ public:
 
 };
 
-} // namespace detail
 } // namespace caf
 

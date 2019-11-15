@@ -27,8 +27,7 @@
 
 #include "caf/intrusive/inbox_result.hpp"
 
-namespace caf {
-namespace intrusive {
+namespace caf::intrusive {
 
 /// An intrusive, thread-safe LIFO queue implementation for a single reader
 /// with any number of writers.
@@ -282,6 +281,5 @@ private:
   std::atomic<pointer> stack_;
 };
 
-} // namespace intrusive
 } // namespace caf
 

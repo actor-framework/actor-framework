@@ -25,8 +25,7 @@
 
 #include "caf/intrusive/task_result.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Drains a mailbox and sends an error message to each unhandled request.
 struct sync_request_bouncer {
@@ -45,6 +44,5 @@ struct sync_request_bouncer {
   }
 };
 
-} // namespace detail
 } // namespace caf
 
