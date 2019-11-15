@@ -50,9 +50,9 @@ public:
 
   using worker_type = transport_worker<application_type>;
 
-  using id_type = unit_t;
-
   using super = stream_transport_base<application_type>;
+
+  using id_type = typename super::id_type;
 
   using buffer_type = typename super::buffer_type;
 
@@ -187,12 +187,10 @@ private:
       auto write_ret = write(this->handle(), make_span(data, len));
       if (auto num_bytes = get_if<size_t>(&write_ret)) {
         CAF_LOG_DEBUG(CAF_ARG(this->handle_.id) << CAF_ARG(*num_bytes));
-        if (*num_bytes + written_ >= buf.size()) {
+        written_ += *num_bytes;
+        if (written_ >= buf.size()) {
           recycle();
           written_ = 0;
-        } else {
-          written_ += *num_bytes;
-          return false;
         }
       } else {
         auto err = get<sec>(write_ret);
@@ -213,6 +211,8 @@ private:
   size_t collected_;
   size_t max_;
   receive_policy_flag rd_flag_;
+  // TODO implement retries using this member!
+  // size_t max_consecutive_reads_;
 };
 
 } // namespace caf::net
