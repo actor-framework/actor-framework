@@ -22,15 +22,13 @@
 
 #include "caf/fwd.hpp"
 
-namespace caf {
-namespace mixin {
+namespace caf::mixin {
 
 // TODO: legacy API. Deprecate with 0.18, remove with 0.19.
 template <class T>
 struct is_blocking_requester : std::false_type {};
 
-} // namespace mixin
-} // namespace caf
+} // namespace caf::mixin
 
 namespace caf {
 
