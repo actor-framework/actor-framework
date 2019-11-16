@@ -19,63 +19,43 @@
 #pragma once
 
 #include <cstddef>
-#include <cstdint>
-#include <vector>
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <utility>
 
-#include "caf/byte.hpp"
-#include "caf/deserializer.hpp"
+#include "caf/error_code.hpp"
+#include "caf/fwd.hpp"
+#include "caf/sec.hpp"
 #include "caf/span.hpp"
+#include "caf/write_inspector.hpp"
 
 namespace caf {
 
 /// Implements the deserializer interface with a binary serialization protocol.
-class binary_deserializer final : public deserializer {
+class binary_deserializer : public write_inspector<binary_deserializer> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = deserializer;
+  using result_type = error;
+
+  using apply_result = error_code<sec>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  binary_deserializer(actor_system& sys, span<const byte> bytes);
-
-  binary_deserializer(execution_unit* ctx, span<const byte> bytes);
-
-  template <class T>
-  binary_deserializer(actor_system& sys, const std::vector<T>& buf)
-    : binary_deserializer(sys, as_bytes(make_span(buf))) {
-    // nop
+  template <class Container>
+  binary_deserializer(actor_system& sys, const Container& input) noexcept
+    : binary_deserializer(sys) {
+    reset(as_bytes(make_span(input)));
   }
 
-  template <class T>
-  binary_deserializer(execution_unit* ctx, const std::vector<T>& buf)
-    : binary_deserializer(ctx, as_bytes(make_span(buf))) {
-    // nop
+  template <class Container>
+  binary_deserializer(execution_unit* ctx, const Container& input) noexcept
+    : context_(ctx) {
+    reset(as_bytes(make_span(input)));
   }
-
-  binary_deserializer(actor_system& sys, const char* buf, size_t buf_size);
-
-  binary_deserializer(execution_unit* ctx, const char* buf, size_t buf_size);
-
-  // -- overridden member functions --------------------------------------------
-
-  error begin_object(uint16_t& typenr, std::string& name) override;
-
-  error end_object() override;
-
-  error begin_sequence(size_t& list_size) override;
-
-  error end_sequence() override;
-
-  error apply_raw(size_t num_bytes, void* data) override;
 
   // -- properties -------------------------------------------------------------
-
-  /// Returns the current read position.
-  const char* current() const CAF_DEPRECATED_MSG("use remaining() instead");
-
-  /// Returns the past-the-end iterator.
-  const char* end() const CAF_DEPRECATED_MSG("use remaining() instead");
 
   /// Returns how many bytes are still available to read.
   size_t remaining() const noexcept {
@@ -87,49 +67,99 @@ public:
     return make_span(current_, end_);
   }
 
+  /// Returns the current execution unit.
+  execution_unit* context() const noexcept {
+    return context_;
+  }
+
   /// Jumps `num_bytes` forward.
   /// @pre `num_bytes <= remaining()`
-  void skip(size_t num_bytes);
+  void skip(size_t num_bytes) noexcept;
 
   /// Assings a new input.
-  void reset(span<const byte> bytes);
+  void reset(span<const byte> bytes) noexcept;
 
-protected:
-  error apply_impl(int8_t&) override;
+  /// Returns the current read position.
+  const byte* current() const noexcept {
+    return current_;
+  }
 
-  error apply_impl(uint8_t&) override;
+  /// Returns the end of the assigned memory block.
+  const byte* end() const noexcept {
+    return end_;
+  }
 
-  error apply_impl(int16_t&) override;
+  // -- overridden member functions --------------------------------------------
 
-  error apply_impl(uint16_t&) override;
+  apply_result begin_object(uint16_t& typenr, std::string& name);
 
-  error apply_impl(int32_t&) override;
+  apply_result end_object() noexcept;
 
-  error apply_impl(uint32_t&) override;
+  apply_result begin_sequence(size_t& list_size) noexcept;
 
-  error apply_impl(int64_t&) override;
+  apply_result end_sequence() noexcept;
 
-  error apply_impl(uint64_t&) override;
+  apply_result apply(bool&) noexcept;
 
-  error apply_impl(float&) override;
+  apply_result apply(byte&) noexcept;
 
-  error apply_impl(double&) override;
+  apply_result apply(int8_t&) noexcept;
 
-  error apply_impl(long double&) override;
+  apply_result apply(uint8_t&) noexcept;
 
-  error apply_impl(std::string&) override;
+  apply_result apply(int16_t&) noexcept;
 
-  error apply_impl(std::u16string&) override;
+  apply_result apply(uint16_t&) noexcept;
 
-  error apply_impl(std::u32string&) override;
+  apply_result apply(int32_t&) noexcept;
+
+  apply_result apply(uint32_t&) noexcept;
+
+  apply_result apply(int64_t&) noexcept;
+
+  apply_result apply(uint64_t&) noexcept;
+
+  apply_result apply(float&) noexcept;
+
+  apply_result apply(double&) noexcept;
+
+  apply_result apply(long double&);
+
+  apply_result apply(timespan& x) noexcept;
+
+  apply_result apply(timestamp& x) noexcept;
+
+  apply_result apply(span<byte>) noexcept;
+
+  apply_result apply(std::string&);
+
+  apply_result apply(std::u16string&);
+
+  apply_result apply(std::u32string&);
+
+  template <class Enum, class = std::enable_if_t<std::is_enum<Enum>::value>>
+  auto apply(Enum& x) noexcept {
+    return apply(reinterpret_cast<std::underlying_type_t<Enum>&>(x));
+  }
+
+  apply_result apply(std::vector<bool>& xs);
 
 private:
-  bool range_check(size_t read_size) {
+  explicit binary_deserializer(actor_system& sys) noexcept;
+
+  /// Checks whether we can read `read_size` more bytes.
+  bool range_check(size_t read_size) const noexcept {
     return current_ + read_size <= end_;
   }
 
+  /// Points to the current read position.
   const byte* current_;
+
+  /// Points to the end of the assigned memory block.
   const byte* end_;
+
+  /// Provides access to the ::proxy_registry and to the ::actor_system.
+  execution_unit* context_;
 };
 
 } // namespace caf

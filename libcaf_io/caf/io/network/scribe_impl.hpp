@@ -37,9 +37,9 @@ public:
 
   void ack_writes(bool enable) override;
 
-  std::vector<char>& wr_buf() override;
+  byte_buffer& wr_buf() override;
 
-  std::vector<char>& rd_buf() override;
+  byte_buffer& rd_buf() override;
 
   void graceful_shutdown() override;
 

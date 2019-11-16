@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2019 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -20,15 +20,11 @@
 
 #include <vector>
 
-namespace caf::io::basp {
+#include "caf/byte.hpp"
 
-/// @addtogroup BASP
+namespace caf {
 
-/// Storage type for raw bytes.
-using buffer_type = std::vector<char>;
-
-/// @}
+/// A buffer for storing binary data.
+using byte_buffer = std::vector<byte>;
 
 } // namespace caf
-
-

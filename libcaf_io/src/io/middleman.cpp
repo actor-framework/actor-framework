@@ -219,9 +219,13 @@ expected<group> middleman::remote_group(const std::string& group_identifier,
         self->request(mm, infinite, connect_atom::value, host, port)
           .then([=](const node_id&, strong_actor_ptr& ptr,
                     const std::set<std::string>&) mutable {
+            CAF_LOG_DEBUG("received handle to target node:" << CAF_ARG(ptr));
             auto hdl = actor_cast<actor>(ptr);
             self->request(hdl, infinite, get_atom::value, group_identifier)
-              .then([=](group& grp) mutable { rp.deliver(std::move(grp)); });
+              .then([=](group& grp) mutable {
+                CAF_LOG_DEBUG("received remote group handle:" << CAF_ARG(grp));
+                rp.deliver(std::move(grp));
+              });
           });
       },
     };
@@ -232,9 +236,19 @@ expected<group> middleman::remote_group(const std::string& group_identifier,
   auto worker = self->spawn<lazy_init + monitored>(two_step_lookup,
                                                    actor_handle());
   self->send(worker, get_atom::value);
-  self->receive([&](group& grp) { result = std::move(grp); },
-                [&](error& err) { result = std::move(err); },
-                [&](down_msg& dm) { result = std::move(dm.reason); });
+  self->receive(
+    [&](group& grp) {
+      CAF_LOG_DEBUG("received remote group handle:" << CAF_ARG(grp));
+      result = std::move(grp);
+    },
+    [&](error& err) {
+      CAF_LOG_DEBUG("received an error while waiting for the group:" << err);
+      result = std::move(err);
+    },
+    [&](down_msg& dm) {
+      CAF_LOG_DEBUG("lookup actor failed:" << CAF_ARG(dm));
+      result = std::move(dm.reason);
+    });
   return result;
 }
 
@@ -348,6 +362,11 @@ void middleman::init(actor_system_config& cfg) {
     }
 
     error load(deserializer&, group&) override {
+      // never called, because we hand out group instances of the local module
+      return sec::no_such_group_module;
+    }
+
+    error load(binary_deserializer&, group&) override {
       // never called, because we hand out group instances of the local module
       return sec::no_such_group_module;
     }

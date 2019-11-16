@@ -29,10 +29,11 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
 #include "caf/byte.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/detail/parse.hpp"
 #include "caf/ipv4_address.hpp"
-#include "caf/serializer_impl.hpp"
 #include "caf/span.hpp"
 
 using namespace caf;
@@ -52,9 +53,8 @@ struct fixture {
 
   template <class T>
   T roundtrip(T x) {
-    using container_type = std::vector<byte>;
-    container_type buf;
-    serializer_impl<container_type> sink(sys, buf);
+    byte_buffer buf;
+    binary_serializer sink(sys, buf);
     if (auto err = sink(x))
       CAF_FAIL("serialization failed: " << sys.render(err));
     binary_deserializer source(sys, make_span(buf));

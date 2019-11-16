@@ -24,6 +24,8 @@
 #include <random>
 #include <sstream>
 
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
 #include "caf/config.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
@@ -136,6 +138,14 @@ error node_id::default_data::deserialize(deserializer& source) {
   return source(pid_, host_);
 }
 
+error node_id::default_data::serialize(binary_serializer& sink) const {
+  return sink(pid_, host_);
+}
+
+error node_id::default_data::deserialize(binary_deserializer& source) {
+  return source(pid_, host_);
+}
+
 node_id::uri_data::uri_data(uri value) : value_(std::move(value)) {
   // nop
 }
@@ -178,6 +188,14 @@ error node_id::uri_data::deserialize(deserializer& source) {
   return source(value_);
 }
 
+error node_id::uri_data::serialize(binary_serializer& sink) const {
+  return sink(value_);
+}
+
+error node_id::uri_data::deserialize(binary_deserializer& source) {
+  return source(value_);
+}
+
 node_id& node_id::operator=(const none_t&) {
   data_.reset();
   return *this;
@@ -207,42 +225,59 @@ void node_id::swap(node_id& x) {
   data_.swap(x.data_);
 }
 
-error node_id::serialize(serializer& sink) const {
-  if (data_ && data_->valid()) {
-    if (auto err = sink(data_->implementation_id()))
+namespace {
+
+template <class Serializer>
+error serialize_data(Serializer& sink,
+                     const intrusive_ptr<node_id::data>& ptr) {
+  if (ptr && ptr->valid()) {
+    if (auto err = sink(ptr->implementation_id()))
       return err;
-    return data_->serialize(sink);
+    return ptr->serialize(sink);
   }
   return sink(atom(""));
 }
 
-error node_id::deserialize(deserializer& source) {
+template <class Deserializer>
+error deserialize_data(Deserializer& source,
+                       intrusive_ptr<node_id::data>& ptr) {
   auto impl = static_cast<atom_value>(0);
   if (auto err = source(impl))
     return err;
   if (impl == atom("")) {
-    data_.reset();
+    ptr.reset();
     return none;
   }
-  if (impl == default_data::class_id) {
-    if (data_ == nullptr
-        || data_->implementation_id() != default_data::class_id)
-      data_ = make_counted<default_data>();
-    return data_->deserialize(source);
-  } else if (impl == uri_data::class_id) {
-    if (data_ == nullptr || data_->implementation_id() != uri_data::class_id)
-      data_ = make_counted<uri_data>();
-    return data_->deserialize(source);
+  if (impl == node_id::default_data::class_id) {
+    if (ptr == nullptr
+        || ptr->implementation_id() != node_id::default_data::class_id)
+      ptr = make_counted<node_id::default_data>();
+    return ptr->deserialize(source);
+  } else if (impl == node_id::uri_data::class_id) {
+    if (ptr == nullptr
+        || ptr->implementation_id() != node_id::uri_data::class_id)
+      ptr = make_counted<node_id::uri_data>();
+    return ptr->deserialize(source);
   }
   return sec::unknown_type;
 }
 
-error inspect(serializer& sink, const node_id& x) {
-  return x.serialize(sink);
+} // namespace
+
+error inspect(serializer& sink, node_id& x) {
+  return serialize_data(sink, x.data_);
 }
 
 error inspect(deserializer& source, node_id& x) {
-  return x.deserialize(source);
+  return deserialize_data(source, x.data_);
+}
+
+error inspect(binary_serializer& sink, node_id& x) {
+  return serialize_data(sink, x.data_);
+}
+
+error inspect(binary_deserializer& source, node_id& x) {
+  return deserialize_data(source, x.data_);
 }
 
 void append_to_string(std::string& str, const node_id& x) {
@@ -276,11 +311,14 @@ optional<node_id> make_node_id(uint32_t process_id,
     return none;
   detail::parser::ascii_to_int<16, uint8_t> xvalue;
   node_data::host_id_type host_id;
-  for (size_t i = 0; i < node_data::host_id_size; i += 2) {
-    // Read two characters, each representing 4 bytes.
-    if (!isxdigit(host_hash[i]) || !isxdigit(host_hash[i + 1]))
+  auto in = host_hash.begin();
+  for (auto& byte : host_id) {
+    if (!isxdigit(*in))
       return none;
-    host_id[i / 2] = (xvalue(host_hash[i]) << 4) | xvalue(host_hash[i + 1]);
+    auto first_nibble = (xvalue(*in++) << 4);
+    if (!isxdigit(*in))
+      return none;
+    byte = static_cast<uint8_t>(first_nibble | xvalue(*in++));
   }
   if (!node_data::valid(host_id))
     return none;

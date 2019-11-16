@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "caf/byte_buffer.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/abstract_worker.hpp"
 #include "caf/detail/worker_hub.hpp"
@@ -48,8 +49,6 @@ public:
 
   using scheduler_type = scheduler::abstract_coordinator;
 
-  using buffer_type = std::vector<char>;
-
   using hub_type = detail::worker_hub<worker>;
 
   // -- constructors, destructors, and assignment operators --------------------
@@ -62,7 +61,7 @@ public:
   // -- management -------------------------------------------------------------
 
   void launch(const node_id& last_hop, const basp::header& hdr,
-              const buffer_type& payload);
+              const byte_buffer& payload);
 
   // -- implementation of resumable --------------------------------------------
 
@@ -108,7 +107,7 @@ private:
   header hdr_;
 
   /// Contains whatever this worker deserializes next.
-  buffer_type payload_;
+  byte_buffer payload_;
 };
 
 } // namespace caf

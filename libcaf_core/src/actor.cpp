@@ -22,16 +22,14 @@
 #include <utility>
 
 #include "caf/actor_addr.hpp"
-#include "caf/make_actor.hpp"
-#include "caf/serializer.hpp"
 #include "caf/actor_proxy.hpp"
-#include "caf/local_actor.hpp"
-#include "caf/deserializer.hpp"
-#include "caf/scoped_actor.hpp"
-#include "caf/event_based_actor.hpp"
-
-#include "caf/decorator/splitter.hpp"
 #include "caf/decorator/sequencer.hpp"
+#include "caf/deserializer.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/local_actor.hpp"
+#include "caf/make_actor.hpp"
+#include "caf/scoped_actor.hpp"
+#include "caf/serializer.hpp"
 
 namespace caf {
 
@@ -87,21 +85,6 @@ actor operator*(actor f, actor g) {
     sys.next_actor_id(), sys.node(), &sys,
     actor_cast<strong_actor_ptr>(std::move(f)),
     actor_cast<strong_actor_ptr>(std::move(g)), std::set<std::string>{});
-}
-
-actor actor::splice_impl(std::initializer_list<actor> xs) {
-  assert(xs.size() >= 2);
-  actor_system* sys = nullptr;
-  std::vector<strong_actor_ptr> tmp;
-  for (auto& x : xs) {
-    if (sys == nullptr)
-      sys = &(x->home_system());
-    tmp.push_back(actor_cast<strong_actor_ptr>(x));
-  }
-  return make_actor<decorator::splitter, actor>(sys->next_actor_id(),
-                                                sys->node(), sys,
-                                                std::move(tmp),
-                                                std::set<std::string>{});
 }
 
 bool operator==(const actor& lhs, abstract_actor* rhs) {

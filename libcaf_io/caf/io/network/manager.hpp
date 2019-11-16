@@ -18,12 +18,12 @@
 
 #pragma once
 
-#include "caf/message.hpp"
-#include "caf/ref_counted.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/intrusive_ptr.hpp"
-
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/operation.hpp"
+#include "caf/message.hpp"
+#include "caf/ref_counted.hpp"
 
 namespace caf::io::network {
 
@@ -77,4 +77,3 @@ protected:
 };
 
 } // namespace caf
-

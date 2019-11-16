@@ -59,7 +59,7 @@ void stream::configure_read(receive_policy::config config) {
 
 void stream::write(const void* buf, size_t num_bytes) {
   CAF_LOG_TRACE(CAF_ARG(num_bytes));
-  auto first = reinterpret_cast<const char*>(buf);
+  auto first = reinterpret_cast<const byte*>(buf);
   auto last = first + num_bytes;
   wr_offline_buf_.insert(wr_offline_buf_.end(), first, last);
 }

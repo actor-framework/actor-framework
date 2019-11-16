@@ -37,7 +37,7 @@ public:
 
   /// Called by the underlying I/O device whenever it sent data.
   virtual void datagram_sent(execution_unit*, datagram_handle hdl, size_t,
-                             std::vector<char> buffer) = 0;
+                             byte_buffer buffer) = 0;
 
   /// Called by the underlying I/O device to indicate that a new remote
   /// endpoint has been detected, passing in the received datagram.

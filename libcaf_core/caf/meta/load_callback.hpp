@@ -43,6 +43,9 @@ struct is_load_callback : std::false_type {};
 template <class F>
 struct is_load_callback<load_callback_t<F>> : std::true_type {};
 
+template <class F>
+constexpr bool is_load_callback_v = is_load_callback<F>::value;
+
 /// Returns an annotation that allows inspectors to call
 /// user-defined code after performing load operations.
 template <class F>

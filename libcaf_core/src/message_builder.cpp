@@ -69,10 +69,6 @@ message message_builder::move_to_message() {
   return message{std::move(data_)};
 }
 
-message message_builder::extract(message_handler f) const {
-  return to_message().extract(std::move(f));
-}
-
 optional<message> message_builder::apply(message_handler handler) {
   // Avoid detaching of data_ by moving the data to a message object,
   // calling message::apply and moving the data back.

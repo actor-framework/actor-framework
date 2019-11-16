@@ -583,8 +583,7 @@ void basp_broker::connection_cleanup(connection_handle hdl) {
   }
 }
 
-basp::instance::callee::buffer_type&
-basp_broker::get_buffer(connection_handle hdl) {
+byte_buffer& basp_broker::get_buffer(connection_handle hdl) {
   return wr_buf(hdl);
 }
 

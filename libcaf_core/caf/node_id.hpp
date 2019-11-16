@@ -56,6 +56,10 @@ public:
     virtual error serialize(serializer& sink) const = 0;
 
     virtual error deserialize(deserializer& source) = 0;
+
+    virtual error serialize(binary_serializer& sink) const = 0;
+
+    virtual error deserialize(binary_deserializer& source) = 0;
   };
 
   // A technology-agnostic node identifier with process ID and hash value.
@@ -115,6 +119,10 @@ public:
 
     error deserialize(deserializer& source) override;
 
+    error serialize(binary_serializer& sink) const override;
+
+    error deserialize(binary_deserializer& source) override;
+
   private:
     // -- member variables -----------------------------------------------------
 
@@ -159,6 +167,10 @@ public:
 
     error deserialize(deserializer& source) override;
 
+    error serialize(binary_serializer& sink) const override;
+
+    error deserialize(binary_deserializer& source) override;
+
   private:
     // -- member variables -----------------------------------------------------
 
@@ -199,9 +211,6 @@ public:
 
   /// @cond PRIVATE
 
-  error serialize(serializer& sink) const;
-
-  error deserialize(deserializer& source);
 
   data* operator->() noexcept {
     return data_.get();
@@ -220,6 +229,14 @@ public:
   }
 
   /// @endcond
+
+  friend error inspect(serializer& sink, node_id& x);
+
+  friend error inspect(binary_serializer& sink, node_id& x);
+
+  friend error inspect(deserializer& source, node_id& x);
+
+  friend error inspect(binary_deserializer& source, node_id& x);
 
 private:
   intrusive_ptr<data> data_;
@@ -280,12 +297,6 @@ inline bool operator!=(const node_id& x, const none_t&) noexcept {
 inline bool operator!=(const none_t&, const node_id& x) noexcept {
   return static_cast<bool>(x);
 }
-
-/// @relates node_id
-error inspect(serializer& sink, const node_id& x);
-
-/// @relates node_id
-error inspect(deserializer& source, node_id& x);
 
 /// Appends `x` in human-readable string representation to `str`.
 /// @relates node_id

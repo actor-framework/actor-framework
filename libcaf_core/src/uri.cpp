@@ -18,6 +18,8 @@
 
 #include "caf/uri.hpp"
 
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/detail/append_percent_encoded.hpp"
 #include "caf/detail/fnv_hash.hpp"
@@ -103,6 +105,18 @@ error inspect(caf::serializer& dst, uri& x) {
 }
 
 error inspect(caf::deserializer& src, uri& x) {
+  auto impl = make_counted<detail::uri_impl>();
+  auto err = inspect(src, *impl);
+  if (err == none)
+    x = uri{std::move(impl)};
+  return err;
+}
+
+error inspect(caf::binary_serializer& dst, uri& x) {
+  return inspect(dst, const_cast<detail::uri_impl&>(*x.impl_));
+}
+
+error inspect(caf::binary_deserializer& src, uri& x) {
   auto impl = make_counted<detail::uri_impl>();
   auto err = inspect(src, *impl);
   if (err == none)

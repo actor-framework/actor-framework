@@ -22,16 +22,15 @@
 
 #include "caf/test/dsl.hpp"
 
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
+
 using namespace caf;
 
 namespace {
 
 behavior dummy() {
-  return {
-    [](int i) {
-      return i;
-    }
-  };
+  return {[](int i) { return i; }};
 }
 
 using foo_atom = atom_constant<atom("foo")>;
@@ -50,6 +49,20 @@ CAF_TEST(erase) {
   expect((int), from(_).to(self).with(42));
   sys.registry().erase(foo_atom::value);
   CAF_CHECK_EQUAL(sys.registry().named_actors().size(), baseline);
+}
+
+CAF_TEST(serialization roundtrips go through the registry) {
+  auto hdl = sys.spawn(dummy);
+  byte_buffer buf;
+  binary_serializer sink{sys, buf};
+  if (auto err = sink(hdl))
+    CAF_FAIL("serialization failed: " << sys.render(err));
+  actor hdl2;
+  binary_deserializer source{sys, buf};
+  if (auto err = source(hdl2))
+    CAF_FAIL("serialization failed: " << sys.render(err));
+  CAF_CHECK_EQUAL(hdl, hdl2);
+  anon_send_exit(hdl, exit_reason::user_shutdown);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

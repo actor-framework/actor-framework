@@ -88,10 +88,10 @@ CAF_TEST(shutdown_delayed_send_loop) {
   CAF_MESSAGE("does sys shut down after spawning a detached actor that used "
               "a delayed send loop and was interrupted via exit message?");
   auto f = [](event_based_actor* self) -> behavior {
-    self->send(self, std::chrono::milliseconds(1), ok_atom::value);
+    self->delayed_send(self, std::chrono::milliseconds(1), ok_atom::value);
     return {
       [=](ok_atom) {
-        self->send(self, std::chrono::milliseconds(1), ok_atom::value);
+        self->delayed_send(self, std::chrono::milliseconds(1), ok_atom::value);
       }
     };
   };

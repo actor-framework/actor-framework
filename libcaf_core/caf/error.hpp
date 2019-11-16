@@ -23,13 +23,12 @@
 #include <utility>
 
 #include "caf/atom.hpp"
+#include "caf/detail/comparable.hpp"
+#include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
-#include "caf/none.hpp"
-
 #include "caf/meta/omittable_if_empty.hpp"
 #include "caf/meta/type_name.hpp"
-
-#include "caf/detail/comparable.hpp"
+#include "caf/none.hpp"
 
 namespace caf {
 
@@ -99,15 +98,19 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   error() noexcept;
+
   error(none_t) noexcept;
 
   error(error&&) noexcept;
+
   error& operator=(error&&) noexcept;
 
   error(const error&);
+
   error& operator=(const error&);
 
   error(uint8_t x, atom_value y);
+
   error(uint8_t x, atom_value y, message z);
 
   template <class E, class = enable_if_has_make_error_t<E>>
@@ -115,9 +118,21 @@ public:
     // nop
   }
 
+  template <class E>
+  error(error_code<E> code) : error(code.value()) {
+    // nop
+  }
+
   template <class E, class = enable_if_has_make_error_t<E>>
   error& operator=(E error_value) {
     auto tmp = make_error(error_value);
+    std::swap(data_, tmp.data_);
+    return *this;
+  }
+
+  template <class E>
+  error& operator=(error_code<E> code) {
+    auto tmp = make_error(code.value());
     std::swap(data_, tmp.data_);
     return *this;
   }

@@ -39,7 +39,7 @@ worker::~worker() {
 // -- management ---------------------------------------------------------------
 
 void worker::launch(const node_id& last_hop, const basp::header& hdr,
-                    const buffer_type& payload) {
+                    const byte_buffer& payload) {
   CAF_ASSERT(hdr.dest_actor != 0);
   CAF_ASSERT(hdr.operation == basp::message_type::direct_message
              || hdr.operation == basp::message_type::routed_message);

@@ -25,12 +25,12 @@
 #include <cstdint>
 
 #include "caf/atom.hpp"
+#include "caf/byte.hpp"
+#include "caf/detail/squashed_int.hpp"
+#include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
 #include "caf/timespan.hpp"
 #include "caf/timestamp.hpp"
-
-#include "caf/detail/type_list.hpp"
-#include "caf/detail/squashed_int.hpp"
 
 namespace caf {
 
@@ -43,6 +43,7 @@ using sorted_builtin_types =
     actor_addr,                         // @addr
     std::vector<actor_addr>,            // @addrvec
     atom_value,                         // @atom
+    std::vector<byte>,                  // @bytebuf
     std::vector<char>,                  // @charbuf
     config_value,                       // @config_value
     down_msg,                           // @down

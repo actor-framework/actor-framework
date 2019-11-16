@@ -31,10 +31,8 @@
 #include <vector>
 
 #include "caf/all.hpp"
-#include "caf/io/all.hpp"
-
 #include "caf/deep_to_string.hpp"
-
+#include "caf/io/all.hpp"
 #include "caf/io/network/interfaces.hpp"
 #include "caf/io/network/test_multiplexer.hpp"
 
@@ -82,9 +80,7 @@ constexpr auto config_serv_atom = caf::atom("ConfigServ");
 
 constexpr uint32_t num_remote_nodes = 2;
 
-using buffer = std::vector<char>;
-
-std::string hexstr(const buffer& buf) {
+std::string hexstr(const byte_buffer& buf) {
   return deep_to_string(meta::hex_formatted(), buf);
 }
 
@@ -162,10 +158,10 @@ public:
   }
 
   uint32_t serialized_size(const message& msg) {
-    buffer buf;
+    byte_buffer buf;
     binary_serializer bs{mpx_, buf};
-    auto e = bs(const_cast<message&>(msg));
-    CAF_REQUIRE(!e);
+    if (auto err = bs(const_cast<message&>(msg)))
+      CAF_FAIL("returned to serialize message: " << sys.render(err));
     return static_cast<uint32_t>(buf.size());
   }
 
@@ -220,24 +216,20 @@ public:
   using payload_writer = basp::instance::payload_writer;
 
   template <class... Ts>
-  void to_payload(binary_serializer& bs, const Ts&... xs) {
-    bs(const_cast<Ts&>(xs)...);
+  void to_payload(byte_buffer& buf, const Ts&... xs) {
+    binary_serializer sink{mpx_, buf};
+    if (auto err = sink(xs...))
+      CAF_FAIL("failed to serialize payload: " << sys.render(err));
   }
 
-  template <class... Ts>
-  void to_payload(buffer& buf, const Ts&... xs) {
-    binary_serializer bs{mpx_, buf};
-    to_payload(bs, xs...);
-  }
-
-  void to_buf(buffer& buf, basp::header& hdr, payload_writer* writer) {
+  void to_buf(byte_buffer& buf, basp::header& hdr, payload_writer* writer) {
     instance().write(mpx_, buf, hdr, writer);
   }
 
   template <class T, class... Ts>
-  void to_buf(buffer& buf, basp::header& hdr, payload_writer* writer,
+  void to_buf(byte_buffer& buf, basp::header& hdr, payload_writer* writer,
               const T& x, const Ts&... xs) {
-    auto pw = make_callback([&](serializer& sink) -> error {
+    auto pw = make_callback([&](binary_serializer& sink) -> error {
       if (writer)
         return error::eval([&] { return (*writer)(sink); },
                            [&] { return sink(const_cast<T&>(x)); });
@@ -246,12 +238,12 @@ public:
     to_buf(buf, hdr, &pw, xs...);
   }
 
-  std::pair<basp::header, buffer> from_buf(const buffer& buf) {
+  std::pair<basp::header, byte_buffer> from_buf(const byte_buffer& buf) {
     basp::header hdr;
     binary_deserializer bd{mpx_, buf};
     auto e = bd(hdr);
     CAF_REQUIRE(!e);
-    buffer payload;
+    byte_buffer payload;
     if (hdr.payload_len > 0) {
       std::copy(buf.begin() + basp::header_size, buf.end(),
                 std::back_inserter(payload));
@@ -295,7 +287,7 @@ public:
     CAF_CHECK_EQUAL(path->next_hop, n.id);
   }
 
-  std::pair<basp::header, buffer> read_from_out_buf(connection_handle hdl) {
+  auto read_from_out_buf(connection_handle hdl) {
     CAF_MESSAGE("read from output buffer for connection " << hdl.id());
     auto& buf = mpx_->output_buffer(hdl);
     while (buf.size() < basp::header_size)
@@ -308,7 +300,7 @@ public:
 
   void dispatch_out_buf(connection_handle hdl) {
     basp::header hdr;
-    buffer buf;
+    byte_buffer buf;
     std::tie(hdr, buf) = read_from_out_buf(hdl);
     CAF_MESSAGE("dispatch output buffer for connection " << hdl.id());
     CAF_REQUIRE_EQUAL(hdr.operation, basp::message_type::direct_message);
@@ -346,9 +338,9 @@ public:
                     maybe<actor_id> source_actor, maybe<actor_id> dest_actor,
                     const Ts&... xs) {
       CAF_MESSAGE("expect #" << num);
-      buffer buf;
+      byte_buffer buf;
       this_->to_payload(buf, xs...);
-      buffer& ob = this_->mpx()->output_buffer(hdl);
+      auto& ob = this_->mpx()->output_buffer(hdl);
       while (this_->mpx()->try_exec_runnable()) {
         // repeat
       }
@@ -356,10 +348,11 @@ public:
       basp::header hdr;
       { // lifetime scope of source
         binary_deserializer source{this_->mpx(), ob};
-        auto e = source(hdr);
-        CAF_REQUIRE_EQUAL(e, none);
+        if (auto err = source(hdr))
+          CAF_FAIL("unable to deserialize header: "
+                   << actor_system_config::render(err));
       }
-      buffer payload;
+      byte_buffer payload;
       if (hdr.payload_len > 0) {
         CAF_REQUIRE(ob.size() >= (basp::header_size + hdr.payload_len));
         auto first = ob.begin() + basp::header_size;
@@ -390,7 +383,7 @@ public:
 
   template <class... Ts>
   mock_t mock(connection_handle hdl, basp::header hdr, const Ts&... xs) {
-    buffer buf;
+    byte_buffer buf;
     to_buf(buf, hdr, nullptr, xs...);
     CAF_MESSAGE("virtually send " << to_string(hdr.operation) << " with "
                                   << (buf.size() - basp::header_size)
@@ -454,10 +447,10 @@ CAF_TEST_FIXTURE_SCOPE(basp_tests, fixture)
 CAF_TEST(empty_server_handshake) {
   // test whether basp instance correctly sends a
   // server handshake when there's no actor published
-  buffer buf;
+  byte_buffer buf;
   instance().write_server_handshake(mpx(), buf, none);
   basp::header hdr;
-  buffer payload;
+  byte_buffer payload;
   std::tie(hdr, payload) = from_buf(buf);
   basp::header expected{basp::message_type::server_handshake,
                         0,
@@ -473,12 +466,12 @@ CAF_TEST(empty_server_handshake) {
 CAF_TEST(non_empty_server_handshake) {
   // test whether basp instance correctly sends a
   // server handshake with published actors
-  buffer buf;
+  byte_buffer buf;
   instance().add_published_actor(4242, actor_cast<strong_actor_ptr>(self()),
                                  {"caf::replies_to<@u16>::with<@u16>"});
   instance().write_server_handshake(mpx(), buf, uint16_t{4242});
   basp::header hdr;
-  buffer payload;
+  byte_buffer payload;
   std::tie(hdr, payload) = from_buf(buf);
   basp::header expected{basp::message_type::server_handshake,
                         0,
@@ -489,10 +482,12 @@ CAF_TEST(non_empty_server_handshake) {
   CAF_CHECK(basp::valid(hdr));
   CAF_CHECK(basp::is_handshake(hdr));
   CAF_CHECK_EQUAL(to_string(hdr), to_string(expected));
-  buffer expected_payload;
-  binary_serializer bd{nullptr, expected_payload};
-  bd(instance().this_node(), defaults::middleman::app_identifiers, self()->id(),
-     std::set<std::string>{"caf::replies_to<@u16>::with<@u16>"});
+  byte_buffer expected_payload;
+  std::set<std::string> ifs{"caf::replies_to<@u16>::with<@u16>"};
+  binary_serializer sink{nullptr, expected_payload};
+  if (auto err = sink(instance().this_node(),
+                      defaults::middleman::app_identifiers, self()->id(), ifs))
+    CAF_FAIL("serializing handshake failed: " << sys.render(err));
   CAF_CHECK_EQUAL(hexstr(payload), hexstr(expected_payload));
 }
 

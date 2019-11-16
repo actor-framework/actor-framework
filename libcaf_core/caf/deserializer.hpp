@@ -18,62 +18,134 @@
 
 #pragma once
 
-#include <string>
 #include <cstddef>
-#include <utility>
+#include <string>
+#include <tuple>
 #include <type_traits>
+#include <utility>
 
-#include "caf/data_processor.hpp"
+#include "caf/byte.hpp"
 #include "caf/fwd.hpp"
-#include "caf/raise_error.hpp"
+#include "caf/span.hpp"
+#include "caf/write_inspector.hpp"
 
 namespace caf {
 
 /// @ingroup TypeSystem
 /// Technology-independent deserialization interface.
-class deserializer : public data_processor<deserializer> {
+class deserializer : public write_inspector<deserializer> {
 public:
-  ~deserializer() override;
+  // -- member types -----------------------------------------------------------
 
-  using super = data_processor<deserializer>;
+  using result_type = error;
 
-  static constexpr bool reads_state = false;
-  static constexpr bool writes_state = true;
+  // -- constructors, destructors, and assignment operators --------------------
 
-  // Boost Serialization compatibility
-  using is_saving = std::false_type;
-  using is_loading = std::true_type;
+  explicit deserializer(actor_system& sys) noexcept;
 
-  explicit deserializer(actor_system& x);
+  explicit deserializer(execution_unit* ctx = nullptr) noexcept;
 
-  explicit deserializer(execution_unit* x = nullptr);
+  virtual ~deserializer();
+
+  // -- properties -------------------------------------------------------------
+
+  auto context() const noexcept {
+    return context_;
+  }
+
+  // -- interface functions ----------------------------------------------------
+
+  /// Begins processing of an object. Saves the type information
+  /// to the underlying storage.
+  virtual result_type begin_object(uint16_t& typenr, std::string& type_name)
+    = 0;
+
+  /// Ends processing of an object.
+  virtual result_type end_object() = 0;
+
+  /// Begins processing of a sequence. Saves the size
+  /// to the underlying storage when in saving mode, otherwise
+  /// sets `num` accordingly.
+  virtual result_type begin_sequence(size_t& num) = 0;
+
+  /// Ends processing of a sequence.
+  virtual result_type end_sequence() = 0;
+
+  /// Reads primitive value from the input.
+  /// @param x The primitive value.
+  /// @returns A non-zero error code on failure, `sec::success` otherwise.
+  virtual result_type apply(bool& x) = 0;
+
+  /// @copydoc apply
+  virtual result_type apply(int8_t&) = 0;
+
+  /// @copydoc apply
+  virtual result_type apply(uint8_t&) = 0;
+
+  /// @copydoc apply
+  virtual result_type apply(int16_t&) = 0;
+
+  /// @copydoc apply
+  virtual result_type apply(uint16_t&) = 0;
+
+  /// @copydoc apply
+  virtual result_type apply(int32_t&) = 0;
+
+  /// @copydoc apply
+  virtual result_type apply(uint32_t&) = 0;
+
+  /// @copydoc apply
+  virtual result_type apply(int64_t&) = 0;
+
+  /// @copydoc apply
+  virtual result_type apply(uint64_t&) = 0;
+
+  /// @copydoc apply
+  virtual result_type apply(float&) = 0;
+
+  /// @copydoc apply
+  virtual result_type apply(double&) = 0;
+
+  /// @copydoc apply
+  virtual result_type apply(long double&) = 0;
+
+  /// @copydoc apply
+  virtual result_type apply(timespan x) = 0;
+
+  /// @copydoc apply
+  virtual result_type apply(timestamp x) = 0;
+
+  /// @copydoc apply
+  virtual result_type apply(atom_value x) = 0;
+
+  /// @copydoc apply
+  virtual result_type apply(std::string&) = 0;
+
+  /// @copydoc apply
+  virtual result_type apply(std::u16string&) = 0;
+
+  /// @copydoc apply
+  virtual result_type apply(std::u32string&) = 0;
+
+  /// @copydoc apply
+  template <class Enum, class = std::enable_if_t<std::is_enum<Enum>::value>>
+  auto apply(Enum& x) {
+    return apply(reinterpret_cast<std::underlying_type_t<Enum>&>(x));
+  }
+
+  /// Reads a byte sequence from the input.
+  /// @param x The byte sequence.
+  /// @returns A non-zero error code on failure, `sec::success` otherwise.
+  virtual result_type apply_raw(span<byte> x) = 0;
+
+  /// Adds each boolean in `xs` to the output. Derived classes can override this
+  /// member function to pack the booleans, for example to avoid using one byte
+  /// for each value in a binary output format.
+  virtual result_type apply(std::vector<bool>& xs) noexcept;
+
+protected:
+  /// Provides access to the ::proxy_registry and to the ::actor_system.
+  execution_unit* context_;
 };
 
-template <class T>
-typename std::enable_if<
-  std::is_same<
-    error,
-    decltype(std::declval<deserializer&>().apply(std::declval<T&>()))
-  >::value
->::type
-operator&(deserializer& source, T& x) {
-  auto e = source.apply(x);
-  if (e)
-    CAF_RAISE_ERROR("error during serialization (using operator&)");
-}
-
-template <class T>
-typename std::enable_if<
-  std::is_same<
-    error,
-    decltype(std::declval<deserializer&>().apply(std::declval<T&>()))
-  >::value,
-  deserializer&
->::type
-operator>>(deserializer& source, T& x) {
-  source & x;
-  return source;
-}
-
 } // namespace caf
-

@@ -54,30 +54,58 @@ intptr_t group::compare(const group& other) const noexcept {
   return compare(ptr_.get(), other.ptr_.get());
 }
 
-error inspect(serializer& f, group& x) {
+namespace {
+
+template <class Serializer>
+auto save_group(Serializer& sink, group& x) {
   std::string mod_name;
   auto ptr = x.get();
   if (ptr == nullptr)
-    return f(mod_name);
+    return sink(mod_name);
   mod_name = ptr->module().name();
-  auto e = f(mod_name);
-  return e ? e : ptr->save(f);
+  if (auto err = sink(mod_name))
+    return err;
+  return ptr->save(sink);
 }
 
-error inspect(deserializer& f, group& x) {
+} // namespace
+
+error inspect(serializer& sink, group& x) {
+  return save_group(sink, x);
+}
+
+error inspect(binary_serializer& sink, group& x) {
+  return save_group(sink, x);
+}
+
+namespace {
+
+template <class Deserializer>
+typename Deserializer::result_type load_group(Deserializer& source, group& x) {
   std::string module_name;
-  f(module_name);
+  if (auto err = source(module_name))
+    return err;
   if (module_name.empty()) {
     x = invalid_group;
     return none;
   }
-  if (f.context() == nullptr)
+  if (source.context() == nullptr)
     return sec::no_context;
-  auto& sys = f.context()->system();
+  auto& sys = source.context()->system();
   auto mod = sys.groups().get_module(module_name);
   if (!mod)
     return sec::no_such_group_module;
-  return mod->load(f, x);
+  return mod->load(source, x);
+}
+
+} // namespace
+
+error inspect(deserializer& source, group& x) {
+  return load_group(source, x);
+}
+
+error inspect(binary_deserializer& source, group& x) {
+  return load_group(source, x);
 }
 
 std::string to_string(const group& x) {

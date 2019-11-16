@@ -60,7 +60,7 @@ bool datagram_servant::consume(execution_unit* ctx, datagram_handle hdl,
 }
 
 void datagram_servant::datagram_sent(execution_unit* ctx, datagram_handle hdl,
-                                     size_t written, std::vector<char> buffer) {
+                                     size_t written, byte_buffer buffer) {
   CAF_LOG_TRACE(CAF_ARG(written));
   if (detached())
     return;

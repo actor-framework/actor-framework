@@ -16,27 +16,26 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <set>
-#include <map>
-#include <list>
-#include <vector>
-#include <string>
-#include <unordered_set>
-#include <unordered_map>
-
-#include "caf/config.hpp"
-
 #define CAF_SUITE inspector
+
 #include "caf/test/unit_test.hpp"
 
+#include <list>
+#include <map>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
 #include "caf/actor_system.hpp"
-#include "caf/type_erased_value.hpp"
-#include "caf/binary_serializer.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
-#include "caf/make_type_erased_value.hpp"
-
+#include "caf/binary_serializer.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/detail/stringification_inspector.hpp"
+#include "caf/make_type_erased_value.hpp"
+#include "caf/type_erased_value.hpp"
 
 using namespace caf;
 
@@ -239,8 +238,8 @@ struct binary_serialization_policy {
   execution_unit& context;
 
   template <class T>
-  std::vector<char> to_buf(const T& x) {
-    std::vector<char> result;
+  auto to_buf(const T& x) {
+    byte_buffer result;
     binary_serializer sink{&context, result};
     if (auto err = sink(x))
       CAF_FAIL("failed to serialize " << x << ": " << err);

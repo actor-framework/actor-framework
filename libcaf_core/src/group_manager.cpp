@@ -111,6 +111,8 @@ public:
 
   error save(serializer& sink) const override;
 
+  error save(binary_serializer& sink) const override;
+
   void stop() override {
     CAF_LOG_TRACE("");
     await_all_locals_down(system(), {broker_});
@@ -348,7 +350,9 @@ public:
     return group{result};
   }
 
-  error load(deserializer& source, group& storage) override {
+
+  template <class Deserializer>
+  error load_impl(Deserializer& source, group& storage) {
     CAF_LOG_TRACE("");
     // deserialize identifier and broker
     std::string identifier;
@@ -382,12 +386,29 @@ public:
     return none;
   }
 
-  error save(const local_group* ptr, serializer& sink) const {
+  error load(deserializer& source, group& storage) override {
+    return load_impl(source, storage);
+  }
+
+  error load(binary_deserializer& source, group& storage) override {
+    return load_impl(source, storage);
+  }
+
+  template <class Serializer>
+  auto save_impl(const local_group* ptr, Serializer& sink) const {
     CAF_ASSERT(ptr != nullptr);
     CAF_LOG_TRACE("");
     auto bro = actor_cast<strong_actor_ptr>(ptr->broker());
     auto& id = const_cast<std::string&>(ptr->identifier());
     return sink(id, bro);
+  }
+
+  error save(const local_group* ptr, serializer& sink) const {
+    return save_impl(ptr, sink);
+  }
+
+  error save(const local_group* ptr, binary_serializer& sink) const {
+    return save_impl(ptr, sink);
   }
 
   void stop() override {
@@ -428,6 +449,11 @@ error local_group::save(serializer& sink) const {
   CAF_LOG_TRACE("");
   // this cast is safe, because the only available constructor accepts
   // local_group_module* as module pointer
+  return static_cast<local_group_module&>(parent_).save(this, sink);
+}
+
+error local_group::save(binary_serializer& sink) const {
+  CAF_LOG_TRACE("");
   return static_cast<local_group_module&>(parent_).save(this, sink);
 }
 

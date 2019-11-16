@@ -60,6 +60,11 @@ error dynamic_message_data::load(size_t pos, deserializer& source) {
   return elements_[pos]->load(source);
 }
 
+error dynamic_message_data::load(size_t pos, binary_deserializer& source) {
+  CAF_ASSERT(pos < size());
+  return elements_[pos]->load(source);
+}
+
 size_t dynamic_message_data::size() const noexcept {
   return elements_.size();
 }
@@ -89,6 +94,11 @@ type_erased_value_ptr dynamic_message_data::copy(size_t pos) const {
 }
 
 error dynamic_message_data::save(size_t pos, serializer& sink) const {
+  CAF_ASSERT(pos < size());
+  return elements_[pos]->save(sink);
+}
+
+error dynamic_message_data::save(size_t pos, binary_serializer& sink) const {
   CAF_ASSERT(pos < size());
   return elements_[pos]->save(sink);
 }

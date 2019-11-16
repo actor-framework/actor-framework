@@ -24,7 +24,6 @@
 #include <vector>
 
 #include "caf/io/abstract_broker.hpp"
-#include "caf/io/basp/buffer_type.hpp"
 #include "caf/node_id.hpp"
 
 namespace caf::io::basp {

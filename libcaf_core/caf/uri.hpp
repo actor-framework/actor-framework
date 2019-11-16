@@ -123,7 +123,11 @@ public:
 
   friend error inspect(caf::serializer& dst, uri& x);
 
+  friend error inspect(caf::binary_serializer& dst, uri& x);
+
   friend error inspect(caf::deserializer& src, uri& x);
+
+  friend error inspect(caf::binary_deserializer& src, uri& x);
 
 private:
   impl_ptr impl_;

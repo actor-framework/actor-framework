@@ -18,13 +18,14 @@
 
 #pragma once
 
-#include <tuple>
+#include <array>
 #include <chrono>
-#include <string>
-#include <vector>
-#include <utility>
 #include <functional>
+#include <string>
+#include <tuple>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 #include "caf/fwd.hpp"
 #include "caf/timestamp.hpp"
@@ -272,19 +273,6 @@ public:
 
 template <class T>
 constexpr bool is_iterable<T>::value;
-
-/// Checks whether T is a contiguous sequence of byte.
-template <class T>
-struct is_byte_sequence : std::false_type { };
-
-template <>
-struct is_byte_sequence<std::vector<char>> : std::true_type { };
-
-template <>
-struct is_byte_sequence<std::vector<unsigned char>> : std::true_type { };
-
-template <>
-struct is_byte_sequence<std::string> : std::true_type { };
 
 /// Checks whether `T` provides either a free function or a member function for
 /// serialization. The checks test whether both serialization and
@@ -771,9 +759,11 @@ using deconst_kvp_t = typename deconst_kvp<T>::type;
 template <class T>
 struct is_pair : std::false_type {};
 
-/// Utility trait for checking whether T is a `std::pair`.
 template <class First, class Second>
 struct is_pair<std::pair<First, Second>> : std::true_type {};
+
+template <class T>
+constexpr bool is_pair_v = is_pair<T>::value;
 
 // -- traits to check for STL-style type aliases -------------------------------
 
@@ -806,6 +796,9 @@ struct is_map_like {
                                 && has_mapped_type_alias<T>::value;
 };
 
+template <class T>
+constexpr bool is_map_like_v = is_map_like<T>::value;
+
 /// Checks whether T behaves like `std::vector`, `std::list`, or `std::set`.
 template <class T>
 struct is_list_like {
@@ -813,6 +806,9 @@ struct is_list_like {
                                 && has_value_type_alias<T>::value
                                 && !has_mapped_type_alias<T>::value;
 };
+
+template <class T>
+constexpr bool is_list_like_v = is_list_like<T>::value;
 
 template <class F, class... Ts>
 struct is_invocable {
@@ -846,7 +842,58 @@ public:
   static constexpr bool value = sfinae_type::value;
 };
 
-} // namespace caf
+template <class T, class To>
+class has_convertible_data_member {
+private:
+  template <class U>
+  static auto sfinae(U* x)
+    -> decltype(std::declval<To*>() = x->data(), std::true_type());
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using sfinae_type = decltype(sfinae<T>(nullptr));
+
+public:
+  static constexpr bool value = sfinae_type::value;
+};
+
+template <class T, class Arg>
+struct can_apply {
+  template <class U>
+  static auto sfinae(U* x)
+    -> decltype(x->apply(std::declval<Arg>()), std::true_type{});
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using type = decltype(sfinae<T>(nullptr));
+  static constexpr bool value = type::value;
+};
+
+template <class T, class Arg>
+constexpr bool can_apply_v = can_apply<T, Arg>::value;
+
+/// Evaluates to `true` for all types that specialize `std::tuple_size`, i.e.,
+/// `std::tuple`, `std::pair`, and `std::array`.
+template <class T>
+struct is_stl_tuple_type {
+  template <class U>
+  static auto sfinae(U*)
+    -> decltype(std::bool_constant<std::tuple_size<U>::value >= 0>{});
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using type = decltype(sfinae<T>(nullptr));
+
+  static constexpr bool value = type::value;
+};
+
+template <class T>
+constexpr bool is_stl_tuple_type_v = is_stl_tuple_type<T>::value;
+
+} // namespace caf::detail
 
 #undef CAF_HAS_MEMBER_TRAIT
 #undef CAF_HAS_ALIAS_TRAIT

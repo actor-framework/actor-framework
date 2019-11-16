@@ -40,9 +40,9 @@ public:
 
   void ack_writes(bool enable) override;
 
-  std::vector<char>& wr_buf(datagram_handle hdl) override;
+  byte_buffer& wr_buf(datagram_handle hdl) override;
 
-  void enqueue_datagram(datagram_handle hdl, std::vector<char> buf) override;
+  void enqueue_datagram(datagram_handle hdl, byte_buffer buf) override;
 
   network::receive_buffer& rd_buf() override;
 

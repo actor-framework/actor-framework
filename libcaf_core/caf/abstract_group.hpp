@@ -47,6 +47,9 @@ public:
   /// Serialize this group to `sink`.
   virtual error save(serializer& sink) const = 0;
 
+  /// Serialize this group to `sink`.
+  virtual error save(binary_serializer& sink) const = 0;
+
   /// Subscribes `who` to this group and returns `true` on success
   /// or `false` if `who` is already subscribed.
   virtual bool subscribe(strong_actor_ptr who) = 0;

@@ -43,7 +43,7 @@ using int_types_by_size =
 template <class T>
 struct squashed_int {
   using tpair = typename detail::tl_at<int_types_by_size, sizeof(T)>::type;
-  using type = 
+  using type =
     typename std::conditional<
       std::is_signed<T>::value,
       typename tpair::first,
@@ -55,5 +55,3 @@ template <class T>
 using squashed_int_t = typename squashed_int<T>::type;
 
 } // namespace caf
-
-

@@ -44,13 +44,13 @@ set(LIBCAF_CORE_SRCS
   src/attachable.cpp
   src/behavior.cpp
   src/binary_deserializer.cpp
+  src/binary_serializer.cpp
   src/blocking_actor.cpp
   src/config_option.cpp
   src/config_option_adder.cpp
   src/config_option_set.cpp
   src/config_value.cpp
   src/decorator/sequencer.cpp
-  src/decorator/splitter.cpp
   src/default_attachable.cpp
   src/defaults.cpp
   src/deserializer.cpp
@@ -61,8 +61,6 @@ set(LIBCAF_CORE_SRCS
   src/detail/behavior_impl.cpp
   src/detail/behavior_stack.cpp
   src/detail/blocking_behavior.cpp
-  src/detail/concatenated_tuple.cpp
-  src/detail/decorated_tuple.cpp
   src/detail/dynamic_message_data.cpp
   src/detail/fnv_hash.cpp
   src/detail/get_mac_addresses.cpp
@@ -70,14 +68,12 @@ set(LIBCAF_CORE_SRCS
   src/detail/get_root_uuid.cpp
   src/detail/ini_consumer.cpp
   src/detail/invoke_result_visitor.cpp
-  src/detail/merged_tuple.cpp
   src/detail/message_data.cpp
   src/detail/parse.cpp
   src/detail/parser/chars.cpp
   src/detail/pretty_type_name.cpp
   src/detail/private_thread.cpp
   src/detail/ripemd_160.cpp
-  src/detail/serialized_size.cpp
   src/detail/set_thread_name.cpp
   src/detail/shared_spinlock.cpp
   src/detail/simple_actor_clock.cpp
@@ -92,6 +88,7 @@ set(LIBCAF_CORE_SRCS
   src/downstream_manager_base.cpp
   src/duration.cpp
   src/error.cpp
+  src/error_code.cpp
   src/event_based_actor.cpp
   src/execution_unit.cpp
   src/exit_reason.cpp
