@@ -255,19 +255,19 @@ public:
 private:
   static constexpr pointer stack_empty_tag() {
     // We are *never* going to dereference the returned pointer. It is only
-    // used as indicator wheter this queue is empty or not.
+    // used as indicator whether this queue is empty or not.
     return static_cast<pointer>(nullptr);
   }
 
   pointer stack_closed_tag() const noexcept {
     // We are *never* going to dereference the returned pointer. It is only
-    // used as indicator wheter this queue is closed or not.
+    // used as indicator whether this queue is closed or not.
     return reinterpret_cast<pointer>(reinterpret_cast<intptr_t>(this) + 1);
   }
 
   pointer reader_blocked_tag() const noexcept {
     // We are *never* going to dereference the returned pointer. It is only
-    // used as indicator wheter the owner of the queue is currently waiting for
+    // used as indicator whether the owner of the queue is currently waiting for
     // new messages.
     return reinterpret_cast<pointer>(const_cast<lifo_inbox*>(this));
   }

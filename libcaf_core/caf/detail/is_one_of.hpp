@@ -22,7 +22,7 @@
 
 namespace caf::detail {
 
-/// Checks wheter `T` is in the template parameter pack `Ts`.
+/// Checks whether `T` is in the template parameter pack `Ts`.
 template <class T, class... Ts>
 struct is_one_of;
 

@@ -96,7 +96,7 @@ inline bool is_handshake(const header& hdr) {
       || hdr.operation == message_type::client_handshake;
 }
 
-/// Checks wheter given header contains a heartbeat.
+/// Checks whether given header contains a heartbeat.
 inline bool is_heartbeat(const header& hdr) {
   return hdr.operation == message_type::heartbeat;
 }
