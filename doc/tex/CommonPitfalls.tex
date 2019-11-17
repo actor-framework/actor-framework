@@ -60,5 +60,5 @@ behavior that is incredibly hard to find and debug. However, sharing
 and its lifetime is guaranteed to outlive all actors. The simplest way to meet
 the lifetime guarantee is by storing the data in smart pointers such as
 \lstinline^std::shared_ptr^. Nevertheless, the recommended way of sharing
-informations is message passing. Sending the same message to multiple actors
+information is message passing. Sending the same message to multiple actors
 does not result in copying the data several times.
