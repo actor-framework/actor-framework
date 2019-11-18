@@ -18,6 +18,8 @@
 
 #include "caf/binary_serializer.hpp"
 
+#include <iomanip>
+
 #include "caf/actor_system.hpp"
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/network_order.hpp"
@@ -155,7 +157,7 @@ void binary_serializer::apply(string_view x) {
   end_sequence();
 }
 
-void binary_serializer::apply(std::u16string_view x) {
+void binary_serializer::apply(const std::u16string& x) {
   auto str_size = x.size();
   begin_sequence(str_size);
   // The standard does not guarantee that char16_t is exactly 16 bits.
@@ -164,7 +166,7 @@ void binary_serializer::apply(std::u16string_view x) {
   end_sequence();
 }
 
-void binary_serializer::apply(std::u32string_view x) {
+void binary_serializer::apply(const std::u32string& x) {
   auto str_size = x.size();
   begin_sequence(str_size);
   // The standard does not guarantee that char32_t is exactly 32 bits.

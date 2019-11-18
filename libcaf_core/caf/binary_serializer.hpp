@@ -20,7 +20,6 @@
 
 #include <cstddef>
 #include <string>
-#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -118,9 +117,9 @@ public:
 
   void apply(string_view x);
 
-  void apply(std::u16string_view x);
+  void apply(const std::u16string& x);
 
-  void apply(std::u32string_view x);
+  void apply(const std::u32string& x);
 
   void apply(span<const byte> x);
 
