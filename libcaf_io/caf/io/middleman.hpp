@@ -327,7 +327,7 @@ private:
   std::thread thread_;
   // keeps track of "singleton-like" brokers
   std::map<atom_value, actor> named_brokers_;
-  // actor offering asyncronous IO by managing this singleton instance
+  // actor offering asynchronous IO by managing this singleton instance
   middleman_actor manager_;
 };
 
