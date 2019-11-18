@@ -37,9 +37,7 @@ class binary_deserializer : public write_inspector<binary_deserializer> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using result_type = error;
-
-  using apply_result = error_code<sec>;
+  using result_type = error_code<sec>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -91,58 +89,58 @@ public:
 
   // -- overridden member functions --------------------------------------------
 
-  apply_result begin_object(uint16_t& typenr, std::string& name);
+  result_type begin_object(uint16_t& typenr, std::string& name);
 
-  apply_result end_object() noexcept;
+  result_type end_object() noexcept;
 
-  apply_result begin_sequence(size_t& list_size) noexcept;
+  result_type begin_sequence(size_t& list_size) noexcept;
 
-  apply_result end_sequence() noexcept;
+  result_type end_sequence() noexcept;
 
-  apply_result apply(bool&) noexcept;
+  result_type apply(bool&) noexcept;
 
-  apply_result apply(byte&) noexcept;
+  result_type apply(byte&) noexcept;
 
-  apply_result apply(int8_t&) noexcept;
+  result_type apply(int8_t&) noexcept;
 
-  apply_result apply(uint8_t&) noexcept;
+  result_type apply(uint8_t&) noexcept;
 
-  apply_result apply(int16_t&) noexcept;
+  result_type apply(int16_t&) noexcept;
 
-  apply_result apply(uint16_t&) noexcept;
+  result_type apply(uint16_t&) noexcept;
 
-  apply_result apply(int32_t&) noexcept;
+  result_type apply(int32_t&) noexcept;
 
-  apply_result apply(uint32_t&) noexcept;
+  result_type apply(uint32_t&) noexcept;
 
-  apply_result apply(int64_t&) noexcept;
+  result_type apply(int64_t&) noexcept;
 
-  apply_result apply(uint64_t&) noexcept;
+  result_type apply(uint64_t&) noexcept;
 
-  apply_result apply(float&) noexcept;
+  result_type apply(float&) noexcept;
 
-  apply_result apply(double&) noexcept;
+  result_type apply(double&) noexcept;
 
-  apply_result apply(long double&);
+  result_type apply(long double&);
 
-  apply_result apply(timespan& x) noexcept;
+  result_type apply(timespan& x) noexcept;
 
-  apply_result apply(timestamp& x) noexcept;
+  result_type apply(timestamp& x) noexcept;
 
-  apply_result apply(span<byte>) noexcept;
+  result_type apply(span<byte>) noexcept;
 
-  apply_result apply(std::string&);
+  result_type apply(std::string&);
 
-  apply_result apply(std::u16string&);
+  result_type apply(std::u16string&);
 
-  apply_result apply(std::u32string&);
+  result_type apply(std::u32string&);
 
   template <class Enum, class = std::enable_if_t<std::is_enum<Enum>::value>>
   auto apply(Enum& x) noexcept {
     return apply(reinterpret_cast<std::underlying_type_t<Enum>&>(x));
   }
 
-  apply_result apply(std::vector<bool>& xs);
+  result_type apply(std::vector<bool>& xs);
 
 private:
   explicit binary_deserializer(actor_system& sys) noexcept;

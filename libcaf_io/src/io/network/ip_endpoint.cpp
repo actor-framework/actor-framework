@@ -206,8 +206,8 @@ uint32_t family(const ip_endpoint& ep) {
   return ep.caddress()->sa_family;
 }
 
-error load_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h, uint16_t& p,
-                    size_t& l) {
+error_code<sec> load_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h,
+                              uint16_t& p, size_t& l) {
   ep.clear();
   if (l > 0) {
     *ep.length() = l;
@@ -233,8 +233,8 @@ error load_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h, uint16_t& p,
   return none;
 }
 
-error save_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h, uint16_t& p,
-                    size_t& l) {
+error_code<sec> save_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h,
+                              uint16_t& p, size_t& l) {
   if (*ep.length() > 0) {
     f = family(ep);
     h = host(ep);

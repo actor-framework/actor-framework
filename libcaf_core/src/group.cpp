@@ -74,7 +74,7 @@ error inspect(serializer& sink, group& x) {
   return save_group(sink, x);
 }
 
-error inspect(binary_serializer& sink, group& x) {
+error_code<sec> inspect(binary_serializer& sink, group& x) {
   return save_group(sink, x);
 }
 
@@ -104,7 +104,7 @@ error inspect(deserializer& source, group& x) {
   return load_group(source, x);
 }
 
-error inspect(binary_deserializer& source, group& x) {
+error_code<sec> inspect(binary_deserializer& source, group& x) {
   return load_group(source, x);
 }
 

@@ -112,11 +112,11 @@ error inspect(caf::deserializer& src, uri& x) {
   return err;
 }
 
-error inspect(caf::binary_serializer& dst, uri& x) {
+error_code<sec> inspect(caf::binary_serializer& dst, uri& x) {
   return inspect(dst, const_cast<detail::uri_impl&>(*x.impl_));
 }
 
-error inspect(caf::binary_deserializer& src, uri& x) {
+error_code<sec> inspect(caf::binary_deserializer& src, uri& x) {
   auto impl = make_counted<detail::uri_impl>();
   auto err = inspect(src, *impl);
   if (err == none)

@@ -45,7 +45,7 @@ public:
   virtual error load(deserializer& source) = 0;
 
   /// Load the content for the stored value from `source`.
-  virtual error load(binary_deserializer& source) = 0;
+  virtual error_code<sec> load(binary_deserializer& source) = 0;
 
   // -- pure virtual observers -------------------------------------------------
 
@@ -59,7 +59,7 @@ public:
   virtual error save(serializer& sink) const = 0;
 
   /// Saves the content of the stored value to `sink`.
-  virtual error save(binary_serializer& sink) const = 0;
+  virtual error_code<sec> save(binary_serializer& sink) const = 0;
 
   /// Converts the stored value to a string.
   virtual std::string stringify() const = 0;
@@ -99,27 +99,27 @@ public:
 };
 
 /// @relates type_erased_value_impl
-inline error inspect(serializer& f, type_erased_value& x) {
+inline auto inspect(serializer& f, type_erased_value& x) {
   return x.save(f);
 }
 
 /// @relates type_erased_value_impl
-inline error inspect(binary_serializer& f, type_erased_value& x) {
+inline auto inspect(binary_serializer& f, type_erased_value& x) {
   return x.save(f);
 }
 
 /// @relates type_erased_value_impl
-inline error inspect(deserializer& f, type_erased_value& x) {
+inline auto inspect(deserializer& f, type_erased_value& x) {
   return x.load(f);
 }
 
 /// @relates type_erased_value_impl
-inline error inspect(binary_deserializer& f, type_erased_value& x) {
+inline auto inspect(binary_deserializer& f, type_erased_value& x) {
   return x.load(f);
 }
 
 /// @relates type_erased_value_impl
-inline std::string to_string(const type_erased_value& x) {
+inline auto to_string(const type_erased_value& x) {
   return x.stringify();
 }
 

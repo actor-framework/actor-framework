@@ -73,7 +73,7 @@ public:
 
   error load(size_t pos, deserializer& source) override;
 
-  error load(size_t pos, binary_deserializer& source) override;
+  error_code<sec> load(size_t pos, binary_deserializer& source) override;
 
   size_t size() const noexcept override;
 
@@ -89,17 +89,17 @@ public:
 
   error save(size_t pos, serializer& sink) const override;
 
-  error save(size_t pos, binary_serializer& sink) const override;
+  error_code<sec> save(size_t pos, binary_serializer& sink) const override;
 
   bool shared() const noexcept override;
 
   error load(deserializer& source) override;
 
-  error load(binary_deserializer& source) override;
+  error_code<sec> load(binary_deserializer& source) override;
 
   error save(serializer& sink) const override;
 
-  error save(binary_serializer& sink) const override;
+  error_code<sec> save(binary_serializer& sink) const override;
 
   // -- factories --------------------------------------------------------------
 
@@ -165,7 +165,8 @@ public:
   /// even if the serialized object had a different type.
   static error save(serializer& sink, const type_erased_tuple& x);
 
-  static error save(binary_serializer& sink, const type_erased_tuple& x);
+  static error_code<sec>
+  save(binary_serializer& sink, const type_erased_tuple& x);
 
   /// @endcond
 
@@ -199,13 +200,13 @@ private:
 error inspect(serializer& sink, message& msg);
 
 /// @relates message
-error inspect(binary_serializer& sink, message& msg);
+error_code<sec> inspect(binary_serializer& sink, message& msg);
 
 /// @relates message
 error inspect(deserializer& source, message& msg);
 
 /// @relates message
-error inspect(binary_deserializer& source, message& msg);
+error_code<sec> inspect(binary_deserializer& source, message& msg);
 
 /// @relates message
 std::string to_string(const message& msg);

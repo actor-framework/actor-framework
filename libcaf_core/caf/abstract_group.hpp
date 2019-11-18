@@ -48,7 +48,7 @@ public:
   virtual error save(serializer& sink) const = 0;
 
   /// Serialize this group to `sink`.
-  virtual error save(binary_serializer& sink) const = 0;
+  virtual error_code<sec> save(binary_serializer& sink) const = 0;
 
   /// Subscribes `who` to this group and returns `true` on success
   /// or `false` if `who` is already subscribed.

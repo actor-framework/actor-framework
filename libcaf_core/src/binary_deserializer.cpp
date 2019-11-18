@@ -32,10 +32,10 @@ namespace caf {
 
 namespace {
 
-using apply_result = binary_deserializer::apply_result;
+using result_type = binary_deserializer::result_type;
 
 template <class T>
-apply_result apply_int(binary_deserializer& source, T& x) {
+result_type apply_int(binary_deserializer& source, T& x) {
   auto tmp = std::make_unsigned_t<T>{};
   if (auto err = source.apply(as_writable_bytes(make_span(&tmp, 1))))
     return err;
@@ -44,7 +44,7 @@ apply_result apply_int(binary_deserializer& source, T& x) {
 }
 
 template <class T>
-apply_result apply_float(binary_deserializer& source, T& x) {
+result_type apply_float(binary_deserializer& source, T& x) {
   auto tmp = typename detail::ieee_754_trait<T>::packed_type{};
   if (auto err = apply_int(source, tmp))
     return err;
@@ -68,7 +68,7 @@ binary_deserializer::binary_deserializer(actor_system& sys) noexcept
   // nop
 }
 
-apply_result binary_deserializer::begin_object(uint16_t& nr, std::string& name) {
+result_type binary_deserializer::begin_object(uint16_t& nr, std::string& name) {
   name.clear();
   if (auto err = apply(nr))
     return err;
@@ -78,11 +78,11 @@ apply_result binary_deserializer::begin_object(uint16_t& nr, std::string& name) 
   return none;
 }
 
-apply_result binary_deserializer::end_object() noexcept {
+result_type binary_deserializer::end_object() noexcept {
   return none;
 }
 
-apply_result binary_deserializer::begin_sequence(size_t& list_size) noexcept {
+result_type binary_deserializer::begin_sequence(size_t& list_size) noexcept {
   // Use varbyte encoding to compress sequence size on the wire.
   uint32_t x = 0;
   int n = 0;
@@ -97,7 +97,7 @@ apply_result binary_deserializer::begin_sequence(size_t& list_size) noexcept {
   return none;
 }
 
-apply_result binary_deserializer::end_sequence() noexcept {
+result_type binary_deserializer::end_sequence() noexcept {
   return none;
 }
 
@@ -111,7 +111,7 @@ void binary_deserializer::reset(span<const byte> bytes) noexcept {
   end_ = current_ + bytes.size();
 }
 
-apply_result binary_deserializer::apply(bool& x) noexcept {
+result_type binary_deserializer::apply(bool& x) noexcept {
   int8_t tmp = 0;
   if (auto err = apply(tmp))
     return err;
@@ -119,7 +119,7 @@ apply_result binary_deserializer::apply(bool& x) noexcept {
   return none;
 }
 
-apply_result binary_deserializer::apply(byte& x) noexcept {
+result_type binary_deserializer::apply(byte& x) noexcept {
   if (range_check(1)) {
     x = *current_++;
     return none;
@@ -127,7 +127,7 @@ apply_result binary_deserializer::apply(byte& x) noexcept {
   return sec::end_of_stream;
 }
 
-apply_result binary_deserializer::apply(int8_t& x) noexcept {
+result_type binary_deserializer::apply(int8_t& x) noexcept {
   if (range_check(1)) {
     x = static_cast<int8_t>(*current_++);
     return none;
@@ -135,7 +135,7 @@ apply_result binary_deserializer::apply(int8_t& x) noexcept {
   return sec::end_of_stream;
 }
 
-apply_result binary_deserializer::apply(uint8_t& x) noexcept {
+result_type binary_deserializer::apply(uint8_t& x) noexcept {
   if (range_check(1)) {
     x = static_cast<uint8_t>(*current_++);
     return none;
@@ -143,39 +143,39 @@ apply_result binary_deserializer::apply(uint8_t& x) noexcept {
   return sec::end_of_stream;
 }
 
-apply_result binary_deserializer::apply(int16_t& x) noexcept {
+result_type binary_deserializer::apply(int16_t& x) noexcept {
   return apply_int(*this, x);
 }
 
-apply_result binary_deserializer::apply(uint16_t& x) noexcept {
+result_type binary_deserializer::apply(uint16_t& x) noexcept {
   return apply_int(*this, x);
 }
 
-apply_result binary_deserializer::apply(int32_t& x) noexcept {
+result_type binary_deserializer::apply(int32_t& x) noexcept {
   return apply_int(*this, x);
 }
 
-apply_result binary_deserializer::apply(uint32_t& x) noexcept {
+result_type binary_deserializer::apply(uint32_t& x) noexcept {
   return apply_int(*this, x);
 }
 
-apply_result binary_deserializer::apply(int64_t& x) noexcept {
+result_type binary_deserializer::apply(int64_t& x) noexcept {
   return apply_int(*this, x);
 }
 
-apply_result binary_deserializer::apply(uint64_t& x) noexcept {
+result_type binary_deserializer::apply(uint64_t& x) noexcept {
   return apply_int(*this, x);
 }
 
-apply_result binary_deserializer::apply(float& x) noexcept {
+result_type binary_deserializer::apply(float& x) noexcept {
   return apply_float(*this, x);
 }
 
-apply_result binary_deserializer::apply(double& x) noexcept {
+result_type binary_deserializer::apply(double& x) noexcept {
   return apply_float(*this, x);
 }
 
-apply_result binary_deserializer::apply(long double& x) {
+result_type binary_deserializer::apply(long double& x) {
   // TODO: Our IEEE-754 conversion currently does not work for long double. The
   //       standard does not guarantee a fixed representation for this type, but
   //       on X86 we can usually rely on 80-bit precision. For now, we fall back
@@ -189,7 +189,7 @@ apply_result binary_deserializer::apply(long double& x) {
   return sec::invalid_argument;
 }
 
-apply_result binary_deserializer::apply(timespan& x) noexcept {
+result_type binary_deserializer::apply(timespan& x) noexcept {
   int64_t tmp = 0;
   if (auto err = apply(tmp))
     return err;
@@ -197,7 +197,7 @@ apply_result binary_deserializer::apply(timespan& x) noexcept {
   return none;
 }
 
-apply_result binary_deserializer::apply(timestamp& x) noexcept {
+result_type binary_deserializer::apply(timestamp& x) noexcept {
   int64_t tmp = 0;
   if (auto err = apply(tmp))
     return err;
@@ -205,7 +205,7 @@ apply_result binary_deserializer::apply(timestamp& x) noexcept {
   return none;
 }
 
-apply_result binary_deserializer::apply(span<byte> x) noexcept {
+result_type binary_deserializer::apply(span<byte> x) noexcept {
   if (!range_check(x.size()))
     return sec::end_of_stream;
   memcpy(x.data(), current_, x.size());
@@ -213,7 +213,7 @@ apply_result binary_deserializer::apply(span<byte> x) noexcept {
   return none;
 }
 
-apply_result binary_deserializer::apply(std::string& x) {
+result_type binary_deserializer::apply(std::string& x) {
   x.clear();
   size_t str_size = 0;
   if (auto err = begin_sequence(str_size))
@@ -225,7 +225,7 @@ apply_result binary_deserializer::apply(std::string& x) {
   return end_sequence();
 }
 
-apply_result binary_deserializer::apply(std::u16string& x) {
+result_type binary_deserializer::apply(std::u16string& x) {
   x.clear();
   size_t str_size = 0;
   if (auto err = begin_sequence(str_size))
@@ -240,7 +240,7 @@ apply_result binary_deserializer::apply(std::u16string& x) {
   return end_sequence();
 }
 
-apply_result binary_deserializer::apply(std::u32string& x) {
+result_type binary_deserializer::apply(std::u32string& x) {
   x.clear();
   size_t str_size = 0;
   if (auto err = begin_sequence(str_size))
@@ -256,7 +256,7 @@ apply_result binary_deserializer::apply(std::u32string& x) {
   return end_sequence();
 }
 
-apply_result binary_deserializer::apply(std::vector<bool>& x) {
+result_type binary_deserializer::apply(std::vector<bool>& x) {
   x.clear();
   size_t len = 0;
   if (auto err = begin_sequence(len))

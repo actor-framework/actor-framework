@@ -54,7 +54,7 @@ public:
   virtual error load(size_t pos, deserializer& source) = 0;
 
   /// Load the content for the element at position `pos` from `source`.
-  virtual error load(size_t pos, binary_deserializer& source) = 0;
+  virtual error_code<sec> load(size_t pos, binary_deserializer& source) = 0;
 
   // -- modifiers --------------------------------------------------------------
 
@@ -62,7 +62,7 @@ public:
   virtual error load(deserializer& source);
 
   /// Load the content for the tuple from `source`.
-  virtual error load(binary_deserializer& source);
+  virtual error_code<sec> load(binary_deserializer& source);
 
   // -- pure virtual observers -------------------------------------------------
 
@@ -89,7 +89,7 @@ public:
   virtual error save(size_t pos, serializer& sink) const = 0;
 
   /// Saves the element at position `pos` to `sink`.
-  virtual error save(size_t pos, binary_serializer& sink) const = 0;
+  virtual error_code<sec> save(size_t pos, binary_serializer& sink) const = 0;
 
   // -- observers --------------------------------------------------------------
 
@@ -107,7 +107,7 @@ public:
   virtual error save(serializer& sink) const;
 
   /// Saves the content of the tuple to `sink`.
-  virtual error save(binary_serializer& sink) const;
+  virtual error_code<sec> save(binary_serializer& sink) const;
 
   /// Checks whether the type of the stored value at position `pos`
   /// matches type number `n` and run-time type information `p`.
@@ -231,22 +231,22 @@ private:
 };
 
 /// @relates type_erased_tuple
-inline error inspect(serializer& sink, const type_erased_tuple& x) {
+inline auto inspect(serializer& sink, const type_erased_tuple& x) {
   return x.save(sink);
 }
 
 /// @relates type_erased_tuple
-inline error inspect(binary_serializer& sink, const type_erased_tuple& x) {
+inline auto inspect(binary_serializer& sink, const type_erased_tuple& x) {
   return x.save(sink);
 }
 
 /// @relates type_erased_tuple
-inline error inspect(deserializer& source, type_erased_tuple& x) {
+inline auto inspect(deserializer& source, type_erased_tuple& x) {
   return x.load(source);
 }
 
 /// @relates type_erased_tuple
-inline error inspect(binary_deserializer& source, type_erased_tuple& x) {
+inline auto inspect(binary_deserializer& source, type_erased_tuple& x) {
   return x.load(source);
 }
 
@@ -267,7 +267,7 @@ public:
 
   error load(size_t pos, deserializer& source) override;
 
-  error load(size_t pos, binary_deserializer& source) override;
+  error_code<sec> load(size_t pos, binary_deserializer& source) override;
 
   size_t size() const noexcept override;
 
@@ -283,7 +283,7 @@ public:
 
   error save(size_t pos, serializer& sink) const override;
 
-  error save(size_t pos, binary_serializer& sink) const override;
+  error_code<sec> save(size_t pos, binary_serializer& sink) const override;
 };
 
 } // namespace caf

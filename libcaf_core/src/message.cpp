@@ -66,7 +66,7 @@ error message::load(size_t pos, deserializer& source) {
   return vals_.unshared().load(pos, source);
 }
 
-error message::load(size_t pos, binary_deserializer& source) {
+error_code<sec> message::load(size_t pos, binary_deserializer& source) {
   CAF_ASSERT(vals_ != nullptr);
   return vals_.unshared().load(pos, source);
 }
@@ -104,7 +104,7 @@ error message::save(size_t pos, serializer& sink) const {
   return vals_->save(pos, sink);
 }
 
-error message::save(size_t pos, binary_serializer& sink) const {
+error_code<sec> message::save(size_t pos, binary_serializer& sink) const {
   CAF_ASSERT(vals_ != nullptr);
   return vals_->save(pos, sink);
 }
@@ -116,7 +116,8 @@ bool message::shared() const noexcept {
 namespace {
 
 template <class Deserializer>
-error load_vals(Deserializer& source, message::data_ptr& vals) {
+typename Deserializer::result_type
+load_vals(Deserializer& source, message::data_ptr& vals) {
   if (source.context() == nullptr)
     return sec::no_context;
   uint16_t zero = 0;
@@ -146,7 +147,10 @@ error load_vals(Deserializer& source, message::data_ptr& vals) {
     tmp.assign(i, n);
     auto ptr = types.make_value(tmp);
     if (!ptr)
-      return make_error(sec::unknown_type, make_message(std::move(tmp)));
+    {
+      CAF_LOG_ERROR("unknown type:" << tmp);
+      return sec::unknown_type;
+    }
     if (auto err = ptr->load(source))
       return err;
     dmd->append(std::move(ptr));
@@ -167,14 +171,15 @@ error message::load(deserializer& source) {
   return load_vals(source, vals_);
 }
 
-error message::load(binary_deserializer& source) {
+error_code<sec> message::load(binary_deserializer& source) {
   return load_vals(source, vals_);
 }
 
 namespace {
 
 template <class Serializer>
-error save_tuple(Serializer& sink, const type_erased_tuple& x) {
+typename Serializer::result_type
+save_tuple(Serializer& sink, const type_erased_tuple& x) {
   if (sink.context() == nullptr)
     return sec::no_context;
   // build type name
@@ -196,9 +201,7 @@ error save_tuple(Serializer& sink, const type_erased_tuple& x) {
                 << (rtti.second != nullptr ? rtti.second->name()
                                            : "-not-available-")
                 << std::endl;
-      return make_error(sec::unknown_type, make_message(rtti.second != nullptr
-                                                          ? rtti.second->name()
-                                                          : "-not-available-"));
+      return sec::unknown_type;
     }
     tname += '+';
     tname += portable_name;
@@ -217,7 +220,8 @@ error message::save(serializer& sink, const type_erased_tuple& x) {
   return save_tuple(sink, x);
 }
 
-error message::save(binary_serializer& sink, const type_erased_tuple& x) {
+error_code<sec>
+message::save(binary_serializer& sink, const type_erased_tuple& x) {
   return save_tuple(sink, x);
 }
 
@@ -225,7 +229,7 @@ error message::save(serializer& sink) const {
   return save_tuple(sink, *this);
 }
 
-error message::save(binary_serializer& sink) const {
+error_code<sec> message::save(binary_serializer& sink) const {
   return save_tuple(sink, *this);
 }
 
@@ -262,11 +266,11 @@ error inspect(deserializer& source, message& msg) {
   return msg.load(source);
 }
 
-error inspect(binary_serializer& sink, message& msg) {
+error_code<sec> inspect(binary_serializer& sink, message& msg) {
   return msg.save(sink);
 }
 
-error inspect(binary_deserializer& source, message& msg) {
+error_code<sec> inspect(binary_deserializer& source, message& msg) {
   return msg.load(source);
 }
 

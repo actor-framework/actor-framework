@@ -51,7 +51,7 @@ public:
   virtual error load(deserializer& source, group& storage) = 0;
 
   /// Loads a group of this module from `source` and stores it in `storage`.
-  virtual error load(binary_deserializer& source, group& storage) = 0;
+  virtual error_code<sec> load(binary_deserializer& source, group& storage) = 0;
 
   // -- observers --------------------------------------------------------------
 

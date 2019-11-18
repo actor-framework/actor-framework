@@ -138,7 +138,7 @@ public:
     return dispatch(pos, source);
   }
 
-  error load(size_t pos, binary_deserializer& source) override {
+  error_code<sec> load(size_t pos, binary_deserializer& source) override {
     return dispatch(pos, source);
   }
 
@@ -154,7 +154,7 @@ public:
     return mptr()->dispatch(pos, sink);
   }
 
-  error save(size_t pos, binary_serializer& sink) const override {
+  error_code<sec> save(size_t pos, binary_serializer& sink) const override {
     return mptr()->dispatch(pos, sink);
   }
 

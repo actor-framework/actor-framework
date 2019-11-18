@@ -81,7 +81,7 @@ public:
     return source(*addr_of(x_));
   }
 
-  error load(binary_deserializer& source) override {
+  error_code<sec> load(binary_deserializer& source) override {
     return source(*addr_of(x_));
   }
 
@@ -110,7 +110,7 @@ public:
     return sink(*addr_of(const_cast<T&>(x_)));
   }
 
-  error save(binary_serializer& sink) const override {
+  error_code<sec> save(binary_serializer& sink) const override {
     return sink(*addr_of(const_cast<T&>(x_)));
   }
 

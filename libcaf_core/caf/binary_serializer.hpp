@@ -40,7 +40,7 @@ class binary_serializer : public read_inspector<binary_serializer> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using result_type = error;
+  using result_type = error_code<sec>;
 
   // -- constructors, destructors, and assignment operators --------------------
 

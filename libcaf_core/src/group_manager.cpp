@@ -111,7 +111,7 @@ public:
 
   error save(serializer& sink) const override;
 
-  error save(binary_serializer& sink) const override;
+  error_code<sec> save(binary_serializer& sink) const override;
 
   void stop() override {
     CAF_LOG_TRACE("");
@@ -350,16 +350,15 @@ public:
     return group{result};
   }
 
-
   template <class Deserializer>
-  error load_impl(Deserializer& source, group& storage) {
+  typename Deserializer::result_type
+  load_impl(Deserializer& source, group& storage) {
     CAF_LOG_TRACE("");
     // deserialize identifier and broker
     std::string identifier;
     strong_actor_ptr broker_ptr;
-    auto e = source(identifier, broker_ptr);
-    if (e)
-      return e;
+    if (auto err = source(identifier, broker_ptr))
+      return err;
     CAF_LOG_DEBUG(CAF_ARG(identifier) << CAF_ARG(broker_ptr));
     if (!broker_ptr) {
       storage = invalid_group;
@@ -390,7 +389,7 @@ public:
     return load_impl(source, storage);
   }
 
-  error load(binary_deserializer& source, group& storage) override {
+  error_code<sec> load(binary_deserializer& source, group& storage) override {
     return load_impl(source, storage);
   }
 
@@ -407,7 +406,7 @@ public:
     return save_impl(ptr, sink);
   }
 
-  error save(const local_group* ptr, binary_serializer& sink) const {
+  error_code<sec> save(const local_group* ptr, binary_serializer& sink) const {
     return save_impl(ptr, sink);
   }
 
@@ -452,7 +451,7 @@ error local_group::save(serializer& sink) const {
   return static_cast<local_group_module&>(parent_).save(this, sink);
 }
 
-error local_group::save(binary_serializer& sink) const {
+error_code<sec> local_group::save(binary_serializer& sink) const {
   CAF_LOG_TRACE("");
   return static_cast<local_group_module&>(parent_).save(this, sink);
 }

@@ -229,10 +229,10 @@ public:
   template <class T, class... Ts>
   void to_buf(byte_buffer& buf, basp::header& hdr, payload_writer* writer,
               const T& x, const Ts&... xs) {
-    auto pw = make_callback([&](binary_serializer& sink) -> error {
+    auto pw = make_callback([&](binary_serializer& sink) {
       if (writer)
-        return error::eval([&] { return (*writer)(sink); },
-                           [&] { return sink(const_cast<T&>(x)); });
+        if (auto err = (*writer)(sink))
+          return err;
       return sink(const_cast<T&>(x));
     });
     to_buf(buf, hdr, &pw, xs...);

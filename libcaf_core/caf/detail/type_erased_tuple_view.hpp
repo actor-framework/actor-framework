@@ -70,7 +70,7 @@ public:
     return ptrs_[pos]->load(source);
   }
 
-  error load(size_t pos, binary_deserializer& source) override {
+  error_code<sec> load(size_t pos, binary_deserializer& source) override {
     return ptrs_[pos]->load(source);
   }
 
@@ -104,7 +104,7 @@ public:
     return ptrs_[pos]->save(sink);
   }
 
-  error save(size_t pos, binary_serializer& sink) const override {
+  error_code<sec> save(size_t pos, binary_serializer& sink) const override {
     return ptrs_[pos]->save(sink);
   }
 

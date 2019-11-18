@@ -57,9 +57,9 @@ public:
 
     virtual error deserialize(deserializer& source) = 0;
 
-    virtual error serialize(binary_serializer& sink) const = 0;
+    virtual error_code<sec> serialize(binary_serializer& sink) const = 0;
 
-    virtual error deserialize(binary_deserializer& source) = 0;
+    virtual error_code<sec> deserialize(binary_deserializer& source) = 0;
   };
 
   // A technology-agnostic node identifier with process ID and hash value.
@@ -119,9 +119,9 @@ public:
 
     error deserialize(deserializer& source) override;
 
-    error serialize(binary_serializer& sink) const override;
+    error_code<sec> serialize(binary_serializer& sink) const override;
 
-    error deserialize(binary_deserializer& source) override;
+    error_code<sec> deserialize(binary_deserializer& source) override;
 
   private:
     // -- member variables -----------------------------------------------------
@@ -167,9 +167,9 @@ public:
 
     error deserialize(deserializer& source) override;
 
-    error serialize(binary_serializer& sink) const override;
+    error_code<sec> serialize(binary_serializer& sink) const override;
 
-    error deserialize(binary_deserializer& source) override;
+    error_code<sec> deserialize(binary_deserializer& source) override;
 
   private:
     // -- member variables -----------------------------------------------------
@@ -232,11 +232,11 @@ public:
 
   friend error inspect(serializer& sink, node_id& x);
 
-  friend error inspect(binary_serializer& sink, node_id& x);
+  friend error_code<sec> inspect(binary_serializer& sink, node_id& x);
 
   friend error inspect(deserializer& source, node_id& x);
 
-  friend error inspect(binary_deserializer& source, node_id& x);
+  friend error_code<sec> inspect(binary_deserializer& source, node_id& x);
 
 private:
   intrusive_ptr<data> data_;

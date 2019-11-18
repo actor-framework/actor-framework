@@ -138,11 +138,13 @@ error node_id::default_data::deserialize(deserializer& source) {
   return source(pid_, host_);
 }
 
-error node_id::default_data::serialize(binary_serializer& sink) const {
+error_code<sec>
+node_id::default_data::serialize(binary_serializer& sink) const {
   return sink(pid_, host_);
 }
 
-error node_id::default_data::deserialize(binary_deserializer& source) {
+error_code<sec>
+node_id::default_data::deserialize(binary_deserializer& source) {
   return source(pid_, host_);
 }
 
@@ -188,11 +190,11 @@ error node_id::uri_data::deserialize(deserializer& source) {
   return source(value_);
 }
 
-error node_id::uri_data::serialize(binary_serializer& sink) const {
+error_code<sec> node_id::uri_data::serialize(binary_serializer& sink) const {
   return sink(value_);
 }
 
-error node_id::uri_data::deserialize(binary_deserializer& source) {
+error_code<sec> node_id::uri_data::deserialize(binary_deserializer& source) {
   return source(value_);
 }
 
@@ -228,8 +230,7 @@ void node_id::swap(node_id& x) {
 namespace {
 
 template <class Serializer>
-error serialize_data(Serializer& sink,
-                     const intrusive_ptr<node_id::data>& ptr) {
+auto serialize_data(Serializer& sink, const intrusive_ptr<node_id::data>& ptr) {
   if (ptr && ptr->valid()) {
     if (auto err = sink(ptr->implementation_id()))
       return err;
@@ -239,14 +240,14 @@ error serialize_data(Serializer& sink,
 }
 
 template <class Deserializer>
-error deserialize_data(Deserializer& source,
-                       intrusive_ptr<node_id::data>& ptr) {
+auto deserialize_data(Deserializer& source, intrusive_ptr<node_id::data>& ptr) {
+  using result_type = typename Deserializer::result_type;
   auto impl = static_cast<atom_value>(0);
   if (auto err = source(impl))
     return err;
   if (impl == atom("")) {
     ptr.reset();
-    return none;
+    return result_type{};
   }
   if (impl == node_id::default_data::class_id) {
     if (ptr == nullptr
@@ -259,7 +260,7 @@ error deserialize_data(Deserializer& source,
       ptr = make_counted<node_id::uri_data>();
     return ptr->deserialize(source);
   }
-  return sec::unknown_type;
+  return result_type{sec::unknown_type};
 }
 
 } // namespace
@@ -272,11 +273,11 @@ error inspect(deserializer& source, node_id& x) {
   return deserialize_data(source, x.data_);
 }
 
-error inspect(binary_serializer& sink, node_id& x) {
+error_code<sec> inspect(binary_serializer& sink, node_id& x) {
   return serialize_data(sink, x.data_);
 }
 
-error inspect(binary_deserializer& source, node_id& x) {
+error_code<sec> inspect(binary_deserializer& source, node_id& x) {
   return deserialize_data(source, x.data_);
 }
 

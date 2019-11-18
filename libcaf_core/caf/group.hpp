@@ -82,11 +82,11 @@ public:
 
   friend error inspect(serializer&, group&);
 
-  friend error inspect(binary_serializer&, group&);
+  friend error_code<sec> inspect(binary_serializer&, group&);
 
   friend error inspect(deserializer&, group&);
 
-  friend error inspect(binary_deserializer&, group&);
+  friend error_code<sec> inspect(binary_deserializer&, group&);
 
   abstract_group* get() const noexcept {
     return ptr_.get();

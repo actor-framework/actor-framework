@@ -60,7 +60,8 @@ error dynamic_message_data::load(size_t pos, deserializer& source) {
   return elements_[pos]->load(source);
 }
 
-error dynamic_message_data::load(size_t pos, binary_deserializer& source) {
+error_code<sec>
+dynamic_message_data::load(size_t pos, binary_deserializer& source) {
   CAF_ASSERT(pos < size());
   return elements_[pos]->load(source);
 }
@@ -98,7 +99,8 @@ error dynamic_message_data::save(size_t pos, serializer& sink) const {
   return elements_[pos]->save(sink);
 }
 
-error dynamic_message_data::save(size_t pos, binary_serializer& sink) const {
+error_code<sec>
+dynamic_message_data::save(size_t pos, binary_serializer& sink) const {
   CAF_ASSERT(pos < size());
   return elements_[pos]->save(sink);
 }

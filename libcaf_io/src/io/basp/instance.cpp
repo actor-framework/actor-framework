@@ -176,7 +176,7 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
                mid.integer_value(),
                sender ? sender->id() : invalid_actor_id,
                dest_actor};
-    auto writer = make_callback([&](binary_serializer& sink) -> error {
+    auto writer = make_callback([&](binary_serializer& sink) { //
       return sink(forwarding_stack, msg);
     });
     write(ctx, callee_.get_buffer(path->hdl), hdr, &writer);
@@ -187,7 +187,7 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
                mid.integer_value(),
                sender ? sender->id() : invalid_actor_id,
                dest_actor};
-    auto writer = make_callback([&](binary_serializer& sink) -> error {
+    auto writer = make_callback([&](binary_serializer& sink) {
       return sink(source_node, dest_node, forwarding_stack, msg);
     });
     write(ctx, callee_.get_buffer(path->hdl), hdr, &writer);
@@ -225,7 +225,7 @@ void instance::write_server_handshake(execution_unit* ctx, byte_buffer& out_buf,
       pa = &i->second;
   }
   CAF_LOG_DEBUG_IF(!pa && port, "no actor published");
-  auto writer = make_callback([&](binary_serializer& sink) -> error {
+  auto writer = make_callback([&](binary_serializer& sink) {
     auto app_ids = get_or(config(), "middleman.app-identifiers",
                           defaults::middleman::app_identifiers);
     auto aid = invalid_actor_id;
@@ -246,8 +246,9 @@ void instance::write_server_handshake(execution_unit* ctx, byte_buffer& out_buf,
 }
 
 void instance::write_client_handshake(execution_unit* ctx, byte_buffer& buf) {
-  auto writer = make_callback(
-    [&](binary_serializer& sink) -> error { return sink(this_node_); });
+  auto writer = make_callback([&](binary_serializer& sink) { //
+    return sink(this_node_);
+  });
   header hdr{message_type::client_handshake,
              0,
              0,
@@ -260,7 +261,7 @@ void instance::write_client_handshake(execution_unit* ctx, byte_buffer& buf) {
 void instance::write_monitor_message(execution_unit* ctx, byte_buffer& buf,
                                      const node_id& dest_node, actor_id aid) {
   CAF_LOG_TRACE(CAF_ARG(dest_node) << CAF_ARG(aid));
-  auto writer = make_callback([&](binary_serializer& sink) -> error {
+  auto writer = make_callback([&](binary_serializer& sink) { //
     return sink(this_node_, dest_node);
   });
   header hdr{message_type::monitor_message, 0, 0, 0, invalid_actor_id, aid};
@@ -271,7 +272,7 @@ void instance::write_down_message(execution_unit* ctx, byte_buffer& buf,
                                   const node_id& dest_node, actor_id aid,
                                   const error& rsn) {
   CAF_LOG_TRACE(CAF_ARG(dest_node) << CAF_ARG(aid) << CAF_ARG(rsn));
-  auto writer = make_callback([&](binary_serializer& sink) -> error {
+  auto writer = make_callback([&](binary_serializer& sink) { //
     return sink(this_node_, dest_node, rsn);
   });
   header hdr{message_type::down_message, 0, 0, 0, aid, invalid_actor_id};

@@ -366,7 +366,7 @@ void middleman::init(actor_system_config& cfg) {
       return sec::no_such_group_module;
     }
 
-    error load(binary_deserializer&, group&) override {
+    error_code<sec> load(binary_deserializer&, group&) override {
       // never called, because we hand out group instances of the local module
       return sec::no_such_group_module;
     }
