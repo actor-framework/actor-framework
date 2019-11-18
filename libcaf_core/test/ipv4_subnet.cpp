@@ -54,7 +54,7 @@ CAF_TEST(equality) {
   CAF_CHECK_EQUAL(a, b);
 }
 
-CAF_TEST(constains) {
+CAF_TEST(contains) {
   ipv4_subnet local{addr(127, 0, 0, 0), 8};
   CAF_CHECK(local.contains(addr(127, 0, 0, 1)));
   CAF_CHECK(local.contains(addr(127, 1, 2, 3)));

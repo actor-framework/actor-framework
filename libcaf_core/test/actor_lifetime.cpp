@@ -184,7 +184,7 @@ struct fixture {
 } // namespace
 
 CAF_TEST(destructor_call) {
-  { // lifetime scope of actor systme
+  { // lifetime scope of actor system
     actor_system_config cfg;
     actor_system system{cfg};
     system.spawn<testee>();

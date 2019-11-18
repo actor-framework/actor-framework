@@ -51,7 +51,7 @@ struct fixture {
 
 CAF_TEST_FIXTURE_SCOPE(receive_buffer_tests, fixture)
 
-CAF_TEST(constuctors) {
+CAF_TEST(constructors) {
   CAF_CHECK_EQUAL(a.size(), 0ul);
   CAF_CHECK_EQUAL(a.capacity(), 0ul);
   CAF_CHECK_EQUAL(a.data(), nullptr);

@@ -57,7 +57,7 @@ struct handle_set {
   actor_addr wh;
   // Dynamically typed handle to the actor.
   actor dt;
-  // Staically typed handle to the actor.
+  // Statically typed handle to the actor.
   testee_actor st;
 
   handle_set() = default;

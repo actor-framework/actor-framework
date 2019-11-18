@@ -49,7 +49,7 @@ CAF_TEST(equality) {
   CAF_CHECK_EQUAL(a, b);
 }
 
-CAF_TEST(constains) {
+CAF_TEST(contains) {
   auto local = ipv6_address{{0xbebe, 0xbebe}, {}} / 32;
   CAF_CHECK(local.contains(ipv6_address({0xbebe, 0xbebe, 0xbebe}, {})));
   CAF_CHECK(!local.contains(ipv6_address({0xbebe, 0xbebf}, {})));

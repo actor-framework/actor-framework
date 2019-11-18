@@ -661,7 +661,7 @@ CAF_TEST(depth_3_pipeline_2000_items) {
   loop(alice, bob);
   CAF_CHECK_NOT_EQUAL(bob.data.size(), 0u);
   CAF_CHECK_EQUAL(carl.data.size(), 0u);
-  CAF_MESSAGE("loop over bob and carl until bob finsihed sending");
+  CAF_MESSAGE("loop over bob and carl until bob finished sending");
   // bob has one batch from alice in its mailbox that bob will read when
   // becoming uncongested again
   loop(bob, carl);
