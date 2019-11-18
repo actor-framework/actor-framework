@@ -143,14 +143,6 @@ void binary_serializer::apply(long double x) {
   apply(tmp);
 }
 
-void binary_serializer::apply(timespan x) {
-  apply(x.count());
-}
-
-void binary_serializer::apply(timestamp x) {
-  apply(x.time_since_epoch().count());
-}
-
 void binary_serializer::apply(string_view x) {
   begin_sequence(x.size());
   apply(as_bytes(make_span(x)));

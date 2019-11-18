@@ -24,6 +24,7 @@
 #include <utility>
 
 #include "caf/allowed_unsafe_message_type.hpp"
+#include "caf/detail/inspect.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/meta/annotation.hpp"
@@ -45,7 +46,6 @@ namespace caf {
 /// - all fixed-size integer types from `<cstdint>`
 /// - floating point numbers
 /// - enum types
-/// - `timespan`, `timestamp`, and `atom_value`
 /// - `std::string`, `std::u16string`, and `std::u32string`
 template <class Subtype>
 class write_inspector {
@@ -102,6 +102,7 @@ public:
         static_assert(std::is_lvalue_reference_v<decltype(x)> //
                       && !std::is_const_v<decltype(x)>);
         static_assert(detail::is_inspectable<Subtype, type>::value);
+        using caf::detail::inspect;
         CAF_WRITE_INSPECTOR_TRY(inspect(dref, x));
       }
       return true;

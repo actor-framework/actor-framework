@@ -41,6 +41,10 @@ public:
 
   using result_type = error_code<sec>;
 
+  using container_type = byte_buffer;
+
+  using value_type = byte;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   binary_serializer(actor_system& sys, byte_buffer& buf) noexcept;
@@ -110,10 +114,6 @@ public:
   void apply(double x);
 
   void apply(long double x);
-
-  void apply(timespan x);
-
-  void apply(timestamp x);
 
   void apply(string_view x);
 

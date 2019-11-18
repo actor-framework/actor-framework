@@ -53,6 +53,17 @@ public:
     reset(as_bytes(make_span(input)));
   }
 
+  binary_deserializer(execution_unit* ctx, const void* buf,
+                      size_t size) noexcept
+    : binary_deserializer(ctx, span{reinterpret_cast<const byte*>(buf), size}) {
+    // nop
+  }
+
+  binary_deserializer(actor_system& sys, const void* buf, size_t size) noexcept
+    : binary_deserializer(sys, span{reinterpret_cast<const byte*>(buf), size}) {
+    // nop
+  }
+
   // -- properties -------------------------------------------------------------
 
   /// Returns how many bytes are still available to read.
@@ -122,10 +133,6 @@ public:
   result_type apply(double&) noexcept;
 
   result_type apply(long double&);
-
-  result_type apply(timespan& x) noexcept;
-
-  result_type apply(timestamp& x) noexcept;
 
   result_type apply(span<byte>) noexcept;
 

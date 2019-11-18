@@ -21,6 +21,7 @@
 #include <type_traits>
 
 #include "caf/allowed_unsafe_message_type.hpp"
+#include "caf/detail/inspect.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/meta/annotation.hpp"
@@ -98,6 +99,7 @@ public:
         CAF_READ_INSPECTOR_TRY(dref.end_sequence())
       } else {
         static_assert(detail::is_inspectable<Subtype, type>::value);
+        using caf::detail::inspect;
         // We require that the implementation for `inspect` does not modify its
         // arguments when passing a reading inspector.
         CAF_READ_INSPECTOR_TRY(inspect(dref, const_cast<type&>(x)));

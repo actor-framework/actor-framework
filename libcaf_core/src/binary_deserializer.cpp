@@ -189,22 +189,6 @@ result_type binary_deserializer::apply(long double& x) {
   return sec::invalid_argument;
 }
 
-result_type binary_deserializer::apply(timespan& x) noexcept {
-  int64_t tmp = 0;
-  if (auto err = apply(tmp))
-    return err;
-  x = timespan{tmp};
-  return none;
-}
-
-result_type binary_deserializer::apply(timestamp& x) noexcept {
-  int64_t tmp = 0;
-  if (auto err = apply(tmp))
-    return err;
-  x = timestamp{timespan{tmp}};
-  return none;
-}
-
 result_type binary_deserializer::apply(span<byte> x) noexcept {
   if (!range_check(x.size()))
     return sec::end_of_stream;
