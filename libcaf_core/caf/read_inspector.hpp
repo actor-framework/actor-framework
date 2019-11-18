@@ -77,21 +77,21 @@ public:
         } else {
           CAF_READ_INSPECTOR_TRY(dref.apply(x))
         }
-      } else if constexpr (std::is_integral_v<type>) {
+      } else if constexpr (std::is_integral<type>::value) {
         using squashed_type = detail::squashed_int_t<type>;
         CAF_READ_INSPECTOR_TRY(dref.apply(static_cast<squashed_type>(x)))
       } else if constexpr (std::is_array<type>::value) {
         CAF_READ_INSPECTOR_TRY(apply_array(dref, x))
-      } else if constexpr (detail::is_stl_tuple_type_v<type>) {
-        std::make_index_sequence<std::tuple_size_v<type>> seq;
+      } else if constexpr (detail::is_stl_tuple_type<type>::value) {
+        std::make_index_sequence<std::tuple_size<type>::value> seq;
         CAF_READ_INSPECTOR_TRY(apply_tuple(dref, x, seq))
-      } else if constexpr (detail::is_map_like_v<type>) {
+      } else if constexpr (detail::is_map_like<type>::value) {
         CAF_READ_INSPECTOR_TRY(dref.begin_sequence(x.size()))
-        for (const auto& [key, value] : x) {
-          CAF_READ_INSPECTOR_TRY(dref(key, value))
+        for (const auto& kvp : x) {
+          CAF_READ_INSPECTOR_TRY(dref(kvp.first, kvp.second))
         }
         CAF_READ_INSPECTOR_TRY(dref.end_sequence())
-      } else if constexpr (detail::is_list_like_v<type>) {
+      } else if constexpr (detail::is_list_like<type>::value) {
         CAF_READ_INSPECTOR_TRY(dref.begin_sequence(x.size()))
         for (const auto& value : x) {
           CAF_READ_INSPECTOR_TRY(dref(value))

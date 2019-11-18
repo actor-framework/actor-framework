@@ -69,13 +69,13 @@ public:
         // skip element
       } else if constexpr (detail::can_apply_v<Subtype, decltype(x)>) {
         CAF_WRITE_INSPECTOR_TRY(dref.apply(x))
-      } else if constexpr (std::is_integral_v<type>) {
+      } else if constexpr (std::is_integral<type>::value) {
         using squashed_type = detail::squashed_int_t<type>;
         CAF_WRITE_INSPECTOR_TRY(dref.apply(reinterpret_cast<squashed_type&>(x)))
       } else if constexpr (std::is_array<type>::value) {
         CAF_WRITE_INSPECTOR_TRY(apply_array(dref, x))
       } else if constexpr (detail::is_stl_tuple_type_v<type>) {
-        std::make_index_sequence<std::tuple_size_v<type>> seq;
+        std::make_index_sequence<std::tuple_size<type>::value> seq;
         CAF_WRITE_INSPECTOR_TRY(apply_tuple(dref, x, seq))
       } else if constexpr (detail::is_map_like_v<type>) {
         x.clear();
@@ -99,8 +99,8 @@ public:
         }
         CAF_WRITE_INSPECTOR_TRY(dref.end_sequence())
       } else {
-        static_assert(std::is_lvalue_reference_v<decltype(x)> //
-                      && !std::is_const_v<decltype(x)>);
+        static_assert(std::is_lvalue_reference<decltype(x)>::value //
+                      && !std::is_const<decltype(x)>::value);
         static_assert(detail::is_inspectable<Subtype, type>::value);
         using caf::detail::inspect;
         CAF_WRITE_INSPECTOR_TRY(inspect(dref, x));

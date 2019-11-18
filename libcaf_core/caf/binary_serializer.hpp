@@ -124,7 +124,8 @@ public:
   void apply(span<const byte> x);
 
   template <class T>
-  std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T>> apply(T x) {
+  std::enable_if_t<std::is_integral<T>::value && std::is_signed<T>::value>
+  apply(T x) {
     return apply(static_cast<std::make_unsigned_t<T>>(x));
   }
 

@@ -20,7 +20,7 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <string_view>
+#include <string>
 #include <tuple>
 #include <utility>
 
@@ -32,6 +32,7 @@
 #include "caf/read_inspector.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
+#include "caf/string_view.hpp"
 
 namespace caf {
 
@@ -125,10 +126,10 @@ public:
   virtual result_type apply(string_view x) = 0;
 
   /// @copydoc apply
-  virtual result_type apply(std::u16string_view x) = 0;
+  virtual result_type apply(const std::u16string& x) = 0;
 
   /// @copydoc apply
-  virtual result_type apply(std::u32string_view x) = 0;
+  virtual result_type apply(const std::u32string& x) = 0;
 
   template <class Enum, class = std::enable_if_t<std::is_enum<Enum>::value>>
   result_type apply(Enum x) {

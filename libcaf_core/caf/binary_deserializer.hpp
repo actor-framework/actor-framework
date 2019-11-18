@@ -20,7 +20,6 @@
 
 #include <cstddef>
 #include <string>
-#include <string_view>
 #include <tuple>
 #include <utility>
 
@@ -28,6 +27,7 @@
 #include "caf/fwd.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
+#include "caf/string_view.hpp"
 #include "caf/write_inspector.hpp"
 
 namespace caf {
@@ -55,12 +55,14 @@ public:
 
   binary_deserializer(execution_unit* ctx, const void* buf,
                       size_t size) noexcept
-    : binary_deserializer(ctx, span{reinterpret_cast<const byte*>(buf), size}) {
+    : binary_deserializer(ctx, make_span(reinterpret_cast<const byte*>(buf),
+                                         size)) {
     // nop
   }
 
   binary_deserializer(actor_system& sys, const void* buf, size_t size) noexcept
-    : binary_deserializer(sys, span{reinterpret_cast<const byte*>(buf), size}) {
+    : binary_deserializer(sys, make_span(reinterpret_cast<const byte*>(buf),
+                                         size)) {
     // nop
   }
 
