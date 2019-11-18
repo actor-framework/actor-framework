@@ -97,7 +97,7 @@ log_magic_trans <- function(base=10) {
             log_breaks(base=base), domain=c(0, Inf))
 }
 
-# Dyanmic time scale that flips to logarithmic if our data is more than two
+# Dynamic time scale that flips to logarithmic if our data is more than two
 # orders of magnitude apart.
 scale_time <- function(.data, fun) {
   trans <- NULL
@@ -253,7 +253,7 @@ plot_time_barplot <- function(.data) {
     scale_y_continuous(name="CPU time", breaks=ticks,
                        labels=make_usec_labels(ticks)) +
     scale_fill_manual(name="CPU time", values=rev(color_hue(2)),
-                      labels=c("User", "Sytem")) +
+                      labels=c("User", "System")) +
     theme(axis.text.x=element_text(angle=90, vjust=.5, hjust=1),
           legend.justification=c(1,1), legend.position=c(1,1))
 }
