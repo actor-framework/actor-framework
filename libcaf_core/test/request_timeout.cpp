@@ -273,7 +273,7 @@ CAF_TEST(single_timeout) {
               {ping_single3, "ping_single3"}};
   for (auto f : fs) {
     bool had_timeout = false;
-    CAF_MESSAGE("test implemenation " << f.second);
+    CAF_MESSAGE("test implementation " << f.second);
     auto testee = sys.spawn(f.first, &had_timeout,
                             sys.spawn<lazy_init>(pong));
     CAF_REQUIRE_EQUAL(sched.jobs.size(), 1u);
@@ -296,7 +296,7 @@ CAF_TEST(nested_timeout) {
               {ping_nested3, "ping_nested3"}};
   for (auto f : fs) {
     bool had_timeout = false;
-    CAF_MESSAGE("test implemenation " << f.second);
+    CAF_MESSAGE("test implementation " << f.second);
     auto testee = sys.spawn(f.first, &had_timeout,
                             sys.spawn<lazy_init>(pong));
     CAF_REQUIRE_EQUAL(sched.jobs.size(), 1u);
@@ -325,7 +325,7 @@ CAF_TEST(multiplexed_timeout) {
               {ping_multiplexed3, "ping_multiplexed3"}};
   for (auto f : fs) {
     bool had_timeout = false;
-    CAF_MESSAGE("test implemenation " << f.second);
+    CAF_MESSAGE("test implementation " << f.second);
     auto testee = sys.spawn(f.first, &had_timeout,
                             sys.spawn<lazy_init>(pong));
     CAF_REQUIRE_EQUAL(sched.jobs.size(), 1u);
