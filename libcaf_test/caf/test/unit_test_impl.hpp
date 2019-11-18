@@ -538,7 +538,7 @@ int main(int argc, char** argv) {
   caf::settings conf;
   std::vector<std::string> args_cpy{argv + 1, argv + divider};
   auto res = options.parse(conf, args_cpy);
-  if (res.first!= caf::pec::success) {
+  if (res.first != caf::pec::success) {
     std::cerr << "error while parsing argument \"" << *res.second
               << "\": " << to_string(res.first) << "\n\n";
     std::cerr << options.help_text() << std::endl;

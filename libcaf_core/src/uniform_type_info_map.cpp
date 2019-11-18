@@ -97,7 +97,7 @@ const char* numbered_type_names[] = {
   "@weak_actor_ptr",
   "bool",
   "double",
-  "float"
+  "float",
 };
 
 namespace {

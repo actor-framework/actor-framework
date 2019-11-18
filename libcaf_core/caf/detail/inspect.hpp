@@ -22,8 +22,7 @@
 
 #include "caf/meta/load_callback.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 // -- inject `inspect` overloads for some STL types ----------------------------
 
@@ -60,8 +59,8 @@ private:
 
   static std::false_type sfinae(Inspector&, ...);
 
-  using result_type = decltype(sfinae(std::declval<Inspector&>(),
-                                      std::declval<T&>()));
+  using result_type
+    = decltype(sfinae(std::declval<Inspector&>(), std::declval<T&>()));
 
 public:
   static constexpr bool value
@@ -72,5 +71,4 @@ public:
 template <class Inspector, class T>
 struct is_inspectable<Inspector, T*> : std::false_type {};
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

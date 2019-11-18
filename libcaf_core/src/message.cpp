@@ -146,8 +146,7 @@ load_vals(Deserializer& source, message::data_ptr& vals) {
     auto n = next(i);
     tmp.assign(i, n);
     auto ptr = types.make_value(tmp);
-    if (!ptr)
-    {
+    if (!ptr) {
       CAF_LOG_ERROR("unknown type:" << tmp);
       return sec::unknown_type;
     }

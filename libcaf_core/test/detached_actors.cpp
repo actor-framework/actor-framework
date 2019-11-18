@@ -54,9 +54,7 @@ CAF_TEST(shutdown_with_delayed_send) {
   auto f = [](event_based_actor* self) -> behavior {
     self->delayed_send(self, std::chrono::nanoseconds(1), ok_atom::value);
     return {
-      [=](ok_atom) {
-        self->quit();
-      }
+      [=](ok_atom) { self->quit(); },
     };
   };
   sys.spawn<detached>(f);
@@ -76,9 +74,7 @@ CAF_TEST(shutdown_with_after) {
               "after()?");
   auto f = [](event_based_actor* self) -> behavior {
     return {
-      after(std::chrono::nanoseconds(1)) >> [=] {
-        self->quit();
-      }
+      after(std::chrono::nanoseconds(1)) >> [=] { self->quit(); },
     };
   };
   sys.spawn<detached>(f);
@@ -92,13 +88,12 @@ CAF_TEST(shutdown_delayed_send_loop) {
     return {
       [=](ok_atom) {
         self->delayed_send(self, std::chrono::milliseconds(1), ok_atom::value);
-      }
+      },
     };
   };
   auto a = sys.spawn<detached>(f);
-  auto g = detail::make_scope_guard([&] {
-    self->send_exit(a, exit_reason::user_shutdown);
-  });
+  auto g = detail::make_scope_guard(
+    [&] { self->send_exit(a, exit_reason::user_shutdown); });
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

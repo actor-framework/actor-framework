@@ -106,8 +106,8 @@ message make_message(T&& x, Ts&&... xs) {
       "individual types by specializing caf::allowed_unsafe_message_type<T> "
       "or by using the macro CAF_ALLOW_UNSAFE_MESSAGE_TYPE");
     using storage = typename tl_apply<stored_types, tuple_vals>::type;
-    auto ptr = make_counted<storage>(std::forward<T>(x),
-                                     std::forward<Ts>(xs)...);
+    auto ptr
+      = make_counted<storage>(std::forward<T>(x), std::forward<Ts>(xs)...);
     return message{detail::message_data::cow_ptr{std::move(ptr)}};
   }
 }

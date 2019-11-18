@@ -112,8 +112,8 @@ public:
 
 private:
   template <class Tuple, size_t... Is>
-  static auto apply_tuple(Subtype& dref, const Tuple& xs,
-                          std::index_sequence<Is...>) {
+  static auto
+  apply_tuple(Subtype& dref, const Tuple& xs, std::index_sequence<Is...>) {
     return dref(std::get<Is>(xs)...);
   }
 

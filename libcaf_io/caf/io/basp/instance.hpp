@@ -55,7 +55,8 @@ public:
     /// Called if a server handshake was received and
     /// the connection to `nid` is established.
     virtual void finalize_handshake(const node_id& nid, actor_id aid,
-                                    std::set<std::string>& sigs) = 0;
+                                    std::set<std::string>& sigs)
+      = 0;
 
     /// Called whenever a direct connection was closed or a
     /// node became unrechable for other reasons *before*
@@ -70,8 +71,9 @@ public:
 
     /// Called whenever BASP learns the ID of a remote node
     /// to which it does not have a direct connection.
-    virtual void learned_new_node_directly(const node_id& nid,
-                                           bool was_known_indirectly) = 0;
+    virtual void
+    learned_new_node_directly(const node_id& nid, bool was_known_indirectly)
+      = 0;
 
     /// Called whenever BASP learns the ID of a remote node
     /// to which it does not have a direct connection.
@@ -113,8 +115,8 @@ public:
 
   /// Handles received data and returns a config for receiving the
   /// next data or `none` if an error occured.
-  connection_state handle(execution_unit* ctx,
-                          new_data_msg& dm, header& hdr, bool is_payload);
+  connection_state
+  handle(execution_unit* ctx, new_data_msg& dm, header& hdr, bool is_payload);
 
   /// Sends heartbeat messages to all valid nodes those are directly connected.
   void handle_heartbeat(execution_unit* ctx);
@@ -127,17 +129,16 @@ public:
 
   /// Sends a BASP message and implicitly flushes the output buffer of `r`.
   /// This function will update `hdr.payload_len` if a payload was written.
-  void write(execution_unit* ctx, const routing_table::route& r,
-             header& hdr, payload_writer* writer = nullptr);
+  void write(execution_unit* ctx, const routing_table::route& r, header& hdr,
+             payload_writer* writer = nullptr);
 
   /// Adds a new actor to the map of published actors.
-  void add_published_actor(uint16_t port,
-                           strong_actor_ptr published_actor,
+  void add_published_actor(uint16_t port, strong_actor_ptr published_actor,
                            std::set<std::string> published_interface);
 
   /// Removes the actor currently assigned to `port`.
-  size_t remove_published_actor(uint16_t port,
-                                removed_published_actor* cb = nullptr);
+  size_t
+  remove_published_actor(uint16_t port, removed_published_actor* cb = nullptr);
 
   /// Removes `whom` if it is still assigned to `port` or from all of its
   /// current ports if `port == 0`.
@@ -181,8 +182,8 @@ public:
   /// actor published at `port` to `buf`. If `port == none` or
   /// if no actor is published at this port then a standard handshake is
   /// written (e.g. used when establishing direct connections on-the-fly).
-  void write_server_handshake(execution_unit* ctx,
-                              byte_buffer& out_buf, optional<uint16_t> port);
+  void write_server_handshake(execution_unit* ctx, byte_buffer& out_buf,
+                              optional<uint16_t> port);
 
   /// Writes the client handshake to `buf`.
   void write_client_handshake(execution_unit* ctx, byte_buffer& buf);
@@ -192,9 +193,9 @@ public:
                              const node_id& dest_node, actor_id aid);
 
   /// Writes a `kill_proxy` to `buf`.
-  void write_down_message(execution_unit* ctx, byte_buffer& buf,
-                          const node_id& dest_node, actor_id aid,
-                          const error& rsn);
+  void
+  write_down_message(execution_unit* ctx, byte_buffer& buf,
+                     const node_id& dest_node, actor_id aid, const error& rsn);
 
   /// Writes a `heartbeat` to `buf`.
   void write_heartbeat(execution_unit* ctx, byte_buffer& buf);
@@ -236,4 +237,4 @@ private:
 
 /// @}
 
-} // namespace caf
+} // namespace caf::io::basp

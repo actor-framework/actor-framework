@@ -248,8 +248,8 @@ public:
 
   /// Appends `buf` to the virtual network buffer of `hdl`
   /// and calls `read_data(hdl)` afterwards.
-  void virtual_send(datagram_handle src, datagram_handle ep,
-                    const byte_buffer&);
+  void
+  virtual_send(datagram_handle src, datagram_handle ep, const byte_buffer&);
 
   /// Waits until a `runnable` is available and executes it.
   void exec_runnable();

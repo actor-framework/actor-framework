@@ -149,12 +149,9 @@ struct fixture : test_coordinator_fixture<config> {
   test_enum te = test_enum::b;
   string str = "Lorem ipsum dolor sit amet.";
   raw_struct rs;
-  test_array ta {
+  test_array ta{
     {0, 1, 2, 3},
-    {
-      {0, 1, 2, 3},
-      {4, 5, 6, 7}
-    },
+    {{0, 1, 2, 3}, {4, 5, 6, 7}},
   };
   int ra[3] = {1, 2, 3};
 
@@ -223,16 +220,12 @@ struct is_message {
     bool ok = false;
     // work around for gcc 4.8.4 bug
     auto tup = tie(v, vs...);
-    message_handler impl {
-      [&](T const& u, Ts const&... us) {
-        ok = tup == tie(u, us...);
-      }
-    };
+    message_handler impl{
+      [&](T const& u, Ts const&... us) { ok = tup == tie(u, us...); }};
     impl(msg);
     return ok;
   }
 };
-
 
 } // namespace
 
@@ -351,7 +344,6 @@ CAF_TEST(multiple_messages) {
   CAF_CHECK(is_message(m1).equal(rs, te));
   CAF_CHECK(is_message(m2).equal(i32, i64, dur, ts, te, str, rs));
 }
-
 
 CAF_TEST(type_erased_value) {
   auto buf = serialize(str);

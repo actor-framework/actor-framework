@@ -55,14 +55,14 @@ public:
 
   binary_deserializer(execution_unit* ctx, const void* buf,
                       size_t size) noexcept
-    : binary_deserializer(ctx, make_span(reinterpret_cast<const byte*>(buf),
-                                         size)) {
+    : binary_deserializer(ctx,
+                          make_span(reinterpret_cast<const byte*>(buf), size)) {
     // nop
   }
 
   binary_deserializer(actor_system& sys, const void* buf, size_t size) noexcept
-    : binary_deserializer(sys, make_span(reinterpret_cast<const byte*>(buf),
-                                         size)) {
+    : binary_deserializer(sys,
+                          make_span(reinterpret_cast<const byte*>(buf), size)) {
     // nop
   }
 

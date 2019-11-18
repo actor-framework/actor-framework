@@ -157,8 +157,7 @@ CAF_TEST(concatenation) {
     using i16i8_pair = std::pair<int16_t, int8_t>;
     CHECK_LOAD(i8i16_pair, std::make_pair(int8_t{7}, int16_t{-32683}), //
                7_b, 0x80_b, 0x55_b);
-    CHECK_LOAD(i16i8_pair,
-               std::make_pair(int16_t{-32683}, int8_t{7}), //
+    CHECK_LOAD(i16i8_pair, std::make_pair(int16_t{-32683}, int8_t{7}), //
                0x80_b, 0x55_b, 7_b);
   }
   SUBTEST("calling f(make_tuple(a, b)) is equivalent to f(make_pair(a, b))") {
@@ -166,8 +165,7 @@ CAF_TEST(concatenation) {
     using i16i8_tuple = std::tuple<int16_t, int8_t>;
     CHECK_LOAD(i8i16_tuple, std::make_tuple(int8_t{7}, int16_t{-32683}), //
                7_b, 0x80_b, 0x55_b);
-    CHECK_LOAD(i16i8_tuple,
-               std::make_tuple(int16_t{-32683}, int8_t{7}), //
+    CHECK_LOAD(i16i8_tuple, std::make_tuple(int16_t{-32683}, int8_t{7}), //
                0x80_b, 0x55_b, 7_b);
   }
   SUBTEST("arrays behave like tuples") {
@@ -210,13 +208,13 @@ CAF_TEST(binary serializer picks up inspect functions) {
                10_b, 11_b, 12_b, 13_b, 14_b, 15_b, 16_b, 17_b, 18_b, 19_b);
   }
   SUBTEST("custom struct") {
-    test_data value{-345,
+    test_data value{
+      -345,
       -1234567890123456789ll,
       3.45,
       54.3,
       caf::duration(caf::time_unit::seconds, 123),
-      caf::timestamp{
-        caf::timestamp::duration{1478715821 * 1000000000ll}},
+      caf::timestamp{caf::timestamp::duration{1478715821 * 1000000000ll}},
       test_enum::b,
       "Lorem ipsum dolor sit amet."};
     CHECK_LOAD(test_data, value,

@@ -153,8 +153,7 @@ CAF_TEST(concatenation) {
     using i16i8_pair = std::pair<int16_t, int8_t>;
     CHECK_SAVE(i8i16_pair, std::make_pair(int8_t{7}, int16_t{-32683}), //
                7_b, 0x80_b, 0x55_b);
-    CHECK_SAVE(i16i8_pair,
-               std::make_pair(int16_t{-32683}, int8_t{7}), //
+    CHECK_SAVE(i16i8_pair, std::make_pair(int16_t{-32683}, int8_t{7}), //
                0x80_b, 0x55_b, 7_b);
   }
   SUBTEST("calling f(make_tuple(a, b)) is equivalent to f(make_pair(a, b))") {
@@ -162,8 +161,7 @@ CAF_TEST(concatenation) {
     using i16i8_tuple = std::tuple<int16_t, int8_t>;
     CHECK_SAVE(i8i16_tuple, std::make_tuple(int8_t{7}, int16_t{-32683}), //
                7_b, 0x80_b, 0x55_b);
-    CHECK_SAVE(i16i8_tuple,
-               std::make_tuple(int16_t{-32683}, int8_t{7}), //
+    CHECK_SAVE(i16i8_tuple, std::make_tuple(int16_t{-32683}, int8_t{7}), //
                0x80_b, 0x55_b, 7_b);
   }
   SUBTEST("arrays behave like tuples") {
