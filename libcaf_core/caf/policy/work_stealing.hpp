@@ -134,7 +134,7 @@ public:
   template <class Worker>
   resumable* dequeue(Worker* self) {
     // we wait for new jobs by polling our external queue: first, we
-    // assume an active work load on the machine and perform aggresive
+    // assume an active work load on the machine and perform aggressive
     // polling, then we relax our polling a bit and wait 50 us between
     // dequeue attempts
     auto& strategies = d(self).strategies;
@@ -153,8 +153,8 @@ public:
         }
         if (strategies[k].sleep_duration.count() > 0) {
 #ifdef CAF_MSVC
-          // Windows cannot sleep less than 1000 us, so timeout is conveted to 0
-          // inside sleep_for(), but Sleep(0) is dangerous so replace it with
+          // Windows cannot sleep less than 1000 us, so timeout is converted to
+          // 0 inside sleep_for(), but Sleep(0) is dangerous so replace it with
           // yield()
           if (strategies[k].sleep_duration.count() < 1000)
             std::this_thread::yield();

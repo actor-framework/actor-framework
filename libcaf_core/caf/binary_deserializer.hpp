@@ -91,7 +91,7 @@ public:
   /// @pre `num_bytes <= remaining()`
   void skip(size_t num_bytes);
 
-  /// Assings a new input.
+  /// Assigns a new input.
   void reset(span<const byte> bytes);
 
 protected:

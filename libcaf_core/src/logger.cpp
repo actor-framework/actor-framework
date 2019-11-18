@@ -409,7 +409,7 @@ void logger::render_fun_prefix(std::ostream& out, const event& x) {
   //                          ^~~~~~~~~~~~~
   // Here, we output Java-style "my.namespace" to `out`.
   auto reduced = x.pretty_fun;
-  // Skip all prefixes that can preceed the return type.
+  // Skip all prefixes that can precede the return type.
   auto skip = [&](string_view str) {
     if (starts_with(reduced, str)) {
       reduced.remove_prefix(str.size());

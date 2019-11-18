@@ -409,7 +409,7 @@ public:
   apply(std::chrono::duration<Rep, Period>& x) {
     using duration_type = std::chrono::duration<Rep, Period>;
     // always save/store durations as int64_t to work around possibly
-    // different integer types on different plattforms for standard typedefs
+    // different integer types on different platforms for standard typedefs
     struct {
       void operator()(duration_type& lhs, Rep& rhs) const {
         duration_type tmp{rhs};

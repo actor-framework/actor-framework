@@ -363,7 +363,7 @@ message::cli_res message::extract_opts(std::vector<cli_arg> xs,
         return skip();
       if (arg == "--") {
         skip_remainder = true;
-        // drop frist remainder indicator
+        // drop first remainder indicator
         return none;
       }
       if (arg.empty() || arg.front() != '-') {

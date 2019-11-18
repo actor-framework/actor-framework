@@ -322,7 +322,7 @@ struct message::cli_arg {
   /// Full name of this CLI argument using format "<long name>[,<short name>]"
   std::string name;
 
-  /// Desciption of this CLI argument for the auto-generated help text.
+  /// Description of this CLI argument for the auto-generated help text.
   std::string text;
 
   /// Auto-generated helptext for this item.
