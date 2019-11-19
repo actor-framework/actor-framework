@@ -26,7 +26,7 @@
 
 namespace caf::net {
 
-/// Implements base class for transports.
+/// Implements a base class for transports.
 /// @tparam Transport The derived type of the transport implementation.
 /// @tparam NextLayer The Following Layer. Either `transport_worker` or
 /// `transport_worker_dispatcher`
@@ -68,7 +68,7 @@ public:
     return handle_;
   }
 
-  /// Returns a reference to the actor_system of this transport.
+  /// Returns a reference to the `actor_system` of this transport.
   /// @pre `init` must be called before calling this getter.
   actor_system& system() {
     return manager().system();
@@ -84,7 +84,7 @@ public:
     return *reinterpret_cast<transport_type*>(this);
   }
 
-  /// Returns a reference to the endpoint_manager of this transport.
+  /// Returns a reference to the `endpoint_manager` of this transport.
   /// @pre `init` must be called before calling this getter.
   endpoint_manager& manager() {
     CAF_ASSERT(manager_);
@@ -94,7 +94,7 @@ public:
   // -- transport member functions ---------------------------------------------
 
   /// Initializes this transport.
-  /// @param parent The endpoint manager that manages this transport.
+  /// @param parent The `endpoint_manager` that manages this transport.
   /// @returns `error` on failure, none on success.
   virtual error init(endpoint_manager& parent) {
     CAF_LOG_TRACE("");
@@ -112,7 +112,7 @@ public:
   }
 
   /// Resolves a remote actor using `locator` and sends the resolved actor to
-  /// listener on success - an error otherwise.
+  /// listener on success - an `error` otherwise.
   /// @param locator The `uri` of the remote actor.
   /// @param listener The `actor_handle` which the result should be sent to.
   auto resolve(endpoint_manager&, const uri& locator, const actor& listener) {
@@ -128,9 +128,9 @@ public:
     f(next_layer_);
   }
 
-  /// Gets called by actor_proxy after creation.
-  /// @param peer the node_id of the remote node.
-  /// @param id the id of the remote actor.
+  /// Gets called by an actor proxy after creation.
+  /// @param peer The `node_id` of the remote node.
+  /// @param id The id of the remote actor.
   void new_proxy(endpoint_manager&, const node_id& peer, actor_id id) {
     next_layer_.new_proxy(*this, peer, id);
   }
@@ -154,7 +154,7 @@ public:
 
   /// Callback for setting a timeout. Will be called after setting a timeout to
   /// get the timeout id for local use.
-  /// @param timeout_id The timeout_id of the previously set timeout.
+  /// @param timeout_id The id of the previously set timeout.
   /// @param ts Any further information that was passed when setting the
   /// timeout.
   template <class... Ts>
