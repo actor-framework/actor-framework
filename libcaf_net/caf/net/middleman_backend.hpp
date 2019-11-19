@@ -24,8 +24,7 @@
 #include "caf/net/fwd.hpp"
 #include "caf/proxy_registry.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// Technology-specific backend for connecting to and managing peer
 /// connections.
@@ -63,5 +62,4 @@ private:
 /// @relates middleman_backend
 using middleman_backend_ptr = std::unique_ptr<middleman_backend>;
 
-} // namespace net
 } // namespace caf

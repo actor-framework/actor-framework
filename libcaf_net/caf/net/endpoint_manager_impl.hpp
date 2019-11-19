@@ -25,8 +25,7 @@
 #include "caf/detail/overload.hpp"
 #include "caf/net/endpoint_manager.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 template <class Transport>
 class endpoint_manager_impl : public endpoint_manager {
@@ -132,5 +131,4 @@ private:
   uint64_t next_timeout_id_;
 };
 
-} // namespace net
 } // namespace caf

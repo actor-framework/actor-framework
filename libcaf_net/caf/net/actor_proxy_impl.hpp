@@ -21,8 +21,7 @@
 #include "caf/actor_proxy.hpp"
 #include "caf/net/endpoint_manager.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// Implements a simple proxy forwarding all operations to a manager.
 class actor_proxy_impl : public actor_proxy {
@@ -42,5 +41,4 @@ private:
   endpoint_manager_ptr dst_;
 };
 
-} // namespace net
 } // namespace caf

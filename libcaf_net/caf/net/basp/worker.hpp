@@ -32,9 +32,7 @@
 #include "caf/node_id.hpp"
 #include "caf/resumable.hpp"
 
-namespace caf {
-namespace net {
-namespace basp {
+namespace caf::net::basp {
 
 /// Deserializes payloads for BASP messages asynchronously.
 class worker : public detail::abstract_worker,
@@ -113,6 +111,4 @@ private:
   buffer_type payload_;
 };
 
-} // namespace basp
-} // namespace net
 } // namespace caf

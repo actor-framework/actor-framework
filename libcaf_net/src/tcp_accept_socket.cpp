@@ -31,8 +31,7 @@
 #include "caf/net/tcp_stream_socket.hpp"
 #include "caf/sec.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 namespace {
 
@@ -145,5 +144,4 @@ expected<tcp_stream_socket> accept(tcp_accept_socket x) {
   return tcp_stream_socket{sock};
 }
 
-} // namespace net
 } // namespace caf

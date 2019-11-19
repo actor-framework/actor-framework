@@ -24,8 +24,7 @@
 
 #include "caf/config.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 enum class receive_policy_flag : unsigned { at_least, at_most, exactly };
 
@@ -57,5 +56,4 @@ public:
   }
 };
 
-} // namespace net
 } // namespace caf

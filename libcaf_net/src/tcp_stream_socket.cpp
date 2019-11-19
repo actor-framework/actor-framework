@@ -29,8 +29,7 @@
 #include "caf/sec.hpp"
 #include "caf/variant.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 namespace {
 
@@ -96,5 +95,4 @@ make_connected_tcp_stream_socket(const uri::authority_type& node) {
   return make_error(sec::cannot_connect_to_node, to_string(node));
 }
 
-} // namespace net
 } // namespace caf

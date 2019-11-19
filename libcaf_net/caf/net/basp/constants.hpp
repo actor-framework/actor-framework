@@ -21,9 +21,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace caf {
-namespace net {
-namespace basp {
+namespace caf::net::basp {
 
 /// @addtogroup BASP
 
@@ -36,6 +34,4 @@ constexpr size_t header_size = 13;
 
 /// @}
 
-} // namespace basp
-} // namespace net
 } // namespace caf

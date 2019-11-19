@@ -31,8 +31,7 @@
 #  include <sys/uio.h>
 #endif
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 #ifdef CAF_WINDOWS
 
@@ -234,5 +233,4 @@ check_stream_socket_io_res(std::make_signed<size_t>::type res) {
   return static_cast<size_t>(res);
 }
 
-} // namespace net
 } // namespace caf

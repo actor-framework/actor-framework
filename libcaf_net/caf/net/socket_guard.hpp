@@ -20,8 +20,7 @@
 
 #include "caf/net/socket_id.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// Closes the guarded socket when destroyed.
 template <class Socket>
@@ -78,5 +77,4 @@ socket_guard<Socket> make_socket_guard(Socket sock) {
   return socket_guard<Socket>{sock};
 }
 
-} // namespace net
 } // namespace caf

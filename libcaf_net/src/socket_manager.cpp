@@ -21,8 +21,7 @@
 #include "caf/config.hpp"
 #include "caf/net/multiplexer.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 socket_manager::socket_manager(socket handle, const multiplexer_ptr& parent)
   : handle_(handle), mask_(operation::none), parent_(parent) {
@@ -68,5 +67,4 @@ void socket_manager::register_writing() {
     ptr->register_writing(this);
 }
 
-} // namespace net
 } // namespace caf

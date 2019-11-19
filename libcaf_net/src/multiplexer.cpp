@@ -38,8 +38,7 @@
 #  include "caf/detail/socket_sys_includes.hpp"
 #endif // CAF_WINDOWS
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 #ifndef POLLRDHUP
 #  define POLLRDHUP POLLHUP
@@ -283,5 +282,4 @@ void multiplexer::write_to_pipe(uint8_t opcode, const socket_manager_ptr& mgr) {
     mgr->deref();
 }
 
-} // namespace net
 } // namespace caf

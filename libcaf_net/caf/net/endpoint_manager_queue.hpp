@@ -28,8 +28,7 @@
 #include "caf/unit.hpp"
 #include "caf/variant.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 class endpoint_manager_queue {
 public:
@@ -201,5 +200,4 @@ public:
   using type = intrusive::fifo_inbox<policy>;
 };
 
-} // namespace net
 } // namespace caf

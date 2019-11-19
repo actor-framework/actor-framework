@@ -25,8 +25,7 @@
 #include "caf/net/socket.hpp"
 #include "caf/ref_counted.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// Manages the lifetime of a single socket and handles any I/O events on it.
 class socket_manager : public ref_counted {
@@ -95,5 +94,4 @@ protected:
 
 using socket_manager_ptr = intrusive_ptr<socket_manager>;
 
-} // namespace net
 } // namespace caf

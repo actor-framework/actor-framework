@@ -33,9 +33,7 @@
 #include "caf/net/basp/header.hpp"
 #include "caf/node_id.hpp"
 
-namespace caf {
-namespace net {
-namespace basp {
+namespace caf::net::basp {
 
 template <class Subtype>
 class remote_message_handler {
@@ -80,6 +78,4 @@ public:
   }
 };
 
-} // namespace basp
-} // namespace net
 } // namespace caf

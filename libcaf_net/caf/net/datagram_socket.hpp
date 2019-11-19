@@ -21,8 +21,7 @@
 #include "caf/net/network_socket.hpp"
 #include "caf/variant.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// A datagram-oriented network communication endpoint.
 struct datagram_socket : network_socket {
@@ -41,5 +40,4 @@ error allow_connreset(datagram_socket x, bool new_value);
 variant<size_t, sec>
 check_datagram_socket_io_res(std::make_signed<size_t>::type res);
 
-} // namespace net
 } // namespace caf

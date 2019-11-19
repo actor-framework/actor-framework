@@ -18,16 +18,10 @@
 
 #include "caf/net/defaults.hpp"
 
-namespace caf {
-namespace defaults {
-
-namespace middleman {
+namespace caf::defaults::middleman {
 
 const size_t max_payload_buffers = 100;
 
 const size_t max_header_buffers = 10;
 
-} // namespace middleman
-
-} // namespace defaults
 } // namespace caf

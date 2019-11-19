@@ -22,8 +22,7 @@
 #include "caf/expected.hpp"
 #include "caf/logger.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 actor_proxy_impl::actor_proxy_impl(actor_config& cfg, endpoint_manager_ptr dst)
   : super(cfg), sf_(dst->serialize_fun()), dst_(std::move(dst)) {
@@ -50,5 +49,4 @@ void actor_proxy_impl::kill_proxy(execution_unit* ctx, error rsn) {
   cleanup(std::move(rsn), ctx);
 }
 
-} // namespace net
 } // namespace caf

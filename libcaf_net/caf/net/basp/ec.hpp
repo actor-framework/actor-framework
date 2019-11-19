@@ -23,9 +23,7 @@
 
 #include "caf/fwd.hpp"
 
-namespace caf {
-namespace net {
-namespace basp {
+namespace caf::net::basp {
 
 /// BASP-specific error codes.
 enum class ec : uint8_t {
@@ -51,6 +49,4 @@ std::string to_string(ec x);
 /// @relates ec
 error make_error(ec x);
 
-} // namespace basp
-} // namespace net
 } // namespace caf

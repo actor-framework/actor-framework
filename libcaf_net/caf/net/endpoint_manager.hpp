@@ -34,8 +34,7 @@
 #include "caf/net/socket_manager.hpp"
 #include "caf/variant.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// Manages a communication endpoint.
 class endpoint_manager : public socket_manager {
@@ -104,5 +103,4 @@ protected:
 
 using endpoint_manager_ptr = intrusive_ptr<endpoint_manager>;
 
-} // namespace net
 } // namespace caf

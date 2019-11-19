@@ -23,8 +23,7 @@
 #include "caf/ipv6_endpoint.hpp"
 #include "caf/sec.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 void convert(const ip_endpoint& src, sockaddr_storage& dst) {
   memset(&dst, 0, sizeof(sockaddr_storage));
@@ -60,5 +59,4 @@ error convert(const sockaddr_storage& src, ip_endpoint& dst) {
   return none;
 }
 
-} // namespace detail
 } // namespace caf

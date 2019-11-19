@@ -29,9 +29,7 @@
 #include "caf/raise_error.hpp"
 #include "caf/send.hpp"
 
-namespace caf {
-namespace net {
-namespace backend {
+namespace caf::net::backend {
 
 test::test(middleman& mm)
   : middleman_backend("test"), mm_(mm), proxies_(mm.system(), *this) {
@@ -101,6 +99,4 @@ test::peer_entry& test::get_peer(const node_id& id) {
   return emplace(id, sockets->first, sockets->second);
 }
 
-} // namespace backend
-} // namespace net
 } // namespace caf

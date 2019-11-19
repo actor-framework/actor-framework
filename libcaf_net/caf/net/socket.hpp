@@ -27,8 +27,7 @@
 #include "caf/fwd.hpp"
 #include "caf/net/socket_id.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// An internal endpoint for sending or receiving data. Can be either a
 /// ::network_socket, ::pipe_socket, ::stream_socket, or ::datagram_socket.
@@ -89,5 +88,4 @@ error child_process_inherit(socket x, bool new_value);
 /// @relates socket
 error nonblocking(socket x, bool new_value);
 
-} // namespace net
 } // namespace caf

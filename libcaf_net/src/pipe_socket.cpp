@@ -34,8 +34,7 @@
 #include "caf/span.hpp"
 #include "caf/variant.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 #ifdef CAF_WINDOWS
 
@@ -102,5 +101,4 @@ check_pipe_socket_io_res(std::make_signed<size_t>::type res) {
   return check_stream_socket_io_res(res);
 }
 
-} // namespace net
 } // namespace caf

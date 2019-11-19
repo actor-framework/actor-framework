@@ -22,10 +22,7 @@
 
 // -- hard-coded default values for various CAF options ------------------------
 
-namespace caf {
-namespace defaults {
-
-namespace middleman {
+namespace caf::defaults::middleman {
 
 /// Maximum number of cached buffers for sending payloads.
 extern const size_t max_payload_buffers;
@@ -33,7 +30,4 @@ extern const size_t max_payload_buffers;
 /// Maximum number of cached buffers for sending headers.
 extern const size_t max_header_buffers;
 
-} // namespace middleman
-
-} // namespace defaults
 } // namespace caf

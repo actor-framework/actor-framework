@@ -18,8 +18,7 @@
 
 #include "caf/net/middleman_backend.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 middleman_backend::middleman_backend(std::string id) : id_(std::move(id)) {
   // nop
@@ -29,5 +28,4 @@ middleman_backend::~middleman_backend() {
   // nop
 }
 
-} // namespace net
 } // namespace caf

@@ -23,8 +23,7 @@
 #include "caf/byte.hpp"
 #include "caf/span.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// Implements the interface for transport and application policies and
 /// dispatches member functions either to `object` or `parent`.
@@ -93,5 +92,4 @@ make_packet_writer_decorator(Object& object, Parent& parent) {
   return {object, parent};
 }
 
-} // namespace net
 } // namespace caf

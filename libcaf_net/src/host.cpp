@@ -25,8 +25,7 @@
 #include "caf/net/socket.hpp"
 #include "caf/none.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 #ifdef CAF_WINDOWS
 
@@ -53,5 +52,4 @@ void this_host::cleanup() {
 
 #endif // CAF_WINDOWS
 
-} // namespace net
 } // namespace caf

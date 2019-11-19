@@ -24,8 +24,7 @@
 #include "caf/net/fwd.hpp"
 #include "caf/span.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// Implements an interface for packet writing in application-layers.
 class packet_writer {
@@ -56,5 +55,4 @@ protected:
   virtual void write_impl(span<buffer_type*> buffers) = 0;
 };
 
-} // namespace net
 } // namespace caf

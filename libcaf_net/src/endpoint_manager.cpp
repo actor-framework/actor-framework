@@ -24,8 +24,7 @@
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 endpoint_manager::endpoint_manager(socket handle, const multiplexer_ptr& parent,
                                    actor_system& sys)
@@ -87,5 +86,4 @@ bool endpoint_manager::enqueue(endpoint_manager_queue::element* ptr) {
   }
 }
 
-} // namespace net
 } // namespace caf

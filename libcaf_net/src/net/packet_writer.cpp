@@ -18,12 +18,10 @@
 
 #include "caf/net/packet_writer.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 packet_writer::~packet_writer() {
   // nop
 }
 
-} // namespace net
 } // namespace caf

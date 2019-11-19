@@ -25,8 +25,7 @@
 #include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 class middleman : public actor_system::module {
 public:
@@ -119,5 +118,4 @@ private:
   std::thread mpx_thread_;
 };
 
-} // namespace net
 } // namespace caf

@@ -21,9 +21,7 @@
 #include <cstdint>
 #include <string>
 
-namespace caf {
-namespace net {
-namespace basp {
+namespace caf::net::basp {
 
 /// @addtogroup BASP
 
@@ -75,6 +73,4 @@ std::string to_string(message_type);
 
 /// @}
 
-} // namespace basp
-} // namespace net
 } // namespace caf
