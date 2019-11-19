@@ -30,16 +30,13 @@
 #include "caf/unifyn.hpp"
 
 #define CAF_READ_INSPECTOR_TRY(statement)                                      \
-  using CAF_UNIFYN(statement_result) = decltype(statement);                    \
-  if constexpr (std::is_same<CAF_UNIFYN(statement_result), void>::value) {     \
+  if constexpr (std::is_same<decltype(statement), void>::value) {              \
     statement;                                                                 \
-  } else if constexpr (std::is_same<CAF_UNIFYN(statement_result),              \
-                                    bool>::value) {                            \
-    if (!statement)                                                            \
+  } else {                                                                     \
+    if (auto err = statement) {                                                \
+      result = err;                                                            \
       return false;                                                            \
-  } else if (auto err = statement) {                                           \
-    result = err;                                                              \
-    return false;                                                              \
+    }                                                                          \
   }
 
 namespace caf {
@@ -54,59 +51,8 @@ public:
 
   template <class... Ts>
   [[nodiscard]] auto operator()(Ts&&... xs) {
-    auto& dref = *static_cast<Subtype*>(this);
     typename Subtype::result_type result;
-    auto f = [&result, &dref](auto&& x) {
-      using type = std::remove_const_t<std::remove_reference_t<decltype(x)>>;
-      if constexpr (std::is_empty<type>::value) {
-        // nop
-      } else if constexpr (meta::is_save_callback_v<type>) {
-        CAF_READ_INSPECTOR_TRY(x.fun())
-      } else if constexpr (meta::is_annotation_v<type> //
-                           || is_allowed_unsafe_message_type_v<type>) {
-        // skip element
-      } else if constexpr (detail::can_apply_v<Subtype, decltype(x)>) {
-        using apply_type = decltype(dref.apply(x));
-        if constexpr (std::is_same<apply_type, void>::value) {
-          dref.apply(x);
-        } else if constexpr (std::is_same<apply_type, bool>::value) {
-          if (!dref.apply(x)) {
-            result = sec::end_of_stream;
-            return false;
-          }
-        } else {
-          CAF_READ_INSPECTOR_TRY(dref.apply(x))
-        }
-      } else if constexpr (std::is_integral<type>::value) {
-        using squashed_type = detail::squashed_int_t<type>;
-        CAF_READ_INSPECTOR_TRY(dref.apply(static_cast<squashed_type>(x)))
-      } else if constexpr (std::is_array<type>::value) {
-        CAF_READ_INSPECTOR_TRY(apply_array(dref, x))
-      } else if constexpr (detail::is_stl_tuple_type<type>::value) {
-        std::make_index_sequence<std::tuple_size<type>::value> seq;
-        CAF_READ_INSPECTOR_TRY(apply_tuple(dref, x, seq))
-      } else if constexpr (detail::is_map_like<type>::value) {
-        CAF_READ_INSPECTOR_TRY(dref.begin_sequence(x.size()))
-        for (const auto& kvp : x) {
-          CAF_READ_INSPECTOR_TRY(dref(kvp.first, kvp.second))
-        }
-        CAF_READ_INSPECTOR_TRY(dref.end_sequence())
-      } else if constexpr (detail::is_list_like<type>::value) {
-        CAF_READ_INSPECTOR_TRY(dref.begin_sequence(x.size()))
-        for (const auto& value : x) {
-          CAF_READ_INSPECTOR_TRY(dref(value))
-        }
-        CAF_READ_INSPECTOR_TRY(dref.end_sequence())
-      } else {
-        static_assert(detail::is_inspectable<Subtype, type>::value);
-        using caf::detail::inspect;
-        // We require that the implementation for `inspect` does not modify its
-        // arguments when passing a reading inspector.
-        CAF_READ_INSPECTOR_TRY(inspect(dref, const_cast<type&>(x)));
-      }
-      return true;
-    };
-    static_cast<void>((f(std::forward<Ts>(xs)) && ...));
+    static_cast<void>((try_apply(result, xs) && ...));
     return result;
   }
 
@@ -118,14 +64,58 @@ private:
   }
 
   template <class T, size_t... Is>
-  static auto apply_array(Subtype& dref, T* xs, std::index_sequence<Is...>) {
+  static auto
+  apply_array(Subtype& dref, const T* xs, std::index_sequence<Is...>) {
     return dref(xs[Is]...);
   }
 
-  template <class T, size_t N>
-  static auto apply_array(Subtype& dref, T (&xs)[N]) {
-    std::make_index_sequence<N> seq;
-    return apply_array(dref, xs, seq);
+  template <class R, class T>
+  std::enable_if_t<meta::is_annotation_v<T>, bool> try_apply(R& result, T& x) {
+    if constexpr (meta::is_save_callback_v<T>)
+      CAF_READ_INSPECTOR_TRY(x.fun())
+    return true;
+  }
+
+  template <class R, class T>
+  std::enable_if_t<!meta::is_annotation_v<T>, bool>
+  try_apply(R& result, const T& x) {
+    Subtype& dref = *static_cast<Subtype*>(this);
+    if constexpr (std::is_empty<T>::value
+                  || is_allowed_unsafe_message_type_v<T>) {
+      // skip element
+    } else if constexpr (detail::can_apply_v<Subtype, decltype(x)>) {
+      CAF_READ_INSPECTOR_TRY(dref.apply(x))
+    } else if constexpr (std::is_integral<T>::value) {
+      using squashed_type = detail::squashed_int_t<T>;
+      auto squashed_x = static_cast<squashed_type>(x);
+      CAF_READ_INSPECTOR_TRY(dref.apply(squashed_x))
+    } else if constexpr (std::is_array<T>::value) {
+      std::make_index_sequence<std::extent<T>::value> seq;
+      CAF_READ_INSPECTOR_TRY(apply_array(dref, x, seq))
+    } else if constexpr (detail::is_stl_tuple_type<T>::value) {
+      std::make_index_sequence<std::tuple_size<T>::value> seq;
+      CAF_READ_INSPECTOR_TRY(apply_tuple(dref, x, seq))
+    } else if constexpr (detail::is_map_like<T>::value) {
+      CAF_READ_INSPECTOR_TRY(dref.begin_sequence(x.size()))
+      for (const auto& kvp : x) {
+        CAF_READ_INSPECTOR_TRY(dref(kvp.first, kvp.second))
+      }
+      CAF_READ_INSPECTOR_TRY(dref.end_sequence())
+    } else if constexpr (detail::is_list_like<T>::value) {
+      CAF_READ_INSPECTOR_TRY(dref.begin_sequence(x.size()))
+      for (const auto& value : x) {
+        CAF_READ_INSPECTOR_TRY(dref(value))
+      }
+      CAF_READ_INSPECTOR_TRY(dref.end_sequence())
+    } else {
+      static_assert(detail::is_inspectable<Subtype, T>::value);
+      using caf::detail::inspect;
+      // We require that the implementation for `inspect` does not modify its
+      // arguments when passing a reading inspector.
+      auto& mutable_x = const_cast<T&>(x);
+      CAF_READ_INSPECTOR_TRY(inspect(dref, mutable_x));
+    }
+    return true;
   }
 };
 
