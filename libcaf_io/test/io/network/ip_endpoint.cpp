@@ -66,7 +66,7 @@ struct fixture : test_coordinator_fixture<> {
 
 CAF_TEST_FIXTURE_SCOPE(ep_endpoint_tests, fixture)
 
-CAF_TEST(ip_endpoint) {
+CAF_TEST_DISABLED(ip_endpoint) {
   // create an empty endpoint
   network::ip_endpoint ep;
   ep.clear();
