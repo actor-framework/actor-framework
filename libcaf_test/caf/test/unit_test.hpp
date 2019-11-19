@@ -417,7 +417,7 @@ public:
   /// @param not_suites_str Regular expression for excluding test suites.
   /// @param tests_str Regular expression for individually selecting tests.
   /// @param not_tests_str Regular expression for individually disabling tests.
-  /// @returns `true` iff all tests succeeded.
+  /// @returns `true` if all tests succeeded.
   static bool run(bool colorize,
                   const std::string& log_file,
                   int verbosity_console,

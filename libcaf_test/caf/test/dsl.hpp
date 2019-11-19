@@ -764,7 +764,7 @@ public:
 
   /// Consume messages and trigger timeouts until no activity remains.
   /// @returns The total number of events, i.e., messages consumed and
-  ///          timeouts triggerd.
+  ///          timeouts triggered.
   size_t run() {
     return run_until([] { return false; });
   }

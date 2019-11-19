@@ -59,7 +59,7 @@ public:
       = 0;
 
     /// Called whenever a direct connection was closed or a
-    /// node became unrechable for other reasons *before*
+    /// node became unreachable for other reasons *before*
     /// this node gets erased from the routing table.
     /// @warning The implementing class must not modify the
     ///          routing table from this callback.
@@ -115,8 +115,8 @@ public:
 
   /// Handles received data and returns a config for receiving the
   /// next data or `none` if an error occured.
-  connection_state
-  handle(execution_unit* ctx, new_data_msg& dm, header& hdr, bool is_payload);
+  connection_state handle(execution_unit* ctx,
+                          new_data_msg& dm, header& hdr, bool is_payload);
 
   /// Sends heartbeat messages to all valid nodes those are directly connected.
   void handle_heartbeat(execution_unit* ctx);

@@ -255,8 +255,6 @@ void message::reset(raw_ptr new_ptr, bool add_ref) noexcept {
   vals_.reset(new_ptr, add_ref);
 }
 
-// -- related non-members ------------------------------------------------------
-
 error inspect(serializer& sink, message& msg) {
   return msg.save(sink);
 }

@@ -102,7 +102,7 @@ public:
 
 protected:
   /// Allows subclasses to add additional cleanup code to the
-  /// critical secion in `cleanup`. This member function is
+  /// critical section in `cleanup`. This member function is
   /// called inside of a critical section.
   virtual void on_cleanup(const error& reason);
 

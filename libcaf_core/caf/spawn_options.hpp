@@ -67,43 +67,43 @@ constexpr spawn_options hidden = spawn_options::hide_flag;
 /// initialization until a message arrives.
 constexpr spawn_options lazy_init = spawn_options::lazy_init_flag;
 
-/// Checks wheter `haystack` contains `needle`.
+/// Checks whether `haystack` contains `needle`.
 /// @relates spawn_options
 constexpr bool has_spawn_option(spawn_options haystack, spawn_options needle) {
   return (static_cast<int>(haystack) & static_cast<int>(needle)) != 0;
 }
 
-/// Checks wheter the {@link detached} flag is set in `opts`.
+/// Checks whether the {@link detached} flag is set in `opts`.
 /// @relates spawn_options
 constexpr bool has_detach_flag(spawn_options opts) {
   return has_spawn_option(opts, detached);
 }
 
-/// Checks wheter the {@link priority_aware} flag is set in `opts`.
+/// Checks whether the {@link priority_aware} flag is set in `opts`.
 /// @relates spawn_options
 constexpr bool has_priority_aware_flag(spawn_options) {
   return true;
 }
 
-/// Checks wheter the {@link hidden} flag is set in `opts`.
+/// Checks whether the {@link hidden} flag is set in `opts`.
 /// @relates spawn_options
 constexpr bool has_hide_flag(spawn_options opts) {
   return has_spawn_option(opts, hidden);
 }
 
-/// Checks wheter the {@link linked} flag is set in `opts`.
+/// Checks whether the {@link linked} flag is set in `opts`.
 /// @relates spawn_options
 constexpr bool has_link_flag(spawn_options opts) {
   return has_spawn_option(opts, linked);
 }
 
-/// Checks wheter the {@link monitored} flag is set in `opts`.
+/// Checks whether the {@link monitored} flag is set in `opts`.
 /// @relates spawn_options
 constexpr bool has_monitor_flag(spawn_options opts) {
   return has_spawn_option(opts, monitored);
 }
 
-/// Checks wheter the {@link lazy_init} flag is set in `opts`.
+/// Checks whether the {@link lazy_init} flag is set in `opts`.
 /// @relates spawn_options
 constexpr bool has_lazy_init_flag(spawn_options opts) {
   return has_spawn_option(opts, lazy_init);

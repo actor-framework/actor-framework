@@ -112,7 +112,7 @@ public:
   /// Unique pointer to an outbound path.
   using typename super::unique_path_ptr;
 
-  // Lists all tempate parameters `[T, Ts...]`;
+  // Lists all template parameters `[T, Ts...]`;
   using param_list = detail::type_list<T, Ts...>;
 
   /// State held for each slot.

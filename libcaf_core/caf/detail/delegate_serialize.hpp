@@ -17,7 +17,7 @@
  ******************************************************************************/
 
 // The rationale of this header is to provide a serialization API
-// that is compatbile to boost.serialization. In particular, the
+// that is compatible to boost.serialization. In particular, the
 // design goals are:
 // - allow users to integrate existing boost.serialization-based code easily
 // - allow to switch out this header with the actual boost header in boost.actor

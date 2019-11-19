@@ -77,7 +77,7 @@ public:
   virtual void before_sending(const local_actor& self, mailbox_element& element)
     = 0;
 
-  /// Analoguous to `before_sending`, but called whenever an actor is about to
+  /// Analogous to `before_sending`, but called whenever an actor is about to
   /// call `actor_clock::schedule_message`.
   /// @param self The current actor.
   /// @param timeout Time point for the message delivery.

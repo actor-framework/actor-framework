@@ -207,7 +207,7 @@ public:
   static constexpr bool value = std::is_same<bool, result_type>::value;
 };
 
-/// Checks wheter `T` behaves like a forward iterator.
+/// Checks whether `T` behaves like a forward iterator.
 template <class T>
 class is_forward_iterator {
   template <class C>
@@ -361,7 +361,7 @@ struct get_callable_trait : get_callable_trait_helper<decay_t<T>> {};
 template <class T>
 using get_callable_trait_t = typename get_callable_trait<T>::type;
 
-/// Checks wheter `T` is a function or member function.
+/// Checks whether `T` is a function or member function.
 template <class T>
 struct is_callable {
   template <class C>
@@ -375,7 +375,7 @@ public:
   static constexpr bool value = std::is_same<bool, result_type>::value;
 };
 
-/// Checks wheter `F` is callable with arguments of types `Ts...`.
+/// Checks whether `F` is callable with arguments of types `Ts...`.
 template <class F, class... Ts>
 struct is_callable_with {
   template <class U>
@@ -389,7 +389,7 @@ struct is_callable_with {
   static constexpr bool value = type::value;
 };
 
-/// Checks wheter `F` takes mutable references.
+/// Checks whether `F` takes mutable references.
 ///
 /// A manipulator is a functor that manipulates its arguments via
 /// mutable references.
@@ -427,11 +427,11 @@ private:
     // no members
   };
 
-  // picked for any U without requested member since `U::name` is not ambigious
+  // picked for any U without requested member since `U::name` is not ambiguous
   template <class U>
   static char fun(U*, decltype(U::name)* = nullptr);
 
-  // picked for any U with requested member since `U::name` is ambigious
+  // picked for any U with requested member since `U::name` is ambiguous
   static int fun(void*);
 
 public:

@@ -120,7 +120,7 @@ public:
     (*this)(const_cast<const unit_t&>(x));
   }
 
-  // -- special-purpose handlers that don't procude results --------------------
+  // -- special-purpose handlers that don't produce results --------------------
 
   /// Calls `(*this)()`.
   inline void operator()(response_promise&) {

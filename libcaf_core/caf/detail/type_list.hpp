@@ -414,7 +414,7 @@ struct tl_reverse_impl<empty_type_list, E...> {
   using type = type_list<E...>;
 };
 
-/// Creates a new list wih elements in reversed order.
+/// Creates a new list with elements in reversed order.
 template <class List>
 struct tl_reverse {
   using type = typename tl_reverse_impl<List>::type;
@@ -704,7 +704,7 @@ struct tl_map_conditional<empty_type_list, Trait, TraitResult, Funs...> {
 
 // list pop_back()
 
-/// Creates a new list wih all but the last element of `List`.
+/// Creates a new list with all but the last element of `List`.
 template <class List>
 struct tl_pop_back {
   using type = typename tl_slice<List, 0, tl_size<List>::value - 1>::type;

@@ -56,7 +56,7 @@ public:
   /// @warning Not thread safe.
   void write(datagram_handle hdl, const void* buf, size_t num_bytes);
 
-  /// Returns the write buffer of this enpoint.
+  /// Returns the write buffer of this endpoint.
   /// @warning Must not be modified outside the IO multiplexers event loop
   ///          once the stream has been started.
   byte_buffer& wr_buf(datagram_handle hdl) {

@@ -103,7 +103,7 @@ void read_int(const void* data, uint64_t& storage) {
   storage = first | (static_cast<uint64_t>(second) << sizeof(uint32_t));
 }
 
-// implemenation of our broker
+// implementation of our broker
 behavior broker_impl(broker* self, connection_handle hdl, const actor& buddy) {
   // we assume io_fsm manages a broker with exactly one connection,
   // i.e., the connection ponted to by `hdl`

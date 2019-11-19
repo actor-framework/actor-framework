@@ -49,7 +49,7 @@ public:
 
   /// Starts this acceptor, forwarding all incoming connections to
   /// `manager`. The intrusive pointer will be released after the
-  /// acceptor has been closed or an IO error occured.
+  /// acceptor has been closed or an IO error occurred.
   void start(acceptor_manager* mgr);
 
   /// Activates the acceptor.

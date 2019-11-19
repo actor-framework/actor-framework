@@ -59,7 +59,7 @@ enum class pec : uint8_t {
   type_mismatch,
   /// Stopped at an unrecognized option name.
   not_an_option,
-  /// Stopped at an unparseable argument.
+  /// Stopped at an unparsable argument.
   illegal_argument = 15,
   /// Stopped because an argument was omitted.
   missing_argument,
