@@ -62,4 +62,4 @@ private:
 /// @relates middleman_backend
 using middleman_backend_ptr = std::unique_ptr<middleman_backend>;
 
-} // namespace caf
+} // namespace caf::net

@@ -200,4 +200,4 @@ public:
   using type = intrusive::fifo_inbox<policy>;
 };
 
-} // namespace caf
+} // namespace caf::net

@@ -86,4 +86,4 @@ bool endpoint_manager::enqueue(endpoint_manager_queue::element* ptr) {
   }
 }
 
-} // namespace caf
+} // namespace caf::net

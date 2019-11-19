@@ -31,4 +31,4 @@ endpoint_manager_ptr make_endpoint_manager(const multiplexer_ptr& mpx,
   return make_counted<impl>(mpx, sys, std::move(trans));
 }
 
-} // namespace caf
+} // namespace caf::net

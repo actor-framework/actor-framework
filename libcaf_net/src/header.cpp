@@ -67,4 +67,4 @@ void to_bytes(header x, std::vector<byte>& buf) {
   to_bytes_impl(x, buf.data());
 }
 
-} // namespace caf
+} // namespace caf::net::basp

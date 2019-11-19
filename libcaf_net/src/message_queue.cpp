@@ -70,4 +70,4 @@ uint64_t message_queue::new_id() {
   return next_id++;
 }
 
-} // namespace caf
+} // namespace caf::net::basp

@@ -27,4 +27,4 @@ void convert(const ip_endpoint& src, sockaddr_storage& dst);
 
 error convert(const sockaddr_storage& src, ip_endpoint& dst);
 
-} // namespace caf
+} // namespace caf::detail

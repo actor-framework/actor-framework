@@ -30,4 +30,4 @@ struct this_host {
   static void cleanup();
 };
 
-} // namespace caf
+} // namespace caf::net

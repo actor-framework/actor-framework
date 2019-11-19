@@ -92,4 +92,4 @@ make_packet_writer_decorator(Object& object, Parent& parent) {
   return {object, parent};
 }
 
-} // namespace caf
+} // namespace caf::net

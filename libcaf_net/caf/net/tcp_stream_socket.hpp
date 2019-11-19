@@ -45,4 +45,4 @@ expected<tcp_stream_socket> make_connected_tcp_stream_socket(ip_endpoint node);
 expected<tcp_stream_socket>
 make_connected_tcp_stream_socket(const uri::authority_type& node);
 
-} // namespace caf
+} // namespace caf::net

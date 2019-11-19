@@ -95,4 +95,4 @@ make_connected_tcp_stream_socket(const uri::authority_type& node) {
   return make_error(sec::cannot_connect_to_node, to_string(node));
 }
 
-} // namespace caf
+} // namespace caf::net

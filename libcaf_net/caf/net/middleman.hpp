@@ -118,4 +118,4 @@ private:
   std::thread mpx_thread_;
 };
 
-} // namespace caf
+} // namespace caf::net

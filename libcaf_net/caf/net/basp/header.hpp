@@ -89,4 +89,4 @@ typename Inspector::result_type inspect(Inspector& f, header& x) {
 
 /// @}
 
-} // namespace caf
+} // namespace caf::net::basp

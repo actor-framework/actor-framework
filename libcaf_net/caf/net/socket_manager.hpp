@@ -94,4 +94,4 @@ protected:
 
 using socket_manager_ptr = intrusive_ptr<socket_manager>;
 
-} // namespace caf
+} // namespace caf::net

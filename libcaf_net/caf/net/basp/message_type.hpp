@@ -73,4 +73,4 @@ std::string to_string(message_type);
 
 /// @}
 
-} // namespace caf
+} // namespace caf::net::basp

@@ -59,4 +59,4 @@ error convert(const sockaddr_storage& src, ip_endpoint& dst) {
   return none;
 }
 
-} // namespace caf
+} // namespace caf::detail

@@ -101,4 +101,4 @@ check_pipe_socket_io_res(std::make_signed<size_t>::type res) {
   return check_stream_socket_io_res(res);
 }
 
-} // namespace caf
+} // namespace caf::net

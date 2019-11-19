@@ -41,4 +41,4 @@ std::vector<ip_address> local_addresses(ip_address host);
 /// Returns the hostname of this device.
 std::string hostname();
 
-} // namespace caf
+} // namespace caf::net::ip

@@ -99,4 +99,4 @@ test::peer_entry& test::get_peer(const node_id& id) {
   return emplace(id, sockets->first, sockets->second);
 }
 
-} // namespace caf
+} // namespace caf::net::backend

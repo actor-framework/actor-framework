@@ -49,4 +49,4 @@ std::string to_string(ec x);
 /// @relates ec
 error make_error(ec x);
 
-} // namespace caf
+} // namespace caf::net::basp

@@ -57,4 +57,4 @@ make_tcp_accept_socket(const uri::authority_type& node,
 /// @relates tcp_accept_socket
 expected<tcp_stream_socket> accept(tcp_accept_socket x);
 
-} // namespace caf
+} // namespace caf::net

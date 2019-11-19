@@ -58,4 +58,4 @@ resumable::resume_result worker::resume(execution_unit* ctx, size_t) {
   return resumable::awaiting_message;
 }
 
-} // namespace caf
+} // namespace caf::net::basp

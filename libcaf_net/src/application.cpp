@@ -395,4 +395,4 @@ error application::generate_handshake(std::vector<byte>& buf) {
                      defaults::middleman::app_identifiers));
 }
 
-} // namespace caf
+} // namespace caf::net::basp

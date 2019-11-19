@@ -24,4 +24,4 @@ const size_t max_payload_buffers = 100;
 
 const size_t max_header_buffers = 10;
 
-} // namespace caf
+} // namespace caf::defaults::middleman

@@ -49,4 +49,4 @@ void actor_proxy_impl::kill_proxy(execution_unit* ctx, error rsn) {
   cleanup(std::move(rsn), ctx);
 }
 
-} // namespace caf
+} // namespace caf::net

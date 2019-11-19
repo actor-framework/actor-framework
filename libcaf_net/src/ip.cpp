@@ -249,4 +249,4 @@ std::string hostname() {
   return buf;
 }
 
-} // namespace caf
+} // namespace caf::net::ip

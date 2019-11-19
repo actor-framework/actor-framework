@@ -48,4 +48,4 @@ constexpr operation operator~(operation x) {
 
 std::string to_string(operation x);
 
-} // namespace caf
+} // namespace caf::net

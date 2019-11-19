@@ -144,4 +144,4 @@ expected<tcp_stream_socket> accept(tcp_accept_socket x) {
   return tcp_stream_socket{sock};
 }
 
-} // namespace caf
+} // namespace caf::net

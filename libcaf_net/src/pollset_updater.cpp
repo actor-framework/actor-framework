@@ -71,4 +71,4 @@ void pollset_updater::handle_error(sec) {
   // nop
 }
 
-} // namespace caf
+} // namespace caf::net

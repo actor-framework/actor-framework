@@ -46,4 +46,4 @@ std::string to_string(connection_state x);
 
 /// @}
 
-} // namespace caf
+} // namespace caf::net::basp

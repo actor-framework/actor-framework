@@ -190,4 +190,4 @@ check_udp_datagram_socket_io_res(std::make_signed<size_t>::type res) {
   return static_cast<size_t>(res);
 }
 
-} // namespace caf
+} // namespace caf::net

@@ -282,4 +282,4 @@ void multiplexer::write_to_pipe(uint8_t opcode, const socket_manager_ptr& mgr) {
     mgr->deref();
 }
 
-} // namespace caf
+} // namespace caf::net

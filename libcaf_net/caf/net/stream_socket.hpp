@@ -77,4 +77,4 @@ variant<size_t, sec> write(stream_socket x,
 variant<size_t, sec>
 check_stream_socket_io_res(std::make_signed<size_t>::type res);
 
-} // namespace caf
+} // namespace caf::net

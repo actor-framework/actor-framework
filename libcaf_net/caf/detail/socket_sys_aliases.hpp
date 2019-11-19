@@ -40,4 +40,4 @@ using socket_size_type = unsigned;
 
 #endif // CAF_WINDOWS
 
-} // namespace caf
+} // namespace caf::net

@@ -50,4 +50,4 @@ constexpr socket_id invalid_socket_id = -1;
 /// @relates socket
 using signed_socket_id = std::make_signed<socket_id>::type;
 
-} // namespace caf
+} // namespace caf::net

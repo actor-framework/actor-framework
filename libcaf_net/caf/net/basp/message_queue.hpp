@@ -74,4 +74,4 @@ public:
   std::vector<actor_msg> pending;
 };
 
-} // namespace caf
+} // namespace caf::net::basp

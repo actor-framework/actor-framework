@@ -55,4 +55,4 @@ protected:
   virtual void write_impl(span<buffer_type*> buffers) = 0;
 };
 
-} // namespace caf
+} // namespace caf::net

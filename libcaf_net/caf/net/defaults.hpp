@@ -30,4 +30,4 @@ extern const size_t max_payload_buffers;
 /// Maximum number of cached buffers for sending headers.
 extern const size_t max_header_buffers;
 
-} // namespace caf
+} // namespace caf::defaults::middleman

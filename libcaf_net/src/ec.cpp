@@ -28,4 +28,4 @@ error make_error(ec x) {
   return {static_cast<uint8_t>(x), atom("basp")};
 }
 
-} // namespace caf
+} // namespace caf::net::basp

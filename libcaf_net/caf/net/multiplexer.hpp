@@ -127,4 +127,4 @@ using multiplexer_ptr = std::shared_ptr<multiplexer>;
 /// @relates multiplexer
 using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
 
-} // namespace caf
+} // namespace caf::net

@@ -88,4 +88,4 @@ error child_process_inherit(socket x, bool new_value);
 /// @relates socket
 error nonblocking(socket x, bool new_value);
 
-} // namespace caf
+} // namespace caf::net

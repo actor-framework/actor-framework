@@ -103,4 +103,4 @@ protected:
 
 using endpoint_manager_ptr = intrusive_ptr<endpoint_manager>;
 
-} // namespace caf
+} // namespace caf::net

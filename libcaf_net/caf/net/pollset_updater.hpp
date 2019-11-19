@@ -62,4 +62,4 @@ private:
   size_t buf_size_;
 };
 
-} // namespace caf
+} // namespace caf::net

@@ -52,4 +52,4 @@ void this_host::cleanup() {
 
 #endif // CAF_WINDOWS
 
-} // namespace caf
+} // namespace caf::net

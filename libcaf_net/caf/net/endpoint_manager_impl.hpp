@@ -131,4 +131,4 @@ private:
   uint64_t next_timeout_id_;
 };
 
-} // namespace caf
+} // namespace caf::net

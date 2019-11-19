@@ -209,4 +209,4 @@ private:
   std::unique_ptr<hub_type> hub_;
 };
 
-} // namespace caf
+} // namespace caf::net::basp

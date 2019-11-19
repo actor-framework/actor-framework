@@ -67,4 +67,4 @@ void socket_manager::register_writing() {
     ptr->register_writing(this);
 }
 
-} // namespace caf
+} // namespace caf::net

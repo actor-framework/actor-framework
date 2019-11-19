@@ -41,4 +41,4 @@ private:
   endpoint_manager_ptr dst_;
 };
 
-} // namespace caf
+} // namespace caf::net

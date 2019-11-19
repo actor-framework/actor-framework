@@ -24,4 +24,4 @@ packet_writer::~packet_writer() {
   // nop
 }
 
-} // namespace caf
+} // namespace caf::net

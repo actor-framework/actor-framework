@@ -34,4 +34,4 @@ constexpr size_t header_size = 13;
 
 /// @}
 
-} // namespace caf
+} // namespace caf::net::basp

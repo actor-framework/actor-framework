@@ -28,4 +28,4 @@ middleman_backend::~middleman_backend() {
   // nop
 }
 
-} // namespace caf
+} // namespace caf::net

@@ -56,4 +56,4 @@ public:
   }
 };
 
-} // namespace caf
+} // namespace caf::net

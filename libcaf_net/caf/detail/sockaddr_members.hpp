@@ -46,4 +46,4 @@ inline auto port_of(sockaddr_in6& what) -> decltype(what.sin6_port)& {
   return what.sin6_port;
 }
 
-} // namespace caf
+} // namespace caf::detail

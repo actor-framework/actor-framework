@@ -40,4 +40,4 @@ error allow_connreset(datagram_socket x, bool new_value);
 variant<size_t, sec>
 check_datagram_socket_io_res(std::make_signed<size_t>::type res);
 
-} // namespace caf
+} // namespace caf::net

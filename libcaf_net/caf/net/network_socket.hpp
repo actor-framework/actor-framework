@@ -82,4 +82,4 @@ void shutdown_write(network_socket x);
 /// @relates network_socket
 void shutdown(network_socket x);
 
-} // namespace caf
+} // namespace caf::net

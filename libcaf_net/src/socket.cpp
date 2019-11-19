@@ -179,4 +179,4 @@ error nonblocking(socket x, bool new_value) {
 
 #endif // CAF_WINDOWS
 
-} // namespace caf
+} // namespace caf::net

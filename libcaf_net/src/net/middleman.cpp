@@ -102,4 +102,4 @@ middleman_backend* middleman::backend(string_view scheme) const noexcept {
   return nullptr;
 }
 
-} // namespace caf
+} // namespace caf::net

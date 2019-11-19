@@ -73,4 +73,4 @@ endpoint_manager_queue::message::~message() {
   // nop
 }
 
-} // namespace caf
+} // namespace caf::net

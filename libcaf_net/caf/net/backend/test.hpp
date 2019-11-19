@@ -73,4 +73,4 @@ private:
   proxy_registry proxies_;
 };
 
-} // namespace caf
+} // namespace caf::net::backend
