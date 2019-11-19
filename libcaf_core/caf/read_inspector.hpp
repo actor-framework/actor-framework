@@ -71,8 +71,9 @@ private:
 
   template <class R, class T>
   std::enable_if_t<meta::is_annotation_v<T>, bool> try_apply(R& result, T& x) {
-    if constexpr (meta::is_save_callback_v<T>)
+    if constexpr (meta::is_save_callback_v<T>) {
       CAF_READ_INSPECTOR_TRY(x.fun())
+    }
     return true;
   }
 
