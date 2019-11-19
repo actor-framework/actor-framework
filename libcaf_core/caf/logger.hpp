@@ -151,7 +151,7 @@ public:
     timestamp tstamp;
   };
 
-  /// Internal representation of format string entites.
+  /// Internal representation of format string entities.
   enum field_type {
     invalid_field,
     category_field,
@@ -406,11 +406,11 @@ bool operator==(const logger::field& x, const logger::field& y);
 // -- utility macros -----------------------------------------------------------
 
 #ifdef CAF_MSVC
-/// Expands to a string representation of the current funciton name that
+/// Expands to a string representation of the current function name that
 /// includes the full function name and its signature.
 #  define CAF_PRETTY_FUN __FUNCSIG__
 #else // CAF_MSVC
-/// Expands to a string representation of the current funciton name that
+/// Expands to a string representation of the current function name that
 /// includes the full function name and its signature.
 #  define CAF_PRETTY_FUN __PRETTY_FUNCTION__
 #endif // CAF_MSVC

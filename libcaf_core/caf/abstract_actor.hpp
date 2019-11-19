@@ -81,7 +81,7 @@ public:
   virtual void attach(attachable_ptr ptr) = 0;
 
   /// Convenience function that attaches the functor `f` to this actor. The
-  /// actor executes `f()` on exit or immediatley if it is not running.
+  /// actor executes `f()` on exit or immediately if it is not running.
   template <class F>
   void attach_functor(F f) {
     attach(attachable_ptr{new detail::functor_attachable<F>(std::move(f))});
@@ -222,7 +222,7 @@ protected:
   mutable std::mutex mtx_;
 
 private:
-  // prohibit copies, assigments, and heap allocations
+  // prohibit copies, assignments, and heap allocations
   void* operator new(size_t);
   void* operator new[](size_t);
   abstract_actor(const abstract_actor&) = delete;

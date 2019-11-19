@@ -54,7 +54,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  /// Only the ::worker_hub has access to the construtor.
+  /// Only the ::worker_hub has access to the constructor.
   worker(hub_type& hub, message_queue& queue, proxy_registry& proxies);
 
   ~worker() override;

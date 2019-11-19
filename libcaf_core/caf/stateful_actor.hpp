@@ -33,7 +33,7 @@ namespace caf {
 /// An event-based actor with managed state. The state is constructed
 /// before `make_behavior` will get called and destroyed after the
 /// actor called `quit`. This state management brakes cycles and
-/// allows actors to automatically release ressources as soon
+/// allows actors to automatically release resources as soon
 /// as possible.
 template <class State, class Base /* = event_based_actor (see fwd.hpp) */>
 class stateful_actor : public Base {

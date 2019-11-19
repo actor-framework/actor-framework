@@ -570,7 +570,7 @@ void default_multiplexer::handle_socket_event(native_socket fd, int mask,
     ptr->handle_event(operation::write);
   }
   if (checkerror && ((mask & error_mask) != 0)) {
-    CAF_LOG_DEBUG("error occured on socket:"
+    CAF_LOG_DEBUG("error occurred on socket:"
                   << CAF_ARG(fd) << CAF_ARG(last_socket_error())
                   << CAF_ARG(last_socket_error_as_string()));
     ptr->handle_event(operation::propagate_error);

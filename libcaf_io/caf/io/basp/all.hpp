@@ -27,11 +27,11 @@
 #include "caf/io/basp/routing_table.hpp"
 #include "caf/io/basp/version.hpp"
 
-/// @defgroup BASP Binary Actor Sytem Protocol
+/// @defgroup BASP Binary Actor System Protocol
 ///
 /// # Protocol Overview
 ///
-/// The "Binary Actor Sytem Protocol" (BASP) is **not** a network protocol.
+/// The "Binary Actor System Protocol" (BASP) is **not** a network protocol.
 /// It is a specification for the "Remote Method Invocation" (RMI) interface
 /// used by distributed instances of CAF. The purpose of BASP is unify the
 /// structure of RMI calls in order to simplify processing and implementation.
@@ -44,7 +44,7 @@
 ///
 /// ![](basp_overview.png)
 ///
-/// The figure above illustrates the phyiscal as well as the logical view
+/// The figure above illustrates the physical as well as the logical view
 /// of a distributed CAF application. Note that the actors used for the
 /// BASP communication ("BASP Brokers") are not part of the logical system
 /// view and are in fact not visible to other actors. A BASP Broker creates

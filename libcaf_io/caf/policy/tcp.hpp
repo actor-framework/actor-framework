@@ -27,7 +27,7 @@ namespace caf::policy {
 struct tcp {
   /// Reads up to `len` bytes from `fd,` writing the received data
   /// to `buf`. Returns `true` as long as `fd` is readable and `false`
-  /// if the socket has been closed or an IO error occured. The number
+  /// if the socket has been closed or an IO error occurred. The number
   /// of read bytes is stored in `result` (can be 0).
   static io::network::rw_state read_some(size_t& result,
                                          io::network::native_socket fd,
@@ -35,7 +35,7 @@ struct tcp {
 
   /// Writes up to `len` bytes from `buf` to `fd`.
   /// Returns `true` as long as `fd` is readable and `false`
-  /// if the socket has been closed or an IO error occured. The number
+  /// if the socket has been closed or an IO error occurred. The number
   /// of written bytes is stored in `result` (can be 0).
   static io::network::rw_state write_some(size_t& result,
                                           io::network::native_socket fd,

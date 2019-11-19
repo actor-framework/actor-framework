@@ -21,7 +21,7 @@
 #define CAF_SUITE intrusive_ptr
 #include "caf/test/unit_test.hpp"
 
-// this test dosn't verify thread-safety of intrusive_ptr
+// this test doesn't verify thread-safety of intrusive_ptr
 // however, it is thread safe since it uses atomic operations only
 
 #include <vector>

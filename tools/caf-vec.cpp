@@ -356,7 +356,7 @@ struct log_entry {
   string component;
   /// Severity level of this entry.
   log_level level;
-  /// ID of the logging entitiy.
+  /// ID of the logging entity.
   logger_id id;
   /// Context information about currently active class.
   string class_name;

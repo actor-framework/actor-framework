@@ -83,7 +83,7 @@ void string_view::assign(const_pointer data, size_type len) {
   size_ = len;
 }
 
-// -- algortihms ---------------------------------------------------------------
+// -- algorithms ---------------------------------------------------------------
 
 string_view::size_type string_view::copy(pointer dest, size_type n,
                                          size_type pos) const {

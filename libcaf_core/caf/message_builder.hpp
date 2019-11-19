@@ -27,7 +27,7 @@
 
 namespace caf {
 
-/// Provides a convenient interface for createing `message` objects
+/// Provides a convenient interface for creating `message` objects
 /// from a series of values using the member function `append`.
 class message_builder {
 public:

@@ -75,7 +75,7 @@ behavior calculator_fun() {
 
 namespace client {
 
-// a simple calculater task: operation + operands
+// a simple calculator task: operation + operands
 struct task {
   atom_value op;
   int lhs;

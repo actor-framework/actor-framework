@@ -58,7 +58,7 @@ config_option_set& config_option_set::add(config_option opt) {
 }
 
 std::string config_option_set::help_text(bool global_only) const {
-  //<--- argument --------> <---- desciption ---->
+  //<--- argument --------> <---- description --->
   // (-w|--write) <string> : output file
   auto build_argument = [](const config_option& x) {
     string_builder sb;
