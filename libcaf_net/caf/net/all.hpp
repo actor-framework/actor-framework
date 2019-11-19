@@ -51,17 +51,3 @@
 #include "caf/net/transport_worker.hpp"
 #include "caf/net/transport_worker_dispatcher.hpp"
 #include "caf/net/udp_datagram_socket.hpp"
-
-#include "caf/net/backend/test.hpp"
-
-#include "caf/net/basp/application.hpp"
-#include "caf/net/basp/connection_state.hpp"
-#include "caf/net/basp/constants.hpp"
-#include "caf/net/basp/ec.hpp"
-#include "caf/net/basp/header.hpp"
-#include "caf/net/basp/message_queue.hpp"
-#include "caf/net/basp/message_type.hpp"
-#include "caf/net/basp/remote_message_handler.hpp"
-#include "caf/net/basp/worker.hpp"
-
-#include "caf/net/test/host_fixture.hpp"
