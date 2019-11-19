@@ -339,8 +339,7 @@ bool engine::run(bool colorize,
   };
 # endif
   auto test_enabled = [&](const whitelist_type& whitelist,
-                          const blacklist_type& blacklist,
-                          const test& x) {
+                          const blacklist_type& blacklist, const test& x) {
     // Disabled tests run if explicitly requested by the user, i.e.,
     // tests_str is not the ".*" catch-all default.
     return (!x.disabled() || tests_str != ".*")

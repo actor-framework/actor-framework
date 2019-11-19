@@ -141,4 +141,3 @@
 /// of {@link message_type} below.
 ///
 /// ![](basp_sequence.png)
-

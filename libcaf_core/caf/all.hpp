@@ -289,11 +289,11 @@
 ///
 /// @section Atoms Atoms
 ///
-/// Atoms are a nice way to add semantic information to a message.
-/// Assuming an actor wants to provide a "math service" for integers. It
-/// could provide operations such as addition, subtraction, etc.
-/// This operations all have two operands. Thus, the actor does not know
-/// what operation the sender of a message wanted by receiving just two integers.
+/// Atoms are a nice way to add semantic information to a message. Assuming an
+/// actor wants to provide a "math service" for integers. It could provide
+/// operations such as addition, subtraction, etc. This operations all have two
+/// operands. Thus, the actor does not know what operation the sender of a
+/// message wanted by receiving just two integers.
 ///
 /// Example actor:
 /// ~~
