@@ -94,6 +94,28 @@ else()
   set(CAF_BUILD_STATIC_RUNTIME no)
 endif()
 
+option(CAF_ENABLE_SANITIZERS "Set to ON to enable the sanitizers")
+
+if ( CAF_ENABLE_SANITIZERS )
+  if ( NOT "${CMAKE_BUILD_TYPE}" STREQUAL "Debug" )
+    message(FATAL_ERROR "CAF_ENABLE_SANITIZERS requires the build type to be set to Debug")
+  endif ()
+
+  if ( NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND
+       NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang" )
+
+    message(FATAL_ERROR "CAF_ENABLE_SANITIZERS requires the compiler to be set to Clang")
+  endif ()
+
+  set(sanitizer_flags
+    "-fno-omit-frame-pointer -fsanitize=address,undefined"
+  )
+
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${sanitizer_flags}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${sanitizer_flags}")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${sanitizer_flags}")
+endif ()
+
 # add helper target that simplifies re-running configure
 if(NOT caf_is_subproject)
   add_custom_target(configure COMMAND ${CMAKE_CURRENT_BINARY_DIR}/config.status)
