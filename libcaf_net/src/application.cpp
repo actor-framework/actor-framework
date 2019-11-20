@@ -41,9 +41,7 @@
 #include "caf/string_algorithms.hpp"
 #include "caf/type_erased_tuple.hpp"
 
-namespace caf {
-namespace net {
-namespace basp {
+namespace caf::net::basp {
 
 application::application(proxy_registry& proxies)
   : proxies_(proxies), queue_{new message_queue}, hub_{new hub_type} {
@@ -397,6 +395,4 @@ error application::generate_handshake(std::vector<byte>& buf) {
                      defaults::middleman::app_identifiers));
 }
 
-} // namespace basp
-} // namespace net
-} // namespace caf
+} // namespace caf::net::basp

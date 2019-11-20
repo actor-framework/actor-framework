@@ -21,8 +21,7 @@
 #include "caf/fwd.hpp"
 #include "caf/net/network_socket.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// A connection-oriented network communication endpoint for bidirectional byte
 /// streams.
@@ -78,5 +77,4 @@ variant<size_t, sec> write(stream_socket x,
 variant<size_t, sec>
 check_stream_socket_io_res(std::make_signed<size_t>::type res);
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

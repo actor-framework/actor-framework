@@ -22,14 +22,10 @@
 #include "caf/error.hpp"
 #include "caf/string_view.hpp"
 
-namespace caf {
-namespace net {
-namespace basp {
+namespace caf::net::basp {
 
 error make_error(ec x) {
   return {static_cast<uint8_t>(x), atom("basp")};
 }
 
-} // namespace basp
-} // namespace net
-} // namespace caf
+} // namespace caf::net::basp

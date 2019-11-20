@@ -28,9 +28,7 @@
 #include "caf/net/basp/constants.hpp"
 #include "caf/net/basp/message_type.hpp"
 
-namespace caf {
-namespace net {
-namespace basp {
+namespace caf::net::basp {
 
 /// @addtogroup BASP
 
@@ -91,6 +89,4 @@ typename Inspector::result_type inspect(Inspector& f, header& x) {
 
 /// @}
 
-} // namespace basp
-} // namespace net
-} // namespace caf
+} // namespace caf::net::basp

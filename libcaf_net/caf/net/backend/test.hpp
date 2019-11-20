@@ -26,9 +26,7 @@
 #include "caf/net/stream_socket.hpp"
 #include "caf/node_id.hpp"
 
-namespace caf {
-namespace net {
-namespace backend {
+namespace caf::net::backend {
 
 /// Minimal backend for unit testing.
 /// @warning this backend is *not* thread safe.
@@ -75,6 +73,4 @@ private:
   proxy_registry proxies_;
 };
 
-} // namespace backend
-} // namespace net
-} // namespace caf
+} // namespace caf::net::backend

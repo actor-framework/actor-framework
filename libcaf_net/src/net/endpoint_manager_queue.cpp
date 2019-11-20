@@ -18,8 +18,7 @@
 
 #include "caf/net/endpoint_manager_queue.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 endpoint_manager_queue::element::~element() {
   // nop
@@ -74,5 +73,4 @@ endpoint_manager_queue::message::~message() {
   // nop
 }
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

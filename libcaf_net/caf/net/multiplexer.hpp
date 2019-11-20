@@ -34,8 +34,7 @@ struct pollfd;
 
 } // extern "C"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// Multiplexes any number of ::socket_manager objects with a ::socket.
 class multiplexer : public std::enable_shared_from_this<multiplexer> {
@@ -128,5 +127,4 @@ using multiplexer_ptr = std::shared_ptr<multiplexer>;
 /// @relates multiplexer
 using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

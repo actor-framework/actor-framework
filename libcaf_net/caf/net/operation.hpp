@@ -20,8 +20,7 @@
 
 #include <string>
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// Values for representing bitmask of I/O operations.
 enum class operation {
@@ -49,5 +48,4 @@ constexpr operation operator~(operation x) {
 
 std::string to_string(operation x);
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

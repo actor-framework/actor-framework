@@ -21,12 +21,10 @@
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/fwd.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 void convert(const ip_endpoint& src, sockaddr_storage& dst);
 
 error convert(const sockaddr_storage& src, ip_endpoint& dst);
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

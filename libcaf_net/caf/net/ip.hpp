@@ -23,9 +23,7 @@
 
 #include "caf/fwd.hpp"
 
-namespace caf {
-namespace net {
-namespace ip {
+namespace caf::net::ip {
 
 /// Returns all IP addresses of `host` (if any).
 std::vector<ip_address> resolve(string_view host);
@@ -43,6 +41,4 @@ std::vector<ip_address> local_addresses(ip_address host);
 /// Returns the hostname of this device.
 std::string hostname();
 
-} // namespace ip
-} // namespace net
-} // namespace caf
+} // namespace caf::net::ip

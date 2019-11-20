@@ -21,8 +21,7 @@
 #include "caf/fwd.hpp"
 #include "caf/net/network_socket.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// A datagram-oriented network communication endpoint for bidirectional
 /// byte transmission.
@@ -83,5 +82,4 @@ variant<size_t, sec> write(udp_datagram_socket x, span<const byte> buf,
 variant<size_t, sec>
 check_udp_datagram_socket_io_res(std::make_signed<size_t>::type res);
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

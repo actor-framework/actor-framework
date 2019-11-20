@@ -20,8 +20,7 @@
 
 #include "caf/config.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 #ifdef CAF_WINDOWS
 
@@ -41,5 +40,4 @@ using socket_size_type = unsigned;
 
 #endif // CAF_WINDOWS
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

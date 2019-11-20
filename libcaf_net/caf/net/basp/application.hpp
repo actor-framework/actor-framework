@@ -50,9 +50,7 @@
 #include "caf/span.hpp"
 #include "caf/unit.hpp"
 
-namespace caf {
-namespace net {
-namespace basp {
+namespace caf::net::basp {
 
 /// An implementation of BASP as an application layer protocol.
 class application {
@@ -211,6 +209,4 @@ private:
   std::unique_ptr<hub_type> hub_;
 };
 
-} // namespace basp
-} // namespace net
-} // namespace caf
+} // namespace caf::net::basp

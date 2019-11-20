@@ -26,8 +26,7 @@
 #include "caf/net/pipe_socket.hpp"
 #include "caf/net/socket_manager.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 class pollset_updater : public socket_manager {
 public:
@@ -63,5 +62,4 @@ private:
   size_t buf_size_;
 };
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

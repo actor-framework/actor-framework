@@ -22,8 +22,7 @@
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/net/endpoint_manager_impl.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 template <class Transport>
 endpoint_manager_ptr make_endpoint_manager(const multiplexer_ptr& mpx,
@@ -32,5 +31,4 @@ endpoint_manager_ptr make_endpoint_manager(const multiplexer_ptr& mpx,
   return make_counted<impl>(mpx, sys, std::move(trans));
 }
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

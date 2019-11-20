@@ -26,9 +26,7 @@
 #include "caf/fwd.hpp"
 #include "caf/mailbox_element.hpp"
 
-namespace caf {
-namespace net {
-namespace basp {
+namespace caf::net::basp {
 
 /// Enforces strict order of message delivery, i.e., deliver messages in the
 /// same order as if they were deserialized by a single thread.
@@ -76,6 +74,4 @@ public:
   std::vector<actor_msg> pending;
 };
 
-} // namespace basp
-} // namespace net
-} // namespace caf
+} // namespace caf::net::basp

@@ -26,8 +26,7 @@
 #include "caf/net/socket.hpp"
 #include "caf/net/socket_id.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// A unidirectional communication endpoint for inter-process communication.
 struct pipe_socket : socket {
@@ -63,5 +62,4 @@ variant<size_t, sec> read(pipe_socket x, span<byte>);
 variant<size_t, sec>
 check_pipe_socket_io_res(std::make_signed<size_t>::type res);
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

@@ -23,8 +23,7 @@
 #include "caf/net/stream_socket.hpp"
 #include "caf/uri.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// Represents a TCP connection.
 struct tcp_stream_socket : stream_socket {
@@ -46,5 +45,4 @@ expected<tcp_stream_socket> make_connected_tcp_stream_socket(ip_endpoint node);
 expected<tcp_stream_socket>
 make_connected_tcp_stream_socket(const uri::authority_type& node);
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

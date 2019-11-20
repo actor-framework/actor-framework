@@ -24,8 +24,7 @@
 
 #include "caf/config.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 #ifdef CAF_WINDOWS
 
@@ -51,5 +50,4 @@ constexpr socket_id invalid_socket_id = -1;
 /// @relates socket
 using signed_socket_id = std::make_signed<socket_id>::type;
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

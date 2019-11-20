@@ -27,8 +27,7 @@
 #include "caf/send.hpp"
 #include "caf/uri.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 middleman::middleman(actor_system& sys) : sys_(sys) {
   mpx_ = std::make_shared<multiplexer>();
@@ -103,5 +102,4 @@ middleman_backend* middleman::backend(string_view scheme) const noexcept {
   return nullptr;
 }
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

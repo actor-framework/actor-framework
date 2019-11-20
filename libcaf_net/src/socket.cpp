@@ -27,8 +27,7 @@
 #include "caf/sec.hpp"
 #include "caf/variant.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 #ifdef CAF_WINDOWS
 
@@ -180,5 +179,4 @@ error nonblocking(socket x, bool new_value) {
 
 #endif // CAF_WINDOWS
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

@@ -55,8 +55,7 @@ uint16_t port_of(sockaddr& what) {
 
 } // namespace
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 #if defined(CAF_MACOS) || defined(CAF_IOS) || defined(CAF_BSD)
 #  define CAF_HAS_NOSIGPIPE_SOCKET_FLAG
@@ -80,7 +79,6 @@ error allow_udp_connreset(network_socket x, bool new_value) {
   return none;
 }
 #else // CAF_WINDOWS
-
 
 error allow_sigpipe(network_socket x, bool new_value) {
 #  ifdef CAF_HAS_NOSIGPIPE_SOCKET_FLAG
@@ -193,5 +191,4 @@ void shutdown(network_socket x) {
   ::shutdown(x.id, 2);
 }
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

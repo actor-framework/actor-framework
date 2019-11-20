@@ -24,9 +24,7 @@
 #include "caf/proxy_registry.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
-namespace caf {
-namespace net {
-namespace basp {
+namespace caf::net::basp {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
@@ -60,6 +58,4 @@ resumable::resume_result worker::resume(execution_unit* ctx, size_t) {
   return resumable::awaiting_message;
 }
 
-} // namespace basp
-} // namespace net
-} // namespace caf
+} // namespace caf::net::basp

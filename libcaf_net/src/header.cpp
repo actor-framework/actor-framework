@@ -24,9 +24,7 @@
 #include "caf/detail/network_order.hpp"
 #include "caf/span.hpp"
 
-namespace caf {
-namespace net {
-namespace basp {
+namespace caf::net::basp {
 
 namespace {
 
@@ -69,6 +67,4 @@ void to_bytes(header x, std::vector<byte>& buf) {
   to_bytes_impl(x, buf.data());
 }
 
-} // namespace basp
-} // namespace net
-} // namespace caf
+} // namespace caf::net::basp

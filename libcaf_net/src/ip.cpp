@@ -54,9 +54,7 @@ using std::pair;
 using std::string;
 using std::vector;
 
-namespace caf {
-namespace net {
-namespace ip {
+namespace caf::net::ip {
 
 namespace {
 
@@ -251,6 +249,4 @@ std::string hostname() {
   return buf;
 }
 
-} // namespace ip
-} // namespace net
-} // namespace caf
+} // namespace caf::net::ip

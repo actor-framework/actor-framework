@@ -23,8 +23,7 @@
 #include "caf/net/network_socket.hpp"
 #include "caf/uri.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// Represents a TCP acceptor in listening mode.
 struct tcp_accept_socket : network_socket {
@@ -58,5 +57,4 @@ make_tcp_accept_socket(const uri::authority_type& node,
 /// @relates tcp_accept_socket
 expected<tcp_stream_socket> accept(tcp_accept_socket x);
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

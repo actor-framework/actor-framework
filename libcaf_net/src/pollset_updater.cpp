@@ -23,8 +23,7 @@
 #include "caf/span.hpp"
 #include "caf/variant.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 pollset_updater::pollset_updater(pipe_socket read_handle,
                                  const multiplexer_ptr& parent)
@@ -72,5 +71,4 @@ void pollset_updater::handle_error(sec) {
   // nop
 }
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net
