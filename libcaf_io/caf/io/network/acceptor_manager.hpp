@@ -36,6 +36,9 @@ public:
 
   /// Get the port of the underlying I/O device.
   virtual uint16_t port() const = 0;
+
+  /// Get the port of the underlying I/O device.
+  virtual std::string addr() const = 0;
 };
 
 } // namespace caf

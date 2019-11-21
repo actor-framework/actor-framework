@@ -85,11 +85,8 @@ void datagram_servant_impl::flush() {
   handler_.flush(this);
 }
 
-std::string datagram_servant_impl::addr() const {
-  auto x = remote_addr_of_fd(handler_.fd());
-  if (!x)
-    return "";
-  return *x;
+std::string datagram_servant_impl::addr(datagram_handle hdl) const {
+  return handler_.addr(hdl);
 }
 
 uint16_t datagram_servant_impl::port(datagram_handle hdl) const {
