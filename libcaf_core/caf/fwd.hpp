@@ -261,6 +261,14 @@ class manager;
 
 } // namespace openssl
 
+// -- thread-affinity classes --------------------------------------------------
+
+namespace affinity {
+
+class manager;
+
+} // namespace affinity
+
 // -- detail classes -----------------------------------------------------------
 
 namespace detail {

@@ -143,6 +143,15 @@ actor_system_config::actor_system_config()
                  "path to an OpenSSL-style directory of trusted certificates")
     .add<string>(openssl_cafile, "cafile",
                  "path to a file of concatenated PEM-formatted certificates");
+  opt_group(custom_options_, "affinity")
+    .add<string>(affinity_worker_cores, "worker-cores",
+                  "sets the cores to use for the worker threads")
+    .add<string>(affinity_detached_cores, "detached-cores",
+                  "sets the cores to use for the detached threads")
+    .add<string>(affinity_blocking_cores, "blocking-cores",
+                  "sets the cores to use for the blocking threads")
+    .add<string>(affinity_other_cores, "other-cores",
+                  "sets the cores for other threads (apart from workers, blocking and detached threads)");
   // add renderers for default error categories
   error_renderers.emplace(atom("system"), render_sec);
   error_renderers.emplace(atom("exit"), render_exit_reason);

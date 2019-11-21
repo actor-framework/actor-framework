@@ -35,6 +35,8 @@
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/scheduler/profiled_coordinator.hpp"
 
+#include "caf/affinity/affinity_manager.hpp"
+
 namespace caf {
 
 namespace {
@@ -283,6 +285,11 @@ actor_system::actor_system(actor_system_config& cfg)
         sched.reset(new test_coordinator(*this));
     }
   }
+  auto& aff = modules_[module::affinity_manager];
+  // set affinity only if not explicitly loaded by user
+  if (!aff) {
+      aff.reset(new affinity::manager(*this));
+  }
   // initialize state for each module and give each module the opportunity
   // to influence the system configuration, e.g., by adding more types
   logger_->init(cfg);
@@ -411,6 +418,17 @@ openssl::manager& actor_system::openssl_manager() const {
   return *reinterpret_cast<openssl::manager*>(clptr->subtype_ptr());
 }
 
+bool actor_system::has_affinity_manager() const {
+  return modules_[module::affinity_manager] != nullptr;
+}
+
+affinity::manager& actor_system::affinity_manager() const {
+  auto& clptr = modules_[module::affinity_manager];
+  if (!clptr)
+    CAF_RAISE_ERROR("cannot access affinity manager: module not loaded");
+  return *reinterpret_cast<affinity::manager*>(clptr->subtype_ptr());
+}
+
 bool actor_system::has_network_manager() const noexcept {
   return modules_[module::network_manager] != nullptr;
 }
@@ -458,9 +476,10 @@ void actor_system::await_detached_threads() {
     detached_cv_.wait(guard);
 }
 
-void actor_system::thread_started() {
+void actor_system::thread_started(thread_type tt) {
   for (auto& hook : cfg_.thread_hooks_)
     hook->thread_started();
+  affinity_manager().set_affinity(tt);
 }
 
 void actor_system::thread_terminates() {

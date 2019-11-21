@@ -121,7 +121,16 @@ public:
   friend class net::middleman;
   friend class abstract_actor;
 
-  /// The number of actors implictly spawned by the actor system on startup.
+  /// thread kind
+  enum thread_type { 
+      worker_thread     = 0,
+      private_thread    = 1,
+      blocking_thread   = 2,
+      other_thread      = 3,
+      no_id             = 4
+  };
+
+  /// The number of actors implicitly spawned by the actor system on startup.
   static constexpr size_t num_internal_actors = 2;
 
   /// Returns the ID of an internal actor by its name.
@@ -154,6 +163,7 @@ public:
       opencl_manager,
       openssl_manager,
       network_manager,
+      affinity_manager,
       num_ids
     };
 
@@ -281,6 +291,13 @@ public:
   /// Returns the manager instance from the OpenSSL module.
   /// @throws `std::logic_error` if module is not loaded.
   openssl::manager& openssl_manager() const;
+
+  /// Returns `true` if the affinity module is available, `false` otherwise.
+  bool has_affinity_manager() const;
+
+  /// Returns the manager instance from the Affinity module.
+  /// @throws `std::logic_error` if module is not loaded.
+  affinity::manager& affinity_manager() const;
 
   /// Returns `true` if the network module is available, `false` otherwise.
   bool has_network_manager() const noexcept;
@@ -524,7 +541,7 @@ public:
 
   /// Calls all thread started hooks
   /// @warning must be called by thread which is about to start
-  void thread_started();
+  void thread_started(thread_type tt=other_thread);
 
   /// Calls all thread terminates hooks
   /// @warning must be called by thread which is about to terminate

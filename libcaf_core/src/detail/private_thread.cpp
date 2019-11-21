@@ -89,7 +89,7 @@ void private_thread::shutdown() {
 
 void private_thread::exec(private_thread* this_ptr) {
   detail::set_thread_name("caf.actor");
-  this_ptr->system_.thread_started();
+  this_ptr->system_.thread_started(actor_system::private_thread);
   this_ptr->run();
   // make sure to not destroy the private thread object before the
   // detached actor is destroyed and this object is unreachable

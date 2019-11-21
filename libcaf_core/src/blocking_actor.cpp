@@ -98,7 +98,7 @@ void blocking_actor::launch(execution_unit*, bool, bool hide) {
   std::thread([](strong_actor_ptr ptr) {
     // actor lives in its own thread
     detail::set_thread_name("caf.actor");
-    ptr->home_system->thread_started();
+    ptr->home_system->thread_started(actor_system::blocking_thread);
     auto this_ptr = ptr->get();
     CAF_ASSERT(dynamic_cast<blocking_actor*>(this_ptr) != nullptr);
     auto self = static_cast<blocking_actor*>(this_ptr);
