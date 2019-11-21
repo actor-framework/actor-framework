@@ -47,6 +47,9 @@ public:
 
   /// Get the port of the underlying I/O device.
   virtual uint16_t port(datagram_handle) const = 0;
+
+  /// Get the remote address of the underlying I/O device.
+  virtual std::string addr(datagram_handle) const = 0;
 };
 
 } // namespace caf

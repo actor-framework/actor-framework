@@ -50,7 +50,7 @@ public:
 
   void flush() override;
 
-  std::string addr() const override;
+  std::string addr(datagram_handle hdl) const override;
 
   uint16_t port(datagram_handle hdl) const override;
 

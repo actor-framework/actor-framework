@@ -63,9 +63,6 @@ public:
   /// Detaches this manager from its parent in case of an error.
   void io_failure(execution_unit* ctx, operation op);
 
-  /// Get the address of the underlying I/O device.
-  virtual std::string addr() const = 0;
-
 protected:
   /// Creates a message signalizing a disconnect to the parent.
   virtual message detach_message() = 0;

@@ -122,6 +122,12 @@ void datagram_handler::remove_endpoint(datagram_handle hdl) {
   }
 }
 
+std::string datagram_handler::addr(datagram_handle hdl) const {
+  if (auto itr = ep_by_hdl_.find(hdl); itr != ep_by_hdl_.end())
+    return host(itr->second);
+  return std::string{};
+}
+
 void datagram_handler::removed_from_loop(operation op) {
   switch (op) {
     case operation::read:

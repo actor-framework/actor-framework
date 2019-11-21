@@ -88,6 +88,9 @@ public:
   ///          once the stream has been started.
   void flush(const manager_ptr& mgr);
 
+  /// Return the remote address for a given `hdl`.
+  std::string addr(datagram_handle hdl) const;
+
   void removed_from_loop(operation op) override;
 
   void graceful_shutdown() override;
