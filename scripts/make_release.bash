@@ -89,7 +89,7 @@ echo "\
 This script expects to run at the root directory of a Git clone of CAF.
 The current repository must be master. There must be no untracked file
 and the working tree status must be equal to the current HEAD commit.
-Further, the script expects a relase_note.md file in the current directory
+Further, the script expects a release_note.md file in the current directory
 with the developer blog checked out one level above, i.e.:
 
 \$HOME

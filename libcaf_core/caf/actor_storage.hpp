@@ -132,7 +132,7 @@ void intrusive_ptr_release(actor_storage<T>* x) {
   // and destroy the data block
   if (x->ctrl.strong_refs.fetch_sub(1, std::memory_order_acq_rel) == 1) {
     x->destroy_data();
-    intrusive_ptr_relase_weak(x);
+    intrusive_ptr_release_weak(x);
   }
 }
 
