@@ -217,7 +217,7 @@ public:
 
   template <class Mutex, class CondVar>
   bool synchronized_push_front(Mutex& mtx, CondVar& cv, unique_pointer ptr) {
-    return synchronized_push_front(mtx, cv, ptr.relase());
+    return synchronized_push_front(mtx, cv, ptr.release());
   }
 
   template <class Mutex, class CondVar, class... Ts>

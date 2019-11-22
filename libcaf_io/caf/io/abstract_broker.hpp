@@ -173,7 +173,7 @@ public:
     return system().middleman();
   }
 
-  /// Adds the unitialized `scribe` instance `ptr` to this broker.
+  /// Adds the uninitialized `scribe` instance `ptr` to this broker.
   void add_scribe(scribe_ptr ptr);
 
   /// Creates and assigns a new `scribe` from given native socked `fd`.
