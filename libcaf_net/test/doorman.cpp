@@ -18,7 +18,7 @@
 
 #define CAF_SUITE doorman
 
-#include "caf/policy/doorman.hpp"
+#include "caf/net/doorman.hpp"
 
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/net/ip.hpp"
@@ -30,29 +30,26 @@
 
 #include "caf/test/dsl.hpp"
 
-#include "host_fixture.hpp"
+#include "caf/net/test/host_fixture.hpp"
 
 using namespace caf;
 using namespace caf::net;
+using namespace std::literals::string_literals;
 
 namespace {
-
-// TODO: switch to std::operator""s when switching to C++14
-std::string operator"" _s(const char* str, size_t size) {
-  return std::string(str, size);
-}
 
 struct fixture : test_coordinator_fixture<>, host_fixture {
   fixture() {
     mpx = std::make_shared<multiplexer>();
     if (auto err = mpx->init())
       CAF_FAIL("mpx->init failed: " << sys.render(err));
+    mpx->set_thread_id();
+    CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
     auth.port = 0;
-    auth.host = "0.0.0.0"_s;
+    auth.host = "0.0.0.0"s;
   }
 
   bool handle_io_event() override {
-    mpx->handle_updates();
     return mpx->poll_once(false);
   }
 
@@ -71,30 +68,41 @@ public:
     return result;
   }
 
-  template <class Transport>
-  error init(Transport&) {
+  template <class Parent>
+  error init(Parent&) {
     return none;
   }
 
-  template <class Transport>
-  void write_message(Transport& transport,
-                     std::unique_ptr<endpoint_manager::message> msg) {
-    transport.write_packet(msg->payload);
+  template <class Parent>
+  void write_message(Parent& parent,
+                     std::unique_ptr<endpoint_manager_queue::message> msg) {
+    parent.write_packet(msg->payload);
   }
 
   template <class Parent>
-  void handle_data(Parent&, span<byte>) {
+  error handle_data(Parent&, span<const byte>) {
+    return none;
+  }
+
+  template <class Parent>
+  void resolve(Parent&, string_view path, const actor& listener) {
+    anon_send(listener, resolve_atom::value,
+              "the resolved path is still "
+                + std::string(path.begin(), path.end()));
+  }
+
+  template <class Parent>
+  void timeout(Parent&, atom_value, uint64_t) {
     // nop
   }
 
-  template <class Transport>
-  void resolve(Transport&, std::string path, actor listener) {
-    anon_send(listener, resolve_atom::value,
-              "the resolved path is still " + path);
+  template <class Parent>
+  void new_proxy(Parent&, actor_id) {
+    // nop
   }
 
-  template <class Transport>
-  void timeout(Transport&, atom_value, uint64_t) {
+  template <class Parent>
+  void local_actor_down(Parent&, actor_id, error) {
     // nop
   }
 
@@ -105,6 +113,8 @@ public:
 
 class dummy_application_factory {
 public:
+  using application_type = dummy_application;
+
   static expected<std::vector<byte>> serialize(actor_system& sys,
                                                const type_erased_tuple& x) {
     return dummy_application::serialize(sys, x);
@@ -115,7 +125,7 @@ public:
     return none;
   }
 
-  dummy_application make() const {
+  application_type make() const {
     return dummy_application{};
   }
 };
@@ -131,7 +141,7 @@ CAF_TEST(tcp connect) {
   CAF_MESSAGE("opened acceptor on port " << port);
   uri::authority_type dst;
   dst.port = port;
-  dst.host = "localhost"_s;
+  dst.host = "localhost"s;
   auto conn = make_socket_guard(unbox(make_connected_tcp_stream_socket(dst)));
   auto accepted = make_socket_guard(unbox(accept(acceptor)));
   CAF_MESSAGE("accepted connection");
@@ -142,19 +152,21 @@ CAF_TEST(doorman accept) {
   auto port = unbox(local_port(socket_cast<network_socket>(acceptor)));
   auto acceptor_guard = make_socket_guard(acceptor);
   CAF_MESSAGE("opened acceptor on port " << port);
-  auto mgr = make_endpoint_manager(mpx, sys, policy::doorman{acceptor},
-                                   dummy_application_factory{});
+  auto mgr = make_endpoint_manager(
+    mpx, sys,
+    doorman<dummy_application_factory>{acceptor_guard.release(),
+                                       dummy_application_factory{}});
   CAF_CHECK_EQUAL(mgr->init(), none);
-  handle_io_event();
   auto before = mpx->num_socket_managers();
-  CAF_MESSAGE("connecting to doorman");
+  CAF_CHECK_EQUAL(before, 2);
   uri::authority_type dst;
   dst.port = port;
-  dst.host = "localhost"_s;
+  dst.host = "localhost"s;
+  CAF_MESSAGE("connecting to doorman on: " << dst);
   auto conn = make_socket_guard(unbox(make_connected_tcp_stream_socket(dst)));
   CAF_MESSAGE("waiting for connection");
   while (mpx->num_socket_managers() != before + 1)
-    handle_io_event();
+    run();
   CAF_MESSAGE("connected");
 }
 

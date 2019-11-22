@@ -21,34 +21,47 @@
 #include <vector>
 
 #include "caf/logger.hpp"
+#include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/net/stream_socket.hpp"
+#include "caf/net/stream_transport.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
 #include "caf/send.hpp"
-#include "caf/stream_transport.hpp"
 
-namespace caf {
+namespace caf::net {
 
 /// A doorman accepts TCP connections and creates stream_transports to handle
 /// them.
+template <class Factory>
 class doorman {
 public:
-  doorman(net::tcp_accept_socket acceptor) : acceptor_(acceptor) {
+  // -- member types -----------------------------------------------------------
+
+  using factory_type = Factory;
+
+  using application_type = typename Factory::application_type;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  explicit doorman(net::tcp_accept_socket acceptor, factory_type factory)
+    : acceptor_(acceptor), factory_(std::move(factory)) {
     // nop
   }
 
-  net::tcp_accept_socket acceptor_;
+  // -- properties -------------------------------------------------------------
 
   net::tcp_accept_socket handle() {
     return acceptor_;
   }
 
+  // -- member functions -------------------------------------------------------
+
   template <class Parent>
   error init(Parent& parent) {
-    if (auto err = parent.application().init(parent))
+    // TODO: is initializing application factory nessecary?
+    if (auto err = factory_.init(parent))
       return err;
-    parent.mask_add(net::operation::read);
     return none;
   }
 
@@ -59,13 +72,16 @@ public:
       CAF_LOG_ERROR("accept failed:" << parent.system().render(x.error()));
       return false;
     }
+    // TODO this won't work anymore
     auto mpx = parent.multiplexer();
     if (!mpx) {
       CAF_LOG_DEBUG("unable to get multiplexer from parent");
       return false;
     }
-    auto child = make_endpoint_manager(mpx, parent.system(), scribe{*x},
-                                       parent.application().make());
+    auto child = make_endpoint_manager(mpx, parent.system(),
+                                       stream_transport<
+                                         application_type>{*x,
+                                                           factory_.make()});
     if (auto err = child->init())
       return false;
     return true;
@@ -78,9 +94,24 @@ public:
   }
 
   template <class Parent>
-  void resolve(Parent&, const std::string& path, actor listener) {
-    CAF_LOG_ERROR("doorman called to resolve" << CAF_ARG(path));
+  void resolve(Parent&, const uri& locator, const actor& listener) {
+    CAF_LOG_ERROR("doorman called to resolve" << CAF_ARG(locator));
     anon_send(listener, resolve_atom::value, "doormen cannot resolve paths");
+  }
+
+  void new_proxy(endpoint_manager&, const node_id& peer, actor_id id) {
+    CAF_LOG_ERROR("doorman received new_proxy" << CAF_ARG(peer) << CAF_ARG(id));
+    CAF_IGNORE_UNUSED(peer);
+    CAF_IGNORE_UNUSED(id);
+  }
+
+  void local_actor_down(endpoint_manager&, const node_id& peer, actor_id id,
+                        error reason) {
+    CAF_LOG_ERROR("doorman received local_actor_down"
+                  << CAF_ARG(peer) << CAF_ARG(id) << CAF_ARG(reason));
+    CAF_IGNORE_UNUSED(peer);
+    CAF_IGNORE_UNUSED(id);
+    CAF_IGNORE_UNUSED(reason);
   }
 
   template <class Parent>
@@ -90,10 +121,14 @@ public:
     CAF_IGNORE_UNUSED(id);
   }
 
-  template <class Application>
-  void handle_error(Application&, sec err) {
+  void handle_error(sec err) {
     CAF_LOG_ERROR("doorman encounterd error: " << err);
   }
+
+private:
+  net::tcp_accept_socket acceptor_;
+
+  factory_type factory_;
 };
 
-} // namespace caf
+} // namespace caf::net

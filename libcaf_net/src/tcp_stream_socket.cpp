@@ -83,7 +83,7 @@ make_connected_tcp_stream_socket(const uri::authority_type& node) {
     return make_error(sec::cannot_connect_to_node, "port is zero");
   std::vector<ip_address> addrs;
   if (auto str = get_if<std::string>(&node.host))
-    addrs = ip::resolve(std::move(*str));
+    addrs = ip::local_addresses(*str);
   else if (auto addr = get_if<ip_address>(&node.host))
     addrs.push_back(*addr);
   if (addrs.empty())

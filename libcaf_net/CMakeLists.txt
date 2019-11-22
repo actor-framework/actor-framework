@@ -36,6 +36,8 @@ set(LIBCAF_NET_SRCS
   src/pipe_socket.cpp
   src/pollset_updater.cpp
   src/socket.cpp
+  src/tcp_accept_socket.cpp
+  src/tcp_stream_socket.cpp
   src/socket_manager.cpp
   src/stream_socket.cpp
   src/udp_datagram_socket.cpp

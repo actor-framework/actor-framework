@@ -36,7 +36,7 @@ public:
   /// @pre `handle != invalid_socket`
   socket_manager(socket handle, const multiplexer_ptr& parent);
 
-  virtual ~socket_manager();
+  ~socket_manager() override;
 
   socket_manager(const socket_manager&) = delete;
 
