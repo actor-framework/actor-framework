@@ -20,11 +20,11 @@
 
 #include <cstddef>
 #include <limits>
+#include <type_traits>
 
 #include "caf/config.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 #ifdef CAF_WINDOWS
 
@@ -46,5 +46,8 @@ constexpr socket_id invalid_socket_id = -1;
 
 #endif // CAF_WINDOWS
 
-} // namespace net
-} // namespace caf
+/// Signed counterpart of `socket_id`.
+/// @relates socket
+using signed_socket_id = std::make_signed<socket_id>::type;
+
+} // namespace caf::net

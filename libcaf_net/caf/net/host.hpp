@@ -20,8 +20,7 @@
 
 #include "caf/fwd.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 struct this_host {
   /// Initializes the network subsystem.
@@ -31,5 +30,4 @@ struct this_host {
   static void cleanup();
 };
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

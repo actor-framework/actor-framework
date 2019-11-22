@@ -34,8 +34,7 @@ struct pollfd;
 
 } // extern "C"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// Multiplexes any number of ::socket_manager objects with a ::socket.
 class multiplexer : public std::enable_shared_from_this<multiplexer> {
@@ -64,9 +63,13 @@ public:
 
   // -- thread-safe signaling --------------------------------------------------
 
-  /// Causes the multiplexer to update its event bitmask for `mgr`.
+  /// Registers `mgr` for read events.
   /// @thread-safe
-  void update(const socket_manager_ptr& mgr);
+  void register_reading(const socket_manager_ptr& mgr);
+
+  /// Registers `mgr` for write events.
+  /// @thread-safe
+  void register_writing(const socket_manager_ptr& mgr);
 
   /// Closes the pipe for signaling updates to the multiplexer. After closing
   /// the pipe, calls to `update` no longer have any effect.
@@ -79,20 +82,24 @@ public:
   /// ready as a result.
   bool poll_once(bool blocking);
 
+  /// Sets the thread ID to `std::this_thread::id()`.
+  void set_thread_id();
+
   /// Polls until no socket event handler remains.
   void run();
-
-  /// Processes all updates on the socket managers.
-  void handle_updates();
 
 protected:
   // -- utility functions ------------------------------------------------------
 
   /// Handles an I/O event on given manager.
-  void handle(const socket_manager_ptr& mgr, int mask);
+  short handle(const socket_manager_ptr& mgr, short events, short revents);
 
   /// Adds a new socket manager to the pollset.
   void add(socket_manager_ptr mgr);
+
+  /// Writes `opcode` and pointer to `mgr` the the pipe for handling an event
+  /// later via the pollset updater.
+  void write_to_pipe(uint8_t opcode, const socket_manager_ptr& mgr);
 
   // -- member variables -------------------------------------------------------
 
@@ -102,9 +109,6 @@ protected:
   /// Maps sockets to their owning managers by storing the managers in the same
   /// order as their sockets appear in `pollset_`.
   manager_list managers_;
-
-  /// Managers that updated their event mask and need updating.
-  manager_list dirty_managers_;
 
   /// Stores the ID of the thread this multiplexer is running in. Set when
   /// calling `init()`.
@@ -123,5 +127,4 @@ using multiplexer_ptr = std::shared_ptr<multiplexer>;
 /// @relates multiplexer
 using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

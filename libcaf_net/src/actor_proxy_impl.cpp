@@ -22,51 +22,31 @@
 #include "caf/expected.hpp"
 #include "caf/logger.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 actor_proxy_impl::actor_proxy_impl(actor_config& cfg, endpoint_manager_ptr dst)
   : super(cfg), sf_(dst->serialize_fun()), dst_(std::move(dst)) {
-  // anon_send(broker_, monitor_atom::value, ctrl());
+  CAF_ASSERT(dst_ != nullptr);
+  dst_->enqueue_event(node(), id());
 }
 
 actor_proxy_impl::~actor_proxy_impl() {
-  // anon_send(broker_, make_message(delete_atom::value, node(), id()));
+  // nop
 }
 
 void actor_proxy_impl::enqueue(mailbox_element_ptr what, execution_unit*) {
   CAF_PUSH_AID(0);
   CAF_ASSERT(what != nullptr);
+  CAF_LOG_SEND_EVENT(what);
   if (auto payload = sf_(home_system(), what->content()))
-    dst_->enqueue(std::move(what), std::move(*payload));
+    dst_->enqueue(std::move(what), ctrl(), std::move(*payload));
   else
     CAF_LOG_ERROR(
       "unable to serialize payload: " << home_system().render(payload.error()));
-}
-
-bool actor_proxy_impl::add_backlink(abstract_actor* x) {
-  if (monitorable_actor::add_backlink(x)) {
-    enqueue(make_mailbox_element(ctrl(), make_message_id(), {},
-                                 link_atom::value, x->ctrl()),
-            nullptr);
-    return true;
-  }
-  return false;
-}
-
-bool actor_proxy_impl::remove_backlink(abstract_actor* x) {
-  if (monitorable_actor::remove_backlink(x)) {
-    enqueue(make_mailbox_element(ctrl(), make_message_id(), {},
-                                 unlink_atom::value, x->ctrl()),
-            nullptr);
-    return true;
-  }
-  return false;
 }
 
 void actor_proxy_impl::kill_proxy(execution_unit* ctx, error rsn) {
   cleanup(std::move(rsn), ctx);
 }
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

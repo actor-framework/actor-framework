@@ -16,54 +16,41 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#define CAF_SUITE basp.header
 
-#include <cstddef>
-#include <limits>
+#include "caf/net/basp/header.hpp"
 
-#include "caf/net/socket_id.hpp"
+#include "caf/test/dsl.hpp"
 
-namespace caf {
-namespace net {
+#include "caf/binary_deserializer.hpp"
+#include "caf/serializer_impl.hpp"
 
-template <class Derived>
-struct abstract_socket {
-  socket_id id;
+using namespace caf;
+using namespace caf::net;
 
-  constexpr abstract_socket() : id(invalid_socket_id) {
-    // nop
+CAF_TEST(serialization) {
+  basp::header x{basp::message_type::handshake, 42, 4};
+  std::vector<byte> buf;
+  {
+    serializer_impl<std::vector<byte>> sink{nullptr, buf};
+    CAF_CHECK_EQUAL(sink(x), none);
   }
-
-  constexpr abstract_socket(socket_id id) : id(id) {
-    // nop
+  CAF_CHECK_EQUAL(buf.size(), basp::header_size);
+  auto buf2 = to_bytes(x);
+  CAF_REQUIRE_EQUAL(buf.size(), buf2.size());
+  CAF_CHECK(std::equal(buf.begin(), buf.end(), buf2.begin()));
+  basp::header y;
+  {
+    binary_deserializer source{nullptr, buf};
+    CAF_CHECK_EQUAL(source(y), none);
   }
+  CAF_CHECK_EQUAL(x, y);
+  auto z = basp::header::from_bytes(buf);
+  CAF_CHECK_EQUAL(x, z);
+  CAF_CHECK_EQUAL(y, z);
+}
 
-  constexpr abstract_socket(const Derived& other) : id(other.id) {
-    // nop
-  }
-
-  abstract_socket& operator=(const Derived& other) {
-    id = other.id;
-    return *this;
-  }
-
-  template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f, Derived& x) {
-    return f(x.id);
-  }
-
-  friend constexpr bool operator==(Derived x, Derived y) {
-    return x.id == y.id;
-  }
-
-  friend constexpr bool operator!=(Derived x, Derived y) {
-    return x.id != y.id;
-  }
-
-  friend constexpr bool operator<(Derived x, Derived y) {
-    return x.id < y.id;
-  }
-};
-
-} // namespace net
-} // namespace caf
+CAF_TEST(to_string) {
+  basp::header x{basp::message_type::handshake, 42, 4};
+  CAF_CHECK_EQUAL(to_string(x), "basp::header(handshake, 42, 4)");
+}

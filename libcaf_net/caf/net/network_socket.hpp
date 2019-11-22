@@ -25,22 +25,16 @@
 
 #include "caf/config.hpp"
 #include "caf/fwd.hpp"
-#include "caf/net/abstract_socket.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/net/socket_id.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// A bidirectional network communication endpoint.
-struct network_socket : abstract_socket<network_socket> {
-  using super = abstract_socket<network_socket>;
+struct network_socket : socket {
+  using super = socket;
 
   using super::super;
-
-  constexpr operator socket() const noexcept {
-    return socket{id};
-  }
 };
 
 /// Enables or disables `SIGPIPE` events from `x`.
@@ -88,5 +82,4 @@ void shutdown_write(network_socket x);
 /// @relates network_socket
 void shutdown(network_socket x);
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

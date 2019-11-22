@@ -18,35 +18,24 @@
 
 #pragma once
 
-#include "caf/ip_endpoint.hpp"
-#include "caf/net/abstract_socket.hpp"
+#include "caf/fwd.hpp"
+#include "caf/net/fwd.hpp"
 #include "caf/net/network_socket.hpp"
-#include "caf/net/socket.hpp"
-#include "caf/net/stream_socket.hpp"
-#include "caf/net/tcp_stream_socket.hpp"
 #include "caf/uri.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
-/// Represents a TCP acceptr in listening mode.
-struct tcp_accept_socket : abstract_socket<tcp_accept_socket> {
-  using super = abstract_socket<tcp_accept_socket>;
+/// Represents a TCP acceptor in listening mode.
+struct tcp_accept_socket : network_socket {
+  using super = network_socket;
 
   using super::super;
-
-  constexpr operator socket() const noexcept {
-    return socket{id};
-  }
-
-  constexpr operator network_socket() const noexcept {
-    return network_socket{id};
-  }
 };
 
 /// Creates a new TCP socket to accept connections on a given port.
 /// @param node The endpoint to listen on and the filter for incoming addresses.
 /// Passing the address `0.0.0.0` will accept incoming connection from any host.
+/// Passing port 0 lets the OS choose the port.
 /// @relates tcp_accept_socket
 expected<tcp_accept_socket> make_tcp_accept_socket(ip_endpoint node,
                                                    bool reuse_addr = false);
@@ -54,6 +43,7 @@ expected<tcp_accept_socket> make_tcp_accept_socket(ip_endpoint node,
 /// Creates a new TCP socket to accept connections on a given port.
 /// @param node The endpoint to listen on and the filter for incoming addresses.
 /// Passing the address `0.0.0.0` will accept incoming connection from any host.
+/// Passing port 0 lets the OS choose the port.
 /// @param reuse_addr Optionally sets the SO_REUSEADDR option on the socket.
 /// @relates tcp_accept_socket
 expected<tcp_accept_socket>
@@ -67,5 +57,4 @@ make_tcp_accept_socket(const uri::authority_type& node,
 /// @relates tcp_accept_socket
 expected<tcp_stream_socket> accept(tcp_accept_socket x);
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

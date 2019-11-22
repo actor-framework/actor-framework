@@ -18,12 +18,16 @@
 
 #pragma once
 
+#include "caf/abstract_actor.hpp"
+#include "caf/actor_cast.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/atom.hpp"
+#include "caf/detail/overload.hpp"
 #include "caf/net/endpoint_manager.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
-template <class Transport, class Application>
+template <class Transport>
 class endpoint_manager_impl : public endpoint_manager {
 public:
   // -- member types -----------------------------------------------------------
@@ -32,15 +36,13 @@ public:
 
   using transport_type = Transport;
 
-  using application_type = Application;
+  using application_type = typename transport_type::application_type;
 
   // -- constructors, destructors, and assignment operators --------------------
 
   endpoint_manager_impl(const multiplexer_ptr& parent, actor_system& sys,
-                        Transport trans, Application app)
-    : super(trans.handle(), parent, sys),
-      transport_(std::move(trans)),
-      application_(std::move(app)) {
+                        Transport trans)
+    : super(trans.handle(), parent, sys), transport_(std::move(trans)) {
     // nop
   }
 
@@ -54,13 +56,26 @@ public:
     return transport_;
   }
 
-  application_type& application() {
-    return application_;
+  endpoint_manager_impl& manager() {
+    return *this;
+  }
+
+  // -- timeout management -----------------------------------------------------
+
+  template <class... Ts>
+  uint64_t set_timeout(actor_clock::time_point tp, atom_value type,
+                       Ts&&... xs) {
+    auto act = actor_cast<abstract_actor*>(timeout_proxy_);
+    CAF_ASSERT(act != nullptr);
+    sys_.clock().set_multi_timeout(tp, act, type, next_timeout_id_);
+    transport_.set_timeout(next_timeout_id_, std::forward<Ts>(xs)...);
+    return next_timeout_id_++;
   }
 
   // -- interface functions ----------------------------------------------------
 
   error init() override {
+    this->register_reading();
     return transport_.init(*this);
   }
 
@@ -69,29 +84,40 @@ public:
   }
 
   bool handle_write_event() override {
-    if (!this->events_.blocked() && !this->events_.empty()) {
+    if (!this->queue_.blocked()) {
+      this->queue_.fetch_more();
+      auto& q = std::get<0>(this->queue_.queue().queues());
       do {
-        this->events_.fetch_more();
-        auto& q = this->events_.queue();
         q.inc_deficit(q.total_task_size());
         for (auto ptr = q.next(); ptr != nullptr; ptr = q.next()) {
-          using timeout = endpoint_manager::event::timeout;
-          using resolve_request = endpoint_manager::event::resolve_request;
-          if (auto rr = get_if<resolve_request>(&ptr->value)) {
-            transport_.resolve(*this, std::move(rr->path),
-                               std::move(rr->listener));
-          } else {
-            auto& t = get<timeout>(ptr->value);
-            transport_.timeout(*this, t.type, t.id);
-          }
+          auto f = detail::make_overload(
+            [&](endpoint_manager_queue::event::resolve_request& x) {
+              transport_.resolve(*this, x.locator, x.listener);
+            },
+            [&](endpoint_manager_queue::event::new_proxy& x) {
+              transport_.new_proxy(*this, x.peer, x.id);
+            },
+            [&](endpoint_manager_queue::event::local_actor_down& x) {
+              transport_.local_actor_down(*this, x.observing_peer, x.id,
+                                          std::move(x.reason));
+            },
+            [&](endpoint_manager_queue::event::timeout& x) {
+              transport_.timeout(*this, x.type, x.id);
+            });
+          visit(f, ptr->value);
         }
-      } while (!this->events_.try_block());
+      } while (!q.empty());
     }
-    return transport_.handle_write_event(*this);
+    if (!transport_.handle_write_event(*this)) {
+      if (this->queue_.blocked())
+        return false;
+      return !(this->queue_.empty() && this->queue_.try_block());
+    }
+    return true;
   }
 
   void handle_error(sec code) override {
-    transport_.handle_error(application_, code);
+    transport_.handle_error(code);
   }
 
   serialize_fun_type serialize_fun() const noexcept override {
@@ -100,8 +126,9 @@ public:
 
 private:
   transport_type transport_;
-  application_type application_;
+
+  /// Stores the id for the next timeout.
+  uint64_t next_timeout_id_;
 };
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

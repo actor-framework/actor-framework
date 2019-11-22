@@ -18,30 +18,54 @@
 
 #pragma once
 
-#include "caf/net/socket.hpp"
+#include "caf/net/socket_id.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// Closes the guarded socket when destroyed.
 template <class Socket>
 class socket_guard {
 public:
-  explicit socket_guard(Socket sock) : sock_(sock) {
+  socket_guard() noexcept : sock_(invalid_socket_id) {
     // nop
   }
 
-  ~socket_guard() {
-    if (sock_.id != invalid_socket_id) {
-      net::close(sock_);
-      sock_.id = invalid_socket_id;
-    }
+  explicit socket_guard(Socket sock) noexcept : sock_(sock) {
+    // nop
   }
 
-  Socket release() {
+  socket_guard(socket_guard&& other) noexcept : sock_(other.release()) {
+    // nop
+  }
+
+  socket_guard(const socket_guard&) = delete;
+
+  socket_guard& operator=(socket_guard&& other) noexcept {
+    reset(other.release());
+    return *this;
+  }
+
+  socket_guard& operator=(const socket_guard&) = delete;
+
+  ~socket_guard() {
+    if (sock_.id != invalid_socket_id)
+      close(sock_);
+  }
+
+  void reset(Socket x) noexcept {
+    if (sock_.id != invalid_socket_id)
+      close(sock_);
+    sock_ = x;
+  }
+
+  Socket release() noexcept {
     auto sock = sock_;
     sock_.id = invalid_socket_id;
     return sock;
+  }
+
+  Socket socket() const noexcept {
+    return sock_;
   }
 
 private:
@@ -53,5 +77,4 @@ socket_guard<Socket> make_socket_guard(Socket sock) {
   return socket_guard<Socket>{sock};
 }
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

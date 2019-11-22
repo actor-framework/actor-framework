@@ -20,9 +20,8 @@
 
 #include "caf/net/socket.hpp"
 
+#include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
-
-#include "host_fixture.hpp"
 
 using namespace caf;
 using namespace caf::net;

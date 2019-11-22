@@ -18,8 +18,9 @@
 
 #pragma once
 
-namespace caf {
-namespace net {
+#include <string>
+
+namespace caf::net {
 
 /// Values for representing bitmask of I/O operations.
 enum class operation {
@@ -45,5 +46,6 @@ constexpr operation operator~(operation x) {
   return static_cast<operation>(~static_cast<int>(x));
 }
 
-} // namespace net
-} // namespace caf
+std::string to_string(operation x);
+
+} // namespace caf::net

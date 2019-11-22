@@ -21,8 +21,7 @@
 #include "caf/actor_proxy.hpp"
 #include "caf/net/endpoint_manager.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 /// Implements a simple proxy forwarding all operations to a manager.
 class actor_proxy_impl : public actor_proxy {
@@ -35,10 +34,6 @@ public:
 
   void enqueue(mailbox_element_ptr what, execution_unit* context) override;
 
-  bool add_backlink(abstract_actor* x) override;
-
-  bool remove_backlink(abstract_actor* x) override;
-
   void kill_proxy(execution_unit* ctx, error rsn) override;
 
 private:
@@ -46,5 +41,4 @@ private:
   endpoint_manager_ptr dst_;
 };
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

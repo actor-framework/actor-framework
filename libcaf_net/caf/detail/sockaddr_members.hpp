@@ -20,8 +20,7 @@
 
 #include "caf/detail/socket_sys_includes.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 inline auto addr_of(sockaddr_in& what) -> decltype(what.sin_addr)& {
   return what.sin_addr;
@@ -47,5 +46,4 @@ inline auto port_of(sockaddr_in6& what) -> decltype(what.sin6_port)& {
   return what.sin6_port;
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

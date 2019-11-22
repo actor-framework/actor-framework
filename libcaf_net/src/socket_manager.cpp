@@ -21,8 +21,7 @@
 #include "caf/config.hpp"
 #include "caf/net/multiplexer.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 socket_manager::socket_manager(socket handle, const multiplexer_ptr& parent)
   : handle_(handle), mask_(operation::none), parent_(parent) {
@@ -34,33 +33,38 @@ socket_manager::~socket_manager() {
   close(handle_);
 }
 
-operation socket_manager::mask() const noexcept {
-  return mask_.load();
-}
-
 bool socket_manager::mask_add(operation flag) noexcept {
   CAF_ASSERT(flag != operation::none);
   auto x = mask();
-  while ((x & flag) != flag)
-    if (mask_.compare_exchange_strong(x, x | flag)) {
-      if (auto ptr = parent_.lock())
-        ptr->update(this);
-      return true;
-    }
-  return false;
+  if ((x & flag) == flag)
+    return false;
+  mask_ = x | flag;
+  return true;
 }
 
 bool socket_manager::mask_del(operation flag) noexcept {
   CAF_ASSERT(flag != operation::none);
   auto x = mask();
-  while ((x & flag) != operation::none)
-    if (mask_.compare_exchange_strong(x, x & ~flag)) {
-      if (auto ptr = parent_.lock())
-        ptr->update(this);
-      return true;
-    }
-  return false;
+  if ((x & flag) == operation::none)
+    return false;
+  mask_ = x & ~flag;
+  return true;
 }
 
-} // namespace net
-} // namespace caf
+void socket_manager::register_reading() {
+  if ((mask() & operation::read) == operation::read)
+    return;
+  auto ptr = parent_.lock();
+  if (ptr != nullptr)
+    ptr->register_reading(this);
+}
+
+void socket_manager::register_writing() {
+  if ((mask() & operation::write) == operation::write)
+    return;
+  auto ptr = parent_.lock();
+  if (ptr != nullptr)
+    ptr->register_writing(this);
+}
+
+} // namespace caf::net

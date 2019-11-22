@@ -29,8 +29,11 @@
 #include "caf/span.hpp"
 #include "caf/variant.hpp"
 
-namespace caf {
-namespace net {
+#ifdef CAF_POSIX
+#  include <sys/uio.h>
+#endif
+
+namespace caf::net {
 
 #ifdef CAF_WINDOWS
 
@@ -117,7 +120,7 @@ expected<std::pair<stream_socket, stream_socket>> make_stream_socket_pair() {
                   accept(listener, nullptr, nullptr));
   close(socket{listener});
   guard.disable();
-  return std::make_pair(read_fd, write_fd);
+  return std::make_pair(stream_socket{read_fd}, stream_socket{write_fd});
 }
 
 error keepalive(stream_socket x, bool new_value) {
@@ -177,6 +180,47 @@ variant<size_t, sec> write(stream_socket x, span<const byte> buf) {
   return check_stream_socket_io_res(res);
 }
 
+#ifdef CAF_WINDOWS
+
+variant<size_t, sec> write(stream_socket x,
+                           std::initializer_list<span<const byte>> bufs) {
+  CAF_ASSERT(bufs.size() < 10);
+  WSABUF buf_array[10];
+  auto convert = [](span<const byte> buf) {
+    auto data = const_cast<byte*>(buf.data());
+    return WSABUF{static_cast<ULONG>(buf.size()),
+                  reinterpret_cast<CHAR*>(data)};
+  };
+  std::transform(bufs.begin(), bufs.end(), std::begin(buf_array), convert);
+  DWORD bytes_sent = 0;
+  auto res = WSASend(x.id, buf_array, static_cast<DWORD>(bufs.size()),
+                     &bytes_sent, 0, nullptr, nullptr);
+  if (res != 0) {
+    auto code = last_socket_error();
+    if (code == std::errc::operation_would_block
+        || code == std::errc::resource_unavailable_try_again)
+      return sec::unavailable_or_would_block;
+    return sec::socket_operation_failed;
+  }
+  return static_cast<size_t>(bytes_sent);
+}
+
+#else // CAF_WINDOWS
+
+variant<size_t, sec> write(stream_socket x,
+                           std::initializer_list<span<const byte>> bufs) {
+  CAF_ASSERT(bufs.size() < 10);
+  iovec buf_array[10];
+  auto convert = [](span<const byte> buf) {
+    return iovec{const_cast<byte*>(buf.data()), buf.size()};
+  };
+  std::transform(bufs.begin(), bufs.end(), std::begin(buf_array), convert);
+  auto res = writev(x.id, buf_array, static_cast<int>(bufs.size()));
+  return check_stream_socket_io_res(res);
+}
+
+#endif // CAF_WINDOWS
+
 variant<size_t, sec>
 check_stream_socket_io_res(std::make_signed<size_t>::type res) {
   if (res == 0)
@@ -191,5 +235,4 @@ check_stream_socket_io_res(std::make_signed<size_t>::type res) {
   return static_cast<size_t>(res);
 }
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

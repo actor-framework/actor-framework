@@ -18,54 +18,48 @@
 
 #pragma once
 
-namespace caf {
-namespace net {
+#include <string>
 
-/// Implements the interface for transport and application policies and
-/// dispatches member functions either to `decorator` or `parent`.
-template <class Object, class Parent>
-class write_packet_decorator {
+#include "caf/fwd.hpp"
+#include "caf/net/fwd.hpp"
+#include "caf/proxy_registry.hpp"
+
+namespace caf::net {
+
+/// Technology-specific backend for connecting to and managing peer
+/// connections.
+/// @relates middleman
+class middleman_backend : public proxy_registry::backend {
 public:
-  dispatcher(Object& object, Parent& parent)
-    : object_(object), parent_(parent) {
-    // nop
-  }
+  // -- constructors, destructors, and assignment operators --------------------
 
-  template <class Header>
-  void write_packet(const Header& header, span<const byte> payload) {
-    object_.write_packet(parent_, header, payload);
-  }
+  middleman_backend(std::string id);
 
-  actor_system& system() {
-    parent_.system();
-  }
+  virtual ~middleman_backend();
 
-  void cancel_timeout(atom_value type, uint64_t id) {
-    parent_.cancel_timeout(type, id);
-  }
+  // -- interface functions ----------------------------------------------------
 
-  void set_timeout(timestamp tout, atom_value type, uint64_t id) {
-    parent_.set_timeout(tout, type, id);
-  }
+  /// Initializes the backend.
+  virtual error init() = 0;
 
-  typename parent::transport_type& transport() {
-    return parent_.transport_;
-  }
+  /// @returns The endpoint manager for `peer` on success, `nullptr` otherwise.
+  virtual endpoint_manager_ptr peer(const node_id& id) = 0;
 
-  typename parent::application_type& application() {
-    return parent_.application_;
+  /// Resolves a path to a remote actor.
+  virtual void resolve(const uri& locator, const actor& listener) = 0;
+
+  // -- properties -------------------------------------------------------------
+
+  const std::string& id() const noexcept {
+    return id_;
   }
 
 private:
-  Object& object_;
-  Parent& parent_;
+  /// Stores the technology-specific identifier.
+  std::string id_;
 };
 
-template <class Object, class Parent>
-write_packet_decorator<Object, Parent>
-make_write_packet_decorator(Object& object, Parent& parent) {
-  return {object, parent};
-}
+/// @relates middleman_backend
+using middleman_backend_ptr = std::unique_ptr<middleman_backend>;
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

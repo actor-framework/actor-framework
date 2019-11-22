@@ -31,8 +31,7 @@
 #include "caf/net/tcp_stream_socket.hpp"
 #include "caf/sec.hpp"
 
-namespace caf {
-namespace net {
+namespace caf::net {
 
 namespace {
 
@@ -63,9 +62,10 @@ expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
   socktype |= SOCK_CLOEXEC;
 #endif
   CAF_NET_SYSCALL("socket", fd, ==, -1, ::socket(Family, socktype, 0));
-  child_process_inherit(fd, false);
+  tcp_accept_socket sock{fd};
   // sguard closes the socket in case of exception
   auto sguard = make_socket_guard(tcp_accept_socket{fd});
+  child_process_inherit(sock, false);
   if (reuse_addr) {
     int on = 1;
     CAF_NET_SYSCALL("setsockopt", tmp1, !=, 0,
@@ -79,7 +79,7 @@ expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
   memset(&sa, 0, sizeof(sockaddr_type));
   detail::family_of(sa) = Family;
   if (any)
-    if (auto err = set_inaddr_any(fd, sa))
+    if (auto err = set_inaddr_any(sock, sa))
       return err;
   CAF_NET_SYSCALL("inet_pton", tmp, !=, 1,
                   inet_pton(Family, addr, &detail::addr_of(sa)));
@@ -102,7 +102,7 @@ expected<tcp_accept_socket> make_tcp_accept_socket(ip_endpoint node,
   auto p = make_acceptor(node.port(), addr.c_str(), reuse_addr,
                          node.address().zero());
   if (!p) {
-    CAF_LOG_WARNING("could not open tcp socket on: " << to_string(node));
+    CAF_LOG_WARNING("could not create tcp socket for: " << to_string(node));
     return make_error(sec::cannot_open_port, "tcp socket creation failed",
                       to_string(node));
   }
@@ -120,7 +120,7 @@ make_tcp_accept_socket(const uri::authority_type& node, bool reuse_addr) {
   auto host = get<std::string>(node.host);
   auto addrs = ip::resolve(host);
   if (addrs.empty())
-    return make_error(sec::cannot_open_port, "No local interface available",
+    return make_error(sec::cannot_open_port, "no local interface available",
                       to_string(node));
   for (auto& addr : addrs) {
     if (auto sock = make_tcp_accept_socket(ip_endpoint{addr, node.port},
@@ -132,17 +132,16 @@ make_tcp_accept_socket(const uri::authority_type& node, bool reuse_addr) {
 }
 
 expected<tcp_stream_socket> accept(tcp_accept_socket x) {
-  auto sck = ::accept(x.id, nullptr, nullptr);
-  if (sck == net::invalid_socket_id) {
+  auto sock = ::accept(x.id, nullptr, nullptr);
+  if (sock == net::invalid_socket_id) {
     auto err = net::last_socket_error();
     if (err != std::errc::operation_would_block
         && err != std::errc::resource_unavailable_try_again) {
       return caf::make_error(sec::unavailable_or_would_block);
     }
-    return caf::make_error(sec::socket_operation_failed);
+    return caf::make_error(sec::socket_operation_failed, "tcp accept failed");
   }
-  return tcp_stream_socket{sck};
+  return tcp_stream_socket{sock};
 }
 
-} // namespace net
-} // namespace caf
+} // namespace caf::net

@@ -25,13 +25,13 @@
 #include "caf/net/stream_socket.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
 #include "caf/net/tcp_stream_socket.hpp"
-#include "caf/policy/scribe.hpp"
 #include "caf/send.hpp"
+#include "caf/stream_transport.hpp"
 
 namespace caf {
-namespace policy {
 
-/// A doorman accepts TCP connections and creates scribes to handle them.
+/// A doorman accepts TCP connections and creates stream_transports to handle
+/// them.
 class doorman {
 public:
   doorman(net::tcp_accept_socket acceptor) : acceptor_(acceptor) {
@@ -96,5 +96,4 @@ public:
   }
 };
 
-} // namespace policy
 } // namespace caf
