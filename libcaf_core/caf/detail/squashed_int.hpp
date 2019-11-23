@@ -38,7 +38,7 @@ using int_types_by_size = detail::type_list< // bytes
   detail::type_pair<int64_t, uint64_t>       // 8
   >;
 
-/// Squashes integer types into [u]int_[8|16|32|64]_t equivalents
+/// Squashes integer types into [u]int_[8|16|32|64]_t equivalents.
 template <class T>
 struct squashed_int {
   using tpair = typename detail::tl_at<int_types_by_size, sizeof(T)>::type;

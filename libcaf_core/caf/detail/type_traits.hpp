@@ -254,7 +254,7 @@ public:
 template <class T>
 constexpr bool is_iterable<T>::value;
 
-/// Checks wheter `T` is a non-const reference.
+/// Checks whether `T` is a non-const reference.
 template <class T>
 struct is_mutable_ref : std::false_type { };
 

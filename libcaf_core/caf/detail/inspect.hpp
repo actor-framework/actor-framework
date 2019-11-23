@@ -48,7 +48,7 @@ auto inspect(Inspector& f, std::chrono::time_point<Clock, Duration>& x) {
   }
 }
 
-// -- provide is_inspectable trait for metaprogramming -------------------------
+// -- provide `is_inspectable` trait for metaprogramming -----------------------
 
 /// Checks whether `T` is inspectable by `Inspector`.
 template <class Inspector, class T>
@@ -67,7 +67,7 @@ public:
     = !std::is_same<result_type, std::false_type>::value;
 };
 
-// pointers are never inspectable
+// Pointers are never inspectable.
 template <class Inspector, class T>
 struct is_inspectable<Inspector, T*> : std::false_type {};
 

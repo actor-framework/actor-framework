@@ -104,7 +104,7 @@ error empty_type_erased_tuple::load(size_t, deserializer&) {
 }
 
 error_code<sec> empty_type_erased_tuple::load(size_t, binary_deserializer&) {
-  CAF_RAISE_ERROR("empty_type_erased_tuple::get_mutable");
+  CAF_RAISE_ERROR("empty_type_erased_tuple::load");
 }
 
 size_t empty_type_erased_tuple::size() const noexcept {
