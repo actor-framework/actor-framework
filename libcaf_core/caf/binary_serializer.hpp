@@ -35,6 +35,7 @@
 
 namespace caf {
 
+/// Serializes objects into a sequence of bytes.
 class binary_serializer : public read_inspector<binary_serializer> {
 public:
   // -- member types -----------------------------------------------------------

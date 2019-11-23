@@ -217,6 +217,7 @@ result_type binary_deserializer::apply(std::u16string& x) {
   if (!range_check(str_size * sizeof(uint16_t)))
     return sec::end_of_stream;
   for (size_t i = 0; i < str_size; ++i) {
+    // The standard does not guarantee that char16_t is exactly 16 bits.
     uint16_t tmp;
     unsafe_apply_int(*this, tmp);
     x.push_back(static_cast<char16_t>(tmp));

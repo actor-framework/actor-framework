@@ -45,7 +45,7 @@ public:
   virtual Result operator()(Ts...) = 0;
 };
 
-/// Utility class for wrapping a function object of type `Base`.
+/// Utility class for wrapping a function object of type `F`.
 template <class F, class Signature>
 class callback_impl;
 
@@ -68,7 +68,7 @@ private:
   F f_;
 };
 
-/// Creates a callback from a lambda expression.
+/// Creates a ::callback from the function object `fun`.
 /// @relates callback
 template <class F>
 auto make_callback(F fun) {

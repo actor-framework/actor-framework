@@ -99,12 +99,12 @@ public:
 };
 
 /// @relates type_erased_value_impl
-inline auto inspect(serializer& f, type_erased_value& x) {
+inline auto inspect(serializer& f, const type_erased_value& x) {
   return x.save(f);
 }
 
 /// @relates type_erased_value_impl
-inline auto inspect(binary_serializer& f, type_erased_value& x) {
+inline auto inspect(binary_serializer& f, const type_erased_value& x) {
   return x.save(f);
 }
 

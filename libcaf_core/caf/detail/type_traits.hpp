@@ -717,6 +717,7 @@ struct can_apply {
   static auto sfinae(...) -> std::false_type;
 
   using type = decltype(sfinae<T>(nullptr));
+
   static constexpr bool value = type::value;
 };
 

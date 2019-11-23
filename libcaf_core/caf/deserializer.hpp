@@ -55,18 +55,15 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
-  /// Begins processing of an object. Saves the type information
-  /// to the underlying storage.
+  /// Begins processing of an object.
   virtual result_type begin_object(uint16_t& typenr, std::string& type_name)
     = 0;
 
   /// Ends processing of an object.
   virtual result_type end_object() = 0;
 
-  /// Begins processing of a sequence. Saves the size
-  /// to the underlying storage when in saving mode, otherwise
-  /// sets `num` accordingly.
-  virtual result_type begin_sequence(size_t& num) = 0;
+  /// Begins processing of a sequence.
+  virtual result_type begin_sequence(size_t& size) = 0;
 
   /// Ends processing of a sequence.
   virtual result_type end_sequence() = 0;

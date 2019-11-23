@@ -32,7 +32,7 @@
 
 namespace caf {
 
-/// Implements the deserializer interface with a binary serialization protocol.
+/// Deserializes objects from sequence of bytes.
 class binary_deserializer : public write_inspector<binary_deserializer> {
 public:
   // -- member types -----------------------------------------------------------
