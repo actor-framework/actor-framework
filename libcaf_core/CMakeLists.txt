@@ -88,7 +88,6 @@ set(LIBCAF_CORE_SRCS
   src/downstream_manager_base.cpp
   src/duration.cpp
   src/error.cpp
-  src/error_code.cpp
   src/event_based_actor.cpp
   src/execution_unit.cpp
   src/exit_reason.cpp
