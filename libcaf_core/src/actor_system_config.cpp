@@ -215,41 +215,6 @@ settings actor_system_config::dump_content() const {
   return result;
 }
 
-std::string
-actor_system_config::make_help_text(const std::vector<message::cli_arg>& xs) {
-  auto is_no_caf_option = [](const message::cli_arg& arg) {
-    return arg.name.compare(0, 4, "caf#") != 0;
-  };
-  auto op = [](size_t tmp, const message::cli_arg& arg) {
-    return std::max(tmp, arg.helptext.size());
-  };
-  // maximum string length of all options
-  auto name_width = std::accumulate(xs.begin(), xs.end(), size_t{0}, op);
-  // iterators to the vector with respect to partition point
-  auto first = xs.begin();
-  auto last = xs.end();
-  auto sep = std::find_if(first, last, is_no_caf_option);
-  // output stream
-  std::ostringstream oss;
-  oss << std::left;
-  oss << "CAF Options:" << std::endl;
-  for (auto i = first; i != sep; ++i) {
-    oss << "  ";
-    oss.width(static_cast<std::streamsize>(name_width));
-    oss << i->helptext << "  : " << i->text << std::endl;
-  }
-  if (sep != last) {
-    oss << std::endl;
-    oss << "Application Options:" << std::endl;
-    for (auto i = sep; i != last; ++i) {
-      oss << "  ";
-      oss.width(static_cast<std::streamsize>(name_width));
-      oss << i->helptext << "  : " << i->text << std::endl;
-    }
-  }
-  return oss.str();
-}
-
 error actor_system_config::parse(int argc, char** argv,
                                  const char* ini_file_cstr) {
   string_list args;

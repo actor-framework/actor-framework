@@ -26,6 +26,7 @@
 
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/apply_args.hpp"
+#include "caf/detail/inspect.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/meta/annotation.hpp"

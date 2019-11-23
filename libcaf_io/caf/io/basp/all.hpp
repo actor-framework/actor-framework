@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include "caf/io/basp/buffer_type.hpp"
 #include "caf/io/basp/connection_state.hpp"
 #include "caf/io/basp/endpoint_context.hpp"
 #include "caf/io/basp/header.hpp"

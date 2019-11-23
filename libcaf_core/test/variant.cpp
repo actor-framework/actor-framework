@@ -23,13 +23,14 @@
 
 #include <string>
 
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
+#include "caf/byte_buffer.hpp"
+#include "caf/deep_to_string.hpp"
 #include "caf/none.hpp"
 #include "caf/variant.hpp"
-#include "caf/actor_system.hpp"
-#include "caf/deep_to_string.hpp"
-#include "caf/binary_serializer.hpp"
-#include "caf/binary_deserializer.hpp"
-#include "caf/actor_system_config.hpp"
 
 using namespace std;
 using namespace caf;
@@ -99,13 +100,15 @@ using v20 = variant<i01, i02, i03, i04, i05, i06, i07, i08, i09, i10,
   CAF_CHECK_EQUAL(x4, i##n{0});                                                \
   CAF_CHECK_EQUAL(x3, i##n{0x##n});                                            \
   {                                                                            \
-    std::vector<char> buf;                                                     \
-    binary_serializer bs{sys.dummy_execution_unit(), buf};                     \
-    inspect(bs, x3);                                                           \
+    byte_buffer buf;                                                           \
+    binary_serializer sink{sys.dummy_execution_unit(), buf};                   \
+    if (auto err = sink(x3))                                                   \
+      CAF_FAIL("failed to serialize data: " << sys.render(err));               \
     CAF_CHECK_EQUAL(x3, i##n{0x##n});                                          \
     v20 tmp;                                                                   \
-    binary_deserializer bd{sys.dummy_execution_unit(), buf};                   \
-    inspect(bd, tmp);                                                          \
+    binary_deserializer source{sys.dummy_execution_unit(), buf};               \
+    if (auto err = source(tmp))                                                \
+      CAF_FAIL("failed to deserialize data: " << sys.render(err));             \
     CAF_CHECK_EQUAL(tmp, i##n{0x##n});                                         \
     CAF_CHECK_EQUAL(tmp, x3);                                                  \
   }

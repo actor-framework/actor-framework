@@ -43,5 +43,7 @@ struct is_annotation<const T&> : is_annotation<T> {};
 template <class T>
 struct is_annotation<T&&> : is_annotation<T> {};
 
-} // namespace caf
+template <class T>
+constexpr bool is_annotation_v = is_annotation<T>::value;
 
+} // namespace caf::meta

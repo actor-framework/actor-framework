@@ -33,10 +33,11 @@
 #include <unistd.h>
 #endif
 
-#include "caf/message_builder.hpp"
-#include "caf/message_handler.hpp"
+#include "caf/config_option_adder.hpp"
+#include "caf/config_option_set.hpp"
+#include "caf/config_value.hpp"
+#include "caf/settings.hpp"
 #include "caf/string_algorithms.hpp"
-
 #include "caf/test/unit_test.hpp"
 
 namespace caf::test {
@@ -508,34 +509,43 @@ int main(int argc, char** argv) {
   // use all arguments after '--' for the test engine.
   std::string delimiter = "--";
   auto divider = argc;
-  auto cli_argv = argv + 1;
   for (auto i = 1; i < argc; ++i) {
     if (delimiter == argv[i]) {
       divider = i;
       break;
     }
   }
-  // our simple command line parser.
-  auto res = message_builder(cli_argv, cli_argv + divider - 1).extract_opts({
-    {"no-colors,n", "disable coloring (ignored on Windows)"},
-    {"log-file,l", "set output file", log_file},
-    {"console-verbosity,v", "set verbosity level of console (1-5)",
-     verbosity_console},
-    {"file-verbosity,V", "set verbosity level of file output (1-5)",
-     verbosity_file},
-    {"max-runtime,r", "set maximum runtime in seconds (0 = infinite)",
-      max_runtime},
-    {"suites,s",
-     "define what suites to run, either * or a comma-separated list", suites},
-    {"not-suites,S", "exclude suites", not_suites},
-    {"tests,t", "set tests", tests},
-    {"not-tests,T", "exclude tests", not_tests},
-    {"available-suites,a", "print available suites"},
-    {"available-tests,A", "print available tests for given suite", suite_query}
-  });
-  if (res.opts.count("help") > 0) {
-    std::cout << res.helptext << std::endl;
-    return 0;
+  caf::config_option_set options;
+  caf::config_option_adder{options, "global"}
+    .add<bool>("no-colors,n", "disable coloring (ignored on Windows)")
+    .add<bool>("help,h?", "print this help text")
+    .add<bool>("available-suites,a", "print available suites")
+    .add(log_file, "log-file,l", "set output file")
+    .add(verbosity_console, "console-verbosity,v",
+         "set verbosity level of console (1-5)")
+    .add(verbosity_file, "file-verbosity,V",
+         "set verbosity level of file output (1-5)")
+    .add(max_runtime, "max-runtime,r",
+         "set maximum runtime in seconds (0 = infinite)")
+    .add(suites, "suites,s",
+         "define what suites to run, either * or a comma-separated list")
+    .add(not_suites, "not-suites,S", "exclude suites")
+    .add(tests, "tests,t", "set tests")
+    .add(not_tests, "not-tests,T", "exclude tests")
+    .add(suite_query, "available-tests,A",
+         "print available tests for given suite");
+  caf::settings conf;
+  std::vector<std::string> args_cpy{argv + 1, argv + divider};
+  auto res = options.parse(conf, args_cpy);
+  if (res.first != caf::pec::success) {
+    std::cerr << "error while parsing argument \"" << *res.second
+              << "\": " << to_string(res.first) << "\n\n";
+    std::cerr << options.help_text() << std::endl;
+    return EXIT_FAILURE;
+  }
+  if (caf::get_or(conf, "help", false)) {
+    std::cout << options.help_text() << std::endl;
+    return EXIT_SUCCESS;
   }
   if (!suite_query.empty()) {
     std::cout << "available tests in suite " << suite_query << ":" << std::endl;
@@ -543,18 +553,13 @@ int main(int argc, char** argv) {
       std::cout << "  - " << t << std::endl;
     return 0;
   }
-  if (res.opts.count("available-suites") > 0) {
+  if (caf::get_or(conf, "available-suites", false)) {
     std::cout << "available suites:" << std::endl;
     for (auto& s : engine::available_suites())
       std::cout << "  - " << s << std::endl;
-    return 0;
+    return EXIT_SUCCESS;
   }
-  if (!res.remainder.empty()) {
-    std::cerr << "*** invalid command line options" << std::endl
-              << res.helptext << std::endl;
-    return 1;
-  }
-  auto colorize = res.opts.count("no-colors") == 0;
+  auto colorize = !caf::get_or(conf, "no-colors", false);
   std::vector<char*> args;
   if (divider < argc) {
     // make a new args vector that contains argv[0] and all remaining args

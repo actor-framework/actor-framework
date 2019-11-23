@@ -31,11 +31,16 @@ type_erased_tuple::~type_erased_tuple() {
 }
 
 error type_erased_tuple::load(deserializer& source) {
-  for (size_t i = 0; i < size(); ++i) {
-    auto e = load(i, source);
-    if (e)
-      return e;
-  }
+  for (size_t i = 0; i < size(); ++i)
+    if (auto err = load(i, source))
+      return err;
+  return none;
+}
+
+error_code<sec> type_erased_tuple::load(binary_deserializer& source) {
+  for (size_t i = 0; i < size(); ++i)
+    if (auto err = load(i, source))
+      return err;
   return none;
 }
 
@@ -69,6 +74,12 @@ error type_erased_tuple::save(serializer& sink) const {
   return none;
 }
 
+error_code<sec> type_erased_tuple::save(binary_serializer& sink) const {
+  for (size_t i = 0; i < size(); ++i)
+    save(i, sink);
+  return none;
+}
+
 bool type_erased_tuple::matches(size_t pos, uint16_t nr,
                                 const std::type_info* ptr) const noexcept {
   CAF_ASSERT(pos < size());
@@ -90,6 +101,10 @@ void* empty_type_erased_tuple::get_mutable(size_t) {
 
 error empty_type_erased_tuple::load(size_t, deserializer&) {
   CAF_RAISE_ERROR("empty_type_erased_tuple::get_mutable");
+}
+
+error_code<sec> empty_type_erased_tuple::load(size_t, binary_deserializer&) {
+  CAF_RAISE_ERROR("empty_type_erased_tuple::load");
 }
 
 size_t empty_type_erased_tuple::size() const noexcept {
@@ -117,7 +132,12 @@ type_erased_value_ptr empty_type_erased_tuple::copy(size_t) const {
 }
 
 error empty_type_erased_tuple::save(size_t, serializer&) const {
-  CAF_RAISE_ERROR("empty_type_erased_tuple::copy");
+  CAF_RAISE_ERROR("empty_type_erased_tuple::save");
+}
+
+error_code<sec>
+empty_type_erased_tuple::save(size_t, binary_serializer&) const {
+  CAF_RAISE_ERROR("empty_type_erased_tuple::save");
 }
 
 } // namespace caf

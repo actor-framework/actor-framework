@@ -21,18 +21,19 @@
 #include <tuple>
 #include <stdexcept>
 
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/detail/message_data.hpp"
+#include "caf/detail/safe_equal.hpp"
+#include "caf/detail/stringification_inspector.hpp"
+#include "caf/detail/try_serialize.hpp"
+#include "caf/detail/type_list.hpp"
 #include "caf/make_type_erased_value.hpp"
 #include "caf/rtti_pair.hpp"
 #include "caf/serializer.hpp"
 #include "caf/type_nr.hpp"
-
-#include "caf/detail/type_list.hpp"
-#include "caf/detail/safe_equal.hpp"
-#include "caf/detail/message_data.hpp"
-#include "caf/detail/try_serialize.hpp"
-#include "caf/detail/stringification_inspector.hpp"
 
 #define CAF_TUPLE_VALS_DISPATCH(x)                                             \
   case x:                                                                      \
@@ -137,6 +138,10 @@ public:
     return dispatch(pos, source);
   }
 
+  error_code<sec> load(size_t pos, binary_deserializer& source) override {
+    return dispatch(pos, source);
+  }
+
   uint32_t type_token() const noexcept override {
     return make_type_token<Ts...>();
   }
@@ -146,6 +151,10 @@ public:
   }
 
   error save(size_t pos, serializer& sink) const override {
+    return mptr()->dispatch(pos, sink);
+  }
+
+  error_code<sec> save(size_t pos, binary_serializer& sink) const override {
     return mptr()->dispatch(pos, sink);
   }
 

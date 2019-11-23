@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2019 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,37 +16,61 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/deserializer.hpp"
+#pragma once
 
-#include "caf/actor_system.hpp"
+#include <string>
+#include <type_traits>
+
+#include "caf/fwd.hpp"
+#include "caf/none.hpp"
 
 namespace caf {
 
-deserializer::deserializer(actor_system& x) noexcept
-  : context_(x.dummy_execution_unit()) {
-  // nop
-}
+/// A lightweight wrapper around an error code enum.
+template <class Enum>
+class error_code {
+public:
+  using enum_type = Enum;
 
-deserializer::deserializer(execution_unit* x) noexcept : context_(x) {
-  // nop
-}
+  using underlying_type = std::underlying_type_t<enum_type>;
 
-deserializer::~deserializer() {
-  // nop
-}
-
-auto deserializer::apply(std::vector<bool>& x) noexcept -> result_type {
-  x.clear();
-  size_t size = 0;
-  if (auto err = begin_sequence(size))
-    return err;
-  for (size_t i = 0; i < size; ++i) {
-    bool tmp = false;
-    if (auto err = apply(tmp))
-      return err;
-    x.emplace_back(tmp);
+  constexpr error_code() noexcept : value_(static_cast<Enum>(0)) {
+    // nop
   }
-  return end_sequence();
+
+  constexpr error_code(none_t) noexcept : value_(static_cast<Enum>(0)) {
+    // nop
+  }
+
+  constexpr error_code(enum_type value) noexcept : value_(value) {
+    // nop
+  }
+
+  constexpr error_code(const error_code&) noexcept = default;
+
+  constexpr error_code& operator=(const error_code&) noexcept = default;
+
+  error_code& operator=(Enum value) noexcept {
+    value_ = value;
+    return *this;
+  }
+
+  constexpr explicit operator bool() const noexcept {
+    return static_cast<underlying_type>(value_) != 0;
+  }
+
+  constexpr enum_type value() const noexcept {
+    return value_;
+  }
+
+private:
+  enum_type value_;
+};
+
+/// Converts `x` to a string if `Enum` provides a `to_string` function.
+template <class Enum>
+auto to_string(error_code<Enum> x) -> decltype(to_string(x.value())) {
+  return to_string(x.value());
 }
 
 } // namespace caf

@@ -70,10 +70,9 @@ void datagram_handler::write(datagram_handle hdl, const void* buf,
                              size_t num_bytes) {
   wr_offline_buf_.emplace_back();
   wr_offline_buf_.back().first = hdl;
-  auto cbuf = reinterpret_cast<const char*>(buf);
-  wr_offline_buf_.back().second.assign(cbuf,
-                                       cbuf
-                                         + static_cast<ptrdiff_t>(num_bytes));
+  auto cbuf = reinterpret_cast<const byte*>(buf);
+  wr_offline_buf_.back().second.assign(
+    cbuf, cbuf + static_cast<ptrdiff_t>(num_bytes));
 }
 
 void datagram_handler::flush(const manager_ptr& mgr) {
@@ -195,8 +194,8 @@ bool datagram_handler::handle_read_result(bool read_result) {
 }
 
 void datagram_handler::handle_write_result(bool write_result,
-                                           datagram_handle id,
-                                           std::vector<char>& buf, size_t wb) {
+                                           datagram_handle id, byte_buffer& buf,
+                                           size_t wb) {
   if (!write_result) {
     writer_->io_failure(&backend(), operation::write);
     backend().del(operation::write, fd(), this);
@@ -220,4 +219,4 @@ void datagram_handler::handle_error() {
   // no need to call backend().del() here
 }
 
-} // namespace caf
+} // namespace caf::io::network

@@ -23,14 +23,14 @@
 #include <sstream>
 #include <iomanip>
 
-#include "caf/meta/type_name.hpp"
-#include "caf/meta/hex_formatted.hpp"
-
-#include "caf/io/handle.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/io/accept_handle.hpp"
-#include "caf/io/datagram_handle.hpp"
 #include "caf/io/connection_handle.hpp"
+#include "caf/io/datagram_handle.hpp"
+#include "caf/io/handle.hpp"
 #include "caf/io/network/receive_buffer.hpp"
+#include "caf/meta/hex_formatted.hpp"
+#include "caf/meta/type_name.hpp"
 
 namespace caf::io {
 
@@ -52,7 +52,7 @@ struct new_data_msg {
   /// Handle to the related connection.
   connection_handle handle;
   /// Buffer containing the received data.
-  std::vector<char> buf;
+  byte_buffer buf;
 };
 
 /// @relates new_data_msg
@@ -148,7 +148,7 @@ struct datagram_sent_msg {
   // Number of bytes written.
   uint64_t written;
   // Buffer of the sent datagram, for reuse.
-  std::vector<char> buf;
+  byte_buffer buf;
 };
 
 /// @relates datagram_sent_msg

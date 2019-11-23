@@ -16,10 +16,9 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE serialization
-#include "caf/test/unit_test.hpp"
+
+#include "caf/test/dsl.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -47,7 +46,13 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/detail/get_mac_addresses.hpp"
+#include "caf/detail/ieee_754.hpp"
+#include "caf/detail/int_list.hpp"
+#include "caf/detail/safe_equal.hpp"
+#include "caf/detail/type_traits.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/make_type_erased_tuple_view.hpp"
 #include "caf/make_type_erased_view.hpp"
@@ -57,16 +62,7 @@
 #include "caf/proxy_registry.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/serializer.hpp"
-#include "caf/stream_deserializer.hpp"
-#include "caf/stream_serializer.hpp"
-#include "caf/streambuf.hpp"
 #include "caf/variant.hpp"
-
-#include "caf/detail/get_mac_addresses.hpp"
-#include "caf/detail/ieee_754.hpp"
-#include "caf/detail/int_list.hpp"
-#include "caf/detail/safe_equal.hpp"
-#include "caf/detail/type_traits.hpp"
 
 using namespace std;
 using namespace caf;
@@ -143,8 +139,7 @@ public:
   }
 };
 
-template <class Serializer, class Deserializer>
-struct fixture {
+struct fixture : test_coordinator_fixture<config> {
   int32_t i32 = -345;
   int64_t i64 = -1234567890123456789ll;
   float f32 = 3.45f;
@@ -154,36 +149,31 @@ struct fixture {
   test_enum te = test_enum::b;
   string str = "Lorem ipsum dolor sit amet.";
   raw_struct rs;
-  test_array ta {
+  test_array ta{
     {0, 1, 2, 3},
-    {
-      {0, 1, 2, 3},
-      {4, 5, 6, 7}
-    },
+    {{0, 1, 2, 3}, {4, 5, 6, 7}},
   };
   int ra[3] = {1, 2, 3};
 
-  config cfg;
-  actor_system system;
   message msg;
   message recursive;
 
-  template <class T, class... Ts>
-  vector<char> serialize(T& x, Ts&... xs) {
-    vector<char> buf;
-    binary_serializer sink{system, buf};
-    if (auto err = sink(x, xs...))
+  template <class... Ts>
+  byte_buffer serialize(const Ts&... xs) {
+    byte_buffer buf;
+    binary_serializer sink{sys, buf};
+    if (auto err = sink(xs...))
       CAF_FAIL("serialization failed: "
-               << system.render(err) << ", data: "
-               << deep_to_string(std::forward_as_tuple(x, xs...)));
+               << sys.render(err)
+               << ", data: " << deep_to_string(std::forward_as_tuple(xs...)));
     return buf;
   }
 
-  template <class T, class... Ts>
-  void deserialize(const vector<char>& buf, T& x, Ts&... xs) {
-    binary_deserializer source{system, buf};
-    if (auto err = source(x, xs...))
-      CAF_FAIL("deserialization failed: " << system.render(err));
+  template <class... Ts>
+  void deserialize(const byte_buffer& buf, Ts&... xs) {
+    binary_deserializer source{sys, buf};
+    if (auto err = source(xs...))
+      CAF_FAIL("deserialization failed: " << sys.render(err));
   }
 
   // serializes `x` and then deserializes and returns the serialized value
@@ -206,7 +196,7 @@ struct fixture {
     return result.get_as<T>(0);
   }
 
-  fixture() : system(cfg) {
+  fixture() {
     rs.str.assign(string(str.rbegin(), str.rend()));
     msg = make_message(i32, i64, dur, ts, te, str, rs);
     config_value::dictionary dict;
@@ -230,11 +220,8 @@ struct is_message {
     bool ok = false;
     // work around for gcc 4.8.4 bug
     auto tup = tie(v, vs...);
-    message_handler impl {
-      [&](T const& u, Ts const&... us) {
-        ok = tup == tie(u, us...);
-      }
-    };
+    message_handler impl{
+      [&](T const& u, Ts const&... us) { ok = tup == tie(u, us...); }};
     impl(msg);
     return ok;
   }
@@ -242,43 +229,13 @@ struct is_message {
 
 } // namespace
 
-#define SERIALIZATION_TEST(name)                                               \
-  namespace {                                                                  \
-  template <class Serializer, class Deserializer>                              \
-  struct name##_tpl : fixture<Serializer, Deserializer> {                      \
-    using super = fixture<Serializer, Deserializer>;                           \
-    using super::i32;                                                          \
-    using super::i64;                                                          \
-    using super::f32;                                                          \
-    using super::f64;                                                          \
-    using super::dur;                                                          \
-    using super::ts;                                                           \
-    using super::te;                                                           \
-    using super::str;                                                          \
-    using super::rs;                                                           \
-    using super::ta;                                                           \
-    using super::ra;                                                           \
-    using super::system;                                                       \
-    using super::msg;                                                          \
-    using super::recursive;                                                    \
-    using super::serialize;                                                    \
-    using super::deserialize;                                                  \
-    using super::roundtrip;                                                    \
-    using super::msg_roundtrip;                                                \
-    void run_test_impl();                                                      \
-  };                                                                           \
-  using name##_binary = name##_tpl<binary_serializer, binary_deserializer>;    \
-  using name##_stream = name##_tpl<stream_serializer<vectorbuf>,               \
-                                   stream_deserializer<charbuf>>;              \
-  ::caf::test::detail::adder<::caf::test::test_impl<name##_binary>>            \
-    CAF_UNIQUE(a_binary){CAF_XSTR(CAF_SUITE), CAF_XSTR(name##_binary), false}; \
-  ::caf::test::detail::adder<::caf::test::test_impl<name##_stream>>            \
-    CAF_UNIQUE(a_stream){CAF_XSTR(CAF_SUITE), CAF_XSTR(name##_stream), false}; \
-  }                                                                            \
-  template <class Serializer, class Deserializer>                              \
-  void name##_tpl<Serializer, Deserializer>::run_test_impl()
+#define CHECK_RT(val) CAF_CHECK_EQUAL(val, roundtrip(val))
 
-SERIALIZATION_TEST(ieee_754_conversion) {
+#define CHECK_MSG_RT(val) CAF_CHECK_EQUAL(val, msg_roundtrip(val))
+
+CAF_TEST_FIXTURE_SCOPE(serialization_tests, fixture)
+
+CAF_TEST(ieee_754_conversion) {
   // check conversion of float
   float f1 = 3.1415925f;              // float value
   auto p1 = caf::detail::pack754(f1); // packet value
@@ -293,79 +250,33 @@ SERIALIZATION_TEST(ieee_754_conversion) {
   CAF_CHECK_EQUAL(f2, u2);
 }
 
-SERIALIZATION_TEST(i32_values) {
-  auto buf = serialize(i32);
-  int32_t x;
-  deserialize(buf, x);
-  CAF_CHECK_EQUAL(i32, x);
+CAF_TEST(serializing and then deserializing produces the same value) {
+  CHECK_RT(i32);
+  CHECK_RT(i64);
+  CHECK_RT(f32);
+  CHECK_RT(f64);
+  CHECK_RT(dur);
+  CHECK_RT(ts);
+  CHECK_RT(te);
+  CHECK_RT(str);
+  CHECK_RT(rs);
+  CHECK_RT(atom("foo"));
 }
 
-SERIALIZATION_TEST(i64_values) {
-  auto buf = serialize(i64);
-  int64_t x;
-  deserialize(buf, x);
-  CAF_CHECK_EQUAL(i64, x);
+CAF_TEST(messages serialize and deserialize their content) {
+  CHECK_MSG_RT(i32);
+  CHECK_MSG_RT(i64);
+  CHECK_MSG_RT(f32);
+  CHECK_MSG_RT(f64);
+  CHECK_MSG_RT(dur);
+  CHECK_MSG_RT(ts);
+  CHECK_MSG_RT(te);
+  CHECK_MSG_RT(str);
+  CHECK_MSG_RT(rs);
+  CHECK_MSG_RT(atom("foo"));
 }
 
-SERIALIZATION_TEST(float_values) {
-  auto buf = serialize(f32);
-  float x;
-  deserialize(buf, x);
-  CAF_CHECK_EQUAL(f32, x);
-}
-
-SERIALIZATION_TEST(double_values) {
-  auto buf = serialize(f64);
-  double x;
-  deserialize(buf, x);
-  CAF_CHECK_EQUAL(f64, x);
-}
-
-SERIALIZATION_TEST(duration_values) {
-  auto buf = serialize(dur);
-  duration x;
-  deserialize(buf, x);
-  CAF_CHECK_EQUAL(dur, x);
-}
-
-SERIALIZATION_TEST(timestamp_values) {
-  auto buf = serialize(ts);
-  timestamp x;
-  deserialize(buf, x);
-  CAF_CHECK_EQUAL(ts, x);
-}
-
-SERIALIZATION_TEST(enum_classes) {
-  auto buf = serialize(te);
-  test_enum x;
-  deserialize(buf, x);
-  CAF_CHECK_EQUAL(te, x);
-}
-
-SERIALIZATION_TEST(strings) {
-  auto buf = serialize(str);
-  string x;
-  deserialize(buf, x);
-  CAF_CHECK_EQUAL(str, x);
-}
-
-SERIALIZATION_TEST(custom_struct) {
-  auto buf = serialize(rs);
-  raw_struct x;
-  deserialize(buf, x);
-  CAF_CHECK_EQUAL(rs, x);
-}
-
-SERIALIZATION_TEST(atoms) {
-  auto foo = atom("foo");
-  CAF_CHECK_EQUAL(foo, roundtrip(foo));
-  CAF_CHECK_EQUAL(foo, msg_roundtrip(foo));
-  using bar_atom = atom_constant<atom("bar")>;
-  CAF_CHECK_EQUAL(bar_atom::value, roundtrip(atom("bar")));
-  CAF_CHECK_EQUAL(bar_atom::value, msg_roundtrip(atom("bar")));
-}
-
-SERIALIZATION_TEST(raw_arrays) {
+CAF_TEST(raw_arrays) {
   auto buf = serialize(ra);
   int x[3];
   deserialize(buf, x);
@@ -373,7 +284,7 @@ SERIALIZATION_TEST(raw_arrays) {
     CAF_CHECK_EQUAL(ra[i], x[i]);
 }
 
-SERIALIZATION_TEST(arrays) {
+CAF_TEST(arrays) {
   auto buf = serialize(ta);
   test_array x;
   deserialize(buf, x);
@@ -384,7 +295,7 @@ SERIALIZATION_TEST(arrays) {
       CAF_CHECK_EQUAL(ta.value2[i][j], x.value2[i][j]);
 }
 
-SERIALIZATION_TEST(empty_non_pods) {
+CAF_TEST(empty_non_pods) {
   test_empty_non_pod x;
   auto buf = serialize(x);
   CAF_REQUIRE(buf.empty());
@@ -403,7 +314,7 @@ std::string hexstr(const std::vector<char>& buf) {
   return oss.str();
 }
 
-SERIALIZATION_TEST(messages) {
+CAF_TEST(messages) {
   // serialize original message which uses tuple_vals internally and
   // deserialize into a message which uses type_erased_value pointers
   message x;
@@ -421,7 +332,7 @@ SERIALIZATION_TEST(messages) {
   CAF_CHECK_EQUAL(to_string(recursive), to_string(roundtrip(recursive)));
 }
 
-SERIALIZATION_TEST(multiple_messages) {
+CAF_TEST(multiple_messages) {
   auto m = make_message(rs, te);
   auto buf = serialize(te, m, msg);
   test_enum t;
@@ -434,16 +345,15 @@ SERIALIZATION_TEST(multiple_messages) {
   CAF_CHECK(is_message(m2).equal(i32, i64, dur, ts, te, str, rs));
 }
 
-
-SERIALIZATION_TEST(type_erased_value) {
+CAF_TEST(type_erased_value) {
   auto buf = serialize(str);
   type_erased_value_ptr ptr{new type_erased_value_impl<std::string>};
-  binary_deserializer source{system, buf};
+  binary_deserializer source{sys, buf};
   ptr->load(source);
   CAF_CHECK_EQUAL(str, *reinterpret_cast<const std::string*>(ptr->get()));
 }
 
-SERIALIZATION_TEST(type_erased_view) {
+CAF_TEST(type_erased_view) {
   auto str_view = make_type_erased_view(str);
   auto buf = serialize(str_view);
   std::string res;
@@ -451,7 +361,7 @@ SERIALIZATION_TEST(type_erased_view) {
   CAF_CHECK_EQUAL(str, res);
 }
 
-SERIALIZATION_TEST(type_erased_tuple) {
+CAF_TEST(type_erased_tuple) {
   auto tview = make_type_erased_tuple_view(str, i32);
   CAF_CHECK_EQUAL(to_string(tview), deep_to_string(std::make_tuple(str, i32)));
   auto buf = serialize(tview);
@@ -465,55 +375,8 @@ SERIALIZATION_TEST(type_erased_tuple) {
   CAF_CHECK_EQUAL(to_string(tview), deep_to_string(std::make_tuple(str, i32)));
 }
 
-SERIALIZATION_TEST(streambuf_serialization) {
-  auto data = std::string{"The quick brown fox jumps over the lazy dog"};
-  std::vector<char> buf;
-  // First, we check the standard use case in CAF where stream serializers own
-  // their stream buffers.
-  stream_serializer<vectorbuf> bs{vectorbuf{buf}};
-  auto e = bs(data);
-  CAF_REQUIRE_EQUAL(e, none);
-  stream_deserializer<charbuf> bd{charbuf{buf}};
-  std::string target;
-  e = bd(target);
-  CAF_REQUIRE_EQUAL(e, none);
-  CAF_CHECK_EQUAL(data, target);
-  // Second, we test another use case where the serializers only keep
-  // references of the stream buffers.
-  buf.clear();
-  target.clear();
-  vectorbuf vb{buf};
-  stream_serializer<vectorbuf&> vs{vb};
-  e = vs(data);
-  CAF_REQUIRE_EQUAL(e, none);
-  charbuf cb{buf};
-  stream_deserializer<charbuf&> vd{cb};
-  e = vd(target);
-  CAF_REQUIRE_EQUAL(e, none);
-  CAF_CHECK(data == target);
-}
-
-SERIALIZATION_TEST(byte_sequence_optimization) {
-  std::vector<uint8_t> data(42);
-  std::fill(data.begin(), data.end(), 0x2a);
-  std::vector<uint8_t> buf;
-  using streambuf_type = containerbuf<std::vector<uint8_t>>;
-  streambuf_type cb{buf};
-  stream_serializer<streambuf_type&> bs{cb};
-  auto e = bs(data);
-  CAF_REQUIRE(!e);
-  data.clear();
-  streambuf_type cb2{buf};
-  stream_deserializer<streambuf_type&> bd{cb2};
-  e = bd(data);
-  CAF_REQUIRE(!e);
-  CAF_CHECK_EQUAL(data.size(), 42u);
-  CAF_CHECK(std::all_of(data.begin(), data.end(),
-                        [](uint8_t c) { return c == 0x2a; }));
-}
-
-SERIALIZATION_TEST(long_sequences) {
-  std::vector<char> data;
+CAF_TEST(long_sequences) {
+  byte_buffer data;
   binary_serializer sink{nullptr, data};
   size_t n = std::numeric_limits<uint32_t>::max();
   sink.begin_sequence(n);
@@ -525,7 +388,7 @@ SERIALIZATION_TEST(long_sequences) {
   CAF_CHECK_EQUAL(n, m);
 }
 
-SERIALIZATION_TEST(non_empty_vector) {
+CAF_TEST(non_empty_vector) {
   CAF_MESSAGE("deserializing into a non-empty vector overrides any content");
   std::vector<int> foo{1, 2, 3};
   std::vector<int> bar{0};
@@ -534,7 +397,7 @@ SERIALIZATION_TEST(non_empty_vector) {
   CAF_CHECK_EQUAL(foo, bar);
 }
 
-SERIALIZATION_TEST(variant_with_tree_types) {
+CAF_TEST(variant_with_tree_types) {
   CAF_MESSAGE("deserializing into a non-empty vector overrides any content");
   using test_variant = variant<int, double, std::string>;
   test_variant x{42};
@@ -548,21 +411,28 @@ SERIALIZATION_TEST(variant_with_tree_types) {
 // -- our vector<bool> serialization packs into an uint64_t. Hence, the
 // critical sizes to test are 0, 1, 63, 64, and 65.
 
-SERIALIZATION_TEST(bool_vector_size_0) {
+CAF_TEST(bool_vector_size_0) {
   std::vector<bool> xs;
   CAF_CHECK_EQUAL(deep_to_string(xs), "[]");
   CAF_CHECK_EQUAL(xs, roundtrip(xs));
   CAF_CHECK_EQUAL(xs, msg_roundtrip(xs));
 }
 
-SERIALIZATION_TEST(bool_vector_size_1) {
+CAF_TEST(bool_vector_size_1) {
   std::vector<bool> xs{true};
   CAF_CHECK_EQUAL(deep_to_string(xs), "[true]");
   CAF_CHECK_EQUAL(xs, roundtrip(xs));
   CAF_CHECK_EQUAL(xs, msg_roundtrip(xs));
 }
 
-SERIALIZATION_TEST(bool_vector_size_63) {
+CAF_TEST(bool_vector_size_2) {
+  std::vector<bool> xs{true, true};
+  CAF_CHECK_EQUAL(deep_to_string(xs), "[true, true]");
+  CAF_CHECK_EQUAL(xs, roundtrip(xs));
+  CAF_CHECK_EQUAL(xs, msg_roundtrip(xs));
+}
+
+CAF_TEST(bool_vector_size_63) {
   std::vector<bool> xs;
   for (int i = 0; i < 63; ++i)
     xs.push_back(i % 3 == 0);
@@ -578,7 +448,7 @@ SERIALIZATION_TEST(bool_vector_size_63) {
   CAF_CHECK_EQUAL(xs, msg_roundtrip(xs));
 }
 
-SERIALIZATION_TEST(bool_vector_size_64) {
+CAF_TEST(bool_vector_size_64) {
   std::vector<bool> xs;
   for (int i = 0; i < 64; ++i)
     xs.push_back(i % 5 == 0);
@@ -595,7 +465,7 @@ SERIALIZATION_TEST(bool_vector_size_64) {
   CAF_CHECK_EQUAL(xs, msg_roundtrip(xs));
 }
 
-SERIALIZATION_TEST(bool_vector_size_65) {
+CAF_TEST(bool_vector_size_65) {
   std::vector<bool> xs;
   for (int i = 0; i < 65; ++i)
     xs.push_back(!(i % 7 == 0));
@@ -610,3 +480,5 @@ SERIALIZATION_TEST(bool_vector_size_65) {
   CAF_CHECK_EQUAL(xs, roundtrip(xs));
   CAF_CHECK_EQUAL(xs, msg_roundtrip(xs));
 }
+
+CAF_TEST_FIXTURE_SCOPE_END()

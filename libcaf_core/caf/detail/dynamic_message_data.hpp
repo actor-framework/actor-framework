@@ -20,9 +20,8 @@
 
 #include <vector>
 
-#include "caf/type_erased_value.hpp"
-
 #include "caf/detail/message_data.hpp"
+#include "caf/type_erased_value.hpp"
 
 namespace caf::detail {
 
@@ -52,6 +51,8 @@ public:
 
   error load(size_t pos, deserializer& source) override;
 
+  error_code<sec> load(size_t pos, binary_deserializer& source) override;
+
   // -- overridden observers of type_erased_tuple ------------------------------
 
   size_t size() const noexcept override;
@@ -67,6 +68,8 @@ public:
   type_erased_value_ptr copy(size_t pos) const override;
 
   error save(size_t pos, serializer& sink) const override;
+
+  error_code<sec> save(size_t pos, binary_serializer& sink) const override;
 
   // -- modifiers --------------------------------------------------------------
 

@@ -70,6 +70,10 @@ public:
     return ptrs_[pos]->load(source);
   }
 
+  error_code<sec> load(size_t pos, binary_deserializer& source) override {
+    return ptrs_[pos]->load(source);
+  }
+
   // -- overridden observers ---------------------------------------------------
 
   size_t size() const noexcept override {
@@ -97,6 +101,10 @@ public:
   }
 
   error save(size_t pos, serializer& sink) const override {
+    return ptrs_[pos]->save(sink);
+  }
+
+  error_code<sec> save(size_t pos, binary_serializer& sink) const override {
     return ptrs_[pos]->save(sink);
   }
 

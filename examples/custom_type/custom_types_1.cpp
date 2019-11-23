@@ -90,7 +90,7 @@ void caf_main(actor_system& system, const config&) {
   f1.b.resize(1);
   f1.b.back().push_back(42);
   // I/O buffer
-  vector<char> buf;
+  binary_serializer::container_type buf;
   // write f1 to buffer
   binary_serializer bs{system, buf};
   auto e = bs(f1);

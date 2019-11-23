@@ -21,6 +21,8 @@
 #include <type_traits>
 
 #include "caf/all.hpp"
+#include "caf/binary_serializer.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/gcd.hpp"
 #include "caf/meta/annotation.hpp"
@@ -679,9 +681,6 @@ public:
   /// A deterministic scheduler type.
   using scheduler_type = caf::scheduler::test_coordinator;
 
-  /// A buffer for serializing or deserializing objects.
-  using byte_buffer = std::vector<char>;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   static Config& init_config(Config& cfg) {
@@ -850,8 +849,8 @@ public:
   }
 
   template <class... Ts>
-  byte_buffer serialize(const Ts&... xs) {
-    byte_buffer buf;
+  caf::byte_buffer serialize(const Ts&... xs) {
+    caf::byte_buffer buf;
     caf::binary_serializer sink{sys, buf};
     if (auto err = sink(xs...))
       CAF_FAIL("serialization failed: " << sys.render(err));
@@ -859,7 +858,7 @@ public:
   }
 
   template <class... Ts>
-  void deserialize(const byte_buffer& buf, Ts&... xs) {
+  void deserialize(const caf::byte_buffer& buf, Ts&... xs) {
     caf::binary_deserializer source{sys, buf};
     if (auto err = source(xs...))
       CAF_FAIL("deserialization failed: " << sys.render(err));

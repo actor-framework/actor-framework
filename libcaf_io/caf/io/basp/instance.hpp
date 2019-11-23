@@ -21,11 +21,10 @@
 #include <limits>
 
 #include "caf/actor_system_config.hpp"
-#include "caf/binary_deserializer.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/callback.hpp"
 #include "caf/detail/worker_hub.hpp"
 #include "caf/error.hpp"
-#include "caf/io/basp/buffer_type.hpp"
 #include "caf/io/basp/connection_state.hpp"
 #include "caf/io/basp/header.hpp"
 #include "caf/io/basp/message_queue.hpp"
@@ -45,10 +44,6 @@ public:
   /// Provides a callback-based interface for certain BASP events.
   class callee {
   public:
-    // -- member types ---------------------------------------------------------
-
-    using buffer_type = std::vector<char>;
-
     // -- constructors, destructors, and assignment operators ------------------
 
     explicit callee(actor_system& sys, proxy_registry::backend& backend);
@@ -60,7 +55,8 @@ public:
     /// Called if a server handshake was received and
     /// the connection to `nid` is established.
     virtual void finalize_handshake(const node_id& nid, actor_id aid,
-                                    std::set<std::string>& sigs) = 0;
+                                    std::set<std::string>& sigs)
+      = 0;
 
     /// Called whenever a direct connection was closed or a
     /// node became unreachable for other reasons *before*
@@ -75,8 +71,9 @@ public:
 
     /// Called whenever BASP learns the ID of a remote node
     /// to which it does not have a direct connection.
-    virtual void learned_new_node_directly(const node_id& nid,
-                                           bool was_known_indirectly) = 0;
+    virtual void
+    learned_new_node_directly(const node_id& nid, bool was_known_indirectly)
+      = 0;
 
     /// Called whenever BASP learns the ID of a remote node
     /// to which it does not have a direct connection.
@@ -94,7 +91,7 @@ public:
     }
 
     /// Returns a reference to the sent buffer.
-    virtual buffer_type& get_buffer(connection_handle hdl) = 0;
+    virtual byte_buffer& get_buffer(connection_handle hdl) = 0;
 
     /// Flushes the underlying write buffer of `hdl`.
     virtual void flush(connection_handle hdl) = 0;
@@ -108,15 +105,16 @@ public:
 
   /// Describes a function object responsible for writing
   /// the payload for a BASP message.
-  using payload_writer = callback<serializer&>;
+  using payload_writer = callback<error_code<sec>(binary_serializer&)>;
 
   /// Describes a callback function object for `remove_published_actor`.
-  using removed_published_actor = callback<const strong_actor_ptr&, uint16_t>;
+  using removed_published_actor
+    = callback<error_code<sec>(const strong_actor_ptr&, uint16_t)>;
 
   instance(abstract_broker* parent, callee& lstnr);
 
   /// Handles received data and returns a config for receiving the
-  /// next data or `none` if an error occurred.
+  /// next data or `none` if an error occured.
   connection_state handle(execution_unit* ctx,
                           new_data_msg& dm, header& hdr, bool is_payload);
 
@@ -131,17 +129,16 @@ public:
 
   /// Sends a BASP message and implicitly flushes the output buffer of `r`.
   /// This function will update `hdr.payload_len` if a payload was written.
-  void write(execution_unit* ctx, const routing_table::route& r,
-             header& hdr, payload_writer* writer = nullptr);
+  void write(execution_unit* ctx, const routing_table::route& r, header& hdr,
+             payload_writer* writer = nullptr);
 
   /// Adds a new actor to the map of published actors.
-  void add_published_actor(uint16_t port,
-                           strong_actor_ptr published_actor,
+  void add_published_actor(uint16_t port, strong_actor_ptr published_actor,
                            std::set<std::string> published_interface);
 
   /// Removes the actor currently assigned to `port`.
-  size_t remove_published_actor(uint16_t port,
-                                removed_published_actor* cb = nullptr);
+  size_t
+  remove_published_actor(uint16_t port, removed_published_actor* cb = nullptr);
 
   /// Removes `whom` if it is still assigned to `port` or from all of its
   /// current ports if `port == 0`.
@@ -178,30 +175,30 @@ public:
   }
 
   /// Writes a header followed by its payload to `storage`.
-  static void write(execution_unit* ctx, buffer_type& buf, header& hdr,
+  static void write(execution_unit* ctx, byte_buffer& buf, header& hdr,
                     payload_writer* pw = nullptr);
 
   /// Writes the server handshake containing the information of the
   /// actor published at `port` to `buf`. If `port == none` or
   /// if no actor is published at this port then a standard handshake is
   /// written (e.g. used when establishing direct connections on-the-fly).
-  void write_server_handshake(execution_unit* ctx,
-                              buffer_type& out_buf, optional<uint16_t> port);
+  void write_server_handshake(execution_unit* ctx, byte_buffer& out_buf,
+                              optional<uint16_t> port);
 
   /// Writes the client handshake to `buf`.
-  void write_client_handshake(execution_unit* ctx, buffer_type& buf);
+  void write_client_handshake(execution_unit* ctx, byte_buffer& buf);
 
   /// Writes an `announce_proxy` to `buf`.
-  void write_monitor_message(execution_unit* ctx, buffer_type& buf,
+  void write_monitor_message(execution_unit* ctx, byte_buffer& buf,
                              const node_id& dest_node, actor_id aid);
 
   /// Writes a `kill_proxy` to `buf`.
-  void write_down_message(execution_unit* ctx, buffer_type& buf,
-                          const node_id& dest_node, actor_id aid,
-                          const error& rsn);
+  void
+  write_down_message(execution_unit* ctx, byte_buffer& buf,
+                     const node_id& dest_node, actor_id aid, const error& rsn);
 
   /// Writes a `heartbeat` to `buf`.
-  void write_heartbeat(execution_unit* ctx, buffer_type& buf);
+  void write_heartbeat(execution_unit* ctx, byte_buffer& buf);
 
   const node_id& this_node() const {
     return this_node_;
@@ -224,11 +221,11 @@ public:
   }
 
   bool handle(execution_unit* ctx, connection_handle hdl, header& hdr,
-              std::vector<char>* payload);
+              byte_buffer* payload);
 
 private:
   void forward(execution_unit* ctx, const node_id& dest_node, const header& hdr,
-               std::vector<char>& payload);
+               byte_buffer& payload);
 
   routing_table tbl_;
   published_actor_map published_actors_;
@@ -240,4 +237,4 @@ private:
 
 /// @}
 
-} // namespace caf
+} // namespace caf::io::basp

@@ -295,11 +295,10 @@ behavior basp_broker::make_behavior() {
     },
     [=](unpublish_atom, const actor_addr& whom, uint16_t port) -> result<void> {
       CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
-      auto cb = make_callback(
-        [&](const strong_actor_ptr&, uint16_t x) -> error {
-          close(hdl_by_port(x));
-          return none;
-        });
+      auto cb = make_callback([&](const strong_actor_ptr&, uint16_t x) {
+        close(hdl_by_port(x));
+        return error_code<sec>{};
+      });
       if (instance.remove_published_actor(whom, port, &cb) == 0)
         return sec::no_actor_published_at_port;
       return unit;
@@ -583,8 +582,7 @@ void basp_broker::connection_cleanup(connection_handle hdl) {
   }
 }
 
-basp::instance::callee::buffer_type&
-basp_broker::get_buffer(connection_handle hdl) {
+byte_buffer& basp_broker::get_buffer(connection_handle hdl) {
   return wr_buf(hdl);
 }
 

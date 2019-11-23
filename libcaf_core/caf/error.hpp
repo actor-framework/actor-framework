@@ -23,13 +23,12 @@
 #include <utility>
 
 #include "caf/atom.hpp"
+#include "caf/detail/comparable.hpp"
+#include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
-#include "caf/none.hpp"
-
 #include "caf/meta/omittable_if_empty.hpp"
 #include "caf/meta/type_name.hpp"
-
-#include "caf/detail/comparable.hpp"
+#include "caf/none.hpp"
 
 namespace caf {
 
@@ -99,15 +98,19 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   error() noexcept;
+
   error(none_t) noexcept;
 
   error(error&&) noexcept;
+
   error& operator=(error&&) noexcept;
 
   error(const error&);
+
   error& operator=(const error&);
 
   error(uint8_t x, atom_value y);
+
   error(uint8_t x, atom_value y, message z);
 
   template <class E, class = enable_if_has_make_error_t<E>>
@@ -115,9 +118,21 @@ public:
     // nop
   }
 
+  template <class E>
+  error(error_code<E> code) : error(code.value()) {
+    // nop
+  }
+
   template <class E, class = enable_if_has_make_error_t<E>>
   error& operator=(E error_value) {
     auto tmp = make_error(error_value);
+    std::swap(data_, tmp.data_);
+    return *this;
+  }
+
+  template <class E>
+  error& operator=(error_code<E> code) {
+    auto tmp = make_error(code.value());
     std::swap(data_, tmp.data_);
     return *this;
   }
@@ -180,17 +195,40 @@ public:
   // -- friend functions -------------------------------------------------------
 
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f, error& x) {
-    auto fun = [&](meta::type_name_t x0, uint8_t& x1, atom_value& x2,
-                   meta::omittable_if_empty_t x3,
-                   message& x4) -> error { return f(x0, x1, x2, x3, x4); };
-    return x.apply(fun);
+  friend auto inspect(Inspector& f, error& x) {
+    using result_type = typename Inspector::result_type;
+    if constexpr (Inspector::reads_state) {
+      if (!x) {
+        uint8_t code = 0;
+        return f(code);
+      }
+      return f(x.code(), x.category(), x.context());
+    } else {
+      uint8_t code = 0;
+      auto cb = meta::load_callback([&] {
+        if (code == 0) {
+          x.clear();
+          if constexpr (std::is_same<result_type, void>::value)
+            return;
+          else
+            return result_type{};
+        }
+        x.init();
+        x.code_ref() = code;
+        return f(x.category_ref(), x.context());
+      });
+      return f(code, cb);
+    }
   }
 
 private:
   // -- inspection support -----------------------------------------------------
 
-  error apply(const inspect_fun& f);
+  uint8_t& code_ref() noexcept;
+
+  atom_value& category_ref() noexcept;
+
+  void init();
 
   // -- nested classes ---------------------------------------------------------
 

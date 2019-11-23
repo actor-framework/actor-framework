@@ -18,13 +18,14 @@
 
 #pragma once
 
-#include <tuple>
+#include <array>
 #include <chrono>
-#include <string>
-#include <vector>
-#include <utility>
 #include <functional>
+#include <string>
+#include <tuple>
 #include <type_traits>
+#include <utility>
+#include <vector>
 
 #include "caf/fwd.hpp"
 #include "caf/timestamp.hpp"
@@ -85,22 +86,6 @@ using enable_if_tt = typename std::enable_if<Trait::value, T>::type;
 template <class T>
 using remove_reference_t = typename std::remove_reference<T>::type;
 
-/// Checks whether `T` is inspectable by `Inspector`.
-template <class Inspector, class T>
-class is_inspectable {
-private:
-  template <class U>
-  static auto sfinae(Inspector& x, U& y) -> decltype(inspect(x, y));
-
-  static std::false_type sfinae(Inspector&, ...);
-
-  using result_type = decltype(sfinae(std::declval<Inspector&>(),
-                                      std::declval<T&>()));
-
-public:
-  static constexpr bool value = !std::is_same<result_type, std::false_type>::value;
-};
-
 /// Checks whether `T` defines a free function `to_string`.
 template <class T>
 class has_to_string {
@@ -115,10 +100,6 @@ private:
 public:
   static constexpr bool value = std::is_convertible<result, std::string>::value;
 };
-
-// pointers are never inspectable
-template <class Inspector, class T>
-struct is_inspectable<Inspector, T*> : std::false_type {};
 
 template <bool X>
 using bool_token = std::integral_constant<bool, X>;
@@ -272,150 +253,6 @@ public:
 
 template <class T>
 constexpr bool is_iterable<T>::value;
-
-/// Checks whether T is a contiguous sequence of byte.
-template <class T>
-struct is_byte_sequence : std::false_type { };
-
-template <>
-struct is_byte_sequence<std::vector<char>> : std::true_type { };
-
-template <>
-struct is_byte_sequence<std::vector<unsigned char>> : std::true_type { };
-
-template <>
-struct is_byte_sequence<std::string> : std::true_type { };
-
-/// Checks whether `T` provides either a free function or a member function for
-/// serialization. The checks test whether both serialization and
-/// deserialization can succeed. The meta function tests the following
-/// functions with `Processor` being both `serializer` and `deserializer` and
-/// returns an integral constant if and only if the test succeeds for both.
-///
-/// - `serialize(Processor&, T&, const unsigned int)`
-/// - `serialize(Processor&, T&)`
-/// - `T::serialize(Processor&, const unsigned int)`.
-/// - `T::serialize(Processor&)`.
-template <class T,
-          bool Ignore = std::is_pointer<T>::value
-                        || std::is_function<T>::value>
-struct has_serialize {
-  template <class U>
-  static auto test_serialize(caf::serializer* sink, U* x, unsigned int y = 0)
-  -> decltype(serialize(*sink, *x, y));
-
-  template <class U>
-  static auto test_serialize(caf::serializer* sink, U* x)
-  -> decltype(serialize(*sink, *x));
-
-  template <class>
-  static auto test_serialize(...) -> std::false_type;
-
-  template <class U>
-  static auto test_deserialize(caf::deserializer* source, U* x, unsigned int y = 0)
-  -> decltype(serialize(*source, *x, y));
-
-  template <class U>
-  static auto test_deserialize(caf::deserializer* source, U* x)
-  -> decltype(serialize(*source, *x));
-
-  template <class>
-  static auto test_deserialize(...) -> std::false_type;
-
-  using serialize_type = decltype(test_serialize<T>(nullptr, nullptr));
-  using deserialize_type = decltype(test_deserialize<T>(nullptr, nullptr));
-  using type = std::integral_constant<
-    bool,
-    std::is_same<serialize_type, void>::value
-    && std::is_same<deserialize_type, void>::value
-  >;
-
-  static constexpr bool value = type::value;
-};
-
-template <class T>
-struct has_serialize<T, true> {
-  static constexpr bool value = false;
-};
-
-/// Any inspectable type is considered to be serializable.
-template <class T>
-struct is_serializable;
-
-template <class T,
-          bool IsIterable = is_iterable<T>::value,
-          bool Ignore = std::is_pointer<T>::value
-                        || std::is_function<T>::value>
-struct is_serializable_impl;
-
-
-/// Checks whether `T` is builtin or provides a `serialize`
-/// (free or member) function.
-template <class T>
-struct is_serializable_impl<T, false, false> {
-  static constexpr bool value = has_serialize<T>::value
-                                || is_inspectable<serializer, T>::value
-                                || is_builtin<T>::value;
-};
-
-template <class F, class S>
-struct is_serializable_impl<std::pair<F, S>, false, false> {
-  static constexpr bool value = is_serializable<F>::value
-                                && is_serializable<S>::value;
-};
-
-template <class... Ts>
-struct is_serializable_impl<std::tuple<Ts...>, false, false> {
-  static constexpr bool value = conjunction<
-                                  is_serializable<Ts>::value...
-                                >::value;
-};
-
-template <class T>
-struct is_serializable_impl<T, true, false> {
-  using value_type = typename T::value_type;
-  static constexpr bool value = is_serializable<value_type>::value;
-};
-
-template <class T, size_t S>
-struct is_serializable_impl<T[S], false, false> {
-  static constexpr bool value = is_serializable<T>::value;
-};
-
-template <class T, bool IsIterable>
-struct is_serializable_impl<T, IsIterable, true> {
-  static constexpr bool value = false;
-};
-
-/// Checks whether `T` is builtin or provides a `serialize`
-/// (free or member) function.
-template <class T>
-struct is_serializable {
-  static constexpr bool value = is_serializable_impl<T>::value
-                                || is_inspectable<serializer, T>::value
-                                || std::is_empty<T>::value
-                                || std::is_enum<T>::value;
-};
-
-template <>
-struct is_serializable<bool> : std::true_type  {
-  // nop
-};
-
-template <class T>
-struct is_serializable<T&> : is_serializable<T> {
-  // nop
-};
-
-template <class T>
-struct is_serializable<const T> : is_serializable<T> {
-  // nop
-};
-
-template <class T>
-struct is_serializable<const T&> : is_serializable<T> {
-  // nop
-};
 
 /// Checks whether `T` is a non-const reference.
 template <class T>
@@ -771,9 +608,11 @@ using deconst_kvp_t = typename deconst_kvp<T>::type;
 template <class T>
 struct is_pair : std::false_type {};
 
-/// Utility trait for checking whether T is a `std::pair`.
 template <class First, class Second>
 struct is_pair<std::pair<First, Second>> : std::true_type {};
+
+template <class T>
+constexpr bool is_pair_v = is_pair<T>::value;
 
 // -- traits to check for STL-style type aliases -------------------------------
 
@@ -806,6 +645,9 @@ struct is_map_like {
                                 && has_mapped_type_alias<T>::value;
 };
 
+template <class T>
+constexpr bool is_map_like_v = is_map_like<T>::value;
+
 /// Checks whether T behaves like `std::vector`, `std::list`, or `std::set`.
 template <class T>
 struct is_list_like {
@@ -813,6 +655,9 @@ struct is_list_like {
                                 && has_value_type_alias<T>::value
                                 && !has_mapped_type_alias<T>::value;
 };
+
+template <class T>
+constexpr bool is_list_like_v = is_list_like<T>::value;
 
 template <class F, class... Ts>
 struct is_invocable {
@@ -846,7 +691,59 @@ public:
   static constexpr bool value = sfinae_type::value;
 };
 
-} // namespace caf
+template <class T, class To>
+class has_convertible_data_member {
+private:
+  template <class U>
+  static auto sfinae(U* x)
+    -> decltype(std::declval<To*>() = x->data(), std::true_type());
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using sfinae_type = decltype(sfinae<T>(nullptr));
+
+public:
+  static constexpr bool value = sfinae_type::value;
+};
+
+template <class T, class Arg>
+struct can_apply {
+  template <class U>
+  static auto sfinae(U* x)
+    -> decltype(x->apply(std::declval<Arg>()), std::true_type{});
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using type = decltype(sfinae<T>(nullptr));
+
+  static constexpr bool value = type::value;
+};
+
+template <class T, class Arg>
+constexpr bool can_apply_v = can_apply<T, Arg>::value;
+
+/// Evaluates to `true` for all types that specialize `std::tuple_size`, i.e.,
+/// `std::tuple`, `std::pair`, and `std::array`.
+template <class T>
+struct is_stl_tuple_type {
+  template <class U>
+  static auto sfinae(U*)
+    -> decltype(std::integral_constant<bool, std::tuple_size<U>::value >= 0>{});
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using type = decltype(sfinae<T>(nullptr));
+
+  static constexpr bool value = type::value;
+};
+
+template <class T>
+constexpr bool is_stl_tuple_type_v = is_stl_tuple_type<T>::value;
+
+} // namespace caf::detail
 
 #undef CAF_HAS_MEMBER_TRAIT
 #undef CAF_HAS_ALIAS_TRAIT

@@ -20,14 +20,14 @@
 
 #include <vector>
 
-#include "caf/message.hpp"
-
-#include "caf/io/datagram_handle.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/io/broker_servant.hpp"
-#include "caf/io/system_messages.hpp"
-#include "caf/io/network/ip_endpoint.hpp"
+#include "caf/io/datagram_handle.hpp"
 #include "caf/io/network/datagram_manager.hpp"
+#include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/receive_buffer.hpp"
+#include "caf/io/system_messages.hpp"
+#include "caf/message.hpp"
 
 namespace caf::io {
 
@@ -46,10 +46,10 @@ public:
   virtual void ack_writes(bool enable) = 0;
 
   /// Returns a new output buffer.
-  virtual std::vector<char>& wr_buf(datagram_handle) = 0;
+  virtual byte_buffer& wr_buf(datagram_handle) = 0;
 
   /// Enqueue a buffer to be sent as a datagram.
-  virtual void enqueue_datagram(datagram_handle, std::vector<char>) = 0;
+  virtual void enqueue_datagram(datagram_handle, byte_buffer) = 0;
 
   /// Returns the current input buffer.
   virtual network::receive_buffer& rd_buf() = 0;
@@ -75,7 +75,7 @@ public:
                network::receive_buffer& buf) override;
 
   void datagram_sent(execution_unit*, datagram_handle hdl, size_t,
-                     std::vector<char> buffer) override;
+                     byte_buffer buffer) override;
 
   virtual void detach_handles() = 0;
 
@@ -94,4 +94,3 @@ using datagram_servant_ptr = intrusive_ptr<datagram_servant>;
 // Allows the `middleman_actor` to create an `datagram_servant` and then send it
 // to the BASP broker.
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(caf::io::datagram_servant_ptr)
-

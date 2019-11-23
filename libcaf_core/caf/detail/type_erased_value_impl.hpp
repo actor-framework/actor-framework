@@ -22,11 +22,14 @@
 #include <typeinfo>
 #include <functional>
 
-#include "caf/error.hpp"
-#include "caf/type_erased_value.hpp"
-
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
+#include "caf/deserializer.hpp"
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/try_serialize.hpp"
+#include "caf/error.hpp"
+#include "caf/serializer.hpp"
+#include "caf/type_erased_value.hpp"
 
 namespace caf::detail {
 
@@ -78,6 +81,10 @@ public:
     return source(*addr_of(x_));
   }
 
+  error_code<sec> load(binary_deserializer& source) override {
+    return source(*addr_of(x_));
+  }
+
   // -- overridden observers ---------------------------------------------------
 
   static rtti_pair type(std::integral_constant<uint16_t, 0>) {
@@ -100,6 +107,10 @@ public:
   }
 
   error save(serializer& sink) const override {
+    return sink(*addr_of(const_cast<T&>(x_)));
+  }
+
+  error_code<sec> save(binary_serializer& sink) const override {
     return sink(*addr_of(const_cast<T&>(x_)));
   }
 

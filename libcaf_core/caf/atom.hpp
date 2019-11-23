@@ -25,15 +25,12 @@
 
 #include "caf/detail/atom_val.hpp"
 #include "caf/fwd.hpp"
+#include "caf/meta/load_callback.hpp"
 
 namespace caf {
 
 /// The value type of atoms.
-enum class atom_value : uint64_t {
-  /// @cond PRIVATE
-  dirty_little_hack = 31337
-  /// @endcond
-};
+enum class atom_value : uint64_t {};
 
 /// @relates atom_value
 std::string to_string(atom_value x);

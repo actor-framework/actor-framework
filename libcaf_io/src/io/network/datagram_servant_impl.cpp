@@ -60,12 +60,12 @@ void datagram_servant_impl::ack_writes(bool enable) {
   handler_.ack_writes(enable);
 }
 
-std::vector<char>& datagram_servant_impl::wr_buf(datagram_handle hdl) {
+byte_buffer& datagram_servant_impl::wr_buf(datagram_handle hdl) {
   return handler_.wr_buf(hdl);
 }
 
 void datagram_servant_impl::enqueue_datagram(datagram_handle hdl,
-                                             std::vector<char> buffer) {
+                                             byte_buffer buffer) {
   handler_.enqueue_datagram(hdl, std::move(buffer));
 }
 

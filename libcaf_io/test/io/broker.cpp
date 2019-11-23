@@ -91,7 +91,7 @@ behavior peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
   self->configure_read(hdl, receive_policy::exactly(sizeof(atom_value)));
   auto write = [=](atom_value type) {
     auto& buf = self->wr_buf(hdl);
-    auto first = reinterpret_cast<char*>(&type);
+    auto first = reinterpret_cast<byte*>(&type);
     buf.insert(buf.end(), first, first + sizeof(atom_value));
     self->flush(hdl);
   };
