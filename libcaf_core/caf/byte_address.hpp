@@ -19,17 +19,15 @@
 #pragma once
 
 #include <cstdint>
-#include <cstring>
 
 #include "caf/config.hpp"
-#include "caf/detail/comparable.hpp"
 
 namespace caf {
 
 /// Base type for addresses based on a byte representation such as IP or
 /// Ethernet addresses.
 template <class Derived>
-class byte_address : detail::comparable<Derived> {
+class byte_address {
 public:
   // -- element access ---------------------------------------------------------
 
@@ -48,15 +46,6 @@ public:
   /// Returns the number of bytes of the address.
   size_t size() const noexcept {
     return dref().bytes().size();
-  }
-
-  // -- comparison -------------------------------------------------------------
-
-  /// Returns a negative number if `*this < other`, zero if `*this == other`
-  /// and a positive number if `*this > other`.
-  int compare(const Derived& other) const noexcept {
-    auto& buf = dref().bytes();
-    return memcmp(buf.data(), other.bytes().data(), Derived::num_bytes);
   }
 
   // -- transformations --------------------------------------------------------

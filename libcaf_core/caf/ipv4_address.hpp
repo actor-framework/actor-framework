@@ -29,7 +29,8 @@
 
 namespace caf {
 
-class CAF_CORE_EXPORT ipv4_address : public byte_address<ipv4_address> {
+class CAF_CORE_EXPORT ipv4_address : public byte_address<ipv4_address>,
+                                     detail::comparable<ipv4_address> {
 public:
   // -- constants --------------------------------------------------------------
 
@@ -93,6 +94,12 @@ public:
   inline const array_type& data() const noexcept {
     return bytes_;
   }
+
+  // -- comparison -------------------------------------------------------------
+
+  /// Returns a negative number if `*this < other`, zero if `*this == other`
+  /// and a positive number if `*this > other`.
+  int compare(ipv4_address other) const noexcept;
 
   // -- inspection -------------------------------------------------------------
 

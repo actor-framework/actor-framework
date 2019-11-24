@@ -22,7 +22,6 @@
 
 #include "caf/buffered_downstream_manager.hpp"
 #include "caf/detail/algorithms.hpp"
-#include "caf/detail/core_export.hpp"
 #include "caf/detail/path_state.hpp"
 #include "caf/detail/select_all.hpp"
 #include "caf/detail/unordered_flat_map.hpp"
@@ -32,8 +31,7 @@
 namespace caf {
 
 template <class T, class Filter = unit_t, class Select = detail::select_all>
-class CAF_CORE_EXPORT broadcast_downstream_manager
-  : public buffered_downstream_manager<T> {
+class broadcast_downstream_manager : public buffered_downstream_manager<T> {
 public:
   // -- member types -----------------------------------------------------------
 

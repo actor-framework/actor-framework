@@ -1,6 +1,6 @@
 # -- get header files for creating "proper" XCode projects ---------------------
 
-file(GLOB_RECURSE LIBCAF_IO_HDRS "caf/*.hpp")
+file(GLOB_RECURSE CAF_IO_HEADERS "caf/*.hpp")
 
 # -- auto generate to_string for enum types ------------------------------------
 
@@ -9,7 +9,7 @@ enum_to_string("caf/io/network/operation.hpp" "operation_to_string.cpp")
 
 # -- list cpp files ------------------------------------------------------------
 
-set(LIBCAF_IO_SRCS
+set(CAF_IO_SOURCES
   "${CMAKE_CURRENT_BINARY_DIR}/message_type_to_string.cpp"
   "${CMAKE_CURRENT_BINARY_DIR}/operation_to_string.cpp"
   src/detail/socket_guard.cpp
@@ -52,30 +52,37 @@ set(LIBCAF_IO_SRCS
   src/policy/udp.cpp
 )
 
+set(CAF_IO_TEST_SOURCES
+  test/io/basp/message_queue.cpp
+  test/io/basp_broker.cpp
+  test/io/broker.cpp
+  test/io/http_broker.cpp
+  test/io/network/default_multiplexer.cpp
+  test/io/network/ip_endpoint.cpp
+  test/io/receive_buffer.cpp
+  test/io/remote_actor.cpp
+  test/io/remote_group.cpp
+  test/io/remote_spawn.cpp
+  test/io/unpublish.cpp
+  test/io/worker.cpp
+)
+
 # -- add library target --------------------------------------------------------
 
-add_library(libcaf_io ${LIBCAF_IO_SRCS} ${LIBCAF_IO_HDRS})
+add_library(libcaf_io_obj OBJECT ${CAF_IO_SOURCES} ${CAF_IO_HEADERS})
+
+add_library(libcaf_io $<TARGET_OBJECTS:libcaf_io_obj>)
 
 add_library(caf::io ALIAS libcaf_io)
 
-# TODO: only exists for backwards compatibility, remove with CAF 0.19
-if(BUILD_SHARED_LIBS)
-  add_library(libcaf_io_shared ALIAS libcaf_io)
-else()
-  add_library(libcaf_io_static ALIAS libcaf_io)
-endif()
+target_link_libraries(libcaf_io_obj PUBLIC caf::core)
 
 target_link_libraries(libcaf_io PUBLIC caf::core)
 
-generate_export_header(libcaf_io
+generate_export_header(libcaf_io_obj
                        EXPORT_MACRO_NAME CAF_IO_EXPORT
-                       EXPORT_FILE_NAME "caf/detail/io_export.hpp"
+                       EXPORT_FILE_NAME "${CMAKE_BINARY_DIR}/caf/detail/io_export.hpp"
                        STATIC_DEFINE CAF_STATIC_BUILD)
-
-target_include_directories(libcaf_io PUBLIC
-                           $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-                           $<INSTALL_INTERFACE:include>)
 
 set_target_properties(libcaf_io PROPERTIES
                       EXPORT_NAME io
@@ -85,9 +92,8 @@ set_target_properties(libcaf_io PROPERTIES
 
 # -- install library and header files ------------------------------------------
 
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/io_export.hpp"
+install(FILES "${CMAKE_BINARY_DIR}/caf/detail/io_export.hpp"
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail")
-
 
 install(TARGETS libcaf_io
         EXPORT CAFTargets
@@ -100,8 +106,31 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
         COMPONENT io
         FILES_MATCHING PATTERN "*.hpp")
 
+# -- build unit tests ----------------------------------------------------------
+
+if(NOT CAF_NO_UNIT_TESTS)
+  add_executable(caf-io-test
+                 "${PROJECT_SOURCE_DIR}/libcaf_test/src/caf-test.cpp"
+                 "${PROJECT_SOURCE_DIR}/libcaf_test/caf/test/unit_test.hpp"
+                 "${PROJECT_SOURCE_DIR}/libcaf_test/caf/test/unit_test_impl.hpp"
+                 ${CAF_IO_TEST_SOURCES}
+                 $<TARGET_OBJECTS:libcaf_io_obj>)
+  target_link_libraries(caf-io-test caf::core ${CAF_EXTRA_LDFLAGS})
+  add_test_suites(caf-io-test
+                  "${CMAKE_CURRENT_SOURCE_DIR}"
+                  ${CAF_IO_TEST_SOURCES})
+endif()
+
 # -- add this library to the global CAF_LIBRARIES ------------------------------
 
 list(APPEND CAF_LIBRARIES libcaf_io)
 
 set(CAF_LIBRARIES ${CAF_LIBRARIES} PARENT_SCOPE)
+
+# -- backwards compatibility, TODO: remove -------------------------------------
+
+if(BUILD_SHARED_LIBS)
+  add_library(libcaf_io_shared ALIAS libcaf_io)
+else()
+  add_library(libcaf_io_static ALIAS libcaf_io)
+endif()

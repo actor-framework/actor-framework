@@ -73,7 +73,7 @@ public:
   static constexpr int initial_credit = 50;
 
   /// Stores statistics for measuring complexity of incoming batches.
-  struct stats_t {
+  struct CAF_CORE_EXPORT stats_t {
     /// Wraps a time measurement for a single processed batch.
     struct measurement {
       /// Number of items in the batch.
@@ -83,7 +83,7 @@ public:
     };
 
     /// Wraps the resulf of `stats_t::calculate()`.
-    struct calculation_result {
+    struct CAF_CORE_EXPORT calculation_result {
       /// Number of items per credit cycle.
       int32_t max_throughput;
       /// Number of items per batch to reach the desired batch complexity.

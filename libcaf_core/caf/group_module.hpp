@@ -37,6 +37,10 @@ public:
 
   group_module(actor_system& sys, std::string mname);
 
+  group_module(const group_module&) = delete;
+
+  group_module& operator=(const group_module&) = delete;
+
   virtual ~group_module();
 
   // -- pure virtual member functions ------------------------------------------

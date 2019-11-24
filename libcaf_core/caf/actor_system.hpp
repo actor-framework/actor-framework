@@ -81,6 +81,7 @@ struct mpi_field_access<void> {
     return "void";
   }
 };
+
 template <class T>
 std::string get_mpi_field(const uniform_type_info_map& types) {
   mpi_field_access<T> f;
@@ -147,7 +148,7 @@ public:
   actor_system& operator=(const actor_system&) = delete;
 
   /// An (optional) component of the actor system.
-  class module {
+  class CAF_CORE_EXPORT module {
   public:
     enum id_t {
       scheduler,

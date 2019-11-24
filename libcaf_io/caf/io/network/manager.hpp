@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/actor_control_block.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/io/fwd.hpp"

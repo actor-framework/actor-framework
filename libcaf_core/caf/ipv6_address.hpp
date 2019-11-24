@@ -27,11 +27,13 @@
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
+#include "caf/ipv4_address.hpp"
 
 namespace caf {
 
 class CAF_CORE_EXPORT ipv6_address
   : public byte_address<ipv6_address>,
+    detail::comparable<ipv6_address>,
     detail::comparable<ipv6_address, ipv4_address> {
 public:
   // -- constants --------------------------------------------------------------
@@ -66,7 +68,9 @@ public:
 
   // -- comparison -------------------------------------------------------------
 
-  using super::compare;
+  /// Returns a negative number if `*this < other`, zero if `*this == other`
+  /// and a positive number if `*this > other`.
+  int compare(ipv6_address other) const noexcept;
 
   /// Returns a negative number if `*this < other`, zero if `*this == other`
   /// and a positive number if `*this > other`.

@@ -18,22 +18,8 @@
 
 #pragma once
 
-#include <chrono>
-
-#include "caf/actor_system_config.hpp"
-#include "caf/after.hpp"
 #include "caf/detail/io_export.hpp"
-#include "caf/event_based_actor.hpp"
-#include "caf/io/basp/all.hpp"
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/broker.hpp"
-#include "caf/io/datagram_handle.hpp"
-#include "caf/io/middleman.hpp"
-#include "caf/io/network/datagram_manager.hpp"
-#include "caf/io/network/default_multiplexer.hpp"
-#include "caf/io/network/interfaces.hpp"
-#include "caf/io/system_messages.hpp"
-#include "caf/stateful_actor.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 namespace io {

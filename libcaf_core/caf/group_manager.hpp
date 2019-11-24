@@ -46,6 +46,10 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
+  group_manager(const group_manager&) = delete;
+
+  group_manager& operator=(const group_manager&) = delete;
+
   ~group_manager();
 
   // -- observers --------------------------------------------------------------
@@ -78,7 +82,7 @@ public:
 private:
   // -- constructors, destructors, and assignment operators --------------------
 
-  group_manager(actor_system& sys);
+  explicit group_manager(actor_system& sys);
 
   // -- member functions required by actor_system ------------------------------
 

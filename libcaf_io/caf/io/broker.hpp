@@ -81,6 +81,14 @@ public:
 
   explicit broker(actor_config& cfg);
 
+  broker(broker&&) = delete;
+
+  broker(const broker&) = delete;
+
+  broker& operator=(broker&&) = delete;
+
+  broker& operator=(const broker&) = delete;
+
 protected:
   virtual behavior make_behavior();
 };

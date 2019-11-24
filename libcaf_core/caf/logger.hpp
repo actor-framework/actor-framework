@@ -102,7 +102,7 @@ public:
   };
 
   /// Encapsulates a single logging event.
-  struct event {
+  struct CAF_CORE_EXPORT event {
     // -- constructors, destructors, and assignment operators ------------------
 
     event() = default;
@@ -181,7 +181,7 @@ public:
   using line_format = std::vector<field>;
 
   /// Utility class for building user-defined log messages with `CAF_ARG`.
-  class line_builder {
+  class CAF_CORE_EXPORT line_builder {
   public:
     line_builder();
 

@@ -1,6 +1,6 @@
 # -- get header files for creating "proper" XCode projects ---------------------
 
-file(GLOB_RECURSE LIBCAF_CORE_HDRS "caf/*.hpp")
+file(GLOB_RECURSE CAF_CORE_HEADERS "caf/*.hpp")
 
 # -- auto generate to_string for enum types ------------------------------------
 
@@ -13,9 +13,9 @@ enum_to_string("caf/pec.hpp" "pec_strings.cpp")
 enum_to_string("caf/sec.hpp" "sec_strings.cpp")
 enum_to_string("caf/stream_priority.hpp" "stream_priority_strings.cpp")
 
-# -- list cpp files ------------------------------------------------------------
+# -- list cpp files for libcaf_core --------------------------------------------
 
-set(LIBCAF_CORE_SRCS
+set(CAF_CORE_SOURCES
   "${CMAKE_CURRENT_BINARY_DIR}/exit_reason_strings.cpp"
   "${CMAKE_CURRENT_BINARY_DIR}/inbox_result_strings.cpp"
   "${CMAKE_CURRENT_BINARY_DIR}/invoke_msg_result_strings.cpp"
@@ -157,36 +157,139 @@ set(LIBCAF_CORE_SRCS
   src/uri_builder.cpp
 )
 
-# -- generate build config header ----------------------------------------------
+# -- list cpp files for caf-core-test ------------------------------------------
 
-configure_file("${PROJECT_SOURCE_DIR}/cmake/build_config.hpp.in"
-               "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
-               @ONLY)
+set(CAF_CORE_TEST_SOURCES
+  test/actor_clock.cpp
+  test/actor_factory.cpp
+  test/actor_lifetime.cpp
+  test/actor_pool.cpp
+  test/actor_profiler.cpp
+  test/actor_registry.cpp
+  test/actor_system_config.cpp
+  test/actor_termination.cpp
+  test/aout.cpp
+  test/atom.cpp
+  test/behavior.cpp
+  test/blocking_actor.cpp
+  test/broadcast_downstream_manager.cpp
+  test/byte.cpp
+  test/composable_behavior.cpp
+  test/composition.cpp
+  test/config_option.cpp
+  test/config_option_set.cpp
+  test/config_value.cpp
+  test/config_value_adaptor.cpp
+  test/constructor_attach.cpp
+  test/continuous_streaming.cpp
+  test/cow_tuple.cpp
+  test/custom_exception_handler.cpp
+  test/decorator/sequencer.cpp
+  test/decorator/splitter.cpp
+  test/deep_to_string.cpp
+  test/detached_actors.cpp
+  test/detail/bounds_checker.cpp
+  test/detail/ini_consumer.cpp
+  test/detail/limited_vector.cpp
+  test/detail/parse.cpp
+  test/detail/parser/read_atom.cpp
+  test/detail/parser/read_bool.cpp
+  test/detail/parser/read_floating_point.cpp
+  test/detail/parser/read_ini.cpp
+  test/detail/parser/read_number.cpp
+  test/detail/parser/read_number_or_timespan.cpp
+  test/detail/parser/read_signed_integer.cpp
+  test/detail/parser/read_string.cpp
+  test/detail/parser/read_timespan.cpp
+  test/detail/parser/read_unsigned_integer.cpp
+  test/detail/ringbuffer.cpp
+  test/detail/ripemd_160.cpp
+  test/detail/serialized_size.cpp
+  test/detail/tick_emitter.cpp
+  test/detail/unique_function.cpp
+  test/detail/unordered_flat_map.cpp
+  test/dictionary.cpp
+  test/dynamic_spawn.cpp
+  test/expected.cpp
+  test/extract.cpp
+  test/function_view.cpp
+  test/fused_downstream_manager.cpp
+  test/handles.cpp
+  test/inbound_path.cpp
+  test/inspector.cpp
+  test/intrusive/drr_cached_queue.cpp
+  test/intrusive/drr_queue.cpp
+  test/intrusive/fifo_inbox.cpp
+  test/intrusive/lifo_inbox.cpp
+  test/intrusive/task_queue.cpp
+  test/intrusive/wdrr_dynamic_multiplexed_queue.cpp
+  test/intrusive/wdrr_fixed_multiplexed_queue.cpp
+  test/intrusive_ptr.cpp
+  test/ipv4_address.cpp
+  test/ipv4_endpoint.cpp
+  test/ipv4_subnet.cpp
+  test/ipv6_address.cpp
+  test/ipv6_endpoint.cpp
+  test/ipv6_subnet.cpp
+  test/local_group.cpp
+  test/local_migration.cpp
+  test/logger.cpp
+  test/mailbox_element.cpp
+  test/make_config_value_field.cpp
+  test/match.cpp
+  test/message.cpp
+  test/message_id.cpp
+  test/message_lifetime.cpp
+  test/metaprogramming.cpp
+  test/mixin/requester.cpp
+  test/mixin/sender.cpp
+  test/mock_streaming_classes.cpp
+  test/native_streaming_classes.cpp
+  test/optional.cpp
+  test/or_else.cpp
+  test/pipeline_streaming.cpp
+  test/policy/categorized.cpp
+  test/request_timeout.cpp
+  test/result.cpp
+  test/rtti_pair.cpp
+  test/runtime_settings_map.cpp
+  test/selective_streaming.cpp
+  test/serial_reply.cpp
+  test/serialization.cpp
+  test/serializer_impl.cpp
+  test/settings.cpp
+  test/simple_timeout.cpp
+  test/span.cpp
+  test/stateful_actor.cpp
+  test/streambuf.cpp
+  test/string_algorithms.cpp
+  test/string_view.cpp
+  test/sum_type.cpp
+  test/sum_type_token.cpp
+  test/thread_hook.cpp
+  test/to_string.cpp
+  test/type_erased_tuple.cpp
+  test/typed_response_promise.cpp
+  test/typed_spawn.cpp
+  test/unit.cpp
+  test/uri.cpp
+  test/variant.cpp
+)
 
 # -- add library target --------------------------------------------------------
 
-add_library(libcaf_core ${LIBCAF_CORE_SRCS} ${LIBCAF_CORE_HDRS})
+add_library(libcaf_core_obj OBJECT ${CAF_CORE_SOURCES} ${CAF_CORE_HEADERS})
+
+add_library(libcaf_core $<TARGET_OBJECTS:libcaf_core_obj>)
 
 add_library(caf::core ALIAS libcaf_core)
 
-# TODO: only exists for backwards compatibility, remove with CAF 0.19
-if(BUILD_SHARED_LIBS)
-  add_library(libcaf_core_shared ALIAS libcaf_core)
-else()
-  add_library(libcaf_core_static ALIAS libcaf_core)
-endif()
-
 target_link_libraries(libcaf_core PUBLIC ${CAF_EXTRA_LDFLAGS})
 
-generate_export_header(libcaf_core
+generate_export_header(libcaf_core_obj
                        EXPORT_MACRO_NAME CAF_CORE_EXPORT
-                       EXPORT_FILE_NAME "caf/detail/core_export.hpp"
+                       EXPORT_FILE_NAME "${CMAKE_BINARY_DIR}/caf/detail/core_export.hpp"
                        STATIC_DEFINE CAF_STATIC_BUILD)
-
-target_include_directories(libcaf_core PUBLIC
-                           $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-                           $<INSTALL_INTERFACE:include>)
 
 set_target_properties(libcaf_core PROPERTIES
                       EXPORT_NAME core
@@ -195,6 +298,10 @@ set_target_properties(libcaf_core PROPERTIES
                       OUTPUT_NAME caf_core)
 
 # -- install library and header files ------------------------------------------
+
+install(FILES "${CMAKE_BINARY_DIR}/caf/detail/build_config.hpp"
+              "${CMAKE_BINARY_DIR}/caf/detail/core_export.hpp"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail")
 
 install(TARGETS libcaf_core
         EXPORT CAFTargets
@@ -207,12 +314,31 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
         COMPONENT core
         FILES_MATCHING PATTERN "*.hpp")
 
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
-              "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/core_export.hpp"
-        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail")
-
 # -- add this library to the global CAF_LIBRARIES ------------------------------
 
 list(APPEND CAF_LIBRARIES libcaf_core)
 
 set(CAF_LIBRARIES ${CAF_LIBRARIES} PARENT_SCOPE)
+
+# -- build unit tests ----------------------------------------------------------
+
+if(NOT CAF_NO_UNIT_TESTS)
+  add_executable(caf-core-test
+                 "${PROJECT_SOURCE_DIR}/libcaf_test/src/caf-test.cpp"
+                 "${PROJECT_SOURCE_DIR}/libcaf_test/caf/test/unit_test.hpp"
+                 "${PROJECT_SOURCE_DIR}/libcaf_test/caf/test/unit_test_impl.hpp"
+                 ${CAF_CORE_TEST_SOURCES}
+                 $<TARGET_OBJECTS:libcaf_core_obj>)
+  target_link_libraries(caf-core-test ${CAF_EXTRA_LDFLAGS})
+  add_test_suites(caf-core-test
+                  "${CMAKE_CURRENT_SOURCE_DIR}"
+                  ${CAF_CORE_TEST_SOURCES})
+endif()
+
+# -- backwards compatibility, TODO: remove -------------------------------------
+
+if(BUILD_SHARED_LIBS)
+  add_library(libcaf_core_shared ALIAS libcaf_core)
+else()
+  add_library(libcaf_core_static ALIAS libcaf_core)
+endif()

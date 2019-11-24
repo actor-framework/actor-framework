@@ -22,6 +22,36 @@ else()
 endif()
 unset(_parent)
 
+# enable tests if not disabled
+if(NOT CAF_NO_UNIT_TESTS)
+  enable_testing()
+  function(add_test_suites executable dir)
+    # enumerate all test suites.
+    set(suites "")
+    foreach(cpp_file ${ARGN})
+      file(STRINGS "${dir}/${cpp_file}" contents)
+      foreach(line ${contents})
+        if ("${line}" MATCHES "SUITE (.+)")
+          string(REGEX REPLACE ".*SUITE (.+)" "\\1" suite ${line})
+          list(APPEND suites "${suite}")
+        endif()
+      endforeach()
+    endforeach()
+    list(REMOVE_DUPLICATES suites)
+    list(LENGTH suites num_suites)
+    message(STATUS "Found ${num_suites} test suite for ${executable}")
+    # creates one CMake test per test suite.
+    macro (make_test suite)
+      string(REPLACE " " "_" test_name ${suite})
+      add_test(NAME ${test_name} COMMAND ${executable} -r300 -n -v5 -s"^${suite}$")
+    endmacro ()
+    list(LENGTH suites num_suites)
+    foreach(suite ${suites})
+      make_test("${suite}")
+    endforeach ()
+  endfunction()
+endif()
+
 # -- make sure we have at least C++17 available --------------------------------
 
 if(NOT CMAKE_CROSSCOMPILING)
@@ -426,51 +456,32 @@ add_custom_command(TARGET uninstall
                    COMMAND "${CMAKE_COMMAND}" -P
                    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
 
-################################################################################
-#                       set inclue paths for subprojects                       #
-################################################################################
+# -- generate build config header ----------------------------------------------
 
-# path to caf core & io headers
-set(LIBCAF_INCLUDE_DIRS
-    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_core"
-    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_io"
-    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_test")
-# enable tests if not disabled
-if(NOT CAF_NO_UNIT_TESTS)
-  enable_testing()
-  macro(add_unit_tests globstr)
-    file(GLOB_RECURSE tests "${globstr}")
-    set(CAF_ALL_UNIT_TESTS ${CAF_ALL_UNIT_TESTS} ${tests})
-  endmacro()
-else()
-  macro(add_unit_tests globstr)
-    # do nothing (unit tests disabled)
-  endmacro()
-endif()
-# all projects need the headers of the core components
-include_directories("${LIBCAF_INCLUDE_DIRS}")
+configure_file("${PROJECT_SOURCE_DIR}/cmake/build_config.hpp.in"
+               "${CMAKE_BINARY_DIR}/caf/detail/build_config.hpp"
+               @ONLY)
 
+# -- set include paths for all subprojects -------------------------------------
+
+include_directories("${CMAKE_BINARY_DIR}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_core"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_io"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_test"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_openssl")
 
 ################################################################################
 #                                 add targets                                  #
 ################################################################################
-
-macro(add_caf_lib name)
-  set(full_name libcaf_${name})
-  add_subdirectory(${full_name})
-  add_unit_tests("${full_name}/test/*.cpp")
-  # add headers to include directories so other subprojects can use them
-  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/${full_name}")
-endmacro()
 
 macro(add_optional_caf_lib name)
   string(TOUPPER ${name} upper_name)
   set(flag_varname CAF_NO_${upper_name})
   if(NOT ${flag_varname}
      AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_${name}/CMakeLists.txt")
-    add_caf_lib(${name})
+    add_subdirectory("libcaf_${name}")
   else()
-    set(${flag_name} yes)
+    set(${flag_varname} yes)
   endif()
 endmacro()
 
@@ -500,7 +511,7 @@ macro(add_optional_caf_binaries name)
 endmacro()
 
 # build core and I/O library
-add_caf_lib(core)
+add_subdirectory(libcaf_core)
 add_optional_caf_lib(io)
 
 # build SSL module if OpenSSL library is available
@@ -572,48 +583,6 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/CAFConfig.cmake"
   "${CMAKE_CURRENT_BINARY_DIR}/CAFConfigVersion.cmake"
   DESTINATION "${INSTALL_CAF_CMAKEDIR}")
 
-################################################################################
-#                               unit tests setup                               #
-################################################################################
-
-if(NOT CAF_NO_UNIT_TESTS)
-  # setup unit test binary
-  add_executable(caf-test
-                 libcaf_test/src/caf-test.cpp
-                 libcaf_test/caf/test/unit_test.hpp
-                 libcaf_test/caf/test/unit_test_impl.hpp
-                 ${CAF_ALL_UNIT_TESTS})
-  target_link_libraries(caf-test
-                        ${CAF_EXTRA_LDFLAGS}
-                        ${CAF_LIBRARIES}
-                        ${PTHREAD_LIBRARIES})
-  add_custom_target(all_unit_tests)
-  add_dependencies(caf-test all_unit_tests)
-  # enumerate all test suites.
-  foreach(test ${CAF_ALL_UNIT_TESTS})
-    file(STRINGS ${test} contents)
-    foreach(line ${contents})
-      if ("${line}" MATCHES "CAF_SUITE (.*)")
-        string(REGEX REPLACE ".* CAF_SUITE (.*)" "\\1" suite ${line})
-        list(APPEND suites ${suite})
-      endif()
-    endforeach()
-  endforeach()
-  list(REMOVE_DUPLICATES suites)
-  # creates one CMake test per test suite.
-  macro (make_test suite)
-    string(REPLACE " " "_" test_name ${suite})
-    set(caf_test ${EXECUTABLE_OUTPUT_PATH}/caf-test)
-    add_test(${test_name} ${caf_test} -r 300 -n -v 5 -s "${suite}" ${ARGN})
-  endmacro ()
-  list(LENGTH suites num_suites)
-  message(STATUS "Found ${num_suites} test suites")
-  foreach(suite ${suites})
-    make_test("${suite}")
-  endforeach ()
-endif()
-
-
 # -- Fetch branch name and SHA if available ------------------------------------
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/release.txt")
@@ -627,7 +596,9 @@ message(STATUS "Set release version for all documentation to ${CAF_RELEASE}.")
 
 # -- Setup for building manual and API documentation ---------------------------
 
-add_subdirectory(doc)
+if(NOT WIN32)
+  add_subdirectory(doc)
+endif()
 
 ################################################################################
 #                     Add additional project files to GUI                      #

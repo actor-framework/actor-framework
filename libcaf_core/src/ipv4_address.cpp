@@ -18,6 +18,8 @@
 
 #include "caf/ipv4_address.hpp"
 
+#include <cstring>
+
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/parser/read_ipv4_address.hpp"
 #include "caf/error.hpp"
@@ -55,6 +57,11 @@ ipv4_address::ipv4_address() {
 
 ipv4_address::ipv4_address(array_type bytes) {
   memcpy(bytes_.data(), bytes.data(), bytes.size());
+}
+// -- comparison ---------------------------------------------------------------
+
+int ipv4_address::compare(ipv4_address other) const noexcept {
+  return memcmp(bytes().data(), other.bytes().data(), num_bytes);
 }
 
 // -- properties ---------------------------------------------------------------

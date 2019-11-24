@@ -38,7 +38,7 @@ namespace caf {
 class CAF_CORE_EXPORT proxy_registry {
 public:
   /// Responsible for creating proxy actors.
-  class backend {
+  class CAF_CORE_EXPORT backend {
   public:
     virtual ~backend();
 

@@ -39,7 +39,13 @@ public:
 
   dynamic_message_data(elements&& data);
 
+  dynamic_message_data(dynamic_message_data&&) = default;
+
   dynamic_message_data(const dynamic_message_data& other);
+
+  dynamic_message_data& operator=(dynamic_message_data&&) = delete;
+
+  dynamic_message_data& operator=(const dynamic_message_data&) = delete;
 
   ~dynamic_message_data() override;
 

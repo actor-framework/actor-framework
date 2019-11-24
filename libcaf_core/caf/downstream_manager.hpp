@@ -49,13 +49,13 @@ public:
   using unique_path_ptr = std::unique_ptr<path_type>;
 
   /// Function object for iterating over all paths.
-  struct path_visitor {
+  struct CAF_CORE_EXPORT path_visitor {
     virtual ~path_visitor();
     virtual void operator()(outbound_path& x) = 0;
   };
 
   /// Predicate object for paths.
-  struct path_predicate {
+  struct CAF_CORE_EXPORT path_predicate {
     virtual ~path_predicate();
     virtual bool operator()(const outbound_path& x) const noexcept = 0;
   };
@@ -66,6 +66,10 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit downstream_manager(stream_manager* parent);
+
+  downstream_manager(const downstream_manager&) = delete;
+
+  downstream_manager& operator=(const downstream_manager&) = delete;
 
   virtual ~downstream_manager();
 

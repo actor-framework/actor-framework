@@ -124,7 +124,7 @@ public:
   // -- nested classes ---------------------------------------------------------
 
   /// Represents pre- and postconditions for receive loops.
-  class receive_cond {
+  class CAF_CORE_EXPORT receive_cond {
   public:
     virtual ~receive_cond();
 
@@ -136,14 +136,14 @@ public:
   };
 
   /// Pseudo receive condition modeling a single receive.
-  class accept_one_cond : public receive_cond {
+  class CAF_CORE_EXPORT accept_one_cond : public receive_cond {
   public:
     ~accept_one_cond() override;
     bool post() override;
   };
 
   /// Implementation helper for `blocking_actor::receive_while`.
-  struct receive_while_helper {
+  struct CAF_CORE_EXPORT receive_while_helper {
     using fun_type = std::function<bool()>;
 
     blocking_actor* self;
@@ -195,7 +195,7 @@ public:
   };
 
   /// Implementation helper for `blocking_actor::do_receive`.
-  struct do_receive_helper {
+  struct CAF_CORE_EXPORT do_receive_helper {
     std::function<void(receive_cond& rc)> cb;
 
     template <class Statement>

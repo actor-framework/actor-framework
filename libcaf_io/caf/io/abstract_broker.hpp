@@ -76,6 +76,14 @@ class middleman;
 class CAF_IO_EXPORT abstract_broker : public scheduled_actor,
                                       public prohibit_top_level_spawn_marker {
 public:
+  abstract_broker(abstract_broker&&) = delete;
+
+  abstract_broker(const abstract_broker&&) = delete;
+
+  abstract_broker& operator=(abstract_broker&&) = delete;
+
+  abstract_broker& operator=(const abstract_broker&&) = delete;
+
   ~abstract_broker() override;
 
   // even brokers need friends

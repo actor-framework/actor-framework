@@ -21,6 +21,7 @@
 #include <unordered_set>
 
 #include "caf/actor_system_config.hpp"
+#include "caf/defaults.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/raw_event_based_actor.hpp"
@@ -33,7 +34,6 @@
 #include "caf/scheduler/coordinator.hpp"
 #include "caf/scheduler/test_coordinator.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
-#include "caf/scheduler/profiled_coordinator.hpp"
 
 namespace caf {
 
@@ -240,17 +240,12 @@ actor_system::actor_system(actor_system_config& cfg)
   using policy::work_stealing;
   using share = coordinator<work_sharing>;
   using steal = coordinator<work_stealing>;
-  using profiled_share = profiled_coordinator<policy::profiled<work_sharing>>;
-  using profiled_steal = profiled_coordinator<policy::profiled<work_stealing>>;
   // set scheduler only if not explicitly loaded by user
   if (!sched) {
     enum sched_conf {
       stealing          = 0x0001,
       sharing           = 0x0002,
       testing           = 0x0003,
-      profiled          = 0x0100,
-      profiled_stealing = 0x0101,
-      profiled_sharing  = 0x0102
     };
     sched_conf sc = stealing;
     namespace sr = defaults::scheduler;
@@ -264,20 +259,12 @@ actor_system::actor_system(actor_system_config& cfg)
                 << " is an unrecognized scheduler pollicy, "
                    "falling back to 'stealing' (i.e. work-stealing)"
                 << std::endl;
-    if (get_or(cfg, "scheduler.enable-profiling", false))
-      sc = static_cast<sched_conf>(sc | profiled);
     switch (sc) {
       default: // any invalid configuration falls back to work stealing
         sched.reset(new steal(*this));
         break;
       case sharing:
         sched.reset(new share(*this));
-        break;
-      case profiled_stealing:
-        sched.reset(new profiled_steal(*this));
-        break;
-      case profiled_sharing:
-        sched.reset(new profiled_share(*this));
         break;
       case testing:
         sched.reset(new test_coordinator(*this));

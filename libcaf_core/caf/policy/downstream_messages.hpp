@@ -35,7 +35,7 @@ public:
   // -- nested types -----------------------------------------------------------
 
   /// Configures a nested DRR queue.
-  class nested {
+  class CAF_CORE_EXPORT nested {
   public:
     // -- member types ---------------------------------------------------------
 

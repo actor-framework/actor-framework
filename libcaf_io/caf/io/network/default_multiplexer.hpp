@@ -84,13 +84,13 @@ using multiplexer_poll_shadow_data = native_socket;
 #endif // CAF_POLL_MULTIPLEXER
 
 /// Defines the bitmask for input (read) socket events.
-CAF_IO_EXPORT extern const event_mask_type input_mask;
+extern const event_mask_type input_mask;
 
 /// Defines the bitmask for output (write) socket events.
-CAF_IO_EXPORT extern const event_mask_type output_mask;
+extern const event_mask_type output_mask;
 
 /// Defines the bitmask for error socket events.
-CAF_IO_EXPORT extern const event_mask_type error_mask;
+extern const event_mask_type error_mask;
 
 class CAF_IO_EXPORT default_multiplexer : public multiplexer {
 public:
@@ -274,11 +274,11 @@ new_tcp_connection(const std::string& host, uint16_t port,
 CAF_IO_EXPORT expected<native_socket>
 new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr);
 
-CAF_IO_EXPORT expected<std::pair<native_socket, ip_endpoint>>
+expected<std::pair<native_socket, ip_endpoint>>
 new_remote_udp_endpoint_impl(const std::string& host, uint16_t port,
                              optional<protocol::network> preferred = none);
 
-CAF_IO_EXPORT expected<std::pair<native_socket, protocol::network>>
+expected<std::pair<native_socket, protocol::network>>
 new_local_udp_endpoint_impl(uint16_t port, const char* addr,
                             bool reuse_addr = false,
                             optional<protocol::network> preferred = none);

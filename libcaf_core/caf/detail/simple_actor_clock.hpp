@@ -247,6 +247,18 @@ public:
     }
   };
 
+  // -- constructors, destructors, and assignment operators --------------------
+
+  simple_actor_clock() = default;
+
+  simple_actor_clock(simple_actor_clock&&) = default;
+
+  simple_actor_clock(const simple_actor_clock&) = delete;
+
+  simple_actor_clock& operator=(simple_actor_clock&&) = default;
+
+  simple_actor_clock& operator=(const simple_actor_clock&) = delete;
+
   // -- properties -------------------------------------------------------------
 
   const schedule_map& schedule() const {

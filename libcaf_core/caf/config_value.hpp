@@ -262,8 +262,6 @@ CAF_DEFAULT_CONFIG_VALUE_ACCESS(double, "real64");
 CAF_DEFAULT_CONFIG_VALUE_ACCESS(atom_value, "atom");
 CAF_DEFAULT_CONFIG_VALUE_ACCESS(timespan, "timespan");
 CAF_DEFAULT_CONFIG_VALUE_ACCESS(uri, "uri");
-CAF_DEFAULT_CONFIG_VALUE_ACCESS(config_value::list, "list");
-CAF_DEFAULT_CONFIG_VALUE_ACCESS(config_value::dictionary, "dictionary");
 
 #undef CAF_DEFAULT_CONFIG_VALUE_ACCESS
 

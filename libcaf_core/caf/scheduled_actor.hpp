@@ -251,6 +251,14 @@ public:
 
   explicit scheduled_actor(actor_config& cfg);
 
+  scheduled_actor(scheduled_actor&&) = delete;
+
+  scheduled_actor(const scheduled_actor&) = delete;
+
+  scheduled_actor& operator=(scheduled_actor&&) = delete;
+
+  scheduled_actor& operator=(const scheduled_actor&) = delete;
+
   ~scheduled_actor() override;
 
   // -- overridden functions of abstract_actor ---------------------------------

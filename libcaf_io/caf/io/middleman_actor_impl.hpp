@@ -48,6 +48,14 @@ public:
 
   middleman_actor_impl(actor_config& cfg, actor default_broker);
 
+  middleman_actor_impl(middleman_actor_impl&&) = delete;
+
+  middleman_actor_impl(const middleman_actor_impl&) = delete;
+
+  middleman_actor_impl& operator=(middleman_actor_impl&&) = delete;
+
+  middleman_actor_impl& operator=(const middleman_actor_impl&) = delete;
+
   void on_exit() override;
 
   const char* name() const override;

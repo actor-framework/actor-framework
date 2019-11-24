@@ -19,9 +19,15 @@
 #include "caf/io/connection_helper.hpp"
 
 #include <chrono>
+#include <string>
 
+#include "caf/actor.hpp"
+#include "caf/after.hpp"
 #include "caf/defaults.hpp"
+#include "caf/event_based_actor.hpp"
 #include "caf/io/basp/instance.hpp"
+#include "caf/io/network/interfaces.hpp"
+#include "caf/stateful_actor.hpp"
 
 namespace caf {
 namespace io {
