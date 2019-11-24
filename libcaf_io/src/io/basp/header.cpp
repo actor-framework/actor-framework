@@ -20,9 +20,7 @@
 
 #include <sstream>
 
-namespace caf {
-namespace io {
-namespace basp {
+namespace caf::io::basp {
 
 const uint8_t header::named_receiver_flag;
 
@@ -109,6 +107,4 @@ bool valid(const header& hdr) {
   }
 }
 
-} // namespace basp
-} // namespace io
-} // namespace caf
+} // namespace caf::io::basp

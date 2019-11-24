@@ -27,8 +27,7 @@
 #include <utility>
 #include <vector>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class T>
 bool operator==(const unordered_flat_map<int, T>& xs,
@@ -42,8 +41,7 @@ bool operator==(const std::vector<std::pair<int, T>>& xs,
   return ys == xs;
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail
 
 using std::make_pair;
 using std::pair;

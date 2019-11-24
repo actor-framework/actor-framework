@@ -33,8 +33,7 @@
 #include <thread>
 #include <type_traits>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 void set_thread_name(const char* name) {
   CAF_IGNORE_UNUSED(name);
@@ -53,5 +52,4 @@ void set_thread_name(const char* name) {
 #endif   // CAF_WINDOWS
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

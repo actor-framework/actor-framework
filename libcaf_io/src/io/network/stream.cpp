@@ -26,9 +26,7 @@
 #include "caf/io/network/default_multiplexer.hpp"
 #include "caf/logger.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 stream::stream(default_multiplexer& backend_ref, native_socket sockfd)
   : event_handler(backend_ref, sockfd),
@@ -61,7 +59,7 @@ void stream::configure_read(receive_policy::config config) {
 
 void stream::write(const void* buf, size_t num_bytes) {
   CAF_LOG_TRACE(CAF_ARG(num_bytes));
-  auto first = reinterpret_cast<const char*>(buf);
+  auto first = reinterpret_cast<const byte*>(buf);
   auto last = first + num_bytes;
   wr_offline_buf_.insert(wr_offline_buf_.end(), first, last);
 }
@@ -214,6 +212,4 @@ void stream::send_fin() {
   shutdown_write(fd_);
 }
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

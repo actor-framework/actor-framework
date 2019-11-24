@@ -21,6 +21,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "caf/byte_buffer.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/connection_handle.hpp"
@@ -36,8 +37,7 @@
 #include "caf/prohibit_top_level_spawn_marker.hpp"
 #include "caf/scheduled_actor.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 class middleman;
 
@@ -153,7 +153,7 @@ public:
   void ack_writes(connection_handle hdl, bool enable);
 
   /// Returns the write buffer for a given connection.
-  std::vector<char>& wr_buf(connection_handle hdl);
+  byte_buffer& wr_buf(connection_handle hdl);
 
   /// Writes `data` into the buffer for a given connection.
   void write(connection_handle hdl, size_t bs, const void* buf);
@@ -165,10 +165,10 @@ public:
   void ack_writes(datagram_handle hdl, bool enable);
 
   /// Returns the write buffer for a given sink.
-  std::vector<char>& wr_buf(datagram_handle hdl);
+  byte_buffer& wr_buf(datagram_handle hdl);
 
   /// Enqueue a buffer to be sent as a datagram via a given endpoint.
-  void enqueue_datagram(datagram_handle, std::vector<char>);
+  void enqueue_datagram(datagram_handle, byte_buffer);
 
   /// Writes `data` into the buffer of a given sink.
   void write(datagram_handle hdl, size_t data_size, const void* data);
@@ -181,7 +181,7 @@ public:
     return system().middleman();
   }
 
-  /// Adds the unitialized `scribe` instance `ptr` to this broker.
+  /// Adds the uninitialized `scribe` instance `ptr` to this broker.
   void add_scribe(scribe_ptr ptr);
 
   /// Creates and assigns a new `scribe` from given native socked `fd`.
@@ -431,8 +431,7 @@ private:
   scribe_map scribes_;
   doorman_map doormen_;
   datagram_servant_map datagram_servants_;
-  std::vector<char> dummy_wr_buf_;
+  byte_buffer dummy_wr_buf_;
 };
 
-} // namespace io
-} // namespace caf
+} // namespace caf::io

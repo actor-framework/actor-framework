@@ -22,8 +22,7 @@
 
 #include "caf/detail/type_traits.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Moves the value from `x` if it is not a pointer (e.g., `optional` or
 /// `expected`), returns `*x` otherwise.
@@ -39,5 +38,4 @@ auto move_if_not_ptr(T& x) -> decltype(std::move(*x)) {
   return std::move(*x);
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

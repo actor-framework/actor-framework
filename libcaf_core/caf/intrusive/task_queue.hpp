@@ -25,8 +25,7 @@
 
 #include "caf/intrusive/forward_iterator.hpp"
 
-namespace caf {
-namespace intrusive {
+namespace caf::intrusive {
 
 /// A singly-linked FIFO queue for storing tasks of varying size. This queue is
 /// used as a base type for concrete task abstractions such as `drr_queue` and
@@ -70,9 +69,7 @@ public:
   // -- constructors, destructors, and assignment operators -------------------
 
   task_queue(policy_type p)
-      : old_last_(nullptr),
-        new_head_(nullptr),
-        policy_(std::move(p)) {
+    : old_last_(nullptr), new_head_(nullptr), policy_(std::move(p)) {
     init();
   }
 
@@ -383,6 +380,4 @@ protected:
   policy_type policy_;
 };
 
-} // namespace intrusive
-} // namespace caf
-
+} // namespace caf::intrusive

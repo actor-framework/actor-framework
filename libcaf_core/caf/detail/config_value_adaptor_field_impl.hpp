@@ -28,8 +28,7 @@
 #include "caf/detail/dispatch_parse_cli.hpp"
 #include "caf/string_view.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class T, size_t Pos>
 class config_value_adaptor_field_impl
@@ -70,5 +69,4 @@ struct select_adaptor_fields<T, detail::int_list<Pos...>> {
   using type = std::tuple<config_value_adaptor_field_impl<T, Pos>...>;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

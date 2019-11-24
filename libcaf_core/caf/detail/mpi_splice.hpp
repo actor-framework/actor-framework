@@ -25,8 +25,7 @@
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class T, class... Lists>
 struct mpi_splice_by_input;
@@ -44,13 +43,15 @@ struct mpi_splice_by_input<T, type_list<>, Lists...> {
 
 // splice two MPIs if they have the same input
 template <class Input, class... Xs, class... Ys, class... Ts, class... Lists>
-struct mpi_splice_by_input<typed_mpi<Input, type_list<Xs...>>, type_list<typed_mpi<Input, type_list<Ys...>>, Ts...>, Lists...>
-  : mpi_splice_by_input<typed_mpi<Input, type_list<Xs..., Ys...>>, Lists...> { };
+struct mpi_splice_by_input<typed_mpi<Input, type_list<Xs...>>,
+                           type_list<typed_mpi<Input, type_list<Ys...>>, Ts...>,
+                           Lists...>
+  : mpi_splice_by_input<typed_mpi<Input, type_list<Xs..., Ys...>>, Lists...> {};
 
 // skip element in list until empty
 template <class MPI, class MPI2, class... Ts, class... Lists>
 struct mpi_splice_by_input<MPI, type_list<MPI2, Ts...>, Lists...>
-  : mpi_splice_by_input<MPI, type_list<Ts...>, Lists...> { };
+  : mpi_splice_by_input<MPI, type_list<Ts...>, Lists...> {};
 
 template <class Result, class CurrentNeedle, class... Lists>
 struct input_mapped;
@@ -62,11 +63,13 @@ struct input_mapped<type_list<Rs...>, none_t, type_list<>, Lists...> {
 
 template <class... Rs, class T, class... Ts, class... Lists>
 struct input_mapped<type_list<Rs...>, none_t, type_list<T, Ts...>, Lists...>
-    : input_mapped<type_list<Rs...>, T, type_list<Ts...>, Lists...> {};
+  : input_mapped<type_list<Rs...>, T, type_list<Ts...>, Lists...> {};
 
 template <class... Rs, class T, class FirstList, class... Lists>
 struct input_mapped<type_list<Rs...>, T, FirstList, Lists...>
-  : input_mapped<type_list<Rs..., typename mpi_splice_by_input<T, Lists...>::type>, none_t, FirstList, Lists...> { };
+  : input_mapped<
+      type_list<Rs..., typename mpi_splice_by_input<T, Lists...>::type>, none_t,
+      FirstList, Lists...> {};
 
 template <template <class...> class Target, class ListA, class ListB>
 struct mpi_splice;
@@ -75,16 +78,10 @@ template <template <class...> class Target, class... Ts, class List>
 struct mpi_splice<Target, type_list<Ts...>, List> {
   using spliced_list =
     typename input_mapped<type_list<>, none_t, type_list<Ts...>, List>::type;
-  using filtered_list =
-    typename tl_filter_not_type<
-      spliced_list,
-      none_t
-    >::type;
+  using filtered_list = typename tl_filter_not_type<spliced_list, none_t>::type;
   static_assert(tl_size<filtered_list>::value > 0,
                 "cannot splice incompatible actor handles");
   using type = typename tl_apply<filtered_list, Target>::type;
 };
 
-} // namespace detail
-} // namespace caf
-
+} // namespace caf::detail

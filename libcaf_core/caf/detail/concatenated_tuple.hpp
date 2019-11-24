@@ -24,8 +24,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/decorated_tuple.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class CAF_CORE_EXPORT concatenated_tuple : public message_data {
 public:
@@ -85,5 +84,4 @@ private:
   size_t size_;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

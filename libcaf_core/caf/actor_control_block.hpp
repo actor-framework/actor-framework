@@ -184,11 +184,13 @@ inline bool operator!=(const abstract_actor* x, const strong_actor_ptr& y) {
 /// @relates actor_control_block
 using weak_actor_ptr = weak_intrusive_ptr<actor_control_block>;
 
-CAF_CORE_EXPORT error load_actor(strong_actor_ptr& storage, execution_unit*,
-                                 actor_id aid, const node_id& nid);
+CAF_CORE_EXPORT error_code<sec>
+load_actor(strong_actor_ptr& storage, execution_unit*, actor_id aid,
+           const node_id& nid);
 
-CAF_CORE_EXPORT error save_actor(strong_actor_ptr& storage, execution_unit*,
-                                 actor_id aid, const node_id& nid);
+CAF_CORE_EXPORT error_code<sec>
+save_actor(strong_actor_ptr& storage, execution_unit*, actor_id aid,
+           const node_id& nid);
 
 template <class Inspector>
 auto context_of(Inspector* f) -> decltype(f->context()) {
@@ -226,10 +228,7 @@ template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, weak_actor_ptr& x) {
   // inspect as strong pointer, then write back to weak pointer on save
   auto tmp = x.lock();
-  auto load = [&]() -> error {
-    x.reset(tmp.get());
-    return none;
-  };
+  auto load = [&] { x.reset(tmp.get()); };
   return f(tmp, meta::load_callback(load));
 }
 

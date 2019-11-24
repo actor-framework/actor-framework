@@ -22,10 +22,8 @@
 
 #include "caf/detail/core_export.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 CAF_CORE_EXPORT std::string get_root_uuid();
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

@@ -30,8 +30,7 @@
 #include "caf/sec.hpp"
 #include "caf/typed_actor.hpp"
 
-namespace caf {
-namespace openssl {
+namespace caf::openssl {
 
 /// @private
 CAF_OPENSSL_EXPORT expected<uint16_t>
@@ -56,5 +55,4 @@ expected<uint16_t> publish(const Handle& whom, uint16_t port,
                  sys.message_types(whom), port, in, reuse);
 }
 
-} // namespace openssl
-} // namespace caf
+} // namespace caf::openssl

@@ -28,8 +28,7 @@
 
 #include "caf/detail/type_traits.hpp"
 
-namespace caf {
-namespace intrusive {
+namespace caf::intrusive {
 
 /// A work queue that internally multiplexes any number of DRR queues.
 template <class Policy, class Q, class... Qs>
@@ -56,8 +55,7 @@ public:
 
   wdrr_fixed_multiplexed_queue(policy_type p0, typename Q::policy_type p1,
                                typename Qs::policy_type... ps)
-      : qs_(std::move(p1), std::move(ps)...),
-        policy_(std::move(p0)) {
+    : qs_(std::move(p1), std::move(ps)...), policy_(std::move(p0)) {
     // nop
   }
 
@@ -250,7 +248,8 @@ private:
   template <size_t I>
   detail::enable_if_t<I != num_queues, task_size_type>
   total_task_size_recursion() const noexcept {
-    return std::get<I>(qs_).total_task_size() + total_task_size_recursion<I + 1>();
+    return std::get<I>(qs_).total_task_size()
+           + total_task_size_recursion<I + 1>();
   }
 
   template <size_t I>
@@ -288,6 +287,4 @@ private:
   Policy policy_;
 };
 
-} // namespace intrusive
-} // namespace caf
-
+} // namespace caf::intrusive

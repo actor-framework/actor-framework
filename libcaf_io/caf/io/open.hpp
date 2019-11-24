@@ -24,8 +24,7 @@
 
 #include "caf/io/middleman.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 /// Tries to open a port for other CAF instances to connect to.
 /// @experimental
@@ -34,6 +33,4 @@ inline expected<uint16_t> open(actor_system& sys, uint16_t port,
   return sys.middleman().open(port, in, reuse);
 }
 
-} // namespace io
-} // namespace caf
-
+} // namespace caf::io

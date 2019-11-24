@@ -27,9 +27,7 @@
 #include "caf/logger.hpp"
 #include "caf/ref_counted.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// An acceptor is responsible for accepting incoming connections.
 class CAF_IO_EXPORT acceptor : public event_handler {
@@ -50,7 +48,7 @@ public:
 
   /// Starts this acceptor, forwarding all incoming connections to
   /// `manager`. The intrusive pointer will be released after the
-  /// acceptor has been closed or an IO error occured.
+  /// acceptor has been closed or an IO error occurred.
   void start(acceptor_manager* mgr);
 
   /// Activates the acceptor.
@@ -80,6 +78,4 @@ private:
   native_socket sock_;
 };
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

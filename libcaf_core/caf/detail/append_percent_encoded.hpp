@@ -22,13 +22,11 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 // Escapes all reserved characters according to RFC 3986 in `x` and
 // adds the encoded string to `str`.
 CAF_CORE_EXPORT void
 append_percent_encoded(std::string& str, string_view x, bool is_path = false);
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

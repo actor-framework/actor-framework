@@ -52,8 +52,7 @@ THREAD_LOCAL caf::node_id* t_last_hop = nullptr;
 
 } // namespace
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
@@ -296,11 +295,10 @@ behavior basp_broker::make_behavior() {
     },
     [=](unpublish_atom, const actor_addr& whom, uint16_t port) -> result<void> {
       CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
-      auto cb = make_callback(
-        [&](const strong_actor_ptr&, uint16_t x) -> error {
-          close(hdl_by_port(x));
-          return none;
-        });
+      auto cb = make_callback([&](const strong_actor_ptr&, uint16_t x) {
+        close(hdl_by_port(x));
+        return error_code<sec>{};
+      });
       if (instance.remove_published_actor(whom, port, &cb) == 0)
         return sec::no_actor_published_at_port;
       return unit;
@@ -340,8 +338,8 @@ proxy_registry* basp_broker::proxy_registry_ptr() {
 
 resumable::resume_result basp_broker::resume(execution_unit* ctx, size_t mt) {
   ctx->proxy_registry_ptr(&instance.proxies());
-  auto guard = detail::make_scope_guard(
-    [=] { ctx->proxy_registry_ptr(nullptr); });
+  auto guard
+    = detail::make_scope_guard([=] { ctx->proxy_registry_ptr(nullptr); });
   return super::resume(ctx, mt);
 }
 
@@ -362,9 +360,8 @@ strong_actor_ptr basp_broker::make_proxy(node_id nid, actor_id aid) {
   // create proxy and add functor that will be called if we
   // receive a basp::down_message
   actor_config cfg;
-  auto res = make_actor<forwarding_actor_proxy, strong_actor_ptr>(aid, nid,
-                                                                  &(system()),
-                                                                  cfg, this);
+  auto res = make_actor<forwarding_actor_proxy, strong_actor_ptr>(
+    aid, nid, &(system()), cfg, this);
   strong_actor_ptr selfptr{ctrl()};
   res->get()->attach_functor([=](const error& rsn) {
     mm->backend().post([=] {
@@ -584,8 +581,7 @@ void basp_broker::connection_cleanup(connection_handle hdl) {
   }
 }
 
-basp::instance::callee::buffer_type&
-basp_broker::get_buffer(connection_handle hdl) {
+byte_buffer& basp_broker::get_buffer(connection_handle hdl) {
   return wr_buf(hdl);
 }
 
@@ -605,5 +601,4 @@ strong_actor_ptr basp_broker::this_actor() {
   return ctrl();
 }
 
-} // namespace io
-} // namespace caf
+} // namespace caf::io

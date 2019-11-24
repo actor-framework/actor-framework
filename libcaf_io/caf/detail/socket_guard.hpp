@@ -21,8 +21,7 @@
 #include "caf/detail/io_export.hpp"
 #include "caf/io/network/native_socket.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class CAF_IO_EXPORT socket_guard {
 public:
@@ -38,5 +37,4 @@ private:
   io::network::native_socket fd_;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

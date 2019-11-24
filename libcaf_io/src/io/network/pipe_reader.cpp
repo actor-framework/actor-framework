@@ -30,9 +30,7 @@
 #  include <unistd.h>
 #endif
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 pipe_reader::pipe_reader(default_multiplexer& dm)
   : event_handler(dm, invalid_native_socket) {
@@ -51,8 +49,8 @@ resumable* pipe_reader::try_read_next() {
   std::intptr_t ptrval;
   // on windows, we actually have sockets, otherwise we have file handles
 #ifdef CAF_WINDOWS
-  auto res = recv(fd(), reinterpret_cast<socket_recv_ptr>(&ptrval),
-                  sizeof(ptrval), 0);
+  auto res
+    = recv(fd(), reinterpret_cast<socket_recv_ptr>(&ptrval), sizeof(ptrval), 0);
 #else
   auto res = read(fd(), &ptrval, sizeof(ptrval));
 #endif
@@ -75,6 +73,4 @@ void pipe_reader::init(native_socket sock_fd) {
   fd_ = sock_fd;
 }
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

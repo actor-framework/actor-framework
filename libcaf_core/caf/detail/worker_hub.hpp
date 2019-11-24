@@ -20,8 +20,7 @@
 
 #include "caf/detail/abstract_worker_hub.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class Worker>
 class worker_hub : public abstract_worker_hub {
@@ -60,5 +59,4 @@ public:
   }
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

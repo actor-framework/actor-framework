@@ -23,8 +23,7 @@
 
 #include "caf/detail/core_export.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 CAF_CORE_EXPORT void prettify_type_name(std::string& class_name);
 
@@ -33,5 +32,4 @@ prettify_type_name(std::string& class_name, const char* input_class_name);
 
 CAF_CORE_EXPORT std::string pretty_type_name(const std::type_info& x);
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

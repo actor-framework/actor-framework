@@ -34,9 +34,7 @@ CAF_PUSH_UNUSED_LABEL_WARNING
 
 #include "caf/detail/parser/fsm.hpp"
 
-namespace caf {
-namespace detail {
-namespace parser {
+namespace caf::detail::parser {
 
 struct read_ipv4_octet_consumer {
   std::array<uint8_t, 4> bytes;
@@ -51,22 +49,17 @@ template <class State, class Consumer>
 void read_ipv4_octet(State& ps, Consumer& consumer) {
   uint8_t res = 0;
   // Reads the a decimal place.
-  auto rd_decimal = [&](char c) {
-    return add_ascii<10>(res, c);
-  };
+  auto rd_decimal = [&](char c) { return add_ascii<10>(res, c); };
   // Computes the result on success.
   auto g = caf::detail::make_scope_guard([&] {
     if (ps.code <= pec::trailing_character)
       consumer.value(res);
   });
   start();
-  state(init) {
-    transition(read, decimal_chars, rd_decimal(ch), pec::integer_overflow)
-  }
-  term_state(read) {
-    transition(read, decimal_chars, rd_decimal(ch), pec::integer_overflow)
-  }
-  fin();
+  state(init){transition(read, decimal_chars, rd_decimal(ch),
+                         pec::integer_overflow)} term_state(read){
+    transition(read, decimal_chars, rd_decimal(ch),
+               pec::integer_overflow)} fin();
 }
 
 /// Reads a number, i.e., on success produces either an `int64_t` or a
@@ -99,9 +92,7 @@ void read_ipv4_address(State& ps, Consumer&& consumer) {
   // clang-format on
 }
 
-} // namespace parser
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail::parser
 
 #include "caf/detail/parser/fsm_undef.hpp"
 

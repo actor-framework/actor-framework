@@ -26,8 +26,7 @@
 #include "caf/typed_actor.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 /// Default implementation of the `middleman_actor` interface.
 class CAF_IO_EXPORT middleman_actor_impl : public middleman_actor::base {
@@ -100,5 +99,4 @@ private:
   std::map<endpoint, std::vector<response_promise>> pending_;
 };
 
-} // namespace io
-} // namespace caf
+} // namespace caf::io

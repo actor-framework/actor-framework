@@ -20,8 +20,7 @@
 
 #include "caf/config.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 #ifdef CAF_MSVC // we assume Windows is always little endian
 
@@ -66,6 +65,4 @@ inline T from_network_order(T value) {
   return to_network_order(value);
 }
 
-} // namespace detail
-} // namespace caf
-
+} // namespace caf::detail

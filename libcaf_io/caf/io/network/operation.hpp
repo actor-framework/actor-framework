@@ -20,9 +20,7 @@
 
 #include <string>
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// Identifies network IO operations, i.e., read or write.
 enum class operation {
@@ -31,6 +29,4 @@ enum class operation {
   propagate_error,
 };
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

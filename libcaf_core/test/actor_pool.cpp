@@ -182,43 +182,4 @@ CAF_TEST(random_actor_pool) {
   self->send_exit(pool, exit_reason::user_shutdown);
 }
 
-CAF_TEST(split_join_actor_pool) {
-  auto spawn_split_worker = [&] {
-    return system.spawn<lazy_init>([]() -> behavior {
-      return {
-        [](size_t pos, const std::vector<int>& xs) {
-          return xs[pos];
-        }
-      };
-    });
-  };
-  auto split_fun = [](std::vector<std::pair<actor, message>>& xs, message& y) {
-    for (size_t i = 0; i < xs.size(); ++i) {
-      xs[i].second = make_message(i) + y;
-    }
-  };
-  auto join_fun = [](int& res, message& msg) {
-    msg.apply([&](int x) {
-      res += x;
-    });
-  };
-  scoped_actor self{system};
-  CAF_MESSAGE("create actor pool");
-  auto pool = actor_pool::make(&context, 5, spawn_split_worker,
-                            actor_pool::split_join<int>(join_fun, split_fun));
-  self->request(pool, infinite, std::vector<int>{1, 2, 3, 4, 5}).receive(
-    [&](int res) {
-      CAF_CHECK_EQUAL(res, 15);
-    },
-    handle_err
-  );
-  self->request(pool, infinite, std::vector<int>{6, 7, 8, 9, 10}).receive(
-    [&](int res) {
-      CAF_CHECK_EQUAL(res, 40);
-    },
-    handle_err
-  );
-  self->send_exit(pool, exit_reason::user_shutdown);
-}
-
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -27,8 +27,7 @@
 #include "caf/policy/unprofiled.hpp"
 #include "caf/resumable.hpp"
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 /// Implements scheduling of actors via work sharing (central job queue).
 /// @extends scheduler_policy
@@ -119,5 +118,4 @@ public:
   }
 };
 
-} // namespace policy
-} // namespace caf
+} // namespace caf::policy

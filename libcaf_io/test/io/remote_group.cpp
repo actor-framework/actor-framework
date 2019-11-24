@@ -87,7 +87,7 @@ CAF_TEST(connecting to remote group) {
   CAF_MESSAGE("call remote_group on earth");
   loop_after_next_enqueue(earth);
   auto grp = unbox(earth.mm.remote_group(group_name, server, port));
-  CAF_CHECK(grp);
+  CAF_REQUIRE(grp != nullptr);
   CAF_CHECK_EQUAL(grp->get()->identifier(), group_name);
 }
 

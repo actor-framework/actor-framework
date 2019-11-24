@@ -32,7 +32,7 @@ namespace caf {
 
 namespace detail {
 
-// Catches `std::string`, `std::string_view` and all classes mimicing those,
+// Catches `std::string`, `std::string_view` and all classes mimicking those,
 // but not `std::vector<char>` or other buffers.
 template <class T>
 struct is_string_like {
@@ -198,7 +198,7 @@ public:
 
   void assign(const_pointer data, size_type len);
 
-  // -- algortihms -------------------------------------------------------------
+  // -- algorithms -------------------------------------------------------------
 
   size_type copy(pointer dest, size_type n, size_type pos = 0) const;
 

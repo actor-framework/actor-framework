@@ -100,7 +100,7 @@ config_option make_config_option(T& storage, string_view category,
           std::addressof(storage)};
 }
 
-// -- backward compatbility, do not use for new code ! -------------------------
+// -- backward compatibility, do not use for new code ! ------------------------
 
 // Inverts the value when writing to `storage`.
 CAF_CORE_EXPORT config_option

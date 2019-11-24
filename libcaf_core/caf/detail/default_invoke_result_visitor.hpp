@@ -22,8 +22,7 @@
 
 #include "caf/detail/invoke_result_visitor.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class Self>
 class default_invoke_result_visitor : public invoke_result_visitor {
@@ -87,5 +86,4 @@ private:
   Self* self_;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

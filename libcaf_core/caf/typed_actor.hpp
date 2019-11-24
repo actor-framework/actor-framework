@@ -26,7 +26,6 @@
 #include "caf/actor_system.hpp"
 #include "caf/composed_type.hpp"
 #include "caf/decorator/sequencer.hpp"
-#include "caf/decorator/splitter.hpp"
 #include "caf/detail/mpi_splice.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/make_actor.hpp"
@@ -314,21 +313,6 @@ operator*(typed_actor<Xs...> f, typed_actor<Ys...> g) {
     sys.next_actor_id(), sys.node(), &sys,
     actor_cast<strong_actor_ptr>(std::move(f)),
     actor_cast<strong_actor_ptr>(std::move(g)), std::move(mts));
-}
-
-template <class... Xs, class... Ts>
-typename detail::mpi_splice<typed_actor, detail::type_list<Xs...>,
-                            typename Ts::signatures...>::type
-splice(const typed_actor<Xs...>& x, const Ts&... xs) {
-  using result =
-    typename detail::mpi_splice<typed_actor, detail::type_list<Xs...>,
-                                typename Ts::signatures...>::type;
-  std::vector<strong_actor_ptr> tmp{actor_cast<strong_actor_ptr>(x),
-                                    actor_cast<strong_actor_ptr>(xs)...};
-  auto& sys = x->home_system();
-  auto mts = sys.message_types(detail::type_list<result>{});
-  return make_actor<decorator::splitter, result>(
-    sys.next_actor_id(), sys.node(), &sys, std::move(tmp), std::move(mts));
 }
 
 } // namespace caf

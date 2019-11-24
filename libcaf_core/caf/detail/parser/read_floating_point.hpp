@@ -35,9 +35,7 @@ CAF_PUSH_UNUSED_LABEL_WARNING
 
 #include "caf/detail/parser/fsm.hpp"
 
-namespace caf {
-namespace detail {
-namespace parser {
+namespace caf::detail::parser {
 
 /// Reads a floating point number (`float` or `double`).
 /// @param ps The parser state.
@@ -88,8 +86,8 @@ void read_floating_point(State& ps, Consumer&& consumer,
       }
       // 3) Scale result.
       // Pre-computed powers of 10 for the scaling loop.
-      static double powerTable[] = {1e1,  1e2,  1e4,   1e8,  1e16,
-                                    1e32, 1e64, 1e128, 1e256};
+      static double powerTable[]
+        = {1e1, 1e2, 1e4, 1e8, 1e16, 1e32, 1e64, 1e128, 1e256};
       auto i = 0;
       if (exp < 0) {
         for (auto n = -exp; n != 0; n >>= 1, ++i)
@@ -191,9 +189,7 @@ void read_floating_point(State& ps, Consumer&& consumer) {
   return read_floating_point(ps, consumer, optional<value_type>{});
 }
 
-} // namespace parser
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail::parser
 
 #include "caf/detail/parser/fsm_undef.hpp"
 

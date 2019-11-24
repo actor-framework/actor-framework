@@ -26,8 +26,7 @@
 #include "caf/stream_slot.hpp"
 #include "caf/unit.hpp"
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 /// Configures a dynamic WDRR queue for holding downstream messages.
 class CAF_CORE_EXPORT downstream_messages {
@@ -117,5 +116,4 @@ public:
   }
 };
 
-} // namespace policy
-} // namespace caf
+} // namespace caf::policy

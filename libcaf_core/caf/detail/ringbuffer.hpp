@@ -25,8 +25,7 @@
 
 #include "caf/config.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 // A ringbuffer designed for a single consumer and any number of producers that
 // can hold a maximum of `Size - 1` elements.
@@ -151,5 +150,4 @@ private:
   std::array<T, Size> buf_;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

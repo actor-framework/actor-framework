@@ -18,8 +18,7 @@
 
 #pragma once
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <template <class, typename> class Tpl, typename Arg1>
 struct tbind {
@@ -29,6 +28,4 @@ struct tbind {
   };
 };
 
-} // namespace detail
-} // namespace caf
-
+} // namespace caf::detail

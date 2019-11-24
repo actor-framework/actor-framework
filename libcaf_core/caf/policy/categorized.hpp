@@ -29,8 +29,7 @@
 #include "caf/policy/urgent_messages.hpp"
 #include "caf/unit.hpp"
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 /// Configures a cached WDRR fixed multiplexed queue for dispatching to four
 /// nested queue (one for each message category type).
@@ -78,5 +77,4 @@ public:
   }
 };
 
-} // namespace policy
-} // namespace caf
+} // namespace caf::policy

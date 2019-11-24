@@ -17,7 +17,7 @@
  ******************************************************************************/
 
 // The rationale of this header is to provide a serialization API
-// that is compatbile to boost.serialization. In particular, the
+// that is compatible to boost.serialization. In particular, the
 // design goals are:
 // - allow users to integrate existing boost.serialization-based code easily
 // - allow to switch out this header with the actual boost header in boost.actor
@@ -32,19 +32,14 @@
 
 #pragma once
 
-#include <utility>
 #include <type_traits>
+#include <utility>
 
 #include "caf/detail/type_traits.hpp"
 
-namespace boost {
-namespace serialization {
+namespace boost::serialization {} // namespace boost::serialization
 
-} // namespace serialization
-} // namespace boost
-
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 // Calls `serialize(...)` with `using namespace boost::serialization`
 // to enable both ADL and picking up existing boost code.
@@ -60,11 +55,8 @@ auto delegate_serialize(Processor& proc, U& x, const unsigned int y = 0)
 // ignores anyway.
 
 template <class Processor, class U>
-auto delegate_serialize(Processor& proc, U& x)
-  -> decltype(serialize(proc, x)) {
+auto delegate_serialize(Processor& proc, U& x) -> decltype(serialize(proc, x)) {
   serialize(proc, x);
 }
 
-} // namespace detail
-} // namespace caf
-
+} // namespace caf::detail

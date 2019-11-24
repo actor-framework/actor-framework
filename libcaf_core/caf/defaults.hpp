@@ -30,8 +30,7 @@
 
 // -- hard-coded default values for various CAF options ------------------------
 
-namespace caf {
-namespace defaults {
+namespace caf::defaults {
 
 namespace stream {
 
@@ -87,5 +86,4 @@ extern CAF_CORE_EXPORT const size_t workers;
 
 } // namespace middleman
 
-} // namespace defaults
-} // namespace caf
+} // namespace caf::defaults

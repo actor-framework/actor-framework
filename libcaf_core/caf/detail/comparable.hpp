@@ -18,8 +18,7 @@
 
 #pragma once
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Barton–Nackman trick implementation.
 /// `Subclass` must provide a compare member function that compares
@@ -105,6 +104,4 @@ class comparable<Subclass, Subclass> {
   }
 };
 
-} // namespace details
-} // namespace caf
-
+} // namespace caf::detail

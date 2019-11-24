@@ -204,7 +204,7 @@ CAF_TEST(getter and setter access) {
   test_foo_field(foo_field);
 }
 
-CAF_TEST(oject access from dictionary - foobar) {
+CAF_TEST(object access from dictionary - foobar) {
   settings x;
   put(x, "my-value.bar", "hello");
   CAF_MESSAGE("without foo member");
@@ -226,7 +226,7 @@ CAF_TEST(oject access from dictionary - foobar) {
   }
 }
 
-CAF_TEST(oject access from dictionary - foobar_foobar) {
+CAF_TEST(object access from dictionary - foobar_foobar) {
   settings x;
   put(x, "my-value.x.foo", 1);
   put(x, "my-value.x.bar", "hello");

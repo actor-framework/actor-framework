@@ -18,9 +18,10 @@
 
 #pragma once
 
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
+#include "caf/byte_buffer.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/datagram_manager.hpp"
@@ -32,21 +33,17 @@
 #include "caf/raise_error.hpp"
 #include "caf/ref_counted.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 class CAF_IO_EXPORT datagram_handler : public event_handler {
 public:
   /// A smart pointer to a datagram manager.
   using manager_ptr = intrusive_ptr<datagram_manager>;
 
-  /// A buffer class providing a compatible interface to `std::vector`.
-  using write_buffer_type = std::vector<char>;
   using read_buffer_type = network::receive_buffer;
 
   /// A job for sending a datagram consisting of the sender and a buffer.
-  using job_type = std::pair<datagram_handle, write_buffer_type>;
+  using job_type = std::pair<datagram_handle, byte_buffer>;
 
   datagram_handler(default_multiplexer& backend_ref, native_socket sockfd);
 
@@ -60,10 +57,10 @@ public:
   /// @warning Not thread safe.
   void write(datagram_handle hdl, const void* buf, size_t num_bytes);
 
-  /// Returns the write buffer of this enpoint.
+  /// Returns the write buffer of this endpoint.
   /// @warning Must not be modified outside the IO multiplexers event loop
   ///          once the stream has been started.
-  write_buffer_type& wr_buf(datagram_handle hdl) {
+  byte_buffer& wr_buf(datagram_handle hdl) {
     wr_offline_buf_.emplace_back();
     wr_offline_buf_.back().first = hdl;
     return wr_offline_buf_.back().second;
@@ -72,7 +69,7 @@ public:
   /// Enqueues a buffer to be sent as a datagram.
   /// @warning Must not be modified outside the IO multiplexers event loop
   ///          once the stream has been started.
-  void enqueue_datagram(datagram_handle hdl, std::vector<char> buf) {
+  void enqueue_datagram(datagram_handle hdl, byte_buffer buf) {
     wr_offline_buf_.emplace_back(hdl, move(buf));
   }
 
@@ -88,6 +85,9 @@ public:
   /// @warning Must not be called outside the IO multiplexers event loop
   ///          once the stream has been started.
   void flush(const manager_ptr& mgr);
+
+  /// Return the remote address for a given `hdl`.
+  std::string addr(datagram_handle hdl) const;
 
   void removed_from_loop(operation op) override;
 
@@ -131,7 +131,7 @@ protected:
           CAF_RAISE_ERROR("got write event for undefined endpoint");
         auto& id = itr->first;
         auto& ep = itr->second;
-        std::vector<char> buf;
+        byte_buffer buf;
         std::swap(buf, wr_buf_.second);
         auto size_as_int = static_cast<int>(buf.size());
         if (size_as_int > send_buffer_size_) {
@@ -158,7 +158,7 @@ private:
   bool handle_read_result(bool read_result);
 
   void handle_write_result(bool write_result, datagram_handle id,
-                           std::vector<char>& buf, size_t wb);
+                           byte_buffer& buf, size_t wb);
 
   void handle_error();
 
@@ -180,6 +180,4 @@ private:
   manager_ptr writer_;
 };
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

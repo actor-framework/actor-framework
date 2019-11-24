@@ -27,6 +27,7 @@
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/inspect.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/meta/annotation.hpp"
@@ -40,8 +41,7 @@
 #include "caf/timespan.hpp"
 #include "caf/timestamp.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class CAF_CORE_EXPORT stringification_inspector {
 public:
@@ -297,5 +297,4 @@ private:
   std::string& result_;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

@@ -22,8 +22,7 @@
 #include "caf/intrusive_cow_ptr.hpp"
 #include "caf/make_counted.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 dynamic_message_data::dynamic_message_data() : type_token_(0xFFFFFFFF) {
   // nop
@@ -61,6 +60,12 @@ error dynamic_message_data::load(size_t pos, deserializer& source) {
   return elements_[pos]->load(source);
 }
 
+error_code<sec>
+dynamic_message_data::load(size_t pos, binary_deserializer& source) {
+  CAF_ASSERT(pos < size());
+  return elements_[pos]->load(source);
+}
+
 size_t dynamic_message_data::size() const noexcept {
   return elements_.size();
 }
@@ -94,6 +99,12 @@ error dynamic_message_data::save(size_t pos, serializer& sink) const {
   return elements_[pos]->save(sink);
 }
 
+error_code<sec>
+dynamic_message_data::save(size_t pos, binary_serializer& sink) const {
+  CAF_ASSERT(pos < size());
+  return elements_[pos]->save(sink);
+}
+
 void dynamic_message_data::clear() {
   elements_.clear();
   type_token_ = 0xFFFFFFFF;
@@ -120,5 +131,4 @@ dynamic_message_data* intrusive_cow_ptr_unshare(dynamic_message_data*& ptr) {
   return default_intrusive_cow_ptr_unshare(ptr);
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

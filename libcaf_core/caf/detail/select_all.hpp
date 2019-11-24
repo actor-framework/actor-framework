@@ -18,8 +18,7 @@
 
 #pragma once
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 struct select_all {
   template <class T, class U>
@@ -28,6 +27,4 @@ struct select_all {
   }
 };
 
-} // namespace detail
-} // namespace caf
-
+} // namespace caf::detail

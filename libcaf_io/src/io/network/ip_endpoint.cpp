@@ -46,9 +46,7 @@ using sa_family_t = short;
 using caf::detail::fnv_hash;
 using caf::detail::fnv_hash_append;
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 struct ip_endpoint::impl {
   sockaddr_storage addr;
@@ -188,8 +186,8 @@ uint16_t port(const ip_endpoint& ep) {
     return 0;
   switch (ep.caddress()->sa_family) {
     case AF_INET:
-      port = ntohs(
-        reinterpret_cast<const sockaddr_in*>(ep.caddress())->sin_port);
+      port
+        = ntohs(reinterpret_cast<const sockaddr_in*>(ep.caddress())->sin_port);
       break;
     case AF_INET6:
       port = ntohs(
@@ -208,8 +206,8 @@ uint32_t family(const ip_endpoint& ep) {
   return ep.caddress()->sa_family;
 }
 
-error load_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h, uint16_t& p,
-                    size_t& l) {
+error_code<sec> load_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h,
+                              uint16_t& p, size_t& l) {
   ep.clear();
   if (l > 0) {
     *ep.length() = l;
@@ -235,8 +233,8 @@ error load_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h, uint16_t& p,
   return none;
 }
 
-error save_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h, uint16_t& p,
-                    size_t& l) {
+error_code<sec> save_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h,
+                              uint16_t& p, size_t& l) {
   if (*ep.length() > 0) {
     f = family(ep);
     h = host(ep);
@@ -251,6 +249,4 @@ error save_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h, uint16_t& p,
   return none;
 }
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

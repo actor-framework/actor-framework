@@ -16,13 +16,14 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE uri
+
+#include "caf/uri.hpp"
+
 #include "caf/test/dsl.hpp"
 
+#include "caf/byte_buffer.hpp"
 #include "caf/ipv4_address.hpp"
-#include "caf/uri.hpp"
 #include "caf/uri_builder.hpp"
 
 using namespace caf;
@@ -115,10 +116,6 @@ struct uri_str_builder {
 };
 
 struct fixture {
-  // -- member types -----------------------------------------------------------
-
-  using buffer = std::vector<char>;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   fixture() {
@@ -133,21 +130,19 @@ struct fixture {
 
   // -- utility functions ------------------------------------------------------
 
-  buffer serialize(uri x) {
-    buffer buf;
-    binary_serializer dst{nullptr, buf};
-    auto err = inspect(dst, x);
-    if (err)
+  byte_buffer serialize(uri x) {
+    byte_buffer buf;
+    binary_serializer sink{nullptr, buf};
+    if (auto err = sink(x))
       CAF_FAIL("unable to serialize " << x << ": " << to_string(err));
     return buf;
   }
 
-  uri deserialize(buffer buf) {
+  uri deserialize(byte_buffer buf) {
     uri result;
-    binary_deserializer src{nullptr, buf};
-    auto err = inspect(src, result);
-    if (err)
-      CAF_FAIL("unable to deserialize from buffer: " << to_string(err));
+    binary_deserializer source{nullptr, buf};
+    if (auto err = source(result))
+      CAF_FAIL("unable to deserialize from byte_buffer: " << to_string(err));
     return result;
   }
 };

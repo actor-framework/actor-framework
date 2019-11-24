@@ -42,8 +42,7 @@
 #include "caf/send.hpp"
 #include "caf/system_messages.hpp"
 
-namespace caf {
-namespace scheduler {
+namespace caf::scheduler {
 
 /******************************************************************************
  *                     utility and implementation details                     *
@@ -312,5 +311,4 @@ void abstract_coordinator::cleanup_and_release(resumable* ptr) {
   intrusive_ptr_release(ptr);
 }
 
-} // namespace scheduler
-} // namespace caf
+} // namespace caf::scheduler

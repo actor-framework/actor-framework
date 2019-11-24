@@ -21,8 +21,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 /// This class is intended to be used as a base class for actual polices.
 /// It provides a default empty implementation for the customization points.
@@ -67,5 +66,4 @@ protected:
   }
 };
 
-} // namespace policy
-} // namespace caf
+} // namespace caf::policy

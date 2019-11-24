@@ -24,9 +24,7 @@
 #include "caf/io/network/operation.hpp"
 #include "caf/io/receive_policy.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// A socket I/O event handler.
 class CAF_IO_EXPORT event_handler {
@@ -119,6 +117,4 @@ protected:
   default_multiplexer& backend_;
 };
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

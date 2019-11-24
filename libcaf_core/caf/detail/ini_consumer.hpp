@@ -26,8 +26,7 @@
 #include "caf/dictionary.hpp"
 #include "caf/settings.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class ini_consumer;
 class ini_list_consumer;
@@ -212,5 +211,4 @@ private:
   std::vector<error> warnings_;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

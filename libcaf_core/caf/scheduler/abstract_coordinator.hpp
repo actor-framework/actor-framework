@@ -33,8 +33,7 @@
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
 
-namespace caf {
-namespace scheduler {
+namespace caf::scheduler {
 
 /// A coordinator creates the workers, manages delayed sends and
 /// the central printer instance for {@link aout}. It also forwards
@@ -107,5 +106,4 @@ protected:
   actor_system& system_;
 };
 
-} // namespace scheduler
-} // namespace caf
+} // namespace caf::scheduler

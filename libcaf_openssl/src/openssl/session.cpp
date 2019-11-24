@@ -59,8 +59,7 @@ CAF_POP_WARNINGS
 
 #endif // CAF_LINUX
 
-namespace caf {
-namespace openssl {
+namespace caf::openssl {
 
 namespace {
 
@@ -157,8 +156,8 @@ rw_state session::do_some(int (*f)(SSL*, void*, int), size_t& result, void* buf,
   return handle_ssl_result(ret) ? rw_state::success : rw_state::failure;
 }
 
-rw_state session::read_some(size_t& result, native_socket, void* buf,
-                            size_t len) {
+rw_state
+session::read_some(size_t& result, native_socket, void* buf, size_t len) {
   CAF_LOG_TRACE(CAF_ARG(len));
   return do_some(SSL_read, result, buf, len, "read_some");
 }
@@ -231,10 +230,10 @@ SSL_CTX* session::create_ssl_context() {
                                        SSL_FILETYPE_PEM)
              != 1)
       CAF_RAISE_ERROR("cannot load private key");
-    auto cafile = (cfg.openssl_cafile.size() > 0 ? cfg.openssl_cafile.c_str()
-                                                 : nullptr);
-    auto capath = (cfg.openssl_capath.size() > 0 ? cfg.openssl_capath.c_str()
-                                                 : nullptr);
+    auto cafile
+      = (cfg.openssl_cafile.size() > 0 ? cfg.openssl_cafile.c_str() : nullptr);
+    auto capath
+      = (cfg.openssl_capath.size() > 0 ? cfg.openssl_capath.c_str() : nullptr);
     if (cafile || capath) {
       if (SSL_CTX_load_verify_locations(ctx, cafile, capath) != 1)
         CAF_RAISE_ERROR("cannot load trusted CA certificates");
@@ -298,8 +297,8 @@ bool session::handle_ssl_result(int ret) {
   }
 }
 
-session_ptr make_session(actor_system& sys, native_socket fd,
-                         bool from_accepted_socket) {
+session_ptr
+make_session(actor_system& sys, native_socket fd, bool from_accepted_socket) {
   session_ptr ptr{new session(sys)};
   if (!ptr->init())
     return nullptr;
@@ -313,5 +312,4 @@ session_ptr make_session(actor_system& sys, native_socket fd,
   return ptr;
 }
 
-} // namespace openssl
-} // namespace caf
+} // namespace caf::openssl

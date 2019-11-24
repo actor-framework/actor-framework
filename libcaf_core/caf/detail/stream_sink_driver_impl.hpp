@@ -24,8 +24,7 @@
 #include "caf/stream_sink_driver.hpp"
 #include "caf/stream_sink_trait.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Identifies an unbound sequence of messages.
 template <class Input, class Process, class Finalize>
@@ -43,8 +42,7 @@ public:
 
   template <class Init>
   stream_sink_driver_impl(Init init, Process f, Finalize fin)
-      : process_(std::move(f)),
-        fin_(std::move(fin)) {
+    : process_(std::move(f)), fin_(std::move(fin)) {
     init(state_);
   }
 
@@ -62,6 +60,4 @@ private:
   state_type state_;
 };
 
-} // namespace detail
-} // namespace caf
-
+} // namespace caf::detail

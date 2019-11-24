@@ -21,8 +21,7 @@
 #include "caf/detail/io_export.hpp"
 #include "caf/fwd.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 struct connection_helper_state {
   static const char* name;
@@ -31,5 +30,4 @@ struct connection_helper_state {
 CAF_IO_EXPORT behavior
 connection_helper(stateful_actor<connection_helper_state>* self, actor b);
 
-} // namespace io
-} // namespace caf
+} // namespace caf::io

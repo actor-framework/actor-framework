@@ -25,9 +25,7 @@
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/operation.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// An event handler for the internal event pipe.
 class CAF_IO_EXPORT pipe_reader : public event_handler {
@@ -45,6 +43,4 @@ public:
   resumable* try_read_next();
 };
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

@@ -31,8 +31,7 @@
 #include "caf/ref_counted.hpp"
 #include "caf/type_erased_tuple.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class CAF_CORE_EXPORT message_data : public ref_counted,
                                      public type_erased_tuple {
@@ -59,5 +58,4 @@ public:
   bool shared() const noexcept override;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

@@ -39,8 +39,7 @@
 #include "caf/send.hpp"
 #include "caf/typed_actor_view_base.hpp"
 
-namespace caf {
-namespace mixin {
+namespace caf::mixin {
 
 /// A `sender` is an actor that supports `self->send(...)`.
 template <class Base, class Subtype>
@@ -78,8 +77,8 @@ public:
   /// Sends `{xs...}` as an asynchronous message to `dest` with priority `mp`.
   template <message_priority P = message_priority::normal, class Dest,
             class... Ts>
-  detail::enable_if_t<!std::is_same<group, Dest>::value> send(const Dest& dest,
-                                                              Ts&&... xs) {
+  detail::enable_if_t<!std::is_same<group, Dest>::value>
+  send(const Dest& dest, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
     type_check(dest, args_token);
@@ -212,9 +211,9 @@ private:
   }
 
   template <class Dest, class... Ts>
-  void scheduled_anon_send_impl(message_id mid, const Dest& dest,
-                                actor_clock& clock,
-                                actor_clock::time_point timeout, Ts&&... xs) {
+  void
+  scheduled_anon_send_impl(message_id mid, const Dest& dest, actor_clock& clock,
+                           actor_clock::time_point timeout, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "no message to send");
     detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
     type_check(dest, args_token);
@@ -251,5 +250,4 @@ private:
   }
 };
 
-} // namespace mixin
-} // namespace caf
+} // namespace caf::mixin

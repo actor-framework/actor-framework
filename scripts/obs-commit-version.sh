@@ -119,6 +119,6 @@ sed -i.bk -E \
   "$packageName.spec" \
   "$packageName.dsc"
 
-echo "[obs-commit-version] Comitting: $packageVersion, $1"
+echo "[obs-commit-version] Committing: $packageVersion, $1"
 osc commit -m "Automatic commit: $packageVersion, $1"
 

@@ -25,8 +25,7 @@
 #include "caf/raise_error.hpp"
 #include "caf/resumable.hpp"
 
-namespace caf {
-namespace scheduler {
+namespace caf::scheduler {
 
 namespace {
 
@@ -78,9 +77,8 @@ void test_coordinator::start() {
   dummy_worker worker{this};
   actor_config cfg{&worker};
   auto& sys = system();
-  utility_actors_[printer_id] = make_actor<dummy_printer,
-                                           actor>(sys.next_actor_id(),
-                                                  sys.node(), &sys, cfg);
+  utility_actors_[printer_id] = make_actor<dummy_printer, actor>(
+    sys.next_actor_id(), sys.node(), &sys, cfg);
 }
 
 void test_coordinator::stop() {
@@ -158,5 +156,4 @@ void test_coordinator::inline_all_enqueues_helper() {
   after_next_enqueue([=] { inline_all_enqueues_helper(); });
 }
 
-} // namespace scheduler
-} // namespace caf
+} // namespace caf::scheduler

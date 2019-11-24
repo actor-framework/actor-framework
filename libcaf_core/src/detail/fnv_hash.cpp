@@ -20,8 +20,7 @@
 
 #include <cstdint>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 namespace {
 
@@ -59,5 +58,4 @@ size_t fnv_hash_append(size_t intermediate, const unsigned char* first,
   return result;
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

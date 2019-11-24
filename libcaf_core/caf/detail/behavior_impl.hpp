@@ -48,8 +48,7 @@ class message_handler;
 
 } // namespace caf
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class CAF_CORE_EXPORT behavior_impl : public ref_counted {
 public:
@@ -231,5 +230,4 @@ struct make_behavior_impl_t {
 
 constexpr make_behavior_impl_t make_behavior_impl = make_behavior_impl_t{};
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

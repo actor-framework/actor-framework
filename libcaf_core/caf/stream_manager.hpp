@@ -188,7 +188,7 @@ public:
   }
 
   /// Acquires credit on an inbound path. The calculated credit to fill our
-  /// queue fro two cycles is `desired`, but the manager is allowed to return
+  /// queue for two cycles is `desired`, but the manager is allowed to return
   /// any non-negative value.
   virtual int32_t acquire_credit(inbound_path* path, int32_t desired);
 

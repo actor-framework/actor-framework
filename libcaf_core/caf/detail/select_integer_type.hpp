@@ -20,8 +20,7 @@
 
 #include <cstdint>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <int, bool>
 struct select_integer_type;
@@ -67,8 +66,7 @@ struct select_integer_type<8, false> {
 };
 
 template <int Size, bool IsSigned>
-using select_integer_type_t = typename select_integer_type<Size,
-                                                           IsSigned>::type;
+using select_integer_type_t =
+  typename select_integer_type<Size, IsSigned>::type;
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

@@ -23,8 +23,7 @@
 
 #include "caf/detail/core_export.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// A spinlock implementation providing shared and exclusive locking.
 class CAF_CORE_EXPORT shared_spinlock {
@@ -48,5 +47,4 @@ private:
   std::atomic<long> flag_;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

@@ -30,8 +30,7 @@
 #include "caf/optional.hpp"
 #include "caf/string_view.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class MemberObjectPointer>
 class config_value_field_impl;
@@ -145,5 +144,4 @@ private:
   mutable value_type dummy_;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

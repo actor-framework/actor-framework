@@ -29,8 +29,7 @@
 #include "caf/typed_response_promise.hpp"
 #include "caf/unit.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class T>
 struct is_message_id_wrapper {
@@ -125,5 +124,4 @@ public:
   }
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

@@ -21,11 +21,9 @@
 
 #include "caf/intrusive/inbox_result.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Alias for backwards compatibility.
 using enqueue_result = intrusive::inbox_result;
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

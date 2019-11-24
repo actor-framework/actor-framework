@@ -20,6 +20,7 @@
 
 #include <vector>
 
+#include "caf/byte_buffer.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/event_handler.hpp"
@@ -29,9 +30,7 @@
 #include "caf/logger.hpp"
 #include "caf/ref_counted.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// A stream capable of both reading and writing. The stream's input
 /// data is forwarded to its {@link stream_manager manager}.
@@ -39,10 +38,6 @@ class CAF_IO_EXPORT stream : public event_handler {
 public:
   /// A smart pointer to a stream manager.
   using manager_ptr = intrusive_ptr<stream_manager>;
-
-  /// A buffer class providing a compatible
-  /// interface to `std::vector`.
-  using buffer_type = std::vector<char>;
 
   stream(default_multiplexer& backend_ref, native_socket sockfd);
 
@@ -64,14 +59,14 @@ public:
   /// Returns the write buffer of this stream.
   /// @warning Must not be modified outside the IO multiplexers event loop
   ///          once the stream has been started.
-  inline buffer_type& wr_buf() {
+  inline byte_buffer& wr_buf() {
     return wr_offline_buf_;
   }
 
   /// Returns the read buffer of this stream.
   /// @warning Must not be modified outside the IO multiplexers event loop
   ///          once the stream has been started.
-  inline buffer_type& rd_buf() {
+  inline byte_buffer& rd_buf() {
     return rd_buf_;
   }
 
@@ -148,15 +143,13 @@ private:
   size_t read_threshold_;
   size_t collected_;
   size_t max_;
-  buffer_type rd_buf_;
+  byte_buffer rd_buf_;
 
   // State for writing.
   manager_ptr writer_;
   size_t written_;
-  buffer_type wr_buf_;
-  buffer_type wr_offline_buf_;
+  byte_buffer wr_buf_;
+  byte_buffer wr_offline_buf_;
 };
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

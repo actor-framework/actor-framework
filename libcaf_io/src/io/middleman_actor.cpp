@@ -28,8 +28,7 @@
 
 #include "caf/io/middleman_actor_impl.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 middleman_actor make_middleman_actor(actor_system& sys, actor db) {
   return get_or(sys.config(), "middleman.attach-utility-actors", false)
@@ -37,5 +36,4 @@ middleman_actor make_middleman_actor(actor_system& sys, actor db) {
            : sys.spawn<middleman_actor_impl, detached + hidden>(std::move(db));
 }
 
-} // namespace io
-} // namespace caf
+} // namespace caf::io

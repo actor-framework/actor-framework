@@ -19,8 +19,7 @@
 
 #pragma once
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class... Fs>
 struct overload;
@@ -47,5 +46,4 @@ overload<Fs...> make_overload(Fs... fs) {
   return {fs...};
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

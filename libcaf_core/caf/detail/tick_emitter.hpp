@@ -25,8 +25,7 @@
 #include "caf/config.hpp"
 #include "caf/detail/core_export.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Converts realtime into a series of ticks, whereas each tick represents a
 /// preconfigured timespan. For example, a tick emitter configured with a
@@ -91,5 +90,4 @@ private:
   size_t last_tick_id_;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

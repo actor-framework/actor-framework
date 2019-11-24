@@ -460,7 +460,7 @@ void scheduled_actor::quit(error x) {
   for (auto i = managers.begin(); i != e; ++i) {
     auto& mgr = *i;
     mgr->shutdown();
-    // Managers can become done after calling quit if they were continous.
+    // Managers can become done after calling quit if they were continuous.
     if (mgr->done()) {
       mgr->stop();
       erase_stream_manager(mgr);
@@ -1076,7 +1076,7 @@ void scheduled_actor::erase_stream_manager(const stream_manager_ptr& mgr) {
 invoke_message_result
 scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
   CAF_LOG_TRACE(CAF_ARG(x));
-  // Fetches a stream manger from a behavior.
+  // Fetches a stream manager from a behavior.
   struct visitor : detail::invoke_result_visitor {
     void operator()() override {
       // nop

@@ -53,7 +53,7 @@ void global_fun() {
 // Clang expands template parameters in __PRETTY_FUNCTION__, while GCC does
 // not. For example, Clang would produce "void foo<int>::bar()", while GCC
 // would produce "void foo<T>::bar() [with T = int]". A type called T gives
-// us always the same ouptut for the prefix.
+// us always the same output for the prefix.
 struct T {};
 
 namespace {

@@ -20,8 +20,7 @@
 
 #include "caf/meta/annotation.hpp"
 
-namespace caf {
-namespace meta {
+namespace caf::meta {
 
 struct omittable_t : annotation {
   constexpr omittable_t() {
@@ -35,6 +34,4 @@ constexpr omittable_t omittable() {
   return {};
 }
 
-} // namespace meta
-} // namespace caf
-
+} // namespace caf::meta

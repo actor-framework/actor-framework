@@ -394,8 +394,6 @@ public:
                             settings& result);
 
 protected:
-  virtual std::string make_help_text(const std::vector<message::cli_arg>&);
-
   config_option_set custom_options_;
 
 private:

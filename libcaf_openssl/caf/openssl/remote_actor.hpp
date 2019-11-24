@@ -27,8 +27,7 @@
 #include "caf/detail/openssl_export.hpp"
 #include "caf/fwd.hpp"
 
-namespace caf {
-namespace openssl {
+namespace caf::openssl {
 
 /// @private
 CAF_OPENSSL_EXPORT expected<strong_actor_ptr>
@@ -50,5 +49,4 @@ remote_actor(actor_system& sys, std::string host, uint16_t port) {
   return std::move(res.error());
 }
 
-} // namespace openssl
-} // namespace caf
+} // namespace caf::openssl

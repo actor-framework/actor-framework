@@ -23,8 +23,7 @@
 #include "caf/config_value.hpp"
 #include "caf/detail/type_traits.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class Trait>
 struct dispatch_parse_cli_helper {
@@ -52,11 +51,11 @@ void dispatch_parse_cli(string_parser_state& ps, T& x,
                         const char* char_blacklist) {
   using access = caf::select_config_value_access_t<T>;
   using helper_fun = dispatch_parse_cli_helper<access>;
-  using token_type = bool_token<detail::is_callable_with<
-    helper_fun, string_parser_state&, T&, const char*>::value>;
+  using token_type
+    = bool_token<detail::is_callable_with<helper_fun, string_parser_state&, T&,
+                                          const char*>::value>;
   token_type token;
   dispatch_parse_cli<access>(token, ps, x, char_blacklist);
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

@@ -18,8 +18,7 @@
 
 #include "caf/detail/abstract_worker.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
@@ -45,5 +44,4 @@ void abstract_worker::intrusive_ptr_release_impl() {
   deref();
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

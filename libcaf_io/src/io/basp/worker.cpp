@@ -23,9 +23,7 @@
 #include "caf/proxy_registry.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
-namespace caf {
-namespace io {
-namespace basp {
+namespace caf::io::basp {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
@@ -41,7 +39,7 @@ worker::~worker() {
 // -- management ---------------------------------------------------------------
 
 void worker::launch(const node_id& last_hop, const basp::header& hdr,
-                    const buffer_type& payload) {
+                    const byte_buffer& payload) {
   CAF_ASSERT(hdr.dest_actor != 0);
   CAF_ASSERT(hdr.operation == basp::message_type::direct_message
              || hdr.operation == basp::message_type::routed_message);
@@ -62,6 +60,4 @@ resumable::resume_result worker::resume(execution_unit* ctx, size_t) {
   return resumable::awaiting_message;
 }
 
-} // namespace basp
-} // namespace io
-} // namespace caf
+} // namespace caf::io::basp

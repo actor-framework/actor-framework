@@ -25,17 +25,16 @@
 
 #include "caf/openssl/manager.hpp"
 
-namespace caf {
-namespace openssl {
+namespace caf::openssl {
 
 /// Establish a new connection to the actor at `host` on given `port`.
 /// @param host Valid hostname or IP address.
 /// @param port TCP port.
 /// @returns An `actor` to the proxy instance representing
 ///          a remote actor or an `error`.
-expected<strong_actor_ptr> remote_actor(actor_system& sys,
-                                        const std::set<std::string>& mpi,
-                                        std::string host, uint16_t port) {
+expected<strong_actor_ptr>
+remote_actor(actor_system& sys, const std::set<std::string>& mpi,
+             std::string host, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(mpi) << CAF_ARG(host) << CAF_ARG(port));
   expected<strong_actor_ptr> res{strong_actor_ptr{nullptr}};
   auto f = make_function_view(sys.openssl_manager().actor_handle());
@@ -52,5 +51,4 @@ expected<strong_actor_ptr> remote_actor(actor_system& sys,
   return sec::unexpected_actor_messaging_interface;
 }
 
-} // namespace openssl
-} // namespace caf
+} // namespace caf::openssl

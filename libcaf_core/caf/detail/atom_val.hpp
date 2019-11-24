@@ -18,8 +18,7 @@
 
 #pragma once
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 namespace {
 
@@ -173,5 +172,4 @@ constexpr uint64_t atom_val(const char* cstr, uint64_t interim = 0xF) {
                       next_interim(interim, static_cast<size_t>(*cstr)));
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

@@ -31,8 +31,7 @@
 
 #include "caf/event_based_actor.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 void abstract_broker::enqueue(strong_actor_ptr src, message_id mid, message msg,
                               execution_unit*) {
@@ -87,7 +86,7 @@ void abstract_broker::ack_writes(connection_handle hdl, bool enable) {
     x->ack_writes(enable);
 }
 
-std::vector<char>& abstract_broker::wr_buf(connection_handle hdl) {
+byte_buffer& abstract_broker::wr_buf(connection_handle hdl) {
   CAF_ASSERT(hdl != invalid_connection_handle);
   auto x = by_id(hdl);
   if (!x) {
@@ -100,7 +99,7 @@ std::vector<char>& abstract_broker::wr_buf(connection_handle hdl) {
 
 void abstract_broker::write(connection_handle hdl, size_t bs, const void* buf) {
   auto& out = wr_buf(hdl);
-  auto first = reinterpret_cast<const char*>(buf);
+  auto first = reinterpret_cast<const byte*>(buf);
   auto last = first + bs;
   out.insert(out.end(), first, last);
 }
@@ -118,7 +117,7 @@ void abstract_broker::ack_writes(datagram_handle hdl, bool enable) {
     x->ack_writes(enable);
 }
 
-std::vector<char>& abstract_broker::wr_buf(datagram_handle hdl) {
+byte_buffer& abstract_broker::wr_buf(datagram_handle hdl) {
   auto x = by_id(hdl);
   if (!x) {
     CAF_LOG_ERROR("tried to access wr_buf() of an unknown"
@@ -128,8 +127,7 @@ std::vector<char>& abstract_broker::wr_buf(datagram_handle hdl) {
   return x->wr_buf(hdl);
 }
 
-void abstract_broker::enqueue_datagram(datagram_handle hdl,
-                                       std::vector<char> buf) {
+void abstract_broker::enqueue_datagram(datagram_handle hdl, byte_buffer buf) {
   auto x = by_id(hdl);
   if (!x)
     CAF_LOG_ERROR("tried to access datagram_buffer() of an unknown"
@@ -139,7 +137,7 @@ void abstract_broker::enqueue_datagram(datagram_handle hdl,
 
 void abstract_broker::write(datagram_handle hdl, size_t bs, const void* buf) {
   auto& out = wr_buf(hdl);
-  auto first = reinterpret_cast<const char*>(buf);
+  auto first = reinterpret_cast<const byte*>(buf);
   auto last = first + bs;
   out.insert(out.end(), first, last);
 }
@@ -318,7 +316,7 @@ datagram_handle abstract_broker::datagram_hdl_by_port(uint16_t port) {
 
 std::string abstract_broker::remote_addr(datagram_handle hdl) {
   auto i = datagram_servants_.find(hdl);
-  return i != datagram_servants_.end() ? i->second->addr() : std::string{};
+  return i != datagram_servants_.end() ? i->second->addr(hdl) : std::string{};
 }
 
 uint16_t abstract_broker::remote_port(datagram_handle hdl) {
@@ -355,8 +353,8 @@ resumable::subtype_t abstract_broker::subtype() const {
   return io_actor;
 }
 
-resumable::resume_result abstract_broker::resume(execution_unit* ctx,
-                                                 size_t mt) {
+resumable::resume_result
+abstract_broker::resume(execution_unit* ctx, size_t mt) {
   CAF_ASSERT(ctx != nullptr);
   CAF_ASSERT(ctx == &backend());
   return scheduled_actor::resume(ctx, mt);
@@ -395,5 +393,4 @@ void abstract_broker::launch_servant(datagram_servant_ptr& ptr) {
     ptr->launch();
 }
 
-} // namespace io
-} // namespace caf
+} // namespace caf::io

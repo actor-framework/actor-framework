@@ -20,8 +20,7 @@
 
 #include "caf/meta/annotation.hpp"
 
-namespace caf {
-namespace meta {
+namespace caf::meta {
 
 struct type_name_t : annotation {
   constexpr type_name_t(const char* cstr) : value(cstr) {
@@ -35,6 +34,4 @@ struct type_name_t : annotation {
 type_name_t constexpr type_name(const char* cstr) {
   return {cstr};
 }
-} // namespace meta
-} // namespace caf
-
+} // namespace caf::meta

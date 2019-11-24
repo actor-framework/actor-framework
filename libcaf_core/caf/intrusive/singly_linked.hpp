@@ -19,8 +19,7 @@
 
 #pragma once
 
-namespace caf {
-namespace intrusive {
+namespace caf::intrusive {
 
 /// Intrusive base for singly linked types that allows queues to use `T` with
 /// dummy nodes.
@@ -46,5 +45,4 @@ struct singly_linked {
   node_pointer next;
 };
 
-} // namespace intrusive
-} // namespace caf
+} // namespace caf::intrusive

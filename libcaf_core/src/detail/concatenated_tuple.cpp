@@ -24,8 +24,7 @@
 #include "caf/message.hpp"
 #include "caf/raise_error.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 concatenated_tuple::concatenated_tuple(std::initializer_list<cow_ptr> xs) {
   for (auto& x : xs) {
@@ -43,9 +42,8 @@ concatenated_tuple::concatenated_tuple(std::initializer_list<cow_ptr> xs) {
   for (const auto& m : data_)
     for (size_t i = 0; i < m->size(); ++i)
       type_token_ = add_to_type_token(type_token_, m->type_nr(i));
-  auto acc_size = [](size_t tmp, const cow_ptr& val) {
-    return tmp + val->size();
-  };
+  auto acc_size
+    = [](size_t tmp, const cow_ptr& val) { return tmp + val->size(); };
   size_ = std::accumulate(data_.begin(), data_.end(), size_t{0}, acc_size);
 }
 
@@ -132,5 +130,4 @@ concatenated_tuple::select(size_t pos) const {
   CAF_RAISE_ERROR(std::out_of_range, "concatenated_tuple::select out of range");
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

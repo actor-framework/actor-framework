@@ -23,9 +23,7 @@
 #include "caf/config.hpp"
 #include "caf/detail/core_export.hpp"
 
-namespace caf {
-namespace detail {
-namespace parser {
+namespace caf::detail::parser {
 
 struct any_char_t {};
 
@@ -57,6 +55,4 @@ CAF_CORE_EXPORT extern const char decimal_chars[11];
 
 CAF_CORE_EXPORT extern const char octal_chars[9];
 
-} // namespace parser
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail::parser

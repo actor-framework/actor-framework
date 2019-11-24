@@ -134,8 +134,6 @@ public:
 
   intptr_t compare(const strong_actor_ptr&) const noexcept;
 
-  static actor splice_impl(std::initializer_list<actor> xs);
-
   actor(actor_control_block*, bool);
 
   /// @endcond
@@ -175,12 +173,6 @@ private:
 
 /// Combine `f` and `g` so that `(f*g)(x) = f(g(x))`.
 CAF_CORE_EXPORT actor operator*(actor f, actor g);
-
-/// @relates actor
-template <class... Ts>
-actor splice(const actor& x, const actor& y, const Ts&... zs) {
-  return actor::splice_impl({x, y, zs...});
-}
 
 /// @relates actor
 CAF_CORE_EXPORT bool operator==(const actor& lhs, abstract_actor* rhs);

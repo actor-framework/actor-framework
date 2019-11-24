@@ -28,9 +28,7 @@
 #  include <sys/socket.h>
 #endif
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 event_handler::event_handler(default_multiplexer& dm, native_socket sockfd)
   : fd_(sockfd),
@@ -65,6 +63,4 @@ void event_handler::set_fd_flags() {
   allow_sigpipe(fd_, false);
 }
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

@@ -59,14 +59,12 @@ struct epoll_event;
 
 // Pick a backend for the multiplexer, depending on the settings in config.hpp.
 #if !defined(CAF_LINUX) || defined(CAF_POLL_IMPL)
-#define CAF_POLL_MULTIPLEXER
+#  define CAF_POLL_MULTIPLEXER
 #else
-#define CAF_EPOLL_MULTIPLEXER
+#  define CAF_EPOLL_MULTIPLEXER
 #endif
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 // Define type aliases based on backend type.
 #ifdef CAF_POLL_MULTIPLEXER
@@ -117,13 +115,13 @@ public:
 
   scribe_ptr new_scribe(native_socket fd) override;
 
-  expected<scribe_ptr> new_tcp_scribe(const std::string& host,
-                                      uint16_t port) override;
+  expected<scribe_ptr>
+  new_tcp_scribe(const std::string& host, uint16_t port) override;
 
   doorman_ptr new_doorman(native_socket fd) override;
 
-  expected<doorman_ptr> new_tcp_doorman(uint16_t port, const char* in,
-                                        bool reuse_addr) override;
+  expected<doorman_ptr>
+  new_tcp_doorman(uint16_t port, const char* in, bool reuse_addr) override;
 
   datagram_servant_ptr new_datagram_servant(native_socket fd) override;
 
@@ -135,7 +133,7 @@ public:
   new_remote_udp_endpoint(const std::string& host, uint16_t port) override;
 
   expected<datagram_servant_ptr>
-  new_local_udp_endpoint(uint16_t port,const char* in = nullptr,
+  new_local_udp_endpoint(uint16_t port, const char* in = nullptr,
                          bool reuse_addr = false) override;
 
   void exec_later(resumable* ptr) override;
@@ -186,7 +184,7 @@ private:
     // the only valid input where ptr == nullptr is our pipe
     // read handle which is only registered for reading
     auto old_bf = ptr ? ptr->eventbf() : input_mask;
-    //auto bf = fun(op, old_bf);
+    // auto bf = fun(op, old_bf);
     CAF_LOG_TRACE(CAF_ARG(op) << CAF_ARG(fd) << CAF_ARG(old_bf));
     auto last = events_.end();
     auto i = std::lower_bound(events_.begin(), last, fd, event_less{});
@@ -194,7 +192,7 @@ private:
       CAF_ASSERT(ptr == i->ptr);
       // squash events together
       CAF_LOG_DEBUG("squash events:" << CAF_ARG(i->mask)
-                    << CAF_ARG(fun(op, i->mask)));
+                                     << CAF_ARG(fun(op, i->mask)));
       auto bf = i->mask;
       i->mask = fun(op, bf);
       if (i->mask == bf) {
@@ -209,8 +207,8 @@ private:
       // insert new element
       auto bf = fun(op, old_bf);
       if (bf == old_bf) {
-        CAF_LOG_DEBUG("event has no effect (discarded): "
-                 << CAF_ARG(bf) << ", " << CAF_ARG(old_bf));
+        CAF_LOG_DEBUG("event has no effect (discarded): " << CAF_ARG(bf) << ", "
+                                                          << CAF_ARG(old_bf));
       } else {
         CAF_LOG_DEBUG("added handler:" << CAF_ARG(fd) << CAF_ARG(op));
         events_.insert(i, event{fd, bf, ptr});
@@ -283,6 +281,4 @@ new_local_udp_endpoint_impl(uint16_t port, const char* addr,
                             bool reuse_addr = false,
                             optional<protocol::network> preferred = none);
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

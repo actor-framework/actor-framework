@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "caf/atom.hpp"
+#include "caf/byte.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/squashed_int.hpp"

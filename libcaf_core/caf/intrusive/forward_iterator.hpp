@@ -23,8 +23,7 @@
 #include <iterator>
 #include <type_traits>
 
-namespace caf {
-namespace intrusive {
+namespace caf::intrusive {
 
 // A forward iterator for intrusive lists.
 template <class T>
@@ -44,12 +43,9 @@ public:
 
   using const_reference = const value_type&;
 
-  using node_type =
-    typename std::conditional<
-      std::is_const<T>::value,
-      const typename T::node_type,
-      typename T::node_type
-    >::type;
+  using node_type = typename std::conditional<std::is_const<T>::value,
+                                              const typename T::node_type,
+                                              typename T::node_type>::type;
 
   using node_pointer = node_type*;
 
@@ -114,18 +110,14 @@ public:
 
 /// @relates forward_iterator
 template <class T>
-bool operator==(const forward_iterator<T>& x,
-                const forward_iterator<T>& y) {
+bool operator==(const forward_iterator<T>& x, const forward_iterator<T>& y) {
   return x.ptr == y.ptr;
 }
 
 /// @relates forward_iterator
 template <class T>
-bool operator!=(const forward_iterator<T>& x,
-                const forward_iterator<T>& y) {
+bool operator!=(const forward_iterator<T>& x, const forward_iterator<T>& y) {
   return x.ptr != y.ptr;
 }
 
-} // namespace intrusive
-} // namespace caf
-
+} // namespace caf::intrusive

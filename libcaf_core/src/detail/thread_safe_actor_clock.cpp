@@ -23,8 +23,7 @@
 #include "caf/sec.hpp"
 #include "caf/system_messages.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 void thread_safe_actor_clock::set_ordinary_timeout(time_point t,
                                                    abstract_actor* self,
@@ -163,5 +162,4 @@ void thread_safe_actor_clock::push(event* ptr) {
   queue_.push_back(unique_event_ptr{ptr});
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

@@ -27,8 +27,7 @@
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 
-namespace caf {
-namespace decorator {
+namespace caf::decorator {
 
 namespace {
 
@@ -113,5 +112,4 @@ splitter::message_types_set splitter::message_types() const {
   return msg_types_;
 }
 
-} // namespace decorator
-} // namespace caf
+} // namespace caf::decorator

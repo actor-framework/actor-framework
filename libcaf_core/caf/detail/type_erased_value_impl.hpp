@@ -19,17 +19,19 @@
 #pragma once
 
 #include <cstdint>
-#include <typeinfo>
 #include <functional>
+#include <typeinfo>
 
-#include "caf/error.hpp"
-#include "caf/type_erased_value.hpp"
-
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
+#include "caf/deserializer.hpp"
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/try_serialize.hpp"
+#include "caf/error.hpp"
+#include "caf/serializer.hpp"
+#include "caf/type_erased_value.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// @relates type_erased_value
 /// Default implementation for single type-erased values.
@@ -55,17 +57,17 @@ public:
 
   template <class U, size_t N,
             class = typename std::enable_if<std::is_same<T, U[N]>::value>::type>
-  type_erased_value_impl(const U (&&ys)[N]) {
+  type_erased_value_impl(const U(&&ys)[N]) {
     array_copy(x_, ys);
   }
 
   type_erased_value_impl(type_erased_value_impl&& other)
-      : type_erased_value_impl(std::move(other.x_)) {
+    : type_erased_value_impl(std::move(other.x_)) {
     // nop
   }
 
   type_erased_value_impl(const type_erased_value_impl& other)
-      : type_erased_value_impl(other.x_) {
+    : type_erased_value_impl(other.x_) {
     // nop
   }
 
@@ -76,6 +78,10 @@ public:
   }
 
   error load(deserializer& source) override {
+    return source(*addr_of(x_));
+  }
+
+  error_code<sec> load(binary_deserializer& source) override {
     return source(*addr_of(x_));
   }
 
@@ -101,6 +107,10 @@ public:
   }
 
   error save(serializer& sink) const override {
+    return sink(*addr_of(const_cast<T&>(x_)));
+  }
+
+  error_code<sec> save(binary_serializer& sink) const override {
     return sink(*addr_of(const_cast<T&>(x_)));
   }
 
@@ -169,6 +179,4 @@ private:
   T x_;
 };
 
-} // namespace detail
-} // namespace caf
-
+} // namespace caf::detail

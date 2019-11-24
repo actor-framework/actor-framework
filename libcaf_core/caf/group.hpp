@@ -80,22 +80,13 @@ public:
     return ptr_ ? 1 : 0;
   }
 
-  template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f, group& x) {
-    std::string x_id;
-    std::string x_mod;
-    auto ptr = x.get();
-    if (ptr) {
-      x_id = ptr->identifier();
-      x_mod = ptr->module().name();
-    }
-    return f(meta::type_name("group"), meta::omittable_if_empty(), x_id,
-             meta::omittable_if_empty(), x_mod);
-  }
-
   friend CAF_CORE_EXPORT error inspect(serializer&, group&);
 
+  friend CAF_CORE_EXPORT error_code<sec> inspect(binary_serializer&, group&);
+
   friend CAF_CORE_EXPORT error inspect(deserializer&, group&);
+
+  friend CAF_CORE_EXPORT error_code<sec> inspect(binary_deserializer&, group&);
 
   abstract_group* get() const noexcept {
     return ptr_.get();

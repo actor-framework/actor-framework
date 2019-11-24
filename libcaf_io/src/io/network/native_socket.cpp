@@ -81,9 +81,7 @@ auto port_of(sockaddr& what)
 
 } // namespace
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 #ifdef CAF_WINDOWS
 const int ec_out_of_memory = WSAENOBUFS;
@@ -93,7 +91,7 @@ const int ec_out_of_memory = ENOMEM;
 const int ec_interrupted_syscall = EINTR;
 #endif
 
-// Platform-dependent setup for supressing SIGPIPE.
+// Platform-dependent setup for suppressing SIGPIPE.
 #if defined(CAF_MACOS) || defined(CAF_IOS) || defined(__FreeBSD__)
 // Set the SO_NOSIGPIPE socket option on macOS, iOS and FreeBSD.
 const int no_sigpipe_socket_flag = SO_NOSIGPIPE;
@@ -473,6 +471,4 @@ void shutdown_both(native_socket fd) {
   ::shutdown(fd, both_channels);
 }
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

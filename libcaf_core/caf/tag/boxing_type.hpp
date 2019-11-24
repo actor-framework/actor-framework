@@ -18,12 +18,9 @@
 
 #pragma once
 
-namespace caf {
-namespace tag {
+namespace caf::tag {
 
 /// Allows the testing DSL to recognize that subtypes are boxing content types.
 struct boxing_type {};
 
-} // namespace tag
-} // namespace caf
-
+} // namespace caf::tag

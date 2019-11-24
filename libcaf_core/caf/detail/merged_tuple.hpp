@@ -24,8 +24,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/message.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class CAF_CORE_EXPORT merged_tuple : public message_data {
 public:
@@ -87,5 +86,4 @@ private:
   mapping_type mapping_;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

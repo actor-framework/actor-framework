@@ -24,9 +24,7 @@
 
 #include "caf/io/network/default_multiplexer.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 scribe_impl::scribe_impl(default_multiplexer& mx, native_socket sockfd)
   : scribe(network::conn_hdl_from_socket(sockfd)),
@@ -47,11 +45,11 @@ void scribe_impl::ack_writes(bool enable) {
   stream_.ack_writes(enable);
 }
 
-std::vector<char>& scribe_impl::wr_buf() {
+byte_buffer& scribe_impl::wr_buf() {
   return stream_.wr_buf();
 }
 
-std::vector<char>& scribe_impl::rd_buf() {
+byte_buffer& scribe_impl::rd_buf() {
   return stream_.rd_buf();
 }
 
@@ -95,6 +93,4 @@ void scribe_impl::remove_from_loop() {
   stream_.passivate();
 }
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

@@ -25,9 +25,7 @@
 #include "caf/io/scribe.hpp"
 #include "caf/policy/tcp.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// Default scribe implementation.
 class CAF_IO_EXPORT scribe_impl : public scribe {
@@ -38,9 +36,9 @@ public:
 
   void ack_writes(bool enable) override;
 
-  std::vector<char>& wr_buf() override;
+  byte_buffer& wr_buf() override;
 
-  std::vector<char>& rd_buf() override;
+  byte_buffer& rd_buf() override;
 
   void graceful_shutdown() override;
 
@@ -61,6 +59,4 @@ protected:
   stream_impl<policy::tcp> stream_;
 };
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

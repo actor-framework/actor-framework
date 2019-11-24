@@ -30,9 +30,7 @@ CAF_PUSH_UNUSED_LABEL_WARNING
 
 #include "caf/detail/parser/fsm.hpp"
 
-namespace caf {
-namespace detail {
-namespace parser {
+namespace caf::detail::parser {
 
 //   foo://example.com:8042/over/there?name=ferret#nose
 //   \_/   \______________/\_________/ \_________/ \__/
@@ -226,9 +224,7 @@ void read_uri(State& ps, Consumer&& consumer) {
   // clang-format on
 }
 
-} // namespace parser
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail::parser
 
 #include "caf/detail/parser/fsm_undef.hpp"
 

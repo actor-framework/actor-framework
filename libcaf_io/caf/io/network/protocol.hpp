@@ -24,22 +24,14 @@
 #include "caf/detail/io_export.hpp"
 #include "caf/meta/type_name.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// Bundles protocol information for network and transport layer communication.
 struct protocol {
   /// Denotes a network protocol, i.e., IPv4 or IPv6.
-  enum network {
-    ipv4,
-    ipv6
-  };
+  enum network { ipv4, ipv6 };
   /// Denotes a transport protocol, i.e., TCP or UDP.
-  enum transport {
-    tcp,
-    udp
-  };
+  enum transport { tcp, udp };
   transport trans;
   network net;
 };
@@ -65,6 +57,4 @@ typename Inspector::result_type inspect(Inspector& f, protocol& x) {
 /// @relates protocol
 CAF_IO_EXPORT std::string to_string(const protocol& x);
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

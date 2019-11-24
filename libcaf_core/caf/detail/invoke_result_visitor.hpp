@@ -37,8 +37,7 @@
 #include "caf/skip.hpp"
 #include "caf/unit.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Inspects the result of message handlers and triggers type-depended actions
 /// such as generating result messages.
@@ -121,7 +120,7 @@ public:
     (*this)(const_cast<const unit_t&>(x));
   }
 
-  // -- special-purpose handlers that don't procude results --------------------
+  // -- special-purpose handlers that don't produce results --------------------
 
   /// Calls `(*this)()`.
   inline void operator()(response_promise&) {
@@ -217,5 +216,4 @@ public:
   }
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

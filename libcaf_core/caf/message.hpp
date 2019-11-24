@@ -46,12 +46,6 @@ class message_handler;
 /// tuple with elements of any type.
 class CAF_CORE_EXPORT message : public type_erased_tuple {
 public:
-  // -- nested types -----------------------------------------------------------
-
-  struct cli_arg;
-
-  struct cli_res;
-
   // -- member types -----------------------------------------------------------
 
   /// Raw pointer to content.
@@ -59,9 +53,6 @@ public:
 
   /// Copy-on-write pointer to content.
   using data_ptr = detail::message_data::cow_ptr;
-
-  /// Function object for generating CLI argument help text.
-  using help_factory = std::function<std::string(const std::vector<cli_arg>&)>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -82,6 +73,8 @@ public:
 
   error load(size_t pos, deserializer& source) override;
 
+  error_code<sec> load(size_t pos, binary_deserializer& source) override;
+
   size_t size() const noexcept override;
 
   uint32_t type_token() const noexcept override;
@@ -96,27 +89,24 @@ public:
 
   error save(size_t pos, serializer& sink) const override;
 
+  error_code<sec> save(size_t pos, binary_serializer& sink) const override;
+
   bool shared() const noexcept override;
 
   error load(deserializer& source) override;
 
+  error_code<sec> load(binary_deserializer& source) override;
+
   error save(serializer& sink) const override;
 
-  // -- factories --------------------------------------------------------------
+  error_code<sec> save(binary_serializer& sink) const override;
 
-  /// Creates a new message by concatenating `xs...`.
-  template <class... Ts>
-  static message concat(const Ts&... xs) {
-    return concat_impl({xs.vals()...});
-  }
+  // -- factories --------------------------------------------------------------
 
   /// Creates a new message by copying all elements in a type-erased tuple.
   static message copy(const type_erased_tuple& xs);
 
   // -- modifiers --------------------------------------------------------------
-
-  /// Concatenates `*this` and `x`.
-  message& operator+=(const message& x);
 
   /// Returns `handler(*this)`.
   optional<message> apply(message_handler handler);
@@ -139,90 +129,6 @@ public:
   /// Assigns new content.
   void reset(raw_ptr new_ptr = nullptr, bool add_ref = true) noexcept;
 
-  // -- observers --------------------------------------------------------------
-
-  /// Creates a new message with all but the first n values.
-  message drop(size_t n) const;
-
-  /// Creates a new message with all but the last n values.
-  message drop_right(size_t n) const;
-
-  /// Creates a new message of size `n` starting at the element at position `p`.
-  message slice(size_t pos, size_t n) const;
-
-  /// Filters this message by applying slices of it to `handler` and  returns
-  /// the remaining elements of this operation. Slices are generated in the
-  /// sequence `[0, size)`, `[0, size-1)`, `...` , `[1, size-1)`, `...`,
-  /// `[size-1, size)`. Whenever a slice matches, it is removed from the message
-  /// and the next slice starts at the *same* index on the reduced message.
-  ///
-  /// For example:
-  ///
-  /// ~~~
-  /// auto msg = make_message(1, 2.f, 3.f, 4);
-  /// // extract float and integer pairs
-  /// auto msg2 = msg.extract({
-  ///   [](float, float) { },
-  ///   [](int, int) { }
-  /// });
-  /// assert(msg2 == make_message(1, 4));
-  /// ~~~
-  ///
-  /// Step-by-step explanation:
-  /// - Slice 1: `(1, 2.f, 3.f, 4)`, no match
-  /// - Slice 2: `(1, 2.f, 3.f)`, no match
-  /// - Slice 3: `(1, 2.f)`, no match
-  /// - Slice 4: `(1)`, no match
-  /// - Slice 5: `(2.f, 3.f, 4)`, no match
-  /// - Slice 6: `(2.f, 3.f)`, *match*; new message is `(1, 4)`
-  /// - Slice 7: `(4)`, no match
-  ///
-  /// Slice 7 is `(4)`, i.e., does not contain the first element, because the
-  /// match on slice 6 occurred at index position 1. The function `extract`
-  /// iterates a message only once, from left to right.
-  message extract(message_handler handler) const;
-
-  /// A simplistic interface for using `extract` to parse command line options.
-  /// Usage example:
-  ///
-  /// ~~~
-  /// int main(int argc, char** argv) {
-  ///   uint16_t port;
-  ///   string host = "localhost";
-  ///   auto res = message_builder(argv + 1, argv + argc).extract_opts({
-  ///     {"port,p", "set port", port},
-  ///     {"host,H", "set host (default: localhost)", host},
-  ///     {"verbose,v", "enable verbose mode"}
-  ///   });
-  ///   if (!res.error.empty()) {
-  ///     cerr << res.error << endl;
-  ///     return 1;
-  ///   }
-  ///   if (res.opts.count("help") > 0) {
-  ///     // CLI arguments contained "-h", "--help", or "-?" (builtin);
-  ///     cout << res.helptext << endl;
-  ///     return 0;
-  ///   }
-  ///   if (!res.remainder.empty()) {
-  ///     // ... extract did not consume all CLI arguments ...
-  ///   }
-  ///   if (res.opts.count("verbose") > 0) {
-  ///     // ... enable verbose mode ...
-  ///   }
-  ///   // ...
-  /// }
-  /// ~~~
-  /// @param xs List of argument descriptors.
-  /// @param f Optional factory function to generate help text
-  ///          (overrides the default generator).
-  /// @param no_help Suppress generation of default-generated help option.
-  /// @returns A struct containing remainder
-  ///          (i.e. unmatched elements), a set containing the names of all
-  ///          used arguments, and the generated help text.
-  /// @throws std::invalid_argument if no name or more than one long name is set
-  cli_res extract_opts(std::vector<cli_arg> xs, const help_factory& f = nullptr,
-                       bool no_help = false) const;
-
   // -- inline observers -------------------------------------------------------
 
   /// Returns a const pointer to the element at position `p`.
@@ -239,17 +145,6 @@ public:
   /// Returns a reference to the content.
   inline const data_ptr& cvals() const noexcept {
     return vals_;
-  }
-
-  /// Returns the size of this message.
-  /// Creates a new message from the first n values.
-  inline message take(size_t n) const {
-    return n >= size() ? *this : drop_right(size() - n);
-  }
-
-  /// Creates a new message from the last n values.
-  inline message take_right(size_t n) const {
-    return n >= size() ? *this : drop(size() - n);
   }
 
   /// @cond PRIVATE
@@ -270,6 +165,9 @@ public:
   /// even if the serialized object had a different type.
   static error save(serializer& sink, const type_erased_tuple& x);
 
+  static error_code<sec>
+  save(binary_serializer& sink, const type_erased_tuple& x);
+
   /// @endcond
 
 private:
@@ -289,106 +187,9 @@ private:
     return match_element<T>(P) && match_elements_impl(next_p, next_list);
   }
 
-  message extract_impl(size_t start, message_handler handler) const;
-
-  static message concat_impl(std::initializer_list<data_ptr> xs);
-
   // -- member functions -------------------------------------------------------
 
   data_ptr vals_;
-};
-
-// -- nested types -------------------------------------------------------------
-
-/// Stores the result of `message::extract_opts`.
-struct message::cli_res {
-  /// Stores the remaining (unmatched) arguments.
-  message remainder;
-  /// Stores the names of all active options.
-  std::set<std::string> opts;
-  /// Stores the automatically generated help text.
-  std::string helptext;
-  /// Stores errors during option parsing.
-  std::string error;
-};
-
-/// Stores the name of a command line option ("<long name>[,<short name>]")
-/// along with a description and a callback.
-struct CAF_CORE_EXPORT message::cli_arg {
-  /// Returns `true` on a match, `false` otherwise.
-  using consumer = std::function<bool(const std::string&)>;
-
-  /// Full name of this CLI argument using format "<long name>[,<short name>]"
-  std::string name;
-
-  /// Desciption of this CLI argument for the auto-generated help text.
-  std::string text;
-
-  /// Auto-generated helptext for this item.
-  std::string helptext;
-
-  /// Evaluates option arguments.
-  consumer fun;
-
-  /// Set to true for zero-argument options.
-  bool* flag;
-
-  /// Creates a CLI argument without data.
-  cli_arg(std::string nstr, std::string tstr);
-
-  /// Creates a CLI flag option. The `flag` is set to `true` if the option
-  /// was set, otherwise it is `false`.
-  cli_arg(std::string nstr, std::string tstr, bool& arg);
-
-  /// Creates a CLI argument storing its matched argument in `dest`.
-  cli_arg(std::string nstr, std::string tstr, atom_value& arg);
-
-  /// Creates a CLI argument storing its matched argument in `dest`.
-  cli_arg(std::string nstr, std::string tstr, timespan& arg);
-
-  /// Creates a CLI argument storing its matched argument in `dest`.
-  cli_arg(std::string nstr, std::string tstr, std::string& arg);
-
-  /// Creates a CLI argument appending matched arguments to `dest`.
-  cli_arg(std::string nstr, std::string tstr, std::vector<std::string>& arg);
-
-  /// Creates a CLI argument using the function object `f`.
-  cli_arg(std::string nstr, std::string tstr, consumer f);
-
-  /// Creates a CLI argument for converting from strings,
-  /// storing its matched argument in `dest`.
-  template <class T>
-  cli_arg(std::string nstr, std::string tstr, T& arg)
-    : name(std::move(nstr)), text(std::move(tstr)), flag(nullptr) {
-    fun = [&arg](const std::string& str) -> bool {
-      T x;
-      // TODO: using this stream is a workaround for the missing
-      //       from_string<T>() interface and has downsides such as
-      //       not performing overflow/underflow checks etc.
-      std::istringstream iss{str};
-      if (iss >> x) {
-        arg = x;
-        return true;
-      }
-      return false;
-    };
-  }
-
-  /// Creates a CLI argument for converting from strings,
-  /// appending matched arguments to `dest`.
-  template <class T>
-  cli_arg(std::string nstr, std::string tstr, std::vector<T>& arg)
-    : name(std::move(nstr)), text(std::move(tstr)), flag(nullptr) {
-    fun = [&arg](const std::string& str) -> bool {
-      T x;
-      std::istringstream iss{str};
-      if (iss >> x) {
-        arg.emplace_back(std::move(x));
-        return true;
-      }
-      return false;
-    };
-  }
 };
 
 // -- related non-members ------------------------------------------------------
@@ -397,14 +198,16 @@ struct CAF_CORE_EXPORT message::cli_arg {
 CAF_CORE_EXPORT error inspect(serializer& sink, message& msg);
 
 /// @relates message
+CAF_CORE_EXPORT error_code<sec> inspect(binary_serializer& sink, message& msg);
+
+/// @relates message
 CAF_CORE_EXPORT error inspect(deserializer& source, message& msg);
 
 /// @relates message
-CAF_CORE_EXPORT std::string to_string(const message& msg);
+CAF_CORE_EXPORT error_code<sec>
+inspect(binary_deserializer& source, message& msg);
 
 /// @relates message
-inline message operator+(const message& lhs, const message& rhs) {
-  return message::concat(lhs, rhs);
-}
+CAF_CORE_EXPORT std::string to_string(const message& msg);
 
 } // namespace caf

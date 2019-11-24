@@ -28,8 +28,7 @@
 
 #include "caf/detail/sync_request_bouncer.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 sync_request_bouncer::sync_request_bouncer(error r) : rsn(std::move(r)) {
   // nop
@@ -48,5 +47,4 @@ void sync_request_bouncer::operator()(const mailbox_element& e) const {
   (*this)(e.sender, e.mid);
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

@@ -18,28 +18,28 @@
 
 #pragma once
 
-#include <tuple>
 #include <stdexcept>
+#include <tuple>
 
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/detail/message_data.hpp"
+#include "caf/detail/safe_equal.hpp"
+#include "caf/detail/stringification_inspector.hpp"
+#include "caf/detail/try_serialize.hpp"
+#include "caf/detail/type_list.hpp"
 #include "caf/make_type_erased_value.hpp"
 #include "caf/rtti_pair.hpp"
 #include "caf/serializer.hpp"
 #include "caf/type_nr.hpp"
 
-#include "caf/detail/type_list.hpp"
-#include "caf/detail/safe_equal.hpp"
-#include "caf/detail/message_data.hpp"
-#include "caf/detail/try_serialize.hpp"
-#include "caf/detail/stringification_inspector.hpp"
-
 #define CAF_TUPLE_VALS_DISPATCH(x)                                             \
   case x:                                                                      \
-    return tuple_inspect_delegate<x, sizeof...(Ts)-1>(data_, f)
+    return tuple_inspect_delegate<x, sizeof...(Ts) - 1>(data_, f)
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 // avoids triggering static asserts when using CAF_TUPLE_VALS_DISPATCH
 template <size_t X, size_t Max, class T, class F>
@@ -82,8 +82,8 @@ public:
   // -- friend functions -------------------------------------------------------
 
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f,
-                                                 tuple_vals_impl& x) {
+  friend typename Inspector::result_type
+  inspect(Inspector& f, tuple_vals_impl& x) {
     return apply_args(f, get_indices(x.data_), x.data_);
   }
 
@@ -91,8 +91,7 @@ public:
 
   template <class... Us>
   tuple_vals_impl(Us&&... xs)
-      : data_(std::forward<Us>(xs)...),
-        types_{{make_rtti_pair<Ts>()...}} {
+    : data_(std::forward<Us>(xs)...), types_{{make_rtti_pair<Ts>()...}} {
     // nop
   }
 
@@ -138,6 +137,10 @@ public:
     return dispatch(pos, source);
   }
 
+  error_code<sec> load(size_t pos, binary_deserializer& source) override {
+    return dispatch(pos, source);
+  }
+
   uint32_t type_token() const noexcept override {
     return make_type_token<Ts...>();
   }
@@ -147,6 +150,10 @@ public:
   }
 
   error save(size_t pos, serializer& sink) const override {
+    return mptr()->dispatch(pos, sink);
+  }
+
+  error_code<sec> save(size_t pos, binary_serializer& sink) const override {
     return mptr()->dispatch(pos, sink);
   }
 
@@ -175,13 +182,13 @@ private:
 
   template <class F, size_t N>
   auto rec_dispatch(size_t, F& f, tup_ptr_access_pos<N, N>)
-  -> decltype(f(std::declval<int&>())) {
+    -> decltype(f(std::declval<int&>())) {
     return tuple_inspect_delegate<N, N>(data_, f);
   }
 
   template <class F, size_t X, size_t N>
   auto rec_dispatch(size_t pos, F& f, tup_ptr_access_pos<X, N> token)
-  -> decltype(f(std::declval<int&>())) {
+    -> decltype(f(std::declval<int&>())) {
     return pos == X ? tuple_inspect_delegate<X, N>(data_, f)
                     : rec_dispatch(pos, f, next(token));
   }
@@ -210,6 +217,4 @@ public:
   }
 };
 
-} // namespace detail
-} // namespace caf
-
+} // namespace caf::detail

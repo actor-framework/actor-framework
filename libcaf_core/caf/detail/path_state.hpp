@@ -23,8 +23,7 @@
 
 #include "caf/unit.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Bundles a filter and a buffer.
 template <class Filter, class T>
@@ -70,6 +69,4 @@ struct path_state<unit_t, T> {
   }
 };
 
-} // namespace detail
-} // namespace caf
-
+} // namespace caf::detail

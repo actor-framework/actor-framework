@@ -35,8 +35,7 @@
 #include "caf/proxy_registry.hpp"
 #include "caf/send.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 /// Manages brokers and network backends.
 class CAF_IO_EXPORT middleman : public actor_system::module {
@@ -326,9 +325,8 @@ private:
   std::thread thread_;
   // keeps track of "singleton-like" brokers
   std::map<atom_value, actor> named_brokers_;
-  // actor offering asyncronous IO by managing this singleton instance
+  // actor offering asynchronous IO by managing this singleton instance
   middleman_actor manager_;
 };
 
-} // namespace io
-} // namespace caf
+} // namespace caf::io

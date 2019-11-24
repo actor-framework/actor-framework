@@ -27,8 +27,7 @@
 
 #include "caf/intrusive/inbox_result.hpp"
 
-namespace caf {
-namespace intrusive {
+namespace caf::intrusive {
 
 /// An intrusive, thread-safe LIFO queue implementation for a single reader
 /// with any number of writers.
@@ -71,8 +70,8 @@ public:
       // A tag is never part of a non-empty list.
       new_element->next = e != blk ? e : nullptr;
       if (stack_.compare_exchange_strong(e, new_element))
-        return  e == reader_blocked_tag() ? inbox_result::unblocked_reader
-                                            : inbox_result::success;
+        return e == reader_blocked_tag() ? inbox_result::unblocked_reader
+                                         : inbox_result::success;
       // Continue with new value of `e`.
     }
     // The queue has been closed, drop messages.
@@ -86,7 +85,6 @@ public:
   inbox_result push_front(unique_pointer x) noexcept {
     return push_front(x.release());
   }
-
 
   /// Tries to enqueue a new element to the mailbox.
   /// @threadsafe
@@ -131,8 +129,7 @@ public:
   pointer take_head(pointer new_head) noexcept {
     // This member function should only be used to transition to closed or
     // empty.
-    CAF_ASSERT(new_head == stack_closed_tag()
-               || new_head == stack_empty_tag());
+    CAF_ASSERT(new_head == stack_closed_tag() || new_head == stack_empty_tag());
     pointer e = stack_.load();
     // Must not be called on a closed queue.
     CAF_ASSERT(e != stack_closed_tag());
@@ -218,7 +215,7 @@ public:
 
   template <class Mutex, class CondVar>
   bool synchronized_push_front(Mutex& mtx, CondVar& cv, unique_pointer ptr) {
-    return synchronized_push_front(mtx, cv, ptr.relase());
+    return synchronized_push_front(mtx, cv, ptr.release());
   }
 
   template <class Mutex, class CondVar, class... Ts>
@@ -256,19 +253,19 @@ public:
 private:
   static constexpr pointer stack_empty_tag() {
     // We are *never* going to dereference the returned pointer. It is only
-    // used as indicator wheter this queue is empty or not.
+    // used as indicator whether this queue is empty or not.
     return static_cast<pointer>(nullptr);
   }
 
   pointer stack_closed_tag() const noexcept {
     // We are *never* going to dereference the returned pointer. It is only
-    // used as indicator wheter this queue is closed or not.
+    // used as indicator whether this queue is closed or not.
     return reinterpret_cast<pointer>(reinterpret_cast<intptr_t>(this) + 1);
   }
 
   pointer reader_blocked_tag() const noexcept {
     // We are *never* going to dereference the returned pointer. It is only
-    // used as indicator wheter the owner of the queue is currently waiting for
+    // used as indicator whether the owner of the queue is currently waiting for
     // new messages.
     return reinterpret_cast<pointer>(const_cast<lifo_inbox*>(this));
   }
@@ -282,6 +279,4 @@ private:
   std::atomic<pointer> stack_;
 };
 
-} // namespace intrusive
-} // namespace caf
-
+} // namespace caf::intrusive

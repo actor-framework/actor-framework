@@ -27,8 +27,7 @@
 #  include <unistd.h>
 #endif
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 unsigned get_process_id() {
 #ifdef CAF_WINDOWS
@@ -38,5 +37,4 @@ unsigned get_process_id() {
 #endif
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

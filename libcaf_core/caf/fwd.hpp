@@ -38,12 +38,12 @@ namespace caf {
 template <class> class behavior_type_of;
 template <class> class dictionary;
 template <class> class downstream;
+template <class> class error_code;
 template <class> class expected;
 template <class> class intrusive_cow_ptr;
 template <class> class intrusive_ptr;
 template <class> class optional;
 template <class> class param;
-template <class> class serializer_impl;
 template <class> class span;
 template <class> class stream;
 template <class> class stream_sink;
@@ -96,6 +96,7 @@ class actor_system;
 class actor_system_config;
 class behavior;
 class binary_deserializer;
+class binary_serializer;
 class blocking_actor;
 class config_option;
 class config_option_adder;
@@ -184,7 +185,6 @@ enum class invoke_message_result;
 // -- aliases ------------------------------------------------------------------
 
 using actor_id = uint64_t;
-using binary_serializer = serializer_impl<std::vector<char>>;
 using ip_address = ipv6_address;
 using ip_endpoint = ipv6_endpoint;
 using ip_subnet = ipv6_subnet;
@@ -195,6 +195,9 @@ using stream_slot = uint16_t;
 
 /// @relates actor_system_config
 CAF_CORE_EXPORT const settings& content(const actor_system_config&);
+
+template <class T, class... Ts>
+message make_message(T&& x, Ts&&... xs);
 
 // -- intrusive containers -----------------------------------------------------
 

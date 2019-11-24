@@ -18,10 +18,22 @@
 
 #include "caf/sec.hpp"
 
+#include "caf/error.hpp"
+#include "caf/make_message.hpp"
+#include "caf/message.hpp"
+
 namespace caf {
 
 error make_error(sec x) {
   return {static_cast<uint8_t>(x), atom("system")};
+}
+
+error make_error(sec x, message msg) {
+  return {static_cast<uint8_t>(x), atom("system"), std::move(msg)};
+}
+
+error make_error(sec x, std::string msg) {
+  return make_error(x, make_message(std::move(msg)));
 }
 
 } // namespace caf

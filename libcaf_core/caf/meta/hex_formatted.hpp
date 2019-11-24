@@ -20,8 +20,7 @@
 
 #include "caf/meta/annotation.hpp"
 
-namespace caf {
-namespace meta {
+namespace caf::meta {
 
 struct hex_formatted_t : annotation {
   constexpr hex_formatted_t() {
@@ -34,6 +33,4 @@ constexpr hex_formatted_t hex_formatted() {
   return {};
 }
 
-} // namespace meta
-} // namespace caf
-
+} // namespace caf::meta

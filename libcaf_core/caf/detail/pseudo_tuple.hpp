@@ -20,13 +20,12 @@
 
 #include <cstddef>
 
-#include "caf/param.hpp"
 #include "caf/config.hpp"
+#include "caf/param.hpp"
 
 #include "caf/detail/type_traits.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 // tuple-like access to an array of void pointers that is
 // also aware of the semantics of param<T>
@@ -102,8 +101,7 @@ struct pseudo_tuple_access<const param<T>> : pseudo_tuple_access<param<T>> {
 
 template <size_t N, class... Ts>
 typename pseudo_tuple_access<
-  const typename detail::type_at<N, Ts...>::type
->::result_type
+  const typename detail::type_at<N, Ts...>::type>::result_type
 get(const detail::pseudo_tuple<Ts...>& tv) {
   static_assert(N < sizeof...(Ts), "N >= tv.size()");
   using f = pseudo_tuple_access<const typename detail::type_at<N, Ts...>::type>;
@@ -112,14 +110,11 @@ get(const detail::pseudo_tuple<Ts...>& tv) {
 
 template <size_t N, class... Ts>
 typename pseudo_tuple_access<
-  typename detail::type_at<N, Ts...>::type
->::result_type
+  typename detail::type_at<N, Ts...>::type>::result_type
 get(detail::pseudo_tuple<Ts...>& tv) {
   static_assert(N < sizeof...(Ts), "N >= tv.size()");
   using f = pseudo_tuple_access<typename detail::type_at<N, Ts...>::type>;
   return f::get(tv, N);
 }
 
-} // namespace detail
-} // namespace caf
-
+} // namespace caf::detail

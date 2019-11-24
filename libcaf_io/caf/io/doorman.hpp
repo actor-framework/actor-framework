@@ -29,8 +29,7 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/message.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 using doorman_base = broker_servant<network::acceptor_manager, accept_handle,
                                     new_connection_msg>;
@@ -56,8 +55,7 @@ protected:
 
 using doorman_ptr = intrusive_ptr<doorman>;
 
-} // namespace io
-} // namespace caf
+} // namespace caf::io
 
 // Allows the `middleman_actor` to create a `doorman` and then send it to the
 // BASP broker.

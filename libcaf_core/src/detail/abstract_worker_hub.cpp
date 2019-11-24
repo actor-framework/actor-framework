@@ -20,8 +20,7 @@
 
 #include "caf/detail/abstract_worker.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
@@ -90,5 +89,4 @@ abstract_worker* abstract_worker_hub::peek_impl() {
   return head_.load();
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

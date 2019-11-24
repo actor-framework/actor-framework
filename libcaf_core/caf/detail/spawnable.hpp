@@ -23,8 +23,7 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/infer_handle.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Returns whether the function object `F` is spawnable from the actor
 /// implementation `Impl` with arguments of type `Ts...`.
@@ -34,5 +33,4 @@ constexpr bool spawnable() {
          || is_callable_with<F, Impl*, Ts...>::value;
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

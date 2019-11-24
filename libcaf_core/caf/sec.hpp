@@ -22,8 +22,9 @@
 
 #pragma once
 
-#include "caf/error.hpp"
-#include "caf/make_message.hpp"
+#include <string>
+
+#include "caf/fwd.hpp"
 
 namespace caf {
 
@@ -135,10 +136,13 @@ CAF_CORE_EXPORT std::string to_string(sec);
 CAF_CORE_EXPORT error make_error(sec);
 
 /// @relates sec
+CAF_CORE_EXPORT error make_error(sec, message);
+
+/// @relates sec
 template <class T, class... Ts>
-error make_error(sec code, T&& x, Ts&&... xs) {
-  return {static_cast<uint8_t>(code), atom("system"),
-          make_message(std::forward<T>(x), std::forward<Ts>(xs)...)};
+auto make_error(sec code, T&& x, Ts&&... xs) {
+  return make_error(code,
+                    make_message(std::forward<T>(x), std::forward<Ts>(xs)...));
 }
 
 } // namespace caf

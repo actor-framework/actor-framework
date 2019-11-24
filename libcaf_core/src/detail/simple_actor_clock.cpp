@@ -22,8 +22,7 @@
 #include "caf/sec.hpp"
 #include "caf/system_messages.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 simple_actor_clock::event::~event() {
   // nop
@@ -197,5 +196,4 @@ void simple_actor_clock::add_schedule_entry(
   i->second->second->backlink = i;
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

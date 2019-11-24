@@ -20,15 +20,14 @@
 
 #include <thread>
 
+#include "caf/byte_buffer.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/io/abstract_broker.hpp"
 #include "caf/io/network/multiplexer.hpp"
 #include "caf/io/network/receive_buffer.hpp"
 #include "caf/io/receive_policy.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 class CAF_IO_EXPORT test_multiplexer : public multiplexer {
 private:
@@ -104,32 +103,29 @@ public:
   /// Generate an id for a new servant.
   int64_t next_endpoint_id();
 
-  /// A buffer storing bytes used for TCP related components.
-  using buffer_type = std::vector<char>;
-
   /// Buffers storing bytes for UDP related components.
-  using read_buffer_type = network::receive_buffer;
-  using write_buffer_type = buffer_type;
-  using read_job_type = std::pair<datagram_handle, read_buffer_type>;
-  using write_job_type = std::pair<datagram_handle, write_buffer_type>;
+  using read_byte_buffer = network::receive_buffer;
+  using write_byte_buffer = byte_buffer;
+  using read_job_type = std::pair<datagram_handle, read_byte_buffer>;
+  using write_job_type = std::pair<datagram_handle, write_byte_buffer>;
   using write_job_queue_type = std::deque<write_job_type>;
 
-  using shared_buffer_type = std::shared_ptr<buffer_type>;
+  using shared_byte_buffer = std::shared_ptr<byte_buffer>;
   using shared_job_queue_type = std::shared_ptr<write_job_queue_type>;
 
   /// Models pending data on the network, i.e., the network
   /// input buffer usually managed by the operating system.
-  buffer_type& virtual_network_buffer(connection_handle hdl);
+  byte_buffer& virtual_network_buffer(connection_handle hdl);
 
   /// Models pending data on the network, i.e., the network
   /// input buffer usually managed by the operating system.
   write_job_queue_type& virtual_network_buffer(datagram_handle hdl);
 
   /// Returns the output buffer of the scribe identified by `hdl`.
-  buffer_type& output_buffer(connection_handle hdl);
+  byte_buffer& output_buffer(connection_handle hdl);
 
   /// Returns the input buffer of the scribe identified by `hdl`.
-  buffer_type& input_buffer(connection_handle hdl);
+  byte_buffer& input_buffer(connection_handle hdl);
 
   /// Returns the output buffer of the dgram servant identified by `hdl`.
   write_job_type& output_buffer(datagram_handle hdl);
@@ -249,12 +245,12 @@ public:
 
   /// Appends `buf` to the virtual network buffer of `hdl`
   /// and calls `read_data(hdl)` afterwards.
-  void virtual_send(connection_handle hdl, const buffer_type& buf);
+  void virtual_send(connection_handle hdl, const byte_buffer& buf);
 
   /// Appends `buf` to the virtual network buffer of `hdl`
   /// and calls `read_data(hdl)` afterwards.
-  void virtual_send(datagram_handle src, datagram_handle ep,
-                    const buffer_type&);
+  void
+  virtual_send(datagram_handle src, datagram_handle ep, const byte_buffer&);
 
   /// Waits until a `runnable` is available and executes it.
   void exec_runnable();
@@ -298,11 +294,11 @@ private:
   std::shared_ptr<datagram_data> data_for_hdl(datagram_handle hdl);
 
   struct scribe_data {
-    shared_buffer_type vn_buf_ptr;
-    shared_buffer_type wr_buf_ptr;
-    buffer_type& vn_buf;
-    buffer_type rd_buf;
-    buffer_type& wr_buf;
+    shared_byte_buffer vn_buf_ptr;
+    shared_byte_buffer wr_buf_ptr;
+    byte_buffer& vn_buf;
+    byte_buffer rd_buf;
+    byte_buffer& wr_buf;
     receive_policy::config recv_conf;
     bool stopped_reading;
     bool passive_mode;
@@ -311,8 +307,8 @@ private:
 
     // Allows creating an entangled scribes where the input of this scribe is
     // the output of another scribe and vice versa.
-    scribe_data(shared_buffer_type input = std::make_shared<buffer_type>(),
-                shared_buffer_type output = std::make_shared<buffer_type>());
+    scribe_data(shared_byte_buffer input = std::make_shared<byte_buffer>(),
+                shared_byte_buffer output = std::make_shared<byte_buffer>());
   };
 
   struct doorman_data {
@@ -376,6 +372,4 @@ private:
   int64_t servant_ids_;
 };
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

@@ -93,17 +93,20 @@ behavior http_worker(http_broker* self, connection_handle hdl) {
     [=](const new_data_msg& msg) {
       assert(!msg.buf.empty());
       assert(msg.handle == hdl);
+      // interpret the received bytes as a string
+      string_view msg_buf{reinterpret_cast<const char*>(msg.buf.data()),
+                          msg.buf.size()};
       // extract lines from received buffer
       auto& lines = self->state.lines;
-      auto i = msg.buf.begin();
-      auto e = msg.buf.end();
+      auto i = msg_buf.begin();
+      auto e = msg_buf.end();
       // search position of first newline in data chunk
       auto nl = std::search(i, e, std::begin(newline), std::end(newline));
       // store whether we are continuing a previously started line
       auto append_to_last_line = self->state.ps == receive_continued_line;
       // check whether our last chunk ended between \r and \n
       if (self->state.ps == receive_second_newline_half) {
-        if (msg.buf.front() == '\n') {
+        if (msg_buf.front() == '\n') {
           // simply skip this character
           ++i;
         }
@@ -125,10 +128,10 @@ behavior http_worker(http_broker* self, connection_handle hdl) {
         }
       } while (nl != e);
       // store current state of our parser
-      if (msg.buf.back() == '\r') {
+      if (msg_buf.back() == '\r') {
         self->state.ps = receive_second_newline_half;
         self->state.lines.pop_back(); // drop '\r' from our last read line
-      } else if (msg.buf.back() == '\n') {
+      } else if (msg_buf.back() == '\n') {
         self->state.ps = receive_new_line; // we've got a clean cut
       } else {
         self->state.ps = receive_continued_line; // interrupted in the
@@ -141,13 +144,17 @@ behavior http_worker(http_broker* self, connection_handle hdl) {
       // end
       if (lines.size() > 1 && lines.back().empty()) {
         auto& out = self->wr_buf(hdl);
+        auto append = [&](string_view str) {
+          auto bytes = as_bytes(make_span(str));
+          out.insert(out.end(), bytes.begin(), bytes.end());
+        };
         // we only look at the first line in our example and reply with
         // our OK message if we receive exactly "GET / HTTP/1.1",
         // otherwise we send a 404 HTTP response
         if (lines.front() == http_valid_get)
-          out.insert(out.end(), std::begin(http_ok), std::end(http_ok));
+          append(http_ok);
         else
-          out.insert(out.end(), std::begin(http_error), std::end(http_error));
+          append(http_error);
         // write data and close connection
         self->flush(hdl);
         self->quit();
@@ -202,11 +209,12 @@ public:
     mock_t(const mock_t&) = default;
 
     mock_t& expect(const std::string& x) {
+      auto bytes = as_bytes(make_span(x));
       auto& buf = this_->mpx_->output_buffer(this_->connection_);
       CAF_REQUIRE(buf.size() >= x.size());
       CAF_REQUIRE(std::equal(buf.begin(),
                              buf.begin() + static_cast<ptrdiff_t>(x.size()),
-                             x.begin()));
+                             bytes.begin()));
       buf.erase(buf.begin(), buf.begin() + static_cast<ptrdiff_t>(x.size()));
       return *this;
     }
@@ -216,10 +224,9 @@ public:
 
   // mocks some input for our AUT and allows to
   // check the output for this operation
-  mock_t mock(const char* what) {
-    std::vector<char> buf;
-    for (char c = *what++; c != '\0'; c = *what++)
-      buf.push_back(c);
+  mock_t mock(string_view what) {
+    auto bytes = as_bytes(make_span(what));
+    byte_buffer buf{bytes.begin(), bytes.end()};
     mpx_->virtual_send(connection_, std::move(buf));
     return {this};
   }

@@ -21,8 +21,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/simple_actor_clock.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class CAF_CORE_EXPORT test_actor_clock : public simple_actor_clock {
 public:
@@ -63,5 +62,4 @@ public:
   std::map<atom_value, duration_type> time_per_unit;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

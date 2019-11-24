@@ -29,8 +29,7 @@
 #include "caf/detail/ringbuffer.hpp"
 #include "caf/detail/simple_actor_clock.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class CAF_CORE_EXPORT thread_safe_actor_clock : public simple_actor_clock {
 public:
@@ -81,5 +80,4 @@ private:
   std::array<unique_event_ptr, buffer_size> events_;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

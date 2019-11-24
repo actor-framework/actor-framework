@@ -29,6 +29,7 @@
 
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/forwarding_actor_proxy.hpp"
 #include "caf/io/basp/all.hpp"
@@ -37,8 +38,7 @@
 #include "caf/proxy_registry.hpp"
 #include "caf/stateful_actor.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 /// A broker implementation for the Binary Actor System Protocol (BASP).
 class CAF_IO_EXPORT basp_broker : public broker,
@@ -92,7 +92,7 @@ public:
 
   void learned_new_node_indirectly(const node_id& nid) override;
 
-  buffer_type& get_buffer(connection_handle hdl) override;
+  byte_buffer& get_buffer(connection_handle hdl) override;
 
   void flush(connection_handle hdl) override;
 
@@ -160,5 +160,4 @@ public:
   monitored_actor_map monitored_actors;
 };
 
-} // namespace io
-} // namespace caf
+} // namespace caf::io

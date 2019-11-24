@@ -28,8 +28,7 @@
 #include "caf/detail/type_list.hpp"
 #include "caf/ref_counted.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class CAF_CORE_EXPORT decorated_tuple : public message_data {
 public:
@@ -95,5 +94,4 @@ private:
   uint32_t type_token_;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

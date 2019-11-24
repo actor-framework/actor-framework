@@ -33,9 +33,7 @@ constexpr size_t receive_buffer_size = std::numeric_limits<uint16_t>::max();
 
 } // namespace
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 datagram_handler::datagram_handler(default_multiplexer& backend_ref,
                                    native_socket sockfd)
@@ -72,10 +70,9 @@ void datagram_handler::write(datagram_handle hdl, const void* buf,
                              size_t num_bytes) {
   wr_offline_buf_.emplace_back();
   wr_offline_buf_.back().first = hdl;
-  auto cbuf = reinterpret_cast<const char*>(buf);
-  wr_offline_buf_.back().second.assign(cbuf,
-                                       cbuf
-                                         + static_cast<ptrdiff_t>(num_bytes));
+  auto cbuf = reinterpret_cast<const byte*>(buf);
+  wr_offline_buf_.back().second.assign(
+    cbuf, cbuf + static_cast<ptrdiff_t>(num_bytes));
 }
 
 void datagram_handler::flush(const manager_ptr& mgr) {
@@ -122,6 +119,12 @@ void datagram_handler::remove_endpoint(datagram_handle hdl) {
     hdl_by_ep_.erase(itr->second);
     ep_by_hdl_.erase(itr);
   }
+}
+
+std::string datagram_handler::addr(datagram_handle hdl) const {
+  if (auto itr = ep_by_hdl_.find(hdl); itr != ep_by_hdl_.end())
+    return host(itr->second);
+  return std::string{};
 }
 
 void datagram_handler::removed_from_loop(operation op) {
@@ -191,8 +194,8 @@ bool datagram_handler::handle_read_result(bool read_result) {
 }
 
 void datagram_handler::handle_write_result(bool write_result,
-                                           datagram_handle id,
-                                           std::vector<char>& buf, size_t wb) {
+                                           datagram_handle id, byte_buffer& buf,
+                                           size_t wb) {
   if (!write_result) {
     writer_->io_failure(&backend(), operation::write);
     backend().del(operation::write, fd(), this);
@@ -216,6 +219,4 @@ void datagram_handler::handle_error() {
   // no need to call backend().del() here
 }
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

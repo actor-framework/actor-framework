@@ -20,9 +20,7 @@
 
 #include <iterator>
 
-namespace caf {
-namespace io {
-namespace basp {
+namespace caf::io::basp {
 
 message_queue::message_queue() : next_id(0), next_undelivered(0) {
   // nop
@@ -72,6 +70,4 @@ uint64_t message_queue::new_id() {
   return next_id++;
 }
 
-} // namespace basp
-} // namespace io
-} // namespace caf
+} // namespace caf::io::basp

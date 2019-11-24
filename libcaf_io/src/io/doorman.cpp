@@ -22,8 +22,7 @@
 
 #include "caf/io/abstract_broker.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 doorman::doorman(accept_handle acc_hdl) : doorman_base(acc_hdl) {
   // nop
@@ -42,5 +41,4 @@ bool doorman::new_connection(execution_unit* ctx, connection_handle x) {
   return invoke_mailbox_element(ctx);
 }
 
-} // namespace io
-} // namespace caf
+} // namespace caf::io

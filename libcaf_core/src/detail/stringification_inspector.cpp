@@ -47,8 +47,7 @@ void escape(std::string& result, char c) {
 
 } // namespace
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 void stringification_inspector::sep() {
   if (!result_.empty())
@@ -207,5 +206,4 @@ void stringification_inspector::consume_int(uint64_t x) {
   std::reverse(result_.begin() + begin, result_.end());
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

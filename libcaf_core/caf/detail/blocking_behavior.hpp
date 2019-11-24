@@ -23,8 +23,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/timeout_definition.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class CAF_CORE_EXPORT blocking_behavior {
 public:
@@ -140,5 +139,4 @@ struct make_blocking_behavior_t {
 constexpr make_blocking_behavior_t make_blocking_behavior
   = make_blocking_behavior_t{};
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

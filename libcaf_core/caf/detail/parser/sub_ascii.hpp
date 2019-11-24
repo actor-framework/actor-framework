@@ -24,9 +24,7 @@
 #include "caf/detail/parser/ascii_to_int.hpp"
 #include "caf/detail/type_traits.hpp"
 
-namespace caf {
-namespace detail {
-namespace parser {
+namespace caf::detail::parser {
 
 // Subtracs integers when parsing negative integers.
 // @returns `false` on an underflow, otherwise `true`.
@@ -55,6 +53,4 @@ bool sub_ascii(T& x, char c,
   return true;
 }
 
-} // namespace parser
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail::parser

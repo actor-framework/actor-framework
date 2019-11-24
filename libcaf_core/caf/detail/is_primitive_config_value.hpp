@@ -37,14 +37,12 @@ enum class atom_value : uint64_t;
 
 // -- trait --------------------------------------------------------------------
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
-/// Checks wheter `T` is in a primitive value type in `config_value`.
+/// Checks whether `T` is in a primitive value type in `config_value`.
 template <class T>
 using is_primitive_config_value
   = is_one_of<T, int64_t, bool, double, atom_value, timespan, std::string,
               std::vector<config_value>, std::map<std::string, config_value>>;
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

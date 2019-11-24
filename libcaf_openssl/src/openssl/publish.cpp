@@ -28,8 +28,7 @@
 
 #include "caf/openssl/manager.hpp"
 
-namespace caf {
-namespace openssl {
+namespace caf::openssl {
 
 expected<uint16_t> publish(actor_system& sys, const strong_actor_ptr& whom,
                            std::set<std::string>&& sigs, uint16_t port,
@@ -44,5 +43,4 @@ expected<uint16_t> publish(actor_system& sys, const strong_actor_ptr& whom,
            std::move(in), ru);
 }
 
-} // namespace openssl
-} // namespace caf
+} // namespace caf::openssl

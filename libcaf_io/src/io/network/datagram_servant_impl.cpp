@@ -24,9 +24,7 @@
 
 #include "caf/io/network/default_multiplexer.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 datagram_servant_impl::datagram_servant_impl(default_multiplexer& mx,
                                              native_socket sockfd, int64_t id)
@@ -62,12 +60,12 @@ void datagram_servant_impl::ack_writes(bool enable) {
   handler_.ack_writes(enable);
 }
 
-std::vector<char>& datagram_servant_impl::wr_buf(datagram_handle hdl) {
+byte_buffer& datagram_servant_impl::wr_buf(datagram_handle hdl) {
   return handler_.wr_buf(hdl);
 }
 
 void datagram_servant_impl::enqueue_datagram(datagram_handle hdl,
-                                             std::vector<char> buffer) {
+                                             byte_buffer buffer) {
   handler_.enqueue_datagram(hdl, std::move(buffer));
 }
 
@@ -87,11 +85,8 @@ void datagram_servant_impl::flush() {
   handler_.flush(this);
 }
 
-std::string datagram_servant_impl::addr() const {
-  auto x = remote_addr_of_fd(handler_.fd());
-  if (!x)
-    return "";
-  return *x;
+std::string datagram_servant_impl::addr(datagram_handle hdl) const {
+  return handler_.addr(hdl);
 }
 
 uint16_t datagram_servant_impl::port(datagram_handle hdl) const {
@@ -148,6 +143,4 @@ void datagram_servant_impl::detach_handles() {
   }
 }
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

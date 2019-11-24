@@ -20,9 +20,7 @@
 
 #include "caf/io/network/stream.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// A concrete stream with a technology-dependent policy for sending and
 /// receiving data from a socket.
@@ -31,8 +29,7 @@ class stream_impl : public stream {
 public:
   template <class... Ts>
   stream_impl(default_multiplexer& mpx, native_socket sockfd, Ts&&... xs)
-  : stream(mpx, sockfd),
-  policy_(std::forward<Ts>(xs)...) {
+    : stream(mpx, sockfd), policy_(std::forward<Ts>(xs)...) {
     // nop
   }
 
@@ -44,6 +41,4 @@ private:
   ProtocolPolicy policy_;
 };
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

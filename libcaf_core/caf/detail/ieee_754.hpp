@@ -16,17 +16,14 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-/******************************************************************************\
- *      Based on http://beej.us/guide/bgnet/examples/pack2.c      *
-\ ******************************************************************************/
+// Based on http://beej.us/guide/bgnet/examples/pack2.c
 
 #pragma once
 
 #include <cmath>
 #include <cstdint>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class T>
 struct ieee_754_trait;
@@ -40,7 +37,6 @@ struct ieee_754_trait<float> {
   using packed_type = uint32_t;          // unsigned integer type
   using signed_packed_type = int32_t;    // signed integer type
   using float_type = float;              // floating point type
-
 };
 
 template <>
@@ -55,7 +51,6 @@ struct ieee_754_trait<double> {
   using packed_type = uint64_t;
   using signed_packed_type = int64_t;
   using float_type = double;
-
 };
 
 template <>
@@ -107,7 +102,8 @@ typename ieee_754_trait<T>::float_type unpack754(T i) {
   using trait = ieee_754_trait<T>;
   using signed_type = typename trait::signed_packed_type;
   using result_type = typename trait::float_type;
-  if (i == 0) return trait::zero;
+  if (i == 0)
+    return trait::zero;
   auto significandbits = trait::bits - trait::expbits - 1; // -1 for sign bit
   // pull the significand: mask, convert back to float + add the one back on
   auto result = static_cast<result_type>(i & ((T{1} << significandbits) - 1));
@@ -117,8 +113,8 @@ typename ieee_754_trait<T>::float_type unpack754(T i) {
   auto si = static_cast<signed_type>(i);
   auto bias = (1 << (trait::expbits - 1)) - 1;
   auto pownum = static_cast<signed_type>(1) << trait::expbits;
-  auto shift = static_cast<signed_type>(
-    ((si >> significandbits) & (pownum - 1)) - bias);
+  auto shift
+    = static_cast<signed_type>(((si >> significandbits) & (pownum - 1)) - bias);
   while (shift > 0) {
     result *= static_cast<result_type>(2);
     --shift;
@@ -132,6 +128,4 @@ typename ieee_754_trait<T>::float_type unpack754(T i) {
   return result;
 }
 
-} // namespace detail
-} // namespace caf
-
+} // namespace caf::detail

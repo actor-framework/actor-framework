@@ -23,39 +23,31 @@
 
 #include "caf/detail/type_list.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Compile-time list of integer types types.
-using int_types_by_size =
-  detail::type_list<                      // bytes
-    void,                                 // 0
-    detail::type_pair<int8_t, uint8_t>,   // 1
-    detail::type_pair<int16_t, uint16_t>, // 2
-    void,                                 // 3
-    detail::type_pair<int32_t, uint32_t>, // 4
-    void,                                 // 5
-    void,                                 // 6
-    void,                                 // 7
-    detail::type_pair<int64_t, uint64_t>  // 8
+using int_types_by_size = detail::type_list< // bytes
+  void,                                      // 0
+  detail::type_pair<int8_t, uint8_t>,        // 1
+  detail::type_pair<int16_t, uint16_t>,      // 2
+  void,                                      // 3
+  detail::type_pair<int32_t, uint32_t>,      // 4
+  void,                                      // 5
+  void,                                      // 6
+  void,                                      // 7
+  detail::type_pair<int64_t, uint64_t>       // 8
   >;
 
-/// Squashes integer types into [u]int_[8|16|32|64]_t equivalents
+/// Squashes integer types into [u]int_[8|16|32|64]_t equivalents.
 template <class T>
 struct squashed_int {
   using tpair = typename detail::tl_at<int_types_by_size, sizeof(T)>::type;
-  using type = 
-    typename std::conditional<
-      std::is_signed<T>::value,
-      typename tpair::first,
-      typename tpair::second
-    >::type;
+  using type = std::conditional_t<std::is_signed<T>::value, //
+                                  typename tpair::first,    //
+                                  typename tpair::second>;
 };
 
 template <class T>
 using squashed_int_t = typename squashed_int<T>::type;
 
-} // namespace detail
-} // namespace caf
-
-
+} // namespace caf::detail

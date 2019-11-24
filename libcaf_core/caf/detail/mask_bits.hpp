@@ -22,8 +22,7 @@
 #include <array>
 #include <cstdint>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Sets all bits after bits_to_keep to 0.
 template <size_t NumBytes>
@@ -46,5 +45,4 @@ void mask_bits(std::array<uint8_t, NumBytes>& bytes, size_t bits_to_keep) {
     *i = 0;
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

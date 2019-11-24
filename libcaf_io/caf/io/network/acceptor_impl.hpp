@@ -21,12 +21,10 @@
 #include "caf/io/fwd.hpp"
 
 #include "caf/io/network/acceptor.hpp"
-#include "caf/io/network/operation.hpp"
 #include "caf/io/network/native_socket.hpp"
+#include "caf/io/network/operation.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// A concrete acceptor with a technology-dependent policy.
 template <class ProtocolPolicy>
@@ -34,8 +32,7 @@ class acceptor_impl : public acceptor {
 public:
   template <class... Ts>
   acceptor_impl(default_multiplexer& mpx, native_socket sockfd, Ts&&... xs)
-    : acceptor(mpx, sockfd),
-      policy_(std::forward<Ts>(xs)...) {
+    : acceptor(mpx, sockfd), policy_(std::forward<Ts>(xs)...) {
     // nop
   }
 
@@ -47,6 +44,4 @@ private:
   ProtocolPolicy policy_;
 };
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

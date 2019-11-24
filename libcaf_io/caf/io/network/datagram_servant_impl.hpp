@@ -27,9 +27,7 @@
 #include "caf/io/network/native_socket.hpp"
 #include "caf/policy/udp.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// Default datagram servant implementation.
 class CAF_IO_EXPORT datagram_servant_impl : public datagram_servant {
@@ -43,9 +41,9 @@ public:
 
   void ack_writes(bool enable) override;
 
-  std::vector<char>& wr_buf(datagram_handle hdl) override;
+  byte_buffer& wr_buf(datagram_handle hdl) override;
 
-  void enqueue_datagram(datagram_handle hdl, std::vector<char> buf) override;
+  void enqueue_datagram(datagram_handle hdl, byte_buffer buf) override;
 
   network::receive_buffer& rd_buf() override;
 
@@ -53,7 +51,7 @@ public:
 
   void flush() override;
 
-  std::string addr() const override;
+  std::string addr(datagram_handle hdl) const override;
 
   uint16_t port(datagram_handle hdl) const override;
 
@@ -78,6 +76,4 @@ private:
   datagram_handler_impl<policy::udp> handler_;
 };
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

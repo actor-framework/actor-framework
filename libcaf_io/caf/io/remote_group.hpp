@@ -18,27 +18,24 @@
 
 #pragma once
 
-#include <string>
 #include <cstdint>
+#include <string>
 
 #include "caf/actor_system.hpp"
 
 #include "caf/io/middleman.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
-inline expected<group> remote_group(actor_system& sys,
-                                    const std::string& group_uri) {
+inline expected<group>
+remote_group(actor_system& sys, const std::string& group_uri) {
   return sys.middleman().remote_group(group_uri);
 }
 
-inline expected<group> remote_group(actor_system& sys,
-                                    const std::string& group_identifier,
-                                    const std::string& host, uint16_t port) {
+inline expected<group>
+remote_group(actor_system& sys, const std::string& group_identifier,
+             const std::string& host, uint16_t port) {
   return sys.middleman().remote_group(group_identifier, host, port);
 }
 
-} // namespace io
-} // namespace caf
-
+} // namespace caf::io

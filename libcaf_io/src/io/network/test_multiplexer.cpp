@@ -24,9 +24,7 @@
 #include "caf/raise_error.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 namespace {
 
@@ -34,8 +32,8 @@ constexpr size_t receive_buffer_size = std::numeric_limits<uint16_t>::max();
 
 } // namespace
 
-test_multiplexer::scribe_data::scribe_data(shared_buffer_type input,
-                                           shared_buffer_type output)
+test_multiplexer::scribe_data::scribe_data(shared_byte_buffer input,
+                                           shared_byte_buffer output)
   : vn_buf_ptr(std::move(input)),
     wr_buf_ptr(std::move(output)),
     vn_buf(*vn_buf_ptr),
@@ -96,10 +94,10 @@ scribe_ptr test_multiplexer::new_scribe(connection_handle hdl) {
     void ack_writes(bool enable) override {
       mpx_->ack_writes(hdl()) = enable;
     }
-    std::vector<char>& wr_buf() override {
+    byte_buffer& wr_buf() override {
       return mpx_->output_buffer(hdl());
     }
-    std::vector<char>& rd_buf() override {
+    byte_buffer& rd_buf() override {
       return mpx_->input_buffer(hdl());
     }
     void graceful_shutdown() override {
@@ -135,8 +133,8 @@ scribe_ptr test_multiplexer::new_scribe(connection_handle hdl) {
   return sptr;
 }
 
-expected<scribe_ptr> test_multiplexer::new_tcp_scribe(const std::string& host,
-                                                      uint16_t port) {
+expected<scribe_ptr>
+test_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port));
   connection_handle hdl;
   { // lifetime scope of guard
@@ -214,8 +212,8 @@ doorman_ptr test_multiplexer::new_doorman(accept_handle hdl, uint16_t port) {
   return dptr;
 }
 
-expected<doorman_ptr> test_multiplexer::new_tcp_doorman(uint16_t desired_port,
-                                                        const char*, bool) {
+expected<doorman_ptr>
+test_multiplexer::new_tcp_doorman(uint16_t desired_port, const char*, bool) {
   CAF_LOG_TRACE(CAF_ARG(desired_port));
   accept_handle hdl;
   uint16_t port = 0;
@@ -320,8 +318,8 @@ test_multiplexer::new_local_udp_endpoint(uint16_t desired_port, const char*,
   return new_datagram_servant(hdl, port);
 }
 
-datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle hdl,
-                                                            uint16_t port) {
+datagram_servant_ptr
+test_multiplexer::new_datagram_servant(datagram_handle hdl, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(hdl));
   class impl : public datagram_servant {
   public:
@@ -349,12 +347,12 @@ datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle hdl,
     void ack_writes(bool enable) override {
       mpx_->ack_writes(hdl()) = enable;
     }
-    std::vector<char>& wr_buf(datagram_handle dh) override {
+    byte_buffer& wr_buf(datagram_handle dh) override {
       auto& buf = mpx_->output_buffer(dh);
       buf.first = dh;
       return buf.second;
     }
-    void enqueue_datagram(datagram_handle dh, std::vector<char> buf) override {
+    void enqueue_datagram(datagram_handle dh, byte_buffer buf) override {
       auto& q = mpx_->output_queue(dh);
       q.emplace_back(dh, std::move(buf));
     }
@@ -373,7 +371,7 @@ datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle hdl,
     void flush() override {
       // nop
     }
-    std::string addr() const override {
+    std::string addr(datagram_handle) const override {
       return "test";
     }
     uint16_t port(datagram_handle dh) const override {
@@ -432,9 +430,9 @@ datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle hdl,
   return dptr;
 }
 
-datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle,
-                                                            const std::string&,
-                                                            uint16_t) {
+datagram_servant_ptr
+test_multiplexer::new_datagram_servant(datagram_handle, const std::string&,
+                                       uint16_t) {
   CAF_CRITICAL("This has no implementation in the test multiplexer");
 }
 
@@ -443,9 +441,8 @@ int64_t test_multiplexer::next_endpoint_id() {
 }
 
 bool test_multiplexer::is_known_port(uint16_t x) const {
-  auto pred1 = [&](const doorman_data_map::value_type& y) {
-    return x == y.second.port;
-  };
+  auto pred1
+    = [&](const doorman_data_map::value_type& y) { return x == y.second.port; };
   auto pred2 = [&](const datagram_data_map::value_type& y) {
     return x == y.second->port;
   };
@@ -455,9 +452,8 @@ bool test_multiplexer::is_known_port(uint16_t x) const {
 }
 
 bool test_multiplexer::is_known_handle(accept_handle x) const {
-  auto pred = [&](const pending_doorman_map::value_type& y) {
-    return x == y.second;
-  };
+  auto pred
+    = [&](const pending_doorman_map::value_type& y) { return x == y.second; };
   return doorman_data_.count(x) > 0
          || std::any_of(doormen_.begin(), doormen_.end(), pred);
 }
@@ -528,8 +524,7 @@ void test_multiplexer::provide_datagram_servant(std::string host,
 
 /// The external input buffer should be filled by
 /// the test program.
-test_multiplexer::buffer_type&
-test_multiplexer::virtual_network_buffer(connection_handle hdl) {
+byte_buffer& test_multiplexer::virtual_network_buffer(connection_handle hdl) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   return scribe_data_[hdl].vn_buf;
 }
@@ -540,14 +535,12 @@ test_multiplexer::virtual_network_buffer(datagram_handle hdl) {
   return data_for_hdl(hdl)->vn_buf;
 }
 
-test_multiplexer::buffer_type&
-test_multiplexer::output_buffer(connection_handle hdl) {
+byte_buffer& test_multiplexer::output_buffer(connection_handle hdl) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   return scribe_data_[hdl].wr_buf;
 }
 
-test_multiplexer::buffer_type&
-test_multiplexer::input_buffer(connection_handle hdl) {
+byte_buffer& test_multiplexer::input_buffer(connection_handle hdl) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   return scribe_data_[hdl].rd_buf;
 }
@@ -670,8 +663,8 @@ void test_multiplexer::prepare_connection(accept_handle src,
   CAF_ASSERT(this != &peer);
   CAF_LOG_TRACE(CAF_ARG(src) << CAF_ARG(hdl) << CAF_ARG(host) << CAF_ARG(port)
                              << CAF_ARG(peer_hdl));
-  auto input = std::make_shared<buffer_type>();
-  auto output = std::make_shared<buffer_type>();
+  auto input = std::make_shared<byte_buffer>();
+  auto output = std::make_shared<byte_buffer>();
   CAF_LOG_DEBUG("insert scribe data for" << CAF_ARG(hdl));
   auto res1 = scribe_data_.emplace(hdl, scribe_data{input, output});
   if (!res1.second)
@@ -907,7 +900,8 @@ bool test_multiplexer::read_data(datagram_handle hdl) {
   to.first = from.first;
   CAF_ASSERT(to.second.capacity() > from.second.size());
   to.second.resize(from.second.size());
-  std::copy(from.second.begin(), from.second.end(), to.second.begin());
+  std::transform(from.second.begin(), from.second.end(), to.second.begin(),
+                 [](byte x) { return caf::to_integer<char>(x); });
   data->vn_buf.pop_front();
   auto sitr = datagram_data_.find(data->rd_buf.first);
   if (sitr == datagram_data_.end()) {
@@ -921,7 +915,7 @@ bool test_multiplexer::read_data(datagram_handle hdl) {
 }
 
 void test_multiplexer::virtual_send(connection_handle hdl,
-                                    const buffer_type& buf) {
+                                    const byte_buffer& buf) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE(CAF_ARG(hdl));
   auto& vb = virtual_network_buffer(hdl);
@@ -930,7 +924,7 @@ void test_multiplexer::virtual_send(connection_handle hdl,
 }
 
 void test_multiplexer::virtual_send(datagram_handle dst, datagram_handle ep,
-                                    const buffer_type& buf) {
+                                    const byte_buffer& buf) {
   CAF_ASSERT(std::this_thread::get_id() == tid_);
   CAF_LOG_TRACE(CAF_ARG(dst) << CAF_ARG(ep));
   auto& vb = virtual_network_buffer(dst);
@@ -1037,6 +1031,4 @@ void test_multiplexer::exec(resumable_ptr& ptr) {
   }
 }
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

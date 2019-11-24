@@ -33,7 +33,7 @@ namespace caf {
 /// An event-based actor with managed state. The state is constructed
 /// before `make_behavior` will get called and destroyed after the
 /// actor called `quit`. This state management brakes cycles and
-/// allows actors to automatically release ressources as soon
+/// allows actors to automatically release resources as soon
 /// as possible.
 template <class State, class Base /* = event_based_actor (see fwd.hpp) */>
 class stateful_actor : public Base {
@@ -41,8 +41,6 @@ public:
   template <class... Ts>
   explicit stateful_actor(actor_config& cfg, Ts&&... xs)
     : Base(cfg, std::forward<Ts>(xs)...), state(state_) {
-    if (detail::is_serializable<State>::value)
-      this->setf(Base::is_serializable_flag);
     cr_state(this);
   }
 
@@ -60,14 +58,6 @@ public:
     return get_name(state_);
   }
 
-  error save_state(serializer& sink, unsigned int version) override {
-    return serialize_state(&sink, state, version);
-  }
-
-  error load_state(deserializer& source, unsigned int version) override {
-    return serialize_state(&source, state, version);
-  }
-
   /// A reference to the actor's state.
   State& state;
 
@@ -80,17 +70,6 @@ public:
   /// @endcond
 
 private:
-  template <class Inspector, class T>
-  auto serialize_state(Inspector* f, T& x, unsigned int)
-    -> decltype(inspect(*f, x)) {
-    return inspect(*f, x);
-  }
-
-  template <class T>
-  error serialize_state(void*, T&, unsigned int) {
-    return sec::invalid_argument;
-  }
-
   template <class T>
   typename std::enable_if<std::is_constructible<State, T>::value>::type
   cr_state(T arg) {

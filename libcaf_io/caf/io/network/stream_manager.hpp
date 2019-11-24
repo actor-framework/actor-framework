@@ -23,9 +23,7 @@
 #include "caf/detail/io_export.hpp"
 #include "caf/io/network/manager.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 /// A stream manager configures an IO stream and provides callbacks
 /// for incoming data as well as for error handling.
@@ -39,12 +37,14 @@ public:
 
   /// Called by the underlying I/O device whenever it sent data.
   virtual void data_transferred(execution_unit* ctx, size_t num_bytes,
-                                size_t remaining_bytes) = 0;
+                                size_t remaining_bytes)
+    = 0;
 
   /// Get the port of the underlying I/O device.
   virtual uint16_t port() const = 0;
+
+  /// Get the address of the underlying I/O device.
+  virtual std::string addr() const = 0;
 };
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

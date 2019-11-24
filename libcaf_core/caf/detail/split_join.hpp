@@ -21,28 +21,27 @@
 #include <vector>
 
 #include "caf/actor.hpp"
-#include "caf/locks.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/event_based_actor.hpp"
+#include "caf/locks.hpp"
 
 #include "caf/detail/shared_spinlock.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 using actor_msg_vec = std::vector<std::pair<actor, message>>;
 
 template <class T, class Split, class Join>
 class split_join_collector : public event_based_actor {
 public:
-  split_join_collector(actor_config& cfg, T init_value,
-                       Split s, Join j, actor_msg_vec xs)
-      : event_based_actor(cfg),
-        workset_(std::move(xs)),
-        awaited_results_(workset_.size()),
-        join_(std::move(j)),
-        split_(std::move(s)),
-        value_(std::move(init_value)) {
+  split_join_collector(actor_config& cfg, T init_value, Split s, Join j,
+                       actor_msg_vec xs)
+    : event_based_actor(cfg),
+      workset_(std::move(xs)),
+      awaited_results_(workset_.size()),
+      join_(std::move(j)),
+      split_(std::move(s)),
+      value_(std::move(init_value)) {
     // nop
   }
 
@@ -53,8 +52,8 @@ public:
       split_(workset_, msg);
       for (auto& x : workset_)
         this->send(x.first, std::move(x.second));
-      auto g = [=](scheduled_actor*, message_view& ys) mutable
-               -> result<message> {
+      auto g
+        = [=](scheduled_actor*, message_view& ys) mutable -> result<message> {
         auto res = ys.move_content_to_message();
         join_(value_, res);
         if (--awaited_results_ == 0) {
@@ -67,11 +66,9 @@ public:
       return delegated<message>{};
     };
     set_default_handler(f);
-    return {
-      [] {
-        // nop
-      }
-    };
+    return {[] {
+      // nop
+    }};
   }
 
 private:
@@ -94,26 +91,24 @@ template <class T, class Split, class Join>
 class split_join {
 public:
   split_join(T init_value, Split s, Join j)
-      : init_(std::move(init_value)),
-        sf_(std::move(s)),
-        jf_(std::move(j)) {
+    : init_(std::move(init_value)), sf_(std::move(s)), jf_(std::move(j)) {
     // nop
   }
 
-  void operator()(actor_system& sys,
-                  upgrade_lock<detail::shared_spinlock>& ulock,
-                  const std::vector<actor>& workers,
-                  mailbox_element_ptr& ptr,
-                  execution_unit* host) {
+  void
+  operator()(actor_system& sys, upgrade_lock<detail::shared_spinlock>& ulock,
+             const std::vector<actor>& workers, mailbox_element_ptr& ptr,
+             execution_unit* host) {
     if (!ptr->sender)
       return;
     actor_msg_vec xs;
     xs.reserve(workers.size());
-    for (const auto & worker : workers)
+    for (const auto& worker : workers)
       xs.emplace_back(worker, message{});
     ulock.unlock();
     using collector_t = split_join_collector<T, Split, Join>;
-    auto hdl = sys.spawn<collector_t, lazy_init>(init_, sf_, jf_, std::move(xs));
+    auto hdl
+      = sys.spawn<collector_t, lazy_init>(init_, sf_, jf_, std::move(xs));
     hdl->enqueue(std::move(ptr), host);
   }
 
@@ -123,7 +118,4 @@ private:
   Join jf_;  // join function
 };
 
-} // namespace detail
-} // namespace caf
-
-
+} // namespace caf::detail

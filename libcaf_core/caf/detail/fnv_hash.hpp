@@ -24,8 +24,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/type_traits.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// Non-cryptographic hash function named after Glenn Fowler, Landon Curt Noll,
 /// and Kiem-Phong Vo.
@@ -70,5 +69,4 @@ fnv_hash_append(size_t interim, const T& x) {
   return fnv_hash_append(interim, first, first + sizeof(T));
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

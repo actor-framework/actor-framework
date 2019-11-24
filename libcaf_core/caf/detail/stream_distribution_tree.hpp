@@ -26,8 +26,7 @@
 #include "caf/scheduled_actor.hpp"
 #include "caf/stream_manager.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 /// A stream distribution tree consist of peers forming an acyclic graph. The
 /// user is responsible for making sure peers do not form a loop. Data is
@@ -58,9 +57,7 @@ public:
 
   template <class... Ts>
   stream_distribution_tree(scheduled_actor* selfptr, Ts&&... xs)
-      : super(selfptr),
-        out_(this),
-        policy_(this, std::forward<Ts>(xs)...) {
+    : super(selfptr), out_(this), policy_(this, std::forward<Ts>(xs)...) {
     continuous(true);
   }
 
@@ -126,8 +123,8 @@ public:
   }
 
   bool done() const override {
-    return !continuous() && pending_handshakes_ == 0
-           && inbound_paths_.empty() && out_.clean();
+    return !continuous() && pending_handshakes_ == 0 && inbound_paths_.empty()
+           && out_.clean();
   }
 
   bool idle() const noexcept override {
@@ -144,6 +141,4 @@ private:
   Policy policy_;
 };
 
-} // namespace detail
-} // namespace caf
-
+} // namespace caf::detail

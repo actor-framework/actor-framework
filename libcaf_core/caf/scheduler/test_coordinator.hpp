@@ -31,8 +31,7 @@
 #include "caf/scheduled_actor.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 
-namespace caf {
-namespace scheduler {
+namespace caf::scheduler {
 
 /// A schedule coordinator for testing purposes.
 class CAF_CORE_EXPORT test_coordinator : public abstract_coordinator {
@@ -177,5 +176,4 @@ private:
   std::function<void()> after_next_enqueue_;
 };
 
-} // namespace scheduler
-} // namespace caf
+} // namespace caf::scheduler

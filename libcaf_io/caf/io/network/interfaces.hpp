@@ -18,21 +18,19 @@
 
 #pragma once
 
-#include <map>
-#include <vector>
-#include <string>
-#include <utility>
 #include <functional>
 #include <initializer_list>
+#include <map>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "caf/detail/io_export.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/protocol.hpp"
 #include "caf/optional.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 // {protocol => address}
 using address_listing = std::map<protocol::network, std::vector<std::string>>;
@@ -44,8 +42,8 @@ using interfaces_map = std::map<std::string, address_listing>;
 class CAF_IO_EXPORT interfaces {
 public:
   /// Consumes `{interface_name, protocol_type, is_localhost, address}` entries.
-  using consumer = std::function<void (const char*, protocol::network,
-                                       bool, const char*)>;
+  using consumer
+    = std::function<void(const char*, protocol::network, bool, const char*)>;
 
   /// Traverses all network interfaces for given protocols using `f`.
   static void traverse(std::initializer_list<protocol::network> ps, consumer f);
@@ -65,8 +63,8 @@ public:
                  bool include_localhost = true);
 
   /// Returns all addresses for all devices for given protocol.
-  static std::vector<std::string> list_addresses(protocol::network proc,
-                                                 bool include_localhost = true);
+  static std::vector<std::string>
+  list_addresses(protocol::network proc, bool include_localhost = true);
 
   /// Returns a native IPv4 or IPv6 translation of `host`.
   static optional<std::pair<std::string, protocol::network>>
@@ -84,6 +82,4 @@ public:
                optional<protocol::network> preferred = none);
 };
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

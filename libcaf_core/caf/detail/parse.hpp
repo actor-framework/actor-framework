@@ -35,8 +35,7 @@
 #include "caf/string_view.hpp"
 #include "caf/unit.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 // -- boolean type -------------------------------------------------------------
 
@@ -197,5 +196,4 @@ error parse(string_view str, T& x) {
   return make_error(ps.code, str);
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

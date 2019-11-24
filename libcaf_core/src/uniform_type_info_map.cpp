@@ -59,6 +59,7 @@ const char* numbered_type_names[] = {
   "@addr",
   "@addrvec",
   "@atom",
+  "@bytebuf",
   "@charbuf",
   "@config_value",
   "@down",
@@ -96,7 +97,7 @@ const char* numbered_type_names[] = {
   "@weak_actor_ptr",
   "bool",
   "double",
-  "float"
+  "float",
 };
 
 namespace {

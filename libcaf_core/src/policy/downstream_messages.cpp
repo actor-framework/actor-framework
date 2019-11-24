@@ -23,8 +23,7 @@
 #include "caf/inbound_path.hpp"
 #include "caf/logger.hpp"
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 namespace {
 
@@ -57,9 +56,8 @@ auto downstream_messages::id_of(mailbox_element& x) noexcept -> key_type {
 
 bool downstream_messages::enabled(const nested_queue_type& q) noexcept {
   auto congested = q.policy().handler->mgr->congested();
-  CAF_LOG_DEBUG_IF(congested,
-                   "path is congested:"
-                     << CAF_ARG2("slot", q.policy().handler->slots.receiver));
+  CAF_LOG_DEBUG_IF(congested, "path is congested:" << CAF_ARG2(
+                                "slot", q.policy().handler->slots.receiver));
   return !congested;
 }
 
@@ -69,5 +67,4 @@ auto downstream_messages::quantum(const nested_queue_type& q,
   return x * static_cast<deficit_type>(q.policy().handler->desired_batch_size);
 }
 
-} // namespace policy
-} // namespace caf
+} // namespace caf::policy

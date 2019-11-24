@@ -21,8 +21,7 @@
 
 #include "caf/logger.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 tick_emitter::tick_emitter()
   : start_(duration_type{0}), interval_(0), last_tick_id_(0) {
@@ -52,8 +51,8 @@ void tick_emitter::interval(duration_type x) {
   interval_ = x;
 }
 
-size_t tick_emitter::timeouts(time_point now,
-                              std::initializer_list<size_t> periods) {
+size_t
+tick_emitter::timeouts(time_point now, std::initializer_list<size_t> periods) {
   CAF_LOG_TRACE(CAF_ARG(now)
                 << CAF_ARG(periods) << CAF_ARG(interval_) << CAF_ARG(start_));
   CAF_ASSERT(now >= start_);
@@ -88,5 +87,4 @@ tick_emitter::next_timeout(time_point t,
   return start_ + (interval_ * tick_id);
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

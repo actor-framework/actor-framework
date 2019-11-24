@@ -23,8 +23,7 @@
 #include "caf/fwd.hpp"
 #include "caf/typed_actor.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 /// A message passing interface for asynchronous networking operations.
 ///
@@ -108,5 +107,4 @@ using middleman_actor = typed_actor<
 /// @relates middleman_actor
 CAF_IO_EXPORT middleman_actor make_middleman_actor(actor_system& sys, actor db);
 
-} // namespace io
-} // namespace caf
+} // namespace caf::io

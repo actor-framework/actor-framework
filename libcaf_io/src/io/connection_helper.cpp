@@ -29,8 +29,7 @@
 #include "caf/io/network/interfaces.hpp"
 #include "caf/stateful_actor.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 namespace {
 
@@ -40,8 +39,8 @@ auto autoconnect_timeout = std::chrono::minutes(10);
 
 const char* connection_helper_state::name = "connection_helper";
 
-behavior connection_helper(stateful_actor<connection_helper_state>* self,
-                           actor b) {
+behavior
+connection_helper(stateful_actor<connection_helper_state>* self, actor b) {
   CAF_LOG_TRACE(CAF_ARG(b));
   self->monitor(b);
   self->set_down_handler([=](down_msg& dm) {
@@ -87,5 +86,4 @@ behavior connection_helper(stateful_actor<connection_helper_state>* self,
   };
 }
 
-} // namespace io
-} // namespace caf
+} // namespace caf::io

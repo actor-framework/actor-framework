@@ -18,14 +18,10 @@
 
 #include "caf/io/network/datagram_manager.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 datagram_manager::~datagram_manager() {
   // nop
 }
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

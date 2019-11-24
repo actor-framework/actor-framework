@@ -125,7 +125,12 @@ public:
 
   friend CAF_CORE_EXPORT error inspect(caf::serializer& dst, uri& x);
 
+  friend CAF_CORE_EXPORT error_code<sec>
+  inspect(caf::binary_serializer& dst, uri& x);
+
   friend CAF_CORE_EXPORT error inspect(caf::deserializer& src, uri& x);
+
+  friend error_code<sec> inspect(caf::binary_deserializer& src, uri& x);
 
 private:
   impl_ptr impl_;

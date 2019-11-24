@@ -20,8 +20,7 @@
 
 #include "caf/logger.hpp"
 
-namespace caf {
-namespace io {
+namespace caf::io {
 
 scribe::scribe(connection_handle conn_hdl) : scribe_base(conn_hdl) {
   // nop
@@ -77,5 +76,4 @@ void scribe::data_transferred(execution_unit* ctx, size_t written,
   // parent()->consume(std::move(ptr));
 }
 
-} // namespace io
-} // namespace caf
+} // namespace caf::io

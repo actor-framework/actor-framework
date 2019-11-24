@@ -123,7 +123,7 @@ public:
   friend class net::middleman;
   friend class abstract_actor;
 
-  /// The number of actors implictly spawned by the actor system on startup.
+  /// The number of actors implicitly spawned by the actor system on startup.
   static constexpr size_t num_internal_actors = 2;
 
   /// Returns the ID of an internal actor by its name.
@@ -588,7 +588,7 @@ private:
   template <class T>
   void check_invariants() {
     static_assert(!std::is_base_of<prohibit_top_level_spawn_marker, T>::value,
-                  "This actor type cannot be spawned throught an actor system. "
+                  "This actor type cannot be spawned through an actor system. "
                   "Probably you have tried to spawn a broker or opencl actor.");
   }
 

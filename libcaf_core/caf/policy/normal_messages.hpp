@@ -24,8 +24,7 @@
 #include "caf/mailbox_element.hpp"
 #include "caf/unit.hpp"
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 /// Configures a cached DRR queue for holding asynchronous messages with
 /// default priority.
@@ -60,5 +59,4 @@ public:
   }
 };
 
-} // namespace policy
-} // namespace caf
+} // namespace caf::policy

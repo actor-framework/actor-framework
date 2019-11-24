@@ -78,8 +78,7 @@ void dynlock_destroy(CRYPTO_dynlock_value* dynlock, const char*, int) {
 
 #endif
 
-namespace caf {
-namespace openssl {
+namespace caf::openssl {
 
 manager::~manager() {
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -97,10 +96,8 @@ manager::~manager() {
 
 void manager::start() {
   CAF_LOG_TRACE("");
-  manager_ = make_middleman_actor(system(), system()
-                                              .middleman()
-                                              .named_broker<io::basp_broker>(
-                                                atom("BASP")));
+  manager_ = make_middleman_actor(
+    system(), system().middleman().named_broker<io::basp_broker>(atom("BASP")));
 }
 
 void manager::stop() {
@@ -166,5 +163,4 @@ manager::manager(actor_system& sys) : system_(sys) {
   // nop
 }
 
-} // namespace openssl
-} // namespace caf
+} // namespace caf::openssl

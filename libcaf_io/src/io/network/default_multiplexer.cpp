@@ -113,9 +113,7 @@ auto port_of(sockaddr_in6& what) -> decltype(what.sin6_port)& {
 
 } // namespace
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 // poll vs epoll backend
 #ifdef CAF_POLL_MULTIPLEXER
@@ -572,7 +570,7 @@ void default_multiplexer::handle_socket_event(native_socket fd, int mask,
     ptr->handle_event(operation::write);
   }
   if (checkerror && ((mask & error_mask) != 0)) {
-    CAF_LOG_DEBUG("error occured on socket:"
+    CAF_LOG_DEBUG("error occurred on socket:"
                   << CAF_ARG(fd) << CAF_ARG(last_socket_error())
                   << CAF_ARG(last_socket_error_as_string()));
     ptr->handle_event(operation::propagate_error);
@@ -589,8 +587,8 @@ void default_multiplexer::init() {
   }
 #endif
   namespace sr = defaults::scheduler;
-  max_throughput_ = get_or(system().config(), "scheduler.max-throughput",
-                           sr::max_throughput);
+  max_throughput_
+    = get_or(system().config(), "scheduler.max-throughput", sr::max_throughput);
 }
 
 bool default_multiplexer::poll_once(bool block) {
@@ -685,9 +683,9 @@ doorman_ptr default_multiplexer::new_doorman(native_socket fd) {
   return make_counted<doorman_impl>(*this, fd);
 }
 
-expected<doorman_ptr> default_multiplexer::new_tcp_doorman(uint16_t port,
-                                                           const char* in,
-                                                           bool reuse_addr) {
+expected<doorman_ptr>
+default_multiplexer::new_tcp_doorman(uint16_t port, const char* in,
+                                     bool reuse_addr) {
   auto fd = new_tcp_acceptor_impl(port, in, reuse_addr);
   if (fd)
     return new_doorman(*fd);
@@ -746,8 +744,9 @@ bool ip_connect(native_socket fd, const std::string& host, uint16_t port) {
   CAF_LOG_TRACE("Family =" << (Family == AF_INET ? "AF_INET" : "AF_INET6")
                            << CAF_ARG(fd) << CAF_ARG(host));
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
-  using sockaddr_type = typename std::conditional<
-    Family == AF_INET, sockaddr_in, sockaddr_in6>::type;
+  using sockaddr_type =
+    typename std::conditional<Family == AF_INET, sockaddr_in,
+                              sockaddr_in6>::type;
   sockaddr_type sa;
   memset(&sa, 0, sizeof(sockaddr_type));
   inet_pton(Family, host.c_str(), &addr_of(sa));
@@ -840,8 +839,9 @@ expected<native_socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
                          reinterpret_cast<setsockopt_ptr>(&on),
                          static_cast<socket_size_type>(sizeof(on))));
   }
-  using sockaddr_type = typename std::conditional<
-    Family == AF_INET, sockaddr_in, sockaddr_in6>::type;
+  using sockaddr_type =
+    typename std::conditional<Family == AF_INET, sockaddr_in,
+                              sockaddr_in6>::type;
   sockaddr_type sa;
   memset(&sa, 0, sizeof(sockaddr_type));
   family_of(sa) = Family;
@@ -856,8 +856,8 @@ expected<native_socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
   return sguard.release();
 }
 
-expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
-                                              bool reuse_addr) {
+expected<native_socket>
+new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr) {
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
   auto addrs = interfaces::server_address(port, addr);
   auto addr_str = std::string{addr == nullptr ? "" : addr};
@@ -868,10 +868,10 @@ expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
   auto fd = invalid_native_socket;
   for (auto& elem : addrs) {
     auto hostname = elem.first.c_str();
-    auto p = elem.second == ipv4
-               ? new_ip_acceptor_impl<AF_INET>(port, hostname, reuse_addr, any)
-               : new_ip_acceptor_impl<AF_INET6>(port, hostname, reuse_addr,
-                                                any);
+    auto p
+      = elem.second == ipv4
+          ? new_ip_acceptor_impl<AF_INET>(port, hostname, reuse_addr, any)
+          : new_ip_acceptor_impl<AF_INET6>(port, hostname, reuse_addr, any);
     if (!p) {
       CAF_LOG_DEBUG(p.error());
       continue;
@@ -922,11 +922,10 @@ new_local_udp_endpoint_impl(uint16_t port, const char* addr, bool reuse,
   protocol::network proto;
   for (auto& elem : addrs) {
     auto host = elem.first.c_str();
-    auto p = elem.second == ipv4
-               ? new_ip_acceptor_impl<AF_INET, SOCK_DGRAM>(port, host, reuse,
-                                                           any)
-               : new_ip_acceptor_impl<AF_INET6, SOCK_DGRAM>(port, host, reuse,
-                                                            any);
+    auto p
+      = elem.second == ipv4
+          ? new_ip_acceptor_impl<AF_INET, SOCK_DGRAM>(port, host, reuse, any)
+          : new_ip_acceptor_impl<AF_INET6, SOCK_DGRAM>(port, host, reuse, any);
     if (!p) {
       CAF_LOG_DEBUG(p.error());
       continue;
@@ -945,6 +944,4 @@ new_local_udp_endpoint_impl(uint16_t port, const char* addr, bool reuse,
   return std::make_pair(fd, proto);
 }
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

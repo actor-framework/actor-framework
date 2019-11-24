@@ -22,14 +22,13 @@
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/rw_state.hpp"
 
-namespace caf {
-namespace policy {
+namespace caf::policy {
 
 /// Policy object for wrapping default TCP operations.
 struct CAF_IO_EXPORT tcp {
   /// Reads up to `len` bytes from `fd,` writing the received data
   /// to `buf`. Returns `true` as long as `fd` is readable and `false`
-  /// if the socket has been closed or an IO error occured. The number
+  /// if the socket has been closed or an IO error occurred. The number
   /// of read bytes is stored in `result` (can be 0).
   static io::network::rw_state
   read_some(size_t& result, io::network::native_socket fd, void* buf,
@@ -37,7 +36,7 @@ struct CAF_IO_EXPORT tcp {
 
   /// Writes up to `len` bytes from `buf` to `fd`.
   /// Returns `true` as long as `fd` is readable and `false`
-  /// if the socket has been closed or an IO error occured. The number
+  /// if the socket has been closed or an IO error occurred. The number
   /// of written bytes is stored in `result` (can be 0).
   static io::network::rw_state
   write_some(size_t& result, io::network::native_socket fd, const void* buf,
@@ -56,5 +55,4 @@ struct CAF_IO_EXPORT tcp {
   }
 };
 
-} // namespace policy
-} // namespace caf
+} // namespace caf::policy

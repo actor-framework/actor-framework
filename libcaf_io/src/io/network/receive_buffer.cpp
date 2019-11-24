@@ -28,9 +28,7 @@ constexpr size_t min_size = 1;
 
 } // namespace
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 receive_buffer::receive_buffer() noexcept
   : buffer_(nullptr), capacity_(0), size_(0) {
@@ -124,8 +122,8 @@ void receive_buffer::shrink_by(size_t bytes) {
   capacity_ = new_size;
 }
 
-receive_buffer::iterator receive_buffer::insert(iterator pos,
-                                                value_type value) {
+receive_buffer::iterator
+receive_buffer::insert(iterator pos, value_type value) {
   if (size_ == capacity_) {
     auto dist = (pos == nullptr) ? 0 : std::distance(begin(), pos);
     increase_by(std::max(capacity_, min_size));
@@ -137,6 +135,4 @@ receive_buffer::iterator receive_buffer::insert(iterator pos,
   return pos;
 }
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

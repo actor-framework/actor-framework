@@ -18,12 +18,10 @@
 
 #include "caf/detail/invoke_result_visitor.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 invoke_result_visitor::~invoke_result_visitor() {
   // nop
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

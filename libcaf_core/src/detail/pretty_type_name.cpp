@@ -28,8 +28,7 @@
 
 #include "caf/string_algorithms.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 void prettify_type_name(std::string& class_name) {
   // replace_all(class_name, " ", "");
@@ -76,5 +75,4 @@ std::string pretty_type_name(const std::type_info& x) {
   return result;
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

@@ -20,9 +20,7 @@
 
 #include "caf/io/middleman.hpp"
 
-namespace caf {
-namespace io {
-namespace basp {
+namespace caf::io::basp {
 
 routing_table::routing_table(abstract_broker* parent) : parent_(parent) {
   // nop
@@ -128,6 +126,4 @@ bool routing_table::add_indirect(const node_id& hop, const node_id& dest) {
   return result;
 }
 
-} // namespace basp
-} // namespace io
-} // namespace caf
+} // namespace caf::io::basp

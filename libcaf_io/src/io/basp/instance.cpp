@@ -26,11 +26,8 @@
 #include "caf/io/basp/version.hpp"
 #include "caf/io/basp/worker.hpp"
 #include "caf/settings.hpp"
-#include "caf/streambuf.hpp"
 
-namespace caf {
-namespace io {
-namespace basp {
+namespace caf::io::basp {
 
 instance::callee::callee(actor_system& sys, proxy_registry::backend& backend)
   : namespace_(sys, backend) {
@@ -44,8 +41,8 @@ instance::callee::~callee() {
 instance::instance(abstract_broker* parent, callee& lstnr)
   : tbl_(parent), this_node_(parent->system().node()), callee_(lstnr) {
   CAF_ASSERT(this_node_ != none);
-  auto workers = get_or(config(), "middleman.workers",
-                        defaults::middleman::workers);
+  auto workers
+    = get_or(config(), "middleman.workers", defaults::middleman::workers);
   for (size_t i = 0; i < workers; ++i)
     hub_.add_new_worker(queue_, proxies());
 }
@@ -59,7 +56,7 @@ connection_state instance::handle(execution_unit* ctx, new_data_msg& dm,
       callee_.purge_state(nid);
     return close_connection;
   };
-  std::vector<char>* payload = nullptr;
+  byte_buffer* payload = nullptr;
   if (is_payload) {
     payload = &dm.buf;
     if (payload->size() != hdr.payload_len) {
@@ -121,8 +118,8 @@ void instance::add_published_actor(uint16_t port,
   swap(entry.second, published_interface);
 }
 
-size_t instance::remove_published_actor(uint16_t port,
-                                        removed_published_actor* cb) {
+size_t
+instance::remove_published_actor(uint16_t port, removed_published_actor* cb) {
   CAF_LOG_TRACE(CAF_ARG(port));
   auto i = published_actors_.find(port);
   if (i == published_actors_.end())
@@ -179,8 +176,9 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
                mid.integer_value(),
                sender ? sender->id() : invalid_actor_id,
                dest_actor};
-    auto writer = make_callback(
-      [&](serializer& sink) -> error { return sink(forwarding_stack, msg); });
+    auto writer = make_callback([&](binary_serializer& sink) { //
+      return sink(forwarding_stack, msg);
+    });
     write(ctx, callee_.get_buffer(path->hdl), hdr, &writer);
   } else {
     header hdr{message_type::routed_message,
@@ -189,7 +187,7 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
                mid.integer_value(),
                sender ? sender->id() : invalid_actor_id,
                dest_actor};
-    auto writer = make_callback([&](serializer& sink) -> error {
+    auto writer = make_callback([&](binary_serializer& sink) {
       return sink(source_node, dest_node, forwarding_stack, msg);
     });
     write(ctx, callee_.get_buffer(path->hdl), hdr, &writer);
@@ -198,7 +196,7 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
   return true;
 }
 
-void instance::write(execution_unit* ctx, buffer_type& buf, header& hdr,
+void instance::write(execution_unit* ctx, byte_buffer& buf, header& hdr,
                      payload_writer* pw) {
   CAF_LOG_TRACE(CAF_ARG(hdr));
   binary_serializer sink{ctx, buf};
@@ -216,7 +214,7 @@ void instance::write(execution_unit* ctx, buffer_type& buf, header& hdr,
     CAF_LOG_ERROR(CAF_ARG(err));
 }
 
-void instance::write_server_handshake(execution_unit* ctx, buffer_type& out_buf,
+void instance::write_server_handshake(execution_unit* ctx, byte_buffer& out_buf,
                                       optional<uint16_t> port) {
   CAF_LOG_TRACE(CAF_ARG(port));
   using namespace detail;
@@ -227,7 +225,7 @@ void instance::write_server_handshake(execution_unit* ctx, buffer_type& out_buf,
       pa = &i->second;
   }
   CAF_LOG_DEBUG_IF(!pa && port, "no actor published");
-  auto writer = make_callback([&](serializer& sink) -> error {
+  auto writer = make_callback([&](binary_serializer& sink) {
     auto app_ids = get_or(config(), "middleman.app-identifiers",
                           defaults::middleman::app_identifiers);
     auto aid = invalid_actor_id;
@@ -247,9 +245,10 @@ void instance::write_server_handshake(execution_unit* ctx, buffer_type& out_buf,
   write(ctx, out_buf, hdr, &writer);
 }
 
-void instance::write_client_handshake(execution_unit* ctx, buffer_type& buf) {
-  auto writer = make_callback(
-    [&](serializer& sink) -> error { return sink(this_node_); });
+void instance::write_client_handshake(execution_unit* ctx, byte_buffer& buf) {
+  auto writer = make_callback([&](binary_serializer& sink) { //
+    return sink(this_node_);
+  });
   header hdr{message_type::client_handshake,
              0,
              0,
@@ -259,27 +258,28 @@ void instance::write_client_handshake(execution_unit* ctx, buffer_type& buf) {
   write(ctx, buf, hdr, &writer);
 }
 
-void instance::write_monitor_message(execution_unit* ctx, buffer_type& buf,
+void instance::write_monitor_message(execution_unit* ctx, byte_buffer& buf,
                                      const node_id& dest_node, actor_id aid) {
   CAF_LOG_TRACE(CAF_ARG(dest_node) << CAF_ARG(aid));
-  auto writer = make_callback(
-    [&](serializer& sink) -> error { return sink(this_node_, dest_node); });
+  auto writer = make_callback([&](binary_serializer& sink) { //
+    return sink(this_node_, dest_node);
+  });
   header hdr{message_type::monitor_message, 0, 0, 0, invalid_actor_id, aid};
   write(ctx, buf, hdr, &writer);
 }
 
-void instance::write_down_message(execution_unit* ctx, buffer_type& buf,
+void instance::write_down_message(execution_unit* ctx, byte_buffer& buf,
                                   const node_id& dest_node, actor_id aid,
                                   const error& rsn) {
   CAF_LOG_TRACE(CAF_ARG(dest_node) << CAF_ARG(aid) << CAF_ARG(rsn));
-  auto writer = make_callback([&](serializer& sink) -> error {
+  auto writer = make_callback([&](binary_serializer& sink) { //
     return sink(this_node_, dest_node, rsn);
   });
   header hdr{message_type::down_message, 0, 0, 0, aid, invalid_actor_id};
   write(ctx, buf, hdr, &writer);
 }
 
-void instance::write_heartbeat(execution_unit* ctx, buffer_type& buf) {
+void instance::write_heartbeat(execution_unit* ctx, byte_buffer& buf) {
   CAF_LOG_TRACE("");
   header hdr{message_type::heartbeat, 0, 0, 0, invalid_actor_id,
              invalid_actor_id};
@@ -287,7 +287,7 @@ void instance::write_heartbeat(execution_unit* ctx, buffer_type& buf) {
 }
 
 bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
-                      std::vector<char>* payload) {
+                      byte_buffer* payload) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(hdr));
   // Check payload validity.
   if (payload == nullptr) {
@@ -411,7 +411,7 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
         struct handler : remote_message_handler<handler> {
           handler(message_queue* queue, proxy_registry* proxies,
                   actor_system* system, node_id last_hop, basp::header& hdr,
-                  buffer_type& payload)
+                  byte_buffer& payload)
             : queue_(queue),
               proxies_(proxies),
               system_(system),
@@ -425,7 +425,7 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
           actor_system* system_;
           node_id last_hop_;
           basp::header& hdr_;
-          buffer_type& payload_;
+          byte_buffer& payload_;
           uint64_t msg_id_;
         };
         handler f{&queue_, &proxies(), &system(), last_hop, hdr, *payload};
@@ -488,7 +488,7 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
 }
 
 void instance::forward(execution_unit* ctx, const node_id& dest_node,
-                       const header& hdr, std::vector<char>& payload) {
+                       const header& hdr, byte_buffer& payload) {
   CAF_LOG_TRACE(CAF_ARG(dest_node) << CAF_ARG(hdr) << CAF_ARG(payload));
   auto path = lookup(dest_node);
   if (path) {
@@ -497,16 +497,11 @@ void instance::forward(execution_unit* ctx, const node_id& dest_node,
       CAF_LOG_ERROR("unable to serialize BASP header");
       return;
     }
-    if (auto err = bs.apply_raw(payload.size(), payload.data())) {
-      CAF_LOG_ERROR("unable to serialize raw payload");
-      return;
-    }
+    bs.apply(span<const byte>{payload.data(), payload.size()});
     flush(*path);
   } else {
     CAF_LOG_WARNING("cannot forward message, no route to destination");
   }
 }
 
-} // namespace basp
-} // namespace io
-} // namespace caf
+} // namespace caf::io::basp

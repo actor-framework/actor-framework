@@ -23,8 +23,7 @@
 #include "caf/detail/dispatch_parse_cli.hpp"
 #include "caf/optional.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class Object, class Value>
 class config_value_field_base : public config_value_field<Object> {
@@ -104,5 +103,4 @@ protected:
   predicate_type predicate_;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

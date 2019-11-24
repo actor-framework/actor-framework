@@ -79,13 +79,15 @@ public:
   }
 
   template <class C,
-            class E = detail::enable_if_t<detail::has_data_member<C>::value>>
+            class = std::enable_if_t<
+              detail::has_convertible_data_member<C, value_type>::value>>
   span(C& xs) noexcept : begin_(xs.data()), size_(xs.size()) {
     // nop
   }
 
   template <class C,
-            class E = detail::enable_if_t<detail::has_data_member<C>::value>>
+            class = std::enable_if_t<
+              detail::has_convertible_data_member<C, value_type>::value>>
   span(const C& xs) noexcept : begin_(xs.data()), size_(xs.size()) {
     // nop
   }

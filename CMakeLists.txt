@@ -456,7 +456,7 @@ add_custom_command(TARGET uninstall
                    COMMAND "${CMAKE_COMMAND}" -P
                    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
 
-# -- generate build config header ----------------------------------------------
+# -- set include paths for subprojects -----------------------------------------
 
 configure_file("${PROJECT_SOURCE_DIR}/cmake/build_config.hpp.in"
                "${CMAKE_BINARY_DIR}/caf/detail/build_config.hpp"
@@ -488,7 +488,7 @@ endmacro()
 macro(add_optional_caf_binaries name)
   string(TOUPPER ${name} upper_name)
   set(dependency_failed no)
-  # check all aditional dependency flags
+  # check all additional dependency flags
   foreach(flag_name ${ARGN})
     if(${flag_name})
       set(dependency_failed yes)

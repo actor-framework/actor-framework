@@ -24,8 +24,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/type_traits.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 CAF_CORE_EXPORT void
 append_hex(std::string& result, const uint8_t* xs, size_t n);
@@ -43,5 +42,4 @@ append_hex(std::string& result, const T& x) {
   return append_hex(result, reinterpret_cast<const uint8_t*>(&x), sizeof(T));
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

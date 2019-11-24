@@ -24,13 +24,11 @@
 
 #include "caf/detail/core_export.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 using iface_info = std::pair<std::string /* interface name */,
                              std::string /* interface address */>;
 
 CAF_CORE_EXPORT std::vector<iface_info> get_mac_addresses();
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

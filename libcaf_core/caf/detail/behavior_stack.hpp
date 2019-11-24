@@ -30,8 +30,7 @@
 #include "caf/message_id.hpp"
 #include "caf/optional.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 struct behavior_stack_mover;
 
@@ -76,5 +75,4 @@ private:
   std::vector<behavior> erased_elements_;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

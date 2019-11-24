@@ -18,9 +18,9 @@
 
 #pragma once
 
+#include <functional>
 #include <string>
 #include <thread>
-#include <functional>
 
 #include "caf/detail/io_export.hpp"
 #include "caf/execution_unit.hpp"
@@ -35,9 +35,7 @@
 #include "caf/make_counted.hpp"
 #include "caf/resumable.hpp"
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 class multiplexer_backend;
 
@@ -53,8 +51,8 @@ public:
   /// Tries to connect to `host` on given `port` and returns a `scribe` instance
   /// on success.
   /// @threadsafe
-  virtual expected<scribe_ptr> new_tcp_scribe(const std::string& host,
-                                              uint16_t port) = 0;
+  virtual expected<scribe_ptr>
+  new_tcp_scribe(const std::string& host, uint16_t port) = 0;
 
   /// Creates a new doorman from a native socket handle.
   /// @threadsafe
@@ -63,16 +61,18 @@ public:
   /// Tries to create an unbound TCP doorman bound to `port`, optionally
   /// accepting only connections from IP address `in`.
   /// @warning Do not call from outside the multiplexer's event loop.
-  virtual expected<doorman_ptr> new_tcp_doorman(uint16_t port,
-                                                const char* in = nullptr,
-                                                bool reuse_addr = false) = 0;
+  virtual expected<doorman_ptr>
+  new_tcp_doorman(uint16_t port, const char* in = nullptr,
+                  bool reuse_addr = false)
+    = 0;
 
   /// Creates a new `datagram_servant` from a native socket handle.
   /// @threadsafe
   virtual datagram_servant_ptr new_datagram_servant(native_socket fd) = 0;
 
   virtual datagram_servant_ptr
-  new_datagram_servant_for_endpoint(native_socket fd, const ip_endpoint& ep) = 0;
+  new_datagram_servant_for_endpoint(native_socket fd, const ip_endpoint& ep)
+    = 0;
 
   /// Create a new `datagram_servant` to contact a remote endpoint `host` and
   /// `port`.
@@ -85,7 +85,8 @@ public:
   /// @warning Do not call from outside the multiplexer's event loop.
   virtual expected<datagram_servant_ptr>
   new_local_udp_endpoint(uint16_t port, const char* in = nullptr,
-                         bool reuse_addr = false) = 0;
+                         bool reuse_addr = false)
+    = 0;
 
   /// Simple wrapper for runnables
   class CAF_IO_EXPORT runnable : public resumable, public ref_counted {
@@ -139,7 +140,8 @@ public:
   void post(F fun) {
     struct impl : runnable {
       F f;
-      impl(F&& mf) : f(std::move(mf)) { }
+      impl(F&& mf) : f(std::move(mf)) {
+      }
       resume_result resume(execution_unit*, size_t) override {
         f();
         return done;
@@ -168,6 +170,4 @@ protected:
 
 using multiplexer_ptr = std::unique_ptr<multiplexer>;
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network

@@ -31,8 +31,7 @@
 #include "caf/string_view.hpp"
 #include "caf/uri.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 class CAF_CORE_EXPORT uri_impl {
 public:
@@ -94,15 +93,13 @@ private:
 /// @relates uri_impl
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, uri_impl& x) {
-  auto load = [&]() -> error {
+  auto load = [&] {
     x.str.clear();
     if (x.valid())
       x.assemble_str();
-    return none;
   };
   return f(x.scheme, x.authority, x.path, x.query, x.fragment,
            meta::load_callback(load));
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

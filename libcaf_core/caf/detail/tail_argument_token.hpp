@@ -18,11 +18,8 @@
 
 #pragma once
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
-struct tail_argument_token { };
+struct tail_argument_token {};
 
-} // namespace detail
-} // namespace caf
-
+} // namespace caf::detail

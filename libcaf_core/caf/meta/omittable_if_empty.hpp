@@ -20,8 +20,7 @@
 
 #include "caf/meta/annotation.hpp"
 
-namespace caf {
-namespace meta {
+namespace caf::meta {
 
 struct omittable_if_empty_t : annotation {
   constexpr omittable_if_empty_t() {
@@ -34,6 +33,4 @@ constexpr omittable_if_empty_t omittable_if_empty() {
   return {};
 }
 
-} // namespace meta
-} // namespace caf
-
+} // namespace caf::meta

@@ -68,14 +68,14 @@ struct consumer {
   intrusive::task_result operator()(const Key&, const Queue&,
                                     const mailbox_element& x) {
     if (!x.content().match_elements<int>())
-      CAF_FAIL("unexepected message: " << x.content());
+      CAF_FAIL("unexpected message: " << x.content());
     ints.emplace_back(x.content().get_as<int>(0));
     return intrusive::task_result::resume;
   }
 
   template <class Key, class Queue, class... Ts>
   intrusive::task_result operator()(const Key&, const Queue&, const Ts&...) {
-    CAF_FAIL("unexepected message type"); // << typeid(Ts).name());
+    CAF_FAIL("unexpected message type"); // << typeid(Ts).name());
     return intrusive::task_result::resume;
   }
 };

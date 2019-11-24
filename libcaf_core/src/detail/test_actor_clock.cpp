@@ -20,8 +20,7 @@
 
 #include "caf/logger.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 test_actor_clock::test_actor_clock() : current_time(duration_type{1}) {
   // This ctor makes sure that the clock isn't at the default-constructed
@@ -76,5 +75,4 @@ size_t test_actor_clock::advance_time(duration_type x) {
   return trigger_expired_timeouts();
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

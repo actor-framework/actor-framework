@@ -23,8 +23,7 @@
 #include "caf/fwd.hpp"
 #include "caf/group.hpp"
 
-namespace caf {
-namespace mixin {
+namespace caf::mixin {
 
 /// Marker for `subscriber`.
 struct subscriber_base {};
@@ -46,7 +45,7 @@ public:
 
   template <class... Ts>
   subscriber(actor_config& cfg, Ts&&... xs)
-      : Base(cfg, std::forward<Ts>(xs)...) {
+    : Base(cfg, std::forward<Ts>(xs)...) {
     if (cfg.groups != nullptr)
       for (auto& grp : *cfg.groups)
         join(grp);
@@ -97,6 +96,4 @@ private:
   subscriptions subscriptions_;
 };
 
-} // namespace mixin
-} // namespace caf
-
+} // namespace caf::mixin

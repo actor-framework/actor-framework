@@ -115,8 +115,7 @@ std::vector<iface_info> get_mac_addresses() {
 #  include <unistd.h>
 #  include <vector>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 std::vector<iface_info> get_mac_addresses() {
   // get a socket handle
@@ -168,8 +167,7 @@ std::vector<iface_info> get_mac_addresses() {
   return result;
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail
 
 #else
 

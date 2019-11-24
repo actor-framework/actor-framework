@@ -21,6 +21,8 @@
 #include <type_traits>
 
 #include "caf/all.hpp"
+#include "caf/binary_serializer.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/gcd.hpp"
 #include "caf/meta/annotation.hpp"
@@ -645,9 +647,9 @@ protected:
 
 template <class... Ts>
 struct test_coordinator_fixture_fetch_helper {
-  template <class Self, class Interface>
+  template <class Self, template <class> class Policy, class Interface>
   std::tuple<Ts...>
-  operator()(caf::response_handle<Self, Interface, true>& from) const {
+  operator()(caf::response_handle<Self, Policy<Interface>>& from) const {
     std::tuple<Ts...> result;
     from.receive([&](Ts&... xs) { result = std::make_tuple(std::move(xs)...); },
                  [&](caf::error& err) {
@@ -659,8 +661,8 @@ struct test_coordinator_fixture_fetch_helper {
 
 template <class T>
 struct test_coordinator_fixture_fetch_helper<T> {
-  template <class Self, class Interface>
-  T operator()(caf::response_handle<Self, Interface, true>& from) const {
+  template <class Self, template <class> class Policy, class Interface>
+  T operator()(caf::response_handle<Self, Policy<Interface>>& from) const {
     T result;
     from.receive([&](T& x) { result = std::move(x); },
                  [&](caf::error& err) {
@@ -678,9 +680,6 @@ public:
 
   /// A deterministic scheduler type.
   using scheduler_type = caf::scheduler::test_coordinator;
-
-  /// A buffer for serializing or deserializing objects.
-  using byte_buffer = std::vector<char>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -765,7 +764,7 @@ public:
 
   /// Consume messages and trigger timeouts until no activity remains.
   /// @returns The total number of events, i.e., messages consumed and
-  ///          timeouts triggerd.
+  ///          timeouts triggered.
   size_t run() {
     return run_until([] { return false; });
   }
@@ -850,8 +849,8 @@ public:
   }
 
   template <class... Ts>
-  byte_buffer serialize(const Ts&... xs) {
-    byte_buffer buf;
+  caf::byte_buffer serialize(const Ts&... xs) {
+    caf::byte_buffer buf;
     caf::binary_serializer sink{sys, buf};
     if (auto err = sink(xs...))
       CAF_FAIL("serialization failed: " << sys.render(err));
@@ -859,7 +858,7 @@ public:
   }
 
   template <class... Ts>
-  void deserialize(const byte_buffer& buf, Ts&... xs) {
+  void deserialize(const caf::byte_buffer& buf, Ts&... xs) {
     caf::binary_deserializer source{sys, buf};
     if (auto err = source(xs...))
       CAF_FAIL("deserialization failed: " << sys.render(err));

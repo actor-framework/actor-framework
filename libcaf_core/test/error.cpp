@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2019 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,23 +16,32 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#define CAF_SUITE error
 
-#include <vector>
+#include "caf/error.hpp"
 
-namespace caf {
-namespace io {
-namespace basp {
+#include "caf/test/dsl.hpp"
 
-/// @addtogroup BASP
+using namespace caf;
 
-/// Storage type for raw bytes.
-using buffer_type = std::vector<char>;
+CAF_TEST(default constructed errors evaluate to false) {
+  error err;
+  CAF_CHECK(!err);
+}
 
-/// @}
+CAF_TEST(error code zero is not an error) {
+  CAF_CHECK(!error(0, atom("system")));
+  CAF_CHECK(!make_error(sec::none));
+  CAF_CHECK(!error{error_code<sec>(sec::none)});
+}
 
-} // namespace basp
-} // namespace io
-} // namespace caf
+CAF_TEST(error codes that are not zero are errors) {
+  CAF_CHECK(error(1, atom("system")));
+  CAF_CHECK(make_error(sec::unexpected_message));
+  CAF_CHECK(error{error_code<sec>(sec::unexpected_message)});
+}
 
-
+CAF_TEST(errors convert enums to their integer value) {
+  CAF_CHECK_EQUAL(make_error(sec::unexpected_message).code(), 1u);
+  CAF_CHECK_EQUAL(error{error_code<sec>(sec::unexpected_message)}.code(), 1u);
+}

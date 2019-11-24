@@ -27,8 +27,7 @@
 #include "caf/stream_stage.hpp"
 #include "caf/stream_stage_trait.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class Driver>
 class stream_stage_impl : public Driver::stage_type {
@@ -49,9 +48,9 @@ public:
 
   template <class... Ts>
   stream_stage_impl(scheduled_actor* self, Ts&&... xs)
-      : stream_manager(self),
-        super(self),
-        driver_(this->out_, std::forward<Ts>(xs)...) {
+    : stream_manager(self),
+      super(self),
+      driver_(this->out_, std::forward<Ts>(xs)...) {
     // nop
   }
 
@@ -87,12 +86,10 @@ protected:
 };
 
 template <class Driver, class... Ts>
-typename Driver::stage_ptr_type make_stream_stage(scheduled_actor* self,
-                                                  Ts&&... xs) {
+typename Driver::stage_ptr_type
+make_stream_stage(scheduled_actor* self, Ts&&... xs) {
   using impl = stream_stage_impl<Driver>;
   return make_counted<impl>(self, std::forward<Ts>(xs)...);
 }
 
-} // namespace detail
-} // namespace caf
-
+} // namespace caf::detail

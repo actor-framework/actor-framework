@@ -20,9 +20,7 @@
 
 #include <cstdint>
 
-namespace caf {
-namespace io {
-namespace basp {
+namespace caf::io::basp {
 
 /// @addtogroup BASP
 
@@ -31,6 +29,4 @@ constexpr uint64_t version = 3;
 
 /// @}
 
-} // namespace basp
-} // namespace io
-} // namespace caf
+} // namespace caf::io::basp

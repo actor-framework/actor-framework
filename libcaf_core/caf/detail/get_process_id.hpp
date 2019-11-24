@@ -24,10 +24,8 @@
 
 #include "caf/detail/core_export.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 CAF_CORE_EXPORT unsigned get_process_id();
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

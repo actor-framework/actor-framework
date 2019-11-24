@@ -20,18 +20,17 @@
 
 #include "caf/config.hpp"
 
-#include <thread>
+#include <condition_variable>
 #include <limits>
 #include <memory>
-#include <condition_variable>
+#include <thread>
 
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/thread_safe_actor_clock.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/scheduler/worker.hpp"
 
-namespace caf {
-namespace scheduler {
+namespace caf::scheduler {
 
 /// Policy-based implementation of the abstract coordinator base class.
 template <class Policy>
@@ -170,6 +169,4 @@ private:
   std::thread timer_;
 };
 
-} // namespace scheduler
-} // namespace caf
-
+} // namespace caf::scheduler

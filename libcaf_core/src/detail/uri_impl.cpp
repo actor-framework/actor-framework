@@ -24,8 +24,7 @@
 #include "caf/ip_address.hpp"
 #include "caf/string_algorithms.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
@@ -84,5 +83,4 @@ void intrusive_ptr_release(const uri_impl* p) {
     delete p;
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

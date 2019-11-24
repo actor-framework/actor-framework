@@ -45,13 +45,13 @@ set(CAF_CORE_SOURCES
   src/attachable.cpp
   src/behavior.cpp
   src/binary_deserializer.cpp
+  src/binary_serializer.cpp
   src/blocking_actor.cpp
   src/config_option.cpp
   src/config_option_adder.cpp
   src/config_option_set.cpp
   src/config_value.cpp
   src/decorator/sequencer.cpp
-  src/decorator/splitter.cpp
   src/default_attachable.cpp
   src/defaults.cpp
   src/deserializer.cpp
@@ -62,8 +62,6 @@ set(CAF_CORE_SOURCES
   src/detail/behavior_impl.cpp
   src/detail/behavior_stack.cpp
   src/detail/blocking_behavior.cpp
-  src/detail/concatenated_tuple.cpp
-  src/detail/decorated_tuple.cpp
   src/detail/dynamic_message_data.cpp
   src/detail/fnv_hash.cpp
   src/detail/get_mac_addresses.cpp
@@ -71,14 +69,12 @@ set(CAF_CORE_SOURCES
   src/detail/get_root_uuid.cpp
   src/detail/ini_consumer.cpp
   src/detail/invoke_result_visitor.cpp
-  src/detail/merged_tuple.cpp
   src/detail/message_data.cpp
   src/detail/parse.cpp
   src/detail/parser/chars.cpp
   src/detail/pretty_type_name.cpp
   src/detail/private_thread.cpp
   src/detail/ripemd_160.cpp
-  src/detail/serialized_size.cpp
   src/detail/set_thread_name.cpp
   src/detail/shared_spinlock.cpp
   src/detail/simple_actor_clock.cpp
@@ -185,7 +181,6 @@ set(CAF_CORE_TEST_SOURCES
   test/cow_tuple.cpp
   test/custom_exception_handler.cpp
   test/decorator/sequencer.cpp
-  test/decorator/splitter.cpp
   test/deep_to_string.cpp
   test/detached_actors.cpp
   test/detail/bounds_checker.cpp
@@ -204,14 +199,12 @@ set(CAF_CORE_TEST_SOURCES
   test/detail/parser/read_unsigned_integer.cpp
   test/detail/ringbuffer.cpp
   test/detail/ripemd_160.cpp
-  test/detail/serialized_size.cpp
   test/detail/tick_emitter.cpp
   test/detail/unique_function.cpp
   test/detail/unordered_flat_map.cpp
   test/dictionary.cpp
   test/dynamic_spawn.cpp
   test/expected.cpp
-  test/extract.cpp
   test/function_view.cpp
   test/fused_downstream_manager.cpp
   test/handles.cpp
@@ -256,12 +249,10 @@ set(CAF_CORE_TEST_SOURCES
   test/selective_streaming.cpp
   test/serial_reply.cpp
   test/serialization.cpp
-  test/serializer_impl.cpp
   test/settings.cpp
   test/simple_timeout.cpp
   test/span.cpp
   test/stateful_actor.cpp
-  test/streambuf.cpp
   test/string_algorithms.cpp
   test/string_view.cpp
   test/sum_type.cpp

@@ -20,8 +20,7 @@
 
 #include <utility>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 template <class T>
 class consumer {
@@ -45,5 +44,4 @@ consumer<T> make_consumer(T& x) {
   return consumer<T>{x};
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

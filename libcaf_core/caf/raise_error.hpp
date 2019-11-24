@@ -27,13 +27,11 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/pp.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 CAF_CORE_EXPORT void log_cstring_error(const char* cstring);
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail
 
 #ifdef CAF_NO_EXCEPTIONS
 
