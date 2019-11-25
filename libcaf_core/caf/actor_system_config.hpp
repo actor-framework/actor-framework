@@ -306,6 +306,11 @@ public:
   /// @note Has no effect unless building CAF with CAF_ENABLE_ACTOR_PROFILER.
   actor_profiler* profiler = nullptr;
 
+  /// Enables CAF to deserialize application-specific tracing information.
+  /// @experimental
+  /// @note Has no effect unless building CAF with CAF_ENABLE_ACTOR_PROFILER.
+  tracing_data_factory* tracing_context = nullptr;
+
   // -- run-time type information ----------------------------------------------
 
   portable_name_map type_names_by_rtti;

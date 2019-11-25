@@ -588,6 +588,10 @@ public:
       profiler_->before_sending_scheduled(self, timeout, element);
   }
 
+  tracing_data_factory* tracing_context() const noexcept {
+    return tracing_context_;
+  }
+
   /// @endcond
 
 private:
@@ -673,6 +677,9 @@ private:
 
   /// Stores custom, system-wide key-value pairs.
   runtime_settings_map settings_;
+
+  /// Stores the system-wide factory for deserializing tracing data.
+  tracing_data_factory* tracing_context_;
 };
 
 } // namespace caf
