@@ -25,9 +25,6 @@ add_library(libcaf_openssl $<TARGET_OBJECTS:libcaf_openssl_obj>)
 
 add_library(caf::openssl ALIAS libcaf_openssl)
 
-target_link_libraries(libcaf_openssl_obj PUBLIC
-                      caf::core caf::io ${OPENSSL_LIBRARIES})
-
 target_link_libraries(libcaf_openssl PUBLIC
                       caf::core caf::io ${OPENSSL_LIBRARIES})
 
@@ -54,7 +51,7 @@ set_target_properties(libcaf_openssl PROPERTIES
 
 # -- install library and header files ------------------------------------------
 
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/openssl_export.hpp"
+install(FILES "${CMAKE_BINARY_DIR}/caf/detail/openssl_export.hpp"
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail")
 
 install(TARGETS libcaf_openssl
@@ -89,11 +86,3 @@ endif()
 list(APPEND CAF_LIBRARIES libcaf_openssl)
 
 set(CAF_LIBRARIES ${CAF_LIBRARIES} PARENT_SCOPE)
-
-# -- backwards compatibility, TODO: remove -------------------------------------
-
-if(BUILD_SHARED_LIBS)
-  add_library(libcaf_openssl_shared ALIAS libcaf_openssl)
-else()
-  add_library(libcaf_openssl_static ALIAS libcaf_openssl)
-endif()

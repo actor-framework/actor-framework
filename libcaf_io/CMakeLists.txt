@@ -75,9 +75,7 @@ add_library(libcaf_io $<TARGET_OBJECTS:libcaf_io_obj>)
 
 add_library(caf::io ALIAS libcaf_io)
 
-target_link_libraries(libcaf_io_obj PUBLIC caf::core)
-
-target_link_libraries(libcaf_io PUBLIC caf::core)
+target_link_libraries(libcaf_io PUBLIC caf::core ${CAF_EXTRA_LDFLAGS})
 
 generate_export_header(libcaf_io_obj
                        EXPORT_MACRO_NAME CAF_IO_EXPORT
@@ -126,11 +124,3 @@ endif()
 list(APPEND CAF_LIBRARIES libcaf_io)
 
 set(CAF_LIBRARIES ${CAF_LIBRARIES} PARENT_SCOPE)
-
-# -- backwards compatibility, TODO: remove -------------------------------------
-
-if(BUILD_SHARED_LIBS)
-  add_library(libcaf_io_shared ALIAS libcaf_io)
-else()
-  add_library(libcaf_io_static ALIAS libcaf_io)
-endif()

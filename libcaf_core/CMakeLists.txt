@@ -305,12 +305,6 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
         COMPONENT core
         FILES_MATCHING PATTERN "*.hpp")
 
-# -- add this library to the global CAF_LIBRARIES ------------------------------
-
-list(APPEND CAF_LIBRARIES libcaf_core)
-
-set(CAF_LIBRARIES ${CAF_LIBRARIES} PARENT_SCOPE)
-
 # -- build unit tests ----------------------------------------------------------
 
 if(NOT CAF_NO_UNIT_TESTS)
@@ -326,10 +320,8 @@ if(NOT CAF_NO_UNIT_TESTS)
                   ${CAF_CORE_TEST_SOURCES})
 endif()
 
-# -- backwards compatibility, TODO: remove -------------------------------------
+# -- add this library to the global CAF_LIBRARIES ------------------------------
 
-if(BUILD_SHARED_LIBS)
-  add_library(libcaf_core_shared ALIAS libcaf_core)
-else()
-  add_library(libcaf_core_static ALIAS libcaf_core)
-endif()
+list(APPEND CAF_LIBRARIES libcaf_core)
+
+set(CAF_LIBRARIES ${CAF_LIBRARIES} PARENT_SCOPE)
