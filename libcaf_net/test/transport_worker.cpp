@@ -23,13 +23,13 @@
 #include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
 
+#include "caf/binary_serializer.hpp"
 #include "caf/byte.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/ip_endpoint.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/net/actor_proxy_impl.hpp"
 #include "caf/net/multiplexer.hpp"
-#include "caf/serializer_impl.hpp"
 #include "caf/span.hpp"
 
 using namespace caf;
@@ -105,9 +105,9 @@ public:
   static expected<std::vector<byte>> serialize(actor_system& sys,
                                                const type_erased_tuple& x) {
     std::vector<byte> result;
-    serializer_impl<std::vector<byte>> sink{sys, result};
+    binary_serializer sink{sys, result};
     if (auto err = message::save(sink, x))
-      return err;
+      return err.value();
     return result;
   }
 

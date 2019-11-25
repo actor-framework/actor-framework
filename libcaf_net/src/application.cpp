@@ -23,6 +23,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
 #include "caf/byte.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/network_order.hpp"
@@ -37,7 +38,6 @@
 #include "caf/none.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
-#include "caf/serializer_impl.hpp"
 #include "caf/string_algorithms.hpp"
 #include "caf/type_erased_tuple.hpp"
 
@@ -54,7 +54,7 @@ error application::write_message(
   CAF_ASSERT(ptr->msg != nullptr);
   CAF_LOG_TRACE(CAF_ARG2("content", ptr->msg->content()));
   auto payload_prefix = writer.next_payload_buffer();
-  serializer_impl<buffer_type> sink{system(), payload_prefix};
+  binary_serializer sink{system(), payload_prefix};
   const auto& src = ptr->msg->sender;
   const auto& dst = ptr->receiver;
   if (dst == nullptr) {
@@ -84,7 +84,7 @@ void application::resolve(packet_writer& writer, string_view path,
                           const actor& listener) {
   CAF_LOG_TRACE(CAF_ARG(path) << CAF_ARG(listener));
   auto payload = writer.next_payload_buffer();
-  serializer_impl<buffer_type> sink{&executor_, payload};
+  binary_serializer sink{&executor_, payload};
   if (auto err = sink(path)) {
     CAF_LOG_ERROR("unable to serialize path" << CAF_ARG(err));
     return;
@@ -108,7 +108,7 @@ void application::new_proxy(packet_writer& writer, actor_id id) {
 void application::local_actor_down(packet_writer& writer, actor_id id,
                                    error reason) {
   auto payload = writer.next_payload_buffer();
-  serializer_impl<buffer_type> sink{system(), payload};
+  binary_serializer sink{system(), payload};
   if (auto err = sink(reason))
     CAF_RAISE_ERROR("unable to serialize an error");
   auto hdr = writer.next_header_buffer();
@@ -122,9 +122,9 @@ void application::local_actor_down(packet_writer& writer, actor_id id,
 expected<std::vector<byte>> application::serialize(actor_system& sys,
                                                    const type_erased_tuple& x) {
   std::vector<byte> result;
-  serializer_impl<std::vector<byte>> sink{sys, result};
+  binary_serializer sink{sys, result};
   if (auto err = message::save(sink, x))
-    return err;
+    return err.value();
   return result;
 }
 
@@ -307,7 +307,7 @@ error application::handle_resolve_request(packet_writer& writer, header rec_hdr,
   }
   // TODO: figure out how to obtain messaging interface.
   auto payload = writer.next_payload_buffer();
-  serializer_impl<buffer_type> sink{&executor_, payload};
+  binary_serializer sink{&executor_, payload};
   if (auto err = sink(aid, ifs))
     return err;
   auto hdr = writer.next_header_buffer();
@@ -363,7 +363,7 @@ error application::handle_monitor_message(packet_writer& writer,
   } else {
     error reason = exit_reason::unknown;
     auto payload = writer.next_payload_buffer();
-    serializer_impl<buffer_type> sink{&executor_, payload};
+    binary_serializer sink{&executor_, payload};
     if (auto err = sink(reason))
       return err;
     auto hdr = writer.next_header_buffer();
@@ -389,7 +389,7 @@ error application::handle_down_message(packet_writer&, header received_hdr,
 }
 
 error application::generate_handshake(std::vector<byte>& buf) {
-  serializer_impl<buffer_type> sink{&executor_, buf};
+  binary_serializer sink{&executor_, buf};
   return sink(system().node(),
               get_or(system().config(), "middleman.app-identifiers",
                      defaults::middleman::app_identifiers));

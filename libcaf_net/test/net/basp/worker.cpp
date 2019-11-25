@@ -25,10 +25,10 @@
 #include "caf/actor_cast.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/binary_serializer.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/net/basp/message_queue.hpp"
 #include "caf/proxy_registry.hpp"
-#include "caf/serializer_impl.hpp"
 
 using namespace caf;
 
@@ -109,7 +109,7 @@ CAF_TEST(deliver serialized message) {
   CAF_MESSAGE("create a fake message + BASP header");
   std::vector<byte> payload;
   std::vector<strong_actor_ptr> stages;
-  serializer_impl<std::vector<byte>> sink{sys, payload};
+  binary_serializer sink{sys, payload};
   if (auto err = sink(node_id{}, self->id(), testee.id(), stages,
                       make_message(ok_atom::value)))
     CAF_FAIL("unable to serialize message: " << sys.render(err));
@@ -117,7 +117,7 @@ CAF_TEST(deliver serialized message) {
                         static_cast<uint32_t>(payload.size()),
                         make_message_id().integer_value()};
   CAF_MESSAGE("launch worker");
-  w->launch(last_hop, hdr, payload);
+  w->launch(last_hop, hdr, as_bytes(make_span(payload)));
   sched.run_once();
   expect((ok_atom), from(_).to(testee));
 }

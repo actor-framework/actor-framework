@@ -23,6 +23,7 @@
 #include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
 
+#include "caf/binary_serializer.hpp"
 #include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/ip_address.hpp"
@@ -119,7 +120,7 @@ CAF_TEST(read / write using span<std::vector<byte>*>) {
   // generate header and payload in separate buffers
   header hdr{hello_test.size()};
   std::vector<byte> hdr_buf;
-  serializer_impl<std::vector<byte>> sink(sys, hdr_buf);
+  binary_serializer sink(sys, hdr_buf);
   if (auto err = sink(hdr))
     CAF_FAIL("serializing payload failed" << sys.render(err));
   auto bytes = as_bytes(make_span(hello_test));
@@ -133,7 +134,8 @@ CAF_TEST(read / write using span<std::vector<byte>*>) {
   CAF_CHECK_EQUAL(buf.size(), packet_size);
   binary_deserializer source(nullptr, buf);
   header recv_hdr;
-  source(recv_hdr);
+  if (auto err = source(recv_hdr))
+    CAF_FAIL("serializing failed: " << err);
   CAF_CHECK_EQUAL(hdr.payload_size, recv_hdr.payload_size);
   string_view received{reinterpret_cast<const char*>(buf.data())
                          + sizeof(header),

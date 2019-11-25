@@ -82,7 +82,7 @@ struct fixture : host_fixture, test_coordinator_fixture<config> {
   template <class... Ts>
   buffer_type to_buf(const Ts&... xs) {
     buffer_type buf;
-    serializer_impl<buffer_type> sink{system(), buf};
+    binary_serializer sink{system(), buf};
     REQUIRE_OK(sink(xs...));
     return buf;
   }
@@ -90,7 +90,7 @@ struct fixture : host_fixture, test_coordinator_fixture<config> {
   template <class... Ts>
   void mock(const Ts&... xs) {
     auto buf = to_buf(xs...);
-    if (fetch_size(write(sock, make_span(buf))) != buf.size())
+    if (fetch_size(write(sock, as_bytes(make_span(buf)))) != buf.size())
       CAF_FAIL("unable to write " << buf.size() << " bytes");
     run();
   }
@@ -103,7 +103,7 @@ struct fixture : host_fixture, test_coordinator_fixture<config> {
                       static_cast<uint32_t>(payload.size()), basp::version});
     CAF_CHECK_EQUAL(app->state(),
                     basp::connection_state::await_handshake_payload);
-    write(sock, make_span(payload));
+    write(sock, as_bytes(make_span(payload)));
     run();
   }
 
@@ -111,7 +111,7 @@ struct fixture : host_fixture, test_coordinator_fixture<config> {
     buffer_type buf(basp::header_size);
     if (fetch_size(read(sock, make_span(buf))) != basp::header_size)
       CAF_FAIL("unable to read " << basp::header_size << " bytes");
-    auto hdr = basp::header::from_bytes(buf);
+    auto hdr = basp::header::from_bytes(as_bytes(make_span(buf)));
     if (hdr.type != basp::message_type::handshake || hdr.payload_len == 0
         || hdr.operation_data != basp::version)
       CAF_FAIL("invalid handshake header");
@@ -149,7 +149,7 @@ struct fixture : host_fixture, test_coordinator_fixture<config> {
                       std::tuple<unit_t>>::value) {                            \
       auto payload = to_buf(__VA_ARGS__);                                      \
       mock(basp::header{kind, static_cast<uint32_t>(payload.size()), op});     \
-      write(sock, make_span(payload));                                         \
+      write(sock, as_bytes(make_span(payload)));                               \
     } else {                                                                   \
       mock(basp::header{kind, 0, op});                                         \
     }                                                                          \
@@ -162,7 +162,7 @@ struct fixture : host_fixture, test_coordinator_fixture<config> {
     buffer_type buf(basp::header_size);                                        \
     if (fetch_size(read(sock, make_span(buf))) != basp::header_size)           \
       CAF_FAIL("unable to read " << basp::header_size << " bytes");            \
-    auto hdr = basp::header::from_bytes(buf);                                  \
+    auto hdr = basp::header::from_bytes(as_bytes(make_span(buf)));             \
     CAF_CHECK_EQUAL(hdr.type, msg_type);                                       \
     CAF_CHECK_EQUAL(hdr.operation_data, op_data);                              \
     if (!std::is_same<decltype(std::make_tuple(__VA_ARGS__)),                  \

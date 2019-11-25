@@ -72,7 +72,7 @@ public:
   bool handle_write_event() override {
     if (wr_buf_.size() == 0)
       return false;
-    auto res = write(handle(), make_span(wr_buf_));
+    auto res = write(handle(), as_bytes(make_span(wr_buf_)));
     if (auto num_bytes = get_if<size_t>(&res)) {
       CAF_ASSERT(*num_bytes > 0);
       wr_buf_.erase(wr_buf_.begin(), wr_buf_.begin() + *num_bytes);

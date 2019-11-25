@@ -87,7 +87,7 @@ public:
       CAF_LOG_DEBUG("received " << num_bytes << " bytes");
       auto ep = res->second;
       this->read_buf_.resize(num_bytes);
-      this->next_layer_.handle_data(*this, make_span(this->read_buf_),
+      this->next_layer_.handle_data(*this, as_bytes(make_span(this->read_buf_)),
                                     std::move(ep));
       prepare_next_read();
     } else {

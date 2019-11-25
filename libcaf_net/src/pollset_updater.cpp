@@ -18,6 +18,8 @@
 
 #include "caf/net/pollset_updater.hpp"
 
+#include <cstring>
+
 #include "caf/net/multiplexer.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"

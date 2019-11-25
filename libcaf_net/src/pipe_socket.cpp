@@ -19,16 +19,15 @@
 #include "caf/net/pipe_socket.hpp"
 
 #include <cstdio>
-#include <cstdlib>
 #include <utility>
 
 #include "caf/byte.hpp"
-#include "caf/config.hpp"
-#include "caf/detail/net_syscall.hpp"
+#include "caf/detail/scope_guard.hpp"
 #include "caf/detail/socket_sys_aliases.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
-#include "caf/error.hpp"
 #include "caf/expected.hpp"
+#include "caf/make_message.hpp"
+#include "caf/message.hpp"
 #include "caf/net/stream_socket.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"

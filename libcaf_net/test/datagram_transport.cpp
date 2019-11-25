@@ -23,6 +23,7 @@
 #include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
 
+#include "caf/binary_serializer.hpp"
 #include "caf/byte.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/make_actor.hpp"
@@ -33,7 +34,6 @@
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/udp_datagram_socket.hpp"
-#include "caf/serializer_impl.hpp"
 #include "caf/span.hpp"
 
 using namespace caf;
@@ -169,9 +169,9 @@ public:
   static expected<buffer_type> serialize(actor_system& sys,
                                          const type_erased_tuple& x) {
     buffer_type result;
-    serializer_impl<buffer_type> sink{sys, result};
+    binary_serializer sink{sys, result};
     if (auto err = message::save(sink, x))
-      return err;
+      return err.value();
     return result;
   }
 
