@@ -6,12 +6,11 @@
 defaultReleaseBuildFlags = [
     'CAF_ENABLE_RUNTIME_CHECKS:BOOL=yes',
     'CAF_NO_OPENCL:BOOL=yes',
-    'CAF_INSTALL_UNIT_TESTS:BOOL=yes',
 ]
 
 // Default CMake flags for debug builds.
 defaultDebugBuildFlags = defaultReleaseBuildFlags + [
-    'CAF_ENABLE_ADDRESS_SANITIZER:BOOL=yes',
+    'CAF_SANITIZERS:STRING=address,undefined',
     'CAF_LOG_LEVEL:STRING=TRACE',
     'CAF_ENABLE_ACTOR_PROFILER:BOOL=yes',
 ]
@@ -99,7 +98,9 @@ config = [
             ],
         ],
         Windows: [
-            debug: defaultDebugBuildFlags + [
+            debug: [
+                'CAF_LOG_LEVEL:STRING=TRACE',
+                'CAF_ENABLE_ACTOR_PROFILER:BOOL=yes',
                 'CAF_BUILD_STATIC_ONLY:BOOL=yes',
             ],
             release: defaultReleaseBuildFlags + [
