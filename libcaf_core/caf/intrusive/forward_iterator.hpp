@@ -84,13 +84,13 @@ public:
   // -- operators --------------------------------------------------------------
 
   forward_iterator& operator++() {
-    ptr = promote(ptr->next);
+    ptr = ptr->next;
     return *this;
   }
 
   forward_iterator operator++(int) {
     forward_iterator res = *this;
-    ptr = promote(ptr->next);
+    ptr = ptr->next;
     return res;
   }
 

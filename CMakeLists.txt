@@ -313,10 +313,10 @@ else()
 endif()
 
 # enable address sanitizer if requested by the user
-if(CAF_ENABLE_ADDRESS_SANITIZER AND NOT WIN32)
-  add_compile_options("-fsanitize=address"
+if(CAF_SANITIZERS)
+  add_compile_options("-fsanitize=${CAF_SANITIZERS}"
                       "-fno-omit-frame-pointer")
-  list(APPEND CAF_EXTRA_LDFLAGS "-fsanitize=address")
+  list(APPEND CAF_EXTRA_LDFLAGS "-fsanitize=${CAF_SANITIZERS}")
 endif()
 # -pthread is ignored on MacOSX but required on other platforms
 if(NOT APPLE AND NOT WIN32)

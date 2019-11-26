@@ -87,7 +87,6 @@ CAF_TEST(default_constructed) {
   CAF_REQUIRE_EQUAL(queue.peek(), nullptr);
   CAF_REQUIRE_EQUAL(queue.next(), nullptr);
   CAF_REQUIRE_EQUAL(queue.begin(), queue.end());
-  CAF_REQUIRE_EQUAL(queue.before_begin()->next, queue.end().ptr);
 }
 
 CAF_TEST(inc_deficit) {

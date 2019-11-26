@@ -173,10 +173,8 @@ public:
 
   /// @private
   task_size_type next_task_size() const noexcept {
-    if (head_.next == nullptr)
-      return 0;
-    auto ptr = promote(head_.next);
-    return policy_.task_size(*ptr);
+    auto ptr = head_.next;
+    return ptr != &tail_ ? policy_.task_size(*promote(ptr)) : 0;
   }
 
   /// @private
@@ -202,16 +200,6 @@ public:
   }
 
   // -- iterator access --------------------------------------------------------
-
-  /// Returns an iterator to the dummy before the first element.
-  iterator before_begin() noexcept {
-    return &head_;
-  }
-
-  /// Returns an iterator to the dummy before the first element.
-  const_iterator before_begin() const noexcept {
-    return &head_;
-  }
 
   /// Returns an iterator to the dummy before the first element.
   iterator begin() noexcept {
@@ -252,6 +240,7 @@ public:
 
   /// Returns a pointer to the last element.
   pointer back() noexcept {
+    CAF_ASSERT(head_.next != &tail_);
     return promote(tail_.next);
   }
 
@@ -319,7 +308,7 @@ public:
   /// @private
   void lifo_append(node_pointer ptr) {
     if (old_last_ == nullptr) {
-      old_last_ = back();
+      old_last_ = tail_.next;
       push_back(promote(ptr));
     } else {
       ptr->next = new_head_;
