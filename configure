@@ -79,6 +79,12 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --with-sanitizers=LIST      build with this list of sanitizers enabled
     --with-actor-profiler       enables the (experimental) actor_profiler API
 
+  Convenience options:
+    --dev-mode                  sets --build-type=debug, --no-examples,
+                                --no-tools, --with-runtime-checks,
+                                --log-level=trace, and
+                                --sanitizers=address,undefined
+
   Influential Environment Variables (only on first invocation):
     CXX                         C++ compiler command
     CXXFLAGS                    C++ compiler flags (overrides defaults)
@@ -355,6 +361,14 @@ while [ $# -ne 0 ]; do
             for var in CAF_NO_TOOLS CAF_NO_PYTHON CAF_NO_EXAMPLES  CAF_NO_UNIT_TESTS CAF_NO_IO CAF_NO_OPENSSL ; do
               append_cache_entry $var BOOL yes
             done
+            ;;
+        --dev-mode)
+            for var in CAF_NO_TOOLS CAF_NO_EXAMPLES CAF_ENABLE_RUNTIME_CHECKS ; do
+              append_cache_entry $var BOOL yes
+            done
+            append_cache_entry CMAKE_BUILD_TYPE STRING debug
+            append_cache_entry CAF_LOG_LEVEL STRING TRACE
+            append_cache_entry CAF_SANITIZERS STRING address,undefined
             ;;
         *)
             echo "Invalid option '$1'.  Try $0 --help to see available options."
