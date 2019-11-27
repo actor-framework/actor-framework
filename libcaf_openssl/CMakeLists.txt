@@ -25,6 +25,11 @@ add_library(libcaf_openssl $<TARGET_OBJECTS:libcaf_openssl_obj>)
 
 add_library(caf::openssl ALIAS libcaf_openssl)
 
+if(BUILD_SHARED_LIBS AND NOT WIN32)
+  target_compile_options(libcaf_openssl PRIVATE -fPIC)
+  target_compile_options(libcaf_openssl_obj PRIVATE -fPIC)
+endif()
+
 target_link_libraries(libcaf_openssl PUBLIC
                       caf::core caf::io ${OPENSSL_LIBRARIES})
 

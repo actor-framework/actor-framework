@@ -75,6 +75,11 @@ add_library(libcaf_io $<TARGET_OBJECTS:libcaf_io_obj>)
 
 add_library(caf::io ALIAS libcaf_io)
 
+if(BUILD_SHARED_LIBS AND NOT WIN32)
+  target_compile_options(libcaf_io PRIVATE -fPIC)
+  target_compile_options(libcaf_io_obj PRIVATE -fPIC)
+endif()
+
 target_link_libraries(libcaf_io PUBLIC caf::core ${CAF_EXTRA_LDFLAGS})
 
 generate_export_header(libcaf_io
