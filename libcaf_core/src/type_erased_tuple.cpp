@@ -87,7 +87,7 @@ bool type_erased_tuple::matches(size_t pos, uint16_t nr,
   if (tp.first != nr)
     return false;
   if (nr == 0)
-    return ptr != nullptr ? *tp.second == *ptr : false;
+    return ptr != nullptr ? strcmp(tp.second->name(), ptr->name()) == 0 : false;
   return true;
 }
 
