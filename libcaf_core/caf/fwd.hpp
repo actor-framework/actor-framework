@@ -185,6 +185,7 @@ enum class invoke_message_result;
 // -- aliases ------------------------------------------------------------------
 
 using actor_id = uint64_t;
+using byte_buffer = std::vector<byte>;
 using ip_address = ipv6_address;
 using ip_endpoint = ipv6_endpoint;
 using ip_subnet = ipv6_subnet;

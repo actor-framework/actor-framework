@@ -29,14 +29,15 @@ target_link_libraries(libcaf_openssl PUBLIC
                       caf::core caf::io ${OPENSSL_LIBRARIES})
 
 if(NOT APPLE AND NOT WIN32)
-  target_link_libraries(libcaf_openssl_obj PUBLIC "-pthread")
   target_link_libraries(libcaf_openssl PUBLIC "-pthread")
 endif()
 
-generate_export_header(libcaf_openssl_obj
+generate_export_header(libcaf_openssl
                        EXPORT_MACRO_NAME CAF_OPENSSL_EXPORT
                        EXPORT_FILE_NAME "${CMAKE_BINARY_DIR}/caf/detail/openssl_export.hpp"
                        STATIC_DEFINE CAF_STATIC_BUILD)
+
+target_compile_definitions(libcaf_openssl_obj PRIVATE libcaf_openssl_EXPORTS)
 
 target_include_directories(libcaf_openssl PUBLIC
                            $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>
@@ -74,6 +75,7 @@ if(NOT CAF_NO_UNIT_TESTS)
                  "${PROJECT_SOURCE_DIR}/libcaf_test/caf/test/unit_test_impl.hpp"
                  ${CAF_OPENSSL_TEST_SOURCES}
                  $<TARGET_OBJECTS:libcaf_openssl_obj>)
+  target_compile_definitions(caf-openssl-test PRIVATE libcaf_openssl_EXPORTS)
   target_link_libraries(caf-openssl-test caf::core caf::io
                         ${OPENSSL_LIBRARIES} ${CAF_EXTRA_LDFLAGS})
   add_test_suites(caf-openssl-test

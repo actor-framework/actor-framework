@@ -140,6 +140,14 @@ public:
 
   explicit default_multiplexer(actor_system* sys);
 
+  default_multiplexer(default_multiplexer&&) = delete;
+
+  default_multiplexer(const default_multiplexer&) = delete;
+
+  default_multiplexer& operator=(default_multiplexer&&) = delete;
+
+  default_multiplexer& operator=(const default_multiplexer&) = delete;
+
   ~default_multiplexer() override;
 
   supervisor_ptr make_supervisor() override;

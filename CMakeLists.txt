@@ -146,6 +146,11 @@ if(NOT caf_is_subproject)
   add_custom_target(configure COMMAND ${CMAKE_CURRENT_BINARY_DIR}/config.status)
 endif()
 
+# Silence annoying MSVC warning.
+if(MSVC)
+  add_compile_options(/wd4275 /wd4251)
+endif()
+
 ################################################################################
 #                              utility functions                               #
 ################################################################################
@@ -181,7 +186,7 @@ add_executable(caf-generate-enum-strings cmake/caf-generate-enum-strings.cpp)
 
 function(enum_to_string relative_input_file relative_output_file)
   set(input "${CMAKE_CURRENT_SOURCE_DIR}/${relative_input_file}")
-  set(output "${CMAKE_CURRENT_BINARY_DIR}/${relative_output_file}")
+  set(output "${CMAKE_BINARY_DIR}/${relative_output_file}")
   add_custom_command(OUTPUT "${output}"
                      COMMAND caf-generate-enum-strings "${input}" "${output}"
                      DEPENDS caf-generate-enum-strings "${input}")

@@ -16,14 +16,14 @@ enum_to_string("caf/stream_priority.hpp" "stream_priority_strings.cpp")
 # -- list cpp files for libcaf_core --------------------------------------------
 
 set(CAF_CORE_SOURCES
-  "${CMAKE_CURRENT_BINARY_DIR}/exit_reason_strings.cpp"
-  "${CMAKE_CURRENT_BINARY_DIR}/inbox_result_strings.cpp"
-  "${CMAKE_CURRENT_BINARY_DIR}/invoke_msg_result_strings.cpp"
-  "${CMAKE_CURRENT_BINARY_DIR}/message_priority_strings.cpp"
-  "${CMAKE_CURRENT_BINARY_DIR}/pec_strings.cpp"
-  "${CMAKE_CURRENT_BINARY_DIR}/sec_strings.cpp"
-  "${CMAKE_CURRENT_BINARY_DIR}/stream_priority_strings.cpp"
-  "${CMAKE_CURRENT_BINARY_DIR}/task_result_strings.cpp"
+  "${CMAKE_BINARY_DIR}/exit_reason_strings.cpp"
+  "${CMAKE_BINARY_DIR}/inbox_result_strings.cpp"
+  "${CMAKE_BINARY_DIR}/invoke_msg_result_strings.cpp"
+  "${CMAKE_BINARY_DIR}/message_priority_strings.cpp"
+  "${CMAKE_BINARY_DIR}/pec_strings.cpp"
+  "${CMAKE_BINARY_DIR}/sec_strings.cpp"
+  "${CMAKE_BINARY_DIR}/stream_priority_strings.cpp"
+  "${CMAKE_BINARY_DIR}/task_result_strings.cpp"
   src/abstract_actor.cpp
   src/abstract_channel.cpp
   src/abstract_composable_behavior.cpp
@@ -277,10 +277,12 @@ add_library(caf::core ALIAS libcaf_core)
 
 target_link_libraries(libcaf_core PUBLIC ${CAF_EXTRA_LDFLAGS})
 
-generate_export_header(libcaf_core_obj
+generate_export_header(libcaf_core
                        EXPORT_MACRO_NAME CAF_CORE_EXPORT
                        EXPORT_FILE_NAME "${CMAKE_BINARY_DIR}/caf/detail/core_export.hpp"
                        STATIC_DEFINE CAF_STATIC_BUILD)
+
+target_compile_definitions(libcaf_core_obj PRIVATE libcaf_core_EXPORTS)
 
 set_target_properties(libcaf_core PROPERTIES
                       EXPORT_NAME core
@@ -314,6 +316,7 @@ if(NOT CAF_NO_UNIT_TESTS)
                  "${PROJECT_SOURCE_DIR}/libcaf_test/caf/test/unit_test_impl.hpp"
                  ${CAF_CORE_TEST_SOURCES}
                  $<TARGET_OBJECTS:libcaf_core_obj>)
+  target_compile_definitions(caf-core-test PRIVATE libcaf_core_EXPORTS)
   target_link_libraries(caf-core-test ${CAF_EXTRA_LDFLAGS})
   add_test_suites(caf-core-test
                   "${CMAKE_CURRENT_SOURCE_DIR}"

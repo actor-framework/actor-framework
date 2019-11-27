@@ -10,8 +10,8 @@ enum_to_string("caf/io/network/operation.hpp" "operation_to_string.cpp")
 # -- list cpp files ------------------------------------------------------------
 
 set(CAF_IO_SOURCES
-  "${CMAKE_CURRENT_BINARY_DIR}/message_type_to_string.cpp"
-  "${CMAKE_CURRENT_BINARY_DIR}/operation_to_string.cpp"
+  "${CMAKE_BINARY_DIR}/message_type_to_string.cpp"
+  "${CMAKE_BINARY_DIR}/operation_to_string.cpp"
   src/detail/socket_guard.cpp
   src/io/abstract_broker.cpp
   src/io/basp/header.cpp
@@ -77,10 +77,12 @@ add_library(caf::io ALIAS libcaf_io)
 
 target_link_libraries(libcaf_io PUBLIC caf::core ${CAF_EXTRA_LDFLAGS})
 
-generate_export_header(libcaf_io_obj
+generate_export_header(libcaf_io
                        EXPORT_MACRO_NAME CAF_IO_EXPORT
                        EXPORT_FILE_NAME "${CMAKE_BINARY_DIR}/caf/detail/io_export.hpp"
                        STATIC_DEFINE CAF_STATIC_BUILD)
+
+target_compile_definitions(libcaf_io_obj PRIVATE libcaf_io_EXPORTS)
 
 set_target_properties(libcaf_io PROPERTIES
                       EXPORT_NAME io
@@ -113,6 +115,7 @@ if(NOT CAF_NO_UNIT_TESTS)
                  "${PROJECT_SOURCE_DIR}/libcaf_test/caf/test/unit_test_impl.hpp"
                  ${CAF_IO_TEST_SOURCES}
                  $<TARGET_OBJECTS:libcaf_io_obj>)
+  target_compile_definitions(caf-io-test PRIVATE libcaf_io_EXPORTS)
   target_link_libraries(caf-io-test caf::core ${CAF_EXTRA_LDFLAGS})
   add_test_suites(caf-io-test
                   "${CMAKE_CURRENT_SOURCE_DIR}"
