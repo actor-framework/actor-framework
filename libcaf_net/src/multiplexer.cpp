@@ -274,7 +274,7 @@ void multiplexer::write_to_pipe(uint8_t opcode, const socket_manager_ptr& mgr) {
   { // Lifetime scope of guard.
     std::lock_guard<std::mutex> guard{write_lock_};
     if (write_handle_ != invalid_socket)
-      res = write(write_handle_, as_bytes(make_span(buf)));
+      res = write(write_handle_, make_span(buf));
     else
       res = sec::socket_invalid;
   }

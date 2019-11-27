@@ -85,8 +85,8 @@ public:
       this->collected_ += *num_bytes;
       if (this->collected_ >= this->read_threshold_) {
         if (auto err = this->next_layer_.handle_data(*this,
-                                                     as_bytes(make_span(
-                                                       this->read_buf_)))) {
+                                                     make_span(
+                                                       this->read_buf_))) {
           CAF_LOG_ERROR("handle_data failed: " << CAF_ARG(err));
           return false;
         }
@@ -186,7 +186,7 @@ private:
       CAF_ASSERT(!buf.empty());
       auto data = buf.data() + written_;
       auto len = buf.size() - written_;
-      auto write_ret = write(this->handle(), as_bytes(make_span(data, len)));
+      auto write_ret = write(this->handle(), make_span(data, len));
       if (auto num_bytes = get_if<size_t>(&write_ret)) {
         CAF_LOG_DEBUG(CAF_ARG(this->handle_.id) << CAF_ARG(*num_bytes));
         written_ += *num_bytes;

@@ -75,16 +75,16 @@ struct fixture : test_coordinator_fixture<>,
     set_input(basp::header{basp::message_type::handshake,
                            static_cast<uint32_t>(payload.size()),
                            basp::version});
-    REQUIRE_OK(app.handle_data(*this, as_bytes(make_span(input))));
+    REQUIRE_OK(app.handle_data(*this, make_span(input)));
     CAF_CHECK_EQUAL(app.state(),
                     basp::connection_state::await_handshake_payload);
-    REQUIRE_OK(app.handle_data(*this, as_bytes(make_span(payload))));
+    REQUIRE_OK(app.handle_data(*this, make_span(payload)));
   }
 
   void consume_handshake() {
     if (output.size() < basp::header_size)
       CAF_FAIL("BASP application did not write a handshake header");
-    auto hdr = basp::header::from_bytes(as_bytes(make_span(output)));
+    auto hdr = basp::header::from_bytes(make_span(output));
     if (hdr.type != basp::message_type::handshake || hdr.payload_len == 0
         || hdr.operation_data != basp::version)
       CAF_FAIL("invalid handshake header");
@@ -158,10 +158,10 @@ protected:
   do {                                                                         \
     auto payload = to_buf(__VA_ARGS__);                                        \
     set_input(basp::header{kind, static_cast<uint32_t>(payload.size()), op});  \
-    if (auto err = app.handle_data(*this, as_bytes(make_span(input))))         \
+    if (auto err = app.handle_data(*this, make_span(input)))                   \
       CAF_FAIL("application-under-test failed to process header: "             \
                << sys.render(err));                                            \
-    if (auto err = app.handle_data(*this, as_bytes(make_span(payload))))       \
+    if (auto err = app.handle_data(*this, make_span(payload)))                 \
       CAF_FAIL("application-under-test failed to process payload: "            \
                << sys.render(err));                                            \
   } while (false)
@@ -185,21 +185,21 @@ CAF_TEST_FIXTURE_SCOPE(application_tests, fixture)
 CAF_TEST(missing handshake) {
   CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_handshake_header);
   set_input(basp::header{basp::message_type::heartbeat, 0, 0});
-  CAF_CHECK_EQUAL(app.handle_data(*this, as_bytes(make_span(input))),
+  CAF_CHECK_EQUAL(app.handle_data(*this, make_span(input)),
                   basp::ec::missing_handshake);
 }
 
 CAF_TEST(version mismatch) {
   CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_handshake_header);
   set_input(basp::header{basp::message_type::handshake, 0, 0});
-  CAF_CHECK_EQUAL(app.handle_data(*this, as_bytes(make_span(input))),
+  CAF_CHECK_EQUAL(app.handle_data(*this, make_span(input)),
                   basp::ec::version_mismatch);
 }
 
 CAF_TEST(missing payload in handshake) {
   CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_handshake_header);
   set_input(basp::header{basp::message_type::handshake, 0, basp::version});
-  CAF_CHECK_EQUAL(app.handle_data(*this, as_bytes(make_span(input))),
+  CAF_CHECK_EQUAL(app.handle_data(*this, make_span(input)),
                   basp::ec::missing_payload);
 }
 
@@ -210,9 +210,9 @@ CAF_TEST(invalid handshake) {
   auto payload = to_buf(no_nid, no_ids);
   set_input(basp::header{basp::message_type::handshake,
                          static_cast<uint32_t>(payload.size()), basp::version});
-  REQUIRE_OK(app.handle_data(*this, as_bytes(make_span(input))));
+  REQUIRE_OK(app.handle_data(*this, make_span(input)));
   CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_handshake_payload);
-  CAF_CHECK_EQUAL(app.handle_data(*this, as_bytes(make_span(payload))),
+  CAF_CHECK_EQUAL(app.handle_data(*this, make_span(payload)),
                   basp::ec::invalid_handshake);
 }
 
@@ -222,9 +222,9 @@ CAF_TEST(app identifier mismatch) {
   auto payload = to_buf(mars, wrong_ids);
   set_input(basp::header{basp::message_type::handshake,
                          static_cast<uint32_t>(payload.size()), basp::version});
-  REQUIRE_OK(app.handle_data(*this, as_bytes(make_span(input))));
+  REQUIRE_OK(app.handle_data(*this, make_span(input)));
   CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_handshake_payload);
-  CAF_CHECK_EQUAL(app.handle_data(*this, as_bytes(make_span(payload))),
+  CAF_CHECK_EQUAL(app.handle_data(*this, make_span(payload)),
                   basp::ec::app_identifiers_mismatch);
 }
 
@@ -237,8 +237,8 @@ CAF_TEST(repeated handshake) {
   auto payload = to_buf(no_nid, no_ids);
   set_input(basp::header{basp::message_type::handshake,
                          static_cast<uint32_t>(payload.size()), basp::version});
-  CAF_CHECK_EQUAL(app.handle_data(*this, as_bytes(make_span(input))), none);
-  CAF_CHECK_EQUAL(app.handle_data(*this, as_bytes(make_span(payload))),
+  CAF_CHECK_EQUAL(app.handle_data(*this, make_span(input)), none);
+  CAF_CHECK_EQUAL(app.handle_data(*this, make_span(payload)),
                   basp::ec::unexpected_handshake);
 }
 
@@ -337,7 +337,7 @@ CAF_TEST(heartbeat message) {
   CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_header);
   auto bytes = to_bytes(basp::header{basp::message_type::heartbeat, 0, 0});
   set_input(bytes);
-  REQUIRE_OK(app.handle_data(*this, as_bytes(make_span(input))));
+  REQUIRE_OK(app.handle_data(*this, make_span(input)));
   CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_header);
 }
 

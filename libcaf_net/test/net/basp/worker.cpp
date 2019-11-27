@@ -117,7 +117,7 @@ CAF_TEST(deliver serialized message) {
                         static_cast<uint32_t>(payload.size()),
                         make_message_id().integer_value()};
   CAF_MESSAGE("launch worker");
-  w->launch(last_hop, hdr, as_bytes(make_span(payload)));
+  w->launch(last_hop, hdr, make_span(payload));
   sched.run_once();
   expect((ok_atom), from(_).to(testee));
 }
