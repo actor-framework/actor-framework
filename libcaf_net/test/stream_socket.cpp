@@ -74,31 +74,29 @@ struct fixture : host_fixture {
 CAF_TEST_FIXTURE_SCOPE(network_socket_tests, fixture)
 
 CAF_TEST(read on empty sockets) {
-  CAF_CHECK_EQUAL(read(first, make_span(rd_buf)),
-                  sec::unavailable_or_would_block);
-  CAF_CHECK_EQUAL(read(second, make_span(rd_buf)),
-                  sec::unavailable_or_would_block);
+  CAF_CHECK_EQUAL(read(first, rd_buf), sec::unavailable_or_would_block);
+  CAF_CHECK_EQUAL(read(second, rd_buf), sec::unavailable_or_would_block);
 }
 
 CAF_TEST(transfer data from first to second socket) {
   std::vector<byte> wr_buf{1_b, 2_b, 4_b, 8_b, 16_b, 32_b, 64_b};
   CAF_MESSAGE("transfer data from first to second socket");
-  CAF_CHECK_EQUAL(write(first, make_span(wr_buf)), wr_buf.size());
-  CAF_CHECK_EQUAL(read(second, make_span(rd_buf)), wr_buf.size());
+  CAF_CHECK_EQUAL(write(first, wr_buf), wr_buf.size());
+  CAF_CHECK_EQUAL(read(second, rd_buf), wr_buf.size());
   CAF_CHECK(std::equal(wr_buf.begin(), wr_buf.end(), rd_buf.begin()));
   rd_buf.assign(rd_buf.size(), byte(0));
 }
 
 CAF_TEST(transfer data from second to first socket) {
   std::vector<byte> wr_buf{1_b, 2_b, 4_b, 8_b, 16_b, 32_b, 64_b};
-  CAF_CHECK_EQUAL(write(second, make_span(wr_buf)), wr_buf.size());
-  CAF_CHECK_EQUAL(read(first, make_span(rd_buf)), wr_buf.size());
+  CAF_CHECK_EQUAL(write(second, wr_buf), wr_buf.size());
+  CAF_CHECK_EQUAL(read(first, rd_buf), wr_buf.size());
   CAF_CHECK(std::equal(wr_buf.begin(), wr_buf.end(), rd_buf.begin()));
 }
 
 CAF_TEST(shut down first socket and observe shutdown on the second one) {
   close(first);
-  CAF_CHECK_EQUAL(read(second, make_span(rd_buf)), sec::socket_disconnected);
+  CAF_CHECK_EQUAL(read(second, rd_buf), sec::socket_disconnected);
   first.id = invalid_socket_id;
 }
 
@@ -110,7 +108,7 @@ CAF_TEST(transfer data using multiple buffers) {
   full_buf.insert(full_buf.end(), wr_buf_2.begin(), wr_buf_2.end());
   CAF_CHECK_EQUAL(write(second, {make_span(wr_buf_1), make_span(wr_buf_2)}),
                   full_buf.size());
-  CAF_CHECK_EQUAL(read(first, make_span(rd_buf)), full_buf.size());
+  CAF_CHECK_EQUAL(read(first, rd_buf), full_buf.size());
   CAF_CHECK(std::equal(full_buf.begin(), full_buf.end(), rd_buf.begin()));
 }
 

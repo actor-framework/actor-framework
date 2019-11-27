@@ -94,7 +94,7 @@ public:
 
   template <class Manager>
   bool handle_read_event(Manager&) {
-    auto res = read(handle_, make_span(read_buf_));
+    auto res = read(handle_, read_buf_);
     if (auto num_bytes = get_if<size_t>(&res)) {
       data_->insert(data_->end(), read_buf_.begin(),
                     read_buf_.begin() + *num_bytes);
@@ -109,7 +109,7 @@ public:
       auto& payload = x->payload;
       buf_.insert(buf_.end(), payload.begin(), payload.end());
     }
-    auto res = write(handle_, as_bytes(make_span(buf_)));
+    auto res = write(handle_, buf_);
     if (auto num_bytes = get_if<size_t>(&res)) {
       buf_.erase(buf_.begin(), buf_.begin() + *num_bytes);
       return buf_.size() > 0;
@@ -168,7 +168,7 @@ CAF_TEST(send and receive) {
   auto buf = std::make_shared<std::vector<byte>>();
   auto sockets = unbox(make_stream_socket_pair());
   nonblocking(sockets.second, true);
-  CAF_CHECK_EQUAL(read(sockets.second, make_span(read_buf)),
+  CAF_CHECK_EQUAL(read(sockets.second, read_buf),
                   sec::unavailable_or_would_block);
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
   auto mgr = make_endpoint_manager(mpx, sys,
@@ -183,7 +183,7 @@ CAF_TEST(send and receive) {
   CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(buf->data()),
                               buf->size()),
                   hello_manager);
-  CAF_CHECK_EQUAL(read(sockets.second, make_span(read_buf)), hello_test.size());
+  CAF_CHECK_EQUAL(read(sockets.second, read_buf), hello_test.size());
   CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(read_buf.data()),
                               hello_test.size()),
                   hello_test);
@@ -200,7 +200,7 @@ CAF_TEST(resolve and proxy communication) {
   CAF_CHECK_EQUAL(mgr->init(), none);
   CAF_CHECK_EQUAL(mgr->mask(), operation::read_write);
   run();
-  CAF_CHECK_EQUAL(read(sockets.second, make_span(read_buf)), hello_test.size());
+  CAF_CHECK_EQUAL(read(sockets.second, read_buf), hello_test.size());
   mgr->resolve(unbox(make_uri("test:id/42")), self);
   run();
   self->receive(
@@ -211,7 +211,7 @@ CAF_TEST(resolve and proxy communication) {
     after(std::chrono::seconds(0)) >>
       [&] { CAF_FAIL("manager did not respond with a proxy."); });
   run();
-  auto read_res = read(sockets.second, make_span(read_buf));
+  auto read_res = read(sockets.second, read_buf);
   if (!holds_alternative<size_t>(read_res)) {
     CAF_ERROR("read() returned an error: " << sys.render(get<sec>(read_res)));
     return;

@@ -46,7 +46,6 @@
 #include "caf/proxy_registry.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/scoped_execution_unit.hpp"
-#include "caf/span.hpp"
 #include "caf/unit.hpp"
 
 namespace caf::net::basp {

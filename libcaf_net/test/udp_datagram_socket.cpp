@@ -69,7 +69,7 @@ error read_from_socket(udp_datagram_socket sock, std::vector<byte>& buf) {
   uint8_t receive_attempts = 0;
   variant<std::pair<size_t, ip_endpoint>, sec> read_ret;
   do {
-    read_ret = read(sock, make_span(buf));
+    read_ret = read(sock, buf);
     if (auto read_res = get_if<std::pair<size_t, ip_endpoint>>(&read_ret)) {
       buf.resize(read_res->first);
     } else if (get<sec>(read_ret) != sec::unavailable_or_would_block) {
@@ -106,8 +106,7 @@ CAF_TEST_FIXTURE_SCOPE(udp_datagram_socket_test, fixture)
 CAF_TEST(read / write using span<byte>) {
   if (auto err = nonblocking(socket_cast<net::socket>(receive_socket), true))
     CAF_FAIL("setting socket to nonblocking failed: " << err);
-  CAF_CHECK_EQUAL(read(receive_socket, make_span(buf)),
-                  sec::unavailable_or_would_block);
+  CAF_CHECK_EQUAL(read(receive_socket, buf), sec::unavailable_or_would_block);
   CAF_MESSAGE("sending data to " << to_string(ep));
   CAF_CHECK_EQUAL(write(send_socket, as_bytes(make_span(hello_test)), ep),
                   hello_test.size());
@@ -127,7 +126,7 @@ CAF_TEST(read / write using span<std::vector<byte>*>) {
   std::vector<byte> payload_buf(bytes.begin(), bytes.end());
   auto packet_size = hdr_buf.size() + payload_buf.size();
   std::vector<std::vector<byte>*> bufs{&hdr_buf, &payload_buf};
-  CAF_CHECK_EQUAL(write(send_socket, make_span(bufs), ep), packet_size);
+  CAF_CHECK_EQUAL(write(send_socket, bufs, ep), packet_size);
   // receive both as one single packet.
   buf.resize(packet_size);
   CAF_CHECK_EQUAL(read_from_socket(receive_socket, buf), none);

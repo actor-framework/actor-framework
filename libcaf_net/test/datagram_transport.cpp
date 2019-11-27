@@ -83,7 +83,7 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
     uint8_t receive_attempts = 0;
     variant<std::pair<size_t, ip_endpoint>, sec> read_ret;
     do {
-      read_ret = read(sock, make_span(buf));
+      read_ret = read(sock, buf);
       if (auto read_res = get_if<std::pair<size_t, ip_endpoint>>(&read_ret)) {
         buf.resize(read_res->first);
       } else if (get<sec>(read_ret) != sec::unavailable_or_would_block) {

@@ -27,7 +27,6 @@
 #include "caf/ip_endpoint.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/socket_guard.hpp"
-#include "caf/span.hpp"
 
 namespace caf::net {
 

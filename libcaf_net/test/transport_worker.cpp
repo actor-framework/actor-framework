@@ -202,9 +202,7 @@ CAF_TEST(write_message) {
   auto msg = make_message();
   auto elem = make_mailbox_element(strong_actor, make_message_id(12345), stack,
                                    msg);
-  auto test_span = make_span(reinterpret_cast<byte*>(
-                               const_cast<char*>(hello_test.data())),
-                             hello_test.size());
+  auto test_span = as_bytes(make_span(hello_test));
   std::vector<byte> payload(test_span.begin(), test_span.end());
   using message_type = endpoint_manager_queue::message;
   auto message = detail::make_unique<message_type>(std::move(elem), nullptr,

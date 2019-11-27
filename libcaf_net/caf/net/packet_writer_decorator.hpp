@@ -21,7 +21,6 @@
 #include "caf/net/packet_writer.hpp"
 
 #include "caf/byte.hpp"
-#include "caf/span.hpp"
 
 namespace caf::net {
 

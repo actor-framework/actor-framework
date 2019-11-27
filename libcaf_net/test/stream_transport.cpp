@@ -194,7 +194,7 @@ CAF_TEST(resolve and proxy communication) {
     after(std::chrono::seconds(0)) >>
       [&] { CAF_FAIL("manager did not respond with a proxy."); });
   run();
-  auto read_res = read(recv_socket_guard.socket(), make_span(recv_buf));
+  auto read_res = read(recv_socket_guard.socket(), recv_buf);
   if (!holds_alternative<size_t>(read_res))
     CAF_FAIL("read() returned an error: " << sys.render(get<sec>(read_res)));
   recv_buf.resize(get<size_t>(read_res));

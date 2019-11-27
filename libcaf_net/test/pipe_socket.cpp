@@ -26,7 +26,6 @@
 #include <vector>
 
 #include "caf/byte.hpp"
-#include "caf/span.hpp"
 
 using namespace caf;
 using namespace caf::net;
@@ -41,8 +40,8 @@ CAF_TEST(send and receive) {
   pipe_socket rd_sock;
   pipe_socket wr_sock;
   std::tie(rd_sock, wr_sock) = unbox(make_pipe());
-  CAF_CHECK_EQUAL(write(wr_sock, make_span(send_buf)), send_buf.size());
-  CAF_CHECK_EQUAL(read(rd_sock, make_span(receive_buf)), send_buf.size());
+  CAF_CHECK_EQUAL(write(wr_sock, send_buf), send_buf.size());
+  CAF_CHECK_EQUAL(read(rd_sock, receive_buf), send_buf.size());
   CAF_CHECK(std::equal(send_buf.begin(), send_buf.end(), receive_buf.begin()));
 }
 

@@ -30,7 +30,6 @@
 #include "caf/message.hpp"
 #include "caf/net/stream_socket.hpp"
 #include "caf/sec.hpp"
-#include "caf/span.hpp"
 #include "caf/variant.hpp"
 
 namespace caf::net {

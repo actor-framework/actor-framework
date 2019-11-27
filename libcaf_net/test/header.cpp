@@ -45,7 +45,7 @@ CAF_TEST(serialization) {
     CAF_CHECK_EQUAL(source(y), none);
   }
   CAF_CHECK_EQUAL(x, y);
-  auto z = basp::header::from_bytes(make_span(buf));
+  auto z = basp::header::from_bytes(buf);
   CAF_CHECK_EQUAL(x, z);
   CAF_CHECK_EQUAL(y, z);
 }
