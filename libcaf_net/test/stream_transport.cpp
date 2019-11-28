@@ -24,6 +24,7 @@
 #include "caf/test/dsl.hpp"
 
 #include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
 #include "caf/byte.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/make_actor.hpp"
@@ -34,7 +35,6 @@
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_guard.hpp"
 #include "caf/net/stream_socket.hpp"
-#include "caf/serializer_impl.hpp"
 #include "caf/span.hpp"
 
 using namespace caf;
@@ -140,9 +140,9 @@ public:
   static expected<buffer_type> serialize(actor_system& sys,
                                          const type_erased_tuple& x) {
     buffer_type result;
-    serializer_impl<buffer_type> sink{sys, result};
+    binary_serializer sink{sys, result};
     if (auto err = message::save(sink, x))
-      return err;
+      return err.value();
     return result;
   }
 
@@ -194,7 +194,7 @@ CAF_TEST(resolve and proxy communication) {
     after(std::chrono::seconds(0)) >>
       [&] { CAF_FAIL("manager did not respond with a proxy."); });
   run();
-  auto read_res = read(recv_socket_guard.socket(), make_span(recv_buf));
+  auto read_res = read(recv_socket_guard.socket(), recv_buf);
   if (!holds_alternative<size_t>(read_res))
     CAF_FAIL("read() returned an error: " << sys.render(get<sec>(read_res)));
   recv_buf.resize(get<size_t>(read_res));

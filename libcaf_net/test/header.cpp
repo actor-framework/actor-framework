@@ -23,7 +23,7 @@
 #include "caf/test/dsl.hpp"
 
 #include "caf/binary_deserializer.hpp"
-#include "caf/serializer_impl.hpp"
+#include "caf/binary_serializer.hpp"
 
 using namespace caf;
 using namespace caf::net;
@@ -32,7 +32,7 @@ CAF_TEST(serialization) {
   basp::header x{basp::message_type::handshake, 42, 4};
   std::vector<byte> buf;
   {
-    serializer_impl<std::vector<byte>> sink{nullptr, buf};
+    binary_serializer sink{nullptr, buf};
     CAF_CHECK_EQUAL(sink(x), none);
   }
   CAF_CHECK_EQUAL(buf.size(), basp::header_size);

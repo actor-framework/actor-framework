@@ -24,7 +24,6 @@
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/expected.hpp"
 #include "caf/logger.hpp"
-#include "caf/span.hpp"
 #include "caf/variant.hpp"
 
 #ifdef CAF_POSIX

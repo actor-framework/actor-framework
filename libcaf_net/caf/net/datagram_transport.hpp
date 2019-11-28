@@ -30,7 +30,6 @@
 #include "caf/net/transport_worker_dispatcher.hpp"
 #include "caf/net/udp_datagram_socket.hpp"
 #include "caf/sec.hpp"
-#include "caf/span.hpp"
 
 namespace caf::net {
 
@@ -81,14 +80,13 @@ public:
 
   bool handle_read_event(endpoint_manager&) override {
     CAF_LOG_TRACE(CAF_ARG(this->handle_.id));
-    auto ret = read(this->handle_, make_span(this->read_buf_));
+    auto ret = read(this->handle_, this->read_buf_);
     if (auto res = get_if<std::pair<size_t, ip_endpoint>>(&ret)) {
       auto num_bytes = res->first;
       CAF_LOG_DEBUG("received " << num_bytes << " bytes");
       auto ep = res->second;
       this->read_buf_.resize(num_bytes);
-      this->next_layer_.handle_data(*this, make_span(this->read_buf_),
-                                    std::move(ep));
+      this->next_layer_.handle_data(*this, this->read_buf_, std::move(ep));
       prepare_next_read();
     } else {
       auto err = get<sec>(ret);
@@ -183,7 +181,7 @@ private:
     while (!packet_queue_.empty()) {
       auto& packet = packet_queue_.front();
       auto ptrs = packet.get_buffer_ptrs();
-      auto write_ret = write(this->handle_, make_span(ptrs), packet.id);
+      auto write_ret = write(this->handle_, ptrs, packet.id);
       if (auto num_bytes = get_if<size_t>(&write_ret)) {
         CAF_LOG_DEBUG(CAF_ARG(this->handle_.id) << CAF_ARG(*num_bytes));
         CAF_LOG_WARNING_IF(*num_bytes < packet.size,

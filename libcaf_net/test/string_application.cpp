@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
 #include "caf/byte.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/make_actor.hpp"
@@ -34,7 +35,6 @@
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/stream_socket.hpp"
-#include "caf/serializer_impl.hpp"
 #include "caf/span.hpp"
 
 using namespace caf;
@@ -105,18 +105,19 @@ public:
     if (ptr->msg == nullptr)
       return;
     auto header_buf = parent.next_header_buffer();
-    serializer_impl<buffer_type> sink{sys_, header_buf};
+    binary_serializer sink{sys_, header_buf};
     header_type header{static_cast<uint32_t>(ptr->payload.size())};
-    sink(header);
+    if (auto err = sink(header))
+      CAF_FAIL("serializing failed: " << err);
     parent.write_packet(header_buf, ptr->payload);
   }
 
   static expected<std::vector<byte>> serialize(actor_system& sys,
                                                const type_erased_tuple& x) {
     std::vector<byte> result;
-    serializer_impl<std::vector<byte>> sink{sys, result};
+    binary_serializer sink{sys, result};
     if (auto err = message::save(sink, x))
-      return err;
+      return err.value();
     return result;
   }
 
@@ -152,7 +153,8 @@ public:
       if (data.size() != sizeof(header_type))
         CAF_FAIL("");
       binary_deserializer source{nullptr, data};
-      source(header_);
+      if (auto err = source(header_))
+        CAF_FAIL("serializing failed: " << err);
       if (header_.payload == 0)
         Base::handle_packet(parent, header_, span<const byte>{});
       else
@@ -214,7 +216,7 @@ CAF_TEST(receive) {
   auto buf = std::make_shared<std::vector<byte>>();
   auto sockets = unbox(make_stream_socket_pair());
   nonblocking(sockets.second, true);
-  CAF_CHECK_EQUAL(read(sockets.second, make_span(read_buf)),
+  CAF_CHECK_EQUAL(read(sockets.second, read_buf),
                   sec::unavailable_or_would_block);
   CAF_MESSAGE("adding both endpoint managers");
   auto mgr1 = make_endpoint_manager(mpx, sys,
