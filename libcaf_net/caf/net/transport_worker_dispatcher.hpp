@@ -62,7 +62,7 @@ public:
   }
 
   template <class Parent>
-  error handle_data(Parent& parent, span<byte> data, id_type id) {
+  error handle_data(Parent& parent, span<const byte> data, id_type id) {
     if (auto worker = find_worker(id))
       return worker->handle_data(parent, data);
     // TODO: Where to get node_id from here?

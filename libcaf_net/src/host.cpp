@@ -22,6 +22,8 @@
 #include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/error.hpp"
+#include "caf/make_message.hpp"
+#include "caf/message.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/none.hpp"
 

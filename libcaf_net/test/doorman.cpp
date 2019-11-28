@@ -20,6 +20,7 @@
 
 #include "caf/net/doorman.hpp"
 
+#include "caf/binary_serializer.hpp"
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/net/ip.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
@@ -62,9 +63,9 @@ public:
   static expected<std::vector<byte>> serialize(actor_system& sys,
                                                const type_erased_tuple& x) {
     std::vector<byte> result;
-    serializer_impl<std::vector<byte>> sink{sys, result};
+    binary_serializer sink{sys, result};
     if (auto err = message::save(sink, x))
-      return err;
+      return err.value();
     return result;
   }
 
@@ -158,7 +159,7 @@ CAF_TEST(doorman accept) {
                                        dummy_application_factory{}});
   CAF_CHECK_EQUAL(mgr->init(), none);
   auto before = mpx->num_socket_managers();
-  CAF_CHECK_EQUAL(before, 2);
+  CAF_CHECK_EQUAL(before, 2u);
   uri::authority_type dst;
   dst.port = port;
   dst.host = "localhost"s;

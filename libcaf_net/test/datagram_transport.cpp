@@ -23,6 +23,7 @@
 #include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
 
+#include "caf/binary_serializer.hpp"
 #include "caf/byte.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/make_actor.hpp"
@@ -33,7 +34,6 @@
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/udp_datagram_socket.hpp"
-#include "caf/serializer_impl.hpp"
 #include "caf/span.hpp"
 
 using namespace caf;
@@ -83,7 +83,7 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
     uint8_t receive_attempts = 0;
     variant<std::pair<size_t, ip_endpoint>, sec> read_ret;
     do {
-      read_ret = read(sock, make_span(buf));
+      read_ret = read(sock, buf);
       if (auto read_res = get_if<std::pair<size_t, ip_endpoint>>(&read_ret)) {
         buf.resize(read_res->first);
       } else if (get<sec>(read_ret) != sec::unavailable_or_would_block) {
@@ -169,9 +169,9 @@ public:
   static expected<buffer_type> serialize(actor_system& sys,
                                          const type_erased_tuple& x) {
     buffer_type result;
-    serializer_impl<buffer_type> sink{sys, result};
+    binary_serializer sink{sys, result};
     if (auto err = message::save(sink, x))
-      return err;
+      return err.value();
     return result;
   }
 

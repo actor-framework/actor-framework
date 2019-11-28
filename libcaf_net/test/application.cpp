@@ -58,7 +58,7 @@ struct fixture : test_coordinator_fixture<>,
   template <class... Ts>
   buffer_type to_buf(const Ts&... xs) {
     buffer_type buf;
-    serializer_impl<buffer_type> sink{system(), buf};
+    binary_serializer sink{system(), buf};
     REQUIRE_OK(sink(xs...));
     return buf;
   }
