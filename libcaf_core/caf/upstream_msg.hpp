@@ -173,7 +173,7 @@ template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f,
                                         upstream_msg::ack_batch& x) {
   return f(meta::type_name("ack_batch"), x.new_capacity, x.desired_batch_size,
-           x.acknowledged_id);
+           x.acknowledged_id, x.max_capacity);
 }
 
 /// @relates upstream_msg::drop
