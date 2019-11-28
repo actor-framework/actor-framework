@@ -16,7 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE doorman
+#define CAF_SUITE net.doorman
 
 #include "caf/net/doorman.hpp"
 

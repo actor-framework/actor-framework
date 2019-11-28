@@ -49,8 +49,7 @@ public:
     return handle_;
   }
 
-  /// Returns a pointer to the multiplexer running the socket manager or
-  /// `nullptr` if the manager is no assigned to one.
+  /// Returns a pointer to the multiplexer running this `socket_manager`.
   multiplexer_ptr multiplexer() const {
     return parent_.lock();
   }

@@ -72,7 +72,6 @@ public:
       CAF_LOG_ERROR("accept failed:" << parent.system().render(x.error()));
       return false;
     }
-    // TODO this won't work anymore
     auto mpx = parent.multiplexer();
     if (!mpx) {
       CAF_LOG_DEBUG("unable to get multiplexer from parent");
