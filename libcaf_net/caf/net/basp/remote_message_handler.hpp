@@ -74,7 +74,7 @@ public:
     auto ptr = make_mailbox_element(std::move(src_hdl),
                                     make_message_id(hdr.operation_data),
                                     std::move(fwd_stack), std::move(content));
-    dst_hdl->get()->enqueue(std::move(ptr), nullptr);
+    dref.queue_->push(ctx, dref.msg_id_, std::move(dst_hdl), std::move(ptr));
   }
 };
 
