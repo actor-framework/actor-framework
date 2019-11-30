@@ -114,15 +114,6 @@ public:
   virtual result_type apply(long double x) = 0;
 
   /// @copydoc apply
-  virtual result_type apply(timespan x) = 0;
-
-  /// @copydoc apply
-  virtual result_type apply(timestamp x) = 0;
-
-  /// @copydoc apply
-  virtual result_type apply(atom_value x) = 0;
-
-  /// @copydoc apply
   virtual result_type apply(string_view x) = 0;
 
   /// @copydoc apply
