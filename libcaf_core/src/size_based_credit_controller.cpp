@@ -27,12 +27,10 @@
 // Safe us some typing and very ugly formatting.
 #define impl size_based_credit_controller
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 impl::impl(scheduled_actor* self) : super(self) {
   auto& cfg = self->system().config();
-  complexity_ = cfg.stream_desired_batch_complexity;
   buffer_capacity_ = get_or(cfg, "stream.size-policy.buffer-capacity",
                             defaults::stream::size_policy::buffer_capacity);
   bytes_per_batch_ = get_or(cfg, "stream.size-policy.bytes-per-batch",
@@ -44,13 +42,16 @@ impl::~impl() {
 }
 
 void impl::before_processing(downstream_msg::batch& x) {
-  num_elements_ += x.xs_size;
-  total_size_ = serialized_size(self()->system(), x.xs);
-  processing_begin_ = clock_type::now();
+  if (++sample_counter_ == sample_rate_) {
+    sampled_elements_ += x.xs_size;
+    sampled_total_size_ += serialized_size(self()->system(), x.xs);
+    sample_counter_ = 0;
+  }
+  ++num_batches_;
 }
 
 void impl::after_processing(downstream_msg::batch&) {
-  processing_time_ += clock_type::now() - processing_begin_;
+  // nop
 }
 
 credit_controller::assignment impl::compute_initial() {
@@ -58,9 +59,7 @@ credit_controller::assignment impl::compute_initial() {
 }
 
 credit_controller::assignment impl::compute(timespan) {
-  // Update batch and buffer size if we have at least 10 new data points to
-  // work with.
-  if (num_elements_ > 9) {
+  if (sampled_elements_ > 0) {
     // Helper for truncating a 64-bit integer to a 32-bit integer with a
     // minimum value of 1.
     auto clamp_i32 = [](int64_t x) -> int32_t {
@@ -71,40 +70,18 @@ credit_controller::assignment impl::compute(timespan) {
         return 1;
       return static_cast<int32_t>(x);
     };
-    // Calculate ideal batch size by complexity.
-    auto total_ns = processing_time_.count();
-    CAF_ASSERT(total_ns > 0);
-    auto size_by_complexity = clamp_i32((complexity_.count() * num_elements_)
-                                        / total_ns);
     // Calculate ideal batch size by size.
-    auto bytes_per_element = clamp_i32(total_size_ / num_elements_);
-    auto size_by_bytes = clamp_i32(bytes_per_batch_ / bytes_per_element);
-    // Always pick the smaller of the two in order to achieve a good tradeoff
-    // between size and computational complexity
-    auto batch_size = clamp_i32(std::min(size_by_bytes, size_by_complexity));
-    auto buffer_size = std::min(clamp_i32(buffer_capacity_ / bytes_per_element),
-                                4 * batch_size_);
-    // Add a new entry to our ringbuffer and calculate batch and buffer sizes
-    // based on the average recorded sizes.
-    auto& kvp = ringbuf_[ringbuf_pos_];
-    kvp.first = buffer_size;
-    kvp.second = batch_size;
-    ringbuf_pos_ = (ringbuf_pos_ + 1) % ringbuf_.size();
-    if (ringbuf_size_ < ringbuf_.size())
-      ++ringbuf_size_;
-    using int32_pair = std::pair<int32_t, int32_t>;
-    auto plus = [](int32_pair x, int32_pair y) {
-      return int32_pair{x.first + y.first, x.second + y.second};
-    };
-    auto psum = std::accumulate(ringbuf_.begin(),
-                                ringbuf_.begin() + ringbuf_size_,
-                                int32_pair{0, 0}, plus);
-    buffer_size_ = psum.first / ringbuf_size_;
-    batch_size_ = psum.second / ringbuf_size_;
+    auto bytes_per_element = clamp_i32(sampled_total_size_ / sampled_elements_);
+    batch_size_ = clamp_i32(bytes_per_batch_ / bytes_per_element);
+    buffer_size_ = clamp_i32(buffer_capacity_ / bytes_per_element);
     // Reset bookkeeping state.
-    num_elements_ = 0;
-    total_size_ = 0;
-    processing_time_ = timespan{0};
+    sampled_elements_ = 0;
+    sampled_total_size_ = 0;
+    // Ideally, we sample 10 batches per cycle.
+    sample_rate_ = clamp_i32(num_batches_ / 10);
+    if (sample_counter_ >= sample_rate_)
+      sample_counter_ = 0;
+    num_batches_ = 0;
   }
   return {buffer_size_, batch_size_};
 }
@@ -116,8 +93,7 @@ credit_controller::assignment impl::compute_bridge() {
 }
 
 int32_t impl::low_threshold() const noexcept {
-  return buffer_size_ / 4;
+  return static_cast<int32_t>(buffer_size_ * .75f);
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

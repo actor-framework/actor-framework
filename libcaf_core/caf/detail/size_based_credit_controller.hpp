@@ -22,10 +22,10 @@
 
 #include <chrono>
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
-/// .
+/// A credit controller that estimates the bytes required to store incoming
+/// batches and constrains credit based on upper bounds for memory usage.
 class size_based_credit_controller : public credit_controller {
 public:
   // -- member types -----------------------------------------------------------
@@ -60,26 +60,13 @@ private:
   // -- member variables -------------------------------------------------------
 
   /// Total number of elements in all processed batches in the current cycle.
-  int64_t num_elements_ = 0;
-
-  /// Measured size of all sampled elements.
-  int64_t total_size_ = 0;
-
-  /// Elapsed time for processing all elements of all batches in the current
-  /// cycle.
-  timespan processing_time_;
-
-  /// Timestamp of the last call to `before_processing`.
-  time_point processing_begin_;
-
-  /// Stores the desired per-batch complexity.
-  timespan complexity_;
+  int64_t num_batches_ = 0;
 
   /// Stores how many elements the buffer should hold at most.
-  int32_t buffer_size_ = 1;
+  int32_t buffer_size_ = 10;
 
   /// Stores how many elements each batch should contain.
-  int32_t batch_size_ = 1;
+  int32_t batch_size_ = 2;
 
   /// Configures how many bytes we store in total.
   int32_t buffer_capacity_;
@@ -87,15 +74,18 @@ private:
   /// Configures how many bytes we transfer per batch.
   int32_t bytes_per_batch_;
 
-  /// Stores the current write position in the ring buffer.
-  size_t ringbuf_pos_ = 0;
+  /// Stores how many elements we have sampled during the current cycle.
+  int64_t sampled_elements_ = 0;
 
-  /// Stores how many valid entries the ring buffer holds.
-  size_t ringbuf_size_ = 0;
+  /// Stores approximately how many bytes the sampled elements require when
+  /// serialized.
+  int64_t sampled_total_size_ = 0;
 
-  /// Records recent calculations for buffer and batch sizes.
-  std::array<std::pair<int32_t, int32_t>, 32> ringbuf_;
+  /// Counter for keeping track of when to sample a batch.
+  int32_t sample_counter_ = 0;
+
+  /// Configured how many batches we skip for the size sampling.
+  int32_t sample_rate_ = 50;
 };
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

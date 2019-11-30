@@ -25,8 +25,7 @@
 // Safe us some typing and very ugly formatting.
 #define impl complexity_based_credit_controller
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
 impl::impl(scheduled_actor* self) : super(self) {
   auto& cfg = self->system().config();
@@ -80,5 +79,4 @@ credit_controller::assignment impl::compute(timespan cycle) {
   return result;
 }
 
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

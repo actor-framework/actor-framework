@@ -38,7 +38,9 @@ constexpr bool force_ack = true;
 void emit_ack_batch(inbound_path& path, credit_controller::assignment x,
                     bool force_ack_msg = false) {
   CAF_ASSERT(x.batch_size > 0);
+  auto& out = path.mgr->out();
   path.desired_batch_size = x.batch_size;
+  auto downstream_capacity = out.max_capacity();
   auto guard = detail::make_scope_guard([&] {
     if (!force_ack_msg || path.up_to_date())
       return;
@@ -47,14 +49,14 @@ void emit_ack_batch(inbound_path& path, credit_controller::assignment x,
                                                  path.self()->address(), 0,
                                                  x.batch_size,
                                                  path.last_batch_id,
-                                                 path.downstream_capacity));
+                                                 downstream_capacity));
     path.last_acked_batch_id = path.last_batch_id;
   });
-  auto credit = std::min(x.credit, path.downstream_capacity);
-  if (credit <= path.assigned_credit)
+  auto max_credit = std::min(x.credit, downstream_capacity);
+  auto used_credit = static_cast<int32_t>(out.buffered()) + path.assigned_credit;
+  if (max_credit <= used_credit)
     return;
-  auto new_credit = path.mgr->acquire_credit(&path,
-                                             credit - path.assigned_credit);
+  auto new_credit = path.mgr->acquire_credit(&path, max_credit - used_credit);
   if (new_credit < 1)
     return;
   guard.disable();
@@ -63,7 +65,7 @@ void emit_ack_batch(inbound_path& path, credit_controller::assignment x,
                                                path.self()->address(),
                                                new_credit, x.batch_size,
                                                path.last_batch_id,
-                                               path.downstream_capacity));
+                                               downstream_capacity));
   path.last_acked_batch_id = path.last_batch_id;
   path.assigned_credit += new_credit;
 }
@@ -128,7 +130,6 @@ void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
   // Update state.
   auto initial = controller_->compute_initial();
   assigned_credit = mgr->acquire_credit(this, initial.credit);
-  downstream_capacity = assigned_credit;
   CAF_ASSERT(assigned_credit >= 0);
   desired_batch_size = std::min(initial.batch_size, assigned_credit);
   // Make sure we receive errors from this point on.
@@ -146,7 +147,6 @@ void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
 void inbound_path::emit_ack_batch(local_actor*, int32_t,
                                   actor_clock::time_point now, timespan cycle) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(cycle));
-  downstream_capacity = mgr->out().max_capacity();
   last_credit_decision = now;
   next_credit_decision = now + cycle;
   caf::emit_ack_batch(*this, controller_->compute(cycle), force_ack);

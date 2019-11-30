@@ -60,9 +60,6 @@ public:
   /// Amount of credit we have signaled upstream.
   int32_t assigned_credit = 0;
 
-  /// Upstream capacity for limiting the amount of credit we can give.
-  int32_t downstream_capacity = 0;
-
   /// Priority of incoming batches from this source.
   stream_priority prio = stream_priority::normal;
 
