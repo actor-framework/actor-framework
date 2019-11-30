@@ -74,6 +74,7 @@ set(LIBCAF_CORE_SRCS
   src/detail/pretty_type_name.cpp
   src/detail/private_thread.cpp
   src/detail/ripemd_160.cpp
+  src/detail/serialized_size.cpp
   src/detail/set_thread_name.cpp
   src/detail/shared_spinlock.cpp
   src/detail/simple_actor_clock.cpp
