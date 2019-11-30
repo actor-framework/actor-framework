@@ -101,7 +101,10 @@ config = [
     ],
     // Configures what binary the coverage report uses and what paths to exclude.
     coverage: [
-        binary: 'build/bin/caf-test',
+        binaries: [
+          'build/bin/caf-core-test',
+          'build/bin/caf-io-test',
+        ],
         relativeExcludePaths: [
             'examples',
             'tools',
@@ -110,7 +113,6 @@ config = [
             'libcaf_io/test',
             'libcaf_openssl/test',
             'libcaf_opencl',
-            'libcaf_core/caf/scheduler/profiled_coordinator.hpp',
         ],
     ],
 ]
