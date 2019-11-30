@@ -148,6 +148,9 @@
 #  ifdef __APPLE__
 #    define CAF_NO_THREAD_LOCAL
 #  endif
+#  ifdef __MINGW32__
+#    define CAF_NO_THREAD_LOCAL
+#  endif
 #elif defined(_MSC_VER)
 #  define CAF_MSVC
 #  define CAF_LIKELY(x) x
