@@ -58,8 +58,8 @@ credit_controller::assignment impl::compute_initial() {
   return {buffer_size_, batch_size_};
 }
 
-credit_controller::assignment impl::compute(timespan) {
-  if (sampled_elements_ > 0) {
+credit_controller::assignment impl::compute(timespan, int32_t) {
+  if (sampled_elements_ > 9) {
     // Helper for truncating a 64-bit integer to a 32-bit integer with a
     // minimum value of 1.
     auto clamp_i32 = [](int64_t x) -> int32_t {

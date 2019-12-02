@@ -40,32 +40,27 @@ void emit_ack_batch(inbound_path& path, credit_controller::assignment x,
   CAF_ASSERT(x.batch_size > 0);
   auto& out = path.mgr->out();
   path.desired_batch_size = x.batch_size;
-  auto downstream_capacity = out.max_capacity();
+  int32_t new_credit = 0;
+  auto used = static_cast<int32_t>(out.buffered()) + path.assigned_credit;
   auto guard = detail::make_scope_guard([&] {
     if (!force_ack_msg || path.up_to_date())
       return;
     unsafe_send_as(path.self(), path.hdl,
-                   make<upstream_msg::ack_batch>(path.slots.invert(),
-                                                 path.self()->address(), 0,
-                                                 x.batch_size,
-                                                 path.last_batch_id,
-                                                 downstream_capacity));
+                   make<upstream_msg::ack_batch>(
+                     path.slots.invert(), path.self()->address(), 0,
+                     x.batch_size, path.last_batch_id, x.credit));
     path.last_acked_batch_id = path.last_batch_id;
   });
-  auto max_credit = std::min(x.credit, downstream_capacity);
-  auto used_credit = static_cast<int32_t>(out.buffered()) + path.assigned_credit;
-  if (max_credit <= used_credit)
+  if (x.credit <= used)
     return;
-  auto new_credit = path.mgr->acquire_credit(&path, max_credit - used_credit);
+  new_credit = path.mgr->acquire_credit(&path, x.credit - used);
   if (new_credit < 1)
     return;
   guard.disable();
   unsafe_send_as(path.self(), path.hdl,
-                 make<upstream_msg::ack_batch>(path.slots.invert(),
-                                               path.self()->address(),
-                                               new_credit, x.batch_size,
-                                               path.last_batch_id,
-                                               downstream_capacity));
+                 make<upstream_msg::ack_batch>(
+                   path.slots.invert(), path.self()->address(), new_credit,
+                   x.batch_size, path.last_batch_id, x.credit));
   path.last_acked_batch_id = path.last_batch_id;
   path.assigned_credit += new_credit;
 }
@@ -149,7 +144,9 @@ void inbound_path::emit_ack_batch(local_actor*, int32_t,
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(cycle));
   last_credit_decision = now;
   next_credit_decision = now + cycle;
-  caf::emit_ack_batch(*this, controller_->compute(cycle), force_ack);
+  auto max_capacity = static_cast<int32_t>(mgr->out().max_capacity());
+  caf::emit_ack_batch(*this, controller_->compute(cycle, max_capacity),
+                      force_ack);
 }
 
 bool inbound_path::up_to_date() {

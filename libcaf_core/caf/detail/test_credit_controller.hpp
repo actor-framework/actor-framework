@@ -44,7 +44,7 @@ public:
 
   assignment compute_initial() override;
 
-  assignment compute(timespan cycle) override;
+  assignment compute(timespan cycle, int32_t) override;
 
 private:
   /// Total number of elements in all processed batches in the current cycle.

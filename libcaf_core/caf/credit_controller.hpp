@@ -32,10 +32,10 @@ public:
 
   /// Wraps an assignment of the controller to its source.
   struct assignment {
-    /// Store how much credit we assign to the source.
+    /// Stores how much credit we assign to the source.
     int32_t credit;
 
-    /// Store how many elements we demand per batch.
+    /// Stores how many elements we demand per batch.
     int32_t batch_size;
   };
 
@@ -67,8 +67,12 @@ public:
   /// @returns The initial credit for the new sources.
   virtual assignment compute_initial() = 0;
 
-  /// Computes a credit assignment to the source after a cycle ends.
-  virtual assignment compute(timespan cycle) = 0;
+  /// Assigs new credit to the source after a cycle ends.
+  /// @param cycle Duration of a cycle.
+  /// @param max_downstream_credit Maximum downstream capacity as reported by
+  ///                              the downstream manager. Controllers may use
+  ///                              this capacity as an upper bound.
+  virtual assignment compute(timespan cycle, int32_t max_downstream_credit) = 0;
 
   // -- virtual functions ------------------------------------------------------
 

@@ -50,7 +50,7 @@ public:
 
   assignment compute_initial() override;
 
-  assignment compute(timespan cycle) override;
+  assignment compute(timespan cycle, int32_t) override;
 
   assignment compute_bridge() override;
 
@@ -85,7 +85,7 @@ private:
   int32_t sample_counter_ = 0;
 
   /// Configured how many batches we skip for the size sampling.
-  int32_t sample_rate_ = 50;
+  int32_t sample_rate_ = 1;
 };
 
 } // namespace caf::detail

@@ -41,7 +41,8 @@ credit_controller::assignment test_credit_controller::compute_initial() {
   return {50, 50};
 }
 
-credit_controller::assignment test_credit_controller::compute(timespan cycle) {
+credit_controller::assignment
+test_credit_controller::compute(timespan cycle, int32_t) {
   auto& cfg = self()->system().config();
   auto complexity = cfg.stream_desired_batch_complexity;
   // Max throughput = C * (N / t), where C = cycle length, N = measured items,

@@ -49,7 +49,8 @@ credit_controller::assignment impl::compute_initial() {
   return {50, 10};
 }
 
-credit_controller::assignment impl::compute(timespan cycle) {
+credit_controller::assignment
+impl::compute(timespan cycle, int32_t downstream_capacity) {
   // Max throughput = C * (N / t), where C = cycle length, N = measured items,
   // and t = measured time. Desired batch size is the same formula with D
   // (desired complexity) instead of C. We compute our values in 64-bit for
@@ -70,8 +71,9 @@ credit_controller::assignment impl::compute(timespan cycle) {
   // Instead of C * (N / t) we calculate (C * N) / t to avoid double conversion
   // and rounding errors.
   assignment result;
-  // Give enough credit to last 2 cycles.
+  // Give enough credit to last 2 cycles, but don't exceed downstream capacity.
   result.credit = 2 * clamp((cycle.count() * num_elements_) / total_ns);
+  result.credit = std::min(result.credit, downstream_capacity);
   result.batch_size = clamp((complexity_.count() * num_elements_) / total_ns);
   // Reset state and return.
   num_elements_ = 0;

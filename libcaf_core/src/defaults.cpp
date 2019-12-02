@@ -53,7 +53,7 @@ const atom_value credit_policy = atom("complexity");
 
 namespace size_policy {
 
-const int32_t bytes_per_batch = 1024;      // 1 KB
+const int32_t bytes_per_batch = 2048;      // 2 KB
 const int32_t buffer_capacity = 64 * 1024; // 64 KB
 
 } // namespace size_policy
