@@ -135,19 +135,6 @@ public:
 
 CAF_TEST_FIXTURE_SCOPE(doorman_tests, fixture)
 
-CAF_TEST(tcp connect) {
-  auto acceptor = unbox(make_tcp_accept_socket(auth, false));
-  auto port = unbox(local_port(socket_cast<network_socket>(acceptor)));
-  auto acceptor_guard = make_socket_guard(acceptor);
-  CAF_MESSAGE("opened acceptor on port " << port);
-  uri::authority_type dst;
-  dst.port = port;
-  dst.host = "localhost"s;
-  auto conn = make_socket_guard(unbox(make_connected_tcp_stream_socket(dst)));
-  auto accepted = make_socket_guard(unbox(accept(acceptor)));
-  CAF_MESSAGE("accepted connection");
-}
-
 CAF_TEST(doorman accept) {
   auto acceptor = unbox(make_tcp_accept_socket(auth, false));
   auto port = unbox(local_port(socket_cast<network_socket>(acceptor)));
