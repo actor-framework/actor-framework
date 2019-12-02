@@ -132,10 +132,9 @@ void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
                       stream_aborter::source_aborter);
   // Send message.
   unsafe_send_as(self, hdl,
-                 make<upstream_msg::ack_open>(slots.invert(), self->address(),
-                                              std::move(rebind_from),
-                                              self->ctrl(), assigned_credit,
-                                              desired_batch_size));
+                 make<upstream_msg::ack_open>(
+                   slots.invert(), self->address(), std::move(rebind_from),
+                   self->ctrl(), assigned_credit, desired_batch_size));
   last_credit_decision = self->clock().now();
 }
 
