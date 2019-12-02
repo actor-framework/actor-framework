@@ -36,7 +36,7 @@ public:
   /// @pre `handle != invalid_socket`
   socket_manager(socket handle, const multiplexer_ptr& parent);
 
-  virtual ~socket_manager();
+  ~socket_manager() override;
 
   socket_manager(const socket_manager&) = delete;
 
@@ -47,6 +47,11 @@ public:
   /// Returns the managed socket.
   socket handle() const noexcept {
     return handle_;
+  }
+
+  /// Returns a pointer to the multiplexer running this `socket_manager`.
+  multiplexer_ptr multiplexer() const {
+    return parent_.lock();
   }
 
   /// Returns registered operations (read, write, or both).
