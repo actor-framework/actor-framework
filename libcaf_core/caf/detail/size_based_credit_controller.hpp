@@ -20,8 +20,6 @@
 
 #include "caf/credit_controller.hpp"
 
-#include <chrono>
-
 namespace caf::detail {
 
 /// A credit controller that estimates the bytes required to store incoming
@@ -32,9 +30,19 @@ public:
 
   using super = credit_controller;
 
-  using clock_type = std::chrono::steady_clock;
+  // -- constants --------------------------------------------------------------
 
-  using time_point = clock_type::time_point;
+  /// Configures at what buffer level we grant bridge credit (0 to 1).
+  static constexpr float buffer_threshold = 0.75f;
+
+  /// Configures how many samples we require for recalculating buffer sizes.
+  static constexpr int32_t min_samples = 10;
+
+  /// Stores how many elements we buffer at most after the handshake.
+  int32_t initial_buffer_size = 10;
+
+  /// Stores how many elements we allow per batch after the handshake.
+  int32_t initial_batch_size = 2;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -42,7 +50,7 @@ public:
 
   ~size_based_credit_controller() override;
 
-  // -- implementation of virtual functions ------------------------------------
+  // -- overrides --------------------------------------------------------------
 
   void before_processing(downstream_msg::batch& x) override;
 
@@ -54,7 +62,7 @@ public:
 
   assignment compute_bridge() override;
 
-  int32_t low_threshold() const noexcept override;
+  int32_t threshold() const noexcept override;
 
 private:
   // -- member variables -------------------------------------------------------
@@ -63,10 +71,10 @@ private:
   int64_t num_batches_ = 0;
 
   /// Stores how many elements the buffer should hold at most.
-  int32_t buffer_size_ = 10;
+  int32_t buffer_size_ = initial_buffer_size;
 
   /// Stores how many elements each batch should contain.
-  int32_t batch_size_ = 2;
+  int32_t batch_size_ = initial_batch_size;
 
   /// Configures how many bytes we store in total.
   int32_t buffer_capacity_;
@@ -75,11 +83,11 @@ private:
   int32_t bytes_per_batch_;
 
   /// Stores how many elements we have sampled during the current cycle.
-  int64_t sampled_elements_ = 0;
+  int32_t sampled_elements_ = 0;
 
   /// Stores approximately how many bytes the sampled elements require when
   /// serialized.
-  int64_t sampled_total_size_ = 0;
+  int32_t sampled_total_size_ = 0;
 
   /// Counter for keeping track of when to sample a batch.
   int32_t sample_counter_ = 0;

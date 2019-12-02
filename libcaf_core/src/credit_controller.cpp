@@ -32,7 +32,7 @@ credit_controller::assignment credit_controller::compute_bridge() {
   return {0, 0};
 }
 
-int32_t credit_controller::low_threshold() const noexcept {
+int32_t credit_controller::threshold() const noexcept {
   return -1;
 }
 

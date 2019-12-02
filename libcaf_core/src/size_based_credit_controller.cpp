@@ -59,7 +59,7 @@ credit_controller::assignment impl::compute_initial() {
 }
 
 credit_controller::assignment impl::compute(timespan, int32_t) {
-  if (sampled_elements_ > 9) {
+  if (sampled_elements_ >= min_samples) {
     // Helper for truncating a 64-bit integer to a 32-bit integer with a
     // minimum value of 1.
     auto clamp_i32 = [](int64_t x) -> int32_t {
@@ -77,8 +77,8 @@ credit_controller::assignment impl::compute(timespan, int32_t) {
     // Reset bookkeeping state.
     sampled_elements_ = 0;
     sampled_total_size_ = 0;
-    // Ideally, we sample 10 batches per cycle.
-    sample_rate_ = clamp_i32(num_batches_ / 10);
+    // Adjust the sample rate to reach min_samples in the next cycle.
+    sample_rate_ = clamp_i32(num_batches_ / min_samples);
     if (sample_counter_ >= sample_rate_)
       sample_counter_ = 0;
     num_batches_ = 0;
@@ -92,8 +92,8 @@ credit_controller::assignment impl::compute_bridge() {
   return {buffer_size_, batch_size_};
 }
 
-int32_t impl::low_threshold() const noexcept {
-  return static_cast<int32_t>(buffer_size_ * .75f);
+int32_t impl::threshold() const noexcept {
+  return static_cast<int32_t>(buffer_size_ * buffer_threshold);
 }
 
 } // namespace caf::detail

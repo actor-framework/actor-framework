@@ -82,10 +82,10 @@ public:
 
   /// Returns the threshold for when we may give extra credit to a source
   /// during a cycle.
-  /// @returns A negative value if the controller never grants bridge credit,
-  ///          otherwise the threshold for calling `compute_bridge` to generate
-  ///          additional credit.
-  virtual int32_t low_threshold() const noexcept;
+  /// @returns Zero or a negative value if the controller never grants bridge
+  ///          credit, otherwise the threshold for calling `compute_bridge` to
+  ///          generate additional credit.
+  virtual int32_t threshold() const noexcept;
 
 private:
   // -- member variables -------------------------------------------------------

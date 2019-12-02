@@ -36,7 +36,7 @@ public:
 
   ~test_credit_controller() override;
 
-  // -- implementation of virtual functions ------------------------------------
+  // -- overrides --------------------------------------------------------------
 
   void before_processing(downstream_msg::batch& x) override;
 

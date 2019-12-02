@@ -111,7 +111,7 @@ void inbound_path::handle(downstream_msg::batch& x) {
     assigned_credit -= batch_size;
     CAF_ASSERT(assigned_credit >= 0);
   }
-  auto threshold = controller_->low_threshold();
+  auto threshold = controller_->threshold();
   if (threshold >= 0 && assigned_credit <= threshold)
     caf::emit_ack_batch(*this, controller_->compute_bridge());
   controller_->before_processing(x);

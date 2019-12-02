@@ -46,7 +46,7 @@ void impl::after_processing(downstream_msg::batch&) {
 }
 
 credit_controller::assignment impl::compute_initial() {
-  return {50, 10};
+  return {initial_buffer_size, initial_batch_size};
 }
 
 credit_controller::assignment

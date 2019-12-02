@@ -31,13 +31,21 @@ public:
 
   using super = credit_controller;
 
+  // -- constants --------------------------------------------------------------
+
+  /// Stores how many elements we buffer at most after the handshake.
+  int32_t initial_buffer_size = 50;
+
+  /// Stores how many elements we allow per batch after the handshake.
+  int32_t initial_batch_size = 10;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit complexity_based_credit_controller(scheduled_actor* self);
 
   ~complexity_based_credit_controller() override;
 
-  // -- implementation of virtual functions ------------------------------------
+  // -- overrides --------------------------------------------------------------
 
   void before_processing(downstream_msg::batch& x) override;
 
