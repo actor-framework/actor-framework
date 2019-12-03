@@ -55,6 +55,7 @@ config = [
             builds: ['debug'],
             tools: ['gcc-8'],
             extraSteps: ['coverageReport'],
+            extraFlags: ['BUILD_SHARED_LIBS:BOOL=OFF'],
         ]],
         ['fedora-28', [
             builds: ['release'],
