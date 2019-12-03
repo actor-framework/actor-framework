@@ -46,10 +46,12 @@ set(LIBCAF_CORE_SRCS
   src/binary_deserializer.cpp
   src/binary_serializer.cpp
   src/blocking_actor.cpp
+  src/complexity_based_credit_controller.cpp
   src/config_option.cpp
   src/config_option_adder.cpp
   src/config_option_set.cpp
   src/config_value.cpp
+  src/credit_controller.cpp
   src/decorator/sequencer.cpp
   src/default_attachable.cpp
   src/defaults.cpp
@@ -138,12 +140,14 @@ set(LIBCAF_CORE_SRCS
   src/sec.cpp
   src/serializer.cpp
   src/settings.cpp
+  src/size_based_credit_controller.cpp
   src/skip.cpp
   src/stream_aborter.cpp
   src/stream_manager.cpp
   src/string_algorithms.cpp
   src/string_view.cpp
   src/term.cpp
+  src/test_credit_controller.cpp
   src/thread_hook.cpp
   src/timestamp.cpp
   src/tracing_data.cpp
