@@ -28,6 +28,7 @@
 #include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/squashed_int.hpp"
 #include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
 #include "caf/read_inspector.hpp"
@@ -129,7 +130,9 @@ public:
   template <class T>
   std::enable_if_t<std::is_integral<T>::value && std::is_signed<T>::value>
   apply(T x) {
-    return apply(static_cast<std::make_unsigned_t<T>>(x));
+    using unsigned_type = std::make_unsigned_t<T>;
+    using squashed_unsigned_type = detail::squashed_int_t<unsigned_type>;
+    return apply(static_cast<squashed_unsigned_type>(x));
   }
 
   template <class Enum>

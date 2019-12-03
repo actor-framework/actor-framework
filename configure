@@ -75,16 +75,14 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
                                   - INFO
                                   - DEBUG
                                   - TRACE
-    --with-address-sanitizer    build with address sanitizer if available
-    --with-asan                 alias for --with-address-sanitier
-    --enable-asan               alias for --with-address-sanitier
-    --with-gcov                 build with gcov coverage enabled
+    --with-sanitizers=LIST      build with this list of sanitizers enabled
     --with-actor-profiler       enables the (experimental) actor_profiler API
 
   Convenience options:
     --dev-mode                  sets --build-type=debug, --no-examples,
                                 --no-tools, --with-runtime-checks,
-                                --log-level=trace, and --enable-asan
+                                --log-level=trace, and
+                                --sanitizers=address,undefined
 
   Influential Environment Variables (only on first invocation):
     CXX                         C++ compiler command
@@ -237,17 +235,8 @@ while [ $# -ne 0 ]; do
         --with-runtime-checks)
             append_cache_entry CAF_ENABLE_RUNTIME_CHECKS BOOL yes
             ;;
-        --with-address-sanitizer)
-            append_cache_entry CAF_ENABLE_ADDRESS_SANITIZER BOOL yes
-            ;;
-        --with-asan)
-            append_cache_entry CAF_ENABLE_ADDRESS_SANITIZER BOOL yes
-            ;;
-        --enable-asan)
-            append_cache_entry CAF_ENABLE_ADDRESS_SANITIZER BOOL yes
-            ;;
-        --with-gcov)
-            append_cache_entry CAF_ENABLE_GCOV BOOL yes
+        --with-sanitizers=*)
+            append_cache_entry CAF_SANITIZERS STRING "$optarg"
             ;;
         --with-actor-profiler)
             append_cache_entry CAF_ENABLE_ACTOR_PROFILER BOOL yes
@@ -370,12 +359,12 @@ while [ $# -ne 0 ]; do
             done
             ;;
         --dev-mode)
-            append_cache_entry CMAKE_BUILD_TYPE STRING Debug
-            append_cache_entry CAF_NO_EXAMPLES BOOL yes
-            append_cache_entry CAF_NO_TOOLS BOOL yes
+            for var in CAF_NO_TOOLS CAF_NO_EXAMPLES CAF_ENABLE_RUNTIME_CHECKS ; do
+              append_cache_entry $var BOOL yes
+            done
+            append_cache_entry CMAKE_BUILD_TYPE STRING debug
             append_cache_entry CAF_LOG_LEVEL STRING TRACE
-            append_cache_entry CAF_ENABLE_RUNTIME_CHECKS BOOL yes
-            append_cache_entry CAF_ENABLE_ADDRESS_SANITIZER BOOL yes
+            append_cache_entry CAF_SANITIZERS STRING address,undefined
             ;;
         *)
             echo "Invalid option '$1'.  Try $0 --help to see available options."

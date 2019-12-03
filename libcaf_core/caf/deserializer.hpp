@@ -107,15 +107,6 @@ public:
   virtual result_type apply(long double&) = 0;
 
   /// @copydoc apply
-  virtual result_type apply(timespan x) = 0;
-
-  /// @copydoc apply
-  virtual result_type apply(timestamp x) = 0;
-
-  /// @copydoc apply
-  virtual result_type apply(atom_value x) = 0;
-
-  /// @copydoc apply
   virtual result_type apply(std::string&) = 0;
 
   /// @copydoc apply
@@ -133,7 +124,7 @@ public:
   /// Reads a byte sequence from the input.
   /// @param x The byte sequence.
   /// @returns A non-zero error code on failure, `sec::success` otherwise.
-  virtual result_type apply_raw(span<byte> x) = 0;
+  virtual result_type apply(span<byte> x) = 0;
 
   /// Adds each boolean in `xs` to the output. Derived classes can override this
   /// member function to pack the booleans, for example to avoid using one byte

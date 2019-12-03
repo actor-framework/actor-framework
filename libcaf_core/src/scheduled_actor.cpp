@@ -1158,12 +1158,13 @@ scheduled_actor::advance_streams(actor_clock::time_point now) {
     CAF_LOG_DEBUG("new credit round");
     auto cycle = stream_ticks_.interval();
     cycle *= static_cast<decltype(cycle)::rep>(credit_round_ticks_);
-    auto bc = home_system().config().stream_desired_batch_complexity;
     auto& qs = get_downstream_queue().queues();
     for (auto& kvp : qs) {
       auto inptr = kvp.second.policy().handler.get();
-      auto bs = static_cast<int32_t>(kvp.second.total_task_size());
-      inptr->emit_ack_batch(this, bs, now, cycle, bc);
+      if (inptr != nullptr) {
+        auto tts = static_cast<int32_t>(kvp.second.total_task_size());
+        inptr->emit_ack_batch(this, tts, now, cycle);
+      }
     }
   }
   return stream_ticks_.next_timeout(now, {max_batch_delay_ticks_,

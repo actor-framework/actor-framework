@@ -37,6 +37,14 @@ namespace stream {
 extern CAF_CORE_EXPORT const timespan desired_batch_complexity;
 extern CAF_CORE_EXPORT const timespan max_batch_delay;
 extern CAF_CORE_EXPORT const timespan credit_round_interval;
+extern CAF_CORE_EXPORT const atom_value credit_policy;
+
+namespace size_policy {
+
+extern CAF_CORE_EXPORT const int32_t bytes_per_batch;
+extern CAF_CORE_EXPORT const int32_t buffer_capacity;
+
+} // namespace size_policy
 
 } // namespace stream
 

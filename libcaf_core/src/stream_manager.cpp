@@ -155,7 +155,6 @@ void stream_manager::advance() {
   if (!inbound_paths_.empty()) {
     auto now = self_->clock().now();
     auto& cfg = self_->system().config();
-    auto bc = cfg.stream_desired_batch_complexity;
     auto interval = cfg.stream_credit_round_interval;
     auto& qs = self_->get_downstream_queue().queues();
     // Iterate all queues for inbound traffic.
@@ -163,8 +162,8 @@ void stream_manager::advance() {
       auto inptr = kvp.second.policy().handler.get();
       // Ignore inbound paths of other managers.
       if (inptr->mgr.get() == this) {
-        auto bs = static_cast<int32_t>(kvp.second.total_task_size());
-        inptr->emit_ack_batch(self_, bs, now, interval, bc);
+        auto tts = static_cast<int32_t>(kvp.second.total_task_size());
+        inptr->emit_ack_batch(self_, tts, now, interval);
       }
     }
   }

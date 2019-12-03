@@ -114,4 +114,10 @@ CAF_TEST(make_span) {
   CAF_CHECK_EQUAL(begin(ys), begin(zs));
 }
 
+CAF_TEST(spans are convertible from compatible containers) {
+  std::vector<int> xs{1, 2, 3};
+  span<const int> ys{xs};
+  CAF_CHECK(std::equal(xs.begin(), xs.end(), ys.begin()));
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()

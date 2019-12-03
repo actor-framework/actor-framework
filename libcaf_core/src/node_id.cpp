@@ -100,7 +100,8 @@ bool node_id::default_data::valid() const noexcept {
 size_t node_id::default_data::hash_code() const noexcept {
   // XOR the first few bytes from the node ID and the process ID.
   auto x = static_cast<size_t>(pid_);
-  auto y = *reinterpret_cast<const size_t*>(host_.data());
+  size_t y;
+  memcpy(&y, host_.data(), sizeof(size_t));
   return x ^ y;
 }
 

@@ -84,12 +84,12 @@ private:
     if constexpr (std::is_empty<T>::value
                   || is_allowed_unsafe_message_type_v<T>) {
       // skip element
-    } else if constexpr (detail::can_apply_v<Subtype, decltype(x)>) {
-      CAF_READ_INSPECTOR_TRY(dref.apply(x))
     } else if constexpr (std::is_integral<T>::value) {
       using squashed_type = detail::squashed_int_t<T>;
       auto squashed_x = static_cast<squashed_type>(x);
       CAF_READ_INSPECTOR_TRY(dref.apply(squashed_x))
+    } else if constexpr (detail::can_apply_v<Subtype, decltype(x)>) {
+      CAF_READ_INSPECTOR_TRY(dref.apply(x))
     } else if constexpr (std::is_array<T>::value) {
       std::make_index_sequence<std::extent<T>::value> seq;
       CAF_READ_INSPECTOR_TRY(apply_array(dref, x, seq))

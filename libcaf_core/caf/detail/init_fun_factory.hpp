@@ -55,11 +55,15 @@ protected:
 };
 
 /// Wraps a user-defined function and gives it a uniform signature.
-template <class Base, class F, class ArgsPtr, bool ReturnsBehavior,
+template <class Base, class F, class Tuple, bool ReturnsBehavior,
           bool HasSelfPtr>
 class init_fun_factory_helper final : public init_fun_factory_helper_base {
 public:
-  init_fun_factory_helper(F fun, ArgsPtr args)
+  using args_pointer = std::shared_ptr<Tuple>;
+
+  static constexpr bool args_empty = std::tuple_size<Tuple>::value == 0;
+
+  init_fun_factory_helper(F fun, args_pointer args)
     : fun_(std::move(fun)), args_(std::move(args)) {
     // nop
   }
@@ -71,40 +75,52 @@ public:
   behavior operator()(local_actor* self) final {
     if (hook_ != nullptr)
       hook_(self);
-    bool_token<ReturnsBehavior> returns_behavior_token;
-    bool_token<HasSelfPtr> captures_self_token;
-    return apply(returns_behavior_token, captures_self_token, self);
-  }
-
-private:
-  // behavior (pointer)
-  behavior apply(std::true_type, std::true_type, local_actor* ptr) {
-    auto res = apply_moved_args_prefixed(fun_, get_indices(*args_), *args_,
-                                         static_cast<Base*>(ptr));
-    return std::move(res.unbox());
-  }
-
-  // void (pointer)
-  behavior apply(std::false_type, std::true_type, local_actor* ptr) {
-    apply_moved_args_prefixed(fun_, get_indices(*args_), *args_,
-                              static_cast<Base*>(ptr));
-    return behavior{};
-  }
-
-  // behavior ()
-  behavior apply(std::true_type, std::false_type, local_actor*) {
-    auto res = apply_args(fun_, get_indices(*args_), *args_);
-    return std::move(res.unbox());
-  }
-
-  // void ()
-  behavior apply(std::false_type, std::false_type, local_actor*) {
-    apply_args(fun_, get_indices(*args_), *args_);
-    return behavior{};
+    auto dptr = static_cast<Base*>(self);
+    if constexpr (ReturnsBehavior) {
+      auto unbox = [](auto x) -> behavior { return std::move(x.unbox()); };
+      if constexpr (args_empty) {
+        if constexpr (HasSelfPtr) {
+          // behavior (pointer)
+          return unbox(fun_(dptr));
+        } else {
+          // behavior ()
+          return unbox(fun_());
+        }
+      } else {
+        if constexpr (HasSelfPtr) {
+          // behavior (pointer, args...)
+          auto res = apply_moved_args_prefixed(fun_, get_indices(*args_),
+                                               *args_, dptr);
+          return unbox(std::move(res));
+        } else {
+          // behavior (args...)
+          return unbox(apply_args(fun_, get_indices(*args_), *args_));
+        }
+      }
+    } else {
+      if constexpr (args_empty) {
+        if constexpr (HasSelfPtr) {
+          // void (pointer)
+          fun_(dptr);
+        } else {
+          // void ()
+          fun_();
+        }
+      } else {
+        if constexpr (HasSelfPtr) {
+          // void (pointer, args...)
+          apply_moved_args_prefixed(fun_, get_indices(*args_), *args_, dptr);
+        } else {
+          // void (args...)
+          apply_args(fun_, get_indices(*args_), *args_);
+        }
+      }
+      return {};
+    }
   }
 
   F fun_;
-  ArgsPtr args_;
+  args_pointer args_;
 };
 
 template <class Base, class F>
@@ -125,8 +141,7 @@ public:
     constexpr bool selfptr = std::is_pointer<first_arg>::value;
     constexpr bool rets = std::is_convertible<res_type, behavior>::value;
     using tuple_type = decltype(std::make_tuple(detail::spawn_fwd<Ts>(xs)...));
-    using tuple_ptr = std::shared_ptr<tuple_type>;
-    using helper = init_fun_factory_helper<Base, F, tuple_ptr, rets, selfptr>;
+    using helper = init_fun_factory_helper<Base, F, tuple_type, rets, selfptr>;
     return ptr_type{new helper{std::move(f), sizeof...(Ts) > 0
                                                ? std::make_shared<tuple_type>(
                                                  detail::spawn_fwd<Ts>(xs)...)

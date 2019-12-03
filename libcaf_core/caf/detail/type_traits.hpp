@@ -695,8 +695,8 @@ template <class T, class To>
 class has_convertible_data_member {
 private:
   template <class U>
-  static auto sfinae(U* x)
-    -> decltype(std::declval<To*>() = x->data(), std::true_type());
+  static auto sfinae(U* x) -> std::integral_constant<
+    bool, std::is_convertible<decltype(x->data()), To*>::value>;
 
   template <class U>
   static auto sfinae(...) -> std::false_type;

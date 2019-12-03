@@ -329,7 +329,6 @@ public:
 
   void advance_time() {
     auto cycle = std::chrono::milliseconds(100);
-    auto desired_batch_complexity = std::chrono::microseconds(50);
     auto f = [&](tick_type x) {
       if (x % ticks_per_force_batches_interval == 0) {
         // Force batches on all output paths.
@@ -341,9 +340,8 @@ public:
         auto& qs = get<dmsg_id::value>(mbox.queues()).queues();
         for (auto& kvp : qs) {
           auto inptr = kvp.second.policy().handler.get();
-          auto bs = static_cast<int32_t>(kvp.second.total_task_size());
-          inptr->emit_ack_batch(this, bs, now(), cycle,
-                                desired_batch_complexity);
+          auto tts = static_cast<int32_t>(kvp.second.total_task_size());
+          inptr->emit_ack_batch(this, tts, now(), cycle);
         }
       }
     };

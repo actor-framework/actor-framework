@@ -23,6 +23,7 @@
 
 #include "caf/actor_clock.hpp"
 #include "caf/actor_control_block.hpp"
+#include "caf/credit_controller.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/meta/type_name.hpp"
@@ -55,63 +56,22 @@ public:
   stream_slots slots;
 
   /// Stores the last computed desired batch size.
-  int32_t desired_batch_size;
+  int32_t desired_batch_size = 0;
 
   /// Amount of credit we have signaled upstream.
-  int32_t assigned_credit;
+  int32_t assigned_credit = 0;
 
   /// Priority of incoming batches from this source.
-  stream_priority prio;
+  stream_priority prio = stream_priority::normal;
 
   /// ID of the last acknowledged batch ID.
-  int64_t last_acked_batch_id;
+  int64_t last_acked_batch_id = 0;
 
   /// ID of the last received batch.
-  int64_t last_batch_id;
+  int64_t last_batch_id = 0;
 
-  /// Amount of credit we assign sources after receiving `open`.
-  static constexpr int initial_credit = 50;
-
-  /// Stores statistics for measuring complexity of incoming batches.
-  struct CAF_CORE_EXPORT stats_t {
-    /// Wraps a time measurement for a single processed batch.
-    struct measurement {
-      /// Number of items in the batch.
-      int32_t batch_size;
-      /// Elapsed time for processing all elements of the batch.
-      timespan calculation_time;
-    };
-
-    /// Wraps the resulf of `stats_t::calculate()`.
-    struct CAF_CORE_EXPORT calculation_result {
-      /// Number of items per credit cycle.
-      int32_t max_throughput;
-      /// Number of items per batch to reach the desired batch complexity.
-      int32_t items_per_batch;
-    };
-
-    /// Total number of elements in all processed batches.
-    int64_t num_elements;
-
-    /// Elapsed time for processing all elements of all batches.
-    timespan processing_time;
-
-    stats_t();
-
-    /// Returns the maximum number of items this actor could handle for given
-    /// cycle length with a minimum of 1.
-    calculation_result calculate(timespan cycle, timespan desired_complexity);
-
-    /// Adds a measurement to this statistic.
-    void store(measurement x);
-
-    /// Resets this statistic.
-    void reset();
-  };
-
-  /// Summarizes how many elements we processed during the last cycle and how
-  /// much time we spent processing those elements.
-  stats_t stats;
+  /// Controller for assigning credit to the source.
+  std::unique_ptr<credit_controller> controller_;
 
   /// Stores the time point of the last credit decision for this source.
   actor_clock::time_point last_credit_decision;
@@ -147,10 +107,8 @@ public:
   ///                     waiting in the mailbox.
   /// @param now Current timestamp.
   /// @param cycle Time between credit rounds.
-  /// @param desired_batch_complexity Desired processing time per batch.
   void emit_ack_batch(local_actor* self, int32_t queued_items,
-                      actor_clock::time_point now, timespan cycle,
-                      timespan desired_batch_complexity);
+                      actor_clock::time_point now, timespan cycle);
 
   /// Returns whether the path received no input since last emitting
   /// `ack_batch`, i.e., `last_acked_batch_id == last_batch_id`.
@@ -167,8 +125,8 @@ public:
   emit_irregular_shutdown(local_actor* self, stream_slots slots,
                           const strong_actor_ptr& hdl, error reason);
 
-private:
-  actor_clock& clock();
+  /// Returns a pointer to the parent actor.
+  scheduled_actor* self();
 };
 
 /// @relates inbound_path

@@ -137,6 +137,8 @@ class scoped_actor;
 class serializer;
 class stream_manager;
 class string_view;
+class tracing_data;
+class tracing_data_factory;
 class type_erased_tuple;
 class type_erased_value;
 class uniform_type_info_map;
@@ -307,7 +309,8 @@ using stream_manager_ptr = intrusive_ptr<stream_manager>;
 
 // -- unique pointer aliases ---------------------------------------------------
 
-using type_erased_value_ptr = std::unique_ptr<type_erased_value>;
 using mailbox_element_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
+using tracing_data_ptr = std::unique_ptr<tracing_data>;
+using type_erased_value_ptr = std::unique_ptr<type_erased_value>;
 
 } // namespace caf

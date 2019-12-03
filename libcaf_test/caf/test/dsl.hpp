@@ -693,6 +693,7 @@ public:
     cfg.set("middleman.network-backend", caf::atom("testing"));
     cfg.set("middleman.manual-multiplexing", true);
     cfg.set("middleman.workers", size_t{0});
+    cfg.set("stream.credit-policy", caf::atom("testing"));
     return cfg;
   }
 
