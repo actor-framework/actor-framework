@@ -289,11 +289,12 @@ public:
   std::string openssl_cafile;
 
   // -- thread-affinity parameters ---------------------------------------------
-
-  std::string affinity_worker_cores;
-  std::string affinity_detached_cores;
-  std::string affinity_blocking_cores;
-  std::string affinity_other_cores;
+  
+  using core_cfg_list = std::vector<std::vector<int>>;
+  core_cfg_list affinity_scheduled_actors;
+  core_cfg_list affinity_detached_actors;
+  core_cfg_list affinity_blocking_actors;
+  core_cfg_list affinity_non_actors;
 
   // -- factories --------------------------------------------------------------
 

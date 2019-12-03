@@ -35,8 +35,6 @@
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/scheduler/profiled_coordinator.hpp"
 
-#include "caf/affinity/affinity_manager.hpp"
-
 namespace caf {
 
 namespace {
@@ -285,11 +283,27 @@ actor_system::actor_system(actor_system_config& cfg)
         sched.reset(new test_coordinator(*this));
     }
   }
-  auto& aff = modules_[module::affinity_manager];
-  // set affinity only if not explicitly loaded by user
-  if (!aff) {
-      aff.reset(new affinity::manager(*this));
+  // initialize affinity members
+  for (auto& a : atomics_) {
+      a.store(0);
   }
+  for (auto& group : cfg.affinity_scheduled_actors) {
+    cores_[worker_thread].push_back(
+      detail::core_group(group.begin(), group.end()));
+  }
+  for (auto& group : cfg.affinity_detached_actors) {
+    cores_[private_thread].push_back(
+      detail::core_group(group.begin(), group.end()));
+  }
+  for (auto& group : cfg.affinity_blocking_actors) {
+    cores_[blocking_thread].push_back(
+      detail::core_group(group.begin(), group.end()));
+  }
+  for (auto& group : cfg.affinity_non_actors) {
+    cores_[other_thread].push_back(
+      detail::core_group(group.begin(), group.end()));
+  }
+
   // initialize state for each module and give each module the opportunity
   // to influence the system configuration, e.g., by adding more types
   logger_->init(cfg);
@@ -418,17 +432,6 @@ openssl::manager& actor_system::openssl_manager() const {
   return *reinterpret_cast<openssl::manager*>(clptr->subtype_ptr());
 }
 
-bool actor_system::has_affinity_manager() const {
-  return modules_[module::affinity_manager] != nullptr;
-}
-
-affinity::manager& actor_system::affinity_manager() const {
-  auto& clptr = modules_[module::affinity_manager];
-  if (!clptr)
-    CAF_RAISE_ERROR("cannot access affinity manager: module not loaded");
-  return *reinterpret_cast<affinity::manager*>(clptr->subtype_ptr());
-}
-
 bool actor_system::has_network_manager() const noexcept {
   return modules_[module::network_manager] != nullptr;
 }
@@ -476,15 +479,27 @@ void actor_system::await_detached_threads() {
     detached_cv_.wait(guard);
 }
 
-void actor_system::thread_started(thread_type tt) {
+void actor_system::thread_started(const thread_type tt) {
+  set_affinity(tt);
   for (auto& hook : cfg_.thread_hooks_)
     hook->thread_started();
-  affinity_manager().set_affinity(tt);
 }
 
 void actor_system::thread_terminates() {
   for (auto& hook : cfg_.thread_hooks_)
     hook->thread_terminates();
+}
+
+void actor_system::set_affinity(const thread_type tt) {
+  CAF_ASSERT(tt < no_id);
+  auto cores = cores_[tt];
+  if (cores.size()) {
+    auto& atomics = atomics_[tt];
+    size_t id = atomics.fetch_add(1) % cores.size();
+    // Set the affinity of the thread
+    detail::core_group& core = cores[id];
+    detail::set_current_thread_affinity(core);
+  }
 }
 
 expected<strong_actor_ptr>

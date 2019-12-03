@@ -36,6 +36,7 @@
 #include "caf/actor_registry.hpp"
 #include "caf/actor_traits.hpp"
 #include "caf/composable_behavior_based_actor.hpp"
+#include "caf/detail/affinity.hpp"
 #include "caf/detail/init_fun_factory.hpp"
 #include "caf/detail/spawn_fwd.hpp"
 #include "caf/detail/spawnable.hpp"
@@ -163,7 +164,6 @@ public:
       opencl_manager,
       openssl_manager,
       network_manager,
-      affinity_manager,
       num_ids
     };
 
@@ -291,13 +291,6 @@ public:
   /// Returns the manager instance from the OpenSSL module.
   /// @throws `std::logic_error` if module is not loaded.
   openssl::manager& openssl_manager() const;
-
-  /// Returns `true` if the affinity module is available, `false` otherwise.
-  bool has_affinity_manager() const;
-
-  /// Returns the manager instance from the Affinity module.
-  /// @throws `std::logic_error` if module is not loaded.
-  affinity::manager& affinity_manager() const;
 
   /// Returns `true` if the network module is available, `false` otherwise.
   bool has_network_manager() const noexcept;
@@ -541,7 +534,9 @@ public:
 
   /// Calls all thread started hooks
   /// @warning must be called by thread which is about to start
-  void thread_started(thread_type tt=other_thread);
+  void thread_started(const thread_type tt=other_thread);
+
+  void set_affinity(const thread_type tt);
 
   /// Calls all thread terminates hooks
   /// @warning must be called by thread which is about to terminate
@@ -690,6 +685,12 @@ private:
 
   /// Stores custom, system-wide key-value pairs.
   runtime_settings_map settings_;
+
+  /// Stores the affinity configuration
+  using core_array = std::array<detail::core_groups, no_id>;
+  using atomic_array = std::array<std::atomic<size_t>, no_id>;
+  core_array cores_;
+  atomic_array atomics_;
 };
 
 } // namespace caf
