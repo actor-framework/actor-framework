@@ -1,6 +1,3 @@
-cmake_minimum_required(VERSION 2.8.12)
-project(caf_net C CXX)
-
 # get header files; only needed by CMake generators,
 # e.g., for creating proper Xcode projects
 file(GLOB_RECURSE LIBCAF_NET_HDRS "caf/*.hpp")
@@ -42,7 +39,7 @@ set(LIBCAF_NET_SRCS
   src/stream_socket.cpp
   src/udp_datagram_socket.cpp
   src/defaults.cpp
-  src/message_queue.cpp 
+  src/message_queue.cpp
   src/worker.cpp
 )
 
@@ -60,7 +57,7 @@ if (NOT CAF_BUILD_STATIC_ONLY)
   set_target_properties(libcaf_net_shared
     PROPERTIES
     SOVERSION ${CAF_VERSION}
-    VERSION ${CAF_VERSION}
+    VERSION ${CAF_LIB_VERSION}
     OUTPUT_NAME caf_net
   )
   install(TARGETS libcaf_net_shared
