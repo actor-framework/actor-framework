@@ -6,6 +6,14 @@
 #  include <sys/sysinfo.h>
 #endif
 
+#ifdef CAF_MACOS
+#  ifndef _GNU_SOURCE
+#    define _GNU_SOURCE
+#  endif // _GNU_SOURCE
+#include <mach/mach_init.h>
+#include <mach/thread_act.h>
+#endif // CAF_MAC
+
 using std::endl;
 using std::string;
 using std::to_string;
@@ -31,10 +39,12 @@ string get_my_affinity() {
 #elif defined(CAF_WINDOWS)
 // TODO: implement getaffinity for Windows
 #elif defined(CAF_MACOS)
-  thread_affinity_policy affinity;
-  if (thread_policy_get(mach_thread_self(), THREAD_AFFINITY_POLICY,
+  thread_affinity_policy_data_t affinity;
+  mach_msg_type_number_t count = THREAD_AFFINITY_POLICY_COUNT;
+  boolean_t getdefault = FALSE;
+  if (thread_policy_get(pthread_mach_thread_np(pthread_self()), THREAD_AFFINITY_POLICY,
                         (thread_policy_t) &affinity,
-                        THREAD_AFFINITY_POLICY_COUNT, FALSE)
+                        &count, &getdefault)
       == 0) {
     res += to_string(affinity.affinity_tag) + " ";
   }
@@ -78,7 +88,7 @@ int main() {
   // Mac start counting cores from 1 and cannot set multiple cores per thread.
   actor_system_config cfg;
   // Pin the scheduled actors on core 2.
-  cfg.set<vector<vector<int>>>("affinity.scheduled-actors", {{2}});
+  cfg.set<vector<vector<int>>>("affinity.scheduled-actors", {{1}});
   // Pin the first detached actor on core 1 and the second on core 2.
   cfg.set<vector<vector<int>>>("affinity.detached-actors", {{1}, {2}});
   // Pin the blocking actors on core 1.

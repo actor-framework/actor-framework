@@ -19,7 +19,7 @@
 #  include <windows.h>
 #endif // CAF_WINDOWS
 
-#ifdef CAF_MAC
+#ifdef CAF_MACOS
 #  ifndef _GNU_SOURCE
 #    define _GNU_SOURCE
 #  endif // _GNU_SOURCE
@@ -69,7 +69,7 @@ void set_thread_affinity(int pid, const core_group& cores) {
   }
   CloseHandle(thread_ptr);
 #elif defined(CAF_MACOS)
-  auto thread_id = pid != 0 ? mach_thread_self() : pthread_mach_thread_np(pid);
+  auto thread_id = pthread_mach_thread_np(pid == 0 ? pthread_self() : pthread_t(pid));
   // Create the affinity policy with only the first element of the set.
   // MacOS does not support to pin a thread on multiple cores
   thread_affinity_policy affinity;
