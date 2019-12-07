@@ -163,120 +163,120 @@ set(CAF_CORE_SOURCES
 # -- list cpp files for caf-core-test ------------------------------------------
 
 set(CAF_CORE_TEST_SOURCES
-  test/constructor_attach.cpp
-  test/make_config_value_field.cpp
-  test/sum_type.cpp
-  test/binary_deserializer.cpp
-  test/config_option_set.cpp
-  test/actor_profiler.cpp
-  test/sum_type_token.cpp
-  test/behavior.cpp
-  test/custom_exception_handler.cpp
-  test/config_value.cpp
-  test/ipv4_address.cpp
-  test/mock_streaming_classes.cpp
-  test/ipv4_endpoint.cpp
-  test/composable_behavior.cpp
-  test/decorator/sequencer.cpp
-  test/local_migration.cpp
-  test/message.cpp
-  test/typed_spawn.cpp
-  test/native_streaming_classes.cpp
-  test/actor_system_config.cpp
-  test/error.cpp
-  test/config_option.cpp
-  test/string_algorithms.cpp
-  test/continuous_streaming.cpp
-  test/serial_reply.cpp
-  test/atom.cpp
-  test/aout.cpp
-  test/byte.cpp
-  test/function_view.cpp
-  test/fused_downstream_manager.cpp
-  test/type_erased_tuple.cpp
-  test/optional.cpp
-  test/mixin/sender.cpp
-  test/mixin/requester.cpp
-  test/binary_serializer.cpp
-  test/composition.cpp
-  test/string_view.cpp
-  test/local_group.cpp
-  test/match.cpp
-  test/runtime_settings_map.cpp
-  test/uri.cpp
-  test/mailbox_element.cpp
-  test/actor_lifetime.cpp
-  test/cow_tuple.cpp
-  test/selective_streaming.cpp
-  test/blocking_actor.cpp
-  test/typed_response_promise.cpp
-  test/actor_termination.cpp
   test/actor_clock.cpp
-  test/dynamic_spawn.cpp
-  test/ipv6_subnet.cpp
-  test/or_else.cpp
-  test/message_lifetime.cpp
+  test/actor_factory.cpp
+  test/actor_lifetime.cpp
+  test/actor_pool.cpp
+  test/actor_profiler.cpp
+  test/actor_registry.cpp
+  test/actor_system_config.cpp
+  test/actor_termination.cpp
+  test/aout.cpp
+  test/atom.cpp
+  test/behavior.cpp
+  test/binary_deserializer.cpp
+  test/binary_serializer.cpp
+  test/blocking_actor.cpp
+  test/broadcast_downstream_manager.cpp
+  test/byte.cpp
+  test/composable_behavior.cpp
+  test/composition.cpp
+  test/config_option.cpp
+  test/config_option_set.cpp
+  test/config_value.cpp
+  test/config_value_adaptor.cpp
+  test/constructor_attach.cpp
+  test/continuous_streaming.cpp
+  test/cow_tuple.cpp
+  test/custom_exception_handler.cpp
+  test/decorator/sequencer.cpp
+  test/deep_to_string.cpp
+  test/detached_actors.cpp
   test/detail/bounds_checker.cpp
-  test/detail/parse.cpp
   test/detail/ini_consumer.cpp
-  test/detail/tick_emitter.cpp
   test/detail/limited_vector.cpp
-  test/detail/unique_function.cpp
-  test/detail/serialized_size.cpp
+  test/detail/parse.cpp
   test/detail/parser/read_atom.cpp
-  test/detail/parser/read_floating_point.cpp
-  test/detail/parser/read_number.cpp
-  test/detail/parser/read_signed_integer.cpp
-  test/detail/parser/read_number_or_timespan.cpp
-  test/detail/parser/read_unsigned_integer.cpp
   test/detail/parser/read_bool.cpp
-  test/detail/parser/read_timespan.cpp
+  test/detail/parser/read_floating_point.cpp
   test/detail/parser/read_ini.cpp
+  test/detail/parser/read_number.cpp
+  test/detail/parser/read_number_or_timespan.cpp
+  test/detail/parser/read_signed_integer.cpp
   test/detail/parser/read_string.cpp
+  test/detail/parser/read_timespan.cpp
+  test/detail/parser/read_unsigned_integer.cpp
   test/detail/ringbuffer.cpp
   test/detail/ripemd_160.cpp
+  test/detail/serialized_size.cpp
+  test/detail/tick_emitter.cpp
+  test/detail/unique_function.cpp
   test/detail/unordered_flat_map.cpp
+  test/dictionary.cpp
+  test/dynamic_spawn.cpp
+  test/error.cpp
+  test/expected.cpp
+  test/function_view.cpp
+  test/fused_downstream_manager.cpp
+  test/handles.cpp
+  test/inspector.cpp
   test/intrusive/drr_cached_queue.cpp
-  test/intrusive/lifo_inbox.cpp
-  test/intrusive/fifo_inbox.cpp
   test/intrusive/drr_queue.cpp
-  test/intrusive/wdrr_fixed_multiplexed_queue.cpp
+  test/intrusive/fifo_inbox.cpp
+  test/intrusive/lifo_inbox.cpp
   test/intrusive/task_queue.cpp
   test/intrusive/wdrr_dynamic_multiplexed_queue.cpp
-  test/config_value_adaptor.cpp
-  test/serialization.cpp
-  test/deep_to_string.cpp
-  test/pipeline_streaming.cpp
-  test/actor_factory.cpp
+  test/intrusive/wdrr_fixed_multiplexed_queue.cpp
   test/intrusive_ptr.cpp
-  test/inspector.cpp
-  test/variant.cpp
-  test/tracing_data.cpp
-  test/unit.cpp
-  test/actor_registry.cpp
-  test/rtti_pair.cpp
-  test/result.cpp
-  test/ipv6_endpoint.cpp
-  test/request_timeout.cpp
+  test/ipv4_address.cpp
+  test/ipv4_endpoint.cpp
   test/ipv4_subnet.cpp
-  test/to_string.cpp
-  test/logger.cpp
-  test/message_id.cpp
-  test/stateful_actor.cpp
   test/ipv6_address.cpp
-  test/actor_pool.cpp
-  test/simple_timeout.cpp
-  test/detached_actors.cpp
-  test/span.cpp
-  test/handles.cpp
-  test/thread_hook.cpp
-  test/settings.cpp
-  test/broadcast_downstream_manager.cpp
-  test/dictionary.cpp
+  test/ipv6_endpoint.cpp
+  test/ipv6_subnet.cpp
+  test/local_group.cpp
+  test/local_migration.cpp
+  test/logger.cpp
+  test/mailbox_element.cpp
+  test/make_config_value_field.cpp
+  test/match.cpp
+  test/message.cpp
+  test/message_id.cpp
+  test/message_lifetime.cpp
+  test/metaprogramming.cpp
+  test/mixin/requester.cpp
+  test/mixin/sender.cpp
+  test/mock_streaming_classes.cpp
+  test/native_streaming_classes.cpp
+  test/optional.cpp
+  test/or_else.cpp
+  test/pipeline_streaming.cpp
   test/policy/categorized.cpp
   test/policy/fan_in_responses.cpp
-  test/expected.cpp
-  test/metaprogramming.cpp
+  test/request_timeout.cpp
+  test/result.cpp
+  test/rtti_pair.cpp
+  test/runtime_settings_map.cpp
+  test/selective_streaming.cpp
+  test/serial_reply.cpp
+  test/serialization.cpp
+  test/settings.cpp
+  test/simple_timeout.cpp
+  test/span.cpp
+  test/stateful_actor.cpp
+  test/string_algorithms.cpp
+  test/string_view.cpp
+  test/sum_type.cpp
+  test/sum_type_token.cpp
+  test/thread_hook.cpp
+  test/to_string.cpp
+  test/tracing_data.cpp
+  test/type_erased_tuple.cpp
+  test/typed_response_promise.cpp
+  test/typed_spawn.cpp
+  test/unit.cpp
+  test/uri.cpp
+  test/variant.cpp
 )
 
 # -- add library target --------------------------------------------------------
