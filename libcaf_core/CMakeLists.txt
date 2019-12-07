@@ -185,6 +185,7 @@ set(CAF_CORE_TEST_SOURCES
   test/config_option_set.cpp
   test/config_value.cpp
   test/config_value_adaptor.cpp
+  test/const_typed_message_view.cpp
   test/constructor_attach.cpp
   test/continuous_streaming.cpp
   test/cow_tuple.cpp
@@ -272,6 +273,7 @@ set(CAF_CORE_TEST_SOURCES
   test/tracing_data.cpp
   test/type_erased_tuple.cpp
   test/type_id_list.cpp
+  test/typed_message_view.cpp
   test/typed_response_promise.cpp
   test/typed_spawn.cpp
   test/unit.cpp
