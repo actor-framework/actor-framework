@@ -38,10 +38,6 @@
 namespace caf::detail {
 
 void set_current_thread_affinity(const core_group& cores) {
-  set_thread_affinity(0, cores);
-}
-
-void set_thread_affinity(int pid, const core_group& cores) {
   if (cores.size() == 0) {
     return;
   }
@@ -53,12 +49,11 @@ void set_thread_affinity(int pid, const core_group& cores) {
   for (int const& c : cores) {
     CPU_SET(c, &cpuset);
   }
-  if (sched_setaffinity(pid, sizeof(cpu_set_t), &cpuset) < 0) {
+  if (sched_setaffinity(0, sizeof(cpu_set_t), &cpuset) < 0) {
     std::cerr << "Error setting affinity" << std::endl;
   }
 #elif defined(CAF_WINDOWS)
-  HANDLE thread_ptr = pid != 0 ? OpenThread(THREAD_ALL_ACCESS, FALSE, pid)
-                               : GetCurrentThread();
+  HANDLE thread_ptr = GetCurrentThread();
   // Create the affinity mask
   DWORD_PTR mask = 0;
   for (int const& c : cores) {
@@ -69,7 +64,7 @@ void set_thread_affinity(int pid, const core_group& cores) {
   }
   CloseHandle(thread_ptr);
 #elif defined(CAF_MACOS)
-  auto thread_id = pthread_mach_thread_np(pid == 0 ? pthread_self() : pthread_t(pid));
+  auto thread_id = pthread_mach_thread_np(pthread_self());
   // Create the affinity policy with only the first element of the set.
   // MacOS does not support to pin a thread on multiple cores
   thread_affinity_policy affinity;
@@ -81,6 +76,7 @@ void set_thread_affinity(int pid, const core_group& cores) {
     std::cerr << "Error setting affinity" << std::endl;
   }
 #elif defined(CAF_BSD)
+  auto thread_id = pthread_self();
   // Create a cpu_set_t object representing a set of CPUs.
   // Clear it and mark only CPU i as set.
   cpu_set_t cpuset;
@@ -88,7 +84,7 @@ void set_thread_affinity(int pid, const core_group& cores) {
   for (int const& c : cores) {
     CPU_SET(c, &cpuset);
   }
-  if (pthread_setaffinity_np(pid, sizeof(cpu_set_t), &cpuset) != 0) {
+  if (pthread_setaffinity_np(thread_id, sizeof(cpu_set_t), &cpuset) != 0) {
     std::cerr << "Error setting affinity" << std::endl;
   }
 #else
