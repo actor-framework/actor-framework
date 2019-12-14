@@ -32,7 +32,6 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 #include "caf/detail/type_list.hpp"
-#include "caf/duration.hpp"
 #include "caf/fwd.hpp"
 #include "caf/node_id.hpp"
 #include "caf/system_messages.hpp"

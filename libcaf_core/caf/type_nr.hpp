@@ -49,7 +49,6 @@ using sorted_builtin_types
                       config_value,                       // @config_value
                       down_msg,                           // @down
                       downstream_msg,                     // @downstream_msg
-                      duration,                           // @duration
                       error,                              // @error
                       exit_msg,                           // @exit
                       group,                              // @group

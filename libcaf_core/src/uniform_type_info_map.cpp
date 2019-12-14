@@ -34,7 +34,6 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/downstream_msg.hpp"
-#include "caf/duration.hpp"
 #include "caf/group.hpp"
 #include "caf/locks.hpp"
 #include "caf/logger.hpp"
@@ -64,7 +63,6 @@ const char* numbered_type_names[] = {
   "@config_value",
   "@down",
   "@downstream_msg",
-  "@duration",
   "@error",
   "@exit",
   "@group",

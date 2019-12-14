@@ -36,7 +36,7 @@ public:
 
   virtual result<message> fallback(message_view&);
 
-  virtual duration timeout();
+  virtual timespan timeout();
 
   virtual void handle_timeout();
 };
@@ -70,7 +70,7 @@ public:
 
   blocking_behavior_v3(blocking_behavior_v3&&) = default;
 
-  duration timeout() override {
+  timespan timeout() override {
     return f.timeout;
   }
 
@@ -96,7 +96,7 @@ public:
     return f1.handler(x);
   }
 
-  duration timeout() override {
+  timespan timeout() override {
     return f2.timeout;
   }
 

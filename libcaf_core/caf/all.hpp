@@ -62,7 +62,6 @@
 #include "caf/deserializer.hpp"
 #include "caf/detail/config_value_adaptor_field_impl.hpp"
 #include "caf/downstream_msg.hpp"
-#include "caf/duration.hpp"
 #include "caf/error.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/exec_main.hpp"

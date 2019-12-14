@@ -20,10 +20,15 @@
 
 #include <chrono>
 #include <cstdint>
+#include <limits>
 
 namespace caf {
 
 /// A portable timespan type with nanosecond resolution.
 using timespan = std::chrono::duration<int64_t, std::nano>;
+
+/// Constant representing an infinite amount of time.
+static constexpr timespan infinite
+  = timespan{std::numeric_limits<int64_t>::max()};
 
 } // namespace caf

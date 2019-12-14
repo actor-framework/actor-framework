@@ -156,7 +156,7 @@ public:
   template <class Handle>
   expected<Handle>
   remote_spawn(const node_id& nid, std::string name, message args,
-               duration timeout = duration(time_unit::minutes, 1)) {
+               timespan timeout = timespan{60000000000}) {
     if (!nid || name.empty())
       return sec::invalid_argument;
     auto res = remote_spawn_impl(nid, name, args,
@@ -172,7 +172,7 @@ public:
   remote_spawn(const node_id& nid, std::string name, message args,
                std::chrono::duration<Rep, Period> timeout) {
     return remote_spawn<Handle>(nid, std::move(name), std::move(args),
-                                duration{timeout});
+                                timespan{timeout});
   }
 
   /// Smart pointer for `network::multiplexer`.
@@ -207,7 +207,7 @@ public:
 
   /// Returns a new functor-based broker connected
   /// to `host:port` or an `error`.
-  /// @warning Blocks the caller for the duration of the connection process.
+  /// @warning Blocks the caller for the timespan of the connection process.
   template <spawn_options Os = no_spawn_options,
             class F = std::function<void(broker*)>, class... Ts>
   expected<typename infer_handle_from_fun<F>::type>
@@ -304,7 +304,7 @@ private:
 
   expected<strong_actor_ptr>
   remote_spawn_impl(const node_id& nid, std::string& name, message& args,
-                    std::set<std::string> s, duration timeout);
+                    std::set<std::string> s, timespan timeout);
 
   expected<uint16_t>
   publish(const strong_actor_ptr& whom, std::set<std::string> sigs,

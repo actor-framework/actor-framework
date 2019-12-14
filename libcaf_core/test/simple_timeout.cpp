@@ -75,14 +75,6 @@ timer::behavior_type timer_impl2(timer::pointer self) {
 
 CAF_TEST_FIXTURE_SCOPE(simple_timeout_tests, test_coordinator_fixture<>)
 
-CAF_TEST(duration_conversion) {
-  duration d1{time_unit::milliseconds, 100};
-  std::chrono::milliseconds d2{100};
-  duration d3{d2};
-  CAF_CHECK_EQUAL(d1.count, static_cast<uint64_t>(d2.count()));
-  CAF_CHECK_EQUAL(d1, d3);
-}
-
 CAF_TEST(single_timeout) {
   sys.spawn(timer_impl);
 }

@@ -105,7 +105,6 @@ class config_value;
 class deserializer;
 class downstream_manager;
 class downstream_manager_base;
-class duration;
 class error;
 class event_based_actor;
 class execution_unit;

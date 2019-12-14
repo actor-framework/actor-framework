@@ -32,7 +32,6 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/after.hpp"
 #include "caf/defaults.hpp"
-#include "caf/duration.hpp"
 #include "caf/logger.hpp"
 #include "caf/others.hpp"
 #include "caf/policy/work_stealing.hpp"

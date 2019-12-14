@@ -78,7 +78,12 @@ behavior_impl::~behavior_impl() {
   // nop
 }
 
-behavior_impl::behavior_impl(duration tout)
+behavior_impl::behavior_impl()
+  : timeout_(infinite), begin_(nullptr), end_(nullptr) {
+  // nop
+}
+
+behavior_impl::behavior_impl(timespan tout)
   : timeout_(tout), begin_(nullptr), end_(nullptr) {
   // nop
 }
