@@ -55,11 +55,16 @@ void read_ipv4_octet(State& ps, Consumer& consumer) {
     if (ps.code <= pec::trailing_character)
       consumer.value(res);
   });
+  // clang-format off
   start();
-  state(init){transition(read, decimal_chars, rd_decimal(ch),
-                         pec::integer_overflow)} term_state(read){
-    transition(read, decimal_chars, rd_decimal(ch),
-               pec::integer_overflow)} fin();
+  state(init) {
+    transition(read, decimal_chars, rd_decimal(ch), pec::integer_overflow)
+  }
+  term_state(read) {
+    transition(read, decimal_chars, rd_decimal(ch), pec::integer_overflow)
+  }
+  fin();
+  // clang-format on
 }
 
 /// Reads a number, i.e., on success produces either an `int64_t` or a

@@ -23,6 +23,7 @@
 #include <tuple>
 #include <utility>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
 #include "caf/sec.hpp"

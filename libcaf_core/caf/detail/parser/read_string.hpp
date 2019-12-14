@@ -41,20 +41,36 @@ void read_string(State& ps, Consumer&& consumer) {
     if (ps.code <= pec::trailing_character)
       consumer.value(std::move(res));
   });
+  // clang-format off
   start();
-  state(init){transition(init, " \t") transition(read_chars, '"') transition(
-    read_unquoted_chars, alphanumeric_chars, res += ch)} state(read_chars){
-    transition(escape, '\\') transition(done, '"')
-      error_transition(pec::unexpected_newline, '\n')
-        transition(read_chars, any_char, res += ch)} state(escape){
-    transition(read_chars, 'n', res += '\n')
-      transition(read_chars, 'r', res += '\r')
-        transition(read_chars, 't', res += '\t')
-          transition(read_chars, '\\', res += '\\')
-            transition(read_chars, '"', res += '"') error_transition(
-              pec::illegal_escape_sequence)} term_state(read_unquoted_chars){
+  state(init) {
+    transition(init, " \t")
+    transition(read_chars, '"')
     transition(read_unquoted_chars, alphanumeric_chars, res += ch)
-      epsilon(done)} term_state(done){transition(done, " \t")} fin();
+  }
+  state(read_chars) {
+    transition(escape, '\\')
+    transition(done, '"')
+    error_transition(pec::unexpected_newline, '\n')
+    transition(read_chars, any_char, res += ch)
+  }
+  state(escape) {
+    transition(read_chars, 'n', res += '\n')
+    transition(read_chars, 'r', res += '\r')
+    transition(read_chars, 't', res += '\t')
+    transition(read_chars, '\\', res += '\\')
+    transition(read_chars, '"', res += '"')
+    error_transition(pec::illegal_escape_sequence)
+  }
+  term_state(read_unquoted_chars) {
+    transition(read_unquoted_chars, alphanumeric_chars, res += ch)
+    epsilon(done)
+  }
+  term_state(done) {
+    transition(done, " \t")
+  }
+  fin();
+  // clang-format on
 }
 
 } // namespace caf::detail::parser

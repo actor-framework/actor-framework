@@ -24,7 +24,6 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/comparable.hpp"
-#include "caf/detail/core_export.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/error.hpp"
 #include "caf/message_priority.hpp"

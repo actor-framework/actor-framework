@@ -26,7 +26,6 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/config.hpp"
-#include "caf/detail/core_export.hpp"
 
 #ifdef CAF_GCC
 #  pragma GCC diagnostic push

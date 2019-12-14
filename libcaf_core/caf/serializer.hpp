@@ -25,6 +25,7 @@
 #include <utility>
 
 #include "caf/byte.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/meta/annotation.hpp"

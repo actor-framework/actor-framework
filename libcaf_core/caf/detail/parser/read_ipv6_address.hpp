@@ -68,11 +68,17 @@ void read_ipv6_h16(State& ps, Consumer& consumer) {
     if (ps.code <= pec::trailing_character)
       consumer.value(res);
   });
+  // clang-format off
   start();
-  state(init){transition(read, hexadecimal_chars, rd_hex(ch),
-                         pec::integer_overflow)} term_state(read){
-    transition_if(digits < 4, read, hexadecimal_chars, rd_hex(ch),
-                  pec::integer_overflow)} fin();
+  state(init) {
+    transition(read, hexadecimal_chars, rd_hex(ch), pec::integer_overflow)
+  }
+  term_state(read) {
+    transition_if(digits < 4,
+                  read, hexadecimal_chars, rd_hex(ch), pec::integer_overflow)
+  }
+  fin();
+  // clang-format on
 }
 
 /// Reads 16 (hex) or 32 (IPv4 notation) bits of an IPv6 address.
@@ -118,21 +124,29 @@ void read_ipv6_h16_or_l32(State& ps, Consumer& consumer) {
         fin_octet();
     }
   });
+  // clang-format off
   start();
-  state(init){transition(read, hexadecimal_chars, rd_both(ch),
-                         pec::integer_overflow)} term_state(read){
-    transition_if(mode == indeterminate, read, hexadecimal_chars, rd_both(ch),
-                  pec::integer_overflow)
-      transition_if(mode == v6_bits, read, hexadecimal_chars, rd_hex(ch),
-                    pec::integer_overflow)
-        transition_if(mode != v6_bits && digits > 0, read_octet, '.',
-                      fin_octet())} state(read_octet){
+  state(init) {
+    transition(read, hexadecimal_chars, rd_both(ch), pec::integer_overflow)
+  }
+  term_state(read) {
+    transition_if(mode == indeterminate,
+                  read, hexadecimal_chars, rd_both(ch), pec::integer_overflow)
+    transition_if(mode == v6_bits,
+                  read, hexadecimal_chars, rd_hex(ch), pec::integer_overflow)
+    transition_if(mode != v6_bits && digits > 0, read_octet, '.', fin_octet())
+  }
+  state(read_octet) {
     transition(read_octet, decimal_chars, rd_dec(ch), pec::integer_overflow)
-      transition_if(octet < 2 && digits > 0, read_octet, '.', fin_octet())
-        transition_if(octet == 2 && digits > 0, read_last_octet, '.',
-                      fin_octet())} term_state(read_last_octet){
-    transition(read_last_octet, decimal_chars, rd_dec(ch),
-               pec::integer_overflow)} fin();
+    transition_if(octet < 2 && digits > 0, read_octet, '.', fin_octet())
+    transition_if(octet == 2 && digits > 0, read_last_octet, '.', fin_octet())
+  }
+  term_state(read_last_octet) {
+    transition(read_last_octet, decimal_chars,
+               rd_dec(ch), pec::integer_overflow)
+  }
+  fin();
+  // clang-format on
 }
 
 template <class F>
@@ -208,31 +222,42 @@ void read_ipv6_address(State& ps, Consumer&& consumer) {
     }
     return false;
   };
+  // clang-format off
   start();
   // Either transitions to reading leading "::" or reads the first h16. When
   // reading an l32 immediately promotes to IPv4 address and stops.
-  state(init){transition(rd_sep, ':')
-                fsm_epsilon(read_ipv6_h16_or_l32(ps, prefix_consumer),
-                            maybe_has_l32, hexadecimal_chars)}
+  state(init) {
+    transition(rd_sep, ':')
+    fsm_epsilon(read_ipv6_h16_or_l32(ps, prefix_consumer),
+                maybe_has_l32, hexadecimal_chars)
+  }
   // Checks whether the first call to read_ipv6_h16_or_l32 consumed
   // exactly 4 bytes. If so, we have an IPv4-formatted address.
-  unstable_state(maybe_has_l32){epsilon_if(promote_v4(), done)
-                                  epsilon(rd_prefix_sep)}
+  unstable_state(maybe_has_l32) {
+    epsilon_if(promote_v4(), done)
+    epsilon(rd_prefix_sep)
+  }
   // Got ":" at a position where it can only be parsed as "::".
-  state(rd_sep){transition(has_sep, ':')}
+  state(rd_sep) {
+    transition(has_sep, ':')
+  }
   // Stops parsing after reading "::" (all-zero address) or proceeds with
   // reading the suffix.
-  term_state(has_sep){epsilon(rd_suffix, hexadecimal_chars)}
+  term_state(has_sep) {
+    epsilon(rd_suffix, hexadecimal_chars)
+  }
   // Read part of the prefix, i.e., everything before "::".
-  state(rd_prefix){
-    fsm_epsilon_if(remaining_bytes() > 4, read_ipv6_h16(ps, prefix_consumer),
+  state(rd_prefix) {
+    fsm_epsilon_if(remaining_bytes() > 4,
+                   read_ipv6_h16(ps, prefix_consumer),
                    rd_prefix_sep, hexadecimal_chars)
-      fsm_epsilon_if(remaining_bytes() == 4,
-                     read_ipv6_h16_or_l32(ps, prefix_consumer), maybe_done,
-                     hexadecimal_chars)
-        fsm_epsilon_if(remaining_bytes() == 2,
-                       read_ipv6_h16(ps, prefix_consumer), done,
-                       hexadecimal_chars)}
+    fsm_epsilon_if(remaining_bytes() == 4,
+                   read_ipv6_h16_or_l32(ps, prefix_consumer),
+                   maybe_done, hexadecimal_chars)
+    fsm_epsilon_if(remaining_bytes() == 2,
+                   read_ipv6_h16(ps, prefix_consumer),
+                   done, hexadecimal_chars)
+  }
   // Checks whether we've read an l32 in our last call to read_ipv6_h16_or_l32,
   // in which case we're done. Otherwise continues to read the last two bytes.
   unstable_state(maybe_done) {
@@ -240,23 +265,33 @@ void read_ipv6_address(State& ps, Consumer&& consumer) {
     epsilon(rd_prefix_sep)
   }
   // Waits for ":" after reading an h16 in the prefix.
-  state(rd_prefix_sep){transition(rd_next_prefix, ':')}
+  state(rd_prefix_sep) {
+    transition(rd_next_prefix, ':')
+  }
   // Waits for either the second ":" or an h16/l32 after reading an ":".
-  state(rd_next_prefix){transition(has_sep, ':') epsilon(rd_prefix)}
+  state(rd_next_prefix) {
+    transition(has_sep, ':')
+    epsilon(rd_prefix)
+  }
   // Reads a part of the suffix.
-  state(rd_suffix){
+  state(rd_suffix) {
     fsm_epsilon_if(remaining_bytes() >= 4,
-                   read_ipv6_h16_or_l32(ps, suffix_consumer), rd_next_suffix,
-                   hexadecimal_chars)
-      fsm_epsilon_if(remaining_bytes() == 2, read_ipv6_h16(ps, suffix_consumer),
-                     rd_next_suffix, hexadecimal_chars)}
+                   read_ipv6_h16_or_l32(ps, suffix_consumer),
+                   rd_next_suffix, hexadecimal_chars)
+    fsm_epsilon_if(remaining_bytes() == 2,
+                   read_ipv6_h16(ps, suffix_consumer),
+                   rd_next_suffix, hexadecimal_chars)
+  }
   // Reads the ":" separator between h16.
-  term_state(rd_next_suffix){transition(rd_suffix, ':')}
+  term_state(rd_next_suffix) {
+    transition(rd_suffix, ':')
+  }
   // Accepts only the end-of-input, since we've read a full IP address.
   term_state(done) {
     // nop
   }
   fin();
+  // clang-format on
 }
 
 } // namespace caf::detail::parser

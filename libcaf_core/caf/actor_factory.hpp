@@ -23,7 +23,6 @@
 
 #include "caf/actor_addr.hpp"
 #include "caf/actor_system.hpp"
-#include "caf/detail/core_export.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/execution_unit.hpp"
 #include "caf/infer_handle.hpp"

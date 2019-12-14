@@ -25,6 +25,7 @@
 
 #include "caf/atom.hpp"
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/none.hpp"

@@ -25,6 +25,7 @@
 
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/downstream_manager.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/fwd.hpp"

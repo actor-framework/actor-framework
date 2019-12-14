@@ -7,10 +7,11 @@ option(BUILD_SHARED_LIBS "Build all modules as shared library" ON)
 
 # -- includes ------------------------------------------------------------------
 
-include(CheckCSourceCompiles) # Check whether compiler works
-include(CheckCSourceRuns)     # Check whether compiler produces binaries
-include(GNUInstallDirs)       # Sets default install paths
-include(GenerateExportHeader) # Auto-generates dllexport macros
+include(CMakePackageConfigHelpers) # For creating .cmake files
+include(CheckCSourceCompiles)      # Check whether compiler works
+include(CheckCSourceRuns)          # Check whether compiler produces binaries
+include(GNUInstallDirs)            # Sets default install paths
+include(GenerateExportHeader)      # Auto-generates dllexport macros
 
 # -- check whether we are running as CMake subdirectory ------------------------
 
@@ -573,7 +574,6 @@ install(EXPORT CAFTargets
         DESTINATION "${INSTALL_CAF_CMAKEDIR}"
         NAMESPACE caf::)
 
-include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
   "${CMAKE_CURRENT_BINARY_DIR}/CAFConfigVersion.cmake"
   VERSION ${CAF_VERSION}

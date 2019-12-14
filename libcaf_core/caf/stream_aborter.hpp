@@ -20,6 +20,7 @@
 
 #include "caf/actor_addr.hpp"
 #include "caf/attachable.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/stream_slot.hpp"
 
