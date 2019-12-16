@@ -70,7 +70,7 @@ T get_or(const settings& xs, string_view name, T default_value) {
   auto result = get_if<T>(&xs, name);
   if (result)
     return std::move(*result);
-  return std::move(default_value);
+  return default_value;
 }
 
 CAF_CORE_EXPORT std::string
