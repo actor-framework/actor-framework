@@ -346,7 +346,7 @@ CAF_TEST(ranges can use signed integers) {
     CAF_FAIL("expected expression to produce to an error");                    \
   } else {                                                                     \
     auto& err = res.error();                                                   \
-    CAF_CHECK_EQUAL(err.category(), atom("parser"));                           \
+    CAF_CHECK_EQUAL(err.category(), error_category<pec>::value);               \
     CAF_CHECK_EQUAL(err.code(), static_cast<uint8_t>(enum_value));             \
   }
 

@@ -32,15 +32,6 @@ test_actor_clock::time_point test_actor_clock::now() const noexcept {
   return current_time;
 }
 
-test_actor_clock::duration_type
-test_actor_clock::difference(atom_value measurement, long units, time_point t0,
-                             time_point t1) const noexcept {
-  auto i = time_per_unit.find(measurement);
-  if (i != time_per_unit.end())
-    return units * i->second;
-  return t0 == t1 ? duration_type{1} : t1 - t0;
-}
-
 bool test_actor_clock::trigger_timeout() {
   CAF_LOG_TRACE(CAF_ARG2("schedule.size", schedule_.size()));
   if (schedule_.empty())

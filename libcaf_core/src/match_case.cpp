@@ -24,8 +24,4 @@ match_case::~match_case() {
   // nop
 }
 
-match_case::match_case(uint32_t tt) : token_(tt) {
-  // nop
-}
-
 } // namespace caf

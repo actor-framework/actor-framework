@@ -44,7 +44,7 @@ adder::behavior_type calculator_master(adder::pointer self) {
 
 void caf_main(actor_system& system) {
   auto f = make_function_view(system.spawn(calculator_master));
-  cout << "12 + 13 = " << f(add_atom::value, 12, 13) << endl;
+  cout << "12 + 13 = " << f(add_atom_v, 12, 13) << endl;
 }
 
 CAF_MAIN()

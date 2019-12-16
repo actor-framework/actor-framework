@@ -22,6 +22,8 @@
 
 #include "caf/test/dsl.hpp"
 
+#include <numeric>
+
 #include "caf/event_based_actor.hpp"
 #include "caf/policy/fan_in_responses.hpp"
 

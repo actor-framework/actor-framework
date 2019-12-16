@@ -28,7 +28,6 @@
 #include <unordered_map>
 
 #include "caf/abstract_actor.hpp"
-#include "caf/atom.hpp"
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/arg_wrapper.hpp"
@@ -115,7 +114,7 @@ public:
 
     event& operator=(const event&) = default;
 
-    event(unsigned lvl, unsigned line, atom_value cat, string_view full_fun,
+    event(unsigned lvl, unsigned line, string_view cat, string_view full_fun,
           string_view fun, string_view fn, std::string msg, std::thread::id t,
           actor_id a, timestamp ts);
 
@@ -128,7 +127,7 @@ public:
     unsigned line_number;
 
     /// Name of the category (component) logging the event.
-    atom_value category_name;
+    string_view category_name;
 
     /// Name of the current function as reported by `__PRETTY_FUNCTION__`.
     string_view pretty_fun;
@@ -230,7 +229,7 @@ public:
 
   /// Returns whether the logger is configured to accept input for given
   /// component and log level.
-  bool accepts(unsigned level, atom_value component_name);
+  bool accepts(unsigned level, string_view component_name);
 
   /// Returns the output format used for the log file.
   const line_format& file_format() const {
@@ -261,9 +260,6 @@ public:
 
   /// Renders the name of a fully qualified function.
   static void render_fun_name(std::ostream& out, const event& x);
-
-  /// Renders the difference between `t0` and `tn` in milliseconds.
-  static void render_time_diff(std::ostream& out, timestamp t0, timestamp tn);
 
   /// Renders the date of `x` in ISO 8601 format.
   static void render_date(std::ostream& out, timestamp x);
@@ -347,7 +343,7 @@ private:
   config cfg_;
 
   // Filters events by component name.
-  std::vector<atom_value> component_blacklist;
+  std::vector<std::string> component_blacklist;
 
   // References the parent system.
   actor_system& system_;
@@ -414,8 +410,8 @@ CAF_CORE_EXPORT bool operator==(const logger::field& x, const logger::field& y);
 #define CAF_CAT(a, b) a##b
 
 #define CAF_LOG_MAKE_EVENT(aid, component, loglvl, message)                    \
-  ::caf::logger::event(loglvl, __LINE__, caf::atom(component), CAF_PRETTY_FUN, \
-                       __func__, caf::logger::skip_path(__FILE__),             \
+  ::caf::logger::event(loglvl, __LINE__, component, CAF_PRETTY_FUN, __func__,  \
+                       caf::logger::skip_path(__FILE__),                       \
                        (::caf::logger::line_builder{} << message).get(),       \
                        ::std::this_thread::get_id(), aid,                      \
                        ::caf::make_timestamp())
@@ -436,7 +432,7 @@ CAF_CORE_EXPORT bool operator==(const logger::field& x, const logger::field& y);
   do {                                                                         \
     auto CAF_UNIFYN(caf_logger) = caf::logger::current_logger();               \
     if (CAF_UNIFYN(caf_logger) != nullptr                                      \
-        && CAF_UNIFYN(caf_logger)->accepts(loglvl, caf::atom(component)))      \
+        && CAF_UNIFYN(caf_logger)->accepts(loglvl, component))                 \
       CAF_UNIFYN(caf_logger)                                                   \
         ->log(CAF_LOG_MAKE_EVENT(CAF_UNIFYN(caf_logger)->thread_local_aid(),   \
                                  component, loglvl, message));                 \

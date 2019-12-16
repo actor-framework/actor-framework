@@ -38,7 +38,6 @@ const char* type_names[] {
   "integer",
   "boolean",
   "real",
-  "atom",
   "timespan",
   "uri",
   "string",

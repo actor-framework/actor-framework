@@ -52,8 +52,8 @@ bool blocking_actor::accept_one_cond::post() {
 }
 
 blocking_actor::blocking_actor(actor_config& cfg)
-    : super(cfg.add_flag(local_actor::is_blocking_flag)),
-      mailbox_(unit, unit, unit) {
+  : super(cfg.add_flag(local_actor::is_blocking_flag)),
+    mailbox_(unit, unit, unit) {
   // nop
 }
 
@@ -95,40 +95,41 @@ void blocking_actor::launch(execution_unit*, bool, bool hide) {
   if (!hide)
     register_at_system();
   home_system().inc_detached_threads();
-  std::thread([](strong_actor_ptr ptr) {
-    // actor lives in its own thread
-    detail::set_thread_name("caf.actor");
-    ptr->home_system->thread_started();
-    auto this_ptr = ptr->get();
-    CAF_ASSERT(dynamic_cast<blocking_actor*>(this_ptr) != nullptr);
-    auto self = static_cast<blocking_actor*>(this_ptr);
-    CAF_SET_LOGGER_SYS(ptr->home_system);
-    CAF_PUSH_AID_FROM_PTR(self);
-    self->initialize();
-    error rsn;
-#   ifndef CAF_NO_EXCEPTIONS
-    try {
+  std::thread(
+    [](strong_actor_ptr ptr) {
+      // actor lives in its own thread
+      detail::set_thread_name("caf.actor");
+      ptr->home_system->thread_started();
+      auto this_ptr = ptr->get();
+      CAF_ASSERT(dynamic_cast<blocking_actor*>(this_ptr) != nullptr);
+      auto self = static_cast<blocking_actor*>(this_ptr);
+      CAF_SET_LOGGER_SYS(ptr->home_system);
+      CAF_PUSH_AID_FROM_PTR(self);
+      self->initialize();
+      error rsn;
+#ifndef CAF_NO_EXCEPTIONS
+      try {
+        self->act();
+        rsn = self->fail_state_;
+      } catch (...) {
+        rsn = exit_reason::unhandled_exception;
+      }
+      try {
+        self->on_exit();
+      } catch (...) {
+        // simply ignore exception
+      }
+#else
       self->act();
       rsn = self->fail_state_;
-    }
-    catch (...) {
-      rsn = exit_reason::unhandled_exception;
-    }
-    try {
       self->on_exit();
-    }
-    catch (...) {
-      // simply ignore exception
-    }
-#   else
-    self->act();
-    rsn = self->fail_state_;
-    self->on_exit();
-#   endif
-    self->cleanup(std::move(rsn), self->context());
-    ptr->home_system->thread_terminates();
-    ptr->home_system->dec_detached_threads();
-  }, strong_actor_ptr{ctrl()}).detach();
+#endif
+      self->cleanup(std::move(rsn), self->context());
+      ptr->home_system->thread_terminates();
+      ptr->home_system->dec_detached_threads();
+    },
+    strong_actor_ptr{ctrl()})
+    .detach();
 }
 
 blocking_actor::receive_while_helper
@@ -228,8 +229,7 @@ blocking_actor::mailbox_visitor::operator()(mailbox_element& x) {
   return result;
 }
 
-void blocking_actor::receive_impl(receive_cond& rcc,
-                                  message_id mid,
+void blocking_actor::receive_impl(receive_cond& rcc, message_id mid,
                                   detail::blocking_behavior& bhvr) {
   CAF_LOG_TRACE(CAF_ARG(mid));
   // Set to `true` by the visitor when done.
@@ -280,7 +280,7 @@ mailbox_element_ptr blocking_actor::dequeue() {
   auto& qs = mailbox().queue().queues();
   auto result = get<mailbox_policy::urgent_queue_index>(qs).take_front();
   if (!result)
-   result = get<mailbox_policy::normal_queue_index>(qs).take_front();
+    result = get<mailbox_policy::normal_queue_index>(qs).take_front();
   CAF_ASSERT(result != nullptr);
   return result;
 }
@@ -314,13 +314,11 @@ size_t blocking_actor::attach_functor(const actor_addr& x) {
 }
 
 size_t blocking_actor::attach_functor(const strong_actor_ptr& ptr) {
-  using wait_for_atom = atom_constant<atom("waitFor")>;
   if (!ptr)
     return 0;
   actor self{this};
-  ptr->get()->attach_functor([=](const error&) {
-    anon_send(self, wait_for_atom::value);
-  });
+  auto f = [self](const error&) { caf::anon_send(self, wait_for_atom_v); };
+  ptr->get()->attach_functor(std::move(f));
   return 1;
 }
 

@@ -18,6 +18,8 @@
 
 #include "caf/type_erased_value.hpp"
 
+#include "caf/error.hpp"
+
 namespace caf {
 
 type_erased_value::~type_erased_value() {
@@ -31,6 +33,14 @@ bool type_erased_value::matches(uint16_t nr, const std::type_info* ptr) const {
   if (nr == 0)
     return ptr != nullptr ? *tp.second == *ptr : false;
   return true;
+}
+
+error inspect(serializer& f, const type_erased_value& x) {
+  return x.save(f);
+}
+
+error inspect(deserializer& f, type_erased_value& x) {
+  return x.load(f);
 }
 
 } // namespace caf

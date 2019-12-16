@@ -23,7 +23,6 @@
 #include <functional>
 #include <string>
 
-#include "caf/atom.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
@@ -48,7 +47,7 @@ public:
 
     virtual size_t hash_code() const noexcept = 0;
 
-    virtual atom_value implementation_id() const noexcept = 0;
+    virtual uint8_t implementation_id() const noexcept = 0;
 
     virtual int compare(const data& other) const noexcept = 0;
 
@@ -72,7 +71,7 @@ public:
     static constexpr size_t host_id_size = 20;
 
     /// Identifies this data implementation type.
-    static constexpr atom_value class_id = atom("default");
+    static constexpr uint8_t class_id = 1;
 
     // -- member types ---------------------------------------------------------
 
@@ -110,7 +109,7 @@ public:
 
     size_t hash_code() const noexcept override;
 
-    atom_value implementation_id() const noexcept override;
+    uint8_t implementation_id() const noexcept override;
 
     int compare(const data& other) const noexcept override;
 
@@ -138,7 +137,7 @@ public:
     // -- constants ------------------------------------------------------------
 
     /// Identifies this data implementation type.
-    static constexpr atom_value class_id = atom("uri");
+    static constexpr uint8_t class_id = 2;
 
     // -- constructors, destructors, and assignment operators ------------------
 
@@ -158,7 +157,7 @@ public:
 
     size_t hash_code() const noexcept override;
 
-    atom_value implementation_id() const noexcept override;
+    uint8_t implementation_id() const noexcept override;
 
     int compare(const data& other) const noexcept override;
 

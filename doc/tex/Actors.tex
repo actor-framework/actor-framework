@@ -227,7 +227,7 @@ be overloaded only by their return type, interfaces cannot accept one input
 twice (possibly mapping it to different outputs). The example below defines a
 messaging interface for a simple calculator.
 
-\cppexample[17-21]{message_passing/calculator}
+\cppexample[17-18]{message_passing/calculator}
 
 It is not required to create a type alias such as \lstinline^calculator_actor^,
 but it makes dealing with statically typed actors much easier. Also, a central
@@ -277,11 +277,11 @@ Both statically and dynamically typed actors are spawned from an
 function either takes a function as first argument or a class as first template
 parameter. For example, the following functions and classes represent actors.
 
-\cppexample[24-29]{message_passing/calculator}
+\cppexample[21-26]{message_passing/calculator}
 
 Spawning an actor for each implementation is illustrated below.
 
-\cppexample[140-145]{message_passing/calculator}
+\cppexample[123-128]{message_passing/calculator}
 
 Additional arguments to \lstinline^spawn^ are passed to the constructor of a
 class or used as additional function arguments, respectively. In the example
@@ -317,7 +317,7 @@ and illustrate one blocking actor and two event-based actors (statically and
 dynamically typed).
 
 \clearpage
-\cppexample[31-72]{message_passing/calculator}
+\cppexample[28-56]{message_passing/calculator}
 
 \clearpage
 \subsection{Class-based Actors}
@@ -343,7 +343,7 @@ behaviors~\see{composable-behavior} that works well with inheritance. The
 following three examples implement the forward declarations shown in
 \sref{spawn}.
 
-\cppexample[74-108]{message_passing/calculator}
+\cppexample[58-92]{message_passing/calculator}
 
 \clearpage
 \subsection{Stateful Actors}
@@ -405,7 +405,7 @@ Any composable (or composed) behavior with no pure virtual member functions can
 be spawned directly through an actor system by calling
 \lstinline^system.spawn<...>()^, as shown below.
 
-\cppexample[20-52]{composition/calculator_behavior}
+\cppexample[20-45]{composition/calculator_behavior}
 
 \clearpage
 
@@ -435,7 +435,7 @@ the actor has already exited. Otherwise, the actor will execute it as part of
 its termination. The following example attaches a function object to actors for
 printing a custom string on exit.
 
-\cppexample[46-50]{broker/simple_broker}
+\cppexample[42-47]{broker/simple_broker}
 
 It is possible to attach code to remote actors. However, the cleanup code will
 run on the local machine.

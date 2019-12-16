@@ -110,7 +110,7 @@ hard-coded defaults. Users can add any number of custom program options by
 implementing a subtype of \lstinline^actor_system_config^. The example below
 adds three options to the ``global'' category.
 
-\cppexample[222-234]{remoting/distributed_calculator}
+\cppexample[206-218]{remoting/distributed_calculator}
 
 We create a new ``global'' category in  \lstinline^custom_options_}^. Each
 following call to \lstinline^add^ then appends individual options to the
@@ -207,7 +207,7 @@ name. In particular, this enables spawning of actors on a different node
 \see{remote-spawn}. For our example configuration, we consider the following
 simple \lstinline^calculator^ actor.
 
-\cppexample[33-39]{remoting/remote_spawn}
+\cppexample[33-34]{remoting/remote_spawn}
 
 Adding the calculator actor type to our config is achieved by calling
 \lstinline^add_actor_type<T>^. Note that adding an actor type in this way
@@ -216,7 +216,7 @@ implicitly calls \lstinline^add_message_type<T>^ for typed actors
 serializable and also enables remote nodes to spawn calculators anywhere in the
 distributed actor system (assuming all nodes use the same config).
 
-\cppexample[99-101,106-106,110-101]{remoting/remote_spawn}
+\cppexample[98-109]{remoting/remote_spawn}
 
 Our final example illustrates how to spawn a \lstinline^calculator^ locally by
 using its type name. Because the dynamic type name lookup can fail and the

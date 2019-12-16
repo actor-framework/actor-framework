@@ -21,6 +21,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <numeric>
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"

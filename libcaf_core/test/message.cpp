@@ -16,21 +16,18 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <map>
-#include <vector>
-#include <string>
-#include <numeric>
-#include <iostream>
+#define CAF_SUITE message
 
-#include <set>
-#include <unordered_set>
+#include "caf/message.hpp"
 
-#include "caf/config.hpp"
-
-#define CAF_SUITE message_operations
 #include "caf/test/unit_test.hpp"
 
-#include "caf/all.hpp"
+#include "caf/message_handler.hpp"
+
+#include <map>
+#include <numeric>
+#include <string>
+#include <vector>
 
 using std::map;
 using std::string;
@@ -49,11 +46,6 @@ CAF_TEST(apply) {
   auto m = make_message(42);
   m.apply(f1);
   m.apply(f2);
-}
-
-CAF_TEST(type_token) {
-  auto m1 = make_message(get_atom::value);
-  CAF_CHECK_EQUAL(m1.type_token(), make_type_token<get_atom>());
 }
 
 namespace {
@@ -149,4 +141,12 @@ CAF_TEST(arrays_to_string) {
   tmp.value[0][1] = 100;
   CAF_CHECK_EQUAL(to_string(msg2), "([[1, 10], [2, 20], [3, 30], [4, 40]])");
   CAF_CHECK_EQUAL(msg_as_string(s3{}), "([1, 2, 3, 4])");
+}
+
+CAF_TEST(match_elements exposes element types) {
+  auto msg = make_message(put_atom_v, "foo", int64_t{123});
+  CAF_CHECK((msg.match_element<put_atom>(0)));
+  CAF_CHECK((msg.match_element<string>(1)));
+  CAF_CHECK((msg.match_element<int64_t>(2)));
+  CAF_CHECK((msg.match_elements<put_atom, string, int64_t>()));
 }

@@ -21,8 +21,6 @@
 #include <algorithm>
 #include <ctime>
 
-#include "caf/atom.hpp"
-
 namespace {
 
 void escape(std::string& result, char c) {
@@ -60,12 +58,6 @@ void stringification_inspector::sep() {
       default:
         result_ += ", ";
     }
-}
-
-void stringification_inspector::consume(atom_value x) {
-  result_ += '\'';
-  result_ += to_string(x);
-  result_ += '\'';
 }
 
 void stringification_inspector::consume(string_view str) {

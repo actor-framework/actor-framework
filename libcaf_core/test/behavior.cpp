@@ -33,10 +33,6 @@
 #include "caf/make_type_erased_tuple_view.hpp"
 
 using namespace caf;
-using namespace std;
-
-using hi_atom = atom_constant<atom("hi")>;
-using ho_atom = atom_constant<atom("ho")>;
 
 namespace {
 

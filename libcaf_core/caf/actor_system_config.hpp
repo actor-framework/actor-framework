@@ -74,10 +74,9 @@ public:
 
   using portable_name_map = hash_map<std::type_index, std::string>;
 
-  using error_renderer
-    = std::function<std::string(uint8_t, atom_value, const message&)>;
+  using error_renderer = std::function<std::string(uint8_t, const message&)>;
 
-  using error_renderer_map = hash_map<atom_value, error_renderer>;
+  using error_renderer_map = hash_map<uint8_t, error_renderer>;
 
   using group_module_factory = std::function<group_module*()>;
 
@@ -188,15 +187,15 @@ public:
 
   /// Enables the actor system to convert errors of this error category
   /// to human-readable strings via `renderer`.
-  actor_system_config& add_error_category(atom_value x, error_renderer y);
+  actor_system_config& add_error_category(uint8_t category, error_renderer f);
 
   /// Enables the actor system to convert errors of this error category
   /// to human-readable strings via `to_string(T)`.
   template <class T>
-  actor_system_config& add_error_category(atom_value category) {
+  actor_system_config&
+  add_error_category(uint8_t category, string_view category_name) {
     auto f = [=](uint8_t val, const std::string& ctx) -> std::string {
-      std::string result;
-      result = to_string(category);
+      std::string result{category_name.begin(), category_name.end()};
       result += ": ";
       result += to_string(static_cast<T>(val));
       if (!ctx.empty()) {
@@ -206,7 +205,7 @@ public:
       }
       return result;
     };
-    return add_error_category(category, f);
+    return add_error_category(category, error_renderer{f});
   }
 
   /// Loads module `T` with optional template parameters `Ts...`.
@@ -331,11 +330,11 @@ public:
 
   static std::string render(const error& err);
 
-  static std::string render_sec(uint8_t, atom_value, const message&);
+  static std::string render_sec(uint8_t, const message&);
 
-  static std::string render_exit_reason(uint8_t, atom_value, const message&);
+  static std::string render_exit_reason(uint8_t, const message&);
 
-  static std::string render_pec(uint8_t, atom_value, const message&);
+  static std::string render_pec(uint8_t, const message&);
 
   // -- config file parsing ----------------------------------------------------
 
@@ -422,7 +421,7 @@ CAF_CORE_EXPORT const settings& content(const actor_system_config& cfg);
 /// Tries to retrieve the value associated to `name` from `cfg`.
 /// @relates actor_system_config
 template <class T>
-optional<T> get_if(const actor_system_config* cfg, string_view name) {
+auto get_if(const actor_system_config* cfg, string_view name) {
   return get_if<T>(&content(*cfg), name);
 }
 

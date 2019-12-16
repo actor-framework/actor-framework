@@ -31,8 +31,6 @@ using std::endl;
 
 namespace {
 
-using down_atom = atom_constant<atom("down")>;
-
 struct fixture {
   actor_system_config cfg;
 

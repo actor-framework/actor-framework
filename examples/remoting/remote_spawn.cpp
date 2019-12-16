@@ -7,31 +7,28 @@
 // Run client at the same host:
 // - remote_spawn -H localhost -p 4242
 
-// Manual refs: 33-39, 99-101,106,110 (ConfiguringActorApplications)
-//              125-143 (RemoteSpawn)
+// Manual refs: 33-34, 98-109 (ConfiguringActorApplications)
+//              123-137 (RemoteSpawn)
 
 #include <array>
-#include <vector>
-#include <string>
-#include <sstream>
 #include <cassert>
-#include <iostream>
 #include <functional>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
-using std::cout;
 using std::cerr;
+using std::cout;
 using std::endl;
 using std::string;
 
 using namespace caf;
 
 namespace {
-
-using add_atom = atom_constant<atom("add")>;
-using sub_atom = atom_constant<atom("sub")>;
 
 using calculator = typed_actor<replies_to<add_atom, int, int>::with<int>,
                                replies_to<sub_atom, int, int>::with<int>>;
@@ -45,7 +42,7 @@ calculator::behavior_type calculator_fun(calculator::pointer self) {
     [=](sub_atom, int a, int b) -> int {
       aout(self) << "received task from a remote node" << endl;
       return a - b;
-    }
+    },
   };
 }
 
@@ -62,10 +59,11 @@ string trim(string s) {
 // implements our main loop for reading user input
 void client_repl(function_view<calculator> f) {
   auto usage = [] {
-  cout << "Usage:" << endl
-       << "  quit                  : terminate program" << endl
-       << "  <x> + <y>             : adds two integers" << endl
-       << "  <x> - <y>             : subtracts two integers" << endl << endl;
+    cout << "Usage:" << endl
+         << "  quit                  : terminate program" << endl
+         << "  <x> + <y>             : adds two integers" << endl
+         << "  <x> - <y>             : subtracts two integers" << endl
+         << endl;
   };
   usage();
   // read next line, split it, and evaluate user input
@@ -91,8 +89,9 @@ void client_repl(function_view<calculator> f) {
     if (!x || !y || (words[1] != "+" && words[1] != "-"))
       usage();
     else
-      cout << " = " << (words[1] == "+" ? f(add_atom::value, *x, *y)
-                                        : f(sub_atom::value, *x, *y)) << "\n";
+      cout << " = "
+           << (words[1] == "+" ? f(add_atom_v, *x, *y) : f(sub_atom_v, *x, *y))
+           << "\n";
   }
 }
 
@@ -100,9 +99,9 @@ struct config : actor_system_config {
   config() {
     add_actor_type("calculator", calculator_fun);
     opt_group{custom_options_, "global"}
-    .add(port, "port,p", "set port")
-    .add(host, "host,H", "set node (ignored in server mode)")
-    .add(server_mode, "server-mode,s", "enable server mode");
+      .add(port, "port,p", "set port")
+      .add(host, "host,H", "set node (ignored in server mode)")
+      .add(server_mode, "server-mode,s", "enable server mode");
   }
   uint16_t port = 0;
   string host = "localhost";
@@ -112,12 +111,10 @@ struct config : actor_system_config {
 void server(actor_system& system, const config& cfg) {
   auto res = system.middleman().open(cfg.port);
   if (!res) {
-    cerr << "*** cannot open port: "
-         << system.render(res.error()) << endl;
+    cerr << "*** cannot open port: " << system.render(res.error()) << endl;
     return;
   }
-  cout << "*** running on port: "
-       << *res << endl
+  cout << "*** running on port: " << *res << endl
        << "*** press <enter> to shutdown server" << endl;
   getchar();
 }
@@ -125,18 +122,17 @@ void server(actor_system& system, const config& cfg) {
 void client(actor_system& system, const config& cfg) {
   auto node = system.middleman().connect(cfg.host, cfg.port);
   if (!node) {
-    cerr << "*** connect failed: "
-         << system.render(node.error()) << endl;
+    cerr << "*** connect failed: " << system.render(node.error()) << endl;
     return;
   }
-  auto type = "calculator"; // type of the actor we wish to spawn
-  auto args = make_message(); // arguments to construct the actor
+  auto type = "calculator";             // type of the actor we wish to spawn
+  auto args = make_message();           // arguments to construct the actor
   auto tout = std::chrono::seconds(30); // wait no longer than 30s
-  auto worker = system.middleman().remote_spawn<calculator>(*node, type,
-                                                            args, tout);
+  auto worker = system.middleman().remote_spawn<calculator>(*node, type, args,
+                                                            tout);
   if (!worker) {
-    cerr << "*** remote spawn failed: "
-         << system.render(worker.error()) << endl;
+    cerr << "*** remote spawn failed: " << system.render(worker.error())
+         << endl;
     return;
   }
   // start using worker in main loop

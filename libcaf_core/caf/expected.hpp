@@ -27,6 +27,7 @@
 
 #include "caf/deep_to_string.hpp"
 #include "caf/error.hpp"
+#include "caf/error_category.hpp"
 #include "caf/unifyn.hpp"
 #include "caf/unit.hpp"
 
@@ -92,8 +93,8 @@ public:
     construct(other);
   }
 
-  template <class Code, class E = enable_if_has_make_error_t<Code>>
-  expected(Code code) : engaged_(false) {
+  template <class Enum, uint8_t Category = error_category<Enum>::value>
+  expected(Enum code) : engaged_(false) {
     new (std::addressof(error_)) caf::error(make_error(code));
   }
 
@@ -168,8 +169,8 @@ public:
     return *this;
   }
 
-  template <class Code>
-  enable_if_has_make_error_t<Code, expected&> operator=(Code code) {
+  template <class Enum, uint8_t Category = error_category<Enum>::value>
+  expected& operator=(Enum code) {
     return *this = make_error(code);
   }
 
@@ -309,14 +310,14 @@ bool operator==(const error& x, const expected<T>& y) {
 }
 
 /// @relates expected
-template <class T, class E>
-enable_if_has_make_error_t<E, bool> operator==(const expected<T>& x, E y) {
+template <class T, class Enum, uint8_t = error_category<Enum>::value>
+bool operator==(const expected<T>& x, Enum y) {
   return x == make_error(y);
 }
 
 /// @relates expected
-template <class T, class E>
-enable_if_has_make_error_t<E, bool> operator==(E x, const expected<T>& y) {
+template <class Enum, class T, uint8_t = error_category<Enum>::value>
+bool operator==(Enum x, const expected<T>& y) {
   return y == make_error(x);
 }
 
@@ -352,14 +353,14 @@ bool operator!=(const error& x, const expected<T>& y) {
 }
 
 /// @relates expected
-template <class T, class E>
-enable_if_has_make_error_t<E, bool> operator!=(const expected<T>& x, E y) {
+template <class T, class Enum, uint8_t = error_category<Enum>::value>
+bool operator!=(const expected<T>& x, Enum y) {
   return !(x == y);
 }
 
 /// @relates expected
-template <class T, class E>
-enable_if_has_make_error_t<E, bool> operator!=(E x, const expected<T>& y) {
+template <class T, class Enum, uint8_t = error_category<Enum>::value>
+bool operator!=(Enum x, const expected<T>& y) {
   return !(x == y);
 }
 
@@ -390,8 +391,8 @@ public:
     // nop
   }
 
-  template <class Code, class E = enable_if_has_make_error_t<Code>>
-  expected(Code code) : error_(make_error(code)) {
+  template <class Enum, uint8_t = error_category<Enum>::value>
+  expected(Enum code) : error_(code) {
     // nop
   }
 

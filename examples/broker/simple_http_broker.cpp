@@ -13,7 +13,7 @@ using namespace caf::io;
 
 namespace {
 
-using tick_atom = atom_constant<atom("tick")>;
+CAF_MSG_TYPE_ADD_ATOM(tick_atom)
 
 constexpr const char http_ok[] = R"__(HTTP/1.1 200 OK
 Content-Type: text/plain
@@ -51,7 +51,7 @@ behavior server(broker* self) {
   self->set_down_handler([=](down_msg&) {
     ++*counter;
   });
-  self->delayed_send(self, std::chrono::seconds(1), tick_atom::value);
+  self->delayed_send(self, std::chrono::seconds(1), tick_atom_v);
   return {
     [=](const new_connection_msg& ncm) {
       auto worker = self->fork(connection_worker, ncm.handle);
@@ -61,7 +61,7 @@ behavior server(broker* self) {
     [=](tick_atom) {
       aout(self) << "Finished " << *counter << " requests per second." << endl;
       *counter = 0;
-      self->delayed_send(self, std::chrono::seconds(1), tick_atom::value);
+      self->delayed_send(self, std::chrono::seconds(1), tick_atom_v);
     }
   };
 }

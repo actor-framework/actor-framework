@@ -63,6 +63,12 @@ struct header {
   /// Identifies a receiver by name rather than ID.
   static const uint8_t named_receiver_flag = 0x01;
 
+  /// Identifies the config server.
+  static const uint64_t config_server_id = 1;
+
+  /// Identifies the spawn server.
+  static const uint64_t spawn_server_id = 2;
+
   /// Queries whether this header has the given flag.
   bool has(uint8_t flag) const {
     return (flags & flag) != 0;

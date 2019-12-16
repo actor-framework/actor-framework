@@ -19,47 +19,32 @@
 #pragma once
 
 #include <array>
-#include <numeric>
+#include <cstdint>
 #include <typeinfo>
 
-#include "caf/atom.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/type_list.hpp"
+#include "caf/fwd.hpp"
 #include "caf/type_nr.hpp"
 
 namespace caf::detail {
 
 struct meta_element {
-  atom_value v;
   uint16_t typenr;
   const std::type_info* type;
-  bool (*fun)(const meta_element&, const type_erased_tuple&, size_t);
 };
-
-CAF_CORE_EXPORT bool
-match_element(const meta_element&, const type_erased_tuple&, size_t);
-
-CAF_CORE_EXPORT bool
-match_atom_constant(const meta_element&, const type_erased_tuple&, size_t);
 
 template <class T, uint16_t TN = type_nr<T>::value>
 struct meta_element_factory {
   static meta_element create() {
-    return {static_cast<atom_value>(0), TN, nullptr, match_element};
+    return {TN, nullptr};
   }
 };
 
 template <class T>
 struct meta_element_factory<T, 0> {
   static meta_element create() {
-    return {static_cast<atom_value>(0), 0, &typeid(T), match_element};
-  }
-};
-
-template <atom_value V>
-struct meta_element_factory<atom_constant<V>, type_nr<atom_value>::value> {
-  static meta_element create() {
-    return {V, type_nr<atom_value>::value, nullptr, match_atom_constant};
+    return {0, &typeid(T)};
   }
 };
 
@@ -73,8 +58,5 @@ struct meta_elements<type_list<Ts...>> {
     // nop
   }
 };
-
-CAF_CORE_EXPORT bool
-try_match(const type_erased_tuple& xs, const meta_element* iter, size_t ps);
 
 } // namespace caf::detail

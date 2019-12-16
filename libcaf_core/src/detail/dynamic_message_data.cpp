@@ -24,22 +24,19 @@
 
 namespace caf::detail {
 
-dynamic_message_data::dynamic_message_data() : type_token_(0xFFFFFFFF) {
+dynamic_message_data::dynamic_message_data() {
   // nop
 }
 
 dynamic_message_data::dynamic_message_data(elements&& data)
-  : elements_(std::move(data)), type_token_(0xFFFFFFFF) {
-  for (auto& e : elements_)
-    add_to_type_token(e->type().first);
+  : elements_(std::move(data)) {
+  // nop
 }
 
 dynamic_message_data::dynamic_message_data(const dynamic_message_data& other)
-  : detail::message_data(other), type_token_(0xFFFFFFFF) {
-  for (auto& e : other.elements_) {
-    add_to_type_token(e->type().first);
+  : detail::message_data(other) {
+  for (auto& e : other.elements_)
     elements_.emplace_back(e->copy());
-  }
 }
 
 dynamic_message_data::~dynamic_message_data() {
@@ -68,10 +65,6 @@ dynamic_message_data::load(size_t pos, binary_deserializer& source) {
 
 size_t dynamic_message_data::size() const noexcept {
   return elements_.size();
-}
-
-uint32_t dynamic_message_data::type_token() const noexcept {
-  return type_token_;
 }
 
 auto dynamic_message_data::type(size_t pos) const noexcept -> rtti_pair {
@@ -107,16 +100,10 @@ dynamic_message_data::save(size_t pos, binary_serializer& sink) const {
 
 void dynamic_message_data::clear() {
   elements_.clear();
-  type_token_ = 0xFFFFFFFF;
 }
 
 void dynamic_message_data::append(type_erased_value_ptr x) {
-  add_to_type_token(x->type().first);
   elements_.emplace_back(std::move(x));
-}
-
-void dynamic_message_data::add_to_type_token(uint16_t typenr) {
-  type_token_ = (type_token_ << 6) | typenr;
 }
 
 void intrusive_ptr_add_ref(const dynamic_message_data* ptr) {

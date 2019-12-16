@@ -49,7 +49,7 @@ namespace stream {
 const timespan desired_batch_complexity = us(50);
 const timespan max_batch_delay = ms(5);
 const timespan credit_round_interval = ms(10);
-const atom_value credit_policy = atom("complexity");
+const string_view credit_policy = "complexity";
 
 namespace size_policy {
 
@@ -62,7 +62,7 @@ const int32_t buffer_capacity = 64 * 1024; // 64 KB
 
 namespace scheduler {
 
-const atom_value policy = atom("stealing");
+const string_view policy = "stealing";
 string_view profiling_output_file = "";
 const size_t max_threads = max(std::thread::hardware_concurrency(), 4u);
 const size_t max_throughput = std::numeric_limits<size_t>::max();
@@ -85,19 +85,19 @@ const timespan relaxed_sleep_duration = ms(10);
 namespace logger {
 
 string_view component_filter = "";
-const atom_value console = atom("none");
+const string_view console = "none";
 string_view console_format = "%m";
-const atom_value console_verbosity = atom("trace");
+const string_view console_verbosity = "trace";
 string_view file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
 string_view file_name = "actor_log_[PID]_[TIMESTAMP]_[NODE].log";
-const atom_value file_verbosity = atom("trace");
+const string_view file_verbosity = "trace";
 
 } // namespace logger
 
 namespace middleman {
 
 std::vector<std::string> app_identifiers{"generic-caf-app"};
-const atom_value network_backend = atom("default");
+const string_view network_backend = "default";
 const size_t max_consecutive_reads = 50;
 const size_t heartbeat_interval = 0;
 const size_t cached_udp_buffers = 10;

@@ -803,7 +803,7 @@ public:
   // -- timeout management -----------------------------------------------------
 
   /// Requests a new timeout and returns its ID.
-  uint64_t set_timeout(atom_value type, actor_clock::time_point x);
+  uint64_t set_timeout(std::string type, actor_clock::time_point x);
 
   // -- stream processing ------------------------------------------------------
 

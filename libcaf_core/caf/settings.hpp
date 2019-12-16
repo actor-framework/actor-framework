@@ -20,6 +20,7 @@
 
 #include "caf/config_value.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/move_if_not_ptr.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/optional.hpp"
 #include "caf/raise_error.hpp"
@@ -39,11 +40,10 @@ get_if(const settings* xs, string_view name);
 /// Tries to retrieve the value associated to `name` from `xs`.
 /// @relates config_value
 template <class T>
-optional<T> get_if(const settings* xs, string_view name) {
-  if (auto value = get_if(xs, name))
-    if (auto ptr = get_if<T>(value))
-      return *ptr;
-  return none;
+auto get_if(const settings* xs, string_view name) {
+  auto value = get_if(xs, name);
+  using result_type = decltype(get_if<T>(value));
+  return value ? get_if<T>(value) : result_type{};
 }
 
 /// Returns whether `xs` associates a value of type `T` to `name`.
@@ -59,8 +59,8 @@ bool holds_alternative(const settings& xs, string_view name) {
 template <class T>
 T get(const settings& xs, string_view name) {
   auto result = get_if<T>(&xs, name);
-  CAF_ASSERT(result != none);
-  return std::move(*result);
+  CAF_ASSERT(result);
+  return detail::move_if_not_ptr(result);
 }
 
 template <class T, class = typename std::enable_if<

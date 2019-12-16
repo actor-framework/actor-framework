@@ -97,7 +97,7 @@ manager::~manager() {
 void manager::start() {
   CAF_LOG_TRACE("");
   manager_ = make_middleman_actor(
-    system(), system().middleman().named_broker<io::basp_broker>(atom("BASP")));
+    system(), system().middleman().named_broker<io::basp_broker>("BASP"));
 }
 
 void manager::stop() {

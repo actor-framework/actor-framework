@@ -20,7 +20,6 @@
 
 #include "caf/detail/consumer.hpp"
 #include "caf/detail/parser/chars.hpp"
-#include "caf/detail/parser/read_atom.hpp"
 #include "caf/detail/parser/read_bool.hpp"
 #include "caf/detail/parser/read_floating_point.hpp"
 #include "caf/detail/parser/read_ipv4_address.hpp"
@@ -109,10 +108,6 @@ PARSE_IMPL(float, floating_point)
 PARSE_IMPL(double, floating_point)
 
 PARSE_IMPL(timespan, timespan)
-
-void parse(string_parser_state& ps, atom_value& x) {
-  parser::read_atom(ps, make_consumer(x), true);
-}
 
 void parse(string_parser_state& ps, uri& x) {
   uri_builder builder;

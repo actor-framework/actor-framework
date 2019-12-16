@@ -38,11 +38,8 @@ namespace {
 std::atomic<long> s_max_actor_instances;
 std::atomic<long> s_actor_instances;
 
-using a_atom = atom_constant<atom("a")>;
-using b_atom = atom_constant<atom("b")>;
-using c_atom = atom_constant<atom("c")>;
-using abc_atom = atom_constant<atom("abc")>;
-using name_atom = atom_constant<atom("name")>;
+CAF_MSG_TYPE_ADD_ATOM(abc_atom);
+CAF_MSG_TYPE_ADD_ATOM(name_atom);
 
 void inc_actor_instances() {
   long v1 = ++s_actor_instances;
@@ -116,7 +113,7 @@ actor spawn_event_testee2(scoped_actor& parent) {
         after(chrono::milliseconds(1)) >> [=] {
           CAF_MESSAGE("remaining: " << to_string(remaining));
           if (remaining == 1) {
-            send(parent, ok_atom::value);
+            send(parent, ok_atom_v);
             quit();
           }
           else become(wait4timeout(remaining - 1));
@@ -281,11 +278,11 @@ public:
 
   behavior make_behavior() override {
     for (int i = 0; i < 100; ++i) {
-      send(this, ok_atom::value);
+      send(this, ok_atom_v);
     }
     CAF_CHECK_EQUAL(mailbox().size(), 100u);
     for (int i = 0; i < 100; ++i) {
-      send(this, ok_atom::value);
+      send(this, ok_atom_v);
     }
     CAF_CHECK_EQUAL(mailbox().size(), 200u);
     return {};
@@ -347,7 +344,7 @@ CAF_TEST(detached_actors_and_schedulued_actors) {
   auto m = system.spawn<detached>(master);
   system.spawn(slave, m);
   system.spawn(slave, m);
-  self->send(m, ok_atom::value);
+  self->send(m, ok_atom_v);
 }
 
 CAF_TEST(self_receive_with_zero_timeout) {
@@ -432,19 +429,19 @@ CAF_TEST(function_spawn) {
   auto f = [](const string& name) -> behavior {
     return (
       [name](get_atom) {
-        return std::make_tuple(name_atom::value, name);
+        return std::make_tuple(name_atom_v, name);
       }
     );
   };
   auto a1 = system.spawn(f, "alice");
   auto a2 = system.spawn(f, "bob");
-  self->send(a1, get_atom::value);
+  self->send(a1, get_atom_v);
   self->receive (
     [&](name_atom, const string& name) {
       CAF_CHECK_EQUAL(name, "alice");
     }
   );
-  self->send(a2, get_atom::value);
+  self->send(a2, get_atom_v);
   self->receive (
     [&](name_atom, const string& name) {
       CAF_CHECK_EQUAL(name, "bob");
@@ -468,7 +465,7 @@ typed_testee::behavior_type testee() {
 CAF_TEST(typed_await) {
   scoped_actor self{system};
   auto f = make_function_view(system.spawn(testee));
-  CAF_CHECK_EQUAL(f(abc_atom::value), "abc");
+  CAF_CHECK_EQUAL(f(abc_atom_v), "abc");
 }
 
 // tests attach_functor() inside of an actor's constructor
@@ -479,7 +476,7 @@ CAF_TEST(constructor_attach) {
         : event_based_actor(cfg),
           buddy_(buddy) {
       attach_functor([=](const error& reason) {
-        send(buddy, ok_atom::value, reason);
+        send(buddy, ok_atom_v, reason);
       });
     }
 
@@ -520,7 +517,7 @@ CAF_TEST(constructor_attach) {
           CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
           if (++downs_ == 2)
             quit(reason);
-        }
+        },
       };
     }
 

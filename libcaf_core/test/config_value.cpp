@@ -31,17 +31,18 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/atom.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/bounds_checker.hpp"
 #include "caf/none.hpp"
 #include "caf/pec.hpp"
-#include "caf/variant.hpp"
 #include "caf/string_view.hpp"
+#include "caf/variant.hpp"
 
 using std::string;
 
 using namespace caf;
+
+using namespace std::string_literals;
 
 namespace {
 
@@ -77,18 +78,13 @@ config_value cfg_lst(Ts&&... xs) {
   return config_value{std::move(lst)};
 }
 
-// TODO: switch to std::operator""s when switching to C++14
-string operator"" _s(const char* str, size_t size) {
-  return string(str, size);
-}
-
 } // namespace
 
 CAF_TEST(default_constructed) {
   config_value x;
   CAF_CHECK_EQUAL(holds_alternative<int64_t>(x), true);
   CAF_CHECK_EQUAL(get<int64_t>(x), 0);
-  CAF_CHECK_EQUAL(x.type_name(), "integer"_s);
+  CAF_CHECK_EQUAL(x.type_name(), "integer"s);
 }
 
 CAF_TEST(positive integer) {
@@ -142,7 +138,7 @@ CAF_TEST(homogeneous list) {
   auto ys = config_value{integer_list{1, 2, 3}};
   CAF_CHECK_EQUAL(xs, ys);
   CAF_CHECK_EQUAL(to_string(xs), "[1, 2, 3]");
-  CAF_CHECK_EQUAL(xs.type_name(), "list"_s);
+  CAF_CHECK_EQUAL(xs.type_name(), "list"s);
   CAF_CHECK_EQUAL(holds_alternative<config_value::list>(xs), true);
   CAF_CHECK_EQUAL(holds_alternative<integer_list>(xs), true);
   CAF_CHECK_EQUAL(get<integer_list>(xs), integer_list({1, 2, 3}));
@@ -151,19 +147,19 @@ CAF_TEST(homogeneous list) {
 CAF_TEST(heterogeneous list) {
   auto xs_value = make_config_value_list(1, "two", 3.0);
   auto& xs = xs_value.as_list();
-  CAF_CHECK_EQUAL(xs_value.type_name(), "list"_s);
+  CAF_CHECK_EQUAL(xs_value.type_name(), "list"s);
   CAF_REQUIRE_EQUAL(xs.size(), 3u);
   CAF_CHECK_EQUAL(xs[0], 1);
-  CAF_CHECK_EQUAL(xs[1], "two"_s);
+  CAF_CHECK_EQUAL(xs[1], "two"s);
   CAF_CHECK_EQUAL(xs[2], 3.0);
 }
 
 CAF_TEST(convert_to_list) {
   config_value x{int64_t{42}};
-  CAF_CHECK_EQUAL(x.type_name(), "integer"_s);
+  CAF_CHECK_EQUAL(x.type_name(), "integer"s);
   CAF_CHECK_EQUAL(to_string(x), "42");
   x.convert_to_list();
-  CAF_CHECK_EQUAL(x.type_name(), "list"_s);
+  CAF_CHECK_EQUAL(x.type_name(), "list"s);
   CAF_CHECK_EQUAL(to_string(x), "[42]");
   x.convert_to_list();
   CAF_CHECK_EQUAL(to_string(x), "[42]");
@@ -174,8 +170,8 @@ CAF_TEST(append) {
   CAF_CHECK_EQUAL(to_string(x), "1");
   x.append(config_value{int64_t{2}});
   CAF_CHECK_EQUAL(to_string(x), "[1, 2]");
-  x.append(config_value{atom("foo")});
-  CAF_CHECK_EQUAL(to_string(x), "[1, 2, 'foo']");
+  x.append(config_value{"foo"});
+  CAF_CHECK_EQUAL(to_string(x), R"__([1, 2, "foo"])__");
 }
 
 CAF_TEST(homogeneous dictionary) {
@@ -193,7 +189,10 @@ CAF_TEST(homogeneous dictionary) {
     {"value-4", 4},
   };
   config_value xs_cv{xs};
-  CAF_CHECK_EQUAL(get_if<int64_t>(&xs, "value-1"), int64_t{100000});
+  if (auto val = get_if<int64_t>(&xs, "value-1"))
+    CAF_CHECK_EQUAL(*val, int64_t{100000});
+  else
+    CAF_FAIL("value-1 not an int64_t");
   CAF_CHECK_EQUAL(get_if<int32_t>(&xs, "value-1"), int32_t{100000});
   CAF_CHECK_EQUAL(get_if<int16_t>(&xs, "value-1"), none);
   CAF_CHECK_EQUAL(get<int64_t>(xs, "value-1"), 100000);
@@ -206,7 +205,7 @@ CAF_TEST(heterogeneous dictionary) {
   using string_list = std::vector<string>;
   auto xs = dict()
               .add("scheduler", dict()
-                                  .add("policy", config_value{atom("none")})
+                                  .add("policy", config_value{"none"})
                                   .add("max-threads", config_value{2})
                                   .make_cv())
               .add("nodes", dict()
@@ -215,9 +214,9 @@ CAF_TEST(heterogeneous dictionary) {
                               .make_cv())
 
               .make();
-  CAF_CHECK_EQUAL(get<atom_value>(xs, "scheduler.policy"), atom("none"));
+  CAF_CHECK_EQUAL(get<string>(xs, "scheduler.policy"), "none");
   CAF_CHECK_EQUAL(get<int64_t>(xs, "scheduler.max-threads"), 2);
-  CAF_CHECK_EQUAL(get_if<double>(&xs, "scheduler.max-threads"), none);
+  CAF_CHECK_EQUAL(get_if<double>(&xs, "scheduler.max-threads"), nullptr);
   string_list nodes{"sun", "venus", "mercury", "earth", "mars"};
   CAF_CHECK_EQUAL(get<string_list>(xs, "nodes.preload"), nodes);
 }
@@ -231,20 +230,19 @@ CAF_TEST(successful parsing) {
     auto x = config_value::parse(str);
     if (!x)
       CAF_FAIL("cannot parse " << str << ": assumed a result but error "
-               << to_string(x.error()));
+                               << to_string(x.error()));
     parsed = std::move(*x);
     return parsed;
   };
   using di = caf::dictionary<int>; // Dictionary-of-integers.
-  using ls = std::vector<string>; // List-of-strings.
-  using li = std::vector<int>; // List-of-integers.
-  using lli = std::vector<li>; // List-of-list-of-integers.
+  using ls = std::vector<string>;  // List-of-strings.
+  using li = std::vector<int>;     // List-of-integers.
+  using lli = std::vector<li>;     // List-of-list-of-integers.
   using std::chrono::milliseconds;
   CAF_CHECK_EQUAL(get<int64_t>(parse("123")), 123);
   CAF_CHECK_EQUAL(get<int64_t>(parse("+123")), 123);
   CAF_CHECK_EQUAL(get<int64_t>(parse("-1")), -1);
   CAF_CHECK_EQUAL(get<double>(parse("1.")), 1.);
-  CAF_CHECK_EQUAL(get<atom_value>(parse("'abc'")), atom("abc"));
   CAF_CHECK_EQUAL(get<string>(parse("\"abc\"")), "abc");
   CAF_CHECK_EQUAL(get<string>(parse("abc")), "abc");
   CAF_CHECK_EQUAL(get<li>(parse("[1, 2, 3]")), li({1, 2, 3}));
@@ -277,7 +275,7 @@ CAF_TEST(conversion to simple tuple) {
   CAF_REQUIRE(holds_alternative<tuple_type>(x));
   CAF_REQUIRE_NOT_EQUAL(get_if<tuple_type>(&x), none);
   CAF_CHECK_EQUAL(get<tuple_type>(x),
-                  std::make_tuple(size_t{42}, "hello world"_s));
+                  std::make_tuple(size_t{42}, "hello world"s));
 }
 
 CAF_TEST(conversion to nested tuple) {

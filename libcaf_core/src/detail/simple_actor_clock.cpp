@@ -30,12 +30,12 @@ simple_actor_clock::event::~event() {
 
 void simple_actor_clock::set_ordinary_timeout(time_point t,
                                               abstract_actor* self,
-                                              atom_value type, uint64_t id) {
+                                              std::string type, uint64_t id) {
   new_schedule_entry<ordinary_timeout>(t, self->ctrl(), type, id);
 }
 
 void simple_actor_clock::set_multi_timeout(time_point t, abstract_actor* self,
-                                           atom_value type, uint64_t id) {
+                                           std::string type, uint64_t id) {
   new_schedule_entry<multi_timeout>(t, self->ctrl(), type, id);
 }
 
@@ -45,8 +45,8 @@ void simple_actor_clock::set_request_timeout(time_point t, abstract_actor* self,
 }
 
 void simple_actor_clock::cancel_ordinary_timeout(abstract_actor* self,
-                                                 atom_value type) {
-  ordinary_timeout_cancellation tmp{self->id(), type};
+                                                 std::string type) {
+  ordinary_timeout_cancellation tmp{self->id(), std::move(type)};
   handle(tmp);
 }
 

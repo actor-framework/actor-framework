@@ -47,11 +47,6 @@ struct unbox_message_element<T, 0> {
   using type = T;
 };
 
-template <atom_value V>
-struct unbox_message_element<atom_constant<V>, 0> {
-  using type = atom_value;
-};
-
 template <>
 struct unbox_message_element<actor_control_block*, 0> {
   using type = strong_actor_ptr;

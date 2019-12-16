@@ -166,14 +166,6 @@ CAF_TEST(invalid timespans) {
   CAF_CHECK_EQUAL(read<timespan>("56m"), pec::unexpected_eof);
 }
 
-CAF_TEST(valid atom values) {
-  CAF_CHECK_EQUAL(read<atom_value>("foo"), atom("foo"));
-  CAF_CHECK_EQUAL(read<atom_value>("'foo'"), atom("foo"));
-  CAF_CHECK_EQUAL(read<atom_value>("foooooooooo"), pec::too_many_characters);
-  CAF_CHECK_EQUAL(read<atom_value>("foo,bar"), pec::trailing_character);
-  CAF_CHECK_EQUAL(read<atom_value>("$"), pec::unexpected_character);
-}
-
 CAF_TEST(strings) {
   CAF_CHECK_EQUAL(read<std::string>("    foo\t  "), "foo");
   CAF_CHECK_EQUAL(read<std::string>("  \"  foo\t\"  "), "  foo\t");
@@ -181,27 +173,20 @@ CAF_TEST(strings) {
 
 CAF_TEST(lists) {
   using int_list = std::vector<int>;
-  using atom_list = std::vector<atom_value>;
   using string_list = std::vector<std::string>;
   CAF_CHECK_EQUAL(read<int_list>("1"), int_list({1}));
   CAF_CHECK_EQUAL(read<int_list>("1, 2, 3"), int_list({1, 2, 3}));
   CAF_CHECK_EQUAL(read<int_list>("[1, 2, 3]"), int_list({1, 2, 3}));
-  CAF_CHECK_EQUAL(read<atom_list>("foo, bar, baz"),
-                  atom_list({atom("foo"), atom("bar"), atom("baz")}));
-  CAF_CHECK_EQUAL(read<atom_list>("'foo', bar, 'baz'"),
-                  atom_list({atom("foo"), atom("bar"), atom("baz")}));
-  CAF_CHECK_EQUAL(read<atom_list>("[ foo , 'bar', 'baz']    "),
-                  atom_list({atom("foo"), atom("bar"), atom("baz")}));
   CAF_CHECK_EQUAL(read<string_list>("a, b , \" c \""),
                   string_list({"a", "b", " c "}));
 }
 
 CAF_TEST(maps) {
-  using int_map = std::map<atom_value, int>;
-  CAF_CHECK_EQUAL(read<int_map>("a=1, 'b' = 42"),
-                  int_map({{atom("a"), 1}, {atom("b"), 42}}));
-  CAF_CHECK_EQUAL(read<int_map>("{   a  = 1  , 'b'   =    42   ,} \t "),
-                  int_map({{atom("a"), 1}, {atom("b"), 42}}));
+  using int_map = std::map<std::string, int>;
+  CAF_CHECK_EQUAL(read<int_map>(R"(a=1, "b" = 42)"),
+                  int_map({{"a", 1}, {"b", 42}}));
+  CAF_CHECK_EQUAL(read<int_map>(R"({   a  = 1  , b   =    42   ,} )"),
+                  int_map({{"a", 1}, {"b", 42}}));
 }
 
 CAF_TEST(uris) {

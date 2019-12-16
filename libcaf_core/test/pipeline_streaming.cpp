@@ -305,7 +305,7 @@ CAF_TEST(delayed_depth_2_pipeline_50_items) {
   disallow((upstream_msg::ack_open), from(snk).to(src));
   disallow((upstream_msg::forced_drop), from(_).to(src));
   CAF_MESSAGE("send 'ok' to trigger sink to handle open_stream_msg");
-  self->send(snk, ok_atom::value);
+  self->send(snk, ok_atom_v);
   expect((ok_atom), from(self).to(snk));
   expect((open_stream_msg), from(self).to(snk));
   expect((upstream_msg::ack_open), from(snk).to(src));

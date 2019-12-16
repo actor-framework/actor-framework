@@ -3,7 +3,7 @@
  * for both the blocking and the event-based API.                             *
 \******************************************************************************/
 
-// Manual refs: lines 19-21, 31-72, 74-108, 140-145 (Actor)
+// Manual refs: lines 17-18, 28-56, 58-92, 123-128 (Actor)
 
 #include <iostream>
 
@@ -13,9 +13,6 @@ using std::endl;
 using namespace caf;
 
 namespace {
-
-using add_atom = atom_constant<atom("add")>;
-using sub_atom = atom_constant<atom("sub")>;
 
 using calculator_actor = typed_actor<replies_to<add_atom, int, int>::with<int>,
                                      replies_to<sub_atom, int, int>::with<int>>;
@@ -31,43 +28,30 @@ class typed_calculator;
 // function-based, dynamically typed, event-based API
 behavior calculator_fun(event_based_actor*) {
   return {
-    [](add_atom, int a, int b) {
-      return a + b;
-    },
-    [](sub_atom, int a, int b) {
-      return a - b;
-    }
+    [](add_atom, int a, int b) { return a + b; },
+    [](sub_atom, int a, int b) { return a - b; },
   };
 }
 
 // function-based, dynamically typed, blocking API
 void blocking_calculator_fun(blocking_actor* self) {
   bool running = true;
-  self->receive_while(running) (
-    [](add_atom, int a, int b) {
-      return a + b;
-    },
-    [](sub_atom, int a, int b) {
-      return a - b;
-    },
+  self->receive_while(running)( //
+    [](add_atom, int a, int b) { return a + b; },
+    [](sub_atom, int a, int b) { return a - b; },
     [&](exit_msg& em) {
       if (em.reason) {
         self->fail_state(std::move(em.reason));
         running = false;
       }
-    }
-  );
+    });
 }
 
 // function-based, statically typed, event-based API
 calculator_actor::behavior_type typed_calculator_fun() {
   return {
-    [](add_atom, int a, int b) {
-      return a + b;
-    },
-    [](sub_atom, int a, int b) {
-      return a - b;
-    }
+    [](add_atom, int a, int b) { return a + b; },
+    [](sub_atom, int a, int b) { return a - b; },
   };
 }
 
@@ -119,19 +103,19 @@ void tester(scoped_actor& self, const Handle& hdl, int x, int y, Ts&&... xs) {
                << self->system().render(err) << endl;
   };
   // first test: x + y = z
-  self->request(hdl, infinite, add_atom::value, x, y).receive(
-    [&](int res1) {
-      aout(self) << x << " + " << y << " = " << res1 << endl;
-      // second test: x - y = z
-      self->request(hdl, infinite, sub_atom::value, x, y).receive(
-        [&](int res2) {
-          aout(self) << x << " - " << y << " = " << res2 << endl;
-        },
-        handle_err
-      );
-    },
-    handle_err
-  );
+  self->request(hdl, infinite, add_atom_v, x, y)
+    .receive(
+      [&](int res1) {
+        aout(self) << x << " + " << y << " = " << res1 << endl;
+        // second test: x - y = z
+        self->request(hdl, infinite, sub_atom_v, x, y)
+          .receive(
+            [&](int res2) {
+              aout(self) << x << " - " << y << " = " << res2 << endl;
+            },
+            handle_err);
+      },
+      handle_err);
   tester(self, std::forward<Ts>(xs)...);
 }
 

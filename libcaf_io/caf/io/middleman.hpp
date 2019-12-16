@@ -127,7 +127,7 @@ public:
   /// Returns the broker associated with `name` or creates a
   /// new instance of type `Impl`.
   template <class Impl>
-  actor named_broker(atom_value name) {
+  actor named_broker(const std::string& name) {
     auto i = named_brokers_.find(name);
     if (i != named_brokers_.end())
       return i->second;
@@ -152,7 +152,7 @@ public:
   /// associated to this `name`.
   /// @note Blocks the caller until `nid` responded to the lookup
   ///       or an error occurred.
-  strong_actor_ptr remote_lookup(atom_value name, const node_id& nid);
+  strong_actor_ptr remote_lookup(std::string name, const node_id& nid);
 
   /// @experimental
   template <class Handle>
@@ -326,7 +326,7 @@ private:
   // runs the backend
   std::thread thread_;
   // keeps track of "singleton-like" brokers
-  std::map<atom_value, actor> named_brokers_;
+  std::map<std::string, actor> named_brokers_;
   // actor offering asynchronous IO by managing this singleton instance
   middleman_actor manager_;
 };

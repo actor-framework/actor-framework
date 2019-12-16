@@ -18,6 +18,7 @@
 
 #include "caf/error.hpp"
 
+#include "caf/actor_system_config.hpp"
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/deserializer.hpp"
@@ -30,7 +31,7 @@ namespace caf {
 
 struct error::data {
   uint8_t code;
-  atom_value category;
+  uint8_t category;
   message context;
 };
 
@@ -73,12 +74,12 @@ error& error::operator=(const error& x) {
   return *this;
 }
 
-error::error(uint8_t x, atom_value y)
+error::error(uint8_t x, uint8_t y)
   : data_(x != 0 ? new data{x, y, none} : nullptr) {
   // nop
 }
 
-error::error(uint8_t x, atom_value y, message z)
+error::error(uint8_t x, uint8_t y, message z)
   : data_(x != 0 ? new data{x, y, std::move(z)} : nullptr) {
   // nop
 }
@@ -94,7 +95,7 @@ uint8_t error::code() const noexcept {
   return data_->code;
 }
 
-atom_value error::category() const noexcept {
+uint8_t error::category() const noexcept {
   CAF_ASSERT(data_ != nullptr);
   return data_->category;
 }
@@ -106,26 +107,26 @@ const message& error::context() const noexcept {
 
 int error::compare(const error& x) const noexcept {
   uint8_t x_code;
-  atom_value x_category;
+  uint8_t x_category;
   if (x) {
     x_code = x.data_->code;
     x_category = x.data_->category;
   } else {
     x_code = 0;
-    x_category = atom("");
+    x_category = 0;
   }
   return compare(x_code, x_category);
 }
 
-int error::compare(uint8_t x, atom_value y) const noexcept {
+int error::compare(uint8_t x, uint8_t y) const noexcept {
   uint8_t mx;
-  atom_value my;
+  uint8_t my;
   if (data_ != nullptr) {
     mx = data_->code;
     my = data_->category;
   } else {
     mx = 0;
-    my = atom("");
+    my = 0;
   }
   // all errors with default value are considered no error -> equal
   if (mx == x && x == 0)
@@ -158,7 +159,7 @@ uint8_t& error::code_ref() noexcept {
   return data_->code;
 }
 
-atom_value& error::category_ref() noexcept {
+uint8_t& error::category_ref() noexcept {
   CAF_ASSERT(data_ != nullptr);
   return data_->category;
 }
@@ -171,8 +172,7 @@ void error::init() {
 std::string to_string(const error& x) {
   if (!x)
     return "none";
-  return deep_to_string(meta::type_name("error"), x.code(), x.category(),
-                        meta::omittable_if_empty(), x.context());
+  return actor_system_config::render(x);
 }
 
 } // namespace caf

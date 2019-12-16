@@ -58,7 +58,7 @@ public:
     actor_system_config::parse(test::engine::argc(), test::engine::argv());
     set("middleman.manual-multiplexing", true);
     set("middleman.attach-utility-actors", true);
-    set("scheduler.policy", atom("testing"));
+    set("scheduler.policy", "testing");
   }
 
   static std::string data_dir() {

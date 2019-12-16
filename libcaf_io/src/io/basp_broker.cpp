@@ -106,8 +106,8 @@ behavior basp_broker::make_behavior() {
     if (res) {
       auto port = res->second;
       auto addrs = network::interfaces::list_addresses(false);
-      auto config_server = system().registry().get(atom("ConfigServ"));
-      send(actor_cast<actor>(config_server), put_atom::value,
+      auto config_server = system().registry().get("ConfigServ");
+      send(actor_cast<actor>(config_server), put_atom_v,
            "basp.default-connectivity-tcp",
            make_message(port, std::move(addrs)));
     }
@@ -117,7 +117,7 @@ behavior basp_broker::make_behavior() {
                                    defaults::middleman::heartbeat_interval);
   if (heartbeat_interval > 0) {
     CAF_LOG_DEBUG("enable heartbeat" << CAF_ARG(heartbeat_interval));
-    send(this, tick_atom::value, heartbeat_interval);
+    send(this, tick_atom_v, heartbeat_interval);
   }
   return behavior{
     // received from underlying broker implementation
@@ -161,19 +161,18 @@ behavior basp_broker::make_behavior() {
       }
     },
     // received from some system calls like whereis
-    [=](forward_atom, const node_id& dest_node, atom_value dest_name,
+    [=](forward_atom, const node_id& dest_node, uint64_t dest_id,
         const message& msg) -> result<message> {
       auto cme = current_mailbox_element();
       if (cme == nullptr || cme->sender == nullptr)
         return sec::invalid_argument;
       CAF_LOG_TRACE(CAF_ARG2("sender", cme->sender)
-                    << ", " << CAF_ARG(dest_node) << ", " << CAF_ARG(dest_name)
+                    << ", " << CAF_ARG(dest_node) << ", " << CAF_ARG(dest_id)
                     << ", " << CAF_ARG(msg));
       auto& sender = cme->sender;
       if (system().node() == sender->node())
         system().registry().put(sender->id(), sender);
-      if (!instance.dispatch(context(), sender, cme->stages, dest_node,
-                             static_cast<uint64_t>(dest_name),
+      if (!instance.dispatch(context(), sender, cme->stages, dest_node, dest_id,
                              basp::header::named_receiver_flag, cme->mid,
                              msg)) {
         detail::sync_request_bouncer srb{exit_reason::remote_link_unreachable};
@@ -221,8 +220,8 @@ behavior basp_broker::make_behavior() {
       auto& q = instance.queue();
       auto msg_id = q.new_id();
       q.push(context(), msg_id, ctrl(),
-             make_mailbox_element(nullptr, make_message_id(), {},
-                                  delete_atom::value, msg.handle));
+             make_mailbox_element(nullptr, make_message_id(), {}, delete_atom_v,
+                                  msg.handle));
     },
     // received from the message handler above for connection_closed_msg
     [=](delete_atom, connection_handle hdl) { connection_cleanup(hdl); },
@@ -233,8 +232,8 @@ behavior basp_broker::make_behavior() {
       auto& q = instance.queue();
       auto msg_id = q.new_id();
       q.push(context(), msg_id, ctrl(),
-             make_mailbox_element(nullptr, make_message_id(), {},
-                                  delete_atom::value, msg.handle));
+             make_mailbox_element(nullptr, make_message_id(), {}, delete_atom_v,
+                                  msg.handle));
     },
     // received from the message handler above for acceptor_closed_msg
     [=](delete_atom, accept_handle hdl) {
@@ -327,7 +326,7 @@ behavior basp_broker::make_behavior() {
     },
     [=](tick_atom, size_t interval) {
       instance.handle_heartbeat(context());
-      delayed_send(this, std::chrono::milliseconds{interval}, tick_atom::value,
+      delayed_send(this, std::chrono::milliseconds{interval}, tick_atom_v,
                    interval);
     }};
 }
@@ -484,8 +483,8 @@ void basp_broker::learned_new_node(const node_id& nid) {
         tself->become([=](spawn_atom, std::string& type, message& args)
                         -> delegated<strong_actor_ptr, std::set<std::string>> {
           CAF_LOG_TRACE(CAF_ARG(type) << CAF_ARG(args));
-          tself->delegate(actor_cast<actor>(std::move(config_serv)),
-                          get_atom::value, std::move(type), std::move(args));
+          tself->delegate(actor_cast<actor>(std::move(config_serv)), get_atom_v,
+                          std::move(type), std::move(args));
           return {};
         });
       },
@@ -501,10 +500,9 @@ void basp_broker::learned_new_node(const node_id& nid) {
   system().registry().put(tmp.id(), tmp_ptr);
   std::vector<strong_actor_ptr> stages;
   if (!instance.dispatch(context(), tmp_ptr, stages, nid,
-                         static_cast<uint64_t>(atom("SpawnServ")),
+                         basp::header::spawn_server_id,
                          basp::header::named_receiver_flag, make_message_id(),
-                         make_message(sys_atom::value, get_atom::value,
-                                      "info"))) {
+                         make_message(sys_atom_v, get_atom_v, "info"))) {
     CAF_LOG_ERROR("learned_new_node called, but no route to remote node"
                   << CAF_ARG(nid));
   }
@@ -532,11 +530,10 @@ void basp_broker::learned_new_node_indirectly(const node_id& nid) {
   auto sender = actor_cast<strong_actor_ptr>(tmp);
   system().registry().put(sender->id(), sender);
   std::vector<strong_actor_ptr> fwd_stack;
-  if (!instance.dispatch(context(), sender, fwd_stack, nid,
-                         static_cast<uint64_t>(atom("ConfigServ")),
-                         basp::header::named_receiver_flag, make_message_id(),
-                         make_message(get_atom::value,
-                                      "basp.default-connectivity-tcp"))) {
+  if (!instance.dispatch(
+        context(), sender, fwd_stack, nid, basp::header::config_server_id,
+        basp::header::named_receiver_flag, make_message_id(),
+        make_message(get_atom_v, "basp.default-connectivity-tcp"))) {
     CAF_LOG_ERROR("learned_new_node_indirectly called, but no route to nid");
   }
 }

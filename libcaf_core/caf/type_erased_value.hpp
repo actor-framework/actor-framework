@@ -23,7 +23,7 @@
 #include <typeinfo>
 
 #include "caf/detail/core_export.hpp"
-#include "caf/error.hpp"
+#include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
 #include "caf/rtti_pair.hpp"
 #include "caf/type_nr.hpp"
@@ -100,18 +100,14 @@ public:
 };
 
 /// @relates type_erased_value_impl
-inline auto inspect(serializer& f, const type_erased_value& x) {
-  return x.save(f);
-}
+CAF_CORE_EXPORT error inspect(serializer& f, const type_erased_value& x);
+
+/// @relates type_erased_value_impl
+CAF_CORE_EXPORT error inspect(deserializer& f, type_erased_value& x);
 
 /// @relates type_erased_value_impl
 inline auto inspect(binary_serializer& f, const type_erased_value& x) {
   return x.save(f);
-}
-
-/// @relates type_erased_value_impl
-inline auto inspect(deserializer& f, type_erased_value& x) {
-  return x.load(f);
 }
 
 /// @relates type_erased_value_impl

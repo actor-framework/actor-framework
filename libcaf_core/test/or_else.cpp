@@ -23,27 +23,28 @@
 
 #include "caf/all.hpp"
 
-#define ERROR_HANDLER                                                          \
-  [&](error& err) { CAF_FAIL(system.render(err)); }
+#define ERROR_HANDLER [&](error& err) { CAF_FAIL(system.render(err)); }
 
 using namespace caf;
 
 namespace {
 
-using a_atom = atom_constant<atom("a")>;
-using b_atom = atom_constant<atom("b")>;
-using c_atom = atom_constant<atom("c")>;
-
 message_handler handle_a() {
-  return [](a_atom) { return 1; };
+  return {
+    [](int8_t) { return "a"; },
+  };
 }
 
 message_handler handle_b() {
-  return [](b_atom) { return 2; };
+  return {
+    [](int16_t) { return "b"; },
+  };
 }
 
 message_handler handle_c() {
-  return [](c_atom) { return 3; };
+  return {
+    [](int32_t) { return "c"; },
+  };
 }
 
 struct fixture {
@@ -56,26 +57,16 @@ struct fixture {
 
   void run_testee(const actor& testee) {
     scoped_actor self{system};
-    self->request(testee, infinite, a_atom::value).receive(
-      [](int i) {
-        CAF_CHECK_EQUAL(i, 1);
-      },
-      ERROR_HANDLER
-    );
-    self->request(testee, infinite, b_atom::value).receive(
-      [](int i) {
-        CAF_CHECK_EQUAL(i, 2);
-      },
-      ERROR_HANDLER
-    );
-    self->request(testee, infinite, c_atom::value).receive(
-      [](int i) {
-        CAF_CHECK_EQUAL(i, 3);
-      },
-      ERROR_HANDLER
-    );
+    self->request(testee, infinite, int8_t{1})
+      .receive([](const std::string& str) { CAF_CHECK_EQUAL(str, "a"); },
+               ERROR_HANDLER);
+    self->request(testee, infinite, int16_t{1})
+      .receive([](const std::string& str) { CAF_CHECK_EQUAL(str, "b"); },
+               ERROR_HANDLER);
+    self->request(testee, infinite, int32_t{1})
+      .receive([](const std::string& str) { CAF_CHECK_EQUAL(str, "c"); },
+               ERROR_HANDLER);
     self->send_exit(testee, exit_reason::user_shutdown);
-    self->await_all_other_actors_done();
   }
 };
 
@@ -84,28 +75,22 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
 
 CAF_TEST(composition1) {
-  run_testee(
-    system.spawn([=] {
-      return handle_a().or_else(handle_b()).or_else(handle_c());
-    })
-  );
+  run_testee(system.spawn(
+    [=] { return handle_a().or_else(handle_b()).or_else(handle_c()); }));
 }
 
 CAF_TEST(composition2) {
-  run_testee(
-    system.spawn([=] {
-      return handle_a().or_else(handle_b()).or_else([](c_atom) { return 3; });
-    })
-  );
+  run_testee(system.spawn([=] {
+    return handle_a().or_else(handle_b()).or_else([](int32_t) { return "c"; });
+  }));
 }
 
 CAF_TEST(composition3) {
-  run_testee(
-    system.spawn([=] {
-      return message_handler{[](a_atom) { return 1; }}.
-             or_else(handle_b()).or_else(handle_c());
-    })
-  );
+  run_testee(system.spawn([=] {
+    return message_handler{[](int8_t) { return "a"; }}
+      .or_else(handle_b())
+      .or_else(handle_c());
+  }));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -55,10 +55,16 @@ public:
     // Registry setup.
     dref.proxies_->set_last_hop(&dref.last_hop_);
     // Get the local receiver.
-    if (dref.hdr_.has(basp::header::named_receiver_flag))
-      dst = sys.registry().get(static_cast<atom_value>(dref.hdr_.dest_actor));
-    else
+    if (dref.hdr_.has(basp::header::named_receiver_flag)) {
+      // TODO: consider replacing hacky workaround (requires changing BASP).
+      if (dref.hdr_.dest_actor == 1) {
+        dst = sys.registry().get("ConfigServ");
+      } else if (dref.hdr_.dest_actor == 2) {
+        dst = sys.registry().get("SpawnServ");
+      }
+    } else {
       dst = sys.registry().get(dref.hdr_.dest_actor);
+    }
     // Short circuit if we already know there's nothing to do.
     if (dst == nullptr && !mid.is_request()) {
       CAF_LOG_INFO("drop asynchronous remote message: unknown destination");
@@ -97,26 +103,21 @@ public:
     }
     // Intercept link messages. Forwarding actor proxies signalize linking
     // by sending link_atom/unlink_atom message with src == dest.
-    if (msg.type_token() == make_type_token<atom_value, strong_actor_ptr>()) {
+    if (msg.match_elements<link_atom, strong_actor_ptr>()) {
       const auto& ptr = msg.get_as<strong_actor_ptr>(1);
-      switch (static_cast<uint64_t>(msg.get_as<atom_value>(0))) {
-        default:
-          break;
-        case link_atom::uint_value(): {
-          if (ptr != nullptr)
-            static_cast<actor_proxy*>(ptr->get())->add_link(dst->get());
-          else
-            CAF_LOG_WARNING("received link message with invalid target");
-          return;
-        }
-        case unlink_atom::uint_value(): {
-          if (ptr != nullptr)
-            static_cast<actor_proxy*>(ptr->get())->remove_link(dst->get());
-          else
-            CAF_LOG_DEBUG("received unlink message with invalid target");
-          return;
-        }
-      }
+      if (ptr != nullptr)
+        static_cast<actor_proxy*>(ptr->get())->add_link(dst->get());
+      else
+        CAF_LOG_WARNING("received link message with invalid target");
+      return;
+    }
+    if (msg.match_elements<unlink_atom, strong_actor_ptr>()) {
+      const auto& ptr = msg.get_as<strong_actor_ptr>(1);
+      if (ptr != nullptr)
+        static_cast<actor_proxy*>(ptr->get())->remove_link(dst->get());
+      else
+        CAF_LOG_DEBUG("received unlink message with invalid target");
+      return;
     }
     // Ship the message.
     guard.disable();

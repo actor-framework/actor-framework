@@ -20,35 +20,34 @@
 
 #include "caf/forwarding_actor_proxy.hpp"
 
-#include "caf/send.hpp"
 #include "caf/locks.hpp"
 #include "caf/logger.hpp"
 #include "caf/mailbox_element.hpp"
+#include "caf/send.hpp"
 
 namespace caf {
 
 forwarding_actor_proxy::forwarding_actor_proxy(actor_config& cfg, actor dest)
-    : actor_proxy(cfg),
-      broker_(std::move(dest)) {
-  anon_send(broker_, monitor_atom::value, ctrl());
+  : actor_proxy(cfg), broker_(std::move(dest)) {
+  anon_send(broker_, monitor_atom_v, ctrl());
 }
 
 forwarding_actor_proxy::~forwarding_actor_proxy() {
-  anon_send(broker_, make_message(delete_atom::value, node(), id()));
+  anon_send(broker_, make_message(delete_atom_v, node(), id()));
 }
 
 void forwarding_actor_proxy::forward_msg(strong_actor_ptr sender,
                                          message_id mid, message msg,
                                          const forwarding_stack* fwd) {
-  CAF_LOG_TRACE(CAF_ARG(id()) << CAF_ARG(sender)
-                << CAF_ARG(mid) << CAF_ARG(msg));
+  CAF_LOG_TRACE(CAF_ARG(id())
+                << CAF_ARG(sender) << CAF_ARG(mid) << CAF_ARG(msg));
   if (msg.match_elements<exit_msg>())
     unlink_from(msg.get_as<exit_msg>(0).source);
   forwarding_stack tmp;
   shared_lock<detail::shared_spinlock> guard(broker_mtx_);
   if (broker_)
     broker_->enqueue(nullptr, make_message_id(),
-                     make_message(forward_atom::value, std::move(sender),
+                     make_message(forward_atom_v, std::move(sender),
                                   fwd != nullptr ? *fwd : tmp,
                                   strong_actor_ptr{ctrl()}, mid,
                                   std::move(msg)),
@@ -66,7 +65,7 @@ void forwarding_actor_proxy::enqueue(mailbox_element_ptr what,
 bool forwarding_actor_proxy::add_backlink(abstract_actor* x) {
   if (monitorable_actor::add_backlink(x)) {
     forward_msg(ctrl(), make_message_id(),
-                make_message(link_atom::value, x->ctrl()));
+                make_message(link_atom_v, x->ctrl()));
     return true;
   }
   return false;
@@ -75,7 +74,7 @@ bool forwarding_actor_proxy::add_backlink(abstract_actor* x) {
 bool forwarding_actor_proxy::remove_backlink(abstract_actor* x) {
   if (monitorable_actor::remove_backlink(x)) {
     forward_msg(ctrl(), make_message_id(),
-                make_message(unlink_atom::value, x->ctrl()));
+                make_message(unlink_atom_v, x->ctrl()));
     return true;
   }
   return false;

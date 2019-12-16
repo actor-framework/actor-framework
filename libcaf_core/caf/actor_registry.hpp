@@ -22,6 +22,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <unordered_map>
 
@@ -35,12 +36,12 @@
 
 namespace caf {
 
-/// A registry is used to associate actors to IDs or atoms (names). This
-/// allows a middleman to lookup actor handles after receiving actor IDs
-/// via the network and enables developers to use well-known names to
-/// identify important actors independent from their ID at runtime.
-/// Note that the registry does *not* contain all actors of an actor system.
-/// The middleman registers actors as needed.
+/// A registry is used to associate actors to IDs or names. This allows a
+/// middleman to lookup actor handles after receiving actor IDs via the network
+/// and enables developers to use well-known names to identify important actors
+/// independent from their ID at runtime. Note that the registry does *not*
+/// contain all actors of an actor system. The middleman registers actors as
+/// needed.
 class CAF_CORE_EXPORT actor_registry {
 public:
   friend class actor_system;
@@ -78,22 +79,22 @@ public:
 
   /// Returns the actor associated with `key` or `invalid_actor`.
   template <class T = strong_actor_ptr>
-  T get(atom_value key) const {
+  T get(const std::string& key) const {
     return actor_cast<T>(get_impl(key));
   }
 
   /// Associates given actor to `key`.
   template <class T>
-  void put(atom_value key, const T& value) {
+  void put(const std::string& key, const T& value) {
     // using reference here and before to allow putting a scoped_actor without
     // calling .ptr()
-    put_impl(key, actor_cast<strong_actor_ptr>(value));
+    put_impl(std::move(key), actor_cast<strong_actor_ptr>(value));
   }
 
   /// Removes a name mapping.
-  void erase(atom_value key);
+  void erase(const std::string& key);
 
-  using name_map = std::unordered_map<atom_value, strong_actor_ptr>;
+  using name_map = std::unordered_map<std::string, strong_actor_ptr>;
 
   name_map named_actors() const;
 
@@ -111,10 +112,10 @@ private:
   void put_impl(actor_id key, strong_actor_ptr val);
 
   /// Returns the actor associated with `key` or `invalid_actor`.
-  strong_actor_ptr get_impl(atom_value key) const;
+  strong_actor_ptr get_impl(const std::string& key) const;
 
   /// Associates given actor to `key`.
-  void put_impl(atom_value key, strong_actor_ptr value);
+  void put_impl(const std::string& key, strong_actor_ptr value);
 
   using entries = std::unordered_map<actor_id, strong_actor_ptr>;
 

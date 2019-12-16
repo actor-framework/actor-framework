@@ -22,9 +22,11 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string>
 
 #include "caf/detail/core_export.hpp"
+#include "caf/error_category.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf {
@@ -135,17 +137,9 @@ enum class sec : uint8_t {
 /// @relates sec
 CAF_CORE_EXPORT std::string to_string(sec);
 
-/// @relates sec
-CAF_CORE_EXPORT error make_error(sec);
-
-/// @relates sec
-CAF_CORE_EXPORT error make_error(sec, message);
-
-/// @relates sec
-template <class T, class... Ts>
-auto make_error(sec code, T&& x, Ts&&... xs) {
-  return make_error(code,
-                    make_message(std::forward<T>(x), std::forward<Ts>(xs)...));
-}
+template <>
+struct error_category<sec> {
+  static constexpr uint8_t value = 0;
+};
 
 } // namespace caf

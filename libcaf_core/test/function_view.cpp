@@ -34,17 +34,13 @@ using calculator = typed_actor<replies_to<int, int>::with<int>>;
 
 calculator::behavior_type adder() {
   return {
-    [](int x, int y) {
-      return x + y;
-    }
+    [](int x, int y) { return x + y; },
   };
 }
 
 calculator::behavior_type multiplier() {
   return {
-    [](int x, int y) {
-      return x * y;
-    }
+    [](int x, int y) { return x * y; },
   };
 }
 
@@ -54,7 +50,7 @@ calculator::behavior_type divider() {
       if (y == 0)
         return none;
       return x / y;
-    }
+    },
   };
 }
 
@@ -62,28 +58,21 @@ using doubler = typed_actor<replies_to<int>::with<int, int>>;
 
 doubler::behavior_type simple_doubler() {
   return {
-    [](int x) {
-      return std::make_tuple(x, x);
-    }
+    [](int x) { return std::make_tuple(x, x); },
   };
 }
 
-using cell = typed_actor<reacts_to<put_atom, int>,
-                         replies_to<get_atom>::with<int>>;
+using cell
+  = typed_actor<reacts_to<put_atom, int>, replies_to<get_atom>::with<int>>;
 
 struct cell_state {
   int value = 0;
 };
 
-cell::behavior_type
-simple_cell(cell::stateful_pointer<cell_state> self) {
+cell::behavior_type simple_cell(cell::stateful_pointer<cell_state> self) {
   return {
-    [=](put_atom, int val) {
-      self->state.value = val;
-    },
-    [=](get_atom) {
-      return self->state.value;
-    }
+    [=](put_atom, int val) { self->state.value = val; },
+    [=](get_atom) { return self->state.value; },
   };
 }
 
@@ -132,9 +121,9 @@ CAF_TEST(tuple_res_function_view) {
 
 CAF_TEST(cell_function_view) {
   auto f = make_function_view(system.spawn(simple_cell));
-  CAF_CHECK_EQUAL(f(get_atom::value), 0);
-  f(put_atom::value, 1024);
-  CAF_CHECK_EQUAL(f(get_atom::value), 1024);
+  CAF_CHECK_EQUAL(f(get_atom_v), 0);
+  f(put_atom_v, 1024);
+  CAF_CHECK_EQUAL(f(get_atom_v), 1024);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

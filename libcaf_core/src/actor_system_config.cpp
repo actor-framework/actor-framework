@@ -56,11 +56,9 @@ actor_system_config::actor_system_config()
   // add `vector<T>` and `stream<T>` for each statically known type
   add_message_type_impl<stream<actor>>("stream<@actor>");
   add_message_type_impl<stream<actor_addr>>("stream<@addr>");
-  add_message_type_impl<stream<atom_value>>("stream<@atom>");
   add_message_type_impl<stream<message>>("stream<@message>");
   add_message_type_impl<std::vector<actor>>("std::vector<@actor>");
   add_message_type_impl<std::vector<actor_addr>>("std::vector<@addr>");
-  add_message_type_impl<std::vector<atom_value>>("std::vector<@atom>");
   add_message_type_impl<std::vector<message>>("std::vector<@message>");
   add_message_type_impl<settings>("settings");
   add_message_type_impl<config_value::list>("std::vector<@config_value>");
@@ -84,10 +82,10 @@ actor_system_config::actor_system_config()
                    "maximum delay for partial batches")
     .add<timespan>(stream_credit_round_interval, "credit-round-interval",
                    "time between emitting credit")
-    .add<atom_value>("credit-policy",
-                     "selects an algorithm for credit computation");
+    .add<std::string>("credit-policy",
+                      "selects an algorithm for credit computation");
   opt_group{custom_options_, "scheduler"}
-    .add<atom_value>("policy", "'stealing' (default) or 'sharing'")
+    .add<std::string>("policy", "'stealing' (default) or 'sharing'")
     .add<size_t>("max-threads", "maximum number of worker threads")
     .add<size_t>("max-throughput", "nr. of messages actors can consume per run")
     .add<bool>("enable-profiling", "enables profiler output")
@@ -107,19 +105,20 @@ actor_system_config::actor_system_config()
     .add<timespan>("relaxed-sleep-duration",
                    "sleep duration between relaxed steal attempts");
   opt_group{custom_options_, "logger"}
-    .add<atom_value>("verbosity", "default verbosity for file and console")
+    .add<std::string>("verbosity", "default verbosity for file and console")
     .add<string>("file-name", "filesystem path of the log file")
     .add<string>("file-format", "line format for individual log file entries")
-    .add<atom_value>("file-verbosity", "file output verbosity")
-    .add<atom_value>("console", "std::clog output: none, colored, or uncolored")
+    .add<std::string>("file-verbosity", "file output verbosity")
+    .add<std::string>("console",
+                      "std::clog output: none, colored, or uncolored")
     .add<string>("console-format", "line format for printed log entries")
-    .add<atom_value>("console-verbosity", "console output verbosity")
-    .add<std::vector<atom_value>>("component-blacklist",
-                                  "excluded components for logging")
+    .add<std::string>("console-verbosity", "console output verbosity")
+    .add<std::vector<std::string>>("component-blacklist",
+                                   "excluded components for logging")
     .add<bool>("inline-output", "disable logger thread (for testing only!)");
   opt_group{custom_options_, "middleman"}
-    .add<atom_value>("network-backend",
-                     "either 'default' or 'asio' (if available)")
+    .add<std::string>("network-backend",
+                      "either 'default' or 'asio' (if available)")
     .add<std::vector<string>>("app-identifiers",
                               "valid application identifiers of this node")
     .add<string>("app-identifier", "DEPRECATED: use app-identifiers instead")
@@ -145,8 +144,10 @@ actor_system_config::actor_system_config()
     .add<string>(openssl_cafile, "cafile",
                  "path to a file of concatenated PEM-formatted certificates");
   // add renderers for default error categories
-  error_renderers.emplace(atom("system"), render_sec);
-  error_renderers.emplace(atom("exit"), render_exit_reason);
+  error_renderers.emplace(error_category<sec>::value, render_sec);
+  error_renderers.emplace(error_category<pec>::value, render_pec);
+  error_renderers.emplace(error_category<exit_reason>::value,
+                          render_exit_reason);
 }
 
 settings actor_system_config::dump_content() const {
@@ -199,7 +200,7 @@ settings actor_system_config::dump_content() const {
   put_missing(logger_group, "console-format", defaults::logger::console_format);
   put_missing(logger_group, "console-verbosity",
               defaults::logger::console_verbosity);
-  put_missing(logger_group, "component-blacklist", std::vector<atom_value>{});
+  put_missing(logger_group, "component-blacklist", std::vector<std::string>{});
   put_missing(logger_group, "inline-output", false);
   // -- middleman parameters
   auto& middleman_group = result["middleman"].as_dictionary();
@@ -360,14 +361,14 @@ error actor_system_config::parse(string_list args, const char* ini_file_cstr) {
   return parse(std::move(args), ini);
 }
 
-actor_system_config&
-actor_system_config::add_actor_factory(std::string name, actor_factory fun) {
+actor_system_config& actor_system_config::add_actor_factory(std::string name,
+                                                            actor_factory fun) {
   actor_factories.emplace(std::move(name), std::move(fun));
   return *this;
 }
 
-actor_system_config&
-actor_system_config::add_error_category(atom_value x, error_renderer y) {
+actor_system_config& actor_system_config::add_error_category(uint8_t x,
+                                                             error_renderer y) {
   error_renderers[x] = y;
   return *this;
 }
@@ -401,35 +402,34 @@ timespan actor_system_config::stream_tick_duration() const noexcept {
                                    stream_max_batch_delay.count());
   return timespan{ns_count};
 }
-std::string actor_system_config::render(const error& err) {
-  std::string msg;
-  switch (static_cast<uint64_t>(err.category())) {
-    case atom_uint("system"):
-      return render_sec(err.code(), err.category(), err.context());
-    case atom_uint("exit"):
-      return render_exit_reason(err.code(), err.category(), err.context());
-    case atom_uint("parser"):
-      return render_pec(err.code(), err.category(), err.context());
+std::string actor_system_config::render(const error& x) {
+  switch (x.category()) {
+    case error_category<sec>::value:
+      return render_sec(x.code(), x.context());
+    case error_category<exit_reason>::value:
+      return render_exit_reason(x.code(), x.context());
+    case error_category<pec>::value:
+      return render_pec(x.code(), x.context());
+    default:
+      return deep_to_string(meta::type_name("error"), x.code(), x.category(),
+                            meta::omittable_if_empty(), x.context());
   }
-  return "unknown-error";
 }
 
-std::string
-actor_system_config::render_sec(uint8_t x, atom_value, const message& xs) {
+std::string actor_system_config::render_sec(uint8_t x, const message& xs) {
   auto tmp = static_cast<sec>(x);
   return deep_to_string(meta::type_name("system_error"), tmp,
                         meta::omittable_if_empty(), xs);
 }
 
-std::string actor_system_config::render_exit_reason(uint8_t x, atom_value,
+std::string actor_system_config::render_exit_reason(uint8_t x,
                                                     const message& xs) {
   auto tmp = static_cast<exit_reason>(x);
   return deep_to_string(meta::type_name("exit_reason"), tmp,
                         meta::omittable_if_empty(), xs);
 }
 
-std::string
-actor_system_config::render_pec(uint8_t x, atom_value, const message& xs) {
+std::string actor_system_config::render_pec(uint8_t x, const message& xs) {
   auto tmp = static_cast<pec>(x);
   return deep_to_string(meta::type_name("parser_error"), tmp,
                         meta::omittable_if_empty(), xs);

@@ -27,32 +27,23 @@ using namespace caf;
 
 namespace {
 
-using die_atom = atom_constant<atom("die")>;
-using done_atom = atom_constant<atom("done")>;
-
 class testee : public event_based_actor {
 public:
   testee(actor_config& cfg, actor buddy) : event_based_actor(cfg) {
-    attach_functor([=](const error& reason) {
-      send(buddy, done_atom::value, reason);
-    });
+    attach_functor([=](const error& rsn) { send(buddy, ok_atom_v, rsn); });
   }
 
   behavior make_behavior() override {
-    return {
-      [=](die_atom) {
-        quit(exit_reason::user_shutdown);
-      }
-    };
+    return {[=](delete_atom) { quit(exit_reason::user_shutdown); }};
   }
 };
 
 class spawner : public event_based_actor {
 public:
   spawner(actor_config& cfg)
-      : event_based_actor(cfg),
-        downs_(0),
-        testee_(spawn<testee, monitored>(this)) {
+    : event_based_actor(cfg),
+      downs_(0),
+      testee_(spawn<testee, monitored>(this)) {
     set_down_handler([=](down_msg& msg) {
       CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
       CAF_CHECK_EQUAL(msg.source, testee_.address());
@@ -63,15 +54,13 @@ public:
 
   behavior make_behavior() override {
     return {
-      [=](done_atom, const error& reason) {
+      [=](ok_atom, const error& reason) {
         CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
         if (++downs_ == 2) {
           quit(reason);
         }
       },
-      [=](die_atom x) {
-        return delegate(testee_, x);
-      }
+      [=](delete_atom x) { return delegate(testee_, x); },
     };
   }
 
@@ -89,5 +78,5 @@ private:
 CAF_TEST(constructor_attach) {
   actor_system_config cfg;
   actor_system system{cfg};
-  anon_send(system.spawn<spawner>(), die_atom::value);
+  anon_send(system.spawn<spawner>(), delete_atom_v);
 }

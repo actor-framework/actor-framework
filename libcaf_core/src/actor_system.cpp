@@ -20,20 +20,19 @@
 
 #include <unordered_set>
 
+#include "caf/actor.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/raise_error.hpp"
-#include "caf/raw_event_based_actor.hpp"
-#include "caf/send.hpp"
-#include "caf/to_string.hpp"
-
 #include "caf/policy/work_sharing.hpp"
 #include "caf/policy/work_stealing.hpp"
-
+#include "caf/raise_error.hpp"
+#include "caf/raw_event_based_actor.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/scheduler/coordinator.hpp"
 #include "caf/scheduler/test_coordinator.hpp"
+#include "caf/send.hpp"
+#include "caf/to_string.hpp"
 
 namespace caf {
 
@@ -82,12 +81,12 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
         // we never put a nullptr in our map
         auto subscriber = actor_cast<actor>(subscriber_ptr);
         if (subscriber != self->current_sender())
-          self->send(subscriber, update_atom::value, key, vp.first);
+          self->send(subscriber, update_atom_v, key, vp.first);
       }
       // also iterate all subscribers for '*'
       for (auto& subscriber : self->state.data[wildcard].second)
         if (subscriber != self->current_sender())
-          self->send(actor_cast<actor>(subscriber), update_atom::value, key,
+          self->send(actor_cast<actor>(subscriber), update_atom_v, key,
                      vp.first);
     },
     // get a key/value pair
@@ -135,7 +134,7 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
       self->state.data[key].second.erase(subscriber);
     },
     // get a 'named' actor from local registry
-    [=](get_atom, atom_value name) {
+    [=](get_atom, const std::string& name) {
       return self->home_system().registry().get(name);
     },
   };
@@ -248,11 +247,11 @@ actor_system::actor_system(actor_system_config& cfg)
     sched_conf sc = stealing;
     namespace sr = defaults::scheduler;
     auto sr_policy = get_or(cfg, "scheduler.policy", sr::policy);
-    if (sr_policy == atom("sharing"))
+    if (sr_policy == "sharing")
       sc = sharing;
-    else if (sr_policy == atom("testing"))
+    else if (sr_policy == "testing")
       sc = testing;
-    else if (sr_policy != atom("stealing"))
+    else if (sr_policy != "stealing")
       std::cerr << "[WARNING] " << deep_to_string(sr_policy)
                 << " is an unrecognized scheduler pollicy, "
                    "falling back to 'stealing' (i.e. work-stealing)"
@@ -282,8 +281,8 @@ actor_system::actor_system(actor_system_config& cfg)
   config_serv(actor_cast<strong_actor_ptr>(spawn<Flags>(config_serv_impl)));
   // fire up remaining modules
   registry_.start();
-  registry_.put(atom("SpawnServ"), spawn_serv());
-  registry_.put(atom("ConfigServ"), config_serv());
+  registry_.put("SpawnServ", spawn_serv());
+  registry_.put("ConfigServ", config_serv());
   for (auto& mod : modules_)
     if (mod)
       mod->start();
@@ -298,13 +297,14 @@ actor_system::~actor_system() {
     if (await_actors_before_shutdown_)
       await_all_actors_done();
     // shutdown internal actors
-    for (auto& x : internal_actors_) {
+    auto drop = [&](auto& x) {
       anon_send_exit(x, exit_reason::user_shutdown);
       x = nullptr;
-    }
-    registry_.erase(atom("SpawnServ"));
-    registry_.erase(atom("ConfigServ"));
-    registry_.erase(atom("StreamServ"));
+    };
+    drop(spawn_serv_);
+    drop(config_serv_);
+    registry_.erase("SpawnServ");
+    registry_.erase("ConfigServ");
     // group module is the first one, relies on MM
     groups_.stop();
     // stop modules in reverse order
@@ -355,7 +355,7 @@ std::string actor_system::render(const error& x) const {
   auto& xs = config().error_renderers;
   auto i = xs.find(x.category());
   if (i != xs.end())
-    return i->second(x.code(), x.category(), x.context());
+    return i->second(x.code(), x.context());
   return to_string(x);
 }
 

@@ -20,7 +20,6 @@
 
 #include <cstddef>
 
-#include "caf/atom.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/meta/type_name.hpp"
 
@@ -28,7 +27,7 @@ namespace caf {
 
 /// Stores a flow-control configuration.
 struct named_actor_config {
-  atom_value strategy;
+  std::string strategy;
   size_t low_watermark;
   size_t max_pending;
 };

@@ -35,21 +35,11 @@ using std::string;
 
 using namespace caf;
 
-using passed_atom = caf::atom_constant<caf::atom("passed")>;
-
 namespace {
 
-enum class mock_errc : uint8_t {
-  cannot_revert_empty = 1,
-};
-
-error make_error(mock_errc x) {
-  return {static_cast<uint8_t>(x), atom("mock")};
-}
-
 // check invariants of type system
-using dummy1 = typed_actor<reacts_to<int, int>,
-                           replies_to<double>::with<double>>;
+using dummy1
+  = typed_actor<reacts_to<int, int>, replies_to<double>::with<double>>;
 
 using dummy2 = dummy1::extend<reacts_to<ok_atom>>;
 
@@ -110,7 +100,7 @@ void client(event_based_actor* self, const actor& parent,
     CAF_CHECK_EQUAL(val1, true);
     self->request(serv, infinite, my_request{10, 20}).then([=](bool val2) {
       CAF_CHECK_EQUAL(val2, false);
-      self->send(parent, passed_atom::value);
+      self->send(parent, ok_atom_v);
     });
   });
 }
@@ -121,9 +111,10 @@ void client(event_based_actor* self, const actor& parent,
 
 struct get_state_msg {};
 
-using event_testee_type = typed_actor<
-  replies_to<get_state_msg>::with<string>, replies_to<string>::with<void>,
-  replies_to<float>::with<void>, replies_to<int>::with<int>>;
+using event_testee_type
+  = typed_actor<replies_to<get_state_msg>::with<string>,
+                replies_to<string>::with<void>, replies_to<float>::with<void>,
+                replies_to<int>::with<int>>;
 
 class event_testee : public event_testee_type::base {
 public:
@@ -193,16 +184,16 @@ string_actor::behavior_type string_delegator(string_actor::pointer self,
   };
 }
 
-using maybe_string_actor = typed_actor<
-  replies_to<string>::with<ok_atom, string>>;
+using maybe_string_actor
+  = typed_actor<replies_to<string>::with<ok_atom, string>>;
 
 maybe_string_actor::behavior_type maybe_string_reverter() {
   return {
     [](string& str) -> result<ok_atom, string> {
       if (str.empty())
-        return mock_errc::cannot_revert_empty;
+        return sec::invalid_argument;
       std::reverse(str.begin(), str.end());
-      return {ok_atom::value, std::move(str)};
+      return {ok_atom_v, std::move(str)};
     },
   };
 }
@@ -310,7 +301,7 @@ struct fixture {
       .receive([](bool value) { CAF_CHECK_EQUAL(value, true); }, ERROR_HANDLER);
     CAF_CHECK_EQUAL(system.registry().running(), 2u);
     auto c1 = self->spawn(client, self, ts);
-    self->receive([](passed_atom) { CAF_MESSAGE("received `passed_atom`"); });
+    self->receive([](ok_atom) { CAF_MESSAGE("received `ok_atom`"); });
     self->wait_for(c1);
     CAF_CHECK_EQUAL(system.registry().running(), 2u);
   }
@@ -372,9 +363,9 @@ CAF_TEST(string_delegator_chain) {
   std::set<string> iface{"caf::replies_to<@str>::with<@str>"};
   CAF_CHECK_EQUAL(aut->message_types(), iface);
   self->request(aut, infinite, "Hello World!")
-    .receive([](const string&
-                  answer) { CAF_CHECK_EQUAL(answer, "!dlroW olleH"); },
-             ERROR_HANDLER);
+    .receive(
+      [](const string& answer) { CAF_CHECK_EQUAL(answer, "!dlroW olleH"); },
+      ERROR_HANDLER);
 }
 
 CAF_TEST(maybe_string_delegator_chain) {
@@ -386,9 +377,9 @@ CAF_TEST(maybe_string_delegator_chain) {
     .receive([](ok_atom,
                 const string&) { CAF_FAIL("unexpected string response"); },
              [](const error& err) {
-               CAF_CHECK_EQUAL(err.category(), atom("mock"));
-               CAF_CHECK_EQUAL(err.code(), static_cast<uint8_t>(
-                                             mock_errc::cannot_revert_empty));
+               CAF_CHECK_EQUAL(err.category(), error_category<sec>::value);
+               CAF_CHECK_EQUAL(err.code(),
+                               static_cast<uint8_t>(sec::invalid_argument));
              });
   CAF_MESSAGE("send abcd string, expect dcba");
   self->request(aut, infinite, "abcd")
@@ -417,13 +408,13 @@ CAF_TEST(check_signature) {
     return {
       [=](put_atom) -> foo_result_type {
         ptr->quit();
-        return {ok_atom::value};
+        return {ok_atom_v};
       },
     };
   };
   auto bar_action = [=](bar_type::pointer ptr) -> bar_type::behavior_type {
     auto foo = ptr->spawn<linked>(foo_action);
-    ptr->send(foo, put_atom::value);
+    ptr->send(foo, put_atom_v);
     return {[=](ok_atom) { ptr->quit(); }};
   };
   auto x = self->spawn(bar_action);

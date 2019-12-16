@@ -34,12 +34,9 @@
 
 using namespace caf;
 
-namespace {
+using namespace std::string_literals;
 
-// TODO: switch to std::operator""s when switching to C++14
-std::string operator"" _s(const char* str, size_t size) {
-  return std::string{str, size};
-}
+namespace {
 
 timespan operator"" _ms(unsigned long long x) {
   return std::chrono::duration_cast<timespan>(std::chrono::milliseconds(x));
@@ -47,10 +44,6 @@ timespan operator"" _ms(unsigned long long x) {
 
 uri operator"" _u(const char* str, size_t size) {
   return unbox(make_uri(string_view{str, size}));
-}
-
-atom_value operator"" _a(const char* str, size_t size) {
-  return atom_from_string(string_view{str, size});
 }
 
 using string_list = std::vector<std::string>;
@@ -130,12 +123,12 @@ CAF_TEST(parsing - with CLI cfg.remainder) {
 #define CHECK_SYNCED(var, value)                                               \
   do {                                                                         \
     CAF_CHECK_EQUAL(var, value);                                               \
-    CAF_CHECK_EQUAL(get_if<decltype(var)>(&cfg, #var), value);                 \
+    CAF_CHECK_EQUAL(get<decltype(var)>(cfg, #var), value);                     \
   } while (false)
 
 // Checks whether an entry in content(cfg) is equal to `value`.
 #define CHECK_TEXT_ONLY(type, var, value)                                      \
-  CAF_CHECK_EQUAL(get_if<type>(&cfg, #var), value)
+  CAF_CHECK_EQUAL(get<type>(cfg, #var), value)
 
 #define ADD(var) add(var, #var, "...")
 
@@ -191,14 +184,12 @@ CAF_TEST(basic and basic containers options) {
   using int_list = vector<int>;
   using bool_list = vector<bool>;
   using double_list = vector<double>;
-  using atom_value_list = vector<atom_value>;
   using timespan_list = vector<timespan>;
   using uri_list = vector<uri>;
   using string_list = vector<string>;
   using int_map = map<string, int>;
   using bool_map = map<string, bool>;
   using double_map = map<string, double>;
-  using atom_value_map = map<string, atom_value>;
   using timespan_map = map<string, timespan>;
   using uri_map = map<string, uri>;
   using string_map = map<string, string>;
@@ -206,21 +197,18 @@ CAF_TEST(basic and basic containers options) {
     some_int = 42
     some_bool = true
     some_double = 1e23
-    some_atom_value = 'atom'
     some_timespan = 123ms
     some_uri = <foo:bar>
     some_string = "string"
     some_int_list = [1, 2, 3]
     some_bool_list = [false, true]
     some_double_list = [1., 2., 3.]
-    some_atom_value_list = ['a', 'b', 'c']
     some_timespan_list = [123ms, 234ms, 345ms]
     some_uri_list = [<foo:a>, <foo:b>, <foo:c>]
     some_string_list = ["a", "b", "c"]
     some_int_map = {a = 1, b = 2, c = 3}
     some_bool_map = {a = true, b = false}
     some_double_map = {a = 1., b = 2., c = 3.}
-    some_atom_value_map = {a = '1', b = '2', c = '3'}
     some_timespan_map = {a = 123ms, b = 234ms, c = 345ms}
     some_uri_map = {a = <foo:a>, b = <foo:b>, c = <foo:c>}
     some_string_map = {a = "1", b = "2", c = "3"}
@@ -228,21 +216,18 @@ CAF_TEST(basic and basic containers options) {
   VAR(int);
   VAR(bool);
   VAR(double);
-  VAR(atom_value);
   VAR(timespan);
   VAR(uri);
   VAR(string);
   VAR(int_list);
   VAR(bool_list);
   VAR(double_list);
-  VAR(atom_value_list);
   VAR(timespan_list);
   VAR(uri_list);
   VAR(string_list);
   VAR(int_map);
   VAR(bool_map);
   VAR(double_map);
-  VAR(atom_value_map);
   VAR(timespan_map);
   VAR(uri_map);
   VAR(string_map);
@@ -251,15 +236,13 @@ CAF_TEST(basic and basic containers options) {
   CHECK_SYNCED(some_int, 42);
   CHECK_SYNCED(some_bool, true);
   CHECK_SYNCED(some_double, 1e23);
-  CHECK_SYNCED(some_atom_value, "atom"_a);
   CHECK_SYNCED(some_timespan, 123_ms);
   CHECK_SYNCED(some_uri, "foo:bar"_u);
-  CHECK_SYNCED(some_string, "string"_s);
+  CHECK_SYNCED(some_string, "string"s);
   CAF_MESSAGE("check list types");
   CHECK_SYNCED(some_int_list, int_list({1, 2, 3}));
   CHECK_SYNCED(some_bool_list, bool_list({false, true}));
   CHECK_SYNCED(some_double_list, double_list({1., 2., 3.}));
-  CHECK_SYNCED(some_atom_value_list, atom_value_list({"a"_a, "b"_a, "c"_a}));
   CHECK_SYNCED(some_timespan_list, timespan_list({123_ms, 234_ms, 345_ms}));
   CHECK_SYNCED(some_uri_list, uri_list({"foo:a"_u, "foo:b"_u, "foo:c"_u}));
   CHECK_SYNCED(some_string_list, string_list({"a", "b", "c"}));
@@ -267,8 +250,6 @@ CAF_TEST(basic and basic containers options) {
   CHECK_SYNCED(some_int_map, int_map({{"a", 1}, {"b", 2}, {"c", 3}}));
   CHECK_SYNCED(some_bool_map, bool_map({{"a", true}, {"b", false}}));
   CHECK_SYNCED(some_double_map, double_map({{"a", 1.}, {"b", 2.}, {"c", 3.}}));
-  CHECK_SYNCED(some_atom_value_map,
-               atom_value_map({{"a", "1"_a}, {"b", "2"_a}, {"c", "3"_a}}));
   CHECK_SYNCED(some_timespan_map,
                timespan_map({{"a", 123_ms}, {"b", 234_ms}, {"c", 345_ms}}));
   CHECK_SYNCED(some_uri_map,

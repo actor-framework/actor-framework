@@ -30,6 +30,8 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
+#include "caf/make_message.hpp"
+#include "caf/message.hpp"
 #include "caf/none.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/string_view.hpp"
@@ -79,8 +81,6 @@ CAF_CORE_EXPORT void parse(string_parser_state& ps, double& x);
 // -- CAF types ----------------------------------------------------------------
 
 CAF_CORE_EXPORT void parse(string_parser_state& ps, timespan& x);
-
-CAF_CORE_EXPORT void parse(string_parser_state& ps, atom_value& x);
 
 CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv4_address& x);
 
@@ -193,7 +193,7 @@ error parse(string_view str, T& x) {
   parse(ps, x);
   if (ps.code == pec::success)
     return none;
-  return make_error(ps.code, str);
+  return make_error(ps.code, std::string{str.begin(), str.end()});
 }
 
 } // namespace caf::detail

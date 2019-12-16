@@ -23,15 +23,10 @@
 namespace caf::detail {
 
 decorated_tuple::decorated_tuple(cow_ptr&& d, vector_type&& v)
-  : decorated_(std::move(d)), mapping_(std::move(v)), type_token_(0xFFFFFFFF) {
+  : decorated_(std::move(d)), mapping_(std::move(v)) {
   CAF_ASSERT(mapping_.empty()
              || *(std::max_element(mapping_.begin(), mapping_.end()))
                   < static_cast<const cow_ptr&>(decorated_)->size());
-  // calculate type token
-  for (unsigned long i : mapping_) {
-    type_token_ <<= 6;
-    type_token_ |= static_cast<const cow_ptr&>(decorated_)->type_nr(i);
-  }
 }
 
 decorated_tuple::cow_ptr decorated_tuple::make(cow_ptr d, vector_type v) {
@@ -62,10 +57,6 @@ error decorated_tuple::load(size_t pos, deserializer& source) {
 
 size_t decorated_tuple::size() const noexcept {
   return mapping_.size();
-}
-
-uint32_t decorated_tuple::type_token() const noexcept {
-  return type_token_;
 }
 
 rtti_pair decorated_tuple::type(size_t pos) const noexcept {

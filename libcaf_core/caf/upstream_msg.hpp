@@ -24,7 +24,6 @@
 
 #include "caf/actor_addr.hpp"
 #include "caf/actor_control_block.hpp"
-#include "caf/atom.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/message.hpp"

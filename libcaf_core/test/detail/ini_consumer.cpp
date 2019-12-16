@@ -41,7 +41,6 @@ nodes=["sun", "venus", ]
 file-name = "foobar.ini" ; our file name
 [scheduler] ; more settings
   timing  =  2us ; using microsecond resolution
-impl =       'foo';some atom
 )";
 
 constexpr const string_view test_ini2 = R"(
@@ -52,7 +51,6 @@ logger = {
 port = 4242
 scheduler = {
   timing = 2us,
-  impl = 'foo'
 }
 nodes = ["sun", "venus"]
 )";
@@ -67,8 +65,7 @@ struct fixture {
       .add<ls>("global", "nodes", "list of remote nodes")
       .add<string>("logger", "file-name", "log output file")
       .add<int>("scheduler", "padding", "some integer")
-      .add<timespan>("scheduler", "timing", "some timespan")
-      .add<atom_value>("scheduler", "impl", "some atom");
+      .add<timespan>("scheduler", "timing", "some timespan");
   }
 };
 
@@ -95,25 +92,23 @@ CAF_TEST(ini_consumer) {
   CAF_CHECK_EQUAL(get<uint16_t>(config, "port"), 4242u);
   CAF_CHECK_EQUAL(get<ls>(config, "nodes"), ls({"sun", "venus"}));
   CAF_CHECK_EQUAL(get<string>(config, "logger.file-name"), "foobar.ini");
+  CAF_MESSAGE(config);
   CAF_CHECK_EQUAL(get<timespan>(config, "scheduler.timing"), timespan(2000));
-  CAF_CHECK_EQUAL(get<atom_value>(config, "scheduler.impl"), atom("foo"));
 }
 
 CAF_TEST(simplified syntax) {
-  string_view str = test_ini;
   CAF_MESSAGE("read test_ini");
   {
     detail::ini_consumer consumer{options, config};
-    string_parser_state res{str.begin(), str.end()};
+    string_parser_state res{test_ini.begin(), test_ini.end()};
     detail::parser::read_ini(res, consumer);
     CAF_CHECK_EQUAL(res.code, pec::success);
   }
-  str = test_ini2;
   settings config2;
   CAF_MESSAGE("read test_ini2");
   {
     detail::ini_consumer consumer{options, config2};
-    string_parser_state res{str.begin(), str.end()};
+    string_parser_state res{test_ini2.begin(), test_ini2.end()};
     detail::parser::read_ini(res, consumer);
     CAF_CHECK_EQUAL(res.code, pec::success);
   }

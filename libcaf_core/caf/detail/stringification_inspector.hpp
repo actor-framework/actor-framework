@@ -86,8 +86,6 @@ public:
   /// Prints a separator to the result string.
   void sep();
 
-  void consume(atom_value x);
-
   void consume(string_view str);
 
   void consume(timespan x);

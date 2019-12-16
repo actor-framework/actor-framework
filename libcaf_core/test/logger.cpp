@@ -60,7 +60,7 @@ namespace {
 
 struct fixture {
   fixture() {
-    cfg.set("scheduler.policy", atom("testing"));
+    cfg.set("scheduler.policy", "testing");
   }
 
   void add(logger::field_type kind) {
@@ -169,8 +169,6 @@ CAF_TEST(parse_default_format_strings) {
 CAF_TEST(rendering) {
   // Rendering of time points.
   timestamp t0;
-  timestamp t1{timestamp::duration{5000000}}; // epoch + 5000000ns (5ms)
-  CAF_CHECK_EQUAL(render(logger::render_time_diff, t0, t1), "5");
   time_t t0_t = 0;
   char t0_buf[50];
   CAF_REQUIRE(strftime(t0_buf, sizeof(t0_buf),
@@ -180,14 +178,14 @@ CAF_TEST(rendering) {
   logger::event e{
     CAF_LOG_LEVEL_WARNING,
     42,
-    atom("unit_test"),
+    "unit_test",
     "void ns::foo::bar()",
     "bar",
     "foo.cpp",
     "hello world",
     std::this_thread::get_id(),
     0,
-    t0
+    t0,
   };
   CAF_CHECK_EQUAL(render(logger::render_fun_name, e), string_view{"bar"});
   CAF_CHECK_EQUAL(render(logger::render_fun_prefix, e),

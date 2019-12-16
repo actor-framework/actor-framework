@@ -26,6 +26,7 @@
 #include "caf/test/dsl.hpp"
 
 #include "caf/config_option_set.hpp"
+#include "caf/detail/move_if_not_ptr.hpp"
 #include "caf/settings.hpp"
 
 using std::string;
@@ -44,10 +45,9 @@ struct fixture {
     auto res = opts.parse(cfg, std::move(args));
     if (res.first != pec::success)
       return res.first;
-    auto x = get_if<T>(&cfg, key);
-    if (x == none)
-      return sec::invalid_argument;
-    return *x;
+    if (auto x = get_if<T>(&cfg, key))
+      return detail::move_if_not_ptr(x);
+    return sec::invalid_argument;
   }
 
   std::string key = "value";
@@ -112,13 +112,6 @@ CAF_TEST(parse with ref syncing) {
   CAF_CHECK_EQUAL(bar_d, ds({{"a", "a"}, {"b", "b"}}));
   CAF_MESSAGE("verify dictionary content");
   CAF_CHECK_EQUAL(get<int>(cfg, "foo.i"), 42);
-}
-
-CAF_TEST(atom parameters) {
-  opts.add<atom_value>("value,v", "some value");
-  CAF_CHECK_EQUAL(read<atom_value>({"-v", "foobar"}), atom("foobar"));
-  CAF_CHECK_EQUAL(read<atom_value>({"-vfoobar"}), atom("foobar"));
-  CAF_CHECK_EQUAL(read<atom_value>({"--value=foobar"}), atom("foobar"));
 }
 
 CAF_TEST(string parameters) {

@@ -30,13 +30,13 @@ CAF_TEST(default constructed errors evaluate to false) {
 }
 
 CAF_TEST(error code zero is not an error) {
-  CAF_CHECK(!error(0, atom("system")));
+  CAF_CHECK(!error(0, error_category<sec>::value));
   CAF_CHECK(!make_error(sec::none));
   CAF_CHECK(!error{error_code<sec>(sec::none)});
 }
 
 CAF_TEST(error codes that are not zero are errors) {
-  CAF_CHECK(error(1, atom("system")));
+  CAF_CHECK(error(1, error_category<sec>::value));
   CAF_CHECK(make_error(sec::unexpected_message));
   CAF_CHECK(error{error_code<sec>(sec::unexpected_message)});
 }

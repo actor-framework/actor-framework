@@ -26,7 +26,6 @@
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/invoke_result_visitor.hpp"
 #include "caf/detail/pseudo_tuple.hpp"
-#include "caf/detail/try_match.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/match_case.hpp"
@@ -41,8 +40,7 @@ class CAF_CORE_EXPORT match_case {
 public:
   enum result { no_match, match, skip };
 
-  match_case(uint32_t tt);
-
+  match_case() = default;
   match_case(match_case&&) = default;
   match_case(const match_case&) = default;
 
@@ -52,13 +50,6 @@ public:
   virtual result
   invoke(detail::invoke_result_visitor& rv, type_erased_tuple& xs)
     = 0;
-
-  inline uint32_t type_token() const {
-    return token_;
-  }
-
-private:
-  uint32_t token_;
 };
 
 template <bool IsVoid, class F>
@@ -123,16 +114,13 @@ public:
   trivial_match_case& operator=(trivial_match_case&&) = default;
   trivial_match_case& operator=(const trivial_match_case&) = default;
 
-  trivial_match_case(F f)
-    : match_case(make_type_token_from_list<pattern>()), fun_(std::move(f)) {
+  trivial_match_case(F f) : fun_(std::move(f)) {
     // nop
   }
 
   match_case::result
   invoke(detail::invoke_result_visitor& f, type_erased_tuple& xs) override {
-    detail::meta_elements<pattern> ms;
-    // check if try_match() reports success
-    if (!detail::try_match(xs, ms.arr.data(), ms.arr.size()))
+    if (!xs.match_elements(pattern{}))
       return match_case::no_match;
     typename detail::il_indices<decayed_arg_types>::type indices;
     lfinvoker<std::is_same<result_type, void>::value, F> fun{fun_};
@@ -150,13 +138,8 @@ protected:
 };
 
 struct match_case_info {
-  uint32_t type_token;
   match_case* ptr;
 };
-
-inline bool operator<(const match_case_info& x, const match_case_info& y) {
-  return x.type_token < y.type_token;
-}
 
 template <class F>
 typename std::enable_if<!std::is_base_of<match_case, F>::value,

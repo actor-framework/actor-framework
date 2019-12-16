@@ -38,29 +38,27 @@ cell::behavior_type cell_impl(cell::stateful_pointer<cell_state> self, int x0) {
 
 void waiting_testee(event_based_actor* self, vector<cell> cells) {
   for (auto& x : cells)
-    self->request(x, seconds(1), get_atom::value).await([=](int y) {
+    self->request(x, seconds(1), get_atom_v).await([=](int y) {
       aout(self) << "cell #" << x.id() << " -> " << y << endl;
     });
 }
 
 void multiplexed_testee(event_based_actor* self, vector<cell> cells) {
   for (auto& x : cells)
-    self->request(x, seconds(1), get_atom::value).then([=](int y) {
+    self->request(x, seconds(1), get_atom_v).then([=](int y) {
       aout(self) << "cell #" << x.id() << " -> " << y << endl;
     });
 }
 
 void blocking_testee(blocking_actor* self, vector<cell> cells) {
   for (auto& x : cells)
-    self->request(x, seconds(1), get_atom::value).receive(
-      [&](int y) {
-        aout(self) << "cell #" << x.id() << " -> " << y << endl;
-      },
-      [&](error& err) {
-        aout(self) << "cell #" << x.id()
-                   << " -> " << self->system().render(err) << endl;
-      }
-    );
+    self->request(x, seconds(1), get_atom_v)
+      .receive(
+        [&](int y) { aout(self) << "cell #" << x.id() << " -> " << y << endl; },
+        [&](error& err) {
+          aout(self) << "cell #" << x.id() << " -> "
+                     << self->system().render(err) << endl;
+        });
 }
 
 void caf_main(actor_system& system) {

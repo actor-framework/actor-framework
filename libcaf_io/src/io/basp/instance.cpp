@@ -464,7 +464,7 @@ bool instance::handle(execution_unit* ctx, connection_handle hdl, header& hdr,
         // Delay this message to make sure we don't skip in-flight messages.
         auto msg_id = queue_.new_id();
         auto ptr = make_mailbox_element(nullptr, make_message_id(), {},
-                                        delete_atom::value, source_node,
+                                        delete_atom_v, source_node,
                                         hdr.source_actor,
                                         std::move(fail_state));
         queue_.push(callee_.current_execution_unit(), msg_id,

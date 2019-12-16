@@ -30,6 +30,8 @@
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 
+using namespace std::string_literals;
+
 namespace caf {
 
 // -- related free functions ---------------------------------------------------
@@ -282,7 +284,7 @@ struct upstream_msg_visitor {
 intrusive::task_result
 scheduled_actor::mailbox_visitor::operator()(size_t, upstream_queue&,
                                              mailbox_element& x) {
-  CAF_ASSERT(x.content().type_token() == make_type_token<upstream_msg>());
+  CAF_ASSERT(x.content().match_elements<upstream_msg>());
   self->current_mailbox_element(&x);
   CAF_LOG_RECEIVE_EVENT((&x));
   CAF_BEFORE_PROCESSING(self, x);
@@ -348,7 +350,7 @@ intrusive::task_result scheduled_actor::mailbox_visitor::operator()(
   self->current_mailbox_element(&x);
   CAF_LOG_RECEIVE_EVENT((&x));
   CAF_BEFORE_PROCESSING(self, x);
-  CAF_ASSERT(x.content().type_token() == make_type_token<downstream_msg>());
+  CAF_ASSERT(x.content().match_elements<downstream_msg>());
   auto& dm = x.content().get_mutable_as<downstream_msg>(0);
   downstream_msg_visitor f{self, qs, q, dm};
   auto res = visit(f, dm.content);
@@ -473,7 +475,7 @@ void scheduled_actor::quit(error x) {
 uint64_t scheduled_actor::set_receive_timeout(actor_clock::time_point x) {
   CAF_LOG_TRACE(x);
   setf(has_timeout_flag);
-  return set_timeout(receive_atom::value, x);
+  return set_timeout("receive", x);
 }
 
 uint64_t scheduled_actor::set_receive_timeout() {
@@ -488,7 +490,7 @@ uint64_t scheduled_actor::set_receive_timeout() {
   if (timeout == timespan{0}) {
     // immediately enqueue timeout message if duration == 0s
     auto id = ++timeout_id_;
-    auto type = receive_atom::value;
+    auto type = "receive"s;
     eq_impl(make_message_id(), nullptr, context(), timeout_msg{type, id});
     return id;
   }
@@ -525,7 +527,7 @@ uint64_t scheduled_actor::set_stream_timeout(actor_clock::time_point x) {
     return 0;
   }
   // Delegate call.
-  return set_timeout(stream_atom::value, x);
+  return set_timeout("stream", x);
 }
 
 // -- message processing -------------------------------------------------------
@@ -548,83 +550,76 @@ scheduled_actor::message_category
 scheduled_actor::categorize(mailbox_element& x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   auto& content = x.content();
-  switch (content.type_token()) {
-    case make_type_token<atom_value, atom_value, std::string>():
-      if (content.get_as<atom_value>(0) == sys_atom::value
-          && content.get_as<atom_value>(1) == get_atom::value) {
-        auto rp = make_response_promise();
-        if (!rp.pending()) {
-          CAF_LOG_WARNING("received anonymous ('get', 'sys', $key) message");
-          return message_category::internal;
-        }
-        auto& what = content.get_as<std::string>(2);
-        if (what == "info") {
-          CAF_LOG_DEBUG("reply to 'info' message");
-          rp.deliver(ok_atom::value, std::move(what), strong_actor_ptr{ctrl()},
-                     name());
-        } else {
-          rp.deliver(make_error(sec::unsupported_sys_key));
-        }
-        return message_category::internal;
-      }
-      return message_category::ordinary;
-    case make_type_token<timeout_msg>(): {
-      CAF_ASSERT(x.mid.is_async());
-      auto& tm = content.get_as<timeout_msg>(0);
-      auto tid = tm.timeout_id;
-      if (tm.type == receive_atom::value) {
-        CAF_LOG_DEBUG("handle ordinary timeout message");
-        if (is_active_receive_timeout(tid) && !bhvr_stack_.empty())
-          bhvr_stack_.back().handle_timeout();
-      } else {
-        CAF_ASSERT(tm.type == atom("stream"));
-        CAF_LOG_DEBUG("handle stream timeout message");
-        set_stream_timeout(advance_streams(clock().now()));
-      }
+  if (content.match_elements<sys_atom, get_atom, std::string>()) {
+    auto rp = make_response_promise();
+    if (!rp.pending()) {
+      CAF_LOG_WARNING("received anonymous ('get', 'sys', $key) message");
       return message_category::internal;
     }
-    case make_type_token<exit_msg>(): {
-      auto em = content.move_if_unshared<exit_msg>(0);
-      // make sure to get rid of attachables if they're no longer needed
-      unlink_from(em.source);
-      // exit_reason::kill is always fatal and also aborts streams.
-      if (em.reason == exit_reason::kill) {
-        quit(std::move(em.reason));
-        std::vector<stream_manager_ptr> xs;
-        for (auto& kvp : stream_managers_)
-          xs.emplace_back(kvp.second);
-        for (auto& kvp : pending_stream_managers_)
-          xs.emplace_back(kvp.second);
-        std::sort(xs.begin(), xs.end());
-        auto last = std::unique(xs.begin(), xs.end());
-        std::for_each(xs.begin(), last, [&](stream_manager_ptr& mgr) {
-          mgr->stop(exit_reason::kill);
-        });
-        stream_managers_.clear();
-        pending_stream_managers_.clear();
-      } else {
-        call_handler(exit_handler_, this, em);
-      }
-      return message_category::internal;
+    auto& what = content.get_as<std::string>(2);
+    if (what == "info") {
+      CAF_LOG_DEBUG("reply to 'info' message");
+      rp.deliver(ok_atom_v, std::move(what), strong_actor_ptr{ctrl()}, name());
+    } else {
+      rp.deliver(make_error(sec::unsupported_sys_key));
     }
-    case make_type_token<down_msg>(): {
-      auto dm = content.move_if_unshared<down_msg>(0);
-      call_handler(down_handler_, this, dm);
-      return message_category::internal;
-    }
-    case make_type_token<error>(): {
-      auto err = content.move_if_unshared<error>(0);
-      call_handler(error_handler_, this, err);
-      return message_category::internal;
-    }
-    case make_type_token<open_stream_msg>(): {
-      return handle_open_stream_msg(x) != invoke_message_result::skipped
-               ? message_category::internal
-               : message_category::skipped;
-    }
-    default:
-      return message_category::ordinary;
+    return message_category::internal;
   }
+  if (content.match_elements<timeout_msg>()) {
+    CAF_ASSERT(x.mid.is_async());
+    auto& tm = content.get_as<timeout_msg>(0);
+    auto tid = tm.timeout_id;
+    if (tm.type == "receive") {
+      CAF_LOG_DEBUG("handle ordinary timeout message");
+      if (is_active_receive_timeout(tid) && !bhvr_stack_.empty())
+        bhvr_stack_.back().handle_timeout();
+    } else {
+      CAF_ASSERT(tm.type == "stream");
+      CAF_LOG_DEBUG("handle stream timeout message");
+      set_stream_timeout(advance_streams(clock().now()));
+    }
+    return message_category::internal;
+  }
+  if (content.match_elements<exit_msg>()) {
+    auto em = content.move_if_unshared<exit_msg>(0);
+    // make sure to get rid of attachables if they're no longer needed
+    unlink_from(em.source);
+    // exit_reason::kill is always fatal and also aborts streams.
+    if (em.reason == exit_reason::kill) {
+      quit(std::move(em.reason));
+      std::vector<stream_manager_ptr> xs;
+      for (auto& kvp : stream_managers_)
+        xs.emplace_back(kvp.second);
+      for (auto& kvp : pending_stream_managers_)
+        xs.emplace_back(kvp.second);
+      std::sort(xs.begin(), xs.end());
+      auto last = std::unique(xs.begin(), xs.end());
+      std::for_each(xs.begin(), last, [&](stream_manager_ptr& mgr) {
+        mgr->stop(exit_reason::kill);
+      });
+      stream_managers_.clear();
+      pending_stream_managers_.clear();
+    } else {
+      call_handler(exit_handler_, this, em);
+    }
+    return message_category::internal;
+  }
+  if (content.match_elements<down_msg>()) {
+    auto dm = content.move_if_unshared<down_msg>(0);
+    call_handler(down_handler_, this, dm);
+    return message_category::internal;
+  }
+  if (content.match_elements<error>()) {
+    auto err = content.move_if_unshared<error>(0);
+    call_handler(error_handler_, this, err);
+    return message_category::internal;
+  }
+  if (content.match_elements<open_stream_msg>()) {
+    return handle_open_stream_msg(x) != invoke_message_result::skipped
+             ? message_category::internal
+             : message_category::skipped;
+  }
+  return message_category::ordinary;
 }
 
 invoke_message_result scheduled_actor::consume(mailbox_element& x) {
@@ -975,12 +970,12 @@ void scheduled_actor::handle_upstream_msg(stream_slots slots,
   ptr->handle(slots, x);
 }
 
-uint64_t scheduled_actor::set_timeout(atom_value type,
+uint64_t scheduled_actor::set_timeout(std::string type,
                                       actor_clock::time_point x) {
   CAF_LOG_TRACE(CAF_ARG(type) << CAF_ARG(x));
   auto id = ++timeout_id_;
   CAF_LOG_DEBUG("set timeout:" << CAF_ARG(type) << CAF_ARG(x));
-  clock().set_ordinary_timeout(x, this, type, id);
+  clock().set_ordinary_timeout(x, this, std::move(type), id);
   return id;
 }
 

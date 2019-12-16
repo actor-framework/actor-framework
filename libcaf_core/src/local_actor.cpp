@@ -24,7 +24,6 @@
 #include "caf/actor_cast.hpp"
 #include "caf/actor_ostream.hpp"
 #include "caf/actor_system.hpp"
-#include "caf/atom.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/default_attachable.hpp"

@@ -22,7 +22,6 @@
 
 #include "caf/test/dsl.hpp"
 
-#include "caf/atom.hpp"
 #include "caf/attach_stream_sink.hpp"
 #include "caf/attach_stream_source.hpp"
 #include "caf/attach_stream_stage.hpp"
@@ -210,31 +209,13 @@ struct hash<counting_string> {
 
 namespace {
 
-using add_atom = atom_constant<atom("add")>;
-using get_name_atom = atom_constant<atom("getName")>;
-using ping_atom = atom_constant<atom("ping")>;
-using pong_atom = atom_constant<atom("pong")>;
-
-// "base" interface
-using named_actor = typed_actor<
-  replies_to<get_name_atom>::with<counting_string>,
-  replies_to<ping_atom>::with<pong_atom>>;
-
 // a simple dictionary
-using dict = named_actor::extend<
+using dict = typed_actor<
   replies_to<get_atom, counting_string>::with<counting_string>,
   replies_to<put_atom, counting_string, counting_string>::with<void>>;
 
 class dict_state : public composable_behavior<dict> {
 public:
-  result<counting_string> operator()(get_name_atom) override {
-    return "dictionary";
-  }
-
-  result<pong_atom> operator()(ping_atom) override {
-    return pong_atom::value;
-  }
-
   result<counting_string> operator()(get_atom,
                                      param<counting_string> key) override {
     auto i = values_.find(key.get());
@@ -329,8 +310,8 @@ CAF_TEST(param_detaching) {
   CAF_CHECK_EQUAL(counting_strings_moved.load(), 0);
   CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 0);
   // Wrap two strings into messages.
-  auto put_msg = make_message(put_atom::value, key, value);
-  auto get_msg = make_message(get_atom::value, key);
+  auto put_msg = make_message(put_atom_v, key, value);
+  auto get_msg = make_message(get_atom_v, key);
   CAF_CHECK_EQUAL(counting_strings_created.load(), 5);
   CAF_CHECK_EQUAL(counting_strings_moved.load(), 0);
   CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 0);
@@ -410,7 +391,7 @@ CAF_TEST(streaming) {
   static_assert(std::is_same<decltype(snk * stg), stg_to_snk>::value,
                 "stg * src produces the wrong type");
   auto pipeline = snk * stg * src;
-  self->send(pipeline, open_atom::value);
+  self->send(pipeline, open_atom_v);
   run();
   using sink_actor = composable_behavior_based_actor<sink_actor_state>;
   auto& st = deref<sink_actor>(snk).state;

@@ -119,7 +119,6 @@ file-name = "foobar.ini" ; our file name
 
 [scheduler] ; more settings
   timing  =  2us ; using microsecond resolution
-impl =       'foo';some atom
 x_ =.123
 some-bool=true
 some-other-bool=false
@@ -129,15 +128,13 @@ some-list=[
   1..3,
   23 ; twenty-three!
   ,2..4..2,
-  "abc",
-  'def', ; some comment and a trailing comma
+  "abc", ; some comment and a trailing comma
 ]
 some-map{
 ; here we have some list entries
 entry1=123,
   entry2=23 ; twenty-three! btw, comma is not mandatory
- entry3= "abc",
- entry4 = 'def', ; some comment and a trailing comma
+ entry3= "abc" , ; some comment and a trailing comma
 }
 [middleman]
 preconnect=[<
@@ -169,8 +166,6 @@ const auto ini0_log = make_log(
   "{",
     "key: timing",
     "value (timespan): 2us",
-    "key: impl",
-    "value (atom): 'foo'",
     "key: x_",
     "value (real): " + deep_to_string(.123),
     "key: some-bool",
@@ -187,7 +182,6 @@ const auto ini0_log = make_log(
       "value (integer): 2",
       "value (integer): 4",
       "value (string): \"abc\"",
-      "value (atom): 'def'",
     "]",
     "key: some-map",
     "{",
@@ -197,8 +191,6 @@ const auto ini0_log = make_log(
       "value (integer): 23",
       "key: entry3",
       "value (string): \"abc\"",
-      "key: entry4",
-      "value (atom): 'def'",
     "}",
   "}",
   "key: middleman",

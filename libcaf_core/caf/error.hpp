@@ -22,41 +22,18 @@
 #include <functional>
 #include <utility>
 
-#include "caf/atom.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/error_category.hpp"
 #include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
+#include "caf/meta/load_callback.hpp"
 #include "caf/meta/omittable_if_empty.hpp"
+#include "caf/meta/save_callback.hpp"
 #include "caf/meta/type_name.hpp"
 #include "caf/none.hpp"
 
 namespace caf {
-
-class error;
-
-/// Evaluates to true if `T` is an enum with a free function
-/// `make_error` for converting it to an `error`.
-template <class T>
-struct has_make_error {
-private:
-  template <class U>
-  static auto test_make_error(U* x) -> decltype(make_error(*x));
-
-  template <class U>
-  static auto test_make_error(...) -> void;
-
-  using type = decltype(test_make_error<T>(nullptr));
-
-public:
-  static constexpr bool value = std::is_enum<T>::value
-                                && std::is_same<error, type>::value;
-};
-
-/// Convenience alias for `std::enable_if<has_make_error<T>::value, U>::type`.
-template <class T, class U = void>
-using enable_if_has_make_error_t =
-  typename std::enable_if<has_make_error<T>::value, U>::type;
 
 /// A serializable type for storing error codes with category and optional,
 /// human-readable context information. Unlike error handling classes from
@@ -93,7 +70,7 @@ public:
   // -- member types -----------------------------------------------------------
 
   using inspect_fun
-    = std::function<error(meta::type_name_t, uint8_t&, atom_value&,
+    = std::function<error(meta::type_name_t, uint8_t&, uint8_t&,
                           meta::omittable_if_empty_t, message&)>;
 
   // -- constructors, destructors, and assignment operators --------------------
@@ -110,32 +87,30 @@ public:
 
   error& operator=(const error&);
 
-  error(uint8_t x, atom_value y);
+  error(uint8_t x, uint8_t y);
 
-  error(uint8_t x, atom_value y, message z);
+  error(uint8_t x, uint8_t y, message z);
 
-  template <class E, class = enable_if_has_make_error_t<E>>
-  error(E error_value) : error(make_error(error_value)) {
+  template <class Enum, uint8_t Category = error_category<Enum>::value>
+  error(Enum error_value) : error(static_cast<uint8_t>(error_value), Category) {
+    // nop
+  }
+
+  template <class Enum>
+  error(error_code<Enum> code) : error(code.value()) {
     // nop
   }
 
   template <class E>
-  error(error_code<E> code) : error(code.value()) {
-    // nop
-  }
-
-  template <class E, class = enable_if_has_make_error_t<E>>
   error& operator=(E error_value) {
-    auto tmp = make_error(error_value);
+    error tmp{error_value};
     std::swap(data_, tmp.data_);
     return *this;
   }
 
   template <class E>
   error& operator=(error_code<E> code) {
-    auto tmp = make_error(code.value());
-    std::swap(data_, tmp.data_);
-    return *this;
+    return *this = code.value();
   }
 
   ~error();
@@ -148,7 +123,7 @@ public:
 
   /// Returns the category of this error.
   /// @pre `*this != none`
-  atom_value category() const noexcept;
+  uint8_t category() const noexcept;
 
   /// Returns context information to this error.
   /// @pre `*this != none`
@@ -166,7 +141,7 @@ public:
 
   int compare(const error&) const noexcept;
 
-  int compare(uint8_t x, atom_value y) const noexcept;
+  int compare(uint8_t x, uint8_t y) const noexcept;
 
   // -- modifiers --------------------------------------------------------------
 
@@ -227,7 +202,7 @@ private:
 
   uint8_t& code_ref() noexcept;
 
-  atom_value& category_ref() noexcept;
+  uint8_t& category_ref() noexcept;
 
   void init();
 
@@ -244,6 +219,19 @@ private:
 CAF_CORE_EXPORT std::string to_string(const error& x);
 
 /// @relates error
+template <class Enum>
+error make_error(Enum code) {
+  return error{static_cast<uint8_t>(code), error_category<Enum>::value};
+}
+
+/// @relates error
+template <class Enum, class T, class... Ts>
+error make_error(Enum code, T&& x, Ts&&... xs) {
+  return error{static_cast<uint8_t>(code), error_category<Enum>::value,
+               make_message(std::forward<T>(x), std::forward<Ts>(xs)...)};
+}
+
+/// @relates error
 inline bool operator==(const error& x, none_t) {
   return !x;
 }
@@ -254,15 +242,16 @@ inline bool operator==(none_t, const error& x) {
 }
 
 /// @relates error
-template <class E, class = enable_if_has_make_error_t<E>>
-bool operator==(const error& x, E y) {
-  return x == make_error(y);
+template <class Enum, uint8_t Category = error_category<Enum>::value>
+bool operator==(const error& x, Enum y) {
+  auto code = static_cast<uint8_t>(y);
+  return code == 0 ? !x : x && x.category() == Category && x.code() == code;
 }
 
 /// @relates error
-template <class E, class = enable_if_has_make_error_t<E>>
-bool operator==(E x, const error& y) {
-  return make_error(x) == y;
+template <class Enum, uint8_t Category = error_category<Enum>::value>
+bool operator==(Enum x, const error& y) {
+  return y == x;
 }
 
 /// @relates error
@@ -276,14 +265,14 @@ inline bool operator!=(none_t, const error& x) {
 }
 
 /// @relates error
-template <class E, class = enable_if_has_make_error_t<E>>
-bool operator!=(const error& x, E y) {
+template <class Enum, uint8_t Category = error_category<Enum>::value>
+bool operator!=(const error& x, Enum y) {
   return !(x == y);
 }
 
 /// @relates error
-template <class E, class = enable_if_has_make_error_t<E>>
-bool operator!=(E x, const error& y) {
+template <class Enum, uint8_t Category = error_category<Enum>::value>
+bool operator!=(Enum x, const error& y) {
   return !(x == y);
 }
 

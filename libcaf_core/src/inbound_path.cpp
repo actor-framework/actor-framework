@@ -76,16 +76,16 @@ inbound_path::inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
                        << "opens input stream with element type"
                        << mgr->self()->system().types().portable_name(in_type)
                        << "at slot" << id.receiver << "from" << hdl);
-  switch (atom_uint(get_or(self()->system().config(), "stream.credit-policy",
-                           defaults::stream::credit_policy))) {
-    case atom_uint("testing"):
+  if (auto str = get_if<std::string>(&self()->system().config(),
+                                     "stream.credit-policy")) {
+    if (*str == "testing")
       controller_.reset(new detail::test_credit_controller(self()));
-      break;
-    case atom_uint("size"):
+    else if (*str == "size")
       controller_.reset(new detail::size_based_credit_controller(self()));
-      break;
-    default:
+    else
       controller_.reset(new detail::complexity_based_credit_controller(self()));
+  } else {
+    controller_.reset(new detail::complexity_based_credit_controller(self()));
   }
 }
 

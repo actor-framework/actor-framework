@@ -64,7 +64,7 @@ connection_helper(stateful_actor<connection_helper_state>* self, actor b) {
                 // gotcha! send scribe to our BASP broker
                 // to initiate handshake etc.
                 CAF_LOG_INFO("connected directly:" << CAF_ARG(addr));
-                self->send(b, connect_atom::value, *hdl, port);
+                self->send(b, connect_atom_v, *hdl, port);
                 return;
               }
             }

@@ -49,9 +49,9 @@ void caf_main(actor_system& system) {
   auto cell1 = system.spawn(type_checked_cell);
   auto cell2 = system.spawn(unchecked_cell);
   auto f = make_function_view(cell1);
-  cout << "cell value: " << f(get_atom::value) << endl;
-  f(put_atom::value, 20);
-  cout << "cell value (after setting to 20): " << f(get_atom::value) << endl;
+  cout << "cell value: " << f(get_atom_v) << endl;
+  f(put_atom_v, 20);
+  cout << "cell value (after setting to 20): " << f(get_atom_v) << endl;
   // get an unchecked cell and send it some garbage
   anon_send(cell2, "hello there!");
 }
