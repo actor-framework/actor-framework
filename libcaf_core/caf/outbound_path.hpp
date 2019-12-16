@@ -108,7 +108,8 @@ public:
       return;
     CAF_ASSERT(open_credit >= 0);
     CAF_ASSERT(desired_batch_size > 0);
-    CAF_ASSERT(cache.size() <= std::numeric_limits<int32_t>::max());
+    CAF_ASSERT(cache.size()
+               <= static_cast<size_t>(std::numeric_limits<int32_t>::max()));
     auto first = cache.begin();
     auto last
       = first + std::min(open_credit, static_cast<int32_t>(cache.size()));

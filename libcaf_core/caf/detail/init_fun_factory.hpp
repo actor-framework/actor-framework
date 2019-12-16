@@ -76,6 +76,7 @@ public:
     if (hook_ != nullptr)
       hook_(self);
     auto dptr = static_cast<Base*>(self);
+    CAF_IGNORE_UNUSED(dptr);
     if constexpr (ReturnsBehavior) {
       auto unbox = [](auto x) -> behavior { return std::move(x.unbox()); };
       if constexpr (args_empty) {
