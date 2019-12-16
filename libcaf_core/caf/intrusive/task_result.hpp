@@ -44,5 +44,4 @@ enum class task_result {
 /// @relates task_result
 std::string to_string(task_result);
 
-} // namespace caf
-
+} // namespace caf::intrusive

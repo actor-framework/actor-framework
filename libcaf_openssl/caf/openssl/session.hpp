@@ -27,17 +27,17 @@ CAF_PUSH_WARNINGS
 CAF_POP_WARNINGS
 
 #include "caf/actor_system.hpp"
-
-#include "caf/io/network/native_socket.hpp"
+#include "caf/detail/openssl_export.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
+#include "caf/io/network/native_socket.hpp"
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
-# define CAF_SSL_HAS_SECURITY_LEVEL
-# define CAF_SSL_HAS_NON_VERSIONED_TLS_FUN
+#  define CAF_SSL_HAS_SECURITY_LEVEL
+#  define CAF_SSL_HAS_NON_VERSIONED_TLS_FUN
 #endif
 
 #if defined(SSL_CTX_set_ecdh_auto)
-# define CAF_SSL_HAS_ECDH_AUTO
+#  define CAF_SSL_HAS_ECDH_AUTO
 #endif
 
 namespace caf::openssl {
@@ -46,15 +46,15 @@ using native_socket = io::network::native_socket;
 
 using rw_state = io::network::rw_state;
 
-class session {
+class CAF_OPENSSL_EXPORT session {
 public:
   session(actor_system& sys);
   ~session();
 
   bool init();
   rw_state read_some(size_t& result, native_socket fd, void* buf, size_t len);
-  rw_state write_some(size_t& result, native_socket fd, const void* buf,
-                      size_t len);
+  rw_state
+  write_some(size_t& result, native_socket fd, const void* buf, size_t len);
   bool try_connect(native_socket fd);
   bool try_accept(native_socket fd);
 
@@ -81,8 +81,7 @@ private:
 using session_ptr = std::unique_ptr<session>;
 
 /// @relates session
-session_ptr make_session(actor_system& sys, native_socket fd,
-                         bool from_accepted_socket);
+CAF_OPENSSL_EXPORT session_ptr make_session(actor_system& sys, native_socket fd,
+                                            bool from_accepted_socket);
 
-} // namespace caf
-
+} // namespace caf::openssl

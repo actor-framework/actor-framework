@@ -186,8 +186,8 @@ uint16_t port(const ip_endpoint& ep) {
     return 0;
   switch (ep.caddress()->sa_family) {
     case AF_INET:
-      port = ntohs(
-        reinterpret_cast<const sockaddr_in*>(ep.caddress())->sin_port);
+      port
+        = ntohs(reinterpret_cast<const sockaddr_in*>(ep.caddress())->sin_port);
       break;
     case AF_INET6:
       port = ntohs(
@@ -249,4 +249,4 @@ error_code<sec> save_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h,
   return none;
 }
 
-} // namespace caf
+} // namespace caf::io::network

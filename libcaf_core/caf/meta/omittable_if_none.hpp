@@ -33,5 +33,4 @@ constexpr omittable_if_none_t omittable_if_none() {
   return {};
 }
 
-} // namespace caf
-
+} // namespace caf::meta

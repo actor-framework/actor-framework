@@ -471,4 +471,4 @@ void shutdown_both(native_socket fd) {
   ::shutdown(fd, both_channels);
 }
 
-} // namespace caf
+} // namespace caf::io::network

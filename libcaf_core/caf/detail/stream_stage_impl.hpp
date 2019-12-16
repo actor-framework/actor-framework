@@ -48,9 +48,9 @@ public:
 
   template <class... Ts>
   stream_stage_impl(scheduled_actor* self, Ts&&... xs)
-      : stream_manager(self),
-        super(self),
-        driver_(this->out_, std::forward<Ts>(xs)...) {
+    : stream_manager(self),
+      super(self),
+      driver_(this->out_, std::forward<Ts>(xs)...) {
     // nop
   }
 
@@ -86,11 +86,10 @@ protected:
 };
 
 template <class Driver, class... Ts>
-typename Driver::stage_ptr_type make_stream_stage(scheduled_actor* self,
-                                                  Ts&&... xs) {
+typename Driver::stage_ptr_type
+make_stream_stage(scheduled_actor* self, Ts&&... xs) {
   using impl = stream_stage_impl<Driver>;
   return make_counted<impl>(self, std::forward<Ts>(xs)...);
 }
 
-} // namespace caf
-
+} // namespace caf::detail

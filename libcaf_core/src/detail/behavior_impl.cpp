@@ -29,8 +29,8 @@ namespace {
 
 class combinator final : public behavior_impl {
 public:
-  match_case::result invoke(detail::invoke_result_visitor& f,
-                            type_erased_tuple& xs) override {
+  match_case::result
+  invoke(detail::invoke_result_visitor& f, type_erased_tuple& xs) override {
     auto x = first->invoke(f, xs);
     return x == match_case::no_match ? second->invoke(f, xs) : x;
   }
@@ -89,8 +89,8 @@ behavior_impl::invoke_empty(detail::invoke_result_visitor& f) {
   return invoke(f, xs);
 }
 
-match_case::result behavior_impl::invoke(detail::invoke_result_visitor& f,
-                                         type_erased_tuple& xs) {
+match_case::result
+behavior_impl::invoke(detail::invoke_result_visitor& f, type_erased_tuple& xs) {
   auto msg_token = xs.type_token();
   for (auto i = begin_; i != end_; ++i)
     if (i->type_token == msg_token)
@@ -122,8 +122,8 @@ optional<message> behavior_impl::invoke(type_erased_tuple& xs) {
   return std::move(f.value);
 }
 
-match_case::result behavior_impl::invoke(detail::invoke_result_visitor& f,
-                                         message& xs) {
+match_case::result
+behavior_impl::invoke(detail::invoke_result_visitor& f, message& xs) {
   // the following const-cast is safe, because invoke() is aware of
   // copy-on-write and does not modify x if it's shared
   if (!xs.empty())
@@ -140,4 +140,4 @@ behavior_impl::pointer behavior_impl::or_else(const pointer& other) {
   return make_counted<combinator>(this, other);
 }
 
-} // namespace caf
+} // namespace caf::detail

@@ -56,7 +56,8 @@ struct imi<Pos, type_list<timeout_definition<X>>, type_list<>, type_list<>> {
 
 // end of recursion: failure (consumed all Xs but not all Ys)
 template <int Pos, class Yin, class Yout, class... Ys>
-struct imi<Pos, type_list<>, type_list<typed_mpi<Yin, Yout>, Ys...>, type_list<>> {
+struct imi<Pos, type_list<>, type_list<typed_mpi<Yin, Yout>, Ys...>,
+           type_list<>> {
   static constexpr int value = -1;
   using xs = type_list<>;
   using ys = type_list<typed_mpi<Yin, Yout>, Ys...>;
@@ -64,7 +65,8 @@ struct imi<Pos, type_list<>, type_list<typed_mpi<Yin, Yout>, Ys...>, type_list<>
 
 // end of recursion: failure (consumed all Ys but not all Xs)
 template <int Pos, class Xin, class Xout, class... Xs>
-struct imi<Pos, type_list<typed_mpi<Xin, Xout>, Xs...>, type_list<>, type_list<>> {
+struct imi<Pos, type_list<typed_mpi<Xin, Xout>, Xs...>, type_list<>,
+           type_list<>> {
   static constexpr int value = -2;
   using xs = type_list<typed_mpi<Xin, Xout>, Xs...>;
   using ys = type_list<>;
@@ -72,8 +74,8 @@ struct imi<Pos, type_list<typed_mpi<Xin, Xout>, Xs...>, type_list<>, type_list<>
 
 // end of recursion: failure (consumed all Ys except timeout but not all Xs)
 template <int Pos, class X, class Y, class... Ys>
-struct imi<Pos, type_list<timeout_definition<X>>,
-           type_list<Y, Ys...>, type_list<>> {
+struct imi<Pos, type_list<timeout_definition<X>>, type_list<Y, Ys...>,
+           type_list<>> {
   static constexpr int value = -2;
   using xs = type_list<>;
   using ys = type_list<Y, Ys...>;
@@ -81,31 +83,23 @@ struct imi<Pos, type_list<timeout_definition<X>>,
 
 // case #1: exact match
 template <int Pos, class In, class Out, class... Xs, class... Ys, class... Zs>
-struct imi<Pos,
-           type_list<typed_mpi<In, Out>, Xs...>,
-           type_list<typed_mpi<In, Out>, Ys...>,
-           type_list<Zs...>>
-    : imi<Pos + 1, type_list<Xs...>, type_list<Zs..., Ys...>, type_list<>> {};
+struct imi<Pos, type_list<typed_mpi<In, Out>, Xs...>,
+           type_list<typed_mpi<In, Out>, Ys...>, type_list<Zs...>>
+  : imi<Pos + 1, type_list<Xs...>, type_list<Zs..., Ys...>, type_list<>> {};
 
 // case #2: match with skip_t
 template <int Pos, class In, class... Xs, class Out, class... Ys, class... Zs>
-struct imi<Pos,
-           type_list<typed_mpi<In, output_tuple<skip_t>>, Xs...>,
-           type_list<typed_mpi<In, Out>, Ys...>,
-           type_list<Zs...>>
-    : imi<Pos + 1, type_list<Xs...>, type_list<Zs..., Ys...>, type_list<>> {};
+struct imi<Pos, type_list<typed_mpi<In, output_tuple<skip_t>>, Xs...>,
+           type_list<typed_mpi<In, Out>, Ys...>, type_list<Zs...>>
+  : imi<Pos + 1, type_list<Xs...>, type_list<Zs..., Ys...>, type_list<>> {};
 
 // case #3: no match at position
-template <int Pos, class Xin, class Xout, class... Xs,
-          class Yin, class Yout, class... Ys, class... Zs>
-struct imi<Pos,
-           type_list<typed_mpi<Xin, Xout>, Xs...>,
-           type_list<typed_mpi<Yin, Yout>, Ys...>,
-           type_list<Zs...>>
-    : imi<Pos,
-          type_list<typed_mpi<Xin, Xout>, Xs...>,
-          type_list<Ys...>,
-          type_list<Zs..., typed_mpi<Yin, Yout>>> {};
+template <int Pos, class Xin, class Xout, class... Xs, class Yin, class Yout,
+          class... Ys, class... Zs>
+struct imi<Pos, type_list<typed_mpi<Xin, Xout>, Xs...>,
+           type_list<typed_mpi<Yin, Yout>, Ys...>, type_list<Zs...>>
+  : imi<Pos, type_list<typed_mpi<Xin, Xout>, Xs...>, type_list<Ys...>,
+        type_list<Zs..., typed_mpi<Yin, Yout>>> {};
 
 // case #4: no match (error)
 template <int Pos, class X, class... Xs, class... Zs>
@@ -121,8 +115,7 @@ struct imi<Pos, type_list<X, Xs...>, type_list<>, type_list<Zs...>> {
 /// first mismatch. Returns the number of elements on a match.
 /// @pre len(Found) == len(Expected)
 template <class Found, class Expected>
-using interface_mismatch_t = detail::imi<0, Found, Expected,
-                                         detail::type_list<>>;
+using interface_mismatch_t
+  = detail::imi<0, Found, Expected, detail::type_list<>>;
 
 } // namespace caf
-

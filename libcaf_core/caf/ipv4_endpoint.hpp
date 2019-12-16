@@ -22,13 +22,14 @@
 #include <functional>
 
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/meta/type_name.hpp"
 
 namespace caf {
 
 /// An IP endpoint that contains an ::ipv4_address and a port.
-class ipv4_endpoint : detail::comparable<ipv4_endpoint> {
+class CAF_CORE_EXPORT ipv4_endpoint : detail::comparable<ipv4_endpoint> {
 public:
   // -- constructors -----------------------------------------------------------
 
@@ -71,8 +72,8 @@ public:
   long compare(ipv4_endpoint x) const noexcept;
 
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f,
-                                                 ipv4_endpoint& x) {
+  friend typename Inspector::result_type
+  inspect(Inspector& f, ipv4_endpoint& x) {
     return f(meta::type_name("ipv4_endpoint"), x.address_, x.port_);
   }
 
@@ -81,7 +82,7 @@ private:
   uint16_t port_;        /// The port of this endpoint.
 };
 
-std::string to_string(const ipv4_endpoint& ep);
+CAF_CORE_EXPORT std::string to_string(const ipv4_endpoint& ep);
 
 } // namespace caf
 

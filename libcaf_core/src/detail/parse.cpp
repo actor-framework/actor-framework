@@ -219,9 +219,8 @@ void parse_element(string_parser_state& ps, std::string& x,
     parser::read_string(ps, make_consumer(x));
     return;
   }
-  auto is_legal = [=](char c) {
-    return c != '\0' && strchr(char_blacklist, c) == nullptr;
-  };
+  auto is_legal
+    = [=](char c) { return c != '\0' && strchr(char_blacklist, c) == nullptr; };
   for (auto c = ps.current(); is_legal(c); c = ps.next())
     x += c;
   while (!x.empty() && isspace(x.back()))
@@ -229,4 +228,4 @@ void parse_element(string_parser_state& ps, std::string& x,
   ps.code = ps.at_end() ? pec::success : pec::trailing_character;
 }
 
-} // namespace caf
+} // namespace caf::detail

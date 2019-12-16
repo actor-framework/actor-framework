@@ -79,4 +79,4 @@ void doorman_impl::remove_from_loop() {
   acceptor_.passivate();
 }
 
-} // namespace caf
+} // namespace caf::io::network

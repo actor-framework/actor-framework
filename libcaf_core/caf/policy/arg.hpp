@@ -30,5 +30,4 @@ public:
 template <class... Ts>
 const arg<Ts...> arg<Ts...>::value = arg<Ts...>{};
 
-} // namespace caf
-
+} // namespace caf::policy

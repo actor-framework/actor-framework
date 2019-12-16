@@ -18,15 +18,15 @@
 
 #pragma once
 
-#include <cmath>     // fabs
-#include <string>
-#include <vector>
+#include <algorithm>
 #include <limits>
 #include <sstream>
-#include <algorithm>
+#include <string>
 #include <type_traits>
+#include <vector>
 
 #include "caf/config.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/string_view.hpp"
 
@@ -40,17 +40,17 @@ inline string_view is_any_of(string_view arg) {
 
 constexpr bool token_compress_on = false;
 
-void split(std::vector<std::string>& result, string_view str,
-           string_view delims, bool keep_all = true);
+CAF_CORE_EXPORT void split(std::vector<std::string>& result, string_view str,
+                           string_view delims, bool keep_all = true);
 
-void split(std::vector<string_view>& result, string_view str,
-           string_view delims, bool keep_all = true);
+CAF_CORE_EXPORT void split(std::vector<string_view>& result, string_view str,
+                           string_view delims, bool keep_all = true);
 
-void split(std::vector<std::string>& result, string_view str,
-           char delim, bool keep_all = true);
+CAF_CORE_EXPORT void split(std::vector<std::string>& result, string_view str,
+                           char delim, bool keep_all = true);
 
-void split(std::vector<string_view>& result, string_view str,
-           char delim, bool keep_all = true);
+CAF_CORE_EXPORT void split(std::vector<string_view>& result, string_view str,
+                           char delim, bool keep_all = true);
 
 template <class InputIterator>
 std::string join(InputIterator first, InputIterator last, string_view glue) {
@@ -69,12 +69,13 @@ std::string join(const Container& c, string_view glue) {
 }
 
 /// Replaces all occurrences of `what` by `with` in `str`.
-void replace_all(std::string& str, string_view what, string_view with);
+CAF_CORE_EXPORT void
+replace_all(std::string& str, string_view what, string_view with);
 
 /// Returns whether `str` begins with `prefix`.
-bool starts_with(string_view str, string_view prefix);
+CAF_CORE_EXPORT bool starts_with(string_view str, string_view prefix);
 
 /// Returns whether `str` ends with `suffix`.
-bool ends_with(string_view str, string_view suffix);
+CAF_CORE_EXPORT bool ends_with(string_view str, string_view suffix);
 
 } // namespace caf

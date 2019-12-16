@@ -32,4 +32,3 @@ struct keep_behavior_t {
 constexpr keep_behavior_t keep_behavior = keep_behavior_t{};
 
 } // namespace caf
-

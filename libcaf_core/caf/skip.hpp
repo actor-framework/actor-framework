@@ -20,6 +20,7 @@
 
 #include <functional>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf {
@@ -28,10 +29,10 @@ namespace caf {
 /// Default handler function that leaves messages in the mailbox.
 /// Can also be used inside custom message handlers to signalize
 /// skipping to the runtime.
-class skip_t {
+class CAF_CORE_EXPORT skip_t {
 public:
-  using fun = std::function<result<message> (scheduled_actor* self,
-                                             message_view&)>;
+  using fun
+    = std::function<result<message>(scheduled_actor* self, message_view&)>;
 
   constexpr skip_t() {
     // nop
@@ -53,4 +54,3 @@ private:
 constexpr skip_t skip = skip_t{};
 
 } // namespace caf
-

@@ -41,10 +41,8 @@ inline bool is_digit<10>(char c) {
 
 template <>
 inline bool is_digit<16>(char c) {
-  return (c >= '0' && c <= '9')
-         || (c >= 'A' && c <= 'F')
+  return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F')
          || (c >= 'a' && c <= 'f');
 }
 
-} // namespace caf
-
+} // namespace caf::detail::parser

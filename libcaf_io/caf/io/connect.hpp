@@ -18,11 +18,11 @@
 
 #pragma once
 
-#include <string>
 #include <cstdint>
+#include <string>
 
-#include "caf/node_id.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/node_id.hpp"
 
 #include "caf/io/middleman.hpp"
 
@@ -30,11 +30,9 @@ namespace caf::io {
 
 /// Tries to connect to given node.
 /// @experimental
-inline expected<node_id> connect(actor_system& sys, std::string host,
-                                 uint16_t port) {
+inline expected<node_id>
+connect(actor_system& sys, std::string host, uint16_t port) {
   return sys.middleman().connect(std::move(host), port);
 }
 
-
-} // namespace caf
-
+} // namespace caf::io

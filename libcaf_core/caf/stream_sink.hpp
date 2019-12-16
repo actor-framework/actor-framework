@@ -78,4 +78,3 @@ template <class In>
 using stream_sink_ptr = intrusive_ptr<stream_sink<In>>;
 
 } // namespace caf
-

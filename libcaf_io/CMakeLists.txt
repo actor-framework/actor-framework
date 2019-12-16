@@ -1,16 +1,17 @@
-project(caf_io C CXX)
+# -- get header files for creating "proper" XCode projects ---------------------
 
-# get header files; only needed by CMake generators,
-# e.g., for creating proper Xcode projects
-file(GLOB_RECURSE LIBCAF_IO_HDRS "caf/*.hpp")
+file(GLOB_RECURSE CAF_IO_HEADERS "caf/*.hpp")
+
+# -- auto generate to_string for enum types ------------------------------------
 
 enum_to_string("caf/io/basp/message_type.hpp" "message_type_to_string.cpp")
 enum_to_string("caf/io/network/operation.hpp" "operation_to_string.cpp")
 
-# list cpp files excluding platform-dependent files
-set(LIBCAF_IO_SRCS
-  "${CMAKE_CURRENT_BINARY_DIR}/message_type_to_string.cpp"
-  "${CMAKE_CURRENT_BINARY_DIR}/operation_to_string.cpp"
+# -- list cpp files ------------------------------------------------------------
+
+set(CAF_IO_SOURCES
+  "${CMAKE_BINARY_DIR}/message_type_to_string.cpp"
+  "${CMAKE_BINARY_DIR}/operation_to_string.cpp"
   src/detail/socket_guard.cpp
   src/io/abstract_broker.cpp
   src/io/basp/header.cpp
@@ -51,41 +52,83 @@ set(LIBCAF_IO_SRCS
   src/policy/udp.cpp
 )
 
-add_custom_target(libcaf_io)
+set(CAF_IO_TEST_SOURCES
+  test/io/basp/message_queue.cpp
+  test/io/basp_broker.cpp
+  test/io/broker.cpp
+  test/io/http_broker.cpp
+  test/io/network/default_multiplexer.cpp
+  test/io/network/ip_endpoint.cpp
+  test/io/receive_buffer.cpp
+  test/io/remote_actor.cpp
+  test/io/remote_group.cpp
+  test/io/remote_spawn.cpp
+  test/io/unpublish.cpp
+  test/io/worker.cpp
+)
 
-# build shared library if not compiling static only
-if (NOT CAF_BUILD_STATIC_ONLY)
-  add_library(libcaf_io_shared SHARED ${LIBCAF_IO_SRCS} ${LIBCAF_IO_HDRS})
-  target_link_libraries(libcaf_io_shared ${CAF_EXTRA_LDFLAGS} ${CAF_LIBRARY_CORE})
-  target_include_directories(libcaf_io_shared PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    $<INSTALL_INTERFACE:include>
-  )
-  set_target_properties(libcaf_io_shared
-                        PROPERTIES
-                        SOVERSION ${CAF_VERSION}
-                        VERSION ${CAF_LIB_VERSION}
-                        OUTPUT_NAME caf_io)
-  install(TARGETS libcaf_io_shared
-          RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-          LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
-  add_dependencies(libcaf_io_shared libcaf_io)
-endif ()
+# -- add library target --------------------------------------------------------
 
-# build static library only if --build-static or --build-static-only was set
-if (CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
-  add_library(libcaf_io_static STATIC ${LIBCAF_IO_HDRS} ${LIBCAF_IO_SRCS})
-  target_link_libraries(libcaf_io_static ${CAF_EXTRA_LDFLAGS} ${CAF_LIBRARY_CORE_STATIC})
-  target_include_directories(libcaf_io_static PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    $<INSTALL_INTERFACE:include>
-  )
-  set_target_properties(libcaf_io_static PROPERTIES OUTPUT_NAME caf_io_static)
-  install(TARGETS libcaf_io_static ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-  add_dependencies(libcaf_io_static libcaf_io)
-endif ()
+add_library(libcaf_io_obj OBJECT ${CAF_IO_SOURCES} ${CAF_IO_HEADERS})
 
-# install includes
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/caf
+add_library(libcaf_io $<TARGET_OBJECTS:libcaf_io_obj>)
+
+add_library(caf::io ALIAS libcaf_io)
+
+if(BUILD_SHARED_LIBS AND NOT WIN32)
+  target_compile_options(libcaf_io PRIVATE -fPIC)
+  target_compile_options(libcaf_io_obj PRIVATE -fPIC)
+endif()
+
+target_link_libraries(libcaf_io PUBLIC caf::core ${CAF_EXTRA_LDFLAGS})
+
+generate_export_header(libcaf_io
+                       EXPORT_MACRO_NAME CAF_IO_EXPORT
+                       EXPORT_FILE_NAME "${CMAKE_BINARY_DIR}/caf/detail/io_export.hpp"
+                       STATIC_DEFINE CAF_STATIC_BUILD)
+
+target_compile_definitions(libcaf_io_obj PRIVATE libcaf_io_EXPORTS)
+
+set_target_properties(libcaf_io PROPERTIES
+                      EXPORT_NAME io
+                      SOVERSION ${CAF_VERSION}
+                      VERSION ${CAF_LIB_VERSION}
+                      OUTPUT_NAME caf_io)
+
+# -- install library and header files ------------------------------------------
+
+install(FILES "${CMAKE_BINARY_DIR}/caf/detail/io_export.hpp"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail")
+
+install(TARGETS libcaf_io
+        EXPORT CAFTargets
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT io
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT io
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT io)
+
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        COMPONENT io
         FILES_MATCHING PATTERN "*.hpp")
+
+# -- build unit tests ----------------------------------------------------------
+
+if(NOT CAF_NO_UNIT_TESTS)
+  add_executable(caf-io-test
+                 "${PROJECT_SOURCE_DIR}/libcaf_test/src/caf-test.cpp"
+                 "${PROJECT_SOURCE_DIR}/libcaf_test/caf/test/unit_test.hpp"
+                 "${PROJECT_SOURCE_DIR}/libcaf_test/caf/test/unit_test_impl.hpp"
+                 ${CAF_IO_TEST_SOURCES}
+                 $<TARGET_OBJECTS:libcaf_io_obj>)
+  target_compile_definitions(caf-io-test PRIVATE libcaf_io_EXPORTS)
+  target_link_libraries(caf-io-test caf::core ${CAF_EXTRA_LDFLAGS})
+  add_test_suites(caf-io-test
+                  "${CMAKE_CURRENT_SOURCE_DIR}"
+                  ${CAF_IO_TEST_SOURCES})
+endif()
+
+# -- add this library to the global CAF_LIBRARIES ------------------------------
+
+list(APPEND CAF_LIBRARIES libcaf_io)
+
+set(CAF_LIBRARIES ${CAF_LIBRARIES} PARENT_SCOPE)

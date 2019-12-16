@@ -18,21 +18,25 @@
 
 #pragma once
 
+#include <vector>
+
 #include "caf/allowed_unsafe_message_type.hpp"
 #include "caf/byte_buffer.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/io/broker_servant.hpp"
 #include "caf/io/network/stream_manager.hpp"
 #include "caf/io/receive_policy.hpp"
 #include "caf/io/system_messages.hpp"
+#include "caf/message.hpp"
 
 namespace caf::io {
 
-using scribe_base = broker_servant<network::stream_manager, connection_handle,
-                                   new_data_msg>;
+using scribe_base
+  = broker_servant<network::stream_manager, connection_handle, new_data_msg>;
 
 /// Manages a stream.
 /// @ingroup Broker
-class scribe : public scribe_base {
+class CAF_IO_EXPORT scribe : public scribe_base {
 public:
   scribe(connection_handle conn_hdl);
 
@@ -64,7 +68,7 @@ protected:
 
 using scribe_ptr = intrusive_ptr<scribe>;
 
-} // namespace caf
+} // namespace caf::io
 
 // Allows the `middleman_actor` to create a `scribe` and then send it to the
 // BASP broker.

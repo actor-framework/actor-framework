@@ -24,4 +24,4 @@ acceptor_manager::~acceptor_manager() {
   // nop
 }
 
-} // namespace caf
+} // namespace caf::io::network

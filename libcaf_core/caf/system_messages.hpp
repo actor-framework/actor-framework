@@ -18,17 +18,16 @@
 
 #pragma once
 
-#include <vector>
 #include <cstdint>
 #include <type_traits>
+#include <vector>
 
 #include "caf/actor_addr.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/fwd.hpp"
 #include "caf/group.hpp"
-#include "caf/stream_slot.hpp"
-
 #include "caf/meta/type_name.hpp"
+#include "caf/stream_slot.hpp"
 
 namespace caf {
 
@@ -128,4 +127,3 @@ typename Inspector::result_type inspect(Inspector& f, open_stream_msg& x) {
 }
 
 } // namespace caf
-

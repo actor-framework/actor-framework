@@ -19,26 +19,26 @@
 #pragma once
 
 #include <map>
-#include <vector>
 #include <memory>
 #include <thread>
+#include <vector>
 
 #include "caf/actor_system.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/detail/unique_function.hpp"
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
+#include "caf/io/broker.hpp"
+#include "caf/io/middleman_actor.hpp"
+#include "caf/io/network/multiplexer.hpp"
 #include "caf/node_id.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/send.hpp"
 
-#include "caf/io/broker.hpp"
-#include "caf/io/middleman_actor.hpp"
-#include "caf/io/network/multiplexer.hpp"
-
 namespace caf::io {
 
 /// Manages brokers and network backends.
-class middleman : public actor_system::module {
+class CAF_IO_EXPORT middleman : public actor_system::module {
 public:
   friend class ::caf::actor_system;
 
@@ -46,8 +46,8 @@ public:
 
   /// Tries to open a port for other CAF instances to connect to.
   /// @experimental
-  expected<uint16_t> open(uint16_t port, const char* in = nullptr,
-                          bool reuse = false);
+  expected<uint16_t>
+  open(uint16_t port, const char* in = nullptr, bool reuse = false);
 
   /// Closes port `port` regardless of whether an actor is published to it.
   expected<void> close(uint16_t port);
@@ -76,9 +76,9 @@ public:
   /// on address `addr` and `port`.
   /// @returns The actual port the OS uses after `bind()`. If `port == 0`
   ///          the OS chooses a random high-level port.
-  expected<uint16_t> publish_local_groups(uint16_t port,
-                                          const char* in = nullptr,
-                                          bool reuse = false);
+  expected<uint16_t>
+  publish_local_groups(uint16_t port, const char* in = nullptr,
+                       bool reuse = false);
 
   /// Unpublishes `whom` by closing `port` or all assigned ports if `port == 0`.
   /// @param whom Actor that should be unpublished at `port`.
@@ -168,9 +168,9 @@ public:
 
   /// @experimental
   template <class Handle, class Rep, class Period>
-  expected<Handle> remote_spawn(const node_id& nid, std::string name,
-                                message args,
-                                std::chrono::duration<Rep, Period> timeout) {
+  expected<Handle>
+  remote_spawn(const node_id& nid, std::string name, message args,
+               std::chrono::duration<Rep, Period> timeout) {
     return remote_spawn<Handle>(nid, std::move(name), std::move(args),
                                 duration{timeout});
   }
@@ -179,7 +179,7 @@ public:
   using backend_pointer = std::unique_ptr<network::multiplexer>;
 
   /// Used to initialize the backend during construction.
-  using backend_factory = std::function<backend_pointer ()>;
+  using backend_factory = std::function<backend_pointer()>;
 
   void start() override;
 
@@ -194,8 +194,7 @@ public:
   /// Spawns a new functor-based broker.
   template <spawn_options Os = no_spawn_options,
             class F = std::function<void(broker*)>, class... Ts>
-  typename infer_handle_from_fun<F>::type
-  spawn_broker(F fun, Ts&&... xs) {
+  typename infer_handle_from_fun<F>::type spawn_broker(F fun, Ts&&... xs) {
     using impl = infer_impl_from_fun_t<F>;
     static constexpr bool spawnable = detail::spawnable<F, impl, Ts...>();
     static_assert(spawnable,
@@ -245,8 +244,8 @@ public:
   static actor_system::module* make(actor_system&, detail::type_list<>);
 
   template <class Backend>
-  static actor_system::module* make(actor_system& sys,
-                                    detail::type_list<Backend>) {
+  static actor_system::module*
+  make(actor_system& sys, detail::type_list<Backend>) {
     class impl : public middleman {
     public:
       impl(actor_system& ref) : middleman(ref), backend_(&ref) {
@@ -303,19 +302,18 @@ private:
     return system().spawn_class<Impl, Os>(cfg);
   }
 
-  expected<strong_actor_ptr> remote_spawn_impl(const node_id& nid,
-                                               std::string& name, message& args,
-                                               std::set<std::string> s,
-                                               duration timeout);
+  expected<strong_actor_ptr>
+  remote_spawn_impl(const node_id& nid, std::string& name, message& args,
+                    std::set<std::string> s, duration timeout);
 
-  expected<uint16_t> publish(const strong_actor_ptr& whom,
-                             std::set<std::string> sigs,
-                             uint16_t port, const char* cstr, bool ru);
+  expected<uint16_t>
+  publish(const strong_actor_ptr& whom, std::set<std::string> sigs,
+          uint16_t port, const char* cstr, bool ru);
 
   expected<void> unpublish(const actor_addr& whom, uint16_t port);
 
-  expected<strong_actor_ptr> remote_actor(std::set<std::string> ifs,
-                                          std::string host, uint16_t port);
+  expected<strong_actor_ptr>
+  remote_actor(std::set<std::string> ifs, std::string host, uint16_t port);
 
   static int exec_slave_mode(actor_system&, const actor_system_config&);
 
@@ -331,5 +329,4 @@ private:
   middleman_actor manager_;
 };
 
-} // namespace caf
-
+} // namespace caf::io

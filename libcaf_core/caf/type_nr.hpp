@@ -18,14 +18,16 @@
 
 #pragma once
 
+#include <cstdint>
 #include <map>
 #include <set>
 #include <string>
 #include <vector>
-#include <cstdint>
 
 #include "caf/atom.hpp"
 #include "caf/byte.hpp"
+#include "caf/config.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
@@ -36,52 +38,52 @@ namespace caf {
 
 /// Compile-time list of all built-in types.
 /// @warning Types are sorted by uniform name.
-using sorted_builtin_types = detail::type_list< // uniform name:
-  actor,                                        // @actor
-  std::vector<actor>,                           // @actorvec
-  actor_addr,                                   // @addr
-  std::vector<actor_addr>,                      // @addrvec
-  atom_value,                                   // @atom
-  std::vector<byte>,                            // @bytebuf
-  std::vector<char>,                            // @charbuf
-  config_value,                                 // @config_value
-  down_msg,                                     // @down
-  downstream_msg,                               // @downstream_msg
-  duration,                                     // @duration
-  error,                                        // @error
-  exit_msg,                                     // @exit
-  group,                                        // @group
-  group_down_msg,                               // @group_down
-  int16_t,                                      // @i16
-  int32_t,                                      // @i32
-  int64_t,                                      // @i64
-  int8_t,                                       // @i8
-  long double,                                  // @ldouble
-  message,                                      // @message
-  message_id,                                   // @message_id
-  node_id,                                      // @node
-  open_stream_msg,                              // @open_stream_msg
-  std::string,                                  // @str
-  std::map<std::string, std::string>,           // @strmap
-  strong_actor_ptr,                             // @strong_actor_ptr
-  std::set<std::string>,                        // @strset
-  std::vector<std::string>,                     // @strvec
-  timeout_msg,                                  // @timeout
-  timespan,                                     // @timespan
-  timestamp,                                    // @timestamp
-  uint16_t,                                     // @u16
-  std::u16string,                               // @u16_str
-  uint32_t,                                     // @u32
-  std::u32string,                               // @u32_str
-  uint64_t,                                     // @u64
-  uint8_t,                                      // @u8
-  unit_t,                                       // @unit
-  upstream_msg,                                 // @upstream_msg
-  weak_actor_ptr,                               // @weak_actor_ptr
-  bool,                                         // bool
-  double,                                       // double
-  float                                         // float
-  >;
+using sorted_builtin_types
+  = detail::type_list<actor,                              // @actor
+                      std::vector<actor>,                 // @actorvec
+                      actor_addr,                         // @addr
+                      std::vector<actor_addr>,            // @addrvec
+                      atom_value,                         // @atom
+                      byte_buffer,                        // @bytebuf
+                      std::vector<char>,                  // @charbuf
+                      config_value,                       // @config_value
+                      down_msg,                           // @down
+                      downstream_msg,                     // @downstream_msg
+                      duration,                           // @duration
+                      error,                              // @error
+                      exit_msg,                           // @exit
+                      group,                              // @group
+                      group_down_msg,                     // @group_down
+                      int16_t,                            // @i16
+                      int32_t,                            // @i32
+                      int64_t,                            // @i64
+                      int8_t,                             // @i8
+                      long double,                        // @ldouble
+                      message,                            // @message
+                      message_id,                         // @message_id
+                      node_id,                            // @node
+                      open_stream_msg,                    // @open_stream_msg
+                      std::string,                        // @str
+                      std::map<std::string, std::string>, // @strmap
+                      strong_actor_ptr,                   // @strong_actor_ptr
+                      std::set<std::string>,              // @strset
+                      std::vector<std::string>,           // @strvec
+                      timeout_msg,                        // @timeout
+                      timespan,                           // @timespan
+                      timestamp,                          // @timestamp
+                      uint16_t,                           // @u16
+                      std::u16string,                     // @u16_str
+                      uint32_t,                           // @u32
+                      std::u32string,                     // @u32_str
+                      uint64_t,                           // @u64
+                      uint8_t,                            // @u8
+                      unit_t,                             // @unit
+                      upstream_msg,                       // @upstream_msg
+                      weak_actor_ptr,                     // @weak_actor_ptr
+                      bool,                               // bool
+                      double,                             // double
+                      float                               // float
+                      >;
 
 /// Computes the type number for `T`.
 template <class T, bool IsIntegral = std::is_integral<T>::value>
@@ -109,11 +111,11 @@ struct type_nr<atom_constant<V>, false> {
 };
 
 /// The number of built-in types.
-static constexpr size_t type_nrs = detail::tl_size<sorted_builtin_types>::value
-                                   + 1;
+static constexpr size_t type_nrs
+  = detail::tl_size<sorted_builtin_types>::value + 1;
 
 /// List of all type names, indexed via `type_nr`.
-extern const char* numbered_type_names[];
+CAF_CORE_EXPORT extern const char* numbered_type_names[];
 
 template <uint32_t R, uint16_t... Is>
 struct type_token_helper;
@@ -142,7 +144,7 @@ struct make_type_token_from_list_helper;
 
 template <class... Ts>
 struct make_type_token_from_list_helper<detail::type_list<Ts...>>
-    : type_token_helper<0xFFFFFFFF, type_nr<Ts>::value...> {
+  : type_token_helper<0xFFFFFFFF, type_nr<Ts>::value...> {
   // nop
 };
 
@@ -152,4 +154,3 @@ constexpr uint32_t make_type_token_from_list() {
 }
 
 } // namespace caf
-

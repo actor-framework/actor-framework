@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include "caf/error.hpp"
 #include "caf/config.hpp"
+#include "caf/error.hpp"
 
 #include "caf/detail/type_traits.hpp"
 

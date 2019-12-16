@@ -33,5 +33,4 @@ inline expected<uint16_t> open(actor_system& sys, uint16_t port,
   return sys.middleman().open(port, in, reuse);
 }
 
-} // namespace caf
-
+} // namespace caf::io

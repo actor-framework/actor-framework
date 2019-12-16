@@ -57,4 +57,4 @@ work_stealing::worker_data::worker_data(const worker_data& other)
   // nop
 }
 
-} // namespace caf
+} // namespace caf::policy

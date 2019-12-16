@@ -20,12 +20,13 @@
 
 #include <utility>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf {
 
 /// Marker type that allows CAF to spawn actors from composable states.
-class abstract_composable_behavior {
+class CAF_CORE_EXPORT abstract_composable_behavior {
 public:
   virtual ~abstract_composable_behavior();
 
@@ -33,4 +34,3 @@ public:
 };
 
 } // namespace caf
-

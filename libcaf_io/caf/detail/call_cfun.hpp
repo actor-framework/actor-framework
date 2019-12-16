@@ -51,16 +51,18 @@ inline bool cc_valid_socket(caf::io::network::native_socket fd) {
 #define CALL_CFUN(var, predicate, fun_name, expr)                              \
   auto var = expr;                                                             \
   if (!predicate(var))                                                         \
-    return make_error(sec::network_syscall_failed,                             \
-                      fun_name, last_socket_error_as_string())
+  return make_error(sec::network_syscall_failed, fun_name,                     \
+                    last_socket_error_as_string())
 
 /// Calls a C functions and calls exit() if `predicate(var)` returns false.
 #define CALL_CRITICAL_CFUN(var, predicate, funname, expr)                      \
   auto var = expr;                                                             \
   if (!predicate(var)) {                                                       \
     fprintf(stderr, "[FATAL] %s:%u: syscall failed: %s returned %s\n",         \
-           __FILE__, __LINE__, funname, last_socket_error_as_string().c_str());\
+            __FILE__, __LINE__, funname,                                       \
+            last_socket_error_as_string().c_str());                            \
     abort();                                                                   \
-  } static_cast<void>(0)
+  }                                                                            \
+  static_cast<void>(0)
 
-} // namespace caf
+} // namespace caf::detail

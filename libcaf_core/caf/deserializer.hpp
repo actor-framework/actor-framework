@@ -25,6 +25,7 @@
 #include <utility>
 
 #include "caf/byte.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/span.hpp"
 #include "caf/write_inspector.hpp"
@@ -33,7 +34,7 @@ namespace caf {
 
 /// @ingroup TypeSystem
 /// Technology-independent deserialization interface.
-class deserializer : public write_inspector<deserializer> {
+class CAF_CORE_EXPORT deserializer : public write_inspector<deserializer> {
 public:
   // -- member types -----------------------------------------------------------
 

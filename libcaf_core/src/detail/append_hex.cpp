@@ -35,4 +35,4 @@ void append_hex(std::string& result, const uint8_t* xs, size_t n) {
   }
 }
 
-} // namespace caf
+} // namespace caf::detail

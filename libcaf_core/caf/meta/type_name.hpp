@@ -34,5 +34,4 @@ struct type_name_t : annotation {
 type_name_t constexpr type_name(const char* cstr) {
   return {cstr};
 }
-} // namespace caf
-
+} // namespace caf::meta

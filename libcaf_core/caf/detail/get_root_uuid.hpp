@@ -20,9 +20,10 @@
 
 #include <string>
 
+#include "caf/detail/core_export.hpp"
+
 namespace caf::detail {
 
-std::string get_root_uuid();
+CAF_CORE_EXPORT std::string get_root_uuid();
 
-} // namespace caf
-
+} // namespace caf::detail

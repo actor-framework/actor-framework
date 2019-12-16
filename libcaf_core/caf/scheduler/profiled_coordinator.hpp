@@ -21,21 +21,21 @@
 #include "caf/config.hpp"
 
 #if defined(CAF_MACOS) || defined(CAF_IOS)
-#include <mach/mach.h>
+#  include <mach/mach.h>
 #elif defined(CAF_WINDOWS)
-#include <windows.h>
-#include <psapi.h>
+#  include <psapi.h>
+#  include <windows.h>
 #else
-#include <sys/resource.h>
+#  include <sys/resource.h>
 #endif
 
-#include <cmath>
-#include <mutex>
 #include <chrono>
-#include <vector>
+#include <cmath>
 #include <fstream>
 #include <iomanip>
+#include <mutex>
 #include <unordered_map>
+#include <vector>
 
 #include "caf/actor_system_config.hpp"
 #include "caf/defaults.hpp"
@@ -59,29 +59,30 @@ public:
 
   class measurement {
   public:
-#   if defined(CAF_MACOS) || defined(CAF_IOS)
+#if defined(CAF_MACOS) || defined(CAF_IOS)
     static usec to_usec(const ::time_value_t& tv) {
       return std::chrono::seconds(tv.seconds) + usec(tv.microseconds);
     }
-#   elif defined(CAF_WINDOWS)
+#elif defined(CAF_WINDOWS)
     static usec to_usec(FILETIME const& ft) {
       ULARGE_INTEGER time;
       time.LowPart = ft.dwLowDateTime;
       time.HighPart = ft.dwHighDateTime;
 
-      return std::chrono::seconds(time.QuadPart / 10000000) + usec((time.QuadPart % 10000000) / 10);
+      return std::chrono::seconds(time.QuadPart / 10000000)
+             + usec((time.QuadPart % 10000000) / 10);
     }
-#   else
+#else
     static usec to_usec(const ::timeval& tv) {
       return std::chrono::seconds(tv.tv_sec) + usec(tv.tv_usec);
     }
-#   endif
+#endif
 
     static measurement take() {
       auto now = clock_type::now().time_since_epoch();
       measurement m;
       m.runtime = std::chrono::duration_cast<usec>(now);
-#     if defined(CAF_MACOS) || defined(CAF_IOS)
+#if defined(CAF_MACOS) || defined(CAF_IOS)
       auto tself = ::mach_thread_self();
       ::thread_basic_info info;
       auto count = THREAD_BASIC_INFO_COUNT;
@@ -93,30 +94,30 @@ public:
         m.sys = to_usec(info.system_time);
       }
       ::mach_port_deallocate(mach_task_self(), tself);
-#     elif defined(CAF_WINDOWS)
+#elif defined(CAF_WINDOWS)
       FILETIME creation_time, exit_time, kernel_time, user_time;
       PROCESS_MEMORY_COUNTERS pmc;
 
       GetProcessTimes(GetCurrentProcess(), &creation_time, &exit_time,
-        &kernel_time, &user_time);
+                      &kernel_time, &user_time);
 
       GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc));
 
       m.mem = pmc.PeakWorkingSetSize / 1024;
       m.usr = to_usec(user_time);
       m.sys = to_usec(kernel_time);
-#     elif defined(CAF_CYGWIN)
+#elif defined(CAF_CYGWIN)
       // TODO - decide what to do here instead of zeros
       m.usr = usec::zero();
       m.sys = usec::zero();
       m.mem = 0;
-#     else
+#else
       ::rusage ru;
       ::getrusage(RUSAGE_THREAD, &ru);
       m.usr = to_usec(ru.ru_utime);
       m.sys = to_usec(ru.ru_stime);
       m.mem = ru.ru_maxrss;
-#     endif
+#endif
       return m;
     }
 
@@ -150,10 +151,8 @@ public:
 
     friend std::ostream& operator<<(std::ostream& out, const measurement& m) {
       using std::setw;
-      out << setw(15) << m.runtime.count()
-          << setw(15) << m.usr.count()
-          << setw(15) << m.sys.count()
-          << m.mem;
+      out << setw(15) << m.runtime.count() << setw(15) << m.usr.count()
+          << setw(15) << m.sys.count() << m.mem;
       return out;
     }
 
@@ -181,12 +180,10 @@ public:
                         sr::profiling_output_file);
     file_.open(fname);
     if (!file_)
-      std::cerr << R"([WARNING] could not open file ")"
-                << fname
-                << R"(" (no profiler output will be generated))"
-                << std::endl;
-    auto res = get_or(cfg, "scheduler.profiling-resolution",
-                      sr::profiling_resolution);
+      std::cerr << R"([WARNING] could not open file ")" << fname
+                << R"(" (no profiler output will be generated))" << std::endl;
+    auto res
+      = get_or(cfg, "scheduler.profiling-resolution", sr::profiling_resolution);
     resolution_ = std::chrono::duration_cast<msec>(res);
   }
 
@@ -196,13 +193,13 @@ public:
     worker_states_.resize(this->num_workers());
     using std::setw;
     file_.flags(std::ios::left);
-    file_ << setw(21) << "clock"     // UNIX timestamp in microseconds
-          << setw(10) << "type"      // "actor" or "worker"
-          << setw(10) << "id"        // ID of the above
-          << setw(15) << "time"      // duration of this sample (cumulative)
-          << setw(15) << "usr"       // time spent in user mode (cumulative)
-          << setw(15) << "sys"       // time spent in kernel model (cumulative)
-          << "mem"                   // used memory (cumulative)
+    file_ << setw(21) << "clock" // UNIX timestamp in microseconds
+          << setw(10) << "type"  // "actor" or "worker"
+          << setw(10) << "id"    // ID of the above
+          << setw(15) << "time"  // duration of this sample (cumulative)
+          << setw(15) << "usr"   // time spent in user mode (cumulative)
+          << setw(15) << "sys"   // time spent in kernel model (cumulative)
+          << "mem"               // used memory (cumulative)
           << '\n';
   }
 
@@ -263,11 +260,8 @@ public:
   template <class Time, class Label>
   void record(Time t, Label label, size_t rec_id, const measurement& m) {
     using std::setw;
-    file_ << setw(21) << t.time_since_epoch().count()
-           << setw(10) << label
-           << setw(10) << rec_id
-           << m
-           << '\n';
+    file_ << setw(21) << t.time_since_epoch().count() << setw(10) << label
+          << setw(10) << rec_id << m << '\n';
   }
 
   void report(const actor_id& job, const measurement& m) {
@@ -296,5 +290,4 @@ public:
   clock_type::duration last_flush_ = clock_type::duration::zero();
 };
 
-} // namespace caf
-
+} // namespace caf::scheduler

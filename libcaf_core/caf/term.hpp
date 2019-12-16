@@ -20,6 +20,8 @@
 
 #include <iosfwd>
 
+#include "caf/detail/core_export.hpp"
+
 namespace caf {
 
 /// Terminal color and font face options.
@@ -62,7 +64,6 @@ enum class term {
   bold_white
 };
 
-std::ostream& operator<<(std::ostream& out, term x);
+CAF_CORE_EXPORT std::ostream& operator<<(std::ostream& out, term x);
 
 } // namespace caf
-

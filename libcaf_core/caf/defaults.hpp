@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "caf/atom.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/string_view.hpp"
 #include "caf/timestamp.hpp"
 
@@ -33,64 +34,64 @@ namespace caf::defaults {
 
 namespace stream {
 
-extern const timespan desired_batch_complexity;
-extern const timespan max_batch_delay;
-extern const timespan credit_round_interval;
-extern const atom_value credit_policy;
+extern CAF_CORE_EXPORT const timespan desired_batch_complexity;
+extern CAF_CORE_EXPORT const timespan max_batch_delay;
+extern CAF_CORE_EXPORT const timespan credit_round_interval;
+extern CAF_CORE_EXPORT const atom_value credit_policy;
 
 namespace size_policy {
 
-extern const int32_t bytes_per_batch;
-extern const int32_t buffer_capacity;
+extern CAF_CORE_EXPORT const int32_t bytes_per_batch;
+extern CAF_CORE_EXPORT const int32_t buffer_capacity;
 
 } // namespace size_policy
 
-} // namespace streaming
+} // namespace stream
 
 namespace scheduler {
 
-extern const atom_value policy;
-extern string_view profiling_output_file;
-extern const size_t max_threads;
-extern const size_t max_throughput;
-extern const timespan profiling_resolution;
+extern CAF_CORE_EXPORT const atom_value policy;
+extern CAF_CORE_EXPORT string_view profiling_output_file;
+extern CAF_CORE_EXPORT const size_t max_threads;
+extern CAF_CORE_EXPORT const size_t max_throughput;
+extern CAF_CORE_EXPORT const timespan profiling_resolution;
 
 } // namespace scheduler
 
 namespace work_stealing {
 
-extern const size_t aggressive_poll_attempts;
-extern const size_t aggressive_steal_interval;
-extern const size_t moderate_poll_attempts;
-extern const size_t moderate_steal_interval;
-extern const timespan moderate_sleep_duration;
-extern const size_t relaxed_steal_interval;
-extern const timespan relaxed_sleep_duration;
+extern CAF_CORE_EXPORT const size_t aggressive_poll_attempts;
+extern CAF_CORE_EXPORT const size_t aggressive_steal_interval;
+extern CAF_CORE_EXPORT const size_t moderate_poll_attempts;
+extern CAF_CORE_EXPORT const size_t moderate_steal_interval;
+extern CAF_CORE_EXPORT const timespan moderate_sleep_duration;
+extern CAF_CORE_EXPORT const size_t relaxed_steal_interval;
+extern CAF_CORE_EXPORT const timespan relaxed_sleep_duration;
 
 } // namespace work_stealing
 
 namespace logger {
 
-extern string_view component_filter;
-extern const atom_value console;
-extern string_view console_format;
-extern const atom_value console_verbosity;
-extern string_view file_format;
-extern string_view file_name;
-extern const atom_value file_verbosity;
+extern CAF_CORE_EXPORT string_view component_filter;
+extern CAF_CORE_EXPORT const atom_value console;
+extern CAF_CORE_EXPORT string_view console_format;
+extern CAF_CORE_EXPORT const atom_value console_verbosity;
+extern CAF_CORE_EXPORT string_view file_format;
+extern CAF_CORE_EXPORT string_view file_name;
+extern CAF_CORE_EXPORT const atom_value file_verbosity;
 
 } // namespace logger
 
 namespace middleman {
 
-extern std::vector<std::string> app_identifiers;
-extern const atom_value network_backend;
-extern const size_t max_consecutive_reads;
-extern const size_t heartbeat_interval;
-extern const size_t cached_udp_buffers;
-extern const size_t max_pending_msgs;
-extern const size_t workers;
+extern CAF_CORE_EXPORT std::vector<std::string> app_identifiers;
+extern CAF_CORE_EXPORT const atom_value network_backend;
+extern CAF_CORE_EXPORT const size_t max_consecutive_reads;
+extern CAF_CORE_EXPORT const size_t heartbeat_interval;
+extern CAF_CORE_EXPORT const size_t cached_udp_buffers;
+extern CAF_CORE_EXPORT const size_t max_pending_msgs;
+extern CAF_CORE_EXPORT const size_t workers;
 
 } // namespace middleman
 
-} // namespace caf
+} // namespace caf::defaults

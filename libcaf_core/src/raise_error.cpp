@@ -27,4 +27,4 @@ void log_cstring_error(const char* cstring) {
   CAF_LOG_ERROR(cstring);
 }
 
-} // namespace caf
+} // namespace caf::detail

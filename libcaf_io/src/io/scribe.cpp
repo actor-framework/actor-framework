@@ -76,4 +76,4 @@ void scribe::data_transferred(execution_unit* ctx, size_t written,
   // parent()->consume(std::move(ptr));
 }
 
-} // namespace caf
+} // namespace caf::io

@@ -41,6 +41,7 @@ void read_string(State& ps, Consumer&& consumer) {
     if (ps.code <= pec::trailing_character)
       consumer.value(std::move(res));
   });
+  // clang-format off
   start();
   state(init) {
     transition(init, " \t")
@@ -69,9 +70,10 @@ void read_string(State& ps, Consumer&& consumer) {
     transition(done, " \t")
   }
   fin();
+  // clang-format on
 }
 
-} // namespace caf
+} // namespace caf::detail::parser
 
 #include "caf/detail/parser/fsm_undef.hpp"
 

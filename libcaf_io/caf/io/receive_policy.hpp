@@ -18,19 +18,15 @@
 
 #pragma once
 
-#include <string>
 #include <cstddef>
+#include <string>
 #include <utility>
 
 #include "caf/config.hpp"
 
 namespace caf::io {
 
-enum class receive_policy_flag : unsigned {
-  at_least,
-  at_most,
-  exactly
-};
+enum class receive_policy_flag : unsigned { at_least, at_most, exactly };
 
 constexpr unsigned to_integer(receive_policy_flag x) {
   return static_cast<unsigned>(x);
@@ -38,8 +34,8 @@ constexpr unsigned to_integer(receive_policy_flag x) {
 
 inline std::string to_string(receive_policy_flag x) {
   return x == receive_policy_flag::at_least
-         ? "at_least"
-         : (x == receive_policy_flag::at_most ? "at_most" : "exactly");
+           ? "at_least"
+           : (x == receive_policy_flag::at_most ? "at_most" : "exactly");
 }
 
 class receive_policy {
@@ -64,5 +60,4 @@ public:
   }
 };
 
-} // namespace caf
-
+} // namespace caf::io

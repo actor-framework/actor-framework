@@ -112,4 +112,4 @@ splitter::message_types_set splitter::message_types() const {
   return msg_types_;
 }
 
-} // namespace caf
+} // namespace caf::decorator

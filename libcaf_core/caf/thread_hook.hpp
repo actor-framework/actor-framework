@@ -20,10 +20,12 @@
 
 #include "caf/fwd.hpp"
 
+#include "caf/detail/core_export.hpp"
+
 namespace caf {
 
 /// Interface to define thread hooks.
-class thread_hook {
+class CAF_CORE_EXPORT thread_hook {
 public:
   virtual ~thread_hook();
 
@@ -42,4 +44,3 @@ public:
 };
 
 } // namespace caf
-

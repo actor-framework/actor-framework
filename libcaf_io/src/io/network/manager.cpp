@@ -78,4 +78,4 @@ void manager::io_failure(execution_unit* ctx, operation op) {
   detach(ctx, true);
 }
 
-} // namespace caf
+} // namespace caf::io::network

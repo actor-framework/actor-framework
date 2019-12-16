@@ -65,5 +65,4 @@ inline T from_network_order(T value) {
   return to_network_order(value);
 }
 
-} // namespace caf
-
+} // namespace caf::detail

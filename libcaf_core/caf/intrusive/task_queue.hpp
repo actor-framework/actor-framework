@@ -69,9 +69,7 @@ public:
   // -- constructors, destructors, and assignment operators -------------------
 
   task_queue(policy_type p)
-      : old_last_(nullptr),
-        new_head_(nullptr),
-        policy_(std::move(p)) {
+    : old_last_(nullptr), new_head_(nullptr), policy_(std::move(p)) {
     init();
   }
 
@@ -371,5 +369,4 @@ protected:
   policy_type policy_;
 };
 
-} // namespace caf
-
+} // namespace caf::intrusive

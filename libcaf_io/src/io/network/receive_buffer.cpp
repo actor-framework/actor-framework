@@ -122,8 +122,8 @@ void receive_buffer::shrink_by(size_t bytes) {
   capacity_ = new_size;
 }
 
-receive_buffer::iterator receive_buffer::insert(iterator pos,
-                                                value_type value) {
+receive_buffer::iterator
+receive_buffer::insert(iterator pos, value_type value) {
   if (size_ == capacity_) {
     auto dist = (pos == nullptr) ? 0 : std::distance(begin(), pos);
     increase_by(std::max(capacity_, min_size));
@@ -135,4 +135,4 @@ receive_buffer::iterator receive_buffer::insert(iterator pos,
   return pos;
 }
 
-} // namespace caf
+} // namespace caf::io::network

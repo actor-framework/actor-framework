@@ -41,7 +41,7 @@ bool operator==(const std::vector<std::pair<int, T>>& xs,
   return ys == xs;
 }
 
-} // namespace caf
+} // namespace caf::detail
 
 using std::make_pair;
 using std::pair;

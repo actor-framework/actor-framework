@@ -26,6 +26,7 @@
 
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/apply_args.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/inspect.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
@@ -42,7 +43,7 @@
 
 namespace caf::detail {
 
-class stringification_inspector {
+class CAF_CORE_EXPORT stringification_inspector {
 public:
   // -- member types required by Inspector concept -----------------------------
 
@@ -244,8 +245,8 @@ public:
   }
 
   template <class T, class... Ts>
-  void traverse(const meta::omittable_if_empty_t&, const T& x,
-                const Ts&... xs) {
+  void
+  traverse(const meta::omittable_if_empty_t&, const T& x, const Ts&... xs) {
     if (!x.empty()) {
       sep();
       consume(x);
@@ -296,4 +297,4 @@ private:
   std::string& result_;
 };
 
-} // namespace caf
+} // namespace caf::detail

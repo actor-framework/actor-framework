@@ -44,10 +44,7 @@ struct implicit_actor_conversions<T, true, false> {
 template <class T>
 struct implicit_actor_conversions<T, false, true> {
   using type =
-    typename detail::tl_apply<
-      typename T::signatures,
-      typed_actor
-    >::type;
+    typename detail::tl_apply<typename T::signatures, typed_actor>::type;
 };
 
 template <>
@@ -57,12 +54,8 @@ struct implicit_actor_conversions<actor_control_block, false, false> {
 
 template <class T>
 struct implicit_conversions {
-  using type =
-    typename std::conditional<
-      std::is_convertible<T, error>::value,
-      error,
-      T
-    >::type;
+  using type = typename std::conditional<std::is_convertible<T, error>::value,
+                                         error, T>::type;
 };
 
 template <class T>
@@ -74,16 +67,13 @@ struct implicit_conversions<char*> {
 };
 
 template <size_t N>
-struct implicit_conversions<char[N]>
-    : implicit_conversions<char*> {};
+struct implicit_conversions<char[N]> : implicit_conversions<char*> {};
 
 template <>
-struct implicit_conversions<const char*>
-    : implicit_conversions<char*> {};
+struct implicit_conversions<const char*> : implicit_conversions<char*> {};
 
 template <size_t N>
-struct implicit_conversions<const char[N]>
-    : implicit_conversions<char*> {};
+struct implicit_conversions<const char[N]> : implicit_conversions<char*> {};
 
 template <>
 struct implicit_conversions<char16_t*> {
@@ -91,12 +81,11 @@ struct implicit_conversions<char16_t*> {
 };
 
 template <size_t N>
-struct implicit_conversions<char16_t[N]>
-    : implicit_conversions<char16_t*> {};
+struct implicit_conversions<char16_t[N]> : implicit_conversions<char16_t*> {};
 
 template <>
-struct implicit_conversions<const char16_t*>
-    : implicit_conversions<char16_t*> {};
+struct implicit_conversions<const char16_t*> : implicit_conversions<char16_t*> {
+};
 
 template <size_t N>
 struct implicit_conversions<const char16_t[N]>
@@ -108,16 +97,15 @@ struct implicit_conversions<char32_t*> {
 };
 
 template <size_t N>
-struct implicit_conversions<char32_t[N]>
-    : implicit_conversions<char32_t*> {};
+struct implicit_conversions<char32_t[N]> : implicit_conversions<char32_t*> {};
 
 template <>
-struct implicit_conversions<const char32_t*>
-    : implicit_conversions<char32_t*> {};
+struct implicit_conversions<const char32_t*> : implicit_conversions<char32_t*> {
+};
 
 template <size_t N>
 struct implicit_conversions<const char32_t[N]>
-    : implicit_conversions<char32_t*> {};
+  : implicit_conversions<char32_t*> {};
 
 template <>
 struct implicit_conversions<scoped_actor> {
@@ -129,18 +117,11 @@ using implicit_conversions_t = typename implicit_conversions<T>::type;
 
 template <class T>
 struct strip_and_convert {
-  using type =
-    typename implicit_conversions<
-      typename std::remove_const<
-        typename std::remove_reference<
-          T
-        >::type
-      >::type
-    >::type;
+  using type = typename implicit_conversions<typename std::remove_const<
+    typename std::remove_reference<T>::type>::type>::type;
 };
 
 template <class T>
 using strip_and_convert_t = typename strip_and_convert<T>::type;
 
-} // namespace caf
-
+} // namespace caf::detail

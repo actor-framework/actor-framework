@@ -143,4 +143,4 @@ void datagram_servant_impl::detach_handles() {
   }
 }
 
-} // namespace caf
+} // namespace caf::io::network

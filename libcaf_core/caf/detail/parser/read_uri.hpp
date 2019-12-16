@@ -224,7 +224,7 @@ void read_uri(State& ps, Consumer&& consumer) {
   // clang-format on
 }
 
-} // namespace caf
+} // namespace caf::detail::parser
 
 #include "caf/detail/parser/fsm_undef.hpp"
 

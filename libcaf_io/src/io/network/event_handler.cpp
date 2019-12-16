@@ -63,4 +63,4 @@ void event_handler::set_fd_flags() {
   allow_sigpipe(fd_, false);
 }
 
-} // namespace caf
+} // namespace caf::io::network

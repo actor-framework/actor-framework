@@ -20,14 +20,14 @@
 
 #include "caf/config.hpp"
 
-#include <chrono>
-#include <thread>
 #include <atomic>
 #include <cassert>
+#include <chrono>
+#include <thread>
 
 // GCC hack
 #if defined(CAF_GCC) && !defined(_GLIBCXX_USE_SCHED_YIELD)
-#include <time.h>
+#  include <time.h>
 namespace std {
 namespace this_thread {
 namespace {
@@ -44,7 +44,7 @@ inline void yield() noexcept {
 
 // another GCC hack
 #if defined(CAF_GCC) && !defined(_GLIBCXX_USE_NANOSLEEP)
-#include <time.h>
+#  include <time.h>
 namespace std {
 namespace this_thread {
 namespace {
@@ -88,12 +88,13 @@ public:
     explicit node(pointer val) : value(val), next(nullptr) {
       // nop
     }
+
   private:
-    static constexpr size_type payload_size =
-      sizeof(pointer) + sizeof(std::atomic<node*>);
+    static constexpr size_type payload_size
+      = sizeof(pointer) + sizeof(std::atomic<node*>);
     static constexpr size_type cline_size = CAF_CACHE_LINE_SIZE;
-    static constexpr size_type pad_size =
-      (cline_size * ((payload_size / cline_size) + 1)) - payload_size;
+    static constexpr size_type pad_size
+      = (cline_size * ((payload_size / cline_size) + 1)) - payload_size;
     // avoid false sharing
     static_assert(pad_size > 0, "invalid padding size calculated");
     char pad[pad_size];
@@ -233,10 +234,10 @@ private:
     ~lock_guard() {
       lock_.clear(std::memory_order_release);
     }
+
   private:
     std::atomic_flag& lock_;
   };
 };
 
-} // namespace caf
-
+} // namespace caf::detail

@@ -18,27 +18,27 @@
 
 #pragma once
 
+#include "caf/actor_companion.hpp"
 #include "caf/config.hpp"
 #include "caf/make_actor.hpp"
-#include "caf/actor_companion.hpp"
 #include "caf/message_handler.hpp"
 
 #include "caf/scoped_execution_unit.hpp"
 
 CAF_PUSH_WARNINGS
-#include <QEvent>
 #include <QApplication>
+#include <QEvent>
 CAF_POP_WARNINGS
 
 namespace caf::mixin {
 
-template<typename Base, int EventId = static_cast<int>(QEvent::User + 31337)>
+template <typename Base, int EventId = static_cast<int>(QEvent::User + 31337)>
 class actor_widget : public Base {
 public:
   struct event_type : public QEvent {
     mailbox_element_ptr mptr;
     event_type(mailbox_element_ptr ptr)
-        : QEvent(static_cast<QEvent::Type>(EventId)), mptr(std::move(ptr)) {
+      : QEvent(static_cast<QEvent::Type>(EventId)), mptr(std::move(ptr)) {
       // nop
     }
   };
@@ -52,7 +52,6 @@ public:
     if (companion_)
       self()->cleanup(error{}, &dummy_);
   }
-
 
   void init(actor_system& system) {
     alive_ = true;
@@ -104,11 +103,9 @@ public:
   }
 
 private:
-
   scoped_execution_unit dummy_;
   strong_actor_ptr companion_;
   bool alive_;
 };
 
-} // namespace caf
-
+} // namespace caf::mixin

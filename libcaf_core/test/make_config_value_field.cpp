@@ -164,6 +164,7 @@ namespace caf {
 template <>
 struct config_value_access<foobar> : config_value_object_access<foobar_trait> {
 };
+
 template <>
 struct config_value_access<foobar_foobar>
   : config_value_object_access<foobar_foobar_trait> {};

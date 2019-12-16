@@ -18,10 +18,11 @@
 
 #pragma once
 
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "caf/byte_buffer.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/connection_handle.hpp"
 #include "caf/io/datagram_handle.hpp"
@@ -72,9 +73,17 @@ class middleman;
 
 /// A broker mediates between actor systems and other components in the network.
 /// @ingroup Broker
-class abstract_broker : public scheduled_actor,
-                        public prohibit_top_level_spawn_marker {
+class CAF_IO_EXPORT abstract_broker : public scheduled_actor,
+                                      public prohibit_top_level_spawn_marker {
 public:
+  abstract_broker(abstract_broker&&) = delete;
+
+  abstract_broker(const abstract_broker&&) = delete;
+
+  abstract_broker& operator=(abstract_broker&&) = delete;
+
+  abstract_broker& operator=(const abstract_broker&&) = delete;
+
   ~abstract_broker() override;
 
   // even brokers need friends
@@ -181,8 +190,8 @@ public:
   /// Tries to connect to `host` on given `port` and creates
   /// a new scribe describing the connection afterwards.
   /// @returns The handle of the new `scribe` on success.
-  expected<connection_handle> add_tcp_scribe(const std::string& host,
-                                             uint16_t port);
+  expected<connection_handle>
+  add_tcp_scribe(const std::string& host, uint16_t port);
 
   /// Moves the initialized `scribe` instance `ptr` from another broker to this
   /// broker.
@@ -209,8 +218,8 @@ public:
   void add_datagram_servant(datagram_servant_ptr ptr);
 
   /// Adds the `datagram_servant` under an additional `hdl`.
-  void add_hdl_for_datagram_servant(datagram_servant_ptr ptr,
-                                    datagram_handle hdl);
+  void
+  add_hdl_for_datagram_servant(datagram_servant_ptr ptr, datagram_handle hdl);
 
   /// Creates and assigns a new `datagram_servant` from a given socket `fd`.
   datagram_handle add_datagram_servant(network::native_socket fd);
@@ -221,7 +230,8 @@ public:
   add_datagram_servant_for_endpoint(network::native_socket fd,
                                     const network::ip_endpoint& ep);
 
-  /// Creates a new `datagram_servant` for the remote endpoint `host` and `port`.
+  /// Creates a new `datagram_servant` for the remote endpoint `host` and
+  /// `port`.
   /// @returns The handle to the new `datagram_servant`.
   expected<datagram_handle>
   add_udp_datagram_servant(const std::string& host, uint16_t port);
@@ -356,8 +366,8 @@ protected:
 
   using doorman_map = std::unordered_map<accept_handle, intrusive_ptr<doorman>>;
 
-  using scribe_map = std::unordered_map<connection_handle,
-                                        intrusive_ptr<scribe>>;
+  using scribe_map
+    = std::unordered_map<connection_handle, intrusive_ptr<scribe>>;
 
   using datagram_servant_map
     = std::unordered_map<datagram_handle, intrusive_ptr<datagram_servant>>;
@@ -424,4 +434,4 @@ private:
   byte_buffer dummy_wr_buf_;
 };
 
-} // namespace caf
+} // namespace caf::io

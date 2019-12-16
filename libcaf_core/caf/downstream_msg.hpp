@@ -19,26 +19,25 @@
 
 #pragma once
 
+#include <cstdint>
 #include <utility>
 #include <vector>
-#include <cstdint>
 
 #include "caf/actor_addr.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/atom.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/type_list.hpp"
 #include "caf/message.hpp"
 #include "caf/stream_priority.hpp"
 #include "caf/stream_slot.hpp"
-#include "caf/variant.hpp"
-
 #include "caf/tag/boxing_type.hpp"
-
-#include "caf/detail/type_list.hpp"
+#include "caf/variant.hpp"
 
 namespace caf {
 
 /// Stream messages that travel downstream, i.e., batches and close messages.
-struct downstream_msg : tag::boxing_type {
+struct CAF_CORE_EXPORT downstream_msg : tag::boxing_type {
   // -- nested types -----------------------------------------------------------
 
   /// Transmits stream data.
@@ -83,9 +82,7 @@ struct downstream_msg : tag::boxing_type {
 
   template <class T>
   downstream_msg(stream_slots s, actor_addr addr, T&& x)
-      : slots(s),
-        sender(std::move(addr)),
-        content(std::forward<T>(x)) {
+    : slots(s), sender(std::move(addr)), content(std::forward<T>(x)) {
     // nop
   }
 
@@ -133,8 +130,8 @@ make(stream_slots slots, actor_addr addr, Ts&&... xs) {
 
 /// @relates downstream_msg::batch
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f,
-                                        downstream_msg::batch& x) {
+typename Inspector::result_type
+inspect(Inspector& f, downstream_msg::batch& x) {
   return f(meta::type_name("batch"), meta::omittable(), x.xs_size, x.xs, x.id);
 }
 
@@ -146,8 +143,8 @@ typename Inspector::result_type inspect(Inspector& f, downstream_msg::close&) {
 
 /// @relates downstream_msg::forced_close
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f,
-                                        downstream_msg::forced_close& x) {
+typename Inspector::result_type
+inspect(Inspector& f, downstream_msg::forced_close& x) {
   return f(meta::type_name("forced_close"), x.reason);
 }
 
@@ -158,4 +155,3 @@ typename Inspector::result_type inspect(Inspector& f, downstream_msg& x) {
 }
 
 } // namespace caf
-

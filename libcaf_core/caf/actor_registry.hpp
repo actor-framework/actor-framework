@@ -18,20 +18,20 @@
 
 #pragma once
 
+#include <atomic>
+#include <condition_variable>
+#include <cstdint>
 #include <mutex>
 #include <thread>
-#include <atomic>
-#include <cstdint>
 #include <unordered_map>
-#include <condition_variable>
 
-#include "caf/fwd.hpp"
+#include "caf/abstract_actor.hpp"
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
-#include "caf/abstract_actor.hpp"
 #include "caf/actor_control_block.hpp"
-
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/shared_spinlock.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 
@@ -41,22 +41,22 @@ namespace caf {
 /// identify important actors independent from their ID at runtime.
 /// Note that the registry does *not* contain all actors of an actor system.
 /// The middleman registers actors as needed.
-class actor_registry {
+class CAF_CORE_EXPORT actor_registry {
 public:
   friend class actor_system;
 
   ~actor_registry();
 
   /// Returns the local actor associated to `key`.
-  template<class T = strong_actor_ptr>
+  template <class T = strong_actor_ptr>
   T get(actor_id key) const {
-      return actor_cast<T>(get_impl(key));
+    return actor_cast<T>(get_impl(key));
   }
 
   /// Associates a local actor with its ID.
-  template<class T>
+  template <class T>
   void put(actor_id key, const T& val) {
-      put_impl(key, actor_cast<strong_actor_ptr>(val));
+    put_impl(key, actor_cast<strong_actor_ptr>(val));
   }
 
   /// Removes an actor from this registry,
@@ -77,16 +77,17 @@ public:
   void await_running_count_equal(size_t expected) const;
 
   /// Returns the actor associated with `key` or `invalid_actor`.
-  template<class T = strong_actor_ptr>
+  template <class T = strong_actor_ptr>
   T get(atom_value key) const {
-      return actor_cast<T>(get_impl(key));
+    return actor_cast<T>(get_impl(key));
   }
 
   /// Associates given actor to `key`.
-  template<class T>
+  template <class T>
   void put(atom_value key, const T& value) {
-      // using reference here and before to allow putting a scoped_actor without calling .ptr()
-      put_impl(key, actor_cast<strong_actor_ptr>(value));
+    // using reference here and before to allow putting a scoped_actor without
+    // calling .ptr()
+    put_impl(key, actor_cast<strong_actor_ptr>(value));
   }
 
   /// Removes a name mapping.
@@ -133,4 +134,3 @@ private:
 };
 
 } // namespace caf
-

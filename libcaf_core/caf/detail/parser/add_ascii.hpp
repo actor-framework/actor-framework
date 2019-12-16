@@ -53,4 +53,4 @@ bool add_ascii(T& x, char c,
   return true;
 }
 
-} // namespace caf
+} // namespace caf::detail::parser

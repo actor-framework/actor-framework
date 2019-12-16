@@ -25,4 +25,3 @@ struct prohibit_top_level_spawn_marker {
 };
 
 } // namespace caf
-

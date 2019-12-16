@@ -116,4 +116,4 @@ void private_thread::start() {
   std::thread{exec, this}.detach();
 }
 
-} // namespace caf
+} // namespace caf::detail

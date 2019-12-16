@@ -59,4 +59,4 @@ public:
   }
 };
 
-} // namespace caf
+} // namespace caf::detail

@@ -18,9 +18,9 @@
 
 #pragma once
 
+#include <cstdint>
 #include <set>
 #include <string>
-#include <cstdint>
 
 #include "caf/actor_system.hpp"
 
@@ -34,10 +34,9 @@ namespace caf::io {
 /// @returns An `actor` to the proxy instance representing
 ///          a remote actor or an `error`.
 template <class ActorHandle = actor>
-expected<ActorHandle> remote_actor(actor_system& sys, std::string host,
-                                   uint16_t port) {
+expected<ActorHandle>
+remote_actor(actor_system& sys, std::string host, uint16_t port) {
   return sys.middleman().remote_actor<ActorHandle>(std::move(host), port);
 }
 
-} // namespace caf
-
+} // namespace caf::io

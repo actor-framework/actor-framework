@@ -20,6 +20,7 @@
 
 #include "caf/actor.hpp"
 #include "caf/deep_to_string.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/typed_actor_pointer.hpp"
 
 namespace caf {
@@ -29,9 +30,9 @@ namespace caf {
 /// when explicitly forced to flush its buffer. The stream will convert *any*
 /// operation to a message received by a printer actor. This actor is a sequence
 /// point that ensures output appears never interleaved.
-class actor_ostream {
+class CAF_CORE_EXPORT actor_ostream {
 public:
-  using fun_type = actor_ostream& (*)(actor_ostream&);
+  using fun_type = actor_ostream& (*) (actor_ostream&);
 
   actor_ostream(actor_ostream&&) = default;
   actor_ostream(const actor_ostream&) = default;
@@ -47,7 +48,7 @@ public:
 
   template <class... Sigs>
   explicit actor_ostream(const typed_actor_pointer<Sigs...>& ptr)
-      : actor_ostream(ptr.internal_ptr()) {
+    : actor_ostream(ptr.internal_ptr()) {
     // nop
   }
 
@@ -95,10 +96,10 @@ private:
 };
 
 /// Convenience factory function for creating an actor output stream.
-actor_ostream aout(local_actor* self);
+CAF_CORE_EXPORT actor_ostream aout(local_actor* self);
 
-/// Convenience factory function for creating an actor output stream.
-actor_ostream aout(scoped_actor& self);
+// Convenience factory function for creating an actor output stream.
+CAF_CORE_EXPORT actor_ostream aout(scoped_actor& self);
 
 /// Convenience factory function for creating an actor output stream.
 template <class... Sigs>
@@ -110,7 +111,6 @@ actor_ostream aout(const typed_actor_pointer<Sigs...>& ptr) {
 
 namespace std {
 // provide convenience overlaods for aout; implemented in logging.cpp
-caf::actor_ostream& endl(caf::actor_ostream& o);
-caf::actor_ostream& flush(caf::actor_ostream& o);
+CAF_CORE_EXPORT caf::actor_ostream& endl(caf::actor_ostream& o);
+CAF_CORE_EXPORT caf::actor_ostream& flush(caf::actor_ostream& o);
 } // namespace std
-

@@ -196,4 +196,4 @@ void simple_actor_clock::add_schedule_entry(
   i->second->second->backlink = i;
 }
 
-} // namespace caf
+} // namespace caf::detail

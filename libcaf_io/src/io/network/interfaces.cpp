@@ -56,8 +56,9 @@
 namespace caf::io::network {
 
 // {interface_name => {protocol => address}}
-using interfaces_map = std::map<
-  std::string, std::map<protocol::network, std::vector<std::string>>>;
+using interfaces_map
+  = std::map<std::string,
+             std::map<protocol::network, std::vector<std::string>>>;
 
 template <class T>
 void* vptr(T* ptr) {
@@ -110,12 +111,11 @@ void for_each_address(bool get_ipv4, bool get_ipv6, F fun) {
                 << std::endl;
     } else {
       void* msgbuf = nullptr;
-      if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER
-                          | FORMAT_MESSAGE_FROM_SYSTEM
-                          | FORMAT_MESSAGE_IGNORE_INSERTS,
-                        nullptr, retval,
-                        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                        (LPTSTR) &msgbuf, 0, nullptr)) {
+      if (FormatMessage(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM
+              | FORMAT_MESSAGE_IGNORE_INSERTS,
+            nullptr, retval, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+            (LPTSTR) &msgbuf, 0, nullptr)) {
         printf("Error: %s", static_cast<char*>(msgbuf));
         LocalFree(msgbuf);
       }
@@ -211,8 +211,8 @@ interfaces::list_addresses(std::initializer_list<protocol::network> procs,
   return result;
 }
 
-std::vector<std::string> interfaces::list_addresses(protocol::network proc,
-                                                    bool include_localhost) {
+std::vector<std::string>
+interfaces::list_addresses(protocol::network proc, bool include_localhost) {
   return list_addresses({proc}, include_localhost);
 }
 
@@ -304,4 +304,4 @@ bool interfaces::get_endpoint(const std::string& host, uint16_t port,
   return false;
 }
 
-} // namespace caf
+} // namespace caf::io::network

@@ -51,4 +51,4 @@ void multiplexer::runnable::intrusive_ptr_release_impl() {
   intrusive_ptr_release(this);
 }
 
-} // namespace caf
+} // namespace caf::io::network

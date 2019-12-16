@@ -57,4 +57,4 @@ behavior broker::make_behavior() {
   return res;
 }
 
-} // namespace caf
+} // namespace caf::io

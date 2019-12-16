@@ -72,4 +72,4 @@ void datagram_servant::datagram_sent(execution_unit* ctx, datagram_handle hdl,
   invoke_mailbox_element_impl(ctx, tmp);
 }
 
-} // namespace caf
+} // namespace caf::io

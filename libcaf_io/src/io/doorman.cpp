@@ -41,4 +41,4 @@ bool doorman::new_connection(execution_unit* ctx, connection_handle x) {
   return invoke_mailbox_element(ctx);
 }
 
-} // namespace caf
+} // namespace caf::io

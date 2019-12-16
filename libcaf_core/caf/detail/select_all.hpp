@@ -27,5 +27,4 @@ struct select_all {
   }
 };
 
-} // namespace caf
-
+} // namespace caf::detail

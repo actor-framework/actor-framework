@@ -18,6 +18,8 @@
 
 #include "caf/ipv6_address.hpp"
 
+#include <cstring>
+
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/parser/read_ipv6_address.hpp"
@@ -114,6 +116,12 @@ ipv6_address::ipv6_address(ipv4_address addr) {
 
 ipv6_address::ipv6_address(array_type bytes) {
   memcpy(bytes_.data(), bytes.data(), bytes.size());
+}
+
+// -- comparison ---------------------------------------------------------------
+
+int ipv6_address::compare(ipv6_address other) const noexcept {
+  return memcmp(bytes().data(), other.bytes().data(), num_bytes);
 }
 
 int ipv6_address::compare(ipv4_address other) const noexcept {

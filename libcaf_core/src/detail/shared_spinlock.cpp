@@ -100,4 +100,4 @@ bool shared_spinlock::try_lock_shared() {
   return (v >= 0) ? cas_weak(&flag_, &v, v + 1) : false;
 }
 
-} // namespace caf
+} // namespace caf::detail

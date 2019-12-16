@@ -18,14 +18,15 @@
 
 #pragma once
 
-#include "caf/message.hpp"
+#include "caf/abstract_actor.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/attachable.hpp"
-#include "caf/abstract_actor.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/message.hpp"
 
 namespace caf::detail {
 
-class merged_tuple : public message_data {
+class CAF_CORE_EXPORT merged_tuple : public message_data {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -85,5 +86,4 @@ private:
   mapping_type mapping_;
 };
 
-} // namespace caf
-
+} // namespace caf::detail

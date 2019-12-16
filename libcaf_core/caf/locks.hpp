@@ -70,7 +70,8 @@ public:
   template <class LockType>
   explicit upgrade_to_unique_lock(LockType& other) {
     lockable_ = other.release();
-    if (lockable_) lockable_->unlock_upgrade_and_lock();
+    if (lockable_)
+      lockable_->unlock_upgrade_and_lock();
   }
 
   ~upgrade_to_unique_lock() {
@@ -93,4 +94,3 @@ private:
 };
 
 } // namespace caf
-

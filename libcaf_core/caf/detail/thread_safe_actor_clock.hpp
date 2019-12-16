@@ -25,12 +25,13 @@
 #include <mutex>
 
 #include "caf/abstract_actor.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/ringbuffer.hpp"
 #include "caf/detail/simple_actor_clock.hpp"
 
 namespace caf::detail {
 
-class thread_safe_actor_clock : public simple_actor_clock {
+class CAF_CORE_EXPORT thread_safe_actor_clock : public simple_actor_clock {
 public:
   // -- constants --------------------------------------------------------------
 
@@ -42,14 +43,14 @@ public:
 
   // -- member functions -------------------------------------------------------
 
-  void set_ordinary_timeout(time_point t, abstract_actor* self,
-                           atom_value type, uint64_t id) override;
+  void set_ordinary_timeout(time_point t, abstract_actor* self, atom_value type,
+                            uint64_t id) override;
 
   void set_request_timeout(time_point t, abstract_actor* self,
                            message_id id) override;
 
-  void set_multi_timeout(time_point t, abstract_actor* self,
-                         atom_value type, uint64_t id) override;
+  void set_multi_timeout(time_point t, abstract_actor* self, atom_value type,
+                         uint64_t id) override;
 
   void cancel_ordinary_timeout(abstract_actor* self, atom_value type) override;
 
@@ -79,4 +80,4 @@ private:
   std::array<unique_event_ptr, buffer_size> events_;
 };
 
-} // namespace caf
+} // namespace caf::detail

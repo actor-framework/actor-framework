@@ -45,7 +45,7 @@ public:
 
   template <class... Ts>
   subscriber(actor_config& cfg, Ts&&... xs)
-      : Base(cfg, std::forward<Ts>(xs)...) {
+    : Base(cfg, std::forward<Ts>(xs)...) {
     if (cfg.groups != nullptr)
       for (auto& grp : *cfg.groups)
         join(grp);
@@ -92,5 +92,4 @@ private:
   subscriptions subscriptions_;
 };
 
-} // namespace caf
-
+} // namespace caf::mixin

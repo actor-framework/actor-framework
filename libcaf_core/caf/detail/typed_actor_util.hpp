@@ -41,12 +41,13 @@ template <class Arguments, class Signature>
 struct input_is_eval_impl : std::false_type {};
 
 template <class Arguments, class Out>
-struct input_is_eval_impl<Arguments, typed_mpi<Arguments, Out>> : std::true_type {};
+struct input_is_eval_impl<Arguments, typed_mpi<Arguments, Out>>
+  : std::true_type {};
 
 template <class Arguments>
 struct input_is {
   template <class Signature>
-  struct eval : input_is_eval_impl<Arguments, Signature> { };
+  struct eval : input_is_eval_impl<Arguments, Signature> {};
 };
 
 template <class... Ts>
@@ -56,7 +57,7 @@ struct make_response_promise_helper {
 
 template <class... Ts>
 struct make_response_promise_helper<typed_response_promise<Ts...>>
-    : make_response_promise_helper<Ts...> {};
+  : make_response_promise_helper<Ts...> {};
 
 template <>
 struct make_response_promise_helper<response_promise> {
@@ -66,18 +67,14 @@ struct make_response_promise_helper<response_promise> {
 template <class Output, class F>
 struct type_checker {
   static void check() {
-    using arg_types =
-      typename tl_map<
-        typename get_callable_trait<F>::arg_types,
-        std::decay
-      >::type;
+    using arg_types = typename tl_map<typename get_callable_trait<F>::arg_types,
+                                      std::decay>::type;
     static_assert(std::is_same<Output, arg_types>::value
-                  || (std::is_same<Output, type_list<void>>::value
-                     && std::is_same<arg_types, type_list<>>::value),
+                    || (std::is_same<Output, type_list<void>>::value
+                        && std::is_same<arg_types, type_list<>>::value),
                   "wrong functor signature");
   }
 };
-
 
 template <class F>
 struct type_checker<message, F> {
@@ -114,16 +111,30 @@ struct static_error_printer<N, -1, Xs, Ys> {
 #define CAF_STATICERR(x)                                                       \
   template <int N, class Xs, class Ys>                                         \
   struct static_error_printer<N, x, Xs, Ys> {                                  \
-    static_assert(N == x, "unexpected handler at index " #x );                 \
+    static_assert(N == x, "unexpected handler at index " #x);                  \
   }
 
-CAF_STATICERR( 0); CAF_STATICERR( 1); CAF_STATICERR( 2);
-CAF_STATICERR( 3); CAF_STATICERR( 4); CAF_STATICERR( 5);
-CAF_STATICERR( 6); CAF_STATICERR( 7); CAF_STATICERR( 8);
-CAF_STATICERR( 9); CAF_STATICERR(10); CAF_STATICERR(11);
-CAF_STATICERR(12); CAF_STATICERR(13); CAF_STATICERR(14);
-CAF_STATICERR(15); CAF_STATICERR(16); CAF_STATICERR(17);
-CAF_STATICERR(18); CAF_STATICERR(19); CAF_STATICERR(20);
+CAF_STATICERR(0);
+CAF_STATICERR(1);
+CAF_STATICERR(2);
+CAF_STATICERR(3);
+CAF_STATICERR(4);
+CAF_STATICERR(5);
+CAF_STATICERR(6);
+CAF_STATICERR(7);
+CAF_STATICERR(8);
+CAF_STATICERR(9);
+CAF_STATICERR(10);
+CAF_STATICERR(11);
+CAF_STATICERR(12);
+CAF_STATICERR(13);
+CAF_STATICERR(14);
+CAF_STATICERR(15);
+CAF_STATICERR(16);
+CAF_STATICERR(17);
+CAF_STATICERR(18);
+CAF_STATICERR(19);
+CAF_STATICERR(20);
 
 template <class... Ts>
 struct extend_with_helper;
@@ -139,5 +150,4 @@ struct extend_with_helper<typed_actor<Xs...>, typed_actor<Ys...>, Ts...>
   // nop
 };
 
-} // namespace caf
-
+} // namespace caf::detail

@@ -23,16 +23,16 @@
 
 #include "caf/actor_addr.hpp"
 #include "caf/actor_system.hpp"
-#include "caf/infer_handle.hpp"
-#include "caf/execution_unit.hpp"
-
 #include "caf/detail/type_traits.hpp"
+#include "caf/execution_unit.hpp"
+#include "caf/infer_handle.hpp"
 
 namespace caf {
 
 using actor_factory_result = std::pair<strong_actor_ptr, std::set<std::string>>;
 
-using actor_factory = std::function<actor_factory_result (actor_config&, message&)>;
+using actor_factory
+  = std::function<actor_factory_result(actor_config&, message&)>;
 
 using selfptr_mode_token = spawn_mode_token<spawn_mode::function_with_selfptr>;
 
@@ -42,10 +42,10 @@ template <class F, class T, class Bhvr, spawn_mode Mode, class R, class Sig>
 class fun_decorator;
 
 template <class F, class T, class Bhvr, class R, class... Ts>
-class fun_decorator<F, T, Bhvr, spawn_mode::function,
-                    R, detail::type_list<Ts...>> {
+class fun_decorator<F, T, Bhvr, spawn_mode::function, R,
+                    detail::type_list<Ts...>> {
 public:
-  fun_decorator(F  f, T*) : f_(std::move(f)) {
+  fun_decorator(F f, T*) : f_(std::move(f)) {
     // nop
   }
 
@@ -55,20 +55,14 @@ public:
   }
 
   template <class U>
-  typename std::enable_if<
-    std::is_convertible<U, Bhvr>::value,
-    behavior
-  >::type
+  typename std::enable_if<std::is_convertible<U, Bhvr>::value, behavior>::type
   apply(detail::type_list<U>, Ts... xs) {
     auto bhvr = f_(xs...);
     return std::move(bhvr.unbox());
   }
 
   template <class U>
-  typename std::enable_if<
-    !std::is_convertible<U, Bhvr>::value,
-    behavior
-  >::type
+  typename std::enable_if<!std::is_convertible<U, Bhvr>::value, behavior>::type
   apply(detail::type_list<U>, Ts... xs) {
     f_(xs...);
     return {};
@@ -79,10 +73,10 @@ private:
 };
 
 template <class F, class T, class Bhvr, class R, class... Ts>
-class fun_decorator<F, T, Bhvr, spawn_mode::function_with_selfptr,
-                    R, detail::type_list<T*, Ts...>> {
+class fun_decorator<F, T, Bhvr, spawn_mode::function_with_selfptr, R,
+                    detail::type_list<T*, Ts...>> {
 public:
-  fun_decorator(F  f, T* ptr) : f_(std::move(f)), ptr_(ptr) {
+  fun_decorator(F f, T* ptr) : f_(std::move(f)), ptr_(ptr) {
     // nop
   }
 
@@ -92,20 +86,14 @@ public:
   }
 
   template <class U>
-  typename std::enable_if<
-    std::is_convertible<U, Bhvr>::value,
-    behavior
-  >::type
+  typename std::enable_if<std::is_convertible<U, Bhvr>::value, behavior>::type
   apply(detail::type_list<U>, Ts... xs) {
     auto bhvr = f_(ptr_, xs...);
     return std::move(bhvr.unbox());
   }
 
   template <class U>
-  typename std::enable_if<
-    !std::is_convertible<U, Bhvr>::value,
-    behavior
-  >::type
+  typename std::enable_if<!std::is_convertible<U, Bhvr>::value, behavior>::type
   apply(detail::type_list<U>, Ts... xs) {
     f_(ptr_, xs...);
     return {};
@@ -189,14 +177,12 @@ actor_factory_result dyn_spawn_class(actor_config& cfg, message& msg) {
 
 template <class T, class... Ts>
 actor_factory make_actor_factory() {
-  static_assert(detail::conjunction<
-                  std::is_lvalue_reference<Ts>::value...
-                >::value,
-                "all Ts must be lvalue references");
+  static_assert(
+    detail::conjunction<std::is_lvalue_reference<Ts>::value...>::value,
+    "all Ts must be lvalue references");
   static_assert(std::is_base_of<local_actor, T>::value,
                 "T is not derived from local_actor");
   return &dyn_spawn_class<T, Ts...>;
 }
 
 } // namespace caf
-

@@ -106,4 +106,4 @@ const size_t workers = min(3u, std::thread::hardware_concurrency() / 4u) + 1;
 
 } // namespace middleman
 
-} // namespace caf
+} // namespace caf::defaults

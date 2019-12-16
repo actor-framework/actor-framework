@@ -18,7 +18,9 @@
 
 #pragma once
 
+#include "caf/actor_control_block.hpp"
 #include "caf/byte_buffer.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/operation.hpp"
@@ -29,7 +31,7 @@ namespace caf::io::network {
 
 /// A manager configures an I/O device and provides callbacks
 /// for various I/O operations.
-class manager : public ref_counted {
+class CAF_IO_EXPORT manager : public ref_counted {
 public:
   manager();
 
@@ -73,4 +75,4 @@ protected:
   strong_actor_ptr parent_;
 };
 
-} // namespace caf
+} // namespace caf::io::network

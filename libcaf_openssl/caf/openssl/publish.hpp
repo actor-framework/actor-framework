@@ -18,23 +18,24 @@
 
 #pragma once
 
+#include <cstdint>
 #include <set>
 #include <string>
-#include <cstdint>
 
+#include "caf/actor_cast.hpp"
+#include "caf/actor_control_block.hpp"
+#include "caf/detail/openssl_export.hpp"
+#include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/sec.hpp"
-#include "caf/error.hpp"
-#include "caf/actor_cast.hpp"
 #include "caf/typed_actor.hpp"
-#include "caf/actor_control_block.hpp"
 
 namespace caf::openssl {
 
 /// @private
-expected<uint16_t> publish(actor_system& sys, const strong_actor_ptr& whom,
-                           std::set<std::string>&& sigs, uint16_t port,
-                           const char* cstr, bool ru);
+CAF_OPENSSL_EXPORT expected<uint16_t>
+publish(actor_system& sys, const strong_actor_ptr& whom,
+        std::set<std::string>&& sigs, uint16_t port, const char* cstr, bool ru);
 
 /// Tries to publish `whom` at `port` and returns either an `error` or the
 /// bound port.
@@ -54,5 +55,4 @@ expected<uint16_t> publish(const Handle& whom, uint16_t port,
                  sys.message_types(whom), port, in, reuse);
 }
 
-} // namespace caf
-
+} // namespace caf::openssl

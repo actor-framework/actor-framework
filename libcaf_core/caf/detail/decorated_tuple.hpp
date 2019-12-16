@@ -18,20 +18,19 @@
 
 #pragma once
 
-#include <vector>
 #include <algorithm>
+#include <vector>
 
 #include "caf/config.hpp"
-#include "caf/ref_counted.hpp"
-
-#include "caf/detail/type_list.hpp"
-
-#include "caf/detail/tuple_vals.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/message_data.hpp"
+#include "caf/detail/tuple_vals.hpp"
+#include "caf/detail/type_list.hpp"
+#include "caf/ref_counted.hpp"
 
 namespace caf::detail {
 
-class decorated_tuple : public message_data {
+class CAF_CORE_EXPORT decorated_tuple : public message_data {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -95,5 +94,4 @@ private:
   uint32_t type_token_;
 };
 
-} // namespace caf
-
+} // namespace caf::detail

@@ -33,4 +33,4 @@ const char decimal_chars[11] = "0123456789";
 
 const char octal_chars[9] = "01234567";
 
-} // namespace caf
+} // namespace caf::detail::parser

@@ -47,4 +47,4 @@ void sync_request_bouncer::operator()(const mailbox_element& e) const {
   (*this)(e.sender, e.mid);
 }
 
-} // namespace caf
+} // namespace caf::detail

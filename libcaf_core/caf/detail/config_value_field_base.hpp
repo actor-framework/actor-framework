@@ -103,4 +103,4 @@ protected:
   predicate_type predicate_;
 };
 
-} // namespace caf
+} // namespace caf::detail

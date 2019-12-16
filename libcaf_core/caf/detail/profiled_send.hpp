@@ -59,4 +59,4 @@ void profiled_send(Self* self, Sender&& sender, const Handle& receiver,
   }
 }
 
-} // namespace caf
+} // namespace caf::detail

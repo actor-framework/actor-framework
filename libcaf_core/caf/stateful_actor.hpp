@@ -40,8 +40,7 @@ class stateful_actor : public Base {
 public:
   template <class... Ts>
   explicit stateful_actor(actor_config& cfg, Ts&&... xs)
-      : Base(cfg, std::forward<Ts>(xs)...),
-        state(state_) {
+    : Base(cfg, std::forward<Ts>(xs)...), state(state_) {
     cr_state(this);
   }
 
@@ -104,8 +103,9 @@ private:
     return Base::name();
   }
 
-  union { State state_; };
+  union {
+    State state_;
+  };
 };
 
 } // namespace caf
-

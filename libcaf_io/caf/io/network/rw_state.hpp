@@ -30,4 +30,4 @@ enum class rw_state {
   indeterminate
 };
 
-} // namespace caf
+} // namespace caf::io::network

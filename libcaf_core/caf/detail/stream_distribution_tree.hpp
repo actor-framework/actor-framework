@@ -57,9 +57,7 @@ public:
 
   template <class... Ts>
   stream_distribution_tree(scheduled_actor* selfptr, Ts&&... xs)
-      : super(selfptr),
-        out_(this),
-        policy_(this, std::forward<Ts>(xs)...) {
+    : super(selfptr), out_(this), policy_(this, std::forward<Ts>(xs)...) {
     continuous(true);
   }
 
@@ -125,8 +123,8 @@ public:
   }
 
   bool done() const override {
-    return !continuous() && pending_handshakes_ == 0
-           && inbound_paths_.empty() && out_.clean();
+    return !continuous() && pending_handshakes_ == 0 && inbound_paths_.empty()
+           && out_.clean();
   }
 
   bool idle() const noexcept override {
@@ -143,5 +141,4 @@ private:
   Policy policy_;
 };
 
-} // namespace caf
-
+} // namespace caf::detail

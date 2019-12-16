@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/unordered_flat_map.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -32,7 +33,8 @@
 namespace caf {
 
 /// A URI according to RFC 3986.
-class uri : detail::comparable<uri>, detail::comparable<uri, string_view> {
+class CAF_CORE_EXPORT uri : detail::comparable<uri>,
+                            detail::comparable<uri, string_view> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -121,11 +123,12 @@ public:
 
   // -- friend functions -------------------------------------------------------
 
-  friend error inspect(caf::serializer& dst, uri& x);
+  friend CAF_CORE_EXPORT error inspect(caf::serializer& dst, uri& x);
 
-  friend error_code<sec> inspect(caf::binary_serializer& dst, uri& x);
+  friend CAF_CORE_EXPORT error_code<sec>
+  inspect(caf::binary_serializer& dst, uri& x);
 
-  friend error inspect(caf::deserializer& src, uri& x);
+  friend CAF_CORE_EXPORT error inspect(caf::deserializer& src, uri& x);
 
   friend error_code<sec> inspect(caf::binary_deserializer& src, uri& x);
 
@@ -141,16 +144,16 @@ typename Inspector::result_type inspect(Inspector& f, uri::authority_type& x) {
 }
 
 /// @relates uri
-std::string to_string(const uri& x);
+CAF_CORE_EXPORT std::string to_string(const uri& x);
 
 /// @relates uri
-std::string to_string(const uri::authority_type& x);
+CAF_CORE_EXPORT std::string to_string(const uri::authority_type& x);
 
 /// @relates uri
-error parse(string_view str, uri& dest);
+CAF_CORE_EXPORT error parse(string_view str, uri& dest);
 
 /// @relates uri
-expected<uri> make_uri(string_view str);
+CAF_CORE_EXPORT expected<uri> make_uri(string_view str);
 
 } // namespace caf
 

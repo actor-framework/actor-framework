@@ -18,52 +18,56 @@
 
 #pragma once
 
-#include <set>
 #include <map>
-#include <string>
-#include <utility>
-#include <typeinfo>
+#include <set>
 #include <stdexcept>
-#include <typeindex>
+#include <string>
 #include <type_traits>
+#include <typeindex>
+#include <typeinfo>
 #include <unordered_map>
-
-#include "caf/fwd.hpp"
+#include <utility>
 
 #include "caf/atom.hpp"
-#include "caf/unit.hpp"
-#include "caf/node_id.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/shared_spinlock.hpp"
+#include "caf/detail/type_list.hpp"
 #include "caf/duration.hpp"
+#include "caf/fwd.hpp"
+#include "caf/node_id.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/type_erased_value.hpp"
-
 #include "caf/type_nr.hpp"
-#include "caf/detail/type_list.hpp"
-#include "caf/detail/shared_spinlock.hpp"
+#include "caf/unit.hpp"
 
 namespace caf {
 
-class uniform_type_info_map {
+class CAF_CORE_EXPORT uniform_type_info_map {
 public:
   friend class actor_system;
 
-  using value_factory = std::function<type_erased_value_ptr ()>;
+  using value_factory = std::function<type_erased_value_ptr()>;
 
-  using actor_factory_result = std::pair<strong_actor_ptr, std::set<std::string>>;
+  using actor_factory_result
+    = std::pair<strong_actor_ptr, std::set<std::string>>;
 
-  using actor_factory = std::function<actor_factory_result (actor_config&, message&)>;
+  using actor_factory
+    = std::function<actor_factory_result(actor_config&, message&)>;
 
   using actor_factories = std::unordered_map<std::string, actor_factory>;
 
-  using value_factories_by_name = std::unordered_map<std::string, value_factory>;
+  using value_factories_by_name
+    = std::unordered_map<std::string, value_factory>;
 
-  using value_factories_by_rtti = std::unordered_map<std::type_index, value_factory>;
+  using value_factories_by_rtti
+    = std::unordered_map<std::type_index, value_factory>;
 
   using value_factory_kvp = std::pair<std::string, value_factory>;
 
   using portable_names = std::unordered_map<std::type_index, std::string>;
 
-  using error_renderer = std::function<std::string (uint8_t, atom_value, const message&)>;
+  using error_renderer
+    = std::function<std::string(uint8_t, atom_value, const message&)>;
 
   using error_renderers = std::unordered_map<atom_value, error_renderer>;
 
@@ -117,4 +121,3 @@ private:
 };
 
 } // namespace caf
-

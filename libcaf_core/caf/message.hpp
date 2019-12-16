@@ -18,12 +18,19 @@
 
 #pragma once
 
-#include <tuple>
 #include <sstream>
+#include <tuple>
 #include <type_traits>
 
 #include "caf/atom.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/apply_args.hpp"
+#include "caf/detail/comparable.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/implicit_conversions.hpp"
+#include "caf/detail/int_list.hpp"
+#include "caf/detail/message_data.hpp"
+#include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/index_mapping.hpp"
 #include "caf/make_counted.hpp"
@@ -32,19 +39,12 @@
 #include "caf/skip.hpp"
 #include "caf/type_nr.hpp"
 
-#include "caf/detail/apply_args.hpp"
-#include "caf/detail/comparable.hpp"
-#include "caf/detail/implicit_conversions.hpp"
-#include "caf/detail/int_list.hpp"
-#include "caf/detail/message_data.hpp"
-#include "caf/detail/type_traits.hpp"
-
 namespace caf {
 class message_handler;
 
 /// Describes a fixed-length, copy-on-write, type-erased
 /// tuple with elements of any type.
-class message : public type_erased_tuple {
+class CAF_CORE_EXPORT message : public type_erased_tuple {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -63,7 +63,7 @@ public:
 
   message(message&&) noexcept;
   message& operator=(message&&) noexcept;
-  explicit message(data_ptr  ptr) noexcept;
+  explicit message(data_ptr ptr) noexcept;
 
   ~message() override;
 
@@ -195,18 +195,19 @@ private:
 // -- related non-members ------------------------------------------------------
 
 /// @relates message
-error inspect(serializer& sink, message& msg);
+CAF_CORE_EXPORT error inspect(serializer& sink, message& msg);
 
 /// @relates message
-error_code<sec> inspect(binary_serializer& sink, message& msg);
+CAF_CORE_EXPORT error_code<sec> inspect(binary_serializer& sink, message& msg);
 
 /// @relates message
-error inspect(deserializer& source, message& msg);
+CAF_CORE_EXPORT error inspect(deserializer& source, message& msg);
 
 /// @relates message
-error_code<sec> inspect(binary_deserializer& source, message& msg);
+CAF_CORE_EXPORT error_code<sec>
+inspect(binary_deserializer& source, message& msg);
 
 /// @relates message
-std::string to_string(const message& msg);
+CAF_CORE_EXPORT std::string to_string(const message& msg);
 
 } // namespace caf

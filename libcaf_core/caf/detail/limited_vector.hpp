@@ -18,11 +18,11 @@
 
 #pragma once
 
-#include <cstddef>
-#include <iterator>
 #include <algorithm>
-#include <type_traits>
+#include <cstddef>
 #include <initializer_list>
+#include <iterator>
+#include <type_traits>
 
 #include "caf/config.hpp"
 #include "caf/raise_error.hpp"
@@ -34,17 +34,17 @@ namespace caf::detail {
 template <class T, size_t MaxSize>
 class limited_vector {
 public:
-  using value_type              = T;
-  using size_type               = size_t;
-  using difference_type         = ptrdiff_t;
-  using reference               = value_type&;
-  using const_reference         = const value_type&;
-  using pointer                 = value_type*;
-  using const_pointer           = const value_type*;
-  using iterator                = pointer;
-  using const_iterator          = const_pointer;
-  using reverse_iterator        = std::reverse_iterator<iterator>;
-  using const_reverse_iterator  = std::reverse_iterator<const_iterator>;
+  using value_type = T;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
+  using reference = value_type&;
+  using const_reference = const value_type&;
+  using pointer = value_type*;
+  using const_pointer = const value_type*;
+  using iterator = pointer;
+  using const_iterator = const_pointer;
+  using reverse_iterator = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
   limited_vector() : size_(0) {
     // nop
@@ -228,8 +228,7 @@ public:
     if (pos == end()) {
       resize(size() + num_elements);
       std::copy(first, last, pos);
-    }
-    else {
+    } else {
       // move elements
       auto old_end = end();
       resize(size() + num_elements);
@@ -244,5 +243,4 @@ private:
   T data_[(MaxSize > 0) ? MaxSize : 1];
 };
 
-} // namespace caf
-
+} // namespace caf::detail

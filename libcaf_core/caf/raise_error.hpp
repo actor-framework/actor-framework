@@ -21,37 +21,38 @@
 #include "caf/config.hpp"
 
 #ifndef CAF_NO_EXCEPTIONS
-#include <stdexcept>
+#  include <stdexcept>
 #endif
 
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/pp.hpp"
 
 namespace caf::detail {
 
-void log_cstring_error(const char* cstring);
+CAF_CORE_EXPORT void log_cstring_error(const char* cstring);
 
-} // namespace caf
+} // namespace caf::detail
 
 #ifdef CAF_NO_EXCEPTIONS
 
-#define CAF_RAISE_ERROR_IMPL_1(msg)                                            \
-  do {                                                                         \
-    ::caf::detail::log_cstring_error(msg);                                     \
-    CAF_CRITICAL(msg);                                                         \
-  } while (false)
+#  define CAF_RAISE_ERROR_IMPL_1(msg)                                          \
+    do {                                                                       \
+      ::caf::detail::log_cstring_error(msg);                                   \
+      CAF_CRITICAL(msg);                                                       \
+    } while (false)
 
-#define CAF_RAISE_ERROR_IMPL_2(unused, msg) CAF_RAISE_ERROR_IMPL_1(msg)
+#  define CAF_RAISE_ERROR_IMPL_2(unused, msg) CAF_RAISE_ERROR_IMPL_1(msg)
 
 #else // CAF_NO_EXCEPTIONS
 
-#define CAF_RAISE_ERROR_IMPL_2(exception_type, msg)                            \
-  do {                                                                         \
-    ::caf::detail::log_cstring_error(msg);                                     \
-    throw exception_type(msg);                                                 \
-  } while (false)
+#  define CAF_RAISE_ERROR_IMPL_2(exception_type, msg)                          \
+    do {                                                                       \
+      ::caf::detail::log_cstring_error(msg);                                   \
+      throw exception_type(msg);                                               \
+    } while (false)
 
-#define CAF_RAISE_ERROR_IMPL_1(msg)                                            \
-  CAF_RAISE_ERROR_IMPL_2(std::runtime_error, msg)
+#  define CAF_RAISE_ERROR_IMPL_1(msg)                                          \
+    CAF_RAISE_ERROR_IMPL_2(std::runtime_error, msg)
 
 #endif // CAF_NO_EXCEPTIONS
 
@@ -59,15 +60,16 @@ void log_cstring_error(const char* cstring);
 
 /// Throws an exception if `CAF_NO_EXCEPTIONS` is undefined, otherwise calls
 /// abort() after printing a given message.
-#define CAF_RAISE_ERROR(...)                                                   \
-  CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_RAISE_ERROR_IMPL_, __VA_ARGS__)(__VA_ARGS__), \
-             CAF_PP_EMPTY())
+#  define CAF_RAISE_ERROR(...)                                                 \
+    CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_RAISE_ERROR_IMPL_,                          \
+                               __VA_ARGS__)(__VA_ARGS__),                      \
+               CAF_PP_EMPTY())
 
 #else // CAF_MSVC
 
 /// Throws an exception if `CAF_NO_EXCEPTIONS` is undefined, otherwise calls
 /// abort() after printing a given message.
-#define CAF_RAISE_ERROR(...)                                                   \
-  CAF_PP_OVERLOAD(CAF_RAISE_ERROR_IMPL_, __VA_ARGS__)(__VA_ARGS__)
+#  define CAF_RAISE_ERROR(...)                                                 \
+    CAF_PP_OVERLOAD(CAF_RAISE_ERROR_IMPL_, __VA_ARGS__)(__VA_ARGS__)
 
 #endif // CAF_MSVC

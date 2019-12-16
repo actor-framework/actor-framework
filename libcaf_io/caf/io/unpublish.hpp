@@ -36,5 +36,4 @@ expected<void> unpublish(const Handle& whom, uint16_t port = 0) {
   return whom.home_system().middleman().unpublish(whom, port);
 }
 
-} // namespace caf
-
+} // namespace caf::io

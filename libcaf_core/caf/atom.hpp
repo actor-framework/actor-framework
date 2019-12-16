@@ -24,6 +24,7 @@
 #include <type_traits>
 
 #include "caf/detail/atom_val.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/meta/load_callback.hpp"
 
@@ -33,19 +34,19 @@ namespace caf {
 enum class atom_value : uint64_t {};
 
 /// @relates atom_value
-std::string to_string(atom_value x);
+CAF_CORE_EXPORT std::string to_string(atom_value x);
 
 /// @relates atom_value
-std::ostream& operator<<(std::ostream& out, atom_value x);
+CAF_CORE_EXPORT std::ostream& operator<<(std::ostream& out, atom_value x);
 
 /// @relates atom_value
-atom_value to_lowercase(atom_value x);
+CAF_CORE_EXPORT atom_value to_lowercase(atom_value x);
 
 /// @relates atom_value
-atom_value atom_from_string(string_view x);
+CAF_CORE_EXPORT atom_value atom_from_string(string_view x);
 
 /// @relates atom_value
-int compare(atom_value x, atom_value y);
+CAF_CORE_EXPORT int compare(atom_value x, atom_value y);
 
 /// Creates an atom from given string literal.
 template <size_t Size>

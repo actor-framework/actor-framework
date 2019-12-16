@@ -40,4 +40,4 @@ struct bounds_checker<To, true> {
   }
 };
 
-} // namespace caf
+} // namespace caf::detail

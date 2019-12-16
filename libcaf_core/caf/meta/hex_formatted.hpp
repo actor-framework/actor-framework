@@ -33,5 +33,4 @@ constexpr hex_formatted_t hex_formatted() {
   return {};
 }
 
-} // namespace caf
-
+} // namespace caf::meta

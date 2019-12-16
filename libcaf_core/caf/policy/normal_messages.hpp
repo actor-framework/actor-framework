@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/unit.hpp"
@@ -27,7 +28,7 @@ namespace caf::policy {
 
 /// Configures a cached DRR queue for holding asynchronous messages with
 /// default priority.
-class normal_messages {
+class CAF_CORE_EXPORT normal_messages {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -58,5 +59,4 @@ public:
   }
 };
 
-} // namespace caf
-
+} // namespace caf::policy

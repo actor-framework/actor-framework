@@ -21,15 +21,15 @@
 #include <functional>
 #include <type_traits>
 
-#include "caf/result.hpp"
 #include "caf/message.hpp"
 #include "caf/message_view.hpp"
+#include "caf/result.hpp"
 
 namespace caf {
 
 template <class F>
 struct catch_all {
-  using fun_type = std::function<result<message> (message_view&)>;
+  using fun_type = std::function<result<message>(message_view&)>;
 
   F handler;
 
@@ -58,4 +58,3 @@ template <class T>
 struct is_catch_all<catch_all<T>> : std::true_type {};
 
 } // namespace caf
-

@@ -22,7 +22,6 @@
 
 #include "caf/atom.hpp"
 #include "caf/deep_to_string.hpp"
-
 #include "caf/meta/type_name.hpp"
 
 namespace caf {
@@ -41,4 +40,3 @@ typename Inspector::result_type inspect(Inspector& f, named_actor_config& x) {
 }
 
 } // namespace caf
-

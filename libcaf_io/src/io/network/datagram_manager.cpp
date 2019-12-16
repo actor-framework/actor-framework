@@ -24,4 +24,4 @@ datagram_manager::~datagram_manager() {
   // nop
 }
 
-} // namespace caf
+} // namespace caf::io::network

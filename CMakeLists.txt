@@ -1,14 +1,20 @@
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 project(caf C CXX)
 
-include(CheckCSourceCompiles)
-include(CheckCSourceRuns)
+# -- project options -----------------------------------------------------------
 
-# Set default install paths.
-# See https://cmake.org/cmake/help/latest/module/GNUInstallDirs.html
-include(GNUInstallDirs)
+option(BUILD_SHARED_LIBS "Build all modules as shared library" ON)
 
-# Check whether we are running as CMake subdirectory.
+# -- includes ------------------------------------------------------------------
+
+include(CMakePackageConfigHelpers) # For creating .cmake files
+include(CheckCSourceCompiles)      # Check whether compiler works
+include(CheckCSourceRuns)          # Check whether compiler produces binaries
+include(GNUInstallDirs)            # Sets default install paths
+include(GenerateExportHeader)      # Auto-generates dllexport macros
+
+# -- check whether we are running as CMake subdirectory ------------------------
+
 get_directory_property(_parent PARENT_DIRECTORY)
 if(_parent)
   set(caf_is_subproject ON)
@@ -16,6 +22,38 @@ else()
   set(caf_is_subproject OFF)
 endif()
 unset(_parent)
+
+# enable tests if not disabled
+if(NOT CAF_NO_UNIT_TESTS)
+  enable_testing()
+  function(add_test_suites executable dir)
+    # enumerate all test suites.
+    set(suites "")
+    foreach(cpp_file ${ARGN})
+      file(STRINGS "${dir}/${cpp_file}" contents)
+      foreach(line ${contents})
+        if ("${line}" MATCHES "SUITE (.+)")
+          string(REGEX REPLACE ".*SUITE (.+)" "\\1" suite ${line})
+          list(APPEND suites "${suite}")
+        endif()
+      endforeach()
+    endforeach()
+    list(REMOVE_DUPLICATES suites)
+    list(LENGTH suites num_suites)
+    message(STATUS "Found ${num_suites} test suite for ${executable}")
+    # creates one CMake test per test suite.
+    macro (make_test suite)
+      string(REPLACE " " "_" test_name ${suite})
+      add_test(NAME ${test_name} COMMAND ${executable} -r300 -n -v5 -s"^${suite}$")
+    endmacro ()
+    list(LENGTH suites num_suites)
+    foreach(suite ${suites})
+      make_test("${suite}")
+    endforeach ()
+  endfunction()
+endif()
+
+# -- make sure we have at least C++17 available --------------------------------
 
 if(NOT CMAKE_CROSSCOMPILING)
   # Check whether the user already provided flags that enable C++ >= 17.
@@ -49,18 +87,28 @@ if(NOT CMAKE_CROSSCOMPILING)
   endif()
 endif()
 
+set(CMAKE_INSTALL_CMAKEBASEDIR "${CMAKE_INSTALL_LIBDIR}/cmake" CACHE PATH
+    "Base directory for installing cmake specific artifacts")
+set(INSTALL_CAF_CMAKEDIR "${CMAKE_INSTALL_CMAKEBASEDIR}/caf")
+
+if(BUILD_SHARED_LIBS)
+  set(LINK_TYPE "shared")
+  set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+  set(CMAKE_VISIBILITY_INLINES_HIDDEN yes)
+  if(POLICY CMP0063)
+    cmake_policy(SET CMP0063 NEW)
+  endif()
+else()
+  set(CAF_STATIC_BUILD yes)
+  set(LINK_TYPE "static")
+endif()
+
 # Be nice to VIM users and Clang tools.
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 # Silence policy CMP0042 warning by enabling RPATH explicitly.
 if(APPLE AND NOT DEFINED CMAKE_MACOSX_RPATH)
   set(CMAKE_MACOSX_RPATH true)
-endif()
-
-# Shared libs are currently not supported on Windows.
-if(WIN32 AND NOT CAF_BUILD_STATIC_ONLY)
-  message(STATUS "CAF currently only supports static-only builds on Windows")
-  set(CAF_BUILD_STATIC_ONLY yes)
 endif()
 
 if(CAF_BUILD_STATIC_RUNTIME)
@@ -99,6 +147,11 @@ if(NOT caf_is_subproject)
   add_custom_target(configure COMMAND ${CMAKE_CURRENT_BINARY_DIR}/config.status)
 endif()
 
+# Silence annoying MSVC warning.
+if(MSVC)
+  add_compile_options(/wd4275 /wd4251)
+endif()
+
 ################################################################################
 #                              utility functions                               #
 ################################################################################
@@ -134,7 +187,7 @@ add_executable(caf-generate-enum-strings cmake/caf-generate-enum-strings.cpp)
 
 function(enum_to_string relative_input_file relative_output_file)
   set(input "${CMAKE_CURRENT_SOURCE_DIR}/${relative_input_file}")
-  set(output "${CMAKE_CURRENT_BINARY_DIR}/${relative_output_file}")
+  set(output "${CMAKE_BINARY_DIR}/${relative_output_file}")
   add_custom_command(OUTPUT "${output}"
                      COMMAND caf-generate-enum-strings "${input}" "${output}"
                      DEPENDS caf-generate-enum-strings "${input}")
@@ -169,8 +222,6 @@ pretty_yes("CAF_FORCE_NO_EXCEPTIONS")
 pretty_no("CAF_ENABLE_RUNTIME_CHECKS")
 pretty_no("CAF_NO_MEM_MANAGEMENT")
 pretty_no("CAF_NO_EXCEPTIONS")
-pretty_no("CAF_BUILD_STATIC_ONLY")
-pretty_no("CAF_BUILD_STATIC")
 pretty_no("CAF_NO_OPENSSL")
 pretty_no("CAF_NO_PYTHON")
 pretty_no("CAF_NO_TOOLS")
@@ -326,14 +377,11 @@ endif()
 if(MINGW)
   add_definitions(-D_WIN32_WINNT=0x0600)
   add_definitions(-DWIN32)
-  include(GenerateExportHeader)
   list(APPEND CAF_EXTRA_LDFLAGS -lws2_32 -liphlpapi -lpsapi)
   # build static to avoid runtime dependencies to GCC libraries
   build_string("EXTRA_FLAGS" "-static")
 elseif(CYGWIN)
   build_string("EXTRA_FLAGS" "-U__STRICT_ANSI__")
-else()
-  build_string("EXTRA_FLAGS" "-fPIC")
 endif()
 if (WIN32)
   list(APPEND CAF_EXTRA_LDFLAGS ws2_32 iphlpapi)
@@ -414,66 +462,32 @@ add_custom_command(TARGET uninstall
                    COMMAND "${CMAKE_COMMAND}" -P
                    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
 
-################################################################################
-#                       set include paths for subprojects                      #
-################################################################################
+# -- set include paths for subprojects -----------------------------------------
 
-# path to caf core & io headers
-set(LIBCAF_INCLUDE_DIRS
-    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_core"
-    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_io"
-    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_test")
-# enable tests if not disabled
-if(NOT CAF_NO_UNIT_TESTS)
-  enable_testing()
-  macro(add_unit_tests globstr)
-    file(GLOB_RECURSE tests "${globstr}")
-    set(CAF_ALL_UNIT_TESTS ${CAF_ALL_UNIT_TESTS} ${tests})
-  endmacro()
-else()
-  macro(add_unit_tests globstr)
-    # do nothing (unit tests disabled)
-  endmacro()
-endif()
-# all projects need the headers of the core components
-include_directories("${LIBCAF_INCLUDE_DIRS}")
+configure_file("${PROJECT_SOURCE_DIR}/cmake/build_config.hpp.in"
+               "${CMAKE_BINARY_DIR}/caf/detail/build_config.hpp"
+               @ONLY)
 
+# -- set include paths for all subprojects -------------------------------------
+
+include_directories("${CMAKE_BINARY_DIR}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_core"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_io"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_test"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_openssl")
 
 ################################################################################
 #                                 add targets                                  #
 ################################################################################
-
-macro(add_caf_lib name)
-  string(TOUPPER ${name} upper_name)
-  set(full_name libcaf_${name})
-  set(shared_target ${full_name}_shared)
-  set(static_target ${full_name}_static)
-  add_subdirectory(${full_name})
-  set(lib_varname CAF_LIBRARY_${upper_name})
-  set(lib_varname_static ${lib_varname}_STATIC)
-  if(NOT CAF_BUILD_STATIC_ONLY)
-    set(${lib_varname} ${shared_target})
-    set(CAF_LIBRARIES ${CAF_LIBRARIES} ${shared_target})
-  else()
-    set(${lib_varname} ${static_target})
-    set(CAF_LIBRARIES ${CAF_LIBRARIES} ${static_target})
-  endif()
-  if(CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
-    set(${lib_varname_static} ${static_target})
-  endif()
-  add_unit_tests("${full_name}/test/*.cpp")
-  # add headers to include directories so other subprojects can use them
-  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/libcaf_${name}")
-endmacro()
 
 macro(add_optional_caf_lib name)
   string(TOUPPER ${name} upper_name)
   set(flag_varname CAF_NO_${upper_name})
   if(NOT ${flag_varname}
      AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_${name}/CMakeLists.txt")
-    add_caf_lib(${name})
+    add_subdirectory("libcaf_${name}")
   else()
-    set(${flag_name} yes)
+    set(${flag_varname} yes)
   endif()
 endmacro()
 
@@ -503,7 +517,7 @@ macro(add_optional_caf_binaries name)
 endmacro()
 
 # build core and I/O library
-add_caf_lib(core)
+add_subdirectory(libcaf_core)
 add_optional_caf_lib(io)
 
 # build SSL module if OpenSSL library is available
@@ -554,47 +568,25 @@ add_optional_caf_binaries(examples)
 # build tools if not being told otherwise
 add_optional_caf_binaries(tools)
 
-################################################################################
-#                               unit tests setup                               #
-################################################################################
+export(EXPORT CAFTargets FILE CAFTargets.cmake NAMESPACE caf::)
 
-if(NOT CAF_NO_UNIT_TESTS)
-  # setup unit test binary
-  add_executable(caf-test
-                 libcaf_test/src/caf-test.cpp
-                 libcaf_test/caf/test/unit_test.hpp
-                 libcaf_test/caf/test/unit_test_impl.hpp
-                 ${CAF_ALL_UNIT_TESTS})
-  target_link_libraries(caf-test
-                        ${CAF_EXTRA_LDFLAGS}
-                        ${CAF_LIBRARIES}
-                        ${PTHREAD_LIBRARIES})
-  add_custom_target(all_unit_tests)
-  add_dependencies(caf-test all_unit_tests)
-  # enumerate all test suites.
-  foreach(test ${CAF_ALL_UNIT_TESTS})
-    file(STRINGS ${test} contents)
-    foreach(line ${contents})
-      if ("${line}" MATCHES "CAF_SUITE (.*)")
-        string(REGEX REPLACE ".* CAF_SUITE (.*)" "\\1" suite ${line})
-        list(APPEND suites ${suite})
-      endif()
-    endforeach()
-  endforeach()
-  list(REMOVE_DUPLICATES suites)
-  # creates one CMake test per test suite.
-  macro (make_test suite)
-    string(REPLACE " " "_" test_name ${suite})
-    set(caf_test ${EXECUTABLE_OUTPUT_PATH}/caf-test)
-    add_test(${test_name} ${caf_test} -r 300 -n -v 5 -s "${suite}" ${ARGN})
-  endmacro ()
-  list(LENGTH suites num_suites)
-  message(STATUS "Found ${num_suites} test suites")
-  foreach(suite ${suites})
-    make_test("${suite}")
-  endforeach ()
-endif()
+install(EXPORT CAFTargets
+        DESTINATION "${INSTALL_CAF_CMAKEDIR}"
+        NAMESPACE caf::)
 
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/CAFConfigVersion.cmake"
+  VERSION ${CAF_VERSION}
+  COMPATIBILITY ExactVersion)
+
+configure_package_config_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CAFConfig.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/CAFConfig.cmake" INSTALL_DESTINATION
+  "${INSTALL_CAF_CMAKEDIR}")
+
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/CAFConfig.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/CAFConfigVersion.cmake"
+  DESTINATION "${INSTALL_CAF_CMAKEDIR}")
 
 # -- Fetch branch name and SHA if available ------------------------------------
 
@@ -609,7 +601,9 @@ message(STATUS "Set release version for all documentation to ${CAF_RELEASE}.")
 
 # -- Setup for building manual and API documentation ---------------------------
 
-add_subdirectory(doc)
+if(NOT WIN32)
+  add_subdirectory(doc)
+endif()
 
 ################################################################################
 #                     Add additional project files to GUI                      #
@@ -652,8 +646,7 @@ if(NOT CAF_NO_SUMMARY)
         "\nCAF version:           ${CAF_VERSION}"
         "\n"
         "\nBuild type:            ${CMAKE_BUILD_TYPE}"
-        "\nBuild static:          ${CAF_BUILD_STATIC}"
-        "\nBuild static only:     ${CAF_BUILD_STATIC_ONLY}"
+        "\nLink type:             ${LINK_TYPE}"
         "\nBuild static runtime:  ${CAF_BUILD_STATIC_RUNTIME}"
         "\nRuntime checks:        ${CAF_ENABLE_RUNTIME_CHECKS}"
         "\nLog level:             ${CAF_LOG_LEVEL}"

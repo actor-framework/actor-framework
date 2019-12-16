@@ -60,4 +60,4 @@ void append_percent_encoded(std::string& str, string_view x, bool is_path) {
     }
 }
 
-} // namespace caf
+} // namespace caf::detail

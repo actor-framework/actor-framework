@@ -60,16 +60,14 @@ public:
   // -- constructors, destructors, and assignment operators -------------------
 
   drr_cached_queue(policy_type p)
-      : list_(p),
-        deficit_(0),
-        cache_(std::move(p)) {
+    : list_(p), deficit_(0), cache_(std::move(p)) {
     // nop
   }
 
   drr_cached_queue(drr_cached_queue&& other)
-      : list_(std::move(other.list_)),
-        deficit_(other.deficit_),
-        cache_(std::move(other.cache_)) {
+    : list_(std::move(other.list_)),
+      deficit_(other.deficit_),
+      cache_(std::move(other.cache_)) {
     // nop
   }
 
@@ -176,8 +174,8 @@ public:
 
   /// Run a new round with `quantum`, dispatching all tasks to `consumer`.
   template <class F>
-  new_round_result new_round(deficit_type quantum, F& consumer)
-  noexcept(noexcept(consumer(std::declval<value_type&>()))) {
+  new_round_result new_round(deficit_type quantum, F& consumer) noexcept(
+    noexcept(consumer(std::declval<value_type&>()))) {
     if (list_.empty())
       return {false, false};
     deficit_ += quantum;
@@ -264,5 +262,4 @@ private:
   cache_type cache_;
 };
 
-} // namespace caf
-
+} // namespace caf::intrusive

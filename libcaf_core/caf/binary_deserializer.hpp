@@ -23,6 +23,7 @@
 #include <tuple>
 #include <utility>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
 #include "caf/sec.hpp"
@@ -33,7 +34,8 @@
 namespace caf {
 
 /// Deserializes objects from sequence of bytes.
-class binary_deserializer : public write_inspector<binary_deserializer> {
+class CAF_CORE_EXPORT binary_deserializer
+  : public write_inspector<binary_deserializer> {
 public:
   // -- member types -----------------------------------------------------------
 

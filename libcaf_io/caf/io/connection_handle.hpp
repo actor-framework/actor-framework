@@ -38,8 +38,8 @@ constexpr invalid_connection_handle_t invalid_connection_handle
   = invalid_connection_handle_t{};
 
 /// Generic handle type for identifying connections.
-class connection_handle : public handle<connection_handle,
-                                        invalid_connection_handle_t> {
+class connection_handle
+  : public handle<connection_handle, invalid_connection_handle_t> {
 public:
   friend class handle<connection_handle, invalid_connection_handle_t>;
 
@@ -54,22 +54,22 @@ public:
   }
 
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f,
-                                                 connection_handle& x) {
+  friend typename Inspector::result_type
+  inspect(Inspector& f, connection_handle& x) {
     return f(meta::type_name("connection_handle"), x.id_);
   }
 
- private:
+private:
   inline connection_handle(int64_t handle_id) : super(handle_id) {
     // nop
   }
 };
 
-} // namespace caf
+} // namespace caf::io
 
 namespace std {
 
-template<>
+template <>
 struct hash<caf::io::connection_handle> {
   size_t operator()(const caf::io::connection_handle& hdl) const {
     hash<int64_t> f;
@@ -78,4 +78,3 @@ struct hash<caf::io::connection_handle> {
 };
 
 } // namespace std
-

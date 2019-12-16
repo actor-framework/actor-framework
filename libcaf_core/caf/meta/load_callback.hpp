@@ -53,5 +53,4 @@ load_callback_t<F> load_callback(F fun) {
   return {std::move(fun)};
 }
 
-} // namespace caf
-
+} // namespace caf::meta

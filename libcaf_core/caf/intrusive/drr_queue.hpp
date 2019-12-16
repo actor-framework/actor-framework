@@ -123,5 +123,4 @@ private:
   deficit_type deficit_ = 0;
 };
 
-} // namespace caf
-
+} // namespace caf::intrusive

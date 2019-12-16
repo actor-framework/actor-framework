@@ -24,6 +24,7 @@
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/check_typed_input.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/response_type.hpp"
@@ -33,7 +34,7 @@ namespace caf {
 /// A response promise can be used to deliver a uniquely identifiable
 /// response message from the server (i.e. receiver of the request)
 /// to the client (i.e. the sender of the request).
-class response_promise {
+class CAF_CORE_EXPORT response_promise {
 public:
   using forwarding_stack = std::vector<strong_actor_ptr>;
 
@@ -148,4 +149,3 @@ private:
 };
 
 } // namespace caf
-

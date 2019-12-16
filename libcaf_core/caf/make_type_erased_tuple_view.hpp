@@ -18,14 +18,13 @@
 
 #pragma once
 
-#include <tuple>
 #include <cstddef>
 #include <cstdint>
+#include <tuple>
 #include <typeinfo>
 
-#include "caf/type_erased_tuple.hpp"
-
 #include "caf/detail/type_erased_tuple_view.hpp"
+#include "caf/type_erased_tuple.hpp"
 
 namespace caf {
 
@@ -36,4 +35,3 @@ detail::type_erased_tuple_view<Ts...> make_type_erased_tuple_view(Ts&... xs) {
 }
 
 } // namespace caf
-

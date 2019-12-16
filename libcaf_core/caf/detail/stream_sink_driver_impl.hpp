@@ -42,8 +42,7 @@ public:
 
   template <class Init>
   stream_sink_driver_impl(Init init, Process f, Finalize fin)
-      : process_(std::move(f)),
-        fin_(std::move(fin)) {
+    : process_(std::move(f)), fin_(std::move(fin)) {
     init(state_);
   }
 
@@ -61,5 +60,4 @@ private:
   state_type state_;
 };
 
-} // namespace caf
-
+} // namespace caf::detail

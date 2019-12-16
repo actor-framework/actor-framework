@@ -20,7 +20,6 @@
 
 namespace caf::detail {
 
-struct tail_argument_token { };
+struct tail_argument_token {};
 
-} // namespace caf
-
+} // namespace caf::detail

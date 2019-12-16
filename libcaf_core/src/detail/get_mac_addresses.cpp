@@ -167,7 +167,7 @@ std::vector<iface_info> get_mac_addresses() {
   return result;
 }
 
-} // namespace caf
+} // namespace caf::detail
 
 #else
 

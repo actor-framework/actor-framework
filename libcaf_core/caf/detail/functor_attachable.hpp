@@ -51,7 +51,6 @@ struct functor_attachable<F, 2> : attachable {
   }
 };
 
-
 template <class F>
 struct functor_attachable<F, 0> : attachable {
   F functor_;
@@ -63,5 +62,4 @@ struct functor_attachable<F, 0> : attachable {
   }
 };
 
-} // namespace caf
-
+} // namespace caf::detail

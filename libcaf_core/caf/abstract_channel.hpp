@@ -20,6 +20,7 @@
 
 #include <atomic>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message_id.hpp"
 
@@ -28,7 +29,7 @@ namespace caf {
 /// Interface for all message receivers. * This interface describes an
 /// entity that can receive messages and is implemented by {@link actor}
 /// and {@link group}.
-class abstract_channel {
+class CAF_CORE_EXPORT abstract_channel {
 public:
   friend class abstract_actor;
   friend class abstract_group;
@@ -37,19 +38,20 @@ public:
 
   /// Enqueues a new message without forwarding stack to the channel.
   virtual void enqueue(strong_actor_ptr sender, message_id mid, message content,
-                       execution_unit* host = nullptr) = 0;
+                       execution_unit* host = nullptr)
+    = 0;
 
-  static constexpr int is_abstract_actor_flag       = 0x01000000;
+  static constexpr int is_abstract_actor_flag = 0x01000000;
 
-  static constexpr int is_abstract_group_flag       = 0x02000000;
+  static constexpr int is_abstract_group_flag = 0x02000000;
 
   static constexpr int is_actor_bind_decorator_flag = 0x04000000;
 
-  static constexpr int is_actor_dot_decorator_flag  = 0x08000000;
+  static constexpr int is_actor_dot_decorator_flag = 0x08000000;
 
-  static constexpr int is_actor_decorator_mask      = 0x0C000000;
+  static constexpr int is_actor_decorator_mask = 0x0C000000;
 
-  static constexpr int is_hidden_flag               = 0x10000000;
+  static constexpr int is_hidden_flag = 0x10000000;
 
   inline bool is_abstract_actor() const {
     return static_cast<bool>(flags() & is_abstract_actor_flag);
@@ -89,4 +91,3 @@ private:
 };
 
 } // namespace caf
-

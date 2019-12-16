@@ -29,8 +29,7 @@ class stream_impl : public stream {
 public:
   template <class... Ts>
   stream_impl(default_multiplexer& mpx, native_socket sockfd, Ts&&... xs)
-  : stream(mpx, sockfd),
-  policy_(std::forward<Ts>(xs)...) {
+    : stream(mpx, sockfd), policy_(std::forward<Ts>(xs)...) {
     // nop
   }
 
@@ -42,4 +41,4 @@ private:
   ProtocolPolicy policy_;
 };
 
-} // namespace caf
+} // namespace caf::io::network

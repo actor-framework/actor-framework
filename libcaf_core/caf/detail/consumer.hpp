@@ -44,4 +44,4 @@ consumer<T> make_consumer(T& x) {
   return consumer<T>{x};
 }
 
-} // namespace caf
+} // namespace caf::detail

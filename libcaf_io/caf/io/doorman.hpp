@@ -21,13 +21,13 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "caf/message.hpp"
-#include "caf/mailbox_element.hpp"
-
+#include "caf/detail/io_export.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/broker_servant.hpp"
-#include "caf/io/system_messages.hpp"
 #include "caf/io/network/acceptor_manager.hpp"
+#include "caf/io/system_messages.hpp"
+#include "caf/mailbox_element.hpp"
+#include "caf/message.hpp"
 
 namespace caf::io {
 
@@ -36,7 +36,7 @@ using doorman_base = broker_servant<network::acceptor_manager, accept_handle,
 
 /// Manages incoming connections.
 /// @ingroup Broker
-class doorman : public doorman_base {
+class CAF_IO_EXPORT doorman : public doorman_base {
 public:
   doorman(accept_handle acc_hdl);
 
@@ -55,9 +55,8 @@ protected:
 
 using doorman_ptr = intrusive_ptr<doorman>;
 
-} // namespace caf
+} // namespace caf::io
 
 // Allows the `middleman_actor` to create a `doorman` and then send it to the
 // BASP broker.
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(caf::io::doorman_ptr)
-

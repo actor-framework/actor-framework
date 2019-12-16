@@ -44,4 +44,4 @@ void abstract_worker::intrusive_ptr_release_impl() {
   deref();
 }
 
-} // namespace caf
+} // namespace caf::detail

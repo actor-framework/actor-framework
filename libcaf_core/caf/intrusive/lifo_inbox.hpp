@@ -70,8 +70,8 @@ public:
       // A tag is never part of a non-empty list.
       new_element->next = e != blk ? e : nullptr;
       if (stack_.compare_exchange_strong(e, new_element))
-        return  e == reader_blocked_tag() ? inbox_result::unblocked_reader
-                                            : inbox_result::success;
+        return e == reader_blocked_tag() ? inbox_result::unblocked_reader
+                                         : inbox_result::success;
       // Continue with new value of `e`.
     }
     // The queue has been closed, drop messages.
@@ -85,7 +85,6 @@ public:
   inbox_result push_front(unique_pointer x) noexcept {
     return push_front(x.release());
   }
-
 
   /// Tries to enqueue a new element to the mailbox.
   /// @threadsafe
@@ -130,8 +129,7 @@ public:
   pointer take_head(pointer new_head) noexcept {
     // This member function should only be used to transition to closed or
     // empty.
-    CAF_ASSERT(new_head == stack_closed_tag()
-               || new_head == stack_empty_tag());
+    CAF_ASSERT(new_head == stack_closed_tag() || new_head == stack_empty_tag());
     pointer e = stack_.load();
     // Must not be called on a closed queue.
     CAF_ASSERT(e != stack_closed_tag());
@@ -281,5 +279,4 @@ private:
   std::atomic<pointer> stack_;
 };
 
-} // namespace caf
-
+} // namespace caf::intrusive

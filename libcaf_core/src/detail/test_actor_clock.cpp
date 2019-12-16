@@ -75,4 +75,4 @@ size_t test_actor_clock::advance_time(duration_type x) {
   return trigger_expired_timeouts();
 }
 
-} // namespace caf
+} // namespace caf::detail

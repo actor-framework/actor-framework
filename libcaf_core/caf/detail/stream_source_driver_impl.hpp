@@ -29,7 +29,7 @@ namespace caf::detail {
 /// Identifies an unbound sequence of messages.
 template <class DownstreamManager, class Pull, class Done, class Finalize>
 class stream_source_driver_impl final
-    : public stream_source_driver<DownstreamManager> {
+  : public stream_source_driver<DownstreamManager> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -43,9 +43,7 @@ public:
 
   template <class Init>
   stream_source_driver_impl(Init init, Pull f, Done pred, Finalize fin)
-      : pull_(std::move(f)),
-        done_(std::move(pred)),
-        fin_(std::move(fin)) {
+    : pull_(std::move(f)), done_(std::move(pred)), fin_(std::move(fin)) {
     init(state_);
   }
 
@@ -68,5 +66,4 @@ private:
   Finalize fin_;
 };
 
-} // namespace caf
-
+} // namespace caf::detail

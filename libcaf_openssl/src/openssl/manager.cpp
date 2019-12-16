@@ -96,10 +96,8 @@ manager::~manager() {
 
 void manager::start() {
   CAF_LOG_TRACE("");
-  manager_ = make_middleman_actor(system(), system()
-                                              .middleman()
-                                              .named_broker<io::basp_broker>(
-                                                atom("BASP")));
+  manager_ = make_middleman_actor(
+    system(), system().middleman().named_broker<io::basp_broker>(atom("BASP")));
 }
 
 void manager::stop() {
@@ -165,4 +163,4 @@ manager::manager(actor_system& sys) : system_(sys) {
   // nop
 }
 
-} // namespace caf
+} // namespace caf::openssl

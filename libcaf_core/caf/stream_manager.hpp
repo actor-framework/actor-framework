@@ -25,6 +25,7 @@
 
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/downstream_manager.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/fwd.hpp"
@@ -39,7 +40,7 @@
 namespace caf {
 
 /// Manages a single stream with any number of in- and outbound paths.
-class stream_manager : public ref_counted {
+class CAF_CORE_EXPORT stream_manager : public ref_counted {
 public:
   // -- constants --------------------------------------------------------------
 
@@ -100,8 +101,8 @@ public:
 
   /// Sends a handshake to `dest`.
   /// @pre `dest != nullptr`
-  virtual void deliver_handshake(response_promise& rp, stream_slot slot,
-                                 message handshake);
+  virtual void
+  deliver_handshake(response_promise& rp, stream_slot slot, message handshake);
 
   // -- implementation hooks for sources ---------------------------------------
 
@@ -255,13 +256,13 @@ public:
 
   /// Adds a new outbound path to `rp.next()`.
   /// @private
-  stream_slot add_unchecked_outbound_path_impl(response_promise& rp,
-                                               message handshake);
+  stream_slot
+  add_unchecked_outbound_path_impl(response_promise& rp, message handshake);
 
   /// Adds a new outbound path to `next`.
   /// @private
-  stream_slot add_unchecked_outbound_path_impl(strong_actor_ptr next,
-                                               message handshake);
+  stream_slot
+  add_unchecked_outbound_path_impl(strong_actor_ptr next, message handshake);
 
   /// Adds a new outbound path to the current sender.
   /// @private
@@ -336,4 +337,3 @@ private:
 using stream_manager_ptr = intrusive_ptr<stream_manager>;
 
 } // namespace caf
-

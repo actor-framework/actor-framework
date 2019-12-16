@@ -131,4 +131,4 @@ dynamic_message_data* intrusive_cow_ptr_unshare(dynamic_message_data*& ptr) {
   return default_intrusive_cow_ptr_unshare(ptr);
 }
 
-} // namespace caf
+} // namespace caf::detail

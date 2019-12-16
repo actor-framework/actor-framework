@@ -26,6 +26,7 @@
 #include <type_traits>
 
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/core_export.hpp"
 
 namespace caf {
 
@@ -41,31 +42,21 @@ struct is_string_like {
     const U* x,
     // check if `(*x)[0]` returns `const char&`
     typename std::enable_if<
-      std::is_same<
-        const char&,
-        decltype((*x)[0])
-      >::value
-    >::type* = nullptr,
+      std::is_same<const char&, decltype((*x)[0])>::value>::type* = nullptr,
     // check if `x->size()` returns an integer
     typename std::enable_if<
-      std::is_integral<
-        decltype(x->size())
-      >::value
-    >::type* = nullptr,
+      std::is_integral<decltype(x->size())>::value>::type* = nullptr,
     // check if `x->find('?', 0)` is well-formed and returns an integer
     // (distinguishes vectors from strings)
     typename std::enable_if<
-      std::is_integral<
-        decltype(x->find('?', 0))
-      >::value
-    >::type* = nullptr);
+      std::is_integral<decltype(x->find('?', 0))>::value>::type* = nullptr);
 
   // SFINAE fallback.
   static void sfinae(void*);
 
   // Result of SFINAE test.
-  using result_type =
-    decltype(sfinae(static_cast<typename std::decay<T>::type*>(nullptr)));
+  using result_type
+    = decltype(sfinae(static_cast<typename std::decay<T>::type*>(nullptr)));
 
   // Trait result.
   static constexpr bool value = std::is_same<bool, result_type>::value;
@@ -74,7 +65,7 @@ struct is_string_like {
 } // namespace detail
 
 /// Drop-in replacement for C++17 std::string_view.
-class string_view : detail::comparable<string_view> {
+class CAF_CORE_EXPORT string_view : detail::comparable<string_view> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -101,32 +92,27 @@ public:
   }
 
   constexpr string_view(const char* cstr, size_t length) noexcept
-      : data_(cstr),
-        size_(length) {
+    : data_(cstr), size_(length) {
     // nop
   }
 
 #ifdef CAF_GCC
   constexpr string_view(const char* cstr) noexcept
-      : data_(cstr),
-        size_(strlen(cstr)) {
+    : data_(cstr), size_(strlen(cstr)) {
     // nop
   }
 #else
   template <size_t N>
   constexpr string_view(const char (&cstr)[N]) noexcept
-      : data_(cstr),
-        size_(N - 1) {
+    : data_(cstr), size_(N - 1) {
     // nop
   }
 #endif
 
   constexpr string_view(const string_view&) noexcept = default;
 
-  template <
-    class T,
-    class = typename std::enable_if<detail::is_string_like<T>::value>::type
-  >
+  template <class T, class = typename std::enable_if<
+                       detail::is_string_like<T>::value>::type>
   string_view(const T& str) noexcept {
     auto len = str.size();
     if (len == 0) {
@@ -222,15 +208,15 @@ public:
 
   int compare(size_type pos1, size_type n1, string_view str) const noexcept;
 
-  int compare(size_type pos1, size_type n1, string_view str,
-              size_type pos2, size_type n2) const noexcept;
+  int compare(size_type pos1, size_type n1, string_view str, size_type pos2,
+              size_type n2) const noexcept;
 
   int compare(const_pointer str) const noexcept;
 
   int compare(size_type pos, size_type n, const_pointer str) const noexcept;
 
-  int compare(size_type pos1, size_type n1,
-              const_pointer s, size_type n2) const noexcept;
+  int compare(size_type pos1, size_type n1, const_pointer s, size_type n2) const
+    noexcept;
 
   size_type find(string_view str, size_type pos = 0) const noexcept;
 
@@ -252,8 +238,8 @@ public:
 
   size_type find_first_of(value_type ch, size_type pos = 0) const noexcept;
 
-  size_type find_first_of(const_pointer str, size_type pos,
-                          size_type n) const noexcept;
+  size_type find_first_of(const_pointer str, size_type pos, size_type n) const
+    noexcept;
 
   size_type find_first_of(const_pointer str, size_type pos = 0) const noexcept;
 
@@ -261,34 +247,34 @@ public:
 
   size_type find_last_of(value_type ch, size_type pos = npos) const noexcept;
 
-  size_type find_last_of(const_pointer str, size_type pos,
-                         size_type n) const noexcept;
+  size_type find_last_of(const_pointer str, size_type pos, size_type n) const
+    noexcept;
 
-  size_type find_last_of(const_pointer str,
-                         size_type pos = npos) const noexcept;
+  size_type find_last_of(const_pointer str, size_type pos = npos) const
+    noexcept;
 
-  size_type find_first_not_of(string_view str,
-                              size_type pos = 0) const noexcept;
+  size_type find_first_not_of(string_view str, size_type pos = 0) const
+    noexcept;
 
   size_type find_first_not_of(value_type ch, size_type pos = 0) const noexcept;
 
   size_type find_first_not_of(const_pointer str, size_type pos,
                               size_type n) const noexcept;
 
-  size_type find_first_not_of(const_pointer str,
-                              size_type pos = 0) const noexcept;
+  size_type find_first_not_of(const_pointer str, size_type pos = 0) const
+    noexcept;
 
-  size_type find_last_not_of(string_view str,
-                             size_type pos = npos) const noexcept;
+  size_type find_last_not_of(string_view str, size_type pos = npos) const
+    noexcept;
 
-  size_type find_last_not_of(value_type ch,
-                             size_type pos = npos) const noexcept;
+  size_type find_last_not_of(value_type ch, size_type pos = npos) const
+    noexcept;
 
   size_type find_last_not_of(const_pointer str, size_type pos,
                              size_type n) const noexcept;
 
-  size_type find_last_not_of(const_pointer str,
-                             size_type pos = npos) const noexcept;
+  size_type find_last_not_of(const_pointer str, size_type pos = npos) const
+    noexcept;
 
 private:
   const char* data_;
@@ -299,6 +285,6 @@ private:
 
 namespace std {
 
-std::ostream& operator<<(std::ostream& out, caf::string_view);
+CAF_CORE_EXPORT std::ostream& operator<<(std::ostream& out, caf::string_view);
 
 } // namespace std

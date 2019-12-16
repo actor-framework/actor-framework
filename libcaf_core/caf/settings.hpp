@@ -19,6 +19,7 @@
 #pragma once
 
 #include "caf/config_value.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/optional.hpp"
 #include "caf/raise_error.hpp"
@@ -32,7 +33,8 @@ using settings = dictionary<config_value>;
 
 /// Tries to retrieve the value associated to `name` from `xs`.
 /// @relates config_value
-const config_value* get_if(const settings* xs, string_view name);
+CAF_CORE_EXPORT const config_value*
+get_if(const settings* xs, string_view name);
 
 /// Tries to retrieve the value associated to `name` from `xs`.
 /// @relates config_value
@@ -71,15 +73,17 @@ T get_or(const settings& xs, string_view name, T default_value) {
   return std::move(default_value);
 }
 
-std::string get_or(const settings& xs, string_view name,
-                   string_view default_value);
+CAF_CORE_EXPORT std::string
+get_or(const settings& xs, string_view name, string_view default_value);
 
 /// @private
-config_value& put_impl(settings& dict, const std::vector<string_view>& path,
-                       config_value& value);
+CAF_CORE_EXPORT config_value&
+put_impl(settings& dict, const std::vector<string_view>& path,
+         config_value& value);
 
 /// @private
-config_value& put_impl(settings& dict, string_view key, config_value& value);
+CAF_CORE_EXPORT config_value&
+put_impl(settings& dict, string_view key, config_value& value);
 
 /// Converts `value` to a `config_value` and assigns it to `key`.
 /// @param dict Dictionary of key-value pairs.
@@ -106,10 +110,11 @@ void put_missing(settings& xs, string_view key, T&& value) {
 
 /// Inserts a new list named `name` into the dictionary `xs` and returns
 /// a reference to it. Overrides existing entries with the same name.
-config_value::list& put_list(settings& xs, std::string name);
+CAF_CORE_EXPORT config_value::list& put_list(settings& xs, std::string name);
 
 /// Inserts a new list named `name` into the dictionary `xs` and returns
 /// a reference to it. Overrides existing entries with the same name.
-config_value::dictionary& put_dictionary(settings& xs, std::string name);
+CAF_CORE_EXPORT config_value::dictionary&
+put_dictionary(settings& xs, std::string name);
 
 } // namespace caf

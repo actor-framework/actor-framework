@@ -206,4 +206,4 @@ void stringification_inspector::consume_int(uint64_t x) {
   std::reverse(result_.begin() + begin, result_.end());
 }
 
-} // namespace caf
+} // namespace caf::detail

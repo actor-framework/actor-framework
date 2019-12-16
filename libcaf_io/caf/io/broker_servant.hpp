@@ -34,9 +34,9 @@ public:
   using handle_type = Handle;
 
   broker_servant(handle_type x)
-      : hdl_(x),
-        value_(strong_actor_ptr{}, make_message_id(),
-               mailbox_element::forwarding_stack{}, SysMsgType{x, {}}) {
+    : hdl_(x),
+      value_(strong_actor_ptr{}, make_message_id(),
+             mailbox_element::forwarding_stack{}, SysMsgType{x, {}}) {
     // nop
   }
 
@@ -96,21 +96,18 @@ protected:
         return false;
       // tell broker it entered passive mode, this can result in
       // producing, why we check the condition again afterwards
-      using passiv_t =
+      using passiv_t = typename std::conditional<
+        std::is_same<handle_type, connection_handle>::value,
+        connection_passivated_msg,
         typename std::conditional<
-          std::is_same<handle_type, connection_handle>::value,
-          connection_passivated_msg,
-          typename std::conditional<
-            std::is_same<handle_type, accept_handle>::value,
-            acceptor_passivated_msg,
-            datagram_servant_passivated_msg
-          >::type
-        >::type;
-        using tmp_t = mailbox_element_vals<passiv_t>;
-        tmp_t tmp{strong_actor_ptr{}, make_message_id(),
-                  mailbox_element::forwarding_stack{}, passiv_t{hdl()}};
-        invoke_mailbox_element_impl(ctx, tmp);
-        return activity_tokens_ != size_t{0};
+          std::is_same<handle_type, accept_handle>::value,
+          acceptor_passivated_msg,
+          datagram_servant_passivated_msg>::type>::type;
+      using tmp_t = mailbox_element_vals<passiv_t>;
+      tmp_t tmp{strong_actor_ptr{}, make_message_id(),
+                mailbox_element::forwarding_stack{}, passiv_t{hdl()}};
+      invoke_mailbox_element_impl(ctx, tmp);
+      return activity_tokens_ != size_t{0};
     }
     return true;
   }
@@ -124,6 +121,4 @@ protected:
   optional<size_t> activity_tokens_;
 };
 
-} // namespace caf
-
-
+} // namespace caf::io

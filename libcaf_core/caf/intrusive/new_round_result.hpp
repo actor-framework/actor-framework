@@ -41,8 +41,8 @@ constexpr bool operator!=(new_round_result x, new_round_result y) {
   return !(x == y);
 }
 
-constexpr new_round_result make_new_round_result(bool consumed_items,
-                                                 bool stop_all = false) {
+constexpr new_round_result
+make_new_round_result(bool consumed_items, bool stop_all = false) {
   return {consumed_items, stop_all};
 }
 
@@ -50,5 +50,4 @@ constexpr new_round_result operator|(new_round_result x, new_round_result y) {
   return {x.consumed_items || y.consumed_items, x.stop_all || y.stop_all};
 }
 
-} // namespace caf
-
+} // namespace caf::intrusive

@@ -46,5 +46,4 @@ overload<Fs...> make_overload(Fs... fs) {
   return {fs...};
 }
 
-} // namespace caf
-
+} // namespace caf::detail

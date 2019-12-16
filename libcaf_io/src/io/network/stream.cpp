@@ -212,4 +212,4 @@ void stream::send_fin() {
   shutdown_write(fd_);
 }
 
-} // namespace caf
+} // namespace caf::io::network

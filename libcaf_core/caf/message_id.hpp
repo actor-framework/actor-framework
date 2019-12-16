@@ -18,18 +18,16 @@
 
 #pragma once
 
-#include <string>
 #include <cstdint>
 #include <functional>
+#include <string>
 
 #include "caf/config.hpp"
-#include "caf/error.hpp"
-#include "caf/message_priority.hpp"
-
-#include "caf/meta/type_name.hpp"
-
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/error.hpp"
+#include "caf/message_priority.hpp"
+#include "caf/meta/type_name.hpp"
 
 namespace caf {
 
@@ -210,15 +208,15 @@ private:
 
 /// Generates a `message_id` with given integer value.
 /// @relates message_id
-constexpr message_id make_message_id(normal_message_priority_constant,
-                                     uint64_t value) {
+constexpr message_id
+make_message_id(normal_message_priority_constant, uint64_t value) {
   return message_id{value | message_id::default_async_value};
 }
 
 /// Generates a `message_id` with given integer value.
 /// @relates message_id
-constexpr message_id make_message_id(high_message_priority_constant,
-                                     uint64_t value) {
+constexpr message_id
+make_message_id(high_message_priority_constant, uint64_t value) {
   return message_id{value};
 }
 
@@ -248,4 +246,3 @@ struct hash<caf::message_id> {
 };
 
 } // namespace std
-

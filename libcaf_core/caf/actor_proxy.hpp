@@ -22,15 +22,15 @@
 #include <cstdint>
 
 #include "caf/abstract_actor.hpp"
-#include "caf/monitorable_actor.hpp"
-
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/shared_spinlock.hpp"
+#include "caf/monitorable_actor.hpp"
 
 namespace caf {
 
 /// Represents an actor running on a remote machine,
 /// or different hardware, or in a separate process.
-class actor_proxy : public monitorable_actor {
+class CAF_CORE_EXPORT actor_proxy : public monitorable_actor {
 public:
   explicit actor_proxy(actor_config& cfg);
 
@@ -41,4 +41,3 @@ public:
 };
 
 } // namespace caf
-

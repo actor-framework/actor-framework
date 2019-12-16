@@ -24,4 +24,4 @@ invoke_result_visitor::~invoke_result_visitor() {
   // nop
 }
 
-} // namespace caf
+} // namespace caf::detail

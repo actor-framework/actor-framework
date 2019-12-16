@@ -41,11 +41,11 @@ public:
 
   worker(size_t worker_id, coordinator_ptr worker_parent,
          const policy_data& init, size_t throughput)
-      : execution_unit(&worker_parent->system()),
-        max_throughput_(throughput),
-        id_(worker_id),
-        parent_(worker_parent),
-        data_(init) {
+    : execution_unit(&worker_parent->system()),
+      max_throughput_(throughput),
+      id_(worker_id),
+      parent_(worker_parent),
+      data_(init) {
     // nop
   }
 
@@ -93,7 +93,7 @@ public:
 
   actor_id id_of(resumable* ptr) {
     abstract_actor* dptr = ptr != nullptr ? dynamic_cast<abstract_actor*>(ptr)
-                               : nullptr;
+                                          : nullptr;
     return dptr != nullptr ? dptr->id() : 0;
   }
 
@@ -155,5 +155,4 @@ private:
   Policy policy_;
 };
 
-} // namespace caf
-
+} // namespace caf::scheduler

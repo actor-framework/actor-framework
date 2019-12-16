@@ -41,5 +41,4 @@ struct is_type_pair<type_pair<First, Second>> {
   static constexpr bool value = true;
 };
 
-} // namespace caf
-
+} // namespace caf::detail

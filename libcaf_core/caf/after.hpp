@@ -21,11 +21,12 @@
 #include <tuple>
 #include <type_traits>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/timeout_definition.hpp"
 
 namespace caf {
 
-class timeout_definition_builder {
+class CAF_CORE_EXPORT timeout_definition_builder {
 public:
   constexpr timeout_definition_builder(duration d) : tout_(d) {
     // nop
@@ -53,4 +54,3 @@ after(std::chrono::duration<Rep, Period> d) {
 }
 
 } // namespace caf
-

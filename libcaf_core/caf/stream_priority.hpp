@@ -20,6 +20,8 @@
 
 #include <string>
 
+#include "caf/detail/core_export.hpp"
+
 namespace caf {
 
 /// Categorizes individual streams.
@@ -40,7 +42,6 @@ enum class stream_priority {
 static constexpr size_t stream_priorities = 5;
 
 /// @relates stream_priority
-std::string to_string(stream_priority x);
+CAF_CORE_EXPORT std::string to_string(stream_priority x);
 
 } // namespace caf
-

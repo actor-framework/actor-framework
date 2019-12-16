@@ -20,14 +20,14 @@
 
 #include <unordered_map>
 
-#include "caf/variant.hpp"
 #include "caf/response_promise.hpp"
+#include "caf/variant.hpp"
 
-#include "caf/io/datagram_handle.hpp"
 #include "caf/io/connection_handle.hpp"
+#include "caf/io/datagram_handle.hpp"
 
-#include "caf/io/basp/header.hpp"
 #include "caf/io/basp/connection_state.hpp"
+#include "caf/io/basp/header.hpp"
 
 namespace caf::io::basp {
 
@@ -48,5 +48,4 @@ struct endpoint_context {
   optional<response_promise> callback;
 };
 
-} // namespace caf
-
+} // namespace caf::io::basp

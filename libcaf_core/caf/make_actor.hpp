@@ -20,13 +20,13 @@
 
 #include <type_traits>
 
+#include "caf/actor_control_block.hpp"
+#include "caf/actor_storage.hpp"
 #include "caf/fwd.hpp"
-#include "caf/logger.hpp"
-#include "caf/ref_counted.hpp"
 #include "caf/infer_handle.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/actor_storage.hpp"
-#include "caf/actor_control_block.hpp"
+#include "caf/logger.hpp"
+#include "caf/ref_counted.hpp"
 
 namespace caf {
 
@@ -38,19 +38,18 @@ R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
                                         caf::atom(CAF_LOG_FLOW_COMPONENT))) {
     std::string args;
     args = deep_to_string(std::forward_as_tuple(xs...));
-    ptr = new actor_storage<T>(aid, std::move(nid), sys,
-                               std::forward<Ts>(xs)...);
+    ptr
+      = new actor_storage<T>(aid, std::move(nid), sys, std::forward<Ts>(xs)...);
     CAF_LOG_SPAWN_EVENT(ptr->data, args);
   } else {
-    ptr = new actor_storage<T>(aid, std::move(nid), sys,
-                               std::forward<Ts>(xs)...);
+    ptr
+      = new actor_storage<T>(aid, std::move(nid), sys, std::forward<Ts>(xs)...);
   }
 #else
-  auto ptr = new actor_storage<T>(aid, std::move(nid), sys,
-                                  std::forward<Ts>(xs)...);
+  auto ptr
+    = new actor_storage<T>(aid, std::move(nid), sys, std::forward<Ts>(xs)...);
 #endif
   return {&(ptr->ctrl), false};
 }
 
 } // namespace caf
-

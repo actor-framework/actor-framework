@@ -24,4 +24,4 @@ unprofiled::~unprofiled() {
   // nop
 }
 
-} // namespace caf
+} // namespace caf::policy

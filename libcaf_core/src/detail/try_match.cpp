@@ -50,4 +50,4 @@ bool try_match(const type_erased_tuple& xs, pattern_iterator iter, size_t ps) {
   return true;
 }
 
-} // namespace caf
+} // namespace caf::detail

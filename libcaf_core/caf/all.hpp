@@ -121,14 +121,14 @@
 
 #include "caf/decorator/sequencer.hpp"
 
-#include "caf/meta/type_name.hpp"
 #include "caf/meta/annotation.hpp"
-#include "caf/meta/save_callback.hpp"
 #include "caf/meta/load_callback.hpp"
 #include "caf/meta/omittable_if_empty.hpp"
+#include "caf/meta/save_callback.hpp"
+#include "caf/meta/type_name.hpp"
 
-#include "caf/scheduler/test_coordinator.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
+#include "caf/scheduler/test_coordinator.hpp"
 
 ///
 /// @mainpage CAF
@@ -401,7 +401,7 @@
 /// // sends an std::string containing "cstring" to itself
 /// send(self, cstring);
 ///
-/// // sends an std::u16string containing the UTF16 string "hello unicode world!"
+/// // sends an std::u16string containing "hello unicode world!"
 /// send(self, u"hello unicode world!");
 ///
 /// // x has the type caf::tuple<std::string, std::string>
@@ -420,4 +420,3 @@
 
 /// An event-based "Dining Philosophers" implementation.
 /// @example dining_philosophers.cpp
-

@@ -38,4 +38,4 @@ auto move_if_not_ptr(T& x) -> decltype(std::move(*x)) {
   return std::move(*x);
 }
 
-} // namespace caf
+} // namespace caf::detail

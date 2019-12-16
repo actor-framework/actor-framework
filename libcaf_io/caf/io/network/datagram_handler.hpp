@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "caf/byte_buffer.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/datagram_manager.hpp"
 #include "caf/io/network/event_handler.hpp"
@@ -34,7 +35,7 @@
 
 namespace caf::io::network {
 
-class datagram_handler : public event_handler {
+class CAF_IO_EXPORT datagram_handler : public event_handler {
 public:
   /// A smart pointer to a datagram manager.
   using manager_ptr = intrusive_ptr<datagram_manager>;

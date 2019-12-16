@@ -52,4 +52,4 @@ void set_thread_name(const char* name) {
 #endif   // CAF_WINDOWS
 }
 
-} // namespace caf
+} // namespace caf::detail

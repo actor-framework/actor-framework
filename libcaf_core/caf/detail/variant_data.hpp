@@ -21,18 +21,18 @@
 #include <stdexcept>
 #include <type_traits>
 
-#include "caf/unit.hpp"
 #include "caf/none.hpp"
+#include "caf/unit.hpp"
 
-#define CAF_VARIANT_DATA_CONCAT(x, y) x ## y
+#define CAF_VARIANT_DATA_CONCAT(x, y) x##y
 
 #define CAF_VARIANT_DATA_GETTER(pos)                                           \
-  inline CAF_VARIANT_DATA_CONCAT(T, pos) &                                     \
-  get(std::integral_constant<int, pos>) {                                      \
+  inline CAF_VARIANT_DATA_CONCAT(T, pos)                                       \
+    & get(std::integral_constant<int, pos>) {                                  \
     return CAF_VARIANT_DATA_CONCAT(v, pos);                                    \
   }                                                                            \
-  inline const CAF_VARIANT_DATA_CONCAT(T, pos) &                               \
-  get(std::integral_constant<int, pos>) const {                                \
+  inline const CAF_VARIANT_DATA_CONCAT(T, pos)                                 \
+    & get(std::integral_constant<int, pos>) const {                            \
     return CAF_VARIANT_DATA_CONCAT(v, pos);                                    \
   }
 
@@ -131,5 +131,4 @@ struct variant_data_destructor {
   }
 };
 
-} // namespace caf
-
+} // namespace caf::detail

@@ -78,4 +78,4 @@ bool udp::write_datagram(size_t& result, native_socket fd, void* buf,
   return true;
 }
 
-} // namespace caf
+} // namespace caf::policy

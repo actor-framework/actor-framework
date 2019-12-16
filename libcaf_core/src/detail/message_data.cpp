@@ -30,4 +30,4 @@ bool message_data::shared() const noexcept {
   return !unique();
 }
 
-} // namespace caf
+} // namespace caf::detail

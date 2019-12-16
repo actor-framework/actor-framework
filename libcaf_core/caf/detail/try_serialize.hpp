@@ -22,7 +22,7 @@ namespace caf::detail {
 
 template <class Processor, class T>
 auto try_serialize(Processor& proc, T* x) -> decltype(proc & *x) {
-  proc & *x;
+  proc&* x;
 }
 
 template <class Processor>
@@ -30,5 +30,4 @@ void try_serialize(Processor&, void*) {
   // nop
 }
 
-} // namespace caf
-
+} // namespace caf::detail

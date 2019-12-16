@@ -123,8 +123,8 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
               monitor(addr);
               cached_tcp_.emplace(key, std::make_tuple(nid, addr, sigs));
             }
-            auto res = make_message(std::move(nid), std::move(addr),
-                                    std::move(sigs));
+            auto res
+              = make_message(std::move(nid), std::move(addr), std::move(sigs));
             for (auto& promise : i->second)
               promise.deliver(res);
             pending_.erase(i);
@@ -228,8 +228,8 @@ middleman_actor_impl::pending(const endpoint& ep) {
   return none;
 }
 
-expected<scribe_ptr> middleman_actor_impl::connect(const std::string& host,
-                                                   uint16_t port) {
+expected<scribe_ptr>
+middleman_actor_impl::connect(const std::string& host, uint16_t port) {
   return system().middleman().backend().new_tcp_scribe(host, port);
 }
 
@@ -238,8 +238,8 @@ middleman_actor_impl::contact(const std::string& host, uint16_t port) {
   return system().middleman().backend().new_remote_udp_endpoint(host, port);
 }
 
-expected<doorman_ptr> middleman_actor_impl::open(uint16_t port,
-                                                 const char* addr, bool reuse) {
+expected<doorman_ptr>
+middleman_actor_impl::open(uint16_t port, const char* addr, bool reuse) {
   return system().middleman().backend().new_tcp_doorman(port, addr, reuse);
 }
 
@@ -249,4 +249,4 @@ middleman_actor_impl::open_udp(uint16_t port, const char* addr, bool reuse) {
                                                                reuse);
 }
 
-} // namespace caf
+} // namespace caf::io

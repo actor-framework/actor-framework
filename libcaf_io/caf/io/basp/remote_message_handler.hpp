@@ -50,8 +50,8 @@ public:
     auto mid = make_message_id(dref.hdr_.operation_data);
     binary_deserializer source{ctx, dref.payload_};
     // Make sure to drop the message in case we return abnormally.
-    auto guard = detail::make_scope_guard(
-      [&] { dref.queue_->drop(ctx, dref.msg_id_); });
+    auto guard
+      = detail::make_scope_guard([&] { dref.queue_->drop(ctx, dref.msg_id_); });
     // Registry setup.
     dref.proxies_->set_last_hop(&dref.last_hop_);
     // Get the local receiver.
@@ -126,4 +126,4 @@ public:
   }
 };
 
-} // namespace caf
+} // namespace caf::io::basp

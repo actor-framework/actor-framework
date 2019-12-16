@@ -29,5 +29,4 @@ enum class operation {
   propagate_error,
 };
 
-} // namespace caf
-
+} // namespace caf::io::network

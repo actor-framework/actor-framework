@@ -62,9 +62,7 @@ public:
   }
 
   make_stage_result(stream_slot in, stream_slot out, stage_ptr_type ptr)
-      : inbound_slot_(in),
-        outbound_slot_(out),
-        ptr_(std::move(ptr)) {
+    : inbound_slot_(in), outbound_slot_(out), ptr_(std::move(ptr)) {
     // nop
   }
 
@@ -100,8 +98,8 @@ private:
 /// Helper type for defining a `make_stage_result` from a downstream manager
 /// plus additional handshake types. Hardwires `message` as result type.
 template <class In, class DownstreamManager, class... Ts>
-using make_stage_result_t =
-  make_stage_result<In, DownstreamManager, detail::strip_and_convert_t<Ts>...>;
+using make_stage_result_t
+  = make_stage_result<In, DownstreamManager,
+                      detail::strip_and_convert_t<Ts>...>;
 
 } // namespace caf
-

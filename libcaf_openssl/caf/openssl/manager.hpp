@@ -22,13 +22,14 @@
 #include <string>
 
 #include "caf/actor_system.hpp"
+#include "caf/detail/openssl_export.hpp"
 #include "caf/io/middleman_actor.hpp"
 
 namespace caf::openssl {
 
 /// Stores OpenSSL context information and provides access to necessary
 /// credentials for establishing connections.
-class manager : public actor_system::module {
+class CAF_OPENSSL_EXPORT manager : public actor_system::module {
 public:
   ~manager() override;
 
@@ -79,5 +80,4 @@ private:
   io::middleman_actor manager_;
 };
 
-} // namespace caf
-
+} // namespace caf::openssl

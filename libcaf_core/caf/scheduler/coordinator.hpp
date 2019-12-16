@@ -20,10 +20,10 @@
 
 #include "caf/config.hpp"
 
-#include <thread>
+#include <condition_variable>
 #include <limits>
 #include <memory>
-#include <condition_variable>
+#include <thread>
 
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/thread_safe_actor_clock.hpp"
@@ -169,5 +169,4 @@ private:
   std::thread timer_;
 };
 
-} // namespace caf
-
+} // namespace caf::scheduler

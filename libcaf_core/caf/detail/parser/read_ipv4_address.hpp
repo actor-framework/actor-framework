@@ -49,14 +49,13 @@ template <class State, class Consumer>
 void read_ipv4_octet(State& ps, Consumer& consumer) {
   uint8_t res = 0;
   // Reads the a decimal place.
-  auto rd_decimal = [&](char c) {
-    return add_ascii<10>(res, c);
-  };
+  auto rd_decimal = [&](char c) { return add_ascii<10>(res, c); };
   // Computes the result on success.
   auto g = caf::detail::make_scope_guard([&] {
     if (ps.code <= pec::trailing_character)
       consumer.value(res);
   });
+  // clang-format off
   start();
   state(init) {
     transition(read, decimal_chars, rd_decimal(ch), pec::integer_overflow)
@@ -65,6 +64,7 @@ void read_ipv4_octet(State& ps, Consumer& consumer) {
     transition(read, decimal_chars, rd_decimal(ch), pec::integer_overflow)
   }
   fin();
+  // clang-format on
 }
 
 /// Reads a number, i.e., on success produces either an `int64_t` or a
@@ -97,7 +97,7 @@ void read_ipv4_address(State& ps, Consumer&& consumer) {
   // clang-format on
 }
 
-} // namespace caf
+} // namespace caf::detail::parser
 
 #include "caf/detail/parser/fsm_undef.hpp"
 

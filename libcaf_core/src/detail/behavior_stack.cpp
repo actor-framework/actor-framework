@@ -42,4 +42,4 @@ void behavior_stack::clear() {
   }
 }
 
-} // namespace caf
+} // namespace caf::detail

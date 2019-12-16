@@ -21,6 +21,7 @@
 #include "caf/actor_clock.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/build_config.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf {
@@ -28,7 +29,7 @@ namespace caf {
 /// A profiler which provides a set of callbacks for several actor operations in
 /// order to collect fine-grained profiling state about the system.
 /// @experimental
-class actor_profiler {
+class CAF_CORE_EXPORT actor_profiler {
 public:
   virtual ~actor_profiler();
 
@@ -51,8 +52,8 @@ public:
   /// @param self The current actor.
   /// @param element The current element from the mailbox.
   /// @thread-safe
-  virtual void before_processing(const local_actor& self,
-                                 const mailbox_element& element)
+  virtual void
+  before_processing(const local_actor& self, const mailbox_element& element)
     = 0;
 
   /// Called after an actor processed an element from its mailbox.
@@ -60,8 +61,8 @@ public:
   /// @param result Stores whether the actor consumed, skipped or dropped the
   ///               message.
   /// @thread-safe
-  virtual void after_processing(const local_actor& self,
-                                invoke_message_result result)
+  virtual void
+  after_processing(const local_actor& self, invoke_message_result result)
     = 0;
 
   /// Called whenever an actor is about to send a message. Allows the profiler

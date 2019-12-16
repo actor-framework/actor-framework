@@ -32,6 +32,4 @@ T gcd(T a, T b) {
   return a;
 }
 
-} // namespace caf
-
-
+} // namespace caf::detail

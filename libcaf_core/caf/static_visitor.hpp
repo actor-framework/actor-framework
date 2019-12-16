@@ -26,4 +26,3 @@ struct static_visitor {
 };
 
 } // namespace caf
-

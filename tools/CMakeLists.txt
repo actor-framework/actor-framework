@@ -1,5 +1,3 @@
-project(caf_tools CXX)
-
 add_custom_target(all_tools)
 
 include_directories(${LIBCAF_INCLUDE_DIRS})

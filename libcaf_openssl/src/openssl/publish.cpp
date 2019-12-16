@@ -43,4 +43,4 @@ expected<uint16_t> publish(actor_system& sys, const strong_actor_ptr& whom,
            std::move(in), ru);
 }
 
-} // namespace caf
+} // namespace caf::openssl

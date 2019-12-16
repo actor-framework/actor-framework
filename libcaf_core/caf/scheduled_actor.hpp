@@ -21,7 +21,7 @@
 #include "caf/config.hpp"
 
 #ifndef CAF_NO_EXCEPTIONS
-#include <exception>
+#  include <exception>
 #endif // CAF_NO_EXCEPTIONS
 
 #include <forward_list>
@@ -32,10 +32,25 @@
 #include "caf/actor_traits.hpp"
 #include "caf/broadcast_downstream_manager.hpp"
 #include "caf/default_downstream_manager.hpp"
+#include "caf/detail/behavior_stack.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/stream_sink_driver_impl.hpp"
+#include "caf/detail/stream_sink_impl.hpp"
+#include "caf/detail/stream_source_driver_impl.hpp"
+#include "caf/detail/stream_source_impl.hpp"
+#include "caf/detail/stream_stage_driver_impl.hpp"
+#include "caf/detail/stream_stage_impl.hpp"
+#include "caf/detail/tick_emitter.hpp"
+#include "caf/detail/unordered_flat_map.hpp"
 #include "caf/error.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
 #include "caf/inbound_path.hpp"
+#include "caf/intrusive/drr_cached_queue.hpp"
+#include "caf/intrusive/drr_queue.hpp"
+#include "caf/intrusive/fifo_inbox.hpp"
+#include "caf/intrusive/wdrr_dynamic_multiplexed_queue.hpp"
+#include "caf/intrusive/wdrr_fixed_multiplexed_queue.hpp"
 #include "caf/invoke_message_result.hpp"
 #include "caf/is_actor_handle.hpp"
 #include "caf/local_actor.hpp"
@@ -43,7 +58,16 @@
 #include "caf/make_sink_result.hpp"
 #include "caf/make_source_result.hpp"
 #include "caf/make_stage_result.hpp"
+#include "caf/mixin/behavior_changer.hpp"
+#include "caf/mixin/requester.hpp"
+#include "caf/mixin/sender.hpp"
 #include "caf/no_stages.hpp"
+#include "caf/policy/arg.hpp"
+#include "caf/policy/categorized.hpp"
+#include "caf/policy/downstream_messages.hpp"
+#include "caf/policy/normal_messages.hpp"
+#include "caf/policy/upstream_messages.hpp"
+#include "caf/policy/urgent_messages.hpp"
 #include "caf/response_handle.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/sec.hpp"
@@ -54,61 +78,34 @@
 #include "caf/stream_stage_trait.hpp"
 #include "caf/to_string.hpp"
 
-#include "caf/policy/arg.hpp"
-#include "caf/policy/categorized.hpp"
-#include "caf/policy/downstream_messages.hpp"
-#include "caf/policy/normal_messages.hpp"
-#include "caf/policy/upstream_messages.hpp"
-#include "caf/policy/urgent_messages.hpp"
-
-#include "caf/detail/behavior_stack.hpp"
-#include "caf/detail/stream_sink_driver_impl.hpp"
-#include "caf/detail/stream_sink_impl.hpp"
-#include "caf/detail/stream_source_driver_impl.hpp"
-#include "caf/detail/stream_source_impl.hpp"
-#include "caf/detail/stream_stage_driver_impl.hpp"
-#include "caf/detail/stream_stage_driver_impl.hpp"
-#include "caf/detail/stream_stage_impl.hpp"
-#include "caf/detail/tick_emitter.hpp"
-#include "caf/detail/unordered_flat_map.hpp"
-
-#include "caf/intrusive/drr_cached_queue.hpp"
-#include "caf/intrusive/drr_queue.hpp"
-#include "caf/intrusive/fifo_inbox.hpp"
-#include "caf/intrusive/wdrr_dynamic_multiplexed_queue.hpp"
-#include "caf/intrusive/wdrr_fixed_multiplexed_queue.hpp"
-
-#include "caf/mixin/behavior_changer.hpp"
-#include "caf/mixin/requester.hpp"
-#include "caf/mixin/sender.hpp"
-
 namespace caf {
 
 // -- related free functions ---------------------------------------------------
 
 /// @relates scheduled_actor
 /// Default handler function that sends the message back to the sender.
-result<message> reflect(scheduled_actor*, message_view&);
+CAF_CORE_EXPORT result<message> reflect(scheduled_actor*, message_view&);
 
 /// @relates scheduled_actor
 /// Default handler function that sends
 /// the message back to the sender and then quits.
-result<message> reflect_and_quit(scheduled_actor*, message_view&);
+CAF_CORE_EXPORT result<message>
+reflect_and_quit(scheduled_actor*, message_view&);
 
 /// @relates scheduled_actor
 /// Default handler function that prints messages
 /// message via `aout` and drops them afterwards.
-result<message> print_and_drop(scheduled_actor*, message_view&);
+CAF_CORE_EXPORT result<message> print_and_drop(scheduled_actor*, message_view&);
 
 /// @relates scheduled_actor
 /// Default handler function that simply drops messages.
-result<message> drop(scheduled_actor*, message_view&);
+CAF_CORE_EXPORT result<message> drop(scheduled_actor*, message_view&);
 
 /// A cooperatively scheduled, event-based actor implementation.
 /// @extends local_actor
-class scheduled_actor : public local_actor,
-                        public resumable,
-                        public non_blocking_actor_base {
+class CAF_CORE_EXPORT scheduled_actor : public local_actor,
+                                        public resumable,
+                                        public non_blocking_actor_base {
 public:
   // -- nested enums -----------------------------------------------------------
 
@@ -152,8 +149,8 @@ public:
   using upstream_queue = intrusive::drr_queue<policy::upstream_messages>;
 
   /// Stores downstream messages.
-  using downstream_queue =
-    intrusive::wdrr_dynamic_multiplexed_queue<policy::downstream_messages>;
+  using downstream_queue
+    = intrusive::wdrr_dynamic_multiplexed_queue<policy::downstream_messages>;
 
   /// Configures the FIFO inbox with four nested queues:
   ///
@@ -171,10 +168,9 @@ public:
 
     using unique_pointer = mailbox_element_ptr;
 
-    using queue_type =
-      intrusive::wdrr_fixed_multiplexed_queue<policy::categorized, urgent_queue,
-                                              normal_queue, upstream_queue,
-                                              downstream_queue>;
+    using queue_type = intrusive::wdrr_fixed_multiplexed_queue<
+      policy::categorized, urgent_queue, normal_queue, upstream_queue,
+      downstream_queue>;
   };
 
   static constexpr size_t urgent_queue_index = 0;
@@ -195,22 +191,22 @@ public:
   using pointer = scheduled_actor*;
 
   /// Function object for handling unmatched messages.
-  using default_handler =
-    std::function<result<message>(pointer, message_view&)>;
+  using default_handler
+    = std::function<result<message>(pointer, message_view&)>;
 
   /// Function object for handling error messages.
-  using error_handler = std::function<void (pointer, error&)>;
+  using error_handler = std::function<void(pointer, error&)>;
 
   /// Function object for handling down messages.
-  using down_handler = std::function<void (pointer, down_msg&)>;
+  using down_handler = std::function<void(pointer, down_msg&)>;
 
   /// Function object for handling exit messages.
-  using exit_handler = std::function<void (pointer, exit_msg&)>;
+  using exit_handler = std::function<void(pointer, exit_msg&)>;
 
-# ifndef CAF_NO_EXCEPTIONS
+#ifndef CAF_NO_EXCEPTIONS
   /// Function object for handling exit messages.
-  using exception_handler = std::function<error (pointer, std::exception_ptr&)>;
-# endif // CAF_NO_EXCEPTIONS
+  using exception_handler = std::function<error(pointer, std::exception_ptr&)>;
+#endif // CAF_NO_EXCEPTIONS
 
   /// Consumes messages from the mailbox.
   struct mailbox_visitor {
@@ -219,8 +215,8 @@ public:
     size_t max_throughput;
 
     /// Consumes upstream messages.
-    intrusive::task_result operator()(size_t, upstream_queue&,
-                                      mailbox_element&);
+    intrusive::task_result
+    operator()(size_t, upstream_queue&, mailbox_element&);
 
     /// Consumes downstream messages.
     intrusive::task_result
@@ -247,13 +243,21 @@ public:
 
   static void default_exit_handler(pointer ptr, exit_msg& x);
 
-# ifndef CAF_NO_EXCEPTIONS
+#ifndef CAF_NO_EXCEPTIONS
   static error default_exception_handler(pointer ptr, std::exception_ptr& x);
-# endif // CAF_NO_EXCEPTIONS
+#endif // CAF_NO_EXCEPTIONS
 
   // -- constructors and destructors -------------------------------------------
 
   explicit scheduled_actor(actor_config& cfg);
+
+  scheduled_actor(scheduled_actor&&) = delete;
+
+  scheduled_actor(const scheduled_actor&) = delete;
+
+  scheduled_actor& operator=(scheduled_actor&&) = delete;
+
+  scheduled_actor& operator=(const scheduled_actor&) = delete;
 
   ~scheduled_actor() override;
 
@@ -339,16 +343,11 @@ public:
 
   /// Sets a custom handler for unexpected messages.
   template <class F>
-  typename std::enable_if<
-    std::is_convertible<
-      F,
-      std::function<result<message> (type_erased_tuple&)>
-    >::value
-  >::type
+  typename std::enable_if<std::is_convertible<
+    F, std::function<result<message>(type_erased_tuple&)>>::value>::type
   set_default_handler(F fun) {
-    default_handler_ = [=](scheduled_actor*, const type_erased_tuple& xs) {
-      return fun(xs);
-    };
+    default_handler_
+      = [=](scheduled_actor*, const type_erased_tuple& xs) { return fun(xs); };
   }
 
   /// Sets a custom handler for error messages.
@@ -393,7 +392,7 @@ public:
     set_exit_handler([fun](scheduled_actor*, exit_msg& x) { fun(x); });
   }
 
-# ifndef CAF_NO_EXCEPTIONS
+#ifndef CAF_NO_EXCEPTIONS
   /// Sets a custom exception handler for this actor. If multiple handlers are
   /// defined, only the functor that was added *last* is being executed.
   inline void set_exception_handler(exception_handler fun) {
@@ -406,18 +405,13 @@ public:
   /// Sets a custom exception handler for this actor. If multiple handlers are
   /// defined, only the functor that was added *last* is being executed.
   template <class F>
-  typename std::enable_if<
-    std::is_convertible<
-      F,
-      std::function<error (std::exception_ptr&)>
-    >::value
-  >::type
+  typename std::enable_if<std::is_convertible<
+    F, std::function<error(std::exception_ptr&)>>::value>::type
   set_exception_handler(F f) {
-    set_exception_handler([f](scheduled_actor*, std::exception_ptr& x) {
-      return f(x);
-    });
+    set_exception_handler(
+      [f](scheduled_actor*, std::exception_ptr& x) { return f(x); });
   }
-# endif // CAF_NO_EXCEPTIONS
+#endif // CAF_NO_EXCEPTIONS
 
   // -- stream management ------------------------------------------------------
 
@@ -428,9 +422,8 @@ public:
   make_source(std::tuple<Ts...> xs, Init init, Pull pull, Done done,
               Finalize fin = {}) {
     using detail::make_stream_source;
-    auto mgr = make_stream_source<Driver>(this, std::move(init),
-                                          std::move(pull), std::move(done),
-                                          std::move(fin));
+    auto mgr = make_stream_source<Driver>(
+      this, std::move(init), std::move(pull), std::move(done), std::move(fin));
     auto slot = mgr->add_outbound_path(std::move(xs));
     return {slot, std::move(mgr)};
   }
@@ -457,8 +450,7 @@ public:
                       make_source_result_t<DownstreamManager>>
   make_source(Init init, Pull pull, Done done, Finalize finalize = {},
               policy::arg<DownstreamManager> token = {}) {
-    return make_source(std::make_tuple(), init, pull, done, finalize,
-                       token);
+    return make_source(std::make_tuple(), init, pull, done, finalize, token);
   }
 
   /// @deprecated Please use `attach_stream_source` instead.
@@ -474,10 +466,8 @@ public:
     // TODO: type checking of dest
     using driver = detail::stream_source_driver_impl<DownstreamManager, Pull,
                                                      Done, Finalize>;
-    auto mgr = detail::make_stream_source<driver>(this, std::move(init),
-                                                  std::move(pull),
-                                                  std::move(done),
-                                                  std::move(fin));
+    auto mgr = detail::make_stream_source<driver>(
+      this, std::move(init), std::move(pull), std::move(done), std::move(fin));
     auto slot = mgr->add_outbound_path(dest, std::move(xs));
     return {slot, std::move(mgr)};
   }
@@ -490,8 +480,7 @@ public:
   detail::enable_if_t<is_actor_handle<ActorHandle>::value && Trait::valid,
                       make_source_result_t<DownstreamManager>>
   make_source(const ActorHandle& dest, Init init, Pull pull, Done done,
-              Finalize fin = {},
-              policy::arg<DownstreamManager> token = {}) {
+              Finalize fin = {}, policy::arg<DownstreamManager> token = {}) {
     return make_source(dest, std::make_tuple(), std::move(init),
                        std::move(pull), std::move(done), std::move(fin), token);
   }
@@ -502,9 +491,8 @@ public:
   typename Driver::source_ptr_type
   make_continuous_source(Init init, Pull pull, Done done, Finalize fin = {}) {
     using detail::make_stream_source;
-    auto mgr = make_stream_source<Driver>(this, std::move(init),
-                                          std::move(pull), std::move(done),
-                                          std::move(fin));
+    auto mgr = make_stream_source<Driver>(
+      this, std::move(init), std::move(pull), std::move(done), std::move(fin));
     mgr->continuous(true);
     return mgr;
   }
@@ -534,8 +522,8 @@ public:
   /// @deprecated Please use `attach_stream_sink` instead.
   template <class In, class Init, class Fun, class Finalize = unit_t,
             class Trait = stream_sink_trait_t<Fun>>
-  make_sink_result<In> make_sink(const stream<In>& in, Init init, Fun fun,
-                                 Finalize fin = {}) {
+  make_sink_result<In>
+  make_sink(const stream<In>& in, Init init, Fun fun, Finalize fin = {}) {
     using driver = detail::stream_sink_driver_impl<In, Fun, Finalize>;
     return make_sink<driver>(in, std::move(init), std::move(fun),
                              std::move(fin));
@@ -566,20 +554,18 @@ public:
       current_mailbox_element()->content().match_elements<open_stream_msg>());
     using output_type = typename stream_stage_trait_t<Fun>::output;
     using state_type = typename stream_stage_trait_t<Fun>::state;
-    static_assert(std::is_same<
-                    void (state_type&),
-                    typename detail::get_callable_trait<Init>::fun_sig
-                  >::value,
-                  "Expected signature `void (State&)` for init function");
-    static_assert(std::is_same<
-                    void (state_type&, downstream<output_type>&, In),
-                    typename detail::get_callable_trait<Fun>::fun_sig
-                  >::value,
-                  "Expected signature `void (State&, downstream<Out>&, In)` "
-                  "for consume function");
-    using driver = detail::stream_stage_driver_impl<typename Trait::input,
-                                                    DownstreamManager, Fun,
-                                                    Finalize>;
+    static_assert(
+      std::is_same<void(state_type&),
+                   typename detail::get_callable_trait<Init>::fun_sig>::value,
+      "Expected signature `void (State&)` for init function");
+    static_assert(
+      std::is_same<void(state_type&, downstream<output_type>&, In),
+                   typename detail::get_callable_trait<Fun>::fun_sig>::value,
+      "Expected signature `void (State&, downstream<Out>&, In)` "
+      "for consume function");
+    using driver
+      = detail::stream_stage_driver_impl<typename Trait::input,
+                                         DownstreamManager, Fun, Finalize>;
     return make_stage<driver>(in, std::move(xs), std::move(init),
                               std::move(fun), std::move(fin));
   }
@@ -614,20 +600,18 @@ public:
     using input_type = typename Trait::input;
     using output_type = typename Trait::output;
     using state_type = typename Trait::state;
-    static_assert(std::is_same<
-                    void (state_type&),
-                    typename detail::get_callable_trait<Init>::fun_sig
-                  >::value,
-                  "Expected signature `void (State&)` for init function");
-    static_assert(std::is_same<
-                    void (state_type&, downstream<output_type>&, input_type),
-                    typename detail::get_callable_trait<Fun>::fun_sig
-                  >::value,
-                  "Expected signature `void (State&, downstream<Out>&, In)` "
-                  "for consume function");
-    using driver = detail::stream_stage_driver_impl<typename Trait::input,
-                                                    DownstreamManager, Fun,
-                                                    Cleanup>;
+    static_assert(
+      std::is_same<void(state_type&),
+                   typename detail::get_callable_trait<Init>::fun_sig>::value,
+      "Expected signature `void (State&)` for init function");
+    static_assert(
+      std::is_same<void(state_type&, downstream<output_type>&, input_type),
+                   typename detail::get_callable_trait<Fun>::fun_sig>::value,
+      "Expected signature `void (State&, downstream<Out>&, In)` "
+      "for consume function");
+    using driver
+      = detail::stream_stage_driver_impl<typename Trait::input,
+                                         DownstreamManager, Fun, Cleanup>;
     return make_continuous_stage<driver>(std::move(init), std::move(fun),
                                          std::move(cleanup));
   }
@@ -723,10 +707,9 @@ public:
   // -- inbound_path management ------------------------------------------------
 
   /// Creates a new path for incoming stream traffic from `sender`.
-  virtual inbound_path* make_inbound_path(stream_manager_ptr mgr,
-                                          stream_slots slots,
-                                          strong_actor_ptr sender,
-                                          rtti_pair rtti);
+  virtual inbound_path*
+  make_inbound_path(stream_manager_ptr mgr, stream_slots slots,
+                    strong_actor_ptr sender, rtti_pair rtti);
 
   /// Silently closes incoming stream traffic on `slot`.
   virtual void erase_inbound_path_later(stream_slot slot);
@@ -741,8 +724,8 @@ public:
   /// Closes all incoming stream traffic for a manager. Emits a drop message on
   /// each path if `reason == none` and a `forced_drop` message on each path
   /// otherwise.
-  virtual void erase_inbound_paths_later(const stream_manager* mgr,
-                                         error reason);
+  virtual void
+  erase_inbound_paths_later(const stream_manager* mgr, error reason);
 
   // -- handling of stream messages --------------------------------------------
 
@@ -790,11 +773,9 @@ public:
   /// Utility function that swaps `f` into a temporary before calling it
   /// and restoring `f` only if it has not been replaced by the user.
   template <class F, class... Ts>
-  auto call_handler(F& f, Ts&&... xs)
-  -> typename std::enable_if<
-       !std::is_same<decltype(f(std::forward<Ts>(xs)...)), void>::value,
-       decltype(f(std::forward<Ts>(xs)...))
-     >::type {
+  auto call_handler(F& f, Ts&&... xs) -> typename std::enable_if<
+    !std::is_same<decltype(f(std::forward<Ts>(xs)...)), void>::value,
+    decltype(f(std::forward<Ts>(xs)...))>::type {
     using std::swap;
     F g;
     swap(f, g);
@@ -805,10 +786,8 @@ public:
   }
 
   template <class F, class... Ts>
-  auto call_handler(F& f, Ts&&... xs)
-  -> typename std::enable_if<
-       std::is_same<decltype(f(std::forward<Ts>(xs)...)), void>::value
-     >::type {
+  auto call_handler(F& f, Ts&&... xs) -> typename std::enable_if<
+    std::is_same<decltype(f(std::forward<Ts>(xs)...)), void>::value>::type {
     using std::swap;
     F g;
     swap(f, g);
@@ -871,10 +850,8 @@ public:
   /// participates in streams.
   /// @private
   inline bool alive() const noexcept {
-    return !bhvr_stack_.empty()
-           || !awaited_responses_.empty()
-           || !multiplexed_responses_.empty()
-           || !stream_managers_.empty()
+    return !bhvr_stack_.empty() || !awaited_responses_.empty()
+           || !multiplexed_responses_.empty() || !stream_managers_.empty()
            || !pending_stream_managers_.empty();
   }
 
@@ -929,13 +906,12 @@ protected:
   /// Pointer to a private thread object associated with a detached actor.
   detail::private_thread* private_thread_;
 
-# ifndef CAF_NO_EXCEPTIONS
+#ifndef CAF_NO_EXCEPTIONS
   /// Customization point for setting a default exception callback.
   exception_handler exception_handler_;
-# endif // CAF_NO_EXCEPTIONS
+#endif // CAF_NO_EXCEPTIONS
 
   /// @endcond
 };
 
 } // namespace caf
-

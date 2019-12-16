@@ -99,11 +99,10 @@ middleman::middleman(actor_system& sys) : system_(sys) {
   // nop
 }
 
-expected<strong_actor_ptr> middleman::remote_spawn_impl(const node_id& nid,
-                                                        std::string& name,
-                                                        message& args,
-                                                        std::set<std::string> s,
-                                                        duration timeout) {
+expected<strong_actor_ptr>
+middleman::remote_spawn_impl(const node_id& nid, std::string& name,
+                             message& args, std::set<std::string> s,
+                             duration timeout) {
   auto f = make_function_view(actor_handle(), timeout);
   return f(spawn_atom::value, nid, std::move(name), std::move(args),
            std::move(s));
@@ -130,9 +129,9 @@ expected<node_id> middleman::connect(std::string host, uint16_t port) {
   return std::get<0>(*res);
 }
 
-expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
-                                      std::set<std::string> sigs, uint16_t port,
-                                      const char* cstr, bool ru) {
+expected<uint16_t>
+middleman::publish(const strong_actor_ptr& whom, std::set<std::string> sigs,
+                   uint16_t port, const char* cstr, bool ru) {
   CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(sigs) << CAF_ARG(port));
   if (!whom)
     return sec::cannot_publish_invalid_actor;
@@ -143,8 +142,8 @@ expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
   return f(publish_atom::value, port, std::move(whom), std::move(sigs), in, ru);
 }
 
-expected<uint16_t> middleman::publish_local_groups(uint16_t port,
-                                                   const char* in, bool reuse) {
+expected<uint16_t>
+middleman::publish_local_groups(uint16_t port, const char* in, bool reuse) {
   CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(in));
   auto group_nameserver = [](event_based_actor* self) -> behavior {
     return {
@@ -169,9 +168,9 @@ expected<void> middleman::unpublish(const actor_addr& whom, uint16_t port) {
   return f(unpublish_atom::value, whom, port);
 }
 
-expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
-                                                   std::string host,
-                                                   uint16_t port) {
+expected<strong_actor_ptr>
+middleman::remote_actor(std::set<std::string> ifs, std::string host,
+                        uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(ifs) << CAF_ARG(host) << CAF_ARG(port));
   auto f = make_function_view(actor_handle());
   auto res = f(connect_atom::value, std::move(host), port);
@@ -202,14 +201,14 @@ expected<group> middleman::remote_group(const std::string& group_uri) {
   return remote_group(name, host, port);
 }
 
-expected<group> middleman::remote_group(const std::string& group_identifier,
-                                        const std::string& host,
-                                        uint16_t port) {
+expected<group>
+middleman::remote_group(const std::string& group_identifier,
+                        const std::string& host, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(group_identifier) << CAF_ARG(host) << CAF_ARG(port));
   // Helper actor that first connects to the remote actor at `host:port` and
   // then tries to get a valid group from that actor.
-  auto two_step_lookup = [=](event_based_actor* self,
-                             middleman_actor mm) -> behavior {
+  auto two_step_lookup
+    = [=](event_based_actor* self, middleman_actor mm) -> behavior {
     return {
       [=](get_atom) {
         /// We won't receive a second message, so we drop our behavior here to
@@ -233,8 +232,8 @@ expected<group> middleman::remote_group(const std::string& group_identifier,
   // Spawn the helper actor and wait for the result.
   expected<group> result{sec::cannot_connect_to_node};
   scoped_actor self{system(), true};
-  auto worker = self->spawn<lazy_init + monitored>(two_step_lookup,
-                                                   actor_handle());
+  auto worker
+    = self->spawn<lazy_init + monitored>(two_step_lookup, actor_handle());
   self->send(worker, get_atom::value);
   self->receive(
     [&](group& grp) {
@@ -417,4 +416,4 @@ int middleman::exec_slave_mode(actor_system&, const actor_system_config&) {
   return 0;
 }
 
-} // namespace caf
+} // namespace caf::io

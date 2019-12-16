@@ -89,4 +89,4 @@ abstract_worker* abstract_worker_hub::peek_impl() {
   return head_.load();
 }
 
-} // namespace caf
+} // namespace caf::detail

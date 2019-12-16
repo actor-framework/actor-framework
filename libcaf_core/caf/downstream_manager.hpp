@@ -21,6 +21,7 @@
 #include <memory>
 #include <vector>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/stream_slot.hpp"
 
@@ -31,7 +32,7 @@ namespace caf {
 /// output and is responsible for the dispatching policy (broadcasting, for
 /// example). The default implementation terminates the stream and never
 /// accepts any pahts.
-class downstream_manager {
+class CAF_CORE_EXPORT downstream_manager {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -48,27 +49,27 @@ public:
   using unique_path_ptr = std::unique_ptr<path_type>;
 
   /// Function object for iterating over all paths.
-  struct path_visitor {
+  struct CAF_CORE_EXPORT path_visitor {
     virtual ~path_visitor();
     virtual void operator()(outbound_path& x) = 0;
   };
 
   /// Predicate object for paths.
-  struct path_predicate {
+  struct CAF_CORE_EXPORT path_predicate {
     virtual ~path_predicate();
     virtual bool operator()(const outbound_path& x) const noexcept = 0;
   };
 
   /// Selects a check algorithms.
-  enum path_algorithm {
-    all_of,
-    any_of,
-    none_of
-  };
+  enum path_algorithm { all_of, any_of, none_of };
 
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit downstream_manager(stream_manager* parent);
+
+  downstream_manager(const downstream_manager&) = delete;
+
+  downstream_manager& operator=(const downstream_manager&) = delete;
 
   virtual ~downstream_manager();
 
@@ -133,8 +134,8 @@ public:
   path_ptr add_path(stream_slot slot, strong_actor_ptr target);
 
   /// Removes a path from the manager.
-  virtual bool remove_path(stream_slot slot, error reason,
-                           bool silent) noexcept;
+  virtual bool
+  remove_path(stream_slot slot, error reason, bool silent) noexcept;
 
   /// Returns the path associated to `slot` or `nullptr`.
   virtual path_ptr path(stream_slot slot) noexcept;
@@ -213,8 +214,8 @@ protected:
 
   /// Dispatches the predicate to `std::all_of`, `std::any_of`, or
   /// `std::none_of`.
-  virtual bool check_paths_impl(path_algorithm algo,
-                                path_predicate& pred) const noexcept;
+  virtual bool check_paths_impl(path_algorithm algo, path_predicate& pred) const
+    noexcept;
 
   /// Emits a regular (`reason == nullptr`) or irregular (`reason != nullptr`)
   /// shutdown if `silent == false`.
@@ -225,8 +226,8 @@ protected:
 
   /// Delegates to `check_paths_impl`.
   template <class Predicate>
-  bool check_paths(path_algorithm algorithm,
-                   Predicate predicate) const noexcept {
+  bool check_paths(path_algorithm algorithm, Predicate predicate) const
+    noexcept {
     struct impl : path_predicate {
       Predicate fun;
       impl(Predicate x) : fun(std::move(x)) {
@@ -246,4 +247,3 @@ protected:
 };
 
 } // namespace caf
-

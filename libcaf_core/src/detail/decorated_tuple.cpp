@@ -93,4 +93,4 @@ error decorated_tuple::save(size_t pos, serializer& sink) const {
   return decorated_->save(mapping_[pos], sink);
 }
 
-} // namespace caf
+} // namespace caf::detail

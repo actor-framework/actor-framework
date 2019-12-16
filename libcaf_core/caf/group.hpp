@@ -18,18 +18,18 @@
 
 #pragma once
 
+#include <functional>
 #include <string>
 #include <utility>
-#include <functional>
 
+#include "caf/abstract_group.hpp"
+#include "caf/detail/comparable.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
-#include "caf/none.hpp"
 #include "caf/group_module.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/abstract_group.hpp"
-
-#include "caf/detail/comparable.hpp"
-#include "caf/detail/type_traits.hpp"
+#include "caf/none.hpp"
 
 namespace caf {
 
@@ -41,8 +41,8 @@ struct invalid_group_t {
 /// @relates group
 constexpr invalid_group_t invalid_group = invalid_group_t{};
 
-class group : detail::comparable<group>,
-              detail::comparable<group, invalid_group_t> {
+class CAF_CORE_EXPORT group : detail::comparable<group>,
+                              detail::comparable<group, invalid_group_t> {
 public:
   using signatures = none_t;
 
@@ -80,13 +80,13 @@ public:
     return ptr_ ? 1 : 0;
   }
 
-  friend error inspect(serializer&, group&);
+  friend CAF_CORE_EXPORT error inspect(serializer&, group&);
 
-  friend error_code<sec> inspect(binary_serializer&, group&);
+  friend CAF_CORE_EXPORT error_code<sec> inspect(binary_serializer&, group&);
 
-  friend error inspect(deserializer&, group&);
+  friend CAF_CORE_EXPORT error inspect(deserializer&, group&);
 
-  friend error_code<sec> inspect(binary_deserializer&, group&);
+  friend CAF_CORE_EXPORT error_code<sec> inspect(binary_deserializer&, group&);
 
   abstract_group* get() const noexcept {
     return ptr_.get();
@@ -99,8 +99,8 @@ public:
   }
 
   template <class... Ts>
-  void eq_impl(message_id mid, strong_actor_ptr sender,
-               execution_unit* ctx, Ts&&... xs) const {
+  void eq_impl(message_id mid, strong_actor_ptr sender, execution_unit* ctx,
+               Ts&&... xs) const {
     CAF_ASSERT(!mid.is_request());
     if (ptr_)
       ptr_->enqueue(std::move(sender), mid,
@@ -135,7 +135,7 @@ private:
 };
 
 /// @relates group
-std::string to_string(const group& x);
+CAF_CORE_EXPORT std::string to_string(const group& x);
 
 } // namespace caf
 
@@ -148,4 +148,3 @@ struct hash<caf::group> {
   }
 };
 } // namespace std
-

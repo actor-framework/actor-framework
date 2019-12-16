@@ -27,6 +27,7 @@
 
 #include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
@@ -37,7 +38,8 @@
 namespace caf {
 
 /// Serializes objects into a sequence of bytes.
-class binary_serializer : public read_inspector<binary_serializer> {
+class CAF_CORE_EXPORT binary_serializer
+  : public read_inspector<binary_serializer> {
 public:
   // -- member types -----------------------------------------------------------
 

@@ -144,4 +144,4 @@ private:
   mutable value_type dummy_;
 };
 
-} // namespace caf
+} // namespace caf::detail

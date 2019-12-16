@@ -21,12 +21,13 @@
 #include <cstdint>
 #include <string>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/uri.hpp"
 
 namespace caf {
 
-class uri_builder {
+class CAF_CORE_EXPORT uri_builder {
 public:
   // -- member types -----------------------------------------------------------
 

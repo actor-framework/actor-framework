@@ -21,6 +21,7 @@
 #include <atomic>
 
 #include "caf/config.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -65,20 +66,20 @@ namespace caf {
 /// The data block is destructed by calling the destructor of `T` when the
 /// last strong reference expires. The storage itself is destroyed when
 /// the last weak reference expires.
-class actor_control_block {
+class CAF_CORE_EXPORT actor_control_block {
 public:
   using data_destructor = void (*)(abstract_actor*);
   using block_destructor = void (*)(actor_control_block*);
 
   actor_control_block(actor_id x, node_id& y, actor_system* sys,
                       data_destructor ddtor, block_destructor bdtor)
-      : strong_refs(1),
-        weak_refs(1),
-        aid(x),
-        nid(std::move(y)),
-        home_system(sys),
-        data_dtor(ddtor),
-        block_dtor(bdtor) {
+    : strong_refs(1),
+      weak_refs(1),
+      aid(x),
+      nid(std::move(y)),
+      home_system(sys),
+      data_dtor(ddtor),
+      block_dtor(bdtor) {
     // nop
   }
 
@@ -108,8 +109,8 @@ public:
   /// Returns a pointer to the actual actor instance.
   inline abstract_actor* get() {
     // this pointer arithmetic is compile-time checked in actor_storage's ctor
-    return reinterpret_cast<abstract_actor*>(
-      reinterpret_cast<intptr_t>(this) + CAF_CACHE_LINE_SIZE);
+    return reinterpret_cast<abstract_actor*>(reinterpret_cast<intptr_t>(this)
+                                             + CAF_CACHE_LINE_SIZE);
   }
 
   /// Returns a pointer to the control block that stores
@@ -117,7 +118,7 @@ public:
   static actor_control_block* from(const abstract_actor* ptr) {
     // this pointer arithmetic is compile-time checked in actor_storage's ctor
     return reinterpret_cast<actor_control_block*>(
-          reinterpret_cast<intptr_t>(ptr) - CAF_CACHE_LINE_SIZE);
+      reinterpret_cast<intptr_t>(ptr) - CAF_CACHE_LINE_SIZE);
   }
 
   /// @cond PRIVATE
@@ -132,8 +133,8 @@ public:
     return nid;
   }
 
-  void enqueue(strong_actor_ptr sender, message_id mid,
-               message content, execution_unit* host);
+  void enqueue(strong_actor_ptr sender, message_id mid, message content,
+               execution_unit* host);
 
   void enqueue(mailbox_element_ptr what, execution_unit* host);
 
@@ -141,7 +142,7 @@ public:
 };
 
 /// @relates actor_control_block
-bool intrusive_ptr_upgrade_weak(actor_control_block* x);
+CAF_CORE_EXPORT bool intrusive_ptr_upgrade_weak(actor_control_block* x);
 
 /// @relates actor_control_block
 inline void intrusive_ptr_add_weak_ref(actor_control_block* x) {
@@ -149,7 +150,7 @@ inline void intrusive_ptr_add_weak_ref(actor_control_block* x) {
 }
 
 /// @relates actor_control_block
-void intrusive_ptr_release_weak(actor_control_block* x);
+CAF_CORE_EXPORT void intrusive_ptr_release_weak(actor_control_block* x);
 
 /// @relates actor_control_block
 inline void intrusive_ptr_add_ref(actor_control_block* x) {
@@ -157,17 +158,17 @@ inline void intrusive_ptr_add_ref(actor_control_block* x) {
 }
 
 /// @relates actor_control_block
-void intrusive_ptr_release(actor_control_block* x);
+CAF_CORE_EXPORT void intrusive_ptr_release(actor_control_block* x);
 
 /// @relates abstract_actor
 /// @relates actor_control_block
 using strong_actor_ptr = intrusive_ptr<actor_control_block>;
 
 /// @relates strong_actor_ptr
-bool operator==(const strong_actor_ptr&, const abstract_actor*);
+CAF_CORE_EXPORT bool operator==(const strong_actor_ptr&, const abstract_actor*);
 
 /// @relates strong_actor_ptr
-bool operator==(const abstract_actor*, const strong_actor_ptr&);
+CAF_CORE_EXPORT bool operator==(const abstract_actor*, const strong_actor_ptr&);
 
 /// @relates strong_actor_ptr
 inline bool operator!=(const strong_actor_ptr& x, const abstract_actor* y) {
@@ -183,11 +184,13 @@ inline bool operator!=(const abstract_actor* x, const strong_actor_ptr& y) {
 /// @relates actor_control_block
 using weak_actor_ptr = weak_intrusive_ptr<actor_control_block>;
 
-error_code<sec> load_actor(strong_actor_ptr& storage, execution_unit*,
-                           actor_id aid, const node_id& nid);
+CAF_CORE_EXPORT error_code<sec>
+load_actor(strong_actor_ptr& storage, execution_unit*, actor_id aid,
+           const node_id& nid);
 
-error_code<sec> save_actor(strong_actor_ptr& storage, execution_unit*,
-                           actor_id aid, const node_id& nid);
+CAF_CORE_EXPORT error_code<sec>
+save_actor(strong_actor_ptr& storage, execution_unit*, actor_id aid,
+           const node_id& nid);
 
 template <class Inspector>
 auto context_of(Inspector* f) -> decltype(f->context()) {
@@ -198,13 +201,14 @@ inline execution_unit* context_of(void*) {
   return nullptr;
 }
 
-std::string to_string(const strong_actor_ptr& x);
+CAF_CORE_EXPORT std::string to_string(const strong_actor_ptr& x);
 
-void append_to_string(std::string& x, const strong_actor_ptr& y);
+CAF_CORE_EXPORT void
+append_to_string(std::string& x, const strong_actor_ptr& y);
 
-std::string to_string(const weak_actor_ptr& x);
+CAF_CORE_EXPORT std::string to_string(const weak_actor_ptr& x);
 
-void append_to_string(std::string& x, const weak_actor_ptr& y);
+CAF_CORE_EXPORT void append_to_string(std::string& x, const weak_actor_ptr& y);
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, strong_actor_ptr& x) {
@@ -216,8 +220,7 @@ typename Inspector::result_type inspect(Inspector& f, strong_actor_ptr& x) {
   }
   auto load = [&] { return load_actor(x, context_of(&f), aid, nid); };
   auto save = [&] { return save_actor(x, context_of(&f), aid, nid); };
-  return f(meta::type_name("actor"), aid,
-           meta::omittable_if_none(), nid,
+  return f(meta::type_name("actor"), aid, meta::omittable_if_none(), nid,
            meta::load_callback(load), meta::save_callback(save));
 }
 
@@ -249,4 +252,3 @@ struct hash<caf::weak_actor_ptr> {
 };
 
 } // namespace std
-

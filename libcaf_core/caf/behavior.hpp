@@ -21,14 +21,13 @@
 #include <functional>
 #include <type_traits>
 
-#include "caf/none.hpp"
-
-#include "caf/duration.hpp"
-#include "caf/timeout_definition.hpp"
-
+#include "caf/detail/behavior_impl.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
-#include "caf/detail/behavior_impl.hpp"
+#include "caf/duration.hpp"
+#include "caf/none.hpp"
+#include "caf/timeout_definition.hpp"
 
 namespace caf {
 
@@ -36,7 +35,7 @@ class message_handler;
 
 /// Describes the behavior of an actor, i.e., provides a message
 /// handler and an optional timeout.
-class behavior {
+class CAF_CORE_EXPORT behavior {
 public:
   friend class message_handler;
 
@@ -104,14 +103,14 @@ public:
   }
 
   /// Runs this handler with callback.
-  inline match_case::result operator()(detail::invoke_result_visitor& f,
-                                       type_erased_tuple& xs) {
+  inline match_case::result
+  operator()(detail::invoke_result_visitor& f, type_erased_tuple& xs) {
     return impl_ ? impl_->invoke(f, xs) : match_case::no_match;
   }
 
   /// Runs this handler with callback.
-  inline match_case::result operator()(detail::invoke_result_visitor& f,
-                                       message& xs) {
+  inline match_case::result
+  operator()(detail::invoke_result_visitor& f, message& xs) {
     return impl_ ? impl_->invoke(f, xs) : match_case::no_match;
   }
 
@@ -143,4 +142,3 @@ private:
 };
 
 } // namespace caf
-

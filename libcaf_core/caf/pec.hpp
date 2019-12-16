@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <string>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf {
@@ -75,17 +76,17 @@ enum class pec : uint8_t {
 };
 
 /// @relates pec
-std::string to_string(pec);
+CAF_CORE_EXPORT std::string to_string(pec);
 
 /// Returns an error object from given error code.
-error make_error(pec code);
+CAF_CORE_EXPORT error make_error(pec code);
 
 /// Returns an error object from given error code with additional context
 /// information for where the parser stopped in the input.
-error make_error(pec code, int32_t line, int32_t column);
+CAF_CORE_EXPORT error make_error(pec code, int32_t line, int32_t column);
 
 /// Returns an error object from given error code with additional context
 /// information for where the parser stopped in the argument.
-error make_error(pec code, string_view argument);
+CAF_CORE_EXPORT error make_error(pec code, string_view argument);
 
 } // namespace caf

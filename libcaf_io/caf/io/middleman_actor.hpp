@@ -18,8 +18,9 @@
 
 #pragma once
 
-#include "caf/fwd.hpp"
 #include "caf/atom.hpp"
+#include "caf/detail/io_export.hpp"
+#include "caf/fwd.hpp"
 #include "caf/typed_actor.hpp"
 
 namespace caf::io {
@@ -53,7 +54,8 @@ namespace caf::io {
 ///   -> (uint16_t)
 ///
 ///   // Queries a remote node and returns an ID to this node as well as
-///   // an `strong_actor_ptr` to a remote actor if an actor was published at this
+///   // an `strong_actor_ptr` to a remote actor if an actor was published at
+///   this
 ///   // port. The actor address must be cast to either `actor` or
 ///   // `typed_actor` using `actor_cast` after validating `ifs`.
 ///   // hostname: IP address or DNS hostname.
@@ -84,30 +86,25 @@ namespace caf::io {
 ///
 /// }
 /// ~~~
-using middleman_actor =
-  typed_actor<
-    replies_to<publish_atom, uint16_t, strong_actor_ptr,
-               std::set<std::string>, std::string, bool>
-    ::with<uint16_t>,
+using middleman_actor = typed_actor<
+  replies_to<publish_atom, uint16_t, strong_actor_ptr, std::set<std::string>,
+             std::string, bool>::with<uint16_t>,
 
+  replies_to<open_atom, uint16_t, std::string, bool>::with<uint16_t>,
 
-    replies_to<open_atom, uint16_t, std::string, bool>
-    ::with<uint16_t>,
+  replies_to<connect_atom, std::string,
+             uint16_t>::with<node_id, strong_actor_ptr, std::set<std::string>>,
 
-    replies_to<connect_atom, std::string, uint16_t>
-    ::with<node_id, strong_actor_ptr, std::set<std::string>>,
+  reacts_to<unpublish_atom, actor_addr, uint16_t>,
 
-    reacts_to<unpublish_atom, actor_addr, uint16_t>,
+  reacts_to<close_atom, uint16_t>,
 
-    reacts_to<close_atom, uint16_t>,
+  replies_to<spawn_atom, node_id, std::string, message,
+             std::set<std::string>>::with<strong_actor_ptr>,
 
-    replies_to<spawn_atom, node_id, std::string, message, std::set<std::string>>
-    ::with<strong_actor_ptr>,
-
-    replies_to<get_atom, node_id>::with<node_id, std::string, uint16_t>>;
+  replies_to<get_atom, node_id>::with<node_id, std::string, uint16_t>>;
 
 /// @relates middleman_actor
-middleman_actor make_middleman_actor(actor_system& sys, actor db);
+CAF_IO_EXPORT middleman_actor make_middleman_actor(actor_system& sys, actor db);
 
-} // namespace caf
-
+} // namespace caf::io

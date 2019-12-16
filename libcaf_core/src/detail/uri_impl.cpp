@@ -83,4 +83,4 @@ void intrusive_ptr_release(const uri_impl* p) {
     delete p;
 }
 
-} // namespace caf
+} // namespace caf::detail

@@ -19,29 +19,28 @@
 #pragma once
 
 #include <list>
-#include <vector>
 #include <memory>
-#include <utility>
 #include <type_traits>
-
-#include "caf/fwd.hpp"
-#include "caf/none.hpp"
-#include "caf/intrusive_ptr.hpp"
+#include <utility>
+#include <vector>
 
 #include "caf/behavior.hpp"
+#include "caf/detail/behavior_impl.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/duration.hpp"
+#include "caf/fwd.hpp"
+#include "caf/intrusive_ptr.hpp"
 #include "caf/match_case.hpp"
 #include "caf/may_have_timeout.hpp"
 #include "caf/message.hpp"
+#include "caf/none.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/timeout_definition.hpp"
-
-#include "caf/detail/behavior_impl.hpp"
 
 namespace caf {
 
 /// A partial function implementation used to process a `message`.
-class message_handler {
+class CAF_CORE_EXPORT message_handler {
 public:
   friend class behavior;
 
@@ -78,9 +77,10 @@ public:
   template <class... Ts>
   void assign(Ts... xs) {
     static_assert(sizeof...(Ts) > 0, "assign without arguments called");
-    static_assert(!detail::disjunction<may_have_timeout<
-                      typename std::decay<Ts>::type>::value...
-                    >::value, "Timeouts are only allowed in behaviors");
+    static_assert(
+      !detail::disjunction<
+        may_have_timeout<typename std::decay<Ts>::type>::value...>::value,
+      "Timeouts are only allowed in behaviors");
     impl_ = detail::make_behavior(xs...);
   }
 
@@ -98,27 +98,23 @@ public:
   }
 
   /// Runs this handler with callback.
-  inline match_case::result operator()(detail::invoke_result_visitor& f,
-                                       type_erased_tuple& xs) {
+  inline match_case::result
+  operator()(detail::invoke_result_visitor& f, type_erased_tuple& xs) {
     return impl_ ? impl_->invoke(f, xs) : match_case::no_match;
   }
 
   /// Runs this handler with callback.
-  inline match_case::result operator()(detail::invoke_result_visitor& f,
-                                       message& xs) {
+  inline match_case::result
+  operator()(detail::invoke_result_visitor& f, message& xs) {
     return impl_ ? impl_->invoke(f, xs) : match_case::no_match;
   }
 
   /// Returns a new handler that concatenates this handler
   /// with a new handler from `xs...`.
   template <class... Ts>
-  typename std::conditional<
-    detail::disjunction<may_have_timeout<
-      typename std::decay<Ts>::type>::value...
-    >::value,
-    behavior,
-    message_handler
-  >::type
+  typename std::conditional<detail::disjunction<may_have_timeout<
+                              typename std::decay<Ts>::type>::value...>::value,
+                            behavior, message_handler>::type
   or_else(Ts&&... xs) const {
     // using a behavior is safe here, because we "cast"
     // it back to a message_handler when appropriate
@@ -144,4 +140,3 @@ private:
 };
 
 } // namespace caf
-

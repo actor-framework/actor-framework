@@ -69,4 +69,4 @@ struct select_adaptor_fields<T, detail::int_list<Pos...>> {
   using type = std::tuple<config_value_adaptor_field_impl<T, Pos>...>;
 };
 
-} // namespace caf
+} // namespace caf::detail

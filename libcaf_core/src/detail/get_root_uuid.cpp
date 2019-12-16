@@ -137,7 +137,7 @@ std::string get_root_uuid() {
   return uuid;
 }
 
-} // namespace caf
+} // namespace caf::detail
 
 #elif defined(CAF_WINDOWS)
 

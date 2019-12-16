@@ -31,4 +31,3 @@ intrusive_cow_ptr<T> make_copy_on_write(Ts&&... xs) {
 }
 
 } // namespace caf
-

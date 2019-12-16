@@ -59,5 +59,4 @@ spawn_fwd(typename std::remove_reference<T>::type&& arg) noexcept {
   return static_cast<T&&>(arg);
 }
 
-} // namespace caf
-
+} // namespace caf::detail

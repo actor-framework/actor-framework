@@ -75,7 +75,7 @@ void read_atom(State& ps, Consumer&& consumer, bool accept_unquoted = false) {
   // clang-format on
 }
 
-} // namespace caf
+} // namespace caf::detail::parser
 
 #include "caf/detail/parser/fsm_undef.hpp"
 

@@ -18,18 +18,17 @@
 
 #pragma once
 
+#include "caf/detail/io_export.hpp"
 #include "caf/io/fwd.hpp"
-#include "caf/io/scribe.hpp"
-
-#include "caf/io/network/stream_impl.hpp"
 #include "caf/io/network/native_socket.hpp"
-
+#include "caf/io/network/stream_impl.hpp"
+#include "caf/io/scribe.hpp"
 #include "caf/policy/tcp.hpp"
 
 namespace caf::io::network {
 
 /// Default scribe implementation.
-class scribe_impl : public scribe {
+class CAF_IO_EXPORT scribe_impl : public scribe {
 public:
   scribe_impl(default_multiplexer& mx, native_socket sockfd);
 
@@ -60,4 +59,4 @@ protected:
   stream_impl<policy::tcp> stream_;
 };
 
-} // namespace caf
+} // namespace caf::io::network

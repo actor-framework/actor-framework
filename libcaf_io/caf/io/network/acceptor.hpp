@@ -18,20 +18,19 @@
 
 #pragma once
 
-#include "caf/logger.hpp"
-#include "caf/ref_counted.hpp"
-
+#include "caf/detail/io_export.hpp"
 #include "caf/io/fwd.hpp"
-
-#include "caf/io/network/operation.hpp"
+#include "caf/io/network/acceptor_manager.hpp"
 #include "caf/io/network/event_handler.hpp"
 #include "caf/io/network/native_socket.hpp"
-#include "caf/io/network/acceptor_manager.hpp"
+#include "caf/io/network/operation.hpp"
+#include "caf/logger.hpp"
+#include "caf/ref_counted.hpp"
 
 namespace caf::io::network {
 
 /// An acceptor is responsible for accepting incoming connections.
-class acceptor : public event_handler {
+class CAF_IO_EXPORT acceptor : public event_handler {
 public:
   /// A manager providing the `accept` member function.
   using manager_type = acceptor_manager;
@@ -79,4 +78,4 @@ private:
   native_socket sock_;
 };
 
-} // namespace caf
+} // namespace caf::io::network

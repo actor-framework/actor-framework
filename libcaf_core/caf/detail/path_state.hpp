@@ -69,5 +69,4 @@ struct path_state<unit_t, T> {
   }
 };
 
-} // namespace caf
-
+} // namespace caf::detail

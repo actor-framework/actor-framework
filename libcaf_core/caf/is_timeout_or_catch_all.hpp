@@ -33,4 +33,3 @@ template <class T>
 struct is_timeout_or_catch_all<timeout_definition<T>> : std::true_type {};
 
 } // namespace caf
-

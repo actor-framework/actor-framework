@@ -20,15 +20,15 @@
 
 #include <tuple>
 
-#include "caf/fwd.hpp"
-
 #include "caf/detail/apply_args.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/spawn_fwd.hpp"
 #include "caf/detail/unique_function.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf::detail {
 
-class init_fun_factory_helper_base
+class CAF_CORE_EXPORT init_fun_factory_helper_base
   : public unique_function<behavior(local_actor*)>::wrapper {
 public:
   // -- member types -----------------------------------------------------------
@@ -143,9 +143,9 @@ public:
     using tuple_type = decltype(std::make_tuple(detail::spawn_fwd<Ts>(xs)...));
     using helper = init_fun_factory_helper<Base, F, tuple_type, rets, selfptr>;
     return ptr_type{new helper{std::move(f), sizeof...(Ts) > 0
-                                             ? std::make_shared<tuple_type>(
+                                               ? std::make_shared<tuple_type>(
                                                  detail::spawn_fwd<Ts>(xs)...)
-                                             : nullptr}};
+                                               : nullptr}};
   }
 
   template <class... Ts>
@@ -154,5 +154,4 @@ public:
   }
 };
 
-} // namespace caf
-
+} // namespace caf::detail

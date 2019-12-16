@@ -19,15 +19,16 @@
 #pragma once
 
 #include <string>
-#include <vector>
 #include <utility>
+#include <vector>
+
+#include "caf/detail/core_export.hpp"
 
 namespace caf::detail {
 
 using iface_info = std::pair<std::string /* interface name */,
                              std::string /* interface address */>;
 
-std::vector<iface_info> get_mac_addresses();
+CAF_CORE_EXPORT std::vector<iface_info> get_mac_addresses();
 
-} // namespace caf
-
+} // namespace caf::detail

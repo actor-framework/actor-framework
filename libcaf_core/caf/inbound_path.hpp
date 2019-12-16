@@ -24,6 +24,7 @@
 #include "caf/actor_clock.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/credit_controller.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/meta/type_name.hpp"
 #include "caf/rtti_pair.hpp"
@@ -37,7 +38,7 @@
 namespace caf {
 
 /// State for a path to an upstream actor (source).
-class inbound_path {
+class CAF_CORE_EXPORT inbound_path {
 public:
   /// Message type for propagating graceful shutdowns.
   using regular_shutdown = upstream_msg::drop;
@@ -120,9 +121,9 @@ public:
   void emit_irregular_shutdown(local_actor* self, error reason);
 
   /// Sends an `upstream_msg::forced_drop`.
-  static void emit_irregular_shutdown(local_actor* self, stream_slots slots,
-                                      const strong_actor_ptr& hdl,
-                                      error reason);
+  static void
+  emit_irregular_shutdown(local_actor* self, stream_slots slots,
+                          const strong_actor_ptr& hdl, error reason);
 
   /// Returns a pointer to the parent actor.
   scheduled_actor* self();

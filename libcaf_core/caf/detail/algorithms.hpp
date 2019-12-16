@@ -97,8 +97,8 @@ typename T::value_type* ptr_find(T& xs, const typename T::value_type& x) {
 /// Like `std::find`, but takes a range instead of an iterator pair and returns
 /// a pointer to the found object on success instead of returning an iterator.
 template <class T>
-const typename T::value_type* ptr_find(const T& xs,
-                                       const typename T::value_type& x) {
+const typename T::value_type*
+ptr_find(const T& xs, const typename T::value_type& x) {
   for (auto& y : xs)
     if (y == x)
       return &y;
@@ -127,5 +127,4 @@ const typename T::value_type* ptr_find_if(const T& xs, Predicate pred) {
   return nullptr;
 }
 
-} // namespace caf
-
+} // namespace caf::detail

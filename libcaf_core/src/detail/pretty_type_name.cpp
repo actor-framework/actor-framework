@@ -75,4 +75,4 @@ std::string pretty_type_name(const std::type_info& x) {
   return result;
 }
 
-} // namespace caf
+} // namespace caf::detail

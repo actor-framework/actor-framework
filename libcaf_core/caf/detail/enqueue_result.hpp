@@ -26,5 +26,4 @@ namespace caf::detail {
 /// Alias for backwards compatibility.
 using enqueue_result = intrusive::inbox_result;
 
-} // namespace caf
-
+} // namespace caf::detail

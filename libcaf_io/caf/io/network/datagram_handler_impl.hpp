@@ -20,9 +20,9 @@
 
 #include "caf/io/fwd.hpp"
 
-#include "caf/io/network/operation.hpp"
-#include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/datagram_handler.hpp"
+#include "caf/io/network/native_socket.hpp"
+#include "caf/io/network/operation.hpp"
 
 namespace caf::io::network {
 
@@ -33,8 +33,7 @@ public:
   template <class... Ts>
   datagram_handler_impl(default_multiplexer& mpx, native_socket sockfd,
                         Ts&&... xs)
-  : datagram_handler(mpx, sockfd),
-  policy_(std::forward<Ts>(xs)...) {
+    : datagram_handler(mpx, sockfd), policy_(std::forward<Ts>(xs)...) {
     // nop
   }
 
@@ -46,4 +45,4 @@ private:
   ProtocolPolicy policy_;
 };
 
-} // namespace caf
+} // namespace caf::io::network

@@ -18,20 +18,19 @@
 
 #pragma once
 
-#include <memory>
 #include <functional>
+#include <memory>
 
-#include "caf/fwd.hpp"
-#include "caf/extend.hpp"
-#include "caf/scheduled_actor.hpp"
-#include "caf/mailbox_element.hpp"
-
-#include "caf/mixin/sender.hpp"
-#include "caf/mixin/subscriber.hpp"
-#include "caf/mixin/behavior_changer.hpp"
-
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/shared_spinlock.hpp"
+#include "caf/extend.hpp"
+#include "caf/fwd.hpp"
+#include "caf/mailbox_element.hpp"
+#include "caf/mixin/behavior_changer.hpp"
+#include "caf/mixin/sender.hpp"
+#include "caf/mixin/subscriber.hpp"
+#include "caf/scheduled_actor.hpp"
 
 namespace caf {
 
@@ -45,10 +44,13 @@ public:
 /// callback to another object, thus serving as gateway to
 /// allow any object to interact with other actors.
 /// @extends local_actor
-class actor_companion : public extend<scheduled_actor, actor_companion>::
-                               with<mixin::sender,
-                                    mixin::subscriber,
-                                    mixin::behavior_changer> {
+class CAF_CORE_EXPORT actor_companion
+  // clang-format off
+  : public extend<scheduled_actor, actor_companion>::
+           with<mixin::sender,
+                mixin::subscriber,
+                mixin::behavior_changer> {
+  // clang-format on
 public:
   // -- member types -----------------------------------------------------------
 
@@ -62,10 +64,10 @@ public:
   using lock_type = detail::shared_spinlock;
 
   /// Delegates incoming messages to user-defined event loop.
-  using enqueue_handler = std::function<void (mailbox_element_ptr)>;
+  using enqueue_handler = std::function<void(mailbox_element_ptr)>;
 
   /// Callback for actor termination.
-  using on_exit_handler = std::function<void ()>;
+  using on_exit_handler = std::function<void()>;
 
   // -- constructors, destructors ----------------------------------------------
 
@@ -109,4 +111,3 @@ private:
 };
 
 } // namespace caf
-

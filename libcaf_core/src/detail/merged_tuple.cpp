@@ -108,4 +108,4 @@ const merged_tuple::mapping_type& merged_tuple::mapping() const {
   return mapping_;
 }
 
-} // namespace caf
+} // namespace caf::detail

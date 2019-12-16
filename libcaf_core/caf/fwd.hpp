@@ -24,6 +24,7 @@
 #include <tuple>
 #include <vector>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/is_one_of.hpp"
 #include "caf/detail/is_primitive_config_value.hpp"
 #include "caf/timespan.hpp"
@@ -186,6 +187,7 @@ enum class invoke_message_result;
 // -- aliases ------------------------------------------------------------------
 
 using actor_id = uint64_t;
+using byte_buffer = std::vector<byte>;
 using ip_address = ipv6_address;
 using ip_endpoint = ipv6_endpoint;
 using ip_subnet = ipv6_subnet;
@@ -195,7 +197,7 @@ using stream_slot = uint16_t;
 // -- functions ----------------------------------------------------------------
 
 /// @relates actor_system_config
-const settings& content(const actor_system_config&);
+CAF_CORE_EXPORT const settings& content(const actor_system_config&);
 
 template <class T, class... Ts>
 message make_message(T&& x, Ts&&... xs);
@@ -285,13 +287,14 @@ class private_thread;
 class uri_impl;
 
 // enable intrusive_ptr<uri_impl> with forward declaration only
-void intrusive_ptr_add_ref(const uri_impl*);
-void intrusive_ptr_release(const uri_impl*);
+CAF_CORE_EXPORT void intrusive_ptr_add_ref(const uri_impl*);
+CAF_CORE_EXPORT void intrusive_ptr_release(const uri_impl*);
 
 // enable intrusive_cow_ptr<dynamic_message_data> with forward declaration only
-void intrusive_ptr_add_ref(const dynamic_message_data*);
-void intrusive_ptr_release(const dynamic_message_data*);
-dynamic_message_data* intrusive_cow_ptr_unshare(dynamic_message_data*&);
+CAF_CORE_EXPORT void intrusive_ptr_add_ref(const dynamic_message_data*);
+CAF_CORE_EXPORT void intrusive_ptr_release(const dynamic_message_data*);
+CAF_CORE_EXPORT dynamic_message_data*
+intrusive_cow_ptr_unshare(dynamic_message_data*&);
 
 } // namespace detail
 

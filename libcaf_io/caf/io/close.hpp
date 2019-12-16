@@ -31,5 +31,4 @@ inline expected<void> close(actor_system& sys, uint16_t port) {
   return sys.middleman().close(port);
 }
 
-} // namespace caf
-
+} // namespace caf::io

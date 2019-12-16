@@ -28,4 +28,4 @@ class message_queue;
 class instance;
 class routing_table;
 
-} // namespace caf
+} // namespace caf::io::basp

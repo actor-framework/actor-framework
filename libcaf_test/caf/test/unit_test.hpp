@@ -92,9 +92,9 @@ struct equality_operator {
     return x == y;
   }
 
-  template <class T, class U,
-            typename std::enable_if<!detail::is_comparable<T, U>::value,
-                                    int>::type = 0>
+  template <
+    class T, class U,
+    typename std::enable_if<!detail::is_comparable<T, U>::value, int>::type = 0>
   bool operator()(const T&, const U&) const {
     return default_value;
   }
@@ -106,8 +106,9 @@ struct inequality_operator {
   template <class T, class U,
             typename std::enable_if<(std::is_floating_point<T>::value
                                      || std::is_floating_point<U>::value)
-                                    && detail::is_comparable<T, U>::value,
-                                    int>::type = 0>
+                                      && detail::is_comparable<T, U>::value,
+                                    int>::type
+            = 0>
   bool operator()(const T& x, const U& y) const {
     equality_operator f;
     return !f(x, y);
@@ -115,16 +116,17 @@ struct inequality_operator {
 
   template <class T, class U,
             typename std::enable_if<!std::is_floating_point<T>::value
-                                    && !std::is_floating_point<U>::value
-                                    && detail::is_comparable<T, U>::value,
-                                    int>::type = 0>
+                                      && !std::is_floating_point<U>::value
+                                      && detail::is_comparable<T, U>::value,
+                                    int>::type
+            = 0>
   bool operator()(const T& x, const U& y) const {
     return x != y;
   }
 
-  template <class T, class U,
-            typename std::enable_if<!detail::is_comparable<T, U>::value,
-                                    int>::type = 0>
+  template <
+    class T, class U,
+    typename std::enable_if<!detail::is_comparable<T, U>::value, int>::type = 0>
   bool operator()(const T&, const U&) const {
     return default_value;
   }
@@ -261,13 +263,13 @@ private:
   bool disabled_;
 };
 
-struct dummy_fixture { };
+struct dummy_fixture {};
 
 template <class T>
 class test_impl : public test {
 public:
   test_impl(std::string test_name, bool disabled_by_default)
-      : test(std::move(test_name), disabled_by_default) {
+    : test(std::move(test_name), disabled_by_default) {
     // nop
   }
 
@@ -292,9 +294,9 @@ void remove_trailing_spaces(std::string& x);
 class logger {
 public:
   enum class level : int {
-    quiet   = 0,
-    error   = 1,
-    info    = 2,
+    quiet = 0,
+    error = 1,
+    info = 2,
     verbose = 3,
     massive = 4
   };
@@ -311,13 +313,10 @@ public:
       }
     };
     using fwd =
-      typename std::conditional<
-        std::is_same<char, T>::value
-        || std::is_convertible<T, std::string>::value
-        || std::is_same<caf::term, T>::value,
-        simple_fwd_t,
-        deep_to_string_t
-      >::type;
+      typename std::conditional<std::is_same<char, T>::value
+                                  || std::is_convertible<T, std::string>::value
+                                  || std::is_same<caf::term, T>::value,
+                                simple_fwd_t, deep_to_string_t>::type;
     fwd f;
     auto y = f(x);
     if (lvl <= level_console_)
@@ -418,14 +417,11 @@ public:
   /// @param tests_str Regular expression for individually selecting tests.
   /// @param not_tests_str Regular expression for individually disabling tests.
   /// @returns `true` if all tests succeeded.
-  static bool run(bool colorize,
-                  const std::string& log_file,
-                  int verbosity_console,
-                  int verbosity_file,
-                  const std::string& suites_str,
-                  const std::string& not_suites_str,
-                  const std::string& tests_str,
-                  const std::string& not_tests_str);
+  static bool
+  run(bool colorize, const std::string& log_file, int verbosity_console,
+      int verbosity_file, const std::string& suites_str,
+      const std::string& not_suites_str, const std::string& tests_str,
+      const std::string& not_tests_str);
 
   static const char* last_check_file();
   static void last_check_file(const char* file);
@@ -448,7 +444,7 @@ private:
 
   int argc_ = 0;
   char** argv_ = nullptr;
-  char*  path_ = nullptr;
+  char* path_ = nullptr;
   bool colorize_ = false;
   const char* check_file_ = "<none>";
   size_t check_line_ = 0;
@@ -466,35 +462,29 @@ struct adder {
   }
 };
 
-bool check(test* parent, const char *file, size_t line,
-           const char *expr, bool should_fail, bool result);
+bool check(test* parent, const char* file, size_t line, const char* expr,
+           bool should_fail, bool result);
 
 template <class T, class U>
-bool check(test* parent, const char *file, size_t line,
-           const char *expr, bool should_fail, bool result,
-           const T& x, const U& y) {
+bool check(test* parent, const char* file, size_t line, const char* expr,
+           bool should_fail, bool result, const T& x, const U& y) {
   auto out = logger::instance().massive();
   if (result) {
-    out << term::green << "** "
-        << term::blue << file << term::yellow << ":"
-        << term::blue << line << fill(line) << term::reset
-        << expr << '\n';
+    out << term::green << "** " << term::blue << file << term::yellow << ":"
+        << term::blue << line << fill(line) << term::reset << expr << '\n';
     parent->pass();
   } else {
-    out << term::red << "!! "
-        << term::blue << file << term::yellow << ":"
-        << term::blue << line << fill(line) << term::reset
-        << expr << term::magenta << " ("
-        << term::red << x << term::magenta
-        << " !! " << term::red << y << term::magenta
-        << ')' << term::reset_endl;
+    out << term::red << "!! " << term::blue << file << term::yellow << ":"
+        << term::blue << line << fill(line) << term::reset << expr
+        << term::magenta << " (" << term::red << x << term::magenta << " !! "
+        << term::red << y << term::magenta << ')' << term::reset_endl;
     parent->fail(should_fail);
   }
   return result;
 }
 
 } // namespace detail
-} // namespace caf
+} // namespace caf::test
 
 // on the global namespace so that it can hidden via namespace-scoping
 using caf_test_case_auto_fixture = caf::test::dummy_fixture;
@@ -505,18 +495,18 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
    << ::caf::test::logger::stream::reset_flags_t{} << msg << " [line "         \
    << __LINE__ << "]\n")
 
-#define CAF_TEST_PRINT_ERROR(msg)   CAF_TEST_PRINT(info, msg, red)
-#define CAF_TEST_PRINT_INFO(msg)    CAF_TEST_PRINT(info, msg, yellow)
+#define CAF_TEST_PRINT_ERROR(msg) CAF_TEST_PRINT(info, msg, red)
+#define CAF_TEST_PRINT_INFO(msg) CAF_TEST_PRINT(info, msg, yellow)
 #define CAF_TEST_PRINT_VERBOSE(msg) CAF_TEST_PRINT(verbose, msg, yellow)
 
-#define CAF_PASTE_CONCAT(lhs, rhs) lhs ## rhs
+#define CAF_PASTE_CONCAT(lhs, rhs) lhs##rhs
 
 #define CAF_PASTE(lhs, rhs) CAF_PASTE_CONCAT(lhs, rhs)
 
 #define CAF_UNIQUE(name) CAF_PASTE(name, __LINE__)
 
 #ifndef CAF_SUITE
-#define CAF_SUITE unnamed
+#  define CAF_SUITE unnamed
 #endif
 
 #define CAF_STR(s) #s
@@ -536,11 +526,11 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 #define CAF_CHECK(...)                                                         \
   do {                                                                         \
     static_cast<void>(::caf::test::detail::check(                              \
-      ::caf::test::engine::current_test(), __FILE__, __LINE__,                 \
-      #__VA_ARGS__, false, static_cast<bool>(__VA_ARGS__)));                   \
+      ::caf::test::engine::current_test(), __FILE__, __LINE__, #__VA_ARGS__,   \
+      false, static_cast<bool>(__VA_ARGS__)));                                 \
     ::caf::test::engine::last_check_file(__FILE__);                            \
     ::caf::test::engine::last_check_line(__LINE__);                            \
-  } while(false)
+  } while (false)
 
 #define CAF_CHECK_FUNC(func, x_expr, y_expr)                                   \
   do {                                                                         \
@@ -558,11 +548,11 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 #define CAF_CHECK_FAIL(...)                                                    \
   do {                                                                         \
     static_cast<void>(::caf::test::detail::check(                              \
-      ::caf::test::engine::current_test(), __FILE__, __LINE__,                 \
-      #__VA_ARGS__, true, static_cast<bool>(__VA_ARGS__)));                    \
+      ::caf::test::engine::current_test(), __FILE__, __LINE__, #__VA_ARGS__,   \
+      true, static_cast<bool>(__VA_ARGS__)));                                  \
     ::caf::test::engine::last_check_file(__FILE__);                            \
     ::caf::test::engine::last_check_line(__LINE__);                            \
-  } while(false)
+  } while (false)
 
 #define CAF_FAIL(msg)                                                          \
   do {                                                                         \
@@ -613,10 +603,10 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 #define CAF_TEST_DISABLED(name) CAF_TEST_IMPL(name, true)
 
 #define CAF_TEST_FIXTURE_SCOPE(scope_name, fixture_name)                       \
-  namespace scope_name { using caf_test_case_auto_fixture = fixture_name ;
+  namespace scope_name {                                                       \
+  using caf_test_case_auto_fixture = fixture_name;
 
-#define CAF_TEST_FIXTURE_SCOPE_END()                                           \
-  } // namespace <scope_name>
+#define CAF_TEST_FIXTURE_SCOPE_END() } // namespace <scope_name>
 
 // -- Convenience macros -------------------------------------------------------
 
@@ -628,14 +618,12 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 
 // -- CAF_CHECK* predicate family ----------------------------------------------
 
-#define CAF_CHECK_EQUAL(x, y)                                                  \
-  CAF_CHECK_FUNC(::caf::test::equal_to, x, y)
+#define CAF_CHECK_EQUAL(x, y) CAF_CHECK_FUNC(::caf::test::equal_to, x, y)
 
 #define CAF_CHECK_NOT_EQUAL(x, y)                                              \
   CAF_CHECK_FUNC(::caf::test::not_equal_to, x, y)
 
-#define CAF_CHECK_LESS(x, y)                                                   \
-  CAF_CHECK_FUNC(::caf::test::less_than, x, y)
+#define CAF_CHECK_LESS(x, y) CAF_CHECK_FUNC(::caf::test::less_than, x, y)
 
 #define CAF_CHECK_NOT_LESS(x, y)                                               \
   CAF_CHECK_FUNC(::caf::test::negated<::caf::test::less_than>, x, y)
@@ -646,8 +634,7 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 #define CAF_CHECK_NOT_LESS_OR_EQUAL(x, y)                                      \
   CAF_CHECK_FUNC(::caf::test::negated<::caf::test::less_than_or_equal>, x, y)
 
-#define CAF_CHECK_GREATER(x, y)                                                \
-  CAF_CHECK_FUNC(::caf::test::greater_than, x, y)
+#define CAF_CHECK_GREATER(x, y) CAF_CHECK_FUNC(::caf::test::greater_than, x, y)
 
 #define CAF_CHECK_NOT_GREATER(x, y)                                            \
   CAF_CHECK_FUNC(::caf::test::negated<::caf::test::greater_than>, x, y)
@@ -660,14 +647,12 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 
 // -- CAF_CHECK* predicate family ----------------------------------------------
 
-#define CAF_REQUIRE_EQUAL(x, y)                                                \
-  CAF_REQUIRE_FUNC(::caf::test::equal_to, x, y)
+#define CAF_REQUIRE_EQUAL(x, y) CAF_REQUIRE_FUNC(::caf::test::equal_to, x, y)
 
 #define CAF_REQUIRE_NOT_EQUAL(x, y)                                            \
   CAF_REQUIRE_FUNC(::caf::test::not_equal_to, x, y)
 
-#define CAF_REQUIRE_LESS(x, y)                                                 \
-  CAF_REQUIRE_FUNC(::caf::test::less_than, x, y)
+#define CAF_REQUIRE_LESS(x, y) CAF_REQUIRE_FUNC(::caf::test::less_than, x, y)
 
 #define CAF_REQUIRE_NOT_LESS(x, y)                                             \
   CAF_REQUIRE_FUNC(::caf::test::negated<::caf::test::less_than>, x, y)
@@ -690,4 +675,3 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 #define CAF_REQUIRE_NOT_GREATER_OR_EQUAL(x, y)                                 \
   CAF_REQUIRE_FUNC(::caf::test::negated<::caf::test::greater_than_or_equal>,   \
                    x, y)
-

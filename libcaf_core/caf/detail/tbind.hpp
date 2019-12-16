@@ -28,5 +28,4 @@ struct tbind {
   };
 };
 
-} // namespace caf
-
+} // namespace caf::detail

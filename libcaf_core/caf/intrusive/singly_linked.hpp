@@ -45,4 +45,4 @@ struct singly_linked {
   node_pointer next;
 };
 
-} // namespace caf
+} // namespace caf::intrusive

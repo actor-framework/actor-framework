@@ -25,6 +25,7 @@
 #include <utility>
 #include <vector>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/error.hpp"
@@ -38,75 +39,75 @@ namespace caf::detail {
 
 // -- boolean type -------------------------------------------------------------
 
-void parse(string_parser_state& ps, bool& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, bool& x);
 
 // -- signed integer types -----------------------------------------------------
 
-void parse(string_parser_state& ps, int8_t& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, int8_t& x);
 
-void parse(string_parser_state& ps, int16_t& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, int16_t& x);
 
-void parse(string_parser_state& ps, int32_t& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, int32_t& x);
 
-void parse(string_parser_state& ps, int64_t& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, int64_t& x);
 
 // -- unsigned integer types ---------------------------------------------------
 
-void parse(string_parser_state& ps, uint8_t& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, uint8_t& x);
 
-void parse(string_parser_state& ps, uint16_t& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, uint16_t& x);
 
-void parse(string_parser_state& ps, uint32_t& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, uint32_t& x);
 
-void parse(string_parser_state& ps, uint64_t& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, uint64_t& x);
 
 // -- non-fixed size integer types ---------------------------------------------
 
 template <class T>
-detail::enable_if_t<std::is_integral<T>::value> parse(string_parser_state& ps,
-                                                      T& x) {
+detail::enable_if_t<std::is_integral<T>::value>
+parse(string_parser_state& ps, T& x) {
   using squashed_type = squashed_int_t<T>;
   return parse(ps, reinterpret_cast<squashed_type&>(x));
 }
 
 // -- floating point types -----------------------------------------------------
 
-void parse(string_parser_state& ps, float& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, float& x);
 
-void parse(string_parser_state& ps, double& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, double& x);
 
 // -- CAF types ----------------------------------------------------------------
 
-void parse(string_parser_state& ps, timespan& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, timespan& x);
 
-void parse(string_parser_state& ps, atom_value& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, atom_value& x);
 
-void parse(string_parser_state& ps, ipv4_address& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv4_address& x);
 
-void parse(string_parser_state& ps, ipv4_subnet& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv4_subnet& x);
 
-void parse(string_parser_state& ps, ipv4_endpoint& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv4_endpoint& x);
 
-void parse(string_parser_state& ps, ipv6_address& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv6_address& x);
 
-void parse(string_parser_state& ps, ipv6_subnet& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv6_subnet& x);
 
-void parse(string_parser_state& ps, ipv6_endpoint& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv6_endpoint& x);
 
-void parse(string_parser_state& ps, uri& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, uri& x);
 
 // -- STL types ----------------------------------------------------------------
 
-void parse(string_parser_state& ps, std::string& x);
+CAF_CORE_EXPORT void parse(string_parser_state& ps, std::string& x);
 
 // -- container types ----------------------------------------------------------
 
-void parse_element(string_parser_state& ps, std::string& x,
-                   const char* char_blacklist);
+CAF_CORE_EXPORT void parse_element(string_parser_state& ps, std::string& x,
+                                   const char* char_blacklist);
 
 template <class T>
-enable_if_t<!is_pair<T>::value> parse_element(string_parser_state& ps, T& x,
-                                              const char*);
+enable_if_t<!is_pair<T>::value>
+parse_element(string_parser_state& ps, T& x, const char*);
 
 template <class First, class Second, size_t N>
 void parse_element(string_parser_state& ps, std::pair<First, Second>& kvp,
@@ -158,8 +159,8 @@ enable_if_tt<is_iterable<T>> parse(string_parser_state& ps, T& xs) {
 }
 
 template <class T>
-enable_if_t<!is_pair<T>::value> parse_element(string_parser_state& ps, T& x,
-                                              const char*) {
+enable_if_t<!is_pair<T>::value>
+parse_element(string_parser_state& ps, T& x, const char*) {
   parse(ps, x);
 }
 
@@ -195,4 +196,4 @@ error parse(string_view str, T& x) {
   return make_error(ps.code, str);
 }
 
-} // namespace caf
+} // namespace caf::detail

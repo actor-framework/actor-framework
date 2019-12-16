@@ -18,10 +18,10 @@
 
 #pragma once
 
+#include <iomanip>
+#include <sstream>
 #include <tuple>
 #include <vector>
-#include <sstream>
-#include <iomanip>
 
 #include "caf/byte_buffer.hpp"
 #include "caf/io/accept_handle.hpp"
@@ -58,8 +58,8 @@ struct new_data_msg {
 /// @relates new_data_msg
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, new_data_msg& x) {
-  return f(meta::type_name("new_data_msg"), x.handle,
-           meta::hex_formatted(), x.buf);
+  return f(meta::type_name("new_data_msg"), x.handle, meta::hex_formatted(),
+           x.buf);
 }
 
 /// Signalizes that a certain amount of bytes has been written.
@@ -75,8 +75,8 @@ struct data_transferred_msg {
 /// @relates data_transferred_msg
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, data_transferred_msg& x) {
-  return f(meta::type_name("data_transferred_msg"),
-           x.handle, x.written, x.remaining);
+  return f(meta::type_name("data_transferred_msg"), x.handle, x.written,
+           x.remaining);
 }
 
 /// Signalizes that a {@link broker} connection has been closed.
@@ -87,7 +87,8 @@ struct connection_closed_msg {
 
 /// @relates connection_closed_msg
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, connection_closed_msg& x) {
+typename Inspector::result_type
+inspect(Inspector& f, connection_closed_msg& x) {
   return f(meta::type_name("connection_closed_msg"), x.handle);
 }
 
@@ -181,5 +182,4 @@ inspect(Inspector& f, datagram_servant_closed_msg& x) {
   return f(meta::type_name("datagram_servant_closed_msg"), x.handles);
 }
 
-} // namespace caf
-
+} // namespace caf::io

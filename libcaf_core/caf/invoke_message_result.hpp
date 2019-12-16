@@ -20,6 +20,8 @@
 
 #include <string>
 
+#include "caf/detail/core_export.hpp"
+
 namespace caf {
 
 /// Stores the result of a message invocation.
@@ -37,6 +39,6 @@ enum class invoke_message_result {
 };
 
 /// @relates invoke_message_result
-std::string to_string(invoke_message_result);
+CAF_CORE_EXPORT std::string to_string(invoke_message_result);
 
 } // namespace caf

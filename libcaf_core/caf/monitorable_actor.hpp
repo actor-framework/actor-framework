@@ -18,29 +18,29 @@
 
 #pragma once
 
-#include <set>
-#include <mutex>
 #include <atomic>
-#include <memory>
-#include <string>
-#include <vector>
-#include <cstdint>
-#include <type_traits>
 #include <condition_variable>
+#include <cstdint>
+#include <memory>
+#include <mutex>
+#include <set>
+#include <string>
+#include <type_traits>
+#include <vector>
 
-#include "caf/type_nr.hpp"
+#include "caf/abstract_actor.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
-#include "caf/abstract_actor.hpp"
-#include "caf/mailbox_element.hpp"
-
-#include "caf/detail/type_traits.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/functor_attachable.hpp"
+#include "caf/detail/type_traits.hpp"
+#include "caf/mailbox_element.hpp"
+#include "caf/type_nr.hpp"
 
 namespace caf {
 
 /// Base class for all actor implementations.
-class monitorable_actor : public abstract_actor {
+class CAF_CORE_EXPORT monitorable_actor : public abstract_actor {
 public:
   /// Returns an implementation-dependent name for logging purposes, which
   /// is only valid as long as the actor is running. The default
@@ -156,8 +156,7 @@ protected:
   // attached functors that are executed on cleanup (monitors, links, etc)
   attachable_ptr attachables_head_;
 
- /// @endcond
+  /// @endcond
 };
 
 } // namespace caf
-

@@ -23,5 +23,4 @@ namespace caf::tag {
 /// Allows the testing DSL to recognize that subtypes are boxing content types.
 struct boxing_type {};
 
-} // namespace caf
-
+} // namespace caf::tag

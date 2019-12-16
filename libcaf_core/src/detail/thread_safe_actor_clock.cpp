@@ -162,4 +162,4 @@ void thread_safe_actor_clock::push(event* ptr) {
   queue_.push_back(unique_event_ptr{ptr});
 }
 
-} // namespace caf
+} // namespace caf::detail

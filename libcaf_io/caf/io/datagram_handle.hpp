@@ -38,8 +38,8 @@ constexpr invalid_datagram_handle_t invalid_datagram_handle
   = invalid_datagram_handle_t{};
 
 /// Generic handle type for identifying datagram endpoints
-class datagram_handle : public handle<datagram_handle,
-                                      invalid_datagram_handle_t> {
+class datagram_handle
+  : public handle<datagram_handle, invalid_datagram_handle_t> {
 public:
   friend class handle<datagram_handle, invalid_datagram_handle_t>;
 
@@ -54,8 +54,8 @@ public:
   }
 
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f,
-                                                 datagram_handle& x) {
+  friend typename Inspector::result_type
+  inspect(Inspector& f, datagram_handle& x) {
     return f(meta::type_name("datagram_handle"), x.id_);
   }
 
@@ -65,11 +65,11 @@ private:
   }
 };
 
-} // namespace caf
+} // namespace caf::io
 
 namespace std {
 
-template<>
+template <>
 struct hash<caf::io::datagram_handle> {
   size_t operator()(const caf::io::datagram_handle& hdl) const {
     return std::hash<int64_t>{}(hdl.id());
@@ -77,4 +77,3 @@ struct hash<caf::io::datagram_handle> {
 };
 
 } // namespace std
-

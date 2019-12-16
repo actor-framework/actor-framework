@@ -21,13 +21,13 @@
 
 #include "caf/config.hpp"
 
-#include <list>
-#include <deque>
-#include <mutex>
 #include <atomic>
-#include <memory>
-#include <limits>
 #include <condition_variable> // std::cv_status
+#include <deque>
+#include <limits>
+#include <list>
+#include <memory>
+#include <mutex>
 
 #include "caf/config.hpp"
 
@@ -159,9 +159,7 @@ public:
   /// Closes this inbox and moves all elements to the queue.
   /// @warning Call only from the reader (owner).
   void close() {
-    auto f = [&](pointer x) {
-      queue_.lifo_append(x);
-    };
+    auto f = [&](pointer x) { queue_.lifo_append(x); };
     inbox_.close(f);
     queue_.stop_lifo_append();
   }
@@ -229,5 +227,4 @@ private:
   queue_type queue_;
 };
 
-} // namespace caf
-
+} // namespace caf::intrusive

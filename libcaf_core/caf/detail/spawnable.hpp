@@ -33,4 +33,4 @@ constexpr bool spawnable() {
          || is_callable_with<F, Impl*, Ts...>::value;
 }
 
-} // namespace caf
+} // namespace caf::detail

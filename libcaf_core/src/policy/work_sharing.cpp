@@ -24,4 +24,4 @@ work_sharing::~work_sharing() {
   // nop
 }
 
-} // namespace caf
+} // namespace caf::policy

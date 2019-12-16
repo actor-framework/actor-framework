@@ -29,4 +29,4 @@ constexpr uint64_t version = 3;
 
 /// @}
 
-} // namespace caf
+} // namespace caf::io::basp

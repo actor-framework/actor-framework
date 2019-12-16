@@ -28,4 +28,4 @@ std::string to_string(const protocol& x) {
   return result;
 }
 
-} // namespace caf
+} // namespace caf::io::network

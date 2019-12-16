@@ -338,8 +338,8 @@ proxy_registry* basp_broker::proxy_registry_ptr() {
 
 resumable::resume_result basp_broker::resume(execution_unit* ctx, size_t mt) {
   ctx->proxy_registry_ptr(&instance.proxies());
-  auto guard = detail::make_scope_guard(
-    [=] { ctx->proxy_registry_ptr(nullptr); });
+  auto guard
+    = detail::make_scope_guard([=] { ctx->proxy_registry_ptr(nullptr); });
   return super::resume(ctx, mt);
 }
 
@@ -360,9 +360,8 @@ strong_actor_ptr basp_broker::make_proxy(node_id nid, actor_id aid) {
   // create proxy and add functor that will be called if we
   // receive a basp::down_message
   actor_config cfg;
-  auto res = make_actor<forwarding_actor_proxy, strong_actor_ptr>(aid, nid,
-                                                                  &(system()),
-                                                                  cfg, this);
+  auto res = make_actor<forwarding_actor_proxy, strong_actor_ptr>(
+    aid, nid, &(system()), cfg, this);
   strong_actor_ptr selfptr{ctrl()};
   res->get()->attach_functor([=](const error& rsn) {
     mm->backend().post([=] {
@@ -602,4 +601,4 @@ strong_actor_ptr basp_broker::this_actor() {
   return ctrl();
 }
 
-} // namespace caf
+} // namespace caf::io

@@ -30,6 +30,7 @@
 
 #include "caf/atom.hpp"
 #include "caf/detail/bounds_checker.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/move_if_not_ptr.hpp"
 #include "caf/detail/parse.hpp"
 #include "caf/detail/type_traits.hpp"
@@ -51,7 +52,7 @@ namespace caf {
 /// A type for config parameters with similar interface to a `variant`. This
 /// type is not implemented as a simple variant alias because variants cannot
 /// contain lists of themselves.
-class config_value {
+class CAF_CORE_EXPORT config_value {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -106,8 +107,8 @@ public:
   // -- parsing ----------------------------------------------------------------
 
   /// Tries to parse a value from `str`.
-  static expected<config_value> parse(string_view::iterator first,
-                                      string_view::iterator last);
+  static expected<config_value>
+  parse(string_view::iterator first, string_view::iterator last);
 
   /// Tries to parse a value from `str`.
   static expected<config_value> parse(string_view str);
@@ -249,7 +250,8 @@ struct config_value_access : config_value_access_unspecialized {};
 
 #define CAF_DEFAULT_CONFIG_VALUE_ACCESS(type, name)                            \
   template <>                                                                  \
-  struct config_value_access<type> : default_config_value_access<type> {       \
+  struct CAF_CORE_EXPORT config_value_access<type>                             \
+    : default_config_value_access<type> {                                      \
     static std::string type_name() {                                           \
       return name;                                                             \
     }                                                                          \
@@ -260,13 +262,11 @@ CAF_DEFAULT_CONFIG_VALUE_ACCESS(double, "real64");
 CAF_DEFAULT_CONFIG_VALUE_ACCESS(atom_value, "atom");
 CAF_DEFAULT_CONFIG_VALUE_ACCESS(timespan, "timespan");
 CAF_DEFAULT_CONFIG_VALUE_ACCESS(uri, "uri");
-CAF_DEFAULT_CONFIG_VALUE_ACCESS(config_value::list, "list");
-CAF_DEFAULT_CONFIG_VALUE_ACCESS(config_value::dictionary, "dictionary");
 
 #undef CAF_DEFAULT_CONFIG_VALUE_ACCESS
 
 template <>
-struct config_value_access<std::string>
+struct CAF_CORE_EXPORT config_value_access<std::string>
   : default_config_value_access<std::string> {
   using super = default_config_value_access<std::string>;
 
@@ -314,8 +314,8 @@ struct select_config_value_access {
 };
 
 template <class T>
-using select_config_value_access_t = typename select_config_value_access<
-  T>::type;
+using select_config_value_access_t =
+  typename select_config_value_access<T>::type;
 
 template <>
 struct sum_type_access<config_value> {
@@ -574,29 +574,29 @@ struct select_config_value_access<T, select_config_value_hint::is_map> {
 
 template <>
 struct config_value_access<float> {
-  static inline std::string type_name() {
+  static std::string type_name() {
     return "real32";
   }
 
-  static inline bool is(const config_value& x) {
+  static bool is(const config_value& x) {
     return holds_alternative<double>(x.get_data());
   }
 
-  static inline optional<float> get_if(const config_value* x) {
+  static optional<float> get_if(const config_value* x) {
     if (auto res = caf::get_if<double>(&(x->get_data())))
       return static_cast<float>(*res);
     return none;
   }
 
-  static inline float get(const config_value& x) {
+  static float get(const config_value& x) {
     return static_cast<float>(caf::get<double>(x.get_data()));
   }
 
-  static inline double convert(float x) {
+  static double convert(float x) {
     return x;
   }
 
-  static inline void parse_cli(string_parser_state& ps, float& x) {
+  static void parse_cli(string_parser_state& ps, float& x) {
     detail::parse(ps, x);
   }
 };
@@ -654,8 +654,8 @@ struct config_value_access<std::tuple<Ts...>> {
 
 private:
   template <int Pos>
-  static void rec_name(std::string&, bool, detail::int_token<Pos>,
-                       detail::type_list<>) {
+  static void
+  rec_name(std::string&, bool, detail::int_token<Pos>, detail::type_list<>) {
     // nop
   }
 
@@ -739,10 +739,10 @@ private:
 // -- SumType-like access of dictionary values ---------------------------------
 
 /// @relates config_value
-bool operator<(const config_value& x, const config_value& y);
+CAF_CORE_EXPORT bool operator<(const config_value& x, const config_value& y);
 
 /// @relates config_value
-bool operator==(const config_value& x, const config_value& y);
+CAF_CORE_EXPORT bool operator==(const config_value& x, const config_value& y);
 
 /// @relates config_value
 inline bool operator>=(const config_value& x, const config_value& y) {
@@ -755,10 +755,11 @@ inline bool operator!=(const config_value& x, const config_value& y) {
 }
 
 /// @relates config_value
-std::string to_string(const config_value& x);
+CAF_CORE_EXPORT std::string to_string(const config_value& x);
 
 /// @relates config_value
-std::ostream& operator<<(std::ostream& out, const config_value& x);
+CAF_CORE_EXPORT std::ostream&
+operator<<(std::ostream& out, const config_value& x);
 
 template <class... Ts>
 config_value make_config_value_list(Ts&&... xs) {

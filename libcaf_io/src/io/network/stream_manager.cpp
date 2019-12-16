@@ -24,4 +24,4 @@ stream_manager::~stream_manager() {
   // nop
 }
 
-} // namespace caf
+} // namespace caf::io::network

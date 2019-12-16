@@ -104,5 +104,4 @@ class comparable<Subclass, Subclass> {
   }
 };
 
-} // namespace caf
-
+} // namespace caf::detail

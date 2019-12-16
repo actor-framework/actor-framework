@@ -25,6 +25,7 @@
 #include <utility>
 
 #include "caf/byte.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/meta/annotation.hpp"
@@ -38,7 +39,7 @@ namespace caf {
 
 /// @ingroup TypeSystem
 /// Technology-independent serialization interface.
-class serializer : public read_inspector<serializer> {
+class CAF_CORE_EXPORT serializer : public read_inspector<serializer> {
 public:
   // -- member types -----------------------------------------------------------
 

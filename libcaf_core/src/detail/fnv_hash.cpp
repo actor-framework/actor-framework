@@ -58,4 +58,4 @@ size_t fnv_hash_append(size_t intermediate, const unsigned char* first,
   return result;
 }
 
-} // namespace caf
+} // namespace caf::detail

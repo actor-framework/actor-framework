@@ -76,4 +76,4 @@ private:
   message_id mid_;
 };
 
-} // namespace caf
+} // namespace caf::policy

@@ -126,4 +126,4 @@ bool routing_table::add_indirect(const node_id& hop, const node_id& dest) {
   return result;
 }
 
-} // namespace caf
+} // namespace caf::io::basp

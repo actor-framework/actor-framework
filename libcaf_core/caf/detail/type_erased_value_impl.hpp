@@ -19,8 +19,8 @@
 #pragma once
 
 #include <cstdint>
-#include <typeinfo>
 #include <functional>
+#include <typeinfo>
 
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
@@ -57,17 +57,17 @@ public:
 
   template <class U, size_t N,
             class = typename std::enable_if<std::is_same<T, U[N]>::value>::type>
-  type_erased_value_impl(const U (&&ys)[N]) {
+  type_erased_value_impl(const U(&&ys)[N]) {
     array_copy(x_, ys);
   }
 
   type_erased_value_impl(type_erased_value_impl&& other)
-      : type_erased_value_impl(std::move(other.x_)) {
+    : type_erased_value_impl(std::move(other.x_)) {
     // nop
   }
 
   type_erased_value_impl(const type_erased_value_impl& other)
-      : type_erased_value_impl(other.x_) {
+    : type_erased_value_impl(other.x_) {
     // nop
   }
 
@@ -179,5 +179,4 @@ private:
   T x_;
 };
 
-} // namespace caf
-
+} // namespace caf::detail

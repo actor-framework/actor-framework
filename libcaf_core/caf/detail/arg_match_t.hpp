@@ -22,5 +22,4 @@ namespace caf::detail {
 
 struct arg_match_t {};
 
-} // namespace caf
-
+} // namespace caf::detail

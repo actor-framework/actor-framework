@@ -18,13 +18,14 @@
 
 #pragma once
 
-#include <deque>
-#include <chrono>
-#include <limits>
-#include <cstddef>
 #include <algorithm>
+#include <chrono>
+#include <cstddef>
+#include <deque>
+#include <limits>
 
 #include "caf/config.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/test_actor_clock.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/scheduled_actor.hpp"
@@ -33,7 +34,7 @@
 namespace caf::scheduler {
 
 /// A schedule coordinator for testing purposes.
-class test_coordinator : public abstract_coordinator {
+class CAF_CORE_EXPORT test_coordinator : public abstract_coordinator {
 public:
   using super = abstract_coordinator;
 
@@ -175,4 +176,4 @@ private:
   std::function<void()> after_next_enqueue_;
 };
 
-} // namespace caf
+} // namespace caf::scheduler

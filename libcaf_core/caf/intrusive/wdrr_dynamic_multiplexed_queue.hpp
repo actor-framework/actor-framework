@@ -218,5 +218,4 @@ private:
   std::vector<key_type> erase_list_;
 };
 
-} // namespace caf
-
+} // namespace caf::intrusive

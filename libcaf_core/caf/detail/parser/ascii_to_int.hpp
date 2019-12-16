@@ -40,10 +40,9 @@ struct ascii_to_int<16, T> {
     // Lowercase characters start at position 97 in the ASCII table.
     // Result is guaranteed to have a value between 0 and 16 and can be safely
     // cast to any integer type.
-    return static_cast<T>(c <= '9'
-                          ? c - '0'
-                          : (c <= 'F' ? 10 + (c - 'A') : 10 + (c - 'a')));
+    return static_cast<T>(
+      c <= '9' ? c - '0' : (c <= 'F' ? 10 + (c - 'A') : 10 + (c - 'a')));
   }
 };
 
-} // namespace caf
+} // namespace caf::detail::parser

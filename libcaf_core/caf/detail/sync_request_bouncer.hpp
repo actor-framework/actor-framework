@@ -20,15 +20,15 @@
 
 #include <cstdint>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
-
 #include "caf/intrusive/task_result.hpp"
 
 namespace caf::detail {
 
 /// Drains a mailbox and sends an error message to each unhandled request.
-struct sync_request_bouncer {
+struct CAF_CORE_EXPORT sync_request_bouncer {
   error rsn;
   explicit sync_request_bouncer(error r);
   void operator()(const strong_actor_ptr& sender, const message_id& mid) const;
@@ -37,12 +37,11 @@ struct sync_request_bouncer {
   /// Unwrap WDRR queues. Nesting WDRR queues results in a Key/Queue prefix for
   /// each layer of nesting.
   template <class Key, class Queue, class... Ts>
-  intrusive::task_result operator()(const Key&, const Queue&,
-                                    const Ts&... xs) const {
+  intrusive::task_result
+  operator()(const Key&, const Queue&, const Ts&... xs) const {
     (*this)(xs...);
     return intrusive::task_result::resume;
   }
 };
 
-} // namespace caf
-
+} // namespace caf::detail

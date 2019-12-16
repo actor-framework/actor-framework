@@ -18,27 +18,26 @@
 
 #pragma once
 
+#include <cstdint>
 #include <utility>
 #include <vector>
-#include <cstdint>
 
 #include "caf/actor_addr.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/atom.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/type_list.hpp"
 #include "caf/message.hpp"
 #include "caf/stream_priority.hpp"
 #include "caf/stream_slot.hpp"
+#include "caf/tag/boxing_type.hpp"
 #include "caf/timespan.hpp"
 #include "caf/variant.hpp"
-
-#include "caf/tag/boxing_type.hpp"
-
-#include "caf/detail/type_list.hpp"
 
 namespace caf {
 
 /// Stream messages that flow upstream, i.e., acks and drop messages.
-struct upstream_msg : tag::boxing_type {
+struct CAF_CORE_EXPORT upstream_msg : tag::boxing_type {
   // -- nested types -----------------------------------------------------------
 
   /// Acknowledges a previous `open` message and finalizes a stream handshake.
@@ -102,8 +101,8 @@ struct upstream_msg : tag::boxing_type {
   // -- member types -----------------------------------------------------------
 
   /// Lists all possible options for the payload.
-  using alternatives =
-    detail::type_list<ack_open, ack_batch, drop, forced_drop>;
+  using alternatives
+    = detail::type_list<ack_open, ack_batch, drop, forced_drop>;
 
   /// Stores one of `alternatives`.
   using content_type = variant<ack_open, ack_batch, drop, forced_drop>;
@@ -112,9 +111,7 @@ struct upstream_msg : tag::boxing_type {
 
   template <class T>
   upstream_msg(stream_slots id, actor_addr addr, T&& x)
-      : slots(id),
-        sender(std::move(addr)),
-        content(std::forward<T>(x)) {
+    : slots(id), sender(std::move(addr)), content(std::forward<T>(x)) {
     // nop
   }
 
@@ -162,16 +159,16 @@ make(stream_slots slots, actor_addr addr, Ts&&... xs) {
 
 /// @relates upstream_msg::ack_open
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f,
-                                        upstream_msg::ack_open& x) {
+typename Inspector::result_type
+inspect(Inspector& f, upstream_msg::ack_open& x) {
   return f(meta::type_name("ack_open"), x.rebind_from, x.rebind_to,
            x.initial_demand, x.desired_batch_size);
 }
 
 /// @relates upstream_msg::ack_batch
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f,
-                                        upstream_msg::ack_batch& x) {
+typename Inspector::result_type
+inspect(Inspector& f, upstream_msg::ack_batch& x) {
   return f(meta::type_name("ack_batch"), x.new_capacity, x.desired_batch_size,
            x.acknowledged_id, x.max_capacity);
 }
@@ -184,8 +181,8 @@ typename Inspector::result_type inspect(Inspector& f, upstream_msg::drop&) {
 
 /// @relates upstream_msg::forced_drop
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f,
-                                        upstream_msg::forced_drop& x) {
+typename Inspector::result_type
+inspect(Inspector& f, upstream_msg::forced_drop& x) {
   return f(meta::type_name("forced_drop"), x.reason);
 }
 
@@ -196,4 +193,3 @@ typename Inspector::result_type inspect(Inspector& f, upstream_msg& x) {
 }
 
 } // namespace caf
-

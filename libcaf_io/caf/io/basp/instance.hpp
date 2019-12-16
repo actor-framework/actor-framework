@@ -23,6 +23,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/callback.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/detail/worker_hub.hpp"
 #include "caf/error.hpp"
 #include "caf/io/basp/connection_state.hpp"
@@ -39,10 +40,10 @@ namespace caf::io::basp {
 /// @addtogroup BASP
 
 /// Describes a protocol instance managing multiple connections.
-class instance {
+class CAF_IO_EXPORT instance {
 public:
   /// Provides a callback-based interface for certain BASP events.
-  class callee {
+  class CAF_IO_EXPORT callee {
   public:
     // -- constructors, destructors, and assignment operators ------------------
 

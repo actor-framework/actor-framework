@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "caf/byte_buffer.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/event_handler.hpp"
 #include "caf/io/network/rw_state.hpp"
@@ -33,7 +34,7 @@ namespace caf::io::network {
 
 /// A stream capable of both reading and writing. The stream's input
 /// data is forwarded to its {@link stream_manager manager}.
-class stream : public event_handler {
+class CAF_IO_EXPORT stream : public event_handler {
 public:
   /// A smart pointer to a stream manager.
   using manager_ptr = intrusive_ptr<stream_manager>;
@@ -151,4 +152,4 @@ private:
   byte_buffer wr_offline_buf_;
 };
 
-} // namespace caf
+} // namespace caf::io::network

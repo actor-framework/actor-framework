@@ -18,20 +18,18 @@
 
 #pragma once
 
-#include "caf/actor.hpp"
-#include "caf/group.hpp"
-#include "caf/channel.hpp"
-#include "caf/actor_addr.hpp"
 #include "caf/abstract_actor.hpp"
-#include "caf/abstract_group.hpp"
 #include "caf/abstract_channel.hpp"
+#include "caf/abstract_group.hpp"
+#include "caf/actor.hpp"
+#include "caf/actor_addr.hpp"
+#include "caf/channel.hpp"
+#include "caf/group.hpp"
 
 namespace caf::detail {
 
 class raw_access {
-
 public:
-
   template <class ActorHandle>
   static abstract_actor* get(const ActorHandle& hdl) {
     return hdl.ptr_.get();
@@ -66,8 +64,6 @@ public:
   static void unsafe_assign(T& lhs, const abstract_actor_ptr& ptr) {
     lhs = T{ptr.get()};
   }
-
 };
 
-} // namespace caf
-
+} // namespace caf::detail

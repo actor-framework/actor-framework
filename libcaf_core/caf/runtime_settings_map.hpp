@@ -22,13 +22,14 @@
 #include <unordered_map>
 
 #include "caf/atom.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 #include "caf/variant.hpp"
 
 namespace caf {
 
 /// Thread-safe container for mapping atoms to arbitrary settings.
-class runtime_settings_map {
+class CAF_CORE_EXPORT runtime_settings_map {
 public:
   // -- member types -----------------------------------------------------------
 

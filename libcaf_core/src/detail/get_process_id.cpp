@@ -37,4 +37,4 @@ unsigned get_process_id() {
 #endif
 }
 
-} // namespace caf
+} // namespace caf::detail

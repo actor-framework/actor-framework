@@ -19,9 +19,10 @@
 #pragma once
 
 #include <cstdint>
-#include <typeinfo>
 #include <functional>
+#include <typeinfo>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/rtti_pair.hpp"
@@ -30,7 +31,7 @@
 namespace caf {
 
 /// Represents a single type-erased value.
-class type_erased_value {
+class CAF_CORE_EXPORT type_erased_value {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -124,4 +125,3 @@ inline auto to_string(const type_erased_value& x) {
 }
 
 } // namespace caf
-

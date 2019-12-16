@@ -18,28 +18,28 @@
 
 #pragma once
 
-#include <set>
-#include <mutex>
 #include <atomic>
-#include <memory>
-#include <string>
-#include <vector>
 #include <cstdint>
+#include <memory>
+#include <mutex>
+#include <set>
+#include <string>
 #include <type_traits>
+#include <vector>
 
-#include "caf/fwd.hpp"
-#include "caf/node_id.hpp"
-#include "caf/attachable.hpp"
-#include "caf/message_id.hpp"
-#include "caf/exit_reason.hpp"
-#include "caf/intrusive_ptr.hpp"
-#include "caf/execution_unit.hpp"
-#include "caf/mailbox_element.hpp"
 #include "caf/abstract_channel.hpp"
-
+#include "caf/attachable.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/disposer.hpp"
-#include "caf/detail/type_traits.hpp"
 #include "caf/detail/functor_attachable.hpp"
+#include "caf/detail/type_traits.hpp"
+#include "caf/execution_unit.hpp"
+#include "caf/exit_reason.hpp"
+#include "caf/fwd.hpp"
+#include "caf/intrusive_ptr.hpp"
+#include "caf/mailbox_element.hpp"
+#include "caf/message_id.hpp"
+#include "caf/node_id.hpp"
 
 namespace caf {
 
@@ -51,7 +51,7 @@ using actor_id = uint64_t;
 constexpr actor_id invalid_actor_id = 0;
 
 /// Base class for all actor implementations.
-class abstract_actor : public abstract_channel {
+class CAF_CORE_EXPORT abstract_actor : public abstract_channel {
 public:
   // allow placement new (only)
   inline void* operator new(std::size_t, void* ptr) {
@@ -69,8 +69,8 @@ public:
   /// implementation is required to call `super::destroy()` at the end.
   virtual void on_destroy();
 
-  void enqueue(strong_actor_ptr sender, message_id mid,
-               message msg, execution_unit* host) override;
+  void enqueue(strong_actor_ptr sender, message_id mid, message msg,
+               execution_unit* host) override;
 
   /// Enqueues a new message wrapped in a `mailbox_element` to the actor.
   /// This `enqueue` variant allows to define forwarding chains.
@@ -120,25 +120,25 @@ public:
   virtual mailbox_element* peek_at_next_mailbox_element();
 
   template <class... Ts>
-  void eq_impl(message_id mid, strong_actor_ptr sender,
-               execution_unit* ctx, Ts&&... xs) {
-    enqueue(make_mailbox_element(std::move(sender), mid,
-                                 {}, std::forward<Ts>(xs)...),
+  void eq_impl(message_id mid, strong_actor_ptr sender, execution_unit* ctx,
+               Ts&&... xs) {
+    enqueue(make_mailbox_element(std::move(sender), mid, {},
+                                 std::forward<Ts>(xs)...),
             ctx);
   }
 
   // flags storing runtime information                      used by ...
-  static constexpr int has_timeout_flag        = 0x0004; // single_timeout
-  static constexpr int is_registered_flag      = 0x0008; // (several actors)
-  static constexpr int is_initialized_flag     = 0x0010; // event-based actors
-  static constexpr int is_blocking_flag        = 0x0020; // blocking_actor
-  static constexpr int is_detached_flag        = 0x0040; // local_actor
-  static constexpr int is_serializable_flag    = 0x0100; // local_actor
-  static constexpr int is_migrated_from_flag   = 0x0200; // local_actor
-  static constexpr int has_used_aout_flag      = 0x0400; // local_actor
-  static constexpr int is_terminated_flag      = 0x0800; // local_actor
-  static constexpr int is_cleaned_up_flag      = 0x1000; // monitorable_actor
-  static constexpr int is_shutting_down_flag   = 0x2000; // scheduled_actor
+  static constexpr int has_timeout_flag = 0x0004;      // single_timeout
+  static constexpr int is_registered_flag = 0x0008;    // (several actors)
+  static constexpr int is_initialized_flag = 0x0010;   // event-based actors
+  static constexpr int is_blocking_flag = 0x0020;      // blocking_actor
+  static constexpr int is_detached_flag = 0x0040;      // local_actor
+  static constexpr int is_serializable_flag = 0x0100;  // local_actor
+  static constexpr int is_migrated_from_flag = 0x0200; // local_actor
+  static constexpr int has_used_aout_flag = 0x0400;    // local_actor
+  static constexpr int is_terminated_flag = 0x0800;    // local_actor
+  static constexpr int is_cleaned_up_flag = 0x1000;    // monitorable_actor
+  static constexpr int is_shutting_down_flag = 0x2000; // scheduled_actor
 
   inline void setf(int flag) {
     auto x = flags();
@@ -195,9 +195,8 @@ public:
   /// identical, independently from the order of `p1` and `p2`.
   template <class F>
   static auto joined_exclusive_critical_section(abstract_actor* p1,
-                                                abstract_actor* p2,
-                                                F fun)
-  -> decltype(fun()) {
+                                                abstract_actor* p2, F fun)
+    -> decltype(fun()) {
     // Make sure to allocate locks always in the same order by starting on the
     // actor with the lowest address.
     CAF_ASSERT(p1 != p2 && p1 != nullptr && p2 != nullptr);
@@ -230,4 +229,3 @@ private:
 };
 
 } // namespace caf
-

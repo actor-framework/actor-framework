@@ -41,8 +41,8 @@ instance::callee::~callee() {
 instance::instance(abstract_broker* parent, callee& lstnr)
   : tbl_(parent), this_node_(parent->system().node()), callee_(lstnr) {
   CAF_ASSERT(this_node_ != none);
-  auto workers = get_or(config(), "middleman.workers",
-                        defaults::middleman::workers);
+  auto workers
+    = get_or(config(), "middleman.workers", defaults::middleman::workers);
   for (size_t i = 0; i < workers; ++i)
     hub_.add_new_worker(queue_, proxies());
 }
@@ -118,8 +118,8 @@ void instance::add_published_actor(uint16_t port,
   swap(entry.second, published_interface);
 }
 
-size_t instance::remove_published_actor(uint16_t port,
-                                        removed_published_actor* cb) {
+size_t
+instance::remove_published_actor(uint16_t port, removed_published_actor* cb) {
   CAF_LOG_TRACE(CAF_ARG(port));
   auto i = published_actors_.find(port);
   if (i == published_actors_.end())
@@ -504,4 +504,4 @@ void instance::forward(execution_unit* ctx, const node_id& dest_node,
   }
 }
 
-} // namespace caf
+} // namespace caf::io::basp

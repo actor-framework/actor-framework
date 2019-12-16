@@ -410,4 +410,4 @@ void ripemd_160(std::array<uint8_t, 20>& storage, const std::string& data) {
   }
 }
 
-} // namespace caf
+} // namespace caf::detail

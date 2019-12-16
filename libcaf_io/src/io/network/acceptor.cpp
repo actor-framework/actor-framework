@@ -56,4 +56,4 @@ void acceptor::graceful_shutdown() {
   shutdown_both(fd_);
 }
 
-} // namespace caf
+} // namespace caf::io::network

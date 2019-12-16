@@ -22,6 +22,7 @@
 
 #include "caf/config_option_set.hpp"
 #include "caf/config_value.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/settings.hpp"
 
@@ -31,7 +32,7 @@ class ini_consumer;
 class ini_list_consumer;
 class ini_map_consumer;
 
-class abstract_ini_consumer {
+class CAF_CORE_EXPORT abstract_ini_consumer {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -66,7 +67,7 @@ protected:
   abstract_ini_consumer* parent_;
 };
 
-class ini_map_consumer : public abstract_ini_consumer {
+class CAF_CORE_EXPORT ini_map_consumer : public abstract_ini_consumer {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -99,7 +100,7 @@ private:
   iterator i_;
 };
 
-class ini_list_consumer : public abstract_ini_consumer {
+class CAF_CORE_EXPORT ini_list_consumer : public abstract_ini_consumer {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -124,7 +125,7 @@ private:
 };
 
 /// Consumes a single value from an INI parser.
-class ini_value_consumer : public abstract_ini_consumer {
+class CAF_CORE_EXPORT ini_value_consumer : public abstract_ini_consumer {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -144,7 +145,7 @@ public:
 };
 
 /// Consumes a config category.
-class ini_category_consumer : public abstract_ini_consumer {
+class CAF_CORE_EXPORT ini_category_consumer : public abstract_ini_consumer {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -177,7 +178,7 @@ private:
 };
 
 /// Consumes a series of dictionaries forming a application configuration.
-class ini_consumer : public abstract_ini_consumer {
+class CAF_CORE_EXPORT ini_consumer : public abstract_ini_consumer {
 public:
   // -- friends ----------------------------------------------------------------
 
@@ -210,4 +211,4 @@ private:
   std::vector<error> warnings_;
 };
 
-} // namespace caf
+} // namespace caf::detail

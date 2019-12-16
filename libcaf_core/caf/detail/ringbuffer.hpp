@@ -150,4 +150,4 @@ private:
   std::array<T, Size> buf_;
 };
 
-} // namespace caf
+} // namespace caf::detail

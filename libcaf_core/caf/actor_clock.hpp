@@ -20,12 +20,13 @@
 
 #include <chrono>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf {
 
 /// A monotonic clock for scheduling timeouts and delayed messages.
-class actor_clock {
+class CAF_CORE_EXPORT actor_clock {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -56,19 +57,22 @@ public:
   /// Schedules a `timeout_msg` for `self` at time point `t`, overriding any
   /// previous receive timeout.
   virtual void set_ordinary_timeout(time_point t, abstract_actor* self,
-                                    atom_value type, uint64_t id) = 0;
+                                    atom_value type, uint64_t id)
+    = 0;
 
   /// Schedules a `timeout_msg` for `self` at time point `t`.
   virtual void set_multi_timeout(time_point t, abstract_actor* self,
-                                 atom_value type, uint64_t id) = 0;
+                                 atom_value type, uint64_t id)
+    = 0;
 
   /// Schedules a `sec::request_timeout` for `self` at time point `t`.
-  virtual void set_request_timeout(time_point t, abstract_actor* self,
-                                   message_id id) = 0;
+  virtual void
+  set_request_timeout(time_point t, abstract_actor* self, message_id id)
+    = 0;
 
   /// Cancels a pending receive timeout.
-  virtual void cancel_ordinary_timeout(abstract_actor* self,
-                                       atom_value type) = 0;
+  virtual void cancel_ordinary_timeout(abstract_actor* self, atom_value type)
+    = 0;
 
   /// Cancels the pending request timeout for `id`.
   virtual void cancel_request_timeout(abstract_actor* self, message_id id) = 0;
@@ -78,15 +82,16 @@ public:
 
   /// Schedules an arbitrary message to `receiver` for time point `t`.
   virtual void schedule_message(time_point t, strong_actor_ptr receiver,
-                                mailbox_element_ptr content) = 0;
+                                mailbox_element_ptr content)
+    = 0;
 
   /// Schedules an arbitrary message to `target` for time point `t`.
   virtual void schedule_message(time_point t, group target,
-                                strong_actor_ptr sender, message content) = 0;
+                                strong_actor_ptr sender, message content)
+    = 0;
 
   /// Cancels all timeouts and scheduled messages.
   virtual void cancel_all() = 0;
 };
 
 } // namespace caf
-

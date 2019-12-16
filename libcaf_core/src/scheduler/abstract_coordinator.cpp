@@ -311,4 +311,4 @@ void abstract_coordinator::cleanup_and_release(resumable* ptr) {
   intrusive_ptr_release(ptr);
 }
 
-} // namespace caf
+} // namespace caf::scheduler

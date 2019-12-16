@@ -46,9 +46,7 @@ public:
   bool idle() const noexcept override {
     // A source is idle if it can't make any progress on its downstream or if
     // it's not producing new data despite having credit.
-    auto some_credit = [](const outbound_path& x) {
-      return x.open_credit > 0;
-    };
+    auto some_credit = [](const outbound_path& x) { return x.open_credit > 0; };
     return out_.stalled()
            || (out_.buffered() == 0 && out_.all_paths(some_credit));
   }
@@ -94,4 +92,3 @@ template <class DownstreamManager>
 using stream_source_ptr = intrusive_ptr<stream_source<DownstreamManager>>;
 
 } // namespace caf
-

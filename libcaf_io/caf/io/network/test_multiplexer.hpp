@@ -21,6 +21,7 @@
 #include <thread>
 
 #include "caf/byte_buffer.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/io/abstract_broker.hpp"
 #include "caf/io/network/multiplexer.hpp"
 #include "caf/io/network/receive_buffer.hpp"
@@ -28,7 +29,7 @@
 
 namespace caf::io::network {
 
-class test_multiplexer : public multiplexer {
+class CAF_IO_EXPORT test_multiplexer : public multiplexer {
 private:
   struct datagram_data;
 
@@ -371,5 +372,4 @@ private:
   int64_t servant_ids_;
 };
 
-} // namespace caf
-
+} // namespace caf::io::network

@@ -22,6 +22,7 @@
 
 #include "caf/abstract_channel.hpp"
 #include "caf/behavior.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/unique_function.hpp"
 #include "caf/fwd.hpp"
 #include "caf/input_range.hpp"
@@ -29,7 +30,7 @@
 namespace caf {
 
 /// Stores spawn-time flags and groups.
-class actor_config {
+class CAF_CORE_EXPORT actor_config {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -57,6 +58,6 @@ public:
 };
 
 /// @relates actor_config
-std::string to_string(const actor_config& x);
+CAF_CORE_EXPORT std::string to_string(const actor_config& x);
 
 } // namespace caf

@@ -25,12 +25,16 @@
 
 #include "caf/byte_address.hpp"
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
+#include "caf/ipv4_address.hpp"
 
 namespace caf {
 
-class ipv6_address : public byte_address<ipv6_address>,
-                     detail::comparable<ipv6_address, ipv4_address> {
+class CAF_CORE_EXPORT ipv6_address
+  : public byte_address<ipv6_address>,
+    detail::comparable<ipv6_address>,
+    detail::comparable<ipv6_address, ipv4_address> {
 public:
   // -- constants --------------------------------------------------------------
 
@@ -64,7 +68,9 @@ public:
 
   // -- comparison -------------------------------------------------------------
 
-  using super::compare;
+  /// Returns a negative number if `*this < other`, zero if `*this == other`
+  /// and a positive number if `*this > other`.
+  int compare(ipv6_address other) const noexcept;
 
   /// Returns a negative number if `*this < other`, zero if `*this == other`
   /// and a positive number if `*this > other`.
@@ -110,12 +116,12 @@ public:
   // -- inspection -------------------------------------------------------------
 
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f,
-                                                 ipv6_address& x) {
+  friend typename Inspector::result_type
+  inspect(Inspector& f, ipv6_address& x) {
     return f(x.bytes_);
   }
 
-  friend std::string to_string(ipv6_address x);
+  friend CAF_CORE_EXPORT std::string to_string(ipv6_address x);
 
 private:
   // -- member variables -------------------------------------------------------
@@ -128,6 +134,6 @@ private:
   };
 };
 
-error parse(string_view str, ipv6_address& dest);
+CAF_CORE_EXPORT error parse(string_view str, ipv6_address& dest);
 
 } // namespace caf

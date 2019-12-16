@@ -18,26 +18,8 @@
 
 #pragma once
 
-#include <chrono>
-
-#include "caf/stateful_actor.hpp"
-
-#include "caf/io/network/interfaces.hpp"
-
-#include "caf/after.hpp"
-#include "caf/event_based_actor.hpp"
-#include "caf/actor_system_config.hpp"
-
-#include "caf/io/broker.hpp"
-#include "caf/io/middleman.hpp"
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/system_messages.hpp"
-#include "caf/io/datagram_handle.hpp"
-
-#include "caf/io/basp/all.hpp"
-
-#include "caf/io/network/datagram_manager.hpp"
-#include "caf/io/network/default_multiplexer.hpp"
+#include "caf/detail/io_export.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf::io {
 
@@ -45,6 +27,7 @@ struct connection_helper_state {
   static const char* name;
 };
 
-behavior connection_helper(stateful_actor<connection_helper_state>* self,
-                           actor b);
-} // namespace caf
+CAF_IO_EXPORT behavior
+connection_helper(stateful_actor<connection_helper_state>* self, actor b);
+
+} // namespace caf::io

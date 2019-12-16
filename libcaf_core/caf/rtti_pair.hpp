@@ -23,6 +23,7 @@
 #include <typeinfo>
 #include <utility>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/type_nr.hpp"
 
 namespace caf {
@@ -48,6 +49,6 @@ make_rtti_pair() {
 }
 
 /// @relates rtti_pair
-std::string to_string(rtti_pair x);
+CAF_CORE_EXPORT std::string to_string(rtti_pair x);
 
 } // namespace caf

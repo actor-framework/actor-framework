@@ -24,6 +24,7 @@
 
 #include "caf/atom.hpp"
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
 #include "caf/meta/omittable_if_empty.hpp"
@@ -54,8 +55,8 @@ public:
 
 /// Convenience alias for `std::enable_if<has_make_error<T>::value, U>::type`.
 template <class T, class U = void>
-using enable_if_has_make_error_t = typename std::enable_if<
-  has_make_error<T>::value, U>::type;
+using enable_if_has_make_error_t =
+  typename std::enable_if<has_make_error<T>::value, U>::type;
 
 /// A serializable type for storing error codes with category and optional,
 /// human-readable context information. Unlike error handling classes from
@@ -87,13 +88,13 @@ using enable_if_has_make_error_t = typename std::enable_if<
 /// categories instead and requires users to register custom error categories
 /// to the actor system. This makes the actor system the natural instance for
 /// rendering error messages via `actor_system::render(const error&)`.
-class error : detail::comparable<error> {
+class CAF_CORE_EXPORT error : detail::comparable<error> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using inspect_fun = std::function<
-    error(meta::type_name_t, uint8_t&, atom_value&, meta::omittable_if_empty_t,
-          message&)>;
+  using inspect_fun
+    = std::function<error(meta::type_name_t, uint8_t&, atom_value&,
+                          meta::omittable_if_empty_t, message&)>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -240,7 +241,7 @@ private:
 };
 
 /// @relates error
-std::string to_string(const error& x);
+CAF_CORE_EXPORT std::string to_string(const error& x);
 
 /// @relates error
 inline bool operator==(const error& x, none_t) {

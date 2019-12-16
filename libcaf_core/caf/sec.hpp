@@ -24,6 +24,7 @@
 
 #include <string>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf {
@@ -132,13 +133,13 @@ enum class sec : uint8_t {
 };
 
 /// @relates sec
-std::string to_string(sec);
+CAF_CORE_EXPORT std::string to_string(sec);
 
 /// @relates sec
-error make_error(sec);
+CAF_CORE_EXPORT error make_error(sec);
 
 /// @relates sec
-error make_error(sec, message);
+CAF_CORE_EXPORT error make_error(sec, message);
 
 /// @relates sec
 template <class T, class... Ts>

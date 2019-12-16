@@ -160,4 +160,4 @@ public:
   }
 };
 
-} // namespace caf
+} // namespace caf::mixin

@@ -18,20 +18,20 @@
 
 #pragma once
 
-#include <tuple>
 #include <cstddef>
 #include <cstdint>
-#include <typeinfo>
 #include <functional>
+#include <tuple>
+#include <typeinfo>
 
-#include "caf/fwd.hpp"
 #include "caf/error.hpp"
-#include "caf/type_nr.hpp"
-#include "caf/type_erased_value.hpp"
+#include "caf/fwd.hpp"
 #include "caf/type_erased_tuple.hpp"
+#include "caf/type_erased_value.hpp"
+#include "caf/type_nr.hpp"
 
-#include "caf/detail/try_match.hpp"
 #include "caf/detail/apply_args.hpp"
+#include "caf/detail/try_match.hpp"
 
 namespace caf::detail {
 
@@ -43,7 +43,8 @@ public:
   template <size_t X>
   using num_token = std::integral_constant<size_t, X>;
 
-  using tuple_type = std::tuple<type_erased_value_impl<std::reference_wrapper<Ts>>...>;
+  using tuple_type
+    = std::tuple<type_erased_value_impl<std::reference_wrapper<Ts>>...>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -52,8 +53,7 @@ public:
   }
 
   type_erased_tuple_view(const type_erased_tuple_view& other)
-      : type_erased_tuple(),
-        xs_(other.xs_) {
+    : type_erased_tuple(), xs_(other.xs_) {
     init();
   }
 
@@ -142,5 +142,4 @@ private:
   type_erased_value* ptrs_[sizeof...(Ts) == 0 ? 1 : sizeof...(Ts)];
 };
 
-} // namespace caf
-
+} // namespace caf::detail

@@ -53,5 +53,4 @@ save_callback_t<F> save_callback(F fun) {
   return {std::move(fun)};
 }
 
-} // namespace caf
-
+} // namespace caf::meta

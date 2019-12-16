@@ -19,14 +19,15 @@
 #pragma once
 
 #include <deque>
-#include <vector>
-#include <string>
 #include <functional>
+#include <string>
+#include <vector>
 
+#include "caf/detail/io_export.hpp"
 #include "caf/error.hpp"
-#include "caf/meta/type_name.hpp"
-#include "caf/meta/save_callback.hpp"
 #include "caf/meta/load_callback.hpp"
+#include "caf/meta/save_callback.hpp"
+#include "caf/meta/type_name.hpp"
 
 struct sockaddr;
 struct sockaddr_storage;
@@ -39,7 +40,7 @@ namespace caf::io::network {
 // - https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
 // - http://www.isthe.com/chongo/tech/comp/fnv/index.html
 // Always hash 128 bit address, for v4 we use the embedded addr.
-class ep_hash {
+class CAF_IO_EXPORT ep_hash {
 public:
   ep_hash();
   size_t operator()(const sockaddr& sa) const noexcept;
@@ -48,9 +49,8 @@ public:
 };
 
 /// A hashable wrapper for a sockaddr storage.
-struct ip_endpoint {
+struct CAF_IO_EXPORT ip_endpoint {
 public:
-
   /// Default constructor for sockaddr storage which reserves memory for the
   /// internal data structure on creation.
   ip_endpoint();
@@ -87,25 +87,29 @@ public:
 
 private:
   struct impl;
-  struct impl_deleter { void operator()(impl*) const; };
-  std::unique_ptr<impl,impl_deleter> ptr_;
+  struct impl_deleter {
+    void operator()(impl*) const;
+  };
+  std::unique_ptr<impl, impl_deleter> ptr_;
 };
 
-bool operator==(const ip_endpoint& lhs, const ip_endpoint& rhs);
+CAF_IO_EXPORT bool operator==(const ip_endpoint& lhs, const ip_endpoint& rhs);
 
-std::string to_string(const ip_endpoint& ep);
+CAF_IO_EXPORT std::string to_string(const ip_endpoint& ep);
 
-std::string host(const ip_endpoint& ep);
+CAF_IO_EXPORT std::string host(const ip_endpoint& ep);
 
-uint16_t port(const ip_endpoint& ep);
+CAF_IO_EXPORT uint16_t port(const ip_endpoint& ep);
 
-uint32_t family(const ip_endpoint& ep);
+CAF_IO_EXPORT uint32_t family(const ip_endpoint& ep);
 
-error_code<sec> load_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h,
-                              uint16_t& p, size_t& l);
+CAF_IO_EXPORT error_code<sec>
+load_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h, uint16_t& p,
+              size_t& l);
 
-error_code<sec> save_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h,
-                              uint16_t& p, size_t& l);
+CAF_IO_EXPORT error_code<sec>
+save_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h, uint16_t& p,
+              size_t& l);
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& fun, ip_endpoint& ep) {
@@ -125,7 +129,7 @@ typename Inspector::result_type inspect(Inspector& fun, ip_endpoint& ep) {
              meta::load_callback(load), meta::save_callback(save));
 }
 
-} // namespace caf
+} // namespace caf::io::network
 
 namespace std {
 
@@ -140,5 +144,3 @@ struct hash<caf::io::network::ip_endpoint> {
 };
 
 } // namespace std
-
-

@@ -25,6 +25,7 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/abstract_worker.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/detail/worker_hub.hpp"
 #include "caf/fwd.hpp"
 #include "caf/io/basp/fwd.hpp"
@@ -36,8 +37,8 @@
 namespace caf::io::basp {
 
 /// Deserializes payloads for BASP messages asynchronously.
-class worker : public detail::abstract_worker,
-               public remote_message_handler<worker> {
+class CAF_IO_EXPORT worker : public detail::abstract_worker,
+                             public remote_message_handler<worker> {
 public:
   // -- friends ----------------------------------------------------------------
 
@@ -71,10 +72,9 @@ private:
   // -- constants and assertions -----------------------------------------------
 
   /// Stores how many bytes the "first half" of this object requires.
-  static constexpr size_t pointer_members_size = sizeof(hub_type*)
-                                                 + sizeof(message_queue*)
-                                                 + sizeof(proxy_registry*)
-                                                 + sizeof(actor_system*);
+  static constexpr size_t pointer_members_size
+    = sizeof(hub_type*) + sizeof(message_queue*) + sizeof(proxy_registry*)
+      + sizeof(actor_system*);
 
   static_assert(CAF_CACHE_LINE_SIZE > pointer_members_size,
                 "invalid cache line size");
@@ -110,4 +110,4 @@ private:
   byte_buffer payload_;
 };
 
-} // namespace caf
+} // namespace caf::io::basp

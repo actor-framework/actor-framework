@@ -54,6 +54,7 @@ config = [
             builds: ['debug'],
             tools: ['gcc-8'],
             extraSteps: ['coverageReport'],
+            extraFlags: ['BUILD_SHARED_LIBS:BOOL=OFF'],
         ]],
         ['fedora-28', [
             builds: ['release'],
@@ -97,20 +98,13 @@ config = [
                 'OPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include',
             ],
         ],
-        Windows: [
-            debug: [
-                'CAF_LOG_LEVEL:STRING=TRACE',
-                'CAF_ENABLE_ACTOR_PROFILER:BOOL=yes',
-                'CAF_BUILD_STATIC_ONLY:BOOL=yes',
-            ],
-            release: defaultReleaseBuildFlags + [
-                'CAF_BUILD_STATIC_ONLY:BOOL=yes',
-            ],
-        ],
     ],
     // Configures what binary the coverage report uses and what paths to exclude.
     coverage: [
-        binary: 'build/bin/caf-test',
+        binaries: [
+          'build/bin/caf-core-test',
+          'build/bin/caf-io-test',
+        ],
         relativeExcludePaths: [
             'examples',
             'tools',
@@ -119,7 +113,6 @@ config = [
             'libcaf_io/test',
             'libcaf_openssl/test',
             'libcaf_opencl',
-            'libcaf_core/caf/scheduler/profiled_coordinator.hpp',
         ],
     ],
 ]

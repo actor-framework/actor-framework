@@ -40,4 +40,4 @@ void blocking_behavior::handle_timeout() {
   // nop
 }
 
-} // namespace caf
+} // namespace caf::detail

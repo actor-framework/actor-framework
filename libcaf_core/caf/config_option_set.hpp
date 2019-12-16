@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "caf/config_option.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/make_config_option.hpp"
 #include "caf/pec.hpp"
@@ -34,7 +35,7 @@ namespace caf {
 
 /// A set of `config_option` objects that parses CLI arguments into a
 /// `settings` object.
-class config_option_set {
+class CAF_CORE_EXPORT config_option_set {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -69,8 +70,8 @@ public:
   option_pointer cli_short_name_lookup(char short_name) const;
 
   /// Returns the first `config_option` that matches category and long name.
-  option_pointer qualified_name_lookup(string_view category,
-                                       string_view long_name) const;
+  option_pointer
+  qualified_name_lookup(string_view category, string_view long_name) const;
 
   /// Returns the first `config_option` that matches the qualified name.
   /// @param name Config option name formatted as `<category>.<long-name>`.
@@ -108,8 +109,8 @@ public:
 
   /// Adds a config option to the set.
   template <class T>
-  config_option_set& add(string_view category, string_view name,
-                         string_view description) & {
+  config_option_set&
+  add(string_view category, string_view name, string_view description) & {
     return add(make_config_option<T>(category, name, description));
   }
 
@@ -121,8 +122,8 @@ public:
 
   /// Adds a config option to the set.
   template <class T>
-  config_option_set&& add(string_view category, string_view name,
-                          string_view description) && {
+  config_option_set&&
+  add(string_view category, string_view name, string_view description) && {
     return std::move(add<T>(category, name, description));
   }
 
@@ -154,8 +155,8 @@ public:
 
   /// Adds a config option to the set that synchronizes its value with `ref`.
   template <class T>
-  config_option_set&& add(T& ref, string_view name,
-                          string_view description) && {
+  config_option_set&&
+  add(T& ref, string_view name, string_view description) && {
     return std::move(add(ref, "global", name, description));
   }
 
@@ -168,12 +169,12 @@ public:
   // -- parsing ----------------------------------------------------------------
 
   /// Parses a given range as CLI arguments into `config`.
-  parse_result parse(settings& config, argument_iterator begin,
-                     argument_iterator end) const;
+  parse_result
+  parse(settings& config, argument_iterator begin, argument_iterator end) const;
 
   /// Parses a given range as CLI arguments into `config`.
-  parse_result parse(settings& config,
-                     const std::vector<std::string>& args) const;
+  parse_result
+  parse(settings& config, const std::vector<std::string>& args) const;
 
 private:
   // -- member variables -------------------------------------------------------

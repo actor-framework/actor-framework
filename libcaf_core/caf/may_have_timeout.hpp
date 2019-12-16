@@ -28,20 +28,16 @@ class behavior;
 template <class T>
 struct may_have_timeout {
   static constexpr bool value = false;
-
 };
 
 template <>
 struct may_have_timeout<behavior> {
   static constexpr bool value = true;
-
 };
 
 template <class F>
 struct may_have_timeout<timeout_definition<F>> {
   static constexpr bool value = true;
-
 };
 
 } // namespace caf
-

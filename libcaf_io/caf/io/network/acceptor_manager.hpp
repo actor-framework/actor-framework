@@ -18,13 +18,14 @@
 
 #pragma once
 
+#include "caf/detail/io_export.hpp"
 #include "caf/io/network/manager.hpp"
 
 namespace caf::io::network {
 
 /// An acceptor manager configures an acceptor and provides
 /// callbacks for incoming connections as well as for error handling.
-class acceptor_manager : public manager {
+class CAF_IO_EXPORT acceptor_manager : public manager {
 public:
   ~acceptor_manager() override;
 
@@ -41,5 +42,4 @@ public:
   virtual std::string addr() const = 0;
 };
 
-} // namespace caf
-
+} // namespace caf::io::network

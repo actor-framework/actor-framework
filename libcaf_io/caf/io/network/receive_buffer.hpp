@@ -23,11 +23,12 @@
 #include <memory>
 
 #include "caf/allowed_unsafe_message_type.hpp"
+#include "caf/detail/io_export.hpp"
 
 namespace caf::io::network {
 
 /// A container that does not call constructors and destructors for its values.
-class receive_buffer {
+class CAF_IO_EXPORT receive_buffer {
 public:
   using value_type = char;
   using size_type = size_t;
@@ -40,8 +41,8 @@ public:
   using const_iterator = const_pointer;
   using reverse_iterator = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-  using buffer_ptr = std::unique_ptr<value_type[],
-                                     std::default_delete<value_type[]>>;
+  using buffer_ptr
+    = std::unique_ptr<value_type[], std::default_delete<value_type[]>>;
 
   /// Create an empty container.
   receive_buffer() noexcept;
@@ -194,7 +195,8 @@ public:
   void push_back(value_type value);
 
 private:
-  // Increse the buffer capacity, maintaining its data. May invalidate iterators.
+  // Increse the buffer capacity, maintaining its data. May invalidate
+  // iterators.
   void increase_by(size_t bytes);
 
   // Reduce the buffer capacity, maintaining its data. May invalidate iterators.
@@ -205,5 +207,4 @@ private:
   size_type size_;
 };
 
-} // namespace caf
-
+} // namespace caf::io::network

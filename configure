@@ -34,8 +34,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --with-qt-prefix=PATH       prefix path for Qt5 cmake modules
     --with-openssl=PATH         path to OpenSSL library and headers
     --dual-build                build using both gcc and clang
-    --build-static              build as static and shared library
-    --build-static-only         build as static library only
+    --build-static              build as static library
     --static-runtime            build with static C++ runtime
     --more-warnings             enables most warnings
     --no-compiler-check         disable compiler version check
@@ -329,10 +328,7 @@ while [ $# -ne 0 ]; do
             append_cache_entry CAF_NO_OPENSSL BOOL yes
             ;;
         --build-static)
-            append_cache_entry CAF_BUILD_STATIC BOOL yes
-            ;;
-        --build-static-only)
-            append_cache_entry CAF_BUILD_STATIC_ONLY BOOL yes
+            append_cache_entry BUILD_SHARED_LIBS BOOL no
             ;;
         --static-runtime)
             append_cache_entry CAF_BUILD_STATIC_RUNTIME BOOL yes

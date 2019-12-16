@@ -86,5 +86,4 @@ private:
   Self* self_;
 };
 
-} // namespace caf
-
+} // namespace caf::detail

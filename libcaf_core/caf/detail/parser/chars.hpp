@@ -20,6 +20,9 @@
 
 #include <cstring>
 
+#include "caf/config.hpp"
+#include "caf/detail/core_export.hpp"
+
 namespace caf::detail::parser {
 
 struct any_char_t {};
@@ -42,15 +45,14 @@ inline bool in_whitelist(bool (*filter)(char), char ch) {
   return filter(ch);
 }
 
-extern const char alphanumeric_chars[63];
+CAF_CORE_EXPORT extern const char alphanumeric_chars[63];
 
-extern const char alphabetic_chars[53];
+CAF_CORE_EXPORT extern const char alphabetic_chars[53];
 
-extern const char hexadecimal_chars[23];
+CAF_CORE_EXPORT extern const char hexadecimal_chars[23];
 
-extern const char decimal_chars[11];
+CAF_CORE_EXPORT extern const char decimal_chars[11];
 
-extern const char octal_chars[9];
+CAF_CORE_EXPORT extern const char octal_chars[9];
 
-} // namespace caf
-
+} // namespace caf::detail::parser

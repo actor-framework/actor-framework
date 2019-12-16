@@ -24,15 +24,14 @@
 
 namespace caf::detail {
 
-template<class T>
+template <class T>
 bool cas_weak(std::atomic<T>* obj, T* expected, T desired) {
-# if (defined(CAF_CLANG) && CAF_COMPILER_VERSION < 30401)                      \
-     || (defined(CAF_GCC) && CAF_COMPILER_VERSION < 40803)
+#if (defined(CAF_CLANG) && CAF_COMPILER_VERSION < 30401)                       \
+  || (defined(CAF_GCC) && CAF_COMPILER_VERSION < 40803)
   return std::atomic_compare_exchange_strong(obj, expected, desired);
-# else
+#else
   return std::atomic_compare_exchange_weak(obj, expected, desired);
-# endif
+#endif
 }
 
-} // namespace caf
-
+} // namespace caf::detail

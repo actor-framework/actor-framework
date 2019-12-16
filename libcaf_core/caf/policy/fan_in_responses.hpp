@@ -129,7 +129,7 @@ private:
   std::shared_ptr<size_t> pending;
 };
 
-} // namespace caf
+} // namespace caf::detail
 
 namespace caf::policy {
 
@@ -214,4 +214,4 @@ private:
   message_id_list ids_;
 };
 
-} // namespace caf
+} // namespace caf::policy

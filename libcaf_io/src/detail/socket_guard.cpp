@@ -50,4 +50,4 @@ void socket_guard::close() {
   }
 }
 
-} // namespace caf
+} // namespace caf::detail

@@ -20,9 +20,8 @@
 
 #include <functional>
 
-#include "caf/type_erased_value.hpp"
-
 #include "caf/detail/type_erased_value_impl.hpp"
+#include "caf/type_erased_value.hpp"
 
 namespace caf {
 
@@ -35,4 +34,3 @@ make_type_erased_view(T& x) {
 }
 
 } // namespace caf
-

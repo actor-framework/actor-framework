@@ -80,4 +80,4 @@ private:
   }
 };
 
-} // namespace caf
+} // namespace caf::mixin

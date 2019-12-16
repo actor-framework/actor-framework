@@ -20,6 +20,7 @@
 
 #include <memory>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf {
@@ -28,7 +29,7 @@ namespace caf {
 /// enables users to inject application-specific instrumentation into CAF's
 /// messaging layer. CAF provides no default implementation for this
 /// customization point.
-class tracing_data {
+class CAF_CORE_EXPORT tracing_data {
 public:
   virtual ~tracing_data();
 
@@ -43,15 +44,17 @@ public:
 using tracing_data_ptr = std::unique_ptr<tracing_data>;
 
 /// @relates tracing_data
-error inspect(serializer& sink, const tracing_data_ptr& x);
+CAF_CORE_EXPORT error inspect(serializer& sink, const tracing_data_ptr& x);
 
 /// @relates tracing_data
-error_code<sec> inspect(binary_serializer& sink, const tracing_data_ptr& x);
+CAF_CORE_EXPORT error_code<sec>
+inspect(binary_serializer& sink, const tracing_data_ptr& x);
 
 /// @relates tracing_data
-error inspect(deserializer& source, tracing_data_ptr& x);
+CAF_CORE_EXPORT error inspect(deserializer& source, tracing_data_ptr& x);
 
 /// @relates tracing_data
-error_code<sec> inspect(binary_deserializer& source, tracing_data_ptr& x);
+CAF_CORE_EXPORT error_code<sec>
+inspect(binary_deserializer& source, tracing_data_ptr& x);
 
 } // namespace caf

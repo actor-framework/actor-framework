@@ -18,23 +18,23 @@
 
 #pragma once
 
-#include <string>
 #include <iterator>
+#include <string>
 #include <typeinfo>
 
-
 #include "caf/config.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_cow_ptr.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/type_erased_tuple.hpp"
 
-#include "caf/detail/type_list.hpp"
-
 namespace caf::detail {
 
-class message_data : public ref_counted, public type_erased_tuple {
+class CAF_CORE_EXPORT message_data : public ref_counted,
+                                     public type_erased_tuple {
 public:
   // -- nested types -----------------------------------------------------------
 
@@ -58,5 +58,4 @@ public:
   bool shared() const noexcept override;
 };
 
-} // namespace caf
-
+} // namespace caf::detail

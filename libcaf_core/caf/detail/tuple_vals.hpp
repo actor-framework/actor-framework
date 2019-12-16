@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include <tuple>
 #include <stdexcept>
+#include <tuple>
 
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
@@ -37,7 +37,7 @@
 
 #define CAF_TUPLE_VALS_DISPATCH(x)                                             \
   case x:                                                                      \
-    return tuple_inspect_delegate<x, sizeof...(Ts)-1>(data_, f)
+    return tuple_inspect_delegate<x, sizeof...(Ts) - 1>(data_, f)
 
 namespace caf::detail {
 
@@ -82,8 +82,8 @@ public:
   // -- friend functions -------------------------------------------------------
 
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f,
-                                                 tuple_vals_impl& x) {
+  friend typename Inspector::result_type
+  inspect(Inspector& f, tuple_vals_impl& x) {
     return apply_args(f, get_indices(x.data_), x.data_);
   }
 
@@ -91,8 +91,7 @@ public:
 
   template <class... Us>
   tuple_vals_impl(Us&&... xs)
-      : data_(std::forward<Us>(xs)...),
-        types_{{make_rtti_pair<Ts>()...}} {
+    : data_(std::forward<Us>(xs)...), types_{{make_rtti_pair<Ts>()...}} {
     // nop
   }
 
@@ -183,13 +182,13 @@ private:
 
   template <class F, size_t N>
   auto rec_dispatch(size_t, F& f, tup_ptr_access_pos<N, N>)
-  -> decltype(f(std::declval<int&>())) {
+    -> decltype(f(std::declval<int&>())) {
     return tuple_inspect_delegate<N, N>(data_, f);
   }
 
   template <class F, size_t X, size_t N>
   auto rec_dispatch(size_t pos, F& f, tup_ptr_access_pos<X, N> token)
-  -> decltype(f(std::declval<int&>())) {
+    -> decltype(f(std::declval<int&>())) {
     return pos == X ? tuple_inspect_delegate<X, N>(data_, f)
                     : rec_dispatch(pos, f, next(token));
   }
@@ -218,5 +217,4 @@ public:
   }
 };
 
-} // namespace caf
-
+} // namespace caf::detail

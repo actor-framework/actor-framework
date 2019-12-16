@@ -33,6 +33,4 @@ bool is_ichar(char c) {
   return c == C || c == (C - 32);
 }
 
-} // namespace caf
-
-
+} // namespace caf::detail::parser

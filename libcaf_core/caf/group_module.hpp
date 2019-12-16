@@ -18,23 +18,28 @@
 
 #pragma once
 
-#include <string>
 #include <memory>
+#include <string>
 
-#include "caf/fwd.hpp"
+#include "caf/abstract_channel.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/attachable.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/fwd.hpp"
 #include "caf/ref_counted.hpp"
-#include "caf/abstract_channel.hpp"
 
 namespace caf {
 
 /// Interface for user-defined multicast implementations.
-class group_module {
+class CAF_CORE_EXPORT group_module {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
   group_module(actor_system& sys, std::string mname);
+
+  group_module(const group_module&) = delete;
+
+  group_module& operator=(const group_module&) = delete;
 
   virtual ~group_module();
 
@@ -71,4 +76,3 @@ private:
 };
 
 } // namespace caf
-

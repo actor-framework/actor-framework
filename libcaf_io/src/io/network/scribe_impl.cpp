@@ -93,4 +93,4 @@ void scribe_impl::remove_from_loop() {
   stream_.passivate();
 }
 
-} // namespace caf
+} // namespace caf::io::network

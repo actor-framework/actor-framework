@@ -36,8 +36,8 @@
 namespace caf {
 
 /// Sends `to` a message under the identity of `from` with priority `prio`.
-template <message_priority P = message_priority::normal,
-          class Source = actor, class Dest = actor, class... Ts>
+template <message_priority P = message_priority::normal, class Source = actor,
+          class Dest = actor, class... Ts>
 void send_as(const Source& src, const Dest& dest, Ts&&... xs) {
   static_assert(sizeof...(Ts) > 0, "no message to send");
   using token = detail::type_list<detail::strip_and_convert_t<Ts>...>;
@@ -45,24 +45,15 @@ void send_as(const Source& src, const Dest& dest, Ts&&... xs) {
                 "statically typed actors can only send() to other "
                 "statically typed actors; use anon_send() or request() when "
                 "communicating with dynamically typed actors");
-  static_assert(response_type_unbox<
-                  signatures_of_t<Dest>,
-                  token
-                >::valid,
+  static_assert(response_type_unbox<signatures_of_t<Dest>, token>::valid,
                 "receiver does not accept given message");
   // TODO: this only checks one way, we should check for loops
-  static_assert(is_void_response<
-                  response_type_unbox_t<
-                    signatures_of_t<Dest>,
-                    token>
-                >::value
-                ||  response_type_unbox<
-                      signatures_of_t<Source>,
-                      response_type_unbox_t<
-                        signatures_of_t<Dest>,
-                        token>
-                    >::valid,
-                "this actor does not accept the response message");
+  static_assert(
+    is_void_response<response_type_unbox_t<signatures_of_t<Dest>, token>>::value
+      || response_type_unbox<
+        signatures_of_t<Source>,
+        response_type_unbox_t<signatures_of_t<Dest>, token>>::valid,
+    "this actor does not accept the response message");
   if (dest)
     dest->eq_impl(make_message_id(P), actor_cast<strong_actor_ptr>(src),
                   nullptr, std::forward<Ts>(xs)...);
@@ -73,9 +64,8 @@ template <message_priority P = message_priority::normal, class Source,
 void unsafe_send_as(Source* src, const Dest& dest, Ts&&... xs) {
   static_assert(sizeof...(Ts) > 0, "no message to send");
   if (dest)
-    actor_cast<abstract_actor*>(dest)->eq_impl(make_message_id(P),
-                                               src->ctrl(), src->context(),
-                                               std::forward<Ts>(xs)...);
+    actor_cast<abstract_actor*>(dest)->eq_impl(
+      make_message_id(P), src->ctrl(), src->context(), std::forward<Ts>(xs)...);
 }
 
 template <class... Ts>
@@ -100,8 +90,8 @@ void unsafe_response(local_actor* self, strong_actor_ptr src,
 }
 
 /// Anonymously sends `dest` a message.
-template <message_priority P = message_priority::normal,
-          class Dest = actor, class... Ts>
+template <message_priority P = message_priority::normal, class Dest = actor,
+          class... Ts>
 void anon_send(const Dest& dest, Ts&&... xs) {
   static_assert(sizeof...(Ts) > 0, "no message to send");
   using token = detail::type_list<detail::strip_and_convert_t<Ts>...>;
@@ -168,4 +158,3 @@ inline void anon_send_exit(const weak_actor_ptr& to, exit_reason reason) {
 }
 
 } // namespace caf
-

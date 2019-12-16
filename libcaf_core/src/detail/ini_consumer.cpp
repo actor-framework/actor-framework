@@ -195,4 +195,4 @@ void ini_consumer::value_impl(config_value&& x) {
   }
 }
 
-} // namespace caf
+} // namespace caf::detail

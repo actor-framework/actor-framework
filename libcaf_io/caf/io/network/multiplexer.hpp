@@ -18,30 +18,29 @@
 
 #pragma once
 
+#include <functional>
 #include <string>
 #include <thread>
-#include <functional>
 
-#include "caf/extend.hpp"
-#include "caf/expected.hpp"
-#include "caf/resumable.hpp"
-#include "caf/make_counted.hpp"
+#include "caf/detail/io_export.hpp"
 #include "caf/execution_unit.hpp"
-
-#include "caf/io/fwd.hpp"
+#include "caf/expected.hpp"
+#include "caf/extend.hpp"
 #include "caf/io/accept_handle.hpp"
 #include "caf/io/connection_handle.hpp"
-
-#include "caf/io/network/protocol.hpp"
+#include "caf/io/fwd.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/native_socket.hpp"
+#include "caf/io/network/protocol.hpp"
+#include "caf/make_counted.hpp"
+#include "caf/resumable.hpp"
 
 namespace caf::io::network {
 
 class multiplexer_backend;
 
 /// Low-level backend for IO multiplexing.
-class multiplexer : public execution_unit {
+class CAF_IO_EXPORT multiplexer : public execution_unit {
 public:
   explicit multiplexer(actor_system* sys);
 
@@ -52,8 +51,8 @@ public:
   /// Tries to connect to `host` on given `port` and returns a `scribe` instance
   /// on success.
   /// @threadsafe
-  virtual expected<scribe_ptr> new_tcp_scribe(const std::string& host,
-                                              uint16_t port) = 0;
+  virtual expected<scribe_ptr>
+  new_tcp_scribe(const std::string& host, uint16_t port) = 0;
 
   /// Creates a new doorman from a native socket handle.
   /// @threadsafe
@@ -62,16 +61,18 @@ public:
   /// Tries to create an unbound TCP doorman bound to `port`, optionally
   /// accepting only connections from IP address `in`.
   /// @warning Do not call from outside the multiplexer's event loop.
-  virtual expected<doorman_ptr> new_tcp_doorman(uint16_t port,
-                                                const char* in = nullptr,
-                                                bool reuse_addr = false) = 0;
+  virtual expected<doorman_ptr>
+  new_tcp_doorman(uint16_t port, const char* in = nullptr,
+                  bool reuse_addr = false)
+    = 0;
 
   /// Creates a new `datagram_servant` from a native socket handle.
   /// @threadsafe
   virtual datagram_servant_ptr new_datagram_servant(native_socket fd) = 0;
 
   virtual datagram_servant_ptr
-  new_datagram_servant_for_endpoint(native_socket fd, const ip_endpoint& ep) = 0;
+  new_datagram_servant_for_endpoint(native_socket fd, const ip_endpoint& ep)
+    = 0;
 
   /// Create a new `datagram_servant` to contact a remote endpoint `host` and
   /// `port`.
@@ -84,10 +85,11 @@ public:
   /// @warning Do not call from outside the multiplexer's event loop.
   virtual expected<datagram_servant_ptr>
   new_local_udp_endpoint(uint16_t port, const char* in = nullptr,
-                         bool reuse_addr = false) = 0;
+                         bool reuse_addr = false)
+    = 0;
 
   /// Simple wrapper for runnables
-  class runnable : public resumable, public ref_counted {
+  class CAF_IO_EXPORT runnable : public resumable, public ref_counted {
   public:
     subtype_t subtype() const override;
     void intrusive_ptr_add_ref_impl() override;
@@ -96,7 +98,7 @@ public:
 
   /// Makes sure the multipler does not exit its event loop until
   /// the destructor of `supervisor` has been called.
-  class supervisor {
+  class CAF_IO_EXPORT supervisor {
   public:
     virtual ~supervisor();
   };
@@ -138,7 +140,8 @@ public:
   void post(F fun) {
     struct impl : runnable {
       F f;
-      impl(F&& mf) : f(std::move(mf)) { }
+      impl(F&& mf) : f(std::move(mf)) {
+      }
       resume_result resume(execution_unit*, size_t) override {
         f();
         return done;
@@ -167,5 +170,4 @@ protected:
 
 using multiplexer_ptr = std::unique_ptr<multiplexer>;
 
-} // namespace caf
-
+} // namespace caf::io::network

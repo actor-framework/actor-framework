@@ -20,18 +20,19 @@
 
 #include <cstdint>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf {
 
 /// Computes credit for an attached source.
-class credit_controller {
+class CAF_CORE_EXPORT credit_controller {
 public:
   // -- member types -----------------------------------------------------------
 
   /// Wraps an assignment of the controller to its source.
-  struct assignment {
+  struct CAF_CORE_EXPORT assignment {
     /// Stores how much credit we assign to the source.
     int32_t credit;
 

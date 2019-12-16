@@ -18,7 +18,6 @@
 
 #pragma once
 
-
 namespace caf::io::basp {
 
 /// @addtogroup BASP
@@ -37,13 +36,11 @@ enum connection_state {
 
 /// @relates connection_state
 inline std::string to_string(connection_state x) {
-  return x == await_header ? "await_header"
-                           : (x == await_payload ? "await_payload"
-                                                 : "close_connection");
+  return x == await_header
+           ? "await_header"
+           : (x == await_payload ? "await_payload" : "close_connection");
 }
 
 /// @}
 
-} // namespace caf
-
-
+} // namespace caf::io::basp
