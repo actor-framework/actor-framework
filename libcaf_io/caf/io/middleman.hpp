@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <chrono>
 #include <map>
 #include <memory>
 #include <thread>
@@ -34,6 +35,7 @@
 #include "caf/node_id.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/send.hpp"
+#include "caf/timespan.hpp"
 
 namespace caf::io {
 
@@ -156,7 +158,7 @@ public:
   template <class Handle>
   expected<Handle>
   remote_spawn(const node_id& nid, std::string name, message args,
-               timespan timeout = timespan{60000000000}) {
+               timespan timeout = timespan{std::chrono::minutes{1}}) {
     if (!nid || name.empty())
       return sec::invalid_argument;
     auto res = remote_spawn_impl(nid, name, args,

@@ -27,6 +27,7 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/none.hpp"
 #include "caf/timeout_definition.hpp"
+#include "caf/timespan.hpp"
 
 namespace caf {
 

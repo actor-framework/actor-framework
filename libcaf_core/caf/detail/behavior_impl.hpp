@@ -38,6 +38,7 @@
 #include "caf/response_promise.hpp"
 #include "caf/skip.hpp"
 #include "caf/timeout_definition.hpp"
+#include "caf/timespan.hpp"
 #include "caf/typed_response_promise.hpp"
 #include "caf/variant.hpp"
 

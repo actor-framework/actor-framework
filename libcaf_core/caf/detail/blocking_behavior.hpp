@@ -22,6 +22,7 @@
 #include "caf/catch_all.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/timeout_definition.hpp"
+#include "caf/timespan.hpp"
 
 namespace caf::detail {
 
