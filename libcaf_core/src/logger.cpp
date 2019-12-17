@@ -18,14 +18,15 @@
 
 #include "caf/logger.hpp"
 
-#include <ctime>
-#include <thread>
-#include <cstring>
-#include <iomanip>
-#include <fstream>
 #include <algorithm>
 #include <condition_variable>
+#include <cstring>
+#include <ctime>
+#include <fstream>
+#include <iomanip>
+#include <thread>
 #include <unordered_map>
+#include <utility>
 
 #include "caf/config.hpp"
 
@@ -46,6 +47,12 @@
 namespace caf {
 
 namespace {
+
+// Stores the ID of the currently running actor.
+thread_local actor_id current_actor_id;
+
+// Stores a pointer to the system-wide logger.
+thread_local intrusive_ptr<logger> current_logger_ptr;
 
 constexpr string_view log_level_name[] = {
   "QUIET",
@@ -188,48 +195,6 @@ string_view reduce_symbol(std::ostream& out, string_view symbol) {
   return symbol;
 }
 
-#if defined(CAF_NO_THREAD_LOCAL)
-
-pthread_key_t s_key;
-pthread_once_t s_key_once = PTHREAD_ONCE_INIT;
-
-void logger_ptr_destructor(void* ptr) {
-  if (ptr != nullptr) {
-    intrusive_ptr_release(reinterpret_cast<logger*>(ptr));
-  }
-}
-
-void make_logger_ptr() {
-  pthread_key_create(&s_key, logger_ptr_destructor);
-}
-
-void set_current_logger(logger* x) {
-  pthread_once(&s_key_once, make_logger_ptr);
-  logger_ptr_destructor(pthread_getspecific(s_key));
-  if (x != nullptr)
-    intrusive_ptr_add_ref(x);
-  pthread_setspecific(s_key, x);
-}
-
-logger* get_current_logger() {
-  pthread_once(&s_key_once, make_logger_ptr);
-  return reinterpret_cast<logger*>(pthread_getspecific(s_key));
-}
-
-#else // !CAF_NO_THREAD_LOCAL
-
-thread_local intrusive_ptr<logger> current_logger;
-
-inline void set_current_logger(logger* x) {
-  current_logger.reset(x);
-}
-
-inline logger* get_current_logger() {
-  return current_logger.get();
-}
-
-#endif // CAF_NO_THREAD_LOCAL
-
 } // namespace
 
 logger::config::config()
@@ -296,15 +261,13 @@ std::string logger::line_builder::get() const {
 
 // returns the actor ID for the current thread
 
-thread_local actor_id _currentActoId;
 actor_id logger::thread_local_aid() {
-  return _currentActoId;
+  return current_actor_id;
 }
 
 actor_id logger::thread_local_aid(actor_id aid) {
-  auto old = _currentActoId;
-  _currentActoId = aid;
-  return old;
+  std::swap(current_actor_id, aid);
+  return aid;
 }
 
 void logger::log(event&& x) {
@@ -315,14 +278,11 @@ void logger::log(event&& x) {
 }
 
 void logger::set_current_actor_system(actor_system* x) {
-  if (x != nullptr)
-    set_current_logger(&x->logger());
-  else
-    set_current_logger(nullptr);
+  current_logger_ptr.reset(x != nullptr ? &x->logger() : nullptr);
 }
 
 logger* logger::current_logger() {
-  return get_current_logger();
+  return current_logger_ptr.get();
 }
 
 bool logger::accepts(unsigned level, atom_value cname) {
