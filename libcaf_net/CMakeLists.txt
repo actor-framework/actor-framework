@@ -106,8 +106,7 @@ set_target_properties(libcaf_net PROPERTIES
 
 # -- install library and header files ------------------------------------------
 
-install(FILES "${CMAKE_BINARY_DIR}/caf/detail/build_config.hpp"
-              "${CMAKE_BINARY_DIR}/caf/detail/net_export.hpp"
+install(FILES "${CMAKE_BINARY_DIR}/caf/detail/net_export.hpp"
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail")
 
 install(TARGETS libcaf_net
@@ -125,13 +124,13 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
 
 if(NOT CAF_NO_UNIT_TESTS)
   add_executable(caf-net-test
-                 "${CAF_ROOT_DIR}/../libcaf_test/src/caf-test.cpp"
-                 "${CAF_ROOT_DIR}/../libcaf_test/caf/test/unit_test.hpp"
-                 "${CAF_ROOT_DIR}/../libcaf_test/caf/test/unit_test_impl.hpp"
+                 "${PROJECT_SOURCE_DIR}/cmake/incubator-test.cpp"
+                 "${CAF_INCLUDE_DIR_TEST}/caf/test/unit_test.hpp"
+                 "${CAF_INCLUDE_DIR_TEST}/caf/test/unit_test_impl.hpp"
                  ${CAF_NET_TEST_SOURCES}
                  $<TARGET_OBJECTS:libcaf_net_obj>)
   target_compile_definitions(caf-net-test PRIVATE libcaf_net_EXPORTS)
-  target_link_libraries(caf-net-test ${CAF_EXTRA_LDFLAGS})
+  target_link_libraries(caf-net-test ${CAF_EXTRA_LDFLAGS} ${CAF_LIBRARIES})
   add_test_suites(caf-net-test
                   "${CMAKE_CURRENT_SOURCE_DIR}"
                   ${CAF_NET_TEST_SOURCES})

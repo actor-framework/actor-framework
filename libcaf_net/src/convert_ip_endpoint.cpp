@@ -18,6 +18,8 @@
 
 #include "caf/detail/convert_ip_endpoint.hpp"
 
+#include <cstring>
+
 #include "caf/error.hpp"
 #include "caf/ipv4_endpoint.hpp"
 #include "caf/ipv6_endpoint.hpp"
