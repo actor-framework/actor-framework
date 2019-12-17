@@ -20,6 +20,7 @@
 
 #include "caf/behavior.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/blocking_behavior.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/typed_actor_util.hpp"
@@ -64,9 +65,9 @@ public:
 
   template <class Self, class F, class OnError>
   void receive(Self* self, F&& f, OnError&& g) const {
-    typename Self::accept_one_cond rc;
-    self->varargs_receive(rc, mid_, std::forward<F>(f),
-                          std::forward<OnError>(g));
+    behavior bhvr{std::forward<F>(f), std::forward<OnError>(g)};
+    auto blocking_bhvr = detail::make_blocking_behavior(&bhvr);
+    self->receive_response(mid_, make_timestamp(), blocking_bhvr);
   }
 
   message_id id() const noexcept {

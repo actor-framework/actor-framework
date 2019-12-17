@@ -131,6 +131,37 @@ void blocking_actor::launch(execution_unit*, bool, bool hide) {
   }, strong_actor_ptr{ctrl()}).detach();
 }
 
+void blocking_actor::receive_response(message_id id,
+                                      [[maybe_unused]] timestamp send_time,
+                                      detail::blocking_behavior& bhvr) {
+  CAF_LOG_TRACE(CAF_ARG(id) << CAF_ARG(send_time));
+  bool done = false;
+  auto f = [&](size_t, auto&, mailbox_element& x) -> intrusive::task_result {
+    if (id != x.mid)
+      return intrusive::task_result::skip;
+    CAF_LOG_RECEIVE_EVENT((&x));
+    CAF_BEFORE_PROCESSING(self, x, id, send_time);
+    // Blocking actors can nest receives => push/pop `current_element_`
+    auto prev = current_element_;
+    current_element_ = &x;
+    auto g = detail::make_scope_guard([&] { current_element_ = prev; });
+    if (bhvr.nested(x.content()) == none && bhvr.fallback(x).flag == rt_skip) {
+      // Invoke again with error if first attempt failed.
+      auto msg = make_message(
+        make_error(sec::unexpected_response, x.move_content_to_message()));
+      bhvr.nested(msg);
+    }
+    CAF_AFTER_PROCESSING(this, invoke_message_result::consumed);
+    CAF_LOG_SKIP_OR_FINALIZE_EVENT(invoke_message_result::consumed);
+    done = true;
+    return intrusive::task_result::stop;
+  };
+  do {
+    await_data();
+    mailbox_.new_round(3, f);
+  } while (!done);
+}
+
 blocking_actor::receive_while_helper
 blocking_actor::receive_while(std::function<bool()> stmt) {
   return {this, std::move(stmt)};
@@ -171,14 +202,9 @@ blocking_actor::mailbox_visitor::operator()(mailbox_element& x) {
       done = true;
       return intrusive::task_result::stop;
     };
-    // Skip messages that don't match our message ID.
-    if (mid.is_response()) {
-      if (mid != x.mid) {
-        return intrusive::task_result::skip;
-      }
-    } else if (x.mid.is_response()) {
+    // Response messages get handled via receive_response().
+    if (x.mid.is_response())
       return intrusive::task_result::skip;
-    }
     // Automatically unlink from actors after receiving an exit.
     if (x.content().match_elements<exit_msg>())
       self->unlink_from(x.content().get_as<exit_msg>(0).source);
@@ -199,19 +225,8 @@ blocking_actor::mailbox_visitor::operator()(mailbox_element& x) {
           visitor.visit(sres);
           return check_if_done();
         }
+        return intrusive::task_result::skip;
       }
-        // Response handlers must get re-invoked with an error when receiving an
-        // unexpected message.
-        if (mid.is_response()) {
-          auto err = make_error(sec::unexpected_response,
-                                x.move_content_to_message());
-          mailbox_element_view<error> tmp{std::move(x.sender), x.mid,
-                                          std::move(x.stages), err};
-          self->current_element_ = &tmp;
-          bhvr.nested(tmp.content());
-          return check_if_done();
-        }
-        CAF_ANNOTATE_FALLTHROUGH;
       case match_case::skip:
         return intrusive::task_result::skip;
     }
@@ -229,13 +244,12 @@ blocking_actor::mailbox_visitor::operator()(mailbox_element& x) {
 }
 
 void blocking_actor::receive_impl(receive_cond& rcc,
-                                  message_id mid,
                                   detail::blocking_behavior& bhvr) {
-  CAF_LOG_TRACE(CAF_ARG(mid));
+  CAF_LOG_TRACE("");
   // Set to `true` by the visitor when done.
   bool done = false;
   // Make sure each receive sees all mailbox elements.
-  mailbox_visitor f{this, done, rcc, mid, bhvr};
+  mailbox_visitor f{this, done, rcc, bhvr};
   mailbox().flush_cache();
   // Check pre-condition once before entering the message consumption loop. The
   // consumer performs any future check on pre and post conditions via
@@ -285,7 +299,7 @@ mailbox_element_ptr blocking_actor::dequeue() {
   return result;
 }
 
-void blocking_actor::varargs_tup_receive(receive_cond& rcc, message_id mid,
+void blocking_actor::varargs_tup_receive(receive_cond& rcc,
                                          std::tuple<behavior&>& tup) {
   using namespace detail;
   auto& bhvr = std::get<0>(tup);
@@ -294,10 +308,10 @@ void blocking_actor::varargs_tup_receive(receive_cond& rcc, message_id mid,
       bhvr.handle_timeout();
     };
     auto fun = make_blocking_behavior(&bhvr, std::move(tmp));
-    receive_impl(rcc, mid, fun);
+    receive_impl(rcc, fun);
   } else {
     auto fun = make_blocking_behavior(&bhvr);
-    receive_impl(rcc, mid, fun);
+    receive_impl(rcc, fun);
   }
 }
 

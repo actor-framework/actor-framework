@@ -26,6 +26,7 @@
 
 #include "caf/behavior.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/blocking_behavior.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/typed_actor_util.hpp"
@@ -190,10 +191,11 @@ public:
         g(err);
       }
     };
-    for (auto id : ids_) {
-      typename Self::accept_one_cond rc;
-      self->varargs_receive(rc, id, helper.wrap(), error_handler);
-    }
+    auto ts = make_timestamp();
+    behavior bhvr{helper.wrap(), error_handler};
+    auto blocking_bhvr = detail::make_blocking_behavior(&bhvr);
+    for (auto id : ids_)
+      self->receive_response(id, ts, blocking_bhvr);
   }
 
   const message_id_list& ids() const noexcept {

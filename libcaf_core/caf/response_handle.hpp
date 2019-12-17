@@ -28,6 +28,7 @@
 #include "caf/system_messages.hpp"
 #include "caf/typed_behavior.hpp"
 
+#include "caf/detail/blocking_behavior.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 
@@ -145,8 +146,9 @@ public:
     // TODO: this bypasses the policy. Either we deprecate `catch_all` or *all*
     //       policies must support it. Currently, we only enable this member
     //       function on the trivial policy for backwards compatibility.
-    typename actor_type::accept_one_cond rc;
-    self_->varargs_receive(rc, id(), std::move(g), std::move(f));
+    behavior bhvr{g};
+    auto blocking_bhvr = detail::make_blocking_behavior(&bhvr, std::move(f));
+    self_->receive_response(id(), make_timestamp(), blocking_bhvr);
   }
 
   // -- properties -------------------------------------------------------------

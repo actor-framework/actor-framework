@@ -156,7 +156,7 @@ public:
         }
       };
       cond rc{std::move(stmt_)};
-      self->varargs_receive(rc, make_message_id(), std::forward<Ts>(xs)...);
+      self->varargs_receive(rc, std::forward<Ts>(xs)...);
     }
   };
 
@@ -183,7 +183,7 @@ public:
         }
       };
       cond rc{*this};
-      self->varargs_receive(rc, make_message_id(), std::forward<Ts>(xs)...);
+      self->varargs_receive(rc, std::forward<Ts>(xs)...);
     }
   };
 
@@ -215,7 +215,6 @@ public:
     blocking_actor* self;
     bool& done;
     receive_cond& rcc;
-    message_id mid;
     detail::blocking_behavior& bhvr;
 
     // Dispatches messages with high and normal priority to the same handler.
@@ -253,13 +252,16 @@ public:
 
   // -- modifiers --------------------------------------------------------------
 
-  /// Dequeues the next message from the mailbox that is
-  /// matched by given behavior.
+  /// Blocks until receiving a matching message.
   template <class... Ts>
   void receive(Ts&&... xs) {
     accept_one_cond rc;
-    varargs_receive(rc, make_message_id(), std::forward<Ts>(xs)...);
+    varargs_receive(rc, std::forward<Ts>(xs)...);
   }
+
+  /// Blocks until receiving the awaited response message.
+  void receive_response(message_id id, timestamp send_time,
+                        detail::blocking_behavior& bhvr);
 
   /// Receives messages for range `[begin, first)`.
   /// Semantically equal to:
@@ -322,9 +324,7 @@ public:
   template <class... Ts>
   do_receive_helper do_receive(Ts&&... xs) {
     auto tup = std::make_tuple(std::forward<Ts>(xs)...);
-    auto cb = [=](receive_cond& rc) mutable {
-      varargs_tup_receive(rc, make_message_id(), tup);
-    };
+    auto cb = [=](receive_cond& rc) mutable { varargs_tup_receive(rc, tup); };
     return {cb};
   }
 
@@ -371,8 +371,7 @@ public:
 
   /// Receives messages until either a pre- or postcheck of `rcc` fails.
   template <class... Ts>
-  void varargs_tup_receive(receive_cond& rcc, message_id mid,
-                           std::tuple<Ts...>& tup) {
+  void varargs_tup_receive(receive_cond& rcc, std::tuple<Ts...>& tup) {
     using namespace detail;
     static_assert(sizeof...(Ts), "at least one argument required");
     // extract how many arguments are actually the behavior part,
@@ -389,23 +388,21 @@ public:
                          >::type;
     make_blocking_behavior_t factory;
     auto fun = apply_moved_args_prefixed(factory, tail_indices{}, tup, &bhvr);
-    receive_impl(rcc, mid, fun);
+    receive_impl(rcc, fun);
   }
 
   /// Receives messages until either a pre- or postcheck of `rcc` fails.
-  void varargs_tup_receive(receive_cond& rcc, message_id mid,
-                           std::tuple<behavior&>& tup);
+  void varargs_tup_receive(receive_cond& rcc, std::tuple<behavior&>& tup);
 
   /// Receives messages until either a pre- or postcheck of `rcc` fails.
   template <class... Ts>
-  void varargs_receive(receive_cond& rcc, message_id mid, Ts&&... xs) {
+  void varargs_receive(receive_cond& rcc, Ts&&... xs) {
     auto tup = std::forward_as_tuple(std::forward<Ts>(xs)...);
-    varargs_tup_receive(rcc, mid, tup);
+    varargs_tup_receive(rcc, tup);
   }
 
   /// Receives messages until either a pre- or postcheck of `rcc` fails.
-  void receive_impl(receive_cond& rcc, message_id mid,
-                    detail::blocking_behavior& bhvr);
+  void receive_impl(receive_cond& rcc, detail::blocking_behavior& bhvr);
 
   bool cleanup(error&& fail_state, execution_unit* host) override;
 
