@@ -112,9 +112,9 @@ A SNocs workspace is provided by GitHub user
 
 ## Supported Compilers
 
-* GCC >= 4.8.3
-* Clang >= 3.2
-* MSVC >= 2015, update 3
+* GCC >= 7
+* Clang >= 4
+* MSVC >= 2019
 
 ## Supported Operating Systems
 
@@ -127,7 +127,6 @@ A SNocs workspace is provided by GitHub user
 
 * Doxygen (for the `doxygen` target)
 * LaTeX (for the `manual` target)
-* Pandoc and Python with pandocfilters (for the `rst` target)
 
 ## Scientific Use
 

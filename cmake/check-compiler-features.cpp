@@ -10,10 +10,6 @@
 #  error "No support for 'if constexpr' (__cpp_if_constexpr)"
 #endif
 
-// Unfortunately there's no feature test macro for thread_local. By putting this
-// here, at least we'll get a compiler error on unsupported platforms.
-[[maybe_unused]] thread_local int foo;
-
 int main(int, char**) {
   return 0;
 }

@@ -645,9 +645,9 @@ protected:
 
 template <class... Ts>
 struct test_coordinator_fixture_fetch_helper {
-  template <class Self, class Interface>
+  template <class Self, template <class> class Policy, class Interface>
   std::tuple<Ts...>
-  operator()(caf::response_handle<Self, Interface, true>& from) const {
+  operator()(caf::response_handle<Self, Policy<Interface>>& from) const {
     std::tuple<Ts...> result;
     from.receive([&](Ts&... xs) { result = std::make_tuple(std::move(xs)...); },
                  [&](caf::error& err) {
@@ -659,8 +659,8 @@ struct test_coordinator_fixture_fetch_helper {
 
 template <class T>
 struct test_coordinator_fixture_fetch_helper<T> {
-  template <class Self, class Interface>
-  T operator()(caf::response_handle<Self, Interface, true>& from) const {
+  template <class Self, template <class> class Policy, class Interface>
+  T operator()(caf::response_handle<Self, Policy<Interface>>& from) const {
     T result;
     from.receive([&](T& x) { result = std::move(x); },
                  [&](caf::error& err) {

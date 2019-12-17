@@ -58,15 +58,6 @@
 #include "caf/mixin/subscriber.hpp"
 
 namespace caf {
-namespace mixin {
-
-template <>
-struct is_blocking_requester<blocking_actor> : std::true_type { };
-
-} // namespace caf
-} // namespace mixin
-
-namespace caf {
 
 /// A thread-mapped or context-switching actor using a blocking
 /// receive rather than a behavior-stack based message processing.
