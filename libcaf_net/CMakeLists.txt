@@ -89,7 +89,7 @@ if(BUILD_SHARED_LIBS AND NOT WIN32)
   target_compile_options(libcaf_net_obj PRIVATE -fPIC)
 endif()
 
-target_link_libraries(libcaf_net PUBLIC ${CAF_EXTRA_LDFLAGS})
+target_link_libraries(libcaf_net PUBLIC ${CAF_EXTRA_LDFLAGS} ${CAF_LIBRARIES})
 
 generate_export_header(libcaf_net
                        EXPORT_MACRO_NAME CAF_NET_EXPORT
