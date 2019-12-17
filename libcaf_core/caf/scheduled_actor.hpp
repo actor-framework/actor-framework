@@ -188,8 +188,17 @@ public:
   /// A queue optimized for single-reader-many-writers.
   using mailbox_type = intrusive::fifo_inbox<mailbox_policy>;
 
+  /// Stores state for handling an outstanding response message.
+  struct response_handler {
+    /// Stores the callbacks for processing the response.
+    behavior bhvr;
+
+    /// Stores when the request was sent.
+    timestamp send_time;
+  };
+
   /// The message ID of an outstanding response with its callback.
-  using pending_response = std::pair<const message_id, behavior>;
+  using pending_response = std::pair<const message_id, response_handler>;
 
   /// A pointer to a scheduled actor.
   using pointer = scheduled_actor*;
@@ -688,7 +697,7 @@ public:
   }
 
   inline behavior& current_behavior() {
-    return !awaited_responses_.empty() ? awaited_responses_.front().second
+    return !awaited_responses_.empty() ? awaited_responses_.front().second.bhvr
                                        : bhvr_stack_.back();
   }
 
@@ -896,7 +905,8 @@ protected:
   std::forward_list<pending_response> awaited_responses_;
 
   /// Stores callbacks for multiplexed responses.
-  detail::unordered_flat_map<message_id, behavior> multiplexed_responses_;
+  detail::unordered_flat_map<message_id, response_handler>
+    multiplexed_responses_;
 
   /// Customization point for setting a default `message` callback.
   default_handler default_handler_;

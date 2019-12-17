@@ -18,10 +18,18 @@
 
 #include "caf/actor_profiler.hpp"
 
+#include "caf/message_id.hpp"
+
 namespace caf {
 
 actor_profiler::~actor_profiler() {
   // nop
+}
+
+void actor_profiler::before_processing(const local_actor& self,
+                                       const mailbox_element& element,
+                                       message_id, timestamp) {
+  before_processing(self, element);
 }
 
 } // namespace caf

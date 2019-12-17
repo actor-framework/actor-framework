@@ -30,56 +30,56 @@ raw_event_based_actor::raw_event_based_actor(actor_config& cfg)
 invoke_message_result raw_event_based_actor::consume(mailbox_element& x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   current_element_ = &x;
+  auto invoke = [](behavior& f, mailbox_element& in) -> bool {
+    return f(in.content()) != none;
+  };
+  // Short-circuit awaited responses. Don't trigger any logging if we skip here.
+  if (!awaited_responses_.empty()) {
+    auto& pr = awaited_responses_.front();
+    // Skip all messages until we receive the currently awaited response.
+    if (x.mid != pr.first)
+      return invoke_message_result::skipped;
+    CAF_LOG_RECEIVE_EVENT(current_element_);
+    CAF_BEFORE_PROCESSING(this, x, pr.first, pr.second.send_time);
+    auto f = std::move(pr.second.bhvr);
+    awaited_responses_.pop_front();
+    if (!invoke(f, x)) {
+      // Try again with error if first attempt failed.
+      auto msg = make_message(
+        make_error(sec::unexpected_response, x.move_content_to_message()));
+      f(msg);
+    }
+    CAF_AFTER_PROCESSING(this, invoke_message_result::consumed);
+    CAF_LOG_SKIP_OR_FINALIZE_EVENT(invoke_message_result::consumed);
+    return invoke_message_result::consumed;
+  }
+  // Handle multiplexed responses.
+  if (x.mid.is_response()) {
+    auto mrh = multiplexed_responses_.find(x.mid);
+    // Neither awaited nor multiplexed, probably an expired timeout. Discard
+    // without bothering the profiler.
+    if (mrh == multiplexed_responses_.end()) {
+      CAF_LOG_DEBUG("drop unexpected response:" << x);
+      return invoke_message_result::dropped;
+    }
+    CAF_LOG_RECEIVE_EVENT(current_element_);
+    CAF_BEFORE_PROCESSING(this, x, mrh->first, mrth->second.send_time);
+    auto bhvr = std::move(mrh->second.bhvr);
+    multiplexed_responses_.erase(mrh);
+    if (!invoke(bhvr, x)) {
+      // Try again with error if first attempt failed.
+      auto msg = make_message(
+        make_error(sec::unexpected_response, x.move_content_to_message()));
+      bhvr(msg);
+    }
+    CAF_AFTER_PROCESSING(this, invoke_message_result::consumed);
+    CAF_LOG_SKIP_OR_FINALIZE_EVENT(invoke_message_result::consumed);
+    return invoke_message_result::consumed;
+  }
   CAF_LOG_RECEIVE_EVENT(current_element_);
   CAF_BEFORE_PROCESSING(this, x);
   // Wrap the actual body for the function.
   auto body = [this, &x] {
-    // short-circuit awaited responses
-    if (!awaited_responses_.empty()) {
-      auto& pr = awaited_responses_.front();
-      // skip all messages until we receive the currently awaited response
-      if (x.mid != pr.first)
-        return invoke_message_result::skipped;
-      if (!pr.second(x.content())) {
-        // try again with error if first attempt failed
-        auto msg = make_message(
-          make_error(sec::unexpected_response, x.move_content_to_message()));
-        pr.second(msg);
-      }
-      awaited_responses_.pop_front();
-      return invoke_message_result::consumed;
-    }
-    // handle multiplexed responses
-    if (x.mid.is_response()) {
-      auto mrh = multiplexed_responses_.find(x.mid);
-      // neither awaited nor multiplexed, probably an expired timeout
-      if (mrh == multiplexed_responses_.end())
-        return invoke_message_result::dropped;
-      if (!mrh->second(x.content())) {
-        // try again with error if first attempt failed
-        auto msg = make_message(
-          make_error(sec::unexpected_response, x.move_content_to_message()));
-        mrh->second(msg);
-      }
-      multiplexed_responses_.erase(mrh);
-      return invoke_message_result::consumed;
-    }
-    auto& content = x.content();
-    //  handle timeout messages
-    if (x.content().type_token() == make_type_token<timeout_msg>()) {
-      auto& tm = content.get_as<timeout_msg>(0);
-      auto tid = tm.timeout_id;
-      CAF_ASSERT(x.mid.is_async());
-      if (is_active_receive_timeout(tid)) {
-        CAF_LOG_DEBUG("handle timeout message");
-        if (bhvr_stack_.empty())
-          return invoke_message_result::dropped;
-        bhvr_stack_.back().handle_timeout();
-        return invoke_message_result::consumed;
-      }
-      CAF_LOG_DEBUG("dropped expired timeout message");
-      return invoke_message_result::dropped;
-    }
     // handle everything else as ordinary message
     detail::default_invoke_result_visitor<event_based_actor> visitor{this};
     bool skipped = false;

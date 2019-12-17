@@ -534,14 +534,16 @@ void scheduled_actor::add_awaited_response_handler(message_id response_id,
                                                    behavior bhvr) {
   if (bhvr.timeout().valid())
     request_response_timeout(bhvr.timeout(), response_id);
-  awaited_responses_.emplace_front(response_id, std::move(bhvr));
+  awaited_responses_.emplace_front(
+    response_id, response_handler{std::move(bhvr), make_timestamp()});
 }
 
 void scheduled_actor::add_multiplexed_response_handler(message_id response_id,
                                                        behavior bhvr) {
   if (bhvr.timeout().valid())
     request_response_timeout(bhvr.timeout(), response_id);
-  multiplexed_responses_.emplace(response_id, std::move(bhvr));
+  multiplexed_responses_.emplace(
+    response_id, response_handler{std::move(bhvr), make_timestamp()});
 }
 
 scheduled_actor::message_category
@@ -630,51 +632,56 @@ scheduled_actor::categorize(mailbox_element& x) {
 invoke_message_result scheduled_actor::consume(mailbox_element& x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   current_element_ = &x;
+  auto invoke = [](behavior& f, mailbox_element& in) -> bool {
+    return f(in.content()) != none;
+  };
+  // Short-circuit awaited responses. Don't trigger any logging if we skip here.
+  if (!awaited_responses_.empty()) {
+    auto& pr = awaited_responses_.front();
+    // Skip all messages until we receive the currently awaited response.
+    if (x.mid != pr.first)
+      return invoke_message_result::skipped;
+    CAF_LOG_RECEIVE_EVENT(current_element_);
+    CAF_BEFORE_PROCESSING(this, x, pr.first, pr.second.send_time);
+    auto f = std::move(pr.second.bhvr);
+    awaited_responses_.pop_front();
+    if (!invoke(f, x)) {
+      // Try again with error if first attempt failed.
+      auto msg = make_message(
+        make_error(sec::unexpected_response, x.move_content_to_message()));
+      f(msg);
+    }
+    CAF_AFTER_PROCESSING(this, invoke_message_result::consumed);
+    CAF_LOG_SKIP_OR_FINALIZE_EVENT(invoke_message_result::consumed);
+    return invoke_message_result::consumed;
+  }
+  // Handle multiplexed responses.
+  if (x.mid.is_response()) {
+    auto mrh = multiplexed_responses_.find(x.mid);
+    // Neither awaited nor multiplexed, probably an expired timeout. Discard
+    // without bothering the profiler.
+    if (mrh == multiplexed_responses_.end()) {
+      CAF_LOG_DEBUG("drop unexpected response:" << x);
+      return invoke_message_result::dropped;
+    }
+    CAF_LOG_RECEIVE_EVENT(current_element_);
+    CAF_BEFORE_PROCESSING(this, x, mrh->first, mrth->second.send_time);
+    auto bhvr = std::move(mrh->second.bhvr);
+    multiplexed_responses_.erase(mrh);
+    if (!invoke(bhvr, x)) {
+      // Try again with error if first attempt failed.
+      auto msg = make_message(
+        make_error(sec::unexpected_response, x.move_content_to_message()));
+      bhvr(msg);
+    }
+    CAF_AFTER_PROCESSING(this, invoke_message_result::consumed);
+    CAF_LOG_SKIP_OR_FINALIZE_EVENT(invoke_message_result::consumed);
+    return invoke_message_result::consumed;
+  }
   CAF_LOG_RECEIVE_EVENT(current_element_);
   CAF_BEFORE_PROCESSING(this, x);
   // Wrap the actual body for the function.
   auto body = [this, &x] {
-    // Helper function for dispatching a message to a response handler.
-    using ptr_t = scheduled_actor*;
-    using fun_t = bool (*)(ptr_t, behavior&, mailbox_element&);
-    auto ordinary_invoke = [](ptr_t, behavior& f, mailbox_element& in) -> bool {
-      return f(in.content()) != none;
-    };
-    auto select_invoke_fun = [&]() -> fun_t { return ordinary_invoke; };
-    // Short-circuit awaited responses.
-    if (!awaited_responses_.empty()) {
-      auto invoke = select_invoke_fun();
-      auto& pr = awaited_responses_.front();
-      // skip all messages until we receive the currently awaited response
-      if (x.mid != pr.first)
-        return invoke_message_result::skipped;
-      auto f = std::move(pr.second);
-      awaited_responses_.pop_front();
-      if (!invoke(this, f, x)) {
-        // try again with error if first attempt failed
-        auto msg = make_message(
-          make_error(sec::unexpected_response, x.move_content_to_message()));
-        f(msg);
-      }
-      return invoke_message_result::consumed;
-    }
-    // Handle multiplexed responses.
-    if (x.mid.is_response()) {
-      auto invoke = select_invoke_fun();
-      auto mrh = multiplexed_responses_.find(x.mid);
-      // neither awaited nor multiplexed, probably an expired timeout
-      if (mrh == multiplexed_responses_.end())
-        return invoke_message_result::dropped;
-      auto bhvr = std::move(mrh->second);
-      multiplexed_responses_.erase(mrh);
-      if (!invoke(this, bhvr, x)) {
-        // try again with error if first attempt failed
-        auto msg = make_message(
-          make_error(sec::unexpected_response, x.move_content_to_message()));
-        bhvr(msg);
-      }
-      return invoke_message_result::consumed;
-    }
     // Dispatch on the content of x.
     switch (categorize(x)) {
       case message_category::skipped:
