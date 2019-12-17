@@ -81,14 +81,14 @@ public:
     // nop
   }
 
-  void before_sending(const local_actor& self,
-                      mailbox_element& element) override {
+  void
+  before_sending(const local_actor& self, mailbox_element& element) override {
     element.tracing_id.reset(new dummy_tracing_data(self.name()));
   }
 
-  void before_sending_scheduled(const local_actor& self,
-                                actor_clock::time_point,
-                                mailbox_element& element) override {
+  void
+  before_sending_scheduled(const local_actor& self, actor_clock::time_point,
+                           mailbox_element& element) override {
     element.tracing_id.reset(new dummy_tracing_data(self.name()));
   }
 };
