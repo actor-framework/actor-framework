@@ -63,7 +63,7 @@ invoke_message_result raw_event_based_actor::consume(mailbox_element& x) {
       return invoke_message_result::dropped;
     }
     CAF_LOG_RECEIVE_EVENT(current_element_);
-    CAF_BEFORE_PROCESSING(this, x, mrh->first, mrth->second.send_time);
+    CAF_BEFORE_PROCESSING(this, x, mrh->first, mrh->second.send_time);
     auto bhvr = std::move(mrh->second.bhvr);
     multiplexed_responses_.erase(mrh);
     if (!invoke(bhvr, x)) {

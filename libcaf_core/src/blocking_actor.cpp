@@ -140,7 +140,7 @@ void blocking_actor::receive_response(message_id id,
     if (id != x.mid)
       return intrusive::task_result::skip;
     CAF_LOG_RECEIVE_EVENT((&x));
-    CAF_BEFORE_PROCESSING(self, x, id, send_time);
+    CAF_BEFORE_PROCESSING(this, x, id, send_time);
     // Blocking actors can nest receives => push/pop `current_element_`
     auto prev = current_element_;
     current_element_ = &x;

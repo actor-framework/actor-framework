@@ -563,10 +563,10 @@ public:
       profiler_->remove_actor(self);
   }
 
-  void profiler_before_processing(const local_actor& self,
-                                  const mailbox_element& element) {
+  template <class... Ts>
+  void profiler_before_processing(const local_actor& self, Ts&&... xs) {
     if (profiler_)
-      profiler_->before_processing(self, element);
+      profiler_->before_processing(self, std::forward<Ts>(xs)...);
   }
 
   void profiler_after_processing(const local_actor& self,
