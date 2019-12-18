@@ -18,17 +18,19 @@
 
 #pragma once
 
+#include <chrono>
 #include <tuple>
 #include <type_traits>
 
 #include "caf/detail/core_export.hpp"
 #include "caf/timeout_definition.hpp"
+#include "caf/timespan.hpp"
 
 namespace caf {
 
 class CAF_CORE_EXPORT timeout_definition_builder {
 public:
-  constexpr timeout_definition_builder(duration d) : tout_(d) {
+  explicit constexpr timeout_definition_builder(timespan d) : tout_(d) {
     // nop
   }
 
@@ -38,19 +40,14 @@ public:
   }
 
 private:
-  duration tout_;
+  timespan tout_;
 };
 
 /// Returns a generator for timeouts.
-constexpr timeout_definition_builder after(duration d) {
-  return {d};
-}
-
-/// Returns a generator for timeouts.
 template <class Rep, class Period>
-constexpr timeout_definition_builder
-after(std::chrono::duration<Rep, Period> d) {
-  return after(duration{d});
+constexpr auto after(std::chrono::duration<Rep, Period> d) {
+  using std::chrono::duration_cast;
+  return timeout_definition_builder{duration_cast<timespan>(d)};
 }
 
 } // namespace caf

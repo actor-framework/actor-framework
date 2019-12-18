@@ -29,7 +29,6 @@
 #include "caf/actor_system.hpp"
 #include "caf/atom.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/duration.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
 

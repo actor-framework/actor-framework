@@ -27,7 +27,6 @@
 #include "caf/behavior.hpp"
 #include "caf/detail/behavior_impl.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/duration.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/match_case.hpp"

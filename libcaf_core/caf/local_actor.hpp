@@ -38,7 +38,6 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/typed_actor_util.hpp"
 #include "caf/detail/unique_function.hpp"
-#include "caf/duration.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
@@ -50,6 +49,7 @@
 #include "caf/response_type.hpp"
 #include "caf/resumable.hpp"
 #include "caf/spawn_options.hpp"
+#include "caf/timespan.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_response_promise.hpp"
 
@@ -91,7 +91,7 @@ public:
 
   /// Requests a new timeout for `mid`.
   /// @pre `mid.is_request()`
-  void request_response_timeout(const duration& d, message_id mid);
+  void request_response_timeout(timespan d, message_id mid);
 
   // -- spawn functions --------------------------------------------------------
 

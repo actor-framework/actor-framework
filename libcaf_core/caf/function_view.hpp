@@ -26,6 +26,7 @@
 #include "caf/expected.hpp"
 #include "caf/response_type.hpp"
 #include "caf/scoped_actor.hpp"
+#include "caf/timespan.hpp"
 #include "caf/typed_actor.hpp"
 
 namespace caf {
@@ -35,7 +36,7 @@ class function_view_storage {
 public:
   using type = function_view_storage;
 
-  function_view_storage(T& storage) : storage_(&storage) {
+  explicit function_view_storage(T& storage) : storage_(&storage) {
     // nop
   }
 
@@ -52,7 +53,8 @@ class function_view_storage<std::tuple<Ts...>> {
 public:
   using type = function_view_storage;
 
-  function_view_storage(std::tuple<Ts...>& storage) : storage_(&storage) {
+  explicit function_view_storage(std::tuple<Ts...>& storage)
+    : storage_(&storage) {
     // nop
   }
 
@@ -69,7 +71,7 @@ class function_view_storage<unit_t> {
 public:
   using type = function_view_storage;
 
-  function_view_storage(unit_t&) {
+  explicit function_view_storage(unit_t&) {
     // nop
   }
 
@@ -81,7 +83,7 @@ public:
 struct CAF_CORE_EXPORT function_view_storage_catch_all {
   message* storage_;
 
-  function_view_storage_catch_all(message& ptr) : storage_(&ptr) {
+  explicit function_view_storage_catch_all(message& ptr) : storage_(&ptr) {
     // nop
   }
 
@@ -135,11 +137,20 @@ class function_view {
 public:
   using type = Actor;
 
-  function_view(duration rel_timeout = infinite) : timeout(rel_timeout) {
+  function_view() : timeout(infinite) {
     // nop
   }
 
-  function_view(type impl, duration rel_timeout = infinite)
+  explicit function_view(timespan rel_timeout) : timeout(rel_timeout) {
+    // nop
+  }
+
+  explicit function_view(type impl)
+    : timeout(infinite), impl_(std::move(impl)) {
+    new_self(impl_);
+  }
+
+  function_view(type impl, timespan rel_timeout)
     : timeout(rel_timeout), impl_(std::move(impl)) {
     new_self(impl_);
   }
@@ -206,7 +217,7 @@ public:
     return impl_;
   }
 
-  duration timeout;
+  timespan timeout;
 
 private:
   template <class T>
@@ -258,8 +269,8 @@ bool operator!=(std::nullptr_t x, const function_view<T>& y) {
 /// @relates function_view
 /// @experimental
 template <class T>
-function_view<T> make_function_view(const T& x, duration t = infinite) {
-  return {x, t};
+auto make_function_view(const T& x, timespan t = infinite) {
+  return function_view<T>{x, t};
 }
 
 } // namespace caf

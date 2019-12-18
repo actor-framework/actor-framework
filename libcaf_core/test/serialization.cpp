@@ -144,7 +144,6 @@ struct fixture : test_coordinator_fixture<config> {
   int64_t i64 = -1234567890123456789ll;
   float f32 = 3.45f;
   double f64 = 54.3;
-  duration dur = duration{time_unit::seconds, 123};
   timestamp ts = timestamp{timestamp::duration{1478715821 * 1000000000ll}};
   test_enum te = test_enum::b;
   string str = "Lorem ipsum dolor sit amet.";
@@ -198,7 +197,7 @@ struct fixture : test_coordinator_fixture<config> {
 
   fixture() {
     rs.str.assign(string(str.rbegin(), str.rend()));
-    msg = make_message(i32, i64, dur, ts, te, str, rs);
+    msg = make_message(i32, i64, ts, te, str, rs);
     config_value::dictionary dict;
     put(dict, "scheduler.policy", atom("none"));
     put(dict, "scheduler.max-threads", 42);
@@ -255,7 +254,6 @@ CAF_TEST(serializing and then deserializing produces the same value) {
   CHECK_RT(i64);
   CHECK_RT(f32);
   CHECK_RT(f64);
-  CHECK_RT(dur);
   CHECK_RT(ts);
   CHECK_RT(te);
   CHECK_RT(str);
@@ -268,7 +266,6 @@ CAF_TEST(messages serialize and deserialize their content) {
   CHECK_MSG_RT(i64);
   CHECK_MSG_RT(f32);
   CHECK_MSG_RT(f64);
-  CHECK_MSG_RT(dur);
   CHECK_MSG_RT(ts);
   CHECK_MSG_RT(te);
   CHECK_MSG_RT(str);
@@ -321,14 +318,14 @@ CAF_TEST(messages) {
   auto buf1 = serialize(msg);
   deserialize(buf1, x);
   CAF_CHECK_EQUAL(to_string(msg), to_string(x));
-  CAF_CHECK(is_message(x).equal(i32, i64, dur, ts, te, str, rs));
+  CAF_CHECK(is_message(x).equal(i32, i64, ts, te, str, rs));
   // serialize fully dynamic message again (do another roundtrip)
   message y;
   auto buf2 = serialize(x);
   CAF_CHECK_EQUAL(buf1, buf2);
   deserialize(buf2, y);
   CAF_CHECK_EQUAL(to_string(msg), to_string(y));
-  CAF_CHECK(is_message(y).equal(i32, i64, dur, ts, te, str, rs));
+  CAF_CHECK(is_message(y).equal(i32, i64, ts, te, str, rs));
   CAF_CHECK_EQUAL(to_string(recursive), to_string(roundtrip(recursive)));
 }
 
@@ -342,7 +339,7 @@ CAF_TEST(multiple_messages) {
   CAF_CHECK_EQUAL(std::make_tuple(t, to_string(m1), to_string(m2)),
                   std::make_tuple(te, to_string(m), to_string(msg)));
   CAF_CHECK(is_message(m1).equal(rs, te));
-  CAF_CHECK(is_message(m2).equal(i32, i64, dur, ts, te, str, rs));
+  CAF_CHECK(is_message(m2).equal(i32, i64, ts, te, str, rs));
 }
 
 CAF_TEST(type_erased_value) {

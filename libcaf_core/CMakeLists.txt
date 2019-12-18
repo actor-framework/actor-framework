@@ -90,7 +90,6 @@ set(CAF_CORE_SOURCES
   src/detail/uri_impl.cpp
   src/downstream_manager.cpp
   src/downstream_manager_base.cpp
-  src/duration.cpp
   src/error.cpp
   src/event_based_actor.cpp
   src/execution_unit.cpp

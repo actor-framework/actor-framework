@@ -102,7 +102,7 @@ middleman::middleman(actor_system& sys) : system_(sys) {
 expected<strong_actor_ptr>
 middleman::remote_spawn_impl(const node_id& nid, std::string& name,
                              message& args, std::set<std::string> s,
-                             duration timeout) {
+                             timespan timeout) {
   auto f = make_function_view(actor_handle(), timeout);
   return f(spawn_atom::value, nid, std::move(name), std::move(args),
            std::move(s));

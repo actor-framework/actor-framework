@@ -25,7 +25,6 @@
 #include "caf/actor.hpp"
 #include "caf/check_typed_input.hpp"
 #include "caf/detail/profiled_send.hpp"
-#include "caf/duration.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
@@ -58,9 +57,10 @@ public:
   /// @returns A handle identifying a future-like handle to the response.
   /// @warning The returned handle is actor specific and the response to the
   ///          sent message cannot be received by another actor.
-  template <message_priority P = message_priority::normal, class Handle = actor,
-            class... Ts>
-  auto request(const Handle& dest, const duration& timeout, Ts&&... xs) {
+  template <message_priority P = message_priority::normal, class Rep = int,
+            class Period = std::ratio<1>, class Handle = actor, class... Ts>
+  auto request(const Handle& dest, std::chrono::duration<Rep, Period> timeout,
+               Ts&&... xs) {
     using namespace detail;
     static_assert(sizeof...(Ts) > 0, "no message to send");
     using token = type_list<implicit_conversions_t<decay_t<Ts>>...>;
@@ -84,14 +84,6 @@ public:
     return handle_type{self, req_id.response_id()};
   }
 
-  /// @copydoc request
-  template <message_priority P = message_priority::normal, class Rep = int,
-            class Period = std::ratio<1>, class Handle = actor, class... Ts>
-  auto request(const Handle& dest, std::chrono::duration<Rep, Period> timeout,
-               Ts&&... xs) {
-    return request(dest, duration{timeout}, std::forward<Ts>(xs)...);
-  }
-
   /// Sends `{xs...}` to each actor in the range `destinations` as a synchronous
   /// message. Response messages get combined into a single result according to
   /// the `MergePolicy`.
@@ -113,10 +105,10 @@ public:
   /// @note The returned handle is actor-specific. Only the actor that called
   ///       `request` can use it for setting response handlers.
   template <template <class> class MergePolicy,
-            message_priority Prio = message_priority::normal, class Container,
-            class... Ts>
-  auto fan_out_request(const Container& destinations, const duration& timeout,
-                       Ts&&... xs) {
+            message_priority Prio = message_priority::normal, class Rep = int,
+            class Period = std::ratio<1>, class Container, class... Ts>
+  auto fan_out_request(const Container& destinations,
+                       std::chrono::duration<Rep, Period> timeout, Ts&&... xs) {
     using handle_type = typename Container::value_type;
     using namespace detail;
     static_assert(sizeof...(Ts) > 0, "no message to send");
@@ -147,16 +139,6 @@ public:
                         detail::implicit_conversions_t<detail::decay_t<Ts>>...>;
     using result_type = response_handle<Subtype, MergePolicy<response_type>>;
     return result_type{dptr, std::move(ids)};
-  }
-
-  /// @copydoc fan_out_request
-  template <template <class> class MergePolicy,
-            message_priority Prio = message_priority::normal, class Rep,
-            class Period, class Container, class... Ts>
-  auto fan_out_request(const Container& destinations,
-                       std::chrono::duration<Rep, Period> timeout, Ts&&... xs) {
-    return request<MergePolicy, Prio>(destinations, duration{timeout},
-                                      std::forward<Ts>(xs)...);
   }
 };
 

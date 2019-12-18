@@ -23,6 +23,7 @@
 #include "caf/interface_mismatch.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/system_messages.hpp"
+#include "caf/timespan.hpp"
 
 #include "caf/detail/typed_actor_util.hpp"
 
@@ -210,7 +211,7 @@ public:
 
   /// Returns the duration after which receives using
   /// this behavior should time out.
-  const duration& timeout() const {
+  timespan timeout() const noexcept {
     return bhvr_.timeout();
   }
 

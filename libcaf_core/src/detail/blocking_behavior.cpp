@@ -32,8 +32,8 @@ result<message> blocking_behavior::fallback(message_view&) {
   return skip;
 }
 
-duration blocking_behavior::timeout() {
-  return {};
+timespan blocking_behavior::timeout() {
+  return infinite;
 }
 
 void blocking_behavior::handle_timeout() {

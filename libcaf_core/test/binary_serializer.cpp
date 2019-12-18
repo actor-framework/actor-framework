@@ -29,7 +29,6 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
-#include "caf/duration.hpp"
 #include "caf/timestamp.hpp"
 
 using namespace caf;
@@ -55,7 +54,6 @@ struct test_data {
   int64_t i64_;
   float f32_;
   double f64_;
-  caf::duration dur_;
   caf::timestamp ts_;
   test_enum te_;
   std::string str_;
@@ -64,7 +62,7 @@ struct test_data {
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, test_data& x) {
   return f(caf::meta::type_name("test_data"), x.i32_, x.i64_, x.f32_, x.f64_,
-           x.dur_, x.ts_, x.te_, x.str_);
+           x.ts_, x.te_, x.str_);
 }
 
 struct fixture {
@@ -182,13 +180,6 @@ CAF_TEST(container types) {
 }
 
 CAF_TEST(binary serializer picks up inspect functions) {
-  SUBTEST("duration") {
-    CHECK_SAVE(duration, duration(time_unit::minutes, 3),
-               // Bytes 1-4 contain the time_unit.
-               0_b, 0_b, 0_b, 1_b,
-               // Bytes 5-12 contain the count.
-               0_b, 0_b, 0_b, 0_b, 0_b, 0_b, 0_b, 3_b);
-  }
   SUBTEST("node ID") {
     auto nid = make_node_id(123, "000102030405060708090A0B0C0D0E0F10111213");
     CHECK_SAVE(node_id, unbox(nid),
@@ -206,7 +197,6 @@ CAF_TEST(binary serializer picks up inspect functions) {
                     -1234567890123456789ll,
                     3.45,
                     54.3,
-                    caf::duration(caf::time_unit::seconds, 123),
                     ts,
                     test_enum::b,
                     "Lorem ipsum dolor sit amet."};
@@ -219,10 +209,6 @@ CAF_TEST(binary serializer picks up inspect functions) {
                0x40_b, 0x5C_b, 0xCC_b, 0xCD_b,
                // 64-bit f64_ member: 54.3
                0x40_b, 0x4B_b, 0x26_b, 0x66_b, 0x66_b, 0x66_b, 0x66_b, 0x66_b,
-               // 32-bit dur_.unit member: time_unit::seconds
-               0x00_b, 0x00_b, 0x00_b, 0x02_b,
-               // 64-bit dur_.count member: 123
-               0x00_b, 0x00_b, 0x00_b, 0x00_b, 0x00_b, 0x00_b, 0x00_b, 0x7B_b,
                // 64-bit ts_ member.
                0x14_b, 0x85_b, 0x74_b, 0x34_b, 0x62_b, 0x74_b, 0x82_b, 0x00_b,
                // 32-bit te_ member: test_enum::b

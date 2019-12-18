@@ -28,7 +28,6 @@
 #include "caf/check_typed_input.hpp"
 #include "caf/detail/profiled_send.hpp"
 #include "caf/detail/type_traits.hpp"
-#include "caf/duration.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
 #include "caf/message_priority.hpp"

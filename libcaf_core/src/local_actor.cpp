@@ -60,12 +60,12 @@ void local_actor::on_destroy() {
   }
 }
 
-void local_actor::request_response_timeout(const duration& d, message_id mid) {
-  CAF_LOG_TRACE(CAF_ARG(d) << CAF_ARG(mid));
-  if (!d.valid())
+void local_actor::request_response_timeout(timespan timeout, message_id mid) {
+  CAF_LOG_TRACE(CAF_ARG(timeout) << CAF_ARG(mid));
+  if (timeout == infinite)
     return;
   auto t = clock().now();
-  t += d;
+  t += timeout;
   clock().set_request_timeout(t, this, mid.response_id());
 }
 

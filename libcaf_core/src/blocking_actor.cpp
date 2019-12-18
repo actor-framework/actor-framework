@@ -247,7 +247,7 @@ void blocking_actor::receive_impl(receive_cond& rcc,
   do {
     // Reset the timeout each iteration.
     auto rel_tout = bhvr.timeout();
-    if (!rel_tout.valid()) {
+    if (rel_tout == infinite) {
       await_data();
     } else {
       auto abs_tout = std::chrono::high_resolution_clock::now();
@@ -289,14 +289,12 @@ void blocking_actor::varargs_tup_receive(receive_cond& rcc, message_id mid,
                                          std::tuple<behavior&>& tup) {
   using namespace detail;
   auto& bhvr = std::get<0>(tup);
-  if (bhvr.timeout().valid()) {
-    auto tmp = after(bhvr.timeout()) >> [&] {
-      bhvr.handle_timeout();
-    };
-    auto fun = make_blocking_behavior(&bhvr, std::move(tmp));
+  if (bhvr.timeout() == infinite) {
+    auto fun = make_blocking_behavior(&bhvr);
     receive_impl(rcc, mid, fun);
   } else {
-    auto fun = make_blocking_behavior(&bhvr);
+    auto tmp = after(bhvr.timeout()) >> [&] { bhvr.handle_timeout(); };
+    auto fun = make_blocking_behavior(&bhvr, std::move(tmp));
     receive_impl(rcc, mid, fun);
   }
 }
