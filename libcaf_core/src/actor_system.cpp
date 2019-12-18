@@ -137,7 +137,8 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
     // get a 'named' actor from local registry
     [=](get_atom, atom_value name) {
       return self->home_system().registry().get(name);
-    }};
+    },
+  };
 }
 
 // -- spawn server -------------------------------------------------------------
@@ -154,12 +155,14 @@ const char* spawn_serv_state::name = "spawn_server";
 
 behavior spawn_serv_impl(stateful_actor<spawn_serv_state>* self) {
   CAF_LOG_TRACE("");
-  return {[=](spawn_atom, const std::string& name, message& args,
-              actor_system::mpi& xs) -> expected<strong_actor_ptr> {
-    CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(args));
-    return self->system().spawn<strong_actor_ptr>(name, std::move(args),
-                                                  self->context(), true, &xs);
-  }};
+  return {
+    [=](spawn_atom, const std::string& name, message& args,
+        actor_system::mpi& xs) -> expected<strong_actor_ptr> {
+      CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(args));
+      return self->system().spawn<strong_actor_ptr>(name, std::move(args),
+                                                    self->context(), true, &xs);
+    },
+  };
 }
 
 // -- stream server ------------------------------------------------------------

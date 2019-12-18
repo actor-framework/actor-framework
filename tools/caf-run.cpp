@@ -44,8 +44,12 @@ std::string encode_base64(const string& str) {
   std::string result;
   // consumes three characters from input
   auto consume = [&](const char* i) {
-    int buf[]{(i[0] & 0xfc) >> 2, ((i[0] & 0x03) << 4) + ((i[1] & 0xf0) >> 4),
-              ((i[1] & 0x0f) << 2) + ((i[2] & 0xc0) >> 6), i[2] & 0x3f};
+    int buf[]{
+      (i[0] & 0xfc) >> 2,
+      ((i[0] & 0x03) << 4) + ((i[1] & 0xf0) >> 4),
+      ((i[1] & 0x0f) << 2) + ((i[2] & 0xc0) >> 6),
+      i[2] & 0x3f,
+    };
     for (auto x : buf)
       result += base64_tbl[x];
   };
@@ -70,7 +74,7 @@ public:
   std::string host;
   int cpu_slots;
 
-  host_desc(std::string host_addr, int slots, string cldevices)
+  host_desc(std::string host_addr, int slots)
     : host(std::move(host_addr)), cpu_slots(slots) {
     // nop
   }
@@ -80,7 +84,7 @@ public:
   host_desc& operator=(host_desc&&) = default;
   host_desc& operator=(const host_desc&) = default;
 
-  static void append(vector<host_desc>& xs, const string& line, size_t num) {
+  static void append(vector<host_desc>& xs, const string& line) {
     vector<string> fields;
     split(fields, line, is_any_of(" "), token_compress_on);
     if (fields.empty())
@@ -99,9 +103,8 @@ std::vector<host_desc> read_hostfile(const string& fname) {
   std::vector<host_desc> result;
   std::ifstream in{fname};
   std::string line;
-  size_t line_num = 0;
   while (std::getline(in, line))
-    host_desc::append(result, line, ++line_num);
+    host_desc::append(result, line);
   return result;
 }
 
