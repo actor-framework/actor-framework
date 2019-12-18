@@ -25,6 +25,7 @@
 #include "caf/actor.hpp"
 #include "caf/actor_clock.hpp"
 #include "caf/byte.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/drr_queue.hpp"
 #include "caf/intrusive/fifo_inbox.hpp"
@@ -37,7 +38,7 @@
 namespace caf::net {
 
 /// Manages a communication endpoint.
-class endpoint_manager : public socket_manager {
+class CAF_NET_EXPORT endpoint_manager : public socket_manager {
 public:
   // -- member types -----------------------------------------------------------
 

@@ -20,6 +20,7 @@
 
 #include <map>
 
+#include "caf/detail/net_export.hpp"
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/middleman_backend.hpp"
@@ -30,7 +31,7 @@ namespace caf::net::backend {
 
 /// Minimal backend for unit testing.
 /// @warning this backend is *not* thread safe.
-class test : public middleman_backend {
+class CAF_NET_EXPORT test : public middleman_backend {
 public:
   // -- member types -----------------------------------------------------------
 

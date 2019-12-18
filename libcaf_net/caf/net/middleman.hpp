@@ -21,13 +21,14 @@
 #include <thread>
 
 #include "caf/actor_system.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
 
 namespace caf::net {
 
-class middleman : public actor_system::module {
+class CAF_NET_EXPORT middleman : public actor_system::module {
 public:
   // -- member types -----------------------------------------------------------
 
