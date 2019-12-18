@@ -18,10 +18,10 @@
 
 #include "caf/actor_system_config.hpp"
 
-#include <limits>
-#include <thread>
 #include <fstream>
+#include <limits>
 #include <sstream>
+#include <thread>
 
 #include "caf/config.hpp"
 #include "caf/config_option.hpp"
@@ -39,7 +39,7 @@ namespace {
 
 constexpr const char* default_config_file = "caf-application.ini";
 
-} // namespace anonymous
+} // namespace
 
 actor_system_config::~actor_system_config() {
   // nop
@@ -49,10 +49,10 @@ actor_system_config::~actor_system_config() {
 // by (2) INI-file contents that are in turn overridden by (3) CLI arguments
 
 actor_system_config::actor_system_config()
-    : cli_helptext_printed(false),
-      slave_mode(false),
-      config_file_path(default_config_file),
-      slave_mode_fun(nullptr) {
+  : cli_helptext_printed(false),
+    slave_mode(false),
+    config_file_path(default_config_file),
+    slave_mode_fun(nullptr) {
   // add `vector<T>` and `stream<T>` for each statically known type
   add_message_type_impl<stream<actor>>("stream<@actor>");
   add_message_type_impl<stream<actor_addr>>("stream<@addr>");
@@ -75,7 +75,8 @@ actor_system_config::actor_system_config()
     .add<bool>("help,h?", "print help text to STDERR and exit")
     .add<bool>("long-help", "print long help text to STDERR and exit")
     .add<bool>("dump-config", "print configuration to STDERR and exit")
-    .add<string>(config_file_path, "config-file", "set config file (default: caf-application.ini)");
+    .add<string>(config_file_path, "config-file",
+                 "set config file (default: caf-application.ini)");
   opt_group{custom_options_, "stream"}
     .add<timespan>(stream_desired_batch_complexity, "desired-batch-complexity",
                    "processing time per batch")
@@ -132,8 +133,6 @@ actor_system_config::actor_system_config()
     .add<bool>("manual-multiplexing",
                "disables background activity of the multiplexer")
     .add<size_t>("workers", "number of deserialization workers");
-  opt_group(custom_options_, "opencl")
-    .add<std::vector<size_t>>("device-ids", "whitelist for OpenCL devices");
   opt_group(custom_options_, "openssl")
     .add<string>(openssl_certificate, "certificate",
                  "path to the PEM-formatted certificate file")
@@ -212,7 +211,7 @@ settings actor_system_config::dump_content() const {
   put_missing(middleman_group, "heartbeat-interval",
               defaults::middleman::heartbeat_interval);
   put_missing(middleman_group, "workers", defaults::middleman::workers);
-  // -- opencl parameters
+  // -- openssl parameters
   auto& openssl_group = result["openssl"].as_dictionary();
   put_missing(openssl_group, "certificate", std::string{});
   put_missing(openssl_group, "key", std::string{});
@@ -265,7 +264,7 @@ struct ini_iter {
   }
 };
 
-struct ini_sentinel { };
+struct ini_sentinel {};
 
 bool operator!=(ini_iter iter, ini_sentinel) {
   return !iter.ini->fail();
@@ -373,8 +372,8 @@ actor_system_config::add_error_category(atom_value x, error_renderer y) {
   return *this;
 }
 
-actor_system_config& actor_system_config::set_impl(string_view name,
-                                                   config_value value) {
+actor_system_config&
+actor_system_config::set_impl(string_view name, config_value value) {
   if (name == "middleman.app-identifier") {
     // TODO: Print a warning with 0.18 and remove this code with 0.19.
     value.convert_to_list();
@@ -415,8 +414,8 @@ std::string actor_system_config::render(const error& err) {
   return "unknown-error";
 }
 
-std::string actor_system_config::render_sec(uint8_t x, atom_value,
-                                            const message& xs) {
+std::string
+actor_system_config::render_sec(uint8_t x, atom_value, const message& xs) {
   auto tmp = static_cast<sec>(x);
   return deep_to_string(meta::type_name("system_error"), tmp,
                         meta::omittable_if_empty(), xs);
@@ -429,8 +428,8 @@ std::string actor_system_config::render_exit_reason(uint8_t x, atom_value,
                         meta::omittable_if_empty(), xs);
 }
 
-std::string actor_system_config::render_pec(uint8_t x, atom_value,
-                                            const message& xs) {
+std::string
+actor_system_config::render_pec(uint8_t x, atom_value, const message& xs) {
   auto tmp = static_cast<pec>(x);
   return deep_to_string(meta::type_name("parser_error"), tmp,
                         meta::omittable_if_empty(), xs);

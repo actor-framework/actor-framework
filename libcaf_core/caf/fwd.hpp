@@ -241,14 +241,6 @@ class middleman;
 
 } // namespace net
 
-// -- OpenCL classes -----------------------------------------------------------
-
-namespace opencl {
-
-class manager;
-
-} // namespace opencl
-
 // -- scheduler classes --------------------------------------------------------
 
 namespace scheduler {

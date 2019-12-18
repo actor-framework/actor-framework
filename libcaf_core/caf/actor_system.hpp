@@ -153,7 +153,6 @@ public:
     enum id_t {
       scheduler,
       middleman,
-      opencl_manager,
       openssl_manager,
       network_manager,
       num_ids
@@ -269,13 +268,6 @@ public:
   /// Returns the middleman instance from the I/O module.
   /// @throws `std::logic_error` if module is not loaded.
   io::middleman& middleman();
-
-  /// Returns `true` if the opencl module is available, `false` otherwise.
-  bool has_opencl_manager() const;
-
-  /// Returns the manager instance from the OpenCL module.
-  /// @throws `std::logic_error` if module is not loaded.
-  opencl::manager& opencl_manager() const;
 
   /// Returns `true` if the openssl module is available, `false` otherwise.
   bool has_openssl_manager() const;
@@ -593,7 +585,7 @@ private:
   void check_invariants() {
     static_assert(!std::is_base_of<prohibit_top_level_spawn_marker, T>::value,
                   "This actor type cannot be spawned through an actor system. "
-                  "Probably you have tried to spawn a broker or opencl actor.");
+                  "Probably you have tried to spawn a broker.");
   }
 
   expected<strong_actor_ptr>
