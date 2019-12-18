@@ -19,19 +19,19 @@
 #include <unistd.h>
 
 #include <cstdio>
-#include <string>
-#include <vector>
-#include <sstream>
 #include <fstream>
 #include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
 using namespace caf;
 
-using std::cout;
 using std::cerr;
+using std::cout;
 using std::endl;
 using std::string;
 using std::vector;
@@ -44,18 +44,18 @@ std::string encode_base64(const string& str) {
   std::string result;
   // consumes three characters from input
   auto consume = [&](const char* i) {
-    int buf[] {
+    int buf[]{
       (i[0] & 0xfc) >> 2,
       ((i[0] & 0x03) << 4) + ((i[1] & 0xf0) >> 4),
       ((i[1] & 0x0f) << 2) + ((i[2] & 0xc0) >> 6),
-      i[2] & 0x3f
+      i[2] & 0x3f,
     };
     for (auto x : buf)
       result += base64_tbl[x];
   };
   // iterate string in chunks of three characters
   auto i = str.begin();
-  for ( ; std::distance(i, str.end()) >= 3; i += 3)
+  for (; std::distance(i, str.end()) >= 3; i += 3)
     consume(&(*i));
   if (i != str.end()) {
     // "fill" string with 0s
@@ -73,12 +73,9 @@ class host_desc {
 public:
   std::string host;
   int cpu_slots;
-  string opencl_device_ids;
 
-  host_desc(std::string host_addr, int slots, string cldevices)
-      : host(std::move(host_addr)),
-        cpu_slots(slots),
-        opencl_device_ids(std::move(cldevices)) {
+  host_desc(std::string host_addr, int slots)
+    : host(std::move(host_addr)), cpu_slots(slots) {
     // nop
   }
 
@@ -87,7 +84,7 @@ public:
   host_desc& operator=(host_desc&&) = default;
   host_desc& operator=(const host_desc&) = default;
 
-  static void append(vector<host_desc>& xs, const string& line, size_t num) {
+  static void append(vector<host_desc>& xs, const string& line) {
     vector<string> fields;
     split(fields, line, is_any_of(" "), token_compress_on);
     if (fields.empty())
@@ -95,15 +92,6 @@ public:
     host_desc hd;
     hd.host = std::move(fields.front());
     hd.cpu_slots = 0;
-    hd.opencl_device_ids = "";
-    for (auto i = fields.begin() + 1; i != fields.end(); ++i) {
-      if (starts_with(*i, "device_ids=")) {
-        hd.opencl_device_ids.assign(std::find(i->begin(), i->end(), '=') + 1,
-                                    i->end());
-      } else if (sscanf(i->c_str(), "slots=%d", &hd.cpu_slots) != 0) {
-        cerr << "invalid option at line " << num << ": " << *i << endl;
-      }
-    }
     xs.emplace_back(std::move(hd));
   }
 
@@ -115,16 +103,15 @@ std::vector<host_desc> read_hostfile(const string& fname) {
   std::vector<host_desc> result;
   std::ifstream in{fname};
   std::string line;
-  size_t line_num = 0;
   while (std::getline(in, line))
-    host_desc::append(result, line, ++line_num);
+    host_desc::append(result, line);
   return result;
 }
 
-bool run_ssh(actor_system& system, const string& wdir,
-             const string& cmd, const string& host) {
-  std::cout << "runssh, wdir: " << wdir << " cmd: " << cmd
-            << " host: " << host << std::endl;
+bool run_ssh(actor_system& system, const string& wdir, const string& cmd,
+             const string& host) {
+  std::cout << "runssh, wdir: " << wdir << " cmd: " << cmd << " host: " << host
+            << std::endl;
   // pack command before sending it to avoid any issue with shell escaping
   string full_cmd = "cd ";
   full_cmd += wdir;
@@ -132,9 +119,9 @@ bool run_ssh(actor_system& system, const string& wdir,
   full_cmd += cmd;
   auto packed = encode_base64(full_cmd);
   std::ostringstream oss;
-  oss << "ssh -Y -o ServerAliveInterval=60 " << host
-      << R"( "echo )" << packed << R"( | base64 --decode | /bin/sh")";
-  //return system(oss.str().c_str());
+  oss << "ssh -Y -o ServerAliveInterval=60 " << host << R"( "echo )" << packed
+      << R"( | base64 --decode | /bin/sh")";
+  // return system(oss.str().c_str());
   string line;
   std::cout << "popen: " << oss.str() << std::endl;
   auto fp = popen(oss.str().c_str(), "r");
@@ -163,12 +150,9 @@ bool run_ssh(actor_system& system, const string& wdir,
   return true;
 }
 
-void bootstrap(actor_system& system,
-               const string& wdir,
-               const host_desc& master,
-               vector<host_desc> slaves,
-               const string& cmd,
-               vector<string> args) {
+void bootstrap(actor_system& system, const string& wdir,
+               const host_desc& master, vector<host_desc> slaves,
+               const string& cmd, vector<string> args) {
   using io::network::interfaces;
   if (!args.empty())
     args.erase(args.begin());
@@ -184,38 +168,37 @@ void bootstrap(actor_system& system,
   auto port = *port_res;
   // run a slave process at master host if user defined slots > 1 for it
   if (master.cpu_slots > 1)
-    slaves.emplace_back(master.host, master.cpu_slots - 1,
-                        master.opencl_device_ids);
+    slaves.emplace_back(master.host, master.cpu_slots - 1);
   for (auto& slave : slaves) {
     using namespace caf::io::network;
     // build SSH command and pack it to avoid any issue with shell escaping
     std::thread{[=, &system](actor bootstrapper) {
-      std::ostringstream oss;
-      oss << cmd;
-      if (slave.cpu_slots > 0)
-        oss << " --caf#scheduler.max-threads=" << slave.cpu_slots;
-      if (!slave.opencl_device_ids.empty())
-        oss << " --caf#opencl-devices=" << slave.opencl_device_ids;
-      oss << " --caf#slave-mode"
-          << " --caf#slave-name=" << slave.host
-          << " --caf#bootstrap-node=";
-      bool is_first = true;
-      interfaces::traverse(
-        {protocol::ipv4, protocol::ipv6},
-        [&](const char*, protocol::network, bool lo, const char* x) {
-          if (lo)
-            return;
-          if (!is_first)
-            oss << ",";
-          else
-            is_first = false;
-          oss << x << "/" << port;
-        });
-      for (auto& arg : args)
-        oss << " " << arg;
-      if (!run_ssh(system, wdir, oss.str(), slave.host))
-        anon_send(bootstrapper, slave.host);
-    }, actor{self}}.detach();
+                  std::ostringstream oss;
+                  oss << cmd;
+                  if (slave.cpu_slots > 0)
+                    oss << " --caf#scheduler.max-threads=" << slave.cpu_slots;
+                  oss << " --caf#slave-mode"
+                      << " --caf#slave-name=" << slave.host
+                      << " --caf#bootstrap-node=";
+                  bool is_first = true;
+                  interfaces::traverse({protocol::ipv4, protocol::ipv6},
+                                       [&](const char*, protocol::network,
+                                           bool lo, const char* x) {
+                                         if (lo)
+                                           return;
+                                         if (!is_first)
+                                           oss << ",";
+                                         else
+                                           is_first = false;
+                                         oss << x << "/" << port;
+                                       });
+                  for (auto& arg : args)
+                    oss << " " << arg;
+                  if (!run_ssh(system, wdir, oss.str(), slave.host))
+                    anon_send(bootstrapper, slave.host);
+                },
+                actor{self}}
+      .detach();
   }
   std::string slaveslist;
   for (size_t i = 0; i < slaves.size(); ++i) {
@@ -229,8 +212,7 @@ void bootstrap(actor_system& system,
       },
       [](const string& node) {
         cerr << "unable to launch process via SSH at node " << node << endl;
-      }
-    );
+      });
   }
   // run (and wait for) master
   std::ostringstream oss;
@@ -249,8 +231,8 @@ namespace {
 struct config : actor_system_config {
   config() {
     opt_group{custom_options_, "global"}
-    .add(hostfile, "hostfile", "path to hostfile")
-    .add(wdir, "wdir", "working directory");
+      .add(hostfile, "hostfile", "path to hostfile")
+      .add(wdir, "wdir", "working directory");
   }
   string hostfile;
   string wdir;
@@ -274,7 +256,7 @@ int main(int argc, char** argv) {
   auto cmd = std::move(remainder.front());
   vector<string> xs;
   for (auto i = cfg.remainder.begin() + 1; i != cfg.remainder.end(); ++i)
-     xs.emplace_back(std::move(*i));
+    xs.emplace_back(std::move(*i));
   auto hosts = read_hostfile(cfg.hostfile);
   if (hosts.empty())
     RETURN_WITH_ERROR("no valid entry in hostfile");

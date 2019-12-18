@@ -5,7 +5,6 @@
 // Default CMake flags for release builds.
 defaultReleaseBuildFlags = [
     'CAF_ENABLE_RUNTIME_CHECKS:BOOL=yes',
-    'CAF_NO_OPENCL:BOOL=yes',
 ]
 
 // Default CMake flags for debug builds.
@@ -112,7 +111,6 @@ config = [
             'libcaf_core/test',
             'libcaf_io/test',
             'libcaf_openssl/test',
-            'libcaf_opencl',
         ],
     ],
 ]

@@ -275,10 +275,6 @@ public:
   /// @private
   timespan stream_tick_duration() const noexcept;
 
-  // -- OpenCL parameters ------------------------------------------------------
-
-  std::string opencl_device_ids;
-
   // -- OpenSSL parameters -----------------------------------------------------
 
   std::string openssl_certificate;

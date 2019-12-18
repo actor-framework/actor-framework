@@ -31,9 +31,9 @@
 #include "caf/policy/work_sharing.hpp"
 #include "caf/policy/work_stealing.hpp"
 
+#include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/scheduler/coordinator.hpp"
 #include "caf/scheduler/test_coordinator.hpp"
-#include "caf/scheduler/abstract_coordinator.hpp"
 
 namespace caf {
 
@@ -87,8 +87,8 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
       // also iterate all subscribers for '*'
       for (auto& subscriber : self->state.data[wildcard].second)
         if (subscriber != self->current_sender())
-          self->send(actor_cast<actor>(subscriber), update_atom::value,
-                     key, vp.first);
+          self->send(actor_cast<actor>(subscriber), update_atom::value, key,
+                     vp.first);
     },
     // get a key/value pair
     [=](get_atom, std::string& key) -> message {
@@ -101,9 +101,9 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
         return make_message(std::move(msgs));
       }
       auto i = self->state.data.find(key);
-      return make_message(std::move(key),
-                          i != self->state.data.end() ? i->second.first
-                                                      : make_message());
+      return make_message(std::move(key), i != self->state.data.end()
+                                            ? i->second.first
+                                            : make_message());
     },
     // subscribe to a key
     [=](subscribe_atom, const std::string& key) {
@@ -137,7 +137,7 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
     // get a 'named' actor from local registry
     [=](get_atom, atom_value name) {
       return self->home_system().registry().get(name);
-    }
+    },
   };
 }
 
@@ -156,13 +156,12 @@ const char* spawn_serv_state::name = "spawn_server";
 behavior spawn_serv_impl(stateful_actor<spawn_serv_state>* self) {
   CAF_LOG_TRACE("");
   return {
-    [=](spawn_atom, const std::string& name,
-        message& args, actor_system::mpi& xs)
-    -> expected<strong_actor_ptr> {
+    [=](spawn_atom, const std::string& name, message& args,
+        actor_system::mpi& xs) -> expected<strong_actor_ptr> {
       CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(args));
       return self->system().spawn<strong_actor_ptr>(name, std::move(args),
                                                     self->context(), true, &xs);
-    }
+    },
   };
 }
 
@@ -204,8 +203,6 @@ const char* actor_system::module::name() const noexcept {
       return "Scheduler";
     case middleman:
       return "Middleman";
-    case opencl_manager:
-      return "OpenCL Manager";
     case openssl_manager:
       return "OpenSSL Manager";
     case network_manager:
@@ -244,9 +241,9 @@ actor_system::actor_system(actor_system_config& cfg)
   // set scheduler only if not explicitly loaded by user
   if (!sched) {
     enum sched_conf {
-      stealing          = 0x0001,
-      sharing           = 0x0002,
-      testing           = 0x0003,
+      stealing = 0x0001,
+      sharing = 0x0002,
+      testing = 0x0003,
     };
     sched_conf sc = stealing;
     namespace sr = defaults::scheduler;
@@ -377,17 +374,6 @@ io::middleman& actor_system::middleman() {
   return *reinterpret_cast<io::middleman*>(clptr->subtype_ptr());
 }
 
-bool actor_system::has_opencl_manager() const {
-  return modules_[module::opencl_manager] != nullptr;
-}
-
-opencl::manager& actor_system::opencl_manager() const {
-  auto& clptr = modules_[module::opencl_manager];
-  if (!clptr)
-    CAF_RAISE_ERROR("cannot access opencl manager: module not loaded");
-  return *reinterpret_cast<opencl::manager*>(clptr->subtype_ptr());
-}
-
 bool actor_system::has_openssl_manager() const {
   return modules_[module::openssl_manager] != nullptr;
 }
@@ -461,7 +447,7 @@ actor_system::dyn_spawn_impl(const std::string& name, message& args,
                              execution_unit* ctx, bool check_interface,
                              optional<const mpi&> expected_ifs) {
   CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(args) << CAF_ARG(check_interface)
-                << CAF_ARG(expected_ifs));
+                              << CAF_ARG(expected_ifs));
   if (name.empty())
     return sec::invalid_argument;
   auto& fs = cfg_.actor_factories;
