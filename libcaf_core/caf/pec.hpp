@@ -72,7 +72,9 @@ enum class pec : uint8_t {
   repeated_field_name,
   /// Stopped while reading a user-defined type with one or more missing
   /// mandatory fields.
-  missing_field,
+  missing_field = 20,
+  /// Parsing a range statement ('n..m' or 'n..m..step') failed.
+  invalid_range_expression,
 };
 
 /// @relates pec
