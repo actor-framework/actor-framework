@@ -284,6 +284,8 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_SOURCES} ${CAF_CORE_HEADERS})
 
 add_library(libcaf_core $<TARGET_OBJECTS:libcaf_core_obj>)
 
+xcode_assert_target_not_empty(libcaf_core)
+
 add_library(caf::core ALIAS libcaf_core)
 
 if(BUILD_SHARED_LIBS AND NOT WIN32)
