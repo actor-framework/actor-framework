@@ -667,6 +667,8 @@ if(NOT CAF_NO_SUMMARY)
         "\n"
         "\nSource directory:      ${CMAKE_CURRENT_SOURCE_DIR}"
         "\nBuild directory:       ${CMAKE_CURRENT_BINARY_DIR}"
+        "\nExecutable path:       ${EXECUTABLE_OUTPUT_PATH}"
+        "\nLibrary path:          ${LIBRARY_OUTPUT_PATH}"
         "\nInstall prefix:        ${CMAKE_INSTALL_PREFIX}"
         "\nGenerator:             ${CMAKE_GENERATOR}"
         "\n"
