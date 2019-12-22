@@ -132,7 +132,7 @@ A SNocs workspace is provided by GitHub user
 
 If you use CAF in a scientific context, please use one of the following citations:
 
-```latex
+```bibtex
 @inproceedings{cshw-nassp-13,
   author = {Dominik Charousset and Thomas C. Schmidt and Raphael Hiesgen and Matthias W{\"a}hlisch},
   title = {{Native Actors -- A Scalable Software Platform for Distributed, Heterogeneous Environments}},
@@ -150,7 +150,7 @@ If you use CAF in a scientific context, please use one of the following citation
   journal = {Computer Languages, Systems \& Structures},
   volume = {45},
   year = {2016},
-  month = "April",
+  month = {April},
   pages = {105--131},
   publisher = {Elsevier}
 }
