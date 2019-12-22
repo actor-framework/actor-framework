@@ -18,6 +18,14 @@
 
 #include "caf/io/middleman_actor.hpp"
 
+#ifdef CAF_WINDOWS
+#  include <winsock2.h>
+#  include <ws2tcpip.h> // socket_size_type, etc. (MSVC20xx)
+#else
+#  include <sys/socket.h>
+#  include <sys/types.h>
+#endif
+
 #include <stdexcept>
 #include <tuple>
 #include <utility>
@@ -41,14 +49,6 @@
 #include "caf/io/network/stream_impl.hpp"
 
 #include "caf/openssl/session.hpp"
-
-#ifdef CAF_WINDOWS
-#  include <winsock2.h>
-#  include <ws2tcpip.h> // socket_size_type, etc. (MSVC20xx)
-#else
-#  include <sys/socket.h>
-#  include <sys/types.h>
-#endif
 
 namespace caf::openssl {
 
