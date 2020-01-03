@@ -71,7 +71,9 @@ set(CAF_IO_TEST_SOURCES
 
 add_library(libcaf_io_obj OBJECT ${CAF_IO_SOURCES} ${CAF_IO_HEADERS})
 
-add_library(libcaf_io $<TARGET_OBJECTS:libcaf_io_obj>)
+add_library(libcaf_io
+            "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
+            $<TARGET_OBJECTS:libcaf_io_obj>)
 
 add_library(caf::io ALIAS libcaf_io)
 

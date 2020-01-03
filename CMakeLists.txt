@@ -13,6 +13,10 @@ include(CheckCSourceRuns)          # Check whether compiler produces binaries
 include(GNUInstallDirs)            # Sets default install paths
 include(GenerateExportHeader)      # Auto-generates dllexport macros
 
+# -- project-specific CMake settings -------------------------------------------
+
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 # -- check whether we are running as CMake subdirectory ------------------------
 
 get_directory_property(_parent PARENT_DIRECTORY)
@@ -268,20 +272,17 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL "${CMAKE_CURRENT_BINARY_DIR}")
                         "./configure to choose a build directory and "
                         "initialize the build configuration.")
 endif()
-# set module path appropriately
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-# set binary output path if not defined by user
-if(NOT EXECUTABLE_OUTPUT_PATH)
-  set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/bin")
-endif()
-# set library output path if not defined by user, but always set
-# library output path to binary output path for Xcode projects
-if(CMAKE_GENERATOR STREQUAL "Xcode")
-  set(LIBRARY_OUTPUT_PATH "${EXECUTABLE_OUTPUT_PATH}")
-elseif(NOT LIBRARY_OUTPUT_PATH)
-  set(LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/lib")
-endif()
 
+if(NOT XCODE)
+  # set binary output path if not defined by user
+  if(NOT EXECUTABLE_OUTPUT_PATH)
+    set(EXECUTABLE_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/bin")
+  endif()
+  # set library output path if not defined by user
+  if(NOT LIBRARY_OUTPUT_PATH)
+    set(LIBRARY_OUTPUT_PATH "${CMAKE_CURRENT_BINARY_DIR}/lib")
+  endif()
+endif()
 
 ################################################################################
 #                                compiler setup                                #
