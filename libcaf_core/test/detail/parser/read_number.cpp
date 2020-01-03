@@ -341,4 +341,9 @@ CAF_TEST(ranges can use signed integers) {
   CHECK_RANGE("-2..+2..+2", -2, 0, 2);
 }
 
+CAF_TEST(the parser rejects invalid step values) {
+  CAF_CHECK_EQUAL(r("-2..+2..-2"), pec::invalid_range_expression);
+  CAF_CHECK_EQUAL(r("+2..-2..+2"), pec::invalid_range_expression);
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()
