@@ -490,15 +490,19 @@ void actor_system::thread_terminates() {
     hook->thread_terminates();
 }
 
+/// Pin the current thread of type 'tt', passed as a parameter, on the next
+/// core group. The core groups are set by the affinity configurations and by
+/// default no groups are configured. If all the core groups are used for a
+/// specific thread type the function starts again from the first group.
 void actor_system::set_affinity(const thread_type tt) {
   CAF_ASSERT(tt < no_id);
-  auto cores = cores_[tt];
-  if (cores.size()) {
+  detail::core_groups& core_groups = cores_[tt];
+  if (core_groups.size()) {
     auto& atomics = atomics_[tt];
-    size_t id = atomics.fetch_add(1) % cores.size();
+    size_t id = atomics.fetch_add(1) % core_groups.size();
     // Set the affinity of the thread
-    detail::core_group& core = cores[id];
-    detail::set_current_thread_affinity(core);
+    detail::core_group& core_group = core_groups[id];
+    detail::set_current_thread_affinity(core_group);
   }
 }
 

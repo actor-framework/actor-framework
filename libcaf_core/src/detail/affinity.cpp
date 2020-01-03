@@ -14,7 +14,7 @@
 
 #ifdef CAF_WINDOWS
 #  ifndef WIN32_LEAN_AND_MEAN
-#    define _GNU_SOURCE
+#    define WIN32_LEAN_AND_MEAN
 #  endif // WIN32_LEAN_AND_MEAN
 #  include <windows.h>
 #endif // CAF_WINDOWS
@@ -37,6 +37,7 @@
 
 namespace caf::detail {
 
+/// Pin the current thread to a specific set of cores
 void set_current_thread_affinity(const core_group& cores) {
   if (cores.size() == 0) {
     return;
