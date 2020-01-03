@@ -21,13 +21,14 @@
 #include <vector>
 
 #include "caf/byte.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/span.hpp"
 
 namespace caf::net {
 
 /// Implements an interface for packet writing in application-layers.
-class packet_writer {
+class CAF_NET_EXPORT packet_writer {
 public:
   using buffer_type = std::vector<byte>;
 

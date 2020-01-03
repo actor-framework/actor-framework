@@ -18,13 +18,14 @@
 
 #pragma once
 
+#include "caf/detail/net_export.hpp"
 #include "caf/net/network_socket.hpp"
 #include "caf/variant.hpp"
 
 namespace caf::net {
 
 /// A datagram-oriented network communication endpoint.
-struct datagram_socket : network_socket {
+struct CAF_NET_EXPORT datagram_socket : network_socket {
   using super = network_socket;
 
   using super::super;
@@ -32,12 +33,12 @@ struct datagram_socket : network_socket {
 
 /// Enables or disables `SIO_UDP_CONNRESET` error on `x`.
 /// @relates datagram_socket
-error allow_connreset(datagram_socket x, bool new_value);
+error CAF_NET_EXPORT allow_connreset(datagram_socket x, bool new_value);
 
 /// Converts the result from I/O operation on a ::datagram_socket to either an
 /// error code or a integer greater or equal to zero.
 /// @relates datagram_socket
-variant<size_t, sec>
+variant<size_t, sec> CAF_NET_EXPORT
 check_datagram_socket_io_res(std::make_signed<size_t>::type res);
 
 } // namespace caf::net

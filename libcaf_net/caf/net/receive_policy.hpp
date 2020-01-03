@@ -26,7 +26,11 @@
 
 namespace caf::net {
 
-enum class receive_policy_flag : unsigned { at_least, at_most, exactly };
+enum class CAF_NET_EXPORT receive_policy_flag : unsigned {
+  at_least,
+  at_most,
+  exactly
+};
 
 inline std::string to_string(receive_policy_flag x) {
   return x == receive_policy_flag::at_least
@@ -34,7 +38,7 @@ inline std::string to_string(receive_policy_flag x) {
            : (x == receive_policy_flag::at_most ? "at_most" : "exactly");
 }
 
-class receive_policy {
+class CAF_NET_EXPORT receive_policy {
 public:
   receive_policy() = delete;
 

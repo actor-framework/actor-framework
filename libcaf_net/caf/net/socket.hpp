@@ -24,6 +24,7 @@
 
 #include "caf/config.hpp"
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/socket_id.hpp"
 
@@ -31,7 +32,7 @@ namespace caf::net {
 
 /// An internal endpoint for sending or receiving data. Can be either a
 /// ::network_socket, ::pipe_socket, ::stream_socket, or ::datagram_socket.
-struct socket : detail::comparable<socket> {
+struct CAF_NET_EXPORT socket : detail::comparable<socket> {
   socket_id id;
 
   constexpr socket() noexcept : id(invalid_socket_id) {
@@ -54,7 +55,8 @@ struct socket : detail::comparable<socket> {
 
 /// @relates socket
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, socket& x) {
+typename Inspector::result_type CAF_NET_EXPORT inspect(Inspector& f,
+                                                       socket& x) {
   return f(x.id);
 }
 
@@ -63,29 +65,29 @@ constexpr auto invalid_socket = socket{invalid_socket_id};
 
 /// Converts between different socket types.
 template <class To, class From>
-To socket_cast(From x) {
+To CAF_NET_EXPORT socket_cast(From x) {
   return To{x.id};
 }
 
 /// Close socket `x`.
 /// @relates socket
-void close(socket x);
+void CAF_NET_EXPORT close(socket x);
 
 /// Returns the last socket error in this thread as an integer.
 /// @relates socket
-std::errc last_socket_error();
+std::errc CAF_NET_EXPORT last_socket_error();
 
 /// Returns the last socket error as human-readable string.
 /// @relates socket
-std::string last_socket_error_as_string();
+std::string CAF_NET_EXPORT last_socket_error_as_string();
 
 /// Sets x to be inherited by child processes if `new_value == true`
 /// or not if `new_value == false`.  Not implemented on Windows.
 /// @relates socket
-error child_process_inherit(socket x, bool new_value);
+error CAF_NET_EXPORT child_process_inherit(socket x, bool new_value);
 
 /// Enables or disables nonblocking I/O on `x`.
 /// @relates socket
-error nonblocking(socket x, bool new_value);
+error CAF_NET_EXPORT nonblocking(socket x, bool new_value);
 
 } // namespace caf::net

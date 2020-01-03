@@ -20,12 +20,13 @@
 
 #include <stdexcept>
 
+#include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/net/host.hpp"
 
 namespace {
 
-struct host_fixture {
+struct CAF_NET_EXPORT host_fixture {
   host_fixture() {
     if (auto err = caf::net::this_host::startup())
       throw std::logic_error("this_host::startup failed");

@@ -18,11 +18,12 @@
 
 #pragma once
 
+#include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf::net {
 
-struct this_host {
+struct CAF_NET_EXPORT this_host {
   /// Initializes the network subsystem.
   static error startup();
 
