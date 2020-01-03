@@ -23,6 +23,8 @@ add_library(libcaf_openssl_obj OBJECT ${CAF_OPENSSL_SOURCES} ${CAF_OPENSSL_HEADE
 
 add_library(libcaf_openssl $<TARGET_OBJECTS:libcaf_openssl_obj>)
 
+xcode_assert_target_not_empty(libcaf_openssl)
+
 add_library(caf::openssl ALIAS libcaf_openssl)
 
 if(BUILD_SHARED_LIBS AND NOT WIN32)
