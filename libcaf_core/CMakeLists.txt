@@ -282,9 +282,9 @@ set(CAF_CORE_TEST_SOURCES
 
 add_library(libcaf_core_obj OBJECT ${CAF_CORE_SOURCES} ${CAF_CORE_HEADERS})
 
-add_library(libcaf_core $<TARGET_OBJECTS:libcaf_core_obj>)
-
-xcode_assert_target_not_empty(libcaf_core)
+add_library(libcaf_core
+            "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
+            $<TARGET_OBJECTS:libcaf_core_obj>)
 
 add_library(caf::core ALIAS libcaf_core)
 

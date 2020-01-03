@@ -13,9 +13,9 @@ include(CheckCSourceRuns)          # Check whether compiler produces binaries
 include(GNUInstallDirs)            # Sets default install paths
 include(GenerateExportHeader)      # Auto-generates dllexport macros
 
-# -- project-specific includes ------------------------------------------------------------------
+# -- project-specific CMake settings -------------------------------------------
+
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-include(XcodeSpecifics)
 
 # -- check whether we are running as CMake subdirectory ------------------------
 

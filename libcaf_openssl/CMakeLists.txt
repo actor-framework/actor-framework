@@ -21,9 +21,9 @@ set(CAF_OPENSSL_TEST_SOURCES
 
 add_library(libcaf_openssl_obj OBJECT ${CAF_OPENSSL_SOURCES} ${CAF_OPENSSL_HEADERS})
 
-add_library(libcaf_openssl $<TARGET_OBJECTS:libcaf_openssl_obj>)
-
-xcode_assert_target_not_empty(libcaf_openssl)
+add_library(libcaf_openssl
+            "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
+            $<TARGET_OBJECTS:libcaf_openssl_obj>)
 
 add_library(caf::openssl ALIAS libcaf_openssl)
 
