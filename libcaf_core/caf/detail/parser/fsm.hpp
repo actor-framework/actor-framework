@@ -273,15 +273,27 @@
 
 #endif // CAF_MSVC
 
-/// Makes a transition into another state if the `statement` is true.
+/// Enables a transition into another state if the `statement` is true.
 #define transition_if(statement, ...)                                          \
   if (statement) {                                                             \
     transition(__VA_ARGS__)                                                    \
   }
 
-/// Makes an epsiolon transition into another state if the `statement` is true.
+/// Enables a transition if the constexpr `statement` is true.
+#define transition_static_if(statement, ...)                                   \
+  if constexpr (statement) {                                                   \
+    transition(__VA_ARGS__)                                                    \
+  }
+
+/// Enables an epsiolon transition if the `statement` is true.
 #define epsilon_if(statement, ...)                                             \
   if (statement) {                                                             \
+    epsilon(__VA_ARGS__)                                                       \
+  }
+
+/// Enables an epsiolon transition if the constexpr `statement` is true.
+#define epsilon_static_if(statement, ...)                                      \
+  if constexpr (statement) {                                                   \
     epsilon(__VA_ARGS__)                                                       \
   }
 
@@ -292,9 +304,23 @@
     fsm_transition(__VA_ARGS__)                                                \
   }
 
+/// Makes an transition transition into another FSM if `statement` is true,
+/// resuming at state `target`.
+#define fsm_transition_static_if(statement, ...)                               \
+  if constexpr (statement) {                                                   \
+    fsm_transition(__VA_ARGS__)                                                \
+  }
+
 /// Makes an epsilon transition into another FSM if `statement` is true,
 /// resuming at state `target`.
 #define fsm_epsilon_if(statement, ...)                                         \
   if (statement) {                                                             \
+    fsm_epsilon(__VA_ARGS__)                                                   \
+  }
+
+/// Makes an epsilon transition into another FSM if `statement` is true,
+/// resuming at state `target`.
+#define fsm_epsilon_static_if(statement, ...)                                  \
+  if constexpr (statement) {                                                   \
     fsm_epsilon(__VA_ARGS__)                                                   \
   }

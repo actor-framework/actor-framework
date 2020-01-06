@@ -38,7 +38,11 @@ constexpr bool in_whitelist(char whitelist, char ch) {
 }
 
 inline bool in_whitelist(const char* whitelist, char ch) {
-  return strchr(whitelist, ch) != nullptr;
+  // Note: using strchr breaks if `ch == '\0'`.
+  for (char c = *whitelist++; c != '\0'; c = *whitelist++)
+    if (c == ch)
+      return true;
+  return false;
 }
 
 inline bool in_whitelist(bool (*filter)(char), char ch) {

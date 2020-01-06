@@ -36,13 +36,23 @@ using namespace caf;
 
 namespace {
 
-struct numbers_parser_consumer {
+struct number_consumer {
   variant<int64_t, double> x;
-  inline void value(double y) {
+  void value(double y) {
     x = y;
   }
-  inline void value(int64_t y) {
+  void value(int64_t y) {
     x = y;
+  }
+};
+
+struct range_consumer {
+  std::vector<int64_t> xs;
+  void value(double) {
+    CAF_FAIL("range consumer called with a double");
+  }
+  void value(int64_t y) {
+    xs.emplace_back(y);
   }
 };
 
@@ -53,6 +63,10 @@ struct res_t {
     // nop
   }
 };
+
+std::string to_string(const res_t& x) {
+  return caf::visit([](auto& y) { return deep_to_string(y); }, x.val);
+}
 
 bool operator==(const res_t& x, const res_t& y) {
   if (x.val.index() != y.val.index())
@@ -70,12 +84,23 @@ bool operator==(const res_t& x, const res_t& y) {
 
 struct numbers_parser {
   res_t operator()(string_view str) {
-    numbers_parser_consumer f;
+    number_consumer f;
     string_parser_state res{str.begin(), str.end()};
     detail::parser::read_number(res, f);
     if (res.code == pec::success)
       return f.x;
     return res.code;
+  }
+};
+
+struct range_parser {
+  expected<std::vector<int64_t>> operator()(string_view str) {
+    range_consumer f;
+    string_parser_state res{str.begin(), str.end()};
+    detail::parser::read_number(res, f, std::true_type{}, std::true_type{});
+    if (res.code == pec::success)
+      return std::move(f.xs);
+    return make_error(res);
   }
 };
 
@@ -92,6 +117,7 @@ res(T x) {
 
 struct fixture {
   numbers_parser p;
+  range_parser r;
 };
 
 } // namespace
@@ -205,12 +231,18 @@ CAF_TEST(floating point numbers) {
   CHECK_NUMBER(0.0);
   CHECK_NUMBER(.0);
   CHECK_NUMBER(0.);
+  CHECK_NUMBER(1.1);
+  CHECK_NUMBER(.1);
+  CHECK_NUMBER(1.);
   CHECK_NUMBER(0.123);
   CHECK_NUMBER(.123);
   CHECK_NUMBER(123.456);
   CHECK_NUMBER(-0.0);
   CHECK_NUMBER(-.0);
   CHECK_NUMBER(-0.);
+  CHECK_NUMBER(-1.1);
+  CHECK_NUMBER(-.1);
+  CHECK_NUMBER(-1.);
   CHECK_NUMBER(-0.123);
   CHECK_NUMBER(-.123);
   CHECK_NUMBER(-123.456);
@@ -267,6 +299,60 @@ CAF_TEST(fractional mantissa with negative exponent) {
   CHECK_NUMBER(-42.001e-3);
   CHECK_NUMBER(-42001e-6);
   CHECK_NUMBER(-42.0001e-5);
+}
+
+#define CHECK_RANGE(expr, ...)                                                 \
+  CAF_CHECK_EQUAL(r(expr), std::vector<int64_t>({__VA_ARGS__}))
+
+CAF_TEST(a range from n to n is just n) {
+  CHECK_RANGE("0..0", 0);
+  CHECK_RANGE("1..1", 1);
+  CHECK_RANGE("2..2", 2);
+  CHECK_RANGE("101..101", 101);
+  CHECK_RANGE("101..101..1", 101);
+  CHECK_RANGE("101..101..2", 101);
+  CHECK_RANGE("101..101..-1", 101);
+  CHECK_RANGE("101..101..-2", 101);
+}
+
+CAF_TEST(ranges are either ascending or descending) {
+  CHECK_RANGE("0..1", 0, 1);
+  CHECK_RANGE("0..2", 0, 1, 2);
+  CHECK_RANGE("0..3", 0, 1, 2, 3);
+  CHECK_RANGE("3..0", 3, 2, 1, 0);
+  CHECK_RANGE("3..1", 3, 2, 1);
+  CHECK_RANGE("3..2", 3, 2);
+}
+
+CAF_TEST(ranges can use positive step values) {
+  CHECK_RANGE("2..6..2", 2, 4, 6);
+  CHECK_RANGE("3..8..3", 3, 6);
+}
+
+CAF_TEST(ranges can use negative step values) {
+  CHECK_RANGE("6..2..-2", 6, 4, 2);
+  CHECK_RANGE("8..3..-3", 8, 5);
+}
+
+CAF_TEST(ranges can use signed integers) {
+  CHECK_RANGE("+2..+6..+2", 2, 4, 6);
+  CHECK_RANGE("+6..+2..-2", 6, 4, 2);
+  CHECK_RANGE("+2..-2..-2", 2, 0, -2);
+  CHECK_RANGE("-2..+2..+2", -2, 0, 2);
+}
+
+#define CHECK_ERR(expr, enum_value)                                            \
+  if (auto res = r(expr)) {                                                    \
+    CAF_FAIL("expected expression to produce to an error");                    \
+  } else {                                                                     \
+    auto& err = res.error();                                                   \
+    CAF_CHECK_EQUAL(err.category(), atom("parser"));                           \
+    CAF_CHECK_EQUAL(err.code(), static_cast<uint8_t>(enum_value));             \
+  }
+
+CAF_TEST(the parser rejects invalid step values) {
+  CHECK_ERR("-2..+2..-2", pec::invalid_range_expression);
+  CHECK_ERR("+2..-2..+2", pec::invalid_range_expression);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

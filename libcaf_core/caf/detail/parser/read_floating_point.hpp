@@ -112,7 +112,8 @@ void read_floating_point(State& ps, Consumer&& consumer,
   start();
   unstable_state(init) {
     epsilon_if(start_value == none, regular_init)
-    epsilon(after_dec)
+    epsilon(after_dec, "eE.")
+    epsilon(after_dot, any_char)
   }
   state(regular_init) {
     transition(regular_init, " \t")

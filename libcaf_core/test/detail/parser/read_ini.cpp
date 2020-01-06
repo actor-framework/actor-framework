@@ -126,8 +126,9 @@ some-other-bool=false
 some-list=[
 ; here we have some list entries
 123,
+  1..3,
   23 ; twenty-three!
-  ,
+  ,2..4..2,
   "abc",
   'def', ; some comment and a trailing comma
 ]
@@ -179,7 +180,12 @@ const auto ini0_log = make_log(
     "key: some-list",
     "[",
       "value (integer): 123",
+      "value (integer): 1",
+      "value (integer): 2",
+      "value (integer): 3",
       "value (integer): 23",
+      "value (integer): 2",
+      "value (integer): 4",
       "value (string): \"abc\"",
       "value (atom): 'def'",
     "]",

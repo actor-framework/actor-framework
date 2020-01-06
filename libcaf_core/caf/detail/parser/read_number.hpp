@@ -19,8 +19,10 @@
 #pragma once
 
 #include <cstdint>
+#include <type_traits>
 
 #include "caf/config.hpp"
+#include "caf/detail/consumer.hpp"
 #include "caf/detail/parser/add_ascii.hpp"
 #include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/is_char.hpp"
@@ -36,10 +38,25 @@ CAF_PUSH_UNUSED_LABEL_WARNING
 
 namespace caf::detail::parser {
 
+/// Reads the second half of 'n..m' range statement.
+///
+/// Expect the current position to point at the number *after* the dots:
+///
+/// ~~~
+/// foo = [1..2]
+///        ~~~^
+/// ~~~
+template <class State, class Consumer>
+void read_number_range(State& ps, Consumer& consumer, int64_t begin);
+
 /// Reads a number, i.e., on success produces either an `int64_t` or a
 /// `double`.
-template <class State, class Consumer>
-void read_number(State& ps, Consumer& consumer) {
+template <class State, class Consumer, class EnableFloat = std::true_type,
+          class EnableRange = std::false_type>
+void read_number(State& ps, Consumer& consumer, EnableFloat = {},
+                 EnableRange = {}) {
+  static constexpr bool enable_float = EnableFloat::value;
+  static constexpr bool enable_range = EnableRange::value;
   // Our result when reading an integer number.
   int64_t result = 0;
   // Computes the result on success.
@@ -47,6 +64,7 @@ void read_number(State& ps, Consumer& consumer) {
     if (ps.code <= pec::trailing_character)
       consumer.value(result);
   });
+  using odbl = optional<double>;
   // clang-format off
   // Definition of our parser FSM.
   start();
@@ -54,18 +72,23 @@ void read_number(State& ps, Consumer& consumer) {
     transition(init, " \t")
     transition(has_plus, '+')
     transition(has_minus, '-')
+    fsm_epsilon_static_if(enable_float,
+                          read_floating_point(ps, consumer, odbl{0.}),
+                          done, '.', g.disable())
     epsilon(has_plus)
   }
   // "+" or "-" alone aren't numbers.
   state(has_plus) {
-    fsm_epsilon(read_floating_point(ps, consumer, optional<double>{0.}),
-                done, '.', g.disable())
+    fsm_epsilon_static_if(enable_float,
+                          read_floating_point(ps, consumer, odbl{0.}),
+                          done, '.', g.disable())
     transition(pos_zero, '0')
     epsilon(pos_dec)
   }
   state(has_minus) {
-    fsm_epsilon(read_floating_point(ps, consumer, optional<double>{0.}, true),
-                done, '.', g.disable())
+    fsm_epsilon_static_if(enable_float,
+                          read_floating_point(ps, consumer, odbl{0.}, true),
+                          done, '.', g.disable())
     transition(neg_zero, '0')
     epsilon(neg_dec)
   }
@@ -73,15 +96,13 @@ void read_number(State& ps, Consumer& consumer) {
   term_state(pos_zero) {
     transition(start_pos_bin, "bB")
     transition(start_pos_hex, "xX")
-    fsm_epsilon(read_floating_point(ps, consumer, optional<double>{0.}),
-                done, '.', g.disable())
+    transition_static_if(enable_float || enable_range, pos_dot, '.')
     epsilon(pos_oct)
   }
   term_state(neg_zero) {
     transition(start_neg_bin, "bB")
     transition(start_neg_hex, "xX")
-    fsm_epsilon(read_floating_point(ps, consumer, optional<double>{0.}, true),
-                done, '.', g.disable())
+    transition_static_if(enable_float || enable_range, neg_dot, '.')
     epsilon(neg_oct)
   }
   // Binary integers.
@@ -131,19 +152,101 @@ void read_number(State& ps, Consumer& consumer) {
   term_state(pos_dec) {
     transition(pos_dec, decimal_chars, add_ascii<10>(result, ch),
                pec::integer_overflow)
-    fsm_epsilon(read_floating_point(ps, consumer, optional<double>{result}),
-                done, "eE", g.disable())
-    fsm_epsilon(read_floating_point(ps, consumer, optional<double>{result}),
-                done, '.', g.disable())
+    fsm_epsilon_static_if(enable_float,
+                          read_floating_point(ps, consumer, odbl{result}),
+                          done, "eE", g.disable())
+    transition_static_if(enable_float || enable_range, pos_dot, '.')
   }
   // Reads the integer part of the mantissa or a negative decimal integer.
   term_state(neg_dec) {
     transition(neg_dec, decimal_chars, sub_ascii<10>(result, ch),
                pec::integer_underflow)
-    fsm_epsilon(read_floating_point(ps, consumer, optional<double>{result}, true),
-                done, "eE", g.disable())
-    fsm_epsilon(read_floating_point(ps, consumer, optional<double>{result}, true),
-                done, '.', g.disable())
+    fsm_epsilon_static_if(enable_float,
+                          read_floating_point(ps, consumer, odbl{result}, true),
+                          done, "eE", g.disable())
+    transition_static_if(enable_float || enable_range, neg_dot, '.')
+  }
+  unstable_state(pos_dot) {
+    fsm_transition_static_if(enable_range,
+                             read_number_range(ps, consumer, result),
+                             done, '.', g.disable())
+    fsm_epsilon_static_if(enable_float,
+                          read_floating_point(ps, consumer, odbl{result}),
+                          done, any_char, g.disable())
+    epsilon(done)
+  }
+  unstable_state(neg_dot) {
+    fsm_transition_static_if(enable_range,
+                             read_number_range(ps, consumer, result),
+                             done, '.', g.disable())
+    fsm_epsilon_static_if(enable_float,
+                          read_floating_point(ps, consumer, odbl{result}, true),
+                          done, any_char, g.disable())
+    epsilon(done)
+  }
+  term_state(done) {
+    // nop
+  }
+  fin();
+  // clang-format on
+}
+
+template <class State, class Consumer>
+void read_number_range(State& ps, Consumer& consumer, int64_t begin) {
+  optional<int64_t> end;
+  optional<int64_t> step;
+  auto end_consumer = make_consumer(end);
+  auto step_consumer = make_consumer(step);
+  auto generate_2 = [&](int64_t n, int64_t m) {
+    if (n <= m)
+      while (n <= m)
+        consumer.value(n++);
+    else
+      while (n >= m)
+        consumer.value(n--);
+  };
+  auto generate_3 = [&](int64_t n, int64_t m, int64_t s) {
+    if (n == m) {
+      consumer.value(n);
+      return;
+    }
+    if (s == 0 || (n > m && s > 0) || (n < m && s < 0)) {
+      ps.code = pec::invalid_range_expression;
+      return;
+    }
+    if (n <= m)
+      for (auto i = n; i <= m; i += s)
+        consumer.value(i);
+    else
+      for (auto i = n; i >= m; i += s)
+        consumer.value(i);
+  };
+  auto g = caf::detail::make_scope_guard([&] {
+    if (ps.code <= pec::trailing_character) {
+      if (!end) {
+        ps.code = pec::invalid_range_expression;
+      } else if (!step) {
+        generate_2(begin, *end);
+      } else {
+        generate_3(begin, *end, *step);
+      }
+    }
+  });
+  static constexpr std::false_type no_float = std::false_type{};
+  // clang-format off
+  // Definition of our parser FSM.
+  start();
+  state(init) {
+    fsm_epsilon(read_number(ps, end_consumer, no_float), after_end_num)
+  }
+  term_state(after_end_num) {
+    transition(first_dot, '.')
+  }
+  state(first_dot) {
+    transition(second_dot, '.')
+  }
+  state(second_dot) {
+    fsm_epsilon(read_number(ps, step_consumer, no_float), done)
   }
   term_state(done) {
     // nop
