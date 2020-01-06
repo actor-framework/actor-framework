@@ -25,6 +25,7 @@
 
 #include "caf/io/network/protocol.hpp"
 
+// clang-format off
 #ifdef CAF_WINDOWS
 #  ifndef WIN32_LEAN_AND_MEAN
 #    define WIN32_LEAN_AND_MEAN
@@ -54,6 +55,7 @@
 #  include <sys/socket.h>
 #  include <unistd.h>
 #endif
+// clang-format on
 
 using std::string;
 

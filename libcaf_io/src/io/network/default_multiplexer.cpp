@@ -39,6 +39,7 @@
 
 #include "caf/scheduler/abstract_coordinator.hpp"
 
+// clang-format off
 #ifdef CAF_WINDOWS
 #  ifndef WIN32_LEAN_AND_MEAN
 #    define WIN32_LEAN_AND_MEAN
@@ -76,6 +77,7 @@
 #  else
 #    error "neither CAF_POLL_MULTIPLEXER nor CAF_EPOLL_MULTIPLEXER defined"
 #  endif
+// clang-format on
 
 #endif
 
