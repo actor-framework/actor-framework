@@ -30,6 +30,7 @@
 #  include <ws2tcpip.h>
 #  include <ws2ipdef.h>
 #else
+#  include <sys/types.h>
 #  include <arpa/inet.h>
 #  include <cerrno>
 #  include <netinet/in.h>

@@ -39,6 +39,7 @@
 
 #include "caf/scheduler/abstract_coordinator.hpp"
 
+// clang-format off
 #ifdef CAF_WINDOWS
 #  ifndef WIN32_LEAN_AND_MEAN
 #    define WIN32_LEAN_AND_MEAN
@@ -63,11 +64,11 @@
 #  include <cerrno>
 #  include <fcntl.h>
 #  include <netdb.h>
+#  include <sys/types.h>
 #  include <netinet/in.h>
 #  include <netinet/ip.h>
 #  include <netinet/tcp.h>
 #  include <sys/socket.h>
-#  include <sys/types.h>
 #  include <unistd.h>
 #  ifdef CAF_POLL_MULTIPLEXER
 #    include <poll.h>
@@ -76,6 +77,7 @@
 #  else
 #    error "neither CAF_POLL_MULTIPLEXER nor CAF_EPOLL_MULTIPLEXER defined"
 #  endif
+// clang-format on
 
 #endif
 
