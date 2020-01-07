@@ -49,9 +49,11 @@ header header::from_bytes(span<const byte> bytes) {
   header result;
   auto ptr = bytes.data();
   result.type = *reinterpret_cast<const message_type*>(ptr);
-  auto payload_len = *reinterpret_cast<const uint32_t*>(ptr + 1);
+  uint32_t payload_len = 0;
+  memcpy(&payload_len, ptr + 1, 4);
   result.payload_len = detail::from_network_order(payload_len);
-  auto operation_data = *reinterpret_cast<const uint64_t*>(ptr + 5);
+  uint64_t operation_data;
+  memcpy(&operation_data, ptr + 5, 8);
   result.operation_data = detail::from_network_order(operation_data);
   return result;
 }
