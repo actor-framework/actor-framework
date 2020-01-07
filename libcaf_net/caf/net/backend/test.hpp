@@ -47,6 +47,8 @@ public:
 
   error init() override;
 
+  void stop() override;
+
   endpoint_manager_ptr peer(const node_id& id) override;
 
   void resolve(const uri& locator, const actor& listener) override;

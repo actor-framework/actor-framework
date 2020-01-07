@@ -67,4 +67,12 @@ void socket_manager::register_writing() {
     ptr->register_writing(this);
 }
 
+void socket_manager::unregister_reading() {
+  if ((mask() & operation::read) != operation::read)
+    return;
+  auto ptr = parent_.lock();
+  if (ptr != nullptr)
+    ptr->unregister_reading(this);
+}
+
 } // namespace caf::net

@@ -53,6 +53,8 @@ void middleman::start() {
 }
 
 void middleman::stop() {
+  for (const auto& backend : backends_)
+    backend->stop();
   mpx_->close_pipe();
   if (mpx_thread_.joinable())
     mpx_thread_.join();

@@ -1,21 +1,19 @@
 /******************************************************************************
- *                       ____    _    _____                                   *
- *                      / ___|  / \  |  ___|    C++                           *
- *                     | |     / _ \ | |_       Actor                         *
- *                     | |___ / ___ \|  _|      Framework                     *
- *                      \____/_/   \_|_|                                      *
+ *                       ____    _    _____ * / ___|  / \  |  ___|    C++ *
+ *                     | |     / _ \ | |_       Actor * | |___ / ___ \|  _|
+ *Framework                     *
+ *                      \____/_/   \_|_| *
  *                                                                            *
- * Copyright 2011-2019 Dominik Charousset                                     *
+ * Copyright 2011-2019 Dominik Charousset *
  *                                                                            *
- * Distributed under the terms and conditions of the BSD 3-Clause License or  *
- * (at your option) under the terms and conditions of the Boost Software      *
- * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
+ * Distributed under the terms and conditions of the BSD 3-Clause License or
+ ** (at your option) under the terms and conditions of the Boost Software *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE. *
  *                                                                            *
- * If you did not receive a copy of the license files, see                    *
- * http://opensource.org/licenses/BSD-3-Clause and                            *
- * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ * If you did not receive a copy of the license files, see *
+ * http://opensource.org/licenses/BSD-3-Clause and *
+ * http://www.boost.org/LICENSE_1_0.txt. *
  ******************************************************************************/
-
 #include "caf/net/multiplexer.hpp"
 
 #include <algorithm>
@@ -134,6 +132,25 @@ void multiplexer::register_writing(const socket_manager_ptr& mgr) {
     }
   } else {
     write_to_pipe(1, mgr);
+  }
+}
+
+void multiplexer::unregister_reading(const socket_manager_ptr& mgr) {
+  if (std::this_thread::get_id() == tid_) {
+    if (mgr->mask() != operation::none) {
+      CAF_ASSERT(index_of(mgr) != -1);
+      if (mgr->mask_del(operation::read)) {
+        auto& fd = pollset_[index_of(mgr)];
+        fd.events &= ~input_mask;
+      }
+      if (mgr->mask() == operation::none) {
+        auto mgr_index = index_of(mgr);
+        pollset_.erase(pollset_.begin() + mgr_index);
+        managers_.erase(managers_.begin() + mgr_index);
+      }
+    }
+  } else {
+    write_to_pipe(0, mgr);
   }
 }
 

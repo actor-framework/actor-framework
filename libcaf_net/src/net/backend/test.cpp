@@ -44,6 +44,11 @@ error test::init() {
   return none;
 }
 
+void test::stop() {
+  for (const auto& peer : peers_)
+    peer.second.second->unregister_reading();
+}
+
 endpoint_manager_ptr test::peer(const node_id& id) {
   return get_peer(id).second;
 }
