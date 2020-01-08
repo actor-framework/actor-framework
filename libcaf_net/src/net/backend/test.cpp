@@ -45,8 +45,9 @@ error test::init() {
 }
 
 void test::stop() {
-  for (const auto& peer : peers_)
-    peer.second.second->unregister_reading();
+  for (const auto& pair : peers_)
+    proxies_.erase(pair.first);
+  peers_.clear();
 }
 
 endpoint_manager_ptr test::peer(const node_id& id) {

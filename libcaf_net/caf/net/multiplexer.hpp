@@ -71,9 +71,9 @@ public:
   /// @thread-safe
   void register_writing(const socket_manager_ptr& mgr);
 
-  /// Unregisters `mgr` for read events.
+  /// Unregisters `mgr` for events.
   /// @thread-safe
-  void unregister_reading(const socket_manager_ptr& mgr);
+  void unregister_manager(const socket_manager_ptr& mgr);
 
   /// Closes the pipe for signaling updates to the multiplexer. After closing
   /// the pipe, calls to `update` no longer have any effect.
@@ -92,6 +92,9 @@ public:
   /// Polls until no socket event handler remains.
   void run();
 
+  /// Signals the multiplexer to initiate shutdown.
+  void shutdown();
+
 protected:
   // -- utility functions ------------------------------------------------------
 
@@ -100,6 +103,9 @@ protected:
 
   /// Adds a new socket manager to the pollset.
   void add(socket_manager_ptr mgr);
+
+  /// Deletes a known socket manager from the pollset.
+  void del(const socket_manager_ptr& mgr);
 
   /// Writes `opcode` and pointer to `mgr` the the pipe for handling an event
   /// later via the pollset updater.
@@ -123,6 +129,9 @@ protected:
 
   /// Guards `write_handle_`.
   std::mutex write_lock_;
+
+  /// Signals shutdown has been requested.
+  bool will_shutdown_;
 };
 
 /// @relates multiplexer

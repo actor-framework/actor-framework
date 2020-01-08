@@ -75,8 +75,6 @@ public:
 
   void register_writing();
 
-  void unregister_reading();
-
   // -- pure virtual member functions ------------------------------------------
 
   /// Called whenever the socket received new data.

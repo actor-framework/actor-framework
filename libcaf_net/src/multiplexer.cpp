@@ -1,19 +1,21 @@
 /******************************************************************************
- *                       ____    _    _____ * / ___|  / \  |  ___|    C++ *
- *                     | |     / _ \ | |_       Actor * | |___ / ___ \|  _|
- *Framework                     *
- *                      \____/_/   \_|_| *
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2019 Dominik Charousset *
+ * Copyright 2011-2019 Dominik Charousset                                     *
  *                                                                            *
- * Distributed under the terms and conditions of the BSD 3-Clause License or
- ** (at your option) under the terms and conditions of the Boost Software *
- * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE. *
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
  *                                                                            *
- * If you did not receive a copy of the license files, see *
- * http://opensource.org/licenses/BSD-3-Clause and *
- * http://www.boost.org/LICENSE_1_0.txt. *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
+
 #include "caf/net/multiplexer.hpp"
 
 #include <algorithm>
@@ -135,22 +137,13 @@ void multiplexer::register_writing(const socket_manager_ptr& mgr) {
   }
 }
 
-void multiplexer::unregister_reading(const socket_manager_ptr& mgr) {
+void multiplexer::unregister_manager(const socket_manager_ptr& mgr) {
   if (std::this_thread::get_id() == tid_) {
-    if (mgr->mask() != operation::none) {
-      CAF_ASSERT(index_of(mgr) != -1);
-      if (mgr->mask_del(operation::read)) {
-        auto& fd = pollset_[index_of(mgr)];
-        fd.events &= ~input_mask;
-      }
-      if (mgr->mask() == operation::none) {
-        auto mgr_index = index_of(mgr);
-        pollset_.erase(pollset_.begin() + mgr_index);
-        managers_.erase(managers_.begin() + mgr_index);
-      }
-    }
+    del(mgr);
+    if (will_shutdown_ && managers_.size() == 1)
+      close_pipe();
   } else {
-    write_to_pipe(0, mgr);
+    write_to_pipe(4, mgr);
   }
 }
 
@@ -239,6 +232,21 @@ void multiplexer::run() {
     poll_once(true);
 }
 
+void multiplexer::shutdown() {
+  if (std::this_thread::get_id() == tid_) {
+    will_shutdown_ = true;
+    if (managers_.size() == 1) {
+      close_pipe();
+    } else {
+      // First manager is the pollset_updater. Skip it and delete later.
+      for (size_t i = 1; i < managers_.size(); ++i)
+        write_to_pipe(4, managers_[i]);
+    }
+  } else {
+    write_to_pipe(5, nullptr);
+  }
+}
+
 short multiplexer::handle(const socket_manager_ptr& mgr, short events,
                           short revents) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle()));
@@ -279,11 +287,18 @@ void multiplexer::add(socket_manager_ptr mgr) {
   managers_.emplace_back(std::move(mgr));
 }
 
+void multiplexer::del(const socket_manager_ptr& mgr) {
+  CAF_ASSERT(index_of(mgr) != -1);
+  pollset_.erase(pollset_.begin() + index_of(mgr));
+  managers_.erase(managers_.begin() + index_of(mgr));
+}
+
 void multiplexer::write_to_pipe(uint8_t opcode, const socket_manager_ptr& mgr) {
-  CAF_ASSERT(opcode == 0 || opcode == 1);
-  CAF_ASSERT(mgr != nullptr);
+  CAF_ASSERT(opcode == 0 || opcode == 1 || opcode == 4 || opcode == 5);
+  CAF_ASSERT(mgr != nullptr || opcode == 5);
   pollset_updater::msg_buf buf;
-  mgr->ref();
+  if (opcode != 5)
+    mgr->ref();
   buf[0] = static_cast<byte>(opcode);
   auto value = reinterpret_cast<intptr_t>(mgr.get());
   memcpy(buf.data() + 1, &value, sizeof(intptr_t));
@@ -295,7 +310,7 @@ void multiplexer::write_to_pipe(uint8_t opcode, const socket_manager_ptr& mgr) {
     else
       res = sec::socket_invalid;
   }
-  if (holds_alternative<sec>(res))
+  if (holds_alternative<sec>(res) && opcode != 5)
     mgr->deref();
 }
 

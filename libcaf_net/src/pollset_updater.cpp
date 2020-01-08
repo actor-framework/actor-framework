@@ -49,13 +49,19 @@ bool pollset_updater::handle_read_event() {
         auto opcode = static_cast<uint8_t>(buf_[0]);
         intptr_t value;
         memcpy(&value, buf_.data() + 1, sizeof(intptr_t));
-        socket_manager_ptr mgr{reinterpret_cast<socket_manager*>(value), false};
         if (auto ptr = parent_.lock()) {
           if (opcode == 0) {
-            ptr->register_reading(mgr);
+            ptr->register_reading(
+              {reinterpret_cast<socket_manager*>(value), false});
+          } else if (opcode == 1) {
+            ptr->register_writing(
+              {reinterpret_cast<socket_manager*>(value), false});
+          } else if (opcode == 4) {
+            ptr->unregister_manager(
+              {reinterpret_cast<socket_manager*>(value), false});
           } else {
-            CAF_ASSERT(opcode == 1);
-            ptr->register_writing(mgr);
+            CAF_ASSERT(opcode == 5);
+            ptr->shutdown();
           }
         }
       }
