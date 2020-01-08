@@ -80,7 +80,9 @@ set(CAF_NET_TEST_SOURCES
 
 add_library(libcaf_net_obj OBJECT ${CAF_NET_SOURCES} ${CAF_NET_HEADERS})
 
-add_library(libcaf_net $<TARGET_OBJECTS:libcaf_net_obj>)
+add_library(libcaf_net
+            "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
+            $<TARGET_OBJECTS:libcaf_net_obj>)
 
 add_library(caf::net ALIAS libcaf_net)
 
