@@ -56,14 +56,16 @@ void middleman::stop() {
   for (const auto& backend : backends_)
     backend->stop();
   mpx_->shutdown();
-  if (mpx_thread_.joinable())
-    mpx_thread_.join();
+  // TODO: Implement shutdown for multiplexer running in own thread!
+  // if (mpx_thread_.joinable())
+  // mpx_thread_.join();
+  mpx_->run();
 }
 
 void middleman::init(actor_system_config& cfg) {
   if (auto err = mpx_->init()) {
     CAF_LOG_ERROR("mgr->init() failed: " << system().render(err));
-    CAF_RAISE_ERROR("mpx->init failed");
+    CAF_RAISE_ERROR("mpx->init() failed");
   }
   if (auto node_uri = get_if<uri>(&cfg, "middleman.this-node")) {
     auto this_node = make_node_id(std::move(*node_uri));
