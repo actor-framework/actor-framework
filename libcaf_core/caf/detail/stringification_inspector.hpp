@@ -58,6 +58,24 @@ public:
     // nop
   }
 
+  // -- serializer interface ---------------------------------------------------
+
+  void begin_object(uint16_t, string_view) {
+    // nop
+  }
+
+  void end_object() {
+    // nop
+  }
+
+  void begin_sequence(size_t) {
+    // nop
+  }
+
+  void end_sequence() {
+    // nop
+  }
+
   // -- operator() -------------------------------------------------------------
 
   template <class... Ts>
