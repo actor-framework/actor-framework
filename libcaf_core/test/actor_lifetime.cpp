@@ -21,9 +21,9 @@
 #define CAF_SUITE actor_lifetime
 #include "caf/test/unit_test.hpp"
 
-#include <mutex>
 #include <atomic>
 #include <condition_variable>
+#include <mutex>
 
 #include "caf/all.hpp"
 
@@ -62,9 +62,7 @@ public:
 
   behavior make_behavior() override {
     return {
-      [=](int x) {
-        return x;
-      }
+      [=](int x) { return x; },
     };
   }
 };
@@ -108,11 +106,9 @@ behavior tester(event_based_actor* self, const actor& aut) {
       CAF_CHECK_EQUAL(s_testees.load(), 0);
       CAF_CHECK_EQUAL(s_pending_on_exits.load(), 0);
       self->quit();
-    }
+    },
   };
 }
-
-
 
 struct config : actor_system_config {
   config() {
@@ -163,7 +159,7 @@ struct fixture {
       }
       // Run the exit_msg.
       sched.run_once();
-      //expect((exit_msg), from(tst_driver).to(tst_subject));
+      // expect((exit_msg), from(tst_driver).to(tst_subject));
       { // Resume driver.
         std::unique_lock<std::mutex> guard{s_mtx};
         s_testee_cleanup_done = true;

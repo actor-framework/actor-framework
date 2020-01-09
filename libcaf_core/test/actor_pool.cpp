@@ -86,8 +86,8 @@ CAF_TEST_FIXTURE_SCOPE(actor_pool_tests, fixture)
 
 CAF_TEST(round_robin_actor_pool) {
   scoped_actor self{system};
-  auto pool
-    = actor_pool::make(&context, 5, spawn_worker, actor_pool::round_robin());
+  auto pool = actor_pool::make(&context, 5, spawn_worker,
+                               actor_pool::round_robin());
   self->send(pool, sys_atom_v, put_atom_v, spawn_worker());
   std::vector<actor> workers;
   for (int i = 0; i < 6; ++i) {
