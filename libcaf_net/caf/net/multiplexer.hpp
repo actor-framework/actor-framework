@@ -61,6 +61,8 @@ public:
   /// Returns the index of `mgr` in the pollset or `-1`.
   ptrdiff_t index_of(const socket_manager_ptr& mgr);
 
+  bool is_same_thread();
+
   // -- thread-safe signaling --------------------------------------------------
 
   /// Registers `mgr` for read events.

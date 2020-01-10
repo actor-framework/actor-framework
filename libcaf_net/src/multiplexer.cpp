@@ -104,6 +104,10 @@ ptrdiff_t multiplexer::index_of(const socket_manager_ptr& mgr) {
   return i == last ? -1 : std::distance(first, i);
 }
 
+bool multiplexer::is_same_thread() {
+  return std::this_thread::get_id() == tid_;
+}
+
 void multiplexer::register_reading(const socket_manager_ptr& mgr) {
   if (std::this_thread::get_id() == tid_) {
     if (mgr->mask() != operation::none) {
@@ -242,7 +246,6 @@ void multiplexer::shutdown() {
     }
   } else {
     write_to_pipe(5, nullptr);
-    run();
   }
 }
 

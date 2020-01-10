@@ -55,7 +55,10 @@ void middleman::start() {
 void middleman::stop() {
   for (const auto& backend : backends_)
     backend->stop();
-  if (mpx_thread_.joinable())
+  mpx_->shutdown();
+  if (mpx_->is_same_thread())
+    mpx_->run();
+  else if (mpx_thread_.joinable())
     mpx_thread_.join();
 }
 
