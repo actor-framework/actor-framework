@@ -230,7 +230,7 @@ void multiplexer::run() {
     poll_once(true);
 }
 
-bool multiplexer::shutdown() {
+void multiplexer::shutdown() {
   if (std::this_thread::get_id() == tid_) {
     will_shutdown_ = true;
     if (managers_.size() == 1) {
@@ -240,10 +240,9 @@ bool multiplexer::shutdown() {
       for (size_t i = 1; i < managers_.size(); ++i)
         write_to_pipe(4, managers_[i]);
     }
-    return true;
   } else {
     write_to_pipe(5, nullptr);
-    return false;
+    run();
   }
 }
 

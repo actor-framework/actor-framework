@@ -93,9 +93,8 @@ public:
   void run();
 
   /// Signals the multiplexer to initiate shutdown.
-  /// @returns true if manual triggering is needed, false if not.
   /// @thread-safe
-  bool shutdown();
+  void shutdown();
 
 protected:
   // -- utility functions ------------------------------------------------------
