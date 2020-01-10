@@ -45,8 +45,8 @@ error test::init() {
 }
 
 void test::stop() {
-  for (const auto& pair : peers_)
-    proxies_.erase(pair.first);
+  for (const auto& p : peers_)
+    proxies_.erase(p.first);
   peers_.clear();
 }
 

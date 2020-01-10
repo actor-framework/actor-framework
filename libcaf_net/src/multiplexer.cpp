@@ -29,7 +29,6 @@
 #include "caf/net/pollset_updater.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/sec.hpp"
-#include "caf/span.hpp"
 #include "caf/variant.hpp"
 
 #ifndef CAF_WINDOWS
@@ -209,8 +208,7 @@ bool multiplexer::poll_once(bool blocking) {
         auto new_events = handle(mgr, events, revents);
         --presult;
         if (new_events == 0) {
-          pollset_.erase(pollset_.begin() + i);
-          managers_.erase(managers_.begin() + i);
+          del(i);
           continue;
         } else if (new_events != events) {
           pollset_[i].events = new_events;
@@ -290,9 +288,13 @@ void multiplexer::add(socket_manager_ptr mgr) {
 }
 
 void multiplexer::del(const socket_manager_ptr& mgr) {
-  CAF_ASSERT(index_of(mgr) != -1);
-  pollset_.erase(pollset_.begin() + index_of(mgr));
-  managers_.erase(managers_.begin() + index_of(mgr));
+  del(index_of(mgr));
+}
+
+void multiplexer::del(ptrdiff_t index) {
+  CAF_ASSERT(index != -1);
+  pollset_.erase(pollset_.begin() + index);
+  managers_.erase(managers_.begin() + index);
 }
 
 void multiplexer::write_to_pipe(uint8_t opcode, const socket_manager_ptr& mgr) {

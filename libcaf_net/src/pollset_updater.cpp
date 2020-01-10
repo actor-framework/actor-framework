@@ -20,6 +20,7 @@
 
 #include <cstring>
 
+#include "caf/logger.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
@@ -50,18 +51,25 @@ bool pollset_updater::handle_read_event() {
         intptr_t value;
         memcpy(&value, buf_.data() + 1, sizeof(intptr_t));
         if (auto ptr = parent_.lock()) {
-          if (opcode == 0) {
-            ptr->register_reading(
-              {reinterpret_cast<socket_manager*>(value), false});
-          } else if (opcode == 1) {
-            ptr->register_writing(
-              {reinterpret_cast<socket_manager*>(value), false});
-          } else if (opcode == 4) {
-            ptr->unregister_manager(
-              {reinterpret_cast<socket_manager*>(value), false});
-          } else {
-            CAF_ASSERT(opcode == 5);
-            ptr->shutdown();
+          switch (opcode) {
+            case 0:
+              ptr->register_reading(
+                {reinterpret_cast<socket_manager*>(value), false});
+              break;
+            case 1:
+              ptr->register_writing(
+                {reinterpret_cast<socket_manager*>(value), false});
+              break;
+            case 4:
+              ptr->unregister_manager(
+                {reinterpret_cast<socket_manager*>(value), false});
+              break;
+            case 5:
+              ptr->shutdown();
+              break;
+            default:
+              CAF_LOG_DEBUG("opcode not recognized: " << CAF_ARG(opcode));
+              break;
           }
         }
       }
