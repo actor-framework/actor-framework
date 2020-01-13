@@ -61,8 +61,6 @@ public:
   /// Returns the index of `mgr` in the pollset or `-1`.
   ptrdiff_t index_of(const socket_manager_ptr& mgr);
 
-  bool is_same_thread();
-
   // -- thread-safe signaling --------------------------------------------------
 
   /// Registers `mgr` for read events.
@@ -72,10 +70,6 @@ public:
   /// Registers `mgr` for write events.
   /// @thread-safe
   void register_writing(const socket_manager_ptr& mgr);
-
-  /// Unregisters `mgr` for read and write events.
-  /// @thread-safe
-  void unregister_manager(const socket_manager_ptr& mgr);
 
   /// Closes the pipe for signaling updates to the multiplexer. After closing
   /// the pipe, calls to `update` no longer have any effect.
@@ -108,9 +102,6 @@ protected:
   void add(socket_manager_ptr mgr);
 
   /// Deletes a known socket manager from the pollset.
-  void del(const socket_manager_ptr& mgr);
-
-  /// Deletes a known socket manager from the pollset.
   void del(ptrdiff_t index);
 
   /// Writes `opcode` and pointer to `mgr` the the pipe for handling an event
@@ -137,7 +128,7 @@ protected:
   std::mutex write_lock_;
 
   /// Signals shutdown has been requested.
-  bool will_shutdown_;
+  bool shutting_down_;
 };
 
 /// @relates multiplexer

@@ -76,7 +76,7 @@ short to_bitmask(operation op) {
 
 } // namespace
 
-multiplexer::multiplexer() {
+multiplexer::multiplexer() : shutting_down_(false) {
   // nop
 }
 
@@ -104,13 +104,11 @@ ptrdiff_t multiplexer::index_of(const socket_manager_ptr& mgr) {
   return i == last ? -1 : std::distance(first, i);
 }
 
-bool multiplexer::is_same_thread() {
-  return std::this_thread::get_id() == tid_;
-}
-
 void multiplexer::register_reading(const socket_manager_ptr& mgr) {
   if (std::this_thread::get_id() == tid_) {
-    if (mgr->mask() != operation::none) {
+    if (shutting_down_) {
+      // discard
+    } else if (mgr->mask() != operation::none) {
       CAF_ASSERT(index_of(mgr) != -1);
       if (mgr->mask_add(operation::read)) {
         auto& fd = pollset_[index_of(mgr)];
@@ -126,7 +124,9 @@ void multiplexer::register_reading(const socket_manager_ptr& mgr) {
 
 void multiplexer::register_writing(const socket_manager_ptr& mgr) {
   if (std::this_thread::get_id() == tid_) {
-    if (mgr->mask() != operation::none) {
+    if (shutting_down_) {
+      // discard
+    } else if (mgr->mask() != operation::none) {
       CAF_ASSERT(index_of(mgr) != -1);
       if (mgr->mask_add(operation::write)) {
         auto& fd = pollset_[index_of(mgr)];
@@ -137,16 +137,6 @@ void multiplexer::register_writing(const socket_manager_ptr& mgr) {
     }
   } else {
     write_to_pipe(1, mgr);
-  }
-}
-
-void multiplexer::unregister_manager(const socket_manager_ptr& mgr) {
-  if (std::this_thread::get_id() == tid_) {
-    del(mgr);
-    if (will_shutdown_ && managers_.size() == 1)
-      close_pipe();
-  } else {
-    write_to_pipe(4, mgr);
   }
 }
 
@@ -236,14 +226,20 @@ void multiplexer::run() {
 
 void multiplexer::shutdown() {
   if (std::this_thread::get_id() == tid_) {
-    will_shutdown_ = true;
-    if (managers_.size() == 1) {
-      close_pipe();
-    } else {
-      // First manager is the pollset_updater. Skip it and delete later.
-      for (size_t i = 1; i < managers_.size(); ++i)
-        write_to_pipe(4, managers_[i]);
+    shutting_down_ = true;
+    // First manager is the pollset_updater. Skip it and delete later.
+    for (size_t i = 1; i < managers_.size();) {
+      auto& mgr = managers_[i];
+      if (mgr->mask_del(operation::read)) {
+        auto& fd = pollset_[index_of(mgr)];
+        fd.events &= ~input_mask;
+      }
+      if (mgr->mask() == operation::none)
+        del(i);
+      else
+        ++i;
     }
+    close_pipe();
   } else {
     write_to_pipe(5, nullptr);
   }
@@ -289,10 +285,6 @@ void multiplexer::add(socket_manager_ptr mgr) {
   managers_.emplace_back(std::move(mgr));
 }
 
-void multiplexer::del(const socket_manager_ptr& mgr) {
-  del(index_of(mgr));
-}
-
 void multiplexer::del(ptrdiff_t index) {
   CAF_ASSERT(index != -1);
   pollset_.erase(pollset_.begin() + index);
@@ -301,7 +293,7 @@ void multiplexer::del(ptrdiff_t index) {
 
 void multiplexer::write_to_pipe(uint8_t opcode, const socket_manager_ptr& mgr) {
   CAF_ASSERT(opcode == 0 || opcode == 1 || opcode == 4 || opcode == 5);
-  CAF_ASSERT(mgr != nullptr || opcode == 5);
+  CAF_ASSERT(mgr != nullptr || opcode == 4);
   pollset_updater::msg_buf buf;
   if (opcode != 5)
     mgr->ref();
@@ -316,7 +308,7 @@ void multiplexer::write_to_pipe(uint8_t opcode, const socket_manager_ptr& mgr) {
     else
       res = sec::socket_invalid;
   }
-  if (holds_alternative<sec>(res) && opcode != 5)
+  if (holds_alternative<sec>(res) && opcode != 4)
     mgr->deref();
 }
 

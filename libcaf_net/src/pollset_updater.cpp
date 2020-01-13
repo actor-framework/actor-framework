@@ -50,21 +50,16 @@ bool pollset_updater::handle_read_event() {
         auto opcode = static_cast<uint8_t>(buf_[0]);
         intptr_t value;
         memcpy(&value, buf_.data() + 1, sizeof(intptr_t));
+        socket_manager_ptr mgr{reinterpret_cast<socket_manager*>(value), false};
         if (auto ptr = parent_.lock()) {
           switch (opcode) {
             case 0:
-              ptr->register_reading(
-                {reinterpret_cast<socket_manager*>(value), false});
+              ptr->register_reading(mgr);
               break;
             case 1:
-              ptr->register_writing(
-                {reinterpret_cast<socket_manager*>(value), false});
+              ptr->register_writing(mgr);
               break;
             case 4:
-              ptr->unregister_manager(
-                {reinterpret_cast<socket_manager*>(value), false});
-              break;
-            case 5:
               ptr->shutdown();
               break;
             default:
