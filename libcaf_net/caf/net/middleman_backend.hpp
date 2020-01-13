@@ -20,6 +20,7 @@
 
 #include <string>
 
+#include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/proxy_registry.hpp"
@@ -29,7 +30,7 @@ namespace caf::net {
 /// Technology-specific backend for connecting to and managing peer
 /// connections.
 /// @relates middleman
-class middleman_backend : public proxy_registry::backend {
+class CAF_NET_EXPORT middleman_backend : public proxy_registry::backend {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -47,6 +48,8 @@ public:
 
   /// Resolves a path to a remote actor.
   virtual void resolve(const uri& locator, const actor& listener) = 0;
+
+  virtual void stop() = 0;
 
   // -- properties -------------------------------------------------------------
 

@@ -53,15 +53,19 @@ void middleman::start() {
 }
 
 void middleman::stop() {
-  mpx_->close_pipe();
+  for (const auto& backend : backends_)
+    backend->stop();
+  mpx_->shutdown();
   if (mpx_thread_.joinable())
     mpx_thread_.join();
+  else
+    mpx_->run();
 }
 
 void middleman::init(actor_system_config& cfg) {
   if (auto err = mpx_->init()) {
     CAF_LOG_ERROR("mgr->init() failed: " << system().render(err));
-    CAF_RAISE_ERROR("mpx->init failed");
+    CAF_RAISE_ERROR("mpx->init() failed");
   }
   if (auto node_uri = get_if<uri>(&cfg, "middleman.this-node")) {
     auto this_node = make_node_id(std::move(*node_uri));

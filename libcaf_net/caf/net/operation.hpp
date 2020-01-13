@@ -28,6 +28,7 @@ enum class operation {
   read = 0x01,
   write = 0x02,
   read_write = 0x03,
+  shutdown = 0x04,
 };
 
 constexpr operation operator|(operation x, operation y) {

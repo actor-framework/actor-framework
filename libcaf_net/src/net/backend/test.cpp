@@ -44,6 +44,12 @@ error test::init() {
   return none;
 }
 
+void test::stop() {
+  for (const auto& p : peers_)
+    proxies_.erase(p.first);
+  peers_.clear();
+}
+
 endpoint_manager_ptr test::peer(const node_id& id) {
   return get_peer(id).second;
 }
