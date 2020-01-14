@@ -241,7 +241,7 @@ void multiplexer::shutdown() {
     }
     close_pipe();
   } else {
-    write_to_pipe(5, nullptr);
+    write_to_pipe(4, nullptr);
   }
 }
 
@@ -292,10 +292,10 @@ void multiplexer::del(ptrdiff_t index) {
 }
 
 void multiplexer::write_to_pipe(uint8_t opcode, const socket_manager_ptr& mgr) {
-  CAF_ASSERT(opcode == 0 || opcode == 1 || opcode == 4 || opcode == 5);
+  CAF_ASSERT(opcode == 0 || opcode == 1 || opcode == 4);
   CAF_ASSERT(mgr != nullptr || opcode == 4);
   pollset_updater::msg_buf buf;
-  if (opcode != 5)
+  if (opcode != 4)
     mgr->ref();
   buf[0] = static_cast<byte>(opcode);
   auto value = reinterpret_cast<intptr_t>(mgr.get());
