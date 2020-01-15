@@ -251,6 +251,7 @@ set(CAF_CORE_TEST_SOURCES
   test/or_else.cpp
   test/pipeline_streaming.cpp
   test/policy/categorized.cpp
+  test/policy/choose_response.cpp
   test/policy/fan_in_responses.cpp
   test/request_timeout.cpp
   test/result.cpp

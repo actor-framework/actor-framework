@@ -130,6 +130,8 @@ enum class sec : uint8_t {
   remote_lookup_failed,
   /// Serialization failed because actor_system::tracing_context is null.
   no_tracing_context,
+  /// No request produced a valid result.
+  all_requests_failed,
 };
 
 /// @relates sec
