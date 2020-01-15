@@ -189,7 +189,8 @@ public:
     };
     for (auto id : ids_) {
       typename Self::accept_one_cond rc;
-      self->varargs_receive(rc, id, helper.wrap(), error_handler);
+      auto error_handler_copy = error_handler;
+      self->varargs_receive(rc, id, helper.wrap(), error_handler_copy);
     }
   }
 
