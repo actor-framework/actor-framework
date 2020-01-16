@@ -31,7 +31,7 @@ config = [
     buildMatrix: [
         ['Linux', [
             builds: ['debug'],
-            tools: ['gcc4.8', 'gcc4.9', 'gcc5', 'gcc6', 'gcc7'],
+            tools: ['gcc7'],
         ]],
         ['Linux', [
             builds: ['debug'],
@@ -40,7 +40,7 @@ config = [
         ]],
         ['Linux', [
             builds: ['release'],
-            tools: ['gcc8', 'clang'],
+            tools: ['gcc8'],
         ]],
         ['macOS', [
             builds: ['debug', 'release'],
