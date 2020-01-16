@@ -279,4 +279,56 @@ CAF_TEST(invalid inis) {
   CAF_CHECK_EQUAL(parse(ini3), ini3_log);
 }
 
+CAF_TEST(integer keys are legal in INI syntax) {
+  static constexpr string_view ini = R"__(
+    [foo.bar]
+    1 = 10
+    2 = 20
+  )__";
+  // clang-format off
+  auto log = make_log(
+    "key: foo",
+    "{",
+      "key: bar",
+      "{",
+        "key: 1",
+        "value (integer): 10",
+        "key: 2",
+        "value (integer): 20",
+      "}",
+    "}"
+  );
+  // clang-format on
+  CAF_CHECK_EQUAL(parse(ini), log);
+}
+
+CAF_TEST(integer keys are legal in config syntax) {
+  static constexpr string_view ini = R"__(
+    foo {
+      bar {
+        1 = 10
+        2 = 20
+      }
+    }
+  )__";
+  // clang-format off
+  auto log = make_log(
+    "key: global",
+    "{",
+      "key: foo",
+      "{",
+        "key: bar",
+        "{",
+          "key: 1",
+          "value (integer): 10",
+          "key: 2",
+          "value (integer): 20",
+        "}",
+      "}",
+    "}"
+  );
+  // clang-format on
+  CAF_CHECK_EQUAL(parse(ini), log);
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()
