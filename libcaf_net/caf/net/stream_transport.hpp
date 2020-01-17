@@ -67,7 +67,8 @@ public:
       collected_(0),
       max_(1024),
       rd_flag_(net::receive_policy_flag::exactly) {
-    // nop
+    CAF_ASSERT(handle != invalid_socket);
+    nodelay(handle, true);
   }
 
   // -- member functions -------------------------------------------------------
