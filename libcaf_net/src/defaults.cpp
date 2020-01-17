@@ -24,4 +24,6 @@ const size_t max_payload_buffers = 100;
 
 const size_t max_header_buffers = 10;
 
+const size_t max_write_queue_size = 2000;
+
 } // namespace caf::defaults::middleman

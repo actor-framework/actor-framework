@@ -106,16 +106,18 @@ public:
 
   bool handle_write_event(endpoint_manager& parent) override {
     CAF_LOG_TRACE(CAF_ARG2("handle", this->handle().id));
-    // Try to write leftover data.
-    write_some();
-    // Get new data from parent.
-    // TODO: dont read all messages at once - get one by one.
-    for (auto msg = parent.next_message(); msg != nullptr;
-         msg = parent.next_message()) {
-      this->next_layer_.write_message(*this, std::move(msg));
-    }
-    // Write prepared data.
-    return write_some();
+    auto get_messages = [&] {
+      if (write_queue_.empty()) {
+        for (auto msg = parent.next_message(); msg != nullptr;
+             msg = parent.next_message()) {
+          this->next_layer_.write_message(*this, std::move(msg));
+        }
+      }
+      return !write_queue_.empty();
+    };
+    while (write_some() && get_messages())
+      ; // nop
+    return !write_queue_.empty();
   }
 
   void write_packet(id_type, span<buffer_type*> buffers) override {
@@ -200,12 +202,11 @@ private:
         if (err != sec::unavailable_or_would_block) {
           CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
           this->next_layer_.handle_error(err);
-          return false;
         }
-        return true;
+        return false;
       }
     }
-    return false;
+    return true;
   }
 
   write_queue_type write_queue_;
