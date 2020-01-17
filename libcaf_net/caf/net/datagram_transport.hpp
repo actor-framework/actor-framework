@@ -79,20 +79,23 @@ public:
   }
 
   bool handle_read_event(endpoint_manager&) override {
-    CAF_LOG_TRACE(CAF_ARG(this->handle_.id));
-    auto ret = read(this->handle_, this->read_buf_);
-    if (auto res = get_if<std::pair<size_t, ip_endpoint>>(&ret)) {
-      auto num_bytes = res->first;
-      CAF_LOG_DEBUG("received " << num_bytes << " bytes");
-      auto ep = res->second;
-      this->read_buf_.resize(num_bytes);
-      this->next_layer_.handle_data(*this, this->read_buf_, std::move(ep));
-      prepare_next_read();
-    } else {
-      auto err = get<sec>(ret);
-      CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
-      this->next_layer_.handle_error(err);
-      return false;
+    size_t reads = 0;
+    while (reads++ < this->max_consecutive_reads_) {
+      CAF_LOG_TRACE(CAF_ARG(this->handle_.id));
+      auto ret = read(this->handle_, this->read_buf_);
+      if (auto res = get_if<std::pair<size_t, ip_endpoint>>(&ret)) {
+        auto num_bytes = res->first;
+        CAF_LOG_DEBUG("received " << num_bytes << " bytes");
+        auto ep = res->second;
+        this->read_buf_.resize(num_bytes);
+        this->next_layer_.handle_data(*this, this->read_buf_, std::move(ep));
+        prepare_next_read();
+      } else {
+        auto err = get<sec>(ret);
+        CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
+        this->next_layer_.handle_error(err);
+        return false;
+      }
     }
     return true;
   }
