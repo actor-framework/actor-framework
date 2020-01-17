@@ -144,10 +144,9 @@ actor_system_config::actor_system_config()
     .add<string>(openssl_cafile, "cafile",
                  "path to a file of concatenated PEM-formatted certificates");
   // add renderers for default error categories
-  error_renderers.emplace(error_category<sec>::value, render_sec);
-  error_renderers.emplace(error_category<pec>::value, render_pec);
-  error_renderers.emplace(error_category<exit_reason>::value,
-                          render_exit_reason);
+  add_error_category(error_category<sec>::value, render_sec);
+  add_error_category(error_category<pec>::value, render_pec);
+  add_error_category(error_category<exit_reason>::value, render_exit_reason);
 }
 
 settings actor_system_config::dump_content() const {

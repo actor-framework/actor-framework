@@ -377,7 +377,7 @@ CAF_TEST(maybe_string_delegator_chain) {
     .receive([](ok_atom,
                 const string&) { CAF_FAIL("unexpected string response"); },
              [](const error& err) {
-               CAF_CHECK_EQUAL(err.category(), error_category<sec>::value);
+               CAF_CHECK(err.category() == error_category<sec>::value);
                CAF_CHECK_EQUAL(err.code(),
                                static_cast<uint8_t>(sec::invalid_argument));
              });
