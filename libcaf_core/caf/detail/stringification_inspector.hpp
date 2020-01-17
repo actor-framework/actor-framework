@@ -86,69 +86,72 @@ public:
   /// Prints a separator to the result string.
   void sep();
 
-  void consume(string_view str);
+  void consume(const timespan& x);
 
-  void consume(timespan x);
+  void consume(const timestamp& x);
 
-  void consume(timestamp x);
-
-  void consume(bool x);
-
-  void consume(const void* ptr);
-
-  void consume(const char* cstr);
+  void consume(const bool& x);
 
   void consume(const std::vector<bool>& xs);
 
-  template <class T>
-  enable_if_t<std::is_floating_point<T>::value> consume(T x) {
-    result_ += std::to_string(x);
+  template <class T, size_t N>
+  void consume(const T (&xs)[N]) {
+    consume_range(xs, xs + N);
   }
 
   template <class T>
-  enable_if_t<std::is_integral<T>::value && std::is_signed<T>::value>
-  consume(T x) {
-    consume_int(static_cast<int64_t>(x));
-  }
-
-  template <class T>
-  enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value>
-  consume(T x) {
-    consume_int(static_cast<uint64_t>(x));
+  void consume(const T& x) {
+    if constexpr (std::is_pointer<T>::value) {
+      consume_ptr(x);
+    } else if constexpr (std::is_convertible<T, string_view>::value) {
+      consume_str(string_view{x});
+    } else if constexpr (std::is_integral<T>::value) {
+      if constexpr (std::is_signed<T>::value)
+        consume_int(static_cast<int64_t>(x));
+      else
+        consume_int(static_cast<uint64_t>(x));
+    } else if constexpr (std::is_floating_point<T>::value) {
+      result_ += std::to_string(x);
+    } else if constexpr (has_to_string<T>::value) {
+      result_ += to_string(x);
+    } else if constexpr (is_inspectable<stringification_inspector, T>::value) {
+      inspect(*this, const_cast<T&>(x));
+    } else if constexpr (is_map_like<T>::value) {
+      result_ += '{';
+      for (const auto& kvp : x) {
+        sep();
+        consume(kvp.first);
+        result_ += " = ";
+        consume(kvp.second);
+      }
+      result_ += '}';
+    } else if constexpr (is_iterable<T>::value) {
+      consume_range(x.begin(), x.end());
+    } else if constexpr (has_peek_all<T>::value) {
+      result_ += '[';
+      x.peek_all(*this);
+      result_ += ']';
+    } else {
+      result_ += "<unprintable>";
+    }
   }
 
   template <class Clock, class Duration>
-  void consume(std::chrono::time_point<Clock, Duration> x) {
+  void consume(const std::chrono::time_point<Clock, Duration>& x) {
     timestamp tmp{std::chrono::duration_cast<timespan>(x.time_since_epoch())};
     consume(tmp);
   }
 
   template <class Rep, class Period>
-  void consume(std::chrono::duration<Rep, Period> x) {
+  void consume(const std::chrono::duration<Rep, Period>& x) {
     auto tmp = std::chrono::duration_cast<timespan>(x);
     consume(tmp);
   }
 
   // Unwrap std::ref.
   template <class T>
-  void consume(std::reference_wrapper<T> x) {
+  void consume(const std::reference_wrapper<T>& x) {
     return consume(x.get());
-  }
-
-  /// Picks up user-defined `to_string` functions.
-  template <class T>
-  enable_if_t<!std::is_pointer<T>::value && has_to_string<T>::value>
-  consume(const T& x) {
-    result_ += to_string(x);
-  }
-
-  /// Delegates to `inspect(*this, x)` if available and `T` does not provide
-  /// a `to_string` overload.
-  template <class T>
-  enable_if_t<is_inspectable<stringification_inspector, T>::value
-              && !has_to_string<T>::value>
-  consume(const T& x) {
-    inspect(*this, const_cast<T&>(x));
   }
 
   template <class F, class S>
@@ -163,81 +166,6 @@ public:
     result_ += '(';
     apply_args(*this, get_indices(x), x);
     result_ += ')';
-  }
-
-  template <class T>
-  enable_if_t<is_map_like<T>::value
-              && !is_inspectable<stringification_inspector, T>::value
-              && !has_to_string<T>::value>
-  consume(const T& xs) {
-    result_ += '{';
-    for (const auto& kvp : xs) {
-      sep();
-      consume(kvp.first);
-      result_ += " = ";
-      consume(kvp.second);
-    }
-    result_ += '}';
-  }
-
-  template <class Iterator>
-  void consume_range(Iterator first, Iterator last) {
-    result_ += '[';
-    while (first != last) {
-      sep();
-      consume(*first++);
-    }
-    result_ += ']';
-  }
-
-  template <class T>
-  enable_if_t<is_iterable<T>::value && !is_map_like<T>::value
-              && !std::is_convertible<T, string_view>::value
-              && !is_inspectable<stringification_inspector, T>::value
-              && !has_to_string<T>::value>
-  consume(const T& xs) {
-    consume_range(xs.begin(), xs.end());
-  }
-
-  template <class T, size_t S>
-  void consume(const T (&xs)[S]) {
-    return consume_range(xs, xs + S);
-  }
-
-  template <class T>
-  enable_if_t<has_peek_all<T>::value
-              && !is_iterable<T>::value // pick begin()/end() over peek_all
-              && !is_inspectable<stringification_inspector, T>::value
-              && !has_to_string<T>::value>
-  consume(const T& xs) {
-    result_ += '[';
-    xs.peek_all(*this);
-    result_ += ']';
-  }
-
-  template <class T>
-  enable_if_t<
-    std::is_pointer<T>::value
-    && !std::is_same<void, typename std::remove_pointer<T>::type>::value>
-  consume(const T ptr) {
-    if (ptr) {
-      result_ += '*';
-      consume(*ptr);
-    } else {
-      result_ += "<null>";
-    }
-  }
-
-  /// Fallback printing `<unprintable>`.
-  template <class T>
-  enable_if_t<!is_iterable<T>::value && !has_peek_all<T>::value
-              && !std::is_pointer<T>::value
-              && !is_inspectable<stringification_inspector, T>::value
-              && !std::is_arithmetic<T>::value
-              && !std::is_convertible<T, string_view>::value
-              && !has_to_string<T>::value>
-  consume(const T&) {
-    result_ += "<unprintable>";
   }
 
   void traverse() {
@@ -306,6 +234,32 @@ public:
   }
 
 private:
+  template <class Iterator>
+  void consume_range(Iterator first, Iterator last) {
+    result_ += '[';
+    while (first != last) {
+      sep();
+      consume(*first++);
+    }
+    result_ += ']';
+  }
+
+  template <class T>
+  void consume_ptr(const T* ptr) {
+    if (ptr) {
+      result_ += '*';
+      consume(*ptr);
+    } else {
+      result_ += "nullptr";
+    }
+  }
+
+  void consume_str(string_view str);
+
+  void consume_ptr(const void* ptr);
+
+  void consume_ptr(const char* cstr);
+
   void consume_int(int64_t x);
 
   void consume_int(uint64_t x);

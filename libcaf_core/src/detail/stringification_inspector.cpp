@@ -60,24 +60,7 @@ void stringification_inspector::sep() {
     }
 }
 
-void stringification_inspector::consume(string_view str) {
-  if (str.empty()) {
-    result_ += R"("")";
-    return;
-  }
-  if (str[0] == '"') {
-    // Assume an already escaped string.
-    result_.insert(result_.end(), str.begin(), str.end());
-    return;
-  }
-  // Escape string.
-  result_ += '"';
-  for (char c : str)
-    escape(result_, c);
-  result_ += '"';
-}
-
-void stringification_inspector::consume(timespan x) {
+void stringification_inspector::consume(const timespan& x) {
   auto ns = x.count();
   if (ns % 1000 > 0) {
     consume(ns);
@@ -119,7 +102,7 @@ void stringification_inspector::consume(timespan x) {
   result_ += "d";
 }
 
-void stringification_inspector::consume(timestamp x) {
+void stringification_inspector::consume(const timestamp& x) {
   char buf[64];
   auto y = std::chrono::time_point_cast<timestamp::clock::duration>(x);
   auto z = timestamp::clock::to_time_t(y);
@@ -134,16 +117,42 @@ void stringification_inspector::consume(timestamp x) {
   result_ += frac;
 }
 
-void stringification_inspector::consume(bool x) {
+void stringification_inspector::consume(const bool& x) {
   result_ += x ? "true" : "false";
 }
 
-void stringification_inspector::consume(const void* ptr) {
+void stringification_inspector::consume_str(string_view str) {
+  if (str.empty()) {
+    result_ += R"("")";
+    return;
+  }
+  if (str[0] == '"') {
+    // Assume an already escaped string.
+    result_.insert(result_.end(), str.begin(), str.end());
+    return;
+  }
+  // Escape string.
+  result_ += '"';
+  for (char c : str)
+    escape(result_, c);
+  result_ += '"';
+}
+
+void stringification_inspector::consume(const std::vector<bool>& xs) {
+  result_ += '[';
+  for (bool x : xs) {
+    sep();
+    consume(x);
+  }
+  result_ += ']';
+}
+
+void stringification_inspector::consume_ptr(const void* ptr) {
   result_ += "0x";
   consume(reinterpret_cast<intptr_t>(ptr));
 }
 
-void stringification_inspector::consume(const char* cstr) {
+void stringification_inspector::consume_ptr(const char* cstr) {
   if (cstr == nullptr) {
     result_ += "<null>";
     return;
@@ -162,15 +171,6 @@ void stringification_inspector::consume(const char* cstr) {
   for (char c = *cstr++; c != '\0'; c = *cstr++)
     escape(result_, c);
   result_ += '"';
-}
-
-void stringification_inspector::consume(const std::vector<bool>& xs) {
-  result_ += '[';
-  for (bool x : xs) {
-    sep();
-    consume(x);
-  }
-  result_ += ']';
 }
 
 void stringification_inspector::consume_int(int64_t x) {
