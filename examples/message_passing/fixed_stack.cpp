@@ -8,8 +8,8 @@ using namespace caf;
 
 namespace {
 
-CAF_MSG_TYPE_ADD_ATOM(pop_atom)
-CAF_MSG_TYPE_ADD_ATOM(push_atom)
+CAF_MSG_TYPE_ADD_ATOM(pop_atom);
+CAF_MSG_TYPE_ADD_ATOM(push_atom);
 
 enum class fixed_stack_errc : uint8_t {
   push_to_full = 1,

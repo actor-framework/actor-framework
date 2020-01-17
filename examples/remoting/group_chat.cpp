@@ -26,7 +26,7 @@ using namespace caf;
 
 namespace {
 
-CAF_MSG_TYPE_ADD_ATOM(broadcast_atom)
+CAF_MSG_TYPE_ADD_ATOM(broadcast_atom);
 
 struct line {
   string str;

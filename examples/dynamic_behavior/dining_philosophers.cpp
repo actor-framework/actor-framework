@@ -23,10 +23,10 @@ using namespace caf;
 namespace {
 
 // atoms for chopstick and philosopher interfaces
-CAF_MSG_TYPE_ADD_ATOM(take_atom)
-CAF_MSG_TYPE_ADD_ATOM(taken_atom)
-CAF_MSG_TYPE_ADD_ATOM(eat_atom)
-CAF_MSG_TYPE_ADD_ATOM(think_atom)
+CAF_MSG_TYPE_ADD_ATOM(take_atom);
+CAF_MSG_TYPE_ADD_ATOM(taken_atom);
+CAF_MSG_TYPE_ADD_ATOM(eat_atom);
+CAF_MSG_TYPE_ADD_ATOM(think_atom);
 
 // a chopstick
 using chopstick = typed_actor<replies_to<take_atom>::with<taken_atom, bool>,

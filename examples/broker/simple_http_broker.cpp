@@ -13,7 +13,7 @@ using namespace caf::io;
 
 namespace {
 
-CAF_MSG_TYPE_ADD_ATOM(tick_atom)
+CAF_MSG_TYPE_ADD_ATOM(tick_atom);
 
 constexpr const char http_ok[] = R"__(HTTP/1.1 200 OK
 Content-Type: text/plain

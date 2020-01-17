@@ -24,9 +24,9 @@ using std::endl;
 using std::chrono::seconds;
 using namespace caf;
 
-CAF_MSG_TYPE_ADD_ATOM(row_atom)
-CAF_MSG_TYPE_ADD_ATOM(column_atom)
-CAF_MSG_TYPE_ADD_ATOM(average_atom)
+CAF_MSG_TYPE_ADD_ATOM(row_atom);
+CAF_MSG_TYPE_ADD_ATOM(column_atom);
+CAF_MSG_TYPE_ADD_ATOM(average_atom);
 
 /// A simple actor for storing an integer value.
 using cell = typed_actor<

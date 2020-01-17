@@ -60,11 +60,11 @@ using namespace caf;
 
 using buffer_type = std::vector<char>;
 
-CAF_MSG_TYPE_ADD_ATOM(read_atom)
-CAF_MSG_TYPE_ADD_ATOM(fail_atom)
-CAF_MSG_TYPE_ADD_ATOM(next_atom)
-CAF_MSG_TYPE_ADD_ATOM(reply_atom)
-CAF_MSG_TYPE_ADD_ATOM(finished_atom)
+CAF_MSG_TYPE_ADD_ATOM(read_atom);
+CAF_MSG_TYPE_ADD_ATOM(fail_atom);
+CAF_MSG_TYPE_ADD_ATOM(next_atom);
+CAF_MSG_TYPE_ADD_ATOM(reply_atom);
+CAF_MSG_TYPE_ADD_ATOM(finished_atom);
 
 namespace color {
 
