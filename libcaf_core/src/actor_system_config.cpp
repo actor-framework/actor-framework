@@ -431,7 +431,8 @@ timespan actor_system_config::stream_tick_duration() const noexcept {
   return timespan{ns_count};
 }
 std::string actor_system_config::render(const error& err) {
-  std::string msg;
+  if (!err)
+    return "none";
   switch (static_cast<uint64_t>(err.category())) {
     case atom_uint("system"):
       return render_sec(err.code(), err.category(), err.context());
@@ -439,8 +440,11 @@ std::string actor_system_config::render(const error& err) {
       return render_exit_reason(err.code(), err.category(), err.context());
     case atom_uint("parser"):
       return render_pec(err.code(), err.category(), err.context());
+    default:
+      return deep_to_string(meta::type_name("error"), err.code(),
+                            err.category(), meta::omittable_if_empty(),
+                            err.context());
   }
-  return "unknown-error";
 }
 
 std::string actor_system_config::render_sec(uint8_t x, atom_value,

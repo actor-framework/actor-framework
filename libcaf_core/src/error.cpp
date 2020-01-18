@@ -18,6 +18,7 @@
 
 #include "caf/error.hpp"
 
+#include "caf/actor_system_config.hpp"
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/deserializer.hpp"
@@ -166,10 +167,7 @@ error error::apply(const inspect_fun& f) {
 }
 
 std::string to_string(const error& x) {
-  if (!x)
-    return "none";
-  return deep_to_string(meta::type_name("error"), x.code(), x.category(),
-                        meta::omittable_if_empty(), x.context());
+  return actor_system_config::render(x);
 }
 
 } // namespace caf
