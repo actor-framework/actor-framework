@@ -289,6 +289,7 @@ CAF_TEST(from string) {
   // all combinations of components
   ROUNDTRIP("http:file");
   ROUNDTRIP("http:foo-bar");
+  ROUNDTRIP("http:foo:bar");
   ROUNDTRIP("http:file?a=1&b=2");
   ROUNDTRIP("http:file#42");
   ROUNDTRIP("http:file?a=1&b=2#42");
@@ -359,12 +360,14 @@ CAF_TEST(from string) {
   ROUNDTRIP("http://me@[::1]:80/file?a=1&b=2#42");
   // percent encoding
   ROUNDTRIP("hi%20there://it%27s@me%21/file%201#%5B42%5D");
+  ROUNDTRIP("file://localhost/tmp/test/test.{%3A04d}.exr");
 }
 
 #undef ROUNDTRIP
 
 CAF_TEST(empty components) {
   CAF_CHECK_EQUAL("foo:/"_u, "foo:/");
+  CAF_CHECK_EQUAL("foo:///"_u, "foo:/");
   CAF_CHECK_EQUAL("foo:/#"_u, "foo:/");
   CAF_CHECK_EQUAL("foo:/?"_u, "foo:/");
   CAF_CHECK_EQUAL("foo:/?#"_u, "foo:/");
