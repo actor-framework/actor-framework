@@ -75,6 +75,7 @@ detail::test_actor_clock& test_coordinator::clock() noexcept {
 }
 
 void test_coordinator::start() {
+  CAF_LOG_TRACE("");
   dummy_worker worker{this};
   actor_config cfg{&worker};
   auto& sys = system();
@@ -84,6 +85,7 @@ void test_coordinator::start() {
 }
 
 void test_coordinator::stop() {
+  CAF_LOG_TRACE("");
   while (run() > 0)
     trigger_timeouts();
 }
@@ -92,6 +94,7 @@ void test_coordinator::enqueue(resumable* ptr) {
   CAF_LOG_TRACE("");
   jobs.push_back(ptr);
   if (after_next_enqueue_ != nullptr) {
+    CAF_LOG_DEBUG("inline this enqueue");
     std::function<void()> f;
     f.swap(after_next_enqueue_);
     f();
@@ -99,6 +102,7 @@ void test_coordinator::enqueue(resumable* ptr) {
 }
 
 bool test_coordinator::try_run_once() {
+  CAF_LOG_TRACE("");
   if (jobs.empty())
     return false;
   auto job = jobs.front();
@@ -119,6 +123,7 @@ bool test_coordinator::try_run_once() {
 }
 
 bool test_coordinator::try_run_once_lifo() {
+  CAF_LOG_TRACE("");
   if (jobs.empty())
     return false;
   if (jobs.size() >= 2)
@@ -127,18 +132,21 @@ bool test_coordinator::try_run_once_lifo() {
 }
 
 void test_coordinator::run_once() {
+  CAF_LOG_TRACE("");
   if (jobs.empty())
     CAF_RAISE_ERROR("No job to run available.");
   try_run_once();
 }
 
 void test_coordinator::run_once_lifo() {
+  CAF_LOG_TRACE("");
   if (jobs.empty())
     CAF_RAISE_ERROR("No job to run available.");
   try_run_once_lifo();
 }
 
 size_t test_coordinator::run(size_t max_count) {
+  CAF_LOG_TRACE(CAF_ARG(max_count));
   size_t res = 0;
   while (res < max_count && try_run_once())
     ++res;
@@ -146,16 +154,19 @@ size_t test_coordinator::run(size_t max_count) {
 }
 
 void test_coordinator::inline_next_enqueue() {
+  CAF_LOG_TRACE("");
   after_next_enqueue([=] { run_once_lifo(); });
 }
 
 void test_coordinator::inline_all_enqueues() {
+  CAF_LOG_TRACE("");
   after_next_enqueue([=] { inline_all_enqueues_helper(); });
 }
 
 void test_coordinator::inline_all_enqueues_helper() {
-  run_once_lifo();
+  CAF_LOG_TRACE("");
   after_next_enqueue([=] { inline_all_enqueues_helper(); });
+  run_once_lifo();
 }
 
 } // namespace scheduler
