@@ -92,9 +92,13 @@ public:
         prepare_next_read();
       } else {
         auto err = get<sec>(ret);
-        CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
-        this->next_layer_.handle_error(err);
-        return false;
+        if (err == sec::unavailable_or_would_block) {
+          break;
+        } else {
+          CAF_LOG_DEBUG("read failed" << CAF_ARG(err));
+          this->next_layer_.handle_error(err);
+          return false;
+        }
       }
     }
     return true;
