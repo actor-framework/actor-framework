@@ -212,6 +212,8 @@ public:
     return i->second.ptr;
   }
 
+  using downstream_manager::close;
+
   void close() override {
     CAF_LOG_TRACE(CAF_ARG(paths_));
     for (auto ptr : ptrs_)
