@@ -28,6 +28,7 @@ namespace detail {
 void append_percent_encoded(std::string& str, string_view x, bool is_path) {
   for (auto ch : x)
     switch (ch) {
+      case ':':
       case '/':
         if (is_path) {
           str += ch;
@@ -35,7 +36,6 @@ void append_percent_encoded(std::string& str, string_view x, bool is_path) {
         }
         CAF_ANNOTATE_FALLTHROUGH;
       case ' ':
-      case ':':
       case '?':
       case '#':
       case '[':
