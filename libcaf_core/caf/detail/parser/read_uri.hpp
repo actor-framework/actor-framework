@@ -67,7 +67,8 @@ void read_uri_percent_encoded(State& ps, std::string& str) {
 }
 
 inline bool uri_unprotected_char(char c) {
-  return in_whitelist(alphanumeric_chars, c) || in_whitelist("-._~", c);
+  // Consider valid characters not explicitly stated as reserved as unreserved.
+  return isprint(c) && !in_whitelist(":/?#[]@!$&'()*+,;=<>", c);
 }
 
 // clang-format off
@@ -127,7 +128,9 @@ void read_uri(State& ps, Consumer&& consumer) {
     return res;
   };
   // Allowed character sets.
-  auto path_char = [](char c) { return uri_unprotected_char(c) || c == '/'; };
+  auto path_char = [](char c) {
+    return uri_unprotected_char(c) || c == '/' || c == ':';
+  };
   // Utility setters for avoiding code duplication.
   auto set_path = [&] { consumer.path(take_str()); };
   auto set_host = [&] { consumer.host(take_str()); };
@@ -159,6 +162,8 @@ void read_uri(State& ps, Consumer&& consumer) {
     epsilon(read_path, any_char, str += '/')
   }
   state(start_authority) {
+    // A third '/' skips the authority, e.g., "file:///".
+    transition(read_path, '/', str += '/')
     read_next_char(read_authority, str)
     fsm_transition(read_ipv6_address(ps, ip_consumer), await_end_of_ipv6, '[')
   }
