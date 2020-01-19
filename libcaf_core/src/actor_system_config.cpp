@@ -402,6 +402,8 @@ timespan actor_system_config::stream_tick_duration() const noexcept {
   return timespan{ns_count};
 }
 std::string actor_system_config::render(const error& x) {
+  if (!x)
+    return "none";
   switch (x.category()) {
     case error_category<sec>::value:
       return render_sec(x.code(), x.context());

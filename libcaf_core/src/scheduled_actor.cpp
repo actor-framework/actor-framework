@@ -837,6 +837,21 @@ bool scheduled_actor::finalize() {
   // Repeated calls always return `true` but have no side effects.
   if (getf(is_cleaned_up_flag))
     return true;
+  // TODO: This is a workaround for issue #1011. Iterating over all stream
+  //       managers here and dropping them as needed prevents the
+  //       never-terminating part, but it still means that "dead" stream manager
+  //       can accumulate over time since we only run this O(n) path if the
+  //       actor is shutting down.
+  if (!has_behavior() && !stream_managers_.empty()) {
+    for (auto i = stream_managers_.begin(); i != stream_managers_.end();) {
+      if (i->second->done())
+        i = stream_managers_.erase(i);
+      else
+        ++i;
+      if (stream_managers_.empty())
+        stream_ticks_.stop();
+    }
+  }
   // An actor is considered alive as long as it has a behavior and didn't set
   // the terminated flag.
   if (alive())

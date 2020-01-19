@@ -170,8 +170,6 @@ void error::init() {
 }
 
 std::string to_string(const error& x) {
-  if (!x)
-    return "none";
   return actor_system_config::render(x);
 }
 

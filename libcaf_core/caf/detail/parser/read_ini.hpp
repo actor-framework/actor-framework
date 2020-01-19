@@ -113,7 +113,7 @@ void read_ini_map(State& ps, Consumer&& consumer) {
   state(await_key_name) {
     transition(await_key_name, " \t\n")
     fsm_epsilon(read_ini_comment(ps, consumer), await_key_name, ';')
-    transition(read_key_name, alphabetic_chars, key = ch)
+    transition(read_key_name, alphanumeric_chars, key = ch)
     transition(done, '}', consumer.end_map())
   }
   // Reads a key of a "key=value" line.
