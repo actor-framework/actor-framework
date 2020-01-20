@@ -100,8 +100,6 @@ public:
     CAF_LOG_TRACE("");
     manager_ = &parent;
     auto& cfg = system().config();
-    max_write_queue_size_ = get_or(cfg, "middleman.max-write-queue-size",
-                                   defaults::middleman::max_write_queue_size);
     auto max_header_bufs = get_or(cfg, "middleman.max-header-buffers",
                                   defaults::middleman::max_header_buffers);
     header_bufs_.reserve(max_header_bufs);
@@ -226,8 +224,6 @@ protected:
   buffer_type read_buf_;
 
   endpoint_manager* manager_;
-
-  size_t max_write_queue_size_;
 };
 
 } // namespace caf::net

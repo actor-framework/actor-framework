@@ -104,12 +104,13 @@ public:
     return true;
   }
 
-  bool handle_write_event(endpoint_manager& parent) override {
-    CAF_LOG_TRACE(CAF_ARG2("handle", this->handle().id));
+  bool handle_write_event(endpoint_manager& manager) override {
+    CAF_LOG_TRACE(CAF_ARG2("handle", this->handle().id)
+                  << CAF_ARG2("queue-size", write_queue_.size()));
     auto get_messages = [&] {
       if (write_queue_.empty()) {
-        for (auto msg = parent.next_message(); msg != nullptr;
-             msg = parent.next_message()) {
+        for (auto msg = manager.next_message(); msg != nullptr;
+             msg = manager.next_message()) {
           this->next_layer_.write_message(*this, std::move(msg));
         }
       }
@@ -167,7 +168,6 @@ private:
   }
 
   bool write_some() {
-    CAF_LOG_TRACE(CAF_ARG2("handle", this->handle_.id));
     // Helper function to sort empty buffers back into the right caches.
     auto recycle = [&]() {
       auto& front = this->write_queue_.front();

@@ -98,17 +98,20 @@ public:
   }
 
   bool handle_write_event(endpoint_manager& manager) override {
-    CAF_LOG_TRACE(CAF_ARG(this->handle_.id)
-                  << CAF_ARG2("queue-size", packet_queue_.size()));
-    // Try to write leftover data.
-    write_some();
-    // Get new data from parent.
-    for (auto msg = manager.next_message(); msg != nullptr;
-         msg = manager.next_message()) {
-      this->next_layer_.write_message(*this, std::move(msg));
-    }
-    // Write prepared data.
-    return write_some();
+    CAF_LOG_TRACE(CAF_ARG2("handle", this->handle_.id)
+                  << CAF_ARG2("queue-size", this->packet_queue_.size()));
+    auto get_messages = [&] {
+      if (packet_queue_.empty()) {
+        for (auto msg = manager.next_message(); msg != nullptr;
+             msg = manager.next_message()) {
+          this->next_layer_.write_message(*this, std::move(msg));
+        }
+      }
+      return !packet_queue_.empty();
+    };
+    while (write_some() && get_messages())
+      ; // nop
+    return !packet_queue_.empty();
   }
 
   // TODO: remove this function. `resolve` should add workers when needed.
@@ -159,7 +162,6 @@ private:
   }
 
   bool write_some() {
-    CAF_LOG_TRACE(CAF_ARG2("handle", this->handle_.id));
     // Helper function to sort empty buffers back into the right caches.
     auto recycle = [&]() {
       auto& front = packet_queue_.front();
@@ -192,13 +194,11 @@ private:
         if (err != sec::unavailable_or_would_block) {
           CAF_LOG_ERROR("write failed" << CAF_ARG(err));
           this->next_layer_.handle_error(err);
-          return false;
         }
-        CAF_LOG_DEBUG("write returned `unavailable_or_would_block`");
-        return true;
+        return false;
       }
     }
-    return false;
+    return true;
   }
 
   std::deque<packet> packet_queue_;

@@ -30,7 +30,4 @@ extern const size_t max_payload_buffers;
 /// Maximum number of cached buffers for sending headers.
 extern const size_t max_header_buffers;
 
-/// Maximum number of packets to be held in write_queue.
-extern const size_t max_write_queue_size;
-
 } // namespace caf::defaults::middleman
