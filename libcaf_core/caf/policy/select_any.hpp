@@ -32,10 +32,10 @@
 namespace caf::detail {
 
 template <class F, class = typename get_callable_trait<F>::arg_types>
-struct choose_response_factory;
+struct select_any_factory;
 
 template <class F, class... Ts>
-struct choose_response_factory<F, type_list<Ts...>> {
+struct select_any_factory<F, type_list<Ts...>> {
   template <class Fun>
   static auto make(std::shared_ptr<size_t> pending, Fun&& fun) {
     return [pending, f{std::forward<Fun>(fun)}](Ts... xs) mutable {
@@ -52,12 +52,12 @@ struct choose_response_factory<F, type_list<Ts...>> {
 
 namespace caf::policy {
 
-/// Enables a `response_handle` to choose one response for any number of
-/// response messages.
+/// Enables a `response_handle` to pick the first arriving response, ignoring
+/// all other results.
 /// @relates mixin::requester
 /// @relates response_handle
 template <class ResponseType>
-class choose_response {
+class select_any {
 public:
   static constexpr bool is_trivial = false;
 
@@ -69,7 +69,7 @@ public:
   using type_checker
     = detail::type_checker<response_type, detail::decay_t<Fun>>;
 
-  explicit choose_response(message_id_list ids) : ids_(std::move(ids)) {
+  explicit select_any(message_id_list ids) : ids_(std::move(ids)) {
     CAF_ASSERT(ids_.size()
                <= static_cast<size_t>(std::numeric_limits<int>::max()));
   }
@@ -93,7 +93,7 @@ public:
   template <class Self, class F, class G>
   void receive(Self* self, F&& f, G&& g) const {
     CAF_LOG_TRACE(CAF_ARG(ids_));
-    using factory = detail::choose_response_factory<std::decay_t<F>>;
+    using factory = detail::select_any_factory<std::decay_t<F>>;
     auto pending = std::make_shared<size_t>(ids_.size());
     auto fw = factory::make(pending, std::forward<F>(f));
     auto gw = make_error_handler(std::move(pending), std::forward<G>(g));
@@ -126,7 +126,7 @@ private:
 
   template <class F, class OnError>
   behavior make_behavior(F&& f, OnError&& g) const {
-    using factory = detail::choose_response_factory<std::decay_t<F>>;
+    using factory = detail::select_any_factory<std::decay_t<F>>;
     auto pending = std::make_shared<size_t>(ids_.size());
     auto result_handler = factory::make(pending, std::forward<F>(f));
     return {
