@@ -127,8 +127,8 @@ behavior basp_broker::make_behavior() {
       auto& ctx = *this_context;
       auto next = instance.handle(context(), msg, ctx.hdr,
                                   ctx.cstate == basp::await_payload);
-      if (next == basp::close_connection) {
-        connection_cleanup(msg.handle);
+      if (requires_shutdown(next)) {
+        connection_cleanup(msg.handle, to_sec(next));
         close(msg.handle);
         return;
       }
@@ -225,7 +225,9 @@ behavior basp_broker::make_behavior() {
                                   delete_atom::value, msg.handle));
     },
     // received from the message handler above for connection_closed_msg
-    [=](delete_atom, connection_handle hdl) { connection_cleanup(hdl); },
+    [=](delete_atom, connection_handle hdl) {
+      connection_cleanup(hdl, sec::none);
+    },
     // received from underlying broker implementation
     [=](const acceptor_closed_msg& msg) {
       CAF_LOG_TRACE("");
@@ -561,8 +563,8 @@ void basp_broker::set_context(connection_handle hdl) {
   t_last_hop = &i->second.id;
 }
 
-void basp_broker::connection_cleanup(connection_handle hdl) {
-  CAF_LOG_TRACE(CAF_ARG(hdl));
+void basp_broker::connection_cleanup(connection_handle hdl, sec code) {
+  CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(code));
   // Remove handle from the routing table and clean up any node-specific state
   // we might still have.
   if (auto nid = instance.tbl().erase_direct(hdl))
@@ -574,8 +576,9 @@ void basp_broker::connection_cleanup(connection_handle hdl) {
     auto& ref = i->second;
     CAF_ASSERT(i->first == ref.hdl);
     if (ref.callback) {
-      CAF_LOG_DEBUG("connection closed during handshake");
-      ref.callback->deliver(sec::disconnect_during_handshake);
+      CAF_LOG_DEBUG("connection closed during handshake:" << CAF_ARG(code));
+      auto x = code != sec::none ? code : sec::disconnect_during_handshake;
+      ref.callback->deliver(x);
     }
     ctx.erase(i);
   }

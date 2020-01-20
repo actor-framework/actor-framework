@@ -6,12 +6,14 @@ file(GLOB_RECURSE CAF_IO_HEADERS "caf/*.hpp")
 
 enum_to_string("caf/io/basp/message_type.hpp" "message_type_to_string.cpp")
 enum_to_string("caf/io/network/operation.hpp" "operation_to_string.cpp")
+enum_to_string("caf/io/basp/connection_state.hpp" "connection_state_to_string.cpp")
 
 # -- list cpp files ------------------------------------------------------------
 
 set(CAF_IO_SOURCES
   "${CMAKE_BINARY_DIR}/message_type_to_string.cpp"
   "${CMAKE_BINARY_DIR}/operation_to_string.cpp"
+  "${CMAKE_BINARY_DIR}/connection_state_to_string.cpp"
   src/detail/socket_guard.cpp
   src/io/abstract_broker.cpp
   src/io/basp/header.cpp
