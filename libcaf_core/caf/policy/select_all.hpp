@@ -105,29 +105,6 @@ struct select_select_all_helper<F, detail::type_list<std::vector<T>>> {
 template <class F>
 using select_all_helper_t = typename select_select_all_helper<F>::type;
 
-// TODO: Replace with a lambda when switching to C++17 (move g into lambda).
-template <class G>
-class select_all_error_handler {
-public:
-  template <class Fun>
-  select_all_error_handler(Fun&& fun, std::shared_ptr<size_t> pending)
-    : handler(std::forward<Fun>(fun)), pending(std::move(pending)) {
-    // nop
-  }
-
-  void operator()(error& err) {
-    CAF_LOG_TRACE(CAF_ARG2("pending", *pending));
-    if (*pending > 0) {
-      *pending = 0;
-      handler(err);
-    }
-  }
-
-private:
-  G handler;
-  std::shared_ptr<size_t> pending;
-};
-
 } // namespace caf::detail
 
 namespace caf::policy {
@@ -203,12 +180,19 @@ private:
   behavior make_behavior(F&& f, OnError&& g) const {
     using namespace detail;
     using helper_type = select_all_helper_t<decay_t<F>>;
-    using error_handler_type = select_all_error_handler<decay_t<OnError>>;
     helper_type helper{ids_.size(), std::move(f)};
-    error_handler_type err_helper{std::forward<OnError>(g), helper.pending};
+    auto pending = helper.pending;
+    auto error_handler = [pending{std::move(pending)},
+                          g{std::forward<OnError>(g)}](error& err) mutable {
+      CAF_LOG_TRACE(CAF_ARG2("pending", *pending));
+      if (*pending > 0) {
+        *pending = 0;
+        g(err);
+      }
+    };
     return {
       std::move(helper),
-      std::move(err_helper),
+      std::move(error_handler),
     };
   }
 
