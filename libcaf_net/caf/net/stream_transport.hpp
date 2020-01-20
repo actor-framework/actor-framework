@@ -108,12 +108,9 @@ public:
     CAF_LOG_TRACE(CAF_ARG2("handle", this->handle().id)
                   << CAF_ARG2("queue-size", write_queue_.size()));
     auto get_messages = [&] {
-      if (write_queue_.empty()) {
-        for (auto msg = manager.next_message(); msg != nullptr;
-             msg = manager.next_message()) {
-          this->next_layer_.write_message(*this, std::move(msg));
-        }
-      }
+      for (auto msg = manager.next_message(); msg != nullptr;
+           msg = manager.next_message())
+        this->next_layer_.write_message(*this, std::move(msg));
       return !write_queue_.empty();
     };
     while (write_some() && get_messages())
