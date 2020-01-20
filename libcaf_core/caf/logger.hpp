@@ -498,8 +498,10 @@ bool operator==(const logger::field& x, const logger::field& y);
     CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_WARNING, output)
 #endif
 
-#define CAF_LOG_ERROR(output)                                                  \
-  CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_ERROR, output)
+#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_ERROR
+#  define CAF_LOG_ERROR(output)                                                \
+    CAF_LOG_IMPL(CAF_LOG_COMPONENT, CAF_LOG_LEVEL_ERROR, output)
+#endif
 
 #ifndef CAF_LOG_INFO
 #  define CAF_LOG_INFO(output) CAF_VOID_STMT
