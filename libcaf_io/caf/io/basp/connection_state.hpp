@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include "caf/sec.hpp"
 #include "caf/detail/io_export.hpp"
+#include "caf/sec.hpp"
 
 namespace caf::io::basp {
 
