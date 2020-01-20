@@ -69,6 +69,7 @@ set(CAF_CORE_SOURCES
   src/detail/ini_consumer.cpp
   src/detail/invoke_result_visitor.cpp
   src/detail/message_data.cpp
+  src/detail/meta_object.cpp
   src/detail/parse.cpp
   src/detail/parser/chars.cpp
   src/detail/pretty_type_name.cpp
@@ -193,6 +194,7 @@ set(CAF_CORE_TEST_SOURCES
   test/detail/bounds_checker.cpp
   test/detail/ini_consumer.cpp
   test/detail/limited_vector.cpp
+  test/detail/meta_object.cpp
   test/detail/parse.cpp
   test/detail/parser/read_bool.cpp
   test/detail/parser/read_floating_point.cpp

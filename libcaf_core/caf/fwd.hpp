@@ -40,13 +40,17 @@ template <class> class intrusive_ptr;
 template <class> class optional;
 template <class> class param;
 template <class> class span;
-template <class> class stream;
+template <class> class stream;;
 template <class> class stream_sink;
 template <class> class stream_source;
 template <class> class trivial_match_case;
 template <class> class weak_intrusive_ptr;
 
 template <class> struct timeout_definition;
+template <class> struct type_id;
+
+template <uint16_t> struct type_by_id;
+template <uint16_t> struct type_name_by_id;
 
 // -- 2 param templates --------------------------------------------------------
 
@@ -271,6 +275,8 @@ class group_manager;
 class message_data;
 class private_thread;
 class uri_impl;
+
+struct meta_object;
 
 // enable intrusive_ptr<uri_impl> with forward declaration only
 CAF_CORE_EXPORT void intrusive_ptr_add_ref(const uri_impl*);
