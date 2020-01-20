@@ -23,10 +23,28 @@
 #include <limits>
 #include <thread>
 
+#include "caf/detail/build_config.hpp"
+#include "caf/detail/log_level.hpp"
+
 using std::max;
 using std::min;
 
 namespace {
+
+static constexpr caf::string_view default_log_level =
+#if CAF_LOG_LEVEL == CAF_LOG_LEVEL_TRACE
+  "trace";
+#elif CAF_LOG_LEVEL == CAF_LOG_LEVEL_DEBUG
+  "debug";
+#elif CAF_LOG_LEVEL == CAF_LOG_LEVEL_INFO
+  "info";
+#elif CAF_LOG_LEVEL == CAF_LOG_LEVEL_WARNING
+  "warning";
+#elif CAF_LOG_LEVEL == CAF_LOG_LEVEL_ERROR
+  "error";
+#else
+  "quiet";
+#endif
 
 using us_t = std::chrono::microseconds;
 
@@ -87,10 +105,10 @@ namespace logger {
 string_view component_filter = "";
 const string_view console = "none";
 string_view console_format = "%m";
-const string_view console_verbosity = "trace";
+const string_view console_verbosity = default_log_level;
 string_view file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
 string_view file_name = "actor_log_[PID]_[TIMESTAMP]_[NODE].log";
-const string_view file_verbosity = "trace";
+const string_view file_verbosity = default_log_level;
 
 } // namespace logger
 
