@@ -36,7 +36,7 @@
 namespace caf::detail {
 
 template <class F, class T>
-struct fan_in_responses_helper {
+struct select_all_helper {
   std::vector<T> results;
   std::shared_ptr<size_t> pending;
   F f;
@@ -51,7 +51,7 @@ struct fan_in_responses_helper {
   }
 
   template <class Fun>
-  fan_in_responses_helper(size_t pending, Fun&& f)
+  select_all_helper(size_t pending, Fun&& f)
     : pending(std::make_shared<size_t>(pending)), f(std::forward<Fun>(f)) {
     results.reserve(pending);
   }
@@ -62,7 +62,7 @@ struct fan_in_responses_helper {
 };
 
 template <class F, class... Ts>
-struct fan_in_responses_tuple_helper {
+struct select_all_tuple_helper {
   using value_type = std::tuple<Ts...>;
   std::vector<value_type> results;
   std::shared_ptr<size_t> pending;
@@ -78,7 +78,7 @@ struct fan_in_responses_tuple_helper {
   }
 
   template <class Fun>
-  fan_in_responses_tuple_helper(size_t pending, Fun&& f)
+  select_all_tuple_helper(size_t pending, Fun&& f)
     : pending(std::make_shared<size_t>(pending)), f(std::forward<Fun>(f)) {
     results.reserve(pending);
   }
@@ -89,56 +89,32 @@ struct fan_in_responses_tuple_helper {
 };
 
 template <class F, class = typename detail::get_callable_trait<F>::arg_types>
-struct select_fan_in_responses_helper;
+struct select_select_all_helper;
 
 template <class F, class... Ts>
-struct select_fan_in_responses_helper<
+struct select_select_all_helper<
   F, detail::type_list<std::vector<std::tuple<Ts...>>>> {
-  using type = fan_in_responses_tuple_helper<F, Ts...>;
+  using type = select_all_tuple_helper<F, Ts...>;
 };
 
 template <class F, class T>
-struct select_fan_in_responses_helper<F, detail::type_list<std::vector<T>>> {
-  using type = fan_in_responses_helper<F, T>;
+struct select_select_all_helper<F, detail::type_list<std::vector<T>>> {
+  using type = select_all_helper<F, T>;
 };
 
 template <class F>
-using fan_in_responses_helper_t =
-  typename select_fan_in_responses_helper<F>::type;
-
-// TODO: Replace with a lambda when switching to C++17 (move g into lambda).
-template <class G>
-class fan_in_responses_error_handler {
-public:
-  template <class Fun>
-  fan_in_responses_error_handler(Fun&& fun, std::shared_ptr<size_t> pending)
-    : handler(std::forward<Fun>(fun)), pending(std::move(pending)) {
-    // nop
-  }
-
-  void operator()(error& err) {
-    CAF_LOG_TRACE(CAF_ARG2("pending", *pending));
-    if (*pending > 0) {
-      *pending = 0;
-      handler(err);
-    }
-  }
-
-private:
-  G handler;
-  std::shared_ptr<size_t> pending;
-};
+using select_all_helper_t = typename select_select_all_helper<F>::type;
 
 } // namespace caf::detail
 
 namespace caf::policy {
 
-/// Enables a `response_handle` to fan-in multiple responses into a single
-/// result (a `vector` of individual values) for the client.
+/// Enables a `response_handle` to fan-in all responses messages into a single
+/// result (a `vector` that stores all received results).
 /// @relates mixin::requester
 /// @relates response_handle
 template <class ResponseType>
-class fan_in_responses {
+class select_all {
 public:
   static constexpr bool is_trivial = false;
 
@@ -147,17 +123,18 @@ public:
   using message_id_list = std::vector<message_id>;
 
   template <class Fun>
-  using type_checker = detail::type_checker<
-    response_type, detail::fan_in_responses_helper_t<detail::decay_t<Fun>>>;
+  using type_checker
+    = detail::type_checker<response_type,
+                           detail::select_all_helper_t<detail::decay_t<Fun>>>;
 
-  explicit fan_in_responses(message_id_list ids) : ids_(std::move(ids)) {
+  explicit select_all(message_id_list ids) : ids_(std::move(ids)) {
     CAF_ASSERT(ids_.size()
                <= static_cast<size_t>(std::numeric_limits<int>::max()));
   }
 
-  fan_in_responses(fan_in_responses&&) noexcept = default;
+  select_all(select_all&&) noexcept = default;
 
-  fan_in_responses& operator=(fan_in_responses&&) noexcept = default;
+  select_all& operator=(select_all&&) noexcept = default;
 
   template <class Self, class F, class OnError>
   void await(Self* self, F&& f, OnError&& g) const {
@@ -178,7 +155,7 @@ public:
   template <class Self, class F, class G>
   void receive(Self* self, F&& f, G&& g) const {
     CAF_LOG_TRACE(CAF_ARG(ids_));
-    using helper_type = detail::fan_in_responses_helper_t<detail::decay_t<F>>;
+    using helper_type = detail::select_all_helper_t<detail::decay_t<F>>;
     helper_type helper{ids_.size(), std::forward<F>(f)};
     auto error_handler = [&](error& err) {
       if (*helper.pending > 0) {
@@ -202,13 +179,20 @@ private:
   template <class F, class OnError>
   behavior make_behavior(F&& f, OnError&& g) const {
     using namespace detail;
-    using helper_type = fan_in_responses_helper_t<decay_t<F>>;
-    using error_handler_type = fan_in_responses_error_handler<decay_t<OnError>>;
+    using helper_type = select_all_helper_t<decay_t<F>>;
     helper_type helper{ids_.size(), std::move(f)};
-    error_handler_type err_helper{std::forward<OnError>(g), helper.pending};
+    auto pending = helper.pending;
+    auto error_handler = [pending{std::move(pending)},
+                          g{std::forward<OnError>(g)}](error& err) mutable {
+      CAF_LOG_TRACE(CAF_ARG2("pending", *pending));
+      if (*pending > 0) {
+        *pending = 0;
+        g(err);
+      }
+    };
     return {
       std::move(helper),
-      std::move(err_helper),
+      std::move(error_handler),
     };
   }
 
