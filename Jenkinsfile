@@ -141,6 +141,24 @@ pipeline {
                 runClangFormat(config)
             }
         }
+        stage('Check Consistency') {
+            agent { label 'unix' }
+            steps {
+                deleteDir()
+                unstash('sources')
+                dir('sources') {
+                    cmakeBuild([
+                        buildDir: 'build',
+                        installation: 'cmake in search path',
+                        sourceDir: '.',
+                        steps: [[
+                            args: '--target consistency-check',
+                            withCmake: true,
+                        ]],
+                    ])
+                }
+            }
+        }
         stage('Build') {
             steps {
                 buildParallel(config, PrettyJobBaseName)
