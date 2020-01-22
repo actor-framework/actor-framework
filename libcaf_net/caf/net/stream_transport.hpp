@@ -73,12 +73,11 @@ public:
   // -- member functions -------------------------------------------------------
 
   bool handle_read_event(endpoint_manager&) override {
-    size_t reads = 0;
-    while (reads++ < this->max_consecutive_reads_) {
+    CAF_LOG_TRACE(CAF_ARG2("handle", this->handle().id));
+    for (size_t reads = 0; reads < this->max_consecutive_reads_; ++reads) {
       auto buf = this->read_buf_.data() + this->collected_;
       size_t len = this->read_threshold_ - this->collected_;
-      CAF_LOG_TRACE(CAF_ARG2("handle", this->handle().id)
-                    << CAF_ARG2("missing", len));
+      CAF_LOG_DEBUG(CAF_ARG2("missing", len));
       auto ret = read(this->handle_, make_span(buf, len));
       // Update state.
       if (auto num_bytes = get_if<size_t>(&ret)) {

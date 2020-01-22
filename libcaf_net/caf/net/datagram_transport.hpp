@@ -79,14 +79,12 @@ public:
   }
 
   bool handle_read_event(endpoint_manager&) override {
-    size_t reads = 0;
-    while (reads++ < this->max_consecutive_reads_) {
-      CAF_LOG_TRACE(CAF_ARG(this->handle_.id));
+    CAF_LOG_TRACE(CAF_ARG(this->handle_.id));
+    for (size_t reads = 0; reads < this->max_consecutive_reads_; ++reads) {
       auto ret = read(this->handle_, this->read_buf_);
       if (auto res = get_if<std::pair<size_t, ip_endpoint>>(&ret)) {
-        auto num_bytes = res->first;
+        auto& [num_bytes, ep] = *res;
         CAF_LOG_DEBUG("received " << num_bytes << " bytes");
-        auto ep = res->second;
         this->read_buf_.resize(num_bytes);
         this->next_layer_.handle_data(*this, this->read_buf_, std::move(ep));
         prepare_next_read();
