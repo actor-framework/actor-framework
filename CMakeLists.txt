@@ -111,6 +111,8 @@ function(add_enum_consistency_check hpp_file cpp_file)
   set(input "${CMAKE_CURRENT_SOURCE_DIR}/${hpp_file}")
   set(file_under_test "${CMAKE_CURRENT_SOURCE_DIR}/${cpp_file}")
   set(output "${CMAKE_CURRENT_BINARY_DIR}/check/${cpp_file}")
+  get_filename_component(output_dir "${output}" DIRECTORY)
+  file(MAKE_DIRECTORY "${output_dir}")
   add_custom_command(OUTPUT "${output}"
                      COMMAND caf-generate-enum-strings "${input}" "${output}"
                      DEPENDS caf-generate-enum-strings "${input}")
