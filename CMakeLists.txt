@@ -97,14 +97,39 @@ function(pretty_yes var)
   endif()
 endfunction(pretty_yes)
 
-add_executable(caf-generate-enum-strings cmake/caf-generate-enum-strings.cpp)
+add_executable(caf-generate-enum-strings
+               EXCLUDE_FROM_ALL
+               cmake/caf-generate-enum-strings.cpp)
 
-function(enum_to_string relative_input_file relative_output_file)
-  set(input "${CMAKE_CURRENT_SOURCE_DIR}/${relative_input_file}")
-  set(output "${CMAKE_CURRENT_BINARY_DIR}/${relative_output_file}")
+add_custom_target(consistency-check)
+
+add_custom_target(update-enum-strings)
+
+# adds a consistency check that verifies that `cpp_file` is still valid by
+# re-generating the file and comparing it to the existing file
+function(add_enum_consistency_check hpp_file cpp_file)
+  set(input "${CMAKE_CURRENT_SOURCE_DIR}/${hpp_file}")
+  set(file_under_test "${CMAKE_CURRENT_SOURCE_DIR}/${cpp_file}")
+  set(output "${CMAKE_CURRENT_BINARY_DIR}/check/${cpp_file}")
   add_custom_command(OUTPUT "${output}"
                      COMMAND caf-generate-enum-strings "${input}" "${output}"
                      DEPENDS caf-generate-enum-strings "${input}")
+  get_filename_component(target_name "${input}" NAME_WE)
+  add_custom_target("${target_name}"
+                    COMMAND
+                      "${CMAKE_COMMAND}"
+                      "-Dfile_under_test=${file_under_test}"
+                      "-Dgenerated_file=${output}"
+                      -P "${PROJECT_SOURCE_DIR}/cmake/check-consistency.cmake"
+                    DEPENDS "${output}")
+  add_dependencies(consistency-check "${target_name}")
+  add_custom_target("${target_name}-update"
+                    COMMAND
+                      caf-generate-enum-strings
+                      "${input}"
+                      "${file_under_test}"
+                     DEPENDS caf-generate-enum-strings "${input}")
+  add_dependencies(update-enum-strings "${target_name}-update")
 endfunction()
 
 ################################################################################
