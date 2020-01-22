@@ -107,12 +107,14 @@ public:
   bool handle_write_event(endpoint_manager& manager) override {
     CAF_LOG_TRACE(CAF_ARG2("handle", this->handle_.id)
                   << CAF_ARG2("queue-size", write_queue_.size()));
-    auto get_message = [&] {
-      if (auto msg = manager.next_message())
+    auto fetch_next_message = [&] {
+      if (auto msg = manager.next_message()) {
         this->next_layer_.write_message(*this, std::move(msg));
-      return !write_queue_.empty();
+        return true;
+      }
+      return false;
     };
-    while (write_some() && get_message())
+    while (write_some() && fetch_next_message())
       ; // nop
     return !write_queue_.empty();
   }
