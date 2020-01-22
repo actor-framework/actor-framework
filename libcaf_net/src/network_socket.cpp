@@ -79,7 +79,7 @@ error allow_udp_connreset(network_socket x, bool new_value) {
 }
 #else // CAF_WINDOWS
 
-error allow_sigpipe(network_socket x, bool new_value) {
+error allow_sigpipe(network_socket x, [[maybe_unused]] bool new_value) {
 #  ifdef CAF_HAS_NOSIGPIPE_SOCKET_FLAG
   int value = new_value ? 0 : 1;
   CAF_NET_SYSCALL("setsockopt", res, !=, 0,
