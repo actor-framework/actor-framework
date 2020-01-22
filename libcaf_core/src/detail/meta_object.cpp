@@ -27,6 +27,12 @@
 
 namespace caf::detail {
 
+#define fatal(str)                                                             \
+  do {                                                                         \
+    fprintf(stderr, "FATAL: " str "\n");                                       \
+    abort();                                                                   \
+  } while (false)
+
 namespace {
 
 // Stores global type information.
@@ -62,17 +68,46 @@ void clear_global_meta_objects() {
 }
 
 span<meta_object> resize_global_meta_objects(size_t size) {
-  if (size <= meta_objects_size) {
-    fprintf(stderr, "resize_global_meta_objects called with a new size that "
-                    "does not grow the array\n");
-    abort();
-  }
+  if (size <= meta_objects_size)
+    fatal("resize_global_meta_objects called with a new size that does not "
+          "grow the array");
   auto new_storage = new meta_object[size];
   std::copy(meta_objects, meta_objects + meta_objects_size, new_storage);
   delete[] meta_objects;
   meta_objects = new_storage;
   meta_objects_size = size;
   return {new_storage, size};
+}
+
+void set_global_meta_objects(uint16_t first_id, span<const meta_object> xs) {
+  auto new_size = first_id + xs.size();
+  if (first_id < meta_objects_size) {
+    if (new_size > meta_objects_size)
+      fatal("set_global_meta_objects called with "
+            "'first_id < meta_objects_size' and "
+            "'new_size > meta_objects_size'");
+    auto out = meta_objects + first_id;
+    for (const auto& x : xs) {
+      if (out->type_name == nullptr) {
+        // We support calling set_global_meta_objects for building the global
+        // table chunk-by-chunk.
+        *out = x;
+      } else if (strcmp(out->type_name, x.type_name) == 0) {
+        // nop: set_global_meta_objects implements idempotency.
+      } else {
+        fprintf(stderr,
+                "FATAL: type ID %d already assigned to %s (tried to override "
+                "with %s)\n",
+                static_cast<int>(std::distance(meta_objects, out)),
+                out->type_name, x.type_name);
+        abort();
+      }
+      ++out;
+    }
+    return;
+  }
+  auto dst = resize_global_meta_objects(first_id + xs.size());
+  std::copy(xs.begin(), xs.end(), dst.begin() + first_id);
 }
 
 } // namespace caf::detail

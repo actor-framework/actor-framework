@@ -172,6 +172,19 @@ CAF_TEST(init_global_meta_objects takes care of creating a meta object table) {
   CAF_CHECK_EQUAL(type_name_by_id_v<type_id_v<i64_wrapper>>, "i64_wrapper"s);
   CAF_CHECK_EQUAL(xs[type_id_v<i32_wrapper>].type_name, "i32_wrapper"s);
   CAF_CHECK_EQUAL(xs[type_id_v<i64_wrapper>].type_name, "i64_wrapper"s);
+  CAF_MESSAGE("calling init_global_meta_objects again is a no-op");
+  init_global_meta_objects<meta_object_suite_type_ids>();
+  auto ys = global_meta_objects();
+  auto same = [](const auto& x, const auto& y) {
+    return x.type_name == y.type_name;
+  };
+  CAF_CHECK(std::equal(xs.begin(), xs.end(), ys.begin(), ys.end(), same));
+  CAF_MESSAGE("init_global_meta_objects can initialize allocated chunks");
+  CAF_CHECK_EQUAL(global_meta_object(type_id_v<float>).type_name, nullptr);
+  init_global_meta_objects<builtin_type_ids>();
+  CAF_MESSAGE("again, calling init_global_meta_objects again is a no-op");
+  init_global_meta_objects<builtin_type_ids>();
+  CAF_CHECK_EQUAL(global_meta_object(type_id_v<float>).type_name, "float"s);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

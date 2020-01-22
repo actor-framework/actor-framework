@@ -30,7 +30,7 @@ namespace caf::detail {
 /// pointers.
 struct meta_object {
   /// Stores a human-readable representation of the type's name.
-  const char* type_name;
+  const char* type_name = nullptr;
 
   /// Calls the destructor for given object.
   void (*destroy)(void*) noexcept;
@@ -59,13 +59,23 @@ CAF_CORE_EXPORT span<const meta_object> global_meta_objects();
 /// Returns the global meta object for given type ID.
 CAF_CORE_EXPORT meta_object& global_meta_object(uint16_t id);
 
-/// Clears the array for storing global meta objects. Meant for unit testing
-/// only!
+/// Clears the array for storing global meta objects.
+/// @warning intended for unit testing only!
 CAF_CORE_EXPORT void clear_global_meta_objects();
 
 /// Resizes and returns the global storage for all meta objects. Existing
 /// entries are copied to the new memory region. The new size *must* grow the
 /// array.
+/// @warning calling this after constructing any ::actor_system is unsafe and
+///          causes undefined behavior.
 CAF_CORE_EXPORT span<meta_object> resize_global_meta_objects(size_t size);
+
+/// Sets the meta objects in range `(first_id, first_id + xs.size]` to `xs`.
+/// Resizes the global meta object if needed. Aborts the program if the range
+/// already contains meta objects.
+/// @warning calling this after constructing any ::actor_system is unsafe and
+///          causes undefined behavior.
+CAF_CORE_EXPORT void set_global_meta_objects(uint16_t first_id,
+                                             span<const meta_object> xs);
 
 } // namespace caf::detail

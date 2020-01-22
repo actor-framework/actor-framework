@@ -25,6 +25,7 @@
 
 #include "caf/detail/make_meta_object.hpp"
 #include "caf/detail/meta_object.hpp"
+#include "caf/span.hpp"
 #include "caf/type_id.hpp"
 
 namespace caf::detail {
@@ -54,22 +55,26 @@ using make_type_id_sequence =
 
 namespace caf {
 
+/// @warning calling this after constructing any ::actor_system is unsafe and
+///          causes undefined behavior.
 template <uint16_t... Is>
 void init_global_meta_objects_impl(std::integer_sequence<uint16_t, Is...>,
-                                   size_t begin, size_t end) {
+                                   uint16_t first_id) {
   detail::meta_object src[] = {
     detail::make_meta_object<type_by_id_t<Is>>(type_name_by_id_v<Is>)...,
   };
-  auto dst = detail::resize_global_meta_objects(end);
-  std::copy(src, src + sizeof...(Is), dst.begin() + begin);
+  detail::set_global_meta_objects(first_id, make_span(src));
 }
 
+/// Initializes the global meta object table with all types in `ProjectIds`.
+/// @warning calling this after constructing any ::actor_system is unsafe and
+///          causes undefined behavior.
 template <class ProjectIds>
 void init_global_meta_objects() {
   static constexpr uint16_t begin = ProjectIds::first;
   static constexpr uint16_t end = ProjectIds::last + 1;
   init_global_meta_objects_impl(detail::make_type_id_sequence<begin, end>{},
-                                begin, end);
+                                begin);
 }
 
 } // namespace caf
