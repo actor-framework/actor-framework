@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
   }
   std::ofstream out{argv[2]};
   if (!out) {
-    cerr << "unable to open output file: " << argv[1] << '\n';
+    cerr << "unable to open output file: " << argv[2] << '\n';
     return EXIT_FAILURE;
   }
   // Print file header.
