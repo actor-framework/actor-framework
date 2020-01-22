@@ -2,23 +2,23 @@
 
 file(GLOB_RECURSE CAF_IO_HEADERS "caf/*.hpp")
 
-# -- auto generate to_string for enum types ------------------------------------
+# -- add consistency checks for enum to_string implementations -----------------
 
-enum_to_string("caf/io/basp/message_type.hpp" "message_type_to_string.cpp")
-enum_to_string("caf/io/network/operation.hpp" "operation_to_string.cpp")
-enum_to_string("caf/io/basp/connection_state.hpp" "connection_state_to_string.cpp")
+add_enum_consistency_check("caf/io/basp/message_type.hpp"
+                           "src/io/basp/message_type_strings.cpp")
+
+add_enum_consistency_check("caf/io/network/operation.hpp"
+                           "src/io/network/operation_strings.cpp")
 
 # -- list cpp files ------------------------------------------------------------
 
 set(CAF_IO_SOURCES
-  "${CMAKE_BINARY_DIR}/message_type_to_string.cpp"
-  "${CMAKE_BINARY_DIR}/operation_to_string.cpp"
-  "${CMAKE_BINARY_DIR}/connection_state_to_string.cpp"
   src/detail/socket_guard.cpp
   src/io/abstract_broker.cpp
   src/io/basp/header.cpp
   src/io/basp/instance.cpp
   src/io/basp/message_queue.cpp
+  src/io/basp/message_type_strings.cpp
   src/io/basp/routing_table.cpp
   src/io/basp/worker.cpp
   src/io/basp_broker.cpp
@@ -42,6 +42,7 @@ set(CAF_IO_SOURCES
   src/io/network/manager.cpp
   src/io/network/multiplexer.cpp
   src/io/network/native_socket.cpp
+  src/io/network/operation_strings.cpp
   src/io/network/pipe_reader.cpp
   src/io/network/protocol.cpp
   src/io/network/receive_buffer.cpp
