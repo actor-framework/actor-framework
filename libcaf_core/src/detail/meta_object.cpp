@@ -62,7 +62,7 @@ meta_object& global_meta_object(uint16_t id) {
 
 void clear_global_meta_objects() {
   if (meta_objects != nullptr) {
-    delete meta_objects;
+    delete[] meta_objects;
     meta_objects = nullptr;
     meta_objects_size = 0;
   }
