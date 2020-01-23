@@ -107,8 +107,10 @@ public:
       }
       return false;
     };
-    while (write_some() && fetch_next_message())
-      ; // nop
+    do {
+      if (!write_some())
+        return false;
+    } while (fetch_next_message());
     return !packet_queue_.empty();
   }
 
