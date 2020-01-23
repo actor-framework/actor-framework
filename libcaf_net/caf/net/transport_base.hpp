@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/defaults.hpp"
 #include "caf/detail/overload.hpp"
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
@@ -100,6 +101,9 @@ public:
     CAF_LOG_TRACE("");
     manager_ = &parent;
     auto& cfg = system().config();
+    max_consecutive_reads_ = get_or(this->system().config(),
+                                    "middleman.max-consecutive-reads",
+                                    defaults::middleman::max_consecutive_reads);
     auto max_header_bufs = get_or(cfg, "middleman.max-header-buffers",
                                   defaults::middleman::max_header_buffers);
     header_bufs_.reserve(max_header_bufs);
@@ -224,6 +228,8 @@ protected:
   buffer_type read_buf_;
 
   endpoint_manager* manager_;
+
+  size_t max_consecutive_reads_;
 };
 
 } // namespace caf::net

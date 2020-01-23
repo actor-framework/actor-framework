@@ -23,7 +23,6 @@
 
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
-#include "caf/net/defaults.hpp"
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/receive_policy.hpp"
@@ -74,31 +73,35 @@ public:
   // -- member functions -------------------------------------------------------
 
   bool handle_read_event(endpoint_manager&) override {
-    auto buf = this->read_buf_.data() + this->collected_;
-    size_t len = this->read_threshold_ - this->collected_;
-    CAF_LOG_TRACE(CAF_ARG2("handle", this->handle().id)
-                  << CAF_ARG2("missing", len));
-    auto ret = read(this->handle_, make_span(buf, len));
-    // Update state.
-    if (auto num_bytes = get_if<size_t>(&ret)) {
-      CAF_LOG_DEBUG(CAF_ARG(len)
-                    << CAF_ARG(this->handle_.id) << CAF_ARG(*num_bytes));
-      this->collected_ += *num_bytes;
-      if (this->collected_ >= this->read_threshold_) {
-        if (auto err = this->next_layer_.handle_data(*this,
-                                                     make_span(
-                                                       this->read_buf_))) {
-          CAF_LOG_ERROR("handle_data failed: " << CAF_ARG(err));
+    CAF_LOG_TRACE(CAF_ARG2("handle", this->handle().id));
+    for (size_t reads = 0; reads < this->max_consecutive_reads_; ++reads) {
+      auto buf = this->read_buf_.data() + this->collected_;
+      size_t len = this->read_threshold_ - this->collected_;
+      CAF_LOG_DEBUG(CAF_ARG2("missing", len));
+      auto ret = read(this->handle_, make_span(buf, len));
+      // Update state.
+      if (auto num_bytes = get_if<size_t>(&ret)) {
+        CAF_LOG_DEBUG(CAF_ARG(len)
+                      << CAF_ARG(this->handle_.id) << CAF_ARG(*num_bytes));
+        this->collected_ += *num_bytes;
+        if (this->collected_ >= this->read_threshold_) {
+          if (auto err = this->next_layer_.handle_data(*this,
+                                                       make_span(
+                                                         this->read_buf_))) {
+            CAF_LOG_ERROR("handle_data failed: " << CAF_ARG(err));
+            return false;
+          }
+          this->prepare_next_read();
+        }
+      } else {
+        auto err = get<sec>(ret);
+        if (err == sec::unavailable_or_would_block) {
+          break;
+        } else {
+          CAF_LOG_DEBUG("read failed" << CAF_ARG(err));
+          this->next_layer_.handle_error(err);
           return false;
         }
-        this->prepare_next_read();
-      }
-    } else {
-      auto err = get<sec>(ret);
-      if (err != sec::unavailable_or_would_block) {
-        CAF_LOG_DEBUG("read failed" << CAF_ARG(err));
-        this->next_layer_.handle_error(err);
-        return false;
       }
     }
     return true;
@@ -214,8 +217,6 @@ private:
   size_t collected_;
   size_t max_;
   receive_policy_flag rd_flag_;
-  // TODO implement retries using this member!
-  // size_t max_consecutive_reads_;
 };
 
 } // namespace caf::net
