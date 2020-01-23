@@ -14,7 +14,7 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/exec_main.hpp"
 #include "caf/function_view.hpp"
-#include "caf/policy/fan_in_responses.hpp"
+#include "caf/policy/select_all.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/stateful_actor.hpp"
 #include "caf/typed_actor.hpp"
@@ -87,7 +87,7 @@ matrix::behavior_type matrix_actor(matrix::stateful_pointer<matrix_state> self,
       assert(row < rows);
       auto rp = self->make_response_promise<double>();
       auto& row_vec = self->state.rows[row];
-      self->fan_out_request<policy::fan_in_responses>(row_vec, infinite, get)
+      self->fan_out_request<policy::select_all>(row_vec, infinite, get)
         .then(
           [=](std::vector<int> xs) mutable {
             assert(xs.size() == static_cast<size_t>(columns));
@@ -104,7 +104,7 @@ matrix::behavior_type matrix_actor(matrix::stateful_pointer<matrix_state> self,
       for (int row = 0; row < rows; ++row)
         columns.emplace_back(rows_vec[row][column]);
       auto rp = self->make_response_promise<double>();
-      self->fan_out_request<policy::fan_in_responses>(columns, infinite, get)
+      self->fan_out_request<policy::select_all>(columns, infinite, get)
         .then(
           [=](std::vector<int> xs) mutable {
             assert(xs.size() == static_cast<size_t>(rows));

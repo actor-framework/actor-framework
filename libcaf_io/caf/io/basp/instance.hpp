@@ -221,8 +221,8 @@ public:
     return system().config();
   }
 
-  bool handle(execution_unit* ctx, connection_handle hdl, header& hdr,
-              byte_buffer* payload);
+  connection_state handle(execution_unit* ctx, connection_handle hdl,
+                          header& hdr, byte_buffer* payload);
 
 private:
   void forward(execution_unit* ctx, const node_id& dest_node, const header& hdr,

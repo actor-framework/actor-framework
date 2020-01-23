@@ -128,10 +128,23 @@ enum class sec : uint8_t {
   socket_operation_failed = 45,
   /// A resource is temporarily unavailable or would block.
   unavailable_or_would_block,
+  /// Connection refused because of incompatible CAF versions.
+  incompatible_versions,
+  /// Connection refused because of incompatible application IDs.
+  incompatible_application_ids,
+  /// The middleman received a malformed BASP message from another node.
+  malformed_basp_message,
+  /// The middleman closed a connection because it failed to serialize or
+  /// deserialize a payload.
+  serializing_basp_payload_failed,
+  /// The middleman closed a connection to itself or an already connected node.
+  redundant_connection,
   /// Resolving a path on a remote node failed.
   remote_lookup_failed,
   /// Serialization failed because actor_system::tracing_context is null.
   no_tracing_context,
+  /// No request produced a valid result.
+  all_requests_failed,
 };
 
 /// @relates sec

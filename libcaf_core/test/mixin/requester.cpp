@@ -25,7 +25,7 @@
 #include <numeric>
 
 #include "caf/event_based_actor.hpp"
-#include "caf/policy/fan_in_responses.hpp"
+#include "caf/policy/select_all.hpp"
 
 using namespace caf;
 
@@ -154,7 +154,7 @@ CAF_TEST(delegated request with integer result) {
 }
 
 CAF_TEST(requesters support fan_out_request) {
-  using policy::fan_in_responses;
+  using policy::select_all;
   std::vector<adding_server_type> workers{
     make_server([](int x, int y) { return x + y; }),
     make_server([](int x, int y) { return x + y; }),
@@ -163,7 +163,7 @@ CAF_TEST(requesters support fan_out_request) {
   run();
   auto sum = std::make_shared<int>(0);
   auto client = sys.spawn([=](event_based_actor* self) {
-    self->fan_out_request<fan_in_responses>(workers, infinite, 1, 2)
+    self->fan_out_request<select_all>(workers, infinite, 1, 2)
       .then([=](std::vector<int> results) {
         for (auto result : results)
           CAF_CHECK_EQUAL(result, 3);
