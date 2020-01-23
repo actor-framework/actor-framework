@@ -23,10 +23,28 @@
 #include <limits>
 #include <thread>
 
+#include "caf/detail/build_config.hpp"
+#include "caf/detail/log_level.hpp"
+
 using std::max;
 using std::min;
 
 namespace {
+
+static constexpr caf::atom_value default_log_level =
+#if CAF_LOG_LEVEL == CAF_LOG_LEVEL_TRACE
+  caf::atom("trace");
+#elif CAF_LOG_LEVEL == CAF_LOG_LEVEL_DEBUG
+  caf::atom("debug");
+#elif CAF_LOG_LEVEL == CAF_LOG_LEVEL_INFO
+  caf::atom("info");
+#elif CAF_LOG_LEVEL == CAF_LOG_LEVEL_WARNING
+  caf::atom("warning");
+#elif CAF_LOG_LEVEL == CAF_LOG_LEVEL_ERROR
+  caf::atom("error");
+#else
+  caf::atom("quiet");
+#endif
 
 using us_t = std::chrono::microseconds;
 
@@ -80,10 +98,10 @@ namespace logger {
 string_view component_filter = "";
 const atom_value console = atom("none");
 string_view console_format = "%m";
-const atom_value console_verbosity = atom("trace");
+const atom_value console_verbosity = default_log_level;
 string_view file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
 string_view file_name = "actor_log_[PID]_[TIMESTAMP]_[NODE].log";
-const atom_value file_verbosity = atom("trace");
+const atom_value file_verbosity = default_log_level;
 
 } // namespace logger
 
