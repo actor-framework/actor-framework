@@ -682,7 +682,7 @@ CAF_TEST(indirect_connections) {
   // this asks Jupiter if it has a 'SpawnServ'
   mx.receive(mars().connection, basp::message_type::routed_message,
              basp::header::named_receiver_flag, any_vals,
-             default_operation_data, any_vals, spawn_serv_id, this_node(),
+             default_operation_data, any_vals, config_serv_id, this_node(),
              jupiter().id, std::vector<strong_actor_ptr>{},
              make_message(sys_atom_v, get_atom_v, "info"));
   CAF_MESSAGE("expect announce_proxy message at Mars from Earth to Jupiter");
@@ -733,7 +733,7 @@ CAF_TEST(automatic_connection) {
        make_message("hello from jupiter!"))
     .receive(mars().connection, basp::message_type::routed_message,
              basp::header::named_receiver_flag, any_vals,
-             default_operation_data, any_vals, spawn_serv_id, this_node(),
+             default_operation_data, any_vals, config_serv_id, this_node(),
              jupiter().id, std::vector<strong_actor_ptr>{},
              make_message(sys_atom_v, get_atom_v, "info"))
     .receive(mars().connection, basp::message_type::routed_message,
