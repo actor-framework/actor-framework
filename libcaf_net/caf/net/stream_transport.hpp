@@ -115,8 +115,8 @@ public:
       return false;
     };
     do {
-      if (!write_some())
-        return false;
+      if (auto err = write_some())
+        return err == sec::unavailable_or_would_block;
     } while (fetch_next_message());
     return !write_queue_.empty();
   }
@@ -167,7 +167,7 @@ private:
     }
   }
 
-  bool write_some() {
+  error write_some() {
     // Helper function to sort empty buffers back into the right caches.
     auto recycle = [&]() {
       auto& front = this->write_queue_.front();
@@ -203,10 +203,10 @@ private:
           CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
           this->next_layer_.handle_error(err);
         }
-        return false;
+        return err;
       }
     }
-    return true;
+    return none;
   }
 
   write_queue_type write_queue_;

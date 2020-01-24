@@ -108,8 +108,8 @@ public:
       return false;
     };
     do {
-      if (!write_some())
-        return false;
+      if (auto err = write_some())
+        return err == sec::unavailable_or_would_block;
     } while (fetch_next_message());
     return !packet_queue_.empty();
   }
@@ -161,7 +161,7 @@ private:
     this->read_buf_.resize(max_datagram_size);
   }
 
-  bool write_some() {
+  error write_some() {
     // Helper function to sort empty buffers back into the right caches.
     auto recycle = [&]() {
       auto& front = packet_queue_.front();
@@ -195,10 +195,10 @@ private:
           CAF_LOG_ERROR("write failed" << CAF_ARG(err));
           this->next_layer_.handle_error(err);
         }
-        return false;
+        return err;
       }
     }
-    return true;
+    return none;
   }
 
   std::deque<packet> packet_queue_;
