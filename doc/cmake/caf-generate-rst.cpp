@@ -328,7 +328,7 @@ struct list_builder : abstract_consumer {
     } else if (name == "item") {
       result.items.emplace_back();
     } else {
-      consumer->consume(make_node(name, std::move(args)));
+      consume(make_node(name, std::move(args)));
     }
   }
 };
@@ -442,6 +442,19 @@ void read_tex_list(State& ps, Consumer&& consumer, const string& cmd_name);
 template <class State, class Consumer>
 void read_tex_tabular(State& ps, Consumer&& consumer);
 
+struct sub_command_consumer : abstract_consumer {
+  std::vector<string>& args;
+
+  explicit sub_command_consumer(std::vector<string>& args) : args(args) {
+    // nop
+  }
+
+  template <class T>
+  void cmd(const T& x, std::vector<std::string> args);
+
+  void consume(node x);
+};
+
 template <class State, class Consumer>
 void read_tex_command(State& ps, Consumer&& consumer) {
   string cmd;
@@ -481,6 +494,7 @@ void read_tex_command(State& ps, Consumer&& consumer) {
         consumer.consume(text{std::move(spaces)});
     }
   });
+  sub_command_consumer scc{args};
   // clang-format off
   start();
   state(init) {
@@ -499,9 +513,16 @@ void read_tex_command(State& ps, Consumer&& consumer) {
     transition(read_command, " \t\n", spaces += ch)
   }
   state(read_command_arg) {
+    transition(start_escaping_inside_command_arg, '\\')
     fsm_epsilon(read_tex_comment(ps, consumer), read_command_arg, '%')
     transition(read_command, stop_chars)
     transition(read_command_arg, any_char, args.back() += ch)
+  }
+  state(start_escaping_inside_command_arg) {
+    transition(read_command_arg, '\\', args.back() += '\\')
+    transition(read_command_arg, '%', args.back() += '%')
+    transition(read_command_arg, '_', args.back() += '_')
+    fsm_epsilon(read_tex_command(ps, scc), read_command_arg, any_char)
   }
   term_state(done) {
     guard.disable();
@@ -528,13 +549,14 @@ void read_tex(State& ps, Consumer&& consumer) {
   start();
   term_state(init) {
     fsm_transition(read_tex_comment(ps, consumer), init, '%')
-    transition(start_escaping, "\\")
-    transition(init, "~", str += ' ')
+    transition(start_escaping, '\\')
+    transition(init, '~', str += ' ')
     transition(init, any_char, str += ch)
   }
   state(start_escaping) {
-    transition(init, "\\", str += '\\')
-    transition(init, "%", str += '%')
+    transition(init, '\\', str += '\\')
+    transition(init, '%', str += '%')
+    transition(init, '_', str += '_')
     fsm_epsilon(read_tex_command(ps, consumer), init, any_char, consume_str())
   }
   fin();
@@ -561,8 +583,9 @@ void read_tex_list(State& ps, Consumer& consumer) {
     transition_if(before_first_item(), init, " \t\n")
   }
   state(start_escaping) {
-    transition_if(!before_first_item(), init, "\\", str += '\\')
-    transition_if(!before_first_item(), init, "%", str += '%')
+    transition_if(!before_first_item(), init, '\\', str += '\\')
+    transition_if(!before_first_item(), init, '%', str += '%')
+    transition_if(!before_first_item(), init, '_', str += '_')
     fsm_epsilon(read_tex_command(ps, consumer), after_cmd, any_char, consume_str())
   }
   unstable_state(after_cmd) {
@@ -611,14 +634,15 @@ void read_tex_tabular(State& ps, Consumer&& consumer) {
   start();
   state(init) {
     fsm_transition(read_tex_comment(ps, builder), init, '%')
-    transition(start_escaping, "\\")
+    transition(start_escaping, '\\')
     transition(init, "&", next_column())
     transition(init, "~", str += ' ')
     transition(init, any_char, str += ch)
   }
   state(start_escaping) {
-    transition(init, "\\", next_row())
-    transition(init, "%", str += '%')
+    transition(init, '\\', next_row())
+    transition(init, '%', str += '%')
+    transition(init, '_', str += '_')
     fsm_epsilon(read_tex_command(ps, builder), after_cmd, any_char, consume_str())
   }
   unstable_state(after_cmd) {
@@ -918,7 +942,7 @@ Out& operator<<(Out& out, href& x) {
 
 template <class Out>
 Out& operator<<(Out& out, experimental&) {
-  return out << "\\ :sup:`experimental`\\ ";
+  return out << " :sup:`experimental`";
 }
 
 } // namespace rst_ops
@@ -955,6 +979,17 @@ struct rst_ops_visitor : abstract_consumer {
     consume(make_node(name, std::move(args)));
   }
 };
+
+template <class T>
+void sub_command_consumer::cmd(const T& x, std::vector<std::string> xs) {
+  consume(make_node(x, std::move(xs)));
+}
+
+void sub_command_consumer::consume(node x) {
+  string_stream out{args.back()};
+  rst_ops_visitor<string_stream> visitor{out};
+  visitor.consume(std::move(x));
+}
 
 BEGIN_STATE(await_section_label)
 
@@ -1050,27 +1085,57 @@ BEGIN_STATE(read_body)
     print_block(".. ::", x.block);
   }
 
-  void operator()(itemize& x) {
+  template <class T, class NextLine>
+  void print_list(T & x, NextLine next_line) {
     out() << "\n\n";
     for (auto& i : x.items) {
-      out() << "* ";
+      // lists must be aligned
+      std::string block;
+      string_stream block_stream{block};
+      rst_ops_visitor<string_stream> sub{block_stream};
       for (auto& n : i.nodes)
-        visit(*this, n);
+        visit(sub, n);
+      std::vector<std::string> lines;
+      split(lines, block, is_any_of("\n"), token_compress_on);
+      for (auto i = lines.begin(); i != lines.end();) {
+        trim(*i);
+        if (i->empty())
+          i = lines.erase(i);
+        else
+          ++i;
+      }
+      if (!lines.empty()) {
+        next_line(true);
+        out() << lines.front();
+        for (size_t i = 1; i < lines.size(); ++i) {
+          next_line(false);
+          out() << lines[i];
+        }
+      }
       out() << '\n';
     }
     out() << '\n';
   }
 
+  void operator()(itemize& x) {
+    auto next_line = [&](bool new_item) {
+      if (new_item)
+        out() << "* ";
+      else
+        out() << "  ";
+    };
+    print_list(x, next_line);
+  }
+
   void operator()(enumerate& x) {
     size_t num = 1;
-    out() << "\n\n";
-    for (auto& i : x.items) {
-      out() << num++ << ". ";
-      for (auto& n : i.nodes)
-        visit(*this, n);
-      out() << '\n';
-    }
-    out() << '\n';
+    auto next_line = [&](bool new_item) {
+      if (new_item)
+        out() << num++ << ". ";
+      else
+        out() << "   "; // TODO: support more than 10 items
+    };
+    print_list(x, next_line);
   }
 
   void operator()(tabular& x) {
