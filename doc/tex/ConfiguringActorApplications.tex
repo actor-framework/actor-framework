@@ -104,16 +104,16 @@ object \emph{before} initializing an actor system with it.
 \subsection{Command Line Options and INI Configuration Files}
 \label{system-config-options}
 
-CAF organizes program options in categories and parses CLI arguments as well
-as INI files. CLI arguments override values in the INI file which override
+CAF organizes program options in categories and parses CLI arguments as well as
+INI files. CLI arguments override values in the INI file which override
 hard-coded defaults. Users can add any number of custom program options by
 implementing a subtype of \lstinline^actor_system_config^. The example below
-adds three options to the ``global'' category.
+adds three options to the \lstinline^global^ category.
 
 \cppexample[222-234]{remoting/distributed_calculator}
 
-We create a new ``global'' category in  \lstinline^custom_options_}^. Each
-following call to \lstinline^add^ then appends individual options to the
+We create a new \lstinline^global^ category in  \lstinline^custom_options_}^.
+Each following call to \lstinline^add^ then appends individual options to the
 category. The first argument to \lstinline^add^ is the associated variable. The
 second argument is the name for the parameter, optionally suffixed with a
 comma-separated single-character short name. The short name is only considered
@@ -121,12 +121,12 @@ for CLI parsing and allows users to abbreviate commonly used option names. The
 third and final argument to \lstinline^add^ is a help text.
 
 The custom \lstinline^config^ class allows end users to set the port for the
-application to 42 with either \lstinline^--port=42^ (long name) or
-\lstinline^-p 42^ (short name). The long option name is prefixed by the
-category when using a different category than ``global''. For example, adding
-the port option to the category ``foo'' means end users have to type
-\lstinline^--foo.port=42^ when using the long name. Short names are unaffected
-by the category, but have to be unique.
+application to 42 with either \lstinline^--port=42^ (long name) or \lstinline^-p
+42^ (short name). The long option name is prefixed by the category when using a
+different category than ``global''. For example, adding the port option to the
+category \lstinline^foo^ means end users have to type \lstinline^--foo.port=42^
+when using the long name. Short names are unaffected by the category, but have
+to be unique.
 
 Boolean options do not require arguments. The member variable
 \lstinline^server_mode^ is set to \lstinline^true^ if the command line contains
@@ -138,18 +138,18 @@ simplicity. However, this is not required. For example,
 values of the configuration are accessible with \lstinline^get_or^. Note that
 all global options can omit the \lstinline^"global."^ prefix.
 
-CAF adds the program options ``help'' (with short names \lstinline^-h^ and
-\lstinline^-?^) as well as ``long-help'' to the ``global'' category.
+CAF adds the program options \lstinline^help^ (with short names \lstinline^-h^
+and \lstinline^-?^) as well as \lstinline^long-help^ to the \lstinline^global^
+category.
 
 The default name for the INI file is \lstinline^caf-application.ini^. Users can
-change the file name and path by passing \lstinline^--config-file=<path>^ on
-the command line.
+change the file name and path by passing \lstinline^--config-file=<path>^ on the
+command line.
 
-INI files are organized in categories. No value is allowed outside of a
-category (no implicit ``global'' category). The parses uses the following
-syntax:
+INI files are organized in categories. No value is allowed outside of a category
+(no implicit \lstinline^global^ category). The parses uses the following syntax:
 
-\begin{tabular}{p{0.3\textwidth}p{0.65\textwidth}}
+\begin{tabular}{ll}
   \lstinline^key=true^ & is a boolean \\
   \lstinline^key=1^ & is an integer \\
   \lstinline^key=1.0^ & is an floating point number \\
@@ -253,9 +253,10 @@ with \lstinline^std::string^.
 
 Logging is disabled in CAF per default. It can be enabled by setting the
 \lstinline^--with-log-level=^ option of the \lstinline^configure^ script to one
-of ``error'', ``warning'', ``info'', ``debug'', or ``trace'' (from least output
-to most). Alternatively, setting the CMake variable \lstinline^CAF_LOG_LEVEL^
-to 0, 1, 2, 3, or 4 (from least output to most) has the same effect.
+of \lstinline^error^, \lstinline^warning^, \lstinline^info^, \lstinline^debug^,
+or \lstinline^trace^ (from least output to most). Alternatively, setting the
+CMake variable \lstinline^CAF_LOG_LEVEL^ to one of these values has the same
+effect.
 
 All logger-related configuration options listed here and in
 \sref{system-config-options} are silently ignored if logging is disabled.
@@ -266,7 +267,7 @@ All logger-related configuration options listed here and in
 The output file is generated from the template configured by
 \lstinline^logger-file-name^. This template supports the following variables.
 
-\begin{tabular}{|p{0.2\textwidth}|p{0.75\textwidth}|}
+\begin{tabular}{ll}
   \hline
   \textbf{Variable} & \textbf{Output} \\
   \hline
@@ -294,15 +295,15 @@ events via \lstinline^logger-file-format^ and
 \lstinline^logger-console-format^. Note that format modifiers are not supported
 at the moment. The recognized field identifiers are:
 
-\begin{tabular}{|p{0.1\textwidth}|p{0.85\textwidth}|}
+\begin{tabular}{ll}
   \hline
   \textbf{Character} & \textbf{Output} \\
   \hline
-  \texttt{c} & The category/component. This name is defined by the macro \lstinline^CAF_LOG_COMPONENT^. Set this macro before including any CAF header. \\
+  \texttt{c} & The category/component. \\
   \hline
   \texttt{C} & The full qualifier of the current function. For example, the qualifier of \lstinline^void ns::foo::bar()^ is printed as \lstinline^ns.foo^. \\
   \hline
-  \texttt{d} & The date in ISO 8601 format, i.e., \lstinline^"YYYY-MM-DD hh:mm:ss"^. \\
+  \texttt{d} & The date in ISO 8601 format, i.e., \lstinline^"YYYY-MM-DDThh:mm:ss"^. \\
   \hline
   \texttt{F} & The file name. \\
   \hline
@@ -320,7 +321,7 @@ at the moment. The recognized field identifiers are:
   \hline
   \texttt{t} & ID of the current thread. \\
   \hline
-  \texttt{a} & ID of the current actor (or ``actor0'' when not logging inside an actor). \\
+  \texttt{a} & ID of the current actor (or \lstinline^actor0^ when not logging inside an actor). \\
   \hline
   \texttt{\%} & A single percent sign. \\
   \hline
