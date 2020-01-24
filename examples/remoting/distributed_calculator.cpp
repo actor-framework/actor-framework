@@ -157,7 +157,7 @@ behavior running(stateful_actor<state>* self, const actor& calculator) {
       .then(
         [=](int result) {
           const char* op_str;
-          if constexpr (std::is_same<add_atom, decltype(x)>::value)
+          if constexpr (std::is_same<add_atom, decltype(op)>::value)
             op_str = " + ";
           else
             op_str = " - ";

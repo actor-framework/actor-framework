@@ -1,11 +1,11 @@
-#include "caf/all.hpp"
 #include <iostream>
+
+#include "caf/all.hpp"
 
 // This file is partially included in the manual, do not modify
 // without updating the references in the *.tex files!
 // Manual references: lines 15-36 (MessagePassing.tex)
 
-using std::endl;
 using namespace caf;
 
 // using add_atom = atom_constant<atom("add")>; (defined in atom.hpp)
@@ -14,7 +14,7 @@ using calc = typed_actor<replies_to<add_atom, int, int>::with<int>>;
 
 void actor_a(event_based_actor* self, const calc& worker) {
   self->request(worker, std::chrono::seconds(10), add_atom_v, 1, 2)
-    .then([=](int result) { aout(self) << "1 + 2 = " << result << endl; });
+    .then([=](int result) { aout(self) << "1 + 2 = " << result << std::endl; });
 }
 
 calc::behavior_type actor_b(calc::pointer self, const calc& worker) {

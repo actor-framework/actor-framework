@@ -134,15 +134,17 @@ behavior client_job(stateful_actor<base_state>* self, const actor& parent) {
     return {}; // returning an empty behavior terminates the actor
   self->send(parent, read_atom_v, "http://www.example.com/index.html",
              uint64_t{0}, uint64_t{4095});
-  return {[=](reply_atom, const buffer_type& buf) {
-            self->state.print() << "successfully received " << buf.size()
-                                << " bytes" << color::reset_endl;
-            self->quit();
-          },
-          [=](fail_atom) {
-            self->state.print() << "failure" << color::reset_endl;
-            self->quit();
-          }};
+  return {
+    [=](reply_atom, const buffer_type& buf) {
+      self->state.print() << "successfully received " << buf.size() << " bytes"
+                          << color::reset_endl;
+      self->quit();
+    },
+    [=](fail_atom) {
+      self->state.print() << "failure" << color::reset_endl;
+      self->quit();
+    },
+  };
 }
 
 struct client_state : base_state {
@@ -291,24 +293,26 @@ behavior curl_master(stateful_actor<master_state>* self) {
   };
   self->state.print() << "spawned " << self->state.idle.size() << " worker(s)"
                       << color::reset_endl;
-  return {[=](read_atom rd, std::string& str, uint64_t x, uint64_t y) {
-            auto& st = self->state;
-            st.print() << "received {'read'}" << color::reset_endl;
-            // forward job to an idle worker
-            actor worker = st.idle.back();
-            st.idle.pop_back();
-            st.busy.push_back(worker);
-            self->delegate(worker, rd, std::move(str), x, y);
-            st.print() << st.busy.size() << " active jobs" << color::reset_endl;
-            if (st.idle.empty()) {
-              // wait until at least one worker finished its job
-              self->become(keep_behavior, [=](finished_atom) {
-                worker_finished();
-                self->unbecome();
-              });
-            }
-          },
-          [=](finished_atom) { worker_finished(); }};
+  return {
+    [=](read_atom rd, std::string& str, uint64_t x, uint64_t y) {
+      auto& st = self->state;
+      st.print() << "received {'read'}" << color::reset_endl;
+      // forward job to an idle worker
+      actor worker = st.idle.back();
+      st.idle.pop_back();
+      st.busy.push_back(worker);
+      self->delegate(worker, rd, std::move(str), x, y);
+      st.print() << st.busy.size() << " active jobs" << color::reset_endl;
+      if (st.idle.empty()) {
+        // wait until at least one worker finished its job
+        self->become(keep_behavior, [=](finished_atom) {
+          worker_finished();
+          self->unbecome();
+        });
+      }
+    },
+    [=](finished_atom) { worker_finished(); },
+  };
 }
 
 // signal handling for ctrl+c

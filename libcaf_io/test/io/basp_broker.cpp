@@ -76,6 +76,10 @@ constexpr uint64_t default_operation_data = make_message_id().integer_value();
 
 constexpr uint32_t num_remote_nodes = 2;
 
+constexpr uint64_t spawn_serv_id = 2;
+
+constexpr uint64_t config_serv_id = 2;
+
 std::string hexstr(const byte_buffer& buf) {
   return deep_to_string(meta::hex_formatted(), buf);
 }
@@ -270,7 +274,7 @@ public:
       // whether there is a SpawnServ actor on this node
       .receive(hdl, basp::message_type::direct_message,
                basp::header::named_receiver_flag, any_vals,
-               default_operation_data, any_vals, static_cast<uint64_t>(2),
+               default_operation_data, any_vals, config_serv_id,
                std::vector<strong_actor_ptr>{},
                make_message(sys_atom_v, get_atom_v, "info"));
     // test whether basp instance correctly updates the
@@ -582,7 +586,7 @@ CAF_TEST(remote_actor_and_send) {
              invalid_actor_id, this_node())
     .receive(jupiter().connection, basp::message_type::direct_message,
              basp::header::named_receiver_flag, any_vals,
-             default_operation_data, any_vals, static_cast<uint64_t>(2),
+             default_operation_data, any_vals, config_serv_id,
              std::vector<strong_actor_ptr>{},
              make_message(sys_atom_v, get_atom_v, "info"))
     .receive(jupiter().connection, basp::message_type::monitor_message,
@@ -678,8 +682,8 @@ CAF_TEST(indirect_connections) {
   // this asks Jupiter if it has a 'SpawnServ'
   mx.receive(mars().connection, basp::message_type::routed_message,
              basp::header::named_receiver_flag, any_vals,
-             default_operation_data, any_vals, static_cast<uint64_t>(2),
-             this_node(), jupiter().id, std::vector<strong_actor_ptr>{},
+             default_operation_data, any_vals, spawn_serv_id, this_node(),
+             jupiter().id, std::vector<strong_actor_ptr>{},
              make_message(sys_atom_v, get_atom_v, "info"));
   CAF_MESSAGE("expect announce_proxy message at Mars from Earth to Jupiter");
   mx.receive(mars().connection, basp::message_type::monitor_message, no_flags,
@@ -729,14 +733,14 @@ CAF_TEST(automatic_connection) {
        make_message("hello from jupiter!"))
     .receive(mars().connection, basp::message_type::routed_message,
              basp::header::named_receiver_flag, any_vals,
-             default_operation_data, any_vals, static_cast<uint64_t>(2),
-             this_node(), jupiter().id, std::vector<strong_actor_ptr>{},
+             default_operation_data, any_vals, spawn_serv_id, this_node(),
+             jupiter().id, std::vector<strong_actor_ptr>{},
              make_message(sys_atom_v, get_atom_v, "info"))
     .receive(mars().connection, basp::message_type::routed_message,
              basp::header::named_receiver_flag, any_vals,
              default_operation_data,
              any_vals, // actor ID of an actor spawned by the BASP broker
-             static_cast<uint64_t>(1), this_node(), jupiter().id,
+             spawn_serv_id, this_node(), jupiter().id,
              std::vector<strong_actor_ptr>{},
              make_message(get_atom_v, "basp.default-connectivity-tcp"))
     .receive(mars().connection, basp::message_type::monitor_message, no_flags,

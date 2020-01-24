@@ -39,7 +39,7 @@ using namespace caf::io;
 
 namespace {
 
-// utility function to print an exit message with custom name
+// Utility function to print an exit message with custom name.
 void print_on_exit(const actor& hdl, const std::string& name) {
   hdl->attach_functor([=](const error& reason) {
     cout << name << " exited: " << to_string(reason) << endl;
@@ -73,7 +73,7 @@ behavior pong() {
   };
 }
 
-// utility function for sending an integer type
+// Utility function for sending an integer type.
 template <class T>
 void write_int(broker* self, connection_handle hdl, T value) {
   using unsigned_type = typename std::make_unsigned<T>::type;
@@ -82,7 +82,7 @@ void write_int(broker* self, connection_handle hdl, T value) {
   self->flush(hdl);
 }
 
-// utility function for reading an ingeger from incoming data
+// Utility function for reading an ingeger from incoming data.
 template <class T>
 void read_int(const void* data, T& storage) {
   using unsigned_type = typename std::make_unsigned<T>::type;
@@ -90,30 +90,30 @@ void read_int(const void* data, T& storage) {
   storage = static_cast<T>(ntohl(static_cast<unsigned_type>(storage)));
 }
 
-// implementation of our broker
+// Implementation of our broker.
 behavior broker_impl(broker* self, connection_handle hdl, const actor& buddy) {
-  // we assume io_fsm manages a broker with exactly one connection,
-  // i.e., the connection ponted to by `hdl`
+  // We assume io_fsm manages a broker with exactly one connection,
+  // i.e., the connection ponted to by `hdl`.
   assert(self->num_connections() == 1);
-  // monitor buddy to quit broker if buddy is done
+  // Monitor buddy to quit broker if buddy is done.
   self->monitor(buddy);
   self->set_down_handler([=](down_msg& dm) {
     if (dm.source == buddy) {
       aout(self) << "our buddy is down" << endl;
-      // quit for same reason
+      // Quit for same reason.
       self->quit(dm.reason);
     }
   });
-  // setup: we are exchanging only messages consisting of an atom
-  // (as uint64_t) and an integer value (int32_t)
+  // Setup: we are exchanging only messages consisting of an atom
+  // (as uint64_t) and an integer value (int32_t).
   self->configure_read(
     hdl, receive_policy::exactly(sizeof(uint64_t) + sizeof(int32_t)));
-  // our message handlers
+  // Our message handlers.
   return {
     [=](const connection_closed_msg& msg) {
-      // brokers can multiplex any number of connections, however
+      // Brokers can multiplex any number of connections, however
       // this example assumes io_fsm to manage a broker with
-      // exactly one connection
+      // exactly one connection.
       if (msg.handle == hdl) {
         aout(self) << "connection closed" << endl;
         // force buddy to quit
@@ -132,16 +132,16 @@ behavior broker_impl(broker* self, connection_handle hdl, const actor& buddy) {
       write_int(self, hdl, i);
     },
     [=](const new_data_msg& msg) {
-      // read the operation value as uint8_t from buffer
+      // Read the operation value as uint8_t from buffer.
       uint8_t op_val;
       read_int(msg.buf.data(), op_val);
-      // read integer value from buffer, jumping to the correct
-      // position via offset_data(...)
+      // Read integer value from buffer, jumping to the correct
+      // position via offset_data(...).
       int32_t ival;
       read_int(msg.buf.data() + sizeof(uint8_t), ival);
-      // show some output
+      // Show some output.
       aout(self) << "received {" << op_val << ", " << ival << "}" << endl;
-      // send composed message to our buddy
+      // Send composed message to our buddy.
       switch (static_cast<op>(op_val)) {
         case op::ping:
           self->send(buddy, ping_atom_v, ival);
@@ -162,8 +162,8 @@ behavior server(broker* self, const actor& buddy) {
   return {
     [=](const new_connection_msg& msg) {
       aout(self) << "server accepted new connection" << endl;
-      // by forking into a new broker, we are no longer
-      // responsible for the connection
+      // By forking into a new broker, we are no longer
+      // responsible for the connection.
       auto impl = self->fork(broker_impl, msg.handle, buddy);
       print_on_exit(impl, "broker_impl");
       aout(self) << "quit server (only accept 1 connection)" << endl;

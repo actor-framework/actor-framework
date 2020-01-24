@@ -6,8 +6,7 @@
  * - ./build/bin/group_chat -s -p 4242                                        *
  * - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n alice        *
  * - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n bob          *
-\
-******************************************************************************/
+\******************************************************************************/
 
 #include <cstdlib>
 #include <iostream>

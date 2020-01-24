@@ -3,7 +3,7 @@
  * for both the blocking and the event-based API.                             *
 \******************************************************************************/
 
-// Manual refs: lines 17-18, 28-56, 58-92, 123-128 (Actor)
+// Manual refs: lines 17-18, 21-26, 28-56, 58-92, 123-128 (Actor)
 
 #include <iostream>
 

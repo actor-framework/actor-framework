@@ -152,7 +152,7 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
     [=](spawn_atom atm, node_id& nid, std::string& str, message& msg,
         std::set<std::string>& ifs) -> delegated<strong_actor_ptr> {
       CAF_LOG_TRACE("");
-      uint64_t id = str == "SpawnServ" ? 1u : 2u;
+      static constexpr uint64_t id = 1u; // SpawnServ
       delegate(broker_, forward_atom_v, nid, id,
                make_message(atm, std::move(str), std::move(msg),
                             std::move(ifs)));
