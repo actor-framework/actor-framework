@@ -2,7 +2,7 @@ project(caf_tools CXX)
 
 add_custom_target(all_tools)
 
-include_directories(${LIBCAF_INCLUDE_DIRS})
+include_directories(${CAF_INCLUDE_DIRS})
 
 macro(add name)
   add_executable(${name} ${name}.cpp ${ARGN})
