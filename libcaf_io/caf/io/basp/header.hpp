@@ -21,13 +21,12 @@
 #include <string>
 #include <cstdint>
 
+#include "caf/deep_to_string.hpp"
 #include "caf/error.hpp"
-#include "caf/node_id.hpp"
-
+#include "caf/io/basp/message_type.hpp"
 #include "caf/meta/omittable.hpp"
 #include "caf/meta/type_name.hpp"
-
-#include "caf/io/basp/message_type.hpp"
+#include "caf/node_id.hpp"
 
 namespace caf {
 namespace io {

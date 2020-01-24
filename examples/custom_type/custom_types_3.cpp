@@ -3,8 +3,8 @@
 
 // Manual refs: 20-49, 76-103 (TypeInspection)
 
-#include <utility>
 #include <iostream>
+#include <utility>
 
 #include "caf/all.hpp"
 
@@ -52,14 +52,17 @@ private:
 template <class Fun>
 class scope_guard {
 public:
-  scope_guard(Fun f) : fun_(std::move(f)), enabled_(true) { }
+  scope_guard(Fun f) : fun_(std::move(f)), enabled_(true) {
+    // nop
+  }
 
   scope_guard(scope_guard&& x) : fun_(std::move(x.fun_)), enabled_(x.enabled_) {
     x.enabled_ = false;
   }
 
   ~scope_guard() {
-    if (enabled_) fun_();
+    if (enabled_)
+      fun_();
   }
 
 private:
@@ -96,9 +99,7 @@ inspect(Inspector& f, foo& x) {
 
 behavior testee(event_based_actor* self) {
   return {
-    [=](const foo& x) {
-      aout(self) << to_string(x) << endl;
-    }
+    [=](const foo& x) { aout(self) << deep_to_string(x) << endl; },
   };
 }
 

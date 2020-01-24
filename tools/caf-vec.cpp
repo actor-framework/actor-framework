@@ -415,11 +415,11 @@ struct se_event {
 string to_string(const se_event& x) {
   string res;
   res += "node{";
-  res += to_string(*x.source);
+  res += deep_to_string(*x.source);
   res += ", ";
   res += deep_to_string(x.vstamp);
   res += ", ";
-  res += to_string(x.type);
+  res += deep_to_string(x.type);
   res += ", ";
   res += deep_to_string(x.fields);
   res += "}";

@@ -52,7 +52,6 @@
 #include "caf/stream_sink_trait.hpp"
 #include "caf/stream_source_trait.hpp"
 #include "caf/stream_stage_trait.hpp"
-#include "caf/to_string.hpp"
 
 #include "caf/policy/arg.hpp"
 #include "caf/policy/categorized.hpp"

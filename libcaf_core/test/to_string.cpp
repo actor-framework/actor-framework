@@ -16,14 +16,16 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
+#define CAF_SUITE deep_to_string
 
-#define CAF_SUITE to_string
+#include "caf/deep_to_string.hpp"
+
 #include "caf/test/unit_test.hpp"
 
-#include "caf/to_string.hpp"
+#include <vector>
 
-using namespace std;
+#include "caf/meta/hex_formatted.hpp"
+
 using namespace caf;
 
 CAF_TEST(buffer) {

@@ -21,12 +21,15 @@
 #include <cstdint>
 #include <vector>
 
+#include "caf/default_sum_type_access.hpp"
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/type_list.hpp"
 #include "caf/detail/unordered_flat_map.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/ip_address.hpp"
 #include "caf/string_view.hpp"
+#include "caf/sum_type_access.hpp"
 #include "caf/variant.hpp"
 
 namespace caf {
@@ -41,7 +44,62 @@ public:
 
   /// Host subcomponent of the authority component. Either an IP address or
   /// an hostname as string.
-  using host_type = variant<std::string, ip_address>;
+  struct host_type {
+  public:
+    using types = detail::type_list<std::string, ip_address>;
+
+    using data_type = variant<std::string, ip_address>;
+
+    host_type() = default;
+
+    host_type(host_type&&) noexcept = default;
+
+    host_type(const host_type&) = default;
+
+    host_type& operator=(host_type&) noexcept = default;
+
+    host_type& operator=(const host_type&) = default;
+
+    host_type& operator=(std::string str) noexcept {
+      data_ = std::move(str);
+      return *this;
+    }
+
+    host_type& operator=(ip_address addr) noexcept {
+      data_ = addr;
+      return *this;
+    }
+
+    explicit host_type(std::string host) : data_(std::move(host)) {
+      // nop
+    }
+
+    explicit host_type(ip_address host) : data_(host) {
+      // nop
+    }
+
+    /// @private
+    data_type& get_data() {
+      return data_;
+    }
+
+    /// @private
+    const data_type& get_data() const {
+      return data_;
+    }
+
+    template <class Inspector>
+    friend typename Inspector::result_type inspect(Inspector& f, host_type& x) {
+      return f(x.data_);
+    }
+
+  private:
+    // This type essentially is just a "strong typedef" for a variant. We do
+    // that in order to make sure our `to_string` for this type does not pick up
+    // other values by accident. Since `variant` has an implicit conversion
+    // operator, we really want to "isolate" it as much as possible.
+    variant<std::string, ip_address> data_;
+  };
 
   /// Bundles the authority component of the URI, i.e., userinfo, host, and
   /// port.
@@ -57,7 +115,7 @@ public:
     /// Returns whether `host` is empty, i.e., the host is not an IP address
     /// and the string is empty.
     bool empty() const noexcept {
-      auto str = get_if<std::string>(&host);
+      auto str = get_if<std::string>(&host.get_data());
       return str != nullptr && str->empty();
     }
   };
@@ -136,11 +194,18 @@ typename Inspector::result_type inspect(Inspector& f, uri::authority_type& x) {
   return f(x.userinfo, x.host, x.port);
 }
 
+template <>
+struct sum_type_access<uri::host_type>
+  : default_sum_type_access<uri::host_type> {};
+
 /// @relates uri
 std::string to_string(const uri& x);
 
 /// @relates uri
 std::string to_string(const uri::authority_type& x);
+
+/// @relates uri
+std::string to_string(const uri::host_type& x);
 
 /// @relates uri
 error parse(string_view str, uri& dest);

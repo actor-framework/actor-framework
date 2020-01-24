@@ -145,6 +145,12 @@ std::string to_string(const uri::authority_type& x) {
   return str;
 }
 
+std::string to_string(const uri::host_type& x){
+  if (auto str = get_if<std::string>(&x))
+    return *str;
+  return to_string(get<ip_address>(x));
+}
+
 error parse(string_view str, uri& dest) {
   string_parser_state ps{str.begin(), str.end()};
   parse(ps, dest);

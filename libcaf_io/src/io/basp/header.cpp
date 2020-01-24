@@ -33,14 +33,6 @@ std::string to_bin(uint8_t x) {
   return res;
 }
 
-std::string to_string(const header& hdr) {
-  std::ostringstream oss;
-  oss << "{" << to_string(hdr.operation) << ", " << to_bin(hdr.flags) << ", "
-      << hdr.payload_len << ", " << hdr.operation_data << ", "
-      << hdr.source_actor << ", " << hdr.dest_actor << "}";
-  return oss.str();
-}
-
 bool operator==(const header& lhs, const header& rhs) {
   return lhs.operation == rhs.operation && lhs.flags == rhs.flags
          && lhs.payload_len == rhs.payload_len

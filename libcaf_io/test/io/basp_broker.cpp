@@ -467,7 +467,7 @@ CAF_TEST(empty_server_handshake) {
                         invalid_actor_id};
   CAF_CHECK(basp::valid(hdr));
   CAF_CHECK(basp::is_handshake(hdr));
-  CAF_CHECK_EQUAL(to_string(hdr), to_string(expected));
+  CAF_CHECK_EQUAL(deep_to_string(hdr), deep_to_string(expected));
 }
 
 CAF_TEST(non_empty_server_handshake) {
@@ -488,7 +488,7 @@ CAF_TEST(non_empty_server_handshake) {
                         invalid_actor_id};
   CAF_CHECK(basp::valid(hdr));
   CAF_CHECK(basp::is_handshake(hdr));
-  CAF_CHECK_EQUAL(to_string(hdr), to_string(expected));
+  CAF_CHECK_EQUAL(deep_to_string(hdr), deep_to_string(expected));
   buffer expected_payload;
   binary_serializer bd{nullptr, expected_payload};
   bd(instance().this_node(), defaults::middleman::app_identifiers, self()->id(),

@@ -3,16 +3,16 @@
 // Manual refs: 24-27, 30-34, 75-78, 81-84 (ConfiguringActorApplications)
 //              23-33 (TypeInspection)
 
-#include <string>
-#include <vector>
 #include <cassert>
-#include <utility>
 #include <iostream>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "caf/all.hpp"
 
-using std::cout;
 using std::cerr;
+using std::cout;
 using std::endl;
 using std::vector;
 
@@ -58,7 +58,7 @@ void testee(event_based_actor* self, size_t remaining) {
     else
       self->quit();
   };
-  self->become (
+  self->become(
     // note: we sent a foo_pair2, but match on foo_pair
     // that works because both are aliases for std::pair<int, int>
     [=](const foo_pair& val) {
@@ -66,10 +66,9 @@ void testee(event_based_actor* self, size_t remaining) {
       set_next_behavior();
     },
     [=](const foo& val) {
-      aout(self) << to_string(val) << endl;
+      aout(self) << deep_to_string(val) << endl;
       set_next_behavior();
-    }
-  );
+    });
 }
 
 class config : public actor_system_config {
@@ -95,20 +94,20 @@ void caf_main(actor_system& system, const config&) {
   binary_serializer bs{system, buf};
   auto e = bs(f1);
   if (e) {
-    std::cerr << "*** unable to serialize foo2: "
-              << system.render(e) << std::endl;
+    std::cerr << "*** unable to serialize foo2: " << system.render(e)
+              << std::endl;
     return;
   }
   // read f2 back from buffer
   binary_deserializer bd{system, buf};
   e = bd(f2);
   if (e) {
-    std::cerr << "*** unable to serialize foo2: "
-              << system.render(e) << std::endl;
+    std::cerr << "*** unable to serialize foo2: " << system.render(e)
+              << std::endl;
     return;
   }
   // must be equal
-  assert(to_string(f1) == to_string(f2));
+  assert(deep_to_string(f1) == deep_to_string(f2));
   // spawn a testee that receives two messages of user-defined type
   auto t = system.spawn(testee, 2u);
   scoped_actor self{system};
