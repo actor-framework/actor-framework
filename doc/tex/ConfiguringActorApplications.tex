@@ -121,12 +121,12 @@ for CLI parsing and allows users to abbreviate commonly used option names. The
 third and final argument to \lstinline^add^ is a help text.
 
 The custom \lstinline^config^ class allows end users to set the port for the
-application to 42 with either \lstinline^--port=42^ (long name) or \lstinline^-p
-42^ (short name). The long option name is prefixed by the category when using a
-different category than ``global''. For example, adding the port option to the
-category \lstinline^foo^ means end users have to type \lstinline^--foo.port=42^
-when using the long name. Short names are unaffected by the category, but have
-to be unique.
+application to 42 with either \lstinline^-p 42^ (short name) or
+\lstinline^--port=42^ (long name). The long option name is prefixed by the
+category when using a different category than ``global''. For example, adding
+the port option to the category \lstinline^foo^ means end users have to type
+\lstinline^--foo.port=42^ when using the long name. Short names are unaffected
+by the category, but have to be unique.
 
 Boolean options do not require arguments. The member variable
 \lstinline^server_mode^ is set to \lstinline^true^ if the command line contains
