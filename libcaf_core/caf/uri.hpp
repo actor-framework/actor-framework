@@ -56,7 +56,7 @@ public:
 
     host_type(const host_type&) = default;
 
-    host_type& operator=(host_type&) noexcept = default;
+    host_type& operator=(host_type&&) noexcept = default;
 
     host_type& operator=(const host_type&) = default;
 
