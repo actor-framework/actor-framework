@@ -25,17 +25,16 @@
 #include "caf/actor.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/io/basp/header.hpp"
+#include "caf/io/basp_broker.hpp"
+#include "caf/io/network/default_multiplexer.hpp"
+#include "caf/io/network/interfaces.hpp"
+#include "caf/io/system_messages.hpp"
 #include "caf/logger.hpp"
 #include "caf/node_id.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
 #include "caf/typed_event_based_actor.hpp"
-
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/system_messages.hpp"
-
-#include "caf/io/network/default_multiplexer.hpp"
-#include "caf/io/network/interfaces.hpp"
 
 namespace caf::io {
 
@@ -152,7 +151,9 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
     [=](spawn_atom atm, node_id& nid, std::string& str, message& msg,
         std::set<std::string>& ifs) -> delegated<strong_actor_ptr> {
       CAF_LOG_TRACE("");
-      static constexpr uint64_t id = 1u; // SpawnServ
+      // This local variable prevents linker errors (delegate forms an lvalue
+      // reference but spawn_server_id is constexpr).
+      auto id = basp::header::spawn_server_id;
       delegate(broker_, forward_atom_v, nid, id,
                make_message(atm, std::move(str), std::move(msg),
                             std::move(ifs)));

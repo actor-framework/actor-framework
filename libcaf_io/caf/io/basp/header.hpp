@@ -57,7 +57,6 @@ struct header {
       dest_actor(m_dest_actor) {
     // nop
   }
-
   header() = default;
 
   /// Identifies a receiver by name rather than ID.
