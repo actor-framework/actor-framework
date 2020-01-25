@@ -302,15 +302,15 @@ Blocking actors simply implement their behavior in the function body. The actor
 is done once it returns from that function.
 
 Event-based actors can either return a \lstinline^behavior^
-\see{message-handler} that is used to initialize the actor or explicitly set
-the initial behavior by calling \lstinline^self->become(...)^. Due to the
+\see{message-handler} that is used to initialize the actor or explicitly set the
+initial behavior by calling \lstinline^self->become(...)^. Due to the
 asynchronous, event-based nature of this kind of actor, the function usually
 returns immediately after setting a behavior (message handler) for the
-\emph{next} incoming message. Hence, variables on the stack will be out of
-scope once a message arrives. Managing state in function-based actors can be
-done either via rebinding state with \lstinline^become^, using heap-located
-data referenced via \lstinline^std::shared_ptr^ or by using the ``stateful
-actor'' abstraction~\see{stateful-actor}.
+\emph{next} incoming message. Hence, variables on the stack will be out of scope
+once a message arrives. Managing state in function-based actors can be done
+either via rebinding state with \lstinline^become^, using heap-located data
+referenced via \lstinline^std::shared_ptr^ or by using the \textit{stateful
+actor} abstraction~\see{stateful-actor}.
 
 The following three functions implement the prototypes shown in~\sref{spawn}
 and illustrate one blocking actor and two event-based actors (statically and
@@ -396,8 +396,8 @@ A behavior that combines the behaviors \lstinline^X^, \lstinline^Y^, and
 inheriting from the three classes directly. The class
 \lstinline^composed_behavior^ ensures that the behaviors are concatenated
 correctly. In case one message handler is defined in multiple base types, the
-\emph{first} type in declaration order ``wins''. For example, if \lstinline^X^
-and \lstinline^Y^ both implement the interface
+\emph{first} type in declaration order wins. For example, if \lstinline^X^ and
+\lstinline^Y^ both implement the interface
 \lstinline^replies_to<int,int>::with<int>^, only the handler implemented in
 \lstinline^X^ is active.
 
