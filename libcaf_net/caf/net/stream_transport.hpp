@@ -107,6 +107,47 @@ public:
   bool handle_write_event(endpoint_manager& manager) override {
     CAF_LOG_TRACE(CAF_ARG2("handle", this->handle_.id)
                   << CAF_ARG2("queue-size", write_queue_.size()));
+    auto drain_write_queue = []() -> error_code<sec> {
+      // Helper function to sort empty buffers back into the right caches.
+      auto recycle = [&]() {
+        auto& front = this->write_queue_.front();
+        auto& is_header = front.first;
+        auto& buf = front.second;
+        written_ = 0;
+        buf.clear();
+        if (is_header) {
+          if (this->header_bufs_.size() < this->header_bufs_.capacity())
+            this->header_bufs_.emplace_back(std::move(buf));
+        } else if (this->payload_bufs_.size() < this->payload_bufs_.capacity()) {
+          this->payload_bufs_.emplace_back(std::move(buf));
+        }
+        write_queue_.pop_front();
+      };
+      // Write buffers from the write_queue_ for as long as possible.
+      while (!write_queue_.empty()) {
+        auto& buf = write_queue_.front().second;
+        CAF_ASSERT(!buf.empty());
+        auto data = buf.data() + written_;
+        auto len = buf.size() - written_;
+        auto write_ret = write(this->handle(), make_span(data, len));
+        if (auto num_bytes = get_if<size_t>(&write_ret)) {
+          CAF_LOG_DEBUG(CAF_ARG(this->handle_.id) << CAF_ARG(*num_bytes));
+          written_ += *num_bytes;
+          if (written_ >= buf.size()) {
+            recycle();
+            written_ = 0;
+          }
+        } else {
+          auto err = get<sec>(write_ret);
+          if (err != sec::unavailable_or_would_block) {
+            CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
+            this->next_layer_.handle_error(err);
+          }
+          return err;
+        }
+      }
+      return none;
+    };
     auto fetch_next_message = [&] {
       if (auto msg = manager.next_message()) {
         this->next_layer_.write_message(*this, std::move(msg));
@@ -115,10 +156,11 @@ public:
       return false;
     };
     do {
-      if (auto err = write_some())
+      if (auto err = drain_write_queue())
         return err == sec::unavailable_or_would_block;
     } while (fetch_next_message());
-    return !write_queue_.empty();
+    CAF_ASSERT(write_queue_.empty());
+    return false;
   }
 
   void write_packet(id_type, span<buffer_type*> buffers) override {
@@ -165,48 +207,6 @@ private:
         break;
       }
     }
-  }
-
-  error write_some() {
-    // Helper function to sort empty buffers back into the right caches.
-    auto recycle = [&]() {
-      auto& front = this->write_queue_.front();
-      auto& is_header = front.first;
-      auto& buf = front.second;
-      written_ = 0;
-      buf.clear();
-      if (is_header) {
-        if (this->header_bufs_.size() < this->header_bufs_.capacity())
-          this->header_bufs_.emplace_back(std::move(buf));
-      } else if (this->payload_bufs_.size() < this->payload_bufs_.capacity()) {
-        this->payload_bufs_.emplace_back(std::move(buf));
-      }
-      write_queue_.pop_front();
-    };
-    // Write buffers from the write_queue_ for as long as possible.
-    while (!write_queue_.empty()) {
-      auto& buf = write_queue_.front().second;
-      CAF_ASSERT(!buf.empty());
-      auto data = buf.data() + written_;
-      auto len = buf.size() - written_;
-      auto write_ret = write(this->handle(), make_span(data, len));
-      if (auto num_bytes = get_if<size_t>(&write_ret)) {
-        CAF_LOG_DEBUG(CAF_ARG(this->handle_.id) << CAF_ARG(*num_bytes));
-        written_ += *num_bytes;
-        if (written_ >= buf.size()) {
-          recycle();
-          written_ = 0;
-        }
-      } else {
-        auto err = get<sec>(write_ret);
-        if (err != sec::unavailable_or_would_block) {
-          CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
-          this->next_layer_.handle_error(err);
-        }
-        return err;
-      }
-    }
-    return none;
   }
 
   write_queue_type write_queue_;
