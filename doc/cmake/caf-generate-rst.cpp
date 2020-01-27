@@ -24,7 +24,6 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/parser/chars.hpp"
-#include "caf/detail/parser/read_atom.hpp"
 #include "caf/detail/parser/read_bool.hpp"
 #include "caf/detail/parser/read_number_or_timespan.hpp"
 #include "caf/detail/parser/read_string.hpp"

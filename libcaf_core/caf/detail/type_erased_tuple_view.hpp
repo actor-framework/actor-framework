@@ -24,14 +24,12 @@
 #include <tuple>
 #include <typeinfo>
 
+#include "caf/detail/apply_args.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/type_erased_tuple.hpp"
 #include "caf/type_erased_value.hpp"
 #include "caf/type_nr.hpp"
-
-#include "caf/detail/apply_args.hpp"
-#include "caf/detail/try_match.hpp"
 
 namespace caf::detail {
 
@@ -78,10 +76,6 @@ public:
 
   size_t size() const noexcept override {
     return sizeof...(Ts);
-  }
-
-  uint32_t type_token() const noexcept override {
-    return make_type_token<Ts...>();
   }
 
   rtti_pair type(size_t pos) const noexcept override {

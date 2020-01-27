@@ -142,37 +142,15 @@ struct is_duration : std::false_type {};
 template <class Period, class Rep>
 struct is_duration<std::chrono::duration<Period, Rep>> : std::true_type {};
 
-/// Checks whether `T` is considered a builtin type.
-///
-/// Builtin types are: (1) all arithmetic types (including time types), (2)
-/// string types from the STL, and (3) built-in types such as `actor_ptr`.
-template <class T>
-struct is_builtin {
-  static constexpr bool value = std::is_arithmetic<T>::value
-                                || is_duration<T>::value
-                                || is_one_of<T, timestamp, std::string,
-                                             std::u16string, std::u32string,
-                                             atom_value, message, actor, group,
-                                             node_id>::value;
-};
-
 /// Checks whether `T` is primitive, i.e., either an arithmetic type or
 /// convertible to one of STL's string types.
 template <class T>
 struct is_primitive {
-  static constexpr bool value = std::is_arithmetic<T>::value
-                                || std::is_convertible<T, std::string>::value
+  static constexpr bool value = std::is_convertible<T, std::string>::value
                                 || std::is_convertible<T, std::u16string>::value
                                 || std::is_convertible<T, std::u32string>::value
-                                || std::is_convertible<T, atom_value>::value;
+                                || std::is_arithmetic<T>::value;
 };
-
-// Workaround for weird GCC 4.8 STL implementation that breaks
-// `std::is_convertible<T, atom_value>::value` for tuples containing atom
-// constants.
-// TODO: remove when dropping support for GCC 4.8.
-template <class... Ts>
-struct is_primitive<std::tuple<Ts...>> : std::false_type {};
 
 /// Checks whether `T1` is comparable with `T2`.
 template <class T1, class T2>

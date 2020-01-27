@@ -58,8 +58,6 @@ public:
 
   size_t size() const noexcept override;
 
-  uint32_t type_token() const noexcept override;
-
   rtti_pair type(size_t pos) const noexcept override;
 
   const void* get(size_t pos) const noexcept override;
@@ -80,7 +78,6 @@ private:
   // -- data members -----------------------------------------------------------
 
   vector_type data_;
-  uint32_t type_token_;
   size_t size_;
 };
 

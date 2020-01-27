@@ -32,11 +32,6 @@ using namespace caf;
 
 namespace {
 
-using ping_atom = caf::atom_constant<caf::atom("ping")>;
-using pong_atom = caf::atom_constant<caf::atom("pong")>;
-using publish_atom = caf::atom_constant<caf::atom("publish")>;
-using kickoff_atom = caf::atom_constant<caf::atom("kickoff")>;
-
 struct suite_state {
   int pings = 0;
   int pongs = 0;
@@ -48,13 +43,13 @@ using suite_state_ptr = std::shared_ptr<suite_state>;
 
 behavior ping(event_based_actor* self, suite_state_ptr ssp) {
   return {
-    [=](kickoff_atom, const actor& pong) {
-      CAF_MESSAGE("received `kickoff_atom`");
+    [=](ok_atom, const actor& pong) {
+      CAF_MESSAGE("received `ok_atom`");
       ++ssp->pings;
-      self->send(pong, ping_atom::value);
+      self->send(pong, ping_atom_v);
       self->become([=](pong_atom) {
         CAF_MESSAGE("ping: received pong");
-        self->send(pong, ping_atom::value);
+        self->send(pong, ping_atom_v);
         if (++ssp->pings == 10) {
           self->quit();
           CAF_MESSAGE("ping is done");
@@ -66,13 +61,13 @@ behavior ping(event_based_actor* self, suite_state_ptr ssp) {
 
 behavior pong(event_based_actor* self, suite_state_ptr ssp) {
   return {
-    [=](ping_atom) -> atom_value {
+    [=](ping_atom) -> pong_atom {
       CAF_MESSAGE("pong: received ping");
       if (++ssp->pongs == 10) {
         self->quit();
         CAF_MESSAGE("pong is done");
       }
-      return pong_atom::value;
+      return pong_atom_v;
     },
   };
 }
@@ -130,7 +125,7 @@ CAF_TEST(ping_pong) {
   auto port = mars.publish(mars.sys.spawn(pong, ssp), 8080);
   CAF_CHECK_EQUAL(port, 8080u);
   auto remote_pong = earth.remote_actor("mars", 8080);
-  anon_send(earth.sys.spawn(ping, ssp), kickoff_atom::value, remote_pong);
+  anon_send(earth.sys.spawn(ping, ssp), ok_atom_v, remote_pong);
   run();
   CAF_CHECK_EQUAL(ssp->pings, 10);
   CAF_CHECK_EQUAL(ssp->pongs, 10);

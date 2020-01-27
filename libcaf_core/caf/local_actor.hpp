@@ -81,12 +81,6 @@ public:
   /// Returns the current time.
   clock_type::time_point now() const noexcept;
 
-  /// Returns the difference between `t0` and `t1`, allowing the clock to
-  /// return any arbitrary value depending on the measurement that took place.
-  clock_type::duration
-  difference(atom_value measurement, clock_type::time_point t0,
-             clock_type::time_point t1);
-
   // -- timeout management -----------------------------------------------------
 
   /// Requests a new timeout for `mid`.

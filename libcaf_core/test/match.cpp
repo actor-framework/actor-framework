@@ -32,10 +32,10 @@
 using namespace caf;
 using namespace std;
 
-using hi_atom = atom_constant<atom("hi")>;
-using ho_atom = atom_constant<atom("ho")>;
-
 namespace {
+
+CAF_MSG_TYPE_ADD_ATOM(hi_atom);
+CAF_MSG_TYPE_ADD_ATOM(ho_atom);
 
 struct fixture {
   using array_type = std::array<bool, 4>;
@@ -56,8 +56,6 @@ struct fixture {
     auto msg3 = make_type_erased_tuple_view(xs...);
     CAF_CHECK_EQUAL(to_string(msg1), to_string(msg2));
     CAF_CHECK_EQUAL(to_string(msg1), to_string(msg3));
-    CAF_CHECK_EQUAL(msg1.type_token(), msg2.type_token());
-    CAF_CHECK_EQUAL(msg1.type_token(), msg3.type_token());
     std::vector<std::string> msg1_types;
     std::vector<std::string> msg2_types;
     std::vector<std::string> msg3_types;
@@ -117,34 +115,26 @@ CAF_TEST(atom_constants) {
       invoked[1] = true;
     }
   };
-  CAF_CHECK_EQUAL(invoke(expr, atom_value{ok_atom::value}), -1);
-  CAF_CHECK_EQUAL(invoke(expr, atom_value{hi_atom::value}), 0);
-  CAF_CHECK_EQUAL(invoke(expr, atom_value{ho_atom::value}), 1);
+  CAF_CHECK_EQUAL(invoke(expr, ok_atom_v), -1);
+  CAF_CHECK_EQUAL(invoke(expr, hi_atom_v), 0);
+  CAF_CHECK_EQUAL(invoke(expr, ho_atom_v), 1);
 }
 
 CAF_TEST(manual_matching) {
-  using foo_atom = atom_constant<atom("foo")>;
-  using bar_atom = atom_constant<atom("bar")>;
-  auto msg1 = make_message(foo_atom::value, 42);
-  auto msg2 = make_message(bar_atom::value, 42);
+  auto msg1 = make_message(add_atom_v, 42);
+  auto msg2 = make_message(get_atom_v, 42);
   CAF_MESSAGE("check individual message elements");
   CAF_CHECK((msg1.match_element<int>(1)));
   CAF_CHECK((msg2.match_element<int>(1)));
-  CAF_CHECK((msg1.match_element<foo_atom>(0)));
-  CAF_CHECK((!msg2.match_element<foo_atom>(0)));
-  CAF_CHECK((!msg1.match_element<bar_atom>(0)));
-  CAF_CHECK((msg2.match_element<bar_atom>(0)));
+  CAF_CHECK((msg1.match_element<add_atom>(0)));
+  CAF_CHECK((!msg2.match_element<add_atom>(0)));
+  CAF_CHECK((!msg1.match_element<get_atom>(0)));
+  CAF_CHECK((msg2.match_element<get_atom>(0)));
   CAF_MESSAGE("check matching whole tuple");
-  CAF_CHECK((msg1.match_elements<foo_atom, int>()));
-  CAF_CHECK(!(msg2.match_elements<foo_atom, int>()));
-  CAF_CHECK(!(msg1.match_elements<bar_atom, int>()));
-  CAF_CHECK((msg2.match_elements<bar_atom, int>()));
-  CAF_CHECK((msg1.match_elements<atom_value, int>()));
-  CAF_CHECK((msg2.match_elements<atom_value, int>()));
-  CAF_CHECK(!(msg1.match_elements<atom_value, double>()));
-  CAF_CHECK(!(msg2.match_elements<atom_value, double>()));
-  CAF_CHECK(!(msg1.match_elements<atom_value, int, int>()));
-  CAF_CHECK(!(msg2.match_elements<atom_value, int, int>()));
+  CAF_CHECK((msg1.match_elements<add_atom, int>()));
+  CAF_CHECK(!(msg2.match_elements<add_atom, int>()));
+  CAF_CHECK(!(msg1.match_elements<get_atom, int>()));
+  CAF_CHECK((msg2.match_elements<get_atom, int>()));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

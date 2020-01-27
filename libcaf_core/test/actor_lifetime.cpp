@@ -21,15 +21,13 @@
 #define CAF_SUITE actor_lifetime
 #include "caf/test/unit_test.hpp"
 
-#include <mutex>
 #include <atomic>
 #include <condition_variable>
+#include <mutex>
 
 #include "caf/all.hpp"
 
 #include "caf/test/dsl.hpp"
-
-using check_atom = caf::atom_constant<caf::atom("check")>;
 
 using namespace caf;
 
@@ -64,9 +62,7 @@ public:
 
   behavior make_behavior() override {
     return {
-      [=](int x) {
-        return x;
-      }
+      [=](int x) { return x; },
     };
   }
 };
@@ -78,7 +74,7 @@ behavior tester(event_based_actor* self, const actor& aut) {
       // must be still alive at this point
       CAF_CHECK_EQUAL(s_testees.load(), 1);
       CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
-      self->send(self, check_atom::value);
+      self->send(self, ok_atom_v);
     });
     self->link_to(aut);
   } else {
@@ -90,7 +86,7 @@ behavior tester(event_based_actor* self, const actor& aut) {
       // another worker thread; by waiting some milliseconds, we make sure
       // testee had enough time to return control to the scheduler
       // which in turn destroys it by dropping the last remaining reference
-      self->send(self, check_atom::value);
+      self->send(self, ok_atom_v);
     });
     self->monitor(aut);
   }
@@ -101,7 +97,7 @@ behavior tester(event_based_actor* self, const actor& aut) {
     s_cv.notify_one();
   }
   return {
-    [self](check_atom) {
+    [self](ok_atom) {
       { // make sure aut's dtor and on_exit() have been called
         std::unique_lock<std::mutex> guard{s_mtx};
         while (!s_testee_cleanup_done.load())
@@ -110,15 +106,13 @@ behavior tester(event_based_actor* self, const actor& aut) {
       CAF_CHECK_EQUAL(s_testees.load(), 0);
       CAF_CHECK_EQUAL(s_pending_on_exits.load(), 0);
       self->quit();
-    }
+    },
   };
 }
 
-
-
 struct config : actor_system_config {
   config() {
-    set("scheduler.policy", atom("testing"));
+    set("scheduler.policy", "testing");
   }
 };
 
@@ -165,7 +159,7 @@ struct fixture {
       }
       // Run the exit_msg.
       sched.run_once();
-      //expect((exit_msg), from(tst_driver).to(tst_subject));
+      // expect((exit_msg), from(tst_driver).to(tst_subject));
       { // Resume driver.
         std::unique_lock<std::mutex> guard{s_mtx};
         s_testee_cleanup_done = true;

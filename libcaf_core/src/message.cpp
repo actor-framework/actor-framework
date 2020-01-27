@@ -75,10 +75,6 @@ size_t message::size() const noexcept {
   return vals_ != nullptr ? vals_->size() : 0;
 }
 
-uint32_t message::type_token() const noexcept {
-  return vals_  != nullptr ? vals_->type_token() : 0xFFFFFFFF;
-}
-
 rtti_pair message::type(size_t pos) const noexcept {
   CAF_ASSERT(vals_ != nullptr);
   return vals_->type(pos);

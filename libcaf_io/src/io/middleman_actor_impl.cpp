@@ -25,17 +25,16 @@
 #include "caf/actor.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/io/basp/header.hpp"
+#include "caf/io/basp_broker.hpp"
+#include "caf/io/network/default_multiplexer.hpp"
+#include "caf/io/network/interfaces.hpp"
+#include "caf/io/system_messages.hpp"
 #include "caf/logger.hpp"
 #include "caf/node_id.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
 #include "caf/typed_event_based_actor.hpp"
-
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/system_messages.hpp"
-
-#include "caf/io/network/default_multiplexer.hpp"
-#include "caf/io/network/interfaces.hpp"
 
 namespace caf::io {
 
@@ -113,7 +112,7 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
       auto& ptr = *r;
       std::vector<response_promise> tmp{std::move(rp)};
       pending_.emplace(key, std::move(tmp));
-      request(broker_, infinite, connect_atom::value, std::move(ptr), port)
+      request(broker_, infinite, connect_atom_v, std::move(ptr), port)
         .then(
           [=](node_id& nid, strong_actor_ptr& addr, mpi_set& sigs) {
             auto i = pending_.find(key);
@@ -152,7 +151,10 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
     [=](spawn_atom atm, node_id& nid, std::string& str, message& msg,
         std::set<std::string>& ifs) -> delegated<strong_actor_ptr> {
       CAF_LOG_TRACE("");
-      delegate(broker_, forward_atom::value, nid, atom("SpawnServ"),
+      // This local variable prevents linker errors (delegate forms an lvalue
+      // reference but spawn_server_id is constexpr).
+      auto id = basp::header::spawn_server_id;
+      delegate(broker_, forward_atom_v, nid, id,
                make_message(atm, std::move(str), std::move(msg),
                             std::move(ifs)));
       return {};
@@ -180,7 +182,7 @@ middleman_actor_impl::put(uint16_t port, strong_actor_ptr& whom, mpi_set& sigs,
     return std::move(res.error());
   auto& ptr = *res;
   actual_port = ptr->port();
-  anon_send(broker_, publish_atom::value, std::move(ptr), actual_port,
+  anon_send(broker_, publish_atom_v, std::move(ptr), actual_port,
             std::move(whom), std::move(sigs));
   return actual_port;
 }
@@ -199,7 +201,7 @@ middleman_actor_impl::put_udp(uint16_t port, strong_actor_ptr& whom,
     return std::move(res.error());
   auto& ptr = *res;
   actual_port = ptr->local_port();
-  anon_send(broker_, publish_udp_atom::value, std::move(ptr), actual_port,
+  anon_send(broker_, publish_udp_atom_v, std::move(ptr), actual_port,
             std::move(whom), std::move(sigs));
   return actual_port;
 }

@@ -684,16 +684,16 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   static Config& init_config(Config& cfg) {
-    cfg.set("logger.file-verbosity", caf::atom("quiet"));
+    cfg.set("logger.file-verbosity", "quiet");
     if (auto err = cfg.parse(caf::test::engine::argc(),
                              caf::test::engine::argv()))
       CAF_FAIL("failed to parse config: " << to_string(err));
-    cfg.set("scheduler.policy", caf::atom("testing"));
+    cfg.set("scheduler.policy", "testing");
     cfg.set("logger.inline-output", true);
-    cfg.set("middleman.network-backend", caf::atom("testing"));
+    cfg.set("middleman.network-backend", "testing");
     cfg.set("middleman.manual-multiplexing", true);
     cfg.set("middleman.workers", size_t{0});
-    cfg.set("stream.credit-policy", caf::atom("testing"));
+    cfg.set("stream.credit-policy", "testing");
     return cfg;
   }
 
@@ -703,9 +703,6 @@ public:
       sys(init_config(cfg)),
       self(sys, true),
       sched(dynamic_cast<scheduler_type&>(sys.scheduler())) {
-    // Configure the clock to measure each batch item with 1us.
-    sched.clock().time_per_unit.emplace(caf::atom("batch"),
-                                        caf::timespan{1000});
     // Make sure the current time isn't 0.
     sched.clock().current_time += std::chrono::hours(1);
   }

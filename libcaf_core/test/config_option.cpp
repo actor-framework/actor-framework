@@ -172,12 +172,6 @@ CAF_TEST(type string) {
   CAF_CHECK_EQUAL(unbox(read<string>("\"foo\"")), "foo");
 }
 
-CAF_TEST(type atom) {
-  CAF_CHECK_EQUAL(unbox(read<atom_value>("foo")), atom("foo"));
-  CAF_CHECK_EQUAL(read<atom_value>("toomanycharacters"), none);
-  CAF_CHECK_EQUAL(read<atom_value>("illegal!"), none);
-}
-
 CAF_TEST(type timespan) {
   timespan dur{500};
   CAF_CHECK_EQUAL(unbox(read<timespan>("500ns")), dur);

@@ -64,8 +64,6 @@ public:
 
   size_t size() const noexcept override;
 
-  uint32_t type_token() const noexcept override;
-
   rtti_pair type(size_t pos) const noexcept override;
 
   const void* get(size_t pos) const noexcept override;
@@ -84,13 +82,10 @@ public:
 
   void append(type_erased_value_ptr x);
 
-  void add_to_type_token(uint16_t typenr);
-
 private:
   // -- data members -----------------------------------------------------------
 
   elements elements_;
-  uint32_t type_token_;
 };
 
 CAF_CORE_EXPORT void intrusive_ptr_add_ref(const dynamic_message_data*);

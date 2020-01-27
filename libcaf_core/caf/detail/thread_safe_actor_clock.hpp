@@ -23,6 +23,7 @@
 #include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <string>
 
 #include "caf/abstract_actor.hpp"
 #include "caf/detail/core_export.hpp"
@@ -43,16 +44,16 @@ public:
 
   // -- member functions -------------------------------------------------------
 
-  void set_ordinary_timeout(time_point t, abstract_actor* self, atom_value type,
-                            uint64_t id) override;
+  void set_ordinary_timeout(time_point t, abstract_actor* self,
+                            std::string type, uint64_t id) override;
 
   void set_request_timeout(time_point t, abstract_actor* self,
                            message_id id) override;
 
-  void set_multi_timeout(time_point t, abstract_actor* self, atom_value type,
+  void set_multi_timeout(time_point t, abstract_actor* self, std::string type,
                          uint64_t id) override;
 
-  void cancel_ordinary_timeout(abstract_actor* self, atom_value type) override;
+  void cancel_ordinary_timeout(abstract_actor* self, std::string type) override;
 
   void cancel_request_timeout(abstract_actor* self, message_id id) override;
 

@@ -39,7 +39,6 @@ set(CAF_CORE_SOURCES
   src/actor_registry.cpp
   src/actor_system.cpp
   src/actor_system_config.cpp
-  src/atom.cpp
   src/attachable.cpp
   src/behavior.cpp
   src/binary_deserializer.cpp
@@ -84,14 +83,12 @@ set(CAF_CORE_SOURCES
   src/detail/test_actor_clock.cpp
   src/detail/thread_safe_actor_clock.cpp
   src/detail/tick_emitter.cpp
-  src/detail/try_match.cpp
   src/detail/uri_impl.cpp
   src/downstream_manager.cpp
   src/downstream_manager_base.cpp
   src/error.cpp
   src/event_based_actor.cpp
   src/execution_unit.cpp
-  src/exit_reason.cpp
   src/exit_reason_strings.cpp
   src/forwarding_actor_proxy.cpp
   src/group.cpp
@@ -121,7 +118,6 @@ set(CAF_CORE_SOURCES
   src/monitorable_actor.cpp
   src/node_id.cpp
   src/outbound_path.cpp
-  src/pec.cpp
   src/pec_strings.cpp
   src/policy/downstream_messages.cpp
   src/policy/unprofiled.cpp
@@ -135,13 +131,11 @@ set(CAF_CORE_SOURCES
   src/response_promise.cpp
   src/resumable.cpp
   src/rtti_pair.cpp
-  src/runtime_settings_map.cpp
   src/scheduled_actor.cpp
   src/scheduler/abstract_coordinator.cpp
   src/scheduler/test_coordinator.cpp
   src/scoped_actor.cpp
   src/scoped_execution_unit.cpp
-  src/sec.cpp
   src/sec_strings.cpp
   src/serializer.cpp
   src/settings.cpp
@@ -177,7 +171,6 @@ set(CAF_CORE_TEST_SOURCES
   test/actor_system_config.cpp
   test/actor_termination.cpp
   test/aout.cpp
-  test/atom.cpp
   test/behavior.cpp
   test/binary_deserializer.cpp
   test/binary_serializer.cpp
@@ -201,7 +194,6 @@ set(CAF_CORE_TEST_SOURCES
   test/detail/ini_consumer.cpp
   test/detail/limited_vector.cpp
   test/detail/parse.cpp
-  test/detail/parser/read_atom.cpp
   test/detail/parser/read_bool.cpp
   test/detail/parser/read_floating_point.cpp
   test/detail/parser/read_ini.cpp
@@ -262,9 +254,7 @@ set(CAF_CORE_TEST_SOURCES
   test/request_timeout.cpp
   test/result.cpp
   test/rtti_pair.cpp
-  test/runtime_settings_map.cpp
   test/selective_streaming.cpp
-  test/serial_reply.cpp
   test/serialization.cpp
   test/settings.cpp
   test/simple_timeout.cpp

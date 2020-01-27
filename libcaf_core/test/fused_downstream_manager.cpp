@@ -43,10 +43,6 @@ using int_downstream_manager = broadcast_downstream_manager<int>;
 
 using string_downstream_manager = broadcast_downstream_manager<string>;
 
-using ints_atom = atom_constant<atom("ints")>;
-
-using strings_atom = atom_constant<atom("strings")>;
-
 template <class T>
 void push(std::deque<T>& xs, downstream<T>& out, size_t num) {
   auto n = std::min(num, xs.size());
@@ -123,7 +119,7 @@ TESTEE(sum_up) {
     },
     [=](join_atom, actor src) {
       CAF_MESSAGE(self->name() << " joins a stream");
-      self->send(self * src, join_atom::value, ints_atom::value);
+      self->send(self * src, join_atom_v, int32_t{0});
     },
   };
 }
@@ -154,7 +150,7 @@ TESTEE(collect) {
     },
     [=](join_atom, actor src) {
       CAF_MESSAGE(self->name() << " joins a stream");
-      self->send(self * src, join_atom::value, strings_atom::value);
+      self->send(self * src, join_atom_v, "dummy");
     },
   };
 }
@@ -223,14 +219,14 @@ TESTEE_STATE(stream_multiplexer) {
 TESTEE(stream_multiplexer) {
   self->state.stage = make_counted<fused_stage>(self);
   return {
-    [=](join_atom, ints_atom) {
+    [=](join_atom, int32_t) {
       auto& stg = self->state.stage;
       CAF_MESSAGE("received 'join' request for integers");
       auto result = stg->add_unchecked_outbound_path<int>();
       stg->out().assign<int_downstream_manager>(result);
       return result;
     },
-    [=](join_atom, strings_atom) {
+    [=](join_atom, std::string) {
       auto& stg = self->state.stage;
       CAF_MESSAGE("received 'join' request for strings");
       auto result = stg->add_unchecked_outbound_path<string>();
@@ -270,8 +266,8 @@ CAF_TEST(depth_3_pipeline_with_fork) {
   auto snk2 = sys.spawn(collect);
   auto& st = deref<stream_multiplexer_actor>(stg).state;
   CAF_MESSAGE("connect sinks to the fused stage");
-  self->send(snk1, join_atom::value, stg);
-  self->send(snk2, join_atom::value, stg);
+  self->send(snk1, join_atom_v, stg);
+  self->send(snk2, join_atom_v, stg);
   sched.run();
   CAF_CHECK_EQUAL(st.stage->out().num_paths(), 2u);
   CAF_CHECK_EQUAL(st.stage->inbound_paths().size(), 0u);

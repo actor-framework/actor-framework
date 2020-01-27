@@ -4,9 +4,9 @@
 
 #include <cassert>
 #include <chrono>
-#include <cmath>
 #include <iomanip>
 #include <iostream>
+#include <numeric>
 #include <vector>
 
 #include "caf/actor_system.hpp"
@@ -24,9 +24,9 @@ using std::endl;
 using std::chrono::seconds;
 using namespace caf;
 
-using row_atom = atom_constant<atom("row")>;
-using column_atom = atom_constant<atom("column")>;
-using average_atom = atom_constant<atom("average")>;
+CAF_MSG_TYPE_ADD_ATOM(row_atom);
+CAF_MSG_TYPE_ADD_ATOM(column_atom);
+CAF_MSG_TYPE_ADD_ATOM(average_atom);
 
 /// A simple actor for storing an integer value.
 using cell = typed_actor<
@@ -122,7 +122,15 @@ std::ostream& operator<<(std::ostream& out, const expected<int>& x) {
   return out << to_string(x.error());
 }
 
-void caf_main(actor_system& sys) {
+struct config : actor_system_config {
+  config() {
+    add_message_type<row_atom>("row_atom");
+    add_message_type<column_atom>("column_atom");
+    add_message_type<average_atom>("average_atom");
+  }
+};
+
+void caf_main(actor_system& sys, const config&) {
   // Spawn our matrix.
   static constexpr int rows = 3;
   static constexpr int columns = 6;
@@ -134,22 +142,21 @@ void caf_main(actor_system& sys) {
   //      4    16    64   256  1024  4096
   for (int row = 0; row < rows; ++row)
     for (int column = 0; column < columns; ++column)
-      f(put_atom::value, row, column, (int) pow(row + 2, column + 1));
+      f(put_atom_v, row, column, (int) pow(row + 2, column + 1));
   // Print out matrix.
   for (int row = 0; row < rows; ++row) {
     for (int column = 0; column < columns; ++column)
-      std::cout << std::setw(4) << f(get_atom::value, row, column) << ' ';
+      std::cout << std::setw(4) << f(get_atom_v, row, column) << ' ';
     std::cout << '\n';
   }
   // Print out AVG for each row and column.
   for (int row = 0; row < rows; ++row)
-    std::cout << "AVG(row " << row << ") = "
-              << f(get_atom::value, average_atom::value, row_atom::value, row)
+    std::cout << "AVG(row " << row
+              << ") = " << f(get_atom_v, average_atom_v, row_atom_v, row)
               << '\n';
   for (int column = 0; column < columns; ++column)
-    std::cout << "AVG(column " << column << ") = "
-              << f(get_atom::value, average_atom::value, column_atom::value,
-                   column)
+    std::cout << "AVG(column " << column
+              << ") = " << f(get_atom_v, average_atom_v, column_atom_v, column)
               << '\n';
 }
 

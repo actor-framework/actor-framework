@@ -28,7 +28,6 @@
 #include <unordered_map>
 #include <utility>
 
-#include "caf/atom.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 #include "caf/detail/type_list.hpp"
@@ -65,10 +64,9 @@ public:
 
   using portable_names = std::unordered_map<std::type_index, std::string>;
 
-  using error_renderer
-    = std::function<std::string(uint8_t, atom_value, const message&)>;
+  using error_renderer = std::function<std::string(uint8_t, const message&)>;
 
-  using error_renderers = std::unordered_map<atom_value, error_renderer>;
+  using error_renderers = std::unordered_map<uint8_t, error_renderer>;
 
   type_erased_value_ptr make_value(uint16_t nr) const;
 

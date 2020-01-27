@@ -35,7 +35,7 @@ R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
 #if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
   actor_storage<T>* ptr = nullptr;
   if (logger::current_logger()->accepts(CAF_LOG_LEVEL_DEBUG,
-                                        caf::atom(CAF_LOG_FLOW_COMPONENT))) {
+                                        CAF_LOG_FLOW_COMPONENT)) {
     std::string args;
     args = deep_to_string(std::forward_as_tuple(xs...));
     ptr

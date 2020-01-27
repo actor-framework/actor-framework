@@ -38,11 +38,8 @@ namespace {
 std::atomic<long> s_max_actor_instances;
 std::atomic<long> s_actor_instances;
 
-using a_atom = atom_constant<atom("a")>;
-using b_atom = atom_constant<atom("b")>;
-using c_atom = atom_constant<atom("c")>;
-using abc_atom = atom_constant<atom("abc")>;
-using name_atom = atom_constant<atom("name")>;
+CAF_MSG_TYPE_ADD_ATOM(abc_atom);
+CAF_MSG_TYPE_ADD_ATOM(name_atom);
 
 void inc_actor_instances() {
   long v1 = ++s_actor_instances;
@@ -60,30 +57,12 @@ class event_testee : public event_based_actor {
 public:
   event_testee(actor_config& cfg) : event_based_actor(cfg) {
     inc_actor_instances();
-    wait4string.assign(
-      [=](const std::string&) {
-        become(wait4int);
-      },
-      [=](get_atom) {
-        return "wait4string";
-      }
-    );
-    wait4float.assign(
-      [=](float) {
-        become(wait4string);
-      },
-      [=](get_atom) {
-        return "wait4float";
-      }
-    );
-    wait4int.assign(
-      [=](int) {
-        become(wait4float);
-      },
-      [=](get_atom) {
-        return "wait4int";
-      }
-    );
+    wait4string.assign([=](const std::string&) { become(wait4int); },
+                       [=](get_atom) { return "wait4string"; });
+    wait4float.assign([=](float) { become(wait4string); },
+                      [=](get_atom) { return "wait4float"; });
+    wait4int.assign([=](int) { become(wait4float); },
+                    [=](get_atom) { return "wait4int"; });
   }
 
   ~event_testee() override {
@@ -104,8 +83,7 @@ actor spawn_event_testee2(scoped_actor& parent) {
   struct wrapper : event_based_actor {
     actor parent;
     wrapper(actor_config& cfg, actor parent_actor)
-        : event_based_actor(cfg),
-          parent(std::move(parent_actor)) {
+      : event_based_actor(cfg), parent(std::move(parent_actor)) {
       inc_actor_instances();
     }
     ~wrapper() override {
@@ -113,14 +91,15 @@ actor spawn_event_testee2(scoped_actor& parent) {
     }
     behavior wait4timeout(int remaining) {
       return {
-        after(chrono::milliseconds(1)) >> [=] {
-          CAF_MESSAGE("remaining: " << to_string(remaining));
-          if (remaining == 1) {
-            send(parent, ok_atom::value);
-            quit();
-          }
-          else become(wait4timeout(remaining - 1));
-        }
+        after(chrono::milliseconds(1)) >>
+          [=] {
+            CAF_MESSAGE("remaining: " << to_string(remaining));
+            if (remaining == 1) {
+              send(parent, ok_atom_v);
+              quit();
+            } else
+              become(wait4timeout(remaining - 1));
+          },
       };
     }
     behavior make_behavior() override {
@@ -142,47 +121,29 @@ public:
 
   void act() override {
     bool running = true;
-    receive_while(running) (
-      [&](int) {
-        wait4float();
-      },
-      [&](get_atom) {
-        return "wait4int";
-      },
-      [&](exit_msg& em) {
-        if (em.reason) {
-          fail_state(std::move(em.reason));
-          running = false;
-        }
-      }
-    );
+    receive_while(running)([&](int) { wait4float(); },
+                           [&](get_atom) { return "wait4int"; },
+                           [&](exit_msg& em) {
+                             if (em.reason) {
+                               fail_state(std::move(em.reason));
+                               running = false;
+                             }
+                           });
   }
 
 private:
   void wait4string() {
     bool string_received = false;
-    do_receive (
-      [&](const string&) {
-        string_received = true;
-      },
-      [&](get_atom) {
-        return "wait4string";
-      }
-    )
-    .until([&] { return string_received; });
+    do_receive([&](const string&) { string_received = true; },
+               [&](get_atom) { return "wait4string"; })
+      .until([&] { return string_received; });
   }
 
   void wait4float() {
     bool float_received = false;
-    do_receive (
-      [&](float) {
-        float_received = true;
-      },
-      [&](get_atom) {
-        return "wait4float";
-      }
-    )
-    .until([&] { return float_received; });
+    do_receive([&](float) { float_received = true; },
+               [&](get_atom) { return "wait4float"; })
+      .until([&] { return float_received; });
     wait4string();
   }
 };
@@ -200,9 +161,7 @@ public:
 
   behavior make_behavior() override {
     return {
-      after(chrono::milliseconds(10)) >> [=] {
-        unbecome();
-      }
+      after(chrono::milliseconds(10)) >> [=] { unbecome(); },
     };
   }
 };
@@ -222,7 +181,7 @@ public:
     return {
       [] {
         // nop
-      }
+      },
     };
   }
 };
@@ -242,18 +201,18 @@ public:
     return {
       [] {
         // nop
-      }
+      },
     };
   }
 };
 
 behavior master(event_based_actor* self) {
-  return (
+  return {
     [=](ok_atom) {
       CAF_MESSAGE("master: received done");
       self->quit(exit_reason::user_shutdown);
-    }
-  );
+    },
+  };
 }
 
 behavior slave(event_based_actor* self, const actor& master) {
@@ -265,7 +224,7 @@ behavior slave(event_based_actor* self, const actor& master) {
   return {
     [] {
       // nop
-    }
+    },
   };
 }
 
@@ -281,11 +240,11 @@ public:
 
   behavior make_behavior() override {
     for (int i = 0; i < 100; ++i) {
-      send(this, ok_atom::value);
+      send(this, ok_atom_v);
     }
     CAF_CHECK_EQUAL(mailbox().size(), 100u);
     for (int i = 0; i < 100; ++i) {
-      send(this, ok_atom::value);
+      send(this, ok_atom_v);
     }
     CAF_CHECK_EQUAL(mailbox().size(), 200u);
     return {};
@@ -295,7 +254,9 @@ public:
 struct fixture {
   actor_system_config cfg;
   // put inside a union to control ctor/dtor timing
-  union { actor_system system; };
+  union {
+    actor_system system;
+  };
 
   fixture() {
     new (&system) actor_system(cfg);
@@ -347,43 +308,35 @@ CAF_TEST(detached_actors_and_schedulued_actors) {
   auto m = system.spawn<detached>(master);
   system.spawn(slave, m);
   system.spawn(slave, m);
-  self->send(m, ok_atom::value);
+  self->send(m, ok_atom_v);
 }
 
 CAF_TEST(self_receive_with_zero_timeout) {
   scoped_actor self{system};
-  self->receive(
-    [&] {
-      CAF_ERROR("Unexpected message");
-    },
-    after(chrono::seconds(0)) >> [] {
-      // mailbox empty
-    }
-  );
+  self->receive([&] { CAF_ERROR("Unexpected message"); },
+                after(chrono::seconds(0)) >>
+                  [] {
+                    // mailbox empty
+                  });
 }
 
 CAF_TEST(detached_mirror) {
   scoped_actor self{system};
   auto mirror = self->spawn<simple_mirror, detached>();
   self->send(mirror, "hello mirror");
-  self->receive (
-    [](const std::string& msg) {
-      CAF_CHECK_EQUAL(msg, "hello mirror");
-    }
-  );
+  self->receive(
+    [](const std::string& msg) { CAF_CHECK_EQUAL(msg, "hello mirror"); });
 }
 
 CAF_TEST(send_to_self) {
   scoped_actor self{system};
   self->send(self, 1, 2, 3, true);
-  self->receive(
-    [](int a, int b, int c, bool d) {
-      CAF_CHECK_EQUAL(a, 1);
-      CAF_CHECK_EQUAL(b, 2);
-      CAF_CHECK_EQUAL(c, 3);
-      CAF_CHECK_EQUAL(d, true);
-    }
-  );
+  self->receive([](int a, int b, int c, bool d) {
+    CAF_CHECK_EQUAL(a, 1);
+    CAF_CHECK_EQUAL(b, 2);
+    CAF_CHECK_EQUAL(c, 3);
+    CAF_CHECK_EQUAL(d, true);
+  });
   self->send(self, message{});
   self->receive([] {});
 }
@@ -393,63 +346,44 @@ CAF_TEST(echo_actor_messaging) {
   auto mecho = system.spawn<echo_actor>();
   self->send(mecho, "hello echo");
   self->receive(
-    [](const std::string& arg) {
-      CAF_CHECK_EQUAL(arg, "hello echo");
-    }
-  );
+    [](const std::string& arg) { CAF_CHECK_EQUAL(arg, "hello echo"); });
 }
 
 CAF_TEST(delayed_send) {
   scoped_actor self{system};
   self->delayed_send(self, chrono::milliseconds(1), 1, 2, 3);
-  self->receive(
-    [](int a, int b, int c) {
-      CAF_CHECK_EQUAL(a, 1);
-      CAF_CHECK_EQUAL(b, 2);
-      CAF_CHECK_EQUAL(c, 3);
-    }
-  );
+  self->receive([](int a, int b, int c) {
+    CAF_CHECK_EQUAL(a, 1);
+    CAF_CHECK_EQUAL(b, 2);
+    CAF_CHECK_EQUAL(c, 3);
+  });
 }
 
 CAF_TEST(delayed_spawn) {
   scoped_actor self{system};
-  self->receive(after(chrono::milliseconds(1)) >> [] { });
+  self->receive(after(chrono::milliseconds(1)) >> [] {});
   system.spawn<testee1>();
 }
 
 CAF_TEST(spawn_event_testee2_test) {
   scoped_actor self{system};
   spawn_event_testee2(self);
-  self->receive(
-    [](ok_atom) {
-      CAF_MESSAGE("Received 'ok'");
-    }
-  );
+  self->receive([](ok_atom) { CAF_MESSAGE("Received 'ok'"); });
 }
 
 CAF_TEST(function_spawn) {
   scoped_actor self{system};
   auto f = [](const string& name) -> behavior {
-    return (
-      [name](get_atom) {
-        return std::make_tuple(name_atom::value, name);
-      }
-    );
+    return ([name](get_atom) { return std::make_tuple(name_atom_v, name); });
   };
   auto a1 = system.spawn(f, "alice");
   auto a2 = system.spawn(f, "bob");
-  self->send(a1, get_atom::value);
-  self->receive (
-    [&](name_atom, const string& name) {
-      CAF_CHECK_EQUAL(name, "alice");
-    }
-  );
-  self->send(a2, get_atom::value);
-  self->receive (
-    [&](name_atom, const string& name) {
-      CAF_CHECK_EQUAL(name, "bob");
-    }
-  );
+  self->send(a1, get_atom_v);
+  self->receive(
+    [&](name_atom, const string& name) { CAF_CHECK_EQUAL(name, "alice"); });
+  self->send(a2, get_atom_v);
+  self->receive(
+    [&](name_atom, const string& name) { CAF_CHECK_EQUAL(name, "bob"); });
   self->send_exit(a1, exit_reason::user_shutdown);
   self->send_exit(a2, exit_reason::user_shutdown);
 }
@@ -457,18 +391,16 @@ CAF_TEST(function_spawn) {
 using typed_testee = typed_actor<replies_to<abc_atom>::with<std::string>>;
 
 typed_testee::behavior_type testee() {
-  return {
-    [](abc_atom) {
-      CAF_MESSAGE("received 'abc'");
-      return "abc";
-    }
-  };
+  return {[](abc_atom) {
+    CAF_MESSAGE("received 'abc'");
+    return "abc";
+  }};
 }
 
 CAF_TEST(typed_await) {
   scoped_actor self{system};
   auto f = make_function_view(system.spawn(testee));
-  CAF_CHECK_EQUAL(f(abc_atom::value), "abc");
+  CAF_CHECK_EQUAL(f(abc_atom_v), "abc");
 }
 
 // tests attach_functor() inside of an actor's constructor
@@ -476,18 +408,16 @@ CAF_TEST(constructor_attach) {
   class testee : public event_based_actor {
   public:
     testee(actor_config& cfg, actor buddy)
-        : event_based_actor(cfg),
-          buddy_(buddy) {
-      attach_functor([=](const error& reason) {
-        send(buddy, ok_atom::value, reason);
-      });
+      : event_based_actor(cfg), buddy_(buddy) {
+      attach_functor(
+        [=](const error& reason) { send(buddy, ok_atom_v, reason); });
     }
 
     behavior make_behavior() override {
       return {
         [] {
           // nop
-        }
+        },
       };
     }
 
@@ -501,17 +431,16 @@ CAF_TEST(constructor_attach) {
   class spawner : public event_based_actor {
   public:
     spawner(actor_config& cfg)
-        : event_based_actor(cfg),
-          downs_(0),
-          testee_(spawn<testee, monitored>(this)) {
+      : event_based_actor(cfg),
+        downs_(0),
+        testee_(spawn<testee, monitored>(this)) {
       set_down_handler([=](down_msg& msg) {
         CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
         if (++downs_ == 2)
           quit(msg.reason);
       });
-      set_exit_handler([=](exit_msg& msg) {
-        send_exit(testee_, std::move(msg.reason));
-      });
+      set_exit_handler(
+        [=](exit_msg& msg) { send_exit(testee_, std::move(msg.reason)); });
     }
 
     behavior make_behavior() override {
@@ -520,7 +449,7 @@ CAF_TEST(constructor_attach) {
           CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
           if (++downs_ == 2)
             quit(reason);
-        }
+        },
       };
     }
 
@@ -544,7 +473,7 @@ CAF_TEST(kill_the_immortal) {
     return {
       [] {
         // nop
-      }
+      },
     };
   });
   scoped_actor self{system};
@@ -557,24 +486,22 @@ CAF_TEST(move_only_argument) {
   unique_int uptr{new int(42)};
   auto wrapper = [](event_based_actor* self, unique_int ptr) -> behavior {
     auto i = *ptr;
-    return {
-      [=](float) {
-        self->quit();
-        return i;
-      }
-    };
+    return {[=](float) {
+      self->quit();
+      return i;
+    }};
   };
   auto f = make_function_view(system.spawn(wrapper, std::move(uptr)));
   CAF_CHECK_EQUAL(to_string(f(1.f)), "(42)");
 }
 
-CAF_TEST(move-only function object) {
+CAF_TEST(move - only function object) {
   struct move_only_fun {
     move_only_fun() = default;
     move_only_fun(const move_only_fun&) = delete;
     move_only_fun(move_only_fun&&) = default;
 
-    behavior operator()(event_based_actor*)  {
+    behavior operator()(event_based_actor*) {
       return {};
     }
   };

@@ -18,11 +18,11 @@
 
 #pragma once
 
-#include <cstddef>
 #include <cstdint>
 #include <string>
 
 #include "caf/detail/core_export.hpp"
+#include "caf/error_category.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf {
@@ -80,15 +80,9 @@ enum class pec : uint8_t {
 /// @relates pec
 CAF_CORE_EXPORT std::string to_string(pec);
 
-/// Returns an error object from given error code.
-CAF_CORE_EXPORT error make_error(pec code);
-
-/// Returns an error object from given error code with additional context
-/// information for where the parser stopped in the input.
-CAF_CORE_EXPORT error make_error(pec code, int32_t line, int32_t column);
-
-/// Returns an error object from given error code with additional context
-/// information for where the parser stopped in the argument.
-CAF_CORE_EXPORT error make_error(pec code, string_view argument);
+template <>
+struct error_category<pec> {
+  static constexpr uint8_t value = 1;
+};
 
 } // namespace caf

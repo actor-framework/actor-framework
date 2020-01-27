@@ -28,7 +28,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "caf/atom.hpp"
 #include "caf/detail/bounds_checker.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/move_if_not_ptr.hpp"
@@ -62,8 +61,6 @@ public:
 
   using real = double;
 
-  using atom = atom_value;
-
   using timespan = caf::timespan;
 
   using string = std::string;
@@ -72,8 +69,8 @@ public:
 
   using dictionary = caf::dictionary<config_value>;
 
-  using types = detail::type_list<integer, boolean, real, atom, timespan, uri,
-                                  string, list, dictionary>;
+  using types = detail::type_list<integer, boolean, real, timespan, uri, string,
+                                  list, dictionary>;
 
   using variant_type = detail::tl_apply_t<types, variant>;
 
@@ -176,8 +173,8 @@ private:
   }
 
   template <class T>
-  detail::enable_if_t<detail::is_one_of<T, real, atom, timespan, uri, string,
-                                        list, dictionary>::value>
+  detail::enable_if_t<
+    detail::is_one_of<T, real, timespan, uri, string, list, dictionary>::value>
   set(T x) {
     data_ = std::move(x);
   }
@@ -259,7 +256,6 @@ struct config_value_access : config_value_access_unspecialized {};
 
 CAF_DEFAULT_CONFIG_VALUE_ACCESS(bool, "boolean");
 CAF_DEFAULT_CONFIG_VALUE_ACCESS(double, "real64");
-CAF_DEFAULT_CONFIG_VALUE_ACCESS(atom_value, "atom");
 CAF_DEFAULT_CONFIG_VALUE_ACCESS(timespan, "timespan");
 CAF_DEFAULT_CONFIG_VALUE_ACCESS(uri, "uri");
 

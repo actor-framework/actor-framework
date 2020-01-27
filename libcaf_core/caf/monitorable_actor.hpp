@@ -139,7 +139,7 @@ protected:
   template <class F>
   bool handle_system_message(mailbox_element& x, execution_unit* context,
                              bool trap_exit, F& down_msg_handler) {
-    if (x.content().type_token() == make_type_token<down_msg>()) {
+    if (x.content().match_elements<down_msg>()) {
       down_msg_handler(x.content().get_mutable_as<down_msg>(0));
       return true;
     }

@@ -48,8 +48,8 @@ public:
     value = make_message(Ts{std::forward<Us>(xs)}...);
   }
 
-  template <class E, class = enable_if_has_make_error_t<E>>
-  result(E x) : flag(rt_error), err(make_error(x)) {
+  template <class Enum, uint8_t = error_category<Enum>::value>
+  result(Enum x) : flag(rt_error), err(make_error(x)) {
     // nop
   }
 
@@ -109,8 +109,8 @@ public:
     // nop
   }
 
-  template <class E, class = enable_if_has_make_error_t<E>>
-  result(E x) : flag(rt_error), err(make_error(x)) {
+  template <class Enum, uint8_t = error_category<Enum>::value>
+  result(Enum x) : flag(rt_error), err(make_error(x)) {
     // nop
   }
 

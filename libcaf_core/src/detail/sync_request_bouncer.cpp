@@ -18,7 +18,6 @@
 
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
-#include "caf/atom.hpp"
 #include "caf/config.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/mailbox_element.hpp"

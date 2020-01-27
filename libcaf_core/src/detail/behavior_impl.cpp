@@ -96,17 +96,15 @@ behavior_impl::invoke_empty(detail::invoke_result_visitor& f) {
 
 match_case::result
 behavior_impl::invoke(detail::invoke_result_visitor& f, type_erased_tuple& xs) {
-  auto msg_token = xs.type_token();
   for (auto i = begin_; i != end_; ++i)
-    if (i->type_token == msg_token)
-      switch (i->ptr->invoke(f, xs)) {
-        case match_case::no_match:
-          break;
-        case match_case::match:
-          return match_case::match;
-        case match_case::skip:
-          return match_case::skip;
-      };
+    switch (i->ptr->invoke(f, xs)) {
+      case match_case::no_match:
+        break;
+      case match_case::match:
+        return match_case::match;
+      case match_case::skip:
+        return match_case::skip;
+    };
   return match_case::no_match;
 }
 

@@ -52,7 +52,7 @@ CAF_TEST(shutdown_with_delayed_send) {
   CAF_MESSAGE("does sys shut down after spawning a detached actor that used "
               "delayed_send?");
   auto f = [](event_based_actor* self) -> behavior {
-    self->delayed_send(self, std::chrono::nanoseconds(1), ok_atom::value);
+    self->delayed_send(self, std::chrono::nanoseconds(1), ok_atom_v);
     return {
       [=](ok_atom) { self->quit(); },
     };
@@ -64,7 +64,7 @@ CAF_TEST(shutdown_with_unhandled_delayed_send) {
   CAF_MESSAGE("does sys shut down after spawning a detached actor that used "
               "delayed_send but didn't bother waiting for it?");
   auto f = [](event_based_actor* self) {
-    self->delayed_send(self, std::chrono::nanoseconds(1), ok_atom::value);
+    self->delayed_send(self, std::chrono::nanoseconds(1), ok_atom_v);
   };
   sys.spawn<detached>(f);
 }
@@ -84,10 +84,10 @@ CAF_TEST(shutdown_delayed_send_loop) {
   CAF_MESSAGE("does sys shut down after spawning a detached actor that used "
               "a delayed send loop and was interrupted via exit message?");
   auto f = [](event_based_actor* self) -> behavior {
-    self->delayed_send(self, std::chrono::milliseconds(1), ok_atom::value);
+    self->delayed_send(self, std::chrono::milliseconds(1), ok_atom_v);
     return {
       [=](ok_atom) {
-        self->delayed_send(self, std::chrono::milliseconds(1), ok_atom::value);
+        self->delayed_send(self, std::chrono::milliseconds(1), ok_atom_v);
       },
     };
   };

@@ -141,10 +141,6 @@ public:
     return dispatch(pos, source);
   }
 
-  uint32_t type_token() const noexcept override {
-    return make_type_token<Ts...>();
-  }
-
   rtti_pair type(size_t pos) const noexcept override {
     return types_[pos];
   }

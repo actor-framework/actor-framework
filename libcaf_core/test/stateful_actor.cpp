@@ -23,16 +23,15 @@
 
 #include "caf/all.hpp"
 
-#define ERROR_HANDLER                                                          \
-  [&](error& err) { CAF_FAIL(system.render(err)); }
+#define ERROR_HANDLER [&](error& err) { CAF_FAIL(system.render(err)); }
 
 using namespace std;
 using namespace caf;
 
 namespace {
 
-using typed_adder_actor = typed_actor<reacts_to<add_atom, int>,
-                                      replies_to<get_atom>::with<int>>;
+using typed_adder_actor
+  = typed_actor<reacts_to<add_atom, int>, replies_to<get_atom>::with<int>>;
 
 struct counter {
   int value = 0;
@@ -41,12 +40,8 @@ struct counter {
 
 behavior adder(stateful_actor<counter>* self) {
   return {
-    [=](add_atom, int x) {
-      self->state.value += x;
-    },
-    [=](get_atom) {
-      return self->state.value;
-    }
+    [=](add_atom, int x) { self->state.value += x; },
+    [=](get_atom) { return self->state.value; },
   };
 }
 
@@ -64,12 +59,8 @@ public:
 typed_adder_actor::behavior_type
 typed_adder(typed_adder_actor::stateful_pointer<counter> self) {
   return {
-    [=](add_atom, int x) {
-      self->state.value += x;
-    },
-    [=](get_atom) {
-      return self->state.value;
-    }
+    [=](add_atom, int x) { self->state.value += x; },
+    [=](get_atom) { return self->state.value; },
   };
 }
 
@@ -97,15 +88,11 @@ struct fixture {
   template <class ActorUnderTest>
   void test_adder(ActorUnderTest aut) {
     scoped_actor self{system};
-    self->send(aut, add_atom::value, 7);
-    self->send(aut, add_atom::value, 4);
-    self->send(aut, add_atom::value, 9);
-    self->request(aut, infinite, get_atom::value).receive(
-      [](int x) {
-        CAF_CHECK_EQUAL(x, 20);
-      },
-      ERROR_HANDLER
-    );
+    self->send(aut, add_atom_v, 7);
+    self->send(aut, add_atom_v, 4);
+    self->send(aut, add_atom_v, 9);
+    self->request(aut, infinite, get_atom_v)
+      .receive([](int x) { CAF_CHECK_EQUAL(x, 20); }, ERROR_HANDLER);
   }
 
   template <class State>
@@ -117,12 +104,9 @@ struct fixture {
       };
     });
     scoped_actor self{system};
-    self->request(aut, infinite, get_atom::value).receive(
-      [&](const string& str) {
-        CAF_CHECK_EQUAL(str, expected);
-      },
-      ERROR_HANDLER
-    );
+    self->request(aut, infinite, get_atom_v)
+      .receive([&](const string& str) { CAF_CHECK_EQUAL(str, expected); },
+               ERROR_HANDLER);
   }
 };
 

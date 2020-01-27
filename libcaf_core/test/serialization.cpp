@@ -58,7 +58,6 @@
 #include "caf/make_type_erased_view.hpp"
 #include "caf/message.hpp"
 #include "caf/message_handler.hpp"
-#include "caf/primitive_variant.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/serializer.hpp"
@@ -199,7 +198,7 @@ struct fixture : test_coordinator_fixture<config> {
     rs.str.assign(string(str.rbegin(), str.rend()));
     msg = make_message(i32, i64, ts, te, str, rs);
     config_value::dictionary dict;
-    put(dict, "scheduler.policy", atom("none"));
+    put(dict, "scheduler.policy", "none");
     put(dict, "scheduler.max-threads", 42);
     put(dict, "nodes.preload",
         make_config_value_list("sun", "venus", "mercury", "earth", "mars"));
@@ -258,7 +257,6 @@ CAF_TEST(serializing and then deserializing produces the same value) {
   CHECK_RT(te);
   CHECK_RT(str);
   CHECK_RT(rs);
-  CHECK_RT(atom("foo"));
 }
 
 CAF_TEST(messages serialize and deserialize their content) {
@@ -270,7 +268,6 @@ CAF_TEST(messages serialize and deserialize their content) {
   CHECK_MSG_RT(te);
   CHECK_MSG_RT(str);
   CHECK_MSG_RT(rs);
-  CHECK_MSG_RT(atom("foo"));
 }
 
 CAF_TEST(raw_arrays) {

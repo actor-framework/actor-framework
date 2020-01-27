@@ -33,7 +33,6 @@ namespace {
 
 using ms = std::chrono::milliseconds;
 
-using reset_atom = atom_constant<atom("reset")>;
 using timer = typed_actor<reacts_to<reset_atom>>;
 
 struct timer_state {
@@ -41,33 +40,35 @@ struct timer_state {
 };
 
 timer::behavior_type timer_impl(timer::stateful_pointer<timer_state> self) {
-  self->delayed_send(self, ms(100), reset_atom::value);
+  self->delayed_send(self, ms(100), reset_atom_v);
   return {
     [=](reset_atom) {
       CAF_MESSAGE("timer reset");
       self->state.had_reset = true;
     },
-    after(ms(600)) >> [=] {
-      CAF_MESSAGE("timer expired");
-      CAF_REQUIRE(self->state.had_reset);
-      self->quit();
-    }
+    after(ms(600)) >>
+      [=] {
+        CAF_MESSAGE("timer expired");
+        CAF_REQUIRE(self->state.had_reset);
+        self->quit();
+      },
   };
 }
 
 timer::behavior_type timer_impl2(timer::pointer self) {
   auto had_reset = std::make_shared<bool>(false);
-  delayed_anon_send(self, ms(100), reset_atom::value);
+  delayed_anon_send(self, ms(100), reset_atom_v);
   return {
     [=](reset_atom) {
       CAF_MESSAGE("timer reset");
       *had_reset = true;
     },
-    after(ms(600)) >> [=] {
-      CAF_MESSAGE("timer expired");
-      CAF_REQUIRE(*had_reset);
-      self->quit();
-    }
+    after(ms(600)) >>
+      [=] {
+        CAF_MESSAGE("timer expired");
+        CAF_REQUIRE(*had_reset);
+        self->quit();
+      },
   };
 }
 

@@ -161,7 +161,7 @@ public:
   /// The type of a single tick.
   using time_point = clock_type::time_point;
 
-  /// Difference between two points in time.
+  /// A time interval in the resolution of the actor clock.
   using duration_type = time_point::duration;
 
   /// The type of a single tick.
@@ -412,8 +412,7 @@ struct msg_visitor {
 
   result_type operator()(normal_async_id, entity::normal_queue&,
                          mailbox_element& x) {
-    CAF_REQUIRE_EQUAL(x.content().type_token(),
-                      make_type_token<open_stream_msg>());
+    CAF_REQUIRE(x.content().match_elements<open_stream_msg>());
     self->current_mailbox_element(&x);
     (*self)(x.content().get_mutable_as<open_stream_msg>(0));
     self->current_mailbox_element(nullptr);
@@ -421,7 +420,7 @@ struct msg_visitor {
   }
 
   result_type operator()(umsg_id, entity::upstream_queue&, mailbox_element& x) {
-    CAF_REQUIRE(x.content().type_token() == make_type_token<upstream_msg>());
+    CAF_REQUIRE(x.content().match_elements<upstream_msg>());
     self->current_mailbox_element(&x);
     auto& um = x.content().get_mutable_as<upstream_msg>(0);
     auto f = detail::make_overload(
@@ -446,7 +445,7 @@ struct msg_visitor {
   result_type operator()(dmsg_id, entity::downstream_queue& qs, stream_slot,
                          policy::downstream_messages::nested_queue_type& q,
                          mailbox_element& x) {
-    CAF_REQUIRE(x.content().type_token() == make_type_token<downstream_msg>());
+    CAF_REQUIRE(x.content().match_elements<downstream_msg>());
     self->current_mailbox_element(&x);
     auto inptr = q.policy().handler.get();
     if (inptr == nullptr)
@@ -537,7 +536,7 @@ struct fixture {
     if (auto err = cfg.parse(caf::test::engine::argc(),
                              caf::test::engine::argv()))
       CAF_FAIL("parsing the config failed: " << to_string(err));
-    cfg.set("scheduler.policy", caf::atom("testing"));
+    cfg.set("scheduler.policy", "testing");
     return cfg;
   }
 
@@ -550,8 +549,7 @@ struct fixture {
         alice(fetch(alice_hdl)),
         bob(fetch(bob_hdl)),
         carl(fetch(carl_hdl)) {
-    // Configure the clock to measure each batch item with 1us.
-    sched.clock().time_per_unit.emplace(atom("batch"), timespan{1000});
+    // nop
   }
 
   ~fixture() {

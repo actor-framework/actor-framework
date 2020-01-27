@@ -221,12 +221,12 @@ as a fallback in scheduled actors.
 As an example, we consider a simple divider that returns an error on a division
 by zero. This examples uses a custom error category~\see{error}.
 
-\cppexample[19-25,35-48]{message_passing/divider}
+\cppexample[17-19,49-59]{message_passing/divider}
 
 When sending requests to the divider, we use a custom error handlers to report
 errors to the user.
 
-\cppexample[68-77]{message_passing/divider}
+\cppexample[70-76]{message_passing/divider}
 
 \clearpage
 \subsection{Delaying Messages}
@@ -235,7 +235,7 @@ errors to the user.
 Messages can be delayed by using the function \lstinline^delayed_send^, as
 illustrated in the following time-based loop example.
 
-\cppexample[56-75]{message_passing/dancing_kirby}
+\cppexample[58-75]{message_passing/dancing_kirby}
 
 \clearpage
 \subsection{Delegating Messages}
@@ -272,7 +272,7 @@ Returning the result of \lstinline^delegate(...)^ from a message handler, as
 shown in the example below, suppresses the implicit response message and allows
 the compiler to check the result type when using statically typed actors.
 
-\cppexample[15-42]{message_passing/delegating}
+\cppexample[15-36]{message_passing/delegating}
 
 \subsection{Response Promises}
 \label{promise}

@@ -36,9 +36,9 @@ MacroBlockBegin: "^BEGIN_STATE$"
 MacroBlockEnd: "^END_STATE$"
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
-PenaltyBreakAssignment: 10
+PenaltyBreakAssignment: 25
 PenaltyBreakBeforeFirstCallParameter: 30
-PenaltyReturnTypeOnItsOwnLine: 5
+PenaltyReturnTypeOnItsOwnLine: 25
 PointerAlignment: Left
 ReflowComments: true
 SortIncludes: true

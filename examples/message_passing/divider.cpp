@@ -2,8 +2,8 @@
  * A very basic, interactive divider.                                         *
 \******************************************************************************/
 
-// Manual refs: 19-25, 35-48, 68-77 (MessagePassing);
-//              19-34, 50-58 (Error)
+// Manual refs: 17-19, 49-59, 70-76 (MessagePassing);
+//              17-47 (Error)
 
 #include <iostream>
 
@@ -14,15 +14,9 @@ using std::endl;
 using std::flush;
 using namespace caf;
 
-namespace {
-
 enum class math_error : uint8_t {
-  division_by_zero = 1
+  division_by_zero = 1,
 };
-
-error make_error(math_error x) {
-  return {static_cast<uint8_t>(x), atom("math")};
-}
 
 std::string to_string(math_error x) {
   switch (x) {
@@ -33,7 +27,24 @@ std::string to_string(math_error x) {
   }
 }
 
-using div_atom = atom_constant<atom("div")>;
+namespace caf {
+
+template <>
+struct error_category<math_error> {
+  static constexpr uint8_t value = 101;
+};
+
+} // namespace caf
+
+class config : public actor_system_config {
+public:
+  config() {
+    auto renderer = [](uint8_t x, const message&) {
+      return to_string(static_cast<math_error>(x));
+    };
+    add_error_category(caf::error_category<math_error>::value, renderer);
+  }
+};
 
 using divider = typed_actor<replies_to<div_atom, double, double>::with<double>>;
 
@@ -43,19 +54,9 @@ divider::behavior_type divider_impl() {
       if (y == 0.0)
         return math_error::division_by_zero;
       return x / y;
-    }
+    },
   };
 }
-
-class config : public actor_system_config {
-public:
-  config() {
-    auto renderer = [](uint8_t x, atom_value, const message&) {
-      return "math_error" + deep_to_string_as_tuple(static_cast<math_error>(x));
-    };
-    add_error_category(atom("math"), renderer);
-  }
-};
 
 void caf_main(actor_system& system, const config&) {
   double x;
@@ -66,17 +67,13 @@ void caf_main(actor_system& system, const config&) {
   std::cin >> y;
   auto div = system.spawn(divider_impl);
   scoped_actor self{system};
-  self->request(div, std::chrono::seconds(10), div_atom::value, x, y).receive(
-    [&](double z) {
-      aout(self) << x << " / " << y << " = " << z << endl;
-    },
-    [&](const error& err) {
-      aout(self) << "*** cannot compute " << x << " / " << y << " => "
-                 << system.render(err) << endl;
-    }
-  );
+  self->request(div, std::chrono::seconds(10), div_atom_v, x, y)
+    .receive(
+      [&](double z) { aout(self) << x << " / " << y << " = " << z << endl; },
+      [&](const error& err) {
+        aout(self) << "*** cannot compute " << x << " / " << y << " => "
+                   << system.render(err) << endl;
+      });
 }
-
-} // namespace
 
 CAF_MAIN()

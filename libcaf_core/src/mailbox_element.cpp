@@ -26,10 +26,9 @@ namespace caf {
 namespace {
 
 message_id dynamic_category_correction(const message& msg, message_id mid) {
-  auto tt = msg.type_token();
-  if (tt == make_type_token<downstream_msg>())
+  if (msg.match_elements<downstream_msg>())
     return mailbox_category_corrector<downstream_msg>::apply(mid);
-  if (tt == make_type_token<upstream_msg>())
+  if (msg.match_elements<upstream_msg>())
     return mailbox_category_corrector<upstream_msg>::apply(mid);
   return mid;
 }

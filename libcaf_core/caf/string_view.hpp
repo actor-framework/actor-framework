@@ -23,6 +23,7 @@
 #include <iosfwd>
 #include <iterator>
 #include <limits>
+#include <string>
 #include <type_traits>
 
 #include "caf/detail/comparable.hpp"
@@ -280,6 +281,11 @@ private:
   const char* data_;
   size_t size_;
 };
+
+/// @relates string_view
+inline std::string to_string(string_view x) {
+  return std::string{x.begin(), x.end()};
+}
 
 } // namespace caf
 

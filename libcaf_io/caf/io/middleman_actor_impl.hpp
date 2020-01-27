@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include "caf/atom.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/io/fwd.hpp"

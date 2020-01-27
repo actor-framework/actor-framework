@@ -108,7 +108,7 @@ CAF_TEST(deliver serialized message) {
   byte_buffer payload;
   std::vector<strong_actor_ptr> stages;
   binary_serializer sink{sys, payload};
-  if (auto err = sink(stages, make_message(ok_atom::value)))
+  if (auto err = sink(stages, make_message(ok_atom_v)))
     CAF_FAIL("unable to serialize message: " << sys.render(err));
   io::basp::header hdr{io::basp::message_type::direct_message,
                        0,

@@ -33,8 +33,6 @@ behavior dummy() {
   return {[](int i) { return i; }};
 }
 
-using foo_atom = atom_constant<atom("foo")>;
-
 } // namespace
 
 CAF_TEST_FIXTURE_SCOPE(actor_registry_tests, test_coordinator_fixture<>)
@@ -42,12 +40,12 @@ CAF_TEST_FIXTURE_SCOPE(actor_registry_tests, test_coordinator_fixture<>)
 CAF_TEST(erase) {
   // CAF registers a few actors by itself.
   auto baseline = sys.registry().named_actors().size();
-  sys.registry().put(foo_atom::value, sys.spawn(dummy));
+  sys.registry().put("foo", sys.spawn(dummy));
   CAF_CHECK_EQUAL(sys.registry().named_actors().size(), baseline + 1u);
-  self->send(sys.registry().get<actor>(foo_atom::value), 42);
+  self->send(sys.registry().get<actor>("foo"), 42);
   run();
   expect((int), from(_).to(self).with(42));
-  sys.registry().erase(foo_atom::value);
+  sys.registry().erase("foo");
   CAF_CHECK_EQUAL(sys.registry().named_actors().size(), baseline);
 }
 

@@ -40,14 +40,9 @@ merged_tuple::cow_ptr merged_tuple::make(message x, message y) {
 }
 
 merged_tuple::merged_tuple(data_type xs, mapping_type ys)
-  : data_(std::move(xs)), type_token_(0xFFFFFFFF), mapping_(std::move(ys)) {
+  : data_(std::move(xs)), mapping_(std::move(ys)) {
   CAF_ASSERT(!data_.empty());
   CAF_ASSERT(!mapping_.empty());
-  // calculate type token
-  for (auto& p : mapping_) {
-    type_token_ <<= 6;
-    type_token_ |= data_[p.first]->type_nr(p.second);
-  }
 }
 
 merged_tuple* merged_tuple::copy() const {
@@ -68,10 +63,6 @@ error merged_tuple::load(size_t pos, deserializer& source) {
 
 size_t merged_tuple::size() const noexcept {
   return mapping_.size();
-}
-
-uint32_t merged_tuple::type_token() const noexcept {
-  return type_token_;
 }
 
 rtti_pair merged_tuple::type(size_t pos) const noexcept {

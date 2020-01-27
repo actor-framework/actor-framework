@@ -155,8 +155,8 @@ CAF_TEST(depth_3_pipeline_with_fork) {
   auto snk2 = sys.spawn(sum_up);
   auto& st = deref<stream_multiplexer_actor>(stg).state;
   CAF_MESSAGE("connect sinks to the stage (fork)");
-  self->send(snk1, join_atom::value, stg);
-  self->send(snk2, join_atom::value, stg);
+  self->send(snk1, join_atom_v, stg);
+  self->send(snk2, join_atom_v, stg);
   consume_messages();
   CAF_CHECK_EQUAL(st.stage->out().num_paths(), 2u);
   CAF_MESSAGE("connect source to the stage (fork)");
@@ -179,7 +179,7 @@ CAF_TEST(depth_3_pipeline_with_join) {
   auto snk = sys.spawn(sum_up);
   auto& st = deref<stream_multiplexer_actor>(stg).state;
   CAF_MESSAGE("connect sink to the stage");
-  self->send(snk, join_atom::value, stg);
+  self->send(snk, join_atom_v, stg);
   consume_messages();
   CAF_CHECK_EQUAL(st.stage->out().num_paths(), 1u);
   CAF_MESSAGE("connect sources to the stage (join)");
@@ -202,8 +202,8 @@ CAF_TEST(closing_downstreams_before_end_of_stream) {
   auto snk2 = sys.spawn(sum_up);
   auto& st = deref<stream_multiplexer_actor>(stg).state;
   CAF_MESSAGE("connect sinks to the stage (fork)");
-  self->send(snk1, join_atom::value, stg);
-  self->send(snk2, join_atom::value, stg);
+  self->send(snk1, join_atom_v, stg);
+  self->send(snk2, join_atom_v, stg);
   consume_messages();
   CAF_CHECK_EQUAL(st.stage->out().num_paths(), 2u);
   CAF_MESSAGE("connect source to the stage (fork)");
@@ -223,8 +223,8 @@ CAF_TEST(closing_downstreams_before_end_of_stream) {
   CAF_REQUIRE_GREATER(next_pending, 0);
   auto sink1_result = sum(next_pending - 1);
   CAF_MESSAGE("gracefully close sink 1, next pending: " << next_pending);
-  self->send(stg, close_atom::value, 0);
-  expect((atom_value, int), from(self).to(stg));
+  self->send(stg, close_atom_v, 0);
+  expect((close_atom, int), from(self).to(stg));
   CAF_MESSAGE("ship remaining elements");
   run();
   CAF_CHECK_EQUAL(st.stage->out().num_paths(), 1u);

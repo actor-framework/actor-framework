@@ -27,7 +27,7 @@ namespace caf::detail {
 
 void thread_safe_actor_clock::set_ordinary_timeout(time_point t,
                                                    abstract_actor* self,
-                                                   atom_value type,
+                                                   std::string type,
                                                    uint64_t id) {
   push(new ordinary_timeout(t, self->ctrl(), type, id));
 }
@@ -40,12 +40,12 @@ void thread_safe_actor_clock::set_request_timeout(time_point t,
 
 void thread_safe_actor_clock::set_multi_timeout(time_point t,
                                                 abstract_actor* self,
-                                                atom_value type, uint64_t id) {
+                                                std::string type, uint64_t id) {
   push(new multi_timeout(t, self->ctrl(), type, id));
 }
 
 void thread_safe_actor_clock::cancel_ordinary_timeout(abstract_actor* self,
-                                                      atom_value type) {
+                                                      std::string type) {
   push(new ordinary_timeout_cancellation(self->id(), type));
 }
 

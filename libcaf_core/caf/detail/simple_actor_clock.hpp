@@ -99,17 +99,17 @@ public:
   struct ordinary_timeout final : delayed_event {
     static constexpr bool cancellable = true;
 
-    ordinary_timeout(time_point due, strong_actor_ptr self, atom_value type,
+    ordinary_timeout(time_point due, strong_actor_ptr self, std::string type,
                      uint64_t id)
       : delayed_event(ordinary_timeout_type, due),
         self(std::move(self)),
-        type(type),
+        type(std::move(type)),
         id(id) {
       // nop
     }
 
     strong_actor_ptr self;
-    atom_value type;
+    std::string type;
     uint64_t id;
   };
 
@@ -118,17 +118,17 @@ public:
   struct multi_timeout final : delayed_event {
     static constexpr bool cancellable = true;
 
-    multi_timeout(time_point due, strong_actor_ptr self, atom_value type,
+    multi_timeout(time_point due, strong_actor_ptr self, std::string type,
                   uint64_t id)
       : delayed_event(multi_timeout_type, due),
         self(std::move(self)),
-        type(type),
+        type(std::move(type)),
         id(id) {
       // nop
     }
 
     strong_actor_ptr self;
-    atom_value type;
+    std::string type;
     uint64_t id;
   };
 
@@ -193,24 +193,24 @@ public:
 
   /// Cancels matching ordinary timeouts.
   struct ordinary_timeout_cancellation final : cancellation {
-    ordinary_timeout_cancellation(actor_id aid, atom_value type)
+    ordinary_timeout_cancellation(actor_id aid, std::string type)
       : cancellation(ordinary_timeout_cancellation_type, aid), type(type) {
       // nop
     }
 
-    atom_value type;
+    std::string type;
   };
 
   /// Cancels the matching multi timeout.
   struct multi_timeout_cancellation final : cancellation {
-    multi_timeout_cancellation(actor_id aid, atom_value type, uint64_t id)
+    multi_timeout_cancellation(actor_id aid, std::string type, uint64_t id)
       : cancellation(ordinary_timeout_cancellation_type, aid),
-        type(type),
+        type(std::move(type)),
         id(id) {
       // nop
     }
 
-    atom_value type;
+    std::string type;
     uint64_t id;
   };
 
@@ -277,16 +277,16 @@ public:
 
   // -- overridden member functions --------------------------------------------
 
-  void set_ordinary_timeout(time_point t, abstract_actor* self, atom_value type,
-                            uint64_t id) override;
+  void set_ordinary_timeout(time_point t, abstract_actor* self,
+                            std::string type, uint64_t id) override;
 
-  void set_multi_timeout(time_point t, abstract_actor* self, atom_value type,
+  void set_multi_timeout(time_point t, abstract_actor* self, std::string type,
                          uint64_t id) override;
 
   void set_request_timeout(time_point t, abstract_actor* self,
                            message_id id) override;
 
-  void cancel_ordinary_timeout(abstract_actor* self, atom_value type) override;
+  void cancel_ordinary_timeout(abstract_actor* self, std::string type) override;
 
   void cancel_request_timeout(abstract_actor* self, message_id id) override;
 

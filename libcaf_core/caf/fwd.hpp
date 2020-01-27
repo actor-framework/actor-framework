@@ -19,15 +19,10 @@
 #pragma once
 
 #include <cstdint>
-#include <map>
 #include <memory>
-#include <tuple>
 #include <vector>
 
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/is_one_of.hpp"
-#include "caf/detail/is_primitive_config_value.hpp"
-#include "caf/timespan.hpp"
 
 namespace caf {
 
@@ -177,8 +172,8 @@ config_option make_config_option(T& storage, string_view category,
 
 // -- enums --------------------------------------------------------------------
 
-enum class atom_value : uint64_t;
 enum class byte : uint8_t;
+enum class pec : uint8_t;
 enum class sec : uint8_t;
 enum class stream_priority;
 enum class invoke_message_result;

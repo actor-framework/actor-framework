@@ -6,14 +6,14 @@
  * - ./build/bin/group_chat -s -p 4242                                        *
  * - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n alice        *
  * - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n bob          *
-\ ******************************************************************************/
+\******************************************************************************/
 
-#include <set>
-#include <map>
-#include <vector>
 #include <cstdlib>
-#include <sstream>
 #include <iostream>
+#include <map>
+#include <set>
+#include <sstream>
+#include <vector>
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
@@ -25,9 +25,11 @@ using namespace caf;
 
 namespace {
 
-using broadcast_atom = atom_constant<atom("broadcast")>;
+CAF_MSG_TYPE_ADD_ATOM(broadcast_atom);
 
-struct line { string str; };
+struct line {
+  string str;
+};
 
 istream& operator>>(istream& is, line& l) {
   getline(is, l.str);
@@ -37,7 +39,7 @@ istream& operator>>(istream& is, line& l) {
 behavior client(event_based_actor* self, const string& name) {
   return {
     [=](broadcast_atom, const string& message) {
-      for(auto& dest : self->joined_groups()) {
+      for (auto& dest : self->joined_groups()) {
         self->send(dest, name + ": " + message);
       }
     },
@@ -58,7 +60,7 @@ behavior client(event_based_actor* self, const string& name) {
     },
     [=](const group_down_msg& g) {
       cout << "*** chatroom offline: " << to_string(g.source) << endl;
-    }
+    },
   };
 }
 
@@ -71,16 +73,16 @@ public:
 
   config() {
     opt_group{custom_options_, "global"}
-    .add(name, "name,n", "set name")
-    .add(group_uris, "group,g", "join group")
-    .add(server_mode, "server,s", "run in server mode")
-    .add(port, "port,p", "set port (ignored in client mode)");
+      .add(name, "name,n", "set name")
+      .add(group_uris, "group,g", "join group")
+      .add(server_mode, "server,s", "run in server mode")
+      .add(port, "port,p", "set port (ignored in client mode)");
   }
 };
 
 void run_server(actor_system& system, const config& cfg) {
   auto res = system.middleman().publish_local_groups(cfg.port);
-  if (! res) {
+  if (!res) {
     std::cerr << "*** publishing local groups failed: "
               << system.render(res.error()) << endl;
     return;
@@ -106,7 +108,7 @@ void run_client(actor_system& system, const config& cfg) {
   for (auto& uri : cfg.group_uris) {
     auto tmp = system.groups().get(uri);
     if (tmp)
-      anon_send(client_actor, join_atom::value, std::move(*tmp));
+      anon_send(client_actor, join_atom_v, std::move(*tmp));
     else
       cerr << R"(*** failed to parse ")" << uri << R"(" as group URI: )"
            << system.render(tmp.error()) << endl;
@@ -116,36 +118,35 @@ void run_client(actor_system& system, const config& cfg) {
   for (istream_iterator<line> i(cin); i != eof; ++i) {
     auto send_input = [&] {
       if (!i->str.empty())
-        anon_send(client_actor, broadcast_atom::value, i->str);
+        anon_send(client_actor, broadcast_atom_v, i->str);
     };
     words.clear();
     split(words, i->str, is_any_of(" "));
-    auto res = message_builder(words.begin(), words.end()).apply({
-      [&](const string& cmd, const string& mod, const string& id) {
-        if (cmd == "/join") {
-          auto grp = system.groups().get(mod, id);
-          if (grp)
-            anon_send(client_actor, join_atom::value, *grp);
-        }
-        else {
-          send_input();
-        }
-      },
-      [&](const string& cmd) {
-        if (cmd == "/quit") {
-          cin.setstate(ios_base::eofbit);
-        }
-        else if (cmd[0] == '/') {
-          cout << "*** available commands:\n"
-            "  /join <module> <group> join a new chat channel\n"
-            "  /quit          quit the program\n"
-            "  /help          print this text\n" << flush;
-        }
-        else {
-          send_input();
-        }
-      }
-    });
+    auto res
+      = message_builder(words.begin(), words.end())
+          .apply(
+            {[&](const string& cmd, const string& mod, const string& id) {
+               if (cmd == "/join") {
+                 auto grp = system.groups().get(mod, id);
+                 if (grp)
+                   anon_send(client_actor, join_atom_v, *grp);
+               } else {
+                 send_input();
+               }
+             },
+             [&](const string& cmd) {
+               if (cmd == "/quit") {
+                 cin.setstate(ios_base::eofbit);
+               } else if (cmd[0] == '/') {
+                 cout << "*** available commands:\n"
+                         "  /join <module> <group> join a new chat channel\n"
+                         "  /quit          quit the program\n"
+                         "  /help          print this text\n"
+                      << flush;
+               } else {
+                 send_input();
+               }
+             }});
     if (!res)
       send_input();
   }

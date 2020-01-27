@@ -32,31 +32,28 @@
 #include "caf/after.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
-#include "caf/event_based_actor.hpp"
-#include "caf/function_view.hpp"
-#include "caf/logger.hpp"
-#include "caf/make_counted.hpp"
-#include "caf/node_id.hpp"
-#include "caf/raw_event_based_actor.hpp"
-#include "caf/scoped_actor.hpp"
-#include "caf/sec.hpp"
-#include "caf/send.hpp"
-#include "caf/typed_event_based_actor.hpp"
-
-#include "caf/io/basp_broker.hpp"
-#include "caf/io/system_messages.hpp"
-
-#include "caf/io/network/default_multiplexer.hpp"
-#include "caf/io/network/interfaces.hpp"
-#include "caf/io/network/test_multiplexer.hpp"
-
-#include "caf/scheduler/abstract_coordinator.hpp"
-
 #include "caf/detail/get_mac_addresses.hpp"
 #include "caf/detail/get_root_uuid.hpp"
 #include "caf/detail/ripemd_160.hpp"
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/set_thread_name.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/function_view.hpp"
+#include "caf/io/basp/header.hpp"
+#include "caf/io/basp_broker.hpp"
+#include "caf/io/network/default_multiplexer.hpp"
+#include "caf/io/network/interfaces.hpp"
+#include "caf/io/network/test_multiplexer.hpp"
+#include "caf/io/system_messages.hpp"
+#include "caf/logger.hpp"
+#include "caf/make_counted.hpp"
+#include "caf/node_id.hpp"
+#include "caf/raw_event_based_actor.hpp"
+#include "caf/scheduler/abstract_coordinator.hpp"
+#include "caf/scoped_actor.hpp"
+#include "caf/sec.hpp"
+#include "caf/send.hpp"
+#include "caf/typed_event_based_actor.hpp"
 
 #ifdef CAF_WINDOWS
 #  include <fcntl.h>
@@ -85,14 +82,12 @@ private:
 } // namespace
 
 actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
-  auto atm = get_or(sys.config(), "middleman.network-backend",
-                    defaults::middleman::network_backend);
-  switch (atom_uint(atm)) {
-    case atom_uint(atom("testing")):
-      return new mm_impl<network::test_multiplexer>(sys);
-    default:
-      return new mm_impl<network::default_multiplexer>(sys);
-  }
+  auto impl = get_or(sys.config(), "middleman.network-backend",
+                     defaults::middleman::network_backend);
+  if (impl == "testing")
+    return new mm_impl<network::test_multiplexer>(sys);
+  else
+    return new mm_impl<network::default_multiplexer>(sys);
 }
 
 middleman::middleman(actor_system& sys) : system_(sys) {
@@ -104,8 +99,7 @@ middleman::remote_spawn_impl(const node_id& nid, std::string& name,
                              message& args, std::set<std::string> s,
                              timespan timeout) {
   auto f = make_function_view(actor_handle(), timeout);
-  return f(spawn_atom::value, nid, std::move(name), std::move(args),
-           std::move(s));
+  return f(spawn_atom_v, nid, std::move(name), std::move(args), std::move(s));
 }
 
 expected<uint16_t> middleman::open(uint16_t port, const char* in, bool reuse) {
@@ -113,25 +107,25 @@ expected<uint16_t> middleman::open(uint16_t port, const char* in, bool reuse) {
   if (in != nullptr)
     str = in;
   auto f = make_function_view(actor_handle());
-  return f(open_atom::value, port, std::move(str), reuse);
+  return f(open_atom_v, port, std::move(str), reuse);
 }
 
 expected<void> middleman::close(uint16_t port) {
   auto f = make_function_view(actor_handle());
-  return f(close_atom::value, port);
+  return f(close_atom_v, port);
 }
 
 expected<node_id> middleman::connect(std::string host, uint16_t port) {
   auto f = make_function_view(actor_handle());
-  auto res = f(connect_atom::value, std::move(host), port);
+  auto res = f(connect_atom_v, std::move(host), port);
   if (!res)
     return std::move(res.error());
   return std::get<0>(*res);
 }
 
-expected<uint16_t>
-middleman::publish(const strong_actor_ptr& whom, std::set<std::string> sigs,
-                   uint16_t port, const char* cstr, bool ru) {
+expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
+                                      std::set<std::string> sigs, uint16_t port,
+                                      const char* cstr, bool ru) {
   CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(sigs) << CAF_ARG(port));
   if (!whom)
     return sec::cannot_publish_invalid_actor;
@@ -139,11 +133,11 @@ middleman::publish(const strong_actor_ptr& whom, std::set<std::string> sigs,
   if (cstr != nullptr)
     in = cstr;
   auto f = make_function_view(actor_handle());
-  return f(publish_atom::value, port, std::move(whom), std::move(sigs), in, ru);
+  return f(publish_atom_v, port, std::move(whom), std::move(sigs), in, ru);
 }
 
-expected<uint16_t>
-middleman::publish_local_groups(uint16_t port, const char* in, bool reuse) {
+expected<uint16_t> middleman::publish_local_groups(uint16_t port,
+                                                   const char* in, bool reuse) {
   CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(in));
   auto group_nameserver = [](event_based_actor* self) -> behavior {
     return {
@@ -165,15 +159,15 @@ middleman::publish_local_groups(uint16_t port, const char* in, bool reuse) {
 expected<void> middleman::unpublish(const actor_addr& whom, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
   auto f = make_function_view(actor_handle());
-  return f(unpublish_atom::value, whom, port);
+  return f(unpublish_atom_v, whom, port);
 }
 
-expected<strong_actor_ptr>
-middleman::remote_actor(std::set<std::string> ifs, std::string host,
-                        uint16_t port) {
+expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
+                                                   std::string host,
+                                                   uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(ifs) << CAF_ARG(host) << CAF_ARG(port));
   auto f = make_function_view(actor_handle());
-  auto res = f(connect_atom::value, std::move(host), port);
+  auto res = f(connect_atom_v, std::move(host), port);
   if (!res)
     return std::move(res.error());
   strong_actor_ptr ptr = std::move(std::get<1>(*res));
@@ -201,26 +195,26 @@ expected<group> middleman::remote_group(const std::string& group_uri) {
   return remote_group(name, host, port);
 }
 
-expected<group>
-middleman::remote_group(const std::string& group_identifier,
-                        const std::string& host, uint16_t port) {
+expected<group> middleman::remote_group(const std::string& group_identifier,
+                                        const std::string& host,
+                                        uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(group_identifier) << CAF_ARG(host) << CAF_ARG(port));
   // Helper actor that first connects to the remote actor at `host:port` and
   // then tries to get a valid group from that actor.
-  auto two_step_lookup
-    = [=](event_based_actor* self, middleman_actor mm) -> behavior {
+  auto two_step_lookup = [=](event_based_actor* self,
+                             middleman_actor mm) -> behavior {
     return {
       [=](get_atom) {
         /// We won't receive a second message, so we drop our behavior here to
         /// terminate the actor after both requests finish.
         self->unbecome();
         auto rp = self->make_response_promise();
-        self->request(mm, infinite, connect_atom::value, host, port)
+        self->request(mm, infinite, connect_atom_v, host, port)
           .then([=](const node_id&, strong_actor_ptr& ptr,
                     const std::set<std::string>&) mutable {
             CAF_LOG_DEBUG("received handle to target node:" << CAF_ARG(ptr));
             auto hdl = actor_cast<actor>(ptr);
-            self->request(hdl, infinite, get_atom::value, group_identifier)
+            self->request(hdl, infinite, get_atom_v, group_identifier)
               .then([=](group& grp) mutable {
                 CAF_LOG_DEBUG("received remote group handle:" << CAF_ARG(grp));
                 rp.deliver(std::move(grp));
@@ -232,9 +226,9 @@ middleman::remote_group(const std::string& group_identifier,
   // Spawn the helper actor and wait for the result.
   expected<group> result{sec::cannot_connect_to_node};
   scoped_actor self{system(), true};
-  auto worker
-    = self->spawn<lazy_init + monitored>(two_step_lookup, actor_handle());
-  self->send(worker, get_atom::value);
+  auto worker = self->spawn<lazy_init + monitored>(two_step_lookup,
+                                                   actor_handle());
+  self->send(worker, get_atom_v);
   self->receive(
     [&](group& grp) {
       CAF_LOG_DEBUG("received remote group handle:" << CAF_ARG(grp));
@@ -251,15 +245,17 @@ middleman::remote_group(const std::string& group_identifier,
   return result;
 }
 
-strong_actor_ptr middleman::remote_lookup(atom_value name, const node_id& nid) {
+strong_actor_ptr middleman::remote_lookup(std::string name,
+                                          const node_id& nid) {
   CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(nid));
   if (system().node() == nid)
     return system().registry().get(name);
-  auto basp = named_broker<basp_broker>(atom("BASP"));
+  auto basp = named_broker<basp_broker>("BASP");
   strong_actor_ptr result;
   scoped_actor self{system(), true};
-  self->send(basp, forward_atom::value, nid, atom("ConfigServ"),
-             make_message(get_atom::value, name));
+  auto id = basp::header::config_server_id;
+  self->send(basp, forward_atom_v, nid, id,
+             make_message(get_atom_v, std::move(name)));
   self->receive([&](strong_actor_ptr& addr) { result = std::move(addr); },
                 after(std::chrono::minutes(5)) >>
                   [] {
@@ -300,7 +296,7 @@ void middleman::start() {
       cv.wait(guard);
   }
   // Spawn utility actors.
-  auto basp = named_broker<basp_broker>(atom("BASP"));
+  auto basp = named_broker<basp_broker>("BASP");
   manager_ = make_middleman_actor(system(), basp);
 }
 
@@ -340,7 +336,7 @@ void middleman::init(actor_system_config& cfg) {
   // never detach actors when using the testing multiplexer
   auto network_backend = get_or(cfg, "middleman.network-backend",
                                 defaults::middleman::network_backend);
-  if (network_backend == atom("testing")) {
+  if (network_backend == "testing") {
     cfg.set("middleman.attach-utility-actors", true)
       .set("middleman.manual-multiplexing", true);
   }

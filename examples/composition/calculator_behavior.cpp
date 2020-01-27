@@ -17,11 +17,9 @@ using namespace caf;
 
 namespace {
 
-// using add_atom = atom_constant<atom("add")>; (defined in atom.hpp)
-using multiply_atom = atom_constant<atom("multiply")>;
-
 using adder = typed_actor<replies_to<add_atom, int, int>::with<int>>;
-using multiplier = typed_actor<replies_to<multiply_atom, int, int>::with<int>>;
+
+using multiplier = typed_actor<replies_to<mul_atom, int, int>::with<int>>;
 
 class adder_bhvr : public composable_behavior<adder> {
 public:
@@ -32,7 +30,7 @@ public:
 
 class multiplier_bhvr : public composable_behavior<multiplier> {
 public:
-  result<int> operator()(multiply_atom, int x, int y) override {
+  result<int> operator()(mul_atom, int x, int y) override {
     return x * y;
   }
 };
@@ -40,12 +38,12 @@ public:
 // calculator_bhvr can be inherited from or composed further
 using calculator_bhvr = composed_behavior<adder_bhvr, multiplier_bhvr>;
 
-} // namespace
-
 void caf_main(actor_system& system) {
   auto f = make_function_view(system.spawn<calculator_bhvr>());
-  cout << "10 + 20 = " << f(add_atom::value, 10, 20) << endl;
-  cout << "7 * 9 = " << f(multiply_atom::value, 7, 9) << endl;
+  cout << "10 + 20 = " << f(add_atom_v, 10, 20) << endl;
+  cout << "7 * 9 = " << f(mul_atom_v, 7, 9) << endl;
 }
+
+} // namespace
 
 CAF_MAIN()

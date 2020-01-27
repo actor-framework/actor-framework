@@ -22,7 +22,6 @@
 #include <tuple>
 #include <type_traits>
 
-#include "caf/atom.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/comparable.hpp"
@@ -76,8 +75,6 @@ public:
   error_code<sec> load(size_t pos, binary_deserializer& source) override;
 
   size_t size() const noexcept override;
-
-  uint32_t type_token() const noexcept override;
 
   rtti_pair type(size_t pos) const noexcept override;
 

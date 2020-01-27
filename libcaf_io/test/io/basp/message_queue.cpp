@@ -53,7 +53,7 @@ struct fixture : test_coordinator_fixture<> {
   void push(int msg_id) {
     queue.push(nullptr, static_cast<uint64_t>(msg_id), testee,
                make_mailbox_element(self->ctrl(), make_message_id(), {},
-                                    ok_atom::value, msg_id));
+                                    ok_atom_v, msg_id));
   }
 };
 

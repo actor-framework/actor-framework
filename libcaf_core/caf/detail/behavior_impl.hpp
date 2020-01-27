@@ -21,7 +21,6 @@
 #include <tuple>
 #include <type_traits>
 
-#include "caf/atom.hpp"
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/int_list.hpp"
@@ -175,7 +174,7 @@ private:
   void init(std::integral_constant<size_t, First>,
             std::integral_constant<size_t, Last> last) {
     auto& element = std::get<First>(cases_);
-    arr_[First] = match_case_info{element.type_token(), &element};
+    arr_[First] = match_case_info{&element};
     init(std::integral_constant<size_t, First + 1>{}, last);
   }
 

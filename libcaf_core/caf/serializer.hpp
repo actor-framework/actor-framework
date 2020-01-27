@@ -26,7 +26,6 @@
 
 #include "caf/byte.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/meta/annotation.hpp"
 #include "caf/meta/save_callback.hpp"
@@ -124,7 +123,7 @@ public:
   virtual result_type apply(const std::u32string& x) = 0;
 
   template <class Enum, class = std::enable_if_t<std::is_enum<Enum>::value>>
-  result_type apply(Enum x) {
+  auto apply(Enum x) {
     return apply(static_cast<std::underlying_type_t<Enum>>(x));
   }
 

@@ -23,23 +23,21 @@
 #include <atomic>
 #include <stdexcept>
 
-#include "caf/atom.hpp"
-#include "caf/config.hpp"
-#include "caf/logger.hpp"
-#include "caf/message.hpp"
+#include "caf/abstract_actor.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_cast.hpp"
-#include "caf/actor_system.hpp"
-#include "caf/abstract_actor.hpp"
-#include "caf/actor_registry.hpp"
-#include "caf/execution_unit.hpp"
-#include "caf/mailbox_element.hpp"
-#include "caf/system_messages.hpp"
-#include "caf/default_attachable.hpp"
 #include "caf/actor_control_block.hpp"
-
+#include "caf/actor_registry.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/config.hpp"
+#include "caf/default_attachable.hpp"
 #include "caf/detail/disposer.hpp"
 #include "caf/detail/shared_spinlock.hpp"
+#include "caf/execution_unit.hpp"
+#include "caf/logger.hpp"
+#include "caf/mailbox_element.hpp"
+#include "caf/message.hpp"
+#include "caf/system_messages.hpp"
 
 namespace caf {
 

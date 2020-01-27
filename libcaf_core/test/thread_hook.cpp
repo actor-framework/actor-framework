@@ -84,7 +84,7 @@ template <class Hook>
 struct config : actor_system_config {
   config() {
     add_thread_hook<Hook>();
-    set("logger.verbosity", atom("quiet"));
+    set("logger.verbosity", "quiet");
   }
 };
 

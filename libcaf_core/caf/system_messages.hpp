@@ -88,8 +88,8 @@ typename Inspector::result_type inspect(Inspector& f, group_down_msg& x) {
 /// Signalizes a timeout event.
 /// @note This message is handled implicitly by the runtime system.
 struct timeout_msg {
-  /// Type of the timeout (either `receive_atom` or `cycle_atom`).
-  atom_value type;
+  /// Type of the timeout (usually either "receive" or "cycle").
+  std::string type;
   /// Actor-specific timeout ID.
   uint64_t timeout_id;
 };

@@ -124,9 +124,6 @@ void test_impl(Policy& p) {
   CAF_CHECK(check(nl<double>::max()));
   CAF_CHECK(check(nl<long double>::lowest()));
   CAF_CHECK(check(nl<long double>::max()));
-  // atoms
-  CAF_CHECK(check(atom("")));
-  CAF_CHECK(check(atom("0123456789")));
   // various containers
   CAF_CHECK(check(std::array<int, 3>{{1, 2, 3}}));
   CAF_CHECK(check(std::vector<char>{}));
@@ -210,12 +207,6 @@ struct stringification_inspector_policy {
   // check result for bool
   bool operator()(bool& x) {
     CAF_CHECK_EQUAL(f(x), std::string{x ? "true" : "false"});
-    return true;
-  }
-
-  // check result for atoms
-  bool operator()(atom_value& x) {
-    CAF_CHECK_EQUAL(f(x), "'" + to_string(x) + "'");
     return true;
   }
 };

@@ -22,7 +22,6 @@
 
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_system.hpp"
-#include "caf/atom.hpp"
 #include "caf/expected.hpp"
 #include "caf/function_view.hpp"
 
@@ -39,7 +38,7 @@ expected<uint16_t> publish(actor_system& sys, const strong_actor_ptr& whom,
   if (cstr != nullptr)
     in = cstr;
   auto f = make_function_view(sys.openssl_manager().actor_handle());
-  return f(publish_atom::value, port, std::move(whom), std::move(sigs),
+  return f(publish_atom_v, port, std::move(whom), std::move(sigs),
            std::move(in), ru);
 }
 

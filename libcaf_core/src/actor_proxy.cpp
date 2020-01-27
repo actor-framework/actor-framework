@@ -16,14 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <utility>
-
-#include "caf/locks.hpp"
-
-#include "caf/atom.hpp"
-#include "caf/message.hpp"
 #include "caf/actor_proxy.hpp"
-#include "caf/exit_reason.hpp"
 
 namespace caf {
 

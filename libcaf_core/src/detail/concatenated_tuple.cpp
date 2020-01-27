@@ -38,10 +38,6 @@ concatenated_tuple::concatenated_tuple(std::initializer_list<cow_ptr> xs) {
       }
     }
   }
-  type_token_ = make_type_token();
-  for (const auto& m : data_)
-    for (size_t i = 0; i < m->size(); ++i)
-      type_token_ = add_to_type_token(type_token_, m->type_nr(i));
   auto acc_size
     = [](size_t tmp, const cow_ptr& val) { return tmp + val->size(); };
   size_ = std::accumulate(data_.begin(), data_.end(), size_t{0}, acc_size);
@@ -69,10 +65,6 @@ error concatenated_tuple::load(size_t pos, deserializer& source) {
 
 size_t concatenated_tuple::size() const noexcept {
   return size_;
-}
-
-uint32_t concatenated_tuple::type_token() const noexcept {
-  return type_token_;
 }
 
 rtti_pair concatenated_tuple::type(size_t pos) const noexcept {

@@ -47,8 +47,8 @@ protected:
 
 void caf_main(actor_system& system) {
   auto f = make_function_view(system.spawn<dict_behavior>());
-  f(put_atom::value, "CAF", "success");
-  cout << "CAF is the key to " << f(get_atom::value, "CAF") << endl;
+  f(put_atom_v, "CAF", "success");
+  cout << "CAF is the key to " << f(get_atom_v, "CAF") << endl;
 }
 
 CAF_MAIN()

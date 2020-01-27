@@ -190,8 +190,8 @@ CAF_TEST(binary serializer picks up inspect functions) {
   SUBTEST("node ID") {
     auto nid = make_node_id(123, "000102030405060708090A0B0C0D0E0F10111213");
     CHECK_LOAD(node_id, unbox(nid),
-               // Implementation ID: atom("default").
-               0_b, 0_b, 0x3E_b, 0x9A_b, 0xAB_b, 0x9B_b, 0xAC_b, 0x79_b,
+               // Implementation ID: node_id::default_data::class_id (1)
+               1_b,
                // Process ID.
                0_b, 0_b, 0_b, 123_b,
                // Host ID.

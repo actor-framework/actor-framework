@@ -32,15 +32,9 @@
 #include "caf/none.hpp"
 #include "caf/variant.hpp"
 
-using namespace std;
-using namespace caf;
+using namespace std::string_literals;
 
-struct tostring_visitor : static_visitor<string> {
-  template <class T>
-  inline string operator()(const T& value) {
-    return to_string(value);
-  }
-};
+using namespace caf;
 
 // 20 integer wrappers for building a variant with 20 distint types
 #define i_n(n)                                                                 \
@@ -89,8 +83,8 @@ using v20 = variant<i01, i02, i03, i04, i05, i06, i07, i08, i09, i10,
 
 #define v20_test(n)                                                            \
   x3 = i##n{0x##n};                                                            \
-  CAF_CHECK_EQUAL(deep_to_string(x3), CAF_STR(i##n) + std::string("(")         \
-                                        + std::to_string(0x##n) + ")");        \
+  CAF_CHECK_EQUAL(deep_to_string(x3),                                          \
+                  CAF_STR(i##n) + "("s + std::to_string(0x##n) + ")");         \
   CAF_CHECK_EQUAL(v20{x3}, i##n{0x##n});                                       \
   x4 = x3;                                                                     \
   CAF_CHECK_EQUAL(x4, i##n{0x##n});                                            \
@@ -134,7 +128,7 @@ namespace {
 
 struct test_visitor {
   template <class... Ts>
-  string operator()(const Ts&... xs) {
+  std::string operator()(const Ts&... xs) {
     return deep_to_string(std::forward_as_tuple(xs...));
   }
 };
@@ -142,39 +136,35 @@ struct test_visitor {
 } // namespace
 
 CAF_TEST(constructors) {
-  variant<int, string> a{42};
-  variant<string, atom_value> b{atom("foo")};
-  variant<float, int, string> c{string{"bar"}};
-  variant<int, string, double> d{123};
-  variant<bool, uint8_t> e{uint8_t{252}};
+  variant<int, std::string> a{42};
+  variant<float, int, std::string> b{"bar"s};
+  variant<int, std::string, double> c{123};
+  variant<bool, uint8_t> d{uint8_t{252}};
   CAF_CHECK_EQUAL(a, 42);
-  CAF_CHECK_EQUAL(b, atom("foo"));
-  CAF_CHECK_EQUAL(d, 123);
-  CAF_CHECK_NOT_EQUAL(d, std::string{"123"});
-  CAF_CHECK_EQUAL(e, uint8_t{252});
+  CAF_CHECK_EQUAL(b, "bar"s);
+  CAF_CHECK_EQUAL(c, 123);
+  CAF_CHECK_NOT_EQUAL(c, "123"s);
+  CAF_CHECK_EQUAL(d, uint8_t{252});
 }
 
 CAF_TEST(n_ary_visit) {
-  variant<int, string> a{42};
-  variant<string, atom_value> b{atom("foo")};
-  variant<float, int, string> c{string{"bar"}};
-  variant<int, string, double> d{123};
+  variant<int, std::string> a{42};
+  variant<float, int, std::string> b{"bar"s};
+  variant<int, std::string, double> c{123};
   test_visitor f;
-  CAF_CHECK_EQUAL(visit(f, a, b), "(42, 'foo')");
-  CAF_CHECK_EQUAL(visit(f, a, b, c), "(42, 'foo', \"bar\")");
-  CAF_CHECK_EQUAL(visit(f, a, b, c, d), "(42, 'foo', \"bar\", 123)");
+  CAF_CHECK_EQUAL(visit(f, a), "(42)");
+  CAF_CHECK_EQUAL(visit(f, a, b), "(42, \"bar\")");
+  CAF_CHECK_EQUAL(visit(f, a, b, c), "(42, \"bar\", 123)");
 }
 
 CAF_TEST(get_if) {
-  variant<int ,string, atom_value> b = atom("foo");
+  variant<int, std::string> b = "foo"s;
   CAF_MESSAGE("test get_if directly");
   CAF_CHECK_EQUAL(get_if<int>(&b), nullptr);
-  CAF_CHECK_EQUAL(get_if<string>(&b), nullptr);
-  CAF_CHECK_NOT_EQUAL(get_if<atom_value>(&b), nullptr);
+  CAF_CHECK_NOT_EQUAL(get_if<std::string>(&b), nullptr);
   CAF_MESSAGE("test get_if via unit test framework");
   CAF_CHECK_NOT_EQUAL(b, 42);
-  CAF_CHECK_NOT_EQUAL(b, string{"foo"});
-  CAF_CHECK_EQUAL(b, atom("foo"));
+  CAF_CHECK_EQUAL(b, "foo"s);
 }
 
 CAF_TEST(less_than) {

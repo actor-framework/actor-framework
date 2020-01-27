@@ -20,7 +20,7 @@
 
 #include <type_traits>
 
-#include "caf/atom.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 
@@ -87,13 +87,10 @@ private:
 /// Converts `T` to `param<T>` unless `T` is arithmetic, an atom constant, or
 /// a stream handshake.
 template <class T>
-struct add_param : std::conditional<std::is_arithmetic<T>::value, T, param<T>> {
+struct add_param
+  : std::conditional<std::is_arithmetic<T>::value || std::is_empty<T>::value, T,
+                     param<T>> {
   // nop
-};
-
-template <atom_value V>
-struct add_param<atom_constant<V>> {
-  using type = atom_constant<V>;
 };
 
 template <class T>

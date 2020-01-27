@@ -47,7 +47,6 @@
 #include "caf/logger.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/prohibit_top_level_spawn_marker.hpp"
-#include "caf/runtime_settings_map.hpp"
 #include "caf/scoped_execution_unit.hpp"
 #include "caf/spawn_options.hpp"
 #include "caf/string_algorithms.hpp"
@@ -65,13 +64,6 @@ struct mpi_field_access {
       result += "]>";
     }
     return result;
-  }
-};
-
-template <atom_value X>
-struct mpi_field_access<atom_constant<X>> {
-  std::string operator()(const uniform_type_info_map&) {
-    return to_string(X);
   }
 };
 
@@ -123,24 +115,15 @@ public:
   friend class net::middleman;
   friend class abstract_actor;
 
-  /// The number of actors implicitly spawned by the actor system on startup.
-  static constexpr size_t num_internal_actors = 2;
-
-  /// Returns the ID of an internal actor by its name.
-  /// @pre x in {'SpawnServ', 'ConfigServ', 'StreamServ'}
-  static constexpr size_t internal_actor_id(atom_value x) {
-    return x == atom("SpawnServ") ? 0 : (x == atom("ConfigServ") ? 1 : 2);
-  }
-
   /// Returns the internal actor for dynamic spawn operations.
   const strong_actor_ptr& spawn_serv() const {
-    return internal_actors_[internal_actor_id(atom("SpawnServ"))];
+    return spawn_serv_;
   }
 
   /// Returns the internal actor for storing the runtime configuration
   /// for this actor system.
   const strong_actor_ptr& config_serv() const {
-    return internal_actors_[internal_actor_id(atom("ConfigServ"))];
+    return config_serv_;
   }
 
   actor_system() = delete;
@@ -483,16 +466,6 @@ public:
   /// Returns the system-wide clock.
   actor_clock& clock() noexcept;
 
-  /// Returns application-specific, system-wide runtime settings.
-  runtime_settings_map& runtime_settings() {
-    return settings_;
-  }
-
-  /// Returns application-specific, system-wide runtime settings.
-  const runtime_settings_map& runtime_settings() const {
-    return settings_;
-  }
-
   /// Returns the number of detached actors.
   size_t detached_actors() {
     return detached_.load();
@@ -594,12 +567,12 @@ private:
 
   /// Sets the internal actor for dynamic spawn operations.
   void spawn_serv(strong_actor_ptr x) {
-    internal_actors_[internal_actor_id(atom("SpawnServ"))] = std::move(x);
+    spawn_serv_ = std::move(x);
   }
 
   /// Sets the internal actor for storing the runtime configuration.
   void config_serv(strong_actor_ptr x) {
-    internal_actors_[internal_actor_id(atom("ConfigServ"))] = std::move(x);
+    config_serv_ = std::move(x);
   }
 
   // -- member variables -------------------------------------------------------
@@ -634,8 +607,11 @@ private:
   /// Stores whether the system should wait for running actors on shutdown.
   bool await_actors_before_shutdown_;
 
-  /// Stores SpawnServ, ConfigServ, and StreamServ.
-  std::array<strong_actor_ptr, num_internal_actors> internal_actors_;
+  /// Stores config parameters.
+  strong_actor_ptr config_serv_;
+
+  /// Allows fully dynamic spawning of actors.
+  strong_actor_ptr spawn_serv_;
 
   /// Counts the number of detached actors.
   std::atomic<size_t> detached_;
@@ -658,9 +634,6 @@ private:
 
   /// Allows waiting on specific values for `logger_dtor_done_`.
   mutable std::condition_variable logger_dtor_cv_;
-
-  /// Stores custom, system-wide key-value pairs.
-  runtime_settings_map settings_;
 
   /// Stores the system-wide factory for deserializing tracing data.
   tracing_data_factory* tracing_context_;

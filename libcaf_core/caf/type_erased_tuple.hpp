@@ -22,11 +22,13 @@
 #include <cstdint>
 #include <tuple>
 #include <typeinfo>
+#include <utility>
 
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/pseudo_tuple.hpp"
 #include "caf/detail/try_match.hpp"
+#include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
 #include "caf/optional.hpp"
 #include "caf/rtti_pair.hpp"
@@ -69,9 +71,6 @@ public:
 
   /// Returns the size of this tuple.
   virtual size_t size() const noexcept = 0;
-
-  /// Returns a type hint for the element types.
-  virtual uint32_t type_token() const noexcept = 0;
 
   /// Returns the type number and `std::type_info` object for
   /// the element at position `pos`.
@@ -179,14 +178,15 @@ public:
   bool match_element(size_t pos) const noexcept {
     CAF_ASSERT(pos < size());
     auto x = detail::meta_element_factory<T>::create();
-    return x.fun(x, *this, pos);
+    return matches(pos, x.typenr, x.type);
   }
 
   /// Returns `true` if the pattern `Ts...` matches the content of this tuple.
   template <class... Ts>
   bool match_elements() const noexcept {
+    std::make_index_sequence<sizeof...(Ts)> seq;
     detail::type_list<Ts...> tk;
-    return match_elements(tk);
+    return size() == sizeof...(Ts) && match_elements(tk, seq);
   }
 
   template <class F>
@@ -199,14 +199,23 @@ public:
   }
 
   /// @private
-  template <class T, class... Ts>
-  bool match_elements(detail::type_list<T, Ts...>) const noexcept {
-    detail::meta_elements<detail::type_list<T, Ts...>> xs;
-    return detail::try_match(*this, &xs.arr[0], 1 + sizeof...(Ts));
+  template <class... Ts>
+  bool match_elements(detail::type_list<Ts...> tk) const noexcept {
+    std::make_index_sequence<sizeof...(Ts)> seq;
+    return size() == sizeof...(Ts) && match_elements(tk, seq);
   }
 
   /// @private
-  inline bool match_elements(detail::type_list<>) const noexcept {
+  template <class Ts, size_t I, size_t... Is>
+  bool match_elements(Ts, std::index_sequence<I, Is...>) const noexcept {
+    using detail::tl_at_t;
+    return match_element<tl_at_t<Ts, I>>(I)
+           && (match_element<tl_at_t<Ts, Is>>(Is) && ...);
+  }
+
+  /// @private
+  bool match_elements(detail::type_list<>, std::index_sequence<>) const
+    noexcept {
     return empty();
   }
 
@@ -231,18 +240,14 @@ private:
 };
 
 /// @relates type_erased_tuple
-inline auto inspect(serializer& sink, const type_erased_tuple& x) {
-  return x.save(sink);
-}
+CAF_CORE_EXPORT error inspect(serializer& sink, const type_erased_tuple& x);
+
+/// @relates type_erased_tuple
+CAF_CORE_EXPORT error inspect(deserializer& source, type_erased_tuple& x);
 
 /// @relates type_erased_tuple
 inline auto inspect(binary_serializer& sink, const type_erased_tuple& x) {
   return x.save(sink);
-}
-
-/// @relates type_erased_tuple
-inline auto inspect(deserializer& source, type_erased_tuple& x) {
-  return x.load(source);
 }
 
 /// @relates type_erased_tuple
@@ -270,8 +275,6 @@ public:
   error_code<sec> load(size_t pos, binary_deserializer& source) override;
 
   size_t size() const noexcept override;
-
-  uint32_t type_token() const noexcept override;
 
   rtti_pair type(size_t pos) const noexcept override;
 

@@ -55,7 +55,8 @@ void await_all_locals_down(actor_system& sys, std::initializer_list<actor> xs) {
       ys.push_back(x);
     }
   // Don't block when using the test coordinator.
-  if (atom("testing") != get_or(sys.config(), "scheduler.policy", atom("")))
+  if (auto policy = get_if<std::string>(&sys.config(), "scheduler.policy");
+      policy && *policy != "testing")
     self->wait_for(ys);
 }
 
@@ -255,7 +256,7 @@ public:
     if (res.first) {
       // join remote source
       if (res.second == 1)
-        anon_send(broker_, join_atom::value, proxy_broker_);
+        anon_send(broker_, join_atom_v, proxy_broker_);
       return true;
     }
     CAF_LOG_WARNING("actor already joined group");
@@ -268,7 +269,7 @@ public:
     if (res.first && res.second == 0) {
       // leave the remote source,
       // because there's no more subscriber on this node
-      anon_send(broker_, leave_atom::value, proxy_broker_);
+      anon_send(broker_, leave_atom_v, proxy_broker_);
     }
   }
 
@@ -277,7 +278,7 @@ public:
     CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(mid) << CAF_ARG(msg));
     // forward message to the broker
     broker_->enqueue(std::move(sender), mid,
-                     make_message(forward_atom::value, std::move(msg)), eu);
+                     make_message(forward_atom_v, std::move(msg)), eu);
   }
 
   void stop() override {
