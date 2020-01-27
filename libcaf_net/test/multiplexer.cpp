@@ -173,4 +173,31 @@ CAF_TEST(send and receive) {
   CAF_CHECK_EQUAL(bob->receive(), "hello bob");
 }
 
+CAF_TEST(shutdown) {
+  std::mutex m;
+  std::condition_variable cv;
+  bool thread_id_set = false;
+  auto run_mpx = [&] {
+    std::unique_lock<std::mutex> lk(m);
+    mpx->set_thread_id();
+    thread_id_set = true;
+    lk.unlock();
+    cv.notify_one();
+    mpx->run();
+  };
+  CAF_REQUIRE_EQUAL(mpx->init(), none);
+  auto sockets = unbox(make_stream_socket_pair());
+  auto alice = make_counted<dummy_manager>(manager_count, sockets.first, mpx);
+  auto bob = make_counted<dummy_manager>(manager_count, sockets.second, mpx);
+  alice->register_reading();
+  bob->register_reading();
+  CAF_REQUIRE_EQUAL(mpx->num_socket_managers(), 3u);
+  std::thread mpx_thread{run_mpx};
+  std::unique_lock<std::mutex> lk(m);
+  cv.wait(lk, [&] { return thread_id_set; });
+  mpx->shutdown();
+  mpx_thread.join();
+  CAF_REQUIRE_EQUAL(mpx->num_socket_managers(), 0u);
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()
