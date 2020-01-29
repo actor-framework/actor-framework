@@ -69,6 +69,7 @@ set(CAF_CORE_SOURCES
   src/detail/ini_consumer.cpp
   src/detail/invoke_result_visitor.cpp
   src/detail/message_data.cpp
+  src/detail/meta_object.cpp
   src/detail/parse.cpp
   src/detail/parser/chars.cpp
   src/detail/pretty_type_name.cpp
@@ -154,6 +155,7 @@ set(CAF_CORE_SOURCES
   src/tracing_data_factory.cpp
   src/type_erased_tuple.cpp
   src/type_erased_value.cpp
+  src/type_id_list.cpp
   src/uniform_type_info_map.cpp
   src/uri.cpp
   src/uri_builder.cpp
@@ -193,6 +195,7 @@ set(CAF_CORE_TEST_SOURCES
   test/detail/bounds_checker.cpp
   test/detail/ini_consumer.cpp
   test/detail/limited_vector.cpp
+  test/detail/meta_object.cpp
   test/detail/parse.cpp
   test/detail/parser/read_bool.cpp
   test/detail/parser/read_floating_point.cpp
@@ -268,6 +271,7 @@ set(CAF_CORE_TEST_SOURCES
   test/to_string.cpp
   test/tracing_data.cpp
   test/type_erased_tuple.cpp
+  test/type_id_list.cpp
   test/typed_response_promise.cpp
   test/typed_spawn.cpp
   test/unit.cpp
