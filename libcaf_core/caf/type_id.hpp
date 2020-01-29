@@ -27,47 +27,53 @@
 
 namespace caf {
 
-/// Maps the type `T` to a globally unique 16-bit ID.
+/// Internal representation of a type ID.
+using type_id_t = uint16_t;
+
+/// Maps the type `T` to a globally unique ID.
 template <class T>
 struct type_id;
 
 /// Convenience alias for `type_id<T>::value`.
 /// @relates type_id
 template <class T>
-constexpr uint16_t type_id_v = type_id<T>::value;
+constexpr type_id_t type_id_v = type_id<T>::value;
 
 /// Maps the globally unique ID `V` to a type (inverse to ::type_id).
 /// @relates type_id
-template <uint16_t V>
+template <type_id_t V>
 struct type_by_id;
 
 /// Convenience alias for `type_by_id<I>::type`.
 /// @relates type_by_id
-template <uint16_t I>
+template <type_id_t I>
 using type_by_id_t = typename type_by_id<I>::type;
 
 /// Maps the globally unique ID `V` to a type name.
-template <uint16_t V>
+template <type_id_t V>
 struct type_name_by_id;
 
 /// Convenience alias for `type_name_by_id<I>::value`.
 /// @relates type_name_by_id
-template <uint16_t I>
+template <type_id_t I>
 constexpr const char* type_name_by_id_v = type_name_by_id<I>::value;
 
 /// The first type ID not reserved by CAF and its modules.
-constexpr uint16_t first_custom_type_id = 200;
+constexpr type_id_t first_custom_type_id = 200;
 
 } // namespace caf
 
 /// Starts a code block for registering custom types to CAF. Stores the first ID
-/// for the project as `caf::${project_name}_first_type_id`. Unless the project
-/// appends to an ID block of another project, users should use
-/// `caf::first_custom_type_id` as `first_id`.
+/// for the project as `caf::${project_name}_first_type_id`. Usually, users
+/// should use `caf::first_custom_type_id` as `first_id`. However, this
+/// mechanism also enables modules to append IDs to a block of another module or
+/// module. If two modules are developed separately to avoid dependencies, they
+/// only need to define sufficiently large offsets to guarantee collision-free
+/// IDs (CAF supports gaps in the ID space).
 #define CAF_BEGIN_TYPE_ID_BLOCK(project_name, first_id)                        \
   namespace caf {                                                              \
-  constexpr uint16_t project_name##_type_id_counter_init = __COUNTER__;        \
-  constexpr uint16_t project_name##_first_type_id = first_id;                  \
+  constexpr type_id_t project_name##_type_id_counter_init = __COUNTER__;       \
+  constexpr type_id_t project_name##_first_type_id = first_id;                 \
   }
 
 /// Assigns the next free type ID to `fully_qualified_name`.
@@ -75,7 +81,7 @@ constexpr uint16_t first_custom_type_id = 200;
   namespace caf {                                                              \
   template <>                                                                  \
   struct type_id<fully_qualified_name> {                                       \
-    static constexpr uint16_t value                                            \
+    static constexpr type_id_t value                                           \
       = project_name##_first_type_id                                           \
         + (__COUNTER__ - project_name##_type_id_counter_init - 1);             \
   };                                                                           \
@@ -105,12 +111,12 @@ constexpr uint16_t first_custom_type_id = 200;
 /// type ID used by the project as `caf::${project_name}_last_type_id`.
 #define CAF_END_TYPE_ID_BLOCK(project_name)                                    \
   namespace caf {                                                              \
-  constexpr uint16_t project_name##_last_type_id                               \
+  constexpr type_id_t project_name##_last_type_id                              \
     = project_name##_first_type_id                                             \
       + (__COUNTER__ - project_name##_type_id_counter_init - 2);               \
   struct project_name##_type_ids {                                             \
-    static constexpr uint16_t first = project_name##_first_type_id;            \
-    static constexpr uint16_t last = project_name##_last_type_id;              \
+    static constexpr type_id_t first = project_name##_first_type_id;           \
+    static constexpr type_id_t last = project_name##_last_type_id;             \
   };                                                                           \
   }
 

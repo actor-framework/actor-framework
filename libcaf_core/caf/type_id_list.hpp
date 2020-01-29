@@ -29,10 +29,10 @@
 
 namespace caf {
 
-/// A list of 16-bit type IDs, stored in a size-prefix, contiguous memory block.
+/// A list of type IDs, stored in a size-prefix, contiguous memory block.
 class type_id_list : detail::comparable<type_id_list> {
 public:
-  using pointer = const uint16_t*;
+  using pointer = const type_id_t*;
 
   constexpr explicit type_id_list(pointer data) noexcept : data_(data) {
     // nop
@@ -42,7 +42,7 @@ public:
 
   type_id_list& operator=(const type_id_list&) noexcept = default;
 
-  /// Queries whether this type list contains data, i,e, `data() != nullptr`.
+  /// Queries whether this type list contains data, i.e, `data() != nullptr`.
   constexpr operator bool() const noexcept {
     return data_ != nullptr;
   }
@@ -60,13 +60,13 @@ public:
 
   /// Returns the type ID at `index`.
   /// @pre `data() != nullptr`
-  constexpr uint16_t operator[](size_t index) const noexcept {
+  constexpr type_id_t operator[](size_t index) const noexcept {
     return data_[index + 1];
   }
 
   /// Compares this list to `other`.
   int compare(type_id_list other) const noexcept {
-    return memcmp(data_, other.data_, size() * sizeof(uint16_t));
+    return memcmp(data_, other.data_, size() * sizeof(type_id_t));
   }
 
 private:
@@ -76,8 +76,8 @@ private:
 /// @private
 template <class... Ts>
 struct make_type_id_list_helper {
-  static constexpr inline uint16_t data[]
-    = {static_cast<uint16_t>(sizeof...(Ts)), type_id_v<Ts>...};
+  static constexpr inline type_id_t data[]
+    = {static_cast<type_id_t>(sizeof...(Ts)), type_id_v<Ts>...};
 };
 
 /// Constructs a ::type_id_list from the template parameter pack `Ts`.

@@ -191,6 +191,7 @@ using ip_endpoint = ipv6_endpoint;
 using ip_subnet = ipv6_subnet;
 using settings = dictionary<config_value>;
 using stream_slot = uint16_t;
+using type_id_t = uint16_t;
 
 // -- functions ----------------------------------------------------------------
 

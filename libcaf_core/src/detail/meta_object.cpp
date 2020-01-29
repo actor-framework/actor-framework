@@ -55,7 +55,7 @@ span<const meta_object> global_meta_objects() {
   return {meta_objects, meta_objects_size};
 }
 
-meta_object& global_meta_object(uint16_t id) {
+meta_object& global_meta_object(type_id_t id) {
   CAF_ASSERT(id < meta_objects_size);
   return meta_objects[id];
 }
@@ -80,7 +80,7 @@ span<meta_object> resize_global_meta_objects(size_t size) {
   return {new_storage, size};
 }
 
-void set_global_meta_objects(uint16_t first_id, span<const meta_object> xs) {
+void set_global_meta_objects(type_id_t first_id, span<const meta_object> xs) {
   auto new_size = first_id + xs.size();
   if (first_id < meta_objects_size) {
     if (new_size > meta_objects_size)

@@ -57,7 +57,7 @@ struct meta_object {
 CAF_CORE_EXPORT span<const meta_object> global_meta_objects();
 
 /// Returns the global meta object for given type ID.
-CAF_CORE_EXPORT meta_object& global_meta_object(uint16_t id);
+CAF_CORE_EXPORT meta_object& global_meta_object(type_id_t id);
 
 /// Clears the array for storing global meta objects.
 /// @warning intended for unit testing only!
@@ -70,12 +70,12 @@ CAF_CORE_EXPORT void clear_global_meta_objects();
 ///          causes undefined behavior.
 CAF_CORE_EXPORT span<meta_object> resize_global_meta_objects(size_t size);
 
-/// Sets the meta objects in range `(first_id, first_id + xs.size]` to `xs`.
+/// Sets the meta objects in range `[first_id, first_id + xs.size)` to `xs`.
 /// Resizes the global meta object if needed. Aborts the program if the range
 /// already contains meta objects.
 /// @warning calling this after constructing any ::actor_system is unsafe and
 ///          causes undefined behavior.
-CAF_CORE_EXPORT void set_global_meta_objects(uint16_t first_id,
+CAF_CORE_EXPORT void set_global_meta_objects(type_id_t first_id,
                                              span<const meta_object> xs);
 
 } // namespace caf::detail

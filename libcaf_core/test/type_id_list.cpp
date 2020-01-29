@@ -27,7 +27,7 @@
 using namespace caf;
 
 CAF_TEST(lists store the size at index 0) {
-  uint16_t data[] = {3, 1, 2, 4};
+  type_id_t data[] = {3, 1, 2, 4};
   type_id_list xs{data};
   CAF_CHECK_EQUAL(xs.size(), 3u);
   CAF_CHECK_EQUAL(xs[0], 1u);
@@ -36,9 +36,9 @@ CAF_TEST(lists store the size at index 0) {
 }
 
 CAF_TEST(lists are comparable) {
-  uint16_t data[] = {3, 1, 2, 4};
+  type_id_t data[] = {3, 1, 2, 4};
   type_id_list xs{data};
-  uint16_t data_copy[] = {3, 1, 2, 4};
+  type_id_t data_copy[] = {3, 1, 2, 4};
   type_id_list ys{data_copy};
   CAF_CHECK_EQUAL(xs, ys);
   data_copy[1] = 10;
