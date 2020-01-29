@@ -2,30 +2,35 @@
 
 file(GLOB_RECURSE CAF_NET_HEADERS "caf/*.hpp")
 
-# -- auto generate to_string for enum types ------------------------------------
+# -- add consistency checks for enum to_string implementations -----------------
 
-enum_to_string("caf/net/basp/connection_state.hpp" "basp_conn_strings.cpp")
-enum_to_string("caf/net/basp/ec.hpp" "basp_ec_strings.cpp")
-enum_to_string("caf/net/basp/message_type.hpp" "basp_message_type_strings.cpp")
-enum_to_string("caf/net/operation.hpp" "operation_strings.cpp")
+add_enum_consistency_check("caf/net/basp/connection_state.hpp"
+                           "src/basp/connection_state_strings.cpp")
+add_enum_consistency_check("caf/net/basp/ec.hpp"
+                           "src/basp/ec_strings.cpp")
+add_enum_consistency_check("caf/net/basp/message_type.hpp"
+                           "src/basp/message_type_strings.cpp")
+add_enum_consistency_check("caf/net/operation.hpp"
+                           "src/basp/operation_strings.cpp")
 
 # -- list cpp files for caf::net -----------------------------------------------
 
 set(CAF_NET_SOURCES
-  "${CMAKE_BINARY_DIR}/basp_conn_strings.cpp"
-  "${CMAKE_BINARY_DIR}/basp_ec_strings.cpp"
-  "${CMAKE_BINARY_DIR}/basp_message_type_strings.cpp"
-  "${CMAKE_BINARY_DIR}/operation_strings.cpp"
   src/actor_proxy_impl.cpp
   src/application.cpp
+  src/basp/connection_state_strings.cpp
+  src/basp/ec_strings.cpp
+  src/basp/message_type_strings.cpp
+  src/basp/operation_strings.cpp
   src/convert_ip_endpoint.cpp
   src/datagram_socket.cpp
   src/defaults.cpp
-  src/ec.cpp
+  src/defaults.cpp
   src/endpoint_manager.cpp
   src/header.cpp
   src/host.cpp
   src/ip.cpp
+  src/message_queue.cpp
   src/multiplexer.cpp
   src/net/backend/test.cpp
   src/net/endpoint_manager_queue.cpp
@@ -36,13 +41,11 @@ set(CAF_NET_SOURCES
   src/pipe_socket.cpp
   src/pollset_updater.cpp
   src/socket.cpp
-  src/tcp_accept_socket.cpp
-  src/tcp_stream_socket.cpp
   src/socket_manager.cpp
   src/stream_socket.cpp
+  src/tcp_accept_socket.cpp
+  src/tcp_stream_socket.cpp
   src/udp_datagram_socket.cpp
-  src/defaults.cpp
-  src/message_queue.cpp
   src/worker.cpp
 )
 

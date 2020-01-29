@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <string>
+
 #include "caf/actor.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/drr_queue.hpp"
@@ -73,7 +75,7 @@ public:
     };
 
     struct timeout {
-      atom_value type;
+      std::string type;
       uint64_t id;
     };
 
@@ -83,7 +85,7 @@ public:
 
     event(node_id observing_peer, actor_id local_actor_id, error reason);
 
-    event(atom_value type, uint64_t id);
+    event(std::string type, uint64_t id);
 
     ~event() override;
 

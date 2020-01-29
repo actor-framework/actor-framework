@@ -142,7 +142,7 @@ strong_actor_ptr application::resolve_local_path(string_view path) {
   static constexpr string_view name_prefix = "name/";
   if (starts_with(path, name_prefix)) {
     path.remove_prefix(name_prefix.size());
-    atom_value name;
+    std::string name;
     if (auto err = detail::parse(path, name))
       return nullptr;
     return system().registry().get(name);

@@ -84,7 +84,7 @@ public:
   }
 
   template <class Transport>
-  void timeout(Transport&, atom_value, uint64_t) {
+  void timeout(Transport&, const std::string&, uint64_t) {
     rec_buf_->push_back(static_cast<byte>(id_));
   }
 
@@ -263,7 +263,7 @@ struct fixture : host_fixture {
 
 #define CHECK_TIMEOUT(testcase)                                                \
   dispatcher.set_timeout(1u, testcase.ep);                                     \
-  dispatcher.timeout(dummy, atom("dummy"), 1u);                                \
+  dispatcher.timeout(dummy, "dummy", 1u);                                      \
   CAF_CHECK_EQUAL(buf->size(), 1u);                                            \
   CAF_CHECK_EQUAL(static_cast<byte>(testcase.worker_id), buf->at(0));          \
   buf->clear();

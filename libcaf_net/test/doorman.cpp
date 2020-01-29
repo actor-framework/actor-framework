@@ -87,13 +87,13 @@ public:
 
   template <class Parent>
   void resolve(Parent&, string_view path, const actor& listener) {
-    anon_send(listener, resolve_atom::value,
+    anon_send(listener, resolve_atom_v,
               "the resolved path is still "
                 + std::string(path.begin(), path.end()));
   }
 
   template <class Parent>
-  void timeout(Parent&, atom_value, uint64_t) {
+  void timeout(Parent&, const std::string&, uint64_t) {
     // nop
   }
 

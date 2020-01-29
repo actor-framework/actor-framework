@@ -150,10 +150,10 @@ public:
 
   /// Notifies the transport that the timeout identified by `value` plus `id`
   /// was triggered.
-  /// @param value The `atom_value` of the timeout.
+  /// @param tag The type tag of the timeout.
   /// @param id The timeout id of the timeout.
-  void timeout(endpoint_manager&, atom_value value, uint64_t id) {
-    next_layer_.timeout(*this, value, id);
+  void timeout(endpoint_manager&, std::string tag, uint64_t id) {
+    next_layer_.timeout(*this, std::move(tag), id);
   }
 
   /// Callback for setting a timeout. Will be called after setting a timeout to

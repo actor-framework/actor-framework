@@ -131,11 +131,11 @@ public:
                                                             &mgr.system(), cfg,
                                                             &mgr);
     std::string path{locator.path().begin(), locator.path().end()};
-    anon_send(listener, resolve_atom::value, std::move(path), p);
+    anon_send(listener, resolve_atom_v, std::move(path), p);
   }
 
   template <class Manager>
-  void timeout(Manager&, atom_value, uint64_t) {
+  void timeout(Manager&, const std::string&, uint64_t) {
     // nop
   }
 

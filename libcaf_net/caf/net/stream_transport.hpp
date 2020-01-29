@@ -110,9 +110,9 @@ public:
   bool handle_write_event(endpoint_manager& manager) override {
     CAF_LOG_TRACE(CAF_ARG2("handle", this->handle_.id)
                   << CAF_ARG2("queue-size", write_queue_.size()));
-    auto drain_write_queue = []() -> error_code<sec> {
+    auto drain_write_queue = [this]() -> error_code<sec> {
       // Helper function to sort empty buffers back into the right caches.
-      auto recycle = [&]() {
+      auto recycle = [this]() {
         auto& front = this->write_queue_.front();
         auto& is_header = front.first;
         auto& buf = front.second;

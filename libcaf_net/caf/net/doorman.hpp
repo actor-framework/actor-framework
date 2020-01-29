@@ -95,7 +95,7 @@ public:
   template <class Parent>
   void resolve(Parent&, const uri& locator, const actor& listener) {
     CAF_LOG_ERROR("doorman called to resolve" << CAF_ARG(locator));
-    anon_send(listener, resolve_atom::value, "doormen cannot resolve paths");
+    anon_send(listener, resolve_atom_v, "doormen cannot resolve paths");
   }
 
   void new_proxy(endpoint_manager&, const node_id& peer, actor_id id) {
@@ -114,10 +114,9 @@ public:
   }
 
   template <class Parent>
-  void timeout(Parent&, atom_value x, uint64_t id) {
-    CAF_LOG_ERROR("doorman received timeout" << CAF_ARG(x) << CAF_ARG(id));
-    CAF_IGNORE_UNUSED(x);
-    CAF_IGNORE_UNUSED(id);
+  void timeout(Parent&, [[maybe_unused]] const std::string& tag,
+               [[maybe_unused]] uint64_t id) {
+    CAF_LOG_ERROR("doorman received timeout" << CAF_ARG(tag) << CAF_ARG(id));
   }
 
   void handle_error(sec err) {

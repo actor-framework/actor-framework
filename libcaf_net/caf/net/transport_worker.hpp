@@ -98,9 +98,9 @@ public:
   }
 
   template <class Parent>
-  void timeout(Parent& parent, atom_value value, uint64_t id) {
+  void timeout(Parent& parent, std::string tag, uint64_t id) {
     auto writer = make_packet_writer_decorator(*this, parent);
-    application_.timeout(writer, value, id);
+    application_.timeout(writer, std::move(tag), id);
   }
 
   void handle_error(sec error) {

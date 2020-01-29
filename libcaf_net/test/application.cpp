@@ -246,8 +246,8 @@ CAF_TEST(actor message) {
   MOCK(basp::message_type::actor_message, make_message_id().integer_value(),
        mars, actor_id{42}, self->id(), std::vector<strong_actor_ptr>{},
        make_message("hello world!"));
-  allow((atom_value, strong_actor_ptr),
-        from(_).to(self).with(atom("monitor"), _));
+  allow((monitor_atom, strong_actor_ptr),
+        from(_).to(self).with(monitor_atom_v, _));
   expect((std::string), from(_).to(self).with("hello world!"));
 }
 
@@ -282,7 +282,7 @@ CAF_TEST(resolve request on id with result) {
 CAF_TEST(resolve request on name with result) {
   handle_handshake();
   consume_handshake();
-  sys.registry().put(atom("foo"), self);
+  sys.registry().put("foo", self);
   std::string path = "name/foo";
   CAF_CHECK_EQUAL(app.state(), basp::connection_state::await_header);
   MOCK(basp::message_type::resolve_request, 42, path);

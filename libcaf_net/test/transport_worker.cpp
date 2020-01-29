@@ -46,7 +46,7 @@ struct application_result {
   std::vector<byte> data_buffer;
   std::string resolve_path;
   actor resolve_listener;
-  atom_value timeout_value;
+  std::string timeout_value;
   uint64_t timeout_id;
   sec err;
 };
@@ -93,8 +93,8 @@ public:
   }
 
   template <class Parent>
-  void timeout(Parent&, atom_value value, uint64_t id) {
-    res_->timeout_value = value;
+  void timeout(Parent&, std::string value, uint64_t id) {
+    res_->timeout_value = std::move(value);
     res_->timeout_id = id;
   }
 
@@ -221,8 +221,8 @@ CAF_TEST(resolve) {
 }
 
 CAF_TEST(timeout) {
-  worker.timeout(transport, atom("bar"), 42u);
-  CAF_CHECK_EQUAL(application_results->timeout_value, atom("bar"));
+  worker.timeout(transport, "bar", 42u);
+  CAF_CHECK_EQUAL(application_results->timeout_value, "bar");
   CAF_CHECK_EQUAL(application_results->timeout_id, 42u);
 }
 

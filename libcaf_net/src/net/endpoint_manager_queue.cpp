@@ -42,8 +42,8 @@ endpoint_manager_queue::event::event(node_id observing_peer,
   // nop
 }
 
-endpoint_manager_queue::event::event(atom_value type, uint64_t id)
-  : element(element_type::event), value(timeout{type, id}) {
+endpoint_manager_queue::event::event(std::string tag, uint64_t id)
+  : element(element_type::event), value(timeout{std::move(tag), id}) {
   // nop
 }
 

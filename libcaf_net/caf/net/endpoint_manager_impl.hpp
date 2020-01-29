@@ -21,7 +21,6 @@
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_system.hpp"
-#include "caf/atom.hpp"
 #include "caf/detail/overload.hpp"
 #include "caf/net/endpoint_manager.hpp"
 
@@ -63,11 +62,11 @@ public:
   // -- timeout management -----------------------------------------------------
 
   template <class... Ts>
-  uint64_t set_timeout(actor_clock::time_point tp, atom_value type,
+  uint64_t set_timeout(actor_clock::time_point tp, std::string type,
                        Ts&&... xs) {
     auto act = actor_cast<abstract_actor*>(timeout_proxy_);
     CAF_ASSERT(act != nullptr);
-    sys_.clock().set_multi_timeout(tp, act, type, next_timeout_id_);
+    sys_.clock().set_multi_timeout(tp, act, std::move(type), next_timeout_id_);
     transport_.set_timeout(next_timeout_id_, std::forward<Ts>(xs)...);
     return next_timeout_id_++;
   }

@@ -117,9 +117,9 @@ public:
   }
 
   template <class Parent>
-  void timeout(Parent& parent, atom_value value, uint64_t id) {
+  void timeout(Parent& parent, std::string tag, uint64_t id) {
     if (auto worker = workers_by_timeout_id_.at(id)) {
-      worker->timeout(parent, value, id);
+      worker->timeout(parent, std::move(tag), id);
       workers_by_timeout_id_.erase(id);
     }
   }

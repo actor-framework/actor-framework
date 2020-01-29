@@ -30,9 +30,6 @@ using namespace caf::net;
 
 namespace {
 
-using ping_atom = caf::atom_constant<caf::atom("ping")>;
-using pong_atom = caf::atom_constant<caf::atom("pong")>;
-
 struct earth_node {
   uri operator()() {
     return unbox(make_uri("test://earth"));
@@ -118,15 +115,15 @@ private:
 behavior ping_actor(event_based_actor* self, actor pong, size_t num_pings,
                     std::shared_ptr<size_t> count) {
   CAF_MESSAGE("num_pings: " << num_pings);
-  self->send(pong, ping_atom::value, 1);
+  self->send(pong, ping_atom_v, 1);
   return {
-    [=](pong_atom, int value) -> std::tuple<atom_value, int> {
+    [=](pong_atom, int value) {
       CAF_MESSAGE("received `pong_atom`");
       if (++*count >= num_pings) {
         CAF_MESSAGE("received " << num_pings << " pings, call self->quit");
         self->quit();
       }
-      return std::make_tuple(ping_atom::value, value + 1);
+      return std::make_tuple(ping_atom_v, value + 1);
     },
   };
 }
@@ -138,17 +135,16 @@ behavior pong_actor(event_based_actor* self) {
     self->quit(dm.reason);
   });
   return {
-    [=](ping_atom, int value) -> std::tuple<atom_value, int> {
+    [=](ping_atom, int value) {
       CAF_MESSAGE("received `ping_atom` from " << self->current_sender());
       if (self->current_sender() == self->ctrl())
         abort();
       self->monitor(self->current_sender());
       // set next behavior
-      self->become([](ping_atom, int val) {
-        return std::make_tuple(pong_atom::value, val);
-      });
+      self->become(
+        [](ping_atom, int val) { return std::make_tuple(pong_atom_v, val); });
       // reply to 'ping'
-      return std::make_tuple(pong_atom::value, value);
+      return std::make_tuple(pong_atom_v, value);
     },
   };
 }
@@ -188,7 +184,7 @@ CAF_TEST_FIXTURE_SCOPE(ping_pong_tests, fixture)
 CAF_TEST(full setup) {
   auto pong = earth.sys.spawn(pong_actor);
   run();
-  earth.sys.registry().put(atom("pong"), pong);
+  earth.sys.registry().put("pong", pong);
   auto remote_pong = mars.resolve("test://earth/name/pong");
   auto count = std::make_shared<size_t>(0);
   auto ping = mars.sys.spawn(ping_actor, remote_pong, 10, count);

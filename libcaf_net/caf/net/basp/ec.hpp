@@ -21,7 +21,8 @@
 #include <cstdint>
 #include <string>
 
-#include "caf/fwd.hpp"
+#include "caf/detail/net_export.hpp"
+#include "caf/error_category.hpp"
 
 namespace caf::net::basp {
 
@@ -44,9 +45,15 @@ enum class ec : uint8_t {
 };
 
 /// @relates ec
-std::string to_string(ec x);
-
-/// @relates ec
-error make_error(ec x);
+CAF_NET_EXPORT std::string to_string(ec x);
 
 } // namespace caf::net::basp
+
+namespace caf {
+
+template <>
+struct error_category<net::basp::ec> {
+  static constexpr uint8_t value = 4;
+};
+
+} // namespace caf

@@ -66,13 +66,13 @@ public:
 
   // -- member functions -------------------------------------------------------
 
-  void cancel_timeout(atom_value type, uint64_t id) {
-    parent_.cancel_timeout(type, id);
+  void cancel_timeout(std::string tag, uint64_t id) {
+    parent_.cancel_timeout(std::move(tag), id);
   }
 
   template <class... Ts>
-  uint64_t set_timeout(timestamp tout, atom_value type, Ts&&... xs) {
-    return parent_.set_timeout(tout, type, std::forward<Ts>(xs)...);
+  uint64_t set_timeout(timestamp tout, std::string tag, Ts&&... xs) {
+    return parent_.set_timeout(tout, std::move(tag), std::forward<Ts>(xs)...);
   }
 
 protected:

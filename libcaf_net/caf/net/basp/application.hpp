@@ -117,7 +117,7 @@ public:
   void local_actor_down(packet_writer& writer, actor_id id, error reason);
 
   template <class Parent>
-  void timeout(Parent&, atom_value, uint64_t) {
+  void timeout(Parent&, const std::string&, uint64_t) {
     // nop
   }
 

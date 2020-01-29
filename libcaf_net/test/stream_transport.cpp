@@ -114,12 +114,12 @@ public:
                                                             &parent.system(),
                                                             cfg,
                                                             std::move(ptr));
-    anon_send(listener, resolve_atom::value,
-              std::string{path.begin(), path.end()}, p);
+    anon_send(listener, resolve_atom_v, std::string{path.begin(), path.end()},
+              p);
   }
 
   template <class Parent>
-  void timeout(Parent&, atom_value, uint64_t) {
+  void timeout(Parent&, const std::string&, uint64_t) {
     // nop
   }
 
