@@ -574,7 +574,12 @@ add_optional_caf_lib(io)
 # build SSL module if OpenSSL library is available or if a parent project
 # defined OPENSSL_LIBRARIES for us
 if(DEFINED OPENSSL_LIBRARIES)
+  if (NOT OPENSSL_INCLUDE_DIR)
+    message(FATAL_ERROR "got OPENSSL_LIBRARIES predefined but no OPENSSL_INCLUDE_DIR")
+  endif()
   message(STATUS "use OPENSSL_LIBRARIES provided by parent: ${OPENSSL_LIBRARIES}")
+  message(STATUS "use OPENSSL_INCLUDE_DIR provided by parent: ${OPENSSL_INCLUDE_DIR}")
+  include_directories(BEFORE ${OPENSSL_INCLUDE_DIR})
   add_optional_caf_lib(openssl)
 elseif(NOT CAF_NO_OPENSSL)
   find_package(OpenSSL)
