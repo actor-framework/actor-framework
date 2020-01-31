@@ -113,7 +113,11 @@ public:
       m.mem = 0;
 #else
       ::rusage ru;
+#ifdef RUSAGE_THREAD
       ::getrusage(RUSAGE_THREAD, &ru);
+#else
+      ::getrusage(RUSAGE_SELF, &ru)
+#endif
       m.usr = to_usec(ru.ru_utime);
       m.sys = to_usec(ru.ru_stime);
       m.mem = ru.ru_maxrss;
