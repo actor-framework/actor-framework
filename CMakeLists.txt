@@ -574,7 +574,12 @@ add_optional_caf_lib(io)
 # build SSL module if OpenSSL library is available or if a parent project
 # defined OPENSSL_LIBRARIES for us
 if(DEFINED OPENSSL_LIBRARIES)
+  if (NOT OPENSSL_INCLUDE_DIR)
+    message(FATAL_ERROR "got OPENSSL_LIBRARIES predefined but no OPENSSL_INCLUDE_DIR")
+  endif()
   message(STATUS "use OPENSSL_LIBRARIES provided by parent: ${OPENSSL_LIBRARIES}")
+  message(STATUS "use OPENSSL_INCLUDE_DIR provided by parent: ${OPENSSL_INCLUDE_DIR}")
+  include_directories(BEFORE ${OPENSSL_INCLUDE_DIR})
   add_optional_caf_lib(openssl)
 elseif(NOT CAF_NO_OPENSSL)
   find_package(OpenSSL)
@@ -682,27 +687,18 @@ if(NOT CAF_NO_UNIT_TESTS)
 endif()
 
 
-# -- Fetch branch name and SHA if available ------------------------------------
-
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/release.txt")
-  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/release.txt" CAF_RELEASE)
-  string(REGEX REPLACE "\n" "" CAF_RELEASE "${CAF_RELEASE}")
-else()
-  set(CAF_RELEASE "${CAF_VERSION}")
-endif()
-
-message(STATUS "Set release version for all documentation to ${CAF_RELEASE}.")
-
 # -- Setup for building manual and API documentation ---------------------------
 
-add_subdirectory(doc)
-
-################################################################################
-#                     Add additional project files to GUI                      #
-################################################################################
-
-file(GLOB_RECURSE script_files "scripts/*")
-add_custom_target(gui_dummy SOURCES configure ${script_files})
+if(NOT caf_is_subproject)
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/release.txt")
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/release.txt" CAF_RELEASE)
+    string(REGEX REPLACE "\n" "" CAF_RELEASE "${CAF_RELEASE}")
+  else()
+    set(CAF_RELEASE "${CAF_VERSION}")
+  endif()
+  message(STATUS "Set release version for all documentation to ${CAF_RELEASE}.")
+  add_subdirectory(doc)
+endif()
 
 # -- Export important variables to the parent scope ----------------------------
 
