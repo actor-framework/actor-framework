@@ -338,7 +338,11 @@ if (NOT caf_is_subproject)
   # add -stdlib=libc++ when using Clang if possible
   if(NOT CAF_NO_AUTO_LIBCPP AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CXXFLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
-    set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++")
+    if(NOT APPLE AND NOT WIN32)
+      set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++ -pthread")
+    else()
+      set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++")
+    endif()
     try_run(ProgramResult
             CompilationSucceeded
             "${CMAKE_CURRENT_BINARY_DIR}"
