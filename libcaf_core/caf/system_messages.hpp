@@ -43,6 +43,11 @@ struct exit_msg {
 };
 
 /// @relates exit_msg
+inline bool operator==(const exit_msg& x, const exit_msg& y) noexcept {
+  return x.source == y.source && x.reason == y.reason;
+}
+
+/// @relates exit_msg
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, exit_msg& x) {
   return f(meta::type_name("exit_msg"), x.source, x.reason);
