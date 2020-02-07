@@ -40,7 +40,7 @@ template <class> class intrusive_ptr;
 template <class> class optional;
 template <class> class param;
 template <class> class span;
-template <class> class stream;;
+template <class> class stream;
 template <class> class stream_sink;
 template <class> class stream_source;
 template <class> class trivial_match_case;
