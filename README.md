@@ -67,6 +67,15 @@ brew install caf --HEAD
 A [Conan](https://conan.io/) recipe for CAF along with pre-built libraries
 for most platforms are available at [bincrafters/caf](https://bintray.com/bincrafters/public-conan/caf%3Abincrafters).
 
+### VCPKG
+
+You can build and install CAF using [vcpkg](https://github.com/Microsoft/vcpkg/) dependency manager with a single command:
+
+```sh
+vcpkg install caf
+```
+
+The caf port in vcpkg is kept up to date by Microsoft team members and community contributors.
 
 ## Get the Sources
 
