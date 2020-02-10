@@ -39,6 +39,17 @@ namespace {
 using calculator = typed_actor<replies_to<add_atom, int, int>::with<int>,
                                replies_to<sub_atom, int, int>::with<int>>;
 
+} // namespace
+
+CAF_BEGIN_TYPE_ID_BLOCK(remote_spawn_tests, caf::first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(remote_spawn_tests, calculator)
+
+CAF_END_TYPE_ID_BLOCK(remote_spawn_tests)
+
+
+namespace {
+
 // function-based, dynamically typed, event-based API
 behavior calculator_fun(event_based_actor*) {
   return {

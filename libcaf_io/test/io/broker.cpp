@@ -87,11 +87,11 @@ behavior peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
   });
   // Assume exactly one connection.
   CAF_REQUIRE(self->connections().size() == 1);
-  self->configure_read(hdl, receive_policy::exactly(sizeof(uint16_t)));
-  auto write = [=](uint16_t type) {
+  self->configure_read(hdl, receive_policy::exactly(sizeof(type_id_t)));
+  auto write = [=](type_id_t type) {
     auto& buf = self->wr_buf(hdl);
     auto first = reinterpret_cast<byte*>(&type);
-    buf.insert(buf.end(), first, first + sizeof(uint16_t));
+    buf.insert(buf.end(), first, first + sizeof(type_id_t));
     self->flush(hdl);
   };
   return {
@@ -101,20 +101,20 @@ behavior peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
     },
     [=](const new_data_msg& msg) {
       CAF_MESSAGE("received new_data_msg");
-      CAF_REQUIRE_EQUAL(msg.buf.size(), sizeof(uint16_t));
-      uint16_t type = 0;
-      memcpy(&type, msg.buf.data(), sizeof(uint16_t));
-      static_assert(type_nr<ping_atom>::value != type_nr<pong_atom>::value);
-      if (type == type_nr_v<ping_atom>) {
+      CAF_REQUIRE_EQUAL(msg.buf.size(), sizeof(type_id_t));
+      type_id_t type = 0;
+      memcpy(&type, msg.buf.data(), sizeof(type_id_t));
+      static_assert(type_id_v<ping_atom> != type_id_v<pong_atom>);
+      if (type == type_id_v<ping_atom>) {
         self->send(buddy, ping_atom_v);
-      } else if (type == type_nr_v<pong_atom>) {
+      } else if (type == type_id_v<pong_atom>) {
         self->send(buddy, pong_atom_v);
       } else {
         CAF_FAIL("unexpected message type");
       }
     },
-    [=](ping_atom) { write(type_nr_v<ping_atom>); },
-    [=](pong_atom) { write(type_nr_v<pong_atom>); },
+    [=](ping_atom) { write(type_id_v<ping_atom>); },
+    [=](pong_atom) { write(type_id_v<pong_atom>); },
   };
 }
 

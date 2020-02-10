@@ -30,10 +30,37 @@
 #include "caf/detail/make_meta_object.hpp"
 #include "caf/init_global_meta_objects.hpp"
 
+namespace {
+
+struct i32_wrapper;
+struct i64_wrapper;
+
+} // namespace
+
+CAF_BEGIN_TYPE_ID_BLOCK(meta_object_tests, caf::first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(meta_object_tests, i32_wrapper)
+
+  CAF_ADD_TYPE_ID(meta_object_tests, i64_wrapper)
+
+CAF_END_TYPE_ID_BLOCK(meta_object_tests)
+
 using namespace std::string_literals;
 
 using namespace caf;
 using namespace caf::detail;
+
+static_assert(meta_object_tests_first_type_id == first_custom_type_id);
+
+static_assert(meta_object_tests_last_type_id == first_custom_type_id + 1);
+
+static_assert(type_id_v<i32_wrapper> == first_custom_type_id);
+
+static_assert(type_id_v<i64_wrapper> == first_custom_type_id + 1);
+
+static_assert(type_id_v<i32_wrapper> == meta_object_tests_first_type_id);
+
+static_assert(type_id_v<i64_wrapper> == meta_object_tests_last_type_id);
 
 namespace {
 
@@ -79,34 +106,6 @@ auto inspect(Inspector& f, i64_wrapper& x) {
 
 size_t i64_wrapper::instances = 0;
 
-} // namespace
-
-CAF_BEGIN_TYPE_ID_BLOCK(meta_object_suite, caf::first_custom_type_id)
-
-  CAF_ADD_TYPE_ID(meta_object_suite, i32_wrapper)
-
-  CAF_ADD_TYPE_ID(meta_object_suite, i64_wrapper)
-
-CAF_END_TYPE_ID_BLOCK(meta_object_suite)
-
-namespace caf {
-
-static_assert(meta_object_suite_first_type_id == first_custom_type_id);
-
-static_assert(meta_object_suite_last_type_id == first_custom_type_id + 1);
-
-static_assert(type_id<i32_wrapper>::value == first_custom_type_id);
-
-static_assert(type_id<i64_wrapper>::value == first_custom_type_id + 1);
-
-static_assert(type_id<i32_wrapper>::value == meta_object_suite_first_type_id);
-
-static_assert(type_id<i64_wrapper>::value == meta_object_suite_last_type_id);
-
-} // namespace caf
-
-namespace {
-
 struct fixture {
   fixture() {
     CAF_ASSERT(i32_wrapper::instances == 0);
@@ -116,7 +115,7 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(meta_object_suite, fixture)
+CAF_TEST_FIXTURE_SCOPE(meta_object_tests, fixture)
 
 CAF_TEST(meta objects allow construction and destruction of objects) {
   auto meta_i32_wrapper = make_meta_object<i32_wrapper>("i32_wrapper");
@@ -165,15 +164,16 @@ CAF_TEST(resizing the global meta objects keeps entries) {
 }
 
 CAF_TEST(init_global_meta_objects takes care of creating a meta object table) {
-  init_global_meta_objects<meta_object_suite_type_ids>();
+  detail::clear_global_meta_objects();
+  init_global_meta_objects<meta_object_tests_type_ids>();
   auto xs = global_meta_objects();
-  CAF_REQUIRE_EQUAL(xs.size(), meta_object_suite_last_type_id + 1u);
+  CAF_REQUIRE_EQUAL(xs.size(), meta_object_tests_last_type_id + 1u);
   CAF_CHECK_EQUAL(type_name_by_id_v<type_id_v<i32_wrapper>>, "i32_wrapper"s);
   CAF_CHECK_EQUAL(type_name_by_id_v<type_id_v<i64_wrapper>>, "i64_wrapper"s);
   CAF_CHECK_EQUAL(xs[type_id_v<i32_wrapper>].type_name, "i32_wrapper"s);
   CAF_CHECK_EQUAL(xs[type_id_v<i64_wrapper>].type_name, "i64_wrapper"s);
   CAF_MESSAGE("calling init_global_meta_objects again is a no-op");
-  init_global_meta_objects<meta_object_suite_type_ids>();
+  init_global_meta_objects<meta_object_tests_type_ids>();
   auto ys = global_meta_objects();
   auto same = [](const auto& x, const auto& y) {
     return x.type_name == y.type_name;

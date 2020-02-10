@@ -49,22 +49,6 @@ outbound_path::~outbound_path() {
   // nop
 }
 
-void outbound_path::emit_open(local_actor* self, stream_slot slot,
-                              strong_actor_ptr to, message handshake_data,
-                              stream_priority prio) {
-  CAF_LOG_TRACE(CAF_ARG(slot) << CAF_ARG(to) << CAF_ARG(handshake_data)
-                << CAF_ARG(prio));
-  CAF_ASSERT(self != nullptr);
-  CAF_ASSERT(to != nullptr);
-  // Make sure we receive errors from this point on.
-  stream_aborter::add(to, self->address(), slot,
-                      stream_aborter::sink_aborter);
-  // Send message.
-  unsafe_send_as(self, to,
-                 open_stream_msg{slot, std::move(handshake_data), self->ctrl(),
-                                 nullptr, prio});
-}
-
 void outbound_path::emit_batch(local_actor* self, int32_t xs_size, message xs) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(xs_size) << CAF_ARG(xs));
   CAF_ASSERT(xs_size > 0);

@@ -16,15 +16,26 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE message_lifetime
-#include "caf/test/unit_test.hpp"
+
+#include "caf/test/dsl.hpp"
 
 #include <atomic>
 #include <iostream>
 
 #include "caf/all.hpp"
+
+namespace {
+
+struct fail_on_copy;
+
+} // namespace
+
+CAF_BEGIN_TYPE_ID_BLOCK(message_lifetime_tests, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(message_lifetime_tests, fail_on_copy)
+
+CAF_END_TYPE_ID_BLOCK(message_lifetime_tests)
 
 using namespace caf;
 
@@ -81,11 +92,6 @@ private:
   message msg_;
 };
 
-struct fixture {
-  actor_system_config cfg;
-  actor_system system{cfg};
-};
-
 struct fail_on_copy {
   int value;
 
@@ -111,13 +117,18 @@ typename Inspector::result_type inspect(Inspector& f, fail_on_copy& x) {
   return f(x.value);
 }
 
+struct config : actor_system_config {
+  config() {
+    init_global_meta_objects<message_lifetime_tests_type_ids>();
+  }
+};
+
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(message_lifetime_tests, fixture)
+CAF_TEST_FIXTURE_SCOPE(message_lifetime_tests, test_coordinator_fixture<config>)
 
 CAF_TEST(nocopy_in_scoped_actor) {
   auto msg = make_message(fail_on_copy{1});
-  scoped_actor self{system};
   self->send(self, msg);
   self->receive(
     [&](const fail_on_copy& x) {
@@ -130,7 +141,6 @@ CAF_TEST(nocopy_in_scoped_actor) {
 
 CAF_TEST(message_lifetime_in_scoped_actor) {
   auto msg = make_message(1, 2, 3);
-  scoped_actor self{system};
   self->send(self, msg);
   self->receive(
     [&](int a, int b, int c) {
@@ -155,7 +165,7 @@ CAF_TEST(message_lifetime_in_scoped_actor) {
 
 CAF_TEST(message_lifetime_in_spawned_actor) {
   for (size_t i = 0; i < 100; ++i)
-    system.spawn<tester>(system.spawn<testee>());
+    sys.spawn<tester>(sys.spawn<testee>());
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

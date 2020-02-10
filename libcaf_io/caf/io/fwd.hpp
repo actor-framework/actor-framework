@@ -18,6 +18,18 @@
 
 #pragma once
 
+#include <map>
+#include <string>
+#include <vector>
+
+#include "caf/allowed_unsafe_message_type.hpp"
+#include "caf/type_id.hpp"
+
+// Unfortunately required, because we cannot add a forward declaration for the
+// enum protol::network that we need for assigning a type ID to
+// io::network::address_listing.
+#include "caf/io/network/protocol.hpp"
+
 namespace caf {
 
 // -- templates from the parent namespace necessary for defining aliases -------
@@ -33,14 +45,30 @@ class typed_broker;
 
 // -- classes ------------------------------------------------------------------
 
-class scribe;
+class abstract_broker;
+class accept_handle;
+class basp_broker;
 class broker;
+class connection_handle;
+class datagram_servant;
 class doorman;
 class middleman;
-class basp_broker;
 class receive_policy;
-class abstract_broker;
-class datagram_servant;
+class scribe;
+
+// -- structs ------------------------------------------------------------------
+
+struct acceptor_closed_msg;
+struct acceptor_passivated_msg;
+struct connection_closed_msg;
+struct connection_passivated_msg;
+struct data_transferred_msg;
+struct datagram_sent_msg;
+struct datagram_servant_closed_msg;
+struct datagram_servant_passivated_msg;
+struct new_connection_msg;
+struct new_data_msg;
+struct new_datagram_msg;
 
 // -- aliases ------------------------------------------------------------------
 
@@ -52,11 +80,40 @@ using datagram_servant_ptr = intrusive_ptr<datagram_servant>;
 
 namespace network {
 
-class multiplexer;
 class default_multiplexer;
+class multiplexer;
+class receive_buffer;
+
+using address_listing = std::map<protocol::network, std::vector<std::string>>;
 
 } // namespace network
 
 } // namespace io
 } // namespace caf
 
+CAF_BEGIN_TYPE_ID_BLOCK(io_module, builtin_type_ids::end)
+
+  CAF_ADD_TYPE_ID(io_module, caf::io::accept_handle);
+  CAF_ADD_TYPE_ID(io_module, caf::io::acceptor_closed_msg);
+  CAF_ADD_TYPE_ID(io_module, caf::io::acceptor_passivated_msg);
+  CAF_ADD_TYPE_ID(io_module, caf::io::connection_closed_msg);
+  CAF_ADD_TYPE_ID(io_module, caf::io::connection_handle);
+  CAF_ADD_TYPE_ID(io_module, caf::io::connection_passivated_msg);
+  CAF_ADD_TYPE_ID(io_module, caf::io::data_transferred_msg);
+  CAF_ADD_TYPE_ID(io_module, caf::io::datagram_sent_msg);
+  CAF_ADD_TYPE_ID(io_module, caf::io::datagram_servant_closed_msg);
+  CAF_ADD_TYPE_ID(io_module, caf::io::datagram_servant_passivated_msg);
+  CAF_ADD_TYPE_ID(io_module, caf::io::datagram_servant_ptr);
+  CAF_ADD_TYPE_ID(io_module, caf::io::doorman_ptr);
+  CAF_ADD_TYPE_ID(io_module, caf::io::network::address_listing);
+  CAF_ADD_TYPE_ID(io_module, caf::io::network::protocol);
+  CAF_ADD_TYPE_ID(io_module, caf::io::network::receive_buffer);
+  CAF_ADD_TYPE_ID(io_module, caf::io::new_connection_msg);
+  CAF_ADD_TYPE_ID(io_module, caf::io::new_data_msg);
+  CAF_ADD_TYPE_ID(io_module, caf::io::new_datagram_msg);
+  CAF_ADD_TYPE_ID(io_module, caf::io::scribe_ptr);
+
+CAF_END_TYPE_ID_BLOCK(io_module)
+
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(caf::io::doorman_ptr)
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(caf::io::scribe_ptr)

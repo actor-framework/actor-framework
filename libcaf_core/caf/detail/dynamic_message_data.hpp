@@ -23,6 +23,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/message_data.hpp"
 #include "caf/type_erased_value.hpp"
+#include "caf/type_id.hpp"
 
 namespace caf::detail {
 
@@ -64,7 +65,9 @@ public:
 
   size_t size() const noexcept override;
 
-  rtti_pair type(size_t pos) const noexcept override;
+  type_id_list types() const noexcept override;
+
+  type_id_t type(size_t pos) const noexcept override;
 
   const void* get(size_t pos) const noexcept override;
 
@@ -84,6 +87,8 @@ public:
 
 private:
   // -- data members -----------------------------------------------------------
+
+  std::vector<type_id_t> types_;
 
   elements elements_;
 };

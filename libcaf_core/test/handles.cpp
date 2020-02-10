@@ -283,7 +283,7 @@ CAF_TEST(string_representation) {
 
 CAF_TEST(mpi_string_representation) {
   CAF_CHECK(sys.message_types(a0.dt).empty());
-  std::set<std::string> st_expected{"caf::replies_to<@i32>::with<@i32>"};
+  std::set<std::string> st_expected{"caf::replies_to<int32_t>::with<int32_t>"};
   CAF_CHECK_EQUAL(st_expected, sys.message_types(a0.st));
   CAF_CHECK_EQUAL(st_expected, sys.message_types<testee_actor>());
 }

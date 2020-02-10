@@ -68,7 +68,7 @@ public:
     impl_ = detail::make_behavior(std::forward<Ts>(xs)...);
   }
 
-  inline void swap(behavior& other) {
+  void swap(behavior& other) {
     impl_.swap(other.impl_);
   }
 
@@ -83,7 +83,7 @@ public:
   void assign(behavior other);
 
   /// Invokes the timeout callback if set.
-  inline void handle_timeout() {
+  void handle_timeout() {
     impl_->handle_timeout();
   }
 
@@ -94,28 +94,27 @@ public:
   }
 
   /// Runs this handler and returns its (optional) result.
-  inline optional<message> operator()(message& xs) {
+  optional<message> operator()(message& xs) {
     return impl_ ? impl_->invoke(xs) : none;
   }
 
-  inline optional<message> operator()(type_erased_tuple& xs) {
+  optional<message> operator()(type_erased_tuple& xs) {
     return impl_ ? impl_->invoke(xs) : none;
   }
 
   /// Runs this handler with callback.
-  inline match_case::result
-  operator()(detail::invoke_result_visitor& f, type_erased_tuple& xs) {
-    return impl_ ? impl_->invoke(f, xs) : match_case::no_match;
+  match_result operator()(detail::invoke_result_visitor& f,
+                          type_erased_tuple& xs) {
+    return impl_ ? impl_->invoke(f, xs) : match_result::no_match;
   }
 
   /// Runs this handler with callback.
-  inline match_case::result
-  operator()(detail::invoke_result_visitor& f, message& xs) {
-    return impl_ ? impl_->invoke(f, xs) : match_case::no_match;
+  match_result operator()(detail::invoke_result_visitor& f, message& xs) {
+    return impl_ ? impl_->invoke(f, xs) : match_result::no_match;
   }
 
   /// Checks whether this behavior is not empty.
-  inline operator bool() const {
+  operator bool() const {
     return static_cast<bool>(impl_);
   }
 
@@ -123,15 +122,15 @@ public:
 
   using impl_ptr = intrusive_ptr<detail::behavior_impl>;
 
-  inline const impl_ptr& as_behavior_impl() const {
+  const impl_ptr& as_behavior_impl() const {
     return impl_;
   }
 
-  inline behavior(impl_ptr ptr) : impl_(std::move(ptr)) {
+  behavior(impl_ptr ptr) : impl_(std::move(ptr)) {
     // nop
   }
 
-  inline behavior& unbox() {
+  behavior& unbox() {
     return *this;
   }
 

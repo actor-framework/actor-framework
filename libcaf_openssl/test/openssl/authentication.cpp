@@ -43,6 +43,12 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
+CAF_BEGIN_TYPE_ID_BLOCK(message_tests, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(message_tests, std::vector<int>)
+
+CAF_END_TYPE_ID_BLOCK(message_tests)
+
 using namespace caf;
 
 namespace {
@@ -54,7 +60,6 @@ public:
   config() {
     load<io::middleman>();
     load<openssl::manager>();
-    add_message_type<std::vector<int>>("std::vector<int>");
     actor_system_config::parse(test::engine::argc(), test::engine::argv());
     set("middleman.manual-multiplexing", true);
     set("middleman.attach-utility-actors", true);

@@ -23,6 +23,7 @@
 #include "caf/meta/type_name.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_slot.hpp"
+#include "caf/type_id.hpp"
 
 namespace caf {
 
@@ -32,5 +33,11 @@ class stream {
 public:
   using value_type = T;
 };
+
+/// @relates stream
+template <class Inspector, class T>
+auto inspect(Inspector& f, stream<T>&) {
+  return f(meta::type_name(type_name_v<stream<T>>));
+}
 
 } // namespace caf

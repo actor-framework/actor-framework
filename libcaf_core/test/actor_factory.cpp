@@ -16,14 +16,20 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE actor_factory
+
+#include "caf/actor_system_config.hpp"
+
 #include "caf/test/unit_test.hpp"
 
-#include "caf/all.hpp"
-
 #include "caf/actor_registry.hpp"
+#include "caf/all.hpp"
+#include "caf/type_id.hpp"
+
+// CAF_BEGIN_TYPE_ID_BLOCK(actor_factory_tests, first_custom_type_id)
+//
+//
+// CAF_END_TYPE_ID_BLOCK(actor_factory_tests)
 
 using namespace caf;
 
@@ -33,6 +39,12 @@ namespace {
 
 struct fixture {
   actor_system_config cfg;
+
+  fixture() {
+    detail::clear_global_meta_objects();
+    init_global_meta_objects<builtin_type_ids>();
+    // init_global_meta_objects<actor_factory_tests_type_ids>();
+  }
 
   void test_spawn(message args, bool expect_fail = false) {
     actor_system system{cfg};

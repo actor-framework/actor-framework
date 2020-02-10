@@ -6,6 +6,8 @@ file(GLOB_RECURSE CAF_CORE_HEADERS "caf/*.hpp")
 
 add_enum_consistency_check("caf/sec.hpp" "src/sec_strings.cpp")
 add_enum_consistency_check("caf/pec.hpp" "src/pec_strings.cpp")
+add_enum_consistency_check("caf/match_result.hpp"
+                           "src/match_result_strings.cpp")
 add_enum_consistency_check("caf/stream_priority.hpp"
                            "src/stream_priority_strings.cpp")
 add_enum_consistency_check("caf/exit_reason.hpp"
@@ -109,7 +111,7 @@ set(CAF_CORE_SOURCES
   src/logger.cpp
   src/mailbox_element.cpp
   src/make_config_option.cpp
-  src/match_case.cpp
+  src/match_result_strings.cpp
   src/memory_managed.cpp
   src/message.cpp
   src/message_builder.cpp
@@ -131,7 +133,6 @@ set(CAF_CORE_SOURCES
   src/replies_to.cpp
   src/response_promise.cpp
   src/resumable.cpp
-  src/rtti_pair.cpp
   src/scheduled_actor.cpp
   src/scheduler/abstract_coordinator.cpp
   src/scheduler/test_coordinator.cpp
@@ -156,7 +157,6 @@ set(CAF_CORE_SOURCES
   src/type_erased_tuple.cpp
   src/type_erased_value.cpp
   src/type_id_list.cpp
-  src/uniform_type_info_map.cpp
   src/uri.cpp
   src/uri_builder.cpp
 )
@@ -240,7 +240,6 @@ set(CAF_CORE_TEST_SOURCES
   test/logger.cpp
   test/mailbox_element.cpp
   test/make_config_value_field.cpp
-  test/match.cpp
   test/message.cpp
   test/message_id.cpp
   test/message_lifetime.cpp
@@ -257,7 +256,6 @@ set(CAF_CORE_TEST_SOURCES
   test/policy/select_any.cpp
   test/request_timeout.cpp
   test/result.cpp
-  test/rtti_pair.cpp
   test/selective_streaming.cpp
   test/serialization.cpp
   test/settings.cpp

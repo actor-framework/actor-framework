@@ -20,14 +20,47 @@
 
 #include "caf/message.hpp"
 
-#include "caf/test/unit_test.hpp"
-
-#include "caf/message_handler.hpp"
+#include "caf/test/dsl.hpp"
 
 #include <map>
 #include <numeric>
 #include <string>
 #include <vector>
+
+#include "caf/init_global_meta_objects.hpp"
+#include "caf/message_handler.hpp"
+#include "caf/type_id.hpp"
+
+namespace {
+
+struct s1;
+struct s2;
+struct s3;
+
+} // namespace
+
+CAF_BEGIN_TYPE_ID_BLOCK(message_tests, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(message_tests, s1)
+
+  CAF_ADD_TYPE_ID(message_tests, s2)
+
+  CAF_ADD_TYPE_ID(message_tests, s3)
+
+  CAF_ADD_TYPE_ID(message_tests, std::vector<int>)
+
+  CAF_ADD_TYPE_ID(message_tests, std::vector<std::string>)
+
+  CAF_ADD_TYPE_ID(message_tests, std::map<int CAF_PP_COMMA int>)
+
+  CAF_ADD_TYPE_ID(message_tests,
+                  std::tuple<int CAF_PP_COMMA int CAF_PP_COMMA int>)
+
+  CAF_ADD_TYPE_ID(
+    message_tests,
+    std::tuple<std::string CAF_PP_COMMA int32_t CAF_PP_COMMA uint32_t>)
+
+CAF_END_TYPE_ID_BLOCK(message_tests)
 
 using std::map;
 using std::string;
@@ -35,6 +68,8 @@ using std::vector;
 using std::make_tuple;
 
 using namespace caf;
+
+using namespace std::literals::string_literals;
 
 CAF_TEST(apply) {
   auto f1 = [] {
@@ -85,7 +120,15 @@ std::string msg_as_string(Ts&&... xs) {
   return to_string(make_message(std::forward<Ts>(xs)...));
 }
 
+struct config : actor_system_config {
+  config() {
+    init_global_meta_objects<message_tests_type_ids>();
+  }
+};
+
 } // namespace
+
+CAF_TEST_FIXTURE_SCOPE(message_tests, test_coordinator_fixture<config>)
 
 CAF_TEST(compare_custom_types) {
   s2 tmp;
@@ -130,7 +173,7 @@ CAF_TEST(maps_to_string) {
 CAF_TEST(tuples_to_string) {
   auto msg1 = make_message(make_tuple(1, 2, 3), 4, 5);
   CAF_CHECK_EQUAL(to_string(msg1), "((1, 2, 3), 4, 5)");
-  auto msg2 = make_message(make_tuple(string{"one"}, 2, uint32_t{3}), 4, true);
+  auto msg2 = make_message(make_tuple("one"s, int32_t{2}, uint32_t{3}), 4, true);
   CAF_CHECK_EQUAL(to_string(msg2), "((\"one\", 2, 3), 4, true)");
 }
 
@@ -150,3 +193,5 @@ CAF_TEST(match_elements exposes element types) {
   CAF_CHECK((msg.match_element<int64_t>(2)));
   CAF_CHECK((msg.match_elements<put_atom, string, int64_t>()));
 }
+
+CAF_TEST_FIXTURE_SCOPE_END()

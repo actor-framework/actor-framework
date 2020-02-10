@@ -30,6 +30,7 @@
 #include "caf/error.hpp"
 #include "caf/serializer.hpp"
 #include "caf/type_erased_value.hpp"
+#include "caf/type_id.hpp"
 
 namespace caf::detail {
 
@@ -87,18 +88,8 @@ public:
 
   // -- overridden observers ---------------------------------------------------
 
-  static rtti_pair type(std::integral_constant<uint16_t, 0>) {
-    return {0, &typeid(value_type)};
-  }
-
-  template <uint16_t V>
-  static rtti_pair type(std::integral_constant<uint16_t, V>) {
-    return {V, nullptr};
-  }
-
-  rtti_pair type() const override {
-    std::integral_constant<uint16_t, caf::type_nr<value_type>::value> token;
-    return type(token);
+  type_id_t type() const override {
+    return type_id_v<value_type>;
   }
 
   const void* get() const override {

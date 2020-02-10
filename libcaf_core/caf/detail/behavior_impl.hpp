@@ -20,16 +20,19 @@
 
 #include <tuple>
 #include <type_traits>
+#include <utility>
 
+#include "caf/const_typed_message_view.hpp"
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/invoke_result_visitor.hpp"
+#include "caf/detail/param_message_view.hpp"
 #include "caf/detail/tail_argument_token.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/match_case.hpp"
+#include "caf/match_result.hpp"
 #include "caf/message.hpp"
 #include "caf/none.hpp"
 #include "caf/optional.hpp"
@@ -38,6 +41,7 @@
 #include "caf/skip.hpp"
 #include "caf/timeout_definition.hpp"
 #include "caf/timespan.hpp"
+#include "caf/typed_message_view.hpp"
 #include "caf/typed_response_promise.hpp"
 #include "caf/variant.hpp"
 
@@ -59,12 +63,13 @@ public:
 
   explicit behavior_impl(timespan tout);
 
-  virtual match_case::result invoke_empty(detail::invoke_result_visitor& f);
+  match_result invoke_empty(detail::invoke_result_visitor& f);
 
-  virtual match_case::result
-  invoke(detail::invoke_result_visitor& f, type_erased_tuple& xs);
+  virtual match_result
+  invoke(detail::invoke_result_visitor& f, type_erased_tuple& xs)
+    = 0;
 
-  match_case::result invoke(detail::invoke_result_visitor& f, message& xs);
+  match_result invoke(detail::invoke_result_visitor& f, message& xs);
 
   optional<message> invoke(message&);
 
@@ -80,29 +85,6 @@ public:
 
 protected:
   timespan timeout_;
-  match_case_info* begin_;
-  match_case_info* end_;
-};
-
-template <class Tuple>
-void call_timeout_handler(Tuple& tup, std::true_type) {
-  auto& f = std::get<std::tuple_size<Tuple>::value - 1>(tup);
-  f.handler();
-}
-
-template <class Tuple>
-void call_timeout_handler(Tuple&, std::false_type) {
-  // nop
-}
-
-template <class T, bool IsTimeout = is_timeout_definition<T>::value>
-struct lift_behavior {
-  using type = trivial_match_case<T>;
-};
-
-template <class T>
-struct lift_behavior<T, true> {
-  using type = T;
 };
 
 template <bool HasTimeout, class Tuple>
@@ -135,59 +117,61 @@ public:
 
   static constexpr size_t num_cases = sizeof...(Ts) - (has_timeout ? 1 : 0);
 
-  using cases =
-    typename std::conditional<has_timeout,
-                              typename tl_pop_back<type_list<Ts...>>::type,
-                              type_list<Ts...>>::type;
-
   default_behavior_impl(tuple_type&& tup) : cases_(std::move(tup)) {
-    init();
+    if constexpr (has_timeout) {
+      this->timeout_ = std::get<num_cases>(cases_).timeout;
+    }
   }
 
   template <class... Us>
   default_behavior_impl(Us&&... xs) : cases_(std::forward<Us>(xs)...) {
-    init();
+    if constexpr (has_timeout) {
+      this->timeout_ = std::get<num_cases>(cases_).timeout;
+    }
+  }
+
+  virtual match_result invoke(detail::invoke_result_visitor& f,
+                              type_erased_tuple& xs) override {
+    return invoke_impl(f, xs, std::make_index_sequence<sizeof...(Ts)>{});
+  }
+
+  template <size_t... Is>
+  match_result invoke_impl(detail::invoke_result_visitor& f,
+                           type_erased_tuple& msg, std::index_sequence<Is...>) {
+    auto result = match_result::no_match;
+    auto dispatch = [&](auto& fun) {
+      using fun_type = std::decay_t<decltype(fun)>;
+      if constexpr (!is_timeout_definition<fun_type>::value) {
+        using trait = get_callable_trait_t<fun_type>;
+        auto arg_types = to_type_id_list<typename trait::decayed_arg_types>();
+        if (arg_types == msg.types()) {
+          typename trait::message_view_type xs{msg};
+          using fun_result = decltype(detail::apply_args(fun, xs));
+          if constexpr (std::is_same_v<void, fun_result>) {
+            detail::apply_args(fun, xs);
+            result = f.visit(unit) ? match_result::match : match_result::skip;
+          } else {
+            auto invoke_res = detail::apply_args(fun, xs);
+            result = f.visit(invoke_res) ? match_result::match
+                                         : match_result::skip;
+          }
+          return true;
+        }
+      }
+      return false;
+    };
+    static_cast<void>((dispatch(std::get<Is>(cases_)) || ...));
+    return result;
   }
 
   void handle_timeout() override {
-    std::integral_constant<bool, has_timeout> token;
-    call_timeout_handler(cases_, token);
+    if constexpr (has_timeout) {
+      std::get<num_cases>(cases_).handler();
+    }
   }
 
 private:
-  void init() {
-    std::integral_constant<size_t, 0> first;
-    std::integral_constant<size_t, num_cases> last;
-    init(first, last);
-  }
-
-  template <size_t Last>
-  void init(std::integral_constant<size_t, Last>,
-            std::integral_constant<size_t, Last>) {
-    this->begin_ = arr_.data();
-    this->end_ = arr_.data() + arr_.size();
-    std::integral_constant<bool, has_timeout> token;
-    set_timeout(token);
-  }
-
-  template <size_t First, size_t Last>
-  void init(std::integral_constant<size_t, First>,
-            std::integral_constant<size_t, Last> last) {
-    auto& element = std::get<First>(cases_);
-    arr_[First] = match_case_info{&element};
-    init(std::integral_constant<size_t, First + 1>{}, last);
-  }
-
-  void set_timeout(std::true_type) {
-    this->timeout_ = std::get<num_cases>(cases_).timeout;
-  }
-
-  void set_timeout(std::false_type) {
-    // nop
-  }
-
   tuple_type cases_;
-  std::array<match_case_info, num_cases> arr_;
 };
 
 template <class Tuple>
@@ -204,11 +188,9 @@ struct make_behavior_t {
   }
 
   template <class... Ts>
-  intrusive_ptr<
-    default_behavior_impl<std::tuple<typename lift_behavior<Ts>::type...>>>
+  intrusive_ptr<default_behavior_impl<std::tuple<Ts...>>>
   operator()(Ts... xs) const {
-    using type
-      = default_behavior_impl<std::tuple<typename lift_behavior<Ts>::type...>>;
+    using type = default_behavior_impl<std::tuple<Ts...>>;
     return make_counted<type>(std::move(xs)...);
   }
 };

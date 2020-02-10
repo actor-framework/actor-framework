@@ -39,6 +39,7 @@
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/function_view.hpp"
+#include "caf/init_global_meta_objects.hpp"
 #include "caf/io/basp/header.hpp"
 #include "caf/io/basp_broker.hpp"
 #include "caf/io/network/default_multiplexer.hpp"
@@ -333,7 +334,8 @@ void middleman::stop() {
 }
 
 void middleman::init(actor_system_config& cfg) {
-  // never detach actors when using the testing multiplexer
+  // Note: logging is not available at this stage.
+  // Never detach actors when using the testing multiplexer.
   auto network_backend = get_or(cfg, "middleman.network-backend",
                                 defaults::middleman::network_backend);
   if (network_backend == "testing") {
@@ -371,19 +373,8 @@ void middleman::init(actor_system_config& cfg) {
   };
   auto gfactory = [=]() -> group_module* { return new remote_groups(*this); };
   cfg.group_module_factories.emplace_back(gfactory);
-  // logging not available at this stage
-  // add I/O-related types to config
-  cfg.add_message_type<network::protocol>("@protocol")
-    .add_message_type<network::address_listing>("@address_listing")
-    .add_message_type<network::receive_buffer>("@receive_buffer")
-    .add_message_type<new_data_msg>("@new_data_msg")
-    .add_message_type<new_connection_msg>("@new_connection_msg")
-    .add_message_type<acceptor_closed_msg>("@acceptor_closed_msg")
-    .add_message_type<connection_closed_msg>("@connection_closed_msg")
-    .add_message_type<accept_handle>("@accept_handle")
-    .add_message_type<connection_handle>("@connection_handle")
-    .add_message_type<connection_passivated_msg>("@connection_passivated_msg")
-    .add_message_type<acceptor_passivated_msg>("@acceptor_passivated_msg");
+  // Add I/O-related types.
+  init_global_meta_objects<io_module_type_ids>();
   // Compute and set ID for this network node.
   auto this_node = node_id::default_data::local(cfg);
   system().node_.swap(this_node);

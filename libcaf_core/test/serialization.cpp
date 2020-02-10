@@ -63,16 +63,37 @@
 #include "caf/serializer.hpp"
 #include "caf/variant.hpp"
 
-using namespace std;
+namespace {
+
+using strmap = std::map<std::string, std::u16string>;
+
+struct raw_struct;
+
+enum class test_enum : uint32_t;
+
+struct test_array;
+
+struct test_empty_non_pod;
+
+} // namespace
+
+CAF_BEGIN_TYPE_ID_BLOCK(serialization_tests, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(serialization_tests, strmap);
+  CAF_ADD_TYPE_ID(serialization_tests, std::vector<bool>);
+  CAF_ADD_TYPE_ID(serialization_tests, raw_struct);
+  CAF_ADD_TYPE_ID(serialization_tests, test_enum);
+  CAF_ADD_TYPE_ID(serialization_tests, test_array);
+  CAF_ADD_TYPE_ID(serialization_tests, test_empty_non_pod);
+
+CAF_END_TYPE_ID_BLOCK(serialization_tests)
+
 using namespace caf;
-using caf::detail::type_erased_value_impl;
 
 namespace {
 
-using strmap = map<string, u16string>;
-
 struct raw_struct {
-  string str;
+  std::string str;
 };
 
 template <class Inspector>
@@ -130,11 +151,7 @@ typename Inspector::result_type inspect(Inspector& f, test_empty_non_pod&) {
 class config : public actor_system_config {
 public:
   config() {
-    add_message_type<test_enum>("test_enum");
-    add_message_type<raw_struct>("raw_struct");
-    add_message_type<test_array>("test_array");
-    add_message_type<test_empty_non_pod>("test_empty_non_pod");
-    add_message_type<std::vector<bool>>("bool_vector");
+    init_global_meta_objects<serialization_tests_type_ids>();
   }
 };
 
@@ -145,7 +162,7 @@ struct fixture : test_coordinator_fixture<config> {
   double f64 = 54.3;
   timestamp ts = timestamp{timestamp::duration{1478715821 * 1000000000ll}};
   test_enum te = test_enum::b;
-  string str = "Lorem ipsum dolor sit amet.";
+  std::string str = "Lorem ipsum dolor sit amet.";
   raw_struct rs;
   test_array ta{
     {0, 1, 2, 3},
@@ -195,7 +212,7 @@ struct fixture : test_coordinator_fixture<config> {
   }
 
   fixture() {
-    rs.str.assign(string(str.rbegin(), str.rend()));
+    rs.str.assign(std::string(str.rbegin(), str.rend()));
     msg = make_message(i32, i64, ts, te, str, rs);
     config_value::dictionary dict;
     put(dict, "scheduler.policy", "none");
@@ -217,9 +234,9 @@ struct is_message {
   bool equal(T&& v, Ts&&... vs) {
     bool ok = false;
     // work around for gcc 4.8.4 bug
-    auto tup = tie(v, vs...);
+    auto tup = std::tie(v, vs...);
     message_handler impl{
-      [&](T const& u, Ts const&... us) { ok = tup == tie(u, us...); }};
+      [&](T const& u, Ts const&... us) { ok = tup == std::tie(u, us...); }};
     impl(msg);
     return ok;
   }
@@ -340,6 +357,7 @@ CAF_TEST(multiple_messages) {
 }
 
 CAF_TEST(type_erased_value) {
+  using caf::detail::type_erased_value_impl;
   auto buf = serialize(str);
   type_erased_value_ptr ptr{new type_erased_value_impl<std::string>};
   binary_deserializer source{sys, buf};

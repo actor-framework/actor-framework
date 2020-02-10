@@ -25,15 +25,16 @@
 #include "caf/attach_stream_sink.hpp"
 #include "caf/attach_stream_source.hpp"
 #include "caf/attach_stream_stage.hpp"
+#include "caf/composable_behavior_based_actor.hpp"
 #include "caf/typed_actor.hpp"
 
 #define ERROR_HANDLER [&](error& err) { CAF_FAIL(system.render(err)); }
 
-using namespace caf;
-
 namespace {
 
-// -- composable behaviors using primitive data types and streams --------------
+using namespace caf;
+
+struct counting_string;
 
 using i3_actor = typed_actor<replies_to<int, int, int>::with<int>>;
 
@@ -46,6 +47,26 @@ using stage_actor = typed_actor<replies_to<stream<int>>::with<stream<int>>>;
 using sink_actor = typed_actor<reacts_to<stream<int>>>;
 
 using foo_actor = i3_actor::extend_with<d_actor>;
+
+} // namespace
+
+CAF_BEGIN_TYPE_ID_BLOCK(composable_behavior_tests, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(composable_behavior_tests, std::vector<int>)
+
+  CAF_ADD_TYPE_ID(composable_behavior_tests, caf::stream<int>)
+
+  CAF_ADD_TYPE_ID(composable_behavior_tests, counting_string)
+
+  CAF_ADD_TYPE_ID(composable_behavior_tests, foo_actor)
+
+CAF_END_TYPE_ID_BLOCK(composable_behavior_tests)
+
+using namespace caf;
+
+namespace {
+
+// -- composable behaviors using primitive data types and streams --------------
 
 class foo_actor_state : public composable_behavior<foo_actor> {
 public:
@@ -263,6 +284,7 @@ struct config : actor_system_config {
   config() {
     using foo_actor_impl = composable_behavior_based_actor<foo_actor_state>;
     add_actor_type<foo_actor_impl>("foo_actor");
+    init_global_meta_objects<composable_behavior_tests_type_ids>();
   }
 };
 

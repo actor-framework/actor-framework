@@ -57,13 +57,13 @@ namespace caf {
 
 /// @warning calling this after constructing any ::actor_system is unsafe and
 ///          causes undefined behavior.
-template <uint16_t... Is>
-void init_global_meta_objects_impl(std::integer_sequence<uint16_t, Is...>,
-                                   uint16_t first_id) {
+template <class ProjectIds, uint16_t... Is>
+void init_global_meta_objects_impl(std::integer_sequence<uint16_t, Is...>) {
+  static_assert(sizeof...(Is) > 0);
   detail::meta_object src[] = {
     detail::make_meta_object<type_by_id_t<Is>>(type_name_by_id_v<Is>)...,
   };
-  detail::set_global_meta_objects(first_id, make_span(src));
+  detail::set_global_meta_objects(ProjectIds::begin, make_span(src));
 }
 
 /// Initializes the global meta object table with all types in `ProjectIds`.
@@ -71,10 +71,8 @@ void init_global_meta_objects_impl(std::integer_sequence<uint16_t, Is...>,
 ///          causes undefined behavior.
 template <class ProjectIds>
 void init_global_meta_objects() {
-  static constexpr uint16_t begin = ProjectIds::first;
-  static constexpr uint16_t end = ProjectIds::last + 1;
-  init_global_meta_objects_impl(detail::make_type_id_sequence<begin, end>{},
-                                begin);
+  detail::make_type_id_sequence<ProjectIds::begin, ProjectIds::end> seq;
+  init_global_meta_objects_impl<ProjectIds>(seq);
 }
 
 } // namespace caf

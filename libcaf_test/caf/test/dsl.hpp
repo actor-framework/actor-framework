@@ -25,6 +25,7 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/gcd.hpp"
+#include "caf/init_global_meta_objects.hpp"
 #include "caf/meta/annotation.hpp"
 #include "caf/test/unit_test.hpp"
 
@@ -697,6 +698,12 @@ public:
     return cfg;
   }
 
+  struct meta_objects_resetter {
+    meta_objects_resetter() {
+      caf::detail::clear_global_meta_objects();
+    }
+  };
+
   template <class... Ts>
   explicit test_coordinator_fixture(Ts&&... xs)
     : cfg(std::forward<Ts>(xs)...),
@@ -870,6 +877,10 @@ public:
   }
 
   // -- member variables -------------------------------------------------------
+
+  /// Helper for calling `clear_global_meta_objects` before initializing the
+  /// actor system config.
+  meta_objects_resetter reset_helper;
 
   /// The user-generated system config.
   Config cfg;

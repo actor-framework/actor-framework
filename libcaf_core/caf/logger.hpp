@@ -44,7 +44,6 @@
 #include "caf/ref_counted.hpp"
 #include "caf/string_view.hpp"
 #include "caf/timestamp.hpp"
-#include "caf/type_nr.hpp"
 #include "caf/unifyn.hpp"
 
 /*

@@ -29,7 +29,6 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/match_case.hpp"
 #include "caf/may_have_timeout.hpp"
 #include "caf/message.hpp"
 #include "caf/none.hpp"
@@ -53,7 +52,7 @@ public:
   using impl_ptr = intrusive_ptr<detail::behavior_impl>;
 
   /// Returns a pointer to the implementation.
-  inline const impl_ptr& as_behavior_impl() const {
+  const impl_ptr& as_behavior_impl() const {
     return impl_;
   }
 
@@ -61,7 +60,7 @@ public:
   message_handler(impl_ptr ptr);
 
   /// Checks whether the message handler is not empty.
-  inline operator bool() const {
+  operator bool() const {
     return static_cast<bool>(impl_);
   }
 
@@ -87,25 +86,24 @@ public:
   void assign(message_handler what);
 
   /// Runs this handler and returns its (optional) result.
-  inline optional<message> operator()(message& arg) {
+  optional<message> operator()(message& arg) {
     return (impl_) ? impl_->invoke(arg) : none;
   }
 
   /// Runs this handler and returns its (optional) result.
-  inline optional<message> operator()(type_erased_tuple& xs) {
+  optional<message> operator()(type_erased_tuple& xs) {
     return impl_ ? impl_->invoke(xs) : none;
   }
 
   /// Runs this handler with callback.
-  inline match_case::result
-  operator()(detail::invoke_result_visitor& f, type_erased_tuple& xs) {
-    return impl_ ? impl_->invoke(f, xs) : match_case::no_match;
+  match_result operator()(detail::invoke_result_visitor& f,
+                          type_erased_tuple& xs) {
+    return impl_ ? impl_->invoke(f, xs) : match_result::no_match;
   }
 
   /// Runs this handler with callback.
-  inline match_case::result
-  operator()(detail::invoke_result_visitor& f, message& xs) {
-    return impl_ ? impl_->invoke(f, xs) : match_case::no_match;
+  match_result operator()(detail::invoke_result_visitor& f, message& xs) {
+    return impl_ ? impl_->invoke(f, xs) : match_result::no_match;
   }
 
   /// Returns a new handler that concatenates this handler
@@ -128,7 +126,7 @@ public:
 
   /// @cond PRIVATE
 
-  inline message_handler& unbox() {
+  message_handler& unbox() {
     return *this;
   }
 

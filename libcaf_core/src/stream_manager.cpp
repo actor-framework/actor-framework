@@ -32,7 +32,6 @@
 #include "caf/response_promise.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/sec.hpp"
-#include "caf/type_nr.hpp"
 
 namespace caf {
 
@@ -287,7 +286,8 @@ stream_manager::add_unchecked_outbound_path_impl(message handshake) {
   return add_unchecked_outbound_path_impl(rp, std::move(handshake));
 }
 
-stream_slot stream_manager::add_unchecked_inbound_path_impl(rtti_pair rtti) {
+stream_slot
+stream_manager::add_unchecked_inbound_path_impl(type_id_t input_type) {
   CAF_LOG_TRACE("");
   auto x = self_->current_mailbox_element();
   if (x == nullptr || !x->content().match_elements<open_stream_msg>()) {
@@ -311,7 +311,7 @@ stream_slot stream_manager::add_unchecked_inbound_path_impl(rtti_pair rtti) {
   auto slot = assign_next_slot();
   stream_slots path_id{osm.slot, slot};
   auto ptr = self_->make_inbound_path(this, path_id, std::move(osm.prev_stage),
-                                      rtti);
+                                      input_type);
   CAF_ASSERT(ptr != nullptr);
   ptr->emit_ack_open(self_, actor_cast<actor_addr>(osm.original_stage));
   return slot;

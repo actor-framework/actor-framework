@@ -250,8 +250,8 @@ public:
   /// @pre `out().terminal() == false`
   /// @private
   template <class In>
-  stream_slot add_unchecked_inbound_path(const stream<In>&) {
-    return add_unchecked_inbound_path_impl(make_rtti_pair<In>());
+  stream_slot add_unchecked_inbound_path(stream<In>) {
+    return add_unchecked_inbound_path_impl(type_id_v<In>);
   }
 
   /// Adds a new outbound path to `rp.next()`.
@@ -270,7 +270,7 @@ public:
 
   /// Adds the current sender as an inbound path.
   /// @pre Current message is an `open_stream_msg`.
-  stream_slot add_unchecked_inbound_path_impl(rtti_pair rtti);
+  stream_slot add_unchecked_inbound_path_impl(type_id_t rtti);
 
 protected:
   // -- modifiers for self -----------------------------------------------------

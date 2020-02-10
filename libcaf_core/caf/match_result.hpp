@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,8 +18,20 @@
 
 #pragma once
 
-namespace caf::detail {
+#include <string>
 
-struct arg_match_t {};
+#include "caf/detail/core_export.hpp"
 
-} // namespace caf::detail
+namespace caf {
+
+/// Denotes the invoke result of a ::behavior or ::message_handler.
+enum class match_result {
+  no_match,
+  match,
+  skip,
+};
+
+/// @relates match_result
+CAF_CORE_EXPORT std::string to_string(match_result);
+
+} // namespace caf

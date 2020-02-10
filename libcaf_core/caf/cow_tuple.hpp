@@ -40,7 +40,7 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit cow_tuple(Ts... xs)
-      : ptr_(make_copy_on_write<impl>(std::move(xs)...)) {
+    : ptr_(make_copy_on_write<impl>(std::move(xs)...)) {
     // nop
   }
 

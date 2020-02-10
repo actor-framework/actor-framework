@@ -193,8 +193,8 @@ blocking_actor::mailbox_visitor::operator()(mailbox_element& x) {
     switch (bhvr.nested(visitor, x.content())) {
       default:
         return check_if_done();
-      case match_case::no_match: { // Blocking actors can have fallback handlers
-                                   // for catch-all rules.
+      case match_result::no_match: { // Blocking actors can have fallback
+                                     // handlers for catch-all rules.
         auto sres = bhvr.fallback(*self->current_element_);
         if (sres.flag != rt_skip) {
           visitor.visit(sres);
@@ -213,7 +213,7 @@ blocking_actor::mailbox_visitor::operator()(mailbox_element& x) {
           return check_if_done();
         }
         CAF_ANNOTATE_FALLTHROUGH;
-      case match_case::skip:
+      case match_result::skip:
         return intrusive::task_result::skip;
     }
   };

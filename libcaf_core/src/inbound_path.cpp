@@ -21,6 +21,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/complexity_based_credit_controller.hpp"
+#include "caf/detail/meta_object.hpp"
 #include "caf/detail/size_based_credit_controller.hpp"
 #include "caf/detail/test_credit_controller.hpp"
 #include "caf/logger.hpp"
@@ -68,13 +69,13 @@ void emit_ack_batch(inbound_path& path, credit_controller::assignment x,
 } // namespace
 
 inbound_path::inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
-                           strong_actor_ptr ptr, rtti_pair in_type)
+                           strong_actor_ptr ptr,
+                           [[maybe_unused]] type_id_t in_type)
   : mgr(std::move(mgr_ptr)), hdl(std::move(ptr)), slots(id) {
-  CAF_IGNORE_UNUSED(in_type);
   mgr->register_input_path(this);
   CAF_STREAM_LOG_DEBUG(mgr->self()->name()
                        << "opens input stream with element type"
-                       << mgr->self()->system().types().portable_name(in_type)
+                       << detail::global_meta_object(in_type).type_name
                        << "at slot" << id.receiver << "from" << hdl);
   if (auto str = get_if<std::string>(&self()->system().config(),
                                      "stream.credit-policy")) {

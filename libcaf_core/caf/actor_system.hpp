@@ -50,47 +50,20 @@
 #include "caf/scoped_execution_unit.hpp"
 #include "caf/spawn_options.hpp"
 #include "caf/string_algorithms.hpp"
-#include "caf/uniform_type_info_map.hpp"
+#include "caf/type_id.hpp"
 
-namespace caf {
+namespace caf::detail {
 
-template <class T>
-struct mpi_field_access {
-  std::string operator()(const uniform_type_info_map& types) {
-    auto result = types.portable_name(type_nr<T>::value, &typeid(T));
-    if (result == types.default_type_name()) {
-      result = "<invalid-type[typeid ";
-      result += typeid(T).name();
-      result += "]>";
-    }
-    return result;
-  }
-};
-
-template <>
-struct mpi_field_access<void> {
-  std::string operator()(const uniform_type_info_map&) {
-    return "void";
-  }
-};
-
-template <class T>
-std::string get_mpi_field(const uniform_type_info_map& types) {
-  mpi_field_access<T> f;
-  return f(types);
-}
-
-template <class T>
+template <class>
 struct typed_mpi_access;
 
-template <class... Is, class... Ls>
-struct typed_mpi_access<
-  typed_mpi<detail::type_list<Is...>, output_tuple<Ls...>>> {
-  std::string operator()(const uniform_type_info_map& types) const {
-    static_assert(sizeof...(Is) > 0, "typed MPI without inputs");
-    static_assert(sizeof...(Ls) > 0, "typed MPI without outputs");
-    std::vector<std::string> inputs{get_mpi_field<Is>(types)...};
-    std::vector<std::string> outputs1{get_mpi_field<Ls>(types)...};
+template <class... In, class... Out>
+struct typed_mpi_access<typed_mpi<type_list<In...>, output_tuple<Out...>>> {
+  std::string operator()() const {
+    static_assert(sizeof...(In) > 0, "typed MPI without inputs");
+    static_assert(sizeof...(Out) > 0, "typed MPI without outputs");
+    std::vector<std::string> inputs{type_name_v<In>...};
+    std::vector<std::string> outputs1{type_name_v<Out>...};
     std::string result = "caf::replies_to<";
     result += join(inputs, ",");
     result += ">::with<";
@@ -101,10 +74,14 @@ struct typed_mpi_access<
 };
 
 template <class T>
-std::string get_rtti_from_mpi(const uniform_type_info_map& types) {
+std::string get_rtti_from_mpi() {
   typed_mpi_access<T> f;
-  return f(types);
+  return f();
 }
+
+} // namespace caf::detail
+
+namespace caf {
 
 /// Actor environment including scheduler, registry, and optional components
 /// such as a middleman.
@@ -185,7 +162,7 @@ public:
   template <class... Ts>
   mpi message_types(detail::type_list<typed_actor<Ts...>>) const {
     static_assert(sizeof...(Ts) > 0, "empty typed actor handle given");
-    mpi result{get_rtti_from_mpi<Ts>(types())...};
+    mpi result{detail::get_rtti_from_mpi<Ts>()...};
     return result;
   }
 
@@ -235,9 +212,6 @@ public:
 
   /// Returns the system-wide actor registry.
   actor_registry& registry();
-
-  /// Returns the system-wide factory for custom types and actors.
-  const uniform_type_info_map& types() const;
 
   /// Returns a string representation for `err`.
   std::string render(const error& x) const;
@@ -582,9 +556,6 @@ private:
 
   /// Used to generate ascending actor IDs.
   std::atomic<size_t> ids_;
-
-  /// Stores runtime type information for builtin and user-defined types.
-  uniform_type_info_map types_;
 
   /// Identifies this actor system in a distributed setting.
   node_id node_;

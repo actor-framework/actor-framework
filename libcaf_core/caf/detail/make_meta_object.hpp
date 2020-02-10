@@ -26,6 +26,7 @@
 #include "caf/byte.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/detail/meta_object.hpp"
+#include "caf/detail/type_erased_value_impl.hpp"
 #include "caf/error.hpp"
 #include "caf/serializer.hpp"
 
@@ -49,14 +50,11 @@ meta_object make_meta_object(const char* type_name) {
     [](caf::deserializer& source, void* ptr) {
       return source(*reinterpret_cast<T*>(ptr));
     },
+    // Temporary hack.
+    []() -> type_erased_value* {
+      return new detail::type_erased_value_impl<T>;
+    },
   };
-}
-
-template <class... Ts>
-void register_meta_objects(size_t first_id) {
-  auto xs = resize_global_meta_objects(first_id + sizeof...(Ts));
-  meta_object src[] = {make_meta_object<Ts>()...};
-  std::copy(src, src + sizeof...(Ts), xs.begin() + first_id);
 }
 
 } // namespace caf::detail

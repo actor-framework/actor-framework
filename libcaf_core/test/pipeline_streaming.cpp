@@ -30,6 +30,14 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/stateful_actor.hpp"
 
+CAF_BEGIN_TYPE_ID_BLOCK(pipeline_streaming_tests, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(pipeline_streaming_tests, std::vector<int>)
+
+  CAF_ADD_TYPE_ID(pipeline_streaming_tests, caf::stream<int>)
+
+CAF_END_TYPE_ID_BLOCK(pipeline_streaming_tests)
+
 using std::string;
 
 using namespace caf;
@@ -230,7 +238,13 @@ TESTEE(doubler) {
   };
 }
 
-struct fixture : test_coordinator_fixture<> {
+struct config : actor_system_config {
+  config() {
+    init_global_meta_objects<pipeline_streaming_tests_type_ids>();
+  }
+};
+
+struct fixture : test_coordinator_fixture<config> {
   void tick() {
     advance_time(cfg.stream_credit_round_interval);
   }

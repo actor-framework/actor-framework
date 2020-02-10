@@ -26,8 +26,8 @@ namespace caf {
 template <class... Ts>
 class const_typed_message_view {
 public:
-  explicit const_typed_message_view(const message& msg) noexcept
-    : ptr_(msg.cvals().get()) {
+  explicit const_typed_message_view(const type_erased_tuple& msg) noexcept
+    : ptr_(&msg) {
     // nop
   }
 
@@ -38,12 +38,12 @@ public:
   const_typed_message_view& operator=(const const_typed_message_view&) noexcept
     = default;
 
-  const detail::message_data* operator->() const noexcept {
+  const type_erased_tuple* operator->() const noexcept {
     return ptr_;
   }
 
 private:
-  const detail::message_data* ptr_;
+  const type_erased_tuple* ptr_;
 };
 
 template <size_t Position, class... Ts>

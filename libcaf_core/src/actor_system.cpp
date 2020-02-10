@@ -214,7 +214,6 @@ const char* actor_system::module::name() const noexcept {
 actor_system::actor_system(actor_system_config& cfg)
   : profiler_(cfg.profiler),
     ids_(0),
-    types_(*this),
     logger_(new caf::logger(*this), false),
     registry_(*this),
     groups_(*this),
@@ -343,10 +342,6 @@ caf::logger& actor_system::logger() {
 
 actor_registry& actor_system::registry() {
   return registry_;
-}
-
-const uniform_type_info_map& actor_system::types() const {
-  return types_;
 }
 
 std::string actor_system::render(const error& x) const {

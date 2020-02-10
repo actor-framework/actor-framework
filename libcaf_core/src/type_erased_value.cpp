@@ -26,15 +26,6 @@ type_erased_value::~type_erased_value() {
   // nop
 }
 
-bool type_erased_value::matches(uint16_t nr, const std::type_info* ptr) const {
-  auto tp = type();
-  if (tp.first != nr)
-    return false;
-  if (nr == 0)
-    return ptr != nullptr ? *tp.second == *ptr : false;
-  return true;
-}
-
 error inspect(serializer& f, const type_erased_value& x) {
   return x.save(f);
 }

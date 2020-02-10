@@ -30,6 +30,14 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/stateful_actor.hpp"
 
+CAF_BEGIN_TYPE_ID_BLOCK(continuous_streaming_tests, caf::first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(continuous_streaming_tests, std::vector<int>)
+
+  CAF_ADD_TYPE_ID(continuous_streaming_tests, caf::stream<int>)
+
+CAF_END_TYPE_ID_BLOCK(continuous_streaming_tests)
+
 using std::string;
 
 using namespace caf;
@@ -140,7 +148,13 @@ TESTEE(stream_multiplexer) {
   };
 }
 
-using fixture = test_coordinator_fixture<>;
+struct config : actor_system_config {
+  config() {
+    init_global_meta_objects<continuous_streaming_tests_type_ids>();
+  }
+};
+
+using fixture = test_coordinator_fixture<config>;
 
 } // namespace
 

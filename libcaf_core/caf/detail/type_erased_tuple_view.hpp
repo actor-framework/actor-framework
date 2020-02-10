@@ -29,7 +29,7 @@
 #include "caf/fwd.hpp"
 #include "caf/type_erased_tuple.hpp"
 #include "caf/type_erased_value.hpp"
-#include "caf/type_nr.hpp"
+#include "caf/type_id_list.hpp"
 
 namespace caf::detail {
 
@@ -78,8 +78,13 @@ public:
     return sizeof...(Ts);
   }
 
-  rtti_pair type(size_t pos) const noexcept override {
-    return ptrs_[pos]->type();
+  type_id_list types() const noexcept override {
+    return make_type_id_list<Ts...>();
+  }
+
+  type_id_t type(size_t pos) const noexcept override {
+    auto xs = types();
+    return xs[pos];
   }
 
   const void* get(size_t pos) const noexcept override {

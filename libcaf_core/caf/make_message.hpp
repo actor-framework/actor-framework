@@ -89,20 +89,17 @@ message make_message(T&& x, Ts&&... xs) {
                 && std::is_same<message, std::decay_t<T>>::value) {
     return std::forward<T>(x);
   } else {
-    using namespace caf::detail;
-    using stored_types = type_list<
-      typename unbox_message_element<typename strip_and_convert<T>::type>::type,
-      typename unbox_message_element<
-        typename strip_and_convert<Ts>::type>::type...>;
-    static_assert(
-      tl_forall<stored_types, is_serializable_or_whitelisted>::value,
-      "at least one type is not inspectable via inspect(Inspector&, T&). If "
-      "you are not sending this type over the network, you can whitelist "
-      "individual types by specializing caf::allowed_unsafe_message_type<T> "
-      "or by using the macro CAF_ALLOW_UNSAFE_MESSAGE_TYPE");
-    using storage = typename tl_apply<stored_types, tuple_vals>::type;
-    auto ptr
-      = make_counted<storage>(std::forward<T>(x), std::forward<Ts>(xs)...);
+    using namespace detail;
+    // clang-format off
+    static_assert(is_complete<type_id<strip_and_convert_t<T>>>
+                  && (is_complete<type_id<strip_and_convert_t<Ts>>> && ...),
+                  "at least one type has no ID, "
+                  "did you forgot to announce it via CAF_ADD_TYPE_ID?");
+    // clang-format on
+    using storage
+      = tuple_vals<strip_and_convert_t<T>, strip_and_convert_t<Ts>...>;
+    auto ptr = make_counted<storage>(std::forward<T>(x),
+                                     std::forward<Ts>(xs)...);
     return message{detail::message_data::cow_ptr{std::move(ptr)}};
   }
 }

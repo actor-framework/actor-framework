@@ -25,9 +25,7 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/inbound_path.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/rtti_pair.hpp"
 #include "caf/stream_manager.hpp"
-#include "caf/type_nr.hpp"
 
 namespace caf {
 
@@ -64,8 +62,7 @@ public:
 
   /// Creates a new input path to the current sender.
   inbound_stream_slot<input_type> add_inbound_path(const stream<input_type>&) {
-    auto rtti = make_rtti_pair<input_type>();
-    return {this->add_unchecked_inbound_path_impl(rtti)};
+    return {this->add_unchecked_inbound_path_impl(type_id_v<input_type>)};
   }
 
 private:

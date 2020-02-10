@@ -36,7 +36,6 @@
 #include "caf/none.hpp"
 #include "caf/optional.hpp"
 #include "caf/skip.hpp"
-#include "caf/type_nr.hpp"
 
 namespace caf {
 class message_handler;
@@ -76,7 +75,9 @@ public:
 
   size_t size() const noexcept override;
 
-  rtti_pair type(size_t pos) const noexcept override;
+  type_id_list types() const noexcept override;
+
+  type_id_t type(size_t pos) const noexcept override;
 
   const void* get(size_t pos) const noexcept override;
 
@@ -168,24 +169,6 @@ public:
   /// @endcond
 
 private:
-  // -- private helpers --------------------------------------------------------
-
-  template <size_t P>
-  static bool match_elements_impl(std::integral_constant<size_t, P>,
-                                  detail::type_list<>) noexcept {
-    return true; // end of recursion
-  }
-
-  template <size_t P, class T, class... Ts>
-  bool match_elements_impl(std::integral_constant<size_t, P>,
-                           detail::type_list<T, Ts...>) const noexcept {
-    std::integral_constant<size_t, P + 1> next_p;
-    detail::type_list<Ts...> next_list;
-    return match_element<T>(P) && match_elements_impl(next_p, next_list);
-  }
-
-  // -- member functions -------------------------------------------------------
-
   data_ptr vals_;
 };
 

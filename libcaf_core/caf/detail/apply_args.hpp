@@ -32,9 +32,14 @@ template <long Pos, class... Ts>
 typename tl_at<type_list<Ts...>, Pos>::type get(const type_list<Ts...>&);
 
 template <class F, long... Is, class Tuple>
-auto apply_args(F& f, detail::int_list<Is...>, Tuple& tup)
-  -> decltype(f(get<Is>(tup)...)) {
+decltype(auto) apply_args(F& f, detail::int_list<Is...>, Tuple& tup) {
   return f(get<Is>(tup)...);
+}
+
+template <class F, long... Is, class Tuple>
+decltype(auto) apply_args(F& f, Tuple& tup) {
+  auto token = get_indices(tup);
+  return apply_args(f, token, tup);
 }
 
 template <class F, long... Is, class Tuple>

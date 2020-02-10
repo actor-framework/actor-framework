@@ -19,11 +19,16 @@
 #pragma once
 
 #include <cstdint>
+#include <set>
+#include <string>
 #include <utility>
 
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/squashed_int.hpp"
 #include "caf/fwd.hpp"
 #include "caf/meta/type_name.hpp"
-#include "caf/type_nr.hpp"
+#include "caf/timespan.hpp"
+#include "caf/timestamp.hpp"
 
 namespace caf {
 
@@ -37,7 +42,7 @@ struct type_id;
 /// Convenience alias for `type_id<T>::value`.
 /// @relates type_id
 template <class T>
-constexpr type_id_t type_id_v = type_id<T>::value;
+constexpr type_id_t type_id_v = type_id<detail::squash_if_int_t<T>>::value;
 
 /// Maps the globally unique ID `V` to a type (inverse to ::type_id).
 /// @relates type_id
@@ -57,6 +62,22 @@ struct type_name_by_id;
 /// @relates type_name_by_id
 template <type_id_t I>
 constexpr const char* type_name_by_id_v = type_name_by_id<I>::value;
+
+/// Convenience type that resolves to `type_name_by_id<type_id_v<T>>`.
+template <class T>
+struct type_name;
+
+/// Convenience specialization that enables generic code to not treat `void`
+/// manually.
+template <>
+struct type_name<void> {
+  static constexpr const char* value = "void";
+};
+
+/// Convenience alias for `type_name<T>::value`.
+/// @relates type_name
+template <class T>
+constexpr const char* type_name_v = type_name<T>::value;
 
 /// The first type ID not reserved by CAF and its modules.
 constexpr type_id_t first_custom_type_id = 200;
@@ -90,9 +111,13 @@ constexpr type_id_t first_custom_type_id = 200;
     using type = fully_qualified_name;                                         \
   };                                                                           \
   template <>                                                                  \
-  struct type_name_by_id<type_id<fully_qualified_name>::value> {               \
-    static constexpr const char* value = #fully_qualified_name;                \
+  struct type_name<fully_qualified_name> {                                     \
+    [[maybe_unused]] static constexpr const char* value                        \
+      = #fully_qualified_name;                                                 \
   };                                                                           \
+  template <>                                                                  \
+  struct type_name_by_id<type_id<fully_qualified_name>::value>                 \
+    : type_name<fully_qualified_name> {};                                      \
   }
 
 /// Creates a new tag type (atom) and assigns the next free type ID to it.
@@ -100,12 +125,18 @@ constexpr type_id_t first_custom_type_id = 200;
   namespace atom_namespace {                                                   \
   struct atom_name {};                                                         \
   static constexpr atom_name atom_name##_v = atom_name{};                      \
+  [[maybe_unused]] constexpr bool operator==(atom_name, atom_name) {           \
+    return true;                                                               \
+  }                                                                            \
+  [[maybe_unused]] constexpr bool operator!=(atom_name, atom_name) {           \
+    return false;                                                              \
+  }                                                                            \
   template <class Inspector>                                                   \
   auto inspect(Inspector& f, atom_name&) {                                     \
     return f(caf::meta::type_name(#atom_namespace "::" #atom_name));           \
   }                                                                            \
   }                                                                            \
-  CAF_ADD_TYPE_ID(project_name, atom_namespace##atom_name)
+  CAF_ADD_TYPE_ID(project_name, atom_namespace ::atom_name)
 
 /// Finalizes a code block for registering custom types to CAF. Stores the last
 /// type ID used by the project as `caf::${project_name}_last_type_id`.
@@ -115,10 +146,12 @@ constexpr type_id_t first_custom_type_id = 200;
     = project_name##_first_type_id                                             \
       + (__COUNTER__ - project_name##_type_id_counter_init - 2);               \
   struct project_name##_type_ids {                                             \
-    static constexpr type_id_t first = project_name##_first_type_id;           \
-    static constexpr type_id_t last = project_name##_last_type_id;             \
+    static constexpr type_id_t begin = project_name##_first_type_id;           \
+    static constexpr type_id_t end = project_name##_last_type_id + 1;         \
   };                                                                           \
   }
+
+#define CAF_PP_COMMA ,
 
 CAF_BEGIN_TYPE_ID_BLOCK(builtin, 0)
 
@@ -150,6 +183,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(builtin, 0)
   CAF_ADD_TYPE_ID(builtin, caf::actor_addr)
   CAF_ADD_TYPE_ID(builtin, caf::byte_buffer)
   CAF_ADD_TYPE_ID(builtin, caf::config_value)
+  CAF_ADD_TYPE_ID(builtin, caf::dictionary<caf::config_value>)
   CAF_ADD_TYPE_ID(builtin, caf::down_msg)
   CAF_ADD_TYPE_ID(builtin, caf::downstream_msg)
   CAF_ADD_TYPE_ID(builtin, caf::error)
@@ -169,94 +203,54 @@ CAF_BEGIN_TYPE_ID_BLOCK(builtin, 0)
   CAF_ADD_TYPE_ID(builtin, caf::weak_actor_ptr)
   CAF_ADD_TYPE_ID(builtin, std::vector<caf::actor>)
   CAF_ADD_TYPE_ID(builtin, std::vector<caf::actor_addr>)
+  CAF_ADD_TYPE_ID(builtin, std::vector<caf::config_value>)
+  CAF_ADD_TYPE_ID(builtin, std::vector<caf::strong_actor_ptr>)
+  CAF_ADD_TYPE_ID(builtin, std::vector<caf::weak_actor_ptr>)
+  CAF_ADD_TYPE_ID(builtin, std::vector<std::pair<std::string CAF_PP_COMMA message>>);
 
   // -- predefined atoms
 
-  CAF_ADD_TYPE_ID(builtin, caf::add_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::close_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::connect_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::contact_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::delete_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::demonitor_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::div_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::flush_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::forward_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::get_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::idle_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::join_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::leave_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::link_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::migrate_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::monitor_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::mul_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::ok_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::open_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::pending_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::ping_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::pong_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::publish_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::publish_udp_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::put_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::receive_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::redirect_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::reset_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::resolve_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::spawn_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::stream_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::sub_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::subscribe_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::sys_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::tick_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::timeout_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::unlink_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::unpublish_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::unpublish_udp_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::unsubscribe_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::update_atom)
-  CAF_ADD_TYPE_ID(builtin, caf::wait_for_atom)
-
-  // TODO: remove atoms from type_nr.hpp and uncomment this block
-  // CAF_ADD_ATOM(builtin, caf, add_atom)
-  // CAF_ADD_ATOM(builtin, caf, close_atom)
-  // CAF_ADD_ATOM(builtin, caf, connect_atom)
-  // CAF_ADD_ATOM(builtin, caf, contact_atom)
-  // CAF_ADD_ATOM(builtin, caf, delete_atom)
-  // CAF_ADD_ATOM(builtin, caf, demonitor_atom)
-  // CAF_ADD_ATOM(builtin, caf, div_atom)
-  // CAF_ADD_ATOM(builtin, caf, flush_atom)
-  // CAF_ADD_ATOM(builtin, caf, forward_atom)
-  // CAF_ADD_ATOM(builtin, caf, get_atom)
-  // CAF_ADD_ATOM(builtin, caf, idle_atom)
-  // CAF_ADD_ATOM(builtin, caf, join_atom)
-  // CAF_ADD_ATOM(builtin, caf, leave_atom)
-  // CAF_ADD_ATOM(builtin, caf, link_atom)
-  // CAF_ADD_ATOM(builtin, caf, migrate_atom)
-  // CAF_ADD_ATOM(builtin, caf, monitor_atom)
-  // CAF_ADD_ATOM(builtin, caf, mul_atom)
-  // CAF_ADD_ATOM(builtin, caf, ok_atom)
-  // CAF_ADD_ATOM(builtin, caf, open_atom)
-  // CAF_ADD_ATOM(builtin, caf, pending_atom)
-  // CAF_ADD_ATOM(builtin, caf, ping_atom)
-  // CAF_ADD_ATOM(builtin, caf, pong_atom)
-  // CAF_ADD_ATOM(builtin, caf, publish_atom)
-  // CAF_ADD_ATOM(builtin, caf, publish_udp_atom)
-  // CAF_ADD_ATOM(builtin, caf, put_atom)
-  // CAF_ADD_ATOM(builtin, caf, receive_atom)
-  // CAF_ADD_ATOM(builtin, caf, redirect_atom)
-  // CAF_ADD_ATOM(builtin, caf, reset_atom)
-  // CAF_ADD_ATOM(builtin, caf, resolve_atom)
-  // CAF_ADD_ATOM(builtin, caf, spawn_atom)
-  // CAF_ADD_ATOM(builtin, caf, stream_atom)
-  // CAF_ADD_ATOM(builtin, caf, sub_atom)
-  // CAF_ADD_ATOM(builtin, caf, subscribe_atom)
-  // CAF_ADD_ATOM(builtin, caf, sys_atom)
-  // CAF_ADD_ATOM(builtin, caf, tick_atom)
-  // CAF_ADD_ATOM(builtin, caf, timeout_atom)
-  // CAF_ADD_ATOM(builtin, caf, unlink_atom)
-  // CAF_ADD_ATOM(builtin, caf, unpublish_atom)
-  // CAF_ADD_ATOM(builtin, caf, unpublish_udp_atom)
-  // CAF_ADD_ATOM(builtin, caf, unsubscribe_atom)
-  // CAF_ADD_ATOM(builtin, caf, update_atom)
-  // CAF_ADD_ATOM(builtin, caf, wait_for_atom)
+  CAF_ADD_ATOM(builtin, caf, add_atom)
+  CAF_ADD_ATOM(builtin, caf, close_atom)
+  CAF_ADD_ATOM(builtin, caf, connect_atom)
+  CAF_ADD_ATOM(builtin, caf, contact_atom)
+  CAF_ADD_ATOM(builtin, caf, delete_atom)
+  CAF_ADD_ATOM(builtin, caf, demonitor_atom)
+  CAF_ADD_ATOM(builtin, caf, div_atom)
+  CAF_ADD_ATOM(builtin, caf, flush_atom)
+  CAF_ADD_ATOM(builtin, caf, forward_atom)
+  CAF_ADD_ATOM(builtin, caf, get_atom)
+  CAF_ADD_ATOM(builtin, caf, idle_atom)
+  CAF_ADD_ATOM(builtin, caf, join_atom)
+  CAF_ADD_ATOM(builtin, caf, leave_atom)
+  CAF_ADD_ATOM(builtin, caf, link_atom)
+  CAF_ADD_ATOM(builtin, caf, migrate_atom)
+  CAF_ADD_ATOM(builtin, caf, monitor_atom)
+  CAF_ADD_ATOM(builtin, caf, mul_atom)
+  CAF_ADD_ATOM(builtin, caf, ok_atom)
+  CAF_ADD_ATOM(builtin, caf, open_atom)
+  CAF_ADD_ATOM(builtin, caf, pending_atom)
+  CAF_ADD_ATOM(builtin, caf, ping_atom)
+  CAF_ADD_ATOM(builtin, caf, pong_atom)
+  CAF_ADD_ATOM(builtin, caf, publish_atom)
+  CAF_ADD_ATOM(builtin, caf, publish_udp_atom)
+  CAF_ADD_ATOM(builtin, caf, put_atom)
+  CAF_ADD_ATOM(builtin, caf, receive_atom)
+  CAF_ADD_ATOM(builtin, caf, redirect_atom)
+  CAF_ADD_ATOM(builtin, caf, reset_atom)
+  CAF_ADD_ATOM(builtin, caf, resolve_atom)
+  CAF_ADD_ATOM(builtin, caf, spawn_atom)
+  CAF_ADD_ATOM(builtin, caf, stream_atom)
+  CAF_ADD_ATOM(builtin, caf, sub_atom)
+  CAF_ADD_ATOM(builtin, caf, subscribe_atom)
+  CAF_ADD_ATOM(builtin, caf, sys_atom)
+  CAF_ADD_ATOM(builtin, caf, tick_atom)
+  CAF_ADD_ATOM(builtin, caf, timeout_atom)
+  CAF_ADD_ATOM(builtin, caf, unlink_atom)
+  CAF_ADD_ATOM(builtin, caf, unpublish_atom)
+  CAF_ADD_ATOM(builtin, caf, unpublish_udp_atom)
+  CAF_ADD_ATOM(builtin, caf, unsubscribe_atom)
+  CAF_ADD_ATOM(builtin, caf, update_atom)
+  CAF_ADD_ATOM(builtin, caf, wait_for_atom)
 
 CAF_END_TYPE_ID_BLOCK(builtin)

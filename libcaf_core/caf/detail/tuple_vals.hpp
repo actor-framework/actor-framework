@@ -31,9 +31,8 @@
 #include "caf/detail/try_serialize.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/make_type_erased_value.hpp"
-#include "caf/rtti_pair.hpp"
 #include "caf/serializer.hpp"
-#include "caf/type_nr.hpp"
+#include "caf/type_id_list.hpp"
 
 #define CAF_TUPLE_VALS_DISPATCH(x)                                             \
   case x:                                                                      \
@@ -91,7 +90,7 @@ public:
 
   template <class... Us>
   tuple_vals_impl(Us&&... xs)
-    : data_(std::forward<Us>(xs)...), types_{{make_rtti_pair<Ts>()...}} {
+    : types_(make_type_id_list<Ts...>()), data_(std::forward<Us>(xs)...) {
     // nop
   }
 
@@ -141,7 +140,11 @@ public:
     return dispatch(pos, source);
   }
 
-  rtti_pair type(size_t pos) const noexcept override {
+  type_id_list types() const noexcept override {
+    return types_;
+  }
+
+  type_id_t type(size_t pos) const noexcept override {
     return types_[pos];
   }
 
@@ -193,8 +196,8 @@ private:
     return const_cast<tuple_vals_impl*>(this);
   }
 
+  type_id_list types_;
   data_type data_;
-  std::array<rtti_pair, sizeof...(Ts)> types_;
 };
 
 template <class... Ts>

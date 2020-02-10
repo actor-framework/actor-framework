@@ -32,15 +32,16 @@ public:
   enum flag {
     shared_access,    // x_ lives in a shared type_erased_tuple
     exclusive_access, // x_ lives in an unshared type_erased_tuple
-    private_access    // x_ is a copy of the original value
+    private_access,   // x_ is a copy of the original value
   };
 
   param(const void* ptr, bool is_shared)
-      : x_(reinterpret_cast<T*>(const_cast<void*>(ptr))) {
+    : x_(reinterpret_cast<T*>(const_cast<void*>(ptr))) {
     flag_ = is_shared ? shared_access : exclusive_access;
   }
 
   param(const param& other) = delete;
+
   param& operator=(const param& other) = delete;
 
   param(param&& other) : x_(other.x_), flag_(other.flag_) {
@@ -119,5 +120,24 @@ template <class T>
 struct param_decay {
   using type = typename remove_param<typename std::decay<T>::type>::type;
 };
+
+/// @relates param_decay
+template <class T>
+using param_decay_t = typename param_decay<T>::type;
+
+/// Queries whether `T` is a ::param.
+template <class T>
+struct is_param {
+  static constexpr bool value = false;
+};
+
+template <class T>
+struct is_param<param<T>> {
+  static constexpr bool value = true;
+};
+
+/// @relates is_param
+template <class T>
+constexpr bool is_param_v = is_param<T>::value;
 
 } // namespace caf

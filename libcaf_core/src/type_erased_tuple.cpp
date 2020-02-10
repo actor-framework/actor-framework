@@ -18,9 +18,19 @@
 
 #include "caf/type_erased_tuple.hpp"
 
+#include <memory>
+
 #include "caf/config.hpp"
+#include "caf/detail/dynamic_message_data.hpp"
 #include "caf/error.hpp"
 #include "caf/raise_error.hpp"
+
+namespace {
+
+caf::type_id_t empty_type_list[] = {0};
+
+} // namespace
+
 
 namespace caf {
 
@@ -78,15 +88,12 @@ error_code<sec> type_erased_tuple::save(binary_serializer& sink) const {
   return none;
 }
 
-bool type_erased_tuple::matches(size_t pos, uint16_t nr,
-                                const std::type_info* ptr) const noexcept {
-  CAF_ASSERT(pos < size());
-  auto tp = type(pos);
-  if (tp.first != nr)
-    return false;
-  if (nr == 0)
-    return ptr != nullptr ? strcmp(tp.second->name(), ptr->name()) == 0 : false;
-  return true;
+type_erased_tuple* type_erased_tuple::copy() const {
+  // Temporary hack until redesigning caf::message.
+  auto ptr = std::make_unique<detail::dynamic_message_data>();
+  for (size_t i = 0; i < size(); ++i)
+    ptr->append(copy(i));
+  return ptr.release();
 }
 
 empty_type_erased_tuple::~empty_type_erased_tuple() {
@@ -109,7 +116,11 @@ size_t empty_type_erased_tuple::size() const noexcept {
   return 0;
 }
 
-auto empty_type_erased_tuple::type(size_t) const noexcept -> rtti_pair {
+type_id_list empty_type_erased_tuple::types() const noexcept {
+  return type_id_list{empty_type_list};
+}
+
+type_id_t empty_type_erased_tuple::type(size_t) const noexcept {
   CAF_CRITICAL("empty_type_erased_tuple::type");
 }
 

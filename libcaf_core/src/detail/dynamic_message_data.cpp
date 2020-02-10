@@ -25,16 +25,19 @@
 namespace caf::detail {
 
 dynamic_message_data::dynamic_message_data() {
-  // nop
+  types_.push_back(0);
 }
 
 dynamic_message_data::dynamic_message_data(elements&& data)
   : elements_(std::move(data)) {
-  // nop
+  types_.reserve(elements_.size() + 1);
+  types_.emplace_back(static_cast<type_id_t>(elements_.size()));
+  for (const auto& e : elements_)
+    types_.emplace_back(e->type());
 }
 
 dynamic_message_data::dynamic_message_data(const dynamic_message_data& other)
-  : detail::message_data(other) {
+  : detail::message_data(other), types_(other.types_) {
   for (auto& e : other.elements_)
     elements_.emplace_back(e->copy());
 }
@@ -67,7 +70,11 @@ size_t dynamic_message_data::size() const noexcept {
   return elements_.size();
 }
 
-auto dynamic_message_data::type(size_t pos) const noexcept -> rtti_pair {
+type_id_list dynamic_message_data::types() const noexcept {
+  return type_id_list{types_.data()};
+}
+
+type_id_t dynamic_message_data::type(size_t pos) const noexcept {
   CAF_ASSERT(pos < size());
   return elements_[pos]->type();
 }
@@ -100,9 +107,13 @@ dynamic_message_data::save(size_t pos, binary_serializer& sink) const {
 
 void dynamic_message_data::clear() {
   elements_.clear();
+  types_.clear();
+  types_.push_back(0);
 }
 
 void dynamic_message_data::append(type_erased_value_ptr x) {
+  types_[0] += 1;
+  types_.emplace_back(x->type());
   elements_.emplace_back(std::move(x));
 }
 

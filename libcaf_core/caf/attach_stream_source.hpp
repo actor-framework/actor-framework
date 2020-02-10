@@ -22,6 +22,7 @@
 
 #include "caf/broadcast_downstream_manager.hpp"
 #include "caf/default_downstream_manager.hpp"
+#include "caf/detail/implicit_conversions.hpp"
 #include "caf/detail/stream_source_driver_impl.hpp"
 #include "caf/detail/stream_source_impl.hpp"
 #include "caf/detail/type_list.hpp"
@@ -106,6 +107,13 @@ detail::enable_if_t<!is_actor_handle<Init>::value && Trait::valid,
 attach_stream_source(scheduled_actor* self, Init init, Pull pull, Done done,
                      Finalize finalize = {},
                      policy::arg<DownstreamManager> token = {}) {
+  using output_type = typename Trait::output;
+  static_assert(detail::sendable<output_type>,
+                "the output type of the source has has no type ID, "
+                "did you forgot to announce it via CAF_ADD_TYPE_ID?");
+  static_assert(detail::sendable<stream<output_type>>,
+                "stream<T> for the output type has has no type ID, "
+                "did you forgot to announce it via CAF_ADD_TYPE_ID?");
   return attach_stream_source(self, std::make_tuple(), init, pull, done,
                               finalize, token);
 }

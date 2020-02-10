@@ -66,7 +66,7 @@ public:
 
   /// Compares this list to `other`.
   int compare(type_id_list other) const noexcept {
-    return memcmp(data_, other.data_, size() * sizeof(type_id_t));
+    return memcmp(data_, other.data_, (size() + 1) * sizeof(type_id_t));
   }
 
 private:

@@ -28,9 +28,10 @@
 
 using namespace caf;
 
-using std::string;
 using std::chrono::milliseconds;
 using std::chrono::seconds;
+
+using namespace std::string_literals;
 
 namespace {
 
@@ -52,7 +53,7 @@ const char* ping_state::name = "ping";
 using ping_actor = stateful_actor<ping_state>;
 
 using fptr = behavior (*)(ping_actor*, bool*, const actor&);
-using test_vec = std::vector<std::pair<fptr, string>>;
+using test_vec = std::vector<std::pair<fptr, std::string>>;
 
 // assumes to receive a timeout (sent via delayed_send) before pong replies
 behavior ping_single1(ping_actor* self, bool* had_timeout, const actor& buddy) {
@@ -74,6 +75,7 @@ behavior ping_single2(ping_actor* self, bool* had_timeout, const actor& buddy) {
     [=](pong_atom) { CAF_FAIL("received pong atom"); },
     after(std::chrono::seconds(1)) >>
       [=] {
+        CAF_LOG_TRACE(CAF_ARG2("had_timeout", *had_timeout));
         *had_timeout = true;
         self->quit();
       },
@@ -232,10 +234,10 @@ CAF_TEST(single_timeout) {
     CAF_MESSAGE("test implementation " << f.second);
     auto testee = sys.spawn(f.first, &had_timeout, sys.spawn<lazy_init>(pong));
     CAF_REQUIRE_EQUAL(sched.jobs.size(), 1u);
-    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"ping"});
+    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), "ping"s);
     sched.run_once();
     CAF_REQUIRE_EQUAL(sched.jobs.size(), 1u);
-    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"pong"});
+    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), "pong"s);
     sched.trigger_timeout();
     CAF_REQUIRE_EQUAL(sched.jobs.size(), 2u);
     // now, the timeout message is already dispatched, while pong did
@@ -254,10 +256,10 @@ CAF_TEST(nested_timeout) {
     CAF_MESSAGE("test implementation " << f.second);
     auto testee = sys.spawn(f.first, &had_timeout, sys.spawn<lazy_init>(pong));
     CAF_REQUIRE_EQUAL(sched.jobs.size(), 1u);
-    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"ping"});
+    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), "ping"s);
     sched.run_once();
     CAF_REQUIRE_EQUAL(sched.jobs.size(), 1u);
-    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"pong"});
+    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), "pong"s);
     sched.trigger_timeout();
     CAF_REQUIRE_EQUAL(sched.jobs.size(), 2u);
     // now, the timeout message is already dispatched, while pong did
@@ -265,7 +267,7 @@ CAF_TEST(nested_timeout) {
     sched.run();
     // dispatch second timeout
     CAF_REQUIRE_EQUAL(sched.trigger_timeout(), true);
-    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"ping"});
+    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), "ping"s);
     CAF_CHECK(!had_timeout);
     CAF_CHECK(sched.next_job<ping_actor>().state.had_first_timeout);
     sched.run();
@@ -282,10 +284,10 @@ CAF_TEST(multiplexed_timeout) {
     CAF_MESSAGE("test implementation " << f.second);
     auto testee = sys.spawn(f.first, &had_timeout, sys.spawn<lazy_init>(pong));
     CAF_REQUIRE_EQUAL(sched.jobs.size(), 1u);
-    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"ping"});
+    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), "ping"s);
     sched.run_once();
     CAF_REQUIRE_EQUAL(sched.jobs.size(), 1u);
-    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), string{"pong"});
+    CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), "pong"s);
     sched.trigger_timeouts();
     CAF_REQUIRE_EQUAL(sched.jobs.size(), 2u);
     // now, the timeout message is already dispatched, while pong did

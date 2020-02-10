@@ -25,8 +25,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
-#include "caf/rtti_pair.hpp"
-#include "caf/type_nr.hpp"
+#include "caf/type_id.hpp"
 
 namespace caf {
 
@@ -51,7 +50,7 @@ public:
   // -- pure virtual observers -------------------------------------------------
 
   /// Returns the type number and type information object for the stored value.
-  virtual rtti_pair type() const = 0;
+  virtual type_id_t type() const = 0;
 
   /// Returns a pointer to the stored value.
   virtual const void* get() const = 0;
@@ -68,23 +67,7 @@ public:
   /// Returns a copy of the stored value.
   virtual type_erased_value_ptr copy() const = 0;
 
-  // -- observers --------------------------------------------------------------
-
-  /// Checks whether the type of the stored value matches
-  /// the type nr and type info object.
-  bool matches(uint16_t nr, const std::type_info* ptr) const;
-
   // -- convenience functions --------------------------------------------------
-
-  /// Returns the type number for the stored value.
-  inline uint16_t type_nr() const {
-    return type().first;
-  }
-
-  /// Checks whether the type of the stored value matches `rtti`.
-  inline bool matches(const rtti_pair& rtti) const {
-    return matches(rtti.first, rtti.second);
-  }
 
   /// Convenience function for `reinterpret_cast<const T*>(get())`.
   template <class T>

@@ -33,9 +33,32 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/byte_buffer.hpp"
+#include "caf/detail/meta_object.hpp"
 #include "caf/detail/stringification_inspector.hpp"
+#include "caf/init_global_meta_objects.hpp"
 #include "caf/make_type_erased_value.hpp"
 #include "caf/type_erased_value.hpp"
+
+namespace {
+
+struct dummy_tag_type;
+struct dummy_struct;
+enum dummy_enum { de_foo, de_bar };
+enum dummy_enum_class : short;
+
+} // namespace
+
+CAF_BEGIN_TYPE_ID_BLOCK(inspector_tests, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(inspector_tests, dummy_tag_type)
+
+  CAF_ADD_TYPE_ID(inspector_tests, dummy_struct)
+
+  CAF_ADD_TYPE_ID(inspector_tests, dummy_enum)
+
+  CAF_ADD_TYPE_ID(inspector_tests, dummy_enum_class)
+
+CAF_END_TYPE_ID_BLOCK(inspector_tests)
 
 using namespace caf;
 
@@ -86,9 +109,6 @@ template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, dummy_struct& x) {
   return f(meta::type_name("dummy_struct"), x.a, x.b);
 }
-
-// two different styles of enums
-enum dummy_enum { de_foo, de_bar };
 
 enum dummy_enum_class : short { foo, bar };
 
@@ -263,11 +283,11 @@ struct binary_serialization_policy {
 } // namespace
 
 CAF_TEST(binary_serialization_inspectors) {
+  detail::clear_global_meta_objects();
+  init_global_meta_objects<inspector_tests_type_ids>();
   actor_system_config cfg;
-  cfg.add_message_type<dummy_struct>("dummy_struct");
   actor_system sys{cfg};
   scoped_execution_unit context;
   binary_serialization_policy p{context};
   test_impl(p);
-
 }

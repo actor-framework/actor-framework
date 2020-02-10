@@ -79,8 +79,6 @@ macro_repeat20(i_n)
 using v20 = variant<i01, i02, i03, i04, i05, i06, i07, i08, i09, i10,
                     i11, i12, i13, i14, i15, i16, i17, i18, i19, i20>;
 
-#define announce_n(n) cfg.add_message_type<i##n>(CAF_STR(i##n));
-
 #define v20_test(n)                                                            \
   x3 = i##n{0x##n};                                                            \
   CAF_CHECK_EQUAL(deep_to_string(x3),                                          \
@@ -111,7 +109,6 @@ using v20 = variant<i01, i02, i03, i04, i05, i06, i07, i08, i09, i10,
 // and finally serialization round-trip
 CAF_TEST(copying_moving_roundtrips) {
   actor_system_config cfg;
-  macro_repeat20(announce_n)
   actor_system sys{cfg};
   // default construction
   variant<none_t> x1;

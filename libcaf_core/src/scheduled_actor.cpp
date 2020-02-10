@@ -663,7 +663,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       auto bhvr = std::move(mrh->second);
       multiplexed_responses_.erase(mrh);
       if (!invoke(this, bhvr, x)) {
-        // try again with error if first attempt failed
+        CAF_LOG_DEBUG("got unexpected_response, invoke as again as error");
         auto msg = make_message(
           make_error(sec::unexpected_response, x.move_content_to_message()));
         bhvr(msg);
@@ -710,10 +710,10 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
         switch (bhvr(visitor, x.content())) {
           default:
             break;
-          case match_case::skip:
+          case match_result::skip:
             skipped = true;
             break;
-          case match_case::no_match:
+          case match_result::no_match:
             call_default_handler();
         }
         return !skipped ? invoke_message_result::consumed
@@ -900,14 +900,15 @@ scheduled_actor::urgent_queue& scheduled_actor::get_urgent_queue() {
 inbound_path* scheduled_actor::make_inbound_path(stream_manager_ptr mgr,
                                                  stream_slots slots,
                                                  strong_actor_ptr sender,
-                                                 rtti_pair rtti) {
+                                                 type_id_t input_type) {
   static constexpr size_t queue_index = downstream_queue_index;
   using policy_type = policy::downstream_messages::nested;
   auto& qs = get<queue_index>(mailbox_.queue().queues()).queues();
   auto res = qs.emplace(slots.receiver, policy_type{nullptr});
   if (!res.second)
     return nullptr;
-  auto path = new inbound_path(std::move(mgr), slots, std::move(sender), rtti);
+  auto path = new inbound_path(std::move(mgr), slots, std::move(sender),
+                               input_type);
   res.first->second.policy().handler.reset(path);
   return path;
 }
@@ -1134,12 +1135,14 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
   auto& bs = bhvr_stack();
   if (bs.empty())
     return fallback();
+std::cout<<to_string(osm.msg)<<std::endl;
+std::cout<<to_string(osm.msg.types())<<std::endl;
   auto res = (bs.back())(f, osm.msg);
   switch (res) {
-    case match_case::result::no_match:
+    case match_result::no_match:
       CAF_LOG_DEBUG("no match in behavior, fall back to default handler");
       return fallback();
-    case match_case::result::match: {
+    case match_result::match: {
       return invoke_message_result::consumed;
     }
     default:

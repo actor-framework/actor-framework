@@ -20,10 +20,8 @@
 
 #include "caf/expected.hpp"
 #include "caf/function_view.hpp"
-#include "caf/sec.hpp"
-#include "caf/type_nr.hpp"
-
 #include "caf/openssl/manager.hpp"
+#include "caf/sec.hpp"
 
 namespace caf::openssl {
 

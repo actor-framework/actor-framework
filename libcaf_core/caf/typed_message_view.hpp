@@ -26,9 +26,19 @@ namespace caf {
 template <class... Ts>
 class typed_message_view {
 public:
-  explicit typed_message_view(message& msg) noexcept
-    : ptr_(msg.vals().unshared_ptr()) {
+  explicit typed_message_view(message& msg)
+    : ptr_(msg.vals().unshared_ptr()), owning_(false) {
     // nop
+  }
+
+  explicit typed_message_view(type_erased_tuple& msg) {
+    if (msg.shared()) {
+      ptr_ = msg.copy();
+      owning_ = true;
+    } else {
+      ptr_ = &msg;
+      owning_ = false;
+    }
   }
 
   typed_message_view() = delete;
@@ -37,12 +47,19 @@ public:
 
   typed_message_view& operator=(const typed_message_view&) noexcept = default;
 
-  detail::message_data* operator->() noexcept {
+  ~typed_message_view() {
+    if (owning_)
+      delete ptr_;
+  }
+
+  type_erased_tuple* operator->() noexcept {
     return ptr_;
   }
 
 private:
-  detail::message_data* ptr_;
+  type_erased_tuple* ptr_;
+  // Temporary hack until redesigning caf::message.
+  bool owning_;
 };
 
 template <size_t Position, class... Ts>

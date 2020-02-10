@@ -24,18 +24,16 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "caf/sec.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/attachable.hpp"
+#include "caf/detail/shared_spinlock.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/exit_reason.hpp"
 #include "caf/locks.hpp"
 #include "caf/logger.hpp"
-#include "caf/attachable.hpp"
-#include "caf/exit_reason.hpp"
-#include "caf/actor_system.hpp"
 #include "caf/scoped_actor.hpp"
+#include "caf/sec.hpp"
 #include "caf/stateful_actor.hpp"
-#include "caf/event_based_actor.hpp"
-#include "caf/uniform_type_info_map.hpp"
-
-#include "caf/detail/shared_spinlock.hpp"
 
 namespace caf {
 

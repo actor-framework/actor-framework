@@ -43,7 +43,6 @@ template <class> class span;
 template <class> class stream;
 template <class> class stream_sink;
 template <class> class stream_source;
-template <class> class trivial_match_case;
 template <class> class weak_intrusive_ptr;
 
 template <class> struct timeout_definition;
@@ -66,6 +65,7 @@ template <class, class, class> class broadcast_downstream_manager;
 
 // -- variadic templates -------------------------------------------------------
 
+template <class...> class const_typed_message_view;
 template <class...> class cow_tuple;
 template <class...> class delegated;
 template <class...> class result;
@@ -73,6 +73,7 @@ template <class...> class typed_actor;
 template <class...> class typed_actor_pointer;
 template <class...> class typed_actor_view;
 template <class...> class typed_event_based_actor;
+template <class...> class typed_message_view;
 template <class...> class typed_response_promise;
 template <class...> class variant;
 
@@ -140,7 +141,6 @@ class tracing_data;
 class tracing_data_factory;
 class type_erased_tuple;
 class type_erased_value;
-class uniform_type_info_map;
 class uri;
 class uri_builder;
 
@@ -266,8 +266,12 @@ namespace detail {
 
 template <class>
 class type_erased_value_impl;
+
 template <class>
 class stream_distribution_tree;
+
+template <class...>
+class param_message_view;
 
 class abstract_worker;
 class abstract_worker_hub;

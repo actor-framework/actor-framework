@@ -50,6 +50,9 @@ struct meta_object {
 
   /// Applies an object to a generic deserializer.
   caf::error (*load)(caf::deserializer&, void*);
+
+  // Temporary hack until re-implementing caf::message.
+  type_erased_value* (*make)();
 };
 
 /// Returns the global storage for all meta objects. The ::type_id of an object

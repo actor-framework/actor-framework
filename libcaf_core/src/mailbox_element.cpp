@@ -19,7 +19,6 @@
 #include "caf/mailbox_element.hpp"
 
 #include "caf/message_builder.hpp"
-#include "caf/type_nr.hpp"
 
 namespace caf {
 

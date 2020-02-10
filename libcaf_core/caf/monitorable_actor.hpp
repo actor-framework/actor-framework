@@ -35,7 +35,6 @@
 #include "caf/detail/functor_attachable.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/mailbox_element.hpp"
-#include "caf/type_nr.hpp"
 
 namespace caf {
 

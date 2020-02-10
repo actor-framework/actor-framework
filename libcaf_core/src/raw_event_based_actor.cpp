@@ -113,10 +113,10 @@ invoke_message_result raw_event_based_actor::consume(mailbox_element& x) {
     switch (bhvr(visitor, x.content())) {
       default:
         break;
-      case match_case::skip:
+      case match_result::skip:
         skipped = true;
         break;
-      case match_case::no_match:
+      case match_result::no_match:
         call_default_handler();
     }
     return !skipped ? invoke_message_result::consumed

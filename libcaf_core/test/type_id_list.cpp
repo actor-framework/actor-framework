@@ -36,6 +36,8 @@ CAF_TEST(lists store the size at index 0) {
 }
 
 CAF_TEST(lists are comparable) {
+  detail::clear_global_meta_objects();
+  init_global_meta_objects<builtin_type_ids>();
   type_id_t data[] = {3, 1, 2, 4};
   type_id_list xs{data};
   type_id_t data_copy[] = {3, 1, 2, 4};
@@ -44,6 +46,9 @@ CAF_TEST(lists are comparable) {
   data_copy[1] = 10;
   CAF_CHECK_NOT_EQUAL(xs, ys);
   CAF_CHECK_LESS(xs, ys);
+  CAF_CHECK_EQUAL(make_type_id_list<add_atom>(), make_type_id_list<add_atom>());
+  CAF_CHECK_NOT_EQUAL(make_type_id_list<add_atom>(),
+                      make_type_id_list<ok_atom>());
 }
 
 CAF_TEST(make_type_id_list constructs a list from types) {
