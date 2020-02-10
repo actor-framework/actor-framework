@@ -84,22 +84,22 @@ namespace caf {
 
 /// @relates scheduled_actor
 /// Default handler function that sends the message back to the sender.
-CAF_CORE_EXPORT result<message> reflect(scheduled_actor*, message_view&);
+CAF_CORE_EXPORT result<message> reflect(scheduled_actor*, message&);
 
 /// @relates scheduled_actor
 /// Default handler function that sends
 /// the message back to the sender and then quits.
 CAF_CORE_EXPORT result<message>
-reflect_and_quit(scheduled_actor*, message_view&);
+reflect_and_quit(scheduled_actor*, message&);
 
 /// @relates scheduled_actor
 /// Default handler function that prints messages
 /// message via `aout` and drops them afterwards.
-CAF_CORE_EXPORT result<message> print_and_drop(scheduled_actor*, message_view&);
+CAF_CORE_EXPORT result<message> print_and_drop(scheduled_actor*, message&);
 
 /// @relates scheduled_actor
 /// Default handler function that simply drops messages.
-CAF_CORE_EXPORT result<message> drop(scheduled_actor*, message_view&);
+CAF_CORE_EXPORT result<message> drop(scheduled_actor*, message&);
 
 /// A cooperatively scheduled, event-based actor implementation.
 /// @extends local_actor
@@ -192,7 +192,7 @@ public:
 
   /// Function object for handling unmatched messages.
   using default_handler
-    = std::function<result<message>(pointer, message_view&)>;
+    = std::function<result<message>(pointer, message&)>;
 
   /// Function object for handling error messages.
   using error_handler = std::function<void(pointer, error&)>;

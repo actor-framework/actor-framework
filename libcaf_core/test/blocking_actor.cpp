@@ -47,8 +47,8 @@ CAF_TEST(catch_all) {
     [](float) {
       CAF_FAIL("received unexpected float");
     },
-    others >> [](message_view& x) -> result<message> {
-      CAF_CHECK_EQUAL(to_string(x.content()), "(42)");
+    others >> [](message& msg) -> result<message> {
+      CAF_CHECK_EQUAL(to_string(msg), "(42)");
       return sec::unexpected_message;
     }
   );

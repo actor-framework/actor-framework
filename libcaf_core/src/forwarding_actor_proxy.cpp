@@ -58,8 +58,8 @@ void forwarding_actor_proxy::enqueue(mailbox_element_ptr what,
                                      execution_unit*) {
   CAF_PUSH_AID(0);
   CAF_ASSERT(what);
-  forward_msg(std::move(what->sender), what->mid,
-              what->move_content_to_message(), &what->stages);
+  forward_msg(std::move(what->sender), what->mid, std::move(what->payload),
+              &what->stages);
 }
 
 bool forwarding_actor_proxy::add_backlink(abstract_actor* x) {

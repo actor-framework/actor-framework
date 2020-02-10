@@ -195,7 +195,7 @@ blocking_actor::mailbox_visitor::operator()(mailbox_element& x) {
         return check_if_done();
       case match_result::no_match: { // Blocking actors can have fallback
                                      // handlers for catch-all rules.
-        auto sres = bhvr.fallback(*self->current_element_);
+        auto sres = bhvr.fallback(self->current_element_->payload);
         if (sres.flag != rt_skip) {
           visitor.visit(sres);
           return check_if_done();
@@ -204,10 +204,9 @@ blocking_actor::mailbox_visitor::operator()(mailbox_element& x) {
         // Response handlers must get re-invoked with an error when receiving an
         // unexpected message.
         if (mid.is_response()) {
-          auto err = make_error(sec::unexpected_response,
-                                x.move_content_to_message());
-          mailbox_element_view<error> tmp{std::move(x.sender), x.mid,
-                                          std::move(x.stages), err};
+          auto err = make_error(sec::unexpected_response, std::move(x.payload));
+          mailbox_element tmp{std::move(x.sender), x.mid, std::move(x.stages),
+                              make_message(std::move(err))};
           self->current_element_ = &tmp;
           bhvr.nested(tmp.content());
           return check_if_done();

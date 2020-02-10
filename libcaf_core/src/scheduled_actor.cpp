@@ -36,25 +36,25 @@ namespace caf {
 
 // -- related free functions ---------------------------------------------------
 
-result<message> reflect(scheduled_actor*, message_view& x) {
-  return x.move_content_to_message();
+result<message> reflect(scheduled_actor*, message& msg) {
+  return std::move(msg);
 }
 
-result<message> reflect_and_quit(scheduled_actor* ptr, message_view& x) {
+result<message> reflect_and_quit(scheduled_actor* ptr, message& msg) {
   error err = exit_reason::normal;
   scheduled_actor::default_error_handler(ptr, err);
-  return reflect(ptr, x);
+  return reflect(ptr, msg);
 }
 
-result<message> print_and_drop(scheduled_actor* ptr, message_view& x) {
-  CAF_LOG_WARNING("unexpected message" << CAF_ARG(x.content()));
+result<message> print_and_drop(scheduled_actor* ptr, message& msg) {
+  CAF_LOG_WARNING("unexpected message:" << msg);
   aout(ptr) << "*** unexpected message [id: " << ptr->id()
-            << ", name: " << ptr->name() << "]: " << x.content().stringify()
+            << ", name: " << ptr->name() << "]: " << to_string(msg)
             << std::endl;
   return sec::unexpected_message;
 }
 
-result<message> drop(scheduled_actor*, message_view&) {
+result<message> drop(scheduled_actor*, message&) {
   return sec::unexpected_message;
 }
 
@@ -67,7 +67,7 @@ void silently_ignore(scheduled_actor*, T&) {
   // nop
 }
 
-result<message> drop_after_quit(scheduled_actor* self, message_view&) {
+result<message> drop_after_quit(scheduled_actor* self, message&) {
   if (self->current_message_id().is_request())
     return make_error(sec::request_receiver_down);
   return make_message();
@@ -648,7 +648,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       if (!invoke(this, f, x)) {
         // try again with error if first attempt failed
         auto msg = make_message(
-          make_error(sec::unexpected_response, x.move_content_to_message()));
+          make_error(sec::unexpected_response, std::move(x.payload)));
         f(msg);
       }
       return invoke_message_result::consumed;
@@ -665,7 +665,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       if (!invoke(this, bhvr, x)) {
         CAF_LOG_DEBUG("got unexpected_response, invoke as again as error");
         auto msg = make_message(
-          make_error(sec::unexpected_response, x.move_content_to_message()));
+          make_error(sec::unexpected_response, std::move(x.payload)));
         bhvr(msg);
       }
       return invoke_message_result::consumed;
@@ -689,7 +689,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
             setf(has_timeout_flag);
         });
         auto call_default_handler = [&] {
-          auto sres = call_handler(default_handler_, this, x);
+          auto sres = call_handler(default_handler_, this, x.payload);
           switch (sres.flag) {
             default:
               break;
@@ -1119,7 +1119,7 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
   };
   // Utility for invoking the default handler.
   auto fallback = [&] {
-    auto sres = call_handler(default_handler_, this, x);
+    auto sres = call_handler(default_handler_, this, x.payload);
     switch (sres.flag) {
       default:
         CAF_LOG_DEBUG(

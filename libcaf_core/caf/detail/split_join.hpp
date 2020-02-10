@@ -46,15 +46,13 @@ public:
   }
 
   behavior make_behavior() override {
-    auto f = [=](scheduled_actor*, message_view& xs) -> result<message> {
-      auto msg = xs.move_content_to_message();
+    auto f = [=](scheduled_actor*, message& msg) -> result<message> {
       auto rp = this->make_response_promise();
       split_(workset_, msg);
       for (auto& x : workset_)
         this->send(x.first, std::move(x.second));
       auto g
-        = [=](scheduled_actor*, message_view& ys) mutable -> result<message> {
-        auto res = ys.move_content_to_message();
+        = [=](scheduled_actor*, message& res) mutable -> result<message> {
         join_(value_, res);
         if (--awaited_results_ == 0) {
           rp.deliver(value_);

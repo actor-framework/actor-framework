@@ -117,7 +117,6 @@ set(CAF_CORE_SOURCES
   src/message_builder.cpp
   src/message_handler.cpp
   src/message_priority_strings.cpp
-  src/message_view.cpp
   src/monitorable_actor.cpp
   src/node_id.cpp
   src/outbound_path.cpp

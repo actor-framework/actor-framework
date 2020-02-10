@@ -36,7 +36,8 @@ public:
   broker_servant(handle_type x)
     : hdl_(x),
       value_(strong_actor_ptr{}, make_message_id(),
-             mailbox_element::forwarding_stack{}, SysMsgType{x, {}}) {
+             mailbox_element::forwarding_stack{},
+             make_message(SysMsgType{x, {}})) {
     // nop
   }
 
@@ -103,9 +104,9 @@ protected:
           std::is_same<handle_type, accept_handle>::value,
           acceptor_passivated_msg,
           datagram_servant_passivated_msg>::type>::type;
-      using tmp_t = mailbox_element_vals<passiv_t>;
-      tmp_t tmp{strong_actor_ptr{}, make_message_id(),
-                mailbox_element::forwarding_stack{}, passiv_t{hdl()}};
+      mailbox_element tmp{strong_actor_ptr{}, make_message_id(),
+                          mailbox_element::forwarding_stack{},
+                          make_message(passiv_t{hdl()})};
       invoke_mailbox_element_impl(ctx, tmp);
       return activity_tokens_ != size_t{0};
     }
@@ -113,11 +114,11 @@ protected:
   }
 
   SysMsgType& msg() {
-    return value_.template get_mutable_as<SysMsgType>(0);
+    return value_.payload.template get_mutable_as<SysMsgType>(0);
   }
 
   handle_type hdl_;
-  mailbox_element_vals<SysMsgType> value_;
+  mailbox_element value_;
   optional<size_t> activity_tokens_;
 };
 
