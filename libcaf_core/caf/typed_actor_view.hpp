@@ -22,6 +22,7 @@
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
 #include "caf/scheduled_actor.hpp"
+#include "caf/timespan.hpp"
 #include "caf/typed_actor_view_base.hpp"
 
 namespace caf {
@@ -106,7 +107,7 @@ public:
     return self_->new_request_id(mp);
   }
 
-  void request_response_timeout(const duration& d, message_id mid) {
+  void request_response_timeout(timespan d, message_id mid) {
     return self_->request_response_timeout(d, mid);
   }
 
