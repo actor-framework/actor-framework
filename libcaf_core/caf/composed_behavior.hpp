@@ -38,8 +38,7 @@ public:
 
   using broker_base = typename handle_type::broker_base;
 
-  using self_pointer =
-    typename detail::tl_apply<signatures, typed_actor_pointer>::type;
+  using self_pointer = typename handle_type::pointer_view;
 
   composed_behavior() : self(nullptr) {
     // nop
