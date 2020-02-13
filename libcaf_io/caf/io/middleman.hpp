@@ -161,6 +161,8 @@ public:
                timespan timeout = timespan{std::chrono::minutes{1}}) {
     if (!nid || name.empty())
       return sec::invalid_argument;
+    if (nid == system().node())
+      return system().spawn<Handle>(std::move(name), std::move(args));
     auto res = remote_spawn_impl(nid, name, args,
                                  system().message_types<Handle>(), timeout);
     if (!res)
