@@ -93,6 +93,10 @@ public:
   /// Identifies pointers to instances of this kind of actor.
   using pointer = typed_event_based_actor<Sigs...>*;
 
+  /// Allows a view to an actor implementing this messaging interface without
+  /// knowledge of the actual type..
+  using pointer_view = typed_actor_pointer<Sigs...>;
+
   /// Identifies the base class for this kind of actor.
   using base = typed_event_based_actor<Sigs...>;
 

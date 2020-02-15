@@ -18,9 +18,11 @@
 
 #pragma once
 
+#include "caf/actor_traits.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
 #include "caf/scheduled_actor.hpp"
+#include "caf/timespan.hpp"
 #include "caf/typed_actor_view_base.hpp"
 
 namespace caf {
@@ -101,6 +103,14 @@ public:
     self_->demonitor(x);
   }
 
+  message_id new_request_id(message_priority mp) {
+    return self_->new_request_id(mp);
+  }
+
+  void request_response_timeout(timespan d, message_id mid) {
+    return self_->request_response_timeout(d, mid);
+  }
+
   response_promise make_response_promise() {
     return self_->make_response_promise();
   }
@@ -112,6 +122,20 @@ public:
               >::type>
   R response(Ts&&... xs) {
     return self_->response(std::forward<Ts>(xs)...);
+  }
+
+  template <class... Ts>
+  void eq_impl(Ts&&... xs) {
+    self_->eq_impl(std::forward<Ts>(xs)...);
+  }
+
+  void add_awaited_response_handler(message_id response_id, behavior bhvr) {
+    return self_->add_awaited_response_handler(response_id, std::move(bhvr));
+  }
+
+  void add_multiplexed_response_handler(message_id response_id, behavior bhvr) {
+    return self_->add_multiplexed_response_handler(response_id,
+                                                   std::move(bhvr));
   }
 
   /// Returns a pointer to the sender of the current message.
@@ -142,6 +166,19 @@ public:
 
 private:
   scheduled_actor* self_;
+};
+
+template <class... Sigs>
+struct actor_traits<typed_actor_view<Sigs...>> {
+  static constexpr bool is_dynamically_typed = false;
+
+  static constexpr bool is_statically_typed = true;
+
+  static constexpr bool is_blocking = false;
+
+  static constexpr bool is_non_blocking = true;
+
+  static constexpr bool is_incomplete = false;
 };
 
 } // namespace caf
