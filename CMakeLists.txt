@@ -707,9 +707,11 @@ endif()
 # -- Export important variables to the parent scope ----------------------------
 
 if(caf_is_subproject)
-  set(CAF_VERSION "${CAF_VERSION}" PARENT_SCOPE)
-  set(CAF_INCLUDE_DIRS "${CAF_INCLUDE_DIRS}" PARENT_SCOPE)
-  set(CAF_LIBRARIES "${CAF_LIBRARIES}" PARENT_SCOPE)
+  # Make sure parent projects can find build_config.hpp
+  list(APPEND CAF_INCLUDE_DIRS "${CMAKE_CURRENT_BINARY_DIR}/libcaf_core")
+  set(CAF_VERSION  "${CAF_VERSION}" CACHE INTERNAL "CAF release version")
+  set(CAF_LIBRARIES "${CAF_LIBRARIES}" CACHE INTERNAL "Library targets")
+  set(CAF_INCLUDE_DIRS "${CAF_INCLUDE_DIRS}" CACHE INTERNAL "Path to CAF headers")
 endif()
 
 ################################################################################
