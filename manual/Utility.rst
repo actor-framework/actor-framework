@@ -1,70 +1,73 @@
-\section{Utility}
-\label{utility}
+.. _utility:
+
+Utility
+=======
 
 CAF includes a few utility classes that are likely to be part of C++
 eventually (or already are in newer versions of the standard). However, until
 these classes are part of the standard library on all supported compilers, we
 unfortunately have to maintain our own implementations.
 
-\subsection{Class \lstinline^optional^}
-\label{optional}
+.. _optional:
+
+Class ``optional``
+------------------
 
 Represents a value that may or may not exist.
 
-\begin{center}
-\begin{tabular}{ll}
-  \textbf{Constructors} & ~ \\
-  \hline
-  \lstinline^(T value)^ & Constructs an object with a value. \\
-  \hline
-  \lstinline^(none_t = none)^ & Constructs an object without a value. \\
-  \hline
-  ~ & ~ \\ \textbf{Observers} & ~ \\
-  \hline
-  \lstinline^explicit operator bool()^ & Checks whether the object contains a value. \\
-  \hline
-  \lstinline^T* operator->()^ & Accesses the contained value. \\
-  \hline
-  \lstinline^T& operator*()^ & Accesses the contained value. \\
-  \hline
-\end{tabular}
-\end{center}
++-----------------------------+---------------------------------------------+
+| **Constructors**            |                                             |
++-----------------------------+---------------------------------------------+
+| ``(T value)``               | Constructs an object with a value.          |
++-----------------------------+---------------------------------------------+
+| ``(none_t = none)``         | Constructs an object without a value.       |
++-----------------------------+---------------------------------------------+
+|                             |                                             |
++-----------------------------+---------------------------------------------+
+| **Observers**               |                                             |
++-----------------------------+---------------------------------------------+
+| ``explicit operator bool()``| Checks whether the object contains a value. |
++-----------------------------+---------------------------------------------+
+| ``T* operator->()``         | Accesses the contained value.               |
++-----------------------------+---------------------------------------------+
+| ``T& operator*()``          | Accesses the contained value.               |
++-----------------------------+---------------------------------------------+
 
-\subsection{Class \lstinline^expected^}
+Class ``expected``
+------------------
 
-Represents the result of a computation that \emph{should} return a value. If no
-value could be produced, the \lstinline^expected<T>^ contains an
-\lstinline^error^ \see{error}.
+Represents the result of a computation that *should* return a value. If no value
+could be produced, the ``expected<T>`` contains an ``error`` (see :ref:`error`).
 
-\begin{center}
-\begin{tabular}{ll}
-  \textbf{Constructors} & ~ \\
-  \hline
-  \lstinline^(T value)^ & Constructs an object with a value. \\
-  \hline
-  \lstinline^(error err)^ & Constructs an object with an error. \\
-  \hline
-  ~ & ~ \\ \textbf{Observers} & ~ \\
-  \hline
-  \lstinline^explicit operator bool()^ & Checks whether the object contains a value. \\
-  \hline
-  \lstinline^T* operator->()^ & Accesses the contained value. \\
-  \hline
-  \lstinline^T& operator*()^ & Accesses the contained value. \\
-  \hline
-  \lstinline^error& error()^ & Accesses the contained error. \\
-  \hline
-\end{tabular}
-\end{center}
++-----------------------------+---------------------------------------------+
+| **Constructors**            |                                             |
++-----------------------------+---------------------------------------------+
+| ``(T value)``               | Constructs an object with a value.          |
++-----------------------------+---------------------------------------------+
+| ``(error err)``             | Constructs an object with an error.         |
++-----------------------------+---------------------------------------------+
+|                             |                                             |
++-----------------------------+---------------------------------------------+
+| **Observers**               |                                             |
++-----------------------------+---------------------------------------------+
+| ``explicit operator bool()``| Checks whether the object contains a value. |
++-----------------------------+---------------------------------------------+
+| ``T* operator->()``         | Accesses the contained value.               |
++-----------------------------+---------------------------------------------+
+| ``T& operator*()``          | Accesses the contained value.               |
++-----------------------------+---------------------------------------------+
+| ``error& error()``          | Accesses the contained error.               |
++-----------------------------+---------------------------------------------+
 
+Constant ``unit``
+-----------------
 
-\subsection{Constant \lstinline^unit^}
+The constant ``unit`` of type ``unit_t`` is the equivalent of
+``void`` and can be used to initialize ``optional<void>`` and
+``expected<void>``.
 
-The constant \lstinline^unit^ of type \lstinline^unit_t^ is the equivalent of
-\lstinline^void^ and can be used to initialize \lstinline^optional<void>^ and
-\lstinline^expected<void>^.
+Constant ``none``
+-----------------
 
-\subsection{Constant \lstinline^none^}
-
-The constant \lstinline^none^ of type \lstinline^none_t^ can be used to
-initialize an \lstinline^optional<T>^ to represent ``nothing''.
+The constant ``none`` of type ``none_t`` can be used to
+initialize an ``optional<T>`` to represent "nothing".

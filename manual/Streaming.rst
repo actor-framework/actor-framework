@@ -1,5 +1,7 @@
-\section{Streaming\experimental}
-\label{streaming}
+.. _streaming:
+
+Streaming :sup:`experimental`
+=============================
 
 Streams in CAF describe data flow between actors. We are not aiming to provide
 functionality similar to Apache projects like Spark, Flink or Storm. Likewise,
@@ -13,17 +15,23 @@ A stream establishes a logical channel between two or more actors for
 exchanging a potentially unbound sequence of values. This channel uses demand
 signaling to guarantee that senders cannot overload receivers.
 
-\singlefig{stream}{Streaming Concept}{stream}
+.. _stream:
 
-Streams are directed and data flows only \emph{downstream}, i.e., from sender
+.. image:: stream.png
+   :alt: Streaming Concept
+
+Streams are directed and data flows only *downstream*, i.e., from sender
 (source) to receiver (sink). Establishing a stream requires a handshake in
 order to initialize required state and signal initial demand.
 
-\singlefig{stream-roles}{Streaming Roles}{stream-roles}
+.. _stream-roles:
 
-CAF distinguishes between three roles in a stream: (1) a \emph{source} creates
-streams and generates data, (2) a \emph{stage} transforms or filters data, and
-(3) a \emph{sink} terminates streams by consuming data.
+.. image:: stream-roles.png
+   :alt: Streaming Roles
+
+CAF distinguishes between three roles in a stream: (1) a *source* creates
+streams and generates data, (2) a *stage* transforms or filters data, and
+(3) a *sink* terminates streams by consuming data.
 
 We usually draw streams as pipelines for simplicity. However, sources can have
 any number of outputs (downstream actors). Likewise, sinks can have any number
@@ -31,19 +39,23 @@ of inputs (upstream actors) and stages can multiplex N inputs to M outputs.
 Hence, streaming topologies in CAF support arbitrary complexity with forks and
 joins.
 
-\subsection{Stream Managers}
+Stream Managers
+---------------
 
 Streaming-related messages are handled separately. Under the hood, actors
-delegate to \emph{stream managers} that in turn allow customization of their
-behavior with \emph{drivers} and \emph{downstream managers}.
+delegate to *stream managers* that in turn allow customization of their
+behavior with *drivers* and *downstream managers*.
 
-\singlefig{stream-manager}{Internals of Stream Managers}{fig-stream-manager}
+.. _fig-stream-manager:
+
+.. image:: stream-manager.png
+   :alt: Internals of Stream Managers
 
 Users usually can skip implementing driver classes and instead use the
 lambda-based interface showcased in the following sections. Drivers implement
 the streaming logic by taking inputs from upstream actors and pushing data to
 the downstream manager. A source has no input buffer. Hence, drivers only
-provide a \emph{generator} function that downstream managers call according to
+provide a *generator* function that downstream managers call according to
 demand.
 
 A downstream manager is responsible for dispatching data to downstream actors.
@@ -52,49 +64,53 @@ the same data. The downstream manager can also perform any sort multi- or
 anycast. For example, a load-balancer would use an anycast policy to dispatch
 data to the next available worker.
 
-\clearpage
+Defining Sources
+----------------
 
-\subsection{Defining Sources}
-
-\cppexample[17-46]{streaming/integer_stream}
+.. literalinclude:: /examples/streaming/integer_stream.cpp
+   :language: C++
+   :lines: 17-48
 
 The simplest way to defining a source is to use the
-\lstinline^attach_stream_source^ function and pass it four arguments: a pointer
-to \emph{self}, \emph{initializer} for the state, \emph{generator} for
-producing values, and \emph{predicate} for signaling the end of the stream.
+``attach_stream_source`` function and pass it four arguments: a pointer
+to *self*, *initializer* for the state, *generator* for
+producing values, and *predicate* for signaling the end of the stream.
 
-\clearpage
+Defining Stages
+---------------
 
-\subsection{Defining Stages}
+.. literalinclude:: /examples/streaming/integer_stream.cpp
+   :language: C++
+   :lines: 50-83
 
-\cppexample[48-78]{streaming/integer_stream}
-
-The function \lstinline^make_stage^ also takes three lambdas but additionally
+The function ``make_stage`` also takes three lambdas but additionally
 the received input stream handshake as first argument. Instead of a predicate,
-\lstinline^make_stage^ only takes a finalizer, since the stage does not produce
+``make_stage`` only takes a finalizer, since the stage does not produce
 data on its own and a stream terminates if no more sources exist.
 
-\clearpage
+Defining Sinks
+--------------
 
-\subsection{Defining Sinks}
+.. literalinclude:: /examples/streaming/integer_stream.cpp
+   :language: C++
+   :lines: 85-114
 
-\cppexample[80-106]{streaming/integer_stream}
-
-The function \lstinline^make_sink^ is similar to \lstinline^make_stage^, except
+The function ``make_sink`` is similar to ``make_stage``, except
 that is does not produce outputs.
 
-\clearpage
+Initiating Streams
+------------------
 
-\subsection{Initiating Streams}
+.. literalinclude:: /examples/streaming/integer_stream.cpp
+   :language: C++
+   :lines: 128-132
 
-\cppexample[121-125]{streaming/integer_stream}
-
-In our example, we always have a source \lstinline^int_source^ and a sink
-\lstinline^int_sink^ with an optional stage \lstinline^int_selector^. Sending
-\lstinline^open_atom^ to the source initiates the stream and the source will
+In our example, we always have a source ``int_source`` and a sink
+``int_sink`` with an optional stage ``int_selector``. Sending
+``open_atom`` to the source initiates the stream and the source will
 respond with a stream handshake.
 
-Using the actor composition in CAF (\lstinline^snk * src^ reads \emph{sink
-after source}) allows us to redirect the stream handshake we send in
-\lstinline^caf_main^ to the sink (or to the stage and then from the stage to
+Using the actor composition in CAF (``snk * src`` reads *sink
+after source*) allows us to redirect the stream handshake we send in
+``caf_main`` to the sink (or to the stage and then from the stage to
 the sink).
