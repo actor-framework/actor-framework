@@ -1,18 +1,21 @@
-\section{Remote Spawning of Actors \experimental}
-\label{remote-spawn}
+.. _remote-spawn:
+
+Remote Spawning of Actors  :sup:`experimental`
+==============================================
 
 Remote spawning is an extension of the dynamic spawn using run-time type names
-\see{add-custom-actor-type}. The following example assumes a typed actor handle
-named \lstinline^calculator^ with an actor implementing this messaging
-interface named "calculator".
+(see :ref:`add-custom-actor-type`). The following example assumes a typed actor
+handle named ``calculator`` with an actor implementing this messaging interface
+named "calculator".
 
-\cppexample[123-137]{remoting/remote_spawn}
+.. literalinclude:: /examples/remoting/remote_spawn.cpp
+   :language: C++
+   :lines: 123-137
 
-We first connect to a CAF node with \lstinline^middleman().connect(...)^. On
-success, \lstinline^connect^ returns the node ID we need for
-\lstinline^remote_spawn^. This requires the server to open a port with
-\lstinline^middleman().open(...)^ or \lstinline^middleman().publish(...)^.
-Alternatively, we can obtain the node ID from an already existing remote actor
-handle---returned from \lstinline^remote_actor^ for example---via
-\lstinline^hdl->node()^. After connecting to the server, we can use
-\lstinline^middleman().remote_spawn<...>(...)^ to create actors remotely.
+We first connect to a CAF node with ``middleman().connect(...)``. On success,
+``connect`` returns the node ID we need for ``remote_spawn``. This requires the
+server to open a port with ``middleman().open(...)`` or
+``middleman().publish(...)``. Alternatively, we can obtain the node ID from an
+already existing remote actor handle---returned from ``remote_actor`` for
+example---via ``hdl->node()``. After connecting to the server, we can use
+``middleman().remote_spawn<...>(...)`` to create actors remotely.

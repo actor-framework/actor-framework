@@ -1,337 +1,369 @@
-\section{Configuring Actor Applications}
-\label{system-config}
+.. _system-config:
+
+Configuring Actor Applications
+==============================
 
 CAF configures applications at startup using an
-\lstinline^actor_system_config^ or a user-defined subclass of that type. The
+``actor_system_config`` or a user-defined subclass of that type. The
 config objects allow users to add custom types, to load modules, and to
 fine-tune the behavior of loaded modules with command line options or
-configuration files~\see{system-config-options}.
+configuration files system-config-options_.
 
-The following code example is a minimal CAF application with a
-middleman~\see{middleman} but without any custom configuration options.
+The following code example is a minimal CAF application with a :ref:`middleman`
+but without any custom configuration options.
 
-\begin{lstlisting}
-void caf_main(actor_system& system) {
-  // ...
-}
-CAF_MAIN(io::middleman)
-\end{lstlisting}
+.. code-block:: C++
+
+   void caf_main(actor_system& system) {
+     // ...
+   }
+   CAF_MAIN(io::middleman)
 
 The compiler expands this example code to the following.
 
-\begin{lstlisting}
-void caf_main(actor_system& system) {
-  // ...
-}
-int main(int argc, char** argv) {
-  return exec_main<io::middleman>(caf_main, argc, argv);
-}
-\end{lstlisting}
+.. code-block:: C++
 
-The function \lstinline^exec_main^ creates a config object, loads all modules
-requested in \lstinline^CAF_MAIN^ and then calls \lstinline^caf_main^. A
-minimal implementation for \lstinline^main^ performing all these steps manually
+   void caf_main(actor_system& system) {
+     // ...
+   }
+   int main(int argc, char** argv) {
+     return exec_main<io::middleman>(caf_main, argc, argv);
+   }
+
+The function ``exec_main`` creates a config object, loads all modules
+requested in ``CAF_MAIN`` and then calls ``caf_main``. A
+minimal implementation for ``main`` performing all these steps manually
 is shown in the next example for the sake of completeness.
 
-\begin{lstlisting}
-int main(int argc, char** argv) {
-  actor_system_config cfg;
-  // read CLI options
-  cfg.parse(argc, argv);
-  // return immediately if a help text was printed
-  if (cfg.cli_helptext_printed)
-    return 0;
-  // load modules
-  cfg.load<io::middleman>();
-  // create actor system and call caf_main
-  actor_system system{cfg};
-  caf_main(system);
-}
-\end{lstlisting}
+.. code-block:: C++
+
+   int main(int argc, char** argv) {
+     actor_system_config cfg;
+     // read CLI options
+     cfg.parse(argc, argv);
+     // return immediately if a help text was printed
+     if (cfg.cli_helptext_printed)
+       return 0;
+     // load modules
+     cfg.load<io::middleman>();
+     // create actor system and call caf_main
+     actor_system system{cfg};
+     caf_main(system);
+   }
 
 However, setting up config objects by hand is usually not necessary. CAF
 automatically selects user-defined subclasses of
-\lstinline^actor_system_config^ if \lstinline^caf_main^ takes a second
+``actor_system_config`` if ``caf_main`` takes a second
 parameter by reference, as shown in the minimal example below.
 
-\begin{lstlisting}
-class my_config : public actor_system_config {
-public:
-  my_config() {
-    // ...
-  }
-};
+.. code-block:: C++
 
-void caf_main(actor_system& system, const my_config& cfg) {
-  // ...
-}
+   class my_config : public actor_system_config {
+   public:
+     my_config() {
+       // ...
+     }
+   };
 
-CAF_MAIN()
-\end{lstlisting}
+   void caf_main(actor_system& system, const my_config& cfg) {
+     // ...
+   }
+
+   CAF_MAIN()
 
 Users can perform additional initialization, add custom program options, etc.
 simply by implementing a default constructor.
 
-\subsection{Loading Modules}
-\label{system-config-module}
+.. _system-config-module:
 
-The simplest way to load modules is to use the macro \lstinline^CAF_MAIN^ and
+Loading Modules
+---------------
+
+The simplest way to load modules is to use the macro ``CAF_MAIN`` and
 to pass a list of all requested modules, as shown below.
 
-\begin{lstlisting}
-void caf_main(actor_system& system) {
-  // ...
-}
-CAF_MAIN(mod1, mod2, ...)
-\end{lstlisting}
+.. code-block:: C++
+
+   void caf_main(actor_system& system) {
+     // ...
+   }
+   CAF_MAIN(mod1, mod2, ...)
 
 Alternatively, users can load modules in user-defined config classes.
 
-\begin{lstlisting}
-class my_config : public actor_system_config {
-public:
-  my_config() {
-    load<mod1>();
-    load<mod2>();
-    // ...
-  }
-};
-\end{lstlisting}
+.. code-block:: C++
 
-The third option is to simply call \lstinline^x.load<mod1>()^ on a config
-object \emph{before} initializing an actor system with it.
+   class my_config : public actor_system_config {
+   public:
+     my_config() {
+       load<mod1>();
+       load<mod2>();
+       // ...
+     }
+   };
 
-\subsection{Command Line Options and INI Configuration Files}
-\label{system-config-options}
+The third option is to simply call ``x.load<mod1>()`` on a config
+object *before* initializing an actor system with it.
+
+.. _system-config-options:
+
+Command Line Options and INI Configuration Files
+------------------------------------------------
 
 CAF organizes program options in categories and parses CLI arguments as well as
 INI files. CLI arguments override values in the INI file which override
 hard-coded defaults. Users can add any number of custom program options by
-implementing a subtype of \lstinline^actor_system_config^. The example below
-adds three options to the \lstinline^global^ category.
+implementing a subtype of ``actor_system_config``. The example below
+adds three options to the ``global`` category.
 
-\cppexample[206-218]{remoting/distributed_calculator}
+.. literalinclude:: /examples/remoting/distributed_calculator.cpp
+   :language: C++
+   :lines: 206-218
 
-We create a new \lstinline^global^ category in  \lstinline^custom_options_}^.
-Each following call to \lstinline^add^ then appends individual options to the
-category. The first argument to \lstinline^add^ is the associated variable. The
+We create a new ``global`` category in ``custom_options_}``.
+Each following call to ``add`` then appends individual options to the
+category. The first argument to ``add`` is the associated variable. The
 second argument is the name for the parameter, optionally suffixed with a
 comma-separated single-character short name. The short name is only considered
 for CLI parsing and allows users to abbreviate commonly used option names. The
-third and final argument to \lstinline^add^ is a help text.
+third and final argument to ``add`` is a help text.
 
-The custom \lstinline^config^ class allows end users to set the port for the
-application to 42 with either \lstinline^-p 42^ (short name) or
-\lstinline^--port=42^ (long name). The long option name is prefixed by the
+The custom ``config`` class allows end users to set the port for the
+application to 42 with either ``-p 42`` (short name) or
+``--port=42`` (long name). The long option name is prefixed by the
 category when using a different category than ``global''. For example, adding
-the port option to the category \lstinline^foo^ means end users have to type
-\lstinline^--foo.port=42^ when using the long name. Short names are unaffected
+the port option to the category ``foo`` means end users have to type
+``--foo.port=42`` when using the long name. Short names are unaffected
 by the category, but have to be unique.
 
 Boolean options do not require arguments. The member variable
-\lstinline^server_mode^ is set to \lstinline^true^ if the command line contains
-either \lstinline^--server-mode^ or \lstinline^-s^.
+``server_mode`` is set to ``true`` if the command line contains
+either ``--server-mode`` or ``-s``.
 
 The example uses member variables for capturing user-provided settings for
 simplicity. However, this is not required. For example,
-\lstinline^add<bool>(...)^ allows omitting the first argument entirely. All
-values of the configuration are accessible with \lstinline^get_or^. Note that
-all global options can omit the \lstinline^"global."^ prefix.
+``add<bool>(...)`` allows omitting the first argument entirely. All
+values of the configuration are accessible with ``get_or``. Note that
+all global options can omit the ``"global."`` prefix.
 
-CAF adds the program options \lstinline^help^ (with short names \lstinline^-h^
-and \lstinline^-?^) as well as \lstinline^long-help^ to the \lstinline^global^
+CAF adds the program options ``help`` (with short names ``-h``
+and ``-?``) as well as ``long-help`` to the ``global``
 category.
 
-The default name for the INI file is \lstinline^caf-application.ini^. Users can
-change the file name and path by passing \lstinline^--config-file=<path>^ on the
+The default name for the INI file is ``caf-application.ini``. Users can
+change the file name and path by passing ``--config-file=<path>`` on the
 command line.
 
 INI files are organized in categories. No value is allowed outside of a category
-(no implicit \lstinline^global^ category). The parses uses the following syntax:
+(no implicit ``global`` category). The parses uses the following syntax:
 
-\begin{tabular}{ll}
-  \lstinline^key=true^ & is a boolean \\
-  \lstinline^key=1^ & is an integer \\
-  \lstinline^key=1.0^ & is an floating point number \\
-  \lstinline^key=1ms^ & is an timespan \\
-  \lstinline^key='foo'^ & is an atom \\
-  \lstinline^key="foo"^ & is a string \\
-  \lstinline^key=[0, 1, ...]^ & is as a list \\
-  \lstinline^key={a=1, b=2, ...}^ & is a dictionary (map) \\
-\end{tabular}
++------------------------+-----------------------------+
+| ``key=true``           | is a boolean                |
++------------------------+-----------------------------+
+| ``key=1``              | is an integer               |
++------------------------+-----------------------------+
+| ``key=1.0``            | is an floating point number |
++------------------------+-----------------------------+
+| ``key=1ms``            | is an timespan              |
++------------------------+-----------------------------+
+| ``key='foo'``          | is an atom                  |
++------------------------+-----------------------------+
+| ``key="foo"``          | is a string                 |
++------------------------+-----------------------------+
+| ``key=[0, 1, ...]``    | is as a list                |
++------------------------+-----------------------------+
+| ``key={a=1, b=2, ...}``| is a dictionary (map)       |
++------------------------+-----------------------------+
 
 The following example INI file lists all standard options in CAF and their
-default value. Note that some options such as \lstinline^scheduler.max-threads^
+default value. Note that some options such as ``scheduler.max-threads``
 are usually detected at runtime and thus have no hard-coded default.
 
-\clearpage
-\iniexample{caf-application}
+.. literalinclude:: /examples/caf-application.ini
+  :language: INI
 
-\clearpage
-\subsection{Adding Custom Message Types}
-\label{add-custom-message-type}
+.. _add-custom-message-type:
 
-CAF requires serialization support for all of its message types
-\see{type-inspection}. However, CAF also needs a mapping of unique type names
+Adding Custom Message Types
+---------------------------
+
+CAF requires serialization support for all of its message types (see
+:ref:`type-inspection`). However, CAF also needs a mapping of unique type names
 to user-defined types at runtime. This is required to deserialize arbitrary
 messages from the network.
 
 As an introductory example, we (again) use the following POD type
-\lstinline^foo^.
+``foo``.
 
-\cppexample[24-27]{custom_type/custom_types_1}
+.. literalinclude:: /examples/custom_type/custom_types_1.cpp
+   :language: C++
+   :lines: 24-27
 
-To make \lstinline^foo^ serializable, we make it inspectable
-\see{type-inspection}:
+To make ``foo`` serializable, we make it inspectable:
 
-\cppexample[30-34]{custom_type/custom_types_1}
+.. literalinclude:: /examples/custom_type/custom_types_1.cpp
+   :language: C++
+   :lines: 30-34
 
-Finally, we give \lstinline^foo^ a platform-neutral name and add it to the list
+Finally, we give ``foo`` a platform-neutral name and add it to the list
 of serializable types by using a custom config class.
 
-\cppexample[75-78,81-84]{custom_type/custom_types_1}
+.. literalinclude:: /examples/custom_type/custom_types_1.cpp
+   :language: C++
+   :lines: 75-78,81-84
 
-\subsection{Adding Custom Error Types}
+Adding Custom Error Types
+-------------------------
 
 Adding a custom error type to the system is a convenience feature to allow
 improve the string representation. Error types can be added by implementing a
-render function and passing it to \lstinline^add_error_category^, as shown
-in~\sref{custom-error}.
+render function and passing it to ``add_error_category``, as shown in
+:ref:`custom-error`.
 
-\clearpage
-\subsection{Adding Custom Actor Types \experimental}
-\label{add-custom-actor-type}
+.. _add-custom-actor-type:
+
+Adding Custom Actor Types  :sup:`experimental`
+----------------------------------------------
 
 Adding actor types to the configuration allows users to spawn actors by their
-name. In particular, this enables spawning of actors on a different node
-\see{remote-spawn}. For our example configuration, we consider the following
-simple \lstinline^calculator^ actor.
+name. In particular, this enables spawning of actors on a different node (see
+:ref:`remote-spawn`). For our example configuration, we consider the following
+simple ``calculator`` actor.
 
-\cppexample[33-34]{remoting/remote_spawn}
+.. literalinclude:: /examples/remoting/remote_spawn.cpp
+   :language: C++
+   :lines: 33-34
 
 Adding the calculator actor type to our config is achieved by calling
-\lstinline^add_actor_type<T>^. Note that adding an actor type in this way
-implicitly calls \lstinline^add_message_type<T>^ for typed actors
-\see{add-custom-message-type}. This makes our \lstinline^calculator^ actor type
+``add_actor_type<T>``. Note that adding an actor type in this way
+implicitly calls ``add_message_type<T>`` for typed actors
+add-custom-message-type_. This makes our ``calculator`` actor type
 serializable and also enables remote nodes to spawn calculators anywhere in the
 distributed actor system (assuming all nodes use the same config).
 
-\cppexample[98-109]{remoting/remote_spawn}
+.. literalinclude:: /examples/remoting/remote_spawn.cpp
+   :language: C++
+   :lines: 98-109
 
-Our final example illustrates how to spawn a \lstinline^calculator^ locally by
+Our final example illustrates how to spawn a ``calculator`` locally by
 using its type name. Because the dynamic type name lookup can fail and the
 construction arguments passed as message can mismatch, this version of
-\lstinline^spawn^ returns \lstinline^expected<T>^.
+``spawn`` returns ``expected<T>``.
 
-\begin{lstlisting}
-auto x = system.spawn<calculator>("calculator", make_message());
-if (! x) {
-  std::cerr << "*** unable to spawn calculator: "
-            << system.render(x.error()) << std::endl;
-  return;
-}
-calculator c = std::move(*x);
-\end{lstlisting}
+.. code-block:: C++
+
+   auto x = system.spawn<calculator>("calculator", make_message());
+   if (! x) {
+     std::cerr << "*** unable to spawn calculator: "
+               << system.render(x.error()) << std::endl;
+     return;
+   }
+   calculator c = std::move(*x);
 
 Adding dynamically typed actors to the config is achieved in the same way. When
 spawning a dynamically typed actor in this way, the template parameter is
-simply \lstinline^actor^. For example, spawning an actor "foo" which requires
+simply ``actor``. For example, spawning an actor "foo" which requires
 one string is created with:
 
-\begin{lstlisting}
-auto worker = system.spawn<actor>("foo", make_message("bar"));
-\end{lstlisting}
+.. code-block:: C++
+
+   auto worker = system.spawn<actor>("foo", make_message("bar"));
 
 Because constructor (or function) arguments for spawning the actor are stored
-in a \lstinline^message^, only actors with appropriate input types are allowed.
+in a ``message``, only actors with appropriate input types are allowed.
 For example, pointer types are illegal. Hence users need to replace C-strings
-with \lstinline^std::string^.
+with ``std::string``.
 
-\clearpage
-\subsection{Log Output}
-\label{log-output}
+.. _log-output:
+
+Log Output
+----------
 
 Logging is disabled in CAF per default. It can be enabled by setting the
-\lstinline^--with-log-level=^ option of the \lstinline^configure^ script to one
-of \lstinline^error^, \lstinline^warning^, \lstinline^info^, \lstinline^debug^,
-or \lstinline^trace^ (from least output to most). Alternatively, setting the
-CMake variable \lstinline^CAF_LOG_LEVEL^ to one of these values has the same
+``--with-log-level=`` option of the ``configure`` script to one
+of ``error``, ``warning``, ``info``, ``debug``,
+or ``trace`` (from least output to most). Alternatively, setting the
+CMake variable ``CAF_LOG_LEVEL`` to one of these values has the same
 effect.
 
 All logger-related configuration options listed here and in
-\sref{system-config-options} are silently ignored if logging is disabled.
+system-config-options_ are silently ignored if logging is disabled.
 
-\subsubsection{File Name}
-\label{log-output-file-name}
+.. _log-output-file-name:
+
+File Name
+~~~~~~~~~
 
 The output file is generated from the template configured by
-\lstinline^logger-file-name^. This template supports the following variables.
+``logger-file-name``. This template supports the following variables.
 
-\begin{tabular}{ll}
-  \hline
-  \textbf{Variable} & \textbf{Output} \\
-  \hline
-  \texttt{[PID]} & The OS-specific process ID. \\
-  \hline
-  \texttt{[TIMESTAMP]} & The UNIX timestamp on startup. \\
-  \hline
-  \texttt{[NODE]} & The node ID of the CAF system. \\
-  \hline
-\end{tabular}
++----------------+--------------------------------+
+| **Variable**   | **Output**                     |
++----------------+--------------------------------+
+| ``[PID]``      | The OS-specific process ID.    |
++----------------+--------------------------------+
+| ``[TIMESTAMP]``| The UNIX timestamp on startup. |
++----------------+--------------------------------+
+| ``[NODE]``     | The node ID of the CAF system. |
++----------------+--------------------------------+
 
-\subsubsection{Console}
-\label{log-output-console}
+.. _log-output-console:
 
-Console output is disabled per default. Setting \lstinline^logger-console^ to
-either \lstinline^"uncolored"^ or \lstinline^"colored"^ prints log events to
-\lstinline^std::clog^. Using the \lstinline^"colored"^ option will print the
+Console
+~~~~~~~
+
+Console output is disabled per default. Setting ``logger-console`` to
+either ``"uncolored"`` or ``"colored"`` prints log events to
+``std::clog``. Using the ``"colored"`` option will print the
 log events in different colors depending on the severity level.
 
-\subsubsection{Format Strings}
-\label{log-output-format-strings}
+.. _log-output-format-strings:
+
+Format Strings
+~~~~~~~~~~~~~~
 
 CAF uses log4j-like format strings for configuring printing of individual
-events via \lstinline^logger-file-format^ and
-\lstinline^logger-console-format^. Note that format modifiers are not supported
+events via ``logger-file-format`` and
+``logger-console-format``. Note that format modifiers are not supported
 at the moment. The recognized field identifiers are:
 
-\begin{tabular}{ll}
-  \hline
-  \textbf{Character} & \textbf{Output} \\
-  \hline
-  \texttt{c} & The category/component. \\
-  \hline
-  \texttt{C} & The full qualifier of the current function. For example, the qualifier of \lstinline^void ns::foo::bar()^ is printed as \lstinline^ns.foo^. \\
-  \hline
-  \texttt{d} & The date in ISO 8601 format, i.e., \lstinline^"YYYY-MM-DDThh:mm:ss"^. \\
-  \hline
-  \texttt{F} & The file name. \\
-  \hline
-  \texttt{L} & The line number. \\
-  \hline
-  \texttt{m} & The user-defined log message. \\
-  \hline
-  \texttt{M} & The name of the current function. For example, the name of \lstinline^void ns::foo::bar()^ is printed as \lstinline^bar^. \\
-  \hline
-  \texttt{n} & A newline. \\
-  \hline
-  \texttt{p} & The priority (severity level). \\
-  \hline
-  \texttt{r} & Elapsed time since starting the application in milliseconds. \\
-  \hline
-  \texttt{t} & ID of the current thread. \\
-  \hline
-  \texttt{a} & ID of the current actor (or \lstinline^actor0^ when not logging inside an actor). \\
-  \hline
-  \texttt{\%} & A single percent sign. \\
-  \hline
-\end{tabular}
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+| **Character**| **Output**                                                                                                                  |
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``c``        | The category/component.                                                                                                     |
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``C``        | The full qualifier of the current function. For example, the qualifier of ``void ns::foo::bar()`` is printed as ``ns.foo``. |
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``d``        | The date in ISO 8601 format, i.e., ``"YYYY-MM-DDThh:mm:ss"``.                                                               |
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``F``        | The file name.                                                                                                              |
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``L``        | The line number.                                                                                                            |
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``m``        | The user-defined log message.                                                                                               |
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``M``        | The name of the current function. For example, the name of ``void ns::foo::bar()`` is printed as ``bar``.                   |
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``n``        | A newline.                                                                                                                  |
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``p``        | The priority (severity level).                                                                                              |
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``r``        | Elapsed time since starting the application in milliseconds.                                                                |
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``t``        | ID of the current thread.                                                                                                   |
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``a``        | ID of the current actor (or ``actor0`` when not logging inside an actor).                                                   |
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``%``        | A single percent sign.                                                                                                      |
++--------------+-----------------------------------------------------------------------------------------------------------------------------+
 
-\subsubsection{Filtering}
-\label{log-output-filtering}
+.. _log-output-filtering:
 
-The two configuration options \lstinline^logger-component-filter^ and
-\lstinline^logger-verbosity^ reduce the amount of generated log events. The
+Filtering
+~~~~~~~~~
+
+The two configuration options ``logger-component-filter`` and
+``logger-verbosity`` reduce the amount of generated log events. The
 former is a list of excluded component names and the latter can increase the
 reported severity level (but not decrease it beyond the level defined at
 compile time).

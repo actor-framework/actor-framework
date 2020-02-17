@@ -1,55 +1,54 @@
-\section{Overview}
+Overview
+========
 
 Compiling CAF requires CMake and a C++11-compatible compiler. To get and
 compile the sources on UNIX-like systems, type the following in a terminal:
 
-\begin{verbatim}
-git clone https://github.com/actor-framework/actor-framework
-cd actor-framework
-./configure
-make
-make install [as root, optional]
-\end{verbatim}
+.. ::
+
+   git clone https://github.com/actor-framework/actor-framework
+   cd actor-framework
+   ./configure
+   make
+   make install [as root, optional]
 
 We recommended to run the unit tests as well:
 
-\begin{verbatim}
-make test
-\end{verbatim}
+.. ::
+
+   make test
 
 If the output indicates an error, please submit a bug report that includes (a)
 your compiler version, (b) your OS, and (c) the content of the file
-\texttt{build/Testing/Temporary/LastTest.log}.
+``build/Testing/Temporary/LastTest.log``.
 
-\subsection{Features}
+Features
+--------
 
-\begin{itemize}
-  \item Lightweight, fast and efficient actor implementations
-  \item Network transparent messaging
-  \item Error handling based on Erlang's failure model
-  \item Pattern matching for messages as internal DSL to ease development
-  \item Thread-mapped actors for soft migration of existing applications
-  \item Publish/subscribe group communication
-\end{itemize}
+* Lightweight, fast and efficient actor implementations
+* Network transparent messaging
+* Error handling based on Erlang's failure model
+* Pattern matching for messages as internal DSL to ease development
+* Thread-mapped actors for soft migration of existing applications
+* Publish/subscribe group communication
 
+Minimal Compiler Versions
+-------------------------
 
-\subsection{Minimal Compiler Versions}
+* GCC 4.8
+* Clang 3.4
+* Visual Studio 2015, Update 3
 
-\begin{itemize}
-  \item GCC 4.8
-  \item Clang 3.4
-  \item Visual Studio 2015, Update 3
-\end{itemize}
+Supported Operating Systems
+---------------------------
 
-\subsection{Supported Operating Systems}
+* Linux
+* Mac OS X
+* Windows (static library only)
 
-\begin{itemize}
-\item Linux
-\item Mac OS X
-\item Windows (static library only)
-\end{itemize}
+Hello World Example
+-------------------
 
-\clearpage
-\subsection{Hello World Example}
+.. literalinclude:: /examples/hello_world.cpp
+   :language: C++
 
-\cppexample{hello_world}
