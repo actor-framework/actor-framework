@@ -129,6 +129,14 @@ A SNocs workspace is provided by GitHub user
 * LaTeX (for the `manual` target)
 * Pandoc and Python with pandocfilters (for the `rst` target)
 
+## Build the Manual
+
+CAF uses [Sphinx](https://www.sphinx-doc.org):
+
+```sh
+sphinx-build . manual/html -c manual
+```
+
 ## Scientific Use
 
 If you use CAF in a scientific context, please use one of the following citations:
