@@ -164,54 +164,35 @@ pipeline {
                 buildParallel(config, PrettyJobBaseName)
             }
         }
-        stage('Documentation') {
-            agent { label 'pandoc' }
-            steps {
-                deleteDir()
-                unstash('sources')
-                dir('sources') {
-                    // Configure and build.
-                    cmakeBuild([
-                        buildDir: 'build',
-                        installation: 'cmake in search path',
-                        sourceDir: '.',
-                        cmakeArgs: '-DCAF_BUILD_TEX_MANUAL=yes',
-                        steps: [[
-                            args: '--target doc',
-                            withCmake: true,
-                        ]],
-                    ])
-                    sshagent(['84d71a75-cbb6-489a-8f4c-d0e2793201e9']) {
-                        sh """
-                            if [ "${env.GIT_BRANCH}" = "master" ]; then
-                                rsync -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -r -z --delete build/doc/html/ www.inet.haw-hamburg.de:/users/www/www.actor-framework.org/html/doc
-                                scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null build/doc/manual.pdf www.inet.haw-hamburg.de:/users/www/www.actor-framework.org/html/pdf/manual.pdf
-                            fi
-                        """
-                    }
-                }
-                dir('read-the-docs') {
-                    git([
-                        credentialsId: '9b054212-9bb4-41fd-ad8e-b7d47495303f',
-                        url: 'git@github.com:actor-framework/read-the-docs.git',
-                    ])
-                    sh """
-                        if [ "${env.GIT_BRANCH}" = "master" ]; then
-                            cp ../sources/build/doc/rst/* .
-                            if [ -n "\$(git status --porcelain)" ]; then
-                                git add .
-                                git commit -m "Update Manual"
-                                git push --set-upstream origin master
-                                if [ -z "\$(grep 'exp.sha' ../sources/release.txt)" ] ; then
-                                    git tag \$(cat ../sources/release.txt)
-                                    git push origin \$(cat ../sources/release.txt)
-                                fi
-                            fi
-                        fi
-                    """
-                }
-            }
-        }
+        // TODO: generate PDF from reStructuredText
+        // stage('Documentation') {
+        //     agent { label 'pandoc' }
+        //     steps {
+        //         deleteDir()
+        //         unstash('sources')
+        //         dir('sources') {
+        //             // Configure and build.
+        //             cmakeBuild([
+        //                 buildDir: 'build',
+        //                 installation: 'cmake in search path',
+        //                 sourceDir: '.',
+        //                 cmakeArgs: '-DCAF_BUILD_TEX_MANUAL=yes',
+        //                 steps: [[
+        //                     args: '--target doc',
+        //                     withCmake: true,
+        //                 ]],
+        //             ])
+        //             sshagent(['84d71a75-cbb6-489a-8f4c-d0e2793201e9']) {
+        //                 sh """
+        //                     if [ "${env.GIT_BRANCH}" = "master" ]; then
+        //                         rsync -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -r -z --delete build/doc/html/ www.inet.haw-hamburg.de:/users/www/www.actor-framework.org/html/doc
+        //                         scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null build/doc/manual.pdf www.inet.haw-hamburg.de:/users/www/www.actor-framework.org/html/pdf/manual.pdf
+        //                     fi
+        //                 """
+        //             }
+        //         }
+        //     }
+        // }
         stage('Notify') {
             steps {
                 collectResults(config, PrettyJobName)
