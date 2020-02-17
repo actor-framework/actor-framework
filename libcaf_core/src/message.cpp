@@ -18,8 +18,6 @@
 
 #include "caf/message.hpp"
 
-#include <iostream>
-#include <utility>
 #include <utility>
 
 #include "caf/actor_system.hpp"

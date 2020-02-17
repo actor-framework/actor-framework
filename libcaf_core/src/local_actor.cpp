@@ -108,11 +108,11 @@ const char* local_actor::name() const {
   return "actor";
 }
 
-error local_actor::save_state(serializer&, const unsigned int) {
+error local_actor::save_state(serializer&, const unsigned int) const {
   CAF_RAISE_ERROR("local_actor::serialize called");
 }
 
-error local_actor::load_state(deserializer&, const unsigned int) {
+error local_actor::load_state(deserializer&, const unsigned int) const {
   CAF_RAISE_ERROR("local_actor::deserialize called");
 }
 

@@ -116,9 +116,9 @@ void manager::init(actor_system_config&) {
   SSL_library_init();
   SSL_load_error_strings();
   if (authentication_enabled()) {
-    if (system().config().openssl_certificate.size() == 0)
+    if (system().config().openssl_certificate.empty())
       CAF_RAISE_ERROR("No certificate configured for SSL endpoint");
-    if (system().config().openssl_key.size() == 0)
+    if (system().config().openssl_key.empty())
       CAF_RAISE_ERROR("No private key configured for SSL endpoint");
   }
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -145,9 +145,9 @@ void* manager::subtype_ptr() {
 
 bool manager::authentication_enabled() {
   auto& cfg = system().config();
-  return cfg.openssl_certificate.size() > 0 || cfg.openssl_key.size() > 0
-         || cfg.openssl_passphrase.size() > 0 || cfg.openssl_capath.size() > 0
-         || cfg.openssl_cafile.size() > 0;
+  return !cfg.openssl_certificate.empty() || !cfg.openssl_key.empty()
+         || !cfg.openssl_passphrase.empty() || !cfg.openssl_capath.empty()
+         || !cfg.openssl_cafile.empty();
 }
 
 actor_system::module* manager::make(actor_system& sys, detail::type_list<>) {

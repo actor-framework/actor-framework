@@ -74,5 +74,5 @@ CAF_TEST(test_serial_reply) {
              [&](const error& err) {
                CAF_ERROR("Error: " << self->system().render(err));
              });
-  CAF_REQUIRE(self->mailbox().size() == 0);
+  CAF_REQUIRE(self->mailbox().empty());
 }
