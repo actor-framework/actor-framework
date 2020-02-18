@@ -134,7 +134,8 @@ A SNocs workspace is provided by GitHub user
 CAF uses [Sphinx](https://www.sphinx-doc.org):
 
 ```sh
-sphinx-build . manual/html -c manual
+cd manual
+sphinx-build . html
 ```
 
 ## Scientific Use

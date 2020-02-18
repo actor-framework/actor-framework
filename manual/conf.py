@@ -20,11 +20,16 @@
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-import os, sys, git, re
+import os, sys, git, re, pathlib
+
+# -- CAF-specific variables ---------------------------------------------------
+
+conf_dir = pathlib.Path(__file__).parent.absolute()
+root_dir = conf_dir.parent.absolute()
 
 # Fetch the CAF version.
 import re
-with open("../libcaf_core/caf/config.hpp") as f:
+with open(os.path.join(root_dir, "libcaf_core/caf/config.hpp")) as f:
     match = re.search('^#define CAF_VERSION ([0-9]+)$', f.read(), re.MULTILINE)
     if match == None:
         raise RuntimeError("unable to locate CAF_VERSION string in config.hpp")
@@ -36,7 +41,7 @@ with open("../libcaf_core/caf/config.hpp") as f:
 
 # We're building a stable release if the last commit message is
 # "Change version to <version>".
-repo = git.Repo(os.path.abspath('..'))
+repo = git.Repo(root_dir)
 is_stable = repo.head.commit.message.startswith("Change version to " + version)
 
 # Generate the full version, including alpha/beta/rc tags. For stable releases,
@@ -48,7 +53,14 @@ else:
     last_commit = last_commit_full[:7]
     release = version + "+exp.sha." + last_commit
 
-# -- General configuration ------------------------------------------------
+# -- Enable Sphinx to find the literal includes -------------------------------
+
+for dirname in ["examples", "libcaf_core", "libcaf_io", "libcaf_openssl"]:
+    dest_dir = os.path.join(conf_dir, dirname)
+    if not os.path.isdir(dest_dir):
+        os.symlink(os.path.join(root_dir, dirname), dest_dir)
+
+# -- General configuration ----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
@@ -75,7 +87,7 @@ source_suffix = '.rst'
 # source_encoding = 'utf-8-sig'
 
 # The master toctree document.
-master_doc = 'manual'
+master_doc = 'index'
 
 # General information about the project.
 project = u'CAF'
