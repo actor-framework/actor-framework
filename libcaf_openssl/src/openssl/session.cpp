@@ -230,10 +230,10 @@ SSL_CTX* session::create_ssl_context() {
                                        SSL_FILETYPE_PEM)
              != 1)
       CAF_RAISE_ERROR("cannot load private key");
-    auto cafile
-      = (!cfg.openssl_cafile.empty() ? cfg.openssl_cafile.c_str() : nullptr);
-    auto capath
-      = (!cfg.openssl_capath.empty() ? cfg.openssl_capath.c_str() : nullptr);
+    auto cafile = (!cfg.openssl_cafile.empty() ? cfg.openssl_cafile.c_str()
+                                               : nullptr);
+    auto capath = (!cfg.openssl_capath.empty() ? cfg.openssl_capath.c_str()
+                                               : nullptr);
     if (cafile || capath) {
       if (SSL_CTX_load_verify_locations(ctx, cafile, capath) != 1)
         CAF_RAISE_ERROR("cannot load trusted CA certificates");
