@@ -169,12 +169,12 @@ Class ``message_builder``
 Extracting
 ----------
 
-The member function ``message::extract`` removes matched elements from
-a message. x Messages are filtered by repeatedly applying a message handler to
-the greatest remaining slice, whereas slices are generated in the sequence $[0,
-size)$, $[0, size-1)$, $...$, $[1, size-1)$, $...$, $[size-1, size)$. Whenever
-a slice is matched, it is removed from the message and the next slice starts at
-the same index on the reduced message.
+The member function ``message::extract`` removes matched elements from a
+message. x Messages are filtered by repeatedly applying a message handler to the
+greatest remaining slice, whereas slices are generated in the sequence
+``[0, size)``, ``[0, size-1)``, ``...``, ``[1, size-1)``, ``...``,
+``[size-1, size)``. Whenever a slice is matched, it is removed from the message
+and the next slice starts at the same index on the reduced message.
 
 For example:
 

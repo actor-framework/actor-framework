@@ -66,7 +66,7 @@ denotes the port, while the second (optional) parameter can be used to
 whitelist IP addresses.
 
 After publishing the group at one node (the server), other nodes (the clients)
-can get a handle for that group by using the ``remote'' module:
-``system.groups().get("remote", "<group>@<host>:<port>")``. This
-implementation uses N-times unicast underneath and the group is only available
-as long as the hosting server is alive.
+can get a handle for that group by using the ``remote`` module:
+``system.groups().get("remote", "<group>@<host>:<port>")``. This implementation
+uses N-times unicast underneath and the group is only available as long as the
+hosting server is alive.

@@ -167,7 +167,7 @@ statically and dynamically typed event-based actors as well as brokers
 +-------------------------------+--------------------------------------------------------------------------+
 | **Special-purpose Handlers**  |                                                                          |
 +-------------------------------+--------------------------------------------------------------------------+
-| ``set_exception_handler(F f)``| Installs ``f`` for converting exceptions to errors (see :ref`error`).    |
+| ``set_exception_handler(F f)``| Installs ``f`` for converting exceptions to errors (see :ref:`error`).   |
 +-------------------------------+--------------------------------------------------------------------------+
 | ``set_down_handler(F f)``     | Installs ``f`` to handle down messages (see :ref:`down-message`).        |
 +-------------------------------+--------------------------------------------------------------------------+
