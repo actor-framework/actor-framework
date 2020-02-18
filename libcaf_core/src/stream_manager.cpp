@@ -215,7 +215,7 @@ void stream_manager::register_input_path(inbound_path* ptr) {
 void stream_manager::deregister_input_path(inbound_path* ptr) noexcept {
   CAF_ASSERT(ptr != nullptr);
   CAF_LOG_TRACE(CAF_ARG2("path", *ptr));
-  CAF_ASSERT(inbound_paths_.size() > 0);
+  CAF_ASSERT(!inbound_paths_.empty());
   using std::swap;
   if (ptr != inbound_paths_.back()) {
     auto i = std::find(inbound_paths_.begin(), inbound_paths_.end(), ptr);

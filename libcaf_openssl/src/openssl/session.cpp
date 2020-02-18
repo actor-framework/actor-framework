@@ -215,25 +215,25 @@ SSL_CTX* session::create_ssl_context() {
   if (sys_.openssl_manager().authentication_enabled()) {
     // Require valid certificates on both sides.
     auto& cfg = sys_.config();
-    if (cfg.openssl_certificate.size() > 0
+    if (!cfg.openssl_certificate.empty()
         && SSL_CTX_use_certificate_chain_file(ctx,
                                               cfg.openssl_certificate.c_str())
              != 1)
       CAF_RAISE_ERROR("cannot load certificate");
-    if (cfg.openssl_passphrase.size() > 0) {
+    if (!cfg.openssl_passphrase.empty()) {
       openssl_passphrase_ = cfg.openssl_passphrase;
       SSL_CTX_set_default_passwd_cb(ctx, pem_passwd_cb);
       SSL_CTX_set_default_passwd_cb_userdata(ctx, this);
     }
-    if (cfg.openssl_key.size() > 0
+    if (!cfg.openssl_key.empty()
         && SSL_CTX_use_PrivateKey_file(ctx, cfg.openssl_key.c_str(),
                                        SSL_FILETYPE_PEM)
              != 1)
       CAF_RAISE_ERROR("cannot load private key");
-    auto cafile
-      = (cfg.openssl_cafile.size() > 0 ? cfg.openssl_cafile.c_str() : nullptr);
-    auto capath
-      = (cfg.openssl_capath.size() > 0 ? cfg.openssl_capath.c_str() : nullptr);
+    auto cafile = (!cfg.openssl_cafile.empty() ? cfg.openssl_cafile.c_str()
+                                               : nullptr);
+    auto capath = (!cfg.openssl_capath.empty() ? cfg.openssl_capath.c_str()
+                                               : nullptr);
     if (cafile || capath) {
       if (SSL_CTX_load_verify_locations(ctx, cafile, capath) != 1)
         CAF_RAISE_ERROR("cannot load trusted CA certificates");
@@ -270,7 +270,7 @@ SSL_CTX* session::create_ssl_context() {
 std::string session::get_ssl_error() {
   std::string msg = "";
   while (auto err = ERR_get_error()) {
-    if (msg.size() > 0)
+    if (!msg.empty())
       msg += " ";
     char buf[256];
     ERR_error_string_n(err, buf, sizeof(buf));

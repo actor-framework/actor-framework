@@ -243,7 +243,7 @@ error_code<sec> save_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h,
     l = *ep.length();
   } else {
     f = 0;
-    h = "";
+    h.clear();
     p = 0;
     l = 0;
   }

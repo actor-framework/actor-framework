@@ -54,7 +54,7 @@ struct literal {
 };
 
 void parse(string_parser_state& ps, literal& x) {
-  CAF_ASSERT(x.str.size() > 0);
+  CAF_ASSERT(!x.str.empty());
   if (ps.current() != x.str[0]) {
     ps.code = pec::unexpected_character;
     return;
