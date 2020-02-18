@@ -120,7 +120,7 @@ adds three options to the ``global`` category.
    :language: C++
    :lines: 206-218
 
-We create a new ``global`` category in ``custom_options_}``.
+We create a new ``global`` category in ``custom_options_``.
 Each following call to ``add`` then appends individual options to the
 category. The first argument to ``add`` is the associated variable. The
 second argument is the name for the parameter, optionally suffixed with a
@@ -128,13 +128,12 @@ comma-separated single-character short name. The short name is only considered
 for CLI parsing and allows users to abbreviate commonly used option names. The
 third and final argument to ``add`` is a help text.
 
-The custom ``config`` class allows end users to set the port for the
-application to 42 with either ``-p 42`` (short name) or
-``--port=42`` (long name). The long option name is prefixed by the
-category when using a different category than ``global''. For example, adding
-the port option to the category ``foo`` means end users have to type
-``--foo.port=42`` when using the long name. Short names are unaffected
-by the category, but have to be unique.
+The custom ``config`` class allows end users to set the port for the application
+to 42 with either ``-p 42`` (short name) or ``--port=42`` (long name). The long
+option name is prefixed by the category when using a different category than
+``global``. For example, adding the port option to the category ``foo`` means
+end users have to type ``--foo.port=42`` when using the long name. Short names
+are unaffected by the category, but have to be unique.
 
 Boolean options do not require arguments. The member variable
 ``server_mode`` is set to ``true`` if the command line contains

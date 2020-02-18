@@ -13,14 +13,13 @@ Amdahl's law.
 Decomposing tasks implies that actors are often short-lived. Assigning a
 dedicated thread to each actor would not scale well. Instead, CAF includes a
 scheduler that dynamically assigns actors to a pre-dimensioned set of worker
-threads. Actors are modeled as lightweight state machines. Whenever a
-*waiting* actor receives a message, it changes its state to *ready*
-and is scheduled for execution. CAF cannot interrupt running actors because it
-is implemented in user space. Consequently, actors that use blocking system
-calls such as I/O functions can suspend threads and create an imbalance or lead
-to starvation. Such ``uncooperative'' actors can be explicitly detached by the
-programmer by using the ``detached`` spawn option, e.g.,
-``system.spawn<detached>(my_actor_fun)``.
+threads. Actors are modeled as lightweight state machines. Whenever a *waiting*
+actor receives a message, it changes its state to *ready* and is scheduled for
+execution. CAF cannot interrupt running actors because it is implemented in user
+space. Consequently, actors that use blocking system calls such as I/O functions
+can suspend threads and create an imbalance or lead to starvation. Such
+"uncooperative" actors can be explicitly detached by the programmer by using the
+``detached`` spawn option, e.g., ``system.spawn<detached>(my_actor_fun)``.
 
 The performance of actor-based applications depends on the scheduling algorithm
 in use and its configuration. Different application scenarios require different

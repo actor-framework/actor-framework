@@ -11,7 +11,7 @@ the middleman, implementations should be careful to consume as little time as
 possible in message handlers. Brokers should outsource any considerable amount
 of work by spawning new actors or maintaining worker actors.
 
-*Note that all UDP-related functionality is still  :sup:`experimental`.*
+*Note that all UDP-related functionality is still experimental.*
 
 Spawning Brokers
 ----------------
