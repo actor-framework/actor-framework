@@ -139,8 +139,8 @@ class stream_manager;
 class string_view;
 class tracing_data;
 class tracing_data_factory;
-class type_erased_tuple;
-class type_erased_value;
+class type_id_list;
+class type_id_list_builder;
 class uri;
 class uri_builder;
 
@@ -198,9 +198,6 @@ using type_id_t = uint16_t;
 
 /// @relates actor_system_config
 CAF_CORE_EXPORT const settings& content(const actor_system_config&);
-
-template <class T, class... Ts>
-message make_message(T&& x, Ts&&... xs);
 
 // -- intrusive containers -----------------------------------------------------
 
@@ -265,9 +262,6 @@ class manager;
 namespace detail {
 
 template <class>
-class type_erased_value_impl;
-
-template <class>
 class stream_distribution_tree;
 
 template <class...>
@@ -309,6 +303,5 @@ using stream_manager_ptr = intrusive_ptr<stream_manager>;
 
 using mailbox_element_ptr = std::unique_ptr<mailbox_element>;
 using tracing_data_ptr = std::unique_ptr<tracing_data>;
-using type_erased_value_ptr = std::unique_ptr<type_erased_value>;
 
 } // namespace caf

@@ -26,7 +26,7 @@ namespace caf::detail {
 template <class... Ts>
 class param_message_view {
 public:
-  explicit param_message_view(type_erased_tuple& msg) noexcept : ptr_(&msg) {
+  explicit param_message_view(const message& msg) noexcept : ptr_(&msg.data()) {
     // nop
   }
 
@@ -37,21 +37,20 @@ public:
   param_message_view& operator=(const param_message_view&) noexcept
     = default;
 
-  const type_erased_tuple* operator->() const noexcept {
+  const detail::message_data* operator->() const noexcept {
     return ptr_;
   }
 
 private:
-  const type_erased_tuple* ptr_;
-  bool shared_;
+  const detail::message_data* ptr_;
 };
 
-template <size_t Position, class... Ts>
-auto get(const param_message_view<Ts...>& x) {
-  static_assert(Position < sizeof...(Ts));
-  using types = detail::type_list<Ts...>;
-  using type = detail::tl_at_t<types, Position>;
-  return param<type>{x->get(Position), x->shared()};
+template <size_t Index, class... Ts>
+auto get(const param_message_view<Ts...>& xs) {
+  static_assert(Index < sizeof...(Ts));
+  using type = caf::detail::tl_at_t<caf::detail::type_list<Ts...>, Index>;
+  return param<type>{xs->storage() + detail::offset_at<Index, Ts...>,
+                     !xs->unique()};
 }
 
 } // namespace caf::detail

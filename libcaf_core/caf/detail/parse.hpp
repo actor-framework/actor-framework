@@ -30,7 +30,6 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
-#include "caf/make_message.hpp"
 #include "caf/message.hpp"
 #include "caf/none.hpp"
 #include "caf/parser_state.hpp"

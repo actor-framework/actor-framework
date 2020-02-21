@@ -25,6 +25,7 @@
 #include "caf/message_handler.hpp"
 #include "caf/sec.hpp"
 #include "caf/system_messages.hpp"
+#include "caf/typed_message_view.hpp"
 
 #include "caf/detail/sync_request_bouncer.hpp"
 
@@ -220,28 +221,33 @@ bool monitorable_actor::handle_system_message(mailbox_element& x,
                                               execution_unit* ctx,
                                               bool trap_exit) {
   auto& msg = x.content();
-  if (!trap_exit && msg.size() == 1 && msg.match_element<exit_msg>(0)) {
-    // exits for non-normal exit reasons
-    auto& em = msg.get_mutable_as<exit_msg>(0);
-    if (em.reason)
-      cleanup(std::move(em.reason), ctx);
-    return true;
+  if (!trap_exit) {
+    if (auto view = make_typed_message_view<exit_msg>(msg)) {
+      // exits for non-normal exit reasons
+      auto& em = get<0>(view);
+      if (em.reason)
+        cleanup(std::move(em.reason), ctx);
+      return true;
+    }
   }
   if (msg.size() > 1 && msg.match_element<sys_atom>(0)) {
     if (!x.sender)
       return true;
     error err;
     mailbox_element_ptr res;
-    msg.apply([&](sys_atom, get_atom, std::string& what) {
-      CAF_LOG_TRACE(CAF_ARG(what));
-      if (what != "info") {
-        err = sec::unsupported_sys_key;
-        return;
-      }
-      res = make_mailbox_element(ctrl(), x.mid.response_id(), {}, ok_atom_v,
-                                 std::move(what), strong_actor_ptr{ctrl()},
-                                 name());
-    });
+    message_handler f{
+      [&](sys_atom, get_atom, std::string& what) {
+        CAF_LOG_TRACE(CAF_ARG(what));
+        if (what != "info") {
+          err = sec::unsupported_sys_key;
+          return;
+        }
+        res = make_mailbox_element(ctrl(), x.mid.response_id(), {}, ok_atom_v,
+                                   std::move(what), strong_actor_ptr{ctrl()},
+                                   name());
+      },
+    };
+    f(msg);
     if (!res && !err)
       err = sec::unsupported_sys_message;
     if (err && x.mid.is_request())

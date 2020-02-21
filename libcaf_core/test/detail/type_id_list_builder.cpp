@@ -16,45 +16,26 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#define CAF_SUITE detail.type_id_list_builder
 
-#include <algorithm>
-#include <cstddef>
+#include "caf/detail/type_id_list_builder.hpp"
 
-#include "caf/binary_deserializer.hpp"
-#include "caf/binary_serializer.hpp"
-#include "caf/byte.hpp"
-#include "caf/deserializer.hpp"
-#include "caf/detail/meta_object.hpp"
-#include "caf/detail/padded_size.hpp"
-#include "caf/error.hpp"
-#include "caf/serializer.hpp"
+#include "caf/test/dsl.hpp"
 
-namespace caf::detail {
+using namespace caf;
 
-template <class T>
-meta_object make_meta_object(const char* type_name) {
-  return {
-    type_name,
-    padded_size_v<T>,
-    [](void* ptr) noexcept { reinterpret_cast<T*>(ptr)->~T(); },
-    [](void* ptr) { new (ptr) T(); },
-    [](const void* src, void* dst) {
-      new (dst) T(*reinterpret_cast<const T*>(src));
-    },
-    [](caf::binary_serializer& sink, const void* ptr) {
-      return sink(*reinterpret_cast<const T*>(ptr));
-    },
-    [](caf::binary_deserializer& source, void* ptr) {
-      return source(*reinterpret_cast<T*>(ptr));
-    },
-    [](caf::serializer& sink, const void* ptr) {
-      return sink(*reinterpret_cast<const T*>(ptr));
-    },
-    [](caf::deserializer& source, void* ptr) {
-      return source(*reinterpret_cast<T*>(ptr));
-    },
-  };
+namespace {
+
+struct fixture {
+
+};
+
+} // namespace
+
+CAF_TEST_FIXTURE_SCOPE(type_id_list_builder_tests, fixture)
+
+CAF_TEST(todo) {
+  // implement me
 }
 
-} // namespace caf::detail
+CAF_TEST_FIXTURE_SCOPE_END()

@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,19 +18,43 @@
 
 #pragma once
 
-#include <functional>
+#include <cstdlib>
 
-#include "caf/detail/type_erased_value_impl.hpp"
-#include "caf/type_erased_value.hpp"
+#include "caf/fwd.hpp"
+#include "caf/type_id.hpp"
 
-namespace caf {
+namespace caf::detail {
 
-/// @relates type_erased_value
-/// Creates a type-erased view for `x`.
-template <class T>
-detail::type_erased_value_impl<std::reference_wrapper<T>>
-make_type_erased_view(T& x) {
-  return {std::ref(x)};
-}
+class type_id_list_builder {
+public:
+  static constexpr size_t block_size = 8;
 
-} // namespace caf
+  type_id_list_builder();
+
+  ~type_id_list_builder();
+
+  void reserve(size_t new_capacity);
+
+  void push_back(type_id_t id);
+
+  /// Returns the number of elements currenty stored in the array.
+  size_t size() const noexcept;
+
+  /// @pre `index < size()`
+  type_id_t operator[](size_t index) const noexcept;
+
+  /// Convertes the internal buffer to a ::type_id_list and returns it.
+  /// @pre `push_back` was called at least once
+  type_id_list to_list() noexcept;
+
+  void clear() noexcept {
+    size_ = 0;
+  }
+
+private:
+  size_t size_;
+  size_t reserved_;
+  type_id_t* storage_;
+};
+
+} // namespace caf::detail

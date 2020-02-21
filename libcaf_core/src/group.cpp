@@ -18,10 +18,14 @@
 
 #include "caf/group.hpp"
 
-#include "caf/message.hpp"
 #include "caf/actor_cast.hpp"
 #include "caf/actor_system.hpp"
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
+#include "caf/deserializer.hpp"
 #include "caf/group_manager.hpp"
+#include "caf/message.hpp"
+#include "caf/serializer.hpp"
 
 namespace caf {
 

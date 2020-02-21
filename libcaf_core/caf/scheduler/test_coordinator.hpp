@@ -64,9 +64,10 @@ public:
   const T& peek() {
     auto ptr = next_job<scheduled_actor>().mailbox().peek();
     CAF_ASSERT(ptr != nullptr);
-    if (!ptr->content().match_elements<T>())
+    auto view = make_typed_message_view<T>(ptr->content());
+    if (!view)
       CAF_RAISE_ERROR("Mailbox element does not match T.");
-    return ptr->content().get_as<T>(0);
+    return get<0>(view);
   }
 
   /// Puts `x` at the front of the queue unless it cannot be found in the queue.

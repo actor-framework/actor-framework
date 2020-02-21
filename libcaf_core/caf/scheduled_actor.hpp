@@ -344,10 +344,9 @@ public:
   /// Sets a custom handler for unexpected messages.
   template <class F>
   typename std::enable_if<std::is_convertible<
-    F, std::function<result<message>(type_erased_tuple&)>>::value>::type
+    F, std::function<result<message>(message&)>>::value>::type
   set_default_handler(F fun) {
-    default_handler_
-      = [=](scheduled_actor*, const type_erased_tuple& xs) { return fun(xs); };
+    default_handler_ = [=](scheduled_actor*, message& xs) { return fun(xs); };
   }
 
   /// Sets a custom handler for error messages.
@@ -550,8 +549,8 @@ public:
              Finalize fin = {}, policy::arg<DownstreamManager> token = {}) {
     CAF_IGNORE_UNUSED(token);
     CAF_ASSERT(current_mailbox_element() != nullptr);
-    CAF_ASSERT(
-      current_mailbox_element()->content().match_elements<open_stream_msg>());
+    CAF_ASSERT(current_mailbox_element()->content().types()
+               == make_type_id_list<open_stream_msg>());
     using output_type = typename stream_stage_trait_t<Fun>::output;
     using state_type = typename stream_stage_trait_t<Fun>::state;
     static_assert(

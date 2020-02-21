@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,34 +16,12 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#include "caf/detail/message_builder_element.hpp"
 
-#include <cstdint>
-#include <functional>
-#include <typeinfo>
+namespace caf::detail {
 
-#include "caf/detail/type_erased_value_impl.hpp"
-#include "caf/type_erased_value.hpp"
-
-namespace caf {
-
-/// @relates type_erased_value
-/// Creates a type-erased value of type `T` from `xs`.
-template <class T, class... Ts>
-type_erased_value_ptr make_type_erased_value(Ts&&... xs) {
-  type_erased_value_ptr result;
-  result.reset(new detail::type_erased_value_impl<T>(std::forward<Ts>(xs)...));
-  return result;
+message_builder_element::~message_builder_element() {
+  // nop
 }
 
-/// @relates type_erased_value
-/// Converts values to type-erased values.
-struct type_erased_value_factory {
-  template <class T>
-  type_erased_value_ptr operator()(T&& x) const {
-    return make_type_erased_value<typename std::decay<T>::type>(
-      std::forward<T>(x));
-  }
-};
-
-} // namespace caf
+} // namespace caf::detail

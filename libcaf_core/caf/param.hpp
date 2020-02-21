@@ -30,8 +30,8 @@ template <class T>
 class param {
 public:
   enum flag {
-    shared_access,    // x_ lives in a shared type_erased_tuple
-    exclusive_access, // x_ lives in an unshared type_erased_tuple
+    shared_access,    // x_ lives in a shared message
+    exclusive_access, // x_ lives in an unshared message
     private_access,   // x_ is a copy of the original value
   };
 

@@ -26,7 +26,6 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
-#include "caf/make_message.hpp"
 #include "caf/make_sink_result.hpp"
 #include "caf/make_source_result.hpp"
 #include "caf/make_stage_result.hpp"

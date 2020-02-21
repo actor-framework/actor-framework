@@ -35,6 +35,8 @@
 #include "caf/detail/functor_attachable.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/mailbox_element.hpp"
+#include "caf/system_messages.hpp"
+#include "caf/typed_message_view.hpp"
 
 namespace caf {
 
@@ -119,7 +121,7 @@ protected:
    ****************************************************************************/
 
   // precondition: `mtx_` is acquired
-  inline void attach_impl(attachable_ptr& ptr) {
+  void attach_impl(attachable_ptr& ptr) {
     ptr->next.swap(attachables_head_);
     attachables_head_.swap(ptr);
   }
@@ -138,8 +140,8 @@ protected:
   template <class F>
   bool handle_system_message(mailbox_element& x, execution_unit* context,
                              bool trap_exit, F& down_msg_handler) {
-    if (x.content().match_elements<down_msg>()) {
-      down_msg_handler(x.content().get_mutable_as<down_msg>(0));
+    if (auto view = make_typed_message_view<down_msg>(x.payload)) {
+      down_msg_handler(get<0>(view));
       return true;
     }
     return handle_system_message(x, context, trap_exit);

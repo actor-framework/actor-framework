@@ -147,11 +147,11 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
                         const strong_actor_ptr& sender, message_id mid,
                         message& content, execution_unit* eu) {
   CAF_LOG_TRACE(CAF_ARG(mid) << CAF_ARG(content));
-  if (content.match_elements<exit_msg>()) {
+  if (auto view = make_const_typed_message_view<exit_msg>(content)) {
     // acquire second mutex as well
     std::vector<actor> workers;
-    auto em = content.get_as<exit_msg>(0).reason;
-    if (cleanup(std::move(em), eu)) {
+    auto reason = get<0>(view).reason;
+    if (cleanup(std::move(reason), eu)) {
       // send exit messages *always* to all workers and clear vector afterwards
       // but first swap workers_ out of the critical section
       upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
@@ -163,9 +163,9 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
     }
     return true;
   }
-  if (content.match_elements<down_msg>()) {
+  if (auto view = make_const_typed_message_view<down_msg>(content)) {
     // remove failed worker from pool
-    auto& dm = content.get_as<down_msg>(0);
+    const auto& dm = get<0>(view);
     upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
     auto last = workers_.end();
     auto i = std::find(workers_.begin(), workers_.end(), dm.source);
@@ -179,17 +179,19 @@ bool actor_pool::filter(upgrade_lock<detail::shared_spinlock>& guard,
     }
     return true;
   }
-  if (content.match_elements<sys_atom, put_atom, actor>()) {
-    auto& worker = content.get_as<actor>(2);
+  if (auto view
+      = make_const_typed_message_view<sys_atom, put_atom, actor>(content)) {
+    const auto& worker = get<2>(view);
     worker->attach(default_attachable::make_monitor(worker.address(),
                                                     address()));
     upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
     workers_.push_back(worker);
     return true;
   }
-  if (content.match_elements<sys_atom, delete_atom, actor>()) {
+  if (auto view
+      = make_const_typed_message_view<sys_atom, delete_atom, actor>(content)) {
     upgrade_to_unique_lock<detail::shared_spinlock> unique_guard{guard};
-    auto& what = content.get_as<actor>(2);
+    auto& what = get<2>(view);
     auto last = workers_.end();
     auto i = std::find(workers_.begin(), last, what);
     if (i != last) {

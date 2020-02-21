@@ -21,7 +21,7 @@
 #include <deque>
 #include <vector>
 
-#include "caf/make_message.hpp"
+#include "caf/message.hpp"
 
 namespace caf {
 

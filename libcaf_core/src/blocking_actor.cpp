@@ -181,8 +181,8 @@ blocking_actor::mailbox_visitor::operator()(mailbox_element& x) {
       return intrusive::task_result::skip;
     }
     // Automatically unlink from actors after receiving an exit.
-    if (x.content().match_elements<exit_msg>())
-      self->unlink_from(x.content().get_as<exit_msg>(0).source);
+    if (auto view = make_const_typed_message_view<exit_msg>(x.content()))
+      self->unlink_from(get<0>(view).source);
     // Blocking actors can nest receives => push/pop `current_element_`
     auto prev_element = self->current_element_;
     self->current_element_ = &x;

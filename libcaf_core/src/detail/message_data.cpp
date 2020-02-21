@@ -19,15 +19,123 @@
 #include "caf/detail/message_data.hpp"
 
 #include <cstring>
+#include <numeric>
+
+#include "caf/detail/meta_object.hpp"
+#include "caf/error.hpp"
+#include "caf/error_code.hpp"
+#include "caf/sec.hpp"
+#include "caf/span.hpp"
 
 namespace caf::detail {
 
-message_data::~message_data() {
+message_data::message_data(type_id_list types)
+  : rc_(1), types_(std::move(types)) {
   // nop
 }
 
-bool message_data::shared() const noexcept {
-  return !unique();
+message_data::~message_data() noexcept {
+  // TODO: we unconditionally destroy all objects without some way of telling
+  //       whether these objects were constructed in the first place.
+  auto gmos = global_meta_objects();
+  auto ptr = storage();
+  // TODO: C++ usually destroys members in reverse order.
+  for (auto id : types_) {
+    auto& meta = gmos[id];
+    meta.destroy(ptr);
+    ptr += meta.padded_size;
+  }
+}
+
+message_data* message_data::copy() const {
+  auto gmos = global_meta_objects();
+  auto add = [](size_t interim, const meta_object& meta) noexcept {
+    return interim + meta.padded_size;
+  };
+  auto storage_size = std::accumulate(gmos.begin(), gmos.end(), size_t{0}, add);
+  auto total_size = sizeof(message_data) + storage_size;
+  auto vptr = malloc(total_size);
+  if (vptr == nullptr)
+    throw std::bad_alloc();
+  auto ptr = new (vptr) message_data(types_);
+  auto src = storage();
+  auto dst = ptr->storage();
+  for (auto id : types_) {
+    auto& meta = gmos[id];
+    // TODO: exception handling.
+    meta.copy_construct(src, dst);
+    src += meta.padded_size;
+    dst += meta.padded_size;
+  }
+  return ptr;
+}
+
+byte* message_data::at(size_t index) noexcept {
+  if (index == 0)
+    return storage();
+  auto gmos = global_meta_objects();
+  auto ptr = storage();
+  for (size_t i = 0; i < index; ++i)
+    ptr += gmos[types_[i]].padded_size;
+  return ptr;
+}
+
+const byte* message_data::at(size_t index) const noexcept {
+  if (index == 0)
+    return storage();
+  auto gmos = global_meta_objects();
+  auto ptr = storage();
+  for (size_t i = 0; i < index; ++i)
+    ptr += gmos[types_[i]].padded_size;
+  return ptr;
+}
+
+caf::error message_data::save(caf::serializer& sink) const {
+  auto gmos = global_meta_objects();
+  auto ptr = storage();
+  for (auto id : types_) {
+    auto& meta = gmos[id];
+    if (auto err = meta.save(sink, ptr))
+      return err;
+    ptr += meta.padded_size;
+  }
+  return none;
+}
+
+caf::error message_data::save(caf::binary_serializer& sink) const {
+  auto gmos = global_meta_objects();
+  auto ptr = storage();
+  for (auto id : types_) {
+    auto& meta = gmos[id];
+    if (auto err = meta.save_binary(sink, ptr))
+      return err;
+    ptr += meta.padded_size;
+  }
+  return none;
+}
+
+caf::error message_data::load(caf::deserializer& source) {
+  auto gmos = global_meta_objects();
+  auto ptr = storage();
+  for (auto id : types_) {
+    auto& meta = gmos[id];
+    if (auto err = meta.load(source, ptr))
+      return err;
+    ptr += meta.padded_size;
+  }
+  return none;
+}
+
+caf::error message_data::load(caf::binary_deserializer& source) {
+  auto gmos = global_meta_objects();
+  auto ptr = storage();
+  for (auto id : types_) {
+    auto& meta = gmos[id];
+    if (auto err = meta.load_binary(source, ptr))
+      return err;
+    ptr += meta.padded_size;
+  }
+  return none;
 }
 
 } // namespace caf::detail

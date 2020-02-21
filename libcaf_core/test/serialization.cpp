@@ -54,8 +54,6 @@
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/make_type_erased_tuple_view.hpp"
-#include "caf/make_type_erased_view.hpp"
 #include "caf/message.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/proxy_registry.hpp"
@@ -354,37 +352,6 @@ CAF_TEST(multiple_messages) {
                   std::make_tuple(te, to_string(m), to_string(msg)));
   CAF_CHECK(is_message(m1).equal(rs, te));
   CAF_CHECK(is_message(m2).equal(i32, i64, ts, te, str, rs));
-}
-
-CAF_TEST(type_erased_value) {
-  using caf::detail::type_erased_value_impl;
-  auto buf = serialize(str);
-  type_erased_value_ptr ptr{new type_erased_value_impl<std::string>};
-  binary_deserializer source{sys, buf};
-  ptr->load(source);
-  CAF_CHECK_EQUAL(str, *reinterpret_cast<const std::string*>(ptr->get()));
-}
-
-CAF_TEST(type_erased_view) {
-  auto str_view = make_type_erased_view(str);
-  auto buf = serialize(str_view);
-  std::string res;
-  deserialize(buf, res);
-  CAF_CHECK_EQUAL(str, res);
-}
-
-CAF_TEST(type_erased_tuple) {
-  auto tview = make_type_erased_tuple_view(str, i32);
-  CAF_CHECK_EQUAL(to_string(tview), deep_to_string(std::make_tuple(str, i32)));
-  auto buf = serialize(tview);
-  CAF_REQUIRE(!buf.empty());
-  std::string tmp1;
-  int32_t tmp2;
-  deserialize(buf, tmp1, tmp2);
-  CAF_CHECK_EQUAL(tmp1, str);
-  CAF_CHECK_EQUAL(tmp2, i32);
-  deserialize(buf, tview);
-  CAF_CHECK_EQUAL(to_string(tview), deep_to_string(std::make_tuple(str, i32)));
 }
 
 CAF_TEST(long_sequences) {

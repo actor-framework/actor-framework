@@ -580,8 +580,8 @@ scheduled_actor::categorize(mailbox_element& x) {
     }
     return message_category::internal;
   }
-  if (content.match_elements<exit_msg>()) {
-    auto em = content.move_if_unshared<exit_msg>(0);
+  if (auto view = make_typed_message_view<exit_msg>(content)) {
+    auto& em = get<0>(view);
     // make sure to get rid of attachables if they're no longer needed
     unlink_from(em.source);
     // exit_reason::kill is always fatal and also aborts streams.
@@ -604,13 +604,13 @@ scheduled_actor::categorize(mailbox_element& x) {
     }
     return message_category::internal;
   }
-  if (content.match_elements<down_msg>()) {
-    auto dm = content.move_if_unshared<down_msg>(0);
+  if (auto view = make_typed_message_view<down_msg>(content)) {
+    auto& dm = get<0>(view);
     call_handler(down_handler_, this, dm);
     return message_category::internal;
   }
-  if (content.match_elements<error>()) {
-    auto err = content.move_if_unshared<error>(0);
+  if (auto view = make_typed_message_view<error>(content)) {
+    auto& err = get<0>(view);
     call_handler(error_handler_, this, err);
     return message_category::internal;
   }

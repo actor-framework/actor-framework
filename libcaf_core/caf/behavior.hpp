@@ -98,16 +98,6 @@ public:
     return impl_ ? impl_->invoke(xs) : none;
   }
 
-  optional<message> operator()(type_erased_tuple& xs) {
-    return impl_ ? impl_->invoke(xs) : none;
-  }
-
-  /// Runs this handler with callback.
-  match_result operator()(detail::invoke_result_visitor& f,
-                          type_erased_tuple& xs) {
-    return impl_ ? impl_->invoke(f, xs) : match_result::no_match;
-  }
-
   /// Runs this handler with callback.
   match_result operator()(detail::invoke_result_visitor& f, message& xs) {
     return impl_ ? impl_->invoke(f, xs) : match_result::no_match;

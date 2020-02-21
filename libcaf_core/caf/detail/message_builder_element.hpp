@@ -18,43 +18,60 @@
 
 #pragma once
 
-#include <algorithm>
-#include <cstddef>
+#include <memory>
+#include <new>
 
-#include "caf/binary_deserializer.hpp"
-#include "caf/binary_serializer.hpp"
 #include "caf/byte.hpp"
-#include "caf/deserializer.hpp"
-#include "caf/detail/meta_object.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/padded_size.hpp"
-#include "caf/error.hpp"
-#include "caf/serializer.hpp"
 
 namespace caf::detail {
 
+/// Wraps a value for either copying or moving it into a pre-allocated storage
+/// later.
+class CAF_CORE_EXPORT message_builder_element {
+public:
+  virtual ~message_builder_element() noexcept;
+
+  /// Uses placement new to create a copy of the wrapped value at given memory
+  /// region.
+  /// @returns the past-the-end pointer of the object, i.e., the first byte for
+  ///          the *next* object.
+  virtual byte* copy_init(byte* storage) const = 0;
+
+  /// Uses placement new to move the wrapped value to given memory region.
+  /// @returns the past-the-end pointer of the object, i.e., the first byte for
+  ///          the *next* object.
+  virtual byte* move_init(byte* storage) = 0;
+};
+
 template <class T>
-meta_object make_meta_object(const char* type_name) {
-  return {
-    type_name,
-    padded_size_v<T>,
-    [](void* ptr) noexcept { reinterpret_cast<T*>(ptr)->~T(); },
-    [](void* ptr) { new (ptr) T(); },
-    [](const void* src, void* dst) {
-      new (dst) T(*reinterpret_cast<const T*>(src));
-    },
-    [](caf::binary_serializer& sink, const void* ptr) {
-      return sink(*reinterpret_cast<const T*>(ptr));
-    },
-    [](caf::binary_deserializer& source, void* ptr) {
-      return source(*reinterpret_cast<T*>(ptr));
-    },
-    [](caf::serializer& sink, const void* ptr) {
-      return sink(*reinterpret_cast<const T*>(ptr));
-    },
-    [](caf::deserializer& source, void* ptr) {
-      return source(*reinterpret_cast<T*>(ptr));
-    },
-  };
+class message_builder_element_impl : public message_builder_element {
+public:
+  message_builder_element_impl(T value) : value_(std::move(value)) {
+    // nop
+  }
+
+  byte* copy_init(byte* storage) const override {
+    new (storage) T(value_);
+    return storage + padded_size_v<T>;
+  }
+
+  byte* move_init(byte* storage) override {
+    new (storage) T(std::move(value_));
+    return storage + padded_size_v<T>;
+  }
+
+private:
+  T value_;
+};
+
+using message_builder_element_ptr = std::unique_ptr<message_builder_element>;
+
+template <class T>
+auto make_message_builder_element(T&& x) {
+  using impl = message_builder_element_impl<std::decay_t<T>>;
+  return message_builder_element_ptr{new impl(std::forward<T>(x))};
 }
 
 } // namespace caf::detail

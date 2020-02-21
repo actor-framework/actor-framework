@@ -36,8 +36,6 @@
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/stringification_inspector.hpp"
 #include "caf/init_global_meta_objects.hpp"
-#include "caf/make_type_erased_value.hpp"
-#include "caf/type_erased_value.hpp"
 
 namespace {
 

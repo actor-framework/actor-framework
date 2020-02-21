@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,20 +18,22 @@
 
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
-#include <tuple>
-#include <typeinfo>
+#include "caf/detail/padded_size.hpp"
 
-#include "caf/detail/type_erased_tuple_view.hpp"
-#include "caf/type_erased_tuple.hpp"
+namespace caf::detail {
 
-namespace caf {
+template <size_t Remaining, class T, class... Ts>
+struct offset_at_helper {
+  static constexpr size_t value = offset_at_helper<Remaining - 1, Ts...>::value
+                                  + padded_size_v<T>;
+};
 
-/// @relates type_erased_tuple
-template <class... Ts>
-detail::type_erased_tuple_view<Ts...> make_type_erased_tuple_view(Ts&... xs) {
-  return {xs...};
-}
+template <class T, class... Ts>
+struct offset_at_helper<0, T, Ts...> {
+  static constexpr size_t value = 0;
+};
 
-} // namespace caf
+template <size_t Index, class... Ts>
+constexpr size_t offset_at = offset_at_helper<Index, Ts...>::value;
+
+} // namespace caf::detail

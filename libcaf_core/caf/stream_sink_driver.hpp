@@ -23,7 +23,6 @@
 #include <vector>
 
 #include "caf/fwd.hpp"
-#include "caf/make_message.hpp"
 #include "caf/message.hpp"
 #include "caf/stream_sink.hpp"
 

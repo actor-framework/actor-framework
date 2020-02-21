@@ -71,18 +71,6 @@ using namespace caf;
 
 using namespace std::literals::string_literals;
 
-CAF_TEST(apply) {
-  auto f1 = [] {
-    CAF_ERROR("f1 invoked!");
-  };
-  auto f2 = [](int i) {
-    CAF_CHECK_EQUAL(i, 42);
-  };
-  auto m = make_message(42);
-  m.apply(f1);
-  m.apply(f2);
-}
-
 namespace {
 
 struct s1 {

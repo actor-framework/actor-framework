@@ -22,22 +22,13 @@
 #include <memory>
 
 #include "caf/actor_control_block.hpp"
-#include "caf/config.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/disposer.hpp"
-#include "caf/detail/tuple_vals.hpp"
-#include "caf/detail/type_erased_tuple_view.hpp"
-#include "caf/extend.hpp"
 #include "caf/intrusive/singly_linked.hpp"
-#include "caf/make_message.hpp"
-#include "caf/memory_managed.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/meta/omittable_if_empty.hpp"
 #include "caf/meta/type_name.hpp"
-#include "caf/ref_counted.hpp"
 #include "caf/tracing_data.hpp"
-#include "caf/type_erased_tuple.hpp"
 
 namespace caf {
 

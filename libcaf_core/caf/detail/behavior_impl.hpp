@@ -65,15 +65,10 @@ public:
 
   match_result invoke_empty(detail::invoke_result_visitor& f);
 
-  virtual match_result
-  invoke(detail::invoke_result_visitor& f, type_erased_tuple& xs)
+  virtual match_result invoke(detail::invoke_result_visitor& f, message& xs)
     = 0;
 
-  match_result invoke(detail::invoke_result_visitor& f, message& xs);
-
   optional<message> invoke(message&);
-
-  optional<message> invoke(type_erased_tuple&);
 
   virtual void handle_timeout();
 
@@ -131,13 +126,13 @@ public:
   }
 
   virtual match_result invoke(detail::invoke_result_visitor& f,
-                              type_erased_tuple& xs) override {
+                              message& xs) override {
     return invoke_impl(f, xs, std::make_index_sequence<sizeof...(Ts)>{});
   }
 
   template <size_t... Is>
-  match_result invoke_impl(detail::invoke_result_visitor& f,
-                           type_erased_tuple& msg, std::index_sequence<Is...>) {
+  match_result invoke_impl(detail::invoke_result_visitor& f, message& msg,
+                           std::index_sequence<Is...>) {
     auto result = match_result::no_match;
     auto dispatch = [&](auto& fun) {
       using fun_type = std::decay_t<decltype(fun)>;

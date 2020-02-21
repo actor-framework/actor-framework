@@ -23,7 +23,6 @@
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/parser/read_ipv4_address.hpp"
 #include "caf/error.hpp"
-#include "caf/make_message.hpp"
 #include "caf/message.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"

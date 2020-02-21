@@ -69,6 +69,16 @@ public:
     return memcmp(data_, other.data_, (size() + 1) * sizeof(type_id_t));
   }
 
+  /// Returns an iterator to the first type ID.
+  pointer begin() const noexcept {
+    return data_ + 1;
+  }
+
+  /// Returns the past-the-end iterator.
+  pointer end() const noexcept {
+    return begin() + size();
+  }
+
 private:
   pointer data_;
 };

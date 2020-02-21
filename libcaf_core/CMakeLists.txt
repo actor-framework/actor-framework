@@ -63,7 +63,6 @@ set(CAF_CORE_SOURCES
   src/detail/behavior_impl.cpp
   src/detail/behavior_stack.cpp
   src/detail/blocking_behavior.cpp
-  src/detail/dynamic_message_data.cpp
   src/detail/fnv_hash.cpp
   src/detail/get_mac_addresses.cpp
   src/detail/get_process_id.cpp
@@ -86,6 +85,7 @@ set(CAF_CORE_SOURCES
   src/detail/test_actor_clock.cpp
   src/detail/thread_safe_actor_clock.cpp
   src/detail/tick_emitter.cpp
+  src/detail/type_id_list_builder.cpp
   src/detail/uri_impl.cpp
   src/downstream_manager.cpp
   src/downstream_manager_base.cpp
@@ -153,8 +153,6 @@ set(CAF_CORE_SOURCES
   src/timestamp.cpp
   src/tracing_data.cpp
   src/tracing_data_factory.cpp
-  src/type_erased_tuple.cpp
-  src/type_erased_value.cpp
   src/type_id_list.cpp
   src/uri.cpp
   src/uri_builder.cpp
@@ -210,6 +208,7 @@ set(CAF_CORE_TEST_SOURCES
   test/detail/ripemd_160.cpp
   test/detail/serialized_size.cpp
   test/detail/tick_emitter.cpp
+  test/detail/type_id_list_builder.cpp
   test/detail/unique_function.cpp
   test/detail/unordered_flat_map.cpp
   test/dictionary.cpp
@@ -268,7 +267,6 @@ set(CAF_CORE_TEST_SOURCES
   test/thread_hook.cpp
   test/to_string.cpp
   test/tracing_data.cpp
-  test/type_erased_tuple.cpp
   test/type_id_list.cpp
   test/typed_message_view.cpp
   test/typed_response_promise.cpp

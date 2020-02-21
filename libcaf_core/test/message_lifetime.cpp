@@ -133,10 +133,10 @@ CAF_TEST(nocopy_in_scoped_actor) {
   self->receive(
     [&](const fail_on_copy& x) {
       CAF_CHECK_EQUAL(x.value, 1);
-      CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2u);
+      CAF_CHECK_EQUAL(msg.data().get_reference_count(), 2u);
     }
   );
-  CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1u);
+  CAF_CHECK_EQUAL(msg.data().get_reference_count(), 1u);
 }
 
 CAF_TEST(message_lifetime_in_scoped_actor) {
@@ -147,16 +147,16 @@ CAF_TEST(message_lifetime_in_scoped_actor) {
       CAF_CHECK_EQUAL(a, 1);
       CAF_CHECK_EQUAL(b, 2);
       CAF_CHECK_EQUAL(c, 3);
-      CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2u);
+      CAF_CHECK_EQUAL(msg.cdata().get_reference_count(), 2u);
     }
   );
-  CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1u);
+  CAF_CHECK_EQUAL(msg.cdata().get_reference_count(), 1u);
   msg = make_message(42);
   self->send(self, msg);
-  CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2u);
+  CAF_CHECK_EQUAL(msg.cdata().get_reference_count(), 2u);
   self->receive(
     [&](int& value) {
-      CAF_CHECK_NOT_EQUAL(&value, msg.at(0));
+      CAF_CHECK_NOT_EQUAL(&value, msg.cdata().at(0));
       value = 10;
     }
   );

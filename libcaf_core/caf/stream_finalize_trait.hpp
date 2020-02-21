@@ -19,7 +19,6 @@
 #pragma once
 
 #include "caf/detail/type_traits.hpp"
-#include "caf/make_message.hpp"
 #include "caf/message.hpp"
 #include "caf/stream_sink.hpp"
 

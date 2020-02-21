@@ -63,9 +63,6 @@ public:
   template <class>
   friend class data_processor;
 
-  template <class>
-  friend class detail::type_erased_value_impl;
-
   template <class...>
   friend class typed_actor;
 

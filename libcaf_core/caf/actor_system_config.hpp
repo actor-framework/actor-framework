@@ -42,7 +42,6 @@
 #include "caf/settings.hpp"
 #include "caf/stream.hpp"
 #include "caf/thread_hook.hpp"
-#include "caf/type_erased_value.hpp"
 
 namespace caf {
 

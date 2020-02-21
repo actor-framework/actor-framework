@@ -50,8 +50,8 @@ public:
   void handle(inbound_path*, downstream_msg::batch& x) override {
     CAF_LOG_TRACE(CAF_ARG(x));
     using vec_type = std::vector<input_type>;
-    if (x.xs.match_elements<vec_type>()) {
-      driver_.process(x.xs.get_mutable_as<vec_type>(0));
+    if (auto view = make_typed_message_view<vec_type>(x.xs)) {
+      driver_.process(get<0>(view));
       return;
     }
     CAF_LOG_ERROR("received unexpected batch type (dropped)");

@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,22 +16,19 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/type_erased_value.hpp"
+#pragma once
 
-#include "caf/error.hpp"
+#include <cstddef>
 
 namespace caf {
+namespace detail {
 
-type_erased_value::~type_erased_value() {
-  // nop
-}
+/// Calculates the size for `T` including padding for aligning to `max_align_t`.
+template <class T>
+constexpr size_t padded_size_v
+  = ((sizeof(T) / alignof(max_align_t))
+     + static_cast<size_t>(sizeof(T) % alignof(max_align_t) != 0))
+    * alignof(max_align_t);
 
-error inspect(serializer& f, const type_erased_value& x) {
-  return x.save(f);
-}
-
-error inspect(deserializer& f, type_erased_value& x) {
-  return x.load(f);
-}
-
+} // namespace detail
 } // namespace caf

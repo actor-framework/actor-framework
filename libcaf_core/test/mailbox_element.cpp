@@ -37,15 +37,10 @@ using namespace caf;
 namespace {
 
 template <class... Ts>
-optional<tuple<Ts...>> fetch(const type_erased_tuple& x) {
-  if (!x.match_elements<Ts...>())
-    return none;
-  return x.get_as_tuple<Ts...>();
-}
-
-template <class... Ts>
 optional<tuple<Ts...>> fetch(const message& x) {
-  return fetch<Ts...>(x.content());
+  if (auto view = make_const_typed_message_view<Ts...>(x))
+    return to_tuple(view);
+  return none;
 }
 
 template <class... Ts>
