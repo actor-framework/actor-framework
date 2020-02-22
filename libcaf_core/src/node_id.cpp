@@ -263,7 +263,7 @@ optional<node_id> make_node_id(uint32_t process_id,
     return none;
   detail::parser::ascii_to_int<16, uint8_t> xvalue;
   node_data::host_id_type host_id;
-  for (size_t i = 0; i < node_data::host_id_size; i += 2) {
+  for (size_t i = 0; i < host_hash.size(); i += 2) {
     // Read two characters, each representing 4 bytes.
     if (!isxdigit(host_hash[i]) || !isxdigit(host_hash[i + 1]))
       return none;
