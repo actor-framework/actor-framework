@@ -18,12 +18,13 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
 namespace caf {
 
 /// Creates instances of @ref tracing_data.
-class tracing_data_factory {
+class CAF_CORE_EXPORT tracing_data_factory {
 public:
   virtual ~tracing_data_factory();
 
