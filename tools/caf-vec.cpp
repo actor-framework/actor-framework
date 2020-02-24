@@ -8,6 +8,17 @@
 
 #include "caf/all.hpp"
 
+struct entity;
+struct se_event;
+
+CAF_BEGIN_TYPE_ID_BLOCK(caf_vec, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(caf_vec, entity);
+  CAF_ADD_TYPE_ID(caf_vec, se_event);
+
+CAF_END_TYPE_ID_BLOCK(caf_vec)
+
+
 using std::string;
 
 using namespace caf;
@@ -739,6 +750,7 @@ struct config : public actor_system_config {
   bool include_hidden_actors = false;
   size_t verbosity = 0;
   config() {
+    init_global_meta_objects<caf_vec_type_ids>();
     opt_group{custom_options_, "global"}
       .add(output_file, "output-file,o", "Path for the output file")
       .add(include_hidden_actors, "include-hidden-actors,i",

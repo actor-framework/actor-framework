@@ -58,8 +58,9 @@ public:
   /// Adds `x` to the elements of the buffer.
   template <class T>
   message_builder& append(T&& x) {
-    using value_type = detail::strip_and_convert<T>;
-    static_assert(detail::sendable<value_type>);
+    using namespace detail;
+    using value_type = strip_and_convert_t<T>;
+    static_assert(sendable<value_type>);
     types_.push_back(type_id_v<value_type>);
     elements_.emplace_back(make_message_builder_element(std::forward<T>(x)));
     return *this;

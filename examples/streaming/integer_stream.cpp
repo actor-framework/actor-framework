@@ -2,22 +2,28 @@
  *     Basic, non-interactive streaming example for processing integers.      *
  ******************************************************************************/
 
-// Manual refs: lines 17-48, 50-83, 85-114, 128-132 (Streaming)
-
 #include <iostream>
 #include <vector>
 
 #include "caf/all.hpp"
+
+CAF_BEGIN_TYPE_ID_BLOCK(integer_stream, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(integer_stream, caf::stream<int32_t>)
+  CAF_ADD_TYPE_ID(integer_stream, std::vector<int32_t>)
+
+CAF_END_TYPE_ID_BLOCK(integer_stream)
 
 using std::endl;
 using namespace caf;
 
 namespace {
 
+// --(rst-source-begin)--
 // Simple source for generating a stream of integers from [0, n).
 behavior int_source(event_based_actor* self) {
   return {
-    [=](open_atom, int n) {
+    [=](open_atom, int32_t n) {
       // Produce at least one value.
       if (n <= 0)
         n = 1;
@@ -28,7 +34,7 @@ behavior int_source(event_based_actor* self) {
         self,
         // Initializer. The type of the first argument (state) is freely
         // chosen. If no state is required, `caf::unit_t` can be used here.
-        [](int& x) { x = 0; },
+        [](int32_t& x) { x = 0; },
         // Generator. This function is called by CAF to produce new stream
         // elements for downstream actors. The `x` argument is our state again
         // (with our freely chosen type). The second argument `out` points to
@@ -36,21 +42,23 @@ behavior int_source(event_based_actor* self) {
         // elements downstream actors receive in this stream. Finally, `num` is
         // a hint from CAF how many elements we should ideally insert into
         // `out`. We can always insert fewer or more items.
-        [n](int& x, downstream<int>& out, size_t num) {
+        [n](int32_t& x, downstream<int32_t>& out, size_t num) {
           auto max_x = std::min(x + static_cast<int>(num), n);
           for (; x < max_x; ++x)
             out.push(x);
         },
         // Predicate. This function tells CAF when we reached the end.
-        [n](const int& x) { return x == n; });
+        [n](const int32_t& x) { return x == n; });
     },
   };
 }
+// --(rst-source-end)--
 
+// --(rst-stage-begin)--
 // Simple stage that only selects even numbers.
 behavior int_selector(event_based_actor* self) {
   return {
-    [=](stream<int> in) {
+    [=](stream<int32_t> in) {
       // Create a stream manager for implementing a stream stage. Similar to
       // `make_source`, we need three functions: initialzer, processor, and
       // finalizer.
@@ -64,7 +72,7 @@ behavior int_selector(event_based_actor* self) {
         },
         // Processor. This function takes individual input elements as `val`
         // and forwards even integers to `out`.
-        [](unit_t&, downstream<int>& out, int val) {
+        [](unit_t&, downstream<int32_t>& out, int32_t val) {
           if (val % 2 == 0)
             out.push(val);
         },
@@ -81,10 +89,12 @@ behavior int_selector(event_based_actor* self) {
     },
   };
 }
+// --(rst-stage-end)--
 
+// --(rst-sink-begin)--
 behavior int_sink(event_based_actor* self) {
   return {
-    [=](stream<int> in) {
+    [=](stream<int32_t> in) {
       // Create a stream manager for implementing a stream sink. Once more, we
       // have to provide three functions: Initializer, Consumer, Finalizer.
       return attach_stream_sink(
@@ -99,9 +109,9 @@ behavior int_sink(event_based_actor* self) {
         },
         // Consumer. Takes individual input elements as `val` and stores them
         // in our history.
-        [](std::vector<int>& xs, int val) { xs.emplace_back(val); },
+        [](std::vector<int32_t>& xs, int32_t val) { xs.emplace_back(val); },
         // Finalizer. Allows us to run cleanup code once the stream terminates.
-        [=](std::vector<int>& xs, const error& err) {
+        [=](std::vector<int32_t>& xs, const error& err) {
           if (err) {
             aout(self) << "int_sink aborted with error: " << err << std::endl;
           } else {
@@ -112,18 +122,21 @@ behavior int_sink(event_based_actor* self) {
     },
   };
 }
+// --(rst-sink-end)--
 
 struct config : actor_system_config {
   config() {
+    init_global_meta_objects<integer_stream_type_ids>();
     opt_group{custom_options_, "global"}
       .add(with_stage, "with-stage,s", "use a stage for filtering odd numbers")
       .add(n, "num-values,n", "number of values produced by the source");
   }
 
   bool with_stage = false;
-  int n = 100;
+  int32_t n = 100;
 };
 
+// --(rst-main-begin)--
 void caf_main(actor_system& sys, const config& cfg) {
   auto src = sys.spawn(int_source);
   auto snk = sys.spawn(int_sink);
@@ -131,6 +144,7 @@ void caf_main(actor_system& sys, const config& cfg) {
                                  : snk * src;
   anon_send(pipeline, open_atom_v, cfg.n);
 }
+// --(rst-main-end)--
 
 } // namespace
 

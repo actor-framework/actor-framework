@@ -30,6 +30,7 @@
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/type_id.hpp"
+#include "caf/type_id_list.hpp"
 
 namespace {
 
@@ -118,6 +119,17 @@ struct config : actor_system_config {
 
 CAF_TEST_FIXTURE_SCOPE(message_tests, test_coordinator_fixture<config>)
 
+CAF_TEST(messages allow index-based access) {
+  auto msg = make_message("abc", uint32_t{10}, 20.0);
+  CAF_CHECK_EQUAL(msg.size(), 3u);
+  CAF_CHECK_EQUAL(msg.types(),
+                  (make_type_id_list<std::string, uint32_t, double>()));
+  CAF_CHECK_EQUAL(msg.get_as<std::string>(0), "abc");
+  CAF_CHECK_EQUAL(msg.get_as<uint32_t>(1), 10u);
+  CAF_CHECK_EQUAL(msg.get_as<double>(2), 20.0);
+  CAF_CHECK_EQUAL(msg.cdata().get_reference_count(), 1u);
+}
+
 CAF_TEST(compare_custom_types) {
   s2 tmp;
   tmp.value[0][1] = 100;
@@ -127,15 +139,22 @@ CAF_TEST(compare_custom_types) {
 
 CAF_TEST(empty_to_string) {
   message msg;
-  CAF_CHECK(to_string(msg), "<empty-message>");
+  CAF_CHECK_EQUAL(to_string(msg), "<empty-message>");
 }
 
 CAF_TEST(integers_to_string) {
-  using ivec = vector<int>;
+  using ivec = vector<int32_t>;
   CAF_CHECK_EQUAL(msg_as_string(1, 2, 3), "(1, 2, 3)");
   CAF_CHECK_EQUAL(msg_as_string(ivec{1, 2, 3}), "([1, 2, 3])");
   CAF_CHECK_EQUAL(msg_as_string(ivec{1, 2}, 3, 4, ivec{5, 6, 7}),
                   "([1, 2], 3, 4, [5, 6, 7])");
+  auto msg = make_message(ivec{1, 2, 3});
+  CAF_MESSAGE("s1: " << type_id_v<s1>);
+  CAF_MESSAGE("ivec: " << type_id_v<ivec>);
+  CAF_MESSAGE("msg.types: " << msg.types());
+  CAF_MESSAGE("types #1: " << make_type_id_list<s1>());
+  CAF_MESSAGE("types #2: " << make_type_id_list<ivec>());
+  CAF_CHECK_EQUAL(msg.get_as<ivec>(0), ivec({1, 2, 3}));
 }
 
 CAF_TEST(strings_to_string) {

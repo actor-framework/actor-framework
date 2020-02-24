@@ -53,13 +53,16 @@ public:
   }
 
   /// Returns the number of elements in the list.
-  /// @pre `data() != nullptr`
   constexpr size_t size() const noexcept {
     return data_[0];
   }
 
+  /// Returns `size() == 0`.
+  constexpr bool empty() const noexcept {
+    return size() == 0;
+  }
+
   /// Returns the type ID at `index`.
-  /// @pre `data() != nullptr`
   constexpr type_id_t operator[](size_t index) const noexcept {
     return data_[index + 1];
   }
@@ -86,14 +89,14 @@ private:
 /// @private
 template <class... Ts>
 struct make_type_id_list_helper {
-  static constexpr inline type_id_t data[]
-    = {static_cast<type_id_t>(sizeof...(Ts)), type_id_v<Ts>...};
+  static inline type_id_t data[] = {static_cast<type_id_t>(sizeof...(Ts)),
+                                    type_id_v<Ts>...};
 };
 
 /// Constructs a ::type_id_list from the template parameter pack `Ts`.
 /// @relates type_id_list
 template <class... Ts>
-constexpr type_id_list make_type_id_list() {
+type_id_list make_type_id_list() {
   return type_id_list{make_type_id_list_helper<Ts...>::data};
 }
 

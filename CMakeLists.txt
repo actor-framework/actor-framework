@@ -403,50 +403,29 @@ if(NOT APPLE AND NOT WIN32)
 endif()
 # -fPIC generates warnings on MinGW and Cygwin plus extra setup steps needed on MinGW
 if(MINGW)
-  add_definitions(-D_WIN32_WINNT=0x0600)
-  add_definitions(-DWIN32)
+  add_definitions(-D_WIN32_WINNT=0x0600 -DWIN32)
   list(APPEND CAF_EXTRA_LDFLAGS -lws2_32 -liphlpapi -lpsapi)
   # build static to avoid runtime dependencies to GCC libraries
-  build_string("EXTRA_FLAGS" "-static")
+  add_compile_options(-static)
 elseif(CYGWIN)
-  build_string("EXTRA_FLAGS" "-U__STRICT_ANSI__")
+  add_compile_options(-U__STRICT_ANSI__)
 endif()
 if (WIN32)
   list(APPEND CAF_EXTRA_LDFLAGS ws2_32 iphlpapi)
 endif()
+
 # iOS support
 if(CAF_OSX_SYSROOT)
   set(CMAKE_OSX_SYSROOT "${CAF_OSX_SYSROOT}")
 endif()
 if(CAF_IOS_DEPLOYMENT_TARGET)
   if(CAF_OSX_SYSROOT STREQUAL "iphonesimulator")
-    build_string("EXTRA_FLAGS"
-                 "-mios-simulator-version-min=${CAF_IOS_DEPLOYMENT_TARGET}")
+    add_compile_options("-mios-simulator-version-min=${CAF_IOS_DEPLOYMENT_TARGET}")
   else()
-    build_string("EXTRA_FLAGS"
-                 "-miphoneos-version-min=${CAF_IOS_DEPLOYMENT_TARGET}")
+    add_compile_options("-miphoneos-version-min=${CAF_IOS_DEPLOYMENT_TARGET}")
   endif()
 endif()
-# check if the user provided CXXFLAGS, set defaults otherwise
-if(NOT CMAKE_CXX_FLAGS)
-  set(CMAKE_CXX_FLAGS                   "-Wextra -Wall -pedantic ${EXTRA_FLAGS}")
-endif()
-if(NOT CMAKE_CXX_FLAGS_DEBUG)
-  set(CMAKE_CXX_FLAGS_DEBUG             "-O0 -g")
-endif()
-if(NOT CMAKE_CXX_FLAGS_MINSIZEREL)
-  set(CMAKE_CXX_FLAGS_MINSIZEREL        "-Os")
-endif()
-if(NOT CMAKE_CXX_FLAGS_RELEASE)
-  set(CMAKE_CXX_FLAGS_RELEASE           "-O3 -DNDEBUG")
-endif()
-if(NOT CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO    "-O2 -g -fno-omit-frame-pointer")
-endif()
-# set build default build type to RelWithDebInfo if not set
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE RelWithDebInfo)
-endif()
+
 # needed by subprojects
 if (DEFINED CMAKE_LD_LIBS)
   list(APPEND ${CMAKE_LD_LIBS})
@@ -616,17 +595,6 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/CAFConfig.cmake"
   "${CMAKE_CURRENT_BINARY_DIR}/CAFConfigVersion.cmake"
   DESTINATION "${INSTALL_CAF_CMAKEDIR}")
 
-# -- Fetch branch name and SHA if available ------------------------------------
-
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/release.txt")
-  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/release.txt" CAF_RELEASE)
-  string(REGEX REPLACE "\n" "" CAF_RELEASE "${CAF_RELEASE}")
-else()
-  set(CAF_RELEASE "${CAF_VERSION}")
-endif()
-
-message(STATUS "Set release version for all documentation to ${CAF_RELEASE}.")
-
 # -- Setup for building manual and API documentation ---------------------------
 
 if(NOT WIN32)
@@ -661,11 +629,7 @@ invertYesNo(CAF_NO_EXCEPTIONS CAF_BUILD_WITH_EXCEPTIONS)
 invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
 invertYesNo(CAF_NO_OPENSSL CAF_BUILD_OPENSSL)
 invertYesNo(CAF_NO_PYTHON CAF_BUILD_PYTHON)
-# collect all compiler flags
-string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPER_BUILD_TYPE)
-set(ALL_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${UPPER_BUILD_TYPE}}")
-set(ALL_LD_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CAF_EXTRA_LDFLAGS}")
-string(STRIP "${ALL_LD_FLAGS}" ALL_LD_FLAGS)
+get_property(all_cxx_flags DIRECTORY PROPERTY COMPILE_OPTIONS)
 # done
 if(NOT CAF_NO_SUMMARY)
   message(STATUS
@@ -689,7 +653,7 @@ if(NOT CAF_NO_SUMMARY)
         "\nBuild Python:          ${CAF_BUILD_PYTHON}"
         "\n"
         "\nCXX:                   ${CMAKE_CXX_COMPILER}"
-        "\nCXXFLAGS:              ${ALL_CXX_FLAGS}"
+        "\nCXXFLAGS:              ${all_cxx_flags}"
         "\nLINKER_FLAGS (shared)  ${ALL_LD_FLAGS}"
         "\n"
         "\nSource directory:      ${CMAKE_CURRENT_SOURCE_DIR}"

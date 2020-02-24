@@ -95,7 +95,7 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
-  error_code<sec> begin_object(uint16_t nr, string_view name);
+  error_code<sec> begin_object(type_id_t type);
 
   error_code<sec> end_object();
 

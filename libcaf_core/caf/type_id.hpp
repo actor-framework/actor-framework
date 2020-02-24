@@ -24,6 +24,7 @@
 #include <utility>
 
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/pp.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/fwd.hpp"
 #include "caf/meta/type_name.hpp"
@@ -120,8 +121,25 @@ constexpr type_id_t first_custom_type_id = 200;
     : type_name<fully_qualified_name> {};                                      \
   }
 
+/// Creates a new tag type (atom) in the global namespace and assigns the next
+/// free type ID to it.
+#define CAF_ADD_ATOM_2(project_name, atom_name)                                \
+  struct atom_name {};                                                         \
+  static constexpr atom_name atom_name##_v = atom_name{};                      \
+  [[maybe_unused]] constexpr bool operator==(atom_name, atom_name) {           \
+    return true;                                                               \
+  }                                                                            \
+  [[maybe_unused]] constexpr bool operator!=(atom_name, atom_name) {           \
+    return false;                                                              \
+  }                                                                            \
+  template <class Inspector>                                                   \
+  auto inspect(Inspector& f, atom_name&) {                                     \
+    return f(caf::meta::type_name(#atom_name));                                \
+  }                                                                            \
+  CAF_ADD_TYPE_ID(project_name, atom_name)
+
 /// Creates a new tag type (atom) and assigns the next free type ID to it.
-#define CAF_ADD_ATOM(project_name, atom_namespace, atom_name)                  \
+#define CAF_ADD_ATOM_3(project_name, atom_namespace, atom_name)                \
   namespace atom_namespace {                                                   \
   struct atom_name {};                                                         \
   static constexpr atom_name atom_name##_v = atom_name{};                      \
@@ -137,6 +155,15 @@ constexpr type_id_t first_custom_type_id = 200;
   }                                                                            \
   }                                                                            \
   CAF_ADD_TYPE_ID(project_name, atom_namespace ::atom_name)
+
+#ifdef CAF_MSVC
+#  define CAF_ADD_ATOM(...)                                                    \
+    CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_ADD_ATOM_, __VA_ARGS__)(__VA_ARGS__),       \
+               CAF_PP_EMPTY())
+#else
+#  define CAF_ADD_ATOM(...)                                                    \
+    CAF_PP_OVERLOAD(CAF_ADD_ATOM_, __VA_ARGS__)(__VA_ARGS__)
+#endif
 
 /// Finalizes a code block for registering custom types to CAF. Stores the last
 /// type ID used by the project as `caf::${project_name}_last_type_id`.

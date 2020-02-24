@@ -27,6 +27,7 @@
 #include "caf/deserializer.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/padded_size.hpp"
+#include "caf/detail/stringification_inspector.hpp"
 #include "caf/error.hpp"
 #include "caf/serializer.hpp"
 
@@ -53,6 +54,10 @@ meta_object make_meta_object(const char* type_name) {
     },
     [](caf::deserializer& source, void* ptr) {
       return source(*reinterpret_cast<T*>(ptr));
+    },
+    [](std::string& buf, const void* ptr) {
+      stringification_inspector f{buf};
+      f(*reinterpret_cast<const T*>(ptr));
     },
   };
 }

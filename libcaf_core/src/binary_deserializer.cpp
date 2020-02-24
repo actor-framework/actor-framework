@@ -68,14 +68,8 @@ binary_deserializer::binary_deserializer(actor_system& sys) noexcept
   // nop
 }
 
-result_type binary_deserializer::begin_object(uint16_t& nr, std::string& name) {
-  name.clear();
-  if (auto err = apply(nr))
-    return err;
-  if (nr == 0)
-    if (auto err = apply(name))
-      return err;
-  return none;
+result_type binary_deserializer::begin_object(type_id_t& type) {
+  return apply(type);
 }
 
 result_type binary_deserializer::end_object() noexcept {

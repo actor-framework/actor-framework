@@ -20,15 +20,15 @@
 
 namespace caf::detail {
 
-void append_hex(std::string& result, const uint8_t* xs, size_t n) {
+void append_hex(std::string& result, const byte* xs, size_t n) {
   if (n == 0) {
-    result += "00";
+    result += "<empty>";
     return;
   }
   auto tbl = "0123456789ABCDEF";
   char buf[3] = {0, 0, 0};
   for (size_t i = 0; i < n; ++i) {
-    auto c = xs[i];
+    auto c = to_integer<uint8_t>(xs[i]);
     buf[0] = tbl[c >> 4];
     buf[1] = tbl[c & 0x0F];
     result += buf;

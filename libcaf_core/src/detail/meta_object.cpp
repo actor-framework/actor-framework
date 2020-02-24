@@ -76,9 +76,10 @@ span<const meta_object> global_meta_objects() {
   return {meta_objects, meta_objects_size};
 }
 
-meta_object& global_meta_object(type_id_t id) {
+const meta_object* global_meta_object(type_id_t id) {
   CAF_ASSERT(id < meta_objects_size);
-  return meta_objects[id];
+  auto& meta = meta_objects[id];
+  return meta.type_name != nullptr ? &meta : nullptr;
 }
 
 void clear_global_meta_objects() {

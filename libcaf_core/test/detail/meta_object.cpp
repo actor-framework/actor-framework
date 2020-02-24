@@ -160,7 +160,7 @@ CAF_TEST(resizing the global meta objects keeps entries) {
   CAF_CHECK_EQUAL(xs2.size(), 2u);
   CAF_CHECK(eq(xs2[0], meta_i32));
   resize_global_meta_objects(3);
-  CAF_CHECK(eq(global_meta_object(0), meta_i32));
+  CAF_CHECK(eq(*global_meta_object(0), meta_i32));
 }
 
 CAF_TEST(init_global_meta_objects takes care of creating a meta object table) {
@@ -180,11 +180,11 @@ CAF_TEST(init_global_meta_objects takes care of creating a meta object table) {
   };
   CAF_CHECK(std::equal(xs.begin(), xs.end(), ys.begin(), ys.end(), same));
   CAF_MESSAGE("init_global_meta_objects can initialize allocated chunks");
-  CAF_CHECK_EQUAL(global_meta_object(type_id_v<float>).type_name, nullptr);
+  CAF_CHECK_EQUAL(global_meta_object(type_id_v<float>)->type_name, nullptr);
   init_global_meta_objects<builtin_type_ids>();
   CAF_MESSAGE("again, calling init_global_meta_objects again is a no-op");
   init_global_meta_objects<builtin_type_ids>();
-  CAF_CHECK_EQUAL(global_meta_object(type_id_v<float>).type_name, "float"s);
+  CAF_CHECK_EQUAL(global_meta_object(type_id_v<float>)->type_name, "float"s);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

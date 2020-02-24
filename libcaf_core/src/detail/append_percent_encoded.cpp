@@ -18,6 +18,7 @@
 
 #include "caf/detail/append_percent_encoded.hpp"
 
+#include "caf/byte.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/append_hex.hpp"
 #include "caf/string_view.hpp"
@@ -33,7 +34,7 @@ void append_percent_encoded(std::string& str, string_view x, bool is_path) {
           str += ch;
           break;
         }
-        CAF_ANNOTATE_FALLTHROUGH;
+        [[fallthrough]];
       case ' ':
       case '?':
       case '#':
@@ -53,7 +54,7 @@ void append_percent_encoded(std::string& str, string_view x, bool is_path) {
       case ';':
       case '=':
         str += '%';
-        append_hex(str, reinterpret_cast<uint8_t*>(&ch), 1);
+        append_hex(str, reinterpret_cast<byte*>(&ch), 1);
         break;
       default:
         str += ch;

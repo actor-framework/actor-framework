@@ -33,7 +33,7 @@ public:
     return result_;
   }
 
-  result_type begin_object(uint16_t typenr, string_view type_name) override;
+  result_type begin_object(type_id_t) override;
 
   result_type end_object() override;
 

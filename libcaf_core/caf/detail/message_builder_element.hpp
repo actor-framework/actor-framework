@@ -31,7 +31,7 @@ namespace caf::detail {
 /// later.
 class CAF_CORE_EXPORT message_builder_element {
 public:
-  virtual ~message_builder_element() noexcept;
+  virtual ~message_builder_element();
 
   /// Uses placement new to create a copy of the wrapped value at given memory
   /// region.

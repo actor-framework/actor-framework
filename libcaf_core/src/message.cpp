@@ -154,9 +154,28 @@ error_code<sec> inspect(binary_deserializer& source, message& msg) {
   return msg.load(source);
 }
 
-std::string to_string(const message& ) {
-  // TODO: implement me
-  return "";
+std::string to_string(const message& msg) {
+  if (msg.empty())
+    return "<empty-message>";
+  std::string result;
+  result += '(';
+  auto types = msg.types();
+  if (!types.empty()) {
+    auto ptr = msg.cdata().storage();
+    auto meta = detail::global_meta_object(types[0]);
+    CAF_ASSERT(meta != nullptr);
+    meta->stringify(result, ptr);
+    ptr += meta->padded_size;
+    for (size_t index = 1; index < types.size(); ++index) {
+      result += ", ";
+      meta = detail::global_meta_object(types[index]);
+      CAF_ASSERT(meta != nullptr);
+      meta->stringify(result, ptr);
+      ptr += meta->padded_size;
+    }
+  }
+  result += ')';
+  return result;
 }
 
 } // namespace caf

@@ -26,11 +26,8 @@
 
 namespace caf::detail {
 
-error serialized_size_inspector::begin_object(uint16_t nr, string_view name) {
-  if (nr != 0)
-    return apply(nr);
-  apply(nr);
-  return apply(name);
+error serialized_size_inspector::begin_object(type_id_t type) {
+  return apply(type);
 }
 
 error serialized_size_inspector::end_object() {

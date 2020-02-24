@@ -104,7 +104,7 @@ public:
 
   // -- overridden member functions --------------------------------------------
 
-  result_type begin_object(uint16_t& typenr, std::string& name);
+  result_type begin_object(type_id_t& type);
 
   result_type end_object() noexcept;
 

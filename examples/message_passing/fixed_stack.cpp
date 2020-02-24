@@ -3,20 +3,20 @@
 #include <cstdint>
 #include <iostream>
 
+CAF_BEGIN_TYPE_ID_BLOCK(fixed_stack, first_custom_type_id)
+
+  CAF_ADD_ATOM(fixed_stack, pop_atom);
+  CAF_ADD_ATOM(fixed_stack, push_atom);
+
+CAF_END_TYPE_ID_BLOCK(fixed_stack)
+
 using std::endl;
 using namespace caf;
-
-namespace {
-
-CAF_MSG_TYPE_ADD_ATOM(pop_atom);
-CAF_MSG_TYPE_ADD_ATOM(push_atom);
 
 enum class fixed_stack_errc : uint8_t {
   push_to_full = 1,
   pop_from_empty,
 };
-
-} // namespace
 
 namespace caf {
 
@@ -26,8 +26,6 @@ struct error_category<fixed_stack_errc> {
 };
 
 } // namespace caf
-
-namespace {
 
 class fixed_stack : public event_based_actor {
 public:
@@ -75,6 +73,12 @@ private:
   behavior empty_;
 };
 
+struct config : actor_system_config {
+  config() {
+    init_global_meta_objects<fixed_stack_type_ids>();
+  }
+};
+
 void caf_main(actor_system& system) {
   scoped_actor self{system};
   auto st = self->spawn<fixed_stack>(5u);
@@ -92,7 +96,5 @@ void caf_main(actor_system& system) {
   aout(self) << "}" << endl;
   self->send_exit(st, exit_reason::user_shutdown);
 }
-
-} // namespace
 
 CAF_MAIN()

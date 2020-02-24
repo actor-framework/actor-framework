@@ -187,29 +187,40 @@ Adding Custom Message Types
 ---------------------------
 
 CAF requires serialization support for all of its message types (see
-:ref:`type-inspection`). However, CAF also needs a mapping of unique type names
-to user-defined types at runtime. This is required to deserialize arbitrary
+:ref:`type-inspection`). However, CAF also needs a mapping of unique type IDs to
+user-defined types at runtime. This is required to deserialize arbitrary
 messages from the network.
 
-As an introductory example, we (again) use the following POD type
-``foo``.
+The type IDs are assigned by listing all custom types in a *type ID block*. CAF
+assigns ascending IDs to each type by in the block as well as storing the type
+name. In the following example, we forward-declare the types ``foo`` and
+``foo2`` and register them to CAF in a *type ID block*. The name of the type ID
+block is arbitrary, but it must be a valid C++ identifier.
 
 .. literalinclude:: /examples/custom_type/custom_types_1.cpp
    :language: C++
-   :lines: 24-27
+   :start-after: --(rst-type-id-block-begin)--
+   :end-before: --(rst-type-id-block-end)--
 
-To make ``foo`` serializable, we make it inspectable:
-
-.. literalinclude:: /examples/custom_type/custom_types_1.cpp
-   :language: C++
-   :lines: 30-34
-
-Finally, we give ``foo`` a platform-neutral name and add it to the list
-of serializable types by using a custom config class.
+Aside from a type ID, CAF also requires an ``inspect`` overload in order to be
+able to serialize objects. As an introductory example, we (again) use the
+following POD type ``foo``.
 
 .. literalinclude:: /examples/custom_type/custom_types_1.cpp
    :language: C++
-   :lines: 75-78,81-84
+   :start-after: --(rst-foo-begin)--
+   :end-before: --(rst-foo-end)--
+
+By assigning type IDs and providing ``inspect`` overloads, we provide static and
+compile-time information for all our types. However, CAF also needs some
+information at run-time for deserializing received data. The function
+``init_global_meta_objects`` takes care fo registering all the state we need at
+run-time.
+
+.. literalinclude:: /examples/custom_type/custom_types_1.cpp
+   :language: C++
+   :start-after: --(rst-config-begin)--
+   :end-before: --(rst-config-end)--
 
 Adding Custom Error Types
 -------------------------
@@ -231,18 +242,14 @@ simple ``calculator`` actor.
 
 .. literalinclude:: /examples/remoting/remote_spawn.cpp
    :language: C++
-   :lines: 33-34
+   :start-after: --(rst-calculator-begin)--
+   :end-before: --(rst-calculator-end)--
 
 Adding the calculator actor type to our config is achieved by calling
-``add_actor_type<T>``. Note that adding an actor type in this way
-implicitly calls ``add_message_type<T>`` for typed actors
-add-custom-message-type_. This makes our ``calculator`` actor type
-serializable and also enables remote nodes to spawn calculators anywhere in the
-distributed actor system (assuming all nodes use the same config).
-
-.. literalinclude:: /examples/remoting/remote_spawn.cpp
-   :language: C++
-   :lines: 98-109
+``add_actor_type``. After calling this in our config, we can spawn the
+``calculator`` anywhere in the distributed actor system (assuming all nodes use
+the same config). Note that the handle type still requires a type ID (see
+add-custom-message-type_).
 
 Our final example illustrates how to spawn a ``calculator`` locally by
 using its type name. Because the dynamic type name lookup can fail and the

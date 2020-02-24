@@ -58,6 +58,9 @@ struct meta_object {
 
   /// Applies an object to a generic deserializer.
   caf::error (*load)(caf::deserializer&, void*);
+
+  /// Appends a string representation of an object to a buffer.
+  void (*stringify)(std::string&, const void*);
 };
 
 /// Convenience function for calling `meta.save(sink, obj)`.
@@ -81,7 +84,7 @@ load(const meta_object& meta, caf::binary_deserializer& source, void* obj);
 CAF_CORE_EXPORT span<const meta_object> global_meta_objects();
 
 /// Returns the global meta object for given type ID.
-CAF_CORE_EXPORT meta_object& global_meta_object(type_id_t id);
+CAF_CORE_EXPORT const meta_object* global_meta_object(type_id_t id);
 
 /// Clears the array for storing global meta objects.
 /// @warning intended for unit testing only!

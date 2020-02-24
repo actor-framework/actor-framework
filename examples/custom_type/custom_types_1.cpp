@@ -11,6 +11,20 @@
 
 #include "caf/all.hpp"
 
+// --(rst-type-id-block-begin)--
+struct foo;
+struct foo2;
+
+CAF_BEGIN_TYPE_ID_BLOCK(custom_types_1, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(custom_types_1, foo)
+  CAF_ADD_TYPE_ID(custom_types_1, foo2)
+  CAF_ADD_TYPE_ID(custom_types_1, std::pair<int32_t CAF_PP_COMMA int32_t>)
+
+CAF_END_TYPE_ID_BLOCK(custom_types_1)
+// --(rst-type-id-block-end)--
+
+
 using std::cout;
 using std::cerr;
 using std::endl;
@@ -18,19 +32,17 @@ using std::vector;
 
 using namespace caf;
 
-namespace {
-
-// POD struct foo
+// --(rst-foo-begin)--
 struct foo {
   std::vector<int> a;
   int b;
 };
 
-// foo needs to be serializable
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, foo& x) {
   return f(meta::type_name("foo"), x.a, x.b);
 }
+// --(rst-foo-end)--
 
 // a pair of two ints
 using foo_pair = std::pair<int, int>;
@@ -72,14 +84,14 @@ void testee(event_based_actor* self, size_t remaining) {
   );
 }
 
+// --(rst-config-begin)--
 class config : public actor_system_config {
 public:
   config() {
-    add_message_type<foo>("foo");
-    add_message_type<foo2>("foo2");
-    add_message_type<foo_pair>("foo_pair");
+    init_global_meta_objects<custom_types_1_type_ids>();
   }
 };
+// --(rst-config-end)--
 
 void caf_main(actor_system& system, const config&) {
   // two variables for testing serialization
@@ -117,7 +129,5 @@ void caf_main(actor_system& system, const config&) {
   // send t a foo_pair2
   self->send(t, foo_pair2{3, 4});
 }
-
-} // namespace
 
 CAF_MAIN()

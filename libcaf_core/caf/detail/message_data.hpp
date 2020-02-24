@@ -147,7 +147,7 @@ void message_data_init(byte* storage, T&& x, Ts&&... xs) {
   // TODO: exception safety: if any constructor throws, we need to unwind the
   //       stack here and call destructors.
   using type = strip_and_convert_t<T>;
-  new (storage) strip_and_convert_t<T>(std::forward<T>(x));
+  new (storage) type(std::forward<T>(x));
   message_data_init(storage + padded_size_v<type>, std::forward<Ts>(xs)...);
 }
 

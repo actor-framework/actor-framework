@@ -182,14 +182,15 @@ template <class... Ts>
 message make_message(Ts&&... xs) {
   using namespace detail;
   static_assert((!std::is_pointer<strip_and_convert_t<Ts>>::value && ...));
-  static constexpr size_t data_size = sizeof(message_data)
-                                      + (padded_size_v<std::decay_t<Ts>> + ...);
+  static_assert((is_complete<type_id<strip_and_convert_t<Ts>>> && ...));
+  static constexpr size_t data_size
+    = sizeof(message_data) + (padded_size_v<strip_and_convert_t<Ts>> + ...);
   auto types = make_type_id_list<strip_and_convert_t<Ts>...>();
   auto vptr = malloc(data_size);
   if (vptr == nullptr)
     throw std::bad_alloc();
   auto raw_ptr = new (vptr) message_data(types);
-  intrusive_cow_ptr<message_data> ptr{};
+  intrusive_cow_ptr<message_data> ptr{raw_ptr, false};
   message_data_init(raw_ptr->storage(), std::forward<Ts>(xs)...);
   return message{std::move(ptr)};
 }

@@ -69,6 +69,7 @@ set(CAF_CORE_SOURCES
   src/detail/get_root_uuid.cpp
   src/detail/ini_consumer.cpp
   src/detail/invoke_result_visitor.cpp
+  src/detail/message_builder_element.cpp
   src/detail/message_data.cpp
   src/detail/meta_object.cpp
   src/detail/parse.cpp

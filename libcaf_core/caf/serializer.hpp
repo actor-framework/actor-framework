@@ -62,7 +62,7 @@ public:
 
   /// Begins processing of an object. Saves the type information
   /// to the underlying storage.
-  virtual result_type begin_object(uint16_t typenr, string_view type_name) = 0;
+  virtual result_type begin_object(type_id_t type) = 0;
 
   /// Ends processing of an object.
   virtual result_type end_object() = 0;

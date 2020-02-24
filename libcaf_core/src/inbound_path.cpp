@@ -75,7 +75,7 @@ inbound_path::inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
   mgr->register_input_path(this);
   CAF_STREAM_LOG_DEBUG(mgr->self()->name()
                        << "opens input stream with element type"
-                       << detail::global_meta_object(in_type).type_name
+                       << detail::global_meta_object(in_type)->type_name
                        << "at slot" << id.receiver << "from" << hdl);
   if (auto str = get_if<std::string>(&self()->system().config(),
                                      "stream.credit-policy")) {

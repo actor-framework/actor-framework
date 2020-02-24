@@ -20,12 +20,13 @@
 
 #include <cstdlib>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/type_id.hpp"
 
 namespace caf::detail {
 
-class type_id_list_builder {
+class CAF_CORE_EXPORT type_id_list_builder {
 public:
   static constexpr size_t block_size = 8;
 
