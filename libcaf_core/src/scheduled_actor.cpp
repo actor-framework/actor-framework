@@ -791,6 +791,14 @@ auto scheduled_actor::activate(execution_unit* ctx, mailbox_element& x)
 auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
   CAF_LOG_TRACE(CAF_ARG(x));
 #ifndef CAF_NO_EXCEPTIONS
+  auto handle_exception = [&](std::exception_ptr eptr) {
+    auto err = call_handler(exception_handler_, this, eptr);
+    if (x.mid.is_request()) {
+      auto rp = make_response_promise();
+      rp.deliver(err);
+    }
+    quit(std::move(err));
+  };
   try {
 #endif // CAF_NO_EXCEPTIONS
     switch (consume(x)) {
@@ -810,12 +818,10 @@ auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
   } catch (std::exception& e) {
     CAF_LOG_INFO("actor died because of an exception, what: " << e.what());
     static_cast<void>(e); // keep compiler happy when not logging
-    auto eptr = std::current_exception();
-    quit(call_handler(exception_handler_, this, eptr));
+    handle_exception(std::current_exception());
   } catch (...) {
     CAF_LOG_INFO("actor died because of an unknown exception");
-    auto eptr = std::current_exception();
-    quit(call_handler(exception_handler_, this, eptr));
+    handle_exception(std::current_exception());
   }
   finalize();
   return activation_result::terminated;
