@@ -273,6 +273,7 @@ set(CAF_CORE_TEST_SOURCES
   test/tracing_data.cpp
   test/type_erased_tuple.cpp
   test/type_id_list.cpp
+  test/typed_behavior.cpp
   test/typed_message_view.cpp
   test/typed_response_promise.cpp
   test/typed_spawn.cpp
