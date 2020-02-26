@@ -18,7 +18,7 @@
 
 #define CAF_SUITE openssl.dynamic_remote_actor
 
-#include "caf/test/dsl.hpp"
+#include "openssl-test.hpp"
 
 #include <algorithm>
 #include <signal.h>
@@ -29,12 +29,6 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 #include "caf/openssl/all.hpp"
-
-CAF_BEGIN_TYPE_ID_BLOCK(dynamic_remote_actor_tests, first_custom_type_id)
-
-  CAF_ADD_TYPE_ID(dynamic_remote_actor_tests, (std::vector<int>))
-
-CAF_END_TYPE_ID_BLOCK(dynamic_remote_actor_tests)
 
 using namespace caf;
 

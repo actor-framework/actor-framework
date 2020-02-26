@@ -77,11 +77,10 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
 
 if(NOT CAF_NO_UNIT_TESTS)
   add_executable(caf-openssl-test
-                 "${PROJECT_SOURCE_DIR}/libcaf_test/src/caf-test.cpp"
-                 "${PROJECT_SOURCE_DIR}/libcaf_test/caf/test/unit_test.hpp"
-                 "${PROJECT_SOURCE_DIR}/libcaf_test/caf/test/unit_test_impl.hpp"
+                 test/openssl-test.cpp
                  ${CAF_OPENSSL_TEST_SOURCES}
                  $<TARGET_OBJECTS:libcaf_openssl_obj>)
+  target_include_directories(caf-openssl-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/test")
   target_compile_definitions(caf-openssl-test PRIVATE libcaf_openssl_EXPORTS)
   target_link_libraries(caf-openssl-test caf::core caf::io
                         ${OPENSSL_LIBRARIES} ${CAF_EXTRA_LDFLAGS})
