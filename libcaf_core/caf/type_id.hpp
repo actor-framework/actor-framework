@@ -113,7 +113,7 @@ constexpr type_id_t first_custom_type_id = 200;
   };                                                                           \
   template <>                                                                  \
   struct type_name<CAF_PP_EXPAND fully_qualified_name> {                       \
-    [[maybe_unused]] static constexpr const char* value                        \
+    static constexpr const char* value                                         \
       = CAF_PP_STR(CAF_PP_EXPAND fully_qualified_name);                        \
   };                                                                           \
   template <>                                                                  \

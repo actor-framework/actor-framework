@@ -142,7 +142,7 @@ public:
         if (arg_types == msg.types()) {
           typename trait::message_view_type xs{msg};
           using fun_result = decltype(detail::apply_args(fun, xs));
-          if constexpr (std::is_same_v<void, fun_result>) {
+          if constexpr (std::is_same<void, fun_result>::value) {
             detail::apply_args(fun, xs);
             result = f.visit(unit) ? match_result::match : match_result::skip;
           } else {
