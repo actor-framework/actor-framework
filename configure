@@ -25,7 +25,7 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
                                   - MinSizeRel: minimal output size
                                   - Release: optimizations on, debugging off
                                   - RelWithDebInfo: release flags plus debugging
-    --extra-flags=STRING        additional compiler flags
+    --extra-flags=STRING        additional compiler flags (sets CMAKE_CXX_FLAGS)
     --build-dir=DIR             place build files in directory [build]
     --bin-dir=DIR               executable directory [build/bin]
     --lib-dir=DIR               library directory [build/lib]
@@ -36,13 +36,11 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --dual-build                build using both gcc and clang
     --build-static              build as static library
     --static-runtime            build with static C++ runtime
-    --more-warnings             enables most warnings
     --no-compiler-check         disable compiler version check
     --no-auto-libc++            do not automatically enable libc++ for Clang
     --no-exceptions             do not catch exceptions in CAF
     --force-no-exceptions       build CAF with '-fno-exceptions'
     --warnings-as-errors        build with '-Werror'
-    --with-ccache               use ccache to improve build performance
 
   Optional Targets:
     --with-qt-examples          build Qt example(s)
@@ -243,9 +241,6 @@ while [ $# -ne 0 ]; do
         --no-memory-management)
             append_cache_entry CAF_NO_MEM_MANAGEMENT BOOL yes
             ;;
-        --more-warnings)
-            append_cache_entry CAF_MORE_WARNINGS BOOL yes
-            ;;
         --no-compiler-check)
             append_cache_entry CAF_NO_COMPILER_CHECK BOOL yes
             ;;
@@ -258,12 +253,6 @@ while [ $# -ne 0 ]; do
         --force-no-exceptions)
             append_cache_entry CAF_NO_EXCEPTIONS BOOL yes
             append_cache_entry CAF_FORCE_NO_EXCEPTIONS BOOL yes
-            ;;
-        --warnings-as-errors)
-            append_cache_entry CAF_CXX_WARNINGS_AS_ERRORS BOOL yes
-            ;;
-        --with-ccache)
-            append_cache_entry CAF_USE_CCACHE BOOL yes
             ;;
         --sysroot=*)
             append_cache_entry CAF_OSX_SYSROOT PATH "$optarg"
@@ -291,7 +280,7 @@ while [ $# -ne 0 ]; do
             append_cache_entry CMAKE_BUILD_TYPE STRING "$optarg"
             ;;
         --extra-flags=*)
-            append_cache_entry EXTRA_FLAGS STRING "$optarg"
+            append_cache_entry CMAKE_CXX_FLAGS STRING "$optarg"
             ;;
         --build-dir=*)
             builddir="$optarg"

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
-project(caf C CXX)
+project(caf CXX)
 
 # -- project options -----------------------------------------------------------
 
@@ -231,20 +231,6 @@ endfunction()
 build_string("CMAKE_PREFIX_PATH" "${CAF_QT_PREFIX_PATH}")
 
 ################################################################################
-#                      enable ccache if required by user                       #
-################################################################################
-
-if(CAF_USE_CCACHE)
-  find_program(CCACHE_PROGRAM ccache)
-  if(CCACHE_PROGRAM)
-    message(STATUS "Using ccache command: ${CCACHE_PROGRAM}")
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
-  else()
-    message(STATUS "Unable to find ccache")
-  endif()
-endif(CAF_USE_CCACHE)
-
-################################################################################
 #      make sure config parameters are printed with yes or no in summary       #
 ################################################################################
 
@@ -324,59 +310,11 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang"
 endif()
 # explicitly disable obnoxious GCC warnings
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  build_string("EXTRA_FLAGS" "-Wno-missing-field-initializers")
-endif()
-# add "-Werror" flag if --pedantic-build is used
-if(CAF_CXX_WARNINGS_AS_ERRORS)
-  build_string("EXTRA_FLAGS" "-Werror")
-endif()
-# set compiler flags for GCOV if requested
-if(CAF_ENABLE_GCOV)
-  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set(NO_INLINE "-fno-inline")
-  else()
-    set(NO_INLINE "-fno-inline -fno-inline-small-functions -fno-default-inline")
-  endif()
-  build_string("EXTRA_FLAGS" "-fprofile-arcs -ftest-coverage ${NO_INLINE}")
+  add_compile_options(-Wno-missing-field-initializers)
 endif()
 # set -fno-exception if requested
 if(CAF_FORCE_NO_EXCEPTIONS)
-  build_string("EXTRA_FLAGS" "-fno-exceptions")
-endif()
-# enable a ton of warnings if --more-clang-warnings is used
-if(CAF_MORE_WARNINGS)
-  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set(WFLAGS "-Weverything -Wno-c++98-compat -Wno-padded "
-               "-Wno-documentation-unknown-command -Wno-exit-time-destructors "
-               "-Wno-global-constructors -Wno-missing-prototypes "
-               "-Wno-c++98-compat-pedantic -Wno-unused-member-function "
-               "-Wno-unused-const-variable -Wno-switch-enum "
-               "-Wno-abstract-vbase-init -Wno-shadow "
-               "-Wno-missing-noreturn -Wno-covered-switch-default")
-  elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    set(WFLAGS "-Waddress -Wall -Warray-bounds "
-               "-Wattributes -Wbuiltin-macro-redefined -Wcast-align "
-               "-Wcast-qual -Wchar-subscripts -Wclobbered -Wcomment "
-               "-Wconversion -Wconversion-null -Wcoverage-mismatch "
-               "-Wcpp -Wdelete-non-virtual-dtor -Wdeprecated "
-               "-Wdeprecated-declarations -Wdiv-by-zero -Wdouble-promotion "
-               "-Wempty-body -Wendif-labels -Wenum-compare -Wextra "
-               "-Wfloat-equal -Wformat -Wfree-nonheap-object "
-               "-Wignored-qualifiers -Winit-self "
-               "-Winline -Wint-to-pointer-cast -Winvalid-memory-model "
-               "-Winvalid-offsetof -Wlogical-op -Wmain -Wmaybe-uninitialized "
-               "-Wmissing-braces -Wmultichar "
-               "-Wnarrowing -Wnoexcept -Wnon-template-friend "
-               "-Wnon-virtual-dtor -Wnonnull -Woverflow "
-               "-Woverlength-strings -Wparentheses "
-               "-Wpmf-conversions -Wpointer-arith -Wreorder "
-               "-Wreturn-type -Wsequence-point "
-               "-Wsign-compare -Wswitch -Wtype-limits -Wundef "
-               "-Wuninitialized -Wunused -Wvla -Wwrite-strings")
-  endif()
-  # convert CMake list to a single string, erasing the ";" separators
-  string(REPLACE ";" "" WFLAGS_STR ${WFLAGS})
-  build_string("EXTRA_FLAGS" "${WFLAGS_STR}")
+  add_compile_options(-fno-exceptions)
 endif()
 # allow enabling IPO on gcc/clang
 if(POLICY CMP0069)
@@ -384,9 +322,9 @@ if(POLICY CMP0069)
 else()
   if(CMAKE_INTERPROCEDURAL_OPTIMIZATION)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      build_string("EXTRA_FLAGS" "-flto")
+      add_compile_options(-flto)
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-      build_string("EXTRA_FLAGS" "-flto -fno-fat-lto-objects")
+      add_compile_options(-flto -fno-fat-lto-objects)
     endif()
   endif()
 endif()
@@ -399,7 +337,7 @@ if(CAF_SANITIZERS)
 endif()
 # -pthread is ignored on MacOSX but required on other platforms
 if(NOT APPLE AND NOT WIN32)
-    build_string("EXTRA_FLAGS" "-pthread")
+  add_compile_options(-pthread)
 endif()
 # -fPIC generates warnings on MinGW and Cygwin plus extra setup steps needed on MinGW
 if(MINGW)
