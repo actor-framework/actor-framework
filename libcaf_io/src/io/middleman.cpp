@@ -82,6 +82,10 @@ private:
 
 } // namespace
 
+void middleman::init_global_meta_objects() {
+  caf::init_global_meta_objects<io_module_type_ids>();
+}
+
 actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
   auto impl = get_or(sys.config(), "middleman.network-backend",
                      defaults::middleman::network_backend);
@@ -374,7 +378,9 @@ void middleman::init(actor_system_config& cfg) {
   auto gfactory = [=]() -> group_module* { return new remote_groups(*this); };
   cfg.group_module_factories.emplace_back(gfactory);
   // Add I/O-related types.
-  init_global_meta_objects<io_module_type_ids>();
+  using ids = io_module_type_ids;
+  detail::make_type_id_sequence<ids::begin, ids::end> seq;
+  caf::init_global_meta_objects_impl<ids>(seq);
   // Compute and set ID for this network node.
   auto this_node = node_id::default_data::local(cfg);
   system().node_.swap(this_node);

@@ -16,10 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE sum_type
-#include "caf/test/unit_test.hpp"
+
+#include "caf/sum_type.hpp"
+
+#include "core-test.hpp"
 
 #include <new>
 #include <map>
@@ -29,7 +30,6 @@
 #include "caf/detail/overload.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/static_visitor.hpp"
-#include "caf/sum_type.hpp"
 #include "caf/sum_type_access.hpp"
 
 namespace {

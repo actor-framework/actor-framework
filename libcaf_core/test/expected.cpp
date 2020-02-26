@@ -16,15 +16,14 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE expected
-#include "caf/test/unit_test.hpp"
 
-#include "caf/sec.hpp"
 #include "caf/expected.hpp"
 
-using namespace std;
+#include "core-test.hpp"
+
+#include "caf/sec.hpp"
+
 using namespace caf;
 
 #define CHECK(x) CAF_CHECK(x);

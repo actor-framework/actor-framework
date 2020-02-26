@@ -1135,8 +1135,6 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
   auto& bs = bhvr_stack();
   if (bs.empty())
     return fallback();
-std::cout<<to_string(osm.msg)<<std::endl;
-std::cout<<to_string(osm.msg.types())<<std::endl;
   auto res = (bs.back())(f, osm.msg);
   switch (res) {
     case match_result::no_match:

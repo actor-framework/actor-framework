@@ -19,12 +19,13 @@
 // This unit test checks guarantees regarding ordering and equality for actor
 // handles, i.e., actor_addr, actor, and typed_actor<...>.
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE handles
-#include "caf/test/unit_test.hpp"
 
-#include "caf/all.hpp"
+#include "caf/actor.hpp"
+#include "caf/actor_addr.hpp"
+#include "caf/typed_actor.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

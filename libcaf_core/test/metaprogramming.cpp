@@ -16,10 +16,9 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE metaprogramming
-#include "caf/test/unit_test.hpp"
+
+#include "core-test.hpp"
 
 #include <string>
 #include <cstdint>

@@ -16,11 +16,9 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/after.hpp"
-
 #define CAF_SUITE request_timeout
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <chrono>
 
@@ -40,7 +38,9 @@ struct pong_state {
 };
 
 behavior pong(stateful_actor<pong_state>*) {
-  return {[=](ping_atom) { return pong_atom_v; }};
+  return {
+    [=](ping_atom) { return pong_atom_v; },
+  };
 }
 
 struct ping_state {
@@ -142,11 +142,14 @@ behavior ping_nested3(ping_actor* self, bool* had_timeout, const actor& buddy) {
         CAF_REQUIRE_EQUAL(err, sec::request_timeout);
         self->state.had_first_timeout = true;
       });
-  return {after(milliseconds(100)) >> [=] {
-    CAF_CHECK(self->state.had_first_timeout);
-    *had_timeout = true;
-    self->quit();
-  }};
+  return {
+    after(milliseconds(100)) >>
+      [=] {
+        CAF_CHECK(self->state.had_first_timeout);
+        *had_timeout = true;
+        self->quit();
+      },
+  };
 }
 
 // uses .then on both requests

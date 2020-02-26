@@ -18,7 +18,7 @@
 
 #define CAF_SUITE selective_streaming
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <memory>
 #include <numeric>
@@ -32,31 +32,9 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/stateful_actor.hpp"
 
-namespace {
-
-enum class level;
-
-using value_type = std::pair<level, std::string>;
-
-} // namespace
-
-CAF_BEGIN_TYPE_ID_BLOCK(selective_streaming_tests, caf::first_custom_type_id)
-
-  CAF_ADD_TYPE_ID(selective_streaming_tests, level)
-
-  CAF_ADD_TYPE_ID(selective_streaming_tests, value_type)
-
-  CAF_ADD_TYPE_ID(selective_streaming_tests, std::vector<value_type>)
-
-  CAF_ADD_TYPE_ID(selective_streaming_tests, caf::stream<value_type>)
-
-CAF_END_TYPE_ID_BLOCK(selective_streaming_tests)
-
 using namespace caf;
 
 namespace {
-
-enum class level { all, trace, debug, warning, error };
 
 using value_type = std::pair<level, std::string>;
 
@@ -181,19 +159,11 @@ TESTEE(log_consumer) {
   };
 }
 
-struct config : actor_system_config {
-  config() {
-    init_global_meta_objects<selective_streaming_tests_type_ids>();
-  }
-};
-
-using fixture = test_coordinator_fixture<config>;
-
 } // namespace
 
 // -- unit tests ---------------------------------------------------------------
 
-CAF_TEST_FIXTURE_SCOPE(selective_streaming_tests, fixture)
+CAF_TEST_FIXTURE_SCOPE(selective_streaming_tests, test_coordinator_fixture<>)
 
 CAF_TEST(select_all) {
   auto src = sys.spawn(log_producer);

@@ -120,11 +120,10 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
 
 if(NOT CAF_NO_UNIT_TESTS)
   add_executable(caf-io-test
-                 "${PROJECT_SOURCE_DIR}/libcaf_test/src/caf-test.cpp"
-                 "${PROJECT_SOURCE_DIR}/libcaf_test/caf/test/unit_test.hpp"
-                 "${PROJECT_SOURCE_DIR}/libcaf_test/caf/test/unit_test_impl.hpp"
+                 test/io-test.cpp
                  ${CAF_IO_TEST_SOURCES}
                  $<TARGET_OBJECTS:libcaf_io_obj>)
+  target_include_directories(caf-io-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/test")
   target_compile_definitions(caf-io-test PRIVATE libcaf_io_EXPORTS)
   target_link_libraries(caf-io-test caf::core ${CAF_EXTRA_LDFLAGS})
   add_test_suites(caf-io-test

@@ -23,7 +23,7 @@
 
 #  define CAF_SUITE typed_spawn
 
-#  include "caf/test/dsl.hpp"
+#  include "core-test.hpp"
 
 #  include "caf/string_algorithms.hpp"
 
@@ -31,25 +31,6 @@
 
 #  define ERROR_HANDLER [&](error& err) { CAF_FAIL(sys.render(err)); }
 
-namespace {
-
-struct my_request;
-
-using int_actor = caf::typed_actor<caf::replies_to<int>::with<int>>;
-
-using float_actor = caf::typed_actor<caf::reacts_to<float>>;
-
-} // namespace
-
-CAF_BEGIN_TYPE_ID_BLOCK(typed_spawn_tests, first_custom_type_id)
-
-  CAF_ADD_TYPE_ID(typed_spawn_tests, float_actor)
-  CAF_ADD_TYPE_ID(typed_spawn_tests, int_actor)
-  CAF_ADD_TYPE_ID(typed_spawn_tests, my_request)
-
-  CAF_ADD_ATOM(typed_spawn_tests, , get_state_atom)
-
-CAF_END_TYPE_ID_BLOCK(typed_spawn_tests)
 
 using std::string;
 
@@ -80,20 +61,6 @@ static_assert(std::is_convertible<dummy5, dummy4>::value,
 /******************************************************************************
  *                        simple request/response test                        *
  ******************************************************************************/
-
-struct my_request {
-  int a;
-  int b;
-};
-
-bool operator==(const my_request& x, const my_request& y) {
-  return std::tie(x.a, x.b) == std::tie(y.a, y.b);
-}
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, my_request& x) {
-  return f(x.a, x.b);
-}
 
 using server_type = typed_actor<replies_to<my_request>::with<bool>>;
 
@@ -290,13 +257,7 @@ int_actor::behavior_type foo3(int_actor::pointer self) {
   };
 }
 
-struct config : actor_system_config {
-  config() {
-    init_global_meta_objects<typed_spawn_tests_type_ids>();
-  }
-};
-
-struct fixture : test_coordinator_fixture<config> {
+struct fixture : test_coordinator_fixture<> {
   void test_typed_spawn(server_type ts) {
     CAF_MESSAGE("the server returns false for inequal numbers");
     inject((my_request), from(self).to(ts).with(my_request{1, 2}));
@@ -339,7 +300,7 @@ CAF_TEST(event_testee_series) {
   auto et = self->spawn<event_testee>();
   CAF_MESSAGE("et->message_types() returns an interface description");
   typed_actor<replies_to<get_state_atom>::with<string>> sub_et = et;
-  std::set<string> iface{"caf::replies_to<::get_state_atom>::with<std::string>",
+  std::set<string> iface{"caf::replies_to<get_state_atom>::with<std::string>",
                          "caf::replies_to<std::string>::with<void>",
                          "caf::replies_to<float>::with<void>",
                          "caf::replies_to<int32_t>::with<int32_t>"};

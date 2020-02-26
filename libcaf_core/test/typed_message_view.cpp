@@ -20,7 +20,7 @@
 
 #include "caf/typed_message_view.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include "caf/message.hpp"
 

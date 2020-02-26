@@ -16,12 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <map>
-
-#include "caf/config.hpp"
-
 #define CAF_SUITE typed_response_promise
-#include "caf/test/unit_test.hpp"
+
+#include "core-test.hpp"
+
+#include <map>
 
 #include "caf/all.hpp"
 
@@ -29,7 +28,7 @@ using namespace caf;
 
 namespace {
 
-using foo_actor = typed_actor<
+using promise_actor = typed_actor<
   replies_to<int>::with<int>, replies_to<get_atom, int>::with<int>,
   replies_to<get_atom, int, int>::with<int, int>,
   replies_to<get_atom, double>::with<double>,
@@ -44,9 +43,9 @@ using get1_helper = typed_actor<replies_to<int, int>::with<put_atom, int, int>>;
 using get2_helper
   = typed_actor<replies_to<int, int, int>::with<put_atom, int, int, int>>;
 
-class foo_actor_impl : public foo_actor::base {
+class promise_actor_impl : public promise_actor::base {
 public:
-  foo_actor_impl(actor_config& cfg) : foo_actor::base(cfg) {
+  promise_actor_impl(actor_config& cfg) : promise_actor::base(cfg) {
     // nop
   }
 
@@ -118,14 +117,14 @@ private:
 
 struct fixture {
   fixture()
-    : system(cfg), self(system, true), foo(system.spawn<foo_actor_impl>()) {
+    : system(cfg), self(system, true), foo(system.spawn<promise_actor_impl>()) {
     // nop
   }
 
   actor_system_config cfg;
   actor_system system;
   scoped_actor self;
-  foo_actor foo;
+  promise_actor foo;
 };
 
 } // namespace
@@ -183,7 +182,7 @@ CAF_TEST(delegating_promises) {
   };
   using bar_actor = typed_actor<replies_to<int>::with<int>, reacts_to<ok_atom>>;
   auto bar_fun = [](bar_actor::stateful_pointer<state> self,
-                    foo_actor worker) -> bar_actor::behavior_type {
+                    promise_actor worker) -> bar_actor::behavior_type {
     return {
       [=](int x) -> typed_response_promise<int> {
         auto& tasks = self->state.tasks;

@@ -16,10 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE stateful_actor
-#include "caf/test/unit_test.hpp"
+
+#include "caf/stateful_actor.hpp"
+
+#include "core-test.hpp"
 
 #include "caf/all.hpp"
 

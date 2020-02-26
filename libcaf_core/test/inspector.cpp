@@ -18,7 +18,7 @@
 
 #define CAF_SUITE inspector
 
-#include "caf/test/unit_test.hpp"
+#include "core-test.hpp"
 
 #include <list>
 #include <map>
@@ -35,28 +35,6 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/stringification_inspector.hpp"
-#include "caf/init_global_meta_objects.hpp"
-
-namespace {
-
-struct dummy_tag_type;
-struct dummy_struct;
-enum dummy_enum { de_foo, de_bar };
-enum dummy_enum_class : short;
-
-} // namespace
-
-CAF_BEGIN_TYPE_ID_BLOCK(inspector_tests, first_custom_type_id)
-
-  CAF_ADD_TYPE_ID(inspector_tests, dummy_tag_type)
-
-  CAF_ADD_TYPE_ID(inspector_tests, dummy_struct)
-
-  CAF_ADD_TYPE_ID(inspector_tests, dummy_enum)
-
-  CAF_ADD_TYPE_ID(inspector_tests, dummy_enum_class)
-
-CAF_END_TYPE_ID_BLOCK(inspector_tests)
 
 using namespace caf;
 
@@ -85,34 +63,6 @@ struct check_impl {
 
 template <class T>
 using nl = std::numeric_limits<T>;
-
-// an empty type
-struct dummy_tag_type {};
-
-constexpr bool operator==(dummy_tag_type, dummy_tag_type) {
-  return true;
-}
-
-// a POD type
-struct dummy_struct {
-  int a;
-  std::string b;
-};
-
-bool operator==(const dummy_struct& x, const dummy_struct& y) {
-  return x.a == y.a && x.b == y.b;
-}
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, dummy_struct& x) {
-  return f(meta::type_name("dummy_struct"), x.a, x.b);
-}
-
-enum dummy_enum_class : short { foo, bar };
-
-std::string to_string(dummy_enum_class x) {
-  return x == dummy_enum_class::foo ? "foo" : "bar";
-}
 
 template <class Policy>
 void test_impl(Policy& p) {
@@ -194,9 +144,6 @@ void test_impl(Policy& p) {
   CAF_CHECK(check(variant<none_t, int, std::string>{std::string{"foo"}}));
 }
 
-} // namespace
-
-namespace {
 struct stringification_inspector_policy {
   template <class T>
   std::string f(T& x) {
@@ -228,6 +175,7 @@ struct stringification_inspector_policy {
     return true;
   }
 };
+
 } // namespace
 
 CAF_TEST(stringification_inspector) {
@@ -281,8 +229,6 @@ struct binary_serialization_policy {
 } // namespace
 
 CAF_TEST(binary_serialization_inspectors) {
-  detail::clear_global_meta_objects();
-  init_global_meta_objects<inspector_tests_type_ids>();
   actor_system_config cfg;
   actor_system sys{cfg};
   scoped_execution_unit context;

@@ -31,7 +31,7 @@
 
 #define CAF_SUITE native_streaming_classes
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <memory>
 #include <numeric>
@@ -74,14 +74,6 @@
 #include "caf/system_messages.hpp"
 #include "caf/upstream_msg.hpp"
 #include "caf/variant.hpp"
-
-CAF_BEGIN_TYPE_ID_BLOCK(native_streaming_classes_tests, first_custom_type_id)
-
-  CAF_ADD_TYPE_ID(native_streaming_classes_tests, std::vector<int32_t>)
-
-  CAF_ADD_TYPE_ID(native_streaming_classes_tests, caf::stream<int32_t>)
-
-CAF_END_TYPE_ID_BLOCK(native_streaming_classes_tests)
 
 using std::vector;
 
@@ -551,7 +543,7 @@ struct fixture {
         alice(fetch(alice_hdl)),
         bob(fetch(bob_hdl)),
         carl(fetch(carl_hdl)) {
-    init_global_meta_objects<native_streaming_classes_tests_type_ids>();
+    // nop
   }
 
   ~fixture() {

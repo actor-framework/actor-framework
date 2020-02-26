@@ -16,12 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE blocking_actor
-#include "caf/test/unit_test.hpp"
 
-#include "caf/all.hpp"
+#include "caf/blocking_actor.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

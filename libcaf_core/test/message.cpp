@@ -20,7 +20,7 @@
 
 #include "caf/message.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <map>
 #include <numeric>
@@ -31,37 +31,6 @@
 #include "caf/message_handler.hpp"
 #include "caf/type_id.hpp"
 #include "caf/type_id_list.hpp"
-
-namespace {
-
-struct s1;
-struct s2;
-struct s3;
-
-} // namespace
-
-CAF_BEGIN_TYPE_ID_BLOCK(message_tests, first_custom_type_id)
-
-  CAF_ADD_TYPE_ID(message_tests, s1)
-
-  CAF_ADD_TYPE_ID(message_tests, s2)
-
-  CAF_ADD_TYPE_ID(message_tests, s3)
-
-  CAF_ADD_TYPE_ID(message_tests, std::vector<int>)
-
-  CAF_ADD_TYPE_ID(message_tests, std::vector<std::string>)
-
-  CAF_ADD_TYPE_ID(message_tests, std::map<int CAF_PP_COMMA int>)
-
-  CAF_ADD_TYPE_ID(message_tests,
-                  std::tuple<int CAF_PP_COMMA int CAF_PP_COMMA int>)
-
-  CAF_ADD_TYPE_ID(
-    message_tests,
-    std::tuple<std::string CAF_PP_COMMA int32_t CAF_PP_COMMA uint32_t>)
-
-CAF_END_TYPE_ID_BLOCK(message_tests)
 
 using std::map;
 using std::string;
@@ -74,50 +43,12 @@ using namespace std::literals::string_literals;
 
 namespace {
 
-struct s1 {
-  int value[3] = {10, 20, 30};
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, s1& x) {
-  return f(x.value);
-}
-
-struct s2 {
-  int value[4][2] = {{1, 10}, {2, 20}, {3, 30}, {4, 40}};
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, s2& x) {
-  return f(x.value);
-}
-
-struct s3 {
-  std::array<int, 4> value;
-  s3() {
-    std::iota(value.begin(), value.end(), 1);
-  }
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, s3& x) {
-  return f(x.value);
-}
-
 template <class... Ts>
 std::string msg_as_string(Ts&&... xs) {
   return to_string(make_message(std::forward<Ts>(xs)...));
 }
 
-struct config : actor_system_config {
-  config() {
-    init_global_meta_objects<message_tests_type_ids>();
-  }
-};
-
 } // namespace
-
-CAF_TEST_FIXTURE_SCOPE(message_tests, test_coordinator_fixture<config>)
 
 CAF_TEST(messages allow index-based access) {
   auto msg = make_message("abc", uint32_t{10}, 20.0);
@@ -144,17 +75,37 @@ CAF_TEST(empty_to_string) {
 
 CAF_TEST(integers_to_string) {
   using ivec = vector<int32_t>;
-  CAF_CHECK_EQUAL(msg_as_string(1, 2, 3), "(1, 2, 3)");
-  CAF_CHECK_EQUAL(msg_as_string(ivec{1, 2, 3}), "([1, 2, 3])");
-  CAF_CHECK_EQUAL(msg_as_string(ivec{1, 2}, 3, 4, ivec{5, 6, 7}),
-                  "([1, 2], 3, 4, [5, 6, 7])");
-  auto msg = make_message(ivec{1, 2, 3});
-  CAF_MESSAGE("s1: " << type_id_v<s1>);
-  CAF_MESSAGE("ivec: " << type_id_v<ivec>);
-  CAF_MESSAGE("msg.types: " << msg.types());
-  CAF_MESSAGE("types #1: " << make_type_id_list<s1>());
-  CAF_MESSAGE("types #2: " << make_type_id_list<ivec>());
-  CAF_CHECK_EQUAL(msg.get_as<ivec>(0), ivec({1, 2, 3}));
+  using svec = vector<std::string>;
+  using sset = std::set<std::string>;
+  using std::string;
+  using itup = std::tuple<int, int, int>;
+  CAF_CHECK_EQUAL(make_message(ivec{}).types(), make_type_id_list<ivec>());
+  CAF_CHECK_EQUAL(make_type_id_list<ivec>()[0], type_id_v<ivec>);
+  CAF_CHECK_EQUAL(make_message(ivec{}).types()[0], type_id_v<ivec>);
+  CAF_CHECK_EQUAL(make_message(1.0).types()[0], type_id_v<double>);
+  CAF_CHECK_EQUAL(make_message(s1{}).types()[0], type_id_v<s1>);
+  CAF_CHECK_EQUAL(make_message(s2{}).types()[0], type_id_v<s2>);
+  CAF_CHECK_EQUAL(make_message(s3{}).types()[0], type_id_v<s3>);
+  CAF_CHECK_EQUAL(make_message(svec{}).types()[0], type_id_v<svec>);
+  CAF_CHECK_EQUAL(make_message(string{}).types()[0], type_id_v<string>);
+  CAF_CHECK_EQUAL(make_message(sset{}).types()[0], type_id_v<sset>);
+  CAF_CHECK_EQUAL(make_message(itup(1, 2, 3)).types()[0], type_id_v<itup>);
+
+  /*
+    CAF_CHECK_EQUAL(make_message(1, 2).types(), (make_type_id_list<int,
+    int>())); CAF_CHECK_EQUAL(msg_as_string(1, 2, 3), "(1, 2, 3)");
+    CAF_CHECK_EQUAL(msg_as_string(ivec{1, 2, 3}), "([1, 2, 3])");
+    CAF_CHECK_EQUAL(msg_as_string(ivec{1, 2}, 3, 4, ivec{5, 6, 7}),
+                    "([1, 2], 3, 4, [5, 6, 7])");
+    auto msg = make_message(ivec{1, 2, 3});
+    CAF_MESSAGE("s1: " << type_id_v<s1>);
+    CAF_MESSAGE("ivec: " << type_id_v<ivec>);
+    CAF_MESSAGE("msg.types: " << msg.types());
+    CAF_MESSAGE("msg.types[int]: " << msg.types()[0]);
+    CAF_MESSAGE("types #1: " << make_type_id_list<s1>());
+    CAF_MESSAGE("types #2: " << make_type_id_list<ivec>());
+    CAF_CHECK_EQUAL(msg.get_as<ivec>(0), ivec({1, 2, 3}));
+    */
 }
 
 CAF_TEST(strings_to_string) {
@@ -200,5 +151,3 @@ CAF_TEST(match_elements exposes element types) {
   CAF_CHECK((msg.match_element<int64_t>(2)));
   CAF_CHECK((msg.match_elements<put_atom, string, int64_t>()));
 }
-
-CAF_TEST_FIXTURE_SCOPE_END()

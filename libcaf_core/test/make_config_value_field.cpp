@@ -20,7 +20,7 @@
 
 #include "caf/make_config_value_field.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include "caf/actor_system_config.hpp"
 #include "caf/config_option_set.hpp"

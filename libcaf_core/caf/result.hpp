@@ -42,7 +42,7 @@ public:
             class = detail::enable_if_tt<
                      detail::all_constructible<
                        detail::type_list<Ts...>,
-                       detail::type_list<detail::decay_t<Us>...>>>>
+                       detail::type_list<std::decay_t<Us>...>>>>
   // clang-format on
   result(Us&&... xs) : flag(rt_value) {
     value = make_message(Ts{std::forward<Us>(xs)}...);
@@ -96,6 +96,54 @@ private:
   void init(Ts... xs) {
     value = make_message(std::move(xs)...);
   }
+};
+
+template <>
+class result<message> {
+public:
+  result(message msg) : flag(rt_value), value(std::move(msg)) {
+    // nop
+  }
+
+  template <class Enum, uint8_t = error_category<Enum>::value>
+  result(Enum x) : flag(rt_error), err(make_error(x)) {
+    // nop
+  }
+
+  result(error x) : flag(rt_error), err(std::move(x)) {
+    // nop
+  }
+
+  template <class T>
+  result(expected<message> x) {
+    if (x) {
+      flag = rt_value;
+      value = std::move(*x);
+    } else {
+      flag = rt_error;
+      err = std::move(x.error());
+    }
+  }
+
+  result(skip_t) : flag(rt_skip) {
+    // nop
+  }
+
+  result(delegated<message>) : flag(rt_delegated) {
+    // nop
+  }
+
+  result(const typed_response_promise<message>&) : flag(rt_delegated) {
+    // nop
+  }
+
+  result(const response_promise&) : flag(rt_delegated) {
+    // nop
+  }
+
+  result_runtime_type flag;
+  message value;
+  error err;
 };
 
 template <>

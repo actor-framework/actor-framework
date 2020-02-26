@@ -20,7 +20,7 @@
 
 #include "caf/all.hpp"
 
-#include "caf/test/unit_test.hpp"
+#include "core-test.hpp"
 
 using namespace caf;
 

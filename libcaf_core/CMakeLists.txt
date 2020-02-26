@@ -99,6 +99,7 @@ set(CAF_CORE_SOURCES
   src/group_manager.cpp
   src/group_module.cpp
   src/inbound_path.cpp
+  src/init_global_meta_objects.cpp
   src/intrusive/inbox_result_strings.cpp
   src/intrusive/task_result_strings.cpp
   src/invoke_msg_result_strings.cpp
@@ -235,7 +236,6 @@ set(CAF_CORE_TEST_SOURCES
   test/ipv6_endpoint.cpp
   test/ipv6_subnet.cpp
   test/local_group.cpp
-  test/local_migration.cpp
   test/logger.cpp
   test/mailbox_element.cpp
   test/make_config_value_field.cpp
@@ -264,9 +264,7 @@ set(CAF_CORE_TEST_SOURCES
   test/string_algorithms.cpp
   test/string_view.cpp
   test/sum_type.cpp
-  test/sum_type_token.cpp
   test/thread_hook.cpp
-  test/to_string.cpp
   test/tracing_data.cpp
   test/type_id_list.cpp
   test/typed_message_view.cpp
@@ -328,11 +326,10 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
 
 if(NOT CAF_NO_UNIT_TESTS)
   add_executable(caf-core-test
-                 "${PROJECT_SOURCE_DIR}/libcaf_test/src/caf-test.cpp"
-                 "${PROJECT_SOURCE_DIR}/libcaf_test/caf/test/unit_test.hpp"
-                 "${PROJECT_SOURCE_DIR}/libcaf_test/caf/test/unit_test_impl.hpp"
+                 test/core-test.cpp
                  ${CAF_CORE_TEST_SOURCES}
                  $<TARGET_OBJECTS:libcaf_core_obj>)
+  target_include_directories(caf-core-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/test")
   target_compile_definitions(caf-core-test PRIVATE libcaf_core_EXPORTS)
   target_link_libraries(caf-core-test ${CAF_EXTRA_LDFLAGS})
   add_test_suites(caf-core-test

@@ -47,8 +47,8 @@ struct fixture : test_coordinator_fixture<> {
 
 } // namespace
 
-#define CHECK_SAME_SIZE(...)                                                   \
-  CAF_CHECK_EQUAL(serialized_size(sys, __VA_ARGS__), actual_size(__VA_ARGS__))
+#define CHECK_SAME_SIZE(value)                                                 \
+  CAF_CHECK_EQUAL(serialized_size(value), actual_size(value))
 
 CAF_TEST_FIXTURE_SCOPE(serialized_size_tests, fixture)
 

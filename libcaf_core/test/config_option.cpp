@@ -17,9 +17,11 @@
  ******************************************************************************/
 
 #define CAF_SUITE config_option
-#include "caf/test/dsl.hpp"
 
 #include "caf/config_option.hpp"
+
+#include "core-test.hpp"
+
 #include "caf/make_config_option.hpp"
 #include "caf/config_value.hpp"
 #include "caf/expected.hpp"

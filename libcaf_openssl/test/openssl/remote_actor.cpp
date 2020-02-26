@@ -32,7 +32,7 @@
 
 CAF_BEGIN_TYPE_ID_BLOCK(dynamic_remote_actor_tests, first_custom_type_id)
 
-  CAF_ADD_TYPE_ID(dynamic_remote_actor_tests, std::vector<int>)
+  CAF_ADD_TYPE_ID(dynamic_remote_actor_tests, (std::vector<int>))
 
 CAF_END_TYPE_ID_BLOCK(dynamic_remote_actor_tests)
 

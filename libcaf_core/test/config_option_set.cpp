@@ -16,14 +16,15 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#define CAF_SUITE config_option_set
+
 #include <map>
 #include <string>
 #include <vector>
 
 #include "caf/config.hpp"
 
-#define CAF_SUITE config_option_set
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include "caf/config_option_set.hpp"
 #include "caf/detail/move_if_not_ptr.hpp"

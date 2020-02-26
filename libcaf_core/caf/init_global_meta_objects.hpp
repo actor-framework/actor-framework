@@ -23,6 +23,7 @@
 #include <cstdint>
 #include <utility>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/make_meta_object.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/span.hpp"
@@ -51,6 +52,8 @@ template <uint16_t Begin, uint16_t End>
 using make_type_id_sequence =
   typename type_id_sequence_helper<type_id_pair<Begin, End>>::type;
 
+CAF_CORE_EXPORT void init_global_builtin_meta_objects();
+
 } // namespace caf::detail
 
 namespace caf {
@@ -69,10 +72,13 @@ void init_global_meta_objects_impl(std::integer_sequence<uint16_t, Is...>) {
 /// Initializes the global meta object table with all types in `ProjectIds`.
 /// @warning calling this after constructing any ::actor_system is unsafe and
 ///          causes undefined behavior.
-template <class ProjectIds>
+template <class ProjectIds = void>
 void init_global_meta_objects() {
-  detail::make_type_id_sequence<ProjectIds::begin, ProjectIds::end> seq;
-  init_global_meta_objects_impl<ProjectIds>(seq);
+  detail::init_global_builtin_meta_objects();
+  if constexpr (!std::is_same<ProjectIds, void>::value) {
+    detail::make_type_id_sequence<ProjectIds::begin, ProjectIds::end> seq;
+    init_global_meta_objects_impl<ProjectIds>(seq);
+  }
 }
 
 } // namespace caf

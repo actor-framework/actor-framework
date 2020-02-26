@@ -16,10 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE actor_clock
-#include "caf/test/dsl.hpp"
+
+#include "caf/actor_clock.hpp"
+
+#include "core-test.hpp"
 
 #include <chrono>
 #include <memory>

@@ -20,7 +20,7 @@
 
 #include "caf/actor_system.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -29,15 +29,6 @@
 #include <stack>
 
 #include "caf/all.hpp"
-
-CAF_BEGIN_TYPE_ID_BLOCK(dynamic_spawn_suite, first_custom_type_id)
-
-  CAF_ADD_ATOM(dynamic_spawn_suite, , abc_atom)
-
-  CAF_ADD_ATOM(dynamic_spawn_suite, , name_atom)
-
-CAF_END_TYPE_ID_BLOCK(dynamic_spawn_suite)
-
 
 using namespace caf;
 

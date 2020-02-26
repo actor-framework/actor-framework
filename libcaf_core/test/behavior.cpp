@@ -20,7 +20,7 @@
 
 #include "caf/config.hpp"
 
-#include "caf/test/unit_test.hpp"
+#include "core-test.hpp"
 
 #include <functional>
 

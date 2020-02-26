@@ -31,7 +31,6 @@
 #include "caf/detail/ini_consumer.hpp"
 #include "caf/detail/parser/read_ini.hpp"
 #include "caf/detail/parser/read_string.hpp"
-#include "caf/init_global_meta_objects.hpp"
 #include "caf/message_builder.hpp"
 #include "caf/type_id.hpp"
 
@@ -55,7 +54,6 @@ actor_system_config::actor_system_config()
     slave_mode(false),
     config_file_path(default_config_file),
     slave_mode_fun(nullptr) {
-  init_global_meta_objects<builtin_type_ids>();
   // (1) hard-coded defaults
   stream_desired_batch_complexity = defaults::stream::desired_batch_complexity;
   stream_max_batch_delay = defaults::stream::max_batch_delay;

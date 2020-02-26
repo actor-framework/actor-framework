@@ -20,7 +20,7 @@
 
 #include "caf/tracing_data.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <vector>
 

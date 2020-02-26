@@ -16,10 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE intrusive_ptr
-#include "caf/test/unit_test.hpp"
+
+#include "caf/intrusive_ptr.hpp"
+
+#include "core-test.hpp"
 
 // this test doesn't verify thread-safety of intrusive_ptr
 // however, it is thread safe since it uses atomic operations only
@@ -29,7 +30,6 @@
 
 #include "caf/ref_counted.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/intrusive_ptr.hpp"
 
 using namespace caf;
 

@@ -44,6 +44,9 @@ class CAF_IO_EXPORT middleman : public actor_system::module {
 public:
   friend class ::caf::actor_system;
 
+  /// Adds message types of the I/O module to the global meta object table.
+  static void init_global_meta_objects();
+
   ~middleman() override;
 
   /// Tries to open a port for other CAF instances to connect to.

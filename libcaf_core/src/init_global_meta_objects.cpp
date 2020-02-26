@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,25 +16,31 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
+#include "caf/init_global_meta_objects.hpp"
 
-#define CAF_SUITE sum_type_token
-#include "caf/test/dsl.hpp"
+#include "caf/actor.hpp"
+#include "caf/actor_addr.hpp"
+#include "caf/actor_control_block.hpp"
+#include "caf/byte_buffer.hpp"
+#include "caf/config_value.hpp"
+#include "caf/downstream_msg.hpp"
+#include "caf/error.hpp"
+#include "caf/group.hpp"
+#include "caf/message.hpp"
+#include "caf/message_id.hpp"
+#include "caf/node_id.hpp"
+#include "caf/system_messages.hpp"
+#include "caf/timespan.hpp"
+#include "caf/timestamp.hpp"
+#include "caf/unit.hpp"
+#include "caf/upstream_msg.hpp"
+#include "caf/uri.hpp"
 
-#include "caf/sum_type_token.hpp"
+namespace caf::detail {
 
-namespace {
-
-struct fixture {
-
-};
-
-} // namespace
-
-CAF_TEST_FIXTURE_SCOPE(sum_type_token_tests, fixture)
-
-CAF_TEST(todo) {
-  // implement me
+void init_global_builtin_meta_objects(){
+  make_type_id_sequence<builtin_type_ids::begin, builtin_type_ids::end> seq;
+  init_global_meta_objects_impl<builtin_type_ids>(seq);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+} // namespace caf

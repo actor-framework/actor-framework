@@ -16,10 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE variant
-#include "caf/test/unit_test.hpp"
+
+#include "caf/variant.hpp"
+
+#include "core-test.hpp"
 
 #include <string>
 
@@ -30,7 +31,6 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/none.hpp"
-#include "caf/variant.hpp"
 
 using namespace std::string_literals;
 

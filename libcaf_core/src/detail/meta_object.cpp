@@ -23,9 +23,13 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
 #include "caf/config.hpp"
+#include "caf/deserializer.hpp"
 #include "caf/error.hpp"
 #include "caf/error_code.hpp"
+#include "caf/serializer.hpp"
 #include "caf/span.hpp"
 
 namespace caf::detail {

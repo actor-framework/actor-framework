@@ -16,12 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE ipv4_subnet
-#include "caf/test/dsl.hpp"
 
 #include "caf/ipv4_subnet.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

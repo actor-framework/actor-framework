@@ -33,7 +33,7 @@
 #include "caf/variant.hpp"
 #include "caf/stream_slot.hpp"
 
-#include "caf/test/unit_test.hpp"
+#include "core-test.hpp"
 
 #include "caf/intrusive/drr_queue.hpp"
 #include "caf/intrusive/singly_linked.hpp"

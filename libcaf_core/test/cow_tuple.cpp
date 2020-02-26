@@ -20,7 +20,7 @@
 
 #include "caf/cow_tuple.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 using std::make_tuple;
 using std::string;

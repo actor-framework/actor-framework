@@ -87,4 +87,12 @@ size_t serialized_size(actor_system& sys, const T& x) {
   return f.result();
 }
 
+template <class T>
+size_t serialized_size(const T& x) {
+  serialized_size_inspector f{nullptr};
+  auto err = f(x);
+  static_cast<void>(err);
+  return f.result();
+}
+
 } // namespace caf::detail

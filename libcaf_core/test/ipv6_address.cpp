@@ -16,15 +16,15 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#define CAF_SUITE ipv6_address
+
+#include "caf/ipv6_address.hpp"
+
+#include "core-test.hpp"
+
 #include <initializer_list>
 
-#include "caf/config.hpp"
-
-#define CAF_SUITE ipv6_address
-#include "caf/test/dsl.hpp"
-
 #include "caf/ipv4_address.hpp"
-#include "caf/ipv6_address.hpp"
 
 using namespace caf;
 

@@ -63,7 +63,7 @@ message_data* message_data::copy() const {
   for (auto id : types_) {
     auto& meta = gmos[id];
     // TODO: exception handling.
-    meta.copy_construct(src, dst);
+    meta.copy_construct(dst, src);
     src += meta.padded_size;
     dst += meta.padded_size;
   }
@@ -90,48 +90,48 @@ const byte* message_data::at(size_t index) const noexcept {
   return ptr;
 }
 
-caf::error message_data::save(caf::serializer& sink) const {
+error message_data::save(serializer& sink) const {
   auto gmos = global_meta_objects();
   auto ptr = storage();
   for (auto id : types_) {
     auto& meta = gmos[id];
-    if (auto err = meta.save(sink, ptr))
+    if (auto err = detail::save(meta, sink, ptr))
       return err;
     ptr += meta.padded_size;
   }
   return none;
 }
 
-caf::error message_data::save(caf::binary_serializer& sink) const {
+error message_data::save(binary_serializer& sink) const {
   auto gmos = global_meta_objects();
   auto ptr = storage();
   for (auto id : types_) {
     auto& meta = gmos[id];
-    if (auto err = meta.save_binary(sink, ptr))
+    if (auto err = detail::save(meta, sink, ptr))
       return err;
     ptr += meta.padded_size;
   }
   return none;
 }
 
-caf::error message_data::load(caf::deserializer& source) {
+error message_data::load(deserializer& source) {
   auto gmos = global_meta_objects();
   auto ptr = storage();
   for (auto id : types_) {
     auto& meta = gmos[id];
-    if (auto err = meta.load(source, ptr))
+    if (auto err = detail::load(meta, source, ptr))
       return err;
     ptr += meta.padded_size;
   }
   return none;
 }
 
-caf::error message_data::load(caf::binary_deserializer& source) {
+error message_data::load(binary_deserializer& source) {
   auto gmos = global_meta_objects();
   auto ptr = storage();
   for (auto id : types_) {
     auto& meta = gmos[id];
-    if (auto err = meta.load_binary(source, ptr))
+    if (auto err = detail::load(meta, source, ptr))
       return err;
     ptr += meta.padded_size;
   }

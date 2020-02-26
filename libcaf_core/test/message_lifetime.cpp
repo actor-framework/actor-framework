@@ -18,26 +18,22 @@
 
 #define CAF_SUITE message_lifetime
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <atomic>
 #include <iostream>
 
 #include "caf/all.hpp"
 
-namespace {
-
-struct fail_on_copy;
-
-} // namespace
-
-CAF_BEGIN_TYPE_ID_BLOCK(message_lifetime_tests, first_custom_type_id)
-
-  CAF_ADD_TYPE_ID(message_lifetime_tests, fail_on_copy)
-
-CAF_END_TYPE_ID_BLOCK(message_lifetime_tests)
-
 using namespace caf;
+
+fail_on_copy::fail_on_copy(const fail_on_copy&) {
+  CAF_FAIL("fail_on_copy: copy constructor called");
+}
+
+fail_on_copy& fail_on_copy::operator=(const fail_on_copy&) {
+  CAF_FAIL("fail_on_copy: copy assign operator called");
+}
 
 namespace {
 
@@ -92,40 +88,9 @@ private:
   message msg_;
 };
 
-struct fail_on_copy {
-  int value;
-
-  fail_on_copy(int x = 0) : value(x) {
-    // nop
-  }
-
-  fail_on_copy(fail_on_copy&&) = default;
-
-  fail_on_copy& operator=(fail_on_copy&&) = default;
-
-  fail_on_copy(const fail_on_copy&) {
-    CAF_FAIL("fail_on_copy: copy constructor called");
-  }
-
-  fail_on_copy& operator=(const fail_on_copy&) {
-    CAF_FAIL("fail_on_copy: copy assign operator called");
-  }
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, fail_on_copy& x) {
-  return f(x.value);
-}
-
-struct config : actor_system_config {
-  config() {
-    init_global_meta_objects<message_lifetime_tests_type_ids>();
-  }
-};
-
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(message_lifetime_tests, test_coordinator_fixture<config>)
+CAF_TEST_FIXTURE_SCOPE(message_lifetime_tests, test_coordinator_fixture<>)
 
 CAF_TEST(nocopy_in_scoped_actor) {
   auto msg = make_message(fail_on_copy{1});
@@ -133,10 +98,10 @@ CAF_TEST(nocopy_in_scoped_actor) {
   self->receive(
     [&](const fail_on_copy& x) {
       CAF_CHECK_EQUAL(x.value, 1);
-      CAF_CHECK_EQUAL(msg.data().get_reference_count(), 2u);
+      CAF_CHECK_EQUAL(msg.cdata().get_reference_count(), 2u);
     }
   );
-  CAF_CHECK_EQUAL(msg.data().get_reference_count(), 1u);
+  CAF_CHECK_EQUAL(msg.cdata().get_reference_count(), 1u);
 }
 
 CAF_TEST(message_lifetime_in_scoped_actor) {

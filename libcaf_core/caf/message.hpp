@@ -48,11 +48,11 @@ public:
 
   message() noexcept = default;
 
-  message(message&) noexcept = default;
+  message(message&&) noexcept = default;
 
   message(const message&) noexcept = default;
 
-  message& operator=(message&) noexcept = default;
+  message& operator=(message&&) noexcept = default;
 
   message& operator=(const message&) noexcept = default;
 
@@ -105,11 +105,11 @@ public:
     return data_.get();
   }
 
-  constexpr operator bool() const {
+  explicit operator bool() const noexcept {
     return static_cast<bool>(data_);
   }
 
-  constexpr bool operator!() const {
+  bool operator!() const noexcept {
     return !data_;
   }
 

@@ -112,8 +112,10 @@ void simple_actor_clock::ship(delayed_event& x) {
     }
     case group_msg_type: {
       auto& dref = static_cast<group_msg&>(x);
-      dref.target->eq_impl(make_message_id(), std::move(dref.sender), nullptr,
-                           std::move(dref.content));
+      auto dst = dref.target->get();
+      if (dst)
+        dst->enqueue(std::move(dref.sender), make_message_id(),
+                     std::move(dref.content), nullptr);
       break;
     }
     default:

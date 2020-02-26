@@ -20,7 +20,7 @@
 
 #include "caf/uri.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include "caf/byte_buffer.hpp"
 #include "caf/ipv4_address.hpp"

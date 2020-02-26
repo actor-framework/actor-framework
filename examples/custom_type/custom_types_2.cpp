@@ -10,7 +10,7 @@ class foo;
 
 CAF_BEGIN_TYPE_ID_BLOCK(custom_types_2, first_custom_type_id)
 
-  CAF_ADD_TYPE_ID(custom_types_2, foo)
+  CAF_ADD_TYPE_ID(custom_types_2, (foo))
 
 CAF_END_TYPE_ID_BLOCK(custom_types_2)
 

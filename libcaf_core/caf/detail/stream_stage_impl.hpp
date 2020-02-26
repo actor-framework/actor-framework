@@ -26,6 +26,7 @@
 #include "caf/stream_manager.hpp"
 #include "caf/stream_stage.hpp"
 #include "caf/stream_stage_trait.hpp"
+#include "caf/typed_message_view.hpp"
 
 namespace caf::detail {
 

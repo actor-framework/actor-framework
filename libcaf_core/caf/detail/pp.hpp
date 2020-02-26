@@ -20,7 +20,7 @@
 
 #include "caf/config.hpp"
 
-/// Evaluates to nothing
+/// Evaluates to nothing.
 #define CAF_PP_EMPTY()
 
 /// Concatenates x and y into a single token.
@@ -65,3 +65,24 @@
 #define CAF_PP_OVERLOAD(PREFIX, ...)                                           \
   CAF_PP_PASTE(PREFIX, CAF_PP_SIZE(__VA_ARGS__))
 
+#define CAF_PP_EXPAND(...) __VA_ARGS__
+
+// clang-format off
+#define CAF_PP_STR_1(x1) #x1
+#define CAF_PP_STR_2(x1, x2) #x1 ", " #x2
+#define CAF_PP_STR_3(x1, x2, x3) #x1 ", " #x2 ", " #x3
+#define CAF_PP_STR_4(x1, x2, x3, x4) #x1 ", " #x2 ", " #x3 ", " #x4
+#define CAF_PP_STR_5(x1, x2, x3, x4, x5) #x1 ", " #x2 ", " #x3 ", " #x4 ", " #x5
+#define CAF_PP_STR_6(x1, x2, x3, x4, x5, x6) #x1 ", " #x2 ", " #x3 ", " #x4 ", " #x5 ", " #x6
+#define CAF_PP_STR_7(x1, x2, x3, x4, x5, x6, x7) #x1 ", " #x2 ", " #x3 ", " #x4 ", " #x5 ", " #x6 ", " #x7
+#define CAF_PP_STR_8(x1, x2, x3, x4, x5, x6, x7, x8) #x1 ", " #x2 ", " #x3 ", " #x4 ", " #x5 ", " #x6 ", " #x7 ", " #x8
+#define CAF_PP_STR_9(x1, x2, x3, x4, x5, x6, x7, x8, x9) #x1 ", " #x2 ", " #x3 ", " #x4 ", " #x5 ", " #x6 ", " #x7 ", " #x8 ", " #x9
+// clang-format on
+
+#ifdef CAF_MSVC
+#  define CAF_PP_STR(...)                                                      \
+    CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_PP_STR_, __VA_ARGS__)(__VA_ARGS__),         \
+               CAF_PP_EMPTY())
+#else
+#  define CAF_PP_STR(...) CAF_PP_OVERLOAD(CAF_PP_STR_, __VA_ARGS__)(__VA_ARGS__)
+#endif

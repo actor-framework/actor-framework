@@ -20,7 +20,7 @@
 
 #include "caf/fused_downstream_manager.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <memory>
 #include <numeric>
@@ -31,20 +31,9 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/stateful_actor.hpp"
 
-CAF_BEGIN_TYPE_ID_BLOCK(fused_downstream_manager_tests, caf::first_custom_type_id)
-
-  CAF_ADD_TYPE_ID(fused_downstream_manager_tests, std::vector<std::string>)
-  CAF_ADD_TYPE_ID(fused_downstream_manager_tests, caf::stream<std::string>)
-  CAF_ADD_TYPE_ID(fused_downstream_manager_tests, std::vector<int32_t>)
-  CAF_ADD_TYPE_ID(fused_downstream_manager_tests, caf::stream<int32_t>)
-
-CAF_END_TYPE_ID_BLOCK(fused_downstream_manager_tests)
-
 using std::string;
 
 using namespace caf;
-
-static_assert(type_id_v<stream<string>> != type_id_v<stream<int32_t>>);
 
 namespace {
 
@@ -256,13 +245,7 @@ CAF_MESSAGE(self->current_mailbox_element()->content());
   };
 }
 
-struct config : actor_system_config {
-  config() {
-    init_global_meta_objects<fused_downstream_manager_tests_type_ids>();
-  }
-};
-
-using fixture = test_coordinator_fixture<config>;
+using fixture = test_coordinator_fixture<>;
 
 } // namespace
 

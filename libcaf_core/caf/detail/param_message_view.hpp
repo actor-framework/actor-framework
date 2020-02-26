@@ -26,7 +26,7 @@ namespace caf::detail {
 template <class... Ts>
 class param_message_view {
 public:
-  explicit param_message_view(const message& msg) noexcept : ptr_(&msg.data()) {
+  explicit param_message_view(const message& msg) noexcept : ptr_(msg.cptr()) {
     // nop
   }
 

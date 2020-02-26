@@ -16,11 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
-// this suite tests whether actors terminate as expect in several use cases
 #define CAF_SUITE actor_termination
-#include "caf/test/dsl.hpp"
+
+#include "core-test.hpp"
+
+#include "caf/all.hpp"
 
 using namespace caf;
 

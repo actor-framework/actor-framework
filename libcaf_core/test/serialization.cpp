@@ -18,7 +18,7 @@
 
 #define CAF_SUITE serialization
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -61,53 +61,7 @@
 #include "caf/serializer.hpp"
 #include "caf/variant.hpp"
 
-namespace {
-
-using strmap = std::map<std::string, std::u16string>;
-
-struct raw_struct;
-
-enum class test_enum : uint32_t;
-
-struct test_array;
-
-struct test_empty_non_pod;
-
-} // namespace
-
-CAF_BEGIN_TYPE_ID_BLOCK(serialization_tests, first_custom_type_id)
-
-  CAF_ADD_TYPE_ID(serialization_tests, strmap);
-  CAF_ADD_TYPE_ID(serialization_tests, std::vector<bool>);
-  CAF_ADD_TYPE_ID(serialization_tests, raw_struct);
-  CAF_ADD_TYPE_ID(serialization_tests, test_enum);
-  CAF_ADD_TYPE_ID(serialization_tests, test_array);
-  CAF_ADD_TYPE_ID(serialization_tests, test_empty_non_pod);
-
-CAF_END_TYPE_ID_BLOCK(serialization_tests)
-
 using namespace caf;
-
-namespace {
-
-struct raw_struct {
-  std::string str;
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, raw_struct& x) {
-  return f(x.str);
-}
-
-bool operator==(const raw_struct& lhs, const raw_struct& rhs) {
-  return lhs.str == rhs.str;
-}
-
-enum class test_enum : uint32_t {
-  a,
-  b,
-  c,
-};
 
 const char* test_enum_strings[] = {
   "a",
@@ -119,41 +73,17 @@ std::string to_string(test_enum x) {
   return test_enum_strings[static_cast<uint32_t>(x)];
 }
 
-struct test_array {
-  int value[4];
-  int value2[2][4];
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, test_array& x) {
-  return f(x.value, x.value2);
+void test_empty_non_pod::foo() {
+  // nop
 }
 
-struct test_empty_non_pod {
-  test_empty_non_pod() = default;
-  test_empty_non_pod(const test_empty_non_pod&) = default;
-  test_empty_non_pod& operator=(const test_empty_non_pod&) = default;
-  virtual void foo() {
-    // nop
-  }
-  virtual ~test_empty_non_pod() {
-    // nop
-  }
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, test_empty_non_pod&) {
-  return f();
+test_empty_non_pod::~test_empty_non_pod() {
+  // nop
 }
 
-class config : public actor_system_config {
-public:
-  config() {
-    init_global_meta_objects<serialization_tests_type_ids>();
-  }
-};
+namespace {
 
-struct fixture : test_coordinator_fixture<config> {
+struct fixture : test_coordinator_fixture<> {
   int32_t i32 = -345;
   int64_t i64 = -1234567890123456789ll;
   float f32 = 3.45f;

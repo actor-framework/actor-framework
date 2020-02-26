@@ -16,12 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE ipv4_address
-#include "caf/test/dsl.hpp"
 
 #include "caf/ipv4_address.hpp"
+
+#include "core-test.hpp"
 
 #include "caf/detail/network_order.hpp"
 

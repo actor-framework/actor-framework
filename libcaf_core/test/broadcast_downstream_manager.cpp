@@ -23,22 +23,14 @@
 #include <memory>
 #include <numeric>
 
-#include "caf/test/unit_test.hpp"
+#include "core-test.hpp"
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/broadcast_downstream_manager.hpp"
 #include "caf/detail/meta_object.hpp"
-#include "caf/init_global_meta_objects.hpp"
 #include "caf/mixin/sender.hpp"
 #include "caf/scheduled_actor.hpp"
-
-CAF_BEGIN_TYPE_ID_BLOCK(broadcast_downstream_manager_tests,
-                        caf::first_custom_type_id)
-
-  CAF_ADD_TYPE_ID(broadcast_downstream_manager_tests, std::vector<int>)
-
-CAF_END_TYPE_ID_BLOCK(broadcast_downstream_manager_tests)
 
 using namespace caf;
 
@@ -211,9 +203,7 @@ struct fixture {
         alice(fetch(alice_hdl)),
         bob(fetch(bob_hdl)),
         carl(fetch(carl_hdl)) {
-    detail::clear_global_meta_objects();
-    init_global_meta_objects<builtin_type_ids>();
-    init_global_meta_objects<broadcast_downstream_manager_tests_type_ids>();
+    // nop
   }
 
   using batch_type = std::vector<int>;

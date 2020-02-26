@@ -53,26 +53,29 @@ load_data(Deserializer& source, message::data_ptr& data) {
       return err;
     ids.push_back(id);
   }
+  CAF_ASSERT(ids.size() == ids_size);
   auto gmos = detail::global_meta_objects();
   size_t data_size = 0;
   for (size_t i = 0; i < ids_size; ++i) {
-    if (i >= gmos.size())
+    auto id = ids[i];
+    if (id >= gmos.size())
       return sec::unknown_type;
-    auto& mo = gmos[ids[i]];
+    auto& mo = gmos[id];
     if (mo.type_name == nullptr)
       return sec::unknown_type;
     data_size += mo.padded_size;
   }
   auto vptr = malloc(sizeof(detail::message_data) + data_size);
-  auto ptr = new (vptr) detail::message_data(ids.to_list());
+  auto ptr = new (vptr) detail::message_data(ids.move_to_list());
   auto pos = ptr->storage();
-  for (auto i = 1; i <= ids_size; ++i) {
-    auto& meta = gmos[ids[i]];
+  auto types = ptr->types();
+  for (auto i = 0; i < ids_size; ++i) {
+    auto& meta = gmos[types[i]];
     meta.default_construct(pos);
     if (auto err = load(meta, source, pos)) {
       auto rpos = pos;
       for (auto j = i; j > 0; --j) {
-        auto& jmeta = gmos[ids[j]];
+        auto& jmeta = gmos[types[j]];
         jmeta.destroy(rpos);
         rpos -= jmeta.padded_size;
       }

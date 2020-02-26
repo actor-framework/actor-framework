@@ -46,10 +46,15 @@ public:
 
   /// Convertes the internal buffer to a ::type_id_list and returns it.
   /// @pre `push_back` was called at least once
-  type_id_list to_list() noexcept;
+  type_id_list move_to_list();
+
+  /// Convertes the internal buffer to a ::type_id_list and returns it.
+  /// @pre `push_back` was called at least once
+  type_id_list copy_to_list();
 
   void clear() noexcept {
-    size_ = 0;
+    if (storage_)
+      size_ = 1;
   }
 
 private:

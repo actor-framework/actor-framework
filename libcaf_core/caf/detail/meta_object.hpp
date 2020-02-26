@@ -23,6 +23,7 @@
 
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
+#include "caf/span.hpp"
 
 namespace caf::detail {
 
@@ -45,7 +46,7 @@ struct meta_object {
 
   /// Creates a new object at given memory location by calling the copy
   /// constructor.
-  void (*copy_construct)(const void*, void*);
+  void (*copy_construct)(void*, const void*);
 
   /// Applies an object to a binary serializer.
   error_code<sec> (*save_binary)(caf::binary_serializer&, const void*);

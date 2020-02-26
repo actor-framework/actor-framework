@@ -26,7 +26,7 @@ using calculator
 
 CAF_BEGIN_TYPE_ID_BLOCK(remote_spawn, first_custom_type_id)
 
-  CAF_ADD_TYPE_ID(remote_spawn, calculator)
+  CAF_ADD_TYPE_ID(remote_spawn, (calculator))
 
 CAF_END_TYPE_ID_BLOCK(remote_spawn)
 

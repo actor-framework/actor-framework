@@ -19,13 +19,15 @@
 
 #define CAF_SUITE mailbox_element
 
+#include "caf/mailbox_element.hpp"
+
+#include "core-test.hpp"
+
 #include <string>
 #include <tuple>
 #include <vector>
 
 #include "caf/all.hpp"
-
-#include "caf/test/unit_test.hpp"
 
 using std::make_tuple;
 using std::string;

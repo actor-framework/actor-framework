@@ -20,19 +20,9 @@
 
 #include "caf/message_id.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 using namespace caf;
-
-namespace {
-
-struct fixture {
-
-};
-
-} // namespace
-
-CAF_TEST_FIXTURE_SCOPE(message_id_tests, fixture)
 
 CAF_TEST(default construction) {
   message_id x;
@@ -117,5 +107,3 @@ CAF_TEST(with_category) {
     CAF_CHECK_EQUAL(x.is_answered(), false);
   }
 }
-
-CAF_TEST_FIXTURE_SCOPE_END()

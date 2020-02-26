@@ -16,10 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE actor_pool
-#include "caf/test/unit_test.hpp"
+
+#include "caf/actor_pool.hpp"
+
+#include "core-test.hpp"
 
 #include "caf/all.hpp"
 
@@ -45,7 +46,7 @@ public:
     set_exit_handler(
       [=](scheduled_actor* self, exit_msg& em) { nested(self, em); });
     return {
-      [](int x, int y) { return x + y; },
+      [](int32_t x, int32_t y) { return x + y; },
     };
   }
 };
@@ -76,9 +77,10 @@ struct fixture {
   }
 };
 
-void handle_err(const error& err) {
-  CAF_FAIL("AUT responded with an error: " + to_string(err));
-}
+#define HANDLE_ERROR                                                           \
+  [](const error& err) {                                                       \
+    CAF_FAIL("AUT responded with an error: " + to_string(err));                \
+  }
 
 } // namespace
 
@@ -90,16 +92,16 @@ CAF_TEST(round_robin_actor_pool) {
                                actor_pool::round_robin());
   self->send(pool, sys_atom_v, put_atom_v, spawn_worker());
   std::vector<actor> workers;
-  for (int i = 0; i < 6; ++i) {
+  for (int32_t i = 0; i < 6; ++i) {
     self->request(pool, infinite, i, i)
       .receive(
-        [&](int res) {
+        [&](int32_t res) {
           CAF_CHECK_EQUAL(res, i + i);
           auto sender = actor_cast<strong_actor_ptr>(self->current_sender());
           CAF_REQUIRE(sender);
           workers.push_back(actor_cast<actor>(std::move(sender)));
         },
-        handle_err);
+        HANDLE_ERROR);
   }
   CAF_CHECK_EQUAL(workers.size(), 6u);
   CAF_CHECK(std::unique(workers.begin(), workers.end()) == workers.end());
@@ -111,7 +113,7 @@ CAF_TEST(round_robin_actor_pool) {
         CAF_REQUIRE_EQUAL(workers.size(), ws.size());
         CAF_CHECK(std::equal(workers.begin(), workers.end(), ws.begin()));
       },
-      handle_err);
+      HANDLE_ERROR);
   CAF_MESSAGE("await last worker");
   anon_send_exit(workers.back(), exit_reason::user_shutdown);
   self->wait_for(workers.back());
@@ -133,7 +135,7 @@ CAF_TEST(round_robin_actor_pool) {
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
           }
         },
-        handle_err);
+        HANDLE_ERROR);
   }
   CAF_REQUIRE_EQUAL(success, true);
   CAF_MESSAGE("about to send exit to workers");
@@ -167,7 +169,7 @@ CAF_TEST(random_actor_pool) {
   auto pool = actor_pool::make(&context, 5, spawn_worker, actor_pool::random());
   for (int i = 0; i < 5; ++i) {
     self->request(pool, std::chrono::milliseconds(250), 1, 2)
-      .receive([&](int res) { CAF_CHECK_EQUAL(res, 3); }, handle_err);
+      .receive([&](int res) { CAF_CHECK_EQUAL(res, 3); }, HANDLE_ERROR);
   }
   self->send_exit(pool, exit_reason::user_shutdown);
 }

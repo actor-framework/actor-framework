@@ -16,12 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE dictionary
-#include "caf/test/dsl.hpp"
 
 #include "caf/dictionary.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 
@@ -29,13 +28,7 @@ namespace {
 
 using int_dict = dictionary<int>;
 
-struct fixture {
-
-};
-
 } // namespace
-
-CAF_TEST_FIXTURE_SCOPE(dictionary_tests, fixture)
 
 CAF_TEST(construction and comparions) {
   int_dict xs;
@@ -148,5 +141,3 @@ CAF_TEST(element access) {
   CAF_CHECK_EQUAL(xs["b"], 2);
   CAF_CHECK_EQUAL(xs["e"], 0);
 }
-
-CAF_TEST_FIXTURE_SCOPE_END()
