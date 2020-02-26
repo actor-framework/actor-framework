@@ -35,7 +35,7 @@ public:
   }
 
   explicit const_typed_message_view(const message& msg) noexcept
-    : ptr_(&msg.cdata()) {
+    : ptr_(msg.cptr()) {
     // nop
   }
 
