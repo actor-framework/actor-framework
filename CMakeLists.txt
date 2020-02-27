@@ -338,6 +338,7 @@ endif()
 # -pthread is ignored on MacOSX but required on other platforms
 if(NOT APPLE AND NOT WIN32)
   add_compile_options(-pthread)
+  list(APPEND CAF_EXTRA_LDFLAGS "-pthread")
 endif()
 # -fPIC generates warnings on MinGW and Cygwin plus extra setup steps needed on MinGW
 if(MINGW)
@@ -362,11 +363,6 @@ if(CAF_IOS_DEPLOYMENT_TARGET)
   else()
     add_compile_options("-miphoneos-version-min=${CAF_IOS_DEPLOYMENT_TARGET}")
   endif()
-endif()
-
-# needed by subprojects
-if (DEFINED CMAKE_LD_LIBS)
-  list(APPEND ${CMAKE_LD_LIBS})
 endif()
 
 ################################################################################
