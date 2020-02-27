@@ -2,15 +2,6 @@
 # Convenience wrapper for easily viewing/setting options that
 # the project's CMake scripts will recognize.
 
-# check for `cmake` command
-type cmake > /dev/null 2>&1 || {
-    echo "\
-This package requires CMake, please install it first, then you may
-use this configure script to access CMake equivalent functionality.\
-" >&2;
-    exit 1;
-}
-
 command="$0 $*"
 dirname_0=`dirname $0`
 sourcedir=`cd $dirname_0 && pwd`
@@ -19,6 +10,7 @@ usage="\
 Usage: $0 [OPTION]... [VAR=VALUE]...
 
   Build Options:
+    --cmake=PATH                set a custom path to the CMake binary
     --generator=GENERATOR       set CMake generator (see cmake --help)
     --build-type=TYPE           set CMake build type [RelWithDebInfo]:
                                   - Debug: debugging flags enabled
@@ -175,9 +167,9 @@ configure ()
     cd "$workdir"
 
     if [ -n "$5" ]; then
-        cmake -G "$5" $CMakeCacheEntries "$sourcedir"
+        "$CMakeCommand" -G "$5" $CMakeCacheEntries "$sourcedir"
     else
-        cmake $CMakeCacheEntries "$sourcedir"
+        "$CMakeCommand" $CMakeCacheEntries "$sourcedir"
     fi
 
     printf "#!/bin/sh\n\n" > config.status
@@ -222,6 +214,9 @@ while [ $# -ne 0 ]; do
         --help|-h)
             echo "${usage}" 1>&2
             exit 1
+            ;;
+        --cmake=*)
+            CMakeCommand="$optarg"
             ;;
         --generator=*)
             CMakeGenerator="$optarg"
@@ -358,6 +353,21 @@ while [ $# -ne 0 ]; do
     esac
     shift
 done
+
+# Check for `cmake` command.
+if [ -z "$CMakeCommand" ]; then
+    # prefer cmake3 over "regular" cmake (cmake == cmake2 on RHEL)
+    if command -v cmake3 >/dev/null 2>&1 ; then
+        CMakeCommand="cmake3"
+    elif command -v cmake >/dev/null 2>&1 ; then
+        CMakeCommand="cmake"
+    else
+        echo "This package requires CMake, please install it first."
+        echo "Then you may use this script to configure the CMake build."
+        echo "Note: pass --cmake=PATH to use cmake in non-standard locations."
+        exit 1;
+    fi
+fi
 
 # At this point we save the global CMake variables so that configure() can
 # later use them.
