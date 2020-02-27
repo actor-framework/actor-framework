@@ -29,6 +29,10 @@
 /// Evaluate x and y before concatenating into a single token.
 #define CAF_PP_PASTE(x, y) CAF_PP_CAT(x, y)
 
+/// Evaluates to __COUNTER__. Allows delaying evaluation of __COUNTER__ in some
+/// edge cases where it otherwise could increment the internal counter twice.
+#define CAF_PP_COUNTER() __COUNTER__
+
 #ifdef CAF_MSVC
 
 /// Computes the number of arguments of a variadic pack.

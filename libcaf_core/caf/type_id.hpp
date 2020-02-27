@@ -98,28 +98,53 @@ constexpr type_id_t first_custom_type_id = 200;
   constexpr type_id_t project_name##_first_type_id = first_id;                 \
   }
 
+#ifdef CAF_MSVC
 /// Assigns the next free type ID to `fully_qualified_name`.
-#define CAF_ADD_TYPE_ID(project_name, fully_qualified_name)                    \
-  namespace caf {                                                              \
-  template <>                                                                  \
-  struct type_id<CAF_PP_EXPAND fully_qualified_name> {                         \
-    static constexpr type_id_t value                                           \
-      = project_name##_first_type_id                                           \
-        + (__COUNTER__ - project_name##_type_id_counter_init - 1);             \
-  };                                                                           \
-  template <>                                                                  \
-  struct type_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value> {      \
-    using type = CAF_PP_EXPAND fully_qualified_name;                           \
-  };                                                                           \
-  template <>                                                                  \
-  struct type_name<CAF_PP_EXPAND fully_qualified_name> {                       \
-    static constexpr const char* value                                         \
-      = CAF_PP_STR(CAF_PP_EXPAND fully_qualified_name);                        \
-  };                                                                           \
-  template <>                                                                  \
-  struct type_name_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value>   \
-    : type_name<CAF_PP_EXPAND fully_qualified_name> {};                        \
-  }
+#  define CAF_ADD_TYPE_ID(project_name, fully_qualified_name)                  \
+    namespace caf {                                                            \
+    template <>                                                                \
+    struct type_id<CAF_PP_EXPAND fully_qualified_name> {                       \
+      static constexpr type_id_t value                                         \
+        = project_name##_first_type_id                                         \
+          + (CAF_PP_CAT(CAF_PP_COUNTER, ())                                    \
+             - project_name##_type_id_counter_init - 1);                       \
+    };                                                                         \
+    template <>                                                                \
+    struct type_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value> {    \
+      using type = CAF_PP_EXPAND fully_qualified_name;                         \
+    };                                                                         \
+    template <>                                                                \
+    struct type_name<CAF_PP_EXPAND fully_qualified_name> {                     \
+      static constexpr const char* value                                       \
+        = CAF_PP_STR(CAF_PP_EXPAND fully_qualified_name);                      \
+    };                                                                         \
+    template <>                                                                \
+    struct type_name_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value> \
+      : type_name<CAF_PP_EXPAND fully_qualified_name> {};                      \
+    }
+#else
+#  define CAF_ADD_TYPE_ID(project_name, fully_qualified_name)                  \
+    namespace caf {                                                            \
+    template <>                                                                \
+    struct type_id<CAF_PP_EXPAND fully_qualified_name> {                       \
+      static constexpr type_id_t value                                         \
+        = project_name##_first_type_id                                         \
+          + (__COUNTER__ - project_name##_type_id_counter_init - 1);           \
+    };                                                                         \
+    template <>                                                                \
+    struct type_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value> {    \
+      using type = CAF_PP_EXPAND fully_qualified_name;                         \
+    };                                                                         \
+    template <>                                                                \
+    struct type_name<CAF_PP_EXPAND fully_qualified_name> {                     \
+      static constexpr const char* value                                       \
+        = CAF_PP_STR(CAF_PP_EXPAND fully_qualified_name);                      \
+    };                                                                         \
+    template <>                                                                \
+    struct type_name_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value> \
+      : type_name<CAF_PP_EXPAND fully_qualified_name> {};                      \
+    }
+#endif
 
 /// Creates a new tag type (atom) in the global namespace and assigns the next
 /// free type ID to it.
@@ -154,7 +179,7 @@ constexpr type_id_t first_custom_type_id = 200;
     return f(caf::meta::type_name(#atom_namespace "::" #atom_name));           \
   }                                                                            \
   }                                                                            \
-  CAF_ADD_TYPE_ID(project_name, (atom_namespace ::atom_name))
+  CAF_ADD_TYPE_ID(project_name, (atom_namespace::atom_name))
 
 #ifdef CAF_MSVC
 #  define CAF_ADD_ATOM(...)                                                    \
