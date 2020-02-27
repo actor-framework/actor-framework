@@ -230,8 +230,10 @@ public:
 private:
   typed_behavior() = default;
 
-  template <class... Ts>
-  void set(intrusive_ptr<detail::default_behavior_impl<std::tuple<Ts...>>> bp) {
+  template <class... Ts, class TimeoutDefinition>
+  void set(intrusive_ptr<
+           detail::default_behavior_impl<std::tuple<Ts...>, TimeoutDefinition>>
+             bp) {
     using found_signatures = detail::type_list<deduce_mpi_t<Ts>...>;
     using m = interface_mismatch_t<found_signatures, signatures>;
     // trigger static assert on mismatch

@@ -98,31 +98,30 @@ struct with_generic_timeout<true, std::tuple<Ts...>> {
                       std::tuple>::type;
 };
 
-template <class Tuple>
+struct dummy_timeout_definition {
+  timespan timeout = infinite;
+
+  constexpr void handler() {
+    // nop
+  }
+};
+
+template <class Tuple, class TimeoutDefinition = dummy_timeout_definition>
 class default_behavior_impl;
 
-template <class... Ts>
-class default_behavior_impl<std::tuple<Ts...>> : public behavior_impl {
+template <class... Ts, class TimeoutDefinition>
+class default_behavior_impl<std::tuple<Ts...>, TimeoutDefinition>
+  : public behavior_impl {
 public:
+  using super = behavior_impl;
+
   using tuple_type = std::tuple<Ts...>;
 
-  using back_type = typename tl_back<type_list<Ts...>>::type;
-
-  static constexpr bool has_timeout = is_timeout_definition<back_type>::value;
-
-  static constexpr size_t num_cases = sizeof...(Ts) - (has_timeout ? 1 : 0);
-
-  default_behavior_impl(tuple_type&& tup) : cases_(std::move(tup)) {
-    if constexpr (has_timeout) {
-      this->timeout_ = std::get<num_cases>(cases_).timeout;
-    }
-  }
-
-  template <class... Us>
-  default_behavior_impl(Us&&... xs) : cases_(std::forward<Us>(xs)...) {
-    if constexpr (has_timeout) {
-      this->timeout_ = std::get<num_cases>(cases_).timeout;
-    }
+  default_behavior_impl(tuple_type&& tup, TimeoutDefinition timeout_definition)
+    : super(timeout_definition.timeout),
+      cases_(std::move(tup)),
+      timeout_definition_(std::move(timeout_definition)) {
+    // nop
   }
 
   virtual match_result invoke(detail::invoke_result_visitor& f,
@@ -136,22 +135,20 @@ public:
     auto result = match_result::no_match;
     auto dispatch = [&](auto& fun) {
       using fun_type = std::decay_t<decltype(fun)>;
-      if constexpr (!is_timeout_definition<fun_type>::value) {
-        using trait = get_callable_trait_t<fun_type>;
-        auto arg_types = to_type_id_list<typename trait::decayed_arg_types>();
-        if (arg_types == msg.types()) {
-          typename trait::message_view_type xs{msg};
-          using fun_result = decltype(detail::apply_args(fun, xs));
-          if constexpr (std::is_same<void, fun_result>::value) {
-            detail::apply_args(fun, xs);
-            result = f.visit(unit) ? match_result::match : match_result::skip;
-          } else {
-            auto invoke_res = detail::apply_args(fun, xs);
-            result = f.visit(invoke_res) ? match_result::match
-                                         : match_result::skip;
-          }
-          return true;
+      using trait = get_callable_trait_t<fun_type>;
+      auto arg_types = to_type_id_list<typename trait::decayed_arg_types>();
+      if (arg_types == msg.types()) {
+        typename trait::message_view_type xs{msg};
+        using fun_result = decltype(detail::apply_args(fun, xs));
+        if constexpr (std::is_same<void, fun_result>::value) {
+          detail::apply_args(fun, xs);
+          result = f.visit(unit) ? match_result::match : match_result::skip;
+        } else {
+          auto invoke_res = detail::apply_args(fun, xs);
+          result = f.visit(invoke_res) ? match_result::match
+                                       : match_result::skip;
         }
+        return true;
       }
       return false;
     };
@@ -160,20 +157,24 @@ public:
   }
 
   void handle_timeout() override {
-    if constexpr (has_timeout) {
-      std::get<num_cases>(cases_).handler();
-    }
+    timeout_definition_.handler();
   }
 
 private:
   tuple_type cases_;
+
+  TimeoutDefinition timeout_definition_;
 };
 
-template <class Tuple>
-struct behavior_factory {
+template <class TimeoutDefinition>
+struct behavior_factory_t {
+  TimeoutDefinition& tdef;
+
   template <class... Ts>
-  typename behavior_impl::pointer operator()(Ts&&... xs) const {
-    return make_counted<default_behavior_impl<Tuple>>(std::forward<Ts>(xs)...);
+  auto operator()(Ts&... xs) {
+    using impl = default_behavior_impl<std::tuple<Ts...>, TimeoutDefinition>;
+    return make_counted<impl>(std::make_tuple(std::move(xs)...),
+                              std::move(tdef));
   }
 };
 
@@ -183,10 +184,18 @@ struct make_behavior_t {
   }
 
   template <class... Ts>
-  intrusive_ptr<default_behavior_impl<std::tuple<Ts...>>>
-  operator()(Ts... xs) const {
-    using type = default_behavior_impl<std::tuple<Ts...>>;
-    return make_counted<type>(std::move(xs)...);
+  auto operator()(Ts... xs) const {
+    if constexpr ((is_timeout_definition<Ts>::value || ...)) {
+      auto args = std::tie(xs...);
+      auto& tdef = std::get<sizeof...(Ts) - 1>(args);
+      behavior_factory_t<std::decay_t<decltype(tdef)>> f{tdef};
+      std::make_index_sequence<sizeof...(Ts) - 1> indexes;
+      return detail::apply_args(f, indexes, args);
+    } else {
+      using type = default_behavior_impl<std::tuple<Ts...>>;
+      dummy_timeout_definition dummy;
+      return make_counted<type>(std::make_tuple(std::move(xs)...), dummy);
+    }
   }
 };
 

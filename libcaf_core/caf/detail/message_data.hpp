@@ -32,6 +32,9 @@
 #ifdef CAF_CLANG
 #  pragma clang diagnostic push
 #  pragma clang diagnostic ignored "-Wc99-extensions"
+#elif defined(CAF_MSVC)
+#  pragma warning(push)
+#  pragma warning(disable : 4200)
 #endif
 
 namespace caf::detail {
@@ -152,4 +155,6 @@ void message_data_init(byte* storage, T&& x, Ts&&... xs) {
 
 #ifdef CAF_CLANG
 #  pragma clang diagnostic pop
+#elif defined(MSVC)
+#  pragma warning(pop)
 #endif

@@ -36,6 +36,11 @@ decltype(auto) apply_args(F& f, detail::int_list<Is...>, Tuple& tup) {
   return f(get<Is>(tup)...);
 }
 
+template <class F, size_t... Is, class Tuple>
+decltype(auto) apply_args(F& f, std::index_sequence<Is...>, Tuple& tup) {
+  return f(get<Is>(tup)...);
+}
+
 template <class F, long... Is, class Tuple>
 decltype(auto) apply_args(F& f, Tuple& tup) {
   auto token = get_indices(tup);
