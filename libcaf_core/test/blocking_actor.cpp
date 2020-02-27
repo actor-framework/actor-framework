@@ -42,15 +42,11 @@ CAF_TEST_FIXTURE_SCOPE(blocking_actor_tests, fixture)
 
 CAF_TEST(catch_all) {
   self->send(self, 42);
-  self->receive(
-    [](float) {
-      CAF_FAIL("received unexpected float");
-    },
-    others >> [](message& msg) -> result<message> {
-      CAF_CHECK_EQUAL(to_string(msg), "(42)");
-      return sec::unexpected_message;
-    }
-  );
+  self->receive([](float) { CAF_FAIL("received unexpected float"); },
+                others >> [](message& msg) -> result<message> {
+                  CAF_CHECK_EQUAL(to_string(msg), "(42)");
+                  return sec::unexpected_message;
+                });
   self->receive(
     [](const error& err) {
       CAF_CHECK_EQUAL(err, sec::unexpected_message);

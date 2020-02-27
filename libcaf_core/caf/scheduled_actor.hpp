@@ -89,8 +89,7 @@ CAF_CORE_EXPORT result<message> reflect(scheduled_actor*, message&);
 /// @relates scheduled_actor
 /// Default handler function that sends
 /// the message back to the sender and then quits.
-CAF_CORE_EXPORT result<message>
-reflect_and_quit(scheduled_actor*, message&);
+CAF_CORE_EXPORT result<message> reflect_and_quit(scheduled_actor*, message&);
 
 /// @relates scheduled_actor
 /// Default handler function that prints messages
@@ -191,8 +190,7 @@ public:
   using pointer = scheduled_actor*;
 
   /// Function object for handling unmatched messages.
-  using default_handler
-    = std::function<result<message>(pointer, message&)>;
+  using default_handler = std::function<result<message>(pointer, message&)>;
 
   /// Function object for handling error messages.
   using error_handler = std::function<void(pointer, error&)>;

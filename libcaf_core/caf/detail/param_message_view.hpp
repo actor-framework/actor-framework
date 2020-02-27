@@ -34,8 +34,7 @@ public:
 
   param_message_view(const param_message_view&) noexcept = default;
 
-  param_message_view& operator=(const param_message_view&) noexcept
-    = default;
+  param_message_view& operator=(const param_message_view&) noexcept = default;
 
   const detail::message_data* operator->() const noexcept {
     return ptr_;

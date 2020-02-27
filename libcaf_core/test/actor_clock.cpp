@@ -43,7 +43,7 @@ behavior testee(stateful_actor<testee_state, raw_event_based_actor>* self,
                 detail::test_actor_clock* t) {
   return {
     [=](ok_atom) {
-      CAF_LOG_TRACE(""<<self->current_mailbox_element()->content());
+      CAF_LOG_TRACE("" << self->current_mailbox_element()->content());
       auto n = t->now() + 10s;
       self->state.timeout_id += 1;
       t->set_ordinary_timeout(n, self, "", self->state.timeout_id);

@@ -119,12 +119,10 @@ CAF_TEST(message_lifetime_in_scoped_actor) {
   msg = make_message(42);
   self->send(self, msg);
   CAF_CHECK_EQUAL(msg.cdata().get_reference_count(), 2u);
-  self->receive(
-    [&](int& value) {
-      CAF_CHECK_NOT_EQUAL(&value, msg.cdata().at(0));
-      value = 10;
-    }
-  );
+  self->receive([&](int& value) {
+    CAF_CHECK_NOT_EQUAL(&value, msg.cdata().at(0));
+    value = 10;
+  });
   CAF_CHECK_EQUAL(msg.get_as<int>(0), 42);
 }
 

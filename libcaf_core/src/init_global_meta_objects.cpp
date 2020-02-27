@@ -38,9 +38,9 @@
 
 namespace caf::detail {
 
-void init_global_builtin_meta_objects(){
+void init_global_builtin_meta_objects() {
   make_type_id_sequence<builtin_type_ids::begin, builtin_type_ids::end> seq;
   init_global_meta_objects_impl<builtin_type_ids>(seq);
 }
 
-} // namespace caf
+} // namespace caf::detail

@@ -27,8 +27,7 @@
 
 namespace caf::detail {
 
-CAF_CORE_EXPORT void
-append_hex(std::string& result, const byte* xs, size_t n);
+CAF_CORE_EXPORT void append_hex(std::string& result, const byte* xs, size_t n);
 
 template <class T>
 enable_if_t<has_data_member<T>::value>

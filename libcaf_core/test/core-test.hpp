@@ -42,8 +42,8 @@ public:
   }
 
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f,
-                                                 counting_string& x) {
+  friend typename Inspector::result_type
+  inspect(Inspector& f, counting_string& x) {
     return f(x.str_);
   }
 
@@ -199,7 +199,6 @@ decltype(auto) inspect(Inspector& f, s3& x) {
   return f(x.value);
 }
 
-
 struct test_array {
   int32_t value[4];
   int32_t value2[2][4];
@@ -273,9 +272,9 @@ enum dummy_enum { de_foo, de_bar };
 
 CAF_BEGIN_TYPE_ID_BLOCK(core_test, caf::first_custom_type_id)
 
-  ADD_TYPE_ID((caf::stream<int32_t>))
-  ADD_TYPE_ID((caf::stream<std::string>))
-  ADD_TYPE_ID((caf::stream<std::pair<level, std::string>>))
+  ADD_TYPE_ID((caf::stream<int32_t>) )
+  ADD_TYPE_ID((caf::stream<std::string>) )
+  ADD_TYPE_ID((caf::stream<std::pair<level, std::string>>) )
   ADD_TYPE_ID((counting_string))
   ADD_TYPE_ID((dummy_enum))
   ADD_TYPE_ID((dummy_enum_class))
@@ -293,15 +292,15 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_test, caf::first_custom_type_id)
   ADD_TYPE_ID((s1))
   ADD_TYPE_ID((s2))
   ADD_TYPE_ID((s3))
-  ADD_TYPE_ID((std::map<int32_t, int32_t>))
-  ADD_TYPE_ID((std::map<std::string, std::u16string>))
-  ADD_TYPE_ID((std::pair<level, std::string>))
-  ADD_TYPE_ID((std::tuple<int32_t, int32_t, int32_t>))
-  ADD_TYPE_ID((std::tuple<std::string, int32_t, uint32_t>))
-  ADD_TYPE_ID((std::vector<bool>));
-  ADD_TYPE_ID((std::vector<int32_t>))
-  ADD_TYPE_ID((std::vector<std::pair<level, std::string>>))
-  ADD_TYPE_ID((std::vector<std::string>))
+  ADD_TYPE_ID((std::map<int32_t, int32_t>) )
+  ADD_TYPE_ID((std::map<std::string, std::u16string>) )
+  ADD_TYPE_ID((std::pair<level, std::string>) )
+  ADD_TYPE_ID((std::tuple<int32_t, int32_t, int32_t>) )
+  ADD_TYPE_ID((std::tuple<std::string, int32_t, uint32_t>) )
+  ADD_TYPE_ID((std::vector<bool>) );
+  ADD_TYPE_ID((std::vector<int32_t>) )
+  ADD_TYPE_ID((std::vector<std::pair<level, std::string>>) )
+  ADD_TYPE_ID((std::vector<std::string>) )
   ADD_TYPE_ID((test_array))
   ADD_TYPE_ID((test_empty_non_pod))
   ADD_TYPE_ID((test_enum))

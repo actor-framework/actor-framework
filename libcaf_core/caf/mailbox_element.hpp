@@ -82,7 +82,6 @@ public:
   }
 };
 
-
 /// @relates mailbox_element
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, mailbox_element& x) {

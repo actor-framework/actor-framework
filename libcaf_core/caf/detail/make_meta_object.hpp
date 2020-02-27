@@ -49,14 +49,12 @@ void copy_construct(void* ptr, const void* src) {
 }
 
 template <class T>
-error_code<sec>
-save_binary(caf::binary_serializer& sink, const void* ptr) {
+error_code<sec> save_binary(caf::binary_serializer& sink, const void* ptr) {
   return sink(*reinterpret_cast<const T*>(ptr));
 }
 
 template <class T>
-error_code<sec>
-load_binary(caf::binary_deserializer& source, void* ptr) {
+error_code<sec> load_binary(caf::binary_deserializer& source, void* ptr) {
   return source(*reinterpret_cast<T*>(ptr));
 }
 

@@ -235,7 +235,7 @@ TESTEE(stream_multiplexer) {
     },
     [=](stream<int32_t> in) {
       CAF_MESSAGE("received handshake for integers");
-CAF_MESSAGE(self->current_mailbox_element()->content());
+      CAF_MESSAGE(self->current_mailbox_element()->content());
       return self->state.stage->add_unchecked_inbound_path(in);
     },
     [=](stream<string> in) {
@@ -255,7 +255,6 @@ CAF_TEST_FIXTURE_SCOPE(fused_downstream_manager_tests, fixture)
 
 // Currently fails for some bizarre reason related to type ID list.
 CAF_TEST_DISABLED(depth_3_pipeline_with_fork) {
-
   CAF_MESSAGE("sanity checks");
   {
     using detail::strip_and_convert_t;
@@ -267,8 +266,8 @@ CAF_TEST_DISABLED(depth_3_pipeline_with_fork) {
     CAF_CHECK_NOT_EQUAL(type_id_v<strip_and_convert_t<int_stream>>,
                         type_id_v<strip_and_convert_t<str_stream>>);
     CAF_CHECK_NOT_EQUAL(m1.types(), m2.types());
-    // CAF_CHECK_NOT_EQUAL(make_type_id_list<int_stream>(), make_type_id_list<str_stream>());
-    // auto m1_ = make_message(int_stream{});
+    // CAF_CHECK_NOT_EQUAL(make_type_id_list<int_stream>(),
+    // make_type_id_list<str_stream>()); auto m1_ = make_message(int_stream{});
     // auto m2_ = make_message(str_stream{});
     // CAF_CHECK_NOT_EQUAL(m1_.types(), m2_.types());
   }

@@ -31,7 +31,6 @@
 
 #  define ERROR_HANDLER [&](error& err) { CAF_FAIL(sys.render(err)); }
 
-
 using std::string;
 
 using namespace caf;

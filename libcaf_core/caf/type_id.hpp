@@ -199,7 +199,7 @@ constexpr type_id_t first_custom_type_id = 200;
       + (__COUNTER__ - project_name##_type_id_counter_init - 2);               \
   struct project_name##_type_ids {                                             \
     static constexpr type_id_t begin = project_name##_first_type_id;           \
-    static constexpr type_id_t end = project_name##_last_type_id + 1;         \
+    static constexpr type_id_t end = project_name##_last_type_id + 1;          \
   };                                                                           \
   }
 
@@ -207,14 +207,14 @@ CAF_BEGIN_TYPE_ID_BLOCK(builtin, 0)
 
   // -- C types
 
-  CAF_ADD_TYPE_ID(builtin, (bool))
-  CAF_ADD_TYPE_ID(builtin, (double))
-  CAF_ADD_TYPE_ID(builtin, (float))
+  CAF_ADD_TYPE_ID(builtin, (bool) )
+  CAF_ADD_TYPE_ID(builtin, (double) )
+  CAF_ADD_TYPE_ID(builtin, (float) )
   CAF_ADD_TYPE_ID(builtin, (int16_t))
   CAF_ADD_TYPE_ID(builtin, (int32_t))
   CAF_ADD_TYPE_ID(builtin, (int64_t))
   CAF_ADD_TYPE_ID(builtin, (int8_t))
-  CAF_ADD_TYPE_ID(builtin, (long double))
+  CAF_ADD_TYPE_ID(builtin, (long double) )
   CAF_ADD_TYPE_ID(builtin, (uint16_t))
   CAF_ADD_TYPE_ID(builtin, (uint32_t))
   CAF_ADD_TYPE_ID(builtin, (uint64_t))
@@ -225,7 +225,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(builtin, 0)
   CAF_ADD_TYPE_ID(builtin, (std::string))
   CAF_ADD_TYPE_ID(builtin, (std::u16string))
   CAF_ADD_TYPE_ID(builtin, (std::u32string))
-  CAF_ADD_TYPE_ID(builtin, (std::set<std::string>))
+  CAF_ADD_TYPE_ID(builtin, (std::set<std::string>) )
 
   // -- CAF types
 
@@ -233,7 +233,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(builtin, 0)
   CAF_ADD_TYPE_ID(builtin, (caf::actor_addr))
   CAF_ADD_TYPE_ID(builtin, (caf::byte_buffer))
   CAF_ADD_TYPE_ID(builtin, (caf::config_value))
-  CAF_ADD_TYPE_ID(builtin, (caf::dictionary<caf::config_value>))
+  CAF_ADD_TYPE_ID(builtin, (caf::dictionary<caf::config_value>) )
   CAF_ADD_TYPE_ID(builtin, (caf::down_msg))
   CAF_ADD_TYPE_ID(builtin, (caf::downstream_msg))
   CAF_ADD_TYPE_ID(builtin, (caf::error))
@@ -252,12 +252,12 @@ CAF_BEGIN_TYPE_ID_BLOCK(builtin, 0)
   CAF_ADD_TYPE_ID(builtin, (caf::upstream_msg))
   CAF_ADD_TYPE_ID(builtin, (caf::uri))
   CAF_ADD_TYPE_ID(builtin, (caf::weak_actor_ptr))
-  CAF_ADD_TYPE_ID(builtin, (std::vector<caf::actor>))
-  CAF_ADD_TYPE_ID(builtin, (std::vector<caf::actor_addr>))
-  CAF_ADD_TYPE_ID(builtin, (std::vector<caf::config_value>))
-  CAF_ADD_TYPE_ID(builtin, (std::vector<caf::strong_actor_ptr>))
-  CAF_ADD_TYPE_ID(builtin, (std::vector<caf::weak_actor_ptr>))
-  CAF_ADD_TYPE_ID(builtin, (std::vector<std::pair<std::string, message>>));
+  CAF_ADD_TYPE_ID(builtin, (std::vector<caf::actor>) )
+  CAF_ADD_TYPE_ID(builtin, (std::vector<caf::actor_addr>) )
+  CAF_ADD_TYPE_ID(builtin, (std::vector<caf::config_value>) )
+  CAF_ADD_TYPE_ID(builtin, (std::vector<caf::strong_actor_ptr>) )
+  CAF_ADD_TYPE_ID(builtin, (std::vector<caf::weak_actor_ptr>) )
+  CAF_ADD_TYPE_ID(builtin, (std::vector<std::pair<std::string, message>>) );
 
   // -- predefined atoms
 
@@ -312,4 +312,4 @@ static constexpr type_id_t io_module_begin = builtin_type_ids::end;
 
 static constexpr type_id_t io_module_end = io_module_begin + 19;
 
-} // namespace caf
+} // namespace caf::detail

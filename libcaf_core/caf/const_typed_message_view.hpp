@@ -52,7 +52,6 @@ public:
     return ptr_ != nullptr;
   }
 
-
 private:
   const detail::message_data* ptr_;
 };

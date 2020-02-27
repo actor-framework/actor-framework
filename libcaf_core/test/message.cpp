@@ -50,7 +50,7 @@ std::string msg_as_string(Ts&&... xs) {
 
 } // namespace
 
-CAF_TEST(messages allow index-based access) {
+CAF_TEST(messages allow index - based access) {
   auto msg = make_message("abc", uint32_t{10}, 20.0);
   CAF_CHECK_EQUAL(msg.size(), 3u);
   CAF_CHECK_EQUAL(msg.types(),
@@ -131,7 +131,8 @@ CAF_TEST(maps_to_string) {
 CAF_TEST(tuples_to_string) {
   auto msg1 = make_message(make_tuple(1, 2, 3), 4, 5);
   CAF_CHECK_EQUAL(to_string(msg1), "((1, 2, 3), 4, 5)");
-  auto msg2 = make_message(make_tuple("one"s, int32_t{2}, uint32_t{3}), 4, true);
+  auto msg2 = make_message(make_tuple("one"s, int32_t{2}, uint32_t{3}), 4,
+                           true);
   CAF_CHECK_EQUAL(to_string(msg2), "((\"one\", 2, 3), 4, true)");
 }
 

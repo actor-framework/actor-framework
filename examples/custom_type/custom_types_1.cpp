@@ -19,11 +19,10 @@ CAF_BEGIN_TYPE_ID_BLOCK(custom_types_1, first_custom_type_id)
 
   CAF_ADD_TYPE_ID(custom_types_1, (foo))
   CAF_ADD_TYPE_ID(custom_types_1, (foo2))
-  CAF_ADD_TYPE_ID(custom_types_1, (std::pair<int32_t, int32_t>))
+  CAF_ADD_TYPE_ID(custom_types_1, (std::pair<int32_t, int32_t>) )
 
 CAF_END_TYPE_ID_BLOCK(custom_types_1)
 // --(rst-type-id-block-end)--
-
 
 using std::cout;
 using std::cerr;

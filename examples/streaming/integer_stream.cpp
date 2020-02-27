@@ -9,8 +9,8 @@
 
 CAF_BEGIN_TYPE_ID_BLOCK(integer_stream, first_custom_type_id)
 
-  CAF_ADD_TYPE_ID(integer_stream, (caf::stream<int32_t>))
-  CAF_ADD_TYPE_ID(integer_stream, (std::vector<int32_t>))
+  CAF_ADD_TYPE_ID(integer_stream, (caf::stream<int32_t>) )
+  CAF_ADD_TYPE_ID(integer_stream, (std::vector<int32_t>) )
 
 CAF_END_TYPE_ID_BLOCK(integer_stream)
 

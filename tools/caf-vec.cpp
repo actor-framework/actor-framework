@@ -18,7 +18,6 @@ CAF_BEGIN_TYPE_ID_BLOCK(caf_vec, first_custom_type_id)
 
 CAF_END_TYPE_ID_BLOCK(caf_vec)
 
-
 using std::string;
 
 using namespace caf;

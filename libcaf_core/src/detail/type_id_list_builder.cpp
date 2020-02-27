@@ -126,7 +126,7 @@ size_t type_id_list_builder::size() const noexcept {
   return size_ > 0 ? size_ - 1 : 0;
 }
 
-type_id_t type_id_list_builder::operator[](size_t index) const noexcept{
+type_id_t type_id_list_builder::operator[](size_t index) const noexcept {
   CAF_ASSERT(index < size());
   return storage_[index + 1];
 }

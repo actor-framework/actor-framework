@@ -746,7 +746,7 @@ template <class T>
 constexpr bool is_stl_tuple_type_v = is_stl_tuple_type<T>::value;
 
 template <class T, std::size_t = sizeof(T)>
-std::true_type is_complete_impl(T *);
+std::true_type is_complete_impl(T*);
 
 std::false_type is_complete_impl(...);
 

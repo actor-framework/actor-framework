@@ -51,8 +51,7 @@ public:
       split_(workset_, msg);
       for (auto& x : workset_)
         this->send(x.first, std::move(x.second));
-      auto g
-        = [=](scheduled_actor*, message& res) mutable -> result<message> {
+      auto g = [=](scheduled_actor*, message& res) mutable -> result<message> {
         join_(value_, res);
         if (--awaited_results_ == 0) {
           rp.deliver(value_);
