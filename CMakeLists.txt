@@ -8,8 +8,8 @@ option(BUILD_SHARED_LIBS "Build all modules as shared library" ON)
 # -- includes ------------------------------------------------------------------
 
 include(CMakePackageConfigHelpers) # For creating .cmake files
-include(CheckCSourceCompiles)      # Check whether compiler works
-include(CheckCSourceRuns)          # Check whether compiler produces binaries
+include(CheckCXXSourceCompiles)    # Check whether compiler works
+include(CheckCXXSourceRuns)        # Check whether compiler produces binaries
 include(GNUInstallDirs)            # Sets default install paths
 include(GenerateExportHeader)      # Auto-generates dllexport macros
 
@@ -479,14 +479,11 @@ if(NOT CAF_NO_OPENSSL)
         # Check if openssl headers and library versions match
         set(CMAKE_REQUIRED_LIBRARIES ${OPENSSL_LIBRARIES})
         set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIR})
-        check_c_source_runs("
+        check_cxx_source_runs("
           #include <openssl/opensslv.h>
           #include <openssl/crypto.h>
           int main() {
-            if (SSLeay() == OPENSSL_VERSION_NUMBER) {
-              return 0;
-            }
-            return -1;
+            return SSLeay() == OPENSSL_VERSION_NUMBER ? 0 : 1;
           }
         " OPENSSL_CORRECT_VERSION_NUMBER)
         if (NOT OPENSSL_CORRECT_VERSION_NUMBER)
