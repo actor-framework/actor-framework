@@ -103,7 +103,7 @@ struct parser_state {
 
   /// Consumes the next character if it satisfies given predicate (skips any
   /// whitespaces).
-  template<class Predicate>
+  template <class Predicate>
   bool consume_if(Predicate predicate) noexcept {
     skip_whitespaces();
     if (predicate(current())) {
@@ -124,7 +124,7 @@ struct parser_state {
 
   /// Consumes the next character if it satisfies given predicate, not allowing
   /// any whitespaces.
-  template<class Predicate>
+  template <class Predicate>
   bool consume_strict_if(Predicate predicate) noexcept {
     if (predicate(current())) {
       next();
