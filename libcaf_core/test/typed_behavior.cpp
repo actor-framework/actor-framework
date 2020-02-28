@@ -36,5 +36,5 @@ CAF_TEST(make_typed_behavior automatically deduces its types) {
   auto bhvr = make_typed_behavior([](const std::string&) {},
                                   [](int32_t x) { return x; },
                                   [](double x) { return x; });
-  static_assert(std::is_same<handle::behavior_type, decltype(bhvr)>::value);
+  static_assert(std::is_same<handle::behavior_type, decltype(bhvr)>::value, "");
 }
