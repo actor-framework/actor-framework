@@ -249,6 +249,7 @@ set(CAF_CORE_TEST_SOURCES
   test/mixin/sender.cpp
   test/mock_streaming_classes.cpp
   test/native_streaming_classes.cpp
+  test/node_id.cpp
   test/optional.cpp
   test/or_else.cpp
   test/pipeline_streaming.cpp
