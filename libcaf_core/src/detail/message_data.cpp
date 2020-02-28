@@ -49,10 +49,9 @@ message_data::~message_data() noexcept {
 
 message_data* message_data::copy() const {
   auto gmos = global_meta_objects();
-  auto add = [](size_t interim, const meta_object& meta) noexcept {
-    return interim + meta.padded_size;
-  };
-  auto storage_size = std::accumulate(gmos.begin(), gmos.end(), size_t{0}, add);
+  size_t storage_size = 0;
+  for (auto id : types_)
+    storage_size += gmos[id].padded_size;
   auto total_size = sizeof(message_data) + storage_size;
   auto vptr = malloc(total_size);
   if (vptr == nullptr)
