@@ -96,6 +96,65 @@ int uri::compare(string_view x) const noexcept {
   return string_view{str()}.compare(x);
 }
 
+// -- parsing ------------------------------------------------------------------
+
+namespace {
+
+class nop_builder {
+public:
+  template <class T>
+  nop_builder& scheme(T&&) {
+    return *this;
+  }
+
+  template <class T>
+  nop_builder& userinfo(T&&) {
+    return *this;
+  }
+
+  template <class T>
+  nop_builder& host(T&&) {
+    return *this;
+  }
+
+  template <class T>
+  nop_builder& port(T&&) {
+    return *this;
+  }
+
+  template <class T>
+  nop_builder& path(T&&) {
+    return *this;
+  }
+
+  template <class T>
+  nop_builder& query(T&&) {
+    return *this;
+  }
+
+  template <class T>
+  nop_builder& fragment(T&&) {
+    return *this;
+  }
+};
+
+} // namespace
+
+bool uri::can_parse(string_view str) noexcept {
+  string_parser_state ps{str.begin(), str.end()};
+  nop_builder builder;
+  if (ps.consume('<')) {
+    detail::parser::read_uri(ps, builder);
+    if (ps.code > pec::trailing_character)
+      return false;
+    if (!ps.consume('>'))
+      return false;
+  } else {
+    detail::parser::read_uri(ps, builder);
+  }
+  return ps.code == pec::success;
+}
+
 // -- friend functions ---------------------------------------------------------
 
 error inspect(caf::serializer& dst, uri& x) {

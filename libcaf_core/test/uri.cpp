@@ -214,6 +214,7 @@ uri operator "" _u(const char* cstr, size_t cstr_len) {
 bool operator "" _i(const char* cstr, size_t cstr_len) {
   uri result;
   string_view str{cstr, cstr_len};
+  CAF_CHECK(!uri::can_parse(str));
   auto err = parse(str, result);
   return err != none;
 }
@@ -283,7 +284,11 @@ CAF_TEST(builder construction) {
   CAF_CHECK_EQUAL(escaped, "hi%20there://it%27s@me%2F/file%201#%5B42%5D");
 }
 
-#define ROUNDTRIP(str) CAF_CHECK_EQUAL(str##_u, str)
+#define ROUNDTRIP(str)                                                         \
+  do {                                                                         \
+    CAF_CHECK(uri::can_parse(str));                                            \
+    CAF_CHECK_EQUAL(str##_u, str);                                             \
+  } while (false)
 
 CAF_TEST(from string) {
   // all combinations of components
