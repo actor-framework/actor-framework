@@ -20,6 +20,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <ctype.h>
 #include <iterator>
 #include <sstream>
 
@@ -28,10 +29,13 @@
 #include "caf/detail/get_mac_addresses.hpp"
 #include "caf/detail/get_process_id.hpp"
 #include "caf/detail/get_root_uuid.hpp"
+#include "caf/detail/parse.hpp"
 #include "caf/detail/parser/ascii_to_int.hpp"
 #include "caf/detail/ripemd_160.hpp"
+#include "caf/expected.hpp"
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
+#include "caf/parser_state.hpp"
 #include "caf/sec.hpp"
 #include "caf/serializer.hpp"
 #include "caf/string_algorithms.hpp"
@@ -76,6 +80,24 @@ node_id node_id::default_data::local(const actor_system_config&) {
 bool node_id::default_data::valid(const host_id_type& x) noexcept {
   auto is_zero = [](uint8_t x) { return x == 0; };
   return !std::all_of(x.begin(), x.end(), is_zero);
+}
+
+bool node_id::default_data::can_parse(string_view str) noexcept {
+  // Our format is "<20-byte-hex>#<pid>". With 2 characters per byte, this means
+  // a valid node ID has at least 42 characters.
+  if (str.size() < 42)
+    return false;
+  string_parser_state ps{str.begin(), str.end()};
+  for (size_t i = 0; i < 40; ++i)
+    if (!ps.consume_strict_if(isxdigit))
+      return false;
+  if (!ps.consume_strict('#'))
+    return false;
+  // We don't care for the value, but we invoke the actual number parser to make
+  // sure the value is in bounds.
+  uint32_t dummy;
+  detail::parse(ps, dummy);
+  return ps.code == pec::success;
 }
 
 bool node_id::default_data::valid() const noexcept {
@@ -203,6 +225,10 @@ error node_id::serialize(serializer& sink) const {
   return sink(atom(""));
 }
 
+bool node_id::can_parse(string_view str) noexcept {
+  return default_data::can_parse(str) || uri::can_parse(str);
+}
+
 error node_id::deserialize(deserializer& source) {
   auto impl = static_cast<atom_value>(0);
   if (auto err = source(impl))
@@ -256,8 +282,7 @@ node_id make_node_id(uint32_t process_id,
   return node_id{std::move(ptr)};
 }
 
-optional<node_id> make_node_id(uint32_t process_id,
-                               const std::string& host_hash) {
+optional<node_id> make_node_id(uint32_t process_id, string_view host_hash) {
   using node_data = node_id::default_data;
   if (host_hash.size() != node_data::host_id_size * 2)
     return none;
@@ -272,6 +297,29 @@ optional<node_id> make_node_id(uint32_t process_id,
   if (!node_data::valid(host_id))
     return none;
   return make_node_id(process_id, host_id);
+}
+
+error parse(string_view str, node_id& dest) {
+  if (node_id::default_data::can_parse(str)) {
+    CAF_ASSERT(str.size() >= 42);
+    auto host_hash = str.substr(0, 40);
+    auto pid_str = str.substr(41);
+    uint32_t pid_val = 0;
+    if (auto err = detail::parse(pid_str, pid_val))
+      return err;
+    if (auto nid = make_node_id(pid_val, host_hash)) {
+      dest = std::move(*nid);
+      return none;
+    }
+    CAF_LOG_ERROR("make_node_id failed after can_parse returned true");
+    return sec::invalid_argument;
+  }
+  if (auto nid_uri = make_uri(str)) {
+    dest = make_node_id(std::move(*nid_uri));
+    return none;
+  } else {
+    return std::move(nid_uri.error());
+  }
 }
 
 } // namespace caf

@@ -100,6 +100,38 @@ struct parser_state {
     }
     return false;
   }
+
+  /// Consumes the next character if it satisfies given predicate (skips any
+  /// whitespaces).
+  template<class Predicate>
+  bool consume_if(Predicate predicate) noexcept {
+    skip_whitespaces();
+    if (predicate(current())) {
+      next();
+      return true;
+    }
+    return false;
+  }
+
+  /// Tries to read `x` as the next character, not allowing any whitespaces.
+  bool consume_strict(char x) noexcept {
+    if (current() == x) {
+      next();
+      return true;
+    }
+    return false;
+  }
+
+  /// Consumes the next character if it satisfies given predicate, not allowing
+  /// any whitespaces.
+  template<class Predicate>
+  bool consume_strict_if(Predicate predicate) noexcept {
+    if (predicate(current())) {
+      next();
+      return true;
+    }
+    return false;
+  }
 };
 
 /// Returns an error object from the current code in `ps` as well as its

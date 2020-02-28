@@ -166,11 +166,10 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/../cmake/build_config.hpp.in"
                "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
                @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/caf/detail
-)
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/caf/detail)
+
 list(APPEND LIBCAF_CORE_HDRS
-  "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
-)
+  "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp")
 
 add_custom_target(libcaf_core)
 
