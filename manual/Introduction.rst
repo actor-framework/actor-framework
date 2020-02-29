@@ -45,7 +45,7 @@ Dynamically Typed Actor
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 A dynamically typed actor accepts any kind of message and dispatches on its
-content dynamically at the receiver. This is the ``traditional'' messaging
+content dynamically at the receiver. This is the "traditional" messaging
 style found in implementations like Erlang or Akka. The upside of this approach
 is (usually) faster prototyping and less code. This comes at the cost of
 requiring excessive testing.

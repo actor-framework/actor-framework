@@ -130,8 +130,8 @@ usually cause the receiving actor to terminate, unless a custom handler was
 installed via ``set_error_handler(f)``, where ``f`` is a function object with
 signature ``void (error&)`` or ``void (scheduled_actor*, error&)``.
 Additionally, ``request`` accepts an error handler as second argument to handle
-errors for a particular request (see :ref:`error-response`). The default handler
-is used as fallback if ``request`` is used without error handler.
+errors for a particular request. The default handler is used as fallback if
+``request`` is used without error handler.
 
 .. _default-handler:
 
@@ -244,32 +244,6 @@ Finally, the ``blocking_testee`` implementation will always print:
 Both event-based approaches send all requests, install a series of one-shot
 handlers, and then return from the implementing function. In contrast, the
 blocking function waits for a response before sending another request.
-
-Sending Multiple Requests
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Sending the same message to a group of workers is a common work flow in actor
-applications. Usually, a manager maintains a set of workers. On request, the
-manager fans-out the request to all of its workers and then collects the
-results. The function ``fan_out_request`` combined with the merge policy
-``select_all`` streamlines this exact use case.
-
-In the following snippet, we have a matrix actor (``self``) that stores
-worker actors for each cell (each simply storing an integer). For computing the
-average over a row, we use ``fan_out_request``. The result handler
-passed to ``then`` now gets called only once with a ``vector``
-holding all collected results. Using a response promise promise_ further
-allows us to delay responding to the client until we have collected all worker
-results.
-
-.. literalinclude:: /examples/message_passing/fan_out_request.cpp
-   :language: C++
-   :lines: 86-98
-
-The policy ``select_any`` models a second common use case: sending a
-request to multiple receivers but only caring for the first arriving response.
-
-.. _error-response:
 
 Error Handling in Requests
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
