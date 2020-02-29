@@ -1,11 +1,17 @@
-.. include:: index_header.rst
+CAF User Manual
+===============
+
+**C++ Actor Framework** version |release|.
+
+Contents
+========
 
 .. toctree::
    :maxdepth: 2
    :caption: Core Library
 
    Introduction
-   FirstSteps
+   Overview
    TypeInspection
    MessageHandlers
    Actors
@@ -38,5 +44,3 @@
    CommonPitfalls
    UsingAout
    MigrationGuides
-
-.. include:: index_footer.rst
