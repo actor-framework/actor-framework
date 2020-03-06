@@ -91,7 +91,8 @@ struct parser_state {
       c = next();
   }
 
-  /// Tries to read `x` as the next character (skips any whitespaces).
+  /// Tries to read `x` as the next character, automatically skipping leading
+  /// whitespaces.
   bool consume(char x) noexcept {
     skip_whitespaces();
     if (current() == x) {
@@ -101,8 +102,8 @@ struct parser_state {
     return false;
   }
 
-  /// Consumes the next character if it satisfies given predicate (skips any
-  /// whitespaces).
+  /// Consumes the next character if it satisfies given predicate, automatically
+  /// skipping leading whitespaces.
   template <class Predicate>
   bool consume_if(Predicate predicate) noexcept {
     skip_whitespaces();
@@ -113,7 +114,8 @@ struct parser_state {
     return false;
   }
 
-  /// Tries to read `x` as the next character, not allowing any whitespaces.
+  /// Tries to read `x` as the next character without automatically skipping
+  /// leading whitespaces.
   bool consume_strict(char x) noexcept {
     if (current() == x) {
       next();
@@ -122,8 +124,8 @@ struct parser_state {
     return false;
   }
 
-  /// Consumes the next character if it satisfies given predicate, not allowing
-  /// any whitespaces.
+  /// Consumes the next character if it satisfies given predicate without
+  /// automatically skipping leading whitespaces.
   template <class Predicate>
   bool consume_strict_if(Predicate predicate) noexcept {
     if (predicate(current())) {
