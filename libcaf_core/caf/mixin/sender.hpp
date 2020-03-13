@@ -94,7 +94,7 @@ public:
     static_assert(response_type_unbox<signatures_of_t<Dest>, token>::valid,
                   "receiver does not accept given message");
     auto self = dptr();
-    detail::profiled_send(self, self->ctrl(), dest, make_message_id(P), {},
+    detail::profiled_send(self, nullptr, dest, make_message_id(P), {},
                           self->context(), std::forward<Ts>(xs)...);
   }
 
@@ -172,8 +172,8 @@ public:
     detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
     type_check(dest, args_token);
     auto self = dptr();
-    detail::profiled_send(self, self->ctrl(), dest, self->system().clock(),
-                          timeout, make_message_id(P), std::forward<Ts>(xs)...);
+    detail::profiled_send(self, nullptr, dest, self->system().clock(), timeout,
+                          make_message_id(P), std::forward<Ts>(xs)...);
   }
 
   template <message_priority P = message_priority::normal, class Dest = actor,
@@ -187,40 +187,11 @@ public:
     auto self = dptr();
     auto& clock = self->system().clock();
     auto timeout = clock.now() + rel_timeout;
-    detail::profiled_send(self, self->ctrl(), dest, clock, timeout,
+    detail::profiled_send(self, nullptr, dest, clock, timeout,
                           make_message_id(P), std::forward<Ts>(xs)...);
   }
 
-  template <class Rep = int, class Period = std::ratio<1>, class... Ts>
-  void delayed_anon_send(const group& dest,
-                         std::chrono::duration<Rep, Period> rtime, Ts&&... xs) {
-    delayed_anon_send_impl(dest, rtime, std::forward<Ts>(xs)...);
-  }
-
 private:
-  template <class Dest, class... Ts>
-  void scheduled_send_impl(message_id mid, const Dest& dest, actor_clock& clock,
-                           actor_clock::time_point timeout, Ts&&... xs) {
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
-    type_check(dest, args_token);
-    auto self = dptr();
-    detail::profiled_send(self, self->ctrl(), dest, clock, timeout, mid,
-                          std::forward<Ts>(xs)...);
-  }
-
-  template <class Dest, class... Ts>
-  void
-  scheduled_anon_send_impl(message_id mid, const Dest& dest, actor_clock& clock,
-                           actor_clock::time_point timeout, Ts&&... xs) {
-    static_assert(sizeof...(Ts) > 0, "no message to send");
-    detail::type_list<detail::strip_and_convert_t<Ts>...> args_token;
-    type_check(dest, args_token);
-    auto self = dptr();
-    detail::profiled_send(self, nullptr, dest, clock, timeout, mid,
-                          std::forward<Ts>(xs)...);
-  }
-
   template <class Dest, class ArgTypes>
   static void type_check(const Dest&, ArgTypes) {
     static_assert(!statically_typed<Subtype>() || statically_typed<Dest>(),

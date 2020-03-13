@@ -46,16 +46,21 @@ void profiled_send(Self* self, Sender&& sender, const Handle& receiver,
 }
 
 template <class Self, class Sender, class Handle, class... Ts>
-void profiled_send(Self* self, Sender&& sender, const Handle& receiver,
+void profiled_send(Self* self, Sender&& sender, const Handle& dst,
                    actor_clock& clock, actor_clock::time_point timeout,
                    message_id msg_id, Ts&&... xs) {
   CAF_IGNORE_UNUSED(self);
-  if (receiver) {
-    auto element = make_mailbox_element(std::forward<Sender>(sender), msg_id,
-                                        no_stages, std::forward<Ts>(xs)...);
-    CAF_BEFORE_SENDING_SCHEDULED(self, timeout, *element);
-    clock.schedule_message(timeout, actor_cast<strong_actor_ptr>(receiver),
-                           std::move(element));
+  if (dst) {
+    if constexpr (std::is_same<Handle, group>::value) {
+      clock.schedule_message(timeout, dst, std::forward<Sender>(sender),
+                             make_message(std::forward<Ts>(xs)...));
+    } else {
+      auto element = make_mailbox_element(std::forward<Sender>(sender), msg_id,
+                                          no_stages, std::forward<Ts>(xs)...);
+      CAF_BEFORE_SENDING_SCHEDULED(self, timeout, *element);
+      clock.schedule_message(timeout, actor_cast<strong_actor_ptr>(dst),
+                             std::move(element));
+    }
   }
 }
 
