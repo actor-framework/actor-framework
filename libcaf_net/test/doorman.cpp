@@ -61,10 +61,10 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
 class dummy_application {
 public:
   static expected<std::vector<byte>> serialize(actor_system& sys,
-                                               const type_erased_tuple& x) {
+                                               const message& x) {
     std::vector<byte> result;
     binary_serializer sink{sys, result};
-    if (auto err = message::save(sink, x))
+    if (auto err = x.save(sink))
       return err.value();
     return result;
   }
@@ -117,7 +117,7 @@ public:
   using application_type = dummy_application;
 
   static expected<std::vector<byte>> serialize(actor_system& sys,
-                                               const type_erased_tuple& x) {
+                                               const message& x) {
     return dummy_application::serialize(sys, x);
   }
 

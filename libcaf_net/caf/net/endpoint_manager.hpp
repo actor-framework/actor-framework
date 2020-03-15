@@ -48,8 +48,7 @@ public:
   using maybe_buffer = expected<std::vector<byte>>;
 
   /// A function type for serializing message payloads.
-  using serialize_fun_type = maybe_buffer (*)(actor_system&,
-                                              const type_erased_tuple&);
+  using serialize_fun_type = maybe_buffer (*)(actor_system&, const message&);
 
   // -- constructors, destructors, and assignment operators --------------------
 

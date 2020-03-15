@@ -113,10 +113,10 @@ public:
   }
 
   static expected<std::vector<byte>> serialize(actor_system& sys,
-                                               const type_erased_tuple& x) {
+                                               const message& x) {
     std::vector<byte> result;
     binary_serializer sink{sys, result};
-    if (auto err = message::save(sink, x))
+    if (auto err = x.save(sink))
       return err.value();
     return result;
   }

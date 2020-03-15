@@ -39,7 +39,6 @@
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
 #include "caf/string_algorithms.hpp"
-#include "caf/type_erased_tuple.hpp"
 
 namespace caf::net::basp {
 
@@ -120,10 +119,10 @@ void application::local_actor_down(packet_writer& writer, actor_id id,
 }
 
 expected<std::vector<byte>> application::serialize(actor_system& sys,
-                                                   const type_erased_tuple& x) {
+                                                   const message& x) {
   std::vector<byte> result;
   binary_serializer sink{sys, result};
-  if (auto err = message::save(sink, x))
+  if (auto err = x.save(sink))
     return err.value();
   return result;
 }

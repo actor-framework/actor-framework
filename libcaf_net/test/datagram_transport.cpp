@@ -166,11 +166,10 @@ public:
     CAF_FAIL("handle_error called: " << to_string(sec));
   }
 
-  static expected<buffer_type> serialize(actor_system& sys,
-                                         const type_erased_tuple& x) {
+  static expected<buffer_type> serialize(actor_system& sys, const message& x) {
     buffer_type result;
     binary_serializer sink{sys, result};
-    if (auto err = message::save(sink, x))
+    if (auto err = x.save(sink))
       return err.value();
     return result;
   }

@@ -92,8 +92,7 @@ public:
     rec_buf_->push_back(static_cast<byte>(id_));
   }
 
-  static expected<buffer_type> serialize(actor_system&,
-                                         const type_erased_tuple&) {
+  static expected<buffer_type> serialize(actor_system&, const message&) {
     return buffer_type{};
   }
 
