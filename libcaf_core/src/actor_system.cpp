@@ -211,6 +211,10 @@ const char* actor_system::module::name() const noexcept {
   }
 }
 
+actor_system::networking_module::~networking_module() {
+  // nop
+}
+
 actor_system::actor_system(actor_system_config& cfg)
   : profiler_(cfg.profiler),
     ids_(0),
@@ -410,6 +414,24 @@ actor_id actor_system::latest_actor_id() const {
 
 void actor_system::await_all_actors_done() const {
   registry_.await_running_count_equal(0);
+}
+
+void actor_system::monitor(const node_id& node, const actor_addr& observer) {
+  // TODO: Currently does not work with other modules, in particular caf_net.
+  auto mm = modules_[module::middleman].get();
+  if (mm == nullptr)
+    return;
+  auto mm_dptr = static_cast<networking_module*>(mm);
+  mm_dptr->monitor(node, observer);
+}
+
+void actor_system::demonitor(const node_id& node, const actor_addr& observer) {
+  // TODO: Currently does not work with other modules, in particular caf_net.
+  auto mm = modules_[module::middleman].get();
+  if (mm == nullptr)
+    return;
+  auto mm_dptr = static_cast<networking_module*>(mm);
+  mm_dptr->demonitor(node, observer);
 }
 
 actor_clock& actor_system::clock() noexcept {

@@ -167,6 +167,22 @@ public:
 
   using module_array = std::array<module_ptr, module::num_ids>;
 
+  /// An (optional) component of the actor system with networking capabilities.
+  class CAF_CORE_EXPORT networking_module : public module {
+  public:
+    ~networking_module() override;
+
+    /// Causes the module to send a `node_down_msg` to `observer` if this system
+    /// loses connection to `node`.
+    virtual void monitor(const node_id& node, const actor_addr& observer) = 0;
+
+    /// Causes the module remove one entry for `observer` from the list of
+    /// actors that receive a `node_down_msg` if this system loses connection to
+    /// `node`. Each call to `monitor` requires one call to `demonitor` in order
+    /// to unsubscribe the `observer` completely.
+    virtual void demonitor(const node_id& node, const actor_addr& observer) = 0;
+  };
+
   /// @warning The system stores a reference to `cfg`, which means the
   ///          config object must outlive the actor system.
   explicit actor_system(actor_system_config& cfg);
@@ -278,6 +294,17 @@ public:
 
   /// Blocks this caller until all actors are done.
   void await_all_actors_done() const;
+
+  /// Send a `node_down_msg` to `observer` if this system loses connection to
+  /// `node`.
+  /// @note Calling this function *n* times causes the system to send
+  ///       `node_down_msg` *n* times to the observer. In order to not receive
+  ///       the messages, the observer must call `demonitor` *n* times.
+  void monitor(const node_id& node, const actor_addr& observer);
+
+  /// Removes `observer` from the list of actors that receive a `node_down_msg`
+  /// if this system loses connection to `node`.
+  void demonitor(const node_id& node, const actor_addr& observer);
 
   /// Called by `spawn` when used to create a class-based actor to
   /// apply automatic conversions to `xs` before spawning the actor.

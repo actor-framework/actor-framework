@@ -399,6 +399,16 @@ void* middleman::subtype_ptr() {
   return this;
 }
 
+void middleman::monitor(const node_id& node, const actor_addr& observer) {
+  auto basp = named_broker<basp_broker>("BASP");
+  anon_send(basp, monitor_atom_v, node, observer);
+}
+
+void middleman::demonitor(const node_id& node, const actor_addr& observer) {
+  auto basp = named_broker<basp_broker>("BASP");
+  anon_send(basp, demonitor_atom_v, node, observer);
+}
+
 middleman::~middleman() {
   // nop
 }

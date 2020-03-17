@@ -104,6 +104,9 @@ public:
 
   // -- utility functions ------------------------------------------------------
 
+  /// Sends `node_down_msg` to all registered observers.
+  void emit_node_down_msg(const node_id& node, const error& reason);
+
   /// Performs bookkeeping such as managing `spawn_servers`.
   void learned_new_node(const node_id& nid);
 
@@ -146,6 +149,10 @@ public:
   /// spawned whenever the broker learns a new node ID and tries to get a
   /// 'SpawnServ' instance on the remote side.
   std::unordered_map<node_id, actor> spawn_servers;
+
+  /// Keeps track of actors that wish to receive a `node_down_msg` if a
+  /// particular node fails.
+  std::unordered_map<node_id, std::vector<actor_addr>> node_observers;
 
   /// Configures whether BASP automatically open new connections to optimize
   /// routing paths by forming a mesh between all nodes.

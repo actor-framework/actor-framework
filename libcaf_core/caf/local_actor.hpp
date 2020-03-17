@@ -288,6 +288,10 @@ public:
     current_element_ = ptr;
   }
 
+  /// Adds a unidirectional `monitor` to `node`.
+  /// @note Each call to `monitor` creates a new, independent monitor.
+  void monitor(const node_id& node);
+
   /// Adds a unidirectional `monitor` to `whom`.
   /// @note Each call to `monitor` creates a new, independent monitor.
   template <message_priority P = message_priority::normal, class Handle = actor>
@@ -298,8 +302,12 @@ public:
   /// Removes a monitor from `whom`.
   void demonitor(const actor_addr& whom);
 
+  /// Removes a monitor from `node`.
+  void demonitor(const node_id& node);
+
   /// Removes a monitor from `whom`.
-  inline void demonitor(const actor& whom) {
+  template <class Handle>
+  void demonitor(const Handle& whom) {
     demonitor(whom.address());
   }
 
