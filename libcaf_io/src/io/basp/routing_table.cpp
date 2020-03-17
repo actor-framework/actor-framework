@@ -113,6 +113,22 @@ void routing_table::add_direct(const connection_handle& hdl,
   CAF_IGNORE_UNUSED(nid_added);
 }
 
+void routing_table::add_alternative(const connection_handle& hdl,
+                                    const node_id& nid) {
+  std::unique_lock<std::mutex> guard{mtx_};
+  CAF_ASSERT(direct_by_nid_.count(nid) != 0);
+  // This member function is safe to call repeatedly. Hence, we ignore the
+  // result of emplace on purpose.
+  direct_by_hdl_.emplace(hdl, nid);
+}
+
+void routing_table::select_alternative(const connection_handle& hdl,
+                                       const node_id& nid) {
+  std::unique_lock<std::mutex> guard{mtx_};
+  CAF_ASSERT(direct_by_hdl_[hdl] == nid);
+  direct_by_nid_[nid] = hdl;
+}
+
 bool routing_table::add_indirect(const node_id& hop, const node_id& dest) {
   std::unique_lock<std::mutex> guard{mtx_};
   // Never add indirect entries if we already have direct connection.

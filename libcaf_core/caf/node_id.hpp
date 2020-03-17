@@ -29,6 +29,7 @@
 #include "caf/intrusive_ptr.hpp"
 #include "caf/none.hpp"
 #include "caf/ref_counted.hpp"
+#include "caf/string_view.hpp"
 #include "caf/uri.hpp"
 
 namespace caf {
@@ -98,6 +99,8 @@ public:
     // -- utility functions ----------------------------------------------------
 
     static bool valid(const host_id_type& x) noexcept;
+
+    static bool can_parse(string_view str) noexcept;
 
     // -- interface implementation ---------------------------------------------
 
@@ -221,6 +224,9 @@ public:
 
   /// @endcond
 
+  /// Returns whether `parse` would produce a valid node ID.
+  static bool can_parse(string_view str) noexcept;
+
 private:
   intrusive_ptr<data> data_;
 };
@@ -310,8 +316,10 @@ node_id make_node_id(uint32_t process_id,
 /// @param process_id System-wide unique process identifier.
 /// @param host_hash Unique node ID as hexadecimal string representation.
 /// @relates node_id
-optional<node_id> make_node_id(uint32_t process_id,
-                               const std::string& host_hash);
+optional<node_id> make_node_id(uint32_t process_id, string_view host_hash);
+
+/// @relates node_id
+error parse(string_view str, node_id& dest);
 
 } // namespace caf
 

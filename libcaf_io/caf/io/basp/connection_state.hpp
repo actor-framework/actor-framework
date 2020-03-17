@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/sec.hpp"
 
 namespace caf {
 namespace io {
@@ -25,7 +26,8 @@ namespace basp {
 
 /// @addtogroup BASP
 
-/// Denotes the state of a connection between to BASP nodes.
+/// Denotes the state of a connection between two BASP nodes. Overlaps with
+/// `sec` (these states get converted to an error by the BASP instance).
 enum connection_state {
   /// Indicates that a connection is established and this node is
   /// waiting for the next BASP header.
@@ -34,14 +36,67 @@ enum connection_state {
   /// and is waiting for the data.
   await_payload,
   /// Indicates that this connection no longer exists.
-  close_connection
+  close_connection,
+  /// See `sec::incompatible_versions`.
+  incompatible_versions,
+  /// See `sec::incompatible_application_ids`.
+  incompatible_application_ids,
+  /// See `sec::malformed_basp_message`.
+  malformed_basp_message,
+  /// See `sec::serializing_basp_payload_failed`.
+  serializing_basp_payload_failed,
+  /// See `sec::redundant_connection`.
+  redundant_connection,
+  /// See `sec::no_route_to_receiving_node`.
+  no_route_to_receiving_node
 };
+
+/// Returns whether the connection state requries a shutdown of the socket
+/// connection.
+/// @relates connection_state
+inline bool requires_shutdown(connection_state x) {
+  // Any enum value other than await_header (0) and await_payload (1) signal the
+  // BASP broker to shutdown the connection.
+  return static_cast<int>(x) > 1;
+}
+
+/// Converts the connection state to a system error code if it holds one of the
+/// overlapping values. Otherwise returns `sec::none`.
+/// @relates connection_state
+inline sec to_sec(connection_state x) {
+  switch (x) {
+    default:
+      return sec::none;
+    case incompatible_versions:
+      return sec::incompatible_versions;
+    case incompatible_application_ids:
+      return sec::incompatible_application_ids;
+    case malformed_basp_message:
+      return sec::malformed_basp_message;
+    case serializing_basp_payload_failed:
+      return sec::serializing_basp_payload_failed;
+    case redundant_connection:
+      return sec::redundant_connection;
+    case no_route_to_receiving_node:
+      return sec::no_route_to_receiving_node;
+  }
+}
 
 /// @relates connection_state
 inline std::string to_string(connection_state x) {
-  return x == await_header ? "await_header"
-                           : (x == await_payload ? "await_payload"
-                                                 : "close_connection");
+  // TODO: auto-generate this to_string implementation
+  static constexpr const char* strings[] = {
+    "await_header",
+    "await_payload",
+    "close_connection",
+    "incompatible_versions",
+    "incompatible_application_ids",
+    "malformed_basp_message",
+    "serializing_basp_payload_failed",
+    "redundant_connection",
+    "no_route_to_receiving_node",
+  };
+  return strings[static_cast<size_t>(x)];
 }
 
 /// @}

@@ -111,7 +111,7 @@ public:
   void set_context(connection_handle hdl);
 
   /// Cleans up any state for `hdl`.
-  void connection_cleanup(connection_handle hdl);
+  void connection_cleanup(connection_handle hdl, sec code);
 
   /// Sends a basp::down_message message to a remote node.
   void send_basp_down_message(const node_id& nid, actor_id aid, error err);

@@ -191,7 +191,8 @@ public:
                               buffer_type& out_buf, optional<uint16_t> port);
 
   /// Writes the client handshake to `buf`.
-  void write_client_handshake(execution_unit* ctx, buffer_type& buf);
+  void write_client_handshake(execution_unit* ctx, buffer_type& buf,
+                              uint8_t flags = 0);
 
   /// Writes an `announce_proxy` to `buf`.
   void write_monitor_message(execution_unit* ctx, buffer_type& buf,
@@ -225,8 +226,8 @@ public:
     return system().config();
   }
 
-  bool handle(execution_unit* ctx, connection_handle hdl, header& hdr,
-              std::vector<char>* payload);
+  connection_state handle(execution_unit* ctx, connection_handle hdl,
+                          header& hdr, std::vector<char>* payload);
 
 private:
   void forward(execution_unit* ctx, const node_id& dest_node, const header& hdr,

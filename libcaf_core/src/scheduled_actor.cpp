@@ -798,6 +798,14 @@ auto scheduled_actor::activate(execution_unit* ctx, mailbox_element& x)
 auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
   CAF_LOG_TRACE(CAF_ARG(x));
 #ifndef CAF_NO_EXCEPTIONS
+  auto handle_exception = [&](std::exception_ptr eptr) {
+    auto err = call_handler(exception_handler_, this, eptr);
+    if (x.mid.is_request()) {
+      auto rp = make_response_promise();
+      rp.deliver(err);
+    }
+    quit(std::move(err));
+  };
   try {
 #endif // CAF_NO_EXCEPTIONS
     switch (consume(x)) {
@@ -817,12 +825,10 @@ auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
   } catch (std::exception& e) {
     CAF_LOG_INFO("actor died because of an exception, what: " << e.what());
     static_cast<void>(e); // keep compiler happy when not logging
-    auto eptr = std::current_exception();
-    quit(call_handler(exception_handler_, this, eptr));
+    handle_exception(std::current_exception());
   } catch (...) {
     CAF_LOG_INFO("actor died because of an unknown exception");
-    auto eptr = std::current_exception();
-    quit(call_handler(exception_handler_, this, eptr));
+    handle_exception(std::current_exception());
   }
   finalize();
   return activation_result::terminated;
@@ -849,6 +855,21 @@ bool scheduled_actor::finalize() {
   // Repeated calls always return `true` but have no side effects.
   if (getf(is_cleaned_up_flag))
     return true;
+  // TODO: This is a workaround for issue #1011. Iterating over all stream
+  //       managers here and dropping them as needed prevents the
+  //       never-terminating part, but it still means that "dead" stream manager
+  //       can accumulate over time since we only run this O(n) path if the
+  //       actor is shutting down.
+  if (!has_behavior() && !stream_managers_.empty()) {
+    for (auto i = stream_managers_.begin(); i != stream_managers_.end();) {
+      if (i->second->done())
+        i = stream_managers_.erase(i);
+      else
+        ++i;
+      if (stream_managers_.empty())
+        stream_ticks_.stop();
+    }
+  }
   // An actor is considered alive as long as it has a behavior and didn't set
   // the terminated flag.
   if (alive())

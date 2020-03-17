@@ -130,14 +130,41 @@ function(pretty_yes var)
   endif()
 endfunction(pretty_yes)
 
-add_executable(caf-generate-enum-strings cmake/caf-generate-enum-strings.cpp)
+add_executable(caf-generate-enum-strings
+               EXCLUDE_FROM_ALL
+               cmake/caf-generate-enum-strings.cpp)
 
-function(enum_to_string relative_input_file relative_output_file)
-  set(input "${CMAKE_CURRENT_SOURCE_DIR}/${relative_input_file}")
-  set(output "${CMAKE_CURRENT_BINARY_DIR}/${relative_output_file}")
+add_custom_target(consistency-check)
+
+add_custom_target(update-enum-strings)
+
+# adds a consistency check that verifies that `cpp_file` is still valid by
+# re-generating the file and comparing it to the existing file
+function(add_enum_consistency_check hpp_file cpp_file)
+  set(input "${CMAKE_CURRENT_SOURCE_DIR}/${hpp_file}")
+  set(file_under_test "${CMAKE_CURRENT_SOURCE_DIR}/${cpp_file}")
+  set(output "${CMAKE_CURRENT_BINARY_DIR}/check/${cpp_file}")
+  get_filename_component(output_dir "${output}" DIRECTORY)
+  file(MAKE_DIRECTORY "${output_dir}")
   add_custom_command(OUTPUT "${output}"
                      COMMAND caf-generate-enum-strings "${input}" "${output}"
                      DEPENDS caf-generate-enum-strings "${input}")
+  get_filename_component(target_name "${input}" NAME_WE)
+  add_custom_target("${target_name}"
+                    COMMAND
+                      "${CMAKE_COMMAND}"
+                      "-Dfile_under_test=${file_under_test}"
+                      "-Dgenerated_file=${output}"
+                      -P "${PROJECT_SOURCE_DIR}/cmake/check-consistency.cmake"
+                    DEPENDS "${output}")
+  add_dependencies(consistency-check "${target_name}")
+  add_custom_target("${target_name}-update"
+                    COMMAND
+                      caf-generate-enum-strings
+                      "${input}"
+                      "${file_under_test}"
+                     DEPENDS caf-generate-enum-strings "${input}")
+  add_dependencies(update-enum-strings "${target_name}-update")
 endfunction()
 
 ################################################################################
@@ -258,57 +285,40 @@ if(CAF_ENABLE_GCOV)
   else()
     set(NO_INLINE "-fno-inline -fno-inline-small-functions -fno-default-inline")
   endif()
-  build_string("EXTRA_FLAGS" "-fprofile-arcs -ftest-coverage ${NO_INLINE}")
-endif()
-# set -fno-exception if requested
-if(CAF_FORCE_NO_EXCEPTIONS)
-  build_string("EXTRA_FLAGS" "-fno-exceptions")
-endif()
-# enable a ton of warnings if --more-clang-warnings is used
-if(CAF_MORE_WARNINGS)
-  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set(WFLAGS "-Weverything -Wno-c++98-compat -Wno-padded "
-               "-Wno-documentation-unknown-command -Wno-exit-time-destructors "
-               "-Wno-global-constructors -Wno-missing-prototypes "
-               "-Wno-c++98-compat-pedantic -Wno-unused-member-function "
-               "-Wno-unused-const-variable -Wno-switch-enum "
-               "-Wno-abstract-vbase-init -Wno-shadow "
-               "-Wno-missing-noreturn -Wno-covered-switch-default")
-  elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    set(WFLAGS "-Waddress -Wall -Warray-bounds "
-               "-Wattributes -Wbuiltin-macro-redefined -Wcast-align "
-               "-Wcast-qual -Wchar-subscripts -Wclobbered -Wcomment "
-               "-Wconversion -Wconversion-null -Wcoverage-mismatch "
-               "-Wcpp -Wdelete-non-virtual-dtor -Wdeprecated "
-               "-Wdeprecated-declarations -Wdiv-by-zero -Wdouble-promotion "
-               "-Wempty-body -Wendif-labels -Wenum-compare -Wextra "
-               "-Wfloat-equal -Wformat -Wfree-nonheap-object "
-               "-Wignored-qualifiers -Winit-self "
-               "-Winline -Wint-to-pointer-cast -Winvalid-memory-model "
-               "-Winvalid-offsetof -Wlogical-op -Wmain -Wmaybe-uninitialized "
-               "-Wmissing-braces -Wmultichar "
-               "-Wnarrowing -Wnoexcept -Wnon-template-friend "
-               "-Wnon-virtual-dtor -Wnonnull -Woverflow "
-               "-Woverlength-strings -Wparentheses "
-               "-Wpmf-conversions -Wpointer-arith -Wreorder "
-               "-Wreturn-type -Wsequence-point "
-               "-Wsign-compare -Wswitch -Wtype-limits -Wundef "
-               "-Wuninitialized -Wunused -Wvla -Wwrite-strings")
-  endif()
-  # convert CMake list to a single string, erasing the ";" separators
-  string(REPLACE ";" "" WFLAGS_STR ${WFLAGS})
-  build_string("EXTRA_FLAGS" "${WFLAGS_STR}")
-endif()
-# allow enabling IPO on gcc/clang
-if(POLICY CMP0069)
-  cmake_policy(SET CMP0069 NEW)
-else()
-  if(CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+  # enable a ton of warnings if --more-clang-warnings is used
+  if(CAF_MORE_WARNINGS)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      build_string("EXTRA_FLAGS" "-flto")
+      set(WFLAGS "-Weverything -Wno-c++98-compat -Wno-padded "
+                 "-Wno-documentation-unknown-command -Wno-exit-time-destructors "
+                 "-Wno-global-constructors -Wno-missing-prototypes "
+                 "-Wno-c++98-compat-pedantic -Wno-unused-member-function "
+                 "-Wno-unused-const-variable -Wno-switch-enum "
+                 "-Wno-abstract-vbase-init -Wno-shadow "
+                 "-Wno-missing-noreturn -Wno-covered-switch-default")
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-      build_string("EXTRA_FLAGS" "-flto -fno-fat-lto-objects")
+      set(WFLAGS "-Waddress -Wall -Warray-bounds "
+                 "-Wattributes -Wbuiltin-macro-redefined -Wcast-align "
+                 "-Wcast-qual -Wchar-subscripts -Wclobbered -Wcomment "
+                 "-Wconversion -Wconversion-null -Wcoverage-mismatch "
+                 "-Wcpp -Wdelete-non-virtual-dtor -Wdeprecated "
+                 "-Wdeprecated-declarations -Wdiv-by-zero -Wdouble-promotion "
+                 "-Wempty-body -Wendif-labels -Wenum-compare -Wextra "
+                 "-Wfloat-equal -Wformat -Wfree-nonheap-object "
+                 "-Wignored-qualifiers -Winit-self "
+                 "-Winline -Wint-to-pointer-cast -Winvalid-memory-model "
+                 "-Winvalid-offsetof -Wlogical-op -Wmain -Wmaybe-uninitialized "
+                 "-Wmissing-braces -Wmultichar "
+                 "-Wnarrowing -Wnoexcept -Wnon-template-friend "
+                 "-Wnon-virtual-dtor -Wnonnull -Woverflow "
+                 "-Woverlength-strings -Wparentheses "
+                 "-Wpmf-conversions -Wpointer-arith -Wreorder "
+                 "-Wreturn-type -Wsequence-point "
+                 "-Wsign-compare -Wswitch -Wtype-limits -Wundef "
+                 "-Wuninitialized -Wunused -Wvla -Wwrite-strings")
     endif()
+    # convert CMake list to a single string, erasing the ";" separators
+    string(REPLACE ";" "" WFLAGS_STR ${WFLAGS})
+    build_string("EXTRA_FLAGS" "${WFLAGS_STR}")
   endif()
 endif()
 
@@ -322,13 +332,23 @@ endif()
 if(NOT APPLE AND NOT WIN32)
     build_string("EXTRA_FLAGS" "-pthread")
 endif()
-# -fPIC generates warnings on MinGW and Cygwin plus extra setup steps needed on MinGW
+
+# Make sure to link to platform-specific threading dependency (e.g. pthread).
+if (NOT TARGET Threads::Threads)
+  find_package(Threads REQUIRED)
+endif ()
+list(APPEND CAF_EXTRA_LDFLAGS Threads::Threads)
+
+# Have CMake set -fPIC when necessary.
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# Adjust setup for MinGW and Cygwin.
 if(MINGW)
   add_definitions(-D_WIN32_WINNT=0x0600)
   add_definitions(-DWIN32)
   include(GenerateExportHeader)
   list(APPEND CAF_EXTRA_LDFLAGS -lws2_32 -liphlpapi -lpsapi)
-  # build static to avoid runtime dependencies to GCC libraries
+  # Build static to avoid runtime dependencies to GCC libraries.
   build_string("EXTRA_FLAGS" "-static")
 elseif(CYGWIN)
   build_string("EXTRA_FLAGS" "-U__STRICT_ANSI__")
@@ -409,19 +429,22 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
 if(NOT TARGET uninstall)
   add_custom_target(uninstall)
 endif()
-add_custom_command(TARGET uninstall
+add_custom_target(caf_uninstall)
+add_custom_command(TARGET caf_uninstall
                    PRE_BUILD
                    COMMAND "${CMAKE_COMMAND}" -P
                    "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
+add_dependencies(uninstall caf_uninstall)
 
 ################################################################################
 #                       set inclue paths for subprojects                       #
 ################################################################################
 
 # path to caf core & io headers
-set(LIBCAF_INCLUDE_DIRS
+set(CAF_INCLUDE_DIRS
     "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_core"
     "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_io"
+    "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_openssl"
     "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_test")
 # enable tests if not disabled
 if(NOT CAF_NO_UNIT_TESTS)
@@ -436,7 +459,7 @@ else()
   endmacro()
 endif()
 # all projects need the headers of the core components
-include_directories("${LIBCAF_INCLUDE_DIRS}")
+include_directories("${CAF_INCLUDE_DIRS}")
 
 
 ################################################################################
@@ -506,8 +529,17 @@ endmacro()
 add_caf_lib(core)
 add_optional_caf_lib(io)
 
-# build SSL module if OpenSSL library is available
-if(NOT CAF_NO_OPENSSL)
+# build SSL module if OpenSSL library is available or if a parent project
+# defined OPENSSL_LIBRARIES for us
+if(DEFINED OPENSSL_LIBRARIES)
+  if (NOT OPENSSL_INCLUDE_DIR)
+    message(FATAL_ERROR "got OPENSSL_LIBRARIES predefined but no OPENSSL_INCLUDE_DIR")
+  endif()
+  message(STATUS "use OPENSSL_LIBRARIES provided by parent: ${OPENSSL_LIBRARIES}")
+  message(STATUS "use OPENSSL_INCLUDE_DIR provided by parent: ${OPENSSL_INCLUDE_DIR}")
+  include_directories(BEFORE ${OPENSSL_INCLUDE_DIR})
+  add_optional_caf_lib(openssl)
+elseif(NOT CAF_NO_OPENSSL)
   find_package(OpenSSL)
   if(OPENSSL_FOUND)
     # Check OpenSSL version >= 1.0.1
@@ -596,27 +628,28 @@ if(NOT CAF_NO_UNIT_TESTS)
 endif()
 
 
-# -- Fetch branch name and SHA if available ------------------------------------
-
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/release.txt")
-  file(READ "${CMAKE_CURRENT_SOURCE_DIR}/release.txt" CAF_RELEASE)
-  string(REGEX REPLACE "\n" "" CAF_RELEASE "${CAF_RELEASE}")
-else()
-  set(CAF_RELEASE "${CAF_VERSION}")
-endif()
-
-message(STATUS "Set release version for all documentation to ${CAF_RELEASE}.")
-
 # -- Setup for building manual and API documentation ---------------------------
 
-add_subdirectory(doc)
+if(NOT caf_is_subproject)
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/release.txt")
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/release.txt" CAF_RELEASE)
+    string(REGEX REPLACE "\n" "" CAF_RELEASE "${CAF_RELEASE}")
+  else()
+    set(CAF_RELEASE "${CAF_VERSION}")
+  endif()
+  message(STATUS "Set release version for all documentation to ${CAF_RELEASE}.")
+  add_subdirectory(doc)
+endif()
 
-################################################################################
-#                     Add additional project files to GUI                      #
-################################################################################
+# -- Export important variables to the parent scope ----------------------------
 
-file(GLOB_RECURSE script_files "scripts/*")
-add_custom_target(gui_dummy SOURCES configure ${script_files})
+if(caf_is_subproject)
+  # Make sure parent projects can find build_config.hpp
+  list(APPEND CAF_INCLUDE_DIRS "${CMAKE_CURRENT_BINARY_DIR}/libcaf_core")
+  set(CAF_VERSION  "${CAF_VERSION}" CACHE INTERNAL "CAF release version")
+  set(CAF_LIBRARIES "${CAF_LIBRARIES}" CACHE INTERNAL "Library targets")
+  set(CAF_INCLUDE_DIRS "${CAF_INCLUDE_DIRS}" CACHE INTERNAL "Path to CAF headers")
+endif()
 
 ################################################################################
 #                                print summary                                 #

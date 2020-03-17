@@ -1,28 +1,25 @@
-project(caf_core C CXX)
-
 # get header files; only needed by CMake generators,
 # e.g., for creating proper Xcode projects
 file(GLOB_RECURSE LIBCAF_CORE_HDRS "caf/*.hpp")
 
-enum_to_string("caf/exit_reason.hpp" "exit_reason_strings.cpp")
-enum_to_string("caf/intrusive/inbox_result.hpp" "inbox_result_strings.cpp")
-enum_to_string("caf/intrusive/task_result.hpp" "task_result_strings.cpp")
-enum_to_string("caf/invoke_message_result.hpp" "invoke_msg_result_strings.cpp")
-enum_to_string("caf/message_priority.hpp" "message_priority_strings.cpp")
-enum_to_string("caf/pec.hpp" "pec_strings.cpp")
-enum_to_string("caf/sec.hpp" "sec_strings.cpp")
-enum_to_string("caf/stream_priority.hpp" "stream_priority_strings.cpp")
+# extend the consistency-check target for enum to_string implementations
+add_enum_consistency_check("caf/sec.hpp" "src/sec_strings.cpp")
+add_enum_consistency_check("caf/pec.hpp" "src/pec_strings.cpp")
+add_enum_consistency_check("caf/stream_priority.hpp"
+                           "src/stream_priority_strings.cpp")
+add_enum_consistency_check("caf/exit_reason.hpp"
+                           "src/exit_reason_strings.cpp")
+add_enum_consistency_check("caf/invoke_message_result.hpp"
+                           "src/invoke_msg_result_strings.cpp")
+add_enum_consistency_check("caf/message_priority.hpp"
+                           "src/message_priority_strings.cpp")
+add_enum_consistency_check("caf/intrusive/inbox_result.hpp"
+                           "src/intrusive/inbox_result_strings.cpp")
+add_enum_consistency_check("caf/intrusive/task_result.hpp"
+                           "src/intrusive/task_result_strings.cpp")
 
 # list cpp files excluding platform-dependent files
 set(LIBCAF_CORE_SRCS
-  "${CMAKE_CURRENT_BINARY_DIR}/exit_reason_strings.cpp"
-  "${CMAKE_CURRENT_BINARY_DIR}/inbox_result_strings.cpp"
-  "${CMAKE_CURRENT_BINARY_DIR}/invoke_msg_result_strings.cpp"
-  "${CMAKE_CURRENT_BINARY_DIR}/message_priority_strings.cpp"
-  "${CMAKE_CURRENT_BINARY_DIR}/pec_strings.cpp"
-  "${CMAKE_CURRENT_BINARY_DIR}/sec_strings.cpp"
-  "${CMAKE_CURRENT_BINARY_DIR}/stream_priority_strings.cpp"
-  "${CMAKE_CURRENT_BINARY_DIR}/task_result_strings.cpp"
   src/abstract_actor.cpp
   src/abstract_channel.cpp
   src/abstract_composable_behavior.cpp
@@ -95,11 +92,15 @@ set(LIBCAF_CORE_SRCS
   src/event_based_actor.cpp
   src/execution_unit.cpp
   src/exit_reason.cpp
+  src/exit_reason_strings.cpp
   src/forwarding_actor_proxy.cpp
   src/group.cpp
   src/group_manager.cpp
   src/group_module.cpp
   src/inbound_path.cpp
+  src/intrusive/inbox_result_strings.cpp
+  src/intrusive/task_result_strings.cpp
+  src/invoke_msg_result_strings.cpp
   src/ipv4_address.cpp
   src/ipv4_endpoint.cpp
   src/ipv4_subnet.cpp
@@ -115,11 +116,13 @@ set(LIBCAF_CORE_SRCS
   src/message.cpp
   src/message_builder.cpp
   src/message_handler.cpp
+  src/message_priority_strings.cpp
   src/message_view.cpp
   src/monitorable_actor.cpp
   src/node_id.cpp
   src/outbound_path.cpp
   src/pec.cpp
+  src/pec_strings.cpp
   src/policy/downstream_messages.cpp
   src/policy/unprofiled.cpp
   src/policy/work_sharing.cpp
@@ -139,11 +142,13 @@ set(LIBCAF_CORE_SRCS
   src/scoped_actor.cpp
   src/scoped_execution_unit.cpp
   src/sec.cpp
+  src/sec_strings.cpp
   src/serializer.cpp
   src/settings.cpp
   src/skip.cpp
   src/stream_aborter.cpp
   src/stream_manager.cpp
+  src/stream_priority_strings.cpp
   src/string_algorithms.cpp
   src/string_view.cpp
   src/term.cpp
@@ -163,11 +168,10 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/../cmake/build_config.hpp.in"
                "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
                @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/caf/detail
-)
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/caf/detail)
+
 list(APPEND LIBCAF_CORE_HDRS
-  "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
-)
+  "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp")
 
 add_custom_target(libcaf_core)
 

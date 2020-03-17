@@ -6,5 +6,9 @@ blog_release_note.md
 build/*
 github_release_note.md
 html/*
-manual
+manual/examples
+manual/html/*
+manual/libcaf_core
+manual/libcaf_io
+manual/libcaf_openssl
 release.txt

@@ -214,6 +214,7 @@ uri operator "" _u(const char* cstr, size_t cstr_len) {
 bool operator "" _i(const char* cstr, size_t cstr_len) {
   uri result;
   string_view str{cstr, cstr_len};
+  CAF_CHECK(!uri::can_parse(str));
   auto err = parse(str, result);
   return err != none;
 }
@@ -283,12 +284,17 @@ CAF_TEST(builder construction) {
   CAF_CHECK_EQUAL(escaped, "hi%20there://it%27s@me%2F/file%201#%5B42%5D");
 }
 
-#define ROUNDTRIP(str) CAF_CHECK_EQUAL(str##_u, str)
+#define ROUNDTRIP(str)                                                         \
+  do {                                                                         \
+    CAF_CHECK(uri::can_parse(str));                                            \
+    CAF_CHECK_EQUAL(str##_u, str);                                             \
+  } while (false)
 
 CAF_TEST(from string) {
   // all combinations of components
   ROUNDTRIP("http:file");
   ROUNDTRIP("http:foo-bar");
+  ROUNDTRIP("http:foo:bar");
   ROUNDTRIP("http:file?a=1&b=2");
   ROUNDTRIP("http:file#42");
   ROUNDTRIP("http:file?a=1&b=2#42");
@@ -359,12 +365,14 @@ CAF_TEST(from string) {
   ROUNDTRIP("http://me@[::1]:80/file?a=1&b=2#42");
   // percent encoding
   ROUNDTRIP("hi%20there://it%27s@me%21/file%201#%5B42%5D");
+  ROUNDTRIP("file://localhost/tmp/test/test.{%3A04d}.exr");
 }
 
 #undef ROUNDTRIP
 
 CAF_TEST(empty components) {
   CAF_CHECK_EQUAL("foo:/"_u, "foo:/");
+  CAF_CHECK_EQUAL("foo:///"_u, "foo:/");
   CAF_CHECK_EQUAL("foo:/#"_u, "foo:/");
   CAF_CHECK_EQUAL("foo:/?"_u, "foo:/");
   CAF_CHECK_EQUAL("foo:/?#"_u, "foo:/");
