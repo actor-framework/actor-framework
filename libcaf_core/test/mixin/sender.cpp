@@ -41,6 +41,8 @@ struct fixture : test_coordinator_fixture<> {
   group grp;
   actor testee;
 
+  std::string hello = "hello world";
+
   fixture() {
     grp = sys.groups().anonymous();
     testee = sys.spawn_in_group(grp, testee_impl);
@@ -56,49 +58,47 @@ struct fixture : test_coordinator_fixture<> {
 CAF_TEST_FIXTURE_SCOPE(sender_tests, fixture)
 
 CAF_TEST(delayed actor messages receive responses) {
-  self->delayed_send(testee, seconds(1), "hello world");
+  self->delayed_send(testee, seconds(1), hello);
   sched.trigger_timeout();
-  expect((std::string), from(self).to(testee).with("hello world"));
-  expect((std::string), from(testee).to(self).with("hello world"));
-  self->scheduled_send(testee, self->clock().now() + seconds(1), "hello world");
+  expect((std::string), from(self).to(testee).with(hello));
+  expect((std::string), from(testee).to(self).with(hello));
+  self->scheduled_send(testee, self->clock().now() + seconds(1), hello);
   sched.trigger_timeout();
-  expect((std::string), from(self).to(testee).with("hello world"));
-  expect((std::string), from(testee).to(self).with("hello world"));
+  expect((std::string), from(self).to(testee).with(hello));
+  expect((std::string), from(testee).to(self).with(hello));
 }
 
 CAF_TEST(delayed group message receive responses) {
-  self->delayed_send(grp, seconds(1), "hello world");
+  self->delayed_send(grp, seconds(1), hello);
   sched.trigger_timeout();
-  expect((std::string), from(self).to(testee).with("hello world"));
-  expect((std::string), from(testee).to(self).with("hello world"));
-  self->scheduled_send(grp, self->clock().now() + seconds(1), "hello world");
+  expect((std::string), from(self).to(testee).with(hello));
+  expect((std::string), from(testee).to(self).with(hello));
+  self->scheduled_send(grp, self->clock().now() + seconds(1), hello);
   sched.trigger_timeout();
-  expect((std::string), from(self).to(testee).with("hello world"));
-  expect((std::string), from(testee).to(self).with("hello world"));
+  expect((std::string), from(self).to(testee).with(hello));
+  expect((std::string), from(testee).to(self).with(hello));
 }
 
 CAF_TEST(anonymous messages receive no response) {
-  self->anon_send(testee, "hello world");
-  expect((std::string), to(testee).with("hello world"));
-  disallow((std::string), from(testee).to(self).with("hello world"));
-  self->delayed_anon_send(testee, seconds(1), "hello world");
+  self->anon_send(testee, hello);
+  expect((std::string), to(testee).with(hello));
+  disallow((std::string), from(testee).to(self).with(hello));
+  self->delayed_anon_send(testee, seconds(1), hello);
   sched.trigger_timeout();
-  expect((std::string), to(testee).with("hello world"));
-  disallow((std::string), from(testee).to(self).with("hello world"));
-  self->scheduled_anon_send(testee, self->clock().now() + seconds(1),
-                            "hello world");
+  expect((std::string), to(testee).with(hello));
+  disallow((std::string), from(testee).to(self).with(hello));
+  self->scheduled_anon_send(testee, self->clock().now() + seconds(1), hello);
   sched.trigger_timeout();
-  expect((std::string), to(testee).with("hello world"));
-  disallow((std::string), from(testee).to(self).with("hello world"));
-  self->delayed_anon_send(grp, seconds(1), "hello world");
+  expect((std::string), to(testee).with(hello));
+  disallow((std::string), from(testee).to(self).with(hello));
+  self->delayed_anon_send(grp, seconds(1), hello);
   sched.trigger_timeout();
-  expect((std::string), to(testee).with("hello world"));
-  disallow((std::string), from(testee).to(self).with("hello world"));
-  self->scheduled_anon_send(grp, self->clock().now() + seconds(1),
-                            "hello world");
+  expect((std::string), to(testee).with(hello));
+  disallow((std::string), from(testee).to(self).with(hello));
+  self->scheduled_anon_send(grp, self->clock().now() + seconds(1), hello);
   sched.trigger_timeout();
-  expect((std::string), to(testee).with("hello world"));
-  disallow((std::string), from(testee).to(self).with("hello world"));
+  expect((std::string), to(testee).with(hello));
+  disallow((std::string), from(testee).to(self).with(hello));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
