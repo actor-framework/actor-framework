@@ -67,6 +67,14 @@ public:
   /// @pre `hdl != invalid_connection_handle && nid != none`
   void add_direct(const connection_handle& hdl, const node_id& nid);
 
+  /// When two CAF nodes connect to each other, multiple connections might spin
+  /// up simultaneously until both sides agree to a single connection.
+  /// @pre `lookup_direct(hdl == nid)`
+  void add_alternative(const connection_handle& hdl, const node_id& nid);
+
+  /// Forces `lookup_direct` to resolve `nid` always to `hdl`.
+  void select_alternative(const connection_handle& hdl, const node_id& nid);
+
   /// Adds a new indirect route to the table.
   bool add_indirect(const node_id& hop, const node_id& dest);
 
