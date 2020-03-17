@@ -623,8 +623,8 @@ void basp_broker::set_context(connection_handle hdl) {
 
 void basp_broker::connection_cleanup(connection_handle hdl, sec code) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(code));
-  // Remove handle from the routing table and clean up any node-specific state
-  // we might still have.
+  // Remove handle from the routing table, notify all observers, and clean up
+  // any node-specific state we might still have.
   if (auto nid = instance.tbl().erase_direct(hdl)) {
     emit_node_down_msg(nid, code);
     purge_state(nid);

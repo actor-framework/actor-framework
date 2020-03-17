@@ -298,8 +298,8 @@ public:
   /// Send a `node_down_msg` to `observer` if this system loses connection to
   /// `node`.
   /// @note Calling this function *n* times causes the system to send
-  ///       `node_down_msg` *n* times. In order to not receive the messages, the
-  ///       observer must call `demonitor` *n* times.
+  ///       `node_down_msg` *n* times to the observer. In order to not receive
+  ///       the messages, the observer must call `demonitor` *n* times.
   void monitor(const node_id& node, const actor_addr& observer);
 
   /// Removes `observer` from the list of actors that receive a `node_down_msg`
