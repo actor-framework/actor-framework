@@ -72,7 +72,7 @@ public:
       : mm(this->sys.middleman()),
         mpx(dynamic_cast<caf::io::network::test_multiplexer&>(mm.backend())),
         run_all_nodes(std::move(fun)) {
-    // nop
+    bb = mm.named_broker<caf::io::basp_broker>("BASP");
   }
 
   test_node_fixture() : test_node_fixture([=] { this->run(); }) {
@@ -108,6 +108,9 @@ public:
 
   /// Reference to the middleman's event multiplexer.
   caf::io::network::test_multiplexer& mpx;
+
+  /// Handle to the BASP broker.
+  caf::actor bb;
 
   /// Callback for triggering all nodes when simulating a network of CAF nodes.
   run_all_nodes_fun run_all_nodes;
@@ -284,9 +287,13 @@ public:
 };
 
 #define expect_on(where, types, fields)                                        \
-  CAF_MESSAGE(#where << ": expect" << #types << "." << #fields);               \
-  expect_clause< CAF_EXPAND(CAF_DSL_LIST types) >{where . sched} . fields
+  do {                                                                         \
+    CAF_MESSAGE(#where << ": expect" << #types << "." << #fields);             \
+    expect_clause<CAF_EXPAND(CAF_DSL_LIST types)>{where.sched}.fields;         \
+  } while (false)
 
 #define disallow_on(where, types, fields)                                      \
-  CAF_MESSAGE(#where << ": disallow" << #types << "." << #fields);             \
-  disallow_clause< CAF_EXPAND(CAF_DSL_LIST types) >{where . sched} . fields
+  do {                                                                         \
+    CAF_MESSAGE(#where << ": disallow" << #types << "." << #fields);           \
+    disallow_clause<CAF_EXPAND(CAF_DSL_LIST types)>{where.sched}.fields;       \
+  } while (false)

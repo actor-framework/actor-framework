@@ -40,7 +40,7 @@
 namespace caf::io {
 
 /// Manages brokers and network backends.
-class CAF_IO_EXPORT middleman : public actor_system::module {
+class CAF_IO_EXPORT middleman : public actor_system::networking_module {
 public:
   friend class ::caf::actor_system;
 
@@ -194,6 +194,10 @@ public:
   id_t id() const override;
 
   void* subtype_ptr() override;
+
+  void monitor(const node_id& node, const actor_addr& observer) override;
+
+  void demonitor(const node_id& node, const actor_addr& observer) override;
 
   /// Spawns a new functor-based broker.
   template <spawn_options Os = no_spawn_options,

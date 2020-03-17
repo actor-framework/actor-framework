@@ -86,6 +86,12 @@ void scheduled_actor::default_down_handler(scheduled_actor* ptr, down_msg& x) {
             << ", name: " << ptr->name() << "]: " << to_string(x) << std::endl;
 }
 
+void scheduled_actor::default_node_down_handler(scheduled_actor* ptr,
+                                                node_down_msg& x) {
+  aout(ptr) << "*** unhandled node down message [id: " << ptr->id()
+            << ", name: " << ptr->name() << "]: " << to_string(x) << std::endl;
+}
+
 void scheduled_actor::default_exit_handler(scheduled_actor* ptr, exit_msg& x) {
   if (x.reason)
     default_error_handler(ptr, x.reason);
@@ -120,6 +126,7 @@ scheduled_actor::scheduled_actor(actor_config& cfg)
     default_handler_(print_and_drop),
     error_handler_(default_error_handler),
     down_handler_(default_down_handler),
+    node_down_handler_(default_node_down_handler),
     exit_handler_(default_exit_handler),
     private_thread_(nullptr)
 #ifndef CAF_NO_EXCEPTIONS
@@ -607,6 +614,11 @@ scheduled_actor::categorize(mailbox_element& x) {
   if (content.match_elements<down_msg>()) {
     auto dm = content.move_if_unshared<down_msg>(0);
     call_handler(down_handler_, this, dm);
+    return message_category::internal;
+  }
+  if (content.match_elements<node_down_msg>()) {
+    auto dm = content.move_if_unshared<node_down_msg>(0);
+    call_handler(node_down_handler_, this, dm);
     return message_category::internal;
   }
   if (content.match_elements<error>()) {

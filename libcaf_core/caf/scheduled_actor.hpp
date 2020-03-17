@@ -200,6 +200,9 @@ public:
   /// Function object for handling down messages.
   using down_handler = std::function<void(pointer, down_msg&)>;
 
+  /// Function object for handling node down messages.
+  using node_down_handler = std::function<void(pointer, node_down_msg&)>;
+
   /// Function object for handling exit messages.
   using exit_handler = std::function<void(pointer, exit_msg&)>;
 
@@ -240,6 +243,8 @@ public:
   static void default_error_handler(pointer ptr, error& x);
 
   static void default_down_handler(pointer ptr, down_msg& x);
+
+  static void default_node_down_handler(pointer ptr, node_down_msg& x);
 
   static void default_exit_handler(pointer ptr, exit_msg& x);
 
@@ -376,6 +381,22 @@ public:
   template <class T>
   auto set_down_handler(T fun) -> decltype(fun(std::declval<down_msg&>())) {
     set_down_handler([fun](scheduled_actor*, down_msg& x) { fun(x); });
+  }
+
+  /// Sets a custom handler for node down messages.
+  void set_node_down_handler(node_down_handler fun) {
+    if (fun)
+      node_down_handler_ = std::move(fun);
+    else
+      node_down_handler_ = default_node_down_handler;
+  }
+
+  /// Sets a custom handler for down messages.
+  template <class T>
+  auto set_node_down_handler(T fun)
+    -> decltype(fun(std::declval<node_down_msg&>())) {
+    set_node_down_handler(
+      [fun](scheduled_actor*, node_down_msg& x) { fun(x); });
   }
 
   /// Sets a custom handler for error messages.
@@ -883,6 +904,9 @@ protected:
 
   /// Customization point for setting a default `down_msg` callback.
   down_handler down_handler_;
+
+  /// Customization point for setting a default `down_msg` callback.
+  node_down_handler node_down_handler_;
 
   /// Customization point for setting a default `exit_msg` callback.
   exit_handler exit_handler_;

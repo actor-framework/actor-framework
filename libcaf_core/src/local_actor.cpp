@@ -74,6 +74,10 @@ void local_actor::monitor(abstract_actor* ptr, message_priority priority) {
       default_attachable::make_monitor(ptr->address(), address(), priority));
 }
 
+void local_actor::monitor(const node_id& node) {
+  system().monitor(node, address());
+}
+
 void local_actor::demonitor(const actor_addr& whom) {
   CAF_LOG_TRACE(CAF_ARG(whom));
   auto ptr = actor_cast<strong_actor_ptr>(whom);
@@ -82,6 +86,10 @@ void local_actor::demonitor(const actor_addr& whom) {
                                          default_attachable::monitor};
     ptr->get()->detach(tk);
   }
+}
+
+void local_actor::demonitor(const node_id& node) {
+  system().demonitor(node, address());
 }
 
 void local_actor::on_exit() {

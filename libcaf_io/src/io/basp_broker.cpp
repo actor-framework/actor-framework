@@ -77,6 +77,13 @@ void basp_broker::on_exit() {
   //       that the middleman calls this in its stop() function. However,
   //       ultimately we should find a nonblocking solution here.
   instance.hub().await_workers();
+  // All nodes are offline now. We use a default-constructed error code to
+  // signal ordinary shutdown.
+  for (const auto& [node, observer_list] : node_observers)
+    for (const auto& observer : observer_list)
+      if (auto hdl = actor_cast<actor>(observer))
+        anon_send(hdl, node_down_msg{node, error{}});
+  node_observers.clear();
   // Release any obsolete state.
   ctx.clear();
   // Make sure all spawn servers are down before clearing the container.
@@ -199,6 +206,47 @@ behavior basp_broker::make_behavior() {
       instance.write_monitor_message(context(), get_buffer(hdl), proxy->node(),
                                      proxy->id());
       flush(hdl);
+    },
+    // received from the middleman whenever a node becomes observed by a local
+    // actor
+    [=](monitor_atom, const node_id& node, const actor_addr& observer) {
+      // Sanity checks.
+      if (!observer || !node)
+        return;
+      // Add to the list if a list for this node already exists.
+      auto i = node_observers.find(node);
+      if (i != node_observers.end()) {
+        i->second.emplace_back(observer);
+        return;
+      }
+      // Check whether the node is still connected at the moment and send the
+      // observer a message immediately otherwise.
+      if (instance.tbl().lookup(node) == none) {
+        if (auto hdl = actor_cast<actor>(observer)) {
+          // TODO: we might want to consider keeping the exit reason for nodes,
+          //       at least for some time. Otherwise, we'll have to send a
+          //       generic "don't know" exit reason. Probably an improvement we
+          //       should consider in caf_net.
+          anon_send(hdl, node_down_msg{node, sec::no_context});
+        }
+        return;
+      }
+      std::vector<actor_addr> xs{observer};
+      node_observers.emplace(node, std::move(xs));
+    },
+    // received from the middleman whenever a node becomes observed by a local
+    // actor
+    [=](demonitor_atom, const node_id& node, const actor_addr& observer) {
+      auto i = node_observers.find(node);
+      if (i == node_observers.end())
+        return;
+      auto& observers = i->second;
+      auto j = std::find(observers.begin(), observers.end(), observer);
+      if (j != observers.end()) {
+        observers.erase(j);
+        if (observers.empty())
+          node_observers.erase(i);
+      }
     },
     // received from underlying broker implementation
     [=](const new_connection_msg& msg) {
@@ -460,6 +508,16 @@ void basp_broker::handle_down_msg(down_msg& dm) {
   monitored_actors.erase(i);
 }
 
+void basp_broker::emit_node_down_msg(const node_id& node, const error& reason) {
+  auto i = node_observers.find(node);
+  if (i == node_observers.end())
+    return;
+  for (const auto& observer : i->second)
+    if (auto hdl = actor_cast<actor>(observer))
+      anon_send(hdl, node_down_msg{node, reason});
+  node_observers.erase(i);
+}
+
 void basp_broker::learned_new_node(const node_id& nid) {
   CAF_LOG_TRACE(CAF_ARG(nid));
   if (spawn_servers.count(nid) > 0) {
@@ -567,8 +625,10 @@ void basp_broker::connection_cleanup(connection_handle hdl, sec code) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(code));
   // Remove handle from the routing table and clean up any node-specific state
   // we might still have.
-  if (auto nid = instance.tbl().erase_direct(hdl))
+  if (auto nid = instance.tbl().erase_direct(hdl)) {
+    emit_node_down_msg(nid, code);
     purge_state(nid);
+  }
   // Remove the context for `hdl`, making sure clients receive an error in case
   // this connection was closed during handshake.
   auto i = ctx.find(hdl);

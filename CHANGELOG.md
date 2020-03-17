@@ -37,6 +37,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The class `exit_msg` finally got its missing `operator==` (#1039).
 - The class `node_id` received an overload for `parse` to allow users to convert
   the output of `to_string` back to the original ID (#1058).
+- Actors can now `monitor` and `demonitor` CAF nodes (#1042). Monitoring a CAF
+  node causes the actor system to send a `node_down_msg` to the observer when
+  losing connection to the monitored node.
 
 ### Changed
 
@@ -82,6 +85,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   deadlocks when calling blocking functions in message handlers. This function
   now behaves as expected (#1016).
 - Exceptions while handling requests now trigger error messages (#1055).
+- The member function `demonitor` falsely refused typed actor handles. Actors
+  could monitor typed actors but not demonitoring it again. This member function
+  is now a template that accepts any actor handle in the same way `monitor`
+  already did.
 
 ## [0.17.5] - Unreleased
 
