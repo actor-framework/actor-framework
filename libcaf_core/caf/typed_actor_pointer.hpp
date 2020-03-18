@@ -24,7 +24,7 @@
 namespace caf {
 
 template <class... Sigs>
-class typed_actor_pointer {
+class typed_actor_pointer : public typed_actor_view_base {
 public:
   /// Stores the template parameter pack.
   using signatures = detail::type_list<Sigs...>;
@@ -44,6 +44,10 @@ public:
   explicit typed_actor_pointer(std::nullptr_t) : view_(nullptr) {
     // nop
   }
+
+  typed_actor_pointer(const typed_actor_pointer&) = default;
+
+  typed_actor_pointer& operator=(const typed_actor_pointer&) = default;
 
   typed_actor_view<Sigs...>* operator->() {
     return &view_;
