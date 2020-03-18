@@ -44,7 +44,7 @@ public:
     = 0;
 
   /// Called before the actor system calls the destructor for `self`.
-  /// @param ptr Points to an actor that is about to get destroyed.
+  /// @param self Points to an actor that is about to get destroyed.
   /// @thread-safe
   virtual void remove_actor(const local_actor& self) = 0;
 

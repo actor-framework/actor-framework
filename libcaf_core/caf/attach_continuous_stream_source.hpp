@@ -33,10 +33,7 @@ namespace caf {
 /// implementation with `Driver`. The returned manager is not connected to any
 /// slot and thus not stored by the actor automatically.
 /// @param self Points to the hosting actor.
-/// @param init Function object for initializing the state of the source.
-/// @param pull Generator function object for producing downstream messages.
-/// @param done Predicate returning `true` when generator is done.
-/// @param fin Cleanup handler.
+/// @param xs Parameter pack for constructing the driver.
 /// @returns The new `stream_manager`.
 template <class Driver, class... Ts>
 typename Driver::source_ptr_type

@@ -167,13 +167,13 @@ public:
 
   // -- sending asynchronous messages ------------------------------------------
 
-  /// Sends an exit message to `dest`.
+  /// Sends an exit message to `whom`.
   void send_exit(const actor_addr& whom, error reason);
 
-  /// Sends an exit message to `dest`.
+  /// Sends an exit message to `whom`.
   void send_exit(const strong_actor_ptr& whom, error reason);
 
-  /// Sends an exit message to `dest`.
+  /// Sends an exit message to `whom`.
   template <class ActorHandle>
   void send_exit(const ActorHandle& whom, error reason) {
     if (whom)
