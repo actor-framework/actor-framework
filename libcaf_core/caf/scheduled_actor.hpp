@@ -300,23 +300,16 @@ public:
 
   // -- state modifiers --------------------------------------------------------
 
-  /// Finishes execution of this actor after any currently running
-  /// message handler is done.
-  /// This member function clears the behavior stack of the running actor
-  /// and invokes `on_exit()`. The actors does not finish execution
-  /// if the implementation of `on_exit()` sets a new behavior.
-  /// When setting a new behavior in `on_exit()`, one has to make sure
-  /// to not produce an infinite recursion.
+  /// Finishes execution of this actor after any currently running message
+  /// handler is done. This member function clears the behavior stack of the
+  /// running actor and invokes `on_exit()`. The actors does not finish
+  /// execution if the implementation of `on_exit()` sets a new behavior. When
+  /// setting a new behavior in `on_exit()`, one has to make sure to not produce
+  /// an infinite recursion.
   ///
-  /// If `on_exit()` did not set a new behavior, the actor sends an
-  /// exit message to all of its linked actors, sets its state to exited
-  /// and finishes execution.
-  ///
-  /// In case this actor uses the blocking API, this member function unwinds
-  /// the stack by throwing an `actor_exited` exception.
-  /// @warning This member function throws immediately in thread-based actors
-  ///          that do not use the behavior stack, i.e., actors that use
-  ///          blocking API calls such as {@link receive()}.
+  /// If `on_exit()` did not set a new behavior, the actor sends an exit message
+  /// to all of its linked actors, sets its state to exited and finishes
+  /// execution.
   void quit(error x = error{});
 
   // -- properties -------------------------------------------------------------
