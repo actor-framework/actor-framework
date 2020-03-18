@@ -32,6 +32,7 @@
 #include "caf/scheduler/coordinator.hpp"
 #include "caf/scheduler/test_coordinator.hpp"
 #include "caf/send.hpp"
+#include "caf/stateful_actor.hpp"
 #include "caf/to_string.hpp"
 
 namespace caf {

@@ -36,6 +36,12 @@
 
 #define CAF_MSG_TYPE_ADD_ATOM(name)                                            \
   struct name {};                                                              \
+  [[maybe_unused]] constexpr bool operator==(name, name) {                     \
+    return true;                                                               \
+  }                                                                            \
+  [[maybe_unused]] constexpr bool operator!=(name, name) {                     \
+    return false;                                                              \
+  }                                                                            \
   template <class Inspector>                                                   \
   auto inspect(Inspector& f, name&) {                                          \
     return f(meta::type_name("caf::" #name));                                  \

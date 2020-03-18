@@ -68,6 +68,15 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Our manual now uses `reStructuredText` instead of `LaTeX`. We hope this makes
   extending the manual easier and lowers the barrier to entry for new
   contributors.
+- A `stateful_actor` now forwards excess arguments to the `State` rather than to
+  the `Base`. This enables states with non-default constructors. When using
+  `stateful_actor<State>` as pointer type in function-based actors, nothing
+  changes (i.e. the new API is backwards compatible for this case). However,
+  calling `spawn<stateful_actor<State>>(xs...)` now initializes the `State` with
+  the argument pack `xs...` (plus optionally a `self` pointer as first
+  argument). Furthermore, the state class can now provide a `make_behavior`
+  member function to initialize the actor (this has no effect for function-based
+  actors).
 
 ### Removed
 

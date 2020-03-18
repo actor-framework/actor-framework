@@ -16,17 +16,17 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE stateful_actor
-#include "caf/test/unit_test.hpp"
 
-#include "caf/all.hpp"
+#include "caf/stateful_actor.hpp"
 
-#define ERROR_HANDLER [&](error& err) { CAF_FAIL(system.render(err)); }
+#include "caf/test/dsl.hpp"
 
-using namespace std;
+#include "caf/event_based_actor.hpp"
+
 using namespace caf;
+
+using namespace std::string_literals;
 
 namespace {
 
@@ -35,7 +35,6 @@ using typed_adder_actor
 
 struct counter {
   int value = 0;
-  local_actor* self_;
 };
 
 behavior adder(stateful_actor<counter>* self) {
@@ -77,36 +76,32 @@ public:
   }
 };
 
-struct fixture {
-  actor_system_config cfg;
-  actor_system system;
-
-  fixture() : system(cfg) {
+struct fixture : test_coordinator_fixture<> {
+  fixture() {
     // nop
   }
 
   template <class ActorUnderTest>
   void test_adder(ActorUnderTest aut) {
-    scoped_actor self{system};
-    self->send(aut, add_atom_v, 7);
-    self->send(aut, add_atom_v, 4);
-    self->send(aut, add_atom_v, 9);
-    self->request(aut, infinite, get_atom_v)
-      .receive([](int x) { CAF_CHECK_EQUAL(x, 20); }, ERROR_HANDLER);
+    inject((add_atom, int), from(self).to(aut).with(add_atom_v, 7));
+    inject((add_atom, int), from(self).to(aut).with(add_atom_v, 4));
+    inject((add_atom, int), from(self).to(aut).with(add_atom_v, 9));
+    inject((get_atom), from(self).to(aut).with(get_atom_v));
+    expect((int), from(aut).to(self).with(20));
   }
 
   template <class State>
   void test_name(const char* expected) {
-    auto aut = system.spawn([](stateful_actor<State>* self) -> behavior {
-      return [=](get_atom) {
-        self->quit();
-        return self->name();
+    auto aut = sys.spawn([](stateful_actor<State>* self) -> behavior {
+      return {
+        [=](get_atom) {
+          self->quit();
+          return self->name();
+        },
       };
     });
-    scoped_actor self{system};
-    self->request(aut, infinite, get_atom_v)
-      .receive([&](const string& str) { CAF_CHECK_EQUAL(str, expected); },
-               ERROR_HANDLER);
+    inject((get_atom), from(self).to(aut).with(get_atom_v));
+    expect((std::string), from(aut).to(self).with(expected));
   }
 };
 
@@ -114,42 +109,84 @@ struct fixture {
 
 CAF_TEST_FIXTURE_SCOPE(dynamic_stateful_actor_tests, fixture)
 
-CAF_TEST(dynamic_stateful_actor) {
-  CAF_REQUIRE(monitored + monitored == monitored);
-  test_adder(system.spawn(adder));
+CAF_TEST(stateful actors can be dynamically typed) {
+  test_adder(sys.spawn(adder));
+  test_adder(sys.spawn<typed_adder_class>());
 }
 
-CAF_TEST(typed_stateful_actor) {
-  test_adder(system.spawn(typed_adder));
+CAF_TEST(stateful actors can be statically typed) {
+  test_adder(sys.spawn(typed_adder));
+  test_adder(sys.spawn<adder_class>());
 }
 
-CAF_TEST(dynamic_stateful_actor_class) {
-  test_adder(system.spawn<adder_class>());
-}
-
-CAF_TEST(typed_stateful_actor_class) {
-  test_adder(system.spawn<typed_adder_class>());
-}
-
-CAF_TEST(no_name) {
+CAF_TEST(stateful actors without explicit name use the name of the parent) {
   struct state {
     // empty
   };
   test_name<state>("scheduled_actor");
 }
 
-CAF_TEST(char_name) {
+CAF_TEST(states with C string names override the default name) {
   struct state {
     const char* name = "testee";
   };
   test_name<state>("testee");
 }
 
-CAF_TEST(string_name) {
+CAF_TEST(states with STL string names override the default name) {
   struct state {
-    string name = "testee2";
+    std::string name = "testee2";
   };
   test_name<state>("testee2");
+}
+
+CAF_TEST(states can accept constructor arguments and provide a behavior) {
+  struct state_type {
+    int x;
+    int y;
+    state_type(int x, int y) : x(x), y(y) {
+      // nop
+    }
+    behavior make_behavior() {
+      return {
+        [=](int x, int y) {
+          this->x = x;
+          this->y = y;
+        },
+      };
+    }
+  };
+  using actor_type = stateful_actor<state_type>;
+  auto testee = sys.spawn<actor_type>(10, 20);
+  auto& state = deref<actor_type>(testee).state;
+  CAF_CHECK_EQUAL(state.x, 10);
+  CAF_CHECK_EQUAL(state.y, 20);
+  inject((int, int), to(testee).with(1, 2));
+  CAF_CHECK_EQUAL(state.x, 1);
+  CAF_CHECK_EQUAL(state.y, 2);
+}
+
+CAF_TEST(states optionally take the self pointer as first argument) {
+  struct state_type {
+    event_based_actor* self;
+    int x;
+    const char* name = "testee";
+    state_type(event_based_actor* self, int x) : self(self), x(x) {
+      // nop
+    }
+    behavior make_behavior() {
+      return {
+        [=](get_atom) { return self->name(); },
+      };
+    }
+  };
+  using actor_type = stateful_actor<state_type>;
+  auto testee = sys.spawn<actor_type>(10);
+  auto& state = deref<actor_type>(testee).state;
+  CAF_CHECK(state.self == &deref<actor_type>(testee));
+  CAF_CHECK_EQUAL(state.x, 10);
+  inject((get_atom), from(self).to(testee).with(get_atom_v));
+  expect((std::string), from(testee).to(self).with("testee"s));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

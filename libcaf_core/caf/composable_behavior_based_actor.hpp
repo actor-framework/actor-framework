@@ -33,7 +33,9 @@ public:
 
   using super = stateful_actor<State, Base>;
 
-  composable_behavior_based_actor(actor_config& cfg) : super(cfg) {
+  template <class... Ts>
+  explicit composable_behavior_based_actor(actor_config& cfg, Ts&&... xs)
+    : super(cfg, std::forward<Ts>(xs)...) {
     // nop
   }
 
