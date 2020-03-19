@@ -37,6 +37,9 @@ namespace basp {
 /// BASP peer and provides both direct and indirect paths.
 class routing_table {
 public:
+  using handle_to_node_map = std::unordered_map<connection_handle, node_id>;
+
+  using node_to_handle_map = std::unordered_map<node_id, connection_handle>;
 
   explicit routing_table(abstract_broker* parent);
 
@@ -96,8 +99,8 @@ public:
 
   abstract_broker* parent_;
   mutable std::mutex mtx_;
-  std::unordered_map<connection_handle, node_id> direct_by_hdl_;
-  std::unordered_map<node_id, connection_handle> direct_by_nid_;
+  handle_to_node_map direct_by_hdl_;
+  node_to_handle_map direct_by_nid_;
   std::unordered_map<node_id, node_id_set> indirect_;
 };
 

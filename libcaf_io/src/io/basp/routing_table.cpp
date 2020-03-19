@@ -88,10 +88,33 @@ node_id routing_table::erase_direct(const connection_handle& hdl) {
   auto i = direct_by_hdl_.find(hdl);
   if (i == direct_by_hdl_.end())
     return {};
-  direct_by_nid_.erase(i->second);
-  node_id result = std::move(i->second);
-  direct_by_hdl_.erase(i->first);
-  return result;
+  // Check whether this handle was the primary mapping for the node.
+  auto& node = i->second;
+  auto j = direct_by_nid_.find(node);
+  if (j != direct_by_nid_.end()) {
+    if (j->second == hdl) {
+      // Try to find an alternative for falling back to a differnt connection.
+      auto predicate = [&](handle_to_node_map::value_type& kvp) {
+        return kvp.second == node;
+      };
+      auto e = direct_by_hdl_.end();
+      auto alternative = std::find_if(direct_by_hdl_.begin(), e, predicate);
+      if (alternative != e) {
+        // Update node <-> handle mapping and only drop the handle.
+        j->second = alternative->first;
+      } else {
+        // This was the only connection to the node. Drop it.
+        auto result = std::move(node);
+        direct_by_nid_.erase(j);
+        direct_by_hdl_.erase(i);
+        return result;
+      }
+    }
+  }
+  // Unless this was the only connection to the node, we only drop the
+  // connection handle.
+  direct_by_hdl_.erase(i);
+  return {};
 }
 
 bool routing_table::erase_indirect(const node_id& dest) {
