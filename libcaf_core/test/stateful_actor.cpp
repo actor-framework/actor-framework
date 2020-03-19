@@ -189,4 +189,28 @@ CAF_TEST(states optionally take the self pointer as first argument) {
   expect((std::string), from(testee).to(self).with("testee"s));
 }
 
+CAF_TEST(typed actors can use typed_actor_pointer as self pointer) {
+  struct state_type {
+    using self_pointer = typed_adder_actor::pointer_view;
+    self_pointer self;
+    const char* name = "testee";
+    int value;
+    state_type(self_pointer self, int x) : self(self), value(x) {
+      // nop
+    }
+    auto make_behavior() {
+      return make_typed_behavior([=](add_atom, int x) { value += x; },
+                                 [=](get_atom) { return value; });
+    }
+  };
+  using actor_type = typed_adder_actor::stateful_base<state_type>;
+  auto testee = sys.spawn<actor_type>(10);
+  auto& state = deref<actor_type>(testee).state;
+  CAF_CHECK(state.self == &deref<actor_type>(testee));
+  CAF_CHECK_EQUAL(state.value, 10);
+  inject((add_atom, int), from(self).to(testee).with(add_atom_v, 1));
+  inject((get_atom), from(self).to(testee).with(get_atom_v));
+  expect((int), from(testee).to(self).with(11));
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()
