@@ -89,6 +89,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   could monitor typed actors but not demonitoring it again. This member function
   is now a template that accepts any actor handle in the same way `monitor`
   already did.
+- The `typed_actor_view` decorator lacked several member functions such as
+  `link_to`, `send_exit`, etc. These are now available.
+- Constructing a `typed_actor` handle from a pointer view failed du to a missing
+  constructor overload. This (explicit) overload now exists and the conversion
+  should work as expected.
 
 ## [0.17.5] - Unreleased
 

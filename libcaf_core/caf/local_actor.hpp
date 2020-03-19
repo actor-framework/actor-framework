@@ -167,16 +167,17 @@ public:
 
   // -- sending asynchronous messages ------------------------------------------
 
-  /// Sends an exit message to `dest`.
+  /// Sends an exit message to `whom`.
   void send_exit(const actor_addr& whom, error reason);
 
-  void send_exit(const strong_actor_ptr& dest, error reason);
+  /// Sends an exit message to `whom`.
+  void send_exit(const strong_actor_ptr& whom, error reason);
 
-  /// Sends an exit message to `dest`.
+  /// Sends an exit message to `whom`.
   template <class ActorHandle>
-  void send_exit(const ActorHandle& dest, error reason) {
-    if (dest)
-      dest->eq_impl(make_message_id(), ctrl(), context(),
+  void send_exit(const ActorHandle& whom, error reason) {
+    if (whom)
+      whom->eq_impl(make_message_id(), ctrl(), context(),
                     exit_msg{address(), std::move(reason)});
   }
 
@@ -294,7 +295,7 @@ public:
 
   /// Adds a unidirectional `monitor` to `whom`.
   /// @note Each call to `monitor` creates a new, independent monitor.
-  template <message_priority P = message_priority::normal, class Handle = actor>
+  template <message_priority P = message_priority::normal, class Handle>
   void monitor(const Handle& whom) {
     monitor(actor_cast<abstract_actor*>(whom), P);
   }

@@ -322,6 +322,10 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang"
   add_compile_options("-ftemplate-depth=512"
                       "-ftemplate-backtrace-limit=0")
 endif()
+# enable useful warnings by default
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wdocumentation)
+endif()
 # explicitly disable obnoxious GCC warnings
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   build_string("EXTRA_FLAGS" "-Wno-missing-field-initializers")
