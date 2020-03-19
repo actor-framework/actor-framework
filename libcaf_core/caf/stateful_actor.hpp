@@ -60,12 +60,10 @@ public:
 
   template <class... Ts>
   explicit stateful_actor(actor_config& cfg, Ts&&... xs) : super(cfg) {
-    using pointer = stateful_actor*;
-    if constexpr (std::is_constructible<State, pointer, Ts&&...>::value) {
-      new (&state) State(this, std::forward<Ts>(xs)...);
-    } else {
+    if constexpr (std::is_constructible<State, Ts&&...>::value)
       new (&state) State(std::forward<Ts>(xs)...);
-    }
+    else
+      new (&state) State(this, std::forward<Ts>(xs)...);
   }
 
   ~stateful_actor() override {
