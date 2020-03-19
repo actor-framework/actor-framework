@@ -26,7 +26,6 @@ add_enum_consistency_check("caf/intrusive/task_result.hpp"
 set(CAF_CORE_SOURCES
   src/abstract_actor.cpp
   src/abstract_channel.cpp
-  src/abstract_composable_behavior.cpp
   src/abstract_group.cpp
   src/actor.cpp
   src/actor_addr.cpp
@@ -178,7 +177,6 @@ set(CAF_CORE_TEST_SOURCES
   test/blocking_actor.cpp
   test/broadcast_downstream_manager.cpp
   test/byte.cpp
-  test/composable_behavior.cpp
   test/composition.cpp
   test/config_option.cpp
   test/config_option_set.cpp

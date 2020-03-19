@@ -96,13 +96,6 @@ public:
                            cfg, std::forward<Ts>(xs)...));
   }
 
-  template <class T, spawn_options Os = no_spawn_options>
-  infer_handle_from_state_t<T> spawn() {
-    using impl = composable_behavior_based_actor<T>;
-    actor_config cfg{context(), this};
-    return eval_opts(Os, system().spawn_class<impl, make_unbound(Os)>(cfg));
-  }
-
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
   infer_handle_from_fun_t<F> spawn(F fun, Ts&&... xs) {
     using impl = infer_impl_from_fun_t<F>;

@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include "caf/abstract_composable_behavior.hpp"
 #include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/typed_behavior.hpp"
@@ -133,29 +132,12 @@ struct infer_handle_from_class {
 
 template <class T>
 struct infer_handle_from_class<T, false> {
-  // nop; this enables SFINAE for spawn to differentiate between
-  // spawns using actor classes or composable states
+  // nop; this enables SFINAE
 };
 
 /// @relates infer_handle_from_class
 template <class T>
 using infer_handle_from_class_t = typename infer_handle_from_class<T>::type;
-
-template <class T,
-          bool = std::is_base_of<abstract_composable_behavior, T>::value>
-struct infer_handle_from_state {
-  using type = typename T::handle_type;
-};
-
-template <class T>
-struct infer_handle_from_state<T, false> {
-  // nop; this enables SFINAE for spawn to differentiate between
-  // spawns using actor classes or composable states
-};
-
-/// @relates infer_handle_from_state
-template <class T>
-using infer_handle_from_state_t = typename infer_handle_from_state<T>::type;
 
 template <class T>
 struct is_handle : std::false_type {};

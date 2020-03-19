@@ -30,7 +30,6 @@
 #include "caf/detail/is_one_of.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
-#include "caf/param.hpp"
 #include "caf/timestamp.hpp"
 
 #define CAF_HAS_MEMBER_TRAIT(name)                                             \
@@ -261,8 +260,8 @@ struct callable_trait<R (Ts...)> {
   /// The unmodified argument types of the function.
   using arg_types = type_list<Ts...>;
 
-  /// The argument types of the function without CV qualifiers or ::param.
-  using decayed_arg_types = type_list<param_decay_t<Ts>...>;
+  /// The argument types of the function without CV qualifiers.
+  using decayed_arg_types = type_list<std::decay_t<Ts>...>;
 
   /// The signature of the function.
   using fun_sig = R (Ts...);
@@ -273,14 +272,10 @@ struct callable_trait<R (Ts...)> {
   /// Tells whether the function takes mutable references as argument.
   static constexpr bool mutates_args = (is_mutable_ref<Ts>::value || ...);
 
-  /// Tells whether the function wraps arguments in ::param containers.
-  static constexpr bool has_param_args = (is_param_v<std::decay_t<Ts>> || ...);
-
   /// Selects a suitable view type for passing a ::message to this function.
-  using message_view_type = std::conditional_t<
-    has_param_args, param_message_view<param_decay_t<Ts>...>,
-    std::conditional_t<mutates_args, typed_message_view<param_decay_t<Ts>...>,
-                       const_typed_message_view<param_decay_t<Ts>...>>>;
+  using message_view_type
+    = std::conditional_t<mutates_args, typed_message_view<std::decay_t<Ts>...>,
+                         const_typed_message_view<std::decay_t<Ts>...>>;
 
   /// Tells the number of arguments of the function.
   static constexpr size_t num_args = sizeof...(Ts);

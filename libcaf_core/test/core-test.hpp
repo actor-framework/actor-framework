@@ -18,39 +18,6 @@ using foo_actor
   = caf::typed_actor<caf::replies_to<int32_t, int32_t, int32_t>::with<int32_t>,
                      caf::replies_to<double>::with<double, double>>;
 
-// A string that counts how many instances where created. Implemented in
-// composable_behavior.cpp.
-struct counting_string {
-public:
-  counting_string();
-
-  explicit counting_string(const char* cstr);
-
-  counting_string(const counting_string& x);
-
-  counting_string(counting_string&& x);
-
-  ~counting_string();
-
-  counting_string& operator=(const char* cstr) {
-    str_ = cstr;
-    return *this;
-  }
-
-  const std::string& str() const {
-    return str_;
-  }
-
-  template <class Inspector>
-  friend typename Inspector::result_type
-  inspect(Inspector& f, counting_string& x) {
-    return f(x.str_);
-  }
-
-private:
-  std::string str_;
-};
-
 // A simple POD type.
 struct dummy_struct {
   int a;
@@ -275,7 +242,6 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_test, caf::first_custom_type_id)
   ADD_TYPE_ID((caf::stream<int32_t>) )
   ADD_TYPE_ID((caf::stream<std::string>) )
   ADD_TYPE_ID((caf::stream<std::pair<level, std::string>>) )
-  ADD_TYPE_ID((counting_string))
   ADD_TYPE_ID((dummy_enum))
   ADD_TYPE_ID((dummy_enum_class))
   ADD_TYPE_ID((dummy_struct))

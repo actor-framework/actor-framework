@@ -35,10 +35,6 @@ add(streaming integer_stream)
 add(dynamic_behavior skip_messages)
 add(dynamic_behavior dining_philosophers)
 
-# composing actors using states or other actors
-add(composition calculator_behavior)
-add(composition dictionary_behavior)
-
 # adding custom message types
 add(custom_type custom_types_1)
 add(custom_type custom_types_2)

@@ -27,7 +27,6 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/invoke_result_visitor.hpp"
-#include "caf/detail/param_message_view.hpp"
 #include "caf/detail/tail_argument_token.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/intrusive_ptr.hpp"

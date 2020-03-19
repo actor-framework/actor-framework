@@ -266,9 +266,6 @@ namespace detail {
 template <class>
 class stream_distribution_tree;
 
-template <class...>
-class param_message_view;
-
 class abstract_worker;
 class abstract_worker_hub;
 class disposer;

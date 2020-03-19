@@ -35,7 +35,6 @@
 #include "caf/actor_profiler.hpp"
 #include "caf/actor_registry.hpp"
 #include "caf/actor_traits.hpp"
-#include "caf/composable_behavior_based_actor.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/init_fun_factory.hpp"
 #include "caf/detail/spawn_fwd.hpp"
@@ -299,11 +298,6 @@ public:
     check_invariants<C>();
     actor_config cfg;
     return spawn_impl<C, Os>(cfg, detail::spawn_fwd<Ts>(xs)...);
-  }
-
-  template <class S, spawn_options Os = no_spawn_options>
-  infer_handle_from_state_t<S> spawn() {
-    return spawn<composable_behavior_based_actor<S>, Os>();
   }
 
   /// Called by `spawn` when used to create a functor-based actor to select a

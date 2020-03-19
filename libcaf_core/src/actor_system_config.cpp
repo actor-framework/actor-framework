@@ -32,6 +32,8 @@
 #include "caf/detail/parser/read_ini.hpp"
 #include "caf/detail/parser/read_string.hpp"
 #include "caf/message_builder.hpp"
+#include "caf/pec.hpp"
+#include "caf/sec.hpp"
 #include "caf/type_id.hpp"
 
 namespace caf {

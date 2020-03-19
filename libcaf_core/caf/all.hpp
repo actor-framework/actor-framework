@@ -22,7 +22,6 @@
 
 #include "caf/abstract_actor.hpp"
 #include "caf/abstract_channel.hpp"
-#include "caf/abstract_composable_behavior.hpp"
 #include "caf/abstract_group.hpp"
 #include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
@@ -46,8 +45,6 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/blocking_actor.hpp"
 #include "caf/byte_buffer.hpp"
-#include "caf/composable_behavior.hpp"
-#include "caf/composed_behavior.hpp"
 #include "caf/config_option.hpp"
 #include "caf/config_option_adder.hpp"
 #include "caf/config_value.hpp"

@@ -53,12 +53,6 @@ public:
   }
 
   /// @copydoc local_actor::spawn
-  template <class T, spawn_options Os = no_spawn_options>
-  infer_handle_from_state_t<T> spawn() {
-    return self_->spawn<T, Os>();
-  }
-
-  /// @copydoc local_actor::spawn
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
   typename infer_handle_from_fun<F>::type spawn(F fun, Ts&&... xs) {
     return self_->spawn<Os>(std::move(fun), std::forward<Ts>(xs)...);

@@ -353,21 +353,17 @@ Class-based Actors
 
 Implementing an actor using a class requires the following:
 
-* Provide a constructor taking a reference of type  ``actor_config&`` as first argument, which is forwarded to the base  class. The config is passed implicitly to the constructor when calling  ``spawn``, which also forwards any number of additional arguments  to the constructor.
-* Override ``make_behavior`` for event-based actors and  ``act`` for blocking actors.
+* Provide a constructor taking a reference of type  ``actor_config&`` as first
+  argument, which is forwarded to the base  class. The config is passed
+  implicitly to the constructor when calling  ``spawn``, which also forwards any
+  number of additional arguments  to the constructor.
+* Override ``make_behavior`` for event-based actors and  ``act`` for blocking
+  actors.
 
 Implementing actors with classes works for all kinds of actors and allows
 simple management of state via member variables. However, composing states via
 inheritance can get quite tedious. For dynamically typed actors, composing
-states is particularly hard, because the compiler cannot provide much help. For
-statically typed actors, CAF also provides an API for composable
-behaviors composable-behavior_ that works well with inheritance. The
-following three examples implement the forward declarations shown in
-spawn_.
-
-.. literalinclude:: /examples/message_passing/calculator.cpp
-   :language: C++
-   :lines: 58-92
+states is particularly hard, because the compiler cannot provide much help.
 
 .. _stateful-actor:
 
@@ -394,69 +390,6 @@ function-based_.
 .. literalinclude:: /examples/message_passing/cell.cpp
    :language: C++
    :lines: 49-50
-
-.. _composable-behavior:
-
-Actors from Composable Behaviors  :sup:`experimental`
------------------------------------------------------
-
-When building larger systems, it is often useful to implement the behavior of
-an actor in terms of other, existing behaviors. The composable behaviors in
-CAF allow developers to generate a behavior class from a messaging
-interface interface_.
-
-The base type for composable behaviors is ``composable_behavior<T>``,
-where ``T`` is a ``typed_actor<...>``. CAF maps each
-``replies_to<A,B,C>::with<D,E,F>`` in ``T`` to a pure virtual
-member function with signature:
-
-.. code-block:: C++
-
-     result<D, E, F> operator()(param<A>, param<B>, param<C>);.
-
-Note that ``operator()`` will take integral types as well as atom constants
-simply by value. A ``result<T>`` accepts either a value of type ``T``, a
-``skip_t`` (see :ref:`default-handler`), an ``error`` (see :ref:`error`), a
-``delegated<T>`` (see :ref:`delegate`), or a ``response_promise<T>`` (see
-:ref:`promise`). A ``result<void>`` is constructed by returning ``unit``.
-
-A behavior that combines the behaviors ``X``, ``Y``, and
-``Z`` must inherit from ``composed_behavior<X,Y,Z>`` instead of
-inheriting from the three classes directly. The class
-``composed_behavior`` ensures that the behaviors are concatenated
-correctly. In case one message handler is defined in multiple base types, the
-*first* type in declaration order wins. For example, if ``X`` and
-``Y`` both implement the interface
-``replies_to<int,int>::with<int>``, only the handler implemented in
-``X`` is active.
-
-Any composable (or composed) behavior with no pure virtual member functions can
-be spawned directly through an actor system by calling
-``system.spawn<...>()``, as shown below.
-
-.. literalinclude:: /examples/composition/calculator_behavior.cpp
-   :language: C++
-   :lines: 20-45
-
-The second example illustrates how to use non-primitive values that are wrapped
-in a ``param<T>`` when working with composable behaviors. The purpose
-of ``param<T>`` is to provide a single interface for both constant and
-non-constant access. Constant access is modeled with the implicit conversion
-operator to a const reference, the member function ``get()``, and
-``operator->``.
-
-When acquiring mutable access to the represented value, CAF copies the value
-before allowing mutable access to it if more than one reference to the value
-exists. This copy-on-write optimization avoids race conditions by design, while
-minimizing copy operations (see :ref:`copy-on-write`). A mutable reference is
-returned from the member functions ``get_mutable()`` and ``move()``. The latter
-is a convenience function for ``std::move(x.get_mutable())``. The following
-example illustrates how to use ``param<std::string>`` when implementing a simple
-dictionary.
-
-.. literalinclude:: /examples/composition/dictionary_behavior.cpp
-   :language: C++
-   :lines: 22-44
 
 .. _attach:
 
