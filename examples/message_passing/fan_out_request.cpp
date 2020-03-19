@@ -16,7 +16,6 @@
 #include "caf/function_view.hpp"
 #include "caf/policy/select_all.hpp"
 #include "caf/scoped_actor.hpp"
-#include "caf/stateful_actor.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_event_based_actor.hpp"
 

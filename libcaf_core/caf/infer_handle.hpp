@@ -21,7 +21,6 @@
 #include "caf/abstract_composable_behavior.hpp"
 #include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
-#include "caf/stateful_actor.hpp"
 #include "caf/typed_behavior.hpp"
 
 namespace caf {

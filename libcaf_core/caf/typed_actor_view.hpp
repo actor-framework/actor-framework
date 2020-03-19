@@ -31,30 +31,24 @@ namespace caf {
 /// Decorates a pointer to a @ref scheduled_actor with a statically typed actor
 /// interface.
 template <class... Sigs>
-class typed_actor_view : public extend<typed_actor_view_base,
-                                       typed_actor_view<Sigs...>>::template
-                                with<mixin::sender, mixin::requester> {
+class typed_actor_view
+  : public extend<typed_actor_view_base, typed_actor_view<Sigs...>>::
+      template with<mixin::sender, mixin::requester> {
 public:
   /// Stores the template parameter pack.
   using signatures = detail::type_list<Sigs...>;
 
   using pointer = scheduled_actor*;
 
-  typed_actor_view(scheduled_actor* ptr) : self_(ptr) {
+  explicit typed_actor_view(scheduled_actor* ptr) : self_(ptr) {
     // nop
-  }
-
-  typed_actor_view& operator=(scheduled_actor* ptr) {
-    self_ = ptr;
-    return *this;
   }
 
   // -- spawn functions --------------------------------------------------------
 
   /// @copydoc local_actor::spawn
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
-  typename infer_handle_from_class<T>::type
-  spawn(Ts&&... xs) {
+  typename infer_handle_from_class<T>::type spawn(Ts&&... xs) {
     return self_->spawn<T, Os>(std::forward<Ts>(xs)...);
   }
 
@@ -66,8 +60,7 @@ public:
 
   /// @copydoc local_actor::spawn
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
-  typename infer_handle_from_fun<F>::type
-  spawn(F fun, Ts&&... xs) {
+  typename infer_handle_from_fun<F>::type spawn(F fun, Ts&&... xs) {
     return self_->spawn<Os>(std::move(fun), std::forward<Ts>(xs)...);
   }
 
@@ -208,10 +201,8 @@ public:
   }
 
   template <class... Ts,
-            class R =
-              typename detail::make_response_promise_helper<
-                typename std::decay<Ts>::type...
-              >::type>
+            class R = typename detail::make_response_promise_helper<
+              typename std::decay<Ts>::type...>::type>
   R response(Ts&&... xs) {
     return self_->response(std::forward<Ts>(xs)...);
   }
@@ -230,6 +221,11 @@ public:
                                                    std::move(bhvr));
   }
 
+  template <class Handle, class... Ts>
+  auto delegate(const Handle& dest, Ts&&... xs) {
+    return self_->delegate(dest, std::forward<Ts>(xs)...);
+  }
+
   /// Returns a pointer to the sender of the current message.
   /// @pre `current_mailbox_element() != nullptr`
   strong_actor_ptr& current_sender() {
@@ -244,12 +240,18 @@ public:
   /// @private
   actor_control_block* ctrl() const noexcept {
     CAF_ASSERT(self_ != nullptr);
-    return actor_control_block::from(self_);;
+    return actor_control_block::from(self_);
+    ;
   }
 
   /// @private
   scheduled_actor* internal_ptr() const noexcept {
     return self_;
+  }
+
+  /// @private
+  void reset(scheduled_actor* ptr) {
+    self_ = ptr;
   }
 
   operator scheduled_actor*() const noexcept {

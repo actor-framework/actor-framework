@@ -31,7 +31,6 @@
 #include "caf/exit_reason.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/scoped_actor.hpp"
-#include "caf/stateful_actor.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/uniform_type_info_map.hpp"
 
