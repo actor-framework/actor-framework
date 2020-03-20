@@ -50,26 +50,32 @@ struct response_type<detail::type_list<>, Xs...> {
 };
 
 // case #1: no match
-template <class In, class Out, class... Ts, class... Xs>
-struct response_type<detail::type_list<typed_mpi<In, Out>, Ts...>, Xs...>
-  : response_type<detail::type_list<Ts...>, Xs...> {};
+template <class Out, class... In, class... Fs, class... Xs>
+struct response_type<detail::type_list<Out(In...), Fs...>, Xs...>
+  : response_type<detail::type_list<Fs...>, Xs...> {};
 
-// case #2: match
-template <class... Out, class... Ts, class... Xs>
-struct response_type<
-  detail::type_list<typed_mpi<detail::type_list<Xs...>, output_tuple<Out...>>,
-                    Ts...>,
-  Xs...> {
+// case #2.a: match `result<Out...>(In...)`
+template <class... Out, class... In, class... Fs>
+struct response_type<detail::type_list<result<Out...>(In...), Fs...>, In...> {
   static constexpr bool valid = true;
   using type = detail::type_list<Out...>;
   using tuple_type = std::tuple<Out...>;
   using delegated_type = delegated<Out...>;
 };
 
-/// Computes the response message for input `Xs...` from the list
-/// of message passing interfaces `Ts`.
-template <class Ts, class... Xs>
-using response_type_t = typename response_type<Ts, Xs...>::type;
+// case #2.b: match `Out(In...)`
+template <class Out, class... In, class... Fs>
+struct response_type<detail::type_list<Out(In...), Fs...>, In...> {
+  static constexpr bool valid = true;
+  using type = detail::type_list<Out>;
+  using tuple_type = std::tuple<Out>;
+  using delegated_type = delegated<Out>;
+};
+
+/// Computes the response message for input `In...` from the list of message
+/// passing interfaces `Fs`.
+template <class Fs, class... In>
+using response_type_t = typename response_type<Fs, In...>::type;
 
 /// Unboxes `Xs` and calls `response_type`.
 template <class Ts, class Xs>

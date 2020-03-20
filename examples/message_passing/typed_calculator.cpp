@@ -12,13 +12,14 @@ using namespace caf;
 
 namespace {
 
-using calculator_type = typed_actor<replies_to<add_atom, int, int>::with<int>,
-                                    replies_to<sub_atom, int, int>::with<int>>;
+using calculator_type
+  = typed_actor<result<int32_t>(add_atom, int32_t, int32_t),
+                result<int32_t>(sub_atom, int32_t, int32_t)>;
 
 calculator_type::behavior_type typed_calculator_fun(calculator_type::pointer) {
   return {
-    [](add_atom, int x, int y) { return x + y; },
-    [](sub_atom, int x, int y) { return x - y; },
+    [](add_atom, int32_t x, int32_t y) -> int32_t { return x + y; },
+    [](sub_atom, int32_t x, int32_t y) -> int32_t { return x - y; },
   };
 }
 
@@ -31,8 +32,8 @@ public:
 protected:
   behavior_type make_behavior() override {
     return {
-      [](add_atom, int x, int y) { return x + y; },
-      [](sub_atom, int x, int y) { return x - y; },
+      [](add_atom, int32_t x, int32_t y) -> int32_t { return x + y; },
+      [](sub_atom, int32_t x, int32_t y) -> int32_t { return x - y; },
     };
   }
 };
@@ -42,9 +43,9 @@ void tester(event_based_actor* self, const calculator_type& testee) {
   // first test: 2 + 1 = 3
   self->request(testee, infinite, add_atom_v, 2, 1)
     .then(
-      [=](int r1) {
+      [=](int32_t r1) {
         // second test: 2 - 1 = 1
-        self->request(testee, infinite, sub_atom_v, 2, 1).then([=](int r2) {
+        self->request(testee, infinite, sub_atom_v, 2, 1).then([=](int32_t r2) {
           // both tests succeeded
           if (r1 == 3 && r2 == 1) {
             aout(self) << "AUT (actor under test) seems to be ok" << endl;

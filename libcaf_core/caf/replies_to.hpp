@@ -21,29 +21,22 @@
 #include <string>
 
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/type_list.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 
-/// @cond PRIVATE
+/// @private
 CAF_CORE_EXPORT std::string
 replies_to_type_name(size_t input_size, const std::string* input,
                      size_t output_size, const std::string* output);
-/// @endcond
-
-template <class...>
-struct output_tuple {};
-
-template <class Input, class Output>
-struct typed_mpi {};
 
 template <class... Is>
 struct replies_to {
   template <class... Os>
-  using with = typed_mpi<detail::type_list<Is...>, output_tuple<Os...>>;
+  using with = result<Os...>(Is...);
 };
 
 template <class... Is>
-using reacts_to = typed_mpi<detail::type_list<Is...>, output_tuple<void>>;
+using reacts_to = result<void>(Is...);
 
 } // namespace caf

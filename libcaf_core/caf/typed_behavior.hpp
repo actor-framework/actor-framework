@@ -29,14 +29,22 @@
 
 namespace caf ::detail {
 
-// converts a list of replies_to<...>::with<...> elements to a list of
-// lists containing the replies_to<...> half only
+template <class Signature>
+struct input_args;
+
+template <class R, class... Ts>
+struct input_args<R(Ts...)> {
+  using type = type_list<Ts...>;
+};
+
+// Converts a list of function signatures to lists of inputs (dropping the
+// return type).
 template <class List>
 struct input_only;
 
 template <class... Ts>
-struct input_only<detail::type_list<Ts...>> {
-  using type = detail::type_list<typename Ts::input_types...>;
+struct input_only<type_list<Ts...>> {
+  using type = type_list<typename input_args<Ts>::type...>;
 };
 
 using skip_list = detail::type_list<skip_t>;

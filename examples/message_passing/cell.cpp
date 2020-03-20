@@ -7,6 +7,7 @@
 // without updating the references in the *.tex files!
 // Manual references: lines 18-44, and 49-50 (Actor.tex)
 
+#include <cstdint>
 #include <iostream>
 
 #include "caf/all.hpp"
@@ -15,33 +16,21 @@ using std::cout;
 using std::endl;
 using namespace caf;
 
-using cell = typed_actor<reacts_to<put_atom, int>,
-                         replies_to<get_atom>::with<int>>;
+using cell
+  = typed_actor<result<void>(put_atom, int32_t), result<int32_t>(get_atom)>;
 
 struct cell_state {
-  int value = 0;
+  int32_t value = 0;
 };
 
 cell::behavior_type type_checked_cell(cell::stateful_pointer<cell_state> self) {
-  return {
-    [=](put_atom, int val) {
-      self->state.value = val;
-    },
-    [=](get_atom) {
-      return self->state.value;
-    }
-  };
+  return {[=](put_atom, int32_t val) { self->state.value = val; },
+          [=](get_atom) { return self->state.value; }};
 }
 
 behavior unchecked_cell(stateful_actor<cell_state>* self) {
-  return {
-    [=](put_atom, int val) {
-      self->state.value = val;
-    },
-    [=](get_atom) {
-      return self->state.value;
-    }
-  };
+  return {[=](put_atom, int32_t val) { self->state.value = val; },
+          [=](get_atom) { return self->state.value; }};
 }
 
 void caf_main(actor_system& system) {

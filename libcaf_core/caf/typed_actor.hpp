@@ -26,7 +26,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/composed_type.hpp"
 #include "caf/decorator/sequencer.hpp"
-#include "caf/detail/mpi_splice.hpp"
+#include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/replies_to.hpp"
@@ -37,19 +37,8 @@
 
 namespace caf {
 
-template <class... Sigs>
-class typed_event_based_actor;
-
-namespace io {
-
-template <class... Sigs>
-class typed_broker;
-
-} // namespace io
-
 /// Identifies a statically typed actor.
-/// @tparam Sigs Signature of this actor as `replies_to<...>::with<...>`
-///              parameter pack.
+/// @tparam Sigs Function signatures for all accepted messages.
 template <class... Sigs>
 class typed_actor : detail::comparable<typed_actor<Sigs...>>,
                     detail::comparable<typed_actor<Sigs...>, actor>,
@@ -57,6 +46,10 @@ class typed_actor : detail::comparable<typed_actor<Sigs...>>,
                     detail::comparable<typed_actor<Sigs...>, strong_actor_ptr> {
 public:
   static_assert(sizeof...(Sigs) > 0, "Empty typed actor handle");
+
+  static_assert((detail::is_normalized_signature_v<Sigs> && ...),
+                "Function signatures must be normalized to the format "
+                "'result<Out...>(In...)', no qualifiers or references allowed");
 
   // -- friend types that need access to private ctors
   friend class local_actor;

@@ -38,9 +38,13 @@ using namespace std::string_literals;
 
 namespace {
 
+static_assert(std::is_same<reacts_to<int, int>, result<void>(int, int)>::value);
+
+static_assert(std::is_same<replies_to<double>::with<double>,
+                           result<double>(double)>::value);
+
 // check invariants of type system
-using dummy1
-  = typed_actor<reacts_to<int, int>, replies_to<double>::with<double>>;
+using dummy1 = typed_actor<result<void>(int, int), result<double>(double)>;
 
 using dummy2 = dummy1::extend<reacts_to<ok_atom>>;
 
@@ -296,10 +300,9 @@ CAF_TEST(event_testee_series) {
   auto et = self->spawn<event_testee>();
   CAF_MESSAGE("et->message_types() returns an interface description");
   typed_actor<replies_to<get_state_atom>::with<string>> sub_et = et;
-  std::set<string> iface{"caf::replies_to<get_state_atom>::with<std::string>",
-                         "caf::replies_to<std::string>::with<void>",
-                         "caf::replies_to<float>::with<void>",
-                         "caf::replies_to<int32_t>::with<int32_t>"};
+  std::set<string> iface{"(get_state_atom) -> (std::string)",
+                         "(std::string) -> (void)", "(float) -> (void)",
+                         "(int32_t) -> (int32_t)"};
   CAF_CHECK_EQUAL(join(sub_et->message_types(), ","), join(iface, ","));
   CAF_MESSAGE("the testee skips messages to drive its internal state machine");
   self->send(et, 1);
@@ -323,7 +326,7 @@ CAF_TEST(string_delegator_chain) {
   // run test series with string reverter
   auto aut = self->spawn<monitored>(string_delegator,
                                     sys.spawn(string_reverter), true);
-  std::set<string> iface{"caf::replies_to<std::string>::with<std::string>"};
+  std::set<string> iface{"(std::string) -> (std::string)"};
   CAF_CHECK_EQUAL(aut->message_types(), iface);
   inject((string), from(self).to(aut).with("Hello World!"s));
   run();

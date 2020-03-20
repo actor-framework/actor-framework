@@ -20,8 +20,8 @@
 
 // --(rst-calculator-begin)--
 using calculator
-  = caf::typed_actor<caf::replies_to<caf::add_atom, int, int>::with<int>,
-                     caf::replies_to<caf::sub_atom, int, int>::with<int>>;
+  = caf::typed_actor<caf::result<int32_t>(caf::add_atom, int32_t, int32_t),
+                     caf::result<int32_t>(caf::sub_atom, int32_t, int32_t)>;
 // --(rst-calculator-end)--
 
 CAF_BEGIN_TYPE_ID_BLOCK(remote_spawn, first_custom_type_id)
@@ -39,11 +39,11 @@ using namespace caf;
 
 calculator::behavior_type calculator_fun(calculator::pointer self) {
   return {
-    [=](add_atom, int a, int b) -> int {
+    [=](add_atom, int32_t a, int32_t b) {
       aout(self) << "received task from a remote node" << endl;
       return a + b;
     },
-    [=](sub_atom, int a, int b) -> int {
+    [=](sub_atom, int32_t a, int32_t b) {
       aout(self) << "received task from a remote node" << endl;
       return a - b;
     },
@@ -65,8 +65,8 @@ void client_repl(function_view<calculator> f) {
   auto usage = [] {
     cout << "Usage:" << endl
          << "  quit                  : terminate program" << endl
-         << "  <x> + <y>             : adds two integers" << endl
-         << "  <x> - <y>             : subtracts two integers" << endl
+         << "  <x> + <y>             : adds two int32_tegers" << endl
+         << "  <x> - <y>             : subtracts two int32_tegers" << endl
          << endl;
   };
   usage();
@@ -81,15 +81,15 @@ void client_repl(function_view<calculator> f) {
       usage();
       continue;
     }
-    auto to_int = [](const string& str) -> optional<int> {
+    auto to_int32_t = [](const string& str) -> optional<int32_t> {
       char* end = nullptr;
       auto res = strtol(str.c_str(), &end, 10);
       if (end == str.c_str() + str.size())
-        return static_cast<int>(res);
+        return static_cast<int32_t>(res);
       return none;
     };
-    auto x = to_int(words[0]);
-    auto y = to_int(words[2]);
+    auto x = to_int32_t(words[0]);
+    auto y = to_int32_t(words[2]);
     if (!x || !y || (words[1] != "+" && words[1] != "-"))
       usage();
     else

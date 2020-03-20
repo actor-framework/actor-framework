@@ -46,7 +46,7 @@ public:
   }
 };
 
-using divider = typed_actor<replies_to<div_atom, double, double>::with<double>>;
+using divider = typed_actor<result<double>(div_atom, double, double)>;
 
 divider::behavior_type divider_impl() {
   return {

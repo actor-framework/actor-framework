@@ -36,20 +36,20 @@ using namespace caf;
 /// A simple actor for storing an integer value.
 using cell = typed_actor<
   // Writes a new value.
-  reacts_to<put_atom, int>,
+  result<void>(put_atom, int),
   // Reads the value.
-  replies_to<get_atom>::with<int>>;
+  result<int>(get_atom)>;
 
 /// An for storing a 2-dimensional matrix of integers.
 using matrix = typed_actor<
   // Writes a new value to given cell (x-coordinate, y-coordinate, new-value).
-  reacts_to<put_atom, int, int, int>,
+  result<void>(put_atom, int, int, int),
   // Reads from given cell.
-  replies_to<get_atom, int, int>::with<int>,
+  result<int>(get_atom, int, int),
   // Computes the average for given row.
-  replies_to<get_atom, average_atom, row_atom, int>::with<double>,
+  result<double>(get_atom, average_atom, row_atom, int),
   // Computes the average for given column.
-  replies_to<get_atom, average_atom, column_atom, int>::with<double>>;
+  result<double>(get_atom, average_atom, column_atom, int)>;
 
 struct cell_state {
   int value = 0;

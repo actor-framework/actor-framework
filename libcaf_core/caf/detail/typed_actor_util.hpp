@@ -21,6 +21,7 @@
 #include <tuple>
 
 #include "caf/delegated.hpp"
+#include "caf/fwd.hpp"
 #include "caf/replies_to.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/system_messages.hpp"
@@ -28,27 +29,7 @@
 
 #include "caf/detail/type_list.hpp"
 
-namespace caf { // forward declarations
-
-template <class... Ts>
-class typed_actor;
-
-} // namespace caf
-
 namespace caf::detail {
-
-template <class Arguments, class Signature>
-struct input_is_eval_impl : std::false_type {};
-
-template <class Arguments, class Out>
-struct input_is_eval_impl<Arguments, typed_mpi<Arguments, Out>>
-  : std::true_type {};
-
-template <class Arguments>
-struct input_is {
-  template <class Signature>
-  struct eval : input_is_eval_impl<Arguments, Signature> {};
-};
 
 template <class... Ts>
 struct make_response_promise_helper {
@@ -111,7 +92,7 @@ struct static_error_printer<N, -1, Xs, Ys> {
 #define CAF_STATICERR(x)                                                       \
   template <int N, class Xs, class Ys>                                         \
   struct static_error_printer<N, x, Xs, Ys> {                                  \
-    static_assert(N == x, "unexpected handler at index " #x);                  \
+    static_assert(N == x, "unexpected handler at index " #x " (0-based)");     \
   }
 
 CAF_STATICERR(0);
@@ -149,5 +130,24 @@ struct extend_with_helper<typed_actor<Xs...>, typed_actor<Ys...>, Ts...>
   : extend_with_helper<typed_actor<Xs..., Ys...>, Ts...> {
   // nop
 };
+
+template <class F>
+struct is_normalized_signature {
+  static constexpr bool value = false;
+};
+
+template <class T>
+constexpr bool is_decayed = !std::is_reference<T>::value
+                            && !std::is_const<T>::value
+                            && !std::is_volatile<T>::value;
+
+template <class... Out, class... In>
+struct is_normalized_signature<result<Out...>(In...)> {
+  static constexpr bool value = (is_decayed<Out> && ...)
+                                && (is_decayed<In> && ...);
+};
+
+template <class F>
+constexpr bool is_normalized_signature_v = is_normalized_signature<F>::value;
 
 } // namespace caf::detail

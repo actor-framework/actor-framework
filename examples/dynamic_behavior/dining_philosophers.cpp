@@ -34,8 +34,8 @@ namespace {
 // atoms for chopstick and philosopher interfaces
 
 // a chopstick
-using chopstick = typed_actor<replies_to<take_atom>::with<taken_atom, bool>,
-                              reacts_to<put_atom>>;
+using chopstick
+  = typed_actor<result<taken_atom, bool>(take_atom), result<void>(put_atom)>;
 
 chopstick::behavior_type taken_chopstick(chopstick::pointer,
                                          const strong_actor_ptr&);

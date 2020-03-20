@@ -56,18 +56,31 @@ namespace caf::detail {
 template <class>
 struct typed_mpi_access;
 
-template <class... In, class... Out>
-struct typed_mpi_access<typed_mpi<type_list<In...>, output_tuple<Out...>>> {
+template <class Out, class... In>
+struct typed_mpi_access<Out(In...)> {
+  std::string operator()() const {
+    static_assert(sizeof...(In) > 0, "typed MPI without inputs");
+    std::vector<std::string> inputs{type_name_v<In>...};
+    std::string result = "(";
+    result += join(inputs, ",");
+    result += ") -> ";
+    result += type_name_v<Out>;
+    return result;
+  }
+};
+
+template <class... Out, class... In>
+struct typed_mpi_access<result<Out...>(In...)> {
   std::string operator()() const {
     static_assert(sizeof...(In) > 0, "typed MPI without inputs");
     static_assert(sizeof...(Out) > 0, "typed MPI without outputs");
     std::vector<std::string> inputs{type_name_v<In>...};
     std::vector<std::string> outputs1{type_name_v<Out>...};
-    std::string result = "caf::replies_to<";
+    std::string result = "(";
     result += join(inputs, ",");
-    result += ">::with<";
+    result += ") -> (";
     result += join(outputs1, ",");
-    result += ">";
+    result += ")";
     return result;
   }
 };

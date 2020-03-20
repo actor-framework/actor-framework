@@ -97,7 +97,13 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   typed behavior always must provide all message handlers (typed behavior assume
   a complete implementation of the interface). This use case received direct
   support: constructing a typed behavior with `partial_behavior_init` as first
-  argument suppresses the check for completeness .
+  argument suppresses the check for completeness.
+- In order to reduce complexity of typed actors, CAF defines interfaces as a set
+  of function signatures rather than using custom metaprogramming facilities.
+  Function signatures *must* always wrap the return type in a `result<T>`. For
+  example: `typed_actor<result<double>(double)>`. We have reimplemented the
+  metaprogramming facilities `racts_to<...>` and `replies_to<...>::with<...>`
+  as an alternative way of writing the function signature.
 
 ### Removed
 

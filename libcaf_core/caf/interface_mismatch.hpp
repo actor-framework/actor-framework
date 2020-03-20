@@ -23,9 +23,7 @@
 
 #include "caf/detail/type_list.hpp"
 
-namespace caf {
-
-namespace detail {
+namespace caf::detail {
 
 // imi = interface_mismatch_implementation
 // Precondition: Pos == 0 && len(Xs) == len(Ys) && len(Zs) == 0
@@ -56,19 +54,17 @@ struct imi<Pos, type_list<timeout_definition<X>>, type_list<>, type_list<>> {
 
 // end of recursion: failure (consumed all Xs but not all Ys)
 template <int Pos, class Yin, class Yout, class... Ys>
-struct imi<Pos, type_list<>, type_list<typed_mpi<Yin, Yout>, Ys...>,
-           type_list<>> {
+struct imi<Pos, type_list<>, type_list<Yout(Yin), Ys...>, type_list<>> {
   static constexpr int value = -1;
   using xs = type_list<>;
-  using ys = type_list<typed_mpi<Yin, Yout>, Ys...>;
+  using ys = type_list<Yout(Yin), Ys...>;
 };
 
 // end of recursion: failure (consumed all Ys but not all Xs)
 template <int Pos, class Xin, class Xout, class... Xs>
-struct imi<Pos, type_list<typed_mpi<Xin, Xout>, Xs...>, type_list<>,
-           type_list<>> {
+struct imi<Pos, type_list<Xout(Xin), Xs...>, type_list<>, type_list<>> {
   static constexpr int value = -2;
-  using xs = type_list<typed_mpi<Xin, Xout>, Xs...>;
+  using xs = type_list<Xout(Xin), Xs...>;
   using ys = type_list<>;
 };
 
@@ -81,27 +77,22 @@ struct imi<Pos, type_list<timeout_definition<X>>, type_list<Y, Ys...>,
   using ys = type_list<Y, Ys...>;
 };
 
-// case #1: exact match
-template <int Pos, class In, class Out, class... Xs, class... Ys, class... Zs>
-struct imi<Pos, type_list<typed_mpi<In, Out>, Xs...>,
-           type_list<typed_mpi<In, Out>, Ys...>, type_list<Zs...>>
+// case #1a: exact match
+template <int Pos, class Out, class... In, class... Xs, class... Ys,
+          class... Zs>
+struct imi<Pos, type_list<Out(In...), Xs...>, type_list<Out(In...), Ys...>,
+           type_list<Zs...>>
   : imi<Pos + 1, type_list<Xs...>, type_list<Zs..., Ys...>, type_list<>> {};
 
-// case #2: match with skip_t
-template <int Pos, class In, class... Xs, class Out, class... Ys, class... Zs>
-struct imi<Pos, type_list<typed_mpi<In, output_tuple<skip_t>>, Xs...>,
-           type_list<typed_mpi<In, Out>, Ys...>, type_list<Zs...>>
-  : imi<Pos + 1, type_list<Xs...>, type_list<Zs..., Ys...>, type_list<>> {};
+// case #2: no match at position
+template <int Pos, class Xout, class... Xin, class... Xs, class Yout,
+          class... Yin, class... Ys, class... Zs>
+struct imi<Pos, type_list<Xout(Xin...), Xs...>, type_list<Yout(Yin...), Ys...>,
+           type_list<Zs...>>
+  : imi<Pos, type_list<Xout(Xin...), Xs...>, type_list<Ys...>,
+        type_list<Zs..., Yout(Yin...)>> {};
 
-// case #3: no match at position
-template <int Pos, class Xin, class Xout, class... Xs, class Yin, class Yout,
-          class... Ys, class... Zs>
-struct imi<Pos, type_list<typed_mpi<Xin, Xout>, Xs...>,
-           type_list<typed_mpi<Yin, Yout>, Ys...>, type_list<Zs...>>
-  : imi<Pos, type_list<typed_mpi<Xin, Xout>, Xs...>, type_list<Ys...>,
-        type_list<Zs..., typed_mpi<Yin, Yout>>> {};
-
-// case #4: no match (error)
+// case #3: no match (error)
 template <int Pos, class X, class... Xs, class... Zs>
 struct imi<Pos, type_list<X, Xs...>, type_list<>, type_list<Zs...>> {
   static constexpr int value = Pos;
@@ -109,7 +100,9 @@ struct imi<Pos, type_list<X, Xs...>, type_list<>, type_list<Zs...>> {
   using ys = type_list<Zs...>;
 };
 
-} // namespace detail
+} // namespace caf::detail
+
+namespace caf {
 
 /// Scans two typed MPI lists for compatibility, returning the index of the
 /// first mismatch. Returns the number of elements on a match.
