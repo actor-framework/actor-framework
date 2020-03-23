@@ -175,7 +175,12 @@ public:
   template <class T, class... Ts>
   void traverse(const meta::hex_formatted_t&, const T& x, const Ts&... xs) {
     sep();
-    append_hex(result_, x);
+    if constexpr (std::is_integral<T>::value) {
+      append_hex(result_, x);
+    } else {
+      static_assert(sizeof(typename T::value_type) == 1);
+      append_hex(result_, x.data(), x.size());
+    }
     traverse(xs...);
   }
 
