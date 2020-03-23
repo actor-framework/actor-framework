@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <string>
+
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
