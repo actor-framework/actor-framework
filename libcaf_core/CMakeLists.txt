@@ -158,6 +158,7 @@ set(CAF_CORE_SOURCES
   src/uniform_type_info_map.cpp
   src/uri.cpp
   src/uri_builder.cpp
+  src/uuid.cpp
 )
 
 # -- list cpp files for caf-core-test ------------------------------------------
@@ -279,6 +280,7 @@ set(CAF_CORE_TEST_SOURCES
   test/typed_spawn.cpp
   test/unit.cpp
   test/uri.cpp
+  test/uuid.cpp
   test/variant.cpp
 )
 
