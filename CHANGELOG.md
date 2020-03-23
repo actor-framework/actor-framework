@@ -77,6 +77,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   argument). Furthermore, the state class can now provide a `make_behavior`
   member function to initialize the actor (this has no effect for function-based
   actors).
+- In order to stay more consistent with naming conventions of the standard
+  library, we have renamed some values of the `pec` enumeration:
+  + `illegal_escape_sequence` => `invalid_escape_sequence`
+  + `illegal_argument` => `invalid_argument`
+  + `illegal_category` => `invalid_category`
 
 ### Removed
 

@@ -45,7 +45,7 @@ enum class pec : uint8_t {
   /// Too many characters for an atom.
   too_many_characters,
   /// Unrecognized character after escaping `\`.
-  illegal_escape_sequence,
+  invalid_escape_sequence,
   /// Misplaced newline, e.g., inside a string.
   unexpected_newline,
   /// Parsed positive integer exceeds the number of available bits.
@@ -61,11 +61,11 @@ enum class pec : uint8_t {
   /// Stopped at an unrecognized option name.
   not_an_option,
   /// Stopped at an unparsable argument.
-  illegal_argument = 15,
+  invalid_argument = 15,
   /// Stopped because an argument was omitted.
   missing_argument,
   /// Stopped because the key of a category was taken.
-  illegal_category,
+  invalid_category,
   /// Stopped at an unexpected field name while reading a user-defined type.
   invalid_field_name,
   /// Stopped at a repeated field name while reading a user-defined type.
