@@ -267,8 +267,7 @@ bool operator<(const T* x, const intrusive_ptr<T>& y) {
 template <class T>
 std::string to_string(const intrusive_ptr<T>& x) {
   std::string result;
-  auto v = reinterpret_cast<uintptr_t>(x.get());
-  detail::append_hex(result, reinterpret_cast<uint8_t*>(&v), sizeof(v));
+  detail::append_hex(result, reinterpret_cast<uintptr_t>(x.get()));
   return result;
 }
 
