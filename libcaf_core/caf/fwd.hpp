@@ -143,6 +143,7 @@ class type_erased_value;
 class uniform_type_info_map;
 class uri;
 class uri_builder;
+class uuid;
 
 // -- templates with default parameters ----------------------------------------
 

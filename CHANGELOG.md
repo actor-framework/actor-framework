@@ -40,6 +40,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Actors can now `monitor` and `demonitor` CAF nodes (#1042). Monitoring a CAF
   node causes the actor system to send a `node_down_msg` to the observer when
   losing connection to the monitored node.
+- In preparation of potential future API additions/changes, CAF now includes an
+  RFC4122-compliant `uuid` class.
 
 ### Changed
 
