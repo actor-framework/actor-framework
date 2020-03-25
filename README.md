@@ -1,8 +1,8 @@
 # CAF: C++ Actor Framework
 
-CAF is an open source C++11 actor model implementation featuring
-lightweight & fast actor implementations, pattern matching for messages,
-network transparent messaging, and more.
+CAF is an open source implementation of the actor model for C++ featuring
+lightweight & fast actor implementations, pattern matching for messages, network
+transparent messaging, and more.
 
 [![Gitter][gitter-badge]](https://gitter.im/actor-framework/chat)
 [![Jenkins][jenkins-badge]](https://jenkins.inet.haw-hamburg.de/job/CAF/job/actor-framework/job/master)
@@ -13,9 +13,8 @@ network transparent messaging, and more.
 
 * __Homepage__: http://www.actor-framework.org
 * __Developer Blog__: http://blog.actor-framework.org
-* __Doxygen__: http://www.actor-framework.org/doc
-* __HTML Manual__: https://actor-framework.readthedocs.io
-* __PDF Manual__: http://www.actor-framework.org/pdf/manual.pdf
+* __Manual__: https://actor-framework.readthedocs.io
+* __Doxygen__: https://codedocs.xyz/actor-framework/actor-framework
 
 ## Report Bugs / Get Help
 
@@ -132,19 +131,17 @@ A SNocs workspace is provided by GitHub user
 * FreeBSD 10
 * Windows >= 7 (currently static builds only)
 
-## Optional Dependencies
+## Build Documentation Locally
 
-* Doxygen (for the `doxygen` target)
-* LaTeX (for the `manual` target)
-
-## Build the Manual
-
-CAF uses [Sphinx](https://www.sphinx-doc.org):
-
-```sh
-cd manual
-sphinx-build . html
-```
+- Building an offline version of the manual requires
+  [Sphinx](https://www.sphinx-doc.org):
+  ```sh
+  cd manual
+  sphinx-build . html
+  ```
+- Building an offline version of the API reference documentation requires
+  [Doxygen](http://www.doxygen.nl) (simply run the  `doxygen` command at the
+  root directory of the repository).
 
 ## Scientific Use
 
