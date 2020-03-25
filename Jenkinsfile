@@ -164,35 +164,6 @@ pipeline {
                 buildParallel(config, PrettyJobBaseName)
             }
         }
-        // TODO: generate PDF from reStructuredText
-        // stage('Documentation') {
-        //     agent { label 'pandoc' }
-        //     steps {
-        //         deleteDir()
-        //         unstash('sources')
-        //         dir('sources') {
-        //             // Configure and build.
-        //             cmakeBuild([
-        //                 buildDir: 'build',
-        //                 installation: 'cmake in search path',
-        //                 sourceDir: '.',
-        //                 cmakeArgs: '-DCAF_BUILD_TEX_MANUAL=yes',
-        //                 steps: [[
-        //                     args: '--target doc',
-        //                     withCmake: true,
-        //                 ]],
-        //             ])
-        //             sshagent(['84d71a75-cbb6-489a-8f4c-d0e2793201e9']) {
-        //                 sh """
-        //                     if [ "${env.GIT_BRANCH}" = "master" ]; then
-        //                         rsync -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -r -z --delete build/doc/html/ www.inet.haw-hamburg.de:/users/www/www.actor-framework.org/html/doc
-        //                         scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null build/doc/manual.pdf www.inet.haw-hamburg.de:/users/www/www.actor-framework.org/html/pdf/manual.pdf
-        //                     fi
-        //                 """
-        //             }
-        //         }
-        //     }
-        // }
         stage('Notify') {
             steps {
                 collectResults(config, PrettyJobName)
