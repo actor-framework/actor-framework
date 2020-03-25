@@ -23,6 +23,7 @@
 namespace caf::io::basp {
 
 /// @addtogroup BASP
+/// @{
 
 /// The current BASP version. Note: BASP is not backwards compatible.
 constexpr uint64_t version = 3;

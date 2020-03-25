@@ -25,6 +25,10 @@
 
 namespace caf {
 
+/// @defgroup SumType Sum Types
+/// Opt-in sum type concept for `variant`-style types.
+/// @{
+
 /// Concept for checking whether `T` supports the sum type API by specializing
 /// `sum_type_access`.
 template <class T>
@@ -61,7 +65,6 @@ make_sum_type_token() {
 
 /// Returns a reference to the value of a sum type.
 /// @pre `holds_alternative<T>(x)`
-/// @relates SumType
 template <class T, class U, class Trait = sum_type_access<U>>
 auto get(U& x) -> decltype(Trait::get(x, make_sum_type_token<Trait, T>())) {
   return Trait::get(x, make_sum_type_token<Trait, T>());
@@ -69,7 +72,6 @@ auto get(U& x) -> decltype(Trait::get(x, make_sum_type_token<Trait, T>())) {
 
 /// Returns a reference to the value of a sum type.
 /// @pre `holds_alternative<T>(x)`
-/// @relates SumType
 template <class T, class U, class Trait = sum_type_access<U>>
 auto get(const U& x)
 -> decltype(Trait::get(x, make_sum_type_token<Trait, T>())) {
@@ -78,7 +80,6 @@ auto get(const U& x)
 
 /// Returns a pointer to the value of a sum type if it is of type `T`,
 /// `nullptr` otherwise.
-/// @relates SumType
 template <class T, class U, class Trait = sum_type_access<U>>
 auto get_if(U* x)
 -> decltype(Trait::get_if(x, make_sum_type_token<Trait, T>())) {
@@ -87,7 +88,6 @@ auto get_if(U* x)
 
 /// Returns a pointer to the value of a sum type if it is of type `T`,
 /// `nullptr` otherwise.
-/// @relates SumType
 template <class T, class U, class Trait = sum_type_access<U>>
 auto get_if(const U* x)
 -> decltype(Trait::get_if(x, make_sum_type_token<Trait, T>())) {
@@ -95,7 +95,6 @@ auto get_if(const U* x)
 }
 
 /// Returns whether a sum type has a value of type `T`.
-/// @relates SumType
 template <class T, class U>
 bool holds_alternative(const U& x) {
   using namespace detail;
@@ -155,7 +154,6 @@ struct visit_impl_continuation {
 };
 
 /// Applies the values of any number of sum types to the visitor.
-/// @relates SumType
 template <class Visitor, class T, class... Ts,
           class Result = sum_type_visit_result_t<Visitor, T, Ts...>>
 detail::enable_if_t<SumTypes<T, Ts...>(), Result>
@@ -164,5 +162,7 @@ visit(Visitor&& f, T&& x, Ts&&... xs) {
                                                       std::forward<T>(x),
                                                       std::forward<Ts>(xs)...);
 }
+
+/// @}
 
 } // namespace caf

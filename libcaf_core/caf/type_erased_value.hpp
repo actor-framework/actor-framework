@@ -99,23 +99,23 @@ public:
   }
 };
 
-/// @relates type_erased_value_impl
+/// @relates type_erased_value
 CAF_CORE_EXPORT error inspect(serializer& f, const type_erased_value& x);
 
-/// @relates type_erased_value_impl
+/// @relates type_erased_value
 CAF_CORE_EXPORT error inspect(deserializer& f, type_erased_value& x);
 
-/// @relates type_erased_value_impl
+/// @relates type_erased_value
 inline auto inspect(binary_serializer& f, const type_erased_value& x) {
   return x.save(f);
 }
 
-/// @relates type_erased_value_impl
+/// @relates type_erased_value
 inline auto inspect(binary_deserializer& f, type_erased_value& x) {
   return x.load(f);
 }
 
-/// @relates type_erased_value_impl
+/// @relates type_erased_value
 inline auto to_string(const type_erased_value& x) {
   return x.stringify();
 }

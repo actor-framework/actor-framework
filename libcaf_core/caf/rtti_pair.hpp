@@ -33,14 +33,12 @@ namespace caf {
 /// non-null for custom types.
 using rtti_pair = std::pair<uint16_t, const std::type_info*>;
 
-/// @relates rtti_pair
 template <class T>
 typename std::enable_if<type_nr<T>::value == 0, rtti_pair>::type
 make_rtti_pair() {
   return {0, &typeid(T)};
 }
 
-/// @relates rtti_pair
 template <class T>
 typename std::enable_if<type_nr<T>::value != 0, rtti_pair>::type
 make_rtti_pair() {
@@ -48,7 +46,6 @@ make_rtti_pair() {
   return {n, nullptr};
 }
 
-/// @relates rtti_pair
 CAF_CORE_EXPORT std::string to_string(rtti_pair x);
 
 } // namespace caf

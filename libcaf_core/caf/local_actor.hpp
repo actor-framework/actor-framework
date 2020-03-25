@@ -399,6 +399,8 @@ public:
 
   message_id new_request_id(message_priority mp);
 
+  /// @endcond
+
 protected:
   // -- member variables -------------------------------------------------------
 

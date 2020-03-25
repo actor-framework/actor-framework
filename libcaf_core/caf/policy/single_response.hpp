@@ -29,7 +29,6 @@
 namespace caf::policy {
 
 /// Trivial policy for handling a single result in a `response_handler`.
-/// @relates mixin::requester
 /// @relates response_handle
 template <class ResponseType>
 class single_response {

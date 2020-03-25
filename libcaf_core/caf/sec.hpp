@@ -147,7 +147,6 @@ enum class sec : uint8_t {
   all_requests_failed,
 };
 
-/// @relates sec
 CAF_CORE_EXPORT std::string to_string(sec);
 
 template <>

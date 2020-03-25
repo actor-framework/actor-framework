@@ -135,43 +135,12 @@
 ///
 /// @section Intro Introduction
 ///
-/// This library provides an implementation of the actor model for C++.
-/// It uses a network transparent messaging system to ease development
-/// of both concurrent and distributed software.
+/// This framework provides an implementation of the actor model for C++. It
+/// uses network transparent messaging to ease development of concurrent and
+/// distributed software.
 ///
-/// `libcaf` uses a thread pool to schedule actors by default.
-/// A scheduled actor should not call blocking functions.
-/// Individual actors can be spawned (created) with a special flag to run in
-/// an own thread if one needs to make use of blocking APIs.
-///
-/// Writing applications in `libcaf` requires a minimum of gluecode and
-/// each context <i>is</i> an actor. Scoped actors allow actor interaction
-/// from the context of threads such as main.
-///
-/// @section GettingStarted Getting Started
-///
-/// To build `libcaf,` you need `GCC >= 4.8 or <tt>Clang >= 3.2</tt>,
-/// and `CMake`.
-///
-/// The usual build steps on Linux and macOS are:
-///
-///- `./configure
-///- `make
-///- `make install (as root, optionally)
-///
-/// Please run the unit tests as well to verify that `libcaf`
-/// works properly.
-///
-///- `make test
-///
-/// Please submit a bug report that includes (a) your compiler version,
-/// (b) your OS, and (c) the output of the unit tests if an error occurs:
-/// https://github.com/actor-framework/actor-framework/issues
-///
-/// Please read the <b>Manual</b> for an introduction to `libcaf`.
-/// It is available online on Read The Docs at
-/// https://actor-framework.readthedocs.io or as PDF at
-/// http://www.actor-framework.org/pdf/manual.pdf
+/// To get started with the framework, please read the
+/// [manual](https://actor-framework.readthedocs.io) first.
 ///
 /// @section IntroHelloWorld Hello World Example
 ///

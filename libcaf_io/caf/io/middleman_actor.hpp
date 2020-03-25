@@ -103,7 +103,7 @@ using middleman_actor = typed_actor<
 
   replies_to<get_atom, node_id>::with<node_id, std::string, uint16_t>>;
 
-/// @relates middleman_actor
+/// Spawns the default implementation for the `middleman_actor` interface.
 CAF_IO_EXPORT middleman_actor make_middleman_actor(actor_system& sys, actor db);
 
 } // namespace caf::io

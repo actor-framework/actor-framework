@@ -47,8 +47,6 @@ T* intrusive_cow_ptr_unshare(T*& ptr) {
 
 /// An intrusive, reference counting smart pointer implementation with
 /// copy-on-write optimization.
-/// @relates ref_counted
-/// @relates intrusive_ptr
 template <class T>
 class intrusive_cow_ptr
     : detail::comparable<intrusive_cow_ptr<T>>,

@@ -22,7 +22,8 @@
 
 namespace caf {
 
-/// Customization point for enabling conversion from an enum type to an ::error.
+/// Customization point for enabling conversion from an enum type to an
+/// @ref error.
 template <class T>
 struct error_category;
 

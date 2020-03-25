@@ -30,6 +30,7 @@
 namespace caf::io::basp {
 
 /// @addtogroup BASP
+/// @{
 
 /// Stores routing information for a single broker participating as
 /// BASP peer and provides both direct and indirect paths.

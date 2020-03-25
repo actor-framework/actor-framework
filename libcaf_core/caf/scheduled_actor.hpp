@@ -102,7 +102,6 @@ CAF_CORE_EXPORT result<message> print_and_drop(scheduled_actor*, message_view&);
 CAF_CORE_EXPORT result<message> drop(scheduled_actor*, message_view&);
 
 /// A cooperatively scheduled, event-based actor implementation.
-/// @extends local_actor
 class CAF_CORE_EXPORT scheduled_actor : public local_actor,
                                         public resumable,
                                         public non_blocking_actor_base {

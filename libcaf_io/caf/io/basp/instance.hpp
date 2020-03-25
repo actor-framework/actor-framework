@@ -38,6 +38,7 @@
 namespace caf::io::basp {
 
 /// @addtogroup BASP
+/// @{
 
 /// Describes a protocol instance managing multiple connections.
 class CAF_IO_EXPORT instance {

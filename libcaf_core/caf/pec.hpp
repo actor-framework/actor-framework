@@ -77,7 +77,6 @@ enum class pec : uint8_t {
   invalid_range_expression,
 };
 
-/// @relates pec
 CAF_CORE_EXPORT std::string to_string(pec);
 
 template <>

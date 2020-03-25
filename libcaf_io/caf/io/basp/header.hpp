@@ -31,11 +31,12 @@
 namespace caf::io::basp {
 
 /// @addtogroup BASP
+/// @{
 
-/// The header of a Binary Actor System Protocol (BASP) message.
-/// A BASP header consists of a routing part, i.e., source and
-/// destination, as well as an operation and operation data. Several
-/// message types consist of only a header.
+/// The header of a Binary Actor System Protocol (BASP) message. A BASP header
+/// consists of a routing part, i.e., source and destination, as well as an
+/// operation and operation data. Several message types consist of only a
+/// header.
 struct header {
   message_type operation;
   uint8_t padding1;
@@ -107,8 +108,9 @@ inline bool is_heartbeat(const header& hdr) {
 CAF_IO_EXPORT bool valid(const header& hdr);
 
 /// Size of a BASP header in serialized form
-constexpr size_t header_size
-  = sizeof(actor_id) * 2 + sizeof(uint32_t) * 2 + sizeof(uint64_t);
+/// @relates header
+constexpr size_t header_size = sizeof(actor_id) * 2 + sizeof(uint32_t) * 2
+                               + sizeof(uint64_t);
 
 /// @}
 

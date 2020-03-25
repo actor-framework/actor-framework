@@ -151,7 +151,6 @@ public:
     timestamp tstamp;
   };
 
-  /// Internal representation of format string entities.
   enum field_type {
     invalid_field,
     category_field,
@@ -373,7 +372,6 @@ private:
   std::thread thread_;
 };
 
-/// @relates logger::field_type
 CAF_CORE_EXPORT std::string to_string(logger::field_type x);
 
 /// @relates logger::field

@@ -631,12 +631,6 @@ endif()
 
 message(STATUS "Set release version for all documentation to ${CAF_RELEASE}.")
 
-# -- Setup for building manual and API documentation ---------------------------
-
-if(NOT WIN32)
-  add_subdirectory(doc)
-endif()
-
 ################################################################################
 #                     Add additional project files to GUI                      #
 ################################################################################
