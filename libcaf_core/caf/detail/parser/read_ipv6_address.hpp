@@ -189,10 +189,10 @@ void read_ipv6_address(State& ps, Consumer&& consumer) {
   // Computes the result on success.
   auto g = caf::detail::make_scope_guard([&] {
     if (ps.code <= pec::trailing_character) {
-      ipv6_address::array_type bytes;
+      ipv6_address result;
+      auto& bytes = result.bytes();
       for (size_t i = 0; i < ipv6_address::num_bytes; ++i)
         bytes[i] = prefix[i] | suffix[i];
-      ipv6_address result{bytes};
       consumer.value(std::move(result));
     }
   });
@@ -215,9 +215,10 @@ void read_ipv6_address(State& ps, Consumer&& consumer) {
   // Utility function for promoting an IPv4 formatted input.
   auto promote_v4 = [&] {
     if (filled_bytes == 4) {
-      ipv4_address::array_type bytes;
+      ipv4_address v4;
+      auto& bytes = v4.bytes();
       memcpy(bytes.data(), prefix.data(), bytes.size());
-      prefix = ipv6_address{ipv4_address{bytes}}.bytes();
+      prefix = ipv6_address{v4}.bytes();
       return true;
     }
     return false;
