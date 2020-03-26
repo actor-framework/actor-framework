@@ -477,18 +477,18 @@ if(NOT CAF_NO_OPENSSL)
     else()
       if(NOT CMAKE_CROSSCOMPILING)
         # Check if openssl headers and library versions match
-        set(CMAKE_REQUIRED_LIBRARIES ${OPENSSL_LIBRARIES})
-        set(CMAKE_REQUIRED_INCLUDES ${OPENSSL_INCLUDE_DIR})
-        check_cxx_source_runs("
-          #include <openssl/opensslv.h>
-          #include <openssl/crypto.h>
-          int main() {
-            return SSLeay() == OPENSSL_VERSION_NUMBER ? 0 : 1;
-          }
-        " OPENSSL_CORRECT_VERSION_NUMBER)
-        if (NOT OPENSSL_CORRECT_VERSION_NUMBER)
+        try_run(sslRunResult sslCompileResult
+                "${CMAKE_CURRENT_BINARY_DIR}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/cmake/openssl-check.cpp"
+                CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${OPENSSL_INCLUDE_DIR}"
+                LINK_LIBRARIES ${OPENSSL_LIBRARIES}
+                OUTPUT_VARIABLE sslOutput)
+        if (NOT sslCompileResult)
+          message(FATAL_ERROR "failed to compile/link against OpenSSL")
+        endif()
+        if(NOT sslRunResult EQUAL 0)
           message(FATAL_ERROR
-            "OpenSSL library version does not match headers")
+                  "OpenSSL version does not match headers: ${sslOutput}")
         endif()
       endif()
       include_directories(BEFORE ${OPENSSL_INCLUDE_DIR})
