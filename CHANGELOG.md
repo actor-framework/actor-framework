@@ -119,6 +119,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix potential deadlock with `inline_all_enqueues` (backport from [0.18.0]).
 - Exceptions while handling requests now trigger error messages (backport from
   [0.18.0]).
+- Fix build on GCC 7.2
 
 ## [0.17.4] - 2019-02-08
 
