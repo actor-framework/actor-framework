@@ -40,15 +40,30 @@
 #include "caf/io/network/interfaces.hpp"
 #include "caf/io/network/stream_impl.hpp"
 
-#include "caf/openssl/session.hpp"
-
 #ifdef CAF_WINDOWS
+#  ifndef WIN32_LEAN_AND_MEAN
+#    define WIN32_LEAN_AND_MEAN
+#  endif // CAF_WINDOWS
+#  ifndef NOMINMAX
+#    define NOMINMAX
+#  endif // NOMINMAX
+#  ifdef CAF_MINGW
+#    undef _WIN32_WINNT
+#    undef WINVER
+#    define _WIN32_WINNT WindowsVista
+#    define WINVER WindowsVista
+#    include <w32api.h>
+#  endif // CAF_MINGW
+#  include <windows.h>
 #  include <winsock2.h>
-#  include <ws2tcpip.h> // socket_size_type, etc. (MSVC20xx)
+#  include <ws2ipdef.h>
+#  include <ws2tcpip.h>
 #else
 #  include <sys/socket.h>
 #  include <sys/types.h>
 #endif
+
+#include "caf/openssl/session.hpp"
 
 namespace caf {
 namespace openssl {
