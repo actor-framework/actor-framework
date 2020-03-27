@@ -120,6 +120,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Exceptions while handling requests now trigger error messages (backport from
   [0.18.0]).
 - Fix build on GCC 7.2
+- Fix build error in the OpenSSL module under some MSVC configurations
 
 ## [0.17.4] - 2019-02-08
 
