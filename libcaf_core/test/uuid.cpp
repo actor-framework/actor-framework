@@ -60,8 +60,6 @@ struct fixture {
     "934a33b6-7f0c-4d70-9749-5ad4292358dd"_uuid,
     "bf761f7c-00f2-4161-855e-e286cfa63c11"_uuid,
   };
-
-  uuid x;
 };
 
 } // namespace
@@ -102,9 +100,7 @@ CAF_TEST(make_uuid rejects strings with invalid variant or version values) {
                   pec::invalid_argument);
 }
 
-#define WITH(uuid_str)                                                         \
-  x = uuid_str##_uuid;                                                         \
-  for (int dummy = 0; dummy < 1; ++dummy)
+#define WITH(uuid_str) if (auto x = uuid_str##_uuid; true)
 
 CAF_TEST(version 1 defines UUIDs that are based on time) {
   CAF_CHECK_EQUAL(v1[0].version(), uuid::time_based);
