@@ -18,7 +18,8 @@
 
 #pragma once
 
-#include "caf/detail/append_hex.hpp"
+#include <string>
+
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 
@@ -26,7 +27,7 @@ namespace caf::detail {
 
 // Escapes all reserved characters according to RFC 3986 in `x` and
 // adds the encoded string to `str`.
-CAF_CORE_EXPORT void
-append_percent_encoded(std::string& str, string_view x, bool is_path = false);
+CAF_CORE_EXPORT void append_percent_encoded(std::string& str, string_view x,
+                                            bool is_path = false);
 
 } // namespace caf::detail

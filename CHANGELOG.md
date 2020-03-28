@@ -40,6 +40,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Actors can now `monitor` and `demonitor` CAF nodes (#1042). Monitoring a CAF
   node causes the actor system to send a `node_down_msg` to the observer when
   losing connection to the monitored node.
+- In preparation of potential future API additions/changes, CAF now includes an
+  RFC4122-compliant `uuid` class.
 
 ### Changed
 
@@ -77,6 +79,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   argument). Furthermore, the state class can now provide a `make_behavior`
   member function to initialize the actor (this has no effect for function-based
   actors).
+- In order to stay more consistent with naming conventions of the standard
+  library, we have renamed some values of the `pec` enumeration:
+  + `illegal_escape_sequence` => `invalid_escape_sequence`
+  + `illegal_argument` => `invalid_argument`
+  + `illegal_category` => `invalid_category`
 
 ### Removed
 

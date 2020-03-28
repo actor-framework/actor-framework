@@ -87,7 +87,7 @@ public:
     dispatch_parse_cli(ps, tmp, char_blacklist);
     if (ps.code <= pec::trailing_character) {
       if (predicate_ && !predicate_(tmp))
-        ps.code = pec::illegal_argument;
+        ps.code = pec::invalid_argument;
       else
         set_value(x, std::move(tmp));
     }

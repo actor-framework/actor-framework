@@ -25,8 +25,8 @@ std::string to_string(pec x) {
       return "fractional_timespan";
     case pec::too_many_characters:
       return "too_many_characters";
-    case pec::illegal_escape_sequence:
-      return "illegal_escape_sequence";
+    case pec::invalid_escape_sequence:
+      return "invalid_escape_sequence";
     case pec::unexpected_newline:
       return "unexpected_newline";
     case pec::integer_overflow:
@@ -41,12 +41,12 @@ std::string to_string(pec x) {
       return "type_mismatch";
     case pec::not_an_option:
       return "not_an_option";
-    case pec::illegal_argument:
-      return "illegal_argument";
+    case pec::invalid_argument:
+      return "invalid_argument";
     case pec::missing_argument:
       return "missing_argument";
-    case pec::illegal_category:
-      return "illegal_category";
+    case pec::invalid_category:
+      return "invalid_category";
     case pec::invalid_field_name:
       return "invalid_field_name";
     case pec::repeated_field_name:

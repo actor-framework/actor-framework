@@ -56,7 +56,6 @@ set(CAF_CORE_SOURCES
   src/deserializer.cpp
   src/detail/abstract_worker.cpp
   src/detail/abstract_worker_hub.cpp
-  src/detail/append_hex.cpp
   src/detail/append_percent_encoded.cpp
   src/detail/behavior_impl.cpp
   src/detail/behavior_stack.cpp
@@ -159,6 +158,7 @@ set(CAF_CORE_SOURCES
   src/uniform_type_info_map.cpp
   src/uri.cpp
   src/uri_builder.cpp
+  src/uuid.cpp
 )
 
 # -- list cpp files for caf-core-test ------------------------------------------
@@ -280,6 +280,7 @@ set(CAF_CORE_TEST_SOURCES
   test/typed_spawn.cpp
   test/unit.cpp
   test/uri.cpp
+  test/uuid.cpp
   test/variant.cpp
 )
 

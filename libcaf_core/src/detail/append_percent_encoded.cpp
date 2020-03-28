@@ -53,7 +53,7 @@ void append_percent_encoded(std::string& str, string_view x, bool is_path) {
       case ';':
       case '=':
         str += '%';
-        append_hex(str, reinterpret_cast<uint8_t*>(&ch), 1);
+        append_hex(str, ch);
         break;
       default:
         str += ch;

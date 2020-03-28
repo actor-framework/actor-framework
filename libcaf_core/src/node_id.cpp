@@ -29,6 +29,7 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/config.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/detail/append_hex.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
 #include "caf/detail/get_process_id.hpp"
 #include "caf/detail/get_root_uuid.hpp"
