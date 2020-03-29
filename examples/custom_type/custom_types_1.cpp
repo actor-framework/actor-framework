@@ -3,11 +3,11 @@
 // Manual refs: 24-27, 30-34, 75-78, 81-84 (ConfiguringActorApplications)
 //              23-33 (TypeInspection)
 
-#include <string>
-#include <vector>
 #include <cassert>
-#include <utility>
 #include <iostream>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "caf/all.hpp"
 
@@ -24,8 +24,8 @@ CAF_BEGIN_TYPE_ID_BLOCK(custom_types_1, first_custom_type_id)
 CAF_END_TYPE_ID_BLOCK(custom_types_1)
 // --(rst-type-id-block-end)--
 
-using std::cout;
 using std::cerr;
+using std::cout;
 using std::endl;
 using std::vector;
 
@@ -69,7 +69,7 @@ void testee(event_based_actor* self, size_t remaining) {
     else
       self->quit();
   };
-  self->become (
+  self->become(
     // note: we sent a foo_pair2, but match on foo_pair
     // that works because both are aliases for std::pair<int, int>
     [=](const foo_pair& val) {
@@ -79,20 +79,10 @@ void testee(event_based_actor* self, size_t remaining) {
     [=](const foo& val) {
       aout(self) << to_string(val) << endl;
       set_next_behavior();
-    }
-  );
+    });
 }
 
-// --(rst-config-begin)--
-class config : public actor_system_config {
-public:
-  config() {
-    init_global_meta_objects<custom_types_1_type_ids>();
-  }
-};
-// --(rst-config-end)--
-
-void caf_main(actor_system& system, const config&) {
+void caf_main(actor_system& sys) {
   // two variables for testing serialization
   foo2 f1;
   foo2 f2;
@@ -103,30 +93,28 @@ void caf_main(actor_system& system, const config&) {
   // I/O buffer
   binary_serializer::container_type buf;
   // write f1 to buffer
-  binary_serializer bs{system, buf};
+  binary_serializer bs{sys, buf};
   auto e = bs(f1);
   if (e) {
-    std::cerr << "*** unable to serialize foo2: "
-              << system.render(e) << std::endl;
+    std::cerr << "*** unable to serialize foo2: " << sys.render(e) << std::endl;
     return;
   }
   // read f2 back from buffer
-  binary_deserializer bd{system, buf};
+  binary_deserializer bd{sys, buf};
   e = bd(f2);
   if (e) {
-    std::cerr << "*** unable to serialize foo2: "
-              << system.render(e) << std::endl;
+    std::cerr << "*** unable to serialize foo2: " << sys.render(e) << std::endl;
     return;
   }
   // must be equal
   assert(to_string(f1) == to_string(f2));
   // spawn a testee that receives two messages of user-defined type
-  auto t = system.spawn(testee, 2u);
-  scoped_actor self{system};
+  auto t = sys.spawn(testee, 2u);
+  scoped_actor self{sys};
   // send t a foo
   self->send(t, foo{std::vector<int>{1, 2, 3, 4}, 5});
   // send t a foo_pair2
   self->send(t, foo_pair2{3, 4});
 }
 
-CAF_MAIN()
+CAF_MAIN(id_block::custom_types_1)

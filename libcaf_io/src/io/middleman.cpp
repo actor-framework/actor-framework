@@ -83,7 +83,7 @@ private:
 } // namespace
 
 void middleman::init_global_meta_objects() {
-  caf::init_global_meta_objects<io_module_type_ids>();
+  caf::init_global_meta_objects<id_block::io_module>();
 }
 
 actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {

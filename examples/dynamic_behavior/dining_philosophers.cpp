@@ -175,15 +175,9 @@ private:
   behavior eating_;   // wait for some time, then go thinking again
 };
 
-struct config : actor_system_config {
-  config() {
-    init_global_meta_objects<dining_philosophers_type_ids>();
-  }
-};
-
 } // namespace
 
-void caf_main(actor_system& system, const config&) {
+void caf_main(actor_system& system) {
   scoped_actor self{system};
   // create five chopsticks
   aout(self) << "chopstick ids are:";
@@ -200,4 +194,4 @@ void caf_main(actor_system& system, const config&) {
     self->spawn<philosopher>(names[i], chopsticks[i], chopsticks[(i + 1) % 5]);
 }
 
-CAF_MAIN()
+CAF_MAIN(id_block::dining_philosophers)

@@ -73,12 +73,6 @@ private:
   behavior empty_;
 };
 
-struct config : actor_system_config {
-  config() {
-    init_global_meta_objects<fixed_stack_type_ids>();
-  }
-};
-
 void caf_main(actor_system& system) {
   scoped_actor self{system};
   auto st = self->spawn<fixed_stack>(5u);
@@ -97,4 +91,4 @@ void caf_main(actor_system& system) {
   self->send_exit(st, exit_reason::user_shutdown);
 }
 
-CAF_MAIN()
+CAF_MAIN(id_block::fixed_stack)

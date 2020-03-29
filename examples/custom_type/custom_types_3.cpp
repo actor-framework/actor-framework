@@ -105,15 +105,8 @@ behavior testee(event_based_actor* self) {
   };
 }
 
-class config : public actor_system_config {
-public:
-  config() {
-    init_global_meta_objects<custom_types_3_type_ids>();
-  }
-};
-
-void caf_main(actor_system& system, const config&) {
+void caf_main(actor_system& system) {
   anon_send(system.spawn(testee), foo{1, 2});
 }
 
-CAF_MAIN()
+CAF_MAIN(id_block::custom_types_3)

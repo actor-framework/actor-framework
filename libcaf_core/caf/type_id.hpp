@@ -86,14 +86,17 @@ constexpr type_id_t first_custom_type_id = 200;
 } // namespace caf
 
 /// Starts a code block for registering custom types to CAF. Stores the first ID
-/// for the project as `caf::${project_name}_first_type_id`. Usually, users
-/// should use `caf::first_custom_type_id` as `first_id`. However, this
-/// mechanism also enables modules to append IDs to a block of another module or
-/// module. If two modules are developed separately to avoid dependencies, they
-/// only need to define sufficiently large offsets to guarantee collision-free
-/// IDs (CAF supports gaps in the ID space).
+/// for the project as `caf::id_block::${project_name}_first_type_id`. Usually,
+/// users should use `caf::first_custom_type_id` as `first_id`. However, this
+/// mechanism also enables projects to append IDs to a block of another project.
+/// If two projects are developed separately to avoid dependencies, they only
+/// need to define sufficiently large offsets to guarantee collision-free IDs.
+/// CAF supports gaps in the ID space.
+///
+/// @note CAF reserves all names with the suffix `_module`. For example, core
+///       module uses the project name `core_module`.
 #define CAF_BEGIN_TYPE_ID_BLOCK(project_name, first_id)                        \
-  namespace caf {                                                              \
+  namespace caf::id_block {                                                    \
   constexpr type_id_t project_name##_type_id_counter_init = __COUNTER__;       \
   constexpr type_id_t project_name##_first_type_id = first_id;                 \
   }
@@ -105,9 +108,9 @@ constexpr type_id_t first_custom_type_id = 200;
     template <>                                                                \
     struct type_id<CAF_PP_EXPAND fully_qualified_name> {                       \
       static constexpr type_id_t value                                         \
-        = project_name##_first_type_id                                         \
+        = id_block::project_name##_first_type_id                               \
           + (CAF_PP_CAT(CAF_PP_COUNTER, ())                                    \
-             - project_name##_type_id_counter_init - 1);                       \
+             - id_block::project_name##_type_id_counter_init - 1);             \
     };                                                                         \
     template <>                                                                \
     struct type_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value> {    \
@@ -128,8 +131,8 @@ constexpr type_id_t first_custom_type_id = 200;
     template <>                                                                \
     struct type_id<CAF_PP_EXPAND fully_qualified_name> {                       \
       static constexpr type_id_t value                                         \
-        = project_name##_first_type_id                                         \
-          + (__COUNTER__ - project_name##_type_id_counter_init - 1);           \
+        = id_block::project_name##_first_type_id                               \
+          + (__COUNTER__ - id_block::project_name##_type_id_counter_init - 1); \
     };                                                                         \
     template <>                                                                \
     struct type_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value> {    \
@@ -190,14 +193,16 @@ constexpr type_id_t first_custom_type_id = 200;
     CAF_PP_OVERLOAD(CAF_ADD_ATOM_, __VA_ARGS__)(__VA_ARGS__)
 #endif
 
-/// Finalizes a code block for registering custom types to CAF. Stores the last
-/// type ID used by the project as `caf::${project_name}_last_type_id`.
+/// Finalizes a code block for registering custom types to CAF. Defines a struct
+/// `caf::type_id::${project_name}` with two static members `begin` and `end`.
+/// The former stores the first assigned type ID. The latter stores the last
+/// assigned type ID + 1.
 #define CAF_END_TYPE_ID_BLOCK(project_name)                                    \
-  namespace caf {                                                              \
+  namespace caf::id_block {                                                    \
   constexpr type_id_t project_name##_last_type_id                              \
     = project_name##_first_type_id                                             \
       + (__COUNTER__ - project_name##_type_id_counter_init - 2);               \
-  struct project_name##_type_ids {                                             \
+  struct project_name {                                                        \
     static constexpr type_id_t begin = project_name##_first_type_id;           \
     static constexpr type_id_t end = project_name##_last_type_id + 1;          \
   };                                                                           \
@@ -308,7 +313,7 @@ CAF_END_TYPE_ID_BLOCK(core_module)
 
 namespace caf::detail {
 
-static constexpr type_id_t io_module_begin = core_module_type_ids::end;
+static constexpr type_id_t io_module_begin = id_block::core_module::end;
 
 static constexpr type_id_t io_module_end = io_module_begin + 19;
 

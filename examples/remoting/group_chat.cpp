@@ -73,7 +73,6 @@ public:
   bool server_mode = false;
 
   config() {
-    init_global_meta_objects<group_chat_type_ids>();
     opt_group{custom_options_, "global"}
       .add(name, "name,n", "set name")
       .add(group_uris, "group,g", "join group")
@@ -162,4 +161,4 @@ void caf_main(actor_system& system, const config& cfg) {
   f(system, cfg);
 }
 
-CAF_MAIN(io::middleman)
+CAF_MAIN(id_block::group_chat, io::middleman)

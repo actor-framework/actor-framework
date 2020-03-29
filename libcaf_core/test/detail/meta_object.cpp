@@ -80,13 +80,13 @@ CAF_TEST(meta objects allow serialization of objects) {
 
 CAF_TEST(init_global_meta_objects takes care of creating a meta object table) {
   auto xs = global_meta_objects();
-  CAF_REQUIRE_EQUAL(xs.size(), caf::core_test_last_type_id + 1u);
+  CAF_REQUIRE_EQUAL(xs.size(), caf::id_block::core_test::end);
   CAF_CHECK_EQUAL(type_name_by_id_v<type_id_v<i32_wrapper>>, "i32_wrapper"s);
   CAF_CHECK_EQUAL(type_name_by_id_v<type_id_v<i64_wrapper>>, "i64_wrapper"s);
   CAF_CHECK_EQUAL(xs[type_id_v<i32_wrapper>].type_name, "i32_wrapper"s);
   CAF_CHECK_EQUAL(xs[type_id_v<i64_wrapper>].type_name, "i64_wrapper"s);
   CAF_MESSAGE("calling init_global_meta_objects again is a no-op");
-  init_global_meta_objects<core_test_type_ids>();
+  init_global_meta_objects<id_block::core_test>();
   auto ys = global_meta_objects();
   auto same = [](const auto& x, const auto& y) {
     return x.type_name == y.type_name;

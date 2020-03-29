@@ -36,11 +36,10 @@
 #include "caf/upstream_msg.hpp"
 #include "caf/uri.hpp"
 
-namespace caf::detail {
+namespace caf::core {
 
-void init_core_module_meta_objects() {
-  make_type_id_sequence<core_module_type_ids> seq;
-  init_global_meta_objects_impl<core_module_type_ids>(seq);
+void init_global_meta_objects() {
+  caf::init_global_meta_objects<id_block::core_module>();
 }
 
-} // namespace caf::detail
+} // namespace caf::core

@@ -324,15 +324,9 @@ behavior curl_master(stateful_actor<master_state>* self) {
 // signal handling for ctrl+c
 std::atomic<bool> shutdown_flag{false};
 
-struct config : actor_system_config {
-  config() {
-    init_global_meta_objects<curl_fuse_type_ids>();
-  }
-};
-
 } // namespace
 
-void caf_main(actor_system& system, const config&) {
+void caf_main(actor_system& system) {
   // install signal handler
   struct sigaction act;
   act.sa_handler = [](int) { shutdown_flag = true; };
@@ -368,4 +362,4 @@ void caf_main(actor_system& system, const config&) {
   curl_global_cleanup();
 }
 
-CAF_MAIN(io::middleman)
+CAF_MAIN(id_block::curl_fuse, io::middleman)

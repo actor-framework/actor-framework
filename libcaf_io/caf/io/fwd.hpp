@@ -118,4 +118,4 @@ CAF_END_TYPE_ID_BLOCK(io_module)
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(caf::io::doorman_ptr)
 CAF_ALLOW_UNSAFE_MESSAGE_TYPE(caf::io::scribe_ptr)
 
-static_assert(caf::io_module_type_ids::end == caf::detail::io_module_end);
+static_assert(caf::id_block::io_module::end == caf::detail::io_module_end);

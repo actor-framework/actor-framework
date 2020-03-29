@@ -749,7 +749,6 @@ struct config : public actor_system_config {
   bool include_hidden_actors = false;
   size_t verbosity = 0;
   config() {
-    init_global_meta_objects<caf_vec_type_ids>();
     opt_group{custom_options_, "global"}
       .add(output_file, "output-file,o", "Path for the output file")
       .add(include_hidden_actors, "include-hidden-actors,i",
@@ -881,5 +880,4 @@ void caf_main(actor_system& sys, const config& cfg) {
 
 } // namespace
 
-CAF_MAIN()
-
+CAF_MAIN(id_block::caf_vec)

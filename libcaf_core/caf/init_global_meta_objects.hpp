@@ -52,8 +52,6 @@ template <class Range>
 using make_type_id_sequence = typename type_id_sequence_helper<
   type_id_pair<Range::begin, Range::end>>::type;
 
-CAF_CORE_EXPORT void init_core_module_meta_objects();
-
 } // namespace caf::detail
 
 namespace caf {
@@ -72,13 +70,17 @@ void init_global_meta_objects_impl(std::integer_sequence<uint16_t, Is...>) {
 /// Initializes the global meta object table with all types in `ProjectIds`.
 /// @warning calling this after constructing any ::actor_system is unsafe and
 ///          causes undefined behavior.
-template <class ProjectIds = void>
+template <class ProjectIds>
 void init_global_meta_objects() {
-  detail::init_core_module_meta_objects();
-  if constexpr (!std::is_same<ProjectIds, void>::value) {
-    detail::make_type_id_sequence<ProjectIds> seq;
-    init_global_meta_objects_impl<ProjectIds>(seq);
-  }
+  detail::make_type_id_sequence<ProjectIds> seq;
+  init_global_meta_objects_impl<ProjectIds>(seq);
 }
 
 } // namespace caf
+
+namespace caf::core {
+
+/// Initializes the meta objects of the core module.
+CAF_CORE_EXPORT void init_global_meta_objects();
+
+} // namespace caf::core

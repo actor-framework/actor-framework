@@ -126,7 +126,6 @@ behavior int_sink(event_based_actor* self) {
 
 struct config : actor_system_config {
   config() {
-    init_global_meta_objects<integer_stream_type_ids>();
     opt_group{custom_options_, "global"}
       .add(with_stage, "with-stage,s", "use a stage for filtering odd numbers")
       .add(n, "num-values,n", "number of values produced by the source");
@@ -148,4 +147,4 @@ void caf_main(actor_system& sys, const config& cfg) {
 
 } // namespace
 
-CAF_MAIN()
+CAF_MAIN(id_block::integer_stream)

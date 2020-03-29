@@ -102,7 +102,6 @@ void client_repl(function_view<calculator> f) {
 struct config : actor_system_config {
   config() {
     add_actor_type("calculator", calculator_fun);
-    init_global_meta_objects<remote_spawn_type_ids>();
     opt_group{custom_options_, "global"}
       .add(port, "port,p", "set port")
       .add(host, "host,H", "set node (ignored in server mode)")
@@ -153,4 +152,4 @@ void caf_main(actor_system& system, const config& cfg) {
   f(system, cfg);
 }
 
-CAF_MAIN(io::middleman)
+CAF_MAIN(id_block::remote_spawn, io::middleman)

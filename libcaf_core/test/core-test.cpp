@@ -5,6 +5,8 @@
 #include "core-test.hpp"
 
 int main(int argc, char** argv) {
-  caf::init_global_meta_objects<caf::core_test_type_ids>();
-  return caf::test::main(argc, argv);
+  using namespace caf;
+  init_global_meta_objects<id_block::core_test>();
+  core::init_global_meta_objects();
+  return test::main(argc, argv);
 }

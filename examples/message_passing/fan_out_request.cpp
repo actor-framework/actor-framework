@@ -128,13 +128,7 @@ std::ostream& operator<<(std::ostream& out, const expected<int>& x) {
   return out << to_string(x.error());
 }
 
-struct config : actor_system_config {
-  config() {
-    init_global_meta_objects<fan_out_request_type_ids>();
-  }
-};
-
-void caf_main(actor_system& sys, const config&) {
+void caf_main(actor_system& sys) {
   // Spawn our matrix.
   static constexpr int rows = 3;
   static constexpr int columns = 6;
@@ -164,4 +158,4 @@ void caf_main(actor_system& sys, const config&) {
               << '\n';
 }
 
-CAF_MAIN()
+CAF_MAIN(id_block::fan_out_request)

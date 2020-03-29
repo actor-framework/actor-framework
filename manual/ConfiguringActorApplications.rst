@@ -30,49 +30,66 @@ The compiler expands this example code to the following.
      return exec_main<io::middleman>(caf_main, argc, argv);
    }
 
-The function ``exec_main`` creates a config object, loads all modules
-requested in ``CAF_MAIN`` and then calls ``caf_main``. A
-minimal implementation for ``main`` performing all these steps manually
-is shown in the next example for the sake of completeness.
+The function ``exec_main`` performs several steps:
+
+#. Initialize all meta objects for the type ID blocks listed in ``CAF_MAIN``.
+#. Create a config object. If ``caf_main`` has two arguments, then CAF
+   assumes that the second argument is the configuration and the type gets
+   derived from that argument. Otherwise, CAF uses ``actor_system_config``.
+#. Parse command line arguments and configuration file.
+#. Load all modules requested in ``CAF_MAIN``.
+#. Create an actor system.
+#. Call ``caf_main`` with the actor system and optionally with ``config``.
+
+When implementing the steps performed by ``CAF_MAIN`` by hand, the ``main``
+function would resemble the following (pseudo) code:
 
 .. code-block:: C++
 
-   int main(int argc, char** argv) {
-     actor_system_config cfg;
-     // read CLI options
-     cfg.parse(argc, argv);
-     // return immediately if a help text was printed
-     if (cfg.cli_helptext_printed)
-       return 0;
-     // load modules
-     cfg.load<io::middleman>();
-     // create actor system and call caf_main
-     actor_system system{cfg};
-     caf_main(system);
-   }
+  int main(int argc, char** argv) {
+    // Initialze the global type information before anything else.
+    init_global_meta_objects<...>();
+    core::init_global_meta_objects();
+    // Create the config.
+    actor_system_config cfg;
+    // Read CLI options.
+    cfg.parse(argc, argv);
+    // Return immediately if a help text was printed.
+    if (cfg.cli_helptext_printed)
+      return 0;
+    // Load modules.
+    cfg.load<...>();
+    // Create the actor system.
+    actor_system sys{cfg};
+    // Run user-defined code.
+    caf_main(sys, cfg);
+  }
 
-However, setting up config objects by hand is usually not necessary. CAF
-automatically selects user-defined subclasses of
-``actor_system_config`` if ``caf_main`` takes a second
-parameter by reference, as shown in the minimal example below.
+Using ``CAF_MAIN`` simply automates that boilerplate code. A minimal example
+with a custom type ID block as well as a custom configuration class with the I/O
+module loaded looks as follows:
 
 .. code-block:: C++
 
-   class my_config : public actor_system_config {
-   public:
-     my_config() {
-       // ...
-     }
-   };
+  CAF_BEGIN_TYPE_ID_BLOCK(my, first_custom_type_id)
 
-   void caf_main(actor_system& system, const my_config& cfg) {
-     // ...
-   }
+    // ...
 
-   CAF_MAIN()
+  CAF_END_TYPE_ID_BLOCK(my)
 
-Users can perform additional initialization, add custom program options, etc.
-simply by implementing a default constructor.
+
+  class my_config : public actor_system_config {
+  public:
+    my_config() {
+      // ...
+    }
+  };
+
+  void caf_main(actor_system& system, const my_config& cfg) {
+    // ...
+  }
+
+  CAF_MAIN(id_block::my, io::middleman)
 
 .. _system-config-module:
 
@@ -215,12 +232,9 @@ By assigning type IDs and providing ``inspect`` overloads, we provide static and
 compile-time information for all our types. However, CAF also needs some
 information at run-time for deserializing received data. The function
 ``init_global_meta_objects`` takes care fo registering all the state we need at
-run-time.
-
-.. literalinclude:: /examples/custom_type/custom_types_1.cpp
-   :language: C++
-   :start-after: --(rst-config-begin)--
-   :end-before: --(rst-config-end)--
+run-time. This function usually gets called by ``CAF_MAIN`` automatically. When
+not using this macro, users **must** call ``init_global_meta_objects`` before
+any other CAF function.
 
 Adding Custom Error Types
 -------------------------
