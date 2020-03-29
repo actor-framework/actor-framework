@@ -52,7 +52,6 @@
 #include "caf/policy/upstream_messages.hpp"
 #include "caf/policy/urgent_messages.hpp"
 #include "caf/send.hpp"
-#include "caf/type_nr.hpp"
 #include "caf/typed_actor.hpp"
 
 namespace caf {

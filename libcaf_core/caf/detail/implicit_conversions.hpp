@@ -22,10 +22,10 @@
 #include <type_traits>
 
 #include "caf/actor_traits.hpp"
-#include "caf/fwd.hpp"
-
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/fwd.hpp"
+#include "caf/type_id.hpp"
 
 namespace caf::detail {
 
@@ -54,8 +54,8 @@ struct implicit_actor_conversions<actor_control_block, false, false> {
 
 template <class T>
 struct implicit_conversions {
-  using type = typename std::conditional<std::is_convertible<T, error>::value,
-                                         error, T>::type;
+  using type = std::conditional_t<std::is_convertible<T, error>::value, error,
+                                  squash_if_int_t<T>>;
 };
 
 template <class T>
@@ -117,11 +117,14 @@ using implicit_conversions_t = typename implicit_conversions<T>::type;
 
 template <class T>
 struct strip_and_convert {
-  using type = typename implicit_conversions<typename std::remove_const<
-    typename std::remove_reference<T>::type>::type>::type;
+  using type
+    = implicit_conversions_t<std::remove_const_t<std::remove_reference_t<T>>>;
 };
 
 template <class T>
 using strip_and_convert_t = typename strip_and_convert<T>::type;
+
+template <class T>
+constexpr bool sendable = is_complete<type_id<strip_and_convert_t<T>>>;
 
 } // namespace caf::detail

@@ -16,14 +16,15 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE actor_factory
-#include "caf/test/unit_test.hpp"
 
-#include "caf/all.hpp"
+#include "caf/actor_system_config.hpp"
+
+#include "core-test.hpp"
 
 #include "caf/actor_registry.hpp"
+#include "caf/all.hpp"
+#include "caf/type_id.hpp"
 
 using namespace caf;
 

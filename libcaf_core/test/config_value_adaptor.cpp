@@ -20,7 +20,7 @@
 
 #include "caf/config_value_adaptor.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include "caf/config_value_adaptor_access.hpp"
 

@@ -49,10 +49,8 @@ void binary_serializer::skip(size_t num_bytes) {
   write_pos_ += num_bytes;
 }
 
-error_code<sec> binary_serializer::begin_object(uint16_t nr, string_view name) {
-  apply(nr);
-  if (nr == 0)
-    apply(name);
+error_code<sec> binary_serializer::begin_object(type_id_t type) {
+  apply(type);
   return none;
 }
 

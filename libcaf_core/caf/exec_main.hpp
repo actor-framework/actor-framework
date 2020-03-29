@@ -22,6 +22,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/init_global_meta_objects.hpp"
 
 namespace caf {
 
@@ -33,8 +34,8 @@ struct exec_main_helper<detail::type_list<actor_system&>> {
   using config = actor_system_config;
 
   template <class F>
-  void operator()(F& fun, actor_system& sys, config&) {
-    fun(sys);
+  auto operator()(F& fun, actor_system& sys, const config&) {
+    return fun(sys);
   }
 };
 
@@ -43,10 +44,29 @@ struct exec_main_helper<detail::type_list<actor_system&, const T&>> {
   using config = T;
 
   template <class F>
-  void operator()(F& fun, actor_system& sys, config& cfg) {
-    fun(sys, cfg);
+  auto operator()(F& fun, actor_system& sys, const config& cfg) {
+    return fun(sys, cfg);
   }
 };
+
+template <class T>
+void exec_main_init_meta_objects_single() {
+  if constexpr (std::is_base_of<actor_system::module, T>::value)
+    T::init_global_meta_objects();
+  else
+    init_global_meta_objects<T>();
+}
+
+template <class... Ts>
+void exec_main_init_meta_objects() {
+  (exec_main_init_meta_objects_single<Ts>(), ...);
+}
+
+template <class T>
+void exec_main_load_module(actor_system_config& cfg) {
+  if constexpr (std::is_base_of<actor_system::module, T>::value)
+    cfg.template load<T>();
+}
 
 template <class... Ts, class F = void (*)(actor_system&)>
 int exec_main(F fun, int argc, char** argv,
@@ -80,8 +100,7 @@ int exec_main(F fun, int argc, char** argv,
   if (cfg.cli_helptext_printed)
     return EXIT_SUCCESS;
   // Load modules.
-  std::initializer_list<unit_t> unused{unit_t{cfg.template load<Ts>()}...};
-  CAF_IGNORE_UNUSED(unused);
+  (exec_main_load_module<Ts>(cfg), ...);
   // Initialize the actor system.
   actor_system system{cfg};
   if (cfg.slave_mode) {
@@ -92,13 +111,20 @@ int exec_main(F fun, int argc, char** argv,
     return cfg.slave_mode_fun(system, cfg);
   }
   helper f;
-  f(fun, system, cfg);
-  return EXIT_SUCCESS;
+  using result_type = decltype(f(fun, system, cfg));
+  if constexpr (std::is_convertible<result_type, int>::value) {
+    return f(fun, system, cfg);
+  } else {
+    f(fun, system, cfg);
+    return EXIT_SUCCESS;
+  }
 }
 
 } // namespace caf
 
 #define CAF_MAIN(...)                                                          \
   int main(int argc, char** argv) {                                            \
-    return ::caf::exec_main<__VA_ARGS__>(caf_main, argc, argv);                \
+    caf::exec_main_init_meta_objects<__VA_ARGS__>();                           \
+    caf::core::init_global_meta_objects();                                     \
+    return caf::exec_main<__VA_ARGS__>(caf_main, argc, argv);                  \
   }

@@ -22,11 +22,13 @@
 #include <type_traits>
 #include <typeinfo>
 
-#include "caf/none.hpp"
-#include "caf/unit.hpp"
-
 #include "caf/detail/tbind.hpp"
 #include "caf/detail/type_pair.hpp"
+#include "caf/fwd.hpp"
+#include "caf/none.hpp"
+#include "caf/type_id.hpp"
+#include "caf/type_id_list.hpp"
+#include "caf/unit.hpp"
 
 namespace caf::detail {
 
@@ -37,6 +39,31 @@ struct type_list {
     // nop
   }
 };
+
+template <class T>
+struct strip_param {
+  using type = T;
+};
+
+template <class T>
+struct strip_param<param<T>> {
+  using type = T;
+};
+
+template <class List>
+struct to_type_id_list_helper;
+
+template <class... Ts>
+struct to_type_id_list_helper<type_list<Ts...>> {
+  static constexpr type_id_list get() {
+    return make_type_id_list<typename strip_param<Ts>::type...>();
+  }
+};
+
+template <class List>
+constexpr type_id_list to_type_id_list() {
+  return to_type_id_list_helper<List>::get();
+}
 
 /// Denotes the empty list.
 using empty_type_list = type_list<>;

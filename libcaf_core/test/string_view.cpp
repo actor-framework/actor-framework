@@ -16,24 +16,13 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE string_view
-#include "caf/test/dsl.hpp"
 
 #include "caf/string_view.hpp"
 
+#include "core-test.hpp"
+
 using namespace caf;
-
-namespace {
-
-struct fixture {
-
-};
-
-} // namespace
-
-CAF_TEST_FIXTURE_SCOPE(string_view_tests, fixture)
 
 CAF_TEST(default construction) {
   string_view x;
@@ -225,5 +214,3 @@ CAF_TEST(find_last_not_of) {
   CAF_CHECK_EQUAL(x.find_last_not_of("bc", 2, 2),
                   y.find_last_not_of("bc", 2, 2));
 }
-
-CAF_TEST_FIXTURE_SCOPE_END()

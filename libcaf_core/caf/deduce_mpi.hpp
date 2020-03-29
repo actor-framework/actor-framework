@@ -20,10 +20,10 @@
 
 #include <type_traits>
 
-#include "caf/fwd.hpp"
-#include "caf/param.hpp"
 #include "caf/expected.hpp"
+#include "caf/fwd.hpp"
 #include "caf/optional.hpp"
+#include "caf/param.hpp"
 #include "caf/replies_to.hpp"
 
 #include "caf/detail/implicit_conversions.hpp"
@@ -38,46 +38,46 @@ struct dmi;
 
 // case #1: function returning a single value
 template <class Y, class... Xs>
-struct dmi<Y (Xs...)> {
+struct dmi<Y(Xs...)> {
   using type = typed_mpi<type_list<typename param_decay<Xs>::type...>,
                          output_tuple<implicit_conversions_t<Y>>>;
 };
 
 // case #2a: function returning a result<...>
 template <class... Ys, class... Xs>
-struct dmi<result<Ys...> (Xs...)> {
+struct dmi<result<Ys...>(Xs...)> {
   using type = typed_mpi<type_list<typename param_decay<Xs>::type...>,
                          output_tuple<implicit_conversions_t<Ys>...>>;
 };
 
 // case #2b: function returning a std::tuple<...>
 template <class... Ys, class... Xs>
-struct dmi<std::tuple<Ys...> (Xs...)> {
+struct dmi<std::tuple<Ys...>(Xs...)> {
   using type = typed_mpi<type_list<typename param_decay<Xs>::type...>,
                          output_tuple<implicit_conversions_t<Ys>...>>;
 };
 
 // case #2c: function returning a std::tuple<...>
 template <class... Ys, class... Xs>
-struct dmi<delegated<Ys...> (Xs...)> {
+struct dmi<delegated<Ys...>(Xs...)> {
   using type = typed_mpi<type_list<typename param_decay<Xs>::type...>,
                          output_tuple<implicit_conversions_t<Ys>...>>;
 };
 
 // case #2d: function returning a typed_response_promise<...>
 template <class... Ys, class... Xs>
-struct dmi<typed_response_promise<Ys...> (Xs...)> {
+struct dmi<typed_response_promise<Ys...>(Xs...)> {
   using type = typed_mpi<type_list<typename param_decay<Xs>::type...>,
                          output_tuple<implicit_conversions_t<Ys>...>>;
 };
 
 // case #3: function returning an optional<>
 template <class Y, class... Xs>
-struct dmi<optional<Y> (Xs...)> : dmi<Y (Xs...)> {};
+struct dmi<optional<Y>(Xs...)> : dmi<Y(Xs...)> {};
 
 // case #4: function returning an expected<>
 template <class Y, class... Xs>
-struct dmi<expected<Y> (Xs...)> : dmi<Y (Xs...)> {};
+struct dmi<expected<Y>(Xs...)> : dmi<Y(Xs...)> {};
 
 // -- dmfou = deduce_mpi_function_object_unboxing
 
@@ -86,15 +86,15 @@ struct dmfou;
 
 // case #1: const member function pointer
 template <class C, class Result, class... Ts>
-struct dmfou<Result (C::*)(Ts...) const, false> : dmi<Result (Ts...)> {};
+struct dmfou<Result (C::*)(Ts...) const, false> : dmi<Result(Ts...)> {};
 
 // case #2: member function pointer
 template <class C, class Result, class... Ts>
-struct dmfou<Result (C::*)(Ts...), false> : dmi<Result (Ts...)> {};
+struct dmfou<Result (C::*)(Ts...), false> : dmi<Result(Ts...)> {};
 
 // case #3: good ol' function
 template <class Result, class... Ts>
-struct dmfou<Result(Ts...), false> : dmi<Result (Ts...)> {};
+struct dmfou<Result(Ts...), false> : dmi<Result(Ts...)> {};
 
 template <class T>
 struct dmfou<T, true> : dmfou<decltype(&T::operator()), false> {};
@@ -106,14 +106,12 @@ struct dmfou<timeout_definition<T>, true> {
   using type = timeout_definition<T>;
 };
 
-template <class T>
-struct dmfou<trivial_match_case<T>, true> : dmfou<T> {};
-
 } // namespace detail
 
 /// Deduces the message passing interface from a function object.
 template <class T>
-using deduce_mpi_t = typename detail::dmfou<typename param_decay<T>::type>::type;
+using deduce_mpi_t =
+  typename detail::dmfou<typename param_decay<T>::type>::type;
 
 } // namespace caf
 

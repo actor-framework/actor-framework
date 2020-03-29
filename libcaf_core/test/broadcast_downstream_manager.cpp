@@ -23,14 +23,14 @@
 #include <memory>
 #include <numeric>
 
+#include "core-test.hpp"
+
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/broadcast_downstream_manager.hpp"
-#include "caf/scheduled_actor.hpp"
-
+#include "caf/detail/meta_object.hpp"
 #include "caf/mixin/sender.hpp"
-
-#include "caf/test/unit_test.hpp"
+#include "caf/scheduled_actor.hpp"
 
 using namespace caf;
 
@@ -83,7 +83,7 @@ public:
   }
 
   void enqueue(mailbox_element_ptr what, execution_unit*) override {
-    mbox.push_back(what->move_content_to_message());
+    mbox.push_back(std::move(what->payload));
   }
 
   void attach(attachable_ptr) override {

@@ -42,7 +42,6 @@
 #include "caf/settings.hpp"
 #include "caf/stream.hpp"
 #include "caf/thread_hook.hpp"
-#include "caf/type_erased_value.hpp"
 
 namespace caf {
 
@@ -63,12 +62,6 @@ public:
   using module_factory = std::function<actor_system::module*(actor_system&)>;
 
   using module_factory_vector = std::vector<module_factory>;
-
-  using value_factory = std::function<type_erased_value_ptr()>;
-
-  using value_factory_string_map = hash_map<std::string, value_factory>;
-
-  using value_factory_rtti_map = hash_map<std::type_index, value_factory>;
 
   using actor_factory_map = hash_map<std::string, actor_factory>;
 
@@ -147,8 +140,7 @@ public:
   template <class T, class... Ts>
   actor_system_config& add_actor_type(std::string name) {
     using handle = typename infer_handle_from_class<T>::type;
-    if (!std::is_same<handle, actor>::value)
-      add_message_type<handle>(name);
+    static_assert(detail::is_complete<type_id<handle>>);
     return add_actor_factory(std::move(name), make_actor_factory<T, Ts...>());
   }
 
@@ -158,31 +150,8 @@ public:
   template <class F>
   actor_system_config& add_actor_type(std::string name, F f) {
     using handle = typename infer_handle_from_fun<F>::type;
-    if (!std::is_same<handle, actor>::value)
-      add_message_type<handle>(name);
+    static_assert(detail::is_complete<type_id<handle>>);
     return add_actor_factory(std::move(name), make_actor_factory(std::move(f)));
-  }
-
-  /// Adds message type `T` with runtime type info `name`.
-  template <class T>
-  actor_system_config& add_message_type(std::string name) {
-    static_assert(
-      std::is_empty<T>::value
-        || std::is_same<T, actor>::value // silence add_actor_type err
-        || is_typed_actor<T>::value
-        || (std::is_default_constructible<T>::value
-            && std::is_copy_constructible<T>::value),
-      "T must provide default and copy constructors");
-    std::string stream_name = "stream<";
-    stream_name += name;
-    stream_name += ">";
-    add_message_type_impl<stream<T>>(std::move(stream_name));
-    std::string vec_name = "std::vector<";
-    vec_name += name;
-    vec_name += ">";
-    add_message_type_impl<std::vector<T>>(std::move(vec_name));
-    add_message_type_impl<T>(std::move(name));
-    return *this;
   }
 
   /// Enables the actor system to convert errors of this error category
@@ -284,8 +253,6 @@ public:
 
   // -- factories --------------------------------------------------------------
 
-  value_factory_string_map value_factories_by_name;
-  value_factory_rtti_map value_factories_by_rtti;
   actor_factory_map actor_factories;
   module_factory_vector module_factories;
   hook_factory_vector hook_factories;
@@ -304,10 +271,6 @@ public:
   /// @experimental
   /// @note Has no effect unless building CAF with CAF_ENABLE_ACTOR_PROFILER.
   tracing_data_factory* tracing_context = nullptr;
-
-  // -- run-time type information ----------------------------------------------
-
-  portable_name_map type_names_by_rtti;
 
   // -- rendering of user-defined types ----------------------------------------
 
@@ -397,15 +360,6 @@ protected:
   config_option_set custom_options_;
 
 private:
-  template <class T>
-  void add_message_type_impl(std::string name) {
-    type_names_by_rtti.emplace(std::type_index(typeid(T)), name);
-    value_factories_by_name.emplace(std::move(name),
-                                    &make_type_erased_value<T>);
-    value_factories_by_rtti.emplace(std::type_index(typeid(T)),
-                                    &make_type_erased_value<T>);
-  }
-
   actor_system_config& set_impl(string_view name, config_value value);
 
   error extract_config_file_path(string_list& args);

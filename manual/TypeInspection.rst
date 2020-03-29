@@ -49,10 +49,9 @@ implementing a hash function.
    Inspector {
      using result_type = T;
 
-     if (inspector only requires read access to the state of T)
-       static constexpr bool reads_state = true;
-     else
-       static constexpr bool writes_state = true;
+     static constexpr bool reads_state = ...;
+
+     static constexpr bool writes_state = ...;
 
      template <class... Ts>
      result_type operator()(Ts&&...);
@@ -116,7 +115,8 @@ access to its members.
 
 .. literalinclude:: /examples/custom_type/custom_types_3.cpp
    :language: C++
-   :lines: 20-49
+   :start-after: --(rst-foo-begin)--
+   :end-before: --(rst-foo-end)--
 
 Since there is no access to the data fields ``a_`` and ``b_``
 (and assuming no changes to ``foo`` are possible), we need to split our
@@ -124,7 +124,8 @@ implementation of ``inspect`` as shown below.
 
 .. literalinclude:: /examples/custom_type/custom_types_3.cpp
    :language: C++
-   :lines: 76-103
+   :start-after: --(rst-inspect-begin)--
+   :end-before: --(rst-inspect-end)--
 
 The purpose of the scope guard in the example above is to write the content of
 the temporaries back to ``foo`` at scope exit automatically. Storing

@@ -19,12 +19,13 @@
 // This unit test checks guarantees regarding ordering and equality for actor
 // handles, i.e., actor_addr, actor, and typed_actor<...>.
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE handles
-#include "caf/test/unit_test.hpp"
 
-#include "caf/all.hpp"
+#include "caf/actor.hpp"
+#include "caf/actor_addr.hpp"
+#include "caf/typed_actor.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 
@@ -283,7 +284,7 @@ CAF_TEST(string_representation) {
 
 CAF_TEST(mpi_string_representation) {
   CAF_CHECK(sys.message_types(a0.dt).empty());
-  std::set<std::string> st_expected{"caf::replies_to<@i32>::with<@i32>"};
+  std::set<std::string> st_expected{"caf::replies_to<int32_t>::with<int32_t>"};
   CAF_CHECK_EQUAL(st_expected, sys.message_types(a0.st));
   CAF_CHECK_EQUAL(st_expected, sys.message_types<testee_actor>());
 }

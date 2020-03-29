@@ -84,22 +84,21 @@ namespace caf {
 
 /// @relates scheduled_actor
 /// Default handler function that sends the message back to the sender.
-CAF_CORE_EXPORT result<message> reflect(scheduled_actor*, message_view&);
+CAF_CORE_EXPORT result<message> reflect(scheduled_actor*, message&);
 
 /// @relates scheduled_actor
 /// Default handler function that sends
 /// the message back to the sender and then quits.
-CAF_CORE_EXPORT result<message>
-reflect_and_quit(scheduled_actor*, message_view&);
+CAF_CORE_EXPORT result<message> reflect_and_quit(scheduled_actor*, message&);
 
 /// @relates scheduled_actor
 /// Default handler function that prints messages
 /// message via `aout` and drops them afterwards.
-CAF_CORE_EXPORT result<message> print_and_drop(scheduled_actor*, message_view&);
+CAF_CORE_EXPORT result<message> print_and_drop(scheduled_actor*, message&);
 
 /// @relates scheduled_actor
 /// Default handler function that simply drops messages.
-CAF_CORE_EXPORT result<message> drop(scheduled_actor*, message_view&);
+CAF_CORE_EXPORT result<message> drop(scheduled_actor*, message&);
 
 /// A cooperatively scheduled, event-based actor implementation.
 class CAF_CORE_EXPORT scheduled_actor : public local_actor,
@@ -190,8 +189,7 @@ public:
   using pointer = scheduled_actor*;
 
   /// Function object for handling unmatched messages.
-  using default_handler
-    = std::function<result<message>(pointer, message_view&)>;
+  using default_handler = std::function<result<message>(pointer, message&)>;
 
   /// Function object for handling error messages.
   using error_handler = std::function<void(pointer, error&)>;
@@ -341,10 +339,9 @@ public:
   /// Sets a custom handler for unexpected messages.
   template <class F>
   typename std::enable_if<std::is_convertible<
-    F, std::function<result<message>(type_erased_tuple&)>>::value>::type
+    F, std::function<result<message>(message&)>>::value>::type
   set_default_handler(F fun) {
-    default_handler_
-      = [=](scheduled_actor*, const type_erased_tuple& xs) { return fun(xs); };
+    default_handler_ = [=](scheduled_actor*, message& xs) { return fun(xs); };
   }
 
   /// Sets a custom handler for error messages.
@@ -560,8 +557,8 @@ public:
              Finalize fin = {}, policy::arg<DownstreamManager> token = {}) {
     CAF_IGNORE_UNUSED(token);
     CAF_ASSERT(current_mailbox_element() != nullptr);
-    CAF_ASSERT(
-      current_mailbox_element()->content().match_elements<open_stream_msg>());
+    CAF_ASSERT(current_mailbox_element()->content().types()
+               == make_type_id_list<open_stream_msg>());
     using output_type = typename stream_stage_trait_t<Fun>::output;
     using state_type = typename stream_stage_trait_t<Fun>::state;
     static_assert(
@@ -718,7 +715,7 @@ public:
   /// Creates a new path for incoming stream traffic from `sender`.
   virtual inbound_path*
   make_inbound_path(stream_manager_ptr mgr, stream_slots slots,
-                    strong_actor_ptr sender, rtti_pair rtti);
+                    strong_actor_ptr sender, type_id_t rtti);
 
   /// Silently closes incoming stream traffic on `slot`.
   virtual void erase_inbound_path_later(stream_slot slot);

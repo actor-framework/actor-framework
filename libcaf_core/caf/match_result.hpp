@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,31 +16,22 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/type_erased_value.hpp"
+#pragma once
 
-#include "caf/error.hpp"
+#include <string>
+
+#include "caf/detail/core_export.hpp"
 
 namespace caf {
 
-type_erased_value::~type_erased_value() {
-  // nop
-}
+/// Denotes the invoke result of a ::behavior or ::message_handler.
+enum class match_result {
+  no_match,
+  match,
+  skip,
+};
 
-bool type_erased_value::matches(uint16_t nr, const std::type_info* ptr) const {
-  auto tp = type();
-  if (tp.first != nr)
-    return false;
-  if (nr == 0)
-    return ptr != nullptr ? *tp.second == *ptr : false;
-  return true;
-}
-
-error inspect(serializer& f, const type_erased_value& x) {
-  return x.save(f);
-}
-
-error inspect(deserializer& f, type_erased_value& x) {
-  return x.load(f);
-}
+/// @relates match_result
+CAF_CORE_EXPORT std::string to_string(match_result);
 
 } // namespace caf

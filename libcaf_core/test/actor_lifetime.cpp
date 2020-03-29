@@ -16,18 +16,15 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE actor_lifetime
-#include "caf/test/unit_test.hpp"
+
+#include "core-test.hpp"
 
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
 
 #include "caf/all.hpp"
-
-#include "caf/test/dsl.hpp"
 
 using namespace caf;
 

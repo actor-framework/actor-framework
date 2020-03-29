@@ -24,6 +24,7 @@
 #include "caf/actor_proxy.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/config.hpp"
+#include "caf/const_typed_message_view.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/execution_unit.hpp"
@@ -103,16 +104,18 @@ public:
     }
     // Intercept link messages. Forwarding actor proxies signalize linking
     // by sending link_atom/unlink_atom message with src == dest.
-    if (msg.match_elements<link_atom, strong_actor_ptr>()) {
-      const auto& ptr = msg.get_as<strong_actor_ptr>(1);
+    if (auto view
+        = make_const_typed_message_view<link_atom, strong_actor_ptr>(msg)) {
+      const auto& ptr = get<1>(view);
       if (ptr != nullptr)
         static_cast<actor_proxy*>(ptr->get())->add_link(dst->get());
       else
         CAF_LOG_WARNING("received link message with invalid target");
       return;
     }
-    if (msg.match_elements<unlink_atom, strong_actor_ptr>()) {
-      const auto& ptr = msg.get_as<strong_actor_ptr>(1);
+    if (auto view
+        = make_const_typed_message_view<unlink_atom, strong_actor_ptr>(msg)) {
+      const auto& ptr = get<1>(view);
       if (ptr != nullptr)
         static_cast<actor_proxy*>(ptr->get())->remove_link(dst->get());
       else

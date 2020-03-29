@@ -16,12 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE detached_actors
-#include "caf/test/unit_test.hpp"
 
 #include "caf/all.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

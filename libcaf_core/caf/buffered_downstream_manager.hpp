@@ -43,6 +43,10 @@ public:
 
   using chunk_type = std::vector<output_type>;
 
+  // -- sanity checks ----------------------------------------------------------
+
+  static_assert(detail::is_complete<type_id<std::vector<output_type>>>);
+
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit buffered_downstream_manager(stream_manager* parent) : super(parent) {

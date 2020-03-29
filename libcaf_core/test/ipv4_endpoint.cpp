@@ -19,9 +19,8 @@
 #define CAF_SUITE ipv4_endpoint
 
 #include "caf/ipv4_endpoint.hpp"
-#include "caf/test/dsl.hpp"
 
-#include "caf/test/unit_test.hpp"
+#include "core-test.hpp"
 
 #include <cassert>
 #include <vector>

@@ -43,17 +43,9 @@ public:
 
   virtual result<Ys...> operator()(param_t<Xs>...) = 0;
 
-  // C++14 and later
-#if __cplusplus > 201103L
   auto make_callback() {
-    return [=](param_t<Xs>... xs) { return (*this)(std::move(xs)...); };
+    return [this](param_t<Xs>... xs) { return (*this)(std::move(xs)...); };
   }
-#else
-  // C++11
-  std::function<result<Ys...>(param_t<Xs>...)> make_callback() {
-    return [=](param_t<Xs>... xs) { return (*this)(std::move(xs)...); };
-  }
-#endif
 };
 
 /// Base type for composable actor states.

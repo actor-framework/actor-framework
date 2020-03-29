@@ -20,7 +20,7 @@
 
 #include "caf/binary_serializer.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <cstring>
 #include <vector>
@@ -41,34 +41,6 @@ byte operator"" _b(unsigned long long int x) {
 
 byte operator"" _b(char x) {
   return static_cast<byte>(x);
-}
-
-enum class test_enum : int32_t {
-  a,
-  b,
-  c,
-};
-
-struct test_data {
-  int32_t i32_;
-  int64_t i64_;
-  float f32_;
-  double f64_;
-  caf::timestamp ts_;
-  test_enum te_;
-  std::string str_;
-};
-
-bool operator==(const test_data& data, const test_data& other) {
-  return (data.f64_ == other.f64_ && data.i32_ == other.i32_
-          && data.i64_ == other.i64_ && data.str_ == other.str_
-          && data.te_ == other.te_ && data.ts_ == other.ts_);
-}
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, test_data& x) {
-  return f(caf::meta::type_name("test_data"), x.i32_, x.i64_, x.f32_, x.f64_,
-           x.ts_, x.te_, x.str_);
 }
 
 struct fixture {

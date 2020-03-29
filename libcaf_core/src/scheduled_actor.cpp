@@ -36,25 +36,25 @@ namespace caf {
 
 // -- related free functions ---------------------------------------------------
 
-result<message> reflect(scheduled_actor*, message_view& x) {
-  return x.move_content_to_message();
+result<message> reflect(scheduled_actor*, message& msg) {
+  return std::move(msg);
 }
 
-result<message> reflect_and_quit(scheduled_actor* ptr, message_view& x) {
+result<message> reflect_and_quit(scheduled_actor* ptr, message& msg) {
   error err = exit_reason::normal;
   scheduled_actor::default_error_handler(ptr, err);
-  return reflect(ptr, x);
+  return reflect(ptr, msg);
 }
 
-result<message> print_and_drop(scheduled_actor* ptr, message_view& x) {
-  CAF_LOG_WARNING("unexpected message" << CAF_ARG(x.content()));
+result<message> print_and_drop(scheduled_actor* ptr, message& msg) {
+  CAF_LOG_WARNING("unexpected message:" << msg);
   aout(ptr) << "*** unexpected message [id: " << ptr->id()
-            << ", name: " << ptr->name() << "]: " << x.content().stringify()
+            << ", name: " << ptr->name() << "]: " << to_string(msg)
             << std::endl;
   return sec::unexpected_message;
 }
 
-result<message> drop(scheduled_actor*, message_view&) {
+result<message> drop(scheduled_actor*, message&) {
   return sec::unexpected_message;
 }
 
@@ -67,7 +67,7 @@ void silently_ignore(scheduled_actor*, T&) {
   // nop
 }
 
-result<message> drop_after_quit(scheduled_actor* self, message_view&) {
+result<message> drop_after_quit(scheduled_actor* self, message&) {
   if (self->current_message_id().is_request())
     return make_error(sec::request_receiver_down);
   return make_message();
@@ -587,8 +587,8 @@ scheduled_actor::categorize(mailbox_element& x) {
     }
     return message_category::internal;
   }
-  if (content.match_elements<exit_msg>()) {
-    auto em = content.move_if_unshared<exit_msg>(0);
+  if (auto view = make_typed_message_view<exit_msg>(content)) {
+    auto& em = get<0>(view);
     // make sure to get rid of attachables if they're no longer needed
     unlink_from(em.source);
     // exit_reason::kill is always fatal and also aborts streams.
@@ -611,18 +611,18 @@ scheduled_actor::categorize(mailbox_element& x) {
     }
     return message_category::internal;
   }
-  if (content.match_elements<down_msg>()) {
-    auto dm = content.move_if_unshared<down_msg>(0);
+  if (auto view = make_typed_message_view<down_msg>(content)) {
+    auto& dm = get<0>(view);
     call_handler(down_handler_, this, dm);
     return message_category::internal;
   }
-  if (content.match_elements<node_down_msg>()) {
-    auto dm = content.move_if_unshared<node_down_msg>(0);
+  if (auto view = make_typed_message_view<node_down_msg>(content)) {
+    auto& dm = get<0>(view);
     call_handler(node_down_handler_, this, dm);
     return message_category::internal;
   }
-  if (content.match_elements<error>()) {
-    auto err = content.move_if_unshared<error>(0);
+  if (auto view = make_typed_message_view<error>(content)) {
+    auto& err = get<0>(view);
     call_handler(error_handler_, this, err);
     return message_category::internal;
   }
@@ -660,7 +660,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       if (!invoke(this, f, x)) {
         // try again with error if first attempt failed
         auto msg = make_message(
-          make_error(sec::unexpected_response, x.move_content_to_message()));
+          make_error(sec::unexpected_response, std::move(x.payload)));
         f(msg);
       }
       return invoke_message_result::consumed;
@@ -675,9 +675,9 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       auto bhvr = std::move(mrh->second);
       multiplexed_responses_.erase(mrh);
       if (!invoke(this, bhvr, x)) {
-        // try again with error if first attempt failed
+        CAF_LOG_DEBUG("got unexpected_response, invoke unexpected_response");
         auto msg = make_message(
-          make_error(sec::unexpected_response, x.move_content_to_message()));
+          make_error(sec::unexpected_response, std::move(x.payload)));
         bhvr(msg);
       }
       return invoke_message_result::consumed;
@@ -701,7 +701,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
             setf(has_timeout_flag);
         });
         auto call_default_handler = [&] {
-          auto sres = call_handler(default_handler_, this, x);
+          auto sres = call_handler(default_handler_, this, x.payload);
           switch (sres.flag) {
             default:
               break;
@@ -722,10 +722,10 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
         switch (bhvr(visitor, x.content())) {
           default:
             break;
-          case match_case::skip:
+          case match_result::skip:
             skipped = true;
             break;
-          case match_case::no_match:
+          case match_result::no_match:
             call_default_handler();
         }
         return !skipped ? invoke_message_result::consumed
@@ -918,14 +918,15 @@ scheduled_actor::urgent_queue& scheduled_actor::get_urgent_queue() {
 inbound_path* scheduled_actor::make_inbound_path(stream_manager_ptr mgr,
                                                  stream_slots slots,
                                                  strong_actor_ptr sender,
-                                                 rtti_pair rtti) {
+                                                 type_id_t input_type) {
   static constexpr size_t queue_index = downstream_queue_index;
   using policy_type = policy::downstream_messages::nested;
   auto& qs = get<queue_index>(mailbox_.queue().queues()).queues();
   auto res = qs.emplace(slots.receiver, policy_type{nullptr});
   if (!res.second)
     return nullptr;
-  auto path = new inbound_path(std::move(mgr), slots, std::move(sender), rtti);
+  auto path = new inbound_path(std::move(mgr), slots, std::move(sender),
+                               input_type);
   res.first->second.policy().handler.reset(path);
   return path;
 }
@@ -1136,7 +1137,7 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
   };
   // Utility for invoking the default handler.
   auto fallback = [&] {
-    auto sres = call_handler(default_handler_, this, x);
+    auto sres = call_handler(default_handler_, this, x.payload);
     switch (sres.flag) {
       default:
         CAF_LOG_DEBUG(
@@ -1154,10 +1155,10 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
     return fallback();
   auto res = (bs.back())(f, osm.msg);
   switch (res) {
-    case match_case::result::no_match:
+    case match_result::no_match:
       CAF_LOG_DEBUG("no match in behavior, fall back to default handler");
       return fallback();
-    case match_case::result::match: {
+    case match_result::match: {
       return invoke_message_result::consumed;
     }
     default:

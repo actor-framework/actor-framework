@@ -43,7 +43,7 @@ invoke_message_result raw_event_based_actor::consume(mailbox_element& x) {
       if (!pr.second(x.content())) {
         // try again with error if first attempt failed
         auto msg = make_message(
-          make_error(sec::unexpected_response, x.move_content_to_message()));
+          make_error(sec::unexpected_response, std::move(x.payload)));
         pr.second(msg);
       }
       awaited_responses_.pop_front();
@@ -58,7 +58,7 @@ invoke_message_result raw_event_based_actor::consume(mailbox_element& x) {
       if (!mrh->second(x.content())) {
         // try again with error if first attempt failed
         auto msg = make_message(
-          make_error(sec::unexpected_response, x.move_content_to_message()));
+          make_error(sec::unexpected_response, std::move(x.payload)));
         mrh->second(msg);
       }
       multiplexed_responses_.erase(mrh);
@@ -92,7 +92,7 @@ invoke_message_result raw_event_based_actor::consume(mailbox_element& x) {
         setf(has_timeout_flag);
     });
     auto call_default_handler = [&] {
-      auto sres = call_handler(default_handler_, this, x);
+      auto sres = call_handler(default_handler_, this, x.payload);
       switch (sres.flag) {
         default:
           break;
@@ -113,10 +113,10 @@ invoke_message_result raw_event_based_actor::consume(mailbox_element& x) {
     switch (bhvr(visitor, x.content())) {
       default:
         break;
-      case match_case::skip:
+      case match_result::skip:
         skipped = true;
         break;
-      case match_case::no_match:
+      case match_result::no_match:
         call_default_handler();
     }
     return !skipped ? invoke_message_result::consumed

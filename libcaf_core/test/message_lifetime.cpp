@@ -16,10 +16,9 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE message_lifetime
-#include "caf/test/unit_test.hpp"
+
+#include "core-test.hpp"
 
 #include <atomic>
 #include <iostream>
@@ -27,6 +26,14 @@
 #include "caf/all.hpp"
 
 using namespace caf;
+
+fail_on_copy::fail_on_copy(const fail_on_copy&) {
+  CAF_FAIL("fail_on_copy: copy constructor called");
+}
+
+fail_on_copy& fail_on_copy::operator=(const fail_on_copy&) {
+  CAF_FAIL("fail_on_copy: copy assign operator called");
+}
 
 namespace {
 
@@ -81,81 +88,47 @@ private:
   message msg_;
 };
 
-struct fixture {
-  actor_system_config cfg;
-  actor_system system{cfg};
-};
-
-struct fail_on_copy {
-  int value;
-
-  fail_on_copy(int x = 0) : value(x) {
-    // nop
-  }
-
-  fail_on_copy(fail_on_copy&&) = default;
-
-  fail_on_copy& operator=(fail_on_copy&&) = default;
-
-  fail_on_copy(const fail_on_copy&) {
-    CAF_FAIL("fail_on_copy: copy constructor called");
-  }
-
-  fail_on_copy& operator=(const fail_on_copy&) {
-    CAF_FAIL("fail_on_copy: copy assign operator called");
-  }
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, fail_on_copy& x) {
-  return f(x.value);
-}
-
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(message_lifetime_tests, fixture)
+CAF_TEST_FIXTURE_SCOPE(message_lifetime_tests, test_coordinator_fixture<>)
 
 CAF_TEST(nocopy_in_scoped_actor) {
   auto msg = make_message(fail_on_copy{1});
-  scoped_actor self{system};
   self->send(self, msg);
   self->receive(
     [&](const fail_on_copy& x) {
       CAF_CHECK_EQUAL(x.value, 1);
-      CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2u);
+      CAF_CHECK_EQUAL(msg.cdata().get_reference_count(), 2u);
     }
   );
-  CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1u);
+  CAF_CHECK_EQUAL(msg.cdata().get_reference_count(), 1u);
 }
 
 CAF_TEST(message_lifetime_in_scoped_actor) {
   auto msg = make_message(1, 2, 3);
-  scoped_actor self{system};
   self->send(self, msg);
   self->receive(
     [&](int a, int b, int c) {
       CAF_CHECK_EQUAL(a, 1);
       CAF_CHECK_EQUAL(b, 2);
       CAF_CHECK_EQUAL(c, 3);
-      CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2u);
+      CAF_CHECK_EQUAL(msg.cdata().get_reference_count(), 2u);
     }
   );
-  CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 1u);
+  CAF_CHECK_EQUAL(msg.cdata().get_reference_count(), 1u);
   msg = make_message(42);
   self->send(self, msg);
-  CAF_CHECK_EQUAL(msg.cvals()->get_reference_count(), 2u);
-  self->receive(
-    [&](int& value) {
-      CAF_CHECK_NOT_EQUAL(&value, msg.at(0));
-      value = 10;
-    }
-  );
+  CAF_CHECK_EQUAL(msg.cdata().get_reference_count(), 2u);
+  self->receive([&](int& value) {
+    CAF_CHECK_NOT_EQUAL(&value, msg.cdata().at(0));
+    value = 10;
+  });
   CAF_CHECK_EQUAL(msg.get_as<int>(0), 42);
 }
 
 CAF_TEST(message_lifetime_in_spawned_actor) {
   for (size_t i = 0; i < 100; ++i)
-    system.spawn<tester>(system.spawn<testee>());
+    sys.spawn<tester>(sys.spawn<testee>());
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

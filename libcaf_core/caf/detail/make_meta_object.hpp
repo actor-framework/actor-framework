@@ -26,8 +26,55 @@
 #include "caf/byte.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/detail/meta_object.hpp"
+#include "caf/detail/padded_size.hpp"
+#include "caf/detail/stringification_inspector.hpp"
 #include "caf/error.hpp"
 #include "caf/serializer.hpp"
+
+namespace caf::detail::default_function {
+
+template <class T>
+void destroy(void* ptr) noexcept {
+  reinterpret_cast<T*>(ptr)->~T();
+}
+
+template <class T>
+void default_construct(void* ptr) {
+  new (ptr) T();
+}
+
+template <class T>
+void copy_construct(void* ptr, const void* src) {
+  new (ptr) T(*reinterpret_cast<const T*>(src));
+}
+
+template <class T>
+error_code<sec> save_binary(caf::binary_serializer& sink, const void* ptr) {
+  return sink(*reinterpret_cast<const T*>(ptr));
+}
+
+template <class T>
+error_code<sec> load_binary(caf::binary_deserializer& source, void* ptr) {
+  return source(*reinterpret_cast<T*>(ptr));
+}
+
+template <class T>
+caf::error save(caf::serializer& sink, const void* ptr) {
+  return sink(*reinterpret_cast<const T*>(ptr));
+}
+
+template <class T>
+caf::error load(caf::deserializer& source, void* ptr) {
+  return source(*reinterpret_cast<T*>(ptr));
+}
+
+template <class T>
+void stringify(std::string& buf, const void* ptr) {
+  stringification_inspector f{buf};
+  f(*reinterpret_cast<const T*>(ptr));
+}
+
+} // namespace caf::detail::default_function
 
 namespace caf::detail {
 
@@ -35,28 +82,16 @@ template <class T>
 meta_object make_meta_object(const char* type_name) {
   return {
     type_name,
-    [](void* ptr) noexcept { reinterpret_cast<T*>(ptr)->~T(); },
-    [](void* ptr) { new (ptr) T(); },
-    [](caf::binary_serializer& sink, const void* ptr) {
-      return sink(*reinterpret_cast<const T*>(ptr));
-    },
-    [](caf::binary_deserializer& source, void* ptr) {
-      return source(*reinterpret_cast<T*>(ptr));
-    },
-    [](caf::serializer& sink, const void* ptr) {
-      return sink(*reinterpret_cast<const T*>(ptr));
-    },
-    [](caf::deserializer& source, void* ptr) {
-      return source(*reinterpret_cast<T*>(ptr));
-    },
+    padded_size_v<T>,
+    default_function::destroy<T>,
+    default_function::default_construct<T>,
+    default_function::copy_construct<T>,
+    default_function::save_binary<T>,
+    default_function::load_binary<T>,
+    default_function::save<T>,
+    default_function::load<T>,
+    default_function::stringify<T>,
   };
-}
-
-template <class... Ts>
-void register_meta_objects(size_t first_id) {
-  auto xs = resize_global_meta_objects(first_id + sizeof...(Ts));
-  meta_object src[] = {make_meta_object<Ts>()...};
-  std::copy(src, src + sizeof...(Ts), xs.begin() + first_id);
 }
 
 } // namespace caf::detail

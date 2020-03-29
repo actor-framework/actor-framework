@@ -69,7 +69,3 @@ protected:
 using scribe_ptr = intrusive_ptr<scribe>;
 
 } // namespace caf::io
-
-// Allows the `middleman_actor` to create a `scribe` and then send it to the
-// BASP broker.
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(caf::io::scribe_ptr)

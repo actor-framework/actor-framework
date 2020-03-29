@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,10 +16,24 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#define CAF_SUITE detail.type_id_list_builder
 
-namespace caf::detail {
+#include "caf/detail/type_id_list_builder.hpp"
 
-struct arg_match_t {};
+#include "caf/test/dsl.hpp"
 
-} // namespace caf::detail
+using namespace caf;
+
+namespace {
+
+struct fixture {};
+
+} // namespace
+
+CAF_TEST_FIXTURE_SCOPE(type_id_list_builder_tests, fixture)
+
+CAF_TEST(todo) {
+  // implement me
+}
+
+CAF_TEST_FIXTURE_SCOPE_END()

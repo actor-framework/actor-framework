@@ -18,7 +18,7 @@
 
 #define CAF_SUITE inspector
 
-#include "caf/test/unit_test.hpp"
+#include "core-test.hpp"
 
 #include <list>
 #include <map>
@@ -33,9 +33,8 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/byte_buffer.hpp"
+#include "caf/detail/meta_object.hpp"
 #include "caf/detail/stringification_inspector.hpp"
-#include "caf/make_type_erased_value.hpp"
-#include "caf/type_erased_value.hpp"
 
 using namespace caf;
 
@@ -64,37 +63,6 @@ struct check_impl {
 
 template <class T>
 using nl = std::numeric_limits<T>;
-
-// an empty type
-struct dummy_tag_type {};
-
-constexpr bool operator==(dummy_tag_type, dummy_tag_type) {
-  return true;
-}
-
-// a POD type
-struct dummy_struct {
-  int a;
-  std::string b;
-};
-
-bool operator==(const dummy_struct& x, const dummy_struct& y) {
-  return x.a == y.a && x.b == y.b;
-}
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, dummy_struct& x) {
-  return f(meta::type_name("dummy_struct"), x.a, x.b);
-}
-
-// two different styles of enums
-enum dummy_enum { de_foo, de_bar };
-
-enum dummy_enum_class : short { foo, bar };
-
-std::string to_string(dummy_enum_class x) {
-  return x == dummy_enum_class::foo ? "foo" : "bar";
-}
 
 template <class Policy>
 void test_impl(Policy& p) {
@@ -176,9 +144,6 @@ void test_impl(Policy& p) {
   CAF_CHECK(check(variant<none_t, int, std::string>{std::string{"foo"}}));
 }
 
-} // namespace
-
-namespace {
 struct stringification_inspector_policy {
   template <class T>
   std::string f(T& x) {
@@ -210,6 +175,7 @@ struct stringification_inspector_policy {
     return true;
   }
 };
+
 } // namespace
 
 CAF_TEST(stringification_inspector) {
@@ -264,10 +230,8 @@ struct binary_serialization_policy {
 
 CAF_TEST(binary_serialization_inspectors) {
   actor_system_config cfg;
-  cfg.add_message_type<dummy_struct>("dummy_struct");
   actor_system sys{cfg};
   scoped_execution_unit context;
   binary_serialization_policy p{context};
   test_impl(p);
-
 }

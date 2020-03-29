@@ -20,7 +20,7 @@
 
 #include "caf/string_algorithms.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <string>
 #include <vector>

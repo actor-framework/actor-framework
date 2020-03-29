@@ -56,15 +56,21 @@ CAF_POP_WARNINGS
 #  pragma clang diagnostic ignored "-Wunused-const-variable"
 #endif // __clang__
 
+CAF_BEGIN_TYPE_ID_BLOCK(curl_fuse, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(curl_fuse, (std::vector<char>) )
+
+  CAF_ADD_ATOM(curl_fuse, read_atom);
+  CAF_ADD_ATOM(curl_fuse, fail_atom);
+  CAF_ADD_ATOM(curl_fuse, next_atom);
+  CAF_ADD_ATOM(curl_fuse, reply_atom);
+  CAF_ADD_ATOM(curl_fuse, finished_atom);
+
+CAF_END_TYPE_ID_BLOCK(curl_fuse)
+
 using namespace caf;
 
 using buffer_type = std::vector<char>;
-
-CAF_MSG_TYPE_ADD_ATOM(read_atom);
-CAF_MSG_TYPE_ADD_ATOM(fail_atom);
-CAF_MSG_TYPE_ADD_ATOM(next_atom);
-CAF_MSG_TYPE_ADD_ATOM(reply_atom);
-CAF_MSG_TYPE_ADD_ATOM(finished_atom);
 
 namespace color {
 
@@ -318,19 +324,9 @@ behavior curl_master(stateful_actor<master_state>* self) {
 // signal handling for ctrl+c
 std::atomic<bool> shutdown_flag{false};
 
-struct config : actor_system_config {
-  config() {
-    add_message_type<read_atom>("read_atom");
-    add_message_type<fail_atom>("fail_atom");
-    add_message_type<next_atom>("next_atom");
-    add_message_type<reply_atom>("reply_atom");
-    add_message_type<finished_atom>("finished_atom");
-  }
-};
-
 } // namespace
 
-void caf_main(actor_system& system, const config&) {
+void caf_main(actor_system& system) {
   // install signal handler
   struct sigaction act;
   act.sa_handler = [](int) { shutdown_flag = true; };
@@ -366,4 +362,4 @@ void caf_main(actor_system& system, const config&) {
   curl_global_cleanup();
 }
 
-CAF_MAIN(io::middleman)
+CAF_MAIN(id_block::curl_fuse, io::middleman)

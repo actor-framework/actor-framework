@@ -27,6 +27,7 @@
 #include "caf/error_category.hpp"
 #include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
+#include "caf/message.hpp"
 #include "caf/meta/load_callback.hpp"
 #include "caf/meta/omittable_if_empty.hpp"
 #include "caf/meta/save_callback.hpp"
@@ -97,7 +98,8 @@ public:
   }
 
   template <class Enum>
-  error(error_code<Enum> code) : error(code.value()) {
+  error(error_code<Enum> code)
+    : error(static_cast<uint8_t>(code.value()), error_category<Enum>::value) {
     // nop
   }
 

@@ -18,12 +18,34 @@
 
 #include "caf/mailbox_element.hpp"
 
-#include "caf/message_builder.hpp"
-#include "caf/type_nr.hpp"
+#include <memory>
 
 namespace caf {
 
 namespace {
+
+/// Corrects the message ID for down- and upstream messages to make sure the
+/// category for a `mailbox_element` matches its content.
+template <class...>
+struct mailbox_category_corrector {
+  static constexpr message_id apply(message_id x) noexcept {
+    return x;
+  }
+};
+
+template <>
+struct mailbox_category_corrector<downstream_msg> {
+  static constexpr message_id apply(message_id x) noexcept {
+    return x.with_category(message_id::downstream_message_category);
+  }
+};
+
+template <>
+struct mailbox_category_corrector<upstream_msg> {
+  static constexpr message_id apply(message_id x) noexcept {
+    return x.with_category(message_id::upstream_message_category);
+  }
+};
 
 message_id dynamic_category_correction(const message& msg, message_id mid) {
   if (msg.match_elements<downstream_msg>())
@@ -33,66 +55,23 @@ message_id dynamic_category_correction(const message& msg, message_id mid) {
   return mid;
 }
 
-/// Wraps a `message` into a mailbox element.
-class mailbox_element_wrapper final : public mailbox_element {
-public:
-  mailbox_element_wrapper(strong_actor_ptr&& x0, message_id x1,
-                          forwarding_stack&& x2, message&& x3)
-      : mailbox_element(std::move(x0), dynamic_category_correction(x3, x1),
-                        std::move(x2)),
-        msg_(std::move(x3)) {
-    /// Make sure that `content` can access the pointer safely.
-    if (msg_.vals() == nullptr) {
-      message_builder mb;
-      msg_ = mb.to_message();
-    }
-  }
-
-  type_erased_tuple& content() override {
-    return msg_;
-  }
-
-  const type_erased_tuple& content() const override {
-    return msg_.content();
-  }
-
-  message move_content_to_message() override {
-    return std::move(msg_);
-  }
-
-  message copy_content_to_message() const override {
-    return msg_;
-  }
-
-private:
-  /// Stores the content of this mailbox element.
-  message msg_;
-};
-
 } // namespace
 
-mailbox_element::mailbox_element() {
-  // nop
-}
-
-mailbox_element::mailbox_element(strong_actor_ptr&& x, message_id y,
-                                 forwarding_stack&& z)
-    :sender(std::move(x)),
-      mid(y),
-      stages(std::move(z)) {
-  // nop
-}
-
-mailbox_element::~mailbox_element() {
+mailbox_element::mailbox_element(strong_actor_ptr sender, message_id mid,
+                                 forwarding_stack stages, message payload)
+  : sender(std::move(sender)),
+    mid(dynamic_category_correction(payload, mid)),
+    stages(std::move(stages)),
+    payload(std::move(payload)) {
   // nop
 }
 
 mailbox_element_ptr
 make_mailbox_element(strong_actor_ptr sender, message_id id,
-                     mailbox_element::forwarding_stack stages, message msg) {
-  auto ptr = new mailbox_element_wrapper(std::move(sender), id,
-                                         std::move(stages), std::move(msg));
-  return mailbox_element_ptr{ptr};
+                     mailbox_element::forwarding_stack stages,
+                     message payload) {
+  return std::make_unique<mailbox_element>(
+    std::move(sender), id, std::move(stages), std::move(payload));
 }
 
 } // namespace caf

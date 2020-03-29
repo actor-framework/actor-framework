@@ -20,9 +20,7 @@
 
 #include "caf/type_id_list.hpp"
 
-#include "caf/test/dsl.hpp"
-
-#include "caf/init_global_meta_objects.hpp"
+#include "core-test.hpp"
 
 using namespace caf;
 
@@ -44,6 +42,9 @@ CAF_TEST(lists are comparable) {
   data_copy[1] = 10;
   CAF_CHECK_NOT_EQUAL(xs, ys);
   CAF_CHECK_LESS(xs, ys);
+  CAF_CHECK_EQUAL(make_type_id_list<add_atom>(), make_type_id_list<add_atom>());
+  CAF_CHECK_NOT_EQUAL(make_type_id_list<add_atom>(),
+                      make_type_id_list<ok_atom>());
 }
 
 CAF_TEST(make_type_id_list constructs a list from types) {
@@ -55,8 +56,6 @@ CAF_TEST(make_type_id_list constructs a list from types) {
 }
 
 CAF_TEST(type ID lists are convertible to strings) {
-  detail::clear_global_meta_objects();
-  init_global_meta_objects<builtin_type_ids>();
-  auto xs = make_type_id_list<uint8_t, bool, float>();
-  CAF_CHECK_EQUAL(to_string(xs), "[uint8_t, bool, float]");
+  auto xs = make_type_id_list<uint16_t, bool, float>();
+  CAF_CHECK_EQUAL(to_string(xs), "[uint16_t, bool, float]");
 }

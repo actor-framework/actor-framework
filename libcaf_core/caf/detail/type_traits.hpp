@@ -27,11 +27,11 @@
 #include <utility>
 #include <vector>
 
-#include "caf/fwd.hpp"
-#include "caf/timestamp.hpp"
-
 #include "caf/detail/is_one_of.hpp"
 #include "caf/detail/type_list.hpp"
+#include "caf/fwd.hpp"
+#include "caf/param.hpp"
+#include "caf/timestamp.hpp"
 
 #define CAF_HAS_MEMBER_TRAIT(name)                                             \
   template <class T>                                                           \
@@ -255,10 +255,34 @@ struct callable_trait;
 // good ol' function
 template <class R, class... Ts>
 struct callable_trait<R (Ts...)> {
+  /// The result type as returned by the function.
   using result_type = R;
+
+  /// The unmodified argument types of the function.
   using arg_types = type_list<Ts...>;
+
+  /// The argument types of the function without CV qualifiers or ::param.
+  using decayed_arg_types = type_list<param_decay_t<Ts>...>;
+
+  /// The signature of the function.
   using fun_sig = R (Ts...);
+
+  /// The signature of the function, wrapped into a `std::function`.
   using fun_type = std::function<R (Ts...)>;
+
+  /// Tells whether the function takes mutable references as argument.
+  static constexpr bool mutates_args = (is_mutable_ref<Ts>::value || ...);
+
+  /// Tells whether the function wraps arguments in ::param containers.
+  static constexpr bool has_param_args = (is_param_v<std::decay_t<Ts>> || ...);
+
+  /// Selects a suitable view type for passing a ::message to this function.
+  using message_view_type = std::conditional_t<
+    has_param_args, param_message_view<param_decay_t<Ts>...>,
+    std::conditional_t<mutates_args, typed_message_view<param_decay_t<Ts>...>,
+                       const_typed_message_view<param_decay_t<Ts>...>>>;
+
+  /// Tells the number of arguments of the function.
   static constexpr size_t num_args = sizeof...(Ts);
 };
 
@@ -721,6 +745,17 @@ struct is_stl_tuple_type {
 
 template <class T>
 constexpr bool is_stl_tuple_type_v = is_stl_tuple_type<T>::value;
+
+template <class T, std::size_t = sizeof(T)>
+std::true_type is_complete_impl(T*);
+
+std::false_type is_complete_impl(...);
+
+/// Checks whether T is a complete type. For example, passing a forward
+/// declaration or undefined template specialization evaluates to `false`.
+template <class T>
+constexpr bool is_complete
+  = decltype(is_complete_impl(std::declval<T*>()))::value;
 
 } // namespace caf::detail
 

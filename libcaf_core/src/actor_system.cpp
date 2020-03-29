@@ -23,6 +23,7 @@
 #include "caf/actor.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/meta_object.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/policy/work_sharing.hpp"
 #include "caf/policy/work_stealing.hpp"
@@ -219,7 +220,6 @@ actor_system::networking_module::~networking_module() {
 actor_system::actor_system(actor_system_config& cfg)
   : profiler_(cfg.profiler),
     ids_(0),
-    types_(*this),
     logger_(new caf::logger(*this), false),
     registry_(*this),
     groups_(*this),
@@ -236,13 +236,27 @@ actor_system::actor_system(actor_system_config& cfg)
     auto mod_ptr = f(*this);
     modules_[mod_ptr->id()].reset(mod_ptr);
   }
+  // Make sure meta objects are loaded.
+  auto gmos = detail::global_meta_objects();
+  if (gmos.size() < id_block::core_module::end
+      || gmos[id_block::core_module::begin].type_name == nullptr) {
+    CAF_CRITICAL("actor_system created without calling "
+                 "caf::init_global_meta_objects<>() before");
+  }
+  if (modules_[module::middleman] != nullptr) {
+    if (gmos.size() < detail::io_module_end
+        || gmos[detail::io_module_begin].type_name == nullptr) {
+      CAF_CRITICAL("I/O module loaded without calling "
+                   "caf::io::middleman::init_global_meta_objects() before");
+    }
+  }
+  // Make sure we have a scheduler up and running.
   auto& sched = modules_[module::scheduler];
   using namespace scheduler;
   using policy::work_sharing;
   using policy::work_stealing;
   using share = coordinator<work_sharing>;
   using steal = coordinator<work_stealing>;
-  // set scheduler only if not explicitly loaded by user
   if (!sched) {
     enum sched_conf {
       stealing = 0x0001,
@@ -272,19 +286,19 @@ actor_system::actor_system(actor_system_config& cfg)
         sched.reset(new test_coordinator(*this));
     }
   }
-  // initialize state for each module and give each module the opportunity
-  // to influence the system configuration, e.g., by adding more types
+  // Initialize state for each module and give each module the opportunity to
+  // adapt the system configuration.
   logger_->init(cfg);
   CAF_SET_LOGGER_SYS(this);
   for (auto& mod : modules_)
     if (mod)
       mod->init(cfg);
   groups_.init(cfg);
-  // spawn config and spawn servers (lazily to not access the scheduler yet)
+  // Spawn config and spawn servers (lazily to not access the scheduler yet).
   static constexpr auto Flags = hidden + lazy_init;
   spawn_serv(actor_cast<strong_actor_ptr>(spawn<Flags>(spawn_serv_impl)));
   config_serv(actor_cast<strong_actor_ptr>(spawn<Flags>(config_serv_impl)));
-  // fire up remaining modules
+  // Start all modules.
   registry_.start();
   registry_.put("SpawnServ", spawn_serv());
   registry_.put("ConfigServ", config_serv());
@@ -348,10 +362,6 @@ caf::logger& actor_system::logger() {
 
 actor_registry& actor_system::registry() {
   return registry_;
-}
-
-const uniform_type_info_map& actor_system::types() const {
-  return types_;
 }
 
 std::string actor_system::render(const error& x) const {

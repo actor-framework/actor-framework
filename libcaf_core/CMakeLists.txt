@@ -6,6 +6,8 @@ file(GLOB_RECURSE CAF_CORE_HEADERS "caf/*.hpp")
 
 add_enum_consistency_check("caf/sec.hpp" "src/sec_strings.cpp")
 add_enum_consistency_check("caf/pec.hpp" "src/pec_strings.cpp")
+add_enum_consistency_check("caf/match_result.hpp"
+                           "src/match_result_strings.cpp")
 add_enum_consistency_check("caf/stream_priority.hpp"
                            "src/stream_priority_strings.cpp")
 add_enum_consistency_check("caf/exit_reason.hpp"
@@ -60,13 +62,13 @@ set(CAF_CORE_SOURCES
   src/detail/behavior_impl.cpp
   src/detail/behavior_stack.cpp
   src/detail/blocking_behavior.cpp
-  src/detail/dynamic_message_data.cpp
   src/detail/fnv_hash.cpp
   src/detail/get_mac_addresses.cpp
   src/detail/get_process_id.cpp
   src/detail/get_root_uuid.cpp
   src/detail/ini_consumer.cpp
   src/detail/invoke_result_visitor.cpp
+  src/detail/message_builder_element.cpp
   src/detail/message_data.cpp
   src/detail/meta_object.cpp
   src/detail/parse.cpp
@@ -83,6 +85,7 @@ set(CAF_CORE_SOURCES
   src/detail/test_actor_clock.cpp
   src/detail/thread_safe_actor_clock.cpp
   src/detail/tick_emitter.cpp
+  src/detail/type_id_list_builder.cpp
   src/detail/uri_impl.cpp
   src/downstream_manager.cpp
   src/downstream_manager_base.cpp
@@ -95,6 +98,7 @@ set(CAF_CORE_SOURCES
   src/group_manager.cpp
   src/group_module.cpp
   src/inbound_path.cpp
+  src/init_global_meta_objects.cpp
   src/intrusive/inbox_result_strings.cpp
   src/intrusive/task_result_strings.cpp
   src/invoke_msg_result_strings.cpp
@@ -108,13 +112,12 @@ set(CAF_CORE_SOURCES
   src/logger.cpp
   src/mailbox_element.cpp
   src/make_config_option.cpp
-  src/match_case.cpp
+  src/match_result_strings.cpp
   src/memory_managed.cpp
   src/message.cpp
   src/message_builder.cpp
   src/message_handler.cpp
   src/message_priority_strings.cpp
-  src/message_view.cpp
   src/monitorable_actor.cpp
   src/node_id.cpp
   src/outbound_path.cpp
@@ -130,7 +133,6 @@ set(CAF_CORE_SOURCES
   src/replies_to.cpp
   src/response_promise.cpp
   src/resumable.cpp
-  src/rtti_pair.cpp
   src/scheduled_actor.cpp
   src/scheduler/abstract_coordinator.cpp
   src/scheduler/test_coordinator.cpp
@@ -152,10 +154,7 @@ set(CAF_CORE_SOURCES
   src/timestamp.cpp
   src/tracing_data.cpp
   src/tracing_data_factory.cpp
-  src/type_erased_tuple.cpp
-  src/type_erased_value.cpp
   src/type_id_list.cpp
-  src/uniform_type_info_map.cpp
   src/uri.cpp
   src/uri_builder.cpp
   src/uuid.cpp
@@ -211,6 +210,7 @@ set(CAF_CORE_TEST_SOURCES
   test/detail/ripemd_160.cpp
   test/detail/serialized_size.cpp
   test/detail/tick_emitter.cpp
+  test/detail/type_id_list_builder.cpp
   test/detail/unique_function.cpp
   test/detail/unordered_flat_map.cpp
   test/dictionary.cpp
@@ -236,11 +236,9 @@ set(CAF_CORE_TEST_SOURCES
   test/ipv6_endpoint.cpp
   test/ipv6_subnet.cpp
   test/local_group.cpp
-  test/local_migration.cpp
   test/logger.cpp
   test/mailbox_element.cpp
   test/make_config_value_field.cpp
-  test/match.cpp
   test/message.cpp
   test/message_id.cpp
   test/message_lifetime.cpp
@@ -258,7 +256,6 @@ set(CAF_CORE_TEST_SOURCES
   test/policy/select_any.cpp
   test/request_timeout.cpp
   test/result.cpp
-  test/rtti_pair.cpp
   test/selective_streaming.cpp
   test/serialization.cpp
   test/settings.cpp
@@ -268,11 +265,8 @@ set(CAF_CORE_TEST_SOURCES
   test/string_algorithms.cpp
   test/string_view.cpp
   test/sum_type.cpp
-  test/sum_type_token.cpp
   test/thread_hook.cpp
-  test/to_string.cpp
   test/tracing_data.cpp
-  test/type_erased_tuple.cpp
   test/type_id_list.cpp
   test/typed_behavior.cpp
   test/typed_message_view.cpp
@@ -335,11 +329,10 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
 
 if(NOT CAF_NO_UNIT_TESTS)
   add_executable(caf-core-test
-                 "${PROJECT_SOURCE_DIR}/libcaf_test/src/caf-test.cpp"
-                 "${PROJECT_SOURCE_DIR}/libcaf_test/caf/test/unit_test.hpp"
-                 "${PROJECT_SOURCE_DIR}/libcaf_test/caf/test/unit_test_impl.hpp"
+                 test/core-test.cpp
                  ${CAF_CORE_TEST_SOURCES}
                  $<TARGET_OBJECTS:libcaf_core_obj>)
+  target_include_directories(caf-core-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/test")
   target_compile_definitions(caf-core-test PRIVATE libcaf_core_EXPORTS)
   target_link_libraries(caf-core-test ${CAF_EXTRA_LDFLAGS})
   add_test_suites(caf-core-test

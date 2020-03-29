@@ -65,10 +65,9 @@ void scribe::data_transferred(execution_unit* ctx, size_t written,
   if (detached())
     return;
   using transferred_t = data_transferred_msg;
-  using tmp_t = mailbox_element_vals<data_transferred_msg>;
-  tmp_t tmp{strong_actor_ptr{}, make_message_id(),
-            mailbox_element::forwarding_stack{},
-            transferred_t{hdl(), written, remaining}};
+  mailbox_element tmp{strong_actor_ptr{}, make_message_id(),
+                      mailbox_element::forwarding_stack{},
+                      make_message(transferred_t{hdl(), written, remaining})};
   invoke_mailbox_element_impl(ctx, tmp);
   // data_transferred_msg tmp{hdl(), written, remaining};
   // auto ptr = make_mailbox_element(nullptr, invalid_message_id, {}, tmp);

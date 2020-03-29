@@ -20,7 +20,7 @@
 
 #include "caf/config.hpp"
 
-#include "caf/test/unit_test.hpp"
+#include "core-test.hpp"
 
 #include <functional>
 
@@ -30,7 +30,6 @@
 #include "caf/message_handler.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/make_type_erased_tuple_view.hpp"
 
 using namespace caf;
 

@@ -56,7 +56,3 @@ protected:
 using doorman_ptr = intrusive_ptr<doorman>;
 
 } // namespace caf::io
-
-// Allows the `middleman_actor` to create a `doorman` and then send it to the
-// BASP broker.
-CAF_ALLOW_UNSAFE_MESSAGE_TYPE(caf::io::doorman_ptr)

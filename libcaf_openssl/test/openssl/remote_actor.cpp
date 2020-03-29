@@ -16,14 +16,12 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
+#define CAF_SUITE openssl.dynamic_remote_actor
 
-#include <signal.h>
-
-#define CAF_SUITE openssl_dynamic_remote_actor
-#include "caf/test/dsl.hpp"
+#include "openssl-test.hpp"
 
 #include <algorithm>
+#include <signal.h>
 #include <sstream>
 #include <utility>
 #include <vector>
@@ -43,7 +41,6 @@ public:
   config() {
     load<io::middleman>();
     load<openssl::manager>();
-    add_message_type<std::vector<int>>("std::vector<int>");
     actor_system_config::parse(test::engine::argc(), test::engine::argv());
     // Setting the "max consecutive reads" to 1 is highly likely to cause
     // OpenSSL to buffer data internally and report "pending" data after a read

@@ -14,18 +14,24 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/exec_main.hpp"
 #include "caf/function_view.hpp"
+#include "caf/init_global_meta_objects.hpp"
 #include "caf/policy/select_all.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
+CAF_BEGIN_TYPE_ID_BLOCK(fan_out_request, first_custom_type_id)
+
+  CAF_ADD_ATOM(fan_out_request, row_atom);
+  CAF_ADD_ATOM(fan_out_request, column_atom);
+  CAF_ADD_ATOM(fan_out_request, average_atom);
+
+CAF_END_TYPE_ID_BLOCK(fan_out_request)
+
 using std::endl;
 using std::chrono::seconds;
 using namespace caf;
 
-CAF_MSG_TYPE_ADD_ATOM(row_atom);
-CAF_MSG_TYPE_ADD_ATOM(column_atom);
-CAF_MSG_TYPE_ADD_ATOM(average_atom);
 
 /// A simple actor for storing an integer value.
 using cell = typed_actor<
@@ -121,15 +127,7 @@ std::ostream& operator<<(std::ostream& out, const expected<int>& x) {
   return out << to_string(x.error());
 }
 
-struct config : actor_system_config {
-  config() {
-    add_message_type<row_atom>("row_atom");
-    add_message_type<column_atom>("column_atom");
-    add_message_type<average_atom>("average_atom");
-  }
-};
-
-void caf_main(actor_system& sys, const config&) {
+void caf_main(actor_system& sys) {
   // Spawn our matrix.
   static constexpr int rows = 3;
   static constexpr int columns = 6;
@@ -159,4 +157,4 @@ void caf_main(actor_system& sys, const config&) {
               << '\n';
 }
 
-CAF_MAIN()
+CAF_MAIN(id_block::fan_out_request)

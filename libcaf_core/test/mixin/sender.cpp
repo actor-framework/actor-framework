@@ -32,9 +32,11 @@ namespace {
 
 behavior testee_impl(event_based_actor* self) {
   self->set_default_handler(reflect);
-  return {[] {
-    // nop
-  }};
+  return {
+    [] {
+      // nop
+    },
+  };
 }
 
 struct fixture : test_coordinator_fixture<> {

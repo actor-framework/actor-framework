@@ -75,7 +75,7 @@ error& error::operator=(const error& x) {
 }
 
 error::error(uint8_t x, uint8_t y)
-  : data_(x != 0 ? new data{x, y, none} : nullptr) {
+  : data_(x != 0 ? new data{x, y, message{}} : nullptr) {
   // nop
 }
 

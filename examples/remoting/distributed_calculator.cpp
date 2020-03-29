@@ -274,7 +274,8 @@ void client_repl(actor_system& system, const config& cfg) {
     line = trim(std::move(line)); // ignore leading and trailing whitespaces
     std::vector<string> words;
     split(words, line, is_any_of(" "), token_compress_on);
-    if (!message_builder(words.begin(), words.end()).apply(eval))
+    auto msg = message_builder(words.begin(), words.end()).move_to_message();
+    if (!eval(msg))
       usage();
   }
 }

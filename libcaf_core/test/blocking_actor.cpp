@@ -16,12 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE blocking_actor
-#include "caf/test/unit_test.hpp"
 
-#include "caf/all.hpp"
+#include "caf/blocking_actor.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 
@@ -43,15 +42,11 @@ CAF_TEST_FIXTURE_SCOPE(blocking_actor_tests, fixture)
 
 CAF_TEST(catch_all) {
   self->send(self, 42);
-  self->receive(
-    [](float) {
-      CAF_FAIL("received unexpected float");
-    },
-    others >> [](message_view& x) -> result<message> {
-      CAF_CHECK_EQUAL(to_string(x.content()), "(42)");
-      return sec::unexpected_message;
-    }
-  );
+  self->receive([](float) { CAF_FAIL("received unexpected float"); },
+                others >> [](message& msg) -> result<message> {
+                  CAF_CHECK_EQUAL(to_string(msg), "(42)");
+                  return sec::unexpected_message;
+                });
   self->receive(
     [](const error& err) {
       CAF_CHECK_EQUAL(err, sec::unexpected_message);

@@ -22,14 +22,13 @@
 #include <type_traits>
 
 #include "caf/message.hpp"
-#include "caf/message_view.hpp"
 #include "caf/result.hpp"
 
 namespace caf {
 
 template <class F>
 struct catch_all {
-  using fun_type = std::function<result<message>(message_view&)>;
+  using fun_type = std::function<result<message>(message&)>;
 
   F handler;
 
@@ -44,7 +43,7 @@ struct catch_all {
 
   static_assert(std::is_convertible<F, fun_type>::value,
                 "catch-all handler must have signature "
-                "result<message> (message_view&)");
+                "result<message> (message&)");
 
   fun_type lift() const {
     return handler;

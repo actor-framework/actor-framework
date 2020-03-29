@@ -27,10 +27,10 @@ std::string to_string(type_id_list xs) {
     return "[]";
   std::string result;
   result += '[';
-  result += detail::global_meta_object(xs[0]).type_name;
+  result += detail::global_meta_object(xs[0])->type_name;
   for (size_t index = 1; index < xs.size(); ++index) {
     result += ", ";
-    result += detail::global_meta_object(xs[index]).type_name;
+    result += detail::global_meta_object(xs[index])->type_name;
   }
   result += ']';
   return result;

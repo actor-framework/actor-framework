@@ -16,12 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE constructor_attach
-#include "caf/test/unit_test.hpp"
 
 #include "caf/all.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 
@@ -34,7 +33,9 @@ public:
   }
 
   behavior make_behavior() override {
-    return {[=](delete_atom) { quit(exit_reason::user_shutdown); }};
+    return {
+      [=](delete_atom) { quit(exit_reason::user_shutdown); },
+    };
   }
 };
 

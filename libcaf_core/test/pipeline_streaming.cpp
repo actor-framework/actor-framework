@@ -18,7 +18,7 @@
 
 #define CAF_SUITE pipeline_streaming
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <memory>
 #include <numeric>

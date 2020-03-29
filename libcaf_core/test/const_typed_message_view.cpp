@@ -20,20 +20,21 @@
 
 #include "caf/const_typed_message_view.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
-#include "caf/make_message.hpp"
 #include "caf/message.hpp"
 
 using namespace caf;
 
+CAF_TEST_FIXTURE_SCOPE(message_tests, test_coordinator_fixture<>)
+
 CAF_TEST(const message views never detach their content) {
   auto msg1 = make_message(1, 2, 3, "four");
   auto msg2 = msg1;
-  CAF_REQUIRE(msg1.cvals().get() == msg2.cvals().get());
+  CAF_REQUIRE(msg1.cptr() == msg2.cptr());
   CAF_REQUIRE(msg1.match_elements<int, int, int, std::string>());
   const_typed_message_view<int, int, int, std::string> view{msg1};
-  CAF_REQUIRE(msg1.cvals().get() == msg2.cvals().get());
+  CAF_REQUIRE(msg1.cptr() == msg2.cptr());
 }
 
 CAF_TEST(const message views allow access via get) {
@@ -45,3 +46,5 @@ CAF_TEST(const message views allow access via get) {
   CAF_CHECK_EQUAL(get<2>(view), 3);
   CAF_CHECK_EQUAL(get<3>(view), "four");
 }
+
+CAF_TEST_FIXTURE_SCOPE_END()

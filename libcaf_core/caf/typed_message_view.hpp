@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include "caf/detail/message_data.hpp"
+#include "caf/detail/offset_at.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/message.hpp"
 
@@ -26,12 +28,13 @@ namespace caf {
 template <class... Ts>
 class typed_message_view {
 public:
-  explicit typed_message_view(message& msg) noexcept
-    : ptr_(msg.vals().unshared_ptr()) {
+  typed_message_view() noexcept : ptr_(nullptr) {
     // nop
   }
 
-  typed_message_view() = delete;
+  explicit typed_message_view(message& msg) : ptr_(&msg.data()) {
+    // nop
+  }
 
   typed_message_view(const typed_message_view&) noexcept = default;
 
@@ -41,16 +44,27 @@ public:
     return ptr_;
   }
 
+  explicit operator bool() const noexcept {
+    return ptr_ != nullptr;
+  }
+
 private:
   detail::message_data* ptr_;
 };
 
-template <size_t Position, class... Ts>
-auto& get(typed_message_view<Ts...>& x) {
-  static_assert(Position < sizeof...(Ts));
-  using types = detail::type_list<Ts...>;
-  using type = detail::tl_at_t<types, Position>;
-  return *reinterpret_cast<type*>(x->get_mutable(Position));
+template <size_t Index, class... Ts>
+auto& get(typed_message_view<Ts...> x) {
+  static_assert(Index < sizeof...(Ts));
+  using type = caf::detail::tl_at_t<caf::detail::type_list<Ts...>, Index>;
+  return *reinterpret_cast<type*>(x->storage()
+                                  + detail::offset_at<Index, Ts...>);
+}
+
+template <class... Ts>
+auto make_typed_message_view(message& msg) {
+  if (msg.types() == make_type_id_list<Ts...>())
+    return typed_message_view<Ts...>{msg};
+  return typed_message_view<Ts...>{};
 }
 
 } // namespace caf

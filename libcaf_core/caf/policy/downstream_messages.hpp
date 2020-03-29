@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include <map>
+
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/drr_queue.hpp"

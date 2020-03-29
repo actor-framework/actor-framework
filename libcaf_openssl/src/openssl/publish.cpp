@@ -24,7 +24,6 @@
 #include "caf/actor_system.hpp"
 #include "caf/expected.hpp"
 #include "caf/function_view.hpp"
-
 #include "caf/openssl/manager.hpp"
 
 namespace caf::openssl {

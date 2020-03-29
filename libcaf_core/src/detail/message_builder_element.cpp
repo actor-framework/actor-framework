@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2019 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,17 +16,12 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/rtti_pair.hpp"
+#include "caf/detail/message_builder_element.hpp"
 
-namespace caf {
+namespace caf::detail {
 
-std::string to_string(rtti_pair x) {
-  std::string result = "(";
-  result += std::to_string(x.first);
-  result += ", ";
-  result += x.second != nullptr ? x.second->name() : "<null>";
-  result += ")";
-  return result;
+message_builder_element::~message_builder_element() {
+  // nop
 }
 
-} // namespace caf
+} // namespace caf::detail

@@ -21,8 +21,11 @@
 #include <utility>
 
 #include "caf/actor_system.hpp"
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
 #include "caf/deserializer.hpp"
-#include "caf/detail/dynamic_message_data.hpp"
+#include "caf/detail/meta_object.hpp"
+#include "caf/detail/type_id_list_builder.hpp"
 #include "caf/message_builder.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/serializer.hpp"
@@ -30,235 +33,124 @@
 
 namespace caf {
 
-message::message(none_t) noexcept {
-  // nop
-}
-
-message::message(message&& other) noexcept : vals_(std::move(other.vals_)) {
-  // nop
-}
-
-message::message(data_ptr ptr) noexcept : vals_(std::move(ptr)) {
-  // nop
-}
-
-message& message::operator=(message&& other) noexcept {
-  vals_.swap(other.vals_);
-  return *this;
-}
-
-message::~message() {
-  // nop
-}
-
-// -- implementation of type_erased_tuple --------------------------------------
-
-void* message::get_mutable(size_t p) {
-  CAF_ASSERT(vals_ != nullptr);
-  return vals_.unshared().get_mutable(p);
-
-}
-
-error message::load(size_t pos, deserializer& source) {
-  CAF_ASSERT(vals_ != nullptr);
-  return vals_.unshared().load(pos, source);
-}
-
-error_code<sec> message::load(size_t pos, binary_deserializer& source) {
-  CAF_ASSERT(vals_ != nullptr);
-  return vals_.unshared().load(pos, source);
-}
-
-size_t message::size() const noexcept {
-  return vals_ != nullptr ? vals_->size() : 0;
-}
-
-rtti_pair message::type(size_t pos) const noexcept {
-  CAF_ASSERT(vals_ != nullptr);
-  return vals_->type(pos);
-}
-
-const void* message::get(size_t pos) const noexcept {
-  CAF_ASSERT(vals_ != nullptr);
-  return vals_->get(pos);
-}
-
-std::string message::stringify(size_t pos) const {
-  CAF_ASSERT(vals_ != nullptr);
-  return vals_->stringify(pos);
-}
-
-type_erased_value_ptr message::copy(size_t pos) const {
-  CAF_ASSERT(vals_ != nullptr);
-  return vals_->copy(pos);
-}
-
-error message::save(size_t pos, serializer& sink) const {
-  CAF_ASSERT(vals_ != nullptr);
-  return vals_->save(pos, sink);
-}
-
-error_code<sec> message::save(size_t pos, binary_serializer& sink) const {
-  CAF_ASSERT(vals_ != nullptr);
-  return vals_->save(pos, sink);
-}
-
-bool message::shared() const noexcept {
-  return vals_ != nullptr ? vals_->shared() : false;
-}
-
 namespace {
 
 template <class Deserializer>
 typename Deserializer::result_type
-load_vals(Deserializer& source, message::data_ptr& vals) {
-  if (source.context() == nullptr)
-    return sec::no_context;
-  uint16_t zero = 0;
-  std::string tname;
-  if (auto err = source.begin_object(zero, tname))
+load_data(Deserializer& source, message::data_ptr& data) {
+  uint16_t ids_size = 0;
+  if (auto err = source.apply(ids_size))
     return err;
-  if (zero != 0)
-    return sec::unknown_type;
-  if (tname == "@<>") {
-    vals.reset();
-    return none;
+  if (ids_size == 0) {
+    data.reset();
+    return caf::none;
   }
-  if (tname.compare(0, 4, "@<>+") != 0)
-    return sec::unknown_type;
-  // iterate over concatenated type names
-  auto eos = tname.end();
-  auto next = [&](std::string::iterator iter) {
-    return std::find(iter, eos, '+');
-  };
-  auto& types = source.context()->system().types();
-  auto dmd = make_counted<detail::dynamic_message_data>();
-  std::string tmp;
-  std::string::iterator i = next(tname.begin());
-  ++i; // skip first '+' sign
-  do {
-    auto n = next(i);
-    tmp.assign(i, n);
-    auto ptr = types.make_value(tmp);
-    if (!ptr) {
-      CAF_LOG_ERROR("unknown type:" << tmp);
-      return sec::unknown_type;
-    }
-    if (auto err = ptr->load(source))
+  detail::type_id_list_builder ids;
+  ids.reserve(ids_size + 1); // +1 for the prefixed size
+  for (size_t i = 0; i < ids_size; ++i) {
+    type_id_t id = 0;
+    if (auto err = source.apply(id))
       return err;
-    dmd->append(std::move(ptr));
-    if (n != eos)
-      i = n + 1;
-    else
-      i = eos;
-  } while (i != eos);
-  if (auto err = source.end_object())
-    return err;
-  vals = detail::message_data::cow_ptr{std::move(dmd)};
-  return none;
+    ids.push_back(id);
+  }
+  CAF_ASSERT(ids.size() == ids_size);
+  auto gmos = detail::global_meta_objects();
+  size_t data_size = 0;
+  for (size_t i = 0; i < ids_size; ++i) {
+    auto id = ids[i];
+    if (id >= gmos.size())
+      return sec::unknown_type;
+    auto& mo = gmos[id];
+    if (mo.type_name == nullptr)
+      return sec::unknown_type;
+    data_size += mo.padded_size;
+  }
+  auto vptr = malloc(sizeof(detail::message_data) + data_size);
+  auto ptr = new (vptr) detail::message_data(ids.move_to_list());
+  auto pos = ptr->storage();
+  auto types = ptr->types();
+  for (auto i = 0; i < ids_size; ++i) {
+    auto& meta = gmos[types[i]];
+    meta.default_construct(pos);
+    if (auto err = load(meta, source, pos)) {
+      auto rpos = pos;
+      for (auto j = i; j > 0; --j) {
+        auto& jmeta = gmos[types[j]];
+        jmeta.destroy(rpos);
+        rpos -= jmeta.padded_size;
+      }
+      ptr->~message_data();
+      free(vptr);
+      return err;
+    }
+    pos += meta.padded_size;
+  }
+  data.reset(ptr, false);
+  return caf::none;
 }
 
 } // namespace
 
 error message::load(deserializer& source) {
-  return load_vals(source, vals_);
+  return load_data(source, data_);
 }
 
 error_code<sec> message::load(binary_deserializer& source) {
-  return load_vals(source, vals_);
+  return load_data(source, data_);
 }
 
 namespace {
 
 template <class Serializer>
 typename Serializer::result_type
-save_tuple(Serializer& sink, const type_erased_tuple& x) {
-  if (sink.context() == nullptr)
-    return sec::no_context;
-  // build type name
-  uint16_t zero = 0;
-  std::string tname = "@<>";
-  if (x.empty()) {
-    if (auto err = sink.begin_object(zero, tname))
-      return err;
-    return sink.end_object();
+save_data(Serializer& sink, const message::data_ptr& data) {
+  // Short-circuit empty tuples.
+  if (data == nullptr) {
+    uint16_t zero = 0;
+    return sink(zero);
   }
-  auto& types = sink.context()->system().types();
-  auto n = x.size();
-  for (size_t i = 0; i < n; ++i) {
-    auto rtti = x.type(i);
-    const auto& portable_name = types.portable_name(rtti);
-    if (portable_name == types.default_type_name()) {
-      std::cerr << "[ERROR]: cannot serialize message because a type was "
-                   "not added to the types list, typeid name: "
-                << (rtti.second != nullptr ? rtti.second->name()
-                                           : "-not-available-")
-                << std::endl;
-      return sec::unknown_type;
-    }
-    tname += '+';
-    tname += portable_name;
-  }
-  if (auto err = sink.begin_object(zero, tname))
+  // Write type information.
+  auto type_ids = data->types();
+  auto type_ids_size = static_cast<uint16_t>(type_ids.size());
+  if (auto err = sink(type_ids_size))
     return err;
-  for (size_t i = 0; i < n; ++i)
-    if (auto err = x.save(i, sink))
+  for (auto id : type_ids)
+    if (auto err = sink(id))
       return err;
-  return sink.end_object();
+  // Write elements.
+  auto gmos = detail::global_meta_objects();
+  auto storage = data->storage();
+  for (auto id : type_ids) {
+    auto& meta = gmos[id];
+    if (auto err = save(meta, sink, storage))
+      return err;
+    storage += meta.padded_size;
+  }
+  return {};
 }
 
 } // namespace
 
-error message::save(serializer& sink, const type_erased_tuple& x) {
-  return save_tuple(sink, x);
-}
-
-error_code<sec>
-message::save(binary_serializer& sink, const type_erased_tuple& x) {
-  return save_tuple(sink, x);
-}
-
 error message::save(serializer& sink) const {
-  return save_tuple(sink, *this);
+  return save_data(sink, data_);
 }
 
 error_code<sec> message::save(binary_serializer& sink) const {
-  return save_tuple(sink, *this);
+  return save_data(sink, data_);
 }
 
-// -- factories ----------------------------------------------------------------
+// -- related non-members ------------------------------------------------------
 
-message message::copy(const type_erased_tuple& xs) {
-  message_builder mb;
-  for (size_t i = 0; i < xs.size(); ++i)
-    mb.emplace(xs.copy(i));
-  return mb.move_to_message();
-}
-// -- modifiers ----------------------------------------------------------------
-
-
-optional<message> message::apply(message_handler handler) {
-  return handler(*this);
+error inspect(serializer& sink, const message& msg) {
+  return msg.save(sink);
 }
 
-void message::swap(message& other) noexcept {
-  vals_.swap(other.vals_);
-}
-
-void message::reset(raw_ptr new_ptr, bool add_ref) noexcept {
-  vals_.reset(new_ptr, add_ref);
-}
-
-error inspect(serializer& sink, message& msg) {
+error_code<sec> inspect(binary_serializer& sink, const message& msg) {
   return msg.save(sink);
 }
 
 error inspect(deserializer& source, message& msg) {
   return msg.load(source);
-}
-
-error_code<sec> inspect(binary_serializer& sink, message& msg) {
-  return msg.save(sink);
 }
 
 error_code<sec> inspect(binary_deserializer& source, message& msg) {
@@ -268,14 +160,25 @@ error_code<sec> inspect(binary_deserializer& source, message& msg) {
 std::string to_string(const message& msg) {
   if (msg.empty())
     return "<empty-message>";
-  std::string str = "(";
-  str += msg.cvals()->stringify(0);
-  for (size_t i = 1; i < msg.size(); ++i) {
-    str += ", ";
-    str += msg.cvals()->stringify(i);
+  std::string result;
+  result += '(';
+  auto types = msg.types();
+  if (!types.empty()) {
+    auto ptr = msg.cdata().storage();
+    auto meta = detail::global_meta_object(types[0]);
+    CAF_ASSERT(meta != nullptr);
+    meta->stringify(result, ptr);
+    ptr += meta->padded_size;
+    for (size_t index = 1; index < types.size(); ++index) {
+      result += ", ";
+      meta = detail::global_meta_object(types[index]);
+      CAF_ASSERT(meta != nullptr);
+      meta->stringify(result, ptr);
+      ptr += meta->padded_size;
+    }
   }
-  str += ")";
-  return str;
+  result += ')';
+  return result;
 }
 
 } // namespace caf

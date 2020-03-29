@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,32 +18,38 @@
 
 #pragma once
 
-#include <cstdint>
-#include <functional>
-#include <typeinfo>
+#include "caf/message.hpp"
+#include "caf/param.hpp"
 
-#include "caf/detail/type_erased_value_impl.hpp"
-#include "caf/type_erased_value.hpp"
+namespace caf::detail {
 
-namespace caf {
-
-/// @relates type_erased_value
-/// Creates a type-erased value of type `T` from `xs`.
-template <class T, class... Ts>
-type_erased_value_ptr make_type_erased_value(Ts&&... xs) {
-  type_erased_value_ptr result;
-  result.reset(new detail::type_erased_value_impl<T>(std::forward<Ts>(xs)...));
-  return result;
-}
-
-/// @relates type_erased_value
-/// Converts values to type-erased values.
-struct type_erased_value_factory {
-  template <class T>
-  type_erased_value_ptr operator()(T&& x) const {
-    return make_type_erased_value<typename std::decay<T>::type>(
-      std::forward<T>(x));
+template <class... Ts>
+class param_message_view {
+public:
+  explicit param_message_view(const message& msg) noexcept : ptr_(msg.cptr()) {
+    // nop
   }
+
+  param_message_view() = delete;
+
+  param_message_view(const param_message_view&) noexcept = default;
+
+  param_message_view& operator=(const param_message_view&) noexcept = default;
+
+  const detail::message_data* operator->() const noexcept {
+    return ptr_;
+  }
+
+private:
+  const detail::message_data* ptr_;
 };
 
-} // namespace caf
+template <size_t Index, class... Ts>
+auto get(const param_message_view<Ts...>& xs) {
+  static_assert(Index < sizeof...(Ts));
+  using type = caf::detail::tl_at_t<caf::detail::type_list<Ts...>, Index>;
+  return param<type>{xs->storage() + detail::offset_at<Index, Ts...>,
+                     !xs->unique()};
+}
+
+} // namespace caf::detail

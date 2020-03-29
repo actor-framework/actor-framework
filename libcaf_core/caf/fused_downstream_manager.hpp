@@ -69,7 +69,8 @@ struct downstream_manager_selector {
 
   template <class T, class... Ts>
   downstream_manager* operator()(const message& msg, T& x, Ts&... xs) {
-    if (msg.match_element<stream<typename T::value_type>>(0))
+    if (msg.size() > 1
+        && msg.type_at(0) == type_id_v<stream<typename T::value_type>>)
       return &x;
     return (*this)(msg, xs...);
   }

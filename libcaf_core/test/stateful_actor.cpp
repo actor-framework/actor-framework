@@ -20,7 +20,7 @@
 
 #include "caf/stateful_actor.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include "caf/event_based_actor.hpp"
 

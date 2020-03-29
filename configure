@@ -2,15 +2,6 @@
 # Convenience wrapper for easily viewing/setting options that
 # the project's CMake scripts will recognize.
 
-# check for `cmake` command
-type cmake > /dev/null 2>&1 || {
-    echo "\
-This package requires CMake, please install it first, then you may
-use this configure script to access CMake equivalent functionality.\
-" >&2;
-    exit 1;
-}
-
 command="$0 $*"
 dirname_0=`dirname $0`
 sourcedir=`cd $dirname_0 && pwd`
@@ -19,13 +10,14 @@ usage="\
 Usage: $0 [OPTION]... [VAR=VALUE]...
 
   Build Options:
+    --cmake=PATH                set a custom path to the CMake binary
     --generator=GENERATOR       set CMake generator (see cmake --help)
     --build-type=TYPE           set CMake build type [RelWithDebInfo]:
                                   - Debug: debugging flags enabled
                                   - MinSizeRel: minimal output size
                                   - Release: optimizations on, debugging off
                                   - RelWithDebInfo: release flags plus debugging
-    --extra-flags=STRING        additional compiler flags
+    --extra-flags=STRING        additional compiler flags (sets CMAKE_CXX_FLAGS)
     --build-dir=DIR             place build files in directory [build]
     --bin-dir=DIR               executable directory [build/bin]
     --lib-dir=DIR               library directory [build/lib]
@@ -36,13 +28,11 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --dual-build                build using both gcc and clang
     --build-static              build as static library
     --static-runtime            build with static C++ runtime
-    --more-warnings             enables most warnings
     --no-compiler-check         disable compiler version check
     --no-auto-libc++            do not automatically enable libc++ for Clang
     --no-exceptions             do not catch exceptions in CAF
     --force-no-exceptions       build CAF with '-fno-exceptions'
     --warnings-as-errors        build with '-Werror'
-    --with-ccache               use ccache to improve build performance
 
   Optional Targets:
     --with-qt-examples          build Qt example(s)
@@ -59,10 +49,8 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-openssl                build without OpenSSL module
     --no-tools                  build without CAF tools such as caf-run
     --no-io                     build without I/O module
-    --no-python                 build without python binding
     --no-summary                do not print configuration before building
-    --libs-only                 sets no-examples, no-tools, no-python,
-                                and no-unit-tests
+    --libs-only                 sets no-examples, no-tools and no-unit-tests
     --core-only                 same as libs-only but also adds sets
                                 no-openssl, and no-io
 
@@ -88,9 +76,6 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     CXXFLAGS                    C++ compiler flags (overrides defaults)
     LDFLAGS                     Additional linker flags
     CMAKE_GENERATOR     Selects a custom generator
-
-  Python Build Options:
-    --with-python-config=FILE   Use python-conf binary to determine includes and libs
 
   iOS Build Options (should be used with XCode generator):
     --sysroot=DIR               set system root for Clang
@@ -177,9 +162,9 @@ configure ()
     cd "$workdir"
 
     if [ -n "$5" ]; then
-        cmake -G "$5" $CMakeCacheEntries "$sourcedir"
+        "$CMakeCommand" -G "$5" $CMakeCacheEntries "$sourcedir"
     else
-        cmake $CMakeCacheEntries "$sourcedir"
+        "$CMakeCommand" $CMakeCacheEntries "$sourcedir"
     fi
 
     printf "#!/bin/sh\n\n" > config.status
@@ -225,6 +210,9 @@ while [ $# -ne 0 ]; do
             echo "${usage}" 1>&2
             exit 1
             ;;
+        --cmake=*)
+            CMakeCommand="$optarg"
+            ;;
         --generator=*)
             CMakeGenerator="$optarg"
             ;;
@@ -243,9 +231,6 @@ while [ $# -ne 0 ]; do
         --no-memory-management)
             append_cache_entry CAF_NO_MEM_MANAGEMENT BOOL yes
             ;;
-        --more-warnings)
-            append_cache_entry CAF_MORE_WARNINGS BOOL yes
-            ;;
         --no-compiler-check)
             append_cache_entry CAF_NO_COMPILER_CHECK BOOL yes
             ;;
@@ -258,12 +243,6 @@ while [ $# -ne 0 ]; do
         --force-no-exceptions)
             append_cache_entry CAF_NO_EXCEPTIONS BOOL yes
             append_cache_entry CAF_FORCE_NO_EXCEPTIONS BOOL yes
-            ;;
-        --warnings-as-errors)
-            append_cache_entry CAF_CXX_WARNINGS_AS_ERRORS BOOL yes
-            ;;
-        --with-ccache)
-            append_cache_entry CAF_USE_CCACHE BOOL yes
             ;;
         --sysroot=*)
             append_cache_entry CAF_OSX_SYSROOT PATH "$optarg"
@@ -291,7 +270,7 @@ while [ $# -ne 0 ]; do
             append_cache_entry CMAKE_BUILD_TYPE STRING "$optarg"
             ;;
         --extra-flags=*)
-            append_cache_entry EXTRA_FLAGS STRING "$optarg"
+            append_cache_entry CMAKE_CXX_FLAGS STRING "$optarg"
             ;;
         --build-dir=*)
             builddir="$optarg"
@@ -329,28 +308,22 @@ while [ $# -ne 0 ]; do
         --static-runtime)
             append_cache_entry CAF_BUILD_STATIC_RUNTIME BOOL yes
             ;;
-        --with-python-config=*)
-            append_cache_entry CAF_PYTHON_CONFIG_BIN FILEPATH "$optarg"
-            ;;
         --no-tools)
             append_cache_entry CAF_NO_TOOLS BOOL yes
             ;;
         --no-io)
             append_cache_entry CAF_NO_IO BOOL yes
             ;;
-        --no-python)
-            append_cache_entry CAF_NO_PYTHON BOOL yes
-            ;;
         --no-summary)
             append_cache_entry CAF_NO_SUMMARY BOOL yes
             ;;
         --libs-only)
-            for var in CAF_NO_TOOLS CAF_NO_PYTHON CAF_NO_EXAMPLES  CAF_NO_UNIT_TESTS; do
+            for var in CAF_NO_TOOLS CAF_NO_EXAMPLES  CAF_NO_UNIT_TESTS; do
               append_cache_entry $var BOOL yes
             done
             ;;
         --core-only)
-            for var in CAF_NO_TOOLS CAF_NO_PYTHON CAF_NO_EXAMPLES  CAF_NO_UNIT_TESTS CAF_NO_IO CAF_NO_OPENSSL ; do
+            for var in CAF_NO_TOOLS CAF_NO_EXAMPLES  CAF_NO_UNIT_TESTS CAF_NO_IO CAF_NO_OPENSSL ; do
               append_cache_entry $var BOOL yes
             done
             ;;
@@ -358,7 +331,7 @@ while [ $# -ne 0 ]; do
             for var in CAF_NO_TOOLS CAF_NO_EXAMPLES CAF_ENABLE_RUNTIME_CHECKS ; do
               append_cache_entry $var BOOL yes
             done
-            append_cache_entry CMAKE_BUILD_TYPE STRING debug
+            append_cache_entry CMAKE_BUILD_TYPE STRING Debug
             append_cache_entry CAF_LOG_LEVEL STRING TRACE
             append_cache_entry CAF_SANITIZERS STRING address,undefined
             ;;
@@ -369,6 +342,21 @@ while [ $# -ne 0 ]; do
     esac
     shift
 done
+
+# Check for `cmake` command.
+if [ -z "$CMakeCommand" ]; then
+    # prefer cmake3 over "regular" cmake (cmake == cmake2 on RHEL)
+    if command -v cmake3 >/dev/null 2>&1 ; then
+        CMakeCommand="cmake3"
+    elif command -v cmake >/dev/null 2>&1 ; then
+        CMakeCommand="cmake"
+    else
+        echo "This package requires CMake, please install it first."
+        echo "Then you may use this script to configure the CMake build."
+        echo "Note: pass --cmake=PATH to use cmake in non-standard locations."
+        exit 1;
+    fi
+fi
 
 # At this point we save the global CMake variables so that configure() can
 # later use them.

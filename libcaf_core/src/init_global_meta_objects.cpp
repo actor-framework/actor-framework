@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,26 +16,30 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#include "caf/init_global_meta_objects.hpp"
 
-#include "caf/detail/core_export.hpp"
-#include "caf/fwd.hpp"
+#include "caf/actor.hpp"
+#include "caf/actor_addr.hpp"
+#include "caf/actor_control_block.hpp"
+#include "caf/byte_buffer.hpp"
+#include "caf/config_value.hpp"
+#include "caf/downstream_msg.hpp"
+#include "caf/error.hpp"
+#include "caf/group.hpp"
+#include "caf/message.hpp"
+#include "caf/message_id.hpp"
+#include "caf/node_id.hpp"
+#include "caf/system_messages.hpp"
+#include "caf/timespan.hpp"
+#include "caf/timestamp.hpp"
+#include "caf/unit.hpp"
+#include "caf/upstream_msg.hpp"
+#include "caf/uri.hpp"
 
-namespace caf {
+namespace caf::core {
 
-/// Represents an object pointing to a `type_erased_tuple` that
-/// is convertible to a `message`
-class CAF_CORE_EXPORT message_view {
-public:
-  virtual ~message_view();
+void init_global_meta_objects() {
+  caf::init_global_meta_objects<id_block::core_module>();
+}
 
-  virtual type_erased_tuple& content() = 0;
-
-  virtual const type_erased_tuple& content() const = 0;
-
-  virtual message move_content_to_message() = 0;
-
-  virtual message copy_content_to_message() const = 0;
-};
-
-} // namespace caf
+} // namespace caf::core

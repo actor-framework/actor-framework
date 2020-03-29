@@ -57,8 +57,7 @@ public:
   // -- interface functions ----------------------------------------------------
 
   /// Begins processing of an object.
-  virtual result_type begin_object(uint16_t& typenr, std::string& type_name)
-    = 0;
+  virtual result_type begin_object(type_id_t& type) = 0;
 
   /// Ends processing of an object.
   virtual result_type end_object() = 0;

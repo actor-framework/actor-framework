@@ -19,13 +19,15 @@
 
 #define CAF_SUITE mailbox_element
 
+#include "caf/mailbox_element.hpp"
+
+#include "core-test.hpp"
+
 #include <string>
 #include <tuple>
 #include <vector>
 
 #include "caf/all.hpp"
-
-#include "caf/test/unit_test.hpp"
 
 using std::make_tuple;
 using std::string;
@@ -37,15 +39,10 @@ using namespace caf;
 namespace {
 
 template <class... Ts>
-optional<tuple<Ts...>> fetch(const type_erased_tuple& x) {
-  if (!x.match_elements<Ts...>())
-    return none;
-  return x.get_as_tuple<Ts...>();
-}
-
-template <class... Ts>
 optional<tuple<Ts...>> fetch(const message& x) {
-  return fetch<Ts...>(x.content());
+  if (auto view = make_const_typed_message_view<Ts...>(x))
+    return to_tuple(view);
+  return none;
 }
 
 template <class... Ts>
@@ -73,26 +70,6 @@ CAF_TEST(non_empty_message) {
   CAF_CHECK_EQUAL((fetch<int, int, int>(*m1)), make_tuple(1, 2, 3));
 }
 
-CAF_TEST(message_roundtrip) {
-  auto msg = make_message(1, 2, 3);
-  auto msg_ptr = msg.cvals().get();
-  auto m1 = make_mailbox_element(nullptr, make_message_id(),
-                                 no_stages, std::move(msg));
-  auto msg2 = m1->move_content_to_message();
-  CAF_CHECK_EQUAL(msg2.cvals().get(), msg_ptr);
-}
-
-CAF_TEST(message_roundtrip_with_copy) {
-  auto msg = make_message(1, 2, 3);
-  auto msg_ptr = msg.cvals().get();
-  auto m1 = make_mailbox_element(nullptr, make_message_id(),
-                                 no_stages, std::move(msg));
-  auto msg2 = m1->copy_content_to_message();
-  auto msg3 = m1->move_content_to_message();
-  CAF_CHECK_EQUAL(msg2.cvals().get(), msg_ptr);
-  CAF_CHECK_EQUAL(msg3.cvals().get(), msg_ptr);
-}
-
 CAF_TEST(tuple) {
   auto m1 = make_mailbox_element(nullptr, make_message_id(),
                                  no_stages, 1, 2, 3);
@@ -101,26 +78,6 @@ CAF_TEST(tuple) {
   CAF_CHECK(!m1->content().empty());
   CAF_CHECK_EQUAL((fetch<int, int>(*m1)), none);
   CAF_CHECK_EQUAL((fetch<int, int, int>(*m1)), make_tuple(1, 2, 3));
-}
-
-CAF_TEST(move_tuple) {
-  auto m1 = make_mailbox_element(nullptr, make_message_id(),
-                                 no_stages, "hello", "world");
-  using strings = tuple<string, string>;
-  CAF_CHECK_EQUAL((fetch<string, string>(*m1)), strings("hello", "world"));
-  auto msg = m1->move_content_to_message();
-  CAF_CHECK_EQUAL((fetch<string, string>(msg)), strings("hello", "world"));
-  CAF_CHECK_EQUAL((fetch<string, string>(*m1)), strings("", ""));
-}
-
-CAF_TEST(copy_tuple) {
-  auto m1 = make_mailbox_element(nullptr, make_message_id(),
-                                 no_stages, "hello", "world");
-  using strings = tuple<string, string>;
-  CAF_CHECK_EQUAL((fetch<string, string>(*m1)), strings("hello", "world"));
-  auto msg = m1->copy_content_to_message();
-  CAF_CHECK_EQUAL((fetch<string, string>(msg)), strings("hello", "world"));
-  CAF_CHECK_EQUAL((fetch<string, string>(*m1)), strings("hello", "world"));
 }
 
 CAF_TEST(high_priority) {

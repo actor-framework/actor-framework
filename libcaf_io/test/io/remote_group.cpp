@@ -35,7 +35,6 @@ class config : public caf::actor_system_config {
 public:
   config() {
     load<caf::io::middleman>();
-    add_message_type<std::vector<actor>>("std::vector<actor>");
   }
 };
 

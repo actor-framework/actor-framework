@@ -16,11 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/after.hpp"
-
 #define CAF_SUITE simple_timeout
 
-#include "caf/test/dsl.hpp"
+#include "caf/after.hpp"
+
+#include "core-test.hpp"
 
 #include <chrono>
 #include <memory>

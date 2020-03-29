@@ -13,6 +13,15 @@
 
 #include "caf/all.hpp"
 
+CAF_BEGIN_TYPE_ID_BLOCK(dining_philosophers, first_custom_type_id)
+
+  CAF_ADD_ATOM(dining_philosophers, take_atom);
+  CAF_ADD_ATOM(dining_philosophers, taken_atom);
+  CAF_ADD_ATOM(dining_philosophers, eat_atom);
+  CAF_ADD_ATOM(dining_philosophers, think_atom);
+
+CAF_END_TYPE_ID_BLOCK(dining_philosophers)
+
 using std::cerr;
 using std::cout;
 using std::endl;
@@ -23,10 +32,6 @@ using namespace caf;
 namespace {
 
 // atoms for chopstick and philosopher interfaces
-CAF_MSG_TYPE_ADD_ATOM(take_atom);
-CAF_MSG_TYPE_ADD_ATOM(taken_atom);
-CAF_MSG_TYPE_ADD_ATOM(eat_atom);
-CAF_MSG_TYPE_ADD_ATOM(think_atom);
 
 // a chopstick
 using chopstick = typed_actor<replies_to<take_atom>::with<taken_atom, bool>,
@@ -170,18 +175,9 @@ private:
   behavior eating_;   // wait for some time, then go thinking again
 };
 
-struct config : actor_system_config {
-  config() {
-    add_message_type<take_atom>("take_atom");
-    add_message_type<taken_atom>("taken_atom");
-    add_message_type<eat_atom>("eat_atom");
-    add_message_type<think_atom>("think_atom");
-  }
-};
-
 } // namespace
 
-void caf_main(actor_system& system, const config&) {
+void caf_main(actor_system& system) {
   scoped_actor self{system};
   // create five chopsticks
   aout(self) << "chopstick ids are:";
@@ -198,4 +194,4 @@ void caf_main(actor_system& system, const config&) {
     self->spawn<philosopher>(names[i], chopsticks[i], chopsticks[(i + 1) % 5]);
 }
 
-CAF_MAIN()
+CAF_MAIN(id_block::dining_philosophers)

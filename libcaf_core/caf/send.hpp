@@ -108,8 +108,10 @@ detail::enable_if_t<!std::is_same<Dest, group>::value>
 delayed_anon_send(const Dest& dest, std::chrono::duration<Rep, Period> rtime,
                   Ts&&... xs) {
   static_assert(sizeof...(Ts) > 0, "no message to send");
-  using token = detail::type_list<typename detail::implicit_conversions<
-    typename std::decay<Ts>::type>::type...>;
+  static_assert((detail::sendable<Ts> && ...),
+                "at least one type has no ID, "
+                "did you forgot to announce it via CAF_ADD_TYPE_ID?");
+  using token = detail::type_list<detail::strip_and_convert_t<Ts>...>;
   static_assert(response_type_unbox<signatures_of_t<Dest>, token>::valid,
                 "receiver does not accept given message");
   if (dest) {

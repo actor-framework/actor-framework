@@ -28,7 +28,7 @@ blocking_behavior::blocking_behavior(behavior& x) : nested(x) {
   // nop
 }
 
-result<message> blocking_behavior::fallback(message_view&) {
+result<message> blocking_behavior::fallback(message&) {
   return skip;
 }
 

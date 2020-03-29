@@ -109,9 +109,9 @@ protected:
   void on_cleanup(const error& reason) override;
 
 private:
-  bool
-  filter(upgrade_lock<detail::shared_spinlock>&, const strong_actor_ptr& sender,
-         message_id mid, message_view& mv, execution_unit* eu);
+  bool filter(upgrade_lock<detail::shared_spinlock>&,
+              const strong_actor_ptr& sender, message_id mid, message& msg,
+              execution_unit* eu);
 
   // call without workers_mtx_ held
   void quit(execution_unit* host);

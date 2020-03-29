@@ -21,8 +21,8 @@
 #include <tuple>
 
 #include "caf/detail/comparable.hpp"
-#include "caf/detail/tuple_vals.hpp"
 #include "caf/make_copy_on_write.hpp"
+#include "caf/ref_counted.hpp"
 
 namespace caf {
 
@@ -33,14 +33,31 @@ class cow_tuple : detail::comparable<cow_tuple<Ts...>>,
 public:
   // -- member types -----------------------------------------------------------
 
-  using impl = detail::tuple_vals<Ts...>;
-
   using data_type = std::tuple<Ts...>;
+
+  struct impl : ref_counted {
+    template <class... Us>
+    impl(Us&&... xs) : data(std::forward<Us>(xs)...) {
+      // nop
+    }
+
+    impl() = default;
+
+    impl(const impl&) = default;
+
+    impl& operator=(const impl&) = default;
+
+    impl* copy() const {
+      return new impl{*this};
+    }
+
+    data_type data;
+  };
 
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit cow_tuple(Ts... xs)
-      : ptr_(make_copy_on_write<impl>(std::move(xs)...)) {
+    : ptr_(make_copy_on_write<impl>(std::move(xs)...)) {
     // nop
   }
 
@@ -60,13 +77,13 @@ public:
 
   /// Returns the managed tuple.
   const data_type& data() const noexcept {
-    return ptr_->data();
+    return ptr_->data;
   }
 
   /// Returns a mutable reference to the managed tuple, guaranteed to have a
   /// reference count of 1.
   data_type& unshared() {
-    return ptr_.unshared().data();
+    return ptr_.unshared().data;
   }
 
   /// Returns whether the reference count of the managed object is 1.

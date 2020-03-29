@@ -16,11 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
-// this suite tests whether actors terminate as expect in several use cases
 #define CAF_SUITE actor_termination
-#include "caf/test/dsl.hpp"
+
+#include "core-test.hpp"
+
+#include "caf/all.hpp"
 
 using namespace caf;
 
@@ -59,11 +59,10 @@ CAF_TEST_FIXTURE_SCOPE(actor_termination_tests, fixture)
 
 CAF_TEST(single_multiplexed_request) {
   auto f = [&](event_based_actor* self, actor server) {
-    self->request(server, infinite, 42).then(
-      [=](int x) {
-        CAF_REQUIRE_EQUAL(x, 42);
-      }
-    );
+    self->request(server, infinite, 42).then([=](int x) {
+      CAF_LOG_TRACE(CAF_ARG(x));
+      CAF_REQUIRE_EQUAL(x, 42);
+    });
   };
   spawn(f, mirror);
   // run initialization code of testee
@@ -75,11 +74,10 @@ CAF_TEST(single_multiplexed_request) {
 CAF_TEST(multiple_multiplexed_requests) {
   auto f = [&](event_based_actor* self, actor server) {
     for (int i = 0; i < 3; ++i)
-      self->request(server, infinite, 42).then(
-        [=](int x) {
-          CAF_REQUIRE_EQUAL(x, 42);
-        }
-      );
+      self->request(server, infinite, 42).then([=](int x) {
+        CAF_LOG_TRACE(CAF_ARG(x));
+        CAF_REQUIRE_EQUAL(x, 42);
+      });
   };
   spawn(f, mirror);
   // run initialization code of testee

@@ -181,8 +181,8 @@ blocking_actor::mailbox_visitor::operator()(mailbox_element& x) {
       return intrusive::task_result::skip;
     }
     // Automatically unlink from actors after receiving an exit.
-    if (x.content().match_elements<exit_msg>())
-      self->unlink_from(x.content().get_as<exit_msg>(0).source);
+    if (auto view = make_const_typed_message_view<exit_msg>(x.content()))
+      self->unlink_from(get<0>(view).source);
     // Blocking actors can nest receives => push/pop `current_element_`
     auto prev_element = self->current_element_;
     self->current_element_ = &x;
@@ -193,9 +193,9 @@ blocking_actor::mailbox_visitor::operator()(mailbox_element& x) {
     switch (bhvr.nested(visitor, x.content())) {
       default:
         return check_if_done();
-      case match_case::no_match: { // Blocking actors can have fallback handlers
-                                   // for catch-all rules.
-        auto sres = bhvr.fallback(*self->current_element_);
+      case match_result::no_match: { // Blocking actors can have fallback
+                                     // handlers for catch-all rules.
+        auto sres = bhvr.fallback(self->current_element_->payload);
         if (sres.flag != rt_skip) {
           visitor.visit(sres);
           return check_if_done();
@@ -204,16 +204,15 @@ blocking_actor::mailbox_visitor::operator()(mailbox_element& x) {
         // Response handlers must get re-invoked with an error when receiving an
         // unexpected message.
         if (mid.is_response()) {
-          auto err = make_error(sec::unexpected_response,
-                                x.move_content_to_message());
-          mailbox_element_view<error> tmp{std::move(x.sender), x.mid,
-                                          std::move(x.stages), err};
+          auto err = make_error(sec::unexpected_response, std::move(x.payload));
+          mailbox_element tmp{std::move(x.sender), x.mid, std::move(x.stages),
+                              make_message(std::move(err))};
           self->current_element_ = &tmp;
           bhvr.nested(tmp.content());
           return check_if_done();
         }
         CAF_ANNOTATE_FALLTHROUGH;
-      case match_case::skip:
+      case match_result::skip:
         return intrusive::task_result::skip;
     }
   };

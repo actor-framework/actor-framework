@@ -65,8 +65,12 @@ public:
                   "it is not possible to deliver objects of type result<T>");
     static_assert(!detail::tl_exists<ts, detail::is_expected>::value,
                   "mixing expected<T> with regular values is not supported");
-    return deliver_impl(
-      make_message(std::forward<T>(x), std::forward<Ts>(xs)...));
+    if constexpr (sizeof...(Ts) == 0
+                  && std::is_same<message, std::decay_t<T>>::value)
+      return deliver_impl(std::forward<T>(x));
+    else
+      return deliver_impl(
+        make_message(std::forward<T>(x), std::forward<Ts>(xs)...));
   }
 
   template <class T>
@@ -91,8 +95,12 @@ public:
     // TODO: use `if constexpr` when switching to C++17
     if (P == message_priority::high)
       id_ = id_.with_high_priority();
-    delegate_impl(actor_cast<abstract_actor*>(dest),
-                  make_message(std::forward<Ts>(xs)...));
+    if constexpr (std::is_same<detail::type_list<message>,
+                               detail::type_list<std::decay_t<Ts>...>>::value)
+      delegate_impl(actor_cast<abstract_actor*>(dest), std::forward<Ts>(xs)...);
+    else
+      delegate_impl(actor_cast<abstract_actor*>(dest),
+                    make_message(std::forward<Ts>(xs)...));
     return {};
   }
 

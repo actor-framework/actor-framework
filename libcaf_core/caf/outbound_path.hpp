@@ -64,11 +64,6 @@ public:
 
   // -- downstream communication -----------------------------------------------
 
-  /// Sends an `open_stream_msg` handshake.
-  static void
-  emit_open(local_actor* self, stream_slot slot, strong_actor_ptr to,
-            message handshake_data, stream_priority prio);
-
   /// Sends a `downstream_msg::batch` on this path. Decrements `open_credit` by
   /// `xs_size` and increments `next_batch_id` by 1.
   void emit_batch(local_actor* self, int32_t xs_size, message xs);

@@ -39,8 +39,7 @@ struct splitter_state {
 
 behavior fan_out_fan_in(stateful_actor<splitter_state>* self,
                         const std::vector<strong_actor_ptr>& workers) {
-  auto f = [=](local_actor*, message_view& x) -> result<message> {
-    auto msg = x.move_content_to_message();
+  auto f = [=](local_actor*, message& msg) -> result<message> {
     self->state.rp = self->make_response_promise();
     self->state.pending = workers.size();
     // request().await() has LIFO ordering

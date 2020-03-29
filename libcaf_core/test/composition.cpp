@@ -17,9 +17,11 @@
  ******************************************************************************/
 
 #define CAF_SUITE composition
-#include "caf/test/dsl.hpp"
 
-using namespace std;
+#include "caf/actor.hpp"
+
+#include "core-test.hpp"
+
 using namespace caf;
 
 namespace {

@@ -1,3 +1,0 @@
-[submodule "libcaf_python/third_party/pybind"]
-	path = libcaf_python/third_party/pybind
-	url = https://github.com/pybind/pybind11.git

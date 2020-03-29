@@ -10,7 +10,8 @@ named "calculator".
 
 .. literalinclude:: /examples/remoting/remote_spawn.cpp
    :language: C++
-   :lines: 123-137
+   :start-after: --(rst-client-begin)--
+   :end-before: --(rst-client-end)--
 
 We first connect to a CAF node with ``middleman().connect(...)``. On success,
 ``connect`` returns the node ID we need for ``remote_spawn``. This requires the

@@ -25,6 +25,7 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/gcd.hpp"
+#include "caf/init_global_meta_objects.hpp"
 #include "caf/meta/annotation.hpp"
 #include "caf/test/unit_test.hpp"
 
@@ -232,9 +233,11 @@ private:
 template <class... Ts>
 caf::optional<std::tuple<Ts...>> default_extract(caf_handle x) {
   auto ptr = x->peek_at_next_mailbox_element();
-  if (ptr == nullptr || !ptr->content().template match_elements<Ts...>())
+  if (ptr == nullptr)
     return caf::none;
-  return ptr->content().template get_as_tuple<Ts...>();
+  if (auto view = caf::make_const_typed_message_view<Ts...>(ptr->content()))
+    return to_tuple(view);
+  return caf::none;
 }
 
 /// @private

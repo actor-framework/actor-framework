@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2019 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,36 +16,24 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE rtti_pair
+#pragma once
 
-#include "caf/rtti_pair.hpp"
+#include "caf/detail/padded_size.hpp"
 
-#include "caf/test/dsl.hpp"
+namespace caf::detail {
 
-using namespace caf;
-
-namespace {
-
-struct foo {
-  int x;
-  int y;
+template <size_t Remaining, class T, class... Ts>
+struct offset_at_helper {
+  static constexpr size_t value = offset_at_helper<Remaining - 1, Ts...>::value
+                                  + padded_size_v<T>;
 };
 
-} // namespace
+template <class T, class... Ts>
+struct offset_at_helper<0, T, Ts...> {
+  static constexpr size_t value = 0;
+};
 
-CAF_TEST(make_rtti_pair) {
-  auto n = type_nr<int32_t>::value;
-  CAF_REQUIRE_NOT_EQUAL(n, 0u);
-  auto x1 = make_rtti_pair<int32_t>();
-  CAF_CHECK_EQUAL(x1.first, n);
-  CAF_CHECK_EQUAL(x1.second, nullptr);
-  auto x2 = make_rtti_pair<foo>();
-  CAF_CHECK_EQUAL(x2.first, 0);
-  CAF_CHECK_EQUAL(x2.second, &typeid(foo));
-}
+template <size_t Index, class... Ts>
+constexpr size_t offset_at = offset_at_helper<Index, Ts...>::value;
 
-CAF_TEST(to_string) {
-  auto n = type_nr<int32_t>::value;
-  CAF_CHECK_EQUAL(to_string(make_rtti_pair<int32_t>()),
-                  "(" + std::to_string(n) + ", <null>)");
-}
+} // namespace caf::detail

@@ -23,7 +23,13 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
 #include "caf/config.hpp"
+#include "caf/deserializer.hpp"
+#include "caf/error.hpp"
+#include "caf/error_code.hpp"
+#include "caf/serializer.hpp"
 #include "caf/span.hpp"
 
 namespace caf::detail {
@@ -51,13 +57,33 @@ struct meta_objects_cleanup {
 
 } // namespace
 
+caf::error save(const meta_object& meta, caf::serializer& sink,
+                const void* obj) {
+  return meta.save(sink, obj);
+}
+
+caf::error_code<sec> save(const meta_object& meta, caf::binary_serializer& sink,
+                          const void* obj) {
+  return meta.save_binary(sink, obj);
+}
+
+caf::error load(const meta_object& meta, caf::deserializer& source, void* obj) {
+  return meta.load(source, obj);
+}
+
+caf::error_code<sec> load(const meta_object& meta,
+                          caf::binary_deserializer& source, void* obj) {
+  return meta.load_binary(source, obj);
+}
+
 span<const meta_object> global_meta_objects() {
   return {meta_objects, meta_objects_size};
 }
 
-meta_object& global_meta_object(type_id_t id) {
+const meta_object* global_meta_object(type_id_t id) {
   CAF_ASSERT(id < meta_objects_size);
-  return meta_objects[id];
+  auto& meta = meta_objects[id];
+  return meta.type_name != nullptr ? &meta : nullptr;
 }
 
 void clear_global_meta_objects() {

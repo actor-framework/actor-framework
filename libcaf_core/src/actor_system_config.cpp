@@ -32,6 +32,7 @@
 #include "caf/detail/parser/read_ini.hpp"
 #include "caf/detail/parser/read_string.hpp"
 #include "caf/message_builder.hpp"
+#include "caf/type_id.hpp"
 
 namespace caf {
 
@@ -53,16 +54,6 @@ actor_system_config::actor_system_config()
     slave_mode(false),
     config_file_path(default_config_file),
     slave_mode_fun(nullptr) {
-  // add `vector<T>` and `stream<T>` for each statically known type
-  add_message_type_impl<stream<actor>>("stream<@actor>");
-  add_message_type_impl<stream<actor_addr>>("stream<@addr>");
-  add_message_type_impl<stream<message>>("stream<@message>");
-  add_message_type_impl<std::vector<actor>>("std::vector<@actor>");
-  add_message_type_impl<std::vector<actor_addr>>("std::vector<@addr>");
-  add_message_type_impl<std::vector<message>>("std::vector<@message>");
-  add_message_type_impl<settings>("settings");
-  add_message_type_impl<config_value::list>("std::vector<@config_value>");
-  add_message_type_impl<config_value::dictionary>("dictionary<@config_value>");
   // (1) hard-coded defaults
   stream_desired_batch_complexity = defaults::stream::desired_batch_complexity;
   stream_max_batch_delay = defaults::stream::max_batch_delay;

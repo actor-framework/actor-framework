@@ -7,9 +7,6 @@
 // Run client at the same host:
 // - remote_spawn -H localhost -p 4242
 
-// Manual refs: 33-34, 98-109 (ConfiguringActorApplications)
-//              123-137 (RemoteSpawn)
-
 #include <array>
 #include <cassert>
 #include <functional>
@@ -21,17 +18,24 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
+// --(rst-calculator-begin)--
+using calculator
+  = caf::typed_actor<caf::replies_to<caf::add_atom, int, int>::with<int>,
+                     caf::replies_to<caf::sub_atom, int, int>::with<int>>;
+// --(rst-calculator-end)--
+
+CAF_BEGIN_TYPE_ID_BLOCK(remote_spawn, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(remote_spawn, (calculator))
+
+CAF_END_TYPE_ID_BLOCK(remote_spawn)
+
 using std::cerr;
 using std::cout;
 using std::endl;
 using std::string;
 
 using namespace caf;
-
-namespace {
-
-using calculator = typed_actor<replies_to<add_atom, int, int>::with<int>,
-                               replies_to<sub_atom, int, int>::with<int>>;
 
 calculator::behavior_type calculator_fun(calculator::pointer self) {
   return {
@@ -119,6 +123,7 @@ void server(actor_system& system, const config& cfg) {
   getchar();
 }
 
+// --(rst-client-begin)--
 void client(actor_system& system, const config& cfg) {
   auto node = system.middleman().connect(cfg.host, cfg.port);
   if (!node) {
@@ -140,12 +145,11 @@ void client(actor_system& system, const config& cfg) {
   // be a good citizen and terminate remotely spawned actor before exiting
   anon_send_exit(*worker, exit_reason::kill);
 }
+// --(rst-client-end)--
 
 void caf_main(actor_system& system, const config& cfg) {
   auto f = cfg.server_mode ? server : client;
   f(system, cfg);
 }
 
-} // namespace
-
-CAF_MAIN(io::middleman)
+CAF_MAIN(id_block::remote_spawn, io::middleman)

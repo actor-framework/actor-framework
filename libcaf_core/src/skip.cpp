@@ -23,7 +23,7 @@
 
 namespace caf {
 
-result<message> skip_t::skip_fun_impl(scheduled_actor*, message_view&) {
+result<message> skip_t::skip_fun_impl(scheduled_actor*, message&) {
   return skip();
 }
 

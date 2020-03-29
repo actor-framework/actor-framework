@@ -16,11 +16,10 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <utility>
-
 #include "caf/detail/behavior_impl.hpp"
 
-#include "caf/make_type_erased_tuple_view.hpp"
+#include <utility>
+
 #include "caf/message_handler.hpp"
 
 namespace caf::detail {
@@ -29,10 +28,9 @@ namespace {
 
 class combinator final : public behavior_impl {
 public:
-  match_case::result
-  invoke(detail::invoke_result_visitor& f, type_erased_tuple& xs) override {
+  match_result invoke(detail::invoke_result_visitor& f, message& xs) override {
     auto x = first->invoke(f, xs);
-    return x == match_case::no_match ? second->invoke(f, xs) : x;
+    return x == match_result::no_match ? second->invoke(f, xs) : x;
   }
 
   void handle_timeout() override {
@@ -78,34 +76,17 @@ behavior_impl::~behavior_impl() {
   // nop
 }
 
-behavior_impl::behavior_impl()
-  : timeout_(infinite), begin_(nullptr), end_(nullptr) {
+behavior_impl::behavior_impl() : timeout_(infinite) {
   // nop
 }
 
-behavior_impl::behavior_impl(timespan tout)
-  : timeout_(tout), begin_(nullptr), end_(nullptr) {
+behavior_impl::behavior_impl(timespan tout) : timeout_(tout) {
   // nop
 }
 
-match_case::result
-behavior_impl::invoke_empty(detail::invoke_result_visitor& f) {
-  auto xs = make_type_erased_tuple_view();
+match_result behavior_impl::invoke_empty(detail::invoke_result_visitor& f) {
+  message xs;
   return invoke(f, xs);
-}
-
-match_case::result
-behavior_impl::invoke(detail::invoke_result_visitor& f, type_erased_tuple& xs) {
-  for (auto i = begin_; i != end_; ++i)
-    switch (i->ptr->invoke(f, xs)) {
-      case match_case::no_match:
-        break;
-      case match_case::match:
-        return match_case::match;
-      case match_case::skip:
-        return match_case::skip;
-    };
-  return match_case::no_match;
 }
 
 optional<message> behavior_impl::invoke(message& xs) {
@@ -113,24 +94,16 @@ optional<message> behavior_impl::invoke(message& xs) {
   // the following const-cast is safe, because invoke() is aware of
   // copy-on-write and does not modify x if it's shared
   if (!xs.empty())
-    invoke(f, *const_cast<message_data*>(xs.cvals().get()));
+    invoke(f, xs);
   else
     invoke_empty(f);
   return std::move(f.value);
 }
 
-optional<message> behavior_impl::invoke(type_erased_tuple& xs) {
-  maybe_message_visitor f;
-  invoke(f, xs);
-  return std::move(f.value);
-}
-
-match_case::result
-behavior_impl::invoke(detail::invoke_result_visitor& f, message& xs) {
-  // the following const-cast is safe, because invoke() is aware of
-  // copy-on-write and does not modify x if it's shared
+match_result behavior_impl::invoke(detail::invoke_result_visitor& f,
+                                   message& xs) {
   if (!xs.empty())
-    return invoke(f, *const_cast<message_data*>(xs.cvals().get()));
+    return invoke(f, xs);
   return invoke_empty(f);
 }
 

@@ -20,7 +20,7 @@
 
 #include "caf/config.hpp"
 
-#include "caf/test/io_dsl.hpp"
+#include "io-test.hpp"
 
 #include <cstring>
 #include <functional>
@@ -35,9 +35,6 @@
 using namespace caf;
 
 namespace {
-
-using calculator = typed_actor<replies_to<add_atom, int, int>::with<int>,
-                               replies_to<sub_atom, int, int>::with<int>>;
 
 // function-based, dynamically typed, event-based API
 behavior calculator_fun(event_based_actor*) {

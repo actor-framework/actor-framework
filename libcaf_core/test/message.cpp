@@ -20,14 +20,17 @@
 
 #include "caf/message.hpp"
 
-#include "caf/test/unit_test.hpp"
-
-#include "caf/message_handler.hpp"
+#include "core-test.hpp"
 
 #include <map>
 #include <numeric>
 #include <string>
 #include <vector>
+
+#include "caf/init_global_meta_objects.hpp"
+#include "caf/message_handler.hpp"
+#include "caf/type_id.hpp"
+#include "caf/type_id_list.hpp"
 
 using std::map;
 using std::string;
@@ -36,49 +39,9 @@ using std::make_tuple;
 
 using namespace caf;
 
-CAF_TEST(apply) {
-  auto f1 = [] {
-    CAF_ERROR("f1 invoked!");
-  };
-  auto f2 = [](int i) {
-    CAF_CHECK_EQUAL(i, 42);
-  };
-  auto m = make_message(42);
-  m.apply(f1);
-  m.apply(f2);
-}
+using namespace std::literals::string_literals;
 
 namespace {
-
-struct s1 {
-  int value[3] = {10, 20, 30};
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, s1& x) {
-  return f(x.value);
-}
-
-struct s2 {
-  int value[4][2] = {{1, 10}, {2, 20}, {3, 30}, {4, 40}};
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, s2& x) {
-  return f(x.value);
-}
-
-struct s3 {
-  std::array<int, 4> value;
-  s3() {
-    std::iota(value.begin(), value.end(), 1);
-  }
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, s3& x) {
-  return f(x.value);
-}
 
 template <class... Ts>
 std::string msg_as_string(Ts&&... xs) {
@@ -86,6 +49,17 @@ std::string msg_as_string(Ts&&... xs) {
 }
 
 } // namespace
+
+CAF_TEST(messages allow index - based access) {
+  auto msg = make_message("abc", uint32_t{10}, 20.0);
+  CAF_CHECK_EQUAL(msg.size(), 3u);
+  CAF_CHECK_EQUAL(msg.types(),
+                  (make_type_id_list<std::string, uint32_t, double>()));
+  CAF_CHECK_EQUAL(msg.get_as<std::string>(0), "abc");
+  CAF_CHECK_EQUAL(msg.get_as<uint32_t>(1), 10u);
+  CAF_CHECK_EQUAL(msg.get_as<double>(2), 20.0);
+  CAF_CHECK_EQUAL(msg.cdata().get_reference_count(), 1u);
+}
 
 CAF_TEST(compare_custom_types) {
   s2 tmp;
@@ -96,15 +70,42 @@ CAF_TEST(compare_custom_types) {
 
 CAF_TEST(empty_to_string) {
   message msg;
-  CAF_CHECK(to_string(msg), "<empty-message>");
+  CAF_CHECK_EQUAL(to_string(msg), "<empty-message>");
 }
 
 CAF_TEST(integers_to_string) {
-  using ivec = vector<int>;
-  CAF_CHECK_EQUAL(msg_as_string(1, 2, 3), "(1, 2, 3)");
-  CAF_CHECK_EQUAL(msg_as_string(ivec{1, 2, 3}), "([1, 2, 3])");
-  CAF_CHECK_EQUAL(msg_as_string(ivec{1, 2}, 3, 4, ivec{5, 6, 7}),
-                  "([1, 2], 3, 4, [5, 6, 7])");
+  using ivec = vector<int32_t>;
+  using svec = vector<std::string>;
+  using sset = std::set<std::string>;
+  using std::string;
+  using itup = std::tuple<int, int, int>;
+  CAF_CHECK_EQUAL(make_message(ivec{}).types(), make_type_id_list<ivec>());
+  CAF_CHECK_EQUAL(make_type_id_list<ivec>()[0], type_id_v<ivec>);
+  CAF_CHECK_EQUAL(make_message(ivec{}).types()[0], type_id_v<ivec>);
+  CAF_CHECK_EQUAL(make_message(1.0).types()[0], type_id_v<double>);
+  CAF_CHECK_EQUAL(make_message(s1{}).types()[0], type_id_v<s1>);
+  CAF_CHECK_EQUAL(make_message(s2{}).types()[0], type_id_v<s2>);
+  CAF_CHECK_EQUAL(make_message(s3{}).types()[0], type_id_v<s3>);
+  CAF_CHECK_EQUAL(make_message(svec{}).types()[0], type_id_v<svec>);
+  CAF_CHECK_EQUAL(make_message(string{}).types()[0], type_id_v<string>);
+  CAF_CHECK_EQUAL(make_message(sset{}).types()[0], type_id_v<sset>);
+  CAF_CHECK_EQUAL(make_message(itup(1, 2, 3)).types()[0], type_id_v<itup>);
+
+  /*
+    CAF_CHECK_EQUAL(make_message(1, 2).types(), (make_type_id_list<int,
+    int>())); CAF_CHECK_EQUAL(msg_as_string(1, 2, 3), "(1, 2, 3)");
+    CAF_CHECK_EQUAL(msg_as_string(ivec{1, 2, 3}), "([1, 2, 3])");
+    CAF_CHECK_EQUAL(msg_as_string(ivec{1, 2}, 3, 4, ivec{5, 6, 7}),
+                    "([1, 2], 3, 4, [5, 6, 7])");
+    auto msg = make_message(ivec{1, 2, 3});
+    CAF_MESSAGE("s1: " << type_id_v<s1>);
+    CAF_MESSAGE("ivec: " << type_id_v<ivec>);
+    CAF_MESSAGE("msg.types: " << msg.types());
+    CAF_MESSAGE("msg.types[int]: " << msg.types()[0]);
+    CAF_MESSAGE("types #1: " << make_type_id_list<s1>());
+    CAF_MESSAGE("types #2: " << make_type_id_list<ivec>());
+    CAF_CHECK_EQUAL(msg.get_as<ivec>(0), ivec({1, 2, 3}));
+    */
 }
 
 CAF_TEST(strings_to_string) {
@@ -130,7 +131,8 @@ CAF_TEST(maps_to_string) {
 CAF_TEST(tuples_to_string) {
   auto msg1 = make_message(make_tuple(1, 2, 3), 4, 5);
   CAF_CHECK_EQUAL(to_string(msg1), "((1, 2, 3), 4, 5)");
-  auto msg2 = make_message(make_tuple(string{"one"}, 2, uint32_t{3}), 4, true);
+  auto msg2 = make_message(make_tuple("one"s, int32_t{2}, uint32_t{3}), 4,
+                           true);
   CAF_CHECK_EQUAL(to_string(msg2), "((\"one\", 2, 3), 4, true)");
 }
 

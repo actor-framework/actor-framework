@@ -8,6 +8,16 @@
 
 #include "caf/all.hpp"
 
+struct entity;
+struct se_event;
+
+CAF_BEGIN_TYPE_ID_BLOCK(caf_vec, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(caf_vec, (entity));
+  CAF_ADD_TYPE_ID(caf_vec, (se_event));
+
+CAF_END_TYPE_ID_BLOCK(caf_vec)
+
 using std::string;
 
 using namespace caf;
@@ -870,5 +880,4 @@ void caf_main(actor_system& sys, const config& cfg) {
 
 } // namespace
 
-CAF_MAIN()
-
+CAF_MAIN(id_block::caf_vec)

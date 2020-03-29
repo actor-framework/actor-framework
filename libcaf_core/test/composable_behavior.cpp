@@ -20,11 +20,12 @@
 
 #include "caf/composable_behavior.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include "caf/attach_stream_sink.hpp"
 #include "caf/attach_stream_source.hpp"
 #include "caf/attach_stream_stage.hpp"
+#include "caf/composable_behavior_based_actor.hpp"
 #include "caf/typed_actor.hpp"
 
 #define ERROR_HANDLER [&](error& err) { CAF_FAIL(system.render(err)); }
@@ -32,8 +33,6 @@
 using namespace caf;
 
 namespace {
-
-// -- composable behaviors using primitive data types and streams --------------
 
 using i3_actor = typed_actor<replies_to<int, int, int>::with<int>>;
 
@@ -45,7 +44,9 @@ using stage_actor = typed_actor<replies_to<stream<int>>::with<stream<int>>>;
 
 using sink_actor = typed_actor<reacts_to<stream<int>>>;
 
-using foo_actor = i3_actor::extend_with<d_actor>;
+static_assert(std::is_same<foo_actor, i3_actor::extend_with<d_actor>>::value);
+
+// -- composable behaviors using primitive data types and streams --------------
 
 class foo_actor_state : public composable_behavior<foo_actor> {
 public:
@@ -138,48 +139,30 @@ std::atomic<long> counting_strings_created;
 std::atomic<long> counting_strings_moved;
 std::atomic<long> counting_strings_destroyed;
 
+} // namespace
+
 // counts how many instances where created
-struct counting_string {
-public:
-  counting_string() {
-    ++counting_strings_created;
-  }
+counting_string::counting_string() {
+  ++counting_strings_created;
+}
 
-  counting_string(const char* cstr) : str_(cstr) {
-    ++counting_strings_created;
-  }
+counting_string::counting_string(const char* cstr) : str_(cstr) {
+  ++counting_strings_created;
+}
 
-  counting_string(const counting_string& x) : str_(x.str_) {
-    ++counting_strings_created;
-  }
+counting_string::counting_string(const counting_string& x) : str_(x.str_) {
+  ++counting_strings_created;
+}
 
-  counting_string(counting_string&& x) : str_(std::move(x.str_)) {
-    ++counting_strings_created;
-    ++counting_strings_moved;
-  }
+counting_string::counting_string(counting_string&& x)
+  : str_(std::move(x.str_)) {
+  ++counting_strings_created;
+  ++counting_strings_moved;
+}
 
-  ~counting_string() {
-    ++counting_strings_destroyed;
-  }
-
-  counting_string& operator=(const char* cstr) {
-    str_ = cstr;
-    return *this;
-  }
-
-  const std::string& str() const {
-    return str_;
-  }
-
-  template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f,
-                                                 counting_string& x) {
-    return f(x.str_);
-  }
-
-private:
-  std::string str_;
-};
+counting_string::~counting_string() {
+  ++counting_strings_destroyed;
+}
 
 bool operator==(const counting_string& x, const counting_string& y) {
   return x.str() == y.str();
@@ -192,8 +175,6 @@ bool operator==(const counting_string& x, const char* y) {
 std::string to_string(const counting_string& ref) {
   return ref.str();
 }
-
-} // namespace
 
 namespace std {
 
@@ -304,20 +285,24 @@ CAF_TEST(composition) {
 CAF_TEST(param_detaching) {
   auto dict = actor_cast<actor>(sys.spawn<dict_state>());
   // Using CAF is the key to success!
-  counting_string key = "CAF";
-  counting_string value = "success";
+  counting_string key{"CAF"};
+  counting_string value{"success"};
   CAF_CHECK_EQUAL(counting_strings_created.load(), 2);
   CAF_CHECK_EQUAL(counting_strings_moved.load(), 0);
   CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 0);
   // Wrap two strings into messages.
   auto put_msg = make_message(put_atom_v, key, value);
+  CAF_CHECK_EQUAL(put_msg.cptr()->get_reference_count(), 1u);
   auto get_msg = make_message(get_atom_v, key);
+  CAF_CHECK_EQUAL(get_msg.cptr()->get_reference_count(), 1u);
   CAF_CHECK_EQUAL(counting_strings_created.load(), 5);
   CAF_CHECK_EQUAL(counting_strings_moved.load(), 0);
   CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 0);
   // Send put message to dictionary.
   self->send(dict, put_msg);
+  CAF_CHECK_EQUAL(put_msg.cptr()->get_reference_count(), 2u);
   sched.run();
+  CAF_CHECK_EQUAL(put_msg.cptr()->get_reference_count(), 1u);
   // The handler of put_atom calls .move() on key and value, both causing to
   // detach + move into the map.
   CAF_CHECK_EQUAL(counting_strings_created.load(), 9);
@@ -325,7 +310,9 @@ CAF_TEST(param_detaching) {
   CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 2);
   // Send put message to dictionary again.
   self->send(dict, put_msg);
+  CAF_CHECK_EQUAL(put_msg.cptr()->get_reference_count(), 2u);
   sched.run();
+  CAF_CHECK_EQUAL(put_msg.cptr()->get_reference_count(), 1u);
   // The handler checks whether key already exists -> no copies.
   CAF_CHECK_EQUAL(counting_strings_created.load(), 9);
   CAF_CHECK_EQUAL(counting_strings_moved.load(), 2);
@@ -335,6 +322,10 @@ CAF_TEST(param_detaching) {
   put_msg.get_mutable_as<counting_string>(2) = "CAF";
   // Send new put message to dictionary.
   self->send(dict, std::move(put_msg));
+  CAF_CHECK(!put_msg);
+  CAF_CHECK_EQUAL(counting_strings_created.load(), 9);
+  CAF_CHECK_EQUAL(counting_strings_moved.load(), 2);
+  CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 2);
   sched.run();
   // The handler of put_atom calls .move() on key and value, but no detaching
   // occurs this time (unique access) -> move into the map.
@@ -343,6 +334,7 @@ CAF_TEST(param_detaching) {
   CAF_CHECK_EQUAL(counting_strings_destroyed.load(), 4);
   // Finally, check for original key.
   self->send(dict, std::move(get_msg));
+  CAF_CHECK(!get_msg);
   sched.run();
   self->receive([&](const counting_string& str) {
     // We receive a copy of the value, which is copied out of the map and then

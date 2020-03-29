@@ -30,49 +30,66 @@ The compiler expands this example code to the following.
      return exec_main<io::middleman>(caf_main, argc, argv);
    }
 
-The function ``exec_main`` creates a config object, loads all modules
-requested in ``CAF_MAIN`` and then calls ``caf_main``. A
-minimal implementation for ``main`` performing all these steps manually
-is shown in the next example for the sake of completeness.
+The function ``exec_main`` performs several steps:
+
+#. Initialize all meta objects for the type ID blocks listed in ``CAF_MAIN``.
+#. Create a config object. If ``caf_main`` has two arguments, then CAF
+   assumes that the second argument is the configuration and the type gets
+   derived from that argument. Otherwise, CAF uses ``actor_system_config``.
+#. Parse command line arguments and configuration file.
+#. Load all modules requested in ``CAF_MAIN``.
+#. Create an actor system.
+#. Call ``caf_main`` with the actor system and optionally with ``config``.
+
+When implementing the steps performed by ``CAF_MAIN`` by hand, the ``main``
+function would resemble the following (pseudo) code:
 
 .. code-block:: C++
 
-   int main(int argc, char** argv) {
-     actor_system_config cfg;
-     // read CLI options
-     cfg.parse(argc, argv);
-     // return immediately if a help text was printed
-     if (cfg.cli_helptext_printed)
-       return 0;
-     // load modules
-     cfg.load<io::middleman>();
-     // create actor system and call caf_main
-     actor_system system{cfg};
-     caf_main(system);
-   }
+  int main(int argc, char** argv) {
+    // Initialze the global type information before anything else.
+    init_global_meta_objects<...>();
+    core::init_global_meta_objects();
+    // Create the config.
+    actor_system_config cfg;
+    // Read CLI options.
+    cfg.parse(argc, argv);
+    // Return immediately if a help text was printed.
+    if (cfg.cli_helptext_printed)
+      return 0;
+    // Load modules.
+    cfg.load<...>();
+    // Create the actor system.
+    actor_system sys{cfg};
+    // Run user-defined code.
+    caf_main(sys, cfg);
+  }
 
-However, setting up config objects by hand is usually not necessary. CAF
-automatically selects user-defined subclasses of
-``actor_system_config`` if ``caf_main`` takes a second
-parameter by reference, as shown in the minimal example below.
+Using ``CAF_MAIN`` simply automates that boilerplate code. A minimal example
+with a custom type ID block as well as a custom configuration class with the I/O
+module loaded looks as follows:
 
 .. code-block:: C++
 
-   class my_config : public actor_system_config {
-   public:
-     my_config() {
-       // ...
-     }
-   };
+  CAF_BEGIN_TYPE_ID_BLOCK(my, first_custom_type_id)
 
-   void caf_main(actor_system& system, const my_config& cfg) {
-     // ...
-   }
+    // ...
 
-   CAF_MAIN()
+  CAF_END_TYPE_ID_BLOCK(my)
 
-Users can perform additional initialization, add custom program options, etc.
-simply by implementing a default constructor.
+
+  class my_config : public actor_system_config {
+  public:
+    my_config() {
+      // ...
+    }
+  };
+
+  void caf_main(actor_system& system, const my_config& cfg) {
+    // ...
+  }
+
+  CAF_MAIN(id_block::my, io::middleman)
 
 .. _system-config-module:
 
@@ -187,29 +204,37 @@ Adding Custom Message Types
 ---------------------------
 
 CAF requires serialization support for all of its message types (see
-:ref:`type-inspection`). However, CAF also needs a mapping of unique type names
-to user-defined types at runtime. This is required to deserialize arbitrary
+:ref:`type-inspection`). However, CAF also needs a mapping of unique type IDs to
+user-defined types at runtime. This is required to deserialize arbitrary
 messages from the network.
 
-As an introductory example, we (again) use the following POD type
-``foo``.
+The type IDs are assigned by listing all custom types in a *type ID block*. CAF
+assigns ascending IDs to each type by in the block as well as storing the type
+name. In the following example, we forward-declare the types ``foo`` and
+``foo2`` and register them to CAF in a *type ID block*. The name of the type ID
+block is arbitrary, but it must be a valid C++ identifier.
 
 .. literalinclude:: /examples/custom_type/custom_types_1.cpp
    :language: C++
-   :lines: 24-27
+   :start-after: --(rst-type-id-block-begin)--
+   :end-before: --(rst-type-id-block-end)--
 
-To make ``foo`` serializable, we make it inspectable:
-
-.. literalinclude:: /examples/custom_type/custom_types_1.cpp
-   :language: C++
-   :lines: 30-34
-
-Finally, we give ``foo`` a platform-neutral name and add it to the list
-of serializable types by using a custom config class.
+Aside from a type ID, CAF also requires an ``inspect`` overload in order to be
+able to serialize objects. As an introductory example, we (again) use the
+following POD type ``foo``.
 
 .. literalinclude:: /examples/custom_type/custom_types_1.cpp
    :language: C++
-   :lines: 75-78,81-84
+   :start-after: --(rst-foo-begin)--
+   :end-before: --(rst-foo-end)--
+
+By assigning type IDs and providing ``inspect`` overloads, we provide static and
+compile-time information for all our types. However, CAF also needs some
+information at run-time for deserializing received data. The function
+``init_global_meta_objects`` takes care fo registering all the state we need at
+run-time. This function usually gets called by ``CAF_MAIN`` automatically. When
+not using this macro, users **must** call ``init_global_meta_objects`` before
+any other CAF function.
 
 Adding Custom Error Types
 -------------------------
@@ -231,18 +256,14 @@ simple ``calculator`` actor.
 
 .. literalinclude:: /examples/remoting/remote_spawn.cpp
    :language: C++
-   :lines: 33-34
+   :start-after: --(rst-calculator-begin)--
+   :end-before: --(rst-calculator-end)--
 
 Adding the calculator actor type to our config is achieved by calling
-``add_actor_type<T>``. Note that adding an actor type in this way
-implicitly calls ``add_message_type<T>`` for typed actors
-add-custom-message-type_. This makes our ``calculator`` actor type
-serializable and also enables remote nodes to spawn calculators anywhere in the
-distributed actor system (assuming all nodes use the same config).
-
-.. literalinclude:: /examples/remoting/remote_spawn.cpp
-   :language: C++
-   :lines: 98-109
+``add_actor_type``. After calling this in our config, we can spawn the
+``calculator`` anywhere in the distributed actor system (assuming all nodes use
+the same config). Note that the handle type still requires a type ID (see
+add-custom-message-type_).
 
 Our final example illustrates how to spawn a ``calculator`` locally by
 using its type name. Because the dynamic type name lookup can fail and the

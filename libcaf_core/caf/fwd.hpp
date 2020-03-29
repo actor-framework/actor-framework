@@ -43,7 +43,6 @@ template <class> class span;
 template <class> class stream;
 template <class> class stream_sink;
 template <class> class stream_source;
-template <class> class trivial_match_case;
 template <class> class weak_intrusive_ptr;
 
 template <class> struct timeout_definition;
@@ -66,6 +65,7 @@ template <class, class, class> class broadcast_downstream_manager;
 
 // -- variadic templates -------------------------------------------------------
 
+template <class...> class const_typed_message_view;
 template <class...> class cow_tuple;
 template <class...> class delegated;
 template <class...> class result;
@@ -73,6 +73,7 @@ template <class...> class typed_actor;
 template <class...> class typed_actor_pointer;
 template <class...> class typed_actor_view;
 template <class...> class typed_event_based_actor;
+template <class...> class typed_message_view;
 template <class...> class typed_response_promise;
 template <class...> class variant;
 
@@ -138,9 +139,8 @@ class stream_manager;
 class string_view;
 class tracing_data;
 class tracing_data_factory;
-class type_erased_tuple;
-class type_erased_value;
-class uniform_type_info_map;
+class type_id_list;
+class type_id_list_builder;
 class uri;
 class uri_builder;
 class uuid;
@@ -200,9 +200,6 @@ using type_id_t = uint16_t;
 
 /// @relates actor_system_config
 CAF_CORE_EXPORT const settings& content(const actor_system_config&);
-
-template <class T, class... Ts>
-message make_message(T&& x, Ts&&... xs);
 
 // -- intrusive containers -----------------------------------------------------
 
@@ -267,9 +264,10 @@ class manager;
 namespace detail {
 
 template <class>
-class type_erased_value_impl;
-template <class>
 class stream_distribution_tree;
+
+template <class...>
+class param_message_view;
 
 class abstract_worker;
 class abstract_worker_hub;
@@ -305,8 +303,7 @@ using stream_manager_ptr = intrusive_ptr<stream_manager>;
 
 // -- unique pointer aliases ---------------------------------------------------
 
-using mailbox_element_ptr = std::unique_ptr<mailbox_element, detail::disposer>;
+using mailbox_element_ptr = std::unique_ptr<mailbox_element>;
 using tracing_data_ptr = std::unique_ptr<tracing_data>;
-using type_erased_value_ptr = std::unique_ptr<type_erased_value>;
 
 } // namespace caf

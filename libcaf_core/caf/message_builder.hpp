@@ -21,10 +21,11 @@
 #include <vector>
 
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/implicit_conversions.hpp"
+#include "caf/detail/message_builder_element.hpp"
+#include "caf/detail/type_id_list_builder.hpp"
 #include "caf/fwd.hpp"
-#include "caf/make_message.hpp"
 #include "caf/message.hpp"
-#include "caf/type_erased_value.hpp"
 
 namespace caf {
 
@@ -34,16 +35,15 @@ class CAF_CORE_EXPORT message_builder {
 public:
   friend class message;
 
-  message_builder(const message_builder&) = delete;
-  message_builder& operator=(const message_builder&) = delete;
+  message_builder() = default;
 
-  message_builder();
-  ~message_builder();
+  message_builder(const message_builder&) = delete;
+
+  message_builder& operator=(const message_builder&) = delete;
 
   /// Creates a new instance and immediately calls `append(first, last)`.
   template <class Iter>
   message_builder(Iter first, Iter last) {
-    init();
     append(first, last);
   }
 
@@ -58,35 +58,24 @@ public:
   /// Adds `x` to the elements of the buffer.
   template <class T>
   message_builder& append(T&& x) {
-    using type =
-      typename unbox_message_element<typename detail::implicit_conversions<
-        typename std::decay<T>::type>::type>::type;
-    return emplace(make_type_erased_value<type>(std::forward<T>(x)));
-  }
-
-  inline message_builder& append_all() {
+    using namespace detail;
+    using value_type = strip_and_convert_t<T>;
+    static_assert(sendable<value_type>);
+    types_.push_back(type_id_v<value_type>);
+    elements_.emplace_back(make_message_builder_element(std::forward<T>(x)));
     return *this;
   }
 
-  template <class T, class... Ts>
-  message_builder& append_all(T&& x, Ts&&... xs) {
-    append(std::forward<T>(x));
-    return append_all(std::forward<Ts>(xs)...);
-  }
-
-  template <size_t N, class... Ts>
-  message_builder&
-  append_tuple(std::integral_constant<size_t, N>,
-               std::integral_constant<size_t, N>, std::tuple<Ts...>&) {
+  template <class... Ts>
+  message_builder& append_all(Ts&&... xs) {
+    (append(std::forward<Ts>(xs)), ...);
     return *this;
   }
 
-  template <size_t I, size_t N, class... Ts>
-  message_builder&
-  append_tuple(std::integral_constant<size_t, I>,
-               std::integral_constant<size_t, N> e, std::tuple<Ts...>& xs) {
-    append(std::move(std::get<I>(xs)));
-    return append_tuple(std::integral_constant<size_t, I + 1>{}, e, xs);
+  template <class Tuple, size_t... Is>
+  message_builder& append_tuple(Tuple& xs, std::index_sequence<Is...>) {
+    (append(std::get<Is>(xs)), ...);
+    return *this;
   }
 
   template <class... Ts>
@@ -105,24 +94,22 @@ public:
   ///          is undefined behavior (dereferencing a `nullptr`)
   message move_to_message();
 
-  /// @copydoc message::apply
-  optional<message> apply(message_handler handler);
-
   /// Removes all elements from the buffer.
-  void clear();
+  void clear() noexcept;
 
   /// Returns whether the buffer is empty.
-  bool empty() const;
+  bool empty() const noexcept {
+    return elements_.empty();
+  }
 
   /// Returns the number of elements in the buffer.
-  size_t size() const;
+  size_t size() const noexcept {
+    return elements_.size();
+  }
 
 private:
-  void init();
-
-  message_builder& emplace(type_erased_value_ptr);
-
-  intrusive_cow_ptr<detail::dynamic_message_data> data_;
+  detail::type_id_list_builder types_;
+  std::vector<detail::message_builder_element_ptr> elements_;
 };
 
 } // namespace caf

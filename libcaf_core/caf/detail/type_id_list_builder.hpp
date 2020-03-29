@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,12 +16,51 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/message_view.hpp"
+#pragma once
 
-namespace caf {
+#include <cstdlib>
 
-message_view::~message_view() {
-  // nop
-}
+#include "caf/detail/core_export.hpp"
+#include "caf/fwd.hpp"
+#include "caf/type_id.hpp"
 
-} // namespace caf
+namespace caf::detail {
+
+class CAF_CORE_EXPORT type_id_list_builder {
+public:
+  static constexpr size_t block_size = 8;
+
+  type_id_list_builder();
+
+  ~type_id_list_builder();
+
+  void reserve(size_t new_capacity);
+
+  void push_back(type_id_t id);
+
+  /// Returns the number of elements currenty stored in the array.
+  size_t size() const noexcept;
+
+  /// @pre `index < size()`
+  type_id_t operator[](size_t index) const noexcept;
+
+  /// Convertes the internal buffer to a ::type_id_list and returns it.
+  /// @pre `push_back` was called at least once
+  type_id_list move_to_list();
+
+  /// Convertes the internal buffer to a ::type_id_list and returns it.
+  /// @pre `push_back` was called at least once
+  type_id_list copy_to_list();
+
+  void clear() noexcept {
+    if (storage_)
+      size_ = 1;
+  }
+
+private:
+  size_t size_;
+  size_t reserved_;
+  type_id_t* storage_;
+};
+
+} // namespace caf::detail

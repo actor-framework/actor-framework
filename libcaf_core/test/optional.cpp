@@ -16,12 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE optional
-#include "caf/test/unit_test.hpp"
 
 #include "caf/optional.hpp"
+
+#include "core-test.hpp"
 
 using namespace caf;
 

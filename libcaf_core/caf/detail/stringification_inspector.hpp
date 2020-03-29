@@ -60,7 +60,7 @@ public:
 
   // -- serializer interface ---------------------------------------------------
 
-  void begin_object(uint16_t, string_view) {
+  void begin_object(type_id_t) {
     // nop
   }
 

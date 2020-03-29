@@ -18,7 +18,7 @@
 
 #define CAF_SUITE serialization
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -54,8 +54,6 @@
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/event_based_actor.hpp"
-#include "caf/make_type_erased_tuple_view.hpp"
-#include "caf/make_type_erased_view.hpp"
 #include "caf/message.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/proxy_registry.hpp"
@@ -63,32 +61,7 @@
 #include "caf/serializer.hpp"
 #include "caf/variant.hpp"
 
-using namespace std;
 using namespace caf;
-using caf::detail::type_erased_value_impl;
-
-namespace {
-
-using strmap = map<string, u16string>;
-
-struct raw_struct {
-  string str;
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, raw_struct& x) {
-  return f(x.str);
-}
-
-bool operator==(const raw_struct& lhs, const raw_struct& rhs) {
-  return lhs.str == rhs.str;
-}
-
-enum class test_enum : uint32_t {
-  a,
-  b,
-  c,
-};
 
 const char* test_enum_strings[] = {
   "a",
@@ -100,52 +73,24 @@ std::string to_string(test_enum x) {
   return test_enum_strings[static_cast<uint32_t>(x)];
 }
 
-struct test_array {
-  int value[4];
-  int value2[2][4];
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, test_array& x) {
-  return f(x.value, x.value2);
+void test_empty_non_pod::foo() {
+  // nop
 }
 
-struct test_empty_non_pod {
-  test_empty_non_pod() = default;
-  test_empty_non_pod(const test_empty_non_pod&) = default;
-  test_empty_non_pod& operator=(const test_empty_non_pod&) = default;
-  virtual void foo() {
-    // nop
-  }
-  virtual ~test_empty_non_pod() {
-    // nop
-  }
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, test_empty_non_pod&) {
-  return f();
+test_empty_non_pod::~test_empty_non_pod() {
+  // nop
 }
 
-class config : public actor_system_config {
-public:
-  config() {
-    add_message_type<test_enum>("test_enum");
-    add_message_type<raw_struct>("raw_struct");
-    add_message_type<test_array>("test_array");
-    add_message_type<test_empty_non_pod>("test_empty_non_pod");
-    add_message_type<std::vector<bool>>("bool_vector");
-  }
-};
+namespace {
 
-struct fixture : test_coordinator_fixture<config> {
+struct fixture : test_coordinator_fixture<> {
   int32_t i32 = -345;
   int64_t i64 = -1234567890123456789ll;
   float f32 = 3.45f;
   double f64 = 54.3;
   timestamp ts = timestamp{timestamp::duration{1478715821 * 1000000000ll}};
   test_enum te = test_enum::b;
-  string str = "Lorem ipsum dolor sit amet.";
+  std::string str = "Lorem ipsum dolor sit amet.";
   raw_struct rs;
   test_array ta{
     {0, 1, 2, 3},
@@ -195,7 +140,7 @@ struct fixture : test_coordinator_fixture<config> {
   }
 
   fixture() {
-    rs.str.assign(string(str.rbegin(), str.rend()));
+    rs.str.assign(std::string(str.rbegin(), str.rend()));
     msg = make_message(i32, i64, ts, te, str, rs);
     config_value::dictionary dict;
     put(dict, "scheduler.policy", "none");
@@ -217,9 +162,9 @@ struct is_message {
   bool equal(T&& v, Ts&&... vs) {
     bool ok = false;
     // work around for gcc 4.8.4 bug
-    auto tup = tie(v, vs...);
+    auto tup = std::tie(v, vs...);
     message_handler impl{
-      [&](T const& u, Ts const&... us) { ok = tup == tie(u, us...); }};
+      [&](T const& u, Ts const&... us) { ok = tup == std::tie(u, us...); }};
     impl(msg);
     return ok;
   }
@@ -337,36 +282,6 @@ CAF_TEST(multiple_messages) {
                   std::make_tuple(te, to_string(m), to_string(msg)));
   CAF_CHECK(is_message(m1).equal(rs, te));
   CAF_CHECK(is_message(m2).equal(i32, i64, ts, te, str, rs));
-}
-
-CAF_TEST(type_erased_value) {
-  auto buf = serialize(str);
-  type_erased_value_ptr ptr{new type_erased_value_impl<std::string>};
-  binary_deserializer source{sys, buf};
-  ptr->load(source);
-  CAF_CHECK_EQUAL(str, *reinterpret_cast<const std::string*>(ptr->get()));
-}
-
-CAF_TEST(type_erased_view) {
-  auto str_view = make_type_erased_view(str);
-  auto buf = serialize(str_view);
-  std::string res;
-  deserialize(buf, res);
-  CAF_CHECK_EQUAL(str, res);
-}
-
-CAF_TEST(type_erased_tuple) {
-  auto tview = make_type_erased_tuple_view(str, i32);
-  CAF_CHECK_EQUAL(to_string(tview), deep_to_string(std::make_tuple(str, i32)));
-  auto buf = serialize(tview);
-  CAF_REQUIRE(!buf.empty());
-  std::string tmp1;
-  int32_t tmp2;
-  deserialize(buf, tmp1, tmp2);
-  CAF_CHECK_EQUAL(tmp1, str);
-  CAF_CHECK_EQUAL(tmp2, i32);
-  deserialize(buf, tview);
-  CAF_CHECK_EQUAL(to_string(tview), deep_to_string(std::make_tuple(str, i32)));
 }
 
 CAF_TEST(long_sequences) {

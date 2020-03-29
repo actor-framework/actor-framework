@@ -18,44 +18,143 @@
 
 #pragma once
 
-#include <iterator>
-#include <string>
-#include <typeinfo>
+#include <atomic>
+#include <cstdlib>
 
+#include "caf/byte.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/type_list.hpp"
+#include "caf/detail/implicit_conversions.hpp"
+#include "caf/detail/padded_size.hpp"
 #include "caf/fwd.hpp"
-#include "caf/intrusive_cow_ptr.hpp"
-#include "caf/intrusive_ptr.hpp"
-#include "caf/ref_counted.hpp"
-#include "caf/type_erased_tuple.hpp"
+#include "caf/type_id_list.hpp"
+
+#ifdef CAF_CLANG
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wc99-extensions"
+#elif defined(CAF_MSVC)
+#  pragma warning(push)
+#  pragma warning(disable : 4200)
+#endif
 
 namespace caf::detail {
 
-class CAF_CORE_EXPORT message_data : public ref_counted,
-                                     public type_erased_tuple {
+/// Container for storing an arbitrary number of message elements.
+class CAF_CORE_EXPORT message_data {
 public:
-  // -- nested types -----------------------------------------------------------
-
-  using cow_ptr = intrusive_cow_ptr<message_data>;
-
   // -- constructors, destructors, and assignment operators --------------------
 
-  message_data() = default;
-  message_data(const message_data&) = default;
+  message_data() = delete;
 
-  ~message_data() override;
+  message_data(const message_data&) = delete;
 
-  // -- pure virtual observers -------------------------------------------------
+  message_data& operator=(const message_data&) = delete;
 
-  virtual message_data* copy() const = 0;
+  /// Constructs the message data object *without* constructing any element.
+  explicit message_data(type_id_list types);
 
-  // -- observers --------------------------------------------------------------
+  ~message_data() noexcept;
 
-  using type_erased_tuple::copy;
+  message_data* copy() const;
 
-  bool shared() const noexcept override;
+  // -- reference counting -----------------------------------------------------
+
+  /// Increases reference count by one.
+  void ref() const noexcept {
+    rc_.fetch_add(1, std::memory_order_relaxed);
+  }
+
+  /// Decreases the reference count by one and destroys the object when its
+  /// reference count drops to zero.
+  void deref() noexcept {
+    if (unique() || rc_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+      this->~message_data();
+      free(const_cast<message_data*>(this));
+    }
+  }
+
+  // -- properties -------------------------------------------------------------
+
+  /// Queries whether there is exactly one reference to this data.
+  bool unique() const noexcept {
+    return rc_ == 1;
+  }
+
+  /// Returns the current number of references to this data.
+  size_t get_reference_count() const noexcept {
+    return rc_.load();
+  }
+
+  /// Returns the memory region for storing the message elements.
+  byte* storage() noexcept {
+    return storage_;
+  }
+
+  /// @copydoc storage
+  const byte* storage() const noexcept {
+    return storage_;
+  }
+
+  /// Returns the type IDs of the message elements.
+  auto types() const noexcept {
+    return types_;
+  }
+
+  /// Returns the number of elements.
+  auto size() const noexcept {
+    return types_.size();
+  }
+
+  /// Returns the memory location for the object at given index.
+  /// @pre `index < size()`
+  byte* at(size_t index) noexcept;
+
+  /// @copydoc at
+  const byte* at(size_t index) const noexcept;
+
+  caf::error save(caf::serializer& sink) const;
+
+  caf::error save(caf::binary_serializer& sink) const;
+
+  caf::error load(caf::deserializer& source);
+
+  caf::error load(caf::binary_deserializer& source);
+
+private:
+  mutable std::atomic<size_t> rc_;
+  type_id_list types_;
+  byte storage_[];
 };
 
+// -- related non-members ------------------------------------------------------
+
+/// @relates message_data
+inline void intrusive_ptr_add_ref(const message_data* ptr) {
+  ptr->ref();
+}
+
+/// @relates message_data
+inline void intrusive_ptr_release(message_data* ptr) {
+  ptr->deref();
+}
+
+inline void message_data_init(byte*) {
+  // nop
+}
+
+template <class T, class... Ts>
+void message_data_init(byte* storage, T&& x, Ts&&... xs) {
+  // TODO: exception safety: if any constructor throws, we need to unwind the
+  //       stack here and call destructors.
+  using type = strip_and_convert_t<T>;
+  new (storage) type(std::forward<T>(x));
+  message_data_init(storage + padded_size_v<type>, std::forward<Ts>(xs)...);
+}
+
 } // namespace caf::detail
+
+#ifdef CAF_CLANG
+#  pragma clang diagnostic pop
+#elif defined(MSVC)
+#  pragma warning(pop)
+#endif

@@ -31,6 +31,8 @@
 
 #define CAF_SUITE native_streaming_classes
 
+#include "core-test.hpp"
+
 #include <memory>
 #include <numeric>
 
@@ -38,12 +40,30 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/broadcast_downstream_manager.hpp"
 #include "caf/buffered_downstream_manager.hpp"
+#include "caf/detail/gcd.hpp"
+#include "caf/detail/overload.hpp"
+#include "caf/detail/stream_sink_impl.hpp"
+#include "caf/detail/stream_source_impl.hpp"
+#include "caf/detail/stream_stage_impl.hpp"
+#include "caf/detail/tick_emitter.hpp"
 #include "caf/downstream_manager.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/inbound_path.hpp"
+#include "caf/intrusive/drr_queue.hpp"
+#include "caf/intrusive/singly_linked.hpp"
+#include "caf/intrusive/task_result.hpp"
+#include "caf/intrusive/wdrr_dynamic_multiplexed_queue.hpp"
+#include "caf/intrusive/wdrr_fixed_multiplexed_queue.hpp"
 #include "caf/mailbox_element.hpp"
+#include "caf/mixin/sender.hpp"
 #include "caf/no_stages.hpp"
 #include "caf/outbound_path.hpp"
+#include "caf/policy/arg.hpp"
+#include "caf/policy/categorized.hpp"
+#include "caf/policy/downstream_messages.hpp"
+#include "caf/policy/normal_messages.hpp"
+#include "caf/policy/upstream_messages.hpp"
+#include "caf/policy/urgent_messages.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/send.hpp"
 #include "caf/stream_manager.hpp"
@@ -54,32 +74,6 @@
 #include "caf/system_messages.hpp"
 #include "caf/upstream_msg.hpp"
 #include "caf/variant.hpp"
-
-#include "caf/scheduler/test_coordinator.hpp"
-
-#include "caf/policy/arg.hpp"
-#include "caf/policy/categorized.hpp"
-#include "caf/policy/downstream_messages.hpp"
-#include "caf/policy/normal_messages.hpp"
-#include "caf/policy/upstream_messages.hpp"
-#include "caf/policy/urgent_messages.hpp"
-
-#include "caf/mixin/sender.hpp"
-
-#include "caf/test/unit_test.hpp"
-
-#include "caf/intrusive/drr_queue.hpp"
-#include "caf/intrusive/singly_linked.hpp"
-#include "caf/intrusive/task_result.hpp"
-#include "caf/intrusive/wdrr_dynamic_multiplexed_queue.hpp"
-#include "caf/intrusive/wdrr_fixed_multiplexed_queue.hpp"
-
-#include "caf/detail/gcd.hpp"
-#include "caf/detail/overload.hpp"
-#include "caf/detail/stream_sink_impl.hpp"
-#include "caf/detail/stream_source_impl.hpp"
-#include "caf/detail/stream_stage_impl.hpp"
-#include "caf/detail/tick_emitter.hpp"
 
 using std::vector;
 
@@ -350,14 +344,14 @@ public:
 
   inbound_path* make_inbound_path(stream_manager_ptr mgr, stream_slots slots,
                                   strong_actor_ptr sender,
-                                  rtti_pair rtti) override {
+                                  type_id_t input_type) override {
     using policy_type = policy::downstream_messages::nested;
     auto res = get<dmsg_id::value>(mbox.queues())
                .queues().emplace(slots.receiver, policy_type{nullptr});
     if (!res.second)
       return nullptr;
     auto path = new inbound_path(std::move(mgr), slots, std::move(sender),
-                                 rtti);
+                                 input_type);
     res.first->second.policy().handler.reset(path);
     return path;
   }

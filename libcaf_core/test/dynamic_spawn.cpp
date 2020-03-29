@@ -20,7 +20,7 @@
 
 #include "caf/actor_system.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -30,16 +30,12 @@
 
 #include "caf/all.hpp"
 
-using namespace std;
 using namespace caf;
 
 namespace {
 
 std::atomic<long> s_max_actor_instances;
 std::atomic<long> s_actor_instances;
-
-CAF_MSG_TYPE_ADD_ATOM(abc_atom);
-CAF_MSG_TYPE_ADD_ATOM(name_atom);
 
 void inc_actor_instances() {
   long v1 = ++s_actor_instances;
@@ -91,9 +87,9 @@ actor spawn_event_testee2(scoped_actor& parent) {
     }
     behavior wait4timeout(int remaining) {
       return {
-        after(chrono::milliseconds(1)) >>
+        after(std::chrono::milliseconds(1)) >>
           [=] {
-            CAF_MESSAGE("remaining: " << to_string(remaining));
+            CAF_MESSAGE("remaining: " << std::to_string(remaining));
             if (remaining == 1) {
               send(parent, ok_atom_v);
               quit();
@@ -134,7 +130,7 @@ public:
 private:
   void wait4string() {
     bool string_received = false;
-    do_receive([&](const string&) { string_received = true; },
+    do_receive([&](const std::string&) { string_received = true; },
                [&](get_atom) { return "wait4string"; })
       .until([&] { return string_received; });
   }
@@ -161,7 +157,7 @@ public:
 
   behavior make_behavior() override {
     return {
-      after(chrono::milliseconds(10)) >> [=] { unbecome(); },
+      after(std::chrono::milliseconds(10)) >> [=] { unbecome(); },
     };
   }
 };
@@ -314,7 +310,7 @@ CAF_TEST(detached_actors_and_schedulued_actors) {
 CAF_TEST(self_receive_with_zero_timeout) {
   scoped_actor self{system};
   self->receive([&] { CAF_ERROR("Unexpected message"); },
-                after(chrono::seconds(0)) >>
+                after(std::chrono::seconds(0)) >>
                   [] {
                     // mailbox empty
                   });
@@ -351,7 +347,7 @@ CAF_TEST(echo_actor_messaging) {
 
 CAF_TEST(delayed_send) {
   scoped_actor self{system};
-  self->delayed_send(self, chrono::milliseconds(1), 1, 2, 3);
+  self->delayed_send(self, std::chrono::milliseconds(1), 1, 2, 3);
   self->receive([](int a, int b, int c) {
     CAF_CHECK_EQUAL(a, 1);
     CAF_CHECK_EQUAL(b, 2);
@@ -361,7 +357,7 @@ CAF_TEST(delayed_send) {
 
 CAF_TEST(delayed_spawn) {
   scoped_actor self{system};
-  self->receive(after(chrono::milliseconds(1)) >> [] {});
+  self->receive(after(std::chrono::milliseconds(1)) >> [] {});
   system.spawn<testee1>();
 }
 
@@ -373,17 +369,18 @@ CAF_TEST(spawn_event_testee2_test) {
 
 CAF_TEST(function_spawn) {
   scoped_actor self{system};
-  auto f = [](const string& name) -> behavior {
+  auto f = [](const std::string& name) -> behavior {
     return ([name](get_atom) { return std::make_tuple(name_atom_v, name); });
   };
   auto a1 = system.spawn(f, "alice");
   auto a2 = system.spawn(f, "bob");
   self->send(a1, get_atom_v);
-  self->receive(
-    [&](name_atom, const string& name) { CAF_CHECK_EQUAL(name, "alice"); });
+  self->receive([&](name_atom, const std::string& name) {
+    CAF_CHECK_EQUAL(name, "alice");
+  });
   self->send(a2, get_atom_v);
   self->receive(
-    [&](name_atom, const string& name) { CAF_CHECK_EQUAL(name, "bob"); });
+    [&](name_atom, const std::string& name) { CAF_CHECK_EQUAL(name, "bob"); });
   self->send_exit(a1, exit_reason::user_shutdown);
   self->send_exit(a2, exit_reason::user_shutdown);
 }
