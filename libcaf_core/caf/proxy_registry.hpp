@@ -19,6 +19,7 @@
 #pragma once
 
 #include <functional>
+#include <map>
 #include <mutex>
 #include <unordered_map>
 #include <utility>

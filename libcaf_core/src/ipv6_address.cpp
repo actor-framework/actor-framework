@@ -20,7 +20,6 @@
 
 #include <cstring>
 
-#include "caf/detail/append_hex.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/parser/read_ipv6_address.hpp"
 #include "caf/error.hpp"

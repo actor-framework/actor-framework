@@ -36,17 +36,14 @@ struct protocol {
   network net;
 };
 
-/// @relates protocol::transport
 inline std::string to_string(protocol::transport x) {
   return x == protocol::tcp ? "TCP" : "UDP";
 }
 
-/// @relates protocol::network
 inline std::string to_string(protocol::network x) {
   return x == protocol::ipv4 ? "IPv4" : "IPv6";
 }
 
-/// @relates protocol
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, protocol& x) {
   return f(meta::type_name("protocol"), x.trans, x.net);
@@ -54,7 +51,6 @@ typename Inspector::result_type inspect(Inspector& f, protocol& x) {
 
 /// Converts a protocol into a transport/network string representation, e.g.,
 /// "TCP/IPv4".
-/// @relates protocol
 CAF_IO_EXPORT std::string to_string(const protocol& x);
 
 } // namespace caf::io::network

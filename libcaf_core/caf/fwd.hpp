@@ -143,6 +143,7 @@ class type_id_list;
 class type_id_list_builder;
 class uri;
 class uri_builder;
+class uuid;
 
 // -- templates with default parameters ----------------------------------------
 
@@ -151,19 +152,20 @@ class stateful_actor;
 
 // -- structs ------------------------------------------------------------------
 
-struct unit_t;
-struct exit_msg;
 struct down_msg;
-struct timeout_msg;
-struct stream_slots;
-struct upstream_msg;
-struct group_down_msg;
 struct downstream_msg;
-struct open_stream_msg;
-struct invalid_actor_t;
-struct invalid_actor_addr_t;
+struct exit_msg;
+struct group_down_msg;
 struct illegal_message_element;
+struct invalid_actor_addr_t;
+struct invalid_actor_t;
+struct node_down_msg;
+struct open_stream_msg;
 struct prohibit_top_level_spawn_marker;
+struct stream_slots;
+struct timeout_msg;
+struct unit_t;
+struct upstream_msg;
 
 // -- free template functions --------------------------------------------------
 

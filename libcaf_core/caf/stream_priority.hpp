@@ -41,7 +41,6 @@ enum class stream_priority {
 /// Stores the number of `stream_priority` classes.
 static constexpr size_t stream_priorities = 5;
 
-/// @relates stream_priority
 CAF_CORE_EXPORT std::string to_string(stream_priority x);
 
 } // namespace caf

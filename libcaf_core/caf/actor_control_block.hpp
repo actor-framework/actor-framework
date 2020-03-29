@@ -160,27 +160,21 @@ inline void intrusive_ptr_add_ref(actor_control_block* x) {
 /// @relates actor_control_block
 CAF_CORE_EXPORT void intrusive_ptr_release(actor_control_block* x);
 
-/// @relates abstract_actor
 /// @relates actor_control_block
 using strong_actor_ptr = intrusive_ptr<actor_control_block>;
 
-/// @relates strong_actor_ptr
 CAF_CORE_EXPORT bool operator==(const strong_actor_ptr&, const abstract_actor*);
 
-/// @relates strong_actor_ptr
 CAF_CORE_EXPORT bool operator==(const abstract_actor*, const strong_actor_ptr&);
 
-/// @relates strong_actor_ptr
 inline bool operator!=(const strong_actor_ptr& x, const abstract_actor* y) {
   return !(x == y);
 }
 
-/// @relates strong_actor_ptr
 inline bool operator!=(const abstract_actor* x, const strong_actor_ptr& y) {
   return !(x == y);
 }
 
-/// @relates abstract_actor
 /// @relates actor_control_block
 using weak_actor_ptr = weak_intrusive_ptr<actor_control_block>;
 

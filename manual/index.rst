@@ -43,4 +43,3 @@ Contents
    Utility
    CommonPitfalls
    UsingAout
-   MigrationGuides

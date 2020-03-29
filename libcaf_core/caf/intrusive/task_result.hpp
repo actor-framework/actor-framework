@@ -41,7 +41,6 @@ enum class task_result {
   stop_all,
 };
 
-/// @relates task_result
 std::string to_string(task_result);
 
 } // namespace caf::intrusive

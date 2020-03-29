@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,23 +16,25 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/detail/append_hex.hpp"
+#define CAF_SUITE typed_behavior
 
-namespace caf::detail {
+#include "caf/typed_behavior.hpp"
 
-void append_hex(std::string& result, const byte* xs, size_t n) {
-  if (n == 0) {
-    result += "<empty>";
-    return;
-  }
-  auto tbl = "0123456789ABCDEF";
-  char buf[3] = {0, 0, 0};
-  for (size_t i = 0; i < n; ++i) {
-    auto c = to_integer<uint8_t>(xs[i]);
-    buf[0] = tbl[c >> 4];
-    buf[1] = tbl[c & 0x0F];
-    result += buf;
-  }
+#include "caf/test/dsl.hpp"
+
+#include <cstdint>
+#include <string>
+
+#include "caf/typed_actor.hpp"
+
+using namespace caf;
+
+CAF_TEST(make_typed_behavior automatically deduces its types) {
+  using handle
+    = typed_actor<reacts_to<std::string>, replies_to<int32_t>::with<int32_t>,
+                  replies_to<double>::with<double>>;
+  auto bhvr = make_typed_behavior([](const std::string&) {},
+                                  [](int32_t x) { return x; },
+                                  [](double x) { return x; });
+  static_assert(std::is_same<handle::behavior_type, decltype(bhvr)>::value);
 }
-
-} // namespace caf::detail

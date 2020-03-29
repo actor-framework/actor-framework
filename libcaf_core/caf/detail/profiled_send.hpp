@@ -31,31 +31,36 @@
 
 namespace caf::detail {
 
-template <class Self, class Sender, class Handle, class... Ts>
-void profiled_send(Self* self, Sender&& sender, const Handle& receiver,
+template <class Self, class SelfHandle, class Handle, class... Ts>
+void profiled_send(Self* self, SelfHandle&& src, const Handle& dst,
                    message_id msg_id, std::vector<strong_actor_ptr> stages,
                    execution_unit* context, Ts&&... xs) {
   CAF_IGNORE_UNUSED(self);
-  if (receiver) {
-    auto element = make_mailbox_element(std::forward<Sender>(sender), msg_id,
+  if (dst) {
+    auto element = make_mailbox_element(std::forward<SelfHandle>(src), msg_id,
                                         std::move(stages),
                                         std::forward<Ts>(xs)...);
     CAF_BEFORE_SENDING(self, *element);
-    receiver->enqueue(std::move(element), context);
+    dst->enqueue(std::move(element), context);
   }
 }
 
-template <class Self, class Sender, class Handle, class... Ts>
-void profiled_send(Self* self, Sender&& sender, const Handle& receiver,
+template <class Self, class SelfHandle, class Handle, class... Ts>
+void profiled_send(Self* self, SelfHandle&& src, const Handle& dst,
                    actor_clock& clock, actor_clock::time_point timeout,
                    message_id msg_id, Ts&&... xs) {
   CAF_IGNORE_UNUSED(self);
-  if (receiver) {
-    auto element = make_mailbox_element(std::forward<Sender>(sender), msg_id,
-                                        no_stages, std::forward<Ts>(xs)...);
-    CAF_BEFORE_SENDING_SCHEDULED(self, timeout, *element);
-    clock.schedule_message(timeout, actor_cast<strong_actor_ptr>(receiver),
-                           std::move(element));
+  if (dst) {
+    if constexpr (std::is_same<Handle, group>::value) {
+      clock.schedule_message(timeout, dst, std::forward<SelfHandle>(src),
+                             make_message(std::forward<Ts>(xs)...));
+    } else {
+      auto element = make_mailbox_element(std::forward<SelfHandle>(src), msg_id,
+                                          no_stages, std::forward<Ts>(xs)...);
+      CAF_BEFORE_SENDING_SCHEDULED(self, timeout, *element);
+      clock.schedule_message(timeout, actor_cast<strong_actor_ptr>(dst),
+                             std::move(element));
+    }
   }
 }
 

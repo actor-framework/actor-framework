@@ -54,7 +54,6 @@ namespace caf::policy {
 
 /// Enables a `response_handle` to pick the first arriving response, ignoring
 /// all other results.
-/// @relates mixin::requester
 /// @relates response_handle
 template <class ResponseType>
 class select_any {

@@ -26,21 +26,17 @@
 
 namespace caf {
 
-/// Denotes the urgency of asynchronous messages.
 enum class message_priority {
   high = 0,
   normal = 1,
 };
 
-/// @relates message_priority
 using high_message_priority_constant
   = std::integral_constant<message_priority, message_priority::high>;
 
-/// @relates message_priority
 using normal_message_priority_constant
   = std::integral_constant<message_priority, message_priority::normal>;
 
-/// @relates message_priority
 CAF_CORE_EXPORT std::string to_string(message_priority);
 
 } // namespace caf

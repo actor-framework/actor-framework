@@ -60,6 +60,7 @@ set(CAF_IO_TEST_SOURCES
   test/io/basp_broker.cpp
   test/io/broker.cpp
   test/io/http_broker.cpp
+  test/io/monitor.cpp
   test/io/network/default_multiplexer.cpp
   test/io/network/ip_endpoint.cpp
   test/io/receive_buffer.cpp

@@ -31,6 +31,7 @@
 #include "caf/make_actor.hpp"
 #include "caf/replies_to.hpp"
 #include "caf/stateful_actor.hpp"
+#include "caf/typed_actor_view_base.hpp"
 #include "caf/typed_behavior.hpp"
 #include "caf/typed_response_promise.hpp"
 
@@ -143,6 +144,15 @@ public:
       detail::tl_subset_of<signatures, typename T::signatures>::value,
       "Cannot assign T* to incompatible handle type");
     CAF_ASSERT(ptr != nullptr);
+  }
+
+  // Enable `handle_type{self}` for typed actor views.
+  template <class T, class = std::enable_if_t<
+                       std::is_base_of<typed_actor_view_base, T>::value>>
+  explicit typed_actor(T ptr) : ptr_(ptr.internal_ptr()) {
+    static_assert(
+      detail::tl_subset_of<signatures, typename T::signatures>::value,
+      "Cannot assign T to incompatible handle type");
   }
 
   template <class... Ts>

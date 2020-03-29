@@ -38,7 +38,6 @@ enum class invoke_message_result {
   dropped,
 };
 
-/// @relates invoke_message_result
 CAF_CORE_EXPORT std::string to_string(invoke_message_result);
 
 } // namespace caf

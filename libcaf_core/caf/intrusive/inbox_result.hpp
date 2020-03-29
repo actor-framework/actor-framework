@@ -40,7 +40,6 @@ enum class inbox_result {
   queue_closed,
 };
 
-/// @relates inbox_result
 CAF_CORE_EXPORT std::string to_string(inbox_result);
 
 } // namespace caf::intrusive

@@ -60,7 +60,7 @@ void read_string(State& ps, Consumer&& consumer) {
     transition(read_chars, 't', res += '\t')
     transition(read_chars, '\\', res += '\\')
     transition(read_chars, '"', res += '"')
-    error_transition(pec::illegal_escape_sequence)
+    error_transition(pec::invalid_escape_sequence)
   }
   term_state(read_unquoted_chars) {
     transition(read_unquoted_chars, alphanumeric_chars, res += ch)

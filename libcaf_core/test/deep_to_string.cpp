@@ -72,7 +72,7 @@ CAF_TEST(buffers) {
   // Use `signed char` explicitly to make sure all compilers agree.
   std::vector<signed char> buf;
   CAF_CHECK_EQUAL(deep_to_string(buf), "[]");
-  CAF_CHECK_EQUAL(deep_to_string(meta::hex_formatted(), buf), "<empty>");
+  CAF_CHECK_EQUAL(deep_to_string(meta::hex_formatted(), buf), "00");
   buf.push_back(-1);
   CAF_CHECK_EQUAL(deep_to_string(buf), "[-1]");
   CAF_CHECK_EQUAL(deep_to_string(meta::hex_formatted(), buf), "FF");

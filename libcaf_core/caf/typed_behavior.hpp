@@ -255,4 +255,10 @@ struct is_typed_behavior : std::false_type {};
 template <class... Sigs>
 struct is_typed_behavior<typed_behavior<Sigs...>> : std::true_type {};
 
+/// Creates a typed behavior from given function objects.
+template <class... Fs>
+typed_behavior<deduce_mpi_t<Fs>...> make_typed_behavior(Fs... fs) {
+  return {std::move(fs)...};
+}
+
 } // namespace caf

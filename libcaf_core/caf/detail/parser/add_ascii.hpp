@@ -21,6 +21,7 @@
 
 #include <limits>
 
+#include "caf/config.hpp"
 #include "caf/detail/parser/ascii_to_int.hpp"
 #include "caf/detail/type_traits.hpp"
 

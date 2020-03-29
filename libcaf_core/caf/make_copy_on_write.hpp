@@ -24,7 +24,7 @@ namespace caf {
 
 /// Constructs an object of type `T` in an `intrusive_cow_ptr`.
 /// @relates ref_counted
-/// @relates intrusive_cow_ptr
+/// @relatealso intrusive_cow_ptr
 template <class T, class... Ts>
 intrusive_cow_ptr<T> make_copy_on_write(Ts&&... xs) {
   return intrusive_cow_ptr<T>(new T(std::forward<Ts>(xs)...), false);

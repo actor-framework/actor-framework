@@ -41,10 +41,7 @@ namespace caf {
 /// manager with `Driver`.
 /// @param self Points to the hosting actor.
 /// @param xs User-defined arguments for the stream handshake.
-/// @param init Function object for initializing the state of the source.
-/// @param pull Function object for generating downstream messages.
-/// @param done Predicate returning `true` when generator is done.
-/// @param fin Optional cleanup handler.
+/// @param ctor_args Parameter pack for constructing the driver.
 /// @returns The allocated `stream_manager` and the output slot.
 template <class Driver, class... Ts, class... CtorArgs>
 make_source_result_t<typename Driver::downstream_manager_type, Ts...>
@@ -105,7 +102,7 @@ template <class Init, class Pull, class Done, class Finalize = unit_t,
 detail::enable_if_t<!is_actor_handle<Init>::value && Trait::valid,
                     make_source_result_t<DownstreamManager>>
 attach_stream_source(scheduled_actor* self, Init init, Pull pull, Done done,
-                     Finalize finalize = {},
+                     Finalize fin = {},
                      policy::arg<DownstreamManager> token = {}) {
   using output_type = typename Trait::output;
   static_assert(detail::sendable<output_type>,
@@ -114,8 +111,8 @@ attach_stream_source(scheduled_actor* self, Init init, Pull pull, Done done,
   static_assert(detail::sendable<stream<output_type>>,
                 "stream<T> for the output type has has no type ID, "
                 "did you forgot to announce it via CAF_ADD_TYPE_ID?");
-  return attach_stream_source(self, std::make_tuple(), init, pull, done,
-                              finalize, token);
+  return attach_stream_source(self, std::make_tuple(), init, pull, done, fin,
+                              token);
 }
 
 /// Attaches a new stream source to `self` by creating a default stream source

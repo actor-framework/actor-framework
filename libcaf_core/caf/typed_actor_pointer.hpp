@@ -19,12 +19,13 @@
 #pragma once
 
 #include "caf/detail/type_list.hpp"
+#include "caf/detail/type_traits.hpp"
 #include "caf/typed_actor_view.hpp"
 
 namespace caf {
 
 template <class... Sigs>
-class typed_actor_pointer {
+class typed_actor_pointer : public typed_actor_view_base {
 public:
   /// Stores the template parameter pack.
   using signatures = detail::type_list<Sigs...>;
@@ -33,16 +34,52 @@ public:
     // nop
   }
 
-  template <class Supertype>
-  explicit typed_actor_pointer(Supertype* selfptr) : view_(selfptr) {
-    using namespace caf::detail;
-    static_assert(
-      tl_subset_of<type_list<Sigs...>, typename Supertype::signatures>::value,
-      "cannot create a pointer view to an unrelated actor type");
+  template <class Supertype,
+            class = detail::enable_if_t< //
+              detail::tl_subset_of<detail::type_list<Sigs...>,
+                                   typename Supertype::signatures>::value>>
+  typed_actor_pointer(Supertype* selfptr) : view_(selfptr) {
+    // nop
   }
+
+  template <class... OtherSigs,
+            class = detail::enable_if_t< //
+              detail::tl_subset_of<detail::type_list<Sigs...>,
+                                   detail::type_list<OtherSigs...>>::value>>
+  typed_actor_pointer(typed_actor_pointer<OtherSigs...> other)
+    : view_(other.internal_ptr()) {
+    // nop
+  }
+
+  typed_actor_pointer(const typed_actor_pointer&) = default;
 
   explicit typed_actor_pointer(std::nullptr_t) : view_(nullptr) {
     // nop
+  }
+
+  typed_actor_pointer& operator=(const typed_actor_pointer&) = default;
+
+  template <class Supertype>
+  typed_actor_pointer& operator=(Supertype* ptr) {
+    using namespace detail;
+    static_assert(
+      tl_subset_of<type_list<Sigs...>, typename Supertype::signatures>::value,
+      "cannot assign pointer of unrelated actor type");
+    view_.reset(ptr);
+    return *this;
+  }
+
+  template <class... OtherSigs,
+            class = detail::enable_if_t< //
+              detail::tl_subset_of<detail::type_list<Sigs...>,
+                                   detail::type_list<OtherSigs...>>::value>>
+  typed_actor_pointer& operator=(typed_actor_pointer<OtherSigs...> other) {
+    using namespace detail;
+    static_assert(
+      tl_subset_of<type_list<Sigs...>, type_list<OtherSigs...>>::value,
+      "cannot assign pointer of unrelated actor type");
+    view_.reset(other.internal_ptr());
+    return *this;
   }
 
   typed_actor_view<Sigs...>* operator->() {
@@ -69,16 +106,6 @@ public:
 
   operator scheduled_actor*() const noexcept {
     return view_.internal_ptr();
-  }
-
-  template <class Supertype>
-  typed_actor_pointer& operator=(Supertype* ptr) {
-    using namespace caf::detail;
-    static_assert(
-      tl_subset_of<type_list<Sigs...>, typename Supertype::signatures>::value,
-      "cannot assign pointer of unrelated actor type");
-    view_ = ptr;
-    return *this;
   }
 
 private:

@@ -121,6 +121,11 @@ public:
 
   int compare(string_view x) const noexcept;
 
+  // -- parsing ----------------------------------------------------------------
+
+  /// Returns whether `parse` would produce a valid URI.
+  static bool can_parse(string_view str) noexcept;
+
   // -- friend functions -------------------------------------------------------
 
   friend CAF_CORE_EXPORT error inspect(caf::serializer& dst, uri& x);

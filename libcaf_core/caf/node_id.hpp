@@ -103,6 +103,8 @@ public:
 
     static bool valid(const host_id_type& x) noexcept;
 
+    static bool can_parse(string_view str) noexcept;
+
     // -- interface implementation ---------------------------------------------
 
     bool valid() const noexcept override;
@@ -230,6 +232,9 @@ public:
 
   /// @endcond
 
+  /// Returns whether `parse` would produce a valid node ID.
+  static bool can_parse(string_view str) noexcept;
+
   /// @relates node_id
   friend CAF_CORE_EXPORT error inspect(serializer& sink, node_id& x);
 
@@ -327,8 +332,11 @@ CAF_CORE_EXPORT node_id make_node_id(
 /// @param process_id System-wide unique process identifier.
 /// @param host_hash Unique node ID as hexadecimal string representation.
 /// @relates node_id
-CAF_CORE_EXPORT optional<node_id>
-make_node_id(uint32_t process_id, const std::string& host_hash);
+CAF_CORE_EXPORT optional<node_id> make_node_id(uint32_t process_id,
+                                               string_view host_hash);
+
+/// @relates node_id
+CAF_CORE_EXPORT error parse(string_view str, node_id& dest);
 
 } // namespace caf
 

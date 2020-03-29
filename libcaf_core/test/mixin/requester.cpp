@@ -180,4 +180,25 @@ CAF_TEST(requesters support fan_out_request) {
   CAF_CHECK_EQUAL(*sum, 9);
 }
 
+#ifndef CAF_NO_EXCEPTIONS
+
+CAF_TEST(exceptions while processing requests trigger error messages) {
+  auto worker = sys.spawn([] {
+    return behavior{
+      [](int) { throw std::runtime_error(""); },
+    };
+  });
+  run();
+  auto client = sys.spawn([worker](event_based_actor* self) {
+    self->request(worker, infinite, 42).then([](int) {
+      CAF_FAIL("unexpected handler called");
+    });
+  });
+  run_once();
+  expect((int), from(client).to(worker).with(42));
+  expect((error), from(worker).to(client).with(sec::runtime_error));
+}
+
+#endif // CAF_NO_EXCEPTIONS
+
 CAF_TEST_FIXTURE_SCOPE_END()

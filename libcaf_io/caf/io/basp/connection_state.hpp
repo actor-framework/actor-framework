@@ -24,6 +24,7 @@
 namespace caf::io::basp {
 
 /// @addtogroup BASP
+/// @{
 
 /// Denotes the state of a connection between two BASP nodes. Overlaps with
 /// `sec` (these states get converted to an error by the BASP instance).
@@ -52,7 +53,6 @@ enum connection_state {
 
 /// Returns whether the connection state requries a shutdown of the socket
 /// connection.
-/// @relates connection_state
 inline bool requires_shutdown(connection_state x) {
   // Any enum value other than await_header (0) and await_payload (1) signal the
   // BASP broker to shutdown the connection.
@@ -61,7 +61,6 @@ inline bool requires_shutdown(connection_state x) {
 
 /// Converts the connection state to a system error code if it holds one of the
 /// overlapping values. Otherwise returns `sec::none`.
-/// @relates connection_state
 inline sec to_sec(connection_state x) {
   switch (x) {
     default:
@@ -81,7 +80,6 @@ inline sec to_sec(connection_state x) {
   }
 }
 
-/// @relates connection_state
 CAF_IO_EXPORT std::string to_string(connection_state x);
 
 /// @}

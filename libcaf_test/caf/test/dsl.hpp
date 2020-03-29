@@ -461,12 +461,13 @@ public:
   }
 
   void with(Ts... xs) {
-    if (src_ == nullptr)
-      CAF_FAIL("missing .from() in inject() statement");
     if (dest_ == nullptr)
       CAF_FAIL("missing .to() in inject() statement");
-    caf::send_as(caf::actor_cast<caf::actor>(src_),
-                 caf::actor_cast<caf::actor>(dest_), xs...);
+    if (src_ == nullptr)
+      caf::anon_send(caf::actor_cast<caf::actor>(dest_), xs...);
+    else
+      caf::send_as(caf::actor_cast<caf::actor>(src_),
+                   caf::actor_cast<caf::actor>(dest_), xs...);
     CAF_REQUIRE(sched_.prioritize(dest_));
     auto dest_ptr = &sched_.next_job<caf::abstract_actor>();
     auto ptr = dest_ptr->peek_at_next_mailbox_element();

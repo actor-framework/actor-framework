@@ -28,7 +28,6 @@ conf_dir = pathlib.Path(__file__).parent.absolute()
 root_dir = conf_dir.parent.absolute()
 
 # Fetch the CAF version.
-import re
 with open(os.path.join(root_dir, "libcaf_core/caf/config.hpp")) as f:
     match = re.search('^#define CAF_VERSION ([0-9]+)$', f.read(), re.MULTILINE)
     if match == None:
@@ -42,7 +41,14 @@ with open(os.path.join(root_dir, "libcaf_core/caf/config.hpp")) as f:
 # We're building a stable release if the last commit message is
 # "Change version to <version>".
 repo = git.Repo(root_dir)
-is_stable = repo.head.commit.message.startswith("Change version to " + version)
+is_stable = False
+
+# We're building a stable release if this version has a release date.
+with open(os.path.join(root_dir, "CHANGELOG.md")) as f:
+    match = re.search('^## \[' + version + '\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$',
+                      f.read(), re.MULTILINE)
+    if match != None:
+        is_stable = True
 
 # Generate the full version, including alpha/beta/rc tags. For stable releases,
 # this is always the same as the CAF version.
@@ -51,7 +57,7 @@ if is_stable:
 else:
     last_commit_full = str(repo.head.commit)
     last_commit = last_commit_full[:7]
-    release = version + "+exp.sha." + last_commit
+    release = version + "-dev+exp.sha." + last_commit
 
 # -- Enable Sphinx to find the literal includes -------------------------------
 

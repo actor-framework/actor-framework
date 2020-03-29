@@ -26,6 +26,7 @@
 namespace caf::io::basp {
 
 /// @addtogroup BASP
+/// @{
 
 /// Describes the first header field of a BASP message and determines the
 /// interpretation of the other header fields.
@@ -73,7 +74,6 @@ enum class message_type : uint8_t {
   heartbeat = 0x06,
 };
 
-/// @relates message_type
 CAF_IO_EXPORT std::string to_string(message_type);
 
 /// @}

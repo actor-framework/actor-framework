@@ -101,7 +101,6 @@ CAF_CORE_EXPORT result<message> print_and_drop(scheduled_actor*, message&);
 CAF_CORE_EXPORT result<message> drop(scheduled_actor*, message&);
 
 /// A cooperatively scheduled, event-based actor implementation.
-/// @extends local_actor
 class CAF_CORE_EXPORT scheduled_actor : public local_actor,
                                         public resumable,
                                         public non_blocking_actor_base {
@@ -198,6 +197,9 @@ public:
   /// Function object for handling down messages.
   using down_handler = std::function<void(pointer, down_msg&)>;
 
+  /// Function object for handling node down messages.
+  using node_down_handler = std::function<void(pointer, node_down_msg&)>;
+
   /// Function object for handling exit messages.
   using exit_handler = std::function<void(pointer, exit_msg&)>;
 
@@ -238,6 +240,8 @@ public:
   static void default_error_handler(pointer ptr, error& x);
 
   static void default_down_handler(pointer ptr, down_msg& x);
+
+  static void default_node_down_handler(pointer ptr, node_down_msg& x);
 
   static void default_exit_handler(pointer ptr, exit_msg& x);
 
@@ -293,23 +297,16 @@ public:
 
   // -- state modifiers --------------------------------------------------------
 
-  /// Finishes execution of this actor after any currently running
-  /// message handler is done.
-  /// This member function clears the behavior stack of the running actor
-  /// and invokes `on_exit()`. The actors does not finish execution
-  /// if the implementation of `on_exit()` sets a new behavior.
-  /// When setting a new behavior in `on_exit()`, one has to make sure
-  /// to not produce an infinite recursion.
+  /// Finishes execution of this actor after any currently running message
+  /// handler is done. This member function clears the behavior stack of the
+  /// running actor and invokes `on_exit()`. The actors does not finish
+  /// execution if the implementation of `on_exit()` sets a new behavior. When
+  /// setting a new behavior in `on_exit()`, one has to make sure to not produce
+  /// an infinite recursion.
   ///
-  /// If `on_exit()` did not set a new behavior, the actor sends an
-  /// exit message to all of its linked actors, sets its state to exited
-  /// and finishes execution.
-  ///
-  /// In case this actor uses the blocking API, this member function unwinds
-  /// the stack by throwing an `actor_exited` exception.
-  /// @warning This member function throws immediately in thread-based actors
-  ///          that do not use the behavior stack, i.e., actors that use
-  ///          blocking API calls such as {@link receive()}.
+  /// If `on_exit()` did not set a new behavior, the actor sends an exit message
+  /// to all of its linked actors, sets its state to exited and finishes
+  /// execution.
   void quit(error x = error{});
 
   // -- properties -------------------------------------------------------------
@@ -375,6 +372,22 @@ public:
     set_down_handler([fun](scheduled_actor*, down_msg& x) { fun(x); });
   }
 
+  /// Sets a custom handler for node down messages.
+  void set_node_down_handler(node_down_handler fun) {
+    if (fun)
+      node_down_handler_ = std::move(fun);
+    else
+      node_down_handler_ = default_node_down_handler;
+  }
+
+  /// Sets a custom handler for down messages.
+  template <class T>
+  auto set_node_down_handler(T fun)
+    -> decltype(fun(std::declval<node_down_msg&>())) {
+    set_node_down_handler(
+      [fun](scheduled_actor*, node_down_msg& x) { fun(x); });
+  }
+
   /// Sets a custom handler for error messages.
   inline void set_exit_handler(exit_handler fun) {
     if (fun)
@@ -412,10 +425,10 @@ public:
 
   // -- stream management ------------------------------------------------------
 
-  /// @deprecated Please use `attach_stream_source` instead.
   template <class Driver, class... Ts, class Init, class Pull, class Done,
             class Finalize = unit_t>
-  make_source_result_t<typename Driver::downstream_manager_type, Ts...>
+  [[deprecated("use attach_stream_source instead")]] make_source_result_t<
+    typename Driver::downstream_manager_type, Ts...>
   make_source(std::tuple<Ts...> xs, Init init, Pull pull, Done done,
               Finalize fin = {}) {
     using detail::make_stream_source;
@@ -425,12 +438,12 @@ public:
     return {slot, std::move(mgr)};
   }
 
-  /// @deprecated Please use `attach_stream_source` instead.
   template <class... Ts, class Init, class Pull, class Done,
             class Finalize = unit_t,
             class DownstreamManager = broadcast_downstream_manager<
               typename stream_source_trait_t<Pull>::output>>
-  make_source_result_t<DownstreamManager, Ts...>
+  [[deprecated("use attach_stream_source instead")]] make_source_result_t<
+    DownstreamManager, Ts...>
   make_source(std::tuple<Ts...> xs, Init init, Pull pull, Done done,
               Finalize fin = {}, policy::arg<DownstreamManager> = {}) {
     using driver = detail::stream_source_driver_impl<DownstreamManager, Pull,
@@ -439,24 +452,24 @@ public:
                                std::move(done), std::move(fin));
   }
 
-  /// @deprecated Please use `attach_stream_source` instead.
   template <class Init, class Pull, class Done, class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Pull>,
             class Trait = stream_source_trait_t<Pull>>
-  detail::enable_if_t<!is_actor_handle<Init>::value && Trait::valid,
-                      make_source_result_t<DownstreamManager>>
+  [[deprecated("use attach_stream_source instead")]] detail::enable_if_t<
+    !is_actor_handle<Init>::value && Trait::valid,
+    make_source_result_t<DownstreamManager>>
   make_source(Init init, Pull pull, Done done, Finalize finalize = {},
               policy::arg<DownstreamManager> token = {}) {
     return make_source(std::make_tuple(), init, pull, done, finalize, token);
   }
 
-  /// @deprecated Please use `attach_stream_source` instead.
   template <class ActorHandle, class... Ts, class Init, class Pull, class Done,
             class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Pull>,
             class Trait = stream_source_trait_t<Pull>>
-  detail::enable_if_t<is_actor_handle<ActorHandle>::value,
-                      make_source_result_t<DownstreamManager>>
+  [[deprecated("use attach_stream_source instead")]] detail::enable_if_t<
+    is_actor_handle<ActorHandle>::value,
+    make_source_result_t<DownstreamManager>>
   make_source(const ActorHandle& dest, std::tuple<Ts...> xs, Init init,
               Pull pull, Done done, Finalize fin = {},
               policy::arg<DownstreamManager> = {}) {
@@ -469,23 +482,22 @@ public:
     return {slot, std::move(mgr)};
   }
 
-  /// @deprecated Please use `attach_stream_source` instead.
   template <class ActorHandle, class Init, class Pull, class Done,
             class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Pull>,
             class Trait = stream_source_trait_t<Pull>>
-  detail::enable_if_t<is_actor_handle<ActorHandle>::value && Trait::valid,
-                      make_source_result_t<DownstreamManager>>
+  [[deprecated("use attach_stream_source instead")]] detail::enable_if_t<
+    is_actor_handle<ActorHandle>::value && Trait::valid,
+    make_source_result_t<DownstreamManager>>
   make_source(const ActorHandle& dest, Init init, Pull pull, Done done,
               Finalize fin = {}, policy::arg<DownstreamManager> token = {}) {
     return make_source(dest, std::make_tuple(), std::move(init),
                        std::move(pull), std::move(done), std::move(fin), token);
   }
 
-  /// @deprecated Please use `attach_continuous_stream_source` instead.
   template <class Driver, class Init, class Pull, class Done,
             class Finalize = unit_t>
-  typename Driver::source_ptr_type
+  [[deprecated("use attach_continuous_stream_source instead")]] auto
   make_continuous_source(Init init, Pull pull, Done done, Finalize fin = {}) {
     using detail::make_stream_source;
     auto mgr = make_stream_source<Driver>(
@@ -494,11 +506,10 @@ public:
     return mgr;
   }
 
-  /// @deprecated Please use `attach_continuous_stream_source` instead.
   template <class Init, class Pull, class Done, class Finalize = unit_t,
             class DownstreamManager = broadcast_downstream_manager<
               typename stream_source_trait_t<Pull>::output>>
-  stream_source_ptr<DownstreamManager>
+  [[deprecated("use attach_continuous_stream_source instead")]] auto
   make_continuous_source(Init init, Pull pull, Done done, Finalize fin = {},
                          policy::arg<DownstreamManager> = {}) {
     using driver = detail::stream_source_driver_impl<DownstreamManager, Pull,
@@ -507,28 +518,27 @@ public:
                                           std::move(done), std::move(fin));
   }
 
-  /// @deprecated Please use `attach_stream_sink` instead.
   template <class Driver, class... Ts>
-  make_sink_result<typename Driver::input_type>
+  [[deprecated("use attach_stream_sink instead")]] make_sink_result<
+    typename Driver::input_type>
   make_sink(const stream<typename Driver::input_type>& src, Ts&&... xs) {
     auto mgr = detail::make_stream_sink<Driver>(this, std::forward<Ts>(xs)...);
     auto slot = mgr->add_inbound_path(src);
     return {slot, std::move(mgr)};
   }
 
-  /// @deprecated Please use `attach_stream_sink` instead.
   template <class In, class Init, class Fun, class Finalize = unit_t,
             class Trait = stream_sink_trait_t<Fun>>
-  make_sink_result<In>
+  [[deprecated("use attach_stream_sink instead")]] make_sink_result<In>
   make_sink(const stream<In>& in, Init init, Fun fun, Finalize fin = {}) {
     using driver = detail::stream_sink_driver_impl<In, Fun, Finalize>;
     return make_sink<driver>(in, std::move(init), std::move(fun),
                              std::move(fin));
   }
 
-  /// @deprecated Please use `attach_stream_stage` instead.
   template <class Driver, class In, class... Ts, class... Us>
-  make_stage_result_t<In, typename Driver::downstream_manager_type, Ts...>
+  [[deprecated("use attach_stream_stage instead")]] make_stage_result_t<
+    In, typename Driver::downstream_manager_type, Ts...>
   make_stage(const stream<In>& src, std::tuple<Ts...> xs, Us&&... ys) {
     using detail::make_stream_stage;
     auto mgr = make_stream_stage<Driver>(this, std::forward<Us>(ys)...);
@@ -537,12 +547,12 @@ public:
     return {in, out, std::move(mgr)};
   }
 
-  /// @deprecated Please use `attach_stream_stage` instead.
   template <class In, class... Ts, class Init, class Fun,
             class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Fun>,
             class Trait = stream_stage_trait_t<Fun>>
-  make_stage_result_t<In, DownstreamManager, Ts...>
+  [[deprecated("use attach_stream_stage instead")]] make_stage_result_t<
+    In, DownstreamManager, Ts...>
   make_stage(const stream<In>& in, std::tuple<Ts...> xs, Init init, Fun fun,
              Finalize fin = {}, policy::arg<DownstreamManager> token = {}) {
     CAF_IGNORE_UNUSED(token);
@@ -567,30 +577,29 @@ public:
                               std::move(fun), std::move(fin));
   }
 
-  /// @deprecated Please use `attach_stream_stage` instead.
   template <class In, class Init, class Fun, class Finalize = unit_t,
             class DownstreamManager = default_downstream_manager_t<Fun>,
             class Trait = stream_stage_trait_t<Fun>>
-  make_stage_result_t<In, DownstreamManager>
+  [[deprecated("use attach_stream_stage instead")]] make_stage_result_t<
+    In, DownstreamManager>
   make_stage(const stream<In>& in, Init init, Fun fun, Finalize fin = {},
              policy::arg<DownstreamManager> token = {}) {
     return make_stage(in, std::make_tuple(), std::move(init), std::move(fun),
                       std::move(fin), token);
   }
 
-  /// @deprecated Please use `attach_continuous_stream_stage` instead.
   template <class Driver, class... Ts>
-  typename Driver::stage_ptr_type make_continuous_stage(Ts&&... xs) {
+  [[deprecated("use attach_continuous_stream_stage instead")]] auto
+  make_continuous_stage(Ts&&... xs) {
     auto ptr = detail::make_stream_stage<Driver>(this, std::forward<Ts>(xs)...);
     ptr->continuous(true);
     return ptr;
   }
 
-  /// @deprecated Please use `attach_continuous_stream_stage` instead.
   template <class Init, class Fun, class Cleanup,
             class DownstreamManager = default_downstream_manager_t<Fun>,
             class Trait = stream_stage_trait_t<Fun>>
-  stream_stage_ptr<typename Trait::input, DownstreamManager>
+  [[deprecated("use attach_continuous_stream_stage instead")]] auto
   make_continuous_stage(Init init, Fun fun, Cleanup cleanup,
                         policy::arg<DownstreamManager> token = {}) {
     CAF_IGNORE_UNUSED(token);
@@ -880,6 +889,9 @@ protected:
 
   /// Customization point for setting a default `down_msg` callback.
   down_handler down_handler_;
+
+  /// Customization point for setting a default `down_msg` callback.
+  node_down_handler node_down_handler_;
 
   /// Customization point for setting a default `exit_msg` callback.
   exit_handler exit_handler_;

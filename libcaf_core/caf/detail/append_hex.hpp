@@ -27,18 +27,35 @@
 
 namespace caf::detail {
 
-CAF_CORE_EXPORT void append_hex(std::string& result, const byte* xs, size_t n);
+enum class hex_format {
+  uppercase,
+  lowercase,
+};
 
-template <class T>
-enable_if_t<has_data_member<T>::value>
-append_hex(std::string& result, const T& x) {
-  return append_hex(result, reinterpret_cast<const byte*>(x.data()), x.size());
+template <hex_format format = hex_format::uppercase>
+void append_hex(std::string& result, const void* vptr, size_t n) {
+  if (n == 0) {
+    result += "00";
+    return;
+  }
+  auto xs = reinterpret_cast<const uint8_t*>(vptr);
+  const char* tbl;
+  if constexpr (format == hex_format::uppercase)
+    tbl = "0123456789ABCDEF";
+  else
+    tbl = "0123456789abcdef";
+  char buf[3] = {0, 0, 0};
+  for (size_t i = 0; i < n; ++i) {
+    auto c = xs[i];
+    buf[0] = tbl[c >> 4];
+    buf[1] = tbl[c & 0x0F];
+    result += buf;
+  }
 }
 
-template <class T>
-enable_if_t<std::is_integral<T>::value>
-append_hex(std::string& result, const T& x) {
-  return append_hex(result, reinterpret_cast<const byte*>(&x), sizeof(T));
+template <hex_format format = hex_format::uppercase, class T = int>
+void append_hex(std::string& result, const T& x) {
+  append_hex<format>(result, &x, sizeof(T));
 }
 
 } // namespace caf::detail

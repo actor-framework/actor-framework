@@ -58,7 +58,6 @@ set(CAF_CORE_SOURCES
   src/deserializer.cpp
   src/detail/abstract_worker.cpp
   src/detail/abstract_worker_hub.cpp
-  src/detail/append_hex.cpp
   src/detail/append_percent_encoded.cpp
   src/detail/behavior_impl.cpp
   src/detail/behavior_stack.cpp
@@ -158,6 +157,7 @@ set(CAF_CORE_SOURCES
   src/type_id_list.cpp
   src/uri.cpp
   src/uri_builder.cpp
+  src/uuid.cpp
 )
 
 # -- list cpp files for caf-core-test ------------------------------------------
@@ -247,6 +247,7 @@ set(CAF_CORE_TEST_SOURCES
   test/mixin/sender.cpp
   test/mock_streaming_classes.cpp
   test/native_streaming_classes.cpp
+  test/node_id.cpp
   test/optional.cpp
   test/or_else.cpp
   test/pipeline_streaming.cpp
@@ -267,11 +268,13 @@ set(CAF_CORE_TEST_SOURCES
   test/thread_hook.cpp
   test/tracing_data.cpp
   test/type_id_list.cpp
+  test/typed_behavior.cpp
   test/typed_message_view.cpp
   test/typed_response_promise.cpp
   test/typed_spawn.cpp
   test/unit.cpp
   test/uri.cpp
+  test/uuid.cpp
   test/variant.cpp
 )
 

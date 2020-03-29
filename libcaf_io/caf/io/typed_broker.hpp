@@ -89,10 +89,13 @@ public:
     template with<mixin::sender, mixin::requester, mixin::behavior_changer>;
 
   /// @cond PRIVATE
+
   std::set<std::string> message_types() const override {
     detail::type_list<typed_actor<Sigs...>> hdl;
     return this->system().message_types(hdl);
   }
+
+  /// @endcond
 
   void initialize() override {
     CAF_LOG_TRACE("");

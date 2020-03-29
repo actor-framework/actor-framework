@@ -308,6 +308,10 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang"
   add_compile_options("-ftemplate-depth=512"
                       "-ftemplate-backtrace-limit=0")
 endif()
+# enable useful warnings by default
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wdocumentation)
+endif()
 # explicitly disable obnoxious GCC warnings
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   add_compile_options(-Wno-missing-field-initializers)
@@ -525,12 +529,6 @@ configure_package_config_file(
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/CAFConfig.cmake"
   "${CMAKE_CURRENT_BINARY_DIR}/CAFConfigVersion.cmake"
   DESTINATION "${INSTALL_CAF_CMAKEDIR}")
-
-# -- Setup for building manual and API documentation ---------------------------
-
-if(NOT WIN32)
-  add_subdirectory(doc)
-endif()
 
 ################################################################################
 #                     Add additional project files to GUI                      #

@@ -90,6 +90,34 @@ typename Inspector::result_type inspect(Inspector& f, group_down_msg& x) {
   return f(meta::type_name("group_down_msg"), x.source);
 }
 
+/// Sent to all actors monitoring a node when CAF loses connection to it.
+struct node_down_msg {
+  /// The disconnected node.
+  node_id node;
+
+  /// The cause for the disconnection. No error (a default-constructed error
+  /// object) indicates an ordinary shutdown.
+  error reason;
+};
+
+/// @relates node_down_msg
+inline bool operator==(const node_down_msg& x,
+                       const node_down_msg& y) noexcept {
+  return x.node == y.node && x.reason == y.reason;
+}
+
+/// @relates node_down_msg
+inline bool operator!=(const node_down_msg& x,
+                       const node_down_msg& y) noexcept {
+  return !(x == y);
+}
+
+/// @relates node_down_msg
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, node_down_msg& x) {
+  return f(meta::type_name("node_down_msg"), x.node, x.reason);
+}
+
 /// Signalizes a timeout event.
 /// @note This message is handled implicitly by the runtime system.
 struct timeout_msg {

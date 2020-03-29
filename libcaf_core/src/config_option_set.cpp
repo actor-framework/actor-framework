@@ -58,8 +58,8 @@ config_option_set& config_option_set::add(config_option opt) {
 }
 
 std::string config_option_set::help_text(bool global_only) const {
-  //<--- argument --------> <---- description --->
-  // (-w|--write) <string> : output file
+  // <--- argument --------> <---- description --->
+  //  (-w|--write) <string> : output file
   auto build_argument = [](const config_option& x) {
     string_builder sb;
     if (x.short_names().empty()) {
@@ -145,7 +145,7 @@ auto config_option_set::parse(settings& config, argument_iterator first,
     // Flags only consume the current element.
     if (opt.is_flag()) {
       if (arg_begin != arg_end)
-        return pec::illegal_argument;
+        return pec::invalid_argument;
       config_value cfg_true{true};
       opt.store(cfg_true);
       entry[opt_name] = cfg_true;
@@ -159,7 +159,7 @@ auto config_option_set::parse(settings& config, argument_iterator first,
         auto& err = val.error();
         if (err.category() == error_category<pec>::value)
           return static_cast<pec>(err.code());
-        return pec::illegal_argument;
+        return pec::invalid_argument;
       }
       entry[opt_name] = std::move(*val);
     }

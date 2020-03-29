@@ -86,6 +86,12 @@ void scheduled_actor::default_down_handler(scheduled_actor* ptr, down_msg& x) {
             << ", name: " << ptr->name() << "]: " << to_string(x) << std::endl;
 }
 
+void scheduled_actor::default_node_down_handler(scheduled_actor* ptr,
+                                                node_down_msg& x) {
+  aout(ptr) << "*** unhandled node down message [id: " << ptr->id()
+            << ", name: " << ptr->name() << "]: " << to_string(x) << std::endl;
+}
+
 void scheduled_actor::default_exit_handler(scheduled_actor* ptr, exit_msg& x) {
   if (x.reason)
     default_error_handler(ptr, x.reason);
@@ -120,6 +126,7 @@ scheduled_actor::scheduled_actor(actor_config& cfg)
     default_handler_(print_and_drop),
     error_handler_(default_error_handler),
     down_handler_(default_down_handler),
+    node_down_handler_(default_node_down_handler),
     exit_handler_(default_exit_handler),
     private_thread_(nullptr)
 #ifndef CAF_NO_EXCEPTIONS
@@ -609,6 +616,11 @@ scheduled_actor::categorize(mailbox_element& x) {
     call_handler(down_handler_, this, dm);
     return message_category::internal;
   }
+  if (auto view = make_typed_message_view<node_down_msg>(content)) {
+    auto& dm = get<0>(view);
+    call_handler(node_down_handler_, this, dm);
+    return message_category::internal;
+  }
   if (auto view = make_typed_message_view<error>(content)) {
     auto& err = get<0>(view);
     call_handler(error_handler_, this, err);
@@ -786,6 +798,14 @@ auto scheduled_actor::activate(execution_unit* ctx, mailbox_element& x)
 auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
   CAF_LOG_TRACE(CAF_ARG(x));
 #ifndef CAF_NO_EXCEPTIONS
+  auto handle_exception = [&](std::exception_ptr eptr) {
+    auto err = call_handler(exception_handler_, this, eptr);
+    if (x.mid.is_request()) {
+      auto rp = make_response_promise();
+      rp.deliver(err);
+    }
+    quit(std::move(err));
+  };
   try {
 #endif // CAF_NO_EXCEPTIONS
     switch (consume(x)) {
@@ -805,12 +825,10 @@ auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
   } catch (std::exception& e) {
     CAF_LOG_INFO("actor died because of an exception, what: " << e.what());
     static_cast<void>(e); // keep compiler happy when not logging
-    auto eptr = std::current_exception();
-    quit(call_handler(exception_handler_, this, eptr));
+    handle_exception(std::current_exception());
   } catch (...) {
     CAF_LOG_INFO("actor died because of an unknown exception");
-    auto eptr = std::current_exception();
-    quit(call_handler(exception_handler_, this, eptr));
+    handle_exception(std::current_exception());
   }
   finalize();
   return activation_result::terminated;

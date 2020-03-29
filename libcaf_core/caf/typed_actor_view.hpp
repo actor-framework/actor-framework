@@ -19,6 +19,7 @@
 #pragma once
 
 #include "caf/actor_traits.hpp"
+#include "caf/config.hpp"
 #include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
 #include "caf/scheduled_actor.hpp"
@@ -27,49 +28,143 @@
 
 namespace caf {
 
+/// Decorates a pointer to a @ref scheduled_actor with a statically typed actor
+/// interface.
 template <class... Sigs>
-class typed_actor_view : public extend<typed_actor_view_base,
-                                       typed_actor_view<Sigs...>>::template
-                                with<mixin::sender, mixin::requester> {
+class typed_actor_view
+  : public extend<typed_actor_view_base, typed_actor_view<Sigs...>>::
+      template with<mixin::sender, mixin::requester> {
 public:
   /// Stores the template parameter pack.
   using signatures = detail::type_list<Sigs...>;
 
   using pointer = scheduled_actor*;
 
-  typed_actor_view(scheduled_actor* ptr) : self_(ptr) {
+  explicit typed_actor_view(scheduled_actor* ptr) : self_(ptr) {
     // nop
   }
 
-  typed_actor_view& operator=(scheduled_actor* ptr) {
-    self_ = ptr;
-    return *this;
-  }
+  // -- spawn functions --------------------------------------------------------
 
-  /****************************************************************************
-   *                           spawn actors                                   *
-   ****************************************************************************/
-
+  /// @copydoc local_actor::spawn
   template <class T, spawn_options Os = no_spawn_options, class... Ts>
-  typename infer_handle_from_class<T>::type
-  spawn(Ts&&... xs) {
+  typename infer_handle_from_class<T>::type spawn(Ts&&... xs) {
     return self_->spawn<T, Os>(std::forward<Ts>(xs)...);
   }
 
+  /// @copydoc local_actor::spawn
   template <class T, spawn_options Os = no_spawn_options>
   infer_handle_from_state_t<T> spawn() {
     return self_->spawn<T, Os>();
   }
 
+  /// @copydoc local_actor::spawn
   template <spawn_options Os = no_spawn_options, class F, class... Ts>
-  typename infer_handle_from_fun<F>::type
-  spawn(F fun, Ts&&... xs) {
+  typename infer_handle_from_fun<F>::type spawn(F fun, Ts&&... xs) {
     return self_->spawn<Os>(std::move(fun), std::forward<Ts>(xs)...);
   }
 
-  /****************************************************************************
-   *                      miscellaneous actor operations                      *
-   ****************************************************************************/
+  // -- state modifiers --------------------------------------------------------
+
+  /// @copydoc scheduled_actor::quit
+  void quit(error x = error{}) {
+    self_->quit(std::move(x));
+  }
+
+  // -- properties -------------------------------------------------------------
+
+  /// @copydoc scheduled_actor::mailbox
+  auto& mailbox() noexcept {
+    return self_->mailbox();
+  }
+
+  // -- event handlers ---------------------------------------------------------
+
+  /// @copydoc scheduled_actor::set_default_handler
+  template <class Fun>
+  void set_default_handler(Fun&& fun) {
+    self_->set_default_handler(std::forward<Fun>(fun));
+  }
+
+  /// @copydoc scheduled_actor::set_error_handler
+  template <class Fun>
+  void set_error_handler(Fun&& fun) {
+    self_->set_error_handler(std::forward<Fun>(fun));
+  }
+
+  /// @copydoc scheduled_actor::set_down_handler
+  template <class Fun>
+  void set_down_handler(Fun&& fun) {
+    self_->set_down_handler(std::forward<Fun>(fun));
+  }
+
+  /// @copydoc scheduled_actor::set_node_down_handler
+  template <class Fun>
+  void set_node_down_handler(Fun&& fun) {
+    self_->set_node_down_handler(std::forward<Fun>(fun));
+  }
+
+  /// @copydoc scheduled_actor::set_exit_handler
+  template <class Fun>
+  void set_exit_handler(Fun&& fun) {
+    self_->set_exit_handler(std::forward<Fun>(fun));
+  }
+
+#ifndef CAF_NO_EXCEPTIONS
+
+  /// @copydoc scheduled_actor::set_exception_handler
+  template <class Fun>
+  void set_exception_handler(Fun&& fun) {
+    self_->set_exception_handler(std::forward<Fun>(fun));
+  }
+
+#endif // CAF_NO_EXCEPTIONS
+
+  // -- linking and monitoring -------------------------------------------------
+
+  /// @copydoc monitorable_actor::link_to
+  template <class ActorHandle>
+  void link_to(const ActorHandle& x) {
+    self_->link_to(x);
+  }
+
+  /// @copydoc monitorable_actor::unlink_from
+  template <class ActorHandle>
+  void unlink_from(const ActorHandle& x) {
+    self_->unlink_from(x);
+  }
+
+  /// @copydoc local_actor::monitor
+  void monitor(const node_id& node) {
+    self_->monitor(node);
+  }
+
+  /// @copydoc local_actor::monitor
+  template <message_priority P = message_priority::normal, class Handle>
+  void monitor(const Handle& whom) {
+    self_->monitor(whom);
+  }
+
+  /// @copydoc local_actor::demonitor
+  void demonitor(const node_id& node) {
+    self_->demonitor(node);
+  }
+
+  /// @copydoc local_actor::demonitor
+  template <class Handle>
+  void demonitor(const Handle& whom) {
+    self_->demonitor(whom);
+  }
+
+  // -- sending asynchronous messages ------------------------------------------
+
+  /// @copydoc local_actor::send_exit
+  template <class ActorHandle>
+  void send_exit(const ActorHandle& whom, error reason) {
+    self_->send_exit(whom, std::move(reason));
+  }
+
+  // -- miscellaneous actor operations -----------------------------------------
 
   execution_unit* context() const {
     return self_->context();
@@ -93,16 +188,6 @@ public:
     return self_->make_response_promise<Ts...>();
   }
 
-  template <message_priority P = message_priority::normal, class Handle = actor>
-  void monitor(const Handle& x) {
-    self_->monitor<P>(x);
-  }
-
-  template <class T>
-  void demonitor(const T& x) {
-    self_->demonitor(x);
-  }
-
   message_id new_request_id(message_priority mp) {
     return self_->new_request_id(mp);
   }
@@ -116,10 +201,8 @@ public:
   }
 
   template <class... Ts,
-            class R =
-              typename detail::make_response_promise_helper<
-                typename std::decay<Ts>::type...
-              >::type>
+            class R = typename detail::make_response_promise_helper<
+              typename std::decay<Ts>::type...>::type>
   R response(Ts&&... xs) {
     return self_->response(std::forward<Ts>(xs)...);
   }
@@ -138,6 +221,11 @@ public:
                                                    std::move(bhvr));
   }
 
+  template <class Handle, class... Ts>
+  auto delegate(const Handle& dest, Ts&&... xs) {
+    return self_->delegate(dest, std::forward<Ts>(xs)...);
+  }
+
   /// Returns a pointer to the sender of the current message.
   /// @pre `current_mailbox_element() != nullptr`
   strong_actor_ptr& current_sender() {
@@ -152,12 +240,18 @@ public:
   /// @private
   actor_control_block* ctrl() const noexcept {
     CAF_ASSERT(self_ != nullptr);
-    return actor_control_block::from(self_);;
+    return actor_control_block::from(self_);
+    ;
   }
 
   /// @private
   scheduled_actor* internal_ptr() const noexcept {
     return self_;
+  }
+
+  /// @private
+  void reset(scheduled_actor* ptr) {
+    self_ = ptr;
   }
 
   operator scheduled_actor*() const noexcept {
