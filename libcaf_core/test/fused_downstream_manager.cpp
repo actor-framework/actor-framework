@@ -253,25 +253,7 @@ using fixture = test_coordinator_fixture<>;
 
 CAF_TEST_FIXTURE_SCOPE(fused_downstream_manager_tests, fixture)
 
-// Currently fails for some bizarre reason related to type ID list.
 CAF_TEST_DISABLED(depth_3_pipeline_with_fork) {
-  CAF_MESSAGE("sanity checks");
-  {
-    using detail::strip_and_convert_t;
-    using int_stream = stream<int32_t>;
-    using str_stream = stream<std::string>;
-    auto m1 = make_message(int_stream{});
-    auto m2 = make_message(str_stream{});
-    CAF_CHECK_NOT_EQUAL(type_id_v<int_stream>, type_id_v<str_stream>);
-    CAF_CHECK_NOT_EQUAL(type_id_v<strip_and_convert_t<int_stream>>,
-                        type_id_v<strip_and_convert_t<str_stream>>);
-    CAF_CHECK_NOT_EQUAL(m1.types(), m2.types());
-    // CAF_CHECK_NOT_EQUAL(make_type_id_list<int_stream>(),
-    // make_type_id_list<str_stream>()); auto m1_ = make_message(int_stream{});
-    // auto m2_ = make_message(str_stream{});
-    // CAF_CHECK_NOT_EQUAL(m1_.types(), m2_.types());
-  }
-
   auto src1 = sys.spawn(int_file_reader, 50u);
   auto src2 = sys.spawn(string_file_reader, 50u);
   auto stg = sys.spawn(stream_multiplexer);

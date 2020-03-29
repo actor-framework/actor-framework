@@ -105,18 +105,8 @@ void type_id_list_builder::reserve(size_t new_capacity) {
 }
 
 void type_id_list_builder::push_back(type_id_t id) {
-  if ((size_ + 1) >= reserved_) {
+  if ((size_ + 1) >= reserved_)
     reserve(reserved_ + block_size);
-    /*
-    auto ptr = realloc(storage_, reserved_ * sizeof(type_id_t));
-    if (ptr == nullptr)
-      throw std::bad_alloc();
-    storage_ = reinterpret_cast<type_id_t*>(ptr);
-    // Add the dummy for later inserting the size on first push_back.
-    if (size_ == 0)
-      storage_[0] = 0;
-    */
-  }
   storage_[size_++] = id;
 }
 

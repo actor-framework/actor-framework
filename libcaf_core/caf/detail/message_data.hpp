@@ -64,8 +64,8 @@ public:
     rc_.fetch_add(1, std::memory_order_relaxed);
   }
 
-  /// Decreases reference count by one and calls `request_deletion`
-  /// when it drops to zero.
+  /// Decreases the reference count by one and destroys the object when its
+  /// reference count drops to zero.
   void deref() noexcept {
     if (unique() || rc_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
       this->~message_data();

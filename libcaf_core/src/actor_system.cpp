@@ -233,7 +233,8 @@ actor_system::actor_system(actor_system_config& cfg)
   }
   // Make sure meta objects are loaded.
   auto gmos = detail::global_meta_objects();
-  if (gmos.size() < builtin_type_ids::end || gmos[0].type_name == nullptr) {
+  if (gmos.size() < core_module_type_ids::end
+      || gmos[core_module_type_ids::begin].type_name == nullptr) {
     CAF_CRITICAL("actor_system created without calling "
                  "caf::init_global_meta_objects<>() before");
   }

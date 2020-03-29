@@ -53,7 +53,7 @@ private:
 };
 
 template <size_t Index, class... Ts>
-auto& get(typed_message_view<Ts...>& x) {
+auto& get(typed_message_view<Ts...> x) {
   static_assert(Index < sizeof...(Ts));
   using type = caf::detail::tl_at_t<caf::detail::type_list<Ts...>, Index>;
   return *reinterpret_cast<type*>(x->storage()

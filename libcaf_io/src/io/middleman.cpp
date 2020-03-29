@@ -377,10 +377,6 @@ void middleman::init(actor_system_config& cfg) {
   };
   auto gfactory = [=]() -> group_module* { return new remote_groups(*this); };
   cfg.group_module_factories.emplace_back(gfactory);
-  // Add I/O-related types.
-  using ids = io_module_type_ids;
-  detail::make_type_id_sequence<ids::begin, ids::end> seq;
-  caf::init_global_meta_objects_impl<ids>(seq);
   // Compute and set ID for this network node.
   auto this_node = node_id::default_data::local(cfg);
   system().node_.swap(this_node);
