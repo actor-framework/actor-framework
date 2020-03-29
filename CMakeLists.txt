@@ -8,8 +8,6 @@ option(BUILD_SHARED_LIBS "Build all modules as shared library" ON)
 # -- includes ------------------------------------------------------------------
 
 include(CMakePackageConfigHelpers) # For creating .cmake files
-include(CheckCXXSourceCompiles)    # Check whether compiler works
-include(CheckCXXSourceRuns)        # Check whether compiler produces binaries
 include(GNUInstallDirs)            # Sets default install paths
 include(GenerateExportHeader)      # Auto-generates dllexport macros
 
@@ -240,7 +238,6 @@ pretty_no("CAF_ENABLE_RUNTIME_CHECKS")
 pretty_no("CAF_NO_MEM_MANAGEMENT")
 pretty_no("CAF_NO_EXCEPTIONS")
 pretty_no("CAF_NO_OPENSSL")
-pretty_no("CAF_NO_PYTHON")
 pretty_no("CAF_NO_TOOLS")
 pretty_no("CAF_NO_SUMMARY")
 
@@ -248,7 +245,6 @@ if(NOT CAF_NO_IO)
   set(CAF_NO_IO no)
 else()
   set(CAF_NO_TOOLS yes)
-  set(CAF_NO_PYTHON yes)
 endif()
 
 ################################################################################
@@ -499,11 +495,6 @@ if(NOT CAF_NO_OPENSSL)
   endif(OPENSSL_FOUND)
 endif()
 
-# build Python binding if not being told otherwise
-if(NOT CAF_NO_PYTHON AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_python/CMakeLists.txt")
-  add_subdirectory(libcaf_python)
-endif()
-
 # build examples if not being told otherwise
 add_optional_caf_binaries(examples)
 
@@ -557,8 +548,11 @@ invertYesNo(CAF_NO_UNIT_TESTS CAF_BUILD_UNIT_TESTS)
 invertYesNo(CAF_NO_EXCEPTIONS CAF_BUILD_WITH_EXCEPTIONS)
 invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
 invertYesNo(CAF_NO_OPENSSL CAF_BUILD_OPENSSL)
-invertYesNo(CAF_NO_PYTHON CAF_BUILD_PYTHON)
-get_property(all_cxx_flags DIRECTORY PROPERTY COMPILE_OPTIONS)
+if(GENERATOR_IS_MULTI_CONFIG)
+  set(summary_build_type "Multi-Config")
+else()
+  set(summary_build_type "${CMAKE_BUILD_TYPE}")
+endif()
 # done
 if(NOT CAF_NO_SUMMARY)
   message(STATUS
@@ -566,7 +560,8 @@ if(NOT CAF_NO_SUMMARY)
         "\n"
         "\nCAF version:           ${CAF_VERSION}"
         "\n"
-        "\nBuild type:            ${CMAKE_BUILD_TYPE}"
+        "\nCXX:                   ${CMAKE_CXX_COMPILER}"
+        "\nBuild type:            ${summary_build_type}"
         "\nLink type:             ${LINK_TYPE}"
         "\nBuild static runtime:  ${CAF_BUILD_STATIC_RUNTIME}"
         "\nRuntime checks:        ${CAF_ENABLE_RUNTIME_CHECKS}"
@@ -575,15 +570,11 @@ if(NOT CAF_NO_SUMMARY)
         "\nWith exceptions:       ${CAF_BUILD_WITH_EXCEPTIONS}"
         "\n"
         "\nBuild I/O module:      ${CAF_BUILD_IO}"
+        "\nBuild OpenSSL module:  ${CAF_BUILD_OPENSSL}"
         "\nBuild tools:           ${CAF_BUILD_TOOLS}"
         "\nBuild examples:        ${CAF_BUILD_EXAMPLES}"
         "\nBuild unit tests:      ${CAF_BUILD_UNIT_TESTS}"
-        "\nBuild OpenSSL:         ${CAF_BUILD_OPENSSL}"
-        "\nBuild Python:          ${CAF_BUILD_PYTHON}"
         "\n"
-        "\nCXX:                   ${CMAKE_CXX_COMPILER}"
-        "\nCXXFLAGS:              ${all_cxx_flags}"
-        "\nLINKER_FLAGS (shared)  ${ALL_LD_FLAGS}"
         "\n"
         "\nSource directory:      ${CMAKE_CURRENT_SOURCE_DIR}"
         "\nBuild directory:       ${CMAKE_CURRENT_BINARY_DIR}"

@@ -49,10 +49,8 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --no-openssl                build without OpenSSL module
     --no-tools                  build without CAF tools such as caf-run
     --no-io                     build without I/O module
-    --no-python                 build without python binding
     --no-summary                do not print configuration before building
-    --libs-only                 sets no-examples, no-tools, no-python,
-                                and no-unit-tests
+    --libs-only                 sets no-examples, no-tools and no-unit-tests
     --core-only                 same as libs-only but also adds sets
                                 no-openssl, and no-io
 
@@ -78,9 +76,6 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     CXXFLAGS                    C++ compiler flags (overrides defaults)
     LDFLAGS                     Additional linker flags
     CMAKE_GENERATOR     Selects a custom generator
-
-  Python Build Options:
-    --with-python-config=FILE   Use python-conf binary to determine includes and libs
 
   iOS Build Options (should be used with XCode generator):
     --sysroot=DIR               set system root for Clang
@@ -313,28 +308,22 @@ while [ $# -ne 0 ]; do
         --static-runtime)
             append_cache_entry CAF_BUILD_STATIC_RUNTIME BOOL yes
             ;;
-        --with-python-config=*)
-            append_cache_entry CAF_PYTHON_CONFIG_BIN FILEPATH "$optarg"
-            ;;
         --no-tools)
             append_cache_entry CAF_NO_TOOLS BOOL yes
             ;;
         --no-io)
             append_cache_entry CAF_NO_IO BOOL yes
             ;;
-        --no-python)
-            append_cache_entry CAF_NO_PYTHON BOOL yes
-            ;;
         --no-summary)
             append_cache_entry CAF_NO_SUMMARY BOOL yes
             ;;
         --libs-only)
-            for var in CAF_NO_TOOLS CAF_NO_PYTHON CAF_NO_EXAMPLES  CAF_NO_UNIT_TESTS; do
+            for var in CAF_NO_TOOLS CAF_NO_EXAMPLES  CAF_NO_UNIT_TESTS; do
               append_cache_entry $var BOOL yes
             done
             ;;
         --core-only)
-            for var in CAF_NO_TOOLS CAF_NO_PYTHON CAF_NO_EXAMPLES  CAF_NO_UNIT_TESTS CAF_NO_IO CAF_NO_OPENSSL ; do
+            for var in CAF_NO_TOOLS CAF_NO_EXAMPLES  CAF_NO_UNIT_TESTS CAF_NO_IO CAF_NO_OPENSSL ; do
               append_cache_entry $var BOOL yes
             done
             ;;
@@ -342,7 +331,7 @@ while [ $# -ne 0 ]; do
             for var in CAF_NO_TOOLS CAF_NO_EXAMPLES CAF_ENABLE_RUNTIME_CHECKS ; do
               append_cache_entry $var BOOL yes
             done
-            append_cache_entry CMAKE_BUILD_TYPE STRING debug
+            append_cache_entry CMAKE_BUILD_TYPE STRING Debug
             append_cache_entry CAF_LOG_LEVEL STRING TRACE
             append_cache_entry CAF_SANITIZERS STRING address,undefined
             ;;
