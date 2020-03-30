@@ -442,8 +442,8 @@ public:
     return convert_apply(dref(), x, tmp, assign);
   }
 
-  template <class Duration>
-  error apply(std::chrono::time_point<std::chrono::system_clock, Duration>& t) {
+  template <class Clock, class Duration>
+  error apply(std::chrono::time_point<Clock, Duration>& t) {
     if (Derived::reads_state) {
       auto dur = t.time_since_epoch();
       return apply(dur);
@@ -451,7 +451,7 @@ public:
     if (Derived::writes_state) {
       Duration dur{};
       auto e = apply(dur);
-      t = std::chrono::time_point<std::chrono::system_clock, Duration>{dur};
+      t = std::chrono::time_point<Clock, Duration>{dur};
       return e;
     }
   }
