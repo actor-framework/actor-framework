@@ -106,7 +106,7 @@ public:
   template <class Parent>
   void resolve(Parent& parent, string_view path, const actor& listener) {
     actor_id aid = 42;
-    auto hid = "0011223344556677889900112233445566778899";
+    auto hid = string_view("0011223344556677889900112233445566778899");
     auto nid = unbox(make_node_id(42, hid));
     actor_config cfg;
     endpoint_manager_ptr ptr{&parent.manager()};

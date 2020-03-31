@@ -168,7 +168,7 @@ public:
   template <class Parent>
   void resolve(Parent& parent, string_view path, actor listener) {
     actor_id aid = 42;
-    auto hid = "0011223344556677889900112233445566778899";
+    auto hid = string_view("0011223344556677889900112233445566778899");
     auto nid = unbox(make_node_id(aid, hid));
     actor_config cfg;
     auto sys = &parent.system();
