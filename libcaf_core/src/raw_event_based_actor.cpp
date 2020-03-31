@@ -93,16 +93,9 @@ invoke_message_result raw_event_based_actor::consume(mailbox_element& x) {
     });
     auto call_default_handler = [&] {
       auto sres = call_handler(default_handler_, this, x.payload);
-      switch (sres.flag) {
-        default:
-          break;
-        case rt_error:
-        case rt_value:
-          visitor.visit(sres);
-          break;
-        case rt_skip:
-          skipped = true;
-      }
+      auto f = detail::make_overload([&](auto& x) { visitor.visit(x); },
+                                     [&](skip_t& x) { skipped = true; });
+      visit(f, sres);
     };
     if (bhvr_stack_.empty()) {
       call_default_handler();

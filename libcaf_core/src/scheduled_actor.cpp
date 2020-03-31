@@ -701,17 +701,10 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
             setf(has_timeout_flag);
         });
         auto call_default_handler = [&] {
+          auto f = detail::make_overload([&](auto& val) { visitor.visit(val); },
+                                         [&](skip_t&) { skipped = true; });
           auto sres = call_handler(default_handler_, this, x.payload);
-          switch (sres.flag) {
-            default:
-              break;
-            case rt_error:
-            case rt_value:
-              visitor.visit(sres);
-              break;
-            case rt_skip:
-              skipped = true;
-          }
+          visit(f, sres);
         };
         if (bhvr_stack_.empty()) {
           call_default_handler();
@@ -1138,15 +1131,14 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
   // Utility for invoking the default handler.
   auto fallback = [&] {
     auto sres = call_handler(default_handler_, this, x.payload);
-    switch (sres.flag) {
-      default:
-        CAF_LOG_DEBUG(
-          "default handler was called for open_stream_msg:" << osm.msg);
-        fail(sec::stream_init_failed, "dropped open_stream_msg (no match)");
-        return invoke_message_result::dropped;
-      case rt_skip:
-        CAF_LOG_DEBUG("default handler skipped open_stream_msg:" << osm.msg);
-        return invoke_message_result::skipped;
+    if (holds_alternative<skip_t>(sres)) {
+      CAF_LOG_DEBUG("default handler skipped open_stream_msg:" << osm.msg);
+      return invoke_message_result::skipped;
+    } else {
+      CAF_LOG_DEBUG(
+        "default handler was called for open_stream_msg:" << osm.msg);
+      fail(sec::stream_init_failed, "dropped open_stream_msg (no match)");
+      return invoke_message_result::dropped;
     }
   };
   // Invoke behavior and dispatch on the result.
