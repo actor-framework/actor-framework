@@ -113,10 +113,10 @@ public:
   }
 
   static expected<std::vector<byte>> serialize(actor_system& sys,
-                                               const type_erased_tuple& x) {
+                                               const message& x) {
     std::vector<byte> result;
     binary_serializer sink{sys, result};
-    if (auto err = message::save(sink, x))
+    if (auto err = x.save(sink))
       return err.value();
     return result;
   }
@@ -168,7 +168,7 @@ public:
   template <class Parent>
   void resolve(Parent& parent, string_view path, actor listener) {
     actor_id aid = 42;
-    auto hid = "0011223344556677889900112233445566778899";
+    auto hid = string_view("0011223344556677889900112233445566778899");
     auto nid = unbox(make_node_id(aid, hid));
     actor_config cfg;
     auto sys = &parent.system();

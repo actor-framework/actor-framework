@@ -25,10 +25,12 @@
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/logger.hpp"
+#include "caf/make_counted.hpp"
 #include "caf/net/operation.hpp"
 #include "caf/net/pollset_updater.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/sec.hpp"
+#include "caf/span.hpp"
 #include "caf/variant.hpp"
 
 #ifndef CAF_WINDOWS

@@ -31,6 +31,7 @@
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/stream_socket.hpp"
+#include "caf/node_id.hpp"
 #include "caf/span.hpp"
 
 using namespace caf;
@@ -62,10 +63,10 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
 class dummy_application {
 public:
   static expected<std::vector<byte>> serialize(actor_system& sys,
-                                               const type_erased_tuple& x) {
+                                               const message& x) {
     std::vector<byte> result;
     binary_serializer sink{sys, result};
-    if (auto err = message::save(sink, x))
+    if (auto err = x.save(sink))
       return err.value();
     return result;
   }
@@ -124,7 +125,7 @@ public:
   template <class Manager>
   void resolve(Manager& mgr, const uri& locator, const actor& listener) {
     actor_id aid = 42;
-    auto hid = "0011223344556677889900112233445566778899";
+    auto hid = string_view("0011223344556677889900112233445566778899");
     auto nid = unbox(make_node_id(42, hid));
     actor_config cfg;
     auto p = make_actor<actor_proxy_impl, strong_actor_ptr>(aid, nid,
