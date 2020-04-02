@@ -359,6 +359,17 @@ struct is_serializable_impl<T, false, false> {
                                 || is_builtin<T>::value;
 };
 
+template <class Rep, class Period>
+struct is_serializable_impl<std::chrono::duration<Rep, Period>, false, false> {
+  static constexpr bool value = is_serializable<Rep>::value;
+};
+
+template <class Clock, class Duration>
+struct is_serializable_impl<std::chrono::time_point<Clock, Duration>, false,
+                            false> {
+  static constexpr bool value = is_serializable<Duration>::value;
+};
+
 template <class F, class S>
 struct is_serializable_impl<std::pair<F, S>, false, false> {
   static constexpr bool value = is_serializable<F>::value
