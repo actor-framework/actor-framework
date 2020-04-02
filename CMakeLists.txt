@@ -394,9 +394,9 @@ if (NOT caf_is_subproject)
   endif()
   # check if the user provided CXXFLAGS, set defaults otherwise
   if(NOT CMAKE_CXX_FLAGS)
-    set(CMAKE_CXX_FLAGS                   "-std=c++11 -Wextra -Wall -pedantic ${EXTRA_FLAGS}")
+    set(CMAKE_CXX_FLAGS                   "-std=c++11 -Wextra -Wall -pedantic")
   endif()
-  if (NOT "${CMAKE_CXX_FLAGS}" MATCHES "-std=")
+  if (NOT MSVC AND NOT "${CMAKE_CXX_FLAGS}" MATCHES "-std=")
     message(STATUS "Supplied CXXFLAGS do not contain a C++ standard, setting std to c++11")
     set(CMAKE_CXX_FLAGS                   "-std=c++11 ${CMAKE_CXX_FLAGS}")
   endif()
@@ -437,6 +437,11 @@ if(MINGW)
   build_string("EXTRA_FLAGS" "-static")
 elseif(CYGWIN)
   build_string("EXTRA_FLAGS" "-U__STRICT_ANSI__")
+endif()
+
+# Add extra flags.
+if (NOT "${EXTRA_FLAGS}" STREQUAL "")
+  build_string(CMAKE_CXX_FLAGS "${EXTRA_FLAGS}")
 endif()
 
 ################################################################################
