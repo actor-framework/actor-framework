@@ -135,6 +135,7 @@ class resumable;
 class scheduled_actor;
 class scoped_actor;
 class serializer;
+class skip_t;
 class stream_manager;
 class string_view;
 class tracing_data;
@@ -193,6 +194,7 @@ using ip_address = ipv6_address;
 using ip_endpoint = ipv6_endpoint;
 using ip_subnet = ipv6_subnet;
 using settings = dictionary<config_value>;
+using skippable_result = variant<delegated<message>, message, error, skip_t>;
 using stream_slot = uint16_t;
 using type_id_t = uint16_t;
 

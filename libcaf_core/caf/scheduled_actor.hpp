@@ -84,21 +84,21 @@ namespace caf {
 
 /// @relates scheduled_actor
 /// Default handler function that sends the message back to the sender.
-CAF_CORE_EXPORT result<message> reflect(scheduled_actor*, message&);
+CAF_CORE_EXPORT skippable_result reflect(scheduled_actor*, message&);
 
 /// @relates scheduled_actor
 /// Default handler function that sends
 /// the message back to the sender and then quits.
-CAF_CORE_EXPORT result<message> reflect_and_quit(scheduled_actor*, message&);
+CAF_CORE_EXPORT skippable_result reflect_and_quit(scheduled_actor*, message&);
 
 /// @relates scheduled_actor
 /// Default handler function that prints messages
 /// message via `aout` and drops them afterwards.
-CAF_CORE_EXPORT result<message> print_and_drop(scheduled_actor*, message&);
+CAF_CORE_EXPORT skippable_result print_and_drop(scheduled_actor*, message&);
 
 /// @relates scheduled_actor
 /// Default handler function that simply drops messages.
-CAF_CORE_EXPORT result<message> drop(scheduled_actor*, message&);
+CAF_CORE_EXPORT skippable_result drop(scheduled_actor*, message&);
 
 /// A cooperatively scheduled, event-based actor implementation.
 class CAF_CORE_EXPORT scheduled_actor : public local_actor,
@@ -189,7 +189,7 @@ public:
   using pointer = scheduled_actor*;
 
   /// Function object for handling unmatched messages.
-  using default_handler = std::function<result<message>(pointer, message&)>;
+  using default_handler = std::function<skippable_result(pointer, message&)>;
 
   /// Function object for handling error messages.
   using error_handler = std::function<void(pointer, error&)>;
@@ -215,8 +215,8 @@ public:
     size_t max_throughput;
 
     /// Consumes upstream messages.
-    intrusive::task_result
-    operator()(size_t, upstream_queue&, mailbox_element&);
+    intrusive::task_result operator()(size_t, upstream_queue&,
+                                      mailbox_element&);
 
     /// Consumes downstream messages.
     intrusive::task_result
@@ -730,8 +730,8 @@ public:
   /// Closes all incoming stream traffic for a manager. Emits a drop message on
   /// each path if `reason == none` and a `forced_drop` message on each path
   /// otherwise.
-  virtual void
-  erase_inbound_paths_later(const stream_manager* mgr, error reason);
+  virtual void erase_inbound_paths_later(const stream_manager* mgr,
+                                         error reason);
 
   // -- handling of stream messages --------------------------------------------
 

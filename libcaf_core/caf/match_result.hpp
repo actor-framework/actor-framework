@@ -26,9 +26,8 @@ namespace caf {
 
 /// Denotes the invoke result of a ::behavior or ::message_handler.
 enum class match_result {
-  no_match,
   match,
-  skip,
+  no_match,
 };
 
 /// @relates match_result

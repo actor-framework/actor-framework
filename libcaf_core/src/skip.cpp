@@ -23,9 +23,13 @@
 
 namespace caf {
 
-result<message> skip_t::skip_fun_impl(scheduled_actor*, message&) {
-  return skip();
+namespace {
+
+skippable_result skip_fun_impl(scheduled_actor*, message&) {
+  return skip;
 }
+
+} // namespace
 
 skip_t::operator fun() const {
   return skip_fun_impl;

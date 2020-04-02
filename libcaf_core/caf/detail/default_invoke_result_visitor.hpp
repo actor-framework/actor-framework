@@ -27,13 +27,17 @@ namespace caf::detail {
 template <class Self>
 class default_invoke_result_visitor : public invoke_result_visitor {
 public:
-  inline default_invoke_result_visitor(Self* ptr) : self_(ptr) {
+  using super = invoke_result_visitor;
+
+  default_invoke_result_visitor(Self* ptr) : self_(ptr) {
     // nop
   }
 
   ~default_invoke_result_visitor() override {
     // nop
   }
+
+  using super::operator();
 
   void operator()(error& x) override {
     CAF_LOG_TRACE(CAF_ARG(x));

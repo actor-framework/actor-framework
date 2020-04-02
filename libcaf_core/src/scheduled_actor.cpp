@@ -36,26 +36,26 @@ namespace caf {
 
 // -- related free functions ---------------------------------------------------
 
-result<message> reflect(scheduled_actor*, message& msg) {
+skippable_result reflect(scheduled_actor*, message& msg) {
   return std::move(msg);
 }
 
-result<message> reflect_and_quit(scheduled_actor* ptr, message& msg) {
+skippable_result reflect_and_quit(scheduled_actor* ptr, message& msg) {
   error err = exit_reason::normal;
   scheduled_actor::default_error_handler(ptr, err);
   return reflect(ptr, msg);
 }
 
-result<message> print_and_drop(scheduled_actor* ptr, message& msg) {
+skippable_result print_and_drop(scheduled_actor* ptr, message& msg) {
   CAF_LOG_WARNING("unexpected message:" << msg);
   aout(ptr) << "*** unexpected message [id: " << ptr->id()
             << ", name: " << ptr->name() << "]: " << to_string(msg)
             << std::endl;
-  return sec::unexpected_message;
+  return make_error(sec::unexpected_message);
 }
 
-result<message> drop(scheduled_actor*, message&) {
-  return sec::unexpected_message;
+skippable_result drop(scheduled_actor*, message&) {
+  return make_error(sec::unexpected_message);
 }
 
 // -- implementation details ---------------------------------------------------
@@ -67,7 +67,7 @@ void silently_ignore(scheduled_actor*, T&) {
   // nop
 }
 
-result<message> drop_after_quit(scheduled_actor* self, message&) {
+skippable_result drop_after_quit(scheduled_actor* self, message&) {
   if (self->current_message_id().is_request())
     return make_error(sec::request_receiver_down);
   return make_message();
@@ -691,38 +691,26 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
         return invoke_message_result::consumed;
       case message_category::ordinary: {
         detail::default_invoke_result_visitor<scheduled_actor> visitor{this};
-        bool skipped = false;
         auto had_timeout = getf(has_timeout_flag);
         if (had_timeout)
           unsetf(has_timeout_flag);
-        // restore timeout at scope exit if message was skipped
-        auto timeout_guard = detail::make_scope_guard([&] {
-          if (skipped && had_timeout)
-            setf(has_timeout_flag);
-        });
-        auto call_default_handler = [&] {
-          auto f = detail::make_overload([&](auto& val) { visitor.visit(val); },
-                                         [&](skip_t&) { skipped = true; });
-          auto sres = call_handler(default_handler_, this, x.payload);
-          visit(f, sres);
-        };
-        if (bhvr_stack_.empty()) {
-          call_default_handler();
-          return !skipped ? invoke_message_result::consumed
-                          : invoke_message_result::skipped;
+        if (!bhvr_stack_.empty()) {
+          auto& bhvr = bhvr_stack_.back();
+          if (bhvr(visitor, x.content()) == match_result::match)
+            return invoke_message_result::consumed;
         }
-        auto& bhvr = bhvr_stack_.back();
-        switch (bhvr(visitor, x.content())) {
-          default:
-            break;
-          case match_result::skip:
-            skipped = true;
-            break;
-          case match_result::no_match:
-            call_default_handler();
-        }
-        return !skipped ? invoke_message_result::consumed
-                        : invoke_message_result::skipped;
+        auto sres = call_handler(default_handler_, this, x.payload);
+        auto f = detail::make_overload(
+          [&](auto& x) {
+            visitor(x);
+            return invoke_message_result::consumed;
+          },
+          [&](skip_t&) {
+            if (had_timeout)
+              setf(has_timeout_flag);
+            return invoke_message_result::skipped;
+          });
+        return visit(f, sres);
       }
     }
     // Unreachable.

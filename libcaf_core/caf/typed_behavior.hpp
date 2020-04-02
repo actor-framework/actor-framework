@@ -27,9 +27,7 @@
 
 #include "caf/detail/typed_actor_util.hpp"
 
-namespace caf {
-
-namespace detail {
+namespace caf ::detail {
 
 // converts a list of replies_to<...>::with<...> elements to a list of
 // lists containing the replies_to<...> half only
@@ -127,15 +125,30 @@ void static_check_typed_behavior_input() {
                           "typed behavior (exact match needed)");
 }
 
-} // namespace detail
+} // namespace caf::detail
 
-template <class... Sigs>
-class typed_actor;
+namespace caf::mixin {
 
-namespace mixin {
 template <class, class, class>
 class behavior_stack_based_impl;
-}
+
+} // namespace caf::mixin
+
+namespace caf {
+
+/// Tag type for constructing a `typed_behavior` with an incomplete list of
+/// message handlers, delegating to the default handler for all unmatched
+/// inputs.
+struct partial_behavior_init_t {};
+
+constexpr partial_behavior_init_t partial_behavior_init
+  = partial_behavior_init_t{};
+
+/// Empty struct tag for constructing from an untyped behavior.
+struct unsafe_behavior_init_t {};
+
+constexpr unsafe_behavior_init_t unsafe_behavior_init
+  = unsafe_behavior_init_t{};
 
 template <class... Sigs>
 class typed_behavior {
@@ -155,9 +168,6 @@ public:
 
   /// Stores the template parameter pack in a type list.
   using signatures = detail::type_list<Sigs...>;
-
-  /// Empty struct tag for constructing from an untyped behavior.
-  struct unsafe_init {};
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -182,11 +192,18 @@ public:
     set(detail::make_behavior(std::move(x), std::move(xs)...));
   }
 
-  typed_behavior(unsafe_init, behavior x) : bhvr_(std::move(x)) {
+  template <class... Ts>
+  typed_behavior(partial_behavior_init_t, Ts... xs)
+    : typed_behavior(unsafe_behavior_init, behavior{std::move(xs)...}) {
+    // TODO: implement type checking.
+  }
+
+  typed_behavior(unsafe_behavior_init_t, behavior x) : bhvr_(std::move(x)) {
     // nop
   }
 
-  typed_behavior(unsafe_init, message_handler x) : bhvr_(std::move(x)) {
+  typed_behavior(unsafe_behavior_init_t, message_handler x)
+    : bhvr_(std::move(x)) {
     // nop
   }
 

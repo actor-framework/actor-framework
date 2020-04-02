@@ -11,12 +11,10 @@ std::string to_string(match_result x) {
   switch(x) {
     default:
       return "???";
-    case match_result::no_match:
-      return "no_match";
     case match_result::match:
       return "match";
-    case match_result::skip:
-      return "skip";
+    case match_result::no_match:
+      return "no_match";
   };
 }
 

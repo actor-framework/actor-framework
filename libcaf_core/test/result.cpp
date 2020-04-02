@@ -32,16 +32,9 @@ template<class T>
 void test_unit_void() {
   auto x = result<T>{};
   CAF_CHECK(holds_alternative<message>(x));
-  x = skip;
-  CAF_CHECK(holds_alternative<skip_t>(x));
 }
 
 } // namespace anonymous
-
-CAF_TEST(skip) {
-  auto x = result<int>{skip};
-  CAF_CHECK(holds_alternative<skip_t>(x));
-}
 
 CAF_TEST(value) {
   auto x = result<int>{42};

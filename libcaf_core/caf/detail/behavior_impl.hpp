@@ -131,7 +131,6 @@ public:
   template <size_t... Is>
   match_result invoke_impl(detail::invoke_result_visitor& f, message& msg,
                            std::index_sequence<Is...>) {
-    auto result = match_result::no_match;
     auto dispatch = [&](auto& fun) {
       using fun_type = std::decay_t<decltype(fun)>;
       using trait = get_callable_trait_t<fun_type>;
@@ -141,18 +140,17 @@ public:
         using fun_result = decltype(detail::apply_args(fun, xs));
         if constexpr (std::is_same<void, fun_result>::value) {
           detail::apply_args(fun, xs);
-          result = f.visit(unit) ? match_result::match : match_result::skip;
+          f(unit);
         } else {
           auto invoke_res = detail::apply_args(fun, xs);
-          result = f.visit(invoke_res) ? match_result::match
-                                       : match_result::skip;
+          f(invoke_res);
         }
         return true;
       }
       return false;
     };
-    static_cast<void>((dispatch(std::get<Is>(cases_)) || ...));
-    return result;
+    bool dispatched = (dispatch(std::get<Is>(cases_)) || ...);
+    return dispatched ? match_result::match : match_result::no_match;
   }
 
   void handle_timeout() override {

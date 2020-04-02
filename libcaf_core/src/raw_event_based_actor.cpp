@@ -82,38 +82,27 @@ invoke_message_result raw_event_based_actor::consume(mailbox_element& x) {
     }
     // handle everything else as ordinary message
     detail::default_invoke_result_visitor<event_based_actor> visitor{this};
-    bool skipped = false;
     auto had_timeout = getf(has_timeout_flag);
     if (had_timeout)
       unsetf(has_timeout_flag);
-    // restore timeout at scope exit if message was skipped
-    auto timeout_guard = detail::make_scope_guard([&] {
-      if (skipped && had_timeout)
-        setf(has_timeout_flag);
-    });
-    auto call_default_handler = [&] {
-      auto sres = call_handler(default_handler_, this, x.payload);
-      auto f = detail::make_overload([&](auto& x) { visitor.visit(x); },
-                                     [&](skip_t& x) { skipped = true; });
-      visit(f, sres);
-    };
-    if (bhvr_stack_.empty()) {
-      call_default_handler();
-      return !skipped ? invoke_message_result::consumed
-                      : invoke_message_result::skipped;
+    if (!bhvr_stack_.empty()) {
+      auto& bhvr = bhvr_stack_.back();
+      if (bhvr(visitor, x.content()) == match_result::match)
+        return invoke_message_result::consumed;
     }
-    auto& bhvr = bhvr_stack_.back();
-    switch (bhvr(visitor, x.content())) {
-      default:
-        break;
-      case match_result::skip:
-        skipped = true;
-        break;
-      case match_result::no_match:
-        call_default_handler();
-    }
-    return !skipped ? invoke_message_result::consumed
-                    : invoke_message_result::skipped;
+    auto sres = call_handler(default_handler_, this, x.payload);
+    auto f = detail::make_overload(
+      [&](auto& x) {
+        visitor(x);
+        return invoke_message_result::consumed;
+      },
+      [&](skip_t& x) {
+        // Restore timeout if message was skipped.
+        if (had_timeout)
+          setf(has_timeout_flag);
+        return invoke_message_result::skipped;
+      });
+    return visit(f, sres);
   };
   // Post-process the returned value from the function body.
   auto result = body();

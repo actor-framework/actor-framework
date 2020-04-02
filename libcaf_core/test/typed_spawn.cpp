@@ -108,36 +108,33 @@ using event_testee_type
 class event_testee : public event_testee_type::base {
 public:
   event_testee(actor_config& cfg) : event_testee_type::base(cfg) {
-    // nop
+    set_default_handler(skip);
   }
 
   behavior_type wait4string() {
     return {
+      partial_behavior_init,
       [=](get_state_atom) { return "wait4string"; },
       [=](const string&) { become(wait4int()); },
-      [=](float) { return skip(); },
-      [=](int) { return skip(); },
     };
   }
 
   behavior_type wait4int() {
     return {
+      partial_behavior_init,
       [=](get_state_atom) { return "wait4int"; },
       [=](int) -> int {
         become(wait4float());
         return 42;
       },
-      [=](float) { return skip(); },
-      [=](const string&) { return skip(); },
     };
   }
 
   behavior_type wait4float() {
     return {
+      partial_behavior_init,
       [=](get_state_atom) { return "wait4float"; },
       [=](float) { become(wait4string()); },
-      [=](const string&) { return skip(); },
-      [=](int) { return skip(); },
     };
   }
 

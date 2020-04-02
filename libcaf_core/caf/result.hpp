@@ -50,7 +50,7 @@ class result_base {
 public:
   static_assert(sizeof...(Ts) > 0);
 
-  using types = detail::type_list<delegated<Ts...>, message, error, skip_t>;
+  using types = detail::type_list<delegated<Ts...>, message, error>;
 
   result_base() = default;
 
@@ -68,10 +68,6 @@ public:
   }
 
   result_base(error x) : content_(std::move(x)) {
-    // nop
-  }
-
-  result_base(skip_t) : content_(skip) {
     // nop
   }
 
@@ -109,7 +105,7 @@ protected:
     // nop
   }
 
-  variant<delegated<Ts...>, message, error, skip_t> content_;
+  variant<delegated<Ts...>, message, error> content_;
 };
 
 // -- result<Ts...> and its specializations ------------------------------------
@@ -244,6 +240,11 @@ template <class... Ts>
 auto make_result(Ts&&... xs) {
   return result<std::decay_t<Ts>...>(std::forward<Ts>(xs)...);
 }
+
+// -- special type alias for a skippable result<message> -----------------------
+
+/// Similar to `result<message>`, but also allows to *skip* a message.
+using skippable_result = variant<delegated<message>, message, error, skip_t>;
 
 // -- sum type access to result<Ts...> -----------------------------------------
 

@@ -165,34 +165,18 @@ CAF_TEST(typed_behavior_assignment) {
                         replies_to<double, double>::with<int, int>>;
   // compatible handlers resulting in perfect match
   auto f1 = [=](int) { return 0.; };
-  auto f2 = [=](double, double) { return std::make_tuple(0, 0); };
-  // compatible handlers using skip
-  auto g1 = [=](int) { return skip(); };
-  auto g2 = [=](double, double) { return skip(); };
+  auto f2 = [=](double, double) -> result<int, int> { return {0, 0}; };
   // incompatbile handlers
   auto e1 = [=](int) { return 0.f; };
   auto e2 = [=](double, double) { return std::make_tuple(0.f, 0.f); };
   // omit one handler
   CAF_CHECK_EQUAL(bi_pair(false, -1), tb_assign<bh1>(f1));
   CAF_CHECK_EQUAL(bi_pair(false, -1), tb_assign<bh1>(f2));
-  CAF_CHECK_EQUAL(bi_pair(false, -1), tb_assign<bh1>(g1));
-  CAF_CHECK_EQUAL(bi_pair(false, -1), tb_assign<bh1>(g2));
   CAF_CHECK_EQUAL(bi_pair(false, -1), tb_assign<bh1>(e1));
   CAF_CHECK_EQUAL(bi_pair(false, -1), tb_assign<bh1>(e2));
-  // any valid alteration of (f1, f2, g1, g2)
+  // any valid alteration of (f1, f2)
   CAF_CHECK_EQUAL(bi_pair(true, 2), tb_assign<bh1>(f1, f2));
   CAF_CHECK_EQUAL(bi_pair(true, 2), tb_assign<bh1>(f2, f1));
-  CAF_CHECK_EQUAL(bi_pair(true, 2), tb_assign<bh1>(g1, g2));
-  CAF_CHECK_EQUAL(bi_pair(true, 2), tb_assign<bh1>(g2, g1));
-  CAF_CHECK_EQUAL(bi_pair(true, 2), tb_assign<bh1>(g1, f2));
-  CAF_CHECK_EQUAL(bi_pair(true, 2), tb_assign<bh1>(f2, g1));
-  CAF_CHECK_EQUAL(bi_pair(true, 2), tb_assign<bh1>(f1, g2));
-  CAF_CHECK_EQUAL(bi_pair(true, 2), tb_assign<bh1>(g2, f1));
-  // any invalid alteration of (f1, f2, g1, g2)
-  CAF_CHECK_EQUAL(bi_pair(false, 1), tb_assign<bh1>(f1, g1));
-  CAF_CHECK_EQUAL(bi_pair(false, 1), tb_assign<bh1>(g1, f1));
-  CAF_CHECK_EQUAL(bi_pair(false, 1), tb_assign<bh1>(f2, g2));
-  CAF_CHECK_EQUAL(bi_pair(false, 1), tb_assign<bh1>(g2, g2));
   // any invalid alteration of (f1, f2, e1, e2)
   CAF_CHECK_EQUAL(bi_pair(false, 1), tb_assign<bh1>(f1, e1));
   CAF_CHECK_EQUAL(bi_pair(false, 1), tb_assign<bh1>(f1, e2));

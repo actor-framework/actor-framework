@@ -56,7 +56,7 @@ public:
   /// Called if the message handler returned any "ordinary" value.
   virtual void operator()(message&) = 0;
 
-  // -- on-the-fly type conversions --------------------------------------------
+  // -- extraction and conversions ---------------------------------------------
 
   /// Wraps arbitrary values into a `message` and calls the visitor recursively.
   template <class... Ts>
@@ -77,6 +77,12 @@ public:
   /// Disambiguates the variadic `operator<Ts...>()`.
   void operator()(unit_t& x) {
     (*this)(const_cast<const unit_t&>(x));
+  }
+
+  /// Dispatches on the runtime-type of `x`.
+  template <class... Ts>
+  void operator()(result<Ts...>& res) {
+    caf::visit([this](auto& x) { (*this)(x); }, res);
   }
 
   // -- special-purpose handlers that don't produce results --------------------
@@ -118,46 +124,6 @@ public:
   template <class In, class DownstreamManager, class... Ts>
   void operator()(make_stage_result<In, DownstreamManager, Ts...>&) {
     // nop
-  }
-
-  // -- visit API: return true if T was visited, false if T was skipped --------
-
-  /// Delegates `x` to the appropriate handler and returns `true`.
-  template <class T>
-  bool visit(T& x) {
-    (*this)(x);
-    return true;
-  }
-
-  /// Returns `false`.
-  bool visit(skip_t&) {
-    return false;
-  }
-
-  /// Returns `false`.
-  bool visit(const skip_t&) {
-    return false;
-  }
-
-  /// Returns `false` if `x != none`, otherwise calls the void handler and
-  /// returns `true`..
-  bool visit(optional<skip_t>& x) {
-    return static_cast<bool>(x);
-  }
-
-  /// Dispatches on the runtime-type of `x`.
-  template <class... Ts>
-  bool visit(result<Ts...>& res) {
-    auto f = detail::make_overload(
-      [this](auto& x) {
-        (*this)(x);
-        return true;
-      },
-      [this](delegated<Ts...>&) {
-        return true;
-      },
-      [this](skip_t&) { return false; });
-    return caf::visit(f, res);
   }
 };
 
