@@ -128,6 +128,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   [0.18.0]).
 - Fix build on GCC 7.2
 - Fix build error in the OpenSSL module under some MSVC configurations
+- Serializer and deserializer now accept `std::chrono::time_point` for all clock
+  types instead of hard-wiring `std::system_clock`.
 
 ## [0.17.4] - 2019-02-08
 
