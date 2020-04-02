@@ -31,38 +31,34 @@ namespace {
 template<class T>
 void test_unit_void() {
   auto x = result<T>{};
-  CAF_CHECK_EQUAL(x.flag, rt_value);
-  x = skip();
-  CAF_CHECK_EQUAL(x.flag, rt_skip);
-  x = expected<T>{};
-  CAF_CHECK_EQUAL(x.flag, rt_value);
-  x = expected<T>{sec::unexpected_message};
-  CAF_CHECK_EQUAL(x.flag, rt_error);
-  CAF_CHECK_EQUAL(x.err, make_error(sec::unexpected_message));
+  CAF_CHECK(holds_alternative<message>(x));
+  x = skip;
+  CAF_CHECK(holds_alternative<skip_t>(x));
 }
 
 } // namespace anonymous
 
 CAF_TEST(skip) {
-  auto x = result<>{skip()};
-  CAF_CHECK_EQUAL(x.flag, rt_skip);
-  CAF_CHECK(x.value.empty());
+  auto x = result<int>{skip};
+  CAF_CHECK(holds_alternative<skip_t>(x));
 }
 
 CAF_TEST(value) {
   auto x = result<int>{42};
-  CAF_CHECK_EQUAL(x.flag, rt_value);
-  CAF_CHECK_EQUAL(x.value.get_as<int>(0), 42);
+  CAF_REQUIRE(holds_alternative<message>(x));
+  if (auto view = make_typed_message_view<int>(get<message>(x)))
+    CAF_CHECK_EQUAL(get<0>(view), 42);
+  else
+    CAF_FAIL("unexpected types in result message");
 }
 
 CAF_TEST(expected) {
   auto x = result<int>{expected<int>{42}};
-  CAF_CHECK_EQUAL(x.flag, rt_value);
-  CAF_CHECK_EQUAL(x.value.get_as<int>(0), 42);
-  x = expected<int>{sec::unexpected_message};
-  CAF_CHECK_EQUAL(x.flag, rt_error);
-  CAF_CHECK_EQUAL(x.err, make_error(sec::unexpected_message));
-  CAF_CHECK(x.value.empty());
+  CAF_REQUIRE(holds_alternative<message>(x));
+  if (auto view = make_typed_message_view<int>(get<message>(x)))
+    CAF_CHECK_EQUAL(get<0>(view), 42);
+  else
+    CAF_FAIL("unexpected types in result message");
 }
 
 CAF_TEST(void_specialization) {

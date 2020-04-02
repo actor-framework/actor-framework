@@ -23,6 +23,7 @@
 #include "caf/detail/apply_args.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/int_list.hpp"
+#include "caf/detail/overload.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
@@ -198,20 +199,18 @@ public:
 
   /// Dispatches on the runtime-type of `x`.
   template <class... Ts>
-  bool visit(result<Ts...>& x) {
-    switch (x.flag) {
-      case rt_value:
-        (*this)(x.value);
+  bool visit(result<Ts...>& res) {
+    auto f = detail::make_overload(
+      [this](auto& x) {
+        (*this)(x);
         return true;
-      case rt_error:
-        (*this)(x.err);
-        return true;
-      case rt_delegated:
+      },
+      [this](delegated<Ts...>&) {
         (*this)();
         return true;
-      default:
-        return false;
-    }
+      },
+      [this](skip_t&) { return false; });
+    return caf::visit(f, res);
   }
 };
 

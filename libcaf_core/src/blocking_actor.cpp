@@ -196,7 +196,7 @@ blocking_actor::mailbox_visitor::operator()(mailbox_element& x) {
       case match_result::no_match: { // Blocking actors can have fallback
                                      // handlers for catch-all rules.
         auto sres = bhvr.fallback(self->current_element_->payload);
-        if (sres.flag != rt_skip) {
+        if (!holds_alternative<skip_t>(sres)) {
           visitor.visit(sres);
           return check_if_done();
         }

@@ -20,6 +20,7 @@
 
 #include <type_traits>
 
+#include "caf/default_sum_type_access.hpp"
 #include "caf/delegated.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
@@ -29,196 +30,217 @@
 #include "caf/message.hpp"
 #include "caf/none.hpp"
 #include "caf/skip.hpp"
+#include "caf/sum_type.hpp"
+#include "caf/variant.hpp"
+
+namespace caf::detail {
+
+// Tag type for selecting a protected constructor in `result_base`.
+struct result_base_message_init {};
+
+} // namespace caf::detail
 
 namespace caf {
 
-enum result_runtime_type { rt_value, rt_error, rt_delegated, rt_skip };
+// -- base type for result<Ts...> ----------------------------------------------
 
+/// Base type for all specializations of `result`.
 template <class... Ts>
-class result {
+class result_base {
 public:
-  // clang-format off
-  template <class... Us,
-            class = detail::enable_if_tt<
-                     detail::all_constructible<
-                       detail::type_list<Ts...>,
-                       detail::type_list<std::decay_t<Us>...>>>>
-  // clang-format on
-  result(Us&&... xs) : flag(rt_value) {
-    value = make_message(Ts{std::forward<Us>(xs)}...);
-  }
+  static_assert(sizeof...(Ts) > 0);
+
+  using types = detail::type_list<delegated<Ts...>, message, error, skip_t>;
+
+  result_base() = default;
+
+  result_base(result_base&&) = default;
+
+  result_base(const result_base&) = default;
+
+  result_base& operator=(result_base&&) = default;
+
+  result_base& operator=(const result_base&) = default;
 
   template <class Enum, uint8_t = error_category<Enum>::value>
-  result(Enum x) : flag(rt_error), err(make_error(x)) {
+  result_base(Enum x) : content_(make_error(x)) {
     // nop
   }
 
-  result(error x) : flag(rt_error), err(std::move(x)) {
+  result_base(error x) : content_(std::move(x)) {
     // nop
   }
 
-  template <class T,
-            class = typename std::enable_if<
-              sizeof...(Ts) == 1
-              && std::is_convertible<
-                T, detail::tl_head_t<detail::type_list<Ts...>>>::value>::type>
-  result(expected<T> x) {
-    if (x) {
-      flag = rt_value;
-      init(std::move(*x));
-    } else {
-      flag = rt_error;
-      err = std::move(x.error());
-    }
-  }
-
-  result(skip_t) : flag(rt_skip) {
+  result_base(skip_t) : content_(skip) {
     // nop
   }
 
-  result(delegated<Ts...>) : flag(rt_delegated) {
+  result_base(delegated<Ts...> x) : content_(x) {
     // nop
   }
 
-  result(const typed_response_promise<Ts...>&) : flag(rt_delegated) {
+  result_base(const typed_response_promise<Ts...>&)
+    : content_(delegated<Ts...>{}) {
     // nop
   }
 
-  result(const response_promise&) : flag(rt_delegated) {
+  result_base(const response_promise&) : content_(delegated<Ts...>{}) {
     // nop
   }
 
-  result_runtime_type flag;
-  message value;
-  error err;
-
-private:
-  void init(Ts... xs) {
-    value = make_message(std::move(xs)...);
+  /// @private
+  auto& get_data() {
+    return content_;
   }
+
+  /// @private
+  const auto& get_data() const {
+    return content_;
+  }
+
+protected:
+  explicit result_base(detail::result_base_message_init) : content_(message{}) {
+    // nop
+  }
+
+  template <class... Us>
+  explicit result_base(detail::result_base_message_init, Us&&... xs)
+    : content_(make_message(std::forward<Us>(xs)...)) {
+    // nop
+  }
+
+  variant<delegated<Ts...>, message, error, skip_t> content_;
 };
 
+// -- result<Ts...> and its specializations ------------------------------------
+
+/// Wraps the result of a message handler to represent either a value (wrapped
+/// into a `message`), a `delegated<Ts...>` (indicates that another actor is
+/// going to respond), or an `error`.
+template <class... Ts>
+class result;
+
 template <>
-class result<message> {
+class result<void> : public result_base<void> {
 public:
-  result(message msg) : flag(rt_value), value(std::move(msg)) {
-    // nop
-  }
-
-  template <class Enum, uint8_t = error_category<Enum>::value>
-  result(Enum x) : flag(rt_error), err(make_error(x)) {
-    // nop
-  }
-
-  result(error x) : flag(rt_error), err(std::move(x)) {
-    // nop
-  }
-
-  template <class T>
-  result(expected<message> x) {
-    if (x) {
-      flag = rt_value;
-      value = std::move(*x);
-    } else {
-      flag = rt_error;
-      err = std::move(x.error());
-    }
-  }
-
-  result(skip_t) : flag(rt_skip) {
-    // nop
-  }
-
-  result(delegated<message>) : flag(rt_delegated) {
-    // nop
-  }
-
-  result(const typed_response_promise<message>&) : flag(rt_delegated) {
-    // nop
-  }
-
-  result(const response_promise&) : flag(rt_delegated) {
-    // nop
-  }
-
-  result_runtime_type flag;
-  message value;
-  error err;
-};
-
-template <>
-struct result<void> {
-public:
-  result() : flag(rt_value) {
-    // nop
-  }
-
-  result(const unit_t&) : flag(rt_value) {
-    // nop
-  }
-
-  template <class Enum, uint8_t = error_category<Enum>::value>
-  result(Enum x) : flag(rt_error), err(make_error(x)) {
-    // nop
-  }
-
-  result(error x) : flag(rt_error), err(std::move(x)) {
-    // nop
-  }
-
-  result(expected<void> x) {
-    init(x);
-  }
-
-  result(expected<unit_t> x) {
-    init(x);
-  }
-
-  result(skip_t) : flag(rt_skip) {
-    // nop
-  }
-
-  result(delegated<void>) : flag(rt_delegated) {
-    // nop
-  }
-
-  result(delegated<unit_t>) : flag(rt_delegated) {
-    // nop
-  }
-
-  result(const typed_response_promise<void>&) : flag(rt_delegated) {
-    // nop
-  }
-
-  result(const typed_response_promise<unit_t>&) : flag(rt_delegated) {
-    // nop
-  }
-
-  result(const response_promise&) : flag(rt_delegated) {
-    // nop
-  }
-
-  result_runtime_type flag;
-  message value;
-  error err;
-
-private:
-  template <class T>
-  void init(T& x) {
-    if (x) {
-      flag = rt_value;
-    } else {
-      flag = rt_error;
-      err = std::move(x.error());
-    }
-  }
-};
-
-template <>
-struct result<unit_t> : result<void> {
-  using super = result<void>;
+  using super = result_base<void>;
 
   using super::super;
+
+  result() : super(detail::result_base_message_init{}) {
+    // nop
+  }
+
+  result(unit_t) : super(detail::result_base_message_init{}) {
+    // nop
+  }
+
+  result(delegated<unit_t>) : super(delegated<void>{}) {
+    // nop
+  }
+
+  result(const typed_response_promise<unit_t>&) : super(delegated<void>{}) {
+    // nop
+  }
+};
+
+template <>
+class result<unit_t> : public result_base<void> {
+public:
+  using super = result_base<void>;
+
+  using super::super;
+
+  result() : super(detail::result_base_message_init{}) {
+    // nop
+  }
+
+  result(unit_t) : super(detail::result_base_message_init{}) {
+    // nop
+  }
+
+  result(delegated<unit_t>) : super(delegated<void>{}) {
+    // nop
+  }
+
+  result(const typed_response_promise<unit_t>&) : super(delegated<void>{}) {
+    // nop
+  }
+};
+
+template <>
+class result<message> : public result_base<message> {
+public:
+  using super = result_base<message>;
+
+  using super::super;
+
+  result(message x) {
+    this->content_ = std::move(x);
+  }
+
+  result(expected<message> x) {
+    if (x)
+      this->content_ = std::move(*x);
+    else
+      this->content_ = std::move(x.error());
+  }
+
+  result& operator=(expected<message> x) {
+    if (x)
+      this->content_ = std::move(*x);
+    else
+      this->content_ = std::move(x.error());
+    return *this;
+  }
+};
+
+template <class T>
+class result<T> : public result_base<T> {
+public:
+  using super = result_base<T>;
+
+  using super::super;
+
+  result(T x) : super(detail::result_base_message_init{}, std::move(x)) {
+    // nop
+  }
+
+  result(expected<T> x) {
+    if (x)
+      this->content_ = make_message(std::move(*x));
+    else
+      this->content_ = std::move(x.error());
+  }
+
+  result& operator=(expected<T> x) {
+    if (x)
+      this->content_ = make_message(std::move(*x));
+    else
+      this->content_ = std::move(x.error());
+    return *this;
+  }
+};
+
+template <class T0, class T1, class... Ts>
+class result<T0, T1, Ts...> : public result_base<T0, T1, Ts...> {
+public:
+  using super = result_base<T0, T1, Ts...>;
+
+  using super::super;
+
+  result(T0 x0, T1 x1, Ts... xs)
+    : super(detail::result_base_message_init{}, std::move(x0), std::move(x1),
+            std::move(xs)...) {
+    // nop
+  }
+};
+
+// -- sum type access to result<Ts...> -----------------------------------------
+
+template <class... Ts>
+struct sum_type_access<result<Ts...>> : default_sum_type_access<result<Ts...>> {
+  // nop
 };
 
 template <class T>

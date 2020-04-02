@@ -33,14 +33,6 @@
 
 namespace caf {
 
-/// Helper class to construct an `expected<T>` that represents no error.
-/// @relates expected
-struct no_error_t {};
-
-/// The only instance of ::no_error_t.
-/// @relates expected
-constexpr no_error_t no_error = no_error_t{};
-
 /// Represents the result of a computation which can either complete
 /// successfully with an instance of type `T` or fail with an `error`.
 /// @tparam T The type of the result.
@@ -83,10 +75,6 @@ public:
 
   expected(caf::error e) noexcept : engaged_(false) {
     new (std::addressof(error_)) caf::error{std::move(e)};
-  }
-
-  expected(no_error_t) noexcept : engaged_(false) {
-    new (std::addressof(error_)) caf::error{};
   }
 
   expected(const expected& other) noexcept(nothrow_copy) {
@@ -372,10 +360,6 @@ public:
   expected() = default;
 
   expected(unit_t) noexcept {
-    // nop
-  }
-
-  expected(no_error_t) noexcept {
     // nop
   }
 
