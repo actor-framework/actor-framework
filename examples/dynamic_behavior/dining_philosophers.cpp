@@ -43,9 +43,9 @@ chopstick::behavior_type taken_chopstick(chopstick::pointer,
 // either taken by a philosopher or available
 chopstick::behavior_type available_chopstick(chopstick::pointer self) {
   return {
-    [=](take_atom) -> std::tuple<taken_atom, bool> {
+    [=](take_atom) -> result<taken_atom, bool> {
       self->become(taken_chopstick(self, self->current_sender()));
-      return std::make_tuple(taken_atom_v, true);
+      return {taken_atom_v, true};
     },
     [](put_atom) { cerr << "chopstick received unexpected 'put'" << endl; },
   };
@@ -54,8 +54,8 @@ chopstick::behavior_type available_chopstick(chopstick::pointer self) {
 chopstick::behavior_type taken_chopstick(chopstick::pointer self,
                                          const strong_actor_ptr& user) {
   return {
-    [](take_atom) -> std::tuple<taken_atom, bool> {
-      return std::make_tuple(taken_atom_v, false);
+    [](take_atom) -> result<taken_atom, bool> {
+      return {taken_atom_v, false};
     },
     [=](put_atom) {
       if (self->current_sender() == user)

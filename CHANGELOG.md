@@ -84,6 +84,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   + `illegal_escape_sequence` => `invalid_escape_sequence`
   + `illegal_argument` => `invalid_argument`
   + `illegal_category` => `invalid_category`
+- CAF no longer automagically flattens `tuple`, `optional`, or `expected` when
+  returning these types from message handlers. Users can simply replace
+  `std::tuple<A, B, C>` with `caf::result<A, B, C>` for returning more than one
+  value from a message handler.
 
 ### Removed
 

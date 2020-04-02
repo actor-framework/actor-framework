@@ -45,9 +45,9 @@ calculator::behavior_type multiplier() {
 
 calculator::behavior_type divider() {
   return {
-    [](int x, int y) -> optional<int> {
+    [](int x, int y) -> result<int> {
       if (y == 0)
-        return none;
+        return make_error(sec::runtime_error, "division by zero");
       return x / y;
     },
   };
@@ -57,7 +57,9 @@ using doubler = typed_actor<replies_to<int>::with<int, int>>;
 
 doubler::behavior_type simple_doubler() {
   return {
-    [](int x) { return std::make_tuple(x, x); },
+    [](int x) -> result<int, int> {
+      return {x, x};
+    },
   };
 }
 

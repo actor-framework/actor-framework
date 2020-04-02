@@ -53,20 +53,12 @@ class maybe_message_visitor : public detail::invoke_result_visitor {
 public:
   optional<message> value;
 
-  void operator()() override {
-    value = message{};
-  }
-
   void operator()(error& x) override {
     value = make_message(std::move(x));
   }
 
   void operator()(message& x) override {
     value = std::move(x);
-  }
-
-  void operator()(const none_t&) override {
-    (*this)();
   }
 };
 

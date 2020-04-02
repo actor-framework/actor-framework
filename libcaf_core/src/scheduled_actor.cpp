@@ -1100,19 +1100,11 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   // Fetches a stream manager from a behavior.
   struct visitor : detail::invoke_result_visitor {
-    void operator()() override {
-      // nop
-    }
-
     void operator()(error&) override {
       // nop
     }
 
     void operator()(message&) override {
-      // nop
-    }
-
-    void operator()(const none_t&) override {
       // nop
     }
   };

@@ -236,6 +236,15 @@ public:
   }
 };
 
+// -- free functions -----------------------------------------------------------
+
+/// Convenience function for wrapping the parameter pack `xs...` into a
+/// `result`.
+template <class... Ts>
+auto make_result(Ts&&... xs) {
+  return result<std::decay_t<Ts>...>(std::forward<Ts>(xs)...);
+}
+
 // -- sum type access to result<Ts...> -----------------------------------------
 
 template <class... Ts>

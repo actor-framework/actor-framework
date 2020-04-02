@@ -370,7 +370,7 @@ CAF_TEST(spawn_event_testee2_test) {
 CAF_TEST(function_spawn) {
   scoped_actor self{system};
   auto f = [](const std::string& name) -> behavior {
-    return ([name](get_atom) { return std::make_tuple(name_atom_v, name); });
+    return ([name](get_atom) { return make_result(name_atom_v, name); });
   };
   auto a1 = system.spawn(f, "alice");
   auto a2 = system.spawn(f, "bob");

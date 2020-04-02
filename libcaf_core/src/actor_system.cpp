@@ -158,7 +158,7 @@ behavior spawn_serv_impl(stateful_actor<spawn_serv_state>* self) {
   CAF_LOG_TRACE("");
   return {
     [=](spawn_atom, const std::string& name, message& args,
-        actor_system::mpi& xs) -> expected<strong_actor_ptr> {
+        actor_system::mpi& xs) -> result<strong_actor_ptr> {
       CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(args));
       return self->system().spawn<strong_actor_ptr>(name, std::move(args),
                                                     self->context(), true, &xs);

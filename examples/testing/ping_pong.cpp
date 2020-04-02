@@ -23,7 +23,7 @@ behavior ping(event_based_actor* self, actor pong_actor, int n) {
 
 behavior pong() {
   return {
-    [=](ping_atom, int x) { return std::make_tuple(pong_atom_v, x); },
+    [=](ping_atom, int x) { return make_result(pong_atom_v, x); },
   };
 }
 

@@ -35,21 +35,12 @@ public:
     // nop
   }
 
-  void operator()() override {
-    // nop
-  }
-
   void operator()(error& x) override {
     CAF_LOG_TRACE(CAF_ARG(x));
     delegate(x);
   }
 
   void operator()(message& x) override {
-    CAF_LOG_TRACE(CAF_ARG(x));
-    delegate(x);
-  }
-
-  void operator()(const none_t& x) override {
     CAF_LOG_TRACE(CAF_ARG(x));
     delegate(x);
   }
@@ -66,11 +57,6 @@ private:
     if (x.empty() && rp.async())
       return;
     rp.deliver(std::move(x));
-  }
-
-  void deliver(response_promise& rp, const none_t&) {
-    error err = sec::unexpected_response;
-    deliver(rp, err);
   }
 
   template <class T>

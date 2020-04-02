@@ -365,7 +365,7 @@ CAF_TEST(sending_typed_actors_and_down_msg) {
 
 CAF_TEST(check_signature) {
   using foo_type = typed_actor<replies_to<put_atom>::with<ok_atom>>;
-  using foo_result_type = optional<ok_atom>;
+  using foo_result_type = result<ok_atom>;
   using bar_type = typed_actor<reacts_to<ok_atom>>;
   auto foo_action = [](foo_type::pointer ptr) -> foo_type::behavior_type {
     return {
