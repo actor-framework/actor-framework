@@ -31,7 +31,6 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/match_result.hpp"
 #include "caf/message.hpp"
 #include "caf/none.hpp"
 #include "caf/optional.hpp"
@@ -62,10 +61,9 @@ public:
 
   explicit behavior_impl(timespan tout);
 
-  match_result invoke_empty(detail::invoke_result_visitor& f);
+  bool invoke_empty(detail::invoke_result_visitor& f);
 
-  virtual match_result invoke(detail::invoke_result_visitor& f, message& xs)
-    = 0;
+  virtual bool invoke(detail::invoke_result_visitor& f, message& xs) = 0;
 
   optional<message> invoke(message&);
 
@@ -123,14 +121,13 @@ public:
     // nop
   }
 
-  virtual match_result invoke(detail::invoke_result_visitor& f,
-                              message& xs) override {
+  virtual bool invoke(detail::invoke_result_visitor& f, message& xs) override {
     return invoke_impl(f, xs, std::make_index_sequence<sizeof...(Ts)>{});
   }
 
   template <size_t... Is>
-  match_result invoke_impl(detail::invoke_result_visitor& f, message& msg,
-                           std::index_sequence<Is...>) {
+  bool invoke_impl(detail::invoke_result_visitor& f, message& msg,
+                   std::index_sequence<Is...>) {
     auto dispatch = [&](auto& fun) {
       using fun_type = std::decay_t<decltype(fun)>;
       using trait = get_callable_trait_t<fun_type>;
@@ -149,8 +146,7 @@ public:
       }
       return false;
     };
-    bool dispatched = (dispatch(std::get<Is>(cases_)) || ...);
-    return dispatched ? match_result::match : match_result::no_match;
+    return (dispatch(std::get<Is>(cases_)) || ...);
   }
 
   void handle_timeout() override {

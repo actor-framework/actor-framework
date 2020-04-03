@@ -87,7 +87,7 @@ invoke_message_result raw_event_based_actor::consume(mailbox_element& x) {
       unsetf(has_timeout_flag);
     if (!bhvr_stack_.empty()) {
       auto& bhvr = bhvr_stack_.back();
-      if (bhvr(visitor, x.content()) == match_result::match)
+      if (bhvr(visitor, x.content()))
         return invoke_message_result::consumed;
     }
     auto sres = call_handler(default_handler_, this, x.payload);

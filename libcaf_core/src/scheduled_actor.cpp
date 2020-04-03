@@ -696,7 +696,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
           unsetf(has_timeout_flag);
         if (!bhvr_stack_.empty()) {
           auto& bhvr = bhvr_stack_.back();
-          if (bhvr(visitor, x.content()) == match_result::match)
+          if (bhvr(visitor, x.content()))
             return invoke_message_result::consumed;
         }
         auto sres = call_handler(default_handler_, this, x.payload);
@@ -1108,34 +1108,19 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
     auto rp = make_response_promise();
     rp.deliver(sec::stream_init_failed);
   };
-  // Utility for invoking the default handler.
-  auto fallback = [&] {
-    auto sres = call_handler(default_handler_, this, x.payload);
-    if (holds_alternative<skip_t>(sres)) {
-      CAF_LOG_DEBUG("default handler skipped open_stream_msg:" << osm.msg);
-      return invoke_message_result::skipped;
-    } else {
-      CAF_LOG_DEBUG(
-        "default handler was called for open_stream_msg:" << osm.msg);
-      fail(sec::stream_init_failed, "dropped open_stream_msg (no match)");
-      return invoke_message_result::dropped;
-    }
-  };
   // Invoke behavior and dispatch on the result.
   auto& bs = bhvr_stack();
-  if (bs.empty())
-    return fallback();
-  auto res = (bs.back())(f, osm.msg);
-  switch (res) {
-    case match_result::no_match:
-      CAF_LOG_DEBUG("no match in behavior, fall back to default handler");
-      return fallback();
-    case match_result::match: {
-      return invoke_message_result::consumed;
-    }
-    default:
-      CAF_LOG_DEBUG("behavior skipped open_stream_msg:" << osm.msg);
-      return invoke_message_result::skipped; // nop
+  if (!bs.empty() && bs.back()(f, osm.msg))
+    return invoke_message_result::consumed;
+  CAF_LOG_DEBUG("no match in behavior, fall back to default handler");
+  auto sres = call_handler(default_handler_, this, x.payload);
+  if (holds_alternative<skip_t>(sres)) {
+    CAF_LOG_DEBUG("default handler skipped open_stream_msg:" << osm.msg);
+    return invoke_message_result::skipped;
+  } else {
+    CAF_LOG_DEBUG("default handler was called for open_stream_msg:" << osm.msg);
+    fail(sec::stream_init_failed, "dropped open_stream_msg (no match)");
+    return invoke_message_result::dropped;
   }
 }
 

@@ -6,8 +6,6 @@ file(GLOB_RECURSE CAF_CORE_HEADERS "caf/*.hpp")
 
 add_enum_consistency_check("caf/sec.hpp" "src/sec_strings.cpp")
 add_enum_consistency_check("caf/pec.hpp" "src/pec_strings.cpp")
-add_enum_consistency_check("caf/match_result.hpp"
-                           "src/match_result_strings.cpp")
 add_enum_consistency_check("caf/stream_priority.hpp"
                            "src/stream_priority_strings.cpp")
 add_enum_consistency_check("caf/exit_reason.hpp"
@@ -111,7 +109,6 @@ set(CAF_CORE_SOURCES
   src/logger.cpp
   src/mailbox_element.cpp
   src/make_config_option.cpp
-  src/match_result_strings.cpp
   src/memory_managed.cpp
   src/message.cpp
   src/message_builder.cpp

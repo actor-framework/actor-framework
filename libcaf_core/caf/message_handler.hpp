@@ -91,8 +91,8 @@ public:
   }
 
   /// Runs this handler with callback.
-  match_result operator()(detail::invoke_result_visitor& f, message& xs) {
-    return impl_ ? impl_->invoke(f, xs) : match_result::no_match;
+  bool operator()(detail::invoke_result_visitor& f, message& xs) {
+    return impl_ ? impl_->invoke(f, xs) : false;
   }
 
   /// Returns a new handler that concatenates this handler
