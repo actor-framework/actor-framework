@@ -126,11 +126,11 @@ behavior peer_acceptor_fun(broker* self, const actor& buddy) {
       self->fork(peer_fun, msg.handle, buddy);
       self->quit();
     },
-    [=](publish_atom) -> expected<uint16_t> {
-      auto res = self->add_tcp_doorman(8080);
-      if (!res)
+    [=](publish_atom) -> result<uint16_t> {
+      if (auto res = self->add_tcp_doorman(8080))
+        return res->second;
+      else
         return std::move(res.error());
-      return res->second;
     },
   };
 }

@@ -161,9 +161,9 @@ public:
     CAF_LOG_TRACE("");
     // instead of dropping "unexpected" messages,
     // we simply forward them to our acquaintances
-    auto fwd = [=](scheduled_actor*, message& msg) -> result<message> {
+    auto fwd = [=](scheduled_actor*, message& msg) -> skippable_result {
       send_to_acquaintances(std::move(msg));
-      return message{};
+      return delegated<message>{};
     };
     set_default_handler(fwd);
     set_down_handler([=](down_msg& dm) {
@@ -313,7 +313,7 @@ behavior proxy_broker::make_behavior() {
   CAF_LOG_TRACE("");
   // instead of dropping "unexpected" messages,
   // we simply forward them to our acquaintances
-  auto fwd = [=](local_actor*, message& msg) -> result<message> {
+  auto fwd = [=](local_actor*, message& msg) -> skippable_result {
     group_->send_all_subscribers(current_element_->sender, std::move(msg),
                                  context());
     return message{};

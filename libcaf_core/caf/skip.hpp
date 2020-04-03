@@ -31,20 +31,13 @@ namespace caf {
 /// skipping to the runtime.
 class CAF_CORE_EXPORT skip_t {
 public:
-  using fun = std::function<result<message>(scheduled_actor* self, message&)>;
+  using fun = std::function<skippable_result(scheduled_actor* self, message&)>;
 
   constexpr skip_t() {
     // nop
   }
 
-  constexpr skip_t operator()() const {
-    return *this;
-  }
-
   operator fun() const;
-
-private:
-  static result<message> skip_fun_impl(scheduled_actor*, message&);
 };
 
 /// Tells the runtime system to skip a message when used as message

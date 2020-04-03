@@ -3,17 +3,14 @@
 using namespace caf;
 
 behavior server(event_based_actor* self) {
+  self->set_default_handler(skip);
   return {
     [=](idle_atom, const actor& worker) {
-      self->become(
-        keep_behavior,
-        [=](ping_atom atm) {
-          self->delegate(worker, atm);
-          self->unbecome();
-        },
-        [=](idle_atom, const actor&) { return skip(); });
+      self->become(keep_behavior, [=](ping_atom atm) {
+        self->delegate(worker, atm);
+        self->unbecome();
+      });
     },
-    [=](ping_atom) { return skip(); },
   };
 }
 

@@ -190,19 +190,14 @@ blocking_actor::mailbox_visitor::operator()(mailbox_element& x) {
       [&] { self->current_element_ = prev_element; });
     // Dispatch on x.
     detail::default_invoke_result_visitor<blocking_actor> visitor{self};
-    switch (bhvr.nested(visitor, x.content())) {
-      default:
-        return check_if_done();
-      case match_result::no_match: { // Blocking actors can have fallback
-                                     // handlers for catch-all rules.
-        auto sres = bhvr.fallback(self->current_element_->payload);
-        if (!holds_alternative<skip_t>(sres)) {
-          visitor.visit(sres);
-          return check_if_done();
-        }
-      }
-        // Response handlers must get re-invoked with an error when receiving an
-        // unexpected message.
+    if (bhvr.nested(visitor, x.content()))
+      return check_if_done();
+    // Blocking actors can have fallback handlers for catch-all rules.
+    auto sres = bhvr.fallback(self->current_element_->payload);
+    auto f = detail::make_overload(
+      [&](skip_t&) {
+        // Response handlers must get re-invoked with an error when
+        // receiving an unexpected message.
         if (mid.is_response()) {
           auto err = make_error(sec::unexpected_response, std::move(x.payload));
           mailbox_element tmp{std::move(x.sender), x.mid, std::move(x.stages),
@@ -211,10 +206,13 @@ blocking_actor::mailbox_visitor::operator()(mailbox_element& x) {
           bhvr.nested(tmp.content());
           return check_if_done();
         }
-        CAF_ANNOTATE_FALLTHROUGH;
-      case match_result::skip:
         return intrusive::task_result::skip;
-    }
+      },
+      [&](auto& res) {
+        visitor(res);
+        return check_if_done();
+      });
+    return visit(f, sres);
   };
   // Post-process the returned value from the function body.
   auto result = body();

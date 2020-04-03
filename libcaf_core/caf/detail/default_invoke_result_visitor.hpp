@@ -27,7 +27,9 @@ namespace caf::detail {
 template <class Self>
 class default_invoke_result_visitor : public invoke_result_visitor {
 public:
-  inline default_invoke_result_visitor(Self* ptr) : self_(ptr) {
+  using super = invoke_result_visitor;
+
+  default_invoke_result_visitor(Self* ptr) : self_(ptr) {
     // nop
   }
 
@@ -35,9 +37,7 @@ public:
     // nop
   }
 
-  void operator()() override {
-    // nop
-  }
+  using super::operator();
 
   void operator()(error& x) override {
     CAF_LOG_TRACE(CAF_ARG(x));
@@ -45,11 +45,6 @@ public:
   }
 
   void operator()(message& x) override {
-    CAF_LOG_TRACE(CAF_ARG(x));
-    delegate(x);
-  }
-
-  void operator()(const none_t& x) override {
     CAF_LOG_TRACE(CAF_ARG(x));
     delegate(x);
   }
@@ -66,11 +61,6 @@ private:
     if (x.empty() && rp.async())
       return;
     rp.deliver(std::move(x));
-  }
-
-  void deliver(response_promise& rp, const none_t&) {
-    error err = sec::unexpected_response;
-    deliver(rp, err);
   }
 
   template <class T>

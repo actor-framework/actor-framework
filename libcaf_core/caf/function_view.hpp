@@ -87,7 +87,7 @@ struct CAF_CORE_EXPORT function_view_storage_catch_all {
     // nop
   }
 
-  result<message> operator()(message& msg) {
+  skippable_result operator()(message& msg) {
     *storage_ = std::move(msg);
     return message{};
   }

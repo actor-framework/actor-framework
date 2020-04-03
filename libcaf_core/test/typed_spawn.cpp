@@ -108,36 +108,33 @@ using event_testee_type
 class event_testee : public event_testee_type::base {
 public:
   event_testee(actor_config& cfg) : event_testee_type::base(cfg) {
-    // nop
+    set_default_handler(skip);
   }
 
   behavior_type wait4string() {
     return {
+      partial_behavior_init,
       [=](get_state_atom) { return "wait4string"; },
       [=](const string&) { become(wait4int()); },
-      [=](float) { return skip(); },
-      [=](int) { return skip(); },
     };
   }
 
   behavior_type wait4int() {
     return {
+      partial_behavior_init,
       [=](get_state_atom) { return "wait4int"; },
       [=](int) -> int {
         become(wait4float());
         return 42;
       },
-      [=](float) { return skip(); },
-      [=](const string&) { return skip(); },
     };
   }
 
   behavior_type wait4float() {
     return {
+      partial_behavior_init,
       [=](get_state_atom) { return "wait4float"; },
       [=](float) { become(wait4string()); },
-      [=](const string&) { return skip(); },
-      [=](int) { return skip(); },
     };
   }
 
@@ -365,7 +362,7 @@ CAF_TEST(sending_typed_actors_and_down_msg) {
 
 CAF_TEST(check_signature) {
   using foo_type = typed_actor<replies_to<put_atom>::with<ok_atom>>;
-  using foo_result_type = optional<ok_atom>;
+  using foo_result_type = result<ok_atom>;
   using bar_type = typed_actor<reacts_to<ok_atom>>;
   auto foo_action = [](foo_type::pointer ptr) -> foo_type::behavior_type {
     return {

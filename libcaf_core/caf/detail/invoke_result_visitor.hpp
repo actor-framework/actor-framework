@@ -25,7 +25,6 @@
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/overload.hpp"
 #include "caf/detail/type_traits.hpp"
-#include "caf/expected.hpp"
 #include "caf/fwd.hpp"
 #include "caf/make_sink_result.hpp"
 #include "caf/make_source_result.hpp"
@@ -51,47 +50,13 @@ public:
 
   // -- virtual handlers -------------------------------------------------------
 
-  /// Called whenever no result messages gets produced, e.g., when returning a
-  /// `response_promise`.
-  virtual void operator()() = 0;
-
   /// Called if the message handler returned an error.
   virtual void operator()(error&) = 0;
 
   /// Called if the message handler returned any "ordinary" value.
   virtual void operator()(message&) = 0;
 
-  /// Called if the message handler returns "nothing", for example a
-  /// default-constructed `optional<T>`.
-  virtual void operator()(const none_t&) = 0;
-
-  // -- on-the-fly type conversions --------------------------------------------
-
-  /// Called if the message handler returns `void` or `unit_t`.
-  inline void operator()(const unit_t&) {
-    message empty_msg;
-    (*this)(empty_msg);
-  }
-
-  /// Unwraps an `optional<T>` by recursively calling the visitor with either
-  /// `none_t` or `T`.
-  template <class T>
-  void operator()(optional<T>& x) {
-    if (x)
-      (*this)(*x);
-    else
-      (*this)(none);
-  }
-
-  /// Unwraps an `expected<T>` by recursively calling the visitor with either
-  /// `error` or `T`.
-  template <class T>
-  void operator()(expected<T>& x) {
-    if (x)
-      (*this)(*x);
-    else
-      (*this)(x.error());
-  }
+  // -- extraction and conversions ---------------------------------------------
 
   /// Wraps arbitrary values into a `message` and calls the visitor recursively.
   template <class... Ts>
@@ -103,114 +68,62 @@ public:
     (*this)(tmp);
   }
 
-  /// Wraps the tuple into a `message` and calls the visitor recursively with
-  /// its contents.
-  template <class... Ts>
-  void operator()(std::tuple<Ts...>& xs) {
-    apply_args(*this, get_indices(xs), xs);
+  /// Called if the message handler returns `void` or `unit_t`.
+  void operator()(const unit_t&) {
+    message empty_msg;
+    (*this)(empty_msg);
   }
 
   /// Disambiguates the variadic `operator<Ts...>()`.
-  inline void operator()(none_t& x) {
-    (*this)(const_cast<const none_t&>(x));
-  }
-
-  /// Disambiguates the variadic `operator<Ts...>()`.
-  inline void operator()(unit_t& x) {
+  void operator()(unit_t& x) {
     (*this)(const_cast<const unit_t&>(x));
-  }
-
-  // -- special-purpose handlers that don't produce results --------------------
-
-  /// Calls `(*this)()`.
-  inline void operator()(response_promise&) {
-    (*this)();
-  }
-
-  /// Calls `(*this)()`.
-  template <class... Ts>
-  void operator()(typed_response_promise<Ts...>&) {
-    (*this)();
-  }
-
-  /// Calls `(*this)()`.
-  template <class... Ts>
-  void operator()(delegated<Ts...>&) {
-    (*this)();
-  }
-
-  /// Calls `(*this)()`.
-  template <class Out, class... Ts>
-  void operator()(outbound_stream_slot<Out, Ts...>&) {
-    (*this)();
-  }
-
-  /// Calls `(*this)()`.
-  template <class In>
-  void operator()(inbound_stream_slot<In>&) {
-    (*this)();
-  }
-
-  /// Calls `(*this)()`.
-  template <class In>
-  void operator()(make_sink_result<In>&) {
-    (*this)();
-  }
-
-  /// Calls `(*this)()`.
-  template <class DownstreamManager, class... Ts>
-  void operator()(make_source_result<DownstreamManager, Ts...>&) {
-    (*this)();
-  }
-
-  /// Calls `(*this)()`.
-  template <class In, class DownstreamManager, class... Ts>
-  void operator()(make_stage_result<In, DownstreamManager, Ts...>&) {
-    (*this)();
-  }
-
-  // -- visit API: return true if T was visited, false if T was skipped --------
-
-  /// Delegates `x` to the appropriate handler and returns `true`.
-  template <class T>
-  bool visit(T& x) {
-    (*this)(x);
-    return true;
-  }
-
-  /// Returns `false`.
-  inline bool visit(skip_t&) {
-    return false;
-  }
-
-  /// Returns `false`.
-  inline bool visit(const skip_t&) {
-    return false;
-  }
-
-  /// Returns `false` if `x != none`, otherwise calls the void handler and
-  /// returns `true`..
-  inline bool visit(optional<skip_t>& x) {
-    if (x)
-      return false;
-    (*this)();
-    return true;
   }
 
   /// Dispatches on the runtime-type of `x`.
   template <class... Ts>
-  bool visit(result<Ts...>& res) {
-    auto f = detail::make_overload(
-      [this](auto& x) {
-        (*this)(x);
-        return true;
-      },
-      [this](delegated<Ts...>&) {
-        (*this)();
-        return true;
-      },
-      [this](skip_t&) { return false; });
-    return caf::visit(f, res);
+  void operator()(result<Ts...>& res) {
+    caf::visit([this](auto& x) { (*this)(x); }, res);
+  }
+
+  // -- special-purpose handlers that don't produce results --------------------
+
+  void operator()(response_promise&) {
+    // nop
+  }
+
+  template <class... Ts>
+  void operator()(typed_response_promise<Ts...>&) {
+    // nop
+  }
+
+  template <class... Ts>
+  void operator()(delegated<Ts...>&) {
+    // nop
+  }
+
+  template <class Out, class... Ts>
+  void operator()(outbound_stream_slot<Out, Ts...>&) {
+    // nop
+  }
+
+  template <class In>
+  void operator()(inbound_stream_slot<In>&) {
+    // nop
+  }
+
+  template <class In>
+  void operator()(make_sink_result<In>&) {
+    // nop
+  }
+
+  template <class DownstreamManager, class... Ts>
+  void operator()(make_source_result<DownstreamManager, Ts...>&) {
+    // nop
+  }
+
+  template <class In, class DownstreamManager, class... Ts>
+  void operator()(make_stage_result<In, DownstreamManager, Ts...>&) {
+    // nop
   }
 };
 

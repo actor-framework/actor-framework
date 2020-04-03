@@ -84,6 +84,20 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   + `illegal_escape_sequence` => `invalid_escape_sequence`
   + `illegal_argument` => `invalid_argument`
   + `illegal_category` => `invalid_category`
+- CAF no longer automagically flattens `tuple`, `optional`, or `expected` when
+  returning these types from message handlers. Users can simply replace
+  `std::tuple<A, B, C>` with `caf::result<A, B, C>` for returning more than one
+  value from a message handler.
+- A `caf::result` can no longer represent `skip`. Whether a message gets skipped
+  or not is now only for the default handler to decide. Consequently, default
+  handlers now return `skippable_result` instead of `result<message>`. A
+  skippable result is a variant over `delegated<message>`, `message`, `error`,
+  or `skip_t`. The only good use case for message handlers that skip a message
+  in their body was in typed actors for getting around the limitation that a
+  typed behavior always must provide all message handlers (typed behavior assume
+  a complete implementation of the interface). This use case received direct
+  support: constructing a typed behavior with `partial_behavior_init` as first
+  argument suppresses the check for completeness .
 
 ### Removed
 
@@ -93,6 +107,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   versions of the standard were never implemented in the first place.
   Consequently, we've dropped the `opencl` module.
 - The old `duration` type is now superseded by `timespan` (#994).
+- The enum `match_result` became obsolete. Individual message handlers can no
+  longer skip messages. Hence, message handlers can only succeed (match) or not.
+  Consequently, invoking a message handler or behavior now returns a boolean.
 
 ### Fixed
 
