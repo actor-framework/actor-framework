@@ -114,7 +114,8 @@ void stream_manager::handle(stream_slots slots, upstream_msg::ack_batch& x) {
 
 void stream_manager::handle(stream_slots slots, upstream_msg::drop&) {
   CAF_LOG_TRACE(CAF_ARG(slots));
-  out().close(slots.receiver);
+  error reason;
+  out().remove_path(slots.receiver, reason, false);
 }
 
 void stream_manager::handle(stream_slots slots, upstream_msg::forced_drop& x) {
