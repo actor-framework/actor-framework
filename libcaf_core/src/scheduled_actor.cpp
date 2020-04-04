@@ -1170,9 +1170,15 @@ scheduled_actor::advance_streams(actor_clock::time_point now) {
   auto bitmask = stream_ticks_.timeouts(now, {max_batch_delay_ticks_,
                                               credit_round_ticks_});
   // Force batches on all output paths.
-  if ((bitmask & 0x01) != 0) {
+  if ((bitmask & 0x01) != 0 && !stream_managers_.empty()) {
+    std::vector<stream_manager*> managers;
+    managers.reserve(stream_managers_.size());
     for (auto& kvp : stream_managers_)
-      kvp.second->out().force_emit_batches();
+      managers.emplace_back(kvp.second.get());
+    std::sort(managers.begin(), managers.end());
+    auto e = std::unique(managers.begin(), managers.end());
+    for (auto i = managers.begin(); i != e; ++i)
+      (*i)->out().force_emit_batches();
   }
   // Fill up credit on each input path.
   if ((bitmask & 0x02) != 0) {
