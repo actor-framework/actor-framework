@@ -149,6 +149,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   types instead of hard-wiring `std::system_clock`.
 - In some edge cases, actors failed to shut down properly when hosting a stream
   source (#1076). The handshake process for a graceful shutdown has been fixed.
+- Fixed a compiler error on Clang 10 (#1077).
 
 ## [0.17.4] - 2019-02-08
 
