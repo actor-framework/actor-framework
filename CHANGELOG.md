@@ -147,6 +147,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix build error in the OpenSSL module under some MSVC configurations
 - Serializer and deserializer now accept `std::chrono::time_point` for all clock
   types instead of hard-wiring `std::system_clock`.
+- In some edge cases, actors failed to shut down properly when hosting a stream
+  source (#1076). The handshake process for a graceful shutdown has been fixed.
 
 ## [0.17.4] - 2019-02-08
 
