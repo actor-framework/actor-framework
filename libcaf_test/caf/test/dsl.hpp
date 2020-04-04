@@ -451,7 +451,7 @@ public:
   }
 
   inject_clause& to(const caf::scoped_actor& whom) {
-    dest_ = whom.ptr();
+    dest_ = caf::actor_cast<caf::strong_actor_ptr>(whom.ptr());
     return *this;
   }
 
