@@ -49,7 +49,6 @@
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/node_id.hpp"
-#include "caf/raw_event_based_actor.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/sec.hpp"

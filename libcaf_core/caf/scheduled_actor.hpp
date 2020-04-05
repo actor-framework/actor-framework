@@ -441,7 +441,7 @@ public:
   message_category categorize(mailbox_element& x);
 
   /// Tries to consume `x`.
-  virtual invoke_message_result consume(mailbox_element& x);
+  invoke_message_result consume(mailbox_element& x);
 
   /// Tries to consume `x`.
   void consume(mailbox_element_ptr x);
