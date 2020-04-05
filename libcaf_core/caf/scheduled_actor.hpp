@@ -30,16 +30,8 @@
 #include <unordered_map>
 
 #include "caf/actor_traits.hpp"
-#include "caf/broadcast_downstream_manager.hpp"
-#include "caf/default_downstream_manager.hpp"
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/stream_sink_driver_impl.hpp"
-#include "caf/detail/stream_sink_impl.hpp"
-#include "caf/detail/stream_source_driver_impl.hpp"
-#include "caf/detail/stream_source_impl.hpp"
-#include "caf/detail/stream_stage_driver_impl.hpp"
-#include "caf/detail/stream_stage_impl.hpp"
 #include "caf/detail/tick_emitter.hpp"
 #include "caf/detail/unordered_flat_map.hpp"
 #include "caf/error.hpp"
@@ -52,7 +44,6 @@
 #include "caf/intrusive/wdrr_dynamic_multiplexed_queue.hpp"
 #include "caf/intrusive/wdrr_fixed_multiplexed_queue.hpp"
 #include "caf/invoke_message_result.hpp"
-#include "caf/is_actor_handle.hpp"
 #include "caf/local_actor.hpp"
 #include "caf/logger.hpp"
 #include "caf/make_sink_result.hpp"
@@ -71,11 +62,7 @@
 #include "caf/response_handle.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/sec.hpp"
-#include "caf/stream.hpp"
 #include "caf/stream_manager.hpp"
-#include "caf/stream_sink_trait.hpp"
-#include "caf/stream_source_trait.hpp"
-#include "caf/stream_stage_trait.hpp"
 #include "caf/to_string.hpp"
 
 namespace caf {
@@ -422,205 +409,6 @@ public:
       [f](scheduled_actor*, std::exception_ptr& x) { return f(x); });
   }
 #endif // CAF_NO_EXCEPTIONS
-
-  // -- stream management ------------------------------------------------------
-
-  template <class Driver, class... Ts, class Init, class Pull, class Done,
-            class Finalize = unit_t>
-  [[deprecated("use attach_stream_source instead")]] make_source_result_t<
-    typename Driver::downstream_manager_type, Ts...>
-  make_source(std::tuple<Ts...> xs, Init init, Pull pull, Done done,
-              Finalize fin = {}) {
-    using detail::make_stream_source;
-    auto mgr = make_stream_source<Driver>(
-      this, std::move(init), std::move(pull), std::move(done), std::move(fin));
-    auto slot = mgr->add_outbound_path(std::move(xs));
-    return {slot, std::move(mgr)};
-  }
-
-  template <class... Ts, class Init, class Pull, class Done,
-            class Finalize = unit_t,
-            class DownstreamManager = broadcast_downstream_manager<
-              typename stream_source_trait_t<Pull>::output>>
-  [[deprecated("use attach_stream_source instead")]] make_source_result_t<
-    DownstreamManager, Ts...>
-  make_source(std::tuple<Ts...> xs, Init init, Pull pull, Done done,
-              Finalize fin = {}, policy::arg<DownstreamManager> = {}) {
-    using driver = detail::stream_source_driver_impl<DownstreamManager, Pull,
-                                                     Done, Finalize>;
-    return make_source<driver>(std::move(xs), std::move(init), std::move(pull),
-                               std::move(done), std::move(fin));
-  }
-
-  template <class Init, class Pull, class Done, class Finalize = unit_t,
-            class DownstreamManager = default_downstream_manager_t<Pull>,
-            class Trait = stream_source_trait_t<Pull>>
-  [[deprecated("use attach_stream_source instead")]] detail::enable_if_t<
-    !is_actor_handle<Init>::value && Trait::valid,
-    make_source_result_t<DownstreamManager>>
-  make_source(Init init, Pull pull, Done done, Finalize finalize = {},
-              policy::arg<DownstreamManager> token = {}) {
-    return make_source(std::make_tuple(), init, pull, done, finalize, token);
-  }
-
-  template <class ActorHandle, class... Ts, class Init, class Pull, class Done,
-            class Finalize = unit_t,
-            class DownstreamManager = default_downstream_manager_t<Pull>,
-            class Trait = stream_source_trait_t<Pull>>
-  [[deprecated("use attach_stream_source instead")]] detail::enable_if_t<
-    is_actor_handle<ActorHandle>::value,
-    make_source_result_t<DownstreamManager>>
-  make_source(const ActorHandle& dest, std::tuple<Ts...> xs, Init init,
-              Pull pull, Done done, Finalize fin = {},
-              policy::arg<DownstreamManager> = {}) {
-    // TODO: type checking of dest
-    using driver = detail::stream_source_driver_impl<DownstreamManager, Pull,
-                                                     Done, Finalize>;
-    auto mgr = detail::make_stream_source<driver>(
-      this, std::move(init), std::move(pull), std::move(done), std::move(fin));
-    auto slot = mgr->add_outbound_path(dest, std::move(xs));
-    return {slot, std::move(mgr)};
-  }
-
-  template <class ActorHandle, class Init, class Pull, class Done,
-            class Finalize = unit_t,
-            class DownstreamManager = default_downstream_manager_t<Pull>,
-            class Trait = stream_source_trait_t<Pull>>
-  [[deprecated("use attach_stream_source instead")]] detail::enable_if_t<
-    is_actor_handle<ActorHandle>::value && Trait::valid,
-    make_source_result_t<DownstreamManager>>
-  make_source(const ActorHandle& dest, Init init, Pull pull, Done done,
-              Finalize fin = {}, policy::arg<DownstreamManager> token = {}) {
-    return make_source(dest, std::make_tuple(), std::move(init),
-                       std::move(pull), std::move(done), std::move(fin), token);
-  }
-
-  template <class Driver, class Init, class Pull, class Done,
-            class Finalize = unit_t>
-  [[deprecated("use attach_continuous_stream_source instead")]] auto
-  make_continuous_source(Init init, Pull pull, Done done, Finalize fin = {}) {
-    using detail::make_stream_source;
-    auto mgr = make_stream_source<Driver>(
-      this, std::move(init), std::move(pull), std::move(done), std::move(fin));
-    mgr->continuous(true);
-    return mgr;
-  }
-
-  template <class Init, class Pull, class Done, class Finalize = unit_t,
-            class DownstreamManager = broadcast_downstream_manager<
-              typename stream_source_trait_t<Pull>::output>>
-  [[deprecated("use attach_continuous_stream_source instead")]] auto
-  make_continuous_source(Init init, Pull pull, Done done, Finalize fin = {},
-                         policy::arg<DownstreamManager> = {}) {
-    using driver = detail::stream_source_driver_impl<DownstreamManager, Pull,
-                                                     Done, Finalize>;
-    return make_continuous_source<driver>(std::move(init), std::move(pull),
-                                          std::move(done), std::move(fin));
-  }
-
-  template <class Driver, class... Ts>
-  [[deprecated("use attach_stream_sink instead")]] make_sink_result<
-    typename Driver::input_type>
-  make_sink(const stream<typename Driver::input_type>& src, Ts&&... xs) {
-    auto mgr = detail::make_stream_sink<Driver>(this, std::forward<Ts>(xs)...);
-    auto slot = mgr->add_inbound_path(src);
-    return {slot, std::move(mgr)};
-  }
-
-  template <class In, class Init, class Fun, class Finalize = unit_t,
-            class Trait = stream_sink_trait_t<Fun>>
-  [[deprecated("use attach_stream_sink instead")]] make_sink_result<In>
-  make_sink(const stream<In>& in, Init init, Fun fun, Finalize fin = {}) {
-    using driver = detail::stream_sink_driver_impl<In, Fun, Finalize>;
-    return make_sink<driver>(in, std::move(init), std::move(fun),
-                             std::move(fin));
-  }
-
-  template <class Driver, class In, class... Ts, class... Us>
-  [[deprecated("use attach_stream_stage instead")]] make_stage_result_t<
-    In, typename Driver::downstream_manager_type, Ts...>
-  make_stage(const stream<In>& src, std::tuple<Ts...> xs, Us&&... ys) {
-    using detail::make_stream_stage;
-    auto mgr = make_stream_stage<Driver>(this, std::forward<Us>(ys)...);
-    auto in = mgr->add_inbound_path(src);
-    auto out = mgr->add_outbound_path(std::move(xs));
-    return {in, out, std::move(mgr)};
-  }
-
-  template <class In, class... Ts, class Init, class Fun,
-            class Finalize = unit_t,
-            class DownstreamManager = default_downstream_manager_t<Fun>,
-            class Trait = stream_stage_trait_t<Fun>>
-  [[deprecated("use attach_stream_stage instead")]] make_stage_result_t<
-    In, DownstreamManager, Ts...>
-  make_stage(const stream<In>& in, std::tuple<Ts...> xs, Init init, Fun fun,
-             Finalize fin = {}, policy::arg<DownstreamManager> token = {}) {
-    CAF_IGNORE_UNUSED(token);
-    CAF_ASSERT(current_mailbox_element() != nullptr);
-    CAF_ASSERT(current_mailbox_element()->content().types()
-               == make_type_id_list<open_stream_msg>());
-    using output_type = typename stream_stage_trait_t<Fun>::output;
-    using state_type = typename stream_stage_trait_t<Fun>::state;
-    static_assert(
-      std::is_same<void(state_type&),
-                   typename detail::get_callable_trait<Init>::fun_sig>::value,
-      "Expected signature `void (State&)` for init function");
-    static_assert(
-      std::is_same<void(state_type&, downstream<output_type>&, In),
-                   typename detail::get_callable_trait<Fun>::fun_sig>::value,
-      "Expected signature `void (State&, downstream<Out>&, In)` "
-      "for consume function");
-    using driver
-      = detail::stream_stage_driver_impl<typename Trait::input,
-                                         DownstreamManager, Fun, Finalize>;
-    return make_stage<driver>(in, std::move(xs), std::move(init),
-                              std::move(fun), std::move(fin));
-  }
-
-  template <class In, class Init, class Fun, class Finalize = unit_t,
-            class DownstreamManager = default_downstream_manager_t<Fun>,
-            class Trait = stream_stage_trait_t<Fun>>
-  [[deprecated("use attach_stream_stage instead")]] make_stage_result_t<
-    In, DownstreamManager>
-  make_stage(const stream<In>& in, Init init, Fun fun, Finalize fin = {},
-             policy::arg<DownstreamManager> token = {}) {
-    return make_stage(in, std::make_tuple(), std::move(init), std::move(fun),
-                      std::move(fin), token);
-  }
-
-  template <class Driver, class... Ts>
-  [[deprecated("use attach_continuous_stream_stage instead")]] auto
-  make_continuous_stage(Ts&&... xs) {
-    auto ptr = detail::make_stream_stage<Driver>(this, std::forward<Ts>(xs)...);
-    ptr->continuous(true);
-    return ptr;
-  }
-
-  template <class Init, class Fun, class Cleanup,
-            class DownstreamManager = default_downstream_manager_t<Fun>,
-            class Trait = stream_stage_trait_t<Fun>>
-  [[deprecated("use attach_continuous_stream_stage instead")]] auto
-  make_continuous_stage(Init init, Fun fun, Cleanup cleanup,
-                        policy::arg<DownstreamManager> token = {}) {
-    CAF_IGNORE_UNUSED(token);
-    using input_type = typename Trait::input;
-    using output_type = typename Trait::output;
-    using state_type = typename Trait::state;
-    static_assert(
-      std::is_same<void(state_type&),
-                   typename detail::get_callable_trait<Init>::fun_sig>::value,
-      "Expected signature `void (State&)` for init function");
-    static_assert(
-      std::is_same<void(state_type&, downstream<output_type>&, input_type),
-                   typename detail::get_callable_trait<Fun>::fun_sig>::value,
-      "Expected signature `void (State&, downstream<Out>&, In)` "
-      "for consume function");
-    using driver
-      = detail::stream_stage_driver_impl<typename Trait::input,
-                                         DownstreamManager, Fun, Cleanup>;
-    return make_continuous_stage<driver>(std::move(init), std::move(fun),
-                                         std::move(cleanup));
-  }
 
   /// @cond PRIVATE
 
