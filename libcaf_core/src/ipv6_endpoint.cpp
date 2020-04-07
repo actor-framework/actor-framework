@@ -18,7 +18,7 @@
 
 #include "caf/ipv6_endpoint.hpp"
 
-#include "caf/detail/fnv_hash.hpp"
+#include "caf/hash/fnv.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/ipv4_endpoint.hpp"
 
@@ -35,8 +35,7 @@ ipv6_endpoint::ipv6_endpoint(ipv4_address address, uint16_t port)
 }
 
 size_t ipv6_endpoint::hash_code() const noexcept {
-  auto result = detail::fnv_hash(address_.data());
-  return detail::fnv_hash_append(result, port_);
+  return hash::fnv<size_t>::compute(address_, port_);
 }
 
 long ipv6_endpoint::compare(ipv6_endpoint x) const noexcept {

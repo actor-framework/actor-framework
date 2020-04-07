@@ -18,7 +18,7 @@
 
 #include "caf/io/network/ip_endpoint.hpp"
 
-#include "caf/detail/fnv_hash.hpp"
+#include "caf/hash/fnv.hpp"
 #include "caf/io/network/native_socket.hpp"
 #include "caf/logger.hpp"
 #include "caf/sec.hpp"
@@ -43,9 +43,6 @@
 #ifdef CAF_WINDOWS
 using sa_family_t = short;
 #endif
-
-using caf::detail::fnv_hash;
-using caf::detail::fnv_hash_append;
 
 namespace caf::io::network {
 
@@ -113,16 +110,12 @@ size_t ep_hash::operator()(const sockaddr& sa) const noexcept {
 }
 
 size_t ep_hash::hash(const sockaddr_in* sa) const noexcept {
-  auto result = fnv_hash(sa->sin_addr.s_addr);
-  result = fnv_hash_append(result, sa->sin_port);
-  return result;
+  return hash::fnv<size_t>::compute(sa->sin_addr.s_addr, sa->sin_port);
 }
 
 size_t ep_hash::hash(const sockaddr_in6* sa) const noexcept {
-  auto& addr = sa->sin6_addr.s6_addr;
-  auto result = fnv_hash(addr, addr + 16);
-  result = fnv_hash_append(result, sa->sin6_port);
-  return result;
+  return hash::fnv<size_t>::compute((make_span(sa->sin6_addr.s6_addr)),
+                                    sa->sin6_port);
 }
 
 bool operator==(const ip_endpoint& lhs, const ip_endpoint& rhs) {

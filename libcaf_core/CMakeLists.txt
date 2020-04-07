@@ -59,7 +59,6 @@ set(CAF_CORE_SOURCES
   src/detail/behavior_impl.cpp
   src/detail/behavior_stack.cpp
   src/detail/blocking_behavior.cpp
-  src/detail/fnv_hash.cpp
   src/detail/get_mac_addresses.cpp
   src/detail/get_process_id.cpp
   src/detail/get_root_uuid.cpp
@@ -215,6 +214,7 @@ set(CAF_CORE_TEST_SOURCES
   test/function_view.cpp
   test/fused_downstream_manager.cpp
   test/handles.cpp
+  test/hash/fnv.cpp
   test/inspector.cpp
   test/intrusive/drr_cached_queue.cpp
   test/intrusive/drr_queue.cpp

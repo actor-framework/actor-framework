@@ -18,11 +18,12 @@
 
 #include "caf/detail/type_id_list_builder.hpp"
 
+#include <cstdint>
 #include <mutex>
 #include <unordered_set>
 
 #include "caf/config.hpp"
-#include "caf/detail/fnv_hash.hpp"
+#include "caf/hash/fnv.hpp"
 #include "caf/type_id_list.hpp"
 
 namespace caf::detail {
@@ -30,9 +31,9 @@ namespace {
 
 struct dyn_type_id_list {
   dyn_type_id_list(type_id_t* storage) : storage(storage) {
-    auto first = reinterpret_cast<unsigned char*>(storage);
+    auto first = reinterpret_cast<const uint8_t*>(storage);
     auto last = first + ((storage[0] + 1) * sizeof(type_id_t));
-    hash = fnv_hash(first, last);
+    hash = caf::hash::fnv<size_t>::compute(make_span(first, last));
   }
 
   dyn_type_id_list(dyn_type_id_list&& other)

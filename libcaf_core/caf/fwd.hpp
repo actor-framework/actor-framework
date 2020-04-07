@@ -203,6 +203,15 @@ using type_id_t = uint16_t;
 /// @relates actor_system_config
 CAF_CORE_EXPORT const settings& content(const actor_system_config&);
 
+// -- hash inspectors ----------------------------------------------------------
+
+namespace hash {
+
+template <class>
+class fnv;
+
+} // namespace hash
+
 // -- intrusive containers -----------------------------------------------------
 
 namespace intrusive {

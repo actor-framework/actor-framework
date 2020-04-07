@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2019 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,46 +16,49 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/detail/fnv_hash.hpp"
+#define CAF_SUITE hash.fnv
 
-#include <cstdint>
+#include "caf/hash/fnv.hpp"
 
-namespace caf::detail {
+#include "caf/test/dsl.hpp"
 
-namespace {
+#include <string>
 
-#if SIZE_MAX == 0xFFFFFFFF
+using namespace caf;
 
-constexpr size_t basis = 2166136261u;
+using namespace std::string_literals;
 
-constexpr size_t prime = 16777619u;
-
-#elif SIZE_MAX == 0xFFFFFFFFFFFFFFFF
-
-constexpr size_t basis = 14695981039346656037u;
-
-constexpr size_t prime = 1099511628211u;
-
-#else
-
-#  error Platform and/or compiler not supported
-
-#endif
-
-} // namespace
-
-size_t fnv_hash(const unsigned char* first, const unsigned char* last) {
-  return fnv_hash_append(basis, first, last);
+template <class... Ts>
+auto fnv32_hash(Ts&&... xs) {
+  return hash::fnv<uint32_t>::compute(std::forward<Ts>(xs)...);
 }
 
-size_t fnv_hash_append(size_t intermediate, const unsigned char* first,
-                       const unsigned char* last) {
-  auto result = intermediate;
-  for (; first != last; ++first) {
-    result *= prime;
-    result ^= *first;
-  }
-  return result;
+template <class... Ts>
+auto fnv64_hash(Ts&&... xs) {
+  return hash::fnv<uint64_t>::compute(std::forward<Ts>(xs)...);
 }
 
-} // namespace caf::detail
+CAF_TEST(FNV hashes build incrementally) {
+  hash::fnv<uint32_t> f;
+  CAF_CHECK_EQUAL(f.value, 0x811C9DC5u);
+  f('a');
+  CAF_CHECK_EQUAL(f.value, 0xE40C292Cu);
+  f('b');
+  CAF_CHECK_EQUAL(f.value, 0x4D2505CAu);
+  f('c');
+  CAF_CHECK_EQUAL(f.value, 0x1A47E90Bu);
+  f('d');
+  CAF_CHECK_EQUAL(f.value, 0xCE3479BDu);
+}
+
+CAF_TEST(FNV supports uint32 hashing) {
+  CAF_CHECK_EQUAL(fnv32_hash(), 0x811C9DC5u);
+  CAF_CHECK_EQUAL(fnv32_hash("abcd"s), 0xCE3479BDu);
+  CAF_CHECK_EQUAL(fnv32_hash("C++ Actor Framework"s), 0x2FF91FE5u);
+}
+
+CAF_TEST(FNV supports uint64 hashing) {
+  CAF_CHECK_EQUAL(fnv64_hash(), 0xCBF29CE484222325ull);
+  CAF_CHECK_EQUAL(fnv64_hash("abcd"s), 0xFC179F83EE0724DDull);
+  CAF_CHECK_EQUAL(fnv64_hash("C++ Actor Framework"s), 0xA229A760C3AF69C5ull);
+}

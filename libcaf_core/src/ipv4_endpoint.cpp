@@ -18,7 +18,7 @@
 
 #include "caf/ipv4_endpoint.hpp"
 
-#include "caf/detail/fnv_hash.hpp"
+#include "caf/hash/fnv.hpp"
 
 namespace caf {
 
@@ -28,8 +28,7 @@ ipv4_endpoint::ipv4_endpoint(ipv4_address address, uint16_t port)
 }
 
 size_t ipv4_endpoint::hash_code() const noexcept {
-  auto result = detail::fnv_hash(address_.data());
-  return detail::fnv_hash_append(result, port_);
+  return hash::fnv<size_t>::compute(address_, port_);
 }
 
 long ipv4_endpoint::compare(ipv4_endpoint x) const noexcept {

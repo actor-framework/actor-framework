@@ -51,9 +51,15 @@ public:
 
   template <class... Ts>
   [[nodiscard]] auto operator()(Ts&&... xs) {
-    typename Subtype::result_type result;
-    static_cast<void>((try_apply(result, xs) && ...));
-    return result;
+    using result_type = typename Subtype::result_type;
+    if constexpr (std::is_same<result_type, void>::value) {
+      auto dummy = unit;
+      static_cast<void>((try_apply(dummy, xs) && ...));
+    } else {
+      typename Subtype::result_type result;
+      static_cast<void>((try_apply(result, xs) && ...));
+      return result;
+    }
   }
 
 private:
