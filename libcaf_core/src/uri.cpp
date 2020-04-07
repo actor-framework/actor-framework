@@ -22,13 +22,13 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/detail/append_percent_encoded.hpp"
-#include "caf/detail/fnv_hash.hpp"
 #include "caf/detail/overload.hpp"
 #include "caf/detail/parse.hpp"
 #include "caf/detail/parser/read_uri.hpp"
 #include "caf/detail/uri_impl.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
+#include "caf/hash/fnv.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/optional.hpp"
 #include "caf/serializer.hpp"
@@ -72,7 +72,7 @@ string_view uri::fragment() const noexcept {
 }
 
 size_t uri::hash_code() const noexcept {
-  return detail::fnv_hash(str());
+  return hash::fnv<size_t>::compute(str());
 }
 
 optional<uri> uri::authority_only() const {

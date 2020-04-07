@@ -69,6 +69,7 @@
 #include "caf/function_view.hpp"
 #include "caf/fused_downstream_manager.hpp"
 #include "caf/group.hpp"
+#include "caf/hash/fnv.hpp"
 #include "caf/index_mapping.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/local_actor.hpp"

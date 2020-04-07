@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2019 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,28 +16,49 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/ipv4_endpoint.hpp"
+#define CAF_SUITE hash.fnv
 
 #include "caf/hash/fnv.hpp"
 
-namespace caf {
+#include "caf/test/dsl.hpp"
 
-ipv4_endpoint::ipv4_endpoint(ipv4_address address, uint16_t port)
-  : address_(address), port_(port) {
-  // nop
+#include <string>
+
+using namespace caf;
+
+using namespace std::string_literals;
+
+template <class... Ts>
+auto fnv32_hash(Ts&&... xs) {
+  return hash::fnv<uint32_t>::compute(std::forward<Ts>(xs)...);
 }
 
-size_t ipv4_endpoint::hash_code() const noexcept {
-  return hash::fnv<size_t>::compute(address_, port_);
+template <class... Ts>
+auto fnv64_hash(Ts&&... xs) {
+  return hash::fnv<uint64_t>::compute(std::forward<Ts>(xs)...);
 }
 
-long ipv4_endpoint::compare(ipv4_endpoint x) const noexcept {
-  auto res = address_.compare(x.address());
-  return res == 0 ? port_ - x.port() : res;
+CAF_TEST(FNV hashes build incrementally) {
+  hash::fnv<uint32_t> f;
+  CAF_CHECK_EQUAL(f.value, 0x811C9DC5u);
+  f('a');
+  CAF_CHECK_EQUAL(f.value, 0xE40C292Cu);
+  f('b');
+  CAF_CHECK_EQUAL(f.value, 0x4D2505CAu);
+  f('c');
+  CAF_CHECK_EQUAL(f.value, 0x1A47E90Bu);
+  f('d');
+  CAF_CHECK_EQUAL(f.value, 0xCE3479BDu);
 }
 
-std::string to_string(const ipv4_endpoint& ep) {
-  return to_string(ep.address()) + ":" + std::to_string(ep.port());
+CAF_TEST(FNV supports uint32 hashing) {
+  CAF_CHECK_EQUAL(fnv32_hash(), 0x811C9DC5u);
+  CAF_CHECK_EQUAL(fnv32_hash("abcd"s), 0xCE3479BDu);
+  CAF_CHECK_EQUAL(fnv32_hash("C++ Actor Framework"s), 0x2FF91FE5u);
 }
 
-} // namespace caf
+CAF_TEST(FNV supports uint64 hashing) {
+  CAF_CHECK_EQUAL(fnv64_hash(), 0xCBF29CE484222325ull);
+  CAF_CHECK_EQUAL(fnv64_hash("abcd"s), 0xFC179F83EE0724DDull);
+  CAF_CHECK_EQUAL(fnv64_hash("C++ Actor Framework"s), 0xA229A760C3AF69C5ull);
+}
