@@ -82,18 +82,18 @@ public:
     return apply(static_cast<std::underlying_type_t<Enum>>(x));
   }
 
-  void begin_sequence(size_t) {
+  void begin_sequence(size_t) noexcept {
     // nop
   }
 
-  void end_sequence() {
+  void end_sequence() noexcept {
     // nop
   }
 
   /// Convenience function for computing an FNV1a hash value for given
   /// arguments in one shot.
   template <class... Ts>
-  static T compute(Ts&&... xs) {
+  static T compute(Ts&&... xs) noexcept {
     fnv f;
     f(std::forward<Ts>(xs)...);
     return f.value;
@@ -102,14 +102,14 @@ public:
   T value;
 
 private:
-  static constexpr T init() {
+  static constexpr T init() noexcept {
     if constexpr (sizeof(T) == 4)
       return 0x811C9DC5u;
     else
       return 0xCBF29CE484222325ull;
   }
 
-  void append(const uint8_t* begin, const uint8_t* end) {
+  void append(const uint8_t* begin, const uint8_t* end) noexcept {
     if constexpr (sizeof(T) == 4)
       while (begin != end)
         value = (*begin++ ^ value) * 0x01000193u;
