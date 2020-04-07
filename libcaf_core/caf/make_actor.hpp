@@ -33,22 +33,23 @@ namespace caf {
 template <class T, class R = infer_handle_from_class_t<T>, class... Ts>
 R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
 #if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
-  actor_storage<T>* ptr = nullptr;
   if (logger::current_logger()->accepts(CAF_LOG_LEVEL_DEBUG,
                                         CAF_LOG_FLOW_COMPONENT)) {
     std::string args;
     args = deep_to_string(std::forward_as_tuple(xs...));
-    ptr
-      = new actor_storage<T>(aid, std::move(nid), sys, std::forward<Ts>(xs)...);
+    actor_storage<T>* ptr;
+    {
+      CAF_PUSH_AID(aid);
+      ptr = new actor_storage<T>(aid, std::move(nid), sys,
+                                 std::forward<Ts>(xs)...);
+    }
     CAF_LOG_SPAWN_EVENT(ptr->data, args);
-  } else {
-    ptr
-      = new actor_storage<T>(aid, std::move(nid), sys, std::forward<Ts>(xs)...);
+    return {&(ptr->ctrl), false};
   }
-#else
-  auto ptr
-    = new actor_storage<T>(aid, std::move(nid), sys, std::forward<Ts>(xs)...);
 #endif
+  CAF_PUSH_AID(aid);
+  auto ptr = new actor_storage<T>(aid, std::move(nid), sys,
+                                  std::forward<Ts>(xs)...);
   return {&(ptr->ctrl), false};
 }
 

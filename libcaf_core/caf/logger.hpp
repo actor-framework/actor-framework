@@ -220,10 +220,10 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Returns the ID of the actor currently associated to the calling thread.
-  actor_id thread_local_aid();
+  static actor_id thread_local_aid();
 
   /// Associates an actor ID to the calling thread and returns the last value.
-  actor_id thread_local_aid(actor_id aid);
+  static actor_id thread_local_aid(actor_id aid);
 
   /// Returns whether the logger is configured to accept input for given
   /// component and log level.
@@ -431,29 +431,20 @@ CAF_CORE_EXPORT bool operator==(const logger::field& x, const logger::field& y);
     if (CAF_UNIFYN(caf_logger) != nullptr                                      \
         && CAF_UNIFYN(caf_logger)->accepts(loglvl, component))                 \
       CAF_UNIFYN(caf_logger)                                                   \
-        ->log(CAF_LOG_MAKE_EVENT(CAF_UNIFYN(caf_logger)->thread_local_aid(),   \
-                                 component, loglvl, message));                 \
+        ->log(CAF_LOG_MAKE_EVENT(caf::logger::thread_local_aid(), component,   \
+                                 loglvl, message));                            \
   } while (false)
 
 #define CAF_PUSH_AID(aarg)                                                     \
-  auto CAF_UNIFYN(caf_tmp_ptr) = caf::logger::current_logger();                \
-  caf::actor_id CAF_UNIFYN(caf_aid_tmp) = 0;                                   \
-  if (CAF_UNIFYN(caf_tmp_ptr))                                                 \
-    CAF_UNIFYN(caf_aid_tmp) = CAF_UNIFYN(caf_tmp_ptr)->thread_local_aid(aarg); \
-  auto CAF_UNIFYN(aid_aid_tmp_guard) = caf::detail::make_scope_guard([=] {     \
-    auto CAF_UNIFYN(caf_tmp2_ptr) = caf::logger::current_logger();             \
-    if (CAF_UNIFYN(caf_tmp2_ptr))                                              \
-      CAF_UNIFYN(caf_tmp2_ptr)->thread_local_aid(CAF_UNIFYN(caf_aid_tmp));     \
-  })
+  caf::actor_id CAF_UNIFYN(caf_aid_tmp) = caf::logger::thread_local_aid(aarg); \
+  auto CAF_UNIFYN(caf_aid_tmp_guard) = caf::detail::make_scope_guard(          \
+    [=] { caf::logger::thread_local_aid(CAF_UNIFYN(caf_aid_tmp)); })
 
 #define CAF_PUSH_AID_FROM_PTR(some_ptr)                                        \
   auto CAF_UNIFYN(caf_aid_ptr) = some_ptr;                                     \
   CAF_PUSH_AID(CAF_UNIFYN(caf_aid_ptr) ? CAF_UNIFYN(caf_aid_ptr)->id() : 0)
 
-#define CAF_SET_AID(aid_arg)                                                   \
-  (caf::logger::current_logger()                                               \
-     ? caf::logger::current_logger()->thread_local_aid(aid_arg)                \
-     : 0)
+#define CAF_SET_AID(aid_arg) caf::logger::thread_local_aid(aid_arg)
 
 #define CAF_SET_LOGGER_SYS(ptr) caf::logger::set_current_actor_system(ptr)
 
