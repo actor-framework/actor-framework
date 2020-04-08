@@ -23,6 +23,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/implicit_conversions.hpp"
 #include "caf/detail/message_builder_element.hpp"
+#include "caf/detail/padded_size.hpp"
 #include "caf/detail/type_id_list_builder.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
@@ -61,6 +62,7 @@ public:
     using namespace detail;
     using value_type = strip_and_convert_t<T>;
     static_assert(sendable<value_type>);
+    storage_size_ += padded_size_v<strip_and_convert_t<value_type>>;
     types_.push_back(type_id_v<value_type>);
     elements_.emplace_back(make_message_builder_element(std::forward<T>(x)));
     return *this;
@@ -91,7 +93,7 @@ public:
   /// Converts the buffer to an actual message object and transfers
   /// ownership of the data to it, leaving this object in an invalid state.
   /// @warning Calling *any*  member function on this object afterwards
-  ///          is undefined behavior (dereferencing a `nullptr`)
+  ///          is undefined behavior.
   message move_to_message();
 
   /// Removes all elements from the buffer.
@@ -108,6 +110,7 @@ public:
   }
 
 private:
+  size_t storage_size_ = 0;
   detail::type_id_list_builder types_;
   std::vector<detail::message_builder_element_ptr> elements_;
 };

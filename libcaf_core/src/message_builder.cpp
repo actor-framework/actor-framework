@@ -21,18 +21,39 @@
 namespace caf {
 
 void message_builder::clear() noexcept {
+  storage_size_ = 0;
   types_.clear();
   elements_.clear();
 }
 
 message message_builder::to_message() const {
-  // TODO: implement me
-  return {};
+  if (empty())
+    return message{};
+  using namespace detail;
+  auto vptr = malloc(sizeof(message_data) + storage_size_);
+  if (vptr == nullptr)
+    throw std::bad_alloc();
+  auto raw_ptr = new (vptr) message_data(types_.copy_to_list());
+  intrusive_cow_ptr<message_data> ptr{raw_ptr, false};
+  auto storage = raw_ptr->storage();
+  for (auto& element : elements_)
+    storage = element->copy_init(storage);
+  return message{std::move(ptr)};
 }
 
 message message_builder::move_to_message() {
-  // TODO: implement me
-  return {};
+  if (empty())
+    return message{};
+  using namespace detail;
+  auto vptr = malloc(sizeof(message_data) + storage_size_);
+  if (vptr == nullptr)
+    throw std::bad_alloc();
+  auto raw_ptr = new (vptr) message_data(types_.move_to_list());
+  intrusive_cow_ptr<message_data> ptr{raw_ptr, false};
+  auto storage = raw_ptr->storage();
+  for (auto& element : elements_)
+    storage = element->move_init(storage);
+  return message{std::move(ptr)};
 }
 
 } // namespace caf

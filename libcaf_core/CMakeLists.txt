@@ -234,6 +234,7 @@ set(CAF_CORE_TEST_SOURCES
   test/mailbox_element.cpp
   test/make_config_value_field.cpp
   test/message.cpp
+  test/message_builder.cpp
   test/message_id.cpp
   test/message_lifetime.cpp
   test/metaprogramming.cpp
