@@ -134,7 +134,7 @@ type_id_list type_id_list_builder::move_to_list() {
   return type_id_list{get_or_set_type_id_buf(ptr)};
 }
 
-type_id_list type_id_list_builder::copy_to_list() {
+type_id_list type_id_list_builder::copy_to_list() const {
   if (size_ == 0)
     return make_type_id_list();
   storage_[0] = static_cast<type_id_t>(size());
