@@ -28,7 +28,6 @@
 #include "caf/policy/work_sharing.hpp"
 #include "caf/policy/work_stealing.hpp"
 #include "caf/raise_error.hpp"
-#include "caf/raw_event_based_actor.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/scheduler/coordinator.hpp"
 #include "caf/scheduler/test_coordinator.hpp"

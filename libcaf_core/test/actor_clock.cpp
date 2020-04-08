@@ -27,7 +27,6 @@
 
 #include "caf/all.hpp"
 #include "caf/detail/test_actor_clock.hpp"
-#include "caf/raw_event_based_actor.hpp"
 
 using namespace caf;
 
@@ -39,8 +38,10 @@ struct testee_state {
   uint64_t timeout_id = 41;
 };
 
-behavior testee(stateful_actor<testee_state, raw_event_based_actor>* self,
+behavior testee(stateful_actor<testee_state>* self,
                 detail::test_actor_clock* t) {
+  self->set_exit_handler([self](exit_msg& x) { self->quit(x.reason); });
+  self->set_error_handler([](scheduled_actor*, error&) {});
   return {
     [=](ok_atom) {
       CAF_LOG_TRACE("" << self->current_mailbox_element()->content());
@@ -61,16 +62,10 @@ behavior testee(stateful_actor<testee_state, raw_event_based_actor>* self,
       auto mid = make_message_id(self->state.timeout_id).response_id();
       t->set_request_timeout(n, self, mid);
     },
-    [](const timeout_msg&) { CAF_LOG_TRACE(""); },
-    [](const error&) { CAF_LOG_TRACE(""); },
     [](const std::string&) { CAF_LOG_TRACE(""); },
     [=](group& grp) {
       CAF_LOG_TRACE("");
       self->join(grp);
-    },
-    [=](exit_msg& x) {
-      CAF_LOG_TRACE("");
-      self->quit(x.reason);
     },
   };
 }

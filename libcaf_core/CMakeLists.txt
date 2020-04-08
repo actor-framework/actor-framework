@@ -123,7 +123,6 @@ set(CAF_CORE_SOURCES
   src/policy/work_stealing.cpp
   src/proxy_registry.cpp
   src/raise_error.cpp
-  src/raw_event_based_actor.cpp
   src/ref_counted.cpp
   src/replies_to.cpp
   src/response_promise.cpp

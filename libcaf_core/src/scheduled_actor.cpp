@@ -580,10 +580,11 @@ scheduled_actor::categorize(mailbox_element& x) {
       CAF_LOG_DEBUG("handle ordinary timeout message");
       if (is_active_receive_timeout(tid) && !bhvr_stack_.empty())
         bhvr_stack_.back().handle_timeout();
-    } else {
-      CAF_ASSERT(tm.type == "stream");
+    } else if (tm.type == "stream") {
       CAF_LOG_DEBUG("handle stream timeout message");
       set_stream_timeout(advance_streams(clock().now()));
+    } else {
+      // Drop. Other types not supported yet.
     }
     return message_category::internal;
   }
