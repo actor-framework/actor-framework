@@ -23,6 +23,7 @@
 #include <typeinfo>
 
 #include "caf/detail/type_traits.hpp"
+#include "caf/downstream_manager.hpp"
 #include "caf/inbound_path.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/stream_manager.hpp"
