@@ -66,7 +66,7 @@ abstract_actor::abstract_actor(actor_config& cfg)
   // nop
 }
 
-actor_addr abstract_actor::address() const {
+actor_addr abstract_actor::address() const noexcept {
   return actor_addr{actor_control_block::from(this)};
 }
 
