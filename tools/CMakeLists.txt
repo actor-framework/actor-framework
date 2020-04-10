@@ -4,10 +4,7 @@ include_directories(${LIBCAF_INCLUDE_DIRS})
 
 macro(add name)
   add_executable(${name} ${name}.cpp ${ARGN})
-  target_link_libraries(${name}
-                        ${CAF_EXTRA_LDFLAGS}
-                        ${CAF_LIBRARIES}
-                        ${PTHREAD_LIBRARIES})
+  target_link_libraries(${name} CAF::core CAF::io)
   install(FILES ${name}.cpp DESTINATION ${CMAKE_INSTALL_DATADIR}/caf/tools/${folder})
   add_dependencies(${name} all_tools)
 endmacro()

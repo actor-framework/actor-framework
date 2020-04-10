@@ -10,9 +10,9 @@ add_enum_consistency_check("caf/io/basp/message_type.hpp"
 add_enum_consistency_check("caf/io/network/operation.hpp"
                            "src/io/network/operation_strings.cpp")
 
-# -- list cpp files ------------------------------------------------------------
+# -- add library target --------------------------------------------------------
 
-set(CAF_IO_SOURCES
+add_library(libcaf_io_obj OBJECT ${CAF_IO_HEADERS}
   src/detail/socket_guard.cpp
   src/io/abstract_broker.cpp
   src/io/basp/header.cpp
@@ -55,38 +55,29 @@ set(CAF_IO_SOURCES
   src/policy/udp.cpp
 )
 
-set(CAF_IO_TEST_SOURCES
-  test/io/basp/message_queue.cpp
-  test/io/basp_broker.cpp
-  test/io/broker.cpp
-  test/io/http_broker.cpp
-  test/io/monitor.cpp
-  test/io/network/default_multiplexer.cpp
-  test/io/network/ip_endpoint.cpp
-  test/io/receive_buffer.cpp
-  test/io/remote_actor.cpp
-  test/io/remote_group.cpp
-  test/io/remote_spawn.cpp
-  test/io/unpublish.cpp
-  test/io/worker.cpp
-)
-
-# -- add library target --------------------------------------------------------
-
-add_library(libcaf_io_obj OBJECT ${CAF_IO_SOURCES} ${CAF_IO_HEADERS})
+target_include_directories(libcaf_io_obj PRIVATE
+                           "${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_library(libcaf_io
             "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
             $<TARGET_OBJECTS:libcaf_io_obj>)
 
-add_library(caf::io ALIAS libcaf_io)
+target_include_directories(libcaf_io INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+
+add_library(CAF::io ALIAS libcaf_io)
 
 if(BUILD_SHARED_LIBS AND NOT WIN32)
   target_compile_options(libcaf_io PRIVATE -fPIC)
   target_compile_options(libcaf_io_obj PRIVATE -fPIC)
 endif()
 
-target_link_libraries(libcaf_io PUBLIC caf::core ${CAF_EXTRA_LDFLAGS})
+target_link_libraries(libcaf_io_obj PRIVATE CAF::core)
+target_link_libraries(libcaf_io PUBLIC CAF::core)
+
+if(MSVC)
+  target_link_libraries(libcaf_io PUBLIC ws2_32 iphlpapi)
+endif()
 
 generate_export_header(libcaf_io
                        EXPORT_MACRO_NAME CAF_IO_EXPORT
@@ -119,21 +110,34 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
 
 # -- build unit tests ----------------------------------------------------------
 
-if(NOT CAF_NO_UNIT_TESTS)
-  add_executable(caf-io-test
-                 test/io-test.cpp
-                 ${CAF_IO_TEST_SOURCES}
-                 $<TARGET_OBJECTS:libcaf_io_obj>)
-  target_include_directories(caf-io-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/test")
-  target_compile_definitions(caf-io-test PRIVATE libcaf_io_EXPORTS)
-  target_link_libraries(caf-io-test caf::core ${CAF_EXTRA_LDFLAGS})
-  add_test_suites(caf-io-test
-                  "${CMAKE_CURRENT_SOURCE_DIR}"
-                  ${CAF_IO_TEST_SOURCES})
+if(NOT CAF_BUILD_TESTING)
+  return()
 endif()
 
-# -- add this library to the global CAF_LIBRARIES ------------------------------
+add_executable(caf-io-test
+               test/io-test.cpp
+               $<TARGET_OBJECTS:libcaf_io_obj>)
 
-list(APPEND CAF_LIBRARIES libcaf_io)
+target_include_directories(caf-io-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/test")
 
-set(CAF_LIBRARIES ${CAF_LIBRARIES} PARENT_SCOPE)
+target_compile_definitions(caf-io-test PRIVATE libcaf_io_EXPORTS)
+
+target_link_libraries(caf-io-test CAF::core CAF::test)
+
+target_include_directories(caf-io-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+
+caf_add_test_suites(caf-io-test
+  io.basp.message_queue
+  io.basp_broker
+  io.broker
+  io.http_broker
+  io.monitor
+  io.network.default_multiplexer
+  io.network.ip_endpoint
+  io.receive_buffer
+  io.remote_actor
+  io.remote_group
+  io.remote_spawn
+  io.unpublish
+  io.worker
+)
