@@ -67,9 +67,79 @@ public:
 
   // -- properties -------------------------------------------------------------
 
+  /// @copydoc abstract_actor::address
+  auto address() const noexcept {
+    return self_->address();
+  }
+
+  /// @copydoc abstract_actor::id
+  auto id() const noexcept {
+    return self_->id();
+  }
+
+  /// @copydoc abstract_actor::node
+  auto node() const noexcept {
+    return self_->node();
+  }
+
+  /// @copydoc abstract_actor::home_system
+  auto& home_system() const noexcept {
+    return self_->home_system();
+  }
+
+  /// @copydoc local_actor::context
+  auto context() const noexcept {
+    return self_->context();
+  }
+
+  /// @copydoc local_actor::system
+  auto& system() const noexcept {
+    return self_->system();
+  }
+
+  /// @copydoc local_actor::config
+  const auto& config() const noexcept {
+    return self_->config();
+  }
+
+  /// @copydoc local_actor::clock
+  auto& clock() const noexcept {
+    return self_->clock();
+  }
+
+  /// @copydoc local_actor::current_sender
+  auto& current_sender() noexcept {
+    return self_->current_sender();
+  }
+
+  /// @copydoc local_actor::current_message_id
+  auto current_message_id() noexcept {
+    return self_->current_message_id();
+  }
+
+  /// @copydoc local_actor::current_mailbox_element
+  auto* current_mailbox_element() {
+    return self_->current_mailbox_element();
+  }
+
+  /// @copydoc local_actor::fail_state
+  const auto& fail_state() const {
+    return self_->fail_state();
+  }
+
   /// @copydoc scheduled_actor::mailbox
   auto& mailbox() noexcept {
     return self_->mailbox();
+  }
+
+  /// @copydoc scheduled_actor::stream_managers
+  auto& stream_managers() noexcept {
+    return self_->stream_managers();
+  }
+
+  /// @copydoc scheduled_actor::pending_stream_managers
+  auto& pending_stream_managers() noexcept {
+    return self_->pending_stream_managers();
   }
 
   // -- event handlers ---------------------------------------------------------
@@ -160,18 +230,6 @@ public:
 
   // -- miscellaneous actor operations -----------------------------------------
 
-  execution_unit* context() const {
-    return self_->context();
-  }
-
-  actor_system& system() const {
-    return self_->system();
-  }
-
-  actor_system& home_system() const {
-    return self_->home_system();
-  }
-
   void quit(exit_reason reason = exit_reason::normal) {
     self_->quit(reason);
   }
@@ -218,17 +276,6 @@ public:
   template <class Handle, class... Ts>
   auto delegate(const Handle& dest, Ts&&... xs) {
     return self_->delegate(dest, std::forward<Ts>(xs)...);
-  }
-
-  /// Returns a pointer to the sender of the current message.
-  /// @pre `current_mailbox_element() != nullptr`
-  strong_actor_ptr& current_sender() {
-    return self_->current_sender();
-  }
-
-  /// Returns a pointer to the currently processed mailbox element.
-  mailbox_element* current_mailbox_element() {
-    return self_->current_mailbox_element();
   }
 
   /// @private

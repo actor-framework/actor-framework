@@ -88,7 +88,7 @@ public:
   }
 
   /// Returns the logical actor address.
-  actor_addr address() const;
+  actor_addr address() const noexcept;
 
   /// Detaches the first attached object that matches `what`.
   virtual size_t detach(const attachable::token& what) = 0;
