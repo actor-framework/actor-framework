@@ -90,14 +90,6 @@ if(CAF_SANITIZERS)
   add_compile_options(-fsanitize=${CAF_SANITIZERS} -fno-omit-frame-pointer)
 endif()
 
-# -- check whether we are running as CMake subdirectory ------------------------
-
-if(NOT CMAKE_PROJECT_NAME STREQUAL "caf")
-  set(caf_is_subproject ON)
-else()
-  set(caf_is_subproject OFF)
-endif()
-
 # -- unit testing setup / caf_add_test_suites function  ------------------------
 
 if(CAF_BUILD_TESTING)
