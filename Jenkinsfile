@@ -4,14 +4,14 @@
 
 // Default CMake flags for release builds.
 defaultReleaseBuildFlags = [
-    'CAF_ENABLE_RUNTIME_CHECKS:BOOL=yes',
+    'CAF_ENABLE_RUNTIME_CHECKS:BOOL=ON',
 ]
 
 // Default CMake flags for debug builds.
 defaultDebugBuildFlags = defaultReleaseBuildFlags + [
     'CAF_SANITIZERS:STRING=address,undefined',
     'CAF_LOG_LEVEL:STRING=TRACE',
-    'CAF_ENABLE_ACTOR_PROFILER:BOOL=yes',
+    'CAF_ENABLE_ACTOR_PROFILER:BOOL=ON',
 ]
 
 // Configures the behavior of our stages.
@@ -97,12 +97,20 @@ config = [
                 'OPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include',
             ],
         ],
+        Windows: [
+            debug: defaultDebugBuildFlags + [
+              'CAF_BUILD_OPENSSL_MODULE:BOOL=OFF',
+            ],
+            release: defaultReleaseBuildFlags + [
+              'CAF_BUILD_OPENSSL_MODULE:BOOL=OFF',
+            ],
+        ],
     ],
     // Configures what binary the coverage report uses and what paths to exclude.
     coverage: [
         binaries: [
-          'build/bin/caf-core-test',
-          'build/bin/caf-io-test',
+          'build/libcaf_core/caf-core-test',
+          'build/libcaf_io/caf-io-test',
         ],
         relativeExcludePaths: [
             'examples',
@@ -151,6 +159,7 @@ pipeline {
                         buildDir: 'build',
                         installation: 'cmake in search path',
                         sourceDir: '.',
+                        cmakeArgs: '-DCAF_BUILD_IO_MODULE:BOOL=OFF',
                         steps: [[
                             args: '--target consistency-check',
                             withCmake: true,
