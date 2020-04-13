@@ -10,36 +10,37 @@ include(GenerateExportHeader)      # Auto-generates dllexport macros
 
 # -- general options -----------------------------------------------------------
 
-option(BUILD_SHARED_LIBS "Shared library targets" ON)
-option(CMAKE_EXPORT_COMPILE_COMMANDS "JSON compile commands database" ON)
+option(BUILD_SHARED_LIBS "Build shared library targets" ON)
+option(CMAKE_EXPORT_COMPILE_COMMANDS "Write JSON compile commands database" ON)
 option(THREADS_PREFER_PTHREAD_FLAG "Prefer -pthread flag if available " ON)
 
 # -- CAF options that are off by default ----------------------------------------
 
-option(CAF_BUILD_CURL_EXAMPLES "Build examples with libcurl" OFF)
-option(CAF_BUILD_PROTOBUF_EXAMPLES "Build examples with Google Protobuf" OFF)
-option(CAF_BUILD_QT5_EXAMPLES "Build examples with the Qt5 framework" OFF)
+option(CAF_ENABLE_CURL_EXAMPLES "Build examples with libcurl" OFF)
+option(CAF_ENABLE_PROTOBUF_EXAMPLES "Build examples with Google Protobuf" OFF)
+option(CAF_ENABLE_QT5_EXAMPLES "Build examples with the Qt5 framework" OFF)
 option(CAF_ENABLE_RUNTIME_CHECKS "Build CAF with extra runtime assertions" OFF)
 option(CAF_ENABLE_UTILITY_TARGETS "Include targets like consistency-check" OFF)
+option(CAF_ENABLE_ACTOR_PROFILER "Enable experimental profiler API" OFF)
 
 # -- CAF options that are on by default ----------------------------------------
 
-option(CAF_BUILD_EXAMPLES "Build small programs showcasing CAF features" ON)
-option(CAF_BUILD_IO_MODULE "Build networking I/O module" ON)
-option(CAF_BUILD_TESTING "Build unit test suites" ON)
-option(CAF_BUILD_TOOLS "Build utility programs such as caf-run" ON)
-option(CAF_BUILD_WITH_EXCEPTIONS "Build CAF with support for exceptions" ON)
+option(CAF_ENABLE_EXAMPLES "Build small programs showcasing CAF features" ON)
+option(CAF_ENABLE_IO_MODULE "Build networking I/O module" ON)
+option(CAF_ENABLE_TESTING "Build unit test suites" ON)
+option(CAF_ENABLE_TOOLS "Build utility programs such as caf-run" ON)
+option(CAF_ENABLE_WITH_EXCEPTIONS "Build CAF with support for exceptions" ON)
 
 # -- CAF options that depend on others -----------------------------------------
 
-cmake_dependent_option(CAF_BUILD_OPENSSL_MODULE "CAF networking I/O module" ON
-                       "CAF_BUILD_IO_MODULE" OFF)
+cmake_dependent_option(CAF_ENABLE_OPENSSL_MODULE "Build OpenSSL module" ON
+                       "CAF_ENABLE_IO_MODULE" OFF)
 
 # -- CAF options with non-boolean values ---------------------------------------
 
-set(CAF_LOG_LEVEL "QUIET" CACHE STRING "Max. log verbosity of CAF components")
+set(CAF_LOG_LEVEL "QUIET" CACHE STRING "Set log verbosity of CAF components")
 set(CAF_SANITIZERS "" CACHE STRING
-    "Comma separated sanitizers, e.g., 'address,undefined'")
+    "comma separated sanitizers, e.g., 'address,undefined'")
 set(CAF_INSTALL_CMAKEDIR
     "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/CAF" CACHE STRING
     "Path for installing CMake files, enables 'find_package(CAF)'")
@@ -56,7 +57,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 # -- sanity checking -----------------------------------------------------------
 
-if(CAF_BUILD_OPENSSL_MODULE AND NOT CAF_BUILD_IO_MODULE)
+if(CAF_ENABLE_OPENSSL_MODULE AND NOT CAF_ENABLE_IO_MODULE)
   message(FATAL_ERROR "Invalid options: cannot build OpenSSL without I/O")
 endif()
 
@@ -69,7 +70,7 @@ endif()
 
 if(MSVC)
   # disable 4275 and 4251 (warnings regarding C++ classes at ABI boundaries)
-  add_compile_options(caf-project INTERFACE /wd4275 /wd4251)
+  add_compile_options(/wd4275 /wd4251)
   if(CAF_SANITIZERS)
     message(FATAL_ERROR "sanitizer builds are currently not supported on MSVC")
   endif()
@@ -93,7 +94,7 @@ endif()
 
 # -- unit testing setup / caf_add_test_suites function  ------------------------
 
-if(CAF_BUILD_TESTING)
+if(CAF_ENABLE_TESTING)
   enable_testing()
   function(caf_add_test_suites target)
     foreach(suiteName ${ARGN})
@@ -250,19 +251,19 @@ add_custom_command(TARGET uninstall
 
 add_subdirectory(libcaf_core)
 
-if(CAF_BUILD_IO_MODULE)
+if(CAF_ENABLE_IO_MODULE)
   add_subdirectory(libcaf_io)
 endif()
 
-if(CAF_BUILD_OPENSSL_MODULE)
+if(CAF_ENABLE_OPENSSL_MODULE)
   add_subdirectory(libcaf_openssl)
 endif()
 
-if(CAF_BUILD_EXAMPLES)
+if(CAF_ENABLE_EXAMPLES)
   add_subdirectory(examples)
 endif()
 
-if(CAF_BUILD_TOOLS)
+if(CAF_ENABLE_TOOLS)
   add_subdirectory(tools)
 endif()
 
