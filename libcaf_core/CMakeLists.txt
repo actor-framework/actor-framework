@@ -182,7 +182,7 @@ endif()
 target_link_libraries(libcaf_core PUBLIC Threads::Threads)
 
 if(CAF_SANITIZERS)
-  target_link_libraries(caf-incubator PUBLIC -fsanitize=${CAF_SANITIZERS})
+  target_link_libraries(libcaf_core PUBLIC -fsanitize=${CAF_SANITIZERS})
 endif()
 
 # -- API exports ---------------------------------------------------------------
@@ -226,6 +226,11 @@ endif()
 add_executable(caf-core-test
   test/core-test.cpp
   $<TARGET_OBJECTS:libcaf_core_obj>)
+
+if(CAF_SANITIZERS)
+  target_link_libraries(caf-core-test PRIVATE -fsanitize=${CAF_SANITIZERS})
+endif()
+
 
 target_include_directories(caf-core-test PRIVATE
                            "${CMAKE_CURRENT_SOURCE_DIR}/test")
