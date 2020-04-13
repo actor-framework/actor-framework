@@ -32,6 +32,9 @@
 #ifdef CAF_CLANG
 #  pragma clang diagnostic push
 #  pragma clang diagnostic ignored "-Wc99-extensions"
+#elif defined(CAF_GCC)
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wpedantic"
 #elif defined(CAF_MSVC)
 #  pragma warning(push)
 #  pragma warning(disable : 4200)
@@ -155,6 +158,8 @@ void message_data_init(byte* storage, T&& x, Ts&&... xs) {
 
 #ifdef CAF_CLANG
 #  pragma clang diagnostic pop
-#elif defined(MSVC)
+#elif defined(CAF_GCC)
+#  pragma GCC diagnostic pop
+#elif defined(CAF_MSVC)
 #  pragma warning(pop)
 #endif

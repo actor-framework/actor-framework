@@ -5,8 +5,8 @@
 
 CAF_BEGIN_TYPE_ID_BLOCK(fixed_stack, first_custom_type_id)
 
-  CAF_ADD_ATOM(fixed_stack, pop_atom);
-  CAF_ADD_ATOM(fixed_stack, push_atom);
+  CAF_ADD_ATOM(fixed_stack, pop_atom)
+  CAF_ADD_ATOM(fixed_stack, push_atom)
 
 CAF_END_TYPE_ID_BLOCK(fixed_stack)
 

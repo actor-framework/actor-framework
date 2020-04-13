@@ -263,7 +263,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
   CAF_ADD_TYPE_ID(core_module, (std::vector<caf::config_value>) )
   CAF_ADD_TYPE_ID(core_module, (std::vector<caf::strong_actor_ptr>) )
   CAF_ADD_TYPE_ID(core_module, (std::vector<caf::weak_actor_ptr>) )
-  CAF_ADD_TYPE_ID(core_module, (std::vector<std::pair<std::string, message>>) );
+  CAF_ADD_TYPE_ID(core_module, (std::vector<std::pair<std::string, message>>) )
 
   // -- predefined atoms
 

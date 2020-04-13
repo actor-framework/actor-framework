@@ -13,8 +13,8 @@ struct se_event;
 
 CAF_BEGIN_TYPE_ID_BLOCK(caf_vec, first_custom_type_id)
 
-  CAF_ADD_TYPE_ID(caf_vec, (entity));
-  CAF_ADD_TYPE_ID(caf_vec, (se_event));
+  CAF_ADD_TYPE_ID(caf_vec, (entity))
+  CAF_ADD_TYPE_ID(caf_vec, (se_event))
 
 CAF_END_TYPE_ID_BLOCK(caf_vec)
 

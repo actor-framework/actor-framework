@@ -22,7 +22,7 @@
 
 CAF_BEGIN_TYPE_ID_BLOCK(group_chat, first_custom_type_id)
 
-  CAF_ADD_ATOM(group_chat, broadcast_atom);
+  CAF_ADD_ATOM(group_chat, broadcast_atom)
 
 CAF_END_TYPE_ID_BLOCK(group_chat)
 

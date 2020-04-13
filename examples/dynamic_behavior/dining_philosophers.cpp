@@ -15,10 +15,10 @@
 
 CAF_BEGIN_TYPE_ID_BLOCK(dining_philosophers, first_custom_type_id)
 
-  CAF_ADD_ATOM(dining_philosophers, take_atom);
-  CAF_ADD_ATOM(dining_philosophers, taken_atom);
-  CAF_ADD_ATOM(dining_philosophers, eat_atom);
-  CAF_ADD_ATOM(dining_philosophers, think_atom);
+  CAF_ADD_ATOM(dining_philosophers, take_atom)
+  CAF_ADD_ATOM(dining_philosophers, taken_atom)
+  CAF_ADD_ATOM(dining_philosophers, eat_atom)
+  CAF_ADD_ATOM(dining_philosophers, think_atom)
 
 CAF_END_TYPE_ID_BLOCK(dining_philosophers)
 

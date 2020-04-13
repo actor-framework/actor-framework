@@ -22,9 +22,9 @@
 
 CAF_BEGIN_TYPE_ID_BLOCK(fan_out_request, first_custom_type_id)
 
-  CAF_ADD_ATOM(fan_out_request, row_atom);
-  CAF_ADD_ATOM(fan_out_request, column_atom);
-  CAF_ADD_ATOM(fan_out_request, average_atom);
+  CAF_ADD_ATOM(fan_out_request, row_atom)
+  CAF_ADD_ATOM(fan_out_request, column_atom)
+  CAF_ADD_ATOM(fan_out_request, average_atom)
 
 CAF_END_TYPE_ID_BLOCK(fan_out_request)
 

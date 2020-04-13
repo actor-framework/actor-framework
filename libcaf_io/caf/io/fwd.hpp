@@ -93,25 +93,25 @@ using address_listing = std::map<protocol::network, std::vector<std::string>>;
 
 CAF_BEGIN_TYPE_ID_BLOCK(io_module, detail::io_module_begin)
 
-  CAF_ADD_TYPE_ID(io_module, (caf::io::accept_handle));
-  CAF_ADD_TYPE_ID(io_module, (caf::io::acceptor_closed_msg));
-  CAF_ADD_TYPE_ID(io_module, (caf::io::acceptor_passivated_msg));
-  CAF_ADD_TYPE_ID(io_module, (caf::io::connection_closed_msg));
-  CAF_ADD_TYPE_ID(io_module, (caf::io::connection_handle));
-  CAF_ADD_TYPE_ID(io_module, (caf::io::connection_passivated_msg));
-  CAF_ADD_TYPE_ID(io_module, (caf::io::data_transferred_msg));
-  CAF_ADD_TYPE_ID(io_module, (caf::io::datagram_sent_msg));
-  CAF_ADD_TYPE_ID(io_module, (caf::io::datagram_servant_closed_msg));
-  CAF_ADD_TYPE_ID(io_module, (caf::io::datagram_servant_passivated_msg));
-  CAF_ADD_TYPE_ID(io_module, (caf::io::datagram_servant_ptr));
-  CAF_ADD_TYPE_ID(io_module, (caf::io::doorman_ptr));
-  CAF_ADD_TYPE_ID(io_module, (caf::io::network::address_listing));
-  CAF_ADD_TYPE_ID(io_module, (caf::io::network::protocol));
-  CAF_ADD_TYPE_ID(io_module, (caf::io::network::receive_buffer));
-  CAF_ADD_TYPE_ID(io_module, (caf::io::new_connection_msg));
-  CAF_ADD_TYPE_ID(io_module, (caf::io::new_data_msg));
-  CAF_ADD_TYPE_ID(io_module, (caf::io::new_datagram_msg));
-  CAF_ADD_TYPE_ID(io_module, (caf::io::scribe_ptr));
+  CAF_ADD_TYPE_ID(io_module, (caf::io::accept_handle))
+  CAF_ADD_TYPE_ID(io_module, (caf::io::acceptor_closed_msg))
+  CAF_ADD_TYPE_ID(io_module, (caf::io::acceptor_passivated_msg))
+  CAF_ADD_TYPE_ID(io_module, (caf::io::connection_closed_msg))
+  CAF_ADD_TYPE_ID(io_module, (caf::io::connection_handle))
+  CAF_ADD_TYPE_ID(io_module, (caf::io::connection_passivated_msg))
+  CAF_ADD_TYPE_ID(io_module, (caf::io::data_transferred_msg))
+  CAF_ADD_TYPE_ID(io_module, (caf::io::datagram_sent_msg))
+  CAF_ADD_TYPE_ID(io_module, (caf::io::datagram_servant_closed_msg))
+  CAF_ADD_TYPE_ID(io_module, (caf::io::datagram_servant_passivated_msg))
+  CAF_ADD_TYPE_ID(io_module, (caf::io::datagram_servant_ptr))
+  CAF_ADD_TYPE_ID(io_module, (caf::io::doorman_ptr))
+  CAF_ADD_TYPE_ID(io_module, (caf::io::network::address_listing))
+  CAF_ADD_TYPE_ID(io_module, (caf::io::network::protocol))
+  CAF_ADD_TYPE_ID(io_module, (caf::io::network::receive_buffer))
+  CAF_ADD_TYPE_ID(io_module, (caf::io::new_connection_msg))
+  CAF_ADD_TYPE_ID(io_module, (caf::io::new_data_msg))
+  CAF_ADD_TYPE_ID(io_module, (caf::io::new_datagram_msg))
+  CAF_ADD_TYPE_ID(io_module, (caf::io::scribe_ptr))
 
 CAF_END_TYPE_ID_BLOCK(io_module)
 

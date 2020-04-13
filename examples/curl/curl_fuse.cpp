@@ -60,11 +60,11 @@ CAF_BEGIN_TYPE_ID_BLOCK(curl_fuse, first_custom_type_id)
 
   CAF_ADD_TYPE_ID(curl_fuse, (std::vector<char>) )
 
-  CAF_ADD_ATOM(curl_fuse, read_atom);
-  CAF_ADD_ATOM(curl_fuse, fail_atom);
-  CAF_ADD_ATOM(curl_fuse, next_atom);
-  CAF_ADD_ATOM(curl_fuse, reply_atom);
-  CAF_ADD_ATOM(curl_fuse, finished_atom);
+  CAF_ADD_ATOM(curl_fuse, read_atom)
+  CAF_ADD_ATOM(curl_fuse, fail_atom)
+  CAF_ADD_ATOM(curl_fuse, next_atom)
+  CAF_ADD_ATOM(curl_fuse, reply_atom)
+  CAF_ADD_ATOM(curl_fuse, finished_atom)
 
 CAF_END_TYPE_ID_BLOCK(curl_fuse)
 
