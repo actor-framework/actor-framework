@@ -62,7 +62,7 @@ public:
     using namespace detail;
     using value_type = strip_and_convert_t<T>;
     static_assert(sendable<value_type>);
-    storage_size_ += padded_size_v<strip_and_convert_t<value_type>>;
+    storage_size_ += padded_size_v<value_type>;
     types_.push_back(type_id_v<value_type>);
     elements_.emplace_back(make_message_builder_element(std::forward<T>(x)));
     return *this;
