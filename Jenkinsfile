@@ -28,10 +28,6 @@ config = [
     // Our build matrix. Keys are the operating system labels and values are build configurations.
     buildMatrix: [
         // Various Linux builds for debug and release.
-        ['debian-8', [
-            builds: ['debug', 'release'],
-            tools: ['clang-4'],
-        ]],
         ['centos-6', [
             builds: ['debug', 'release'],
             tools: ['gcc-7'],
