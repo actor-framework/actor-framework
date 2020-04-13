@@ -72,7 +72,9 @@ if(BUILD_SHARED_LIBS AND NOT WIN32)
   target_compile_options(libcaf_io_obj PRIVATE -fPIC)
 endif()
 
-target_link_libraries(libcaf_io_obj PRIVATE CAF::core)
+target_include_directories(libcaf_io_obj PRIVATE
+  $<TARGET_PROPERTY:libcaf_core,INTERFACE_INCLUDE_DIRECTORIES>)
+
 target_link_libraries(libcaf_io PUBLIC CAF::core)
 
 if(MSVC)

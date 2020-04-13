@@ -227,17 +227,15 @@ add_executable(caf-core-test
   test/core-test.cpp
   $<TARGET_OBJECTS:libcaf_core_obj>)
 
-if(CAF_SANITIZERS)
-  target_link_libraries(caf-core-test PRIVATE -fsanitize=${CAF_SANITIZERS})
-endif()
-
-
 target_include_directories(caf-core-test PRIVATE
                            "${CMAKE_CURRENT_SOURCE_DIR}/test")
 
 target_compile_definitions(caf-core-test PRIVATE libcaf_core_EXPORTS)
 
 target_link_libraries(caf-core-test PUBLIC CAF::test)
+
+target_link_libraries(caf-core-test PRIVATE
+  $<TARGET_PROPERTY:CAF::core,INTERFACE_LINK_LIBRARIES>)
 
 target_include_directories(caf-core-test PRIVATE
                            "${CMAKE_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")

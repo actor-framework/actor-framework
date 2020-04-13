@@ -33,9 +33,10 @@ if(NOT TARGET OpenSSL::SSL OR NOT TARGET OpenSSL::Crypto)
   find_package(OpenSSL REQUIRED)
 endif()
 
-target_link_libraries(libcaf_openssl_obj PUBLIC
-                      CAF::core CAF::io
-                      OpenSSL::SSL OpenSSL::Crypto)
+target_include_directories(libcaf_openssl_obj PRIVATE
+  $<TARGET_PROPERTY:libcaf_core,INTERFACE_INCLUDE_DIRECTORIES>
+  $<TARGET_PROPERTY:libcaf_io,INTERFACE_INCLUDE_DIRECTORIES>
+  ${OPENSSL_INCLUDE_DIR})
 
 target_link_libraries(libcaf_openssl PUBLIC
                       CAF::core CAF::io

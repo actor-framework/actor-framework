@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.2.3 FATAL_ERROR)
 project(CAF CXX)
 
 # -- includes ------------------------------------------------------------------
@@ -12,6 +12,7 @@ include(GenerateExportHeader)      # Auto-generates dllexport macros
 
 option(BUILD_SHARED_LIBS "Shared library targets" ON)
 option(CMAKE_EXPORT_COMPILE_COMMANDS "JSON compile commands database" ON)
+option(THREADS_PREFER_PTHREAD_FLAG "Prefer -pthread flag if available " ON)
 
 # -- CAF options that are off by default ----------------------------------------
 
