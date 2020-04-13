@@ -126,6 +126,9 @@ target_compile_definitions(caf-io-test PRIVATE libcaf_io_EXPORTS)
 
 target_link_libraries(caf-io-test CAF::core CAF::test)
 
+target_link_libraries(caf-core-test PRIVATE
+  $<TARGET_PROPERTY:libcaf_io,INTERFACE_LINK_LIBRARIES>)
+
 target_include_directories(caf-io-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 
 caf_add_test_suites(caf-io-test

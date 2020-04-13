@@ -181,6 +181,10 @@ endif()
 
 target_link_libraries(libcaf_core PUBLIC Threads::Threads)
 
+if(MSVC)
+  target_link_libraries(libcaf_io PUBLIC iphlpapi)
+endif()
+
 if(CAF_SANITIZERS)
   target_link_libraries(libcaf_core PUBLIC -fsanitize=${CAF_SANITIZERS})
 endif()
@@ -235,7 +239,7 @@ target_compile_definitions(caf-core-test PRIVATE libcaf_core_EXPORTS)
 target_link_libraries(caf-core-test PUBLIC CAF::test)
 
 target_link_libraries(caf-core-test PRIVATE
-  $<TARGET_PROPERTY:CAF::core,INTERFACE_LINK_LIBRARIES>)
+  $<TARGET_PROPERTY:libcaf_core,INTERFACE_LINK_LIBRARIES>)
 
 target_include_directories(caf-core-test PRIVATE
                            "${CMAKE_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
