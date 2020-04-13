@@ -99,10 +99,10 @@ config = [
         ],
         Windows: [
             debug: defaultDebugBuildFlags + [
-              'CAF_BUILD_OPENSSL_MODULE:BOOL=OFF',
+              'CAF_ENABLE_OPENSSL_MODULE:BOOL=OFF',
             ],
             release: defaultReleaseBuildFlags + [
-              'CAF_BUILD_OPENSSL_MODULE:BOOL=OFF',
+              'CAF_ENABLE_OPENSSL_MODULE:BOOL=OFF',
             ],
         ],
     ],
@@ -159,7 +159,7 @@ pipeline {
                         buildDir: 'build',
                         installation: 'cmake in search path',
                         sourceDir: '.',
-                        cmakeArgs: '-DCAF_BUILD_IO_MODULE:BOOL=OFF ' +
+                        cmakeArgs: '-DCAF_ENABLE_IO_MODULE:BOOL=OFF ' +
                                    '-DCAF_ENABLE_UTILITY_TARGETS:BOOL=ON',
                         steps: [[
                             args: '--target consistency-check',
