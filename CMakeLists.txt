@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2.3 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.4 FATAL_ERROR)
 project(CAF CXX)
 
 # -- includes ------------------------------------------------------------------
