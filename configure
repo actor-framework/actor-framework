@@ -110,7 +110,6 @@ set_build_flag() {
       exit 1
       ;;
   esac
-  echo "append_cache_entry $FlagName BOOL $2"
   append_cache_entry $FlagName BOOL $2
 }
 
@@ -125,10 +124,7 @@ while [ $# -ne 0 ]; do
     --*=*) optarg=`echo "$1" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
     --enable-*) optarg=`echo "$1" | sed 's/--enable-//'` ;;
     --disable-*) optarg=`echo "$1" | sed 's/--disable-//'` ;;
-    *)
-      echo "Invalid syntax '$1'.  Try $0 --help to see available options."
-      exit 1
-      ;;
+    *) ;;
   esac
   # Consume current input.
   case "$1" in

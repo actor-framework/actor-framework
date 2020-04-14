@@ -78,7 +78,7 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
 
 # -- build unit tests ----------------------------------------------------------
 
-if(NOT CAF_BUILD_TESTING)
+if(NOT CAF_ENABLE_TESTING)
   return()
 endif()
 

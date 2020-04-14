@@ -182,7 +182,7 @@ endif()
 target_link_libraries(libcaf_core PUBLIC Threads::Threads)
 
 if(MSVC)
-  target_link_libraries(libcaf_io PUBLIC iphlpapi)
+  target_link_libraries(libcaf_core PUBLIC iphlpapi)
 endif()
 
 if(CAF_SANITIZERS)
@@ -223,7 +223,7 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
 
 # -- build unit tests ----------------------------------------------------------
 
-if(NOT CAF_BUILD_TESTING)
+if(NOT CAF_ENABLE_TESTING)
   return()
 endif()
 

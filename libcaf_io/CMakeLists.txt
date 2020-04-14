@@ -112,7 +112,7 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
 
 # -- build unit tests ----------------------------------------------------------
 
-if(NOT CAF_BUILD_TESTING)
+if(NOT CAF_ENABLE_TESTING)
   return()
 endif()
 
@@ -124,9 +124,9 @@ target_include_directories(caf-io-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/test
 
 target_compile_definitions(caf-io-test PRIVATE libcaf_io_EXPORTS)
 
-target_link_libraries(caf-io-test CAF::core CAF::test)
+target_link_libraries(caf-io-test PRIVATE CAF::core CAF::test)
 
-target_link_libraries(caf-core-test PRIVATE
+target_link_libraries(caf-io-test PRIVATE
   $<TARGET_PROPERTY:libcaf_io,INTERFACE_LINK_LIBRARIES>)
 
 target_include_directories(caf-io-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
