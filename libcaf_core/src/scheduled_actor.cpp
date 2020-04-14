@@ -97,7 +97,7 @@ void scheduled_actor::default_exit_handler(scheduled_actor* ptr, exit_msg& x) {
     default_error_handler(ptr, x.reason);
 }
 
-#ifndef CAF_NO_EXCEPTIONS
+#ifdef CAF_ENABLE_EXCEPTIONS
 error scheduled_actor::default_exception_handler(pointer ptr,
                                                  std::exception_ptr& x) {
   CAF_ASSERT(x != nullptr);
@@ -115,7 +115,7 @@ error scheduled_actor::default_exception_handler(pointer ptr,
   }
   return sec::runtime_error;
 }
-#endif // CAF_NO_EXCEPTIONS
+#endif // CAF_ENABLE_EXCEPTIONS
 
 // -- constructors and destructors ---------------------------------------------
 
@@ -129,10 +129,10 @@ scheduled_actor::scheduled_actor(actor_config& cfg)
     node_down_handler_(default_node_down_handler),
     exit_handler_(default_exit_handler),
     private_thread_(nullptr)
-#ifndef CAF_NO_EXCEPTIONS
+#ifdef CAF_ENABLE_EXCEPTIONS
     ,
     exception_handler_(default_exception_handler)
-#endif // CAF_NO_EXCEPTIONS
+#endif // CAF_ENABLE_EXCEPTIONS
 {
   auto& sys_cfg = home_system().config();
   auto interval = sys_cfg.stream_tick_duration();
@@ -743,9 +743,9 @@ bool scheduled_actor::activate(execution_unit* ctx) {
     CAF_LOG_ERROR("activate called on a terminated actor");
     return false;
   }
-#ifndef CAF_NO_EXCEPTIONS
+#ifdef CAF_ENABLE_EXCEPTIONS
   try {
-#endif // CAF_NO_EXCEPTIONS
+#endif // CAF_ENABLE_EXCEPTIONS
     if (!getf(is_initialized_flag)) {
       initialize();
       if (finalize()) {
@@ -754,7 +754,7 @@ bool scheduled_actor::activate(execution_unit* ctx) {
       }
       CAF_LOG_DEBUG("initialized actor:" << CAF_ARG(name()));
     }
-#ifndef CAF_NO_EXCEPTIONS
+#ifdef CAF_ENABLE_EXCEPTIONS
   } catch (...) {
     CAF_LOG_ERROR("actor died during initialization");
     auto eptr = std::current_exception();
@@ -762,7 +762,7 @@ bool scheduled_actor::activate(execution_unit* ctx) {
     finalize();
     return false;
   }
-#endif // CAF_NO_EXCEPTIONS
+#endif // CAF_ENABLE_EXCEPTIONS
   return true;
 }
 
@@ -779,7 +779,7 @@ auto scheduled_actor::activate(execution_unit* ctx, mailbox_element& x)
 
 auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
   CAF_LOG_TRACE(CAF_ARG(x));
-#ifndef CAF_NO_EXCEPTIONS
+#ifdef CAF_ENABLE_EXCEPTIONS
   auto handle_exception = [&](std::exception_ptr eptr) {
     auto err = call_handler(exception_handler_, this, eptr);
     if (x.mid.is_request()) {
@@ -789,7 +789,7 @@ auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
     quit(std::move(err));
   };
   try {
-#endif // CAF_NO_EXCEPTIONS
+#endif // CAF_ENABLE_EXCEPTIONS
     switch (consume(x)) {
       case invoke_message_result::dropped:
         return activation_result::dropped;
@@ -803,7 +803,7 @@ auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
       case invoke_message_result::skipped:
         return activation_result::skipped;
     }
-#ifndef CAF_NO_EXCEPTIONS
+#ifdef CAF_ENABLE_EXCEPTIONS
   } catch (std::exception& e) {
     CAF_LOG_INFO("actor died because of an exception, what: " << e.what());
     static_cast<void>(e); // keep compiler happy when not logging
@@ -814,7 +814,7 @@ auto scheduled_actor::reactivate(mailbox_element& x) -> activation_result {
   }
   finalize();
   return activation_result::terminated;
-#endif // CAF_NO_EXCEPTIONS
+#endif // CAF_ENABLE_EXCEPTIONS
 }
 
 // -- behavior management ----------------------------------------------------

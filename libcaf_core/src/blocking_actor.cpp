@@ -107,7 +107,7 @@ void blocking_actor::launch(execution_unit*, bool, bool hide) {
       CAF_PUSH_AID_FROM_PTR(self);
       self->initialize();
       error rsn;
-#ifndef CAF_NO_EXCEPTIONS
+#ifdef CAF_ENABLE_EXCEPTIONS
       try {
         self->act();
         rsn = self->fail_state_;

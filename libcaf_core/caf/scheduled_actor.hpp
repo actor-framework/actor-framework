@@ -20,9 +20,9 @@
 
 #include "caf/config.hpp"
 
-#ifndef CAF_NO_EXCEPTIONS
+#ifdef CAF_ENABLE_EXCEPTIONS
 #  include <exception>
-#endif // CAF_NO_EXCEPTIONS
+#endif // CAF_ENABLE_EXCEPTIONS
 
 #include <forward_list>
 #include <map>
@@ -190,10 +190,10 @@ public:
   /// Function object for handling exit messages.
   using exit_handler = std::function<void(pointer, exit_msg&)>;
 
-#ifndef CAF_NO_EXCEPTIONS
+#ifdef CAF_ENABLE_EXCEPTIONS
   /// Function object for handling exit messages.
   using exception_handler = std::function<error(pointer, std::exception_ptr&)>;
-#endif // CAF_NO_EXCEPTIONS
+#endif // CAF_ENABLE_EXCEPTIONS
 
   /// Consumes messages from the mailbox.
   struct mailbox_visitor {
@@ -232,9 +232,9 @@ public:
 
   static void default_exit_handler(pointer ptr, exit_msg& x);
 
-#ifndef CAF_NO_EXCEPTIONS
+#ifdef CAF_ENABLE_EXCEPTIONS
   static error default_exception_handler(pointer ptr, std::exception_ptr& x);
-#endif // CAF_NO_EXCEPTIONS
+#endif // CAF_ENABLE_EXCEPTIONS
 
   // -- constructors and destructors -------------------------------------------
 
@@ -389,7 +389,7 @@ public:
     set_exit_handler([fun](scheduled_actor*, exit_msg& x) { fun(x); });
   }
 
-#ifndef CAF_NO_EXCEPTIONS
+#ifdef CAF_ENABLE_EXCEPTIONS
   /// Sets a custom exception handler for this actor. If multiple handlers are
   /// defined, only the functor that was added *last* is being executed.
   inline void set_exception_handler(exception_handler fun) {
@@ -408,7 +408,7 @@ public:
     set_exception_handler(
       [f](scheduled_actor*, std::exception_ptr& x) { return f(x); });
   }
-#endif // CAF_NO_EXCEPTIONS
+#endif // CAF_ENABLE_EXCEPTIONS
 
   /// @cond PRIVATE
 
@@ -703,10 +703,10 @@ protected:
   /// Pointer to a private thread object associated with a detached actor.
   detail::private_thread* private_thread_;
 
-#ifndef CAF_NO_EXCEPTIONS
+#ifdef CAF_ENABLE_EXCEPTIONS
   /// Customization point for setting a default exception callback.
   exception_handler exception_handler_;
-#endif // CAF_NO_EXCEPTIONS
+#endif // CAF_ENABLE_EXCEPTIONS
 
   /// @endcond
 };

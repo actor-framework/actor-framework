@@ -104,7 +104,7 @@ public:
     self_->set_exit_handler(std::forward<Fun>(fun));
   }
 
-#ifndef CAF_NO_EXCEPTIONS
+#ifdef CAF_ENABLE_EXCEPTIONS
 
   /// @copydoc scheduled_actor::set_exception_handler
   template <class Fun>
@@ -112,7 +112,7 @@ public:
     self_->set_exception_handler(std::forward<Fun>(fun));
   }
 
-#endif // CAF_NO_EXCEPTIONS
+#endif // CAF_ENABLE_EXCEPTIONS
 
   // -- linking and monitoring -------------------------------------------------
 
