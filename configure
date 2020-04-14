@@ -22,6 +22,10 @@ General CMake options:
   --cxx-flags=STRING        set CMAKE_CXX_FLAGS when running CMake
   --prefix=PATH             set installation directory
 
+Locating packages in non-standard locations:
+
+  --openssl-root-dir=PATH   set root directory of an OpenSSL installation
+
 Debugging options:
 
     --log-level=STRING      build with debugging output, possible values:
@@ -56,6 +60,7 @@ Flags (use --enable-<name> to activate and --disable-<name> to deactivate):
   actor-profiler            enable experimental proiler API [OFF]
   examples                  build small programs showcasing CAF features [ON]
   io-module                 build networking I/O module [ON]
+  openssl-module            build OpenSSL module [ON]
   testing                   build unit test suites [ON]
   tools                     build utility programs such as caf-run [ON]
   with-exceptions           build CAF with support for exceptions [ON]
@@ -79,7 +84,7 @@ append_cache_entry() {
       CMakeCacheEntries="$CMakeCacheEntries -D \"$1:$2=$3\""
       ;;
     *)
-      # string contains whitespace
+      # string contains no whitespace
       CMakeCacheEntries="$CMakeCacheEntries -D $1:$2=$3"
       ;;
   esac
@@ -102,9 +107,10 @@ set_build_flag() {
     actor-profiler)          FlagName='CAF_ENABLE_ACTOR_PROFILER' ;;
     examples)                FlagName='CAF_ENABLE_EXAMPLES' ;;
     io-module)               FlagName='CAF_ENABLE_IO_MODULE' ;;
+    openssl-module)          FlagName='CAF_ENABLE_OPENSSL_MODULE' ;;
     testing)                 FlagName='CAF_ENABLE_TESTING' ;;
     tools)                   FlagName='CAF_ENABLE_TOOLS' ;;
-    with-exceptions)         FlagName='CAF_ENABLE_WITH_EXCEPTIONS' ;;
+    exceptions)              FlagName='CAF_ENABLE_EXCEPTIONS' ;;
     *)
       echo "Invalid flag '$1'.  Try $0 --help to see available options."
       exit 1
@@ -171,6 +177,9 @@ while [ $# -ne 0 ]; do
       ;;
     --disable-*)
       set_build_flag $optarg OFF
+      ;;
+    --openssl-root-dir=*)
+      append_cache_entry OPENSSL_ROOT_DIR PATH "$optarg"
       ;;
     *)
       echo "Invalid option '$1'. Try $0 --help to see available options."

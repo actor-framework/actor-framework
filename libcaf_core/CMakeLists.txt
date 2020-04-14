@@ -245,6 +245,7 @@ target_include_directories(caf-core-test PRIVATE
                            "${CMAKE_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
 
 caf_add_test_suites(caf-core-test
+  $<$<BOOL:CAF_ENABLE_EXCEPTIONS>:custom_exception_handler>
   actor_clock
   actor_factory
   actor_lifetime
@@ -269,7 +270,6 @@ caf_add_test_suites(caf-core-test
   constructor_attach
   continuous_streaming
   cow_tuple
-  custom_exception_handler
   decorator.sequencer
   deep_to_string
   detached_actors

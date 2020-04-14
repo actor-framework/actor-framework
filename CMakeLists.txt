@@ -29,7 +29,7 @@ option(CAF_ENABLE_EXAMPLES "Build small programs showcasing CAF features" ON)
 option(CAF_ENABLE_IO_MODULE "Build networking I/O module" ON)
 option(CAF_ENABLE_TESTING "Build unit test suites" ON)
 option(CAF_ENABLE_TOOLS "Build utility programs such as caf-run" ON)
-option(CAF_ENABLE_WITH_EXCEPTIONS "Build CAF with support for exceptions" ON)
+option(CAF_ENABLE_EXCEPTIONS "Build CAF with support for exceptions" ON)
 
 # -- CAF options that depend on others -----------------------------------------
 
@@ -40,7 +40,7 @@ cmake_dependent_option(CAF_ENABLE_OPENSSL_MODULE "Build OpenSSL module" ON
 
 set(CAF_LOG_LEVEL "QUIET" CACHE STRING "Set log verbosity of CAF components")
 set(CAF_SANITIZERS "" CACHE STRING
-    "comma separated sanitizers, e.g., 'address,undefined'")
+    "Comma separated sanitizers, e.g., 'address,undefined'")
 set(CAF_INSTALL_CMAKEDIR
     "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/CAF" CACHE STRING
     "Path for installing CMake files, enables 'find_package(CAF)'")
@@ -61,18 +61,18 @@ if(CAF_ENABLE_OPENSSL_MODULE AND NOT CAF_ENABLE_IO_MODULE)
   message(FATAL_ERROR "Invalid options: cannot build OpenSSL without I/O")
 endif()
 
-# TODO: use `if (CAF_LOG_LEVEL IN_LIST ...)` when switching to CMake ≥ 3.3
-if(NOT ";QUIET;ERROR;WARNING;INFO;DEBUG;TRACE;" MATCHES ";${CAF_LOG_LEVEL};")
+set(CAF_VALID_LOG_LEVELS QUIET ERROR WARNING INFO DEBUG TRACE)
+if(NOT CAF_LOG_LEVEL IN_LIST CAF_VALID_LOG_LEVELS)
   message(FATAL_ERROR "Invalid log level: \"${CAF_LOG_LEVEL}\"")
 endif()
 
 # -- compiler setup ------------------------------------------------------------
 
 if(MSVC)
-  # disable 4275 and 4251 (warnings regarding C++ classes at ABI boundaries)
+  # Disable 4275 and 4251 (warnings regarding C++ classes at ABI boundaries).
   add_compile_options(/wd4275 /wd4251)
   if(CAF_SANITIZERS)
-    message(FATAL_ERROR "sanitizer builds are currently not supported on MSVC")
+    message(FATAL_ERROR "Sanitizer builds are currently not supported on MSVC")
   endif()
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang"
        OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
