@@ -28,13 +28,13 @@ Locating packages in non-standard locations:
 
 Debugging options:
 
-    --log-level=STRING      build with debugging output, possible values:
-                              - ERROR
-                              - WARNING
-                              - INFO
-                              - DEBUG
-                              - TRACE
-    --sanitizers=STRING     build with this list of sanitizers enabled
+  --log-level=STRING      build with debugging output, possible values:
+                            - ERROR
+                            - WARNING
+                            - INFO
+                            - DEBUG
+                            - TRACE
+  --sanitizers=STRING     build with this list of sanitizers enabled
 
 Convenience options:
 

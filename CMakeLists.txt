@@ -194,21 +194,24 @@ endif()
 
 # -- get CAF version -----------------------------------------------------------
 
-# get line containing the version from config.hpp and extract version number
+# Get line containing the version from config.hpp and extract version number.
 file(READ "libcaf_core/caf/config.hpp" CAF_CONFIG_HPP)
 string(REGEX MATCH "#define CAF_VERSION [0-9]+" CAF_VERSION_LINE "${CAF_CONFIG_HPP}")
 string(REGEX MATCH "[0-9]+" CAF_VERSION_INT "${CAF_VERSION_LINE}")
-# calculate major, minor, and patch version
+# Calculate major, minor, and patch version.
 math(EXPR CAF_VERSION_MAJOR "${CAF_VERSION_INT} / 10000")
 math(EXPR CAF_VERSION_MINOR "( ${CAF_VERSION_INT} / 100) % 100")
 math(EXPR CAF_VERSION_PATCH "${CAF_VERSION_INT} % 100")
-# create full version string
-set(CAF_VERSION "${CAF_VERSION_MAJOR}.${CAF_VERSION_MINOR}.${CAF_VERSION_PATCH}")
-# set the library version for our shared library targets
+# Create full version string.
+set(CAF_VERSION "${CAF_VERSION_MAJOR}.${CAF_VERSION_MINOR}.${CAF_VERSION_PATCH}"
+  CACHE INTERNAL "The full CAF version string")
+# Set the library version for our shared library targets.
 if(CMAKE_HOST_SYSTEM_NAME MATCHES "OpenBSD")
-  set(CAF_LIB_VERSION "${CAF_VERSION_MAJOR}.${CAF_VERSION_MINOR}")
+  set(CAF_LIB_VERSION "${CAF_VERSION_MAJOR}.${CAF_VERSION_MINOR}"
+      CACHE INTERNAL "The version string used for shared library objects")
 else()
-  set(CAF_LIB_VERSION "${CAF_VERSION}")
+  set(CAF_LIB_VERSION "${CAF_VERSION}"
+      CACHE INTERNAL "The version string used for shared library objects")
 endif()
 
 # -- generate build config header ----------------------------------------------
