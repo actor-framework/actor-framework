@@ -245,7 +245,6 @@ target_include_directories(caf-core-test PRIVATE
                            "${CMAKE_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
 
 caf_add_test_suites(caf-core-test
-  $<$<BOOL:CAF_ENABLE_EXCEPTIONS>:custom_exception_handler>
   actor_clock
   actor_factory
   actor_lifetime
@@ -359,3 +358,7 @@ caf_add_test_suites(caf-core-test
   uuid
   variant
 )
+
+if(CAF_ENABLE_EXCEPTIONS)
+  caf_add_test_suites(caf-core-test custom_exception_handler)
+endif()
