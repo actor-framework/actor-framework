@@ -4,18 +4,34 @@ file(GLOB_RECURSE CAF_NET_HEADERS "caf/*.hpp")
 
 # -- add consistency checks for enum to_string implementations -----------------
 
-add_enum_consistency_check("caf/net/basp/connection_state.hpp"
-                           "src/basp/connection_state_strings.cpp")
-add_enum_consistency_check("caf/net/basp/ec.hpp"
-                           "src/basp/ec_strings.cpp")
-add_enum_consistency_check("caf/net/basp/message_type.hpp"
-                           "src/basp/message_type_strings.cpp")
-add_enum_consistency_check("caf/net/operation.hpp"
-                           "src/basp/operation_strings.cpp")
+caf_incubator_add_enum_consistency_check("caf/net/basp/connection_state.hpp"
+                                         "src/basp/connection_state_strings.cpp")
+caf_incubator_add_enum_consistency_check("caf/net/basp/ec.hpp"
+                                         "src/basp/ec_strings.cpp")
+caf_incubator_add_enum_consistency_check("caf/net/basp/message_type.hpp"
+                                         "src/basp/message_type_strings.cpp")
+caf_incubator_add_enum_consistency_check("caf/net/operation.hpp"
+                                         "src/basp/operation_strings.cpp")
 
-# -- list cpp files for caf::net -----------------------------------------------
+# -- collect shared flags in a helper target -----------------------------------
 
-set(CAF_NET_SOURCES
+add_library(libcaf_net_helper INTERFACE)
+
+target_include_directories(libcaf_net_helper INTERFACE
+                           "${CMAKE_CURRENT_SOURCE_DIR}"
+                           "${CMAKE_BINARY_DIR}")
+
+if(BUILD_SHARED_LIBS AND NOT WIN32)
+  target_compile_options(libcaf_net_helper INTERFACE -fPIC)
+endif()
+
+target_link_libraries(libcaf_net_helper INTERFACE CAF::core)
+
+target_compile_definitions(libcaf_net_helper INTERFACE libcaf_net_EXPORTS)
+
+# -- add library targets -------------------------------------------------------
+
+add_library(libcaf_net_obj OBJECT ${CAF_NET_HEADERS}
   src/actor_proxy_impl.cpp
   src/application.cpp
   src/basp/connection_state_strings.cpp
@@ -49,59 +65,23 @@ set(CAF_NET_SOURCES
   src/worker.cpp
 )
 
-# -- list cpp files for caf-net-test ------------------------------------------
-
-set(CAF_NET_TEST_SOURCES
-  test/net/basp/message_queue.cpp
-  test/net/basp/ping_pong.cpp
-  test/net/basp/worker.cpp
-  test/accept_socket.cpp
-  test/pipe_socket.cpp
-  test/application.cpp
-  test/socket.cpp
-  test/convert_ip_endpoint.cpp
-  test/socket_guard.cpp
-  test/datagram_socket.cpp
-  test/stream_application.cpp
-  test/datagram_transport.cpp
-  test/stream_socket.cpp
-  test/doorman.cpp
-  test/stream_transport.cpp
-  test/endpoint_manager.cpp
-  test/string_application.cpp
-  test/header.cpp
-  test/tcp_sockets.cpp
-  test/ip.cpp
-  test/transport_worker.cpp
-  test/multiplexer.cpp
-  test/transport_worker_dispatcher.cpp
-  test/udp_datagram_socket.cpp
-  test/network_socket.cpp
-)
-
-# -- add library target --------------------------------------------------------
-
-add_library(libcaf_net_obj OBJECT ${CAF_NET_SOURCES} ${CAF_NET_HEADERS})
-
-add_library(libcaf_net
-            "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
+add_library(libcaf_net "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
             $<TARGET_OBJECTS:libcaf_net_obj>)
-
-add_library(caf::net ALIAS libcaf_net)
-
-if(BUILD_SHARED_LIBS AND NOT WIN32)
-  target_compile_options(libcaf_net PRIVATE -fPIC)
-  target_compile_options(libcaf_net_obj PRIVATE -fPIC)
-endif()
-
-target_link_libraries(libcaf_net PUBLIC ${CAF_EXTRA_LDFLAGS} ${CAF_LIBRARIES})
 
 generate_export_header(libcaf_net
                        EXPORT_MACRO_NAME CAF_NET_EXPORT
-                       EXPORT_FILE_NAME "${CMAKE_BINARY_DIR}/caf/detail/net_export.hpp"
-                       STATIC_DEFINE CAF_STATIC_BUILD)
+                       EXPORT_FILE_NAME "${CMAKE_BINARY_DIR}/caf/detail/net_export.hpp")
 
-target_compile_definitions(libcaf_net_obj PRIVATE libcaf_net_EXPORTS)
+target_link_libraries(libcaf_net_obj PRIVATE libcaf_net_helper)
+
+target_link_libraries(libcaf_net PRIVATE libcaf_net_helper)
+
+target_link_libraries(libcaf_net INTERFACE CAF::core)
+
+target_include_directories(libcaf_net INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+
+add_library(CAF::net ALIAS libcaf_net)
 
 set_target_properties(libcaf_net PROPERTIES
                       EXPORT_NAME net
@@ -117,8 +97,8 @@ install(FILES "${CMAKE_BINARY_DIR}/caf/detail/net_export.hpp"
 install(TARGETS libcaf_net
         EXPORT CAFTargets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT net
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT net
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT net)
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT net
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT net)
 
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
@@ -127,22 +107,45 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
 
 # -- build unit tests ----------------------------------------------------------
 
-if(NOT CAF_NO_UNIT_TESTS)
-  add_executable(caf-net-test
-                 "${PROJECT_SOURCE_DIR}/cmake/incubator-test.cpp"
-                 "${CAF_INCLUDE_DIR_TEST}/caf/test/unit_test.hpp"
-                 "${CAF_INCLUDE_DIR_TEST}/caf/test/unit_test_impl.hpp"
-                 ${CAF_NET_TEST_SOURCES}
-                 $<TARGET_OBJECTS:libcaf_net_obj>)
-  target_compile_definitions(caf-net-test PRIVATE libcaf_net_EXPORTS)
-  target_link_libraries(caf-net-test ${CAF_EXTRA_LDFLAGS} ${CAF_LIBRARIES})
-  add_test_suites(caf-net-test
-                  "${CMAKE_CURRENT_SOURCE_DIR}"
-                  ${CAF_NET_TEST_SOURCES})
+if(NOT CAF_INC_ENABLE_TESTING)
+  return()
 endif()
 
-# -- add this library to the global CAF_LIBRARIES ------------------------------
+add_executable(caf-net-test
+               test/net-test.cpp
+               $<TARGET_OBJECTS:libcaf_net_obj>)
 
-list(APPEND CAF_LIBRARIES libcaf_net)
+target_include_directories(caf-net-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/test")
 
-set(CAF_LIBRARIES ${CAF_LIBRARIES} PARENT_SCOPE)
+target_compile_definitions(caf-net-test PRIVATE libcaf_net_EXPORTS)
+
+target_link_libraries(caf-net-test PRIVATE
+                      libcaf_net_helper CAF::core CAF::test)
+
+caf_incubator_add_test_suites(caf-net-test
+  net.basp.message_queue
+  net.basp.ping_pong
+  net.basp.worker
+  accept_socket
+  pipe_socket
+  application
+  socket
+  convert_ip_endpoint
+  socket_guard
+  datagram_socket
+  stream_application
+  datagram_transport
+  stream_socket
+  doorman
+  stream_transport
+  endpoint_manager
+  string_application
+  header
+  tcp_sockets
+  ip
+  transport_worker
+  multiplexer
+  transport_worker_dispatcher
+  udp_datagram_socket
+  network_socket
+)

@@ -19,6 +19,7 @@
 #define CAF_SUITE net.basp.ping_pong
 
 #include "caf/net/test/host_fixture.hpp"
+
 #include "caf/test/dsl.hpp"
 
 #include "caf/net/backend/test.hpp"
@@ -123,7 +124,7 @@ behavior ping_actor(event_based_actor* self, actor pong, size_t num_pings,
         CAF_MESSAGE("received " << num_pings << " pings, call self->quit");
         self->quit();
       }
-      return std::make_tuple(ping_atom_v, value + 1);
+      return caf::make_result(ping_atom_v, value + 1);
     },
   };
 }
@@ -142,9 +143,9 @@ behavior pong_actor(event_based_actor* self) {
       self->monitor(self->current_sender());
       // set next behavior
       self->become(
-        [](ping_atom, int val) { return std::make_tuple(pong_atom_v, val); });
+        [](ping_atom, int val) { return caf::make_result(pong_atom_v, val); });
       // reply to 'ping'
-      return std::make_tuple(pong_atom_v, value);
+      return caf::make_result(pong_atom_v, value);
     },
   };
 }

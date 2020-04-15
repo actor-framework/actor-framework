@@ -38,6 +38,10 @@ public:
 
   using middleman_backend_list = std::vector<middleman_backend_ptr>;
 
+  // -- static utility functions -----------------------------------------------
+
+  static void init_global_meta_objects();
+
   // -- constructors, destructors, and assignment operators --------------------
 
   ~middleman() override;
