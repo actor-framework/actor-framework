@@ -20,7 +20,7 @@
 
 #include "caf/config.hpp"
 
-#ifndef CAF_NO_EXCEPTIONS
+#ifdef CAF_ENABLE_EXCEPTIONS
 #  include <stdexcept>
 #endif
 
@@ -33,17 +33,7 @@ CAF_CORE_EXPORT void log_cstring_error(const char* cstring);
 
 } // namespace caf::detail
 
-#ifdef CAF_NO_EXCEPTIONS
-
-#  define CAF_RAISE_ERROR_IMPL_1(msg)                                          \
-    do {                                                                       \
-      ::caf::detail::log_cstring_error(msg);                                   \
-      CAF_CRITICAL(msg);                                                       \
-    } while (false)
-
-#  define CAF_RAISE_ERROR_IMPL_2(unused, msg) CAF_RAISE_ERROR_IMPL_1(msg)
-
-#else // CAF_NO_EXCEPTIONS
+#ifdef CAF_ENABLE_EXCEPTIONS
 
 #  define CAF_RAISE_ERROR_IMPL_2(exception_type, msg)                          \
     do {                                                                       \
@@ -54,11 +44,21 @@ CAF_CORE_EXPORT void log_cstring_error(const char* cstring);
 #  define CAF_RAISE_ERROR_IMPL_1(msg)                                          \
     CAF_RAISE_ERROR_IMPL_2(std::runtime_error, msg)
 
-#endif // CAF_NO_EXCEPTIONS
+#else // CAF_ENABLE_EXCEPTIONS
+
+#  define CAF_RAISE_ERROR_IMPL_1(msg)                                          \
+    do {                                                                       \
+      ::caf::detail::log_cstring_error(msg);                                   \
+      CAF_CRITICAL(msg);                                                       \
+    } while (false)
+
+#  define CAF_RAISE_ERROR_IMPL_2(unused, msg) CAF_RAISE_ERROR_IMPL_1(msg)
+
+#endif // CAF_ENABLE_EXCEPTIONS
 
 #ifdef CAF_MSVC
 
-/// Throws an exception if `CAF_NO_EXCEPTIONS` is undefined, otherwise calls
+/// Throws an exception if `CAF_ENABLE_EXCEPTIONS` is defined, otherwise calls
 /// abort() after printing a given message.
 #  define CAF_RAISE_ERROR(...)                                                 \
     CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_RAISE_ERROR_IMPL_,                          \
@@ -67,7 +67,7 @@ CAF_CORE_EXPORT void log_cstring_error(const char* cstring);
 
 #else // CAF_MSVC
 
-/// Throws an exception if `CAF_NO_EXCEPTIONS` is undefined, otherwise calls
+/// Throws an exception if `CAF_ENABLE_EXCEPTIONS` is defined, otherwise calls
 /// abort() after printing a given message.
 #  define CAF_RAISE_ERROR(...)                                                 \
     CAF_PP_OVERLOAD(CAF_RAISE_ERROR_IMPL_, __VA_ARGS__)(__VA_ARGS__)

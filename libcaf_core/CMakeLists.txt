@@ -19,9 +19,9 @@ add_enum_consistency_check("caf/intrusive/inbox_result.hpp"
 add_enum_consistency_check("caf/intrusive/task_result.hpp"
                            "src/intrusive/task_result_strings.cpp")
 
-# -- list cpp files for libcaf_core --------------------------------------------
+# -- add library target --------------------------------------------------------
 
-set(CAF_CORE_SOURCES
+add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/abstract_actor.cpp
   src/abstract_channel.cpp
   src/abstract_group.cpp
@@ -154,140 +154,42 @@ set(CAF_CORE_SOURCES
   src/uuid.cpp
 )
 
-# -- list cpp files for caf-core-test ------------------------------------------
+target_include_directories(libcaf_core_obj PRIVATE
+                           "${CMAKE_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
 
-set(CAF_CORE_TEST_SOURCES
-  test/actor_clock.cpp
-  test/actor_factory.cpp
-  test/actor_lifetime.cpp
-  test/actor_pool.cpp
-  test/actor_profiler.cpp
-  test/actor_registry.cpp
-  test/actor_system_config.cpp
-  test/actor_termination.cpp
-  test/aout.cpp
-  test/behavior.cpp
-  test/binary_deserializer.cpp
-  test/binary_serializer.cpp
-  test/blocking_actor.cpp
-  test/broadcast_downstream_manager.cpp
-  test/byte.cpp
-  test/composition.cpp
-  test/config_option.cpp
-  test/config_option_set.cpp
-  test/config_value.cpp
-  test/config_value_adaptor.cpp
-  test/const_typed_message_view.cpp
-  test/constructor_attach.cpp
-  test/continuous_streaming.cpp
-  test/cow_tuple.cpp
-  test/custom_exception_handler.cpp
-  test/decorator/sequencer.cpp
-  test/deep_to_string.cpp
-  test/detached_actors.cpp
-  test/detail/bounds_checker.cpp
-  test/detail/ini_consumer.cpp
-  test/detail/limited_vector.cpp
-  test/detail/meta_object.cpp
-  test/detail/parse.cpp
-  test/detail/parser/read_bool.cpp
-  test/detail/parser/read_floating_point.cpp
-  test/detail/parser/read_ini.cpp
-  test/detail/parser/read_number.cpp
-  test/detail/parser/read_number_or_timespan.cpp
-  test/detail/parser/read_signed_integer.cpp
-  test/detail/parser/read_string.cpp
-  test/detail/parser/read_timespan.cpp
-  test/detail/parser/read_unsigned_integer.cpp
-  test/detail/ringbuffer.cpp
-  test/detail/ripemd_160.cpp
-  test/detail/serialized_size.cpp
-  test/detail/tick_emitter.cpp
-  test/detail/type_id_list_builder.cpp
-  test/detail/unique_function.cpp
-  test/detail/unordered_flat_map.cpp
-  test/dictionary.cpp
-  test/dynamic_spawn.cpp
-  test/error.cpp
-  test/expected.cpp
-  test/function_view.cpp
-  test/fused_downstream_manager.cpp
-  test/handles.cpp
-  test/hash/fnv.cpp
-  test/inspector.cpp
-  test/intrusive/drr_cached_queue.cpp
-  test/intrusive/drr_queue.cpp
-  test/intrusive/fifo_inbox.cpp
-  test/intrusive/lifo_inbox.cpp
-  test/intrusive/task_queue.cpp
-  test/intrusive/wdrr_dynamic_multiplexed_queue.cpp
-  test/intrusive/wdrr_fixed_multiplexed_queue.cpp
-  test/intrusive_ptr.cpp
-  test/ipv4_address.cpp
-  test/ipv4_endpoint.cpp
-  test/ipv4_subnet.cpp
-  test/ipv6_address.cpp
-  test/ipv6_endpoint.cpp
-  test/ipv6_subnet.cpp
-  test/local_group.cpp
-  test/logger.cpp
-  test/mailbox_element.cpp
-  test/make_config_value_field.cpp
-  test/message.cpp
-  test/message_id.cpp
-  test/message_lifetime.cpp
-  test/metaprogramming.cpp
-  test/mixin/requester.cpp
-  test/mixin/sender.cpp
-  test/mock_streaming_classes.cpp
-  test/native_streaming_classes.cpp
-  test/node_id.cpp
-  test/optional.cpp
-  test/or_else.cpp
-  test/pipeline_streaming.cpp
-  test/policy/categorized.cpp
-  test/policy/select_all.cpp
-  test/policy/select_any.cpp
-  test/request_timeout.cpp
-  test/result.cpp
-  test/selective_streaming.cpp
-  test/serialization.cpp
-  test/settings.cpp
-  test/simple_timeout.cpp
-  test/span.cpp
-  test/stateful_actor.cpp
-  test/string_algorithms.cpp
-  test/string_view.cpp
-  test/sum_type.cpp
-  test/thread_hook.cpp
-  test/tracing_data.cpp
-  test/type_id_list.cpp
-  test/typed_behavior.cpp
-  test/typed_message_view.cpp
-  test/typed_response_promise.cpp
-  test/typed_spawn.cpp
-  test/unit.cpp
-  test/uri.cpp
-  test/uuid.cpp
-  test/variant.cpp
-)
-
-# -- add library target --------------------------------------------------------
-
-add_library(libcaf_core_obj OBJECT ${CAF_CORE_SOURCES} ${CAF_CORE_HEADERS})
-
-add_library(libcaf_core
-            "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
+add_library(libcaf_core "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
             $<TARGET_OBJECTS:libcaf_core_obj>)
 
-add_library(caf::core ALIAS libcaf_core)
+target_include_directories(libcaf_core INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+
+target_include_directories(libcaf_core INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
+
+add_library(CAF::core ALIAS libcaf_core)
+
+# -- dependencies and compiler flags -------------------------------------------
 
 if(BUILD_SHARED_LIBS AND NOT WIN32)
   target_compile_options(libcaf_core PRIVATE -fPIC)
   target_compile_options(libcaf_core_obj PRIVATE -fPIC)
 endif()
 
-target_link_libraries(libcaf_core PUBLIC ${CAF_EXTRA_LDFLAGS})
+if(NOT TARGET Threads::Threads)
+  find_package(Threads REQUIRED)
+endif()
+
+target_link_libraries(libcaf_core PUBLIC Threads::Threads)
+
+if(MSVC)
+  target_link_libraries(libcaf_core PUBLIC iphlpapi)
+endif()
+
+if(CAF_SANITIZERS)
+  target_link_libraries(libcaf_core PUBLIC -fsanitize=${CAF_SANITIZERS})
+endif()
+
+# -- API exports ---------------------------------------------------------------
 
 generate_export_header(libcaf_core
                        EXPORT_MACRO_NAME CAF_CORE_EXPORT
@@ -321,21 +223,142 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
 
 # -- build unit tests ----------------------------------------------------------
 
-if(NOT CAF_NO_UNIT_TESTS)
-  add_executable(caf-core-test
-                 test/core-test.cpp
-                 ${CAF_CORE_TEST_SOURCES}
-                 $<TARGET_OBJECTS:libcaf_core_obj>)
-  target_include_directories(caf-core-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/test")
-  target_compile_definitions(caf-core-test PRIVATE libcaf_core_EXPORTS)
-  target_link_libraries(caf-core-test ${CAF_EXTRA_LDFLAGS})
-  add_test_suites(caf-core-test
-                  "${CMAKE_CURRENT_SOURCE_DIR}"
-                  ${CAF_CORE_TEST_SOURCES})
+if(NOT CAF_ENABLE_TESTING)
+  return()
 endif()
 
-# -- add this library to the global CAF_LIBRARIES ------------------------------
+add_executable(caf-core-test
+  test/core-test.cpp
+  $<TARGET_OBJECTS:libcaf_core_obj>)
 
-list(APPEND CAF_LIBRARIES libcaf_core)
+target_include_directories(caf-core-test PRIVATE
+                           "${CMAKE_CURRENT_SOURCE_DIR}/test")
 
-set(CAF_LIBRARIES ${CAF_LIBRARIES} PARENT_SCOPE)
+target_compile_definitions(caf-core-test PRIVATE libcaf_core_EXPORTS)
+
+target_link_libraries(caf-core-test PUBLIC CAF::test)
+
+target_link_libraries(caf-core-test PRIVATE
+  $<TARGET_PROPERTY:libcaf_core,INTERFACE_LINK_LIBRARIES>)
+
+target_include_directories(caf-core-test PRIVATE
+                           "${CMAKE_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
+
+caf_add_test_suites(caf-core-test
+  actor_clock
+  actor_factory
+  actor_lifetime
+  actor_pool
+  actor_profiler
+  actor_registry
+  actor_system_config
+  actor_termination
+  aout
+  behavior
+  binary_deserializer
+  binary_serializer
+  blocking_actor
+  broadcast_downstream_manager
+  byte
+  composition
+  config_option
+  config_option_set
+  config_value
+  config_value_adaptor
+  const_typed_message_view
+  constructor_attach
+  continuous_streaming
+  cow_tuple
+  decorator.sequencer
+  deep_to_string
+  detached_actors
+  detail.bounds_checker
+  detail.ini_consumer
+  detail.limited_vector
+  detail.meta_object
+  detail.parse
+  detail.parser.read_bool
+  detail.parser.read_floating_point
+  detail.parser.read_ini
+  detail.parser.read_number
+  detail.parser.read_number_or_timespan
+  detail.parser.read_signed_integer
+  detail.parser.read_string
+  detail.parser.read_timespan
+  detail.parser.read_unsigned_integer
+  detail.ringbuffer
+  detail.ripemd_160
+  detail.serialized_size
+  detail.tick_emitter
+  detail.type_id_list_builder
+  detail.unique_function
+  detail.unordered_flat_map
+  dictionary
+  dynamic_spawn
+  error
+  expected
+  function_view
+  fused_downstream_manager
+  handles
+  hash.fnv
+  inspector
+  intrusive.drr_cached_queue
+  intrusive.drr_queue
+  intrusive.fifo_inbox
+  intrusive.lifo_inbox
+  intrusive.task_queue
+  intrusive.wdrr_dynamic_multiplexed_queue
+  intrusive.wdrr_fixed_multiplexed_queue
+  intrusive_ptr
+  ipv4_address
+  ipv4_endpoint
+  ipv4_subnet
+  ipv6_address
+  ipv6_endpoint
+  ipv6_subnet
+  local_group
+  logger
+  mailbox_element
+  make_config_value_field
+  message
+  message_id
+  message_lifetime
+  metaprogramming
+  mixin.requester
+  mixin.sender
+  mock_streaming_classes
+  native_streaming_classes
+  node_id
+  optional
+  or_else
+  pipeline_streaming
+  policy.categorized
+  policy.select_all
+  policy.select_any
+  request_timeout
+  result
+  selective_streaming
+  serialization
+  settings
+  simple_timeout
+  span
+  stateful_actor
+  string_algorithms
+  string_view
+  sum_type
+  thread_hook
+  tracing_data
+  type_id_list
+  typed_behavior
+  typed_message_view
+  typed_response_promise
+  typed_spawn
+  unit
+  uri
+  uuid
+  variant
+)
+
+if(CAF_ENABLE_EXCEPTIONS)
+  caf_add_test_suites(caf-core-test custom_exception_handler)
+endif()
