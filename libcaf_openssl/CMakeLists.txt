@@ -16,8 +16,8 @@ function(caf_openssl_set_default_properties)
     caf_set_default_properties(${target})
     target_compile_definitions(${target} PRIVATE libcaf_openssl_EXPORTS)
     # Pull in public dependencies.
-    target_link_libraries(${target} PUBLIC
-                          CAF::core CAF::io OpenSSL::SSL OpenSSL::Crypto)
+    caf_target_link_libraries(${target} PUBLIC
+                              CAF::core CAF::io OpenSSL::SSL OpenSSL::Crypto)
   endforeach()
 endfunction()
 
@@ -30,8 +30,6 @@ add_library(libcaf_openssl_obj OBJECT ${CAF_OPENSSL_HEADERS}
   src/openssl/remote_actor.cpp
   src/openssl/session.cpp
 )
-
-set_property(TARGET libcaf_openssl_obj PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_library(libcaf_openssl
             "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"

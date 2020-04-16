@@ -33,9 +33,9 @@ function(caf_core_set_default_properties)
     caf_set_default_properties(${target})
     target_compile_definitions(${target} PRIVATE libcaf_core_EXPORTS)
     # Pull in public dependencies.
-    target_link_libraries(${target} PUBLIC Threads::Threads)
+    caf_target_link_libraries(${target} PUBLIC Threads::Threads)
     if(MSVC)
-      target_link_libraries(${target} PUBLIC iphlpapi)
+      caf_target_link_libraries(${target} PUBLIC iphlpapi)
     endif()
   endforeach()
 endfunction()
@@ -174,8 +174,6 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/uri_builder.cpp
   src/uuid.cpp
 )
-
-set_property(TARGET libcaf_core_obj PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_library(libcaf_core "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
             $<TARGET_OBJECTS:libcaf_core_obj>)

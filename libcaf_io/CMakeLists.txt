@@ -18,9 +18,9 @@ function(caf_io_set_default_properties)
     caf_set_default_properties(${target})
     target_compile_definitions(${target} PRIVATE libcaf_io_EXPORTS)
     # Pull in public dependencies.
-    target_link_libraries(${target} PUBLIC CAF::core)
+    caf_target_link_libraries(${target} PUBLIC CAF::core)
     if(MSVC)
-      target_link_libraries(${target} PUBLIC ws2_32 iphlpapi)
+      caf_target_link_libraries(${target} PUBLIC ws2_32 iphlpapi)
     endif()
   endforeach()
 endfunction()
@@ -69,8 +69,6 @@ add_library(libcaf_io_obj OBJECT ${CAF_IO_HEADERS}
   src/policy/tcp.cpp
   src/policy/udp.cpp
 )
-
-set_property(TARGET libcaf_io_obj PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_library(libcaf_io
             "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
