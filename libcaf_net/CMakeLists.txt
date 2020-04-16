@@ -17,17 +17,17 @@ caf_incubator_add_enum_consistency_check("caf/net/operation.hpp"
 
 function(caf_net_set_default_properties)
   foreach(target ${ARGN})
+    caf_incubator_set_default_properties(${target})
     # Make sure we find our headers plus the the generated export header.
     target_include_directories(${target} PRIVATE
                                "${CMAKE_CURRENT_SOURCE_DIR}"
                                "${CMAKE_BINARY_DIR}")
     target_compile_definitions(${target} PRIVATE libcaf_net_EXPORTS)
-    # Force -fPIC on UNIX systems.
-    if(BUILD_SHARED_LIBS AND UNIX)
-      target_compile_options(${target} PRIVATE -fPIC)
-    endif()
     # Pull in public dependencies.
     target_link_libraries(${target} PUBLIC CAF::core)
+    if(MSVC)
+      target_link_libraries(${target} PUBLIC ws2_32 iphlpapi)
+    endif()
   endforeach()
 endfunction()
 
@@ -73,6 +73,8 @@ add_library(libcaf_net "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
 generate_export_header(libcaf_net
                        EXPORT_MACRO_NAME CAF_NET_EXPORT
                        EXPORT_FILE_NAME "${CMAKE_BINARY_DIR}/caf/detail/net_export.hpp")
+
+set_property(TARGET PROPERTY libcaf_net_obj POSITION_INDEPENDENT_CODE ON)
 
 caf_net_set_default_properties(libcaf_net_obj libcaf_net)
 
