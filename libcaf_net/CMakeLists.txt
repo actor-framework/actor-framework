@@ -74,7 +74,7 @@ generate_export_header(libcaf_net
                        EXPORT_MACRO_NAME CAF_NET_EXPORT
                        EXPORT_FILE_NAME "${CMAKE_BINARY_DIR}/caf/detail/net_export.hpp")
 
-set_property(TARGET PROPERTY libcaf_net_obj POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET libcaf_net_obj PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 caf_net_set_default_properties(libcaf_net_obj libcaf_net)
 
