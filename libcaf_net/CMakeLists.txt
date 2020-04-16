@@ -13,21 +13,23 @@ caf_incubator_add_enum_consistency_check("caf/net/basp/message_type.hpp"
 caf_incubator_add_enum_consistency_check("caf/net/operation.hpp"
                                          "src/basp/operation_strings.cpp")
 
-# -- collect shared flags in a helper target -----------------------------------
+# -- utility function for setting default properties ---------------------------
 
-add_library(libcaf_net_helper INTERFACE)
-
-target_include_directories(libcaf_net_helper INTERFACE
-                           "${CMAKE_CURRENT_SOURCE_DIR}"
-                           "${CMAKE_BINARY_DIR}")
-
-if(BUILD_SHARED_LIBS AND NOT WIN32)
-  target_compile_options(libcaf_net_helper INTERFACE -fPIC)
-endif()
-
-target_link_libraries(libcaf_net_helper INTERFACE CAF::core)
-
-target_compile_definitions(libcaf_net_helper INTERFACE libcaf_net_EXPORTS)
+function(caf_net_set_default_properties)
+  foreach(target ${ARGN})
+    # Make sure we find our headers plus the the generated export header.
+    target_include_directories(${target} PRIVATE
+                               "${CMAKE_CURRENT_SOURCE_DIR}"
+                               "${CMAKE_BINARY_DIR}")
+    target_compile_definitions(${target} PRIVATE libcaf_net_EXPORTS)
+    # Force -fPIC on UNIX systems.
+    if(BUILD_SHARED_LIBS AND UNIX)
+      target_compile_options(${target} PRIVATE -fPIC)
+    endif()
+    # Pull in public dependencies.
+    target_link_libraries(${target} PUBLIC CAF::core)
+  endforeach()
+endfunction()
 
 # -- add library targets -------------------------------------------------------
 
@@ -72,11 +74,7 @@ generate_export_header(libcaf_net
                        EXPORT_MACRO_NAME CAF_NET_EXPORT
                        EXPORT_FILE_NAME "${CMAKE_BINARY_DIR}/caf/detail/net_export.hpp")
 
-target_link_libraries(libcaf_net_obj PRIVATE libcaf_net_helper)
-
-target_link_libraries(libcaf_net PRIVATE libcaf_net_helper)
-
-target_link_libraries(libcaf_net INTERFACE CAF::core)
+caf_net_set_default_properties(libcaf_net_obj libcaf_net)
 
 target_include_directories(libcaf_net INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
@@ -115,12 +113,11 @@ add_executable(caf-net-test
                test/net-test.cpp
                $<TARGET_OBJECTS:libcaf_net_obj>)
 
+caf_net_set_default_properties(caf-net-test)
+
 target_include_directories(caf-net-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/test")
 
-target_compile_definitions(caf-net-test PRIVATE libcaf_net_EXPORTS)
-
-target_link_libraries(caf-net-test PRIVATE
-                      libcaf_net_helper CAF::core CAF::test)
+target_link_libraries(caf-net-test PRIVATE CAF::test)
 
 caf_incubator_add_test_suites(caf-net-test
   net.basp.message_queue
