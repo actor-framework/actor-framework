@@ -4,11 +4,26 @@ file(GLOB_RECURSE CAF_IO_HEADERS "caf/*.hpp")
 
 # -- add consistency checks for enum to_string implementations -----------------
 
-add_enum_consistency_check("caf/io/basp/message_type.hpp"
-                           "src/io/basp/message_type_strings.cpp")
+caf_add_enum_consistency_check("caf/io/basp/message_type.hpp"
+                               "src/io/basp/message_type_strings.cpp")
 
-add_enum_consistency_check("caf/io/network/operation.hpp"
-                           "src/io/network/operation_strings.cpp")
+caf_add_enum_consistency_check("caf/io/network/operation.hpp"
+                               "src/io/network/operation_strings.cpp")
+
+# -- utility function for setting default properties ---------------------------
+
+function(caf_io_set_default_properties)
+  foreach(target ${ARGN})
+    # Set global defaults and set EXPORTS flag.
+    caf_set_default_properties(${target})
+    target_compile_definitions(${target} PRIVATE libcaf_io_EXPORTS)
+    # Pull in public dependencies.
+    target_link_libraries(${target} PUBLIC CAF::core)
+    if(MSVC)
+      target_link_libraries(${target} PUBLIC ws2_32 iphlpapi)
+    endif()
+  endforeach()
+endfunction()
 
 # -- add library target --------------------------------------------------------
 
@@ -55,60 +70,15 @@ add_library(libcaf_io_obj OBJECT ${CAF_IO_HEADERS}
   src/policy/udp.cpp
 )
 
-target_include_directories(libcaf_io_obj PRIVATE
-                           "${CMAKE_CURRENT_SOURCE_DIR}")
+set_property(TARGET libcaf_io_obj PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_library(libcaf_io
             "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
             $<TARGET_OBJECTS:libcaf_io_obj>)
 
-target_include_directories(libcaf_io INTERFACE
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+caf_io_set_default_properties(libcaf_io_obj libcaf_io)
 
-add_library(CAF::io ALIAS libcaf_io)
-
-if(BUILD_SHARED_LIBS AND NOT WIN32)
-  target_compile_options(libcaf_io PRIVATE -fPIC)
-  target_compile_options(libcaf_io_obj PRIVATE -fPIC)
-endif()
-
-target_include_directories(libcaf_io_obj PRIVATE
-  $<TARGET_PROPERTY:libcaf_core,INTERFACE_INCLUDE_DIRECTORIES>)
-
-target_link_libraries(libcaf_io PUBLIC CAF::core)
-
-if(MSVC)
-  target_link_libraries(libcaf_io PUBLIC ws2_32 iphlpapi)
-endif()
-
-generate_export_header(libcaf_io
-                       EXPORT_MACRO_NAME CAF_IO_EXPORT
-                       EXPORT_FILE_NAME "${CMAKE_BINARY_DIR}/caf/detail/io_export.hpp"
-                       STATIC_DEFINE CAF_STATIC_BUILD)
-
-target_compile_definitions(libcaf_io_obj PRIVATE libcaf_io_EXPORTS)
-
-set_target_properties(libcaf_io PROPERTIES
-                      EXPORT_NAME io
-                      SOVERSION ${CAF_VERSION}
-                      VERSION ${CAF_LIB_VERSION}
-                      OUTPUT_NAME caf_io)
-
-# -- install library and header files ------------------------------------------
-
-install(FILES "${CMAKE_BINARY_DIR}/caf/detail/io_export.hpp"
-        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail")
-
-install(TARGETS libcaf_io
-        EXPORT CAFTargets
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT io
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT io
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT io)
-
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-        COMPONENT io
-        FILES_MATCHING PATTERN "*.hpp")
+caf_export_and_install_lib(io)
 
 # -- build unit tests ----------------------------------------------------------
 
@@ -120,16 +90,11 @@ add_executable(caf-io-test
                test/io-test.cpp
                $<TARGET_OBJECTS:libcaf_io_obj>)
 
+caf_io_set_default_properties(caf-io-test)
+
 target_include_directories(caf-io-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/test")
 
-target_compile_definitions(caf-io-test PRIVATE libcaf_io_EXPORTS)
-
-target_link_libraries(caf-io-test PRIVATE CAF::core CAF::test)
-
-target_link_libraries(caf-io-test PRIVATE
-  $<TARGET_PROPERTY:libcaf_io,INTERFACE_LINK_LIBRARIES>)
-
-target_include_directories(caf-io-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(caf-io-test PRIVATE CAF::test)
 
 caf_add_test_suites(caf-io-test
   io.basp.message_queue
