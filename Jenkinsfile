@@ -5,13 +5,12 @@
 // Default CMake flags for release builds.
 defaultReleaseBuildFlags = [
     'CAF_ENABLE_RUNTIME_CHECKS:BOOL=ON',
+    'CAF_ENABLE_ACTOR_PROFILER:BOOL=ON',
 ]
 
 // Default CMake flags for debug builds.
 defaultDebugBuildFlags = defaultReleaseBuildFlags + [
-    'CAF_SANITIZERS:STRING=address,undefined',
     'CAF_LOG_LEVEL:STRING=TRACE',
-    'CAF_ENABLE_ACTOR_PROFILER:BOOL=ON',
 ]
 
 // Configures the behavior of our stages.
@@ -31,10 +30,12 @@ config = [
         ['centos-6', [
             builds: ['debug', 'release'],
             tools: ['gcc-7'],
+            extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
         ]],
         ['centos-7', [
             builds: ['debug', 'release'],
             tools: ['gcc-7'],
+            extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
         ]],
         ['ubuntu-16.04', [
             builds: ['debug', 'release'],
@@ -59,10 +60,16 @@ config = [
         ['macOS', [
             builds: ['debug', 'release'],
             tools: ['clang'],
+            extraFlags: [
+                'OPENSSL_ROOT_DIR=/usr/local/opt/openssl',
+                'OPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include',
+            ],
+            extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
         ]],
         ['FreeBSD', [
             builds: ['debug', 'release'],
             tools: ['clang'],
+            extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
         ]],
         // Non-UNIX systems.
         ['Windows', [
@@ -70,6 +77,7 @@ config = [
             //builds: ['debug', 'release'],
             builds: ['release'],
             tools: ['msvc'],
+            extraFlags: ['CAF_ENABLE_OPENSSL_MODULE:BOOL=OFF'],
         ]],
     ],
     // Platform-specific environment settings.
@@ -83,24 +91,12 @@ config = [
     ],
     // CMake flags by OS and build type to override defaults for individual builds.
     buildFlags: [
-        macOS: [
-            debug: defaultDebugBuildFlags + [
-                'OPENSSL_ROOT_DIR=/usr/local/opt/openssl',
-                'OPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include',
-            ],
-            release: defaultReleaseBuildFlags + [
-                'OPENSSL_ROOT_DIR=/usr/local/opt/openssl',
-                'OPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include',
-            ],
-        ],
-        Windows: [
-            debug: defaultDebugBuildFlags + [
-              'CAF_ENABLE_OPENSSL_MODULE:BOOL=OFF',
-            ],
-            release: defaultReleaseBuildFlags + [
-              'CAF_ENABLE_OPENSSL_MODULE:BOOL=OFF',
-            ],
-        ],
+        nop: [],
+    ],
+    // Default CMake flags by build type.
+    defaultBuildFlags: [
+        debug: defaultDebugBuildFlags,
+        release: defaultReleaseBuildFlags,
     ],
     // Configures what binary the coverage report uses and what paths to exclude.
     coverage: [
