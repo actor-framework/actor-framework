@@ -29,6 +29,10 @@
 
 namespace caf::net {
 
+void middleman::init_global_meta_objects() {
+  // nop
+}
+
 middleman::middleman(actor_system& sys) : sys_(sys) {
   mpx_ = std::make_shared<multiplexer>();
 }
