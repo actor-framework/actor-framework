@@ -18,6 +18,8 @@
 
 #include "caf/io/basp/instance.hpp"
 
+#include <algorithm>
+
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
@@ -41,8 +43,11 @@ instance::callee::~callee() {
 instance::instance(abstract_broker* parent, callee& lstnr)
   : tbl_(parent), this_node_(parent->system().node()), callee_(lstnr) {
   CAF_ASSERT(this_node_ != none);
-  auto workers
-    = get_or(config(), "middleman.workers", defaults::middleman::workers);
+  size_t workers;
+  if (auto workers_cfg = get_if<size_t>(&config(), "middleman.workers"))
+    workers = *workers_cfg;
+  else
+    workers = std::min(3u, std::thread::hardware_concurrency() / 4u) + 1;
   for (size_t i = 0; i < workers; ++i)
     hub_.add_new_worker(queue_, proxies());
 }
@@ -224,8 +229,12 @@ void instance::write_server_handshake(execution_unit* ctx, byte_buffer& out_buf,
   }
   CAF_LOG_DEBUG_IF(!pa && port, "no actor published");
   auto writer = make_callback([&](binary_serializer& sink) {
-    auto app_ids = get_or(config(), "middleman.app-identifiers",
-                          defaults::middleman::app_identifiers);
+    using string_list = std::vector<std::string>;
+    string_list app_ids;
+    if (auto ids = get_if<string_list>(&config(), "middleman.app-identifiers"))
+      app_ids = std::move(*ids);
+    else
+      app_ids.emplace_back(to_string(defaults::middleman::app_identifier));
     auto aid = invalid_actor_id;
     auto iface = std::set<std::string>{};
     if (pa != nullptr && pa->first != nullptr) {
@@ -300,10 +309,11 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
   // Dispatch by message type.
   switch (hdr.operation) {
     case message_type::server_handshake: {
+      using string_list = std::vector<std::string>;
       // Deserialize payload.
       binary_deserializer bd{ctx, *payload};
       node_id source_node;
-      std::vector<std::string> app_ids;
+      string_list app_ids;
       actor_id aid = invalid_actor_id;
       std::set<std::string> sigs;
       if (auto err = bd(source_node, app_ids, aid, sigs)) {
@@ -312,8 +322,13 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
         return serializing_basp_payload_failed;
       }
       // Check the application ID.
-      auto whitelist = get_or(config(), "middleman.app-identifiers",
-                              defaults::middleman::app_identifiers);
+      string_list whitelist;
+      if (auto lst = get_if<string_list>(&config(),
+                                         "middleman.app-identifiers")) {
+        whitelist = std::move(*lst);
+      } else {
+        whitelist.emplace_back(to_string(defaults::middleman::app_identifier));
+      }
       auto i = std::find_first_of(app_ids.begin(), app_ids.end(),
                                   whitelist.begin(), whitelist.end());
       if (i == app_ids.end()) {

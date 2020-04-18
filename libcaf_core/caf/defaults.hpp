@@ -20,77 +20,89 @@
 
 #include <chrono>
 #include <cstddef>
+#include <limits>
 #include <string>
 #include <vector>
 
-#include "caf/detail/core_export.hpp"
+#include "caf/detail/build_config.hpp"
+#include "caf/detail/log_level.hpp"
 #include "caf/string_view.hpp"
 #include "caf/timestamp.hpp"
 
 // -- hard-coded default values for various CAF options ------------------------
 
-namespace caf::defaults {
+namespace caf::defaults::stream {
 
-namespace stream {
+constexpr auto desired_batch_complexity = timespan{50'000};
+constexpr auto max_batch_delay = timespan{5'000'000};
+constexpr auto credit_round_interval = timespan{10'000'000};
+constexpr auto credit_policy = string_view{"complexity"};
 
-extern CAF_CORE_EXPORT const timespan desired_batch_complexity;
-extern CAF_CORE_EXPORT const timespan max_batch_delay;
-extern CAF_CORE_EXPORT const timespan credit_round_interval;
-extern CAF_CORE_EXPORT const string_view credit_policy;
+} // namespace caf::defaults::stream
 
-namespace size_policy {
+namespace caf::defaults::stream::size_policy {
 
-extern CAF_CORE_EXPORT const int32_t bytes_per_batch;
-extern CAF_CORE_EXPORT const int32_t buffer_capacity;
+constexpr auto bytes_per_batch = int32_t{02 * 1024}; //  2 KB
+constexpr auto buffer_capacity = int32_t{64 * 1024}; // 64 KB
 
-} // namespace size_policy
+} // namespace caf::defaults::stream::size_policy
 
-} // namespace stream
+namespace caf::defaults::scheduler {
 
-namespace scheduler {
+constexpr auto policy = string_view{"stealing"};
+constexpr auto profiling_output_file = string_view{""};
+constexpr auto max_throughput = std::numeric_limits<size_t>::max();
+constexpr auto profiling_resolution = timespan(100'000'000);
 
-extern CAF_CORE_EXPORT const string_view policy;
-extern CAF_CORE_EXPORT string_view profiling_output_file;
-extern CAF_CORE_EXPORT const size_t max_threads;
-extern CAF_CORE_EXPORT const size_t max_throughput;
-extern CAF_CORE_EXPORT const timespan profiling_resolution;
+} // namespace caf::defaults::scheduler
 
-} // namespace scheduler
+namespace caf::defaults::work_stealing {
 
-namespace work_stealing {
+constexpr auto aggressive_poll_attempts = size_t{100};
+constexpr auto aggressive_steal_interval = size_t{10};
+constexpr auto moderate_poll_attempts = size_t{500};
+constexpr auto moderate_steal_interval = size_t{5};
+constexpr auto moderate_sleep_duration = timespan{50'000};
+constexpr auto relaxed_steal_interval = size_t{1};
+constexpr auto relaxed_sleep_duration = timespan{10'000'000};
 
-extern CAF_CORE_EXPORT const size_t aggressive_poll_attempts;
-extern CAF_CORE_EXPORT const size_t aggressive_steal_interval;
-extern CAF_CORE_EXPORT const size_t moderate_poll_attempts;
-extern CAF_CORE_EXPORT const size_t moderate_steal_interval;
-extern CAF_CORE_EXPORT const timespan moderate_sleep_duration;
-extern CAF_CORE_EXPORT const size_t relaxed_steal_interval;
-extern CAF_CORE_EXPORT const timespan relaxed_sleep_duration;
+} // namespace caf::defaults::work_stealing
 
-} // namespace work_stealing
+namespace caf::defaults::logger {
 
-namespace logger {
+constexpr auto default_log_level = string_view {
+#if CAF_LOG_LEVEL == CAF_LOG_LEVEL_TRACE
+  "trace"
+#elif CAF_LOG_LEVEL == CAF_LOG_LEVEL_DEBUG
+  "debug"
+#elif CAF_LOG_LEVEL == CAF_LOG_LEVEL_INFO
+  "info"
+#elif CAF_LOG_LEVEL == CAF_LOG_LEVEL_WARNING
+  "warning"
+#elif CAF_LOG_LEVEL == CAF_LOG_LEVEL_ERROR
+  "error"
+#else
+  "quiet"
+#endif
+};
 
-extern CAF_CORE_EXPORT string_view component_filter;
-extern CAF_CORE_EXPORT const string_view console;
-extern CAF_CORE_EXPORT string_view console_format;
-extern CAF_CORE_EXPORT const string_view console_verbosity;
-extern CAF_CORE_EXPORT string_view file_format;
-extern CAF_CORE_EXPORT string_view file_name;
-extern CAF_CORE_EXPORT const string_view file_verbosity;
+constexpr auto component_filter = string_view{""};
+constexpr auto console = string_view{"none"};
+constexpr auto console_format = string_view{"%m"};
+constexpr auto console_verbosity = default_log_level;
+constexpr auto file_format = string_view{"%r %c %p %a %t %C %M %F:%L %m%n"};
+constexpr auto file_name = string_view{"actor_log_[TIMESTAMP]_[PID].log"};
+constexpr auto file_verbosity = default_log_level;
 
-} // namespace logger
+} // namespace caf::defaults::logger
 
-namespace middleman {
+namespace caf::defaults::middleman {
 
-extern CAF_CORE_EXPORT std::vector<std::string> app_identifiers;
-extern CAF_CORE_EXPORT const string_view network_backend;
-extern CAF_CORE_EXPORT const size_t max_consecutive_reads;
-extern CAF_CORE_EXPORT const size_t heartbeat_interval;
-extern CAF_CORE_EXPORT const size_t cached_udp_buffers;
-extern CAF_CORE_EXPORT const size_t max_pending_msgs;
-extern CAF_CORE_EXPORT const size_t workers;
+constexpr auto app_identifier = string_view{"generic-caf-app"};
+constexpr auto network_backend = string_view{"default"};
+constexpr auto max_consecutive_reads = size_t{50};
+constexpr auto heartbeat_interval = size_t{0};
+constexpr auto cached_udp_buffers = size_t{10};
+constexpr auto max_pending_msgs = size_t{10};
 
-} // namespace middleman
-
-} // namespace caf::defaults
+} // namespace caf::defaults::middleman

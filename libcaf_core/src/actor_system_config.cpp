@@ -160,7 +160,6 @@ settings actor_system_config::dump_content() const {
   // -- scheduler parameters
   auto& scheduler_group = result["scheduler"].as_dictionary();
   put_missing(scheduler_group, "policy", defaults::scheduler::policy);
-  put_missing(scheduler_group, "max-threads", defaults::scheduler::max_threads);
   put_missing(scheduler_group, "max-throughput",
               defaults::scheduler::max_throughput);
   put_missing(scheduler_group, "enable-profiling", false);
@@ -196,14 +195,14 @@ settings actor_system_config::dump_content() const {
   put_missing(logger_group, "inline-output", false);
   // -- middleman parameters
   auto& middleman_group = result["middleman"].as_dictionary();
+  auto default_id = to_string(defaults::middleman::app_identifier);
   put_missing(middleman_group, "app-identifiers",
-              defaults::middleman::app_identifiers);
+              std::vector<std::string>{std::move(default_id)});
   put_missing(middleman_group, "enable-automatic-connections", false);
   put_missing(middleman_group, "max-consecutive-reads",
               defaults::middleman::max_consecutive_reads);
   put_missing(middleman_group, "heartbeat-interval",
               defaults::middleman::heartbeat_interval);
-  put_missing(middleman_group, "workers", defaults::middleman::workers);
   // -- openssl parameters
   auto& openssl_group = result["openssl"].as_dictionary();
   put_missing(openssl_group, "certificate", std::string{});
