@@ -22,7 +22,7 @@ config = [
         'build',
         'style',
         'tests',
-        'coverage',
+        // 'coverage', TODO: fix kcov setup
     ],
     // Our build matrix. Keys are the operating system labels and values are build configurations.
     buildMatrix: [
@@ -49,7 +49,7 @@ config = [
         ['fedora-28', [
             builds: ['debug'],
             tools: ['gcc-8'],
-            extraSteps: ['coverageReport'],
+            // extraSteps: ['coverageReport'], TODO: fix kcov setup
             extraFlags: ['BUILD_SHARED_LIBS:BOOL=OFF'],
         ]],
         ['fedora-28', [
