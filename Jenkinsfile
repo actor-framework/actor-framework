@@ -1,6 +1,7 @@
 #!/usr/bin/env groovy
 
-node {
+/*
+node('master') {
     checkout scm
 
     docker.withServer('tcp://mobi7.inet.haw-hamburg.de:2376', '674e60ef-6985-48dd-a61c-353806cc7106 (certificate for docker on mobi3 v7 (docker plugin))') {
@@ -16,20 +17,16 @@ node {
         }
     }
 }
+*/
 
-/*
 pipeline {
-  agent {
-        agent {
-          // Equivalent to "docker build -f Dockerfile.build --build-arg version=1.0.2 ./build/
-          dockerfile {
-              filename 'caf-jenkins-fedora-30'
-              dir 'dockerfile'
-              label 'my-defined-label'
-              additionalBuildArgs  '--build-arg version=1.0.2'
-              args '-v /tmp:/tmp'
-          }
-      }
+    agent {
+        // Equivalent to "docker build -f Dockerfile.build --build-arg version=1.0.2 ./build/
+        dockerfile {
+            filename 'caf-jenkins-fedora-30'
+            dir 'dockerfile'
+            label 'docker'
+        }
     }
     stages {
         stage('Build') {
