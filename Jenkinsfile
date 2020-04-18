@@ -38,7 +38,6 @@ pipeline {
         }
     }
 }
-*/
 
 /*
 @Library('caf-continuous-integration') _
