@@ -46,14 +46,6 @@ RUN sed -ri 's/^session\s+required\s+pam_loginuid.so$/session optional pam_login
 # Create Jenkins User
 RUN useradd jenkins -m -s /bin/bash
 
-# Add public key for Jenkins login
-RUN mkdir /home/jenkins/.ssh
-COPY authorized_keys /home/jenkins/.ssh/authorized_keys
-RUN chown -R jenkins /home/jenkins
-RUN chgrp -R jenkins /home/jenkins
-RUN chmod 600 /home/jenkins/.ssh/authorized_keys
-RUN chmod 700 /home/jenkins/.ssh
-
 # Add the jenkins user to sudoers
 # RUN echo "jenkins  ALL=(ALL)  ALL" >> etc/sudoers
 
