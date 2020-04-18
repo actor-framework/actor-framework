@@ -27,11 +27,11 @@
 #define CAF_VARIANT_DATA_CONCAT(x, y) x##y
 
 #define CAF_VARIANT_DATA_GETTER(pos)                                           \
-  inline CAF_VARIANT_DATA_CONCAT(T, pos)                                       \
-    & get(std::integral_constant<int, pos>) {                                  \
+  CAF_VARIANT_DATA_CONCAT(T, pos)                                              \
+  &get(std::integral_constant<int, pos>) {                                     \
     return CAF_VARIANT_DATA_CONCAT(v, pos);                                    \
   }                                                                            \
-  inline const CAF_VARIANT_DATA_CONCAT(T, pos)                                 \
+  const CAF_VARIANT_DATA_CONCAT(T, pos)                                        \
     & get(std::integral_constant<int, pos>) const {                            \
     return CAF_VARIANT_DATA_CONCAT(v, pos);                                    \
   }

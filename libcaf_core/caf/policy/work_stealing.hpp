@@ -62,7 +62,7 @@ public:
 
   // The coordinator has only a counter for round-robin enqueue to its workers.
   struct coordinator_data {
-    inline explicit coordinator_data(scheduler::abstract_coordinator*)
+    explicit coordinator_data(scheduler::abstract_coordinator*)
       : next_worker(0) {
       // nop
     }

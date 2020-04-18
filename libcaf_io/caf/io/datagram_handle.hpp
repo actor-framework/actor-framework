@@ -60,7 +60,7 @@ public:
   }
 
 private:
-  inline datagram_handle(int64_t handle_id) : super{handle_id} {
+  datagram_handle(int64_t handle_id) : super{handle_id} {
     // nop
   }
 };

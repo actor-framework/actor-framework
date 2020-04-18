@@ -177,7 +177,7 @@ public:
   void flush(datagram_handle hdl);
 
   /// Returns the middleman instance this broker belongs to.
-  inline middleman& parent() {
+  middleman& parent() {
     return system().middleman();
   }
 
@@ -349,7 +349,7 @@ public:
   // -- observers --------------------------------------------------------------
 
   /// Returns the number of open connections.
-  inline size_t num_connections() const {
+  size_t num_connections() const {
     return scribes_.size();
   }
 
@@ -374,16 +374,16 @@ protected:
   /// @cond PRIVATE
 
   // meta programming utility
-  inline doorman_map& get_map(accept_handle) {
+  doorman_map& get_map(accept_handle) {
     return doormen_;
   }
 
   // meta programming utility
-  inline scribe_map& get_map(connection_handle) {
+  scribe_map& get_map(connection_handle) {
     return scribes_;
   }
 
-  inline datagram_servant_map& get_map(datagram_handle) {
+  datagram_servant_map& get_map(datagram_handle) {
     return datagram_servants_;
   }
   /// @endcond
@@ -399,7 +399,7 @@ protected:
   }
 
 private:
-  inline void launch_servant(scribe_ptr&) {
+  void launch_servant(scribe_ptr&) {
     // nop
   }
 

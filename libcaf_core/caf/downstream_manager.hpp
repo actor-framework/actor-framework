@@ -163,7 +163,7 @@ public:
   virtual void abort(error reason);
 
   /// Returns `num_paths() == 0`.
-  inline bool empty() const noexcept {
+  bool empty() const noexcept {
     return num_paths() == 0;
   }
 

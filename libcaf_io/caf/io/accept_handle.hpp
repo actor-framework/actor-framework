@@ -59,7 +59,7 @@ public:
   }
 
 private:
-  inline accept_handle(int64_t handle_id) : super(handle_id) {
+  accept_handle(int64_t handle_id) : super(handle_id) {
     // nop
   }
 };

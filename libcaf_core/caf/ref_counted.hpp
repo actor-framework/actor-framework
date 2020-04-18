@@ -39,7 +39,7 @@ public:
   ref_counted& operator=(const ref_counted&);
 
   /// Increases reference count by one.
-  inline void ref() const noexcept {
+  void ref() const noexcept {
     rc_.fetch_add(1, std::memory_order_relaxed);
   }
 
@@ -48,11 +48,11 @@ public:
   void deref() const noexcept;
 
   /// Queries whether there is exactly one reference.
-  inline bool unique() const noexcept {
+  bool unique() const noexcept {
     return rc_ == 1;
   }
 
-  inline size_t get_reference_count() const noexcept {
+  size_t get_reference_count() const noexcept {
     return rc_;
   }
 

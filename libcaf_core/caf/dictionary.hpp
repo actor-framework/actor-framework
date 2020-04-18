@@ -69,15 +69,15 @@ public:
   using iterator_bool_pair = std::pair<iterator, bool>;
 
   struct mapped_type_less {
-    inline bool operator()(const value_type& x, string_view y) const {
+    bool operator()(const value_type& x, string_view y) const {
       return x.first < y;
     }
 
-    inline bool operator()(const value_type& x, const value_type& y) const {
+    bool operator()(const value_type& x, const value_type& y) const {
       return x.first < y.first;
     }
 
-    inline bool operator()(string_view x, const value_type& y) const {
+    bool operator()(string_view x, const value_type& y) const {
       return x < y.first;
     }
   };
@@ -313,17 +313,17 @@ private:
   }
 
   template <size_t N>
-  static inline std::string copy(const char (&str)[N]) {
+  static std::string copy(const char (&str)[N]) {
     return std::string{str};
   }
 
   // Copies the content of `str` into a new string.
-  static inline std::string copy(string_view str) {
+  static std::string copy(string_view str) {
     return std::string{str.begin(), str.end()};
   }
 
   // Moves the content of `str` into a new string.
-  static inline std::string copy(std::string str) {
+  static std::string copy(std::string str) {
     return str;
   }
 

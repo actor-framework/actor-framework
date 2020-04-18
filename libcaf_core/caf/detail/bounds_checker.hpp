@@ -27,7 +27,7 @@ namespace caf::detail {
 template <class To, bool LargeUnsigned = sizeof(To) >= sizeof(int64_t)
                                          && std::is_unsigned<To>::value>
 struct bounds_checker {
-  static inline bool check(int64_t x) {
+  static constexpr bool check(int64_t x) noexcept {
     return x >= std::numeric_limits<To>::min()
            && x <= std::numeric_limits<To>::max();
   }
@@ -35,7 +35,7 @@ struct bounds_checker {
 
 template <class To>
 struct bounds_checker<To, true> {
-  static inline bool check(int64_t x) {
+  static constexpr bool check(int64_t x) noexcept {
     return x >= 0;
   }
 };

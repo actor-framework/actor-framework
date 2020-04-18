@@ -299,24 +299,24 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Returns the queue for storing incoming messages.
-  inline mailbox_type& mailbox() noexcept {
+  mailbox_type& mailbox() noexcept {
     return mailbox_;
   }
 
   /// Returns map for all active streams.
-  inline stream_manager_map& stream_managers() noexcept {
+  stream_manager_map& stream_managers() noexcept {
     return stream_managers_;
   }
 
   /// Returns map for all pending streams.
-  inline stream_manager_map& pending_stream_managers() noexcept {
+  stream_manager_map& pending_stream_managers() noexcept {
     return pending_stream_managers_;
   }
 
   // -- event handlers ---------------------------------------------------------
 
   /// Sets a custom handler for unexpected messages.
-  inline void set_default_handler(default_handler fun) {
+  void set_default_handler(default_handler fun) {
     if (fun)
       default_handler_ = std::move(fun);
     else
@@ -332,7 +332,7 @@ public:
   }
 
   /// Sets a custom handler for error messages.
-  inline void set_error_handler(error_handler fun) {
+  void set_error_handler(error_handler fun) {
     if (fun)
       error_handler_ = std::move(fun);
     else
@@ -346,7 +346,7 @@ public:
   }
 
   /// Sets a custom handler for down messages.
-  inline void set_down_handler(down_handler fun) {
+  void set_down_handler(down_handler fun) {
     if (fun)
       down_handler_ = std::move(fun);
     else
@@ -376,7 +376,7 @@ public:
   }
 
   /// Sets a custom handler for error messages.
-  inline void set_exit_handler(exit_handler fun) {
+  void set_exit_handler(exit_handler fun) {
     if (fun)
       exit_handler_ = std::move(fun);
     else
@@ -392,7 +392,7 @@ public:
 #ifdef CAF_ENABLE_EXCEPTIONS
   /// Sets a custom exception handler for this actor. If multiple handlers are
   /// defined, only the functor that was added *last* is being executed.
-  inline void set_exception_handler(exception_handler fun) {
+  void set_exception_handler(exception_handler fun) {
     if (fun)
       exception_handler_ = std::move(fun);
     else
@@ -461,11 +461,11 @@ public:
   // -- behavior management ----------------------------------------------------
 
   /// Returns `true` if the behavior stack is not empty.
-  inline bool has_behavior() const noexcept {
+  bool has_behavior() const noexcept {
     return !bhvr_stack_.empty();
   }
 
-  inline behavior& current_behavior() {
+  behavior& current_behavior() {
     return !awaited_responses_.empty() ? awaited_responses_.front().second
                                        : bhvr_stack_.back();
   }
@@ -479,7 +479,7 @@ public:
   bool finalize();
 
   /// Returns the behavior stack.
-  inline detail::behavior_stack& bhvr_stack() {
+  detail::behavior_stack& bhvr_stack() {
     return bhvr_stack_;
   }
 
@@ -643,7 +643,7 @@ public:
   /// Returns `true` if the actor has a behavior, awaits responses, or
   /// participates in streams.
   /// @private
-  inline bool alive() const noexcept {
+  bool alive() const noexcept {
     return !bhvr_stack_.empty() || !awaited_responses_.empty()
            || !multiplexed_responses_.empty() || !stream_managers_.empty()
            || !pending_stream_managers_.empty();

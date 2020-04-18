@@ -28,9 +28,8 @@ class delegated {
   // nop
 };
 
-
 template <class... Ts>
-inline bool operator==(const delegated<Ts...>&, const delegated<Ts...>&) {
+bool operator==(const delegated<Ts...>&, const delegated<Ts...>&) {
   return true;
 }
 

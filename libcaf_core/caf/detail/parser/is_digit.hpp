@@ -22,27 +22,18 @@ namespace caf::detail::parser {
 
 /// Returns whether `c` is a valid digit for a given base.
 template <int Base>
-bool is_digit(char c);
-
-template <>
-inline bool is_digit<2>(char c) {
-  return c == '0' || c == '1';
-}
-
-template <>
-inline bool is_digit<8>(char c) {
-  return c >= '0' && c <= '7';
-}
-
-template <>
-inline bool is_digit<10>(char c) {
-  return c >= '0' && c <= '9';
-}
-
-template <>
-inline bool is_digit<16>(char c) {
-  return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F')
-         || (c >= 'a' && c <= 'f');
+constexpr bool is_digit(char c) noexcept {
+  if constexpr (Base == 2) {
+    return c == '0' || c == '1';
+  } else if constexpr (Base == 8) {
+    return c >= '0' && c <= '7';
+  } else if constexpr (Base == 10) {
+    return c >= '0' && c <= '9';
+  } else {
+    static_assert(Base == 16);
+    return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F')
+           || (c >= 'a' && c <= 'f');
+  }
 }
 
 } // namespace caf::detail::parser

@@ -61,12 +61,12 @@ public:
   // -- observers --------------------------------------------------------------
 
   /// Returns the hosting actor system.
-  inline actor_system& system() const {
+  actor_system& system() const {
     return system_;
   }
 
   /// Returns the name of this module implementation.
-  inline const std::string& name() const {
+  const std::string& name() const {
     return name_;
   }
 

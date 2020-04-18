@@ -115,12 +115,12 @@ public:
                                const std::string& host, uint16_t port);
 
   /// Returns the enclosing actor system.
-  inline actor_system& system() {
+  actor_system& system() {
     return system_;
   }
 
   /// Returns the systemw-wide configuration.
-  inline const actor_system_config& config() const {
+  const actor_system_config& config() const {
     return system_.config();
   }
 

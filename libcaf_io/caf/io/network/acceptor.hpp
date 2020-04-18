@@ -42,7 +42,7 @@ public:
 
   /// Returns the accepted socket. This member function should
   /// be called only from the `new_connection` callback.
-  inline native_socket& accepted_socket() {
+  native_socket& accepted_socket() {
     return sock_;
   }
 

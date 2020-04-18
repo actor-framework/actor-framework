@@ -59,14 +59,14 @@ public:
   /// Returns the write buffer of this stream.
   /// @warning Must not be modified outside the IO multiplexers event loop
   ///          once the stream has been started.
-  inline byte_buffer& wr_buf() {
+  byte_buffer& wr_buf() {
     return wr_offline_buf_;
   }
 
   /// Returns the read buffer of this stream.
   /// @warning Must not be modified outside the IO multiplexers event loop
   ///          once the stream has been started.
-  inline byte_buffer& rd_buf() {
+  byte_buffer& rd_buf() {
     return rd_buf_;
   }
 

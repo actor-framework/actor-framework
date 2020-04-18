@@ -64,7 +64,7 @@ public:
     this->add_to_loop();
   }
 
-  inline optional<size_t> activity_tokens() const {
+  optional<size_t> activity_tokens() const {
     return activity_tokens_;
   }
 

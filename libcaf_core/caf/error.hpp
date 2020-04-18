@@ -132,12 +132,12 @@ public:
   const message& context() const noexcept;
 
   /// Returns `*this != none`.
-  inline explicit operator bool() const noexcept {
+  explicit operator bool() const noexcept {
     return data_ != nullptr;
   }
 
   /// Returns `*this == none`.
-  inline bool operator!() const noexcept {
+  bool operator!() const noexcept {
     return data_ == nullptr;
   }
 
@@ -158,7 +158,7 @@ public:
 
   /// @cond PRIVATE
 
-  static inline error eval() {
+  static error eval() {
     return none;
   }
 

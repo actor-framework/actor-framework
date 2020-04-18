@@ -65,12 +65,12 @@ public:
   // -- observers --------------------------------------------------------------
 
   /// Returns the parent module.
-  inline group_module& module() const {
+  group_module& module() const {
     return parent_;
   }
 
   /// Returns the hosting system.
-  inline actor_system& system() const {
+  actor_system& system() const {
     return system_;
   }
 

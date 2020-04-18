@@ -55,7 +55,7 @@ struct stream_slots : detail::comparable<stream_slots> {
     return {receiver, sender};
   }
 
-  inline long compare(stream_slots other) const noexcept {
+  long compare(stream_slots other) const noexcept {
     static_assert(sizeof(long) >= sizeof(int32_t),
                   "sizeof(long) < sizeof(int32_t)");
     long x = (sender << 16) | receiver;

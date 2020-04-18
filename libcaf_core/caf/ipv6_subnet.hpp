@@ -62,12 +62,12 @@ public:
   ipv4_subnet embedded_v4() const noexcept;
 
   /// Returns the network address for this subnet.
-  inline const ipv6_address& network_address() const noexcept {
+  const ipv6_address& network_address() const noexcept {
     return address_;
   }
 
   /// Returns the prefix length of the netmask.
-  inline uint8_t prefix_length() const noexcept {
+  uint8_t prefix_length() const noexcept {
     return prefix_length_;
   }
 

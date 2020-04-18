@@ -214,11 +214,11 @@ public:
 
   /// @cond PRIVATE
 
-  inline variant& get_data() {
+  variant& get_data() {
     return *this;
   }
 
-  inline const variant& get_data() const {
+  const variant& get_data() const {
     return *this;
   }
 
@@ -300,7 +300,7 @@ public:
   /// @endcond
 
 private:
-  inline void destroy_data() {
+  void destroy_data() {
     if (type_ == variant_npos) return; // nothing to do
     detail::variant_data_destructor f;
     apply<void>(f);

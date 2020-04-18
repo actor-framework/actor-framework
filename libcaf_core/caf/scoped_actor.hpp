@@ -50,30 +50,30 @@ public:
 
   ~scoped_actor();
 
-  inline explicit operator bool() const {
+  explicit operator bool() const {
     return static_cast<bool>(self_);
   }
 
-  inline actor_system& home_system() const {
+  actor_system& home_system() const {
     return *self_->home_system;
   }
 
-  inline blocking_actor* operator->() const {
+  blocking_actor* operator->() const {
     return ptr();
   }
 
-  inline blocking_actor& operator*() const {
+  blocking_actor& operator*() const {
     return *ptr();
   }
 
-  inline actor_addr address() const {
+  actor_addr address() const {
     return ptr()->address();
   }
 
   blocking_actor* ptr() const;
 
 private:
-  inline actor_control_block* get() const {
+  actor_control_block* get() const {
     return self_.get();
   }
 

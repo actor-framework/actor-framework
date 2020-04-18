@@ -102,13 +102,13 @@ public:
   };
 
   struct event_less {
-    inline bool operator()(native_socket lhs, const event& rhs) const {
+    bool operator()(native_socket lhs, const event& rhs) const noexcept {
       return lhs < rhs.fd;
     }
-    inline bool operator()(const event& lhs, native_socket rhs) const {
+    bool operator()(const event& lhs, native_socket rhs) const noexcept {
       return lhs.fd < rhs;
     }
-    inline bool operator()(const event& lhs, const event& rhs) const {
+    bool operator()(const event& lhs, const event& rhs) const noexcept {
       return lhs.fd < rhs.fd;
     }
   };

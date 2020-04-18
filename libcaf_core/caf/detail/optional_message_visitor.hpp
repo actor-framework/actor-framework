@@ -67,25 +67,25 @@ public:
 
   using opt_msg = optional<message>;
 
-  inline opt_msg operator()(const none_t&) const {
+  opt_msg operator()(const none_t&) const {
     return none;
   }
 
-  inline opt_msg operator()(const skip_t&) const {
+  opt_msg operator()(const skip_t&) const {
     return none;
   }
 
-  inline opt_msg operator()(const unit_t&) const {
+  opt_msg operator()(const unit_t&) const {
     return message{};
   }
 
-  inline opt_msg operator()(optional<skip_t>& val) const {
+  opt_msg operator()(optional<skip_t>& val) const {
     if (val)
       return none;
     return message{};
   }
 
-  inline opt_msg operator()(opt_msg& msg) {
+  opt_msg operator()(opt_msg& msg) {
     return msg;
   }
 

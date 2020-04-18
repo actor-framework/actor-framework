@@ -28,7 +28,7 @@ struct no_stages_t {
     // nop
   }
 
-  inline operator mailbox_element::forwarding_stack() const {
+  operator mailbox_element::forwarding_stack() const {
     return {};
   }
 };

@@ -48,11 +48,11 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  inline const map_type& paths() const {
+  const map_type& paths() const {
     return paths_;
   }
 
-  inline map_type& paths() {
+  map_type& paths() {
     return paths_;
   }
 

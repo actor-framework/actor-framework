@@ -54,7 +54,7 @@ constexpr actor_id invalid_actor_id = 0;
 class CAF_CORE_EXPORT abstract_actor : public abstract_channel {
 public:
   // allow placement new (only)
-  inline void* operator new(std::size_t, void* ptr) {
+  void* operator new(std::size_t, void* ptr) {
     return ptr;
   }
 
@@ -140,17 +140,17 @@ public:
   static constexpr int is_cleaned_up_flag = 0x1000;    // monitorable_actor
   static constexpr int is_shutting_down_flag = 0x2000; // scheduled_actor
 
-  inline void setf(int flag) {
+  void setf(int flag) {
     auto x = flags();
     flags(x | flag);
   }
 
-  inline void unsetf(int flag) {
+  void unsetf(int flag) {
     auto x = flags();
     flags(x & ~flag);
   }
 
-  inline bool getf(int flag) const {
+  bool getf(int flag) const {
     return (flags() & flag) != 0;
   }
 

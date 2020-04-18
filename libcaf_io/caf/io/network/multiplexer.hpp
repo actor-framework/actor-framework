@@ -154,11 +154,11 @@ public:
   /// compiled using the default backend.
   virtual multiplexer_backend* pimpl();
 
-  inline const std::thread::id& thread_id() const {
+  const std::thread::id& thread_id() const {
     return tid_;
   }
 
-  inline void thread_id(std::thread::id tid) {
+  void thread_id(std::thread::id tid) {
     tid_ = std::move(tid);
   }
 

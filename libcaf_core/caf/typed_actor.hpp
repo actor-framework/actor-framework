@@ -157,18 +157,18 @@ public:
     return *this;
   }
 
-  inline typed_actor& operator=(std::nullptr_t) {
+  typed_actor& operator=(std::nullptr_t) {
     ptr_.reset();
     return *this;
   }
 
   /// Queries whether this actor handle is valid.
-  inline explicit operator bool() const {
+  explicit operator bool() const {
     return static_cast<bool>(ptr_);
   }
 
   /// Queries whether this actor handle is invalid.
-  inline bool operator!() const {
+  bool operator!() const {
     return !ptr_;
   }
 
@@ -188,7 +188,7 @@ public:
   }
 
   /// Returns the hosting actor system.
-  inline actor_system& home_system() const noexcept {
+  actor_system& home_system() const noexcept {
     return *ptr_->home_system;
   }
 
@@ -227,11 +227,11 @@ public:
     // nop
   }
 
-  friend inline std::string to_string(const typed_actor& x) {
+  friend std::string to_string(const typed_actor& x) {
     return to_string(x.ptr_);
   }
 
-  friend inline void append_to_string(std::string& x, const typed_actor& y) {
+  friend void append_to_string(std::string& x, const typed_actor& y) {
     return append_to_string(x, y.ptr_);
   }
 

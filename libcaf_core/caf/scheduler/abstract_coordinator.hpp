@@ -44,29 +44,29 @@ public:
   explicit abstract_coordinator(actor_system& sys);
 
   /// Returns a handle to the central printing actor.
-  inline actor printer() const {
+  actor printer() const {
     return actor_cast<actor>(utility_actors_[printer_id]);
   }
 
   /// Returns the number of utility actors.
-  inline size_t num_utility_actors() const {
+  size_t num_utility_actors() const {
     return utility_actors_.size();
   }
 
   /// Puts `what` into the queue of a randomly chosen worker.
   virtual void enqueue(resumable* what) = 0;
 
-  inline actor_system& system() {
+  actor_system& system() {
     return system_;
   }
 
   const actor_system_config& config() const;
 
-  inline size_t max_throughput() const {
+  size_t max_throughput() const {
     return max_throughput_;
   }
 
-  inline size_t num_workers() const {
+  size_t num_workers() const {
     return num_workers_;
   }
 

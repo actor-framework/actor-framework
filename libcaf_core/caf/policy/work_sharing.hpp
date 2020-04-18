@@ -39,7 +39,7 @@ public:
   ~work_sharing() override;
 
   struct coordinator_data {
-    inline explicit coordinator_data(scheduler::abstract_coordinator*) {
+    explicit coordinator_data(scheduler::abstract_coordinator*) {
       // nop
     }
 
@@ -49,7 +49,7 @@ public:
   };
 
   struct worker_data {
-    inline explicit worker_data(scheduler::abstract_coordinator*) {
+    explicit worker_data(scheduler::abstract_coordinator*) {
       // nop
     }
   };

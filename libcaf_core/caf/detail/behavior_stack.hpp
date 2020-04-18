@@ -48,25 +48,25 @@ public:
 
   void clear();
 
-  inline bool empty() const {
+  bool empty() const {
     return elements_.empty();
   }
 
-  inline behavior& back() {
+  behavior& back() {
     CAF_ASSERT(!empty());
     return elements_.back();
   }
 
-  inline void push_back(behavior&& what) {
+  void push_back(behavior&& what) {
     elements_.emplace_back(std::move(what));
   }
 
   template <class... Ts>
-  inline void emplace_back(Ts&&... xs) {
+  void emplace_back(Ts&&... xs) {
     elements_.emplace_back(std::forward<Ts>(xs)...);
   }
 
-  inline void cleanup() {
+  void cleanup() {
     erased_elements_.clear();
   }
 

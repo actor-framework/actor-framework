@@ -45,7 +45,7 @@ public:
   abstract_broker* parent();
 
   /// Returns `true` if this manager has a parent, `false` otherwise.
-  inline bool detached() const {
+  bool detached() const {
     return !parent_;
   }
 

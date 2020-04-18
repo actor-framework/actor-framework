@@ -77,7 +77,7 @@ private:
 };
 
 struct nop_split {
-  inline void operator()(actor_msg_vec& xs, message& y) const {
+  void operator()(actor_msg_vec& xs, message& y) const {
     for (auto& x : xs) {
       x.second = y;
     }

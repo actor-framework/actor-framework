@@ -67,11 +67,11 @@ public:
 
   // -- Accessors --------------------------------------------------------------
 
-  inline Policy& policy() {
+  Policy& policy() {
     return policy_;
   }
 
-  inline const Policy& policy() const {
+  const Policy& policy() const {
     return policy_;
   }
 

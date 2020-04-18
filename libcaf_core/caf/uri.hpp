@@ -52,7 +52,7 @@ public:
     host_type host;
     uint16_t port;
 
-    inline authority_type() : port(0) {
+    authority_type() : port(0) {
       // nop
     }
 

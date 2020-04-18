@@ -68,7 +68,7 @@ template <class F, class Container>
 struct container_view {
   Container& x;
   using value_type = typename detail::get_callable_trait<F>::result_type;
-  inline size_t size() const {
+  size_t size() const noexcept {
     return x.size();
   }
   value_type operator[](size_t i) {

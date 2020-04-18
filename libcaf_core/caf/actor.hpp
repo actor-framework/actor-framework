@@ -91,12 +91,12 @@ public:
   actor& operator=(const scoped_actor& x);
 
   /// Queries whether this actor handle is valid.
-  inline explicit operator bool() const {
+  explicit operator bool() const {
     return static_cast<bool>(ptr_);
   }
 
   /// Queries whether this actor handle is invalid.
-  inline bool operator!() const {
+  bool operator!() const {
     return !ptr_;
   }
 
@@ -104,17 +104,17 @@ public:
   actor_addr address() const noexcept;
 
   /// Returns the ID of this actor.
-  inline actor_id id() const noexcept {
+  actor_id id() const noexcept {
     return ptr_->id();
   }
 
   /// Returns the origin node of this actor.
-  inline node_id node() const noexcept {
+  node_id node() const noexcept {
     return ptr_->node();
   }
 
   /// Returns the hosting actor system.
-  inline actor_system& home_system() const noexcept {
+  actor_system& home_system() const noexcept {
     return *ptr_->home_system;
   }
 
@@ -123,7 +123,7 @@ public:
 
   /// @cond PRIVATE
 
-  inline abstract_actor* operator->() const noexcept {
+  abstract_actor* operator->() const noexcept {
     CAF_ASSERT(ptr_);
     return ptr_->get();
   }
@@ -138,11 +138,11 @@ public:
 
   /// @endcond
 
-  friend inline std::string to_string(const actor& x) {
+  friend std::string to_string(const actor& x) {
     return to_string(x.ptr_);
   }
 
-  friend inline void append_to_string(std::string& x, const actor& y) {
+  friend void append_to_string(std::string& x, const actor& y) {
     return append_to_string(x, y.ptr_);
   }
 
@@ -158,11 +158,11 @@ public:
   }
 
 private:
-  inline actor_control_block* get() const noexcept {
+  actor_control_block* get() const noexcept {
     return ptr_.get();
   }
 
-  inline actor_control_block* release() noexcept {
+  actor_control_block* release() noexcept {
     return ptr_.release();
   }
 
@@ -192,7 +192,7 @@ CAF_CORE_EXPORT bool operator!=(abstract_actor* lhs, const actor& rhs);
 namespace std {
 template <>
 struct hash<caf::actor> {
-  inline size_t operator()(const caf::actor& ref) const {
+  size_t operator()(const caf::actor& ref) const noexcept {
     return static_cast<size_t>(ref ? ref->id() : 0);
   }
 };

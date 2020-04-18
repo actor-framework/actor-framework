@@ -62,7 +62,7 @@ public:
   void interval(duration_type x);
 
   /// Returns the time interval per tick.
-  inline duration_type interval() const {
+  duration_type interval() const {
     return interval_;
   }
 

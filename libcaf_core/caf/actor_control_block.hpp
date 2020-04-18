@@ -107,7 +107,7 @@ public:
                 "functiion pointer and regular pointers have different size");
 
   /// Returns a pointer to the actual actor instance.
-  inline abstract_actor* get() {
+  abstract_actor* get() {
     // this pointer arithmetic is compile-time checked in actor_storage's ctor
     return reinterpret_cast<abstract_actor*>(reinterpret_cast<intptr_t>(this)
                                              + CAF_CACHE_LINE_SIZE);
@@ -125,11 +125,11 @@ public:
 
   actor_addr address();
 
-  inline actor_id id() const noexcept {
+  actor_id id() const noexcept {
     return aid;
   }
 
-  inline const node_id& node() const noexcept {
+  const node_id& node() const noexcept {
     return nid;
   }
 
@@ -233,14 +233,14 @@ namespace std {
 
 template <>
 struct hash<caf::strong_actor_ptr> {
-  inline size_t operator()(const caf::strong_actor_ptr& ptr) const {
+  size_t operator()(const caf::strong_actor_ptr& ptr) const {
     return ptr ? static_cast<size_t>(ptr->id()) : 0;
   }
 };
 
 template <>
 struct hash<caf::weak_actor_ptr> {
-  inline size_t operator()(const caf::weak_actor_ptr& ptr) const {
+  size_t operator()(const caf::weak_actor_ptr& ptr) const {
     return ptr ? static_cast<size_t>(ptr->id()) : 0;
   }
 };

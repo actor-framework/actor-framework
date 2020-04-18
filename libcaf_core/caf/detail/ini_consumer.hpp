@@ -53,7 +53,7 @@ public:
     value_impl(config_value{std::forward<T>(x)});
   }
 
-  inline abstract_ini_consumer* parent() {
+  abstract_ini_consumer* parent() {
     return parent_;
   }
 

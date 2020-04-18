@@ -53,7 +53,7 @@ enum connection_state {
 
 /// Returns whether the connection state requries a shutdown of the socket
 /// connection.
-inline bool requires_shutdown(connection_state x) {
+constexpr bool requires_shutdown(connection_state x) noexcept {
   // Any enum value other than await_header (0) and await_payload (1) signal the
   // BASP broker to shutdown the connection.
   return static_cast<int>(x) > 1;
@@ -61,7 +61,7 @@ inline bool requires_shutdown(connection_state x) {
 
 /// Converts the connection state to a system error code if it holds one of the
 /// overlapping values. Otherwise returns `sec::none`.
-inline sec to_sec(connection_state x) {
+inline sec to_sec(connection_state x) noexcept {
   switch (x) {
     default:
       return sec::none;

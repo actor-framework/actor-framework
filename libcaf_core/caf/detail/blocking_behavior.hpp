@@ -111,7 +111,7 @@ struct make_blocking_behavior_t {
     // nop
   }
 
-  inline blocking_behavior operator()(behavior* x) const {
+  blocking_behavior operator()(behavior* x) const {
     CAF_ASSERT(x != nullptr);
     return {*x};
   }

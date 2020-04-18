@@ -29,15 +29,15 @@ struct any_char_t {};
 
 constexpr any_char_t any_char = any_char_t{};
 
-constexpr bool in_whitelist(any_char_t, char) {
+constexpr bool in_whitelist(any_char_t, char) noexcept {
   return true;
 }
 
-constexpr bool in_whitelist(char whitelist, char ch) {
+constexpr bool in_whitelist(char whitelist, char ch) noexcept {
   return whitelist == ch;
 }
 
-inline bool in_whitelist(const char* whitelist, char ch) {
+inline bool in_whitelist(const char* whitelist, char ch) noexcept {
   // Note: using strchr breaks if `ch == '\0'`.
   for (char c = *whitelist++; c != '\0'; c = *whitelist++)
     if (c == ch)
@@ -45,7 +45,7 @@ inline bool in_whitelist(const char* whitelist, char ch) {
   return false;
 }
 
-inline bool in_whitelist(bool (*filter)(char), char ch) {
+inline bool in_whitelist(bool (*filter)(char), char ch) noexcept {
   return filter(ch);
 }
 

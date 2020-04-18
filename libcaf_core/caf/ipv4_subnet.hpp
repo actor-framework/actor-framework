@@ -41,12 +41,12 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Returns the network address for this subnet.
-  inline const ipv4_address& network_address() const noexcept {
+  const ipv4_address& network_address() const noexcept {
     return address_;
   }
 
   /// Returns the prefix length of the netmask in bits.
-  inline uint8_t prefix_length() const noexcept {
+  uint8_t prefix_length() const noexcept {
     return prefix_length_;
   }
 

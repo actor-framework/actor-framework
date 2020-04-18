@@ -45,15 +45,15 @@ struct pseudo_tuple {
       data[i] = const_cast<void*>(xs.get(i));
   }
 
-  inline const_pointer at(size_t p) const {
+  const_pointer at(size_t p) const {
     return data[p];
   }
 
-  inline pointer get_mutable(size_t p) {
+  pointer get_mutable(size_t p) {
     return data[p];
   }
 
-  inline pointer& operator[](size_t p) {
+  pointer& operator[](size_t p) {
     return data[p];
   }
 };

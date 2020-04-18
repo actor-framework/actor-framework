@@ -262,22 +262,22 @@ public:
   void flush_runnables();
 
   /// Executes the next `num` enqueued runnables immediately.
-  inline void inline_next_runnables(size_t num) {
+  void inline_next_runnables(size_t num) {
     inline_runnables_ += num;
   }
 
   /// Executes the next enqueued runnable immediately.
-  inline void inline_next_runnable() {
+  void inline_next_runnable() {
     inline_next_runnables(1);
   }
 
   /// Resets the counter for the next inlined runnables.
-  inline void reset_inlining() {
+  void reset_inlining() {
     inline_runnables_ = 0;
   }
 
   /// Installs a callback that is triggered on the next inlined runnable.
-  inline void after_next_inlined_runnable(std::function<void()> f) {
+  void after_next_inlined_runnable(std::function<void()> f) {
     inline_runnable_callback_ = std::move(f);
   }
 

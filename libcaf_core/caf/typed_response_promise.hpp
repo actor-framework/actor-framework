@@ -33,8 +33,8 @@ public:
   /// Constructs an invalid response promise.
   typed_response_promise() = default;
 
-  inline typed_response_promise(strong_actor_ptr self, mailbox_element& src)
-      : promise_(std::move(self), src) {
+  typed_response_promise(strong_actor_ptr self, mailbox_element& src)
+    : promise_(std::move(self), src) {
     // nop
   }
 
@@ -44,16 +44,15 @@ public:
   typed_response_promise& operator=(const typed_response_promise&) = default;
 
   /// Implicitly convertible to untyped response promise.
-  inline operator response_promise& () {
+  operator response_promise&() {
     return promise_;
   }
 
   /// Satisfies the promise by sending a non-error response message.
   template <class U, class... Us>
-  typename std::enable_if<
-    (sizeof...(Us) > 0) || !std::is_convertible<U, error>::value,
-    typed_response_promise
-  >::type
+  typename std::enable_if<(sizeof...(Us) > 0)
+                            || !std::is_convertible<U, error>::value,
+                          typed_response_promise>::type
   deliver(U&& x, Us&&... xs) {
     static_assert(
       std::is_same<detail::type_list<Ts...>,
@@ -64,8 +63,8 @@ public:
     return *this;
   }
 
-  template <message_priority P = message_priority::normal,
-           class Handle = actor, class... Us>
+  template <message_priority P = message_priority::normal, class Handle = actor,
+            class... Us>
   typed_response_promise delegate(const Handle& dest, Us&&... xs) {
     promise_.template delegate<P>(dest, std::forward<Us>(xs)...);
     return *this;
@@ -73,13 +72,13 @@ public:
 
   /// Satisfies the promise by sending an error response message.
   /// For non-requests, nothing is done.
-  inline typed_response_promise deliver(error x) {
+  typed_response_promise deliver(error x) {
     promise_.deliver(std::move(x));
     return *this;
   }
 
   /// Queries whether this promise is a valid promise that is not satisfied yet.
-  inline bool pending() const {
+  bool pending() const {
     return promise_.pending();
   }
 
@@ -88,4 +87,3 @@ private:
 };
 
 } // namespace caf
-

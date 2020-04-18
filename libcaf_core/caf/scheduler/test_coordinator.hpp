@@ -47,7 +47,7 @@ public:
   std::deque<resumable*> jobs;
 
   /// Returns whether at least one job is in the queue.
-  inline bool has_job() const {
+  bool has_job() const {
     return !jobs.empty();
   }
 

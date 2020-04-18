@@ -34,7 +34,7 @@ namespace caf {
 
 // provide boost::split compatible interface
 
-inline string_view is_any_of(string_view arg) {
+constexpr string_view is_any_of(string_view arg) noexcept {
   return arg;
 }
 

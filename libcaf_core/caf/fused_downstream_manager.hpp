@@ -63,7 +63,7 @@ private:
 };
 
 struct downstream_manager_selector {
-  inline downstream_manager* operator()(const message&) {
+  downstream_manager* operator()(const message&) {
     return nullptr;
   }
 

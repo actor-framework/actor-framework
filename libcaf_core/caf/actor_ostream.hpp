@@ -66,12 +66,12 @@ public:
   static void redirect_all(actor_system& sys, std::string fn, int flags = 0);
 
   /// Writes `arg` to the buffer allocated for the calling actor.
-  inline actor_ostream& operator<<(const char* arg) {
+  actor_ostream& operator<<(const char* arg) {
     return write(arg);
   }
 
   /// Writes `arg` to the buffer allocated for the calling actor.
-  inline actor_ostream& operator<<(std::string arg) {
+  actor_ostream& operator<<(std::string arg) {
     return write(std::move(arg));
   }
 
@@ -79,12 +79,12 @@ public:
   /// calling either `std::to_string` or `caf::to_string` depending on
   /// the argument.
   template <class T>
-  inline actor_ostream& operator<<(const T& arg) {
+  actor_ostream& operator<<(const T& arg) {
     return write(deep_to_string(arg));
   }
 
   /// Apply `f` to `*this`.
-  inline actor_ostream& operator<<(actor_ostream::fun_type f) {
+  actor_ostream& operator<<(actor_ostream::fun_type f) {
     return f(*this);
   }
 

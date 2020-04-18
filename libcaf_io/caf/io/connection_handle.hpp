@@ -60,7 +60,7 @@ public:
   }
 
 private:
-  inline connection_handle(int64_t handle_id) : super(handle_id) {
+  connection_handle(int64_t handle_id) : super(handle_id) {
     // nop
   }
 };

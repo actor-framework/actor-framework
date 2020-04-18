@@ -241,15 +241,15 @@ public:
 
   const std::string& name() const;
 
-  inline size_t good() {
+  size_t good() {
     return good_;
   }
 
-  inline size_t bad() {
+  size_t bad() {
     return bad_;
   }
 
-  inline bool disabled() const noexcept {
+  bool disabled() const noexcept {
     return disabled_;
   }
 
@@ -325,7 +325,7 @@ public:
       file_ << y;
   }
 
-  inline void log(level lvl, const std::nullptr_t&) {
+  void log(level lvl, const std::nullptr_t&) {
     log(lvl, "null");
   }
 

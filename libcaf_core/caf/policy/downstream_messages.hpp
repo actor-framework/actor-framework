@@ -113,7 +113,7 @@ public:
 
   // -- required functions for drr_queue ---------------------------------------
 
-  static inline task_size_type task_size(const mailbox_element&) noexcept {
+  static task_size_type task_size(const mailbox_element&) noexcept {
     return 1;
   }
 };

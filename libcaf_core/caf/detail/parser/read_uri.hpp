@@ -66,7 +66,7 @@ void read_uri_percent_encoded(State& ps, std::string& str) {
   // clang-format on
 }
 
-inline bool uri_unprotected_char(char c) {
+inline bool uri_unprotected_char(char c) noexcept {
   // Consider valid characters not explicitly stated as reserved as unreserved.
   return isprint(c) && !in_whitelist(":/?#[]@!$&'()*+,;=<>", c);
 }

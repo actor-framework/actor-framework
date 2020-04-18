@@ -358,7 +358,7 @@ public:
   virtual mailbox_element_ptr dequeue();
 
   /// Returns the queue for storing incoming messages.
-  inline mailbox_type& mailbox() {
+  mailbox_type& mailbox() {
     return mailbox_;
   }
   /// @cond PRIVATE
@@ -404,11 +404,11 @@ public:
 
   // -- backwards compatibility ------------------------------------------------
 
-  inline mailbox_element_ptr next_message() {
+  mailbox_element_ptr next_message() {
     return dequeue();
   }
 
-  inline bool has_next_message() {
+  bool has_next_message() {
     return !mailbox_.empty();
   }
 

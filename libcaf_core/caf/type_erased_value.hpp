@@ -77,12 +77,12 @@ public:
   // -- convenience functions --------------------------------------------------
 
   /// Returns the type number for the stored value.
-  inline uint16_t type_nr() const {
+  uint16_t type_nr() const {
     return type().first;
   }
 
   /// Checks whether the type of the stored value matches `rtti`.
-  inline bool matches(const rtti_pair& rtti) const {
+  bool matches(const rtti_pair& rtti) const {
     return matches(rtti.first, rtti.second);
   }
 

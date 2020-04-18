@@ -89,27 +89,27 @@ public:
   bool is_loopback() const noexcept;
 
   /// Returns the bytes of the IP address as array.
-  inline array_type& bytes() noexcept {
+  array_type& bytes() noexcept {
     return bytes_;
   }
 
   /// Returns the bytes of the IP address as array.
-  inline const array_type& bytes() const noexcept {
+  const array_type& bytes() const noexcept {
     return bytes_;
   }
 
   /// Alias for `bytes()`.
-  inline array_type& data() noexcept {
+  array_type& data() noexcept {
     return bytes_;
   }
 
   /// Alias for `bytes()`.
-  inline const array_type& data() const noexcept {
+  const array_type& data() const noexcept {
     return bytes_;
   }
 
   /// Returns whether this address contains only zeros, i.e., equals `::`.
-  inline bool zero() const noexcept {
+  bool zero() const noexcept {
     return half_segments_[0] == 0 && half_segments_[1] == 0;
   }
 

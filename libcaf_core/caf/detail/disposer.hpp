@@ -26,7 +26,7 @@ namespace caf::detail {
 
 class disposer {
 public:
-  inline void operator()(memory_managed* ptr) const noexcept {
+  void operator()(memory_managed* ptr) const noexcept {
     ptr->request_deletion(false);
   }
 

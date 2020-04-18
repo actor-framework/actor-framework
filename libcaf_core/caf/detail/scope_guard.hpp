@@ -45,7 +45,7 @@ public:
 
   /// Disables this guard, i.e., the guard does not
   /// run its cleanup code as it goes out of scope.
-  inline void disable() {
+  void disable() noexcept {
     enabled_ = false;
   }
 

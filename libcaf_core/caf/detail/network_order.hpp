@@ -53,14 +53,14 @@ inline uint64_t to_network_order(uint64_t value) {
 #else
 
 template <class T>
-inline T to_network_order(T value) {
+T to_network_order(T value) {
   return value;
 }
 
 #endif
 
 template <class T>
-inline T from_network_order(T value) {
+T from_network_order(T value) {
   // swapping the bytes again gives the native order
   return to_network_order(value);
 }

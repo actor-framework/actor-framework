@@ -53,15 +53,15 @@ public:
 
   static constexpr int is_hidden_flag = 0x10000000;
 
-  inline bool is_abstract_actor() const {
+  bool is_abstract_actor() const {
     return static_cast<bool>(flags() & is_abstract_actor_flag);
   }
 
-  inline bool is_abstract_group() const {
+  bool is_abstract_group() const {
     return static_cast<bool>(flags() & is_abstract_group_flag);
   }
 
-  inline bool is_actor_decorator() const {
+  bool is_actor_decorator() const {
     return static_cast<bool>(flags() & is_actor_decorator_mask);
   }
 
@@ -72,11 +72,11 @@ protected:
   // flags that are considered constant after an actor has launched are
   // read by others, i.e., there is no acquire/release semantic between
   // setting and reading flags
-  inline int flags() const {
+  int flags() const {
     return flags_.load(std::memory_order_relaxed);
   }
 
-  inline void flags(int new_value) {
+  void flags(int new_value) {
     flags_.store(new_value, std::memory_order_relaxed);
   }
 

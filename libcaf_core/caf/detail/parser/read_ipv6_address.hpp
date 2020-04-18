@@ -153,7 +153,7 @@ template <class F>
 struct read_ipv6_address_piece_consumer {
   F callback;
 
-  inline void value(uint16_t x) {
+  void value(uint16_t x) {
     union {
       uint16_t bits;
       std::array<uint8_t, 2> bytes;
@@ -162,7 +162,7 @@ struct read_ipv6_address_piece_consumer {
     callback(val.bytes.data(), val.bytes.size());
   }
 
-  inline void value(uint8_t x) {
+  void value(uint8_t x) {
     callback(&x, 1);
   }
 };
