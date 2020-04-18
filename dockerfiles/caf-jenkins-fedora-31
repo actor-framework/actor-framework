@@ -1,10 +1,10 @@
 ########################################################
 # Dockerfile for Jenkins slave with gcc 9
-# Based on Fedora 30
+# Based on Fedora 31
 ############################################################
 
-FROM fedora:30
-MAINTAINER Raphael Hiesgen
+FROM fedora:31
+MAINTAINER Jakob Otto
 
 # Install Essentials
 RUN dnf update -y && \

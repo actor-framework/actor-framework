@@ -1,9 +1,9 @@
-########################################################
-# Dockerfile for Jenkins slave with gcc 9
-# Based on Fedora 30
+############################################################
+# Dockerfile for Jenkins slave with gcc 7
+# Based on Fedora 27
 ############################################################
 
-FROM fedora:30
+FROM fedora:27
 MAINTAINER Raphael Hiesgen
 
 # Install Essentials
@@ -15,24 +15,17 @@ RUN dnf update -y && \
 # Install Packages
 RUN dnf install -y git \
   wget \
-  make \
   openssh-server \
   sudo \
-  java-11-openjdk \
+  java-9-openjdk \
   cmake \
-  docker \
-  kcov \
   gcc gcc-c++ \
   clang \
   openssl-devel \
   libasan \
   libubsan \
-  python-pip \
+  gcovr \
  && dnf clean all
-
-##################### INSTALL GCOVR #######################
-
-RUN pip install --upgrade gcovr
 
 ####################### SETUP SSH #########################
 

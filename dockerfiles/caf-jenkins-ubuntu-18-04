@@ -1,38 +1,30 @@
-########################################################
-# Dockerfile for Jenkins slave with gcc 9
-# Based on Fedora 30
+############################################################
+# Dockerfile for Jenkins slave with gcc 7.4
+# Based on Ubuntu 18.04
 ############################################################
 
-FROM fedora:30
-MAINTAINER Raphael Hiesgen
+FROM ubuntu:18.04
+MAINTAINER Jakob Otto
 
 # Install Essentials
-RUN dnf update -y && \
-  yum clean all
+RUN apt-get update -y && \
+  apt-get upgrade -y && \
+  apt-get autoremove -y && \
+  apt-get autoclean -y
 
 ##################### INSTALL TOOLS ########################
 
 # Install Packages
-RUN dnf install -y git \
+RUN apt-get install -y git \
   wget \
-  make \
   openssh-server \
-  sudo \
-  java-11-openjdk \
+  openjdk-11-jdk \
   cmake \
-  docker \
-  kcov \
-  gcc gcc-c++ \
+  gcc g++ \
   clang \
-  openssl-devel \
-  libasan \
-  libubsan \
-  python-pip \
- && dnf clean all
-
-##################### INSTALL GCOVR #######################
-
-RUN pip install --upgrade gcovr
+  libssl-dev \
+  gcovr \
+ && apt-get autoclean
 
 ####################### SETUP SSH #########################
 
@@ -55,6 +47,9 @@ RUN chgrp -R jenkins /home/jenkins
 
 # Set Name Servers
 # COPY /files/resolv.conf /etc/resolv.conf
+
+# Ubuntu requires this dir to be created
+RUN mkdir -p /var/run/sshd
 
 # Expose SSH port and run SSHD
 EXPOSE 22

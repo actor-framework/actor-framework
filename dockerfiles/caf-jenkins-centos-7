@@ -1,38 +1,34 @@
-########################################################
-# Dockerfile for Jenkins slave with gcc 9
-# Based on Fedora 30
+############################################################
+# Dockerfile for Jenkins slave with gcc 7.3
+# Based on CentOS 7
 ############################################################
 
-FROM fedora:30
-MAINTAINER Raphael Hiesgen
+FROM centos:7
+MAINTAINER Jakob Otto
 
 # Install Essentials
-RUN dnf update -y && \
-  yum clean all
+RUN yum update -y \
+   && yum install -y centos-release-scl \
+   && yum install -y epel-release \
+   && yum update -y \
+   && yum clean all
 
 ##################### INSTALL TOOLS ########################
 
 # Install Packages
-RUN dnf install -y git \
+RUN yum install -y git \
   wget \
   make \
   openssh-server \
   sudo \
-  java-11-openjdk \
-  cmake \
-  docker \
-  kcov \
-  gcc gcc-c++ \
-  clang \
+  java-1.8.0-openjdk \
+  cmake3 \
   openssl-devel \
-  libasan \
   libubsan \
   python-pip \
- && dnf clean all
-
-##################### INSTALL GCOVR #######################
-
-RUN pip install --upgrade gcovr
+  devtoolset-7 \
+  devtoolset-7-libasan-devel \
+ && yum clean all
 
 ####################### SETUP SSH #########################
 
@@ -47,14 +43,13 @@ RUN sed -ri 's/^session\s+required\s+pam_loginuid.so$/session optional pam_login
 RUN useradd jenkins -m -s /bin/bash
 
 # Setup home for Jenkins
+RUN mkdir /home/jenkins/bin
 RUN chown -R jenkins /home/jenkins
 RUN chgrp -R jenkins /home/jenkins
 
-# Add the jenkins user to sudoers
-# RUN echo "jenkins  ALL=(ALL)  ALL" >> etc/sudoers
-
-# Set Name Servers
-# COPY /files/resolv.conf /etc/resolv.conf
+# Create symlinks to cmake3 binaries in local bin directory.
+RUN ln -s /usr/bin/cmake3 /home/jenkins/bin/cmake
+RUN ln -s /usr/bin/ctest3 /home/jenkins/bin/ctest
 
 # Expose SSH port and run SSHD
 EXPOSE 22

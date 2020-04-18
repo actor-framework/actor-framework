@@ -1,9 +1,9 @@
-########################################################
-# Dockerfile for Jenkins slave with gcc 9
-# Based on Fedora 30
+############################################################
+# Dockerfile for Jenkins slave with gcc 8
+# Based on Fedora 28
 ############################################################
 
-FROM fedora:30
+FROM fedora:28
 MAINTAINER Raphael Hiesgen
 
 # Install Essentials
@@ -18,7 +18,7 @@ RUN dnf install -y git \
   make \
   openssh-server \
   sudo \
-  java-11-openjdk \
+  java-9-openjdk \
   cmake \
   docker \
   kcov \
@@ -59,3 +59,4 @@ RUN chgrp -R jenkins /home/jenkins
 # Expose SSH port and run SSHD
 EXPOSE 22
 CMD ["/usr/sbin/sshd","-D"]
+
