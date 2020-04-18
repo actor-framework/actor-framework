@@ -4,20 +4,41 @@ file(GLOB_RECURSE CAF_CORE_HEADERS "caf/*.hpp")
 
 # -- add consistency checks for enum to_string implementations -----------------
 
-add_enum_consistency_check("caf/sec.hpp" "src/sec_strings.cpp")
-add_enum_consistency_check("caf/pec.hpp" "src/pec_strings.cpp")
-add_enum_consistency_check("caf/stream_priority.hpp"
-                           "src/stream_priority_strings.cpp")
-add_enum_consistency_check("caf/exit_reason.hpp"
-                           "src/exit_reason_strings.cpp")
-add_enum_consistency_check("caf/invoke_message_result.hpp"
-                           "src/invoke_msg_result_strings.cpp")
-add_enum_consistency_check("caf/message_priority.hpp"
-                           "src/message_priority_strings.cpp")
-add_enum_consistency_check("caf/intrusive/inbox_result.hpp"
-                           "src/intrusive/inbox_result_strings.cpp")
-add_enum_consistency_check("caf/intrusive/task_result.hpp"
-                           "src/intrusive/task_result_strings.cpp")
+caf_add_enum_consistency_check("caf/sec.hpp" "src/sec_strings.cpp")
+caf_add_enum_consistency_check("caf/pec.hpp" "src/pec_strings.cpp")
+caf_add_enum_consistency_check("caf/stream_priority.hpp"
+                               "src/stream_priority_strings.cpp")
+caf_add_enum_consistency_check("caf/exit_reason.hpp"
+                               "src/exit_reason_strings.cpp")
+caf_add_enum_consistency_check("caf/invoke_message_result.hpp"
+                               "src/invoke_msg_result_strings.cpp")
+caf_add_enum_consistency_check("caf/message_priority.hpp"
+                               "src/message_priority_strings.cpp")
+caf_add_enum_consistency_check("caf/intrusive/inbox_result.hpp"
+                               "src/intrusive/inbox_result_strings.cpp")
+caf_add_enum_consistency_check("caf/intrusive/task_result.hpp"
+                               "src/intrusive/task_result_strings.cpp")
+
+# -- dependencies --------------------------------------------------------------
+
+if(NOT TARGET Threads::Threads)
+  find_package(Threads REQUIRED)
+endif()
+
+# -- utility function for setting default properties ---------------------------
+
+function(caf_core_set_default_properties)
+  foreach(target ${ARGN})
+    # Set global defaults and set EXPORTS flag.
+    caf_set_default_properties(${target})
+    target_compile_definitions(${target} PRIVATE libcaf_core_EXPORTS)
+    # Pull in public dependencies.
+    caf_target_link_libraries(${target} PUBLIC Threads::Threads)
+    if(MSVC)
+      caf_target_link_libraries(${target} PUBLIC iphlpapi)
+    endif()
+  endforeach()
+endfunction()
 
 # -- add library target --------------------------------------------------------
 
@@ -154,72 +175,12 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/uuid.cpp
 )
 
-target_include_directories(libcaf_core_obj PRIVATE
-                           "${CMAKE_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
-
 add_library(libcaf_core "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
             $<TARGET_OBJECTS:libcaf_core_obj>)
 
-target_include_directories(libcaf_core INTERFACE
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+caf_core_set_default_properties(libcaf_core_obj libcaf_core)
 
-target_include_directories(libcaf_core INTERFACE
-  $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
-
-add_library(CAF::core ALIAS libcaf_core)
-
-# -- dependencies and compiler flags -------------------------------------------
-
-if(BUILD_SHARED_LIBS AND NOT WIN32)
-  target_compile_options(libcaf_core PRIVATE -fPIC)
-  target_compile_options(libcaf_core_obj PRIVATE -fPIC)
-endif()
-
-if(NOT TARGET Threads::Threads)
-  find_package(Threads REQUIRED)
-endif()
-
-target_link_libraries(libcaf_core PUBLIC Threads::Threads)
-
-if(MSVC)
-  target_link_libraries(libcaf_core PUBLIC iphlpapi)
-endif()
-
-if(CAF_SANITIZERS)
-  target_link_libraries(libcaf_core PUBLIC -fsanitize=${CAF_SANITIZERS})
-endif()
-
-# -- API exports ---------------------------------------------------------------
-
-generate_export_header(libcaf_core
-                       EXPORT_MACRO_NAME CAF_CORE_EXPORT
-                       EXPORT_FILE_NAME "${CMAKE_BINARY_DIR}/caf/detail/core_export.hpp"
-                       STATIC_DEFINE CAF_STATIC_BUILD)
-
-target_compile_definitions(libcaf_core_obj PRIVATE libcaf_core_EXPORTS)
-
-set_target_properties(libcaf_core PROPERTIES
-                      EXPORT_NAME core
-                      SOVERSION ${CAF_VERSION}
-                      VERSION ${CAF_LIB_VERSION}
-                      OUTPUT_NAME caf_core)
-
-# -- install library and header files ------------------------------------------
-
-install(FILES "${CMAKE_BINARY_DIR}/caf/detail/build_config.hpp"
-              "${CMAKE_BINARY_DIR}/caf/detail/core_export.hpp"
-        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail")
-
-install(TARGETS libcaf_core
-        EXPORT CAFTargets
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT core
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT core
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT core)
-
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-        COMPONENT core
-        FILES_MATCHING PATTERN "*.hpp")
+caf_export_and_install_lib(core)
 
 # -- build unit tests ----------------------------------------------------------
 
@@ -231,18 +192,12 @@ add_executable(caf-core-test
   test/core-test.cpp
   $<TARGET_OBJECTS:libcaf_core_obj>)
 
+caf_core_set_default_properties(caf-core-test)
+
 target_include_directories(caf-core-test PRIVATE
                            "${CMAKE_CURRENT_SOURCE_DIR}/test")
 
-target_compile_definitions(caf-core-test PRIVATE libcaf_core_EXPORTS)
-
 target_link_libraries(caf-core-test PUBLIC CAF::test)
-
-target_link_libraries(caf-core-test PRIVATE
-  $<TARGET_PROPERTY:libcaf_core,INTERFACE_LINK_LIBRARIES>)
-
-target_include_directories(caf-core-test PRIVATE
-                           "${CMAKE_BINARY_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
 
 caf_add_test_suites(caf-core-test
   actor_clock

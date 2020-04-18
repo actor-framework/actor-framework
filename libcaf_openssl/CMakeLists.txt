@@ -2,6 +2,25 @@
 
 file(GLOB_RECURSE CAF_OPENSSL_HEADERS "caf/*.hpp")
 
+# -- dependencies --------------------------------------------------------------
+
+if(NOT TARGET OpenSSL::SSL OR NOT TARGET OpenSSL::Crypto)
+  find_package(OpenSSL REQUIRED)
+endif()
+
+# -- utility function for setting default properties ---------------------------
+
+function(caf_openssl_set_default_properties)
+  foreach(target ${ARGN})
+    # Set global defaults and set EXPORTS flag.
+    caf_set_default_properties(${target})
+    target_compile_definitions(${target} PRIVATE libcaf_openssl_EXPORTS)
+    # Pull in public dependencies.
+    caf_target_link_libraries(${target} PUBLIC
+                              CAF::core CAF::io OpenSSL::SSL OpenSSL::Crypto)
+  endforeach()
+endfunction()
+
 # -- add library target --------------------------------------------------------
 
 add_library(libcaf_openssl_obj OBJECT ${CAF_OPENSSL_HEADERS}
@@ -12,69 +31,13 @@ add_library(libcaf_openssl_obj OBJECT ${CAF_OPENSSL_HEADERS}
   src/openssl/session.cpp
 )
 
-target_include_directories(libcaf_openssl_obj PRIVATE
-                           "${CMAKE_CURRENT_SOURCE_DIR}")
-
 add_library(libcaf_openssl
             "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
             $<TARGET_OBJECTS:libcaf_openssl_obj>)
 
-target_include_directories(libcaf_openssl INTERFACE
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+caf_openssl_set_default_properties(libcaf_openssl_obj libcaf_openssl)
 
-add_library(CAF::openssl ALIAS libcaf_openssl)
-
-if(BUILD_SHARED_LIBS AND NOT WIN32)
-  target_compile_options(libcaf_openssl PRIVATE -fPIC)
-  target_compile_options(libcaf_openssl_obj PRIVATE -fPIC)
-endif()
-
-if(NOT TARGET OpenSSL::SSL OR NOT TARGET OpenSSL::Crypto)
-  find_package(OpenSSL REQUIRED)
-endif()
-
-target_include_directories(libcaf_openssl_obj PRIVATE
-  $<TARGET_PROPERTY:libcaf_core,INTERFACE_INCLUDE_DIRECTORIES>
-  $<TARGET_PROPERTY:libcaf_io,INTERFACE_INCLUDE_DIRECTORIES>
-  ${OPENSSL_INCLUDE_DIR})
-
-target_link_libraries(libcaf_openssl PUBLIC
-                      CAF::core CAF::io
-                      OpenSSL::SSL OpenSSL::Crypto)
-
-generate_export_header(libcaf_openssl
-                       EXPORT_MACRO_NAME CAF_OPENSSL_EXPORT
-                       EXPORT_FILE_NAME "${CMAKE_BINARY_DIR}/caf/detail/openssl_export.hpp"
-                       STATIC_DEFINE CAF_STATIC_BUILD)
-
-target_compile_definitions(libcaf_openssl_obj PRIVATE libcaf_openssl_EXPORTS)
-
-target_include_directories(libcaf_openssl PUBLIC
-                           $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>
-                           $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
-                           $<INSTALL_INTERFACE:include>)
-
-set_target_properties(libcaf_openssl PROPERTIES
-                      EXPORT_NAME openssl
-                      SOVERSION ${CAF_VERSION}
-                      VERSION ${CAF_LIB_VERSION}
-                      OUTPUT_NAME caf_openssl)
-
-# -- install library and header files ------------------------------------------
-
-install(FILES "${CMAKE_BINARY_DIR}/caf/detail/openssl_export.hpp"
-        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail")
-
-install(TARGETS libcaf_openssl
-        EXPORT CAFTargets
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT openssl
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT openssl
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT openssl)
-
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-        COMPONENT openssl
-        FILES_MATCHING PATTERN "*.hpp")
+caf_export_and_install_lib(openssl)
 
 # -- build unit tests ----------------------------------------------------------
 
@@ -87,15 +50,11 @@ add_executable(caf-openssl-test
                ${CAF_OPENSSL_TEST_SOURCES}
                $<TARGET_OBJECTS:libcaf_openssl_obj>)
 
+caf_openssl_set_default_properties(caf-openssl-test)
+
 target_include_directories(caf-openssl-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/test")
 
-target_compile_definitions(caf-openssl-test PRIVATE libcaf_openssl_EXPORTS)
-
-target_link_libraries(caf-openssl-test PRIVATE
-                      CAF::io CAF::core CAF::test OpenSSL::SSL OpenSSL::Crypto)
-
-target_include_directories(caf-openssl-test PRIVATE
-                           "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(caf-openssl-test PRIVATE CAF::test)
 
 caf_add_test_suites(caf-openssl-test
   openssl.authentication
