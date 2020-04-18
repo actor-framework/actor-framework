@@ -339,7 +339,7 @@ public:
   }
 
   expect_clause& to(const caf::scoped_actor& whom) {
-    dest_ = whom.ptr();
+    dest_ = caf::actor_cast<caf::abstract_actor*>(whom);
     return *this;
   }
 
@@ -415,7 +415,7 @@ public:
   }
 
   expect_clause& to(const caf::scoped_actor& whom) {
-    dest_ = whom.ptr();
+    dest_ = caf::actor_cast<caf::abstract_actor*>(whom);
     return *this;
   }
 
@@ -452,11 +452,6 @@ public:
   template <class Handle>
   inject_clause& to(const Handle& whom) {
     dest_ = caf::actor_cast<caf::strong_actor_ptr>(whom);
-    return *this;
-  }
-
-  inject_clause& to(const caf::scoped_actor& whom) {
-    dest_ = caf::actor_cast<caf::strong_actor_ptr>(whom.ptr());
     return *this;
   }
 
@@ -531,11 +526,6 @@ public:
   allow_clause& to(const Handle& whom) {
     if (sched_.prioritize(whom))
       dest_ = &sched_.next_job<caf::abstract_actor>();
-    return *this;
-  }
-
-  allow_clause& to(const caf::scoped_actor& whom) {
-    dest_ = whom.ptr();
     return *this;
   }
 
