@@ -211,7 +211,7 @@ case "$CMakeBuildDir" in
     CMakeAbsoluteBuildDir="$CMakeBuildDir"
     ;;
   *)
-    CMakeAbsoluteBuildDir="$PWD/$CMakeBuildDir"
+    CMakeAbsoluteBuildDir="$SourceDir/$CMakeBuildDir"
     ;;
 esac
 
@@ -235,7 +235,7 @@ fi
 # Generate a config.status file that allows re-running a clean build.
 printf "#!/bin/sh\n\n" > config.status
 printf "# Switch to the source of this build directory.\n" >> config.status
-printf "cd \"%s\"\n\n" "$CMakeAbsoluteBuildDir" >> config.status
+printf "cd \"%s\"\n\n" "$SourceDir" >> config.status
 printf "# Invoke the command to configure this build.\n" >> config.status
 if [ -n "$CXX" ]; then
   printf "CXX=\"%s\"\n" "$CXX" >> config.status
