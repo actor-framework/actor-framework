@@ -116,6 +116,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The enum `match_result` became obsolete. Individual message handlers can no
   longer skip messages. Hence, message handlers can only succeed (match) or not.
   Consequently, invoking a message handler or behavior now returns a boolean.
+- All member functions of `scheduled_actor` for adding stream managers (such as
+  `make_source`) were removed in favor their free-function equivalent, e.g.,
+  `attach_stream_source`
 
 ### Fixed
 
