@@ -17,7 +17,6 @@ RUN apt-get update -y && \
 # Install Packages
 RUN apt-get install -y git \
   wget \
-  openssh-server \
   openjdk-11-jdk \
   cmake \
   gcc g++ \
@@ -27,13 +26,6 @@ RUN apt-get install -y git \
  && apt-get autoclean
 
 ####################### SETUP SSH #########################
-
-# gen dummy keys, centos doesn't autogen them like ubuntu does
-RUN /usr/bin/ssh-keygen -A
-
-# Set SSH Configuration to allow remote logins without /proc write access
-RUN sed -ri 's/^session\s+required\s+pam_loginuid.so$/session optional pam_loginuid.so/' \
-  /etc/pam.d/sshd
 
 # Create Jenkins User
 RUN useradd jenkins -m -s /bin/bash

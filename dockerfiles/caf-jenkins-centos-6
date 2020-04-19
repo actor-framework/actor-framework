@@ -19,7 +19,6 @@ RUN yum update -y \
 RUN yum install -y git \
   wget \
   make \
-  openssh-server \
   sudo \
   java-1.8.0-openjdk \
   cmake3 \
@@ -31,15 +30,6 @@ RUN yum install -y git \
  && yum clean all
 
 ####################### SETUP SSH #########################
-
-# gen dummy keys, centos doesn't autogen them like ubuntu does
-RUN ssh-keygen -q -N "" -t dsa -f /etc/ssh/ssh_host_dsa_key
-RUN ssh-keygen -q -N "" -t rsa -b 4096 -f /etc/ssh/ssh_host_rsa_key
-RUN ssh-keygen -q -N "" -t ecdsa -f /etc/ssh/ssh_host_ecdsa_key
-
-# Set SSH Configuration to allow remote logins without /proc write access
-RUN sed -ri 's/^session\s+required\s+pam_loginuid.so$/session optional pam_loginuid.so/' \
-  /etc/pam.d/sshd
 
 # Create Jenkins User
 RUN useradd jenkins -m -s /bin/bash

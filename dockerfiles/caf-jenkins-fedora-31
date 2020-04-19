@@ -16,7 +16,6 @@ RUN dnf update -y && \
 RUN dnf install -y git \
   wget \
   make \
-  openssh-server \
   sudo \
   java-11-openjdk \
   cmake \
@@ -35,13 +34,6 @@ RUN dnf install -y git \
 RUN pip install --upgrade gcovr
 
 ####################### SETUP SSH #########################
-
-# gen dummy keys, centos doesn't autogen them like ubuntu does
-RUN /usr/bin/ssh-keygen -A
-
-# Set SSH Configuration to allow remote logins without /proc write access
-RUN sed -ri 's/^session\s+required\s+pam_loginuid.so$/session optional pam_loginuid.so/' \
-  /etc/pam.d/sshd
 
 # Create Jenkins User
 RUN useradd jenkins -m -s /bin/bash
