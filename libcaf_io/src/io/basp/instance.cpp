@@ -323,12 +323,10 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
       }
       // Check the application ID.
       string_list whitelist;
-      if (auto lst = get_if<string_list>(&config(),
-                                         "middleman.app-identifiers")) {
-        whitelist = std::move(*lst);
-      } else {
+      if (auto ls = get_if<string_list>(&config(), "middleman.app-identifiers"))
+        whitelist = std::move(*ls);
+      else
         whitelist.emplace_back(to_string(defaults::middleman::app_identifier));
-      }
       auto i = std::find_first_of(app_ids.begin(), app_ids.end(),
                                   whitelist.begin(), whitelist.end());
       if (i == app_ids.end()) {
