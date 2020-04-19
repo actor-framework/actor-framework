@@ -45,11 +45,9 @@ public:
   type_id_t operator[](size_t index) const noexcept;
 
   /// Convertes the internal buffer to a ::type_id_list and returns it.
-  /// @pre `push_back` was called at least once
-  type_id_list move_to_list();
+  type_id_list move_to_list() noexcept;
 
   /// Convertes the internal buffer to a ::type_id_list and returns it.
-  /// @pre `push_back` was called at least once
   type_id_list copy_to_list() const;
 
   void clear() noexcept {
