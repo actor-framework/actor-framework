@@ -91,8 +91,9 @@ constexpr auto console = string_view{"none"};
 constexpr auto console_format = string_view{"%m"};
 constexpr auto console_verbosity = default_log_level;
 constexpr auto file_format = string_view{"%r %c %p %a %t %C %M %F:%L %m%n"};
-constexpr auto file_name = string_view{"actor_log_[TIMESTAMP]_[PID].log"};
 constexpr auto file_verbosity = default_log_level;
+constexpr auto file_name
+  = string_view{"actor_log_[PID]_[TIMESTAMP]_[NODE].log"};
 
 } // namespace caf::defaults::logger
 
