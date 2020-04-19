@@ -1,26 +1,6 @@
 #!/usr/bin/env groovy
 
-pipeline {
-    agent {
-        // Equivalent to "docker build -f Dockerfile.build --build-arg version=1.0.2 ./build/
-        dockerfile {
-            dir '.ci/fedora-30'
-            label 'docker'
-        }
-    }
-    stages {
-        stage('Build') {
-            steps {
-                sh 'uname -r'
-                sh 'cat /etc/os-release'
-                checkout scm
-            }
-        }
-    }
-}
-
-/*
-@Library('caf-continuous-integration') _
+@Library('caf-continuous-integration@topic/docker') _
 
 // Default CMake flags for release builds.
 defaultReleaseBuildFlags = [
@@ -48,38 +28,34 @@ config = [
     buildMatrix: [
         // Various Linux builds for debug and release.
         ['centos-6', [
+            tags: ['docker'],
             builds: ['debug', 'release'],
-            tools: ['gcc-7'],
             extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
         ]],
         ['centos-7', [
+            tags: ['docker'],
             builds: ['debug', 'release'],
-            tools: ['gcc-7'],
             extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
         ]],
         ['ubuntu-16.04', [
+            tags: ['docker'],
             builds: ['debug', 'release'],
-            tools: ['clang-4'],
         ]],
         ['ubuntu-18.04', [
+            tags: ['docker'],
             builds: ['debug', 'release'],
-            tools: ['gcc-7'],
         ]],
-        // On Fedora 28, our debug build also produces the coverage report.
-        ['fedora-28', [
-            builds: ['debug'],
-            tools: ['gcc-8'],
-            // extraSteps: ['coverageReport'], TODO: fix kcov setup
-            extraFlags: ['BUILD_SHARED_LIBS:BOOL=OFF'],
+        ['fedora-30', [
+            tags: ['docker'],
+            builds: ['debug', 'release'],
         ]],
-        ['fedora-28', [
-            builds: ['release'],
-            tools: ['gcc-8'],
+        ['fedora-31', [
+            tags: ['docker'],
+            builds: ['debug', 'release'],
         ]],
         // Other UNIX systems.
         ['macOS', [
             builds: ['debug', 'release'],
-            tools: ['clang'],
             extraFlags: [
                 'OPENSSL_ROOT_DIR=/usr/local/opt/openssl',
                 'OPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include',
@@ -88,7 +64,6 @@ config = [
         ]],
         ['FreeBSD', [
             builds: ['debug', 'release'],
-            tools: ['clang'],
             extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
         ]],
         // Non-UNIX systems.
@@ -96,7 +71,6 @@ config = [
             // TODO: debug build currently broken
             //builds: ['debug', 'release'],
             builds: ['release'],
-            tools: ['msvc'],
             extraFlags: ['CAF_ENABLE_OPENSSL_MODULE:BOOL=OFF'],
         ]],
     ],
@@ -205,4 +179,3 @@ pipeline {
         }
     }
 }
-*/

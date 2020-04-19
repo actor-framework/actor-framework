@@ -1,14 +1,14 @@
-FROM ubuntu:18.04
+FROM debian:stretch
 
 RUN apt update -y && \
   apt upgrade -y
 
 RUN apt install -y \
+  clang-7 \
   cmake \
-  g++-8
   git \
   libssl-dev \
   make \
- && apt-get autoclean
+ && apt autoclean
 
-ENV CXX=/usr/bin/g++-8
+ENV CXX=/usr/bin/clang++-7
