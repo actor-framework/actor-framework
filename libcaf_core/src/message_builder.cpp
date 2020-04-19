@@ -20,19 +20,52 @@
 
 namespace caf {
 
+namespace {
+
+using namespace detail;
+
+enum to_msg_policy {
+  move_msg,
+  copy_msg,
+};
+
+template <to_msg_policy Policy, class TypeListBuilder, class ElementVector>
+message to_message_impl(size_t storage_size, TypeListBuilder& types,
+                        ElementVector& elements) {
+  if (storage_size == 0)
+    return message{};
+  auto vptr = malloc(sizeof(message_data) + storage_size);
+  if (vptr == nullptr)
+    throw std::bad_alloc();
+  message_data* raw_ptr;
+  if constexpr (Policy == move_msg)
+    raw_ptr = new (vptr) message_data(types.move_to_list());
+  else
+    raw_ptr = new (vptr) message_data(types.copy_to_list());
+  intrusive_cow_ptr<message_data> ptr{raw_ptr, false};
+  auto storage = raw_ptr->storage();
+  for (auto& element : elements)
+    if constexpr (Policy == move_msg)
+      storage = element->move_init(storage);
+    else
+      storage = element->copy_init(storage);
+  return message{std::move(ptr)};
+}
+
+} // namespace
+
 void message_builder::clear() noexcept {
+  storage_size_ = 0;
   types_.clear();
   elements_.clear();
 }
 
 message message_builder::to_message() const {
-  // TODO: implement me
-  return {};
+  return to_message_impl<copy_msg>(storage_size_, types_, elements_);
 }
 
 message message_builder::move_to_message() {
-  // TODO: implement me
-  return {};
+  return to_message_impl<move_msg>(storage_size_, types_, elements_);
 }
 
 } // namespace caf

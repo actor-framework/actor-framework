@@ -276,6 +276,7 @@ caf_add_test_suites(caf-core-test
   mailbox_element
   make_config_value_field
   message
+  message_builder
   message_id
   message_lifetime
   metaprogramming

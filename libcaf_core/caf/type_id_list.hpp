@@ -69,7 +69,13 @@ public:
 
   /// Compares this list to `other`.
   int compare(type_id_list other) const noexcept {
-    return memcmp(data_, other.data_, (size() + 1) * sizeof(type_id_t));
+    // These conversions are safe, because the size is stored in 16 bits.
+    int s1 = data_[0];
+    int s2 = other.data_[0];
+    int diff = s1 - s2;
+    if (diff == 0)
+      return memcmp(begin(), other.begin(), s1 * sizeof(type_id_t));
+    return diff;
   }
 
   /// Returns an iterator to the first type ID.
