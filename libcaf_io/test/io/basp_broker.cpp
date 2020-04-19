@@ -109,6 +109,7 @@ public:
             .set("middleman.workers", size_t{0})
             .set("scheduler.policy", autoconn ? "testing" : "stealing")
             .set("middleman.attach-utility-actors", autoconn)) {
+    app_ids.emplace_back(to_string(defaults::middleman::app_identifier));
     auto& mm = sys.middleman();
     mpx_ = dynamic_cast<network::test_multiplexer*>(&mm.backend());
     CAF_REQUIRE(mpx_ != nullptr);
@@ -268,8 +269,7 @@ public:
          n.id)
       .receive(hdl, basp::message_type::server_handshake, no_flags, any_vals,
                basp::version, invalid_actor_id, invalid_actor_id, this_node(),
-               defaults::middleman::app_identifiers, published_actor_id,
-               published_actor_ifs)
+               app_ids, published_actor_id, published_actor_ifs)
       // upon receiving our client handshake, BASP will check
       // whether there is a SpawnServ actor on this node
       .receive(hdl, basp::message_type::direct_message,
@@ -396,6 +396,7 @@ public:
 
   actor_system_config cfg;
   actor_system sys;
+  std::vector<std::string> app_ids;
 
 private:
   basp_broker* aut_;
@@ -483,8 +484,7 @@ CAF_TEST(non_empty_server_handshake) {
   byte_buffer expected_payload;
   std::set<std::string> ifs{"caf::replies_to<@u16>::with<@u16>"};
   binary_serializer sink{nullptr, expected_payload};
-  if (auto err = sink(instance().this_node(),
-                      defaults::middleman::app_identifiers, self()->id(), ifs))
+  if (auto err = sink(instance().this_node(), app_ids, self()->id(), ifs))
     CAF_FAIL("serializing handshake failed: " << sys.render(err));
   CAF_CHECK_EQUAL(hexstr(payload), hexstr(expected_payload));
 }
@@ -579,8 +579,8 @@ CAF_TEST(remote_actor_and_send) {
   mock(jupiter().connection,
        {basp::message_type::server_handshake, 0, 0, basp::version,
         invalid_actor_id, invalid_actor_id},
-       jupiter().id, defaults::middleman::app_identifiers,
-       jupiter().dummy_actor->id(), std::set<std::string>{})
+       jupiter().id, app_ids, jupiter().dummy_actor->id(),
+       std::set<std::string>{})
     .receive(jupiter().connection, basp::message_type::client_handshake,
              no_flags, any_vals, no_operation_data, invalid_actor_id,
              invalid_actor_id, this_node())
@@ -773,8 +773,8 @@ CAF_TEST(automatic_connection) {
   mock(jupiter().connection,
        {basp::message_type::server_handshake, no_flags, 0, basp::version,
         invalid_actor_id, invalid_actor_id},
-       jupiter().id, defaults::middleman::app_identifiers,
-       jupiter().dummy_actor->id(), std::set<std::string>{})
+       jupiter().id, app_ids, jupiter().dummy_actor->id(),
+       std::set<std::string>{})
     .receive(jupiter().connection, basp::message_type::client_handshake,
              no_flags, any_vals, no_operation_data, invalid_actor_id,
              invalid_actor_id, this_node());

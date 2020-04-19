@@ -85,6 +85,8 @@ public:
 
   virtual actor_clock& clock() noexcept = 0;
 
+  static size_t default_thread_count() noexcept;
+
 protected:
   void stop_actors();
 

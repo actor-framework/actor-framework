@@ -72,7 +72,6 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/credit_controller.cpp
   src/decorator/sequencer.cpp
   src/default_attachable.cpp
-  src/defaults.cpp
   src/deserializer.cpp
   src/detail/abstract_worker.cpp
   src/detail/abstract_worker_hub.cpp
