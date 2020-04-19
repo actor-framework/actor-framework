@@ -1,5 +1,25 @@
 #!/usr/bin/env groovy
 
+pipeline {
+    agent {
+        // Equivalent to "docker build -f Dockerfile.build --build-arg version=1.0.2 ./build/
+        dockerfile {
+            dir '.ci/fedora-30'
+            label 'docker'
+        }
+    }
+    stages {
+        stage('Build') {
+            steps {
+                sh 'uname -r'
+                sh 'cat /etc/os-release'
+                checkout scm
+            }
+        }
+    }
+}
+
+/*
 @Library('caf-continuous-integration') _
 
 // Default CMake flags for release builds.
@@ -185,3 +205,4 @@ pipeline {
         }
     }
 }
+*/
