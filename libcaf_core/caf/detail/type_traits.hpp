@@ -471,6 +471,23 @@ struct callable_trait<R (C::*)(Ts...)> : callable_trait<R (Ts...)> {};
 template <class R, class... Ts>
 struct callable_trait<R (*)(Ts...)> : callable_trait<R (Ts...)> {};
 
+#if __cplusplus >= 201703L
+
+// member const function pointer
+template <class C, typename R, class... Ts>
+struct callable_trait<R (C::*)(Ts...) const noexcept>
+  : callable_trait<R(Ts...)> {};
+
+// member function pointer
+template <class C, typename R, class... Ts>
+struct callable_trait<R (C::*)(Ts...) noexcept> : callable_trait<R(Ts...)> {};
+
+// good ol' function pointer
+template <class R, class... Ts>
+struct callable_trait<R (*)(Ts...) noexcept> : callable_trait<R(Ts...)> {};
+
+#endif
+
 template <class T>
 struct has_apply_operator {
   template <class U>

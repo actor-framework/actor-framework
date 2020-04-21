@@ -39,6 +39,11 @@ config = [
             extraSteps: ['coverageReport'],
         ]],
         ['Linux', [
+            builds: ['debug'],
+            tools: ['gcc8'],
+            extraFlags: ['EXTRA_FLAGS=-std=c++17']
+        ]],
+        ['Linux', [
             builds: ['release'],
             tools: ['gcc8'],
         ]],
