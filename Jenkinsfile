@@ -28,33 +28,40 @@ config = [
     buildMatrix: [
         // Various Linux builds for debug and release.
         ['centos-6', [
+            numCores: 4,
             tags: ['docker'],
             builds: ['debug', 'release'],
             extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
         ]],
         ['centos-7', [
+            numCores: 4,
             tags: ['docker'],
             builds: ['debug', 'release'],
             extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
         ]],
         ['ubuntu-16.04', [
+            numCores: 4,
             tags: ['docker'],
             builds: ['debug', 'release'],
         ]],
         ['ubuntu-18.04', [
+            numCores: 4,
             tags: ['docker'],
             builds: ['debug', 'release'],
         ]],
         ['fedora-30', [
+            numCores: 4,
             tags: ['docker'],
             builds: ['debug', 'release'],
         ]],
         ['fedora-31', [
+            numCores: 4,
             tags: ['docker'],
             builds: ['debug', 'release'],
         ]],
         // Other UNIX systems.
         ['macOS', [
+            numCores: 4,
             builds: ['debug', 'release'],
             extraFlags: [
                 'OPENSSL_ROOT_DIR=/usr/local/opt/openssl',
@@ -63,11 +70,13 @@ config = [
             extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
         ]],
         ['FreeBSD', [
+            numCores: 4,
             builds: ['debug', 'release'],
             extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
         ]],
         // Non-UNIX systems.
         ['Windows', [
+            numCores: 4,
             // TODO: debug build currently broken
             //builds: ['debug', 'release'],
             builds: ['release'],
