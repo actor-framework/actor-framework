@@ -97,6 +97,7 @@ public:
   void learned_new_node(const node_id& nid);
 
   /// Sets `this_context` by either creating or accessing state for `hdl`.
+  /// Automatically sets `endpoint_context::last_seen` to `clock().now()`.
   void set_context(connection_handle hdl);
 
   /// Cleans up any state for `hdl`.

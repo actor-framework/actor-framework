@@ -587,6 +587,7 @@ void basp_broker::learned_new_node_indirectly(const node_id& nid) {
 
 void basp_broker::set_context(connection_handle hdl) {
   CAF_LOG_TRACE(CAF_ARG(hdl));
+  auto now = clock().now();
   auto i = ctx.find(hdl);
   if (i == ctx.end()) {
     CAF_LOG_DEBUG("create new BASP context:" << CAF_ARG(hdl));
@@ -598,8 +599,10 @@ void basp_broker::set_context(connection_handle hdl) {
                      invalid_actor_id};
     i = ctx
           .emplace(hdl, basp::endpoint_context{basp::await_header, hdr, hdl,
-                                               node_id{}, 0, 0, none})
+                                               node_id{}, 0, 0, none, now})
           .first;
+  } else {
+    i->second.last_seen = now;
   }
   this_context = &i->second;
   t_last_hop = &i->second.id;
