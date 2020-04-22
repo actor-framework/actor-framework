@@ -117,6 +117,8 @@ std::string to_string(sec x) {
       return "redundant_connection";
     case sec::remote_lookup_failed:
       return "remote_lookup_failed";
+    case sec::connection_timeout:
+      return "connection_timeout";
   };
 }
 

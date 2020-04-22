@@ -345,9 +345,9 @@ behavior basp_broker::make_behavior() {
       }
       auto next_tick = scheduled + heartbeat_interval;
       if (now >= next_tick) {
-        CAF_LOG_ERROR(
-          "Lagging a full heartbeat interval behind! Interval too low "
-          "or BASP actor overloaded! Other nodes may disconnect.");
+        CAF_LOG_ERROR("Lagging a full heartbeat interval behind! "
+                      "Interval too low or BASP actor overloaded! "
+                      "Other nodes may disconnect.");
         while (now >= next_tick)
           next_tick += heartbeat_interval;
 
@@ -357,6 +357,20 @@ behavior basp_broker::make_behavior() {
       }
       // Send out heartbeats.
       instance.handle_heartbeat(context());
+      // Check whether any node reached the disconnect timeout.
+      for (auto i = ctx.begin(); i != ctx.end();) {
+        if (i->second.last_seen + connection_timeout < now) {
+          CAF_LOG_WARNING("Disconnect BASP node: reached connection timeout!");
+          auto hdl = i->second.hdl;
+          // connection_cleanup below calls ctx.erase, so we need to increase
+          // the iterator now, before it gets invalidated.
+          ++i;
+          connection_cleanup(hdl, sec::connection_timeout);
+          close(hdl);
+        } else {
+          ++i;
+        }
+      }
       // Schedule next tick.
       scheduled_send(this, next_tick, tick_atom::value, next_tick,
                      heartbeat_interval, connection_timeout);
