@@ -127,7 +127,7 @@ actor_system_config::actor_system_config()
     .add<timespan>("heartbeat-interval", "interval of heartbeat messages")
     .add<timespan>("connection-timeout",
                    "max. time between messages before declaring a node dead "
-                   "(ignored if heartbeats are disabled)")
+                   "(disabled if 0, ignored if heartbeats are disabled)")
     .add<bool>("attach-utility-actors",
                "schedule utility actors instead of dedicating threads")
     .add<bool>("manual-multiplexing",

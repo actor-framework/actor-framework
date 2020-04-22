@@ -79,7 +79,8 @@ namespace middleman {
 extern std::vector<std::string> app_identifiers;
 extern const atom_value network_backend;
 extern const size_t max_consecutive_reads;
-extern const size_t heartbeat_interval;
+extern const timespan heartbeat_interval;
+extern const timespan connection_timeout;
 extern const size_t cached_udp_buffers;
 extern const size_t max_pending_msgs;
 extern const size_t workers;

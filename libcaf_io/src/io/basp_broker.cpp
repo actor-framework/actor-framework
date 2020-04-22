@@ -116,9 +116,14 @@ behavior basp_broker::make_behavior() {
   }
   auto heartbeat_interval = get_or(config(), "middleman.heartbeat-interval",
                                    defaults::middleman::heartbeat_interval);
-  if (heartbeat_interval > 0) {
+  if (heartbeat_interval.count() > 0) {
     CAF_LOG_DEBUG("enable heartbeat" << CAF_ARG(heartbeat_interval));
-    send(this, tick_atom::value, heartbeat_interval);
+    auto now = clock().now();
+    auto first_tick = now + heartbeat_interval;
+    auto connection_timeout = get_or(config(), "middleman.connection-timeout",
+                                     defaults::middleman::connection_timeout);
+    scheduled_send(this, first_tick, tick_atom::value, first_tick,
+                   heartbeat_interval, connection_timeout);
   }
   return behavior{
     // received from underlying broker implementation
@@ -329,10 +334,32 @@ behavior basp_broker::make_behavior() {
       }
       return std::make_tuple(x, std::move(addr), port);
     },
-    [=](tick_atom, size_t interval) {
+    [=](tick_atom, actor_clock::time_point scheduled,
+        timespan heartbeat_interval, timespan connection_timeout) {
+      auto now = clock().now();
+      if (now < scheduled) {
+        CAF_LOG_WARNING("received tick before its time, reschedule");
+        scheduled_send(this, scheduled, tick_atom::value, scheduled,
+                       heartbeat_interval, connection_timeout);
+        return;
+      }
+      auto next_tick = scheduled + heartbeat_interval;
+      if (now >= next_tick) {
+        CAF_LOG_ERROR(
+          "Lagging a full heartbeat interval behind! Interval too low "
+          "or BASP actor overloaded! Other nodes may disconnect.");
+        while (now >= next_tick)
+          next_tick += heartbeat_interval;
+
+      } else if (now >= scheduled + (heartbeat_interval / 2)) {
+        CAF_LOG_WARNING("Lagging more than 50% of a heartbeat interval behind! "
+                        "Interval too low or BASP actor overloaded!");
+      }
+      // Send out heartbeats.
       instance.handle_heartbeat(context());
-      delayed_send(this, std::chrono::milliseconds{interval}, tick_atom::value,
-                   interval);
+      // Schedule next tick.
+      scheduled_send(this, next_tick, tick_atom::value, next_tick,
+                     heartbeat_interval, connection_timeout);
     }};
 }
 
