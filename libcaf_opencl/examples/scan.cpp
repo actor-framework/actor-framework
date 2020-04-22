@@ -26,9 +26,14 @@
 #include "caf/all.hpp"
 #include "caf/opencl/all.hpp"
 
-using namespace std;
 using namespace caf;
 using namespace caf::opencl;
+
+using std::cerr;
+using std::cout;
+using std::endl;
+using std::string;
+using std::vector;
 
 using caf::detail::limited_vector;
 
@@ -166,8 +171,8 @@ kernel void phase_3(global uint* restrict data,
 
 } // namespace
 
-template <class T, class E = caf::detail::enable_if_t<is_integral<T>::value>>
-T round_up(T numToRound, T multiple)  {
+template <class T, class = caf::detail::enable_if_t<std::is_integral<T>::value>>
+T round_up(T numToRound, T multiple) {
   return ((numToRound + multiple - 1) / multiple) * multiple;
 }
 
@@ -180,9 +185,9 @@ int main() {
        << "' values." << endl;
   // ---- create data ----
   uvec values(problem_size);
-  random_device rd;
-  mt19937 gen(rd());
-  uniform_int_distribution<uval> val_gen(0, 1023);
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<uval> val_gen(0, 1023);
   std::generate(begin(values), end(values), [&]() { return val_gen(gen); });
   // ---- find device ----
   auto& mngr = system.opencl_manager();
@@ -205,7 +210,7 @@ int main() {
   }
   {
     // ---- general ----
-    auto dev = move(*opt);
+    auto dev = std::move(*opt);
     auto prog = mngr.create_program(kernel_source, "", dev);
     scoped_actor self{system};
     // ---- config parameters ----
@@ -243,7 +248,8 @@ int main() {
         return msg.apply([&](uref& data, uref& incs) {
           auto size = incs.size();
           range = nd_conf(size);
-          return make_message(move(data), move(incs), static_cast<uval>(size));
+          return make_message(std::move(data), std::move(incs),
+                              static_cast<uval>(size));
         });
       },
       in_out<uval,mref,mref>{},
@@ -256,7 +262,8 @@ int main() {
         return msg.apply([&](uref& data, uref& incs) {
           auto size = incs.size();
           range = nd_conf(size);
-          return make_message(move(data), move(incs), static_cast<uval>(size));
+          return make_message(std::move(data), std::move(incs),
+                              static_cast<uval>(size));
         });
       },
       in_out<uval,mref,val>{},
@@ -273,8 +280,8 @@ int main() {
         cout << " index | values |  scan  " << endl
              << "-------+--------+--------" << endl;
         for (size_t i = 0; i < problem_size; ++i)
-          cout << setw(6) << i << " | " << setw(6) << values[i] << " | "
-               << setw(6) << results[i] << endl;
+          cout << std::setw(6) << i << " | " << std::setw(6) << values[i]
+               << " | " << std::setw(6) << results[i] << std::endl;
       }
     );
   }
