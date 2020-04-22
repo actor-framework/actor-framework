@@ -113,8 +113,8 @@ namespace caf::defaults::middleman {
 constexpr auto app_identifier = string_view{"generic-caf-app"};
 constexpr auto network_backend = string_view{"default"};
 constexpr auto max_consecutive_reads = size_t{50};
-constexpr auto heartbeat_interval = timespan{0};
-constexpr auto connection_timeout = timespan{0};
+constexpr auto heartbeat_interval = timespan{10'000'000'000};
+constexpr auto connection_timeout = timespan{30'000'000'000};
 constexpr auto cached_udp_buffers = size_t{10};
 constexpr auto max_pending_msgs = size_t{10};
 
