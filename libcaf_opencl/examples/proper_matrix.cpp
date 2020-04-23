@@ -27,9 +27,13 @@
 
 #include "caf/opencl/all.hpp"
 
-using namespace std;
 using namespace caf;
 using namespace caf::opencl;
+
+using std::cout;
+using std::endl;
+using std::string;
+using std::vector;
 
 using caf::detail::limited_vector;
 
@@ -111,11 +115,12 @@ private:
 
 template<size_t Size>
 string to_string(const square_matrix<Size>& m) {
-  ostringstream oss;
+  std::ostringstream oss;
   oss.fill(' ');
   for (size_t row = 0; row < Size; ++row) {
     for (size_t column = 0; column < Size; ++column)
-      oss << fixed << setprecision(2) << setw(9) << m(column, row);
+      oss << std::fixed << std::setprecision(2) << std::setw(9)
+          << m(column, row);
     oss << '\n';
   }
   return oss.str();
@@ -181,11 +186,10 @@ void multiplier(event_based_actor* self) {
 
   // send both matrices to the actor and
   // wait for results in form of a matrix_type
-  self->request(worker, chrono::seconds(5), move(m1), move(m2)).then(
-    [](const matrix_type& result) {
+  self->request(worker, std::chrono::seconds(5), std::move(m1), std::move(m2))
+    .then([](const matrix_type& result) {
       cout << "result:" << endl << to_string(result);
-    }
-  );
+    });
 }
 
 int main() {

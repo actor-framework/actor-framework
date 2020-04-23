@@ -12,9 +12,13 @@
 
 #include "caf/opencl/all.hpp"
 
-using namespace std;
 using namespace caf;
 using namespace caf::opencl;
+
+using std::cout;
+using std::endl;
+using std::string;
+using std::vector;
 
 using caf::detail::tl_at;
 using caf::detail::tl_head;
@@ -292,7 +296,7 @@ void check_vector_results(const string& description,
     cout << "Size: " << expected.size() << " vs. " << result.size() << endl;
     cout << "Differ at: " << endl;
     bool same = true;
-    for (size_t i = 0; i < min(expected.size(), result.size()); ++i) {
+    for (size_t i = 0; i < std::min(expected.size(), result.size()); ++i) {
       if (expected[i] != result[i]) {
         cout << "[" << i << "] " << expected[i] << " != " << result[i] << endl;
         same = false;
@@ -405,7 +409,7 @@ void test_opencl(actor_system& sys) {
               "semicolon is missing).");
   try {
     /* auto expected_error = */ mngr.create_program(kernel_source_error);
-  } catch (const exception& exc) {
+  } catch (const std::exception& exc) {
     CAF_MESSAGE("got: " << exc.what());
   }
 #endif // CAF_NO_EXCEPTIONS
@@ -423,7 +427,7 @@ void test_opencl(actor_system& sys) {
   );
 
   // test for manuel return size selection (max workgroup size 1d)
-  auto max_wg_size = min(dev->max_work_item_sizes()[0], size_t{512});
+  auto max_wg_size = std::min(dev->max_work_item_sizes()[0], size_t{512});
   auto reduce_buffer_size = static_cast<size_t>(max_wg_size) * 8;
   auto reduce_local_size  = static_cast<size_t>(max_wg_size);
   auto reduce_work_groups = reduce_buffer_size / reduce_local_size;
@@ -731,7 +735,7 @@ void test_in_val_out_val(actor_system& sys) {
   }, others >> wrong_msg);
 
   // test for manuel return size selection (max workgroup size 1d)
-  auto max_wg_size = min(dev->max_work_item_sizes()[0], size_t{512});
+  auto max_wg_size = std::min(dev->max_work_item_sizes()[0], size_t{512});
   auto reduce_buffer_size = static_cast<size_t>(max_wg_size) * 8;
   auto reduce_local_size  = static_cast<size_t>(max_wg_size);
   auto reduce_work_groups = reduce_buffer_size / reduce_local_size;
@@ -801,7 +805,7 @@ void test_in_val_out_mref(actor_system& sys) {
                        " (kernel passed directly)", res1, result);
   }, others >> wrong_msg);
   // test for manuel return size selection (max workgroup size 1d)
-  auto max_wg_size = min(dev->max_work_item_sizes()[0], size_t{512});
+  auto max_wg_size = std::min(dev->max_work_item_sizes()[0], size_t{512});
   auto reduce_buffer_size = static_cast<size_t>(max_wg_size) * 8;
   auto reduce_local_size  = static_cast<size_t>(max_wg_size);
   auto reduce_work_groups = reduce_buffer_size / reduce_local_size;
@@ -858,7 +862,7 @@ void test_in_mref_out_val(actor_system& sys) {
                          " (kernel passed directly)", res1, result);
   }, others >> wrong_msg);
   // test for manuel return size selection (max workgroup size 1d)
-  auto max_wg_size = min(dev->max_work_item_sizes()[0], size_t{512});
+  auto max_wg_size = std::min(dev->max_work_item_sizes()[0], size_t{512});
   auto reduce_buffer_size = static_cast<size_t>(max_wg_size) * 8;
   auto reduce_local_size  = static_cast<size_t>(max_wg_size);
   auto reduce_work_groups = reduce_buffer_size / reduce_local_size;
@@ -917,7 +921,7 @@ void test_in_mref_out_mref(actor_system& sys) {
                        " (kernel passed directly)", res1, result);
   }, others >> wrong_msg);
   // test for manuel return size selection (max workgroup size 1d)
-  auto max_wg_size = min(dev->max_work_item_sizes()[0], size_t{512});
+  auto max_wg_size = std::min(dev->max_work_item_sizes()[0], size_t{512});
   auto reduce_buffer_size = static_cast<size_t>(max_wg_size) * 8;
   auto reduce_local_size  = static_cast<size_t>(max_wg_size);
   auto reduce_work_groups = reduce_buffer_size / reduce_local_size;
