@@ -5,7 +5,7 @@ RUN apt update -y && \
 
 RUN apt install -y \
   cmake \
-  g++-8
+  g++-8 \
   git \
   libssl-dev \
   make \
