@@ -1,6 +1,6 @@
 #!/usr/bin/env groovy
 
-@Library('caf-continuous-integration@topic/docker') _
+@Library('caf-continuous-integration') _
 
 // Default CMake flags for release builds.
 defaultReleaseBuildFlags = [
