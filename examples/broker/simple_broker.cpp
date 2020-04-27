@@ -12,7 +12,7 @@
 
 #include "caf/config.hpp"
 
-#ifdef WIN32
+#ifdef CAF_WINDOWS
 #  define _WIN32_WINNT 0x0600
 #  include <winsock2.h>
 #else
