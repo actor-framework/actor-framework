@@ -28,38 +28,41 @@ config = [
     buildMatrix: [
         // Various Linux builds for debug and release.
         ['centos-6', [
+            numCores: 4,
+            tags: ['docker'],
             builds: ['debug', 'release'],
-            tools: ['gcc-7'],
             extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
         ]],
         ['centos-7', [
+            numCores: 4,
+            tags: ['docker'],
             builds: ['debug', 'release'],
-            tools: ['gcc-7'],
             extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
         ]],
         ['ubuntu-16.04', [
+            numCores: 4,
+            tags: ['docker'],
             builds: ['debug', 'release'],
-            tools: ['clang-4'],
         ]],
         ['ubuntu-18.04', [
+            numCores: 4,
+            tags: ['docker'],
             builds: ['debug', 'release'],
-            tools: ['gcc-7'],
         ]],
-        // On Fedora 28, our debug build also produces the coverage report.
-        ['fedora-28', [
-            builds: ['debug'],
-            tools: ['gcc-8'],
-            // extraSteps: ['coverageReport'], TODO: fix kcov setup
-            extraFlags: ['BUILD_SHARED_LIBS:BOOL=OFF'],
+        ['fedora-30', [
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['debug', 'release'],
         ]],
-        ['fedora-28', [
-            builds: ['release'],
-            tools: ['gcc-8'],
+        ['fedora-31', [
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['debug', 'release'],
         ]],
         // Other UNIX systems.
         ['macOS', [
+            numCores: 4,
             builds: ['debug', 'release'],
-            tools: ['clang'],
             extraFlags: [
                 'OPENSSL_ROOT_DIR=/usr/local/opt/openssl',
                 'OPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include',
@@ -67,16 +70,16 @@ config = [
             extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
         ]],
         ['FreeBSD', [
+            numCores: 4,
             builds: ['debug', 'release'],
-            tools: ['clang'],
             extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
         ]],
         // Non-UNIX systems.
         ['Windows', [
+            numCores: 4,
             // TODO: debug build currently broken
             //builds: ['debug', 'release'],
             builds: ['release'],
-            tools: ['msvc'],
             extraFlags: ['CAF_ENABLE_OPENSSL_MODULE:BOOL=OFF'],
         ]],
     ],
