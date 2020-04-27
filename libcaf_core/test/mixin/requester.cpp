@@ -180,7 +180,7 @@ CAF_TEST(requesters support fan_out_request) {
   CAF_CHECK_EQUAL(*sum, 9);
 }
 
-#ifndef CAF_NO_EXCEPTIONS
+#ifdef CAF_ENABLE_EXCEPTIONS
 
 CAF_TEST(exceptions while processing requests trigger error messages) {
   auto worker = sys.spawn([] {
@@ -199,6 +199,6 @@ CAF_TEST(exceptions while processing requests trigger error messages) {
   expect((error), from(worker).to(client).with(sec::runtime_error));
 }
 
-#endif // CAF_NO_EXCEPTIONS
+#endif // CAF_ENABLE_EXCEPTIONS
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -25,6 +25,7 @@
 #include <cstdint>
 
 #include "caf/detail/parser/add_ascii.hpp"
+#include "caf/raise_error.hpp"
 
 using namespace caf;
 
@@ -36,13 +37,14 @@ byte operator"" _b(const char* str, size_t n) {
   for (size_t i = 0; i < n; ++i) {
     if (str[i] != '\'') {
       if (!detail::parser::add_ascii<2>(result, str[i]))
-        throw std::logic_error("invalid character or over-/underflow");
+        CAF_RAISE_ERROR(std::logic_error,
+                        "invalid character or over-/underflow");
       else
         ++consumed;
     }
   }
   if (consumed != 8)
-    throw std::logic_error("too few digits, expected exactly 8");
+    CAF_RAISE_ERROR(std::logic_error, "too few digits, expected exactly 8");
   return static_cast<byte>(result);
 }
 

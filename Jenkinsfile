@@ -59,6 +59,16 @@ config = [
             tags: ['docker'],
             builds: ['debug', 'release'],
         ]],
+        // One extra debug build with exceptions disabled.
+        ['centos-7', [
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['debug'],
+            extraDebugFlags: [
+                'CAF_ENABLE_EXCEPTIONS:BOOL=OFF',
+                'CMAKE_CXX_FLAGS:STRING=-fno-exceptions',
+            ],
+        ]],
         // Other UNIX systems.
         ['macOS', [
             numCores: 4,

@@ -25,6 +25,7 @@
 
 #include "caf/config.hpp"
 #include "caf/hash/fnv.hpp"
+#include "caf/raise_error.hpp"
 #include "caf/type_id_list.hpp"
 
 namespace caf::detail {
@@ -99,7 +100,7 @@ void type_id_list_builder::reserve(size_t new_capacity) {
   reserved_ = new_capacity;
   auto ptr = realloc(storage_, reserved_ * sizeof(type_id_t));
   if (ptr == nullptr)
-    throw std::bad_alloc();
+    CAF_RAISE_ERROR(std::bad_alloc, "bad_alloc");
   storage_ = reinterpret_cast<type_id_t*>(ptr);
   // Add the dummy for later inserting the size on first push_back.
   if (size_ == 0) {
@@ -144,7 +145,7 @@ type_id_list type_id_list_builder::copy_to_list() const {
     return make_type_id_list();
   auto vptr = malloc(size_ * sizeof(type_id_t));
   if (vptr == nullptr)
-    throw std::bad_alloc();
+    CAF_RAISE_ERROR(std::bad_alloc, "bad_alloc");
   auto copy = reinterpret_cast<type_id_t*>(vptr);
   copy[0] = static_cast<type_id_t>(list_size);
   memcpy(copy + 1, storage_ + 1, list_size * sizeof(type_id_t));
