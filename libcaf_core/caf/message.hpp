@@ -29,6 +29,7 @@
 #include "caf/detail/padded_size.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_cow_ptr.hpp"
+#include "caf/raise_error.hpp"
 
 namespace caf {
 
@@ -188,7 +189,7 @@ message make_message(Ts&&... xs) {
   auto types = make_type_id_list<strip_and_convert_t<Ts>...>();
   auto vptr = malloc(data_size);
   if (vptr == nullptr)
-    throw std::bad_alloc();
+    CAF_RAISE_ERROR(std::bad_alloc, "bad_alloc");
   auto raw_ptr = new (vptr) message_data(types);
   intrusive_cow_ptr<message_data> ptr{raw_ptr, false};
   message_data_init(raw_ptr->storage(), std::forward<Ts>(xs)...);

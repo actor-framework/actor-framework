@@ -163,7 +163,7 @@ CAF_TEST(lookup) {
   CAF_CHECK_EQUAL(cxs.find(5), xs.end());
 }
 
-#ifndef CAF_NO_EXCEPTIONS
+#ifdef CAF_ENABLE_EXCEPTIONS
 CAF_TEST(exceptions) {
   fill_xs();
   try {
@@ -175,7 +175,7 @@ CAF_TEST(exceptions) {
     CAF_FAIL("got an expected exception");
   }
 }
-#endif // CAF_NO_EXCEPTIONS
+#endif // CAF_ENABLE_EXCEPTIONS
 
 // We repeat several tests with strings as value type instead of integers to
 // trigger non-trivial destructors.

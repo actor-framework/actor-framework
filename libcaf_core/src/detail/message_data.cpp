@@ -24,6 +24,7 @@
 #include "caf/detail/meta_object.hpp"
 #include "caf/error.hpp"
 #include "caf/error_code.hpp"
+#include "caf/raise_error.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
 
@@ -55,7 +56,7 @@ message_data* message_data::copy() const {
   auto total_size = sizeof(message_data) + storage_size;
   auto vptr = malloc(total_size);
   if (vptr == nullptr)
-    throw std::bad_alloc();
+    CAF_RAISE_ERROR(std::bad_alloc, "bad_alloc");
   auto ptr = new (vptr) message_data(types_);
   auto src = storage();
   auto dst = ptr->storage();

@@ -27,9 +27,26 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/pp.hpp"
 
+#include <type_traits>
+
 namespace caf::detail {
 
 CAF_CORE_EXPORT void log_cstring_error(const char* cstring);
+
+#ifdef CAF_ENABLE_EXCEPTIONS
+
+template <class T>
+[[noreturn]] std::enable_if_t<std::is_constructible<T, const char*>::value>
+throw_impl(const char* msg) {
+  throw T{msg};
+}
+
+template <class T>
+[[noreturn]] void throw_impl(...) {
+  throw T{};
+}
+
+#endif // CAF_ENABLE_EXCEPTIONS
 
 } // namespace caf::detail
 
@@ -38,7 +55,7 @@ CAF_CORE_EXPORT void log_cstring_error(const char* cstring);
 #  define CAF_RAISE_ERROR_IMPL_2(exception_type, msg)                          \
     do {                                                                       \
       ::caf::detail::log_cstring_error(msg);                                   \
-      throw exception_type(msg);                                               \
+      ::caf::detail::throw_impl<exception_type>(msg);                          \
     } while (false)
 
 #  define CAF_RAISE_ERROR_IMPL_1(msg)                                          \

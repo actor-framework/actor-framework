@@ -18,6 +18,8 @@
 
 #include "caf/message_builder.hpp"
 
+#include "caf/raise_error.hpp"
+
 namespace caf {
 
 namespace {
@@ -36,7 +38,7 @@ message to_message_impl(size_t storage_size, TypeListBuilder& types,
     return message{};
   auto vptr = malloc(sizeof(message_data) + storage_size);
   if (vptr == nullptr)
-    throw std::bad_alloc();
+    CAF_RAISE_ERROR(std::bad_alloc, "bad_alloc");
   message_data* raw_ptr;
   if constexpr (Policy == move_msg)
     raw_ptr = new (vptr) message_data(types.move_to_list());
