@@ -39,6 +39,16 @@ config = [
             builds: ['debug', 'release'],
             extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
         ]],
+        ['debian-9', [
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['debug', 'release'],
+        ]],
+        ['debian-10', [
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['debug', 'release'],
+        ]],
         ['ubuntu-16.04', [
             numCores: 4,
             tags: ['docker'],
