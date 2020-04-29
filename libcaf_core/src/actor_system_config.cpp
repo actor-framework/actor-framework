@@ -115,8 +115,6 @@ actor_system_config::actor_system_config()
                                   "excluded components for logging")
     .add<bool>("inline-output", "disable logger thread (for testing only!)");
   opt_group{custom_options_, "middleman"}
-    .add<atom_value>("network-backend",
-                     "either 'default' or 'asio' (if available)")
     .add<std::vector<string>>("app-identifiers",
                               "valid application identifiers of this node")
     .add<string>("app-identifier", "DEPRECATED: use app-identifiers instead")

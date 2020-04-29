@@ -356,19 +356,21 @@ behavior basp_broker::make_behavior() {
                         "Interval too low or BASP actor overloaded!");
       }
       // Send out heartbeats.
-      instance.handle_heartbeat(context());
+      instance.send_heartbeats(context());
       // Check whether any node reached the disconnect timeout.
-      for (auto i = ctx.begin(); i != ctx.end();) {
-        if (i->second.last_seen + connection_timeout < now) {
-          CAF_LOG_WARNING("Disconnect BASP node: reached connection timeout!");
-          auto hdl = i->second.hdl;
-          // connection_cleanup below calls ctx.erase, so we need to increase
-          // the iterator now, before it gets invalidated.
-          ++i;
-          connection_cleanup(hdl, sec::connection_timeout);
-          close(hdl);
-        } else {
-          ++i;
+      if (connection_timeout.count() > 0) {
+        for (auto i = ctx.begin(); i != ctx.end();) {
+          if (i->second.last_seen + connection_timeout < now) {
+            CAF_LOG_WARNING("Disconnect BASP node: reached connection timeout");
+            auto hdl = i->second.hdl;
+            // connection_cleanup below calls ctx.erase, so we need to increase
+            // the iterator now, before it gets invalidated.
+            ++i;
+            connection_cleanup(hdl, sec::connection_timeout);
+            close(hdl);
+          } else {
+            ++i;
+          }
         }
       }
       // Schedule next tick.

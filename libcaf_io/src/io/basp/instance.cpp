@@ -83,7 +83,7 @@ connection_state instance::handle(execution_unit* ctx, new_data_msg& dm,
   return handle(ctx, dm.handle, hdr, payload);
 }
 
-void instance::handle_heartbeat(execution_unit* ctx) {
+void instance::send_heartbeats(execution_unit* ctx) {
   CAF_LOG_TRACE("");
   for (auto& kvp : tbl_.direct_by_hdl_) {
     CAF_LOG_TRACE(CAF_ARG(kvp.first) << CAF_ARG(kvp.second));

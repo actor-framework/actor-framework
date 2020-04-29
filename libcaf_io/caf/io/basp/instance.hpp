@@ -122,8 +122,8 @@ public:
   connection_state handle(execution_unit* ctx,
                           new_data_msg& dm, header& hdr, bool is_payload);
 
-  /// Sends heartbeat messages to all valid nodes those are directly connected.
-  void handle_heartbeat(execution_unit* ctx);
+  /// Sends heartbeat messages to all connected nodes.
+  void send_heartbeats(execution_unit* ctx);
 
   /// Returns a route to `target` or `none` on error.
   optional<routing_table::route> lookup(const node_id& target);
