@@ -95,7 +95,6 @@ const timespan relaxed_sleep_duration = ms(10);
 
 namespace logger {
 
-string_view component_filter = "";
 const atom_value console = atom("none");
 string_view console_format = "%m";
 const atom_value console_verbosity = default_log_level;

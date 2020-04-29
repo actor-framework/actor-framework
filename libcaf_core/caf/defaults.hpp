@@ -64,7 +64,6 @@ extern const timespan relaxed_sleep_duration;
 
 namespace logger {
 
-extern string_view component_filter;
 extern const atom_value console;
 extern string_view console_format;
 extern const atom_value console_verbosity;

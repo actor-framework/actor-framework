@@ -353,8 +353,12 @@ Class-based Actors
 
 Implementing an actor using a class requires the following:
 
-* Provide a constructor taking a reference of type  ``actor_config&`` as first argument, which is forwarded to the base  class. The config is passed implicitly to the constructor when calling  ``spawn``, which also forwards any number of additional arguments  to the constructor.
-* Override ``make_behavior`` for event-based actors and  ``act`` for blocking actors.
+* Provide a constructor taking a reference of type  ``actor_config&`` as first
+  argument, which is forwarded to the base  class. The config is passed
+  implicitly to the constructor when calling  ``spawn``, which also forwards any
+  number of additional arguments  to the constructor.
+* Override ``make_behavior`` for event-based actors and  ``act`` for blocking
+  actors.
 
 Implementing actors with classes works for all kinds of actors and allows
 simple management of state via member variables. However, composing states via
