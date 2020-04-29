@@ -86,7 +86,6 @@ constexpr auto default_log_level = string_view {
 #endif
 };
 
-constexpr auto component_filter = string_view{""};
 constexpr auto console = string_view{"none"};
 constexpr auto console_format = string_view{"%m"};
 constexpr auto console_verbosity = default_log_level;

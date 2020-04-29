@@ -382,8 +382,8 @@ at the moment. The recognized field identifiers are:
 Filtering
 ~~~~~~~~~
 
-The two configuration options ``logger-component-filter`` and
-``logger-verbosity`` reduce the amount of generated log events. The
-former is a list of excluded component names and the latter can increase the
-reported severity level (but not decrease it beyond the level defined at
-compile time).
+The two configuration options ``logger.component-blacklist`` and
+``logger.(file|console)-verbosity`` reduce the amount of generated log events.
+The former is a list of excluded component names and the latter can increase the
+reported severity level (but not decrease it beyond the level defined at compile
+time).

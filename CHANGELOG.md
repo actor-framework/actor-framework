@@ -408,7 +408,6 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   + `logger_file_format`
   + `logger_console`
   + `logger_console_format`
-  + `logger_component_filter`
   + `logger_verbosity`
   + `logger_inline_output`
   + `middleman_network_backend`
