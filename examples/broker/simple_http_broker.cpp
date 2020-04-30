@@ -77,8 +77,8 @@ public:
 void caf_main(actor_system& system, const config& cfg) {
   auto server_actor = system.middleman().spawn_server(server, cfg.port);
   if (!server_actor) {
-    cerr << "*** cannot spawn server: "
-         << system.render(server_actor.error()) << endl;
+    cerr << "*** cannot spawn server: " << to_string(server_actor.error())
+         << endl;
     return;
   }
   cout << "*** listening on port " << cfg.port << endl;

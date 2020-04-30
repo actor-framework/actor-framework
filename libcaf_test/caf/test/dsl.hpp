@@ -646,9 +646,7 @@ struct test_coordinator_fixture_fetch_helper {
   operator()(caf::response_handle<Self, Policy<Interface>>& from) const {
     std::tuple<Ts...> result;
     from.receive([&](Ts&... xs) { result = std::make_tuple(std::move(xs)...); },
-                 [&](caf::error& err) {
-                   FAIL(from.self()->system().render(err));
-                 });
+                 [&](caf::error& err) { CAF_FAIL(err); });
     return result;
   }
 };
@@ -659,9 +657,7 @@ struct test_coordinator_fixture_fetch_helper<T> {
   T operator()(caf::response_handle<Self, Policy<Interface>>& from) const {
     T result;
     from.receive([&](T& x) { result = std::move(x); },
-                 [&](caf::error& err) {
-                   FAIL(from.self()->system().render(err));
-                 });
+                 [&](caf::error& err) { CAF_FAIL(err); });
     return result;
   }
 };

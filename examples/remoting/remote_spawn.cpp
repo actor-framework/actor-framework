@@ -115,7 +115,7 @@ struct config : actor_system_config {
 void server(actor_system& system, const config& cfg) {
   auto res = system.middleman().open(cfg.port);
   if (!res) {
-    cerr << "*** cannot open port: " << system.render(res.error()) << endl;
+    cerr << "*** cannot open port: " << to_string(res.error()) << endl;
     return;
   }
   cout << "*** running on port: " << *res << endl
@@ -127,7 +127,7 @@ void server(actor_system& system, const config& cfg) {
 void client(actor_system& system, const config& cfg) {
   auto node = system.middleman().connect(cfg.host, cfg.port);
   if (!node) {
-    cerr << "*** connect failed: " << system.render(node.error()) << endl;
+    cerr << "*** connect failed: " << to_string(node.error()) << endl;
     return;
   }
   auto type = "calculator";             // type of the actor we wish to spawn
@@ -136,8 +136,7 @@ void client(actor_system& system, const config& cfg) {
   auto worker = system.middleman().remote_spawn<calculator>(*node, type, args,
                                                             tout);
   if (!worker) {
-    cerr << "*** remote spawn failed: " << system.render(worker.error())
-         << endl;
+    cerr << "*** remote spawn failed: " << to_string(worker.error()) << endl;
     return;
   }
   // start using worker in main loop

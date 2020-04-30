@@ -72,7 +72,7 @@ void caf_main(actor_system& system, const config&) {
       [&](double z) { aout(self) << x << " / " << y << " = " << z << endl; },
       [&](const error& err) {
         aout(self) << "*** cannot compute " << x << " / " << y << " => "
-                   << system.render(err) << endl;
+                   << to_string(err) << endl;
       });
 }
 

@@ -85,7 +85,7 @@ void run_server(actor_system& system, const config& cfg) {
   auto res = system.middleman().publish_local_groups(cfg.port);
   if (!res) {
     std::cerr << "*** publishing local groups failed: "
-              << system.render(res.error()) << std::endl;
+              << to_string(res.error()) << std::endl;
     return;
   }
   std::cout << "*** listening at port " << *res << std::endl
@@ -112,7 +112,7 @@ void run_client(actor_system& system, const config& cfg) {
       anon_send(client_actor, join_atom_v, std::move(*tmp));
     else
       std::cerr << R"(*** failed to parse ")" << uri << R"(" as group URI: )"
-                << system.render(tmp.error()) << std::endl;
+                << to_string(tmp.error()) << std::endl;
   }
   std::istream_iterator<line> eof;
   std::vector<std::string> words;

@@ -61,12 +61,10 @@ namespace caf {
 ///
 /// # Why is there no `string()` member function?
 ///
-/// The C++ standard library uses category singletons and virtual dispatching
-/// to correlate error codes to descriptive strings. However, singletons are
-/// a poor choice when it comes to serialization. CAF uses atoms for
-/// categories instead and requires users to register custom error categories
-/// to the actor system. This makes the actor system the natural instance for
-/// rendering error messages via `actor_system::render(const error&)`.
+/// The C++ standard library uses category singletons and virtual dispatching to
+/// correlate error codes to descriptive strings. However, singletons are a poor
+/// choice when it comes to serialization. CAF uses type IDs and meta objects
+/// instead.
 class CAF_CORE_EXPORT error : detail::comparable<error> {
 public:
   // -- constructors, destructors, and assignment operators --------------------

@@ -145,7 +145,7 @@ void connecting(stateful_actor<state>* self, const std::string& host,
       },
       [=](const error& err) {
         aout(self) << R"(*** cannot connect to ")" << host << R"(":)" << port
-                   << " => " << self->system().render(err) << endl;
+                   << " => " << to_string(err) << endl;
         self->become(unconnected(self));
       });
 }
@@ -286,7 +286,7 @@ void run_server(actor_system& system, const config& cfg) {
   cout << "*** try publish at port " << cfg.port << endl;
   auto expected_port = io::publish(calc, cfg.port);
   if (!expected_port) {
-    std::cerr << "*** publish failed: " << system.render(expected_port.error())
+    std::cerr << "*** publish failed: " << to_string(expected_port.error())
               << endl;
     return;
   }

@@ -192,8 +192,8 @@ void run_server(actor_system& system, const config& cfg) {
   auto server_actor = system.middleman().spawn_server(server, cfg.port,
                                                       pong_actor);
   if (!server_actor) {
-    std::cerr << "failed to spawn server: "
-              << system.render(server_actor.error()) << endl;
+    std::cerr << "failed to spawn server: " << to_string(server_actor.error())
+              << endl;
     return;
   }
   print_on_exit(*server_actor, "server");
@@ -205,7 +205,7 @@ void run_client(actor_system& system, const config& cfg) {
   auto io_actor = system.middleman().spawn_client(broker_impl, cfg.host,
                                                   cfg.port, ping_actor);
   if (!io_actor) {
-    std::cerr << "failed to spawn client: " << system.render(io_actor.error())
+    std::cerr << "failed to spawn client: " << to_string(io_actor.error())
               << endl;
     return;
   }

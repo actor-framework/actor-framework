@@ -274,8 +274,8 @@ construction arguments passed as message can mismatch, this version of
 
    auto x = system.spawn<calculator>("calculator", make_message());
    if (! x) {
-     std::cerr << "*** unable to spawn calculator: "
-               << system.render(x.error()) << std::endl;
+     std::cerr << "*** unable to spawn calculator: " << to_string(x.error())
+               << std::endl;
      return;
    }
    calculator c = std::move(*x);

@@ -54,8 +54,8 @@ void tester(event_based_actor* self, const calculator_type& testee) {
         });
       },
       [=](const error& err) {
-        aout(self) << "AUT (actor under test) failed: "
-                   << self->system().render(err) << endl;
+        aout(self) << "AUT (actor under test) failed: " << to_string(err)
+                   << endl;
         self->quit(exit_reason::user_shutdown);
       });
 }

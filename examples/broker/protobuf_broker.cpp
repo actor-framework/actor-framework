@@ -30,8 +30,7 @@ using kickoff_atom = atom_constant<atom("kickoff")>;
 // utility function to print an exit message with custom name
 void print_on_exit(scheduled_actor* self, const std::string& name) {
   self->attach_functor([=](const error& reason) {
-    aout(self) << name << " exited: " << self->home_system().render(reason)
-               << endl;
+    aout(self) << name << " exited: " << to_string(reason) << endl;
   });
 }
 
@@ -174,8 +173,8 @@ void run_server(actor_system& system, const config& cfg) {
   auto server_actor = system.middleman().spawn_server(server, cfg.port,
                                                       pong_actor);
   if (!server_actor)
-    cerr << "unable to spawn server: "
-         << system.render(server_actor.error()) << endl;
+    cerr << "unable to spawn server: " << to_string(server_actor.error())
+         << endl;
 }
 
 void run_client(actor_system& system, const config& cfg) {
@@ -184,8 +183,8 @@ void run_client(actor_system& system, const config& cfg) {
   auto io_actor = system.middleman().spawn_client(protobuf_io, cfg.host,
                                                   cfg.port, ping_actor);
   if (!io_actor) {
-    cout << "cannot connect to " << cfg.host << " at port " << cfg.port
-         << ": " << system.render(io_actor.error()) << endl;
+    cout << "cannot connect to " << cfg.host << " at port " << cfg.port << ": "
+         << to_string(io_actor.error()) << endl;
     return;
   }
   send_as(*io_actor, ping_actor, kickoff_atom::value, *io_actor);
