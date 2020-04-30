@@ -99,7 +99,7 @@ as ``CAF_CHECK`` and provide tests rather than implementing a
        },
        [&](caf::error& err) {
          // Must not happen, stop test.
-         CAF_FAIL(sys.render(err));
+         CAF_FAIL(err);
        });
    }
 

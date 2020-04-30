@@ -22,38 +22,16 @@
 #include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/deserializer.hpp"
+#include "caf/detail/meta_object.hpp"
 #include "caf/message.hpp"
 #include "caf/serializer.hpp"
 
 namespace caf {
 
-// -- nested classes -----------------------------------------------------------
-
-struct error::data {
-  uint8_t code;
-  uint8_t category;
-  message context;
-};
-
 // -- constructors, destructors, and assignment operators ----------------------
-
-error::error() noexcept : data_(nullptr) {
-  // nop
-}
 
 error::error(none_t) noexcept : data_(nullptr) {
   // nop
-}
-
-error::error(error&& x) noexcept : data_(x.data_) {
-  if (data_ != nullptr)
-    x.data_ = nullptr;
-}
-
-error& error::operator=(error&& x) noexcept {
-  if (this != &x)
-    std::swap(data_, x.data_);
-  return *this;
 }
 
 error::error(const error& x) : data_(x ? new data(*x.data_) : nullptr) {
@@ -61,116 +39,53 @@ error::error(const error& x) : data_(x ? new data(*x.data_) : nullptr) {
 }
 
 error& error::operator=(const error& x) {
-  if (this == &x)
-    return *this;
   if (x) {
     if (data_ == nullptr)
-      data_ = new data(*x.data_);
+      data_.reset(new data(*x.data_));
     else
       *data_ = *x.data_;
   } else {
-    clear();
+    data_.reset();
   }
   return *this;
 }
 
-error::error(uint8_t x, uint8_t y)
-  : data_(x != 0 ? new data{x, y, message{}} : nullptr) {
+error::error(uint8_t code, type_id_t category)
+  : error(code, category, message{}) {
   // nop
 }
 
-error::error(uint8_t x, uint8_t y, message z)
-  : data_(x != 0 ? new data{x, y, std::move(z)} : nullptr) {
+error::error(uint8_t code, type_id_t category, message context)
+  : data_(code != 0 ? new data{code, category, std::move(context)} : nullptr) {
   // nop
-}
-
-error::~error() {
-  delete data_;
 }
 
 // -- observers ----------------------------------------------------------------
 
-uint8_t error::code() const noexcept {
-  CAF_ASSERT(data_ != nullptr);
-  return data_->code;
-}
-
-uint8_t error::category() const noexcept {
-  CAF_ASSERT(data_ != nullptr);
-  return data_->category;
-}
-
-const message& error::context() const noexcept {
-  CAF_ASSERT(data_ != nullptr);
-  return data_->context;
-}
-
 int error::compare(const error& x) const noexcept {
-  uint8_t x_code;
-  uint8_t x_category;
-  if (x) {
-    x_code = x.data_->code;
-    x_category = x.data_->category;
-  } else {
-    x_code = 0;
-    x_category = 0;
-  }
-  return compare(x_code, x_category);
+  return x ? compare(x.data_->code, x.data_->category) : compare(0, 0);
 }
 
-int error::compare(uint8_t x, uint8_t y) const noexcept {
-  uint8_t mx;
-  uint8_t my;
-  if (data_ != nullptr) {
-    mx = data_->code;
-    my = data_->category;
-  } else {
-    mx = 0;
-    my = 0;
-  }
-  // all errors with default value are considered no error -> equal
-  if (mx == x && x == 0)
-    return 0;
-  if (my < y)
-    return -1;
-  if (my > y)
-    return 1;
-  return static_cast<int>(mx) - x;
-}
-
-// -- modifiers --------------------------------------------------------------
-
-message& error::context() noexcept {
-  CAF_ASSERT(data_ != nullptr);
-  return data_->context;
-}
-
-void error::clear() noexcept {
-  if (data_ != nullptr) {
-    delete data_;
-    data_ = nullptr;
-  }
+int error::compare(uint8_t code, type_id_t category) const noexcept {
+  int x = 0;
+  if (data_ != nullptr)
+    x = (data_->code << 16) | data_->category;
+  return x - int{(code << 16) | category};
 }
 
 // -- inspection support -----------------------------------------------------
 
-uint8_t& error::code_ref() noexcept {
-  CAF_ASSERT(data_ != nullptr);
-  return data_->code;
-}
-
-uint8_t& error::category_ref() noexcept {
-  CAF_ASSERT(data_ != nullptr);
-  return data_->category;
-}
-
-void error::init() {
-  if (data_ == nullptr)
-    data_ = new data;
-}
-
 std::string to_string(const error& x) {
-  return actor_system_config::render(x);
+  if (!x)
+    return "none";
+  std::string result;
+  auto code = x.code();
+  auto mobj = detail::global_meta_object(x.category());
+  mobj->stringify(result, &code);
+  auto ctx = x.context();
+  if (ctx)
+    result += to_string(ctx);
+  return result;
 }
 
 } // namespace caf

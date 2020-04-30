@@ -845,7 +845,7 @@ public:
     caf::byte_buffer buf;
     caf::binary_serializer sink{sys, buf};
     if (auto err = sink(xs...))
-      CAF_FAIL("serialization failed: " << sys.render(err));
+      CAF_FAIL("serialization failed: " << err);
     return buf;
   }
 
@@ -853,7 +853,7 @@ public:
   void deserialize(const caf::byte_buffer& buf, Ts&... xs) {
     caf::binary_deserializer source{sys, buf};
     if (auto err = source(xs...))
-      CAF_FAIL("deserialization failed: " << sys.render(err));
+      CAF_FAIL("deserialization failed: " << err);
   }
 
   template <class T>

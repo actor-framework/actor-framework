@@ -26,7 +26,7 @@
 #include <string>
 
 #include "caf/detail/core_export.hpp"
-#include "caf/error_category.hpp"
+#include "caf/is_error_code_enum.hpp"
 
 namespace caf {
 
@@ -56,8 +56,8 @@ enum class exit_reason : uint8_t {
 CAF_CORE_EXPORT std::string to_string(exit_reason);
 
 template <>
-struct error_category<exit_reason> {
-  static constexpr uint8_t value = 3;
+struct is_error_code_enum<exit_reason> {
+  static constexpr bool value = true;
 };
 
 } // namespace caf

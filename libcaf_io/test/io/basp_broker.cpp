@@ -161,7 +161,7 @@ public:
     byte_buffer buf;
     binary_serializer bs{mpx_, buf};
     if (auto err = bs(const_cast<message&>(msg)))
-      CAF_FAIL("returned to serialize message: " << sys.render(err));
+      CAF_FAIL("returned to serialize message: " << to_string(err));
     return static_cast<uint32_t>(buf.size());
   }
 
@@ -219,7 +219,7 @@ public:
   void to_payload(byte_buffer& buf, const Ts&... xs) {
     binary_serializer sink{mpx_, buf};
     if (auto err = sink(xs...))
-      CAF_FAIL("failed to serialize payload: " << sys.render(err));
+      CAF_FAIL("failed to serialize payload: " << to_string(err));
   }
 
   void to_buf(byte_buffer& buf, basp::header& hdr, payload_writer* writer) {
@@ -347,8 +347,7 @@ public:
       { // lifetime scope of source
         binary_deserializer source{this_->mpx(), ob};
         if (auto err = source(hdr))
-          CAF_FAIL("unable to deserialize header: "
-                   << actor_system_config::render(err));
+          CAF_FAIL("unable to deserialize header: " << to_string(err));
       }
       byte_buffer payload;
       if (hdr.payload_len > 0) {
@@ -485,7 +484,7 @@ CAF_TEST(non_empty_server_handshake) {
   std::set<std::string> ifs{"caf::replies_to<@u16>::with<@u16>"};
   binary_serializer sink{nullptr, expected_payload};
   if (auto err = sink(instance().this_node(), app_ids, self()->id(), ifs))
-    CAF_FAIL("serializing handshake failed: " << sys.render(err));
+    CAF_FAIL("serializing handshake failed: " << to_string(err));
   CAF_CHECK_EQUAL(hexstr(payload), hexstr(expected_payload));
 }
 
@@ -608,7 +607,7 @@ CAF_TEST(remote_actor_and_send) {
       CAF_REQUIRE(proxy == res);
       result = actor_cast<actor>(res);
     },
-    [&](error& err) { CAF_FAIL("error: " << sys.render(err)); });
+    [&](error& err) { CAF_FAIL("error: " << to_string(err)); });
   CAF_MESSAGE("send message to proxy");
   anon_send(actor_cast<actor>(result), 42);
   mpx()->flush_runnables();

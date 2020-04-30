@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2019 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,32 +16,21 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE error
+#pragma once
 
-#include "caf/error.hpp"
+#include <type_traits>
 
-#include "core-test.hpp"
+namespace caf::detail {
 
-using namespace caf;
+template <class T, std::size_t = sizeof(T)>
+std::true_type is_complete_impl(T*);
 
-CAF_TEST(default constructed errors evaluate to false) {
-  error err;
-  CAF_CHECK(!err);
-}
+std::false_type is_complete_impl(...);
 
-CAF_TEST(error code zero is not an error) {
-  CAF_CHECK(!error(sec::none));
-  CAF_CHECK(!make_error(sec::none));
-  CAF_CHECK(!error{error_code<sec>(sec::none)});
-}
+/// Checks whether T is a complete type. For example, passing a forward
+/// declaration or undefined template specialization evaluates to `false`.
+template <class T>
+constexpr bool is_complete
+  = decltype(is_complete_impl(std::declval<T*>()))::value;
 
-CAF_TEST(error codes that are not zero are errors) {
-  CAF_CHECK(error(sec::unexpected_message));
-  CAF_CHECK(make_error(sec::unexpected_message));
-  CAF_CHECK(error{error_code<sec>(sec::unexpected_message)});
-}
-
-CAF_TEST(errors convert enums to their integer value) {
-  CAF_CHECK_EQUAL(make_error(sec::unexpected_message).code(), 1u);
-  CAF_CHECK_EQUAL(error{error_code<sec>(sec::unexpected_message)}.code(), 1u);
-}
+} // namespace caf::detail

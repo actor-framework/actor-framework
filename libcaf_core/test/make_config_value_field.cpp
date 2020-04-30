@@ -291,7 +291,7 @@ CAF_TEST(object access from actor system config - file input) {
   test_config cfg;
   std::istringstream in{config_text};
   if (auto err = cfg.parse(0, nullptr, in))
-    CAF_FAIL("cfg.parse failed: " << cfg.render(err));
+    CAF_FAIL("cfg.parse failed: " << err);
   CAF_CHECK_EQUAL(cfg.fb.foo, 42);
   CAF_CHECK_EQUAL(cfg.fb.bar, "Don't panic!");
   CAF_CHECK_EQUAL(cfg.fbfb.x.foo, 1);
@@ -308,7 +308,7 @@ CAF_TEST(object access from actor system config - file input and arguments) {
   test_config cfg;
   std::istringstream in{config_text};
   if (auto err = cfg.parse(std::move(args), in))
-    CAF_FAIL("cfg.parse failed: " << cfg.render(err));
+    CAF_FAIL("cfg.parse failed: " << err);
   CAF_CHECK_EQUAL(cfg.fb.foo, 42);
   CAF_CHECK_EQUAL(cfg.fb.bar, "Don't panic!");
   CAF_CHECK_EQUAL(cfg.fbfb.x.foo, 10);

@@ -24,6 +24,7 @@
 #include <utility>
 
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/is_complete.hpp"
 #include "caf/detail/pp.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/fwd.hpp"
@@ -82,6 +83,10 @@ constexpr const char* type_name_v = type_name<T>::value;
 
 /// The first type ID not reserved by CAF and its modules.
 constexpr type_id_t first_custom_type_id = 200;
+
+/// Checks whether `type_id` is specialized for `T`.
+template <class T>
+constexpr bool has_type_id = detail::is_complete<type_id<T>>;
 
 } // namespace caf
 
@@ -243,6 +248,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
   CAF_ADD_TYPE_ID(core_module, (caf::downstream_msg))
   CAF_ADD_TYPE_ID(core_module, (caf::error))
   CAF_ADD_TYPE_ID(core_module, (caf::exit_msg))
+  CAF_ADD_TYPE_ID(core_module, (caf::exit_reason))
   CAF_ADD_TYPE_ID(core_module, (caf::group))
   CAF_ADD_TYPE_ID(core_module, (caf::group_down_msg))
   CAF_ADD_TYPE_ID(core_module, (caf::message))
@@ -250,6 +256,8 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
   CAF_ADD_TYPE_ID(core_module, (caf::node_down_msg))
   CAF_ADD_TYPE_ID(core_module, (caf::node_id))
   CAF_ADD_TYPE_ID(core_module, (caf::open_stream_msg))
+  CAF_ADD_TYPE_ID(core_module, (caf::pec))
+  CAF_ADD_TYPE_ID(core_module, (caf::sec))
   CAF_ADD_TYPE_ID(core_module, (caf::strong_actor_ptr))
   CAF_ADD_TYPE_ID(core_module, (caf::timeout_msg))
   CAF_ADD_TYPE_ID(core_module, (caf::timespan))

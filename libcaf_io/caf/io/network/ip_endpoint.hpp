@@ -28,6 +28,7 @@
 #include "caf/meta/load_callback.hpp"
 #include "caf/meta/save_callback.hpp"
 #include "caf/meta/type_name.hpp"
+#include "caf/sec.hpp"
 
 struct sockaddr;
 struct sockaddr_storage;

@@ -22,7 +22,7 @@
 
 #include "caf/all.hpp"
 
-#define ERROR_HANDLER [&](error& err) { CAF_FAIL(system.render(err)); }
+#define ERROR_HANDLER [&](error& err) { CAF_FAIL(err); }
 
 using namespace caf;
 

@@ -157,7 +157,7 @@ auto config_option_set::parse(settings& config, argument_iterator first,
       auto val = opt.parse(slice);
       if (!val) {
         auto& err = val.error();
-        if (err.category() == error_category<pec>::value)
+        if (err.category() == type_id_v<pec>)
           return static_cast<pec>(err.code());
         return pec::invalid_argument;
       }

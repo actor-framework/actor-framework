@@ -95,12 +95,12 @@ using v20 = variant<i01, i02, i03, i04, i05, i06, i07, i08, i09, i10,
     byte_buffer buf;                                                           \
     binary_serializer sink{sys.dummy_execution_unit(), buf};                   \
     if (auto err = sink(x3))                                                   \
-      CAF_FAIL("failed to serialize data: " << sys.render(err));               \
+      CAF_FAIL("failed to serialize data: " << err);                           \
     CAF_CHECK_EQUAL(x3, i##n{0x##n});                                          \
     v20 tmp;                                                                   \
     binary_deserializer source{sys.dummy_execution_unit(), buf};               \
     if (auto err = source(tmp))                                                \
-      CAF_FAIL("failed to deserialize data: " << sys.render(err));             \
+      CAF_FAIL("failed to deserialize data: " << err);                         \
     CAF_CHECK_EQUAL(tmp, i##n{0x##n});                                         \
     CAF_CHECK_EQUAL(tmp, x3);                                                  \
   }

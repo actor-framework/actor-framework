@@ -71,7 +71,7 @@ struct fixture {
     cfg.remainder.clear();
     std::istringstream ini{file_content};
     if (auto err = cfg.parse(std::move(args), ini))
-      CAF_FAIL("parse() failed: " << cfg.render(err));
+      CAF_FAIL("parse() failed: " << err);
   }
 };
 

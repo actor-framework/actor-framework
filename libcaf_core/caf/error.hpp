@@ -19,20 +19,21 @@
 #pragma once
 
 #include <cstdint>
-#include <functional>
+#include <memory>
 #include <utility>
 
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/error_category.hpp"
 #include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
+#include "caf/is_error_code_enum.hpp"
 #include "caf/message.hpp"
 #include "caf/meta/load_callback.hpp"
 #include "caf/meta/omittable_if_empty.hpp"
 #include "caf/meta/save_callback.hpp"
 #include "caf/meta/type_name.hpp"
 #include "caf/none.hpp"
+#include "caf/type_id.hpp"
 
 namespace caf {
 
@@ -68,38 +69,33 @@ namespace caf {
 /// rendering error messages via `actor_system::render(const error&)`.
 class CAF_CORE_EXPORT error : detail::comparable<error> {
 public:
-  // -- member types -----------------------------------------------------------
-
-  using inspect_fun
-    = std::function<error(meta::type_name_t, uint8_t&, uint8_t&,
-                          meta::omittable_if_empty_t, message&)>;
-
   // -- constructors, destructors, and assignment operators --------------------
 
-  error() noexcept;
+  error() noexcept = default;
 
   error(none_t) noexcept;
 
-  error(error&&) noexcept;
+  error(error&&) noexcept = default;
 
-  error& operator=(error&&) noexcept;
+  error& operator=(error&&) noexcept = default;
 
   error(const error&);
 
   error& operator=(const error&);
 
-  error(uint8_t x, uint8_t y);
+  template <class Enum, class = std::enable_if_t<is_error_code_enum_v<Enum>>>
+  error(Enum code) : error(static_cast<uint8_t>(code), type_id_v<Enum>) {
+    // nop
+  }
 
-  error(uint8_t x, uint8_t y, message z);
-
-  template <class Enum, uint8_t Category = error_category<Enum>::value>
-  error(Enum error_value) : error(static_cast<uint8_t>(error_value), Category) {
+  template <class Enum, class = std::enable_if_t<is_error_code_enum_v<Enum>>>
+  error(Enum code, message context)
+    : error(static_cast<uint8_t>(code), type_id_v<Enum>, std::move(context)) {
     // nop
   }
 
   template <class Enum>
-  error(error_code<Enum> code)
-    : error(static_cast<uint8_t>(code.value()), error_category<Enum>::value) {
+  error(error_code<Enum> code) : error(to_integer(code), type_id_v<Enum>) {
     // nop
   }
 
@@ -115,21 +111,25 @@ public:
     return *this = code.value();
   }
 
-  ~error();
-
-  // -- observers --------------------------------------------------------------
+  // -- properties -------------------------------------------------------------
 
   /// Returns the category-specific error code, whereas `0` means "no error".
   /// @pre `*this != none`
-  uint8_t code() const noexcept;
+  uint8_t code() const noexcept {
+    return data_->code;
+  }
 
-  /// Returns the category of this error.
+  /// Returns the ::type_id of the category for this error.
   /// @pre `*this != none`
-  uint8_t category() const noexcept;
+  type_id_t category() const noexcept {
+    return data_->category;
+  }
 
   /// Returns context information to this error.
   /// @pre `*this != none`
-  const message& context() const noexcept;
+  const message& context() const noexcept {
+    return data_->context;
+  }
 
   /// Returns `*this != none`.
   explicit operator bool() const noexcept {
@@ -143,23 +143,14 @@ public:
 
   int compare(const error&) const noexcept;
 
-  int compare(uint8_t x, uint8_t y) const noexcept;
-
-  // -- modifiers --------------------------------------------------------------
-
-  /// Returns context information to this error.
-  /// @pre `*this != none`
-  message& context() noexcept;
-
-  /// Sets the error code to 0.
-  void clear() noexcept;
+  int compare(uint8_t code, type_id_t category) const noexcept;
 
   // -- static convenience functions -------------------------------------------
 
   /// @cond PRIVATE
 
   static error eval() {
-    return none;
+    return error{};
   }
 
   template <class F, class... Fs>
@@ -185,36 +176,39 @@ public:
       uint8_t code = 0;
       auto cb = meta::load_callback([&] {
         if (code == 0) {
-          x.clear();
+          x.data_.reset();
           if constexpr (std::is_same<result_type, void>::value)
             return;
           else
             return result_type{};
         }
-        x.init();
-        x.code_ref() = code;
-        return f(x.category_ref(), x.context());
+        if (!x.data_)
+          x.data_.reset(new data);
+        x.data_->code = code;
+        return f(x.data_->category, x.data_->context);
       });
       return f(code, cb);
     }
   }
 
 private:
-  // -- inspection support -----------------------------------------------------
+  // -- constructors, destructors, and assignment operators --------------------
 
-  uint8_t& code_ref() noexcept;
+  error(uint8_t code, type_id_t category);
 
-  uint8_t& category_ref() noexcept;
-
-  void init();
+  error(uint8_t code, type_id_t category, message context);
 
   // -- nested classes ---------------------------------------------------------
 
-  struct data;
+  struct data {
+    uint8_t code;
+    type_id_t category;
+    message context;
+  };
 
   // -- member variables -------------------------------------------------------
 
-  data* data_;
+  std::unique_ptr<data> data_;
 };
 
 /// @relates error
@@ -222,15 +216,15 @@ CAF_CORE_EXPORT std::string to_string(const error& x);
 
 /// @relates error
 template <class Enum>
-error make_error(Enum code) {
-  return error{static_cast<uint8_t>(code), error_category<Enum>::value};
+std::enable_if_t<is_error_code_enum_v<Enum>, error> make_error(Enum code) {
+  return error{code};
 }
 
 /// @relates error
 template <class Enum, class T, class... Ts>
-error make_error(Enum code, T&& x, Ts&&... xs) {
-  return error{static_cast<uint8_t>(code), error_category<Enum>::value,
-               make_message(std::forward<T>(x), std::forward<Ts>(xs)...)};
+std::enable_if_t<is_error_code_enum_v<Enum>, error>
+make_error(Enum code, T&& x, Ts&&... xs) {
+  return error{code, make_message(std::forward<T>(x), std::forward<Ts>(xs)...)};
 }
 
 /// @relates error
@@ -244,15 +238,18 @@ inline bool operator==(none_t, const error& x) {
 }
 
 /// @relates error
-template <class Enum, uint8_t Category = error_category<Enum>::value>
-bool operator==(const error& x, Enum y) {
+template <class Enum>
+std::enable_if_t<is_error_code_enum_v<Enum>, bool>
+operator==(const error& x, Enum y) {
   auto code = static_cast<uint8_t>(y);
-  return code == 0 ? !x : x && x.category() == Category && x.code() == code;
+  return code == 0 ? !x
+                   : x && x.code() == code && x.category() == type_id_v<Enum>;
 }
 
 /// @relates error
-template <class Enum, uint8_t Category = error_category<Enum>::value>
-bool operator==(Enum x, const error& y) {
+template <class Enum>
+std::enable_if_t<is_error_code_enum_v<Enum>, bool>
+operator==(Enum x, const error& y) {
   return y == x;
 }
 
@@ -267,14 +264,16 @@ inline bool operator!=(none_t, const error& x) {
 }
 
 /// @relates error
-template <class Enum, uint8_t Category = error_category<Enum>::value>
-bool operator!=(const error& x, Enum y) {
+template <class Enum>
+std::enable_if_t<is_error_code_enum_v<Enum>, bool>
+operator!=(const error& x, Enum y) {
   return !(x == y);
 }
 
 /// @relates error
-template <class Enum, uint8_t Category = error_category<Enum>::value>
-bool operator!=(Enum x, const error& y) {
+template <class Enum>
+std::enable_if_t<is_error_code_enum_v<Enum>, bool>
+operator!=(Enum x, const error& y) {
   return !(x == y);
 }
 

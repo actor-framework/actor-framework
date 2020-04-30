@@ -46,9 +46,7 @@ struct fixture : test_coordinator_fixture<> {
   }
 
   std::function<void(const error&)> make_error_handler() {
-    return [this](const error& err) {
-      CAF_FAIL("unexpected error: " << sys.render(err));
-    };
+    return [](const error& err) { CAF_FAIL("unexpected error: " << err); };
   }
 
   std::function<void(const error&)> make_counting_error_handler(size_t* count) {

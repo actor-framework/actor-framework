@@ -18,13 +18,17 @@
 
 #pragma once
 
-#include <cstdint>
-
 namespace caf {
 
 /// Customization point for enabling conversion from an enum type to an
-/// @ref error.
+/// @ref error or @ref error_code.
 template <class T>
-struct error_category;
+struct is_error_code_enum {
+  static constexpr bool value = false;
+};
+
+/// @relates is_error_code_enum
+template <class T>
+constexpr bool is_error_code_enum_v = is_error_code_enum<T>::value;
 
 } // namespace caf

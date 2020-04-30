@@ -26,8 +26,8 @@
 #include <string>
 
 #include "caf/detail/core_export.hpp"
-#include "caf/error_category.hpp"
 #include "caf/fwd.hpp"
+#include "caf/is_error_code_enum.hpp"
 
 namespace caf {
 
@@ -147,11 +147,12 @@ enum class sec : uint8_t {
   all_requests_failed,
 };
 
+/// @relates sec
 CAF_CORE_EXPORT std::string to_string(sec);
 
 template <>
-struct error_category<sec> {
-  static constexpr uint8_t value = 0;
+struct is_error_code_enum<sec> {
+  static constexpr bool value = true;
 };
 
 } // namespace caf

@@ -29,7 +29,7 @@
 
 #  include "caf/all.hpp"
 
-#  define ERROR_HANDLER [&](error& err) { CAF_FAIL(sys.render(err)); }
+#  define ERROR_HANDLER [&](error& err) { CAF_FAIL(err); }
 
 using std::string;
 
