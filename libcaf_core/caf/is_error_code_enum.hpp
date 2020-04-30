@@ -32,3 +32,11 @@ template <class T>
 constexpr bool is_error_code_enum_v = is_error_code_enum<T>::value;
 
 } // namespace caf
+
+#define CAF_ERROR_CODE_ENUM(type_name)                                         \
+  namespace caf {                                                              \
+  template <>                                                                  \
+  struct is_error_code_enum<type_name> {                                       \
+    static constexpr bool value = true;                                        \
+  };                                                                           \
+  }

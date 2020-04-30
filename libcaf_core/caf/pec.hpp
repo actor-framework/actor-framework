@@ -79,9 +79,6 @@ enum class pec : uint8_t {
 
 CAF_CORE_EXPORT std::string to_string(pec);
 
-template <>
-struct is_error_code_enum<pec> {
-  static constexpr bool value = true;
-};
-
 } // namespace caf
+
+CAF_ERROR_CODE_ENUM(pec)

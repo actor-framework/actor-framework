@@ -150,9 +150,6 @@ enum class sec : uint8_t {
 /// @relates sec
 CAF_CORE_EXPORT std::string to_string(sec);
 
-template <>
-struct is_error_code_enum<sec> {
-  static constexpr bool value = true;
-};
-
 } // namespace caf
+
+CAF_ERROR_CODE_ENUM(sec)
