@@ -33,7 +33,7 @@ class error_code {
 public:
   using enum_type = Enum;
 
-  using underlying_type = typename std::underlying_type<enum_type>::type;
+  using underlying_type = std::underlying_type_t<Enum>;
 
   static_assert(is_error_code_enum_v<Enum>);
 
@@ -68,15 +68,13 @@ public:
     return value_;
   }
 
+  friend constexpr underlying_type to_integer(error_code x) noexcept {
+    return static_cast<std::underlying_type_t<Enum>>(x.value());
+  }
+
 private:
   enum_type value_;
 };
-
-/// Returns the value of the underlying integer type of `x`.
-template <class Enum, class = std::enable_if_t<is_error_code_enum_v<Enum>>>
-constexpr auto to_integer(error_code<Enum> x) noexcept {
-  return static_cast<typename error_code<Enum>::underlying_type>(x.value());
-}
 
 /// Converts `x` to a string if `Enum` provides a `to_string` function.
 template <class Enum>
