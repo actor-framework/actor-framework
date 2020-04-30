@@ -18,24 +18,23 @@
 
 #pragma once
 
+#include <future>
 #include <map>
 #include <set>
 #include <stack>
 #include <string>
-#include <future>
-#include <vector>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
-#include "caf/stateful_actor.hpp"
-#include "caf/proxy_registry.hpp"
-#include "caf/binary_serializer.hpp"
 #include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
 #include "caf/forwarding_actor_proxy.hpp"
-
 #include "caf/io/basp/all.hpp"
 #include "caf/io/broker.hpp"
 #include "caf/io/typed_broker.hpp"
+#include "caf/proxy_registry.hpp"
+#include "caf/stateful_actor.hpp"
 
 namespace caf {
 namespace io {
@@ -108,6 +107,7 @@ public:
   void learned_new_node(const node_id& nid);
 
   /// Sets `this_context` by either creating or accessing state for `hdl`.
+  /// Automatically sets `endpoint_context::last_seen` to `clock().now()`.
   void set_context(connection_handle hdl);
 
   /// Cleans up any state for `hdl`.

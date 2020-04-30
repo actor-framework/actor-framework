@@ -109,7 +109,8 @@ namespace middleman {
 std::vector<std::string> app_identifiers{"generic-caf-app"};
 const atom_value network_backend = atom("default");
 const size_t max_consecutive_reads = 50;
-const size_t heartbeat_interval = 0;
+const timespan heartbeat_interval = timespan{0};
+const timespan connection_timeout = timespan{0};
 const size_t cached_udp_buffers = 10;
 const size_t max_pending_msgs = 10;
 const size_t workers = min(3u, std::thread::hardware_concurrency() / 4u) + 1;
