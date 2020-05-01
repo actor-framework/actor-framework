@@ -87,10 +87,6 @@ optional<message> behavior_impl::invoke(message& xs) {
   return none;
 }
 
-bool behavior_impl::invoke(detail::invoke_result_visitor& f, message& xs) {
-  return invoke(f, xs);
-}
-
 void behavior_impl::handle_timeout() {
   // nop
 }
