@@ -67,10 +67,6 @@ public:
 
   using portable_name_map = hash_map<std::type_index, std::string>;
 
-  using error_renderer = std::function<std::string(uint8_t, const message&)>;
-
-  using error_renderer_map = hash_map<uint8_t, error_renderer>;
-
   using group_module_factory = std::function<group_module*()>;
 
   using group_module_factory_vector = std::vector<group_module_factory>;
@@ -152,29 +148,6 @@ public:
     using handle = typename infer_handle_from_fun<F>::type;
     static_assert(detail::is_complete<type_id<handle>>);
     return add_actor_factory(std::move(name), make_actor_factory(std::move(f)));
-  }
-
-  /// Enables the actor system to convert errors of this error category
-  /// to human-readable strings via `renderer`.
-  actor_system_config& add_error_category(uint8_t category, error_renderer f);
-
-  /// Enables the actor system to convert errors of this error category
-  /// to human-readable strings via `to_string(T)`.
-  template <class T>
-  actor_system_config&
-  add_error_category(uint8_t category, string_view category_name) {
-    auto f = [=](uint8_t val, const std::string& ctx) -> std::string {
-      std::string result{category_name.begin(), category_name.end()};
-      result += ": ";
-      result += to_string(static_cast<T>(val));
-      if (!ctx.empty()) {
-        result += " (";
-        result += ctx;
-        result += ")";
-      }
-      return result;
-    };
-    return add_error_category(category, error_renderer{f});
   }
 
   /// Loads module `T` with optional template parameters `Ts...`.
@@ -272,10 +245,6 @@ public:
   /// @note Has no effect unless building CAF with CAF_ENABLE_ACTOR_PROFILER.
   tracing_data_factory* tracing_context = nullptr;
 
-  // -- rendering of user-defined types ----------------------------------------
-
-  error_renderer_map error_renderers;
-
   // -- parsing parameters -----------------------------------------------------
 
   /// Configures the file path for the INI file, `caf-application.ini` per
@@ -291,13 +260,8 @@ public:
 
   // -- default error rendering functions --------------------------------------
 
-  static std::string render(const error& err);
-
-  static std::string render_sec(uint8_t, const message&);
-
-  static std::string render_exit_reason(uint8_t, const message&);
-
-  static std::string render_pec(uint8_t, const message&);
+  [[deprecated("please use to_string() on the error")]] static std::string
+  render(const error& err);
 
   // -- config file parsing ----------------------------------------------------
 

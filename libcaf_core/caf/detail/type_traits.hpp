@@ -27,6 +27,7 @@
 #include <utility>
 #include <vector>
 
+#include "caf/detail/is_complete.hpp"
 #include "caf/detail/is_one_of.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
@@ -740,17 +741,6 @@ struct is_stl_tuple_type {
 
 template <class T>
 constexpr bool is_stl_tuple_type_v = is_stl_tuple_type<T>::value;
-
-template <class T, std::size_t = sizeof(T)>
-std::true_type is_complete_impl(T*);
-
-std::false_type is_complete_impl(...);
-
-/// Checks whether T is a complete type. For example, passing a forward
-/// declaration or undefined template specialization evaluates to `false`.
-template <class T>
-constexpr bool is_complete
-  = decltype(is_complete_impl(std::declval<T*>()))::value;
 
 } // namespace caf::detail
 

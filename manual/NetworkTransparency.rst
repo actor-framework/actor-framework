@@ -92,12 +92,10 @@ connect to the published actor by calling ``remote_actor``:
 
    // node B
    auto ping = system.middleman().remote_actor("node A", 4242);
-   if (! ping) {
-     cerr << "unable to connect to node A: "
-          << system.render(ping.error()) << std::endl;
-   } else {
+   if (!ping)
+     cerr << "unable to connect to node A: " << to_string(ping.error()) << '\n';
+   else
      self->send(*ping, ping_atom::value);
-   }
 
 There is no difference between server and client after the connection phase.
 Remote actors use the same handle types as local actors and are thus fully

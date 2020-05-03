@@ -22,6 +22,7 @@
 #include <type_traits>
 
 #include "caf/fwd.hpp"
+#include "caf/is_error_code_enum.hpp"
 #include "caf/none.hpp"
 
 namespace caf {
@@ -32,7 +33,11 @@ class error_code {
 public:
   using enum_type = Enum;
 
-  using underlying_type = std::underlying_type_t<enum_type>;
+  using underlying_type = std::underlying_type_t<Enum>;
+
+  static_assert(is_error_code_enum_v<Enum>);
+
+  static_assert(std::is_same<underlying_type, uint8_t>::value);
 
   constexpr error_code() noexcept : value_(static_cast<Enum>(0)) {
     // nop
@@ -61,6 +66,10 @@ public:
 
   constexpr enum_type value() const noexcept {
     return value_;
+  }
+
+  friend constexpr underlying_type to_integer(error_code x) noexcept {
+    return static_cast<std::underlying_type_t<Enum>>(x.value());
   }
 
 private:

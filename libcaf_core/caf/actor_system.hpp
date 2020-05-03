@@ -242,7 +242,8 @@ public:
   actor_registry& registry();
 
   /// Returns a string representation for `err`.
-  std::string render(const error& x) const;
+  [[deprecated("please use to_string() on the error")]] std::string
+  render(const error& x) const;
 
   /// Returns the system-wide group manager.
   group_manager& groups();

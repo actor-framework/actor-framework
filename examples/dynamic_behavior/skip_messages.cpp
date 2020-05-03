@@ -37,7 +37,7 @@ void caf_main(actor_system& system) {
                                                         : "server\n");
       },
       [&](error& err) {
-        aout(self) << "received error " << system.render(err) << " from "
+        aout(self) << "received error " << to_string(err) << " from "
                    << (self->current_sender() == worker ? "worker\n"
                                                         : "server\n");
       });

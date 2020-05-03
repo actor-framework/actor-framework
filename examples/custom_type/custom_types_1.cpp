@@ -96,14 +96,14 @@ void caf_main(actor_system& sys) {
   binary_serializer bs{sys, buf};
   auto e = bs(f1);
   if (e) {
-    std::cerr << "*** unable to serialize foo2: " << sys.render(e) << std::endl;
+    std::cerr << "*** unable to serialize foo2: " << to_string(e) << '\n';
     return;
   }
   // read f2 back from buffer
   binary_deserializer bd{sys, buf};
   e = bd(f2);
   if (e) {
-    std::cerr << "*** unable to serialize foo2: " << sys.render(e) << std::endl;
+    std::cerr << "*** unable to serialize foo2: " << to_string(e) << '\n';
     return;
   }
   // must be equal

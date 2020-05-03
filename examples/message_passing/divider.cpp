@@ -27,24 +27,13 @@ std::string to_string(math_error x) {
   }
 }
 
-namespace caf {
+CAF_BEGIN_TYPE_ID_BLOCK(divider, first_custom_type_id)
 
-template <>
-struct error_category<math_error> {
-  static constexpr uint8_t value = 101;
-};
+  CAF_ADD_TYPE_ID(divider, (math_error))
 
-} // namespace caf
+CAF_END_TYPE_ID_BLOCK(divider)
 
-class config : public actor_system_config {
-public:
-  config() {
-    auto renderer = [](uint8_t x, const message&) {
-      return to_string(static_cast<math_error>(x));
-    };
-    add_error_category(caf::error_category<math_error>::value, renderer);
-  }
-};
+CAF_ERROR_CODE_ENUM(math_error)
 
 using divider = typed_actor<result<double>(div_atom, double, double)>;
 
@@ -58,7 +47,7 @@ divider::behavior_type divider_impl() {
   };
 }
 
-void caf_main(actor_system& system, const config&) {
+void caf_main(actor_system& system) {
   double x;
   double y;
   cout << "x: " << flush;
@@ -72,8 +61,8 @@ void caf_main(actor_system& system, const config&) {
       [&](double z) { aout(self) << x << " / " << y << " = " << z << endl; },
       [&](const error& err) {
         aout(self) << "*** cannot compute " << x << " / " << y << " => "
-                   << system.render(err) << endl;
+                   << to_string(err) << endl;
       });
 }
 
-CAF_MAIN()
+CAF_MAIN(id_block::divider)

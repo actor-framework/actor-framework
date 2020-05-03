@@ -136,10 +136,6 @@ actor_system_config::actor_system_config()
                  "path to an OpenSSL-style directory of trusted certificates")
     .add<string>(openssl_cafile, "cafile",
                  "path to a file of concatenated PEM-formatted certificates");
-  // add renderers for default error categories
-  add_error_category(error_category<sec>::value, render_sec);
-  add_error_category(error_category<pec>::value, render_pec);
-  add_error_category(error_category<exit_reason>::value, render_exit_reason);
 }
 
 settings actor_system_config::dump_content() const {
@@ -358,14 +354,8 @@ actor_system_config& actor_system_config::add_actor_factory(std::string name,
   return *this;
 }
 
-actor_system_config& actor_system_config::add_error_category(uint8_t x,
-                                                             error_renderer y) {
-  error_renderers[x] = y;
-  return *this;
-}
-
-actor_system_config&
-actor_system_config::set_impl(string_view name, config_value value) {
+actor_system_config& actor_system_config::set_impl(string_view name,
+                                                   config_value value) {
   if (name == "middleman.app-identifier") {
     // TODO: Print a warning with 0.18 and remove this code with 0.19.
     value.convert_to_list();
@@ -393,39 +383,9 @@ timespan actor_system_config::stream_tick_duration() const noexcept {
                                    stream_max_batch_delay.count());
   return timespan{ns_count};
 }
+
 std::string actor_system_config::render(const error& x) {
-  if (!x)
-    return "none";
-  switch (x.category()) {
-    case error_category<sec>::value:
-      return render_sec(x.code(), x.context());
-    case error_category<exit_reason>::value:
-      return render_exit_reason(x.code(), x.context());
-    case error_category<pec>::value:
-      return render_pec(x.code(), x.context());
-    default:
-      return deep_to_string(meta::type_name("error"), x.code(), x.category(),
-                            meta::omittable_if_empty(), x.context());
-  }
-}
-
-std::string actor_system_config::render_sec(uint8_t x, const message& xs) {
-  auto tmp = static_cast<sec>(x);
-  return deep_to_string(meta::type_name("system_error"), tmp,
-                        meta::omittable_if_empty(), xs);
-}
-
-std::string actor_system_config::render_exit_reason(uint8_t x,
-                                                    const message& xs) {
-  auto tmp = static_cast<exit_reason>(x);
-  return deep_to_string(meta::type_name("exit_reason"), tmp,
-                        meta::omittable_if_empty(), xs);
-}
-
-std::string actor_system_config::render_pec(uint8_t x, const message& xs) {
-  auto tmp = static_cast<pec>(x);
-  return deep_to_string(meta::type_name("parser_error"), tmp,
-                        meta::omittable_if_empty(), xs);
+  return to_string(x);
 }
 
 expected<settings>

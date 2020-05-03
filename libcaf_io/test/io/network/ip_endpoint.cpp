@@ -50,7 +50,7 @@ struct fixture : test_coordinator_fixture<> {
     byte_buffer buf;
     binary_serializer sink{sys, buf};
     if (auto err = sink(x, xs...))
-      CAF_FAIL("serialization failed: " << sys.render(err));
+      CAF_FAIL("serialization failed: " << err);
     return buf;
   }
 
@@ -58,7 +58,7 @@ struct fixture : test_coordinator_fixture<> {
   void deserialize(const Buffer& buf, T& x, Ts&... xs) {
     binary_deserializer source{sys, buf};
     if (auto err = source(x, xs...))
-      CAF_FAIL("serialization failed: " << sys.render(err));
+      CAF_FAIL("serialization failed: " << err);
   }
 };
 

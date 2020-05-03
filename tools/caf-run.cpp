@@ -161,8 +161,8 @@ void bootstrap(actor_system& system, const string& wdir,
   // possible addresses slaves can use to connect to us
   auto port_res = system.middleman().publish(self, 0);
   if (!port_res) {
-    cerr << "fatal: unable to publish actor: "
-         << system.render(port_res.error()) << endl;
+    cerr << "fatal: unable to publish actor: " << to_string(port_res.error())
+         << endl;
     return;
   }
   auto port = *port_res;

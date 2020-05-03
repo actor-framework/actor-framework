@@ -318,7 +318,7 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
       std::set<std::string> sigs;
       if (auto err = bd(source_node, app_ids, aid, sigs)) {
         CAF_LOG_WARNING("unable to deserialize payload of server handshake:"
-                        << ctx->system().render(err));
+                        << to_string(err));
         return serializing_basp_payload_failed;
       }
       // Check the application ID.
@@ -367,7 +367,7 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
       node_id source_node;
       if (auto err = bd(source_node)) {
         CAF_LOG_WARNING("unable to deserialize payload of client handshake:"
-                        << ctx->system().render(err));
+                        << to_string(err));
         return serializing_basp_payload_failed;
       }
       // Drop repeated handshakes.
@@ -391,7 +391,7 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
       if (auto err = bd(source_node, dest_node)) {
         CAF_LOG_WARNING(
           "unable to deserialize source and destination for routed message:"
-          << ctx->system().render(err));
+          << to_string(err));
         return serializing_basp_payload_failed;
       }
       if (dest_node != this_node_) {
@@ -449,7 +449,7 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
       node_id dest_node;
       if (auto err = bd(source_node, dest_node)) {
         CAF_LOG_WARNING("unable to deserialize payload of monitor message:"
-                        << ctx->system().render(err));
+                        << to_string(err));
         return serializing_basp_payload_failed;
       }
       if (dest_node == this_node_)
@@ -465,8 +465,8 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
       node_id dest_node;
       error fail_state;
       if (auto err = bd(source_node, dest_node, fail_state)) {
-        CAF_LOG_WARNING("unable to deserialize payload of down message:"
-                        << ctx->system().render(err));
+        CAF_LOG_WARNING(
+          "unable to deserialize payload of down message:" << to_string(err));
         return serializing_basp_payload_failed;
       }
       if (dest_node == this_node_) {

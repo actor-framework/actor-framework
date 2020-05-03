@@ -74,7 +74,7 @@ struct fixture : test_coordinator_fixture<> {
 
 } // namespace
 
-#define ERROR_HANDLER [&](error& err) { CAF_FAIL(sys.render(err)); }
+#define ERROR_HANDLER [&](error& err) { CAF_FAIL(err); }
 
 #define SUBTEST(message)                                                       \
   *result = none;                                                              \

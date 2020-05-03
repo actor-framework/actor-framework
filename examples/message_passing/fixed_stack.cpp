@@ -3,29 +3,24 @@
 #include <cstdint>
 #include <iostream>
 
+enum class fixed_stack_errc : uint8_t {
+  push_to_full = 1,
+  pop_from_empty,
+};
+
 CAF_BEGIN_TYPE_ID_BLOCK(fixed_stack, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(fixed_stack, (fixed_stack_errc))
 
   CAF_ADD_ATOM(fixed_stack, pop_atom)
   CAF_ADD_ATOM(fixed_stack, push_atom)
 
 CAF_END_TYPE_ID_BLOCK(fixed_stack)
 
+CAF_ERROR_CODE_ENUM(fixed_stack_errc)
+
 using std::endl;
 using namespace caf;
-
-enum class fixed_stack_errc : uint8_t {
-  push_to_full = 1,
-  pop_from_empty,
-};
-
-namespace caf {
-
-template <>
-struct error_category<fixed_stack_errc> {
-  static constexpr uint8_t value = 100;
-};
-
-} // namespace caf
 
 class fixed_stack : public event_based_actor {
 public:

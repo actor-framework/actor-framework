@@ -364,12 +364,6 @@ actor_registry& actor_system::registry() {
 }
 
 std::string actor_system::render(const error& x) const {
-  if (!x)
-    return to_string(x);
-  auto& xs = config().error_renderers;
-  auto i = xs.find(x.category());
-  if (i != xs.end())
-    return i->second(x.code(), x.context());
   return to_string(x);
 }
 

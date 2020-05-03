@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2019 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,32 +16,27 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE error
+#pragma once
 
-#include "caf/error.hpp"
+namespace caf {
 
-#include "core-test.hpp"
+/// Customization point for enabling conversion from an enum type to an
+/// @ref error or @ref error_code.
+template <class T>
+struct is_error_code_enum {
+  static constexpr bool value = false;
+};
 
-using namespace caf;
+/// @relates is_error_code_enum
+template <class T>
+constexpr bool is_error_code_enum_v = is_error_code_enum<T>::value;
 
-CAF_TEST(default constructed errors evaluate to false) {
-  error err;
-  CAF_CHECK(!err);
-}
+} // namespace caf
 
-CAF_TEST(error code zero is not an error) {
-  CAF_CHECK(!error(sec::none));
-  CAF_CHECK(!make_error(sec::none));
-  CAF_CHECK(!error{error_code<sec>(sec::none)});
-}
-
-CAF_TEST(error codes that are not zero are errors) {
-  CAF_CHECK(error(sec::unexpected_message));
-  CAF_CHECK(make_error(sec::unexpected_message));
-  CAF_CHECK(error{error_code<sec>(sec::unexpected_message)});
-}
-
-CAF_TEST(errors convert enums to their integer value) {
-  CAF_CHECK_EQUAL(make_error(sec::unexpected_message).code(), 1u);
-  CAF_CHECK_EQUAL(error{error_code<sec>(sec::unexpected_message)}.code(), 1u);
-}
+#define CAF_ERROR_CODE_ENUM(type_name)                                         \
+  namespace caf {                                                              \
+  template <>                                                                  \
+  struct is_error_code_enum<type_name> {                                       \
+    static constexpr bool value = true;                                        \
+  };                                                                           \
+  }

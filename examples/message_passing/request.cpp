@@ -56,8 +56,7 @@ void blocking_testee(blocking_actor* self, vector<cell> cells) {
           aout(self) << "cell #" << x.id() << " -> " << y << endl;
         },
         [&](error& err) {
-          aout(self) << "cell #" << x.id() << " -> "
-                     << self->system().render(err) << endl;
+          aout(self) << "cell #" << x.id() << " -> " << to_string(err) << endl;
         });
 }
 

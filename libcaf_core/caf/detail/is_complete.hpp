@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2019 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,13 +18,19 @@
 
 #pragma once
 
-#include <cstdint>
+#include <type_traits>
 
-namespace caf {
+namespace caf::detail {
 
-/// Customization point for enabling conversion from an enum type to an
-/// @ref error.
+template <class T, std::size_t = sizeof(T)>
+std::true_type is_complete_impl(T*);
+
+std::false_type is_complete_impl(...);
+
+/// Checks whether T is a complete type. For example, passing a forward
+/// declaration or undefined template specialization evaluates to `false`.
 template <class T>
-struct error_category;
+constexpr bool is_complete
+  = decltype(is_complete_impl(std::declval<T*>()))::value;
 
-} // namespace caf
+} // namespace caf::detail

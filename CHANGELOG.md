@@ -42,6 +42,14 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   losing connection to the monitored node.
 - In preparation of potential future API additions/changes, CAF now includes an
   RFC4122-compliant `uuid` class.
+- The new trait class `is_error_code_enum` allows users to enable conversion of
+  custom error code enums to `error` and `error_code`.
+
+### Deprecated
+
+- The `to_string` output for `error` now renders the error code enum by default.
+  This renders the member functions `actor_system::render` and
+  `actor_system_config::render` obsolete.
 
 ### Changed
 

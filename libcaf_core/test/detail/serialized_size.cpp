@@ -40,7 +40,7 @@ struct fixture : test_coordinator_fixture<> {
     byte_buffer buf;
     binary_serializer sink{sys, buf};
     if (auto err = sink(xs...))
-      CAF_FAIL("failed to serialize data: " << sys.render(err));
+      CAF_FAIL("failed to serialize data: " << err);
     return buf.size();
   }
 };

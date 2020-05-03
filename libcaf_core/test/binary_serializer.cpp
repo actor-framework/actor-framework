@@ -49,8 +49,7 @@ struct fixture {
     byte_buffer result;
     binary_serializer sink{nullptr, result};
     if (auto err = sink(xs...))
-      CAF_FAIL("binary_serializer failed to save: "
-               << actor_system_config::render(err));
+      CAF_FAIL("binary_serializer failed to save: " << err);
     return result;
   }
 
@@ -58,8 +57,7 @@ struct fixture {
   void save_to_buf(byte_buffer& data, const Ts&... xs) {
     binary_serializer sink{nullptr, data};
     if (auto err = sink(xs...))
-      CAF_FAIL("binary_serializer failed to save: "
-               << actor_system_config::render(err));
+      CAF_FAIL("binary_serializer failed to save: " << err);
   }
 };
 

@@ -79,7 +79,7 @@ void ChatWidget::sendChatMessage() {
         auto x = system().groups().get(mod, g);
         if (! x)
           print("*** error: "
-                + QString::fromUtf8(system().render(x.error()).c_str()));
+                + QString::fromUtf8(to_string(x.error()).c_str()));
         else
           self()->send(self(), atom("join"), std::move(*x));
       },
@@ -128,7 +128,7 @@ void ChatWidget::joinGroup() {
   string gid = gname.midRef(pos+1).toUtf8().constData();
   auto x = system().groups().get(mod, gid);
   if (! x)
-    QMessageBox::critical(this, "Error", system().render(x.error()).c_str());
+    QMessageBox::critical(this, "Error", to_string(x.error()).c_str());
   else
     self()->send(self(), join_atom::value, std::move(*x));
 }

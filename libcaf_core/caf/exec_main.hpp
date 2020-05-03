@@ -92,8 +92,8 @@ int exec_main(F fun, int argc, char** argv,
   // Pass CLI options to config.
   typename helper::config cfg;
   if (auto err = cfg.parse(argc, argv, config_file_name)) {
-    std::cerr << "error while parsing CLI and file options: "
-              << actor_system_config::render(err) << std::endl;
+    std::cerr << "error while parsing CLI and file options: " << to_string(err)
+              << std::endl;
     return EXIT_FAILURE;
   }
   // Return immediately if a help text was printed.

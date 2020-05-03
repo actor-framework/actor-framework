@@ -71,8 +71,6 @@ CAF_TEST(test_serial_reply) {
   CAF_MESSAGE("ID of main: " << self->id());
   self->request(master, infinite, hi_atom::value)
     .receive([](ho_atom) { CAF_MESSAGE("received 'ho'"); },
-             [&](const error& err) {
-               CAF_ERROR("Error: " << self->system().render(err));
-             });
+             [&](const error& err) { CAF_ERROR("Error: " << to_string(err)); });
   CAF_REQUIRE(self->mailbox().empty());
 }

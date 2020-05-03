@@ -22,8 +22,8 @@
 #include <string>
 
 #include "caf/detail/core_export.hpp"
-#include "caf/error_category.hpp"
 #include "caf/fwd.hpp"
+#include "caf/is_error_code_enum.hpp"
 
 namespace caf {
 
@@ -79,9 +79,6 @@ enum class pec : uint8_t {
 
 CAF_CORE_EXPORT std::string to_string(pec);
 
-template <>
-struct error_category<pec> {
-  static constexpr uint8_t value = 1;
-};
-
 } // namespace caf
+
+CAF_ERROR_CODE_ENUM(pec)
