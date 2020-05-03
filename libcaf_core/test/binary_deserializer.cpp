@@ -49,7 +49,7 @@ struct fixture {
     auto result = T{};
     binary_deserializer source{nullptr, buf};
     if (auto err = source(result))
-      CAF_FAIL("binary_deserializer failed to load: " << to_string(err));
+      CAF_FAIL("binary_deserializer failed to load: " << err);
     return result;
   }
 
@@ -57,7 +57,7 @@ struct fixture {
   void load(const std::vector<byte>& buf, Ts&... xs) {
     binary_deserializer source{nullptr, buf};
     if (auto err = source(xs...))
-      CAF_FAIL("binary_deserializer failed to load: " << to_string(err));
+      CAF_FAIL("binary_deserializer failed to load: " << err);
   }
 };
 
