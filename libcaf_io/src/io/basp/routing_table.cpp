@@ -85,36 +85,34 @@ node_id routing_table::lookup_indirect(const node_id& nid) const {
 
 node_id routing_table::erase_direct(const connection_handle& hdl) {
   std::unique_lock<std::mutex> guard{mtx_};
+  // Sanity check: do nothing if the handle is not mapped to a node.
   auto i = direct_by_hdl_.find(hdl);
   if (i == direct_by_hdl_.end())
     return {};
-  // Check whether this handle was the primary mapping for the node.
-  auto& node = i->second;
-  auto j = direct_by_nid_.find(node);
-  if (j != direct_by_nid_.end()) {
-    if (j->second == hdl) {
-      // Try to find an alternative for falling back to a differnt connection.
-      auto predicate = [&](handle_to_node_map::value_type& kvp) {
-        return kvp.second == node;
-      };
-      auto e = direct_by_hdl_.end();
-      auto alternative = std::find_if(direct_by_hdl_.begin(), e, predicate);
-      if (alternative != e) {
-        // Update node <-> handle mapping and only drop the handle.
-        j->second = alternative->first;
-      } else {
-        // This was the only connection to the node. Drop it.
-        auto result = std::move(node);
-        direct_by_nid_.erase(j);
-        direct_by_hdl_.erase(i);
-        return result;
-      }
-    }
-  }
-  // Unless this was the only connection to the node, we only drop the
-  // connection handle.
+  // We always remove i from direct_by_hdl_.
+  auto node = std::move(i->second);
   direct_by_hdl_.erase(i);
-  return {};
+  // Sanity check: direct_by_nid_ should contain a reverse mapping.
+  auto j = direct_by_nid_.find(node);
+  if (j == direct_by_nid_.end()) {
+    CAF_LOG_WARNING("no reverse mapping exists for the connection handle");
+    return node;
+  }
+  // Try to find an alternative connection for communicating with the node.
+  auto predicate = [&](const handle_to_node_map::value_type& kvp) {
+    return kvp.second == node;
+  };
+  auto e = direct_by_hdl_.end();
+  auto alternative = std::find_if(direct_by_hdl_.begin(), e, predicate);
+  if (alternative != e) {
+    // Update node <-> handle mapping.
+    j->second = alternative->first;
+    return {};
+  } else {
+    // Drop the node after losing the last connection to it.
+    direct_by_nid_.erase(j);
+    return node;
+  }
 }
 
 bool routing_table::erase_indirect(const node_id& dest) {
