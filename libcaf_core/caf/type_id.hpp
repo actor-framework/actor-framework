@@ -326,4 +326,10 @@ static constexpr type_id_t io_module_begin = id_block::core_module::end;
 
 static constexpr type_id_t io_module_end = io_module_begin + 19;
 
+static constexpr type_id_t net_module_begin = io_module_end;
+
+static constexpr type_id_t net_module_end = net_module_begin + 1;
+
+static_assert(net_module_end <= first_custom_type_id);
+
 } // namespace caf::detail
