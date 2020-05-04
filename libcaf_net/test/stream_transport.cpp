@@ -51,7 +51,7 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
   fixture() : recv_buf(1024), shared_buf{std::make_shared<buffer_type>()} {
     mpx = std::make_shared<multiplexer>();
     if (auto err = mpx->init())
-      CAF_FAIL("mpx->init failed: " << sys.render(err));
+      CAF_FAIL("mpx->init failed: " << err);
     mpx->set_thread_id();
     CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
     auto sockets = unbox(make_stream_socket_pair());
@@ -195,7 +195,7 @@ CAF_TEST(resolve and proxy communication) {
   run();
   auto read_res = read(recv_socket_guard.socket(), recv_buf);
   if (!holds_alternative<size_t>(read_res))
-    CAF_FAIL("read() returned an error: " << sys.render(get<sec>(read_res)));
+    CAF_FAIL("read() returned an error: " << get<sec>(read_res));
   recv_buf.resize(get<size_t>(read_res));
   CAF_MESSAGE("receive buffer contains " << recv_buf.size() << " bytes");
   message msg;

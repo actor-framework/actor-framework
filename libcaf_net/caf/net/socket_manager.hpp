@@ -84,7 +84,7 @@ public:
   virtual bool handle_write_event() = 0;
 
   /// Called when the remote side becomes unreachable due to an error.
-  /// @param reason The error code as reported by the operating system.
+  /// @param code The error code as reported by the operating system.
   virtual void handle_error(sec code) = 0;
 
 protected:

@@ -41,8 +41,7 @@ void actor_proxy_impl::enqueue(mailbox_element_ptr what, execution_unit*) {
   if (auto payload = sf_(home_system(), what->content()))
     dst_->enqueue(std::move(what), ctrl(), std::move(*payload));
   else
-    CAF_LOG_ERROR(
-      "unable to serialize payload: " << home_system().render(payload.error()));
+    CAF_LOG_ERROR("unable to serialize payload: " << payload.error());
 }
 
 void actor_proxy_impl::kill_proxy(execution_unit* ctx, error rsn) {

@@ -43,19 +43,17 @@ expected<std::pair<pipe_socket, pipe_socket>> CAF_NET_EXPORT make_pipe();
 
 /// Transmits data from `x` to its peer.
 /// @param x Connected endpoint.
-/// @param buf Points to the message to send.
-/// @param buf_size Specifies the size of the buffer in bytes.
+/// @param buf Memory region for reading the message to send.
 /// @returns The number of written bytes on success, otherwise an error code.
 /// @relates pipe_socket
 variant<size_t, sec> CAF_NET_EXPORT write(pipe_socket x, span<const byte> buf);
 
 /// Receives data from `x`.
 /// @param x Connected endpoint.
-/// @param buf Points to destination buffer.
-/// @param buf_size Specifies the maximum size of the buffer in bytes.
+/// @param buf Memory region for storing the received bytes.
 /// @returns The number of received bytes on success, otherwise an error code.
 /// @relates pipe_socket
-variant<size_t, sec> CAF_NET_EXPORT read(pipe_socket x, span<byte>);
+variant<size_t, sec> CAF_NET_EXPORT read(pipe_socket x, span<byte> buf);
 
 /// Converts the result from I/O operation on a ::pipe_socket to either an
 /// error code or a non-zero positive integer.

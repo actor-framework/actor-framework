@@ -48,7 +48,7 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
     mpx = std::make_shared<multiplexer>();
     mpx->set_thread_id();
     if (auto err = mpx->init())
-      CAF_FAIL("mpx->init failed: " << sys.render(err));
+      CAF_FAIL("mpx->init failed: " << err);
     if (mpx->num_socket_managers() != 1)
       CAF_FAIL("mpx->num_socket_managers() != 1");
   }
@@ -214,7 +214,7 @@ CAF_TEST(resolve and proxy communication) {
   run();
   auto read_res = read(sockets.second, read_buf);
   if (!holds_alternative<size_t>(read_res)) {
-    CAF_ERROR("read() returned an error: " << sys.render(get<sec>(read_res)));
+    CAF_ERROR("read() returned an error: " << get<sec>(read_res));
     return;
   }
   read_buf.resize(get<size_t>(read_res));

@@ -38,6 +38,8 @@ class transport_worker;
 template <class Transport, class IdType = unit_t>
 class transport_worker_dispatcher;
 
+enum class ec : uint8_t;
+
 // -- classes ------------------------------------------------------------------
 
 class endpoint_manager;
@@ -66,3 +68,17 @@ using socket_manager_ptr = intrusive_ptr<socket_manager>;
 using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
 
 } // namespace caf::net
+
+namespace caf::net::basp {
+
+enum class ec : uint8_t;
+
+} // namespace caf::net::basp
+
+CAF_BEGIN_TYPE_ID_BLOCK(net_module, detail::net_module_begin)
+
+  CAF_ADD_TYPE_ID(net_module, (caf::net::basp::ec))
+
+CAF_END_TYPE_ID_BLOCK(net_module)
+
+static_assert(caf::id_block::net_module::end == caf::detail::net_module_end);

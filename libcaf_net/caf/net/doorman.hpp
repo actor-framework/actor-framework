@@ -69,7 +69,7 @@ public:
   bool handle_read_event(Parent& parent) {
     auto x = net::accept(acceptor_);
     if (!x) {
-      CAF_LOG_ERROR("accept failed:" << parent.system().render(x.error()));
+      CAF_LOG_ERROR("accept failed:" << x.error());
       return false;
     }
     auto mpx = parent.multiplexer();

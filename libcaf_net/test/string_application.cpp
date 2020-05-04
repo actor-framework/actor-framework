@@ -49,7 +49,7 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
   fixture() {
     mpx = std::make_shared<multiplexer>();
     if (auto err = mpx->init())
-      CAF_FAIL("mpx->init failed: " << sys.render(err));
+      CAF_FAIL("mpx->init failed: " << err);
     mpx->set_thread_id();
   }
 

@@ -100,7 +100,7 @@ variant<std::pair<size_t, ip_endpoint>, sec> read(udp_datagram_socket x,
                          << " bytes");
     ip_endpoint ep;
     if (auto err = detail::convert(addr, ep)) {
-      CAF_ASSERT(err.category() == error_category<sec>::value);
+      CAF_ASSERT(err.category() == type_id_v<sec>);
       return static_cast<sec>(err.code());
     }
     return std::pair<size_t, ip_endpoint>(*num_bytes, ep);

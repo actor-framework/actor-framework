@@ -33,9 +33,9 @@ struct CAF_NET_EXPORT udp_datagram_socket : network_socket {
 };
 
 /// Creates a `udp_datagram_socket` bound to given port.
-/// @param node ip_endpoint that contains the port to bind to. Pass port '0' to
-/// bind to any unused port - The endpoint will be updated with the specific
-/// port that was bound.
+/// @param ep ip_endpoint that contains the port to bind to. Pass port '0' to
+///           bind to any unused port - The endpoint will be updated with the
+///           specific port that was bound.
 /// @returns The connected socket or an error.
 /// @relates udp_datagram_socket
 expected<std::pair<udp_datagram_socket, uint16_t>> CAF_NET_EXPORT
@@ -49,10 +49,10 @@ error CAF_NET_EXPORT allow_connreset(udp_datagram_socket x, bool new_value);
 /// @param x The UDP socket for receiving datagrams.
 /// @param buf Writable output buffer.
 /// @returns The number of received bytes and the sender as `ip_endpoint` on
-/// success, an error code otherwise.
+///          success, an error code otherwise.
 /// @relates udp_datagram_socket
 /// @post buf was modified and the resulting integer represents the length of
-/// the received datagram, even if it did not fit into the given buffer.
+///       the received datagram, even if it did not fit into the given buffer.
 variant<std::pair<size_t, ip_endpoint>, sec>
   CAF_NET_EXPORT read(udp_datagram_socket x, span<byte> buf);
 

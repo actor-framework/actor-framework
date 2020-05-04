@@ -20,6 +20,7 @@
 
 #include "caf/actor_system_config.hpp"
 #include "caf/detail/set_thread_name.hpp"
+#include "caf/init_global_meta_objects.hpp"
 #include "caf/net/basp/ec.hpp"
 #include "caf/net/middleman_backend.hpp"
 #include "caf/net/multiplexer.hpp"
@@ -30,7 +31,7 @@
 namespace caf::net {
 
 void middleman::init_global_meta_objects() {
-  // nop
+  caf::init_global_meta_objects<id_block::net_module>();
 }
 
 middleman::middleman(actor_system& sys) : sys_(sys) {
@@ -68,7 +69,7 @@ void middleman::stop() {
 
 void middleman::init(actor_system_config& cfg) {
   if (auto err = mpx_->init()) {
-    CAF_LOG_ERROR("mgr->init() failed: " << system().render(err));
+    CAF_LOG_ERROR("mgr->init() failed: " << err);
     CAF_RAISE_ERROR("mpx->init() failed");
   }
   if (auto node_uri = get_if<uri>(&cfg, "middleman.this-node")) {
@@ -79,7 +80,7 @@ void middleman::init(actor_system_config& cfg) {
   }
   for (auto& backend : backends_)
     if (auto err = backend->init()) {
-      CAF_LOG_ERROR("failed to initialize backend: " << system().render(err));
+      CAF_LOG_ERROR("failed to initialize backend: " << err);
       CAF_RAISE_ERROR("failed to initialize backend");
     }
 }

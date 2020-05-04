@@ -54,7 +54,7 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
   fixture() : shared_buf(std::make_shared<buffer_type>(1024)) {
     mpx = std::make_shared<multiplexer>();
     if (auto err = mpx->init())
-      CAF_FAIL("mpx->init failed: " << sys.render(err));
+      CAF_FAIL("mpx->init failed: " << err);
     mpx->set_thread_id();
     CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
     auto addresses = local_addresses("localhost");
@@ -203,7 +203,7 @@ CAF_TEST_FIXTURE_SCOPE(datagram_transport_tests, fixture)
 CAF_TEST(receive) {
   using transport_type = datagram_transport<dummy_application_factory>;
   if (auto err = nonblocking(recv_socket, true))
-    CAF_FAIL("nonblocking() returned an error: " << sys.render(err));
+    CAF_FAIL("nonblocking() returned an error: " << err);
   auto mgr = make_endpoint_manager(mpx, sys,
                                    transport_type{recv_socket,
                                                   dummy_application_factory{

@@ -83,7 +83,7 @@ test::peer_entry& test::emplace(const node_id& peer_id, stream_socket first,
   auto mgr = make_endpoint_manager(mpx, mm_.system(),
                                    transport_type{second, std::move(app)});
   if (auto err = mgr->init()) {
-    CAF_LOG_ERROR("mgr->init() failed: " << mm_.system().render(err));
+    CAF_LOG_ERROR("mgr->init() failed: " << err);
     CAF_RAISE_ERROR("mgr->init() failed");
   }
   mpx->register_reading(mgr);
@@ -98,8 +98,7 @@ test::peer_entry& test::get_peer(const node_id& id) {
     return i->second;
   auto sockets = make_stream_socket_pair();
   if (!sockets) {
-    CAF_LOG_ERROR("make_stream_socket_pair failed: "
-                  << mm_.system().render(sockets.error()));
+    CAF_LOG_ERROR("make_stream_socket_pair failed: " << sockets.error());
     CAF_RAISE_ERROR("make_stream_socket_pair failed");
   }
   return emplace(id, sockets->first, sockets->second);

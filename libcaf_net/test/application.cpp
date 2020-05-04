@@ -38,7 +38,7 @@ using namespace caf::net;
 
 #define REQUIRE_OK(statement)                                                  \
   if (auto err = statement)                                                    \
-    CAF_FAIL("failed to serialize data: " << sys.render(err));
+    CAF_FAIL("failed to serialize data: " << err);
 
 namespace {
 
@@ -71,7 +71,7 @@ struct fixture : test_coordinator_fixture<>,
   void handle_handshake() {
     CAF_CHECK_EQUAL(app.state(),
                     basp::connection_state::await_handshake_header);
-    auto payload = to_buf(mars, defaults::middleman::app_identifiers);
+    auto payload = to_buf(mars, basp::application::default_app_ids());
     set_input(basp::header{basp::message_type::handshake,
                            static_cast<uint32_t>(payload.size()),
                            basp::version});
@@ -93,7 +93,7 @@ struct fixture : test_coordinator_fixture<>,
     binary_deserializer source{sys, output};
     source.skip(basp::header_size);
     if (auto err = source(nid, app_ids))
-      CAF_FAIL("unable to deserialize payload: " << sys.render(err));
+      CAF_FAIL("unable to deserialize payload: " << err);
     if (source.remaining() > 0)
       CAF_FAIL("trailing bytes after reading payload");
     output.clear();
@@ -159,11 +159,9 @@ protected:
     auto payload = to_buf(__VA_ARGS__);                                        \
     set_input(basp::header{kind, static_cast<uint32_t>(payload.size()), op});  \
     if (auto err = app.handle_data(*this, input))                              \
-      CAF_FAIL("application-under-test failed to process header: "             \
-               << sys.render(err));                                            \
+      CAF_FAIL("application-under-test failed to process header: " << err);    \
     if (auto err = app.handle_data(*this, payload))                            \
-      CAF_FAIL("application-under-test failed to process payload: "            \
-               << sys.render(err));                                            \
+      CAF_FAIL("application-under-test failed to process payload: " << err);   \
   } while (false)
 
 #define RECEIVE(msg_type, op_data, ...)                                        \
@@ -171,7 +169,7 @@ protected:
     binary_deserializer source{sys, output};                                   \
     basp::header hdr;                                                          \
     if (auto err = source(hdr, __VA_ARGS__))                                   \
-      CAF_FAIL("failed to receive data: " << sys.render(err));                 \
+      CAF_FAIL("failed to receive data: " << err);                             \
     if (source.remaining() != 0)                                               \
       CAF_FAIL("unable to read entire message, " << source.remaining()         \
                                                  << " bytes left in buffer");  \

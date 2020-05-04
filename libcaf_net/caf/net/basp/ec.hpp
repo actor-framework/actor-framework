@@ -22,7 +22,7 @@
 #include <string>
 
 #include "caf/detail/net_export.hpp"
-#include "caf/error_category.hpp"
+#include "caf/is_error_code_enum.hpp"
 
 namespace caf::net::basp {
 
@@ -49,11 +49,4 @@ CAF_NET_EXPORT std::string to_string(ec x);
 
 } // namespace caf::net::basp
 
-namespace caf {
-
-template <>
-struct error_category<net::basp::ec> {
-  static constexpr uint8_t value = 4;
-};
-
-} // namespace caf
+CAF_ERROR_CODE_ENUM(caf::net::basp::ec)

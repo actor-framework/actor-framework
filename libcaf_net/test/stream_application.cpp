@@ -42,7 +42,7 @@ using namespace caf::net;
 
 #define REQUIRE_OK(statement)                                                  \
   if (auto err = statement)                                                    \
-    CAF_FAIL(sys.render(err));
+    CAF_FAIL(err);
 
 namespace {
 
@@ -98,7 +98,7 @@ struct fixture : host_fixture, test_coordinator_fixture<config> {
   void handle_handshake() {
     CAF_CHECK_EQUAL(app->state(),
                     basp::connection_state::await_handshake_header);
-    auto payload = to_buf(mars, defaults::middleman::app_identifiers);
+    auto payload = to_buf(mars, basp::application::default_app_ids());
     mock(basp::header{basp::message_type::handshake,
                       static_cast<uint32_t>(payload.size()), basp::version});
     CAF_CHECK_EQUAL(app->state(),
@@ -122,7 +122,7 @@ struct fixture : host_fixture, test_coordinator_fixture<config> {
     std::vector<std::string> app_ids;
     binary_deserializer source{sys, buf};
     if (auto err = source(nid, app_ids))
-      CAF_FAIL("unable to deserialize payload: " << sys.render(err));
+      CAF_FAIL("unable to deserialize payload: " << err);
     if (source.remaining() > 0)
       CAF_FAIL("trailing bytes after reading payload");
   }
@@ -172,7 +172,7 @@ struct fixture : host_fixture, test_coordinator_fixture<config> {
         CAF_FAIL("unable to read " << hdr.payload_len << " bytes");            \
       binary_deserializer source{sys, buf};                                    \
       if (auto err = source(__VA_ARGS__))                                      \
-        CAF_FAIL("failed to receive data: " << sys.render(err));               \
+        CAF_FAIL("failed to receive data: " << err);                           \
     } else {                                                                   \
       if (hdr.payload_len != 0)                                                \
         CAF_FAIL("unexpected payload");                                        \

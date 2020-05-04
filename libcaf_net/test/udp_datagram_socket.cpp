@@ -121,7 +121,7 @@ CAF_TEST(read / write using span<std::vector<byte>*>) {
   std::vector<byte> hdr_buf;
   binary_serializer sink(sys, hdr_buf);
   if (auto err = sink(hdr))
-    CAF_FAIL("serializing payload failed" << sys.render(err));
+    CAF_FAIL("serializing payload failed" << err);
   auto bytes = as_bytes(make_span(hello_test));
   std::vector<byte> payload_buf(bytes.begin(), bytes.end());
   auto packet_size = hdr_buf.size() + payload_buf.size();
