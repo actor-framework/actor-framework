@@ -170,16 +170,25 @@ CAF_TEST(flat CLI parsing with nested categories) {
 
 CAF_TEST(square brackets are optional on the command line) {
   using int_list = std::vector<int>;
-  opts.add<int_list>("global", "bar,b", "some list");
-  CAF_CHECK_EQUAL(read<int_list>({"--bar=[1])"}), int_list({1}));
-  CAF_CHECK_EQUAL(read<int_list>({"--bar=[1,])"}), int_list({1}));
-  CAF_CHECK_EQUAL(read<int_list>({"--bar=[ 1 , ])"}), int_list({1}));
-  CAF_CHECK_EQUAL(read<int_list>({"--bar=[1,2])"}), int_list({1, 2}));
-  CAF_CHECK_EQUAL(read<int_list>({"--bar=[1, 2, 3])"}), int_list({1, 2, 3}));
-  CAF_CHECK_EQUAL(read<int_list>({"--bar=[1, 2, 3, ])"}), int_list({1, 2, 3}));
-  CAF_CHECK_EQUAL(read<int_list>({"--bar=1)"}), int_list({1}));
-  CAF_CHECK_EQUAL(read<int_list>({"--bar=1,2,3)"}), int_list({1, 2, 3}));
-  CAF_CHECK_EQUAL(read<int_list>({"--bar=1, 2 , 3 , )"}), int_list({1, 2, 3}));
+  opts.add<int_list>("global", "value,v", "some list");
+  CAF_CHECK_EQUAL(read<int_list>({"--value=[1]"}), int_list({1}));
+  CAF_CHECK_EQUAL(read<int_list>({"--value=[1,]"}), int_list({1}));
+  CAF_CHECK_EQUAL(read<int_list>({"--value=[ 1 , ]"}), int_list({1}));
+  CAF_CHECK_EQUAL(read<int_list>({"--value=[1,2]"}), int_list({1, 2}));
+  CAF_CHECK_EQUAL(read<int_list>({"--value=[1, 2, 3]"}), int_list({1, 2, 3}));
+  CAF_CHECK_EQUAL(read<int_list>({"--value=[1, 2, 3, ]"}), int_list({1, 2, 3}));
+  CAF_CHECK_EQUAL(read<int_list>({"--value=1"}), int_list({1}));
+  CAF_CHECK_EQUAL(read<int_list>({"--value=1,2,3"}), int_list({1, 2, 3}));
+  CAF_CHECK_EQUAL(read<int_list>({"--value=1, 2 , 3 , "}), int_list({1, 2, 3}));
+  CAF_CHECK_EQUAL(read<int_list>({"-v", "[1]"}), int_list({1}));
+  CAF_CHECK_EQUAL(read<int_list>({"-v", "[1,]"}), int_list({1}));
+  CAF_CHECK_EQUAL(read<int_list>({"-v", "[ 1 , ]"}), int_list({1}));
+  CAF_CHECK_EQUAL(read<int_list>({"-v", "[1,2]"}), int_list({1, 2}));
+  CAF_CHECK_EQUAL(read<int_list>({"-v", "[1, 2, 3]"}), int_list({1, 2, 3}));
+  CAF_CHECK_EQUAL(read<int_list>({"-v", "[1, 2, 3, ]"}), int_list({1, 2, 3}));
+  CAF_CHECK_EQUAL(read<int_list>({"-v", "1"}), int_list({1}));
+  CAF_CHECK_EQUAL(read<int_list>({"-v", "1,2,3"}), int_list({1, 2, 3}));
+  CAF_CHECK_EQUAL(read<int_list>({"-v", "1, 2 , 3 , "}), int_list({1, 2, 3}));
 }
 
 #define SUBTEST(msg)                                                           \
@@ -200,7 +209,7 @@ CAF_TEST(CLI arguments override defaults) {
     ints = int_list{1, 2, 3};
     cfg["bar"] = config_value{ints};
     CAF_CHECK_EQUAL(get<int_list>(cfg, "bar"), int_list({1, 2, 3}));
-    CAF_CHECK_EQUAL(read<int_list>(cfg, {"--bar=[10, 20, 30])"}), none);
+    CAF_CHECK_EQUAL(read<int_list>(cfg, {"--bar=[10, 20, 30]"}), none);
     CAF_CHECK_EQUAL(ints, int_list({10, 20, 30}));
     CAF_CHECK_EQUAL(get<int_list>(cfg, "bar"), int_list({10, 20, 30}));
     CAF_MESSAGE("test string lists");
@@ -208,7 +217,7 @@ CAF_TEST(CLI arguments override defaults) {
     cfg["foo"] = config_value{strings};
     CAF_CHECK_EQUAL(get<string_list>(cfg, "foo"),
                     string_list({"one", "two", "three"}));
-    CAF_CHECK_EQUAL(read<string_list>(cfg, {"--foo=[hello, world])"}), none);
+    CAF_CHECK_EQUAL(read<string_list>(cfg, {"--foo=[hello, world]"}), none);
     CAF_CHECK_EQUAL(strings, string_list({"hello", "world"}));
     CAF_CHECK_EQUAL(get<string_list>(cfg, "foo"),
                     string_list({"hello", "world"}));
@@ -221,13 +230,13 @@ CAF_TEST(CLI arguments override defaults) {
     CAF_MESSAGE("test integer lists");
     cfg["bar"] = config_value{int_list{1, 2, 3}};
     CAF_CHECK_EQUAL(get<int_list>(cfg, "bar"), int_list({1, 2, 3}));
-    CAF_CHECK_EQUAL(read<int_list>(cfg, {"--bar=[10, 20, 30])"}), none);
+    CAF_CHECK_EQUAL(read<int_list>(cfg, {"--bar=[10, 20, 30]"}), none);
     CAF_CHECK_EQUAL(get<int_list>(cfg, "bar"), int_list({10, 20, 30}));
     CAF_MESSAGE("test string lists");
     cfg["foo"] = config_value{string_list{"one", "two", "three"}};
     CAF_CHECK_EQUAL(get<string_list>(cfg, "foo"),
                     string_list({"one", "two", "three"}));
-    CAF_CHECK_EQUAL(read<string_list>(cfg, {"--foo=[hello, world])"}), none);
+    CAF_CHECK_EQUAL(read<string_list>(cfg, {"--foo=[hello, world]"}), none);
     CAF_CHECK_EQUAL(get<string_list>(cfg, "foo"),
                     string_list({"hello", "world"}));
   }
