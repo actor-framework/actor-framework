@@ -60,7 +60,7 @@ expected<config_value> parse_impl(T* ptr, string_view str) {
   }
   using trait = select_config_value_access_t<T>;
   string_parser_state ps{str.begin(), str.end()};
-  trait::parse_cli(ps, *ptr);
+  trait::parse_cli(ps, *ptr, top_level_cli_parsing);
   if (ps.code != pec::success)
     return make_error(ps);
   return config_value{trait::convert(*ptr)};
