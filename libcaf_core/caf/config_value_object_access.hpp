@@ -91,7 +91,8 @@ struct config_value_object_access {
     return result;
   }
 
-  static void parse_cli(string_parser_state& ps, object_type& x) {
+  template <class Nested>
+  static void parse_cli(string_parser_state& ps, object_type& x, Nested) {
     using field_type = config_value_field<object_type>;
     std::vector<field_type*> parsed_fields;
     auto got = [&](field_type* f) {
@@ -131,7 +132,7 @@ struct config_value_object_access {
         return;
       }
       std::string field_name;
-      string_access::parse_cli(ps, field_name, "=}");
+      string_access::parse_cli(ps, field_name, nested_cli_parsing);
       if (ps.code > pec::trailing_character)
         return;
       if (!ps.consume('=')) {
@@ -151,7 +152,7 @@ struct config_value_object_access {
         ps.code = pec::repeated_field_name;
         return;
       }
-      fptr->parse_cli(ps, x, ",}");
+      fptr->parse_cli(ps, x, true);
       if (ps.code > pec::trailing_character)
         return;
       if (ps.at_end()) {

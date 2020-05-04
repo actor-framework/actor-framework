@@ -16,10 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE config_value
-#include "caf/test/unit_test.hpp"
+
+#include "caf/config_value.hpp"
+
+#include "caf/test/dsl.hpp"
 
 #include <list>
 #include <map>
@@ -34,10 +35,11 @@
 #include "caf/atom.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/detail/bounds_checker.hpp"
+#include "caf/make_config_option.hpp"
 #include "caf/none.hpp"
 #include "caf/pec.hpp"
-#include "caf/variant.hpp"
 #include "caf/string_view.hpp"
+#include "caf/variant.hpp"
 
 using std::string;
 
@@ -253,6 +255,83 @@ CAF_TEST(successful parsing) {
   CAF_CHECK_EQUAL(get<lli>(parse("[[1, 2], [3]]")), lli({li{1, 2}, li{3}}));
   CAF_CHECK_EQUAL(get<timespan>(parse("10ms")), milliseconds(10));
   CAF_CHECK_EQUAL(get<di>(parse("{a=1,b=2}")), di({{"a", 1}, {"b", 2}}));
+}
+
+#define CHECK_CLI_PARSE(type, str, ...)                                        \
+  do {                                                                         \
+    /* Note: parse_impl from make_config_option.hpp internally dispatches   */ \
+    /*       to parse_cli. No need to replicate that wrapping code here.    */ \
+    if (auto res = caf::detail::parse_impl<type>(nullptr, str)) {              \
+      type expected_res{__VA_ARGS__};                                          \
+      if (auto unboxed = ::caf::get_if<type>(std::addressof(*res))) {          \
+        if (*unboxed == expected_res)                                          \
+          CAF_CHECK_PASSED("parse(" << str << ") == " << expected_res);        \
+        else                                                                   \
+          CAF_CHECK_FAILED(*unboxed << " != " << expected_res);                \
+      } else {                                                                 \
+        CAF_CHECK_FAILED(*res << " != " << expected_res);                      \
+      }                                                                        \
+    } else {                                                                   \
+      CAF_CHECK_FAILED("parse(" << str << ") -> " << res.error());             \
+    }                                                                          \
+  } while (false)
+
+#define CHECK_CLI_PARSE_FAILS(type, str)                                       \
+  do {                                                                         \
+    if (auto res = caf::detail::parse_impl<type>(nullptr, str)) {              \
+      CAF_CHECK_FAILED("unexpected parser result: " << *res);                  \
+    } else {                                                                   \
+      CAF_CHECK_PASSED("parse(" << str << ") == " << res.error());             \
+    }                                                                          \
+  } while (false)
+
+CAF_TEST(parsing via parse_cli enables shortcut syntax for some types) {
+  using ls = std::vector<string>; // List-of-strings.
+  using li = std::vector<int>;    // List-of-integers.
+  using lli = std::vector<li>;    // List-of-list-of-integers.
+  CAF_MESSAGE("lists can omit square brackets");
+  CHECK_CLI_PARSE(int, "123", 123);
+  CHECK_CLI_PARSE(li, "[ 1,2 , 3  ,]", 1, 2, 3);
+  CHECK_CLI_PARSE(li, "[ 1,2 , 3  ]", 1, 2, 3);
+  CHECK_CLI_PARSE(li, " 1,2 , 3  ,", 1, 2, 3);
+  CHECK_CLI_PARSE(li, " 1,2 , 3  ", 1, 2, 3);
+  CHECK_CLI_PARSE(li, " [  ] ", li{});
+  CHECK_CLI_PARSE(li, "  ", li{});
+  CHECK_CLI_PARSE(li, "", li{});
+  CHECK_CLI_PARSE(li, "[123]", 123);
+  CHECK_CLI_PARSE(li, "123", 123);
+  CAF_MESSAGE("brackets must have matching opening/closing brackets");
+  CHECK_CLI_PARSE_FAILS(li, " 1,2 , 3  ,]");
+  CHECK_CLI_PARSE_FAILS(li, " 1,2 , 3  ]");
+  CHECK_CLI_PARSE_FAILS(li, "123]");
+  CHECK_CLI_PARSE_FAILS(li, "[ 1,2 , 3  ,");
+  CHECK_CLI_PARSE_FAILS(li, "[ 1,2 , 3  ");
+  CHECK_CLI_PARSE_FAILS(li, "[123");
+  CAF_MESSAGE("string lists can omit quotation marks");
+  CHECK_CLI_PARSE(string, R"_("123")_", "123");
+  CHECK_CLI_PARSE(string, R"_(123)_", "123");
+  CHECK_CLI_PARSE(ls, R"_([ "1 ","2" , "3"  ,])_", "1 ", "2", "3");
+  CHECK_CLI_PARSE(ls, R"_([ 1,2 , 3  ,])_", "1", "2", "3");
+  CHECK_CLI_PARSE(ls, R"_([ 1,2 , 3  ])_", "1", "2", "3");
+  CHECK_CLI_PARSE(ls, R"_( 1,2 , 3  ,)_", "1", "2", "3");
+  CHECK_CLI_PARSE(ls, R"_( 1,2 , 3  )_", "1", "2", "3");
+  CHECK_CLI_PARSE(ls, R"_( [  ] )_", ls{});
+  CHECK_CLI_PARSE(ls, R"_(  )_", ls{});
+  CHECK_CLI_PARSE(ls, R"_(["abc"])_", "abc");
+  CHECK_CLI_PARSE(ls, R"_([abc])_", "abc");
+  CHECK_CLI_PARSE(ls, R"_("abc")_", "abc");
+  CHECK_CLI_PARSE(ls, R"_(abc)_", "abc");
+  CAF_MESSAGE("nested lists can omit the outer square brackets");
+  CHECK_CLI_PARSE(lli, "[[1, 2, 3, ], ]", li({1, 2, 3}));
+  CHECK_CLI_PARSE(lli, "[[1, 2, 3]]", li({1, 2, 3}));
+  CHECK_CLI_PARSE(lli, "[1, 2, 3, ]", li({1, 2, 3}));
+  CHECK_CLI_PARSE(lli, "[1, 2, 3]", li({1, 2, 3}));
+  CHECK_CLI_PARSE(lli, "[[1], [2]]", li({1}), li({2}));
+  CHECK_CLI_PARSE(lli, "[1], [2]", li({1}), li({2}));
+  CHECK_CLI_PARSE_FAILS(lli, "1");
+  CHECK_CLI_PARSE_FAILS(lli, "1, 2");
+  CHECK_CLI_PARSE_FAILS(lli, "[1, 2]]");
+  CHECK_CLI_PARSE_FAILS(lli, "[[1, 2]");
 }
 
 CAF_TEST(unsuccessful parsing) {

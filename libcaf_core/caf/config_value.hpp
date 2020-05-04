@@ -216,6 +216,22 @@ private:
   variant_type data_;
 };
 
+// -- convenience constants ----------------------------------------------------
+
+/// Type of the `top_level_cli_parsing` constant.
+using top_level_cli_parsing_t = std::false_type;
+
+/// Signals parsing of top-level config values when used as third argument to
+/// `parse_cli`.
+constexpr auto top_level_cli_parsing = top_level_cli_parsing_t{};
+
+/// Type of the `top_level_cli_parsing` constant.
+using nested_cli_parsing_t = std::true_type;
+
+/// Signals parsing of nested config values when used as third argument to
+/// `parse_cli`.
+constexpr auto nested_cli_parsing = nested_cli_parsing_t{};
+
 // -- SumType-like access ------------------------------------------------------
 
 template <class T>
@@ -236,7 +252,8 @@ struct default_config_value_access {
     return x;
   }
 
-  static void parse_cli(string_parser_state& ps, T& x) {
+  template <class Nested>
+  static void parse_cli(string_parser_state& ps, T& x, Nested) {
     detail::parse(ps, x);
   }
 };
@@ -266,19 +283,36 @@ CAF_DEFAULT_CONFIG_VALUE_ACCESS(config_value::dictionary, "dictionary");
 #undef CAF_DEFAULT_CONFIG_VALUE_ACCESS
 
 template <>
-struct config_value_access<std::string>
-  : default_config_value_access<std::string> {
+struct config_value_access<std::string> {
   using super = default_config_value_access<std::string>;
 
   static std::string type_name() {
     return "string";
   }
 
-  using super::parse_cli;
+  static bool is(const config_value& x) {
+    return holds_alternative<std::string>(x.get_data());
+  }
 
+  static const std::string* get_if(const config_value* x) {
+    return caf::get_if<std::string>(&(x->get_data()));
+  }
+
+  static std::string get(const config_value& x) {
+    return caf::get<std::string>(x.get_data());
+  }
+
+  static std::string convert(std::string x) {
+    return x;
+  }
+
+  template <bool IsNested>
   static void parse_cli(string_parser_state& ps, std::string& x,
-                        const char* char_blacklist) {
-    detail::parse_element(ps, x, char_blacklist);
+                        std::integral_constant<bool, IsNested>) {
+    if (IsNested)
+      detail::parse_element(ps, x, ",={}[]");
+    else
+      detail::parse(ps, x);
   }
 };
 
@@ -426,7 +460,8 @@ struct select_config_value_access<T, select_config_value_hint::is_integral> {
       return x;
     }
 
-    static void parse_cli(string_parser_state& ps, T& x) {
+    template <class Nested>
+    static void parse_cli(string_parser_state& ps, T& x, Nested) {
       detail::parse(ps, x);
     }
   };
@@ -486,23 +521,70 @@ struct select_config_value_access<T, select_config_value_hint::is_list> {
       return result;
     }
 
-    static void parse_cli(string_parser_state& ps, T& xs) {
-      config_value::dictionary result;
-      bool has_open_token = ps.consume('[');
+    static void parse_cli(string_parser_state& ps, T& xs,
+                          top_level_cli_parsing_t) {
+      bool has_open_token;
+      auto subtype = select_config_value_oracle<value_type>();
+      if (subtype == select_config_value_hint::is_list) {
+        // The outer square brackets are optional in nested lists. This means we
+        // need to check for "[[" at the beginning and otherwise we assume the
+        // leading '[' was omitted.
+        string_parser_state tmp{ps.i, ps.e};
+        has_open_token = tmp.consume('[') && tmp.consume('[');
+        if (has_open_token)
+          ps.consume('[');
+      } else {
+        has_open_token = ps.consume('[');
+      }
       do {
-        if (has_open_token && ps.consume(']')) {
+        ps.skip_whitespaces();
+        if (has_open_token) {
+          if (ps.consume(']')) {
+            ps.skip_whitespaces();
+            ps.code = ps.at_end() ? pec::success : pec::trailing_character;
+            return;
+          }
+        } else if (ps.at_end()) {
+          // Allow trailing commas and empty strings.
+          ps.code = pec::success;
+          return;
+        }
+        value_type tmp;
+        value_trait::parse_cli(ps, tmp, nested_cli_parsing);
+        if (ps.code > pec::trailing_character)
+          return;
+        xs.insert(xs.end(), std::move(tmp));
+      } while (ps.consume(','));
+      if (has_open_token && !ps.consume(']')) {
+        ps.code = ps.at_end() ? pec::unexpected_eof : pec::unexpected_character;
+        return;
+      }
+      ps.skip_whitespaces();
+      ps.code = ps.at_end() ? pec::success : pec::trailing_character;
+    }
+
+    static void parse_cli(string_parser_state& ps, T& xs,
+                          nested_cli_parsing_t) {
+      if (!ps.consume('[')) {
+        ps.code = ps.at_end() ? pec::unexpected_eof : pec::unexpected_character;
+        return;
+      }
+      do {
+        if (ps.consume(']')) {
           ps.skip_whitespaces();
           ps.code = ps.at_end() ? pec::success : pec::trailing_character;
           return;
         }
         value_type tmp;
-        value_trait::parse_cli(ps, tmp);
+        value_trait::parse_cli(ps, tmp, nested_cli_parsing);
         if (ps.code > pec::trailing_character)
           return;
         xs.insert(xs.end(), std::move(tmp));
       } while (ps.consume(','));
-      if (has_open_token && !ps.consume(']'))
+      if (!ps.consume(']')) {
         ps.code = ps.at_end() ? pec::unexpected_eof : pec::unexpected_character;
+        return;
+      }
       ps.skip_whitespaces();
       ps.code = ps.at_end() ? pec::success : pec::trailing_character;
     }
@@ -559,7 +641,8 @@ struct select_config_value_access<T, select_config_value_hint::is_map> {
       return std::move(*result);
     }
 
-    static void parse_cli(string_parser_state& ps, map_type& xs) {
+    template <class Nested>
+    static void parse_cli(string_parser_state& ps, map_type& xs, Nested) {
       detail::parse(ps, xs);
     }
 
@@ -574,29 +657,30 @@ struct select_config_value_access<T, select_config_value_hint::is_map> {
 
 template <>
 struct config_value_access<float> {
-  static inline std::string type_name() {
+  static std::string type_name() {
     return "real32";
   }
 
-  static inline bool is(const config_value& x) {
+  static bool is(const config_value& x) {
     return holds_alternative<double>(x.get_data());
   }
 
-  static inline optional<float> get_if(const config_value* x) {
+  static optional<float> get_if(const config_value* x) {
     if (auto res = caf::get_if<double>(&(x->get_data())))
       return static_cast<float>(*res);
     return none;
   }
 
-  static inline float get(const config_value& x) {
+  static float get(const config_value& x) {
     return static_cast<float>(caf::get<double>(x.get_data()));
   }
 
-  static inline double convert(float x) {
+  static double convert(float x) {
     return x;
   }
 
-  static inline void parse_cli(string_parser_state& ps, float& x) {
+  template <class Nested>
+  static void parse_cli(string_parser_state& ps, float& x, Nested) {
     detail::parse(ps, x);
   }
 };
@@ -648,7 +732,8 @@ struct config_value_access<std::tuple<Ts...>> {
     return result;
   }
 
-  static void parse_cli(string_parser_state& ps, tuple_type& xs) {
+  template <class Nested>
+  static void parse_cli(string_parser_state& ps, tuple_type& xs, Nested) {
     rec_parse(ps, xs, detail::int_token<0>(), detail::type_list<Ts...>());
   }
 
@@ -727,7 +812,7 @@ private:
   static void rec_parse(string_parser_state& ps, tuple_type& xs,
                         detail::int_token<Pos>, detail::type_list<U, Us...>) {
     using trait = select_config_value_access_t<U>;
-    trait::parse_cli(std::get<Pos>(xs));
+    trait::parse_cli(std::get<Pos>(xs), nested_cli_parsing);
     if (ps.code > pec::trailing_character)
       return;
     if (sizeof...(Us) > 0 && !ps.consume(','))

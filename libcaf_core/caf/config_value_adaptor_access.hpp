@@ -90,9 +90,10 @@ struct config_value_adaptor_access {
     return result;
   }
 
-  static void parse_cli(string_parser_state& ps, value_type& x) {
+  template <class Nested>
+  static void parse_cli(string_parser_state& ps, value_type& x, Nested nested) {
     tuple_type tmp;
-    tuple_access::parse_cli(ps, tmp);
+    tuple_access::parse_cli(ps, tmp, nested);
     if (ps.code <= pec::trailing_character)
       convert(tmp, x);
   }

@@ -25,7 +25,6 @@
 #include "caf/config_value_adaptor_field.hpp"
 #include "caf/config_value_field.hpp"
 #include "caf/detail/config_value_field_base.hpp"
-#include "caf/detail/dispatch_parse_cli.hpp"
 #include "caf/string_view.hpp"
 
 namespace caf {
