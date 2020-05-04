@@ -52,166 +52,166 @@ namespace caf {
 /// type is not implemented as a simple variant alias because variants cannot
 /// contain lists of themselves.
 class CAF_CORE_EXPORT config_value {
-  public:
-    // -- member types -----------------------------------------------------------
+public:
+  // -- member types -----------------------------------------------------------
 
-    using integer = int64_t;
+  using integer = int64_t;
 
-    using boolean = bool;
+  using boolean = bool;
 
-    using real = double;
+  using real = double;
 
-    using timespan = caf::timespan;
+  using timespan = caf::timespan;
 
-    using string = std::string;
+  using string = std::string;
 
-    using list = std::vector<config_value>;
+  using list = std::vector<config_value>;
 
-    using dictionary = caf::dictionary<config_value>;
+  using dictionary = caf::dictionary<config_value>;
 
-    using types = detail::type_list<integer, boolean, real, timespan, uri, string,
-          list, dictionary>;
+  using types = detail::type_list<integer, boolean, real, timespan, uri, string,
+                                  list, dictionary>;
 
-    using variant_type = detail::tl_apply_t<types, variant>;
+  using variant_type = detail::tl_apply_t<types, variant>;
 
-    // -- constructors, destructors, and assignment operators --------------------
+  // -- constructors, destructors, and assignment operators --------------------
 
-    config_value() = default;
+  config_value() = default;
 
-    config_value(config_value&& other) = default;
+  config_value(config_value&& other) = default;
 
-    config_value(const config_value& other) = default;
+  config_value(const config_value& other) = default;
 
-    template <class T, class E = detail::enable_if_t<
-      !std::is_same<detail::decay_t<T>, config_value>::value>>
-      explicit config_value(T&& x) {
-        set(std::forward<T>(x));
-      }
+  template <class T, class E = detail::enable_if_t<
+                       !std::is_same<detail::decay_t<T>, config_value>::value>>
+  explicit config_value(T&& x) {
+    set(std::forward<T>(x));
+  }
 
-    config_value& operator=(config_value&& other) = default;
+  config_value& operator=(config_value&& other) = default;
 
-    config_value& operator=(const config_value& other) = default;
+  config_value& operator=(const config_value& other) = default;
 
-    template <class T, class E = detail::enable_if_t<
-      !std::is_same<detail::decay_t<T>, config_value>::value>>
-      config_value& operator=(T&& x) {
-        set(std::forward<T>(x));
-        return *this;
-      }
+  template <class T, class E = detail::enable_if_t<
+                       !std::is_same<detail::decay_t<T>, config_value>::value>>
+  config_value& operator=(T&& x) {
+    set(std::forward<T>(x));
+    return *this;
+  }
 
-    ~config_value();
+  ~config_value();
 
-    // -- parsing ----------------------------------------------------------------
+  // -- parsing ----------------------------------------------------------------
 
-    /// Tries to parse a value from `str`.
-    static expected<config_value>
-      parse(string_view::iterator first, string_view::iterator last);
+  /// Tries to parse a value from `str`.
+  static expected<config_value> parse(string_view::iterator first,
+                                      string_view::iterator last);
 
-    /// Tries to parse a value from `str`.
-    static expected<config_value> parse(string_view str);
+  /// Tries to parse a value from `str`.
+  static expected<config_value> parse(string_view str);
 
-    // -- properties -------------------------------------------------------------
+  // -- properties -------------------------------------------------------------
 
-    /// Converts the value to a list with one element. Does nothing if the value
-    /// already is a list.
-    void convert_to_list();
+  /// Converts the value to a list with one element. Does nothing if the value
+  /// already is a list.
+  void convert_to_list();
 
-    /// Returns the value as a list, converting it to one if needed.
-    list& as_list();
+  /// Returns the value as a list, converting it to one if needed.
+  list& as_list();
 
-    /// Returns the value as a dictionary, converting it to one if needed.
-    dictionary& as_dictionary();
+  /// Returns the value as a dictionary, converting it to one if needed.
+  dictionary& as_dictionary();
 
-    /// Appends `x` to a list. Converts this config value to a list first by
-    /// calling `convert_to_list` if needed.
-    void append(config_value x);
+  /// Appends `x` to a list. Converts this config value to a list first by
+  /// calling `convert_to_list` if needed.
+  void append(config_value x);
 
-    /// Returns a human-readable type name of the current value.
-    const char* type_name() const noexcept;
+  /// Returns a human-readable type name of the current value.
+  const char* type_name() const noexcept;
 
-    /// Returns the underlying variant.
-    variant_type& get_data() {
-      return data_;
-    }
+  /// Returns the underlying variant.
+  variant_type& get_data() {
+    return data_;
+  }
 
-    /// Returns the underlying variant.
-    const variant_type& get_data() const {
-      return data_;
-    }
+  /// Returns the underlying variant.
+  const variant_type& get_data() const {
+    return data_;
+  }
 
-    /// Returns a pointer to the underlying variant.
-    variant_type* get_data_ptr() {
-      return &data_;
-    }
+  /// Returns a pointer to the underlying variant.
+  variant_type* get_data_ptr() {
+    return &data_;
+  }
 
-    /// Returns a pointer to the underlying variant.
-    const variant_type* get_data_ptr() const {
-      return &data_;
-    }
+  /// Returns a pointer to the underlying variant.
+  const variant_type* get_data_ptr() const {
+    return &data_;
+  }
 
-  private:
-    // -- properties -------------------------------------------------------------
+private:
+  // -- properties -------------------------------------------------------------
 
-    static const char* type_name_at_index(size_t index) noexcept;
+  static const char* type_name_at_index(size_t index) noexcept;
 
-    // -- auto conversion of related types ---------------------------------------
+  // -- auto conversion of related types ---------------------------------------
 
-    void set(bool x) {
-      data_ = x;
-    }
+  void set(bool x) {
+    data_ = x;
+  }
 
-    void set(float x) {
-      data_ = static_cast<double>(x);
-    }
+  void set(float x) {
+    data_ = static_cast<double>(x);
+  }
 
-    void set(const char* x) {
-      data_ = std::string{x};
-    }
+  void set(const char* x) {
+    data_ = std::string{x};
+  }
 
-    void set(string_view x) {
-      data_ = std::string{x.begin(), x.end()};
-    }
+  void set(string_view x) {
+    data_ = std::string{x.begin(), x.end()};
+  }
 
-    template <class T>
-      detail::enable_if_t<
-      detail::is_one_of<T, real, timespan, uri, string, list, dictionary>::value>
-      set(T x) {
-        data_ = std::move(x);
-      }
+  template <class T>
+  detail::enable_if_t<
+    detail::is_one_of<T, real, timespan, uri, string, list, dictionary>::value>
+  set(T x) {
+    data_ = std::move(x);
+  }
 
-    template <class T>
-      void set_range(T& xs, std::true_type) {
-        auto& dict = as_dictionary();
-        dict.clear();
-        for (auto& kvp : xs)
-          dict.emplace(kvp.first, std::move(kvp.second));
-      }
+  template <class T>
+  void set_range(T& xs, std::true_type) {
+    auto& dict = as_dictionary();
+    dict.clear();
+    for (auto& kvp : xs)
+      dict.emplace(kvp.first, std::move(kvp.second));
+  }
 
-    template <class T>
-      void set_range(T& xs, std::false_type) {
-        auto& ls = as_list();
-        ls.clear();
-        ls.insert(ls.end(), std::make_move_iterator(xs.begin()),
-                  std::make_move_iterator(xs.end()));
-      }
+  template <class T>
+  void set_range(T& xs, std::false_type) {
+    auto& ls = as_list();
+    ls.clear();
+    ls.insert(ls.end(), std::make_move_iterator(xs.begin()),
+              std::make_move_iterator(xs.end()));
+  }
 
-    template <class T>
-      detail::enable_if_t<detail::is_iterable<T>::value
-      && !detail::is_one_of<T, string, list, dictionary>::value>
-      set(T xs) {
-        using value_type = typename T::value_type;
-        detail::bool_token<detail::is_pair<value_type>::value> is_map_type;
-        set_range(xs, is_map_type);
-      }
+  template <class T>
+  detail::enable_if_t<detail::is_iterable<T>::value
+                      && !detail::is_one_of<T, string, list, dictionary>::value>
+  set(T xs) {
+    using value_type = typename T::value_type;
+    detail::bool_token<detail::is_pair<value_type>::value> is_map_type;
+    set_range(xs, is_map_type);
+  }
 
-    template <class T>
-      detail::enable_if_t<std::is_integral<T>::value> set(T x) {
-        data_ = static_cast<int64_t>(x);
-      }
+  template <class T>
+  detail::enable_if_t<std::is_integral<T>::value> set(T x) {
+    data_ = static_cast<int64_t>(x);
+  }
 
-    // -- member variables -------------------------------------------------------
+  // -- member variables -------------------------------------------------------
 
-    variant_type data_;
+  variant_type data_;
 };
 
 // -- convenience constants ----------------------------------------------------
@@ -251,9 +251,9 @@ struct default_config_value_access {
   }
 
   template <class Nested>
-    static void parse_cli(string_parser_state& ps, T& x, Nested) {
-      detail::parse(ps, x);
-    }
+  static void parse_cli(string_parser_state& ps, T& x, Nested) {
+    detail::parse(ps, x);
+  }
 };
 
 struct config_value_access_unspecialized {};
@@ -265,7 +265,7 @@ struct config_value_access : config_value_access_unspecialized {};
 #define CAF_DEFAULT_CONFIG_VALUE_ACCESS(type, name)                            \
   template <>                                                                  \
   struct CAF_CORE_EXPORT config_value_access<type>                             \
-  : default_config_value_access<type> {                                      \
+    : default_config_value_access<type> {                                      \
     static std::string type_name() {                                           \
       return name;                                                             \
     }                                                                          \
@@ -839,8 +839,8 @@ inline bool operator!=(const config_value& x, const config_value& y) {
 CAF_CORE_EXPORT std::string to_string(const config_value& x);
 
 /// @relates config_value
-CAF_CORE_EXPORT std::ostream&
-operator<<(std::ostream& out, const config_value& x);
+CAF_CORE_EXPORT std::ostream& operator<<(std::ostream& out,
+                                         const config_value& x);
 
 template <class... Ts>
 config_value make_config_value_list(Ts&&... xs) {
