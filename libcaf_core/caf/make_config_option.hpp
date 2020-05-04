@@ -53,24 +53,13 @@ config_value get_impl(const void* ptr) {
 }
 
 template <class T>
-typename std::enable_if<detail::has_clear_member<T>::value>::type
-clear_before_parsing(T& xs) {
-  xs.clear();
-}
-
-template <class T>
-typename std::enable_if<!detail::has_clear_member<T>::value>::type
-clear_before_parsing(T&) {
-  // nop
-}
-
-template <class T>
 expected<config_value> parse_impl(T* ptr, string_view str) {
   if (!ptr) {
     T tmp;
     return parse_impl(&tmp, str);
   }
-  clear_before_parsing(*ptr);
+  if constexpr (detail::has_clear_member<T>::value)
+    ptr->clear();
   using trait = select_config_value_access_t<T>;
   string_parser_state ps{str.begin(), str.end()};
   trait::parse_cli(ps, *ptr, top_level_cli_parsing);
