@@ -455,9 +455,10 @@ public:
   static constexpr bool value = sizeof(fun(static_cast<T*>(nullptr))) > 1;
 };
 
-CAF_HAS_MEMBER_TRAIT(size);
+CAF_HAS_MEMBER_TRAIT(clear);
 CAF_HAS_MEMBER_TRAIT(data);
 CAF_HAS_MEMBER_TRAIT(make_behavior);
+CAF_HAS_MEMBER_TRAIT(size);
 
 /// Checks whether F is convertible to either `std::function<void (T&)>`
 /// or `std::function<void (const T&)>`.
