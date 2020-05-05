@@ -62,13 +62,10 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
 
 class dummy_application {
 public:
-  static expected<std::vector<byte>> serialize(actor_system& sys,
-                                               const message& x) {
-    std::vector<byte> result;
-    binary_serializer sink{sys, result};
-    if (auto err = x.save(sink))
-      return err.value();
-    return result;
+  static error_code<sec> serialize(actor_system& sys, const message& x,
+                                   std::vector<byte>& buf) {
+    binary_serializer sink{sys, buf};
+    return x.save(sink);
   }
 };
 
@@ -106,12 +103,12 @@ public:
 
   template <class Manager>
   bool handle_write_event(Manager& mgr) {
+    auto sf = mgr.serialize_fun();
     for (auto x = mgr.next_message(); x != nullptr; x = mgr.next_message()) {
-      if (auto payload = application_type::serialize(mgr.system(),
-                                                     x->msg->payload))
-        buf_.insert(buf_.end(), payload->begin(), payload->end());
-      else
-        CAF_FAIL("serializing failed: " << payload.error());
+      std::vector<byte> payload_buf;
+      if (auto err = sf(mgr.system(), x->msg->payload, payload_buf))
+        CAF_FAIL("serializing failed: " << err);
+      buf_.insert(buf_.end(), payload_buf.begin(), payload_buf.end());
     }
     auto res = write(handle_, buf_);
     if (auto num_bytes = get_if<size_t>(&res)) {

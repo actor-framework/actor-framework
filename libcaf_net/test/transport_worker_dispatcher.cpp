@@ -289,7 +289,8 @@ CAF_TEST(handle_data) {
   CHECK_HANDLE_DATA(test_data.at(3));
 }
 
-/*CAF_TEST(write_message write_packet) {
+/*
+  CAF_TEST(write_message write_packet) {
   CHECK_WRITE_MESSAGE(test_data.at(0));
   CHECK_WRITE_MESSAGE(test_data.at(1));
   CHECK_WRITE_MESSAGE(test_data.at(2));

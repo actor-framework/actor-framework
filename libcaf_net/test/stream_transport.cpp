@@ -90,13 +90,13 @@ public:
     return none;
   }
 
-  template <class Transport>
-  void write_message(Transport& transport,
+  template <class Parent>
+  void write_message(Parent& parent,
                      std::unique_ptr<endpoint_manager_queue::message> msg) {
-    if (auto payload = serialize(transport.system(), msg->msg->payload))
-      transport.write_packet(*payload);
-    else
-      CAF_FAIL("serializing failed: " << payload.error());
+    auto payload_buf = parent.next_payload_buffer();
+    if (auto err = serialize(parent.system(), msg->msg->payload, payload_buf))
+      CAF_FAIL("serializing failed: " << err);
+    parent.write_packet(payload_buf);
   }
 
   template <class Parent>
@@ -138,12 +138,10 @@ public:
     // nop
   }
 
-  static expected<buffer_type> serialize(actor_system& sys, const message& x) {
-    buffer_type result;
-    binary_serializer sink{sys, result};
-    if (auto err = x.save(sink))
-      return err.value();
-    return result;
+  static error_code<sec> serialize(actor_system& sys, const message& x,
+                                   std::vector<byte>& buf) {
+    binary_serializer sink{sys, buf};
+    return x.save(sink);
   }
 
 private:

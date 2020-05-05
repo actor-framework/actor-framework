@@ -44,11 +44,9 @@ public:
 
   using super = socket_manager;
 
-  /// Represents either an error or a serialized payload.
-  using maybe_buffer = expected<std::vector<byte>>;
-
   /// A function type for serializing message payloads.
-  using serialize_fun_type = maybe_buffer (*)(actor_system&, const message&);
+  using serialize_fun_type = error_code<sec> (*)(actor_system&, const message&,
+                                                 std::vector<byte>& buf);
 
   // -- constructors, destructors, and assignment operators --------------------
 

@@ -105,23 +105,20 @@ public:
     if (ptr->msg == nullptr)
       return;
     auto header_buf = parent.next_header_buffer();
-    auto payload_buf = serialize(parent.system(), ptr->msg->payload);
-    if (!payload_buf)
-      CAF_FAIL("serializing failed: " << payload_buf.error());
+    auto payload_buf = parent.next_payload_buffer();
+    if (auto err = serialize(parent.system(), ptr->msg->payload, payload_buf))
+      CAF_FAIL("serializing failed: " << err);
     binary_serializer sink{sys_, header_buf};
-    header_type header{static_cast<uint32_t>(payload_buf->size())};
+    header_type header{static_cast<uint32_t>(payload_buf.size())};
     if (auto err = sink(header))
       CAF_FAIL("serializing failed: " << err);
-    parent.write_packet(header_buf, *payload_buf);
+    parent.write_packet(header_buf, payload_buf);
   }
 
-  static expected<std::vector<byte>> serialize(actor_system& sys,
-                                               const message& x) {
-    std::vector<byte> result;
-    binary_serializer sink{sys, result};
-    if (auto err = x.save(sink))
-      return err.value();
-    return result;
+  static error_code<sec> serialize(actor_system& sys, const message& x,
+                                   std::vector<byte>& buf) {
+    binary_serializer sink{sys, buf};
+    return x.save(sink);
   }
 
 private:

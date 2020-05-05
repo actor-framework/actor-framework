@@ -60,9 +60,9 @@ error application::write_message(
     // TODO: valid?
     return none;
   }
-  auto payload_buf = serialize(system(), ptr->msg->content());
-  if (!payload_buf)
-    return payload_buf.error();
+  auto payload_buf = writer.next_payload_buffer();
+  if (auto err = serialize(system(), ptr->msg->content(), payload_buf))
+    return err;
   if (src != nullptr) {
     auto src_id = src->id();
     system().registry().put(src_id, src);
@@ -75,10 +75,10 @@ error application::write_message(
   auto hdr = writer.next_header_buffer();
   to_bytes(header{message_type::actor_message,
                   static_cast<uint32_t>(payload_prefix_buf.size()
-                                        + payload_buf->size()),
+                                        + payload_buf.size()),
                   ptr->msg->mid.integer_value()},
            hdr);
-  writer.write_packet(hdr, payload_prefix_buf, *payload_buf);
+  writer.write_packet(hdr, payload_prefix_buf, payload_buf);
   return none;
 }
 
@@ -121,13 +121,10 @@ void application::local_actor_down(packet_writer& writer, actor_id id,
   writer.write_packet(hdr, payload);
 }
 
-expected<std::vector<byte>> application::serialize(actor_system& sys,
-                                                   const message& x) {
-  std::vector<byte> result;
-  binary_serializer sink{sys, result};
-  if (auto err = x.save(sink))
-    return err.value();
-  return result;
+error_code<sec> application::serialize(actor_system& sys, const message& x,
+                                       std::vector<byte>& buf) {
+  binary_serializer sink{sys, buf};
+  return x.save(sink);
 }
 
 strong_actor_ptr application::resolve_local_path(string_view path) {

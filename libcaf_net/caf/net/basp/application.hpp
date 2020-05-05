@@ -136,7 +136,8 @@ public:
     // nop
   }
 
-  static expected<buffer_type> serialize(actor_system& sys, const message& x);
+  static error_code<sec> serialize(actor_system& sys, const message& x,
+                                   std::vector<byte>& buf);
 
   // -- utility functions ------------------------------------------------------
 
