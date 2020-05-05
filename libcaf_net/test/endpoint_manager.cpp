@@ -107,8 +107,11 @@ public:
   template <class Manager>
   bool handle_write_event(Manager& mgr) {
     for (auto x = mgr.next_message(); x != nullptr; x = mgr.next_message()) {
-      auto& payload = x->payload;
-      buf_.insert(buf_.end(), payload.begin(), payload.end());
+      if (auto payload = application_type::serialize(mgr.system(),
+                                                     x->msg->payload))
+        buf_.insert(buf_.end(), payload->begin(), payload->end());
+      else
+        CAF_FAIL("serializing failed: " << payload.error());
     }
     auto res = write(handle_, buf_);
     if (auto num_bytes = get_if<size_t>(&res)) {
@@ -128,9 +131,8 @@ public:
     auto hid = string_view("0011223344556677889900112233445566778899");
     auto nid = unbox(make_node_id(42, hid));
     actor_config cfg;
-    auto p = make_actor<actor_proxy_impl, strong_actor_ptr>(aid, nid,
-                                                            &mgr.system(), cfg,
-                                                            &mgr);
+    auto p = make_actor<actor_proxy_impl, strong_actor_ptr>(
+      aid, nid, &mgr.system(), cfg, &mgr);
     std::string path{locator.path().begin(), locator.path().end()};
     anon_send(listener, resolve_atom_v, std::move(path), p);
   }

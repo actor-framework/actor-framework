@@ -52,14 +52,17 @@ error application::write_message(
   CAF_ASSERT(ptr != nullptr);
   CAF_ASSERT(ptr->msg != nullptr);
   CAF_LOG_TRACE(CAF_ARG2("content", ptr->msg->content()));
-  auto payload_prefix = writer.next_payload_buffer();
-  binary_serializer sink{system(), payload_prefix};
+  auto payload_prefix_buf = writer.next_payload_buffer();
+  binary_serializer sink{system(), payload_prefix_buf};
   const auto& src = ptr->msg->sender;
   const auto& dst = ptr->receiver;
   if (dst == nullptr) {
     // TODO: valid?
     return none;
   }
+  auto payload_buf = serialize(system(), ptr->msg->content());
+  if (!payload_buf)
+    return payload_buf.error();
   if (src != nullptr) {
     auto src_id = src->id();
     system().registry().put(src_id, src);
@@ -71,11 +74,11 @@ error application::write_message(
   }
   auto hdr = writer.next_header_buffer();
   to_bytes(header{message_type::actor_message,
-                  static_cast<uint32_t>(payload_prefix.size()
-                                        + ptr->payload.size()),
+                  static_cast<uint32_t>(payload_prefix_buf.size()
+                                        + payload_buf->size()),
                   ptr->msg->mid.integer_value()},
            hdr);
-  writer.write_packet(hdr, payload_prefix, ptr->payload);
+  writer.write_packet(hdr, payload_prefix_buf, *payload_buf);
   return none;
 }
 

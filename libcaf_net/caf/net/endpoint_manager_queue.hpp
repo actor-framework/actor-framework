@@ -125,11 +125,7 @@ public:
     /// ID of the receiving actor.
     strong_actor_ptr receiver;
 
-    /// Serialized representation of of `msg->content()`.
-    std::vector<byte> payload;
-
-    message(mailbox_element_ptr msg, strong_actor_ptr receiver,
-            std::vector<byte> payload);
+    message(mailbox_element_ptr msg, strong_actor_ptr receiver);
 
     ~message() override;
 
@@ -153,9 +149,10 @@ public:
       // nop
     }
 
-    static task_size_type task_size(const message& x) noexcept {
+    static task_size_type task_size(const message&) noexcept {
       // Return at least 1 if the payload is empty.
-      return x.payload.size() + static_cast<task_size_type>(x.payload.empty());
+      return static_cast<task_size_type>(1);
+      // was x.payload.size() + static_cast<task_size_type>(x.payload.empty());
     }
   };
 

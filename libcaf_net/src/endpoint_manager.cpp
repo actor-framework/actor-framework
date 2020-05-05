@@ -60,11 +60,9 @@ void endpoint_manager::resolve(uri locator, actor listener) {
 }
 
 void endpoint_manager::enqueue(mailbox_element_ptr msg,
-                               strong_actor_ptr receiver,
-                               std::vector<byte> payload) {
+                               strong_actor_ptr receiver) {
   using message_type = endpoint_manager_queue::message;
-  auto ptr = new message_type(std::move(msg), std::move(receiver),
-                              std::move(payload));
+  auto ptr = new message_type(std::move(msg), std::move(receiver));
   enqueue(ptr);
 }
 

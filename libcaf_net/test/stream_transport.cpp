@@ -90,10 +90,13 @@ public:
     return none;
   }
 
-  template <class Parent>
-  void write_message(Parent& parent,
-                     std::unique_ptr<endpoint_manager_queue::message> ptr) {
-    parent.write_packet(ptr->payload);
+  template <class Transport>
+  void write_message(Transport& transport,
+                     std::unique_ptr<endpoint_manager_queue::message> msg) {
+    if (auto payload = serialize(transport.system(), msg->msg->payload))
+      transport.write_packet(*payload);
+    else
+      CAF_FAIL("serializing failed: " << payload.error());
   }
 
   template <class Parent>
@@ -110,10 +113,8 @@ public:
     auto nid = unbox(make_node_id(42, hid));
     actor_config cfg;
     endpoint_manager_ptr ptr{&parent.manager()};
-    auto p = make_actor<actor_proxy_impl, strong_actor_ptr>(aid, nid,
-                                                            &parent.system(),
-                                                            cfg,
-                                                            std::move(ptr));
+    auto p = make_actor<actor_proxy_impl, strong_actor_ptr>(
+      aid, nid, &parent.system(), cfg, std::move(ptr));
     anon_send(listener, resolve_atom_v, std::string{path.begin(), path.end()},
               p);
   }
@@ -155,10 +156,9 @@ CAF_TEST_FIXTURE_SCOPE(endpoint_manager_tests, fixture)
 
 CAF_TEST(receive) {
   using transport_type = stream_transport<dummy_application>;
-  auto mgr = make_endpoint_manager(mpx, sys,
-                                   transport_type{recv_socket_guard.release(),
-                                                  dummy_application{
-                                                    shared_buf}});
+  auto mgr = make_endpoint_manager(
+    mpx, sys,
+    transport_type{recv_socket_guard.release(), dummy_application{shared_buf}});
   CAF_CHECK_EQUAL(mgr->init(), none);
   auto mgr_impl = mgr.downcast<endpoint_manager_impl<transport_type>>();
   CAF_CHECK(mgr_impl != nullptr);
@@ -177,10 +177,9 @@ CAF_TEST(receive) {
 
 CAF_TEST(resolve and proxy communication) {
   using transport_type = stream_transport<dummy_application>;
-  auto mgr = make_endpoint_manager(mpx, sys,
-                                   transport_type{send_socket_guard.release(),
-                                                  dummy_application{
-                                                    shared_buf}});
+  auto mgr = make_endpoint_manager(
+    mpx, sys,
+    transport_type{send_socket_guard.release(), dummy_application{shared_buf}});
   CAF_CHECK_EQUAL(mgr->init(), none);
   run();
   mgr->resolve(unbox(make_uri("test:/id/42")), self);

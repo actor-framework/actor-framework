@@ -71,8 +71,7 @@ public:
   void resolve(uri locator, actor listener);
 
   /// Enqueues a message to the endpoint.
-  void enqueue(mailbox_element_ptr msg, strong_actor_ptr receiver,
-               std::vector<byte> payload);
+  void enqueue(mailbox_element_ptr msg, strong_actor_ptr receiver);
 
   /// Enqueues an event to the endpoint.
   template <class... Ts>

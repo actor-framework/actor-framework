@@ -66,8 +66,8 @@ struct string_application_header {
 
 /// @relates header
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f,
-                                        string_application_header& hdr) {
+typename Inspector::result_type
+inspect(Inspector& f, string_application_header& hdr) {
   return f(meta::type_name("sa_header"), hdr.payload);
 }
 
@@ -105,11 +105,14 @@ public:
     if (ptr->msg == nullptr)
       return;
     auto header_buf = parent.next_header_buffer();
+    auto payload_buf = serialize(parent.system(), ptr->msg->payload);
+    if (!payload_buf)
+      CAF_FAIL("serializing failed: " << payload_buf.error());
     binary_serializer sink{sys_, header_buf};
-    header_type header{static_cast<uint32_t>(ptr->payload.size())};
+    header_type header{static_cast<uint32_t>(payload_buf->size())};
     if (auto err = sink(header))
       CAF_FAIL("serializing failed: " << err);
-    parent.write_packet(header_buf, ptr->payload);
+    parent.write_packet(header_buf, *payload_buf);
   }
 
   static expected<std::vector<byte>> serialize(actor_system& sys,
@@ -208,8 +211,8 @@ private:
 CAF_TEST_FIXTURE_SCOPE(endpoint_manager_tests, fixture)
 
 CAF_TEST(receive) {
-  using application_type = extend<string_application>::with<
-    stream_string_application>;
+  using application_type
+    = extend<string_application>::with<stream_string_application>;
   using transport_type = stream_transport<application_type>;
   std::vector<byte> read_buf(1024);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
@@ -219,14 +222,12 @@ CAF_TEST(receive) {
   CAF_CHECK_EQUAL(read(sockets.second, read_buf),
                   sec::unavailable_or_would_block);
   CAF_MESSAGE("adding both endpoint managers");
-  auto mgr1 = make_endpoint_manager(mpx, sys,
-                                    transport_type{sockets.first,
-                                                   application_type{sys, buf}});
+  auto mgr1 = make_endpoint_manager(
+    mpx, sys, transport_type{sockets.first, application_type{sys, buf}});
   CAF_CHECK_EQUAL(mgr1->init(), none);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
-  auto mgr2 = make_endpoint_manager(mpx, sys,
-                                    transport_type{sockets.second,
-                                                   application_type{sys, buf}});
+  auto mgr2 = make_endpoint_manager(
+    mpx, sys, transport_type{sockets.second, application_type{sys, buf}});
   CAF_CHECK_EQUAL(mgr2->init(), none);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 3u);
   CAF_MESSAGE("resolve actor-proxy");

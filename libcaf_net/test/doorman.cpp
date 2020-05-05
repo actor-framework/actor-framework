@@ -74,10 +74,13 @@ public:
     return none;
   }
 
-  template <class Parent>
-  void write_message(Parent& parent,
+  template <class Transport>
+  void write_message(Transport& transport,
                      std::unique_ptr<endpoint_manager_queue::message> msg) {
-    parent.write_packet(msg->payload);
+    if (auto payload = serialize(transport.system(), msg->msg->payload))
+      transport.write_packet(*payload);
+    else
+      CAF_FAIL("serializing failed: " << payload.error());
   }
 
   template <class Parent>
