@@ -130,8 +130,9 @@ void read_uri(State& ps, Consumer&& consumer) {
     return res;
   };
   // Allowed character sets.
-  auto path_char
-    = [](char c) { return uri_unprotected_char(c) || c == '/' || c == ':'; };
+  auto path_char = [](char c) {
+    return uri_unprotected_char(c) || c == '/' || c == ':';
+  };
   // Utility setters for avoiding code duplication.
   auto set_path = [&] { consumer.path(take_str()); };
   auto set_host = [&] { consumer.host(take_str()); };

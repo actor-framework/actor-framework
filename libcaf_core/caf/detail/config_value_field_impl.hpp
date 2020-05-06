@@ -24,7 +24,6 @@
 #include "caf/config_value.hpp"
 #include "caf/config_value_field.hpp"
 #include "caf/detail/config_value_field_base.hpp"
-#include "caf/detail/dispatch_parse_cli.hpp"
 #include "caf/detail/parse.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/optional.hpp"
