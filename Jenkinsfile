@@ -79,6 +79,15 @@ config = [
                 'CMAKE_CXX_FLAGS:STRING=-fno-exceptions',
             ],
         ]],
+        // One extra debug build with static libraries.
+        ['debian-10', [
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['debug', 'release'],
+            extraDebugFlags: [
+                'BUILD_SHARED_LIBS:BOOL=OFF',
+            ],
+        ]],
         // Other UNIX systems.
         ['macOS', [
             numCores: 4,
