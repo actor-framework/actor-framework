@@ -21,6 +21,7 @@
 #include <string>
 
 #include "caf/actor.hpp"
+#include "caf/detail/serialized_size.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/drr_queue.hpp"
 #include "caf/intrusive/fifo_inbox.hpp"
@@ -149,8 +150,8 @@ public:
       // nop
     }
 
-    static constexpr task_size_type task_size(const message&) noexcept {
-      return 1;
+    static task_size_type task_size(const message& msg) noexcept {
+      return detail::serialized_size(msg.msg->content());
     }
   };
 
