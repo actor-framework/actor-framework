@@ -7,6 +7,7 @@ defaultReleaseBuildFlags = [
     'CAF_ENABLE_RUNTIME_CHECKS:BOOL=yes',
     'CAF_NO_OPENCL:BOOL=yes',
     'CAF_INSTALL_UNIT_TESTS:BOOL=yes',
+    'CAF_ENABLE_TYPE_ID_CHECKS:BOOL=yes',
 ]
 
 // Default CMake flags for debug builds.
@@ -14,6 +15,7 @@ defaultDebugBuildFlags = defaultReleaseBuildFlags + [
     'CAF_ENABLE_ADDRESS_SANITIZER:BOOL=yes',
     'CAF_LOG_LEVEL:STRING=TRACE',
     'CAF_ENABLE_ACTOR_PROFILER:BOOL=yes',
+    'CAF_ENABLE_TYPE_ID_CHECKS:BOOL=yes',
 ]
 
 // Configures the behavior of our stages.
@@ -25,7 +27,6 @@ config = [
         'build',
         'style',
         'tests',
-        'coverage',
     ],
     // Our build matrix. Keys are the operating system labels and values are build configurations.
     buildMatrix: [
@@ -36,7 +37,6 @@ config = [
         ['Linux', [
             builds: ['debug'],
             tools: ['gcc8'],
-            extraSteps: ['coverageReport'],
         ]],
         ['Linux', [
             builds: ['debug'],
@@ -90,20 +90,6 @@ config = [
             release: defaultReleaseBuildFlags + [
                 'CAF_BUILD_STATIC_ONLY:BOOL=yes',
             ],
-        ],
-    ],
-    // Configures what binary the coverage report uses and what paths to exclude.
-    coverage: [
-        binary: 'build/bin/caf-test',
-        relativeExcludePaths: [
-            'examples',
-            'tools',
-            'libcaf_test',
-            'libcaf_core/test',
-            'libcaf_io/test',
-            'libcaf_openssl/test',
-            'libcaf_opencl',
-            'libcaf_core/caf/scheduler/profiled_coordinator.hpp',
         ],
     ],
 ]

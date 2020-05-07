@@ -27,6 +27,18 @@
 
 #include "caf/opencl/all.hpp"
 
+template <size_t Size>
+class square_matrix;
+
+constexpr size_t matrix_size = 8;
+
+CAF_BEGIN_TYPE_ID_BLOCK(proper_matrix, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(proper_matrix, (square_matrix<matrix_size>) )
+  CAF_ADD_TYPE_ID(proper_matrix, (std::vector<float>) )
+
+CAF_END_TYPE_ID_BLOCK(proper_matrix)
+
 using namespace caf;
 using namespace caf::opencl;
 
@@ -41,7 +53,6 @@ namespace {
 
 using fvec = vector<float>;
 
-constexpr size_t matrix_size = 8;
 constexpr const char* kernel_name = "matrix_mult";
 
 // opencl kernel, multiplies matrix1 and matrix2
@@ -196,9 +207,7 @@ int main() {
   // matrix_type ist not a simple type,
   // it must be annouced to libcaf
   actor_system_config cfg;
-  cfg.load<opencl::manager>()
-    .add_message_type<fvec>("float_vector")
-    .add_message_type<matrix_type>("square_matrix");
+  cfg.load<opencl::manager>().add_message_types<id_block::proper_matrix>();
   actor_system system{cfg};
   system.spawn(multiplier);
   system.await_all_actors_done();

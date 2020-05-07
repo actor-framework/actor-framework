@@ -18,7 +18,7 @@
 
 #define CAF_SUITE continuous_streaming
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <memory>
 #include <numeric>
@@ -37,79 +37,83 @@ using namespace caf;
 namespace {
 
 /// Returns the sum of natural numbers up until `n`, i.e., 1 + 2 + ... + n.
-int sum(int n) {
+int32_t sum(int32_t n) {
   return (n * (n + 1)) / 2;
 }
 
 TESTEE_SETUP();
 
 TESTEE_STATE(file_reader) {
-  std::vector<int> buf;
+  std::vector<int32_t> buf;
 };
 
 VARARGS_TESTEE(file_reader, size_t buf_size) {
-  return {[=](string& fname) -> result<stream<int>, string> {
-    CAF_CHECK_EQUAL(fname, "numbers.txt");
-    CAF_CHECK_EQUAL(self->mailbox().empty(), true);
-    return attach_stream_source(
-      self,
-      // forward file name in handshake to next stage
-      std::forward_as_tuple(std::move(fname)),
-      // initialize state
-      [=](unit_t&) {
-        auto& xs = self->state.buf;
-        xs.resize(buf_size);
-        std::iota(xs.begin(), xs.end(), 1);
-      },
-      // get next element
-      [=](unit_t&, downstream<int>& out, size_t num) {
-        auto& xs = self->state.buf;
-        CAF_MESSAGE("push " << num << " messages downstream");
-        auto n = std::min(num, xs.size());
-        for (size_t i = 0; i < n; ++i)
-          out.push(xs[i]);
-        xs.erase(xs.begin(), xs.begin() + static_cast<ptrdiff_t>(n));
-      },
-      // check whether we reached the end
-      [=](const unit_t&) {
-        if (self->state.buf.empty()) {
-          CAF_MESSAGE(self->name() << " is done");
-          return true;
-        }
-        return false;
-      });
-  }};
+  return {
+    [=](string& fname) -> result<stream<int32_t>, string> {
+      CAF_CHECK_EQUAL(fname, "numbers.txt");
+      CAF_CHECK_EQUAL(self->mailbox().empty(), true);
+      return attach_stream_source(
+        self,
+        // forward file name in handshake to next stage
+        std::forward_as_tuple(std::move(fname)),
+        // initialize state
+        [=](unit_t&) {
+          auto& xs = self->state.buf;
+          xs.resize(buf_size);
+          std::iota(xs.begin(), xs.end(), 1);
+        },
+        // get next element
+        [=](unit_t&, downstream<int32_t>& out, size_t num) {
+          auto& xs = self->state.buf;
+          CAF_MESSAGE("push " << num << " messages downstream");
+          auto n = std::min(num, xs.size());
+          for (size_t i = 0; i < n; ++i)
+            out.push(xs[i]);
+          xs.erase(xs.begin(), xs.begin() + static_cast<ptrdiff_t>(n));
+        },
+        // check whether we reached the end
+        [=](const unit_t&) {
+          if (self->state.buf.empty()) {
+            CAF_MESSAGE(self->name() << " is done");
+            return true;
+          }
+          return false;
+        });
+    },
+  };
 }
 
 TESTEE_STATE(sum_up) {
-  int x = 0;
+  int32_t x = 0;
 };
 
 TESTEE(sum_up) {
-  return {[=](stream<int>& in, const string& fname) {
-            CAF_CHECK_EQUAL(fname, "numbers.txt");
-            using int_ptr = int*;
-            return attach_stream_sink(
-              self,
-              // input stream
-              in,
-              // initialize state
-              [=](int_ptr& x) { x = &self->state.x; },
-              // processing step
-              [](int_ptr& x, int y) { *x += y; },
-              // cleanup
-              [=](int_ptr&, const error&) {
-                CAF_MESSAGE(self->name() << " is done");
-              });
-          },
-          [=](join_atom atm, actor src) {
-            CAF_MESSAGE(self->name() << " joins a stream");
-            self->send(self * src, atm);
-          }};
+  return {
+    [=](stream<int32_t>& in, const string& fname) {
+      CAF_CHECK_EQUAL(fname, "numbers.txt");
+      using int_ptr = int32_t*;
+      return attach_stream_sink(
+        self,
+        // input stream
+        in,
+        // initialize state
+        [=](int_ptr& x) { x = &self->state.x; },
+        // processing step
+        [](int_ptr& x, int32_t y) { *x += y; },
+        // cleanup
+        [=](int_ptr&, const error&) {
+          CAF_MESSAGE(self->name() << " is done");
+        });
+    },
+    [=](join_atom atm, actor src) {
+      CAF_MESSAGE(self->name() << " joins a stream");
+      self->send(self * src, atm);
+    },
+  };
 }
 
 TESTEE_STATE(stream_multiplexer) {
-  stream_stage_ptr<int, broadcast_downstream_manager<int>> stage;
+  stream_stage_ptr<int32_t, broadcast_downstream_manager<int32_t>> stage;
 };
 
 TESTEE(stream_multiplexer) {
@@ -120,7 +124,7 @@ TESTEE(stream_multiplexer) {
       // nop
     },
     // processing step
-    [](unit_t&, downstream<int>& out, int x) { out.push(x); },
+    [](unit_t&, downstream<int32_t>& out, int32_t x) { out.push(x); },
     // cleanup
     [=](unit_t&, const error&) { CAF_MESSAGE(self->name() << " is done"); });
   return {
@@ -129,18 +133,24 @@ TESTEE(stream_multiplexer) {
       return self->state.stage->add_outbound_path(
         std::make_tuple("numbers.txt"));
     },
-    [=](const stream<int>& in, std::string& fname) {
+    [=](const stream<int32_t>& in, std::string& fname) {
       CAF_CHECK_EQUAL(fname, "numbers.txt");
       return self->state.stage->add_inbound_path(in);
     },
-    [=](close_atom, int sink_index) {
+    [=](close_atom, int32_t sink_index) {
       auto& out = self->state.stage->out();
       out.close(out.path_slots().at(static_cast<size_t>(sink_index)));
     },
   };
 }
 
-using fixture = test_coordinator_fixture<>;
+struct config : actor_system_config {
+  config() {
+    add_message_types<id_block::core_test>();
+  }
+};
+
+using fixture = test_coordinator_fixture<config>;
 
 } // namespace
 
@@ -224,7 +234,7 @@ CAF_TEST(closing_downstreams_before_end_of_stream) {
   auto sink1_result = sum(next_pending - 1);
   CAF_MESSAGE("gracefully close sink 1, next pending: " << next_pending);
   self->send(stg, close_atom::value, 0);
-  expect((atom_value, int), from(self).to(stg));
+  expect((atom_value, int32_t), from(self).to(stg));
   CAF_MESSAGE("ship remaining elements");
   run();
   CAF_CHECK_EQUAL(st.stage->out().num_paths(), 1u);

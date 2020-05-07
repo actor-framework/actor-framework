@@ -18,9 +18,7 @@
 
 #define CAF_SUITE io.remote_spawn
 
-#include "caf/config.hpp"
-
-#include "caf/test/io_dsl.hpp"
+#include "io-test.hpp"
 
 #include <cstring>
 #include <functional>
@@ -36,17 +34,11 @@ using namespace caf;
 
 namespace {
 
-using add_atom = atom_constant<atom("add")>;
-using sub_atom = atom_constant<atom("sub")>;
-
-using calculator = typed_actor<replies_to<add_atom, int, int>::with<int>,
-                               replies_to<sub_atom, int, int>::with<int>>;
-
 // function-based, dynamically typed, event-based API
 behavior calculator_fun(event_based_actor*) {
   return {
-    [](add_atom, int a, int b) { return a + b; },
-    [](sub_atom, int a, int b) { return a - b; },
+    [](add_atom, int32_t a, int32_t b) { return a + b; },
+    [](sub_atom, int32_t a, int32_t b) { return a - b; },
   };
 }
 
@@ -58,8 +50,8 @@ public:
 
   behavior make_behavior() override {
     return {
-      [](add_atom, int a, int b) { return a + b; },
-      [](sub_atom, int a, int b) { return a - b; },
+      [](add_atom, int32_t a, int32_t b) { return a + b; },
+      [](sub_atom, int32_t a, int32_t b) { return a - b; },
     };
   }
 };
@@ -67,14 +59,15 @@ public:
 // function-based, statically typed, event-based API
 calculator::behavior_type typed_calculator_fun() {
   return {
-    [](add_atom, int a, int b) { return a + b; },
-    [](sub_atom, int a, int b) { return a - b; },
+    [](add_atom, int32_t a, int32_t b) { return a + b; },
+    [](sub_atom, int32_t a, int32_t b) { return a - b; },
   };
 }
 
 struct config : actor_system_config {
   config() {
     load<io::middleman>();
+    add_message_types<id_block::io_test>();
     add_actor_type<calculator_class>("calculator-class");
     add_actor_type("calculator", calculator_fun);
     add_actor_type("typed_calculator", typed_calculator_fun);

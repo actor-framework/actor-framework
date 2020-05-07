@@ -68,6 +68,25 @@
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/type_traits.hpp"
 
+namespace {
+
+enum class test_enum : uint32_t;
+struct raw_struct;
+struct test_array;
+struct test_empty_non_pod;
+
+} // namespace
+
+CAF_BEGIN_TYPE_ID_BLOCK(serialization, first_custom_type_id)
+
+    CAF_ADD_TYPE_ID(serialization, (raw_struct))
+    CAF_ADD_TYPE_ID(serialization, (std::vector<bool>))
+    CAF_ADD_TYPE_ID(serialization, (test_array))
+    CAF_ADD_TYPE_ID(serialization, (test_empty_non_pod))
+    CAF_ADD_TYPE_ID(serialization, (test_enum))
+
+CAF_END_TYPE_ID_BLOCK(serialization)
+
 using namespace std;
 using namespace caf;
 using caf::detail::type_erased_value_impl;
@@ -135,11 +154,8 @@ typename Inspector::result_type inspect(Inspector& f, test_empty_non_pod&) {
 class config : public actor_system_config {
 public:
   config() {
-    add_message_type<test_enum>("test_enum");
-    add_message_type<raw_struct>("raw_struct");
-    add_message_type<test_array>("test_array");
-    add_message_type<test_empty_non_pod>("test_empty_non_pod");
-    add_message_type<std::vector<bool>>("bool_vector");
+    puts("add_message_types");
+    add_message_types<id_block::serialization>();
   }
 };
 

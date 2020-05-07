@@ -26,6 +26,14 @@
 #include "caf/all.hpp"
 #include "caf/opencl/all.hpp"
 
+CAF_BEGIN_TYPE_ID_BLOCK(scan, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(scan, (caf::opencl::dim_vec))
+  CAF_ADD_TYPE_ID(scan, (caf::opencl::nd_range))
+  CAF_ADD_TYPE_ID(scan, (std::vector<uint32_t>))
+
+CAF_END_TYPE_ID_BLOCK(scan)
+
 using namespace caf;
 using namespace caf::opencl;
 
@@ -39,7 +47,7 @@ using caf::detail::limited_vector;
 
 namespace {
 
-using uval = unsigned;
+using uval = uint32_t;
 using uvec = std::vector<uval>;
 using uref = mem_ref<uval>;
 
@@ -178,8 +186,7 @@ T round_up(T numToRound, T multiple) {
 
 int main() {
   actor_system_config cfg;
-  cfg.load<opencl::manager>()
-     .add_message_type<uvec>("uint_vector");
+  cfg.load<opencl::manager>().add_message_types<id_block::scan>();
   actor_system system{cfg};
   cout << "Calculating exclusive scan of '" << problem_size
        << "' values." << endl;

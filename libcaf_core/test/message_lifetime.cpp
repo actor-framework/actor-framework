@@ -16,10 +16,9 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
-
 #define CAF_SUITE message_lifetime
-#include "caf/test/unit_test.hpp"
+
+#include "core-test.hpp"
 
 #include <atomic>
 #include <iostream>
@@ -81,35 +80,16 @@ private:
   message msg_;
 };
 
+struct config : actor_system_config {
+  config() {
+    add_message_types<id_block::core_test>();
+  }
+};
+
 struct fixture {
-  actor_system_config cfg;
+  config cfg;
   actor_system system{cfg};
 };
-
-struct fail_on_copy {
-  int value;
-
-  fail_on_copy(int x = 0) : value(x) {
-    // nop
-  }
-
-  fail_on_copy(fail_on_copy&&) = default;
-
-  fail_on_copy& operator=(fail_on_copy&&) = default;
-
-  fail_on_copy(const fail_on_copy&) {
-    CAF_FAIL("fail_on_copy: copy constructor called");
-  }
-
-  fail_on_copy& operator=(const fail_on_copy&) {
-    CAF_FAIL("fail_on_copy: copy assign operator called");
-  }
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, fail_on_copy& x) {
-  return f(x.value);
-}
 
 } // namespace
 

@@ -514,10 +514,22 @@ endif()
 # all projects need the headers of the core components
 include_directories("${CAF_INCLUDE_DIRS}")
 
+# -- unit tests setup ----------------------------------------------------------
 
-################################################################################
-#                                 add targets                                  #
-################################################################################
+if(NOT CAF_NO_UNIT_TESTS)
+  enable_testing()
+  function(caf_add_test_suites target)
+    foreach(suiteName ${ARGN})
+      string(REPLACE "." "/" suitePath ${suiteName})
+      target_sources(${target} PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/test/${suitePath}.cpp")
+      add_test(NAME ${suiteName}
+               COMMAND ${target} -r300 -n -v5 -s"^${suiteName}$")
+    endforeach()
+  endfunction()
+endif()
+
+# -- add targets ---------------------------------------------------------------
 
 macro(add_caf_lib name)
   string(TOUPPER ${name} upper_name)
@@ -652,48 +664,6 @@ add_optional_caf_binaries(examples)
 
 # build tools if not being told otherwise
 add_optional_caf_binaries(tools)
-
-################################################################################
-#                               unit tests setup                               #
-################################################################################
-
-if(NOT CAF_NO_UNIT_TESTS)
-  # setup unit test binary
-  add_executable(caf-test
-                 libcaf_test/src/caf-test.cpp
-                 libcaf_test/caf/test/unit_test.hpp
-                 libcaf_test/caf/test/unit_test_impl.hpp
-                 ${CAF_ALL_UNIT_TESTS})
-  target_link_libraries(caf-test
-                        ${CAF_EXTRA_LDFLAGS}
-                        ${CAF_LIBRARIES}
-                        ${PTHREAD_LIBRARIES})
-  add_custom_target(all_unit_tests)
-  add_dependencies(caf-test all_unit_tests)
-  # enumerate all test suites.
-  foreach(test ${CAF_ALL_UNIT_TESTS})
-    file(STRINGS ${test} contents)
-    foreach(line ${contents})
-      if ("${line}" MATCHES "CAF_SUITE (.*)")
-        string(REGEX REPLACE ".* CAF_SUITE (.*)" "\\1" suite ${line})
-        list(APPEND suites ${suite})
-      endif()
-    endforeach()
-  endforeach()
-  list(REMOVE_DUPLICATES suites)
-  # creates one CMake test per test suite.
-  macro (make_test suite)
-    string(REPLACE " " "_" test_name ${suite})
-    set(caf_test ${EXECUTABLE_OUTPUT_PATH}/caf-test)
-    add_test(${test_name} ${caf_test} -r 300 -n -v 5 -s "${suite}" ${ARGN})
-  endmacro ()
-  list(LENGTH suites num_suites)
-  message(STATUS "Found ${num_suites} test suites")
-  foreach(suite ${suites})
-    make_test("${suite}")
-  endforeach ()
-endif()
-
 
 # -- Setup for building manual and API documentation ---------------------------
 

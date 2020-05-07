@@ -81,6 +81,13 @@
 #include "caf/detail/stream_stage_impl.hpp"
 #include "caf/detail/tick_emitter.hpp"
 
+CAF_BEGIN_TYPE_ID_BLOCK(native_streaming_classes, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(native_streaming_classes, (caf::stream<int32_t>) )
+  CAF_ADD_TYPE_ID(native_streaming_classes, (std::vector<int32_t>) )
+
+CAF_END_TYPE_ID_BLOCK(native_streaming_classes)
+
 using std::vector;
 
 using namespace caf;
@@ -228,9 +235,9 @@ public:
     return nullptr;
   }
 
-  void start_streaming(entity& ref, int num_messages) {
+  void start_streaming(entity& ref, int32_t num_messages) {
     CAF_REQUIRE_NOT_EQUAL(num_messages, 0);
-    using downstream_manager = broadcast_downstream_manager<int>;
+    using downstream_manager = broadcast_downstream_manager<int32_t>;
     struct driver final : public stream_source_driver<downstream_manager> {
     public:
       driver(int32_t sentinel) : x_(0), sentinel_(sentinel) {
@@ -540,6 +547,7 @@ struct fixture {
                              caf::test::engine::argv()))
       CAF_FAIL("parsing the config failed: " << to_string(err));
     cfg.set("scheduler.policy", caf::atom("testing"));
+    cfg.add_message_types<id_block::native_streaming_classes>();
     return cfg;
   }
 

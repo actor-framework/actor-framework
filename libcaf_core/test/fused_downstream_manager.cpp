@@ -20,7 +20,7 @@
 
 #include "caf/fused_downstream_manager.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <memory>
 #include <numeric>
@@ -250,11 +250,11 @@ TESTEE(stream_multiplexer) {
 
 struct config : actor_system_config {
   config() {
-    add_message_type<std::deque<std::string>>("deque<string>");
+    add_message_types<id_block::core_test>();
   }
 };
 
-using fixture = test_coordinator_fixture<>;
+using fixture = test_coordinator_fixture<config>;
 
 } // namespace
 

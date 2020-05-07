@@ -19,23 +19,22 @@
 
 #define CAF_SUITE broadcast_downstream_manager
 
+#include "core-test.hpp"
+
 #include <cstdint>
 #include <memory>
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/broadcast_downstream_manager.hpp"
-#include "caf/scheduled_actor.hpp"
-
 #include "caf/mixin/sender.hpp"
-
-#include "caf/test/unit_test.hpp"
+#include "caf/scheduled_actor.hpp"
 
 using namespace caf;
 
 namespace {
 
-using bcast_manager = broadcast_downstream_manager<int>;
+using bcast_manager = broadcast_downstream_manager<int32_t>;
 
 // Mocks just enough of a stream manager to serve our entity.
 class mock_stream_manager : public stream_manager {
@@ -130,7 +129,7 @@ public:
     return static_cast<size_t>((*i)->open_credit);
   }
 
-  void new_round(int num, bool force_emit) {
+  void new_round(int32_t num, bool force_emit) {
     for (auto& ptr : paths)
       ptr->open_credit += num;
     if (force_emit)
@@ -165,9 +164,15 @@ struct not_empty_t {};
 
 constexpr auto some = not_empty_t{};
 
+struct config : actor_system_config {
+  config() {
+    add_message_types<id_block::core_test>();
+  }
+};
+
 // Provides the setup with alice, bob, and carl.
 struct fixture {
-  actor_system_config cfg;
+  config cfg;
 
   actor_system sys;
 
@@ -205,7 +210,7 @@ struct fixture {
     // nop
   }
 
-  using batch_type = std::vector<int>;
+  using batch_type = std::vector<int32_t>;
 
   using batches_type = std::vector<batch_type>;
 
@@ -224,7 +229,7 @@ struct fixture {
     return result;
   }
 
-  batch_type make_batch(int first, int last) {
+  batch_type make_batch(int32_t first, int32_t last) {
     batch_type result;
     result.resize(static_cast<size_t>((last + 1) - first));
     std::iota(result.begin(), result.end(), first);
@@ -351,7 +356,7 @@ CAF_TEST(one_path_force) {
   // Give alice 100 elements to send and a path to bob with desired batch size
   // of 10.
   alice.add_path_to(bob, 10);
-  for (int i = 1; i <= 100; ++i)
+  for (int32_t i = 1; i <= 100; ++i)
     alice.mgr.out().push(i);
   // Give 3 credit (less than 10).
   AFTER ENTITY alice TRIED FORCE_SENDING 3 ELEMENTS {
@@ -390,7 +395,7 @@ CAF_TEST(one_path_without_force) {
   // Give alice 100 elements to send and a path to bob with desired batch size
   // of 10.
   alice.add_path_to(bob, 10);
-  for (int i = 1; i <= 100; ++i)
+  for (int32_t i = 1; i <= 100; ++i)
     alice.mgr.out().push(i);
   // Give 3 credit (less than 10).
   AFTER ENTITY alice TRIED SENDING 3 ELEMENTS {
@@ -430,7 +435,7 @@ CAF_TEST(two_paths_different_sizes_force) {
   // 10, and a path to carl with desired batch size of 7.
   alice.add_path_to(bob, 10);
   alice.add_path_to(carl, 7);
-  for (int i = 1; i <= 100; ++i)
+  for (int32_t i = 1; i <= 100; ++i)
     alice.mgr.out().push(i);
   // Give 3 credit (less than 10).
   AFTER ENTITY alice TRIED FORCE_SENDING 3 ELEMENTS {
@@ -481,7 +486,7 @@ CAF_TEST(two_paths_different_sizes_without_force) {
   // 10, and a path to carl with desired batch size of 7.
   alice.add_path_to(bob, 10);
   alice.add_path_to(carl, 7);
-  for (int i = 1; i <= 100; ++i)
+  for (int32_t i = 1; i <= 100; ++i)
     alice.mgr.out().push(i);
   // Give 3 credit (less than 10).
   AFTER ENTITY alice TRIED SENDING 3 ELEMENTS {

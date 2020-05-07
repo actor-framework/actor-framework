@@ -16,26 +16,24 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <map>
-#include <vector>
-#include <string>
-#include <numeric>
-#include <iostream>
-
-#include <set>
-#include <unordered_set>
-
-#include "caf/config.hpp"
-
 #define CAF_SUITE message_operations
-#include "caf/test/unit_test.hpp"
+
+#include "core-test.hpp"
+
+#include <iostream>
+#include <map>
+#include <numeric>
+#include <set>
+#include <string>
+#include <unordered_set>
+#include <vector>
 
 #include "caf/all.hpp"
 
 using std::map;
 using std::string;
+using std::tuple;
 using std::vector;
-using std::make_tuple;
 
 using namespace caf;
 
@@ -185,44 +183,10 @@ CAF_TEST(concat) {
   CAF_CHECK_EQUAL(to_string(message::concat(m3, message{}, m1, m2)), to_string(m4));
 }
 
-namespace {
-
-struct s1 {
-  int value[3] = {10, 20, 30};
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, s1& x) {
-  return f(x.value);
-}
-
-struct s2 {
-  int value[4][2] = {{1, 10}, {2, 20}, {3, 30}, {4, 40}};
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, s2& x) {
-  return f(x.value);
-}
-
-struct s3 {
-  std::array<int, 4> value;
-  s3() {
-    std::iota(value.begin(), value.end(), 1);
-  }
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, s3& x) {
-  return f(x.value);
-}
-
 template <class... Ts>
 std::string msg_as_string(Ts&&... xs) {
   return to_string(make_message(std::forward<Ts>(xs)...));
 }
-
-} // namespace
 
 CAF_TEST(compare_custom_types) {
   s2 tmp;
@@ -237,7 +201,7 @@ CAF_TEST(empty_to_string) {
 }
 
 CAF_TEST(integers_to_string) {
-  using ivec = vector<int>;
+  using ivec = vector<int32_t>;
   CAF_CHECK_EQUAL(msg_as_string(1, 2, 3), "(1, 2, 3)");
   CAF_CHECK_EQUAL(msg_as_string(ivec{1, 2, 3}), "([1, 2, 3])");
   CAF_CHECK_EQUAL(msg_as_string(ivec{1, 2}, 3, 4, ivec{5, 6, 7}),
@@ -259,15 +223,16 @@ CAF_TEST(strings_to_string) {
 }
 
 CAF_TEST(maps_to_string) {
-  map<int, int> m1{{1, 10}, {2, 20}, {3, 30}};
+  map<int32_t, int32_t> m1{{1, 10}, {2, 20}, {3, 30}};
   auto msg1 = make_message(move(m1));
   CAF_CHECK_EQUAL(to_string(msg1), "({1 = 10, 2 = 20, 3 = 30})");
 }
 
 CAF_TEST(tuples_to_string) {
-  auto msg1 = make_message(make_tuple(1, 2, 3), 4, 5);
+  auto msg1 = make_message(tuple<int32_t, int32_t, int32_t>{1, 2, 3}, 4, 5);
   CAF_CHECK_EQUAL(to_string(msg1), "((1, 2, 3), 4, 5)");
-  auto msg2 = make_message(make_tuple(string{"one"}, 2, uint32_t{3}), 4, true);
+  using msg2_type = tuple<string, int32_t, uint32_t>;
+  auto msg2 = make_message(msg2_type{"one", 2, 3}, 4, true);
   CAF_CHECK_EQUAL(to_string(msg2), "((\"one\", 2, 3), 4, true)");
 }
 

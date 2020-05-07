@@ -24,7 +24,7 @@
 
 #include "caf/all.hpp"
 
-#define ERROR_HANDLER [&](error& err) { CAF_FAIL(system.render(err)); }
+#define ERROR_HANDLER [&](error& err) { CAF_FAIL(err); }
 
 using namespace caf;
 
@@ -42,7 +42,9 @@ using second_stage = typed_actor<replies_to<double, double>::with<double>>;
 
 first_stage::behavior_type typed_first_stage() {
   return {
-    [](int i) { return std::make_tuple(i * 2.0, i * 4.0); },
+    [](int i) -> result<double, double> {
+      return {i * 2.0, i * 4.0};
+    },
   };
 }
 

@@ -213,3 +213,126 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         FILES_MATCHING PATTERN "*.hpp"
 )
+
+# -- build unit tests ----------------------------------------------------------
+
+if(CAF_NO_UNIT_TESTS)
+  return()
+endif()
+
+add_executable(caf-core-test test/core-test.cpp)
+
+target_include_directories(caf-core-test PRIVATE
+                           "${CMAKE_CURRENT_SOURCE_DIR}/test")
+
+if (CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
+  target_link_libraries(caf-core-test libcaf_core_static  ${CAF_EXTRA_LDFLAGS})
+else()
+  target_link_libraries(caf-core-test libcaf_core_shared  ${CAF_EXTRA_LDFLAGS})
+endif()
+
+caf_add_test_suites(caf-core-test
+  actor_clock
+  actor_factory
+  actor_lifetime
+  actor_pool
+  actor_profiler
+  actor_registry
+  actor_system_config
+  actor_termination
+  aout
+  behavior
+  blocking_actor
+  broadcast_downstream_manager
+  byte
+  composition
+  config_option
+  config_option_set
+  config_value
+  config_value_adaptor
+  constructor_attach
+  continuous_streaming
+  cow_tuple
+  decorator.sequencer
+  deep_to_string
+  detached_actors
+  detail.bounds_checker
+  detail.ini_consumer
+  detail.limited_vector
+  detail.parse
+  detail.parser.read_bool
+  detail.parser.read_floating_point
+  detail.parser.read_ini
+  detail.parser.read_number
+  detail.parser.read_number_or_timespan
+  detail.parser.read_signed_integer
+  detail.parser.read_string
+  detail.parser.read_timespan
+  detail.parser.read_unsigned_integer
+  detail.ringbuffer
+  detail.ripemd_160
+  detail.serialized_size
+  detail.tick_emitter
+  detail.unique_function
+  detail.unordered_flat_map
+  dictionary
+  dynamic_spawn
+  expected
+  function_view
+  fused_downstream_manager
+  handles
+  inspector
+  intrusive.drr_cached_queue
+  intrusive.drr_queue
+  intrusive.fifo_inbox
+  intrusive.lifo_inbox
+  intrusive.task_queue
+  intrusive.wdrr_dynamic_multiplexed_queue
+  intrusive.wdrr_fixed_multiplexed_queue
+  intrusive_ptr
+  ipv4_address
+  ipv4_endpoint
+  ipv4_subnet
+  ipv6_address
+  ipv6_endpoint
+  ipv6_subnet
+  local_group
+  logger
+  mailbox_element
+  make_config_value_field
+  message
+  message_id
+  message_lifetime
+  metaprogramming
+  mixin.requester
+  mixin.sender
+  mock_streaming_classes
+  native_streaming_classes
+  node_id
+  optional
+  or_else
+  pipeline_streaming
+  policy.categorized
+  request_timeout
+  result
+  selective_streaming
+  serialization
+  settings
+  simple_timeout
+  span
+  stateful_actor
+  string_algorithms
+  string_view
+  sum_type
+  thread_hook
+  typed_behavior
+  typed_response_promise
+  typed_spawn
+  unit
+  uri
+  variant
+)
+
+if(NOT CAF_NO_EXCEPTIONS)
+  caf_add_test_suites(caf-core-test custom_exception_handler)
+endif()

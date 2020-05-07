@@ -33,6 +33,21 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/stateful_actor.hpp"
 
+namespace {
+
+enum class level;
+
+} // namespace
+
+CAF_BEGIN_TYPE_ID_BLOCK(selective_streaming, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(selective_streaming, (caf::stream<std::pair<level, std::string>>) )
+  CAF_ADD_TYPE_ID(selective_streaming, (level))
+  CAF_ADD_TYPE_ID(selective_streaming, (std::pair<level, std::string>) )
+  CAF_ADD_TYPE_ID(selective_streaming, (std::vector<std::pair<level, std::string>>) )
+
+CAF_END_TYPE_ID_BLOCK(selective_streaming)
+
 using std::string;
 
 using namespace caf;
@@ -73,34 +88,36 @@ buf make_log(level lvl) {
 TESTEE_SETUP();
 
 TESTEE(log_producer) {
-  return {[=](level lvl) -> result<stream<value_type>> {
-    auto res = attach_stream_source(
-      self,
-      // initialize state
-      [=](buf& xs) { xs = make_log(lvl); },
-      // get next element
-      [](buf& xs, downstream<value_type>& out, size_t num) {
-        CAF_MESSAGE("push " << num << " messages downstream");
-        auto n = std::min(num, xs.size());
-        for (size_t i = 0; i < n; ++i)
-          out.push(xs[i]);
-        xs.erase(xs.begin(), xs.begin() + static_cast<ptrdiff_t>(n));
-      },
-      // check whether we reached the end
-      [=](const buf& xs) {
-        if (xs.empty()) {
-          CAF_MESSAGE(self->name() << " is done");
-          return true;
-        }
-        return false;
-      },
-      unit, policy::arg<manager_type>::value);
-    auto& out = res.ptr()->out();
-    static_assert(std::is_same<decltype(out), manager_type&>::value,
-                  "source has wrong manager_type type");
-    out.set_filter(res.outbound_slot(), lvl);
-    return res;
-  }};
+  return {
+    [=](level lvl) -> result<stream<value_type>> {
+      auto res = attach_stream_source(
+        self,
+        // initialize state
+        [=](buf& xs) { xs = make_log(lvl); },
+        // get next element
+        [](buf& xs, downstream<value_type>& out, size_t num) {
+          CAF_MESSAGE("push " << num << " messages downstream");
+          auto n = std::min(num, xs.size());
+          for (size_t i = 0; i < n; ++i)
+            out.push(xs[i]);
+          xs.erase(xs.begin(), xs.begin() + static_cast<ptrdiff_t>(n));
+        },
+        // check whether we reached the end
+        [=](const buf& xs) {
+          if (xs.empty()) {
+            CAF_MESSAGE(self->name() << " is done");
+            return true;
+          }
+          return false;
+        },
+        unit, policy::arg<manager_type>::value);
+      auto& out = res.ptr()->out();
+      static_assert(std::is_same<decltype(out), manager_type&>::value,
+                    "source has wrong manager_type type");
+      out.set_filter(res.outbound_slot(), lvl);
+      return res;
+    },
+  };
 }
 
 TESTEE_STATE(log_dispatcher) {
@@ -158,7 +175,7 @@ TESTEE(log_consumer) {
 
 struct config : actor_system_config {
   config() {
-    add_message_type<value_type>("value_type");
+    add_message_types<id_block::selective_streaming>();
   }
 };
 

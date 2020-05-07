@@ -24,6 +24,13 @@
 #include "caf/all.hpp"
 #include "caf/opencl/all.hpp"
 
+CAF_BEGIN_TYPE_ID_BLOCK(simple_matrix, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(simple_matrix, (std::vector<float>) )
+
+CAF_END_TYPE_ID_BLOCK(simple_matrix)
+
+
 using namespace std;
 using namespace caf;
 using namespace caf::opencl;
@@ -109,8 +116,7 @@ void multiplier(event_based_actor* self) {
 
 int main() {
   actor_system_config cfg;
-  cfg.load<opencl::manager>()
-     .add_message_type<fvec>("float_vector");
+  cfg.load<opencl::manager>().add_message_types<id_block::simple_matrix>();
   actor_system system{cfg};
   system.spawn(multiplier);
   system.await_all_actors_done();

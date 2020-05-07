@@ -23,13 +23,11 @@
 #include <utility>
 
 #include "caf/atom.hpp"
+#include "caf/detail/comparable.hpp"
 #include "caf/fwd.hpp"
-#include "caf/none.hpp"
-
 #include "caf/meta/omittable_if_empty.hpp"
 #include "caf/meta/type_name.hpp"
-
-#include "caf/detail/comparable.hpp"
+#include "caf/none.hpp"
 
 namespace caf {
 
