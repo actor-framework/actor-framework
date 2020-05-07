@@ -37,13 +37,11 @@ using namespace caf::net;
 
 namespace {
 
-using buffer_type = std::vector<byte>;
-
 constexpr string_view hello_test = "hello test!";
 
 struct application_result {
   bool initialized;
-  std::vector<byte> data_buffer;
+  byte_buffer data_buffer;
   std::string resolve_path;
   actor resolve_listener;
   std::string timeout_value;
@@ -74,10 +72,12 @@ public:
   template <class Parent>
   void write_message(Parent& parent,
                      std::unique_ptr<endpoint_manager_queue::message> ptr) {
-    if (auto payload = serialize(parent.system(), ptr->msg->payload))
-      parent.write_packet(*payload);
-    else
-      CAF_FAIL("serializing failed: " << payload.error());
+    auto payload_buf = parent.next_payload_buffer();
+    binary_serializer sink(parent.system(), payload_buf);
+    if (auto err = sink(ptr->msg->content()))
+      CAF_FAIL("serializing failed: " << err);
+    CAF_MESSAGE("before sending: " << CAF_ARG(ptr->msg->content()));
+    parent.write_packet(payload_buf);
   }
 
   template <class Parent>
@@ -104,15 +104,6 @@ public:
     res_->err = err;
   }
 
-  static expected<std::vector<byte>> serialize(actor_system& sys,
-                                               const message& x) {
-    std::vector<byte> result;
-    binary_serializer sink{sys, result};
-    if (auto err = x.save(sink))
-      return err.value();
-    return result;
-  }
-
 private:
   std::shared_ptr<application_result> res_;
 };
@@ -128,7 +119,7 @@ public:
     // nop
   }
 
-  void write_packet(ip_endpoint ep, span<buffer_type*> buffers) {
+  void write_packet(ip_endpoint ep, span<byte_buffer*> buffers) {
     res_->ep = ep;
     auto& packet_buf = res_->packet_buffer;
     packet_buf.clear();
@@ -144,11 +135,11 @@ public:
     return *this;
   }
 
-  std::vector<byte> next_header_buffer() {
+  byte_buffer next_header_buffer() {
     return {};
   }
 
-  std::vector<byte> next_payload_buffer() {
+  byte_buffer next_payload_buffer() {
     return {};
   }
 
@@ -202,25 +193,27 @@ CAF_TEST(handle_data) {
   CAF_CHECK_EQUAL(result, hello_test);
 }
 
-/* TODO: Removed payload, send data in form of message
-  CAF_TEST(write_message) {
+CAF_TEST(write_message) {
+  std::string hello_test{"hello world!"};
   actor act;
   auto strong_actor = actor_cast<strong_actor_ptr>(act);
   mailbox_element::forwarding_stack stack;
-  auto msg = make_message();
+  auto msg = make_message(hello_test);
   auto elem = make_mailbox_element(strong_actor, make_message_id(12345), stack,
                                    msg);
-  auto test_span = as_bytes(make_span(hello_test));
-  std::vector<byte> payload(test_span.begin(), test_span.end());
   using message_type = endpoint_manager_queue::message;
-  auto message = detail::make_unique<message_type>(std::move(elem), nullptr,
-                                                   payload);
+  auto message = detail::make_unique<message_type>(std::move(elem), nullptr);
   worker.write_message(transport, std::move(message));
   auto& buf = transport_results->packet_buffer;
-  string_view result{reinterpret_cast<char*>(buf.data()), buf.size()};
+  binary_deserializer source{sys, buf};
+  caf::message received_msg;
+  CAF_CHECK(!source(received_msg));
+  CAF_MESSAGE(CAF_ARG(received_msg));
+  auto received_str = received_msg.get_as<std::string>(0);
+  string_view result{received_str};
   CAF_CHECK_EQUAL(result, hello_test);
   CAF_CHECK_EQUAL(transport_results->ep, ep);
-}*/
+}
 
 CAF_TEST(resolve) {
   worker.resolve(transport, "foo", self);

@@ -37,7 +37,6 @@ public:
   void kill_proxy(execution_unit* ctx, error rsn) override;
 
 private:
-  endpoint_manager::serialize_fun_type sf_;
   endpoint_manager_ptr dst_;
 };
 

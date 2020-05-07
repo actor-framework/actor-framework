@@ -64,14 +64,12 @@ public:
     return none;
   }
 
-  template <class Transport>
-  void write_message(Transport& transport,
-                     std::unique_ptr<endpoint_manager_queue::message> msg) {
+  template <class Parent>
+  void write_message(Parent& parent,
+                     std::unique_ptr<endpoint_manager_queue::message> ptr) {
     rec_buf_->push_back(static_cast<byte>(id_));
-    if (auto payload = serialize(transport.system(), msg->msg->payload))
-      transport.write_packet(*payload);
-    else
-      CAF_FAIL("serializing failed: " << payload.error());
+    auto data = ptr->msg->content().get_as<std::vector<byte>>(0);
+    parent.write_packet(data);
   }
 
   template <class Parent>
@@ -92,10 +90,6 @@ public:
 
   void handle_error(sec) {
     rec_buf_->push_back(static_cast<byte>(id_));
-  }
-
-  static expected<buffer_type> serialize(actor_system&, const message&) {
-    return buffer_type{};
   }
 
 private:
@@ -203,16 +197,16 @@ struct fixture : host_fixture {
   std::unique_ptr<net::endpoint_manager_queue::message>
   make_dummy_message(node_id nid) {
     actor_id aid = 42;
+    auto test_span = as_bytes(make_span(hello_test));
+    byte_buffer payload(test_span.begin(), test_span.end());
     actor_config cfg;
     auto p = make_actor<dummy_actor, strong_actor_ptr>(aid, nid, &sys, cfg);
-    auto test_span = as_bytes(make_span(hello_test));
-    buffer_type payload(test_span.begin(), test_span.end());
     auto receiver = actor_cast<strong_actor_ptr>(p);
     if (!receiver)
       CAF_FAIL("failed to cast receiver to a strong_actor_ptr");
     mailbox_element::forwarding_stack stack;
     auto elem = make_mailbox_element(nullptr, make_message_id(12345),
-                                     std::move(stack), make_message());
+                                     std::move(stack), make_message(payload));
     return detail::make_unique<endpoint_manager_queue::message>(std::move(elem),
                                                                 receiver);
   }
@@ -234,6 +228,7 @@ struct fixture : host_fixture {
     auto msg = make_dummy_message(testcase.nid);
     if (!msg->receiver)
       CAF_FAIL("receiver is null");
+    CAF_MESSAGE(CAF_ARG(msg));
     dispatcher.write_message(dummy, std::move(msg));
   }
 
@@ -289,13 +284,12 @@ CAF_TEST(handle_data) {
   CHECK_HANDLE_DATA(test_data.at(3));
 }
 
-/*
-  CAF_TEST(write_message write_packet) {
+CAF_TEST(write_message write_packet) {
   CHECK_WRITE_MESSAGE(test_data.at(0));
   CHECK_WRITE_MESSAGE(test_data.at(1));
   CHECK_WRITE_MESSAGE(test_data.at(2));
   CHECK_WRITE_MESSAGE(test_data.at(3));
-}*/
+}
 
 CAF_TEST(resolve) {
   // TODO think of a test for this

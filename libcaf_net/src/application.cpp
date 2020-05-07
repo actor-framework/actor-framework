@@ -52,8 +52,6 @@ error application::write_message(
   CAF_ASSERT(ptr != nullptr);
   CAF_ASSERT(ptr->msg != nullptr);
   CAF_LOG_TRACE(CAF_ARG2("content", ptr->msg->content()));
-  auto payload_prefix_buf = writer.next_payload_buffer();
-  binary_serializer sink{system(), payload_prefix_buf};
   const auto& src = ptr->msg->sender;
   const auto& dst = ptr->receiver;
   if (dst == nullptr) {
@@ -61,8 +59,7 @@ error application::write_message(
     return none;
   }
   auto payload_buf = writer.next_payload_buffer();
-  if (auto err = serialize(system(), ptr->msg->content(), payload_buf))
-    return err;
+  binary_serializer sink{system(), payload_buf};
   if (src != nullptr) {
     auto src_id = src->id();
     system().registry().put(src_id, src);
@@ -72,13 +69,14 @@ error application::write_message(
     if (auto err = sink(node_id{}, actor_id{0}, dst->id(), ptr->msg->stages))
       return err;
   }
+  if (auto err = sink(ptr->msg->content()))
+    return err;
   auto hdr = writer.next_header_buffer();
   to_bytes(header{message_type::actor_message,
-                  static_cast<uint32_t>(payload_prefix_buf.size()
-                                        + payload_buf.size()),
+                  static_cast<uint32_t>(payload_buf.size()),
                   ptr->msg->mid.integer_value()},
            hdr);
-  writer.write_packet(hdr, payload_prefix_buf, payload_buf);
+  writer.write_packet(hdr, payload_buf);
   return none;
 }
 
@@ -119,12 +117,6 @@ void application::local_actor_down(packet_writer& writer, actor_id id,
                   static_cast<uint64_t>(id)},
            hdr);
   writer.write_packet(hdr, payload);
-}
-
-error_code<sec> application::serialize(actor_system& sys, const message& x,
-                                       std::vector<byte>& buf) {
-  binary_serializer sink{sys, buf};
-  return x.save(sink);
 }
 
 strong_actor_ptr application::resolve_local_path(string_view path) {

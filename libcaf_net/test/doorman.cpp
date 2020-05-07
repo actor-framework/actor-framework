@@ -60,12 +60,6 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
 
 class dummy_application {
 public:
-  static error_code<sec> serialize(actor_system& sys, const message& x,
-                                   std::vector<byte>& buf) {
-    binary_serializer sink{sys, buf};
-    return x.save(sink);
-  }
-
   template <class Parent>
   error init(Parent&) {
     return none;
@@ -75,7 +69,8 @@ public:
   void write_message(Parent& parent,
                      std::unique_ptr<endpoint_manager_queue::message> msg) {
     auto payload_buf = parent.next_payload_buffer();
-    if (auto err = serialize(parent.system(), msg->msg->payload, payload_buf))
+    binary_serializer sink{parent.system(), payload_buf};
+    if (auto err = sink(msg->msg->payload))
       CAF_FAIL("serializing failed: " << err);
     parent.write_packet(payload_buf);
   }
@@ -115,11 +110,6 @@ public:
 class dummy_application_factory {
 public:
   using application_type = dummy_application;
-
-  static error_code<sec> serialize(actor_system& sys, const message& x,
-                                   std::vector<byte>& buf) {
-    return dummy_application::serialize(sys, x, buf);
-  }
 
   template <class Parent>
   error init(Parent&) {

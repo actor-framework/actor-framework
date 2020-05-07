@@ -23,6 +23,7 @@
 #include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
 
+#include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/byte.hpp"
 #include "caf/detail/scope_guard.hpp"
@@ -61,12 +62,7 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
 };
 
 class dummy_application {
-public:
-  static error_code<sec> serialize(actor_system& sys, const message& x,
-                                   std::vector<byte>& buf) {
-    binary_serializer sink{sys, buf};
-    return x.save(sink);
-  }
+  // nop
 };
 
 class dummy_transport {
@@ -103,12 +99,10 @@ public:
 
   template <class Manager>
   bool handle_write_event(Manager& mgr) {
-    auto sf = mgr.serialize_fun();
     for (auto x = mgr.next_message(); x != nullptr; x = mgr.next_message()) {
-      std::vector<byte> payload_buf;
-      if (auto err = sf(mgr.system(), x->msg->payload, payload_buf))
+      binary_serializer sink{mgr.system(), buf_};
+      if (auto err = sink(x->msg->payload))
         CAF_FAIL("serializing failed: " << err);
-      buf_.insert(buf_.end(), payload_buf.begin(), payload_buf.end());
     }
     auto res = write(handle_, buf_);
     if (auto num_bytes = get_if<size_t>(&res)) {

@@ -75,8 +75,8 @@ class string_application {
 public:
   using header_type = string_application_header;
 
-  string_application(actor_system& sys, std::shared_ptr<std::vector<byte>> buf)
-    : sys_(sys), buf_(std::move(buf)) {
+  string_application(std::shared_ptr<std::vector<byte>> buf)
+    : buf_(std::move(buf)) {
     // nop
   }
 
@@ -86,8 +86,8 @@ public:
   }
 
   template <class Parent>
-  void handle_packet(Parent&, header_type&, span<const byte> payload) {
-    binary_deserializer source{sys_, payload};
+  void handle_packet(Parent& parent, header_type&, span<const byte> payload) {
+    binary_deserializer source{parent.system(), payload};
     message msg;
     if (auto err = msg.load(source))
       CAF_FAIL("unable to deserialize message: " << err);
@@ -106,23 +106,17 @@ public:
       return;
     auto header_buf = parent.next_header_buffer();
     auto payload_buf = parent.next_payload_buffer();
-    if (auto err = serialize(parent.system(), ptr->msg->payload, payload_buf))
+    binary_serializer payload_sink{parent.system(), payload_buf};
+    if (auto err = payload_sink(ptr->msg->payload))
       CAF_FAIL("serializing failed: " << err);
-    binary_serializer sink{sys_, header_buf};
-    header_type header{static_cast<uint32_t>(payload_buf.size())};
-    if (auto err = sink(header))
+    binary_serializer header_sink{parent.system(), header_buf};
+    if (auto err
+        = header_sink(header_type{static_cast<uint32_t>(payload_buf.size())}))
       CAF_FAIL("serializing failed: " << err);
     parent.write_packet(header_buf, payload_buf);
   }
 
-  static error_code<sec> serialize(actor_system& sys, const message& x,
-                                   std::vector<byte>& buf) {
-    binary_serializer sink{sys, buf};
-    return x.save(sink);
-  }
-
 private:
-  actor_system& sys_;
   std::shared_ptr<std::vector<byte>> buf_;
 };
 
@@ -131,9 +125,8 @@ class stream_string_application : public Base {
 public:
   using header_type = typename Base::header_type;
 
-  stream_string_application(actor_system& sys,
-                            std::shared_ptr<std::vector<byte>> buf)
-    : Base(sys, std::move(buf)), await_payload_(false) {
+  stream_string_application(std::shared_ptr<std::vector<byte>> buf)
+    : Base(std::move(buf)), await_payload_(false) {
     // nop
   }
 
@@ -220,11 +213,11 @@ CAF_TEST(receive) {
                   sec::unavailable_or_would_block);
   CAF_MESSAGE("adding both endpoint managers");
   auto mgr1 = make_endpoint_manager(
-    mpx, sys, transport_type{sockets.first, application_type{sys, buf}});
+    mpx, sys, transport_type{sockets.first, application_type{buf}});
   CAF_CHECK_EQUAL(mgr1->init(), none);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
   auto mgr2 = make_endpoint_manager(
-    mpx, sys, transport_type{sockets.second, application_type{sys, buf}});
+    mpx, sys, transport_type{sockets.second, application_type{buf}});
   CAF_CHECK_EQUAL(mgr2->init(), none);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 3u);
   CAF_MESSAGE("resolve actor-proxy");

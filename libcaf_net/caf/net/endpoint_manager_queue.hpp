@@ -112,7 +112,7 @@ public:
       // nop
     }
 
-    task_size_type task_size(const event&) const noexcept {
+    static constexpr task_size_type task_size(const event&) noexcept {
       return 1;
     }
   };
@@ -149,10 +149,8 @@ public:
       // nop
     }
 
-    static task_size_type task_size(const message&) noexcept {
-      // Return at least 1 if the payload is empty.
-      return static_cast<task_size_type>(1);
-      // was x.payload.size() + static_cast<task_size_type>(x.payload.empty());
+    static constexpr task_size_type task_size(const message&) noexcept {
+      return 1;
     }
   };
 

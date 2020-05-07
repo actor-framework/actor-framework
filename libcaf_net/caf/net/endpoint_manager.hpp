@@ -44,10 +44,6 @@ public:
 
   using super = socket_manager;
 
-  /// A function type for serializing message payloads.
-  using serialize_fun_type = error_code<sec> (*)(actor_system&, const message&,
-                                                 std::vector<byte>& buf);
-
   // -- constructors, destructors, and assignment operators --------------------
 
   endpoint_manager(socket handle, const multiplexer_ptr& parent,
@@ -81,9 +77,6 @@ public:
 
   /// Initializes the manager before adding it to the multiplexer's event loop.
   virtual error init() = 0;
-
-  /// @returns the protocol-specific function for serializing payloads.
-  virtual serialize_fun_type serialize_fun() const noexcept = 0;
 
 protected:
   bool enqueue(endpoint_manager_queue::element* ptr);

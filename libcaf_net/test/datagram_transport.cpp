@@ -123,7 +123,8 @@ public:
   void write_message(Parent& parent,
                      std::unique_ptr<endpoint_manager_queue::message> msg) {
     auto payload_buf = parent.next_payload_buffer();
-    if (auto err = serialize(parent.system(), msg->msg->payload, payload_buf))
+    binary_serializer sink{parent.system(), payload_buf};
+    if (auto err = sink(msg->msg->payload))
       CAF_FAIL("serializing failed: " << err);
     parent.write_packet(payload_buf);
   }
@@ -165,12 +166,6 @@ public:
 
   void handle_error(sec sec) {
     CAF_FAIL("handle_error called: " << to_string(sec));
-  }
-
-  static error_code<sec> serialize(actor_system& sys, const message& x,
-                                   std::vector<byte>& buf) {
-    binary_serializer sink{sys, buf};
-    return x.save(sink);
   }
 
 private:

@@ -136,9 +136,6 @@ public:
     // nop
   }
 
-  static error_code<sec> serialize(actor_system& sys, const message& x,
-                                   std::vector<byte>& buf);
-
   // -- utility functions ------------------------------------------------------
 
   strong_actor_ptr resolve_local_path(string_view path);
