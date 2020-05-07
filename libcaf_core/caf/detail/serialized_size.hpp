@@ -18,12 +18,13 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 #include "caf/serializer.hpp"
 
 namespace caf::detail {
 
-class serialized_size_inspector final : public serializer {
+class CAF_CORE_EXPORT serialized_size_inspector final : public serializer {
 public:
   using super = serializer;
 
