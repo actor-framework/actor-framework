@@ -16,12 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-
-#include <vector>
-#include <random>
 #include <iomanip>
-#include <numeric>
 #include <iostream>
+#include <numeric>
+#include <random>
+#include <vector>
 
 #include "caf/all.hpp"
 #include "caf/opencl/all.hpp"
@@ -30,7 +29,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(scan, first_custom_type_id)
 
   CAF_ADD_TYPE_ID(scan, (caf::opencl::dim_vec))
   CAF_ADD_TYPE_ID(scan, (caf::opencl::nd_range))
-  CAF_ADD_TYPE_ID(scan, (std::vector<uint32_t>))
+  CAF_ADD_TYPE_ID(scan, (std::vector<uint32_t>) )
 
 CAF_END_TYPE_ID_BLOCK(scan)
 
@@ -188,8 +187,8 @@ int main() {
   actor_system_config cfg;
   cfg.load<opencl::manager>().add_message_types<id_block::scan>();
   actor_system system{cfg};
-  cout << "Calculating exclusive scan of '" << problem_size
-       << "' values." << endl;
+  cout << "Calculating exclusive scan of '" << problem_size << "' values."
+       << endl;
   // ---- create data ----
   uvec values(problem_size);
   std::random_device rd;
@@ -211,7 +210,7 @@ int main() {
   }
   if (!opt) {
     cerr << "Not OpenCL device available." << endl;
-    return 0;
+    return EXIT_FAILURE;
   } else {
     cerr << "Found device '" << (*opt)->name() << "'." << endl;
   }
@@ -244,11 +243,8 @@ int main() {
           return make_message(std::move(vec), static_cast<uval>(size));
         });
       },
-      in_out<uval, val, mref>{},
-      out<uval,mref>{reduced_ref},
-      local<uval>{half_block * 2},
-      priv<uval, val>{}
-    );
+      in_out<uval, val, mref>{}, out<uval, mref>{reduced_ref},
+      local<uval>{half_block * 2}, priv<uval, val>{});
     auto phase2 = mngr.spawn(
       prog, kernel_name_2, ndr,
       [nd_conf](nd_range& range, message& msg) -> optional<message> {
@@ -259,10 +255,8 @@ int main() {
                               static_cast<uval>(size));
         });
       },
-      in_out<uval,mref,mref>{},
-      in_out<uval,mref,mref>{},
-      priv<uval, val>{}
-    );
+      in_out<uval, mref, mref>{}, in_out<uval, mref, mref>{},
+      priv<uval, val>{});
     auto phase3 = mngr.spawn(
       prog, kernel_name_3, ndr,
       [nd_conf](nd_range& range, message& msg) -> optional<message> {
@@ -273,25 +267,19 @@ int main() {
                               static_cast<uval>(size));
         });
       },
-      in_out<uval,mref,val>{},
-      in<uval,mref>{},
-      priv<uval, val>{}
-    );
+      in_out<uval, mref, val>{}, in<uval, mref>{}, priv<uval, val>{});
     // ---- composed scan actor ----
     auto scanner = phase3 * phase2 * phase1;
     // ---- scan the data ----
     self->send(scanner, values);
-    self->receive(
-      [&](const uvec& results) {
-        cout << "Received results." << endl;
-        cout << " index | values |  scan  " << endl
-             << "-------+--------+--------" << endl;
-        for (size_t i = 0; i < problem_size; ++i)
-          cout << std::setw(6) << i << " | " << std::setw(6) << values[i]
-               << " | " << std::setw(6) << results[i] << std::endl;
-      }
-    );
+    self->receive([&](const uvec& results) {
+      cout << "Received results." << endl
+           << " index | values |  scan  " << endl
+           << "-------+--------+--------" << endl;
+      for (size_t i = 0; i < problem_size; ++i)
+        cout << std::setw(6) << i << " | " << std::setw(6) << values[i] << " | "
+             << std::setw(6) << results[i] << std::endl;
+    });
   }
-  system.await_all_actors_done();
-  return 0;
+  return EXIT_SUCCESS;
 }

@@ -41,10 +41,12 @@ enum class level;
 
 CAF_BEGIN_TYPE_ID_BLOCK(selective_streaming, first_custom_type_id)
 
-  CAF_ADD_TYPE_ID(selective_streaming, (caf::stream<std::pair<level, std::string>>) )
+  CAF_ADD_TYPE_ID(selective_streaming,
+                  (caf::stream<std::pair<level, std::string>>) )
   CAF_ADD_TYPE_ID(selective_streaming, (level))
   CAF_ADD_TYPE_ID(selective_streaming, (std::pair<level, std::string>) )
-  CAF_ADD_TYPE_ID(selective_streaming, (std::vector<std::pair<level, std::string>>) )
+  CAF_ADD_TYPE_ID(selective_streaming,
+                  (std::vector<std::pair<level, std::string>>) )
 
 CAF_END_TYPE_ID_BLOCK(selective_streaming)
 

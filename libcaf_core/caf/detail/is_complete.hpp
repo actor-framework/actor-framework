@@ -32,8 +32,7 @@ std::false_type is_complete_impl(...);
 /// Checks whether T is a complete type. For example, passing a forward
 /// declaration or undefined template specialization evaluates to `false`.
 template <class T>
-struct is_complete
-{
+struct is_complete {
   static constexpr bool value
     = decltype(is_complete_impl(std::declval<T*>()))::value;
 };

@@ -113,16 +113,13 @@ struct implicit_conversions<char*, 0> {
 };
 
 template <size_t N>
-struct implicit_conversions<char[N], 0>
-    : implicit_conversions<char*> {};
+struct implicit_conversions<char[N], 0> : implicit_conversions<char*> {};
 
 template <>
-struct implicit_conversions<const char*, 0>
-    : implicit_conversions<char*> {};
+struct implicit_conversions<const char*, 0> : implicit_conversions<char*> {};
 
 template <size_t N>
-struct implicit_conversions<const char[N], 0>
-    : implicit_conversions<char*> {};
+struct implicit_conversions<const char[N], 0> : implicit_conversions<char*> {};
 
 template <>
 struct implicit_conversions<char16_t*, 0> {
@@ -130,12 +127,12 @@ struct implicit_conversions<char16_t*, 0> {
 };
 
 template <size_t N>
-struct implicit_conversions<char16_t[N], 0>
-    : implicit_conversions<char16_t*> {};
+struct implicit_conversions<char16_t[N], 0> : implicit_conversions<char16_t*> {
+};
 
 template <>
 struct implicit_conversions<const char16_t*, 0>
-    : implicit_conversions<char16_t*> {};
+  : implicit_conversions<char16_t*> {};
 
 template <size_t N>
 struct implicit_conversions<const char16_t[N], 0>
@@ -147,16 +144,16 @@ struct implicit_conversions<char32_t*, 0> {
 };
 
 template <size_t N>
-struct implicit_conversions<char32_t[N], 0>
-    : implicit_conversions<char32_t*> {};
+struct implicit_conversions<char32_t[N], 0> : implicit_conversions<char32_t*> {
+};
 
 template <>
 struct implicit_conversions<const char32_t*, 0>
-    : implicit_conversions<char32_t*> {};
+  : implicit_conversions<char32_t*> {};
 
 template <size_t N>
 struct implicit_conversions<const char32_t[N], 0>
-    : implicit_conversions<char32_t*> {};
+  : implicit_conversions<char32_t*> {};
 
 template <>
 struct implicit_conversions<scoped_actor, 0> {
@@ -168,14 +165,8 @@ using implicit_conversions_t = typename implicit_conversions<T>::type;
 
 template <class T>
 struct strip_and_convert {
-  using type =
-    typename implicit_conversions<
-      typename std::remove_const<
-        typename std::remove_reference<
-          T
-        >::type
-      >::type
-    >::type;
+  using type = typename implicit_conversions<typename std::remove_const<
+    typename std::remove_reference<T>::type>::type>::type;
 };
 
 template <class T>

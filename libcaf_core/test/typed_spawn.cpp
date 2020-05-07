@@ -81,8 +81,8 @@ error make_error(mock_errc x) {
 }
 
 // check invariants of type system
-using dummy1 = typed_actor<reacts_to<int32_t, int32_t>,
-                           replies_to<double>::with<double>>;
+using dummy1
+  = typed_actor<reacts_to<int32_t, int32_t>, replies_to<double>::with<double>>;
 
 using dummy2 = dummy1::extend<reacts_to<ok_atom>>;
 
@@ -218,8 +218,8 @@ string_actor::behavior_type string_delegator(string_actor::pointer self,
   };
 }
 
-using maybe_string_actor = typed_actor<
-  replies_to<string>::with<ok_atom, string>>;
+using maybe_string_actor
+  = typed_actor<replies_to<string>::with<ok_atom, string>>;
 
 maybe_string_actor::behavior_type maybe_string_reverter() {
   return {
@@ -393,9 +393,9 @@ CAF_TEST(string_delegator_chain) {
   std::set<string> iface{"caf::replies_to<@str>::with<@str>"};
   CAF_CHECK_EQUAL(aut->message_types(), iface);
   self->request(aut, infinite, "Hello World!")
-    .receive([](const string&
-                  answer) { CAF_CHECK_EQUAL(answer, "!dlroW olleH"); },
-             ERROR_HANDLER);
+    .receive(
+      [](const string& answer) { CAF_CHECK_EQUAL(answer, "!dlroW olleH"); },
+      ERROR_HANDLER);
 }
 
 CAF_TEST(maybe_string_delegator_chain) {
@@ -404,13 +404,13 @@ CAF_TEST(maybe_string_delegator_chain) {
                           system.spawn(maybe_string_reverter));
   CAF_MESSAGE("send empty string, expect error");
   self->request(aut, infinite, "")
-    .receive([](ok_atom,
-                const string&) { CAF_FAIL("unexpected string response"); },
-             [](const error& err) {
-               CAF_CHECK_EQUAL(err.category(), atom("mock"));
-               CAF_CHECK_EQUAL(err.code(), static_cast<uint8_t>(
-                                             mock_errc::cannot_revert_empty));
-             });
+    .receive(
+      [](ok_atom, const string&) { CAF_FAIL("unexpected string response"); },
+      [](const error& err) {
+        CAF_CHECK_EQUAL(err.category(), atom("mock"));
+        CAF_CHECK_EQUAL(err.code(),
+                        static_cast<uint8_t>(mock_errc::cannot_revert_empty));
+      });
   CAF_MESSAGE("send abcd string, expect dcba");
   self->request(aut, infinite, "abcd")
     .receive([](ok_atom, const string& str) { CAF_CHECK_EQUAL(str, "dcba"); },
