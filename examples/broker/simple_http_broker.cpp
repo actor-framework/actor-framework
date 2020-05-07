@@ -13,8 +13,6 @@ using namespace caf::io;
 
 namespace {
 
-using tick_atom = atom_constant<atom("tick")>;
-
 constexpr const char http_ok[] = R"__(HTTP/1.1 200 OK
 Content-Type: text/plain
 Connection: keep-alive
@@ -51,7 +49,7 @@ behavior server(broker* self) {
   self->set_down_handler([=](down_msg&) {
     ++*counter;
   });
-  self->delayed_send(self, std::chrono::seconds(1), tick_atom::value);
+  self->delayed_send(self, std::chrono::seconds(1), tick_atom_v);
   return {
     [=](const new_connection_msg& ncm) {
       auto worker = self->fork(connection_worker, ncm.handle);
@@ -61,7 +59,7 @@ behavior server(broker* self) {
     [=](tick_atom) {
       aout(self) << "Finished " << *counter << " requests per second." << endl;
       *counter = 0;
-      self->delayed_send(self, std::chrono::seconds(1), tick_atom::value);
+      self->delayed_send(self, std::chrono::seconds(1), tick_atom_v);
     }
   };
 }
@@ -79,8 +77,8 @@ public:
 void caf_main(actor_system& system, const config& cfg) {
   auto server_actor = system.middleman().spawn_server(server, cfg.port);
   if (!server_actor) {
-    cerr << "*** cannot spawn server: "
-         << system.render(server_actor.error()) << endl;
+    cerr << "*** cannot spawn server: " << to_string(server_actor.error())
+         << endl;
     return;
   }
   cout << "*** listening on port " << cfg.port << endl;

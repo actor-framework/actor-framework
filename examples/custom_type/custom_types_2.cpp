@@ -6,13 +6,19 @@
 
 #include "caf/all.hpp"
 
+class foo;
+
+CAF_BEGIN_TYPE_ID_BLOCK(custom_types_2, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(custom_types_2, (foo))
+
+CAF_END_TYPE_ID_BLOCK(custom_types_2)
+
 using std::cout;
 using std::endl;
 using std::make_pair;
 
 using namespace caf;
-
-namespace {
 
 // a simple class using getter and setter member functions
 class foo {
@@ -58,17 +64,8 @@ behavior testee(event_based_actor* self) {
   };
 }
 
-class config : public actor_system_config {
-public:
-  config() {
-    add_message_type<foo>("foo");
-  }
-};
-
-void caf_main(actor_system& system, const config&) {
-  anon_send(system.spawn(testee), foo{1, 2});
+void caf_main(actor_system& sys) {
+  anon_send(sys.spawn(testee), foo{1, 2});
 }
 
-} // namespace
-
-CAF_MAIN()
+CAF_MAIN(id_block::custom_types_2)

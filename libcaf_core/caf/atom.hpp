@@ -115,105 +115,6 @@ std::string to_string(const atom_constant<V>&) {
 template <atom_value V>
 const atom_constant<V> atom_constant<V>::value = atom_constant<V>{};
 
-/// Used for request operations.
-using add_atom = atom_constant<atom("add")>;
-
-/// Used for request operations.
-using get_atom = atom_constant<atom("get")>;
-
-/// Used for request operations.
-using put_atom = atom_constant<atom("put")>;
-
-/// Used for signalizing resolved paths.
-using resolve_atom = atom_constant<atom("resolve")>;
-
-/// Used for signalizing updates, e.g., in a key-value store.
-using update_atom = atom_constant<atom("update")>;
-
-/// Used for request operations.
-using delete_atom = atom_constant<atom("delete")>;
-
-/// Used for response messages.
-using ok_atom = atom_constant<atom("ok")>;
-
-/// Used for triggering system-level message handling.
-using sys_atom = atom_constant<atom("sys")>;
-
-/// Used for signaling group subscriptions.
-using join_atom = atom_constant<atom("join")>;
-
-/// Used for signaling group unsubscriptions.
-using leave_atom = atom_constant<atom("leave")>;
-
-/// Used for signaling forwarding paths.
-using forward_atom = atom_constant<atom("forward")>;
-
-/// Used for buffer management.
-using flush_atom = atom_constant<atom("flush")>;
-
-/// Used for I/O redirection.
-using redirect_atom = atom_constant<atom("redirect")>;
-
-/// Used for link requests over network.
-using link_atom = atom_constant<atom("link")>;
-
-/// Used for removing networked links.
-using unlink_atom = atom_constant<atom("unlink")>;
-
-/// Used for monitor requests over network.
-using monitor_atom = atom_constant<atom("monitor")>;
-
-/// Used for removing networked monitors.
-using demonitor_atom = atom_constant<atom("demonitor")>;
-
-/// Used for publishing actors at a given port.
-using publish_atom = atom_constant<atom("publish")>;
-
-/// Used for publishing actors at a given port.
-using publish_udp_atom = atom_constant<atom("pub_udp")>;
-
-/// Used for removing an actor/port mapping.
-using unpublish_atom = atom_constant<atom("unpublish")>;
-
-/// Used for removing an actor/port mapping.
-using unpublish_udp_atom = atom_constant<atom("unpub_udp")>;
-
-/// Used for signalizing group membership.
-using subscribe_atom = atom_constant<atom("subscribe")>;
-
-/// Used for withdrawing group membership.
-using unsubscribe_atom = atom_constant<atom("unsubscrib")>;
-
-/// Used for establishing network connections.
-using connect_atom = atom_constant<atom("connect")>;
-
-/// Used for contacting a remote UDP endpoint
-using contact_atom = atom_constant<atom("contact")>;
-
-/// Used for opening ports or files.
-using open_atom = atom_constant<atom("open")>;
-
-/// Used for closing ports or files.
-using close_atom = atom_constant<atom("close")>;
-
-/// Used for spawning remote actors.
-using spawn_atom = atom_constant<atom("spawn")>;
-
-/// Used for migrating actors to other nodes.
-using migrate_atom = atom_constant<atom("migrate")>;
-
-/// Used for triggering periodic operations.
-using tick_atom = atom_constant<atom("tick")>;
-
-/// Used for pending out of order messages.
-using pending_atom = atom_constant<atom("pending")>;
-
-/// Used as timeout type for `timeout_msg`.
-using receive_atom = atom_constant<atom("receive")>;
-
-/// Used as timeout type for `timeout_msg`.
-using stream_atom = atom_constant<atom("stream")>;
-
 } // namespace caf
 
 namespace std {
@@ -227,3 +128,8 @@ struct hash<caf::atom_value> {
 };
 
 } // namespace std
+
+// Ugly, but pull in type_id header since it declares atom constants that used
+// to live in this header.
+
+#include "caf/type_id.hpp"

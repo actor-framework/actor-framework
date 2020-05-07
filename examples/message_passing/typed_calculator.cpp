@@ -1,33 +1,25 @@
 /******************************************************************************\
  * This example is a very basic, non-interactive math service implemented     *
  * using typed actors.                                                        *
-\ ******************************************************************************/
+\******************************************************************************/
 
+#include "caf/all.hpp"
 #include <cassert>
 #include <iostream>
-#include "caf/all.hpp"
 
 using std::endl;
 using namespace caf;
 
 namespace {
 
-using plus_atom = atom_constant<atom("plus")>;
-using minus_atom = atom_constant<atom("minus")>;
-using result_atom = atom_constant<atom("result")>;
-
-using calculator_type =
-  typed_actor<replies_to<plus_atom, int, int>::with<result_atom, int>,
-              replies_to<minus_atom, int, int>::with<result_atom, int>>;
+using calculator_type
+  = typed_actor<replies_to<add_atom, int32_t, int32_t>::with<int32_t>,
+                replies_to<sub_atom, int32_t, int32_t>::with<int32_t>>;
 
 calculator_type::behavior_type typed_calculator_fun(calculator_type::pointer) {
   return {
-    [](plus_atom, int x, int y) {
-      return std::make_tuple(result_atom::value, x + y);
-    },
-    [](minus_atom, int x, int y) {
-      return std::make_tuple(result_atom::value, x - y);
-    }
+    [](add_atom, int32_t x, int32_t y) { return x + y; },
+    [](sub_atom, int32_t x, int32_t y) { return x - y; },
   };
 }
 
@@ -40,12 +32,8 @@ public:
 protected:
   behavior_type make_behavior() override {
     return {
-      [](plus_atom, int x, int y) {
-        return std::make_tuple(result_atom::value, x + y);
-      },
-      [](minus_atom, int x, int y) {
-        return std::make_tuple(result_atom::value, x - y);
-      }
+      [](add_atom, int32_t x, int32_t y) { return x + y; },
+      [](sub_atom, int32_t x, int32_t y) { return x - y; },
     };
   }
 };
@@ -53,26 +41,23 @@ protected:
 void tester(event_based_actor* self, const calculator_type& testee) {
   self->link_to(testee);
   // first test: 2 + 1 = 3
-  self->request(testee, infinite, plus_atom::value, 2, 1).then(
-    [=](result_atom, int r1) {
-      // second test: 2 - 1 = 1
-      self->request(testee, infinite, minus_atom::value, 2, 1).then(
-        [=](result_atom, int r2) {
+  self->request(testee, infinite, add_atom_v, 2, 1)
+    .then(
+      [=](int32_t r1) {
+        // second test: 2 - 1 = 1
+        self->request(testee, infinite, sub_atom_v, 2, 1).then([=](int32_t r2) {
           // both tests succeeded
           if (r1 == 3 && r2 == 1) {
-            aout(self) << "AUT (actor under test) seems to be ok"
-                       << endl;
+            aout(self) << "AUT (actor under test) seems to be ok" << endl;
           }
           self->send_exit(testee, exit_reason::user_shutdown);
-        }
-      );
-    },
-    [=](const error& err) {
-      aout(self) << "AUT (actor under test) failed: "
-                 << self->system().render(err) << endl;
-      self->quit(exit_reason::user_shutdown);
-    }
-  );
+        });
+      },
+      [=](const error& err) {
+        aout(self) << "AUT (actor under test) failed: " << to_string(err)
+                   << endl;
+        self->quit(exit_reason::user_shutdown);
+      });
 }
 
 void caf_main(actor_system& system) {

@@ -40,6 +40,7 @@
 #include "caf/stream.hpp"
 #include "caf/thread_hook.hpp"
 #include "caf/type_erased_value.hpp"
+#include "caf/type_id.hpp"
 
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/type_traits.hpp"
@@ -185,6 +186,14 @@ public:
     return *this;
   }
 
+  /// Loads new types by calling add_message_type for each type in `IdBlock`.
+  template <class IdBlock>
+  actor_system_config& add_message_types() {
+    typename detail::il_range<IdBlock::begin, IdBlock::end>::type token;
+    add_message_types(token);
+    return *this;
+  }
+
   /// Enables the actor system to convert errors of this error category
   /// to human-readable strings via `renderer`.
   actor_system_config& add_error_category(atom_value x,
@@ -211,10 +220,22 @@ public:
 
   /// Loads module `T` with optional template parameters `Ts...`.
   template <class T, class... Ts>
-  actor_system_config& load() {
+  detail::enable_if_t<std::is_base_of<actor_system::module, T>::value,
+                      actor_system_config&>
+  load() {
     module_factories.push_back([](actor_system& sys) -> actor_system::module* {
       return T::make(sys, detail::type_list<Ts...>{});
     });
+    return *this;
+  }
+
+  /// @private
+  template <class IdBlock>
+  detail::enable_if_t<!std::is_base_of<actor_system::module, IdBlock>::value,
+                      actor_system_config&>
+  load() {
+    // Allows exec_main to use one syntax for IdBlocks and modules.
+    add_message_types<IdBlock>();
     return *this;
   }
 
@@ -406,6 +427,16 @@ private:
     value_factories_by_name.emplace(std::move(name), &make_type_erased_value<T>);
     value_factories_by_rtti.emplace(std::type_index(typeid(T)),
                                      &make_type_erased_value<T>);
+  }
+
+  void add_message_types(detail::int_list<>) {
+    // End of recursion.
+  }
+
+  template <long I, long... Is>
+  void add_message_types(detail::int_list<I, Is...>) {
+    add_message_type<typename type_by_id<I>::type>(type_name_by_id<I>::value);
+    add_message_types(detail::int_list<Is...>{});
   }
 
   actor_system_config& set_impl(string_view name, config_value value);
