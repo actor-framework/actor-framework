@@ -45,6 +45,10 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
     --warnings-as-errors        build with '-Werror'
     --with-ccache               use ccache to improve build performance
 
+  Opt-in Features:
+
+    --enable-type-id-checks     raise errors when sending types without type IDs
+
   Optional Targets:
     --with-qt-examples          build Qt example(s)
     --with-protobuf-examples    build Google Protobuf example(s)
@@ -85,7 +89,8 @@ Usage: $0 [OPTION]... [VAR=VALUE]...
   Convenience options:
     --dev-mode                  sets --build-type=debug, --no-examples,
                                 --no-tools, --with-runtime-checks,
-                                --log-level=trace, and --enable-asan
+                                --log-level=trace, --enable-asan,
+                                and --enable-type-id-checks
 
   Influential Environment Variables (only on first invocation):
     CXX                         C++ compiler command
@@ -247,6 +252,9 @@ while [ $# -ne 0 ]; do
         --enable-asan)
             append_cache_entry CAF_ENABLE_ADDRESS_SANITIZER BOOL yes
             ;;
+        --enable-type-id-checks)
+            append_cache_entry CAF_ENABLE_TYPE_ID_CHECKS BOOL yes
+            ;;
         --with-gcov)
             append_cache_entry CAF_ENABLE_GCOV BOOL yes
             ;;
@@ -380,6 +388,7 @@ while [ $# -ne 0 ]; do
             append_cache_entry CAF_LOG_LEVEL STRING TRACE
             append_cache_entry CAF_ENABLE_RUNTIME_CHECKS BOOL yes
             append_cache_entry CAF_ENABLE_ADDRESS_SANITIZER BOOL yes
+            append_cache_entry CAF_ENABLE_TYPE_ID_CHECKS BOOL yes
             ;;
         *)
             echo "Invalid option '$1'.  Try $0 --help to see available options."
