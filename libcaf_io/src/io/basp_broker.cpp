@@ -37,6 +37,9 @@
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
 
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(caf::actor_clock::duration_type)
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(caf::actor_clock::time_point)
+
 namespace {
 
 #ifdef CAF_MSVC

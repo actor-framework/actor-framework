@@ -16,13 +16,19 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include <vector>
 #include <iomanip>
-#include <numeric>
 #include <iostream>
+#include <numeric>
+#include <vector>
 
 #include "caf/all.hpp"
 #include "caf/opencl/all.hpp"
+
+CAF_BEGIN_TYPE_ID_BLOCK(simple_matrix, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(simple_matrix, (std::vector<float>) )
+
+CAF_END_TYPE_ID_BLOCK(simple_matrix)
 
 using namespace std;
 using namespace caf;
@@ -94,23 +100,19 @@ void multiplier(event_based_actor* self) {
   //          expects its arguments for global memory to be passed in vectors,
   //          the vector type is omitted for brevity.
   auto worker = self->system().opencl_manager().spawn(
-    kernel_source, kernel_name,
-    nd_range{dim_vec{matrix_size, matrix_size}},
-    in<float>{}, in<float>{}, out<float>{}
-  );
+    kernel_source, kernel_name, nd_range{dim_vec{matrix_size, matrix_size}},
+    in<float>{}, in<float>{}, out<float>{});
   // send both matrices to the actor and wait for a result
-  self->request(worker, chrono::seconds(5), move(m1), move(m2)).then(
-    [](const fvec& result) {
+  self->request(worker, chrono::seconds(5), move(m1), move(m2))
+    .then([](const fvec& result) {
       cout << "result: " << endl;
       print_as_matrix(result);
-    }
-  );
+    });
 }
 
 int main() {
   actor_system_config cfg;
-  cfg.load<opencl::manager>()
-     .add_message_type<fvec>("float_vector");
+  cfg.load<opencl::manager>().add_message_types<id_block::simple_matrix>();
   actor_system system{cfg};
   system.spawn(multiplier);
   system.await_all_actors_done();

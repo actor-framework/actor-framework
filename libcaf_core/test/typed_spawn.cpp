@@ -31,6 +31,39 @@
 
 #  define ERROR_HANDLER [&](error& err) { CAF_FAIL(system.render(err)); }
 
+namespace {
+
+struct get_state_msg;
+struct my_request;
+
+using server_type = caf::typed_actor<caf::replies_to<my_request>::with<bool>>;
+
+using event_testee_type
+  = caf::typed_actor<caf::replies_to<get_state_msg>::with<std::string>,
+                     caf::replies_to<std::string>::with<void>,
+                     caf::replies_to<float>::with<void>,
+                     caf::replies_to<int32_t>::with<int32_t>>;
+
+using string_actor
+  = caf::typed_actor<caf::replies_to<std::string>::with<std::string>>;
+
+using int_actor = caf::typed_actor<caf::replies_to<int32_t>::with<int32_t>>;
+
+using float_actor = caf::typed_actor<caf::reacts_to<float>>;
+
+} // namespace
+
+CAF_BEGIN_TYPE_ID_BLOCK(typed_spawn, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(typed_spawn, (event_testee_type))
+  CAF_ADD_TYPE_ID(typed_spawn, (float_actor))
+  CAF_ADD_TYPE_ID(typed_spawn, (get_state_msg))
+  CAF_ADD_TYPE_ID(typed_spawn, (int_actor))
+  CAF_ADD_TYPE_ID(typed_spawn, (my_request))
+  CAF_ADD_TYPE_ID(typed_spawn, (string_actor))
+
+CAF_END_TYPE_ID_BLOCK(typed_spawn)
+
 using std::string;
 
 using namespace caf;
@@ -48,16 +81,16 @@ error make_error(mock_errc x) {
 }
 
 // check invariants of type system
-using dummy1 = typed_actor<reacts_to<int, int>,
-                           replies_to<double>::with<double>>;
+using dummy1
+  = typed_actor<reacts_to<int32_t, int32_t>, replies_to<double>::with<double>>;
 
 using dummy2 = dummy1::extend<reacts_to<ok_atom>>;
 
 static_assert(std::is_convertible<dummy2, dummy1>::value,
               "handle not assignable to narrower definition");
 
-using dummy3 = typed_actor<reacts_to<float, int>>;
-using dummy4 = typed_actor<replies_to<int>::with<double>>;
+using dummy3 = typed_actor<reacts_to<float, int32_t>>;
+using dummy4 = typed_actor<replies_to<int32_t>::with<double>>;
 using dummy5 = dummy4::extend_with<dummy3>;
 
 static_assert(std::is_convertible<dummy5, dummy3>::value,
@@ -71,16 +104,14 @@ static_assert(std::is_convertible<dummy5, dummy4>::value,
  ******************************************************************************/
 
 struct my_request {
-  int a;
-  int b;
+  int32_t a;
+  int32_t b;
 };
 
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, my_request& x) {
   return f(x.a, x.b);
 }
-
-using server_type = typed_actor<replies_to<my_request>::with<bool>>;
 
 server_type::behavior_type typed_server1() {
   return {
@@ -120,10 +151,6 @@ void client(event_based_actor* self, const actor& parent,
  ******************************************************************************/
 
 struct get_state_msg {};
-
-using event_testee_type = typed_actor<
-  replies_to<get_state_msg>::with<string>, replies_to<string>::with<void>,
-  replies_to<float>::with<void>, replies_to<int>::with<int>>;
 
 class event_testee : public event_testee_type::base {
 public:
@@ -170,8 +197,6 @@ public:
  *                         simple 'forwarding' chain                          *
  ******************************************************************************/
 
-using string_actor = typed_actor<replies_to<string>::with<string>>;
-
 string_actor::behavior_type string_reverter() {
   return {
     [](string& str) -> string {
@@ -193,8 +218,8 @@ string_actor::behavior_type string_delegator(string_actor::pointer self,
   };
 }
 
-using maybe_string_actor = typed_actor<
-  replies_to<string>::with<ok_atom, string>>;
+using maybe_string_actor
+  = typed_actor<replies_to<string>::with<ok_atom, string>>;
 
 maybe_string_actor::behavior_type maybe_string_reverter() {
   return {
@@ -221,10 +246,6 @@ maybe_string_delegator(maybe_string_actor::pointer self,
 /******************************************************************************
  *                        sending typed actor handles                         *
  ******************************************************************************/
-
-using int_actor = typed_actor<replies_to<int>::with<int>>;
-
-using float_actor = typed_actor<reacts_to<float>>;
 
 int_actor::behavior_type int_fun() {
   return {
@@ -286,7 +307,7 @@ struct fixture {
   scoped_actor self;
 
   static actor_system_config& init(actor_system_config& cfg) {
-    cfg.add_message_type<get_state_msg>("get_state_msg");
+    cfg.add_message_types<id_block::typed_spawn>();
     cfg.parse(test::engine::argc(), test::engine::argv());
     return cfg;
   }
@@ -372,9 +393,9 @@ CAF_TEST(string_delegator_chain) {
   std::set<string> iface{"caf::replies_to<@str>::with<@str>"};
   CAF_CHECK_EQUAL(aut->message_types(), iface);
   self->request(aut, infinite, "Hello World!")
-    .receive([](const string&
-                  answer) { CAF_CHECK_EQUAL(answer, "!dlroW olleH"); },
-             ERROR_HANDLER);
+    .receive(
+      [](const string& answer) { CAF_CHECK_EQUAL(answer, "!dlroW olleH"); },
+      ERROR_HANDLER);
 }
 
 CAF_TEST(maybe_string_delegator_chain) {
@@ -383,13 +404,13 @@ CAF_TEST(maybe_string_delegator_chain) {
                           system.spawn(maybe_string_reverter));
   CAF_MESSAGE("send empty string, expect error");
   self->request(aut, infinite, "")
-    .receive([](ok_atom,
-                const string&) { CAF_FAIL("unexpected string response"); },
-             [](const error& err) {
-               CAF_CHECK_EQUAL(err.category(), atom("mock"));
-               CAF_CHECK_EQUAL(err.code(), static_cast<uint8_t>(
-                                             mock_errc::cannot_revert_empty));
-             });
+    .receive(
+      [](ok_atom, const string&) { CAF_FAIL("unexpected string response"); },
+      [](const error& err) {
+        CAF_CHECK_EQUAL(err.category(), atom("mock"));
+        CAF_CHECK_EQUAL(err.code(),
+                        static_cast<uint8_t>(mock_errc::cannot_revert_empty));
+      });
   CAF_MESSAGE("send abcd string, expect dcba");
   self->request(aut, infinite, "abcd")
     .receive([](ok_atom, const string& str) { CAF_CHECK_EQUAL(str, "dcba"); },

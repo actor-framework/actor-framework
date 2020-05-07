@@ -68,6 +68,25 @@
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/type_traits.hpp"
 
+namespace {
+
+enum class test_enum : uint32_t;
+struct raw_struct;
+struct test_array;
+struct test_empty_non_pod;
+
+} // namespace
+
+CAF_BEGIN_TYPE_ID_BLOCK(serialization, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(serialization, (raw_struct))
+  CAF_ADD_TYPE_ID(serialization, (std::vector<bool>) )
+  CAF_ADD_TYPE_ID(serialization, (test_array))
+  CAF_ADD_TYPE_ID(serialization, (test_empty_non_pod))
+  CAF_ADD_TYPE_ID(serialization, (test_enum))
+
+CAF_END_TYPE_ID_BLOCK(serialization)
+
 using namespace std;
 using namespace caf;
 using caf::detail::type_erased_value_impl;
@@ -135,11 +154,8 @@ typename Inspector::result_type inspect(Inspector& f, test_empty_non_pod&) {
 class config : public actor_system_config {
 public:
   config() {
-    add_message_type<test_enum>("test_enum");
-    add_message_type<raw_struct>("raw_struct");
-    add_message_type<test_array>("test_array");
-    add_message_type<test_empty_non_pod>("test_empty_non_pod");
-    add_message_type<std::vector<bool>>("bool_vector");
+    puts("add_message_types");
+    add_message_types<id_block::serialization>();
   }
 };
 
@@ -154,12 +170,9 @@ struct fixture {
   test_enum te = test_enum::b;
   string str = "Lorem ipsum dolor sit amet.";
   raw_struct rs;
-  test_array ta {
+  test_array ta{
     {0, 1, 2, 3},
-    {
-      {0, 1, 2, 3},
-      {4, 5, 6, 7}
-    },
+    {{0, 1, 2, 3}, {4, 5, 6, 7}},
   };
   int ra[3] = {1, 2, 3};
 
@@ -230,10 +243,8 @@ struct is_message {
     bool ok = false;
     // work around for gcc 4.8.4 bug
     auto tup = tie(v, vs...);
-    message_handler impl {
-      [&](T const& u, Ts const&... us) {
-        ok = tup == tie(u, us...);
-      }
+    message_handler impl{
+      [&](T const& u, Ts const&... us) { ok = tup == tie(u, us...); },
     };
     impl(msg);
     return ok;
@@ -268,8 +279,8 @@ struct is_message {
     void run_test_impl();                                                      \
   };                                                                           \
   using name##_binary = name##_tpl<binary_serializer, binary_deserializer>;    \
-  using name##_stream = name##_tpl<stream_serializer<vectorbuf>,               \
-                                   stream_deserializer<charbuf>>;              \
+  using name##_stream                                                          \
+    = name##_tpl<stream_serializer<vectorbuf>, stream_deserializer<charbuf>>;  \
   ::caf::test::detail::adder<::caf::test::test_impl<name##_binary>>            \
     CAF_UNIQUE(a_binary){CAF_XSTR(CAF_SUITE), CAF_XSTR(name##_binary), false}; \
   ::caf::test::detail::adder<::caf::test::test_impl<name##_stream>>            \
@@ -434,7 +445,6 @@ SERIALIZATION_TEST(multiple_messages) {
   CAF_CHECK(is_message(m2).equal(i32, i64, dur, ts, te, str, rs));
 }
 
-
 SERIALIZATION_TEST(type_erased_value) {
   auto buf = serialize(str);
   type_erased_value_ptr ptr{new type_erased_value_impl<std::string>};
@@ -508,8 +518,8 @@ SERIALIZATION_TEST(byte_sequence_optimization) {
   e = bd(data);
   CAF_REQUIRE(!e);
   CAF_CHECK_EQUAL(data.size(), 42u);
-  CAF_CHECK(std::all_of(data.begin(), data.end(),
-                        [](uint8_t c) { return c == 0x2a; }));
+  CAF_CHECK(
+    std::all_of(data.begin(), data.end(), [](uint8_t c) { return c == 0x2a; }));
 }
 
 SERIALIZATION_TEST(long_sequences) {

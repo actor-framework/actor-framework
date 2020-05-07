@@ -16,14 +16,12 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/config.hpp"
+#define CAF_SUITE openssl.dynamic_remote_actor
 
-#include <signal.h>
-
-#define CAF_SUITE openssl_dynamic_remote_actor
-#include "caf/test/dsl.hpp"
+#include "openssl-test.hpp"
 
 #include <algorithm>
+#include <signal.h>
 #include <sstream>
 #include <utility>
 #include <vector>
@@ -43,7 +41,7 @@ public:
   config() {
     load<io::middleman>();
     load<openssl::manager>();
-    add_message_type<std::vector<int>>("std::vector<int>");
+    add_message_types<id_block::openssl_test>();
     actor_system_config::parse(test::engine::argc(), test::engine::argv());
     // Setting the "max consecutive reads" to 1 is highly likely to cause
     // OpenSSL to buffer data internally and report "pending" data after a read
@@ -67,7 +65,7 @@ struct fixture {
 
 behavior make_pong_behavior() {
   return {
-    [](int val) -> int {
+    [](int32_t val) -> int32_t {
       ++val;
       CAF_MESSAGE("pong with " << val);
       return val;
@@ -79,7 +77,7 @@ behavior make_ping_behavior(event_based_actor* self, const actor& pong) {
   CAF_MESSAGE("ping with " << 0);
   self->send(pong, 0);
   return {
-    [=](int val) -> int {
+    [=](int32_t val) -> int32_t {
       if (val == 3) {
         CAF_MESSAGE("ping with exit");
         self->send_exit(self->current_sender(), exit_reason::user_shutdown);
@@ -92,7 +90,7 @@ behavior make_ping_behavior(event_based_actor* self, const actor& pong) {
   };
 }
 
-std::string to_string(const std::vector<int>& vec) {
+std::string to_string(const std::vector<int32_t>& vec) {
   std::ostringstream os;
   for (size_t i = 0; i + 1 < vec.size(); ++i)
     os << vec[i] << ", ";
@@ -102,7 +100,7 @@ std::string to_string(const std::vector<int>& vec) {
 
 behavior make_sort_behavior() {
   return {
-    [](std::vector<int>& vec) -> std::vector<int> {
+    [](std::vector<int32_t>& vec) -> std::vector<int32_t> {
       CAF_MESSAGE("sorter received: " << to_string(vec));
       std::sort(vec.begin(), vec.end());
       CAF_MESSAGE("sorter sent: " << to_string(vec));
@@ -113,12 +111,12 @@ behavior make_sort_behavior() {
 
 behavior make_sort_requester_behavior(event_based_actor* self,
                                       const actor& sorter) {
-  self->send(sorter, std::vector<int>{5, 4, 3, 2, 1});
+  self->send(sorter, std::vector<int32_t>{5, 4, 3, 2, 1});
   return {
-    [=](const std::vector<int>& vec) {
+    [=](const std::vector<int32_t>& vec) {
       CAF_MESSAGE("sort requester received: " << to_string(vec));
       for (size_t i = 1; i < vec.size(); ++i)
-        CAF_CHECK_EQUAL(static_cast<int>(i), vec[i - 1]);
+        CAF_CHECK_EQUAL(static_cast<int32_t>(i), vec[i - 1]);
       self->send_exit(sorter, exit_reason::user_shutdown);
       self->quit();
     },
@@ -127,7 +125,7 @@ behavior make_sort_requester_behavior(event_based_actor* self,
 
 behavior fragile_mirror(event_based_actor* self) {
   return {
-    [=](int i) {
+    [=](int32_t i) {
       self->quit(exit_reason::user_shutdown);
       return i;
     },
@@ -139,7 +137,7 @@ behavior linking_actor(event_based_actor* self, const actor& buddy) {
   self->link_to(buddy);
   self->send(buddy, 42);
   return {
-    [](int i) { CAF_CHECK_EQUAL(i, 42); },
+    [](int32_t i) { CAF_CHECK_EQUAL(i, 42); },
   };
 }
 

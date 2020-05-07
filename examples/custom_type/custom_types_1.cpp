@@ -3,34 +3,45 @@
 // Manual refs: 24-27, 30-34, 75-78, 81-84 (ConfiguringActorApplications)
 //              23-33 (TypeInspection)
 
-#include <string>
-#include <vector>
 #include <cassert>
-#include <utility>
 #include <iostream>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "caf/all.hpp"
 
-using std::cout;
+// --(rst-type-id-block-begin)--
+struct foo;
+struct foo2;
+
+CAF_BEGIN_TYPE_ID_BLOCK(custom_types_1, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(custom_types_1, (foo))
+  CAF_ADD_TYPE_ID(custom_types_1, (foo2))
+  CAF_ADD_TYPE_ID(custom_types_1, (std::pair<int32_t, int32_t>) )
+
+CAF_END_TYPE_ID_BLOCK(custom_types_1)
+// --(rst-type-id-block-end)--
+
 using std::cerr;
+using std::cout;
 using std::endl;
 using std::vector;
 
 using namespace caf;
 
-namespace {
-
-// POD struct foo
+// --(rst-foo-begin)--
 struct foo {
   std::vector<int> a;
   int b;
 };
 
-// foo needs to be serializable
 template <class Inspector>
 typename Inspector::result_type inspect(Inspector& f, foo& x) {
   return f(meta::type_name("foo"), x.a, x.b);
 }
+// --(rst-foo-end)--
 
 // a pair of two ints
 using foo_pair = std::pair<int, int>;
@@ -58,7 +69,7 @@ void testee(event_based_actor* self, size_t remaining) {
     else
       self->quit();
   };
-  self->become (
+  self->become(
     // note: we sent a foo_pair2, but match on foo_pair
     // that works because both are aliases for std::pair<int, int>
     [=](const foo_pair& val) {
@@ -68,20 +79,10 @@ void testee(event_based_actor* self, size_t remaining) {
     [=](const foo& val) {
       aout(self) << to_string(val) << endl;
       set_next_behavior();
-    }
-  );
+    });
 }
 
-class config : public actor_system_config {
-public:
-  config() {
-    add_message_type<foo>("foo");
-    add_message_type<foo2>("foo2");
-    add_message_type<foo_pair>("foo_pair");
-  }
-};
-
-void caf_main(actor_system& system, const config&) {
+void caf_main(actor_system& sys) {
   // two variables for testing serialization
   foo2 f1;
   foo2 f2;
@@ -90,34 +91,30 @@ void caf_main(actor_system& system, const config&) {
   f1.b.resize(1);
   f1.b.back().push_back(42);
   // I/O buffer
-  vector<char> buf;
+  binary_serializer::container_type buf;
   // write f1 to buffer
-  binary_serializer bs{system, buf};
+  binary_serializer bs{sys, buf};
   auto e = bs(f1);
   if (e) {
-    std::cerr << "*** unable to serialize foo2: "
-              << system.render(e) << std::endl;
+    std::cerr << "*** unable to serialize foo2: " << to_string(e) << '\n';
     return;
   }
   // read f2 back from buffer
-  binary_deserializer bd{system, buf};
+  binary_deserializer bd{sys, buf};
   e = bd(f2);
   if (e) {
-    std::cerr << "*** unable to serialize foo2: "
-              << system.render(e) << std::endl;
+    std::cerr << "*** unable to serialize foo2: " << to_string(e) << '\n';
     return;
   }
   // must be equal
   assert(to_string(f1) == to_string(f2));
   // spawn a testee that receives two messages of user-defined type
-  auto t = system.spawn(testee, 2u);
-  scoped_actor self{system};
+  auto t = sys.spawn(testee, 2u);
+  scoped_actor self{sys};
   // send t a foo
   self->send(t, foo{std::vector<int>{1, 2, 3, 4}, 5});
   // send t a foo_pair2
   self->send(t, foo_pair2{3, 4});
 }
 
-} // namespace
-
-CAF_MAIN()
+CAF_MAIN(id_block::custom_types_1)

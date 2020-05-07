@@ -220,8 +220,9 @@ public:
   }
 
   template <class InputIterator>
-  void insert(iterator pos, InputIterator first, InputIterator last) {
-    CAF_ASSERT(first <= last);
+  iterator insert(iterator pos, InputIterator first, InputIterator last) {
+    if (first == last)
+      return pos;
     auto num_elements = static_cast<size_t>(std::distance(first, last));
     if ((size() + num_elements) > MaxSize) {
       CAF_RAISE_ERROR("limited_vector::insert: too much elements");
@@ -238,6 +239,13 @@ public:
       // insert new elements
       std::copy(first, last, pos);
     }
+    // Iterator to the first element inserted.
+    return pos + 1;
+  }
+
+  iterator insert(iterator pos, value_type value) {
+    T tmp[] = {value};
+    return insert(pos, std::begin(tmp), std::end(tmp));
   }
 
 private:

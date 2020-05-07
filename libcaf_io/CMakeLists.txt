@@ -90,3 +90,41 @@ endif ()
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/caf
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         FILES_MATCHING PATTERN "*.hpp")
+
+# -- build unit tests ----------------------------------------------------------
+
+if(CAF_NO_UNIT_TESTS)
+  return()
+endif()
+
+add_executable(caf-io-test test/io-test.cpp)
+
+target_include_directories(caf-io-test PRIVATE
+                           "${CMAKE_CURRENT_SOURCE_DIR}/test")
+
+if (CAF_BUILD_STATIC_ONLY OR CAF_BUILD_STATIC)
+  target_link_libraries(caf-io-test
+                        libcaf_io_static
+                        libcaf_core_static
+                        ${CAF_EXTRA_LDFLAGS})
+else()
+  target_link_libraries(caf-io-test
+                        libcaf_io_shared
+                        libcaf_core_shared
+                        ${CAF_EXTRA_LDFLAGS})
+endif()
+
+caf_add_test_suites(caf-io-test
+  io.basp.message_queue
+  io.basp_broker
+  io.broker
+  io.http_broker
+  io.network.default_multiplexer
+  io.network.ip_endpoint
+  io.receive_buffer
+  io.remote_actor
+  io.remote_group
+  io.remote_spawn
+  io.unpublish
+  io.worker
+)

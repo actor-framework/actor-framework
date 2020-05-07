@@ -22,106 +22,141 @@
 #include <type_traits>
 
 #include "caf/actor_traits.hpp"
-#include "caf/fwd.hpp"
-
+#include "caf/detail/squashed_int.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/error.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 namespace detail {
 
-template <class T,
-          bool IsDyn = std::is_base_of<dynamically_typed_actor_base, T>::value,
-          bool IsStat = std::is_base_of<statically_typed_actor_base, T>::value>
-struct implicit_actor_conversions {
-  using type = T;
+constexpr int integral_type_flag = 0x01;
+constexpr int error_type_flag = 0x02;
+constexpr int dynamically_typed_actor_flag = 0x04;
+constexpr int statically_typed_actor_flag = 0x08;
+
+template <bool, int>
+struct conversion_flag {
+  static constexpr int value = 0;
+};
+
+template <int Value>
+struct conversion_flag<true, Value> {
+  static constexpr int value = Value;
 };
 
 template <class T>
-struct implicit_actor_conversions<T, true, false> {
+struct implicit_conversion_oracle {
+  static constexpr int value
+    = conversion_flag<std::is_integral<T>::value, integral_type_flag>::value
+      | conversion_flag<std::is_convertible<T, error>::value,
+                        error_type_flag>::value
+      | conversion_flag<std::is_base_of<dynamically_typed_actor_base, T>::value,
+                        dynamically_typed_actor_flag>::value
+      | conversion_flag<std::is_base_of<statically_typed_actor_base, T>::value,
+                        statically_typed_actor_flag>::value;
+};
+
+template <class T, int = implicit_conversion_oracle<T>::value>
+struct implicit_conversions;
+
+template <class T>
+struct implicit_conversions<T, 0> {
+  using type = T;
+};
+
+template <>
+struct implicit_conversions<bool, integral_type_flag> {
+  using type = bool;
+};
+
+template <class T>
+struct implicit_conversions<T, integral_type_flag> {
+  using type = squashed_int_t<T>;
+};
+
+template <class T>
+struct implicit_conversions<T, dynamically_typed_actor_flag> {
   using type = actor;
 };
 
 template <class T>
-struct implicit_actor_conversions<T, false, true> {
+struct implicit_conversions<T, statically_typed_actor_flag> {
   using type =
-    typename detail::tl_apply<
-      typename T::signatures,
-      typed_actor
-    >::type;
+    typename detail::tl_apply<typename T::signatures, typed_actor>::type;
 };
 
 template <>
-struct implicit_actor_conversions<actor_control_block, false, false> {
+struct implicit_conversions<actor_control_block*, 0> {
   using type = strong_actor_ptr;
 };
 
 template <class T>
-struct implicit_conversions {
-  using type =
-    typename std::conditional<
-      std::is_convertible<T, error>::value,
-      error,
-      T
-    >::type;
+struct implicit_conversions<T, error_type_flag> {
+  using type = error;
 };
 
 template <class T>
-struct implicit_conversions<T*> : implicit_actor_conversions<T> {};
+struct implicit_conversions<T*, 0> {
+  static constexpr int oracle = implicit_conversion_oracle<T>::value;
+  static constexpr int is_actor_mask = dynamically_typed_actor_flag
+                                       | statically_typed_actor_flag;
+  static_assert((oracle & is_actor_mask) != 0,
+                "messages must not contain pointers");
+  using type = typename implicit_conversions<T, oracle>::type;
+};
 
 template <>
-struct implicit_conversions<char*> {
+struct implicit_conversions<char*, 0> {
   using type = std::string;
 };
 
 template <size_t N>
-struct implicit_conversions<char[N]>
-    : implicit_conversions<char*> {};
+struct implicit_conversions<char[N], 0> : implicit_conversions<char*> {};
 
 template <>
-struct implicit_conversions<const char*>
-    : implicit_conversions<char*> {};
+struct implicit_conversions<const char*, 0> : implicit_conversions<char*> {};
 
 template <size_t N>
-struct implicit_conversions<const char[N]>
-    : implicit_conversions<char*> {};
+struct implicit_conversions<const char[N], 0> : implicit_conversions<char*> {};
 
 template <>
-struct implicit_conversions<char16_t*> {
+struct implicit_conversions<char16_t*, 0> {
   using type = std::u16string;
 };
 
 template <size_t N>
-struct implicit_conversions<char16_t[N]>
-    : implicit_conversions<char16_t*> {};
+struct implicit_conversions<char16_t[N], 0> : implicit_conversions<char16_t*> {
+};
 
 template <>
-struct implicit_conversions<const char16_t*>
-    : implicit_conversions<char16_t*> {};
+struct implicit_conversions<const char16_t*, 0>
+  : implicit_conversions<char16_t*> {};
 
 template <size_t N>
-struct implicit_conversions<const char16_t[N]>
+struct implicit_conversions<const char16_t[N], 0>
   : implicit_conversions<char16_t*> {};
 
 template <>
-struct implicit_conversions<char32_t*> {
+struct implicit_conversions<char32_t*, 0> {
   using type = std::u16string;
 };
 
 template <size_t N>
-struct implicit_conversions<char32_t[N]>
-    : implicit_conversions<char32_t*> {};
+struct implicit_conversions<char32_t[N], 0> : implicit_conversions<char32_t*> {
+};
 
 template <>
-struct implicit_conversions<const char32_t*>
-    : implicit_conversions<char32_t*> {};
+struct implicit_conversions<const char32_t*, 0>
+  : implicit_conversions<char32_t*> {};
 
 template <size_t N>
-struct implicit_conversions<const char32_t[N]>
-    : implicit_conversions<char32_t*> {};
+struct implicit_conversions<const char32_t[N], 0>
+  : implicit_conversions<char32_t*> {};
 
 template <>
-struct implicit_conversions<scoped_actor> {
+struct implicit_conversions<scoped_actor, 0> {
   using type = actor;
 };
 
@@ -130,14 +165,8 @@ using implicit_conversions_t = typename implicit_conversions<T>::type;
 
 template <class T>
 struct strip_and_convert {
-  using type =
-    typename implicit_conversions<
-      typename std::remove_const<
-        typename std::remove_reference<
-          T
-        >::type
-      >::type
-    >::type;
+  using type = typename implicit_conversions<typename std::remove_const<
+    typename std::remove_reference<T>::type>::type>::type;
 };
 
 template <class T>
@@ -145,4 +174,3 @@ using strip_and_convert_t = typename strip_and_convert<T>::type;
 
 } // namespace detail
 } // namespace caf
-

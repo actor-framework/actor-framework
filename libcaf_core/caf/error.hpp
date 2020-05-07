@@ -23,13 +23,11 @@
 #include <utility>
 
 #include "caf/atom.hpp"
+#include "caf/detail/comparable.hpp"
 #include "caf/fwd.hpp"
-#include "caf/none.hpp"
-
 #include "caf/meta/omittable_if_empty.hpp"
 #include "caf/meta/type_name.hpp"
-
-#include "caf/detail/comparable.hpp"
+#include "caf/none.hpp"
 
 namespace caf {
 
@@ -53,10 +51,25 @@ public:
                                 && std::is_same<error, type>::value;
 };
 
-/// Convenience alias for `std::enable_if<has_make_error<T>::value, U>::type`.
+namespace detail {
+
+// Enables `CAF_ERROR_CODE_ENUM` for forward compatibility with CAF 0.18.
+template <class T>
+struct error_factory {
+  static constexpr bool specialized = false;
+};
+
+} // namespace detail
+
+/// Convenience alias to detect enums that provide `make_error` overloads.
 template <class T, class U = void>
 using enable_if_has_make_error_t = typename std::enable_if<
-  has_make_error<T>::value, U>::type;
+  !detail::error_factory<T>::specialized && has_make_error<T>::value, U>::type;
+
+/// @private
+template <class T, class U = void>
+using enable_if_has_error_factory_t =
+  typename std::enable_if<detail::error_factory<T>::specialized, U>::type;
 
 /// A serializable type for storing error codes with category and optional,
 /// human-readable context information. Unlike error handling classes from
@@ -115,9 +128,24 @@ public:
     // nop
   }
 
-  template <class E, class = enable_if_has_make_error_t<E>>
-  error& operator=(E error_value) {
+  template <class E>
+  enable_if_has_make_error_t<E, error&> operator=(E error_value) {
     auto tmp = make_error(error_value);
+    std::swap(data_, tmp.data_);
+    return *this;
+  }
+
+  template <class E, class = enable_if_has_error_factory_t<E>, class... Ts>
+  error(E error_value, Ts&&... xs)
+    : error(static_cast<uint8_t>(error_value),
+            detail::error_factory<E>::category,
+            detail::error_factory<E>::context(std::forward<Ts>(xs)...)) {
+    // nop
+  }
+
+  template <class E>
+  enable_if_has_error_factory_t<E, error&> operator=(E error_value) {
+    auto tmp = error{error_value};
     std::swap(data_, tmp.data_);
     return *this;
   }
@@ -249,3 +277,18 @@ bool operator!=(E x, const error& y) {
 }
 
 } // namespace caf
+
+#define CAF_ERROR_CODE_ENUM(enum_name)                                         \
+  namespace caf {                                                              \
+  namespace detail {                                                           \
+  template <>                                                                  \
+  struct error_factory<enum_name> {                                            \
+    static constexpr bool specialized = true;                                  \
+    static constexpr atom_value category = atom(#enum_name);                   \
+    template <class... Ts>                                                     \
+    static message context(Ts&&... xs) {                                       \
+      return make_message(std::forward<Ts>(xs)...);                            \
+    }                                                                          \
+  };                                                                           \
+  }                                                                            \
+  }

@@ -4,7 +4,6 @@
 #include <iostream>
 
 #include "caf/all.hpp"
-#include "caf/io/all.hpp"
 
 using namespace caf;
 using std::endl;

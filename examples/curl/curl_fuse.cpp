@@ -31,15 +31,15 @@
  ******************************************************************************/
 
 // C includes
-#include <ctime>
 #include <csignal>
 #include <cstdlib>
+#include <ctime>
 
 // C++ includes
+#include <iostream>
+#include <random>
 #include <string>
 #include <vector>
-#include <random>
-#include <iostream>
 
 // CAF
 #include "caf/all.hpp"
@@ -51,42 +51,49 @@ CAF_POP_WARNINGS
 
 // disable some clang warnings here caused by CURL macros
 #ifdef __clang__
-# pragma clang diagnostic ignored "-Wshorten-64-to-32"
-# pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
-# pragma clang diagnostic ignored "-Wunused-const-variable"
+#  pragma clang diagnostic ignored "-Wshorten-64-to-32"
+#  pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
+#  pragma clang diagnostic ignored "-Wunused-const-variable"
 #endif // __clang__
 
+CAF_BEGIN_TYPE_ID_BLOCK(curl_fuse, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(curl_fuse, (std::vector<char>) )
+
+  CAF_ADD_ATOM(curl_fuse, custom, read_atom, "read")
+  CAF_ADD_ATOM(curl_fuse, custom, fail_atom, "fail")
+  CAF_ADD_ATOM(curl_fuse, custom, next_atom, "next")
+  CAF_ADD_ATOM(curl_fuse, custom, reply_atom, "reply")
+  CAF_ADD_ATOM(curl_fuse, custom, finished_atom, "finished")
+
+CAF_END_TYPE_ID_BLOCK(curl_fuse)
+
 using namespace caf;
+using namespace custom;
 
 using buffer_type = std::vector<char>;
-
-using read_atom = atom_constant<atom("read")>;
-using fail_atom = atom_constant<atom("fail")>;
-using next_atom = atom_constant<atom("next")>;
-using reply_atom = atom_constant<atom("reply")>;
-using finished_atom = atom_constant<atom("finished")>;
 
 namespace color {
 
 // UNIX terminal color codes
-constexpr char reset[]        = "\033[0m";
-constexpr char reset_endl[]   = "\033[0m\n";
-constexpr char black[]        = "\033[30m";
-constexpr char red[]          = "\033[31m";
-constexpr char green[]        = "\033[32m";
-constexpr char yellow[]       = "\033[33m";
-constexpr char blue[]         = "\033[34m";
-constexpr char magenta[]      = "\033[35m";
-constexpr char cyan[]         = "\033[36m";
-constexpr char white[]        = "\033[37m";
-constexpr char bold_black[]   = "\033[1m\033[30m";
-constexpr char bold_red[]     = "\033[1m\033[31m";
-constexpr char bold_green[]   = "\033[1m\033[32m";
-constexpr char bold_yellow[]  = "\033[1m\033[33m";
-constexpr char bold_blue[]    = "\033[1m\033[34m";
+constexpr char reset[] = "\033[0m";
+constexpr char reset_endl[] = "\033[0m\n";
+constexpr char black[] = "\033[30m";
+constexpr char red[] = "\033[31m";
+constexpr char green[] = "\033[32m";
+constexpr char yellow[] = "\033[33m";
+constexpr char blue[] = "\033[34m";
+constexpr char magenta[] = "\033[35m";
+constexpr char cyan[] = "\033[36m";
+constexpr char white[] = "\033[37m";
+constexpr char bold_black[] = "\033[1m\033[30m";
+constexpr char bold_red[] = "\033[1m\033[31m";
+constexpr char bold_green[] = "\033[1m\033[32m";
+constexpr char bold_yellow[] = "\033[1m\033[33m";
+constexpr char bold_blue[] = "\033[1m\033[34m";
 constexpr char bold_magenta[] = "\033[1m\033[35m";
-constexpr char bold_cyan[]    = "\033[1m\033[36m";
-constexpr char bold_white[]   = "\033[1m\033[37m";
+constexpr char bold_cyan[] = "\033[1m\033[36m";
+constexpr char bold_white[] = "\033[1m\033[37m";
 
 } // namespace color
 
@@ -132,8 +139,7 @@ struct base_state {
 behavior client_job(stateful_actor<base_state>* self, const actor& parent) {
   if (!self->state.init("client-job", color::blue))
     return {}; // returning an empty behavior terminates the actor
-  self->send(parent, read_atom::value,
-             "http://www.example.com/index.html",
+  self->send(parent, read_atom_v, "http://www.example.com/index.html",
              uint64_t{0}, uint64_t{4095});
   return {
     [=](reply_atom, const buffer_type& buf) {
@@ -144,16 +150,16 @@ behavior client_job(stateful_actor<base_state>* self, const actor& parent) {
     [=](fail_atom) {
       self->state.print() << "failure" << color::reset_endl;
       self->quit();
-    }
+    },
   };
 }
 
 struct client_state : base_state {
   client_state(local_actor* selfptr)
-      : base_state(selfptr),
-        count(0),
-        re(rd()),
-        dist(min_req_interval, max_req_interval) {
+    : base_state(selfptr),
+      count(0),
+      re(rd()),
+      dist(min_req_interval, max_req_interval) {
     // nop
   }
 
@@ -169,20 +175,18 @@ behavior client(stateful_actor<client_state>* self, const actor& parent) {
   self->link_to(parent);
   if (!self->state.init("client", color::green))
     return {}; // returning an empty behavior terminates the actor
-  self->send(self, next_atom::value);
-  return {
-    [=](next_atom) {
-      auto& st = self->state;
-      st.print() << "spawn new client_job (nr. " << ++st.count << ")"
-                 << color::reset_endl;
-      // client_job will use IO
-      // and should thus be spawned in a separate thread
-      self->spawn<detached+linked>(client_job, parent);
-      // compute random delay until next job is launched
-      auto delay = st.dist(st.re);
-      self->delayed_send(self, milliseconds(delay), next_atom::value);
-    }
-  };
+  self->send(self, next_atom_v);
+  return {[=](next_atom) {
+    auto& st = self->state;
+    st.print() << "spawn new client_job (nr. " << ++st.count << ")"
+               << color::reset_endl;
+    // client_job will use IO
+    // and should thus be spawned in a separate thread
+    self->spawn<detached + linked>(client_job, parent);
+    // compute random delay until next job is launched
+    auto delay = st.dist(st.re);
+    self->delayed_send(self, milliseconds(delay), next_atom_v);
+  }};
 }
 
 struct curl_state : base_state {
@@ -213,7 +217,7 @@ struct curl_state : base_state {
     return base_state::init(std::move(m_name), std::move(m_color));
   }
 
-  CURL*       curl = nullptr;
+  CURL* curl = nullptr;
   buffer_type buf;
 };
 
@@ -221,60 +225,52 @@ struct curl_state : base_state {
 behavior curl_worker(stateful_actor<curl_state>* self, const actor& parent) {
   if (!self->state.init("curl-worker", color::yellow))
     return {}; // returning an empty behavior terminates the actor
-  return {
-    [=](read_atom, const std::string& fname, uint64_t offset, uint64_t range)
-    -> message {
-      auto& st = self->state;
-      st.print() << "read" << color::reset_endl;
-      for (;;) {
-        st.buf.clear();
-        // set URL
-        curl_easy_setopt(st.curl, CURLOPT_URL, fname.c_str());
-        // set range
-        std::ostringstream oss;
-        oss << offset << "-" << range;
-        curl_easy_setopt(st.curl, CURLOPT_RANGE, oss.str().c_str());
-        // set curl callback
-        curl_easy_setopt(st.curl, CURLOPT_WRITEDATA,
-                         reinterpret_cast<void*>(&st));
-        // launch file transfer
-        auto res = curl_easy_perform(st.curl);
-        if (res != CURLE_OK) {
-          st.print() << "curl_easy_perform() failed: "
-                     << curl_easy_strerror(res)
-                     << color::reset_endl;
-        } else {
-          long hc = 0; // http return code
-          curl_easy_getinfo(st.curl, CURLINFO_RESPONSE_CODE, &hc);
-          switch (hc) {
-            default:
-              st.print() << "http error: download failed with "
-                         << "'HTTP RETURN CODE': "
-                         << hc
-                         << color::reset_endl;
-              break;
-            case 200: // ok
-            case 206: // partial content
-              st.print() << "received "
-                         << st.buf.size()
-                         << " bytes with 'HTTP RETURN CODE': "
-                         << hc
-                         << color::reset_endl;
-              // tell parent that this worker is done
-              self->send(parent, finished_atom::value);
-              return make_message(reply_atom::value, std::move(st.buf));
-            case 404: // file does not exist
-              st.print() << "http error: download failed with "
-                         << "'HTTP RETURN CODE': 404 (file does "
-                         << "not exist!)"
-                         << color::reset_endl;
-          }
+  return {[=](read_atom, const std::string& fname, uint64_t offset,
+              uint64_t range) -> message {
+    auto& st = self->state;
+    st.print() << "read" << color::reset_endl;
+    for (;;) {
+      st.buf.clear();
+      // set URL
+      curl_easy_setopt(st.curl, CURLOPT_URL, fname.c_str());
+      // set range
+      std::ostringstream oss;
+      oss << offset << "-" << range;
+      curl_easy_setopt(st.curl, CURLOPT_RANGE, oss.str().c_str());
+      // set curl callback
+      curl_easy_setopt(st.curl, CURLOPT_WRITEDATA,
+                       reinterpret_cast<void*>(&st));
+      // launch file transfer
+      auto res = curl_easy_perform(st.curl);
+      if (res != CURLE_OK) {
+        st.print() << "curl_easy_perform() failed: " << curl_easy_strerror(res)
+                   << color::reset_endl;
+      } else {
+        long hc = 0; // http return code
+        curl_easy_getinfo(st.curl, CURLINFO_RESPONSE_CODE, &hc);
+        switch (hc) {
+          default:
+            st.print() << "http error: download failed with "
+                       << "'HTTP RETURN CODE': " << hc << color::reset_endl;
+            break;
+          case 200: // ok
+          case 206: // partial content
+            st.print() << "received " << st.buf.size()
+                       << " bytes with 'HTTP RETURN CODE': " << hc
+                       << color::reset_endl;
+            // tell parent that this worker is done
+            self->send(parent, finished_atom_v);
+            return make_message(reply_atom_v, std::move(st.buf));
+          case 404: // file does not exist
+            st.print() << "http error: download failed with "
+                       << "'HTTP RETURN CODE': 404 (file does "
+                       << "not exist!)" << color::reset_endl;
         }
-        // avoid 100% cpu utilization if remote side is not accessible
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
       }
+      // avoid 100% cpu utilization if remote side is not accessible
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-  };
+  }};
 }
 
 struct master_state : base_state {
@@ -289,8 +285,9 @@ behavior curl_master(stateful_actor<master_state>* self) {
   if (!self->state.init("curl-master", color::magenta))
     return {}; // returning an empty behavior terminates the actor
   // spawn workers
-  for(size_t i = 0; i < num_curl_workers; ++i)
-    self->state.idle.push_back(self->spawn<detached+linked>(curl_worker, self));
+  for (size_t i = 0; i < num_curl_workers; ++i)
+    self->state.idle.push_back(
+      self->spawn<detached + linked>(curl_worker, self));
   auto worker_finished = [=] {
     auto sender = self->current_sender();
     auto last = self->state.busy.end();
@@ -301,8 +298,8 @@ behavior curl_master(stateful_actor<master_state>* self) {
     self->state.busy.erase(i);
     self->state.print() << "worker is done" << color::reset_endl;
   };
-  self->state.print() << "spawned " << self->state.idle.size()
-                      << " worker(s)" << color::reset_endl;
+  self->state.print() << "spawned " << self->state.idle.size() << " worker(s)"
+                      << color::reset_endl;
   return {
     [=](read_atom rd, std::string& str, uint64_t x, uint64_t y) {
       auto& st = self->state;
@@ -315,18 +312,13 @@ behavior curl_master(stateful_actor<master_state>* self) {
       st.print() << st.busy.size() << " active jobs" << color::reset_endl;
       if (st.idle.empty()) {
         // wait until at least one worker finished its job
-        self->become (
-          keep_behavior,
-          [=](finished_atom) {
-            worker_finished();
-            self->unbecome();
-          }
-        );
+        self->become(keep_behavior, [=](finished_atom) {
+          worker_finished();
+          self->unbecome();
+        });
       }
     },
-    [=](finished_atom) {
-      worker_finished();
-    }
+    [=](finished_atom) { worker_finished(); },
   };
 }
 
@@ -371,4 +363,4 @@ void caf_main(actor_system& system) {
   curl_global_cleanup();
 }
 
-CAF_MAIN(io::middleman)
+CAF_MAIN(id_block::curl_fuse, io::middleman)

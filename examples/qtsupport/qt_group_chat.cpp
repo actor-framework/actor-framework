@@ -59,9 +59,8 @@ int main(int argc, char** argv) {
       auto group_uri = cfg.group_id.substr(p + 1);
       auto g = system.groups().get(module, group_uri);
       if (! g) {
-        cerr << "*** unable to get group " << group_uri
-             << " from module " << module << ": "
-             << system.render(g.error()) << endl;
+        cerr << "*** unable to get group " << group_uri << " from module "
+             << module << ": " << to_string(g.error()) << endl;
         return -1;
       }
       grp = std::move(*g);

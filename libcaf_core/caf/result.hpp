@@ -53,8 +53,15 @@ public:
     value = make_message(Ts{std::forward<Us>(xs)}...);
   }
 
-  template <class E, class = enable_if_has_make_error_t<E>>
-  result(E x) : flag(rt_error), err(make_error(x)) {
+  template <class E>
+  result(E x, enable_if_has_make_error_t<E, void*> = nullptr)
+    : flag(rt_error), err(make_error(x)) {
+    // nop
+  }
+
+  template <class E>
+  result(E x, enable_if_has_error_factory_t<E, int> = 0)
+    : flag(rt_error), err(x) {
     // nop
   }
 
@@ -185,5 +192,13 @@ struct is_result : std::false_type {};
 template <class... Ts>
 struct is_result<result<Ts...>> : std::true_type {};
 
-} // namespace caf
+// -- free functions -----------------------------------------------------------
 
+/// Convenience function for wrapping the parameter pack `xs...` into a
+/// `result`.
+template <class... Ts>
+result<detail::decay_t<Ts>...> make_result(Ts&&... xs) {
+  return {std::forward<Ts>(xs)...};
+}
+
+} // namespace caf

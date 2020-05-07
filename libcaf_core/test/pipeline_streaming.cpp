@@ -30,6 +30,13 @@
 #include "caf/event_based_actor.hpp"
 #include "caf/stateful_actor.hpp"
 
+CAF_BEGIN_TYPE_ID_BLOCK(pipeline_streaming, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(pipeline_streaming, (caf::stream<int32_t>) )
+  CAF_ADD_TYPE_ID(pipeline_streaming, (std::vector<int32_t>) )
+
+CAF_END_TYPE_ID_BLOCK(pipeline_streaming)
+
 using std::string;
 
 using namespace caf;
@@ -83,16 +90,16 @@ TESTEE_STATE(infinite_source) {
 
 TESTEE(infinite_source) {
   return {
-    [=](string& fname) -> result<stream<int>> {
+    [=](string& fname) -> result<stream<int32_t>> {
       CAF_CHECK_EQUAL(fname, "numbers.txt");
       CAF_CHECK_EQUAL(self->mailbox().empty(), true);
       return attach_stream_source(
-        self, [](int& x) { x = 0; },
-        [](int& x, downstream<int>& out, size_t num) {
+        self, [](int32_t& x) { x = 0; },
+        [](int32_t& x, downstream<int32_t>& out, size_t num) {
           for (size_t i = 0; i < num; ++i)
             out.push(x++);
         },
-        [](const int&) { return false; }, fin<int>(self));
+        [](const int32_t&) { return false; }, fin<int>(self));
     },
   };
 }
@@ -103,7 +110,7 @@ TESTEE_STATE(file_reader) {
 
 VARARGS_TESTEE(file_reader, size_t buf_size) {
   return {
-    [=](string& fname) -> result<stream<int>> {
+    [=](string& fname) -> result<stream<int32_t>> {
       CAF_CHECK_EQUAL(fname, "numbers.txt");
       CAF_CHECK_EQUAL(self->mailbox().empty(), true);
       return attach_stream_source(self, init(buf_size), push_from_buf,
@@ -119,14 +126,14 @@ VARARGS_TESTEE(file_reader, size_t buf_size) {
 }
 
 TESTEE_STATE(sum_up) {
-  int x = 0;
-  int fin_called = 0;
+  int32_t x = 0;
+  int32_t fin_called = 0;
 };
 
 TESTEE(sum_up) {
-  using intptr = int*;
+  using intptr = int32_t*;
   return {
-    [=](stream<int>& in) {
+    [=](stream<int32_t>& in) {
       return attach_stream_sink(
         self,
         // input stream
@@ -134,22 +141,22 @@ TESTEE(sum_up) {
         // initialize state
         [=](intptr& x) { x = &self->state.x; },
         // processing step
-        [](intptr& x, int y) { *x += y; }, fin<intptr>(self));
+        [](intptr& x, int32_t y) { *x += y; }, fin<intptr>(self));
     },
   };
 }
 
 TESTEE_STATE(delayed_sum_up) {
-  int x = 0;
-  int fin_called = 0;
+  int32_t x = 0;
+  int32_t fin_called = 0;
 };
 
 TESTEE(delayed_sum_up) {
-  using intptr = int*;
+  using intptr = int32_t*;
   self->set_default_handler(skip);
   return {
     [=](ok_atom) {
-      self->become([=](stream<int>& in) {
+      self->become([=](stream<int32_t>& in) {
         self->set_default_handler(print_and_drop);
         return attach_stream_sink(
           self,
@@ -158,7 +165,7 @@ TESTEE(delayed_sum_up) {
           // initialize state
           [=](intptr& x) { x = &self->state.x; },
           // processing step
-          [](intptr& x, int y) { *x += y; },
+          [](intptr& x, int32_t y) { *x += y; },
           // cleanup
           fin<intptr>(self));
       });
@@ -167,26 +174,26 @@ TESTEE(delayed_sum_up) {
 }
 
 TESTEE_STATE(broken_sink) {
-  int fin_called = 0;
+  int32_t fin_called = 0;
 };
 
 TESTEE(broken_sink) {
   CAF_IGNORE_UNUSED(self);
   return {
-    [=](stream<int>&, const actor&) {
+    [=](stream<int32_t>&, const actor&) {
       // nop
     },
   };
 }
 
 TESTEE_STATE(filter) {
-  int fin_called = 0;
+  int32_t fin_called = 0;
 };
 
 TESTEE(filter) {
   CAF_IGNORE_UNUSED(self);
   return {
-    [=](stream<int>& in) {
+    [=](stream<int32_t>& in) {
       return attach_stream_stage(
         self,
         // input stream
@@ -196,7 +203,7 @@ TESTEE(filter) {
           // nop
         },
         // processing step
-        [](unit_t&, downstream<int>& out, int x) {
+        [](unit_t&, downstream<int32_t>& out, int32_t x) {
           if ((x & 0x01) != 0)
             out.push(x);
         },
@@ -207,13 +214,13 @@ TESTEE(filter) {
 }
 
 TESTEE_STATE(doubler) {
-  int fin_called = 0;
+  int32_t fin_called = 0;
 };
 
 TESTEE(doubler) {
   CAF_IGNORE_UNUSED(self);
   return {
-    [=](stream<int>& in) {
+    [=](stream<int32_t>& in) {
       return attach_stream_stage(
         self,
         // input stream
@@ -223,14 +230,20 @@ TESTEE(doubler) {
           // nop
         },
         // processing step
-        [](unit_t&, downstream<int>& out, int x) { out.push(x * 2); },
+        [](unit_t&, downstream<int32_t>& out, int32_t x) { out.push(x * 2); },
         // cleanup
         fin<unit_t>(self));
     },
   };
 }
 
-struct fixture : test_coordinator_fixture<> {
+struct config : actor_system_config {
+  config() {
+    add_message_types<id_block::pipeline_streaming>();
+  }
+};
+
+struct fixture : test_coordinator_fixture<config> {
   void tick() {
     advance_time(cfg.stream_credit_round_interval);
   }

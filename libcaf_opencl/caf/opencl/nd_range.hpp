@@ -25,6 +25,8 @@ namespace opencl {
 
 class nd_range {
 public:
+  nd_range() = default;
+
   nd_range(const opencl::dim_vec& dimensions,
            const opencl::dim_vec& offsets = {},
            const opencl::dim_vec& local_dimensions = {})
@@ -61,6 +63,11 @@ public:
     return local_dims_;
   }
 
+  template <class Inspector>
+  friend typename Inspector::result_type inspect(Inspector& f, nd_range& x) {
+    return f(x.dims_, x.offset_, x.local_dims_);
+  }
+
 private:
   opencl::dim_vec dims_;
   opencl::dim_vec offset_;
@@ -69,4 +76,3 @@ private:
 
 } // namespace opencl
 } // namespace caf
-
