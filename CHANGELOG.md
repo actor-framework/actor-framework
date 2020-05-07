@@ -147,6 +147,24 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [0.17.5] - Unreleased
 
+### Added
+
+- In order to allow users to start migrating towards upcoming API changes, CAF
+  0.17.5 includes a subset of the CAF 0.18 `type_id` API. Listing all
+  user-defined types between `CAF_BEGIN_TYPE_ID_BLOCK` and
+  `CAF_END_TYPE_ID_BLOCK` assigns ascending type IDs. Only one syntax for
+  `CAF_ADD_ATOM` exists, since the atom text is still mandatory. Assigning type
+  IDs has no immediate effect by default. However, the new function
+  `actor_system_config::add_message_types` accepts an ID block and adds
+  runtime-type information for all types in the block.
+- In order to opt into the compile-time checks for all message types, users can
+  set the `CAF_ENABLE_TYPE_ID_CHECKS` CMake flag to `ON` (pass
+  `--enable-type-id-checks` when using the `configure` script). Building CAF
+  with this option causes compiler errors when sending a type without a type ID.
+  This option in conjunction with the new `add_message_types` function removes a
+  common source of bugs: forgetting to call `add_message_type<T>` for all types
+  that can cross the wire.
+
 ### Changed
 
 - Our manual now uses `reStructuredText` instead of `LaTeX` (backport from
