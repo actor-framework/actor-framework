@@ -100,14 +100,12 @@ middleman::middleman(actor_system& sys) : system_(sys) {
   // nop
 }
 
-expected<strong_actor_ptr> middleman::remote_spawn_impl(const node_id& nid,
-                                                        std::string& name,
-                                                        message& args,
-                                                        std::set<std::string> s,
-                                                        duration timeout) {
+expected<strong_actor_ptr>
+middleman::remote_spawn_impl(const node_id& nid, std::string& name,
+                             message& args, std::set<std::string> s,
+                             duration timeout) {
   auto f = make_function_view(actor_handle(), timeout);
-  return f(spawn_atom::value, nid, std::move(name), std::move(args),
-           std::move(s));
+  return f(spawn_atom_v, nid, std::move(name), std::move(args), std::move(s));
 }
 
 expected<uint16_t> middleman::open(uint16_t port, const char* in, bool reuse) {
@@ -115,17 +113,17 @@ expected<uint16_t> middleman::open(uint16_t port, const char* in, bool reuse) {
   if (in != nullptr)
     str = in;
   auto f = make_function_view(actor_handle());
-  return f(open_atom::value, port, std::move(str), reuse);
+  return f(open_atom_v, port, std::move(str), reuse);
 }
 
 expected<void> middleman::close(uint16_t port) {
   auto f = make_function_view(actor_handle());
-  return f(close_atom::value, port);
+  return f(close_atom_v, port);
 }
 
 expected<node_id> middleman::connect(std::string host, uint16_t port) {
   auto f = make_function_view(actor_handle());
-  auto res = f(connect_atom::value, std::move(host), port);
+  auto res = f(connect_atom_v, std::move(host), port);
   if (!res)
     return std::move(res.error());
   return std::get<0>(*res);
@@ -141,7 +139,7 @@ expected<uint16_t> middleman::publish(const strong_actor_ptr& whom,
   if (cstr != nullptr)
     in = cstr;
   auto f = make_function_view(actor_handle());
-  return f(publish_atom::value, port, std::move(whom), std::move(sigs), in, ru);
+  return f(publish_atom_v, port, std::move(whom), std::move(sigs), in, ru);
 }
 
 expected<uint16_t> middleman::publish_local_groups(uint16_t port,
@@ -167,7 +165,7 @@ expected<uint16_t> middleman::publish_local_groups(uint16_t port,
 expected<void> middleman::unpublish(const actor_addr& whom, uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
   auto f = make_function_view(actor_handle());
-  return f(unpublish_atom::value, whom, port);
+  return f(unpublish_atom_v, whom, port);
 }
 
 expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
@@ -175,7 +173,7 @@ expected<strong_actor_ptr> middleman::remote_actor(std::set<std::string> ifs,
                                                    uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(ifs) << CAF_ARG(host) << CAF_ARG(port));
   auto f = make_function_view(actor_handle());
-  auto res = f(connect_atom::value, std::move(host), port);
+  auto res = f(connect_atom_v, std::move(host), port);
   if (!res)
     return std::move(res.error());
   strong_actor_ptr ptr = std::move(std::get<1>(*res));
@@ -217,11 +215,11 @@ expected<group> middleman::remote_group(const std::string& group_identifier,
         /// terminate the actor after both requests finish.
         self->unbecome();
         auto rp = self->make_response_promise();
-        self->request(mm, infinite, connect_atom::value, host, port)
+        self->request(mm, infinite, connect_atom_v, host, port)
           .then([=](const node_id&, strong_actor_ptr& ptr,
                     const std::set<std::string>&) mutable {
             auto hdl = actor_cast<actor>(ptr);
-            self->request(hdl, infinite, get_atom::value, group_identifier)
+            self->request(hdl, infinite, get_atom_v, group_identifier)
               .then([=](group& grp) mutable { rp.deliver(std::move(grp)); });
           });
       },
@@ -232,7 +230,7 @@ expected<group> middleman::remote_group(const std::string& group_identifier,
   scoped_actor self{system(), true};
   auto worker = self->spawn<lazy_init + monitored>(two_step_lookup,
                                                    actor_handle());
-  self->send(worker, get_atom::value);
+  self->send(worker, get_atom_v);
   self->receive([&](group& grp) { result = std::move(grp); },
                 [&](error& err) { result = std::move(err); },
                 [&](down_msg& dm) { result = std::move(dm.reason); });
@@ -246,8 +244,8 @@ strong_actor_ptr middleman::remote_lookup(atom_value name, const node_id& nid) {
   auto basp = named_broker<basp_broker>(atom("BASP"));
   strong_actor_ptr result;
   scoped_actor self{system(), true};
-  self->send(basp, forward_atom::value, nid, atom("ConfigServ"),
-             make_message(get_atom::value, name));
+  self->send(basp, forward_atom_v, nid, atom("ConfigServ"),
+             make_message(get_atom_v, name));
   self->receive([&](strong_actor_ptr& addr) { result = std::move(addr); },
                 after(std::chrono::minutes(5)) >>
                   [] {

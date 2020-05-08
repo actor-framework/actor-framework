@@ -82,13 +82,13 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
         // we never put a nullptr in our map
         auto subscriber = actor_cast<actor>(subscriber_ptr);
         if (subscriber != self->current_sender())
-          self->send(subscriber, update_atom::value, key, vp.first);
+          self->send(subscriber, update_atom_v, key, vp.first);
       }
       // also iterate all subscribers for '*'
       for (auto& subscriber : self->state.data[wildcard].second)
         if (subscriber != self->current_sender())
-          self->send(actor_cast<actor>(subscriber), update_atom::value,
-                     key, vp.first);
+          self->send(actor_cast<actor>(subscriber), update_atom_v, key,
+                     vp.first);
     },
     // get a key/value pair
     [=](get_atom, std::string& key) -> message {

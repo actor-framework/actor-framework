@@ -286,7 +286,7 @@ public:
                default_operation_data, any_vals,
                static_cast<uint64_t>(spawn_serv_atom),
                std::vector<strong_actor_ptr>{},
-               make_message(sys_atom::value, get_atom::value, "info"));
+               make_message(sys_atom_v, get_atom_v, "info"));
     // test whether basp instance correctly updates the
     // routing table upon receiving client handshakes
     auto path = tbl().lookup(n.id);
@@ -439,8 +439,8 @@ public:
     using sig_t = std::set<std::string>;
     scoped_actor tmp{sys};
     sig_t sigs;
-    tmp->send(mma, publish_atom::value, port,
-              actor_cast<strong_actor_ptr>(whom), std::move(sigs), "", false);
+    tmp->send(mma, publish_atom_v, port, actor_cast<strong_actor_ptr>(whom),
+              std::move(sigs), "", false);
     expect((atom_value, uint16_t, strong_actor_ptr, sig_t, std::string, bool),
            from(tmp).to(mma));
     expect((uint16_t), from(mma).to(tmp).with(port));
@@ -501,7 +501,7 @@ CAF_TEST(remote_address_and_port) {
   connect_node(mars());
   auto mm = sys.middleman().actor_handle();
   CAF_MESSAGE("ask MM about node ID of Mars");
-  self()->send(mm, get_atom::value, mars().id);
+  self()->send(mm, get_atom_v, mars().id);
   do {
     mpx()->exec_runnable();
   } while (self()->mailbox().empty());
@@ -575,8 +575,7 @@ CAF_TEST(remote_actor_and_send) {
   CAF_REQUIRE(mpx()->has_pending_scribe(lo, 4242));
   auto mm1 = sys.middleman().actor_handle();
   actor result;
-  auto f = self()->request(mm1, infinite, connect_atom::value, lo,
-                           uint16_t{4242});
+  auto f = self()->request(mm1, infinite, connect_atom_v, lo, uint16_t{4242});
   // wait until BASP broker has received and processed the connect message
   while (!aut()->valid(jupiter().connection))
     mpx()->exec_runnable();
@@ -597,7 +596,7 @@ CAF_TEST(remote_actor_and_send) {
              default_operation_data, any_vals,
              static_cast<uint64_t>(spawn_serv_atom),
              std::vector<strong_actor_ptr>{},
-             make_message(sys_atom::value, get_atom::value, "info"))
+             make_message(sys_atom_v, get_atom_v, "info"))
     .receive(jupiter().connection, basp::message_type::monitor_message,
              no_flags, any_vals, no_operation_data, invalid_actor_id,
              jupiter().dummy_actor->id(), this_node(), jupiter().id);
@@ -694,7 +693,7 @@ CAF_TEST(indirect_connections) {
              default_operation_data, any_vals,
              static_cast<uint64_t>(spawn_serv_atom), this_node(), jupiter().id,
              std::vector<strong_actor_ptr>{},
-             make_message(sys_atom::value, get_atom::value, "info"));
+             make_message(sys_atom_v, get_atom_v, "info"));
   CAF_MESSAGE("expect announce_proxy message at Mars from Earth to Jupiter");
   mx.receive(mars().connection, basp::message_type::monitor_message, no_flags,
              any_vals, no_operation_data, invalid_actor_id,
@@ -746,14 +745,14 @@ CAF_TEST(automatic_connection) {
              default_operation_data, any_vals,
              static_cast<uint64_t>(spawn_serv_atom), this_node(), jupiter().id,
              std::vector<strong_actor_ptr>{},
-             make_message(sys_atom::value, get_atom::value, "info"))
+             make_message(sys_atom_v, get_atom_v, "info"))
     .receive(mars().connection, basp::message_type::routed_message,
              basp::header::named_receiver_flag, any_vals,
              default_operation_data,
              any_vals, // actor ID of an actor spawned by the BASP broker
              static_cast<uint64_t>(config_serv_atom), this_node(), jupiter().id,
              std::vector<strong_actor_ptr>{},
-             make_message(get_atom::value, "basp.default-connectivity-tcp"))
+             make_message(get_atom_v, "basp.default-connectivity-tcp"))
     .receive(mars().connection, basp::message_type::monitor_message, no_flags,
              any_vals, no_operation_data, invalid_actor_id,
              jupiter().dummy_actor->id(), this_node(), jupiter().id);

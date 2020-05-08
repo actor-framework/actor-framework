@@ -38,12 +38,8 @@ using std::vector;
 using namespace caf;
 
 CAF_TEST(apply) {
-  auto f1 = [] {
-    CAF_ERROR("f1 invoked!");
-  };
-  auto f2 = [](int i) {
-    CAF_CHECK_EQUAL(i, 42);
-  };
+  auto f1 = [] { CAF_ERROR("f1 invoked!"); };
+  auto f2 = [](int i) { CAF_CHECK_EQUAL(i, 42); };
   auto m = make_message(42);
   m.apply(f1);
   m.apply(f2);
@@ -51,14 +47,12 @@ CAF_TEST(apply) {
 
 CAF_TEST(drop) {
   auto m1 = make_message(1, 2, 3, 4, 5);
-  std::vector<message> messages{
-    m1,
-    make_message(2, 3, 4, 5),
-    make_message(3, 4, 5),
-    make_message(4, 5),
-    make_message(5),
-    message{}
-  };
+  std::vector<message> messages{m1,
+                                make_message(2, 3, 4, 5),
+                                make_message(3, 4, 5),
+                                make_message(4, 5),
+                                make_message(5),
+                                message{}};
   for (size_t i = 0; i < messages.size(); ++i) {
     CAF_CHECK_EQUAL(to_string(m1.drop(i)), to_string(messages[i]));
   }
@@ -78,10 +72,7 @@ CAF_TEST(extract1) {
   auto m5 = make_message(1.0, 2.0, 3.0, 1, 2);
   auto m6 = make_message(1, 2, 1.0, 2.0, 3.0, 1, 2);
   auto m7 = make_message(1.0, 1, 2, 3, 4, 2.0, 3.0);
-  message_handler f{
-    [](int, int) { },
-    [](float, float) { }
-  };
+  message_handler f{[](int, int) {}, [](float, float) {}};
   auto m1s = to_string(m1);
   CAF_CHECK_EQUAL(to_string(m2.extract(f)), m1s);
   CAF_CHECK_EQUAL(to_string(m3.extract(f)), m1s);
@@ -95,10 +86,7 @@ CAF_TEST(extract2) {
   auto m1 = make_message(1);
   CAF_CHECK(m1.extract([](int) {}).empty());
   auto m2 = make_message(1.0, 2, 3, 4.0);
-  auto m3 = m2.extract({
-    [](int, int) { },
-    [](double, double) { }
-  });
+  auto m3 = m2.extract({[](int, int) {}, [](double, double) {}});
   // check for false positives through collapsing
   CAF_CHECK_EQUAL(to_string(m3), to_string(make_message(1.0, 4.0)));
 }
@@ -107,12 +95,11 @@ CAF_TEST(extract_opts) {
   auto f = [](std::vector<std::string> xs, std::vector<std::string> remainder) {
     std::string filename;
     size_t log_level = 0;
-    auto res = message_builder(xs.begin(), xs.end()).extract_opts({
-      {"version,v", "print version"},
-      {"log-level,l", "set the log level", log_level},
-      {"file,f", "set output file", filename},
-      {"whatever", "do whatever"}
-    });
+    auto res = message_builder(xs.begin(), xs.end())
+                 .extract_opts({{"version,v", "print version"},
+                                {"log-level,l", "set the log level", log_level},
+                                {"file,f", "set output file", filename},
+                                {"whatever", "do whatever"}});
     CAF_CHECK_EQUAL(res.opts.count("file"), 1u);
     CAF_CHECK(res.remainder.size() == remainder.size());
     for (size_t i = 0; i < res.remainder.size() && i < remainder.size(); ++i) {
@@ -150,37 +137,33 @@ CAF_TEST(extract_opts) {
   auto msg = make_message("-f", "42", "-b", "1337");
   auto foo = 0;
   auto bar = 0;
-  auto r = msg.extract_opts({
-    {"foo,f", "foo desc", foo}
-  });
+  auto r = msg.extract_opts({{"foo,f", "foo desc", foo}});
   CAF_CHECK(r.opts.count("foo") > 0);
   CAF_CHECK_EQUAL(foo, 42);
   CAF_CHECK_EQUAL(bar, 0);
   CAF_CHECK(!r.error.empty()); // -b is an unknown option
   CAF_CHECK(!r.remainder.empty()
             && to_string(r.remainder) == to_string(make_message("-b", "1337")));
-  r = r.remainder.extract_opts({
-    {"bar,b", "bar desc", bar}
-  });
+  r = r.remainder.extract_opts({{"bar,b", "bar desc", bar}});
   CAF_CHECK(r.opts.count("bar") > 0);
   CAF_CHECK_EQUAL(bar, 1337);
   CAF_CHECK(r.error.empty());
 }
 
 CAF_TEST(type_token) {
-  auto m1 = make_message(get_atom::value);
+  auto m1 = make_message(get_atom_v);
   CAF_CHECK_EQUAL(m1.type_token(), make_type_token<get_atom>());
 }
 
 CAF_TEST(concat) {
-  auto m1 = make_message(get_atom::value);
+  auto m1 = make_message(get_atom_v);
   auto m2 = make_message(uint32_t{1});
   auto m3 = message::concat(m1, m2);
   CAF_CHECK_EQUAL(to_string(m3), to_string(m1 + m2));
   CAF_CHECK_EQUAL(to_string(m3), "('get', 1)");
-  auto m4 = make_message(get_atom::value, uint32_t{1},
-                         get_atom::value, uint32_t{1});
-  CAF_CHECK_EQUAL(to_string(message::concat(m3, message{}, m1, m2)), to_string(m4));
+  auto m4 = make_message(get_atom_v, uint32_t{1}, get_atom_v, uint32_t{1});
+  CAF_CHECK_EQUAL(to_string(message::concat(m3, message{}, m1, m2)),
+                  to_string(m4));
 }
 
 template <class... Ts>
@@ -216,8 +199,9 @@ CAF_TEST(strings_to_string) {
   CAF_CHECK_EQUAL(to_string(msg2), R"__((["one", "two", "three"]))__");
   auto msg3 = make_message(svec{"one", "two"}, "three", "four",
                            svec{"five", "six", "seven"});
-  CAF_CHECK(to_string(msg3) ==
-          R"__((["one", "two"], "three", "four", ["five", "six", "seven"]))__");
+  CAF_CHECK(
+    to_string(msg3)
+    == R"__((["one", "two"], "three", "four", ["five", "six", "seven"]))__");
   auto msg4 = make_message(R"(this is a "test")");
   CAF_CHECK_EQUAL(to_string(msg4), "(\"this is a \\\"test\\\"\")");
 }

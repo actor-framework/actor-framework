@@ -111,7 +111,7 @@ behavior basp_broker::make_behavior() {
       auto port = res->second;
       auto addrs = network::interfaces::list_addresses(false);
       auto config_server = system().registry().get(atom("ConfigServ"));
-      send(actor_cast<actor>(config_server), put_atom::value,
+      send(actor_cast<actor>(config_server), put_atom_v,
            "basp.default-connectivity-tcp",
            make_message(port, std::move(addrs)));
     }
@@ -125,7 +125,7 @@ behavior basp_broker::make_behavior() {
     auto first_tick = now + heartbeat_interval;
     auto connection_timeout = get_or(config(), "middleman.connection-timeout",
                                      defaults::middleman::connection_timeout);
-    scheduled_send(this, first_tick, tick_atom::value, first_tick,
+    scheduled_send(this, first_tick, tick_atom_v, first_tick,
                    heartbeat_interval, connection_timeout);
   }
   return behavior{
@@ -230,8 +230,8 @@ behavior basp_broker::make_behavior() {
       auto& q = instance.queue();
       auto msg_id = q.new_id();
       q.push(context(), msg_id, ctrl(),
-             make_mailbox_element(nullptr, make_message_id(), {},
-                                  delete_atom::value, msg.handle));
+             make_mailbox_element(nullptr, make_message_id(), {}, delete_atom_v,
+                                  msg.handle));
     },
     // received from the message handler above for connection_closed_msg
     [=](delete_atom, connection_handle hdl) {
@@ -244,8 +244,8 @@ behavior basp_broker::make_behavior() {
       auto& q = instance.queue();
       auto msg_id = q.new_id();
       q.push(context(), msg_id, ctrl(),
-             make_mailbox_element(nullptr, make_message_id(), {},
-                                  delete_atom::value, msg.handle));
+             make_mailbox_element(nullptr, make_message_id(), {}, delete_atom_v,
+                                  msg.handle));
     },
     // received from the message handler above for acceptor_closed_msg
     [=](delete_atom, accept_handle hdl) {
@@ -342,7 +342,7 @@ behavior basp_broker::make_behavior() {
       auto now = clock().now();
       if (now < scheduled) {
         CAF_LOG_WARNING("received tick before its time, reschedule");
-        scheduled_send(this, scheduled, tick_atom::value, scheduled,
+        scheduled_send(this, scheduled, tick_atom_v, scheduled,
                        heartbeat_interval, connection_timeout);
         return;
       }
@@ -377,7 +377,7 @@ behavior basp_broker::make_behavior() {
         }
       }
       // Schedule next tick.
-      scheduled_send(this, next_tick, tick_atom::value, next_tick,
+      scheduled_send(this, next_tick, tick_atom_v, next_tick,
                      heartbeat_interval, connection_timeout);
     }};
 }
@@ -535,8 +535,8 @@ void basp_broker::learned_new_node(const node_id& nid) {
         tself->become([=](spawn_atom, std::string& type, message& args)
                         -> delegated<strong_actor_ptr, std::set<std::string>> {
           CAF_LOG_TRACE(CAF_ARG(type) << CAF_ARG(args));
-          tself->delegate(actor_cast<actor>(std::move(config_serv)),
-                          get_atom::value, std::move(type), std::move(args));
+          tself->delegate(actor_cast<actor>(std::move(config_serv)), get_atom_v,
+                          std::move(type), std::move(args));
           return {};
         });
       },
@@ -554,8 +554,7 @@ void basp_broker::learned_new_node(const node_id& nid) {
   if (!instance.dispatch(context(), tmp_ptr, stages, nid,
                          static_cast<uint64_t>(atom("SpawnServ")),
                          basp::header::named_receiver_flag, make_message_id(),
-                         make_message(sys_atom::value, get_atom::value,
-                                      "info"))) {
+                         make_message(sys_atom_v, get_atom_v, "info"))) {
     CAF_LOG_ERROR("learned_new_node called, but no route to remote node"
                   << CAF_ARG(nid));
   }
@@ -586,7 +585,7 @@ void basp_broker::learned_new_node_indirectly(const node_id& nid) {
   if (!instance.dispatch(context(), sender, fwd_stack, nid,
                          static_cast<uint64_t>(atom("ConfigServ")),
                          basp::header::named_receiver_flag, make_message_id(),
-                         make_message(get_atom::value,
+                         make_message(get_atom_v,
                                       "basp.default-connectivity-tcp"))) {
     CAF_LOG_ERROR("learned_new_node_indirectly called, but no route to nid");
   }

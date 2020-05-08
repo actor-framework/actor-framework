@@ -473,7 +473,7 @@ void scheduled_actor::quit(error x) {
 uint64_t scheduled_actor::set_receive_timeout(actor_clock::time_point x) {
   CAF_LOG_TRACE(x);
   setf(has_timeout_flag);
-  return set_timeout(receive_atom::value, x);
+  return set_timeout(receive_atom_v, x);
 }
 
 uint64_t scheduled_actor::set_receive_timeout() {
@@ -488,7 +488,7 @@ uint64_t scheduled_actor::set_receive_timeout() {
   if (d.is_zero()) {
     // immediately enqueue timeout message if duration == 0s
     auto id = ++timeout_id_;
-    auto type = receive_atom::value;
+    auto type = receive_atom_v;
     eq_impl(make_message_id(), nullptr, context(), timeout_msg{type, id});
     return id;
   }
@@ -525,7 +525,7 @@ uint64_t scheduled_actor::set_stream_timeout(actor_clock::time_point x) {
     return 0;
   }
   // Delegate call.
-  return set_timeout(stream_atom::value, x);
+  return set_timeout(stream_atom_v, x);
 }
 
 // -- message processing -------------------------------------------------------
@@ -550,8 +550,8 @@ scheduled_actor::categorize(mailbox_element& x) {
   auto& content = x.content();
   switch (content.type_token()) {
     case make_type_token<atom_value, atom_value, std::string>():
-      if (content.get_as<atom_value>(0) == sys_atom::value
-          && content.get_as<atom_value>(1) == get_atom::value) {
+      if (content.get_as<atom_value>(0) == sys_atom_v
+          && content.get_as<atom_value>(1) == get_atom_v) {
         auto rp = make_response_promise();
         if (!rp.pending()) {
           CAF_LOG_WARNING("received anonymous ('get', 'sys', $key) message");
@@ -560,7 +560,7 @@ scheduled_actor::categorize(mailbox_element& x) {
         auto& what = content.get_as<std::string>(2);
         if (what == "info") {
           CAF_LOG_DEBUG("reply to 'info' message");
-          rp.deliver(ok_atom::value, std::move(what), strong_actor_ptr{ctrl()},
+          rp.deliver(ok_atom_v, std::move(what), strong_actor_ptr{ctrl()},
                      name());
         } else {
           rp.deliver(make_error(sec::unsupported_sys_key));
@@ -572,7 +572,7 @@ scheduled_actor::categorize(mailbox_element& x) {
       CAF_ASSERT(x.mid.is_async());
       auto& tm = content.get_as<timeout_msg>(0);
       auto tid = tm.timeout_id;
-      if (tm.type == receive_atom::value) {
+      if (tm.type == receive_atom_v) {
         CAF_LOG_DEBUG("handle ordinary timeout message");
         if (is_active_receive_timeout(tid) && !bhvr_stack_.empty())
           bhvr_stack_.back().handle_timeout();

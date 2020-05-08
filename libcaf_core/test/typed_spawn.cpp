@@ -23,7 +23,7 @@
 
 #  define CAF_SUITE typed_spawn
 
-#  include "caf/test/unit_test.hpp"
+#  include "core-test.hpp"
 
 #  include "caf/string_algorithms.hpp"
 
@@ -33,13 +33,10 @@
 
 namespace {
 
-struct get_state_msg;
-struct my_request;
-
 using server_type = caf::typed_actor<caf::replies_to<my_request>::with<bool>>;
 
 using event_testee_type
-  = caf::typed_actor<caf::replies_to<get_state_msg>::with<std::string>,
+  = caf::typed_actor<caf::replies_to<get_state_atom>::with<std::string>,
                      caf::replies_to<std::string>::with<void>,
                      caf::replies_to<float>::with<void>,
                      caf::replies_to<int32_t>::with<int32_t>>;
@@ -53,22 +50,13 @@ using float_actor = caf::typed_actor<caf::reacts_to<float>>;
 
 } // namespace
 
-CAF_BEGIN_TYPE_ID_BLOCK(typed_spawn, first_custom_type_id)
-
-  CAF_ADD_TYPE_ID(typed_spawn, (event_testee_type))
-  CAF_ADD_TYPE_ID(typed_spawn, (float_actor))
-  CAF_ADD_TYPE_ID(typed_spawn, (get_state_msg))
-  CAF_ADD_TYPE_ID(typed_spawn, (int_actor))
-  CAF_ADD_TYPE_ID(typed_spawn, (my_request))
-  CAF_ADD_TYPE_ID(typed_spawn, (string_actor))
-
-CAF_END_TYPE_ID_BLOCK(typed_spawn)
-
 using std::string;
 
 using namespace caf;
 
 using passed_atom = caf::atom_constant<caf::atom("passed")>;
+
+constexpr auto passed_atom_v = passed_atom::value;
 
 namespace {
 
@@ -103,16 +91,6 @@ static_assert(std::is_convertible<dummy5, dummy4>::value,
  *                        simple request/response test                        *
  ******************************************************************************/
 
-struct my_request {
-  int32_t a;
-  int32_t b;
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, my_request& x) {
-  return f(x.a, x.b);
-}
-
 server_type::behavior_type typed_server1() {
   return {
     [](const my_request& req) { return req.a == req.b; },
@@ -141,7 +119,7 @@ void client(event_based_actor* self, const actor& parent,
     CAF_CHECK_EQUAL(val1, true);
     self->request(serv, infinite, my_request{10, 20}).then([=](bool val2) {
       CAF_CHECK_EQUAL(val2, false);
-      self->send(parent, passed_atom::value);
+      self->send(parent, passed_atom_v);
     });
   });
 }
@@ -149,8 +127,6 @@ void client(event_based_actor* self, const actor& parent,
 /******************************************************************************
  *          test skipping of messages intentionally + using become()          *
  ******************************************************************************/
-
-struct get_state_msg {};
 
 class event_testee : public event_testee_type::base {
 public:
@@ -160,7 +136,7 @@ public:
 
   behavior_type wait4string() {
     return {
-      [=](const get_state_msg&) { return "wait4string"; },
+      [=](get_state_atom) { return "wait4string"; },
       [=](const string&) { become(wait4int()); },
       [=](float) { return skip(); },
       [=](int) { return skip(); },
@@ -169,7 +145,7 @@ public:
 
   behavior_type wait4int() {
     return {
-      [=](const get_state_msg&) { return "wait4int"; },
+      [=](get_state_atom) { return "wait4int"; },
       [=](int) -> int {
         become(wait4float());
         return 42;
@@ -181,7 +157,7 @@ public:
 
   behavior_type wait4float() {
     return {
-      [=](const get_state_msg&) { return "wait4float"; },
+      [=](get_state_atom) { return "wait4float"; },
       [=](float) { become(wait4string()); },
       [=](const string&) { return skip(); },
       [=](int) { return skip(); },
@@ -307,7 +283,7 @@ struct fixture {
   scoped_actor self;
 
   static actor_system_config& init(actor_system_config& cfg) {
-    cfg.add_message_types<id_block::typed_spawn>();
+    cfg.add_message_types<id_block::core_test>();
     cfg.parse(test::engine::argc(), test::engine::argv());
     return cfg;
   }
@@ -370,13 +346,13 @@ CAF_TEST(event_testee_series) {
   self->send(et, .3f);
   self->send(et, "hello again event testee!");
   self->send(et, "goodbye event testee!");
-  typed_actor<replies_to<get_state_msg>::with<string>> sub_et = et;
-  std::set<string> iface{"caf::replies_to<get_state_msg>::with<@str>",
+  typed_actor<replies_to<get_state_atom>::with<string>> sub_et = et;
+  std::set<string> iface{"caf::replies_to<get_state_atom>::with<@str>",
                          "caf::replies_to<@str>::with<void>",
                          "caf::replies_to<float>::with<void>",
                          "caf::replies_to<@i32>::with<@i32>"};
   CAF_CHECK_EQUAL(join(sub_et->message_types(), ","), join(iface, ","));
-  self->send(sub_et, get_state_msg{});
+  self->send(sub_et, get_state_atom_v);
   // we expect three 42s
   int i = 0;
   self->receive_for(i, 3)([](int value) { CAF_CHECK_EQUAL(value, 42); });

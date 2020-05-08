@@ -114,7 +114,7 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
       auto& ptr = *r;
       std::vector<response_promise> tmp{std::move(rp)};
       pending_.emplace(key, std::move(tmp));
-      request(broker_, infinite, connect_atom::value, std::move(ptr), port)
+      request(broker_, infinite, connect_atom_v, std::move(ptr), port)
         .then(
           [=](node_id& nid, strong_actor_ptr& addr, mpi_set& sigs) {
             auto i = pending_.find(key);
@@ -153,7 +153,7 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
     [=](spawn_atom atm, node_id& nid, std::string& str, message& msg,
         std::set<std::string>& ifs) -> delegated<strong_actor_ptr> {
       CAF_LOG_TRACE("");
-      delegate(broker_, forward_atom::value, nid, atom("SpawnServ"),
+      delegate(broker_, forward_atom_v, nid, atom("SpawnServ"),
                make_message(atm, std::move(str), std::move(msg),
                             std::move(ifs)));
       return {};
@@ -181,7 +181,7 @@ middleman_actor_impl::put(uint16_t port, strong_actor_ptr& whom, mpi_set& sigs,
     return std::move(res.error());
   auto& ptr = *res;
   actual_port = ptr->port();
-  anon_send(broker_, publish_atom::value, std::move(ptr), actual_port,
+  anon_send(broker_, publish_atom_v, std::move(ptr), actual_port,
             std::move(whom), std::move(sigs));
   return actual_port;
 }
@@ -200,7 +200,7 @@ middleman_actor_impl::put_udp(uint16_t port, strong_actor_ptr& whom,
     return std::move(res.error());
   auto& ptr = *res;
   actual_port = ptr->local_port();
-  anon_send(broker_, publish_udp_atom::value, std::move(ptr), actual_port,
+  anon_send(broker_, publish_udp_atom_v, std::move(ptr), actual_port,
             std::move(whom), std::move(sigs));
   return actual_port;
 }

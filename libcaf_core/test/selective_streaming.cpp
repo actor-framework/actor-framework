@@ -218,8 +218,8 @@ CAF_TEST(forking) {
   auto snk2 = sys.spawn(log_consumer);
   sched.run();
   self->send(stg * src, level::all);
-  self->send(snk1 * stg, join_atom::value, level::trace);
-  self->send(snk2 * stg, join_atom::value, level::error);
+  self->send(snk1 * stg, join_atom_v, level::trace);
+  self->send(snk2 * stg, join_atom_v, level::error);
   sched.run();
   auto& st = deref<log_dispatcher_actor>(stg).state;
   run_until([&] {

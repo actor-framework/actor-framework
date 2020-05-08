@@ -76,10 +76,10 @@ struct send_to_self {
 CAF_TEST(receive_atoms) {
   scoped_actor self{system};
   send_to_self f{self.ptr()};
-  f(foo_atom::value, static_cast<uint32_t>(42));
-  f(abc_atom::value, def_atom::value, "cstring");
+  f(foo_atom_v, static_cast<uint32_t>(42));
+  f(abc_atom_v, def_atom_v, "cstring");
   f(1.f);
-  f(a_atom::value, b_atom::value, c_atom::value, 23.f);
+  f(a_atom_v, b_atom_v, c_atom::value, 23.f);
   bool matched_pattern[3] = {false, false, false};
   int i = 0;
   CAF_MESSAGE("start receive loop");
@@ -106,7 +106,7 @@ CAF_TEST(receive_atoms) {
     }
   );
   atom_value x = atom("abc");
-  atom_value y = abc_atom::value;
+  atom_value y = abc_atom_v;
   CAF_CHECK_EQUAL(x, y);
   auto msg = make_message(atom("abc"));
   self->send(self, msg);
@@ -131,14 +131,9 @@ testee::behavior_type testee_impl(testee::pointer self) {
 CAF_TEST(request_atom_constants) {
   scoped_actor self{system};
   auto tst = system.spawn(testee_impl);
-  self->request(tst, infinite, abc_atom::value).receive(
-    [](int i) {
-      CAF_CHECK_EQUAL(i, 42);
-    },
-    [&](error& err) {
-      CAF_FAIL("err: " << system.render(err));
-    }
-  );
+  self->request(tst, infinite, abc_atom_v)
+    .receive([](int i) { CAF_CHECK_EQUAL(i, 42); },
+             [&](error& err) { CAF_FAIL("err: " << system.render(err)); });
 }
 
 CAF_TEST(runtime_conversion) {

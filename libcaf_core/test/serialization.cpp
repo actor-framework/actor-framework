@@ -371,9 +371,8 @@ SERIALIZATION_TEST(atoms) {
   auto foo = atom("foo");
   CAF_CHECK_EQUAL(foo, roundtrip(foo));
   CAF_CHECK_EQUAL(foo, msg_roundtrip(foo));
-  using bar_atom = atom_constant<atom("bar")>;
-  CAF_CHECK_EQUAL(bar_atom::value, roundtrip(atom("bar")));
-  CAF_CHECK_EQUAL(bar_atom::value, msg_roundtrip(atom("bar")));
+  CAF_CHECK_EQUAL(atom("bar"), roundtrip(atom("bar")));
+  CAF_CHECK_EQUAL(atom("bar"), msg_roundtrip(atom("bar")));
 }
 
 SERIALIZATION_TEST(raw_arrays) {

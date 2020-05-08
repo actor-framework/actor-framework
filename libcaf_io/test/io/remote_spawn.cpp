@@ -99,10 +99,10 @@ CAF_TEST(nodes can spawn actors remotely) {
   calc = earth.mm.remote_spawn<calculator>(nid, "typed_calculator",
                                            make_message());
   CAF_MESSAGE("remotely spawned actors respond to messages");
-  earth.self->send(*calc, add_atom::value, 10, 20);
+  earth.self->send(*calc, add_atom_v, 10, 20);
   run();
   expect_on(earth, (int), from(*calc).to(earth.self).with(30));
-  earth.self->send(*calc, sub_atom::value, 10, 20);
+  earth.self->send(*calc, sub_atom_v, 10, 20);
   run();
   expect_on(earth, (int), from(*calc).to(earth.self).with(-10));
   anon_send_exit(*calc, exit_reason::user_shutdown);
@@ -111,7 +111,7 @@ CAF_TEST(nodes can spawn actors remotely) {
   auto dyn_calc = earth.mm.remote_spawn<actor>(nid, "calculator-class",
                                                make_message());
   CAF_REQUIRE(dyn_calc);
-  earth.self->send(*dyn_calc, add_atom::value, 10, 20);
+  earth.self->send(*dyn_calc, add_atom_v, 10, 20);
   run();
   expect_on(earth, (int), from(*dyn_calc).to(earth.self).with(30));
   anon_send_exit(*dyn_calc, exit_reason::user_shutdown);

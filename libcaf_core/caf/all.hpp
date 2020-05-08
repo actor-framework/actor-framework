@@ -247,10 +247,10 @@
 /// using result_atom = atom_constant<atom("result")>;
 ///
 /// // send a message to a1
-/// self->send(a1, hello_atom::value, "hello a1!");
+/// self->send(a1, hello_atom_v, "hello a1!");
 ///
 /// // send a message to a1, a2, and a3
-/// auto msg = make_message(compute_atom::value, 1, 2, 3);
+/// auto msg = make_message(compute_atom_v, 1, 2, 3);
 /// self->send(a1, msg);
 /// self->send(a2, msg);
 /// self->send(a3, msg);
@@ -269,7 +269,7 @@
 ///   },
 ///   [](compute_atom, int i0, int i1, int i2) {
 ///     // send our result back to the sender of this messages
-///     return make_message(result_atom::value, i0 + i1 + i2);
+///     return make_message(result_atom_v, i0 + i1 + i2);
 ///   }
 /// }
 /// ~~
@@ -289,11 +289,11 @@
 ///
 /// @section Atoms Atoms
 ///
-/// Atoms are a nice way to add semantic informations to a message.
-/// Assuming an actor wants to provide a "math sevice" for integers. It
-/// could provide operations such as addition, subtraction, etc.
-/// This operations all have two operands. Thus, the actor does not know
-/// what operation the sender of a message wanted by receiving just two integers.
+/// Atoms are a nice way to add semantic informations to a message. Assuming an
+/// actor wants to provide a "math sevice" for integers. It could provide
+/// operations such as addition, subtraction, etc. This operations all have two
+/// operands. Thus, the actor does not know what operation the sender of a
+/// message wanted by receiving just two integers.
 ///
 /// Example actor:
 /// ~~
@@ -371,14 +371,14 @@
 /// ~~
 /// scoped_actor self{...};
 ///
-/// self->delayed_send(self, std::chrono::seconds(1), poll_atom::value);
+/// self->delayed_send(self, std::chrono::seconds(1), poll_atom_v);
 /// bool running = true;
 /// self->receive_while([&](){ return running; }) (
 ///   // ...
 ///   [&](poll_atom) {
 ///     // ... poll something ...
 ///     // and do it again after 1sec
-///     self->delayed_send(self, std::chrono::seconds(1), poll_atom::value);
+///     self->delayed_send(self, std::chrono::seconds(1), poll_atom_v);
 ///   }
 /// );
 /// ~~
@@ -396,18 +396,15 @@
 ///
 /// A few examples:
 /// ~~
-/// // sends an std::string containing "hello actor!" to itself
+/// // sends a string containing "hello actor!" to itself
 /// send(self, "hello actor!");
 ///
 /// const char* cstring = "cstring";
-/// // sends an std::string containing "cstring" to itself
+/// // sends an string containing "cstring" to itself
 /// send(self, cstring);
 ///
-/// // sends an std::u16string containing the UTF16 string "hello unicode world!"
+/// // sends an u16string containing the UTF16 string "hello unicode world!"
 /// send(self, u"hello unicode world!");
-///
-/// // x has the type caf::tuple<std::string, std::string>
-/// auto x = make_message("hello", "tuple");
 /// ~~
 ///
 /// @defgroup ActorCreation Creating Actors

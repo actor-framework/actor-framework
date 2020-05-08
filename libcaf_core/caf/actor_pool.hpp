@@ -37,7 +37,7 @@ namespace caf {
 /// around in an actor system to hide the actual set of workers.
 ///
 /// After construction, new workers can be added via `{'SYS', 'PUT', actor}`
-/// messages, e.g., `send(my_pool, sys_atom::value, put_atom::value, worker)`.
+/// messages, e.g., `send(my_pool, sys_atom_v, put_atom_v, worker)`.
 /// `{'SYS', 'DELETE', actor}` messages remove a specific worker from the set,
 /// `{'SYS', 'DELETE'}` removes all workers, and `{'SYS', 'GET'}` returns a
 /// `vector<actor>` containing all workers.

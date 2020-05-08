@@ -76,11 +76,11 @@ CAF_TEST(class_based_joined_at_spawn) {
   });
   // make sure all actors start at 0
   for (auto& f : fs)
-    CAF_CHECK_EQUAL(f(get_atom::value), 0);
+    CAF_CHECK_EQUAL(f(get_atom_v), 0);
   // send a put to all actors via the group and make sure they change state
-  self->send(grp, put_atom::value, 42);
+  self->send(grp, put_atom_v, 42);
   for (auto& f : fs)
-    CAF_CHECK_EQUAL(f(get_atom::value), 42);
+    CAF_CHECK_EQUAL(f(get_atom_v), 42);
   // shutdown all actors
   for (auto& x : xs)
     self->send_exit(x, exit_reason::user_shutdown);

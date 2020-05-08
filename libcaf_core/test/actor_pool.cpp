@@ -88,7 +88,7 @@ CAF_TEST(round_robin_actor_pool) {
   scoped_actor self{system};
   auto pool = actor_pool::make(&context, 5, spawn_worker,
                                actor_pool::round_robin());
-  self->send(pool, sys_atom::value, put_atom::value, spawn_worker());
+  self->send(pool, sys_atom_v, put_atom_v, spawn_worker());
   std::vector<actor> workers;
   for (int32_t i = 0; i < 6; ++i) {
     self->request(pool, infinite, i, i)
@@ -103,7 +103,7 @@ CAF_TEST(round_robin_actor_pool) {
   }
   CAF_CHECK_EQUAL(workers.size(), 6u);
   CAF_CHECK(std::unique(workers.begin(), workers.end()) == workers.end());
-  self->request(pool, infinite, sys_atom::value, get_atom::value)
+  self->request(pool, infinite, sys_atom_v, get_atom_v)
     .receive(
       [&](std::vector<actor>& ws) {
         std::sort(workers.begin(), workers.end());
@@ -121,7 +121,7 @@ CAF_TEST(round_robin_actor_pool) {
   bool success = false;
   size_t i = 0;
   while (!success && ++i <= 10) {
-    self->request(pool, infinite, sys_atom::value, get_atom::value)
+    self->request(pool, infinite, sys_atom_v, get_atom_v)
       .receive(
         [&](std::vector<actor>& ws) {
           success = workers.size() == ws.size();

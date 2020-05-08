@@ -107,7 +107,7 @@ CAF_TEST_DISABLED(message transmission) {
   {
     received_messages = 0u;
     scoped_actor self{mars.sys};
-    self->send(mars_grp, ok_atom::value);
+    self->send(mars_grp, ok_atom_v);
     exec_all();
     CAF_CHECK_EQUAL(received_messages, 10u);
   }
@@ -115,7 +115,7 @@ CAF_TEST_DISABLED(message transmission) {
   {
     received_messages = 0u;
     scoped_actor self{earth.sys};
-    self->send(earth_grp, ok_atom::value);
+    self->send(earth_grp, ok_atom_v);
     exec_all();
     CAF_CHECK_EQUAL(received_messages, 10u);
   }

@@ -117,16 +117,16 @@ CAF_TEST(atom_constants) {
       invoked[1] = true;
     }
   };
-  CAF_CHECK_EQUAL(invoke(expr, atom_value{ok_atom::value}), -1);
-  CAF_CHECK_EQUAL(invoke(expr, atom_value{hi_atom::value}), 0);
-  CAF_CHECK_EQUAL(invoke(expr, atom_value{ho_atom::value}), 1);
+  CAF_CHECK_EQUAL(invoke(expr, atom_value{ok_atom_v}), -1);
+  CAF_CHECK_EQUAL(invoke(expr, atom_value{hi_atom_v}), 0);
+  CAF_CHECK_EQUAL(invoke(expr, atom_value{ho_atom_v}), 1);
 }
 
 CAF_TEST(manual_matching) {
   using foo_atom = atom_constant<atom("foo")>;
   using bar_atom = atom_constant<atom("bar")>;
-  auto msg1 = make_message(foo_atom::value, 42);
-  auto msg2 = make_message(bar_atom::value, 42);
+  auto msg1 = make_message(foo_atom_v, 42);
+  auto msg2 = make_message(bar_atom_v, 42);
   CAF_MESSAGE("check individual message elements");
   CAF_CHECK((msg1.match_element<int>(1)));
   CAF_CHECK((msg2.match_element<int>(1)));
