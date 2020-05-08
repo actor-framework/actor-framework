@@ -23,6 +23,7 @@
 #include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
 
+#include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/byte.hpp"
 #include "caf/detail/scope_guard.hpp"
@@ -61,15 +62,7 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
 };
 
 class dummy_application {
-public:
-  static expected<std::vector<byte>> serialize(actor_system& sys,
-                                               const message& x) {
-    std::vector<byte> result;
-    binary_serializer sink{sys, result};
-    if (auto err = x.save(sink))
-      return err.value();
-    return result;
-  }
+  // nop
 };
 
 class dummy_transport {
@@ -107,8 +100,9 @@ public:
   template <class Manager>
   bool handle_write_event(Manager& mgr) {
     for (auto x = mgr.next_message(); x != nullptr; x = mgr.next_message()) {
-      auto& payload = x->payload;
-      buf_.insert(buf_.end(), payload.begin(), payload.end());
+      binary_serializer sink{mgr.system(), buf_};
+      if (auto err = sink(x->msg->payload))
+        CAF_FAIL("serializing failed: " << err);
     }
     auto res = write(handle_, buf_);
     if (auto num_bytes = get_if<size_t>(&res)) {
@@ -128,9 +122,8 @@ public:
     auto hid = string_view("0011223344556677889900112233445566778899");
     auto nid = unbox(make_node_id(42, hid));
     actor_config cfg;
-    auto p = make_actor<actor_proxy_impl, strong_actor_ptr>(aid, nid,
-                                                            &mgr.system(), cfg,
-                                                            &mgr);
+    auto p = make_actor<actor_proxy_impl, strong_actor_ptr>(
+      aid, nid, &mgr.system(), cfg, &mgr);
     std::string path{locator.path().begin(), locator.path().end()};
     anon_send(listener, resolve_atom_v, std::move(path), p);
   }

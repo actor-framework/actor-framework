@@ -62,8 +62,8 @@ public:
   // -- timeout management -----------------------------------------------------
 
   template <class... Ts>
-  uint64_t set_timeout(actor_clock::time_point tp, std::string type,
-                       Ts&&... xs) {
+  uint64_t
+  set_timeout(actor_clock::time_point tp, std::string type, Ts&&... xs) {
     auto act = actor_cast<abstract_actor*>(timeout_proxy_);
     CAF_ASSERT(act != nullptr);
     sys_.clock().set_multi_timeout(tp, act, std::move(type), next_timeout_id_);
@@ -117,10 +117,6 @@ public:
 
   void handle_error(sec code) override {
     transport_.handle_error(code);
-  }
-
-  serialize_fun_type serialize_fun() const noexcept override {
-    return application_type::serialize;
   }
 
 private:

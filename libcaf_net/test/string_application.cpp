@@ -66,8 +66,8 @@ struct string_application_header {
 
 /// @relates header
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f,
-                                        string_application_header& hdr) {
+typename Inspector::result_type
+inspect(Inspector& f, string_application_header& hdr) {
   return f(meta::type_name("sa_header"), hdr.payload);
 }
 
@@ -75,8 +75,8 @@ class string_application {
 public:
   using header_type = string_application_header;
 
-  string_application(actor_system& sys, std::shared_ptr<std::vector<byte>> buf)
-    : sys_(sys), buf_(std::move(buf)) {
+  string_application(std::shared_ptr<std::vector<byte>> buf)
+    : buf_(std::move(buf)) {
     // nop
   }
 
@@ -86,8 +86,8 @@ public:
   }
 
   template <class Parent>
-  void handle_packet(Parent&, header_type&, span<const byte> payload) {
-    binary_deserializer source{sys_, payload};
+  void handle_packet(Parent& parent, header_type&, span<const byte> payload) {
+    binary_deserializer source{parent.system(), payload};
     message msg;
     if (auto err = msg.load(source))
       CAF_FAIL("unable to deserialize message: " << err);
@@ -105,24 +105,18 @@ public:
     if (ptr->msg == nullptr)
       return;
     auto header_buf = parent.next_header_buffer();
-    binary_serializer sink{sys_, header_buf};
-    header_type header{static_cast<uint32_t>(ptr->payload.size())};
-    if (auto err = sink(header))
+    auto payload_buf = parent.next_payload_buffer();
+    binary_serializer payload_sink{parent.system(), payload_buf};
+    if (auto err = payload_sink(ptr->msg->payload))
       CAF_FAIL("serializing failed: " << err);
-    parent.write_packet(header_buf, ptr->payload);
-  }
-
-  static expected<std::vector<byte>> serialize(actor_system& sys,
-                                               const message& x) {
-    std::vector<byte> result;
-    binary_serializer sink{sys, result};
-    if (auto err = x.save(sink))
-      return err.value();
-    return result;
+    binary_serializer header_sink{parent.system(), header_buf};
+    if (auto err
+        = header_sink(header_type{static_cast<uint32_t>(payload_buf.size())}))
+      CAF_FAIL("serializing failed: " << err);
+    parent.write_packet(header_buf, payload_buf);
   }
 
 private:
-  actor_system& sys_;
   std::shared_ptr<std::vector<byte>> buf_;
 };
 
@@ -131,9 +125,8 @@ class stream_string_application : public Base {
 public:
   using header_type = typename Base::header_type;
 
-  stream_string_application(actor_system& sys,
-                            std::shared_ptr<std::vector<byte>> buf)
-    : Base(sys, std::move(buf)), await_payload_(false) {
+  stream_string_application(std::shared_ptr<std::vector<byte>> buf)
+    : Base(std::move(buf)), await_payload_(false) {
     // nop
   }
 
@@ -208,8 +201,8 @@ private:
 CAF_TEST_FIXTURE_SCOPE(endpoint_manager_tests, fixture)
 
 CAF_TEST(receive) {
-  using application_type = extend<string_application>::with<
-    stream_string_application>;
+  using application_type
+    = extend<string_application>::with<stream_string_application>;
   using transport_type = stream_transport<application_type>;
   std::vector<byte> read_buf(1024);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
@@ -219,14 +212,12 @@ CAF_TEST(receive) {
   CAF_CHECK_EQUAL(read(sockets.second, read_buf),
                   sec::unavailable_or_would_block);
   CAF_MESSAGE("adding both endpoint managers");
-  auto mgr1 = make_endpoint_manager(mpx, sys,
-                                    transport_type{sockets.first,
-                                                   application_type{sys, buf}});
+  auto mgr1 = make_endpoint_manager(
+    mpx, sys, transport_type{sockets.first, application_type{buf}});
   CAF_CHECK_EQUAL(mgr1->init(), none);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
-  auto mgr2 = make_endpoint_manager(mpx, sys,
-                                    transport_type{sockets.second,
-                                                   application_type{sys, buf}});
+  auto mgr2 = make_endpoint_manager(
+    mpx, sys, transport_type{sockets.second, application_type{buf}});
   CAF_CHECK_EQUAL(mgr2->init(), none);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 3u);
   CAF_MESSAGE("resolve actor-proxy");

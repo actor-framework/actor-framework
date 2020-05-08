@@ -21,6 +21,7 @@
 #include <string>
 
 #include "caf/actor.hpp"
+#include "caf/detail/serialized_size.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/drr_queue.hpp"
 #include "caf/intrusive/fifo_inbox.hpp"
@@ -112,7 +113,7 @@ public:
       // nop
     }
 
-    task_size_type task_size(const event&) const noexcept {
+    static constexpr task_size_type task_size(const event&) noexcept {
       return 1;
     }
   };
@@ -125,11 +126,7 @@ public:
     /// ID of the receiving actor.
     strong_actor_ptr receiver;
 
-    /// Serialized representation of of `msg->content()`.
-    std::vector<byte> payload;
-
-    message(mailbox_element_ptr msg, strong_actor_ptr receiver,
-            std::vector<byte> payload);
+    message(mailbox_element_ptr msg, strong_actor_ptr receiver);
 
     ~message() override;
 
@@ -153,9 +150,8 @@ public:
       // nop
     }
 
-    static task_size_type task_size(const message& x) noexcept {
-      // Return at least 1 if the payload is empty.
-      return x.payload.size() + static_cast<task_size_type>(x.payload.empty());
+    static task_size_type task_size(const message& msg) noexcept {
+      return detail::serialized_size(msg.msg->content());
     }
   };
 

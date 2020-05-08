@@ -119,10 +119,14 @@ public:
     return none;
   }
 
-  template <class Transport>
-  void write_message(Transport& transport,
+  template <class Parent>
+  void write_message(Parent& parent,
                      std::unique_ptr<endpoint_manager_queue::message> msg) {
-    transport.write_packet(msg->payload);
+    auto payload_buf = parent.next_payload_buffer();
+    binary_serializer sink{parent.system(), payload_buf};
+    if (auto err = sink(msg->msg->payload))
+      CAF_FAIL("serializing failed: " << err);
+    parent.write_packet(payload_buf);
   }
 
   template <class Parent>
@@ -139,10 +143,8 @@ public:
     auto nid = make_node_id(uri);
     actor_config cfg;
     endpoint_manager_ptr ptr{&parent.manager()};
-    auto p = make_actor<actor_proxy_impl, strong_actor_ptr>(aid, nid,
-                                                            &parent.system(),
-                                                            cfg,
-                                                            std::move(ptr));
+    auto p = make_actor<actor_proxy_impl, strong_actor_ptr>(
+      aid, nid, &parent.system(), cfg, std::move(ptr));
     anon_send(listener, resolve_atom_v, std::string{path.begin(), path.end()},
               p);
   }
@@ -164,14 +166,6 @@ public:
 
   void handle_error(sec sec) {
     CAF_FAIL("handle_error called: " << to_string(sec));
-  }
-
-  static expected<buffer_type> serialize(actor_system& sys, const message& x) {
-    buffer_type result;
-    binary_serializer sink{sys, result};
-    if (auto err = x.save(sink))
-      return err.value();
-    return result;
   }
 
 private:
@@ -204,10 +198,9 @@ CAF_TEST(receive) {
   using transport_type = datagram_transport<dummy_application_factory>;
   if (auto err = nonblocking(recv_socket, true))
     CAF_FAIL("nonblocking() returned an error: " << err);
-  auto mgr = make_endpoint_manager(mpx, sys,
-                                   transport_type{recv_socket,
-                                                  dummy_application_factory{
-                                                    shared_buf}});
+  auto mgr = make_endpoint_manager(
+    mpx, sys,
+    transport_type{recv_socket, dummy_application_factory{shared_buf}});
   CAF_CHECK_EQUAL(mgr->init(), none);
   auto mgr_impl = mgr.downcast<endpoint_manager_impl<transport_type>>();
   CAF_CHECK(mgr_impl != nullptr);
@@ -227,10 +220,9 @@ CAF_TEST(resolve and proxy communication) {
   using transport_type = datagram_transport<dummy_application_factory>;
   buffer_type recv_buf(1024);
   auto uri = unbox(make_uri("test:/id/42"));
-  auto mgr = make_endpoint_manager(mpx, sys,
-                                   transport_type{send_socket,
-                                                  dummy_application_factory{
-                                                    shared_buf}});
+  auto mgr = make_endpoint_manager(
+    mpx, sys,
+    transport_type{send_socket, dummy_application_factory{shared_buf}});
   CAF_CHECK_EQUAL(mgr->init(), none);
   auto mgr_impl = mgr.downcast<endpoint_manager_impl<transport_type>>();
   CAF_CHECK(mgr_impl != nullptr);

@@ -25,7 +25,7 @@
 namespace caf::net {
 
 actor_proxy_impl::actor_proxy_impl(actor_config& cfg, endpoint_manager_ptr dst)
-  : super(cfg), sf_(dst->serialize_fun()), dst_(std::move(dst)) {
+  : super(cfg), dst_(std::move(dst)) {
   CAF_ASSERT(dst_ != nullptr);
   dst_->enqueue_event(node(), id());
 }
@@ -34,14 +34,11 @@ actor_proxy_impl::~actor_proxy_impl() {
   // nop
 }
 
-void actor_proxy_impl::enqueue(mailbox_element_ptr what, execution_unit*) {
+void actor_proxy_impl::enqueue(mailbox_element_ptr msg, execution_unit*) {
   CAF_PUSH_AID(0);
-  CAF_ASSERT(what != nullptr);
-  CAF_LOG_SEND_EVENT(what);
-  if (auto payload = sf_(home_system(), what->content()))
-    dst_->enqueue(std::move(what), ctrl(), std::move(*payload));
-  else
-    CAF_LOG_ERROR("unable to serialize payload: " << payload.error());
+  CAF_ASSERT(msg != nullptr);
+  CAF_LOG_SEND_EVENT(msg);
+  dst_->enqueue(std::move(msg), ctrl());
 }
 
 void actor_proxy_impl::kill_proxy(execution_unit* ctx, error rsn) {

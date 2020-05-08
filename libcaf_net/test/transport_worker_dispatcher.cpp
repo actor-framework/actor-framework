@@ -66,10 +66,10 @@ public:
 
   template <class Parent>
   void write_message(Parent& parent,
-                     std::unique_ptr<endpoint_manager_queue::message> msg) {
+                     std::unique_ptr<endpoint_manager_queue::message> ptr) {
     rec_buf_->push_back(static_cast<byte>(id_));
-    auto header_buf = parent.next_header_buffer();
-    parent.write_packet(header_buf, msg->payload);
+    auto data = ptr->msg->content().get_as<std::vector<byte>>(0);
+    parent.write_packet(data);
   }
 
   template <class Parent>
@@ -90,10 +90,6 @@ public:
 
   void handle_error(sec) {
     rec_buf_->push_back(static_cast<byte>(id_));
-  }
-
-  static expected<buffer_type> serialize(actor_system&, const message&) {
-    return buffer_type{};
   }
 
 private:
@@ -126,7 +122,8 @@ struct dummy_transport {
 
   using application_type = dummy_application;
 
-  dummy_transport(std::shared_ptr<buffer_type> buf) : buf_(std::move(buf)) {
+  dummy_transport(actor_system& sys, std::shared_ptr<buffer_type> buf)
+    : sys_(sys), buf_(std::move(buf)) {
     // nop
   }
 
@@ -134,6 +131,10 @@ struct dummy_transport {
   void write_packet(IdType, span<buffer_type*> buffers) {
     for (auto buf : buffers)
       buf_->insert(buf_->end(), buf->begin(), buf->end());
+  }
+
+  actor_system& system() {
+    return sys_;
   }
 
   transport_type& transport() {
@@ -149,6 +150,7 @@ struct dummy_transport {
   }
 
 private:
+  actor_system& sys_;
   std::shared_ptr<buffer_type> buf_;
 };
 
@@ -182,32 +184,31 @@ uri operator"" _u(const char* cstr, size_t cstr_len) {
 }
 
 struct fixture : host_fixture {
-  using dispatcher_type = transport_worker_dispatcher<dummy_application_factory,
-                                                      ip_endpoint>;
+  using dispatcher_type
+    = transport_worker_dispatcher<dummy_application_factory, ip_endpoint>;
 
   fixture()
     : buf{std::make_shared<buffer_type>()},
       dispatcher{dummy_application_factory{buf}},
-      dummy{buf} {
+      dummy{sys, buf} {
     add_new_workers();
   }
 
   std::unique_ptr<net::endpoint_manager_queue::message>
   make_dummy_message(node_id nid) {
     actor_id aid = 42;
+    auto test_span = as_bytes(make_span(hello_test));
+    byte_buffer payload(test_span.begin(), test_span.end());
     actor_config cfg;
     auto p = make_actor<dummy_actor, strong_actor_ptr>(aid, nid, &sys, cfg);
-    auto test_span = as_bytes(make_span(hello_test));
-    buffer_type payload(test_span.begin(), test_span.end());
     auto receiver = actor_cast<strong_actor_ptr>(p);
     if (!receiver)
       CAF_FAIL("failed to cast receiver to a strong_actor_ptr");
     mailbox_element::forwarding_stack stack;
     auto elem = make_mailbox_element(nullptr, make_message_id(12345),
-                                     std::move(stack), make_message());
+                                     std::move(stack), make_message(payload));
     return detail::make_unique<endpoint_manager_queue::message>(std::move(elem),
-                                                                receiver,
-                                                                payload);
+                                                                receiver);
   }
 
   bool contains(byte x) {
@@ -227,6 +228,7 @@ struct fixture : host_fixture {
     auto msg = make_dummy_message(testcase.nid);
     if (!msg->receiver)
       CAF_FAIL("receiver is null");
+    CAF_MESSAGE(CAF_ARG(msg));
     dispatcher.write_message(dummy, std::move(msg));
   }
 
@@ -255,9 +257,8 @@ struct fixture : host_fixture {
   test_write_message(testcase);                                                \
   CAF_CHECK_EQUAL(buf->size(), hello_test.size() + 1u);                        \
   CAF_CHECK_EQUAL(static_cast<byte>(testcase.worker_id), buf->at(0));          \
-  CAF_CHECK_EQUAL(memcmp(buf->data() + 1, hello_test.data(),                   \
-                         hello_test.size()),                                   \
-                  0);                                                          \
+  CAF_CHECK_EQUAL(                                                             \
+    memcmp(buf->data() + 1, hello_test.data(), hello_test.size()), 0);         \
   buf->clear();
 
 #define CHECK_TIMEOUT(testcase)                                                \
