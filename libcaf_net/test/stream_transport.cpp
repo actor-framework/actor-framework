@@ -44,11 +44,9 @@ namespace {
 constexpr string_view hello_manager = "hello manager!";
 
 struct fixture : test_coordinator_fixture<>, host_fixture {
-  using buffer_type = std::vector<byte>;
+  using byte_buffer_ptr = std::shared_ptr<byte_buffer>;
 
-  using buffer_ptr = std::shared_ptr<buffer_type>;
-
-  fixture() : recv_buf(1024), shared_buf{std::make_shared<buffer_type>()} {
+  fixture() : recv_buf(1024), shared_buf{std::make_shared<byte_buffer>()} {
     mpx = std::make_shared<multiplexer>();
     if (auto err = mpx->init())
       CAF_FAIL("mpx->init failed: " << err);
@@ -66,19 +64,17 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
   }
 
   multiplexer_ptr mpx;
-  buffer_type recv_buf;
+  byte_buffer recv_buf;
   socket_guard<stream_socket> send_socket_guard;
   socket_guard<stream_socket> recv_socket_guard;
-  buffer_ptr shared_buf;
+  byte_buffer_ptr shared_buf;
 };
 
 class dummy_application {
-  using buffer_type = std::vector<byte>;
-
-  using buffer_ptr = std::shared_ptr<buffer_type>;
+  using byte_buffer_ptr = std::shared_ptr<byte_buffer>;
 
 public:
-  dummy_application(buffer_ptr rec_buf)
+  dummy_application(byte_buffer_ptr rec_buf)
     : rec_buf_(std::move(rec_buf)){
       // nop
     };
@@ -140,7 +136,7 @@ public:
   }
 
 private:
-  buffer_ptr rec_buf_;
+  byte_buffer_ptr rec_buf_;
 };
 
 } // namespace

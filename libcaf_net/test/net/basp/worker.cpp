@@ -107,7 +107,7 @@ CAF_TEST(deliver serialized message) {
   CAF_REQUIRE_NOT_EQUAL(hub.peek(), nullptr);
   auto w = hub.pop();
   CAF_MESSAGE("create a fake message + BASP header");
-  std::vector<byte> payload;
+  byte_buffer payload;
   std::vector<strong_actor_ptr> stages;
   binary_serializer sink{sys, payload};
   if (auto err = sink(node_id{}, self->id(), testee.id(), stages,

@@ -34,7 +34,7 @@ using namespace caf::net;
 
 namespace {
 
-using buffer_type = std::vector<byte>;
+using byte_buffer_ptr = std::shared_ptr<byte_buffer>;
 
 constexpr string_view hello_test = "hello_test";
 
@@ -50,7 +50,7 @@ struct dummy_actor : public monitorable_actor {
 
 class dummy_application {
 public:
-  dummy_application(std::shared_ptr<buffer_type> rec_buf, uint8_t id)
+  dummy_application(byte_buffer_ptr rec_buf, uint8_t id)
     : rec_buf_(std::move(rec_buf)),
       id_(id){
         // nop
@@ -68,7 +68,7 @@ public:
   void write_message(Parent& parent,
                      std::unique_ptr<endpoint_manager_queue::message> ptr) {
     rec_buf_->push_back(static_cast<byte>(id_));
-    auto data = ptr->msg->content().get_as<std::vector<byte>>(0);
+    auto data = ptr->msg->content().get_as<byte_buffer>(0);
     parent.write_packet(data);
   }
 
@@ -93,7 +93,7 @@ public:
   }
 
 private:
-  std::shared_ptr<buffer_type> rec_buf_;
+  byte_buffer_ptr rec_buf_;
   uint8_t id_;
 };
 
@@ -101,7 +101,7 @@ struct dummy_application_factory {
 public:
   using application_type = dummy_application;
 
-  dummy_application_factory(std::shared_ptr<buffer_type> buf)
+  dummy_application_factory(byte_buffer_ptr buf)
     : buf_(std::move(buf)), application_cnt_(0) {
     // nop
   }
@@ -111,7 +111,7 @@ public:
   }
 
 private:
-  std::shared_ptr<buffer_type> buf_;
+  byte_buffer_ptr buf_;
   uint8_t application_cnt_;
 };
 
@@ -122,13 +122,13 @@ struct dummy_transport {
 
   using application_type = dummy_application;
 
-  dummy_transport(actor_system& sys, std::shared_ptr<buffer_type> buf)
+  dummy_transport(actor_system& sys, byte_buffer_ptr buf)
     : sys_(sys), buf_(std::move(buf)) {
     // nop
   }
 
   template <class IdType>
-  void write_packet(IdType, span<buffer_type*> buffers) {
+  void write_packet(IdType, span<byte_buffer*> buffers) {
     for (auto buf : buffers)
       buf_->insert(buf_->end(), buf->begin(), buf->end());
   }
@@ -141,17 +141,17 @@ struct dummy_transport {
     return *this;
   }
 
-  buffer_type next_header_buffer() {
+  byte_buffer next_header_buffer() {
     return {};
   }
 
-  buffer_type next_payload_buffer() {
+  byte_buffer next_payload_buffer() {
     return {};
   }
 
 private:
   actor_system& sys_;
-  std::shared_ptr<buffer_type> buf_;
+  byte_buffer_ptr buf_;
 };
 
 struct testdata {
@@ -188,7 +188,7 @@ struct fixture : host_fixture {
     = transport_worker_dispatcher<dummy_application_factory, ip_endpoint>;
 
   fixture()
-    : buf{std::make_shared<buffer_type>()},
+    : buf{std::make_shared<byte_buffer>()},
       dispatcher{dummy_application_factory{buf}},
       dummy{sys, buf} {
     add_new_workers();
@@ -235,7 +235,7 @@ struct fixture : host_fixture {
   actor_system_config cfg{};
   actor_system sys{cfg};
 
-  std::shared_ptr<buffer_type> buf;
+  byte_buffer_ptr buf;
   dispatcher_type dispatcher;
   dummy_transport dummy;
 

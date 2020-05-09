@@ -379,7 +379,7 @@ error application::handle_down_message(packet_writer&, header received_hdr,
   return none;
 }
 
-error application::generate_handshake(std::vector<byte>& buf) {
+error application::generate_handshake(byte_buffer& buf) {
   binary_serializer sink{&executor_, buf};
   return sink(system().node(),
               get_or(system().config(), "middleman.app-identifiers",

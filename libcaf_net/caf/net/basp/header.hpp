@@ -78,7 +78,7 @@ std::array<byte, header_size> to_bytes(header x);
 
 /// Serializes a header to a byte representation.
 /// @relates header
-void to_bytes(header x, std::vector<byte>& buf);
+void to_bytes(header x, byte_buffer& buf);
 
 /// @relates header
 template <class Inspector>

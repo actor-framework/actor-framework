@@ -43,7 +43,7 @@ using namespace caf::policy;
 
 namespace {
 
-using buffer_type = std::vector<byte>;
+using byte_buffer_ptr = std::shared_ptr<byte_buffer>;
 
 struct fixture : test_coordinator_fixture<>, host_fixture {
   fixture() {
@@ -75,7 +75,7 @@ class string_application {
 public:
   using header_type = string_application_header;
 
-  string_application(std::shared_ptr<std::vector<byte>> buf)
+  string_application(byte_buffer_ptr buf)
     : buf_(std::move(buf)) {
     // nop
   }
@@ -117,7 +117,7 @@ public:
   }
 
 private:
-  std::shared_ptr<std::vector<byte>> buf_;
+  byte_buffer_ptr buf_;
 };
 
 template <class Base, class Subtype>
@@ -125,7 +125,7 @@ class stream_string_application : public Base {
 public:
   using header_type = typename Base::header_type;
 
-  stream_string_application(std::shared_ptr<std::vector<byte>> buf)
+  stream_string_application(byte_buffer_ptr buf)
     : Base(std::move(buf)), await_payload_(false) {
     // nop
   }
@@ -204,9 +204,9 @@ CAF_TEST(receive) {
   using application_type
     = extend<string_application>::with<stream_string_application>;
   using transport_type = stream_transport<application_type>;
-  std::vector<byte> read_buf(1024);
+  byte_buffer read_buf(1024);
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
-  auto buf = std::make_shared<std::vector<byte>>();
+  auto buf = std::make_shared<byte_buffer>();
   auto sockets = unbox(make_stream_socket_pair());
   nonblocking(sockets.second, true);
   CAF_CHECK_EQUAL(read(sockets.second, read_buf),

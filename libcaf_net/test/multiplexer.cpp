@@ -113,9 +113,9 @@ private:
 
   size_t rd_buf_pos_;
 
-  std::vector<byte> wr_buf_;
+  byte_buffer wr_buf_;
 
-  std::vector<byte> rd_buf_;
+  byte_buffer rd_buf_;
 };
 
 using dummy_manager_ptr = intrusive_ptr<dummy_manager>;

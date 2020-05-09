@@ -20,8 +20,6 @@
 
 #include "caf/net/packet_writer.hpp"
 
-#include "caf/byte.hpp"
-
 namespace caf::net {
 
 /// Implements the interface for transport and application policies and
@@ -56,11 +54,11 @@ public:
     return parent_.manager();
   }
 
-  buffer_type next_header_buffer() override {
+  byte_buffer next_header_buffer() override {
     return transport().next_header_buffer();
   }
 
-  buffer_type next_payload_buffer() override {
+  byte_buffer next_payload_buffer() override {
     return transport().next_payload_buffer();
   }
 
@@ -76,7 +74,7 @@ public:
   }
 
 protected:
-  void write_impl(span<buffer_type*> buffers) override {
+  void write_impl(span<byte_buffer*> buffers) override {
     parent_.write_packet(object_.id(), buffers);
   }
 

@@ -19,7 +19,6 @@
 #pragma once
 
 #include <deque>
-#include <vector>
 
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
@@ -35,9 +34,9 @@
 namespace caf::net {
 
 template <class Application>
-using stream_transport_base = transport_base<
-  stream_transport<Application>, transport_worker<Application>, stream_socket,
-  Application, unit_t>;
+using stream_transport_base
+  = transport_base<stream_transport<Application>, transport_worker<Application>,
+                   stream_socket, Application, unit_t>;
 
 /// Implements a stream_transport that manages a stream socket.
 template <class Application>
@@ -53,9 +52,7 @@ public:
 
   using id_type = typename super::id_type;
 
-  using buffer_type = typename super::buffer_type;
-
-  using write_queue_type = std::deque<std::pair<bool, buffer_type>>;
+  using write_queue_type = std::deque<std::pair<bool, byte_buffer>>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -85,9 +82,8 @@ public:
                       << CAF_ARG(this->handle_.id) << CAF_ARG(*num_bytes));
         this->collected_ += *num_bytes;
         if (this->collected_ >= this->read_threshold_) {
-          if (auto err = this->next_layer_.handle_data(*this,
-                                                       make_span(
-                                                         this->read_buf_))) {
+          if (auto err = this->next_layer_.handle_data(
+                *this, make_span(this->read_buf_))) {
             CAF_LOG_ERROR("handle_data failed: " << CAF_ARG(err));
             return false;
           }
@@ -121,7 +117,8 @@ public:
         if (is_header) {
           if (this->header_bufs_.size() < this->header_bufs_.capacity())
             this->header_bufs_.emplace_back(std::move(buf));
-        } else if (this->payload_bufs_.size() < this->payload_bufs_.capacity()) {
+        } else if (this->payload_bufs_.size()
+                   < this->payload_bufs_.capacity()) {
           this->payload_bufs_.emplace_back(std::move(buf));
         }
         write_queue_.pop_front();
@@ -166,7 +163,7 @@ public:
     return false;
   }
 
-  void write_packet(id_type, span<buffer_type*> buffers) override {
+  void write_packet(id_type, span<byte_buffer*> buffers) override {
     CAF_LOG_TRACE("");
     CAF_ASSERT(!buffers.empty());
     if (this->write_queue_.empty())

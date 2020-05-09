@@ -50,7 +50,7 @@ struct application_result {
 };
 
 struct transport_result {
-  std::vector<byte> packet_buffer;
+  byte_buffer packet_buffer;
   ip_endpoint ep;
 };
 

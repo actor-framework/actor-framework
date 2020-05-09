@@ -55,8 +55,6 @@ class application {
 public:
   // -- member types -----------------------------------------------------------
 
-  using buffer_type = std::vector<byte>;
-
   using byte_span = span<const byte>;
 
   using hub_type = detail::worker_hub<worker>;
@@ -175,7 +173,7 @@ private:
                             byte_span received);
 
   /// Writes the handshake payload to `buf_`.
-  error generate_handshake(buffer_type& buf);
+  error generate_handshake(byte_buffer& buf);
 
   // -- member variables -------------------------------------------------------
 

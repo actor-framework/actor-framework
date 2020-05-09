@@ -46,8 +46,6 @@ struct fixture : test_coordinator_fixture<>,
                  proxy_registry::backend,
                  basp::application::test_tag,
                  public packet_writer {
-  using buffer_type = std::vector<byte>;
-
   fixture() : proxies(sys, *this), app(proxies) {
     REQUIRE_OK(app.init(*this));
     uri mars_uri;
@@ -56,8 +54,8 @@ struct fixture : test_coordinator_fixture<>,
   }
 
   template <class... Ts>
-  buffer_type to_buf(const Ts&... xs) {
-    buffer_type buf;
+  byte_buffer to_buf(const Ts&... xs) {
+    byte_buffer buf;
     binary_serializer sink{system(), buf};
     REQUIRE_OK(sink(xs...));
     return buf;
@@ -111,11 +109,11 @@ struct fixture : test_coordinator_fixture<>,
     CAF_FAIL("unexpected function call");
   }
 
-  buffer_type next_payload_buffer() override {
+  byte_buffer next_payload_buffer() override {
     return {};
   }
 
-  buffer_type next_header_buffer() override {
+  byte_buffer next_header_buffer() override {
     return {};
   }
 
@@ -136,14 +134,14 @@ struct fixture : test_coordinator_fixture<>,
   }
 
 protected:
-  void write_impl(span<buffer_type*> buffers) override {
+  void write_impl(span<byte_buffer*> buffers) override {
     for (auto buf : buffers)
       output.insert(output.end(), buf->begin(), buf->end());
   }
 
-  buffer_type input;
+  byte_buffer input;
 
-  buffer_type output;
+  byte_buffer output;
 
   node_id mars;
 

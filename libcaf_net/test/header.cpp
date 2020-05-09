@@ -30,7 +30,7 @@ using namespace caf::net;
 
 CAF_TEST(serialization) {
   basp::header x{basp::message_type::handshake, 42, 4};
-  std::vector<byte> buf;
+  byte_buffer buf;
   {
     binary_serializer sink{nullptr, buf};
     CAF_CHECK_EQUAL(sink(x), none);
