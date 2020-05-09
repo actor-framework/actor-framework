@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include "caf/byte.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/span.hpp"

@@ -24,7 +24,6 @@
 
 #include "caf/actor.hpp"
 #include "caf/actor_clock.hpp"
-#include "caf/byte.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/drr_queue.hpp"

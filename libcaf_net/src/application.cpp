@@ -24,7 +24,6 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
-#include "caf/byte.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/parse.hpp"

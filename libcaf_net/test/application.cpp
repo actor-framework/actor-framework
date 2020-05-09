@@ -24,7 +24,6 @@
 
 #include <vector>
 
-#include "caf/byte.hpp"
 #include "caf/forwarding_actor_proxy.hpp"
 #include "caf/net/basp/connection_state.hpp"
 #include "caf/net/basp/constants.hpp"

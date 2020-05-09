@@ -25,7 +25,6 @@
 
 #include <new>
 #include <tuple>
-#include <vector>
 
 #include "caf/byte.hpp"
 #include "caf/net/socket_manager.hpp"

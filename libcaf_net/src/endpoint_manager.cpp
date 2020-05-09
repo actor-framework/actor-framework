@@ -18,7 +18,6 @@
 
 #include "caf/net/endpoint_manager.hpp"
 
-#include "caf/byte.hpp"
 #include "caf/intrusive/inbox_result.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/sec.hpp"

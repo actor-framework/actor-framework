@@ -23,8 +23,6 @@
 #include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
 
-#include <vector>
-
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/byte.hpp"
@@ -75,8 +73,7 @@ class string_application {
 public:
   using header_type = string_application_header;
 
-  string_application(byte_buffer_ptr buf)
-    : buf_(std::move(buf)) {
+  string_application(byte_buffer_ptr buf) : buf_(std::move(buf)) {
     // nop
   }
 
