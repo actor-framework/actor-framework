@@ -343,7 +343,6 @@ public:
   /// Blocks this actor until all `xs...` have terminated.
   template <class... Ts>
   void wait_for(Ts&&... xs) {
-    using wait_for_atom = atom_constant<atom("waitFor")>;
     size_t expected = 0;
     size_t i = 0;
     size_t attach_results[] = {attach_functor(xs)...};
