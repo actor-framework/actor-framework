@@ -24,6 +24,7 @@
 #include <stdexcept>
 
 #include "caf/error.hpp"
+#include "caf/timespan.hpp"
 
 namespace caf {
 
@@ -74,15 +75,6 @@ template <class Period>
 constexpr time_unit get_time_unit_from_period() {
   return ratio_to_time_unit_helper<Period::num, Period::den>::value;
 }
-
-/// Represents an infinite amount of timeout for specifying "invalid" timeouts.
-struct infinite_t {
-  constexpr infinite_t() {
-    // nop
-  }
-};
-
-static constexpr infinite_t infinite = infinite_t{};
 
 /// Time duration consisting of a `time_unit` and a 64 bit unsigned integer.
 class duration {

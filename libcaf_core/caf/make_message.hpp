@@ -61,14 +61,6 @@ struct is_serializable_or_whitelisted {
                                 || allowed_unsafe_message_type<T>::value;
 };
 
-/// @private
-template <class T>
-struct has_type_id {
-  static constexpr bool value = detail::is_complete<type_id<T>>::value
-                                || is_atom_constant<T>::value
-                                || allowed_unsafe_message_type<T>::value;
-};
-
 /// Returns a new `message` containing the values `(x, xs...)`.
 /// @relates message
 template <class T, class... Ts>

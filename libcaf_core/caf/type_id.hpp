@@ -23,7 +23,9 @@
 #include <string>
 #include <utility>
 
+#include "caf/allowed_unsafe_message_type.hpp"
 #include "caf/atom.hpp"
+#include "caf/detail/is_complete.hpp"
 #include "caf/detail/pp.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/fwd.hpp"
@@ -62,6 +64,17 @@ struct type_name_by_id;
 
 /// The first type ID not reserved by CAF and its modules.
 constexpr type_id_t first_custom_type_id = 200;
+
+/// Evaluates to `true` if any of these statements holds true:
+/// - `type_id<T>` is specialized
+/// - `T` is an atom constant
+/// - `allowed_unsafe_message_type<T>` is specialized
+template <class T>
+struct has_type_id {
+  static constexpr bool value = detail::is_complete<type_id<T>>::value
+                                || is_atom_constant<T>::value
+                                || allowed_unsafe_message_type<T>::value;
+};
 
 } // namespace caf
 

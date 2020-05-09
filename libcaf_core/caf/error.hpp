@@ -71,6 +71,12 @@ template <class T, class U = void>
 using enable_if_has_error_factory_t =
   typename std::enable_if<detail::error_factory<T>::specialized, U>::type;
 
+
+/// @private
+template <class T, class U = void>
+using enable_if_can_construct_error_t = typename std::enable_if<
+  detail::error_factory<T>::specialized || has_make_error<T>::value, U>::type;
+
 /// A serializable type for storing error codes with category and optional,
 /// human-readable context information. Unlike error handling classes from
 /// the C++ standard library, this type is serializable. It consists of an
@@ -276,15 +282,21 @@ bool operator!=(E x, const error& y) {
   return !(x == y);
 }
 
+/// @relates error
+template <class Code, class... Ts>
+enable_if_has_error_factory_t<Code, error> make_error(Code code, Ts&&... xs) {
+  return error{code, std::forward<Ts>(xs)...};
+}
+
 } // namespace caf
 
-#define CAF_ERROR_CODE_ENUM(enum_name)                                         \
+#define CAF_ERROR_CODE_ENUM(enum_type, category_name)                          \
   namespace caf {                                                              \
   namespace detail {                                                           \
   template <>                                                                  \
-  struct error_factory<enum_name> {                                            \
+  struct error_factory<enum_type> {                                            \
     static constexpr bool specialized = true;                                  \
-    static constexpr atom_value category = atom(#enum_name);                   \
+    static constexpr atom_value category = atom(category_name);                \
     template <class... Ts>                                                     \
     static message context(Ts&&... xs) {                                       \
       return make_message(std::forward<Ts>(xs)...);                            \
