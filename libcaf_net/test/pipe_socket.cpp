@@ -32,7 +32,7 @@ CAF_TEST_FIXTURE_SCOPE(pipe_socket_tests, host_fixture)
 
 CAF_TEST(send and receive) {
   byte_buffer send_buf{byte(1), byte(2), byte(3), byte(4),
-                             byte(5), byte(6), byte(7), byte(8)};
+                       byte(5), byte(6), byte(7), byte(8)};
   byte_buffer receive_buf;
   receive_buf.resize(100);
   pipe_socket rd_sock;
