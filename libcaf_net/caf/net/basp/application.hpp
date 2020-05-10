@@ -33,6 +33,7 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/worker_hub.hpp"
 #include "caf/error.hpp"
+#include "caf/fwd.hpp"
 #include "caf/net/basp/connection_state.hpp"
 #include "caf/net/basp/constants.hpp"
 #include "caf/net/basp/header.hpp"

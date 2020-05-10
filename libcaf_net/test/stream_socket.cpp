@@ -24,6 +24,7 @@
 #include "caf/test/dsl.hpp"
 
 #include "caf/byte.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/span.hpp"
 
 using namespace caf;

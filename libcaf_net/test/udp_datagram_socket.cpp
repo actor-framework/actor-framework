@@ -24,6 +24,7 @@
 #include "caf/test/dsl.hpp"
 
 #include "caf/binary_serializer.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/ip_address.hpp"

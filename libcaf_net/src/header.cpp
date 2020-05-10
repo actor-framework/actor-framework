@@ -21,6 +21,7 @@
 #include <cstring>
 
 #include "caf/byte.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/span.hpp"
 

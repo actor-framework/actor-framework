@@ -20,6 +20,8 @@
 
 #include "caf/net/packet_writer.hpp"
 
+#include "caf/byte_buffer.hpp"
+
 namespace caf::net {
 
 /// Implements the interface for transport and application policies and

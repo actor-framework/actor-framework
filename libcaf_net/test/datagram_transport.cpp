@@ -25,6 +25,7 @@
 
 #include "caf/binary_serializer.hpp"
 #include "caf/byte.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/net/actor_proxy_impl.hpp"

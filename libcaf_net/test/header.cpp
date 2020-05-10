@@ -24,6 +24,7 @@
 
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
+#include "caf/byte_buffer.hpp"
 
 using namespace caf;
 using namespace caf::net;

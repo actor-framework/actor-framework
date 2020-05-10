@@ -23,6 +23,7 @@
 #include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
 
+#include "caf/byte_buffer.hpp"
 #include "caf/ip_endpoint.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/monitorable_actor.hpp"

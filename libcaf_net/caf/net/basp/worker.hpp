@@ -24,6 +24,7 @@
 #include "caf/config.hpp"
 #include "caf/detail/abstract_worker.hpp"
 #include "caf/detail/worker_hub.hpp"
+#include "caf/fwd.hpp"
 #include "caf/net/basp/header.hpp"
 #include "caf/net/basp/message_queue.hpp"
 #include "caf/net/basp/remote_message_handler.hpp"

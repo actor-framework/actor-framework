@@ -25,6 +25,7 @@
 
 #include <vector>
 
+#include "caf/byte_buffer.hpp"
 #include "caf/net/backend/test.hpp"
 #include "caf/net/basp/connection_state.hpp"
 #include "caf/net/basp/constants.hpp"

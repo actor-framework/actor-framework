@@ -26,6 +26,7 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/binary_serializer.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/net/basp/message_queue.hpp"
 #include "caf/proxy_registry.hpp"
