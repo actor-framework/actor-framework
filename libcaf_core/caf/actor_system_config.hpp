@@ -136,7 +136,7 @@ public:
   template <class T, class... Ts>
   actor_system_config& add_actor_type(std::string name) {
     using handle = typename infer_handle_from_class<T>::type;
-    static_assert(detail::is_complete<type_id<handle>>);
+    static_assert(has_type_id_v<handle>);
     return add_actor_factory(std::move(name), make_actor_factory<T, Ts...>());
   }
 
@@ -146,7 +146,7 @@ public:
   template <class F>
   actor_system_config& add_actor_type(std::string name, F f) {
     using handle = typename infer_handle_from_fun<F>::type;
-    static_assert(detail::is_complete<type_id<handle>>);
+    static_assert(has_type_id_v<handle>);
     return add_actor_factory(std::move(name), make_actor_factory(std::move(f)));
   }
 

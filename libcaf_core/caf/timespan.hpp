@@ -31,4 +31,11 @@ using timespan = std::chrono::duration<int64_t, std::nano>;
 static constexpr timespan infinite
   = timespan{std::numeric_limits<int64_t>::max()};
 
+/// Checks whether `x` represents an infinite timespan. Timespan are considered
+/// infinite if the underlying integer reached its maximum value.
+template <class Rep, class Period>
+constexpr bool is_infinite(std::chrono::duration<Rep, Period> x) {
+  return x.count() == std::numeric_limits<int64_t>::max();
+}
+
 } // namespace caf

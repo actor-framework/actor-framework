@@ -25,6 +25,7 @@
 #include "caf/sec.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_sink.hpp"
+#include "caf/typed_message_view.hpp"
 
 #include "caf/policy/arg.hpp"
 

@@ -84,9 +84,15 @@ constexpr const char* type_name_v = type_name<T>::value;
 /// The first type ID not reserved by CAF and its modules.
 constexpr type_id_t first_custom_type_id = 200;
 
-/// Checks whether `type_id` is specialized for `T`.
+/// Evaluates to `true` if @ref type_id is specialized for `T`.
 template <class T>
-constexpr bool has_type_id = detail::is_complete<type_id<T>>;
+struct has_type_id {
+  static constexpr bool value = detail::is_complete<type_id<T>>;
+};
+
+/// Checks whether @ref type_id is specialized for `T`.
+template <class T>
+constexpr bool has_type_id_v = has_type_id<T>::value;
 
 } // namespace caf
 
@@ -188,6 +194,15 @@ constexpr bool has_type_id = detail::is_complete<type_id<T>>;
   }                                                                            \
   }                                                                            \
   CAF_ADD_TYPE_ID(project_name, (atom_namespace::atom_name))
+
+/// Creates a new tag type (atom) and assigns the next free type ID to it.
+#define CAF_ADD_ATOM_4(project_name, atom_namespace, atom_name, atom_text)     \
+  CAF_ADD_ATOM_3(project_name, atom_namespace, atom_name)                      \
+  namespace atom_namespace {                                                   \
+  inline std::string to_string(atom_name) {                                    \
+    return atom_text;                                                          \
+  }                                                                            \
+  }
 
 #ifdef CAF_MSVC
 #  define CAF_ADD_ATOM(...)                                                    \

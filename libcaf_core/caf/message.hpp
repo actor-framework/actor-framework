@@ -114,6 +114,12 @@ public:
     return !data_;
   }
 
+  // -- reference counting -----------------------------------------------------
+
+  void force_unshare() {
+    data_.unshare();
+  }
+
   // -- serialization ----------------------------------------------------------
 
   error save(serializer& sink) const;
@@ -183,7 +189,7 @@ template <class... Ts>
 message make_message(Ts&&... xs) {
   using namespace detail;
   static_assert((!std::is_pointer<strip_and_convert_t<Ts>>::value && ...));
-  static_assert((is_complete<type_id<strip_and_convert_t<Ts>>> && ...));
+  static_assert((has_type_id_v<strip_and_convert_t<Ts>> && ...));
   static constexpr size_t data_size
     = sizeof(message_data) + (padded_size_v<strip_and_convert_t<Ts>> + ...);
   auto types = make_type_id_list<strip_and_convert_t<Ts>...>();

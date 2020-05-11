@@ -125,6 +125,6 @@ template <class T>
 using strip_and_convert_t = typename strip_and_convert<T>::type;
 
 template <class T>
-constexpr bool sendable = is_complete<type_id<strip_and_convert_t<T>>>;
+constexpr bool sendable = has_type_id_v<strip_and_convert_t<T>>;
 
 } // namespace caf::detail

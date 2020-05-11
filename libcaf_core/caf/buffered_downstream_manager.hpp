@@ -45,7 +45,7 @@ public:
 
   // -- sanity checks ----------------------------------------------------------
 
-  static_assert(detail::is_complete<type_id<std::vector<output_type>>>);
+  static_assert(has_type_id_v<std::vector<output_type>>);
 
   // -- constructors, destructors, and assignment operators --------------------
 

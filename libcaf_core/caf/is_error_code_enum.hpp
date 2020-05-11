@@ -18,6 +18,9 @@
 
 #pragma once
 
+#include "caf/config.hpp"
+#include "caf/detail/pp.hpp"
+
 namespace caf {
 
 /// Customization point for enabling conversion from an enum type to an
@@ -33,10 +36,24 @@ constexpr bool is_error_code_enum_v = is_error_code_enum<T>::value;
 
 } // namespace caf
 
-#define CAF_ERROR_CODE_ENUM(type_name)                                         \
+#define CAF_ERROR_CODE_ENUM_1(type_name)                                       \
   namespace caf {                                                              \
   template <>                                                                  \
   struct is_error_code_enum<type_name> {                                       \
     static constexpr bool value = true;                                        \
   };                                                                           \
   }
+
+// Exists only for backwards compatibility with 0.17.5.
+#define CAF_ERROR_CODE_ENUM_2(type_name, unused)                               \
+  CAF_ERROR_CODE_ENUM_1(type_name)
+
+#ifdef CAF_MSVC
+#  define CAF_ERROR_CODE_ENUM(...)                                             \
+    CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_ERROR_CODE_ENUM_,                           \
+                               __VA_ARGS__)(__VA_ARGS__),                      \
+               CAF_PP_EMPTY())
+#else
+#  define CAF_ERROR_CODE_ENUM(...)                                             \
+    CAF_PP_OVERLOAD(CAF_ERROR_CODE_ENUM_, __VA_ARGS__)(__VA_ARGS__)
+#endif
