@@ -31,6 +31,11 @@ namespace caf::openssl {
 /// credentials for establishing connections.
 class CAF_OPENSSL_EXPORT manager : public actor_system::module {
 public:
+  /// Adds message types of the I/O module to the global meta object table.
+  static void init_global_meta_objects() {
+    // nop
+  }
+
   ~manager() override;
 
   void start() override;
