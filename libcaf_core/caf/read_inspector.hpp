@@ -78,7 +78,18 @@ private:
   template <class R, class T>
   std::enable_if_t<meta::is_annotation_v<T>, bool> try_apply(R& result, T& x) {
     if constexpr (meta::is_save_callback_v<T>) {
-      CAF_READ_INSPECTOR_TRY(x.fun())
+      using fun_result = decltype(x.fun());
+      if constexpr (std::is_same<fun_result, void>::value) {
+        x.fun();
+      } else {
+        if (auto err = x.fun()) {
+          if constexpr (std::is_assignable<T&, decltype(err)&&>::value)
+            result = std::move(err);
+          else
+            result = sec::save_callback_failed;
+          return false;
+        }
+      }
     }
     return true;
   }

@@ -29,6 +29,7 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/meta/annotation.hpp"
 #include "caf/meta/load_callback.hpp"
+#include "caf/sec.hpp"
 #include "caf/unifyn.hpp"
 
 #define CAF_WRITE_INSPECTOR_TRY(statement)                                     \
@@ -81,7 +82,18 @@ private:
   template <class R, class T>
   std::enable_if_t<meta::is_annotation_v<T>, bool> try_apply(R& result, T& x) {
     if constexpr (meta::is_load_callback_v<T>) {
-      CAF_WRITE_INSPECTOR_TRY(x.fun())
+      using fun_result = decltype(x.fun());
+      if constexpr (std::is_same<fun_result, void>::value) {
+        x.fun();
+      } else {
+        if (auto err = x.fun()) {
+          if constexpr (std::is_assignable<T&, decltype(err)&&>::value)
+            result = std::move(err);
+          else
+            result = sec::load_callback_failed;
+          return false;
+        }
+      }
     }
     return true;
   }
