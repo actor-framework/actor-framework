@@ -185,6 +185,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - In some edge cases, actors failed to shut down properly when hosting a stream
   source (#1076). The handshake process for a graceful shutdown has been fixed.
 - Fixed a compiler error on Clang 10 (#1077).
+- Setting lists and dictionaries on the command line now properly overrides
+  default values and values from configuration files instead of appending to
+  them (#942).
+- Using unquoted strings in command-line arguments inside lists now works as
+  expected. For example, `--foo=abc,def` is now equivalent to
+  `--foo=["abc", "def"]`.
 
 ## [0.17.4] - 2019-02-08
 

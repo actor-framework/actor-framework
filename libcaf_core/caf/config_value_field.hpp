@@ -57,7 +57,7 @@ public:
 
   /// Parses the content for this field in `object` from `ps`.
   virtual void parse_cli(string_parser_state& ps, Object& object,
-                         const char* char_blacklist = "") const = 0;
+                         bool is_nested) const = 0;
 };
 
 } // namespace caf

@@ -20,7 +20,6 @@
 
 #include "caf/config_value.hpp"
 #include "caf/config_value_field.hpp"
-#include "caf/detail/dispatch_parse_cli.hpp"
 #include "caf/optional.hpp"
 
 namespace caf::detail {
@@ -82,9 +81,13 @@ public:
   }
 
   void parse_cli(string_parser_state& ps, object_type& x,
-                 const char* char_blacklist) const override {
+                 bool nested) const override {
+    using access = caf::select_config_value_access_t<value_type>;
     value_type tmp;
-    dispatch_parse_cli(ps, tmp, char_blacklist);
+    if (nested)
+      access::parse_cli(ps, tmp, nested_cli_parsing);
+    else
+      access::parse_cli(ps, tmp, top_level_cli_parsing);
     if (ps.code <= pec::trailing_character) {
       if (predicate_ && !predicate_(tmp))
         ps.code = pec::invalid_argument;

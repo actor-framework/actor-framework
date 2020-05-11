@@ -161,6 +161,7 @@ auto config_option_set::parse(settings& config, argument_iterator first,
           return static_cast<pec>(err.code());
         return pec::invalid_argument;
       }
+      opt.store(*val);
       entry[opt_name] = std::move(*val);
     }
     return pec::success;

@@ -139,7 +139,7 @@ struct fixture {
     CAF_CHECK(!foo_field.set(x, config_value(-1)));
     string_view input = "123";
     string_parser_state ps{input.begin(), input.end()};
-    foo_field.parse_cli(ps, x);
+    foo_field.parse_cli(ps, x, false);
     CAF_CHECK_EQUAL(ps.code, pec::success);
     CAF_CHECK_EQUAL(foo_field.get(x), config_value(123));
   }
