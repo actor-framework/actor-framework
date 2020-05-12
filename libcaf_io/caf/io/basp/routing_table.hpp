@@ -37,6 +37,9 @@ namespace basp {
 /// BASP peer and provides both direct and indirect paths.
 class routing_table {
 public:
+  using handle_to_node_map = std::unordered_map<connection_handle, node_id>;
+
+  using node_to_handle_map = std::unordered_map<node_id, connection_handle>;
 
   explicit routing_table(abstract_broker* parent);
 
@@ -67,6 +70,14 @@ public:
   /// @pre `hdl != invalid_connection_handle && nid != none`
   void add_direct(const connection_handle& hdl, const node_id& nid);
 
+  /// When two CAF nodes connect to each other, multiple connections might spin
+  /// up simultaneously until both sides agree to a single connection.
+  /// @pre `lookup_direct(hdl == nid)`
+  void add_alternative(const connection_handle& hdl, const node_id& nid);
+
+  /// Forces `lookup_direct` to always resolve `nid` to `hdl`.
+  void select_alternative(const connection_handle& hdl, const node_id& nid);
+
   /// Adds a new indirect route to the table.
   bool add_indirect(const node_id& hop, const node_id& dest);
 
@@ -88,8 +99,8 @@ public:
 
   abstract_broker* parent_;
   mutable std::mutex mtx_;
-  std::unordered_map<connection_handle, node_id> direct_by_hdl_;
-  std::unordered_map<node_id, connection_handle> direct_by_nid_;
+  handle_to_node_map direct_by_hdl_;
+  node_to_handle_map direct_by_nid_;
   std::unordered_map<node_id, node_id_set> indirect_;
 };
 

@@ -293,6 +293,9 @@ behavior basp_broker::make_behavior() {
       ctx.callback = rp;
       // await server handshake
       configure_read(hdl, receive_policy::exactly(basp::header_size));
+      // send client handshake
+      instance.write_client_handshake(context(), get_buffer(hdl));
+      flush(hdl);
     },
     [=](delete_atom, const node_id& nid, actor_id aid) {
       CAF_LOG_TRACE(CAF_ARG(nid) << ", " << CAF_ARG(aid));

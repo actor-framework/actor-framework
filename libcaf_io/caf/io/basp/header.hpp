@@ -63,8 +63,12 @@ struct header {
 
   header() = default;
 
-  /// Identifies a receiver by name rather than ID.
+  /// Identifies a receiver by name rather than ID in a `direct_message`.
   static const uint8_t named_receiver_flag = 0x01;
+
+  /// Forces the server to use this connection to a client in a
+  /// `client_handshake`.
+  static const uint8_t select_connection_flag = 0x02;
 
   /// Queries whether this header has the given flag.
   bool has(uint8_t flag) const {
@@ -117,4 +121,3 @@ constexpr size_t header_size = sizeof(actor_id) * 2
 } // namespace basp
 } // namespace io
 } // namespace caf
-

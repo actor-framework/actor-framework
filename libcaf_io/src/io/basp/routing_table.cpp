@@ -85,13 +85,34 @@ node_id routing_table::lookup_indirect(const node_id& nid) const {
 
 node_id routing_table::erase_direct(const connection_handle& hdl) {
   std::unique_lock<std::mutex> guard{mtx_};
+  // Sanity check: do nothing if the handle is not mapped to a node.
   auto i = direct_by_hdl_.find(hdl);
   if (i == direct_by_hdl_.end())
     return {};
-  direct_by_nid_.erase(i->second);
-  node_id result = std::move(i->second);
-  direct_by_hdl_.erase(i->first);
-  return result;
+  // We always remove i from direct_by_hdl_.
+  auto node = std::move(i->second);
+  direct_by_hdl_.erase(i);
+  // Sanity check: direct_by_nid_ should contain a reverse mapping.
+  auto j = direct_by_nid_.find(node);
+  if (j == direct_by_nid_.end()) {
+    CAF_LOG_WARNING("no reverse mapping exists for the connection handle");
+    return node;
+  }
+  // Try to find an alternative connection for communicating with the node.
+  auto predicate = [&](const handle_to_node_map::value_type& kvp) {
+    return kvp.second == node;
+  };
+  auto e = direct_by_hdl_.end();
+  auto alternative = std::find_if(direct_by_hdl_.begin(), e, predicate);
+  if (alternative != e) {
+    // Update node <-> handle mapping.
+    j->second = alternative->first;
+    return {};
+  } else {
+    // Drop the node after losing the last connection to it.
+    direct_by_nid_.erase(j);
+    return node;
+  }
 }
 
 bool routing_table::erase_indirect(const node_id& dest) {
@@ -111,6 +132,22 @@ void routing_table::add_direct(const connection_handle& hdl,
   CAF_ASSERT(hdl_added && nid_added);
   CAF_IGNORE_UNUSED(hdl_added);
   CAF_IGNORE_UNUSED(nid_added);
+}
+
+void routing_table::add_alternative(const connection_handle& hdl,
+                                    const node_id& nid) {
+  std::unique_lock<std::mutex> guard{mtx_};
+  CAF_ASSERT(direct_by_nid_.count(nid) != 0);
+  // This member function is safe to call repeatedly. Hence, we ignore the
+  // result of emplace on purpose.
+  direct_by_hdl_.emplace(hdl, nid);
+}
+
+void routing_table::select_alternative(const connection_handle& hdl,
+                                       const node_id& nid) {
+  std::unique_lock<std::mutex> guard{mtx_};
+  CAF_ASSERT(direct_by_hdl_[hdl] == nid);
+  direct_by_nid_[nid] = hdl;
 }
 
 bool routing_table::add_indirect(const node_id& hop, const node_id& dest) {

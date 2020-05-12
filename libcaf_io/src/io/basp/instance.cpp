@@ -245,11 +245,12 @@ void instance::write_server_handshake(execution_unit* ctx, buffer_type& out_buf,
   write(ctx, out_buf, hdr, &writer);
 }
 
-void instance::write_client_handshake(execution_unit* ctx, buffer_type& buf) {
+void instance::write_client_handshake(execution_unit* ctx, buffer_type& buf,
+                                      uint8_t flags) {
   auto writer = make_callback(
     [&](serializer& sink) -> error { return sink(this_node_); });
   header hdr{message_type::client_handshake,
-             0,
+             flags,
              0,
              0,
              invalid_actor_id,
@@ -338,13 +339,17 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
       CAF_LOG_DEBUG("new direct connection:" << CAF_ARG(source_node));
       tbl_.add_direct(hdl, source_node);
       auto was_indirect = tbl_.erase_indirect(source_node);
-      // write handshake as client in response
+      // Make sure the correct path is registered in the routing table.
       auto path = tbl_.lookup(source_node);
       if (!path) {
         CAF_LOG_ERROR("no route to host after server handshake");
         return no_route_to_receiving_node;
       }
-      write_client_handshake(ctx, callee_.get_buffer(path->hdl));
+      // Repeat client handshake with select_connection_flag to make sure the
+      // server uses this connection in its routing table.
+      write_client_handshake(ctx, callee_.get_buffer(path->hdl),
+                             header::select_connection_flag);
+      // Inform the callee.
       callee_.learned_new_node_directly(source_node, was_indirect);
       callee_.finalize_handshake(source_node, aid, sigs);
       flush(*path);
@@ -359,14 +364,22 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
                         << ctx->system().render(err));
         return serializing_basp_payload_failed;
       }
-      // Drop repeated handshakes.
+      // Handle repeated handshakes by updateing the routing table as necessary.
       if (tbl_.lookup_direct(source_node)) {
-        CAF_LOG_DEBUG(
-          "received repeated client handshake:" << CAF_ARG(source_node));
+        if (hdr.has(header::select_connection_flag)) {
+          CAF_LOG_DEBUG("client selected this connection:"
+                        << CAF_ARG(source_node) << CAF_ARG(hdl));
+          tbl_.select_alternative(hdl, source_node);
+        } else {
+          CAF_LOG_DEBUG("new alternative route:" << CAF_ARG(source_node)
+                                                 << CAF_ARG(hdl));
+          tbl_.add_alternative(hdl, source_node);
+        }
         break;
       }
       // Add direct route to this node and remove any indirect entry.
-      CAF_LOG_DEBUG("new direct connection:" << CAF_ARG(source_node));
+      CAF_LOG_DEBUG("new direct connection:" << CAF_ARG(source_node)
+                                             << CAF_ARG(hdl));
       tbl_.add_direct(hdl, source_node);
       auto was_indirect = tbl_.erase_indirect(source_node);
       callee_.learned_new_node_directly(source_node, was_indirect);
