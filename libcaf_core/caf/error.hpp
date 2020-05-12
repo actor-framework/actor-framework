@@ -23,7 +23,9 @@
 #include <utility>
 
 #include "caf/atom.hpp"
+#include "caf/config.hpp"
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/pp.hpp"
 #include "caf/fwd.hpp"
 #include "caf/meta/omittable_if_empty.hpp"
 #include "caf/meta/type_name.hpp"
@@ -71,7 +73,6 @@ template <class T, class U = void>
 using enable_if_has_error_factory_t =
   typename std::enable_if<detail::error_factory<T>::specialized, U>::type;
 
-
 /// @private
 template <class T, class U = void>
 using enable_if_can_construct_error_t = typename std::enable_if<
@@ -111,9 +112,9 @@ class error : detail::comparable<error> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using inspect_fun = std::function<
-    error(meta::type_name_t, uint8_t&, atom_value&, meta::omittable_if_empty_t,
-          message&)>;
+  using inspect_fun
+    = std::function<error(meta::type_name_t, uint8_t&, atom_value&,
+                          meta::omittable_if_empty_t, message&)>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -290,7 +291,7 @@ enable_if_has_error_factory_t<Code, error> make_error(Code code, Ts&&... xs) {
 
 } // namespace caf
 
-#define CAF_ERROR_CODE_ENUM(enum_type, category_name)                          \
+#define CAF_ERROR_CODE_ENUM_2(enum_type, category_name)                        \
   namespace caf {                                                              \
   namespace detail {                                                           \
   template <>                                                                  \
@@ -304,3 +305,16 @@ enable_if_has_error_factory_t<Code, error> make_error(Code code, Ts&&... xs) {
   };                                                                           \
   }                                                                            \
   }
+
+#define CAF_ERROR_CODE_ENUM_1(type_name)                                       \
+  CAF_ERROR_CODE_ENUM_2(type_name, #type_name)
+
+#ifdef CAF_MSVC
+#  define CAF_ERROR_CODE_ENUM(...)                                             \
+    CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_ERROR_CODE_ENUM_,                           \
+                               __VA_ARGS__)(__VA_ARGS__),                      \
+               CAF_PP_EMPTY())
+#else
+#  define CAF_ERROR_CODE_ENUM(...)                                             \
+    CAF_PP_OVERLOAD(CAF_ERROR_CODE_ENUM_, __VA_ARGS__)(__VA_ARGS__)
+#endif
