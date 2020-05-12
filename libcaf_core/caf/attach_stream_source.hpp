@@ -21,6 +21,7 @@
 #include <tuple>
 
 #include "caf/broadcast_downstream_manager.hpp"
+#include "caf/check_typed_input.hpp"
 #include "caf/default_downstream_manager.hpp"
 #include "caf/detail/stream_source_driver_impl.hpp"
 #include "caf/detail/stream_source_impl.hpp"

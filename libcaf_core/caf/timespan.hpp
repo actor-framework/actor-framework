@@ -36,4 +36,15 @@ struct infinite_t {
 /// Constant for passing "no timeout" to functions such as `request`.
 static constexpr infinite_t infinite = infinite_t{};
 
+// -- forward compatibility with CAF 0.18 --------------------------------------
+
+constexpr bool is_infinite(infinite_t) {
+  return true;
+}
+
+template <class Rep, class Period>
+constexpr bool is_infinite(std::chrono::duration<Rep, Period>) {
+  return false;
+}
+
 } // namespace caf

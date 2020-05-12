@@ -138,6 +138,12 @@ inline bool operator!=(const duration& lhs, const duration& rhs) {
 }
 
 /// @relates duration
+template <class T>
+inline bool is_infinite(duration x) {
+  return !x.valid();
+}
+
+/// @relates duration
 template <class Clock, class Duration>
 std::chrono::time_point<Clock, Duration>&
 operator+=(std::chrono::time_point<Clock, Duration>& lhs, const duration& rhs) {
