@@ -91,9 +91,9 @@ public:
     construct(other);
   }
 
-  template <class Code, class E = enable_if_has_make_error_t<Code>>
+  template <class Code, class = enable_if_can_construct_error_t<Code>>
   expected(Code code) : engaged_(false) {
-    new (std::addressof(error_)) caf::error(make_error(code));
+    new (std::addressof(error_)) caf::error(code);
   }
 
   expected(expected&& other) noexcept(nothrow_move) {
@@ -139,7 +139,6 @@ public:
     return *this;
   }
 
-
   expected& operator=(T&& x) noexcept(nothrow_move) {
     if (engaged_) {
       value_ = std::move(x);
@@ -169,8 +168,8 @@ public:
   }
 
   template <class Code>
-  enable_if_has_make_error_t<Code, expected&> operator=(Code code) {
-    return *this = make_error(code);
+  enable_if_can_construct_error_t<Code, expected&> operator=(Code code) {
+    return *this = caf::error{code};
   }
 
   // -- modifiers --------------------------------------------------------------
@@ -390,8 +389,8 @@ public:
     // nop
   }
 
-  template <class Code, class E = enable_if_has_make_error_t<Code>>
-  expected(Code code) : error_(make_error(code)) {
+  template <class Code, class = enable_if_can_construct_error_t<Code>>
+  expected(Code code) : error_(code) {
     // nop
   }
 
@@ -400,6 +399,11 @@ public:
   expected& operator=(expected&& other) noexcept {
     error_ = std::move(other.error_);
     return *this;
+  }
+
+  template <class Code>
+  enable_if_can_construct_error_t<Code, expected&> operator=(Code code) {
+    error_ = caf::error{code};
   }
 
   explicit operator bool() const {
@@ -458,4 +462,3 @@ auto operator<<(ostream& oss, const caf::expected<T>& x)
 }
 
 } // namespace std
-

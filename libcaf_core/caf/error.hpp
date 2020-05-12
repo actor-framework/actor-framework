@@ -23,7 +23,9 @@
 #include <utility>
 
 #include "caf/atom.hpp"
+#include "caf/config.hpp"
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/pp.hpp"
 #include "caf/fwd.hpp"
 #include "caf/meta/omittable_if_empty.hpp"
 #include "caf/meta/type_name.hpp"
@@ -71,6 +73,11 @@ template <class T, class U = void>
 using enable_if_has_error_factory_t =
   typename std::enable_if<detail::error_factory<T>::specialized, U>::type;
 
+/// @private
+template <class T, class U = void>
+using enable_if_can_construct_error_t = typename std::enable_if<
+  detail::error_factory<T>::specialized || has_make_error<T>::value, U>::type;
+
 /// A serializable type for storing error codes with category and optional,
 /// human-readable context information. Unlike error handling classes from
 /// the C++ standard library, this type is serializable. It consists of an
@@ -105,9 +112,9 @@ class error : detail::comparable<error> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using inspect_fun = std::function<
-    error(meta::type_name_t, uint8_t&, atom_value&, meta::omittable_if_empty_t,
-          message&)>;
+  using inspect_fun
+    = std::function<error(meta::type_name_t, uint8_t&, atom_value&,
+                          meta::omittable_if_empty_t, message&)>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -276,15 +283,21 @@ bool operator!=(E x, const error& y) {
   return !(x == y);
 }
 
+/// @relates error
+template <class Code, class... Ts>
+enable_if_has_error_factory_t<Code, error> make_error(Code code, Ts&&... xs) {
+  return error{code, std::forward<Ts>(xs)...};
+}
+
 } // namespace caf
 
-#define CAF_ERROR_CODE_ENUM(enum_name)                                         \
+#define CAF_ERROR_CODE_ENUM_2(enum_type, category_name)                        \
   namespace caf {                                                              \
   namespace detail {                                                           \
   template <>                                                                  \
-  struct error_factory<enum_name> {                                            \
+  struct error_factory<enum_type> {                                            \
     static constexpr bool specialized = true;                                  \
-    static constexpr atom_value category = atom(#enum_name);                   \
+    static constexpr atom_value category = atom(category_name);                \
     template <class... Ts>                                                     \
     static message context(Ts&&... xs) {                                       \
       return make_message(std::forward<Ts>(xs)...);                            \
@@ -292,3 +305,16 @@ bool operator!=(E x, const error& y) {
   };                                                                           \
   }                                                                            \
   }
+
+#define CAF_ERROR_CODE_ENUM_1(type_name)                                       \
+  CAF_ERROR_CODE_ENUM_2(type_name, #type_name)
+
+#ifdef CAF_MSVC
+#  define CAF_ERROR_CODE_ENUM(...)                                             \
+    CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_ERROR_CODE_ENUM_,                           \
+                               __VA_ARGS__)(__VA_ARGS__),                      \
+               CAF_PP_EMPTY())
+#else
+#  define CAF_ERROR_CODE_ENUM(...)                                             \
+    CAF_PP_OVERLOAD(CAF_ERROR_CODE_ENUM_, __VA_ARGS__)(__VA_ARGS__)
+#endif

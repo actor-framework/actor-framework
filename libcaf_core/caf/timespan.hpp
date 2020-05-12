@@ -26,5 +26,25 @@ namespace caf {
 /// A portable timespan type with nanosecond resolution.
 using timespan = std::chrono::duration<int64_t, std::nano>;
 
-} // namespace caf
+/// Represents an infinite amount of timeout for specifying "invalid" timeouts.
+struct infinite_t {
+  constexpr infinite_t() {
+    // nop
+  }
+};
 
+/// Constant for passing "no timeout" to functions such as `request`.
+static constexpr infinite_t infinite = infinite_t{};
+
+// -- forward compatibility with CAF 0.18 --------------------------------------
+
+constexpr bool is_infinite(infinite_t) {
+  return true;
+}
+
+template <class Rep, class Period>
+constexpr bool is_infinite(std::chrono::duration<Rep, Period>) {
+  return false;
+}
+
+} // namespace caf

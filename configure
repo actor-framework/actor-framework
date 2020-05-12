@@ -390,6 +390,46 @@ while [ $# -ne 0 ]; do
             append_cache_entry CAF_ENABLE_ADDRESS_SANITIZER BOOL yes
             append_cache_entry CAF_ENABLE_TYPE_ID_CHECKS BOOL yes
             ;;
+        # "overloads" for forward compatibility with new 0.18 disable-* syntax
+        --disable-memory-management)
+            append_cache_entry CAF_NO_MEM_MANAGEMENT BOOL yes
+            ;;
+        --disable-compiler-check)
+            append_cache_entry CAF_NO_COMPILER_CHECK BOOL yes
+            ;;
+        --disable-auto-libc++)
+            append_cache_entry CAF_NO_AUTO_LIBCPP BOOL yes
+            ;;
+        --disable-exceptions)
+            append_cache_entry CAF_NO_EXCEPTIONS BOOL yes
+            ;;
+        --disable-examples)
+            append_cache_entry CAF_NO_EXAMPLES BOOL yes
+            ;;
+        --disable-curl-examples)
+            append_cache_entry CAF_NO_CURL_EXAMPLES BOOL yes
+            ;;
+        --disable-testing)
+            append_cache_entry CAF_NO_UNIT_TESTS BOOL yes
+            ;;
+        --disable-opencl)
+            append_cache_entry CAF_NO_OPENCL BOOL yes
+            ;;
+        --disable-openssl)
+            append_cache_entry CAF_NO_OPENSSL BOOL yes
+            ;;
+        --disable-tools)
+            append_cache_entry CAF_NO_TOOLS BOOL yes
+            ;;
+        --disable-io)
+            append_cache_entry CAF_NO_IO BOOL yes
+            ;;
+        --disable-python)
+            append_cache_entry CAF_NO_PYTHON BOOL yes
+            ;;
+        --disable-summary)
+            append_cache_entry CAF_NO_SUMMARY BOOL yes
+            ;;
         *)
             echo "Invalid option '$1'.  Try $0 --help to see available options."
             exit 1
