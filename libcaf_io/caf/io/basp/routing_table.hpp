@@ -75,7 +75,7 @@ public:
   /// @pre `lookup_direct(hdl == nid)`
   void add_alternative(const connection_handle& hdl, const node_id& nid);
 
-  /// Forces `lookup_direct` to resolve `nid` always to `hdl`.
+  /// Forces `lookup_direct` to always resolve `nid` to `hdl`.
   void select_alternative(const connection_handle& hdl, const node_id& nid);
 
   /// Adds a new indirect route to the table.
