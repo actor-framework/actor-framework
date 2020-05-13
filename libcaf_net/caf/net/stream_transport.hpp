@@ -20,6 +20,7 @@
 
 #include <deque>
 
+#include "caf/byte_buffer.hpp"
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/endpoint_manager.hpp"

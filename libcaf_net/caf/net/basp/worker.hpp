@@ -21,6 +21,7 @@
 #include <atomic>
 #include <cstdint>
 
+#include "caf/byte_buffer.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/abstract_worker.hpp"
 #include "caf/detail/worker_hub.hpp"

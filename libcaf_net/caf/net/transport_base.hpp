@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/byte_buffer.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/overload.hpp"
 #include "caf/fwd.hpp"

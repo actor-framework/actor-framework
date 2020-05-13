@@ -21,6 +21,7 @@
 #include <deque>
 #include <vector>
 
+#include "caf/byte_buffer.hpp"
 #include "caf/fwd.hpp"
 #include "caf/ip_endpoint.hpp"
 #include "caf/logger.hpp"
