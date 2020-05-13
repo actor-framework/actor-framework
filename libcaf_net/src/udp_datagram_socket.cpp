@@ -19,6 +19,7 @@
 #include "caf/net/udp_datagram_socket.hpp"
 
 #include "caf/byte.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/detail/convert_ip_endpoint.hpp"
 #include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_aliases.hpp"
@@ -126,11 +127,11 @@ variant<size_t, sec> write(udp_datagram_socket x, span<const byte> buf,
 
 #ifdef CAF_WINDOWS
 
-variant<size_t, sec> write(udp_datagram_socket x, span<std::vector<byte>*> bufs,
+variant<size_t, sec> write(udp_datagram_socket x, span<byte_buffer*> bufs,
                            ip_endpoint ep) {
   CAF_ASSERT(bufs.size() < 10);
   WSABUF buf_array[10];
-  auto convert = [](std::vector<byte>* buf) {
+  auto convert = [](byte_buffer* buf) {
     return WSABUF{static_cast<ULONG>(buf->size()),
                   reinterpret_cast<CHAR*>(buf->data())};
   };
@@ -155,10 +156,10 @@ variant<size_t, sec> write(udp_datagram_socket x, span<std::vector<byte>*> bufs,
 
 #else // CAF_WINDOWS
 
-variant<size_t, sec> write(udp_datagram_socket x, span<std::vector<byte>*> bufs,
+variant<size_t, sec> write(udp_datagram_socket x, span<byte_buffer*> bufs,
                            ip_endpoint ep) {
   CAF_ASSERT(bufs.size() < 10);
-  auto convert = [](std::vector<byte>* buf) {
+  auto convert = [](byte_buffer* buf) {
     return iovec{buf->data(), buf->size()};
   };
   sockaddr_storage addr = {};

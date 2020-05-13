@@ -18,8 +18,6 @@
 
 #pragma once
 
-#include <vector>
-
 #include "caf/logger.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/socket.hpp"
@@ -77,10 +75,9 @@ public:
       CAF_LOG_DEBUG("unable to get multiplexer from parent");
       return false;
     }
-    auto child = make_endpoint_manager(mpx, parent.system(),
-                                       stream_transport<
-                                         application_type>{*x,
-                                                           factory_.make()});
+    auto child = make_endpoint_manager(
+      mpx, parent.system(),
+      stream_transport<application_type>{*x, factory_.make()});
     if (auto err = child->init())
       return false;
     return true;

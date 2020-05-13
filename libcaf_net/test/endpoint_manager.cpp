@@ -25,7 +25,7 @@
 
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
-#include "caf/byte.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/net/actor_proxy_impl.hpp"
@@ -39,6 +39,8 @@ using namespace caf;
 using namespace caf::net;
 
 namespace {
+
+using byte_buffer_ptr = std::shared_ptr<byte_buffer>;
 
 string_view hello_manager{"hello manager!"};
 
@@ -69,7 +71,7 @@ class dummy_transport {
 public:
   using application_type = dummy_application;
 
-  dummy_transport(stream_socket handle, std::shared_ptr<std::vector<byte>> data)
+  dummy_transport(stream_socket handle, byte_buffer_ptr data)
     : handle_(handle), data_(data), read_buf_(1024) {
     // nop
   }
@@ -146,11 +148,11 @@ public:
 private:
   stream_socket handle_;
 
-  std::shared_ptr<std::vector<byte>> data_;
+  byte_buffer_ptr data_;
 
-  std::vector<byte> read_buf_;
+  byte_buffer read_buf_;
 
-  std::vector<byte> buf_;
+  byte_buffer buf_;
 };
 
 } // namespace
@@ -158,8 +160,8 @@ private:
 CAF_TEST_FIXTURE_SCOPE(endpoint_manager_tests, fixture)
 
 CAF_TEST(send and receive) {
-  std::vector<byte> read_buf(1024);
-  auto buf = std::make_shared<std::vector<byte>>();
+  byte_buffer read_buf(1024);
+  auto buf = std::make_shared<byte_buffer>();
   auto sockets = unbox(make_stream_socket_pair());
   nonblocking(sockets.second, true);
   CAF_CHECK_EQUAL(read(sockets.second, read_buf),
@@ -184,8 +186,8 @@ CAF_TEST(send and receive) {
 }
 
 CAF_TEST(resolve and proxy communication) {
-  std::vector<byte> read_buf(1024);
-  auto buf = std::make_shared<std::vector<byte>>();
+  byte_buffer read_buf(1024);
+  auto buf = std::make_shared<byte_buffer>();
   auto sockets = unbox(make_stream_socket_pair());
   nonblocking(sockets.second, true);
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });

@@ -33,6 +33,7 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/worker_hub.hpp"
 #include "caf/error.hpp"
+#include "caf/fwd.hpp"
 #include "caf/net/basp/connection_state.hpp"
 #include "caf/net/basp/constants.hpp"
 #include "caf/net/basp/header.hpp"
@@ -54,8 +55,6 @@ namespace caf::net::basp {
 class application {
 public:
   // -- member types -----------------------------------------------------------
-
-  using buffer_type = std::vector<byte>;
 
   using byte_span = span<const byte>;
 
@@ -175,7 +174,7 @@ private:
                             byte_span received);
 
   /// Writes the handshake payload to `buf_`.
-  error generate_handshake(buffer_type& buf);
+  error generate_handshake(byte_buffer& buf);
 
   // -- member variables -------------------------------------------------------
 

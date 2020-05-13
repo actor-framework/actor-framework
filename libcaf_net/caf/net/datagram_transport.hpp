@@ -21,6 +21,7 @@
 #include <deque>
 #include <vector>
 
+#include "caf/byte_buffer.hpp"
 #include "caf/fwd.hpp"
 #include "caf/ip_endpoint.hpp"
 #include "caf/logger.hpp"
@@ -34,18 +35,18 @@
 namespace caf::net {
 
 template <class Factory>
-using datagram_transport_base = transport_base<
-  datagram_transport<Factory>,
-  transport_worker_dispatcher<Factory, ip_endpoint>, udp_datagram_socket,
-  Factory, ip_endpoint>;
+using datagram_transport_base
+  = transport_base<datagram_transport<Factory>,
+                   transport_worker_dispatcher<Factory, ip_endpoint>,
+                   udp_datagram_socket, Factory, ip_endpoint>;
 
 /// Implements a udp_transport policy that manages a datagram socket.
 template <class Factory>
 class datagram_transport : public datagram_transport_base<Factory> {
 public:
   // Maximal UDP-packet size
-  static constexpr size_t max_datagram_size = std::numeric_limits<
-    uint16_t>::max();
+  static constexpr size_t max_datagram_size
+    = std::numeric_limits<uint16_t>::max();
 
   // -- member types -----------------------------------------------------------
 
@@ -56,8 +57,6 @@ public:
   using application_type = typename factory_type::application_type;
 
   using super = datagram_transport_base<factory_type>;
-
-  using buffer_type = typename super::buffer_type;
 
   using buffer_cache_type = typename super::buffer_cache_type;
 
@@ -127,7 +126,7 @@ public:
     return none;
   }
 
-  void write_packet(id_type id, span<buffer_type*> buffers) override {
+  void write_packet(id_type id, span<byte_buffer*> buffers) override {
     CAF_LOG_TRACE("");
     CAF_ASSERT(!buffers.empty());
     if (packet_queue_.empty())
@@ -143,7 +142,7 @@ public:
     buffer_cache_type bytes;
     size_t size;
 
-    packet(id_type id, span<buffer_type*> bufs) : id(id) {
+    packet(id_type id, span<byte_buffer*> bufs) : id(id) {
       size = 0;
       for (auto buf : bufs) {
         size += buf->size();
@@ -151,8 +150,8 @@ public:
       }
     }
 
-    std::vector<std::vector<byte>*> get_buffer_ptrs() {
-      std::vector<std::vector<byte>*> ptrs;
+    std::vector<byte_buffer*> get_buffer_ptrs() {
+      std::vector<byte_buffer*> ptrs;
       for (auto& buf : bytes)
         ptrs.emplace_back(&buf);
       return ptrs;

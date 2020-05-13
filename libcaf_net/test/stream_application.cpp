@@ -25,7 +25,7 @@
 
 #include <vector>
 
-#include "caf/byte.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/net/backend/test.hpp"
 #include "caf/net/basp/connection_state.hpp"
 #include "caf/net/basp/constants.hpp"
@@ -45,8 +45,6 @@ using namespace caf::net;
     CAF_FAIL(err);
 
 namespace {
-
-using buffer_type = std::vector<byte>;
 
 using transport_type = stream_transport<basp::application>;
 
@@ -80,8 +78,8 @@ struct fixture : host_fixture, test_coordinator_fixture<config> {
   }
 
   template <class... Ts>
-  buffer_type to_buf(const Ts&... xs) {
-    buffer_type buf;
+  byte_buffer to_buf(const Ts&... xs) {
+    byte_buffer buf;
     binary_serializer sink{system(), buf};
     REQUIRE_OK(sink(xs...));
     return buf;
@@ -108,7 +106,7 @@ struct fixture : host_fixture, test_coordinator_fixture<config> {
   }
 
   void consume_handshake() {
-    buffer_type buf(basp::header_size);
+    byte_buffer buf(basp::header_size);
     if (fetch_size(read(sock, buf)) != basp::header_size)
       CAF_FAIL("unable to read " << basp::header_size << " bytes");
     auto hdr = basp::header::from_bytes(buf);
@@ -159,7 +157,7 @@ struct fixture : host_fixture, test_coordinator_fixture<config> {
 #define RECEIVE(msg_type, op_data, ...)                                        \
   do {                                                                         \
     CAF_MESSAGE("receive " << msg_type);                                       \
-    buffer_type buf(basp::header_size);                                        \
+    byte_buffer buf(basp::header_size);                                        \
     if (fetch_size(read(sock, buf)) != basp::header_size)                      \
       CAF_FAIL("unable to read " << basp::header_size << " bytes");            \
     auto hdr = basp::header::from_bytes(buf);                                  \

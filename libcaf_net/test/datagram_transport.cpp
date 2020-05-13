@@ -25,6 +25,7 @@
 
 #include "caf/binary_serializer.hpp"
 #include "caf/byte.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/net/actor_proxy_impl.hpp"
@@ -42,16 +43,14 @@ using namespace caf::net::ip;
 
 namespace {
 
+using byte_buffer_ptr = std::shared_ptr<byte_buffer>;
+
 constexpr string_view hello_manager = "hello manager!";
 
 class dummy_application_factory;
 
 struct fixture : test_coordinator_fixture<>, host_fixture {
-  using buffer_type = std::vector<byte>;
-
-  using buffer_ptr = std::shared_ptr<buffer_type>;
-
-  fixture() : shared_buf(std::make_shared<buffer_type>(1024)) {
+  fixture() : shared_buf(std::make_shared<byte_buffer>(1024)) {
     mpx = std::make_shared<multiplexer>();
     if (auto err = mpx->init())
       CAF_FAIL("mpx->init failed: " << err);
@@ -79,7 +78,7 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
     return mpx->poll_once(false);
   }
 
-  error read_from_socket(udp_datagram_socket sock, buffer_type& buf) {
+  error read_from_socket(udp_datagram_socket sock, byte_buffer& buf) {
     uint8_t receive_attempts = 0;
     variant<std::pair<size_t, ip_endpoint>, sec> read_ret;
     do {
@@ -97,19 +96,15 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
   }
 
   multiplexer_ptr mpx;
-  buffer_ptr shared_buf;
+  byte_buffer_ptr shared_buf;
   ip_endpoint ep;
   udp_datagram_socket send_socket;
   udp_datagram_socket recv_socket;
 };
 
 class dummy_application {
-  using buffer_type = std::vector<byte>;
-
-  using buffer_ptr = std::shared_ptr<buffer_type>;
-
 public:
-  explicit dummy_application(buffer_ptr rec_buf)
+  explicit dummy_application(byte_buffer_ptr rec_buf)
     : rec_buf_(std::move(rec_buf)){
       // nop
     };
@@ -169,16 +164,15 @@ public:
   }
 
 private:
-  buffer_ptr rec_buf_;
+  byte_buffer_ptr rec_buf_;
 };
 
 class dummy_application_factory {
-  using buffer_ptr = std::shared_ptr<std::vector<byte>>;
-
 public:
   using application_type = dummy_application;
 
-  explicit dummy_application_factory(buffer_ptr buf) : buf_(std::move(buf)) {
+  explicit dummy_application_factory(byte_buffer_ptr buf)
+    : buf_(std::move(buf)) {
     // nop
   }
 
@@ -187,7 +181,7 @@ public:
   }
 
 private:
-  buffer_ptr buf_;
+  byte_buffer_ptr buf_;
 };
 
 } // namespace
@@ -218,7 +212,7 @@ CAF_TEST(receive) {
 
 CAF_TEST(resolve and proxy communication) {
   using transport_type = datagram_transport<dummy_application_factory>;
-  buffer_type recv_buf(1024);
+  byte_buffer recv_buf(1024);
   auto uri = unbox(make_uri("test:/id/42"));
   auto mgr = make_endpoint_manager(
     mpx, sys,

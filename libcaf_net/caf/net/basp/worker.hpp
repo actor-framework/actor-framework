@@ -20,11 +20,12 @@
 
 #include <atomic>
 #include <cstdint>
-#include <vector>
 
+#include "caf/byte_buffer.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/abstract_worker.hpp"
 #include "caf/detail/worker_hub.hpp"
+#include "caf/fwd.hpp"
 #include "caf/net/basp/header.hpp"
 #include "caf/net/basp/message_queue.hpp"
 #include "caf/net/basp/remote_message_handler.hpp"
@@ -48,8 +49,6 @@ public:
 
   using scheduler_type = scheduler::abstract_coordinator;
 
-  using buffer_type = std::vector<byte>;
-
   using hub_type = detail::worker_hub<worker>;
 
   // -- constructors, destructors, and assignment operators --------------------
@@ -72,10 +71,9 @@ private:
   // -- constants and assertions -----------------------------------------------
 
   /// Stores how many bytes the "first half" of this object requires.
-  static constexpr size_t pointer_members_size = sizeof(hub_type*)
-                                                 + sizeof(message_queue*)
-                                                 + sizeof(proxy_registry*)
-                                                 + sizeof(actor_system*);
+  static constexpr size_t pointer_members_size
+    = sizeof(hub_type*) + sizeof(message_queue*) + sizeof(proxy_registry*)
+      + sizeof(actor_system*);
 
   static_assert(CAF_CACHE_LINE_SIZE > pointer_members_size,
                 "invalid cache line size");
@@ -108,7 +106,7 @@ private:
   header hdr_;
 
   /// Contains whatever this worker deserializes next.
-  buffer_type payload_;
+  byte_buffer payload_;
 };
 
 } // namespace caf::net::basp

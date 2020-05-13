@@ -38,8 +38,9 @@ struct CAF_NET_EXPORT udp_datagram_socket : network_socket {
 ///           specific port that was bound.
 /// @returns The connected socket or an error.
 /// @relates udp_datagram_socket
-expected<std::pair<udp_datagram_socket, uint16_t>> CAF_NET_EXPORT
-make_udp_datagram_socket(ip_endpoint ep, bool reuse_addr = false);
+expected<std::pair<udp_datagram_socket, uint16_t>>
+  CAF_NET_EXPORT make_udp_datagram_socket(ip_endpoint ep,
+                                          bool reuse_addr = false);
 
 /// Enables or disables `SIO_UDP_CONNRESET` error on `x`.
 /// @relates udp_datagram_socket
@@ -66,7 +67,7 @@ variant<std::pair<size_t, ip_endpoint>, sec>
 /// @relates udp_datagram_socket
 /// @pre `bufs.size() < 10`
 variant<size_t, sec> CAF_NET_EXPORT write(udp_datagram_socket x,
-                                          span<std::vector<byte>*> bufs,
+                                          span<byte_buffer*> bufs,
                                           ip_endpoint ep);
 
 /// Sends the content of `buf` as a datagram to the endpoint `ep` on socket `x`.

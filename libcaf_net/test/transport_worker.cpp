@@ -25,6 +25,7 @@
 
 #include "caf/binary_serializer.hpp"
 #include "caf/byte.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/ip_endpoint.hpp"
 #include "caf/make_actor.hpp"
@@ -50,7 +51,7 @@ struct application_result {
 };
 
 struct transport_result {
-  std::vector<byte> packet_buffer;
+  byte_buffer packet_buffer;
   ip_endpoint ep;
 };
 

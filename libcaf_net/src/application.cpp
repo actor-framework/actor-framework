@@ -24,7 +24,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
-#include "caf/byte.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/parse.hpp"
@@ -379,7 +379,7 @@ error application::handle_down_message(packet_writer&, header received_hdr,
   return none;
 }
 
-error application::generate_handshake(std::vector<byte>& buf) {
+error application::generate_handshake(byte_buffer& buf) {
   binary_serializer sink{&executor_, buf};
   return sink(system().node(),
               get_or(system().config(), "middleman.app-identifiers",

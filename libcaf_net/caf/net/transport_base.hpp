@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/byte_buffer.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/overload.hpp"
 #include "caf/fwd.hpp"
@@ -51,9 +52,7 @@ public:
 
   using id_type = IdType;
 
-  using buffer_type = std::vector<byte>;
-
-  using buffer_cache_type = std::vector<buffer_type>;
+  using buffer_cache_type = std::vector<byte_buffer>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -191,26 +190,26 @@ public:
   /// transport.
   /// @param id The id of the destination endpoint.
   /// @param buffers Pointers to the buffers that make up the packet content.
-  virtual void write_packet(id_type id, span<buffer_type*> buffers) = 0;
+  virtual void write_packet(id_type id, span<byte_buffer*> buffers) = 0;
 
   // -- buffer management ------------------------------------------------------
 
   /// Returns the next cached header buffer or creates a new one if no buffers
   /// are cached.
-  buffer_type next_header_buffer() {
+  byte_buffer next_header_buffer() {
     return next_buffer_impl(header_bufs_);
   }
 
   /// Returns the next cached payload buffer or creates a new one if no buffers
   /// are cached.
-  buffer_type next_payload_buffer() {
+  byte_buffer next_payload_buffer() {
     return next_buffer_impl(payload_bufs_);
   }
 
 private:
   // -- utility functions ------------------------------------------------------
 
-  static buffer_type next_buffer_impl(buffer_cache_type cache) {
+  static byte_buffer next_buffer_impl(buffer_cache_type cache) {
     if (cache.empty())
       return {};
     auto buf = std::move(cache.back());
@@ -225,7 +224,7 @@ protected:
   buffer_cache_type header_bufs_;
   buffer_cache_type payload_bufs_;
 
-  buffer_type read_buf_;
+  byte_buffer read_buf_;
 
   endpoint_manager* manager_;
 

@@ -50,10 +50,6 @@
 #  define HOST_NAME_MAX 255
 #endif
 
-using std::pair;
-using std::string;
-using std::vector;
-
 namespace caf::net::ip {
 
 namespace {
@@ -91,9 +87,8 @@ void for_each_adapter(F f, bool is_link_local = false) {
     CAF_LOG_ERROR("failed to get adapter addresses buffer length");
     return;
   }
-  auto adapters = adapters_ptr{reinterpret_cast<IP_ADAPTER_ADDRESSES*>(
-                                 ::malloc(len)),
-                               free};
+  auto adapters = adapters_ptr{
+    reinterpret_cast<IP_ADAPTER_ADDRESSES*>(::malloc(len)), free};
   if (!adapters) {
     CAF_LOG_ERROR("malloc failed");
     return;

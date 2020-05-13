@@ -18,10 +18,8 @@
 
 #pragma once
 
-#include <vector>
-
-#include "caf/byte.hpp"
 #include "caf/detail/net_export.hpp"
+#include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/span.hpp"
 
@@ -30,15 +28,13 @@ namespace caf::net {
 /// Implements an interface for packet writing in application-layers.
 class CAF_NET_EXPORT packet_writer {
 public:
-  using buffer_type = std::vector<byte>;
-
   virtual ~packet_writer();
 
   /// Returns a buffer for writing header information.
-  virtual buffer_type next_header_buffer() = 0;
+  virtual byte_buffer next_header_buffer() = 0;
 
   /// Returns a buffer for writing payload content.
-  virtual buffer_type next_payload_buffer() = 0;
+  virtual byte_buffer next_payload_buffer() = 0;
 
   /// Convenience function to write a packet consisting of multiple buffers.
   /// @param buffers all buffers for the packet. The first buffer is a header
@@ -46,14 +42,14 @@ public:
   /// @warning this function takes ownership of `buffers`.
   template <class... Ts>
   void write_packet(Ts&... buffers) {
-    buffer_type* bufs[] = {&buffers...};
+    byte_buffer* bufs[] = {&buffers...};
     write_impl(make_span(bufs, sizeof...(Ts)));
   }
 
 protected:
   /// Implementing function for `write_packet`.
   /// @param buffers a `span` containing all buffers of a packet.
-  virtual void write_impl(span<buffer_type*> buffers) = 0;
+  virtual void write_impl(span<byte_buffer*> buffers) = 0;
 };
 
 } // namespace caf::net

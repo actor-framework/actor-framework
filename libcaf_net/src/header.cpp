@@ -21,6 +21,7 @@
 #include <cstring>
 
 #include "caf/byte.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/span.hpp"
 
@@ -64,7 +65,7 @@ std::array<byte, header_size> to_bytes(header x) {
   return result;
 }
 
-void to_bytes(header x, std::vector<byte>& buf) {
+void to_bytes(header x, byte_buffer& buf) {
   buf.resize(header_size);
   to_bytes_impl(x, buf.data());
 }

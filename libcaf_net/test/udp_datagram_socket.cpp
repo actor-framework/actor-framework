@@ -24,6 +24,7 @@
 #include "caf/test/dsl.hpp"
 
 #include "caf/binary_serializer.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/ip_address.hpp"
@@ -62,10 +63,10 @@ struct fixture : host_fixture {
   ip_endpoint ep;
   udp_datagram_socket send_socket;
   udp_datagram_socket receive_socket;
-  std::vector<byte> buf;
+  byte_buffer buf;
 };
 
-error read_from_socket(udp_datagram_socket sock, std::vector<byte>& buf) {
+error read_from_socket(udp_datagram_socket sock, byte_buffer& buf) {
   uint8_t receive_attempts = 0;
   variant<std::pair<size_t, ip_endpoint>, sec> read_ret;
   do {
@@ -115,17 +116,17 @@ CAF_TEST(read / write using span<byte>) {
   CAF_CHECK_EQUAL(received, hello_test);
 }
 
-CAF_TEST(read / write using span<std::vector<byte>*>) {
+CAF_TEST(read / write using span<byte_buffer*>) {
   // generate header and payload in separate buffers
   header hdr{hello_test.size()};
-  std::vector<byte> hdr_buf;
+  byte_buffer hdr_buf;
   binary_serializer sink(sys, hdr_buf);
   if (auto err = sink(hdr))
     CAF_FAIL("serializing payload failed" << err);
   auto bytes = as_bytes(make_span(hello_test));
-  std::vector<byte> payload_buf(bytes.begin(), bytes.end());
+  byte_buffer payload_buf(bytes.begin(), bytes.end());
   auto packet_size = hdr_buf.size() + payload_buf.size();
-  std::vector<std::vector<byte>*> bufs{&hdr_buf, &payload_buf};
+  std::vector<byte_buffer*> bufs{&hdr_buf, &payload_buf};
   CAF_CHECK_EQUAL(write(send_socket, bufs, ep), packet_size);
   // receive both as one single packet.
   buf.resize(packet_size);
