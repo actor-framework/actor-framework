@@ -145,7 +145,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   constructor overload. This (explicit) overload now exists and the conversion
   should work as expected.
 
-## [0.17.5] - Unreleased
+## [0.17.5] - 2020-05-13
 
 ### Added
 
@@ -464,7 +464,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Configuring colored terminal output should now print colored output.
 
 [0.18.0]: https://github.com/actor-framework/actor-framework/compare/0.17.3...master
-[0.17.5]: https://github.com/actor-framework/actor-framework/compare/0.17.4...release/0.17
+[0.17.5]: https://github.com/actor-framework/actor-framework/releases/0.17.5
 [0.17.4]: https://github.com/actor-framework/actor-framework/releases/0.17.4
 [0.17.3]: https://github.com/actor-framework/actor-framework/releases/0.17.3
 [0.17.2]: https://github.com/actor-framework/actor-framework/releases/0.17.2
