@@ -3,19 +3,22 @@
 Actors
 ======
 
-Actors in CAF are a lightweight abstraction for units of computations. They
-are active objects in the sense that they own their state and do not allow
+Actors in CAF represent a lightweight abstraction for units of computations.
+They are active objects in the sense that they own their state and do not allow
 others to access it. The only way to modify the state of an actor is sending
 messages to it.
 
 CAF provides several actor implementations, each covering a particular use
-case. The available implementations differ in three characteristics: (1)
-dynamically or statically typed, (2) class-based or function-based, and (3)
-using asynchronous event handlers or blocking receives. These three
-characteristics can be combined freely, with one exception: statically typed
-actors are always event-based. For example, an actor can have dynamically typed
-messaging, implement a class, and use blocking receives. The common base class
-for all user-defined actors is called ``local_actor``.
+case. The available implementations differ in three characteristics:
+
+#. dynamically or statically typed
+#. class-based or function-based
+#. using asynchronous event handlers or blocking receives
+
+These three characteristics can be combined freely, with one exception:
+statically typed actors are always event-based. For example, an actor can have
+dynamically typed messaging, implement a class, and use blocking receives. The
+common base class for all user-defined actors is called ``local_actor``.
 
 Dynamically typed actors are more familiar to developers coming from Erlang or
 Akka. They (usually) enable faster prototyping but require extensive unit
@@ -28,7 +31,7 @@ visible across multiple translation units.
 Actors that utilize the blocking receive API always require an exclusive thread
 of execution. Event-based actors, on the other hand, are usually scheduled
 cooperatively and are very lightweight with a memory footprint of only few
-hundred bytes. Developers can exclude---detach---event-based actors that
+hundred bytes. Developers can exclude (detach) event-based actors that
 potentially starve others from the cooperative scheduling while spawning it. A
 detached actor lives in its own thread of execution.
 
@@ -38,10 +41,10 @@ Environment / Actor Systems
 ---------------------------
 
 All actors live in an ``actor_system`` representing an actor environment
-including :ref:`scheduler`, :ref:`registry`, and optional components such as a
-:ref:`middleman`. A single process can have multiple ``actor_system`` instances,
-but this is usually not recommended (a use case for multiple systems is to
-strictly separate two or more sets of actors by running them in different
+including :ref:`scheduler`, :ref:`registry`, and optional components (modules)
+such as a :ref:`middleman`. A single process can have multiple ``actor_system``
+instances, but this is usually not recommended (a use case for multiple systems
+is to strictly separate two or more sets of actors by running them in different
 schedulers). For configuration and fine-tuning options of actor systems see
 :ref:`system-config`. A distributed CAF application consists of two or more
 connected actor systems. We also refer to interconnected ``actor_system``
@@ -71,19 +74,15 @@ user-defined actors are ``event_based_actor`` or
 inherited from ``monitorable_actor`` and ``abstract_actor``.
 
 +-------------------------------------+--------------------------------------------------------+
-| **Types**                           |                                                        |
+| **Types**                                                                                    |
 +-------------------------------------+--------------------------------------------------------+
 | ``mailbox_type``                    | A concurrent, many-writers-single-reader queue type.   |
 +-------------------------------------+--------------------------------------------------------+
-|                                     |                                                        |
-+-------------------------------------+--------------------------------------------------------+
-| **Constructors**                    |                                                        |
+| **Constructors**                                                                             |
 +-------------------------------------+--------------------------------------------------------+
 | ``(actor_config&)``                 | Constructs the actor using a config.                   |
 +-------------------------------------+--------------------------------------------------------+
-|                                     |                                                        |
-+-------------------------------------+--------------------------------------------------------+
-| **Observers**                       |                                                        |
+| **Observers**                                                                                |
 +-------------------------------------+--------------------------------------------------------+
 | ``actor_addr address()``            | Returns the address of this actor.                     |
 +-------------------------------------+--------------------------------------------------------+
@@ -93,17 +92,15 @@ inherited from ``monitorable_actor`` and ``abstract_actor``.
 +-------------------------------------+--------------------------------------------------------+
 | ``execution_unit* context()``       | Returns underlying thread or current scheduler worker. |
 +-------------------------------------+--------------------------------------------------------+
-|                                     |                                                        |
+| **Customization Points**                                                                     |
 +-------------------------------------+--------------------------------------------------------+
-| **Customization Points**            |                                                        |
+| ``on_exit()``                       | Performs cleanup steps.                                |
 +-------------------------------------+--------------------------------------------------------+
-| ``on_exit()``                       | Can be overridden to perform cleanup code.             |
+| ``initialize()``                    | Installs an initial behavior.                          |
 +-------------------------------------+--------------------------------------------------------+
 | ``const char* name()``              | Returns a debug name for this actor type.              |
 +-------------------------------------+--------------------------------------------------------+
-|                                     |                                                        |
-+-------------------------------------+--------------------------------------------------------+
-| **Actor Management**                |                                                        |
+| **Actor Management**                                                                         |
 +-------------------------------------+--------------------------------------------------------+
 | ``link_to(other)``                  | Links to ``other`` (see :ref:`link`).                  |
 +-------------------------------------+--------------------------------------------------------+
@@ -117,15 +114,12 @@ inherited from ``monitorable_actor`` and ``abstract_actor``.
 +-------------------------------------+--------------------------------------------------------+
 | ``spawn<T>(xs...)``                 | Spawns a new actor of type ``T``.                      |
 +-------------------------------------+--------------------------------------------------------+
-|                                     |                                                        |
-+-------------------------------------+--------------------------------------------------------+
-| **Message Processing**              |                                                        |
+| **Message Processing**                                                                       |
 +-------------------------------------+--------------------------------------------------------+
 | ``T make_response_promise<Ts...>()``| Allows an actor to delay its response message.         |
 +-------------------------------------+--------------------------------------------------------+
 | ``T response(xs...)``               | Convenience function for creating fulfilled promises.  |
 +-------------------------------------+--------------------------------------------------------+
-
 
 Class ``scheduled_actor``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -135,7 +129,7 @@ statically and dynamically typed event-based actors as well as brokers
 :ref:`broker`.
 
 +-------------------------------+--------------------------------------------------------------------------+
-| **Types**                     |                                                                          |
+| **Types**                                                                                                |
 +-------------------------------+--------------------------------------------------------------------------+
 | ``pointer``                   | ``scheduled_actor*``                                                     |
 +-------------------------------+--------------------------------------------------------------------------+
@@ -149,23 +143,17 @@ statically and dynamically typed event-based actors as well as brokers
 +-------------------------------+--------------------------------------------------------------------------+
 | ``exit_handler``              | ``function<void (pointer, exit_msg&)>``                                  |
 +-------------------------------+--------------------------------------------------------------------------+
-|                               |                                                                          |
-+-------------------------------+--------------------------------------------------------------------------+
-| **Constructors**              |                                                                          |
+| **Constructors**                                                                                         |
 +-------------------------------+--------------------------------------------------------------------------+
 | ``(actor_config&)``           | Constructs the actor using a config.                                     |
 +-------------------------------+--------------------------------------------------------------------------+
-|                               |                                                                          |
-+-------------------------------+--------------------------------------------------------------------------+
-| **Termination**               |                                                                          |
+| **Termination**                                                                                          |
 +-------------------------------+--------------------------------------------------------------------------+
 | ``quit()``                    | Stops this actor with normal exit reason.                                |
 +-------------------------------+--------------------------------------------------------------------------+
 | ``quit(error x)``             | Stops this actor with error ``x``.                                       |
 +-------------------------------+--------------------------------------------------------------------------+
-|                               |                                                                          |
-+-------------------------------+--------------------------------------------------------------------------+
-| **Special-purpose Handlers**  |                                                                          |
+| **Special-purpose Handlers**                                                                             |
 +-------------------------------+--------------------------------------------------------------------------+
 | ``set_exception_handler(F f)``| Installs ``f`` for converting exceptions to errors (see :ref:`error`).   |
 +-------------------------------+--------------------------------------------------------------------------+
@@ -191,45 +179,37 @@ actor is considered *done* only after it returned from ``act`` (or
 from the implementation in function-based actors). A ``scoped_actor``
 sends its exit messages as part of its destruction.
 
-+----------------------------------+---------------------------------------------------+
-| **Constructors**                 |                                                   |
-+----------------------------------+---------------------------------------------------+
-| ``(actor_config&)``              | Constructs the actor using a config.              |
-+----------------------------------+---------------------------------------------------+
-|                                  |                                                   |
-+----------------------------------+---------------------------------------------------+
-| **Customization Points**         |                                                   |
-+----------------------------------+---------------------------------------------------+
-| ``void act()``                   | Implements the behavior of the actor.             |
-+----------------------------------+---------------------------------------------------+
-|                                  |                                                   |
-+----------------------------------+---------------------------------------------------+
-| **Termination**                  |                                                   |
-+----------------------------------+---------------------------------------------------+
-| ``const error& fail_state()``    | Returns the current exit reason.                  |
-+----------------------------------+---------------------------------------------------+
-| ``fail_state(error x)``          | Sets the current exit reason.                     |
-+----------------------------------+---------------------------------------------------+
-|                                  |                                                   |
-+----------------------------------+---------------------------------------------------+
-| **Actor Management**             |                                                   |
-+----------------------------------+---------------------------------------------------+
-| ``wait_for(Ts... xs)``           | Blocks until all actors ``xs...`` are done.       |
-+----------------------------------+---------------------------------------------------+
-| ``await_all_other_actors_done()``| Blocks until all other actors are done.           |
-+----------------------------------+---------------------------------------------------+
-|                                  |                                                   |
-+----------------------------------+---------------------------------------------------+
-| **Message Handling**             |                                                   |
-+----------------------------------+---------------------------------------------------+
-| ``receive(Ts... xs)``            | Receives a message using the callbacks ``xs...``. |
-+----------------------------------+---------------------------------------------------+
-| ``receive_for(T& begin, T end)`` | See receive-loop_.                                |
-+----------------------------------+---------------------------------------------------+
-| ``receive_while(F stmt)``        | See receive-loop_.                                |
-+----------------------------------+---------------------------------------------------+
-| ``do_receive(Ts... xs)``         | See receive-loop_.                                |
-+----------------------------------+---------------------------------------------------+
++-----------------------------------+---------------------------------------------------+
+| **Constructors**                                                                      |
++-----------------------------------+---------------------------------------------------+
+| ``(actor_config&)``               | Constructs the actor using a config.              |
++-----------------------------------+---------------------------------------------------+
+| **Customization Points**                                                              |
++-----------------------------------+---------------------------------------------------+
+| ``void act()``                    | Implements the behavior of the actor.             |
++-----------------------------------+---------------------------------------------------+
+| **Termination**                                                                       |
++-----------------------------------+---------------------------------------------------+
+| ``const error& fail_state()``     | Returns the current exit reason.                  |
++-----------------------------------+---------------------------------------------------+
+| ``fail_state(error x)``           | Sets the current exit reason.                     |
++-----------------------------------+---------------------------------------------------+
+| **Actor Management**                                                                  |
++-----------------------------------+---------------------------------------------------+
+| ``wait_for(Ts... xs)``            | Blocks until all actors ``xs...`` are done.       |
++-----------------------------------+---------------------------------------------------+
+| ``await_all_other_actors_done()`` | Blocks until all other actors are done.           |
++-----------------------------------+---------------------------------------------------+
+| **Message Handling**              |                                                   |
++-----------------------------------+---------------------------------------------------+
+| ``receive(Ts... xs)``             | Receives a message using the callbacks ``xs...``. |
++-----------------------------------+---------------------------------------------------+
+| ``receive_for(T& begin, T end)``  | See :ref:`receive-loop`.                          |
++-----------------------------------+---------------------------------------------------+
+| ``receive_while(F stmt)``         | See :ref:`receive-loop`.                          |
++-----------------------------------+---------------------------------------------------+
+| ``do_receive(Ts... xs)``          | See :ref:`receive-loop`.                          |
++-----------------------------------+---------------------------------------------------+
 
 .. _interface:
 
@@ -250,7 +230,8 @@ messaging interface for a simple calculator.
 
 .. literalinclude:: /examples/message_passing/calculator.cpp
    :language: C++
-   :lines: 17-18
+   :start-after: --(rst-actor-begin)--
+   :end-before: --(rst-actor-end)--
 
 It is not required to create a type alias such as ``calculator_actor``,
 but it makes dealing with statically typed actors much easier. Also, a central
@@ -300,18 +281,20 @@ parameter. For example, the following functions and classes represent actors.
 
 .. literalinclude:: /examples/message_passing/calculator.cpp
    :language: C++
-   :lines: 21-26
+   :start-after: --(rst-fwd-begin)--
+   :end-before: --(rst-fwd-end)--
 
 Spawning an actor for each implementation is illustrated below.
 
 .. literalinclude:: /examples/message_passing/calculator.cpp
    :language: C++
-   :lines: 123-128
+   :start-after: --(rst-spawn-begin)--
+   :end-before: --(rst-spawn-end)--
 
-Additional arguments to ``spawn`` are passed to the constructor of a
-class or used as additional function arguments, respectively. In the example
-above, none of the three functions takes any argument other than the implicit
-but optional ``self`` pointer.
+Additional arguments to ``spawn`` are passed to the constructor of a class or
+used as additional function arguments, respectively. In the example above, none
+of the three functions takes any argument other than the implicit (optional)
+``self`` pointer.
 
 .. _function-based:
 
@@ -323,7 +306,7 @@ argument *can* be used to capture a pointer to the actor itself. The type
 of this pointer is usually ``event_based_actor*`` or
 ``blocking_actor*``. The proper pointer type for any
 ``typed_actor`` handle ``T`` can be obtained via
-``T::pointer`` interface_.
+``T::pointer`` (see :ref:`interface`).
 
 Blocking actors simply implement their behavior in the function body. The actor
 is done once it returns from that function.
@@ -344,7 +327,8 @@ dynamically typed).
 
 .. literalinclude:: /examples/message_passing/calculator.cpp
    :language: C++
-   :lines: 28-56
+   :start-after: --(rst-funs-begin)--
+   :end-before: --(rst-funs-end)--
 
 .. _class-based:
 
@@ -363,15 +347,16 @@ Implementing an actor using a class requires the following:
 Implementing actors with classes works for all kinds of actors and allows
 simple management of state via member variables. However, composing states via
 inheritance can get quite tedious. For dynamically typed actors, composing
-states is particularly hard, because the compiler cannot provide much help. For
-statically typed actors, CAF also provides an API for composable
-behaviors composable-behavior_ that works well with inheritance. The
-following three examples implement the forward declarations shown in
-spawn_.
+states is particularly hard, because the compiler cannot provide much help.
+
+The following three classes implement the prototypes shown in :ref:`spawn` and
+again feature one blocking actor and two event-based actors (statically and
+dynamically typed).
 
 .. literalinclude:: /examples/message_passing/calculator.cpp
    :language: C++
-   :lines: 58-92
+   :start-after: --(rst-classes-begin)--
+   :end-before: --(rst-classes-end)--
 
 .. _stateful-actor:
 
@@ -390,77 +375,11 @@ typing as well as with dynamic typing.
 
 .. literalinclude:: /examples/message_passing/cell.cpp
    :language: C++
-   :lines: 18-44
+   :start-after: --(rst-cell-begin)--
+   :end-before: --(rst-cell-end)--
 
 Stateful actors are spawned in the same way as any other function-based actor
-function-based_.
-
-.. literalinclude:: /examples/message_passing/cell.cpp
-   :language: C++
-   :lines: 49-50
-
-.. _composable-behavior:
-
-Actors from Composable Behaviors  :sup:`experimental`
------------------------------------------------------
-
-When building larger systems, it is often useful to implement the behavior of
-an actor in terms of other, existing behaviors. The composable behaviors in
-CAF allow developers to generate a behavior class from a messaging
-interface interface_.
-
-The base type for composable behaviors is ``composable_behavior<T>``,
-where ``T`` is a ``typed_actor<...>``. CAF maps each
-``replies_to<A,B,C>::with<D,E,F>`` in ``T`` to a pure virtual
-member function with signature:
-
-.. code-block:: C++
-
-     result<D, E, F> operator()(param<A>, param<B>, param<C>);.
-
-Note that ``operator()`` will take integral types as well as atom constants
-simply by value. A ``result<T>`` accepts either a value of type ``T``, a
-``skip_t`` (see :ref:`default-handler`), an ``error`` (see :ref:`error`), a
-``delegated<T>`` (see :ref:`delegate`), or a ``response_promise<T>`` (see
-:ref:`promise`). A ``result<void>`` is constructed by returning ``unit``.
-
-A behavior that combines the behaviors ``X``, ``Y``, and
-``Z`` must inherit from ``composed_behavior<X,Y,Z>`` instead of
-inheriting from the three classes directly. The class
-``composed_behavior`` ensures that the behaviors are concatenated
-correctly. In case one message handler is defined in multiple base types, the
-*first* type in declaration order wins. For example, if ``X`` and
-``Y`` both implement the interface
-``replies_to<int,int>::with<int>``, only the handler implemented in
-``X`` is active.
-
-Any composable (or composed) behavior with no pure virtual member functions can
-be spawned directly through an actor system by calling
-``system.spawn<...>()``, as shown below.
-
-.. literalinclude:: /examples/composition/calculator_behavior.cpp
-   :language: C++
-   :lines: 20-45
-
-The second example illustrates how to use non-primitive values that are wrapped
-in a ``param<T>`` when working with composable behaviors. The purpose
-of ``param<T>`` is to provide a single interface for both constant and
-non-constant access. Constant access is modeled with the implicit conversion
-operator to a const reference, the member function ``get()``, and
-``operator->``.
-
-When acquiring mutable access to the represented value, CAF copies the value
-before allowing mutable access to it if more than one reference to the value
-exists. This copy-on-write optimization avoids race conditions by design, while
-minimizing copy operations (see :ref:`copy-on-write`). A mutable reference is
-returned from the member functions ``get_mutable()`` and ``move()``. The latter
-is a convenience function for ``std::move(x.get_mutable())``. The following
-example illustrates how to use ``param<std::string>`` when implementing a simple
-dictionary.
-
-.. literalinclude:: /examples/composition/dictionary_behavior.cpp
-   :language: C++
-   :lines: 22-44
+(see :ref:`function-based`).
 
 .. _attach:
 
@@ -474,7 +393,8 @@ printing a custom string on exit.
 
 .. literalinclude:: /examples/broker/simple_broker.cpp
    :language: C++
-   :lines: 42-47
+   :start-after: --(rst-attach-begin)--
+   :end-before: --(rst-attach-end)--
 
 It is possible to attach code to remote actors. However, the cleanup code will
 run on the local machine.
@@ -608,9 +528,8 @@ more efficient code.
    ).until([&] { return received >= 10; });
 
 The examples above illustrate the correct usage of the three loops
-``receive_for``, ``receive_while`` and
-``do_receive(...).until``. It is possible to nest receives and receive
-loops.
+``receive_for``, ``receive_while`` and ``do_receive(...).until``. It is possible
+to nest receives and receive loops.
 
 .. code-block:: C++
 
@@ -631,11 +550,10 @@ loops.
 Scoped Actors
 ~~~~~~~~~~~~~
 
-The class ``scoped_actor`` offers a simple way of communicating with
-CAF actors from non-actor contexts. It overloads ``operator->`` to
-return a ``blocking_actor*``. Hence, it behaves like the implicit
-``self`` pointer in functor-based actors, only that it ceases to exist
-at scope end.
+The class ``scoped_actor`` offers a simple way of communicating with CAF actors
+from non-actor contexts. It overloads ``operator->`` to return a
+``blocking_actor*``. Hence, it behaves like the implicit ``self`` pointer in
+functor-based actors, only that it ceases to exist at scope end.
 
 .. code-block:: C++
 
@@ -647,4 +565,3 @@ at scope end.
      // self will be destroyed automatically here; any
      // actor monitoring it will receive down messages etc.
    }
-

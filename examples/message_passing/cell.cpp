@@ -1,11 +1,5 @@
-/******************************************************************************\
- * This example is a very basic, non-interactive math service implemented     *
- * for both the blocking and the event-based API.                             *
-\******************************************************************************/
-
-// This file is partially included in the manual, do not modify
-// without updating the references in the *.tex files!
-// Manual references: lines 18-44, and 49-50 (Actor.tex)
+// This example is a very basic, non-interactive math service implemented for
+// both the blocking and the event-based API.
 
 #include <cstdint>
 #include <iostream>
@@ -16,6 +10,7 @@ using std::cout;
 using std::endl;
 using namespace caf;
 
+// --(rst-cell-begin)--
 using cell = typed_actor<reacts_to<put_atom, int32_t>,
                          replies_to<get_atom>::with<int32_t>>;
 
@@ -24,14 +19,19 @@ struct cell_state {
 };
 
 cell::behavior_type type_checked_cell(cell::stateful_pointer<cell_state> self) {
-  return {[=](put_atom, int32_t val) { self->state.value = val; },
-          [=](get_atom) { return self->state.value; }};
+  return {
+    [=](put_atom, int32_t val) { self->state.value = val; },
+    [=](get_atom) { return self->state.value; },
+  };
 }
 
 behavior unchecked_cell(stateful_actor<cell_state>* self) {
-  return {[=](put_atom, int32_t val) { self->state.value = val; },
-          [=](get_atom) { return self->state.value; }};
+  return {
+    [=](put_atom, int32_t val) { self->state.value = val; },
+    [=](get_atom) { return self->state.value; },
+  };
 }
+// --(rst-cell-end)--
 
 void caf_main(actor_system& system) {
   // create one cell for each implementation

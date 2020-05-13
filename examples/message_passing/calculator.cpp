@@ -1,9 +1,5 @@
-/******************************************************************************\
- * This example is a very basic, non-interactive math service implemented     *
- * for both the blocking and the event-based API.                             *
-\******************************************************************************/
-
-// Manual refs: lines 17-18, 21-26, 28-56, 58-92, 123-128 (Actor)
+// This example is a very basic, non-interactive math service implemented for
+// both the blocking and the event-based API.
 
 #include <iostream>
 
@@ -14,10 +10,13 @@ using namespace caf;
 
 namespace {
 
+// --(rst-actor-begin)--
 using calculator_actor
   = typed_actor<replies_to<add_atom, int32_t, int32_t>::with<int32_t>,
                 replies_to<sub_atom, int32_t, int32_t>::with<int32_t>>;
+// --(rst-actor-end)--
 
+// --(rst-fwd-begin)--
 // prototypes and forward declarations
 behavior calculator_fun(event_based_actor* self);
 void blocking_calculator_fun(blocking_actor* self);
@@ -25,7 +24,9 @@ calculator_actor::behavior_type typed_calculator_fun();
 class calculator;
 class blocking_calculator;
 class typed_calculator;
+// --(rst-fwd-end)--
 
+// --(rst-funs-begin)--
 // function-based, dynamically typed, event-based API
 behavior calculator_fun(event_based_actor*) {
   return {
@@ -55,7 +56,9 @@ calculator_actor::behavior_type typed_calculator_fun() {
     [](sub_atom, int32_t a, int32_t b) { return a - b; },
   };
 }
+// --(rst-funs-end)--
 
+// --(rst-classes-begin)--
 // class-based, dynamically typed, event-based API
 class calculator : public event_based_actor {
 public:
@@ -91,6 +94,7 @@ public:
     return typed_calculator_fun();
   }
 };
+// --(rst-classes-end)--
 
 void tester(scoped_actor&) {
   // end of recursion
@@ -121,12 +125,14 @@ void tester(scoped_actor& self, const Handle& hdl, int32_t x, int32_t y,
 }
 
 void caf_main(actor_system& system) {
+  // --(rst-spawn-begin)--
   auto a1 = system.spawn(blocking_calculator_fun);
   auto a2 = system.spawn(calculator_fun);
   auto a3 = system.spawn(typed_calculator_fun);
   auto a4 = system.spawn<blocking_calculator>();
   auto a5 = system.spawn<calculator>();
   auto a6 = system.spawn<typed_calculator>();
+  // --(rst-spawn-end)--
   scoped_actor self{system};
   tester(self, a1, 1, 2, a2, 3, 4, a3, 5, 6, a4, 7, 8, a5, 9, 10, a6, 11, 12);
   self->send_exit(a1, exit_reason::user_shutdown);

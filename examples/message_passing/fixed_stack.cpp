@@ -1,7 +1,8 @@
-#include "caf/all.hpp"
 #include <cassert>
 #include <cstdint>
 #include <iostream>
+
+#include "caf/all.hpp"
 
 enum class ec : uint8_t {
   push_to_full = 1,

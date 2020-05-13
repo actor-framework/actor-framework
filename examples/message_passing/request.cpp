@@ -1,10 +1,4 @@
-/******************************************************************************\
- * Illustrates semantics of request().{then|await|receive}.                   *
-\******************************************************************************/
-
-// This file is partially included in the manual, do not modify
-// without updating the references in the *.tex files!
-// Manual references: lines 20-37, 39-51, 53-64, 67-69 (MessagePassing.tex)
+// Illustrates semantics of request().{then|await|receive}.
 
 #include <chrono>
 #include <cstdint>
@@ -16,8 +10,10 @@
 using std::endl;
 using std::vector;
 using std::chrono::seconds;
+
 using namespace caf;
 
+// --(rst-cell-begin)--
 using cell = typed_actor<reacts_to<put_atom, int32_t>,
                          replies_to<get_atom>::with<int32_t>>;
 
@@ -59,11 +55,14 @@ void blocking_testee(blocking_actor* self, vector<cell> cells) {
           aout(self) << "cell #" << x.id() << " -> " << to_string(err) << endl;
         });
 }
+// --(rst-cell-end)--
 
 void caf_main(actor_system& system) {
   vector<cell> cells;
+  // --(rst-spawn-begin)--
   for (auto i = 0; i < 5; ++i)
     cells.emplace_back(system.spawn(cell_impl, i * i));
+  // --(rst-spawn-end)--
   scoped_actor self{system};
   aout(self) << "waiting_testee" << endl;
   auto x1 = self->spawn(waiting_testee, cells);

@@ -1,5 +1,5 @@
-// Showcases custom message types that cannot provide
-// friend access to the inspect() function.
+// Showcases custom message types that cannot provide friend access to the
+// inspect() function.
 
 #include <iostream>
 #include <utility>

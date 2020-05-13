@@ -1,14 +1,9 @@
-﻿/******************************************************************************\
- * This example program showcases how to manually manage socket IO using      *
- * a broker. Server and client exchange integers in a 'ping-pong protocol'.   *
- *                                                                            *
- * Minimal setup:                                                             *
- * - ./build/bin/broker -s 4242                                               *
- * - ./build/bin/broker -c localhost 4242                                     *
-\
-******************************************************************************/
-
-// Manual refs: 42-47 (Actors.tex)
+// This example program showcases how to manually manage socket I/O using a
+// broker. Server and client exchange integers in a "ping-pong protocol".
+//
+// Minimal setup:
+// - ./build/bin/broker -s 4242
+// - ./build/bin/broker -c localhost 4242
 
 #include "caf/config.hpp"
 
@@ -39,12 +34,14 @@ using namespace caf::io;
 
 namespace {
 
+// --(rst-attach-begin)--
 // Utility function to print an exit message with custom name.
 void print_on_exit(const actor& hdl, const std::string& name) {
   hdl->attach_functor([=](const error& reason) {
     cout << name << " exited: " << to_string(reason) << endl;
   });
 }
+// --(rst-attach-end)--
 
 enum class op : uint8_t {
   ping,

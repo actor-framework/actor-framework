@@ -69,48 +69,50 @@ Defining Sources
 
 .. literalinclude:: /examples/streaming/integer_stream.cpp
    :language: C++
-   :lines: 17-48
+   :start-after: --(rst-source-begin)--
+   :end-before: --(rst-source-end)--
 
-The simplest way to defining a source is to use the
-``attach_stream_source`` function and pass it four arguments: a pointer
-to *self*, *initializer* for the state, *generator* for
-producing values, and *predicate* for signaling the end of the stream.
+The simplest way to defining a source is to use the ``attach_stream_source``
+function and pass it four arguments: a pointer to *self*, *initializer* for the
+state, *generator* for producing values, and *predicate* for signaling the end
+of the stream.
 
 Defining Stages
 ---------------
 
 .. literalinclude:: /examples/streaming/integer_stream.cpp
    :language: C++
-   :lines: 50-83
+   :start-after: --(rst-stage-begin)--
+   :end-before: --(rst-stage-end)--
 
-The function ``make_stage`` also takes three lambdas but additionally
-the received input stream handshake as first argument. Instead of a predicate,
-``make_stage`` only takes a finalizer, since the stage does not produce
-data on its own and a stream terminates if no more sources exist.
+The function ``make_stage`` also takes three lambdas but additionally the
+received input stream handshake as first argument. Instead of a predicate,
+``make_stage`` only takes a finalizer, since the stage does not produce data on
+its own and a stream terminates if no more sources exist.
 
 Defining Sinks
 --------------
 
 .. literalinclude:: /examples/streaming/integer_stream.cpp
    :language: C++
-   :lines: 85-114
+   :start-after: --(rst-sink-begin)--
+   :end-before: --(rst-sink-end)--
 
-The function ``make_sink`` is similar to ``make_stage``, except
-that is does not produce outputs.
+The function ``make_sink`` is similar to ``make_stage``, except that is does not
+produce outputs.
 
 Initiating Streams
 ------------------
 
 .. literalinclude:: /examples/streaming/integer_stream.cpp
    :language: C++
-   :lines: 128-132
+   :start-after: --(rst-main-begin)--
+   :end-before: --(rst-main-end)--
 
-In our example, we always have a source ``int_source`` and a sink
-``int_sink`` with an optional stage ``int_selector``. Sending
-``open_atom`` to the source initiates the stream and the source will
-respond with a stream handshake.
+In our example, we always have a source ``int_source`` and a sink ``int_sink``
+with an optional stage ``int_selector``. Sending ``open_atom`` to the source
+initiates the stream and the source will respond with a stream handshake.
 
-Using the actor composition in CAF (``snk * src`` reads *sink
-after source*) allows us to redirect the stream handshake we send in
-``caf_main`` to the sink (or to the stage and then from the stage to
-the sink).
+Using the actor composition in CAF (``snk * src`` reads *sink after source*)
+allows us to redirect the stream handshake we send in ``caf_main`` to the sink
+(or to the stage and then from the stage to the sink).

@@ -1,5 +1,3 @@
-// Manual refs: lines 12-60 (Testing)
-
 #define CAF_SUITE ping_pong
 
 #include "caf/test/dsl.hpp"
@@ -9,6 +7,7 @@
 
 using namespace caf;
 
+// --(rst-ping-pong-begin)--
 namespace {
 
 behavior ping(event_based_actor* self, actor pong_actor, int n) {
@@ -58,3 +57,4 @@ CAF_TEST(three pings) {
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
+// --(rst-ping-pong-end)--

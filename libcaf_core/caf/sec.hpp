@@ -16,10 +16,6 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-// This file is partially included in the manual, do not modify
-// without updating the references in the *.tex files!
-// Manual references: lines 32-117 (Error.tex)
-
 #pragma once
 
 #include "caf/error.hpp"
@@ -27,6 +23,7 @@
 
 namespace caf {
 
+// --(rst-sec-begin)--
 /// SEC stands for "System Error Code". This enum contains error codes for
 /// ::actor_system and its modules.
 enum class sec : uint8_t {
@@ -140,6 +137,7 @@ enum class sec : uint8_t {
   /// Disconnected from a BASP node after reaching the connection timeout.
   connection_timeout,
 };
+// --(rst-sec-end)--
 
 /// @relates sec
 std::string to_string(sec);

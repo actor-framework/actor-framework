@@ -1,15 +1,11 @@
+#include <cstdint>
 #include <iostream>
 
 #include "caf/all.hpp"
 
-// This file is partially included in the manual, do not modify
-// without updating the references in the *.tex files!
-// Manual references: lines 15-36 (MessagePassing.tex)
-
 using namespace caf;
 
-// using add_atom = atom_constant<atom("add")>; (defined in atom.hpp)
-
+// --(rst-delegate-begin)--
 using calc = typed_actor<replies_to<add_atom, int32_t, int32_t>::with<int32_t>>;
 
 void actor_a(event_based_actor* self, const calc& worker) {
@@ -32,6 +28,7 @@ calc::behavior_type actor_c() {
     [](add_atom, int32_t x, int32_t y) { return x + y; },
   };
 }
+// --(rst-delegate-end)--
 
 void caf_main(actor_system& system) {
   system.spawn(actor_a, system.spawn(actor_b, system.spawn(actor_c)));

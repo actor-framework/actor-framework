@@ -1,8 +1,5 @@
 // Showcases how to add custom POD message types.
 
-// Manual refs: 24-27, 30-34, 75-78, 81-84 (ConfiguringActorApplications)
-//              23-33 (TypeInspection)
-
 #include <cassert>
 #include <iostream>
 #include <string>
@@ -117,4 +114,4 @@ void caf_main(actor_system& sys) {
   self->send(t, foo_pair2{3, 4});
 }
 
-CAF_MAIN(id_block::custom_types_1)
+CAF_MAIN(caf::id_block::custom_types_1)

@@ -4,23 +4,32 @@ Overview
 Compiling CAF requires CMake and a C++11-compatible compiler. To get and
 compile the sources on UNIX-like systems, type the following in a terminal:
 
-.. ::
+.. code-block:: none
 
    git clone https://github.com/actor-framework/actor-framework
    cd actor-framework
    ./configure
-   make
-   make install [as root, optional]
+   make -C build
+   make -C build test [optional]
+   make -C build install [as root, optional]
 
-We recommended to run the unit tests as well:
+If the output of ``make test`` indicates an error, please submit a bug report
+that includes (a) your compiler version, (b) your OS, and (c) the content of the
+file ``build/Testing/Temporary/LastTest.log``.
 
-.. ::
+The configure script provides several build options for advanced configuration.
+Please run ``./configure -h`` to see all available options. If you are building
+CAF only as a dependency, disabling the unit tests and the examples can safe you
+some time during the build.
 
-   make test
+.. note::
 
-If the output indicates an error, please submit a bug report that includes (a)
-your compiler version, (b) your OS, and (c) the content of the file
-``build/Testing/Temporary/LastTest.log``.
+  The ``configure`` script provides a convenient way for creating a build
+  directory and calling CMake. Users that are familiar with CMake can of course
+  also use CMake directly and avoid using the ``configure`` script entirely.
+
+  On Windows, we recomment using the CMake GUI to generate a Visual Studio
+  project file for CAF.
 
 Features
 --------

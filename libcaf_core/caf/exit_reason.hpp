@@ -16,10 +16,6 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-// This file is partially included in the manual, do not modify
-// without updating the references in the *.tex files!
-// Manual references: lines 29-49 (Error.tex)
-
 #pragma once
 
 #include <string>
@@ -28,6 +24,7 @@
 
 namespace caf {
 
+// --(rst-exit-reason-begin)--
 /// This error category represents fail conditions for actors.
 enum class exit_reason : uint8_t {
   /// Indicates that an actor finished execution without error.
@@ -49,6 +46,7 @@ enum class exit_reason : uint8_t {
   /// Indicates that an actor was killed because it became unreachable.
   unreachable
 };
+// --(rst-exit-reason-end)--
 
 /// Returns a string representation of given exit reason.
 std::string to_string(exit_reason);

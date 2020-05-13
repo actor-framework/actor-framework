@@ -19,7 +19,7 @@ change its behavior when not receiving message after a certain amount of time.
    message_handler x1{
      [](int i) { /*...*/ },
      [](double db) { /*...*/ },
-     [](int a, int b, int c) { /*...*/ }
+     [](int a, int b, int c) { /*...*/ },
    };
 
 In our first example, ``x1`` models a behavior accepting messages that consist
@@ -31,7 +31,7 @@ other message is not matched and gets forwarded to the default handler (see
 
    message_handler x2{
      [](double db) { /*...*/ },
-     [](double db) { /* - unreachable - */ }
+     [](double db) { /* - unreachable - */ },
    };
 
 Our second example illustrates an important characteristic of the matching
@@ -55,37 +55,54 @@ The handler ``x4`` will consume messages with a single
 ``double`` using the first callback in ``x2``, essentially
 overriding the second callback in ``x1``.
 
+.. code-block:: C++
+
+   behavior bhvr{
+     [](int i) { /*...*/ },
+     [](double db) { /*...*/ },
+     [](int a, int b, int c) { /*...*/ },
+     after(std::chrono::seconds(10)) >> [] { /*..*/ },
+   };
+
+Similar to ``message_handler``, ``behavior`` stores a set of functions.
+Additionally, behaviors accept optional timeouts as *last* argument to the
+constructor. In the example above, the behavior calls the timeout handler after
+receiving no messages for 10 seconds. This timeout triggers repeatedly, i.e.,
+the timeout handler gets called again after 20 seconds when not receiving any
+messages, then again after 30 seconds, and so on.
+
 .. _atom:
 
 Atoms
 -----
 
 Defining message handlers in terms of callbacks is convenient, but requires a
-simple way to annotate messages with meta data. Imagine an actor that provides
-a mathematical service for integers. It receives two integers, performs a
+simple way to annotate messages with meta data. Imagine an actor that provides a
+mathematical service for integers. It receives two integers, performs a
 user-defined operation and returns the result. Without additional context, the
-actor cannot decide whether it should multiply or add the integers. Thus, the
-operation must be encoded into the message. The Erlang programming language
-introduced an approach to use non-numerical constants, so-called
-*atoms*, which have an unambiguous, special-purpose type and do not have
-the runtime overhead of string constants.
+actor cannot decide whether it should multiply or add the integers, for example.
+
+Thus, the operation must be encoded into the message. The Erlang programming
+language introduced an approach to use non-numerical constants, so-called
+*atoms*, which have an unambiguous, special-purpose type and do not have the
+runtime overhead of string constants.
 
 Atoms in CAF are mapped to integer values at compile time. This mapping is
 guaranteed to be collision-free and invertible, but limits atom literals to ten
-characters and prohibits special characters. Legal characters are
-``_0-9A-Za-z`` and the whitespace character. Atoms are created using
-the ``constexpr`` function ``atom``, as the following example
-illustrates.
+characters and prohibits special characters. Legal characters are ``_0-9A-Za-z``
+and the whitespace character. Atoms are created using the ``constexpr`` function
+``atom``, as the following example illustrates.
 
 .. code-block:: C++
 
    atom_value a1 = atom("add");
    atom_value a2 = atom("multiply");
 
-**Warning**: The compiler cannot enforce the restrictions at compile time,
-except for a length check. The assertion ``atom("!?") != atom("?!")``
-is not true, because each invalid character translates to a whitespace
-character.
+.. warning::
+
+  The compiler cannot enforce the restrictions at compile time, except for a
+  length check. The assertion ``atom("!?") != atom("?!")`` is not true, because
+  each invalid character translates to a whitespace character.
 
 While the ``atom_value`` is computed at compile time, it is not
 uniquely typed and thus cannot be used in the signature of a callback. To

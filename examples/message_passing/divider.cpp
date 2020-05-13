@@ -1,9 +1,4 @@
-/******************************************************************************\
- * A very basic, interactive divider.                                         *
-\******************************************************************************/
-
-// Manual refs: 17-19, 49-59, 70-76 (MessagePassing);
-//              17-47 (Error)
+// A basic, interactive divider.
 
 #include <iostream>
 
@@ -14,9 +9,20 @@ using std::endl;
 using std::flush;
 using namespace caf;
 
+enum class math_error : uint8_t;
+
+CAF_BEGIN_TYPE_ID_BLOCK(divider, first_custom_type_id)
+
+  CAF_ADD_TYPE_ID(divider, (math_error))
+
+CAF_END_TYPE_ID_BLOCK(divider)
+
+// --(rst-divider-begin)--
 enum class math_error : uint8_t {
   division_by_zero = 1,
 };
+
+CAF_ERROR_CODE_ENUM(math_error)
 
 std::string to_string(math_error x) {
   switch (x) {
@@ -26,14 +32,6 @@ std::string to_string(math_error x) {
       return "-unknown-error-";
   }
 }
-
-CAF_BEGIN_TYPE_ID_BLOCK(divider, first_custom_type_id)
-
-  CAF_ADD_TYPE_ID(divider, (math_error))
-
-CAF_END_TYPE_ID_BLOCK(divider)
-
-CAF_ERROR_CODE_ENUM(math_error)
 
 using divider = typed_actor<replies_to<div_atom, double, double>::with<double>>;
 
@@ -46,6 +44,7 @@ divider::behavior_type divider_impl() {
     },
   };
 }
+// --(rst-divider-end)--
 
 void caf_main(actor_system& system) {
   double x;
@@ -54,6 +53,7 @@ void caf_main(actor_system& system) {
   std::cin >> x;
   cout << "y: " << flush;
   std::cin >> y;
+  // --(rst-request-begin)--
   auto div = system.spawn(divider_impl);
   scoped_actor self{system};
   self->request(div, std::chrono::seconds(10), div_atom_v, x, y)
@@ -63,6 +63,7 @@ void caf_main(actor_system& system) {
         aout(self) << "*** cannot compute " << x << " / " << y << " => "
                    << to_string(err) << endl;
       });
+  // --(rst-request-end)--
 }
 
 CAF_MAIN(id_block::divider)

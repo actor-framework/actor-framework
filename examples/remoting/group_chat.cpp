@@ -1,12 +1,10 @@
-/******************************************************************************\
- * This example program represents a minimal terminal chat program            *
- * based on group communication.                                              *
- *                                                                            *
- * Setup for a minimal chat between "alice" and "bob":                        *
- * - ./build/bin/group_chat -s -p 4242                                        *
- * - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n alice        *
- * - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n bob          *
-\******************************************************************************/
+// This example program represents a minimal terminal chat program based on
+// group communication.
+//
+// Setup for a minimal chat between "alice" and "bob":
+// - ./build/bin/group_chat -s -p 4242
+// - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n alice
+// - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n bob
 
 #include <cstdlib>
 #include <iostream>

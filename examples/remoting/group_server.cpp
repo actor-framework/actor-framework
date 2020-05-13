@@ -1,12 +1,10 @@
-/******************************************************************************\
- * This example program represents a minimal IRC-like group                   *
- * communication server.                                                      *
- *                                                                            *
- * Setup for a minimal chat between "alice" and "bob":                        *
- * - ./build/bin/group_server -p 4242                                         *
- * - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n alice        *
- * - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n bob          *
-\ ******************************************************************************/
+// This example program represents a minimal IRC-like group communication
+// server.
+//
+// Setup for a minimal chat between "alice" and "bob":
+// - ./build/bin/group_server -p 4242
+// - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n alice
+// - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n bob
 
 #include <string>
 #include <cstdlib>

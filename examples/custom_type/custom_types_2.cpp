@@ -1,5 +1,5 @@
-// showcases how to add custom message types to CAF
-// if friend access for serialization is available
+// Showcases how to add custom message types to CAF if friend access for
+// serialization is available.
 
 #include <utility>
 #include <iostream>

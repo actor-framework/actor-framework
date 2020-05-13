@@ -99,7 +99,7 @@ as ``CAF_CHECK`` and provide tests rather than implementing a
        },
        [&](caf::error& err) {
          // Must not happen, stop test.
-         CAF_FAIL(sys.render(err));
+         CAF_FAIL(err);
        });
    }
 
@@ -127,18 +127,16 @@ configuration classes.
 
 Using this fixture unlocks three additional macros:
 
-* ``expect`` checks for a single message. The macro verifies the  content types of the message and invokes the necessary member functions on  the test coordinator. Optionally, the macro checks the receiver of the  message and its content. If the expected message does not exist, the test  aborts.
-* ``allow`` is similar to ``expect``, but it does not abort  the test if the expected message is missing. This macro returns  ``true`` if the allowed message was delivered, ``false``  otherwise.
-* ``disallow`` aborts the test if a particular message was delivered  to an actor.
+- ``expect`` checks for a single message. The macro verifies the  content types of the message and invokes the necessary member functions on  the test coordinator. Optionally, the macro checks the receiver of the  message and its content. If the expected message does not exist, the test  aborts.
+- ``allow`` is similar to ``expect``, but it does not abort  the test if the expected message is missing. This macro returns  ``true`` if the allowed message was delivered, ``false``  otherwise.
+- ``disallow`` aborts the test if a particular message was delivered  to an actor.
 
-The following example implements two actors, ``ping`` and
-``pong``, that exchange a configurable amount of messages. The test
-*three pings* then checks the contents of each message with
-``expect`` and verifies that no additional messages exist using
-``disallow``.
+The following example implements two actors, ``ping`` and ``pong``, that
+exchange a configurable amount of messages. The test *three pings* then checks
+the contents of each message with ``expect`` and verifies that no additional
+messages exist using ``disallow``.
 
 .. literalinclude:: /examples/testing/ping_pong.cpp
    :language: C++
-   :lines: 12-60
-
-
+   :start-after: --(rst-ping-pong-begin)--
+   :end-before: --(rst-ping-pong-end)--

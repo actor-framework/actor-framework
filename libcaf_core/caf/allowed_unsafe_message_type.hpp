@@ -16,9 +16,6 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-// This file is referenced in the manual, do not modify without updating refs!
-// ConfiguringActorApplications: 50-54
-
 #pragma once
 
 #include <type_traits>
@@ -45,9 +42,10 @@ struct is_allowed_unsafe_message_type<const T&>
 
 } // namespace caf
 
+// --(rst-macro-begin)--
 #define CAF_ALLOW_UNSAFE_MESSAGE_TYPE(type_name)                               \
   namespace caf {                                                              \
   template <>                                                                  \
   struct allowed_unsafe_message_type<type_name> : std::true_type {};           \
   }
-
+// --(rst-macro-end)--

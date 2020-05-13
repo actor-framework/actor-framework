@@ -1,5 +1,4 @@
-// This program illustrates how to spawn a simple calculator
-// across the network.
+// This program illustrates how to spawn a simple calculator across the network.
 //
 // Run server at port 4242:
 // - remote_spawn -s -p 4242

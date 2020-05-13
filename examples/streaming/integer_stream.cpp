@@ -1,6 +1,4 @@
-/******************************************************************************
- *     Basic, non-interactive streaming example for processing integers.      *
- ******************************************************************************/
+// Basic, non-interactive streaming example for processing integers.
 
 #include <iostream>
 #include <vector>

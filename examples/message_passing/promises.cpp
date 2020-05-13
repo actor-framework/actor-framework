@@ -1,10 +1,4 @@
-/******************************************************************************\
- * Illustrates response promises.                                             *
-\******************************************************************************/
-
-// This file is partially included in the manual, do not modify
-// without updating the references in the *.tex files!
-// Manual references: lines 18-43 (MessagePassing.tex)
+// Illustrates how to use response promises.
 
 #include <iostream>
 
@@ -15,17 +9,16 @@ using std::endl;
 
 using namespace caf;
 
+// --(rst-promises-begin)--
 using adder
   = typed_actor<replies_to<add_atom, int32_t, int32_t>::with<int32_t>>;
 
-// function-based, statically typed, event-based API
 adder::behavior_type worker() {
   return {
     [](add_atom, int32_t a, int32_t b) { return a + b; },
   };
 }
 
-// function-based, statically typed, event-based API
 adder::behavior_type calculator_master(adder::pointer self) {
   auto w = self->spawn(worker);
   return {
@@ -38,6 +31,7 @@ adder::behavior_type calculator_master(adder::pointer self) {
     },
   };
 }
+// --(rst-promises-end)--
 
 void caf_main(actor_system& system) {
   auto f = make_function_view(system.spawn(calculator_master));
