@@ -90,7 +90,8 @@ public:
   }
 
   template <class Parent>
-  void resolve(Parent&, const uri& locator, const actor& listener) {
+  void
+  resolve(Parent&, [[maybe_unused]] const uri& locator, const actor& listener) {
     CAF_LOG_ERROR("doorman called to resolve" << CAF_ARG(locator));
     anon_send(listener, resolve_atom_v, "doormen cannot resolve paths");
   }
@@ -116,7 +117,7 @@ public:
     CAF_LOG_ERROR("doorman received timeout" << CAF_ARG(tag) << CAF_ARG(id));
   }
 
-  void handle_error(sec err) {
+  void handle_error([[maybe_unused]] sec err) {
     CAF_LOG_ERROR("doorman encounterd error: " << err);
   }
 
