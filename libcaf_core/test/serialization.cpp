@@ -87,7 +87,13 @@ struct fixture : test_coordinator_fixture<> {
   int32_t i32 = -345;
   int64_t i64 = -1234567890123456789ll;
   float f32 = 3.45f;
+  float f32_nan = std::numeric_limits<float>::quiet_NaN();
+  float f32_pos_inf = std::numeric_limits<float>::infinity();
+  float f32_neg_inf = -std::numeric_limits<float>::infinity();
   double f64 = 54.3;
+  double f64_nan = std::numeric_limits<double>::quiet_NaN();
+  double f64_pos_inf = std::numeric_limits<double>::infinity();
+  double f64_neg_inf = -std::numeric_limits<double>::infinity();
   timestamp ts = timestamp{timestamp::duration{1478715821 * 1000000000ll}};
   test_enum te = test_enum::b;
   std::string str = "Lorem ipsum dolor sit amet.";
@@ -174,24 +180,19 @@ struct is_message {
 
 #define CHECK_RT(val) CAF_CHECK_EQUAL(val, roundtrip(val))
 
+#define CHECK_PRED_RT(pred, value) CAF_CHECK(pred(roundtrip(value)))
+
+#define CHECK_SIGN_RT(value)                                                   \
+  CAF_CHECK_EQUAL(std::signbit(roundtrip(value)), std::signbit(value))
+
 #define CHECK_MSG_RT(val) CAF_CHECK_EQUAL(val, msg_roundtrip(val))
 
-CAF_TEST_FIXTURE_SCOPE(serialization_tests, fixture)
+#define CHECK_PRED_MSG_RT(pred, value) CAF_CHECK(pred(msg_roundtrip(value)))
 
-CAF_TEST(ieee_754_conversion) {
-  // check conversion of float
-  float f1 = 3.1415925f;              // float value
-  auto p1 = caf::detail::pack754(f1); // packet value
-  CAF_CHECK_EQUAL(p1, static_cast<decltype(p1)>(0x40490FDA));
-  auto u1 = caf::detail::unpack754(p1); // unpacked value
-  CAF_CHECK_EQUAL(f1, u1);
-  // check conversion of double
-  double f2 = 3.14159265358979311600; // double value
-  auto p2 = caf::detail::pack754(f2); // packet value
-  CAF_CHECK_EQUAL(p2, static_cast<decltype(p2)>(0x400921FB54442D18));
-  auto u2 = caf::detail::unpack754(p2); // unpacked value
-  CAF_CHECK_EQUAL(f2, u2);
-}
+#define CHECK_SIGN_MSG_RT(value)                                               \
+  CAF_CHECK_EQUAL(std::signbit(msg_roundtrip(value)), std::signbit(value))
+
+CAF_TEST_FIXTURE_SCOPE(serialization_tests, fixture)
 
 CAF_TEST(serializing and then deserializing produces the same value) {
   CHECK_RT(i32);
@@ -202,6 +203,16 @@ CAF_TEST(serializing and then deserializing produces the same value) {
   CHECK_RT(te);
   CHECK_RT(str);
   CHECK_RT(rs);
+  CHECK_PRED_RT(std::isnan, f32_nan);
+  CHECK_PRED_RT(std::isinf, f32_pos_inf);
+  CHECK_PRED_RT(std::isinf, f32_neg_inf);
+  CHECK_PRED_RT(std::isnan, f64_nan);
+  CHECK_PRED_RT(std::isinf, f64_pos_inf);
+  CHECK_PRED_RT(std::isinf, f64_neg_inf);
+  CHECK_SIGN_RT(f32_pos_inf);
+  CHECK_SIGN_RT(f32_neg_inf);
+  CHECK_SIGN_RT(f64_pos_inf);
+  CHECK_SIGN_RT(f64_neg_inf);
 }
 
 CAF_TEST(messages serialize and deserialize their content) {
@@ -213,6 +224,16 @@ CAF_TEST(messages serialize and deserialize their content) {
   CHECK_MSG_RT(te);
   CHECK_MSG_RT(str);
   CHECK_MSG_RT(rs);
+  CHECK_PRED_MSG_RT(std::isnan, f32_nan);
+  CHECK_PRED_MSG_RT(std::isinf, f32_pos_inf);
+  CHECK_PRED_MSG_RT(std::isinf, f32_neg_inf);
+  CHECK_PRED_MSG_RT(std::isnan, f64_nan);
+  CHECK_PRED_MSG_RT(std::isinf, f64_pos_inf);
+  CHECK_PRED_MSG_RT(std::isinf, f64_neg_inf);
+  CHECK_SIGN_MSG_RT(f32_pos_inf);
+  CHECK_SIGN_MSG_RT(f32_neg_inf);
+  CHECK_SIGN_MSG_RT(f64_pos_inf);
+  CHECK_SIGN_MSG_RT(f64_neg_inf);
 }
 
 CAF_TEST(raw_arrays) {
