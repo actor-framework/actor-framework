@@ -20,11 +20,14 @@
 
 #include "caf/actor_system_config.hpp"
 #include "caf/detail/set_thread_name.hpp"
+#include "caf/expected.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/net/basp/ec.hpp"
+#include "caf/net/endpoint_manager.hpp"
 #include "caf/net/middleman_backend.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/raise_error.hpp"
+#include "caf/sec.hpp"
 #include "caf/send.hpp"
 #include "caf/uri.hpp"
 
@@ -83,6 +86,7 @@ void middleman::init(actor_system_config& cfg) {
       CAF_LOG_ERROR("failed to initialize backend: " << err);
       CAF_RAISE_ERROR("failed to initialize backend");
     }
+  std::cout << "init" << std::endl;
 }
 
 middleman::module::id_t middleman::id() const {
@@ -91,6 +95,14 @@ middleman::module::id_t middleman::id() const {
 
 void* middleman::subtype_ptr() {
   return this;
+}
+
+expected<endpoint_manager_ptr> middleman::connect(const uri& locator) {
+  auto ptr = backend(locator.scheme());
+  if (auto ret = ptr->connect(locator))
+    return ret;
+  else
+    return sec::cannot_connect_to_node;
 }
 
 void middleman::resolve(const uri& locator, const actor& listener) {
@@ -109,6 +121,14 @@ middleman_backend* middleman::backend(string_view scheme) const noexcept {
   if (i != backends_.end())
     return i->get();
   return nullptr;
+}
+
+expected<uint16_t> middleman::port(string_view scheme) const {
+  auto ptr = backend(scheme);
+  if (ptr != nullptr)
+    return ptr->port();
+  else
+    return sec::invalid_protocol_family;
 }
 
 } // namespace caf::net

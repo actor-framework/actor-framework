@@ -49,7 +49,7 @@ public:
 
   void stop() override;
 
-  endpoint_manager_ptr connect(const uri& locator);
+  endpoint_manager_ptr connect(const uri& locator) override;
 
   endpoint_manager_ptr peer(const node_id& id) override;
 
@@ -79,7 +79,6 @@ private:
     using application_type = basp::application;
 
     basp_application_factory(proxy_registry& proxies);
-    ~basp_application_factory();
 
     template <class Parent>
     error init(Parent&) {

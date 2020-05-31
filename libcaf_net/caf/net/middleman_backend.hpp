@@ -46,6 +46,9 @@ public:
   /// @returns The endpoint manager for `peer` on success, `nullptr` otherwise.
   virtual endpoint_manager_ptr peer(const node_id& id) = 0;
 
+  /// Establishes a connection to a remote node.
+  virtual endpoint_manager_ptr connect(const uri& locator) = 0;
+
   /// Publishes an actor.
   virtual void publish(actor handle, const uri& locator) = 0;
 

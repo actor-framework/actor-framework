@@ -148,4 +148,5 @@ caf_incubator_add_test_suites(caf-net-test
   transport_worker_dispatcher
   udp_datagram_socket
   network_socket
+  net.backend.tcp
 )

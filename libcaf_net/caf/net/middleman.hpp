@@ -76,6 +76,8 @@ public:
 
   // -- remoting ---------------------------------------------------------------
 
+  expected<endpoint_manager_ptr> connect(const uri& locator);
+
   // Publishes an actor.
   template <class Handle = actor>
   error publish(Handle whom, const uri& locator) {
@@ -123,6 +125,8 @@ public:
   }
 
   middleman_backend* backend(string_view scheme) const noexcept;
+
+  expected<uint16_t> port(string_view scheme) const;
 
 private:
   // -- constructors, destructors, and assignment operators --------------------

@@ -64,7 +64,6 @@ error tcp::init() {
   auto doorman_uri = make_uri("tcp://doorman");
   if (!doorman_uri)
     return doorman_uri.error();
-  ;
   auto& mpx = mm_.mpx();
   auto mgr = make_endpoint_manager(
     mpx, mm_.system(),
@@ -73,7 +72,6 @@ error tcp::init() {
     CAF_LOG_ERROR("mgr->init() failed: " << err);
     return err;
   }
-  mpx->register_reading(mgr);
   return none;
 }
 
@@ -133,6 +131,11 @@ endpoint_manager_ptr tcp::get_peer(const node_id& id) {
   if (i != peers_.end())
     return i->second;
   return nullptr;
+}
+
+tcp::basp_application_factory::basp_application_factory(proxy_registry& proxies)
+  : proxies_(proxies) {
+  // nop
 }
 
 } // namespace caf::net::backend
