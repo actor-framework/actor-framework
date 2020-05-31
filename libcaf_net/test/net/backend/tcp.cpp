@@ -23,9 +23,12 @@
 #include "caf/net/test/host_fixture.hpp"
 #include "caf/test/dsl.hpp"
 
+#include <string>
+
 #include "caf/ip_endpoint.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/socket_guard.hpp"
+#include "caf/net/tcp_accept_socket.hpp"
 
 using namespace caf;
 using namespace caf::net;
@@ -78,17 +81,27 @@ CAF_TEST(doorman accept) {
 }
 
 CAF_TEST(connect) {
+  CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2);
   ip_endpoint ep;
   if (auto err = detail::parse("[::]:0", ep))
     CAF_FAIL("could not parse endpoint" << err);
   auto acceptor = make_tcp_accept_socket(ep);
-  CAF_CHECK(!acceptor)
+  if (!acceptor)
+    CAF_FAIL("could not create acceptor" << CAF_ARG2("err", acceptor.error()));
   auto acc_guard = make_socket_guard(*acceptor);
-  auto port = local_port(*acc_guard);
-  auto uri_str = std::string("tcp://localhost:") + std::to_string(port);
+  auto port = local_port(acc_guard.socket());
+  if (!port)
+    CAF_FAIL("could not read port" << CAF_ARG2("err", port.error()));
+  auto uri_str = std::string("tcp://localhost:") + std::to_string(*port);
   CAF_MESSAGE("connecting to " << CAF_ARG(uri_str));
-  auto ptr = mm.backend("tcp");
-  CAF_CHECK(mm->connect(make_uri(ep_string)));
+  auto ret = mm.connect(*make_uri(uri_str));
+  if (!ret)
+    CAF_FAIL("could not connect to " << uri_str);
+  auto sock = accept(acc_guard.socket());
+  if (!sock)
+    CAF_FAIL("accepting failed");
+  handle_io_event();
+  CAF_CHECK_EQUAL(mpx->num_socket_managers(), 3);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

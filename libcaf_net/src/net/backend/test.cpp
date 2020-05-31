@@ -54,6 +54,10 @@ endpoint_manager_ptr test::peer(const node_id& id) {
   return get_peer(id).second;
 }
 
+endpoint_manager_ptr test::connect(const uri&) {
+  return nullptr;
+}
+
 void test::publish(actor, const uri&) {
   // nop
 }

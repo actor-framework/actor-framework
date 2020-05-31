@@ -106,6 +106,7 @@ private:
       CAF_RAISE_ERROR("mgr->init() failed");
     }
     mpx->register_reading(mgr);
+    peers_.emplace(peer_id, std::move(mgr));
     return peers_[peer_id];
   }
 

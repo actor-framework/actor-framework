@@ -86,7 +86,6 @@ void middleman::init(actor_system_config& cfg) {
       CAF_LOG_ERROR("failed to initialize backend: " << err);
       CAF_RAISE_ERROR("failed to initialize backend");
     }
-  std::cout << "init" << std::endl;
 }
 
 middleman::module::id_t middleman::id() const {

@@ -51,6 +51,8 @@ public:
 
   endpoint_manager_ptr peer(const node_id& id) override;
 
+  endpoint_manager_ptr connect(const uri& locator) override;
+
   void publish(actor handle, const uri& locator) override;
 
   void resolve(const uri& locator, const actor& listener) override;
