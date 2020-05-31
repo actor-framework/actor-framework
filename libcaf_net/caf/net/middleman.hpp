@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <set>
+#include <string>
 #include <thread>
 
 #include "caf/actor_system.hpp"
@@ -25,6 +27,8 @@
 #include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
+#include "caf/net/middleman_backend.hpp"
+#include "caf/scoped_actor.hpp"
 
 namespace caf::net {
 
@@ -72,8 +76,37 @@ public:
 
   // -- remoting ---------------------------------------------------------------
 
+  // Publishes an actor.
+  template <class Handle = actor>
+  error publish(Handle whom, const uri& locator) {
+    auto be = backend(locator.scheme());
+    be->publish(whom, locator);
+  }
+
   /// Resolves a path to a remote actor.
   void resolve(const uri& locator, const actor& listener);
+
+  template <class Handle>
+  expected<Handle> remote_actor(const uri& locator) {
+    // TODO: Use function view?
+    scoped_actor self{sys_};
+    resolve(locator, self);
+    strong_actor_ptr actor_ptr;
+    error err = none;
+    self->receive(
+      [&actor_ptr](strong_actor_ptr& ptr, const std::set<std::string>&) {
+        actor_ptr = ptr;
+      },
+      [&err](const error& e) { err = e; });
+    if (err)
+      return err;
+    auto res = actor_cast<Handle>(actor_ptr);
+    if (res)
+      return res;
+    else
+      return make_error(sec::runtime_error,
+                        "cannot cast actor to specified type");
+  }
 
   // -- properties -------------------------------------------------------------
 
