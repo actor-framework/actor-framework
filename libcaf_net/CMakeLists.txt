@@ -50,6 +50,7 @@ add_library(libcaf_net_obj OBJECT ${CAF_NET_HEADERS}
   src/ip.cpp
   src/message_queue.cpp
   src/multiplexer.cpp
+  src/net/backend/tcp.cpp
   src/net/backend/test.cpp
   src/net/endpoint_manager_queue.cpp
   src/net/middleman.cpp

@@ -19,6 +19,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 
 // -- hard-coded default values for various CAF options ------------------------
 
@@ -29,5 +30,8 @@ extern const size_t max_payload_buffers;
 
 /// Maximum number of cached buffers for sending headers.
 extern const size_t max_header_buffers;
+
+/// Port to listen on for tcp.
+extern const uint16_t tcp_port;
 
 } // namespace caf::defaults::middleman

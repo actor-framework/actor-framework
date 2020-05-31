@@ -46,6 +46,9 @@ public:
   /// @returns The endpoint manager for `peer` on success, `nullptr` otherwise.
   virtual endpoint_manager_ptr peer(const node_id& id) = 0;
 
+  /// Publishes an actor.
+  virtual void publish(actor handle, const uri& locator) = 0;
+
   /// Resolves a path to a remote actor.
   virtual void resolve(const uri& locator, const actor& listener) = 0;
 
@@ -56,6 +59,8 @@ public:
   const std::string& id() const noexcept {
     return id_;
   }
+
+  virtual uint16_t port() const = 0;
 
 private:
   /// Stores the technology-specific identifier.
