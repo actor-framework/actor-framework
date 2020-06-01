@@ -29,7 +29,6 @@
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/parse.hpp"
 #include "caf/error.hpp"
-#include "caf/expected.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/basp/constants.hpp"
 #include "caf/net/basp/ec.hpp"

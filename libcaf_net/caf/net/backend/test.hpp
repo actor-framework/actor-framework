@@ -53,7 +53,7 @@ public:
 
   endpoint_manager_ptr connect(const uri& locator) override;
 
-  void publish(actor handle, const uri& locator) override;
+  void publish(actor handle, string_view path) override;
 
   void resolve(const uri& locator, const actor& listener) override;
 

@@ -58,7 +58,7 @@ endpoint_manager_ptr test::connect(const uri&) {
   return nullptr;
 }
 
-void test::publish(actor, const uri&) {
+void test::publish(actor, string_view) {
   // nop
 }
 

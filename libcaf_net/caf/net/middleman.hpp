@@ -81,14 +81,17 @@ public:
   // Publishes an actor.
   template <class Handle = actor>
   error publish(Handle whom, const uri& locator) {
-    auto be = backend(locator.scheme());
-    be->publish(whom, locator);
+    if (auto be = backend(locator.scheme()))
+      be->publish(whom, locator.path());
+    else
+      return sec::runtime_error;
+    return none;
   }
 
   /// Resolves a path to a remote actor.
   void resolve(const uri& locator, const actor& listener);
 
-  template <class Handle>
+  template <class Handle = actor>
   expected<Handle> remote_actor(const uri& locator) {
     // TODO: Use function view?
     scoped_actor self{sys_};
@@ -99,7 +102,14 @@ public:
       [&actor_ptr](strong_actor_ptr& ptr, const std::set<std::string>&) {
         actor_ptr = ptr;
       },
-      [&err](const error& e) { err = e; });
+      [&err](const error& e) {
+        err = e;
+      } /*,
+after(std::chrono::seconds(5)) >>
+[&err] {
+err = make_error(sec::runtime_error,
+"manager did not respond with a proxy.");
+}*/);
     if (err)
       return err;
     auto res = actor_cast<Handle>(actor_ptr);
