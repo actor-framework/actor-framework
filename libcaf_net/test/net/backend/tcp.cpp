@@ -47,13 +47,21 @@ behavior dummy_actor(event_based_actor*) {
 
 struct earth_node {
   uri operator()() {
-    return unbox(make_uri("tcp://earth"));
+    return unbox(make_uri("tcp://localhost:12345"));
+  }
+
+  uint16_t port() {
+    return 12345;
   }
 };
 
 struct mars_node {
   uri operator()() {
-    return unbox(make_uri("tcp://mars"));
+    return unbox(make_uri("tcp://localhost:12346"));
+  }
+
+  uint16_t port() {
+    return 12346;
   }
 };
 
@@ -62,6 +70,7 @@ struct config : actor_system_config {
   config() {
     Node this_node;
     put(content, "middleman.this-node", this_node());
+    put(content, "middleman.tcp-port", this_node.port());
     load<middleman, backend::tcp>();
   }
 };
@@ -202,8 +211,8 @@ CAF_TEST(remote_actor) {
   using std::chrono::milliseconds;
   using std::chrono::seconds;
   auto dummy = earth.sys.spawn(dummy_actor);
-  auto path = "name/dummy"s;
-  earth.mm.publish(dummy, path);
+  auto name = "dummy"s;
+  earth.mm.publish(dummy, name);
   auto port = unbox(earth.mm.port("tcp"));
   auto ep_str = "tcp://localhost:"s + std::to_string(port);
   auto locator = unbox(make_uri(ep_str));
@@ -212,7 +221,7 @@ CAF_TEST(remote_actor) {
   handle_io_event();
   CAF_CHECK_EQUAL(mars.mpx->num_socket_managers(), 3);
   CAF_CHECK_EQUAL(earth.mpx->num_socket_managers(), 3);
-  locator = unbox(make_uri(ep_str + "/"s + path));
+  locator = unbox(make_uri(ep_str + "/name/"s + name));
   CAF_MESSAGE("resolve " << CAF_ARG(locator));
   mars.mm.resolve(locator, mars.self);
   bool running = true;
@@ -226,6 +235,7 @@ CAF_TEST(remote_actor) {
   std::thread t{f};
   auto proxy = unbox(mars.mm.remote_actor(locator));
   CAF_MESSAGE("resolved actor");
+  CAF_CHECK(proxy != nullptr);
   running = false;
   t.join();
   set_thread_id();

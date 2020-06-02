@@ -27,7 +27,6 @@
 #include "caf/net/ip.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/middleman.hpp"
-#include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_guard.hpp"
 #include "caf/net/stream_transport.hpp"
 #include "caf/net/tcp_accept_socket.hpp"
@@ -47,7 +46,7 @@ tcp::~tcp() {
 
 error tcp::init() {
   uint16_t conf_port = get_or<uint16_t>(
-    mm_.system().config(), "middleman.tcp_port", defaults::middleman::tcp_port);
+    mm_.system().config(), "middleman.tcp-port", defaults::middleman::tcp_port);
   ip_endpoint ep;
   auto local_address = std::string("[::]:") + std::to_string(conf_port);
   if (auto err = detail::parse(local_address, ep))
@@ -61,6 +60,7 @@ error tcp::init() {
   if (!port)
     return port.error();
   listening_port_ = *port;
+  CAF_LOG_INFO("doorman spawned on " << CAF_ARG(*port));
   auto doorman_uri = make_uri("tcp://doorman");
   if (!doorman_uri)
     return doorman_uri.error();
