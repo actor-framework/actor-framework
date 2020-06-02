@@ -58,10 +58,6 @@ endpoint_manager_ptr test::connect(const uri&) {
   return nullptr;
 }
 
-void test::publish(actor, string_view) {
-  // nop
-}
-
 void test::resolve(const uri& locator, const actor& listener) {
   auto id = locator.authority_only();
   if (id)

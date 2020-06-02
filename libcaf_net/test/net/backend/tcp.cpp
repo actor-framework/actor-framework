@@ -142,6 +142,11 @@ struct fixture : host_fixture, planet_driver {
     return earth.sched.trigger_timeout() || mars.sched.trigger_timeout();
   }
 
+  void set_thread_id() {
+    earth.mpx->set_thread_id();
+    mars.mpx->set_thread_id();
+  }
+
   void run() {
     earth.run();
   }
@@ -177,50 +182,53 @@ CAF_TEST(connect) {
   auto port = unbox(local_port(acc_guard.socket()));
   auto uri_str = std::string("tcp://localhost:") + std::to_string(port);
   CAF_MESSAGE("connecting to " << CAF_ARG(uri_str));
-  unbox(earth.mm.connect(*make_uri(uri_str)));
-  CAF_CHECK(accept(acc_guard.socket()));
+  CAF_CHECK(earth.mm.connect(*make_uri(uri_str)));
+  auto sock = unbox(accept(acc_guard.socket()));
+  auto sock_guard = make_socket_guard(sock);
   handle_io_event();
   CAF_REQUIRE_EQUAL(earth.mpx->num_socket_managers(), 3);
 }
 
-/*
-CAF_TEST(publish and resolve) {
-  auto dummy = sys.spawn(dummy_actor);
-  auto port = unbox(mm.port("tcp"));
-  auto locator = unbox(make_uri("tcp://localhost:"s + std::to_string(port)));
-  mm.publish(dummy, locator);
-  auto ret = sys.registry().get(
-    std::string(locator.path().begin(), locator.path().end()));
-  if (!ret)
-    CAF_FAIL("could not retrieve published actor");
-  config<mars_node> mars_cfg;
-  actor_system mars_sys{mars_cfg};
-  auto& mars_mm = mars_sys.network_manager();
-  auto mars_mpx = mars_mm.mpx();
-  mars_mpx->set_thread_id();
-  mars_mpx->poll_once(false);
-  CAF_REQUIRE(mars_mpx->num_socket_managers(), 2);
-  CAF_MESSAGE("connecting to " << CAF_ARG(locator));
-  unbox(mars_mm.connect(locator));
-  run();
-  mars_mpx->poll_once(false);
-  auto locator
-    = unbox(make_uri("tcp://localhost:"s + std::to_string(port) + "/dummy"));
-  CAF_MESSAGE("resolving actor " << CAF_ARG(actor_locator));
-  mars_mm.resolve(locator, self);
-  mars_mpx->poll_once(false);
-  run();
-  mars_mpx->poll_once(false);
-  CAF_MESSAGE("receiving actor");
-  self->receive(
-    [](strong_actor_ptr&, const std::set<std::string>&) {
-
-    },
-    [](const error& err) {
-      CAF_FAIL("error resolving actor " << CAF_ARG(err));
-    },
-    after(std::chrono::seconds(5)) >>
-      [] { CAF_FAIL("manager did not respond with a proxy."); });
+CAF_TEST(publish) {
+  auto dummy = earth.sys.spawn(dummy_actor);
+  auto path = "name/dummy"s;
+  CAF_MESSAGE("publishing actor " << CAF_ARG(path));
+  earth.mm.publish(dummy, path);
+  CAF_MESSAGE("check registry for " << CAF_ARG(path));
+  CAF_CHECK(earth.sys.registry().get(path) != nullptr);
 }
-*/
+
+CAF_TEST(remote_actor) {
+  using std::chrono::milliseconds;
+  using std::chrono::seconds;
+  auto dummy = earth.sys.spawn(dummy_actor);
+  auto path = "name/dummy"s;
+  earth.mm.publish(dummy, path);
+  auto port = unbox(earth.mm.port("tcp"));
+  auto ep_str = "tcp://localhost:"s + std::to_string(port);
+  auto locator = unbox(make_uri(ep_str));
+  CAF_MESSAGE("connecting mars to earth at " << CAF_ARG(locator));
+  CAF_CHECK(mars.mm.connect(locator));
+  handle_io_event();
+  CAF_CHECK_EQUAL(mars.mpx->num_socket_managers(), 3);
+  CAF_CHECK_EQUAL(earth.mpx->num_socket_managers(), 3);
+  locator = unbox(make_uri(ep_str + "/"s + path));
+  CAF_MESSAGE("resolve " << CAF_ARG(locator));
+  mars.mm.resolve(locator, mars.self);
+  bool running = true;
+  auto f = [&]() {
+    set_thread_id();
+    while (running) {
+      handle_io_event();
+      std::this_thread::sleep_for(milliseconds(100));
+    }
+  };
+  std::thread t{f};
+  auto proxy = unbox(mars.mm.remote_actor(locator));
+  CAF_MESSAGE("resolved actor");
+  running = false;
+  t.join();
+  set_thread_id();
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()

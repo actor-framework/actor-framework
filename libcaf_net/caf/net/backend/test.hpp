@@ -53,8 +53,6 @@ public:
 
   endpoint_manager_ptr connect(const uri& locator) override;
 
-  void publish(actor handle, string_view path) override;
-
   void resolve(const uri& locator, const actor& listener) override;
 
   strong_actor_ptr make_proxy(node_id nid, actor_id aid) override;

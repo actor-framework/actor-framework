@@ -80,12 +80,8 @@ public:
 
   // Publishes an actor.
   template <class Handle = actor>
-  error publish(Handle whom, const uri& locator) {
-    if (auto be = backend(locator.scheme()))
-      be->publish(whom, locator.path());
-    else
-      return sec::runtime_error;
-    return none;
+  void publish(Handle whom, const std::string& path) {
+    system().registry().put(path, whom);
   }
 
   /// Resolves a path to a remote actor.
@@ -96,28 +92,22 @@ public:
     // TODO: Use function view?
     scoped_actor self{sys_};
     resolve(locator, self);
-    strong_actor_ptr actor_ptr;
+    Handle actor_ptr;
     error err = none;
     self->receive(
       [&actor_ptr](strong_actor_ptr& ptr, const std::set<std::string>&) {
-        actor_ptr = ptr;
+        actor_ptr = actor_cast<Handle>(std::move(ptr));
       },
-      [&err](const error& e) {
-        err = e;
-      } /*,
-after(std::chrono::seconds(5)) >>
-[&err] {
-err = make_error(sec::runtime_error,
-"manager did not respond with a proxy.");
-}*/);
+      [&err](const error& e) { err = e; },
+      // TODO: how long should the middleman wait before erroring out?
+      after(std::chrono::seconds(5)) >>
+        [&err] {
+          err = make_error(sec::runtime_error,
+                           "manager did not respond with a proxy.");
+        });
     if (err)
       return err;
-    auto res = actor_cast<Handle>(actor_ptr);
-    if (res)
-      return res;
-    else
-      return make_error(sec::runtime_error,
-                        "cannot cast actor to specified type");
+    return actor_ptr;
   }
 
   // -- properties -------------------------------------------------------------

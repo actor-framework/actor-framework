@@ -101,10 +101,6 @@ endpoint_manager_ptr tcp::peer(const node_id& id) {
   return get_peer(id);
 }
 
-void tcp::publish(actor handle, string_view path) {
-  mm_.system().registry().put(std::string(path.begin(), path.end()), handle);
-}
-
 void tcp::resolve(const uri& locator, const actor& listener) {
   auto id = locator.authority_only();
   if (id)
