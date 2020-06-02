@@ -146,12 +146,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   should work as expected.
 - Sending floating points to remote actors changed `infinity` and `NaN` to
   garbage values (#1107). The fixed packing / unpacking routines for IEEE 754
-  values keeps these non-numeric values intact now. It is worth mentioning that
+  values keep these non-numeric values intact now. It is worth mentioning that
   the new algorithm downgrades signaling NaN values to silent NaN values,
-  because the standard API does not provide predicates to distinct between the
+  because the standard API does not provide predicates to distinguish between the
   two. This should have no implications for real-world applications, because
-  actors that produce a signaling NaN trigger trap handlers before being able to
-  send the result to another actor.
+  actors that produce a signaling NaN trigger trap handlers before sending
+  the result to another actor.
 
 ## [0.17.5] - 2020-05-13
 
