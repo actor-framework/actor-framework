@@ -33,7 +33,7 @@ namespace caf {
 template <class> class behavior_type_of;
 template <class> class dictionary;
 template <class> class downstream;
-template <class> class error_code;
+template <class> class [[nodiscard]] error_code;
 template <class> class expected;
 template <class> class intrusive_cow_ptr;
 template <class> class intrusive_ptr;
@@ -106,7 +106,7 @@ class config_value;
 class deserializer;
 class downstream_manager;
 class downstream_manager_base;
-class error;
+class [[nodiscard]] error;
 class event_based_actor;
 class execution_unit;
 class forwarding_actor_proxy;
