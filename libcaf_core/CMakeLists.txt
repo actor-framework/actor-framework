@@ -227,6 +227,7 @@ caf_add_test_suites(caf-core-test
   deep_to_string
   detached_actors
   detail.bounds_checker
+  detail.ieee_754
   detail.ini_consumer
   detail.limited_vector
   detail.meta_object
