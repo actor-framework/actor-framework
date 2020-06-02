@@ -137,7 +137,7 @@ CAF_TEST(doorman accept) {
   run();
   CAF_CHECK(sock);
   auto guard = make_socket_guard(*sock);
-  CAF_REQUIRE_EQUAL(earth.mpx->num_socket_managers(), 3);
+  CAF_CHECK_EQUAL(earth.mpx->num_socket_managers(), 3);
 }
 
 CAF_TEST(connect) {
@@ -153,7 +153,7 @@ CAF_TEST(connect) {
   auto sock = unbox(accept(acc_guard.socket()));
   auto sock_guard = make_socket_guard(sock);
   handle_io_event();
-  CAF_REQUIRE_EQUAL(earth.mpx->num_socket_managers(), 3);
+  CAF_CHECK_EQUAL(earth.mpx->num_socket_managers(), 3);
 }
 
 CAF_TEST(publish) {
@@ -162,7 +162,7 @@ CAF_TEST(publish) {
   CAF_MESSAGE("publishing actor " << CAF_ARG(path));
   earth.mm.publish(dummy, path);
   CAF_MESSAGE("check registry for " << CAF_ARG(path));
-  CAF_CHECK(earth.sys.registry().get(path) != nullptr);
+  CAF_CHECK_NOT_EQUAL(earth.sys.registry().get(path), nullptr);
 }
 
 /*
