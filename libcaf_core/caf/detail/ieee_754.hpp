@@ -72,15 +72,12 @@ typename ieee_754_trait<T>::packed_type pack754(T f) {
   using trait = ieee_754_trait<T>;
   using result_type = typename trait::packed_type;
   // filter special cases
-  if (std::isnan(f)) {
+  if (std::isnan(f))
     return trait::packed_nan;
-  }
-  if (std::isinf(f)) {
+  if (std::isinf(f))
     return std::signbit(f) ? trait::packed_ninf : trait::packed_pinf;
-  }
-  if (std::fabs(f) <= trait::zero) { // only true if f equals +0 or -0
+  if (std::fabs(f) <= trait::zero) // only true if f equals +0 or -0
     return std::signbit(f) ? trait::packed_nzero : trait::packed_pzero;
-  }
   auto significandbits = trait::bits - trait::expbits - 1; // -1 for sign bit
   // check sign and begin normalization
   result_type sign;
