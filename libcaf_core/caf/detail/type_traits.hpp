@@ -711,7 +711,7 @@ template <class T, class Arg>
 struct can_apply {
   template <class U>
   static auto sfinae(U* x)
-    -> decltype(x->apply(std::declval<Arg>()), std::true_type{});
+    -> decltype(CAF_IGNORE_UNUSED(x->apply(std::declval<Arg>())), std::true_type{});
 
   template <class U>
   static auto sfinae(...) -> std::false_type;
