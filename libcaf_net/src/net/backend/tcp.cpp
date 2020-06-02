@@ -51,7 +51,7 @@ error tcp::init() {
   auto local_address = std::string("[::]:") + std::to_string(conf_port);
   if (auto err = detail::parse(local_address, ep))
     return err;
-  auto acceptor = make_tcp_accept_socket(ep);
+  auto acceptor = make_tcp_accept_socket(ep, true);
   if (!acceptor)
     return acceptor.error();
   auto acc_guard = make_socket_guard(*acceptor);
@@ -81,7 +81,7 @@ void tcp::stop() {
   peers_.clear();
 }
 
-endpoint_manager_ptr tcp::connect(const uri& locator) {
+expected<endpoint_manager_ptr> tcp::connect(const uri& locator) {
   auto auth = locator.authority();
   auto host = auth.host;
   if (auto hostname = get_if<std::string>(&host)) {
@@ -94,7 +94,7 @@ endpoint_manager_ptr tcp::connect(const uri& locator) {
         return emplace(make_node_id(*locator.authority_only()), *sock);
     }
   }
-  return nullptr;
+  return sec::cannot_connect_to_node;
 }
 
 endpoint_manager_ptr tcp::peer(const node_id& id) {
@@ -107,12 +107,13 @@ void tcp::resolve(const uri& locator, const actor& listener) {
     auto p = peer(make_node_id(*id));
     if (p == nullptr) {
       CAF_LOG_INFO("connecting to " << CAF_ARG(locator));
-      p = connect(locator);
+      auto res = connect(locator);
+      if (!res)
+        anon_send(listener, error(sec::cannot_connect_to_node));
+      else
+        p = *res;
     }
-    if (p != nullptr)
-      p->resolve(locator, listener);
-    else
-      anon_send(listener, error(sec::cannot_connect_to_node));
+    p->resolve(locator, listener);
   } else {
     anon_send(listener, error(basp::ec::invalid_locator));
   }

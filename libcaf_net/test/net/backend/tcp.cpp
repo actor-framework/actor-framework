@@ -165,20 +165,20 @@ CAF_TEST(publish) {
   CAF_CHECK_NOT_EQUAL(earth.sys.registry().get(path), nullptr);
 }
 
-/*
-// TODO: `middleman.this-node` cannot be set according to randomly bound port of
-         the node. Thus, the test segfaults  when creating the new actor with
-         `nullptr` for the `endpoint_manager`...
-
 CAF_TEST(remote_actor) {
   using std::chrono::milliseconds;
   using std::chrono::seconds;
+  auto sockets = unbox(make_stream_socket_pair());
+  auto earth_be = reinterpret_cast<net::backend::tcp*>(earth.mm.backend("tcp"));
+  earth_be->emplace(mars.id(), sockets.first);
+  auto mars_be = reinterpret_cast<net::backend::tcp*>(mars.mm.backend("tcp"));
+  mars_be->emplace(earth.id(), sockets.second);
+  handle_io_event();
+  CAF_CHECK_EQUAL(earth.mpx->num_socket_managers(), 3);
+  CAF_CHECK_EQUAL(mars.mpx->num_socket_managers(), 3);
   auto dummy = earth.sys.spawn(dummy_actor);
-  auto name = "dummy"s;
-  earth.mm.publish(dummy, name);
-  auto port = unbox(earth.mm.port("tcp"));
-  auto ep_str = "tcp://localhost:"s + std::to_string(port);
-  auto locator = unbox(make_uri(ep_str + "/name/"s + name));
+  earth.mm.publish(dummy, "dummy"s);
+  auto locator = unbox(make_uri("tcp://earth/name/dummy"s));
   CAF_MESSAGE("resolve " << CAF_ARG(locator));
   bool running = true;
   auto f = [&]() {
@@ -195,6 +195,6 @@ CAF_TEST(remote_actor) {
   running = false;
   t.join();
   set_thread_id();
-}*/
+}
 
 CAF_TEST_FIXTURE_SCOPE_END()

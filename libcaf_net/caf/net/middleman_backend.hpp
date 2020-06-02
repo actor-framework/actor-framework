@@ -47,7 +47,7 @@ public:
   virtual endpoint_manager_ptr peer(const node_id& id) = 0;
 
   /// Establishes a connection to a remote node.
-  virtual endpoint_manager_ptr connect(const uri& locator) = 0;
+  virtual expected<endpoint_manager_ptr> connect(const uri& locator) = 0;
 
   /// Resolves a path to a remote actor.
   virtual void resolve(const uri& locator, const actor& listener) = 0;

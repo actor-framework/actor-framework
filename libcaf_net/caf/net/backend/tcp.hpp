@@ -21,6 +21,8 @@
 #include <map>
 
 #include "caf/detail/net_export.hpp"
+#include "caf/error.hpp"
+#include "caf/expected.hpp"
 #include "caf/net/basp/application.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
@@ -49,7 +51,7 @@ public:
 
   void stop() override;
 
-  endpoint_manager_ptr connect(const uri& locator) override;
+  expected<endpoint_manager_ptr> connect(const uri& locator) override;
 
   endpoint_manager_ptr peer(const node_id& id) override;
 
@@ -67,6 +69,24 @@ public:
 
   uint16_t port() const noexcept override {
     return listening_port_;
+  }
+
+  template <class Handle>
+  expected<endpoint_manager_ptr>
+  emplace(const node_id& peer_id, Handle socket_handle) {
+    using transport_type = stream_transport<basp::application>;
+    nonblocking(socket_handle, true);
+    auto mpx = mm_.mpx();
+    basp::application app{proxies_};
+    auto mgr = make_endpoint_manager(
+      mpx, mm_.system(), transport_type{socket_handle, std::move(app)});
+    if (auto err = mgr->init()) {
+      CAF_LOG_ERROR("mgr->init() failed: " << err);
+      return err;
+    }
+    mpx->register_reading(mgr);
+    peers_.emplace(peer_id, std::move(mgr));
+    return peers_[peer_id];
   }
 
 private:
@@ -88,23 +108,6 @@ private:
   private:
     proxy_registry& proxies_;
   };
-
-  template <class Handle>
-  endpoint_manager_ptr& emplace(const node_id& peer_id, Handle socket_handle) {
-    using transport_type = stream_transport<basp::application>;
-    nonblocking(socket_handle, true);
-    auto mpx = mm_.mpx();
-    basp::application app{proxies_};
-    auto mgr = make_endpoint_manager(
-      mpx, mm_.system(), transport_type{socket_handle, std::move(app)});
-    if (auto err = mgr->init()) {
-      CAF_LOG_ERROR("mgr->init() failed: " << err);
-      CAF_RAISE_ERROR("mgr->init() failed");
-    }
-    mpx->register_reading(mgr);
-    peers_.emplace(peer_id, std::move(mgr));
-    return peers_[peer_id];
-  }
 
   endpoint_manager_ptr get_peer(const node_id& id);
 

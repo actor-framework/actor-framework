@@ -27,6 +27,7 @@
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/stream_transport.hpp"
 #include "caf/raise_error.hpp"
+#include "caf/sec.hpp"
 #include "caf/send.hpp"
 
 namespace caf::net::backend {
@@ -54,8 +55,9 @@ endpoint_manager_ptr test::peer(const node_id& id) {
   return get_peer(id).second;
 }
 
-endpoint_manager_ptr test::connect(const uri&) {
-  return nullptr;
+expected<endpoint_manager_ptr> test::connect(const uri&) {
+  return make_error(sec::runtime_error,
+                    "function not implemented in test_backend");
 }
 
 void test::resolve(const uri& locator, const actor& listener) {
