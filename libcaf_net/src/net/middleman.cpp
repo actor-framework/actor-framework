@@ -101,7 +101,7 @@ expected<endpoint_manager_ptr> middleman::connect(const uri& locator) {
   if (auto ret = ptr->connect(locator))
     return ret;
   else
-    return sec::cannot_connect_to_node;
+    return basp::ec::invalid_scheme;
 }
 
 void middleman::resolve(const uri& locator, const actor& listener) {
@@ -127,7 +127,7 @@ expected<uint16_t> middleman::port(string_view scheme) const {
   if (ptr != nullptr)
     return ptr->port();
   else
-    return sec::invalid_protocol_family;
+    return basp::ec::invalid_scheme;
 }
 
 } // namespace caf::net

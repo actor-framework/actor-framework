@@ -92,11 +92,11 @@ public:
     // TODO: Use function view?
     scoped_actor self{sys_};
     resolve(locator, self);
-    Handle actor_ptr;
-    error err = none;
+    Handle handle;
+    error err;
     self->receive(
-      [&actor_ptr](strong_actor_ptr& ptr, const std::set<std::string>&) {
-        actor_ptr = actor_cast<Handle>(std::move(ptr));
+      [&handle](strong_actor_ptr& ptr, const std::set<std::string>&) {
+        handle = actor_cast<Handle>(std::move(ptr));
       },
       [&err](const error& e) { err = e; },
       // TODO: how long should the middleman wait before erroring out?
@@ -107,7 +107,9 @@ public:
         });
     if (err)
       return err;
-    return actor_ptr;
+    if (handle)
+      return handle;
+    return make_error(sec::runtime_error, "cast to handle-type failed");
   }
 
   // -- properties -------------------------------------------------------------

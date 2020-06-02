@@ -81,11 +81,7 @@ public:
     // nop
   }
 
-  virtual bool consume_message() = 0;
-
   virtual bool handle_io_event() = 0;
-
-  virtual bool trigger_timeout() = 0;
 };
 
 template <class Node>
@@ -100,29 +96,8 @@ public:
     return this->sys.node();
   }
 
-  bool consume_message() override {
-    return driver_.consume_message();
-  }
-
   bool handle_io_event() override {
     return driver_.handle_io_event();
-  }
-
-  bool trigger_timeout() override {
-    return driver_.trigger_timeout();
-  }
-
-  actor resolve(string_view locator) {
-    auto hdl = actor_cast<actor>(this->self);
-    this->sys.network_manager().resolve(unbox(make_uri(locator)), hdl);
-    this->run();
-    actor result;
-    this->self->receive(
-      [&](strong_actor_ptr& ptr, const std::set<std::string>&) {
-        CAF_MESSAGE("resolved " << locator);
-        result = actor_cast<actor>(std::move(ptr));
-      });
-    return result;
   }
 
   net::middleman& mm;
@@ -139,16 +114,8 @@ struct fixture : host_fixture, planet_driver {
     CAF_REQUIRE_EQUAL(mars.mpx->num_socket_managers(), 2);
   }
 
-  bool consume_message() override {
-    return earth.sched.try_run_once() || mars.sched.try_run_once();
-  }
-
   bool handle_io_event() override {
     return earth.mpx->poll_once(false) || mars.mpx->poll_once(false);
-  }
-
-  bool trigger_timeout() override {
-    return earth.sched.trigger_timeout() || mars.sched.trigger_timeout();
   }
 
   void set_thread_id() {
@@ -215,15 +182,8 @@ CAF_TEST(remote_actor) {
   earth.mm.publish(dummy, name);
   auto port = unbox(earth.mm.port("tcp"));
   auto ep_str = "tcp://localhost:"s + std::to_string(port);
-  auto locator = unbox(make_uri(ep_str));
-  CAF_MESSAGE("connecting mars to earth at " << CAF_ARG(locator));
-  CAF_CHECK(mars.mm.connect(locator));
-  handle_io_event();
-  CAF_CHECK_EQUAL(mars.mpx->num_socket_managers(), 3);
-  CAF_CHECK_EQUAL(earth.mpx->num_socket_managers(), 3);
-  locator = unbox(make_uri(ep_str + "/name/"s + name));
+  auto locator = unbox(make_uri(ep_str + "/name/"s + name));
   CAF_MESSAGE("resolve " << CAF_ARG(locator));
-  mars.mm.resolve(locator, mars.self);
   bool running = true;
   auto f = [&]() {
     set_thread_id();
