@@ -16,7 +16,7 @@ caf_incubator_add_enum_consistency_check("caf/net/operation.hpp"
 # -- utility function for setting default properties ---------------------------
 
 function(caf_net_set_default_properties)
-  foreach (target ${ARGN})
+  foreach(target ${ARGN})
     caf_incubator_set_default_properties(${target})
     # Make sure we find our headers plus the the generated export header.
     target_include_directories(${target} PRIVATE
@@ -25,48 +25,48 @@ function(caf_net_set_default_properties)
     target_compile_definitions(${target} PRIVATE libcaf_net_EXPORTS)
     # Pull in public dependencies.
     target_link_libraries(${target} PUBLIC CAF::core)
-    if (MSVC)
+    if(MSVC)
       target_link_libraries(${target} PUBLIC ws2_32 iphlpapi)
-    endif ()
-  endforeach ()
+    endif()
+  endforeach()
 endfunction()
 
 # -- add library targets -------------------------------------------------------
 
 add_library(libcaf_net_obj OBJECT ${CAF_NET_HEADERS}
-            src/actor_proxy_impl.cpp
-            src/basp/application.cpp
-            src/basp/connection_state_strings.cpp
-            src/basp/ec_strings.cpp
-            src/basp/message_type_strings.cpp
-            src/basp/operation_strings.cpp
-            src/convert_ip_endpoint.cpp
-            src/datagram_socket.cpp
-            src/defaults.cpp
-            src/defaults.cpp
-            src/endpoint_manager.cpp
-            src/header.cpp
-            src/host.cpp
-            src/ip.cpp
-            src/message_queue.cpp
-            src/multiplexer.cpp
-            src/net/backend/tcp.cpp
-            src/net/backend/test.cpp
-            src/net/endpoint_manager_queue.cpp
-            src/net/middleman.cpp
-            src/net/middleman_backend.cpp
-            src/net/packet_writer.cpp
-            src/network_socket.cpp
-            src/pipe_socket.cpp
-            src/pollset_updater.cpp
-            src/socket.cpp
-            src/socket_manager.cpp
-            src/stream_socket.cpp
-            src/tcp_accept_socket.cpp
-            src/tcp_stream_socket.cpp
-            src/udp_datagram_socket.cpp
-            src/worker.cpp
-            )
+  src/actor_proxy_impl.cpp
+  src/application.cpp
+  src/basp/connection_state_strings.cpp
+  src/basp/ec_strings.cpp
+  src/basp/message_type_strings.cpp
+  src/basp/operation_strings.cpp
+  src/convert_ip_endpoint.cpp
+  src/datagram_socket.cpp
+  src/defaults.cpp
+  src/defaults.cpp
+  src/endpoint_manager.cpp
+  src/header.cpp
+  src/host.cpp
+  src/ip.cpp
+  src/message_queue.cpp
+  src/multiplexer.cpp
+  src/net/backend/test.cpp
+  src/net/backend/tcp.cpp
+  src/net/endpoint_manager_queue.cpp
+  src/net/middleman.cpp
+  src/net/middleman_backend.cpp
+  src/net/packet_writer.cpp
+  src/network_socket.cpp
+  src/pipe_socket.cpp
+  src/pollset_updater.cpp
+  src/socket.cpp
+  src/socket_manager.cpp
+  src/stream_socket.cpp
+  src/tcp_accept_socket.cpp
+  src/tcp_stream_socket.cpp
+  src/udp_datagram_socket.cpp
+  src/worker.cpp
+)
 
 add_library(libcaf_net "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
             $<TARGET_OBJECTS:libcaf_net_obj>)
@@ -80,7 +80,7 @@ set_property(TARGET libcaf_net_obj PROPERTY POSITION_INDEPENDENT_CODE ON)
 caf_net_set_default_properties(libcaf_net_obj libcaf_net)
 
 target_include_directories(libcaf_net INTERFACE
-                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 
 add_library(CAF::net ALIAS libcaf_net)
 
@@ -108,9 +108,9 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/caf"
 
 # -- build unit tests ----------------------------------------------------------
 
-if (NOT CAF_INC_ENABLE_TESTING)
+if(NOT CAF_INC_ENABLE_TESTING)
   return()
-endif ()
+endif()
 
 add_executable(caf-net-test
                test/net-test.cpp
@@ -123,30 +123,30 @@ target_include_directories(caf-net-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tes
 target_link_libraries(caf-net-test PRIVATE CAF::test)
 
 caf_incubator_add_test_suites(caf-net-test
-                              net.basp.message_queue
-                              net.basp.ping_pong
-                              net.basp.worker
-                              accept_socket
-                              pipe_socket
-                              application
-                              socket
-                              convert_ip_endpoint
-                              socket_guard
-                              datagram_socket
-                              stream_application
-                              datagram_transport
-                              stream_socket
-                              doorman
-                              stream_transport
-                              endpoint_manager
-                              string_application
-                              header
-                              tcp_sockets
-                              ip
-                              transport_worker
-                              multiplexer
-                              transport_worker_dispatcher
-                              udp_datagram_socket
-                              network_socket
-                              net.backend.tcp
-                              )
+  net.basp.message_queue
+  net.basp.ping_pong
+  net.basp.worker
+  accept_socket
+  pipe_socket
+  application
+  socket
+  convert_ip_endpoint
+  socket_guard
+  datagram_socket
+  stream_application
+  datagram_transport
+  stream_socket
+  doorman
+  stream_transport
+  endpoint_manager
+  string_application
+  header
+  tcp_sockets
+  ip
+  transport_worker
+  multiplexer
+  transport_worker_dispatcher
+  udp_datagram_socket
+  network_socket
+  net.backend.tcp
+)
