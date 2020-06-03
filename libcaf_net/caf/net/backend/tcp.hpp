@@ -85,7 +85,7 @@ public:
       return err;
     }
     mpx->register_reading(mgr);
-    peers_.emplace(peer_id, std::move(mgr));
+    peers_[peer_id] = std::move(mgr);
     return peers_[peer_id];
   }
 

@@ -89,7 +89,6 @@ public:
 
   template <class Handle = actor>
   expected<Handle> remote_actor(const uri& locator) {
-    // TODO: Use function view?
     scoped_actor self{sys_};
     resolve(locator, self);
     Handle handle;
