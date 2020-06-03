@@ -18,12 +18,15 @@
 
 #pragma once
 
+#include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/net/basp/application.hpp"
 #include "caf/proxy_registry.hpp"
 
 namespace caf::net::basp {
 
+/// Factory for basp::application.
+/// @relates doorman
 class CAF_NET_EXPORT application_factory {
 public:
   using application_type = basp::application;

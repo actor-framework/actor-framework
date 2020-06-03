@@ -21,17 +21,19 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "caf/detail/net_export.hpp"
+
 // -- hard-coded default values for various CAF options ------------------------
 
 namespace caf::defaults::middleman {
 
 /// Maximum number of cached buffers for sending payloads.
-extern const size_t max_payload_buffers;
+CAF_NET_EXPORT extern const size_t max_payload_buffers;
 
 /// Maximum number of cached buffers for sending headers.
-extern const size_t max_header_buffers;
+CAF_NET_EXPORT extern const size_t max_header_buffers;
 
 /// Port to listen on for tcp.
-extern const uint16_t tcp_port;
+CAF_NET_EXPORT extern const uint16_t tcp_port;
 
 } // namespace caf::defaults::middleman

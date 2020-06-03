@@ -22,6 +22,7 @@
 #include <cstdint>
 
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/meta/hex_formatted.hpp"
 #include "caf/meta/type_name.hpp"
@@ -33,7 +34,7 @@ namespace caf::net::basp {
 /// @addtogroup BASP
 
 /// The header of a Binary Actor System Protocol (BASP) message.
-struct header : detail::comparable<header> {
+struct CAF_NET_EXPORT header : detail::comparable<header> {
   // -- constructors, destructors, and assignment operators --------------------
 
   constexpr header() noexcept
@@ -74,11 +75,11 @@ struct header : detail::comparable<header> {
 
 /// Serializes a header to a byte representation.
 /// @relates header
-std::array<byte, header_size> to_bytes(header x);
+CAF_NET_EXPORT std::array<byte, header_size> to_bytes(header x);
 
 /// Serializes a header to a byte representation.
 /// @relates header
-void to_bytes(header x, byte_buffer& buf);
+CAF_NET_EXPORT void to_bytes(header x, byte_buffer& buf);
 
 /// @relates header
 template <class Inspector>

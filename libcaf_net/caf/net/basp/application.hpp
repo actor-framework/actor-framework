@@ -31,6 +31,7 @@
 #include "caf/byte.hpp"
 #include "caf/callback.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/detail/worker_hub.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
@@ -52,7 +53,7 @@
 namespace caf::net::basp {
 
 /// An implementation of BASP as an application layer protocol.
-class application {
+class CAF_NET_EXPORT application {
 public:
   // -- member types -----------------------------------------------------------
 
