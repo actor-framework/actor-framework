@@ -90,25 +90,6 @@ public:
   }
 
 private:
-  class basp_application_factory {
-  public:
-    using application_type = basp::application;
-
-    basp_application_factory(proxy_registry& proxies);
-
-    template <class Parent>
-    error init(Parent&) {
-      return none;
-    }
-
-    application_type make() const {
-      return application_type{proxies_};
-    }
-
-  private:
-    proxy_registry& proxies_;
-  };
-
   endpoint_manager_ptr get_peer(const node_id& id);
 
   middleman& mm_;

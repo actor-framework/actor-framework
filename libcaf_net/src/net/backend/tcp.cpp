@@ -22,6 +22,7 @@
 
 #include "caf/net/actor_proxy_impl.hpp"
 #include "caf/net/basp/application.hpp"
+#include "caf/net/basp/application_factory.hpp"
 #include "caf/net/basp/ec.hpp"
 #include "caf/net/doorman.hpp"
 #include "caf/net/ip.hpp"
@@ -65,9 +66,9 @@ error tcp::init() {
   if (!doorman_uri)
     return doorman_uri.error();
   auto& mpx = mm_.mpx();
-  auto mgr = make_endpoint_manager(mpx, mm_.system(),
-                                   doorman{acc_guard.release(),
-                                           basp_application_factory{proxies_}});
+  auto mgr = make_endpoint_manager(
+    mpx, mm_.system(),
+    doorman{acc_guard.release(), basp::application_factory{proxies_}});
   if (auto err = mgr->init()) {
     CAF_LOG_ERROR("mgr->init() failed: " << err);
     return err;
@@ -136,11 +137,6 @@ endpoint_manager_ptr tcp::get_peer(const node_id& id) {
   if (i != peers_.end())
     return i->second;
   return nullptr;
-}
-
-tcp::basp_application_factory::basp_application_factory(proxy_registry& proxies)
-  : proxies_(proxies) {
-  // nop
 }
 
 } // namespace caf::net::backend
