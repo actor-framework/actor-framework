@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <chrono>
 #include <set>
 #include <string>
 #include <thread>
@@ -87,11 +88,9 @@ public:
   /// Resolves a path to a remote actor.
   void resolve(const uri& locator, const actor& listener);
 
-  template <class Handle = actor, class Rep, class Period>
-  expected<Handle>
-  remote_actor(const uri& locator,
-               std::chrono::duration<Rep, Period> timeout_duration
-               = std::chrono::seconds(5)) {
+  template <class Handle = actor, class Duration = std::chrono::seconds>
+  expected<Handle> remote_actor(const uri& locator, Duration timeout_duration
+                                                    = std::chrono::seconds(5)) {
     scoped_actor self{sys_};
     resolve(locator, self);
     Handle handle;
