@@ -79,7 +79,7 @@ public:
   expected<endpoint_manager_ptr> connect(const uri& locator);
 
   // Publishes an actor.
-  template <class Handle = actor>
+  template <class Handle>
   void publish(Handle whom, const std::string& path) {
     system().registry().put(path, whom);
   }
@@ -87,8 +87,11 @@ public:
   /// Resolves a path to a remote actor.
   void resolve(const uri& locator, const actor& listener);
 
-  template <class Handle = actor>
-  expected<Handle> remote_actor(const uri& locator) {
+  template <class Handle = actor, class Rep, class Period>
+  expected<Handle>
+  remote_actor(const uri& locator,
+               std::chrono::duration<Rep, Period> timeout_duration
+               = std::chrono::seconds(5)) {
     scoped_actor self{sys_};
     resolve(locator, self);
     Handle handle;
@@ -98,8 +101,7 @@ public:
         handle = actor_cast<Handle>(std::move(ptr));
       },
       [&err](const error& e) { err = e; },
-      // TODO: how long should the middleman wait before erroring out?
-      after(std::chrono::seconds(5)) >>
+      after(timeout_duration) >>
         [&err] {
           err = make_error(sec::runtime_error,
                            "manager did not respond with a proxy.");

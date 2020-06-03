@@ -65,9 +65,9 @@ error tcp::init() {
   if (!doorman_uri)
     return doorman_uri.error();
   auto& mpx = mm_.mpx();
-  auto mgr = make_endpoint_manager(
-    mpx, mm_.system(),
-    doorman{acc_guard.release(), tcp::basp_application_factory{proxies_}});
+  auto mgr = make_endpoint_manager(mpx, mm_.system(),
+                                   doorman{acc_guard.release(),
+                                           basp_application_factory{proxies_}});
   if (auto err = mgr->init()) {
     CAF_LOG_ERROR("mgr->init() failed: " << err);
     return err;
