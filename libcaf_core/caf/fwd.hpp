@@ -229,6 +229,28 @@ struct subscriber_base;
 
 } // namespace mixin
 
+// -- telemetry API ------------------------------------------------------------
+
+namespace telemetry {
+
+class component;
+class int_gauge;
+class label;
+class label_view;
+class metric;
+class metric_family;
+class metric_registry;
+
+enum class metric_type : uint8_t;
+
+template <class Type>
+class metric_family_impl;
+
+template <class Type>
+class metric_impl;
+
+} // namespace telemetry
+
 // -- I/O classes --------------------------------------------------------------
 
 namespace io {

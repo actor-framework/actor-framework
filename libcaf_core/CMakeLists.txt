@@ -162,6 +162,11 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/stream_priority_strings.cpp
   src/string_algorithms.cpp
   src/string_view.cpp
+  src/telemetry/label.cpp
+  src/telemetry/label_view.cpp
+  src/telemetry/metric.cpp
+  src/telemetry/metric_family.cpp
+  src/telemetry/metric_registry.cpp
   src/term.cpp
   src/test_credit_controller.cpp
   src/thread_hook.cpp
@@ -302,6 +307,9 @@ caf_add_test_suites(caf-core-test
   string_algorithms
   string_view
   sum_type
+  telemetry.int_gauge
+  telemetry.label
+  telemetry.metric_registry
   thread_hook
   tracing_data
   type_id_list
