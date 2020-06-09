@@ -54,12 +54,15 @@ public:
     return std::addressof(m->get()->impl());
   }
 
-  void scrape() override {
-    // nop
+  template <class Collector>
+  void collect(Collector& collector) const {
+    std::unique_lock<std::mutex> guard{mx_};
+    for (auto& ptr : metrics_)
+      collector(this, ptr.get(), std::addressof(ptr->impl()));
   }
 
 private:
-  std::mutex mx_;
+  mutable std::mutex mx_;
   std::vector<std::unique_ptr<metric_type>> metrics_;
 };
 

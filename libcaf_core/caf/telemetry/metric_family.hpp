@@ -34,13 +34,20 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   metric_family(std::string prefix, std::string name,
-                std::vector<std::string> label_names, std::string helptext)
+                std::vector<std::string> label_names, std::string helptext,
+                std::string unit, bool is_sum)
     : prefix_(std::move(prefix)),
       name_(std::move(name)),
       label_names_(std::move(label_names)),
-      helptext_(std::move(helptext)) {
+      helptext_(std::move(helptext)),
+      unit_(std::move(unit)),
+      is_sum_(is_sum) {
     // nop
   }
+
+  metric_family(const metric_family&) = delete;
+
+  metric_family& operator=(const metric_family&) = delete;
 
   virtual ~metric_family();
 
@@ -62,13 +69,21 @@ public:
     return helptext_;
   }
 
-  virtual void scrape() = 0;
+  const auto& unit() const noexcept {
+    return unit_;
+  }
+
+  auto is_sum() const noexcept {
+    return is_sum_;
+  }
 
 private:
   std::string prefix_;
   std::string name_;
   std::vector<std::string> label_names_;
   std::string helptext_;
+  std::string unit_;
+  bool is_sum_;
 };
 
 } // namespace caf::telemetry

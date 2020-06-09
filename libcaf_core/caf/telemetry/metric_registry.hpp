@@ -25,6 +25,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/string_view.hpp"
+#include "caf/telemetry/metric_family_impl.hpp"
 
 namespace caf::telemetry {
 
@@ -35,11 +36,33 @@ public:
 
   ~metric_registry();
 
+  /// Adds a new metric family to the registry.
+  /// @param type The kind of the metric, e.g. gauge or count.
+  /// @param prefix The prefix (namespace) this family belongs to. Usually the
+  ///               application or protocol name, e.g., `http`. The prefix `caf`
+  ///               as well as prefixes starting with an underscore are
+  ///               reserved.
+  /// @param name The human-readable name of the metric, e.g., `requests`.
+  /// @param label_names Names for all label dimensions of the metric.
+  /// @param helptext Short explanation of the metric.
+  /// @param unit Unit of measurement. Please use base units such as `bytes` or
+  ///             `seconds` (prefer lowercase). The pseudo-unit `1` identifies
+  ///             dimensionless counts.
+  /// @param is_sum Setting this to `true` indicates that this metric adds
+  ///               something up to a total, where only the total value is of
+  ///               interest. For example, the total number of HTTP requests.
   void add_family(metric_type type, std::string prefix, std::string name,
-                  std::vector<std::string> label_names, std::string helptext);
+                  std::vector<std::string> label_names, std::string helptext,
+                  std::string unit = "1", bool is_sum = false);
 
   telemetry::int_gauge* int_gauge(string_view prefix, string_view name,
                                   std::vector<label_view> labels);
+
+  template <class Collector>
+  void collect(Collector& collector) const {
+    for (auto& ptr : int_gauges)
+      ptr->collect(collector);
+  }
 
 private:
   void add_int_gauge_family(std::string prefix, std::string name,

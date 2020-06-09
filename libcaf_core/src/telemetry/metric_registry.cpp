@@ -59,25 +59,30 @@ metric_registry::int_gauge(string_view prefix, string_view name,
   return (*i)->get_or_add(labels);
 }
 
-void metric_registry::add_int_gauge_family(std::string prefix, std::string name,
-                                           std::vector<std::string> label_names,
-                                           std::string helptext) {
-  using family_type = metric_family_impl<telemetry::int_gauge>;
-  std::sort(label_names.begin(), label_names.end());
-  auto ptr = std::make_unique<family_type>(std::move(prefix), std::move(name),
-                                           std::move(label_names),
-                                           std::move(helptext));
-  int_gauges.emplace_back(std::move(ptr));
+namespace {
+
+template <class Type>
+using metric_family_ptr = std::unique_ptr<metric_family_impl<Type>>;
+
+template <class T, class... Ts>
+void emplace_family(std::vector<metric_family_ptr<T>>& families, Ts&&... xs) {
+  using family_type = metric_family_impl<T>;
+  families.emplace_back(std::make_unique<family_type>(std::forward<Ts>(xs)...));
 }
+
+} // namespace
 
 void metric_registry::add_family(metric_type type, std::string prefix,
                                  std::string name,
                                  std::vector<std::string> label_names,
-                                 std::string helptext) {
+                                 std::string helptext, std::string unit,
+                                 bool is_sum) {
+  std::sort(label_names.begin(), label_names.end());
   switch (type) {
     case metric_type::int_gauge:
-      return add_int_gauge_family(std::move(prefix), std::move(name),
-                                  std::move(label_names), std::move(helptext));
+      return emplace_family(int_gauges, std::move(prefix), std::move(name),
+                            std::move(label_names), std::move(helptext),
+                            std::move(unit), is_sum);
     default:
       break;
   }
