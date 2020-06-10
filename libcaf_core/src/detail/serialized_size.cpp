@@ -119,19 +119,19 @@ error serialized_size_inspector::apply(long double x) {
 }
 
 error serialized_size_inspector::apply(string_view x) {
-  begin_sequence(x.size());
+  CAF_IGNORE_UNUSED(begin_sequence(x.size()));
   result_ += x.size();
   return end_sequence();
 }
 
 error serialized_size_inspector::apply(const std::u16string& x) {
-  begin_sequence(x.size());
+  CAF_IGNORE_UNUSED(begin_sequence(x.size()));
   result_ += x.size() * sizeof(uint16_t);
   return end_sequence();
 }
 
 error serialized_size_inspector::apply(const std::u32string& x) {
-  begin_sequence(x.size());
+  CAF_IGNORE_UNUSED(begin_sequence(x.size()));
   result_ += x.size() * sizeof(uint32_t);
   return end_sequence();
 }
@@ -142,7 +142,7 @@ error serialized_size_inspector::apply(span<const byte> x) {
 }
 
 error serialized_size_inspector::apply(const std::vector<bool>& xs) {
-  begin_sequence(xs.size());
+  CAF_IGNORE_UNUSED(begin_sequence(xs.size()));
   result_ += (xs.size() + static_cast<size_t>(xs.size() % 8 != 0)) / 8;
   return end_sequence();
 }

@@ -142,34 +142,34 @@ void binary_serializer::apply(long double x) {
 }
 
 void binary_serializer::apply(string_view x) {
-  begin_sequence(x.size());
+  CAF_IGNORE_UNUSED(begin_sequence(x.size()));
   apply(as_bytes(make_span(x)));
-  end_sequence();
+  CAF_IGNORE_UNUSED(end_sequence());
 }
 
 void binary_serializer::apply(const std::u16string& x) {
   auto str_size = x.size();
-  begin_sequence(str_size);
+  CAF_IGNORE_UNUSED(begin_sequence(str_size));
   // The standard does not guarantee that char16_t is exactly 16 bits.
   for (auto c : x)
     apply_int(*this, static_cast<uint16_t>(c));
-  end_sequence();
+  CAF_IGNORE_UNUSED(end_sequence());
 }
 
 void binary_serializer::apply(const std::u32string& x) {
   auto str_size = x.size();
-  begin_sequence(str_size);
+  CAF_IGNORE_UNUSED(begin_sequence(str_size));
   // The standard does not guarantee that char32_t is exactly 32 bits.
   for (auto c : x)
     apply_int(*this, static_cast<uint32_t>(c));
-  end_sequence();
+  CAF_IGNORE_UNUSED(end_sequence());
 }
 
 void binary_serializer::apply(const std::vector<bool>& x) {
   auto len = x.size();
-  begin_sequence(len);
+  CAF_IGNORE_UNUSED(begin_sequence(len));
   if (len == 0) {
-    end_sequence();
+    CAF_IGNORE_UNUSED(end_sequence());
     return;
   }
   size_t pos = 0;
@@ -231,7 +231,7 @@ void binary_serializer::apply(const std::vector<bool>& x) {
     }
     apply(tmp);
   }
-  end_sequence();
+  CAF_IGNORE_UNUSED(end_sequence());
 }
 
 } // namespace caf

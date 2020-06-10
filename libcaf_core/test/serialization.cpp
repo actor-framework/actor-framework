@@ -309,12 +309,12 @@ CAF_TEST(long_sequences) {
   byte_buffer data;
   binary_serializer sink{nullptr, data};
   size_t n = std::numeric_limits<uint32_t>::max();
-  sink.begin_sequence(n);
-  sink.end_sequence();
+  CAF_CHECK_EQUAL(sink.begin_sequence(n), none);
+  CAF_CHECK_EQUAL(sink.end_sequence(), none);
   binary_deserializer source{nullptr, data};
   size_t m = 0;
-  source.begin_sequence(m);
-  source.end_sequence();
+  CAF_CHECK_EQUAL(source.begin_sequence(m), none);
+  CAF_CHECK_EQUAL(source.end_sequence(), none);
   CAF_CHECK_EQUAL(n, m);
 }
 
