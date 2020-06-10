@@ -54,7 +54,6 @@ public:
   config() {
     load<io::middleman>();
     load<openssl::manager>();
-    actor_system_config::parse(test::engine::argc(), test::engine::argv());
     set("middleman.manual-multiplexing", true);
     set("middleman.attach-utility-actors", true);
     set("scheduler.policy", "testing");

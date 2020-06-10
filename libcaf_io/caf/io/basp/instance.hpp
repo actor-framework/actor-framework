@@ -111,7 +111,7 @@ public:
 
   /// Describes a callback function object for `remove_published_actor`.
   using removed_published_actor
-    = callback<error_code<sec>(const strong_actor_ptr&, uint16_t)>;
+    = callback<void(const strong_actor_ptr&, uint16_t)>;
 
   instance(abstract_broker* parent, callee& lstnr);
 

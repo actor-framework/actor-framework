@@ -349,7 +349,6 @@ behavior basp_broker::make_behavior() {
       CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
       auto cb = make_callback([&](const strong_actor_ptr&, uint16_t x) {
         close(hdl_by_port(x));
-        return error_code<sec>{};
       });
       if (instance.remove_published_actor(whom, port, &cb) == 0)
         return sec::no_actor_published_at_port;

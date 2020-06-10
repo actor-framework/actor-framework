@@ -67,12 +67,12 @@ CAF_TEST(meta objects allow serialization of objects) {
   binary_serializer sink{nullptr, buf};
   meta_i32_wrapper.default_construct(&storage);
   CAF_CHECK_EQUAL(i32_wrapper::instances, 1u);
-  meta_i32_wrapper.save_binary(sink, &storage);
+  CAF_CHECK_EQUAL(meta_i32_wrapper.save_binary(sink, &storage), none);
   i32_wrapper copy;
   CAF_CHECK_EQUAL(i32_wrapper::instances, 2u);
   copy.value = 42;
   binary_deserializer source{nullptr, buf};
-  meta_i32_wrapper.load_binary(source, &copy);
+  CAF_CHECK_EQUAL(meta_i32_wrapper.load_binary(source, &copy), none);
   CAF_CHECK_EQUAL(copy.value, 0);
   meta_i32_wrapper.destroy(&storage);
   CAF_CHECK_EQUAL(i32_wrapper::instances, 1u);
