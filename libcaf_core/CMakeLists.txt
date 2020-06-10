@@ -162,6 +162,7 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/stream_priority_strings.cpp
   src/string_algorithms.cpp
   src/string_view.cpp
+  src/telemetry/collector/prometheus.cpp
   src/telemetry/label.cpp
   src/telemetry/label_view.cpp
   src/telemetry/metric.cpp
@@ -307,6 +308,7 @@ caf_add_test_suites(caf-core-test
   string_algorithms
   string_view
   sum_type
+  telemetry.collector.prometheus
   telemetry.int_gauge
   telemetry.label
   telemetry.metric_registry
