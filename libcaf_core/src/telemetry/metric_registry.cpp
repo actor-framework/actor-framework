@@ -19,6 +19,7 @@
 #include "caf/telemetry/metric_registry.hpp"
 
 #include "caf/config.hpp"
+#include "caf/raise_error.hpp"
 #include "caf/telemetry/int_gauge.hpp"
 #include "caf/telemetry/metric_family_impl.hpp"
 #include "caf/telemetry/metric_impl.hpp"
@@ -52,40 +53,56 @@ metric_registry::int_gauge(string_view prefix, string_view name,
                          family->label_names().begin(),
                          family->label_names().end(), lbl_cmp);
   };
-  auto i = std::find_if(int_gauges.begin(), int_gauges.end(), matches);
-  if (i == int_gauges.end()) {
-    return nullptr;
+  using family_type = metric_family_impl<telemetry::int_gauge>;
+  family_type* fptr;
+  {
+    std::unique_lock<std::mutex> guard{families_mx_};
+    auto i = std::find_if(int_gauges_.begin(), int_gauges_.end(), matches);
+    if (i == int_gauges_.end()) {
+      std::string prefix_str{prefix.begin(), prefix.end()};
+      std::string name_str{name.begin(), name.end()};
+      assert_unregistered(prefix_str, name_str);
+      std::vector<std::string> label_names;
+      label_names.reserve(labels.size());
+      for (auto& lbl : labels) {
+        auto lbl_name = lbl.name();
+        label_names.emplace_back(std::string{lbl_name.begin(), lbl_name.end()});
+      }
+      auto ptr = std::make_unique<family_type>(std::move(prefix_str),
+                                               std::move(name_str),
+                                               std::move(label_names), "", "1",
+                                               false);
+      i = int_gauges_.emplace(i, std::move(ptr));
+    }
+    fptr = i->get();
   }
-  return (*i)->get_or_add(labels);
+  return fptr->get_or_add(labels);
 }
-
-namespace {
-
-template <class Type>
-using metric_family_ptr = std::unique_ptr<metric_family_impl<Type>>;
-
-template <class T, class... Ts>
-void emplace_family(std::vector<metric_family_ptr<T>>& families, Ts&&... xs) {
-  using family_type = metric_family_impl<T>;
-  families.emplace_back(std::make_unique<family_type>(std::forward<Ts>(xs)...));
-}
-
-} // namespace
 
 void metric_registry::add_family(metric_type type, std::string prefix,
                                  std::string name,
                                  std::vector<std::string> label_names,
                                  std::string helptext, std::string unit,
                                  bool is_sum) {
-  std::sort(label_names.begin(), label_names.end());
+  namespace t = caf::telemetry;
   switch (type) {
     case metric_type::int_gauge:
-      return emplace_family(int_gauges, std::move(prefix), std::move(name),
-                            std::move(label_names), std::move(helptext),
-                            std::move(unit), is_sum);
-    default:
+      add_family<t::int_gauge>(std::move(prefix), std::move(name),
+                               std::move(label_names), std::move(helptext),
+                               std::move(unit), is_sum);
       break;
+    default:
+      CAF_RAISE_ERROR("invalid metric type");
   }
+}
+
+void metric_registry::assert_unregistered(const std::string& prefix,
+                                          const std::string& name) {
+  auto matches = [&](const auto& ptr) {
+    return ptr->prefix() == prefix && ptr->name() == name;
+  };
+  if (std::any_of(int_gauges_.begin(), int_gauges_.end(), matches))
+    CAF_RAISE_ERROR("prefix and name already belong to an int gauge family");
 }
 
 } // namespace caf::telemetry

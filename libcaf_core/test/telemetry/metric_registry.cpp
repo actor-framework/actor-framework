@@ -116,14 +116,14 @@ CAF_TEST(registries allow users to collect all registered metrics) {
                       "seconds", true);
   registry.add_family(metric_type::int_gauge, "caf", "running_actors", {"node"},
                       "How many actors are currently running?");
-  registry.add_family(metric_type::int_gauge, "caf", "mailbox_size", {"name"},
-                      "How many message are currently in mailboxes?");
   registry.int_gauge("foo", "bar", {})->value(123);
   registry.int_gauge("some", "value", {{"a", "1"}, {"b", "2"}})->value(12);
   registry.int_gauge("some", "value", {{"b", "1"}, {"a", "2"}})->value(21);
   registry.int_gauge("other", "value", {{"x", "true"}})->value(31337);
   auto running_actors = bind("caf", "running_actors");
   running_actors.int_gauge({{"node", "localhost"}})->value(42);
+  // Note: not registering caf_mailbox_size previously forces CAF to create it
+  // lazily when adding the first gauge.
   auto mailbox_size = bind("caf", "mailbox_size");
   mailbox_size.int_gauge({{"name", "printer"}})->value(3);
   mailbox_size.int_gauge({{"name", "parser"}})->value(12);

@@ -45,6 +45,14 @@ public:
     return impl_;
   }
 
+  Type* impl_ptr() noexcept {
+    return &impl_;
+  }
+
+  const Type* impl_ptr() const noexcept {
+    return &impl_;
+  }
+
 private:
   Type impl_;
 };

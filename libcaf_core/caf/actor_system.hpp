@@ -49,6 +49,7 @@
 #include "caf/scoped_execution_unit.hpp"
 #include "caf/spawn_options.hpp"
 #include "caf/string_algorithms.hpp"
+#include "caf/telemetry/metric_registry.hpp"
 #include "caf/type_id.hpp"
 
 namespace caf::detail {
@@ -229,8 +230,20 @@ public:
     return assignable(xs, message_types<T>());
   }
 
+  /// Returns the telemetry registry for this system.
+  telemetry::metric_registry& telemetry() noexcept {
+    return telemetry_;
+  }
+
+  /// Returns the telemetry registry for this system.
+  const telemetry::metric_registry& telemetry() const noexcept {
+    return telemetry_;
+  }
+
   /// Returns the host-local identifier for this system.
-  const node_id& node() const;
+  const node_id& node() const {
+    return node_;
+  }
 
   /// Returns the scheduler instance.
   scheduler::abstract_coordinator& scheduler();
@@ -585,6 +598,9 @@ private:
   }
 
   // -- member variables -------------------------------------------------------
+
+  /// Manages all metrics collected by the system.
+  telemetry::metric_registry telemetry_;
 
   /// Provides system-wide callbacks for several actor operations.
   actor_profiler* profiler_;

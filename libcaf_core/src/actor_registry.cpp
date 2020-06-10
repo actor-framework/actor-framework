@@ -48,8 +48,9 @@ actor_registry::~actor_registry() {
   // nop
 }
 
-actor_registry::actor_registry(actor_system& sys) : running_(0), system_(sys) {
-  // nop
+actor_registry::actor_registry(actor_system& sys) : system_(sys) {
+  running_ = sys.telemetry().add_singleton<telemetry::int_gauge>(
+    "caf", "running_actors", "Number of currently running actors.");
 }
 
 strong_actor_ptr actor_registry::get_impl(actor_id key) const {
@@ -96,19 +97,19 @@ void actor_registry::erase(actor_id key) {
 
 void actor_registry::inc_running() {
 # if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
-  auto value = ++running_;
+  auto value = ++*running_;
   CAF_LOG_DEBUG(CAF_ARG(value));
 # else
-  ++running_;
+  ++*running_;
 # endif
 }
 
 size_t actor_registry::running() const {
-  return running_.load();
+  return running_->value();
 }
 
 void actor_registry::dec_running() {
-  size_t new_val = --running_;
+  size_t new_val = --*running_;
   if (new_val <= 1) {
     std::unique_lock<std::mutex> guard(running_mtx_);
     running_cv_.notify_all();
@@ -120,8 +121,8 @@ void actor_registry::await_running_count_equal(size_t expected) const {
   CAF_ASSERT(expected == 0 || expected == 1);
   CAF_LOG_TRACE(CAF_ARG(expected));
   std::unique_lock<std::mutex> guard{running_mtx_};
-  while (running_ != expected) {
-    CAF_LOG_DEBUG(CAF_ARG(running_.load()));
+  while (running_->value() != static_cast<int64_t>(expected)) {
+    CAF_LOG_DEBUG(CAF_ARG(running_->value()));
     running_cv_.wait(guard);
   }
 }

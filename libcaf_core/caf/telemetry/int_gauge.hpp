@@ -67,6 +67,18 @@ public:
     return value_.load();
   }
 
+  /// Increments the gauge by 1.
+  /// @returns The new value of the gauge.
+  int64_t operator++() noexcept {
+    return ++value_;
+  }
+
+  /// Decrements the gauge by 1.
+  /// @returns The new value of the gauge.
+  int64_t operator--() noexcept {
+    return --value_;
+  }
+
 private:
   std::atomic<int64_t> value_;
 };

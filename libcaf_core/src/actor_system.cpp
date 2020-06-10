@@ -344,11 +344,6 @@ actor_system::~actor_system() {
     logger_dtor_cv_.wait(guard);
 }
 
-/// Returns the host-local identifier for this system.
-const node_id& actor_system::node() const {
-  return node_;
-}
-
 /// Returns the scheduler instance.
 scheduler::abstract_coordinator& actor_system::scheduler() {
   using ptr = scheduler::abstract_coordinator*;
