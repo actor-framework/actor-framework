@@ -19,6 +19,8 @@
 #include "caf/telemetry/collector/prometheus.hpp"
 
 #include <cmath>
+#include <ctime>
+#include <type_traits>
 
 #include "caf/telemetry/int_gauge.hpp"
 #include "caf/telemetry/metric.hpp"
@@ -44,8 +46,9 @@ void append(prometheus::char_buffer&, char, Ts&&...);
 template <class... Ts>
 void append(prometheus::char_buffer&, double, Ts&&...);
 
-template <class... Ts>
-void append(prometheus::char_buffer&, int64_t, Ts&&...);
+template <class T, class... Ts>
+std::enable_if_t<std::is_integral<T>::value>
+append(prometheus::char_buffer& buf, T val, Ts&&... xs);
 
 template <class... Ts>
 void append(prometheus::char_buffer&, const metric_family*, Ts&&...);
@@ -80,8 +83,9 @@ void append(prometheus::char_buffer& buf, double val, Ts&&... xs) {
   append(buf, std::forward<Ts>(xs)...);
 }
 
-template <class... Ts>
-void append(prometheus::char_buffer& buf, int64_t val, Ts&&... xs) {
+template <class T, class... Ts>
+std::enable_if_t<std::is_integral<T>::value>
+append(prometheus::char_buffer& buf, T val, Ts&&... xs) {
   append(buf, std::to_string(val));
   append(buf, std::forward<Ts>(xs)...);
 }
@@ -113,17 +117,25 @@ void append(prometheus::char_buffer& buf, const metric* instance, Ts&&... xs) {
 
 } // namespace
 
-string_view prometheus::collect_from(const metric_registry& registry) {
+string_view prometheus::collect_from(const metric_registry& registry,
+                                     time_t now) {
+  if (!buf_.empty() && now - now_ < min_scrape_interval_)
+    return {buf_.data(), buf_.size()};
   buf_.clear();
+  now_ = now;
   registry.collect(*this);
   current_family_ = nullptr;
   return {buf_.data(), buf_.size()};
 }
 
+string_view prometheus::collect_from(const metric_registry& registry) {
+  return collect_from(registry, time(NULL));
+}
+
 void prometheus::operator()(const metric_family* family, const metric* instance,
                             const int_gauge* gauge) {
   set_current_family(family, "gauge");
-  append(buf_, family, instance, ' ', gauge->value(), '\n');
+  append(buf_, family, instance, ' ', gauge->value(), ' ', now_, '\n');
 }
 
 void prometheus::set_current_family(const metric_family* family,
