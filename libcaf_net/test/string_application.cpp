@@ -97,11 +97,11 @@ public:
   }
 
   template <class Parent>
-  void write_message(Parent& parent,
-                     std::unique_ptr<endpoint_manager_queue::message> ptr) {
+  error write_message(Parent& parent,
+                      std::unique_ptr<endpoint_manager_queue::message> ptr) {
     // Ignore proxy announcement messages.
     if (ptr->msg == nullptr)
-      return;
+      return none;
     auto header_buf = parent.next_header_buffer();
     auto payload_buf = parent.next_payload_buffer();
     binary_serializer payload_sink{parent.system(), payload_buf};
@@ -112,6 +112,7 @@ public:
         = header_sink(header_type{static_cast<uint32_t>(payload_buf.size())}))
       CAF_FAIL("serializing failed: " << err);
     parent.write_packet(header_buf, payload_buf);
+    return none;
   }
 
 private:
@@ -206,7 +207,7 @@ CAF_TEST(receive) {
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
   auto buf = std::make_shared<byte_buffer>();
   auto sockets = unbox(make_stream_socket_pair());
-  nonblocking(sockets.second, true);
+  CAF_CHECK(!nonblocking(sockets.second, true));
   CAF_CHECK_EQUAL(read(sockets.second, read_buf),
                   sec::unavailable_or_would_block);
   CAF_MESSAGE("adding both endpoint managers");

@@ -71,14 +71,15 @@ public:
   }
 
   template <class Parent>
-  void write_message(Parent& parent,
-                     std::unique_ptr<endpoint_manager_queue::message> ptr) {
+  error write_message(Parent& parent,
+                      std::unique_ptr<endpoint_manager_queue::message> ptr) {
     auto payload_buf = parent.next_payload_buffer();
     binary_serializer sink(parent.system(), payload_buf);
     if (auto err = sink(ptr->msg->content()))
       CAF_FAIL("serializing failed: " << err);
     CAF_MESSAGE("before sending: " << CAF_ARG(ptr->msg->content()));
     parent.write_packet(payload_buf);
+    return none;
   }
 
   template <class Parent>
@@ -188,7 +189,7 @@ CAF_TEST(construction and initialization) {
 
 CAF_TEST(handle_data) {
   auto test_span = as_bytes(make_span(hello_test));
-  worker.handle_data(transport, test_span);
+  CAF_CHECK(!worker.handle_data(transport, test_span));
   auto& buf = application_results->data_buffer;
   string_view result{reinterpret_cast<char*>(buf.data()), buf.size()};
   CAF_CHECK_EQUAL(result, hello_test);

@@ -38,8 +38,9 @@ bool ip_connect(stream_socket fd, std::string host, uint16_t port) {
   CAF_LOG_TRACE("Family =" << (Family == AF_INET ? "AF_INET" : "AF_INET6")
                            << CAF_ARG(fd.id) << CAF_ARG(host) << CAF_ARG(port));
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
-  using sockaddr_type = typename std::conditional<
-    Family == AF_INET, sockaddr_in, sockaddr_in6>::type;
+  using sockaddr_type =
+    typename std::conditional<Family == AF_INET, sockaddr_in,
+                              sockaddr_in6>::type;
   sockaddr_type sa;
   memset(&sa, 0, sizeof(sockaddr_type));
   inet_pton(Family, host.c_str(), &detail::addr_of(sa));
@@ -60,7 +61,8 @@ expected<tcp_stream_socket> make_connected_tcp_stream_socket(ip_endpoint node) {
 #endif
   CAF_NET_SYSCALL("socket", fd, ==, -1, ::socket(proto, socktype, 0));
   tcp_stream_socket sock{fd};
-  child_process_inherit(sock, false);
+  if (auto err = child_process_inherit(sock, false))
+    return err;
   auto sguard = make_socket_guard(sock);
   if (proto == AF_INET6) {
     if (ip_connect<AF_INET6>(sock, to_string(node.address()), node.port())) {

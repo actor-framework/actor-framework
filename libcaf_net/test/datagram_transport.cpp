@@ -115,13 +115,14 @@ public:
   }
 
   template <class Parent>
-  void write_message(Parent& parent,
-                     std::unique_ptr<endpoint_manager_queue::message> msg) {
+  error write_message(Parent& parent,
+                      std::unique_ptr<endpoint_manager_queue::message> msg) {
     auto payload_buf = parent.next_payload_buffer();
     binary_serializer sink{parent.system(), payload_buf};
     if (auto err = sink(msg->msg->payload))
       CAF_FAIL("serializing failed: " << err);
     parent.write_packet(payload_buf);
+    return none;
   }
 
   template <class Parent>
@@ -221,7 +222,7 @@ CAF_TEST(resolve and proxy communication) {
   auto mgr_impl = mgr.downcast<endpoint_manager_impl<transport_type>>();
   CAF_CHECK(mgr_impl != nullptr);
   auto& transport = mgr_impl->transport();
-  transport.add_new_worker(make_node_id(uri), ep);
+  CAF_CHECK(!transport.add_new_worker(make_node_id(uri), ep));
   run();
   mgr->resolve(uri, self);
   run();
