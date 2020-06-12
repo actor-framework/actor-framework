@@ -19,9 +19,12 @@
 #pragma once
 
 #include <algorithm>
+#include <initializer_list>
 #include <memory>
 #include <mutex>
 
+#include "caf/span.hpp"
+#include "caf/string_view.hpp"
 #include "caf/telemetry/label.hpp"
 #include "caf/telemetry/label_view.hpp"
 #include "caf/telemetry/metric.hpp"
@@ -33,25 +36,32 @@ namespace caf::telemetry {
 template <class Type>
 class metric_family_impl : public metric_family {
 public:
-  using metric_type = metric_impl<Type>;
+  using impl_type = metric_impl<Type>;
 
   using metric_family::metric_family;
 
-  Type* get_or_add(const std::vector<label_view>& labels) {
-    auto has_label_values = [&labels](const auto& metric_ptr) {
+  metric_type type() const noexcept override {
+    return Type::runtime_type;
+  }
+
+  Type* get_or_add(span<const label_view> labels) {
+    auto has_label_values = [labels](const auto& metric_ptr) {
       const auto& metric_labels = metric_ptr->labels();
-      for (size_t index = 0; index < labels.size(); ++index)
-        if (labels[index].value() != metric_labels[index].value())
-          return false;
-      return true;
+      return std::is_permutation(metric_labels.begin(), metric_labels.end(),
+                                 labels.begin(), labels.end());
     };
     std::unique_lock<std::mutex> guard{mx_};
     auto m = std::find_if(metrics_.begin(), metrics_.end(), has_label_values);
     if (m == metrics_.end()) {
       std::vector<label> cpy{labels.begin(), labels.end()};
-      m = metrics_.emplace(m, std::make_unique<metric_type>(std::move(cpy)));
+      std::sort(cpy.begin(), cpy.end());
+      m = metrics_.emplace(m, std::make_unique<impl_type>(std::move(cpy)));
     }
     return std::addressof(m->get()->impl());
+  }
+
+  Type* get_or_add(std::initializer_list<label_view> labels) {
+    return get_or_add(span<const label_view>{labels.begin(), labels.size()});
   }
 
   template <class Collector>
@@ -63,7 +73,7 @@ public:
 
 private:
   mutable std::mutex mx_;
-  std::vector<std::unique_ptr<metric_type>> metrics_;
+  std::vector<std::unique_ptr<impl_type>> metrics_;
 };
 
 } // namespace caf::telemetry

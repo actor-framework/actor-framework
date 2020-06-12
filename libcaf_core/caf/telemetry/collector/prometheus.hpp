@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/string_view.hpp"
 
@@ -29,7 +30,7 @@ namespace caf::telemetry::collector {
 
 /// Collects system metrics and exports them to the text-based Prometheus
 /// format. For a documentation of the format, see: https://git.io/fjgDD.
-class prometheus {
+class CAF_CORE_EXPORT prometheus {
 public:
   // -- member types -----------------------------------------------------------
 

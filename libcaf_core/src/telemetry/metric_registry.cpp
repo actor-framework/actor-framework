@@ -35,74 +35,35 @@ metric_registry::~metric_registry() {
   // nop
 }
 
-telemetry::int_gauge*
-metric_registry::int_gauge(string_view prefix, string_view name,
-                           std::vector<label_view> labels) {
-  // Make sure labels are sorted by name.
-  auto cmp = [](const label_view& x, const label_view& y) {
-    return x.name() < y.name();
-  };
-  std::sort(labels.begin(), labels.end(), cmp);
-  // Fetch the family.
-  auto matches = [&](const auto& family) {
-    auto lbl_cmp = [](const label_view& lbl, string_view name) {
-      return lbl.name() == name;
-    };
-    return family->prefix() == prefix && family->name() == name
-           && std::equal(labels.begin(), labels.end(),
-                         family->label_names().begin(),
-                         family->label_names().end(), lbl_cmp);
-  };
-  using family_type = metric_family_impl<telemetry::int_gauge>;
-  family_type* fptr;
-  {
-    std::unique_lock<std::mutex> guard{families_mx_};
-    auto i = std::find_if(int_gauges_.begin(), int_gauges_.end(), matches);
-    if (i == int_gauges_.end()) {
-      std::string prefix_str{prefix.begin(), prefix.end()};
-      std::string name_str{name.begin(), name.end()};
-      assert_unregistered(prefix_str, name_str);
-      std::vector<std::string> label_names;
-      label_names.reserve(labels.size());
-      for (auto& lbl : labels) {
-        auto lbl_name = lbl.name();
-        label_names.emplace_back(std::string{lbl_name.begin(), lbl_name.end()});
-      }
-      auto ptr = std::make_unique<family_type>(std::move(prefix_str),
-                                               std::move(name_str),
-                                               std::move(label_names), "", "1",
-                                               false);
-      i = int_gauges_.emplace(i, std::move(ptr));
-    }
-    fptr = i->get();
-  }
-  return fptr->get_or_add(labels);
-}
-
-void metric_registry::add_family(metric_type type, std::string prefix,
-                                 std::string name,
-                                 std::vector<std::string> label_names,
-                                 std::string helptext, std::string unit,
-                                 bool is_sum) {
-  namespace t = caf::telemetry;
-  switch (type) {
-    case metric_type::int_gauge:
-      add_family<t::int_gauge>(std::move(prefix), std::move(name),
-                               std::move(label_names), std::move(helptext),
-                               std::move(unit), is_sum);
-      break;
-    default:
-      CAF_RAISE_ERROR("invalid metric type");
-  }
-}
-
-void metric_registry::assert_unregistered(const std::string& prefix,
-                                          const std::string& name) {
+metric_family* metric_registry::fetch(const string_view& prefix,
+                                      const string_view& name) {
   auto matches = [&](const auto& ptr) {
     return ptr->prefix() == prefix && ptr->name() == name;
   };
-  if (std::any_of(int_gauges_.begin(), int_gauges_.end(), matches))
-    CAF_RAISE_ERROR("prefix and name already belong to an int gauge family");
+  if (auto i = std::find_if(int_gauges_.begin(), int_gauges_.end(), matches);
+      i != int_gauges_.end())
+    return i->get();
+  return nullptr;
+}
+
+void metric_registry::assert_properties(metric_family* ptr, metric_type type,
+                                        span<const string_view> label_names,
+                                        string_view unit, bool is_sum) {
+  auto labels_match = [&] {
+    const auto& xs = ptr->label_names();
+    const auto& ys = label_names;
+    return std::is_sorted(ys.begin(), ys.end())
+             ? std::equal(xs.begin(), xs.end(), ys.begin(), ys.end())
+             : std::is_permutation(xs.begin(), xs.end(), ys.begin(), ys.end());
+  };
+  if (ptr->type() != type)
+    CAF_RAISE_ERROR("full name with different metric type found");
+  if (!labels_match())
+    CAF_RAISE_ERROR("full name with different label dimensions found");
+  if (ptr->unit() != unit)
+    CAF_RAISE_ERROR("full name with different unit found");
+  if (ptr->is_sum() != is_sum)
+    CAF_RAISE_ERROR("full name with different is-sum flag found");
 }
 
 } // namespace caf::telemetry

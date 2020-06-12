@@ -32,6 +32,7 @@ using namespace caf::telemetry;
 namespace {
 
 struct fixture {
+  using ig = int_gauge;
   collector::prometheus exporter;
   metric_registry registry;
 };
@@ -41,21 +42,21 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(prometheus_tests, fixture)
 
 CAF_TEST(the Prometheus collector generates text output) {
-  registry.add_family(metric_type::int_gauge, "foo", "bar", {},
-                      "Just some value without labels.", "seconds");
-  registry.add_family(metric_type::int_gauge, "some", "value", {"a", "b"},
-                      "Just some (total) value with two labels.", "1", true);
-  registry.add_family(metric_type::int_gauge, "other", "value", {"x"}, "",
-                      "seconds", true);
-  registry.int_gauge("foo", "bar", {})->value(123);
-  registry.int_gauge("some", "value", {{"a", "1"}, {"b", "2"}})->value(12);
-  registry.int_gauge("some", "value", {{"b", "1"}, {"a", "2"}})->value(21);
-  registry.int_gauge("other", "value", {{"x", "true"}})->value(31337);
+  auto fb = registry.family<ig>("foo", "bar", {}, "Some value without labels.",
+                                "seconds");
+  auto sv = registry.family<ig>("some", "value", {"a", "b"},
+                                "Some (total) value with two labels.", "1",
+                                true);
+  auto ov = registry.family<ig>("other", "value", {"x"}, "", "seconds", true);
+  fb->get_or_add({})->value(123);
+  sv->get_or_add({{"a", "1"}, {"b", "2"}})->value(12);
+  sv->get_or_add({{"b", "1"}, {"a", "2"}})->value(21);
+  ov->get_or_add({{"x", "true"}})->value(31337);
   CAF_CHECK_EQUAL(exporter.collect_from(registry, 42),
-                  R"(# HELP foo_bar_seconds Just some value without labels.
+                  R"(# HELP foo_bar_seconds Some value without labels.
 # TYPE foo_bar_seconds gauge
 foo_bar_seconds 123 42
-# HELP some_value_total Just some (total) value with two labels.
+# HELP some_value_total Some (total) value with two labels.
 # TYPE some_value_total gauge
 some_value_total{a="1",b="2"} 12 42
 some_value_total{a="2",b="1"} 21 42

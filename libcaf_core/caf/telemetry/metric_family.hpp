@@ -77,6 +77,8 @@ public:
     return is_sum_;
   }
 
+  virtual metric_type type() const noexcept = 0;
+
 private:
   std::string prefix_;
   std::string name_;

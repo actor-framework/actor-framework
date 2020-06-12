@@ -32,7 +32,7 @@ using namespace caf::telemetry;
 
 namespace {
 
-struct collector {
+struct test_collector {
   std::string result;
 
   void operator()(const metric_family* family, const metric* instance,
@@ -70,19 +70,9 @@ struct collector {
 };
 
 struct fixture {
+  using ig = int_gauge;
   metric_registry registry;
-
-  auto bind(string_view prefix, string_view name) {
-    struct bound {
-      fixture* self_;
-      string_view prefix_;
-      string_view name_;
-      auto int_gauge(std::vector<label_view> labels) {
-        return self_->registry.int_gauge(prefix_, name_, std::move(labels));
-      }
-    };
-    return bound{this, prefix, name};
-  }
+  test_collector collector;
 };
 
 } // namespace
@@ -90,46 +80,53 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(metric_registry_tests, fixture)
 
 CAF_TEST(registries lazily create metrics) {
-  registry.add_family(metric_type::int_gauge, "caf", "running_actors",
-                      {"var1", "var2"},
-                      "How many actors are currently running?");
-  auto var = bind("caf", "running_actors");
+  auto f = registry.family<ig>("caf", "running_actors", {"var1", "var2"},
+                               "How many actors are currently running?");
   std::vector<label_view> v1{{"var1", "foo"}, {"var2", "bar"}};
   std::vector<label_view> v1_reversed{{"var2", "bar"}, {"var1", "foo"}};
   std::vector<label_view> v2{{"var1", "bar"}, {"var2", "foo"}};
   std::vector<label_view> v2_reversed{{"var2", "foo"}, {"var1", "bar"}};
-  var.int_gauge(v1)->value(42);
-  var.int_gauge(v2)->value(23);
-  CAF_CHECK_EQUAL(var.int_gauge(v1)->value(), 42);
-  CAF_CHECK_EQUAL(var.int_gauge(v1_reversed)->value(), 42);
-  CAF_CHECK_EQUAL(var.int_gauge(v2)->value(), 23);
-  CAF_CHECK_EQUAL(var.int_gauge(v2_reversed)->value(), 23);
+  f->get_or_add(v1)->value(42);
+  f->get_or_add(v2)->value(23);
+  CAF_CHECK_EQUAL(f->get_or_add(v1)->value(), 42);
+  CAF_CHECK_EQUAL(f->get_or_add(v1_reversed)->value(), 42);
+  CAF_CHECK_EQUAL(f->get_or_add(v2)->value(), 23);
+  CAF_CHECK_EQUAL(f->get_or_add(v2_reversed)->value(), 23);
 }
 
 CAF_TEST(registries allow users to collect all registered metrics) {
-  registry.add_family(metric_type::int_gauge, "foo", "bar", {},
-                      "Just some value without labels.", "seconds");
-  registry.add_family(metric_type::int_gauge, "some", "value", {"a", "b"},
-                      "Just some (total) value with two labels.", "1", true);
-  registry.add_family(metric_type::int_gauge, "other", "value", {"x"},
-                      "Just some (total) seconds value with a labels.",
-                      "seconds", true);
-  registry.add_family(metric_type::int_gauge, "caf", "running_actors", {"node"},
-                      "How many actors are currently running?");
-  registry.int_gauge("foo", "bar", {})->value(123);
-  registry.int_gauge("some", "value", {{"a", "1"}, {"b", "2"}})->value(12);
-  registry.int_gauge("some", "value", {{"b", "1"}, {"a", "2"}})->value(21);
-  registry.int_gauge("other", "value", {{"x", "true"}})->value(31337);
-  auto running_actors = bind("caf", "running_actors");
-  running_actors.int_gauge({{"node", "localhost"}})->value(42);
-  // Note: not registering caf_mailbox_size previously forces CAF to create it
-  // lazily when adding the first gauge.
-  auto mailbox_size = bind("caf", "mailbox_size");
-  mailbox_size.int_gauge({{"name", "printer"}})->value(3);
-  mailbox_size.int_gauge({{"name", "parser"}})->value(12);
-  collector c;
-  registry.collect(c);
-  CAF_CHECK_EQUAL(c.result, R"(
+  auto fb = registry.family<ig>("foo", "bar", {}, "Some value without labels.",
+                                "seconds");
+  auto sv = registry.family<ig>("some", "value", {"a", "b"},
+                                "Some (total) value with two labels.", "1",
+                                true);
+  auto ov = registry.family<ig>("other", "value", {"x"},
+                                "Some (total) seconds with one label.",
+                                "seconds", true);
+  auto ra = registry.family<ig>("caf", "running_actors", {"node"},
+                                "How many actors are running?");
+  auto ms = registry.family<ig>("caf", "mailbox_size", {"name"},
+                                "How full is the mailbox?");
+  CAF_MESSAGE("the registry always returns the same family object");
+  CAF_CHECK_EQUAL(fb, registry.family<ig>("foo", "bar", {}, "", "seconds"));
+  CAF_CHECK_EQUAL(sv, registry.family<ig>("some", "value", {"a", "b"}, "", "1",
+                                          true));
+  CAF_CHECK_EQUAL(sv, registry.family<ig>("some", "value", {"b", "a"}, "", "1",
+                                          true));
+  CAF_MESSAGE("families always return the same metric object for given labels");
+  CAF_CHECK_EQUAL(fb->get_or_add({}), fb->get_or_add({}));
+  CAF_CHECK_EQUAL(sv->get_or_add({{"a", "1"}, {"b", "2"}}),
+                  sv->get_or_add({{"b", "2"}, {"a", "1"}}));
+  CAF_MESSAGE("collectors can observe all metrics in the registry");
+  fb->get_or_add({})->inc(123);
+  sv->get_or_add({{"a", "1"}, {"b", "2"}})->value(12);
+  sv->get_or_add({{"b", "1"}, {"a", "2"}})->value(21);
+  ov->get_or_add({{"x", "true"}})->value(31337);
+  ra->get_or_add({{"node", "localhost"}})->value(42);
+  ms->get_or_add({{"name", "printer"}})->value(3);
+  ms->get_or_add({{"name", "parser"}})->value(12);
+  registry.collect(collector);
+  CAF_CHECK_EQUAL(collector.result, R"(
 foo_bar_seconds 123
 some_value_total{a="1",b="2"} 12
 some_value_total{a="2",b="1"} 21

@@ -23,12 +23,16 @@
 #include <atomic>
 #include <cstdint>
 
+#include "caf/telemetry/metric_type.hpp"
+
 namespace caf::telemetry {
 
 /// A metric that represents a single integer value that can arbitrarily go up
 /// and down.
 class CAF_CORE_EXPORT int_gauge {
 public:
+  static constexpr metric_type runtime_type = metric_type::int_gauge;
+
   int_gauge() noexcept : value_(0) {
     // nop
   }
@@ -38,22 +42,22 @@ public:
   }
 
   /// Increments the gauge by 1.
-  void increment() noexcept {
+  void inc() noexcept {
     ++value_;
   }
 
   /// Increments the gauge by `amount`.
-  void increment(int64_t amount) noexcept {
+  void inc(int64_t amount) noexcept {
     value_.fetch_add(amount);
   }
 
   /// Decrements the gauge by 1.
-  void decrement() noexcept {
+  void dec() noexcept {
     --value_;
   }
 
   /// Decrements the gauge by `amount`.
-  void decrement(int64_t amount) noexcept {
+  void dec(int64_t amount) noexcept {
     value_.fetch_sub(amount);
   }
 

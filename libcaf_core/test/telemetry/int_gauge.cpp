@@ -29,12 +29,12 @@ CAF_TEST(integer gauges can increment and decrement) {
   CAF_MESSAGE("gauges start at 0");
   CAF_CHECK_EQUAL(g.value(), 0);
   CAF_MESSAGE("gauges are incrementable");
-  g.increment();
-  g.increment(2);
+  g.inc();
+  g.inc(2);
   CAF_CHECK_EQUAL(g.value(), 3);
   CAF_MESSAGE("gauges are decrementable");
-  g.decrement();
-  g.decrement(5);
+  g.dec();
+  g.dec(5);
   CAF_CHECK_EQUAL(g.value(), -3);
   CAF_MESSAGE("gauges allow setting values");
   g.value(42);

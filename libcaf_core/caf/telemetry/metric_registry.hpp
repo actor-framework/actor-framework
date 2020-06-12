@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <initializer_list>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -42,26 +43,8 @@ public:
 
   ~metric_registry();
 
-  /// Adds a new metric family to the registry.
-  /// @param type The kind of the metric, e.g. gauge or count.
-  /// @param prefix The prefix (namespace) this family belongs to. Usually the
-  ///               application or protocol name, e.g., `http`. The prefix `caf`
-  ///               as well as prefixes starting with an underscore are
-  ///               reserved.
-  /// @param name The human-readable name of the metric, e.g., `requests`.
-  /// @param label_names Names for all label dimensions of the metric.
-  /// @param helptext Short explanation of the metric.
-  /// @param unit Unit of measurement. Please use base units such as `bytes` or
-  ///             `seconds` (prefer lowercase). The pseudo-unit `1` identifies
-  ///             dimensionless counts.
-  /// @param is_sum Setting this to `true` indicates that this metric adds
-  ///               something up to a total, where only the total value is of
-  ///               interest. For example, the total number of HTTP requests.
-  void add_family(metric_type type, std::string prefix, std::string name,
-                  std::vector<std::string> label_names, std::string helptext,
-                  std::string unit = "1", bool is_sum = false);
-
-  /// Adds a new metric family to the registry.
+  /// Returns a metric family. Creates the family lazily if necessary, but fails
+  /// if the full name already belongs to a different family.
   /// @param prefix The prefix (namespace) this family belongs to. Usually the
   ///               application or protocol name, e.g., `http`. The prefix `caf`
   ///               as well as prefixes starting with an underscore are
@@ -76,25 +59,40 @@ public:
   ///               something up to a total, where only the total value is of
   ///               interest. For example, the total number of HTTP requests.
   template <class Type>
-  metric_family_impl<Type>*
-  add_family(std::string prefix, std::string name,
-             std::vector<std::string> label_names, std::string helptext,
-             std::string unit = "1", bool is_sum = false) {
+  metric_family_impl<Type>* family(string_view prefix, string_view name,
+                                   span<const string_view> label_names,
+                                   string_view helptext, string_view unit = "1",
+                                   bool is_sum = false) {
     using family_type = metric_family_impl<Type>;
-    std::sort(label_names.begin(), label_names.end());
-    auto ptr = std::make_unique<family_type>(std::move(prefix), std::move(name),
-                                             std::move(label_names),
-                                             std::move(helptext),
-                                             std::move(unit), is_sum);
     std::unique_lock<std::mutex> guard{families_mx_};
-    assert_unregistered(ptr->prefix(), ptr->name());
+    if (auto ptr = fetch(prefix, name)) {
+      assert_properties(ptr, Type::runtime_type, label_names, unit, is_sum);
+      return static_cast<family_type*>(ptr);
+    }
+    auto ptr = std::make_unique<family_type>(to_string(prefix), to_string(name),
+                                             to_sorted_vec(label_names),
+                                             to_string(helptext),
+                                             to_string(unit), is_sum);
     auto& families = container_by_type<Type>();
     families.emplace_back(std::move(ptr));
     return families.back().get();
   }
 
-  /// Adds a new metric singleton, i.e., a family without label dimensions and
-  /// thus exactly one metric instance.
+  /// @copydoc family
+  template <class Type>
+  metric_family_impl<Type>*
+  family(string_view prefix, string_view name,
+         std::initializer_list<string_view> label_names, string_view helptext,
+         string_view unit = "1", bool is_sum = false) {
+    return family<Type>(prefix, name,
+                        span<const string_view>{label_names.begin(),
+                                                label_names.size()},
+                        helptext, unit, is_sum);
+  }
+
+  /// Returns a metric singleton, i.e., the single instance of a family without
+  /// label dimensions. Creates all objects lazily if necessary, but fails if
+  /// the full name already belongs to a different family.
   /// @param prefix The prefix (namespace) this family belongs to. Usually the
   ///               application or protocol name, e.g., `http`. The prefix `caf`
   ///               as well as prefixes starting with an underscore are
@@ -108,16 +106,11 @@ public:
   ///               something up to a total, where only the total value is of
   ///               interest. For example, the total number of HTTP requests.
   template <class Type>
-  Type* add_singleton(std::string prefix, std::string name,
-                      std::string helptext, std::string unit = "1",
-                      bool is_sum = false) {
-    auto fptr = add_family<Type>(std::move(prefix), std::move(name), {},
-                                 std::move(helptext), std::move(unit), is_sum);
+  Type* singleton(string_view prefix, string_view name, string_view helptext,
+                  string_view unit = "1", bool is_sum = false) {
+    auto fptr = family<Type>(prefix, name, {}, helptext, unit, is_sum);
     return fptr->get_or_add({});
   }
-
-  telemetry::int_gauge* int_gauge(string_view prefix, string_view name,
-                                  std::vector<label_view> labels);
 
   template <class Collector>
   void collect(Collector& collector) const {
@@ -128,7 +121,22 @@ public:
 
 private:
   /// @pre `families_mx_` is locked.
-  void assert_unregistered(const std::string& prefix, const std::string& name);
+  metric_family* fetch(const string_view& prefix, const string_view& name);
+
+  static std::vector<std::string> to_sorted_vec(span<const string_view> xs) {
+    std::vector<std::string> result;
+    if (!xs.empty()) {
+      result.reserve(xs.size());
+      for (auto x : xs)
+        result.emplace_back(to_string(x));
+      std::sort(result.begin(), result.end());
+    }
+    return result;
+  }
+
+  void assert_properties(metric_family* ptr, metric_type type,
+                         span<const string_view> label_names, string_view unit,
+                         bool is_sum);
 
   template <class Type>
   metric_family_container<Type>& container_by_type();
