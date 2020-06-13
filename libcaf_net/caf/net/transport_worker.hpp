@@ -77,7 +77,7 @@ public:
                      std::unique_ptr<endpoint_manager_queue::message> msg) {
     auto writer = make_packet_writer_decorator(*this, parent);
     if (auto err = application_.write_message(writer, std::move(msg)))
-      CAF_LOG_ERROR("write_message failed: " << to_string(err));
+      CAF_LOG_ERROR("write_message failed: " << err);
   }
 
   template <class Parent>
