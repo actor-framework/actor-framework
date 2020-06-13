@@ -207,7 +207,7 @@ CAF_TEST(receive) {
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
   auto buf = std::make_shared<byte_buffer>();
   auto sockets = unbox(make_stream_socket_pair());
-  CAF_CHECK(!nonblocking(sockets.second, true));
+  CAF_CHECK_EQUAL(nonblocking(sockets.second, true), none);
   CAF_CHECK_EQUAL(read(sockets.second, read_buf),
                   sec::unavailable_or_would_block);
   CAF_MESSAGE("adding both endpoint managers");

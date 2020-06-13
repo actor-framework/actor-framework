@@ -189,7 +189,7 @@ CAF_TEST(construction and initialization) {
 
 CAF_TEST(handle_data) {
   auto test_span = as_bytes(make_span(hello_test));
-  CAF_CHECK(!worker.handle_data(transport, test_span));
+  CAF_CHECK_EQUAL(worker.handle_data(transport, test_span), none);
   auto& buf = application_results->data_buffer;
   string_view result{reinterpret_cast<char*>(buf.data()), buf.size()};
   CAF_CHECK_EQUAL(result, hello_test);
@@ -209,7 +209,7 @@ CAF_TEST(write_message) {
   auto& buf = transport_results->packet_buffer;
   binary_deserializer source{sys, buf};
   caf::message received_msg;
-  CAF_CHECK(!source(received_msg));
+  CAF_CHECK_EQUAL(source(received_msg), none);
   CAF_MESSAGE(CAF_ARG(received_msg));
   auto received_str = received_msg.get_as<std::string>(0);
   string_view result{received_str};

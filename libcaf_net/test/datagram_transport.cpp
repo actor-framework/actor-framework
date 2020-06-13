@@ -222,7 +222,7 @@ CAF_TEST(resolve and proxy communication) {
   auto mgr_impl = mgr.downcast<endpoint_manager_impl<transport_type>>();
   CAF_CHECK(mgr_impl != nullptr);
   auto& transport = mgr_impl->transport();
-  CAF_CHECK(!transport.add_new_worker(make_node_id(uri), ep));
+  CAF_CHECK_EQUAL(transport.add_new_worker(make_node_id(uri), ep), none);
   run();
   mgr->resolve(uri, self);
   run();

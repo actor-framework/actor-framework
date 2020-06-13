@@ -250,7 +250,8 @@ struct fixture : host_fixture {
 };
 
 #define CHECK_HANDLE_DATA(testcase)                                            \
-  CAF_CHECK(!dispatcher.handle_data(dummy, span<const byte>{}, testcase.ep));  \
+  CAF_CHECK_EQUAL(                                                             \
+    dispatcher.handle_data(dummy, span<const byte>{}, testcase.ep), none);     \
   CAF_CHECK_EQUAL(buf->size(), 1u);                                            \
   CAF_CHECK_EQUAL(static_cast<byte>(testcase.worker_id), buf->at(0));          \
   buf->clear();
