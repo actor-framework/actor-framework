@@ -21,6 +21,7 @@
 #include "caf/net/doorman.hpp"
 
 #include "caf/binary_serializer.hpp"
+#include "caf/error.hpp"
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/net/ip.hpp"
 #include "caf/net/make_endpoint_manager.hpp"
@@ -66,13 +67,14 @@ public:
   }
 
   template <class Parent>
-  void write_message(Parent& parent,
-                     std::unique_ptr<endpoint_manager_queue::message> msg) {
+  error write_message(Parent& parent,
+                      std::unique_ptr<endpoint_manager_queue::message> msg) {
     auto payload_buf = parent.next_payload_buffer();
     binary_serializer sink{parent.system(), payload_buf};
     if (auto err = sink(msg->msg->payload))
       CAF_FAIL("serializing failed: " << err);
     parent.write_packet(payload_buf);
+    return none;
   }
 
   template <class Parent>

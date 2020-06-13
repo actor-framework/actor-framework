@@ -66,11 +66,12 @@ public:
   }
 
   template <class Parent>
-  void write_message(Parent& parent,
-                     std::unique_ptr<endpoint_manager_queue::message> ptr) {
+  error write_message(Parent& parent,
+                      std::unique_ptr<endpoint_manager_queue::message> ptr) {
     rec_buf_->push_back(static_cast<byte>(id_));
     auto data = ptr->msg->content().get_as<byte_buffer>(0);
     parent.write_packet(data);
+    return none;
   }
 
   template <class Parent>
@@ -249,7 +250,8 @@ struct fixture : host_fixture {
 };
 
 #define CHECK_HANDLE_DATA(testcase)                                            \
-  dispatcher.handle_data(dummy, span<const byte>{}, testcase.ep);              \
+  CAF_CHECK_EQUAL(                                                             \
+    dispatcher.handle_data(dummy, span<const byte>{}, testcase.ep), none);     \
   CAF_CHECK_EQUAL(buf->size(), 1u);                                            \
   CAF_CHECK_EQUAL(static_cast<byte>(testcase.worker_id), buf->at(0));          \
   buf->clear();

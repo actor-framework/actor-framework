@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/logger.hpp"
 #include "caf/net/endpoint_manager_queue.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/packet_writer_decorator.hpp"
@@ -75,7 +76,8 @@ public:
   void write_message(Parent& parent,
                      std::unique_ptr<endpoint_manager_queue::message> msg) {
     auto writer = make_packet_writer_decorator(*this, parent);
-    application_.write_message(writer, std::move(msg));
+    if (auto err = application_.write_message(writer, std::move(msg)))
+      CAF_LOG_ERROR("write_message failed: " << err);
   }
 
   template <class Parent>
@@ -91,8 +93,8 @@ public:
   }
 
   template <class Parent>
-  void local_actor_down(Parent& parent, const node_id&, actor_id id,
-                        error reason) {
+  void
+  local_actor_down(Parent& parent, const node_id&, actor_id id, error reason) {
     auto writer = make_packet_writer_decorator(*this, parent);
     application_.local_actor_down(writer, id, std::move(reason));
   }
@@ -113,7 +115,7 @@ private:
 };
 
 template <class Application, class IdType = unit_t>
-using transport_worker_ptr = std::shared_ptr<
-  transport_worker<Application, IdType>>;
+using transport_worker_ptr
+  = std::shared_ptr<transport_worker<Application, IdType>>;
 
 } // namespace caf::net

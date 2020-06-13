@@ -77,7 +77,8 @@ void test::set_last_hop(node_id*) {
 test::peer_entry& test::emplace(const node_id& peer_id, stream_socket first,
                                 stream_socket second) {
   using transport_type = stream_transport<basp::application>;
-  nonblocking(second, true);
+  if (auto err = nonblocking(second, true))
+    CAF_LOG_ERROR("nonblocking failed: " << err);
   auto mpx = mm_.mpx();
   basp::application app{proxies_};
   auto mgr = make_endpoint_manager(mpx, mm_.system(),
