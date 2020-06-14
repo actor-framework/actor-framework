@@ -55,9 +55,11 @@ endpoint_manager_ptr test::peer(const node_id& id) {
   return get_peer(id).second;
 }
 
-expected<endpoint_manager_ptr> test::connect(const uri&) {
+expected<endpoint_manager_ptr> test::get_or_connect(const uri& locator) {
+  if (auto ptr = peer(make_node_id(*locator.authority_only())))
+    return ptr;
   return make_error(sec::runtime_error,
-                    "function not implemented in test_backend");
+                    "connecting not implemented in test backend");
 }
 
 void test::resolve(const uri& locator, const actor& listener) {
@@ -78,6 +80,10 @@ strong_actor_ptr test::make_proxy(node_id nid, actor_id aid) {
 
 void test::set_last_hop(node_id*) {
   // nop
+}
+
+uint16_t test::port() const noexcept {
+  return 0;
 }
 
 test::peer_entry& test::emplace(const node_id& peer_id, stream_socket first,

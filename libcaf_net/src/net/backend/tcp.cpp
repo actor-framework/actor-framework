@@ -18,6 +18,7 @@
 
 #include "caf/net/backend/tcp.hpp"
 
+#include <mutex>
 #include <string>
 
 #include "caf/net/actor_proxy_impl.hpp"
@@ -56,7 +57,8 @@ error tcp::init() {
   if (!acceptor)
     return acceptor.error();
   auto acc_guard = make_socket_guard(*acceptor);
-  nonblocking(acc_guard.socket(), true);
+  if (auto err = nonblocking(acc_guard.socket(), true))
+    return err;
   auto port = local_port(*acceptor);
   if (!port)
     return port.error();
@@ -82,17 +84,21 @@ void tcp::stop() {
   peers_.clear();
 }
 
-expected<endpoint_manager_ptr> tcp::connect(const uri& locator) {
-  auto auth = locator.authority();
-  auto host = auth.host;
-  if (auto hostname = get_if<std::string>(&host)) {
-    for (const auto& addr : ip::resolve(*hostname)) {
-      ip_endpoint ep{addr, auth.port};
-      auto sock = make_connected_tcp_stream_socket(ep);
-      if (!sock)
-        continue;
-      else
-        return emplace(make_node_id(*locator.authority_only()), *sock);
+expected<endpoint_manager_ptr> tcp::get_or_connect(const uri& locator) {
+  if (auto auth = locator.authority_only()) {
+    auto id = make_node_id(*auth);
+    if (auto ptr = peer(id))
+      return ptr;
+    auto host = locator.authority().host;
+    if (auto hostname = get_if<std::string>(&host)) {
+      for (const auto& addr : ip::resolve(*hostname)) {
+        ip_endpoint ep{addr, locator.authority().port};
+        auto sock = make_connected_tcp_stream_socket(ep);
+        if (!sock)
+          continue;
+        else
+          return emplace(id, *sock);
+      }
     }
   }
   return sec::cannot_connect_to_node;
@@ -103,12 +109,11 @@ endpoint_manager_ptr tcp::peer(const node_id& id) {
 }
 
 void tcp::resolve(const uri& locator, const actor& listener) {
-  auto id = locator.authority_only();
-  if (id) {
+  if (auto id = locator.authority_only()) {
     auto p = peer(make_node_id(*id));
     if (p == nullptr) {
       CAF_LOG_INFO("connecting to " << CAF_ARG(locator));
-      auto res = connect(locator);
+      auto res = get_or_connect(locator);
       if (!res)
         anon_send(listener, error(sec::cannot_connect_to_node));
       else
@@ -132,7 +137,12 @@ void tcp::set_last_hop(node_id*) {
   // nop
 }
 
+uint16_t tcp::port() const noexcept {
+  return listening_port_;
+}
+
 endpoint_manager_ptr tcp::get_peer(const node_id& id) {
+  const std::lock_guard<std::mutex> lock(lock_);
   auto i = peers_.find(id);
   if (i != peers_.end())
     return i->second;

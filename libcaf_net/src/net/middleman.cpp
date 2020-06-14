@@ -97,9 +97,8 @@ void* middleman::subtype_ptr() {
 }
 
 expected<endpoint_manager_ptr> middleman::connect(const uri& locator) {
-  auto ptr = backend(locator.scheme());
-  if (auto ret = ptr->connect(locator))
-    return ret;
+  if (auto ptr = backend(locator.scheme()))
+    return ptr->get_or_connect(locator);
   else
     return basp::ec::invalid_scheme;
 }
@@ -123,8 +122,7 @@ middleman_backend* middleman::backend(string_view scheme) const noexcept {
 }
 
 expected<uint16_t> middleman::port(string_view scheme) const {
-  auto ptr = backend(scheme);
-  if (ptr != nullptr)
+  if (auto ptr = backend(scheme))
     return ptr->port();
   else
     return basp::ec::invalid_scheme;
