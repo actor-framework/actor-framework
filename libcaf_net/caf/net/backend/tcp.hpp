@@ -37,7 +37,6 @@
 namespace caf::net::backend {
 
 /// Minimal backend for tcp communication.
-/// @warning this backend is *not* thread safe.
 class CAF_NET_EXPORT tcp : public middleman_backend {
 public:
   using peer_map = std::map<node_id, endpoint_manager_ptr>;
