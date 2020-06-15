@@ -34,6 +34,20 @@ namespace caf::telemetry::collector {
 
 namespace {
 
+/// Milliseconds since epoch.
+struct ms_timestamp {
+  int64_t value;
+
+  /// Converts seconds-since-epoch to milliseconds-since-epoch
+  explicit ms_timestamp(time_t from) : value(from * int64_t{1000}) {
+    // nop
+  }
+
+  ms_timestamp(const ms_timestamp&) = default;
+
+  ms_timestamp& operator=(const ms_timestamp&) = default;
+};
+
 void append(prometheus::char_buffer&) {
   // End of recursion.
 }
@@ -56,6 +70,9 @@ void append(prometheus::char_buffer&, const metric_family*, Ts&&...);
 
 template <class... Ts>
 void append(prometheus::char_buffer&, const metric*, Ts&&...);
+
+template <class... Ts>
+void append(prometheus::char_buffer&, ms_timestamp, Ts&&...);
 
 template <class... Ts>
 void append(prometheus::char_buffer& buf, string_view str, Ts&&... xs) {
@@ -116,6 +133,12 @@ void append(prometheus::char_buffer& buf, const metric* instance, Ts&&... xs) {
   append(buf, std::forward<Ts>(xs)...);
 }
 
+template <class... Ts>
+void append(prometheus::char_buffer& buf, ms_timestamp ts, Ts&&... xs) {
+  append(buf, ts.value);
+  append(buf, std::forward<Ts>(xs)...);
+}
+
 } // namespace
 
 string_view prometheus::collect_from(const metric_registry& registry,
@@ -136,13 +159,15 @@ string_view prometheus::collect_from(const metric_registry& registry) {
 void prometheus::operator()(const metric_family* family, const metric* instance,
                             const dbl_gauge* gauge) {
   set_current_family(family, "gauge");
-  append(buf_, family, instance, ' ', gauge->value(), ' ', now_, '\n');
+  append(buf_, family, instance, ' ', gauge->value(), ' ', ms_timestamp{now_},
+         '\n');
 }
 
 void prometheus::operator()(const metric_family* family, const metric* instance,
                             const int_gauge* gauge) {
   set_current_family(family, "gauge");
-  append(buf_, family, instance, ' ', gauge->value(), ' ', now_, '\n');
+  append(buf_, family, instance, ' ', gauge->value(), ' ', ms_timestamp{now_},
+         '\n');
 }
 
 void prometheus::set_current_family(const metric_family* family,

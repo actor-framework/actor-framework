@@ -55,13 +55,13 @@ CAF_TEST(the Prometheus collector generates text output) {
   CAF_CHECK_EQUAL(exporter.collect_from(registry, 42),
                   R"(# HELP foo_bar_seconds Some value without labels.
 # TYPE foo_bar_seconds gauge
-foo_bar_seconds 123 42
+foo_bar_seconds 123 42000
 # HELP some_value_total Some (total) value with two labels.
 # TYPE some_value_total gauge
-some_value_total{a="1",b="2"} 12 42
-some_value_total{a="2",b="1"} 21 42
+some_value_total{a="1",b="2"} 12 42000
+some_value_total{a="2",b="1"} 21 42000
 # TYPE other_value_seconds_total gauge
-other_value_seconds_total{x="true"} 31337 42
+other_value_seconds_total{x="true"} 31337 42000
 )"_sv);
   CAF_MESSAGE("multiple runs generate the same output");
   std::string res1;
