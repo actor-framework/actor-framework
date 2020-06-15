@@ -234,6 +234,7 @@ struct subscriber_base;
 namespace telemetry {
 
 class component;
+class dbl_gauge;
 class int_gauge;
 class label;
 class label_view;

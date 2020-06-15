@@ -115,6 +115,8 @@ public:
   template <class Collector>
   void collect(Collector& collector) const {
     std::unique_lock<std::mutex> guard{families_mx_};
+    for (auto& ptr : dbl_gauges_)
+      ptr->collect(collector);
     for (auto& ptr : int_gauges_)
       ptr->collect(collector);
   }
@@ -138,13 +140,22 @@ private:
                          span<const string_view> label_names, string_view unit,
                          bool is_sum);
 
+  void assert_equal(metric_family* old_ptr, metric_family* new_ptr);
+
   template <class Type>
   metric_family_container<Type>& container_by_type();
 
   mutable std::mutex families_mx_;
 
+  metric_family_container<telemetry::dbl_gauge> dbl_gauges_;
   metric_family_container<telemetry::int_gauge> int_gauges_;
 };
+
+template <>
+inline metric_registry::metric_family_container<dbl_gauge>&
+metric_registry::container_by_type<dbl_gauge>() {
+  return dbl_gauges_;
+}
 
 template <>
 inline metric_registry::metric_family_container<int_gauge>&

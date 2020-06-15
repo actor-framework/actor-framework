@@ -309,6 +309,7 @@ caf_add_test_suites(caf-core-test
   string_view
   sum_type
   telemetry.collector.prometheus
+  telemetry.dbl_gauge
   telemetry.int_gauge
   telemetry.label
   telemetry.metric_registry

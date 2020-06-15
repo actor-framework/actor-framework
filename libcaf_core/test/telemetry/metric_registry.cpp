@@ -23,6 +23,7 @@
 #include "caf/test/dsl.hpp"
 
 #include "caf/string_view.hpp"
+#include "caf/telemetry/dbl_gauge.hpp"
 #include "caf/telemetry/int_gauge.hpp"
 #include "caf/telemetry/label_view.hpp"
 #include "caf/telemetry/metric_type.hpp"
@@ -36,7 +37,18 @@ struct test_collector {
   std::string result;
 
   void operator()(const metric_family* family, const metric* instance,
+                  const dbl_gauge* wrapped) {
+    concat(family, instance);
+    result += std::to_string(wrapped->value());
+  }
+
+  void operator()(const metric_family* family, const metric* instance,
                   const int_gauge* wrapped) {
+    concat(family, instance);
+    result += std::to_string(wrapped->value());
+  }
+
+  void concat(const metric_family* family, const metric* instance) {
     result += '\n';
     result += family->prefix();
     result += '_';
@@ -58,7 +70,6 @@ struct test_collector {
       result += '}';
     }
     result += ' ';
-    result += std::to_string(wrapped->value());
   }
 
   void concat(const label& lbl) {

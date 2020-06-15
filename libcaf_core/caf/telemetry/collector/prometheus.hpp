@@ -70,6 +70,9 @@ public:
   // -- call operators for the metric registry ---------------------------------
 
   void operator()(const metric_family* family, const metric* instance,
+                  const dbl_gauge* gauge);
+
+  void operator()(const metric_family* family, const metric* instance,
                   const int_gauge* gauge);
 
 private:

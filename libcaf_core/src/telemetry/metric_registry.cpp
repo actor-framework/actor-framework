@@ -20,6 +20,7 @@
 
 #include "caf/config.hpp"
 #include "caf/raise_error.hpp"
+#include "caf/telemetry/dbl_gauge.hpp"
 #include "caf/telemetry/int_gauge.hpp"
 #include "caf/telemetry/metric_family_impl.hpp"
 #include "caf/telemetry/metric_impl.hpp"
@@ -40,6 +41,9 @@ metric_family* metric_registry::fetch(const string_view& prefix,
   auto matches = [&](const auto& ptr) {
     return ptr->prefix() == prefix && ptr->name() == name;
   };
+  if (auto i = std::find_if(dbl_gauges_.begin(), dbl_gauges_.end(), matches);
+      i != dbl_gauges_.end())
+    return i->get();
   if (auto i = std::find_if(int_gauges_.begin(), int_gauges_.end(), matches);
       i != int_gauges_.end())
     return i->get();

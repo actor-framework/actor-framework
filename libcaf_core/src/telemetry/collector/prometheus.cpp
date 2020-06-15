@@ -22,6 +22,7 @@
 #include <ctime>
 #include <type_traits>
 
+#include "caf/telemetry/dbl_gauge.hpp"
 #include "caf/telemetry/int_gauge.hpp"
 #include "caf/telemetry/metric.hpp"
 #include "caf/telemetry/metric_family.hpp"
@@ -130,6 +131,12 @@ string_view prometheus::collect_from(const metric_registry& registry,
 
 string_view prometheus::collect_from(const metric_registry& registry) {
   return collect_from(registry, time(NULL));
+}
+
+void prometheus::operator()(const metric_family* family, const metric* instance,
+                            const dbl_gauge* gauge) {
+  set_current_family(family, "gauge");
+  append(buf_, family, instance, ' ', gauge->value(), ' ', now_, '\n');
 }
 
 void prometheus::operator()(const metric_family* family, const metric* instance,
