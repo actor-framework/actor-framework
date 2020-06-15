@@ -65,7 +65,8 @@ expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
   tcp_accept_socket sock{fd};
   // sguard closes the socket in case of exception
   auto sguard = make_socket_guard(tcp_accept_socket{fd});
-  child_process_inherit(sock, false);
+  if (auto err = child_process_inherit(sock, false))
+    return err;
   if (reuse_addr) {
     int on = 1;
     CAF_NET_SYSCALL("setsockopt", tmp1, !=, 0,
@@ -73,8 +74,9 @@ expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
                                reinterpret_cast<setsockopt_ptr>(&on),
                                static_cast<socket_size_type>(sizeof(on))));
   }
-  using sockaddr_type = typename std::conditional<
-    Family == AF_INET, sockaddr_in, sockaddr_in6>::type;
+  using sockaddr_type =
+    typename std::conditional<Family == AF_INET, sockaddr_in,
+                              sockaddr_in6>::type;
   sockaddr_type sa;
   memset(&sa, 0, sizeof(sockaddr_type));
   detail::family_of(sa) = Family;

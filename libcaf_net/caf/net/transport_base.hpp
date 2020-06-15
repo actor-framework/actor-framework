@@ -209,7 +209,7 @@ public:
 private:
   // -- utility functions ------------------------------------------------------
 
-  static byte_buffer next_buffer_impl(buffer_cache_type cache) {
+  static byte_buffer next_buffer_impl(buffer_cache_type& cache) {
     if (cache.empty())
       return {};
     auto buf = std::move(cache.back());

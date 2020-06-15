@@ -65,7 +65,8 @@ public:
       max_(1024),
       rd_flag_(net::receive_policy_flag::exactly) {
     CAF_ASSERT(handle != invalid_socket);
-    nodelay(handle, true);
+    if (auto err = nodelay(handle, true))
+      CAF_LOG_ERROR("nodelay failed: " << err);
   }
 
   // -- member functions -------------------------------------------------------

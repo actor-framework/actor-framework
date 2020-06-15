@@ -32,7 +32,8 @@ pollset_updater::pollset_updater(pipe_socket read_handle,
                                  const multiplexer_ptr& parent)
   : super(read_handle, parent), buf_size_(0) {
   mask_ = operation::read;
-  nonblocking(read_handle, true);
+  if (auto err = nonblocking(read_handle, true))
+    CAF_LOG_ERROR("nonblocking failed: " << err);
 }
 
 pollset_updater::~pollset_updater() {

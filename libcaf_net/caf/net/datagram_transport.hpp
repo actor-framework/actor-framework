@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "caf/byte_buffer.hpp"
+#include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/ip_endpoint.hpp"
 #include "caf/logger.hpp"
@@ -85,7 +86,11 @@ public:
         auto& [num_bytes, ep] = *res;
         CAF_LOG_DEBUG("received " << num_bytes << " bytes");
         this->read_buf_.resize(num_bytes);
-        this->next_layer_.handle_data(*this, this->read_buf_, std::move(ep));
+        if (auto err = this->next_layer_.handle_data(*this, this->read_buf_,
+                                                     std::move(ep))) {
+          CAF_LOG_ERROR("handle_data failed: " << err);
+          return false;
+        }
         prepare_next_read();
       } else {
         auto err = get<sec>(ret);

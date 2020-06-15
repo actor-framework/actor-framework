@@ -163,7 +163,7 @@ CAF_TEST(send and receive) {
   byte_buffer read_buf(1024);
   auto buf = std::make_shared<byte_buffer>();
   auto sockets = unbox(make_stream_socket_pair());
-  nonblocking(sockets.second, true);
+  CAF_CHECK_EQUAL(nonblocking(sockets.second, true), none);
   CAF_CHECK_EQUAL(read(sockets.second, read_buf),
                   sec::unavailable_or_would_block);
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
@@ -189,7 +189,7 @@ CAF_TEST(resolve and proxy communication) {
   byte_buffer read_buf(1024);
   auto buf = std::make_shared<byte_buffer>();
   auto sockets = unbox(make_stream_socket_pair());
-  nonblocking(sockets.second, true);
+  CAF_CHECK_EQUAL(nonblocking(sockets.second, true), none);
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
   auto mgr = make_endpoint_manager(mpx, sys,
                                    dummy_transport{sockets.first, buf});
