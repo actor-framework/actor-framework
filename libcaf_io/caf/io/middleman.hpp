@@ -251,6 +251,13 @@ public:
                                        std::forward<Ts>(xs)...);
   }
 
+  /// Tries to open a port for exposing system metrics in the Prometheus text
+  /// format via HTTP.
+  /// @experimental
+  expected<uint16_t> expose_prometheus_metrics(uint16_t port,
+                                               const char* in = nullptr,
+                                               bool reuse = false);
+
   /// Returns a middleman using the default network backend.
   static actor_system::module* make(actor_system&, detail::type_list<>);
 

@@ -158,6 +158,9 @@ public:
   /// Writes `data` into the buffer for a given connection.
   void write(connection_handle hdl, size_t bs, const void* buf);
 
+  /// Writes `buf` into the buffer for a given connection.
+  void write(connection_handle hdl, span<const byte> buf);
+
   /// Sends the content of the buffer for a given connection.
   void flush(connection_handle hdl);
 
