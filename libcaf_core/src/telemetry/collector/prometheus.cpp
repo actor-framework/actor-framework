@@ -91,7 +91,7 @@ void append(prometheus::char_buffer& buf, double val, Ts&&... xs) {
   if (isnan(val)) {
     append(buf, "NaN"_sv);
   } else if (isinf(val)) {
-    if (signbit(val))
+    if (std::signbit(val))
       append(buf, "+Inf"_sv);
     else
       append(buf, "-Inf"_sv);
