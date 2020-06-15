@@ -87,10 +87,10 @@ public:
     emplace_return_type res;
     {
       const std::lock_guard<std::mutex> lock(lock_);
-      res = peers_.emplace(peer_id, mgr);
+      res = peers_.emplace(peer_id, std::move(mgr));
     }
     if (res.second)
-      return std::move(mgr);
+      return res.first->second;
     else
       return make_error(sec::runtime_error, "peer_id already exists");
   }

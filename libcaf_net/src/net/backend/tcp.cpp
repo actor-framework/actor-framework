@@ -109,20 +109,10 @@ endpoint_manager_ptr tcp::peer(const node_id& id) {
 }
 
 void tcp::resolve(const uri& locator, const actor& listener) {
-  if (auto id = locator.authority_only()) {
-    auto p = peer(make_node_id(*id));
-    if (p == nullptr) {
-      CAF_LOG_INFO("connecting to " << CAF_ARG(locator));
-      auto res = get_or_connect(locator);
-      if (!res)
-        anon_send(listener, error(sec::cannot_connect_to_node));
-      else
-        p = *res;
-    }
-    p->resolve(locator, listener);
-  } else {
-    anon_send(listener, error(basp::ec::invalid_locator));
-  }
+  if (auto p = get_or_connect(locator))
+    (*p)->resolve(locator, listener);
+  else
+    anon_send(listener, p.error());
 }
 
 strong_actor_ptr tcp::make_proxy(node_id nid, actor_id aid) {
