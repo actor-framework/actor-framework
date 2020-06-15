@@ -35,6 +35,8 @@ class CAF_IO_EXPORT prometheus_broker : public io::broker {
 public:
   explicit prometheus_broker(actor_config& cfg);
 
+  prometheus_broker(actor_config& cfg, io::doorman_ptr ptr);
+
   ~prometheus_broker() override;
 
   const char* name() const override;

@@ -31,27 +31,14 @@
 #  define HAS_PROCESS_METRICS
 namespace {
 
-std::atomic<std::remove_pointer_t<vm_size_t>> global_page_size;
-
 std::pair<int64_t, int64_t> get_mem_usage() {
   mach_task_basic_info info;
-  auto page_size = global_page_size.load();
-  if (page_size == 0) {
-    if (host_page_size(mach_host_self(), &page_size) == KERN_SUCCESS) {
-      global_page_size = page_size;
-      printf("page size = %d\n", (int) page_size);
-    } else {
-      puts("failed to get page size");
-    }
-  }
   mach_msg_type_number_t count = MACH_TASK_BASIC_INFO_COUNT;
   if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t) &info,
                 &count)
       != KERN_SUCCESS) {
-    puts("failed to get task info");
     return {0, 0};
   }
-  puts("got task info");
   return {static_cast<int64_t>(info.resident_size),
           static_cast<int64_t>(info.virtual_size)};
 }
@@ -113,17 +100,22 @@ constexpr string_view request_ok = "HTTP/1.1 200 OK\r\n"
 } // namespace
 
 prometheus_broker::prometheus_broker(actor_config& cfg) : io::broker(cfg) {
+#ifdef HAS_PROCESS_METRICS
   using telemetry::dbl_gauge;
   using telemetry::int_gauge;
-  auto& registry = system().telemetry();
-#ifdef HAS_PROCESS_METRICS
-  cpu_time_ = registry.singleton<dbl_gauge>(
+  auto& reg = system().telemetry();
+  cpu_time_ = reg.singleton<dbl_gauge>(
     "process", "cpu", "Total user and system CPU time spent.", "seconds", true);
-  mem_size_ = registry.singleton<int_gauge>(
-    "process", "resident_memory", "	Resident memory size.", "bytes");
-  virt_mem_size_ = registry.singleton<int_gauge>(
-    "process", "virtual_memory", "	Virtual memory size.", "bytes");
+  mem_size_ = reg.singleton<int_gauge>("process", "resident_memory",
+                                       "Resident memory size.", "bytes");
+  virt_mem_size_ = reg.singleton<int_gauge>("process", "virtual_memory",
+                                            "Virtual memory size.", "bytes");
 #endif // HAS_PROCESS_METRICS
+}
+
+prometheus_broker::prometheus_broker(actor_config& cfg, io::doorman_ptr ptr)
+  : prometheus_broker(cfg) {
+  add_doorman(std::move(ptr));
 }
 
 prometheus_broker::~prometheus_broker() {
@@ -148,6 +140,7 @@ behavior prometheus_broker::make_behavior() {
       auto& req = requests_[msg.handle];
       if (req.size() + msg.buf.size() > max_request_size) {
         write(msg.handle, as_bytes(make_span(request_too_large)));
+        flush(msg.handle);
         close(msg.handle);
         return;
       }
@@ -161,6 +154,7 @@ behavior prometheus_broker::make_behavior() {
       // Everything else, we ignore for now.
       if (!starts_with(req_str, "GET /metrics HTTP/1.")) {
         write(msg.handle, as_bytes(make_span(request_not_supported)));
+        flush(msg.handle);
         close(msg.handle);
         return;
       }
@@ -172,6 +166,7 @@ behavior prometheus_broker::make_behavior() {
       auto& dst = wr_buf(msg.handle);
       dst.insert(dst.end(), hdr.begin(), hdr.end());
       dst.insert(dst.end(), payload.begin(), payload.end());
+      flush(msg.handle);
       close(msg.handle);
     },
     [=](const io::new_connection_msg& msg) {
