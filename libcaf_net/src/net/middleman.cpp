@@ -20,11 +20,14 @@
 
 #include "caf/actor_system_config.hpp"
 #include "caf/detail/set_thread_name.hpp"
+#include "caf/expected.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/net/basp/ec.hpp"
+#include "caf/net/endpoint_manager.hpp"
 #include "caf/net/middleman_backend.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/raise_error.hpp"
+#include "caf/sec.hpp"
 #include "caf/send.hpp"
 #include "caf/uri.hpp"
 
@@ -93,6 +96,13 @@ void* middleman::subtype_ptr() {
   return this;
 }
 
+expected<endpoint_manager_ptr> middleman::connect(const uri& locator) {
+  if (auto ptr = backend(locator.scheme()))
+    return ptr->get_or_connect(locator);
+  else
+    return basp::ec::invalid_scheme;
+}
+
 void middleman::resolve(const uri& locator, const actor& listener) {
   auto ptr = backend(locator.scheme());
   if (ptr != nullptr)
@@ -109,6 +119,13 @@ middleman_backend* middleman::backend(string_view scheme) const noexcept {
   if (i != backends_.end())
     return i->get();
   return nullptr;
+}
+
+expected<uint16_t> middleman::port(string_view scheme) const {
+  if (auto ptr = backend(scheme))
+    return ptr->port();
+  else
+    return basp::ec::invalid_scheme;
 }
 
 } // namespace caf::net

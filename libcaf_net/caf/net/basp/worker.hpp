@@ -24,6 +24,7 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/abstract_worker.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/detail/worker_hub.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/basp/header.hpp"
@@ -36,8 +37,8 @@
 namespace caf::net::basp {
 
 /// Deserializes payloads for BASP messages asynchronously.
-class worker : public detail::abstract_worker,
-               public remote_message_handler<worker> {
+class CAF_NET_EXPORT worker : public detail::abstract_worker,
+                              public remote_message_handler<worker> {
 public:
   // -- friends ----------------------------------------------------------------
 

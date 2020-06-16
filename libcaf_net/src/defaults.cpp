@@ -24,4 +24,6 @@ const size_t max_payload_buffers = 100;
 
 const size_t max_header_buffers = 10;
 
+const uint16_t tcp_port = 0;
+
 } // namespace caf::defaults::middleman

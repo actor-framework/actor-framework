@@ -35,7 +35,7 @@ endfunction()
 
 add_library(libcaf_net_obj OBJECT ${CAF_NET_HEADERS}
   src/actor_proxy_impl.cpp
-  src/application.cpp
+  src/basp/application.cpp
   src/basp/connection_state_strings.cpp
   src/basp/ec_strings.cpp
   src/basp/message_type_strings.cpp
@@ -51,6 +51,7 @@ add_library(libcaf_net_obj OBJECT ${CAF_NET_HEADERS}
   src/message_queue.cpp
   src/multiplexer.cpp
   src/net/backend/test.cpp
+  src/net/backend/tcp.cpp
   src/net/endpoint_manager_queue.cpp
   src/net/middleman.cpp
   src/net/middleman_backend.cpp
@@ -147,4 +148,5 @@ caf_incubator_add_test_suites(caf-net-test
   transport_worker_dispatcher
   udp_datagram_socket
   network_socket
+  net.backend.tcp
 )

@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2019 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,22 +18,34 @@
 
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
-
 #include "caf/detail/net_export.hpp"
+#include "caf/error.hpp"
+#include "caf/net/basp/application.hpp"
+#include "caf/proxy_registry.hpp"
 
-// -- hard-coded default values for various CAF options ------------------------
+namespace caf::net::basp {
 
-namespace caf::defaults::middleman {
+/// Factory for basp::application.
+/// @relates doorman
+class CAF_NET_EXPORT application_factory {
+public:
+  using application_type = basp::application;
 
-/// Maximum number of cached buffers for sending payloads.
-CAF_NET_EXPORT extern const size_t max_payload_buffers;
+  application_factory(proxy_registry& proxies) : proxies_(proxies) {
+    // nop
+  }
 
-/// Maximum number of cached buffers for sending headers.
-CAF_NET_EXPORT extern const size_t max_header_buffers;
+  template <class Parent>
+  error init(Parent&) {
+    return none;
+  }
 
-/// Port to listen on for tcp.
-CAF_NET_EXPORT extern const uint16_t tcp_port;
+  application_type make() const {
+    return application_type{proxies_};
+  }
 
-} // namespace caf::defaults::middleman
+private:
+  proxy_registry& proxies_;
+};
+
+} // namespace caf::net::basp

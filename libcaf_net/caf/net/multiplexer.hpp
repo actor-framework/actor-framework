@@ -22,6 +22,7 @@
 #include <mutex>
 #include <thread>
 
+#include "caf/detail/net_export.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/operation.hpp"
 #include "caf/net/pipe_socket.hpp"
@@ -37,7 +38,8 @@ struct pollfd;
 namespace caf::net {
 
 /// Multiplexes any number of ::socket_manager objects with a ::socket.
-class multiplexer : public std::enable_shared_from_this<multiplexer> {
+class CAF_NET_EXPORT multiplexer
+  : public std::enable_shared_from_this<multiplexer> {
 public:
   // -- member types -----------------------------------------------------------
 

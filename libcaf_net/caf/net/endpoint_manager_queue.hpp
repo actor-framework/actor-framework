@@ -21,6 +21,7 @@
 #include <string>
 
 #include "caf/actor.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/detail/serialized_size.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/drr_queue.hpp"
@@ -33,7 +34,7 @@
 
 namespace caf::net {
 
-class endpoint_manager_queue {
+class CAF_NET_EXPORT endpoint_manager_queue {
 public:
   enum class element_type { event, message };
 

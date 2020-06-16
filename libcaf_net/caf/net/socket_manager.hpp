@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
@@ -28,7 +29,7 @@
 namespace caf::net {
 
 /// Manages the lifetime of a single socket and handles any I/O events on it.
-class socket_manager : public ref_counted {
+class CAF_NET_EXPORT socket_manager : public ref_counted {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
