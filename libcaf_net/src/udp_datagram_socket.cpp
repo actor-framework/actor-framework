@@ -82,7 +82,7 @@ make_udp_datagram_socket(ip_endpoint ep, bool reuse_addr) {
   auto port = addr.ss_family == AF_INET
                 ? reinterpret_cast<sockaddr_in*>(&addr)->sin_port
                 : reinterpret_cast<sockaddr_in6*>(&addr)->sin6_port;
-  return std::make_pair(sguard.release(), port);
+  return std::make_pair(sguard.release(), ntohs(port));
 }
 
 variant<std::pair<size_t, ip_endpoint>, sec> read(udp_datagram_socket x,
