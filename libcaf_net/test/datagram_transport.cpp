@@ -63,7 +63,7 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
     send_socket = send_pair.first;
     auto receive_pair = unbox(make_udp_datagram_socket(ep));
     recv_socket = receive_pair.first;
-    ep.port(htons(receive_pair.second));
+    ep.port(receive_pair.second);
     CAF_MESSAGE("sending message to " << CAF_ARG(ep));
     if (auto err = nonblocking(recv_socket, true))
       CAF_FAIL("nonblocking() returned an error: " << err);

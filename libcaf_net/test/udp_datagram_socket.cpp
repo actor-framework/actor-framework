@@ -49,7 +49,7 @@ struct fixture : host_fixture {
     send_socket = send_pair.first;
     auto receive_pair = unbox(make_udp_datagram_socket(ep));
     receive_socket = receive_pair.first;
-    ep.port(ntohs(receive_pair.second));
+    ep.port(receive_pair.second);
   }
 
   ~fixture() {
@@ -103,6 +103,15 @@ struct header {
 } // namespace
 
 CAF_TEST_FIXTURE_SCOPE(udp_datagram_socket_test, fixture)
+
+CAF_TEST(socket creation) {
+  ip_endpoint ep;
+  CAF_CHECK_EQUAL(parse("0.0.0.0:0", ep), none);
+  auto ret = make_udp_datagram_socket(ep);
+  if (!ret)
+    CAF_FAIL("socket creation failed: " << ret.error());
+  CAF_CHECK_EQUAL(local_port(ret->first), ret->second);
+}
 
 CAF_TEST(read / write using span<byte>) {
   if (auto err = nonblocking(socket_cast<net::socket>(receive_socket), true))
