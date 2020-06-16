@@ -33,15 +33,21 @@ namespace caf::telemetry {
 /// Manages a collection of metric families.
 class CAF_CORE_EXPORT metric_registry {
 public:
+  // -- member types -----------------------------------------------------------
+
   template <class Type>
   using metric_family_ptr = std::unique_ptr<metric_family_impl<Type>>;
 
   template <class Type>
   using metric_family_container = std::vector<metric_family_ptr<Type>>;
 
+  // -- constructors, destructors, and assignment operators --------------------
+
   metric_registry();
 
   ~metric_registry();
+
+  // -- factories --------------------------------------------------------------
 
   /// Returns a metric family. Creates the family lazily if necessary, but fails
   /// if the full name already belongs to a different family.
@@ -111,6 +117,8 @@ public:
     auto fptr = family<Type>(prefix, name, {}, helptext, unit, is_sum);
     return fptr->get_or_add({});
   }
+
+  // -- observers --------------------------------------------------------------
 
   template <class Collector>
   void collect(Collector& collector) const {

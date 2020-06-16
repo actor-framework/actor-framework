@@ -31,7 +31,15 @@ namespace caf::telemetry {
 /// and down.
 class CAF_CORE_EXPORT dbl_gauge {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using value_type = double;
+
+  // -- constants --------------------------------------------------------------
+
   static constexpr metric_type runtime_type = metric_type::dbl_gauge;
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   dbl_gauge() noexcept : value_(0) {
     // nop
@@ -40,6 +48,8 @@ public:
   explicit dbl_gauge(double value) noexcept : value_(value) {
     // nop
   }
+
+  // -- modifiers --------------------------------------------------------------
 
   /// Increments the gauge by 1.
   void inc() noexcept {
@@ -69,6 +79,8 @@ public:
   void value(double x) noexcept {
     value_.store(x);
   }
+
+  // -- observers --------------------------------------------------------------
 
   /// Returns the current value of the gauge.
   double value() const noexcept {

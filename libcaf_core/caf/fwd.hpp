@@ -250,6 +250,36 @@ class metric_family_impl;
 template <class Type>
 class metric_impl;
 
+template <class ValueType>
+class histogram;
+
+using dbl_histogram = histogram<double>;
+using int_histogram = histogram<int64_t>;
+
+} // namespace telemetry
+
+namespace detail {
+
+template <class>
+struct gauge_oracle;
+
+template <>
+struct gauge_oracle<double> {
+  using type = telemetry::dbl_gauge;
+};
+
+template <>
+struct gauge_oracle<int64_t> {
+  using type = telemetry::int_gauge;
+};
+
+} // namespace detail
+
+namespace telemetry {
+
+template <class ValueType>
+using gauge = typename detail::gauge_oracle<ValueType>::type;
+
 } // namespace telemetry
 
 // -- I/O classes --------------------------------------------------------------

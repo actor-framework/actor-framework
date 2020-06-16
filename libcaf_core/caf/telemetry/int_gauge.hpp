@@ -31,7 +31,15 @@ namespace caf::telemetry {
 /// and down.
 class CAF_CORE_EXPORT int_gauge {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using value_type = int64_t;
+
+  // -- constants --------------------------------------------------------------
+
   static constexpr metric_type runtime_type = metric_type::int_gauge;
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   int_gauge() noexcept : value_(0) {
     // nop
@@ -40,6 +48,8 @@ public:
   explicit int_gauge(int64_t value) noexcept : value_(value) {
     // nop
   }
+
+  // -- modifiers --------------------------------------------------------------
 
   /// Increments the gauge by 1.
   void inc() noexcept {
@@ -66,11 +76,6 @@ public:
     value_.store(x);
   }
 
-  /// Returns the current value of the gauge.
-  int64_t value() const noexcept {
-    return value_.load();
-  }
-
   /// Increments the gauge by 1.
   /// @returns The new value of the gauge.
   int64_t operator++() noexcept {
@@ -81,6 +86,13 @@ public:
   /// @returns The new value of the gauge.
   int64_t operator--() noexcept {
     return --value_;
+  }
+
+  // -- observers --------------------------------------------------------------
+
+  /// Returns the current value of the gauge.
+  int64_t value() const noexcept {
+    return value_.load();
   }
 
 private:

@@ -310,6 +310,7 @@ caf_add_test_suites(caf-core-test
   sum_type
   telemetry.collector.prometheus
   telemetry.dbl_gauge
+  telemetry.histogram
   telemetry.int_gauge
   telemetry.label
   telemetry.metric_registry

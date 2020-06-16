@@ -18,13 +18,8 @@
 
 #pragma once
 
-namespace caf::telemetry {
+// convenience header for including all gauge types
 
-enum class metric_type : uint8_t {
-  dbl_gauge,
-  int_gauge,
-  dbl_histogram,
-  int_histogram,
-};
-
-} // namespace caf::telemetry
+#include "caf/fwd.hpp"
+#include "caf/telemetry/dbl_gauge.hpp"
+#include "caf/telemetry/int_gauge.hpp"
