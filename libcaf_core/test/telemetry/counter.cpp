@@ -16,17 +16,34 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#define CAF_SUITE telemetry.counter
 
-namespace caf::telemetry {
+#include "caf/telemetry/counter.hpp"
 
-enum class metric_type : uint8_t {
-  dbl_counter,
-  int_counter,
-  dbl_gauge,
-  int_gauge,
-  dbl_histogram,
-  int_histogram,
-};
+#include "caf/test/dsl.hpp"
 
-} // namespace caf::telemetry
+using namespace caf;
+
+CAF_TEST(double counters can only increment) {
+  telemetry::dbl_counter g;
+  CAF_MESSAGE("counters start at 0");
+  CAF_CHECK_EQUAL(g.value(), 0.0);
+  CAF_MESSAGE("counters are incrementable");
+  g.inc();
+  g.inc(2.0);
+  CAF_CHECK_EQUAL(g.value(), 3.0);
+  CAF_MESSAGE("users can create counters with custom start values");
+  CAF_CHECK_EQUAL(telemetry::dbl_counter{42.0}.value(), 42.0);
+}
+
+CAF_TEST(integer counters can only increment) {
+  telemetry::int_counter g;
+  CAF_MESSAGE("counters start at 0");
+  CAF_CHECK_EQUAL(g.value(), 0);
+  CAF_MESSAGE("counters are incrementable");
+  g.inc();
+  g.inc(2);
+  CAF_CHECK_EQUAL(g.value(), 3);
+  CAF_MESSAGE("users can create counters with custom start values");
+  CAF_CHECK_EQUAL(telemetry::int_counter{42}.value(), 42);
+}

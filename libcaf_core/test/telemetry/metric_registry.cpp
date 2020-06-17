@@ -23,8 +23,8 @@
 #include "caf/test/dsl.hpp"
 
 #include "caf/string_view.hpp"
-#include "caf/telemetry/dbl_gauge.hpp"
-#include "caf/telemetry/int_gauge.hpp"
+#include "caf/telemetry/counter.hpp"
+#include "caf/telemetry/gauge.hpp"
 #include "caf/telemetry/label_view.hpp"
 #include "caf/telemetry/metric_type.hpp"
 
@@ -35,6 +35,13 @@ namespace {
 
 struct test_collector {
   std::string result;
+
+  template <class T>
+  void operator()(const metric_family* family, const metric* instance,
+                  const counter<T>* wrapped) {
+    concat(family, instance);
+    result += std::to_string(wrapped->value());
+  }
 
   void operator()(const metric_family* family, const metric* instance,
                   const dbl_gauge* wrapped) {

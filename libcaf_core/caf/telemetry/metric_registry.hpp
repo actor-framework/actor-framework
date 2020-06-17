@@ -28,6 +28,7 @@
 #include "caf/raise_error.hpp"
 #include "caf/settings.hpp"
 #include "caf/string_view.hpp"
+#include "caf/telemetry/counter.hpp"
 #include "caf/telemetry/gauge.hpp"
 #include "caf/telemetry/histogram.hpp"
 #include "caf/telemetry/metric_family_impl.hpp"
@@ -37,14 +38,6 @@ namespace caf::telemetry {
 /// Manages a collection of metric families.
 class CAF_CORE_EXPORT metric_registry {
 public:
-  // -- member types -----------------------------------------------------------
-
-  template <class Type>
-  using metric_family_ptr = std::unique_ptr<metric_family_impl<Type>>;
-
-  template <class Type>
-  using metric_family_container = std::vector<metric_family_ptr<Type>>;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   metric_registry();
@@ -85,9 +78,9 @@ public:
                                              to_sorted_vec(label_names),
                                              to_string(helptext),
                                              to_string(unit), is_sum);
-    auto& families = container_by_type<gauge_type>();
-    families.emplace_back(std::move(ptr));
-    return families.back().get();
+    auto result = ptr.get();
+    families_.emplace_back(std::move(ptr));
+    return result;
   }
 
   /// @copydoc gauge_family
@@ -100,6 +93,55 @@ public:
     auto lbl_span = make_span(label_names.begin(), label_names.size());
     return gauge_family<ValueType>(prefix, name, lbl_span, helptext, unit,
                                    is_sum);
+  }
+
+  /// Returns a counter metric family. Creates the family lazily if necessary,
+  /// but fails if the full name already belongs to a different family.
+  /// @param prefix The prefix (namespace) this family belongs to. Usually the
+  ///               application or protocol name, e.g., `http`. The prefix `caf`
+  ///               as well as prefixes starting with an underscore are
+  ///               reserved.
+  /// @param name The human-readable name of the metric, e.g., `requests`.
+  /// @param label_names Names for all label dimensions of the metric.
+  /// @param helptext Short explanation of the metric.
+  /// @param unit Unit of measurement. Please use base units such as `bytes` or
+  ///             `seconds` (prefer lowercase). The pseudo-unit `1` identifies
+  ///             dimensionless counts.
+  /// @param is_sum Setting this to `true` indicates that this metric adds
+  ///               something up to a total, where only the total value is of
+  ///               interest. For example, the total number of HTTP requests.
+  template <class ValueType = int64_t>
+  metric_family_impl<counter<ValueType>>*
+  counter_family(string_view prefix, string_view name,
+                 span<const string_view> label_names, string_view helptext,
+                 string_view unit = "1", bool is_sum = false) {
+    using counter_type = counter<ValueType>;
+    using family_type = metric_family_impl<counter_type>;
+    std::unique_lock<std::mutex> guard{families_mx_};
+    if (auto ptr = fetch(prefix, name)) {
+      assert_properties(ptr, counter_type::runtime_type, label_names, unit,
+                        is_sum);
+      return static_cast<family_type*>(ptr);
+    }
+    auto ptr = std::make_unique<family_type>(to_string(prefix), to_string(name),
+                                             to_sorted_vec(label_names),
+                                             to_string(helptext),
+                                             to_string(unit), is_sum);
+    auto result = ptr.get();
+    families_.emplace_back(std::move(ptr));
+    return result;
+  }
+
+  /// @copydoc counter_family
+  template <class ValueType = int64_t>
+  metric_family_impl<counter<ValueType>>*
+  counter_family(string_view prefix, string_view name,
+                 std::initializer_list<string_view> label_names,
+                 string_view helptext, string_view unit = "1",
+                 bool is_sum = false) {
+    auto lbl_span = make_span(label_names.begin(), label_names.size());
+    return counter_family<ValueType>(prefix, name, lbl_span, helptext, unit,
+                                     is_sum);
   }
 
   /// Returns a gauge metric singleton, i.e., the single instance of a family
@@ -177,9 +219,9 @@ public:
     auto ptr = std::make_unique<family_type>(
       to_string(prefix), to_string(name), to_sorted_vec(label_names),
       to_string(helptext), to_string(unit), is_sum, std::move(upper_bounds));
-    auto& families = container_by_type<histogram_type>();
-    families.emplace_back(std::move(ptr));
-    return families.back().get();
+    auto result = ptr.get();
+    families_.emplace_back(std::move(ptr));
+    return result;
   }
 
   /// @copydoc gauge_family
@@ -226,15 +268,10 @@ public:
 
   template <class Collector>
   void collect(Collector& collector) const {
+    auto f = [&](auto* ptr) { ptr->collect(collector); };
     std::unique_lock<std::mutex> guard{families_mx_};
-    for (auto& ptr : dbl_gauges_)
-      ptr->collect(collector);
-    for (auto& ptr : int_gauges_)
-      ptr->collect(collector);
-    for (auto& ptr : dbl_histograms_)
-      ptr->collect(collector);
-    for (auto& ptr : int_histograms_)
-      ptr->collect(collector);
+    for (auto& ptr : families_)
+      visit_family(f, ptr.get());
   }
 
 private:
@@ -252,43 +289,31 @@ private:
     return result;
   }
 
+  template <class F>
+  static auto visit_family(F& f, const metric_family* ptr) {
+    switch (ptr->type()) {
+      case metric_type::dbl_counter:
+        return f(static_cast<const metric_family_impl<dbl_counter>*>(ptr));
+      case metric_type::int_counter:
+        return f(static_cast<const metric_family_impl<int_counter>*>(ptr));
+      case metric_type::dbl_gauge:
+        return f(static_cast<const metric_family_impl<dbl_gauge>*>(ptr));
+      case metric_type::int_gauge:
+        return f(static_cast<const metric_family_impl<int_gauge>*>(ptr));
+      case metric_type::dbl_histogram:
+        return f(static_cast<const metric_family_impl<dbl_histogram>*>(ptr));
+      default:
+        CAF_ASSERT(ptr->type() == metric_type::int_histogram);
+        return f(static_cast<const metric_family_impl<int_histogram>*>(ptr));
+    }
+  }
+
   void assert_properties(const metric_family* ptr, metric_type type,
                          span<const string_view> label_names, string_view unit,
                          bool is_sum);
 
-  template <class Type>
-  metric_family_container<Type>& container_by_type();
-
   mutable std::mutex families_mx_;
-
-  metric_family_container<telemetry::dbl_gauge> dbl_gauges_;
-  metric_family_container<telemetry::int_gauge> int_gauges_;
-  metric_family_container<telemetry::dbl_histogram> dbl_histograms_;
-  metric_family_container<telemetry::int_histogram> int_histograms_;
+  std::vector<std::unique_ptr<metric_family>> families_;
 };
-
-template <>
-inline metric_registry::metric_family_container<dbl_gauge>&
-metric_registry::container_by_type<dbl_gauge>() {
-  return dbl_gauges_;
-}
-
-template <>
-inline metric_registry::metric_family_container<int_gauge>&
-metric_registry::container_by_type<int_gauge>() {
-  return int_gauges_;
-}
-
-template <>
-inline metric_registry::metric_family_container<int_histogram>&
-metric_registry::container_by_type<int_histogram>() {
-  return int_histograms_;
-}
-
-template <>
-inline metric_registry::metric_family_container<dbl_histogram>&
-metric_registry::container_by_type<dbl_histogram>() {
-  return dbl_histograms_;
-}
 
 } // namespace caf::telemetry

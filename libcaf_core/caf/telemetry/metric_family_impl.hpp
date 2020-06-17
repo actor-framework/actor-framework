@@ -46,14 +46,11 @@ public:
   metric_family_impl(std::string prefix, std::string name,
                      std::vector<std::string> label_names, std::string helptext,
                      std::string unit, bool is_sum, Ts&&... xs)
-    : super(std::move(prefix), std::move(name), std::move(label_names),
-            std::move(helptext), std::move(unit), is_sum),
+    : super(Type::runtime_type, std::move(prefix), std::move(name),
+            std::move(label_names), std::move(helptext), std::move(unit),
+            is_sum),
       extra_setting_(std::forward<Ts>(xs)...) {
     // nop
-  }
-
-  metric_type type() const noexcept override {
-    return Type::runtime_type;
   }
 
   Type* get_or_add(span<const label_view> labels) {

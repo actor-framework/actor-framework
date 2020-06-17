@@ -49,17 +49,8 @@ metric_family* metric_registry::fetch(const string_view& prefix,
   auto eq = [&](const auto& ptr) {
     return ptr->prefix() == prefix && ptr->name() == name;
   };
-  if (auto i = std::find_if(dbl_gauges_.begin(), dbl_gauges_.end(), eq);
-      i != dbl_gauges_.end())
-    return i->get();
-  if (auto i = std::find_if(int_gauges_.begin(), int_gauges_.end(), eq);
-      i != int_gauges_.end())
-    return i->get();
-  if (auto i = std::find_if(dbl_histograms_.begin(), dbl_histograms_.end(), eq);
-      i != dbl_histograms_.end())
-    return i->get();
-  if (auto i = std::find_if(int_histograms_.begin(), int_histograms_.end(), eq);
-      i != int_histograms_.end())
+  if (auto i = std::find_if(families_.begin(), families_.end(), eq);
+      i != families_.end())
     return i->get();
   return nullptr;
 }

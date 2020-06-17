@@ -190,6 +190,20 @@ string_view prometheus::collect_from(const metric_registry& registry) {
 }
 
 void prometheus::operator()(const metric_family* family, const metric* instance,
+                            const dbl_counter* counter) {
+  set_current_family(family, "counter");
+  append(buf_, family, instance, ' ', counter->value(), ' ', ms_timestamp{now_},
+         '\n');
+}
+
+void prometheus::operator()(const metric_family* family, const metric* instance,
+                            const int_counter* counter) {
+  set_current_family(family, "counter");
+  append(buf_, family, instance, ' ', counter->value(), ' ', ms_timestamp{now_},
+         '\n');
+}
+
+void prometheus::operator()(const metric_family* family, const metric* instance,
                             const dbl_gauge* gauge) {
   set_current_family(family, "gauge");
   append(buf_, family, instance, ' ', gauge->value(), ' ', ms_timestamp{now_},

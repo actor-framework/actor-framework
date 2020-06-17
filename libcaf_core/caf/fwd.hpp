@@ -245,16 +245,21 @@ class timer;
 
 enum class metric_type : uint8_t;
 
+template <class ValueType>
+class counter;
+
+template <class ValueType>
+class histogram;
+
 template <class Type>
 class metric_family_impl;
 
 template <class Type>
 class metric_impl;
 
-template <class ValueType>
-class histogram;
-
+using dbl_counter = counter<double>;
 using dbl_histogram = histogram<double>;
+using int_counter = counter<int64_t>;
 using int_histogram = histogram<int64_t>;
 
 } // namespace telemetry
