@@ -241,6 +241,7 @@ class label_view;
 class metric;
 class metric_family;
 class metric_registry;
+class timer;
 
 enum class metric_type : uint8_t;
 

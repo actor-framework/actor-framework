@@ -313,6 +313,7 @@ caf_add_test_suites(caf-core-test
   telemetry.histogram
   telemetry.label
   telemetry.metric_registry
+  telemetry.timer
   thread_hook
   tracing_data
   type_id_list
