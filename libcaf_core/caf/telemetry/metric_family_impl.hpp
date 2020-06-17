@@ -36,9 +36,21 @@ namespace caf::telemetry {
 template <class Type>
 class metric_family_impl : public metric_family {
 public:
+  using super = metric_family;
+
   using impl_type = metric_impl<Type>;
 
-  using metric_family::metric_family;
+  using extra_setting_type = typename impl_type::family_setting;
+
+  template <class... Ts>
+  metric_family_impl(std::string prefix, std::string name,
+                     std::vector<std::string> label_names, std::string helptext,
+                     std::string unit, bool is_sum, Ts&&... xs)
+    : super(std::move(prefix), std::move(name), std::move(label_names),
+            std::move(helptext), std::move(unit), is_sum),
+      extra_setting_(std::forward<Ts>(xs)...) {
+    // nop
+  }
 
   metric_type type() const noexcept override {
     return Type::runtime_type;
@@ -55,13 +67,24 @@ public:
     if (m == metrics_.end()) {
       std::vector<label> cpy{labels.begin(), labels.end()};
       std::sort(cpy.begin(), cpy.end());
-      m = metrics_.emplace(m, std::make_unique<impl_type>(std::move(cpy)));
+      std::unique_ptr<impl_type> ptr;
+      if constexpr (std::is_same<extra_setting_type, unit_t>::value)
+        ptr.reset(new impl_type(std::move(cpy)));
+      else
+        ptr.reset(new impl_type(std::move(cpy), extra_setting_));
+      m = metrics_.emplace(m, std::move(ptr));
     }
     return std::addressof(m->get()->impl());
   }
 
   Type* get_or_add(std::initializer_list<label_view> labels) {
     return get_or_add(span<const label_view>{labels.begin(), labels.size()});
+  }
+
+  // -- properties --
+
+  const auto& extra_setting() const noexcept {
+    return extra_setting_;
   }
 
   template <class Collector>
@@ -72,6 +95,7 @@ public:
   }
 
 private:
+  extra_setting_type extra_setting_;
   mutable std::mutex mx_;
   std::vector<std::unique_ptr<impl_type>> metrics_;
 };

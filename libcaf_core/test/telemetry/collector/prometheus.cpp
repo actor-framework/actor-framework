@@ -32,7 +32,6 @@ using namespace caf::telemetry;
 namespace {
 
 struct fixture {
-  using ig = int_gauge;
   collector::prometheus exporter;
   metric_registry registry;
 };
@@ -42,16 +41,23 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(prometheus_tests, fixture)
 
 CAF_TEST(the Prometheus collector generates text output) {
-  auto fb = registry.family<ig>("foo", "bar", {}, "Some value without labels.",
-                                "seconds");
-  auto sv = registry.family<ig>("some", "value", {"a", "b"},
-                                "Some (total) value with two labels.", "1",
-                                true);
-  auto ov = registry.family<ig>("other", "value", {"x"}, "", "seconds", true);
+  auto fb = registry.gauge_family("foo", "bar", {},
+                                  "Some value without labels.", "seconds");
+  auto sv = registry.gauge_family("some", "value", {"a", "b"},
+                                  "Some (total) value with two labels.", "1",
+                                  true);
+  auto ov = registry.gauge_family("other", "value", {"x"}, "", "seconds", true);
+  std::vector<int64_t> upper_bounds{1, 2, 4};
+  auto sr = registry.histogram_family("some", "request-duration", {"x"},
+                                      upper_bounds, "Some help.", "seconds");
   fb->get_or_add({})->value(123);
   sv->get_or_add({{"a", "1"}, {"b", "2"}})->value(12);
   sv->get_or_add({{"b", "1"}, {"a", "2"}})->value(21);
   ov->get_or_add({{"x", "true"}})->value(31337);
+  auto h = sr->get_or_add({{"x", "get"}});
+  h->observe(3);
+  h->observe(4);
+  h->observe(7);
   CAF_CHECK_EQUAL(exporter.collect_from(registry, 42),
                   R"(# HELP foo_bar_seconds Some value without labels.
 # TYPE foo_bar_seconds gauge
@@ -62,6 +68,14 @@ some_value_total{a="1",b="2"} 12 42000
 some_value_total{a="2",b="1"} 21 42000
 # TYPE other_value_seconds_total gauge
 other_value_seconds_total{x="true"} 31337 42000
+# HELP some_request_duration_seconds Some help.
+# TYPE some_request_duration_seconds histogram
+some_request_duration_seconds_bucket{x="get",le="1"} 0 42000
+some_request_duration_seconds_bucket{x="get",le="2"} 0 42000
+some_request_duration_seconds_bucket{x="get",le="4"} 2 42000
+some_request_duration_seconds_bucket{x="get",le="+Inf"} 1 42000
+some_request_duration_seconds_sum{x="get"} 14 42000
+some_request_duration_seconds_count{x="get"} 1 42000
 )"_sv);
   CAF_MESSAGE("multiple runs generate the same output");
   std::string res1;

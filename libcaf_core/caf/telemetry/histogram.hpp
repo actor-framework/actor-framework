@@ -39,6 +39,8 @@ public:
 
   using gauge_type = gauge<value_type>;
 
+  using family_setting = std::vector<value_type>;
+
   struct bucket_type {
     value_type upper_bound;
     gauge_type gauge;
@@ -52,7 +54,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  histogram(span<const value_type> upper_bounds) {
+  explicit histogram(span<const value_type> upper_bounds) {
     using limits = std::numeric_limits<value_type>;
     CAF_ASSERT(std::is_sorted(upper_bounds.begin(), upper_bounds.end()));
     num_buckets_ = upper_bounds.size() + 1;
@@ -66,10 +68,14 @@ public:
       buckets_[index].upper_bound = limits::max();
   }
 
-  histogram(std::initializer_list<value_type> upper_bounds)
+  explicit histogram(std::initializer_list<value_type> upper_bounds)
     : histogram(make_span(upper_bounds.begin(), upper_bounds.size())) {
     // nop
   }
+
+  histogram(const histogram&) = delete;
+
+  histogram& operator=(const histogram&) = delete;
 
   ~histogram() {
     delete[] buckets_;
@@ -106,9 +112,10 @@ private:
   gauge_type sum_;
 };
 
-///
+/// Convenience alias for a histogram with value type `double`.
 using dbl_histogram = histogram<double>;
 
+/// Convenience alias for a histogram with value type `int64_t`.
 using int_histogram = histogram<int64_t>;
 
 } // namespace caf::telemetry

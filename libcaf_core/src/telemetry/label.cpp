@@ -33,6 +33,11 @@ label::label(const label_view& view) : label(view.name(), view.value()) {
   // nop
 }
 
+void label::value(string_view new_value) {
+  str_.erase(name_length_ + 1);
+  str_.insert(str_.end(), new_value.begin(), new_value.end());
+}
+
 int label::compare(const label& x) const noexcept {
   return str_.compare(x.str());
 }

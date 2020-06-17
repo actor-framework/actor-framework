@@ -59,6 +59,8 @@ public:
                        str_.size() - name_length_ - 1};
   }
 
+  void value(string_view new_value);
+
   /// Returns the label in `name=value` notation.
   const std::string& str() const noexcept {
     return str_;

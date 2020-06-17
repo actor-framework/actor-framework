@@ -31,6 +31,8 @@ namespace caf::telemetry {
 template <class Type>
 class metric_impl : public metric {
 public:
+  using family_setting = typename Type::family_setting;
+
   template <class... Ts>
   metric_impl(std::vector<label> labels, Ts&&... xs)
     : metric(std::move(labels)), impl_(std::forward<Ts>(xs)...) {

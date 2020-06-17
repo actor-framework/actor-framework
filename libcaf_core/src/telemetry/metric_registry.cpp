@@ -19,12 +19,20 @@
 #include "caf/telemetry/metric_registry.hpp"
 
 #include "caf/config.hpp"
-#include "caf/raise_error.hpp"
 #include "caf/telemetry/dbl_gauge.hpp"
 #include "caf/telemetry/int_gauge.hpp"
 #include "caf/telemetry/metric_family_impl.hpp"
 #include "caf/telemetry/metric_impl.hpp"
 #include "caf/telemetry/metric_type.hpp"
+
+namespace {
+
+template <class Range1, class Range2>
+bool equals(Range1&& xs, Range2&& ys) {
+  return std::equal(xs.begin(), xs.end(), ys.begin(), ys.end());
+}
+
+} // namespace
 
 namespace caf::telemetry {
 
@@ -38,19 +46,26 @@ metric_registry::~metric_registry() {
 
 metric_family* metric_registry::fetch(const string_view& prefix,
                                       const string_view& name) {
-  auto matches = [&](const auto& ptr) {
+  auto eq = [&](const auto& ptr) {
     return ptr->prefix() == prefix && ptr->name() == name;
   };
-  if (auto i = std::find_if(dbl_gauges_.begin(), dbl_gauges_.end(), matches);
+  if (auto i = std::find_if(dbl_gauges_.begin(), dbl_gauges_.end(), eq);
       i != dbl_gauges_.end())
     return i->get();
-  if (auto i = std::find_if(int_gauges_.begin(), int_gauges_.end(), matches);
+  if (auto i = std::find_if(int_gauges_.begin(), int_gauges_.end(), eq);
       i != int_gauges_.end())
+    return i->get();
+  if (auto i = std::find_if(dbl_histograms_.begin(), dbl_histograms_.end(), eq);
+      i != dbl_histograms_.end())
+    return i->get();
+  if (auto i = std::find_if(int_histograms_.begin(), int_histograms_.end(), eq);
+      i != int_histograms_.end())
     return i->get();
   return nullptr;
 }
 
-void metric_registry::assert_properties(metric_family* ptr, metric_type type,
+void metric_registry::assert_properties(const metric_family* ptr,
+                                        metric_type type,
                                         span<const string_view> label_names,
                                         string_view unit, bool is_sum) {
   auto labels_match = [&] {

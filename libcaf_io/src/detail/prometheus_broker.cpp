@@ -192,12 +192,12 @@ prometheus_broker::prometheus_broker(actor_config& cfg) : io::broker(cfg) {
   using telemetry::dbl_gauge;
   using telemetry::int_gauge;
   auto& reg = system().telemetry();
-  cpu_time_ = reg.singleton<dbl_gauge>(
+  cpu_time_ = reg.gauge_singleton<double>(
     "process", "cpu", "Total user and system CPU time spent.", "seconds", true);
-  mem_size_ = reg.singleton<int_gauge>("process", "resident_memory",
-                                       "Resident memory size.", "bytes");
-  virt_mem_size_ = reg.singleton<int_gauge>("process", "virtual_memory",
-                                            "Virtual memory size.", "bytes");
+  mem_size_ = reg.gauge_singleton("process", "resident_memory",
+                                  "Resident memory size.", "bytes");
+  virt_mem_size_ = reg.gauge_singleton("process", "virtual_memory",
+                                       "Virtual memory size.", "bytes");
 #endif // HAS_PROCESS_METRICS
 }
 

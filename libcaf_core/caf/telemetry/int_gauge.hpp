@@ -35,6 +35,8 @@ public:
 
   using value_type = int64_t;
 
+  using family_setting = unit_t;
+
   // -- constants --------------------------------------------------------------
 
   static constexpr metric_type runtime_type = metric_type::int_gauge;

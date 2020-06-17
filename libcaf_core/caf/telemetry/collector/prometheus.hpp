@@ -75,11 +75,21 @@ public:
   void operator()(const metric_family* family, const metric* instance,
                   const int_gauge* gauge);
 
+  void operator()(const metric_family* family, const metric* instance,
+                  const dbl_histogram* val);
+
+  void operator()(const metric_family* family, const metric* instance,
+                  const int_histogram* val);
+
 private:
   /// Sets `current_family_` if not pointing to `family` already. When setting
   /// the member variable, also writes meta information to `buf_`.
   void set_current_family(const metric_family* family,
                           string_view prometheus_type);
+
+  template <class ValueType>
+  void append_histogram(const metric_family* family, const metric* instance,
+                        const histogram<ValueType>* val);
 
   /// Stores the generated text output.
   char_buffer buf_;
@@ -89,6 +99,9 @@ private:
 
   /// Caches type information and help text for a metric.
   std::unordered_map<const metric_family*, char_buffer> meta_info_;
+
+  /// Caches type information and help text for a metric.
+  std::unordered_map<const metric*, std::vector<char_buffer>> virtual_metrics_;
 
   /// Caches which metric family is currently collected.
   const metric_family* current_family_ = nullptr;
