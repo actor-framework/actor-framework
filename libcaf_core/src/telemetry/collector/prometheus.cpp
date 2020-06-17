@@ -290,10 +290,10 @@ void prometheus::append_histogram(const metric_family* family,
   auto buckets = val->buckets();
   size_t index = 0;
   for (; index < buckets.size() - 1; ++index) {
-    append(buf_, vm[index], buckets[index].gauge.value(), ' ',
+    append(buf_, vm[index], buckets[index].count.value(), ' ',
            ms_timestamp{now_}, '\n');
   }
-  auto count = buckets[index].gauge.value();
+  auto count = buckets[index].count.value();
   append(buf_, vm[index], count, ' ', ms_timestamp{now_}, '\n');
   append(buf_, vm[++index], val->sum(), ' ', ms_timestamp{now_}, '\n');
   append(buf_, vm[++index], count, ' ', ms_timestamp{now_}, '\n');

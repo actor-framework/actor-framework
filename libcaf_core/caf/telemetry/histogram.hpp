@@ -24,6 +24,7 @@
 #include "caf/config.hpp"
 #include "caf/fwd.hpp"
 #include "caf/span.hpp"
+#include "caf/telemetry/counter.hpp"
 #include "caf/telemetry/gauge.hpp"
 #include "caf/telemetry/metric_type.hpp"
 
@@ -39,11 +40,13 @@ public:
 
   using gauge_type = gauge<value_type>;
 
+  using counter_type = counter<value_type>;
+
   using family_setting = std::vector<value_type>;
 
   struct bucket_type {
     value_type upper_bound;
-    gauge_type gauge;
+    counter_type count;
   };
 
   // -- constants --------------------------------------------------------------
@@ -85,11 +88,11 @@ public:
 
   void observe(value_type value) {
     // The last bucket has an upper bound of +inf or int_max, so we'll always
-    // find a bucket and increment the gauges.
+    // find a bucket and increment the counters.
     for (size_t index = 0;; ++index) {
-      auto& [upper_bound, gauge] = buckets_[index];
+      auto& [upper_bound, count] = buckets_[index];
       if (value <= upper_bound) {
-        gauge.inc();
+        count.inc();
         sum_.inc(value);
         return;
       }

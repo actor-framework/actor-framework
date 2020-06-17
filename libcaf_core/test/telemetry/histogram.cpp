@@ -53,9 +53,9 @@ CAF_TEST(histograms aggregate to buckets and keep a sum) {
     h1.observe(value);
   auto buckets = h1.buckets();
   CAF_REQUIRE_EQUAL(buckets.size(), 4u);
-  CAF_CHECK_EQUAL(buckets[0].gauge.value(), 2); // 1, 2
-  CAF_CHECK_EQUAL(buckets[1].gauge.value(), 2); // 3, 4
-  CAF_CHECK_EQUAL(buckets[2].gauge.value(), 4); // 5, 6, 7, 8
-  CAF_CHECK_EQUAL(buckets[3].gauge.value(), 2); // 9, 10
+  CAF_CHECK_EQUAL(buckets[0].count.value(), 2); // 1, 2
+  CAF_CHECK_EQUAL(buckets[1].count.value(), 2); // 3, 4
+  CAF_CHECK_EQUAL(buckets[2].count.value(), 4); // 5, 6, 7, 8
+  CAF_CHECK_EQUAL(buckets[3].count.value(), 2); // 9, 10
   CAF_CHECK_EQUAL(h1.sum(), 55);
 }

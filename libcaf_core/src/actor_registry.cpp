@@ -50,7 +50,7 @@ actor_registry::~actor_registry() {
 
 actor_registry::actor_registry(actor_system& sys) : system_(sys) {
   running_ = sys.telemetry().gauge_singleton(
-    "caf", "running_actors", "Number of currently running actors.");
+    "caf", "running-actors", "Number of currently running actors.");
 }
 
 strong_actor_ptr actor_registry::get_impl(actor_id key) const {
