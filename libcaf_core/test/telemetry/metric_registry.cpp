@@ -101,7 +101,8 @@ CAF_TEST(registries lazily create metrics) {
   auto f = registry.gauge_family("caf", "running-actors", {"var1", "var2"},
                                  "How many actors are currently running?");
   auto g = registry.histogram_family("caf", "response-time", {"var1", "var2"},
-                                     upper_bounds, "How long take requests?");
+                                     upper_bounds, nullptr,
+                                     "How long take requests?");
   std::vector<label_view> v1{{"var1", "foo"}, {"var2", "bar"}};
   std::vector<label_view> v1_reversed{{"var2", "bar"}, {"var1", "foo"}};
   std::vector<label_view> v2{{"var1", "bar"}, {"var2", "foo"}};
@@ -160,6 +161,17 @@ other.value.seconds.total{x="true"} 31337
 caf.running-actors{node="localhost"} 42
 caf.mailbox-size{name="printer"} 3
 caf.mailbox-size{name="parser"} 12)");
+}
+
+CAF_TEST(buckets for histograms are configurable via runtime settings){
+  settings cfg;
+  std::vector<int64_t> default_upper_bounds{1, 2, 4, 8};
+  std::vector<int64_t> upper_bounds{1, 2, 3, 5, 7};
+  put(cfg, "caf.response-time.buckets", upper_bounds);
+  auto h = registry.histogram_family("caf", "response-time", {"var1", "var2"},
+                                     upper_bounds, &cfg,
+                                     "How long take requests?");
+  CAF_CHECK_EQUAL(h->extra_setting(), upper_bounds);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

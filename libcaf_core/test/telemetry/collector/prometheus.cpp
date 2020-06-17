@@ -49,7 +49,8 @@ CAF_TEST(the Prometheus collector generates text output) {
   auto ov = registry.gauge_family("other", "value", {"x"}, "", "seconds", true);
   std::vector<int64_t> upper_bounds{1, 2, 4};
   auto sr = registry.histogram_family("some", "request-duration", {"x"},
-                                      upper_bounds, "Some help.", "seconds");
+                                      upper_bounds, nullptr, "Some help.",
+                                      "seconds");
   fb->get_or_add({})->value(123);
   sv->get_or_add({{"a", "1"}, {"b", "2"}})->value(12);
   sv->get_or_add({{"b", "1"}, {"a", "2"}})->value(21);

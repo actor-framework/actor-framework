@@ -26,6 +26,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/raise_error.hpp"
+#include "caf/settings.hpp"
 #include "caf/string_view.hpp"
 #include "caf/telemetry/gauge.hpp"
 #include "caf/telemetry/histogram.hpp"
@@ -134,7 +135,9 @@ public:
   ///               reserved.
   /// @param name The human-readable name of the metric, e.g., `requests`.
   /// @param label_names Names for all label dimensions of the metric.
-  /// @param upper_bounds Upper bounds for the metric buckets.
+  /// @param default_upper_bounds Upper bounds for the metric buckets.
+  /// @param metrics_settings Runtime parameters that may override
+  ///                         `default_upper_bounds`. May be `nullptr`.
   /// @param helptext Short explanation of the metric.
   /// @param unit Unit of measurement. Please use base units such as `bytes` or
   ///             `seconds` (prefer lowercase). The pseudo-unit `1` identifies
@@ -142,25 +145,38 @@ public:
   /// @param is_sum Setting this to `true` indicates that this metric adds
   ///               something up to a total, where only the total value is of
   ///               interest. For example, the total number of HTTP requests.
+  /// @note The first call wins when calling this function multiple times with
+  ///       different bucket settings. Later calls skip checking the bucket
+  ///       settings, mainly because this check would be rather expensive.
   template <class ValueType = int64_t>
   metric_family_impl<histogram<ValueType>>* histogram_family(
     string_view prefix, string_view name, span<const string_view> label_names,
-    span<const typename histogram<ValueType>::value_type> upper_bounds,
-    string_view helptext, string_view unit = "1", bool is_sum = false) {
-    if (upper_bounds.empty())
-      CAF_RAISE_ERROR("at least one bucket must exist");
+    span<const typename histogram<ValueType>::value_type> default_upper_bounds,
+    const settings* metrics_settings, string_view helptext,
+    string_view unit = "1", bool is_sum = false) {
     using histogram_type = histogram<ValueType>;
     using family_type = metric_family_impl<histogram_type>;
+    using upper_bounds_list = std::vector<ValueType>;
+    if (default_upper_bounds.empty())
+      CAF_RAISE_ERROR("at least one bucket must exist in the default settings");
     std::unique_lock<std::mutex> guard{families_mx_};
     if (auto ptr = fetch(prefix, name)) {
-      assert_histogram_properties(ptr, histogram_type::runtime_type,
-                                  label_names, upper_bounds, unit, is_sum);
+      assert_properties(ptr, histogram_type::runtime_type, label_names, unit,
+                        is_sum);
       return static_cast<family_type*>(ptr);
     }
+    upper_bounds_list upper_bounds;
+    if (metrics_settings != nullptr)
+      if (auto grp = get_if<settings>(metrics_settings, name))
+        if (auto var = get_if<settings>(grp, name))
+          if (auto lst = get_if<upper_bounds_list>(var, "buckets"))
+            upper_bounds = std::move(*lst);
+    if (upper_bounds.empty())
+      upper_bounds.assign(default_upper_bounds.begin(),
+                          default_upper_bounds.end());
     auto ptr = std::make_unique<family_type>(
       to_string(prefix), to_string(name), to_sorted_vec(label_names),
-      to_string(helptext), to_string(unit), is_sum, upper_bounds.begin(),
-      upper_bounds.end());
+      to_string(helptext), to_string(unit), is_sum, std::move(upper_bounds));
     auto& families = container_by_type<histogram_type>();
     families.emplace_back(std::move(ptr));
     return families.back().get();
@@ -172,10 +188,12 @@ public:
     string_view prefix, string_view name,
     std::initializer_list<string_view> label_names,
     span<const typename histogram<ValueType>::value_type> upper_bounds,
-    string_view helptext, string_view unit = "1", bool is_sum = false) {
+    const settings* metrics_settings, string_view helptext,
+    string_view unit = "1", bool is_sum = false) {
     auto lbl_span = make_span(label_names.begin(), label_names.size());
     return histogram_family<ValueType>(prefix, name, lbl_span, upper_bounds,
-                                       helptext, unit, is_sum);
+                                       metrics_settings, helptext, unit,
+                                       is_sum);
   }
 
   /// Returns a histogram metric singleton, i.e., the single instance of a
@@ -237,20 +255,6 @@ private:
   void assert_properties(const metric_family* ptr, metric_type type,
                          span<const string_view> label_names, string_view unit,
                          bool is_sum);
-
-  template <class ValueType>
-  void assert_histogram_properties(const metric_family* ptr, metric_type type,
-                                   span<const string_view> label_names,
-                                   span<const ValueType> upper_bounds,
-                                   string_view unit, bool is_sum) {
-    assert_properties(ptr, type, label_names, unit, is_sum);
-    using family_type = metric_family_impl<histogram<ValueType>>;
-    auto dptr = static_cast<const family_type*>(ptr);
-    auto& xs = dptr->extra_setting();
-    if (!std::equal(xs.begin(), xs.end(), upper_bounds.begin(),
-                    upper_bounds.end()))
-      CAF_RAISE_ERROR("full name with different bucket settings found");
-  }
 
   template <class Type>
   metric_family_container<Type>& container_by_type();
