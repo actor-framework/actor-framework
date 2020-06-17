@@ -191,7 +191,7 @@ prometheus_broker::prometheus_broker(actor_config& cfg) : io::broker(cfg) {
 #ifdef HAS_PROCESS_METRICS
   using telemetry::dbl_gauge;
   using telemetry::int_gauge;
-  auto& reg = system().telemetry();
+  auto& reg = system().metrics();
   cpu_time_ = reg.gauge_singleton<double>(
     "process", "cpu", "Total user and system CPU time spent.", "seconds", true);
   mem_size_ = reg.gauge_singleton("process", "resident_memory",
@@ -249,7 +249,7 @@ behavior prometheus_broker::make_behavior() {
       // Collect metrics, ship response, and close.
       scrape();
       auto hdr = as_bytes(make_span(request_ok));
-      auto text = collector_.collect_from(system().telemetry());
+      auto text = collector_.collect_from(system().metrics());
       auto payload = as_bytes(make_span(text));
       auto& dst = wr_buf(msg.handle);
       dst.insert(dst.end(), hdr.begin(), hdr.end());

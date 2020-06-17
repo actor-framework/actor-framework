@@ -230,14 +230,14 @@ public:
     return assignable(xs, message_types<T>());
   }
 
-  /// Returns the telemetry registry for this system.
-  telemetry::metric_registry& telemetry() noexcept {
-    return telemetry_;
+  /// Returns the metrics registry for this system.
+  telemetry::metric_registry& metrics() noexcept {
+    return metrics_;
   }
 
-  /// Returns the telemetry registry for this system.
-  const telemetry::metric_registry& telemetry() const noexcept {
-    return telemetry_;
+  /// Returns the metrics registry for this system.
+  const telemetry::metric_registry& metrics() const noexcept {
+    return metrics_;
   }
 
   /// Returns the host-local identifier for this system.
@@ -600,7 +600,7 @@ private:
   // -- member variables -------------------------------------------------------
 
   /// Manages all metrics collected by the system.
-  telemetry::metric_registry telemetry_;
+  telemetry::metric_registry metrics_;
 
   /// Provides system-wide callbacks for several actor operations.
   actor_profiler* profiler_;
