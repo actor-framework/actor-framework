@@ -45,7 +45,7 @@ public:
     return labels_;
   }
 
-private:
+protected:
   // -- member variables -------------------------------------------------------
 
   std::vector<label> labels_;

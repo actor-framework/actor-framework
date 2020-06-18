@@ -108,8 +108,7 @@ CAF_TEST(registries lazily create metrics) {
   auto f = registry.gauge_family("caf", "running-actors", {"var1", "var2"},
                                  "How many actors are currently running?");
   auto g = registry.histogram_family("caf", "response-time", {"var1", "var2"},
-                                     upper_bounds, nullptr,
-                                     "How long take requests?");
+                                     upper_bounds, "How long take requests?");
   std::vector<label_view> v1{{"var1", "foo"}, {"var2", "bar"}};
   std::vector<label_view> v1_reversed{{"var2", "bar"}, {"var1", "foo"}};
   std::vector<label_view> v2{{"var1", "bar"}, {"var2", "foo"}};
@@ -171,14 +170,41 @@ caf.mailbox-size{name="parser"} 12)");
 }
 
 CAF_TEST(buckets for histograms are configurable via runtime settings){
+  auto bounds = [](auto&& buckets) {
+    std::vector<int64_t> result;
+    for (auto&& bucket : buckets)
+      result.emplace_back(bucket.upper_bound);
+    result.pop_back();
+    return result;
+  };
   settings cfg;
   std::vector<int64_t> default_upper_bounds{1, 2, 4, 8};
   std::vector<int64_t> upper_bounds{1, 2, 3, 5, 7};
+  std::vector<int64_t> alternative_upper_bounds{10, 20, 30};
   put(cfg, "caf.response-time.buckets", upper_bounds);
-  auto h = registry.histogram_family("caf", "response-time", {"var1", "var2"},
-                                     upper_bounds, &cfg,
-                                     "How long take requests?");
-  CAF_CHECK_EQUAL(h->extra_setting(), upper_bounds);
+  put(cfg, "caf.response-time.var1=foo.buckets", alternative_upper_bounds);
+  registry.config(&cfg);
+  auto hf = registry.histogram_family("caf", "response-time", {"var1", "var2"},
+                                      default_upper_bounds,
+                                      "How long take requests?");
+  CAF_CHECK_EQUAL(hf->config(), get_if<settings>(&cfg, "caf.response-time"));
+  CAF_CHECK_EQUAL(hf->extra_setting(), upper_bounds);
+  auto h1 = hf->get_or_add({{"var1", "bar"}, {"var2", "baz"}});
+  CAF_CHECK_EQUAL(bounds(h1->buckets()), upper_bounds);
+  auto h2 = hf->get_or_add({{"var1", "foo"}, {"var2", "bar"}});
+  CAF_CHECK_NOT_EQUAL(h1, h2);
+  CAF_CHECK_EQUAL(bounds(h2->buckets()), alternative_upper_bounds);
+}
+
+CAF_TEST(counter_instance is a shortcut for using the family manually) {
+  auto fptr = registry.counter_family("http", "requests", {"method"},
+                                      "Number of HTTP requests.", "seconds",
+                                      true);
+  auto count = fptr->get_or_add({{"method", "put"}});
+  auto count2
+    = registry.counter_instance("http", "requests", {{"method", "put"}},
+                                "Number of HTTP requests.", "seconds", true);
+  CAF_CHECK_EQUAL(count, count2);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

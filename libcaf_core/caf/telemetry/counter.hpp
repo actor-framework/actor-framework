@@ -22,7 +22,9 @@
 
 #include "caf/config.hpp"
 #include "caf/fwd.hpp"
+#include "caf/span.hpp"
 #include "caf/telemetry/gauge.hpp"
+#include "caf/telemetry/label.hpp"
 
 namespace caf::telemetry {
 
@@ -50,7 +52,7 @@ public:
     // nop
   }
 
-  explicit counter(const std::vector<label>&) noexcept {
+  explicit counter(span<const label>) noexcept {
     // nop
   }
 

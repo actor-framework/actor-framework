@@ -38,9 +38,24 @@ namespace caf::telemetry {
 /// Manages a collection of metric families.
 class CAF_CORE_EXPORT metric_registry {
 public:
+  // -- member types -----------------------------------------------------------
+
+  /// Forces the compiler to use the type `span<const T>` instead of trying to
+  /// match paremeters to a `span`.
+  template <class T>
+  struct span_type {
+    using type = span<const T>;
+  };
+
+  /// Convenience alias to safe some typing.
+  template <class T>
+  using span_t = typename span_type<T>::type;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   metric_registry();
+
+  explicit metric_registry(const actor_system_config& cfg);
 
   ~metric_registry();
 
@@ -53,7 +68,7 @@ public:
   ///               as well as prefixes starting with an underscore are
   ///               reserved.
   /// @param name The human-readable name of the metric, e.g., `requests`.
-  /// @param label_names Names for all label dimensions of the metric.
+  /// @param labels Names for all label dimensions of the metric.
   /// @param helptext Short explanation of the metric.
   /// @param unit Unit of measurement. Please use base units such as `bytes` or
   ///             `seconds` (prefer lowercase). The pseudo-unit `1` identifies
@@ -63,19 +78,18 @@ public:
   ///               interest. For example, the total number of HTTP requests.
   template <class ValueType = int64_t>
   metric_family_impl<gauge<ValueType>>*
-  gauge_family(string_view prefix, string_view name,
-               span<const string_view> label_names, string_view helptext,
-               string_view unit = "1", bool is_sum = false) {
+  gauge_family(string_view prefix, string_view name, span_t<string_view> labels,
+               string_view helptext, string_view unit = "1",
+               bool is_sum = false) {
     using gauge_type = gauge<ValueType>;
     using family_type = metric_family_impl<gauge_type>;
     std::unique_lock<std::mutex> guard{families_mx_};
     if (auto ptr = fetch(prefix, name)) {
-      assert_properties(ptr, gauge_type::runtime_type, label_names, unit,
-                        is_sum);
+      assert_properties(ptr, gauge_type::runtime_type, labels, unit, is_sum);
       return static_cast<family_type*>(ptr);
     }
     auto ptr = std::make_unique<family_type>(to_string(prefix), to_string(name),
-                                             to_sorted_vec(label_names),
+                                             to_sorted_vec(labels),
                                              to_string(helptext),
                                              to_string(unit), is_sum);
     auto result = ptr.get();
@@ -87,22 +101,43 @@ public:
   template <class ValueType = int64_t>
   metric_family_impl<gauge<ValueType>>*
   gauge_family(string_view prefix, string_view name,
-               std::initializer_list<string_view> label_names,
-               string_view helptext, string_view unit = "1",
-               bool is_sum = false) {
-    auto lbl_span = make_span(label_names.begin(), label_names.size());
+               std::initializer_list<string_view> labels, string_view helptext,
+               string_view unit = "1", bool is_sum = false) {
+    auto lbl_span = make_span(labels.begin(), labels.size());
     return gauge_family<ValueType>(prefix, name, lbl_span, helptext, unit,
                                    is_sum);
   }
 
-  /// Returns a counter metric family. Creates the family lazily if necessary,
-  /// but fails if the full name already belongs to a different family.
+  /// @copydoc gauge_family
+  template <class ValueType = int64_t>
+  metric_family_impl<gauge<ValueType>>*
+  gauge_family(string_view prefix, string_view name, span_t<label_view> labels,
+               string_view helptext, string_view unit = "1",
+               bool is_sum = false) {
+    using gauge_type = gauge<ValueType>;
+    using family_type = metric_family_impl<gauge_type>;
+    std::unique_lock<std::mutex> guard{families_mx_};
+    if (auto ptr = fetch(prefix, name)) {
+      assert_properties(ptr, gauge_type::runtime_type, labels, unit, is_sum);
+      return static_cast<family_type*>(ptr);
+    }
+    auto ptr = std::make_unique<family_type>(to_string(prefix), to_string(name),
+                                             to_sorted_vec(labels),
+                                             to_string(helptext),
+                                             to_string(unit), is_sum);
+    auto result = ptr.get();
+    families_.emplace_back(std::move(ptr));
+    return result;
+  }
+
+  /// Returns a gauge. Creates all objects lazily if necessary, but fails if the
+  /// full name already belongs to a different family.
   /// @param prefix The prefix (namespace) this family belongs to. Usually the
   ///               application or protocol name, e.g., `http`. The prefix `caf`
   ///               as well as prefixes starting with an underscore are
   ///               reserved.
   /// @param name The human-readable name of the metric, e.g., `requests`.
-  /// @param label_names Names for all label dimensions of the metric.
+  /// @param labels Values for all label dimensions of the metric.
   /// @param helptext Short explanation of the metric.
   /// @param unit Unit of measurement. Please use base units such as `bytes` or
   ///             `seconds` (prefer lowercase). The pseudo-unit `1` identifies
@@ -111,36 +146,23 @@ public:
   ///               something up to a total, where only the total value is of
   ///               interest. For example, the total number of HTTP requests.
   template <class ValueType = int64_t>
-  metric_family_impl<counter<ValueType>>*
-  counter_family(string_view prefix, string_view name,
-                 span<const string_view> label_names, string_view helptext,
-                 string_view unit = "1", bool is_sum = false) {
-    using counter_type = counter<ValueType>;
-    using family_type = metric_family_impl<counter_type>;
-    std::unique_lock<std::mutex> guard{families_mx_};
-    if (auto ptr = fetch(prefix, name)) {
-      assert_properties(ptr, counter_type::runtime_type, label_names, unit,
-                        is_sum);
-      return static_cast<family_type*>(ptr);
-    }
-    auto ptr = std::make_unique<family_type>(to_string(prefix), to_string(name),
-                                             to_sorted_vec(label_names),
-                                             to_string(helptext),
-                                             to_string(unit), is_sum);
-    auto result = ptr.get();
-    families_.emplace_back(std::move(ptr));
-    return result;
+  gauge<ValueType>* gauge_instance(string_view prefix, string_view name,
+                                   span_t<label_view> labels,
+                                   string_view helptext, string_view unit = "1",
+                                   bool is_sum = false) {
+    auto fptr = gauge_family<ValueType>(prefix, name, labels, helptext, unit,
+                                        is_sum);
+    return fptr->get_or_add(labels);
   }
 
-  /// @copydoc counter_family
+  /// @copydoc gauge_instance
   template <class ValueType = int64_t>
-  metric_family_impl<counter<ValueType>>*
-  counter_family(string_view prefix, string_view name,
-                 std::initializer_list<string_view> label_names,
-                 string_view helptext, string_view unit = "1",
-                 bool is_sum = false) {
-    auto lbl_span = make_span(label_names.begin(), label_names.size());
-    return counter_family<ValueType>(prefix, name, lbl_span, helptext, unit,
+  gauge<ValueType>* gauge_instance(string_view prefix, string_view name,
+                                   std::initializer_list<label_view> labels,
+                                   string_view helptext, string_view unit = "1",
+                                   bool is_sum = false) {
+    span_t<label_view> lbls{labels.begin(), labels.size()};
+    return gauge_instance<ValueType>(prefix, name, lbls, helptext, unit,
                                      is_sum);
   }
 
@@ -163,9 +185,141 @@ public:
   gauge<ValueType>*
   gauge_singleton(string_view prefix, string_view name, string_view helptext,
                   string_view unit = "1", bool is_sum = false) {
-    span<const string_view> lbls;
+    span_t<string_view> lbls;
     auto fptr = gauge_family<ValueType>(prefix, name, lbls, helptext, unit,
                                         is_sum);
+    return fptr->get_or_add({});
+  }
+
+  /// Returns a counter metric family. Creates the family lazily if necessary,
+  /// but fails if the full name already belongs to a different family.
+  /// @param prefix The prefix (namespace) this family belongs to. Usually the
+  ///               application or protocol name, e.g., `http`. The prefix `caf`
+  ///               as well as prefixes starting with an underscore are
+  ///               reserved.
+  /// @param name The human-readable name of the metric, e.g., `requests`.
+  /// @param labels Names for all label dimensions of the metric.
+  /// @param helptext Short explanation of the metric.
+  /// @param unit Unit of measurement. Please use base units such as `bytes` or
+  ///             `seconds` (prefer lowercase). The pseudo-unit `1` identifies
+  ///             dimensionless counts.
+  /// @param is_sum Setting this to `true` indicates that this metric adds
+  ///               something up to a total, where only the total value is of
+  ///               interest. For example, the total number of HTTP requests.
+  template <class ValueType = int64_t>
+  metric_family_impl<counter<ValueType>>*
+  counter_family(string_view prefix, string_view name,
+                 span_t<string_view> labels, string_view helptext,
+                 string_view unit = "1", bool is_sum = false) {
+    using counter_type = counter<ValueType>;
+    using family_type = metric_family_impl<counter_type>;
+    std::unique_lock<std::mutex> guard{families_mx_};
+    if (auto ptr = fetch(prefix, name)) {
+      assert_properties(ptr, counter_type::runtime_type, labels, unit, is_sum);
+      return static_cast<family_type*>(ptr);
+    }
+    auto ptr = std::make_unique<family_type>(to_string(prefix), to_string(name),
+                                             to_sorted_vec(labels),
+                                             to_string(helptext),
+                                             to_string(unit), is_sum);
+    auto result = ptr.get();
+    families_.emplace_back(std::move(ptr));
+    return result;
+  }
+
+  /// @copydoc counter_family
+  template <class ValueType = int64_t>
+  metric_family_impl<counter<ValueType>>*
+  counter_family(string_view prefix, string_view name,
+                 std::initializer_list<string_view> labels,
+                 string_view helptext, string_view unit = "1",
+                 bool is_sum = false) {
+    auto lbl_span = make_span(labels.begin(), labels.size());
+    return counter_family<ValueType>(prefix, name, lbl_span, helptext, unit,
+                                     is_sum);
+  }
+
+  /// @copydoc counter_family
+  template <class ValueType = int64_t>
+  metric_family_impl<counter<ValueType>>*
+  counter_family(string_view prefix, string_view name,
+                 span_t<label_view> labels, string_view helptext,
+                 string_view unit = "1", bool is_sum = false) {
+    using counter_type = counter<ValueType>;
+    using family_type = metric_family_impl<counter_type>;
+    std::unique_lock<std::mutex> guard{families_mx_};
+    if (auto ptr = fetch(prefix, name)) {
+      assert_properties(ptr, counter_type::runtime_type, labels, unit, is_sum);
+      return static_cast<family_type*>(ptr);
+    }
+    auto ptr = std::make_unique<family_type>(to_string(prefix), to_string(name),
+                                             to_sorted_vec(labels),
+                                             to_string(helptext),
+                                             to_string(unit), is_sum);
+    auto result = ptr.get();
+    families_.emplace_back(std::move(ptr));
+    return result;
+  }
+
+  /// Returns a counter. Creates all objects lazily if necessary, but fails if
+  /// the full name already belongs to a different family.
+  /// @param prefix The prefix (namespace) this family belongs to. Usually the
+  ///               application or protocol name, e.g., `http`. The prefix `caf`
+  ///               as well as prefixes starting with an underscore are
+  ///               reserved.
+  /// @param name The human-readable name of the metric, e.g., `requests`.
+  /// @param labels Values for all label dimensions of the metric.
+  /// @param helptext Short explanation of the metric.
+  /// @param unit Unit of measurement. Please use base units such as `bytes` or
+  ///             `seconds` (prefer lowercase). The pseudo-unit `1` identifies
+  ///             dimensionless counts.
+  /// @param is_sum Setting this to `true` indicates that this metric adds
+  ///               something up to a total, where only the total value is of
+  ///               interest. For example, the total number of HTTP requests.
+  template <class ValueType = int64_t>
+  counter<ValueType>*
+  counter_instance(string_view prefix, string_view name,
+                   span_t<label_view> labels, string_view helptext,
+                   string_view unit = "1", bool is_sum = false) {
+    auto fptr = counter_family<ValueType>(prefix, name, labels, helptext, unit,
+                                          is_sum);
+    return fptr->get_or_add(labels);
+  }
+
+  /// @copydoc counter_instance
+  template <class ValueType = int64_t>
+  counter<ValueType>* counter_instance(string_view prefix, string_view name,
+                                       std::initializer_list<label_view> labels,
+                                       string_view helptext,
+                                       string_view unit = "1",
+                                       bool is_sum = false) {
+    span_t<label_view> lbls{labels.begin(), labels.size()};
+    return counter_instance<ValueType>(prefix, name, lbls, helptext, unit,
+                                       is_sum);
+  }
+
+  /// Returns a counter metric singleton, i.e., the single instance of a family
+  /// without label dimensions. Creates all objects lazily if necessary, but
+  /// fails if the full name already belongs to a different family.
+  /// @param prefix The prefix (namespace) this family belongs to. Usually the
+  ///               application or protocol name, e.g., `http`. The prefix `caf`
+  ///               as well as prefixes starting with an underscore are
+  ///               reserved.
+  /// @param name The human-readable name of the metric, e.g., `requests`.
+  /// @param helptext Short explanation of the metric.
+  /// @param unit Unit of measurement. Please use base units such as `bytes` or
+  ///             `seconds` (prefer lowercase). The pseudo-unit `1` identifies
+  ///             dimensionless counts.
+  /// @param is_sum Setting this to `true` indicates that this metric adds
+  ///               something up to a total, where only the total value is of
+  ///               interest. For example, the total number of HTTP requests.
+  template <class ValueType = int64_t>
+  counter<ValueType>*
+  counter_singleton(string_view prefix, string_view name, string_view helptext,
+                    string_view unit = "1", bool is_sum = false) {
+    span_t<string_view> lbls;
+    auto fptr = counter_family<ValueType>(prefix, name, lbls, helptext, unit,
+                                          is_sum);
     return fptr->get_or_add({});
   }
 
@@ -178,8 +332,6 @@ public:
   /// @param name The human-readable name of the metric, e.g., `requests`.
   /// @param label_names Names for all label dimensions of the metric.
   /// @param default_upper_bounds Upper bounds for the metric buckets.
-  /// @param metrics_settings Runtime parameters that may override
-  ///                         `default_upper_bounds`. May be `nullptr`.
   /// @param helptext Short explanation of the metric.
   /// @param unit Unit of measurement. Please use base units such as `bytes` or
   ///             `seconds` (prefer lowercase). The pseudo-unit `1` identifies
@@ -190,12 +342,13 @@ public:
   /// @note The first call wins when calling this function multiple times with
   ///       different bucket settings. Later calls skip checking the bucket
   ///       settings, mainly because this check would be rather expensive.
+  /// @note The actor system config may override `upper_bounds`.
   template <class ValueType = int64_t>
-  metric_family_impl<histogram<ValueType>>* histogram_family(
-    string_view prefix, string_view name, span<const string_view> label_names,
-    span<const typename histogram<ValueType>::value_type> default_upper_bounds,
-    const settings* metrics_settings, string_view helptext,
-    string_view unit = "1", bool is_sum = false) {
+  metric_family_impl<histogram<ValueType>>*
+  histogram_family(string_view prefix, string_view name,
+                   span_t<string_view> label_names,
+                   span_t<ValueType> default_upper_bounds, string_view helptext,
+                   string_view unit = "1", bool is_sum = false) {
     using histogram_type = histogram<ValueType>;
     using family_type = metric_family_impl<histogram_type>;
     using upper_bounds_list = std::vector<ValueType>;
@@ -207,18 +360,20 @@ public:
                         is_sum);
       return static_cast<family_type*>(ptr);
     }
+    const settings* sub_settings = nullptr;
     upper_bounds_list upper_bounds;
-    if (metrics_settings != nullptr)
-      if (auto grp = get_if<settings>(metrics_settings, name))
-        if (auto var = get_if<settings>(grp, name))
-          if (auto lst = get_if<upper_bounds_list>(var, "buckets"))
+    if (config_ != nullptr)
+      if (auto grp = get_if<settings>(config_, prefix))
+        if (sub_settings = get_if<settings>(grp, name); sub_settings != nullptr)
+          if (auto lst = get_if<upper_bounds_list>(sub_settings, "buckets"))
             upper_bounds = std::move(*lst);
     if (upper_bounds.empty())
       upper_bounds.assign(default_upper_bounds.begin(),
                           default_upper_bounds.end());
     auto ptr = std::make_unique<family_type>(
-      to_string(prefix), to_string(name), to_sorted_vec(label_names),
-      to_string(helptext), to_string(unit), is_sum, std::move(upper_bounds));
+      sub_settings, to_string(prefix), to_string(name),
+      to_sorted_vec(label_names), to_string(helptext), to_string(unit), is_sum,
+      std::move(upper_bounds));
     auto result = ptr.get();
     families_.emplace_back(std::move(ptr));
     return result;
@@ -226,16 +381,57 @@ public:
 
   /// @copydoc gauge_family
   template <class ValueType = int64_t>
-  metric_family_impl<histogram<ValueType>>* histogram_family(
-    string_view prefix, string_view name,
-    std::initializer_list<string_view> label_names,
-    span<const typename histogram<ValueType>::value_type> upper_bounds,
-    const settings* metrics_settings, string_view helptext,
-    string_view unit = "1", bool is_sum = false) {
+  metric_family_impl<histogram<ValueType>>*
+  histogram_family(string_view prefix, string_view name,
+                   std::initializer_list<string_view> label_names,
+                   span_t<ValueType> upper_bounds, string_view helptext,
+                   string_view unit = "1", bool is_sum = false) {
     auto lbl_span = make_span(label_names.begin(), label_names.size());
     return histogram_family<ValueType>(prefix, name, lbl_span, upper_bounds,
-                                       metrics_settings, helptext, unit,
-                                       is_sum);
+                                       helptext, unit, is_sum);
+  }
+
+  /// Returns a histogram. Creates the family lazily if necessary, but fails if
+  /// the full name already belongs to a different family.
+  /// @param prefix The prefix (namespace) this family belongs to. Usually the
+  ///               application or protocol name, e.g., `http`. The prefix `caf`
+  ///               as well as prefixes starting with an underscore are
+  ///               reserved.
+  /// @param name The human-readable name of the metric, e.g., `requests`.
+  /// @param label_names Names for all label dimensions of the metric.
+  /// @param default_upper_bounds Upper bounds for the metric buckets.
+  /// @param helptext Short explanation of the metric.
+  /// @param unit Unit of measurement. Please use base units such as `bytes` or
+  ///             `seconds` (prefer lowercase). The pseudo-unit `1` identifies
+  ///             dimensionless counts.
+  /// @param is_sum Setting this to `true` indicates that this metric adds
+  ///               something up to a total, where only the total value is of
+  ///               interest. For example, the total number of HTTP requests.
+  /// @note The first call wins when calling this function multiple times with
+  ///       different bucket settings. Later calls skip checking the bucket
+  ///       settings, mainly because this check would be rather expensive.
+  /// @note The actor system config may override `upper_bounds`.
+  template <class ValueType = int64_t>
+  histogram<ValueType>*
+  histogram_instance(string_view prefix, string_view name,
+                     span_t<label_view> labels, span_t<ValueType> upper_bounds,
+                     string_view helptext, string_view unit = "1",
+                     bool is_sum = false) {
+    auto fptr = histogram_family<ValueType>(prefix, name, labels, upper_bounds,
+                                            helptext, unit, is_sum);
+    return fptr->get_or_add(labels);
+  }
+
+  /// @copdoc histogram_instance
+  template <class ValueType = int64_t>
+  histogram<ValueType>*
+  histogram_instance(string_view prefix, string_view name,
+                     std::initializer_list<label_view> labels,
+                     span_t<ValueType> upper_bounds, string_view helptext,
+                     string_view unit = "1", bool is_sum = false) {
+    span_t<label_view> lbls{labels.begin(), labels.size()};
+    return histogram_instance(prefix, name, lbls, upper_bounds, helptext, unit,
+                              is_sum);
   }
 
   /// Returns a histogram metric singleton, i.e., the single instance of a
@@ -253,15 +449,21 @@ public:
   /// @param is_sum Setting this to `true` indicates that this metric adds
   ///               something up to a total, where only the total value is of
   ///               interest. For example, the total number of HTTP requests.
+  /// @note The actor system config may override `upper_bounds`.
   template <class ValueType = int64_t>
   histogram<ValueType>*
   histogram_singleton(string_view prefix, string_view name,
-                      string_view helptext, span<const ValueType> upper_bounds,
+                      string_view helptext, span_t<ValueType> upper_bounds,
                       string_view unit = "1", bool is_sum = false) {
-    span<const string_view> lbls;
+    span_t<string_view> lbls;
     auto fptr = histogram_family<ValueType>(prefix, name, lbls, upper_bounds,
                                             helptext, unit, is_sum);
     return fptr->get_or_add({});
+  }
+
+  /// @internal
+  void config(const settings* ptr) {
+    config_ = ptr;
   }
 
   // -- observers --------------------------------------------------------------
@@ -278,16 +480,9 @@ private:
   /// @pre `families_mx_` is locked.
   metric_family* fetch(const string_view& prefix, const string_view& name);
 
-  static std::vector<std::string> to_sorted_vec(span<const string_view> xs) {
-    std::vector<std::string> result;
-    if (!xs.empty()) {
-      result.reserve(xs.size());
-      for (auto x : xs)
-        result.emplace_back(to_string(x));
-      std::sort(result.begin(), result.end());
-    }
-    return result;
-  }
+  static std::vector<std::string> to_sorted_vec(span_t<string_view> xs);
+
+  static std::vector<std::string> to_sorted_vec(span_t<label_view> xs);
 
   template <class F>
   static auto visit_family(F& f, const metric_family* ptr) {
@@ -309,11 +504,16 @@ private:
   }
 
   void assert_properties(const metric_family* ptr, metric_type type,
-                         span<const string_view> label_names, string_view unit,
+                         span_t<string_view> label_names, string_view unit,
+                         bool is_sum);
+
+  void assert_properties(const metric_family* ptr, metric_type type,
+                         span_t<label_view> label_names, string_view unit,
                          bool is_sum);
 
   mutable std::mutex families_mx_;
   std::vector<std::unique_ptr<metric_family>> families_;
+  const caf::settings* config_;
 };
 
 } // namespace caf::telemetry

@@ -599,9 +599,6 @@ private:
 
   // -- member variables -------------------------------------------------------
 
-  /// Manages all metrics collected by the system.
-  telemetry::metric_registry metrics_;
-
   /// Provides system-wide callbacks for several actor operations.
   actor_profiler* profiler_;
 
@@ -646,6 +643,9 @@ private:
 
   /// The system-wide, user-provided configuration.
   actor_system_config& cfg_;
+
+  /// Manages all metrics collected by the system.
+  telemetry::metric_registry metrics_;
 
   /// Stores whether the logger has run its destructor and stopped any thread,
   /// file handle, etc.

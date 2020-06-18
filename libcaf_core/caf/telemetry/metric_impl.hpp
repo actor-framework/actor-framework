@@ -34,8 +34,8 @@ public:
   using family_setting = typename Type::family_setting;
 
   template <class... Ts>
-  metric_impl(std::vector<label> labels, Ts&&... xs)
-    : metric(std::move(labels)), impl_(std::forward<Ts>(xs)...) {
+  explicit metric_impl(std::vector<label> labels, Ts&&... xs)
+    : metric(std::move(labels)), impl_(this->labels_, std::forward<Ts>(xs)...) {
     // nop
   }
 

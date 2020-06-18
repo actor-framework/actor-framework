@@ -23,6 +23,9 @@
 #include <atomic>
 #include <cstdint>
 
+#include "caf/fwd.hpp"
+#include "caf/span.hpp"
+#include "caf/telemetry/label.hpp"
 #include "caf/telemetry/metric_type.hpp"
 
 namespace caf::telemetry {
@@ -48,6 +51,10 @@ public:
   }
 
   explicit int_gauge(int64_t value) noexcept : value_(value) {
+    // nop
+  }
+
+  explicit int_gauge(span<const label>) noexcept : value_(0) {
     // nop
   }
 

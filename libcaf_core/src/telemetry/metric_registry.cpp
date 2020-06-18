@@ -18,6 +18,7 @@
 
 #include "caf/telemetry/metric_registry.hpp"
 
+#include "caf/actor_system_config.hpp"
 #include "caf/config.hpp"
 #include "caf/telemetry/dbl_gauge.hpp"
 #include "caf/telemetry/int_gauge.hpp"
@@ -36,8 +37,12 @@ bool equals(Range1&& xs, Range2&& ys) {
 
 namespace caf::telemetry {
 
-metric_registry::metric_registry() {
+metric_registry::metric_registry() : config_(nullptr) {
   // nop
+}
+
+metric_registry::metric_registry(const actor_system_config& cfg) {
+  config_ = get_if<settings>(&cfg, "metrics");
 }
 
 metric_registry::~metric_registry() {
@@ -55,6 +60,30 @@ metric_family* metric_registry::fetch(const string_view& prefix,
   return nullptr;
 }
 
+std::vector<std::string>
+metric_registry::to_sorted_vec(span<const string_view> xs) {
+  std::vector<std::string> result;
+  if (!xs.empty()) {
+    result.reserve(xs.size());
+    for (auto x : xs)
+      result.emplace_back(to_string(x));
+    std::sort(result.begin(), result.end());
+  }
+  return result;
+}
+
+std::vector<std::string>
+metric_registry::to_sorted_vec(span<const label_view> xs) {
+  std::vector<std::string> result;
+  if (!xs.empty()) {
+    result.reserve(xs.size());
+    for (auto x : xs)
+      result.emplace_back(to_string(x.name()));
+    std::sort(result.begin(), result.end());
+  }
+  return result;
+}
+
 void metric_registry::assert_properties(const metric_family* ptr,
                                         metric_type type,
                                         span<const string_view> label_names,
@@ -65,6 +94,51 @@ void metric_registry::assert_properties(const metric_family* ptr,
     return std::is_sorted(ys.begin(), ys.end())
              ? std::equal(xs.begin(), xs.end(), ys.begin(), ys.end())
              : std::is_permutation(xs.begin(), xs.end(), ys.begin(), ys.end());
+  };
+  if (ptr->type() != type)
+    CAF_RAISE_ERROR("full name with different metric type found");
+  if (!labels_match())
+    CAF_RAISE_ERROR("full name with different label dimensions found");
+  if (ptr->unit() != unit)
+    CAF_RAISE_ERROR("full name with different unit found");
+  if (ptr->is_sum() != is_sum)
+    CAF_RAISE_ERROR("full name with different is-sum flag found");
+}
+
+namespace {
+
+struct label_name_eq {
+  bool operator()(string_view x, string_view y) const noexcept {
+    return x == y;
+  }
+
+  bool operator()(string_view x, const label_view& y) const noexcept {
+    return x == y.name();
+  }
+
+  bool operator()(const label_view& x, string_view y) const noexcept {
+    return x.name() == y;
+  }
+
+  bool operator()(label_view x, label_view y) const noexcept {
+    return x == y;
+  }
+};
+
+} // namespace
+
+void metric_registry::assert_properties(const metric_family* ptr,
+                                        metric_type type,
+                                        span<const label_view> labels,
+                                        string_view unit, bool is_sum) {
+  auto labels_match = [&] {
+    const auto& xs = ptr->label_names();
+    const auto& ys = labels;
+    label_name_eq eq;
+    return std::is_sorted(ys.begin(), ys.end())
+             ? std::equal(xs.begin(), xs.end(), ys.begin(), ys.end(), eq)
+             : std::is_permutation(xs.begin(), xs.end(), ys.begin(), ys.end(),
+                                   eq);
   };
   if (ptr->type() != type)
     CAF_RAISE_ERROR("full name with different metric type found");

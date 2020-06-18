@@ -43,12 +43,26 @@ public:
   using extra_setting_type = typename impl_type::family_setting;
 
   template <class... Ts>
+  metric_family_impl(const settings* config, std::string prefix,
+                     std::string name, std::vector<std::string> label_names,
+                     std::string helptext, std::string unit, bool is_sum,
+                     Ts&&... xs)
+    : super(Type::runtime_type, std::move(prefix), std::move(name),
+            std::move(label_names), std::move(helptext), std::move(unit),
+            is_sum),
+      config_(config),
+      extra_setting_(std::forward<Ts>(xs)...) {
+    // nop
+  }
+
+  template <class... Ts>
   metric_family_impl(std::string prefix, std::string name,
                      std::vector<std::string> label_names, std::string helptext,
                      std::string unit, bool is_sum, Ts&&... xs)
     : super(Type::runtime_type, std::move(prefix), std::move(name),
             std::move(label_names), std::move(helptext), std::move(unit),
             is_sum),
+      config_(nullptr),
       extra_setting_(std::forward<Ts>(xs)...) {
     // nop
   }
@@ -68,7 +82,7 @@ public:
       if constexpr (std::is_same<extra_setting_type, unit_t>::value)
         ptr.reset(new impl_type(std::move(cpy)));
       else
-        ptr.reset(new impl_type(std::move(cpy), extra_setting_));
+        ptr.reset(new impl_type(std::move(cpy), config_, extra_setting_));
       m = metrics_.emplace(m, std::move(ptr));
     }
     return std::addressof(m->get()->impl());
@@ -80,8 +94,12 @@ public:
 
   // -- properties --
 
-  const auto& extra_setting() const noexcept {
+  const extra_setting_type& extra_setting() const noexcept {
     return extra_setting_;
+  }
+
+  const settings* config() const noexcept {
+    return config_;
   }
 
   template <class Collector>
@@ -92,6 +110,7 @@ public:
   }
 
 private:
+  const settings* config_;
   extra_setting_type extra_setting_;
   mutable std::mutex mx_;
   std::vector<std::unique_ptr<impl_type>> metrics_;

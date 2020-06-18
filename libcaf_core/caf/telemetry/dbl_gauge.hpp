@@ -23,6 +23,7 @@
 #include <atomic>
 #include <cstdint>
 
+#include "caf/telemetry/label.hpp"
 #include "caf/telemetry/metric_type.hpp"
 
 namespace caf::telemetry {
@@ -48,6 +49,10 @@ public:
   }
 
   explicit dbl_gauge(double value) noexcept : value_(value) {
+    // nop
+  }
+
+  explicit dbl_gauge(span<const label>) noexcept : value_(0) {
     // nop
   }
 
