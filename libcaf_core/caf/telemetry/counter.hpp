@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <type_traits>
+
 #include "caf/config.hpp"
 #include "caf/fwd.hpp"
 #include "caf/telemetry/gauge.hpp"
@@ -48,6 +50,10 @@ public:
     // nop
   }
 
+  explicit counter(const std::vector<label>&) noexcept {
+    // nop
+  }
+
   // -- modifiers --------------------------------------------------------------
 
   /// Increments the counter by 1.
@@ -60,6 +66,13 @@ public:
   void inc(value_type amount) noexcept {
     CAF_ASSERT(amount > 0);
     gauge_.inc(amount);
+  }
+
+  /// Increments the counter by 1.
+  /// @returns The new value of the counter.
+  template <class T = ValueType>
+  std::enable_if_t<std::is_same<T, int64_t>::value, T> operator++() noexcept {
+    return ++gauge_;
   }
 
   // -- observers --------------------------------------------------------------

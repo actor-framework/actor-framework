@@ -25,25 +25,27 @@
 using namespace caf;
 
 CAF_TEST(double counters can only increment) {
-  telemetry::dbl_counter g;
+  telemetry::dbl_counter c;
   CAF_MESSAGE("counters start at 0");
-  CAF_CHECK_EQUAL(g.value(), 0.0);
+  CAF_CHECK_EQUAL(c.value(), 0.0);
   CAF_MESSAGE("counters are incrementable");
-  g.inc();
-  g.inc(2.0);
-  CAF_CHECK_EQUAL(g.value(), 3.0);
+  c.inc();
+  c.inc(2.0);
+  CAF_CHECK_EQUAL(c.value(), 3.0);
   CAF_MESSAGE("users can create counters with custom start values");
   CAF_CHECK_EQUAL(telemetry::dbl_counter{42.0}.value(), 42.0);
 }
 
 CAF_TEST(integer counters can only increment) {
-  telemetry::int_counter g;
+  telemetry::int_counter c;
   CAF_MESSAGE("counters start at 0");
-  CAF_CHECK_EQUAL(g.value(), 0);
+  CAF_CHECK_EQUAL(c.value(), 0);
   CAF_MESSAGE("counters are incrementable");
-  g.inc();
-  g.inc(2);
-  CAF_CHECK_EQUAL(g.value(), 3);
+  c.inc();
+  c.inc(2);
+  CAF_CHECK_EQUAL(c.value(), 3);
+  CAF_MESSAGE("integer counters also support operator++");
+  CAF_CHECK_EQUAL(++c, 4);
   CAF_MESSAGE("users can create counters with custom start values");
   CAF_CHECK_EQUAL(telemetry::int_counter{42}.value(), 42);
 }
