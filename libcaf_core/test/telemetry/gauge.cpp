@@ -57,7 +57,8 @@ CAF_TEST(integer gauges can increment and decrement) {
   CAF_CHECK_EQUAL(g.value(), -3);
   CAF_MESSAGE("gauges allow setting values");
   g.value(42);
-  CAF_CHECK_EQUAL(g.value(), 42);
+  CAF_MESSAGE("integer gauges also support operator++");
+  CAF_CHECK_EQUAL(++g, 43);
   CAF_MESSAGE("users can create gauges with custom start values");
   CAF_CHECK_EQUAL(telemetry::int_gauge{42}.value(), 42);
 }
