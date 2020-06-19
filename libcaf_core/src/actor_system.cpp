@@ -219,6 +219,7 @@ actor_system::networking_module::~networking_module() {
 actor_system::actor_system(actor_system_config& cfg)
   : profiler_(cfg.profiler),
     ids_(0),
+    metrics_(cfg),
     logger_(new caf::logger(*this), false),
     registry_(*this),
     groups_(*this),
@@ -226,7 +227,6 @@ actor_system::actor_system(actor_system_config& cfg)
     await_actors_before_shutdown_(true),
     detached_(0),
     cfg_(cfg),
-    metrics_(cfg),
     logger_dtor_done_(false),
     tracing_context_(cfg.tracing_context) {
   CAF_SET_LOGGER_SYS(this);

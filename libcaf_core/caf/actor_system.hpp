@@ -605,6 +605,9 @@ private:
   /// Used to generate ascending actor IDs.
   std::atomic<size_t> ids_;
 
+  /// Manages all metrics collected by the system.
+  telemetry::metric_registry metrics_;
+
   /// Identifies this actor system in a distributed setting.
   node_id node_;
 
@@ -643,9 +646,6 @@ private:
 
   /// The system-wide, user-provided configuration.
   actor_system_config& cfg_;
-
-  /// Manages all metrics collected by the system.
-  telemetry::metric_registry metrics_;
 
   /// Stores whether the logger has run its destructor and stopped any thread,
   /// file handle, etc.
