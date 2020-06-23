@@ -59,4 +59,6 @@ CAF_CORE_EXPORT extern const char decimal_chars[11];
 
 CAF_CORE_EXPORT extern const char octal_chars[9];
 
+CAF_CORE_EXPORT extern const char quote_marks[3];
+
 } // namespace caf::detail::parser

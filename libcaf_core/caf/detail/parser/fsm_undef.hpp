@@ -18,6 +18,8 @@
 
 // This header intentionally has no `#pragma once`. See fsm.hpp.
 
+#undef CAF_FSM_EVAL_ACTION
+
 #undef CAF_FSM_EVAL_MISMATCH_EC
 
 #undef start

@@ -33,4 +33,6 @@ const char decimal_chars[11] = "0123456789";
 
 const char octal_chars[9] = "01234567";
 
+const char quote_marks[3] = "\"'";
+
 } // namespace caf::detail::parser

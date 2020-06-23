@@ -69,8 +69,8 @@ struct fixture {
   void parse(const char* file_content, string_list args = {}) {
     cfg.clear();
     cfg.remainder.clear();
-    std::istringstream ini{file_content};
-    if (auto err = cfg.parse(std::move(args), ini))
+    std::istringstream conf{file_content};
+    if (auto err = cfg.parse(std::move(args), conf))
       CAF_FAIL("parse() failed: " << err);
   }
 };
@@ -80,7 +80,7 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(actor_system_config_tests, fixture)
 
 CAF_TEST(parsing - without CLI arguments) {
-  auto text = "[foo]\nbar=\"hello\"";
+  auto text = "foo{\nbar=\"hello\"}";
   options("?foo").add<std::string>("bar,b", "some string parameter");
   parse(text);
   CAF_CHECK(cfg.remainder.empty());
@@ -88,7 +88,7 @@ CAF_TEST(parsing - without CLI arguments) {
 }
 
 CAF_TEST(parsing - without CLI cfg.remainder) {
-  auto text = "[foo]\nbar=\"hello\"";
+  auto text = "foo{\nbar=\"hello\"}";
   options("?foo").add<std::string>("bar,b", "some string parameter");
   CAF_MESSAGE("CLI long name");
   parse(text, {"--foo.bar=test"});
@@ -109,7 +109,7 @@ CAF_TEST(parsing - without CLI cfg.remainder) {
 }
 
 CAF_TEST(parsing - with CLI cfg.remainder) {
-  auto text = "[foo]\nbar=\"hello\"";
+  auto text = "foo{\nbar=\"hello\"}";
   options("?foo").add<std::string>("bar,b", "some string parameter");
   CAF_MESSAGE("valid cfg.remainder");
   parse(text, {"-b", "test", "hello", "world"});

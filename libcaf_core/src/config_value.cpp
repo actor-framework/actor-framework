@@ -22,8 +22,8 @@
 #include <ostream>
 
 #include "caf/deep_to_string.hpp"
-#include "caf/detail/ini_consumer.hpp"
-#include "caf/detail/parser/read_ini.hpp"
+#include "caf/detail/config_consumer.hpp"
+#include "caf/detail/parser/read_config.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/expected.hpp"
 #include "caf/parser_state.hpp"
@@ -67,9 +67,9 @@ expected<config_value> config_value::parse(string_view::iterator first,
     if (++i == last)
       return make_error(pec::unexpected_eof);
   // Dispatch to parser.
-  detail::ini_value_consumer f;
+  detail::config_value_consumer f;
   string_parser_state res{i, last};
-  parser::read_ini_value(res, f);
+  parser::read_config_value(res, f);
   if (res.code == pec::success)
     return std::move(f.result);
   // Assume an unescaped string unless the first character clearly indicates

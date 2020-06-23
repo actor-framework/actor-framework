@@ -188,7 +188,7 @@ void read_ini_value(State& ps, Consumer&& consumer, InsideList inside_list) {
   // clang-format off
   start();
   state(init) {
-    fsm_epsilon(read_string(ps, consumer), done, '"')
+    fsm_epsilon(read_string(ps, consumer), done, quote_marks)
     fsm_epsilon(read_number(ps, consumer), done, '.')
     fsm_epsilon(read_bool(ps, consumer), done, "ft")
     fsm_epsilon(read_number_or_timespan(ps, consumer, inside_list),

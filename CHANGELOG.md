@@ -50,6 +50,14 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The `to_string` output for `error` now renders the error code enum by default.
   This renders the member functions `actor_system::render` and
   `actor_system_config::render` obsolete.
+- The configuration format of CAF has come a long way since first starting to
+  allow user-defined configuration via `.ini` files. Rather than sticking with
+  the weird hybrid that evolved over the years, we are going to get rid of the
+  last pieces of INI syntax and go with the much cleaner, scoped syntax. CAF is
+  still picking up `caf-application.ini` with this release and uses the
+  deprecated INI parser when given any other file name that ends in `.ini`.
+  However, the next version of CAF is only going to recognize the new format.
+  The new default file name is `caf-application.conf`.
 
 ### Changed
 
@@ -112,6 +120,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   example: `typed_actor<result<double>(double)>`. We have reimplemented the
   metaprogramming facilities `racts_to<...>` and `replies_to<...>::with<...>`
   as an alternative way of writing the function signature.
+- All parsing functions in `actor_system_config` that take an input stream
+  exclusively use the new configuration syntax (please consult the manual for
+  details and examples for the configuration syntax).
 
 ### Removed
 

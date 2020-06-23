@@ -107,23 +107,23 @@ public:
 
   // -- modifiers --------------------------------------------------------------
 
-  /// Parses `args` as tuple of strings containing CLI options and `ini_stream`
-  /// as INI formatted input stream.
-  error parse(string_list args, std::istream& ini);
+  /// Parses `args` as tuple of strings containing CLI options and `config` as
+  /// configuration file.
+  error parse(string_list args, std::istream& config);
 
-  /// Parses `args` as tuple of strings containing CLI options and tries to
-  /// open `ini_file_cstr` as INI formatted config file. The parsers tries to
-  /// open `caf-application.ini` if `ini_file_cstr` is `nullptr`.
-  error parse(string_list args, const char* ini_file_cstr = nullptr);
+  /// Parses `args` as tuple of strings containing CLI options and tries to open
+  /// `config_file_cstr` as config file. The parsers tries to open
+  /// `caf-application.conf` or `caf-application.ini` (deprecated) if
+  /// `config_file_cstr` is `nullptr`.
+  error parse(string_list args, const char* config_file_cstr = nullptr);
 
-  /// Parses the CLI options `{argc, argv}` and `ini_stream` as INI formatted
-  /// input stream.
-  error parse(int argc, char** argv, std::istream& ini);
+  /// Parses the CLI options `{argc, argv}` and `config` as configuration file.
+  error parse(int argc, char** argv, std::istream& config);
 
-  /// Parses the CLI options `{argc, argv}` and tries to open `ini_file_cstr`
-  /// as INI formatted config file. The parsers tries to open
-  /// `caf-application.ini` if `ini_file_cstr` is `nullptr`.
-  error parse(int argc, char** argv, const char* ini_file_cstr = nullptr);
+  /// Parses the CLI options `{argc, argv}` and tries to open `config_file_cstr`
+  /// as config file. The parsers tries to open `caf-application.conf` or
+  /// `caf-application.ini` (deprecated) if `config_file_cstr` is `nullptr`.
+  error parse(int argc, char** argv, const char* config_file_cstr = nullptr);
 
   /// Allows other nodes to spawn actors created by `fun`
   /// dynamically by using `name` as identifier.
@@ -324,6 +324,10 @@ protected:
   config_option_set custom_options_;
 
 private:
+  // TODO: deprecated. Remove with CAF 0.19.
+  static error parse_ini(std::istream& source, const config_option_set& opts,
+                         settings& result);
+
   actor_system_config& set_impl(string_view name, config_value value);
 
   error extract_config_file_path(string_list& args);

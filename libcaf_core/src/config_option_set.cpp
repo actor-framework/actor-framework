@@ -276,7 +276,7 @@ config_option_set::qualified_name_lookup(string_view category,
 
 config_option_set::option_pointer
 config_option_set::qualified_name_lookup(string_view name) const {
-  auto sep = name.find('.');
+  auto sep = name.rfind('.');
   if (sep == string::npos)
     return nullptr;
   return qualified_name_lookup(name.substr(0, sep), name.substr(sep + 1));
