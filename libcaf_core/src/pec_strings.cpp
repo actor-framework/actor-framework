@@ -55,6 +55,8 @@ std::string to_string(pec x) {
       return "missing_field";
     case pec::invalid_range_expression:
       return "invalid_range_expression";
+    case pec::invalid_state:
+      return "invalid_state";
   };
 }
 
