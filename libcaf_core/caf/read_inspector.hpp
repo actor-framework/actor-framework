@@ -50,7 +50,7 @@ public:
   static constexpr bool writes_state = false;
 
   template <class... Ts>
-  [[nodiscard]] auto operator()(Ts&&... xs) {
+  auto operator()(Ts&&... xs) {
     using result_type = typename Subtype::result_type;
     if constexpr (std::is_same<result_type, void>::value) {
       auto dummy = unit;

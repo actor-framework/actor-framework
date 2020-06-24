@@ -108,9 +108,9 @@ void append(prometheus::char_buffer& buf, char ch, Ts&&... xs) {
 
 template <class... Ts>
 void append(prometheus::char_buffer& buf, double val, Ts&&... xs) {
-  if (isnan(val)) {
+  if (std::isnan(val)) {
     append(buf, "NaN"_sv);
-  } else if (isinf(val)) {
+  } else if (std::isinf(val)) {
     if (std::signbit(val))
       append(buf, "+Inf"_sv);
     else
