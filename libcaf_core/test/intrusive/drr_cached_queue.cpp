@@ -77,6 +77,10 @@ struct fixture {
   }
 };
 
+auto make_new_round_result(size_t consumed_items, bool stop_all) {
+  return new_round_result{consumed_items, stop_all};
+}
+
 } // namespace
 
 CAF_TEST_FIXTURE_SCOPE(drr_cached_queue_tests, fixture)
@@ -108,12 +112,12 @@ CAF_TEST(new_round) {
   fill(queue, 1, 2, 3, 4, 5, 6, 7, 8, 9);
   // Allow f to consume 2, 4, and 6.
   auto round_result = queue.new_round(3, f);
-  CAF_CHECK_EQUAL(round_result, make_new_round_result(true));
+  CAF_CHECK_EQUAL(round_result, make_new_round_result(3, false));
   CAF_CHECK_EQUAL(fseq, "246");
   CAF_CHECK_EQUAL(queue.deficit(), 0);
   // Allow g to consume 1, 3, 5, and 7.
   round_result = queue.new_round(4, g);
-  CAF_CHECK_EQUAL(round_result, make_new_round_result(true));
+  CAF_CHECK_EQUAL(round_result, make_new_round_result(4, false));
   CAF_CHECK_EQUAL(gseq, "1357");
   CAF_CHECK_EQUAL(queue.deficit(), 0);
 }
@@ -128,21 +132,21 @@ CAF_TEST(skipping) {
     return task_result::resume;
   };
   CAF_MESSAGE("make a round on an empty queue");
-  CAF_CHECK_EQUAL(queue.new_round(10, f), make_new_round_result(false));
+  CAF_CHECK_EQUAL(queue.new_round(10, f), make_new_round_result(0, false));
   CAF_MESSAGE("make a round on a queue with only odd numbers (skip all)");
   fill(queue, 1, 3, 5);
-  CAF_CHECK_EQUAL(queue.new_round(10, f), make_new_round_result(false));
+  CAF_CHECK_EQUAL(queue.new_round(10, f), make_new_round_result(0, false));
   CAF_MESSAGE("make a round on a queue with an even number at the front");
   fill(queue, 2);
-  CAF_CHECK_EQUAL(queue.new_round(10, f), make_new_round_result(true));
+  CAF_CHECK_EQUAL(queue.new_round(10, f), make_new_round_result(1, false));
   CAF_CHECK_EQUAL(seq, "2");
   CAF_MESSAGE("make a round on a queue with an even number in between");
   fill(queue, 7, 9, 4, 11, 13);
-  CAF_CHECK_EQUAL(queue.new_round(10, f), make_new_round_result(true));
+  CAF_CHECK_EQUAL(queue.new_round(10, f), make_new_round_result(1, false));
   CAF_CHECK_EQUAL(seq, "24");
   CAF_MESSAGE("make a round on a queue with an even number at the back");
   fill(queue, 15, 17, 6);
-  CAF_CHECK_EQUAL(queue.new_round(10, f), make_new_round_result(true));
+  CAF_CHECK_EQUAL(queue.new_round(10, f), make_new_round_result(1, false));
   CAF_CHECK_EQUAL(seq, "246");
 }
 
@@ -196,7 +200,7 @@ CAF_TEST(alternating_consumer) {
   // sequences and no odd value to read after 7 is available.
   fill(queue, 1, 2, 3, 4, 5, 6, 7, 8, 9);
   auto round_result = queue.new_round(1000, h);
-  CAF_CHECK_EQUAL(round_result, make_new_round_result(true));
+  CAF_CHECK_EQUAL(round_result, make_new_round_result(8, false));
   CAF_CHECK_EQUAL(seq, "21436587");
   CAF_CHECK_EQUAL(queue.deficit(), 0);
   CAF_CHECK_EQUAL(deep_to_string(queue.cache()), "[9]");

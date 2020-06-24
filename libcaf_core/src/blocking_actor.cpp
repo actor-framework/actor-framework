@@ -71,6 +71,7 @@ void blocking_actor::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   // returns false if mailbox has been closed
   if (!mailbox().synchronized_push_back(mtx_, cv_, std::move(ptr))) {
     CAF_LOG_REJECT_EVENT();
+    home_system().base_metrics().rejected_messages->inc();
     if (mid.is_request()) {
       detail::sync_request_bouncer srb{exit_reason()};
       srb(src, mid);

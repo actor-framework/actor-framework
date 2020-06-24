@@ -173,6 +173,21 @@ public:
     virtual void demonitor(const node_id& node, const actor_addr& observer) = 0;
   };
 
+  /// Metrics collected by the actor system by default.
+  /// @warning Do not modify these metrics in user code. Some may be used by the
+  ///          system for synchronization.
+  struct base_metrics_t {
+    /// Counts the number of messages that where rejected because the target
+    /// mailbox was closed or did not exist.
+    telemetry::int_counter* rejected_messages;
+
+    /// Counts the total number of processed messages.
+    telemetry::int_counter* processed_messages;
+
+    /// Tracks the current number of running actors in the system.
+    telemetry::int_gauge* running_actors;
+  };
+
   /// @warning The system stores a reference to `cfg`, which means the
   ///          config object must outlive the actor system.
   explicit actor_system(actor_system_config& cfg);
@@ -569,6 +584,14 @@ public:
       profiler_->before_sending_scheduled(self, timeout, element);
   }
 
+  base_metrics_t& base_metrics() noexcept {
+    return base_metrics_;
+  }
+
+  const base_metrics_t& base_metrics() const noexcept {
+    return base_metrics_;
+  }
+
   tracing_data_factory* tracing_context() const noexcept {
     return tracing_context_;
   }
@@ -607,6 +630,9 @@ private:
 
   /// Manages all metrics collected by the system.
   telemetry::metric_registry metrics_;
+
+  /// Stores all metrics that the actor system collects by default.
+  base_metrics_t base_metrics_;
 
   /// Identifies this actor system in a distributed setting.
   node_id node_;

@@ -22,15 +22,16 @@
 #include <type_traits>
 
 #include "caf/fwd.hpp"
+#include "caf/meta/type_name.hpp"
 
 namespace caf::intrusive {
 
 /// Returns the state of a consumer from `new_round`.
 struct new_round_result {
   /// Denotes whether the consumer accepted at least one element.
-  bool consumed_items : 1;
+  size_t consumed_items;
   /// Denotes whether the consumer returned `task_result::stop_all`.
-  bool stop_all : 1;
+  bool stop_all;
 };
 
 constexpr bool operator==(new_round_result x, new_round_result y) {
@@ -41,13 +42,9 @@ constexpr bool operator!=(new_round_result x, new_round_result y) {
   return !(x == y);
 }
 
-constexpr new_round_result
-make_new_round_result(bool consumed_items, bool stop_all = false) {
-  return {consumed_items, stop_all};
-}
-
-constexpr new_round_result operator|(new_round_result x, new_round_result y) {
-  return {x.consumed_items || y.consumed_items, x.stop_all || y.stop_all};
+template <class Inspector>
+typename Inspector::result_type inspect(Inspector& f, new_round_result& x) {
+  return f(meta::type_name("new_round_result"), x.consumed_items, x.stop_all);
 }
 
 } // namespace caf::intrusive

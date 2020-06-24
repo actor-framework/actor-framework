@@ -170,7 +170,7 @@ public:
   /// @returns `true` if `f` consumed at least one item.
   template <class F>
   bool consume(F& f) noexcept(noexcept(f(std::declval<value_type&>()))) {
-    return new_round(0, f).consumed_items;
+    return new_round(0, f).consumed_items > 0;
   }
 
   /// Run a new round with `quantum`, dispatching all tasks to `consumer`.
@@ -178,12 +178,12 @@ public:
   new_round_result new_round(deficit_type quantum, F& consumer) noexcept(
     noexcept(consumer(std::declval<value_type&>()))) {
     if (list_.empty())
-      return {false, false};
+      return {0, false};
     deficit_ += quantum;
-    long consumed = 0;
     auto ptr = next();
     if (ptr == nullptr)
-      return {false, false};
+      return {0, false};
+    size_t consumed = 0;
     do {
       auto consumer_res = consumer(*ptr);
       switch (consumer_res) {
@@ -194,7 +194,7 @@ public:
           cache_.push_back(ptr.release());
           if (list_.empty()) {
             deficit_ = 0;
-            return {consumed != 0, false};
+            return {consumed, false};
           }
           break;
         case task_result::resume:
@@ -202,7 +202,7 @@ public:
           flush_cache();
           if (list_.empty()) {
             deficit_ = 0;
-            return {consumed != 0, false};
+            return {consumed, false};
           }
           break;
         default:
@@ -210,11 +210,11 @@ public:
           flush_cache();
           if (list_.empty())
             deficit_ = 0;
-          return {consumed != 0, consumer_res == task_result::stop_all};
+          return {consumed, consumer_res == task_result::stop_all};
       }
       ptr = next();
     } while (ptr != nullptr);
-    return {consumed != 0, false};
+    return {consumed, false};
   }
 
   cache_type& cache() noexcept {

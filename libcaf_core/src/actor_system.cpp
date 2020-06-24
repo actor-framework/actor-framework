@@ -216,10 +216,27 @@ actor_system::networking_module::~networking_module() {
   // nop
 }
 
+namespace {
+
+auto make_base_metrics(telemetry::metric_registry& reg) {
+  return actor_system::base_metrics_t{
+    // Initialize the base metrics.
+    reg.counter_singleton("caf", "rejected-messages",
+                          "Number of rejected messages.", "1", true),
+    reg.counter_singleton("caf", "processed-messages",
+                          "Number of processed messages.", "1", true),
+    reg.gauge_singleton("caf", "running-actors",
+                        "Number of currently running actors."),
+  };
+}
+
+} // namespace
+
 actor_system::actor_system(actor_system_config& cfg)
   : profiler_(cfg.profiler),
     ids_(0),
     metrics_(cfg),
+    base_metrics_(make_base_metrics(metrics_)),
     logger_(new caf::logger(*this), false),
     registry_(*this),
     groups_(*this),

@@ -122,7 +122,6 @@ private:
 
   actor_registry(actor_system& sys);
 
-  telemetry::int_gauge* running_;
   mutable std::mutex running_mtx_;
   mutable std::condition_variable running_cv_;
 

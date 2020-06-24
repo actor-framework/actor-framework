@@ -184,6 +184,7 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
     }
     case intrusive::inbox_result::queue_closed: {
       CAF_LOG_REJECT_EVENT();
+      home_system().base_metrics().rejected_messages->inc();
       if (mid.is_request()) {
         detail::sync_request_bouncer f{exit_reason()};
         f(sender, mid);
@@ -252,7 +253,7 @@ bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
     get_normal_queue().flush_cache();
     get_urgent_queue().flush_cache();
     detail::sync_request_bouncer bounce{fail_state};
-    while (mailbox_.queue().new_round(1000, bounce).consumed_items)
+    while (mailbox_.queue().new_round(1000, bounce).consumed_items > 0)
       ; // nop
   }
   // Dispatch to parent's `cleanup` function.
@@ -409,10 +410,14 @@ resumable::resume_result scheduled_actor::resume(execution_unit* ctx,
     CAF_LOG_DEBUG("start new DRR round");
     // TODO: maybe replace '3' with configurable / adaptive value?
     // Dispatch on the different message categories in our mailbox.
-    if (!mailbox_.new_round(3, f).consumed_items) {
+    auto consumed = mailbox_.new_round(3, f).consumed_items;
+    if (consumed == 0) {
       reset_timeouts_if_needed();
       if (mailbox().try_block())
         return resumable::awaiting_message;
+    } else {
+      auto signed_val = static_cast<int64_t>(consumed);
+      home_system().base_metrics().processed_messages->inc(signed_val);
     }
     // Check whether the visitor left the actor without behavior.
     if (finalize()) {

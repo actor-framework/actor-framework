@@ -110,7 +110,7 @@ public:
   /// @returns `true` if at least one item was consumed, `false` otherwise.
   template <class F>
   new_round_result new_round(deficit_type quantum, F& f) {
-    bool result = false;
+    size_t consumed = 0;
     bool stopped = false;
     for (auto& kvp : qs_) {
       if (policy_.enabled(kvp.second)) {
@@ -118,7 +118,7 @@ public:
         if (!stopped) {
           new_round_helper<F> g{kvp.first, q, f};
           auto res = q.new_round(policy_.quantum(q, quantum), g);
-          result = res.consumed_items;
+          consumed += res.consumed_items;
           if (res.stop_all)
             stopped = true;
         } else {
@@ -129,7 +129,7 @@ public:
       }
     }
     cleanup();
-    return {result, stopped};
+    return {consumed, stopped};
   }
 
   /// Erases all keys previously marked via `erase_later`.

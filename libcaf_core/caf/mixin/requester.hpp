@@ -75,6 +75,7 @@ public:
     } else {
       self->eq_impl(req_id.response_id(), self->ctrl(), self->context(),
                     make_error(sec::invalid_argument));
+      self->home_system().base_metrics().rejected_messages->inc();
     }
     using response_type
       = response_type_t<typename Handle::signatures,
