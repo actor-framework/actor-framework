@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <initializer_list>
 #include <map>
 #include <memory>
@@ -362,11 +363,19 @@ public:
     }
     const settings* sub_settings = nullptr;
     upper_bounds_list upper_bounds;
-    if (config_ != nullptr)
-      if (auto grp = get_if<settings>(config_, prefix))
-        if (sub_settings = get_if<settings>(grp, name); sub_settings != nullptr)
-          if (auto lst = get_if<upper_bounds_list>(sub_settings, "buckets"))
-            upper_bounds = std::move(*lst);
+    if (config_ != nullptr) {
+      if (auto grp = get_if<settings>(config_, prefix)) {
+        if (sub_settings = get_if<settings>(grp, name);
+            sub_settings != nullptr) {
+          if (auto lst = get_if<upper_bounds_list>(sub_settings, "buckets")) {
+            std::sort(lst->begin(), lst->end());
+            lst->erase(std::unique(lst->begin(), lst->end()), lst->end());
+            if (!lst->empty())
+              upper_bounds = std::move(*lst);
+          }
+        }
+      }
+    }
     if (upper_bounds.empty())
       upper_bounds.assign(default_upper_bounds.begin(),
                           default_upper_bounds.end());
