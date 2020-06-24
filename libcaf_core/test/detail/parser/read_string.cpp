@@ -96,7 +96,7 @@ CAF_TEST(quoted string with escaped characters) {
   CAF_CHECK_EQUAL(p(R"("a\tb\tc")"), "a\tb\tc"_s);
   CAF_CHECK_EQUAL(p(R"("a\nb\r\nc")"), "a\nb\r\nc"_s);
   CAF_CHECK_EQUAL(p(R"("a\\b")"), "a\\b"_s);
-  CAF_CHECK_EQUAL(p(R"("'hello' \"world\"")"), "'hello' \"world\""_s);
+  CAF_CHECK_EQUAL(p("\"'hello' \\\"world\\\"\""), "'hello' \"world\""_s);
   CAF_CHECK_EQUAL(p(R"('a\tb\tc')"), "a\tb\tc"_s);
   CAF_CHECK_EQUAL(p(R"('a\nb\r\nc')"), "a\nb\r\nc"_s);
   CAF_CHECK_EQUAL(p(R"('a\\b')"), "a\\b"_s);

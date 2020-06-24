@@ -140,7 +140,7 @@ middleman {
 }
 )";
 
-constexpr const std::string_view conf1 = R"(
+constexpr const string_view conf1 = R"(
 {
     "foo" : {
         "bar" : 1,
