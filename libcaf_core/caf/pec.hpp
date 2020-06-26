@@ -75,6 +75,9 @@ enum class pec : uint8_t {
   missing_field = 20,
   /// Parsing a range statement ('n..m' or 'n..m..step') failed.
   invalid_range_expression,
+  /// Stopped after running into an invalid parser state. Should never happen
+  /// and most likely indicates a bug in the implementation.
+  invalid_state,
 };
 
 CAF_CORE_EXPORT std::string to_string(pec);

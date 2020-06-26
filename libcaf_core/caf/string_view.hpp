@@ -97,6 +97,11 @@ public:
     // nop
   }
 
+  constexpr string_view(iterator first, iterator last) noexcept
+    : data_(first), size_(static_cast<size_t>(last - first)) {
+    // nop
+  }
+
 #ifdef CAF_GCC
   constexpr string_view(const char* cstr) noexcept
     : data_(cstr), size_(strlen(cstr)) {

@@ -124,13 +124,13 @@ object *before* initializing an actor system with it.
 
 .. _system-config-options:
 
-Command Line Options and INI Configuration Files
-------------------------------------------------
+Command Line Options and Configuration Files
+--------------------------------------------
 
 CAF organizes program options in categories and parses CLI arguments as well as
-INI files. CLI arguments override values in the INI file which override
-hard-coded defaults. Users can add any number of custom program options by
-implementing a subtype of ``actor_system_config``. The example below
+configuration files. CLI arguments override values in the configuration file
+which override hard-coded defaults. Users can add any number of custom program
+options by implementing a subtype of ``actor_system_config``. The example below
 adds three options to the ``global`` category.
 
 .. literalinclude:: /examples/remoting/distributed_calculator.cpp
@@ -166,37 +166,67 @@ CAF adds the program options ``help`` (with short names ``-h``
 and ``-?``) as well as ``long-help`` to the ``global``
 category.
 
-The default name for the INI file is ``caf-application.ini``. Users can
-change the file name and path by passing ``--config-file=<path>`` on the
+The default name for the configuration file is ``caf-application.conf``. Users
+can change the file name and path by passing ``--config-file=<path>`` on the
 command line.
 
-INI files are organized in categories. No value is allowed outside of a category
-(no implicit ``global`` category). The parses uses the following syntax:
+The syntax for the configuration files provides a clean JSON-like grammar that
+is similar to commonly used configuration formats such as the file format of
+``lighttpd``. In a nutshell, instead of writing:
 
-+------------------------+-----------------------------+
-| ``key=true``           | is a boolean                |
-+------------------------+-----------------------------+
-| ``key=1``              | is an integer               |
-+------------------------+-----------------------------+
-| ``key=1.0``            | is an floating point number |
-+------------------------+-----------------------------+
-| ``key=1ms``            | is an timespan              |
-+------------------------+-----------------------------+
-| ``key='foo'``          | is an atom                  |
-+------------------------+-----------------------------+
-| ``key="foo"``          | is a string                 |
-+------------------------+-----------------------------+
-| ``key=[0, 1, ...]``    | is as a list                |
-+------------------------+-----------------------------+
-| ``key={a=1, b=2, ...}``| is a dictionary (map)       |
-+------------------------+-----------------------------+
+.. code-block:: JSON
 
-The following example INI file lists all standard options in CAF and their
-default value. Note that some options such as ``scheduler.max-threads``
+  {
+    "my-category" : {
+      "first" : 1,
+      "second" : 2
+    }
+  }
+
+you can reduce the noise by writing:
+
+.. code-block:: none
+
+  my-category {
+    first = 1
+    second = 2
+  }
+
+.. note::
+
+  CAF will accept both of the examples above and will produce the same result.
+  We recommend using the second style, mostly because it reduces syntax noise.
+
+Unlike regular JSON, CAF's configuration format supports a couple of additional
+syntax elements such as comments (comments start with ``#`` and end at the end
+of the line) and, most notably, does *not* accept ``null``.
+
+The parses uses the following syntax for writing key-value pairs:
+
++-------------------------+-----------------------------+
+| ``key=true``            | is a boolean                |
++-------------------------+-----------------------------+
+| ``key=1``               | is an integer               |
++-------------------------+-----------------------------+
+| ``key=1.0``             | is an floating point number |
++-------------------------+-----------------------------+
+| ``key=1ms``             | is an timespan              |
++-------------------------+-----------------------------+
+| ``key='foo'``           | is a string                 |
++-------------------------+-----------------------------+
+| ``key="foo"``           | is a string                 |
++-------------------------+-----------------------------+
+| ``key=[0, 1, ...]``     | is as a list                |
++-------------------------+-----------------------------+
+| ``key={a=1, b=2, ...}`` | is a dictionary (map)       |
++-------------------------+-----------------------------+
+
+The following example configuration file lists all standard options in CAF and
+their default value. Note that some options such as ``scheduler.max-threads``
 are usually detected at runtime and thus have no hard-coded default.
 
-.. literalinclude:: /examples/caf-application.ini
-  :language: INI
+.. literalinclude:: /examples/caf-application.conf
+  :language: none
 
 .. _add-custom-message-type:
 

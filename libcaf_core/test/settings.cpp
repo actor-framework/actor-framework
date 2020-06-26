@@ -24,6 +24,8 @@
 
 #include <string>
 
+#include "caf/detail/config_consumer.hpp"
+#include "caf/detail/parser/read_config.hpp"
 #include "caf/none.hpp"
 #include "caf/optional.hpp"
 
@@ -202,6 +204,20 @@ CAF_TEST(custom type) {
   auto fb = get<foobar>(x, "my-value");
   CAF_CHECK_EQUAL(fb.foo, 42);
   CAF_CHECK_EQUAL(fb.bar, 24);
+}
+
+CAF_TEST(read_config accepts the to_string output of settings) {
+  fill();
+  auto str = to_string(x);
+  settings y;
+  config_option_set dummy;
+  detail::config_consumer consumer{dummy, y};
+  string_view str_view = str;
+  string_parser_state res{str_view.begin(), str_view.end()};
+  detail::parser::read_config(res, consumer);
+  CAF_CHECK(res.i == res.e);
+  CAF_CHECK_EQUAL(res.code, pec::success);
+  CAF_CHECK_EQUAL(x, y);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

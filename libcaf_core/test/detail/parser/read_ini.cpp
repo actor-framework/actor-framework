@@ -81,14 +81,6 @@ struct test_consumer {
   }
 };
 
-struct ini_consumer {
-  using inner_map = std::map<std::string, config_value>;
-  using section_map = std::map<std::string, inner_map>;
-
-  section_map sections;
-  section_map::iterator current_section;
-};
-
 struct fixture {
   expected<log_type> parse(string_view str, bool expect_success = true) {
     test_consumer f;

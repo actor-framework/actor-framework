@@ -20,7 +20,20 @@
 // DSL is supposed to clean up all defines made in this header via
 // `include "caf/detail/parser/fsm_undef.hpp"` at the end.
 
+#include <type_traits>
+
 #include "caf/detail/pp.hpp"
+
+#define CAF_FSM_EVAL_ACTION(action)                                            \
+  auto action_impl = [&]() -> decltype(auto) { return action; };               \
+  if constexpr (std::is_same<pec, decltype(action_impl())>::value) {           \
+    if (auto code = action_impl(); code != pec::success) {                     \
+      ps.code = code;                                                          \
+      return;                                                                  \
+    }                                                                          \
+  } else {                                                                     \
+    action_impl();                                                             \
+  }
 
 #define CAF_FSM_EVAL_MISMATCH_EC                                               \
   if (mismatch_ec == caf::pec::unexpected_character)                           \
@@ -107,7 +120,7 @@
 
 #define CAF_TRANSITION_IMPL3(target, whitelist, action)                        \
   if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
-    action;                                                                    \
+    CAF_FSM_EVAL_ACTION(action)                                                \
     CAF_TRANSITION_IMPL1(target)                                               \
   }
 
@@ -139,7 +152,7 @@
 
 #define CAF_EPSILON_IMPL3(target, whitelist, action)                           \
   if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
-    action;                                                                    \
+    CAF_FSM_EVAL_ACTION(action)                                                \
     CAF_EPSILON_IMPL1(target)                                                  \
   }
 
@@ -167,7 +180,7 @@
 
 #define CAF_FSM_TRANSITION_IMPL4(fsm_call, target, whitelist, action)          \
   if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
-    action;                                                                    \
+    CAF_FSM_EVAL_ACTION(action)                                                \
     CAF_FSM_TRANSITION_IMPL2(fsm_call, target)                                 \
   }
 
@@ -195,7 +208,7 @@
 
 #define CAF_FSM_EPSILON_IMPL4(fsm_call, target, whitelist, action)             \
   if (::caf::detail::parser::in_whitelist(whitelist, ch)) {                    \
-    action;                                                                    \
+    CAF_FSM_EVAL_ACTION(action)                                                \
     CAF_FSM_EPSILON_IMPL2(fsm_call, target)                                    \
   }
 
