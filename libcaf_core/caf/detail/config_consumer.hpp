@@ -74,7 +74,7 @@ private:
   config_value::list xs_;
 };
 
-/// Consumes a series of key-vale pairs from an application configuration.
+/// Consumes a series of key-value pairs from an application configuration.
 class CAF_CORE_EXPORT config_consumer {
 public:
   // -- constructors, destructors, and assignment operators --------------------

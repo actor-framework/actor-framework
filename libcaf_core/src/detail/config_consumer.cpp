@@ -156,7 +156,7 @@ void merge_into_place(settings& src, settings& dst) {
 } // namespace
 
 pec config_consumer::value_impl(config_value&& x) {
-  // See whether there's an config_option associated to this key and perform a
+  // See whether there's a config_option associated to this key and perform a
   // type check if necessary.
   const config_option* opt;
   if (options_ == nullptr) {

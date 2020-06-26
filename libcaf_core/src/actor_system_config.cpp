@@ -352,7 +352,7 @@ error actor_system_config::parse(string_list args,
     if (!conf.is_open()) {
       conf.open("caf-application.ini");
       if (conf.is_open()) {
-        // Consume the ini file here, because the parse() overloead for taking
+        // Consume the ini file here, because the parse() overload that takes
         // an istream assumes the new config format.
         if (auto err = parse_ini(conf, custom_options_, content))
           return err;
