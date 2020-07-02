@@ -79,7 +79,7 @@ CAF_TEST(the prometheus broker responds to HTTP get requests) {
                           "Content-Type: text/plain\r\n"
                           "Connection: Closed\r\n\r\n";
   CAF_CHECK(starts_with(response, ok_header));
-  CAF_CHECK(contains(response, "\ncaf_running_actors 2 "));
+  CAF_CHECK(contains(response, "\ncaf_system_running_actors 2 "));
   if (detail::prometheus_broker::has_process_metrics()) {
     CAF_CHECK(contains(response, "\nprocess_cpu_seconds_total "));
     CAF_CHECK(contains(response, "\nprocess_resident_memory_bytes "));

@@ -112,7 +112,7 @@ struct fixture {
 
 #  define NAMED_ACTOR_STATE(type)                                              \
     struct type##_state {                                                      \
-      const char* name = #type;                                                \
+      static inline const char* name = #type;                                  \
     }
 
 NAMED_ACTOR_STATE(bar);

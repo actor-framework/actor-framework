@@ -99,14 +99,14 @@ public:
     // nop
   }
 
-  void
-  before_sending(const local_actor& self, mailbox_element& element) override {
+  void before_sending(const local_actor& self,
+                      mailbox_element& element) override {
     element.tracing_id.reset(new dummy_tracing_data(self.name()));
   }
 
-  void
-  before_sending_scheduled(const local_actor& self, actor_clock::time_point,
-                           mailbox_element& element) override {
+  void before_sending_scheduled(const local_actor& self,
+                                actor_clock::time_point,
+                                mailbox_element& element) override {
     element.tracing_id.reset(new dummy_tracing_data(self.name()));
   }
 };
@@ -154,7 +154,7 @@ const std::string& tracing_id(local_actor* self) {
 
 #  define NAMED_ACTOR_STATE(type)                                              \
     struct type##_state {                                                      \
-      const char* name = #type;                                                \
+      static inline const char* name = #type;                                  \
     }
 
 NAMED_ACTOR_STATE(alice);

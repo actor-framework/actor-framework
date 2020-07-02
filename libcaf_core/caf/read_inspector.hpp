@@ -49,17 +49,20 @@ public:
 
   static constexpr bool writes_state = false;
 
-  template <class... Ts>
-  auto operator()(Ts&&... xs) {
-    using result_type = typename Subtype::result_type;
-    if constexpr (std::is_same<result_type, void>::value) {
-      auto dummy = unit;
-      static_cast<void>((try_apply(dummy, xs) && ...));
-    } else {
-      typename Subtype::result_type result;
-      static_cast<void>((try_apply(result, xs) && ...));
-      return result;
-    }
+  template <class Sub = Subtype, class... Ts>
+  std::enable_if_t<std::is_same<typename Sub::result_type, void>::value>
+  operator()(Ts&&... xs) {
+    auto dummy = unit;
+    static_cast<void>((try_apply(dummy, xs) && ...));
+  }
+
+  template <class Sub = Subtype, class... Ts>
+  std::enable_if_t<!std::is_same<typename Sub::result_type, void>::value,
+                   typename Sub::result_type>
+  operator()(Ts&&... xs) {
+    auto result = typename Sub::result_type{};
+    static_cast<void>((try_apply(result, xs) && ...));
+    return result;
   }
 
 private:
