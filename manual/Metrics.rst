@@ -349,45 +349,47 @@ Configuration Parameters
 
 Histograms use the actor system configuration to enable users to override
 hard-coded default bucket settings. On construction, the histogram family check
-whether a key ``metrics.${prefix}.${name}.buckets`` exists. Further, the metric
-instance also checks on construction whether a more specific bucket setting for
-one of its label dimensions exist.
+whether a key ``caf.metrics.${prefix}.${name}.buckets`` exists. Further, the
+metric instance also checks on construction whether a more specific bucket
+setting for one of its label dimensions exist.
 
 For example, consider we add a histogram family with prefix ``http``, name
 ``request-duration``, and label dimension ``method`` to the registry. The family
-first tries to read ``metrics.http.request-duration.buckets`` from the
+first tries to read ``caf.metrics.http.request-duration.buckets`` from the
 configuration and otherwise falls back to the hard-coded defaults. When creating
 a histogram instance from the family with the label ``method=put``, the
 construct first tries to read
-``metrics.http.request-duration.method=put.buckets`` from the configuration and
-otherwise uses the default for the family.
+``caf.metrics.http.request-duration.method=put.buckets`` from the configuration
+and otherwise uses the default for the family.
 
 In a configuration file, users may provide bucket settings like this:
 
 .. code-block:: none
 
-  metrics {
-    http {
-      # measures the duration per HTTP request in seconds
-      request-duration {
-        buckets = [
-          0.001, # ≤   1ms
-          0.01,  # ≤  10ms
-          0.05,  # ≤  50ms
-          0.1,   # ≤ 100ms
-          0.25,  # ≤ 250ms
-          0.5,   # ≤ 500ms
-          0.75,  # ≤ 750ms
-        ]
-        # use different settings for get requests
-        "method=put" {
+  caf {
+    metrics {
+      http {
+        # measures the duration per HTTP request in seconds
+        request-duration {
           buckets = [
-            0.007, # ≤   7ms
-            0.012, # ≤  12ms
-            0.025, # ≤  25ms
+            0.001, # ≤   1ms
+            0.01,  # ≤  10ms
             0.05,  # ≤  50ms
             0.1,   # ≤ 100ms
+            0.25,  # ≤ 250ms
+            0.5,   # ≤ 500ms
+            0.75,  # ≤ 750ms
           ]
+          # use different settings for get requests
+          "method=put" {
+            buckets = [
+              0.007, # ≤   7ms
+              0.012, # ≤  12ms
+              0.025, # ≤  25ms
+              0.05,  # ≤  50ms
+              0.1,   # ≤ 100ms
+            ]
+          }
         }
       }
     }
@@ -448,3 +450,93 @@ caf.rejected-messages
     was closed or did not exist.
   - **Type**: ``int_counter``
   - **Label dimensions**: none.
+
+Actor Metrics and Filters
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Unlike the base metrics, actor metrics are *off* by default. Applications can
+spawn thousands of actors, with many only existing for a brief time. Hence,
+blindly collecting data from all actors in the system can impact the performance
+and also produce a lot of irrelevant noise.
+
+To make sure CAF only collects actor metrics that are relevant to the user, the
+actor system configuration provides two lists:
+``caf.metrics-filters.actors.includes`` and
+``caf.metrics-filters.actors.excludes``. CAF collects metrics for all actors
+that have names that are selected by the ``includes`` list and are not selected
+by the ``excludes`` list. Entries in the list can use glob-style syntax, in
+particular ``*``-wildcards. For example:
+
+.. code-block:: none
+
+  caf {
+    metrics-filters {
+      actors {
+        includes = [ "foo.*" ]
+        excludes = [ "foo.bar" ]
+      }
+    }
+  }
+
+The configuration above would select all actors with names that start with
+``foo.`` except for actors named ``foo.bar``.
+
+.. note::
+
+  Names belong to actor *types*. CAF assigns default names such as
+  ``user.scheduled-actor`` by default. To provide a custom name, either override
+  the member function ``const char* name() const`` when implementing class-based
+  actors or add a *static* member variable
+  ``static inline const char* name = "..."`` to your state class when using
+  stateful actors.
+
+  CAF uses a hierarchical, hyphenated naming scheme with ``.`` as the separator
+  and all-lowercase name components. For example, ``caf.system.spawn-server``.
+  Users may follow this naming scheme for consistency, but CAF does not enforce
+  any structure on the names. However, we do recommend to avoid whitespaces and
+  special characters that the glob engine recognizes, such as ``*``, ``/``, etc.
+
+For all actors that are selected by the user-defined filters, CAF collects this
+set of metrics:
+
+caf.processing-time
+  - Samples how long the actor needs to process messages.
+  - **Type**: ``dbl_histogram``
+  - **Unit**: ``seconds``
+  - **Label dimensions**: name.
+
+caf.mailbox-time
+  - Samples how long messages wait in the mailbox before being processed.
+  - **Type**: ``dbl_histogram``
+  - **Unit**: ``seconds``
+  - **Label dimensions**: name.
+
+caf.mailbox-size
+  - Counts how many messages are currently waiting in the mailbox.
+  - **Type**: ``int_gauge``
+  - **Label dimensions**: name.
+
+Exporting Metrics to Prometheus
+-------------------------------
+
+The network module in CAF comes with builtin support for exporting metrics to
+Prometheus via HTTP. However, this feature is off by default since CAF generally
+avoids opening ports without explicit user input.
+
+During startup, the middleman enables the export of metrics when the
+configuration provides a valid value (0 to 65536) for
+``caf.middleman.prometheus-http.port`` as shown in the example config file
+below.
+
+.. code-block:: none
+
+  caf {
+    middleman {
+      prometheus-http {
+        # listen for incoming HTTP requests on port 8080 (required parameter)
+        port = 8080
+        # the bind address (optional parameter; default is 0.0.0.0)
+        address = "0.0.0.0"
+      }
+    }
+  }

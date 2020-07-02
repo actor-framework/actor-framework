@@ -44,6 +44,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   RFC4122-compliant `uuid` class.
 - The new trait class `is_error_code_enum` allows users to enable conversion of
   custom error code enums to `error` and `error_code`.
+- CAF now enables users to tap into internal CAF metrics as well as adding their
+  own instrumentation! Since this addition is too large to cover in a changelog
+  entry, please have a look at the new *Metrics* Section of the manual to learn
+  more.
 
 ### Deprecated
 
@@ -112,6 +116,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   example: `typed_actor<result<double>(double)>`. We have reimplemented the
   metaprogramming facilities `racts_to<...>` and `replies_to<...>::with<...>`
   as an alternative way of writing the function signature.
+- The returned string of `name()` must not change during the lifetime of an
+  actor. Hence, `stateful_actor` now only considers static `name` members in its
+  `State` for overriding this function. CAF always assumed names belonging to
+  *types*, but did not enforce it because the name was only used for logging.
+  Since the new metrics use this name for filtering now, we enforce static names
+  in order to help avoid hard-to-find issues with the filtering mechanism.
 
 ### Removed
 
