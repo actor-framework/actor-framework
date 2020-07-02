@@ -46,6 +46,10 @@ public:
 
   message_types_set message_types() const override;
 
+  void setup_metrics() {
+    // nop
+  }
+
 protected:
   void on_cleanup(const error& reason) override;
 

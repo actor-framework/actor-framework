@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,16 +18,9 @@
 
 #pragma once
 
-#include "caf/detail/io_export.hpp"
-#include "caf/fwd.hpp"
+namespace caf::detail {
 
-namespace caf::io {
+// gitignore-style pathname globbing.
+bool glob_match(const char* str, const char* glob);
 
-struct connection_helper_state {
-  static inline const char* name = "caf.system.connection-helper";
-};
-
-CAF_IO_EXPORT behavior
-connection_helper(stateful_actor<connection_helper_state>* self, actor b);
-
-} // namespace caf::io
+} // namespace caf::detail

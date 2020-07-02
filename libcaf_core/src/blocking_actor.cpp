@@ -28,6 +28,7 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/invoke_message_result.hpp"
 #include "caf/logger.hpp"
+#include "caf/telemetry/timer.hpp"
 
 namespace caf {
 
@@ -68,10 +69,17 @@ void blocking_actor::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto src = ptr->sender;
+  auto collects_metrics = getf(abstract_actor::collects_metrics_flag);
+  if (collects_metrics) {
+    ptr->set_enqueue_time();
+    metrics_.mailbox_size->inc();
+  }
   // returns false if mailbox has been closed
   if (!mailbox().synchronized_push_back(mtx_, cv_, std::move(ptr))) {
     CAF_LOG_REJECT_EVENT();
     home_system().base_metrics().rejected_messages->inc();
+    if (collects_metrics)
+      metrics_.mailbox_size->dec();
     if (mid.is_request()) {
       detail::sync_request_bouncer srb{exit_reason()};
       srb(src, mid);
@@ -86,7 +94,7 @@ mailbox_element* blocking_actor::peek_at_next_mailbox_element() {
 }
 
 const char* blocking_actor::name() const {
-  return "blocking_actor";
+  return "user.blocking-actor";
 }
 
 void blocking_actor::launch(execution_unit*, bool, bool hide) {
@@ -216,15 +224,33 @@ blocking_actor::mailbox_visitor::operator()(mailbox_element& x) {
     return visit(f, sres);
   };
   // Post-process the returned value from the function body.
-  auto result = body();
-  if (result == intrusive::task_result::skip) {
-    CAF_AFTER_PROCESSING(self, invoke_message_result::skipped);
-    CAF_LOG_SKIP_EVENT();
+  if (!self->getf(abstract_actor::collects_metrics_flag)) {
+    auto result = body();
+    if (result == intrusive::task_result::skip) {
+      CAF_AFTER_PROCESSING(self, invoke_message_result::skipped);
+      CAF_LOG_SKIP_EVENT();
+    } else {
+      CAF_AFTER_PROCESSING(self, invoke_message_result::consumed);
+      CAF_LOG_FINALIZE_EVENT();
+    }
+    return result;
   } else {
-    CAF_AFTER_PROCESSING(self, invoke_message_result::consumed);
-    CAF_LOG_FINALIZE_EVENT();
+    auto t0 = std::chrono::steady_clock::now();
+    auto mbox_time = x.seconds_until(t0);
+    auto result = body();
+    if (result == intrusive::task_result::skip) {
+      CAF_AFTER_PROCESSING(self, invoke_message_result::skipped);
+      CAF_LOG_SKIP_EVENT();
+      auto& builtins = self->builtin_metrics();
+      telemetry::timer::observe(builtins.processing_time, t0);
+      builtins.mailbox_time->observe(mbox_time);
+      builtins.mailbox_size->dec();
+    } else {
+      CAF_AFTER_PROCESSING(self, invoke_message_result::consumed);
+      CAF_LOG_FINALIZE_EVENT();
+    }
+    return result;
   }
-  return result;
 }
 
 void blocking_actor::receive_impl(receive_cond& rcc, message_id mid,
@@ -325,8 +351,14 @@ bool blocking_actor::cleanup(error&& fail_state, execution_unit* host) {
     mailbox_.close();
     // TODO: messages that are stuck in the cache can get lost
     detail::sync_request_bouncer bounce{fail_state};
-    while (mailbox_.queue().new_round(1000, bounce).consumed_items)
-      ; // nop
+    auto dropped = mailbox_.queue().new_round(1000, bounce).consumed_items;
+    while (dropped > 0) {
+      if (getf(abstract_actor::collects_metrics_flag)) {
+        auto val = static_cast<int64_t>(dropped);
+        metrics_.mailbox_size->dec(val);
+      }
+      dropped = mailbox_.queue().new_round(1000, bounce).consumed_items;
+    }
   }
   // Dispatch to parent's `cleanup` function.
   return super::cleanup(std::move(fail_state), host);

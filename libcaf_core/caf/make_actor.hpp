@@ -44,12 +44,14 @@ R make_actor(actor_id aid, node_id nid, actor_system* sys, Ts&&... xs) {
                                  std::forward<Ts>(xs)...);
     }
     CAF_LOG_SPAWN_EVENT(ptr->data, args);
+    ptr->data.setup_metrics();
     return {&(ptr->ctrl), false};
   }
 #endif
   CAF_PUSH_AID(aid);
   auto ptr = new actor_storage<T>(aid, std::move(nid), sys,
                                   std::forward<Ts>(xs)...);
+  ptr->data.setup_metrics();
   return {&(ptr->ctrl), false};
 }
 

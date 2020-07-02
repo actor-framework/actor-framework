@@ -173,7 +173,7 @@ public:
     virtual void demonitor(const node_id& node, const actor_addr& observer) = 0;
   };
 
-  /// Metrics collected by the actor system by default.
+  /// Metrics that the actor system collects by default.
   /// @warning Do not modify these metrics in user code. Some may be used by the
   ///          system for synchronization.
   struct base_metrics_t {
@@ -186,6 +186,24 @@ public:
 
     /// Tracks the current number of running actors in the system.
     telemetry::int_gauge* running_actors;
+
+    /// Counts the total number of messages that wait in a mailbox.
+    telemetry::int_gauge* queued_messages;
+  };
+
+  /// Metrics that some actors may collect in addition to the base metrics. All
+  /// families in this set use the label dimension *name* (the user-defined name
+  /// of the actor).
+  struct actor_metric_families_t {
+    /// Samples how long the actor needs to process messages.
+    telemetry::dbl_histogram_family* processing_time_family = nullptr;
+
+    /// Samples how long a message waits in the mailbox before the actor
+    /// processes it.
+    telemetry::dbl_histogram_family* mailbox_time_family = nullptr;
+
+    /// Counts how many messages are currently waiting in the mailbox.
+    telemetry::int_gauge_family* mailbox_size_family = nullptr;
   };
 
   /// @warning The system stores a reference to `cfg`, which means the
@@ -418,9 +436,9 @@ public:
   /// range `[first, last)`.
   /// @private
   template <spawn_options Os, class Iter, class F, class... Ts>
-  infer_handle_from_fun_t<F>
-  spawn_fun_in_groups(actor_config& cfg, Iter first, Iter second, F& fun,
-                      Ts&&... xs) {
+  infer_handle_from_fun_t<F> spawn_fun_in_groups(actor_config& cfg, Iter first,
+                                                 Iter second, F& fun,
+                                                 Ts&&... xs) {
     using impl = infer_impl_from_fun_t<F>;
     check_invariants<impl>();
     using traits = actor_traits<impl>;
@@ -527,6 +545,14 @@ public:
   /// @warning must be called by thread which is about to terminate
   void thread_terminates();
 
+  const auto& metrics_actors_includes() const noexcept {
+    return metrics_actors_includes_;
+  }
+
+  const auto& metrics_actors_excludes() const noexcept {
+    return metrics_actors_excludes_;
+  }
+
   template <class C, spawn_options Os, class... Ts>
   infer_handle_from_class_t<C> spawn_impl(actor_config& cfg, Ts&&... xs) {
     static_assert(is_unbound(Os),
@@ -571,8 +597,8 @@ public:
       profiler_->after_processing(self, result);
   }
 
-  void
-  profiler_before_sending(const local_actor& self, mailbox_element& element) {
+  void profiler_before_sending(const local_actor& self,
+                               mailbox_element& element) {
     if (profiler_)
       profiler_->before_sending(self, element);
   }
@@ -588,8 +614,12 @@ public:
     return base_metrics_;
   }
 
-  const base_metrics_t& base_metrics() const noexcept {
+  const auto& base_metrics() const noexcept {
     return base_metrics_;
+  }
+
+  const auto& actor_metric_families() const noexcept {
+    return actor_metric_families_;
   }
 
   tracing_data_factory* tracing_context() const noexcept {
@@ -685,6 +715,17 @@ private:
 
   /// Stores the system-wide factory for deserializing tracing data.
   tracing_data_factory* tracing_context_;
+
+  /// Caches the configuration parameter `caf.metrics-filters.actors.includes`
+  /// for faster lookups at runtime.
+  std::vector<std::string> metrics_actors_includes_;
+
+  /// Caches the configuration parameter `caf.metrics-filters.actors.excludes`
+  /// for faster lookups at runtime.
+  std::vector<std::string> metrics_actors_excludes_;
+
+  /// Caches families for optional actor metrics.
+  actor_metric_families_t actor_metric_families_;
 };
 
 } // namespace caf

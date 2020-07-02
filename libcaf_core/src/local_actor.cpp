@@ -27,6 +27,7 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/default_attachable.hpp"
+#include "caf/detail/glob_match.hpp"
 #include "caf/exit_reason.hpp"
 #include "caf/logger.hpp"
 #include "caf/resumable.hpp"
@@ -34,6 +35,36 @@
 #include "caf/sec.hpp"
 
 namespace caf {
+
+namespace {
+
+local_actor::metrics_t make_instance_metrics(local_actor* self) {
+  const auto& sys = self->home_system();
+  const auto& includes = sys.metrics_actors_includes();
+  const auto& excludes = sys.metrics_actors_excludes();
+  const auto* name = self->name();
+  auto matches = [name](const std::string& glob) {
+    return detail::glob_match(name, glob.c_str());
+  };
+  if (includes.empty()
+      || std::none_of(includes.begin(), includes.end(), matches)
+      || std::any_of(excludes.begin(), excludes.end(), matches))
+    return {
+      nullptr,
+      nullptr,
+      nullptr,
+    };
+  self->setf(abstract_actor::collects_metrics_flag);
+  const auto& families = sys.actor_metric_families();
+  string_view sv{name, strlen(name)};
+  return {
+    families.processing_time_family->get_or_add({{"name", sv}}),
+    families.mailbox_time_family->get_or_add({{"name", sv}}),
+    families.mailbox_size_family->get_or_add({{"name", sv}}),
+  };
+}
+
+} // namespace
 
 local_actor::local_actor(actor_config& cfg)
   : monitorable_actor(cfg),
@@ -57,6 +88,10 @@ void local_actor::on_destroy() {
     cleanup(exit_reason::unreachable, nullptr);
     monitorable_actor::on_destroy();
   }
+}
+
+void local_actor::setup_metrics() {
+  metrics_ = make_instance_metrics(this);
 }
 
 void local_actor::request_response_timeout(timespan timeout, message_id mid) {
@@ -113,7 +148,7 @@ void local_actor::send_exit(const strong_actor_ptr& dest, error reason) {
 }
 
 const char* local_actor::name() const {
-  return "actor";
+  return "user.local-actor";
 }
 
 error local_actor::save_state(serializer&, const unsigned int) {

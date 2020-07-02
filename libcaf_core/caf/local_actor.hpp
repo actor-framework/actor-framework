@@ -49,6 +49,7 @@
 #include "caf/response_type.hpp"
 #include "caf/resumable.hpp"
 #include "caf/spawn_options.hpp"
+#include "caf/telemetry/histogram.hpp"
 #include "caf/timespan.hpp"
 #include "caf/typed_actor.hpp"
 #include "caf/typed_response_promise.hpp"
@@ -64,6 +65,18 @@ public:
   /// Defines a monotonic clock suitable for measuring intervals.
   using clock_type = std::chrono::steady_clock;
 
+  /// Optional metrics collected by individual actors when configured to do so.
+  struct metrics_t {
+    /// Samples how long the actor needs to process messages.
+    telemetry::dbl_histogram* processing_time = nullptr;
+
+    /// Samples how long messages wait in the mailbox before being processed.
+    telemetry::dbl_histogram* mailbox_time = nullptr;
+
+    /// Counts how many messages are currently waiting in the mailbox.
+    telemetry::int_gauge* mailbox_size = nullptr;
+  };
+
   // -- constructors, destructors, and assignment operators --------------------
 
   local_actor(actor_config& cfg);
@@ -71,6 +84,11 @@ public:
   ~local_actor() override;
 
   void on_destroy() override;
+
+  // This function performs additional steps to initialize actor-specific
+  // metrics. It calls virtual functions and thus cannot run as part of the
+  // constructor.
+  void setup_metrics();
 
   // -- pure virtual modifiers -------------------------------------------------
 
@@ -360,6 +378,10 @@ public:
 
   /// @cond PRIVATE
 
+  auto& builtin_metrics() noexcept {
+    return metrics_;
+  }
+
   template <class ActorHandle>
   ActorHandle eval_opts(spawn_options opts, ActorHandle res) {
     if (has_monitor_flag(opts))
@@ -408,6 +430,8 @@ protected:
 
   /// Factory function for returning initial behavior in function-based actors.
   detail::unique_function<behavior(local_actor*)> initial_behavior_fac_;
+
+  metrics_t metrics_;
 };
 
 } // namespace caf

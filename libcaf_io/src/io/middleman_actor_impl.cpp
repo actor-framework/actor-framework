@@ -68,7 +68,7 @@ void middleman_actor_impl::on_exit() {
 }
 
 const char* middleman_actor_impl::name() const {
-  return "middleman_actor";
+  return "caf.system.middleman-actor";
 }
 
 auto middleman_actor_impl::make_behavior() -> behavior_type {

@@ -60,6 +60,7 @@
 #include "caf/scheduled_actor.hpp"
 #include "caf/sec.hpp"
 #include "caf/stream_manager.hpp"
+#include "caf/telemetry/timer.hpp"
 #include "caf/to_string.hpp"
 
 namespace caf {
@@ -197,6 +198,7 @@ public:
     scheduled_actor* self;
     size_t& handled_msgs;
     size_t max_throughput;
+    bool collect_metrics;
 
     /// Consumes upstream messages.
     intrusive::task_result operator()(size_t, upstream_queue&,
@@ -217,6 +219,24 @@ public:
 
     // Consumes asynchronous messages.
     intrusive::task_result operator()(mailbox_element& x);
+
+    template <class F>
+    intrusive::task_result run(mailbox_element& x, F body) {
+      if (collect_metrics) {
+        auto t0 = std::chrono::steady_clock::now();
+        auto mbox_time = x.seconds_until(t0);
+        auto res = body();
+        if (res != intrusive::task_result::skip) {
+          auto& builtins = self->builtin_metrics();
+          telemetry::timer::observe(builtins.processing_time, t0);
+          builtins.mailbox_time->observe(mbox_time);
+          builtins.mailbox_size->dec();
+        }
+        return res;
+      } else {
+        return body();
+      }
+    }
   };
 
   // -- static helper functions ------------------------------------------------

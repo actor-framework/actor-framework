@@ -38,6 +38,10 @@ public:
 
   /// Invokes cleanup code.
   virtual void kill_proxy(execution_unit* ctx, error reason) = 0;
+
+  void setup_metrics() {
+    // nop
+  }
 };
 
 } // namespace caf

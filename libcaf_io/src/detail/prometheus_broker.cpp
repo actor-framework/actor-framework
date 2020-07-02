@@ -211,7 +211,7 @@ prometheus_broker::~prometheus_broker() {
 }
 
 const char* prometheus_broker::name() const {
-  return "prometheus-broker";
+  return "caf.system.prometheus-broker";
 }
 
 bool prometheus_broker::has_process_metrics() noexcept {

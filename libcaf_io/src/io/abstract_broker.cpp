@@ -366,7 +366,7 @@ abstract_broker::resume(execution_unit* ctx, size_t mt) {
 }
 
 const char* abstract_broker::name() const {
-  return "broker";
+  return "user.broker";
 }
 
 void abstract_broker::init_broker() {

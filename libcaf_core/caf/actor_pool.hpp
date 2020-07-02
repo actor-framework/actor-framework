@@ -105,6 +105,10 @@ public:
 
   void on_destroy() override;
 
+  void setup_metrics() {
+    // nop
+  }
+
 protected:
   void on_cleanup(const error& reason) override;
 

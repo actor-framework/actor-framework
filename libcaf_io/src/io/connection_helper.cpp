@@ -38,8 +38,6 @@ auto autoconnect_timeout = std::chrono::minutes(10);
 
 } // namespace
 
-const char* connection_helper_state::name = "connection_helper";
-
 behavior
 connection_helper(stateful_actor<connection_helper_state>* self, actor b) {
   CAF_LOG_TRACE(CAF_ARG(b));

@@ -169,7 +169,7 @@ caf.mailbox-size{name="printer"} 3
 caf.mailbox-size{name="parser"} 12)");
 }
 
-CAF_TEST(buckets for histograms are configurable via runtime settings){
+CAF_TEST(buckets for histograms are configurable via runtime settings) {
   auto bounds = [](auto&& buckets) {
     std::vector<int64_t> result;
     for (auto&& bucket : buckets)
@@ -208,3 +208,19 @@ CAF_TEST(counter_instance is a shortcut for using the family manually) {
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
+
+#define CHECK_CONTAINS(str)                                                    \
+  CAF_CHECK_NOT_EQUAL(collector.result.find(str), npos)
+
+CAF_TEST(enabling actor metrics per config creates metric instances) {
+  actor_system_config cfg;
+  test_coordinator_fixture<>::init_config(cfg);
+  put(cfg.content, "caf.metrics-filters.actors.includes",
+      std::vector<std::string>{"caf.system.*"});
+  actor_system sys{cfg};
+  test_collector collector;
+  sys.metrics().collect(collector);
+  auto npos = std::string::npos;
+  CHECK_CONTAINS(R"(caf.actor.mailbox-size{name="caf.system.spawn-server"})");
+  CHECK_CONTAINS(R"(caf.actor.mailbox-size{name="caf.system.config-server"})");
+}

@@ -42,7 +42,7 @@ metric_registry::metric_registry() : config_(nullptr) {
 }
 
 metric_registry::metric_registry(const actor_system_config& cfg) {
-  config_ = get_if<settings>(&cfg, "metrics");
+  config_ = get_if<settings>(&cfg, "caf.metrics");
 }
 
 metric_registry::~metric_registry() {

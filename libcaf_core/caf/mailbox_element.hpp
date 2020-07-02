@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <chrono>
 #include <cstddef>
 #include <memory>
 
@@ -56,6 +57,27 @@ public:
 
   /// Stores the payload.
   message payload;
+
+  /// Stores a timestamp for when this element got enqueued.
+  std::chrono::steady_clock::time_point enqueue_time;
+
+  /// Sets `enqueue_time` to the current time.
+  void set_enqueue_time() {
+    enqueue_time = std::chrono::steady_clock::now();
+  }
+
+  /// Returns the time between enqueueing the message and `t`.
+  double seconds_until(std::chrono::steady_clock::time_point t) const {
+    namespace ch = std::chrono;
+    using fractional_seconds = ch::duration<double>;
+    return ch::duration_cast<fractional_seconds>(t - enqueue_time).count();
+  }
+
+  /// Returns the time since calling `set_enqueue_time` in seconds.
+  double seconds_since_enqueue() const {
+    namespace ch = std::chrono;
+    return seconds_until(std::chrono::steady_clock::now());
+  }
 
   mailbox_element() = default;
 

@@ -947,9 +947,8 @@ T unbox(T* x) {
 /// Implementation detail for `TESTEE` and `VARARGS_TESTEE`.
 #define TESTEE_SCAFFOLD(tname)                                                 \
   struct tname##_state : testee_state_base<tname##_state> {                    \
-    static const char* name;                                                   \
+    static inline const char* name = #tname;                                   \
   };                                                                           \
-  const char* tname##_state::name = #tname;                                    \
   using tname##_actor = stateful_actor<tname##_state>
 
 /// Convenience macro for defining an actor named `tname`.

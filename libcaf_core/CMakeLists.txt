@@ -82,6 +82,7 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/detail/get_mac_addresses.cpp
   src/detail/get_process_id.cpp
   src/detail/get_root_uuid.cpp
+  src/detail/glob_match.cpp
   src/detail/ini_consumer.cpp
   src/detail/invoke_result_visitor.cpp
   src/detail/message_builder_element.cpp

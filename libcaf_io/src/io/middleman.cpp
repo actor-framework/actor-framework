@@ -305,9 +305,9 @@ void middleman::start() {
   manager_ = make_middleman_actor(system(), basp);
   // Launch metrics exporters.
   using dict = config_value::dictionary;
-  if (auto ex = get_if<dict>(&system().config(), "metrics.export"))
-    if (auto prom = get_if<dict>(ex, "prometheus-http"))
-      expose_prometheus_metrics(*prom);
+  if (auto prom = get_if<dict>(&system().config(),
+                               "caf.middleman.prometheus-http"))
+    expose_prometheus_metrics(*prom);
 }
 
 void middleman::stop() {

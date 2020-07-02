@@ -44,11 +44,9 @@ behavior pong(stateful_actor<pong_state>*) {
 }
 
 struct ping_state {
-  static const char* name;
+  static inline const char* name = "ping";
   bool had_first_timeout = false; // unused in ping_singleN functions
 };
-
-const char* ping_state::name = "ping";
 
 using ping_actor = stateful_actor<ping_state>;
 

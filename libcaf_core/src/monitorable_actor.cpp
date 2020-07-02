@@ -34,7 +34,7 @@
 namespace caf {
 
 const char* monitorable_actor::name() const {
-  return "monitorable_actor";
+  return "user.monitorable-actor";
 }
 
 void monitorable_actor::attach(attachable_ptr ptr) {

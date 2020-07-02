@@ -262,6 +262,13 @@ using dbl_histogram = histogram<double>;
 using int_counter = counter<int64_t>;
 using int_histogram = histogram<int64_t>;
 
+using dbl_counter_family = metric_family_impl<dbl_counter>;
+using dbl_histogram_family = metric_family_impl<dbl_histogram>;
+using dbl_gauge_family = metric_family_impl<dbl_gauge>;
+using int_counter_family = metric_family_impl<int_counter>;
+using int_histogram_family = metric_family_impl<int_histogram>;
+using int_gauge_family = metric_family_impl<int_gauge>;
+
 } // namespace telemetry
 
 namespace detail {

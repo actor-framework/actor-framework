@@ -48,7 +48,9 @@ struct ms_timestamp {
   ms_timestamp& operator=(const ms_timestamp&) = default;
 };
 
-struct underline_to_hyphen {
+// Converts separators such as '.' and '-' to underlines to follow the
+// Prometheus naming conventions.
+struct separator_to_underline {
   string_view str;
 };
 
@@ -60,7 +62,7 @@ template <class... Ts>
 void append(prometheus::char_buffer&, string_view, Ts&&...);
 
 template <class... Ts>
-void append(prometheus::char_buffer&, underline_to_hyphen, Ts&&...);
+void append(prometheus::char_buffer&, separator_to_underline, Ts&&...);
 
 template <class... Ts>
 void append(prometheus::char_buffer&, char, Ts&&...);
@@ -94,9 +96,18 @@ void append(prometheus::char_buffer& buf, string_view str, Ts&&... xs) {
 }
 
 template <class... Ts>
-void append(prometheus::char_buffer& buf, underline_to_hyphen x, Ts&&... xs) {
-  for (auto c : x.str)
-    buf.emplace_back(c != '-' ? c : '_');
+void append(prometheus::char_buffer& buf, separator_to_underline x,
+            Ts&&... xs) {
+  for (auto c : x.str) {
+    switch (c) {
+      default:
+        buf.emplace_back(c);
+        break;
+      case '-':
+      case '.':
+        buf.emplace_back('_');
+    }
+  }
   append(buf, std::forward<Ts>(xs)...);
 }
 
@@ -131,8 +142,8 @@ append(prometheus::char_buffer& buf, T val, Ts&&... xs) {
 template <class... Ts>
 void append(prometheus::char_buffer& buf, const metric_family* family,
             Ts&&... xs) {
-  append(buf, underline_to_hyphen{family->prefix()}, '_',
-         underline_to_hyphen{family->name()});
+  append(buf, separator_to_underline{family->prefix()}, '_',
+         separator_to_underline{family->name()});
   if (family->unit() != "1"_sv)
     append(buf, '_', family->unit());
   if (family->is_sum())

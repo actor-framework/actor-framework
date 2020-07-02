@@ -79,14 +79,16 @@ public:
 
   const char* name() const override {
     if constexpr (detail::has_name<State>::value) {
-      if constexpr (std::is_convertible<decltype(state.name),
-                                        const char*>::value)
-        return state.name;
-      else
-        return state.name.c_str();
-    } else {
-      return Base::name();
+      if constexpr (!std::is_member_pointer<decltype(&State::name)>::value) {
+        if constexpr (std::is_convertible<decltype(State::name),
+                                          const char*>::value) {
+          return State::name;
+        }
+      } else {
+        non_static_name_member(state.name);
+      }
     }
+    return Base::name();
   }
 
   union {
@@ -95,6 +97,14 @@ public:
     /// its reference count drops to zero.
     State state;
   };
+
+  template <class T>
+  [[deprecated("non-static 'State::name' members have no effect since 0.18")]]
+  // This function only exists to raise a deprecated warning.
+  static void
+  non_static_name_member(const T&) {
+    // nop
+  }
 };
 
 } // namespace caf

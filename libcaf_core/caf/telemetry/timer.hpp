@@ -37,11 +37,8 @@ public:
   }
 
   ~timer() {
-    using dbl_sec = std::chrono::duration<double>;
-    if (h_) {
-      auto end = clock_type::now();
-      h_->observe(std::chrono::duration_cast<dbl_sec>(end - start_).count());
-    }
+    if (h_)
+      observe(h_, start_);
   }
 
   auto histogram_ptr() const noexcept {
@@ -50,6 +47,12 @@ public:
 
   auto started() const noexcept {
     return start_;
+  }
+
+  static void observe(dbl_histogram* h, clock_type::time_point start) {
+    using dbl_sec = std::chrono::duration<double>;
+    auto end = clock_type::now();
+    h->observe(std::chrono::duration_cast<dbl_sec>(end - start).count());
   }
 
 private:
