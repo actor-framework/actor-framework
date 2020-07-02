@@ -76,6 +76,10 @@ struct fixture {
   }
 };
 
+auto make_new_round_result(size_t consumed_items, bool stop_all) {
+  return new_round_result{consumed_items, stop_all};
+}
+
 } // namespace
 
 CAF_TEST_FIXTURE_SCOPE(drr_queue_tests, fixture)
@@ -111,22 +115,22 @@ CAF_TEST(new_round) {
   };
   // Allow f to consume 1, 2, and 3 with a leftover deficit of 1.
   auto round_result = queue.new_round(7, f);
-  CAF_CHECK_EQUAL(round_result, make_new_round_result(true));
+  CAF_CHECK_EQUAL(round_result, make_new_round_result(3, false));
   CAF_CHECK_EQUAL(seq, "123");
   CAF_CHECK_EQUAL(queue.deficit(), 1);
   // Allow f to consume 4 and 5 with a leftover deficit of 0.
   round_result = queue.new_round(8, f);
-  CAF_CHECK_EQUAL(round_result, make_new_round_result(true));
+  CAF_CHECK_EQUAL(round_result, make_new_round_result(2, false));
   CAF_CHECK_EQUAL(seq, "12345");
   CAF_CHECK_EQUAL(queue.deficit(), 0);
   // Allow f to consume 6 with a leftover deficit of 0 (queue is empty).
   round_result = queue.new_round(1000, f);
-  CAF_CHECK_EQUAL(round_result, make_new_round_result(true));
+  CAF_CHECK_EQUAL(round_result, make_new_round_result(1, false));
   CAF_CHECK_EQUAL(seq, "123456");
   CAF_CHECK_EQUAL(queue.deficit(), 0);
   // new_round on an empty queue does nothing.
   round_result = queue.new_round(1000, f);
-  CAF_CHECK_EQUAL(round_result, make_new_round_result(false));
+  CAF_CHECK_EQUAL(round_result, make_new_round_result(0, false));
   CAF_CHECK_EQUAL(seq, "123456");
   CAF_CHECK_EQUAL(queue.deficit(), 0);
 }

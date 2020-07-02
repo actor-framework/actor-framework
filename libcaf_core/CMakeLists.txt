@@ -83,6 +83,7 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/detail/get_mac_addresses.cpp
   src/detail/get_process_id.cpp
   src/detail/get_root_uuid.cpp
+  src/detail/glob_match.cpp
   src/detail/ini_consumer.cpp
   src/detail/invoke_result_visitor.cpp
   src/detail/message_builder_element.cpp
@@ -163,6 +164,12 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/stream_priority_strings.cpp
   src/string_algorithms.cpp
   src/string_view.cpp
+  src/telemetry/collector/prometheus.cpp
+  src/telemetry/label.cpp
+  src/telemetry/label_view.cpp
+  src/telemetry/metric.cpp
+  src/telemetry/metric_family.cpp
+  src/telemetry/metric_registry.cpp
   src/term.cpp
   src/test_credit_controller.cpp
   src/thread_hook.cpp
@@ -305,6 +312,13 @@ caf_add_test_suites(caf-core-test
   string_algorithms
   string_view
   sum_type
+  telemetry.collector.prometheus
+  telemetry.counter
+  telemetry.gauge
+  telemetry.histogram
+  telemetry.label
+  telemetry.metric_registry
+  telemetry.timer
   thread_hook
   tracing_data
   type_id_list

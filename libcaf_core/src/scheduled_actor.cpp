@@ -21,14 +21,12 @@
 #include "caf/actor_ostream.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/config.hpp"
-#include "caf/inbound_path.hpp"
-#include "caf/to_string.hpp"
-
-#include "caf/scheduler/abstract_coordinator.hpp"
-
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
+#include "caf/inbound_path.hpp"
+#include "caf/scheduler/abstract_coordinator.hpp"
+#include "caf/to_string.hpp"
 
 using namespace std::string_literals;
 
@@ -166,6 +164,11 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
   CAF_LOG_SEND_EVENT(ptr);
   auto mid = ptr->mid;
   auto sender = ptr->sender;
+  auto collects_metrics = getf(abstract_actor::collects_metrics_flag);
+  if (collects_metrics) {
+    ptr->set_enqueue_time();
+    metrics_.mailbox_size->inc();
+  }
   switch (mailbox().push_back(std::move(ptr))) {
     case intrusive::inbox_result::unblocked_reader: {
       CAF_LOG_ACCEPT_EVENT(true);
@@ -184,6 +187,9 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
     }
     case intrusive::inbox_result::queue_closed: {
       CAF_LOG_REJECT_EVENT();
+      home_system().base_metrics().rejected_messages->inc();
+      if (collects_metrics)
+        metrics_.mailbox_size->dec();
       if (mid.is_request()) {
         detail::sync_request_bouncer f{exit_reason()};
         f(sender, mid);
@@ -203,7 +209,7 @@ mailbox_element* scheduled_actor::peek_at_next_mailbox_element() {
 // -- overridden functions of local_actor --------------------------------------
 
 const char* scheduled_actor::name() const {
-  return "scheduled_actor";
+  return "user.scheduled-actor";
 }
 
 void scheduled_actor::launch(execution_unit* eu, bool lazy, bool hide) {
@@ -252,8 +258,14 @@ bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
     get_normal_queue().flush_cache();
     get_urgent_queue().flush_cache();
     detail::sync_request_bouncer bounce{fail_state};
-    while (mailbox_.queue().new_round(1000, bounce).consumed_items)
-      ; // nop
+    auto dropped = mailbox_.queue().new_round(1000, bounce).consumed_items;
+    while (dropped > 0) {
+      if (getf(abstract_actor::collects_metrics_flag)) {
+        auto val = static_cast<int64_t>(dropped);
+        metrics_.mailbox_size->dec(val);
+      }
+      dropped = mailbox_.queue().new_round(1000, bounce).consumed_items;
+    }
   }
   // Dispatch to parent's `cleanup` function.
   return super::cleanup(std::move(fail_state), host);
@@ -292,15 +304,17 @@ intrusive::task_result
 scheduled_actor::mailbox_visitor::operator()(size_t, upstream_queue&,
                                              mailbox_element& x) {
   CAF_ASSERT(x.content().match_elements<upstream_msg>());
-  self->current_mailbox_element(&x);
-  CAF_LOG_RECEIVE_EVENT((&x));
-  CAF_BEFORE_PROCESSING(self, x);
-  auto& um = x.content().get_mutable_as<upstream_msg>(0);
-  upstream_msg_visitor f{self, um};
-  visit(f, um.content);
-  CAF_AFTER_PROCESSING(self, invoke_message_result::consumed);
-  return ++handled_msgs < max_throughput ? intrusive::task_result::resume
-                                         : intrusive::task_result::stop_all;
+  return run(x, [&] {
+    self->current_mailbox_element(&x);
+    CAF_LOG_RECEIVE_EVENT((&x));
+    CAF_BEFORE_PROCESSING(self, x);
+    auto& um = x.content().get_mutable_as<upstream_msg>(0);
+    upstream_msg_visitor f{self, um};
+    visit(f, um.content);
+    CAF_AFTER_PROCESSING(self, invoke_message_result::consumed);
+    return ++handled_msgs < max_throughput ? intrusive::task_result::resume
+                                           : intrusive::task_result::stop_all;
+  });
 }
 
 namespace {
@@ -326,9 +340,8 @@ struct downstream_msg_visitor {
     CAF_ASSERT(
       inptr->slots == dm.slots
       || (dm.slots.sender == 0 && dm.slots.receiver == inptr->slots.receiver));
-    // TODO: replace with `if constexpr` when switching to C++17
-    if (std::is_same<T, downstream_msg::close>::value
-        || std::is_same<T, downstream_msg::forced_close>::value) {
+    if constexpr (std::is_same<T, downstream_msg::close>::value
+                  || std::is_same<T, downstream_msg::forced_close>::value) {
       inptr.reset();
       qs_ref.erase_later(dm.slots.receiver);
       selfptr->erase_stream_manager(dm.slots.receiver);
@@ -354,32 +367,37 @@ intrusive::task_result scheduled_actor::mailbox_visitor::operator()(
   size_t, downstream_queue& qs, stream_slot,
   policy::downstream_messages::nested_queue_type& q, mailbox_element& x) {
   CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG(handled_msgs));
-  self->current_mailbox_element(&x);
-  CAF_LOG_RECEIVE_EVENT((&x));
-  CAF_BEFORE_PROCESSING(self, x);
-  CAF_ASSERT(x.content().match_elements<downstream_msg>());
-  auto& dm = x.content().get_mutable_as<downstream_msg>(0);
-  downstream_msg_visitor f{self, qs, q, dm};
-  auto res = visit(f, dm.content);
-  CAF_AFTER_PROCESSING(self, invoke_message_result::consumed);
-  return ++handled_msgs < max_throughput ? res
-                                         : intrusive::task_result::stop_all;
+  return run(x, [&, this] {
+    self->current_mailbox_element(&x);
+    CAF_LOG_RECEIVE_EVENT((&x));
+    CAF_BEFORE_PROCESSING(self, x);
+    CAF_ASSERT(x.content().match_elements<downstream_msg>());
+    auto& dm = x.content().get_mutable_as<downstream_msg>(0);
+    downstream_msg_visitor f{self, qs, q, dm};
+    auto res = visit(f, dm.content);
+    CAF_AFTER_PROCESSING(self, invoke_message_result::consumed);
+    return ++handled_msgs < max_throughput ? res
+                                           : intrusive::task_result::stop_all;
+  });
 }
 
 intrusive::task_result
 scheduled_actor::mailbox_visitor::operator()(mailbox_element& x) {
   CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG(handled_msgs));
-  switch (self->reactivate(x)) {
-    case activation_result::terminated:
-      return intrusive::task_result::stop;
-    case activation_result::success:
-      return ++handled_msgs < max_throughput ? intrusive::task_result::resume
-                                             : intrusive::task_result::stop_all;
-    case activation_result::skipped:
-      return intrusive::task_result::skip;
-    default:
-      return intrusive::task_result::resume;
-  }
+  return run(x, [&, this] {
+    switch (self->reactivate(x)) {
+      case activation_result::terminated:
+        return intrusive::task_result::stop;
+      case activation_result::success:
+        return ++handled_msgs < max_throughput
+                 ? intrusive::task_result::resume
+                 : intrusive::task_result::stop_all;
+      case activation_result::skipped:
+        return intrusive::task_result::skip;
+      default:
+        return intrusive::task_result::resume;
+    }
+  });
 }
 
 resumable::resume_result scheduled_actor::resume(execution_unit* ctx,
@@ -402,17 +420,22 @@ resumable::resume_result scheduled_actor::resume(execution_unit* ctx,
       set_stream_timeout(tout);
     }
   };
-  mailbox_visitor f{this, handled_msgs, max_throughput};
+  mailbox_visitor f{this, handled_msgs, max_throughput,
+                    getf(abstract_actor::collects_metrics_flag)};
   mailbox_element_ptr ptr;
   // Timeout for calling `advance_streams`.
   while (handled_msgs < max_throughput) {
     CAF_LOG_DEBUG("start new DRR round");
     // TODO: maybe replace '3' with configurable / adaptive value?
     // Dispatch on the different message categories in our mailbox.
-    if (!mailbox_.new_round(3, f).consumed_items) {
+    auto consumed = mailbox_.new_round(3, f).consumed_items;
+    if (consumed == 0) {
       reset_timeouts_if_needed();
       if (mailbox().try_block())
         return resumable::awaiting_message;
+    } else {
+      auto signed_val = static_cast<int64_t>(consumed);
+      home_system().base_metrics().processed_messages->inc(signed_val);
     }
     // Check whether the visitor left the actor without behavior.
     if (finalize()) {

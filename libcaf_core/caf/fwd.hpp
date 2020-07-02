@@ -229,6 +229,72 @@ struct subscriber_base;
 
 } // namespace mixin
 
+// -- telemetry API ------------------------------------------------------------
+
+namespace telemetry {
+
+class component;
+class dbl_gauge;
+class int_gauge;
+class label;
+class label_view;
+class metric;
+class metric_family;
+class metric_registry;
+class timer;
+
+enum class metric_type : uint8_t;
+
+template <class ValueType>
+class counter;
+
+template <class ValueType>
+class histogram;
+
+template <class Type>
+class metric_family_impl;
+
+template <class Type>
+class metric_impl;
+
+using dbl_counter = counter<double>;
+using dbl_histogram = histogram<double>;
+using int_counter = counter<int64_t>;
+using int_histogram = histogram<int64_t>;
+
+using dbl_counter_family = metric_family_impl<dbl_counter>;
+using dbl_histogram_family = metric_family_impl<dbl_histogram>;
+using dbl_gauge_family = metric_family_impl<dbl_gauge>;
+using int_counter_family = metric_family_impl<int_counter>;
+using int_histogram_family = metric_family_impl<int_histogram>;
+using int_gauge_family = metric_family_impl<int_gauge>;
+
+} // namespace telemetry
+
+namespace detail {
+
+template <class>
+struct gauge_oracle;
+
+template <>
+struct gauge_oracle<double> {
+  using type = telemetry::dbl_gauge;
+};
+
+template <>
+struct gauge_oracle<int64_t> {
+  using type = telemetry::int_gauge;
+};
+
+} // namespace detail
+
+namespace telemetry {
+
+template <class ValueType>
+using gauge = typename detail::gauge_oracle<ValueType>::type;
+
+} // namespace telemetry
+
 // -- I/O classes --------------------------------------------------------------
 
 namespace io {

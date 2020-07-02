@@ -68,11 +68,13 @@ public:
                   "statically typed actors can only send() to other "
                   "statically typed actors; use anon_send() when "
                   "communicating to groups");
+    auto self = dptr();
     // TODO: consider whether it's feasible to track messages to groups
     if (dest) {
-      auto self = dptr();
       dest->eq_impl(make_message_id(P), self->ctrl(), self->context(),
                     std::forward<Ts>(xs)...);
+    } else {
+      self->home_system().base_metrics().rejected_messages->inc();
     }
   }
 
@@ -137,11 +139,13 @@ public:
     static_assert(!statically_typed<Subtype>(),
                   "statically typed actors are not allowed to send to groups");
     // TODO: consider whether it's feasible to track messages to groups
+    auto self = dptr();
     if (dest) {
-      auto self = dptr();
       auto& clock = self->system().clock();
       clock.schedule_message(timeout, dest, self->ctrl(),
                              make_message(std::forward<Ts>(xs)...));
+    } else {
+      self->home_system().base_metrics().rejected_messages->inc();
     }
   }
 

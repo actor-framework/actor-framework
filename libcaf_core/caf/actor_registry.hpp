@@ -33,6 +33,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 #include "caf/fwd.hpp"
+#include "caf/telemetry/int_gauge.hpp"
 
 namespace caf {
 
@@ -121,7 +122,6 @@ private:
 
   actor_registry(actor_system& sys);
 
-  std::atomic<size_t> running_;
   mutable std::mutex running_mtx_;
   mutable std::condition_variable running_cv_;
 

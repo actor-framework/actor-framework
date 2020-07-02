@@ -34,6 +34,7 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
 #include "caf/detail/get_root_uuid.hpp"
+#include "caf/detail/prometheus_broker.hpp"
 #include "caf/detail/ripemd_160.hpp"
 #include "caf/detail/safe_equal.hpp"
 #include "caf/detail/set_thread_name.hpp"
@@ -302,10 +303,21 @@ void middleman::start() {
   // Spawn utility actors.
   auto basp = named_broker<basp_broker>("BASP");
   manager_ = make_middleman_actor(system(), basp);
+  // Launch metrics exporters.
+  using dict = config_value::dictionary;
+  if (auto prom = get_if<dict>(&system().config(),
+                               "caf.middleman.prometheus-http"))
+    expose_prometheus_metrics(*prom);
 }
 
 void middleman::stop() {
   CAF_LOG_TRACE("");
+  {
+    std::unique_lock<std::mutex> guard{background_brokers_mx_};
+    for (auto& hdl : background_brokers_)
+      anon_send_exit(hdl, exit_reason::user_shutdown);
+    background_brokers_.clear();
+  }
   backend().dispatch([=] {
     CAF_LOG_TRACE("");
     // managers_ will be modified while we are stopping each manager,
@@ -345,7 +357,7 @@ void middleman::init(actor_system_config& cfg) {
     cfg.set("middleman.attach-utility-actors", true)
       .set("middleman.manual-multiplexing", true);
   }
-  // add remote group module to config
+  // Add remote group module to config.
   struct remote_groups : group_module {
   public:
     remote_groups(middleman& parent)
@@ -379,8 +391,51 @@ void middleman::init(actor_system_config& cfg) {
   // Compute and set ID for this network node.
   auto this_node = node_id::default_data::local(cfg);
   system().node_.swap(this_node);
-  // give config access to slave mode implementation
+  // Give config access to slave mode implementation.
   cfg.slave_mode_fun = &middleman::exec_slave_mode;
+}
+
+expected<uint16_t> middleman::expose_prometheus_metrics(uint16_t port,
+                                                        const char* in,
+                                                        bool reuse) {
+  // Create the doorman for the broker.
+  doorman_ptr dptr;
+  if (auto maybe_dptr = backend().new_tcp_doorman(port, in, reuse))
+    dptr = std::move(*maybe_dptr);
+  else
+    return std::move(maybe_dptr.error());
+  auto actual_port = dptr->port();
+  // Spawn the actor and store its handle in background_brokers_.
+  using impl = detail::prometheus_broker;
+  actor_config cfg{&backend()};
+  auto hdl = system().spawn_impl<impl, hidden>(cfg, std::move(dptr));
+  std::list<actor> ls{std::move(hdl)};
+  std::unique_lock<std::mutex> guard{background_brokers_mx_};
+  background_brokers_.splice(background_brokers_.end(), ls);
+  return actual_port;
+}
+
+void middleman::expose_prometheus_metrics(const config_value::dictionary& cfg) {
+  // Read port, address and reuse flag from the config.
+  uint16_t port = 0;
+  if (auto cfg_port = get_if<uint16_t>(&cfg, "port")) {
+    port = *cfg_port;
+  } else {
+    CAF_LOG_ERROR("missing mandatory config field: "
+                  "metrics.export.prometheus-http.port");
+    return;
+  }
+  const char* addr = nullptr;
+  if (auto cfg_addr = get_if<std::string>(&cfg, "address"))
+    if (*cfg_addr != "" && *cfg_addr != "0.0.0.0")
+      addr = cfg_addr->c_str();
+  auto reuse = get_or(cfg, "reuse", false);
+  if (auto res = expose_prometheus_metrics(port, addr, reuse)) {
+    CAF_LOG_INFO("expose Prometheus metrics at port" << *res);
+  } else {
+    CAF_LOG_ERROR("failed to expose Prometheus metrics:" << res.error());
+    return;
+  }
 }
 
 actor_system::module::id_t middleman::id() const {

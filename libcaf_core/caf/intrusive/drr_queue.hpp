@@ -95,25 +95,27 @@ public:
   /// @returns `true` if at least one item was consumed, `false` otherwise.
   template <class F>
   new_round_result new_round(deficit_type quantum, F& consumer) {
+    size_t consumed = 0;
     if (!super::empty()) {
       deficit_ += quantum;
       auto ptr = next();
       if (ptr == nullptr)
-        return {false, false};
+        return {0, false};
       do {
+        ++consumed;
         switch (consumer(*ptr)) {
           default:
             break;
           case task_result::stop:
-            return {true, false};
+            return {consumed, false};
           case task_result::stop_all:
-            return {true, true};
+            return {consumed, true};
         }
         ptr = next();
       } while (ptr != nullptr);
-      return {true, false};
+      return {consumed, false};
     }
-    return {false, false};
+    return {consumed, false};
   }
 
 private:

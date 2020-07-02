@@ -24,7 +24,7 @@
 namespace caf::io {
 
 struct connection_helper_state {
-  static const char* name;
+  static inline const char* name = "caf.system.connection-helper";
 };
 
 CAF_IO_EXPORT behavior

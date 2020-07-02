@@ -55,6 +55,10 @@ public:
     mh_(what->content());
   }
 
+  void setup_metrics() {
+    // nop
+  }
+
 private:
   message_handler mh_;
 };

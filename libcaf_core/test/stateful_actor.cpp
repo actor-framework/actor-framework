@@ -123,21 +123,19 @@ CAF_TEST(stateful actors without explicit name use the name of the parent) {
   struct state {
     // empty
   };
-  test_name<state>("scheduled_actor");
+  test_name<state>("user.scheduled-actor");
 }
 
-CAF_TEST(states with C string names override the default name) {
-  struct state {
-    const char* name = "testee";
-  };
-  test_name<state>("testee");
-}
+namespace {
 
-CAF_TEST(states with STL string names override the default name) {
-  struct state {
-    std::string name = "testee2";
-  };
-  test_name<state>("testee2");
+struct named_state {
+  static inline const char* name = "testee";
+};
+
+} // namespace
+
+CAF_TEST(states with static C string names override the default name) {
+  test_name<named_state>("testee");
 }
 
 CAF_TEST(states can accept constructor arguments and provide a behavior) {
@@ -167,10 +165,9 @@ CAF_TEST(states can accept constructor arguments and provide a behavior) {
 }
 
 CAF_TEST(states optionally take the self pointer as first argument) {
-  struct state_type {
+  struct state_type : named_state {
     event_based_actor* self;
     int x;
-    const char* name = "testee";
     state_type(event_based_actor* self, int x) : self(self), x(x) {
       // nop
     }
@@ -190,10 +187,9 @@ CAF_TEST(states optionally take the self pointer as first argument) {
 }
 
 CAF_TEST(typed actors can use typed_actor_pointer as self pointer) {
-  struct state_type {
+  struct state_type : named_state {
     using self_pointer = typed_adder_actor::pointer_view;
     self_pointer self;
-    const char* name = "testee";
     int value;
     state_type(self_pointer self, int x) : self(self), value(x) {
       // nop

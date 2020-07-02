@@ -186,7 +186,7 @@ private:
   template <size_t I, class F>
   detail::enable_if_t<I == num_queues, new_round_result>
   new_round_recursion(deficit_type, F&) noexcept {
-    return {false, false};
+    return {0, false};
   }
 
   template <size_t I, class F>
@@ -202,7 +202,8 @@ private:
       inc_deficit_recursion<I + 1>(quantum);
       return res;
     }
-    return res | new_round_recursion<I + 1>(quantum, f);
+    auto sub = new_round_recursion<I + 1>(quantum, f);
+    return {res.consumed_items + sub.consumed_items, sub.stop_all};
   }
 
   template <size_t I>

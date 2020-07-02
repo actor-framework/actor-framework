@@ -28,6 +28,7 @@ endfunction()
 # -- add library target --------------------------------------------------------
 
 add_library(libcaf_io_obj OBJECT ${CAF_IO_HEADERS}
+  src/detail/prometheus_broker.cpp
   src/detail/socket_guard.cpp
   src/io/abstract_broker.cpp
   src/io/basp/header.cpp
@@ -95,6 +96,7 @@ target_include_directories(caf-io-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/test
 target_link_libraries(caf-io-test PRIVATE CAF::test)
 
 caf_add_test_suites(caf-io-test
+  detail.prometheus_broker
   io.basp.message_queue
   io.basp_broker
   io.broker

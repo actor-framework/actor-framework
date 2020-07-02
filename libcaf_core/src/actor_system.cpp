@@ -46,10 +46,8 @@ struct kvstate {
   using topic_set = std::unordered_set<std::string>;
   std::unordered_map<key_type, std::pair<mapped_type, subscriber_set>> data;
   std::unordered_map<strong_actor_ptr, topic_set> subscribers;
-  static const char* name;
+  static inline const char* name = "caf.system.config-server";
 };
-
-const char* kvstate::name = "config_server";
 
 behavior config_serv_impl(stateful_actor<kvstate>* self) {
   CAF_LOG_TRACE("");
@@ -148,10 +146,8 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
 // on another node, users can spwan actors remotely.
 
 struct spawn_serv_state {
-  static const char* name;
+  static inline const char* name = "caf.system.spawn-server";
 };
-
-const char* spawn_serv_state::name = "spawn_server";
 
 behavior spawn_serv_impl(stateful_actor<spawn_serv_state>* self) {
   CAF_LOG_TRACE("");
@@ -200,13 +196,13 @@ actor_system::module::~module() {
 const char* actor_system::module::name() const noexcept {
   switch (id()) {
     case scheduler:
-      return "Scheduler";
+      return "scheduler";
     case middleman:
-      return "Middleman";
+      return "middleman";
     case openssl_manager:
-      return "OpenSSL Manager";
+      return "openssl-manager";
     case network_manager:
-      return "Network Manager";
+      return "metwork-manager";
     default:
       return "???";
   }
@@ -216,9 +212,58 @@ actor_system::networking_module::~networking_module() {
   // nop
 }
 
+namespace {
+
+auto make_base_metrics(telemetry::metric_registry& reg) {
+  return actor_system::base_metrics_t{
+    // Initialize the base metrics.
+    reg.counter_singleton("caf.system", "rejected-messages",
+                          "Number of rejected messages.", "1", true),
+    reg.counter_singleton("caf.system", "processed-messages",
+                          "Number of processed messages.", "1", true),
+    reg.gauge_singleton("caf.system", "running-actors",
+                        "Number of currently running actors."),
+    reg.gauge_singleton("caf.system", "queued-messages",
+                        "Number of messages in all mailboxes.", "1", true),
+  };
+}
+
+auto make_actor_metric_families(telemetry::metric_registry& reg) {
+  // Handling a single message generally should take microseconds. Going up to
+  // several milliseconds usually indicates a problem (or blocking operations)
+  // but may still be expected for very compute-intense tasks. Single messages
+  // that approach seconds to process most likely indicate a severe issue.
+  // Hence, the default bucket settings focus on micro- and milliseconds.
+  std::array<double, 9> default_buckets{{
+    .00001, // 10us
+    .0001,  // 100us
+    .0005,  // 500us
+    .001,   // 1ms
+    .01,    // 10ms
+    .1,     // 100ms
+    .5,     // 500ms
+    1.,     // 1s
+    5.,     // 5s
+  }};
+  return actor_system::actor_metric_families_t{
+    reg.histogram_family<double>(
+      "caf.actor", "processing-time", {"name"}, default_buckets,
+      "Time an actor needs to process messages.", "seconds"),
+    reg.histogram_family<double>(
+      "caf.actor", "mailbox-time", {"name"}, default_buckets,
+      "Time a message waits in the mailbox before processing.", "seconds"),
+    reg.gauge_family("caf.actor", "mailbox-size", {"name"},
+                     "Number of messages in the mailbox."),
+  };
+}
+
+} // namespace
+
 actor_system::actor_system(actor_system_config& cfg)
   : profiler_(cfg.profiler),
     ids_(0),
+    metrics_(cfg),
+    base_metrics_(make_base_metrics(metrics_)),
     logger_(new caf::logger(*this), false),
     registry_(*this),
     groups_(*this),
@@ -231,6 +276,17 @@ actor_system::actor_system(actor_system_config& cfg)
   CAF_SET_LOGGER_SYS(this);
   for (auto& hook : cfg.thread_hooks_)
     hook->init(*this);
+  // Cache some configuration parameters for faster lookups at runtime.
+  using string_list = std::vector<std::string>;
+  if (auto lst = get_if<string_list>(&cfg,
+                                     "caf.metrics-filters.actors.includes"))
+    metrics_actors_includes_ = std::move(*lst);
+  if (auto lst = get_if<string_list>(&cfg,
+                                     "caf.metrics-filters.actors.excludes"))
+    metrics_actors_excludes_ = std::move(*lst);
+  if (!metrics_actors_includes_.empty())
+    actor_metric_families_ = make_actor_metric_families(metrics_);
+  // Spin up modules.
   for (auto& f : cfg.module_factories) {
     auto mod_ptr = f(*this);
     modules_[mod_ptr->id()].reset(mod_ptr);
@@ -342,11 +398,6 @@ actor_system::~actor_system() {
   std::unique_lock<std::mutex> guard{logger_dtor_mtx_};
   while (!logger_dtor_done_)
     logger_dtor_cv_.wait(guard);
-}
-
-/// Returns the host-local identifier for this system.
-const node_id& actor_system::node() const {
-  return node_;
 }
 
 /// Returns the scheduler instance.

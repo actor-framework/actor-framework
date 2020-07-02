@@ -26,6 +26,7 @@ Contents
    ManagingGroupsOfWorkers
    Streaming
    Testing
+   Metrics
 
 .. toctree::
    :maxdepth: 2

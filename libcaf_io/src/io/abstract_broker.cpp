@@ -22,6 +22,7 @@
 #include "caf/make_counted.hpp"
 #include "caf/none.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
+#include "caf/span.hpp"
 
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
@@ -102,6 +103,10 @@ void abstract_broker::write(connection_handle hdl, size_t bs, const void* buf) {
   auto first = reinterpret_cast<const byte*>(buf);
   auto last = first + bs;
   out.insert(out.end(), first, last);
+}
+
+void abstract_broker::write(connection_handle hdl, span<const byte> buf) {
+  write(hdl, buf.size(), buf.data());
 }
 
 void abstract_broker::flush(connection_handle hdl) {
@@ -361,7 +366,7 @@ abstract_broker::resume(execution_unit* ctx, size_t mt) {
 }
 
 const char* abstract_broker::name() const {
-  return "broker";
+  return "user.broker";
 }
 
 void abstract_broker::init_broker() {

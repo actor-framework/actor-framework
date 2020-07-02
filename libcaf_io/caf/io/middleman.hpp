@@ -19,12 +19,15 @@
 #pragma once
 
 #include <chrono>
+#include <list>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <thread>
 #include <vector>
 
 #include "caf/actor_system.hpp"
+#include "caf/config_value.hpp"
 #include "caf/detail/io_export.hpp"
 #include "caf/detail/unique_function.hpp"
 #include "caf/expected.hpp"
@@ -251,6 +254,13 @@ public:
                                        std::forward<Ts>(xs)...);
   }
 
+  /// Tries to open a port for exposing system metrics in the Prometheus text
+  /// format via HTTP.
+  /// @experimental
+  expected<uint16_t> expose_prometheus_metrics(uint16_t port,
+                                               const char* in = nullptr,
+                                               bool reuse = false);
+
   /// Returns a middleman using the default network backend.
   static actor_system::module* make(actor_system&, detail::type_list<>);
 
@@ -313,6 +323,8 @@ private:
     return system().spawn_class<Impl, Os>(cfg);
   }
 
+  void expose_prometheus_metrics(const config_value::dictionary& cfg);
+
   expected<strong_actor_ptr>
   remote_spawn_impl(const node_id& nid, std::string& name, message& args,
                     std::set<std::string> s, timespan timeout);
@@ -328,16 +340,27 @@ private:
 
   static int exec_slave_mode(actor_system&, const actor_system_config&);
 
-  // environment
+  /// The actor environment.
   actor_system& system_;
-  // prevents backend from shutting down unless explicitly requested
+
+  /// Prevents backend from shutting down unless explicitly requested.
   network::multiplexer::supervisor_ptr backend_supervisor_;
-  // runs the backend
+
+  /// Runs the backend.
   std::thread thread_;
-  // keeps track of "singleton-like" brokers
+
+  /// Keeps track of "singleton-like" brokers.
   std::map<std::string, actor> named_brokers_;
-  // actor offering asynchronous IO by managing this singleton instance
+
+  /// Offers an asynchronous IO by managing this singleton instance.
   middleman_actor manager_;
+
+  /// Protects `background_brokers_`.
+  mutable std::mutex background_brokers_mx_;
+
+  /// Stores hidden background actors that get killed automatically when the
+  /// actor systems shuts down.
+  std::list<actor> background_brokers_;
 };
 
 } // namespace caf::io

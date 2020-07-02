@@ -97,7 +97,7 @@ void basp_broker::on_exit() {
 }
 
 const char* basp_broker::name() const {
-  return "basp-broker";
+  return "caf.system.basp-broker";
 }
 
 behavior basp_broker::make_behavior() {

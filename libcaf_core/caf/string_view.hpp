@@ -294,6 +294,14 @@ inline std::string to_string(string_view x) {
 
 } // namespace caf
 
+namespace caf::literals {
+
+constexpr string_view operator""_sv(const char* cstr, size_t len) {
+  return {cstr, len};
+}
+
+} // namespace caf::literals
+
 namespace std {
 
 CAF_CORE_EXPORT std::ostream& operator<<(std::ostream& out, caf::string_view);
