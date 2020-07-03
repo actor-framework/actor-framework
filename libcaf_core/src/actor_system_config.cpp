@@ -30,7 +30,6 @@
 #include "caf/detail/config_consumer.hpp"
 #include "caf/detail/gcd.hpp"
 #include "caf/detail/parser/read_config.hpp"
-#include "caf/detail/parser/read_ini.hpp"
 #include "caf/detail/parser/read_string.hpp"
 #include "caf/message_builder.hpp"
 #include "caf/pec.hpp"
@@ -50,7 +49,7 @@ actor_system_config::~actor_system_config() {
 }
 
 // in this config class, we have (1) hard-coded defaults that are overridden
-// by (2) INI-file contents that are in turn overridden by (3) CLI arguments
+// by (2) config file contents that are in turn overridden by (3) CLI arguments
 
 actor_system_config::actor_system_config()
   : cli_helptext_printed(false),
@@ -61,14 +60,14 @@ actor_system_config::actor_system_config()
   stream_desired_batch_complexity = defaults::stream::desired_batch_complexity;
   stream_max_batch_delay = defaults::stream::max_batch_delay;
   stream_credit_round_interval = defaults::stream::credit_round_interval;
-  // fill our options vector for creating INI and CLI parsers
+  // fill our options vector for creating config file and CLI parsers
   using std::string;
   opt_group{custom_options_, "global"}
     .add<bool>("help,h?", "print help text to STDERR and exit")
     .add<bool>("long-help", "print long help text to STDERR and exit")
     .add<bool>("dump-config", "print configuration to STDERR and exit")
     .add<string>(config_file_path, "config-file",
-                 "set config file (default: caf-application.ini)");
+                 "set config file (default: caf-application.conf)");
   opt_group{custom_options_, "stream"}
     .add<timespan>(stream_desired_batch_complexity, "desired-batch-complexity",
                    "processing time per batch")
@@ -211,31 +210,31 @@ settings actor_system_config::dump_content() const {
 }
 
 error actor_system_config::parse(int argc, char** argv,
-                                 const char* ini_file_cstr) {
+                                 const char* config_file_cstr) {
   string_list args;
   if (argc > 1)
     args.assign(argv + 1, argv + argc);
-  return parse(std::move(args), ini_file_cstr);
+  return parse(std::move(args), config_file_cstr);
 }
 
-error actor_system_config::parse(int argc, char** argv, std::istream& ini) {
+error actor_system_config::parse(int argc, char** argv, std::istream& conf) {
   string_list args;
   if (argc > 1)
     args.assign(argv + 1, argv + argc);
-  return parse(std::move(args), ini);
+  return parse(std::move(args), conf);
 }
 
 namespace {
 
 struct config_iter {
-  std::istream* ini;
+  std::istream* conf;
   char ch;
 
-  explicit config_iter(std::istream* istr) : ini(istr) {
-    ini->get(ch);
+  explicit config_iter(std::istream* istr) : conf(istr) {
+    conf->get(ch);
   }
 
-  config_iter() : ini(nullptr), ch('\0') {
+  config_iter() : conf(nullptr), ch('\0') {
     // nop
   }
 
@@ -248,7 +247,7 @@ struct config_iter {
   }
 
   inline config_iter& operator++() {
-    ini->get(ch);
+    conf->get(ch);
     return *this;
   }
 };
@@ -256,7 +255,7 @@ struct config_iter {
 struct config_sentinel {};
 
 bool operator!=(config_iter iter, config_sentinel) {
-  return !iter.ini->fail();
+  return !iter.conf->fail();
 }
 
 struct indentation {
@@ -348,18 +347,6 @@ error actor_system_config::parse(string_list args,
     return err;
   if (config_file_path == "$DEFAULT") {
     std::ifstream conf{"caf-application.conf"};
-    // TODO: The .ini parser is deprecated. Remove with CAF 0.19.
-    if (!conf.is_open()) {
-      conf.open("caf-application.ini");
-      if (conf.is_open()) {
-        // Consume the ini file here, because the parse() overload that takes
-        // an istream assumes the new config format.
-        if (auto err = parse_ini(conf, custom_options_, content))
-          return err;
-        std::ifstream dummy;
-        return parse(std::move(args), dummy);
-      }
-    }
     return parse(std::move(args), conf);
   }
   std::ifstream conf{config_file_path};
@@ -418,14 +405,6 @@ actor_system_config::parse_config_file(const char* filename,
   std::ifstream f{filename};
   if (!f.is_open())
     return make_error(sec::cannot_open_file, filename);
-  // TODO: The .ini parser is deprecated. Remove this block with CAF 0.19.
-  string_view fname{filename, strlen(filename)};
-  if (ends_with(fname, ".ini")) {
-    settings result;
-    if (auto err = parse_ini(f, opts, result))
-      return err;
-    return result;
-  }
   return parse_config(f, opts);
 }
 
@@ -451,19 +430,6 @@ error actor_system_config::parse_config(std::istream& source,
   detail::config_consumer consumer{opts, result};
   parser_state<config_iter, config_sentinel> res{config_iter{&source}};
   detail::parser::read_config(res, consumer);
-  if (res.i != res.e)
-    return make_error(res.code, res.line, res.column);
-  return none;
-}
-
-error actor_system_config::parse_ini(std::istream& source,
-                                     const config_option_set& opts,
-                                     settings& result) {
-  if (!source)
-    return make_error(sec::runtime_error, "source stream invalid");
-  detail::config_consumer consumer{opts, result};
-  parser_state<config_iter, config_sentinel> res{config_iter{&source}};
-  detail::parser::read_ini(res, consumer);
   if (res.i != res.e)
     return make_error(res.code, res.line, res.column);
   return none;

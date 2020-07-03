@@ -99,7 +99,7 @@ public:
   /// values.
   virtual settings dump_content() const;
 
-  /// Sets a config by using its INI name `config_name` to `config_value`.
+  /// Sets a config by using its name `config_name` to `config_value`.
   template <class T>
   actor_system_config& set(string_view name, T&& value) {
     return set_impl(name, config_value{std::forward<T>(value)});
@@ -113,16 +113,15 @@ public:
 
   /// Parses `args` as tuple of strings containing CLI options and tries to open
   /// `config_file_cstr` as config file. The parsers tries to open
-  /// `caf-application.conf` or `caf-application.ini` (deprecated) if
-  /// `config_file_cstr` is `nullptr`.
+  /// `caf-application.conf` if `config_file_cstr` is `nullptr`.
   error parse(string_list args, const char* config_file_cstr = nullptr);
 
   /// Parses the CLI options `{argc, argv}` and `config` as configuration file.
   error parse(int argc, char** argv, std::istream& config);
 
   /// Parses the CLI options `{argc, argv}` and tries to open `config_file_cstr`
-  /// as config file. The parsers tries to open `caf-application.conf` or
-  /// `caf-application.ini` (deprecated) if `config_file_cstr` is `nullptr`.
+  /// as config file. The parsers tries to open `caf-application.conf` if
+  /// `config_file_cstr` is `nullptr`.
   error parse(int argc, char** argv, const char* config_file_cstr = nullptr);
 
   /// Allows other nodes to spawn actors created by `fun`
@@ -247,7 +246,7 @@ public:
 
   // -- parsing parameters -----------------------------------------------------
 
-  /// Configures the file path for the INI file, `caf-application.ini` per
+  /// Configures the file path for the config file, `caf-application.conf` per
   /// default.
   std::string config_file_path;
 
@@ -324,10 +323,6 @@ protected:
   config_option_set custom_options_;
 
 private:
-  // TODO: deprecated. Remove with CAF 0.19.
-  static error parse_ini(std::istream& source, const config_option_set& opts,
-                         settings& result);
-
   actor_system_config& set_impl(string_view name, config_value value);
 
   error extract_config_file_path(string_list& args);
