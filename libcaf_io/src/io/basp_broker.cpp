@@ -105,7 +105,7 @@ behavior basp_broker::make_behavior() {
   set_down_handler([](local_actor* ptr, down_msg& x) {
     static_cast<basp_broker*>(ptr)->handle_down_msg(x);
   });
-  if (get_or(config(), "middleman.enable-automatic-connections", false)) {
+  if (get_or(config(), "caf.middleman.enable-automatic-connections", false)) {
     CAF_LOG_DEBUG("enable automatic connections");
     // open a random port and store a record for our peers how to
     // connect to this broker directly in the configuration server
@@ -120,7 +120,7 @@ behavior basp_broker::make_behavior() {
     }
     automatic_connections = true;
   }
-  auto heartbeat_interval = get_or(config(), "middleman.heartbeat-interval",
+  auto heartbeat_interval = get_or(config(), "caf.middleman.heartbeat-interval",
                                    defaults::middleman::heartbeat_interval);
   if (heartbeat_interval > 0) {
     CAF_LOG_DEBUG("enable heartbeat" << CAF_ARG(heartbeat_interval));
@@ -585,7 +585,7 @@ void basp_broker::learned_new_node_indirectly(const node_id& nid) {
   // connection to the routing table; hence, spawning our helper here exactly
   // once and there is no need to track in-flight connection requests.
   using namespace detail;
-  auto tmp = get_or(config(), "middleman.attach-utility-actors", false)
+  auto tmp = get_or(config(), "caf.middleman.attach-utility-actors", false)
                ? system().spawn<hidden>(connection_helper, this)
                : system().spawn<detached + hidden>(connection_helper, this);
   auto sender = actor_cast<strong_actor_ptr>(tmp);

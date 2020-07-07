@@ -283,7 +283,7 @@ logger* logger::current_logger() {
 bool logger::accepts(unsigned level, string_view cname) {
   if (level > cfg_.verbosity)
     return false;
-  return !std::any_of(component_blacklist.begin(), component_blacklist.end(),
+  return std::none_of(global_filter_.begin(), global_filter_.end(),
                       [=](string_view name) { return name == cname; });
 }
 
@@ -302,51 +302,48 @@ logger::~logger() {
 void logger::init(actor_system_config& cfg) {
   CAF_IGNORE_UNUSED(cfg);
   namespace lg = defaults::logger;
+  using std::string;
   using string_list = std::vector<std::string>;
-  auto blacklist = get_if<string_list>(&cfg, "logger.component-blacklist");
-  if (blacklist)
-    component_blacklist = move_if_optional(blacklist);
-  // Parse the configured log level. We only store a string_view to the
-  // verbosity levels, so we make sure we actually get a string pointer here
-  // (and not an optional<string>).
-  const std::string* verbosity = get_if<std::string>(&cfg, "logger.verbosity");
-  auto set_level = [&](auto& var, auto var_default, string_view var_key) {
-    // User-provided overrides have the highest priority.
-    if (const std::string* var_override = get_if<std::string>(&cfg, var_key)) {
-      var = *var_override;
-      return;
-    }
-    // If present, "logger.verbosity" overrides the defaults for both file and
-    // console verbosity level.
-    if (verbosity) {
-      var = *verbosity;
-      return;
-    }
-    var = var_default;
+  auto get_verbosity = [&cfg](string_view key) -> unsigned {
+    if (auto str = get_if<string>(&cfg, key))
+      return to_level_int(*str);
+    return CAF_LOG_LEVEL_QUIET;
   };
-  string_view file_str;
-  string_view console_str;
-  set_level(file_str, lg::file_verbosity, "logger.file-verbosity");
-  set_level(console_str, lg::console_verbosity, "logger.console-verbosity");
-  cfg_.file_verbosity = to_level_int(file_str);
-  cfg_.console_verbosity = to_level_int(console_str);
+  auto read_filter = [&cfg](string_list& var, string_view key) {
+    if (auto lst = get_if<string_list>(&cfg, key))
+      var = std::move(*lst);
+  };
+  cfg_.file_verbosity = get_verbosity("caf.logger.file.verbosity");
+  cfg_.console_verbosity = get_verbosity("caf.logger.console.verbosity");
   cfg_.verbosity = std::max(cfg_.file_verbosity, cfg_.console_verbosity);
-  // Parse the format string.
-  file_format_ =
-    parse_format(get_or(cfg, "logger.file-format", lg::file_format));
-  console_format_ = parse_format(get_or(cfg,"logger.console-format",
-                                        lg::console_format));
-  // Set flags.
-  if (get_or(cfg, "logger.inline-output", false))
-    cfg_.inline_output = true;
-  auto con = get_or(cfg, "logger.console", lg::console);
-  if (con == "colored") {
-    cfg_.console_coloring = true;
-  } else if (con != "uncolored") {
-    // Disable console output if neither 'colored' nor 'uncolored' are present.
-    cfg_.console_verbosity = CAF_LOG_LEVEL_QUIET;
-    cfg_.verbosity = cfg_.file_verbosity;
+  if (cfg_.verbosity == CAF_LOG_LEVEL_QUIET)
+    return;
+  if (cfg_.file_verbosity > CAF_LOG_LEVEL_QUIET
+      && cfg_.console_verbosity > CAF_LOG_LEVEL_QUIET) {
+    read_filter(file_filter_, "caf.logger.file.excluded-components");
+    read_filter(console_filter_, "caf.logger.console.excluded-components");
+    std::sort(file_filter_.begin(), file_filter_.end());
+    std::sort(console_filter_.begin(), console_filter_.end());
+    std::set_union(file_filter_.begin(), file_filter_.end(),
+                   console_filter_.begin(), console_filter_.end(),
+                   std::back_inserter(global_filter_));
+  } else if (cfg_.file_verbosity > CAF_LOG_LEVEL_QUIET) {
+    read_filter(file_filter_, "caf.logger.file.excluded-components");
+    global_filter_ = file_filter_;
+  } else {
+    read_filter(console_filter_, "caf.logger.console.excluded-components");
+    global_filter_ = console_filter_;
   }
+  // Parse the format string.
+  file_format_
+    = parse_format(get_or(cfg, "caf.logger.file.format", lg::file::format));
+  console_format_ = parse_format(
+    get_or(cfg, "caf.logger.console.format", lg::console::format));
+  // Set flags.
+  if (get_or(cfg, "caf.logger.inline-output", false))
+    cfg_.inline_output = true;
+  // If not set to `false`, CAF enables colored output when writing to TTYs.
+  cfg_.console_coloring = get_or(cfg, "caf.logger.console.colored", true);
 }
 
 bool logger::open_file() {
@@ -530,12 +527,17 @@ void logger::run() {
 
 void logger::handle_file_event(const event& x) {
   // Print to file if available.
-  if (file_ && x.level <= file_verbosity())
+  if (file_ && x.level <= file_verbosity()
+      && none_of(file_filter_.begin(), file_filter_.end(),
+                 [&x](string_view name) { return name == x.category_name; }))
     render(file_, file_format_, x);
 }
 
 void logger::handle_console_event(const event& x) {
   if (x.level > console_verbosity())
+    return;
+  if (std::any_of(console_filter_.begin(), console_filter_.end(),
+                  [&x](string_view name) { return name == x.category_name; }))
     return;
   if (cfg_.console_coloring) {
     switch (x.level) {
@@ -572,21 +574,20 @@ void logger::handle_event(const event& x) {
 
 void logger::log_first_line() {
   auto e = CAF_LOG_MAKE_EVENT(0, CAF_LOG_COMPONENT, CAF_LOG_LEVEL_DEBUG, "");
-  auto make_message = [&](string_view config_name, std::string default_value) {
-    std::string msg = "level = ";
-    msg += get_or(system_.config(), config_name, default_value);
+  auto make_message = [&](int level, const auto& filter) {
+    auto lvl_str = log_level_name[level];
+    std::string msg = "verbosity = ";
+    msg.insert(msg.end(), lvl_str.begin(), lvl_str.end());
     msg += ", node = ";
     msg += to_string(system_.node());
-    msg += ", component-blacklist = ";
-    msg += deep_to_string(component_blacklist);
+    msg += ", excluded-components = ";
+    msg += deep_to_string(filter);
     return msg;
   };
   namespace lg = defaults::logger;
-  e.message = make_message("logger.file-verbosity",
-                           to_string(lg::file_verbosity));
+  e.message = make_message(cfg_.file_verbosity, file_filter_);
   handle_file_event(e);
-  e.message = make_message("logger.console-verbosity",
-                           to_string(lg::console_verbosity));
+  e.message = make_message(cfg_.console_verbosity, console_filter_);
   handle_console_event(e);
 }
 
@@ -599,8 +600,8 @@ void logger::start() {
   parent_thread_ = std::this_thread::get_id();
   if (verbosity() == CAF_LOG_LEVEL_QUIET)
     return;
-  file_name_ = get_or(system_.config(), "logger.file-name",
-                  defaults::logger::file_name);
+  file_name_ = get_or(system_.config(), "caf.logger.file.path",
+                      defaults::logger::file::path);
   if (file_name_.empty()) {
     // No need to continue if console and log file are disabled.
     if (console_verbosity() == CAF_LOG_LEVEL_QUIET)

@@ -39,7 +39,7 @@ datagram_handler::datagram_handler(default_multiplexer& backend_ref,
                                    native_socket sockfd)
   : event_handler(backend_ref, sockfd),
     max_consecutive_reads_(get_or(backend().system().config(),
-                                  "middleman.max-consecutive-reads",
+                                  "caf.middleman.max-consecutive-reads",
                                   defaults::middleman::max_consecutive_reads)),
     max_datagram_size_(receive_buffer_size),
     rd_buf_(receive_buffer_size),

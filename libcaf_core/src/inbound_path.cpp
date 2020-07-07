@@ -78,7 +78,7 @@ inbound_path::inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
                        << detail::global_meta_object(in_type)->type_name
                        << "at slot" << id.receiver << "from" << hdl);
   if (auto str = get_if<std::string>(&self()->system().config(),
-                                     "stream.credit-policy")) {
+                                     "caf.stream.credit-policy")) {
     if (*str == "testing")
       controller_.reset(new detail::test_credit_controller(self()));
     else if (*str == "size")

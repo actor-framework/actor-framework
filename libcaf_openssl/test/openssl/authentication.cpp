@@ -54,9 +54,9 @@ public:
   config() {
     load<io::middleman>();
     load<openssl::manager>();
-    set("middleman.manual-multiplexing", true);
-    set("middleman.attach-utility-actors", true);
-    set("scheduler.policy", "testing");
+    set("caf.middleman.manual-multiplexing", true);
+    set("caf.middleman.attach-utility-actors", true);
+    set("caf.scheduler.policy", "testing");
   }
 
   static std::string data_dir() {

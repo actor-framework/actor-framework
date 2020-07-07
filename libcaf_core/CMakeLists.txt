@@ -84,7 +84,6 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/detail/get_process_id.cpp
   src/detail/get_root_uuid.cpp
   src/detail/glob_match.cpp
-  src/detail/ini_consumer.cpp
   src/detail/invoke_result_visitor.cpp
   src/detail/message_builder_element.cpp
   src/detail/message_data.cpp
@@ -237,14 +236,12 @@ caf_add_test_suites(caf-core-test
   detail.bounds_checker
   detail.config_consumer
   detail.ieee_754
-  detail.ini_consumer
   detail.limited_vector
   detail.meta_object
   detail.parse
   detail.parser.read_bool
   detail.parser.read_config
   detail.parser.read_floating_point
-  detail.parser.read_ini
   detail.parser.read_number
   detail.parser.read_number_or_timespan
   detail.parser.read_signed_integer

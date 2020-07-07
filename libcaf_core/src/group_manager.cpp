@@ -55,7 +55,7 @@ void await_all_locals_down(actor_system& sys, std::initializer_list<actor> xs) {
       ys.push_back(x);
     }
   // Don't block when using the test coordinator.
-  if (auto policy = get_if<std::string>(&sys.config(), "scheduler.policy");
+  if (auto policy = get_if<std::string>(&sys.config(), "caf.scheduler.policy");
       policy && *policy != "testing")
     self->wait_for(ys);
 }

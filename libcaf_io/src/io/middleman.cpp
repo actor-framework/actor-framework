@@ -87,7 +87,7 @@ void middleman::init_global_meta_objects() {
 }
 
 actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
-  auto impl = get_or(sys.config(), "middleman.network-backend",
+  auto impl = get_or(sys.config(), "caf.middleman.network-backend",
                      defaults::middleman::network_backend);
   if (impl == "testing")
     return new mm_impl<network::test_multiplexer>(sys);
@@ -272,7 +272,7 @@ strong_actor_ptr middleman::remote_lookup(std::string name,
 void middleman::start() {
   CAF_LOG_TRACE("");
   // Launch backend.
-  if (!get_or(config(), "middleman.manual-multiplexing", false))
+  if (!get_or(config(), "caf.middleman.manual-multiplexing", false))
     backend_supervisor_ = backend().make_supervisor();
   // The only backend that returns a `nullptr` by default is the
   // `test_multiplexer` which does not have its own thread but uses the main
@@ -332,7 +332,7 @@ void middleman::stop() {
       }
     }
   });
-  if (!get_or(config(), "middleman.manual-multiplexing", false)) {
+  if (!get_or(config(), "caf.middleman.manual-multiplexing", false)) {
     backend_supervisor_.reset();
     if (thread_.joinable())
       thread_.join();
@@ -343,7 +343,7 @@ void middleman::stop() {
   named_brokers_.clear();
   scoped_actor self{system(), true};
   self->send_exit(manager_, exit_reason::kill);
-  if (!get_or(config(), "middleman.attach-utility-actors", false))
+  if (!get_or(config(), "caf.middleman.attach-utility-actors", false))
     self->wait_for(manager_);
   destroy(manager_);
 }
@@ -351,11 +351,11 @@ void middleman::stop() {
 void middleman::init(actor_system_config& cfg) {
   // Note: logging is not available at this stage.
   // Never detach actors when using the testing multiplexer.
-  auto network_backend = get_or(cfg, "middleman.network-backend",
+  auto network_backend = get_or(cfg, "caf.middleman.network-backend",
                                 defaults::middleman::network_backend);
   if (network_backend == "testing") {
-    cfg.set("middleman.attach-utility-actors", true)
-      .set("middleman.manual-multiplexing", true);
+    cfg.set("caf.middleman.attach-utility-actors", true)
+      .set("caf.middleman.manual-multiplexing", true);
   }
   // Add remote group module to config.
   struct remote_groups : group_module {

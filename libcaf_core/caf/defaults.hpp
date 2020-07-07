@@ -68,33 +68,19 @@ constexpr auto relaxed_sleep_duration = timespan{10'000'000};
 
 } // namespace caf::defaults::work_stealing
 
-namespace caf::defaults::logger {
+namespace caf::defaults::logger::file {
 
-constexpr auto default_log_level = string_view {
-#if CAF_LOG_LEVEL == CAF_LOG_LEVEL_TRACE
-  "trace"
-#elif CAF_LOG_LEVEL == CAF_LOG_LEVEL_DEBUG
-  "debug"
-#elif CAF_LOG_LEVEL == CAF_LOG_LEVEL_INFO
-  "info"
-#elif CAF_LOG_LEVEL == CAF_LOG_LEVEL_WARNING
-  "warning"
-#elif CAF_LOG_LEVEL == CAF_LOG_LEVEL_ERROR
-  "error"
-#else
-  "quiet"
-#endif
-};
+constexpr auto format = string_view{"%r %c %p %a %t %C %M %F:%L %m%n"};
+constexpr auto path = string_view{"actor_log_[PID]_[TIMESTAMP]_[NODE].log"};
 
-constexpr auto console = string_view{"none"};
-constexpr auto console_format = string_view{"%m"};
-constexpr auto console_verbosity = default_log_level;
-constexpr auto file_format = string_view{"%r %c %p %a %t %C %M %F:%L %m%n"};
-constexpr auto file_verbosity = default_log_level;
-constexpr auto file_name
-  = string_view{"actor_log_[PID]_[TIMESTAMP]_[NODE].log"};
+} // namespace caf::defaults::logger::file
 
-} // namespace caf::defaults::logger
+namespace caf::defaults::logger::console {
+
+constexpr auto colored = true;
+constexpr auto format = string_view{"[%c:%p] %d %m"};
+
+} // namespace caf::defaults::logger::console
 
 namespace caf::defaults::middleman {
 

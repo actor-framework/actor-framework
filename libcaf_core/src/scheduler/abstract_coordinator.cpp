@@ -247,8 +247,9 @@ void abstract_coordinator::start() {
 
 void abstract_coordinator::init(actor_system_config& cfg) {
   namespace sr = defaults::scheduler;
-  max_throughput_ = get_or(cfg, "scheduler.max-throughput", sr::max_throughput);
-  if (auto num_workers = get_if<size_t>(&cfg, "scheduler.max-threads"))
+  max_throughput_ = get_or(cfg, "caf.scheduler.max-throughput",
+                           sr::max_throughput);
+  if (auto num_workers = get_if<size_t>(&cfg, "caf.scheduler.max-threads"))
     num_workers_ = *num_workers;
   else
     num_workers_ = default_thread_count();

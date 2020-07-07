@@ -176,10 +176,10 @@ void bootstrap(actor_system& system, const string& wdir,
                   std::ostringstream oss;
                   oss << cmd;
                   if (slave.cpu_slots > 0)
-                    oss << " --caf#scheduler.max-threads=" << slave.cpu_slots;
-                  oss << " --caf#slave-mode"
-                      << " --caf#slave-name=" << slave.host
-                      << " --caf#bootstrap-node=";
+                    oss << " --caf.scheduler.max-threads=" << slave.cpu_slots;
+                  oss << " --caf.slave-mode"
+                      << " --caf.slave-name=" << slave.host
+                      << " --caf.bootstrap-node=";
                   bool is_first = true;
                   interfaces::traverse({protocol::ipv4, protocol::ipv6},
                                        [&](const char*, protocol::network,
@@ -216,7 +216,7 @@ void bootstrap(actor_system& system, const string& wdir,
   }
   // run (and wait for) master
   std::ostringstream oss;
-  oss << cmd << " --caf#slave-nodes=" << slaveslist << " " << join(args, " ");
+  oss << cmd << " --caf.slave-nodes=" << slaveslist << " " << join(args, " ");
   run_ssh(system, wdir, oss.str(), master.host);
 }
 

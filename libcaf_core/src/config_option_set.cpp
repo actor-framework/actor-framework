@@ -236,9 +236,7 @@ config_option_set::parse(settings& config,
 }
 
 config_option_set::option_pointer
-config_option_set::cli_long_name_lookup(string_view input) const {
-  // We accept "caf#" prefixes for backward compatibility, but ignore them.
-  auto name = input.substr(input.compare(0, 4, "caf#") != 0 ? 0u : 4u);
+config_option_set::cli_long_name_lookup(string_view name) const {
   // Extract category and long name.
   string_view category;
   string_view long_name;

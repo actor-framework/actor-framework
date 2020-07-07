@@ -105,10 +105,10 @@ class fixture {
 public:
   fixture(bool autoconn = false)
     : sys(cfg.load<io::middleman, network::test_multiplexer>()
-            .set("middleman.enable-automatic-connections", autoconn)
-            .set("middleman.workers", size_t{0})
-            .set("scheduler.policy", autoconn ? "testing" : "stealing")
-            .set("middleman.attach-utility-actors", autoconn)) {
+            .set("caf.middleman.enable-automatic-connections", autoconn)
+            .set("caf.middleman.workers", size_t{0})
+            .set("caf.scheduler.policy", autoconn ? "testing" : "stealing")
+            .set("caf.middleman.attach-utility-actors", autoconn)) {
     app_ids.emplace_back(to_string(defaults::middleman::app_identifier));
     auto& mm = sys.middleman();
     mpx_ = dynamic_cast<network::test_multiplexer*>(&mm.backend());
