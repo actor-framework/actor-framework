@@ -96,6 +96,9 @@ private:
       using squashed_type = detail::squashed_int_t<T>;
       auto& squashed_x = reinterpret_cast<squashed_type&>(x);
       CAF_WRITE_INSPECTOR_TRY(dref.apply(squashed_x))
+    } else if constexpr (detail::is_inspectable<Subtype, T>::value) {
+      using caf::detail::inspect;
+      CAF_WRITE_INSPECTOR_TRY(inspect(dref, x));
     } else if constexpr (detail::can_apply_v<Subtype, decltype(x)>) {
       CAF_WRITE_INSPECTOR_TRY(dref.apply(x))
     } else if constexpr (std::is_array<T>::value) {
@@ -126,9 +129,8 @@ private:
       }
       CAF_WRITE_INSPECTOR_TRY(dref.end_sequence())
     } else {
-      static_assert(detail::is_inspectable<Subtype, T>::value);
-      using caf::detail::inspect;
-      CAF_WRITE_INSPECTOR_TRY(inspect(dref, x));
+      static_assert(detail::always_false_v<T>,
+                    "T is neither inspectable nor default-applicable");
     }
     return true;
   }

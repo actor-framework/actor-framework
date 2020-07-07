@@ -590,6 +590,9 @@ struct is_same_ish
 template <class>
 struct always_false : std::false_type {};
 
+template <class T>
+constexpr bool always_false_v = always_false<T>::value;
+
 /// Utility trait for removing const inside a `map<K, V>::value_type`.
 template <class T>
 struct deconst_kvp {
