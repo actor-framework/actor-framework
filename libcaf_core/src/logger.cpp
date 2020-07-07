@@ -527,12 +527,17 @@ void logger::run() {
 
 void logger::handle_file_event(const event& x) {
   // Print to file if available.
-  if (file_ && x.level <= file_verbosity())
+  if (file_ && x.level <= file_verbosity()
+      && none_of(file_filter_.begin(), file_filter_.end(),
+                 [&x](string_view name) { return name == x.category_name; }))
     render(file_, file_format_, x);
 }
 
 void logger::handle_console_event(const event& x) {
   if (x.level > console_verbosity())
+    return;
+  if (std::any_of(console_filter_.begin(), console_filter_.end(),
+                  [&x](string_view name) { return name == x.category_name; }))
     return;
   if (cfg_.console_coloring) {
     switch (x.level) {
