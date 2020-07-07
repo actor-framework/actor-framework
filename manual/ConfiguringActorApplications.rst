@@ -124,8 +124,8 @@ object *before* initializing an actor system with it.
 
 .. _system-config-options:
 
-Command Line Options and Configuration Files
---------------------------------------------
+Program Options
+---------------
 
 CAF organizes program options in categories and parses CLI arguments as well as
 configuration files. CLI arguments override values in the configuration file
@@ -137,13 +137,13 @@ adds three options to the ``global`` category.
    :language: C++
    :lines: 206-218
 
-We create a new ``global`` category in ``custom_options_``.
-Each following call to ``add`` then appends individual options to the
-category. The first argument to ``add`` is the associated variable. The
-second argument is the name for the parameter, optionally suffixed with a
-comma-separated single-character short name. The short name is only considered
-for CLI parsing and allows users to abbreviate commonly used option names. The
-third and final argument to ``add`` is a help text.
+We create a new ``global`` category in ``custom_options_``. Each following call
+to ``add`` then appends individual options to the category. The first argument
+to ``add`` is the associated variable. The second argument is the name for the
+parameter, optionally suffixed with a comma-separated single-character short
+name. The short name is only considered for CLI parsing and allows users to
+abbreviate commonly used option names. The third and final argument to ``add``
+is a help text.
 
 The custom ``config`` class allows end users to set the port for the application
 to 42 with either ``-p 42`` (short name) or ``--port=42`` (long name). The long
@@ -152,27 +152,28 @@ option name is prefixed by the category when using a different category than
 end users have to type ``--foo.port=42`` when using the long name. Short names
 are unaffected by the category, but have to be unique.
 
-Boolean options do not require arguments. The member variable
-``server_mode`` is set to ``true`` if the command line contains
-either ``--server-mode`` or ``-s``.
+Boolean options do not require arguments. The member variable ``server_mode`` is
+set to ``true`` if the command line contains either ``--server-mode`` or ``-s``.
 
 The example uses member variables for capturing user-provided settings for
-simplicity. However, this is not required. For example,
-``add<bool>(...)`` allows omitting the first argument entirely. All
-values of the configuration are accessible with ``get_or``. Note that
-all global options can omit the ``"global."`` prefix.
+simplicity. However, this is not required. For example, ``add<bool>(...)``
+allows omitting the first argument entirely. All values of the configuration are
+accessible with ``get_or``. Note that all global options can omit the
+``"global."`` prefix.
 
-CAF adds the program options ``help`` (with short names ``-h``
-and ``-?``) as well as ``long-help`` to the ``global``
-category.
+CAF adds the program options ``help`` (with short names ``-h`` and ``-?``) as
+well as ``long-help`` to the ``global`` category.
+
+Configuration Files
+-------------------
 
 The default name for the configuration file is ``caf-application.conf``. Users
-can change the file name and path by passing ``--config-file=<path>`` on the
-command line.
+can change the file path by passing ``--config-file=<path>`` on the command
+line.
 
 The syntax for the configuration files provides a clean JSON-like grammar that
-is similar to commonly used configuration formats such as the file format of
-``lighttpd``. In a nutshell, instead of writing:
+is similar to other commonly used configuration formats. In a nutshell, instead
+of writing:
 
 .. code-block:: JSON
 
@@ -341,31 +342,33 @@ system-config-options_ are silently ignored if logging is disabled.
 
 .. _log-output-file-name:
 
-File Name
-~~~~~~~~~
+File
+~~~~
 
-The output file is generated from the template configured by
-``logger-file-name``. This template supports the following variables.
+File output is disabled per default. Setting ``caf.logger.file.verbosity`` to a
+valid severity level causes CAF to print log events to the file specified in
+``caf.logger.file.path``.
 
-+----------------+--------------------------------+
-| **Variable**   | **Output**                     |
-+----------------+--------------------------------+
-| ``[PID]``      | The OS-specific process ID.    |
-+----------------+--------------------------------+
-| ``[TIMESTAMP]``| The UNIX timestamp on startup. |
-+----------------+--------------------------------+
-| ``[NODE]``     | The node ID of the CAF system. |
-+----------------+--------------------------------+
+The ``caf.logger.file.path`` may contain one or more of the following
+placeholders:
+
++-----------------+--------------------------------+
+| **Variable**    | **Output**                     |
++-----------------+--------------------------------+
+| ``[PID]``       | The OS-specific process ID.    |
++-----------------+--------------------------------+
+| ``[TIMESTAMP]`` | The UNIX timestamp on startup. |
++-----------------+--------------------------------+
+| ``[NODE]``      | The node ID of the CAF system. |
++-----------------+--------------------------------+
 
 .. _log-output-console:
 
 Console
 ~~~~~~~
 
-Console output is disabled per default. Setting ``logger-console`` to
-either ``"uncolored"`` or ``"colored"`` prints log events to
-``std::clog``. Using the ``"colored"`` option will print the
-log events in different colors depending on the severity level.
+Console output is disabled per default. Setting ``caf.logger.console.verbosity``
+to a valid severity level causes CAF to print log events to ``std::clog``.
 
 .. _log-output-format-strings:
 
@@ -373,47 +376,46 @@ Format Strings
 ~~~~~~~~~~~~~~
 
 CAF uses log4j-like format strings for configuring printing of individual
-events via ``logger-file-format`` and
-``logger-console-format``. Note that format modifiers are not supported
+events via ``caf.logger.file.format`` and
+``caf.logger.console.format``. Note that format modifiers are not supported
 at the moment. The recognized field identifiers are:
 
-+--------------+-----------------------------------------------------------------------------------------------------------------------------+
-| **Character**| **Output**                                                                                                                  |
-+--------------+-----------------------------------------------------------------------------------------------------------------------------+
-| ``c``        | The category/component.                                                                                                     |
-+--------------+-----------------------------------------------------------------------------------------------------------------------------+
-| ``C``        | The full qualifier of the current function. For example, the qualifier of ``void ns::foo::bar()`` is printed as ``ns.foo``. |
-+--------------+-----------------------------------------------------------------------------------------------------------------------------+
-| ``d``        | The date in ISO 8601 format, i.e., ``"YYYY-MM-DDThh:mm:ss"``.                                                               |
-+--------------+-----------------------------------------------------------------------------------------------------------------------------+
-| ``F``        | The file name.                                                                                                              |
-+--------------+-----------------------------------------------------------------------------------------------------------------------------+
-| ``L``        | The line number.                                                                                                            |
-+--------------+-----------------------------------------------------------------------------------------------------------------------------+
-| ``m``        | The user-defined log message.                                                                                               |
-+--------------+-----------------------------------------------------------------------------------------------------------------------------+
-| ``M``        | The name of the current function. For example, the name of ``void ns::foo::bar()`` is printed as ``bar``.                   |
-+--------------+-----------------------------------------------------------------------------------------------------------------------------+
-| ``n``        | A newline.                                                                                                                  |
-+--------------+-----------------------------------------------------------------------------------------------------------------------------+
-| ``p``        | The priority (severity level).                                                                                              |
-+--------------+-----------------------------------------------------------------------------------------------------------------------------+
-| ``r``        | Elapsed time since starting the application in milliseconds.                                                                |
-+--------------+-----------------------------------------------------------------------------------------------------------------------------+
-| ``t``        | ID of the current thread.                                                                                                   |
-+--------------+-----------------------------------------------------------------------------------------------------------------------------+
-| ``a``        | ID of the current actor (or ``actor0`` when not logging inside an actor).                                                   |
-+--------------+-----------------------------------------------------------------------------------------------------------------------------+
-| ``%``        | A single percent sign.                                                                                                      |
-+--------------+-----------------------------------------------------------------------------------------------------------------------------+
++---------------+-----------------------------------------------------------------------------------------------------------------------------+
+| **Character** | **Output**                                                                                                                  |
++---------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``c``         | The category/component.                                                                                                     |
++---------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``C``         | The full qualifier of the current function. For example, the qualifier of ``void ns::foo::bar()`` is printed as ``ns.foo``. |
++---------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``d``         | The date in ISO 8601 format, i.e., ``"YYYY-MM-DDThh:mm:ss"``.                                                               |
++---------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``F``         | The file name.                                                                                                              |
++---------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``L``         | The line number.                                                                                                            |
++---------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``m``         | The user-defined log message.                                                                                               |
++---------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``M``         | The name of the current function. For example, the name of ``void ns::foo::bar()`` is printed as ``bar``.                   |
++---------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``n``         | A newline.                                                                                                                  |
++---------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``p``         | The priority (severity level).                                                                                              |
++---------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``r``         | Elapsed time since starting the application in milliseconds.                                                                |
++---------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``t``         | ID of the current thread.                                                                                                   |
++---------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``a``         | ID of the current actor (or ``actor0`` when not logging inside an actor).                                                   |
++---------------+-----------------------------------------------------------------------------------------------------------------------------+
+| ``%``         | A single percent sign.                                                                                                      |
++---------------+-----------------------------------------------------------------------------------------------------------------------------+
 
 .. _log-output-filtering:
 
 Filtering
 ~~~~~~~~~
 
-The two configuration options ``logger.component-blacklist`` and
-``logger.(file|console)-verbosity`` reduce the amount of generated log events.
-The former is a list of excluded component names and the latter can increase the
-reported severity level (but not decrease it beyond the level defined at compile
-time).
+The two configuration options ``caf.logger.file.excluded-components`` and
+``caf.logger.console.excluded-components`` reduce the amount of generated log
+events in addition to the minimum severity level. These parameters are lists of
+component names that shall be excluded from any output.
