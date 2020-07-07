@@ -320,7 +320,7 @@ actor_system::actor_system(actor_system_config& cfg)
     };
     sched_conf sc = stealing;
     namespace sr = defaults::scheduler;
-    auto sr_policy = get_or(cfg, "scheduler.policy", sr::policy);
+    auto sr_policy = get_or(cfg, "caf.scheduler.policy", sr::policy);
     if (sr_policy == "sharing")
       sc = sharing;
     else if (sr_policy == "testing")

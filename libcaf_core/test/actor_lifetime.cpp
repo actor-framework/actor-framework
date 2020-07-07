@@ -109,7 +109,7 @@ behavior tester(event_based_actor* self, const actor& aut) {
 
 struct config : actor_system_config {
   config() {
-    set("scheduler.policy", "testing");
+    set("caf.scheduler.policy", "testing");
   }
 };
 

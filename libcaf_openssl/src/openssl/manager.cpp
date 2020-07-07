@@ -104,7 +104,7 @@ void manager::stop() {
   CAF_LOG_TRACE("");
   scoped_actor self{system(), true};
   self->send_exit(manager_, exit_reason::kill);
-  if (!get_or(config(), "middleman.attach-utility-actors", false))
+  if (!get_or(config(), "caf.middleman.attach-utility-actors", false))
     self->wait_for(manager_);
   manager_ = nullptr;
 }

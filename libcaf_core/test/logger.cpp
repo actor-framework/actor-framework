@@ -61,7 +61,9 @@ namespace {
 
 struct fixture {
   fixture() {
-    cfg.set("scheduler.policy", "testing");
+    cfg.set("caf.scheduler.policy", "testing");
+    cfg.set("caf.logger.file.verbosity", "debug");
+    cfg.set("caf.logger.file.path", "");
   }
 
   void add(logger::field_type kind) {
@@ -161,10 +163,7 @@ CAF_TEST(parse_default_format_strings) {
   add(logger::message_field);
   add(logger::newline_field);
   CAF_CHECK_EQUAL(logger::parse_format(file_format), lf);
-#if CAF_LOG_LEVEL >= 0
-  // Not parsed when compiling without logging enabled.
   CAF_CHECK_EQUAL(sys.logger().file_format(), lf);
-#endif
 }
 
 CAF_TEST(rendering) {

@@ -45,7 +45,7 @@ public:
     // OpenSSL to buffer data internally and report "pending" data after a read
     // operation. This will trigger `must_read_more` in the SSL read policy
     // with high probability.
-    set("middleman.max-consecutive-reads", 1);
+    set("caf.middleman.max-consecutive-reads", 1);
   }
 };
 

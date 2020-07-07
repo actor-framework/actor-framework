@@ -530,7 +530,7 @@ struct fixture {
     if (auto err = cfg.parse(caf::test::engine::argc(),
                              caf::test::engine::argv()))
       CAF_FAIL("parsing the config failed: " << to_string(err));
-    cfg.set("scheduler.policy", "testing");
+    cfg.set("caf.scheduler.policy", "testing");
     return cfg;
   }
 

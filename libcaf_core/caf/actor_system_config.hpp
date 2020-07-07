@@ -326,10 +326,6 @@ private:
   actor_system_config& set_impl(string_view name, config_value value);
 
   error extract_config_file_path(string_list& args);
-
-  /// Adjusts the content of the configuration, e.g., for ensuring backwards
-  /// compatibility with older options.
-  error adjust_content();
 };
 
 /// Returns all user-provided configuration parameters.

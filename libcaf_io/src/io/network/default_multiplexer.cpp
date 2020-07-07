@@ -589,8 +589,8 @@ void default_multiplexer::init() {
   }
 #endif
   namespace sr = defaults::scheduler;
-  max_throughput_
-    = get_or(system().config(), "scheduler.max-throughput", sr::max_throughput);
+  max_throughput_ = get_or(system().config(), "caf.scheduler.max-throughput",
+                           sr::max_throughput);
 }
 
 bool default_multiplexer::poll_once(bool block) {

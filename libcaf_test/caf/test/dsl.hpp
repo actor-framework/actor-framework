@@ -674,16 +674,15 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   static Config& init_config(Config& cfg) {
-    cfg.set("logger.file-verbosity", "quiet");
     if (auto err = cfg.parse(caf::test::engine::argc(),
                              caf::test::engine::argv()))
       CAF_FAIL("failed to parse config: " << to_string(err));
-    cfg.set("scheduler.policy", "testing");
-    cfg.set("logger.inline-output", true);
-    cfg.set("middleman.network-backend", "testing");
-    cfg.set("middleman.manual-multiplexing", true);
-    cfg.set("middleman.workers", size_t{0});
-    cfg.set("stream.credit-policy", "testing");
+    cfg.set("caf.scheduler.policy", "testing");
+    cfg.set("caf.logger.inline-output", true);
+    cfg.set("caf.middleman.network-backend", "testing");
+    cfg.set("caf.middleman.manual-multiplexing", true);
+    cfg.set("caf.middleman.workers", size_t{0});
+    cfg.set("caf.stream.credit-policy", "testing");
     return cfg;
   }
 
