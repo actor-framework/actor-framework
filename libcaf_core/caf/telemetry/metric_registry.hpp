@@ -462,7 +462,7 @@ public:
   template <class ValueType = int64_t>
   histogram<ValueType>*
   histogram_singleton(string_view prefix, string_view name,
-                      string_view helptext, span_t<ValueType> upper_bounds,
+                      span_t<ValueType> upper_bounds, string_view helptext,
                       string_view unit = "1", bool is_sum = false) {
     span_t<string_view> lbls;
     auto fptr = histogram_family<ValueType>(prefix, name, lbls, upper_bounds,

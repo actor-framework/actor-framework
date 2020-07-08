@@ -325,9 +325,9 @@ same pattern as the member functions for counters and gauges.
 
   template <class ValueType = int64_t>
   auto* histogram_singleton(string_view prefix, string_view name,
-                            string_view helptext,
                             span<const ValueType> default_upper_bounds,
-                            string_view unit = "1", bool is_sum = false);
+                            string_view helptext, string_view unit = "1",
+                            bool is_sum = false);
 
 Compared to the member functions for counters and guages, histograms require one
 addition argument for the default bucket upper bounds.
