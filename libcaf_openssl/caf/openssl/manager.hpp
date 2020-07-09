@@ -62,6 +62,9 @@ public:
   /// of peers.
   bool authentication_enabled();
 
+  /// Adds module-specific options to the config before loading the module.
+  static void add_module_options(actor_system_config& cfg);
+
   /// Returns an OpenSSL manager using the default network backend.
   /// @warning Creating an OpenSSL manager will fail when using
   //           a custom implementation.

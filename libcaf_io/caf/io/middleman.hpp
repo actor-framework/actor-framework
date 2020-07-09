@@ -261,6 +261,9 @@ public:
                                                const char* in = nullptr,
                                                bool reuse = false);
 
+  /// Adds module-specific options to the config before loading the module.
+  static void add_module_options(actor_system_config& cfg);
+
   /// Returns a middleman using the default network backend.
   static actor_system::module* make(actor_system&, detail::type_list<>);
 

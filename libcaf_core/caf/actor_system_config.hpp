@@ -152,6 +152,7 @@ public:
   /// Loads module `T` with optional template parameters `Ts...`.
   template <class T, class... Ts>
   actor_system_config& load() {
+    T::add_module_options(*this);
     module_factories.push_back([](actor_system& sys) -> actor_system::module* {
       return T::make(sys, detail::type_list<Ts...>{});
     });
@@ -318,6 +319,11 @@ public:
   ///          parser otherwise.
   static error parse_config(std::istream& source, const config_option_set& opts,
                             settings& result);
+
+  /// @private
+  config_option_set& custom_options() {
+    return custom_options_;
+  }
 
 protected:
   config_option_set custom_options_;

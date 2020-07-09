@@ -110,32 +110,6 @@ actor_system_config::actor_system_config()
     .add<string>("format", "format for printed console lines")
     .add<string>("verbosity", "minimum severity level for console output")
     .add<string_list>("excluded-components", "excluded components on console");
-  opt_group{custom_options_, "caf.middleman"}
-    .add<std::string>("network-backend",
-                      "either 'default' or 'asio' (if available)")
-    .add<std::vector<string>>("app-identifiers",
-                              "valid application identifiers of this node")
-    .add<bool>("enable-automatic-connections",
-               "enables automatic connection management")
-    .add<size_t>("max-consecutive-reads",
-                 "max. number of consecutive reads per broker")
-    .add<timespan>("heartbeat-interval", "interval of heartbeat messages")
-    .add<bool>("attach-utility-actors",
-               "schedule utility actors instead of dedicating threads")
-    .add<bool>("manual-multiplexing",
-               "disables background activity of the multiplexer")
-    .add<size_t>("workers", "number of deserialization workers");
-  opt_group(custom_options_, "caf.openssl")
-    .add<string>(openssl_certificate, "certificate",
-                 "path to the PEM-formatted certificate file")
-    .add<string>(openssl_key, "key",
-                 "path to the private key file for this node")
-    .add<string>(openssl_passphrase, "passphrase",
-                 "passphrase to decrypt the private key")
-    .add<string>(openssl_capath, "capath",
-                 "path to an OpenSSL-style directory of trusted certificates")
-    .add<string>(openssl_cafile, "cafile",
-                 "path to a file of concatenated PEM-formatted certificates");
 }
 
 settings actor_system_config::dump_content() const {

@@ -109,8 +109,7 @@ void manager::stop() {
   manager_ = nullptr;
 }
 
-void manager::init(actor_system_config&) {
-  CAF_LOG_TRACE("");
+void manager::init(actor_system_config& cfg) {
   ERR_load_crypto_strings();
   OPENSSL_add_all_algorithms_conf();
   SSL_library_init();
@@ -148,6 +147,22 @@ bool manager::authentication_enabled() {
   return !cfg.openssl_certificate.empty() || !cfg.openssl_key.empty()
          || !cfg.openssl_passphrase.empty() || !cfg.openssl_capath.empty()
          || !cfg.openssl_cafile.empty();
+}
+
+void manager::add_module_options(actor_system_config& cfg) {
+  config_option_adder(cfg.custom_options(), "caf.openssl")
+    .add<std::string>(cfg.openssl_certificate, "certificate",
+                      "path to the PEM-formatted certificate file")
+    .add<std::string>(cfg.openssl_key, "key",
+                      "path to the private key file for this node")
+    .add<std::string>(cfg.openssl_passphrase, "passphrase",
+                      "passphrase to decrypt the private key")
+    .add<std::string>(
+      cfg.openssl_capath, "capath",
+      "path to an OpenSSL-style directory of trusted certificates")
+    .add<std::string>(
+      cfg.openssl_cafile, "cafile",
+      "path to a file of concatenated PEM-formatted certificates");
 }
 
 actor_system::module* manager::make(actor_system& sys, detail::type_list<>) {

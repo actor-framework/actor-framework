@@ -86,6 +86,27 @@ void middleman::init_global_meta_objects() {
   caf::init_global_meta_objects<id_block::io_module>();
 }
 
+void middleman::add_module_options(actor_system_config& cfg) {
+  config_option_adder{cfg.custom_options(), "caf.middleman"}
+    .add<std::string>("network-backend",
+                      "either 'default' or 'asio' (if available)")
+    .add<std::vector<std::string>>("app-identifiers",
+                                   "valid application identifiers of this node")
+    .add<bool>("enable-automatic-connections",
+               "enables automatic connection management")
+    .add<size_t>("max-consecutive-reads",
+                 "max. number of consecutive reads per broker")
+    .add<timespan>("heartbeat-interval", "interval of heartbeat messages")
+    .add<bool>("attach-utility-actors",
+               "schedule utility actors instead of dedicating threads")
+    .add<bool>("manual-multiplexing",
+               "disables background activity of the multiplexer")
+    .add<size_t>("workers", "number of deserialization workers");
+  config_option_adder{cfg.custom_options(), "caf.middleman.prometheus-http"}
+    .add<uint16_t>("port", "listening port for incoming scrapes")
+    .add<std::string>("address", "bind address for the HTTP server socket");
+}
+
 actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
   auto impl = get_or(sys.config(), "caf.middleman.network-backend",
                      defaults::middleman::network_backend);
