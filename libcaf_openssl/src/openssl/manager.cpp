@@ -109,7 +109,7 @@ void manager::stop() {
   manager_ = nullptr;
 }
 
-void manager::init(actor_system_config& cfg) {
+void manager::init(actor_system_config&) {
   ERR_load_crypto_strings();
   OPENSSL_add_all_algorithms_conf();
   SSL_library_init();
