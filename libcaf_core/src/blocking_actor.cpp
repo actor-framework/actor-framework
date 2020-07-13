@@ -28,6 +28,7 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/invoke_message_result.hpp"
 #include "caf/logger.hpp"
+#include "caf/scheduled_actor.hpp"
 #include "caf/telemetry/timer.hpp"
 
 namespace caf {
@@ -121,7 +122,8 @@ void blocking_actor::launch(execution_unit*, bool, bool hide) {
         self->act();
         rsn = self->fail_state_;
       } catch (...) {
-        rsn = exit_reason::unhandled_exception;
+        auto ptr = std::current_exception();
+        rsn = scheduled_actor::default_exception_handler(self, ptr);
       }
       try {
         self->on_exit();

@@ -96,22 +96,24 @@ void scheduled_actor::default_exit_handler(scheduled_actor* ptr, exit_msg& x) {
 }
 
 #ifdef CAF_ENABLE_EXCEPTIONS
-error scheduled_actor::default_exception_handler(pointer ptr,
+error scheduled_actor::default_exception_handler(local_actor* ptr,
                                                  std::exception_ptr& x) {
   CAF_ASSERT(x != nullptr);
   try {
     std::rethrow_exception(x);
-  } catch (const std::exception& e) {
+  } catch (std::exception& e) {
+    auto pretty_type = detail::pretty_type_name(typeid(e));
     aout(ptr) << "*** unhandled exception: [id: " << ptr->id()
               << ", name: " << ptr->name()
-              << ", exception typeid: " << typeid(e).name() << "]: " << e.what()
+              << ", exception typeid: " << pretty_type << "]: " << e.what()
               << std::endl;
+    return make_error(sec::runtime_error, std::move(pretty_type), e.what());
   } catch (...) {
     aout(ptr) << "*** unhandled exception: [id: " << ptr->id()
               << ", name: " << ptr->name() << "]: unknown exception"
               << std::endl;
+    return sec::runtime_error;
   }
-  return sec::runtime_error;
 }
 #endif // CAF_ENABLE_EXCEPTIONS
 

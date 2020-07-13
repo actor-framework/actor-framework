@@ -63,7 +63,7 @@ CAF_TEST(test_custom_exception_handler) {
     catch (...) {
       // "fall through"
     }
-    return exit_reason::unhandled_exception;
+    return sec::runtime_error;
   };
   scoped_actor self{system};
   auto testee1 = self->spawn<monitored>([=](event_based_actor* eb_self) {
