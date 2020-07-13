@@ -28,21 +28,24 @@ using namespace caf;
 #  error "building unit test for exception handlers in no-exceptions build"
 #endif
 
+behavior testee() {
+  return {
+    [](const std::string&) { throw std::runtime_error("whatever"); },
+  };
+}
+
 class exception_testee : public event_based_actor {
 public:
-  ~exception_testee() override;
   exception_testee(actor_config& cfg) : event_based_actor(cfg) {
     set_exception_handler([](std::exception_ptr&) -> error {
       return exit_reason::remote_link_unreachable;
     });
   }
 
+  ~exception_testee() override;
+
   behavior make_behavior() override {
-    return {
-      [](const std::string&) {
-        throw std::runtime_error("whatever");
-      }
-    };
+    return testee();
   }
 };
 
@@ -50,7 +53,27 @@ exception_testee::~exception_testee() {
   // avoid weak-vtables warning
 }
 
-CAF_TEST(test_custom_exception_handler) {
+CAF_TEST(the default exception handler includes the error message) {
+  using std::string;
+  actor_system_config cfg;
+  actor_system system{cfg};
+  scoped_actor self{system};
+  auto aut = self->spawn(testee);
+  self->request(aut, infinite, "hello world")
+    .receive( //
+      [] { CAF_FAIL("unexpected response"); },
+      [](const error& err) {
+        auto msg = err.context();
+        if (auto view = make_typed_message_view<string, string>(msg)) {
+          CAF_CHECK_EQUAL(get<0>(view), "std.runtime_error");
+          CAF_CHECK_EQUAL(get<1>(view), "whatever");
+        } else {
+          CAF_FAIL("unexpected error contest: " << err.context());
+        }
+      });
+}
+
+CAF_TEST(actors can override the default exception handler) {
   actor_system_config cfg;
   actor_system system{cfg};
   auto handler = [](std::exception_ptr& eptr) -> error {
