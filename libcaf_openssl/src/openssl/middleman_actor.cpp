@@ -33,6 +33,7 @@
 #include "caf/actor.hpp"
 #include "caf/actor_proxy.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/detail/socket_guard.hpp"
 #include "caf/logger.hpp"
 #include "caf/node_id.hpp"
 #include "caf/sec.hpp"
@@ -224,6 +225,7 @@ public:
       return false;
     auto& dm = acceptor_.backend();
     auto fd = acceptor_.accepted_socket();
+    detail::socket_guard sguard{fd};
     io::network::nonblocking(fd, true);
     auto sssn = make_session(parent()->system(), fd, true);
     if (sssn == nullptr) {
@@ -233,7 +235,10 @@ public:
     auto scrb = make_counted<scribe_impl>(dm, fd, std::move(sssn));
     auto hdl = scrb->hdl();
     parent()->add_scribe(std::move(scrb));
-    return doorman::new_connection(&dm, hdl);
+    auto result = doorman::new_connection(&dm, hdl);
+    if (result)
+      sguard.release();
+    return result;
   }
 };
 
