@@ -226,12 +226,10 @@ public:
       return false;
     }
     auto scrb = make_counted<scribe_impl>(dm, fd, std::move(sssn));
+    sguard.release(); // The scribe claims ownership of the socket.
     auto hdl = scrb->hdl();
     parent()->add_scribe(std::move(scrb));
-    auto result = doorman::new_connection(&dm, hdl);
-    if (result)
-      sguard.release();
-    return result;
+    return doorman::new_connection(&dm, hdl);
   }
 };
 
