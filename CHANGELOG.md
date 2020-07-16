@@ -171,6 +171,14 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   actors that produce a signaling NaN trigger trap handlers before sending
   the result to another actor.
 
+## [0.17.6] - Unreleased
+
+### Fixed
+
+- Trying to connect to an actor published via the OpenSSL module with the I/O
+  module no longer hangs indefinitely (#1119). Instead, the OpenSSL module
+  immediately closes the socket if initializing the SSL session fails.
+
 ## [0.17.5] - 2020-05-13
 
 ### Added
@@ -490,6 +498,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Configuring colored terminal output should now print colored output.
 
 [0.18.0]: https://github.com/actor-framework/actor-framework/compare/0.17.3...master
+[0.17.6]: https://github.com/actor-framework/actor-framework/compare/0.17.5...release/0.17
 [0.17.5]: https://github.com/actor-framework/actor-framework/releases/0.17.5
 [0.17.4]: https://github.com/actor-framework/actor-framework/releases/0.17.4
 [0.17.3]: https://github.com/actor-framework/actor-framework/releases/0.17.3
