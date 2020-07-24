@@ -26,7 +26,7 @@ namespace caf::io::basp {
 /// @{
 
 /// The current BASP version. Note: BASP is not backwards compatible.
-constexpr uint64_t version = 3;
+constexpr uint64_t version = 4;
 
 /// @}
 
