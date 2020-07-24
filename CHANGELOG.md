@@ -171,7 +171,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   actors that produce a signaling NaN trigger trap handlers before sending
   the result to another actor.
 
-## [0.17.6] - Unreleased
+## [0.17.6] - 2020-07-24
 
 ### Fixed
 
@@ -498,7 +498,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Configuring colored terminal output should now print colored output.
 
 [0.18.0]: https://github.com/actor-framework/actor-framework/compare/0.17.3...master
-[0.17.6]: https://github.com/actor-framework/actor-framework/compare/0.17.5...release/0.17
+[0.17.6]: https://github.com/actor-framework/actor-framework/releases/0.17.6
 [0.17.5]: https://github.com/actor-framework/actor-framework/releases/0.17.5
 [0.17.4]: https://github.com/actor-framework/actor-framework/releases/0.17.4
 [0.17.3]: https://github.com/actor-framework/actor-framework/releases/0.17.3
