@@ -225,6 +225,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Using unquoted strings in command-line arguments inside lists now works as
   expected. For example, `--foo=abc,def` is now equivalent to
   `--foo=["abc", "def"]`.
+- Fixed a type mismatch in the parameter `middleman.heartbeat-interval` (#1095).
+  CAF consistently uses `timespan` for this parameter now.
 
 ## [0.17.4] - 2019-02-08
 
