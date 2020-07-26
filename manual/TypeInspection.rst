@@ -1,134 +1,341 @@
 .. _type-inspection:
 
-Type Inspection (Serialization and String Conversion)
-=====================================================
+Type Inspection
+===============
 
-CAF is designed with distributed systems in mind. Hence, all message types must
-be serializable and need a platform-neutral, unique name that is configured at
-startup (see :ref:`add-custom-message-type`). Using a message type that is not
-serializable causes a compiler error (see :ref:`unsafe-message-type`). CAF
-serializes individual elements of a message by using the inspection API. This
-API allows users to provide code for serialization as well as string conversion
-with a single free function. The signature for a class ``my_class`` is always as
-follows:
+We designed CAF with distributed systems in mind. Hence, all message types must
+be serializable. Using a message type that is not serializable causes a compiler
+error unless explicitly listed as unsafe message type by the user (see
+:ref:`unsafe-message-type`).
 
-.. code-block:: C++
+The inspection API allows CAF to deconstruct C++ objects into fields and values.
+Users can either provide free functions named ``inspect`` that CAF picks up via
+`ADL <https://en.wikipedia.org/wiki/Argument-dependent_name_lookup>`_ or
+specialize ``caf::inspector_access``.
 
-   template <class Inspector>
-   typename Inspector::result_type inspect(Inspector& f, my_class& x) {
-     return f(...);
-   }
+In both cases, users call members and member functions on an ``Inspector`` that
+provides a domain-specific language (DSL) for describing the structure of a C++
+object.
 
-The function ``inspect`` passes meta information and data fields to the
-variadic call operator of the inspector. The following example illustrates an
-implementation for ``inspect`` for a simple POD struct.
+POD Types
+---------
 
-.. literalinclude:: /examples/custom_type/custom_types_1.cpp
-   :language: C++
-   :lines: 23-33
-
-The inspector recursively inspects all data fields and has builtin support for
-(1) ``std::tuple``, (2) ``std::pair``, (3) C arrays, (4) any
-container type with ``x.size()``, ``x.empty()``,
-``x.begin()`` and ``x.end()``.
-
-We consciously made the inspect API as generic as possible to allow for
-extensibility. This allows users to use CAF's types in other contexts, to
-implement parsers, etc.
-
-Inspector Concept
------------------
-
-The following concept class shows the requirements for inspectors. The
-placeholder ``T`` represents any user-defined type. For example,
-``error`` when performing I/O operations or some integer type when
-implementing a hash function.
+Plain old data (POD) types always declare all member variables *public*. An
+``inspect`` overload for PODs simply passes all member variables as fields to
+the *inspector*. For example, consider the following POD type ``point_3d``:
 
 .. code-block:: C++
 
-   Inspector {
-     using result_type = T;
+  struct point_3d {
+    int x;
+    int y;
+    int z;
+  };
 
-     static constexpr bool reads_state = ...;
+To allow CAF to properly serialize and deserialize the POD type, the simplest
+way is to write a free ``inspect`` function:
 
-     static constexpr bool writes_state = ...;
+.. code-block:: C++
 
-     template <class... Ts>
-     result_type operator()(Ts&&...);
-   }
+  template <class Inspector>
+  bool inspect(Inspector& f, point_3d& x) {
+    return f.object().fields(f.field("x", x.x),
+                             f.field("y", x.y),
+                             f.field("z", x.z));
+  }
 
-A saving ``Inspector`` is required to handle constant lvalue and rvalue
-references. A loading ``Inspector`` must only accept mutable lvalue
-references to data fields, but still allow for constant lvalue references and
-rvalue references to annotations.
+After providing this function as well as listing ``point_3d`` in a type ID
+block, CAF can save and load our custom POD type. Of course, this is a recursive
+process that allows us to use ``point_3d`` as member variables of other types.
 
-Annotations
------------
+Working with 3rd party libraries usually rules out adding free functions for
+existing classes, because the namespace belongs to another project. Hence, CAF
+also allows specializing ``inspector_access`` instead. This requires slightly
+more boilerplate code, but follows the same pattern:
 
-Annotations allow users to fine-tune the behavior of inspectors by providing
-addition meta information about a type. All annotations live in the namespace
-``caf::meta`` and derive from ``caf::meta::annotation``. An
-inspector can query whether a type ``T`` is an annotation with
-``caf::meta::is_annotation<T>::value``. Annotations are passed to the
-call operator of the inspector along with data fields. The following list shows
-all annotations supported by CAF:
+.. code-block:: C++
 
-* ``type_name(n)``: Display type name as ``n`` in  human-friendly output (position before data fields).
-* ``hex_formatted()``: Format the following data field in hex  format.
-* ``omittable()``: Omit the following data field in human-friendly  output.
-* ``omittable_if_empty()``: Omit the following data field if it is  empty in human-friendly output.
-* ``omittable_if_none()``: Omit the following data field if it  equals ``none`` in human-friendly output.
-* ``save_callback(f)``: Call ``f`` when serializing  (position after data fields).
-* ``load_callback(f)``: Call ``f`` after deserializing all  data fields (position after data fields).
+  namespace caf {
+    template <>
+    struct inspector_access<point_3d> {
+      template <class Inspector>
+      static bool apply(Inspector& f, point_3d& x) {
+        return f.object(x).fields(f.field("x", x.x),
+                                  f.field("y", x.y),
+                                  f.field("z", x.z));
+      }
+    };
+  }
 
-Backwards and Third-party Compatibility
----------------------------------------
+After listing ``point_3d`` in a type ID block and either providing a free
+``inspect`` overload or specializing ``inspector_access``, CAF is able to:
 
-CAF evaluates common free function other than ``inspect`` in order to
-simplify users to integrate CAF into existing code bases.
+- Serialize and deserialize ``point_3d`` objects to/from Byte sequences.
+- Render a ``point_3d`` as a human-readable string via ``caf::deep_to_string``.
+- Read ``point_3d`` objects from a configuration file.
 
-Serializers and deserializers call user-defined ``serialize``
-functions. Both types support ``operator&`` as well as
-``operator()`` for individual data fields. A ``serialize``
-function has priority over ``inspect``.
+Types with Getter and Setter Access
+-----------------------------------
 
-When converting a user-defined type to a string, CAF calls user-defined
-``to_string`` functions and prefers those over ``inspect``.
+Types that declare their fields *private* and only grant access via getter and
+setter cannot pass references to the member variables to the inspector. Instead,
+they can pass a pair of function objects to the inspector to read and write the
+field.
+
+Consider the following non-POD type ``foobar``:
+
+.. code-block:: C++
+
+  class foobar {
+  public:
+    const std::string& foo() {
+      return foo_;
+    }
+
+    void foo(std::string value) {
+      foo_ = std::move(value);
+    }
+
+    const std::string& bar() {
+      return bar_;
+    }
+
+    void bar(std::string value) {
+      bar_ = std::move(value);
+    }
+
+  private:
+    std::string foo_;
+    std::string bar_;
+  };
+
+Since ``foo_`` and ``bar_`` are not accessible from outside the class, the
+inspector has to use the getter and setter functions. However, C++ has no
+formalized API for getters and setters. Moreover, not all setters are so trivial
+as in the example above. Setters may enforce invariants, for example, and thus
+may fail.
+
+In order to work with any flair of getter and setter functions, CAF requires
+users to wrap these member functions calls into two function objects. The first
+one wraps the getter, takes no arguments, and returns the underlying value
+(either by reference or by value). The second one wraps the setter, takes
+exactly one argument (the new value), and returns a ``bool`` that indicates
+whether the operation succeeded (by returning ``true``) or failed (``by
+returning false``).
+
+The example below shows a possible ``inspect`` implementation for the ``fobar``
+class shown before:
+
+.. code-block:: C++
+
+  template <class Inspector>
+  bool inspect(Inspector& f, foobar& x) {
+    auto get_foo = [&x]() -> decltype(auto) { return x.foo(); };
+    auto set_foo = [&x](std::string value) {
+      x.foo(std::move(value));
+      return true;
+    };
+    auto get_bar = [&x]() -> decltype(auto) { return x.bar(); };
+    auto set_bar = [&x](std::string value) {
+      x.bar(std::move(value));
+      return true;
+    };
+    return f.object(x).fields(f.field("foo", get_foo, set_foo),
+                              f.field("bar", get_bar, set_bar));
+  }
+
+.. note::
+
+  For classes that lie in the responsibility of the same developers that
+  implement the ``inspect`` function, implementing ``inspect`` as friend
+  function inside the class usually can avoid going through the getter and
+  setter functions.
+
+Inspector DSL
+-------------
+
+As shown in previous examples, type inspection with an inspector ``f`` always
+starts with ``f.object(...)`` as entry point. After that, users may set a pretty
+type name with ``pretty_name`` that inspectors may use when generating
+human-readable output. Afterwards, the inspectors expect users to call
+``fields`` with all member variables of the object.
+
+The following pseudo code illustrates how the inspector DSL is structured in
+terms of types involved and member function interfaces.
+
+
+.. code-block:: C++
+
+  class Inspector {
+  public:
+    Object object(T obj);
+
+    Field field(string_view name, T& ref);
+
+    Field field(string_view name, function<T()> get, function<void(T)> set);
+  };
+
+  class FieldWithFallbackAndInvariant;
+
+  class FieldWithFallback {
+  public:
+    FieldWithFallbackAndInvariant invariant(function<bool>(T));
+  };
+
+  class FieldWithInvariant;
+
+  class Field {
+  public:
+    FieldWithFallback fallback(T);
+
+    FieldWithInvariant invariant(function<bool>(T));
+  };
+
+  class FieldsInspector {
+  public:
+    bool fields(...);
+  };
+
+  class Object : public FieldsInspector {
+  public:
+    FieldsInspector pretty_name(string_view);
+  };
+
+The ``Inspector`` has the ``object`` member variable to set things in motion,
+but it also serves as a factory for ``Field`` definitions. Fields always have a
+name and users can either bind a reference to the member variable or provide
+getter and setter functions. Optionally, users can equip fields with a fallback
+value or an invariant predicate. Providing a fallback value automatically makes
+fields optional. For example, consider the following class ``duration`` and its
+implementation for ``inspect``:
+
+.. code-block:: C++
+
+  struct duration {
+    string unit;
+    double count;
+  };
+
+  bool valid_time_unit(const string& unit) {
+    return unit == "seconds" || unit == "minutes";
+  }
+
+  template <class Inspector>
+  bool inspect(Inspector& f, duration& x) {
+    return f.object(x).fields(
+      f.field("unit", x.unit).fallback("seconds").invariant(valid_time_unit),
+      f.field("count", x.count));
+  }
+
+Real code probably would not use a ``string`` to store the time unit. However,
+with the fallback, we have enabled CAF to use ``"seconds"`` whenever the input
+contains no value for the ``unit`` field. Further, the invariant makes sure that
+we verify our input before accepting it.
+
+Whether optional fields are supported depends on the format / inspector. For
+example, the binary serialization protocol in CAF has no notion of optional
+fields. Hence, the default binary serializers simply read and write fields in
+the order they apear in. However, the inspectors for the configuration framework
+do allow optional fields. With our ``inspect`` overload for ``duration``, we
+could configure a parameter named ``example-app.request-timeout`` as follows:
+
+.. code-block:: none
+
+  # example 1: ok, falls back to "seconds"
+  example-app {
+    request-timeout {
+      count = 1.3
+    }
+  }
+
+  # example 2: ok, explicit definition of the time unit
+  example-app {
+    request-timeout {
+      count = 1.3
+      unit = "minutes"
+    }
+  }
+
+  # example 3: error, "parsecs" is not a time unit (invariant does not hold)
+  example-app {
+    request-timeout {
+      count = 12
+      unit = "parsecs"
+    }
+  }
+
+Inspector Traits
+----------------
+
+When writing custom ``inspect`` functions, providing a single overload for all
+inspectors may result in undesired tradeoffs or convoluted code. For example,
+inspection code may be much cleaner when split into a ``save`` and a ``load``
+function. The kind of output format may also play a role. When reading and
+writing human-readable data, we might want to improve the user experience by
+using the constant names in enumeration types rather than using the underlying
+integer values.
+
+To enable static dispatching based on the inspector kind, all inspectors provide
+the following ``static constexpr bool`` constants:
+
+- ``is_loading``: If ``true``, tags the inspector as a deserializer that
+  overrides the state of an object. Otherwise, the inspector is *saving*, i.e.,
+  it visits the state of an object without modifying it.
+- ``has_human_readable_format``: If ``true``, tags the inspector as reading and
+  writing a data format that may be consumed or generated by humans. Otherwise,
+  the ``inspect`` overload can assume a binary data format and optimize for
+  space rather than user experience. For example, an ``inspect`` overload for
+  enumeration types may use the constant names for a human-readable format but
+  otherwise use the underlying integer values.
+
+Using theses constants, users can easily split ``inspect`` overloads into *load*
+and *safe*:
+
+.. code-block:: C++
+
+  template <class Inspector>
+  bool inspect(Inspector& f, my_class& x) {
+    if constexpr (Inspector:is_loading)
+      return load(f, x);
+    else
+      return save(f, x);
+  }
 
 .. _unsafe-message-type:
 
-Whitelisting Unsafe Message Types
----------------------------------
+Unsafe Message Types
+--------------------
 
-Message types that are not serializable cause compile time errors when used in
-actor communication. When using CAF for concurrency only, this errors can be
-suppressed by whitelisting types with
+Message types that do not provide serialization code cause compile time errors
+when used in actor communication. When using CAF for concurrency only, this
+errors can be suppressed by explicitly allowing types via
 ``CAF_ALLOW_UNSAFE_MESSAGE_TYPE``. The macro is defined as follows.
 
-Splitting Save and Load Operations
-----------------------------------
+.. code-block:: C++
 
-If loading and storing cannot be implemented in a single function, users can
-query whether the inspector is loading or storing. For example, consider the
-following class ``foo`` with getter and setter functions and no public
-access to its members.
+  #define CAF_ALLOW_UNSAFE_MESSAGE_TYPE(type_name)                             \
+    namespace caf {                                                            \
+    template <>                                                                \
+    struct allowed_unsafe_message_type<type_name> : std::true_type {};         \
+    }
 
-.. literalinclude:: /examples/custom_type/custom_types_3.cpp
-   :language: C++
-   :start-after: --(rst-foo-begin)--
-   :end-before: --(rst-foo-end)--
+Keep in mind that *unsafe* means that your program runs into undefined behavior
+(or segfaults) when you break your promise and try to serialize messages that
+contain unsafe message types.
 
-Since there is no access to the data fields ``a_`` and ``b_``
-(and assuming no changes to ``foo`` are possible), we need to split our
-implementation of ``inspect`` as shown below.
+.. note::
 
-.. literalinclude:: /examples/custom_type/custom_types_3.cpp
-   :language: C++
-   :start-after: --(rst-inspect-begin)--
-   :end-before: --(rst-inspect-end)--
+  Even *unsafe* messages types still require a :ref:`type ID
+  <custom-message-types>`.
 
-The purpose of the scope guard in the example above is to write the content of
-the temporaries back to ``foo`` at scope exit automatically. Storing
-the result of ``f(...)`` in a temporary first and then writing the
-changes to ``foo`` is not possible, because ``f(...)`` can
-return ``void``.
+.. _custom-inspectors:
+
+Custom Inspectors (Serializers and Deserializers)
+-------------------------------------------------
+
+Writing custom serializers and deserializers enables users to add support for
+alternative wire formats such as `Google Protocol Buffers
+<https://developers.google.com/protocol-buffers>`_ or `MessagePack
+<https://msgpack.org/index.html>`_ as well as supporting non-binary formats such
+as `XML <https://www.w3.org/XML>`_ or `JSON
+<https://www.json.org/json-en.html>`_.
