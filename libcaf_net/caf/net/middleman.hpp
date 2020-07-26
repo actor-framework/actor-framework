@@ -75,6 +75,9 @@ public:
     return result.release();
   }
 
+  /// Adds module-specific options to the config before loading the module.
+  static void add_module_options(actor_system_config& cfg);
+
   // -- remoting ---------------------------------------------------------------
 
   expected<endpoint_manager_ptr> connect(const uri& locator);

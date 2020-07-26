@@ -47,6 +47,10 @@ struct dummy_actor : public monitorable_actor {
   void enqueue(mailbox_element_ptr, execution_unit*) override {
     // nop
   }
+
+  void setup_metrics() {
+    // nop
+  }
 };
 
 class dummy_application {

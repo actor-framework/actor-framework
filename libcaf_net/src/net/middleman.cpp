@@ -96,6 +96,10 @@ void* middleman::subtype_ptr() {
   return this;
 }
 
+void middleman::add_module_options(actor_system_config&) {
+  // nop
+}
+
 expected<endpoint_manager_ptr> middleman::connect(const uri& locator) {
   if (auto ptr = backend(locator.scheme()))
     return ptr->get_or_connect(locator);
