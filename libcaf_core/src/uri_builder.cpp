@@ -19,6 +19,7 @@
 #include "caf/uri_builder.hpp"
 
 #include "caf/detail/uri_impl.hpp"
+#include "caf/ipv4_address.hpp"
 #include "caf/make_counted.hpp"
 
 namespace caf {
@@ -38,7 +39,15 @@ uri_builder& uri_builder::userinfo(std::string str) {
 }
 
 uri_builder& uri_builder::host(std::string str) {
-  impl_->authority.host = std::move(str);
+  // IPv6 addresses get special attention from URIs, i.e., they go in between
+  // square brackets. However, the parser does not catch IPv4 addresses. Hence,
+  // we do a quick check here whether `str` contains a valid IPv4 address and
+  // store it as IP address if possible.
+  ipv4_address addr;
+  if (auto err = parse(str, addr))
+    impl_->authority.host = std::move(str);
+  else
+    impl_->authority.host = ip_address{addr};
   return *this;
 }
 
