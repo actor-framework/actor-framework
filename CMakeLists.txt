@@ -260,16 +260,23 @@ configure_file("${PROJECT_SOURCE_DIR}/cmake/build_config.hpp.in"
 
 # -- install testing DSL headers -----------------------------------------------
 
-# install includes from test
-install(DIRECTORY libcaf_test/caf/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/caf
-        FILES_MATCHING PATTERN "*.hpp")
-
 add_library(libcaf_test INTERFACE)
+
+set_target_properties(libcaf_test PROPERTIES EXPORT_NAME test)
 
 target_include_directories(libcaf_test INTERFACE
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/libcaf_test>)
 
 add_library(CAF::test ALIAS libcaf_test)
+
+install(DIRECTORY libcaf_test/caf/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/caf
+        FILES_MATCHING PATTERN "*.hpp")
+
+install(TARGETS libcaf_test
+        EXPORT CAFTargets
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT test
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT test
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT test)
 
 # -- provide an uinstall target ------------------------------------------------
 
