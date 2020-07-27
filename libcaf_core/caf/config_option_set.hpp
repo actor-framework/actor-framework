@@ -77,6 +77,9 @@ public:
   /// @param name Config option name formatted as `<category>.<long-name>`.
   option_pointer qualified_name_lookup(string_view name) const;
 
+  /// Returns whether a @ref config_option for the given category exists.
+  bool has_category(string_view category) const noexcept;
+
   /// Returns the number of stored config options.
   size_t size() const noexcept {
     return opts_.size();

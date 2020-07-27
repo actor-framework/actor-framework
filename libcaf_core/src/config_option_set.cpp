@@ -280,4 +280,11 @@ config_option_set::qualified_name_lookup(string_view name) const {
   return qualified_name_lookup(name.substr(0, sep), name.substr(sep + 1));
 }
 
+bool config_option_set::has_category(string_view category) const noexcept {
+  auto predicate = [category](const config_option& opt) {
+    return opt.category() == category;
+  };
+  return std::any_of(opts_.begin(), opts_.end(), predicate);
+}
+
 } // namespace caf

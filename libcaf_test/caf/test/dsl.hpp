@@ -679,9 +679,11 @@ public:
       CAF_FAIL("failed to parse config: " << to_string(err));
     cfg.set("caf.scheduler.policy", "testing");
     cfg.set("caf.logger.inline-output", true);
-    cfg.set("caf.middleman.network-backend", "testing");
-    cfg.set("caf.middleman.manual-multiplexing", true);
-    cfg.set("caf.middleman.workers", size_t{0});
+    if (cfg.custom_options().has_category("caf.middleman")) {
+      cfg.set("caf.middleman.network-backend", "testing");
+      cfg.set("caf.middleman.manual-multiplexing", true);
+      cfg.set("caf.middleman.workers", size_t{0});
+    }
     cfg.set("caf.stream.credit-policy", "testing");
     return cfg;
   }
