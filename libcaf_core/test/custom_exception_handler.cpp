@@ -65,7 +65,6 @@ CAF_TEST(the default exception handler includes the error message) {
       [](const error& err) {
         auto msg = err.context();
         if (auto view = make_typed_message_view<string, string>(msg)) {
-          CAF_CHECK_EQUAL(get<0>(view), "std.runtime_error");
           CAF_CHECK_EQUAL(get<1>(view), "whatever");
         } else {
           CAF_FAIL("unexpected error contest: " << err.context());
