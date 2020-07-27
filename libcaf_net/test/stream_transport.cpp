@@ -184,9 +184,11 @@ CAF_TEST(resolve and proxy communication) {
       [&] { CAF_FAIL("manager did not respond with a proxy."); });
   run();
   auto read_res = read(recv_socket_guard.socket(), recv_buf);
-  if (!holds_alternative<size_t>(read_res))
-    CAF_FAIL("read() returned an error: " << get<sec>(read_res));
-  recv_buf.resize(get<size_t>(read_res));
+  if (read_res < 0)
+    CAF_FAIL("read() returned an error: " << last_socket_error_as_string);
+  else if (read_res == 0)
+    CAF_FAIL("read() returned 0 (socket closed)");
+  recv_buf.resize(static_cast<size_t>(read_res));
   CAF_MESSAGE("receive buffer contains " << recv_buf.size() << " bytes");
   message msg;
   binary_deserializer source{sys, recv_buf};

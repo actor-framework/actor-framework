@@ -168,22 +168,19 @@ error nodelay(stream_socket x, bool new_value) {
   return none;
 }
 
-variant<size_t, sec> read(stream_socket x, span<byte> buf) {
-  auto res = ::recv(x.id, reinterpret_cast<socket_recv_ptr>(buf.data()),
-                    buf.size(), no_sigpipe_io_flag);
-  return check_stream_socket_io_res(res);
+ptrdiff_t read(stream_socket x, span<byte> buf) {
+  return ::recv(x.id, reinterpret_cast<socket_recv_ptr>(buf.data()), buf.size(),
+                no_sigpipe_io_flag);
 }
 
-variant<size_t, sec> write(stream_socket x, span<const byte> buf) {
-  auto res = ::send(x.id, reinterpret_cast<socket_send_ptr>(buf.data()),
-                    buf.size(), no_sigpipe_io_flag);
-  return check_stream_socket_io_res(res);
+ptrdiff_t write(stream_socket x, span<const byte> buf) {
+  return ::send(x.id, reinterpret_cast<socket_send_ptr>(buf.data()), buf.size(),
+                no_sigpipe_io_flag);
 }
 
 #ifdef CAF_WINDOWS
 
-variant<size_t, sec> write(stream_socket x,
-                           std::initializer_list<span<const byte>> bufs) {
+ptrdiff_t write(stream_socket x, std::initializer_list<span<const byte>> bufs) {
   CAF_ASSERT(bufs.size() < 10);
   WSABUF buf_array[10];
   auto convert = [](span<const byte> buf) {
@@ -195,44 +192,21 @@ variant<size_t, sec> write(stream_socket x,
   DWORD bytes_sent = 0;
   auto res = WSASend(x.id, buf_array, static_cast<DWORD>(bufs.size()),
                      &bytes_sent, 0, nullptr, nullptr);
-  if (res != 0) {
-    auto code = last_socket_error();
-    if (code == std::errc::operation_would_block
-        || code == std::errc::resource_unavailable_try_again)
-      return sec::unavailable_or_would_block;
-    return sec::socket_operation_failed;
-  }
-  return static_cast<size_t>(bytes_sent);
+  return (res == 0) ? bytes_sent : -1;
 }
 
 #else // CAF_WINDOWS
 
-variant<size_t, sec> write(stream_socket x,
-                           std::initializer_list<span<const byte>> bufs) {
+ptrdiff_t write(stream_socket x, std::initializer_list<span<const byte>> bufs) {
   CAF_ASSERT(bufs.size() < 10);
   iovec buf_array[10];
   auto convert = [](span<const byte> buf) {
     return iovec{const_cast<byte*>(buf.data()), buf.size()};
   };
   std::transform(bufs.begin(), bufs.end(), std::begin(buf_array), convert);
-  auto res = writev(x.id, buf_array, static_cast<int>(bufs.size()));
-  return check_stream_socket_io_res(res);
+  return writev(x.id, buf_array, static_cast<int>(bufs.size()));
 }
 
 #endif // CAF_WINDOWS
-
-variant<size_t, sec>
-check_stream_socket_io_res(std::make_signed<size_t>::type res) {
-  if (res == 0)
-    return sec::socket_disconnected;
-  if (res < 0) {
-    auto code = last_socket_error();
-    if (code == std::errc::operation_would_block
-        || code == std::errc::resource_unavailable_try_again)
-      return sec::unavailable_or_would_block;
-    return sec::socket_operation_failed;
-  }
-  return static_cast<size_t>(res);
-}
 
 } // namespace caf::net

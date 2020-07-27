@@ -48,12 +48,6 @@ namespace {
 
 using transport_type = stream_transport<basp::application>;
 
-size_t fetch_size(variant<size_t, sec> x) {
-  if (holds_alternative<sec>(x))
-    CAF_FAIL("read/write failed: " << to_string(get<sec>(x)));
-  return get<size_t>(x);
-}
-
 struct config : actor_system_config {
   config() {
     put(content, "caf.middleman.this-node", unbox(make_uri("test:earth")));
@@ -88,7 +82,7 @@ struct fixture : host_fixture, test_coordinator_fixture<config> {
   template <class... Ts>
   void mock(const Ts&... xs) {
     auto buf = to_buf(xs...);
-    if (fetch_size(write(sock, buf)) != buf.size())
+    if (write(sock, buf) != static_cast<ptrdiff_t>(buf.size()))
       CAF_FAIL("unable to write " << buf.size() << " bytes");
     run();
   }
@@ -107,14 +101,14 @@ struct fixture : host_fixture, test_coordinator_fixture<config> {
 
   void consume_handshake() {
     byte_buffer buf(basp::header_size);
-    if (fetch_size(read(sock, buf)) != basp::header_size)
+    if (read(sock, buf) != basp::header_size)
       CAF_FAIL("unable to read " << basp::header_size << " bytes");
     auto hdr = basp::header::from_bytes(buf);
     if (hdr.type != basp::message_type::handshake || hdr.payload_len == 0
         || hdr.operation_data != basp::version)
       CAF_FAIL("invalid handshake header");
     buf.resize(hdr.payload_len);
-    if (fetch_size(read(sock, buf)) != hdr.payload_len)
+    if (read(sock, buf) != static_cast<ptrdiff_t>(hdr.payload_len))
       CAF_FAIL("unable to read " << hdr.payload_len << " bytes");
     node_id nid;
     std::vector<std::string> app_ids;
@@ -158,7 +152,7 @@ struct fixture : host_fixture, test_coordinator_fixture<config> {
   do {                                                                         \
     CAF_MESSAGE("receive " << msg_type);                                       \
     byte_buffer buf(basp::header_size);                                        \
-    if (fetch_size(read(sock, buf)) != basp::header_size)                      \
+    if (read(sock, buf) != static_cast<ptrdiff_t>(basp::header_size))          \
       CAF_FAIL("unable to read " << basp::header_size << " bytes");            \
     auto hdr = basp::header::from_bytes(buf);                                  \
     CAF_CHECK_EQUAL(hdr.type, msg_type);                                       \
@@ -166,7 +160,7 @@ struct fixture : host_fixture, test_coordinator_fixture<config> {
     if (!std::is_same<decltype(std::make_tuple(__VA_ARGS__)),                  \
                       std::tuple<unit_t>>::value) {                            \
       buf.resize(hdr.payload_len);                                             \
-      if (fetch_size(read(sock, buf)) != size_t{hdr.payload_len})              \
+      if (read(sock, buf) != static_cast<ptrdiff_t>(hdr.payload_len))          \
         CAF_FAIL("unable to read " << hdr.payload_len << " bytes");            \
       binary_deserializer source{sys, buf};                                    \
       if (auto err = source(__VA_ARGS__))                                      \

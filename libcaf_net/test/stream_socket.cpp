@@ -75,8 +75,10 @@ struct fixture : host_fixture {
 CAF_TEST_FIXTURE_SCOPE(network_socket_tests, fixture)
 
 CAF_TEST(read on empty sockets) {
-  CAF_CHECK_EQUAL(read(first, rd_buf), sec::unavailable_or_would_block);
-  CAF_CHECK_EQUAL(read(second, rd_buf), sec::unavailable_or_would_block);
+  CAF_CHECK_EQUAL(read(first, rd_buf), -1);
+  CAF_CHECK(last_socket_error_is_temporary());
+  CAF_CHECK_EQUAL(read(second, rd_buf), -1);
+  CAF_CHECK(last_socket_error_is_temporary());
 }
 
 CAF_TEST(transfer data from first to second socket) {
@@ -97,7 +99,7 @@ CAF_TEST(transfer data from second to first socket) {
 
 CAF_TEST(shut down first socket and observe shutdown on the second one) {
   close(first);
-  CAF_CHECK_EQUAL(read(second, rd_buf), sec::socket_disconnected);
+  CAF_CHECK_EQUAL(read(second, rd_buf), 0);
   first.id = invalid_socket_id;
 }
 

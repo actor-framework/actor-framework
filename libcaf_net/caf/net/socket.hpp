@@ -69,13 +69,21 @@ To CAF_NET_EXPORT socket_cast(From x) {
   return To{x.id};
 }
 
-/// Close socket `x`.
+/// Closes socket `x`.
 /// @relates socket
 void CAF_NET_EXPORT close(socket x);
 
 /// Returns the last socket error in this thread as an integer.
 /// @relates socket
 std::errc CAF_NET_EXPORT last_socket_error();
+
+/// Checks whether `last_socket_error()` would return an error code that
+/// indicates a temporary error.
+/// @returns `true` if `last_socket_error()` returned either
+/// `std::errc::operation_would_block` or
+/// `std::errc::resource_unavailable_try_again`, `false` otherwise.
+/// @relates socket
+bool CAF_NET_EXPORT last_socket_error_is_temporary();
 
 /// Returns the last socket error as human-readable string.
 /// @relates socket

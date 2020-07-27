@@ -90,13 +90,13 @@ public:
 
   template <class Manager>
   bool handle_read_event(Manager&) {
-    auto res = read(handle_, read_buf_);
-    if (auto num_bytes = get_if<size_t>(&res)) {
+    auto num_bytes = read(handle_, read_buf_);
+    if (num_bytes > 0) {
       data_->insert(data_->end(), read_buf_.begin(),
-                    read_buf_.begin() + *num_bytes);
+                    read_buf_.begin() + num_bytes);
       return true;
     }
-    return get<sec>(res) == sec::unavailable_or_would_block;
+    return num_bytes < 0 && last_socket_error_is_temporary();
   }
 
   template <class Manager>
@@ -106,12 +106,12 @@ public:
       if (auto err = sink(x->msg->payload))
         CAF_FAIL("serializing failed: " << err);
     }
-    auto res = write(handle_, buf_);
-    if (auto num_bytes = get_if<size_t>(&res)) {
-      buf_.erase(buf_.begin(), buf_.begin() + *num_bytes);
+    auto num_bytes = write(handle_, buf_);
+    if (num_bytes > 0) {
+      buf_.erase(buf_.begin(), buf_.begin() + num_bytes);
       return buf_.size() > 0;
     }
-    return get<sec>(res) == sec::unavailable_or_would_block;
+    return num_bytes < 0 && last_socket_error_is_temporary();
   }
 
   void handle_error(sec) {
@@ -164,8 +164,8 @@ CAF_TEST(send and receive) {
   auto buf = std::make_shared<byte_buffer>();
   auto sockets = unbox(make_stream_socket_pair());
   CAF_CHECK_EQUAL(nonblocking(sockets.second, true), none);
-  CAF_CHECK_EQUAL(read(sockets.second, read_buf),
-                  sec::unavailable_or_would_block);
+  CAF_CHECK_EQUAL(read(sockets.second, read_buf), -1);
+  CAF_CHECK(last_socket_error_is_temporary());
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
   auto mgr = make_endpoint_manager(mpx, sys,
                                    dummy_transport{sockets.first, buf});
@@ -208,11 +208,14 @@ CAF_TEST(resolve and proxy communication) {
       [&] { CAF_FAIL("manager did not respond with a proxy."); });
   run();
   auto read_res = read(sockets.second, read_buf);
-  if (!holds_alternative<size_t>(read_res)) {
-    CAF_ERROR("read() returned an error: " << get<sec>(read_res));
+  if (read_res <= 0) {
+    std::string msg = "socket closed";
+    if (read_res < 0)
+      msg = last_socket_error_as_string();
+    CAF_ERROR("read() failed: " << msg);
     return;
   }
-  read_buf.resize(get<size_t>(read_res));
+  read_buf.resize(static_cast<size_t>(read_res));
   CAF_MESSAGE("receive buffer contains " << read_buf.size() << " bytes");
   message msg;
   binary_deserializer source{sys, read_buf};

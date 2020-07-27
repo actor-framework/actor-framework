@@ -42,10 +42,10 @@ pollset_updater::~pollset_updater() {
 
 bool pollset_updater::handle_read_event() {
   for (;;) {
-    auto res = read(handle(), make_span(buf_.data() + buf_size_,
-                                        buf_.size() - buf_size_));
-    if (auto num_bytes = get_if<size_t>(&res)) {
-      buf_size_ += *num_bytes;
+    auto num_bytes = read(handle(), make_span(buf_.data() + buf_size_,
+                                              buf_.size() - buf_size_));
+    if (num_bytes > 0) {
+      buf_size_ += static_cast<size_t>(num_bytes);
       if (buf_.size() == buf_size_) {
         buf_size_ = 0;
         auto opcode = static_cast<uint8_t>(buf_[0]);
@@ -70,7 +70,7 @@ bool pollset_updater::handle_read_event() {
         }
       }
     } else {
-      return get<sec>(res) == sec::unavailable_or_would_block;
+      return num_bytes < 0 && last_socket_error_is_temporary();
     }
   }
 }
