@@ -47,7 +47,7 @@ template <class Node>
 struct config : actor_system_config {
   config() {
     Node this_node;
-    put(content, "middleman.this-node", this_node());
+    put(content, "caf.middleman.this-node", this_node());
     load<middleman, backend::test>();
   }
 };

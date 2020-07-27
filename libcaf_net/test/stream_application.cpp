@@ -56,7 +56,7 @@ size_t fetch_size(variant<size_t, sec> x) {
 
 struct config : actor_system_config {
   config() {
-    put(content, "middleman.this-node", unbox(make_uri("test:earth")));
+    put(content, "caf.middleman.this-node", unbox(make_uri("test:earth")));
     load<middleman, backend::test>();
   }
 };

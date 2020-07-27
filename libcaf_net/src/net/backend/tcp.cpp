@@ -47,8 +47,9 @@ tcp::~tcp() {
 }
 
 error tcp::init() {
-  uint16_t conf_port = get_or<uint16_t>(
-    mm_.system().config(), "middleman.tcp-port", defaults::middleman::tcp_port);
+  uint16_t conf_port = get_or<uint16_t>(mm_.system().config(),
+                                        "caf.middleman.tcp-port",
+                                        defaults::middleman::tcp_port);
   ip_endpoint ep;
   auto local_address = std::string("[::]:") + std::to_string(conf_port);
   if (auto err = detail::parse(local_address, ep))

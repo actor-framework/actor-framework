@@ -88,7 +88,7 @@ public:
       manager_ = &parent.manager();
     size_t workers;
     if (auto workers_cfg = get_if<size_t>(&system_->config(),
-                                          "middleman.workers"))
+                                          "caf.middleman.workers"))
       workers = *workers_cfg;
     else
       workers = std::min(3u, std::thread::hardware_concurrency() / 4u) + 1;

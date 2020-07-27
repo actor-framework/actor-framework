@@ -46,7 +46,7 @@ middleman::~middleman() {
 }
 
 void middleman::start() {
-  if (!get_or(config(), "middleman.manual-multiplexing", false)) {
+  if (!get_or(config(), "caf.middleman.manual-multiplexing", false)) {
     auto mpx = mpx_;
     auto sys_ptr = &system();
     mpx_thread_ = std::thread{[mpx, sys_ptr] {
@@ -75,11 +75,11 @@ void middleman::init(actor_system_config& cfg) {
     CAF_LOG_ERROR("mgr->init() failed: " << err);
     CAF_RAISE_ERROR("mpx->init() failed");
   }
-  if (auto node_uri = get_if<uri>(&cfg, "middleman.this-node")) {
+  if (auto node_uri = get_if<uri>(&cfg, "caf.middleman.this-node")) {
     auto this_node = make_node_id(std::move(*node_uri));
     sys_.node_.swap(this_node);
   } else {
-    CAF_RAISE_ERROR("no valid entry for middleman.this-node found");
+    CAF_RAISE_ERROR("no valid entry for caf.middleman.this-node found");
   }
   for (auto& backend : backends_)
     if (auto err = backend->init()) {
@@ -96,8 +96,16 @@ void* middleman::subtype_ptr() {
   return this;
 }
 
-void middleman::add_module_options(actor_system_config&) {
-  // nop
+void middleman::add_module_options(actor_system_config& cfg) {
+  config_option_adder{cfg.custom_options(), "caf.middleman"}
+    .add<std::vector<std::string>>("app-identifiers",
+                                   "valid application identifiers of this node")
+    .add<uri>("this-node", "locator of this CAF node")
+    .add<size_t>("max-consecutive-reads",
+                 "max. number of consecutive reads per broker")
+    .add<bool>("manual-multiplexing",
+               "disables background activity of the multiplexer")
+    .add<size_t>("workers", "number of deserialization workers");
 }
 
 expected<endpoint_manager_ptr> middleman::connect(const uri& locator) {

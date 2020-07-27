@@ -101,12 +101,12 @@ public:
     manager_ = &parent;
     auto& cfg = system().config();
     max_consecutive_reads_ = get_or(this->system().config(),
-                                    "middleman.max-consecutive-reads",
+                                    "caf.middleman.max-consecutive-reads",
                                     defaults::middleman::max_consecutive_reads);
-    auto max_header_bufs = get_or(cfg, "middleman.max-header-buffers",
+    auto max_header_bufs = get_or(cfg, "caf.middleman.max-header-buffers",
                                   defaults::middleman::max_header_buffers);
     header_bufs_.reserve(max_header_bufs);
-    auto max_payload_bufs = get_or(cfg, "middleman.max-payload-buffers",
+    auto max_payload_bufs = get_or(cfg, "caf.middleman.max-payload-buffers",
                                    defaults::middleman::max_payload_buffers);
     payload_bufs_.reserve(max_payload_bufs);
     if (auto err = next_layer_.init(*this))

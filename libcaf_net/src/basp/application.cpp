@@ -222,7 +222,7 @@ error application::handle_handshake(packet_writer&, header hdr,
     return err;
   if (!peer_id || app_ids.empty())
     return ec::invalid_handshake;
-  auto ids = get_or(system().config(), "middleman.app-identifiers",
+  auto ids = get_or(system().config(), "caf.middleman.app-identifiers",
                     basp::application::default_app_ids());
   auto predicate = [=](const std::string& x) {
     return std::find(ids.begin(), ids.end(), x) != ids.end();
@@ -381,7 +381,7 @@ error application::handle_down_message(packet_writer&, header received_hdr,
 error application::generate_handshake(byte_buffer& buf) {
   binary_serializer sink{&executor_, buf};
   return sink(system().node(),
-              get_or(system().config(), "middleman.app-identifiers",
+              get_or(system().config(), "caf.middleman.app-identifiers",
                      application::default_app_ids()));
 }
 
