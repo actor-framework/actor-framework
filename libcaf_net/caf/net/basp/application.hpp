@@ -82,9 +82,8 @@ public:
     system_ = &parent.system();
     executor_.system_ptr(system_);
     executor_.proxy_registry_ptr(&proxies_);
-    // TODO: use `if constexpr` when switching to C++17.
     // Allow unit tests to run the application without endpoint manager.
-    if (!std::is_base_of<test_tag, Parent>::value)
+    if constexpr (!std::is_base_of<test_tag, Parent>::value)
       manager_ = &parent.manager();
     size_t workers;
     if (auto workers_cfg = get_if<size_t>(&system_->config(),

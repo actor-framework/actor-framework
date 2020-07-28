@@ -75,9 +75,9 @@ struct fixture : host_fixture {
 CAF_TEST_FIXTURE_SCOPE(network_socket_tests, fixture)
 
 CAF_TEST(read on empty sockets) {
-  CAF_CHECK_EQUAL(read(first, rd_buf), -1);
+  CAF_CHECK_LESS(read(first, rd_buf), 0);
   CAF_CHECK(last_socket_error_is_temporary());
-  CAF_CHECK_EQUAL(read(second, rd_buf), -1);
+  CAF_CHECK_LESS(read(second, rd_buf), 0);
   CAF_CHECK(last_socket_error_is_temporary());
 }
 

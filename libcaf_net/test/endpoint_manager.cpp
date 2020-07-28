@@ -164,7 +164,7 @@ CAF_TEST(send and receive) {
   auto buf = std::make_shared<byte_buffer>();
   auto sockets = unbox(make_stream_socket_pair());
   CAF_CHECK_EQUAL(nonblocking(sockets.second, true), none);
-  CAF_CHECK_EQUAL(read(sockets.second, read_buf), -1);
+  CAF_CHECK_LESS(read(sockets.second, read_buf), 0);
   CAF_CHECK(last_socket_error_is_temporary());
   auto guard = detail::make_scope_guard([&] { close(sockets.second); });
   auto mgr = make_endpoint_manager(mpx, sys,
