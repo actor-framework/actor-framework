@@ -64,7 +64,7 @@ brew install caf --HEAD
 ### Conan
 
 A [Conan](https://conan.io/) recipe for CAF along with pre-built libraries
-for most platforms are available at [bincrafters/caf](https://bintray.com/bincrafters/public-conan/caf%3Abincrafters).
+for most platforms are available at [Conan Center](https://conan.io/center/caf/stable/?user=bincrafters&channel=stable).
 
 ### VCPKG
 
