@@ -73,6 +73,11 @@ public:
 
   bool handle_read_event(endpoint_manager&) override {
     CAF_LOG_TRACE(CAF_ARG2("handle", this->handle().id));
+    auto fail = [this](sec err) {
+      CAF_LOG_DEBUG("read failed" << CAF_ARG(err));
+      this->next_layer_.handle_error(err);
+      return false;
+    };
     for (size_t reads = 0; reads < this->max_consecutive_reads_; ++reads) {
       auto buf = this->read_buf_.data() + collected_;
       size_t len = read_threshold_ - collected_;
@@ -91,16 +96,16 @@ public:
           }
           this->prepare_next_read();
         }
-      } else if (num_bytes == 0) {
-        auto err = sec::socket_disconnected;
-        CAF_LOG_DEBUG("read failed" << CAF_ARG(err));
-        this->next_layer_.handle_error(err);
-        return false;
-      } else if (!last_socket_error_is_temporary()) {
-        auto err = sec::socket_operation_failed;
-        CAF_LOG_DEBUG("read failed" << CAF_ARG(err));
-        this->next_layer_.handle_error(err);
-        return false;
+      } else if (num_bytes < 0) {
+        // Try again later on temporary errors such as EWOULDBLOCK and
+        // stop reading on the socket on hard errors.
+        return last_socket_error_is_temporary()
+                 ? true
+                 : fail(sec::socket_operation_failed);
+
+      } else {
+        // read() returns 0 iff the connection was closed.
+        return fail(sec::socket_disconnected);
       }
     }
     return true;
@@ -126,6 +131,11 @@ public:
         }
         write_queue_.pop_front();
       };
+      auto fail = [this](sec err) {
+        CAF_LOG_DEBUG("write failed" << CAF_ARG(err));
+        this->next_layer_.handle_error(err);
+        return err;
+      };
       // Write buffers from the write_queue_ for as long as possible.
       while (!write_queue_.empty()) {
         auto& buf = write_queue_.front().second;
@@ -140,16 +150,14 @@ public:
             recycle();
             written_ = 0;
           }
-        } else if (num_bytes == 0) {
-          auto err = sec::socket_disconnected;
-          CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
-          this->next_layer_.handle_error(err);
-          return err;
-        } else if (!last_socket_error_is_temporary()) {
-          auto err = sec::socket_operation_failed;
-          CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
-          this->next_layer_.handle_error(err);
-          return err;
+        } else if (num_bytes < 0) {
+          return last_socket_error_is_temporary()
+                   ? sec::unavailable_or_would_block
+                   : fail(sec::socket_operation_failed);
+
+        } else {
+          // write() returns 0 iff the connection was closed.
+          return fail(sec::socket_disconnected);
         }
       }
       return none;
