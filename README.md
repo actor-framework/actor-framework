@@ -95,6 +95,7 @@ for a list of available options or read the
 
 ```sh
 ./configure
+cd build
 make
 make test
 make install [as root, optional]
@@ -105,7 +106,12 @@ make install [as root, optional]
 All available CMake variables are available
 [online](https://github.com/actor-framework/actor-framework/wiki/CMake-Options).
 CAF also can be included as CMake submodule or added as dependency to other
-CMake-based projects using the file `cmake/FindCAF.cmake`.
+CMake-based projects. The latter can be achieved by calling
+```cmake
+find_package(CAF REQUIRED)
+```
+in respective project's CMake file. CAF's install location (e.g. by providing
+the `CMAKE_PREFIX_PATH` option) has to be known.
 
 ### Using SNocs
 
