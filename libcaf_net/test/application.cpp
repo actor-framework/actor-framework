@@ -29,6 +29,7 @@
 #include "caf/net/basp/connection_state.hpp"
 #include "caf/net/basp/constants.hpp"
 #include "caf/net/basp/ec.hpp"
+#include "caf/net/middleman.hpp"
 #include "caf/net/packet_writer.hpp"
 #include "caf/none.hpp"
 #include "caf/uri.hpp"
@@ -42,7 +43,13 @@ using namespace caf::net;
 
 namespace {
 
-struct fixture : test_coordinator_fixture<>,
+struct config : actor_system_config {
+  config() {
+    net::middleman::add_module_options(*this);
+  }
+};
+
+struct fixture : test_coordinator_fixture<config>,
                  proxy_registry::backend,
                  basp::application::test_tag,
                  public packet_writer {
@@ -242,8 +249,7 @@ CAF_TEST(actor message) {
   MOCK(basp::message_type::actor_message, make_message_id().integer_value(),
        mars, actor_id{42}, self->id(), std::vector<strong_actor_ptr>{},
        make_message("hello world!"));
-  allow((monitor_atom, strong_actor_ptr),
-        from(_).to(self).with(monitor_atom_v, _));
+  expect((monitor_atom, strong_actor_ptr), from(_).to(self));
   expect((std::string), from(_).to(self).with("hello world!"));
 }
 

@@ -59,26 +59,25 @@ public:
   bool handle_read_event() override {
     if (read_capacity() < 1024)
       rd_buf_.resize(rd_buf_.size() + 2048);
-    auto res = read(handle(),
-                    make_span(read_position_begin(), read_capacity()));
-    if (auto num_bytes = get_if<size_t>(&res)) {
-      CAF_ASSERT(*num_bytes > 0);
-      rd_buf_pos_ += *num_bytes;
+    auto num_bytes = read(handle(),
+                          make_span(read_position_begin(), read_capacity()));
+    if (num_bytes > 0) {
+      CAF_ASSERT(num_bytes > 0);
+      rd_buf_pos_ += num_bytes;
       return true;
     }
-    return get<sec>(res) == sec::unavailable_or_would_block;
+    return num_bytes < 0 && last_socket_error_is_temporary();
   }
 
   bool handle_write_event() override {
     if (wr_buf_.size() == 0)
       return false;
-    auto res = write(handle(), wr_buf_);
-    if (auto num_bytes = get_if<size_t>(&res)) {
-      CAF_ASSERT(*num_bytes > 0);
-      wr_buf_.erase(wr_buf_.begin(), wr_buf_.begin() + *num_bytes);
+    auto num_bytes = write(handle(), wr_buf_);
+    if (num_bytes > 0) {
+      wr_buf_.erase(wr_buf_.begin(), wr_buf_.begin() + num_bytes);
       return wr_buf_.size() > 0;
     }
-    return get<sec>(res) == sec::unavailable_or_would_block;
+    return num_bytes < 0 && last_socket_error_is_temporary();
   }
 
   void handle_error(sec code) override {

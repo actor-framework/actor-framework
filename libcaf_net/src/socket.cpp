@@ -103,6 +103,11 @@ std::errc last_socket_error() {
   abort();
 }
 
+bool last_socket_error_is_temporary() {
+  int wsa_code = WSAGetLastError();
+  return wsa_code == WSAEWOULDBLOCK || wsa_code == WSATRY_AGAIN;
+}
+
 std::string last_socket_error_as_string() {
   int wsa_code = WSAGetLastError();
   LPTSTR errorText = NULL;
@@ -147,6 +152,15 @@ std::errc last_socket_error() {
   // TODO: Linux and macOS both have some non-POSIX error codes that should get
   // mapped accordingly.
   return static_cast<std::errc>(errno);
+}
+
+bool last_socket_error_is_temporary() {
+  auto code = errno;
+#  if EAGAIN == EWOULDBLOCK
+  return code == EAGAIN;
+#  else
+  return code == EAGAIN || code == EWOULDBLOCK;
+#  endif
 }
 
 std::string last_socket_error_as_string() {

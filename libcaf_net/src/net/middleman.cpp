@@ -105,7 +105,8 @@ void middleman::add_module_options(actor_system_config& cfg) {
                  "max. number of consecutive reads per broker")
     .add<bool>("manual-multiplexing",
                "disables background activity of the multiplexer")
-    .add<size_t>("workers", "number of deserialization workers");
+    .add<size_t>("workers", "number of deserialization workers")
+    .add<std::string>("network-backend", "legacy option");
 }
 
 expected<endpoint_manager_ptr> middleman::connect(const uri& locator) {

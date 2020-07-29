@@ -73,17 +73,22 @@ public:
 
   bool handle_read_event(endpoint_manager&) override {
     CAF_LOG_TRACE(CAF_ARG2("handle", this->handle().id));
+    auto fail = [this](sec err) {
+      CAF_LOG_DEBUG("read failed" << CAF_ARG(err));
+      this->next_layer_.handle_error(err);
+      return false;
+    };
     for (size_t reads = 0; reads < this->max_consecutive_reads_; ++reads) {
-      auto buf = this->read_buf_.data() + this->collected_;
-      size_t len = this->read_threshold_ - this->collected_;
+      auto buf = this->read_buf_.data() + collected_;
+      size_t len = read_threshold_ - collected_;
       CAF_LOG_DEBUG(CAF_ARG2("missing", len));
-      auto ret = read(this->handle_, make_span(buf, len));
+      auto num_bytes = read(this->handle_, make_span(buf, len));
+      CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG2("handle", this->handle().id)
+                                 << CAF_ARG(num_bytes));
       // Update state.
-      if (auto num_bytes = get_if<size_t>(&ret)) {
-        CAF_LOG_DEBUG(CAF_ARG(len)
-                      << CAF_ARG(this->handle_.id) << CAF_ARG(*num_bytes));
-        this->collected_ += *num_bytes;
-        if (this->collected_ >= this->read_threshold_) {
+      if (num_bytes > 0) {
+        collected_ += num_bytes;
+        if (collected_ >= read_threshold_) {
           if (auto err = this->next_layer_.handle_data(
                 *this, make_span(this->read_buf_))) {
             CAF_LOG_ERROR("handle_data failed: " << CAF_ARG(err));
@@ -91,15 +96,16 @@ public:
           }
           this->prepare_next_read();
         }
+      } else if (num_bytes < 0) {
+        // Try again later on temporary errors such as EWOULDBLOCK and
+        // stop reading on the socket on hard errors.
+        return last_socket_error_is_temporary()
+                 ? true
+                 : fail(sec::socket_operation_failed);
+
       } else {
-        auto err = get<sec>(ret);
-        if (err == sec::unavailable_or_would_block) {
-          break;
-        } else {
-          CAF_LOG_DEBUG("read failed" << CAF_ARG(err));
-          this->next_layer_.handle_error(err);
-          return false;
-        }
+        // read() returns 0 iff the connection was closed.
+        return fail(sec::socket_disconnected);
       }
     }
     return true;
@@ -125,27 +131,33 @@ public:
         }
         write_queue_.pop_front();
       };
+      auto fail = [this](sec err) {
+        CAF_LOG_DEBUG("write failed" << CAF_ARG(err));
+        this->next_layer_.handle_error(err);
+        return err;
+      };
       // Write buffers from the write_queue_ for as long as possible.
       while (!write_queue_.empty()) {
         auto& buf = write_queue_.front().second;
         CAF_ASSERT(!buf.empty());
         auto data = buf.data() + written_;
         auto len = buf.size() - written_;
-        auto write_ret = write(this->handle(), make_span(data, len));
-        if (auto num_bytes = get_if<size_t>(&write_ret)) {
-          CAF_LOG_DEBUG(CAF_ARG(this->handle_.id) << CAF_ARG(*num_bytes));
-          written_ += *num_bytes;
-          if (written_ >= buf.size()) {
+        auto num_bytes = write(this->handle(), make_span(data, len));
+        if (num_bytes > 0) {
+          CAF_LOG_DEBUG(CAF_ARG(this->handle_.id) << CAF_ARG(num_bytes));
+          written_ += num_bytes;
+          if (written_ >= static_cast<ptrdiff_t>(buf.size())) {
             recycle();
             written_ = 0;
           }
+        } else if (num_bytes < 0) {
+          return last_socket_error_is_temporary()
+                   ? sec::unavailable_or_would_block
+                   : fail(sec::socket_operation_failed);
+
         } else {
-          auto err = get<sec>(write_ret);
-          if (err != sec::unavailable_or_would_block) {
-            CAF_LOG_DEBUG("send failed" << CAF_ARG(err));
-            this->next_layer_.handle_error(err);
-          }
-          return err;
+          // write() returns 0 iff the connection was closed.
+          return fail(sec::socket_disconnected);
         }
       }
       return none;
@@ -212,9 +224,9 @@ private:
   }
 
   write_queue_type write_queue_;
-  size_t written_;
-  size_t read_threshold_;
-  size_t collected_;
+  ptrdiff_t written_;
+  ptrdiff_t read_threshold_;
+  ptrdiff_t collected_;
   size_t max_;
   receive_policy_flag rd_flag_;
 };

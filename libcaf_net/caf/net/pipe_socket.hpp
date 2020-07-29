@@ -27,6 +27,10 @@
 #include "caf/net/socket.hpp"
 #include "caf/net/socket_id.hpp"
 
+// Note: This API mostly wraps platform-specific functions that return ssize_t.
+// We return ptrdiff_t instead, since only POSIX defines ssize_t and the two
+// types are functionally equivalent.
+
 namespace caf::net {
 
 /// A unidirectional communication endpoint for inter-process communication.
@@ -46,19 +50,13 @@ expected<std::pair<pipe_socket, pipe_socket>> CAF_NET_EXPORT make_pipe();
 /// @param buf Memory region for reading the message to send.
 /// @returns The number of written bytes on success, otherwise an error code.
 /// @relates pipe_socket
-variant<size_t, sec> CAF_NET_EXPORT write(pipe_socket x, span<const byte> buf);
+ptrdiff_t CAF_NET_EXPORT write(pipe_socket x, span<const byte> buf);
 
 /// Receives data from `x`.
 /// @param x Connected endpoint.
 /// @param buf Memory region for storing the received bytes.
 /// @returns The number of received bytes on success, otherwise an error code.
 /// @relates pipe_socket
-variant<size_t, sec> CAF_NET_EXPORT read(pipe_socket x, span<byte> buf);
-
-/// Converts the result from I/O operation on a ::pipe_socket to either an
-/// error code or a non-zero positive integer.
-/// @relates pipe_socket
-variant<size_t, sec>
-  CAF_NET_EXPORT check_pipe_socket_io_res(std::make_signed<size_t>::type res);
+ptrdiff_t CAF_NET_EXPORT read(pipe_socket x, span<byte> buf);
 
 } // namespace caf::net

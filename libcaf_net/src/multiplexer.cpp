@@ -155,15 +155,40 @@ bool multiplexer::poll_once(bool blocking) {
     return false;
   // We'll call poll() until poll() succeeds or fails.
   for (;;) {
-    int presult;
+    int presult =
 #ifdef CAF_WINDOWS
-    presult = ::WSAPoll(pollset_.data(), static_cast<ULONG>(pollset_.size()),
-                        blocking ? -1 : 0);
+      ::WSAPoll(pollset_.data(), static_cast<ULONG>(pollset_.size()),
+                blocking ? -1 : 0);
 #else
-    presult = ::poll(pollset_.data(), static_cast<nfds_t>(pollset_.size()),
-                     blocking ? -1 : 0);
+      ::poll(pollset_.data(), static_cast<nfds_t>(pollset_.size()),
+             blocking ? -1 : 0);
 #endif
-    if (presult < 0) {
+    if (presult > 0) {
+      CAF_LOG_DEBUG("poll() on" << pollset_.size() << "sockets reported"
+                                << presult << "event(s)");
+      // Scan pollset for events.
+      CAF_LOG_DEBUG("scan pollset for socket events");
+      for (size_t i = 0; i < pollset_.size() && presult > 0;) {
+        auto revents = pollset_[i].revents;
+        if (revents != 0) {
+          auto events = pollset_[i].events;
+          auto mgr = managers_[i];
+          auto new_events = handle(mgr, events, revents);
+          --presult;
+          if (new_events == 0) {
+            del(i);
+            continue;
+          } else if (new_events != events) {
+            pollset_[i].events = new_events;
+          }
+        }
+        ++i;
+      }
+      return true;
+    } else if (presult == 0) {
+      // No activity.
+      return false;
+    } else {
       auto code = last_socket_error();
       switch (code) {
         case std::errc::interrupted: {
@@ -186,33 +211,7 @@ bool multiplexer::poll_once(bool blocking) {
           CAF_CRITICAL(msg.c_str());
         }
       }
-      // Rinse and repeat.
-      continue;
     }
-    CAF_LOG_DEBUG("poll() on" << pollset_.size() << "sockets reported"
-                              << presult << "event(s)");
-    // No activity.
-    if (presult == 0)
-      return false;
-    // Scan pollset for events.
-    CAF_LOG_DEBUG("scan pollset for socket events");
-    for (size_t i = 0; i < pollset_.size() && presult > 0;) {
-      auto revents = pollset_[i].revents;
-      if (revents != 0) {
-        auto events = pollset_[i].events;
-        auto mgr = managers_[i];
-        auto new_events = handle(mgr, events, revents);
-        --presult;
-        if (new_events == 0) {
-          del(i);
-          continue;
-        } else if (new_events != events) {
-          pollset_[i].events = new_events;
-        }
-      }
-      ++i;
-    }
-    return true;
   }
 }
 
@@ -302,15 +301,13 @@ void multiplexer::write_to_pipe(uint8_t opcode, const socket_manager_ptr& mgr) {
   buf[0] = static_cast<byte>(opcode);
   auto value = reinterpret_cast<intptr_t>(mgr.get());
   memcpy(buf.data() + 1, &value, sizeof(intptr_t));
-  variant<size_t, sec> res;
+  ptrdiff_t res = -1;
   { // Lifetime scope of guard.
     std::lock_guard<std::mutex> guard{write_lock_};
     if (write_handle_ != invalid_socket)
       res = write(write_handle_, buf);
-    else
-      res = sec::socket_invalid;
   }
-  if (holds_alternative<sec>(res) && opcode != 4)
+  if (res <= 0 && opcode != 4)
     mgr->deref();
 }
 
