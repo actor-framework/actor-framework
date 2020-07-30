@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,22 +18,27 @@
 
 #pragma once
 
-#include <chrono>
-#include <cstdint>
-#include <limits>
+#include "caf/error.hpp"
+#include "caf/error_code.hpp"
+#include "caf/sec.hpp"
+#include "caf/type_id.hpp"
 
-namespace caf {
+namespace caf::detail {
 
-/// A portable timespan type with nanosecond resolution.
-using timespan = std::chrono::duration<int64_t, std::nano>;
-
-/// Constant representing an infinite amount of time.
-static constexpr timespan infinite
-  = timespan{std::numeric_limits<int64_t>::max()};
-
-/// Checks whether `value` represents an infinite amount of time.
-constexpr bool is_infinite(timespan value) {
-  return value == infinite;
+template <class T>
+void assign_inspector_try_result(error& x, T&& y) {
+  x = std::forward<T>(y);
 }
 
-} // namespace caf
+inline void assign_inspector_try_result(error_code<sec>& x, const error& y) {
+  if (y.category() == type_id_v<sec>)
+    x = static_cast<sec>(y.code());
+  else
+    x = sec::runtime_error;
+}
+
+inline void assign_inspector_try_result(error_code<sec>& x, error_code<sec> y) {
+  x = y;
+}
+
+} // namespace caf::detail

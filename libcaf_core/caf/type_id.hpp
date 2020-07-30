@@ -86,7 +86,13 @@ constexpr type_id_t first_custom_type_id = 200;
 
 /// Checks whether `type_id` is specialized for `T`.
 template <class T>
-constexpr bool has_type_id = detail::is_complete<type_id<T>>;
+constexpr bool has_type_id_v = detail::is_complete<type_id<T>>;
+
+// TODO: remove with CAF 0.19 (this exists for compatibility with CAF 0.17).
+template <class T>
+struct has_type_id {
+  static constexpr bool value = detail::is_complete<type_id<T>>;
+};
 
 } // namespace caf
 
@@ -181,6 +187,27 @@ constexpr bool has_type_id = detail::is_complete<type_id<T>>;
   }                                                                            \
   [[maybe_unused]] constexpr bool operator!=(atom_name, atom_name) {           \
     return false;                                                              \
+  }                                                                            \
+  template <class Inspector>                                                   \
+  auto inspect(Inspector& f, atom_name&) {                                     \
+    return f(caf::meta::type_name(#atom_namespace "::" #atom_name));           \
+  }                                                                            \
+  }                                                                            \
+  CAF_ADD_TYPE_ID(project_name, (atom_namespace::atom_name))
+
+/// Creates a new tag type (atom) and assigns the next free type ID to it.
+#define CAF_ADD_ATOM_4(project_name, atom_namespace, atom_name, atom_text)     \
+  namespace atom_namespace {                                                   \
+  struct atom_name {};                                                         \
+  static constexpr atom_name atom_name##_v = atom_name{};                      \
+  [[maybe_unused]] constexpr bool operator==(atom_name, atom_name) {           \
+    return true;                                                               \
+  }                                                                            \
+  [[maybe_unused]] constexpr bool operator!=(atom_name, atom_name) {           \
+    return false;                                                              \
+  }                                                                            \
+  inline std::string to_string(atom_name) {                                    \
+    return atom_text;                                                          \
   }                                                                            \
   template <class Inspector>                                                   \
   auto inspect(Inspector& f, atom_name&) {                                     \

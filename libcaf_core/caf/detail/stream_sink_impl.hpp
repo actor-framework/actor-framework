@@ -22,11 +22,11 @@
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/message_id.hpp"
+#include "caf/policy/arg.hpp"
 #include "caf/sec.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/stream_sink.hpp"
-
-#include "caf/policy/arg.hpp"
+#include "caf/typed_message_view.hpp"
 
 namespace caf::detail {
 

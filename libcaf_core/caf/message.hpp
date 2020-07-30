@@ -167,6 +167,12 @@ public:
     data_.reset(new_ptr, add_ref);
   }
 
+  /// Forces the message to copy its content if more than one reference to the
+  /// content exists.
+  void force_unshare() {
+    data_.unshare();
+  }
+
 private:
   data_ptr data_;
 };

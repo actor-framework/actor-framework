@@ -21,6 +21,7 @@
 #include <type_traits>
 
 #include "caf/allowed_unsafe_message_type.hpp"
+#include "caf/detail/assign_inspector_try_result.hpp"
 #include "caf/detail/inspect.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/detail/type_traits.hpp"
@@ -34,7 +35,7 @@
     statement;                                                                 \
   } else {                                                                     \
     if (auto err = statement) {                                                \
-      result = err;                                                            \
+      detail::assign_inspector_try_result(result, std::move(err));             \
       return false;                                                            \
     }                                                                          \
   }

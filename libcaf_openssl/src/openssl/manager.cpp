@@ -174,6 +174,10 @@ actor_system::module* manager::make(actor_system& sys, detail::type_list<>) {
   return new manager(sys);
 }
 
+void manager::init_global_meta_objects() {
+  // nop
+}
+
 manager::manager(actor_system& sys) : system_(sys) {
   // nop
 }

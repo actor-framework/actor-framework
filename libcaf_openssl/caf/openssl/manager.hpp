@@ -72,6 +72,9 @@ public:
   ///         default network backend.
   static actor_system::module* make(actor_system&, detail::type_list<>);
 
+  /// Adds message types of the OpenSSL module to the global meta object table.
+  static void init_global_meta_objects();
+
 private:
   /// Private since instantiation is only allowed via `make`.
   manager(actor_system& sys);
