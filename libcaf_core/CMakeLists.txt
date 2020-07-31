@@ -187,6 +187,8 @@ add_library(libcaf_core "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
 caf_core_set_default_properties(libcaf_core_obj libcaf_core)
 
 caf_export_and_install_lib(core)
+install(FILES "${CMAKE_BINARY_DIR}/caf/detail/build_config.hpp"
+          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail")
 
 # -- build unit tests ----------------------------------------------------------
 
