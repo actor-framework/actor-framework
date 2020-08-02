@@ -274,6 +274,13 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_test, caf::first_custom_type_id)
   ADD_ATOM(abc_atom)
   ADD_ATOM(get_state_atom)
   ADD_ATOM(name_atom)
+  ADD_ATOM(sub0_atom)
+  ADD_ATOM(sub1_atom)
+  ADD_ATOM(sub2_atom)
+  ADD_ATOM(sub3_atom)
+  ADD_ATOM(sub4_atom)
+  ADD_ATOM(hi_atom)
+  ADD_ATOM(ho_atom)
 
 CAF_END_TYPE_ID_BLOCK(core_test)
 

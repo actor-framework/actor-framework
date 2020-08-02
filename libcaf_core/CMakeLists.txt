@@ -303,6 +303,7 @@ caf_add_test_suites(caf-core-test
   request_timeout
   result
   selective_streaming
+  serial_reply
   serialization
   settings
   simple_timeout
