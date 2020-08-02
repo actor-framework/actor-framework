@@ -262,7 +262,7 @@ struct testee : load_inspector {
     return ok;
   }
 
-   bool value(std::string& x) {
+  bool value(std::string& x) {
     new_line();
     log += "std::string value";
     x.clear();
@@ -272,7 +272,6 @@ struct testee : load_inspector {
 
 struct fixture {
   testee f;
-
 };
 
 } // namespace

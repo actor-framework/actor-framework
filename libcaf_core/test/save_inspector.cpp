@@ -244,7 +244,6 @@ struct testee : save_inspector {
 
 struct fixture {
   testee f;
-
 };
 
 } // namespace

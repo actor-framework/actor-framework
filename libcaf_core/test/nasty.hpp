@@ -66,7 +66,6 @@ public:                                                                        \
     name##_ = std::move(value);                                                \
   }
 
-
 // A mean data type designed for maximum coverage of the inspect API.
 class nasty {
 public:
