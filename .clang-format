@@ -37,7 +37,7 @@ MacroBlockEnd: "^END_STATE$|CAF_END_TYPE_ID_BLOCK"
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
 PenaltyBreakAssignment: 25
-PenaltyBreakBeforeFirstCallParameter: 30
+PenaltyBreakBeforeFirstCallParameter: 50
 PenaltyReturnTypeOnItsOwnLine: 25
 PointerAlignment: Left
 ReflowComments: true
