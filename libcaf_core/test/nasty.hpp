@@ -21,7 +21,7 @@ enum class weekday {
 
 std::string to_string(weekday x);
 
-bool parse(std::string_view input, weekday& dest);
+bool parse(caf::string_view input, weekday& dest);
 
 namespace caf {
 

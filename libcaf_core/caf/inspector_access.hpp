@@ -411,7 +411,7 @@ template <class... Ts>
 struct inspector_access<variant<Ts...>> {
   using value_type = variant<Ts...>;
 
-  static constexpr type_id_t allowed_types[] = {type_id_v<Ts>...};
+  static constexpr type_id_t allowed_types_arr[] = {type_id_v<Ts>...};
 
   template <class Inspector>
   [[nodiscard]] static bool apply_object(Inspector& f, value_type& x) {
@@ -428,23 +428,23 @@ struct inspector_access<variant<Ts...>> {
   template <class Inspector>
   static bool save_field(Inspector& f, string_view field_name, value_type& x) {
     auto g = [&f](auto& y) { return inspect_value(f, y); };
-    return f.begin_field(field_name, make_span(allowed_types), x.index()) //
-           && visit(g, x)                                                 //
+    return f.begin_field(field_name, make_span(allowed_types_arr), x.index()) //
+           && visit(g, x)                                                     //
            && f.end_field();
   }
 
   template <class Inspector, class IsPresent, class Get>
   static bool save_field(Inspector& f, string_view field_name,
                          IsPresent& is_present, Get& get) {
+    auto allowed_types = make_span(allowed_types_arr);
     if (is_present()) {
       auto&& x = get();
       auto g = [&f](auto& y) { return inspect_value(f, y); };
-      return f.begin_field(field_name, true, make_span(allowed_types),
-                           x.index()) //
-             && visit(g, x)           //
+      return f.begin_field(field_name, true, allowed_types, x.index()) //
+             && visit(g, x)                                            //
              && f.end_field();
     }
-    return f.begin_field(field_name, false, make_span(allowed_types), 0) //
+    return f.begin_field(field_name, false, allowed_types, 0) //
            && f.end_field();
   }
 
@@ -473,9 +473,10 @@ struct inspector_access<variant<Ts...>> {
   static bool load_field(Inspector& f, string_view field_name, value_type& x,
                          IsValid& is_valid, SyncValue& sync_value) {
     size_t type_index = std::numeric_limits<size_t>::max();
-    if (!f.begin_field(field_name, make_span(allowed_types), type_index))
+    auto allowed_types = make_span(allowed_types_arr);
+    if (!f.begin_field(field_name, allowed_types, type_index))
       return false;
-    if (type_index >= std::size(allowed_types))
+    if (type_index >= allowed_types.size())
       return f.load_field_failed(field_name, sec::invalid_field_type);
     auto runtime_type = allowed_types[type_index];
     detail::type_list<Ts...> types;
@@ -494,12 +495,12 @@ struct inspector_access<variant<Ts...>> {
                          IsValid& is_valid, SyncValue& sync_value,
                          SetFallback& set_fallback) {
     bool is_present = false;
+    auto allowed_types = make_span(allowed_types_arr);
     size_t type_index = std::numeric_limits<size_t>::max();
-    if (!f.begin_field(field_name, is_present, make_span(allowed_types),
-                       type_index))
+    if (!f.begin_field(field_name, is_present, allowed_types, type_index))
       return false;
     if (is_present) {
-      if (type_index >= std::size(allowed_types))
+      if (type_index >= allowed_types.size())
         return f.load_field_failed(field_name, sec::invalid_field_type);
       auto runtime_type = allowed_types[type_index];
       detail::type_list<Ts...> types;

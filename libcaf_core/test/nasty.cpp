@@ -21,7 +21,7 @@ std::string to_string(weekday x) {
   }
 }
 
-bool parse(std::string_view input, weekday& dest) {
+bool parse(caf::string_view input, weekday& dest) {
   if (input == "monday") {
     dest = weekday::monday;
     return true;
