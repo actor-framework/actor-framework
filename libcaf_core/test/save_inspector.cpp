@@ -26,33 +26,7 @@
 #include <string>
 #include <vector>
 
-namespace caf {
-
-template <>
-struct inspector_access<std::string> {
-  template <class Inspector>
-  static bool apply(Inspector& f, std::string& x) {
-    return f.value(x);
-  }
-};
-
-template <>
-struct inspector_access<int32_t> {
-  template <class Inspector>
-  static bool apply(Inspector& f, int32_t& x) {
-    return f.value(x);
-  }
-};
-
-template <>
-struct inspector_access<double> {
-  template <class Inspector>
-  static bool apply(Inspector& f, double& x) {
-    return f.value(x);
-  }
-};
-
-} // namespace caf
+#include "nasty.hpp"
 
 using namespace caf;
 
@@ -174,6 +148,16 @@ struct testee : save_inspector {
     return object_t<testee>{T::tname, this};
   }
 
+  template <class T>
+  auto object(optional<T>&) {
+    return object_t<testee>{"optional", this};
+  }
+
+  template <class... Ts>
+  auto object(variant<Ts...>&) {
+    return object_t<testee>{"variant", this};
+  }
+
   bool begin_object(string_view object_name) {
     new_line();
     indent += 2;
@@ -205,6 +189,22 @@ struct testee : save_inspector {
     return ok;
   }
 
+  bool begin_field(string_view name, span<const type_id_t>, size_t) {
+    new_line();
+    indent += 2;
+    log += "begin variant field ";
+    log.insert(log.end(), name.begin(), name.end());
+    return ok;
+  }
+
+  bool begin_field(string_view name, bool, span<const type_id_t>, size_t) {
+    new_line();
+    indent += 2;
+    log += "begin optional variant field ";
+    log.insert(log.end(), name.begin(), name.end());
+    return ok;
+  }
+
   bool end_field() {
     indent -= 2;
     new_line();
@@ -212,11 +212,32 @@ struct testee : save_inspector {
     return ok;
   }
 
+  bool begin_tuple(size_t size) {
+    new_line();
+    indent += 2;
+    log += "begin tuple of size ";
+    log += std::to_string(size);
+    return ok;
+  }
+
+  bool end_tuple() {
+    indent -= 2;
+    new_line();
+    log += "end tuple";
+    return ok;
+  }
+
   template <class T>
-  bool value(const T&) {
+  std::enable_if_t<std::is_arithmetic<T>::value, bool> value(const T&) {
     new_line();
     log += type_name_v<T>;
     log += " value";
+    return ok;
+  }
+
+  bool value(const std::string&) {
+    new_line();
+    log += "std::string value";
     return ok;
   }
 };
@@ -291,19 +312,38 @@ end object)_");
 }
 
 CAF_TEST(save inspectors support fields with fallbacks and invariants) {
-  duration d{"minutes", 42.0};
-  CAF_CHECK_EQUAL(inspect(f, d), true);
-  CAF_CHECK_EQUAL(d.unit, "minutes");
-  CAF_CHECK_EQUAL(d.count, 42.0);
-  CAF_CHECK_EQUAL(f.log, R"_(
+  CAF_MESSAGE("save inspectors suppress fields with their default value");
+  {
+    duration d{"seconds", 12.0};
+    CAF_CHECK_EQUAL(inspect(f, d), true);
+    CAF_CHECK_EQUAL(d.unit, "seconds");
+    CAF_CHECK_EQUAL(d.count, 12.0);
+    CAF_CHECK_EQUAL(f.log, R"_(
 begin object duration
-  begin field unit
+  begin optional field unit
+  end field
+  begin field count
+    double value
+  end field
+end object)_");
+  }
+  f.log.clear();
+  CAF_MESSAGE("save inspectors include fields with non-default value");
+  {
+    duration d{"minutes", 42.0};
+    CAF_CHECK_EQUAL(inspect(f, d), true);
+    CAF_CHECK_EQUAL(d.unit, "minutes");
+    CAF_CHECK_EQUAL(d.count, 42.0);
+    CAF_CHECK_EQUAL(f.log, R"_(
+begin object duration
+  begin optional field unit
     std::string value
   end field
   begin field count
     double value
   end field
 end object)_");
+  }
 }
 
 CAF_TEST(save inspectors support fields with optional values) {
@@ -335,7 +375,7 @@ CAF_TEST(save inspectors support fields with getters and setters) {
   foobar fb;
   fb.foo("hello");
   fb.bar("world");
-  CAF_CHECK_EQUAL(inspect(f, fb), true);
+  CAF_CHECK(inspect(f, fb));
   CAF_CHECK_EQUAL(fb.foo(), "hello");
   CAF_CHECK_EQUAL(fb.bar(), "world");
   CAF_CHECK_EQUAL(f.log, R"_(
@@ -345,6 +385,114 @@ begin object foobar
   end field
   begin field bar
     std::string value
+  end field
+end object)_");
+}
+
+CAF_TEST(save inspectors support nasty data structures) {
+  nasty x;
+  CAF_CHECK(inspect(f, x));
+  CAF_CHECK_EQUAL(f.log, R"_(
+begin object nasty
+  begin field field_01
+    int32_t value
+  end field
+  begin optional field field_02
+  end field
+  begin field field_03
+    int32_t value
+  end field
+  begin optional field field_04
+  end field
+  begin optional field field_05
+  end field
+  begin optional field field_06
+  end field
+  begin optional field field_07
+  end field
+  begin optional field field_08
+  end field
+  begin variant field field_09
+    std::string value
+  end field
+  begin optional variant field field_10
+    std::string value
+  end field
+  begin variant field field_11
+    std::string value
+  end field
+  begin optional variant field field_12
+    std::string value
+  end field
+  begin field field_13
+    begin tuple of size 2
+      std::string value
+      int32_t value
+    end tuple
+  end field
+  begin optional field field_14
+  end field
+  begin field field_15
+    begin tuple of size 2
+      std::string value
+      int32_t value
+    end tuple
+  end field
+  begin optional field field_16
+  end field
+  begin field field_17
+    int32_t value
+  end field
+  begin optional field field_18
+  end field
+  begin field field_19
+    int32_t value
+  end field
+  begin optional field field_20
+  end field
+  begin optional field field_21
+  end field
+  begin optional field field_22
+  end field
+  begin optional field field_23
+  end field
+  begin optional field field_24
+  end field
+  begin variant field field_25
+    std::string value
+  end field
+  begin optional variant field field_26
+    std::string value
+  end field
+  begin variant field field_27
+    std::string value
+  end field
+  begin optional variant field field_28
+    std::string value
+  end field
+  begin field field_29
+    begin tuple of size 2
+      std::string value
+      int32_t value
+    end tuple
+  end field
+  begin optional field field_30
+  end field
+  begin field field_31
+    begin tuple of size 2
+      std::string value
+      int32_t value
+    end tuple
+  end field
+  begin optional field field_32
+  end field
+  begin optional variant field field_33
+  end field
+  begin optional field field_34
+  end field
+  begin optional variant field field_35
+  end field
+  begin optional field field_36
   end field
 end object)_");
 }

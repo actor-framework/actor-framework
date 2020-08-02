@@ -198,6 +198,7 @@ endif()
 
 add_executable(caf-core-test
   test/core-test.cpp
+  test/nasty.cpp
   $<TARGET_OBJECTS:libcaf_core_obj>)
 
 caf_core_set_default_properties(caf-core-test)

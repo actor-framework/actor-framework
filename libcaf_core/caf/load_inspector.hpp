@@ -21,9 +21,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "caf/error.hpp"
 #include "caf/inspector_access.hpp"
-#include "caf/sec.hpp"
 #include "caf/string_view.hpp"
 
 namespace caf {
@@ -34,7 +32,7 @@ namespace caf {
 ///       for the DSL.
 class load_inspector {
 public:
-  // -- contants ---------------------------------------------------------------
+  // -- constants --------------------------------------------------------------
 
   /// Convenience constant to indicate success of a processing step.
   static constexpr bool ok = true;
@@ -52,77 +50,43 @@ public:
   /// A load inspector overrides the state of an object.
   static constexpr bool writes_state = true;
 
-  // -- error management -------------------------------------------------------
-
-  template <class Inspector>
-  static void set_invariant_check_error(Inspector& f, string_view field_name,
-                                        string_view object_name) {
-    std::string msg = "invalid argument to field ";
-    msg.insert(msg.end(), field_name.begin(), field_name.end());
-    msg += " for object of type ";
-    msg.insert(msg.end(), object_name.begin(), object_name.end());
-    msg += ": invariant check failed";
-    f.set_error(make_error(caf::sec::invalid_argument, std::move(msg)));
-  }
-
-  template <class Inspector>
-  static void set_field_store_error(Inspector& f, string_view field_name,
-                                    string_view object_name) {
-    std::string msg = "invalid argument to field ";
-    msg.insert(msg.end(), field_name.begin(), field_name.end());
-    msg += " for object of type ";
-    msg.insert(msg.end(), object_name.begin(), object_name.end());
-    msg += ": setter returned false";
-    f.set_error(make_error(caf::sec::invalid_argument, std::move(msg)));
-  }
+  /// Inspecting objects, fields and values always returns a `bool`.
+  using result_type = bool;
 
   // -- DSL types for regular fields -------------------------------------------
 
-  template <class T, class Predicate>
+  template <class T, class U, class Predicate>
   struct field_with_invariant_and_fallback_t {
     string_view field_name;
     T* val;
-    T fallback;
+    U fallback;
     Predicate predicate;
 
     template <class Inspector>
-    bool operator()(string_view object_name, Inspector& f) {
-      bool is_present = false;
-      if (!f.begin_field(field_name, is_present))
-        return stop;
-      if (is_present) {
-        if (inspector_access<T>::apply(f, *val) && f.end_field()) {
-          if (predicate(*val))
-            return ok;
-          set_invariant_check_error(f, field_name, object_name);
-        }
-        return stop;
-      }
-      *val = std::move(fallback);
-      return f.end_field();
+    bool operator()(Inspector& f) {
+      auto reset = [this] { *val = std::move(fallback); };
+      return inspector_access<T>::load_field(f, field_name, *val, predicate,
+                                             detail::always_true, reset);
     }
   };
 
-  template <class T>
+  template <class T, class U>
   struct field_with_fallback_t {
     string_view field_name;
     T* val;
-    T fallback;
+    U fallback;
 
     template <class Inspector>
-    bool operator()(string_view, Inspector& f) {
-      bool is_present = false;
-      if (!f.begin_field(field_name, is_present))
-        return stop;
-      if (is_present)
-        return inspector_access<T>::apply(f, *val) && f.end_field();
-      *val = std::move(fallback);
-      return f.end_field();
+    bool operator()(Inspector& f) {
+      auto reset = [this] { *val = std::move(fallback); };
+      return inspector_access<T>::load_field(f, field_name, *val,
+                                             detail::always_true,
+                                             detail::always_true, reset);
     }
 
     template <class Predicate>
     auto invariant(Predicate predicate) && {
-      return field_with_invariant_and_fallback_t<T, Predicate>{
+      return field_with_invariant_and_fallback_t<T, U, Predicate>{
         field_name,
         val,
         std::move(fallback),
@@ -138,19 +102,14 @@ public:
     Predicate predicate;
 
     template <class Inspector>
-    bool operator()(string_view object_name, Inspector& f) {
-      if (f.begin_field(field_name)              //
-          && inspector_access<T>::apply(f, *val) //
-          && f.end_field()) {
-        if (predicate(*val))
-          return ok;
-        set_invariant_check_error(f, field_name, object_name);
-      }
-      return stop;
+    bool operator()(Inspector& f) {
+      return inspector_access<T>::load_field(f, field_name, *val, predicate,
+                                             detail::always_true);
     }
 
-    auto fallback(T value) && {
-      return field_with_invariant_and_fallback_t<T, Predicate>{
+    template <class U>
+    auto fallback(U value) && {
+      return field_with_invariant_and_fallback_t<T, U, Predicate>{
         field_name,
         val,
         std::move(value),
@@ -165,31 +124,15 @@ public:
     T* val;
 
     template <class Inspector>
-    bool operator()(string_view, Inspector& f) {
-      if constexpr (inspector_access_traits<T>::is_optional) {
-        bool is_present = false;
-        if (!f.begin_field(field_name, is_present))
-          return stop;
-        using value_type = std::decay_t<decltype(**val)>;
-        if (is_present) {
-          auto tmp = value_type{};
-          if (!inspector_access<value_type>::apply(f, tmp))
-            return stop;
-          *val = std::move(tmp);
-          return f.end_field();
-        } else {
-          *val = T{};
-          return f.end_field();
-        }
-      } else {
-        return f.begin_field(field_name)              //
-               && inspector_access<T>::apply(f, *val) //
-               && f.end_field();
-      }
+    bool operator()(Inspector& f) {
+      return inspector_access<T>::load_field(f, field_name, *val,
+                                             detail::always_true,
+                                             detail::always_true);
     }
 
-    auto fallback(T value) && {
-      return field_with_fallback_t<T>{field_name, val, std::move(value)};
+    template <class U>
+    auto fallback(U value) && {
+      return field_with_fallback_t<T, U>{field_name, val, std::move(value)};
     }
 
     template <class Predicate>
@@ -204,66 +147,46 @@ public:
 
   // -- DSL types for virtual fields (getter and setter access) ----------------
 
-  template <class T, class Set, class Predicate>
+  template <class T, class Set, class U, class Predicate>
   struct virt_field_with_invariant_and_fallback_t {
     string_view field_name;
     Set set;
-    T fallback;
+    U fallback;
     Predicate predicate;
 
     template <class Inspector>
-    bool operator()(string_view object_name, Inspector& f) {
-      bool is_present = false;
-      if (!f.begin_field(field_name, is_present))
-        return stop;
-      if (is_present) {
-        auto tmp = T{};
-        if (!inspector_access<T>::apply(f, tmp))
-          return stop;
-        if (!predicate(tmp)) {
-          set_invariant_check_error(f, field_name, object_name);
-          return stop;
-        }
-        if (!set(std::move(tmp))) {
-          set_field_store_error(f, field_name, object_name);
-          return stop;
-        }
-        return f.end_field();
-      }
-      if (!set(std::move(fallback))) {
-        set_field_store_error(f, field_name, object_name);
-        return stop;
-      }
-      return f.end_field();
+    bool operator()(Inspector& f) {
+      auto tmp = T{};
+      auto sync = [this, &tmp] { return set(std::move(tmp)); };
+      auto reset = [this] { set(std::move(fallback)); };
+      return inspector_access<T>::load_field(f, field_name, tmp, predicate,
+                                             sync, reset);
     }
   };
 
-  template <class T, class Set>
+  template <class T, class Set, class U>
   struct virt_field_with_fallback_t {
     string_view field_name;
     Set set;
-    T fallback;
+    U fallback;
 
     template <class Inspector>
-    bool operator()(string_view object_name, Inspector& f) {
-      bool is_present = false;
-      if (!f.begin_field(field_name, is_present))
-        return stop;
-      if (is_present) {
-        auto tmp = T{};
-        if (!inspector_access<T>::apply(f, tmp))
-          return stop;
-        if (!set(std::move(tmp))) {
-          set_field_store_error(f, field_name, object_name);
-          return stop;
-        }
-        return f.end_field();
-      }
-      if (!set(std::move(fallback))) {
-        set_field_store_error(f, field_name, object_name);
-        return stop;
-      }
-      return f.end_field();
+    bool operator()(Inspector& f) {
+      auto tmp = T{};
+      auto sync = [this, &tmp] { return set(std::move(tmp)); };
+      auto reset = [this] { set(std::move(fallback)); };
+      return inspector_access<T>::load_field(f, field_name, tmp,
+                                             detail::always_true, sync, reset);
+    }
+
+    template <class Predicate>
+    auto invariant(Predicate predicate) && {
+      return virt_field_with_invariant_and_fallback_t<T, Set, U, Predicate>{
+        field_name,
+        std::move(set),
+        std::move(fallback),
+        std::move(predicate),
+      };
     }
   };
 
@@ -274,25 +197,16 @@ public:
     Predicate predicate;
 
     template <class Inspector>
-    bool operator()(string_view object_name, Inspector& f) {
-      if (!f.begin_field(field_name))
-        return stop;
+    bool operator()(Inspector& f) {
       auto tmp = T{};
-      if (!inspector_access<T>::apply(f, tmp))
-        return stop;
-      if (!predicate(tmp)) {
-        set_invariant_check_error(f, field_name, object_name);
-        return stop;
-      }
-      if (!set(std::move(tmp))) {
-        set_field_store_error(f, field_name, object_name);
-        return stop;
-      }
-      return f.end_field();
+      auto sync = [this, &tmp] { return set(std::move(tmp)); };
+      return inspector_access<T>::load_field(f, field_name, tmp, predicate,
+                                             sync);
     }
 
-    auto fallback(T value) && {
-      return virt_field_with_invariant_and_fallback_t<T, Set, Predicate>{
+    template <class U>
+    auto fallback(U value) && {
+      return virt_field_with_invariant_and_fallback_t<T, Set, U, Predicate>{
         field_name,
         std::move(set),
         std::move(value),
@@ -307,22 +221,28 @@ public:
     Set set;
 
     template <class Inspector>
-    bool operator()(string_view, Inspector& f) {
-      if (!f.begin_field(field_name))
-        return stop;
+    bool operator()(Inspector& f) {
       auto tmp = T{};
-      if (!inspector_access<T>::apply(f, tmp))
-        return stop;
-      if (!set(std::move(tmp))) {
-      }
-      return f.end_field();
+      auto sync = [this, &tmp] { return set(std::move(tmp)); };
+      return inspector_access<T>::load_field(f, field_name, tmp,
+                                             detail::always_true, sync);
     }
 
-    auto fallback(T value) && {
-      return virt_field_with_fallback_t<T, Set>{
+    template <class U>
+    auto fallback(U value) && {
+      return virt_field_with_fallback_t<T, Set, U>{
         field_name,
         std::move(set),
         std::move(value),
+      };
+    }
+
+    template <class Predicate>
+    auto invariant(Predicate predicate) && {
+      return virt_field_with_invariant_t<T, Set, Predicate>{
+        field_name,
+        std::move(set),
+        std::move(predicate),
       };
     }
   };
@@ -334,8 +254,7 @@ public:
 
     template <class... Fields>
     bool fields(Fields&&... fs) {
-      return f->begin_object(object_name) && (fs(object_name, *f) && ...)
-             && f->end_object();
+      return f->begin_object(object_name) && (fs(*f) && ...) && f->end_object();
     }
 
     auto pretty_name(string_view name) && {
@@ -353,9 +272,6 @@ public:
   template <class Get, class Set>
   static auto field(string_view name, Get get, Set set) {
     using field_type = std::decay_t<decltype(get())>;
-    using set_result = decltype(set(std::declval<field_type>()));
-    static_assert(std::is_same<set_result, bool>::value,
-                  "setters of fields must return bool");
     return virt_field_t<field_type, Set>{name, set};
   }
 };

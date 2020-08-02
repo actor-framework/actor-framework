@@ -136,7 +136,7 @@ enum class sec : uint8_t {
   malformed_basp_message,
   /// The middleman closed a connection because it failed to serialize or
   /// deserialize a payload.
-  serializing_basp_payload_failed,
+  serializing_basp_payload_failed = 50,
   /// The middleman closed a connection to itself or an already connected node.
   redundant_connection,
   /// Resolving a path on a remote node failed.
@@ -145,6 +145,13 @@ enum class sec : uint8_t {
   no_tracing_context,
   /// No request produced a valid result.
   all_requests_failed,
+  /// Deserialization failed, because an invariant got violated after reading
+  /// the content of a field.
+  field_invariant_check_failed = 55,
+  /// Deserialization failed, because a setter rejected the input.
+  field_value_synchronization_failed,
+  /// Deserialization failed, because the source announced an invalid type.
+  invalid_field_type,
 };
 
 /// @relates sec

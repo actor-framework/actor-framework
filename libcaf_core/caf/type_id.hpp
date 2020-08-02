@@ -37,6 +37,10 @@ namespace caf {
 /// Internal representation of a type ID.
 using type_id_t = uint16_t;
 
+/// Special value equal to the greatest possible value for `type_id_t`.
+/// Generally indicates that no type ID for a given type exists.
+constexpr type_id_t invalid_type_id = 65535;
+
 /// Maps the type `T` to a globally unique ID.
 template <class T>
 struct type_id;

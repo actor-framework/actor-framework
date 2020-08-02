@@ -240,8 +240,8 @@ enum dummy_enum { de_foo, de_bar };
 CAF_BEGIN_TYPE_ID_BLOCK(core_test, caf::first_custom_type_id)
 
   ADD_TYPE_ID((caf::stream<int32_t>) )
-  ADD_TYPE_ID((caf::stream<std::string>) )
   ADD_TYPE_ID((caf::stream<std::pair<level, std::string>>) )
+  ADD_TYPE_ID((caf::stream<std::string>) )
   ADD_TYPE_ID((dummy_enum))
   ADD_TYPE_ID((dummy_enum_class))
   ADD_TYPE_ID((dummy_struct))

@@ -30,10 +30,10 @@ namespace caf {
 
 // -- 1 param templates --------------------------------------------------------
 
+template <class> class [[nodiscard]] error_code;
 template <class> class behavior_type_of;
 template <class> class dictionary;
 template <class> class downstream;
-template <class> class [[nodiscard]] error_code;
 template <class> class expected;
 template <class> class intrusive_cow_ptr;
 template <class> class intrusive_ptr;
@@ -45,6 +45,7 @@ template <class> class stream_sink;
 template <class> class stream_source;
 template <class> class weak_intrusive_ptr;
 
+template <class> struct inspector_access;
 template <class> struct timeout_definition;
 template <class> struct type_id;
 

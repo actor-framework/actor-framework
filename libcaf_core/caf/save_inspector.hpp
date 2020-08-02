@@ -18,9 +18,7 @@
 
 #pragma once
 
-#include "caf/error.hpp"
 #include "caf/inspector_access.hpp"
-#include "caf/sec.hpp"
 #include "caf/string_view.hpp"
 
 namespace caf {
@@ -31,7 +29,7 @@ namespace caf {
 ///       for the DSL.
 class save_inspector {
 public:
-  // -- contants ---------------------------------------------------------------
+  // -- constants --------------------------------------------------------------
 
   /// Convenience constant to indicate success of a processing step.
   static constexpr bool ok = true;
@@ -49,7 +47,29 @@ public:
   /// A load inspector never modifies the state of an object.
   static constexpr bool writes_state = false;
 
+  /// Inspecting objects, fields and values always returns a `bool`.
+  using result_type = bool;
+
   // -- DSL types for regular fields -------------------------------------------
+
+  template <class T, class U>
+  struct field_with_fallback_t {
+    string_view field_name;
+    T* val;
+    U fallback;
+
+    template <class Inspector>
+    bool operator()(Inspector& f) {
+      auto is_present = [this] { return *val != fallback; };
+      auto get = [this] { return *val; };
+      return inspector_access<T>::save_field(f, field_name, is_present, get);
+    }
+
+    template <class Predicate>
+    field_with_fallback_t&& invariant(Predicate&&) && {
+      return std::move(*this);
+    }
+  };
 
   template <class T>
   struct field_t {
@@ -57,36 +77,40 @@ public:
     T* val;
 
     template <class Inspector>
-    bool operator()(string_view, Inspector& f) {
-      if constexpr (inspector_access_traits<T>::is_optional) {
-        auto& ref = *val;
-        using value_type = std::decay_t<decltype(*ref)>;
-        if (ref) {
-          return f.begin_field(field_name, true)                 //
-                 && inspector_access<value_type>::apply(f, *ref) //
-                 && f.end_field();
-        } else {
-          return f.begin_field(field_name, false) && f.end_field();
-        }
-      } else {
-        return f.begin_field(field_name)              //
-               && inspector_access<T>::apply(f, *val) //
-               && f.end_field();
-      }
+    bool operator()(Inspector& f) {
+      return inspector_access<T>::save_field(f, field_name, *val);
     }
 
-    template <class Unused>
-    field_t& fallback(Unused&&) {
-      return *this;
+    template <class U>
+    auto fallback(U value) && {
+      return field_with_fallback_t<T, U>{field_name, val, std::move(value)};
     }
 
     template <class Predicate>
-    field_t invariant(Predicate&&) {
-      return *this;
+    field_t&& invariant(Predicate&&) && {
+      return std::move(*this);
     }
   };
 
   // -- DSL types for virtual fields (getter and setter access) ----------------
+
+  template <class T, class Get, class U>
+  struct virt_field_with_fallback_t {
+    string_view field_name;
+    Get get;
+    U fallback;
+
+    template <class Inspector>
+    bool operator()(Inspector& f) {
+      auto is_present = [this] { return get() != fallback; };
+      return inspector_access<T>::save_field(f, field_name, is_present, get);
+    }
+
+    template <class Predicate>
+    virt_field_with_fallback_t&& invariant(Predicate&&) && {
+      return std::move(*this);
+    }
+  };
 
   template <class T, class Get>
   struct virt_field_t {
@@ -94,33 +118,24 @@ public:
     Get get;
 
     template <class Inspector>
-    bool operator()(string_view, Inspector& f) {
-      if (!f.begin_field(field_name))
-        return stop;
-      auto&& value = get();
-      using value_type = std::remove_reference_t<decltype(value)>;
-      if constexpr (std::is_const<value_type>::value) {
-        // Force a mutable reference, because the inspect API requires it. This
-        // const_cast is always safe, because we never actually modify the
-        // object.
-        using mutable_ref = std::remove_const_t<value_type>&;
-        if (!inspector_access<T>::apply(f, const_cast<mutable_ref>(value)))
-          return stop;
-      } else {
-        if (!inspector_access<T>::apply(f, value))
-          return stop;
-      }
-      return f.end_field();
+    bool operator()(Inspector& f) {
+      auto&& x = get();
+      return inspector_access<T>::save_field(f, field_name,
+                                             detail::as_mutable_ref(x));
     }
 
-    template <class Unused>
-    virt_field_t& fallback(Unused&&) {
-      return *this;
+    template <class U>
+    auto fallback(U value) && {
+      return virt_field_with_fallback_t<T, Get, U>{
+        field_name,
+        std::move(get),
+        std::move(value),
+      };
     }
 
     template <class Predicate>
-    virt_field_t invariant(Predicate&&) {
-      return *this;
+    virt_field_t&& invariant(Predicate&&) && {
+      return std::move(*this);
     }
   };
 
@@ -131,8 +146,7 @@ public:
 
     template <class... Fields>
     bool fields(Fields&&... fs) {
-      return f->begin_object(object_name) && (fs(object_name, *f) && ...)
-             && f->end_object();
+      return f->begin_object(object_name) && (fs(*f) && ...) && f->end_object();
     }
 
     auto pretty_name(string_view name) && {
