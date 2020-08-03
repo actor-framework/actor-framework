@@ -218,10 +218,19 @@ bool operator "" _i(const char* cstr, size_t cstr_len) {
 
 CAF_TEST_FIXTURE_SCOPE(uri_tests, fixture)
 
-CAF_TEST(constructing) {
+CAF_TEST(default URIs are empty) {
   uri x;
   CAF_CHECK_EQUAL(x.empty(), true);
   CAF_CHECK_EQUAL(x.str(), "");
+}
+
+CAF_TEST(URIs recognize IP addresses while parsing) {
+  auto v6_localhost = "tcp://[::1]:8080"_u;
+  CAF_CHECK(holds_alternative<ip_address>(v6_localhost.authority().host));
+  auto v4_localhost = "tcp://127.0.0.1:8080"_u;
+  CAF_CHECK(holds_alternative<ip_address>(v4_localhost.authority().host));
+  auto str_localhost = "tcp://localhost:8080"_u;
+  CAF_CHECK(holds_alternative<std::string>(str_localhost.authority().host));
 }
 
 #define BUILD(components)                                                      \
@@ -325,7 +334,7 @@ CAF_TEST(from string) {
   ROUNDTRIP("http://me@node:80/file?a=1&b=2");
   ROUNDTRIP("http://me@node:80/file#42");
   ROUNDTRIP("http://me@node:80/file?a=1&b=2#42");
-  // all combinations of with IPv6 host
+  // all combinations of components with IPv6 host
   ROUNDTRIP("http://[::1]");
   ROUNDTRIP("http://[::1]?a=1&b=2");
   ROUNDTRIP("http://[::1]#42");

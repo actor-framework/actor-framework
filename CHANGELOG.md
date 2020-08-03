@@ -170,6 +170,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   two. This should have no implications for real-world applications, because
   actors that produce a signaling NaN trigger trap handlers before sending
   the result to another actor.
+- The URI parser stored IPv4 addresses as strings (#1123). Users can now safely
+  assume that the parsed URI for `tcp://127.0.0.1:8080` returns an IP address
+  when calling `authority().host`.
 
 ## [0.17.6] - 2020-07-24
 
