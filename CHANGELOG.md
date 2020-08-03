@@ -54,6 +54,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The `to_string` output for `error` now renders the error code enum by default.
   This renders the member functions `actor_system::render` and
   `actor_system_config::render` obsolete.
+- Actors that die due to an unhandled exception now use `sec::runtime_error`
+  consistently. This makes `exit_reason::unhandled_exception` obsolete.
 
 ### Changed
 
