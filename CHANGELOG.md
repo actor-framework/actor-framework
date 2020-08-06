@@ -176,6 +176,13 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   assume that the parsed URI for `tcp://127.0.0.1:8080` returns an IP address
   when calling `authority().host`.
 
+## [0.17.7] - Unreleased
+
+### Fixed
+
+- Datagram servants are not added to their broker on creation and should no
+  longer prevent system shutdown if they never enconutered a new endpoint. 
+
 ## [0.17.6] - 2020-07-24
 
 ### Fixed
