@@ -173,11 +173,6 @@ public:
 
   // -- (pure) virtual functions -----------------------------------------------
 
-  /// Configures this transport for the next read event.
-  virtual void configure_read(receive_policy::config) {
-    // nop
-  }
-
   /// Called by the endpoint manager when the transport can read data from its
   /// socket.
   virtual bool handle_read_event(endpoint_manager&) = 0;

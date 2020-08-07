@@ -123,30 +123,31 @@ target_include_directories(caf-net-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tes
 target_link_libraries(caf-net-test PRIVATE CAF::test)
 
 caf_incubator_add_test_suites(caf-net-test
+  accept_socket
+  application
+  convert_ip_endpoint
+  datagram_socket
+  datagram_transport
+  doorman
+  endpoint_manager
+  header
+  ip
+  multiplexer
+  net.backend.tcp
   net.basp.message_queue
   net.basp.ping_pong
   net.basp.worker
-  accept_socket
+  net.length_prefix_framing
+  network_socket
   pipe_socket
-  application
   socket
-  convert_ip_endpoint
   socket_guard
-  datagram_socket
   stream_application
-  datagram_transport
   stream_socket
-  doorman
   stream_transport
-  endpoint_manager
   string_application
-  header
   tcp_sockets
-  ip
   transport_worker
-  multiplexer
   transport_worker_dispatcher
   udp_datagram_socket
-  network_socket
-  net.backend.tcp
 )

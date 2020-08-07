@@ -21,6 +21,7 @@
 #include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
+#include "caf/make_counted.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/operation.hpp"
 #include "caf/net/socket.hpp"
@@ -70,6 +71,21 @@ public:
   /// @pre `flag != operation::none`
   bool mask_del(operation flag) noexcept;
 
+  const error& abort_reason() const noexcept {
+    return abort_reason_;
+  }
+
+  void abort_reason(error reason) noexcept {
+    abort_reason_ = std::move(reason);
+  }
+
+  template <class... Ts>
+  const error& abort_reason_or(Ts&&... xs) {
+    if (!abort_reason_)
+      abort_reason_ = make_error(std::forward<Ts>(xs)...);
+    return abort_reason_;
+  }
+
   // -- event loop management --------------------------------------------------
 
   void register_reading();
@@ -96,8 +112,65 @@ protected:
   operation mask_;
 
   weak_multiplexer_ptr parent_;
+
+  error abort_reason_;
 };
 
+template <class Protocol>
+class socket_manager_impl : public socket_manager {
+public:
+  template <class... Ts>
+  socket_manager_impl(Ts&&... xs) : protocol_(std::forward<Ts>(xs)...) {
+    // nop
+  }
+
+  bool handle_read_event() override {
+    return protocol_.handle_read_event(*this);
+  }
+
+  bool handle_write_event() override {
+    return protocol_.handle_write_event(*this);
+  }
+
+  void handle_error(sec code) override {
+    abort_reason_ = code;
+    return protocol_.abort(*this, abort_reason_);
+  }
+
+  auto& protocol() noexcept {
+    return protocol_;
+  }
+
+  const auto& protocol() const noexcept {
+    return protocol_;
+  }
+
+private:
+  Protocol protocol_;
+};
+
+/// @relates socket_manager
 using socket_manager_ptr = intrusive_ptr<socket_manager>;
+
+template <class B, template <class> class... Layers>
+struct make_socket_manager_helper;
+
+template <class B>
+struct make_socket_manager_helper<B> {
+  using type = B;
+};
+
+template <class B, template <class> class Layer,
+          template <class> class... Layers>
+struct make_socket_manager_helper<B, Layer, Layers...>
+  : make_socket_manager_helper<Layer<B>, Layers...> {
+  // no content
+};
+
+template <class App, template <class> class... Layers, class... Ts>
+auto make_socket_manager(Ts&&... xs) {
+  using impl = make_socket_manager_helper<App, Layers..., socket_manager_impl>;
+  return make_counted<impl>(std::forward<Ts>(xs)...);
+}
 
 } // namespace caf::net

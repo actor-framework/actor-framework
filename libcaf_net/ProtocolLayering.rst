@@ -48,24 +48,52 @@ stack *up*. Outgoing data always travels the protocol stack *down*.
 
 ..code-block:: C++
 
+  interface base [role: upper layer] {
+    /// Called whenever the underlying transport is ready to send, allowing the
+    /// upper layers to produce additional output data or use the event to read
+    /// from event queues, etc.
+    /// @returns `true` if the lower layers may proceed, `false` otherwise
+    ///          (aborts execution).
+    template <class LowerLayer>
+    bool prepare_send(LowerLayer& down);
+
+    /// Called whenever the underlying transport finished writing all buffered
+    /// data for output to query whether an upper layer still has pending events
+    /// or may produce output data on the next call to `prepare_send`.
+    /// @returns `true` if the underlying socket may get removed from the I/O
+    ///          event loop, `false` otherwise.
+    template <class LowerLayer>
+    bool done_sending(LowerLayer& down);
+  }
+
+  interface base [role: lower layer] {
+    /// Returns whether the layer has output slots available.
+    bool can_send_more() const noexcept;
+  }
+
   interface stream_oriented [role: upper layer] {
+    /// Called by the lower layer for cleaning up any state in case of an error.
+    template <class LowerLayer>
+    void abort(LowerLayer& down, const error& reason);
+
     /// Consumes bytes from the lower layer.
     /// @param down Reference to the lower layer that received the data.
     /// @param buffer Available bytes to read.
     /// @param delta Bytes that arrived since last calling this function.
-    /// @returns The number of consumed bytes (may be zero if waiting for more
-    ///          input or negative to signal an error) and a policy that
-    ///          configures how many bytes to receive next (as well as
-    ///          thresholds for when to call this function again).
-    /// @note When returning a negative value for the number of consumed bytes,
-    ///       clients must also call `down.set_read_error(...)` with an
-    ///       appropriate error code.
+    /// @returns The number of consumed bytes. May be zero if waiting for more
+    ///          input or negative to signal an error.
+    /// @note When returning a negative value, clients should also call
+    ///       `down.abort_reason(...)` with an appropriate error code.
     template <class LowerLayer>
-    pair<ptrdiff_t, receive_policy> consume(LowerLayer& down, byte_span buffer,
-                                            byte_span delta);
+    ptrdiff_t consume(LowerLayer& down, byte_span buffer, byte_span delta);
   }
 
   interface stream_oriented [role: lower layer] {
+    /// Configures threshold for the next receive operations. Policies remain
+    /// active until calling this function again.
+    /// @warning Calling this function in `consume` invalidates both byte spans.
+    void configure_read(read_policy policy);
+
     /// Prepares the layer for outgoing traffic, e.g., by allocating an output
     /// buffer as necessary.
     void begin_output();
@@ -78,6 +106,11 @@ stack *up*. Outgoing data always travels the protocol stack *down*.
     /// Prepares written data for transfer, e.g., by flushing buffers or
     /// registering sockets for write events.
     void end_output();
+
+    /// Propagates an abort reason to the lower layers. After processing the
+    /// current read or write event, the lowest layer will call `abort` on its
+    // upper layer.
+    void abort_reason(error reason);
   }
 
   interface datagram_oriented [role: upper layer] {
@@ -137,6 +170,9 @@ stack *up*. Outgoing data always travels the protocol stack *down*.
     byte_buffer& message_buffer();
 
     /// Seals and prepares a message for transfer.
-    void end_message();
+    /// @note When returning `false`, clients must also call
+    ///       `down.set_read_error(...)` with an appropriate error code.
+    template <class LowerLayer>
+    bool end_message();
   }
 

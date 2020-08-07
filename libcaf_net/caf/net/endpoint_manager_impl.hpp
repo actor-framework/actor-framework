@@ -124,6 +124,8 @@ private:
 
   /// Stores the id for the next timeout.
   uint64_t next_timeout_id_;
+
+  error err_;
 };
 
 } // namespace caf::net
