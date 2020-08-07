@@ -217,6 +217,8 @@ void abstract_broker::add_datagram_servant(datagram_servant_ptr ptr) {
   launch_servant(ptr);
   for (auto& hdl : hdls)
     add_hdl_for_datagram_servant(ptr, hdl);
+  auto hdl = ptr->hdl();
+  add_hdl_for_datagram_servant(std::move(ptr), hdl);
 }
 
 void abstract_broker::add_hdl_for_datagram_servant(datagram_servant_ptr ptr,
