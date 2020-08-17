@@ -1023,7 +1023,17 @@ uint64_t scheduled_actor::set_timeout(std::string type,
 stream_slot scheduled_actor::next_slot() {
   stream_slot result = 1;
   auto nslot = [](const stream_manager_map& x) -> stream_slot {
-    return x.rbegin()->first + 1;
+    auto highest = x.rbegin()->first;
+    if (highest < std::numeric_limits<decltype(highest)>::max())
+      return highest + 1;
+    // Back-up algorithm in the case of an overflow: Take the minimum
+    // id `1` if its still free, otherwise take an id from the first
+    // gap between two consecutive keys.
+    if (1 < x.begin()->first)
+      return 1;
+    auto has_gap = [](auto& a, auto& b) { return b.first - a.first > 1; };
+    auto i = std::adjacent_find(x.begin(), x.end(), has_gap);
+    return i != x.end() ? i->first + 1 : invalid_stream_slot;
   };
   if (!stream_managers_.empty())
     result = std::max(nslot(stream_managers_), result);
