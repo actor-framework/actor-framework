@@ -46,6 +46,7 @@ template <class> class stream_source;
 template <class> class weak_intrusive_ptr;
 
 template <class> struct inspector_access;
+template <class> struct inspector_access_traits;
 template <class> struct timeout_definition;
 template <class> struct type_id;
 

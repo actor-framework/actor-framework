@@ -152,6 +152,8 @@ enum class sec : uint8_t {
   field_value_synchronization_failed,
   /// Deserialization failed, because the source announced an invalid type.
   invalid_field_type,
+  /// Serialization failed because a type was flagged as unsafe message type.
+  unsafe_type,
 };
 
 /// @relates sec

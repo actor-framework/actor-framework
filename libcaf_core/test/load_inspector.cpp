@@ -22,6 +22,7 @@
 
 #include "caf/test/dsl.hpp"
 
+#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -153,6 +154,29 @@ bool inspect(Inspector& f, fallback_dummy_message& x) {
   return f.object(x).fields(f.field("content", x.content).fallback(42.0));
 }
 
+struct basics {
+  static inline string_view tname = "basics";
+  struct tag {
+    static inline string_view tname = "tag";
+  };
+  tag v1;
+  int32_t v2;
+  int32_t v3[4];
+  dummy_message v4[2];
+  std::array<int32_t, 2> v5;
+  std::tuple<int32_t, dummy_message> v6;
+  std::map<std::string, int32_t> v7;
+  std::vector<std::list<std::pair<std::string, std::array<int32_t, 3>>>> v8;
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, basics& x) {
+  return f.object(x).fields(f.field("v1", x.v1), f.field("v2", x.v2),
+                            f.field("v3", x.v3), f.field("v4", x.v4),
+                            f.field("v5", x.v5), f.field("v6", x.v6),
+                            f.field("v7", x.v7), f.field("v8", x.v8));
+}
+
 struct testee : load_inspector {
   std::string log;
 
@@ -250,6 +274,22 @@ struct testee : load_inspector {
     indent -= 2;
     new_line();
     log += "end tuple";
+    return ok;
+  }
+
+  bool begin_sequence(size_t& size) {
+    size = 0;
+    new_line();
+    indent += 2;
+    log += "begin sequence of size ";
+    log += std::to_string(size);
+    return ok;
+  }
+
+  bool end_sequence() {
+    indent -= 2;
+    new_line();
+    log += "end sequence";
     return ok;
   }
 
@@ -512,6 +552,67 @@ begin object nasty
   begin optional variant field field_35
   end field
   begin optional field field_36
+  end field
+end object)_");
+}
+
+CAF_TEST(load inspectors support all basic STL types) {
+  basics x;
+  CAF_CHECK(inspect(f, x));
+  CAF_CHECK_EQUAL(f.log, R"_(
+begin object basics
+  begin field v1
+    begin object tag
+    end object
+  end field
+  begin field v2
+    int32_t value
+  end field
+  begin field v3
+    begin tuple of size 4
+      int32_t value
+      int32_t value
+      int32_t value
+      int32_t value
+    end tuple
+  end field
+  begin field v4
+    begin tuple of size 2
+      begin object dummy_message
+        begin variant field content
+          std::string value
+        end field
+      end object
+      begin object dummy_message
+        begin variant field content
+          std::string value
+        end field
+      end object
+    end tuple
+  end field
+  begin field v5
+    begin tuple of size 2
+      int32_t value
+      int32_t value
+    end tuple
+  end field
+  begin field v6
+    begin tuple of size 2
+      int32_t value
+      begin object dummy_message
+        begin variant field content
+          std::string value
+        end field
+      end object
+    end tuple
+  end field
+  begin field v7
+    begin sequence of size 0
+    end sequence
+  end field
+  begin field v8
+    begin sequence of size 0
+    end sequence
   end field
 end object)_");
 }
