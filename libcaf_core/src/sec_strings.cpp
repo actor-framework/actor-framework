@@ -131,6 +131,8 @@ std::string to_string(sec x) {
       return "field_value_synchronization_failed";
     case sec::invalid_field_type:
       return "invalid_field_type";
+    case sec::unsafe_type:
+      return "unsafe_type";
   };
 }
 
