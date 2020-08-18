@@ -8,13 +8,17 @@ include(CMakePackageConfigHelpers) # For creating .cmake files
 include(GNUInstallDirs)            # Sets default install paths
 include(GenerateExportHeader)      # Auto-generates dllexport macros
 
+# -- override CMake defaults for internal cache entries ------------------------
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON
+    CACHE INTERNAL "Write JSON compile commands database")
+
 # -- general options -----------------------------------------------------------
 
 option(BUILD_SHARED_LIBS "Build shared library targets" ON)
-option(CMAKE_EXPORT_COMPILE_COMMANDS "Write JSON compile commands database" ON)
 option(THREADS_PREFER_PTHREAD_FLAG "Prefer -pthread flag if available " ON)
 
-# -- CAF options that are off by default ----------------------------------------
+# -- CAF options that are off by default ---------------------------------------
 
 option(CAF_ENABLE_CURL_EXAMPLES "Build examples with libcurl" OFF)
 option(CAF_ENABLE_PROTOBUF_EXAMPLES "Build examples with Google Protobuf" OFF)
@@ -48,7 +52,7 @@ set(CAF_INSTALL_CMAKEDIR
 # -- macOS-specific options ----------------------------------------------------
 
 if(APPLE)
-  option(CMAKE_MACOSX_RPATH "Use rpaths on macOS and iOS" ON)
+  set(CMAKE_MACOSX_RPATH ON CACHE INTERNAL "Use rpaths on macOS and iOS")
 endif()
 
 # -- project-specific CMake settings -------------------------------------------
