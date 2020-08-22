@@ -204,6 +204,31 @@ public:
 
     /// Counts how many messages are currently waiting in the mailbox.
     telemetry::int_gauge_family* mailbox_size_family = nullptr;
+
+    struct {
+      // -- inbound ------------------------------------------------------------
+
+      /// Counts the total number of processed stream elements from upstream.
+      telemetry::int_counter_family* processed_elements_family = nullptr;
+
+      /// Tracks how many stream elements from upstream are currently buffered.
+      telemetry::int_gauge_family* input_buffer_size_family = nullptr;
+
+      // -- outbound -----------------------------------------------------------
+
+      /// Counts the total number of elements that have been pushed downstream.
+      telemetry::int_counter_family* pushed_elements_family = nullptr;
+
+      /// Counts the total number of batches that have been pushed downstream.
+      telemetry::int_counter_family* pushed_batches_family = nullptr;
+
+      /// Tracks how many stream elements are currently waiting in the output
+      /// buffer due to insufficient credit.
+      telemetry::int_gauge_family* output_buffer_size_family = nullptr;
+    }
+
+    /// Wraps streaming-related actor metric families.
+    stream;
   };
 
   /// @warning The system stores a reference to `cfg`, which means the
