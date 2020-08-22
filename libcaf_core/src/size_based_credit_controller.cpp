@@ -31,9 +31,9 @@ namespace caf::detail {
 
 impl::impl(scheduled_actor* self) : super(self) {
   auto& cfg = self->system().config();
-  buffer_capacity_ = get_or(cfg, "stream.size-policy.buffer-capacity",
+  buffer_capacity_ = get_or(cfg, "caf.stream.size-policy.buffer-capacity",
                             defaults::stream::size_policy::buffer_capacity);
-  bytes_per_batch_ = get_or(cfg, "stream.size-policy.bytes-per-batch",
+  bytes_per_batch_ = get_or(cfg, "caf.stream.size-policy.bytes-per-batch",
                             defaults::stream::size_policy::bytes_per_batch);
 }
 
