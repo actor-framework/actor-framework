@@ -25,6 +25,7 @@
 #include "caf/config_value_adaptor_field.hpp"
 #include "caf/config_value_field.hpp"
 #include "caf/detail/config_value_field_base.hpp"
+#include "caf/detail/int_list.hpp"
 #include "caf/string_view.hpp"
 
 namespace caf::detail {

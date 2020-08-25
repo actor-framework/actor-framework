@@ -53,12 +53,12 @@ CAF_TEST(serialization roundtrips go through the registry) {
   auto hdl = sys.spawn(dummy);
   byte_buffer buf;
   binary_serializer sink{sys, buf};
-  if (auto err = sink(hdl))
-    CAF_FAIL("serialization failed: " << to_string(err));
+  if (!inspect_object(sink,hdl))
+    CAF_FAIL("serialization failed: " << sink.get_error());
   actor hdl2;
   binary_deserializer source{sys, buf};
-  if (auto err = source(hdl2))
-    CAF_FAIL("serialization failed: " << to_string(err));
+  if (!inspect_object(source, hdl2))
+    CAF_FAIL("serialization failed: " << source.get_error());
   CAF_CHECK_EQUAL(hdl, hdl2);
   anon_send_exit(hdl, exit_reason::user_shutdown);
 }

@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2015                                                  *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,26 +16,12 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
-
-#include <cstddef>
-
-#include "caf/deep_to_string.hpp"
-#include "caf/meta/type_name.hpp"
+#include "caf/load_inspector.hpp"
 
 namespace caf {
 
-/// Stores a flow-control configuration.
-struct named_actor_config {
-  std::string strategy;
-  size_t low_watermark;
-  size_t max_pending;
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, named_actor_config& x) {
-  return f(meta::type_name("named_actor_config"), x.strategy, x.low_watermark,
-           x.max_pending);
+load_inspector::~load_inspector() {
+  // nop
 }
 
 } // namespace caf

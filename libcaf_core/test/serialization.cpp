@@ -111,9 +111,9 @@ struct fixture : test_coordinator_fixture<> {
   byte_buffer serialize(const Ts&... xs) {
     byte_buffer buf;
     binary_serializer sink{sys, buf};
-    if (auto err = sink(xs...))
+    if (!inspect_objects(sink, xs...))
       CAF_FAIL("serialization failed: "
-               << err
+               << sink.get_error()
                << ", data: " << deep_to_string(std::forward_as_tuple(xs...)));
     return buf;
   }
@@ -121,8 +121,8 @@ struct fixture : test_coordinator_fixture<> {
   template <class... Ts>
   void deserialize(const byte_buffer& buf, Ts&... xs) {
     binary_deserializer source{sys, buf};
-    if (auto err = source(xs...))
-      CAF_FAIL("deserialization failed: " << err);
+    if (!inspect_objects(source, xs...))
+      CAF_FAIL("deserialization failed: " << source.get_error());
   }
 
   // serializes `x` and then deserializes and returns the serialized value

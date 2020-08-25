@@ -115,13 +115,13 @@ public:
   /// @copydoc at
   const byte* at(size_t index) const noexcept;
 
-  caf::error save(caf::serializer& sink) const;
+  bool save(caf::serializer& sink) const;
 
-  caf::error save(caf::binary_serializer& sink) const;
+  bool save(caf::binary_serializer& sink) const;
 
-  caf::error load(caf::deserializer& source);
+  bool load(caf::deserializer& source);
 
-  caf::error load(caf::binary_deserializer& source);
+  bool load(caf::binary_deserializer& source);
 
 private:
   mutable std::atomic<size_t> rc_;

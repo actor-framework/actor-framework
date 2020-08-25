@@ -164,12 +164,6 @@ bool inspect(Inspector& f, basics& x) {
 struct testee : save_inspector {
   std::string log;
 
-  error err;
-
-  void set_error(error x) {
-    err = std::move(x);
-  }
-
   size_t indent = 0;
 
   void new_line() {
@@ -279,7 +273,8 @@ struct testee : save_inspector {
   template <class T>
   std::enable_if_t<std::is_arithmetic<T>::value, bool> value(const T&) {
     new_line();
-    log += type_name_v<T>;
+    auto tn = type_name_v<T>;
+    log.insert(log.end(), tn.begin(), tn.end());
     log += " value";
     return ok;
   }

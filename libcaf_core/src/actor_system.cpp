@@ -33,7 +33,6 @@
 #include "caf/scheduler/test_coordinator.hpp"
 #include "caf/send.hpp"
 #include "caf/stateful_actor.hpp"
-#include "caf/to_string.hpp"
 
 namespace caf {
 
@@ -294,13 +293,13 @@ actor_system::actor_system(actor_system_config& cfg)
   // Make sure meta objects are loaded.
   auto gmos = detail::global_meta_objects();
   if (gmos.size() < id_block::core_module::end
-      || gmos[id_block::core_module::begin].type_name == nullptr) {
+      || gmos[id_block::core_module::begin].type_name.empty()) {
     CAF_CRITICAL("actor_system created without calling "
                  "caf::init_global_meta_objects<>() before");
   }
   if (modules_[module::middleman] != nullptr) {
     if (gmos.size() < detail::io_module_end
-        || gmos[detail::io_module_begin].type_name == nullptr) {
+        || gmos[detail::io_module_begin].type_name.empty()) {
       CAF_CRITICAL("I/O module loaded without calling "
                    "caf::io::middleman::init_global_meta_objects() before");
     }

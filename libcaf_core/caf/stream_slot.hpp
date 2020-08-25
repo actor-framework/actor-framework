@@ -149,9 +149,8 @@ public:
   // -- serialization ----------------------------------------------------------
 
   template <class Inspector>
-  friend typename Inspector::result_type
-  inspect(Inspector& f, outbound_stream_slot& x) {
-    return f(x.value_);
+  friend bool inspect(Inspector& f, outbound_stream_slot& x) {
+    return f.object(x).fields(f.field("value_", x.value_));
   }
 
 private:
@@ -160,8 +159,9 @@ private:
 
 /// @relates stream_slots
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, stream_slots& x) {
-  return f(x.sender, x.receiver);
+bool inspect(Inspector& f, stream_slots& x) {
+  return f.object(x).fields(f.field("sender", x.sender),
+                            f.field("receiver", x.receiver));
 }
 
 } // namespace caf

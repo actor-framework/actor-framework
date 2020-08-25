@@ -26,21 +26,16 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
+#include "caf/load_inspector.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
 #include "caf/string_view.hpp"
-#include "caf/write_inspector.hpp"
 
 namespace caf {
 
 /// Deserializes objects from sequence of bytes.
-class CAF_CORE_EXPORT binary_deserializer
-  : public write_inspector<binary_deserializer> {
+class CAF_CORE_EXPORT binary_deserializer : public load_inspector {
 public:
-  // -- member types -----------------------------------------------------------
-
-  using result_type = error_code<sec>;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class Container>
@@ -87,7 +82,7 @@ public:
 
   /// Jumps `num_bytes` forward.
   /// @pre `num_bytes <= remaining()`
-  void skip(size_t num_bytes) noexcept;
+  void skip(size_t num_bytes);
 
   /// Assigns a new input.
   void reset(span<const byte> bytes) noexcept;
@@ -102,56 +97,92 @@ public:
     return end_;
   }
 
-  // -- overridden member functions --------------------------------------------
-
-  result_type begin_object(type_id_t& type);
-
-  result_type end_object() noexcept;
-
-  result_type begin_sequence(size_t& list_size) noexcept;
-
-  result_type end_sequence() noexcept;
-
-  result_type apply(bool&) noexcept;
-
-  result_type apply(byte&) noexcept;
-
-  result_type apply(int8_t&) noexcept;
-
-  result_type apply(uint8_t&) noexcept;
-
-  result_type apply(int16_t&) noexcept;
-
-  result_type apply(uint16_t&) noexcept;
-
-  result_type apply(int32_t&) noexcept;
-
-  result_type apply(uint32_t&) noexcept;
-
-  result_type apply(int64_t&) noexcept;
-
-  result_type apply(uint64_t&) noexcept;
-
-  result_type apply(float&) noexcept;
-
-  result_type apply(double&) noexcept;
-
-  result_type apply(long double&);
-
-  result_type apply(span<byte>) noexcept;
-
-  result_type apply(std::string&);
-
-  result_type apply(std::u16string&);
-
-  result_type apply(std::u32string&);
-
-  template <class Enum, class = std::enable_if_t<std::is_enum<Enum>::value>>
-  auto apply(Enum& x) noexcept {
-    return apply(reinterpret_cast<std::underlying_type_t<Enum>&>(x));
+  static constexpr bool has_human_readable_format() noexcept {
+    return false;
   }
 
-  result_type apply(std::vector<bool>& xs);
+  // -- overridden member functions --------------------------------------------
+
+  constexpr bool begin_object(string_view) noexcept {
+    return ok;
+  }
+
+  constexpr bool end_object() noexcept {
+    return ok;
+  }
+
+  constexpr bool begin_field(string_view) noexcept {
+    return true;
+  }
+
+  bool begin_field(string_view name, bool& is_present) noexcept;
+
+  bool begin_field(string_view name, span<const type_id_t> types,
+                   size_t& index) noexcept;
+
+  bool begin_field(string_view name, bool& is_present,
+                   span<const type_id_t> types, size_t& index) noexcept;
+
+  constexpr bool end_field() {
+    return ok;
+  }
+
+  constexpr bool begin_tuple(size_t) noexcept {
+    return ok;
+  }
+
+  constexpr bool end_tuple() noexcept {
+    return ok;
+  }
+
+  bool begin_sequence(size_t& list_size) noexcept;
+
+  constexpr bool end_sequence() noexcept {
+    return ok;
+  }
+
+  bool value(bool& x) noexcept;
+
+  bool value(byte& x) noexcept;
+
+  bool value(uint8_t& x) noexcept;
+
+  bool value(int8_t& x) noexcept;
+
+  bool value(int16_t& x) noexcept;
+
+  bool value(uint16_t& x) noexcept;
+
+  bool value(int32_t& x) noexcept;
+
+  bool value(uint32_t& x) noexcept;
+
+  bool value(int64_t& x) noexcept;
+
+  bool value(uint64_t& x) noexcept;
+
+  bool value(float& x) noexcept;
+
+  bool value(double& x) noexcept;
+
+  bool value(long double& x);
+
+  bool value(std::string& x);
+
+  bool value(std::u16string& x);
+
+  bool value(std::u32string& x);
+
+  bool value(span<byte> x) noexcept;
+
+  bool value(std::vector<bool>& x);
+
+  // -- DSL entry point --------------------------------------------------------
+
+  template <class T>
+  constexpr auto object(T&) noexcept {
+    return object_t<binary_deserializer>{type_name_or_anonymous<T>(), this};
+  }
 
 private:
   explicit binary_deserializer(actor_system& sys) noexcept;

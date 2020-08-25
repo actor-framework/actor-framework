@@ -62,7 +62,7 @@ struct maybe {
 
 template <class T>
 std::string to_string(const maybe<T>& x) {
-  return to_string(x.val);
+  return deep_to_string(x.val);
 }
 
 template <class T>
@@ -123,8 +123,8 @@ public:
     registry_ = &sys.registry();
     registry_->put((*self_)->id(), actor_cast<strong_actor_ptr>(*self_));
     // first remote node is everything of this_node + 1, then +2, etc.
-    auto pid = static_cast<node_id::default_data&>(*this_node_).process_id();
-    auto hid = static_cast<node_id::default_data&>(*this_node_).host_id();
+    auto pid = get<hashed_node_id>(this_node_->content).process_id;
+    auto hid = get<hashed_node_id>(this_node_->content).host;
     for (uint32_t i = 0; i < num_remote_nodes; ++i) {
       auto& n = nodes_[i];
       for (auto& c : hid)
@@ -160,8 +160,8 @@ public:
   uint32_t serialized_size(const message& msg) {
     byte_buffer buf;
     binary_serializer bs{mpx_, buf};
-    if (auto err = bs(const_cast<message&>(msg)))
-      CAF_FAIL("returned to serialize message: " << err);
+    if (!inspect_objects(bs, const_cast<message&>(msg)))
+      CAF_FAIL("failed to serialize message: " << bs.get_error());
     return static_cast<uint32_t>(buf.size());
   }
 
@@ -218,8 +218,8 @@ public:
   template <class... Ts>
   void to_payload(byte_buffer& buf, const Ts&... xs) {
     binary_serializer sink{mpx_, buf};
-    if (auto err = sink(xs...))
-      CAF_FAIL("failed to serialize payload: " << err);
+    if (!inspect_objects(sink, xs...))
+      CAF_FAIL("failed to serialize payload: " << sink.get_error());
   }
 
   void to_buf(byte_buffer& buf, basp::header& hdr, payload_writer* writer) {
@@ -233,7 +233,7 @@ public:
       if (writer)
         if (auto err = (*writer)(sink))
           return err;
-      return sink(const_cast<T&>(x));
+      return inspect_object(sink, const_cast<T&>(x));
     });
     to_buf(buf, hdr, &pw, xs...);
   }
@@ -241,8 +241,8 @@ public:
   std::pair<basp::header, byte_buffer> from_buf(const byte_buffer& buf) {
     basp::header hdr;
     binary_deserializer bd{mpx_, buf};
-    auto e = bd(hdr);
-    CAF_REQUIRE(!e);
+    if (!inspect_object(bd, hdr))
+      CAF_FAIL("failed to deserialize header: " << bd.get_error());
     byte_buffer payload;
     if (hdr.payload_len > 0) {
       std::copy(buf.begin() + basp::header_size, buf.end(),
@@ -305,8 +305,8 @@ public:
     binary_deserializer source{mpx_, buf};
     std::vector<strong_actor_ptr> stages;
     message msg;
-    auto e = source(stages, msg);
-    CAF_REQUIRE(!e);
+    if (!inspect_objects(source, stages, msg))
+      CAF_FAIL("deserialization failed: " << source.get_error());
     auto src = actor_cast<strong_actor_ptr>(registry_->get(hdr.source_actor));
     auto dest = registry_->get(hdr.dest_actor);
     CAF_REQUIRE(dest);
@@ -346,8 +346,8 @@ public:
       basp::header hdr;
       { // lifetime scope of source
         binary_deserializer source{this_->mpx(), ob};
-        if (auto err = source(hdr))
-          CAF_FAIL("unable to deserialize header: " << err);
+        if (!inspect_objects(source, hdr))
+          CAF_FAIL("failed to deserialize header: " << source.get_error());
       }
       byte_buffer payload;
       if (hdr.payload_len > 0) {
@@ -458,7 +458,7 @@ CAF_TEST(empty_server_handshake) {
                         invalid_actor_id};
   CAF_CHECK(basp::valid(hdr));
   CAF_CHECK(basp::is_handshake(hdr));
-  CAF_CHECK_EQUAL(to_string(hdr), to_string(expected));
+  CAF_CHECK_EQUAL(deep_to_string(hdr), deep_to_string(expected));
 }
 
 CAF_TEST(non_empty_server_handshake) {
@@ -479,12 +479,13 @@ CAF_TEST(non_empty_server_handshake) {
                         invalid_actor_id};
   CAF_CHECK(basp::valid(hdr));
   CAF_CHECK(basp::is_handshake(hdr));
-  CAF_CHECK_EQUAL(to_string(hdr), to_string(expected));
+  CAF_CHECK_EQUAL(deep_to_string(hdr), deep_to_string(expected));
   byte_buffer expected_payload;
   std::set<std::string> ifs{"caf::replies_to<@u16>::with<@u16>"};
   binary_serializer sink{nullptr, expected_payload};
-  if (auto err = sink(instance().this_node(), app_ids, self()->id(), ifs))
-    CAF_FAIL("serializing handshake failed: " << err);
+  auto id = self()->id();
+  if (!inspect_objects(sink, instance().this_node(), app_ids, id, ifs))
+    CAF_FAIL("serializing handshake failed: " << sink.get_error());
   CAF_CHECK_EQUAL(hexstr(payload), hexstr(expected_payload));
 }
 

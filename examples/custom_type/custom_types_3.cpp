@@ -83,19 +83,19 @@ scope_guard<Fun> make_scope_guard(Fun f) {
 
 // --(rst-inspect-begin)--
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, foo& x) {
-  if constexpr (Inspector::reads_state) {
-    return f(meta::type_name("foo"), x.a(), x.b());
-  } else {
-    int a;
-    int b;
-    // write back to x at scope exit
-    auto g = make_scope_guard([&] {
-      x.set_a(a);
-      x.set_b(b);
-    });
-    return f(meta::type_name("foo"), a, b);
-  }
+bool inspect(Inspector& f, foo& x) {
+  auto get_a = [&x] { return x.a(); };
+  auto set_a = [&x](int val) {
+    x.a(val);
+    return true;
+  };
+  auto get_b = [&x] { return x.b(); };
+  auto set_b = [&x](int val) {
+    x.b(val);
+    return true;
+  };
+  return f.object(x).fields(f.field("a", get_a, set_a),
+                            f.field("b", get_b, set_b));
 }
 // --(rst-inspect-end)--
 

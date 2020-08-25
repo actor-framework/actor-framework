@@ -841,16 +841,16 @@ public:
   caf::byte_buffer serialize(const Ts&... xs) {
     caf::byte_buffer buf;
     caf::binary_serializer sink{sys, buf};
-    if (auto err = sink(xs...))
-      CAF_FAIL("serialization failed: " << err);
+    if (!inspect_objects(sink, xs...))
+      CAF_FAIL("serialization failed: " << sink.get_error());
     return buf;
   }
 
   template <class... Ts>
   void deserialize(const caf::byte_buffer& buf, Ts&... xs) {
     caf::binary_deserializer source{sys, buf};
-    if (auto err = source(xs...))
-      CAF_FAIL("deserialization failed: " << err);
+    if (!inspect_objects(source, xs...))
+      CAF_FAIL("deserialization failed: " << source.get_error());
   }
 
   template <class T>

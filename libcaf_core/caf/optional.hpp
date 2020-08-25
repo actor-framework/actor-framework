@@ -23,9 +23,6 @@
 #include <utility>
 
 #include "caf/config.hpp"
-#include "caf/deep_to_string.hpp"
-#include "caf/detail/safe_equal.hpp"
-#include "caf/detail/scope_guard.hpp"
 #include "caf/none.hpp"
 #include "caf/unit.hpp"
 
@@ -37,6 +34,8 @@ class optional {
 public:
   /// Typdef for `T`.
   using type = T;
+
+  using value_type = T;
 
   /// Creates an instance without value.
   optional(const none_t& = none) : m_valid(false) {
@@ -144,6 +143,22 @@ public:
   /// Returns the value if `m_valid`, otherwise returns `default_value`.
   const T& value_or(const T& default_value) const {
     return m_valid ? value() : default_value;
+  }
+
+  void reset() {
+    destroy();
+  }
+
+  template <class... Ts>
+  T& emplace(Ts&&... xs) {
+    if (m_valid) {
+      m_value.~T();
+      new (std::addressof(m_value)) T(std::forward<Ts>(xs)...);
+    } else {
+      new (std::addressof(m_value)) T(std::forward<Ts>(xs)...);
+      m_valid = true;
+    }
+    return m_value;
   }
 
 private:
@@ -267,44 +282,11 @@ private:
   bool m_value;
 };
 
-template <class Inspector, class T>
-typename std::enable_if<Inspector::reads_state,
-                        typename Inspector::result_type>::type
-inspect(Inspector& f, optional<T>& x) {
-  return x ? f(true, *x) : f(false);
-}
-
-template <class T>
-struct optional_inspect_helper {
-  bool& enabled;
-  T& storage;
-  template <class Inspector>
-  friend typename Inspector::result_type
-  inspect(Inspector& f, optional_inspect_helper& x) {
-    return x.enabled ? f(x.storage) : f();
-  }
-};
-
-template <class Inspector, class T>
-typename std::enable_if<Inspector::writes_state,
-                        typename Inspector::result_type>::type
-inspect(Inspector& f, optional<T>& x) {
-  bool flag = false;
-  typename optional<T>::type tmp{};
-  optional_inspect_helper<T> helper{flag, tmp};
-  auto guard = detail::make_scope_guard([&] {
-    if (flag)
-      x = std::move(tmp);
-    else
-      x = none;
-  });
-  return f(flag, helper);
-}
-
 /// @relates optional
 template <class T>
-std::string to_string(const optional<T>& x) {
-  return x ? "*" + deep_to_string(*x) : "none";
+auto to_string(const optional<T>& x)
+  -> decltype(to_string(std::declval<const T&>())) {
+  return x ? "*" + to_string(*x) : "null";
 }
 
 /// Returns an rvalue to the value managed by `x`.

@@ -38,8 +38,8 @@ struct foo {
 };
 
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, foo& x) {
-  return f(meta::type_name("foo"), x.a, x.b);
+bool inspect(Inspector& f, foo& x) {
+  return f.object(x).fields(f.field("a", x.a), f.field("b", x.b));
 }
 // --(rst-foo-end)--
 
@@ -57,8 +57,8 @@ struct foo2 {
 
 // foo2 also needs to be serializable
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, foo2& x) {
-  return f(meta::type_name("foo2"), x.a, x.b);
+bool inspect(Inspector& f, foo2& x) {
+  return f.objects(x).fields(f.field("a", x.a), f.field("b", x.b));
 }
 
 // receives our custom message types

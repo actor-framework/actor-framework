@@ -116,9 +116,9 @@ public:
   // -- inspection -------------------------------------------------------------
 
   template <class Inspector>
-  friend typename Inspector::result_type
+  friend bool
   inspect(Inspector& f, ipv6_address& x) {
-    return f(x.bytes_);
+    return f.object(x).fields(f.field("bytes", x.bytes_));
   }
 
   friend CAF_CORE_EXPORT std::string to_string(ipv6_address x);

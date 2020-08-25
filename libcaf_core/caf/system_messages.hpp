@@ -49,8 +49,9 @@ inline bool operator==(const exit_msg& x, const exit_msg& y) noexcept {
 
 /// @relates exit_msg
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, exit_msg& x) {
-  return f(meta::type_name("exit_msg"), x.source, x.reason);
+bool inspect(Inspector& f, exit_msg& x) {
+  return f.object(x).fields(f.field("source", x.source),
+                            f.field("reason", x.reason));
 }
 
 /// Sent to all actors monitoring an actor when it is terminated.
@@ -74,8 +75,9 @@ inline bool operator!=(const down_msg& x, const down_msg& y) noexcept {
 
 /// @relates down_msg
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, down_msg& x) {
-  return f(meta::type_name("down_msg"), x.source, x.reason);
+bool inspect(Inspector& f, down_msg& x) {
+  return f.object(x).fields(f.field("source", x.source),
+                            f.field("reason", x.reason));
 }
 
 /// Sent to all members of a group when it goes offline.
@@ -86,8 +88,8 @@ struct group_down_msg {
 
 /// @relates group_down_msg
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, group_down_msg& x) {
-  return f(meta::type_name("group_down_msg"), x.source);
+bool inspect(Inspector& f, group_down_msg& x) {
+  return f.object(x).fields(f.field("source", x.source));
 }
 
 /// Sent to all actors monitoring a node when CAF loses connection to it.
@@ -114,8 +116,9 @@ inline bool operator!=(const node_down_msg& x,
 
 /// @relates node_down_msg
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, node_down_msg& x) {
-  return f(meta::type_name("node_down_msg"), x.node, x.reason);
+bool inspect(Inspector& f, node_down_msg& x) {
+  return f.object(x).fields(f.field("node", x.node),
+                            f.field("reason", x.reason));
 }
 
 /// Signalizes a timeout event.
@@ -129,8 +132,9 @@ struct timeout_msg {
 
 /// @relates timeout_msg
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, timeout_msg& x) {
-  return f(meta::type_name("timeout_msg"), x.type, x.timeout_id);
+bool inspect(Inspector& f, timeout_msg& x) {
+  return f.object(x).fields(f.field("type", x.type),
+                            f.field("timeout_id", x.timeout_id));
 }
 
 /// Demands the receiver to open a new stream from the sender to the receiver.
@@ -154,9 +158,12 @@ struct open_stream_msg {
 
 /// @relates open_stream_msg
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, open_stream_msg& x) {
-  return f(meta::type_name("open_stream_msg"), x.slot, x.msg, x.prev_stage,
-           x.original_stage, x.priority);
+bool inspect(Inspector& f, open_stream_msg& x) {
+  return f.object(x).fields(f.field("slot", x.slot), //
+                            f.field("msg", x.msg),
+                            f.field("prev_stage", x.prev_stage),
+                            f.field("original_stage", x.original_stage),
+                            f.field("priority", x.priority));
 }
 
 } // namespace caf

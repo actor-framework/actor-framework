@@ -178,9 +178,12 @@ public:
 
 /// @relates outbound_path
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, outbound_path& x) {
-  return f(meta::type_name("outbound_path"), x.slots, x.hdl, x.next_batch_id,
-           x.open_credit, x.desired_batch_size, x.next_ack_id);
+bool inspect(Inspector& f, outbound_path& x) {
+  return f.object(x).fields(f.field("slots", x.slots), f.field("hdl", x.hdl),
+                            f.field("next_batch_id", x.next_batch_id),
+                            f.field("open_credit", x.open_credit),
+                            f.field("desired_batch_size", x.desired_batch_size),
+                            f.field("next_ack_id", x.next_ack_id));
 }
 
 } // namespace caf

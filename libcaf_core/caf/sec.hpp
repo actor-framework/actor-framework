@@ -154,6 +154,10 @@ enum class sec : uint8_t {
   invalid_field_type,
   /// Serialization failed because a type was flagged as unsafe message type.
   unsafe_type,
+  /// Serialization failed, because a save callback returned `false`.
+  save_callback_failed,
+  /// Deserialization failed, because a load callback returned `false`.
+  load_callback_failed,
 };
 
 /// @relates sec

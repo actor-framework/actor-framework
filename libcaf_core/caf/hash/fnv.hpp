@@ -22,9 +22,11 @@
 #include <type_traits>
 
 #include "caf/detail/ieee_754.hpp"
-#include "caf/read_inspector.hpp"
+#include "caf/inspector_access.hpp"
+#include "caf/save_inspector.hpp"
 #include "caf/span.hpp"
 #include "caf/string_view.hpp"
+#include "caf/type_id.hpp"
 
 namespace caf::hash {
 
@@ -37,69 +39,119 @@ namespace caf::hash {
 ///
 /// @tparam T One of `uint32_t`, `uint64_t`, or `size_t`.
 template <class T>
-class fnv : public read_inspector<fnv<T>> {
+class fnv : public save_inspector {
 public:
   static_assert(sizeof(T) == 4 || sizeof(T) == 8);
 
-  using result_type = void;
+  using super = save_inspector;
 
-  constexpr fnv() noexcept : value(init()) {
+  constexpr fnv() noexcept : result(init()) {
     // nop
+  }
+
+  static constexpr bool has_human_readable_format() noexcept {
+    return false;
+  }
+
+  constexpr bool begin_object(string_view) {
+    return true;
+  }
+
+  constexpr bool end_object() {
+    return true;
+  }
+
+  bool begin_field(string_view) {
+    return true;
+  }
+
+  bool begin_field(string_view, bool is_present) {
+    return value(static_cast<uint8_t>(is_present));
+  }
+
+  bool begin_field(string_view, span<const type_id_t>, size_t index) {
+    return value(index);
+  }
+
+  bool begin_field(string_view, bool is_present, span<const type_id_t>,
+                   size_t index) {
+    value(static_cast<uint8_t>(is_present));
+    if (is_present)
+      value(index);
+    return true;
+  }
+
+  constexpr bool end_field() {
+    return true;
+  }
+
+  constexpr bool begin_tuple(size_t) {
+    return true;
+  }
+
+  constexpr bool end_tuple() {
+    return true;
+  }
+
+  constexpr bool begin_sequence(size_t) {
+    return true;
+  }
+
+  constexpr bool end_sequence() {
+    return true;
   }
 
   template <class Integral>
-  std::enable_if_t<std::is_integral<Integral>::value>
-  apply(Integral x) noexcept {
+  std::enable_if_t<std::is_integral<Integral>::value, bool>
+  value(Integral x) noexcept {
     auto begin = reinterpret_cast<const uint8_t*>(&x);
     append(begin, begin + sizeof(Integral));
+    return true;
   }
 
-  void apply(bool x) noexcept {
+  bool value(bool x) noexcept {
     auto tmp = static_cast<uint8_t>(x);
-    apply(tmp);
+    return value(tmp);
   }
 
-  void apply(float x) noexcept {
-    apply(detail::pack754(x));
+  bool value(float x) noexcept {
+    return value(detail::pack754(x));
   }
 
-  void apply(double x) noexcept {
-    apply(detail::pack754(x));
+  bool value(double x) noexcept {
+    return value(detail::pack754(x));
   }
 
-  void apply(string_view x) noexcept {
+  bool value(string_view x) noexcept {
     auto begin = reinterpret_cast<const uint8_t*>(x.data());
     append(begin, begin + x.size());
+    return true;
   }
 
-  void apply(span<const byte> x) noexcept {
+  bool value(span<const byte> x) noexcept {
     auto begin = reinterpret_cast<const uint8_t*>(x.data());
     append(begin, begin + x.size());
+    return true;
   }
 
-  template <class Enum>
-  std::enable_if_t<std::is_enum<Enum>::value> apply(Enum x) noexcept {
-    return apply(static_cast<std::underlying_type_t<Enum>>(x));
-  }
-
-  void begin_sequence(size_t) noexcept {
-    // nop
-  }
-
-  void end_sequence() noexcept {
-    // nop
+  template <class Object>
+  constexpr auto object(Object&) noexcept {
+    return super::object_t<fnv>{type_name_or_anonymous<Object>(), this};
   }
 
   /// Convenience function for computing an FNV1a hash value for given
   /// arguments in one shot.
   template <class... Ts>
   static T compute(Ts&&... xs) noexcept {
+    using detail::as_mutable_ref;
     fnv f;
-    f(std::forward<Ts>(xs)...);
-    return f.value;
+    auto inspect_result = (inspect_object(f, as_mutable_ref(xs)) && ...);
+    // Discard inspection result: always true.
+    static_cast<void>(inspect_result);
+    return f.result;
   }
 
-  T value;
+  T result;
 
 private:
   static constexpr T init() noexcept {
@@ -112,10 +164,10 @@ private:
   void append(const uint8_t* begin, const uint8_t* end) noexcept {
     if constexpr (sizeof(T) == 4)
       while (begin != end)
-        value = (*begin++ ^ value) * 0x01000193u;
+        result = (*begin++ ^ result) * 0x01000193u;
     else
       while (begin != end)
-        value = (*begin++ ^ value) * 1099511628211ull;
+        result = (*begin++ ^ result) * 1099511628211ull;
   }
 };
 

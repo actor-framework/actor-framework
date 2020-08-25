@@ -90,52 +90,52 @@ const byte* message_data::at(size_t index) const noexcept {
   return ptr;
 }
 
-error message_data::save(serializer& sink) const {
+bool message_data::save(serializer& sink) const {
   auto gmos = global_meta_objects();
   auto ptr = storage();
   for (auto id : types_) {
     auto& meta = gmos[id];
-    if (auto err = detail::save(meta, sink, ptr))
-      return err;
+    if (!detail::save(meta, sink, ptr))
+      return false;
     ptr += meta.padded_size;
   }
-  return none;
+  return true;
 }
 
-error message_data::save(binary_serializer& sink) const {
+bool message_data::save(binary_serializer& sink) const {
   auto gmos = global_meta_objects();
   auto ptr = storage();
   for (auto id : types_) {
     auto& meta = gmos[id];
-    if (auto err = detail::save(meta, sink, ptr))
-      return err;
+    if (!detail::save(meta, sink, ptr))
+      return false;
     ptr += meta.padded_size;
   }
-  return none;
+  return true;
 }
 
-error message_data::load(deserializer& source) {
+bool message_data::load(deserializer& source) {
   auto gmos = global_meta_objects();
   auto ptr = storage();
   for (auto id : types_) {
     auto& meta = gmos[id];
-    if (auto err = detail::load(meta, source, ptr))
-      return err;
+    if (!detail::load(meta, source, ptr))
+      return false;
     ptr += meta.padded_size;
   }
-  return none;
+  return true;
 }
 
-error message_data::load(binary_deserializer& source) {
+bool message_data::load(binary_deserializer& source) {
   auto gmos = global_meta_objects();
   auto ptr = storage();
   for (auto id : types_) {
     auto& meta = gmos[id];
-    if (auto err = detail::load(meta, source, ptr))
-      return err;
+    if (!detail::load(meta, source, ptr))
+      return false;
     ptr += meta.padded_size;
   }
-  return none;
+  return true;
 }
 
 } // namespace caf::detail

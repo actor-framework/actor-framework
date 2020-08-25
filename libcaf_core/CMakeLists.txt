@@ -103,7 +103,6 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/detail/thread_safe_actor_clock.cpp
   src/detail/tick_emitter.cpp
   src/detail/type_id_list_builder.cpp
-  src/detail/uri_impl.cpp
   src/downstream_manager.cpp
   src/downstream_manager_base.cpp
   src/error.cpp
@@ -125,6 +124,7 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/ipv6_address.cpp
   src/ipv6_endpoint.cpp
   src/ipv6_subnet.cpp
+  src/load_inspector.cpp
   src/local_actor.cpp
   src/logger.cpp
   src/mailbox_element.cpp
@@ -148,6 +148,7 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/replies_to.cpp
   src/response_promise.cpp
   src/resumable.cpp
+  src/save_inspector.cpp
   src/scheduled_actor.cpp
   src/scheduler/abstract_coordinator.cpp
   src/scheduler/test_coordinator.cpp

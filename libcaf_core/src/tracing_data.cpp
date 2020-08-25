@@ -36,55 +36,31 @@ tracing_data::~tracing_data() {
   // nop
 }
 
+template <class Inspector>
+bool inspect(Inspector& f, tracing_data& x) {
+  return x.serialize(f);
+}
+
 namespace {
 
-template <class Serializer>
-auto inspect_impl(Serializer& sink, const tracing_data_ptr& x) {
-  if (x == nullptr) {
-    uint8_t dummy = 0;
-    return sink(dummy);
-  }
-  uint8_t dummy = 1;
-  if (auto err = sink(dummy))
-    return err;
-  return x->serialize(sink);
-}
-
-template <class Deserializer>
-typename Deserializer::result_type
-inspect_impl(Deserializer& source, tracing_data_ptr& x) {
-  uint8_t dummy = 0;
-  if (auto err = source(dummy))
-    return err;
-  if (dummy == 0) {
-    x.reset();
-    return {};
-  }
-  auto ctx = source.context();
-  if (ctx == nullptr)
-    return sec::no_context;
-  auto tc = ctx->system().tracing_context();
-  if (tc == nullptr)
-    return sec::no_tracing_context;
-  return tc->deserialize(source, x);
-}
+using access = optional_inspector_access<tracing_data_ptr>;
 
 } // namespace
 
-error inspect(serializer& sink, const tracing_data_ptr& x) {
-  return inspect_impl(sink, x);
+bool inspect(serializer& sink, const tracing_data_ptr& x) {
+  return access::apply_object(sink, detail::as_mutable_ref(x));
 }
 
-error_code<sec> inspect(binary_serializer& sink, const tracing_data_ptr& x) {
-  return inspect_impl(sink, x);
+bool inspect(binary_serializer& sink, const tracing_data_ptr& x) {
+  return access::apply_object(sink, detail::as_mutable_ref(x));
 }
 
-error inspect(deserializer& source, tracing_data_ptr& x) {
-  return inspect_impl(source, x);
+bool inspect(deserializer& source, tracing_data_ptr& x) {
+  return access::apply_object(source, x);
 }
 
-error_code<sec> inspect(binary_deserializer& source, tracing_data_ptr& x) {
-  return inspect_impl(source, x);
+bool inspect(binary_deserializer& source, tracing_data_ptr& x) {
+  return access::apply_object(source, x);
 }
 
 } // namespace caf

@@ -29,6 +29,7 @@
 #include "caf/detail/squashed_int.hpp"
 #include "caf/fwd.hpp"
 #include "caf/meta/type_name.hpp"
+#include "caf/string_view.hpp"
 #include "caf/timespan.hpp"
 #include "caf/timestamp.hpp"
 
@@ -67,7 +68,7 @@ struct type_name_by_id;
 /// Convenience alias for `type_name_by_id<I>::value`.
 /// @relates type_name_by_id
 template <type_id_t I>
-constexpr const char* type_name_by_id_v = type_name_by_id<I>::value;
+constexpr string_view type_name_by_id_v = type_name_by_id<I>::value;
 
 /// Convenience type that resolves to `type_name_by_id<type_id_v<T>>`.
 template <class T>
@@ -77,13 +78,13 @@ struct type_name;
 /// manually.
 template <>
 struct type_name<void> {
-  static constexpr const char* value = "void";
+  static constexpr string_view value = "void";
 };
 
 /// Convenience alias for `type_name<T>::value`.
 /// @relates type_name
 template <class T>
-constexpr const char* type_name_v = type_name<T>::value;
+constexpr string_view type_name_v = type_name<T>::value;
 
 /// The first type ID not reserved by CAF and its modules.
 constexpr type_id_t first_custom_type_id = 200;
@@ -97,6 +98,15 @@ template <class T>
 struct has_type_id {
   static constexpr bool value = detail::is_complete<type_id<T>>;
 };
+
+/// Returns `type_name_v<T>` if available, "anonymous" otherwise.
+template <class T>
+string_view type_name_or_anonymous() {
+  if constexpr (has_type_id<T>)
+    return type_name_v<T>;
+  else
+    return "anonymous";
+}
 
 } // namespace caf
 
@@ -133,7 +143,7 @@ struct has_type_id {
     };                                                                         \
     template <>                                                                \
     struct type_name<CAF_PP_EXPAND fully_qualified_name> {                     \
-      static constexpr const char* value                                       \
+      static constexpr string_view value                                       \
         = CAF_PP_STR(CAF_PP_EXPAND fully_qualified_name);                      \
     };                                                                         \
     template <>                                                                \
@@ -155,7 +165,7 @@ struct has_type_id {
     };                                                                         \
     template <>                                                                \
     struct type_name<CAF_PP_EXPAND fully_qualified_name> {                     \
-      static constexpr const char* value                                       \
+      static constexpr string_view value                                       \
         = CAF_PP_STR(CAF_PP_EXPAND fully_qualified_name);                      \
     };                                                                         \
     template <>                                                                \
@@ -176,8 +186,8 @@ struct has_type_id {
     return false;                                                              \
   }                                                                            \
   template <class Inspector>                                                   \
-  auto inspect(Inspector& f, atom_name&) {                                     \
-    return f(caf::meta::type_name(#atom_name));                                \
+  bool inspect(Inspector& f, atom_name& x) {                                   \
+    return f.object(x).fields();                                               \
   }                                                                            \
   CAF_ADD_TYPE_ID(project_name, (atom_name))
 
@@ -193,8 +203,8 @@ struct has_type_id {
     return false;                                                              \
   }                                                                            \
   template <class Inspector>                                                   \
-  auto inspect(Inspector& f, atom_name&) {                                     \
-    return f(caf::meta::type_name(#atom_namespace "::" #atom_name));           \
+  bool inspect(Inspector& f, atom_name& x) {                                   \
+    return f.object(x).fields();                                               \
   }                                                                            \
   }                                                                            \
   CAF_ADD_TYPE_ID(project_name, (atom_namespace::atom_name))
@@ -277,15 +287,26 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
   CAF_ADD_TYPE_ID(core_module, (caf::dictionary<caf::config_value>) )
   CAF_ADD_TYPE_ID(core_module, (caf::down_msg))
   CAF_ADD_TYPE_ID(core_module, (caf::downstream_msg))
+  CAF_ADD_TYPE_ID(core_module, (caf::downstream_msg_batch))
+  CAF_ADD_TYPE_ID(core_module, (caf::downstream_msg_close))
+  CAF_ADD_TYPE_ID(core_module, (caf::downstream_msg_forced_close))
   CAF_ADD_TYPE_ID(core_module, (caf::error))
   CAF_ADD_TYPE_ID(core_module, (caf::exit_msg))
   CAF_ADD_TYPE_ID(core_module, (caf::exit_reason))
   CAF_ADD_TYPE_ID(core_module, (caf::group))
   CAF_ADD_TYPE_ID(core_module, (caf::group_down_msg))
+  CAF_ADD_TYPE_ID(core_module, (caf::hashed_node_id))
+  CAF_ADD_TYPE_ID(core_module, (caf::ipv4_address))
+  CAF_ADD_TYPE_ID(core_module, (caf::ipv4_endpoint))
+  CAF_ADD_TYPE_ID(core_module, (caf::ipv4_subnet))
+  CAF_ADD_TYPE_ID(core_module, (caf::ipv6_address))
+  CAF_ADD_TYPE_ID(core_module, (caf::ipv6_endpoint))
+  CAF_ADD_TYPE_ID(core_module, (caf::ipv6_subnet))
   CAF_ADD_TYPE_ID(core_module, (caf::message))
   CAF_ADD_TYPE_ID(core_module, (caf::message_id))
   CAF_ADD_TYPE_ID(core_module, (caf::node_down_msg))
   CAF_ADD_TYPE_ID(core_module, (caf::node_id))
+  CAF_ADD_TYPE_ID(core_module, (caf::none_t))
   CAF_ADD_TYPE_ID(core_module, (caf::open_stream_msg))
   CAF_ADD_TYPE_ID(core_module, (caf::pec))
   CAF_ADD_TYPE_ID(core_module, (caf::sec))
@@ -295,6 +316,10 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
   CAF_ADD_TYPE_ID(core_module, (caf::timestamp))
   CAF_ADD_TYPE_ID(core_module, (caf::unit_t))
   CAF_ADD_TYPE_ID(core_module, (caf::upstream_msg))
+  CAF_ADD_TYPE_ID(core_module, (caf::upstream_msg_ack_batch))
+  CAF_ADD_TYPE_ID(core_module, (caf::upstream_msg_ack_open))
+  CAF_ADD_TYPE_ID(core_module, (caf::upstream_msg_drop))
+  CAF_ADD_TYPE_ID(core_module, (caf::upstream_msg_forced_drop))
   CAF_ADD_TYPE_ID(core_module, (caf::uri))
   CAF_ADD_TYPE_ID(core_module, (caf::weak_actor_ptr))
   CAF_ADD_TYPE_ID(core_module, (std::vector<caf::actor>) )

@@ -31,7 +31,7 @@ struct inspector_access<weekday> : inspector_access_base<weekday> {
 
   template <class Inspector>
   static bool apply_object(Inspector& f, weekday& x) {
-    if constexpr (Inspector::has_human_readable_format) {
+    if (f.has_human_readable_format()) {
       auto get = [&x] { return to_string(x); };
       auto set = [&x](std::string str) { return parse(str, x); };
       f.object(x).fields(f.field("value", get, set));
@@ -42,7 +42,7 @@ struct inspector_access<weekday> : inspector_access_base<weekday> {
 
   template <class Inspector>
   static bool apply_value(Inspector& f, weekday& x) {
-    if constexpr (Inspector::has_human_readable_format) {
+    if (f.has_human_readable_format()) {
       auto get = [&x] { return to_string(x); };
       auto set = [&x](std::string str) { return parse(str, x); };
       return inspect_value(f, get, set);

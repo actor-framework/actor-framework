@@ -67,6 +67,9 @@
 
 namespace caf::detail {
 
+template <class T>
+constexpr T* null_v = nullptr;
+
 // -- backport of C++14 additions ----------------------------------------------
 
 template <class T>
@@ -651,12 +654,44 @@ struct is_map_like {
 template <class T>
 constexpr bool is_map_like_v = is_map_like<T>::value;
 
+template <class T>
+struct has_insert {
+private:
+  template <class List>
+  static auto sfinae(List* l, typename List::value_type* x = nullptr)
+    -> decltype(l->insert(l->end(), *x), std::true_type());
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using sfinae_type = decltype(sfinae<T>(nullptr));
+
+public:
+  static constexpr bool value = sfinae_type::value;
+};
+
+template <class T>
+struct has_size {
+private:
+  template <class List>
+  static auto sfinae(List* l) -> decltype(l->size(), std::true_type());
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using sfinae_type = decltype(sfinae<T>(nullptr));
+
+public:
+  static constexpr bool value = sfinae_type::value;
+};
+
 /// Checks whether T behaves like `std::vector`, `std::list`, or `std::set`.
 template <class T>
 struct is_list_like {
   static constexpr bool value = is_iterable<T>::value
                                 && has_value_type_alias<T>::value
-                                && !has_mapped_type_alias<T>::value;
+                                && !has_mapped_type_alias<T>::value
+                                && has_insert<T>::value && has_size<T>::value;
 };
 
 template <class T>
@@ -746,6 +781,71 @@ struct is_stl_tuple_type {
 
 template <class T>
 constexpr bool is_stl_tuple_type_v = is_stl_tuple_type<T>::value;
+
+template <class Inspector>
+class has_context {
+private:
+  template <class F>
+  static auto sfinae(F& f) -> decltype(f.context());
+
+  static void sfinae(...);
+
+  using result_type = decltype(sfinae(std::declval<Inspector&>()));
+
+public:
+  static constexpr bool value
+    = std::is_same<result_type, execution_unit*>::value;
+};
+
+/// Checks whether `T` provides an `inspector` overload for `Inspector`.
+template <class Inspector, class T>
+class is_inspectable {
+private:
+  template <class U>
+  static auto sfinae(Inspector& x, U& y)
+    -> decltype(inspect(x, y), std::true_type{});
+
+  static std::false_type sfinae(Inspector&, ...);
+
+  using result_type
+    = decltype(sfinae(std::declval<Inspector&>(), std::declval<T&>()));
+
+public:
+  static constexpr bool value = result_type::value;
+};
+
+/// Checks whether the inspector has a `value` overload for `T`.
+template <class Inspector, class T>
+class is_trivially_inspectable {
+private:
+  template <class U>
+  static auto sfinae(Inspector& f, U& x)
+    -> decltype(f.value(x), std::true_type{});
+
+  static std::false_type sfinae(Inspector&, ...);
+
+  using sfinae_result
+    = decltype(sfinae(std::declval<Inspector&>(), std::declval<T&>()));
+
+public:
+  static constexpr bool value = sfinae_result::value;
+};
+
+/// Checks whether the inspector has an `opaque_value` overload for `T`.
+template <class Inspector, class T>
+class accepts_opaque_value {
+private:
+  template <class F, class U>
+  static auto sfinae(F* f, U* x)
+    -> decltype(f->opaque_value(*x), std::true_type{});
+
+  static std::false_type sfinae(...);
+
+  using sfinae_result = decltype(sfinae(null_v<Inspector>, null_v<T>));
+
+public:
+  static constexpr bool value = sfinae_result::value;
+};
 
 } // namespace caf::detail
 

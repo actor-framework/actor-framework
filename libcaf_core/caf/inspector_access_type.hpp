@@ -21,47 +21,76 @@
 #include <type_traits>
 
 #include "caf/detail/type_traits.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf {
 
 /// Wraps tag types for static dispatching.
 struct inspector_access_type {
-  /// Flags stateless message types.
-  struct empty {};
-  /// Flags allowed unsafe message types.
-  struct unsafe {};
+  /// Flags types that provide an `inspect()` overload.
+  struct inspect {};
+
   /// Flags builtin integral types.
   struct integral {};
-  /// Flags type with user-defined `inspect` overloads.
-  struct inspect {};
+
+  /// Flags types with builtin support via `.value()`.
+  struct builtin {};
+
+  /// Flags `enum` types.
+  struct enumeration {};
+
+  /// Flags stateless message types.
+  struct empty {};
+
+  /// Flags allowed unsafe message types.
+  struct unsafe {};
+
   /// Flags native C array types.
   struct array {};
+
   /// Flags types with `std::tuple`-like API.
   struct tuple {};
+
+  /// Flags type that specialize `inspector_access_boxed_value_traits`.
+  struct boxed_value {};
+
   /// Flags types with `std::map`-like API.
   struct map {};
+
   /// Flags types with `std::vector`-like API.
   struct list {};
+
+  /// Flags types without any default access.
+  struct none {};
 };
 
 /// @relates inspector_access_type
-template <class T>
+template <class Inspector, class T>
 constexpr auto guess_inspector_access_type() {
-  if constexpr (std::is_empty<T>::value) {
+  // User-defined `inspect` overloads always come first.
+  using namespace detail;
+  if constexpr (is_inspectable<Inspector, T>::value) {
+    return inspector_access_type::inspect{};
+  } else if constexpr (std::is_integral<T>::value) {
+    return inspector_access_type::integral{};
+  } else if constexpr (is_trivially_inspectable<Inspector, T>::value) {
+    return inspector_access_type::builtin{};
+  } else if constexpr (std::is_enum<T>::value) {
+    return inspector_access_type::enumeration{};
+  } else if constexpr (std::is_empty<T>::value) {
     return inspector_access_type::empty{};
   } else if constexpr (is_allowed_unsafe_message_type_v<T>) {
     return inspector_access_type::unsafe{};
-  } else if constexpr (std::is_integral<T>::value) {
-    return inspector_access_type::integral{};
   } else if constexpr (std::is_array<T>::value) {
     return inspector_access_type::array{};
-  } else if constexpr (detail::is_stl_tuple_type_v<T>) {
+  } else if constexpr (is_stl_tuple_type_v<T>) {
     return inspector_access_type::tuple{};
-  } else if constexpr (detail::is_map_like_v<T>) {
+  } else if constexpr (is_map_like_v<T>) {
     return inspector_access_type::map{};
-  } else {
-    static_assert(detail::is_list_like_v<T>);
+  } else if constexpr (is_list_like_v<T>) {
     return inspector_access_type::list{};
+  } else {
+    return inspector_access_type::none{};
   }
 }
 

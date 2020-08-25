@@ -35,15 +35,15 @@ deserializer::~deserializer() {
   // nop
 }
 
-auto deserializer::apply(std::vector<bool>& x) noexcept -> result_type {
+bool deserializer::value(std::vector<bool>& x) {
   x.clear();
   size_t size = 0;
-  if (auto err = begin_sequence(size))
-    return err;
+  if (!begin_sequence(size))
+    return false;
   for (size_t i = 0; i < size; ++i) {
     bool tmp = false;
-    if (auto err = apply(tmp))
-      return err;
+    if (!value(tmp))
+      return false;
     x.emplace_back(tmp);
   }
   return end_sequence();

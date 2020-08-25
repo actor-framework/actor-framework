@@ -25,7 +25,6 @@
 #include "caf/detail/overload.hpp"
 #include "caf/detail/parse.hpp"
 #include "caf/detail/parser/read_uri.hpp"
-#include "caf/detail/uri_impl.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/hash/fnv.hpp"
@@ -33,42 +32,59 @@
 #include "caf/optional.hpp"
 #include "caf/serializer.hpp"
 
+namespace {
+
+caf::uri::impl_type default_instance;
+
+} // namespace
+
 namespace caf {
 
-uri::uri() : impl_(&detail::uri_impl::default_instance) {
+uri::impl_type::impl_type() : rc_(1) {
+  // nop
+}
+
+void uri::impl_type::assemble_str() {
+  using detail::append_percent_encoded;
+  append_percent_encoded(str, scheme);
+  str += ':';
+  if (authority.empty()) {
+    CAF_ASSERT(!path.empty());
+    append_percent_encoded(str, path, true);
+  } else {
+    str += "//";
+    str += to_string(authority);
+    if (!path.empty()) {
+      str += '/';
+      append_percent_encoded(str, path, true);
+    }
+  }
+  if (!query.empty()) {
+    str += '?';
+    auto i = query.begin();
+    auto add_kvp = [&](decltype(*i) kvp) {
+      append_percent_encoded(str, kvp.first);
+      str += '=';
+      append_percent_encoded(str, kvp.second);
+    };
+    add_kvp(*i);
+    for (++i; i != query.end(); ++i) {
+      str += '&';
+      add_kvp(*i);
+    }
+  }
+  if (!fragment.empty()) {
+    str += '#';
+    append_percent_encoded(str, fragment);
+  }
+}
+
+uri::uri() : impl_(&default_instance) {
   // nop
 }
 
 uri::uri(impl_ptr ptr) : impl_(std::move(ptr)) {
   CAF_ASSERT(impl_ != nullptr);
-}
-
-bool uri::empty() const noexcept {
-  return str().empty();
-}
-
-string_view uri::str() const noexcept {
-  return impl_->str;
-}
-
-string_view uri::scheme() const noexcept {
-  return impl_->scheme;
-}
-
-const uri::authority_type& uri::authority() const noexcept {
-  return impl_->authority;
-}
-
-string_view uri::path() const noexcept {
-  return impl_->path;
-}
-
-const uri::query_map& uri::query() const noexcept {
-  return impl_->query;
-}
-
-string_view uri::fragment() const noexcept {
-  return impl_->fragment;
 }
 
 size_t uri::hash_code() const noexcept {
@@ -78,7 +94,7 @@ size_t uri::hash_code() const noexcept {
 optional<uri> uri::authority_only() const {
   if (empty() || authority().empty())
     return none;
-  auto result = make_counted<detail::uri_impl>();
+  auto result = make_counted<uri::impl_type>();
   result->scheme = impl_->scheme;
   result->authority = impl_->authority;
   auto& str = result->str;
@@ -86,16 +102,6 @@ optional<uri> uri::authority_only() const {
   str += "://";
   str += to_string(impl_->authority);
   return uri{std::move(result)};
-}
-
-// -- comparison ---------------------------------------------------------------
-
-int uri::compare(const uri& other) const noexcept {
-  return str().compare(other.str());
-}
-
-int uri::compare(string_view x) const noexcept {
-  return string_view{str()}.compare(x);
 }
 
 // -- parsing ------------------------------------------------------------------
@@ -155,32 +161,6 @@ bool uri::can_parse(string_view str) noexcept {
     detail::parser::read_uri(ps, builder);
   }
   return ps.code == pec::success;
-}
-
-// -- friend functions ---------------------------------------------------------
-
-error inspect(caf::serializer& dst, uri& x) {
-  return inspect(dst, const_cast<detail::uri_impl&>(*x.impl_));
-}
-
-error inspect(caf::deserializer& src, uri& x) {
-  auto impl = make_counted<detail::uri_impl>();
-  auto err = inspect(src, *impl);
-  if (err == none)
-    x = uri{std::move(impl)};
-  return err;
-}
-
-error_code<sec> inspect(caf::binary_serializer& dst, uri& x) {
-  return inspect(dst, const_cast<detail::uri_impl&>(*x.impl_));
-}
-
-error_code<sec> inspect(caf::binary_deserializer& src, uri& x) {
-  auto impl = make_counted<detail::uri_impl>();
-  auto err = inspect(src, *impl);
-  if (err == none)
-    x = uri{std::move(impl)};
-  return err;
 }
 
 // -- related free functions ---------------------------------------------------

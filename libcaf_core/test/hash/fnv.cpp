@@ -40,15 +40,15 @@ auto fnv64_hash(Ts&&... xs) {
 
 CAF_TEST(FNV hashes build incrementally) {
   hash::fnv<uint32_t> f;
-  CAF_CHECK_EQUAL(f.value, 0x811C9DC5u);
-  f('a');
-  CAF_CHECK_EQUAL(f.value, 0xE40C292Cu);
-  f('b');
-  CAF_CHECK_EQUAL(f.value, 0x4D2505CAu);
-  f('c');
-  CAF_CHECK_EQUAL(f.value, 0x1A47E90Bu);
-  f('d');
-  CAF_CHECK_EQUAL(f.value, 0xCE3479BDu);
+  CAF_CHECK_EQUAL(f.result, 0x811C9DC5u);
+  f.value('a');
+  CAF_CHECK_EQUAL(f.result, 0xE40C292Cu);
+  f.value('b');
+  CAF_CHECK_EQUAL(f.result, 0x4D2505CAu);
+  f.value('c');
+  CAF_CHECK_EQUAL(f.result, 0x1A47E90Bu);
+  f.value('d');
+  CAF_CHECK_EQUAL(f.result, 0xCE3479BDu);
 }
 
 CAF_TEST(FNV supports uint32 hashing) {

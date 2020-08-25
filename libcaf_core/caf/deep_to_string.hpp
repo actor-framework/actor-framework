@@ -34,28 +34,23 @@ template <class... Ts>
 std::string deep_to_string(const Ts&... xs) {
   std::string result;
   detail::stringification_inspector f{result};
-  f(xs...);
+  auto inspect_result = (inspect_object(f, xs) && ...);
+  static_cast<void>(inspect_result); // Always true.
   return result;
 }
-
-/// Wrapper to `deep_to_string` for using the function as an inspector.
-struct deep_to_string_t {
-  using result_type = std::string;
-
-  static constexpr bool reads_state = true;
-
-  static constexpr bool writes_state = false;
-
-  template <class... Ts>
-  result_type operator()(const Ts&... xs) const {
-    return deep_to_string(xs...);
-  }
-};
 
 /// Convenience function for `deep_to_string(std::forward_as_tuple(xs...))`.
 template <class... Ts>
 std::string deep_to_string_as_tuple(const Ts&... xs) {
   return deep_to_string(std::forward_as_tuple(xs...));
 }
+
+/// Wraps `deep_to_string` into a function object.
+struct deep_to_string_t {
+  template <class... Ts>
+  std::string operator()(const Ts&... xs) const {
+    return deep_to_string(xs...);
+  }
+};
 
 } // namespace caf

@@ -47,8 +47,8 @@ public:
   }
 
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f, foo& x) {
-    return f(meta::type_name("foo"), x.a_, x.b_);
+  friend bool inspect(Inspector& f, foo& x) {
+    return f.object(x).fields(f.field("a", x.a_), f.field("b", x.b_));
   }
 
 private:

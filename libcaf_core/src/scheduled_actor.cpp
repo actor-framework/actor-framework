@@ -26,7 +26,6 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/inbound_path.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
-#include "caf/to_string.hpp"
 
 using namespace std::string_literals;
 
@@ -81,13 +80,15 @@ void scheduled_actor::default_error_handler(scheduled_actor* ptr, error& x) {
 
 void scheduled_actor::default_down_handler(scheduled_actor* ptr, down_msg& x) {
   aout(ptr) << "*** unhandled down message [id: " << ptr->id()
-            << ", name: " << ptr->name() << "]: " << to_string(x) << std::endl;
+            << ", name: " << ptr->name() << "]: " << deep_to_string(x)
+            << std::endl;
 }
 
 void scheduled_actor::default_node_down_handler(scheduled_actor* ptr,
                                                 node_down_msg& x) {
   aout(ptr) << "*** unhandled node down message [id: " << ptr->id()
-            << ", name: " << ptr->name() << "]: " << to_string(x) << std::endl;
+            << ", name: " << ptr->name() << "]: " << deep_to_string(x)
+            << std::endl;
 }
 
 void scheduled_actor::default_exit_handler(scheduled_actor* ptr, exit_msg& x) {

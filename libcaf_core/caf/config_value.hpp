@@ -850,8 +850,51 @@ config_value make_config_value_list(Ts&&... xs) {
 
 /// @relates config_value
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, config_value& x) {
-  return f(meta::type_name("config_value"), x.get_data());
+bool inspect(Inspector& f, config_value& x) {
+  return f.object(x).fields(f.field("value", x.get_data()));
 }
+
+template <>
+struct inspector_access<config_value> {
+  using wrapped = inspector_access<config_value::variant_type>;
+
+  template <class Inspector>
+  static bool apply_object(Inspector& f, config_value& x) {
+    return wrapped::apply_object(f, x.get_data());
+  }
+
+  template <class Inspector>
+  static bool apply_value(Inspector& f, config_value& x) {
+    return wrapped::apply_value(f, x.get_data());
+  }
+
+  template <class Inspector>
+  static bool
+  save_field(Inspector& f, string_view field_name, config_value& x) {
+    return wrapped::save_field(f, field_name, x.get_data());
+  }
+
+  template <class Inspector, class IsPresent, class Get>
+  static bool save_field(Inspector& f, string_view field_name,
+                         IsPresent& is_present, Get& get) {
+    auto get_data = [&get]() -> decltype(auto) { return get().get_data(); };
+    return wrapped::save_field(f, field_name, is_present, get_data);
+  }
+
+  template <class Inspector, class IsValid, class SyncValue>
+  static bool load_field(Inspector& f, string_view field_name, config_value& x,
+                         IsValid& is_valid, SyncValue& sync_value) {
+    return wrapped::load_field(f, field_name, x.get_data(), is_valid,
+                               sync_value);
+  }
+
+  template <class Inspector, class IsValid, class SyncValue, class SetFallback>
+  static bool load_field(Inspector& f, string_view field_name, config_value& x,
+                         IsValid& is_valid, SyncValue& sync_value,
+                         SetFallback& set_fallback) {
+    return wrapped::load_field(f, field_name, x.get_data(), is_valid,
+                               sync_value, set_fallback);
+  }
+};
 
 } // namespace caf

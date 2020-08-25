@@ -133,6 +133,10 @@ std::string to_string(sec x) {
       return "invalid_field_type";
     case sec::unsafe_type:
       return "unsafe_type";
+    case sec::save_callback_failed:
+      return "save_callback_failed";
+    case sec::load_callback_failed:
+      return "load_callback_failed";
   };
 }
 

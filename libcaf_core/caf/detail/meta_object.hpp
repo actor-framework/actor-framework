@@ -24,6 +24,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/span.hpp"
+#include "caf/string_view.hpp"
 
 namespace caf::detail {
 
@@ -31,7 +32,7 @@ namespace caf::detail {
 /// pointers.
 struct meta_object {
   /// Stores a human-readable representation of the type's name.
-  const char* type_name = nullptr;
+  string_view type_name;
 
   /// Stores how many Bytes objects of this type require, including padding for
   /// aligning to `max_align_t`.
@@ -49,36 +50,44 @@ struct meta_object {
   void (*copy_construct)(void*, const void*);
 
   /// Applies an object to a binary serializer.
-  error_code<sec> (*save_binary)(caf::binary_serializer&, const void*);
+  bool (*save_binary)(caf::binary_serializer&, const void*);
 
   /// Applies an object to a binary deserializer.
-  error_code<sec> (*load_binary)(caf::binary_deserializer&, void*);
+  bool (*load_binary)(caf::binary_deserializer&, void*);
 
   /// Applies an object to a generic serializer.
-  caf::error (*save)(caf::serializer&, const void*);
+  bool (*save)(caf::serializer&, const void*);
 
   /// Applies an object to a generic deserializer.
-  caf::error (*load)(caf::deserializer&, void*);
+  bool (*load)(caf::deserializer&, void*);
 
   /// Appends a string representation of an object to a buffer.
   void (*stringify)(std::string&, const void*);
 };
 
 /// Convenience function for calling `meta.save(sink, obj)`.
-CAF_CORE_EXPORT caf::error save(const meta_object& meta, caf::serializer& sink,
-                                const void* obj);
+inline bool save(const meta_object& meta, caf::serializer& sink,
+                 const void* obj) {
+  return meta.save(sink, obj);
+}
 
 /// Convenience function for calling `meta.save_binary(sink, obj)`.
-CAF_CORE_EXPORT caf::error_code<sec>
-save(const meta_object& meta, caf::binary_serializer& sink, const void* obj);
+inline bool save(const meta_object& meta, caf::binary_serializer& sink,
+                 const void* obj) {
+  return meta.save_binary(sink, obj);
+}
 
 /// Convenience function for calling `meta.load(source, obj)`.
-CAF_CORE_EXPORT caf::error load(const meta_object& meta,
-                                caf::deserializer& source, void* obj);
+inline bool load(const meta_object& meta, caf::deserializer& source,
+                 void* obj) {
+  return meta.load(source, obj);
+}
 
 /// Convenience function for calling `meta.load_binary(source, obj)`.
-CAF_CORE_EXPORT caf::error_code<sec>
-load(const meta_object& meta, caf::binary_deserializer& source, void* obj);
+inline bool load(const meta_object& meta, caf::binary_deserializer& source,
+                 void* obj) {
+  return meta.load_binary(source, obj);
+}
 
 /// Returns the global storage for all meta objects. The ::type_id of an object
 /// is the index for accessing the corresonding meta object.

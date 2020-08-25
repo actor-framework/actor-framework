@@ -207,9 +207,10 @@ struct entity {
 };
 
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, entity& x) {
-  return f(meta::type_name("entity"), x.aid, x.tid, x.nid, x.vid, x.hidden,
-           x.pretty_name);
+bool inspect(Inspector& f, entity& x) {
+  return f(f.field("aid", x.aid), f.field("tid", x.tid), f.field("nid", x.nid),
+           f.field("vid", x.vid), f.field("hidden", x.hidden),
+           f.field("pretty_name", x.pretty_name));
 }
 
 mailbox_id to_mailbox_id(const entity& x) {

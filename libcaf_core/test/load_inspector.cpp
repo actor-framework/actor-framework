@@ -180,12 +180,6 @@ bool inspect(Inspector& f, basics& x) {
 struct testee : load_inspector {
   std::string log;
 
-  error err;
-
-  void set_error(error x) {
-    err = std::move(x);
-  }
-
   bool load_field_failed(string_view, sec code) {
     set_error(make_error(code));
     return stop;
@@ -296,7 +290,8 @@ struct testee : load_inspector {
   template <class T>
   std::enable_if_t<std::is_arithmetic<T>::value, bool> value(T& x) {
     new_line();
-    log += type_name_v<T>;
+    auto tn = type_name_v<T>;
+    log.insert(log.end(), tn.begin(), tn.end());
     log += " value";
     x = T{};
     return ok;

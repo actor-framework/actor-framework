@@ -75,7 +75,7 @@ public:
     if (dref.hdr_.operation == basp::message_type::routed_message) {
       node_id src_node;
       node_id dst_node;
-      if (auto err = source(src_node, dst_node)) {
+      if (inspect_objects(source, src_node, dst_node)) {
         CAF_LOG_ERROR("cannot read source and destination of remote message");
         return;
       }
@@ -98,7 +98,7 @@ public:
       return;
     }
     // Get the remainder of the message.
-    if (auto err = source(stages, msg)) {
+    if (!inspect_objects(source, stages, msg)) {
       CAF_LOG_ERROR("cannot read stages and content of remote message");
       return;
     }

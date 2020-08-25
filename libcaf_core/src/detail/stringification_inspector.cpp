@@ -47,6 +47,148 @@ void escape(std::string& result, char c) {
 
 namespace caf::detail {
 
+bool stringification_inspector::begin_object(string_view name) {
+  sep();
+  result_.insert(result_.end(), name.begin(), name.end());
+  result_ += ')';
+  return ok;
+}
+
+bool stringification_inspector::end_object() {
+  result_ += ')';
+  return ok;
+}
+
+bool stringification_inspector::begin_field(string_view) {
+  return ok;
+}
+
+bool stringification_inspector::begin_field(string_view, bool is_present) {
+  if (!is_present) {
+    sep();
+    result_ += "null";
+  }
+  return ok;
+}
+
+bool stringification_inspector::begin_field(string_view, span<const type_id_t>,
+                                            size_t) {
+  return ok;
+}
+
+bool stringification_inspector::begin_field(string_view, bool is_present,
+                                            span<const type_id_t>, size_t) {
+  if (!is_present) {
+    sep();
+    result_ += "null";
+  }
+  return ok;
+}
+
+bool stringification_inspector::end_field() {
+  return ok;
+}
+
+bool stringification_inspector::begin_sequence(size_t) {
+  sep();
+  result_ += '[';
+  return ok;
+}
+
+bool stringification_inspector::end_sequence() {
+  result_ += ']';
+  return ok;
+}
+
+bool stringification_inspector::begin_tuple(size_t size) {
+  return begin_sequence(size);
+}
+
+bool stringification_inspector::end_tuple() {
+  return end_sequence();
+}
+
+bool stringification_inspector::value(bool x) {
+  sep();
+  result_ += x ? "true" : "false";
+  return true;
+}
+
+bool stringification_inspector::value(float x) {
+  auto str = std::to_string(x);
+  result_ += str;
+  return true;
+}
+
+bool stringification_inspector::value(double x) {
+  auto str = std::to_string(x);
+  result_ += str;
+  return true;
+}
+
+bool stringification_inspector::value(long double x) {
+  auto str = std::to_string(x);
+  result_ += str;
+  return true;
+}
+
+bool stringification_inspector::value(string_view str) {
+  if (str.empty()) {
+    result_ += R"("")";
+    return true;
+  }
+  if (str[0] == '"') {
+    // Assume an already escaped string.
+    result_.insert(result_.end(), str.begin(), str.end());
+    return true;
+  }
+  // Escape string.
+  result_ += '"';
+  for (char c : str)
+    escape(result_, c);
+  result_ += '"';
+  return true;
+}
+
+bool stringification_inspector::value(const std::u16string&) {
+  // Convert to UTF-8 and print?
+  result_ += "<unprintable>";
+  return true;
+}
+
+bool stringification_inspector::value(const std::u32string&) {
+  // Convert to UTF-8 and print?
+  result_ += "<unprintable>";
+  return true;
+}
+
+bool stringification_inspector::int_value(int64_t x) {
+  if (x >= 0)
+    return int_value(static_cast<uint64_t>(x));
+  result_ += '-';
+  auto begin = result_.size();
+  result_ += -(x % 10) + '0';
+  x /= 10;
+  while (x != 0) {
+    result_ += -(x % 10) + '0';
+    x /= 10;
+  }
+  std::reverse(result_.begin() + begin, result_.end());
+  return true;
+}
+
+bool stringification_inspector::int_value(uint64_t x) {
+  auto begin = result_.size();
+  result_ += (x % 10) + '0';
+  x /= 10;
+  while (x != 0) {
+    result_ += (x % 10) + '0';
+    x /= 10;
+  }
+  std::reverse(result_.begin() + begin, result_.end());
+  return true;
+}
+
 void stringification_inspector::sep() {
   if (!result_.empty())
     switch (result_.back()) {
@@ -58,144 +200,6 @@ void stringification_inspector::sep() {
       default:
         result_ += ", ";
     }
-}
-
-void stringification_inspector::consume(const timespan& x) {
-  auto ns = x.count();
-  if (ns % 1000 > 0) {
-    consume(ns);
-    result_ += "ns";
-    return;
-  }
-  auto us = ns / 1000;
-  if (us % 1000 > 0) {
-    consume(us);
-    result_ += "us";
-    return;
-  }
-  auto ms = us / 1000;
-  if (ms % 1000 > 0) {
-    consume(ms);
-    result_ += "ms";
-    return;
-  }
-  auto s = ms / 1000;
-  if (s % 60 > 0) {
-    consume(s);
-    result_ += "s";
-    return;
-  }
-  auto min = s / 60;
-  if (min % 60 > 0) {
-    consume(min);
-    result_ += "min";
-    return;
-  }
-  auto h = min / 60;
-  if (min % 24 > 0) {
-    consume(h);
-    result_ += "h";
-    return;
-  }
-  auto d = h / 24;
-  consume(d);
-  result_ += "d";
-}
-
-void stringification_inspector::consume(const timestamp& x) {
-  char buf[64];
-  auto y = std::chrono::time_point_cast<timestamp::clock::duration>(x);
-  auto z = timestamp::clock::to_time_t(y);
-  strftime(buf, sizeof(buf), "%FT%T", std::localtime(&z));
-  result_ += buf;
-  // time_t has no milliseconds, so we need to insert them manually.
-  auto ms = (x.time_since_epoch().count() / 1000000) % 1000;
-  result_ += '.';
-  auto frac = std::to_string(ms);
-  if (frac.size() < 3)
-    frac.insert(0, 3 - frac.size(), '0');
-  result_ += frac;
-}
-
-void stringification_inspector::consume(const bool& x) {
-  result_ += x ? "true" : "false";
-}
-
-void stringification_inspector::consume_str(string_view str) {
-  if (str.empty()) {
-    result_ += R"("")";
-    return;
-  }
-  if (str[0] == '"') {
-    // Assume an already escaped string.
-    result_.insert(result_.end(), str.begin(), str.end());
-    return;
-  }
-  // Escape string.
-  result_ += '"';
-  for (char c : str)
-    escape(result_, c);
-  result_ += '"';
-}
-
-void stringification_inspector::consume(const std::vector<bool>& xs) {
-  result_ += '[';
-  for (bool x : xs) {
-    sep();
-    consume(x);
-  }
-  result_ += ']';
-}
-
-void stringification_inspector::consume_ptr(const void* ptr) {
-  result_ += "0x";
-  consume(reinterpret_cast<intptr_t>(ptr));
-}
-
-void stringification_inspector::consume_ptr(const char* cstr) {
-  if (cstr == nullptr) {
-    result_ += "<null>";
-    return;
-  }
-  if (cstr[0] == '\0') {
-    result_ += R"("")";
-    return;
-  }
-  if (cstr[0] == '"') {
-    // Assume an already escaped string.
-    result_ += cstr;
-    return;
-  }
-  // Escape string.
-  result_ += '"';
-  for (char c = *cstr++; c != '\0'; c = *cstr++)
-    escape(result_, c);
-  result_ += '"';
-}
-
-void stringification_inspector::consume_int(int64_t x) {
-  if (x >= 0)
-    return consume_int(static_cast<uint64_t>(x));
-  result_ += '-';
-  auto begin = result_.size();
-  result_ += -(x % 10) + '0';
-  x /= 10;
-  while (x != 0) {
-    result_ += -(x % 10) + '0';
-    x /= 10;
-  }
-  std::reverse(result_.begin() + begin, result_.end());
-}
-
-void stringification_inspector::consume_int(uint64_t x) {
-  auto begin = result_.size();
-  result_ += (x % 10) + '0';
-  x /= 10;
-  while (x != 0) {
-    result_ += (x % 10) + '0';
-    x /= 10;
-  }
-  std::reverse(result_.begin() + begin, result_.end());
 }
 
 } // namespace caf::detail

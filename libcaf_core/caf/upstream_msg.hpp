@@ -35,67 +35,75 @@
 
 namespace caf {
 
+/// Acknowledges a previous `open` message and finalizes a stream handshake.
+/// Also signalizes initial demand.
+struct upstream_msg_ack_open {
+  /// Allows the testing DSL to unbox this type automagically.
+  using outer_type = upstream_msg;
+
+  /// Allows actors to participate in a stream instead of the actor
+  /// originally receiving the `open` message. No effect when set to
+  /// `nullptr`. This mechanism enables pipeline definitions consisting of
+  /// proxy actors that are replaced with actual actors on demand.
+  actor_addr rebind_from;
+
+  /// Points to sender_, but with a strong reference.
+  strong_actor_ptr rebind_to;
+
+  /// Grants credit to the source.
+  int32_t initial_demand;
+
+  /// Desired size of individual batches.
+  int32_t desired_batch_size;
+};
+
+/// Cumulatively acknowledges received batches and signalizes new demand from a
+/// sink to its source.
+struct upstream_msg_ack_batch {
+  /// Allows the testing DSL to unbox this type automagically.
+  using outer_type = upstream_msg;
+
+  /// Newly available credit.
+  int32_t new_capacity;
+
+  /// Desired size of individual batches for the next cycle.
+  int32_t desired_batch_size;
+
+  /// Cumulative ack ID.
+  int64_t acknowledged_id;
+
+  /// Maximum capacity on this path. Stages can consider this metric for
+  /// downstream actors when calculating their own maximum capactiy.
+  int32_t max_capacity;
+};
+
+/// Asks the source to discard any remaining credit and close this path after
+/// receiving an ACK for the last batch.
+struct upstream_msg_drop {
+  /// Allows the testing DSL to unbox this type automagically.
+  using outer_type = upstream_msg;
+};
+
+/// Propagates a fatal error from sinks to sources.
+struct upstream_msg_forced_drop {
+  /// Allows the testing DSL to unbox this type automagically.
+  using outer_type = upstream_msg;
+
+  /// Reason for shutting down the stream.
+  error reason;
+};
+
 /// Stream messages that flow upstream, i.e., acks and drop messages.
 struct CAF_CORE_EXPORT upstream_msg : tag::boxing_type {
   // -- nested types -----------------------------------------------------------
 
-  /// Acknowledges a previous `open` message and finalizes a stream handshake.
-  /// Also signalizes initial demand.
-  struct ack_open {
-    /// Allows the testing DSL to unbox this type automagically.
-    using outer_type = upstream_msg;
+  using ack_open = upstream_msg_ack_open;
 
-    /// Allows actors to participate in a stream instead of the actor
-    /// originally receiving the `open` message. No effect when set to
-    /// `nullptr`. This mechanism enables pipeline definitions consisting of
-    /// proxy actors that are replaced with actual actors on demand.
-    actor_addr rebind_from;
+  using ack_batch = upstream_msg_ack_batch;
 
-    /// Points to sender_, but with a strong reference.
-    strong_actor_ptr rebind_to;
+  using drop = upstream_msg_drop;
 
-    /// Grants credit to the source.
-    int32_t initial_demand;
-
-    /// Desired size of individual batches.
-    int32_t desired_batch_size;
-  };
-
-  /// Cumulatively acknowledges received batches and signalizes new demand from
-  /// a sink to its source.
-  struct ack_batch {
-    /// Allows the testing DSL to unbox this type automagically.
-    using outer_type = upstream_msg;
-
-    /// Newly available credit.
-    int32_t new_capacity;
-
-    /// Desired size of individual batches for the next cycle.
-    int32_t desired_batch_size;
-
-    /// Cumulative ack ID.
-    int64_t acknowledged_id;
-
-    /// Maximum capacity on this path. Stages can consider this metric for
-    /// downstream actors when calculating their own maximum capactiy.
-    int32_t max_capacity;
-  };
-
-  /// Asks the source to discard any remaining credit and close this path
-  /// after receiving an ACK for the last batch.
-  struct drop {
-    /// Allows the testing DSL to unbox this type automagically.
-    using outer_type = upstream_msg;
-  };
-
-  /// Propagates a fatal error from sinks to sources.
-  struct forced_drop {
-    /// Allows the testing DSL to unbox this type automagically.
-    using outer_type = upstream_msg;
-
-    /// Reason for shutting down the stream.
-    error reason;
-  };
+  using forced_drop = upstream_msg_forced_drop;
 
   // -- member types -----------------------------------------------------------
 
@@ -158,37 +166,40 @@ make(stream_slots slots, actor_addr addr, Ts&&... xs) {
 
 /// @relates upstream_msg::ack_open
 template <class Inspector>
-typename Inspector::result_type
-inspect(Inspector& f, upstream_msg::ack_open& x) {
-  return f(meta::type_name("ack_open"), x.rebind_from, x.rebind_to,
-           x.initial_demand, x.desired_batch_size);
+bool inspect(Inspector& f, upstream_msg::ack_open& x) {
+  return f.object(x).fields(
+    f.field("rebind_from", x.rebind_from), f.field("rebind_to", x.rebind_to),
+    f.field("initial_demand", x.initial_demand),
+    f.field("desired_batch_size", x.desired_batch_size));
 }
 
 /// @relates upstream_msg::ack_batch
 template <class Inspector>
-typename Inspector::result_type
-inspect(Inspector& f, upstream_msg::ack_batch& x) {
-  return f(meta::type_name("ack_batch"), x.new_capacity, x.desired_batch_size,
-           x.acknowledged_id, x.max_capacity);
+bool inspect(Inspector& f, upstream_msg::ack_batch& x) {
+  return f.object(x).fields(f.field("new_capacity", x.new_capacity),
+                            f.field("desired_batch_size", x.desired_batch_size),
+                            f.field("acknowledged_id", x.acknowledged_id),
+                            f.field("max_capacity", x.max_capacity));
 }
 
 /// @relates upstream_msg::drop
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, upstream_msg::drop&) {
-  return f(meta::type_name("drop"));
+bool inspect(Inspector& f, upstream_msg::drop& x) {
+  return f.object(x).fields();
 }
 
 /// @relates upstream_msg::forced_drop
 template <class Inspector>
-typename Inspector::result_type
-inspect(Inspector& f, upstream_msg::forced_drop& x) {
-  return f(meta::type_name("forced_drop"), x.reason);
+bool inspect(Inspector& f, upstream_msg::forced_drop& x) {
+  return f.object(x).fields(f.field("reason", x.reason));
 }
 
 /// @relates upstream_msg
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, upstream_msg& x) {
-  return f(meta::type_name("upstream_msg"), x.slots, x.sender, x.content);
+bool inspect(Inspector& f, upstream_msg& x) {
+  return f.object(x).fields(f.field("slots", x.slots),
+                            f.field("sender", x.sender),
+                            f.field("content", x.content));
 }
 
 } // namespace caf

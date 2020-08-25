@@ -44,20 +44,18 @@ byte operator"" _b(char x) {
 }
 
 struct fixture {
-  template <class T>
-  auto load(const std::vector<byte>& buf) {
-    auto result = T{};
-    binary_deserializer source{nullptr, buf};
-    if (auto err = source(result))
-      CAF_FAIL("binary_deserializer failed to load: " << err);
-    return result;
-  }
-
   template <class... Ts>
   void load(const std::vector<byte>& buf, Ts&... xs) {
     binary_deserializer source{nullptr, buf};
-    if (auto err = source(xs...))
-      CAF_FAIL("binary_deserializer failed to load: " << err);
+    if (!inspect_objects(source, xs...))
+      CAF_FAIL("binary_deserializer failed to load: " << source.get_error());
+  }
+
+  template <class T>
+  auto load(const std::vector<byte>& buf) {
+    auto result = T{};
+    load(buf, result);
+    return result;
   }
 };
 

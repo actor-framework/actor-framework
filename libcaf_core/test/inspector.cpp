@@ -149,7 +149,8 @@ struct stringification_inspector_policy {
   std::string f(T& x) {
     std::string str;
     detail::stringification_inspector fun{str};
-    fun(x);
+    if (!inspect_object(fun, x))
+      CAF_FAIL("inspection failed: " << fun.get_error());
     return str;
   }
 
@@ -198,8 +199,8 @@ struct binary_serialization_policy {
   auto to_buf(const T& x) {
     byte_buffer result;
     binary_serializer sink{&context, result};
-    if (auto err = sink(x))
-      CAF_FAIL("failed to serialize " << x << ": " << err);
+    if (!inspect_objects(sink, x))
+      CAF_FAIL("failed to serialize " << x << ": " << sink.get_error());
     return result;
   }
 
@@ -208,8 +209,8 @@ struct binary_serialization_policy {
     auto buf = to_buf(x);
     binary_deserializer source{&context, buf};
     auto y = static_cast<T>(0);
-    if (auto err = source(y))
-      CAF_FAIL("failed to deserialize from buffer: " << err);
+    if (!inspect_objects(source, y))
+      CAF_FAIL("failed to deserialize from buffer: " << source.get_error());
     CAF_CHECK_EQUAL(x, y);
     return detail::safe_equal(x, y);
   }
@@ -219,8 +220,8 @@ struct binary_serialization_policy {
     auto buf = to_buf(x);
     binary_deserializer source{&context, buf};
     T y;
-    if (auto err = source(y))
-      CAF_FAIL("failed to deserialize from buffer: " << err);
+    if (!inspect_objects(source, y))
+      CAF_FAIL("failed to deserialize from buffer: " << source.get_error());
     CAF_CHECK_EQUAL(x, y);
     return detail::safe_equal(x, y);
   }
