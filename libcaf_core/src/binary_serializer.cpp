@@ -145,6 +145,10 @@ bool binary_serializer::value(byte x) {
   return ok;
 }
 
+bool binary_serializer::value(bool x) {
+  return value(static_cast<uint8_t>(x));
+}
+
 bool binary_serializer::value(int8_t x) {
   return value(static_cast<byte>(x));
 }

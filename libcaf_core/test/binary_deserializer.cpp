@@ -43,6 +43,18 @@ byte operator"" _b(char x) {
   return static_cast<byte>(x);
 }
 
+struct arr {
+  int8_t xs[3];
+  int8_t operator[](size_t index) const noexcept {
+    return xs[index];
+  }
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, arr& x) {
+  return f.object(x).fields(f.field("xs", x.xs));
+}
+
 struct fixture {
   template <class... Ts>
   void load(const std::vector<byte>& buf, Ts&... xs) {
@@ -135,7 +147,7 @@ CAF_TEST(concatenation) {
                0x80_b, 0x55_b, 7_b);
   }
   SUBTEST("arrays behave like tuples") {
-    int8_t xs[] = {0, 0, 0};
+    arr xs{{0, 0, 0}};
     load(byte_buffer({1_b, 2_b, 3_b}), xs);
     CAF_CHECK_EQUAL(xs[0], 1);
     CAF_CHECK_EQUAL(xs[1], 2);
@@ -158,7 +170,7 @@ CAF_TEST(binary serializer picks up inspect functions) {
   SUBTEST("node ID") {
     auto nid = make_node_id(123, "000102030405060708090A0B0C0D0E0F10111213");
     CHECK_LOAD(node_id, unbox(nid),
-               // Implementation ID: node_id::default_data::class_id (1)
+               // content index for hashed_node_id (1)
                1_b,
                // Process ID.
                0_b, 0_b, 0_b, 123_b,

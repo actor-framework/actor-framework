@@ -30,9 +30,7 @@ public:
 
   using super::super;
 
-  size_t result() const noexcept {
-    return result_;
-  }
+  size_t result = 0;
 
   bool begin_object(string_view) override;
 
@@ -91,25 +89,22 @@ public:
   bool value(span<const byte> x) override;
 
   bool value(const std::vector<bool>& xs) override;
-
-private:
-  size_t result_ = 0;
 };
 
 template <class T>
 size_t serialized_size(const T& x) {
   serialized_size_inspector f;
-  auto inspection_res = inspect_object(f, x);
+  auto inspection_res = inspect_object(f, detail::as_mutable_ref(x));
   static_cast<void>(inspection_res); // Always true.
-  return f.result();
+  return f.result;
 }
 
 template <class T>
 size_t serialized_size(actor_system& sys, const T& x) {
   serialized_size_inspector f{sys};
-  auto inspection_res = inspect_object(f, x);
+  auto inspection_res = inspect_object(f, detail::as_mutable_ref(x));
   static_cast<void>(inspection_res); // Always true.
-  return f.result();
+  return f.result;
 }
 
 } // namespace caf::detail

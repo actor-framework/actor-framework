@@ -294,6 +294,17 @@ struct fixture {
 
 CAF_TEST_FIXTURE_SCOPE(load_inspector_tests, fixture)
 
+CAF_TEST(save inspectors can visit C arrays) {
+  int32_t xs[] = {1, 2, 3};
+  CAF_CHECK_EQUAL(inspect_value(f, xs), true);
+  CAF_CHECK_EQUAL(f.log, R"_(
+begin tuple of size 3
+  int32_t value
+  int32_t value
+  int32_t value
+end tuple)_");
+}
+
 CAF_TEST(save inspectors can visit simple POD types) {
   point_3d p{1, 1, 1};
   CAF_CHECK_EQUAL(inspect(f, p), true);
@@ -389,6 +400,16 @@ end object)_");
   }
 }
 
+CAF_TEST(save inspectors support optional) {
+  optional<int32_t> x;
+  CAF_CHECK_EQUAL(inspect_object(f, x), true);
+  CAF_CHECK_EQUAL(f.log, R"_(
+begin object optional
+  begin optional field value
+  end field
+end object)_");
+}
+
 CAF_TEST(save inspectors support fields with optional values) {
   person p1{"Eduard Example", none};
   CAF_CHECK_EQUAL(inspect(f, p1), true);
@@ -435,6 +456,7 @@ end object)_");
 CAF_TEST(save inspectors support nasty data structures) {
   nasty x;
   CAF_CHECK(inspect(f, x));
+  CAF_CHECK_EQUAL(f.get_error(), error{});
   CAF_CHECK_EQUAL(f.log, R"_(
 begin object nasty
   begin field field_01

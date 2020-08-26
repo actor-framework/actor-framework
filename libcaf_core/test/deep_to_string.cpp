@@ -24,14 +24,6 @@
 
 using namespace caf;
 
-namespace {
-
-void foobar() {
-  // nop
-}
-
-} // namespace
-
 #define CHECK_DEEP_TO_STRING(val, str) CAF_CHECK_EQUAL(deep_to_string(val), str)
 
 CAF_TEST(timespans) {
@@ -65,7 +57,6 @@ CAF_TEST(boolean lists) {
 CAF_TEST(pointers) {
   auto i = 42;
   CHECK_DEEP_TO_STRING(&i, "*42");
-  CHECK_DEEP_TO_STRING(foobar, "<fun>");
 }
 
 CAF_TEST(buffers) {

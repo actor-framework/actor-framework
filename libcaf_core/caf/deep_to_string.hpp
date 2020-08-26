@@ -30,12 +30,20 @@ namespace caf {
 /// `to_string` for user-defined types via argument-dependent
 /// loopkup (ADL). Any user-defined type that does not
 /// provide a `to_string` is mapped to `<unprintable>`.
-template <class... Ts>
-std::string deep_to_string(const Ts&... xs) {
+template <class T>
+std::string deep_to_string(const T& x) {
+  using inspector_type = detail::stringification_inspector;
+  auto access_token = guess_inspector_access_type<inspector_type, T>();
+  using access_type = decltype(access_token);
   std::string result;
   detail::stringification_inspector f{result};
-  auto inspect_result = (inspect_object(f, xs) && ...);
-  static_cast<void>(inspect_result); // Always true.
+  if constexpr (std::is_same<access_type,
+                             inspector_access_type::inspect>::value) {
+    auto inspect_result = inspect(f, detail::as_mutable_ref(x));
+    static_cast<void>(inspect_result); // Always true.
+  } else {
+    detail::save_value(f, detail::as_mutable_ref(x), access_token);
+  }
   return result;
 }
 

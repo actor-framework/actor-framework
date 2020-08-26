@@ -85,7 +85,15 @@ public:
 
 class CAF_CORE_EXPORT node_id_data : public ref_counted {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using variant_type = variant<uri, hashed_node_id>;
+
   // -- constructors, destructors, and assignment operators --------------------
+
+  explicit node_id_data(variant_type value) : content(std::move(value)) {
+    // nop
+  }
 
   explicit node_id_data(uri value) : content(std::move(value)) {
     // nop
@@ -110,15 +118,7 @@ public:
 
   // -- member variables -------------------------------------------------------
 
-  variant<uri, hashed_node_id> content;
-
-  // -- friend functions -------------------------------------------------------
-
-
-  template <class Inspector>
-  friend bool inspect(Inspector& f, node_id_data& x) {
-    return f.object(x).fields(f.field("content", x.content));
-  }
+  variant_type content;
 };
 
 /// A node ID is an opaque value for representing CAF instances in the network.
@@ -167,7 +167,17 @@ public:
 
   template <class Inspector>
   friend bool inspect(Inspector& f, node_id& x) {
-    return f.object(x).fields(f.field("data", x.data_));
+    auto is_present = [&x] { return x.data_ != nullptr; };
+    auto get = [&] { return x.data_->content; };
+    auto reset = [&] { x.data_.reset(); };
+    auto set = [&](node_id_data::variant_type&& val) {
+      if (!x.data_ || !x.data_->unique())
+        x.data_.emplace(std::move(val));
+      else
+        x.data_->content = std::move(val);
+      return true;
+    };
+    return f.object(x).fields(f.field("data", is_present, get, reset, set));
   }
 
   // -- private API ------------------------------------------------------------
@@ -194,12 +204,6 @@ public:
 
 private:
   intrusive_ptr<node_id_data> data_;
-};
-
-template <>
-struct inspector_access<intrusive_ptr<node_id_data>>
-  : optional_inspector_access<intrusive_ptr<node_id_data>> {
-  // nop
 };
 
 /// Returns whether `x` contains an URI.

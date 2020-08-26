@@ -135,14 +135,16 @@ save_data(Serializer& sink, const message::data_ptr& data) {
            && sink.end_field()           //
            && sink.end_object();
   }
-  // Write type information.
+  GUARDED(sink.begin_object("message"));
   auto type_ids = data->types();
-  GUARDED(sink.begin_object("message") //
-          && sink.begin_field("types") //
-          && sink.begin_sequence(type_ids.size()));
-  for (auto id : type_ids)
-    GUARDED(sink.value(id));
-  GUARDED(sink.end_sequence() && sink.end_field());
+  // Write type information.
+  if (!sink.has_human_readable_format()) {
+    GUARDED(sink.begin_field("types") //
+            && sink.begin_sequence(type_ids.size()));
+    for (auto id : type_ids)
+      GUARDED(sink.value(id));
+    GUARDED(sink.end_sequence() && sink.end_field());
+  }
   // Write elements.
   auto gmos = detail::global_meta_objects();
   auto storage = data->storage();

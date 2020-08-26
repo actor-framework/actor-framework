@@ -139,7 +139,10 @@ struct fixture : test_coordinator_fixture<> {
   T msg_roundtrip(const T& x) {
     message result;
     auto tmp = make_message(x);
-    deserialize(serialize(tmp), result);
+    auto buf = serialize(tmp);
+    CAF_MESSAGE("serialized " << to_string(msg) << " into " << buf.size()
+                              << " bytes");
+    deserialize(buf, result);
     if (!result.match_elements<T>())
       CAF_FAIL("expected: " << x << ", got: " << result);
     return result.get_as<T>(0);

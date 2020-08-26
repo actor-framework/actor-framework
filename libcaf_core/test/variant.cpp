@@ -26,8 +26,6 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/binary_deserializer.hpp"
-#include "caf/binary_serializer.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/none.hpp"
@@ -79,31 +77,22 @@ macro_repeat20(i_n)
 using v20 = variant<i01, i02, i03, i04, i05, i06, i07, i08, i09, i10,
                     i11, i12, i13, i14, i15, i16, i17, i18, i19, i20>;
 
+#define VARIANT_EQ(x, y)                                                       \
+  do {                                                                         \
+    using type = std::decay_t<decltype(y)>;                                    \
+    CAF_CHECK(holds_alternative<type>(x) && get<type>(x) == y);                \
+  } while (false)
+
 #define v20_test(n)                                                            \
   x3 = i##n{0x##n};                                                            \
-  CAF_CHECK_EQUAL(deep_to_string(x3),                                          \
-                  CAF_STR(i##n) + "("s + std::to_string(0x##n) + ")");         \
-  CAF_CHECK_EQUAL(v20{x3}, i##n{0x##n});                                       \
+  VARIANT_EQ(v20{x3}, i##n{0x##n});                                            \
   x4 = x3;                                                                     \
-  CAF_CHECK_EQUAL(x4, i##n{0x##n});                                            \
-  CAF_CHECK_EQUAL(v20{std::move(x3)}, i##n{0x##n});                            \
-  CAF_CHECK_EQUAL(x3, i##n{0});                                                \
+  VARIANT_EQ(x4, i##n{0x##n});                                                 \
+  VARIANT_EQ(v20{std::move(x3)}, i##n{0x##n});                                 \
+  VARIANT_EQ(x3, i##n{0});                                                     \
   x3 = std::move(x4);                                                          \
-  CAF_CHECK_EQUAL(x4, i##n{0});                                                \
-  CAF_CHECK_EQUAL(x3, i##n{0x##n});
-//  {                                                                            \
-//    byte_buffer buf;                                                           \
-//    binary_serializer sink{sys.dummy_execution_unit(), buf};                   \
-//    if (!inspect_object(sink, x3))                                             \
-//      CAF_FAIL("failed to serialize data: " << sink.get_error());              \
-//    CAF_CHECK_EQUAL(x3, i##n{0x##n});                                          \
-//    v20 tmp;                                                                   \
-//    binary_deserializer source{sys.dummy_execution_unit(), buf};               \
-//    if (!inspect_object(source, tmp))                                          \
-//      CAF_FAIL("failed to deserialize data: " << source.get_error());          \
-//    CAF_CHECK_EQUAL(tmp, i##n{0x##n});                                         \
-//    CAF_CHECK_EQUAL(tmp, x3);                                                  \
-//  }
+  VARIANT_EQ(x4, i##n{0});                                                     \
+  VARIANT_EQ(x3, i##n{0x##n});
 
 // copy construction, copy assign, move construction, move assign
 // and finally serialization round-trip
@@ -114,9 +103,9 @@ CAF_TEST(copying_moving_roundtrips) {
   variant<none_t> x1;
   CAF_CHECK_EQUAL(x1, none);
   variant<int, none_t> x2;
-  CAF_CHECK_EQUAL(x2, 0);
+  VARIANT_EQ(x2, 0);
   v20 x3;
-  CAF_CHECK_EQUAL(x3, i01{0});
+  VARIANT_EQ(x3, i01{0});
   v20 x4;
   macro_repeat20(v20_test);
 }

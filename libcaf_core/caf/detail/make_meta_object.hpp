@@ -71,7 +71,8 @@ bool load(deserializer& source, void* ptr) {
 template <class T>
 void stringify(std::string& buf, const void* ptr) {
   stringification_inspector f{buf};
-  auto unused = inspect_object(f, *static_cast<const T*>(ptr));
+  auto unused
+    = inspect_object(f, detail::as_mutable_ref(*static_cast<const T*>(ptr)));
   static_cast<void>(unused);
 }
 

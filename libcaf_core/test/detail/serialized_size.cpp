@@ -39,7 +39,7 @@ struct fixture : test_coordinator_fixture<> {
   size_t actual_size(const Ts&... xs) {
     byte_buffer buf;
     binary_serializer sink{sys, buf};
-    if (inspect_objects(sink, xs...))
+    if (!inspect_objects(sink, detail::as_mutable_ref(xs)...))
       CAF_FAIL("failed to serialize data: " << sink.get_error());
     return buf.size();
   }

@@ -51,14 +51,16 @@ CAF_TEST(erase) {
 
 CAF_TEST(serialization roundtrips go through the registry) {
   auto hdl = sys.spawn(dummy);
+  CAF_MESSAGE("hdl.id: " << hdl->id());
   byte_buffer buf;
   binary_serializer sink{sys, buf};
-  if (!inspect_object(sink,hdl))
+  if (!inspect_object(sink, hdl))
     CAF_FAIL("serialization failed: " << sink.get_error());
+  CAF_MESSAGE("buf: " << buf);
   actor hdl2;
   binary_deserializer source{sys, buf};
   if (!inspect_object(source, hdl2))
-    CAF_FAIL("serialization failed: " << source.get_error());
+    CAF_FAIL("deserialization failed: " << source.get_error());
   CAF_CHECK_EQUAL(hdl, hdl2);
   anon_send_exit(hdl, exit_reason::user_shutdown);
 }

@@ -21,6 +21,7 @@
 #include <chrono>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
@@ -90,16 +91,34 @@ public:
 
   bool value(long double x);
 
+  bool value(timespan x);
+
+  bool value(timestamp x);
+
   bool value(string_view x);
 
   bool value(const std::u16string& x);
 
   bool value(const std::u32string& x);
 
+  bool value(const std::vector<bool>& xs);
+
   template <class T>
   std::enable_if_t<has_to_string<T>::value, bool> value(const T& x) {
     auto str = to_string(x);
     append(str);
+    return true;
+  }
+
+  template <class T>
+  bool value(const T* x) {
+    sep();
+    if (!x) {
+      result_ += "null";
+    } else {
+      result_ += '*';
+      inspect_value(*this, detail::as_mutable_ref(*x));
+    }
     return true;
   }
 
@@ -110,11 +129,18 @@ public:
   }
 
   template <class T>
-  bool opaque_value(const T&) {
-    result_ += "<unprintable>";
+  bool opaque_value(const T& val) {
+    sep();
+    if constexpr (detail::is_iterable<T>::value) {
+      result_ += '[';
+      for (auto&& x : val)
+        inspect_value(*this, detail::as_mutable_ref(x));
+      result_ += ']';
+    } else {
+      result_ += "<unprintable>";
+    }
     return true;
   }
-
 
   // -- DSL entry point --------------------------------------------------------
 

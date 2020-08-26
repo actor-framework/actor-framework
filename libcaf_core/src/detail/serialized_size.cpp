@@ -35,7 +35,7 @@ bool serialized_size_inspector::end_object() {
 }
 
 bool serialized_size_inspector::begin_field(string_view, bool) {
-  result_ += 1;
+  result += 1;
   return true;
 }
 
@@ -47,20 +47,20 @@ constexpr size_t max_value = static_cast<size_t>(std::numeric_limits<T>::max());
 } // namespace
 
 bool serialized_size_inspector::begin_field(string_view) {
-  return false;
+  return true;
 }
 
 bool serialized_size_inspector::begin_field(string_view,
                                             span<const type_id_t> types,
                                             size_t) {
   if (types.size() < max_value<int8_t>) {
-    result_ += sizeof(int8_t);
+    result += sizeof(int8_t);
   } else if (types.size() < max_value<int16_t>) {
-    result_ += sizeof(int16_t);
+    result += sizeof(int16_t);
   } else if (types.size() < max_value<int32_t>) {
-    result_ += sizeof(int32_t);
+    result += sizeof(int32_t);
   } else {
-    result_ += sizeof(int64_t);
+    result += sizeof(int64_t);
   }
   return true;
 }
@@ -95,7 +95,7 @@ bool serialized_size_inspector::begin_sequence(size_t list_size) {
     x >>= 7;
   }
   *i++ = static_cast<uint8_t>(x) & 0x7f;
-  result_ += static_cast<size_t>(i - buf);
+  result += static_cast<size_t>(i - buf);
   return true;
 }
 
@@ -104,57 +104,57 @@ bool serialized_size_inspector::end_sequence() {
 }
 
 bool serialized_size_inspector::value(bool) {
-  result_ += sizeof(uint8_t);
+  result += sizeof(uint8_t);
   return true;
 }
 
 bool serialized_size_inspector::value(int8_t x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return true;
 }
 
 bool serialized_size_inspector::value(uint8_t x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return true;
 }
 
 bool serialized_size_inspector::value(int16_t x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return true;
 }
 
 bool serialized_size_inspector::value(uint16_t x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return true;
 }
 
 bool serialized_size_inspector::value(int32_t x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return true;
 }
 
 bool serialized_size_inspector::value(uint32_t x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return true;
 }
 
 bool serialized_size_inspector::value(int64_t x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return true;
 }
 
 bool serialized_size_inspector::value(uint64_t x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return true;
 }
 
 bool serialized_size_inspector::value(float x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return true;
 }
 
 bool serialized_size_inspector::value(double x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return true;
 }
 
@@ -169,30 +169,30 @@ bool serialized_size_inspector::value(long double x) {
 
 bool serialized_size_inspector::value(string_view x) {
   CAF_IGNORE_UNUSED(begin_sequence(x.size()));
-  result_ += x.size();
+  result += x.size();
   return end_sequence();
 }
 
 bool serialized_size_inspector::value(const std::u16string& x) {
   CAF_IGNORE_UNUSED(begin_sequence(x.size()));
-  result_ += x.size() * sizeof(uint16_t);
+  result += x.size() * sizeof(uint16_t);
   return end_sequence();
 }
 
 bool serialized_size_inspector::value(const std::u32string& x) {
   CAF_IGNORE_UNUSED(begin_sequence(x.size()));
-  result_ += x.size() * sizeof(uint32_t);
+  result += x.size() * sizeof(uint32_t);
   return end_sequence();
 }
 
 bool serialized_size_inspector::value(span<const byte> x) {
-  result_ += x.size();
+  result += x.size();
   return true;
 }
 
 bool serialized_size_inspector::value(const std::vector<bool>& xs) {
   CAF_IGNORE_UNUSED(begin_sequence(xs.size()));
-  result_ += (xs.size() + static_cast<size_t>(xs.size() % 8 != 0)) / 8;
+  result += (xs.size() + static_cast<size_t>(xs.size() % 8 != 0)) / 8;
   return end_sequence();
 }
 

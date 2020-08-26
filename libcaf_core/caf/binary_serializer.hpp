@@ -20,19 +20,13 @@
 
 #include <cstddef>
 #include <string>
-#include <tuple>
-#include <type_traits>
-#include <utility>
 #include <vector>
 
 #include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/squashed_int.hpp"
-#include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
 #include "caf/save_inspector.hpp"
-#include "caf/sec.hpp"
 #include "caf/span.hpp"
 
 namespace caf {
@@ -134,6 +128,8 @@ public:
   }
 
   bool value(byte x);
+
+  bool value(bool x);
 
   bool value(int8_t x);
 

@@ -205,21 +205,10 @@ struct binary_serialization_policy {
   }
 
   template <class T>
-  detail::enable_if_t<is_integral_or_enum<T>::value, bool> operator()(T& x) {
+  bool operator()(T& x) {
     auto buf = to_buf(x);
     binary_deserializer source{&context, buf};
-    auto y = static_cast<T>(0);
-    if (!inspect_objects(source, y))
-      CAF_FAIL("failed to deserialize from buffer: " << source.get_error());
-    CAF_CHECK_EQUAL(x, y);
-    return detail::safe_equal(x, y);
-  }
-
-  template <class T>
-  detail::enable_if_t<!is_integral_or_enum<T>::value, bool> operator()(T& x) {
-    auto buf = to_buf(x);
-    binary_deserializer source{&context, buf};
-    T y;
+    auto y = T{};
     if (!inspect_objects(source, y))
       CAF_FAIL("failed to deserialize from buffer: " << source.get_error());
     CAF_CHECK_EQUAL(x, y);

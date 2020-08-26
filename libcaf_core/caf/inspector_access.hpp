@@ -225,15 +225,15 @@ bool save_value(Inspector& f, T (&xs)[N], inspector_access_type::array) {
   if (!f.begin_tuple(N))
     return false;
   for (size_t index = 0; index < N; ++index)
-    if (!inspect_value(f, xs[index]))
+    if (!inspect_value(f, as_mutable_ref(xs[index])))
       return false;
   return f.end_tuple();
 }
 
 template <class Inspector, class T, size_t... Ns>
 bool save_tuple(Inspector& f, T& xs, std::index_sequence<Ns...>) {
-  return f.begin_tuple(sizeof...(Ns))              //
-         && (inspect_value(f, get<Ns>(xs)) && ...) //
+  return f.begin_tuple(sizeof...(Ns))                                      //
+         && (inspect_value(f, detail::as_mutable_ref(get<Ns>(xs))) && ...) //
          && f.end_tuple();
 }
 
@@ -248,9 +248,9 @@ bool save_value(Inspector& f, T& x, inspector_access_type::map) {
   auto size = x.size();
   if (!f.begin_sequence(size))
     return false;
-  for (auto& kvp : x) {
+  for (auto&& kvp : x) {
     if (!(f.begin_tuple(2) && inspect_value(f, as_mutable_ref(kvp.first))
-          && inspect_value(f, kvp.second) && f.end_tuple()))
+          && inspect_value(f, as_mutable_ref(kvp.second)) && f.end_tuple()))
       return false;
   }
   return f.end_sequence();
@@ -262,7 +262,7 @@ bool save_value(Inspector& f, T& x, inspector_access_type::list) {
   if (!f.begin_sequence(size))
     return false;
   for (auto&& val : x)
-    if (!inspect_value(f, val))
+    if (!inspect_value(f, detail::as_mutable_ref(val)))
       return false;
   return f.end_sequence();
 }
@@ -295,13 +295,8 @@ constexpr auto inspector_access_tag_v
 /// `inspector_access<T>::apply_value(f, x)` otherwise.
 template <class Inspector, class T>
 bool inspect_value(Inspector& f, T& x) {
+  static_assert(!std::is_const<T>::value);
   return inspector_access<T>::apply_value(f, x);
-}
-
-/// @copydoc inspect_value
-template <class Inspector, class T>
-bool inspect_value(Inspector& f, const T& x) {
-  return inspector_access<T>::apply_value(f, const_cast<T&>(x));
 }
 
 template <class Inspector, class Get, class Set>
@@ -334,8 +329,8 @@ struct inspector_access_base {
                          IsPresent& is_present, Get& get) {
     if (is_present()) {
       auto&& x = get();
-      return f.begin_field(field_name, true) //
-             && inspect_value(f, x)          //
+      return f.begin_field(field_name, true)                //
+             && inspect_value(f, detail::as_mutable_ref(x)) //
              && f.end_field();
     }
     return f.begin_field(field_name, false) && f.end_field();
@@ -448,6 +443,13 @@ template <class Inspector, class T>
     return f.value(x);
   else
     return inspector_access<T>::apply_object(f, x);
+}
+
+/// Inspects `x` using the inspector `f`.
+template <class Inspector, class T>
+[[nodiscard]] bool inspect_object(Inspector& f, const T& x) {
+  static_assert(!Inspector::is_loading);
+  return inspect_object(f, detail::as_mutable_ref(x));
 }
 
 /// Inspects all `xs` using the inspector `f`.
@@ -580,6 +582,10 @@ struct inspector_access<optional<T>> : optional_inspector_access<optional<T>> {
 
 template <class... Ts>
 struct inspector_access<variant<Ts...>> {
+  static_assert(
+    (has_type_id<Ts> && ...),
+    "inspectors requires that each type in a variant has a type_id");
+
   using value_type = variant<Ts...>;
 
   static constexpr type_id_t allowed_types_arr[] = {type_id_v<Ts>...};
@@ -609,7 +615,9 @@ struct inspector_access<variant<Ts...>> {
     auto allowed_types = make_span(allowed_types_arr);
     if (is_present()) {
       auto&& x = get();
-      auto g = [&f](auto& y) { return inspect_value(f, y); };
+      auto g = [&f](auto& y) {
+        return inspect_value(f, detail::as_mutable_ref(y));
+      };
       return f.begin_field(field_name, true, allowed_types, x.index()) //
              && visit(g, x)                                            //
              && f.end_field();
@@ -677,18 +685,24 @@ struct inspector_access<variant<Ts...>> {
     if (!f.begin_field(field_name, is_present, allowed_types, type_index))
       return false;
     if (is_present) {
-      if (type_index >= allowed_types.size())
-        return f.load_field_failed(field_name, sec::invalid_field_type);
+      if (type_index >= allowed_types.size()) {
+        f.emplace_error(sec::invalid_field_type, to_string(field_name));
+        return false;
+      }
       auto runtime_type = allowed_types[type_index];
       detail::type_list<Ts...> types;
       if (!load_variant_value(f, field_name, x, runtime_type, types))
         return false;
-      if (!is_valid(x))
-        return f.load_field_failed(field_name,
-                                   sec::field_invariant_check_failed);
-      if (!sync_value())
-        return f.load_field_failed(field_name,
-                                   sec::field_value_synchronization_failed);
+      if (!is_valid(x)) {
+        f.emplace_error(sec::field_invariant_check_failed,
+                        to_string(field_name));
+        return false;
+      }
+      if (!sync_value()) {
+        f.emplace_error(sec::field_value_synchronization_failed,
+                        to_string(field_name));
+        return false;
+      }
     } else {
       set_fallback();
     }

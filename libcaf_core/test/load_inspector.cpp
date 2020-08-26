@@ -197,6 +197,11 @@ struct testee : load_inspector {
     return object_t<testee>{T::tname, this};
   }
 
+  template <class T>
+  auto object(optional<T>&) {
+    return object_t<testee>{"optional", this};
+  }
+
   bool begin_object(string_view object_name) {
     new_line();
     indent += 2;
@@ -369,6 +374,16 @@ begin object line
         int32_t value
       end field
     end object
+  end field
+end object)_");
+}
+
+CAF_TEST(load inspectors support optional) {
+  optional<int32_t> x;
+  CAF_CHECK_EQUAL(inspect_object(f, x), true);
+  CAF_CHECK_EQUAL(f.log, R"_(
+begin object optional
+  begin optional field value
   end field
 end object)_");
 }

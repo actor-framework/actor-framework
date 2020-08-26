@@ -81,7 +81,8 @@ constexpr uint64_t spawn_serv_id = basp::header::spawn_server_id;
 constexpr uint64_t config_serv_id = basp::header::config_server_id;
 
 std::string hexstr(const byte_buffer& buf) {
-  return deep_to_string(meta::hex_formatted(), buf);
+  // TODO: re-implement hex-formatted option
+  return deep_to_string(buf);
 }
 
 struct node {

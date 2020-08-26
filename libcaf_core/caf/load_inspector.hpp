@@ -271,6 +271,23 @@ public:
     }
   };
 
+  template <class T, class Reset, class Set>
+  struct optional_virt_field_t {
+    string_view field_name;
+    Reset reset;
+    Set set;
+
+    template <class Inspector>
+    bool operator()(Inspector& f) {
+      auto tmp = T{};
+      auto sync = [this, &tmp] { return set(std::move(tmp)); };
+      return inspector_access<T>::load_field(f, field_name, tmp,
+                                             detail::always_true, sync, reset);
+    }
+  };
+
+  // -- DSL type for the object ------------------------------------------------
+
   template <class Inspector, class LoadCallback>
   struct object_with_load_callback_t {
     string_view object_name;
@@ -339,6 +356,7 @@ public:
 
   template <class T>
   static auto field(string_view name, T& x) {
+    static_assert(!std::is_const<T>::value);
     return field_t<T>{name, &x};
   }
 
@@ -346,6 +364,13 @@ public:
   static auto field(string_view name, Get get, Set set) {
     using field_type = std::decay_t<decltype(get())>;
     return virt_field_t<field_type, Set>{name, set};
+  }
+
+  template <class IsPresent, class Get, class Reset, class Set>
+  static auto
+  field(string_view name, IsPresent&&, Get&& get, Reset reset, Set set) {
+    using field_type = std::decay_t<decltype(get())>;
+    return optional_virt_field_t<field_type, Reset, Set>{name, reset, set};
   }
 
 protected:

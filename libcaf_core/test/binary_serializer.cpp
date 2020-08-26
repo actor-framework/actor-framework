@@ -43,12 +43,21 @@ byte operator"" _b(char x) {
   return static_cast<byte>(x);
 }
 
+struct arr {
+  int8_t xs[3];
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, arr& x) {
+  return f.object(x).fields(f.field("xs", x.xs));
+}
+
 struct fixture {
   template <class... Ts>
   auto save(const Ts&... xs) {
     byte_buffer result;
     binary_serializer sink{nullptr, result};
-    if (!inspect_objects(sink, xs...))
+    if (!inspect_objects(sink, detail::as_mutable_ref(xs)...))
       CAF_FAIL("binary_serializer failed to save: " << sink.get_error());
     return result;
   }
@@ -56,7 +65,7 @@ struct fixture {
   template <class... Ts>
   void save_to_buf(byte_buffer& data, const Ts&... xs) {
     binary_serializer sink{nullptr, data};
-    if (!inspect_objects(sink, xs...))
+    if (!inspect_objects(sink, detail::as_mutable_ref(xs)...))
       CAF_FAIL("binary_serializer failed to save: " << sink.get_error());
   }
 };
@@ -139,7 +148,7 @@ CAF_TEST(concatenation) {
                0x80_b, 0x55_b, 7_b);
   }
   SUBTEST("arrays behave like tuples") {
-    int8_t xs[] = {1, 2, 3};
+    arr xs{{1, 2, 3}};
     CAF_CHECK_EQUAL(save(xs), byte_buffer({1_b, 2_b, 3_b}));
   }
 }
@@ -159,7 +168,7 @@ CAF_TEST(binary serializer picks up inspect functions) {
   SUBTEST("node ID") {
     auto nid = make_node_id(123, "000102030405060708090A0B0C0D0E0F10111213");
     CHECK_SAVE(node_id, unbox(nid),
-               // Implementation ID: node_id::default_data::class_id (1)
+               // content index for hashed_node_id (1)
                1_b,
                // Process ID.
                0_b, 0_b, 0_b, 123_b,

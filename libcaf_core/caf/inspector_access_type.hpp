@@ -71,8 +71,11 @@ constexpr auto guess_inspector_access_type() {
   using namespace detail;
   if constexpr (is_inspectable<Inspector, T>::value) {
     return inspector_access_type::inspect{};
-  } else if constexpr (std::is_integral<T>::value) {
+  } else if constexpr (std::is_integral<T>::value
+                       && !std::is_same<T, bool>::value) {
     return inspector_access_type::integral{};
+  } else if constexpr (std::is_array<T>::value) {
+    return inspector_access_type::array{};
   } else if constexpr (is_trivially_inspectable<Inspector, T>::value) {
     return inspector_access_type::builtin{};
   } else if constexpr (std::is_enum<T>::value) {
@@ -81,8 +84,6 @@ constexpr auto guess_inspector_access_type() {
     return inspector_access_type::empty{};
   } else if constexpr (is_allowed_unsafe_message_type_v<T>) {
     return inspector_access_type::unsafe{};
-  } else if constexpr (std::is_array<T>::value) {
-    return inspector_access_type::array{};
   } else if constexpr (is_stl_tuple_type_v<T>) {
     return inspector_access_type::tuple{};
   } else if constexpr (is_map_like_v<T>) {

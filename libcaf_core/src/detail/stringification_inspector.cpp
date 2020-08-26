@@ -50,7 +50,7 @@ namespace caf::detail {
 bool stringification_inspector::begin_object(string_view name) {
   sep();
   result_.insert(result_.end(), name.begin(), name.end());
-  result_ += ')';
+  result_ += '(';
   return ok;
 }
 
@@ -68,6 +68,7 @@ bool stringification_inspector::begin_field(string_view, bool is_present) {
     sep();
     result_ += "null";
   }
+  result_ += '*';
   return ok;
 }
 
@@ -82,6 +83,7 @@ bool stringification_inspector::begin_field(string_view, bool is_present,
     sep();
     result_ += "null";
   }
+  result_ += '*';
   return ok;
 }
 
@@ -115,24 +117,64 @@ bool stringification_inspector::value(bool x) {
 }
 
 bool stringification_inspector::value(float x) {
+  sep();
   auto str = std::to_string(x);
   result_ += str;
   return true;
 }
 
 bool stringification_inspector::value(double x) {
+  sep();
   auto str = std::to_string(x);
   result_ += str;
   return true;
 }
 
 bool stringification_inspector::value(long double x) {
+  sep();
   auto str = std::to_string(x);
   result_ += str;
   return true;
 }
 
+namespace {
+
+template <class Duration>
+auto dcast(timespan x) {
+  return std::chrono::duration_cast<Duration>(x);
+}
+
+} // namespace
+
+bool stringification_inspector::value(timespan x) {
+  namespace sc = std::chrono;
+  sep();
+  auto try_print = [this](auto converted, const char* suffix) {
+    if (converted.count() < 1)
+      return false;
+    value(converted.count());
+    result_ += suffix;
+    return true;
+  };
+  if (try_print(dcast<sc::hours>(x), "h")
+      || try_print(dcast<sc::minutes>(x), "min")
+      || try_print(dcast<sc::seconds>(x), "s")
+      || try_print(dcast<sc::milliseconds>(x), "ms")
+      || try_print(dcast<sc::microseconds>(x), "us"))
+    return true;
+  value(x.count());
+  result_ += "ns";
+  return true;
+}
+
+bool stringification_inspector::value(timestamp x) {
+  sep();
+  append_timestamp_to_string(result_, x);
+  return true;
+}
+
 bool stringification_inspector::value(string_view str) {
+  sep();
   if (str.empty()) {
     result_ += R"("")";
     return true;
@@ -151,18 +193,21 @@ bool stringification_inspector::value(string_view str) {
 }
 
 bool stringification_inspector::value(const std::u16string&) {
+  sep();
   // Convert to UTF-8 and print?
   result_ += "<unprintable>";
   return true;
 }
 
 bool stringification_inspector::value(const std::u32string&) {
+  sep();
   // Convert to UTF-8 and print?
   result_ += "<unprintable>";
   return true;
 }
 
 bool stringification_inspector::int_value(int64_t x) {
+  sep();
   if (x >= 0)
     return int_value(static_cast<uint64_t>(x));
   result_ += '-';
@@ -178,6 +223,7 @@ bool stringification_inspector::int_value(int64_t x) {
 }
 
 bool stringification_inspector::int_value(uint64_t x) {
+  sep();
   auto begin = result_.size();
   result_ += (x % 10) + '0';
   x /= 10;
@@ -189,12 +235,20 @@ bool stringification_inspector::int_value(uint64_t x) {
   return true;
 }
 
+bool stringification_inspector::value(const std::vector<bool>& xs) {
+  begin_sequence(xs.size());
+  for (bool x : xs)
+    value(x);
+  return end_sequence();
+}
+
 void stringification_inspector::sep() {
   if (!result_.empty())
     switch (result_.back()) {
       case '(':
       case '[':
       case '{':
+      case '*':
       case ' ': // only at back if we've printed ", " before
         break;
       default:

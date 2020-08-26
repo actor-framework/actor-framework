@@ -166,6 +166,20 @@ public:
     }
   };
 
+  template <class T, class IsPresent, class Get>
+  struct optional_virt_field_t {
+    string_view field_name;
+    IsPresent is_present;
+    Get get;
+
+    template <class Inspector>
+    bool operator()(Inspector& f) {
+      return inspector_access<T>::save_field(f, field_name, is_present, get);
+    }
+  };
+
+  // -- DSL type for the object ------------------------------------------------
+
   template <class Inspector, class SaveCallback>
   struct object_with_save_callback_t {
     string_view object_name;
@@ -234,13 +248,24 @@ public:
 
   template <class T>
   static auto field(string_view name, T& x) {
-    return field_t<T>{name, &x};
+    static_assert(!std::is_const<T>::value);
+    return field_t<T>{name, std::addressof(x)};
   }
 
   template <class Get, class Set>
   static auto field(string_view name, Get get, Set&&) {
     using field_type = std::decay_t<decltype(get())>;
     return virt_field_t<field_type, Get>{name, get};
+  }
+
+  template <class IsPresent, class Get, class... Ts>
+  static auto field(string_view name, IsPresent is_present, Get get, Ts&&...) {
+    using field_type = std::decay_t<decltype(get())>;
+    return optional_virt_field_t<field_type, IsPresent, Get>{
+      name,
+      is_present,
+      get,
+    };
   }
 
 protected:
