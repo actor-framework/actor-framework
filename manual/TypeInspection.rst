@@ -335,8 +335,8 @@ Specializing on the Data Format
 -------------------------------
 
 Much like ``is_loading`` allows client code to dispatch based on the mode of an
-inspector, the constant ``has_human_readable_format`` allows client code to
-dispatch based on the data format.
+inspector, the member function ``has_human_readable_format()`` allows client
+code to dispatch based on the data format.
 
 The canonical example for choosing a different data representation for
 human-readable input and output is the ``enum`` type. When generating data for
@@ -372,7 +372,7 @@ an ``enum class`` otherwise.
 
     template <class Inspector>
     static bool apply_object(Inspector& f, weekday& x) {
-      if constexpr (Inspector::has_human_readable_format) {
+      if (f.has_human_readable_format()) {
         auto get = [&x] { return to_string(x); };
         auto set = [&x](std::string str) { return parse(str, x); };
         f.object(x).fields(f.field("value", get, set));
@@ -383,7 +383,7 @@ an ``enum class`` otherwise.
 
     template <class Inspector>
     static bool apply_value(Inspector& f, weekday& x) {
-      if constexpr (Inspector::has_human_readable_format) {
+      if (f.has_human_readable_format()) {
         auto get = [&x] { return to_string(x); };
         auto set = [&x](std::string str) { return parse(str, x); };
         return inspect_value(f, get, set);
