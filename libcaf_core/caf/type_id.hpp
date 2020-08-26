@@ -102,7 +102,7 @@ struct has_type_id {
 /// Returns `type_name_v<T>` if available, "anonymous" otherwise.
 template <class T>
 string_view type_name_or_anonymous() {
-  if constexpr (has_type_id<T>)
+  if constexpr (has_type_id_v<T>)
     return type_name_v<T>;
   else
     return "anonymous";

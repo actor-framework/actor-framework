@@ -583,7 +583,7 @@ struct inspector_access<optional<T>> : optional_inspector_access<optional<T>> {
 template <class... Ts>
 struct inspector_access<variant<Ts...>> {
   static_assert(
-    (has_type_id<Ts> && ...),
+    (has_type_id_v<Ts> && ...),
     "inspectors requires that each type in a variant has a type_id");
 
   using value_type = variant<Ts...>;
