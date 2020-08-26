@@ -24,7 +24,10 @@
 
 #include "caf/byte.hpp"
 #include "caf/detail/network_order.hpp"
+#include "caf/error.hpp"
+#include "caf/net/receive_policy.hpp"
 #include "caf/sec.hpp"
+#include "caf/span.hpp"
 #include "caf/tag/message_oriented.hpp"
 #include "caf/tag/stream_oriented.hpp"
 
@@ -38,13 +41,15 @@ namespace caf::net {
 template <class UpperLayer>
 class length_prefix_framing {
 public:
+  using byte_span = span<const byte>;
+
   using input_tag = tag::stream_oriented;
 
   using output_tag = tag::message_oriented;
 
   using length_prefix_type = uint32_t;
 
-  constexpr size_t max_message_length = INT32_MAX;
+  static constexpr size_t max_message_length = INT32_MAX;
 
   // -- interface for the upper layer ------------------------------------------
 
@@ -52,7 +57,7 @@ public:
   class access {
   public:
     access(LowerLayer* lower_layer, length_prefix_framing* this_layer)
-      : lower_layer_(lower_layer), this_layer(this_layer) {
+      : lower_layer_(lower_layer), this_layer_(this_layer) {
       // nop
     }
 
@@ -64,10 +69,10 @@ public:
     }
 
     byte_buffer& message_buffer() {
-      return lower_layer_->output_buffer.size();
+      return lower_layer_->output_buffer();
     }
 
-    void end_message() {
+    bool end_message() {
       using detail::to_network_order;
       auto& buf = message_buffer();
       auto msg_begin = buf.begin() + message_offset_;
@@ -93,11 +98,7 @@ public:
     }
 
     void configure_read(receive_policy policy) {
-      if (policy.max_size > 0 && transport_->max_read_size_ == 0)
-        parent_->register_reading();
-      transport_->min_read_size_ = policy.min_size;
-      transport_->max_read_size_ = policy.max_size;
-      transport_->read_buf_.resize(policy.max_size);
+      lower_layer_->configure_read(policy);
     }
 
   private:
@@ -136,7 +137,17 @@ public:
   }
 
   template <class LowerLayer>
-  ptrdiff_t consume(LowerLayer& down, byte_span buffer, byte_span delta) {
+  ptrdiff_t consume(LowerLayer& down, byte_span buffer, byte_span) {
+    using detail::from_network_order;
+    if (buffer.size() < 4)
+      return 0;
+    auto u32_size = 0;
+    memcpy(&u32_size, buffer.data(), 4);
+    auto msg_size = static_cast<size_t>(from_network_order(u32_size));
+    if (buffer.size() < msg_size + 4)
+      return 0;
+    upper_layer_.consume(down, make_span(buffer.data() + 4, msg_size));
+    return msg_size + 4;
   }
 
 private:
