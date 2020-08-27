@@ -31,6 +31,8 @@
 #include "caf/stream_manager.hpp"
 #include "caf/stream_priority.hpp"
 #include "caf/stream_slot.hpp"
+#include "caf/telemetry/counter.hpp"
+#include "caf/telemetry/gauge.hpp"
 #include "caf/timestamp.hpp"
 #include "caf/upstream_msg.hpp"
 
@@ -53,6 +55,12 @@ public:
 
   /// Stores slot IDs for sender (hdl) and receiver (self).
   stream_slots slots;
+
+  /// Optionally stores pointers to telemetry objects.
+  struct metrics_t {
+    telemetry::int_counter* processed_elements;
+    telemetry::int_gauge* input_buffer_size;
+  } metrics;
 
   /// Stores the last computed desired batch size.
   int32_t desired_batch_size = 0;

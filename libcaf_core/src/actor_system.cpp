@@ -256,18 +256,18 @@ auto make_actor_metric_families(telemetry::metric_registry& reg) {
                      "Number of messages in the mailbox."),
     {
       reg.counter_family("caf.actor.stream", "processed-elements",
-                         {"name", "slot"},
+                         {"name", "type"},
                          "Number of processed stream elements from upstream."),
       reg.gauge_family("caf.actor.stream", "input_buffer_size",
-                       {"name", "slot"},
+                       {"name", "type"},
                        "Number of buffered stream elements from upstream."),
       reg.counter_family(
-        "caf.actor.stream", "pushed-elements", {"name", "slot"},
+        "caf.actor.stream", "pushed-elements", {"name", "type"},
         "Number of elements that have been pushed downstream."),
-      reg.counter_family("caf.actor.stream", "pushed-batches", {"name", "slot"},
+      reg.counter_family("caf.actor.stream", "pushed-batches", {"name", "type"},
                          "Number of batches that have been pushed downstream."),
       reg.gauge_family("caf.actor.stream", "output-buffer-size",
-                       {"name", "slot"},
+                       {"name", "type"},
                        "Number of buffered output stream elements."),
     },
   };

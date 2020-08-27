@@ -50,6 +50,18 @@ public:
 
     using handler_type = std::unique_ptr<inbound_path>;
 
+    static task_size_type task_size(const downstream_msg_batch& x) noexcept;
+
+    static constexpr task_size_type
+    task_size(const downstream_msg_close&) noexcept {
+      return 1;
+    }
+
+    static constexpr task_size_type
+    task_size(const downstream_msg_forced_close&) noexcept {
+      return 1;
+    }
+
     static task_size_type task_size(const mailbox_element& x) noexcept;
 
     // -- constructors, destructors, and assignment operators ------------------
@@ -72,6 +84,8 @@ public:
     // -- member variables -----------------------------------------------------
 
     handler_type handler;
+
+    size_t bulk_inserted_size = 0;
   };
 
   // -- member types -----------------------------------------------------------
@@ -81,6 +95,8 @@ public:
   using task_size_type = size_t;
 
   using deficit_type = size_t;
+
+  using pointer = mapped_type*;
 
   using unique_pointer = mailbox_element_ptr;
 
@@ -116,6 +132,17 @@ public:
   static task_size_type task_size(const mailbox_element&) noexcept {
     return 1;
   }
+
+  // -- required functions for wdrr_dynamic_multiplexed_queue ------------------
+
+  static void cleanup(nested_queue_type&) noexcept;
+
+  static bool push_back(nested_queue_type& sub_queue,
+                        pointer ptr) noexcept;
+
+  static void lifo_append(nested_queue_type& sub_queue, pointer ptr) noexcept;
+
+  static void stop_lifo_append(nested_queue_type& sub_queue) noexcept;
 };
 
 } // namespace caf::policy

@@ -55,6 +55,11 @@ public:
     // nop
   }
 
+  ~wdrr_dynamic_multiplexed_queue() noexcept {
+    for (auto& kvp : qs_)
+      policy_.cleanup(kvp.second);
+  }
+
   policy_type& policy() noexcept {
     return policy_;
   }
@@ -64,10 +69,8 @@ public:
   }
 
   bool push_back(mapped_type* ptr) noexcept {
-    auto i = qs_.find(policy_.id_of(*ptr));
-    if (i != qs_.end()) {
-      i->second.push_back(ptr);
-      return true;
+    if (auto i = qs_.find(policy_.id_of(*ptr)); i != qs_.end()) {
+      return policy_.push_back(i->second, ptr);
     } else {
       typename unique_pointer::deleter_type d;
       d(ptr);
@@ -135,8 +138,12 @@ public:
   /// Erases all keys previously marked via `erase_later`.
   void cleanup() {
     if (!erase_list_.empty()) {
-      for (auto& k : erase_list_)
-        qs_.erase(k);
+      for (auto& k : erase_list_) {
+        if (auto i = qs_.find(k); i != qs_.end()) {
+          policy_.cleanup(i->second);
+          qs_.erase(i);
+        }
+      }
       erase_list_.clear();
     }
   }
@@ -191,9 +198,8 @@ public:
   }
 
   void lifo_append(pointer ptr) noexcept {
-    auto i = qs_.find(policy_.id_of(*ptr));
-    if (i != qs_.end()) {
-      i->second.lifo_append(ptr);
+    if (auto i = qs_.find(policy_.id_of(*ptr)); i != qs_.end()) {
+      policy_.lifo_append(i->second, ptr);
     } else {
       typename unique_pointer::deleter_type d;
       d(ptr);
@@ -202,7 +208,7 @@ public:
 
   void stop_lifo_append() noexcept {
     for (auto& kvp : qs_)
-      kvp.second.stop_lifo_append();
+      policy_.stop_lifo_append(kvp.second);
   }
 
 private:

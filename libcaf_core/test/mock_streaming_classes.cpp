@@ -250,13 +250,33 @@ struct dmsg_queue_policy : policy_base {
   }
 
   template <class Queue>
-  static inline bool enabled(const Queue&) {
+  static inline bool enabled(const Queue&) noexcept {
     return true;
   }
 
   template <class Queue>
-  deficit_type quantum(const Queue&, deficit_type x) {
+  deficit_type quantum(const Queue&, deficit_type x) noexcept {
     return x;
+  }
+
+  template <class Queue>
+  static void cleanup(Queue&) noexcept {
+    // nop
+  }
+
+  template <class Queue, class T>
+  static void lifo_append(Queue& q, T* ptr) noexcept {
+    q.lifo_append(ptr);
+  }
+
+  template <class Queue>
+  static void stop_lifo_append(Queue& q) noexcept {
+    q.stop_lifo_append();
+  }
+
+  template <class Queue, class T>
+  static bool push_back(Queue& q, T* ptr) noexcept {
+    return q.push_back(ptr);
   }
 };
 

@@ -35,39 +35,45 @@
 
 namespace caf {
 
+/// Transmits stream data.
+struct downstream_msg_batch {
+  /// Allows the testing DSL to unbox this type automagically.
+  using outer_type = downstream_msg;
+
+  /// Size of the type-erased vector<T> (used credit).
+  int32_t xs_size;
+
+  /// A type-erased vector<T> containing the elements of the batch.
+  message xs;
+
+  /// ID of this batch (ascending numbering).
+  int64_t id;
+};
+
+/// Orderly shuts down a stream after receiving an ACK for the last batch.
+struct downstream_msg_close {
+  /// Allows the testing DSL to unbox this type automagically.
+  using outer_type = downstream_msg;
+};
+
+/// Propagates a fatal error from sources to sinks.
+struct downstream_msg_forced_close {
+  /// Allows the testing DSL to unbox this type automagically.
+  using outer_type = downstream_msg;
+
+  /// Reason for shutting down the stream.
+  error reason;
+};
+
 /// Stream messages that travel downstream, i.e., batches and close messages.
 struct CAF_CORE_EXPORT downstream_msg : tag::boxing_type {
   // -- nested types -----------------------------------------------------------
 
-  /// Transmits stream data.
-  struct batch {
-    /// Allows the testing DSL to unbox this type automagically.
-    using outer_type = downstream_msg;
+  using batch = downstream_msg_batch;
 
-    /// Size of the type-erased vector<T> (used credit).
-    int32_t xs_size;
+  using close = downstream_msg_close;
 
-    /// A type-erased vector<T> containing the elements of the batch.
-    message xs;
-
-    /// ID of this batch (ascending numbering).
-    int64_t id;
-  };
-
-  /// Orderly shuts down a stream after receiving an ACK for the last batch.
-  struct close {
-    /// Allows the testing DSL to unbox this type automagically.
-    using outer_type = downstream_msg;
-  };
-
-  /// Propagates a fatal error from sources to sinks.
-  struct forced_close {
-    /// Allows the testing DSL to unbox this type automagically.
-    using outer_type = downstream_msg;
-
-    /// Reason for shutting down the stream.
-    error reason;
-  };
+  using forced_close = downstream_msg_forced_close;
 
   // -- member types -----------------------------------------------------------
 
