@@ -94,26 +94,21 @@ void actor_registry::erase(actor_id key) {
   }
 }
 
-void actor_registry::inc_running() {
-# if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
-  auto value = ++*system_.base_metrics().running_actors;
-  CAF_LOG_DEBUG(CAF_ARG(value));
-# else
-  system_.base_metrics().running_actors->inc();
-# endif
+size_t actor_registry::inc_running() {
+  return ++*system_.base_metrics().running_actors;
 }
 
 size_t actor_registry::running() const {
   return static_cast<size_t>(system_.base_metrics().running_actors->value());
 }
 
-void actor_registry::dec_running() {
+size_t actor_registry::dec_running() {
   size_t new_val = --*system_.base_metrics().running_actors;
   if (new_val <= 1) {
     std::unique_lock<std::mutex> guard(running_mtx_);
     running_cv_.notify_all();
   }
-  CAF_LOG_DEBUG(CAF_ARG(new_val));
+  return new_val;
 }
 
 void actor_registry::await_running_count_equal(size_t expected) const {

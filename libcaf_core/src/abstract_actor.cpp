@@ -95,14 +95,16 @@ void abstract_actor::register_at_system() {
   if (getf(is_registered_flag))
     return;
   setf(is_registered_flag);
-  home_system().registry().inc_running();
+  [[maybe_unused]] auto count = home_system().registry().inc_running();
+  CAF_LOG_DEBUG("actor " << id() << " increased running count to " << count);
 }
 
 void abstract_actor::unregister_from_system() {
   if (!getf(is_registered_flag))
     return;
   unsetf(is_registered_flag);
-  home_system().registry().dec_running();
+  [[maybe_unused]] auto count = home_system().registry().dec_running();
+  CAF_LOG_DEBUG("actor " << id() << " decreased running count to " << count);
 }
 
 } // namespace caf
