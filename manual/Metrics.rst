@@ -516,6 +516,26 @@ caf.mailbox-size
   - **Type**: ``int_gauge``
   - **Label dimensions**: name.
 
+caf.stream.processed-elements
+  - Counts the total number of processed stream elements from upstream.
+  - **Type**: ``int_counter``
+  - **Label dimensions**: name, type.
+
+caf.stream.input-buffer-size
+  - Tracks how many stream elements from upstream are currently buffered.
+  - **Type**: ``int_gauge``
+  - **Label dimensions**: name, type.
+
+caf.stream.pushed-elements
+  - Counts the total number of elements that have been pushed downstream.
+  - **Type**: ``int_counter``
+  - **Label dimensions**: name, type.
+
+caf.stream.output-buffer-size
+  - Tracks how many stream elements are currently waiting in the output buffer.
+  - **Type**: ``int_gauge``
+  - **Label dimensions**: name, type.
+
 Exporting Metrics to Prometheus
 -------------------------------
 
