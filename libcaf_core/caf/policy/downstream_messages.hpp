@@ -112,8 +112,8 @@ public:
 
   static bool enabled(const nested_queue_type& q) noexcept;
 
-  static deficit_type
-  quantum(const nested_queue_type& q, deficit_type x) noexcept;
+  static deficit_type quantum(const nested_queue_type& q,
+                              deficit_type x) noexcept;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -137,8 +137,7 @@ public:
 
   static void cleanup(nested_queue_type&) noexcept;
 
-  static bool push_back(nested_queue_type& sub_queue,
-                        pointer ptr) noexcept;
+  static bool push_back(nested_queue_type& sub_queue, pointer ptr) noexcept;
 
   static void lifo_append(nested_queue_type& sub_queue, pointer ptr) noexcept;
 
