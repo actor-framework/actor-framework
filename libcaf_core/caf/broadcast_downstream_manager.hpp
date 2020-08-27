@@ -312,7 +312,6 @@ private:
 
   state_map_type state_map_;
   select_type select_;
-
 };
 
 } // namespace caf
