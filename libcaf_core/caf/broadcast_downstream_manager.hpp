@@ -58,11 +58,24 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  broadcast_downstream_manager(stream_manager* parent) : super(parent) {
+  broadcast_downstream_manager(stream_manager* parent)
+    : super(parent, type_id_v<T>) {
     // nop
   }
 
   // -- properties -------------------------------------------------------------
+
+  template <class... Ts>
+  bool push_to(stream_slot slot, Ts&&... xs) {
+    auto old_size = buffered();
+    if (auto i = states().find(slot); i != states().end()) {
+      i->second.buf.emplace_back(std::forward<Ts>(xs)...);
+      auto new_size = buffered();
+      this->generated_messages(new_size - old_size);
+      return true;
+    }
+    return false;
+  }
 
   size_t buffered() const noexcept override {
     // We have a central buffer, but also an additional buffer at each path. We
@@ -195,6 +208,7 @@ public:
 
   /// Forces the manager flush its buffer to the individual path buffers.
   void fan_out_flush() {
+    auto old_size = buffered();
     auto& buf = this->buf_;
     auto f = [&](typename map_type::value_type& x,
                  typename state_map_type::value_type& y) {
@@ -203,8 +217,7 @@ public:
         return;
       // Push data from the global buffer to path buffers.
       auto& st = y.second;
-      // TODO: replace with `if constexpr` when switching to C++17
-      if (std::is_same<select_type, detail::select_all>::value) {
+      if constexpr (std::is_same<select_type, detail::select_all>::value) {
         st.buf.insert(st.buf.end(), buf.begin(), buf.end());
       } else {
         for (auto& piece : buf)
@@ -214,6 +227,10 @@ public:
     };
     detail::zip_foreach(f, this->paths_.container(), state_map_.container());
     buf.clear();
+    // We may drop messages due to filtering or because all paths are closed.
+    auto new_size = buffered();
+    CAF_ASSERT(old_size >= new_size);
+    this->dropped_messages(old_size - new_size);
   }
 
 protected:
@@ -230,6 +247,7 @@ private:
     CAF_ASSERT(this->paths_.size() <= state_map_.size());
     if (this->paths_.empty())
       return;
+    auto old_size = buffered();
     // Calculate the chunk size, i.e., how many more items we can put to our
     // caches at the most.
     auto not_closing = [&](typename map_type::value_type& x,
@@ -256,7 +274,6 @@ private:
       detail::zip_foreach(g, this->paths_.container(), state_map_.container());
       return;
     }
-
     auto chunk = this->get_chunk(chunk_size);
     if (chunk.empty()) {
       auto g = [&](typename map_type::value_type& x,
@@ -288,10 +305,14 @@ private:
       };
       detail::zip_foreach(g, this->paths_.container(), state_map_.container());
     }
+    auto new_size = buffered();
+    CAF_ASSERT(old_size >= new_size);
+    this->shipped_messages(old_size - new_size);
   }
 
   state_map_type state_map_;
   select_type select_;
+
 };
 
 } // namespace caf

@@ -22,12 +22,22 @@
 
 #include "caf/logger.hpp"
 #include "caf/outbound_path.hpp"
+#include "caf/scheduled_actor.hpp"
+#include "caf/stream_manager.hpp"
 
 namespace caf {
 
 downstream_manager_base::downstream_manager_base(stream_manager* parent)
     : super(parent) {
   // nop
+}
+
+downstream_manager_base::downstream_manager_base(stream_manager* parent,
+                                                 type_id_t type)
+  : super(parent) {
+  auto [pushed_elements, output_buffer_size]
+    = parent->self()->outbound_stream_metrics(type);
+  metrics_ = metrics_t{pushed_elements, output_buffer_size};
 }
 
 downstream_manager_base::~downstream_manager_base() {

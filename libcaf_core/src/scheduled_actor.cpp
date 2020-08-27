@@ -520,6 +520,26 @@ auto scheduled_actor::inbound_stream_metrics(type_id_t type)
   return result;
 }
 
+auto scheduled_actor::outbound_stream_metrics(type_id_t type)
+  -> outbound_stream_metrics_t {
+  if (!has_metrics_enabled())
+    return {nullptr, nullptr};
+  if (auto i = outbound_stream_metrics_.find(type);
+      i != outbound_stream_metrics_.end())
+    return i->second;
+  auto actor_name_cstr = name();
+  auto actor_name = string_view{actor_name_cstr, strlen(actor_name_cstr)};
+  auto tname_cstr = detail::global_meta_object(type)->type_name;
+  auto tname = string_view{tname_cstr, strlen(tname_cstr)};
+  auto fs = system().actor_metric_families().stream;
+  outbound_stream_metrics_t result{
+    fs.pushed_elements->get_or_add({{"name", actor_name}, {"type", tname}}),
+    fs.output_buffer_size->get_or_add({{"name", actor_name}, {"type", tname}}),
+  };
+  outbound_stream_metrics_.emplace(type, result);
+  return result;
+}
+
 // -- timeout management -------------------------------------------------------
 
 uint64_t scheduled_actor::set_receive_timeout(actor_clock::time_point x) {

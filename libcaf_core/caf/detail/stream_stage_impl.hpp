@@ -63,8 +63,11 @@ public:
     CAF_LOG_TRACE(CAF_ARG(x));
     using vec_type = std::vector<input_type>;
     if (auto view = make_typed_message_view<vec_type>(x.xs)) {
+      auto old_size = this->out_.buf().size();
       downstream<output_type> ds{this->out_.buf()};
       driver_.process(ds, get<0>(view));
+      auto new_size = this->out_.buf().size();
+      this->out_.generated_messages(new_size - old_size);
       return;
     }
     CAF_LOG_ERROR("received unexpected batch type (dropped)");

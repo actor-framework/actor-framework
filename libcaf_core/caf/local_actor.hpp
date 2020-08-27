@@ -93,9 +93,6 @@ public:
     /// Counts the total number of elements that have been pushed downstream.
     telemetry::int_counter* pushed_elements = nullptr;
 
-    /// Counts the total number of batches that have been pushed downstream.
-    telemetry::int_counter* pushed_batches = nullptr;
-
     /// Tracks how many stream elements are currently waiting in the output
     /// buffer due to insufficient credit.
     telemetry::int_gauge* output_buffer_size = nullptr;

@@ -123,6 +123,10 @@ public:
   using inbound_stream_metrics_map
     = std::unordered_map<type_id_t, inbound_stream_metrics_t>;
 
+  /// Maps types to metric objects for outbound stream traffic.
+  using outbound_stream_metrics_map
+    = std::unordered_map<type_id_t, outbound_stream_metrics_t>;
+
   /// Maps slot IDs to stream managers.
   using stream_manager_map = std::map<stream_slot, stream_manager_ptr>;
 
@@ -338,6 +342,8 @@ public:
   // -- actor metrics ----------------------------------------------------------
 
   inbound_stream_metrics_t inbound_stream_metrics(type_id_t type);
+
+  outbound_stream_metrics_t outbound_stream_metrics(type_id_t type);
 
   // -- event handlers ---------------------------------------------------------
 
@@ -731,6 +737,9 @@ protected:
 
   /// Catche metric objects for inbound stream traffic.
   inbound_stream_metrics_map inbound_stream_metrics_;
+
+  /// Catche metric objects for outbound stream traffic.
+  outbound_stream_metrics_map outbound_stream_metrics_;
 
 #ifdef CAF_ENABLE_EXCEPTIONS
   /// Customization point for setting a default exception callback.

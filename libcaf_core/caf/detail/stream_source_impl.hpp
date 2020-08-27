@@ -68,11 +68,14 @@ public:
     CAF_LOG_DEBUG(CAF_ARG(hint));
     if (hint == 0)
       return false;
+    auto old_size = this->out_.buf().size();
     downstream<typename Driver::output_type> ds{this->out_.buf()};
     driver_.pull(ds, hint);
     if (driver_.done())
       at_end_ = true;
-    return hint != this->out_.capacity();
+    auto new_size = this->out_.buf().size();
+    this->out_.generated_messages(new_size - old_size);
+    return new_size != old_size;
   }
 
 protected:
