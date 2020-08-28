@@ -58,7 +58,7 @@ public:
 
   assignment compute_initial() override;
 
-  assignment compute(timespan cycle, int32_t) override;
+  assignment compute(timespan cycle) override;
 
   assignment compute_bridge() override;
 

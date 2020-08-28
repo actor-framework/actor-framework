@@ -46,10 +46,10 @@ void emit_ack_batch(inbound_path& path, credit_controller::assignment x,
   auto guard = detail::make_scope_guard([&] {
     if (!force_ack_msg || path.up_to_date())
       return;
-    unsafe_send_as(path.self(), path.hdl,
-                   make<upstream_msg::ack_batch>(
-                     path.slots.invert(), path.self()->address(), 0,
-                     x.batch_size, path.last_batch_id, x.credit));
+    unsafe_send_as(
+      path.self(), path.hdl,
+      make<upstream_msg::ack_batch>(path.slots.invert(), path.self()->address(),
+                                    0, x.batch_size, path.last_batch_id));
     path.last_acked_batch_id = path.last_batch_id;
   });
   if (x.credit <= used)
@@ -61,7 +61,7 @@ void emit_ack_batch(inbound_path& path, credit_controller::assignment x,
   unsafe_send_as(path.self(), path.hdl,
                  make<upstream_msg::ack_batch>(
                    path.slots.invert(), path.self()->address(), new_credit,
-                   x.batch_size, path.last_batch_id, x.credit));
+                   x.batch_size, path.last_batch_id));
   path.last_acked_batch_id = path.last_batch_id;
   path.assigned_credit += new_credit;
 }
@@ -148,9 +148,7 @@ void inbound_path::emit_ack_batch(local_actor*, int32_t,
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(cycle));
   last_credit_decision = now;
   next_credit_decision = now + cycle;
-  auto max_capacity = static_cast<int32_t>(mgr->out().max_capacity());
-  caf::emit_ack_batch(*this, controller_->compute(cycle, max_capacity),
-                      force_ack);
+  caf::emit_ack_batch(*this, controller_->compute(cycle), force_ack);
 }
 
 bool inbound_path::up_to_date() {

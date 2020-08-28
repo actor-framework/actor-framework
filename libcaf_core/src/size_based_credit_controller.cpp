@@ -58,7 +58,7 @@ credit_controller::assignment impl::compute_initial() {
   return {buffer_size_, batch_size_};
 }
 
-credit_controller::assignment impl::compute(timespan, int32_t) {
+credit_controller::assignment impl::compute(timespan) {
   if (sampled_elements_ >= min_samples) {
     // Helper for truncating a 64-bit integer to a 32-bit integer with a
     // minimum value of 1.
@@ -93,7 +93,8 @@ credit_controller::assignment impl::compute_bridge() {
 }
 
 int32_t impl::threshold() const noexcept {
-  return static_cast<int32_t>(buffer_size_ * buffer_threshold);
+return buffer_size_-1;
+//  return static_cast<int32_t>(buffer_size_ * buffer_threshold);
 }
 
 } // namespace caf::detail

@@ -70,10 +70,7 @@ public:
 
   /// Assigs new credit to the source after a cycle ends.
   /// @param cycle Duration of a cycle.
-  /// @param max_downstream_credit Maximum downstream capacity as reported by
-  ///                              the downstream manager. Controllers may use
-  ///                              this capacity as an upper bound.
-  virtual assignment compute(timespan cycle, int32_t max_downstream_credit) = 0;
+  virtual assignment compute(timespan cycle) = 0;
 
   // -- virtual functions ------------------------------------------------------
 

@@ -312,7 +312,9 @@ scheduled_actor::mailbox_visitor::operator()(size_t, upstream_queue&,
     CAF_LOG_RECEIVE_EVENT((&x));
     CAF_BEFORE_PROCESSING(self, x);
     auto& um = x.content().get_mutable_as<upstream_msg>(0);
-    upstream_msg_visitor f{self, um};
+    auto f = [&](auto& content) {
+      self->handle_upstream_msg(um.slots, um.sender, content);
+    };
     visit(f, um.content);
     CAF_AFTER_PROCESSING(self, invoke_message_result::consumed);
     return ++handled_msgs < max_throughput ? intrusive::task_result::resume

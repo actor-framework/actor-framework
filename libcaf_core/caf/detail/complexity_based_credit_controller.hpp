@@ -53,7 +53,7 @@ public:
 
   assignment compute_initial() override;
 
-  assignment compute(timespan cycle, int32_t) override;
+  assignment compute(timespan cycle) override;
 
 private:
   // -- member variables -------------------------------------------------------
