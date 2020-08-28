@@ -20,7 +20,6 @@
 
 #include "caf/actor_system_config.hpp"
 #include "caf/defaults.hpp"
-#include "caf/detail/complexity_based_credit_controller.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/size_based_credit_controller.hpp"
 #include "caf/detail/test_credit_controller.hpp"
@@ -87,10 +86,8 @@ inbound_path::inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
       controller_.reset(new detail::test_credit_controller(self));
     else if (*str == "size")
       controller_.reset(new detail::size_based_credit_controller(self));
-    else
-      controller_.reset(new detail::complexity_based_credit_controller(self));
   } else {
-    controller_.reset(new detail::complexity_based_credit_controller(self));
+    controller_.reset(new detail::size_based_credit_controller(self));
   }
 }
 

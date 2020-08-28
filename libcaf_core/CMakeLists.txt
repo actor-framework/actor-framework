@@ -64,7 +64,6 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/binary_deserializer.cpp
   src/binary_serializer.cpp
   src/blocking_actor.cpp
-  src/complexity_based_credit_controller.cpp
   src/config_option.cpp
   src/config_option_adder.cpp
   src/config_option_set.cpp
