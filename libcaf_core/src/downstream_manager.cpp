@@ -41,7 +41,7 @@ downstream_manager::downstream_manager::path_predicate::~path_predicate() {
 
 downstream_manager::downstream_manager(stream_manager* parent)
     : parent_(parent) {
-  // nop
+  last_send_ = parent->self()->now();
 }
 
 downstream_manager::~downstream_manager() {
@@ -60,6 +60,13 @@ stream_manager* downstream_manager::parent() const noexcept {
 
 bool downstream_manager::terminal() const noexcept {
   return true;
+}
+
+// -- time management ----------------------------------------------------------
+
+void downstream_manager::tick(time_point now, timespan max_batch_delay) {
+  if (now >= last_send_ + max_batch_delay && buffered() > 0)
+    force_emit_batches();
 }
 
 // -- path management ----------------------------------------------------------

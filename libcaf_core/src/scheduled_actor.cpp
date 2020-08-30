@@ -21,6 +21,7 @@
 #include "caf/actor_ostream.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/config.hpp"
+#include "caf/defaults.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/private_thread.hpp"
@@ -136,19 +137,8 @@ scheduled_actor::scheduled_actor(actor_config& cfg)
 #endif // CAF_ENABLE_EXCEPTIONS
 {
   auto& sys_cfg = home_system().config();
-  auto interval = sys_cfg.stream_tick_duration();
-  CAF_ASSERT(interval.count() > 0);
-  stream_ticks_.interval(interval);
-  CAF_ASSERT(sys_cfg.stream_max_batch_delay.count() > 0);
-  auto div = [](timespan x, timespan y) {
-    return static_cast<size_t>(x.count() / y.count());
-  };
-  max_batch_delay_ticks_ = div(sys_cfg.stream_max_batch_delay, interval);
-  CAF_ASSERT(max_batch_delay_ticks_ > 0);
-  credit_round_ticks_ = div(sys_cfg.stream_credit_round_interval, interval);
-  CAF_ASSERT(credit_round_ticks_ > 0);
-  CAF_LOG_DEBUG(CAF_ARG(interval) << CAF_ARG(max_batch_delay_ticks_)
-                                  << CAF_ARG(credit_round_ticks_));
+  max_batch_delay_ = get_or(sys_cfg, "caf.stream.max_batch_delay",
+                            defaults::stream::max_batch_delay);
 }
 
 scheduled_actor::~scheduled_actor() {
@@ -913,8 +903,6 @@ bool scheduled_actor::finalize() {
         i = stream_managers_.erase(i);
       else
         ++i;
-      if (stream_managers_.empty())
-        stream_ticks_.stop();
     }
   }
   // An actor is considered alive as long as it has a behavior and didn't set
@@ -1075,8 +1063,6 @@ stream_slot scheduled_actor::next_slot() {
 
 void scheduled_actor::assign_slot(stream_slot x, stream_manager_ptr mgr) {
   CAF_LOG_TRACE(CAF_ARG(x));
-  if (stream_managers_.empty())
-    stream_ticks_.start(clock().now());
   CAF_ASSERT(stream_managers_.count(x) == 0);
   stream_managers_.emplace(x, std::move(mgr));
 }
@@ -1106,15 +1092,12 @@ scheduled_actor::assign_next_pending_slot_to(stream_manager_ptr mgr) {
 bool scheduled_actor::add_stream_manager(stream_slot id,
                                          stream_manager_ptr mgr) {
   CAF_LOG_TRACE(CAF_ARG(id));
-  if (stream_managers_.empty())
-    stream_ticks_.start(clock().now());
   return stream_managers_.emplace(id, std::move(mgr)).second;
 }
 
 void scheduled_actor::erase_stream_manager(stream_slot id) {
   CAF_LOG_TRACE(CAF_ARG(id));
-  if (stream_managers_.erase(id) != 0 && stream_managers_.empty())
-    stream_ticks_.stop();
+  stream_managers_.erase(id);
   CAF_LOG_DEBUG(CAF_ARG2("stream_managers_.size", stream_managers_.size()));
 }
 
@@ -1133,8 +1116,6 @@ void scheduled_actor::erase_stream_manager(const stream_manager_ptr& mgr) {
         i = stream_managers_.erase(i);
       else
         ++i;
-    if (stream_managers_.empty())
-      stream_ticks_.stop();
   }
   { // Lifetime scope of second iterator pair.
     auto i = pending_stream_managers_.begin();
@@ -1193,41 +1174,21 @@ scheduled_actor::handle_open_stream_msg(mailbox_element& x) {
 
 actor_clock::time_point
 scheduled_actor::advance_streams(actor_clock::time_point now) {
-  CAF_LOG_TRACE("");
-  if (!stream_ticks_.started()) {
-    CAF_LOG_DEBUG("tick emitter not started yet");
+  CAF_LOG_TRACE(CAF_ARG(now));
+  if (stream_managers_.empty())
     return actor_clock::time_point::max();
-  }
-  /// Advance time for driving forced batches and credit.
-  auto bitmask = stream_ticks_.timeouts(now, {max_batch_delay_ticks_,
-                                              credit_round_ticks_});
-  // Force batches on all output paths.
-  if ((bitmask & 0x01) != 0 && !stream_managers_.empty()) {
-    std::vector<stream_manager*> managers;
-    managers.reserve(stream_managers_.size());
-    for (auto& kvp : stream_managers_)
-      managers.emplace_back(kvp.second.get());
-    std::sort(managers.begin(), managers.end());
-    auto e = std::unique(managers.begin(), managers.end());
-    for (auto i = managers.begin(); i != e; ++i)
-      (*i)->out().force_emit_batches();
-  }
-  // Fill up credit on each input path.
-  if ((bitmask & 0x02) != 0) {
-    CAF_LOG_DEBUG("new credit round");
-    auto cycle = stream_ticks_.interval();
-    cycle *= static_cast<decltype(cycle)::rep>(credit_round_ticks_);
-    auto& qs = get_downstream_queue().queues();
-    for (auto& kvp : qs) {
-      auto inptr = kvp.second.policy().handler.get();
-      if (inptr != nullptr) {
-        auto tts = static_cast<int32_t>(kvp.second.total_task_size());
-        inptr->emit_ack_batch(this, tts, now, cycle);
-      }
-    }
-  }
-  return stream_ticks_.next_timeout(now, {max_batch_delay_ticks_,
-                                          credit_round_ticks_});
+  std::vector<stream_manager*> managers;
+  managers.reserve(stream_managers_.size());
+  for (auto& kvp : stream_managers_)
+    managers.emplace_back(kvp.second.get());
+  std::sort(managers.begin(), managers.end());
+  auto e = std::unique(managers.begin(), managers.end());
+  for (auto i = managers.begin(); i != e; ++i)
+    (*i)->tick(now);
+  auto idle = [](const stream_manager* mgr) { return mgr->idle(); };
+  if (std::all_of(managers.begin(), e, idle))
+    return actor_clock::time_point::max();
+  return now + max_batch_delay_;
 }
 
 } // namespace caf

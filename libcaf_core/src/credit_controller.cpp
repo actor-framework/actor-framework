@@ -20,20 +20,8 @@
 
 namespace caf {
 
-credit_controller::credit_controller(scheduled_actor* self) : self_(self) {
-  // nop
-}
-
 credit_controller::~credit_controller() {
   // nop
-}
-
-credit_controller::assignment credit_controller::compute_bridge() {
-  return {0, 0};
-}
-
-int32_t credit_controller::threshold() const noexcept {
-  return -1;
 }
 
 } // namespace caf

@@ -684,7 +684,9 @@ public:
       cfg.set("caf.middleman.manual-multiplexing", true);
       cfg.set("caf.middleman.workers", size_t{0});
     }
-    cfg.set("caf.stream.credit-policy", "testing");
+    cfg.set("caf.stream.credit-policy", "token-based");
+    cfg.set("caf.stream.token-based-policy.batch-size", 50);
+    cfg.set("caf.stream.token-based-policy.buffer-size", 200);
     return cfg;
   }
 

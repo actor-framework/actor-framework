@@ -32,7 +32,6 @@
 #include "caf/actor_traits.hpp"
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/tick_emitter.hpp"
 #include "caf/detail/unordered_flat_map.hpp"
 #include "caf/error.hpp"
 #include "caf/extend.hpp"
@@ -681,6 +680,10 @@ public:
            || !pending_stream_managers_.empty();
   }
 
+  auto max_batch_delay() const noexcept {
+    return max_batch_delay_;
+  }
+
   /// @endcond
 
 protected:
@@ -723,14 +726,12 @@ protected:
   /// yet received an ACK.
   stream_manager_map pending_stream_managers_;
 
-  /// Controls batch and credit timeouts.
-  detail::tick_emitter stream_ticks_;
+  /// Stores how long the actor should try to accumulate more items in order to
+  /// send a full stream batch.
+  timespan max_batch_delay_;
 
   /// Number of ticks per batch delay.
   size_t max_batch_delay_ticks_;
-
-  /// Number of ticks of each credit round.
-  size_t credit_round_ticks_;
 
   /// Pointer to a private thread object associated with a detached actor.
   detail::private_thread* private_thread_;

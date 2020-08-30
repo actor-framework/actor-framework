@@ -26,17 +26,10 @@ namespace caf::detail {
 /// batches and constrains credit based on upper bounds for memory usage.
 class size_based_credit_controller : public credit_controller {
 public:
-  // -- member types -----------------------------------------------------------
-
-  using super = credit_controller;
-
   // -- constants --------------------------------------------------------------
 
-  /// Configures at what buffer level we grant bridge credit (0 to 1).
-  static constexpr float buffer_threshold = 0.75f;
-
   /// Configures how many samples we require for recalculating buffer sizes.
-  static constexpr int32_t min_samples = 10;
+  static constexpr int32_t min_samples = 50;
 
   /// Stores how many elements we buffer at most after the handshake.
   int32_t initial_buffer_size = 10;
@@ -46,54 +39,50 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit size_based_credit_controller(scheduled_actor* self);
+  explicit size_based_credit_controller(local_actor* self);
 
   ~size_based_credit_controller() override;
 
-  // -- overrides --------------------------------------------------------------
+  // -- interface functions ----------------------------------------------------
 
-  void before_processing(downstream_msg::batch& x) override;
+  void before_processing(downstream_msg::batch& batch) override;
 
-  void after_processing(downstream_msg::batch& x) override;
+  calibration init() override;
 
-  assignment compute_initial() override;
-
-  assignment compute(timespan cycle) override;
-
-  assignment compute_bridge() override;
-
-  int32_t threshold() const noexcept override;
+  calibration calibrate() override;
 
 private:
   // -- member variables -------------------------------------------------------
 
-  /// Total number of elements in all processed batches in the current cycle.
-  int64_t num_batches_ = 0;
+  local_actor* self_;
 
-  /// Stores how many elements the buffer should hold at most.
-  int32_t buffer_size_ = initial_buffer_size;
-
-  /// Stores how many elements each batch should contain.
-  int32_t batch_size_ = initial_batch_size;
-
-  /// Configures how many bytes we store in total.
-  int32_t buffer_capacity_;
-
-  /// Configures how many bytes we transfer per batch.
-  int32_t bytes_per_batch_;
-
-  /// Stores how many elements we have sampled during the current cycle.
-  int32_t sampled_elements_ = 0;
-
-  /// Stores approximately how many bytes the sampled elements require when
-  /// serialized.
-  int32_t sampled_total_size_ = 0;
-
-  /// Counter for keeping track of when to sample a batch.
+  /// Keeps track of when to sample a batch.
   int32_t sample_counter_ = 0;
 
-  /// Configured how many batches we skip for the size sampling.
-  int32_t sample_rate_ = 1;
+  /// Stores the last computed (moving) average for the serialized size per
+  /// element in the stream.
+  int32_t bytes_per_element_ = 0;
+
+  /// Stores how many elements were sampled since last calling `calibrate`.
+  int32_t sampled_elements_ = 0;
+
+  /// Stores how many bytes the sampled batches required when serialized.
+  int64_t sampled_total_size_ = 0;
+
+  /// Stores whether this is the first run.
+  bool initializing_ = true;
+
+  // --  see caf::defaults::stream::size_policy --------------------------------
+
+  int32_t bytes_per_batch_;
+
+  int32_t buffer_capacity_;
+
+  int32_t sampling_rate_ = 1;
+
+  int32_t calibration_interval_;
+
+  float smoothing_factor_;
 };
 
 } // namespace caf::detail

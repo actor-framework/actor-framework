@@ -295,7 +295,10 @@ private:
     }
     auto new_size = buffered();
     CAF_ASSERT(old_size >= new_size);
-    this->shipped_messages(old_size - new_size);
+    auto shipped = old_size - new_size;
+    this->shipped_messages(shipped);
+    if (shipped > 0)
+      this->last_send_ = this->self()->now();
   }
 
   state_map_type state_map_;

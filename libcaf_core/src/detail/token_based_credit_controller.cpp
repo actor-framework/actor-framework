@@ -16,50 +16,45 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#include "caf/detail/token_based_credit_controller.hpp"
 
-#include <cstdint>
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
+#include "caf/config_value.hpp"
+#include "caf/defaults.hpp"
+#include "caf/detail/serialized_size.hpp"
+#include "caf/local_actor.hpp"
+#include "caf/settings.hpp"
 
-#include "caf/detail/core_export.hpp"
-#include "caf/downstream_msg.hpp"
-#include "caf/fwd.hpp"
+namespace caf::detail {
 
-namespace caf {
+token_based_credit_controller::token_based_credit_controller(local_actor* ptr) {
+  namespace fallback = defaults::stream::token_policy;
+  // Initialize from the config parameters.
+  auto& cfg = ptr->system().config();
+  if (auto section = get_if<settings>(&cfg, "caf.stream.token-based-policy")) {
+    batch_size_ = get_or(*section, "batch-size", fallback::batch_size);
+    buffer_size_ = get_or(*section, "buffer-size", fallback::buffer_size);
+  } else {
+    batch_size_ = fallback::batch_size;
+    buffer_size_ = fallback::buffer_size;
+  }
+}
 
-/// Computes credit for an attached source.
-class CAF_CORE_EXPORT credit_controller {
-public:
-  // -- member types -----------------------------------------------------------
+token_based_credit_controller::~token_based_credit_controller() {
+  // nop
+}
 
-  /// Wraps an assignment of the controller to its source.
-  struct calibration {
-    /// Stores how much credit the path may emit at most.
-    int32_t max_credit;
+void token_based_credit_controller::before_processing(downstream_msg::batch&) {
+  // nop
+}
 
-    /// Stores how many elements we demand per batch.
-    int32_t batch_size;
+credit_controller::calibration token_based_credit_controller::init() {
+  return calibrate();
+}
 
-    /// Stores how many batches the caller should wait before calling
-    /// `calibrate` again.
-    int32_t next_calibration;
-  };
+credit_controller::calibration token_based_credit_controller::calibrate() {
+  return {buffer_size_, batch_size_, std::numeric_limits<int32_t>::max()};
+}
 
-  // -- constructors, destructors, and assignment operators --------------------
-
-  virtual ~credit_controller();
-
-  // -- pure virtual functions -------------------------------------------------
-
-  /// Called before processing the batch `x` in order to allow the controller
-  /// to keep statistics on incoming batches.
-  virtual void before_processing(downstream_msg::batch& batch) = 0;
-
-  /// Returns an initial calibration for the path.
-  virtual calibration init() = 0;
-
-  /// Computes a credit assignment to the source after crossing the
-  /// low-threshold. May assign zero credit.
-  virtual calibration calibrate() = 0;
-};
-
-} // namespace caf
+} // namespace caf::detail

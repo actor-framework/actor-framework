@@ -23,6 +23,7 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/defaults.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/inbound_path.hpp"
@@ -37,7 +38,9 @@ namespace caf {
 
 stream_manager::stream_manager(scheduled_actor* selfptr, stream_priority prio)
   : self_(selfptr), pending_handshakes_(0), priority_(prio), flags_(0) {
-  // nop
+  auto& cfg = selfptr->config();
+  max_batch_delay_ = get_or(cfg, "caf.stream.max-batch-delay",
+                            defaults::stream::max_batch_delay);
 }
 
 stream_manager::~stream_manager() {
@@ -145,28 +148,6 @@ void stream_manager::shutdown() {
                 << CAF_ARG2("out.paths", out().num_paths()));
   for (auto ipath : inbound_paths_)
     ipath->emit_regular_shutdown(self_);
-}
-
-void stream_manager::advance() {
-  CAF_LOG_TRACE("");
-  // Try to emit more credit.
-  if (!inbound_paths_.empty()) {
-    auto now = self_->clock().now();
-    auto& cfg = self_->system().config();
-    auto interval = cfg.stream_credit_round_interval;
-    auto& qs = self_->get_downstream_queue().queues();
-    // Iterate all queues for inbound traffic.
-    for (auto& kvp : qs) {
-      auto inptr = kvp.second.policy().handler.get();
-      // Ignore inbound paths of other managers.
-      if (inptr->mgr.get() == this) {
-        auto tts = static_cast<int32_t>(kvp.second.total_task_size());
-        inptr->emit_ack_batch(self_, tts, now, interval);
-      }
-    }
-  }
-  // Try to generate more batches.
-  push();
 }
 
 void stream_manager::push() {
@@ -314,6 +295,12 @@ stream_manager::add_unchecked_inbound_path_impl(type_id_t input_type) {
   CAF_ASSERT(ptr != nullptr);
   ptr->emit_ack_open(self_, actor_cast<actor_addr>(osm.original_stage));
   return slot;
+}
+
+void stream_manager::tick(time_point now) {
+  for (auto path : inbound_paths_)
+    path->tick(now, max_batch_delay_);
+  out().tick(now, max_batch_delay_);
 }
 
 stream_slot stream_manager::assign_next_slot() {

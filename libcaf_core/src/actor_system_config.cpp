@@ -57,9 +57,8 @@ actor_system_config::actor_system_config()
     config_file_path(default_config_file),
     slave_mode_fun(nullptr) {
   // (1) hard-coded defaults
-  stream_desired_batch_complexity = defaults::stream::desired_batch_complexity;
   stream_max_batch_delay = defaults::stream::max_batch_delay;
-  stream_credit_round_interval = defaults::stream::credit_round_interval;
+  stream_credit_round_interval = 2 * stream_max_batch_delay;
   // fill our options vector for creating config file and CLI parsers
   using std::string;
   using string_list = std::vector<string>;
@@ -70,14 +69,19 @@ actor_system_config::actor_system_config()
     .add<string>(config_file_path, "config-file",
                  "set config file (default: caf-application.conf)");
   opt_group{custom_options_, "caf.stream"}
-    .add<timespan>(stream_desired_batch_complexity, "desired-batch-complexity",
-                   "processing time per batch")
     .add<timespan>(stream_max_batch_delay, "max-batch-delay",
                    "maximum delay for partial batches")
-    .add<timespan>(stream_credit_round_interval, "credit-round-interval",
-                   "time between emitting credit")
     .add<string>("credit-policy",
-                 "selects an algorithm for credit computation");
+                 "selects an implementation for credit computation");
+  opt_group{custom_options_, "caf.stream.size-based-policy"}
+    .add<int32_t>("bytes-per-batch", "desired batch size in bytes")
+    .add<int32_t>("buffer-capacity", "maximum input buffer size in bytes")
+    .add<int32_t>("sampling-rate", "frequency of collecting batch sizes")
+    .add<int32_t>("calibration-interval", "frequency of re-calibrations")
+    .add<float>("smoothing-factor", "factor for discounting older samples");
+  opt_group{custom_options_, "caf.stream.token-based-policy"}
+    .add<int32_t>("batch-size", "number of elements per batch")
+    .add<int32_t>("buffer-size", "max. number of elements in the input buffer");
   opt_group{custom_options_, "caf.scheduler"}
     .add<string>("policy", "'stealing' (default) or 'sharing'")
     .add<size_t>("max-threads", "maximum number of worker threads")
@@ -117,12 +121,8 @@ settings actor_system_config::dump_content() const {
   auto& caf_group = result["caf"].as_dictionary();
   // -- streaming parameters
   auto& stream_group = caf_group["stream"].as_dictionary();
-  put_missing(stream_group, "desired-batch-complexity",
-              defaults::stream::desired_batch_complexity);
   put_missing(stream_group, "max-batch-delay",
               defaults::stream::max_batch_delay);
-  put_missing(stream_group, "credit-round-interval",
-              defaults::stream::credit_round_interval);
   put_missing(stream_group, "credit-policy", defaults::stream::credit_policy);
   put_missing(stream_group, "size-policy.buffer-capacity",
               defaults::stream::size_policy::buffer_capacity);
@@ -352,12 +352,6 @@ actor_system_config& actor_system_config::set_impl(string_view name,
       put(content, name, std::move(value));
   }
   return *this;
-}
-
-timespan actor_system_config::stream_tick_duration() const noexcept {
-  auto ns_count = caf::detail::gcd(stream_credit_round_interval.count(),
-                                   stream_max_batch_delay.count());
-  return timespan{ns_count};
 }
 
 std::string actor_system_config::render(const error& x) {

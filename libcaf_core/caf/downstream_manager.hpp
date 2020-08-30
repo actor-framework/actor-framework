@@ -21,9 +21,11 @@
 #include <memory>
 #include <vector>
 
+#include "caf/actor_clock.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/stream_slot.hpp"
+#include "caf/timespan.hpp"
 
 namespace caf {
 
@@ -47,6 +49,9 @@ public:
 
   /// Unique pointer to an outbound path.
   using unique_path_ptr = std::unique_ptr<path_type>;
+
+  /// Discrete point in time, as reported by the actor clock.
+  using time_point = typename actor_clock::time_point;
 
   /// Function object for iterating over all paths.
   struct CAF_CORE_EXPORT path_visitor {
@@ -82,6 +87,11 @@ public:
   /// Returns `true` if this manager belongs to a sink, i.e., terminates the
   /// stream and never has outbound paths.
   virtual bool terminal() const noexcept;
+
+  // -- time management --------------------------------------------------------
+
+  /// Forces underful batches after reaching the maximum delay.
+  void tick(time_point now, timespan max_batch_delay);
 
   // -- path management --------------------------------------------------------
 
@@ -241,6 +251,9 @@ protected:
   // -- member variables -------------------------------------------------------
 
   stream_manager* parent_;
+
+  /// Stores the time stamp of our last batch.
+  time_point last_send_;
 };
 
 } // namespace caf
