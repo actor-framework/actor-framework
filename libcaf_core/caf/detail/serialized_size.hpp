@@ -30,9 +30,7 @@ public:
 
   using super::super;
 
-  size_t result() const noexcept {
-    return result_;
-  }
+  size_t result = 0;
 
   result_type begin_object(type_id_t) override;
 
@@ -75,9 +73,6 @@ public:
   result_type apply(span<const byte> x) override;
 
   result_type apply(const std::vector<bool>& xs) override;
-
-private:
-  size_t result_ = 0;
 };
 
 template <class T>
@@ -85,7 +80,7 @@ size_t serialized_size(actor_system& sys, const T& x) {
   serialized_size_inspector f{sys};
   auto err = f(x);
   static_cast<void>(err);
-  return f.result();
+  return f.result;
 }
 
 template <class T>
@@ -93,7 +88,7 @@ size_t serialized_size(const T& x) {
   serialized_size_inspector f{nullptr};
   auto err = f(x);
   static_cast<void>(err);
-  return f.result();
+  return f.result;
 }
 
 } // namespace caf::detail
