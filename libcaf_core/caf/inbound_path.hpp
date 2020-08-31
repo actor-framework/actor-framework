@@ -25,10 +25,13 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/credit_controller.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/size_based_credit_controller.hpp"
+#include "caf/detail/token_based_credit_controller.hpp"
 #include "caf/downstream_msg.hpp"
+#include "caf/logger.hpp"
 #include "caf/meta/type_name.hpp"
+#include "caf/settings.hpp"
 #include "caf/stream_aborter.hpp"
-#include "caf/stream_manager.hpp"
 #include "caf/stream_priority.hpp"
 #include "caf/stream_slot.hpp"
 #include "caf/telemetry/counter.hpp"
@@ -63,16 +66,34 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  /// Constructs a path for given handle and stream ID.
-  inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
-               strong_actor_ptr ptr, type_id_t input_type);
+  template <class T>
+  inbound_path(stream_manager* mgr, stream<T> in)
+    : inbound_path(mgr, type_id_v<T>) {
+    auto& cfg = config();
+    auto set_default = [this, in] {
+      controller_ = detail::size_based_credit_controller::make(self(), in);
+    };
+    if (auto str = get_if<std::string>(&cfg, "caf.stream.credit-policy")) {
+      if (*str == "token-based")
+        controller_ = detail::token_based_credit_controller::make(self(), in);
+      else if (*str == "size-based")
+        set_default();
+      else
+        CAF_LOG_WARNING("unrecognized credit policy:"
+                        << *str << "(falling back to 'size-based')");
+    } else {
+      set_default();
+    }
+  }
+
+  void init(strong_actor_ptr source_hdl, stream_slots id);
 
   ~inbound_path();
 
   // -- member variables -------------------------------------------------------
 
   /// Points to the manager responsible for incoming traffic.
-  stream_manager_ptr mgr;
+  stream_manager* mgr;
 
   /// Handle to the source.
   strong_actor_ptr hdl;
@@ -125,18 +146,20 @@ public:
   /// Returns currently unassigned credit that we could assign to the source.
   int32_t available_credit() const noexcept;
 
+  /// Returns the system-wide configuration.
+  const settings& config() const noexcept;
+
   // -- callbacks --------------------------------------------------------------
 
   /// Updates `last_batch_id` and `assigned_credit` before dispatching to the
   /// manager.
   void handle(downstream_msg::batch& x);
 
-  /// Dispatches any `downstream_msg` other than `batch` directly to the
-  /// manager.
-  template <class T>
-  void handle(T& x) {
-    mgr->handle(this, x);
-  }
+  /// Forward the `close` message to the manager.
+  void handle(downstream_msg::close& x);
+
+  /// Forward the `forced_close` message to the manager.
+  void handle(downstream_msg::forced_close& x);
 
   /// Forces an ACK message after receiving no input for a considerable amount
   /// of time.
@@ -162,6 +185,9 @@ public:
   static void
   emit_irregular_shutdown(local_actor* self, stream_slots slots,
                           const strong_actor_ptr& hdl, error reason);
+
+private:
+  inbound_path(stream_manager* mgr_ptr, type_id_t input_type);
 };
 
 /// @relates inbound_path

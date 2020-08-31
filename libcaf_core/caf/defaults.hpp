@@ -64,7 +64,7 @@ constexpr auto buffer_capacity = int32_t{64 * 1024}; // 64 KB
 
 /// Frequency of computing the serialized size of incoming batches. Smaller
 /// values may increase accuracy, but also add computational overhead.
-constexpr auto sampling_rate = int32_t{25};
+constexpr auto sampling_rate = int32_t{100};
 
 /// Frequency of re-calibrating batch sizes. For example, a calibration interval
 /// of 10 and a sampling rate of 20 causes the actor to re-calibrate every 200

@@ -19,12 +19,16 @@
 #pragma once
 
 #include "caf/credit_controller.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/serialized_size.hpp"
+#include "caf/downstream_msg.hpp"
+#include "caf/stream.hpp"
 
 namespace caf::detail {
 
 /// A credit controller that estimates the bytes required to store incoming
 /// batches and constrains credit based on upper bounds for memory usage.
-class size_based_credit_controller : public credit_controller {
+class CAF_CORE_EXPORT size_based_credit_controller : public credit_controller {
 public:
   // -- constants --------------------------------------------------------------
 
@@ -45,13 +49,35 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
-  void before_processing(downstream_msg::batch& batch) override;
-
   calibration init() override;
 
   calibration calibrate() override;
 
-private:
+  // -- factory functions ------------------------------------------------------
+
+  template <class T>
+  static auto make(local_actor* self, stream<T>) {
+    class impl : public size_based_credit_controller {
+      using size_based_credit_controller::size_based_credit_controller;
+
+      void before_processing(downstream_msg::batch& x) override {
+        if (++this->sample_counter_ == this->sampling_rate_) {
+          this->sample_counter_ = 0;
+          this->inspector_.result = 0;
+          this->sampled_elements_ += x.xs_size;
+          for (auto& element : x.xs.get_as<std::vector<T>>(0)) {
+            auto res = this->inspector_(element);
+            static_cast<void>(res); // This inspector never produces an error.
+          }
+          this->sampled_total_size_
+            += static_cast<int64_t>(this->inspector_.result);
+        }
+      }
+    };
+    return std::make_unique<impl>(self);
+  }
+
+protected:
   // -- member variables -------------------------------------------------------
 
   local_actor* self_;
@@ -68,6 +94,9 @@ private:
 
   /// Stores how many bytes the sampled batches required when serialized.
   int64_t sampled_total_size_ = 0;
+
+  /// Computes how many bytes elements require on the wire.
+  serialized_size_inspector inspector_;
 
   /// Stores whether this is the first run.
   bool initializing_ = true;

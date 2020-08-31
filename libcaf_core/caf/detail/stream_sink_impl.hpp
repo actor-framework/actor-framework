@@ -61,10 +61,6 @@ public:
     return driver_.acquire_credit(path, desired);
   }
 
-  bool congested() const noexcept override {
-    return driver_.congested();
-  }
-
 protected:
   void finalize(const error& reason) override {
     driver_.finalize(reason);

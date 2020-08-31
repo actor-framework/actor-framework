@@ -19,12 +19,13 @@
 #pragma once
 
 #include "caf/credit_controller.hpp"
+#include "caf/detail/core_export.hpp"
 
 namespace caf::detail {
 
 /// A credit controller that estimates the bytes required to store incoming
 /// batches and constrains credit based on upper bounds for memory usage.
-class token_based_credit_controller : public credit_controller {
+class CAF_CORE_EXPORT token_based_credit_controller : public credit_controller {
 public:
   // -- constants --------------------------------------------------------------
 
@@ -50,6 +51,13 @@ public:
   calibration init() override;
 
   calibration calibrate() override;
+
+  // -- factory functions ------------------------------------------------------
+
+  template <class T>
+  static auto make(local_actor* self, stream<T>) {
+    return std::make_unique<token_based_credit_controller>(self);
+  }
 
 private:
   // --  see caf::defaults::stream::token_policy -------------------------------

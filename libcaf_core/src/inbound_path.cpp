@@ -21,8 +21,6 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/meta_object.hpp"
-#include "caf/detail/size_based_credit_controller.hpp"
-#include "caf/detail/token_based_credit_controller.hpp"
 #include "caf/logger.hpp"
 #include "caf/no_stages.hpp"
 #include "caf/scheduled_actor.hpp"
@@ -43,10 +41,12 @@ namespace caf {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-inbound_path::inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
-                           strong_actor_ptr ptr,
-                           [[maybe_unused]] type_id_t in_type)
-  : mgr(std::move(mgr_ptr)), hdl(std::move(ptr)), slots(id) {
+inbound_path::inbound_path(stream_manager* ptr, type_id_t in_type) : mgr(ptr) {
+  // Note: we can't include stream_manager.hpp in the header of inbound_path,
+  // because that would cause a circular reference. Hence, we also can't use an
+  // intrusive_ptr as member and instead call `ref/deref` manually.
+  CAF_ASSERT(mgr != nullptr);
+  mgr->ref();
   auto self = mgr->self();
   auto [processed_elements, input_buffer_size]
     = self->inbound_stream_metrics(in_type);
@@ -54,23 +54,18 @@ inbound_path::inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
   mgr->register_input_path(this);
   CAF_STREAM_LOG_DEBUG(self->name()
                        << "opens input stream with element type"
-                       << detail::global_meta_object(in_type)->type_name
-                       << "at slot" << id.receiver << "from" << hdl);
-  auto setter = set_controller<detail::size_based_credit_controller>;
-  if (auto str = get_if<std::string>(&self->system().config(),
-                                     "caf.stream.credit-policy")) {
-    if (*str == "token-based")
-      setter = set_controller<detail::token_based_credit_controller>;
-    else if (*str != "size-based")
-      CAF_LOG_WARNING("unrecognized credit policy:"
-                      << *str << "(falling back to 'size-based')");
-  }
-  setter(controller_, self);
+                       << detail::global_meta_object(in_type)->type_name);
   last_ack_time = self->now();
 }
 
 inbound_path::~inbound_path() {
   mgr->deregister_input_path(this);
+  mgr->deref();
+}
+
+void inbound_path::init(strong_actor_ptr source_hdl, stream_slots id) {
+  hdl = std::move(source_hdl);
+  slots = id;
 }
 
 // -- properties ---------------------------------------------------------------
@@ -87,6 +82,10 @@ int32_t inbound_path::available_credit() const noexcept {
   // The max_credit may decrease as a result of re-calibration, in which case
   // the source can have more than the maximum amount for a brief period.
   return std::max(max_credit - assigned_credit, int32_t{0});
+}
+
+const settings& inbound_path::config() const noexcept {
+  return content(mgr->self()->config());
 }
 
 // -- callbacks ----------------------------------------------------------------
@@ -127,6 +126,14 @@ void inbound_path::tick(time_point now, duration_type max_batch_delay) {
   }
 }
 
+void inbound_path::handle(downstream_msg::close& x) {
+  mgr->handle(this, x);
+}
+
+void inbound_path::handle(downstream_msg::forced_close& x) {
+  mgr->handle(this, x);
+}
+
 // -- messaging ----------------------------------------------------------------
 
 void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
@@ -134,9 +141,11 @@ void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
   // Update state.
   auto [cmax, bsize, countdown] = controller_->init();
   max_credit = cmax;
-  assigned_credit = mgr->acquire_credit(this, cmax);
   desired_batch_size = bsize;
   calibration_countdown = countdown;
+  if (auto available = available_credit(); available > 0)
+    if (auto acquired = mgr->acquire_credit(this, available); acquired > 0)
+      assigned_credit += acquired;
   // Make sure we receive errors from this point on.
   stream_aborter::add(hdl, self->address(), slots.receiver,
                       stream_aborter::source_aborter);

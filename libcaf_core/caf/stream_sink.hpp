@@ -62,8 +62,8 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Creates a new input path to the current sender.
-  inbound_stream_slot<input_type> add_inbound_path(stream<input_type>) {
-    return {this->add_unchecked_inbound_path_impl(type_id_v<input_type>)};
+  inbound_stream_slot<input_type> add_inbound_path(stream<input_type> in) {
+    return {this->add_unchecked_inbound_path(in)};
   }
 
 private:

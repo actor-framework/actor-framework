@@ -60,12 +60,6 @@ public:
   /// Processes a single batch.
   virtual void process(std::vector<input_type>& batch) = 0;
 
-  /// Can mark the sink as congested, e.g., when writing into a buffer that
-  /// fills up faster than it is drained.
-  virtual bool congested() const noexcept {
-    return false;
-  }
-
   /// Acquires credit on an inbound path. The calculated credit to fill our
   /// queue for two cycles is `desired`, but the driver is allowed to return
   /// any non-negative value.

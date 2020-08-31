@@ -334,8 +334,8 @@ intrusive::task_result scheduled_actor::mailbox_visitor::operator()(
         processed_elements->inc(num_elements);
         input_buffer_size->dec(num_elements);
       }
-      // Do *not* store a reference here since we potentially reset `inptr`.
-      auto mgr = inptr->mgr;
+      // Hold onto a strong reference since we might reset `inptr`.
+      auto mgr = stream_manager_ptr{inptr->mgr};
       inptr->handle(content);
       // The sender slot can be 0. This is the case for forced_close or
       // forced_drop messages from stream aborters.
@@ -950,20 +950,16 @@ scheduled_actor::urgent_queue& scheduled_actor::get_urgent_queue() {
   return get<urgent_queue_index>(mailbox_.queue().queues());
 }
 
-inbound_path* scheduled_actor::make_inbound_path(stream_manager_ptr mgr,
-                                                 stream_slots slots,
-                                                 strong_actor_ptr sender,
-                                                 type_id_t input_type) {
+bool scheduled_actor::add_inbound_path(type_id_t,
+                                       std::unique_ptr<inbound_path> path) {
   static constexpr size_t queue_index = downstream_queue_index;
   using policy_type = policy::downstream_messages::nested;
   auto& qs = get<queue_index>(mailbox_.queue().queues()).queues();
-  auto res = qs.emplace(slots.receiver, policy_type{nullptr});
+  auto res = qs.emplace(path->slots.receiver, policy_type{nullptr});
   if (!res.second)
-    return nullptr;
-  auto path = new inbound_path(std::move(mgr), slots, std::move(sender),
-                               input_type);
-  res.first->second.policy().handler.reset(path);
-  return path;
+    return false;
+  res.first->second.policy().handler = std::move(path);
+  return true;
 }
 
 void scheduled_actor::erase_inbound_path_later(stream_slot slot) {

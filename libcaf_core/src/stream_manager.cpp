@@ -158,7 +158,7 @@ void stream_manager::push() {
 }
 
 bool stream_manager::congested() const noexcept {
-  return false;
+  return out().capacity() == 0;
 }
 
 void stream_manager::deliver_handshake(response_promise& rp, stream_slot slot,
@@ -267,7 +267,8 @@ stream_manager::add_unchecked_outbound_path_impl(message handshake) {
 }
 
 stream_slot
-stream_manager::add_unchecked_inbound_path_impl(type_id_t input_type) {
+stream_manager::add_unchecked_inbound_path_impl(type_id_t input_type,
+                                                inbound_path_ptr ptr) {
   CAF_LOG_TRACE("");
   auto x = self_->current_mailbox_element();
   if (x == nullptr || !x->content().match_elements<open_stream_msg>()) {
@@ -290,10 +291,11 @@ stream_manager::add_unchecked_inbound_path_impl(type_id_t input_type) {
   }
   auto slot = assign_next_slot();
   stream_slots path_id{osm.slot, slot};
-  auto ptr = self_->make_inbound_path(this, path_id, std::move(osm.prev_stage),
-                                      input_type);
-  CAF_ASSERT(ptr != nullptr);
-  ptr->emit_ack_open(self_, actor_cast<actor_addr>(osm.original_stage));
+  auto raw_ptr = ptr.get();
+  ptr->init(std::move(osm.prev_stage), path_id);
+  if (!self_->add_inbound_path(input_type, std::move(ptr)))
+    return invalid_stream_slot;
+  raw_ptr->emit_ack_open(self_, actor_cast<actor_addr>(osm.original_stage));
   return slot;
 }
 

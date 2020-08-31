@@ -314,18 +314,16 @@ public:
       kvp.second->tick(now());
   }
 
-  inbound_path* make_inbound_path(stream_manager_ptr mgr, stream_slots slots,
-                                  strong_actor_ptr sender,
-                                  type_id_t input_type) override {
+  virtual bool add_inbound_path(type_id_t input_type,
+                                std::unique_ptr<inbound_path> path) override {
     using policy_type = policy::downstream_messages::nested;
     auto res = get<dmsg_id::value>(mbox.queues())
-               .queues().emplace(slots.receiver, policy_type{nullptr});
+                 .queues()
+                 .emplace(path->slots.receiver, policy_type{nullptr});
     if (!res.second)
-      return nullptr;
-    auto path = new inbound_path(std::move(mgr), slots, std::move(sender),
-                                 input_type);
-    res.first->second.policy().handler.reset(path);
-    return path;
+      return false;
+    res.first->second.policy().handler = std::move(path);
+    return true;
   }
 
   void erase_inbound_path_later(stream_slot slot) override {

@@ -29,6 +29,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/fwd.hpp"
+#include "caf/inbound_path.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/stream.hpp"
 #include "caf/stream_slot.hpp"
@@ -55,6 +56,8 @@ public:
   static constexpr int is_stopped_flag = 0x0004;
 
   // -- member types -----------------------------------------------------------
+
+  using inbound_path_ptr = std::unique_ptr<inbound_path>;
 
   using inbound_paths_list = std::vector<inbound_path*>;
 
@@ -147,6 +150,16 @@ public:
   ///       This function is called from the destructor of `inbound_path`.
   virtual void deregister_input_path(inbound_path* x) noexcept;
 
+  /// Creates an inbound path to the current sender without any type checking.
+  /// @pre `current_sender() != nullptr`
+  /// @pre `out().terminal() == false`
+  /// @private
+  template <class In>
+  stream_slot add_unchecked_inbound_path(stream<In> in) {
+    auto path = std::make_unique<inbound_path>(this, in);
+    return add_unchecked_inbound_path_impl(type_id_v<In>, std::move(path));
+  }
+
   /// Removes an input path
   virtual void remove_input_path(stream_slot slot, error reason, bool silent);
 
@@ -188,7 +201,7 @@ public:
   bool inbound_paths_idle() const noexcept;
 
   /// Returns the parent actor.
-  scheduled_actor* self() {
+  scheduled_actor* self() noexcept {
     return self_;
   }
 
@@ -246,15 +259,6 @@ public:
                                             std::move(handshake));
   }
 
-  /// Creates an inbound path to the current sender without any type checking.
-  /// @pre `current_sender() != nullptr`
-  /// @pre `out().terminal() == false`
-  /// @private
-  template <class In>
-  stream_slot add_unchecked_inbound_path(stream<In>) {
-    return add_unchecked_inbound_path_impl(type_id_v<In>);
-  }
-
   /// Adds a new outbound path to `rp.next()`.
   /// @private
   stream_slot
@@ -268,10 +272,6 @@ public:
   /// Adds a new outbound path to the current sender.
   /// @private
   stream_slot add_unchecked_outbound_path_impl(message handshake);
-
-  /// Adds the current sender as an inbound path.
-  /// @pre Current message is an `open_stream_msg`.
-  stream_slot add_unchecked_inbound_path_impl(type_id_t rtti);
 
   // -- time management --------------------------------------------------------
 
@@ -303,6 +303,11 @@ protected:
   /// Called when `out().closed()` changes to `true`. The default
   /// implementation does nothing.
   virtual void output_closed(error reason);
+
+  /// Adds the current sender as an inbound path.
+  /// @pre Current message is an `open_stream_msg`.
+  stream_slot add_unchecked_inbound_path_impl(type_id_t input_type,
+                                              inbound_path_ptr path);
 
   // -- member variables -------------------------------------------------------
 

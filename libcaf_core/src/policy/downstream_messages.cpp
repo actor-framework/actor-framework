@@ -22,6 +22,7 @@
 #include "caf/downstream_msg.hpp"
 #include "caf/inbound_path.hpp"
 #include "caf/logger.hpp"
+#include "caf/stream_manager.hpp"
 
 namespace caf::policy {
 

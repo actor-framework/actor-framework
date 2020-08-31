@@ -34,7 +34,7 @@ constexpr int32_t initial_sample_size = 10;
 namespace caf::detail {
 
 size_based_credit_controller::size_based_credit_controller(local_actor* ptr)
-  : self_(ptr) {
+  : self_(ptr), inspector_(ptr->system()) {
   namespace fallback = defaults::stream::size_policy;
   // Initialize from the config parameters.
   auto& cfg = ptr->system().config();
@@ -59,18 +59,6 @@ size_based_credit_controller::~size_based_credit_controller() {
   // nop
 }
 
-void size_based_credit_controller::before_processing(downstream_msg::batch& x) {
-  if (++sample_counter_ == sampling_rate_) {
-    sample_counter_ = 0;
-    sampled_elements_ += x.xs_size;
-    // FIXME: this wildly overestimates the actual size per element, because we
-    //        include the size of the meta data per message. This also punishes
-    //        small batches and we probably never reach a stable point even if
-    //        incoming data always has the exact same size per element.
-    sampled_total_size_ += static_cast<int64_t>(serialized_size(x.xs));
-  }
-}
-
 credit_controller::calibration size_based_credit_controller::init() {
   // Initially, we simply assume that the size of one element equals
   // bytes-per-batch.
@@ -90,7 +78,7 @@ credit_controller::calibration size_based_credit_controller::calibrate() {
     return static_cast<int32_t>(x);
   };
   if (!initializing_) {
-    auto bpe = clamp_i32(sampled_total_size_ / calibration_interval_);
+    auto bpe = clamp_i32(sampled_total_size_ / sampled_elements_);
     bytes_per_element_ = static_cast<int32_t>(
       smoothing_factor_ * bpe // weighted current measurement
       + (1.0 - smoothing_factor_) * bytes_per_element_ // past values
@@ -99,10 +87,11 @@ credit_controller::calibration size_based_credit_controller::calibrate() {
     // After our first run, we continue with the actual sampling rate.
     initializing_ = false;
     sampling_rate_ = get_or(self_->config(),
-                            "caf.stream.size-policy.sample-rate",
+                            "caf.stream.size-based-policy.sampling-rate",
                             defaults::stream::size_policy::sampling_rate);
-    bytes_per_element_ = clamp_i32(sampled_total_size_ / initial_sample_size);
+    bytes_per_element_ = clamp_i32(sampled_total_size_ / sampled_elements_);
   }
+  sampled_elements_ = 0;
   sampled_total_size_ = 0;
   return {
     clamp_i32(buffer_capacity_ / bytes_per_element_),
