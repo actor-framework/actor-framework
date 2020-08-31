@@ -223,7 +223,7 @@ void bootstrap(actor_system& system, const string& wdir,
 #define RETURN_WITH_ERROR(output)                                              \
   do {                                                                         \
     ::std::cerr << output << ::std::endl;                                      \
-    return 1;                                                                  \
+    return EXIT_FAILURE;                                                       \
   } while (true)
 
 namespace {
@@ -242,9 +242,12 @@ struct config : actor_system_config {
 
 int main(int argc, char** argv) {
   config cfg;
-  cfg.parse(argc, argv);
+  if (auto err = cfg.parse(argc, argv)) {
+    std::cerr << "error parsing command line: " << to_string(err) << '\n';
+    return EXIT_FAILURE;
+  }
   if (cfg.cli_helptext_printed)
-    return 0;
+    return EXIT_SUCCESS;
   if (cfg.slave_mode)
     RETURN_WITH_ERROR("cannot use slave mode in caf-run tool");
   std::unique_ptr<char, void (*)(void*)> pwd{getcwd(nullptr, 0), ::free};
@@ -265,4 +268,5 @@ int main(int argc, char** argv) {
   hosts.erase(hosts.begin());
   bootstrap(system, (cfg.wdir.empty()) ? pwd.get() : cfg.wdir.c_str(), master,
             std::move(hosts), cmd, xs);
+  return EXIT_SUCCESS;
 }
