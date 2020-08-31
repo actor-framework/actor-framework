@@ -58,9 +58,9 @@ local_actor::metrics_t make_instance_metrics(local_actor* self) {
   const auto& families = sys.actor_metric_families();
   string_view sv{name, strlen(name)};
   return {
-    families.processing_time_family->get_or_add({{"name", sv}}),
-    families.mailbox_time_family->get_or_add({{"name", sv}}),
-    families.mailbox_size_family->get_or_add({{"name", sv}}),
+    families.processing_time->get_or_add({{"name", sv}}),
+    families.mailbox_time->get_or_add({{"name", sv}}),
+    families.mailbox_size->get_or_add({{"name", sv}}),
   };
 }
 

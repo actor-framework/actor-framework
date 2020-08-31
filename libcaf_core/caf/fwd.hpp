@@ -154,6 +154,9 @@ class stateful_actor;
 
 struct down_msg;
 struct downstream_msg;
+struct downstream_msg_batch;
+struct downstream_msg_close;
+struct downstream_msg_forced_close;
 struct exit_msg;
 struct group_down_msg;
 struct illegal_message_element;

@@ -98,6 +98,14 @@ struct inode_policy {
     return enable_priorities && *q.policy().queue_id == 0 ? 2 * x : x;
   }
 
+  static void cleanup(queue_type&) noexcept {
+    // nop
+  }
+
+  static bool push_back(queue_type& q, mapped_type* ptr) noexcept {
+    return q.push_back(ptr);
+  }
+
   bool enable_priorities = false;
 };
 

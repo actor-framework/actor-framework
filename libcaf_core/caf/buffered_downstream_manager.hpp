@@ -53,9 +53,15 @@ public:
     // nop
   }
 
+  buffered_downstream_manager(stream_manager* parent, type_id_t type)
+    : super(parent, type) {
+    // nop
+  }
+
   template <class T0, class... Ts>
   void push(T0&& x, Ts&&... xs) {
     buf_.emplace_back(std::forward<T0>(x), std::forward<Ts>(xs)...);
+    this->generated_messages(1);
   }
 
   /// @pre `n <= buf_.size()`

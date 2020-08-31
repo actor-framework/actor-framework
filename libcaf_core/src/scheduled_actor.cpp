@@ -22,6 +22,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
+#include "caf/detail/meta_object.hpp"
 #include "caf/detail/private_thread.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/inbound_path.hpp"
@@ -319,52 +320,6 @@ scheduled_actor::mailbox_visitor::operator()(size_t, upstream_queue&,
   });
 }
 
-namespace {
-
-// TODO: replace with generic lambda when switching to C++14
-struct downstream_msg_visitor {
-  scheduled_actor* selfptr;
-  scheduled_actor::downstream_queue& qs_ref;
-  policy::downstream_messages::nested_queue_type& q_ref;
-  downstream_msg& dm;
-
-  template <class T>
-  intrusive::task_result operator()(T& x) {
-    CAF_LOG_TRACE(CAF_ARG(x));
-    auto& inptr = q_ref.policy().handler;
-    if (inptr == nullptr)
-      return intrusive::task_result::stop;
-    // Do *not* store a reference here since we potentially reset `inptr`.
-    auto mgr = inptr->mgr;
-    inptr->handle(x);
-    // The sender slot can be 0. This is the case for forced_close or
-    // forced_drop messages from stream aborters.
-    CAF_ASSERT(
-      inptr->slots == dm.slots
-      || (dm.slots.sender == 0 && dm.slots.receiver == inptr->slots.receiver));
-    if constexpr (std::is_same<T, downstream_msg::close>::value
-                  || std::is_same<T, downstream_msg::forced_close>::value) {
-      inptr.reset();
-      qs_ref.erase_later(dm.slots.receiver);
-      selfptr->erase_stream_manager(dm.slots.receiver);
-      if (mgr->done()) {
-        CAF_LOG_DEBUG("path is done receiving and closes its manager");
-        selfptr->erase_stream_manager(mgr);
-        mgr->stop();
-      }
-      return intrusive::task_result::stop;
-    } else if (mgr->done()) {
-      CAF_LOG_DEBUG("path is done receiving and closes its manager");
-      selfptr->erase_stream_manager(mgr);
-      mgr->stop();
-      return intrusive::task_result::stop;
-    }
-    return intrusive::task_result::resume;
-  }
-};
-
-} // namespace
-
 intrusive::task_result scheduled_actor::mailbox_visitor::operator()(
   size_t, downstream_queue& qs, stream_slot,
   policy::downstream_messages::nested_queue_type& q, mailbox_element& x) {
@@ -375,7 +330,48 @@ intrusive::task_result scheduled_actor::mailbox_visitor::operator()(
     CAF_BEFORE_PROCESSING(self, x);
     CAF_ASSERT(x.content().match_elements<downstream_msg>());
     auto& dm = x.content().get_mutable_as<downstream_msg>(0);
-    downstream_msg_visitor f{self, qs, q, dm};
+    auto f = [&, this](auto& content) {
+      using content_type = std::decay_t<decltype(content)>;
+      auto& inptr = q.policy().handler;
+      if (inptr == nullptr)
+        return intrusive::task_result::stop;
+      if (auto processed_elements = inptr->metrics.processed_elements) {
+        auto num_elements = q.policy().task_size(content);
+        auto input_buffer_size = inptr->metrics.input_buffer_size;
+        CAF_ASSERT(input_buffer_size != nullptr);
+        processed_elements->inc(num_elements);
+        input_buffer_size->dec(num_elements);
+      }
+      // Do *not* store a reference here since we potentially reset `inptr`.
+      auto mgr = inptr->mgr;
+      inptr->handle(content);
+      // The sender slot can be 0. This is the case for forced_close or
+      // forced_drop messages from stream aborters.
+      CAF_ASSERT(inptr->slots == dm.slots
+                 || (dm.slots.sender == 0
+                     && dm.slots.receiver == inptr->slots.receiver));
+      if constexpr (std::is_same<content_type, downstream_msg::close>::value
+                    || std::is_same<content_type,
+                                    downstream_msg::forced_close>::value) {
+        if (auto input_buffer_size = inptr->metrics.input_buffer_size)
+          input_buffer_size->dec(q.total_task_size());
+        inptr.reset();
+        qs.erase_later(dm.slots.receiver);
+        self->erase_stream_manager(dm.slots.receiver);
+        if (mgr->done()) {
+          CAF_LOG_DEBUG("path is done receiving and closes its manager");
+          self->erase_stream_manager(mgr);
+          mgr->stop();
+        }
+        return intrusive::task_result::stop;
+      } else if (mgr->done()) {
+        CAF_LOG_DEBUG("path is done receiving and closes its manager");
+        self->erase_stream_manager(mgr);
+        mgr->stop();
+        return intrusive::task_result::stop;
+      }
+      return intrusive::task_result::resume;
+    };
     auto res = visit(f, dm.content);
     CAF_AFTER_PROCESSING(self, invoke_message_result::consumed);
     return ++handled_msgs < max_throughput ? res
@@ -500,6 +496,48 @@ void scheduled_actor::quit(error x) {
       erase_stream_manager(mgr);
     }
   }
+}
+
+// -- actor metrics ------------------------------------------------------------
+
+auto scheduled_actor::inbound_stream_metrics(type_id_t type)
+  -> inbound_stream_metrics_t {
+  if (!has_metrics_enabled())
+    return {nullptr, nullptr};
+  if (auto i = inbound_stream_metrics_.find(type);
+      i != inbound_stream_metrics_.end())
+    return i->second;
+  auto actor_name_cstr = name();
+  auto actor_name = string_view{actor_name_cstr, strlen(actor_name_cstr)};
+  auto tname_cstr = detail::global_meta_object(type)->type_name;
+  auto tname = string_view{tname_cstr, strlen(tname_cstr)};
+  auto fs = system().actor_metric_families().stream;
+  inbound_stream_metrics_t result{
+    fs.processed_elements->get_or_add({{"name", actor_name}, {"type", tname}}),
+    fs.input_buffer_size->get_or_add({{"name", actor_name}, {"type", tname}}),
+  };
+  inbound_stream_metrics_.emplace(type, result);
+  return result;
+}
+
+auto scheduled_actor::outbound_stream_metrics(type_id_t type)
+  -> outbound_stream_metrics_t {
+  if (!has_metrics_enabled())
+    return {nullptr, nullptr};
+  if (auto i = outbound_stream_metrics_.find(type);
+      i != outbound_stream_metrics_.end())
+    return i->second;
+  auto actor_name_cstr = name();
+  auto actor_name = string_view{actor_name_cstr, strlen(actor_name_cstr)};
+  auto tname_cstr = detail::global_meta_object(type)->type_name;
+  auto tname = string_view{tname_cstr, strlen(tname_cstr)};
+  auto fs = system().actor_metric_families().stream;
+  outbound_stream_metrics_t result{
+    fs.pushed_elements->get_or_add({{"name", actor_name}, {"type", tname}}),
+    fs.output_buffer_size->get_or_add({{"name", actor_name}, {"type", tname}}),
+  };
+  outbound_stream_metrics_.emplace(type, result);
+  return result;
 }
 
 // -- timeout management -------------------------------------------------------

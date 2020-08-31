@@ -72,21 +72,25 @@ inbound_path::inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
                            strong_actor_ptr ptr,
                            [[maybe_unused]] type_id_t in_type)
   : mgr(std::move(mgr_ptr)), hdl(std::move(ptr)), slots(id) {
+  auto self = mgr->self();
+  auto [processed_elements, input_buffer_size]
+    = self->inbound_stream_metrics(in_type);
+  metrics = metrics_t{processed_elements, input_buffer_size};
   mgr->register_input_path(this);
-  CAF_STREAM_LOG_DEBUG(mgr->self()->name()
+  CAF_STREAM_LOG_DEBUG(self->name()
                        << "opens input stream with element type"
                        << detail::global_meta_object(in_type)->type_name
                        << "at slot" << id.receiver << "from" << hdl);
-  if (auto str = get_if<std::string>(&self()->system().config(),
+  if (auto str = get_if<std::string>(&self->system().config(),
                                      "caf.stream.credit-policy")) {
     if (*str == "testing")
-      controller_.reset(new detail::test_credit_controller(self()));
+      controller_.reset(new detail::test_credit_controller(self));
     else if (*str == "size")
-      controller_.reset(new detail::size_based_credit_controller(self()));
+      controller_.reset(new detail::size_based_credit_controller(self));
     else
-      controller_.reset(new detail::complexity_based_credit_controller(self()));
+      controller_.reset(new detail::complexity_based_credit_controller(self));
   } else {
-    controller_.reset(new detail::complexity_based_credit_controller(self()));
+    controller_.reset(new detail::complexity_based_credit_controller(self));
   }
 }
 

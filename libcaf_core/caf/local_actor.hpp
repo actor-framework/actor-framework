@@ -77,6 +77,27 @@ public:
     telemetry::int_gauge* mailbox_size = nullptr;
   };
 
+  /// Optional metrics for inbound stream traffic collected by individual actors
+  /// when configured to do so.
+  struct inbound_stream_metrics_t {
+    /// Counts the total number of processed stream elements from upstream.
+    telemetry::int_counter* processed_elements = nullptr;
+
+    /// Tracks how many stream elements from upstream are currently buffered.
+    telemetry::int_gauge* input_buffer_size = nullptr;
+  };
+
+  /// Optional metrics for outbound stream traffic collected by individual
+  /// actors when configured to do so.
+  struct outbound_stream_metrics_t {
+    /// Counts the total number of elements that have been pushed downstream.
+    telemetry::int_counter* pushed_elements = nullptr;
+
+    /// Tracks how many stream elements are currently waiting in the output
+    /// buffer due to insufficient credit.
+    telemetry::int_gauge* output_buffer_size = nullptr;
+  };
+
   // -- constructors, destructors, and assignment operators --------------------
 
   local_actor(actor_config& cfg);
@@ -380,6 +401,11 @@ public:
 
   auto& builtin_metrics() noexcept {
     return metrics_;
+  }
+
+  bool has_metrics_enabled() const noexcept {
+    // Either all fields are null or none is.
+    return metrics_.processing_time != nullptr;
   }
 
   template <class ActorHandle>

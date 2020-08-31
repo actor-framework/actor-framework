@@ -119,6 +119,14 @@ public:
   /// Base type.
   using super = local_actor;
 
+  /// Maps types to metric objects for inbound stream traffic.
+  using inbound_stream_metrics_map
+    = std::unordered_map<type_id_t, inbound_stream_metrics_t>;
+
+  /// Maps types to metric objects for outbound stream traffic.
+  using outbound_stream_metrics_map
+    = std::unordered_map<type_id_t, outbound_stream_metrics_t>;
+
   /// Maps slot IDs to stream managers.
   using stream_manager_map = std::map<stream_slot, stream_manager_ptr>;
 
@@ -330,6 +338,12 @@ public:
   stream_manager_map& pending_stream_managers() noexcept {
     return pending_stream_managers_;
   }
+
+  // -- actor metrics ----------------------------------------------------------
+
+  inbound_stream_metrics_t inbound_stream_metrics(type_id_t type);
+
+  outbound_stream_metrics_t outbound_stream_metrics(type_id_t type);
 
   // -- event handlers ---------------------------------------------------------
 
@@ -720,6 +734,12 @@ protected:
 
   /// Pointer to a private thread object associated with a detached actor.
   detail::private_thread* private_thread_;
+
+  /// Caches metric objects for inbound stream traffic.
+  inbound_stream_metrics_map inbound_stream_metrics_;
+
+  /// Caches metric objects for outbound stream traffic.
+  outbound_stream_metrics_map outbound_stream_metrics_;
 
 #ifdef CAF_ENABLE_EXCEPTIONS
   /// Customization point for setting a default exception callback.
