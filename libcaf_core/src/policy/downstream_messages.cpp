@@ -57,11 +57,9 @@ auto downstream_messages::quantum(const nested_queue_type& q,
 }
 
 void downstream_messages::cleanup(nested_queue_type& sub_queue) noexcept {
-  auto& handler = sub_queue.policy().handler;
-  if (!handler)
-    return;
-  if (auto input_buffer_size = handler->metrics.input_buffer_size)
-    input_buffer_size->dec(sub_queue.total_task_size());
+  if (auto handler = sub_queue.policy().handler.get())
+    if (auto input_buffer_size = handler->metrics.input_buffer_size)
+      input_buffer_size->dec(sub_queue.total_task_size());
 }
 
 bool downstream_messages::push_back(nested_queue_type& sub_queue,

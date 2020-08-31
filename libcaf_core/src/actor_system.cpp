@@ -258,7 +258,7 @@ auto make_actor_metric_families(telemetry::metric_registry& reg) {
       reg.counter_family("caf.actor.stream", "processed-elements",
                          {"name", "type"},
                          "Number of processed stream elements from upstream."),
-      reg.gauge_family("caf.actor.stream", "input_buffer_size",
+      reg.gauge_family("caf.actor.stream", "input-buffer-size",
                        {"name", "type"},
                        "Number of buffered stream elements from upstream."),
       reg.counter_family(

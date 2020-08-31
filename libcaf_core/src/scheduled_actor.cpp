@@ -989,11 +989,10 @@ void scheduled_actor::erase_inbound_path_later(stream_slot slot, error reason) {
   if (i != e) {
     auto& path = i->second.policy().handler;
     if (path != nullptr) {
-      if (reason == none) {
+      if (reason == none)
         path->emit_regular_shutdown(this);
-      } else {
+      else
         path->emit_irregular_shutdown(this, std::move(reason));
-      }
     }
     q.erase_later(slot);
   }

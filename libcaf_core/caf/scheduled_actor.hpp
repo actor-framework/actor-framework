@@ -735,10 +735,10 @@ protected:
   /// Pointer to a private thread object associated with a detached actor.
   detail::private_thread* private_thread_;
 
-  /// Catche metric objects for inbound stream traffic.
+  /// Caches metric objects for inbound stream traffic.
   inbound_stream_metrics_map inbound_stream_metrics_;
 
-  /// Catche metric objects for outbound stream traffic.
+  /// Caches metric objects for outbound stream traffic.
   outbound_stream_metrics_map outbound_stream_metrics_;
 
 #ifdef CAF_ENABLE_EXCEPTIONS
