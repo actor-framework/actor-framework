@@ -65,10 +65,12 @@ public:
   /// leaving `reason` for future reference.
   void erase(actor_id key);
 
-  /// Increases running-actors-count by one. Returns the increased count.
+  /// Increases running-actors-count by one.
+  /// @returns the increased count.
   size_t inc_running();
 
-  /// Decreases running-actors-count by one. Returns the decreased count.
+  /// Decreases running-actors-count by one.
+  /// @returns the decreased count.
   size_t dec_running();
 
   /// Returns the number of currently running actors.
