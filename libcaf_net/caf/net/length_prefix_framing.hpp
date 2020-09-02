@@ -141,7 +141,7 @@ public:
     using detail::from_network_order;
     if (buffer.size() < 4)
       return 0;
-    auto u32_size = 0;
+    uint32_t u32_size = 0;
     memcpy(&u32_size, buffer.data(), 4);
     auto msg_size = static_cast<size_t>(from_network_order(u32_size));
     if (buffer.size() < msg_size + 4)
