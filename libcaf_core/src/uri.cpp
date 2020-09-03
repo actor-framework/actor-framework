@@ -45,6 +45,7 @@ uri::impl_type::impl_type() : rc_(1) {
 }
 
 void uri::impl_type::assemble_str() {
+  str.clear();
   using detail::append_percent_encoded;
   append_percent_encoded(str, scheme);
   str += ':';

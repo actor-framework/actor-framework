@@ -56,7 +56,7 @@ public:
   }
 
   behavior make_behavior() override {
-    assert(size_ < 2);
+    assert(size_ >= 2);
     return empty_;
   }
 

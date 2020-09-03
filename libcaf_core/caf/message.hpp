@@ -198,7 +198,7 @@ message make_message(Ts&&... xs) {
     CAF_RAISE_ERROR(std::bad_alloc, "bad_alloc");
   auto raw_ptr = new (vptr) message_data(types);
   intrusive_cow_ptr<message_data> ptr{raw_ptr, false};
-  message_data_init(raw_ptr->storage(), std::forward<Ts>(xs)...);
+  raw_ptr->init(std::forward<Ts>(xs)...);
   return message{std::move(ptr)};
 }
 

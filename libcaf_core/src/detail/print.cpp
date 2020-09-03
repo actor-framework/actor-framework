@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,41 +16,28 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#include "caf/detail/print.hpp"
 
-#include <string>
-#include <tuple>
+#include "caf/config.hpp"
 
-#include "caf/detail/stringification_inspector.hpp"
+namespace caf::detail {
 
-namespace caf {
-
-/// Unrolls collections such as vectors/maps, decomposes
-/// tuples/pairs/arrays, auto-escapes strings and calls
-/// `to_string` for user-defined types via argument-dependent
-/// loopkup (ADL). Any user-defined type that does not
-/// provide a `to_string` is mapped to `<unprintable>`.
-template <class T>
-std::string deep_to_string(const T& x) {
-  using inspector_type = detail::stringification_inspector;
-  std::string result;
-  inspector_type f{result};
-  detail::save_value(f, detail::as_mutable_ref(x));
-  return result;
-}
-
-/// Convenience function for `deep_to_string(std::forward_as_tuple(xs...))`.
-template <class... Ts>
-std::string deep_to_string_as_tuple(const Ts&... xs) {
-  return deep_to_string(std::forward_as_tuple(xs...));
-}
-
-/// Wraps `deep_to_string` into a function object.
-struct deep_to_string_t {
-  template <class... Ts>
-  std::string operator()(const Ts&... xs) const {
-    return deep_to_string(xs...);
+size_t print_timestamp(char* buf, size_t buf_size, time_t ts, size_t ms) {
+  tm time_buf;
+  localtime_r(&ts, &time_buf);
+  auto pos = strftime(buf, buf_size, "%FT%T", &time_buf);
+  buf[pos++] = '.';
+  if (ms > 0) {
+    CAF_ASSERT(ms < 1000);
+    buf[pos++] = static_cast<char>((ms / 100) + '0');
+    buf[pos++] = static_cast<char>(((ms % 100) / 10) + '0');
+    buf[pos++] = static_cast<char>((ms % 10) + '0');
+  } else {
+    for (int i = 0; i < 3; ++i)
+      buf[pos++] = '0';
   }
-};
+  buf[pos] = '\0';
+  return pos;
+}
 
-} // namespace caf
+} // namespace caf::detail

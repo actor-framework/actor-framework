@@ -209,6 +209,7 @@ CAF_TEST(custom type) {
 CAF_TEST(read_config accepts the to_string output of settings) {
   fill();
   auto str = to_string(x);
+printf("%s\n",str.c_str());
   settings y;
   config_option_set dummy;
   detail::config_consumer consumer{dummy, y};

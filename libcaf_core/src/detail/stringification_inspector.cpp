@@ -18,6 +18,8 @@
 
 #include "caf/detail/stringification_inspector.hpp"
 
+#include "caf/detail/print.hpp"
+
 #include <algorithm>
 #include <ctime>
 
@@ -64,11 +66,11 @@ bool stringification_inspector::begin_field(string_view) {
 }
 
 bool stringification_inspector::begin_field(string_view, bool is_present) {
-  if (!is_present) {
-    sep();
+  sep();
+  if (!is_present)
     result_ += "null";
-  }
-  result_ += '*';
+  else
+    result_ += '*';
   return ok;
 }
 
@@ -79,11 +81,11 @@ bool stringification_inspector::begin_field(string_view, span<const type_id_t>,
 
 bool stringification_inspector::begin_field(string_view, bool is_present,
                                             span<const type_id_t>, size_t) {
-  if (!is_present) {
-    sep();
+  sep();
+  if (!is_present)
     result_ += "null";
-  }
-  result_ += '*';
+  else
+    result_ += '*';
   return ok;
 }
 
@@ -184,11 +186,20 @@ bool stringification_inspector::value(string_view str) {
     result_.insert(result_.end(), str.begin(), str.end());
     return true;
   }
-  // Escape string.
-  result_ += '"';
-  for (char c : str)
-    escape(result_, c);
-  result_ += '"';
+  // Escape the string if it contains whitespaces or characters that need
+  // escaping.
+  auto needs_escaping = [](char c) {
+    return isspace(c) || c == '\\' || c == '"';
+  };
+  if (always_quote_strings
+      || std::any_of(str.begin(), str.end(), needs_escaping)) {
+    result_ += '"';
+    for (char c : str)
+      escape(result_, c);
+    result_ += '"';
+  } else {
+    result_.insert(result_.end(), str.begin(), str.end());
+  }
   return true;
 }
 
@@ -208,30 +219,13 @@ bool stringification_inspector::value(const std::u32string&) {
 
 bool stringification_inspector::int_value(int64_t x) {
   sep();
-  if (x >= 0)
-    return int_value(static_cast<uint64_t>(x));
-  result_ += '-';
-  auto begin = result_.size();
-  result_ += -(x % 10) + '0';
-  x /= 10;
-  while (x != 0) {
-    result_ += -(x % 10) + '0';
-    x /= 10;
-  }
-  std::reverse(result_.begin() + begin, result_.end());
+  detail::print(result_, x);
   return true;
 }
 
 bool stringification_inspector::int_value(uint64_t x) {
   sep();
-  auto begin = result_.size();
-  result_ += (x % 10) + '0';
-  x /= 10;
-  while (x != 0) {
-    result_ += (x % 10) + '0';
-    x /= 10;
-  }
-  std::reverse(result_.begin() + begin, result_.end());
+  detail::print(result_, x);
   return true;
 }
 
@@ -240,6 +234,10 @@ bool stringification_inspector::value(const std::vector<bool>& xs) {
   for (bool x : xs)
     value(x);
   return end_sequence();
+}
+
+bool stringification_inspector::value(const char* x) {
+  return value(string_view{x, strlen(x)});
 }
 
 void stringification_inspector::sep() {

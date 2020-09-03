@@ -26,14 +26,16 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/inspector_access.hpp"
-#include "caf/save_inspector.hpp"
+#include "caf/save_inspector_base.hpp"
 #include "caf/string_view.hpp"
 #include "caf/timespan.hpp"
 #include "caf/timestamp.hpp"
+#include "caf/variant.hpp"
 
 namespace caf::detail {
 
-class CAF_CORE_EXPORT stringification_inspector : public save_inspector {
+class CAF_CORE_EXPORT stringification_inspector
+  : public save_inspector_base<stringification_inspector> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -50,6 +52,8 @@ public:
   constexpr bool has_human_readable_format() const noexcept {
     return true;
   }
+
+  bool always_quote_strings = false;
 
   // -- serializer interface ---------------------------------------------------
 
@@ -103,12 +107,45 @@ public:
 
   bool value(const std::vector<bool>& xs);
 
+  template <class Rep, class Period>
+  bool value(const std::chrono::duration<Rep, Period> x) {
+    return value(std::chrono::duration_cast<timespan>(x));
+  }
+
   template <class T>
-  std::enable_if_t<has_to_string<T>::value, bool> value(const T& x) {
+  std::enable_if_t<detail::is_map_like_v<T>, bool> value(const T& xs) {
+    sep();
+    auto i = xs.begin();
+    auto last = xs.end();
+    if (i == last) {
+      result_ += "{}";
+      return true;
+    }
+    result_ += '{';
+    save_value(*this, i->first);
+    result_ += " = ";
+    save_value(*this, i->second);
+    while (++i != last) {
+      sep();
+      save_value(*this, i->first);
+      result_ += " = ";
+      save_value(*this, i->second);
+    }
+    result_ += '}';
+    return true;
+  }
+
+  template <class T>
+  std::enable_if_t<has_to_string<T>::value
+                     && !std::is_convertible<T, string_view>::value,
+                   bool>
+  value(const T& x) {
     auto str = to_string(x);
     append(str);
     return true;
   }
+
+  bool value(const char* x);
 
   template <class T>
   bool value(const T* x) {
@@ -117,7 +154,19 @@ public:
       result_ += "null";
     } else {
       result_ += '*';
-      inspect_value(*this, detail::as_mutable_ref(*x));
+      save_value(*this, detail::as_mutable_ref(*x));
+    }
+    return true;
+  }
+
+  template <class T>
+  bool value(const optional<T>& x) {
+    sep();
+    if (!x) {
+      result_ += "null";
+    } else {
+      result_ += '*';
+      save_value(*this, detail::as_mutable_ref(*x));
     }
     return true;
   }
@@ -128,29 +177,33 @@ public:
     result_.insert(result_.end(), str.begin(), str.end());
   }
 
+  template <class... Ts>
+  bool opaque_value(variant<Ts...>& val) {
+    auto f = [this](auto& x) { return save_value(*this, x); };
+    return visit(f, val);
+  }
+
   template <class T>
-  bool opaque_value(const T& val) {
-    sep();
+  bool opaque_value(T& val) {
     if constexpr (detail::is_iterable<T>::value) {
-      result_ += '[';
-      for (auto&& x : val)
-        inspect_value(*this, detail::as_mutable_ref(x));
-      result_ += ']';
+      print_list(val.begin(), val.end());
     } else {
+      sep();
       result_ += "<unprintable>";
     }
     return true;
   }
 
-  // -- DSL entry point --------------------------------------------------------
-
-  template <class Object>
-  constexpr auto object(Object&) noexcept {
-    using wrapper_type = object_t<stringification_inspector>;
-    return wrapper_type{type_name_or_anonymous<Object>(), this};
+private:
+  template <class Iterator, class Sentinel>
+  void print_list(Iterator first, Sentinel sentinel) {
+    sep();
+    result_ += '[';
+    while (first != sentinel)
+      save_value(*this, *first++);
+    result_ += ']';
   }
 
-private:
   bool int_value(int64_t x);
 
   bool int_value(uint64_t x);

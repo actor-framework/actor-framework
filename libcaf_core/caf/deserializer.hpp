@@ -27,7 +27,7 @@
 #include "caf/byte.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/load_inspector.hpp"
+#include "caf/load_inspector_base.hpp"
 #include "caf/span.hpp"
 #include "caf/type_id.hpp"
 
@@ -35,7 +35,7 @@ namespace caf {
 
 /// @ingroup TypeSystem
 /// Technology-independent deserialization interface.
-class CAF_CORE_EXPORT deserializer : public load_inspector {
+class CAF_CORE_EXPORT deserializer : public load_inspector_base<deserializer> {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -56,6 +56,11 @@ public:
   }
 
   // -- interface functions ----------------------------------------------------
+
+  /// Reads run-time-type information for the next object. Requires that the
+  /// @ref serializer provided this information via
+  /// @ref serializer::inject_next_object_type.
+  virtual bool fetch_next_object_type(type_id_t& type) = 0;
 
   /// Begins processing of an object.
   virtual bool begin_object(string_view type) = 0;
@@ -145,13 +150,6 @@ public:
   /// member function to pack the booleans, for example to avoid using one byte
   /// for each value in a binary output format.
   virtual bool value(std::vector<bool>& xs);
-
-  // -- DSL entry point --------------------------------------------------------
-
-  template <class T>
-  constexpr auto object(T&) noexcept {
-    return object_t<deserializer>{type_name_or_anonymous<T>(), this};
-  }
 
 protected:
   /// Provides access to the ::proxy_registry and to the ::actor_system.

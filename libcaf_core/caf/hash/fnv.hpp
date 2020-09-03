@@ -23,7 +23,7 @@
 
 #include "caf/detail/ieee_754.hpp"
 #include "caf/inspector_access.hpp"
-#include "caf/save_inspector.hpp"
+#include "caf/save_inspector_base.hpp"
 #include "caf/span.hpp"
 #include "caf/string_view.hpp"
 #include "caf/type_id.hpp"
@@ -39,7 +39,7 @@ namespace caf::hash {
 ///
 /// @tparam T One of `uint32_t`, `uint64_t`, or `size_t`.
 template <class T>
-class fnv : public save_inspector {
+class fnv : public save_inspector_base<fnv<T>> {
 public:
   static_assert(sizeof(T) == 4 || sizeof(T) == 8);
 
@@ -132,11 +132,6 @@ public:
     auto begin = reinterpret_cast<const uint8_t*>(x.data());
     append(begin, begin + x.size());
     return true;
-  }
-
-  template <class Object>
-  constexpr auto object(Object&) noexcept {
-    return super::object_t<fnv>{type_name_or_anonymous<Object>(), this};
   }
 
   /// Convenience function for computing an FNV1a hash value for given

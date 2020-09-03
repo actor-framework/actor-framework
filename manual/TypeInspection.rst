@@ -386,7 +386,7 @@ an ``enum class`` otherwise.
       if (f.has_human_readable_format()) {
         auto get = [&x] { return to_string(x); };
         auto set = [&x](std::string str) { return parse(str, x); };
-        return inspect_value(f, get, set);
+        return f.apply_value(get, set);
       } else {
         return default_impl::apply_value(f, x);
       }

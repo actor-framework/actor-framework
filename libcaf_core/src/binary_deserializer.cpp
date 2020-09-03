@@ -66,6 +66,10 @@ binary_deserializer::binary_deserializer(actor_system& sys) noexcept
   // nop
 }
 
+bool binary_deserializer::fetch_next_object_type(type_id_t& type) noexcept {
+  return value(type);
+}
+
 bool binary_deserializer::begin_sequence(size_t& list_size) noexcept {
   // Use varbyte encoding to compress sequence size on the wire.
   uint32_t x = 0;

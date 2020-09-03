@@ -21,6 +21,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "caf/detail/as_mutable_ref.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 #include "caf/inspector_access.hpp"
@@ -89,8 +90,8 @@ public:
     template <class Inspector>
     bool operator()(Inspector& f) {
       auto reset = [this] { *val = std::move(fallback); };
-      return inspector_access<T>::load_field(f, field_name, *val, predicate,
-                                             detail::always_true, reset);
+      return detail::load_field(f, field_name, *val, predicate,
+                                detail::always_true, reset);
     }
   };
 
@@ -103,9 +104,8 @@ public:
     template <class Inspector>
     bool operator()(Inspector& f) {
       auto reset = [this] { *val = std::move(fallback); };
-      return inspector_access<T>::load_field(f, field_name, *val,
-                                             detail::always_true,
-                                             detail::always_true, reset);
+      return detail::load_field(f, field_name, *val, detail::always_true,
+                                detail::always_true, reset);
     }
 
     template <class Predicate>
@@ -127,8 +127,8 @@ public:
 
     template <class Inspector>
     bool operator()(Inspector& f) {
-      return inspector_access<T>::load_field(f, field_name, *val, predicate,
-                                             detail::always_true);
+      return detail::load_field(f, field_name, *val, predicate,
+                                detail::always_true);
     }
 
     template <class U>
@@ -149,9 +149,8 @@ public:
 
     template <class Inspector>
     bool operator()(Inspector& f) {
-      return inspector_access<T>::load_field(f, field_name, *val,
-                                             detail::always_true,
-                                             detail::always_true);
+      return detail::load_field(f, field_name, *val, detail::always_true,
+                                detail::always_true);
     }
 
     template <class U>
@@ -183,8 +182,7 @@ public:
       auto tmp = T{};
       auto sync = [this, &tmp] { return set(std::move(tmp)); };
       auto reset = [this] { set(std::move(fallback)); };
-      return inspector_access<T>::load_field(f, field_name, tmp, predicate,
-                                             sync, reset);
+      return detail::load_field(f, field_name, tmp, predicate, sync, reset);
     }
   };
 
@@ -199,8 +197,8 @@ public:
       auto tmp = T{};
       auto sync = [this, &tmp] { return set(std::move(tmp)); };
       auto reset = [this] { set(std::move(fallback)); };
-      return inspector_access<T>::load_field(f, field_name, tmp,
-                                             detail::always_true, sync, reset);
+      return detail::load_field(f, field_name, tmp, detail::always_true, sync,
+                                reset);
     }
 
     template <class Predicate>
@@ -224,8 +222,7 @@ public:
     bool operator()(Inspector& f) {
       auto tmp = T{};
       auto sync = [this, &tmp] { return set(std::move(tmp)); };
-      return inspector_access<T>::load_field(f, field_name, tmp, predicate,
-                                             sync);
+      return detail::load_field(f, field_name, tmp, predicate, sync);
     }
 
     template <class U>
@@ -248,8 +245,7 @@ public:
     bool operator()(Inspector& f) {
       auto tmp = T{};
       auto sync = [this, &tmp] { return set(std::move(tmp)); };
-      return inspector_access<T>::load_field(f, field_name, tmp,
-                                             detail::always_true, sync);
+      return detail::load_field(f, field_name, tmp, detail::always_true, sync);
     }
 
     template <class U>
@@ -281,8 +277,8 @@ public:
     bool operator()(Inspector& f) {
       auto tmp = T{};
       auto sync = [this, &tmp] { return set(std::move(tmp)); };
-      return inspector_access<T>::load_field(f, field_name, tmp,
-                                             detail::always_true, sync, reset);
+      return detail::load_field(f, field_name, tmp, detail::always_true, sync,
+                                reset);
     }
   };
 

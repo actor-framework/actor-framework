@@ -221,6 +221,10 @@ public:
     return cache_;
   }
 
+  list_type& items() noexcept {
+    return list_;
+  }
+
   // -- insertion --------------------------------------------------------------
 
   /// Appends `ptr` to the queue.

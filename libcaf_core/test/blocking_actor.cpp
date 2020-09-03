@@ -44,7 +44,7 @@ CAF_TEST(catch_all) {
   self->send(self, 42);
   self->receive([](float) { CAF_FAIL("received unexpected float"); },
                 others >> [](message& msg) -> skippable_result {
-                  CAF_CHECK_EQUAL(to_string(msg), "(42)");
+                  CAF_CHECK_EQUAL(to_tuple<int32_t>(msg), std::make_tuple(42));
                   return make_error(sec::unexpected_message);
                 });
   self->receive(

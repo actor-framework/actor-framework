@@ -26,37 +26,37 @@ using namespace caf;
 
 #define CHECK_DEEP_TO_STRING(val, str) CAF_CHECK_EQUAL(deep_to_string(val), str)
 
-CAF_TEST(timespans) {
+CAF_TEST(timespans use the highest unit available when printing) {
   CHECK_DEEP_TO_STRING(timespan{1}, "1ns");
-  CHECK_DEEP_TO_STRING(timespan{1000}, "1us");
-  CHECK_DEEP_TO_STRING(timespan{1000000}, "1ms");
-  CHECK_DEEP_TO_STRING(timespan{1000000000}, "1s");
-  CHECK_DEEP_TO_STRING(timespan{60000000000}, "1min");
+  CHECK_DEEP_TO_STRING(timespan{1'000}, "1us");
+  CHECK_DEEP_TO_STRING(timespan{1'000'000}, "1ms");
+  CHECK_DEEP_TO_STRING(timespan{1'000'000'000}, "1s");
+  CHECK_DEEP_TO_STRING(timespan{60'000'000'000}, "1min");
 }
 
-CAF_TEST(integer lists) {
-  int carray[] = {1, 2, 3, 4};
-  using array_type = std::array<int, 4>;
+CAF_TEST(lists use square brackets) {
+  int i32_array[] = {1, 2, 3, 4};
+  using i32_array_type = std::array<int, 4>;
   CHECK_DEEP_TO_STRING(std::list<int>({1, 2, 3, 4}), "[1, 2, 3, 4]");
   CHECK_DEEP_TO_STRING(std::vector<int>({1, 2, 3, 4}), "[1, 2, 3, 4]");
   CHECK_DEEP_TO_STRING(std::set<int>({1, 2, 3, 4}), "[1, 2, 3, 4]");
-  CHECK_DEEP_TO_STRING(array_type({{1, 2, 3, 4}}), "[1, 2, 3, 4]");
-  CHECK_DEEP_TO_STRING(carray, "[1, 2, 3, 4]");
-}
-
-CAF_TEST(boolean lists) {
-  bool carray[] = {false, true};
-  using array_type = std::array<bool, 2>;
+  CHECK_DEEP_TO_STRING(i32_array_type({{1, 2, 3, 4}}), "[1, 2, 3, 4]");
+  CHECK_DEEP_TO_STRING(i32_array, "[1, 2, 3, 4]");
+  bool bool_array[] = {false, true};
+  using bool_array_type = std::array<bool, 2>;
   CHECK_DEEP_TO_STRING(std::list<bool>({false, true}), "[false, true]");
   CHECK_DEEP_TO_STRING(std::vector<bool>({false, true}), "[false, true]");
   CHECK_DEEP_TO_STRING(std::set<bool>({false, true}), "[false, true]");
-  CHECK_DEEP_TO_STRING(array_type({{false, true}}), "[false, true]");
-  CHECK_DEEP_TO_STRING(carray, "[false, true]");
+  CHECK_DEEP_TO_STRING(bool_array_type({{false, true}}), "[false, true]");
+  CHECK_DEEP_TO_STRING(bool_array, "[false, true]");
 }
 
-CAF_TEST(pointers) {
+CAF_TEST(pointers and optionals use dereference syntax) {
   auto i = 42;
   CHECK_DEEP_TO_STRING(&i, "*42");
+  CHECK_DEEP_TO_STRING(static_cast<int*>(nullptr), "null");
+  CHECK_DEEP_TO_STRING(optional<int>{}, "null");
+  CHECK_DEEP_TO_STRING(optional<int>{23}, "*23");
 }
 
 CAF_TEST(buffers) {

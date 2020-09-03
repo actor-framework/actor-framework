@@ -222,13 +222,17 @@ bool inspect(Inspector& f, strong_actor_ptr& x) {
 template <class Inspector>
 bool inspect(Inspector& f, weak_actor_ptr& x) {
   // Inspect as strong pointer, then write back to weak pointer on save.
-  auto tmp = x.lock();
-  auto result = inspect(f, tmp);
-  if constexpr (!Inspector::is_loading) {
-    if (result)
+  if constexpr (Inspector::is_loading) {
+    strong_actor_ptr tmp;
+    if (inspect(f, tmp)) {
       x.reset(tmp.get());
+      return true;
+    }
+    return false;
+  } else {
+    auto tmp = x.lock();
+    return inspect(f, tmp);
   }
-  return result;
 }
 
 } // namespace caf

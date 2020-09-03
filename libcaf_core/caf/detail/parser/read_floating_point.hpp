@@ -125,7 +125,7 @@ void read_floating_point(State& ps, Consumer&& consumer,
   state(has_sign) {
     transition(leading_dot, '.')
     transition(zero, '0')
-    epsilon(dec)
+    epsilon(dec, decimal_chars)
   }
   term_state(zero) {
     transition(trailing_dot, '.')
@@ -134,7 +134,7 @@ void read_floating_point(State& ps, Consumer&& consumer,
   term_state(dec) {
     transition(dec, decimal_chars, add_ascii<10>(result, ch),
                pec::integer_overflow)
-    epsilon(after_dec)
+    epsilon(after_dec, "eE.")
   }
   state(after_dec) {
     transition(has_e, "eE")

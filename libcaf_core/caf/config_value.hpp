@@ -35,6 +35,7 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"
+#include "caf/inspector_access.hpp"
 #include "caf/optional.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/string_algorithms.hpp"
@@ -848,53 +849,88 @@ config_value make_config_value_list(Ts&&... xs) {
   return config_value{std::move(lst)};
 }
 
-/// @relates config_value
-template <class Inspector>
-bool inspect(Inspector& f, config_value& x) {
-  return f.object(x).fields(f.field("value", x.get_data()));
-}
+// -- inspection API -----------------------------------------------------------
 
 template <>
-struct inspector_access<config_value> {
-  using wrapped = inspector_access<config_value::variant_type>;
+struct variant_inspector_traits<config_value> {
+  using value_type = config_value;
 
-  template <class Inspector>
-  static bool apply_object(Inspector& f, config_value& x) {
-    return wrapped::apply_object(f, x.get_data());
+  static constexpr type_id_t allowed_types[]
+    = {type_id_v<config_value::integer>,
+       type_id_v<config_value::boolean>,
+       type_id_v<config_value::real>,
+       type_id_v<config_value::timespan>,
+       type_id_v<uri>,
+       type_id_v<config_value::string>,
+       type_id_v<config_value::list>,
+       type_id_v<config_value::dictionary>};
+
+  static auto type_index(const config_value& x) {
+    return x.get_data().index();
   }
 
-  template <class Inspector>
-  static bool apply_value(Inspector& f, config_value& x) {
-    return wrapped::apply_value(f, x.get_data());
+  template <class F, class Value>
+  static auto visit(F&& f, Value&& x) {
+    return caf::visit(std::forward<F>(f), std::forward<Value>(x));
   }
 
-  template <class Inspector>
-  static bool
-  save_field(Inspector& f, string_view field_name, config_value& x) {
-    return wrapped::save_field(f, field_name, x.get_data());
+  template <class U>
+  static void assign(value_type& x, U&& value) {
+    x.get_data() = std::move(value);
   }
 
-  template <class Inspector, class IsPresent, class Get>
-  static bool save_field(Inspector& f, string_view field_name,
-                         IsPresent& is_present, Get& get) {
-    auto get_data = [&get]() -> decltype(auto) { return get().get_data(); };
-    return wrapped::save_field(f, field_name, is_present, get_data);
+  template <class F>
+  static bool load(type_id_t type, F continuation) {
+    switch (type) {
+      default:
+        return false;
+      case type_id_v<config_value::integer>: {
+        auto tmp = config_value::integer{};
+        continuation(tmp);
+        return true;
+      }
+      case type_id_v<config_value::boolean>: {
+        auto tmp = config_value::boolean{};
+        continuation(tmp);
+        return true;
+      }
+      case type_id_v<config_value::real>: {
+        auto tmp = config_value::real{};
+        continuation(tmp);
+        return true;
+      }
+      case type_id_v<config_value::timespan>: {
+        auto tmp = config_value::timespan{};
+        continuation(tmp);
+        return true;
+      }
+      case type_id_v<uri>: {
+        auto tmp = uri{};
+        continuation(tmp);
+        return true;
+      }
+      case type_id_v<config_value::string>: {
+        auto tmp = config_value::string{};
+        continuation(tmp);
+        return true;
+      }
+      case type_id_v<config_value::list>: {
+        auto tmp = config_value::list{};
+        continuation(tmp);
+        return true;
+      }
+      case type_id_v<config_value::dictionary>: {
+        auto tmp = config_value::dictionary{};
+        continuation(tmp);
+        return true;
+      }
+    }
   }
+};
 
-  template <class Inspector, class IsValid, class SyncValue>
-  static bool load_field(Inspector& f, string_view field_name, config_value& x,
-                         IsValid& is_valid, SyncValue& sync_value) {
-    return wrapped::load_field(f, field_name, x.get_data(), is_valid,
-                               sync_value);
-  }
-
-  template <class Inspector, class IsValid, class SyncValue, class SetFallback>
-  static bool load_field(Inspector& f, string_view field_name, config_value& x,
-                         IsValid& is_valid, SyncValue& sync_value,
-                         SetFallback& set_fallback) {
-    return wrapped::load_field(f, field_name, x.get_data(), is_valid,
-                               sync_value, set_fallback);
-  }
+template <>
+struct inspector_access<config_value> : variant_inspector_access<config_value> {
+  // nop
 };
 
 } // namespace caf

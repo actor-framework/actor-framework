@@ -80,7 +80,10 @@ using v20 = variant<i01, i02, i03, i04, i05, i06, i07, i08, i09, i10,
 #define VARIANT_EQ(x, y)                                                       \
   do {                                                                         \
     using type = std::decay_t<decltype(y)>;                                    \
-    CAF_CHECK(holds_alternative<type>(x) && get<type>(x) == y);                \
+    auto&& tmp = x;                                                            \
+    CAF_CHECK(holds_alternative<type>(tmp));                                   \
+    if (holds_alternative<type>(tmp))                                          \
+      CAF_CHECK_EQUAL(get<type>(tmp), y);                                      \
   } while (false)
 
 #define v20_test(n)                                                            \
@@ -115,7 +118,7 @@ namespace {
 struct test_visitor {
   template <class... Ts>
   std::string operator()(const Ts&... xs) {
-    return deep_to_string(std::forward_as_tuple(xs...));
+    return deep_to_string_as_tuple(xs...);
   }
 };
 
@@ -138,9 +141,9 @@ CAF_TEST(n_ary_visit) {
   variant<float, int, std::string> b{"bar"s};
   variant<int, std::string, double> c{123};
   test_visitor f;
-  CAF_CHECK_EQUAL(visit(f, a), "(42)");
-  CAF_CHECK_EQUAL(visit(f, a, b), "(42, \"bar\")");
-  CAF_CHECK_EQUAL(visit(f, a, b, c), "(42, \"bar\", 123)");
+  CAF_CHECK_EQUAL(visit(f, a), "[42]");
+  CAF_CHECK_EQUAL(visit(f, a, b), "[42, bar]");
+  CAF_CHECK_EQUAL(visit(f, a, b, c), "[42, bar, 123]");
 }
 
 CAF_TEST(get_if) {

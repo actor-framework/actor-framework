@@ -51,6 +51,10 @@ void binary_serializer::skip(size_t num_bytes) {
   write_pos_ += num_bytes;
 }
 
+bool binary_serializer::inject_next_object_type(type_id_t type) {
+  return value(type);
+}
+
 bool binary_serializer::begin_sequence(size_t list_size) {
   // Use varbyte encoding to compress sequence size on the wire.
   // For 64-bit values, the encoded representation cannot get larger than 10
@@ -96,7 +100,9 @@ namespace {
 
 template <class T>
 T compress_index(bool is_present, size_t value) {
-  return is_present ? static_cast<T>(value) : T{-1};
+  // return is_present ? static_cast<T>(value) : T{-1};
+  auto val = is_present ? static_cast<T>(value) : T{-1};
+  return val;
 }
 
 } // namespace

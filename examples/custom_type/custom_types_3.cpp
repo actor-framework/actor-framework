@@ -86,12 +86,12 @@ template <class Inspector>
 bool inspect(Inspector& f, foo& x) {
   auto get_a = [&x] { return x.a(); };
   auto set_a = [&x](int val) {
-    x.a(val);
+    x.set_a(val);
     return true;
   };
   auto get_b = [&x] { return x.b(); };
   auto set_b = [&x](int val) {
-    x.b(val);
+    x.set_b(val);
     return true;
   };
   return f.object(x).fields(f.field("a", get_a, set_a),
@@ -101,7 +101,7 @@ bool inspect(Inspector& f, foo& x) {
 
 behavior testee(event_based_actor* self) {
   return {
-    [=](const foo& x) { aout(self) << to_string(x) << endl; },
+    [=](const foo& x) { aout(self) << deep_to_string(x) << endl; },
   };
 }
 

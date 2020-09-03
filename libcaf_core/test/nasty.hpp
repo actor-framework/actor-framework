@@ -45,7 +45,7 @@ struct inspector_access<weekday> : inspector_access_base<weekday> {
     if (f.has_human_readable_format()) {
       auto get = [&x] { return to_string(x); };
       auto set = [&x](std::string str) { return parse(str, x); };
-      return inspect_value(f, get, set);
+      return f.apply_value(get, set);
     } else {
       return default_impl::apply_value(f, x);
     }
@@ -96,14 +96,16 @@ public:
   // Optional, direct access.
   optional_type field_05;
 
-  // Optional, direct access, fallback (0).
-  optional_type field_06;
+  // TODO: optional with fallback semantically useful?
+  //
+  // // Optional, direct access, fallback (0).
+  // optional_type field_06;
 
   // Optional, direct access, invariant (>= 0).
   optional_type field_07;
 
-  // Optional, direct access, fallback (0), invariant (>= 0).
-  optional_type field_08;
+  // // Optional, direct access, fallback (0), invariant (>= 0).
+  // optional_type field_08;
 
   // Variant, direct access.
   variant_type field_09;
@@ -144,14 +146,14 @@ public:
   // Optional, get/set access.
   ADD_GET_SET_FIELD(optional_type, field_21)
 
-  // Optional, get/set access, fallback (0).
-  ADD_GET_SET_FIELD(optional_type, field_22)
+  // // Optional, get/set access, fallback (0).
+  // ADD_GET_SET_FIELD(optional_type, field_22)
 
   // Optional, get/set access, invariant (>= 0).
   ADD_GET_SET_FIELD(optional_type, field_23)
 
-  // Optional, get/set access, fallback (0), invariant (>= 0).
-  ADD_GET_SET_FIELD(optional_type, field_24)
+  // // Optional, get/set access, fallback (0), invariant (>= 0).
+  // ADD_GET_SET_FIELD(optional_type, field_24)
 
   // Variant, get/set access.
   ADD_GET_SET_FIELD(variant_type, field_25)
@@ -235,9 +237,7 @@ bool inspect(Inspector& f, nasty& x) {
     f.DIRECT_FIELD(03).invariant(is_positive),                            //
     f.DIRECT_FIELD(04).fallback(0).invariant(is_positive),                //
     f.DIRECT_FIELD(05),                                                   //
-    f.DIRECT_FIELD(06).fallback(0),                                       //
     f.DIRECT_FIELD(07).invariant(is_positive),                            //
-    f.DIRECT_FIELD(08).fallback(0).invariant(is_positive),                //
     f.DIRECT_FIELD(09),                                                   //
     f.DIRECT_FIELD(10).fallback(default_variant),                         //
     f.DIRECT_FIELD(11).invariant(is_positive),                            //
@@ -251,9 +251,7 @@ bool inspect(Inspector& f, nasty& x) {
     f.GET_SET_FIELD(19).invariant(is_positive),                           //
     f.GET_SET_FIELD(20).fallback(0).invariant(is_positive),               //
     f.GET_SET_FIELD(21),                                                  //
-    f.GET_SET_FIELD(22).fallback(0),                                      //
     f.GET_SET_FIELD(23).invariant(is_positive),                           //
-    f.GET_SET_FIELD(24).fallback(0).invariant(is_positive),               //
     f.GET_SET_FIELD(25),                                                  //
     f.GET_SET_FIELD(26).fallback(default_variant),                        //
     f.GET_SET_FIELD(27).invariant(is_positive),                           //

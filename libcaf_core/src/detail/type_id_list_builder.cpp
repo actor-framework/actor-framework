@@ -94,7 +94,8 @@ type_id_list_builder::~type_id_list_builder() {
   free(storage_);
 }
 
-void type_id_list_builder::reserve(size_t new_capacity) {
+void type_id_list_builder::reserve(size_t num_elements) {
+  auto new_capacity = num_elements + 1; // One extra slot for the size prefix.
   if (reserved_ >= new_capacity)
     return;
   reserved_ = new_capacity;

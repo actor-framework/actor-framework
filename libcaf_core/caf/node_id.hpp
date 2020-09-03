@@ -27,6 +27,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/hash/fnv.hpp"
+#include "caf/inspector_access.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/none.hpp"
 #include "caf/ref_counted.hpp"
@@ -168,13 +169,15 @@ public:
   template <class Inspector>
   friend bool inspect(Inspector& f, node_id& x) {
     auto is_present = [&x] { return x.data_ != nullptr; };
-    auto get = [&] { return x.data_->content; };
-    auto reset = [&] { x.data_.reset(); };
-    auto set = [&](node_id_data::variant_type&& val) {
-      if (!x.data_ || !x.data_->unique())
-        x.data_.emplace(std::move(val));
-      else
+    auto get = [&]() -> const auto& {
+      return x.data_->content;
+    };
+    auto reset = [&x] { x.data_.reset(); };
+    auto set = [&x](node_id_data::variant_type&& val) {
+      if (x.data_ && x.data_->unique())
         x.data_->content = std::move(val);
+      else
+        x.data_.emplace(std::move(val));
       return true;
     };
     return f.object(x).fields(f.field("data", is_present, get, reset, set));

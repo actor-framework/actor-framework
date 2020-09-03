@@ -65,30 +65,6 @@ struct meta_object {
   void (*stringify)(std::string&, const void*);
 };
 
-/// Convenience function for calling `meta.save(sink, obj)`.
-inline bool save(const meta_object& meta, caf::serializer& sink,
-                 const void* obj) {
-  return meta.save(sink, obj);
-}
-
-/// Convenience function for calling `meta.save_binary(sink, obj)`.
-inline bool save(const meta_object& meta, caf::binary_serializer& sink,
-                 const void* obj) {
-  return meta.save_binary(sink, obj);
-}
-
-/// Convenience function for calling `meta.load(source, obj)`.
-inline bool load(const meta_object& meta, caf::deserializer& source,
-                 void* obj) {
-  return meta.load(source, obj);
-}
-
-/// Convenience function for calling `meta.load_binary(source, obj)`.
-inline bool load(const meta_object& meta, caf::binary_deserializer& source,
-                 void* obj) {
-  return meta.load_binary(source, obj);
-}
-
 /// Returns the global storage for all meta objects. The ::type_id of an object
 /// is the index for accessing the corresonding meta object.
 CAF_CORE_EXPORT span<const meta_object> global_meta_objects();

@@ -26,7 +26,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
-#include "caf/load_inspector.hpp"
+#include "caf/load_inspector_base.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
 #include "caf/string_view.hpp"
@@ -34,7 +34,8 @@
 namespace caf {
 
 /// Deserializes objects from sequence of bytes.
-class CAF_CORE_EXPORT binary_deserializer : public load_inspector {
+class CAF_CORE_EXPORT binary_deserializer
+  : public load_inspector_base<binary_deserializer> {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -102,6 +103,8 @@ public:
   }
 
   // -- overridden member functions --------------------------------------------
+
+  bool fetch_next_object_type(type_id_t& type) noexcept;
 
   constexpr bool begin_object(string_view) noexcept {
     return ok;
@@ -176,13 +179,6 @@ public:
   bool value(span<byte> x) noexcept;
 
   bool value(std::vector<bool>& x);
-
-  // -- DSL entry point --------------------------------------------------------
-
-  template <class T>
-  constexpr auto object(T&) noexcept {
-    return object_t<binary_deserializer>{type_name_or_anonymous<T>(), this};
-  }
 
 private:
   explicit binary_deserializer(actor_system& sys) noexcept;

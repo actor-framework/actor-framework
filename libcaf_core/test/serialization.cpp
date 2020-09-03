@@ -140,7 +140,7 @@ struct fixture : test_coordinator_fixture<> {
     message result;
     auto tmp = make_message(x);
     auto buf = serialize(tmp);
-    CAF_MESSAGE("serialized " << to_string(msg) << " into " << buf.size()
+    CAF_MESSAGE("serialized " << to_string(tmp) << " into " << buf.size()
                               << " bytes");
     deserialize(buf, result);
     if (!result.match_elements<T>())
@@ -312,12 +312,12 @@ CAF_TEST(long_sequences) {
   byte_buffer data;
   binary_serializer sink{nullptr, data};
   size_t n = std::numeric_limits<uint32_t>::max();
-  CAF_CHECK_EQUAL(sink.begin_sequence(n), none);
-  CAF_CHECK_EQUAL(sink.end_sequence(), none);
+  CAF_CHECK(sink.begin_sequence(n));
+  CAF_CHECK(sink.end_sequence());
   binary_deserializer source{nullptr, data};
   size_t m = 0;
-  CAF_CHECK_EQUAL(source.begin_sequence(m), none);
-  CAF_CHECK_EQUAL(source.end_sequence(), none);
+  CAF_CHECK(source.begin_sequence(m));
+  CAF_CHECK(source.end_sequence());
   CAF_CHECK_EQUAL(n, m);
 }
 
@@ -412,6 +412,20 @@ CAF_TEST(bool_vector_size_65) {
     "true, true, true, true, false, true]");
   CAF_CHECK_EQUAL(xs, roundtrip(xs));
   CAF_CHECK_EQUAL(xs, msg_roundtrip(xs));
+}
+
+CAF_TEST(serializers handle actor handles) {
+  auto dummy = sys.spawn([]() -> behavior {
+    return {
+      [](int i) { return i; },
+    };
+  });
+  CAF_CHECK_EQUAL(dummy, roundtrip(dummy));
+  CAF_CHECK_EQUAL(dummy, msg_roundtrip(dummy));
+  std::vector<strong_actor_ptr> wrapped{actor_cast<strong_actor_ptr>(dummy)};
+  CAF_CHECK_EQUAL(wrapped, roundtrip(wrapped));
+  CAF_CHECK_EQUAL(wrapped, msg_roundtrip(wrapped));
+  anon_send_exit(dummy, exit_reason::user_shutdown);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

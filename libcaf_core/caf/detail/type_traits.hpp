@@ -797,13 +797,30 @@ public:
     = std::is_same<result_type, execution_unit*>::value;
 };
 
-/// Checks whether `T` provides an `inspector` overload for `Inspector`.
+/// Checks whether `T` provides an `inspect` overload for `Inspector`.
 template <class Inspector, class T>
-class is_inspectable {
+class has_inspect_overload {
 private:
   template <class U>
   static auto sfinae(Inspector& x, U& y)
     -> decltype(inspect(x, y), std::true_type{});
+
+  static std::false_type sfinae(Inspector&, ...);
+
+  using result_type
+    = decltype(sfinae(std::declval<Inspector&>(), std::declval<T&>()));
+
+public:
+  static constexpr bool value = result_type::value;
+};
+
+/// Checks whether `T` provides an `inspect_value` overload for `Inspector`.
+template <class Inspector, class T>
+class has_inspect_value_overload {
+private:
+  template <class U>
+  static auto sfinae(Inspector& x, U& y)
+    -> decltype(inspect_value(x, y), std::true_type{});
 
   static std::false_type sfinae(Inspector&, ...);
 

@@ -248,7 +248,7 @@ struct inspector_access<message_id> : inspector_access_base<message_id> {
       x = message_id{val};
       return true;
     };
-    return inspect_value(f, get, set);
+    return detail::split_save_load(f, get, set);
   }
 };
 

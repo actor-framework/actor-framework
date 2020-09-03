@@ -27,6 +27,8 @@
 #include <string>
 #include <vector>
 
+#include "caf/load_inspector_base.hpp"
+#include "caf/message.hpp"
 #include "caf/span.hpp"
 #include "caf/type_id.hpp"
 #include "caf/variant.hpp"
@@ -177,7 +179,7 @@ bool inspect(Inspector& f, basics& x) {
                             f.field("v7", x.v7), f.field("v8", x.v8));
 }
 
-struct testee : load_inspector {
+struct testee : load_inspector_base<testee> {
   std::string log;
 
   bool load_field_failed(string_view, sec code) {
@@ -479,11 +481,7 @@ begin object nasty
   end field
   begin optional field field_05
   end field
-  begin optional field field_06
-  end field
   begin optional field field_07
-  end field
-  begin optional field field_08
   end field
   begin variant field field_09
     std::string value
@@ -523,11 +521,7 @@ begin object nasty
   end field
   begin optional field field_21
   end field
-  begin optional field field_22
-  end field
   begin optional field field_23
-  end field
-  begin optional field field_24
   end field
   begin variant field field_25
     std::string value
@@ -625,6 +619,10 @@ begin object basics
     end sequence
   end field
 end object)_");
+}
+
+CAF_TEST(load inspectors support messages) {
+  auto msg = make_message(1, "two", 3.0);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

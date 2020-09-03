@@ -102,7 +102,7 @@ struct make_type_id_list_helper {
 /// Constructs a ::type_id_list from the template parameter pack `Ts`.
 /// @relates type_id_list
 template <class... Ts>
-type_id_list make_type_id_list() {
+constexpr type_id_list make_type_id_list() {
   return type_id_list{make_type_id_list_helper<Ts...>::data};
 }
 

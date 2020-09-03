@@ -26,13 +26,14 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/save_inspector.hpp"
+#include "caf/save_inspector_base.hpp"
 #include "caf/span.hpp"
 
 namespace caf {
 
 /// Serializes objects into a sequence of bytes.
-class CAF_CORE_EXPORT binary_serializer : public save_inspector {
+class CAF_CORE_EXPORT binary_serializer
+  : public save_inspector_base<binary_serializer> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -89,6 +90,8 @@ public:
   void skip(size_t num_bytes);
 
   // -- interface functions ----------------------------------------------------
+
+  bool inject_next_object_type(type_id_t type);
 
   constexpr bool begin_object(string_view) {
     return ok;
@@ -162,13 +165,6 @@ public:
   bool value(span<const byte> x);
 
   bool value(const std::vector<bool>& x);
-
-  // -- DSL entry point --------------------------------------------------------
-
-  template <class T>
-  constexpr auto object(T&) noexcept {
-    return object_t<binary_serializer>{type_name_or_anonymous<T>(), this};
-  }
 
 private:
   /// Stores the serialized output.

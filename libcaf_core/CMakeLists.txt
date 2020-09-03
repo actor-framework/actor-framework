@@ -91,6 +91,7 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/detail/parse.cpp
   src/detail/parser/chars.cpp
   src/detail/pretty_type_name.cpp
+  src/detail/print.cpp
   src/detail/private_thread.cpp
   src/detail/ripemd_160.cpp
   src/detail/serialized_size.cpp
@@ -252,6 +253,7 @@ caf_add_test_suites(caf-core-test
   detail.parser.read_string
   detail.parser.read_timespan
   detail.parser.read_unsigned_integer
+  detail.print
   detail.ringbuffer
   detail.ripemd_160
   detail.serialized_size
@@ -267,7 +269,6 @@ caf_add_test_suites(caf-core-test
   fused_downstream_manager
   handles
   hash.fnv
-  inspector
   intrusive.drr_cached_queue
   intrusive.drr_queue
   intrusive.fifo_inbox

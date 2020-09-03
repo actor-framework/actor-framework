@@ -59,7 +59,7 @@ private:
 behavior testee(event_based_actor* self) {
   return {
     [=](const foo& x) {
-      aout(self) << to_string(x) << endl;
+      aout(self) << deep_to_string(x) << endl;
     }
   };
 }

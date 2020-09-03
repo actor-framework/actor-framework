@@ -140,15 +140,6 @@ middleman {
 }
 )";
 
-constexpr const string_view conf1 = R"(
-{
-    "foo" : {
-        "bar" : 1,
-        "baz" : 2
-    }
-}
-)";
-
 // clang-format off
 const auto conf0_log = make_log(
   "key: foo=bar",
@@ -213,6 +204,15 @@ const auto conf0_log = make_log(
     "]",
   "}"
 );
+
+constexpr const string_view conf1 = R"(
+{
+    "foo" : {
+        "bar" : 1,
+        "baz" : 2
+    }
+}
+)";
 
 const auto conf1_log = make_log(
   "key: foo",

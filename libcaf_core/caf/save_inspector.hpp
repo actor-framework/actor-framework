@@ -20,6 +20,7 @@
 
 #include <utility>
 
+#include "caf/detail/as_mutable_ref.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 #include "caf/inspector_access.hpp"
@@ -89,7 +90,7 @@ public:
     bool operator()(Inspector& f) {
       auto is_present = [this] { return *val != fallback; };
       auto get = [this] { return *val; };
-      return inspector_access<T>::save_field(f, field_name, is_present, get);
+      return detail::save_field(f, field_name, is_present, get);
     }
 
     template <class Predicate>
@@ -105,7 +106,7 @@ public:
 
     template <class Inspector>
     bool operator()(Inspector& f) {
-      return inspector_access<T>::save_field(f, field_name, *val);
+      return detail::save_field(f, field_name, *val);
     }
 
     template <class U>
@@ -130,7 +131,7 @@ public:
     template <class Inspector>
     bool operator()(Inspector& f) {
       auto is_present = [this] { return get() != fallback; };
-      return inspector_access<T>::save_field(f, field_name, is_present, get);
+      return detail::save_field(f, field_name, is_present, get);
     }
 
     template <class Predicate>
@@ -147,8 +148,7 @@ public:
     template <class Inspector>
     bool operator()(Inspector& f) {
       auto&& x = get();
-      return inspector_access<T>::save_field(f, field_name,
-                                             detail::as_mutable_ref(x));
+      return detail::save_field(f, field_name, detail::as_mutable_ref(x));
     }
 
     template <class U>
@@ -174,7 +174,7 @@ public:
 
     template <class Inspector>
     bool operator()(Inspector& f) {
-      return inspector_access<T>::save_field(f, field_name, is_present, get);
+      return detail::save_field(f, field_name, is_present, get);
     }
   };
 

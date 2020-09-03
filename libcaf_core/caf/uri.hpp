@@ -287,7 +287,7 @@ struct inspector_access<uri> : inspector_access_base<uri> {
         auto err = parse(str, x);
         return err.empty();
       };
-      return inspect_value(f, get, set);
+      return detail::split_save_load(f, get, set);
     } else {
       if constexpr (Inspector::is_loading)
         if (!x.impl_->unique())

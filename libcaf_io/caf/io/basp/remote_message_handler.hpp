@@ -75,8 +75,14 @@ public:
     if (dref.hdr_.operation == basp::message_type::routed_message) {
       node_id src_node;
       node_id dst_node;
-      if (inspect_objects(source, src_node, dst_node)) {
-        CAF_LOG_ERROR("cannot read source and destination of remote message");
+      if (!inspect_object(source, src_node)) {
+        CAF_LOG_ERROR(
+          "failed to read source of routed message:" << source.get_error());
+        return;
+      }
+      if (!inspect_object(source, dst_node)) {
+        CAF_LOG_ERROR("failed to read destination of routed message:"
+                      << source.get_error());
         return;
       }
       CAF_ASSERT(dst_node == sys.node());
@@ -98,8 +104,12 @@ public:
       return;
     }
     // Get the remainder of the message.
-    if (!inspect_objects(source, stages, msg)) {
-      CAF_LOG_ERROR("cannot read stages and content of remote message");
+    if (!inspect_object(source, stages)) {
+      CAF_LOG_ERROR("failed to read stages:" << source.get_error());
+      return;
+    }
+    if (!inspect_objects(source, msg)) {
+      CAF_LOG_ERROR("failed to read message content:" << source.get_error());
       return;
     }
     // Intercept link messages. Forwarding actor proxies signalize linking

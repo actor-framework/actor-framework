@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,38 +18,45 @@
 
 #pragma once
 
-#include <string>
-#include <tuple>
-
-#include "caf/detail/stringification_inspector.hpp"
+#include "caf/inspector_access.hpp"
+#include "caf/load_inspector.hpp"
 
 namespace caf {
 
-/// Unrolls collections such as vectors/maps, decomposes
-/// tuples/pairs/arrays, auto-escapes strings and calls
-/// `to_string` for user-defined types via argument-dependent
-/// loopkup (ADL). Any user-defined type that does not
-/// provide a `to_string` is mapped to `<unprintable>`.
-template <class T>
-std::string deep_to_string(const T& x) {
-  using inspector_type = detail::stringification_inspector;
-  std::string result;
-  inspector_type f{result};
-  detail::save_value(f, detail::as_mutable_ref(x));
-  return result;
-}
+template <class Subtype>
+class load_inspector_base : public load_inspector {
+public:
+  // -- member types -----------------------------------------------------------
 
-/// Convenience function for `deep_to_string(std::forward_as_tuple(xs...))`.
-template <class... Ts>
-std::string deep_to_string_as_tuple(const Ts&... xs) {
-  return deep_to_string(std::forward_as_tuple(xs...));
-}
+  using super = load_inspector;
 
-/// Wraps `deep_to_string` into a function object.
-struct deep_to_string_t {
-  template <class... Ts>
-  std::string operator()(const Ts&... xs) const {
-    return deep_to_string(xs...);
+  // -- DSL entry point --------------------------------------------------------
+
+  template <class T>
+  constexpr auto object(T&) noexcept {
+    return super::object_t<Subtype>{type_name_or_anonymous<T>(), dptr()};
+  }
+
+  // -- dispatching to load/load functions -------------------------------------
+
+  template <class T>
+  bool apply_value(T& x) {
+    return detail::load_value(dref(), x);
+  }
+
+  template <class Get, class Set>
+  bool apply_value(Get&& get, Set&&) {
+    auto&& x = get();
+    return detail::load_value(dref(), x);
+  }
+
+private:
+  Subtype* dptr() {
+    return static_cast<Subtype*>(this);
+  }
+
+  Subtype& dref() {
+    return *static_cast<Subtype*>(this);
   }
 };
 

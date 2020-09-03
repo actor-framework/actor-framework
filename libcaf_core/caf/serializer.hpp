@@ -29,7 +29,7 @@
 #include "caf/fwd.hpp"
 #include "caf/meta/annotation.hpp"
 #include "caf/meta/save_callback.hpp"
-#include "caf/save_inspector.hpp"
+#include "caf/save_inspector_base.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
 #include "caf/string_view.hpp"
@@ -38,7 +38,7 @@ namespace caf {
 
 /// @ingroup TypeSystem
 /// Technology-independent serialization interface.
-class CAF_CORE_EXPORT serializer : public save_inspector {
+class CAF_CORE_EXPORT serializer : public save_inspector_base<serializer> {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -59,6 +59,12 @@ public:
   }
 
   // -- interface functions ----------------------------------------------------
+
+  /// Injects run-time-type information for the *next* object, i.e., causes the
+  /// next call to `begin_object` to write additional meta information. Allows a
+  /// @ref deserializer to retrieve the type for the next object via
+  /// @ref deserializer::fetch_next_object_type.
+  virtual bool inject_next_object_type(type_id_t type) = 0;
 
   /// Begins processing of an object. Saves the type information
   /// to the underlying storage.
@@ -149,13 +155,6 @@ public:
   /// member function to pack the booleans, for example to avoid using one byte
   /// for each value in a binary output format.
   virtual bool value(const std::vector<bool>& xs);
-
-  // -- DSL entry point --------------------------------------------------------
-
-  template <class T>
-  constexpr auto object(T&) noexcept {
-    return object_t<serializer>{type_name_or_anonymous<T>(), this};
-  }
 
 protected:
   /// Provides access to the ::proxy_registry and to the ::actor_system.

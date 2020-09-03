@@ -26,7 +26,6 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
-#include "caf/inspector_access.hpp"
 #include "caf/is_error_code_enum.hpp"
 #include "caf/message.hpp"
 #include "caf/none.hpp"
@@ -193,12 +192,6 @@ private:
   // -- member variables -------------------------------------------------------
 
   std::unique_ptr<data> data_;
-};
-
-template <>
-struct inspector_access<std::unique_ptr<error::data>>
-  : optional_inspector_access<std::unique_ptr<error::data>> {
-  // nop
 };
 
 /// @relates error

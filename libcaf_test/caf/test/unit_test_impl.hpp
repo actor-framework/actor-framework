@@ -572,6 +572,7 @@ int main(int argc, char** argv) {
 
 #ifndef CAF_TEST_NO_MAIN
 int main(int argc, char** argv) {
+  caf::core::init_global_meta_objects();
   return caf::test::main(argc, argv);
 }
 #endif // CAF_TEST_UNIT_TEST_IMPL_HPP

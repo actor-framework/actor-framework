@@ -26,7 +26,39 @@
 #include <string>
 #include <vector>
 
+#include "caf/message.hpp"
+#include "caf/serializer.hpp"
+
 #include "nasty.hpp"
+
+namespace {
+
+struct point_3d;
+struct line;
+struct duration;
+struct person;
+class foobar;
+struct dummy_message;
+struct basics;
+
+} // namespace
+
+#define CAF_TYPE_NAME(type)                                                    \
+  namespace caf {                                                              \
+  template <>                                                                  \
+  struct type_name<type> {                                                     \
+    static constexpr string_view value = #type;                                \
+  };                                                                            \
+  }
+
+CAF_TYPE_NAME(point_3d)
+CAF_TYPE_NAME(line)
+CAF_TYPE_NAME(duration)
+CAF_TYPE_NAME(person)
+CAF_TYPE_NAME(foobar)
+CAF_TYPE_NAME(dummy_message)
+CAF_TYPE_NAME(basics)
+CAF_TYPE_NAME(nasty)
 
 using namespace caf;
 
@@ -35,7 +67,6 @@ namespace {
 using string_list = std::vector<std::string>;
 
 struct point_3d {
-  static inline string_view tname = "point_3d";
   int32_t x;
   int32_t y;
   int32_t z;
@@ -48,7 +79,6 @@ bool inspect(Inspector& f, point_3d& x) {
 }
 
 struct line {
-  static inline string_view tname = "line";
   point_3d p1;
   point_3d p2;
 };
@@ -59,7 +89,6 @@ bool inspect(Inspector& f, line& x) {
 }
 
 struct duration {
-  static inline string_view tname = "duration";
   std::string unit;
   double count;
 };
@@ -76,7 +105,6 @@ bool inspect(Inspector& f, duration& x) {
 }
 
 struct person {
-  static inline string_view tname = "person";
   std::string name;
   optional<std::string> phone;
 };
@@ -88,7 +116,6 @@ bool inspect(Inspector& f, person& x) {
 
 class foobar {
 public:
-  static inline string_view tname = "foobar";
 
   const std::string& foo() {
     return foo_;
@@ -128,8 +155,6 @@ bool inspect(Inspector& f, foobar& x) {
 }
 
 struct dummy_message {
-  static inline string_view tname = "dummy_message";
-
   variant<std::string, double> content;
 };
 
@@ -139,10 +164,7 @@ bool inspect(Inspector& f, dummy_message& x) {
 }
 
 struct basics {
-  static inline string_view tname = "basics";
-  struct tag {
-    static inline string_view tname = "tag";
-  };
+  struct tag {};
   tag v1;
   int32_t v2;
   int32_t v3[4];
@@ -161,20 +183,21 @@ bool inspect(Inspector& f, basics& x) {
                             f.field("v7", x.v7), f.field("v8", x.v8));
 }
 
-struct testee : save_inspector {
+struct testee : serializer {
   std::string log;
 
   size_t indent = 0;
+
+  void set_has_human_readable_format(bool new_value) {
+    has_human_readable_format_ = new_value;
+  }
 
   void new_line() {
     log += '\n';
     log.insert(log.end(), indent, ' ');
   }
 
-  template <class T>
-  auto object(T&) {
-    return object_t<testee>{T::tname, this};
-  }
+  using serializer::object;
 
   template <class T>
   auto object(optional<T>&) {
@@ -186,7 +209,15 @@ struct testee : save_inspector {
     return object_t<testee>{"variant", this};
   }
 
-  bool begin_object(string_view object_name) {
+  bool inject_next_object_type(type_id_t type) override {
+    new_line();
+    log += "next object type: ";
+    auto tn = detail::global_meta_object(type)->type_name;
+    log.insert(log.end(), tn.begin(), tn.end());
+    return ok;
+  }
+
+  bool begin_object(string_view object_name) override {
     new_line();
     indent += 2;
     log += "begin object ";
@@ -194,14 +225,16 @@ struct testee : save_inspector {
     return ok;
   }
 
-  bool end_object() {
+  bool end_object() override {
+    if (indent < 2)
+      CAF_FAIL("begin/end mismatch");
     indent -= 2;
     new_line();
     log += "end object";
     return ok;
   }
 
-  bool begin_field(string_view name) {
+  bool begin_field(string_view name) override {
     new_line();
     indent += 2;
     log += "begin field ";
@@ -209,7 +242,7 @@ struct testee : save_inspector {
     return ok;
   }
 
-  bool begin_field(string_view name, bool) {
+  bool begin_field(string_view name, bool) override {
     new_line();
     indent += 2;
     log += "begin optional field ";
@@ -217,7 +250,7 @@ struct testee : save_inspector {
     return ok;
   }
 
-  bool begin_field(string_view name, span<const type_id_t>, size_t) {
+  bool begin_field(string_view name, span<const type_id_t>, size_t) override {
     new_line();
     indent += 2;
     log += "begin variant field ";
@@ -225,7 +258,8 @@ struct testee : save_inspector {
     return ok;
   }
 
-  bool begin_field(string_view name, bool, span<const type_id_t>, size_t) {
+  bool begin_field(string_view name, bool, span<const type_id_t>,
+                   size_t) override {
     new_line();
     indent += 2;
     log += "begin optional variant field ";
@@ -233,14 +267,16 @@ struct testee : save_inspector {
     return ok;
   }
 
-  bool end_field() {
+  bool end_field() override {
+    if (indent < 2)
+      CAF_FAIL("begin/end mismatch");
     indent -= 2;
     new_line();
     log += "end field";
     return ok;
   }
 
-  bool begin_tuple(size_t size) {
+  bool begin_tuple(size_t size) override {
     new_line();
     indent += 2;
     log += "begin tuple of size ";
@@ -248,14 +284,16 @@ struct testee : save_inspector {
     return ok;
   }
 
-  bool end_tuple() {
+  bool end_tuple() override {
+    if (indent < 2)
+      CAF_FAIL("begin/end mismatch");
     indent -= 2;
     new_line();
     log += "end tuple";
     return ok;
   }
 
-  bool begin_sequence(size_t size) {
+  bool begin_sequence(size_t size) override {
     new_line();
     indent += 2;
     log += "begin sequence of size ";
@@ -263,25 +301,108 @@ struct testee : save_inspector {
     return ok;
   }
 
-  bool end_sequence() {
+  bool end_sequence() override {
+    if (indent < 2)
+      CAF_FAIL("begin/end mismatch");
     indent -= 2;
     new_line();
     log += "end sequence";
     return ok;
   }
 
-  template <class T>
-  std::enable_if_t<std::is_arithmetic<T>::value, bool> value(const T&) {
+  bool value(bool) override {
     new_line();
-    auto tn = type_name_v<T>;
-    log.insert(log.end(), tn.begin(), tn.end());
-    log += " value";
+    log += "bool value";
     return ok;
   }
 
-  bool value(const std::string&) {
+  bool value(int8_t) override {
+    new_line();
+    log += "int8_t value";
+    return ok;
+  }
+
+  bool value(uint8_t) override {
+    new_line();
+    log += "uint8_t value";
+    return ok;
+  }
+
+  bool value(int16_t) override {
+    new_line();
+    log += "int16_t value";
+    return ok;
+  }
+
+  bool value(uint16_t) override {
+    new_line();
+    log += "uint16_t value";
+    return ok;
+  }
+
+  bool value(int32_t) override {
+    new_line();
+    log += "int32_t value";
+    return ok;
+  }
+
+  bool value(uint32_t) override {
+    new_line();
+    log += "uint32_t value";
+    return ok;
+  }
+
+  bool value(int64_t) override {
+    new_line();
+    log += "int64_t value";
+    return ok;
+  }
+
+  bool value(uint64_t) override {
+    new_line();
+    log += "uint64_t value";
+    return ok;
+  }
+
+  bool value(float) override {
+    new_line();
+    log += "float value";
+    return ok;
+  }
+
+  bool value(double) override {
+    new_line();
+    log += "double value";
+    return ok;
+  }
+
+  bool value(long double) override {
+    new_line();
+    log += "long double value";
+    return ok;
+  }
+
+  bool value(string_view) override {
     new_line();
     log += "std::string value";
+    return ok;
+  }
+
+  bool value(const std::u16string&) override {
+    new_line();
+    log += "std::u16string value";
+    return ok;
+  }
+
+  bool value(const std::u32string&) override {
+    new_line();
+    log += "std::u32string value";
+    return ok;
+  }
+
+  bool value(span<const byte>) override {
+    new_line();
+    log += "byte_span value";
     return ok;
   }
 };
@@ -296,7 +417,7 @@ CAF_TEST_FIXTURE_SCOPE(load_inspector_tests, fixture)
 
 CAF_TEST(save inspectors can visit C arrays) {
   int32_t xs[] = {1, 2, 3};
-  CAF_CHECK_EQUAL(inspect_value(f, xs), true);
+  CAF_CHECK_EQUAL(detail::save_value(f, xs), true);
   CAF_CHECK_EQUAL(f.log, R"_(
 begin tuple of size 3
   int32_t value
@@ -321,6 +442,46 @@ begin object point_3d
   end field
   begin field z
     int32_t value
+  end field
+end object)_");
+}
+
+CAF_TEST(save inspectors can visit node IDs) {
+  auto tmp = make_node_id(42, "0102030405060708090A0B0C0D0E0F1011121314");
+  auto hash_based_id = unbox(tmp);
+  CAF_CHECK_EQUAL(inspect(f, hash_based_id), true);
+  CAF_CHECK_EQUAL(f.log, R"_(
+begin object caf::node_id
+  begin optional variant field data
+    begin object caf::hashed_node_id
+      begin field process_id
+        uint32_t value
+      end field
+      begin field host
+        begin tuple of size 20
+          uint8_t value
+          uint8_t value
+          uint8_t value
+          uint8_t value
+          uint8_t value
+          uint8_t value
+          uint8_t value
+          uint8_t value
+          uint8_t value
+          uint8_t value
+          uint8_t value
+          uint8_t value
+          uint8_t value
+          uint8_t value
+          uint8_t value
+          uint8_t value
+          uint8_t value
+          uint8_t value
+          uint8_t value
+          uint8_t value
+        end tuple
+      end field
+    end object
   end field
 end object)_");
 }
@@ -471,11 +632,7 @@ begin object nasty
   end field
   begin optional field field_05
   end field
-  begin optional field field_06
-  end field
   begin optional field field_07
-  end field
-  begin optional field field_08
   end field
   begin variant field field_09
     std::string value
@@ -517,11 +674,7 @@ begin object nasty
   end field
   begin optional field field_21
   end field
-  begin optional field field_22
-  end field
   begin optional field field_23
-  end field
-  begin optional field field_24
   end field
   begin variant field field_25
     std::string value
@@ -581,7 +734,7 @@ CAF_TEST(save inspectors support all basic STL types) {
   CAF_CHECK_EQUAL(f.log, R"_(
 begin object basics
   begin field v1
-    begin object tag
+    begin object anonymous
     end object
   end field
   begin field v2
@@ -671,6 +824,70 @@ begin object basics
           end tuple
         end tuple
       end sequence
+    end sequence
+  end field
+end object)_");
+}
+
+CAF_TEST(save inspectors support messages) {
+  auto x = make_message(1, "two", 3.0);
+  CAF_MESSAGE("for machine-to-machine formats, messages prefix their types");
+  CAF_CHECK(inspect(f, x));
+  CAF_CHECK_EQUAL(f.log, R"_(
+begin object message
+  begin field types
+    begin sequence of size 3
+      uint16_t value
+      uint16_t value
+      uint16_t value
+    end sequence
+  end field
+  begin field values
+    begin tuple of size 3
+      begin object int32_t
+        begin field value
+          int32_t value
+        end field
+      end object
+      begin object std::string
+        begin field value
+          std::string value
+        end field
+      end object
+      begin object double
+        begin field value
+          double value
+        end field
+      end object
+    end tuple
+  end field
+end object)_");
+  CAF_MESSAGE("for human-readable formats, messages inline type annotations");
+  f.log.clear();
+  f.set_has_human_readable_format(true);
+  CAF_CHECK(inspect(f, x));
+  CAF_CHECK_EQUAL(f.log, R"_(
+begin object message
+  begin field values
+    begin sequence of size 3
+      next object type: int32_t
+      begin object int32_t
+        begin field value
+          int32_t value
+        end field
+      end object
+      next object type: std::string
+      begin object std::string
+        begin field value
+          std::string value
+        end field
+      end object
+      next object type: double
+      begin object double
+        begin field value
+          double value
+        end field
+      end object
     end sequence
   end field
 end object)_");

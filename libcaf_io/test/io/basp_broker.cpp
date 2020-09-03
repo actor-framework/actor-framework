@@ -109,6 +109,8 @@ public:
             .set("caf.middleman.enable-automatic-connections", autoconn)
             .set("caf.middleman.workers", size_t{0})
             .set("caf.scheduler.policy", autoconn ? "testing" : "stealing")
+.set("caf.logger.inline-output", true)
+.set("caf.logger.console.verbosity", "debug")
             .set("caf.middleman.attach-utility-actors", autoconn)) {
     app_ids.emplace_back(to_string(defaults::middleman::app_identifier));
     auto& mm = sys.middleman();
@@ -160,9 +162,9 @@ public:
 
   uint32_t serialized_size(const message& msg) {
     byte_buffer buf;
-    binary_serializer bs{mpx_, buf};
-    if (!inspect_objects(bs, const_cast<message&>(msg)))
-      CAF_FAIL("failed to serialize message: " << bs.get_error());
+    binary_serializer sink{mpx_, buf};
+    if (!inspect_objects(sink, msg))
+      CAF_FAIL("failed to serialize message: " << sink.get_error());
     return static_cast<uint32_t>(buf.size());
   }
 
@@ -231,19 +233,18 @@ public:
   void to_buf(byte_buffer& buf, basp::header& hdr, payload_writer* writer,
               const T& x, const Ts&... xs) {
     auto pw = make_callback([&](binary_serializer& sink) {
-      if (writer)
-        if (auto err = (*writer)(sink))
-          return err;
-      return inspect_object(sink, const_cast<T&>(x));
+      if (writer != nullptr && !(*writer)(sink))
+        return false;
+      return inspect_objects(sink, x, xs...);
     });
-    to_buf(buf, hdr, &pw, xs...);
+    to_buf(buf, hdr, &pw);
   }
 
   std::pair<basp::header, byte_buffer> from_buf(const byte_buffer& buf) {
     basp::header hdr;
-    binary_deserializer bd{mpx_, buf};
-    if (!inspect_object(bd, hdr))
-      CAF_FAIL("failed to deserialize header: " << bd.get_error());
+    binary_deserializer source{mpx_, buf};
+    if (!inspect_object(source, hdr))
+      CAF_FAIL("failed to deserialize header: " << source.get_error());
     byte_buffer payload;
     if (hdr.payload_len > 0) {
       std::copy(buf.begin() + basp::header_size, buf.end(),
@@ -516,7 +517,7 @@ CAF_TEST(client_handshake_and_dispatch) {
   mock(jupiter().connection,
        {basp::message_type::direct_message, 0, 0, 0,
         jupiter().dummy_actor->id(), self()->id()},
-       std::vector<actor_addr>{}, make_message(1, 2, 3))
+       std::vector<strong_actor_ptr>{}, make_message(1, 2, 3))
     .receive(jupiter().connection, basp::message_type::monitor_message,
              no_flags, any_vals, no_operation_data, invalid_actor_id,
              jupiter().dummy_actor->id(), this_node(), jupiter().id);
@@ -677,7 +678,7 @@ CAF_TEST(indirect_connections) {
   auto mx = mock(mars().connection,
                  {basp::message_type::routed_message, 0, 0, 0,
                   jupiter().dummy_actor->id(), self()->id()},
-                 jupiter().id, this_node(), std::vector<actor_id>{},
+                 jupiter().id, this_node(), std::vector<strong_actor_ptr>{},
                  make_message("hello from jupiter!"));
   CAF_MESSAGE("expect ('sys', 'get', \"info\") from Earth to Jupiter at Mars");
   // this asks Jupiter if it has a 'SpawnServ'

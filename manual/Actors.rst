@@ -382,14 +382,16 @@ typing as well as with dynamic typing.
 
 .. literalinclude:: /examples/message_passing/cell.cpp
    :language: C++
-   :lines: 18-44
+   :start-after: --(rst-cell-begin)--
+   :end-before: --(rst-cell-end)--
 
 Stateful actors are spawned in the same way as any other function-based actor
 function-based_.
 
 .. literalinclude:: /examples/message_passing/cell.cpp
    :language: C++
-   :lines: 49-50
+   :start-after: --(rst-spawn-cell-begin)--
+   :end-before: --(rst-spawn-cell-end)--
 
 .. _attach:
 

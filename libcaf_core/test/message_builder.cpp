@@ -47,7 +47,7 @@ CAF_TEST(message builder can build messages incrermenetally) {
     CAF_CHECK_EQUAL(builder.size(), 1u);
     CAF_CHECK_EQUAL(msg.types(), make_type_id_list<int32_t>());
     CAF_CHECK_EQUAL(to_string(msg.types()), "[int32_t]");
-    CAF_CHECK_EQUAL(to_string(msg), "(1)");
+    CAF_CHECK_EQUAL(to_string(msg), "message(int32_t(1))");
   }
   STEP("after adding [2, 3], the message is (1, 2, 3)") {
     std::vector<int32_t> xs{2, 3};
@@ -57,13 +57,15 @@ CAF_TEST(message builder can build messages incrermenetally) {
     CAF_CHECK_EQUAL(msg.types(),
                     (make_type_id_list<int32_t, int32_t, int32_t>()));
     CAF_CHECK_EQUAL(to_string(msg.types()), "[int32_t, int32_t, int32_t]");
-    CAF_CHECK_EQUAL(to_string(msg), "(1, 2, 3)");
+    CAF_CHECK_EQUAL(to_string(msg),
+                    "message(int32_t(1), int32_t(2), int32_t(3))");
   }
   STEP("moving the content to a message produces the same message again") {
     auto msg = builder.move_to_message();
     CAF_CHECK_EQUAL(msg.types(),
                     (make_type_id_list<int32_t, int32_t, int32_t>()));
     CAF_CHECK_EQUAL(to_string(msg.types()), "[int32_t, int32_t, int32_t]");
-    CAF_CHECK_EQUAL(to_string(msg), "(1, 2, 3)");
+    CAF_CHECK_EQUAL(to_string(msg),
+                    "message(int32_t(1), int32_t(2), int32_t(3))");
   }
 }
