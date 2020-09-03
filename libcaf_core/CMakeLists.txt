@@ -253,7 +253,6 @@ caf_add_test_suites(caf-core-test
   detail.parser.read_string
   detail.parser.read_timespan
   detail.parser.read_unsigned_integer
-  detail.print
   detail.ringbuffer
   detail.ripemd_160
   detail.serialized_size

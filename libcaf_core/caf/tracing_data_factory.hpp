@@ -31,13 +31,12 @@ public:
   /// Deserializes tracing data from `source` and either overrides the content
   /// of `dst` or allocates a new object if `dst` is null.
   /// @returns the result of `source`.
-  virtual error deserialize(deserializer& source,
-                            std::unique_ptr<tracing_data>& dst) const = 0;
+  virtual bool deserialize(deserializer& source,
+                           std::unique_ptr<tracing_data>& dst) const = 0;
 
   /// @copydoc deserialize
-  virtual error_code<sec>
-  deserialize(binary_deserializer& source,
-              std::unique_ptr<tracing_data>& dst) const = 0;
+  virtual bool deserialize(binary_deserializer& source,
+                           std::unique_ptr<tracing_data>& dst) const = 0;
 };
 
 } // namespace caf

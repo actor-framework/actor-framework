@@ -116,8 +116,7 @@ public:
   // -- inspection -------------------------------------------------------------
 
   template <class Inspector>
-  friend bool
-  inspect(Inspector& f, ipv6_address& x) {
+  friend bool inspect(Inspector& f, ipv6_address& x) {
     return f.object(x).fields(f.field("bytes", x.bytes_));
   }
 

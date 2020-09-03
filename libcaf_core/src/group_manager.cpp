@@ -89,11 +89,9 @@ public:
     CAF_LOG_TRACE(""); // serializing who would cause a deadlock
     exclusive_guard guard(mtx_);
     auto e = subscribers_.end();
-    auto cmp = [&](const strong_actor_ptr& lhs) {
-      return lhs.get() == who;
-    };
+    auto cmp = [&](const strong_actor_ptr& lhs) { return lhs.get() == who; };
     auto i = std::find_if(subscribers_.begin(), e, cmp);
-    if(i == e)
+    if (i == e)
       return {false, subscribers_.size()};
     subscribers_.erase(i);
     return {true, subscribers_.size()};
@@ -134,8 +132,7 @@ using local_group_ptr = intrusive_ptr<local_group>;
 class local_dispatcher : public event_based_actor {
 public:
   explicit local_dispatcher(actor_config& cfg, local_group_ptr g)
-      : event_based_actor(cfg),
-        group_(std::move(g)) {
+    : event_based_actor(cfg), group_(std::move(g)) {
     // nop
   }
 
@@ -161,34 +158,32 @@ public:
       CAF_LOG_TRACE(CAF_ARG(dm));
       auto first = acquaintances_.begin();
       auto last = acquaintances_.end();
-      auto i = std::find_if(first, last, [&](const actor& a) {
-        return a == dm.source;
-      });
+      auto i = std::find_if(first, last,
+                            [&](const actor& a) { return a == dm.source; });
       if (i != last)
         acquaintances_.erase(i);
     });
     // return behavior
-    return {
-      [=](join_atom, const actor& other) {
-        CAF_LOG_TRACE(CAF_ARG(other));
-        if (acquaintances_.insert(other).second) {
-          monitor(other);
-        }
-      },
-      [=](leave_atom, const actor& other) {
-        CAF_LOG_TRACE(CAF_ARG(other));
-        acquaintances_.erase(other);
-        if (acquaintances_.erase(other) > 0)
-          demonitor(other);
-      },
-      [=](forward_atom, const message& what) {
-        CAF_LOG_TRACE(CAF_ARG(what));
-        // local forwarding
-        group_->send_all_subscribers(current_element_->sender, what, context());
-        // forward to all acquaintances
-        send_to_acquaintances(what);
-      }
-    };
+    return {[=](join_atom, const actor& other) {
+              CAF_LOG_TRACE(CAF_ARG(other));
+              if (acquaintances_.insert(other).second) {
+                monitor(other);
+              }
+            },
+            [=](leave_atom, const actor& other) {
+              CAF_LOG_TRACE(CAF_ARG(other));
+              acquaintances_.erase(other);
+              if (acquaintances_.erase(other) > 0)
+                demonitor(other);
+            },
+            [=](forward_atom, const message& what) {
+              CAF_LOG_TRACE(CAF_ARG(what));
+              // local forwarding
+              group_->send_all_subscribers(current_element_->sender, what,
+                                           context());
+              // forward to all acquaintances
+              send_to_acquaintances(what);
+            }};
   }
 
 private:
@@ -216,8 +211,7 @@ using local_group_proxy_ptr = intrusive_ptr<local_group_proxy>;
 class proxy_dispatcher : public event_based_actor {
 public:
   proxy_dispatcher(actor_config& cfg, local_group_proxy_ptr grp)
-      : event_based_actor(cfg),
-        group_(std::move(grp)) {
+    : event_based_actor(cfg), group_(std::move(grp)) {
     CAF_LOG_TRACE("");
   }
 
@@ -235,9 +229,10 @@ class local_group_proxy : public local_group {
 public:
   local_group_proxy(actor_system& sys, actor remote_dispatcher,
                     local_group_module& mod, std::string id, node_id nid)
-      : local_group(mod, std::move(id), std::move(nid), std::move(remote_dispatcher)),
-        proxy_dispatcher_{sys.spawn<proxy_dispatcher, hidden>(this)},
-        monitor_{sys.spawn<hidden>(dispatcher_monitor_actor, this)} {
+    : local_group(mod, std::move(id), std::move(nid),
+                  std::move(remote_dispatcher)),
+      proxy_dispatcher_{sys.spawn<proxy_dispatcher, hidden>(this)},
+      monitor_{sys.spawn<hidden>(dispatcher_monitor_actor, this)} {
     // nop
   }
 
@@ -264,12 +259,12 @@ public:
     }
   }
 
-  void enqueue(strong_actor_ptr sender, message_id mid,
-               message msg, execution_unit* eu) override {
+  void enqueue(strong_actor_ptr sender, message_id mid, message msg,
+               execution_unit* eu) override {
     CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(mid) << CAF_ARG(msg));
     // forward message to the dispatcher
     dispatcher_->enqueue(std::move(sender), mid,
-                     make_message(forward_atom_v, std::move(msg)), eu);
+                         make_message(forward_atom_v, std::move(msg)), eu);
   }
 
   void stop() override {
@@ -279,21 +274,18 @@ public:
 
 private:
   static behavior dispatcher_monitor_actor(event_based_actor* self,
-                                       local_group_proxy* grp) {
+                                           local_group_proxy* grp) {
     CAF_LOG_TRACE("");
     self->monitor(grp->dispatcher_);
     self->set_down_handler([=](down_msg& down) {
       CAF_LOG_TRACE(CAF_ARG(down));
       auto msg = make_message(group_down_msg{group(grp)});
-      grp->send_all_subscribers(self->ctrl(), std::move(msg),
-                                self->context());
+      grp->send_all_subscribers(self->ctrl(), std::move(msg), self->context());
       self->quit(down.reason);
     });
-    return {
-      [] {
-        // nop
-      }
-    };
+    return {[] {
+      // nop
+    }};
   }
 
   actor proxy_dispatcher_;
@@ -311,11 +303,9 @@ behavior proxy_dispatcher::make_behavior() {
   };
   set_default_handler(fwd);
   // return dummy behavior
-  return {
-    [] {
-      // nop
-    }
-  };
+  return {[] {
+    // nop
+  }};
 }
 
 class local_group_module : public group_module {
@@ -330,8 +320,8 @@ public:
     auto i = instances_.find(identifier);
     if (i != instances_.end())
       return group{i->second};
-    auto tmp = make_counted<local_group>(*this, identifier,
-                                         system().node(), none);
+    auto tmp = make_counted<local_group>(*this, identifier, system().node(),
+                                         none);
     upgrade_to_unique_guard uguard(guard);
     auto p = instances_.emplace(identifier, tmp);
     auto result = p.first->second;

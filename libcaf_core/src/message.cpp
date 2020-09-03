@@ -278,20 +278,19 @@ save_data(Serializer& sink, const message::data_ptr& data) {
            && sink.end_sequence()        //
            && sink.end_field()           //
            && sink.end_object();
-    }
-    auto type_ids = data->types();
-    GUARDED(sink.begin_object("message")  //
-            && sink.begin_field("values") //
-            && sink.begin_sequence(type_ids.size()));
-    auto storage = data->storage();
-    for (auto id : type_ids) {
-      auto& meta = gmos[id];
-      GUARDED(sink.inject_next_object_type(id) //
-              && save(meta, sink, storage));
-      storage += meta.padded_size;
-    }
-    return sink.end_sequence() && sink.end_field() && sink.end_object();
-
+  }
+  auto type_ids = data->types();
+  GUARDED(sink.begin_object("message")  //
+          && sink.begin_field("values") //
+          && sink.begin_sequence(type_ids.size()));
+  auto storage = data->storage();
+  for (auto id : type_ids) {
+    auto& meta = gmos[id];
+    GUARDED(sink.inject_next_object_type(id) //
+            && save(meta, sink, storage));
+    storage += meta.padded_size;
+  }
+  return sink.end_sequence() && sink.end_field() && sink.end_object();
 }
 
 } // namespace

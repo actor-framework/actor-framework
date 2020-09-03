@@ -48,7 +48,7 @@ struct basics;
   template <>                                                                  \
   struct type_name<type> {                                                     \
     static constexpr string_view value = #type;                                \
-  };                                                                            \
+  };                                                                           \
   }
 
 CAF_TYPE_NAME(point_3d)
@@ -116,7 +116,6 @@ bool inspect(Inspector& f, person& x) {
 
 class foobar {
 public:
-
   const std::string& foo() {
     return foo_;
   }

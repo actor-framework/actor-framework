@@ -75,7 +75,6 @@ public:
     return identifier_;
   }
 
-
   /// @private
   const actor& dispatcher() {
     return dispatcher_;

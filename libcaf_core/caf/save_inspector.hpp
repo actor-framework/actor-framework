@@ -189,8 +189,8 @@ public:
     template <class... Fields>
     bool fields(Fields&&... fs) {
       using save_callback_result = decltype(save_callback());
-        if (!(f->begin_object(object_name) && (fs(*f) && ...)))
-          return false;
+      if (!(f->begin_object(object_name) && (fs(*f) && ...)))
+        return false;
       if constexpr (std::is_same<save_callback_result, bool>::value) {
         if (!save_callback()) {
           f->set_error(sec::save_callback_failed);

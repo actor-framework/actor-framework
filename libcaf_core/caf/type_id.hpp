@@ -108,6 +108,13 @@ string_view type_name_or_anonymous() {
     return "anonymous";
 }
 
+/// Returns the type name of given `type` or an empty string if `type` is an
+/// invalid ID.
+CAF_CORE_EXPORT string_view query_type_name(type_id_t type);
+
+/// Returns the type of given `name` or `invalid_type_id` if no type matches.
+CAF_CORE_EXPORT type_id_t query_type_id(string_view name);
+
 } // namespace caf
 
 /// Starts a code block for registering custom types to CAF. Stores the first ID

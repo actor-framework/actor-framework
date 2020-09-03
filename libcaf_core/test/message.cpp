@@ -32,10 +32,10 @@
 #include "caf/type_id.hpp"
 #include "caf/type_id_list.hpp"
 
+using std::make_tuple;
 using std::map;
 using std::string;
 using std::vector;
-using std::make_tuple;
 
 using namespace caf;
 
@@ -92,8 +92,9 @@ CAF_TEST(to_string converts messages to strings) {
   CAF_CHECK_EQUAL(msg_as_string(), "message()");
   CAF_CHECK_EQUAL(msg_as_string("hello", "world"),
                   R"__(message(std::string(hello), std::string(world)))__");
-  CAF_CHECK_EQUAL(msg_as_string(svec{"one", "two", "three"}),
-                  R"__(message(std::vector<std::string>([one, two, three])))__");
+  CAF_CHECK_EQUAL(
+    msg_as_string(svec{"one", "two", "three"}),
+    R"__(message(std::vector<std::string>([one, two, three])))__");
   CAF_CHECK_EQUAL(
     msg_as_string(svec{"one", "two"}, "three", "four",
                   svec{"five", "six", "seven"}),

@@ -36,31 +36,64 @@ tracing_data::~tracing_data() {
   // nop
 }
 
-template <class Inspector>
-bool inspect(Inspector& f, tracing_data& x) {
-  return x.serialize(f);
-}
-
 namespace {
 
-using access = optional_inspector_access<tracing_data_ptr>;
+template <class Serializer>
+bool serialize_impl(Serializer& sink, const tracing_data_ptr& x) {
+  if (!x) {
+    return sink.begin_object("tracing_data")   //
+           && sink.begin_field("value", false) //
+           && sink.end_field()                 //
+           && sink.end_object();
+  }
+  return sink.begin_object("tracing_data")  //
+         && sink.begin_field("value", true) //
+         && x->serialize(sink)              //
+         && sink.end_field()                //
+         && sink.end_object();
+}
+
+template <class Deserializer>
+bool deserialize_impl(Deserializer& source, tracing_data_ptr& x) {
+  bool is_present = false;
+  if (!source.begin_object("tracing_data")
+      || !source.begin_field("value", is_present))
+    return false;
+  if (!is_present)
+    return source.end_field() && source.end_object();
+  auto ctx = source.context();
+  if (ctx == nullptr) {
+    source.emplace_error(sec::no_context,
+                         "cannot deserialize tracing data without context");
+    return false;
+  }
+  auto tc = ctx->system().tracing_context();
+  if (tc == nullptr) {
+    source.emplace_error(sec::no_tracing_context,
+                         "cannot deserialize tracing data without context");
+    return false;
+  }
+  return tc->deserialize(source, x) //
+         && source.end_field()      //
+         && source.end_object();
+}
 
 } // namespace
 
 bool inspect(serializer& sink, const tracing_data_ptr& x) {
-  return access::apply_object(sink, detail::as_mutable_ref(x));
+  return serialize_impl(sink, x);
 }
 
 bool inspect(binary_serializer& sink, const tracing_data_ptr& x) {
-  return access::apply_object(sink, detail::as_mutable_ref(x));
+  return serialize_impl(sink, x);
 }
 
 bool inspect(deserializer& source, tracing_data_ptr& x) {
-  return access::apply_object(source, x);
+  return deserialize_impl(source, x);
 }
 
 bool inspect(binary_deserializer& source, tracing_data_ptr& x) {
-  return access::apply_object(source, x);
+  return deserialize_impl(source, x);
 }
 
 } // namespace caf

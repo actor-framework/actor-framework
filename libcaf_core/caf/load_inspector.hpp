@@ -293,8 +293,8 @@ public:
     template <class... Fields>
     bool fields(Fields&&... fs) {
       using load_callback_result = decltype(load_callback());
-        if (!(f->begin_object(object_name) && (fs(*f) && ...)))
-          return false;
+      if (!(f->begin_object(object_name) && (fs(*f) && ...)))
+        return false;
       if constexpr (std::is_same<load_callback_result, bool>::value) {
         if (!load_callback()) {
           f->set_error(sec::load_callback_failed);
