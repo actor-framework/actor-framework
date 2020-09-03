@@ -29,158 +29,11 @@
 #include "caf/message.hpp"
 #include "caf/serializer.hpp"
 
-#include "nasty.hpp"
-
-namespace {
-
-struct point_3d;
-struct line;
-struct duration;
-struct person;
-class foobar;
-struct dummy_message;
-struct basics;
-
-} // namespace
-
-#define CAF_TYPE_NAME(type)                                                    \
-  namespace caf {                                                              \
-  template <>                                                                  \
-  struct type_name<type> {                                                     \
-    static constexpr string_view value = #type;                                \
-  };                                                                           \
-  }
-
-CAF_TYPE_NAME(point_3d)
-CAF_TYPE_NAME(line)
-CAF_TYPE_NAME(duration)
-CAF_TYPE_NAME(person)
-CAF_TYPE_NAME(foobar)
-CAF_TYPE_NAME(dummy_message)
-CAF_TYPE_NAME(basics)
-CAF_TYPE_NAME(nasty)
+#include "inspector-tests.hpp"
 
 using namespace caf;
 
 namespace {
-
-using string_list = std::vector<std::string>;
-
-struct point_3d {
-  int32_t x;
-  int32_t y;
-  int32_t z;
-};
-
-template <class Inspector>
-bool inspect(Inspector& f, point_3d& x) {
-  return f.object(x).fields(f.field("x", x.x), f.field("y", x.y),
-                            f.field("z", x.z));
-}
-
-struct line {
-  point_3d p1;
-  point_3d p2;
-};
-
-template <class Inspector>
-bool inspect(Inspector& f, line& x) {
-  return f.object(x).fields(f.field("p1", x.p1), f.field("p2", x.p2));
-}
-
-struct duration {
-  std::string unit;
-  double count;
-};
-
-bool valid_time_unit(const std::string& unit) {
-  return unit == "seconds" || unit == "minutes";
-}
-
-template <class Inspector>
-bool inspect(Inspector& f, duration& x) {
-  return f.object(x).fields(
-    f.field("unit", x.unit).fallback("seconds").invariant(valid_time_unit),
-    f.field("count", x.count));
-}
-
-struct person {
-  std::string name;
-  optional<std::string> phone;
-};
-
-template <class Inspector>
-bool inspect(Inspector& f, person& x) {
-  return f.object(x).fields(f.field("name", x.name), f.field("phone", x.phone));
-}
-
-class foobar {
-public:
-  const std::string& foo() {
-    return foo_;
-  }
-
-  void foo(std::string value) {
-    foo_ = std::move(value);
-  }
-
-  const std::string& bar() {
-    return bar_;
-  }
-
-  void bar(std::string value) {
-    bar_ = std::move(value);
-  }
-
-private:
-  std::string foo_;
-  std::string bar_;
-};
-
-template <class Inspector>
-bool inspect(Inspector& f, foobar& x) {
-  auto get_foo = [&x]() -> decltype(auto) { return x.foo(); };
-  auto set_foo = [&x](std::string value) {
-    x.foo(std::move(value));
-    return true;
-  };
-  auto get_bar = [&x]() -> decltype(auto) { return x.bar(); };
-  auto set_bar = [&x](std::string value) {
-    x.bar(std::move(value));
-    return true;
-  };
-  return f.object(x).fields(f.field("foo", get_foo, set_foo),
-                            f.field("bar", get_bar, set_bar));
-}
-
-struct dummy_message {
-  variant<std::string, double> content;
-};
-
-template <class Inspector>
-bool inspect(Inspector& f, dummy_message& x) {
-  return f.object(x).fields(f.field("content", x.content));
-}
-
-struct basics {
-  struct tag {};
-  tag v1;
-  int32_t v2;
-  int32_t v3[4];
-  dummy_message v4[2];
-  std::array<int32_t, 2> v5;
-  std::tuple<int32_t, dummy_message> v6;
-  std::map<std::string, int32_t> v7;
-  std::vector<std::list<std::pair<std::string, std::array<int32_t, 3>>>> v8;
-};
-
-template <class Inspector>
-bool inspect(Inspector& f, basics& x) {
-  return f.object(x).fields(f.field("v1", x.v1), f.field("v2", x.v2),
-                            f.field("v3", x.v3), f.field("v4", x.v4),
-                            f.field("v5", x.v5), f.field("v6", x.v6),
-                            f.field("v7", x.v7), f.field("v8", x.v8));
-}
 
 struct testee : serializer {
   std::string log;
@@ -292,6 +145,22 @@ struct testee : serializer {
     return ok;
   }
 
+  bool begin_key_value_pair() override {
+    new_line();
+    indent += 2;
+    log += "begin key-value pair";
+    return ok;
+  }
+
+  bool end_key_value_pair() override {
+    if (indent < 2)
+      CAF_FAIL("begin/end mismatch");
+    indent -= 2;
+    new_line();
+    log += "end key-value pair";
+    return ok;
+  }
+
   bool begin_sequence(size_t size) override {
     new_line();
     indent += 2;
@@ -306,6 +175,23 @@ struct testee : serializer {
     indent -= 2;
     new_line();
     log += "end sequence";
+    return ok;
+  }
+
+  bool begin_associative_array(size_t size) override {
+    new_line();
+    indent += 2;
+    log += "begin associative array of size ";
+    log += std::to_string(size);
+    return ok;
+  }
+
+  bool end_associative_array() override {
+    if (indent < 2)
+      CAF_FAIL("begin/end mismatch");
+    indent -= 2;
+    new_line();
+    log += "end associative array";
     return ok;
   }
 
@@ -778,20 +664,20 @@ begin object basics
     end tuple
   end field
   begin field v7
-    begin sequence of size 3
-      begin tuple of size 2
+    begin associative array of size 3
+      begin key-value pair
         std::string value
         int32_t value
-      end tuple
-      begin tuple of size 2
+      end key-value pair
+      begin key-value pair
         std::string value
         int32_t value
-      end tuple
-      begin tuple of size 2
+      end key-value pair
+      begin key-value pair
         std::string value
         int32_t value
-      end tuple
-    end sequence
+      end key-value pair
+    end associative array
   end field
   begin field v8
     begin sequence of size 2

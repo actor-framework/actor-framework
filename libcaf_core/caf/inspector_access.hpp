@@ -142,22 +142,22 @@ template <class Inspector, class T>
 bool load_value(Inspector& f, T& x, inspector_access_type::map) {
   x.clear();
   size_t size = 0;
-  if (!f.begin_sequence(size))
+  if (!f.begin_associative_array(size))
     return false;
   for (size_t i = 0; i < size; ++i) {
     auto key = typename T::key_type{};
     auto val = typename T::mapped_type{};
-    if (!(f.begin_tuple(2)      //
-          && load_value(f, key) //
-          && load_value(f, val) //
-          && f.end_tuple()))
+    if (!(f.begin_key_value_pair() //
+          && load_value(f, key)    //
+          && load_value(f, val)    //
+          && f.end_key_value_pair()))
       return false;
     if (!x.emplace(std::move(key), std::move(val)).second) {
       f.emplace_error(sec::runtime_error, "multiple key definitions");
       return false;
     }
   }
-  return f.end_sequence();
+  return f.end_associative_array();
 }
 
 template <class Inspector, class T>
@@ -310,17 +310,16 @@ bool save_value(Inspector& f, T& x, inspector_access_type::tuple) {
 
 template <class Inspector, class T>
 bool save_value(Inspector& f, T& x, inspector_access_type::map) {
-  auto size = x.size();
-  if (!f.begin_sequence(size))
+  if (!f.begin_associative_array(x.size()))
     return false;
   for (auto&& kvp : x) {
-    if (!(f.begin_tuple(2)             //
+    if (!(f.begin_key_value_pair()     //
           && save_value(f, kvp.first)  //
           && save_value(f, kvp.second) //
-          && f.end_tuple()))
+          && f.end_key_value_pair()))
       return false;
   }
-  return f.end_sequence();
+  return f.end_associative_array();
 }
 
 template <class Inspector, class T>

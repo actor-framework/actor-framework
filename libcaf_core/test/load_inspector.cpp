@@ -33,153 +33,13 @@
 #include "caf/type_id.hpp"
 #include "caf/variant.hpp"
 
-#include "nasty.hpp"
+#include "inspector-tests.hpp"
 
 using namespace caf;
 
 namespace {
 
-using string_list = std::vector<std::string>;
-
-struct point_3d {
-  static inline string_view tname = "point_3d";
-  int32_t x;
-  int32_t y;
-  int32_t z;
-};
-
-template <class Inspector>
-bool inspect(Inspector& f, point_3d& x) {
-  return f.object(x).fields(f.field("x", x.x), f.field("y", x.y),
-                            f.field("z", x.z));
-}
-
-struct line {
-  static inline string_view tname = "line";
-  point_3d p1;
-  point_3d p2;
-};
-
-template <class Inspector>
-bool inspect(Inspector& f, line& x) {
-  return f.object(x).fields(f.field("p1", x.p1), f.field("p2", x.p2));
-}
-
-struct duration {
-  static inline string_view tname = "duration";
-  std::string unit;
-  double count;
-};
-
-bool valid_time_unit(const std::string& unit) {
-  return unit == "seconds" || unit == "minutes";
-}
-
-template <class Inspector>
-bool inspect(Inspector& f, duration& x) {
-  return f.object(x).fields(
-    f.field("unit", x.unit).fallback("seconds").invariant(valid_time_unit),
-    f.field("count", x.count));
-}
-
-struct person {
-  static inline string_view tname = "person";
-  std::string name;
-  optional<std::string> phone;
-};
-
-template <class Inspector>
-bool inspect(Inspector& f, person& x) {
-  return f.object(x).fields(f.field("name", x.name), f.field("phone", x.phone));
-}
-
-class foobar {
-public:
-  static inline string_view tname = "foobar";
-
-  const std::string& foo() {
-    return foo_;
-  }
-
-  void foo(std::string value) {
-    foo_ = std::move(value);
-  }
-
-  const std::string& bar() {
-    return bar_;
-  }
-
-  void bar(std::string value) {
-    bar_ = std::move(value);
-  }
-
-private:
-  std::string foo_;
-  std::string bar_;
-};
-
-template <class Inspector>
-bool inspect(Inspector& f, foobar& x) {
-  auto get_foo = [&x]() -> decltype(auto) { return x.foo(); };
-  auto set_foo = [&x](std::string value) {
-    x.foo(std::move(value));
-    return true;
-  };
-  auto get_bar = [&x]() -> decltype(auto) { return x.bar(); };
-  auto set_bar = [&x](std::string value) {
-    x.bar(std::move(value));
-    return true;
-  };
-  return f.object(x).fields(f.field("foo", get_foo, set_foo),
-                            f.field("bar", get_bar, set_bar));
-}
-
-struct dummy_message {
-  static inline string_view tname = "dummy_message";
-
-  variant<std::string, double> content;
-};
-
-template <class Inspector>
-bool inspect(Inspector& f, dummy_message& x) {
-  return f.object(x).fields(f.field("content", x.content));
-}
-
-struct fallback_dummy_message {
-  static inline string_view tname = "fallback_dummy_message";
-
-  variant<std::string, double> content;
-};
-
-template <class Inspector>
-bool inspect(Inspector& f, fallback_dummy_message& x) {
-  return f.object(x).fields(f.field("content", x.content).fallback(42.0));
-}
-
-struct basics {
-  static inline string_view tname = "basics";
-  struct tag {
-    static inline string_view tname = "tag";
-  };
-  tag v1;
-  int32_t v2;
-  int32_t v3[4];
-  dummy_message v4[2];
-  std::array<int32_t, 2> v5;
-  std::tuple<int32_t, dummy_message> v6;
-  std::map<std::string, int32_t> v7;
-  std::vector<std::list<std::pair<std::string, std::array<int32_t, 3>>>> v8;
-};
-
-template <class Inspector>
-bool inspect(Inspector& f, basics& x) {
-  return f.object(x).fields(f.field("v1", x.v1), f.field("v2", x.v2),
-                            f.field("v3", x.v3), f.field("v4", x.v4),
-                            f.field("v5", x.v5), f.field("v6", x.v6),
-                            f.field("v7", x.v7), f.field("v8", x.v8));
-}
-
-struct testee : load_inspector_base<testee> {
+struct testee : deserializer {
   std::string log;
 
   bool load_field_failed(string_view, sec code) {
@@ -194,9 +54,10 @@ struct testee : load_inspector_base<testee> {
     log.insert(log.end(), indent, ' ');
   }
 
-  template <class T>
-  auto object(T&) {
-    return object_t<testee>{T::tname, this};
+  using deserializer::object;
+
+  bool fetch_next_object_type(type_id_t&) override {
+    return false;
   }
 
   template <class T>
@@ -204,7 +65,12 @@ struct testee : load_inspector_base<testee> {
     return object_t<testee>{"optional", this};
   }
 
-  bool begin_object(string_view object_name) {
+  template <class... Ts>
+  auto object(variant<Ts...>&) {
+    return object_t<testee>{"variant", this};
+  }
+
+  bool begin_object(string_view object_name) override {
     new_line();
     indent += 2;
     log += "begin object ";
@@ -212,14 +78,14 @@ struct testee : load_inspector_base<testee> {
     return ok;
   }
 
-  bool end_object() {
+  bool end_object() override {
     indent -= 2;
     new_line();
     log += "end object";
     return ok;
   }
 
-  bool begin_field(string_view name) {
+  bool begin_field(string_view name) override {
     new_line();
     indent += 2;
     log += "begin field ";
@@ -227,7 +93,7 @@ struct testee : load_inspector_base<testee> {
     return ok;
   }
 
-  bool begin_field(string_view name, bool& is_present) {
+  bool begin_field(string_view name, bool& is_present) override {
     new_line();
     indent += 2;
     log += "begin optional field ";
@@ -237,7 +103,7 @@ struct testee : load_inspector_base<testee> {
   }
 
   bool begin_field(string_view name, span<const type_id_t>,
-                   size_t& type_index) {
+                   size_t& type_index) override {
     new_line();
     indent += 2;
     log += "begin variant field ";
@@ -247,7 +113,7 @@ struct testee : load_inspector_base<testee> {
   }
 
   bool begin_field(string_view name, bool& is_present, span<const type_id_t>,
-                   size_t&) {
+                   size_t&) override {
     new_line();
     indent += 2;
     log += "begin optional variant field ";
@@ -256,14 +122,14 @@ struct testee : load_inspector_base<testee> {
     return ok;
   }
 
-  bool end_field() {
+  bool end_field() override {
     indent -= 2;
     new_line();
     log += "end field";
     return ok;
   }
 
-  bool begin_tuple(size_t size) {
+  bool begin_tuple(size_t size) override {
     new_line();
     indent += 2;
     log += "begin tuple of size ";
@@ -271,14 +137,28 @@ struct testee : load_inspector_base<testee> {
     return ok;
   }
 
-  bool end_tuple() {
+  bool end_tuple() override {
     indent -= 2;
     new_line();
     log += "end tuple";
     return ok;
   }
 
-  bool begin_sequence(size_t& size) {
+  bool begin_key_value_pair() override {
+    new_line();
+    indent += 2;
+    log += "begin key-value pair";
+    return ok;
+  }
+
+  bool end_key_value_pair() override {
+    indent -= 2;
+    new_line();
+    log += "end key-value pair";
+    return ok;
+  }
+
+  bool begin_sequence(size_t& size) override {
     size = 0;
     new_line();
     indent += 2;
@@ -287,15 +167,38 @@ struct testee : load_inspector_base<testee> {
     return ok;
   }
 
-  bool end_sequence() {
+  bool end_sequence() override {
     indent -= 2;
     new_line();
     log += "end sequence";
     return ok;
   }
 
+  bool begin_associative_array(size_t& size) override {
+    size = 0;
+    new_line();
+    indent += 2;
+    log += "begin associative array of size ";
+    log += std::to_string(size);
+    return ok;
+  }
+
+  bool end_associative_array() override {
+    indent -= 2;
+    new_line();
+    log += "end associative array";
+    return ok;
+  }
+
+  bool value(bool& x) override {
+    new_line();
+    log += "bool value";
+    x = false;
+    return ok;
+  }
+
   template <class T>
-  std::enable_if_t<std::is_arithmetic<T>::value, bool> value(T& x) {
+  bool primitive_value(T& x) {
     new_line();
     auto tn = type_name_v<T>;
     log.insert(log.end(), tn.begin(), tn.end());
@@ -304,10 +207,67 @@ struct testee : load_inspector_base<testee> {
     return ok;
   }
 
-  bool value(std::string& x) {
+  bool value(int8_t& x) override {
+    return primitive_value(x);
+  }
+
+  bool value(uint8_t& x) override {
+    return primitive_value(x);
+  }
+
+  bool value(int16_t& x) override {
+    return primitive_value(x);
+  }
+
+  bool value(uint16_t& x) override {
+    return primitive_value(x);
+  }
+
+  bool value(int32_t& x) override {
+    return primitive_value(x);
+  }
+
+  bool value(uint32_t& x) override {
+    return primitive_value(x);
+  }
+
+  bool value(int64_t& x) override {
+    return primitive_value(x);
+  }
+
+  bool value(uint64_t& x) override {
+    return primitive_value(x);
+  }
+
+  bool value(float& x) override {
+    return primitive_value(x);
+  }
+
+  bool value(double& x) override {
+    return primitive_value(x);
+  }
+
+  bool value(long double& x) override {
+    return primitive_value(x);
+  }
+
+  bool value(std::string& x) override {
+    return primitive_value(x);
+  }
+
+  bool value(std::u16string& x) override {
+    return primitive_value(x);
+  }
+
+  bool value(std::u32string& x) override {
+    return primitive_value(x);
+  }
+
+  bool value(span<byte> xs) override {
     new_line();
-    log += "std::string value";
-    x.clear();
+    log += "caf::span<caf::byte> value";
+    for (auto& x : xs)
+      x = byte{0};
     return ok;
   }
 };
@@ -566,7 +526,7 @@ CAF_TEST(load inspectors support all basic STL types) {
   CAF_CHECK_EQUAL(f.log, R"_(
 begin object basics
   begin field v1
-    begin object tag
+    begin object anonymous
     end object
   end field
   begin field v2
@@ -611,8 +571,8 @@ begin object basics
     end tuple
   end field
   begin field v7
-    begin sequence of size 0
-    end sequence
+    begin associative array of size 0
+    end associative array
   end field
   begin field v8
     begin sequence of size 0

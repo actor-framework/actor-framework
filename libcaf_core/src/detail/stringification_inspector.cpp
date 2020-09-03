@@ -104,14 +104,6 @@ bool stringification_inspector::end_sequence() {
   return ok;
 }
 
-bool stringification_inspector::begin_tuple(size_t size) {
-  return begin_sequence(size);
-}
-
-bool stringification_inspector::end_tuple() {
-  return end_sequence();
-}
-
 bool stringification_inspector::value(bool x) {
   sep();
   result_ += x ? "true" : "false";

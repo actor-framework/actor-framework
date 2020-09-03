@@ -71,13 +71,33 @@ public:
 
   bool end_field();
 
+  bool begin_tuple(size_t size) {
+    return begin_sequence(size);
+  }
+
+  bool end_tuple() {
+    return end_sequence();
+  }
+
+  bool begin_key_value_pair() {
+    return begin_tuple(2);
+  }
+
+  bool end_key_value_pair() {
+    return end_tuple();
+  }
+
   bool begin_sequence(size_t size);
 
   bool end_sequence();
 
-  bool begin_tuple(size_t size);
+  bool begin_associative_array(size_t size) {
+    return begin_sequence(size);
+  }
 
-  bool end_tuple();
+  bool end_associative_array() {
+    return end_sequence();
+  }
 
   bool value(bool x);
 

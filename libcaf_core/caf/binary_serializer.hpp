@@ -124,10 +124,26 @@ public:
     return ok;
   }
 
+  constexpr bool begin_key_value_pair() {
+    return ok;
+  }
+
+  constexpr bool end_key_value_pair() {
+    return ok;
+  }
+
   bool begin_sequence(size_t list_size);
 
   constexpr bool end_sequence() {
     return ok;
+  }
+
+  bool begin_associative_array(size_t size) {
+    return begin_sequence(size);
+  }
+
+  bool end_associative_array() {
+    return end_sequence();
   }
 
   bool value(byte x);

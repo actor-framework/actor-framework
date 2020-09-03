@@ -93,11 +93,28 @@ public:
   /// Ends processing of a tuple.
   virtual bool end_tuple() = 0;
 
+  /// Begins processing of a tuple with two elements, whereas the first element
+  /// represents the key in an associative array.
+  /// @note the default implementation calls `begin_tuple(2)`.
+  virtual bool begin_key_value_pair();
+
+  /// Ends processing of a key-value pair after both values were written.
+  /// @note the default implementation calls `end_tuple()`.
+  virtual bool end_key_value_pair();
+
   /// Begins processing of a sequence. Saves the size to the underlying storage.
   virtual bool begin_sequence(size_t size) = 0;
 
   /// Ends processing of a sequence.
   virtual bool end_sequence() = 0;
+
+  /// Begins processing of an associative array (map).
+  /// @note the default implementation calls `begin_sequence(size)`.
+  virtual bool begin_associative_array(size_t size);
+
+  /// Ends processing of an associative array (map).
+  /// @note the default implementation calls `end_sequence()`.
+  virtual bool end_associative_array();
 
   /// Adds the primitive type `x` to the output.
   /// @param x The primitive value.

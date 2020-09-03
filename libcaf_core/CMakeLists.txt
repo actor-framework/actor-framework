@@ -158,6 +158,7 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/sec_strings.cpp
   src/serializer.cpp
   src/settings.cpp
+  src/settings_writer.cpp
   src/size_based_credit_controller.cpp
   src/skip.cpp
   src/stream_aborter.cpp
@@ -177,6 +178,7 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/timestamp.cpp
   src/tracing_data.cpp
   src/tracing_data_factory.cpp
+  src/type_id.cpp
   src/type_id_list.cpp
   src/uri.cpp
   src/uri_builder.cpp
@@ -310,6 +312,7 @@ caf_add_test_suites(caf-core-test
   serial_reply
   serialization
   settings
+  settings_writer
   simple_timeout
   span
   stateful_actor

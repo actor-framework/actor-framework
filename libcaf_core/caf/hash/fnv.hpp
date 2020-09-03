@@ -93,11 +93,27 @@ public:
     return true;
   }
 
+  constexpr bool begin_key_value_pair() {
+    return true;
+  }
+
+  constexpr bool end_key_value_pair() {
+    return true;
+  }
+
   constexpr bool begin_sequence(size_t) {
     return true;
   }
 
   constexpr bool end_sequence() {
+    return true;
+  }
+
+  constexpr bool begin_associative_array(size_t) {
+    return true;
+  }
+
+  constexpr bool end_associative_array() {
     return true;
   }
 

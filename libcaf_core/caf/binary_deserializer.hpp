@@ -138,10 +138,26 @@ public:
     return ok;
   }
 
+  constexpr bool begin_key_value_pair() noexcept {
+    return ok;
+  }
+
+  constexpr bool end_key_value_pair() noexcept {
+    return ok;
+  }
+
   bool begin_sequence(size_t& list_size) noexcept;
 
   constexpr bool end_sequence() noexcept {
     return ok;
+  }
+
+  bool begin_associative_array(size_t& size) noexcept {
+    return begin_sequence(size);
+  }
+
+  bool end_associative_array() noexcept {
+    return end_sequence();
   }
 
   bool value(bool& x) noexcept;

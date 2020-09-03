@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,48 +16,24 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/serializer.hpp"
+#include "caf/type_id.hpp"
 
-#include "caf/actor_system.hpp"
+#include "caf/detail/meta_object.hpp"
 
 namespace caf {
 
-serializer::serializer(actor_system& sys) noexcept
-  : context_(sys.dummy_execution_unit()) {
-  // nop
+string_view query_type_name(type_id_t type) {
+  if (auto ptr = detail::global_meta_object(type))
+    return ptr->type_name;
+  return {};
 }
 
-serializer::serializer(execution_unit* ctx) noexcept : context_(ctx) {
-  // nop
-}
-
-serializer::~serializer() {
-  // nop
-}
-
-bool serializer::begin_key_value_pair() {
-  return begin_tuple(2);
-}
-
-bool serializer::end_key_value_pair() {
-  return end_tuple();
-}
-
-bool serializer::begin_associative_array(size_t size) {
-  return begin_sequence(size);
-}
-
-bool serializer::end_associative_array() {
-  return end_sequence();
-}
-
-bool serializer::value(const std::vector<bool>& xs) {
-  if (!begin_sequence(xs.size()))
-    return false;
-  for (bool x : xs)
-    if (!value(x))
-      return false;
-  return end_sequence();
+type_id_t query_type_id(string_view name) {
+  auto objects = detail::global_meta_objects();
+  for (size_t index = 0; index < objects.size(); ++index)
+    if (objects[index].type_name == name)
+      return static_cast<type_id_t>(index);
+  return invalid_type_id;
 }
 
 } // namespace caf

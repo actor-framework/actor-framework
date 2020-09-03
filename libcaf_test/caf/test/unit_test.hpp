@@ -546,26 +546,29 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
   } while (false)
 
 #define CAF_CHECK(...)                                                         \
-  do {                                                                         \
-    static_cast<void>(::caf::test::detail::check(                              \
-      ::caf::test::engine::current_test(), __FILE__, __LINE__, #__VA_ARGS__,   \
-      false, static_cast<bool>(__VA_ARGS__)));                                 \
+  ([&] {                                                                       \
+    auto caf_check_res                                                         \
+      = ::caf::test::detail::check(::caf::test::engine::current_test(),        \
+                                   __FILE__, __LINE__, #__VA_ARGS__, false,    \
+                                   static_cast<bool>(__VA_ARGS__));            \
     ::caf::test::engine::last_check_file(__FILE__);                            \
     ::caf::test::engine::last_check_line(__LINE__);                            \
-  } while (false)
+    return caf_check_res;                                                      \
+  })()
 
 #define CAF_CHECK_FUNC(func, x_expr, y_expr)                                   \
-  do {                                                                         \
+  ([&] {                                                                       \
     func comparator;                                                           \
     auto&& x_val___ = x_expr;                                                  \
     auto&& y_val___ = y_expr;                                                  \
-    static_cast<void>(::caf::test::detail::check(                              \
+    auto caf_check_res = ::caf::test::detail::check(                           \
       ::caf::test::engine::current_test(), __FILE__, __LINE__,                 \
       CAF_FUNC_EXPR(func, x_expr, y_expr), false,                              \
-      comparator(x_val___, y_val___), x_val___, y_val___));                    \
+      comparator(x_val___, y_val___), x_val___, y_val___);                     \
     ::caf::test::engine::last_check_file(__FILE__);                            \
     ::caf::test::engine::last_check_line(__LINE__);                            \
-  } while (false)
+    return caf_check_res;                                                      \
+  })()
 
 #define CAF_CHECK_FAIL(...)                                                    \
   do {                                                                         \
