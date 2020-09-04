@@ -337,7 +337,7 @@ resumable::resume_result scheduled_actor::resume(execution_unit* ctx,
     return run_with_metrics(x, [this, max_throughput, &consumed, &q, &x] {
       current_mailbox_element(&x);
       CAF_LOG_RECEIVE_EVENT((&x));
-      CAF_BEFORE_PROCESSING(self, x);
+      CAF_BEFORE_PROCESSING(this, x);
       CAF_ASSERT(x.content().match_elements<downstream_msg>());
       auto& dm = x.content().get_mutable_as<downstream_msg>(0);
       auto f = [&, this](auto& content) {
@@ -383,7 +383,7 @@ resumable::resume_result scheduled_actor::resume(execution_unit* ctx,
         return intrusive::task_result::resume;
       };
       auto res = visit(f, dm.content);
-      CAF_AFTER_PROCESSING(self, invoke_message_result::consumed);
+      CAF_AFTER_PROCESSING(this, invoke_message_result::consumed);
       return ++consumed < max_throughput ? res
                                          : intrusive::task_result::stop_all;
     });
