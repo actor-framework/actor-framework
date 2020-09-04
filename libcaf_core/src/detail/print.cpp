@@ -24,7 +24,11 @@ namespace caf::detail {
 
 size_t print_timestamp(char* buf, size_t buf_size, time_t ts, size_t ms) {
   tm time_buf;
+#ifdef CAF_MSVC
+  localtime_s(&time_buf, &ts);
+#else
   localtime_r(&ts, &time_buf);
+#endif
   auto pos = strftime(buf, buf_size, "%FT%T", &time_buf);
   buf[pos++] = '.';
   if (ms > 0) {
