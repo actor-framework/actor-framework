@@ -64,7 +64,6 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/binary_deserializer.cpp
   src/binary_serializer.cpp
   src/blocking_actor.cpp
-  src/complexity_based_credit_controller.cpp
   src/config_option.cpp
   src/config_option_adder.cpp
   src/config_option_set.cpp
@@ -97,11 +96,14 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/detail/set_thread_name.cpp
   src/detail/shared_spinlock.cpp
   src/detail/simple_actor_clock.cpp
+  src/detail/size_based_credit_controller.cpp
   src/detail/stringification_inspector.cpp
   src/detail/sync_request_bouncer.cpp
   src/detail/test_actor_clock.cpp
   src/detail/thread_safe_actor_clock.cpp
   src/detail/tick_emitter.cpp
+  src/detail/token_based_credit_controller.cpp
+  src/detail/token_based_credit_controller.cpp
   src/detail/type_id_list_builder.cpp
   src/detail/uri_impl.cpp
   src/downstream_manager.cpp
@@ -156,7 +158,6 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/sec_strings.cpp
   src/serializer.cpp
   src/settings.cpp
-  src/size_based_credit_controller.cpp
   src/skip.cpp
   src/stream_aborter.cpp
   src/stream_manager.cpp
@@ -170,7 +171,6 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/telemetry/metric_family.cpp
   src/telemetry/metric_registry.cpp
   src/term.cpp
-  src/test_credit_controller.cpp
   src/thread_hook.cpp
   src/timestamp.cpp
   src/tracing_data.cpp

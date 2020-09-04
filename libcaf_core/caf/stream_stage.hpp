@@ -59,7 +59,7 @@ public:
   }
 
   DownstreamManager& out() override {
-    return left_super::out();
+    return this->out_;
   }
 };
 

@@ -25,12 +25,15 @@
 
 #include "caf/actor.hpp"
 #include "caf/actor_cast.hpp"
+#include "caf/actor_clock.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/fwd.hpp"
+#include "caf/inbound_path.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/stream.hpp"
 #include "caf/stream_slot.hpp"
+#include "caf/timespan.hpp"
 #include "caf/upstream_msg.hpp"
 
 namespace caf {
@@ -54,7 +57,14 @@ public:
 
   // -- member types -----------------------------------------------------------
 
+  using inbound_path_ptr = std::unique_ptr<inbound_path>;
+
   using inbound_paths_list = std::vector<inbound_path*>;
+
+  /// Discrete point in time.
+  using time_point = typename actor_clock::time_point;
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   stream_manager(scheduled_actor* selfptr,
                  stream_priority prio = stream_priority::normal);
@@ -83,10 +93,6 @@ public:
   /// buffers of in- and outbound paths.
   virtual void shutdown();
 
-  /// Tries to advance the stream by generating more credit or by sending
-  /// batches.
-  void advance();
-
   /// Pushes new data to downstream actors by sending batches. The amount of
   /// pushed data is limited by the available credit.
   virtual void push();
@@ -107,7 +113,7 @@ public:
   /// messages.
   virtual bool generate_messages();
 
-  // -- pure virtual member functions ------------------------------------------
+  // -- interface functions ----------------------------------------------------
 
   /// Returns the manager for downstream communication.
   virtual downstream_manager& out() = 0;
@@ -127,6 +133,11 @@ public:
   /// Advances time.
   virtual void cycle_timeout(size_t cycle_nr);
 
+  /// Acquires credit on an inbound path. The calculated credit to fill our
+  /// queue for two cycles is `desired`, but the manager is allowed to return
+  /// any non-negative value.
+  virtual int32_t acquire_credit(inbound_path* path, int32_t desired);
+
   // -- input path management --------------------------------------------------
 
   /// Informs the manager that a new input path opens.
@@ -138,6 +149,16 @@ public:
   /// @note The lifetime of inbound paths is managed by the downstream queue.
   ///       This function is called from the destructor of `inbound_path`.
   virtual void deregister_input_path(inbound_path* x) noexcept;
+
+  /// Creates an inbound path to the current sender without any type checking.
+  /// @pre `current_sender() != nullptr`
+  /// @pre `out().terminal() == false`
+  /// @private
+  template <class In>
+  stream_slot add_unchecked_inbound_path(stream<In> in) {
+    auto path = std::make_unique<inbound_path>(this, in);
+    return add_unchecked_inbound_path_impl(type_id_v<In>, std::move(path));
+  }
 
   /// Removes an input path
   virtual void remove_input_path(stream_slot slot, error reason, bool silent);
@@ -180,14 +201,11 @@ public:
   bool inbound_paths_idle() const noexcept;
 
   /// Returns the parent actor.
-  scheduled_actor* self() {
+  scheduled_actor* self() noexcept {
     return self_;
   }
 
-  /// Acquires credit on an inbound path. The calculated credit to fill our
-  /// queue for two cycles is `desired`, but the manager is allowed to return
-  /// any non-negative value.
-  virtual int32_t acquire_credit(inbound_path* path, int32_t desired);
+  // -- output path management -------------------------------------------------
 
   /// Creates an outbound path to the current sender without any type checking.
   /// @pre `out().terminal() == false`
@@ -241,15 +259,6 @@ public:
                                             std::move(handshake));
   }
 
-  /// Creates an inbound path to the current sender without any type checking.
-  /// @pre `current_sender() != nullptr`
-  /// @pre `out().terminal() == false`
-  /// @private
-  template <class In>
-  stream_slot add_unchecked_inbound_path(stream<In>) {
-    return add_unchecked_inbound_path_impl(type_id_v<In>);
-  }
-
   /// Adds a new outbound path to `rp.next()`.
   /// @private
   stream_slot
@@ -264,9 +273,9 @@ public:
   /// @private
   stream_slot add_unchecked_outbound_path_impl(message handshake);
 
-  /// Adds the current sender as an inbound path.
-  /// @pre Current message is an `open_stream_msg`.
-  stream_slot add_unchecked_inbound_path_impl(type_id_t rtti);
+  // -- time management --------------------------------------------------------
+
+  void tick(time_point now);
 
 protected:
   // -- modifiers for self -----------------------------------------------------
@@ -295,6 +304,11 @@ protected:
   /// implementation does nothing.
   virtual void output_closed(error reason);
 
+  /// Adds the current sender as an inbound path.
+  /// @pre Current message is an `open_stream_msg`.
+  stream_slot add_unchecked_inbound_path_impl(type_id_t input_type,
+                                              inbound_path_ptr path);
+
   // -- member variables -------------------------------------------------------
 
   /// Points to the parent actor.
@@ -311,6 +325,10 @@ protected:
 
   /// Stores individual flags, for continuous streaming or when shutting down.
   int flags_;
+
+  /// Stores the maximum amount of time outbound paths should buffer elements
+  /// before sending underful batches.
+  timespan max_batch_delay_;
 
 private:
   void setf(int flag) noexcept {

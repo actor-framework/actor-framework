@@ -94,6 +94,10 @@ void local_actor::setup_metrics() {
   metrics_ = make_instance_metrics(this);
 }
 
+auto local_actor::now() const noexcept -> clock_type::time_point {
+  return clock().now();
+}
+
 void local_actor::request_response_timeout(timespan timeout, message_id mid) {
   CAF_LOG_TRACE(CAF_ARG(timeout) << CAF_ARG(mid));
   if (timeout == infinite)

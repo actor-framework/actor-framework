@@ -100,7 +100,7 @@ public:
                          desired);
     desired *= 2;
     auto stored = buffered();
-    return stored < desired ? desired - stored : 0u;
+    return desired > stored ? desired - stored : 0u;
   }
 
   size_t buffered() const noexcept override {

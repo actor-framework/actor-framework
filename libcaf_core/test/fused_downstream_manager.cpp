@@ -200,10 +200,6 @@ public:
     CAF_LOG_ERROR("received unexpected batch type (dropped)");
   }
 
-  bool congested() const noexcept override {
-    return out_.capacity() == 0;
-  }
-
   fused_manager& out() noexcept override {
     return out_;
   }

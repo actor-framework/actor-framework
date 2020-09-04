@@ -32,67 +32,34 @@ public:
   // -- member types -----------------------------------------------------------
 
   /// Wraps an assignment of the controller to its source.
-  struct CAF_CORE_EXPORT assignment {
-    /// Stores how much credit we assign to the source.
-    int32_t credit;
+  struct calibration {
+    /// Stores how much credit the path may emit at most.
+    int32_t max_credit;
 
     /// Stores how many elements we demand per batch.
     int32_t batch_size;
+
+    /// Stores how many batches the caller should wait before calling
+    /// `calibrate` again.
+    int32_t next_calibration;
   };
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit credit_controller(scheduled_actor* self);
-
   virtual ~credit_controller();
-
-  // -- properties -------------------------------------------------------------
-
-  scheduled_actor* self() noexcept {
-    return self_;
-  }
 
   // -- pure virtual functions -------------------------------------------------
 
   /// Called before processing the batch `x` in order to allow the controller
   /// to keep statistics on incoming batches.
-  virtual void before_processing(downstream_msg::batch& x) = 0;
+  virtual void before_processing(downstream_msg::batch& batch) = 0;
 
-  /// Called after processing the batch `x` in order to allow the controller to
-  /// keep statistics on incoming batches.
-  /// @note The consumer may alter the batch while processing it, for example
-  ///       by moving each element of the batch downstream.
-  virtual void after_processing(downstream_msg::batch& x) = 0;
-
-  /// Assigns initial credit during the stream handshake.
-  /// @returns The initial credit for the new sources.
-  virtual assignment compute_initial() = 0;
-
-  /// Assigs new credit to the source after a cycle ends.
-  /// @param cycle Duration of a cycle.
-  /// @param max_downstream_credit Maximum downstream capacity as reported by
-  ///                              the downstream manager. Controllers may use
-  ///                              this capacity as an upper bound.
-  virtual assignment compute(timespan cycle, int32_t max_downstream_credit) = 0;
-
-  // -- virtual functions ------------------------------------------------------
+  /// Returns an initial calibration for the path.
+  virtual calibration init() = 0;
 
   /// Computes a credit assignment to the source after crossing the
   /// low-threshold. May assign zero credit.
-  virtual assignment compute_bridge();
-
-  /// Returns the threshold for when we may give extra credit to a source
-  /// during a cycle.
-  /// @returns Zero or a negative value if the controller never grants bridge
-  ///          credit, otherwise the threshold for calling `compute_bridge` to
-  ///          generate additional credit.
-  virtual int32_t threshold() const noexcept;
-
-private:
-  // -- member variables -------------------------------------------------------
-
-  /// Points to the parent system.
-  scheduled_actor* self_;
+  virtual calibration calibrate() = 0;
 };
 
 } // namespace caf

@@ -16,40 +16,45 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#include "caf/detail/token_based_credit_controller.hpp"
 
-#include "caf/credit_controller.hpp"
+#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
+#include "caf/config_value.hpp"
+#include "caf/defaults.hpp"
+#include "caf/detail/serialized_size.hpp"
+#include "caf/local_actor.hpp"
+#include "caf/settings.hpp"
 
-namespace caf {
-namespace detail {
+namespace caf::detail {
 
-/// Computes predictable credit in unit tests.
-class test_credit_controller : public credit_controller {
-public:
-  // -- member types -----------------------------------------------------------
+token_based_credit_controller::token_based_credit_controller(local_actor* ptr) {
+  namespace fallback = defaults::stream::token_policy;
+  // Initialize from the config parameters.
+  auto& cfg = ptr->system().config();
+  if (auto section = get_if<settings>(&cfg, "caf.stream.token-based-policy")) {
+    batch_size_ = get_or(*section, "batch-size", fallback::batch_size);
+    buffer_size_ = get_or(*section, "buffer-size", fallback::buffer_size);
+  } else {
+    batch_size_ = fallback::batch_size;
+    buffer_size_ = fallback::buffer_size;
+  }
+}
 
-  using super = credit_controller;
+token_based_credit_controller::~token_based_credit_controller() {
+  // nop
+}
 
-  // -- constructors, destructors, and assignment operators --------------------
+void token_based_credit_controller::before_processing(downstream_msg::batch&) {
+  // nop
+}
 
-  using super::super;
+credit_controller::calibration token_based_credit_controller::init() {
+  return calibrate();
+}
 
-  ~test_credit_controller() override;
+credit_controller::calibration token_based_credit_controller::calibrate() {
+  return {buffer_size_, batch_size_, std::numeric_limits<int32_t>::max()};
+}
 
-  // -- overrides --------------------------------------------------------------
-
-  void before_processing(downstream_msg::batch& x) override;
-
-  void after_processing(downstream_msg::batch& x) override;
-
-  assignment compute_initial() override;
-
-  assignment compute(timespan cycle, int32_t) override;
-
-private:
-  /// Total number of elements in all processed batches in the current cycle.
-  int64_t num_elements_ = 0;
-};
-
-} // namespace detail
-} // namespace caf
+} // namespace caf::detail

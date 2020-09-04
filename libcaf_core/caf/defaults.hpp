@@ -33,19 +33,59 @@
 
 namespace caf::defaults::stream {
 
-constexpr auto desired_batch_complexity = timespan{50'000};
-constexpr auto max_batch_delay = timespan{5'000'000};
-constexpr auto credit_round_interval = timespan{10'000'000};
-constexpr auto credit_policy = string_view{"complexity"};
+constexpr auto max_batch_delay = timespan{1'000'000};
+
+/// Configures an algorithm for assigning credit and adjusting batch sizes.
+///
+/// The `size-based` controller (default) samples how many Bytes stream elements
+/// occupy when serialized to CAF's binary wire format.
+///
+/// The `token-based` controller associates each stream element with one token.
+/// Input buffer and batch sizes are then statically defined in terms of tokens.
+/// This strategy makes no dynamic adjustment or sampling.
+constexpr auto credit_policy = string_view{"size-based"};
+
+[[deprecated("this parameter no longer has any effect")]] //
+constexpr auto credit_round_interval
+  = max_batch_delay;
 
 } // namespace caf::defaults::stream
 
 namespace caf::defaults::stream::size_policy {
 
-constexpr auto bytes_per_batch = int32_t{02 * 1024}; //  2 KB
+/// Desired size of a single batch in Bytes, when serialized into CAF's binary
+/// wire format.
+constexpr auto bytes_per_batch = int32_t{2 * 1024}; //  2 KB
+
+/// Number of Bytes (over all received elements) an inbound path may buffer.
+/// Actors use heuristics for calculating the estimated memory use, so actors
+/// may still allocate more memory in practice.
 constexpr auto buffer_capacity = int32_t{64 * 1024}; // 64 KB
 
+/// Frequency of computing the serialized size of incoming batches. Smaller
+/// values may increase accuracy, but also add computational overhead.
+constexpr auto sampling_rate = int32_t{100};
+
+/// Frequency of re-calibrating batch sizes. For example, a calibration interval
+/// of 10 and a sampling rate of 20 causes the actor to re-calibrate every 200
+/// batches.
+constexpr auto calibration_interval = int32_t{20};
+
+/// Value between 0 and 1 representing the degree of weighting decrease for
+/// adjusting batch sizes. A higher factor discounts older observations faster.
+constexpr auto smoothing_factor = float{0.6};
+
 } // namespace caf::defaults::stream::size_policy
+
+namespace caf::defaults::stream::token_policy {
+
+/// Number of elements in a single batch.
+constexpr auto batch_size = int32_t{256}; // 2 KB for elements of size 8.
+
+/// Maximum number of elements in the input buffer.
+constexpr auto buffer_size = int32_t{4096}; // // 32 KB for elements of size 8.
+
+} // namespace caf::defaults::stream::token_policy
 
 namespace caf::defaults::scheduler {
 

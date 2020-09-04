@@ -73,12 +73,6 @@ public:
     // nop
   }
 
-  /// Can mark the stage as congested. The default implementation signals a
-  /// congestion if the downstream manager has no capacity left in its buffer.
-  virtual bool congested() const noexcept {
-    return out_.capacity() == 0;
-  }
-
   /// Acquires credit on an inbound path. The calculated credit to fill our
   /// queue for two cycles is `desired`, but the driver is allowed to return
   /// any non-negative value.

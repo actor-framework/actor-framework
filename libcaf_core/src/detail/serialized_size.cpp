@@ -46,7 +46,7 @@ error serialized_size_inspector::begin_sequence(size_t list_size) {
     x >>= 7;
   }
   *i++ = static_cast<uint8_t>(x) & 0x7f;
-  result_ += static_cast<size_t>(i - buf);
+  result += static_cast<size_t>(i - buf);
   return none;
 }
 
@@ -55,57 +55,57 @@ error serialized_size_inspector::end_sequence() {
 }
 
 error serialized_size_inspector::apply(bool) {
-  result_ += sizeof(uint8_t);
+  result += sizeof(uint8_t);
   return none;
 }
 
 error serialized_size_inspector::apply(int8_t x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return none;
 }
 
 error serialized_size_inspector::apply(uint8_t x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return none;
 }
 
 error serialized_size_inspector::apply(int16_t x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return none;
 }
 
 error serialized_size_inspector::apply(uint16_t x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return none;
 }
 
 error serialized_size_inspector::apply(int32_t x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return none;
 }
 
 error serialized_size_inspector::apply(uint32_t x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return none;
 }
 
 error serialized_size_inspector::apply(int64_t x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return none;
 }
 
 error serialized_size_inspector::apply(uint64_t x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return none;
 }
 
 error serialized_size_inspector::apply(float x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return none;
 }
 
 error serialized_size_inspector::apply(double x) {
-  result_ += sizeof(x);
+  result += sizeof(x);
   return none;
 }
 
@@ -120,30 +120,30 @@ error serialized_size_inspector::apply(long double x) {
 
 error serialized_size_inspector::apply(string_view x) {
   CAF_IGNORE_UNUSED(begin_sequence(x.size()));
-  result_ += x.size();
+  result += x.size();
   return end_sequence();
 }
 
 error serialized_size_inspector::apply(const std::u16string& x) {
   CAF_IGNORE_UNUSED(begin_sequence(x.size()));
-  result_ += x.size() * sizeof(uint16_t);
+  result += x.size() * sizeof(uint16_t);
   return end_sequence();
 }
 
 error serialized_size_inspector::apply(const std::u32string& x) {
   CAF_IGNORE_UNUSED(begin_sequence(x.size()));
-  result_ += x.size() * sizeof(uint32_t);
+  result += x.size() * sizeof(uint32_t);
   return end_sequence();
 }
 
 error serialized_size_inspector::apply(span<const byte> x) {
-  result_ += x.size();
+  result += x.size();
   return none;
 }
 
 error serialized_size_inspector::apply(const std::vector<bool>& xs) {
   CAF_IGNORE_UNUSED(begin_sequence(xs.size()));
-  result_ += (xs.size() + static_cast<size_t>(xs.size() % 8 != 0)) / 8;
+  result += (xs.size() + static_cast<size_t>(xs.size() % 8 != 0)) / 8;
   return end_sequence();
 }
 

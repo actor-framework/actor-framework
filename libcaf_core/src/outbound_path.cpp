@@ -34,14 +34,13 @@ constexpr int32_t max_batch_size = 128 * 1024;
 
 outbound_path::outbound_path(stream_slot sender_slot,
                              strong_actor_ptr receiver_hdl)
-    : slots(sender_slot, invalid_stream_slot),
-      hdl(std::move(receiver_hdl)),
-      next_batch_id(1),
-      open_credit(0),
-      desired_batch_size(50),
-      next_ack_id(1),
-      max_capacity(0),
-      closing(false) {
+  : slots(sender_slot, invalid_stream_slot),
+    hdl(std::move(receiver_hdl)),
+    next_batch_id(1),
+    open_credit(0),
+    desired_batch_size(50),
+    next_ack_id(1),
+    closing(false) {
   // nop
 }
 

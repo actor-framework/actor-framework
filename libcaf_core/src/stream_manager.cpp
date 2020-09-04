@@ -23,6 +23,7 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/defaults.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
 #include "caf/inbound_path.hpp"
@@ -37,7 +38,9 @@ namespace caf {
 
 stream_manager::stream_manager(scheduled_actor* selfptr, stream_priority prio)
   : self_(selfptr), pending_handshakes_(0), priority_(prio), flags_(0) {
-  // nop
+  auto& cfg = selfptr->config();
+  max_batch_delay_ = get_or(cfg, "caf.stream.max-batch-delay",
+                            defaults::stream::max_batch_delay);
 }
 
 stream_manager::~stream_manager() {
@@ -89,25 +92,20 @@ bool stream_manager::handle(stream_slots slots, upstream_msg::ack_open& x) {
   CAF_ASSERT(ptr->open_credit >= 0);
   ptr->set_desired_batch_size(x.desired_batch_size);
   --pending_handshakes_;
-  push();
   return true;
 }
 
 void stream_manager::handle(stream_slots slots, upstream_msg::ack_batch& x) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(x));
   CAF_ASSERT(x.desired_batch_size > 0);
-  auto path = out().path(slots.receiver);
-  if (path != nullptr) {
+  if (auto path = out().path(slots.receiver); path != nullptr) {
     path->open_credit += x.new_capacity;
-    path->max_capacity = x.max_capacity;
     CAF_ASSERT(path->open_credit >= 0);
-    CAF_ASSERT(path->max_capacity >= 0);
     path->set_desired_batch_size(x.desired_batch_size);
     path->next_ack_id = x.acknowledged_id + 1;
     // Gravefully remove path after receiving its final ACK.
     if (path->closing && out().clean(slots.receiver))
       out().remove_path(slots.receiver, none, false);
-    push();
   }
 }
 
@@ -149,28 +147,6 @@ void stream_manager::shutdown() {
     ipath->emit_regular_shutdown(self_);
 }
 
-void stream_manager::advance() {
-  CAF_LOG_TRACE("");
-  // Try to emit more credit.
-  if (!inbound_paths_.empty()) {
-    auto now = self_->clock().now();
-    auto& cfg = self_->system().config();
-    auto interval = cfg.stream_credit_round_interval;
-    auto& qs = self_->get_downstream_queue().queues();
-    // Iterate all queues for inbound traffic.
-    for (auto& kvp : qs) {
-      auto inptr = kvp.second.policy().handler.get();
-      // Ignore inbound paths of other managers.
-      if (inptr->mgr.get() == this) {
-        auto tts = static_cast<int32_t>(kvp.second.total_task_size());
-        inptr->emit_ack_batch(self_, tts, now, interval);
-      }
-    }
-  }
-  // Try to generate more batches.
-  push();
-}
-
 void stream_manager::push() {
   CAF_LOG_TRACE("");
   do {
@@ -179,7 +155,7 @@ void stream_manager::push() {
 }
 
 bool stream_manager::congested() const noexcept {
-  return false;
+  return out().capacity() == 0;
 }
 
 void stream_manager::deliver_handshake(response_promise& rp, stream_slot slot,
@@ -288,7 +264,8 @@ stream_manager::add_unchecked_outbound_path_impl(message handshake) {
 }
 
 stream_slot
-stream_manager::add_unchecked_inbound_path_impl(type_id_t input_type) {
+stream_manager::add_unchecked_inbound_path_impl(type_id_t input_type,
+                                                inbound_path_ptr ptr) {
   CAF_LOG_TRACE("");
   auto x = self_->current_mailbox_element();
   if (x == nullptr || !x->content().match_elements<open_stream_msg>()) {
@@ -311,11 +288,20 @@ stream_manager::add_unchecked_inbound_path_impl(type_id_t input_type) {
   }
   auto slot = assign_next_slot();
   stream_slots path_id{osm.slot, slot};
-  auto ptr = self_->make_inbound_path(this, path_id, std::move(osm.prev_stage),
-                                      input_type);
-  CAF_ASSERT(ptr != nullptr);
-  ptr->emit_ack_open(self_, actor_cast<actor_addr>(osm.original_stage));
+  auto raw_ptr = ptr.get();
+  ptr->init(std::move(osm.prev_stage), path_id);
+  if (!self_->add_inbound_path(input_type, std::move(ptr)))
+    return invalid_stream_slot;
+  raw_ptr->emit_ack_open(self_, actor_cast<actor_addr>(osm.original_stage));
   return slot;
+}
+
+void stream_manager::tick(time_point now) {
+  do {
+    out().tick(now, max_batch_delay_);
+    for (auto path : inbound_paths_)
+      path->tick(now, max_batch_delay_);
+  } while (generate_messages());
 }
 
 stream_slot stream_manager::assign_next_slot() {

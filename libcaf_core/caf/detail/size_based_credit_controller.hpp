@@ -19,24 +19,21 @@
 #pragma once
 
 #include "caf/credit_controller.hpp"
+#include "caf/detail/core_export.hpp"
+#include "caf/detail/serialized_size.hpp"
+#include "caf/downstream_msg.hpp"
+#include "caf/stream.hpp"
 
 namespace caf::detail {
 
 /// A credit controller that estimates the bytes required to store incoming
 /// batches and constrains credit based on upper bounds for memory usage.
-class size_based_credit_controller : public credit_controller {
+class CAF_CORE_EXPORT size_based_credit_controller : public credit_controller {
 public:
-  // -- member types -----------------------------------------------------------
-
-  using super = credit_controller;
-
   // -- constants --------------------------------------------------------------
 
-  /// Configures at what buffer level we grant bridge credit (0 to 1).
-  static constexpr float buffer_threshold = 0.75f;
-
   /// Configures how many samples we require for recalculating buffer sizes.
-  static constexpr int32_t min_samples = 10;
+  static constexpr int32_t min_samples = 50;
 
   /// Stores how many elements we buffer at most after the handshake.
   int32_t initial_buffer_size = 10;
@@ -46,54 +43,75 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit size_based_credit_controller(scheduled_actor* self);
+  explicit size_based_credit_controller(local_actor* self);
 
   ~size_based_credit_controller() override;
 
-  // -- overrides --------------------------------------------------------------
+  // -- interface functions ----------------------------------------------------
 
-  void before_processing(downstream_msg::batch& x) override;
+  calibration init() override;
 
-  void after_processing(downstream_msg::batch& x) override;
+  calibration calibrate() override;
 
-  assignment compute_initial() override;
+  // -- factory functions ------------------------------------------------------
 
-  assignment compute(timespan cycle, int32_t) override;
+  template <class T>
+  static auto make(local_actor* self, stream<T>) {
+    class impl : public size_based_credit_controller {
+      using size_based_credit_controller::size_based_credit_controller;
 
-  assignment compute_bridge() override;
+      void before_processing(downstream_msg::batch& x) override {
+        if (++this->sample_counter_ == this->sampling_rate_) {
+          this->sample_counter_ = 0;
+          this->inspector_.result = 0;
+          this->sampled_elements_ += x.xs_size;
+          for (auto& element : x.xs.get_as<std::vector<T>>(0)) {
+            auto res = this->inspector_(element);
+            static_cast<void>(res); // This inspector never produces an error.
+          }
+          this->sampled_total_size_
+            += static_cast<int64_t>(this->inspector_.result);
+        }
+      }
+    };
+    return std::make_unique<impl>(self);
+  }
 
-  int32_t threshold() const noexcept override;
-
-private:
+protected:
   // -- member variables -------------------------------------------------------
 
-  /// Total number of elements in all processed batches in the current cycle.
-  int64_t num_batches_ = 0;
+  local_actor* self_;
 
-  /// Stores how many elements the buffer should hold at most.
-  int32_t buffer_size_ = initial_buffer_size;
-
-  /// Stores how many elements each batch should contain.
-  int32_t batch_size_ = initial_batch_size;
-
-  /// Configures how many bytes we store in total.
-  int32_t buffer_capacity_;
-
-  /// Configures how many bytes we transfer per batch.
-  int32_t bytes_per_batch_;
-
-  /// Stores how many elements we have sampled during the current cycle.
-  int32_t sampled_elements_ = 0;
-
-  /// Stores approximately how many bytes the sampled elements require when
-  /// serialized.
-  int32_t sampled_total_size_ = 0;
-
-  /// Counter for keeping track of when to sample a batch.
+  /// Keeps track of when to sample a batch.
   int32_t sample_counter_ = 0;
 
-  /// Configured how many batches we skip for the size sampling.
-  int32_t sample_rate_ = 1;
+  /// Stores the last computed (moving) average for the serialized size per
+  /// element in the stream.
+  int32_t bytes_per_element_ = 0;
+
+  /// Stores how many elements were sampled since last calling `calibrate`.
+  int32_t sampled_elements_ = 0;
+
+  /// Stores how many bytes the sampled batches required when serialized.
+  int64_t sampled_total_size_ = 0;
+
+  /// Computes how many bytes elements require on the wire.
+  serialized_size_inspector inspector_;
+
+  /// Stores whether this is the first run.
+  bool initializing_ = true;
+
+  // --  see caf::defaults::stream::size_policy --------------------------------
+
+  int32_t bytes_per_batch_;
+
+  int32_t buffer_capacity_;
+
+  int32_t sampling_rate_ = 1;
+
+  int32_t calibration_interval_;
+
+  float smoothing_factor_;
 };
 
 } // namespace caf::detail

@@ -205,16 +205,10 @@ public:
   // -- stream parameters ------------------------------------------------------
 
   /// @private
-  timespan stream_desired_batch_complexity;
-
-  /// @private
   timespan stream_max_batch_delay;
 
   /// @private
   timespan stream_credit_round_interval;
-
-  /// @private
-  timespan stream_tick_duration() const noexcept;
 
   // -- OpenSSL parameters -----------------------------------------------------
 

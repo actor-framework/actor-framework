@@ -20,58 +20,33 @@
 
 #include "caf/actor_system_config.hpp"
 #include "caf/defaults.hpp"
-#include "caf/detail/complexity_based_credit_controller.hpp"
 #include "caf/detail/meta_object.hpp"
-#include "caf/detail/size_based_credit_controller.hpp"
-#include "caf/detail/test_credit_controller.hpp"
 #include "caf/logger.hpp"
 #include "caf/no_stages.hpp"
 #include "caf/scheduled_actor.hpp"
 #include "caf/send.hpp"
 #include "caf/settings.hpp"
 
-namespace caf {
-
 namespace {
 
-constexpr bool force_ack = true;
-
-void emit_ack_batch(inbound_path& path, credit_controller::assignment x,
-                    bool force_ack_msg = false) {
-  CAF_ASSERT(x.batch_size > 0);
-  auto& out = path.mgr->out();
-  path.desired_batch_size = x.batch_size;
-  int32_t new_credit = 0;
-  auto used = static_cast<int32_t>(out.buffered()) + path.assigned_credit;
-  auto guard = detail::make_scope_guard([&] {
-    if (!force_ack_msg || path.up_to_date())
-      return;
-    unsafe_send_as(path.self(), path.hdl,
-                   make<upstream_msg::ack_batch>(
-                     path.slots.invert(), path.self()->address(), 0,
-                     x.batch_size, path.last_batch_id, x.credit));
-    path.last_acked_batch_id = path.last_batch_id;
-  });
-  if (x.credit <= used)
-    return;
-  new_credit = path.mgr->acquire_credit(&path, x.credit - used);
-  if (new_credit < 1)
-    return;
-  guard.disable();
-  unsafe_send_as(path.self(), path.hdl,
-                 make<upstream_msg::ack_batch>(
-                   path.slots.invert(), path.self()->address(), new_credit,
-                   x.batch_size, path.last_batch_id, x.credit));
-  path.last_acked_batch_id = path.last_batch_id;
-  path.assigned_credit += new_credit;
+template <class T>
+void set_controller(std::unique_ptr<caf::credit_controller>& ptr,
+                    caf::local_actor* self) {
+  ptr = std::make_unique<T>(self);
 }
 
 } // namespace
 
-inbound_path::inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
-                           strong_actor_ptr ptr,
-                           [[maybe_unused]] type_id_t in_type)
-  : mgr(std::move(mgr_ptr)), hdl(std::move(ptr)), slots(id) {
+namespace caf {
+
+// -- constructors, destructors, and assignment operators ----------------------
+
+inbound_path::inbound_path(stream_manager* ptr, type_id_t in_type) : mgr(ptr) {
+  // Note: we can't include stream_manager.hpp in the header of inbound_path,
+  // because that would cause a circular reference. Hence, we also can't use an
+  // intrusive_ptr as member and instead call `ref/deref` manually.
+  CAF_ASSERT(mgr != nullptr);
+  mgr->ref();
   auto self = mgr->self();
   auto [processed_elements, input_buffer_size]
     = self->inbound_stream_metrics(in_type);
@@ -79,59 +54,96 @@ inbound_path::inbound_path(stream_manager_ptr mgr_ptr, stream_slots id,
   mgr->register_input_path(this);
   CAF_STREAM_LOG_DEBUG(self->name()
                        << "opens input stream with element type"
-                       << detail::global_meta_object(in_type)->type_name
-                       << "at slot" << id.receiver << "from" << hdl);
-  if (auto str = get_if<std::string>(&self->system().config(),
-                                     "caf.stream.credit-policy")) {
-    if (*str == "testing")
-      controller_.reset(new detail::test_credit_controller(self));
-    else if (*str == "size")
-      controller_.reset(new detail::size_based_credit_controller(self));
-    else
-      controller_.reset(new detail::complexity_based_credit_controller(self));
-  } else {
-    controller_.reset(new detail::complexity_based_credit_controller(self));
-  }
+                       << detail::global_meta_object(in_type)->type_name);
+  last_ack_time = self->now();
 }
 
 inbound_path::~inbound_path() {
   mgr->deregister_input_path(this);
+  mgr->deref();
 }
 
-void inbound_path::handle(downstream_msg::batch& x) {
-  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(x));
-  auto batch_size = x.xs_size;
-  last_batch_id = x.id;
-  CAF_STREAM_LOG_DEBUG(mgr->self()->name() << "handles batch of size"
-                       << batch_size << "on slot" << slots.receiver << "with"
-                       << assigned_credit << "assigned credit");
-  if (assigned_credit <= batch_size) {
-    assigned_credit = 0;
-    // Do not log a message when "running out of credit" for the first batch
-    // that can easily consume the initial credit in one shot.
-    CAF_STREAM_LOG_DEBUG_IF(next_credit_decision.time_since_epoch().count() > 0,
-                            mgr->self()->name()
-                              << "ran out of credit at slot" << slots.receiver);
-  } else {
-    assigned_credit -= batch_size;
-    CAF_ASSERT(assigned_credit >= 0);
-  }
-  auto threshold = controller_->threshold();
-  if (threshold >= 0 && assigned_credit <= threshold)
-    caf::emit_ack_batch(*this, controller_->compute_bridge());
-  controller_->before_processing(x);
-  mgr->handle(this, x);
-  controller_->after_processing(x);
-  mgr->push();
+void inbound_path::init(strong_actor_ptr source_hdl, stream_slots id) {
+  hdl = std::move(source_hdl);
+  slots = id;
 }
+
+// -- properties ---------------------------------------------------------------
+
+bool inbound_path::up_to_date() const noexcept {
+  return last_acked_batch_id == last_batch_id;
+}
+
+scheduled_actor* inbound_path::self() const noexcept {
+  return mgr->self();
+}
+
+int32_t inbound_path::available_credit() const noexcept {
+  // The max_credit may decrease as a result of re-calibration, in which case
+  // the source can have more than the maximum amount for a brief period.
+  return std::max(max_credit - assigned_credit, int32_t{0});
+}
+
+const settings& inbound_path::config() const noexcept {
+  return content(mgr->self()->config());
+}
+
+// -- callbacks ----------------------------------------------------------------
+
+void inbound_path::handle(downstream_msg::batch& batch) {
+  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(batch));
+  // Handle batch.
+  auto batch_size = batch.xs_size;
+  last_batch_id = batch.id;
+  CAF_STREAM_LOG_DEBUG(self()->name() << "handles batch of size" << batch_size
+                                      << "on slot" << slots.receiver << "with"
+                                      << assigned_credit << "assigned credit");
+  assigned_credit -= batch_size;
+  CAF_ASSERT(assigned_credit >= 0);
+  controller_->before_processing(batch);
+  mgr->handle(this, batch);
+  // Update settings as necessary.
+  if (--calibration_countdown == 0) {
+    auto [cmax, bsize, countdown] = controller_->calibrate();
+    max_credit = cmax;
+    desired_batch_size = bsize;
+    calibration_countdown = countdown;
+  }
+  // Send ACK whenever we can assign credit for another batch to the source.
+  if (auto available = available_credit(); available >= desired_batch_size)
+    if (auto acquired = mgr->acquire_credit(this, available); acquired > 0)
+      emit_ack_batch(self(), acquired);
+}
+
+void inbound_path::tick(time_point now, duration_type max_batch_delay) {
+  if (now >= last_ack_time + (2 * max_batch_delay)) {
+    int32_t new_credit = 0;
+    if (auto available = available_credit(); available > 0)
+      new_credit = mgr->acquire_credit(this, available);
+    emit_ack_batch(self(), new_credit);
+  }
+}
+
+void inbound_path::handle(downstream_msg::close& x) {
+  mgr->handle(this, x);
+}
+
+void inbound_path::handle(downstream_msg::forced_close& x) {
+  mgr->handle(this, x);
+}
+
+// -- messaging ----------------------------------------------------------------
 
 void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(rebind_from));
   // Update state.
-  auto initial = controller_->compute_initial();
-  assigned_credit = mgr->acquire_credit(this, initial.credit);
-  CAF_ASSERT(assigned_credit >= 0);
-  desired_batch_size = std::min(initial.batch_size, assigned_credit);
+  auto [cmax, bsize, countdown] = controller_->init();
+  max_credit = cmax;
+  desired_batch_size = bsize;
+  calibration_countdown = countdown;
+  if (auto available = available_credit(); available > 0)
+    if (auto acquired = mgr->acquire_credit(this, available); acquired > 0)
+      assigned_credit += acquired;
   // Make sure we receive errors from this point on.
   stream_aborter::add(hdl, self->address(), slots.receiver,
                       stream_aborter::source_aborter);
@@ -140,21 +152,21 @@ void inbound_path::emit_ack_open(local_actor* self, actor_addr rebind_from) {
                  make<upstream_msg::ack_open>(
                    slots.invert(), self->address(), std::move(rebind_from),
                    self->ctrl(), assigned_credit, desired_batch_size));
-  last_credit_decision = self->clock().now();
+  last_ack_time = self->now();
 }
 
-void inbound_path::emit_ack_batch(local_actor*, int32_t,
-                                  actor_clock::time_point now, timespan cycle) {
-  CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(cycle));
-  last_credit_decision = now;
-  next_credit_decision = now + cycle;
-  auto max_capacity = static_cast<int32_t>(mgr->out().max_capacity());
-  caf::emit_ack_batch(*this, controller_->compute(cycle, max_capacity),
-                      force_ack);
-}
-
-bool inbound_path::up_to_date() {
-  return last_acked_batch_id == last_batch_id;
+void inbound_path::emit_ack_batch(local_actor* self, int32_t new_credit) {
+  CAF_LOG_TRACE(CAF_ARG(new_credit));
+  CAF_ASSERT(desired_batch_size > 0);
+  if (last_acked_batch_id == last_batch_id && new_credit == 0)
+    return;
+  unsafe_send_as(self, hdl,
+                 make<upstream_msg::ack_batch>(slots.invert(), self->address(),
+                                               new_credit, desired_batch_size,
+                                               last_batch_id));
+  last_acked_batch_id = last_batch_id;
+  assigned_credit += new_credit;
+  last_ack_time = self->now();
 }
 
 void inbound_path::emit_regular_shutdown(local_actor* self) {
@@ -183,10 +195,6 @@ void inbound_path::emit_irregular_shutdown(local_actor* self,
   anon_send(actor_cast<actor>(hdl),
             make<upstream_msg::forced_drop>(slots.invert(), self->address(),
                                             std::move(reason)));
-}
-
-scheduled_actor* inbound_path::self() {
-  return mgr->self();
 }
 
 } // namespace caf

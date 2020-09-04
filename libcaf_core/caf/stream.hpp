@@ -19,10 +19,7 @@
 #pragma once
 
 #include "caf/fwd.hpp"
-#include "caf/invalid_stream.hpp"
 #include "caf/meta/type_name.hpp"
-#include "caf/stream_manager.hpp"
-#include "caf/stream_slot.hpp"
 #include "caf/type_id.hpp"
 
 namespace caf {
