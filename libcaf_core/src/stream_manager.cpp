@@ -92,15 +92,13 @@ bool stream_manager::handle(stream_slots slots, upstream_msg::ack_open& x) {
   CAF_ASSERT(ptr->open_credit >= 0);
   ptr->set_desired_batch_size(x.desired_batch_size);
   --pending_handshakes_;
-  push();
   return true;
 }
 
 void stream_manager::handle(stream_slots slots, upstream_msg::ack_batch& x) {
   CAF_LOG_TRACE(CAF_ARG(slots) << CAF_ARG(x));
   CAF_ASSERT(x.desired_batch_size > 0);
-  auto path = out().path(slots.receiver);
-  if (path != nullptr) {
+  if (auto path = out().path(slots.receiver); path != nullptr) {
     path->open_credit += x.new_capacity;
     CAF_ASSERT(path->open_credit >= 0);
     path->set_desired_batch_size(x.desired_batch_size);
@@ -108,7 +106,6 @@ void stream_manager::handle(stream_slots slots, upstream_msg::ack_batch& x) {
     // Gravefully remove path after receiving its final ACK.
     if (path->closing && out().clean(slots.receiver))
       out().remove_path(slots.receiver, none, false);
-    push();
   }
 }
 
@@ -300,9 +297,11 @@ stream_manager::add_unchecked_inbound_path_impl(type_id_t input_type,
 }
 
 void stream_manager::tick(time_point now) {
-  for (auto path : inbound_paths_)
-    path->tick(now, max_batch_delay_);
-  out().tick(now, max_batch_delay_);
+  do {
+    out().tick(now, max_batch_delay_);
+    for (auto path : inbound_paths_)
+      path->tick(now, max_batch_delay_);
+  } while (generate_messages());
 }
 
 stream_slot stream_manager::assign_next_slot() {

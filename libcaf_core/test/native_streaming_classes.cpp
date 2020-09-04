@@ -314,7 +314,7 @@ public:
       kvp.second->tick(now());
   }
 
-  virtual bool add_inbound_path(type_id_t input_type,
+  virtual bool add_inbound_path(type_id_t,
                                 std::unique_ptr<inbound_path> path) override {
     using policy_type = policy::downstream_messages::nested;
     auto res = get<dmsg_id::value>(mbox.queues())
@@ -346,6 +346,13 @@ public:
 
   time_point now() {
     return *global_time_;
+  }
+
+  void push() {
+    if (forwarder)
+      forwarder->push();
+    for (auto mgr : active_stream_managers())
+      mgr->push();
   }
 
   // -- member variables -------------------------------------------------------
@@ -402,6 +409,7 @@ struct msg_visitor {
     );
     visit(f, um.content);
     self->current_mailbox_element(nullptr);
+    self->push();
     return intrusive::task_result::resume;
   }
 

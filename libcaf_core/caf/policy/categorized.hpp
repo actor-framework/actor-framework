@@ -67,6 +67,14 @@ public:
     return x + x;
   }
 
+  template <template <class> class Queue>
+  static deficit_type
+  quantum(const Queue<upstream_messages>& q, deficit_type) noexcept {
+    // Allow actors to consume *all* upstream messages. They are lightweight by
+    // design and require little processing.
+    return q.total_task_size();
+  }
+
   template <class Queue>
   static deficit_type quantum(const Queue&, deficit_type x) noexcept {
     return x;

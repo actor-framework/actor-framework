@@ -113,8 +113,6 @@ void inbound_path::handle(downstream_msg::batch& batch) {
   if (auto available = available_credit(); available >= desired_batch_size)
     if (auto acquired = mgr->acquire_credit(this, available); acquired > 0)
       emit_ack_batch(self(), acquired);
-  // FIXME: move this up to the actor
-  mgr->push();
 }
 
 void inbound_path::tick(time_point now, duration_type max_batch_delay) {

@@ -394,12 +394,6 @@ CAF_TEST(depth_3_pipeline_50_items) {
   auto src = sys.spawn(file_reader, 50u);
   auto stg = sys.spawn(filter);
   auto snk = sys.spawn(sum_up);
-  auto next_cycle = [&] {
-    tick();
-    allow((timeout_msg), from(snk).to(snk));
-    allow((timeout_msg), from(stg).to(stg));
-    allow((timeout_msg), from(src).to(src));
-  };
   CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(stg) << CAF_ARG(snk));
   CAF_MESSAGE("initiate stream handshake");
   self->send(snk * stg * src, "numbers.txt");
@@ -412,17 +406,9 @@ CAF_TEST(depth_3_pipeline_50_items) {
   expect((downstream_msg::batch), from(src).to(stg));
   CAF_MESSAGE("the stage should delay its first batch since its underfull");
   disallow((downstream_msg::batch), from(stg).to(snk));
-  next_cycle();
-  CAF_MESSAGE("the source shuts down and the stage sends the final batch");
-  expect((upstream_msg::ack_batch), from(stg).to(src));
-  expect((downstream_msg::close), from(src).to(stg));
-  expect((downstream_msg::batch), from(stg).to(snk));
-  next_cycle();
-  CAF_MESSAGE("the stage shuts down and the sink produces its final result");
-  expect((upstream_msg::ack_batch), from(snk).to(stg));
-  expect((downstream_msg::close), from(stg).to(snk));
+  CAF_MESSAGE("after running the pipeline the sink received all batches");
+  run();
   CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.x, 625);
-  CAF_MESSAGE("verify that each actor called its finalizer once");
   CAF_CHECK_EQUAL(deref<file_reader_actor>(src).state.fin_called, 1);
   CAF_CHECK_EQUAL(deref<filter_actor>(stg).state.fin_called, 1);
   CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.fin_called, 1);

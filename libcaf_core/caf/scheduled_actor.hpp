@@ -200,52 +200,6 @@ public:
   using exception_handler = std::function<error(pointer, std::exception_ptr&)>;
 #endif // CAF_ENABLE_EXCEPTIONS
 
-  /// Consumes messages from the mailbox.
-  struct mailbox_visitor {
-    scheduled_actor* self;
-    size_t& handled_msgs;
-    size_t max_throughput;
-    bool collect_metrics;
-
-    /// Consumes upstream messages.
-    intrusive::task_result operator()(size_t, upstream_queue&,
-                                      mailbox_element&);
-
-    /// Consumes downstream messages.
-    intrusive::task_result
-    operator()(size_t, downstream_queue&, stream_slot slot,
-               policy::downstream_messages::nested_queue_type&,
-               mailbox_element&);
-
-    // Dispatches asynchronous messages with high and normal priority to the
-    // same handler.
-    template <class Queue>
-    intrusive::task_result operator()(size_t, Queue&, mailbox_element& x) {
-      return (*this)(x);
-    }
-
-    // Consumes asynchronous messages.
-    intrusive::task_result operator()(mailbox_element& x);
-
-    template <class F>
-    intrusive::task_result run(mailbox_element& x, F body) {
-      if (collect_metrics) {
-        auto t0 = std::chrono::steady_clock::now();
-        auto mbox_time = x.seconds_until(t0);
-        auto res = body();
-        if (res != intrusive::task_result::skip) {
-          auto& builtins = self->builtin_metrics();
-          telemetry::timer::observe(builtins.processing_time, t0);
-          builtins.mailbox_time->observe(mbox_time);
-          builtins.mailbox_size->dec();
-        }
-        return res;
-      } else {
-        return body();
-      }
-    }
-  };
-
   // -- static helper functions ------------------------------------------------
 
   static void default_error_handler(pointer ptr, error& x);
@@ -517,6 +471,9 @@ public:
   /// Pushes `ptr` to the cache of the default queue.
   void push_to_cache(mailbox_element_ptr ptr);
 
+  /// Returns the queue of the mailbox that stores high priority messages.
+  urgent_queue& get_urgent_queue();
+
   /// Returns the default queue of the mailbox that stores ordinary messages.
   normal_queue& get_normal_queue();
 
@@ -525,9 +482,6 @@ public:
 
   /// Returns the queue of the mailbox that stores `downstream_msg` messages.
   downstream_queue& get_downstream_queue();
-
-  /// Returns the queue of the mailbox that stores high priority messages.
-  urgent_queue& get_urgent_queue();
 
   // -- inbound_path management ------------------------------------------------
 
@@ -569,8 +523,7 @@ public:
         return;
       }
       CAF_LOG_INFO("no manager found:" << CAF_ARG(slots));
-      // TODO: replace with `if constexpr` when switching to C++17
-      if (std::is_same<T, upstream_msg::ack_batch>::value) {
+      if constexpr (std::is_same<T, upstream_msg::ack_batch>::value) {
         // Make sure the other actor does not falsely believe us a source.
         inbound_path::emit_irregular_shutdown(this, slots, current_sender(),
                                               sec::invalid_upstream);
@@ -657,6 +610,12 @@ public:
   /// Removes the stream manager mapped to `id` in `O(log n)`.
   void erase_pending_stream_manager(stream_slot id);
 
+  /// Moves a pending stream manager to the list of active stream managers.
+  /// @returns `true` and a pointer to the moved stream manager on success,
+  ///          `false` and `nullptr` otherwise.
+  [[nodiscard]] std::pair<bool, stream_manager*>
+  ack_pending_stream_manager(stream_slot id);
+
   /// Removes all entries for `mgr` in `O(n)`.
   void erase_stream_manager(const stream_manager_ptr& mgr);
 
@@ -682,6 +641,10 @@ public:
   auto max_batch_delay() const noexcept {
     return max_batch_delay_;
   }
+
+  void active_stream_managers(std::vector<stream_manager*>& result);
+
+  std::vector<stream_manager*> active_stream_managers();
 
   /// @endcond
 
@@ -746,7 +709,23 @@ protected:
   exception_handler exception_handler_;
 #endif // CAF_ENABLE_EXCEPTIONS
 
-  /// @endcond
+private:
+  template <class F>
+  intrusive::task_result run_with_metrics(mailbox_element& x, F body) {
+    if (metrics_.mailbox_time) {
+      auto t0 = std::chrono::steady_clock::now();
+      auto mbox_time = x.seconds_until(t0);
+      auto res = body();
+      if (res != intrusive::task_result::skip) {
+        telemetry::timer::observe(metrics_.processing_time, t0);
+        metrics_.mailbox_time->observe(mbox_time);
+        metrics_.mailbox_size->dec();
+      }
+      return res;
+    } else {
+      return body();
+    }
+  }
 };
 
 } // namespace caf
