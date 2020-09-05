@@ -24,11 +24,10 @@
 #include "caf/optional.hpp"
 
 #define DEFAULT_META(type, parse_fun)                                          \
-  config_option::meta_state                                                    \
-    type##_meta_state{default_config_option_check<type>,                       \
-                      default_config_option_store<type>, get_impl<type>,       \
-                      parse_fun,                                               \
-                      select_config_value_access_t<type>::type_name()};
+  config_option::meta_state type##_meta_state{                                 \
+    default_config_option_check<type>, default_config_option_store<type>,      \
+    get_impl<type>, parse_fun,                                                 \
+    detail::config_value_access_t<type>::type_name()};
 
 using std::string;
 
@@ -78,7 +77,7 @@ config_value bool_get_neg(const void* ptr) {
 
 meta_state bool_neg_meta{detail::check_impl<bool>, bool_store_neg, bool_get_neg,
                          nullptr,
-                         select_config_value_access_t<bool>::type_name()};
+                         detail::config_value_access_t<bool>::type_name()};
 
 error check_timespan(const config_value& x) {
   if (holds_alternative<timespan>(x))
@@ -100,11 +99,11 @@ config_value get_timespan(const void* ptr) {
 
 meta_state us_res_meta{check_timespan, store_timespan<1000>, get_timespan<1000>,
                        nullptr,
-                       select_config_value_access_t<timespan>::type_name()};
+                       detail::config_value_access_t<timespan>::type_name()};
 
 meta_state ms_res_meta{check_timespan, store_timespan<1000000>,
                        get_timespan<1000000>, nullptr,
-                       select_config_value_access_t<timespan>::type_name()};
+                       detail::config_value_access_t<timespan>::type_name()};
 
 } // namespace
 
@@ -114,17 +113,15 @@ config_option make_negated_config_option(bool& storage, string_view category,
   return {category, name, description, &bool_neg_meta, &storage};
 }
 
-config_option make_us_resolution_config_option(size_t& storage,
-                                               string_view category,
-                                               string_view name,
-                                               string_view description) {
+config_option
+make_us_resolution_config_option(size_t& storage, string_view category,
+                                 string_view name, string_view description) {
   return {category, name, description, &us_res_meta, &storage};
 }
 
-config_option make_ms_resolution_config_option(size_t& storage,
-                                               string_view category,
-                                               string_view name,
-                                               string_view description) {
+config_option
+make_ms_resolution_config_option(size_t& storage, string_view category,
+                                 string_view name, string_view description) {
   return {category, name, description, &ms_res_meta, &storage};
 }
 

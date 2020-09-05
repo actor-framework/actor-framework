@@ -28,7 +28,7 @@
 namespace caf {
 
 /// Extracts objects from @ref settings.
-class settings_reader : public deserializer {
+class config_value_reader : public deserializer {
 public:
   // -- member types------------------------------------------------------------
 
@@ -66,23 +66,23 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  settings_reader(const settings* input, actor_system& sys)
-    : super(sys), root_(input) {
+  config_value_reader(const config_value* input, actor_system& sys)
+    : super(sys) {
     st_.push(input);
     has_human_readable_format_ = true;
   }
 
-  settings_reader(const settings* input, execution_unit* ctx)
-    : super(ctx), root_(input) {
+  config_value_reader(const config_value* input, execution_unit* ctx)
+    : super(ctx) {
+    st_.push(input);
     has_human_readable_format_ = true;
   }
-
-  explicit settings_reader(const settings* input)
-    : settings_reader(input, nullptr) {
+  explicit config_value_reader(const config_value* input)
+    : config_value_reader(input, nullptr) {
     // nop
   }
 
-  ~settings_reader() override;
+  ~config_value_reader() override;
 
   // -- stack access -----------------------------------------------------------
 
@@ -166,7 +166,6 @@ private:
   bool fetch_object_type(const settings* obj, type_id_t& type);
 
   stack_type st_;
-  const settings* root_;
 };
 
 } // namespace caf

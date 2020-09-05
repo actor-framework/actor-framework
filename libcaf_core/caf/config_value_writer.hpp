@@ -18,17 +18,16 @@
 
 #pragma once
 
-#include "caf/config_value.hpp"
+#include "caf/fwd.hpp"
 #include "caf/serializer.hpp"
-#include "caf/settings.hpp"
 
 #include <stack>
 #include <vector>
 
 namespace caf {
 
-/// Writes objects into @ref settings.
-class settings_writer final : public serializer {
+/// Serializes an objects into a @ref config_value.
+class config_value_writer final : public serializer {
 public:
   // -- member types------------------------------------------------------------
 
@@ -42,30 +41,29 @@ public:
 
   struct absent_field {};
 
-  using value_type
-    = variant<settings*, absent_field, present_field, config_value::list*>;
+  using value_type = variant<config_value*, settings*, absent_field,
+                             present_field, std::vector<config_value>*>;
 
   using stack_type = std::stack<value_type, std::vector<value_type>>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  settings_writer(settings* destination, actor_system& sys)
-    : super(sys), root_(destination) {
-    st_.push(destination);
+  config_value_writer(config_value* dst, actor_system& sys) : super(sys) {
+    st_.push(dst);
     has_human_readable_format_ = true;
   }
 
-  settings_writer(settings* destination, execution_unit* ctx)
-    : super(ctx), root_(destination) {
+  config_value_writer(config_value* dst, execution_unit* ctx) : super(ctx) {
+    st_.push(dst);
     has_human_readable_format_ = true;
   }
 
-  explicit settings_writer(settings* destination)
-    : settings_writer(destination, nullptr) {
+  explicit config_value_writer(config_value* destination)
+    : config_value_writer(destination, nullptr) {
     // nop
   }
 
-  ~settings_writer() override;
+  ~config_value_writer() override;
 
   // -- interface functions ----------------------------------------------------
 
@@ -140,7 +138,6 @@ private:
 
   stack_type st_;
   string_view type_hint_;
-  settings* root_;
 };
 
 } // namespace caf

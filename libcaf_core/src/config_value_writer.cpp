@@ -16,10 +16,12 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/settings_writer.hpp"
+#include "caf/config_value_writer.hpp"
 
+#include "caf/config_value.hpp"
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/overload.hpp"
+#include "caf/settings.hpp"
 
 #define CHECK_NOT_EMPTY()                                                      \
   do {                                                                         \
@@ -58,13 +60,13 @@ namespace caf {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-settings_writer::~settings_writer() {
+config_value_writer::~config_value_writer() {
   // nop
 }
 
 // -- interface functions ------------------------------------------------------
 
-bool settings_writer::inject_next_object_type(type_id_t type) {
+bool config_value_writer::inject_next_object_type(type_id_t type) {
   CHECK_NOT_EMPTY();
   type_hint_ = query_type_name(type);
   if (type_hint_.empty()) {
@@ -75,48 +77,47 @@ bool settings_writer::inject_next_object_type(type_id_t type) {
   return true;
 }
 
-bool settings_writer::begin_object(string_view) {
-  if (st_.empty()) {
-    if (root_ == nullptr) {
+bool config_value_writer::begin_object(string_view) {
+  CHECK_NOT_EMPTY();
+  auto f = detail::make_overload(
+    [this](config_value* x) {
+      // Morph the root element into a dictionary.
+      auto& dict = x->as_dictionary();
+      dict.clear();
+      st_.top() = &dict;
+      return true;
+    },
+    [this](settings*) {
       emplace_error(sec::runtime_error,
-                    "tried to serialize multiple objects into the root object");
+                    "begin_object called inside another object");
       return false;
-    }
-    st_.push(root_);
-    root_ = nullptr;
-  } else {
-    auto f = detail::make_overload(
-      [this](settings*) {
-        emplace_error(sec::runtime_error,
-                      "begin_object called inside another object");
-        return false;
-      },
-      [this](absent_field) {
-        emplace_error(sec::runtime_error,
-                      "begin_object called inside non-existent optional field");
-        return false;
-      },
-      [this](present_field fld) {
-        auto [iter, added] = fld.parent->emplace(fld.name, settings{});
-        if (!added) {
-          emplace_error(sec::runtime_error,
-                        "field already defined: " + to_string(fld.name));
-          return false;
-        }
-        auto obj = std::addressof(get<settings>(iter->second));
-        if (!fld.type.empty())
-          put(*obj, "@type", fld.type);
-        st_.push(obj);
-        return true;
-      },
-      [this](config_value::list* ls) {
-        ls->emplace_back(settings{});
-        st_.push(std::addressof(get<settings>(ls->back())));
-        return true;
-      });
-    if (!visit(f, st_.top()))
+    },
+    [this](absent_field) {
+      emplace_error(sec::runtime_error,
+                    "begin_object called inside non-existent optional field");
       return false;
-  }
+    },
+    [this](present_field fld) {
+      CAF_ASSERT(fld.parent != nullptr);
+      auto [iter, added] = fld.parent->emplace(fld.name, settings{});
+      if (!added) {
+        emplace_error(sec::runtime_error,
+                      "field already defined: " + to_string(fld.name));
+        return false;
+      }
+      auto obj = std::addressof(get<settings>(iter->second));
+      if (!fld.type.empty())
+        put(*obj, "@type", fld.type);
+      st_.push(obj);
+      return true;
+    },
+    [this](config_value::list* ls) {
+      ls->emplace_back(settings{});
+      st_.push(std::addressof(get<settings>(ls->back())));
+      return true;
+    });
+  if (!visit(f, st_.top()))
+    return false;
   if (!type_hint_.empty()) {
     put(*get<settings*>(st_.top()), "@type", type_hint_);
     type_hint_ = string_view{};
@@ -124,19 +125,19 @@ bool settings_writer::begin_object(string_view) {
   return true;
 }
 
-bool settings_writer::end_object() {
+bool config_value_writer::end_object() {
   SCOPE(settings*);
   st_.pop();
   return true;
 }
 
-bool settings_writer::begin_field(string_view name) {
+bool config_value_writer::begin_field(string_view name) {
   SCOPE(settings*);
   st_.push(present_field{top, name, string_view{}});
   return true;
 }
 
-bool settings_writer::begin_field(string_view name, bool is_present) {
+bool config_value_writer::begin_field(string_view name, bool is_present) {
   SCOPE(settings*);
   if (is_present)
     st_.push(present_field{top, name, string_view{}});
@@ -145,8 +146,9 @@ bool settings_writer::begin_field(string_view name, bool is_present) {
   return true;
 }
 
-bool settings_writer::begin_field(string_view name, span<const type_id_t> types,
-                                  size_t index) {
+bool config_value_writer::begin_field(string_view name,
+                                      span<const type_id_t> types,
+                                      size_t index) {
   SCOPE(settings*);
   if (index >= types.size()) {
     emplace_error(sec::invalid_argument,
@@ -164,15 +166,16 @@ bool settings_writer::begin_field(string_view name, span<const type_id_t> types,
   return true;
 }
 
-bool settings_writer::begin_field(string_view name, bool is_present,
-                                  span<const type_id_t> types, size_t index) {
+bool config_value_writer::begin_field(string_view name, bool is_present,
+                                      span<const type_id_t> types,
+                                      size_t index) {
   if (is_present)
     return begin_field(name, types, index);
   else
     return begin_field(name, false);
 }
 
-bool settings_writer::end_field() {
+bool config_value_writer::end_field() {
   CHECK_NOT_EMPTY();
   if (!holds_alternative<present_field>(st_.top())
       && !holds_alternative<absent_field>(st_.top())) {
@@ -183,15 +186,15 @@ bool settings_writer::end_field() {
   return true;
 }
 
-bool settings_writer::begin_tuple(size_t size) {
+bool config_value_writer::begin_tuple(size_t size) {
   return begin_sequence(size);
 }
 
-bool settings_writer::end_tuple() {
+bool config_value_writer::end_tuple() {
   return end_sequence();
 }
 
-bool settings_writer::begin_key_value_pair() {
+bool config_value_writer::begin_key_value_pair() {
   SCOPE(settings*);
   auto [iter, added] = top->emplace("@tmp", config_value::list{});
   if (!added) {
@@ -202,7 +205,7 @@ bool settings_writer::begin_key_value_pair() {
   return true;
 }
 
-bool settings_writer::end_key_value_pair() {
+bool config_value_writer::end_key_value_pair() {
   config_value::list tmp;
   /* lifetime scope of the list */ {
     SCOPE(config_value::list*);
@@ -229,9 +232,16 @@ bool settings_writer::end_key_value_pair() {
   return true;
 }
 
-bool settings_writer::begin_sequence(size_t) {
+bool config_value_writer::begin_sequence(size_t) {
   CHECK_NOT_EMPTY();
   auto f = detail::make_overload(
+    [this](config_value* val) {
+      // Morph the value into a list.
+      auto& ls = val->as_list();
+      ls.clear();
+      st_.top() = &ls;
+      return true;
+    },
     [this](settings*) {
       emplace_error(sec::runtime_error,
                     "cannot start sequence/tuple inside an object");
@@ -261,16 +271,23 @@ bool settings_writer::begin_sequence(size_t) {
   return visit(f, st_.top());
 }
 
-bool settings_writer::end_sequence() {
+bool config_value_writer::end_sequence() {
   SCOPE(config_value::list*);
   st_.pop();
   return true;
 }
 
-bool settings_writer::begin_associative_array(size_t) {
+bool config_value_writer::begin_associative_array(size_t) {
   CHECK_NOT_EMPTY();
   settings* inner = nullptr;
   auto f = detail::make_overload(
+    [this](config_value* val) {
+      // Morph the top element into a dictionary.
+      auto& dict = val->as_dictionary();
+      dict.clear();
+      st_.top() = &dict;
+      return true;
+    },
     [this](settings*) {
       emplace_error(sec::runtime_error, "cannot write values outside fields");
       return false;
@@ -316,45 +333,45 @@ bool settings_writer::begin_associative_array(size_t) {
   return false;
 }
 
-bool settings_writer::end_associative_array() {
+bool config_value_writer::end_associative_array() {
   SCOPE(settings*);
   st_.pop();
   return true;
 }
 
-bool settings_writer::value(bool x) {
+bool config_value_writer::value(bool x) {
   return push(config_value{x});
 }
 
-bool settings_writer::value(int8_t x) {
+bool config_value_writer::value(int8_t x) {
   return push(config_value{static_cast<config_value::integer>(x)});
 }
 
-bool settings_writer::value(uint8_t x) {
+bool config_value_writer::value(uint8_t x) {
   return push(config_value{static_cast<config_value::integer>(x)});
 }
 
-bool settings_writer::value(int16_t x) {
+bool config_value_writer::value(int16_t x) {
   return push(config_value{static_cast<config_value::integer>(x)});
 }
 
-bool settings_writer::value(uint16_t x) {
+bool config_value_writer::value(uint16_t x) {
   return push(config_value{static_cast<config_value::integer>(x)});
 }
 
-bool settings_writer::value(int32_t x) {
+bool config_value_writer::value(int32_t x) {
   return push(config_value{static_cast<config_value::integer>(x)});
 }
 
-bool settings_writer::value(uint32_t x) {
+bool config_value_writer::value(uint32_t x) {
   return push(config_value{static_cast<config_value::integer>(x)});
 }
 
-bool settings_writer::value(int64_t x) {
+bool config_value_writer::value(int64_t x) {
   return push(config_value{static_cast<config_value::integer>(x)});
 }
 
-bool settings_writer::value(uint64_t x) {
+bool config_value_writer::value(uint64_t x) {
   auto max_val = std::numeric_limits<config_value::integer>::max();
   if (x > static_cast<uint64_t>(max_val)) {
     emplace_error(sec::runtime_error, "integer overflow");
@@ -363,41 +380,45 @@ bool settings_writer::value(uint64_t x) {
   return push(config_value{static_cast<config_value::integer>(x)});
 }
 
-bool settings_writer::value(float x) {
+bool config_value_writer::value(float x) {
   return push(config_value{double{x}});
 }
 
-bool settings_writer::value(double x) {
+bool config_value_writer::value(double x) {
   return push(config_value{x});
 }
 
-bool settings_writer::value(long double x) {
+bool config_value_writer::value(long double x) {
   return push(config_value{std::to_string(x)});
 }
 
-bool settings_writer::value(string_view x) {
+bool config_value_writer::value(string_view x) {
   return push(config_value{to_string(x)});
 }
 
-bool settings_writer::value(const std::u16string&) {
+bool config_value_writer::value(const std::u16string&) {
   emplace_error(sec::runtime_error, "u16string support not implemented yet");
   return false;
 }
 
-bool settings_writer::value(const std::u32string&) {
+bool config_value_writer::value(const std::u32string&) {
   emplace_error(sec::runtime_error, "u32string support not implemented yet");
   return false;
 }
 
-bool settings_writer::value(span<const byte> x) {
+bool config_value_writer::value(span<const byte> x) {
   std::string str;
   detail::append_hex(str, x.data(), x.size());
   return push(config_value{std::move(str)});
 }
 
-bool settings_writer::push(config_value&& x) {
+bool config_value_writer::push(config_value&& x) {
   CHECK_NOT_EMPTY();
   auto f = detail::make_overload(
+    [&x](config_value* val) {
+      *val = std::move(x);
+      return true;
+    },
     [this](settings*) {
       emplace_error(sec::runtime_error, "cannot write values outside fields");
       return false;

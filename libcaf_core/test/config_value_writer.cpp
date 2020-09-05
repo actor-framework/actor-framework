@@ -16,13 +16,15 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE settings_writer
+#define CAF_SUITE config_value_writer
 
-#include "caf/settings_writer.hpp"
+#include "caf/config_value_writer.hpp"
 
 #include "caf/test/dsl.hpp"
 
 #include "inspector-tests.hpp"
+
+#include "caf/inspector_access.hpp"
 
 using namespace caf;
 
@@ -43,9 +45,13 @@ struct fixture {
 
   template <class T>
   void set(const T& value) {
-    settings_writer writer{&xs};
-    if (!inspect_object(writer, value))
+    config_value val;
+    config_value_writer writer{&val};
+    if (!detail::save_value(writer, value))
       CAF_FAIL("failed two write to settings: " << writer.get_error());
+    if (!holds_alternative<settings>(val))
+      CAF_FAIL("serializing T did not result in a dictionary");
+    xs = std::move(caf::get<settings>(val));
   }
 
   template <class T>
@@ -63,7 +69,7 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(settings_writer_tests, fixture)
+CAF_TEST_FIXTURE_SCOPE(config_value_writer_tests, fixture)
 
 CAF_TEST(structs become dictionaries) {
   set(foobar{"hello", "world"});

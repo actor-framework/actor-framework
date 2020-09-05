@@ -16,15 +16,17 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE settings_reader
+#define CAF_SUITE config_value_reader
 
-#include "caf/settings_reader.hpp"
+#include "caf/config_value_reader.hpp"
 
 #include "caf/test/dsl.hpp"
 
 #include "inspector-tests.hpp"
 
-#include "caf/settings_writer.hpp"
+#include "caf/config_value.hpp"
+#include "caf/config_value_writer.hpp"
+#include "caf/inspector_access.hpp"
 
 using namespace caf;
 
@@ -44,10 +46,15 @@ struct fixture {
   settings xs;
 
   template <class T>
-  void deserialize(const settings& src, T& value) {
-    settings_reader reader{&src};
-    if (!inspect_object(reader, value))
+  void deserialize(const config_value& src, T& value) {
+    config_value_reader reader{&src};
+    if (!detail::load_value(reader, value))
       CAF_FAIL("failed to deserialize from settings: " << reader.get_error());
+  }
+
+  template <class T>
+  void deserialize(const settings& src, T& value) {
+    deserialize(config_value{src}, value);
   }
 
   template <class T>
@@ -70,7 +77,14 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(settings_reader_tests, fixture)
+CAF_TEST_FIXTURE_SCOPE(config_value_reader_tests, fixture)
+
+CAF_TEST(readers deserialize builtin types from config values) {
+  std::string value;
+  put(xs, "foo", "bar");
+  deserialize(xs["foo"], value);
+  CAF_CHECK_EQUAL(value, "bar");
+}
 
 CAF_TEST(readers deserialize simple objects from configs) {
   put(xs, "foo", "hello");
@@ -124,9 +138,13 @@ CAF_TEST(readers deserialize objects from the output of writers) {
   CAF_MESSAGE("serialize the 'line' object");
   {
     line l{{10, 20, 30}, {70, 60, 50}};
-    settings_writer writer{&xs};
-    if (!inspect_object(writer, l))
+    config_value tmp;
+    config_value_writer writer{&tmp};
+    if (!detail::save_value(writer, l))
       CAF_FAIL("failed two write to settings: " << writer.get_error());
+    if (!holds_alternative<settings>(tmp))
+      CAF_FAIL("writer failed to produce a dictionary");
+    xs = std::move(caf::get<settings>(tmp));
   }
   CAF_MESSAGE("serialize and verify the 'line' object");
   {

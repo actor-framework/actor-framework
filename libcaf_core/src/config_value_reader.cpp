@@ -16,7 +16,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/settings_reader.hpp"
+#include "caf/config_value_reader.hpp"
 
 #include "caf/config_value.hpp"
 #include "caf/detail/append_hex.hpp"
@@ -40,14 +40,14 @@ struct pretty_name;
 PRETTY_NAME(const caf::settings*, "dictionary");
 PRETTY_NAME(const caf::config_value*, "config_value");
 PRETTY_NAME(const std::string*, "key");
-PRETTY_NAME(caf::settings_reader::absent_field, "absent field");
-PRETTY_NAME(caf::settings_reader::sequence, "sequence");
-PRETTY_NAME(caf::settings_reader::associative_array, "associative array");
+PRETTY_NAME(caf::config_value_reader::absent_field, "absent field");
+PRETTY_NAME(caf::config_value_reader::sequence, "sequence");
+PRETTY_NAME(caf::config_value_reader::associative_array, "associative array");
 
 template <class T>
 constexpr auto pretty_name_v = pretty_name<T>::value;
 
-auto get_pretty_name(const caf::settings_reader::value_type& x) {
+auto get_pretty_name(const caf::config_value_reader::value_type& x) {
   const char* pretty_names[] = {
     "dictionary",   "config_value", "key",
     "absent field", "sequence",     "associative array",
@@ -84,39 +84,36 @@ namespace caf {
 
 // -- member types--------------------------------------------------------------
 
-bool settings_reader::sequence::at_end() const noexcept {
+bool config_value_reader::sequence::at_end() const noexcept {
   return index >= ls->size();
 }
 
-const config_value& settings_reader::sequence::current() {
+const config_value& config_value_reader::sequence::current() {
   return (*ls)[index];
 }
 
-bool settings_reader::associative_array::at_end() const noexcept {
+bool config_value_reader::associative_array::at_end() const noexcept {
   return pos == end;
 }
 
 const std::pair<const std::string, config_value>&
-settings_reader::associative_array::current() {
+config_value_reader::associative_array::current() {
   return *pos;
 }
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-settings_reader::~settings_reader() {
+config_value_reader::~config_value_reader() {
   // nop
 }
 
 // -- interface functions ------------------------------------------------------
 
-bool settings_reader::fetch_next_object_type(type_id_t& type) {
+bool config_value_reader::fetch_next_object_type(type_id_t& type) {
   if (st_.empty()) {
-    if (root_ == nullptr) {
-      emplace_error(sec::runtime_error,
-                    "tried to read multiple objects from the root object");
-      return false;
-    }
-    return fetch_object_type(root_, type);
+    emplace_error(sec::runtime_error,
+                  "tried to read multiple objects from the root object");
+    return false;
   } else {
     auto f = detail::make_overload(
       [this](const settings*) {
@@ -165,16 +162,11 @@ bool settings_reader::fetch_next_object_type(type_id_t& type) {
   }
 }
 
-bool settings_reader::begin_object(string_view) {
+bool config_value_reader::begin_object(string_view) {
   if (st_.empty()) {
-    if (root_ == nullptr) {
-      emplace_error(sec::runtime_error,
-                    "tried to read multiple objects from the root object");
-      return false;
-    }
-    st_.push(root_);
-    root_ = nullptr;
-    return true;
+    emplace_error(sec::runtime_error,
+                  "tried to read multiple objects from the root object");
+    return false;
   }
   auto f = detail::make_overload(
     [this](const settings*) {
@@ -227,13 +219,13 @@ bool settings_reader::begin_object(string_view) {
   return visit(f, st_.top());
 }
 
-bool settings_reader::end_object() {
+bool config_value_reader::end_object() {
   SCOPE(const settings*);
   st_.pop();
   return true;
 }
 
-bool settings_reader::begin_field(string_view name) {
+bool config_value_reader::begin_field(string_view name) {
   SCOPE(const settings*);
   if (auto i = top->find(name); i != top->end()) {
     st_.push(std::addressof(i->second));
@@ -244,7 +236,7 @@ bool settings_reader::begin_field(string_view name) {
   }
 }
 
-bool settings_reader::begin_field(string_view name, bool& is_present) {
+bool config_value_reader::begin_field(string_view name, bool& is_present) {
   SCOPE(const settings*);
   if (auto i = top->find(name); i != top->end()) {
     is_present = true;
@@ -255,8 +247,9 @@ bool settings_reader::begin_field(string_view name, bool& is_present) {
   return true;
 }
 
-bool settings_reader::begin_field(string_view name, span<const type_id_t> types,
-                                  size_t& index) {
+bool config_value_reader::begin_field(string_view name,
+                                      span<const type_id_t> types,
+                                      size_t& index) {
   SCOPE(const settings*);
   std::string key;
   key += '@';
@@ -280,8 +273,9 @@ bool settings_reader::begin_field(string_view name, span<const type_id_t> types,
   return begin_field(name);
 }
 
-bool settings_reader::begin_field(string_view name, bool& is_present,
-                                  span<const type_id_t> types, size_t& index) {
+bool config_value_reader::begin_field(string_view name, bool& is_present,
+                                      span<const type_id_t> types,
+                                      size_t& index) {
   SCOPE(const settings*);
   if (top->contains(name)) {
     is_present = true;
@@ -292,13 +286,13 @@ bool settings_reader::begin_field(string_view name, bool& is_present,
   }
 }
 
-bool settings_reader::end_field() {
+bool config_value_reader::end_field() {
   CHECK_NOT_EMPTY();
   // Note: no pop() here, because the value(s) were already consumed.
   return true;
 }
 
-bool settings_reader::begin_tuple(size_t size) {
+bool config_value_reader::begin_tuple(size_t size) {
   size_t list_size = 0;
   if (begin_sequence(list_size)) {
     if (list_size == size)
@@ -314,11 +308,11 @@ bool settings_reader::begin_tuple(size_t size) {
   return false;
 }
 
-bool settings_reader::end_tuple() {
+bool config_value_reader::end_tuple() {
   return end_sequence();
 }
 
-bool settings_reader::begin_key_value_pair() {
+bool config_value_reader::begin_key_value_pair() {
   SCOPE(associative_array);
   if (top.at_end()) {
     emplace_error(sec::runtime_error,
@@ -331,13 +325,13 @@ bool settings_reader::begin_key_value_pair() {
   return true;
 }
 
-bool settings_reader::end_key_value_pair() {
+bool config_value_reader::end_key_value_pair() {
   SCOPE(associative_array);
   ++top.pos;
   return true;
 }
 
-bool settings_reader::begin_sequence(size_t& size) {
+bool config_value_reader::begin_sequence(size_t& size) {
   SCOPE(const config_value*);
   if (auto ls = get_if<config_value::list>(top)) {
     size = ls->size();
@@ -352,7 +346,7 @@ bool settings_reader::begin_sequence(size_t& size) {
   return false;
 }
 
-bool settings_reader::end_sequence() {
+bool config_value_reader::end_sequence() {
   SCOPE(sequence);
   if (!top.at_end()) {
     emplace_error(sec::runtime_error,
@@ -363,7 +357,7 @@ bool settings_reader::end_sequence() {
   return true;
 }
 
-bool settings_reader::begin_associative_array(size_t& size) {
+bool config_value_reader::begin_associative_array(size_t& size) {
   SCOPE(const config_value*);
   if (auto dict = get_if<settings>(top)) {
     size = dict->size();
@@ -377,7 +371,7 @@ bool settings_reader::begin_associative_array(size_t& size) {
   return false;
 }
 
-bool settings_reader::end_associative_array() {
+bool config_value_reader::end_associative_array() {
   SCOPE(associative_array);
   if (!top.at_end()) {
     emplace_error(sec::runtime_error,
@@ -391,7 +385,7 @@ bool settings_reader::end_associative_array() {
 namespace {
 
 template <class T>
-bool pull(settings_reader& reader, T& x) {
+bool pull(config_value_reader& reader, T& x) {
   using internal_type = std::conditional_t<std::is_floating_point<T>::value,
                                            config_value::real, T>;
   auto assign = [&x](auto& result) {
@@ -415,8 +409,8 @@ bool pull(settings_reader& reader, T& x) {
       return false;
     }
   }
-  if (holds_alternative<settings_reader::sequence>(top)) {
-    auto& seq = get<settings_reader::sequence>(top);
+  if (holds_alternative<config_value_reader::sequence>(top)) {
+    auto& seq = get<config_value_reader::sequence>(top);
     if (seq.at_end()) {
       reader.emplace_error(sec::runtime_error, "value: sequence out of bounds");
       return false;
@@ -433,8 +427,8 @@ bool pull(settings_reader& reader, T& x) {
       return false;
     }
   }
-  if (holds_alternative<settings_reader::key_ptr>(top)) {
-    auto ptr = get<settings_reader::key_ptr>(top);
+  if (holds_alternative<config_value_reader::key_ptr>(top)) {
+    auto ptr = get<config_value_reader::key_ptr>(top);
     if constexpr (std::is_same<std::string, T>::value) {
       x = *ptr;
       reader.pop();
@@ -454,82 +448,82 @@ bool pull(settings_reader& reader, T& x) {
 
 } // namespace
 
-bool settings_reader::value(bool& x) {
+bool config_value_reader::value(bool& x) {
   CHECK_NOT_EMPTY();
   return pull(*this, x);
 }
 
-bool settings_reader::value(int8_t& x) {
+bool config_value_reader::value(int8_t& x) {
   CHECK_NOT_EMPTY();
   return pull(*this, x);
 }
 
-bool settings_reader::value(uint8_t& x) {
+bool config_value_reader::value(uint8_t& x) {
   CHECK_NOT_EMPTY();
   return pull(*this, x);
 }
 
-bool settings_reader::value(int16_t& x) {
+bool config_value_reader::value(int16_t& x) {
   CHECK_NOT_EMPTY();
   return pull(*this, x);
 }
 
-bool settings_reader::value(uint16_t& x) {
+bool config_value_reader::value(uint16_t& x) {
   CHECK_NOT_EMPTY();
   return pull(*this, x);
 }
 
-bool settings_reader::value(int32_t& x) {
+bool config_value_reader::value(int32_t& x) {
   CHECK_NOT_EMPTY();
   return pull(*this, x);
 }
 
-bool settings_reader::value(uint32_t& x) {
+bool config_value_reader::value(uint32_t& x) {
   CHECK_NOT_EMPTY();
   return pull(*this, x);
 }
 
-bool settings_reader::value(int64_t& x) {
+bool config_value_reader::value(int64_t& x) {
   CHECK_NOT_EMPTY();
   return pull(*this, x);
 }
 
-bool settings_reader::value(uint64_t& x) {
+bool config_value_reader::value(uint64_t& x) {
   CHECK_NOT_EMPTY();
   return pull(*this, x);
 }
 
-bool settings_reader::value(float& x) {
+bool config_value_reader::value(float& x) {
   CHECK_NOT_EMPTY();
   return pull(*this, x);
 }
 
-bool settings_reader::value(double& x) {
+bool config_value_reader::value(double& x) {
   CHECK_NOT_EMPTY();
   return pull(*this, x);
 }
 
-bool settings_reader::value(long double& x) {
+bool config_value_reader::value(long double& x) {
   CHECK_NOT_EMPTY();
   return pull(*this, x);
 }
 
-bool settings_reader::value(std::string& x) {
+bool config_value_reader::value(std::string& x) {
   CHECK_NOT_EMPTY();
   return pull(*this, x);
 }
 
-bool settings_reader::value(std::u16string&) {
+bool config_value_reader::value(std::u16string&) {
   emplace_error(sec::runtime_error, "u16string support not implemented yet");
   return false;
 }
 
-bool settings_reader::value(std::u32string&) {
+bool config_value_reader::value(std::u32string&) {
   emplace_error(sec::runtime_error, "u32string support not implemented yet");
   return false;
 }
 
-bool settings_reader::value(span<byte> bytes) {
+bool config_value_reader::value(span<byte> bytes) {
   CHECK_NOT_EMPTY();
   std::string x;
   if (!pull(*this, x))
@@ -555,7 +549,8 @@ bool settings_reader::value(span<byte> bytes) {
   return true;
 }
 
-bool settings_reader::fetch_object_type(const settings* obj, type_id_t& type) {
+bool config_value_reader::fetch_object_type(const settings* obj,
+                                            type_id_t& type) {
   if (auto str = get_if<std::string>(obj, "@type"); str == nullptr) {
     emplace_error(sec::runtime_error,
                   "cannot fetch object type: no '@type' entry found");
