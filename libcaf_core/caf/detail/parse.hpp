@@ -97,6 +97,8 @@ CAF_CORE_EXPORT void parse(string_parser_state& ps, float& x);
 
 CAF_CORE_EXPORT void parse(string_parser_state& ps, double& x);
 
+CAF_CORE_EXPORT void parse(string_parser_state& ps, long double& x);
+
 // -- CAF types ----------------------------------------------------------------
 
 CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv4_address& x);

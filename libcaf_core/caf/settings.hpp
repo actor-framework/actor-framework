@@ -25,6 +25,7 @@
 #include "caf/optional.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/string_view.hpp"
+#include "caf/sum_type.hpp"
 
 namespace caf {
 

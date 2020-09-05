@@ -145,19 +145,21 @@ enum class sec : uint8_t {
   no_tracing_context,
   /// No request produced a valid result.
   all_requests_failed,
-  /// Deserialization failed, because an invariant got violated after reading
+  /// Deserialization failed because an invariant got violated after reading
   /// the content of a field.
   field_invariant_check_failed = 55,
-  /// Deserialization failed, because a setter rejected the input.
+  /// Deserialization failed because a setter rejected the input.
   field_value_synchronization_failed,
-  /// Deserialization failed, because the source announced an invalid type.
+  /// Deserialization failed because the source announced an invalid type.
   invalid_field_type,
   /// Serialization failed because a type was flagged as unsafe message type.
   unsafe_type,
-  /// Serialization failed, because a save callback returned `false`.
+  /// Serialization failed because a save callback returned `false`.
   save_callback_failed,
-  /// Deserialization failed, because a load callback returned `false`.
-  load_callback_failed,
+  /// Deserialization failed because a load callback returned `false`.
+  load_callback_failed = 60,
+  /// Converting between two types failed.
+  conversion_failed,
 };
 
 /// @relates sec

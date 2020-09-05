@@ -142,6 +142,8 @@ PARSE_IMPL(float, floating_point)
 
 PARSE_IMPL(double, floating_point)
 
+PARSE_IMPL(long double, floating_point)
+
 void parse(string_parser_state& ps, uri& x) {
   uri_builder builder;
   if (ps.consume('<')) {
