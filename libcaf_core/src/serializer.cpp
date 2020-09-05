@@ -35,12 +35,28 @@ serializer::~serializer() {
   // nop
 }
 
-auto serializer::apply(const std::vector<bool>& xs) -> result_type {
-  if (auto err = begin_sequence(xs.size()))
-    return err;
-  for (bool value : xs)
-    if (auto err = apply(value))
-      return err;
+bool serializer::begin_key_value_pair() {
+  return begin_tuple(2);
+}
+
+bool serializer::end_key_value_pair() {
+  return end_tuple();
+}
+
+bool serializer::begin_associative_array(size_t size) {
+  return begin_sequence(size);
+}
+
+bool serializer::end_associative_array() {
+  return end_sequence();
+}
+
+bool serializer::value(const std::vector<bool>& xs) {
+  if (!begin_sequence(xs.size()))
+    return false;
+  for (bool x : xs)
+    if (!value(x))
+      return false;
   return end_sequence();
 }
 

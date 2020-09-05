@@ -20,30 +20,22 @@
 
 #include <cstddef>
 #include <string>
-#include <tuple>
-#include <type_traits>
-#include <utility>
 #include <vector>
 
 #include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/squashed_int.hpp"
-#include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
-#include "caf/read_inspector.hpp"
-#include "caf/sec.hpp"
+#include "caf/save_inspector_base.hpp"
 #include "caf/span.hpp"
 
 namespace caf {
 
 /// Serializes objects into a sequence of bytes.
 class CAF_CORE_EXPORT binary_serializer
-  : public read_inspector<binary_serializer> {
+  : public save_inspector_base<binary_serializer> {
 public:
   // -- member types -----------------------------------------------------------
-
-  using result_type = error_code<sec>;
 
   using container_type = byte_buffer;
 
@@ -81,6 +73,10 @@ public:
     return write_pos_;
   }
 
+  static constexpr bool has_human_readable_format() noexcept {
+    return false;
+  }
+
   // -- position management ----------------------------------------------------
 
   /// Sets the write position to `offset`.
@@ -95,52 +91,96 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
-  error_code<sec> begin_object(type_id_t type);
+  bool inject_next_object_type(type_id_t type);
 
-  error_code<sec> end_object();
-
-  error_code<sec> begin_sequence(size_t list_size);
-
-  error_code<sec> end_sequence();
-
-  void apply(byte x);
-
-  void apply(uint8_t x);
-
-  void apply(uint16_t x);
-
-  void apply(uint32_t x);
-
-  void apply(uint64_t x);
-
-  void apply(float x);
-
-  void apply(double x);
-
-  void apply(long double x);
-
-  void apply(string_view x);
-
-  void apply(const std::u16string& x);
-
-  void apply(const std::u32string& x);
-
-  void apply(span<const byte> x);
-
-  template <class T>
-  std::enable_if_t<std::is_integral<T>::value && std::is_signed<T>::value>
-  apply(T x) {
-    using unsigned_type = std::make_unsigned_t<T>;
-    using squashed_unsigned_type = detail::squashed_int_t<unsigned_type>;
-    return apply(static_cast<squashed_unsigned_type>(x));
+  constexpr bool begin_object(string_view) {
+    return ok;
   }
 
-  template <class Enum>
-  std::enable_if_t<std::is_enum<Enum>::value> apply(Enum x) {
-    return apply(static_cast<std::underlying_type_t<Enum>>(x));
+  constexpr bool end_object() {
+    return ok;
   }
 
-  void apply(const std::vector<bool>& x);
+  constexpr bool begin_field(string_view) noexcept {
+    return ok;
+  }
+
+  bool begin_field(string_view, bool is_present);
+
+  bool begin_field(string_view, span<const type_id_t> types, size_t index);
+
+  bool begin_field(string_view, bool is_present, span<const type_id_t> types,
+                   size_t index);
+
+  constexpr bool end_field() {
+    return ok;
+  }
+
+  constexpr bool begin_tuple(size_t) {
+    return ok;
+  }
+
+  constexpr bool end_tuple() {
+    return ok;
+  }
+
+  constexpr bool begin_key_value_pair() {
+    return ok;
+  }
+
+  constexpr bool end_key_value_pair() {
+    return ok;
+  }
+
+  bool begin_sequence(size_t list_size);
+
+  constexpr bool end_sequence() {
+    return ok;
+  }
+
+  bool begin_associative_array(size_t size) {
+    return begin_sequence(size);
+  }
+
+  bool end_associative_array() {
+    return end_sequence();
+  }
+
+  bool value(byte x);
+
+  bool value(bool x);
+
+  bool value(int8_t x);
+
+  bool value(uint8_t x);
+
+  bool value(int16_t x);
+
+  bool value(uint16_t x);
+
+  bool value(int32_t x);
+
+  bool value(uint32_t x);
+
+  bool value(int64_t x);
+
+  bool value(uint64_t x);
+
+  bool value(float x);
+
+  bool value(double x);
+
+  bool value(long double x);
+
+  bool value(string_view x);
+
+  bool value(const std::u16string& x);
+
+  bool value(const std::u32string& x);
+
+  bool value(span<const byte> x);
+
+  bool value(const std::vector<bool>& x);
 
 private:
   /// Stores the serialized output.

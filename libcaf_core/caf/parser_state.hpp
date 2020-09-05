@@ -138,10 +138,12 @@ struct parser_state {
 
 /// Returns an error object from the current code in `ps` as well as its
 /// current position.
-template <class Iterator, class Sentinel>
-auto make_error(const parser_state<Iterator, Sentinel>& ps)
+template <class Iterator, class Sentinel, class... Ts>
+auto make_error(const parser_state<Iterator, Sentinel>& ps, Ts&&... xs)
   -> decltype(make_error(ps.code, ps.line, ps.column)) {
-  return make_error(ps.code, ps.line, ps.column);
+  if (ps.code == pec::success)
+    return {};
+  return make_error(ps.code, ps.line, ps.column, std::forward<Ts>(xs)...);
 }
 
 /// Specialization for parsers operating on string views.

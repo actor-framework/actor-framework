@@ -35,15 +35,31 @@ deserializer::~deserializer() {
   // nop
 }
 
-auto deserializer::apply(std::vector<bool>& x) noexcept -> result_type {
+bool deserializer::begin_key_value_pair() {
+  return begin_tuple(2);
+}
+
+bool deserializer::end_key_value_pair() {
+  return end_tuple();
+}
+
+bool deserializer::begin_associative_array(size_t& size) {
+  return begin_sequence(size);
+}
+
+bool deserializer::end_associative_array() {
+  return end_sequence();
+}
+
+bool deserializer::value(std::vector<bool>& x) {
   x.clear();
   size_t size = 0;
-  if (auto err = begin_sequence(size))
-    return err;
+  if (!begin_sequence(size))
+    return false;
   for (size_t i = 0; i < size; ++i) {
     bool tmp = false;
-    if (auto err = apply(tmp))
-      return err;
+    if (!value(tmp))
+      return false;
     x.emplace_back(tmp);
   }
   return end_sequence();

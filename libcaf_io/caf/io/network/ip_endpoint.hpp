@@ -25,9 +25,6 @@
 
 #include "caf/detail/io_export.hpp"
 #include "caf/error.hpp"
-#include "caf/meta/load_callback.hpp"
-#include "caf/meta/save_callback.hpp"
-#include "caf/meta/type_name.hpp"
 #include "caf/sec.hpp"
 
 struct sockaddr;
@@ -104,30 +101,46 @@ CAF_IO_EXPORT uint16_t port(const ip_endpoint& ep);
 
 CAF_IO_EXPORT uint32_t family(const ip_endpoint& ep);
 
-CAF_IO_EXPORT error_code<sec>
-load_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h, uint16_t& p,
-              size_t& l);
+CAF_IO_EXPORT error_code<sec> load_endpoint(ip_endpoint& ep, uint32_t& f,
+                                            std::string& h, uint16_t& p,
+                                            size_t& l);
 
-CAF_IO_EXPORT error_code<sec>
-save_endpoint(ip_endpoint& ep, uint32_t& f, std::string& h, uint16_t& p,
-              size_t& l);
+CAF_IO_EXPORT error_code<sec> save_endpoint(ip_endpoint& ep, uint32_t& f,
+                                            std::string& h, uint16_t& p,
+                                            size_t& l);
 
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& fun, ip_endpoint& ep) {
-  uint32_t f;
+bool inspect(Inspector& f, ip_endpoint& x) {
+  uint32_t fam;
   std::string h;
   uint16_t p;
   size_t l;
-  if (*ep.length() > 0) {
-    f = family(ep);
-    h = host(ep);
-    p = port(ep);
-    l = *ep.length();
+  if constexpr (!Inspector::is_loading) {
+    if (*x.length() > 0) {
+      fam = family(x);
+      h = host(x);
+      p = port(x);
+      l = *x.length();
+    }
   }
-  auto load = [&] { return load_endpoint(ep, f, h, p, l); };
-  auto save = [&] { return save_endpoint(ep, f, h, p, l); };
-  return fun(meta::type_name("ip_endpoint"), f, h, p, l,
-             meta::load_callback(load), meta::save_callback(save));
+  auto load = [&] {
+    if (auto err = load_endpoint(x, fam, h, p, l)) {
+      f.set_error(err);
+      return false;
+    }
+    return true;
+  };
+  auto save = [&] {
+    if (auto err = save_endpoint(x, fam, h, p, l)) {
+      f.set_error(err);
+      return false;
+    }
+    return true;
+  };
+  return f.object(x).on_load(load).on_save(save).fields(f.field("family", fam),
+                                                        f.field("host", h),
+                                                        f.field("port", p),
+                                                        f.field("length", l));
 }
 
 } // namespace caf::io::network

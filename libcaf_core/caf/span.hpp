@@ -168,6 +168,10 @@ public:
     return {begin_ + offset, num_bytes};
   }
 
+  constexpr span subspan(size_t offset) const {
+    return {begin_ + offset, size_ - offset};
+  }
+
   constexpr span first(size_t num_bytes) const {
     return {begin_, num_bytes};
   }

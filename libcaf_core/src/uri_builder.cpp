@@ -18,13 +18,11 @@
 
 #include "caf/uri_builder.hpp"
 
-#include "caf/detail/uri_impl.hpp"
-#include "caf/ipv4_address.hpp"
 #include "caf/make_counted.hpp"
 
 namespace caf {
 
-uri_builder::uri_builder() : impl_(make_counted<detail::uri_impl>()) {
+uri_builder::uri_builder() : impl_(make_counted<uri::impl_type>()) {
   // nop
 }
 

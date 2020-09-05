@@ -62,7 +62,7 @@ struct maybe {
 
 template <class T>
 std::string to_string(const maybe<T>& x) {
-  return to_string(x.val);
+  return deep_to_string(x.val);
 }
 
 template <class T>
@@ -81,7 +81,8 @@ constexpr uint64_t spawn_serv_id = basp::header::spawn_server_id;
 constexpr uint64_t config_serv_id = basp::header::config_server_id;
 
 std::string hexstr(const byte_buffer& buf) {
-  return deep_to_string(meta::hex_formatted(), buf);
+  // TODO: re-implement hex-formatted option
+  return deep_to_string(buf);
 }
 
 struct node {
@@ -108,6 +109,8 @@ public:
             .set("caf.middleman.enable-automatic-connections", autoconn)
             .set("caf.middleman.workers", size_t{0})
             .set("caf.scheduler.policy", autoconn ? "testing" : "stealing")
+            .set("caf.logger.inline-output", true)
+            .set("caf.logger.console.verbosity", "debug")
             .set("caf.middleman.attach-utility-actors", autoconn)) {
     app_ids.emplace_back(to_string(defaults::middleman::app_identifier));
     auto& mm = sys.middleman();
@@ -123,8 +126,8 @@ public:
     registry_ = &sys.registry();
     registry_->put((*self_)->id(), actor_cast<strong_actor_ptr>(*self_));
     // first remote node is everything of this_node + 1, then +2, etc.
-    auto pid = static_cast<node_id::default_data&>(*this_node_).process_id();
-    auto hid = static_cast<node_id::default_data&>(*this_node_).host_id();
+    auto pid = get<hashed_node_id>(this_node_->content).process_id;
+    auto hid = get<hashed_node_id>(this_node_->content).host;
     for (uint32_t i = 0; i < num_remote_nodes; ++i) {
       auto& n = nodes_[i];
       for (auto& c : hid)
@@ -159,9 +162,9 @@ public:
 
   uint32_t serialized_size(const message& msg) {
     byte_buffer buf;
-    binary_serializer bs{mpx_, buf};
-    if (auto err = bs(const_cast<message&>(msg)))
-      CAF_FAIL("returned to serialize message: " << err);
+    binary_serializer sink{mpx_, buf};
+    if (!inspect_objects(sink, msg))
+      CAF_FAIL("failed to serialize message: " << sink.get_error());
     return static_cast<uint32_t>(buf.size());
   }
 
@@ -218,8 +221,8 @@ public:
   template <class... Ts>
   void to_payload(byte_buffer& buf, const Ts&... xs) {
     binary_serializer sink{mpx_, buf};
-    if (auto err = sink(xs...))
-      CAF_FAIL("failed to serialize payload: " << err);
+    if (!inspect_objects(sink, xs...))
+      CAF_FAIL("failed to serialize payload: " << sink.get_error());
   }
 
   void to_buf(byte_buffer& buf, basp::header& hdr, payload_writer* writer) {
@@ -230,19 +233,18 @@ public:
   void to_buf(byte_buffer& buf, basp::header& hdr, payload_writer* writer,
               const T& x, const Ts&... xs) {
     auto pw = make_callback([&](binary_serializer& sink) {
-      if (writer)
-        if (auto err = (*writer)(sink))
-          return err;
-      return sink(const_cast<T&>(x));
+      if (writer != nullptr && !(*writer)(sink))
+        return false;
+      return inspect_objects(sink, x, xs...);
     });
-    to_buf(buf, hdr, &pw, xs...);
+    to_buf(buf, hdr, &pw);
   }
 
   std::pair<basp::header, byte_buffer> from_buf(const byte_buffer& buf) {
     basp::header hdr;
-    binary_deserializer bd{mpx_, buf};
-    auto e = bd(hdr);
-    CAF_REQUIRE(!e);
+    binary_deserializer source{mpx_, buf};
+    if (!inspect_object(source, hdr))
+      CAF_FAIL("failed to deserialize header: " << source.get_error());
     byte_buffer payload;
     if (hdr.payload_len > 0) {
       std::copy(buf.begin() + basp::header_size, buf.end(),
@@ -305,8 +307,8 @@ public:
     binary_deserializer source{mpx_, buf};
     std::vector<strong_actor_ptr> stages;
     message msg;
-    auto e = source(stages, msg);
-    CAF_REQUIRE(!e);
+    if (!inspect_objects(source, stages, msg))
+      CAF_FAIL("deserialization failed: " << source.get_error());
     auto src = actor_cast<strong_actor_ptr>(registry_->get(hdr.source_actor));
     auto dest = registry_->get(hdr.dest_actor);
     CAF_REQUIRE(dest);
@@ -346,8 +348,8 @@ public:
       basp::header hdr;
       { // lifetime scope of source
         binary_deserializer source{this_->mpx(), ob};
-        if (auto err = source(hdr))
-          CAF_FAIL("unable to deserialize header: " << err);
+        if (!inspect_objects(source, hdr))
+          CAF_FAIL("failed to deserialize header: " << source.get_error());
       }
       byte_buffer payload;
       if (hdr.payload_len > 0) {
@@ -458,7 +460,7 @@ CAF_TEST(empty_server_handshake) {
                         invalid_actor_id};
   CAF_CHECK(basp::valid(hdr));
   CAF_CHECK(basp::is_handshake(hdr));
-  CAF_CHECK_EQUAL(to_string(hdr), to_string(expected));
+  CAF_CHECK_EQUAL(deep_to_string(hdr), deep_to_string(expected));
 }
 
 CAF_TEST(non_empty_server_handshake) {
@@ -479,12 +481,13 @@ CAF_TEST(non_empty_server_handshake) {
                         invalid_actor_id};
   CAF_CHECK(basp::valid(hdr));
   CAF_CHECK(basp::is_handshake(hdr));
-  CAF_CHECK_EQUAL(to_string(hdr), to_string(expected));
+  CAF_CHECK_EQUAL(deep_to_string(hdr), deep_to_string(expected));
   byte_buffer expected_payload;
   std::set<std::string> ifs{"caf::replies_to<@u16>::with<@u16>"};
   binary_serializer sink{nullptr, expected_payload};
-  if (auto err = sink(instance().this_node(), app_ids, self()->id(), ifs))
-    CAF_FAIL("serializing handshake failed: " << err);
+  auto id = self()->id();
+  if (!inspect_objects(sink, instance().this_node(), app_ids, id, ifs))
+    CAF_FAIL("serializing handshake failed: " << sink.get_error());
   CAF_CHECK_EQUAL(hexstr(payload), hexstr(expected_payload));
 }
 
@@ -514,7 +517,7 @@ CAF_TEST(client_handshake_and_dispatch) {
   mock(jupiter().connection,
        {basp::message_type::direct_message, 0, 0, 0,
         jupiter().dummy_actor->id(), self()->id()},
-       std::vector<actor_addr>{}, make_message(1, 2, 3))
+       std::vector<strong_actor_ptr>{}, make_message(1, 2, 3))
     .receive(jupiter().connection, basp::message_type::monitor_message,
              no_flags, any_vals, no_operation_data, invalid_actor_id,
              jupiter().dummy_actor->id(), this_node(), jupiter().id);
@@ -675,7 +678,7 @@ CAF_TEST(indirect_connections) {
   auto mx = mock(mars().connection,
                  {basp::message_type::routed_message, 0, 0, 0,
                   jupiter().dummy_actor->id(), self()->id()},
-                 jupiter().id, this_node(), std::vector<actor_id>{},
+                 jupiter().id, this_node(), std::vector<strong_actor_ptr>{},
                  make_message("hello from jupiter!"));
   CAF_MESSAGE("expect ('sys', 'get', \"info\") from Earth to Jupiter at Mars");
   // this asks Jupiter if it has a 'SpawnServ'

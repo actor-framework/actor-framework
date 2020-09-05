@@ -52,11 +52,10 @@ public:
   /// @threadsafe
   virtual expected<group> get(const std::string& group_name) = 0;
 
-  /// Loads a group of this module from `source` and stores it in `storage`.
-  virtual error load(deserializer& source, group& storage) = 0;
-
-  /// Loads a group of this module from `source` and stores it in `storage`.
-  virtual error_code<sec> load(binary_deserializer& source, group& storage) = 0;
+  /// Returns a pointer to the group associated with the name `group_name`.
+  /// @threadsafe
+  virtual expected<group>
+  get(const std::string& group_name, const caf::actor& dispatcher) = 0;
 
   // -- observers --------------------------------------------------------------
 

@@ -80,14 +80,6 @@ public:
     return ptr_ ? 1 : 0;
   }
 
-  friend CAF_CORE_EXPORT error inspect(serializer&, group&);
-
-  friend CAF_CORE_EXPORT error_code<sec> inspect(binary_serializer&, group&);
-
-  friend CAF_CORE_EXPORT error inspect(deserializer&, group&);
-
-  friend CAF_CORE_EXPORT error_code<sec> inspect(binary_deserializer&, group&);
-
   abstract_group* get() const noexcept {
     return ptr_.get();
   }
@@ -122,6 +114,42 @@ public:
     return this;
   }
 
+  template <class Inspector>
+  friend bool inspect(Inspector& f, group& x) {
+    std::string module_name;
+    std::string group_name;
+    actor dispatcher;
+    if constexpr (!Inspector::is_loading) {
+      if (x) {
+        module_name = x.get()->module().name();
+        group_name = x.get()->identifier();
+        dispatcher = x.get()->dispatcher();
+      }
+    }
+    auto load_cb = [&] {
+      if constexpr (detail::has_context<Inspector>::value) {
+        auto ctx = f.context();
+        if (ctx != nullptr) {
+          if (auto grp = ctx->system().groups().get(module_name, group_name,
+                                                    dispatcher)) {
+            x = std::move(*grp);
+            return true;
+          } else {
+            f.set_error(std::move(grp.error()));
+            return false;
+          }
+        }
+      }
+      f.emplace_error(sec::no_context);
+      return false;
+    };
+    return f.object(x)
+      .on_load(load_cb) //
+      .fields(f.field("module_name", module_name),
+              f.field("group_name", group_name),
+              f.field("dispatcher", dispatcher));
+  }
+
   /// @endcond
 
 private:
@@ -140,11 +168,14 @@ CAF_CORE_EXPORT std::string to_string(const group& x);
 } // namespace caf
 
 namespace std {
+
 template <>
 struct hash<caf::group> {
   size_t operator()(const caf::group& x) const {
-    // groups are singleton objects, the address is thus the best possible hash
+    // Groups are singleton objects. Hence, we can simply use the address as
+    // hash value.
     return !x ? 0 : reinterpret_cast<size_t>(x.get());
   }
 };
+
 } // namespace std

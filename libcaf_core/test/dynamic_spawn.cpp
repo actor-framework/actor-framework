@@ -483,13 +483,15 @@ CAF_TEST(move_only_argument) {
   unique_int uptr{new int(42)};
   auto wrapper = [](event_based_actor* self, unique_int ptr) -> behavior {
     auto i = *ptr;
-    return {[=](float) {
-      self->quit();
-      return i;
-    }};
+    return {
+      [=](float) {
+        self->quit();
+        return i;
+      },
+    };
   };
   auto f = make_function_view(system.spawn(wrapper, std::move(uptr)));
-  CAF_CHECK_EQUAL(to_string(f(1.f)), "(42)");
+  CAF_CHECK_EQUAL(to_tuple<int>(unbox(f(1.f))), std::make_tuple(42));
 }
 
 CAF_TEST(move - only function object) {

@@ -57,33 +57,16 @@ struct meta_objects_cleanup {
 
 } // namespace
 
-caf::error save(const meta_object& meta, caf::serializer& sink,
-                const void* obj) {
-  return meta.save(sink, obj);
-}
-
-caf::error_code<sec> save(const meta_object& meta, caf::binary_serializer& sink,
-                          const void* obj) {
-  return meta.save_binary(sink, obj);
-}
-
-caf::error load(const meta_object& meta, caf::deserializer& source, void* obj) {
-  return meta.load(source, obj);
-}
-
-caf::error_code<sec> load(const meta_object& meta,
-                          caf::binary_deserializer& source, void* obj) {
-  return meta.load_binary(source, obj);
-}
-
 span<const meta_object> global_meta_objects() {
   return {meta_objects, meta_objects_size};
 }
 
 const meta_object* global_meta_object(type_id_t id) {
-  CAF_ASSERT(id < meta_objects_size);
-  auto& meta = meta_objects[id];
-  return meta.type_name != nullptr ? &meta : nullptr;
+  if (id < meta_objects_size) {
+    auto& meta = meta_objects[id];
+    return !meta.type_name.empty() ? &meta : nullptr;
+  }
+  return nullptr;
 }
 
 void clear_global_meta_objects() {
@@ -115,18 +98,21 @@ void set_global_meta_objects(type_id_t first_id, span<const meta_object> xs) {
             "'new_size > meta_objects_size'");
     auto out = meta_objects + first_id;
     for (const auto& x : xs) {
-      if (out->type_name == nullptr) {
+      if (out->type_name.empty()) {
         // We support calling set_global_meta_objects for building the global
         // table chunk-by-chunk.
         *out = x;
-      } else if (strcmp(out->type_name, x.type_name) == 0) {
+      } else if (out->type_name == x.type_name) {
         // nop: set_global_meta_objects implements idempotency.
       } else {
+        // Get null-terminated strings.
+        auto name1 = to_string(out->type_name);
+        auto name2 = to_string(x.type_name);
         fprintf(stderr,
                 "FATAL: type ID %d already assigned to %s (tried to override "
                 "with %s)\n",
                 static_cast<int>(std::distance(meta_objects, out)),
-                out->type_name, x.type_name);
+                name1.c_str(), name2.c_str());
         abort();
       }
       ++out;

@@ -30,8 +30,8 @@ struct dummy_struct {
 }
 
 template <class Inspector>
-decltype(auto) inspect(Inspector& f, dummy_struct& x) {
-  return f(caf::meta::type_name("dummy_struct"), x.a, x.b);
+bool inspect(Inspector& f, dummy_struct& x) {
+  return f.object(x).fields(f.field("a", x.a), f.field("b", x.b));
 }
 
 // An empty type.
@@ -62,8 +62,8 @@ struct fail_on_copy {
   fail_on_copy& operator=(const fail_on_copy&);
 
   template <class Inspector>
-  friend decltype(auto) inspect(Inspector& f, fail_on_copy& x) {
-    return f(x.value);
+  friend bool inspect(Inspector& f, fail_on_copy& x) {
+    return f.object(x).fields(f.field("value", x.value));
   }
 };
 
@@ -82,8 +82,8 @@ struct i32_wrapper {
   }
 
   template <class Inspector>
-  friend decltype(auto) inspect(Inspector& f, i32_wrapper& x) {
-    return f(x.value);
+  friend bool inspect(Inspector& f, i32_wrapper& x) {
+    return f.object(x).fields(f.field("value", x.value));
   }
 };
 
@@ -102,8 +102,8 @@ struct i64_wrapper {
   }
 
   template <class Inspector>
-  friend decltype(auto) inspect(Inspector& f, i64_wrapper& x) {
-    return f(x.value);
+  friend bool inspect(Inspector& f, i64_wrapper& x) {
+    return f.object(x).fields(f.field("value", x.value));
   }
 };
 
@@ -118,8 +118,8 @@ struct my_request {
 }
 
 template <class Inspector>
-decltype(auto) inspect(Inspector& f, my_request& x) {
-  return f(x.a, x.b);
+bool inspect(Inspector& f, my_request& x) {
+  return f.object(x).fields(f.field("a", x.a), f.field("b", x.b));
 }
 
 struct raw_struct {
@@ -127,8 +127,8 @@ struct raw_struct {
 };
 
 template <class Inspector>
-decltype(auto) inspect(Inspector& f, raw_struct& x) {
-  return f(x.str);
+bool inspect(Inspector& f, raw_struct& x) {
+  return f.object(x).fields(f.field("str", x.str));
 }
 
 [[maybe_unused]] inline bool operator==(const raw_struct& lhs,
@@ -141,8 +141,8 @@ struct s1 {
 };
 
 template <class Inspector>
-decltype(auto) inspect(Inspector& f, s1& x) {
-  return f(x.value);
+bool inspect(Inspector& f, s1& x) {
+  return f.object(x).fields(f.field("value", x.value));
 }
 
 struct s2 {
@@ -150,8 +150,8 @@ struct s2 {
 };
 
 template <class Inspector>
-decltype(auto) inspect(Inspector& f, s2& x) {
-  return f(x.value);
+bool inspect(Inspector& f, s2& x) {
+  return f.object(x).fields(f.field("value", x.value));
 }
 
 struct s3 {
@@ -162,8 +162,8 @@ struct s3 {
 };
 
 template <class Inspector>
-decltype(auto) inspect(Inspector& f, s3& x) {
-  return f(x.value);
+bool inspect(Inspector& f, s3& x) {
+  return f.object(x).fields(f.field("value", x.value));
 }
 
 struct test_array {
@@ -172,8 +172,9 @@ struct test_array {
 };
 
 template <class Inspector>
-decltype(auto) inspect(Inspector& f, test_array& x) {
-  return f(x.value, x.value2);
+bool inspect(Inspector& f, test_array& x) {
+  return f.object(x).fields(f.field("value", x.value),
+                            f.field("value2", x.value2));
 }
 
 // Implemented in serialization.cpp.
@@ -186,8 +187,8 @@ struct test_empty_non_pod {
 };
 
 template <class Inspector>
-decltype(auto) inspect(Inspector& f, test_empty_non_pod&) {
-  return f();
+bool inspect(Inspector& f, test_empty_non_pod& x) {
+  return f.object(x).fields();
 }
 
 enum class test_enum : int32_t {
@@ -211,9 +212,11 @@ struct test_data {
 };
 
 template <class Inspector>
-decltype(auto) inspect(Inspector& f, test_data& x) {
-  return f(caf::meta::type_name("test_data"), x.i32, x.i64, x.f32, x.f64, x.ts,
-           x.te, x.str);
+bool inspect(Inspector& f, test_data& x) {
+  return f.object(x).fields(f.field("i32", x.i32), f.field("i64", x.i64),
+                            f.field("f32", x.f32), f.field("f64", x.f64),
+                            f.field("ts", x.ts), f.field("te", x.te),
+                            f.field("str", x.str));
 }
 
 [[maybe_unused]] inline bool operator==(const test_data& x,
@@ -240,8 +243,8 @@ enum dummy_enum { de_foo, de_bar };
 CAF_BEGIN_TYPE_ID_BLOCK(core_test, caf::first_custom_type_id)
 
   ADD_TYPE_ID((caf::stream<int32_t>) )
-  ADD_TYPE_ID((caf::stream<std::string>) )
   ADD_TYPE_ID((caf::stream<std::pair<level, std::string>>) )
+  ADD_TYPE_ID((caf::stream<std::string>) )
   ADD_TYPE_ID((dummy_enum))
   ADD_TYPE_ID((dummy_enum_class))
   ADD_TYPE_ID((dummy_struct))

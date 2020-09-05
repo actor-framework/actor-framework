@@ -176,7 +176,7 @@ CAF_TEST(type string) {
 
 CAF_TEST(type timespan) {
   timespan dur{500};
-  CAF_CHECK_EQUAL(unbox(read<timespan>("500ns")), dur);
+  CAF_CHECK_EQUAL(read<timespan>("500ns"), dur);
 }
 
 CAF_TEST(lists) {

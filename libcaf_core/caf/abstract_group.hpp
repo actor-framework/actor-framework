@@ -22,6 +22,7 @@
 #include <string>
 
 #include "caf/abstract_channel.hpp"
+#include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/attachable.hpp"
 #include "caf/detail/core_export.hpp"
@@ -46,12 +47,6 @@ public:
 
   // -- pure virtual member functions ------------------------------------------
 
-  /// Serialize this group to `sink`.
-  virtual error save(serializer& sink) const = 0;
-
-  /// Serialize this group to `sink`.
-  virtual error_code<sec> save(binary_serializer& sink) const = 0;
-
   /// Subscribes `who` to this group and returns `true` on success
   /// or `false` if `who` is already subscribed.
   virtual bool subscribe(strong_actor_ptr who) = 0;
@@ -64,20 +59,25 @@ public:
 
   // -- observers --------------------------------------------------------------
 
-  /// Returns the parent module.
-  group_module& module() const {
-    return parent_;
-  }
-
   /// Returns the hosting system.
   actor_system& system() const {
     return system_;
+  }
+
+  /// Returns the parent module.
+  group_module& module() const {
+    return parent_;
   }
 
   /// Returns a string representation of the group identifier, e.g.,
   /// "224.0.0.1" for IPv4 multicast or a user-defined string for local groups.
   const std::string& identifier() const {
     return identifier_;
+  }
+
+  /// @private
+  const actor& dispatcher() {
+    return dispatcher_;
   }
 
 protected:
@@ -87,6 +87,7 @@ protected:
   group_module& parent_;
   std::string identifier_;
   node_id origin_;
+  actor dispatcher_;
 };
 
 /// A smart pointer type that manages instances of {@link group}.

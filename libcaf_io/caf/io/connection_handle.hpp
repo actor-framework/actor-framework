@@ -54,9 +54,8 @@ public:
   }
 
   template <class Inspector>
-  friend typename Inspector::result_type
-  inspect(Inspector& f, connection_handle& x) {
-    return f(meta::type_name("connection_handle"), x.id_);
+  friend bool inspect(Inspector& f, connection_handle& x) {
+    return f.object(x).fields(f.field("id", x.id_));
   }
 
 private:

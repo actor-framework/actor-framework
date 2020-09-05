@@ -60,7 +60,6 @@
 #include "caf/sec.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/telemetry/timer.hpp"
-#include "caf/to_string.hpp"
 
 namespace caf {
 

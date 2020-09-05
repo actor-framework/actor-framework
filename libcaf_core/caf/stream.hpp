@@ -33,8 +33,8 @@ public:
 
 /// @relates stream
 template <class Inspector, class T>
-auto inspect(Inspector& f, stream<T>&) {
-  return f(meta::type_name(type_name_v<stream<T>>));
+auto inspect(Inspector& f, stream<T>& x) {
+  return f.object(x).fields();
 }
 
 } // namespace caf

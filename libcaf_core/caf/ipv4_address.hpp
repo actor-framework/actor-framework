@@ -104,9 +104,8 @@ public:
   // -- inspection -------------------------------------------------------------
 
   template <class Inspector>
-  friend typename Inspector::result_type
-  inspect(Inspector& f, ipv4_address& x) {
-    return f(x.bits_);
+  friend bool inspect(Inspector& f, ipv4_address& x) {
+    return f.object(x).fields(f.field("value", x.bits_));
   }
 
 private:

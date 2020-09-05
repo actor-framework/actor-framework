@@ -119,7 +119,6 @@ void read_config_map(State& ps, Consumer&& consumer) {
     fsm_epsilon(read_string(ps, key), await_assignment, quote_marks)
     transition(read_key_name, alnum_or_dash, key = ch)
     transition_if(Nested, done, '}', consumer.end_map())
-    epsilon_if(!Nested, done)
   }
   // Reads a key of a "key=value" line.
   state(read_key_name) {
@@ -219,6 +218,9 @@ void read_config_value(State& ps, Consumer&& consumer, InsideList inside_list) {
 
 template <class State, class Consumer>
 void read_config(State& ps, Consumer&& consumer) {
+  auto key_char = [](char x) {
+    return isalnum(x) || x == '-' || x == '_' || x == '"';
+  };
   // clang-format off
   start();
   // Checks whether there's a top-level '{'.
@@ -226,12 +228,12 @@ void read_config(State& ps, Consumer&& consumer) {
     transition(init, " \t\n")
     fsm_epsilon(read_config_comment(ps, consumer), init, '#')
     fsm_transition(read_config_map<false>(ps, consumer),
-                   await_closing_brance, '{')
-    fsm_epsilon(read_config_map<false>(ps, consumer), init)
+                   await_closing_brace, '{')
+    fsm_epsilon(read_config_map<false>(ps, consumer), init, key_char)
   }
-  state(await_closing_brance) {
-    transition(await_closing_brance, " \t\n")
-    fsm_epsilon(read_config_comment(ps, consumer), await_closing_brance, '#')
+  state(await_closing_brace) {
+    transition(await_closing_brace, " \t\n")
+    fsm_epsilon(read_config_comment(ps, consumer), await_closing_brace, '#')
     transition(done, '}')
   }
   term_state(done) {

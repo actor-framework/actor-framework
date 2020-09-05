@@ -229,7 +229,7 @@ are usually detected at runtime and thus have no hard-coded default.
 .. literalinclude:: /examples/caf-application.conf
   :language: none
 
-.. _add-custom-message-type:
+.. _custom-message-types:
 
 Adding Custom Message Types
 ---------------------------
@@ -294,7 +294,7 @@ Adding the calculator actor type to our config is achieved by calling
 ``add_actor_type``. After calling this in our config, we can spawn the
 ``calculator`` anywhere in the distributed actor system (assuming all nodes use
 the same config). Note that the handle type still requires a type ID (see
-add-custom-message-type_).
+custom-message-types_).
 
 Our final example illustrates how to spawn a ``calculator`` locally by
 using its type name. Because the dynamic type name lookup can fail and the

@@ -116,13 +116,13 @@ public:
 
   // -- serialization ----------------------------------------------------------
 
-  error save(serializer& sink) const;
+  bool save(serializer& sink) const;
 
-  error_code<sec> save(binary_serializer& sink) const;
+  bool save(binary_serializer& sink) const;
 
-  error load(deserializer& source);
+  bool load(deserializer& source);
 
-  error_code<sec> load(binary_deserializer& source);
+  bool load(binary_deserializer& source);
 
   // -- element access ---------------------------------------------------------
 
@@ -198,15 +198,17 @@ message make_message(Ts&&... xs) {
     CAF_RAISE_ERROR(std::bad_alloc, "bad_alloc");
   auto raw_ptr = new (vptr) message_data(types);
   intrusive_cow_ptr<message_data> ptr{raw_ptr, false};
-  message_data_init(raw_ptr->storage(), std::forward<Ts>(xs)...);
+  raw_ptr->init(std::forward<Ts>(xs)...);
   return message{std::move(ptr)};
 }
 
+/// @relates message
 template <class Tuple, size_t... Is>
 message make_message_from_tuple(Tuple&& xs, std::index_sequence<Is...>) {
   return make_message(std::get<Is>(std::forward<Tuple>(xs))...);
 }
 
+/// @relates message
 template <class Tuple>
 message make_message_from_tuple(Tuple&& xs) {
   using tuple_type = std::decay_t<Tuple>;
@@ -215,20 +217,20 @@ message make_message_from_tuple(Tuple&& xs) {
 }
 
 /// @relates message
-CAF_CORE_EXPORT error inspect(serializer& sink, const message& msg);
+template <class Inspector>
+auto inspect(Inspector& f, message& x)
+  -> std::enable_if_t<Inspector::is_loading, decltype(x.load(f))> {
+  return x.load(f);
+}
 
 /// @relates message
-CAF_CORE_EXPORT error_code<sec> inspect(binary_serializer& sink,
-                                        const message& msg);
+template <class Inspector>
+auto inspect(Inspector& f, message& x)
+  -> std::enable_if_t<!Inspector::is_loading, decltype(x.save(f))> {
+  return x.save(f);
+}
 
 /// @relates message
-CAF_CORE_EXPORT error inspect(deserializer& source, message& msg);
-
-/// @relates message
-CAF_CORE_EXPORT error_code<sec>
-inspect(binary_deserializer& source, message& msg);
-
-/// @relates message
-CAF_CORE_EXPORT std::string to_string(const message& msg);
+CAF_CORE_EXPORT std::string to_string(const message& x);
 
 } // namespace caf

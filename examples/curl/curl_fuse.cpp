@@ -115,11 +115,11 @@ struct base_state {
   }
 
   actor_ostream print() {
-    return aout(self) << color << name << " (id = " << self->id() << "): ";
+    return aout(self) << color << self->name() << " (id = " << self->id()
+                      << "): ";
   }
 
-  virtual bool init(std::string m_name, std::string m_color) {
-    name = std::move(m_name);
+  virtual bool init(std::string m_color) {
     color = std::move(m_color);
     print() << "started" << color::reset_endl;
     return true;
@@ -130,13 +130,18 @@ struct base_state {
   }
 
   local_actor* self;
-  std::string name;
   std::string color;
 };
 
+struct client_job_state : base_state {
+  static inline const char* name = "curl.client-job";
+  using base_state::base_state;
+};
+
 // encapsulates an HTTP request
-behavior client_job(stateful_actor<base_state>* self, const actor& parent) {
-  if (!self->state.init("client-job", color::blue))
+behavior client_job(stateful_actor<client_job_state>* self,
+                    const actor& parent) {
+  if (!self->state.init(color::blue))
     return {}; // returning an empty behavior terminates the actor
   self->send(parent, read_atom_v, "http://www.example.com/index.html",
              uint64_t{0}, uint64_t{4095});
@@ -166,26 +171,29 @@ struct client_state : base_state {
   std::random_device rd;
   std::default_random_engine re;
   std::uniform_int_distribution<int> dist;
+  static inline const char* name = "curl.client";
 };
 
 // spawns HTTP requests
 behavior client(stateful_actor<client_state>* self, const actor& parent) {
   using std::chrono::milliseconds;
   self->link_to(parent);
-  if (!self->state.init("client", color::green))
+  if (!self->state.init(color::green))
     return {}; // returning an empty behavior terminates the actor
   self->send(self, next_atom_v);
-  return {[=](next_atom) {
-    auto& st = self->state;
-    st.print() << "spawn new client_job (nr. " << ++st.count << ")"
-               << color::reset_endl;
-    // client_job will use IO
-    // and should thus be spawned in a separate thread
-    self->spawn<detached + linked>(client_job, parent);
-    // compute random delay until next job is launched
-    auto delay = st.dist(st.re);
-    self->delayed_send(self, milliseconds(delay), next_atom_v);
-  }};
+  return {
+    [=](next_atom) {
+      auto& st = self->state;
+      st.print() << "spawn new client_job (nr. " << ++st.count << ")"
+                 << color::reset_endl;
+      // client_job will use IO
+      // and should thus be spawned in a separate thread
+      self->spawn<detached + linked>(client_job, parent);
+      // compute random delay until next job is launched
+      auto delay = st.dist(st.re);
+      self->delayed_send(self, milliseconds(delay), next_atom_v);
+    },
+  };
 }
 
 struct curl_state : base_state {
@@ -207,22 +215,23 @@ struct curl_state : base_state {
     return size;
   }
 
-  bool init(std::string m_name, std::string m_color) override {
+  bool init(std::string m_color) override {
     curl = curl_easy_init();
     if (curl == nullptr)
       return false;
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &curl_state::callback);
     curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
-    return base_state::init(std::move(m_name), std::move(m_color));
+    return base_state::init(std::move(m_color));
   }
 
   CURL* curl = nullptr;
   buffer_type buf;
+  static inline const char* name = "curl.worker";
 };
 
 // manages a CURL session
 behavior curl_worker(stateful_actor<curl_state>* self, const actor& parent) {
-  if (!self->state.init("curl-worker", color::yellow))
+  if (!self->state.init(color::yellow))
     return {}; // returning an empty behavior terminates the actor
   return {[=](read_atom, const std::string& fname, uint64_t offset,
               uint64_t range) -> message {
@@ -278,10 +287,11 @@ struct master_state : base_state {
   }
   std::vector<actor> idle;
   std::vector<actor> busy;
+  static inline const char* name = "curl.master";
 };
 
 behavior curl_master(stateful_actor<master_state>* self) {
-  if (!self->state.init("curl-master", color::magenta))
+  if (!self->state.init(color::magenta))
     return {}; // returning an empty behavior terminates the actor
   // spawn workers
   for (size_t i = 0; i < num_curl_workers; ++i)

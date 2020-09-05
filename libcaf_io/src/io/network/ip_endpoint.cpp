@@ -114,8 +114,8 @@ size_t ep_hash::hash(const sockaddr_in* sa) const noexcept {
 }
 
 size_t ep_hash::hash(const sockaddr_in6* sa) const noexcept {
-  return hash::fnv<size_t>::compute((make_span(sa->sin6_addr.s6_addr)),
-                                    sa->sin6_port);
+  auto bytes = as_bytes(make_span(sa->sin6_addr.s6_addr));
+  return hash::fnv<size_t>::compute(bytes, sa->sin6_port);
 }
 
 bool operator==(const ip_endpoint& lhs, const ip_endpoint& rhs) {

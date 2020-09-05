@@ -47,15 +47,26 @@ public:
 
   nocopy_fun& operator=(const nocopy_fun&) = delete;
 
-  int operator()(int x, int y) {
+  int32_t operator()(int32_t x, int32_t y) {
     return x + y;
   }
 };
 
 struct fixture {
-  message m1 = make_message(1);
-  message m2 = make_message(1, 2);
-  message m3 = make_message(1, 2, 3);
+  optional<int32_t> res_of(behavior& bhvr, message& msg) {
+    auto res = bhvr(msg);
+    if (!res)
+      return none;
+    if (auto view = make_const_typed_message_view<int32_t>(*res))
+      return get<0>(view);
+    return none;
+  }
+
+  message m1 = make_message(int32_t{1});
+
+  message m2 = make_message(int32_t{1}, int32_t{2});
+
+  message m3 = make_message(int32_t{1}, int32_t{2}, int32_t{3});
 };
 
 } // namespace
@@ -72,15 +83,15 @@ CAF_TEST(default_construct) {
 CAF_TEST(nocopy_function_object) {
   behavior f{nocopy_fun{}};
   CAF_CHECK_EQUAL(f(m1), none);
-  CAF_CHECK_EQUAL(to_string(f(m2)), "*(3)");
+  CAF_CHECK_EQUAL(res_of(f, m2), 3);
   CAF_CHECK_EQUAL(f(m3), none);
 }
 
 CAF_TEST(single_lambda_construct) {
   behavior f{[](int x) { return x + 1; }};
-  CAF_CHECK_EQUAL(to_string(f(m1)), "*(2)");
-  CAF_CHECK_EQUAL(f(m2), none);
-  CAF_CHECK_EQUAL(f(m3), none);
+  CAF_CHECK_EQUAL(res_of(f, m1), 2);
+  CAF_CHECK_EQUAL(res_of(f, m2), none);
+  CAF_CHECK_EQUAL(res_of(f, m3), none);
 }
 
 CAF_TEST(multiple_lambda_construct) {
@@ -88,9 +99,9 @@ CAF_TEST(multiple_lambda_construct) {
     [](int x) { return x + 1; },
     [](int x, int y) { return x * y; }
   };
-  CAF_CHECK_EQUAL(to_string(f(m1)), "*(2)");
-  CAF_CHECK_EQUAL(to_string(f(m2)), "*(2)");
-  CAF_CHECK_EQUAL(f(m3), none);
+  CAF_CHECK_EQUAL(res_of(f, m1), 2);
+  CAF_CHECK_EQUAL(res_of(f, m2), 2);
+  CAF_CHECK_EQUAL(res_of(f, m3), none);
 }
 
 CAF_TEST(become_empty_behavior) {

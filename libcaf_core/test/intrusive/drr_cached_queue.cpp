@@ -229,13 +229,13 @@ CAF_TEST(peek_all) {
 }
 
 CAF_TEST(to_string) {
-  CAF_CHECK_EQUAL(deep_to_string(queue), "[]");
+  CAF_CHECK_EQUAL(deep_to_string(queue.items()), "[]");
   fill(queue, 3, 4);
-  CAF_CHECK_EQUAL(deep_to_string(queue), "[3, 4]");
+  CAF_CHECK_EQUAL(deep_to_string(queue.items()), "[3, 4]");
   fill(queue.cache(), 1, 2);
-  CAF_CHECK_EQUAL(deep_to_string(queue), "[3, 4]");
+  CAF_CHECK_EQUAL(deep_to_string(queue.items()), "[3, 4]");
   queue.flush_cache();
-  CAF_CHECK_EQUAL(deep_to_string(queue), "[1, 2, 3, 4]");
+  CAF_CHECK_EQUAL(deep_to_string(queue.items()), "[1, 2, 3, 4]");
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

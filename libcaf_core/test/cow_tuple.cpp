@@ -103,7 +103,7 @@ CAF_TEST(unsharing) {
 
 CAF_TEST(to_string) {
   auto x = make_cow_tuple(1, string{"abc"});
-  CAF_CHECK_EQUAL(deep_to_string(x), "(1, \"abc\")");
+  CAF_CHECK_EQUAL(deep_to_string(x), "[1, abc]");
 }
 
 CAF_TEST_FIXTURE_SCOPE(cow_tuple_tests, test_coordinator_fixture<>)

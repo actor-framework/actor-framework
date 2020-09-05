@@ -184,4 +184,3 @@ bool operator!=(const weak_intrusive_ptr<X>& lhs,
 }
 
 } // namespace caf
-

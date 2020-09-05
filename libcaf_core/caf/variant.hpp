@@ -24,17 +24,14 @@
 
 #include "caf/config.hpp"
 #include "caf/default_sum_type_access.hpp"
+#include "caf/detail/type_list.hpp"
+#include "caf/detail/type_traits.hpp"
+#include "caf/detail/variant_data.hpp"
 #include "caf/fwd.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/static_visitor.hpp"
 #include "caf/sum_type.hpp"
 #include "caf/sum_type_access.hpp"
-
-#include "caf/meta/omittable.hpp"
-
-#include "caf/detail/type_list.hpp"
-#include "caf/detail/type_traits.hpp"
-#include "caf/detail/variant_data.hpp"
 
 #define CAF_VARIANT_CASE(n)                                                    \
   case n:                                                                      \
@@ -433,87 +430,4 @@ bool operator>=(const variant<Ts...>& x, const variant<Ts...>& y) {
   return !(x < y);
 }
 
-/// @relates variant
-template <class T>
-struct variant_reader {
-  uint8_t& type_tag;
-  T& x;
-};
-
-/// @relates variant
-template <class Inspector, class... Ts>
-typename Inspector::result_type
-inspect(Inspector& f, variant_reader<variant<Ts...>>& x) {
-  return x.x.template apply<typename Inspector::result_type>(f);
-}
-
-/// @relates variant
-template <class Inspector, class... Ts>
-typename std::enable_if<Inspector::reads_state,
-                        typename Inspector::result_type>::type
-inspect(Inspector& f, variant<Ts...>& x) {
-  // We use a single byte for the type index on the wire.
-  auto type_tag = static_cast<uint8_t>(x.index());
-  variant_reader<variant<Ts...>> helper{type_tag, x};
-  return f(meta::omittable(), type_tag, helper);
-}
-
-/// @relates variant
-template <class T>
-struct variant_writer {
-  uint8_t& type_tag;
-  T& x;
-};
-
-/// @relates variant
-template <class Inspector, class... Ts>
-typename Inspector::result_type
-inspect(Inspector& f, variant_writer<variant<Ts...>>& x) {
-  switch (x.type_tag) {
-    default: CAF_RAISE_ERROR("invalid type found");
-    CAF_VARIANT_ASSIGN_CASE(0);
-    CAF_VARIANT_ASSIGN_CASE(1);
-    CAF_VARIANT_ASSIGN_CASE(2);
-    CAF_VARIANT_ASSIGN_CASE(3);
-    CAF_VARIANT_ASSIGN_CASE(4);
-    CAF_VARIANT_ASSIGN_CASE(5);
-    CAF_VARIANT_ASSIGN_CASE(6);
-    CAF_VARIANT_ASSIGN_CASE(7);
-    CAF_VARIANT_ASSIGN_CASE(8);
-    CAF_VARIANT_ASSIGN_CASE(9);
-    CAF_VARIANT_ASSIGN_CASE(10);
-    CAF_VARIANT_ASSIGN_CASE(11);
-    CAF_VARIANT_ASSIGN_CASE(12);
-    CAF_VARIANT_ASSIGN_CASE(13);
-    CAF_VARIANT_ASSIGN_CASE(14);
-    CAF_VARIANT_ASSIGN_CASE(15);
-    CAF_VARIANT_ASSIGN_CASE(16);
-    CAF_VARIANT_ASSIGN_CASE(17);
-    CAF_VARIANT_ASSIGN_CASE(18);
-    CAF_VARIANT_ASSIGN_CASE(19);
-    CAF_VARIANT_ASSIGN_CASE(20);
-    CAF_VARIANT_ASSIGN_CASE(21);
-    CAF_VARIANT_ASSIGN_CASE(22);
-    CAF_VARIANT_ASSIGN_CASE(23);
-    CAF_VARIANT_ASSIGN_CASE(24);
-    CAF_VARIANT_ASSIGN_CASE(25);
-    CAF_VARIANT_ASSIGN_CASE(26);
-    CAF_VARIANT_ASSIGN_CASE(27);
-    CAF_VARIANT_ASSIGN_CASE(28);
-    CAF_VARIANT_ASSIGN_CASE(29);
-  }
-}
-
-/// @relates variant
-template <class Inspector, class... Ts>
-typename std::enable_if<Inspector::writes_state,
-                        typename Inspector::result_type>::type
-inspect(Inspector& f, variant<Ts...>& x) {
-  // We use a single byte for the type index on the wire.
-  uint8_t type_tag;
-  variant_writer<variant<Ts...>> helper{type_tag, x};
-  return f(meta::omittable(), type_tag, helper);
-}
-
 } // namespace caf
-

@@ -34,27 +34,26 @@ public:
   virtual ~tracing_data();
 
   /// Writes the content of this object to `sink`.
-  virtual error serialize(serializer& sink) const = 0;
+  virtual bool serialize(serializer& sink) const = 0;
 
   /// @copydoc serialize
-  virtual error_code<sec> serialize(binary_serializer& sink) const = 0;
+  virtual bool serialize(binary_serializer& sink) const = 0;
 };
 
 /// @relates tracing_data
 using tracing_data_ptr = std::unique_ptr<tracing_data>;
 
 /// @relates tracing_data
-CAF_CORE_EXPORT error inspect(serializer& sink, const tracing_data_ptr& x);
+CAF_CORE_EXPORT bool inspect(serializer& sink, const tracing_data_ptr& x);
 
 /// @relates tracing_data
-CAF_CORE_EXPORT error_code<sec>
-inspect(binary_serializer& sink, const tracing_data_ptr& x);
+CAF_CORE_EXPORT bool inspect(binary_serializer& sink,
+                             const tracing_data_ptr& x);
 
 /// @relates tracing_data
-CAF_CORE_EXPORT error inspect(deserializer& source, tracing_data_ptr& x);
+CAF_CORE_EXPORT bool inspect(deserializer& source, tracing_data_ptr& x);
 
 /// @relates tracing_data
-CAF_CORE_EXPORT error_code<sec>
-inspect(binary_deserializer& source, tracing_data_ptr& x);
+CAF_CORE_EXPORT bool inspect(binary_deserializer& source, tracing_data_ptr& x);
 
 } // namespace caf

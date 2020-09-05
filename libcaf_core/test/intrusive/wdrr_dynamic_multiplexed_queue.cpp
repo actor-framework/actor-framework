@@ -211,11 +211,4 @@ CAF_TEST(peek_all) {
   CAF_CHECK_EQUAL(queue_to_string(), "3, 1, 4, 2");
 }
 
-CAF_TEST(to_string) {
-  make_queues();
-  CAF_CHECK_EQUAL(deep_to_string(queue), "[]");
-  fill(queue, 1, 2, 3, 4);
-  CAF_CHECK_EQUAL(deep_to_string(queue), "[3, 1, 4, 2]");
-}
-
 CAF_TEST_FIXTURE_SCOPE_END()

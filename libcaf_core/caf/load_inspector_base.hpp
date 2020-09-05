@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,22 +18,46 @@
 
 #pragma once
 
-#include <string>
-
-#include "caf/deep_to_string.hpp"
-#include "caf/detail/stringification_inspector.hpp"
-#include "caf/detail/type_traits.hpp"
-#include "caf/error.hpp"
+#include "caf/inspector_access.hpp"
+#include "caf/load_inspector.hpp"
 
 namespace caf {
 
-template <class T, class E = typename std::enable_if<detail::is_inspectable<
-                     detail::stringification_inspector, T>::value>::type>
-std::string to_string(const T& x) {
-  std::string res;
-  detail::stringification_inspector f{res};
-  inspect(f, const_cast<T&>(x));
-  return res;
-}
+template <class Subtype>
+class load_inspector_base : public load_inspector {
+public:
+  // -- member types -----------------------------------------------------------
+
+  using super = load_inspector;
+
+  // -- DSL entry point --------------------------------------------------------
+
+  template <class T>
+  constexpr auto object(T&) noexcept {
+    return super::object_t<Subtype>{type_name_or_anonymous<T>(), dptr()};
+  }
+
+  // -- dispatching to load/load functions -------------------------------------
+
+  template <class T>
+  bool apply_value(T& x) {
+    return detail::load_value(dref(), x);
+  }
+
+  template <class Get, class Set>
+  bool apply_value(Get&& get, Set&&) {
+    auto&& x = get();
+    return detail::load_value(dref(), x);
+  }
+
+private:
+  Subtype* dptr() {
+    return static_cast<Subtype*>(this);
+  }
+
+  Subtype& dref() {
+    return *static_cast<Subtype*>(this);
+  }
+};
 
 } // namespace caf

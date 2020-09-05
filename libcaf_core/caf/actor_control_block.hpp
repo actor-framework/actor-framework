@@ -25,10 +25,6 @@
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/meta/load_callback.hpp"
-#include "caf/meta/omittable_if_none.hpp"
-#include "caf/meta/save_callback.hpp"
-#include "caf/meta/type_name.hpp"
 #include "caf/node_id.hpp"
 #include "caf/weak_intrusive_ptr.hpp"
 
@@ -97,7 +93,7 @@ public:
   static_assert(sizeof(std::atomic<size_t>) == sizeof(void*),
                 "std::atomic not lockfree on this platform");
 
-  static_assert(sizeof(intrusive_ptr<node_id::data>) == sizeof(void*),
+  static_assert(sizeof(intrusive_ptr<int>) == sizeof(int*),
                 "intrusive_ptr<T> and T* have different size");
 
   static_assert(sizeof(node_id) == sizeof(void*),
@@ -205,25 +201,38 @@ CAF_CORE_EXPORT std::string to_string(const weak_actor_ptr& x);
 CAF_CORE_EXPORT void append_to_string(std::string& x, const weak_actor_ptr& y);
 
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, strong_actor_ptr& x) {
+bool inspect(Inspector& f, strong_actor_ptr& x) {
   actor_id aid = 0;
   node_id nid;
-  if (x) {
-    aid = x->aid;
-    nid = x->nid;
+  if constexpr (!Inspector::is_loading) {
+    if (x) {
+      aid = x->aid;
+      nid = x->nid;
+    }
   }
-  auto load = [&] { return load_actor(x, context_of(&f), aid, nid); };
-  auto save = [&] { return save_actor(x, context_of(&f), aid, nid); };
-  return f(meta::type_name("actor"), aid, meta::omittable_if_none(), nid,
-           meta::load_callback(load), meta::save_callback(save));
+  auto load_cb = [&] { return load_actor(x, context_of(&f), aid, nid); };
+  auto save_cb = [&] { return save_actor(x, context_of(&f), aid, nid); };
+  return f.object(x)
+    .pretty_name("actor")
+    .on_load(load_cb)
+    .on_save(save_cb)
+    .fields(f.field("id", aid), f.field("node", nid));
 }
 
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, weak_actor_ptr& x) {
-  // inspect as strong pointer, then write back to weak pointer on save
-  auto tmp = x.lock();
-  auto load = [&] { x.reset(tmp.get()); };
-  return f(tmp, meta::load_callback(load));
+bool inspect(Inspector& f, weak_actor_ptr& x) {
+  // Inspect as strong pointer, then write back to weak pointer on save.
+  if constexpr (Inspector::is_loading) {
+    strong_actor_ptr tmp;
+    if (inspect(f, tmp)) {
+      x.reset(tmp.get());
+      return true;
+    }
+    return false;
+  } else {
+    auto tmp = x.lock();
+    return inspect(f, tmp);
+  }
 }
 
 } // namespace caf

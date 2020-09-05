@@ -34,7 +34,7 @@ namespace {
 struct dyn_type_id_list {
   explicit dyn_type_id_list(type_id_t* storage) noexcept : storage(storage) {
     CAF_ASSERT(storage != nullptr);
-    auto first = reinterpret_cast<const uint8_t*>(storage);
+    auto first = reinterpret_cast<const byte*>(storage);
     auto last = first + ((storage[0] + 1) * sizeof(type_id_t));
     hash = caf::hash::fnv<size_t>::compute(make_span(first, last));
   }
@@ -94,7 +94,8 @@ type_id_list_builder::~type_id_list_builder() {
   free(storage_);
 }
 
-void type_id_list_builder::reserve(size_t new_capacity) {
+void type_id_list_builder::reserve(size_t num_elements) {
+  auto new_capacity = num_elements + 1; // One extra slot for the size prefix.
   if (reserved_ >= new_capacity)
     return;
   reserved_ = new_capacity;

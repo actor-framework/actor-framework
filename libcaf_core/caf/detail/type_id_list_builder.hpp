@@ -28,32 +28,52 @@ namespace caf::detail {
 
 class CAF_CORE_EXPORT type_id_list_builder {
 public:
+  // -- constants --------------------------------------------------------------
+
   static constexpr size_t block_size = 8;
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   type_id_list_builder();
 
   ~type_id_list_builder();
 
+  // -- modifiers
+  // ---------------------------------------------------------------
+
   void reserve(size_t new_capacity);
 
   void push_back(type_id_t id);
-
-  /// Returns the number of elements currenty stored in the array.
-  size_t size() const noexcept;
-
-  /// @pre `index < size()`
-  type_id_t operator[](size_t index) const noexcept;
-
-  /// Convertes the internal buffer to a ::type_id_list and returns it.
-  type_id_list move_to_list() noexcept;
-
-  /// Convertes the internal buffer to a ::type_id_list and returns it.
-  type_id_list copy_to_list() const;
 
   void clear() noexcept {
     if (storage_)
       size_ = 1;
   }
+
+  // -- properties -------------------------------------------------------------
+
+  size_t size() const noexcept;
+
+  /// @pre `index < size()`
+  type_id_t operator[](size_t index) const noexcept;
+
+  // -- iterator access --------------------------------------------------------
+
+  auto begin() const noexcept {
+    return storage_;
+  }
+
+  auto end() const noexcept {
+    return storage_ + size_;
+  }
+
+  // -- conversions ------------------------------------------------------------
+
+  /// Convertes the internal buffer to a @ref type_id_list and returns it.
+  type_id_list move_to_list() noexcept;
+
+  /// Convertes the internal buffer to a @ref type_id_list and returns it.
+  type_id_list copy_to_list() const;
 
 private:
   size_t size_;

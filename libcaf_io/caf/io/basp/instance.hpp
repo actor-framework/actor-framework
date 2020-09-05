@@ -107,7 +107,7 @@ public:
 
   /// Describes a function object responsible for writing
   /// the payload for a BASP message.
-  using payload_writer = callback<error_code<sec>(binary_serializer&)>;
+  using payload_writer = callback<bool(binary_serializer&)>;
 
   /// Describes a callback function object for `remove_published_actor`.
   using removed_published_actor

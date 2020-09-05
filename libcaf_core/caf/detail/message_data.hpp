@@ -54,7 +54,7 @@ public:
   message_data& operator=(const message_data&) = delete;
 
   /// Constructs the message data object *without* constructing any element.
-  explicit message_data(type_id_list types);
+  explicit message_data(type_id_list types) noexcept;
 
   ~message_data() noexcept;
 
@@ -115,17 +115,31 @@ public:
   /// @copydoc at
   const byte* at(size_t index) const noexcept;
 
-  caf::error save(caf::serializer& sink) const;
+  void inc_constructed_elements() {
+    ++constructed_elements_;
+  }
 
-  caf::error save(caf::binary_serializer& sink) const;
-
-  caf::error load(caf::deserializer& source);
-
-  caf::error load(caf::binary_deserializer& source);
+  template <class... Ts>
+  void init(Ts&&... xs) {
+    init_impl(storage(), std::forward<Ts>(xs)...);
+  }
 
 private:
+  void init_impl(byte*) {
+    // nop
+  }
+
+  template <class T, class... Ts>
+  void init_impl(byte* storage, T&& x, Ts&&... xs) {
+    using type = strip_and_convert_t<T>;
+    new (storage) type(std::forward<T>(x));
+    ++constructed_elements_;
+    init_impl(storage + padded_size_v<type>, std::forward<Ts>(xs)...);
+  }
+
   mutable std::atomic<size_t> rc_;
   type_id_list types_;
+  size_t constructed_elements_;
   byte storage_[];
 };
 
@@ -139,19 +153,6 @@ inline void intrusive_ptr_add_ref(const message_data* ptr) {
 /// @relates message_data
 inline void intrusive_ptr_release(message_data* ptr) {
   ptr->deref();
-}
-
-inline void message_data_init(byte*) {
-  // nop
-}
-
-template <class T, class... Ts>
-void message_data_init(byte* storage, T&& x, Ts&&... xs) {
-  // TODO: exception safety: if any constructor throws, we need to unwind the
-  //       stack here and call destructors.
-  using type = strip_and_convert_t<T>;
-  new (storage) type(std::forward<T>(x));
-  message_data_init(storage + padded_size_v<type>, std::forward<Ts>(xs)...);
 }
 
 } // namespace caf::detail

@@ -147,7 +147,7 @@ public:
   }
 
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f, actor& x) {
+  friend bool inspect(Inspector& f, actor& x) {
     return inspect(f, x.ptr_);
   }
 

@@ -38,8 +38,8 @@ struct foo {
 };
 
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, foo& x) {
-  return f(meta::type_name("foo"), x.a, x.b);
+bool inspect(Inspector& f, foo& x) {
+  return f.object(x).fields(f.field("a", x.a), f.field("b", x.b));
 }
 // --(rst-foo-end)--
 
@@ -57,8 +57,8 @@ struct foo2 {
 
 // foo2 also needs to be serializable
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, foo2& x) {
-  return f(meta::type_name("foo2"), x.a, x.b);
+bool inspect(Inspector& f, foo2& x) {
+  return f.object(x).fields(f.field("a", x.a), f.field("b", x.b));
 }
 
 // receives our custom message types
@@ -77,7 +77,7 @@ void testee(event_based_actor* self, size_t remaining) {
       set_next_behavior();
     },
     [=](const foo& val) {
-      aout(self) << to_string(val) << endl;
+      aout(self) << deep_to_string(val) << endl;
       set_next_behavior();
     });
 }
@@ -90,24 +90,24 @@ void caf_main(actor_system& sys) {
   f1.a = 5;
   f1.b.resize(1);
   f1.b.back().push_back(42);
-  // I/O buffer
+  // byte buffer
   binary_serializer::container_type buf;
   // write f1 to buffer
-  binary_serializer bs{sys, buf};
-  auto e = bs(f1);
-  if (e) {
-    std::cerr << "*** unable to serialize foo2: " << to_string(e) << '\n';
+  binary_serializer sink{sys, buf};
+  if (!inspect_object(sink, f1)) {
+    std::cerr << "*** failed to serialize foo2: " << to_string(sink.get_error())
+              << '\n';
     return;
   }
   // read f2 back from buffer
-  binary_deserializer bd{sys, buf};
-  e = bd(f2);
-  if (e) {
-    std::cerr << "*** unable to serialize foo2: " << to_string(e) << '\n';
+  binary_deserializer source{sys, buf};
+  if (!inspect_object(source, f2)) {
+    std::cerr << "*** failed to deserialize foo2: "
+              << to_string(source.get_error()) << '\n';
     return;
   }
   // must be equal
-  assert(to_string(f1) == to_string(f2));
+  assert(deep_to_string(f1) == deep_to_string(f2));
   // spawn a testee that receives two messages of user-defined type
   auto t = sys.spawn(testee, 2u);
   scoped_actor self{sys};

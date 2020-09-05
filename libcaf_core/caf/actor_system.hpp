@@ -75,8 +75,8 @@ struct typed_mpi_access<result<Out...>(In...)> {
   std::string operator()() const {
     static_assert(sizeof...(In) > 0, "typed MPI without inputs");
     static_assert(sizeof...(Out) > 0, "typed MPI without outputs");
-    std::vector<std::string> inputs{type_name_v<In>...};
-    std::vector<std::string> outputs1{type_name_v<Out>...};
+    std::vector<std::string> inputs{to_string(type_name_v<In>)...};
+    std::vector<std::string> outputs1{to_string(type_name_v<Out>)...};
     std::string result = "(";
     result += join(inputs, ",");
     result += ") -> (";

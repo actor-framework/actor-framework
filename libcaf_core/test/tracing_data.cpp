@@ -46,38 +46,36 @@ public:
     // nop
   }
 
-  error serialize(serializer& sink) const override {
-    return sink(value);
+  bool serialize(serializer& sink) const override {
+    return inspect_object(sink, value);
   }
 
-  error_code<sec> serialize(binary_serializer& sink) const override {
-    return sink(value);
+  bool serialize(binary_serializer& sink) const override {
+    return inspect_object(sink, value);
   }
 };
 
 class dummy_tracing_data_factory : public tracing_data_factory {
 public:
-  error deserialize(deserializer& source,
-                    std::unique_ptr<tracing_data>& dst) const override {
+  bool deserialize(deserializer& source,
+                   std::unique_ptr<tracing_data>& dst) const override {
     return deserialize_impl(source, dst);
   }
 
-  error_code<sec>
-  deserialize(binary_deserializer& source,
-              std::unique_ptr<tracing_data>& dst) const override {
+  bool deserialize(binary_deserializer& source,
+                   std::unique_ptr<tracing_data>& dst) const override {
     return deserialize_impl(source, dst);
   }
 
 private:
   template <class Deserializer>
-  typename Deserializer::result_type
-  deserialize_impl(Deserializer& source,
-                   std::unique_ptr<tracing_data>& dst) const {
+  bool deserialize_impl(Deserializer& source,
+                        std::unique_ptr<tracing_data>& dst) const {
     string value;
-    if (auto err = source(value))
-      return err;
+    if (!inspect_object(source, value))
+      return false;
     dst.reset(new dummy_tracing_data(std::move(value)));
-    return {};
+    return true;
   }
 };
 
@@ -194,12 +192,11 @@ CAF_TEST(profilers inject tracing data into asynchronous messages) {
 CAF_TEST(tracing data is serializable) {
   byte_buffer buf;
   binary_serializer sink{sys, buf};
-  tracing_data_ptr data;
-  tracing_data_ptr copy;
-  data.reset(new dummy_tracing_data("iTrace"));
-  CAF_CHECK_EQUAL(sink(data), none);
+  tracing_data_ptr data{new dummy_tracing_data("iTrace")};
+  CAF_CHECK(inspect_object(sink, data));
   binary_deserializer source{sys, buf};
-  CAF_CHECK_EQUAL(source(copy), none);
+  tracing_data_ptr copy;
+  CAF_CHECK(inspect_object(source, copy));
   CAF_REQUIRE_NOT_EQUAL(copy.get(), nullptr);
   CAF_CHECK_EQUAL(dynamic_cast<dummy_tracing_data&>(*copy).value, "iTrace");
 }

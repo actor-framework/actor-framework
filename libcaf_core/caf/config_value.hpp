@@ -35,6 +35,7 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"
+#include "caf/inspector_access.hpp"
 #include "caf/optional.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/string_algorithms.hpp"
@@ -848,10 +849,88 @@ config_value make_config_value_list(Ts&&... xs) {
   return config_value{std::move(lst)};
 }
 
-/// @relates config_value
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, config_value& x) {
-  return f(meta::type_name("config_value"), x.get_data());
-}
+// -- inspection API -----------------------------------------------------------
+
+template <>
+struct variant_inspector_traits<config_value> {
+  using value_type = config_value;
+
+  static constexpr type_id_t allowed_types[]
+    = {type_id_v<config_value::integer>,
+       type_id_v<config_value::boolean>,
+       type_id_v<config_value::real>,
+       type_id_v<config_value::timespan>,
+       type_id_v<uri>,
+       type_id_v<config_value::string>,
+       type_id_v<config_value::list>,
+       type_id_v<config_value::dictionary>};
+
+  static auto type_index(const config_value& x) {
+    return x.get_data().index();
+  }
+
+  template <class F, class Value>
+  static auto visit(F&& f, Value&& x) {
+    return caf::visit(std::forward<F>(f), std::forward<Value>(x));
+  }
+
+  template <class U>
+  static void assign(value_type& x, U&& value) {
+    x.get_data() = std::move(value);
+  }
+
+  template <class F>
+  static bool load(type_id_t type, F continuation) {
+    switch (type) {
+      default:
+        return false;
+      case type_id_v<config_value::integer>: {
+        auto tmp = config_value::integer{};
+        continuation(tmp);
+        return true;
+      }
+      case type_id_v<config_value::boolean>: {
+        auto tmp = config_value::boolean{};
+        continuation(tmp);
+        return true;
+      }
+      case type_id_v<config_value::real>: {
+        auto tmp = config_value::real{};
+        continuation(tmp);
+        return true;
+      }
+      case type_id_v<config_value::timespan>: {
+        auto tmp = config_value::timespan{};
+        continuation(tmp);
+        return true;
+      }
+      case type_id_v<uri>: {
+        auto tmp = uri{};
+        continuation(tmp);
+        return true;
+      }
+      case type_id_v<config_value::string>: {
+        auto tmp = config_value::string{};
+        continuation(tmp);
+        return true;
+      }
+      case type_id_v<config_value::list>: {
+        auto tmp = config_value::list{};
+        continuation(tmp);
+        return true;
+      }
+      case type_id_v<config_value::dictionary>: {
+        auto tmp = config_value::dictionary{};
+        continuation(tmp);
+        return true;
+      }
+    }
+  }
+};
+
+template <>
+struct inspector_access<config_value> : variant_inspector_access<config_value> {
+  // nop
+};
 
 } // namespace caf

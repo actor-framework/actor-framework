@@ -26,6 +26,7 @@
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/error.hpp"
+#include "caf/inspector_access.hpp"
 #include "caf/message_priority.hpp"
 #include "caf/meta/type_name.hpp"
 
@@ -191,13 +192,6 @@ public:
     return *this;
   }
 
-  // -- friend functions ------------------------------------------------------
-
-  template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f, message_id& x) {
-    return f(meta::type_name("message_id"), x.value_);
-  }
-
 private:
   // -- member variables -------------------------------------------------------
 
@@ -232,6 +226,31 @@ constexpr message_id make_message_id(uint64_t value = 0) {
 constexpr message_id make_message_id(message_priority p) {
   return message_id{static_cast<uint64_t>(p) << message_id::category_offset};
 }
+
+// -- inspection support -------------------------------------------------------
+
+template <>
+struct inspector_access<message_id> : inspector_access_base<message_id> {
+  template <class Inspector>
+  static bool apply_object(Inspector& f, message_id& x) {
+    auto get = [&x] { return x.integer_value(); };
+    auto set = [&x](uint64_t val) {
+      x = message_id{val};
+      return true;
+    };
+    return f.object(x).fields(f.field("value", get, set));
+  }
+
+  template <class Inspector>
+  static bool apply_value(Inspector& f, message_id& x) {
+    auto get = [&x] { return x.integer_value(); };
+    auto set = [&x](uint64_t val) {
+      x = message_id{val};
+      return true;
+    };
+    return detail::split_save_load(f, get, set);
+  }
+};
 
 } // namespace caf
 

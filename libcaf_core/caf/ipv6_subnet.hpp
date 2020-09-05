@@ -90,8 +90,9 @@ public:
   // -- inspection -------------------------------------------------------------
 
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f, ipv6_subnet& x) {
-    return f(x.address_, x.prefix_length_);
+  friend bool inspect(Inspector& f, ipv6_subnet& x) {
+    return f.object(x).fields(f.field("address", x.address_),
+                              f.field("prefix_length", x.prefix_length_));
   }
 
 private:

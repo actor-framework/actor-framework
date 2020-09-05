@@ -30,21 +30,26 @@
 
 namespace caf::detail {
 
-message_data::message_data(type_id_list types)
-  : rc_(1), types_(std::move(types)) {
+message_data::message_data(type_id_list types) noexcept
+  : rc_(1), types_(std::move(types)), constructed_elements_(0) {
   // nop
 }
 
 message_data::~message_data() noexcept {
-  // TODO: we unconditionally destroy all objects without some way of telling
-  //       whether these objects were constructed in the first place.
   auto gmos = global_meta_objects();
   auto ptr = storage();
-  // TODO: C++ usually destroys members in reverse order.
-  for (auto id : types_) {
-    auto& meta = gmos[id];
-    meta.destroy(ptr);
-    ptr += meta.padded_size;
+  if (constructed_elements_ == types_.size()) {
+    for (auto id : types_) {
+      auto& meta = gmos[id];
+      meta.destroy(ptr);
+      ptr += meta.padded_size;
+    }
+  } else {
+    for (size_t index = 0; index < constructed_elements_; ++index) {
+      auto& meta = gmos[types_[index]];
+      meta.destroy(ptr);
+      ptr += meta.padded_size;
+    }
   }
 }
 
@@ -88,54 +93,6 @@ const byte* message_data::at(size_t index) const noexcept {
   for (size_t i = 0; i < index; ++i)
     ptr += gmos[types_[i]].padded_size;
   return ptr;
-}
-
-error message_data::save(serializer& sink) const {
-  auto gmos = global_meta_objects();
-  auto ptr = storage();
-  for (auto id : types_) {
-    auto& meta = gmos[id];
-    if (auto err = detail::save(meta, sink, ptr))
-      return err;
-    ptr += meta.padded_size;
-  }
-  return none;
-}
-
-error message_data::save(binary_serializer& sink) const {
-  auto gmos = global_meta_objects();
-  auto ptr = storage();
-  for (auto id : types_) {
-    auto& meta = gmos[id];
-    if (auto err = detail::save(meta, sink, ptr))
-      return err;
-    ptr += meta.padded_size;
-  }
-  return none;
-}
-
-error message_data::load(deserializer& source) {
-  auto gmos = global_meta_objects();
-  auto ptr = storage();
-  for (auto id : types_) {
-    auto& meta = gmos[id];
-    if (auto err = detail::load(meta, source, ptr))
-      return err;
-    ptr += meta.padded_size;
-  }
-  return none;
-}
-
-error message_data::load(binary_deserializer& source) {
-  auto gmos = global_meta_objects();
-  auto ptr = storage();
-  for (auto id : types_) {
-    auto& meta = gmos[id];
-    if (auto err = detail::load(meta, source, ptr))
-      return err;
-    ptr += meta.padded_size;
-  }
-  return none;
 }
 
 } // namespace caf::detail
