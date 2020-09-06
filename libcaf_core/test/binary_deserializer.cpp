@@ -59,7 +59,7 @@ struct fixture {
   template <class... Ts>
   void load(const std::vector<byte>& buf, Ts&... xs) {
     binary_deserializer source{nullptr, buf};
-    if (!inspect_objects(source, xs...))
+    if (!source.apply_objects(xs...))
       CAF_FAIL("binary_deserializer failed to load: " << source.get_error());
   }
 

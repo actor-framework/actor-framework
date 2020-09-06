@@ -44,7 +44,7 @@ struct fixture {
   template <class T>
   void set(const T& value) {
     settings_writer writer{&xs};
-    if (!inspect_object(writer, value))
+    if (!writer.apply_object(value))
       CAF_FAIL("failed two write to settings: " << writer.get_error());
   }
 

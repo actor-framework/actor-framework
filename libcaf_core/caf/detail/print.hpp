@@ -28,6 +28,7 @@
 
 namespace caf::detail {
 
+CAF_CORE_EXPORT
 size_t print_timestamp(char* buf, size_t buf_size, time_t ts, size_t ms);
 
 template <class Buffer>

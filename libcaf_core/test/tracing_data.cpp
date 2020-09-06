@@ -47,11 +47,11 @@ public:
   }
 
   bool serialize(serializer& sink) const override {
-    return inspect_object(sink, value);
+    return sink.apply_object(value);
   }
 
   bool serialize(binary_serializer& sink) const override {
-    return inspect_object(sink, value);
+    return sink.apply_object(value);
   }
 };
 
@@ -72,7 +72,7 @@ private:
   bool deserialize_impl(Deserializer& source,
                         std::unique_ptr<tracing_data>& dst) const {
     string value;
-    if (!inspect_object(source, value))
+    if (!source.apply_object(value))
       return false;
     dst.reset(new dummy_tracing_data(std::move(value)));
     return true;
@@ -193,10 +193,10 @@ CAF_TEST(tracing data is serializable) {
   byte_buffer buf;
   binary_serializer sink{sys, buf};
   tracing_data_ptr data{new dummy_tracing_data("iTrace")};
-  CAF_CHECK(inspect_object(sink, data));
+  CAF_CHECK(sink.apply_object(data));
   binary_deserializer source{sys, buf};
   tracing_data_ptr copy;
-  CAF_CHECK(inspect_object(source, copy));
+  CAF_CHECK(source.apply_object(copy));
   CAF_REQUIRE_NOT_EQUAL(copy.get(), nullptr);
   CAF_CHECK_EQUAL(dynamic_cast<dummy_tracing_data&>(*copy).value, "iTrace");
 }

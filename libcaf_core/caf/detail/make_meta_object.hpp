@@ -50,29 +50,28 @@ void copy_construct(void* ptr, const void* src) {
 
 template <class T>
 bool save_binary(binary_serializer& sink, const void* ptr) {
-  return inspect_object(sink, as_mutable_ref(*static_cast<const T*>(ptr)));
+  return sink.apply_object(*static_cast<const T*>(ptr));
 }
 
 template <class T>
 bool load_binary(binary_deserializer& source, void* ptr) {
-  return inspect_object(source, *static_cast<T*>(ptr));
+  return source.apply_object(*static_cast<T*>(ptr));
 }
 
 template <class T>
 bool save(serializer& sink, const void* ptr) {
-  return inspect_object(sink, as_mutable_ref(*static_cast<const T*>(ptr)));
+  return sink.apply_object(*static_cast<const T*>(ptr));
 }
 
 template <class T>
 bool load(deserializer& source, void* ptr) {
-  return inspect_object(source, *static_cast<T*>(ptr));
+  return source.apply_object(*static_cast<T*>(ptr));
 }
 
 template <class T>
 void stringify(std::string& buf, const void* ptr) {
   stringification_inspector f{buf};
-  auto unused
-    = inspect_object(f, detail::as_mutable_ref(*static_cast<const T*>(ptr)));
+  auto unused = f.apply_object(*static_cast<const T*>(ptr));
   static_cast<void>(unused);
 }
 

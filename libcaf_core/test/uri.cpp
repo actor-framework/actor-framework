@@ -133,7 +133,7 @@ struct fixture {
   byte_buffer serialize(uri x) {
     byte_buffer buf;
     binary_serializer sink{nullptr, buf};
-    if (!inspect_objects(sink, x))
+    if (!sink.apply_objects(x))
       CAF_FAIL("unable to serialize " << x << ": " << sink.get_error());
     return buf;
   }
@@ -141,7 +141,7 @@ struct fixture {
   uri deserialize(byte_buffer buf) {
     uri result;
     binary_deserializer source{nullptr, buf};
-    if (!inspect_objects(source, result))
+    if (!source.apply_objects(result))
       CAF_FAIL("unable to deserialize from buffer: " << source.get_error());
     return result;
   }

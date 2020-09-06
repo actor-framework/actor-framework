@@ -8,6 +8,8 @@ be serializable. Using a message type that is not serializable causes a compiler
 error unless explicitly listed as unsafe message type by the user (see
 :ref:`unsafe-message-type`).
 
+.. _type-inspection-data-model:
+
 Data Model
 ----------
 
@@ -90,6 +92,92 @@ the inspector:
                               f.field("z", x.z));
   }
 
+Writing ``inspect_value`` Overloads
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The free function ``inspect`` models the object-level type inspection. As
+mentioned in the section on the :ref:`data model <type-inspection-data-model>`,
+objects are containers for fields that in turn contain a value. When providing
+an ``inspect`` overload, CAF recursively visits a value as an object.
+
+For example, consider the following ID type that simply wraps a string:
+
+.. code-block:: C++
+
+  struct id { std::string value; };
+
+  template <class Inspector>
+  bool inspect(Inspector& f, id& x) {
+    return f.object(x).fields(f.field("value", x.value));
+  }
+
+The type ``id`` is basically a *strong typedef* to improve type safety. To a
+type inspector, ID objects look as follows:
+
+.. code-block:: none
+
+  object(type: "id") {
+    field(name: "value") {
+      value(type: "string")
+    }
+  }
+
+Now, this type has little use on its own. Usually, we would use such a type to
+compose other types such as the following type ``person``:
+
+.. code-block:: C++
+
+  struct person { std::string name; id key; };
+
+  template <class Inspector>
+  bool inspect(Inspector& f, person& x) {
+    return f.object(x).fields(f.field("name", x.name), f.field("key", x.key));
+  }
+
+By providing the ``inspect`` overload for ID, inspectors can recursively visit
+an ``id`` as an object. Hence, the above implementations work as expected. When
+using ``person`` in human-readable data formats such as CAF configurations,
+however, allowing CAF to look "inside" a strong typedef can simplify working
+with types.
+
+With the current implementation, we could read the key ``manager.ceo`` from a
+configuration file with this content:
+
+.. code-block:: none
+
+  manager {
+    ceo {
+      name = "Bob"
+      key = {
+        value = "TWFuIGlz"
+      }
+    }
+  }
+
+This clearly is more verbose than it needs to be. By also providing an overload
+for ``inspect_value``, we can teach CAF how to inspect an ID directly as a
+*value* without having to recursively visit it as an object:
+
+.. code-block:: C++
+
+  template <class Inspector>
+  bool inspect_value(Inspector& f, id& x) {
+    return f.apply_value(x.value);
+  }
+
+With this overload in place, inspectors can now remove one level of indirection
+and read or write strings whenever they encounter an ``id`` as value. This
+allows us to simply our config file from before:
+
+.. code-block:: none
+
+  manager {
+    ceo {
+      name = "Bob"
+      key = "TWFuIGlz"
+    }
+  }
+
 Specializing ``inspector_access``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -128,9 +216,13 @@ The full interface of ``inspector_access`` looks as follows:
                            SetFallback& set_fallback);
   };
 
-For most types, we can implement ``apply_object`` and use default implementation
-for the other member functions. For example, specializing ``inspector_access``
-for our ``point_3d`` would look as follows:
+The static member function ``apply_object`` has the same role as the free
+``inspect`` function. Likewise, ``apply_value`` corresponds to the free
+``inspect_value`` function.
+
+For most types, we can implement only ``apply_object`` and use default
+implementation for the other member functions. For example, specializing
+``inspector_access`` for our ``point_3d`` would look as follows:
 
 .. code-block:: C++
 
@@ -169,9 +261,6 @@ Most of the time, we only need to implement ``apply_object`` and can call it
 from ``apply_value``. The latter customizes how CAF inspects a value inside a
 field. By calling ``apply_object``, we simply recursively visit ``x`` as an
 object again.
-
-For a non-trivial use case of ``apply_value``, see
-:ref:`has-human-readable-format`.
 
 Types with Getter and Setter Access
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -364,36 +453,29 @@ an ``enum class`` otherwise.
 
   bool parse(std::string_view input, weekday& dest);
 
-  namespace caf {
-
-  template <>
-  struct inspector_access<weekday> : inspector_access_base<weekday> {
-    using default_impl = default_inspector_access<weekday>;
-
-    template <class Inspector>
-    static bool apply_object(Inspector& f, weekday& x) {
-      if (f.has_human_readable_format()) {
-        auto get = [&x] { return to_string(x); };
-        auto set = [&x](std::string str) { return parse(str, x); };
-        f.object(x).fields(f.field("value", get, set));
-      } else {
-        return default_impl::apply_object(f, x);
-      }
+  template <class Inspector>
+  bool inspect(Inspector& f, weekday& x) {
+    if (f.has_human_readable_format()) {
+      auto get = [&x] { return to_string(x); };
+      auto set = [&x](std::string str) { return parse(str, x); };
+      f.object(x).fields(f.field("value", get, set));
+    } else {
+      using default_impl = caf::default_inspector_access<weekday>;
+      return default_impl::apply_object(f, x);
     }
+  }
 
-    template <class Inspector>
-    static bool apply_value(Inspector& f, weekday& x) {
-      if (f.has_human_readable_format()) {
-        auto get = [&x] { return to_string(x); };
-        auto set = [&x](std::string str) { return parse(str, x); };
-        return f.apply_value(get, set);
-      } else {
-        return default_impl::apply_value(f, x);
-      }
+  template <class Inspector>
+  bool inspect_value(Inspector& f, weekday& x) {
+    if (f.has_human_readable_format()) {
+      auto get = [&x] { return to_string(x); };
+      auto set = [&x](std::string str) { return parse(str, x); };
+      return f.apply_value(get, set);
+    } else {
+      using default_impl = caf::default_inspector_access<weekday>;
+      return default_impl::apply_value(f, x);
     }
-  };
-
-  } // namespace caf
+  }
 
 When inspecting an object of type ``weekday``, we treat it as if we were
 inspecting an object with a single field named ``value``. However, usually we

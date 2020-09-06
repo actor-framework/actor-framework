@@ -96,16 +96,16 @@ public:
 template <class T>
 size_t serialized_size(const T& x) {
   serialized_size_inspector f;
-  auto inspection_res = inspect_object(f, detail::as_mutable_ref(x));
-  static_cast<void>(inspection_res); // Always true.
+  auto unused = f.apply_object(x);
+  static_cast<void>(unused); // Always true.
   return f.result;
 }
 
 template <class T>
 size_t serialized_size(actor_system& sys, const T& x) {
   serialized_size_inspector f{sys};
-  auto inspection_res = inspect_object(f, detail::as_mutable_ref(x));
-  static_cast<void>(inspection_res); // Always true.
+  auto unused = f.apply_object(x);
+  static_cast<void>(unused); // Always true.
   return f.result;
 }
 

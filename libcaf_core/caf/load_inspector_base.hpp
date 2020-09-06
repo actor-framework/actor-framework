@@ -40,6 +40,18 @@ public:
   // -- dispatching to load/load functions -------------------------------------
 
   template <class T>
+  [[nodiscard]] bool apply_object(T& x) {
+    static_assert(!std::is_const<T>::value);
+    constexpr auto token = inspect_object_access_type<Subtype, T>();
+    return detail::load_object(dref(), x, token);
+  }
+
+  template <class... Ts>
+  [[nodiscard]] bool apply_objects(Ts&... xs) {
+    return (apply_object(xs) && ...);
+  }
+
+  template <class T>
   bool apply_value(T& x) {
     return detail::load_value(dref(), x);
   }

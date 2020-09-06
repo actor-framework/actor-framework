@@ -40,12 +40,29 @@ public:
   // -- dispatching to load/save functions -------------------------------------
 
   template <class T>
-  bool apply_value(T& x) {
+  [[nodiscard]] bool apply_object(T& x) {
+    constexpr auto token = inspect_object_access_type<Subtype, T>();
+    return detail::save_object(dref(), x, token);
+  }
+
+  template <class T>
+  [[nodiscard]] bool apply_object(const T& x) {
+    constexpr auto token = inspect_object_access_type<Subtype, T>();
+    return detail::save_object(dref(), detail::as_mutable_ref(x), token);
+  }
+
+  template <class... Ts>
+  [[nodiscard]] bool apply_objects(Ts&... xs) {
+    return (apply_object(xs) && ...);
+  }
+
+  template <class T>
+  [[nodiscard]] bool apply_value(T& x) {
     return detail::save_value(dref(), x);
   }
 
   template <class Get, class Set>
-  bool apply_value(Get&& get, Set&&) {
+  [[nodiscard]] bool apply_value(Get&& get, Set&&) {
     auto&& x = get();
     return detail::save_value(dref(), x);
   }

@@ -127,6 +127,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   *types*, but did not enforce it because the name was only used for logging.
   Since the new metrics use this name for filtering now, we enforce static names
   in order to help avoid hard-to-find issues with the filtering mechanism.
+- The type inspection API received a complete overhaul. The new DSL for writing
+  `inspect` functions exposes the entire structure of an object to CAF. This
+  enables inspectors to read and write a wider range of data formats. In
+  particular human-readable, structured data such as configuration files, JSON,
+  XML, etc. The inspection API received too many changes to list them here.
+  Please refer to the manual section on type inspection instead.
 
 ### Removed
 
@@ -183,7 +189,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Datagram servants of UDP socket managers were not added as children to their
   parent broker on creation, which prevented proper system shutdown in some
   cases. Adding all servants consistently to the broker should make sure UDP
-  brokers terminate correctly (#1133). 
+  brokers terminate correctly (#1133).
 
 ## [0.17.6] - 2020-07-24
 

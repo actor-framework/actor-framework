@@ -49,18 +49,6 @@ struct testee : serializer {
     log.insert(log.end(), indent, ' ');
   }
 
-  using serializer::object;
-
-  template <class T>
-  auto object(optional<T>&) {
-    return object_t<testee>{"optional", this};
-  }
-
-  template <class... Ts>
-  auto object(variant<Ts...>&) {
-    return object_t<testee>{"variant", this};
-  }
-
   bool inject_next_object_type(type_id_t type) override {
     new_line();
     log += "next object type: ";
@@ -448,9 +436,9 @@ end object)_");
 
 CAF_TEST(save inspectors support optional) {
   optional<int32_t> x;
-  CAF_CHECK_EQUAL(inspect_object(f, x), true);
+  CAF_CHECK_EQUAL(f.apply_object(x), true);
   CAF_CHECK_EQUAL(f.log, R"_(
-begin object optional
+begin object anonymous
   begin optional field value
   end field
 end object)_");

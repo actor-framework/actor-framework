@@ -75,12 +75,12 @@ public:
     if (dref.hdr_.operation == basp::message_type::routed_message) {
       node_id src_node;
       node_id dst_node;
-      if (!inspect_object(source, src_node)) {
+      if (!source.apply_object(src_node)) {
         CAF_LOG_ERROR(
           "failed to read source of routed message:" << source.get_error());
         return;
       }
-      if (!inspect_object(source, dst_node)) {
+      if (!source.apply_object(dst_node)) {
         CAF_LOG_ERROR("failed to read destination of routed message:"
                       << source.get_error());
         return;
@@ -104,11 +104,11 @@ public:
       return;
     }
     // Get the remainder of the message.
-    if (!inspect_object(source, stages)) {
+    if (!source.apply_object(stages)) {
       CAF_LOG_ERROR("failed to read stages:" << source.get_error());
       return;
     }
-    if (!inspect_objects(source, msg)) {
+    if (!source.apply_objects(msg)) {
       CAF_LOG_ERROR("failed to read message content:" << source.get_error());
       return;
     }

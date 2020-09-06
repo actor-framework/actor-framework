@@ -94,14 +94,14 @@ void caf_main(actor_system& sys) {
   binary_serializer::container_type buf;
   // write f1 to buffer
   binary_serializer sink{sys, buf};
-  if (!inspect_object(sink, f1)) {
+  if (!sink.apply_object(f1)) {
     std::cerr << "*** failed to serialize foo2: " << to_string(sink.get_error())
               << '\n';
     return;
   }
   // read f2 back from buffer
   binary_deserializer source{sys, buf};
-  if (!inspect_object(source, f2)) {
+  if (!source.apply_object(f2)) {
     std::cerr << "*** failed to deserialize foo2: "
               << to_string(source.get_error()) << '\n';
     return;

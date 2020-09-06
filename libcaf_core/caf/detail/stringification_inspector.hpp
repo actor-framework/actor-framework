@@ -161,7 +161,13 @@ public:
                    bool>
   value(const T& x) {
     auto str = to_string(x);
-    append(str);
+    if constexpr (std::is_convertible<decltype(str), const char*>::value) {
+      const char* cstr = str;
+      sep();
+      result_ += cstr;
+    } else {
+      append(str);
+    }
     return true;
   }
 

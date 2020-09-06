@@ -35,6 +35,10 @@ namespace caf {
 ///       for the DSL.
 class CAF_CORE_EXPORT load_inspector {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using result_type = bool;
+
   // -- constants --------------------------------------------------------------
 
   /// Convenience constant to indicate success of a processing step.
@@ -46,14 +50,6 @@ public:
 
   /// Enables dispatching on the inspector type.
   static constexpr bool is_loading = true;
-
-  // -- legacy API -------------------------------------------------------------
-
-  static constexpr bool reads_state = false;
-
-  static constexpr bool writes_state = true;
-
-  using result_type = bool;
 
   // -- constructors, destructors, and assignment operators --------------------
 

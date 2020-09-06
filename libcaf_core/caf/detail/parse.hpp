@@ -292,6 +292,7 @@ void parse_element(string_parser_state& ps, std::pair<First, Second>& kvp,
 
 // -- convenience functions ----------------------------------------------------
 
+CAF_CORE_EXPORT
 error parse_result(const string_parser_state& ps, string_view input);
 
 template <class T>

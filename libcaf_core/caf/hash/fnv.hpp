@@ -156,9 +156,8 @@ public:
   static T compute(Ts&&... xs) noexcept {
     using detail::as_mutable_ref;
     fnv f;
-    auto inspect_result = (inspect_object(f, as_mutable_ref(xs)) && ...);
-    // Discard inspection result: always true.
-    static_cast<void>(inspect_result);
+    auto unused = f.apply_objects(xs...);
+    static_cast<void>(unused); // Always true.
     return f.result;
   }
 

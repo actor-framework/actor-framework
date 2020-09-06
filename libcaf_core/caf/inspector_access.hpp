@@ -70,7 +70,7 @@ bool load_value(Inspector& f, T& x, inspector_access_type::specialization) {
 }
 
 template <class Inspector, class T>
-bool load_object(Inspector& f, T& x, inspector_access_type::inspect_value) {
+bool load_value(Inspector& f, T& x, inspector_access_type::inspect_value) {
   return inspect_value(f, x);
 }
 
@@ -476,30 +476,6 @@ struct default_inspector_access : inspector_access_base<T> {
 /// ADL.
 template <class T>
 struct inspector_access;
-
-/// Inspects `x` using the inspector `f`.
-template <class Inspector, class T>
-[[nodiscard]] bool inspect_object(Inspector& f, T& x) {
-  constexpr auto token = inspect_object_access_type<Inspector, T>();
-  if constexpr (Inspector::is_loading)
-    return detail::load_object(f, x, token);
-  else
-    return detail::save_object(f, x, token);
-}
-
-/// Inspects `x` using the inspector `f`.
-template <class Inspector, class T>
-[[nodiscard]] bool inspect_object(Inspector& f, const T& x) {
-  static_assert(!Inspector::is_loading);
-  constexpr auto token = inspect_object_access_type<Inspector, T>();
-  return detail::save_object(f, detail::as_mutable_ref(x), token);
-}
-
-/// Inspects all `xs` using the inspector `f`.
-template <class Inspector, class... Ts>
-[[nodiscard]] bool inspect_objects(Inspector& f, Ts&... xs) {
-  return (inspect_object(f, xs) && ...);
-}
 
 // -- inspection support for optional values -----------------------------------
 

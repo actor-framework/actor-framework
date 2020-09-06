@@ -231,8 +231,8 @@ CAF_CORE_EXPORT type_id_t query_type_id(string_view name);
     return atom_text;                                                          \
   }                                                                            \
   template <class Inspector>                                                   \
-  auto inspect(Inspector& f, atom_name&) {                                     \
-    return f(caf::meta::type_name(#atom_namespace "::" #atom_name));           \
+  auto inspect(Inspector& f, atom_name& x) {                                   \
+    return f.object(x).fields();                                               \
   }                                                                            \
   }                                                                            \
   CAF_ADD_TYPE_ID(project_name, (atom_namespace::atom_name))

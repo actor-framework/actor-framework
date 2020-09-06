@@ -33,7 +33,7 @@ node_id roundtrip(node_id nid) {
   byte_buffer buf;
   {
     binary_serializer sink{nullptr, buf};
-    if (!inspect_object(sink, nid))
+    if (!sink.apply_object(nid))
       CAF_FAIL("serialization failed: " << sink.get_error());
   }
   if (buf.empty())
@@ -41,7 +41,7 @@ node_id roundtrip(node_id nid) {
   node_id result;
   {
     binary_deserializer source{nullptr, buf};
-    if (!inspect_object(source, result))
+    if (!source.apply_object(result))
       CAF_FAIL("deserialization failed: " << source.get_error());
     if (source.remaining() > 0)
       CAF_FAIL("binary_serializer ignored part of its input");
