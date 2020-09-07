@@ -23,6 +23,21 @@
 #include <tuple>
 #include <utility>
 
+#ifdef __has_include
+#  if __has_include(<optional>)
+#    include <optional>
+#    if __cpp_lib_optional >= 201606
+#      define CAF_HAS_STD_OPTIONAL
+#    endif
+#  endif
+#  if __has_include(<variant>)
+#    include <variant>
+#    if __cpp_lib_variant >= 201606
+#      define CAF_HAS_STD_VARIANT
+#    endif
+#  endif
+#endif
+
 #include "caf/allowed_unsafe_message_type.hpp"
 #include "caf/detail/as_mutable_ref.hpp"
 #include "caf/detail/parse.hpp"
@@ -590,6 +605,28 @@ struct inspector_access<optional<T>> : optional_inspector_access<optional<T>> {
   // nop
 };
 
+#ifdef CAF_HAS_STD_OPTIONAL
+
+template <class T>
+struct optional_inspector_traits<std::optional<T>> {
+  using container_type = std::optional<T>;
+
+  using value_type = T;
+
+  template <class... Ts>
+  static void emplace(container_type& container, Ts&&... xs) {
+    container.emplace(std::forward<Ts>(xs)...);
+  }
+};
+
+template <class T>
+struct inspector_access<std::optional<T>>
+  : optional_inspector_access<std::optional<T>> {
+  // nop
+};
+
+#endif
+
 // -- inspection support for error ---------------------------------------------
 
 template <>
@@ -623,7 +660,7 @@ struct variant_inspector_traits<variant<Ts...>> {
 
   template <class U>
   static auto assign(value_type& x, U&& value) {
-    x = std::move(value);
+    x = std::forward<U>(value);
   }
 
   template <class F>
@@ -770,6 +807,62 @@ struct inspector_access<variant<Ts...>>
   : variant_inspector_access<variant<Ts...>> {
   // nop
 };
+
+#ifdef CAF_HAS_STD_VARIANT
+
+template <class... Ts>
+struct variant_inspector_traits<std::variant<Ts...>> {
+  static_assert(
+    (has_type_id_v<Ts> && ...),
+    "inspectors requires that each type in a variant has a type_id");
+
+  using value_type = std::variant<Ts...>;
+
+  static constexpr type_id_t allowed_types[] = {type_id_v<Ts>...};
+
+  static auto type_index(const value_type& x) {
+    return x.index();
+  }
+
+  template <class F, class Value>
+  static auto visit(F&& f, Value&& x) {
+    return std::visit(std::forward<F>(f), std::forward<Value>(x));
+  }
+
+  template <class U>
+  static auto assign(value_type& x, U&& value) {
+    x = std::forward<U>(value);
+  }
+
+  template <class F>
+  static bool load(type_id_t, F&, detail::type_list<>) {
+    return false;
+  }
+
+  template <class F, class U, class... Us>
+  static bool
+  load(type_id_t type, F& continuation, detail::type_list<U, Us...>) {
+    if (type_id_v<U> == type) {
+      auto tmp = U{};
+      continuation(tmp);
+      return true;
+    }
+    return load(type, continuation, detail::type_list<Us...>{});
+  }
+
+  template <class F>
+  static bool load(type_id_t type, F continuation) {
+    return load(type, continuation, detail::type_list<Ts...>{});
+  }
+};
+
+template <class... Ts>
+struct inspector_access<std::variant<Ts...>>
+  : variant_inspector_access<std::variant<Ts...>> {
+  // nop
+};
+
+#endif
 
 // -- inspection support for std::chrono types ---------------------------------
 
