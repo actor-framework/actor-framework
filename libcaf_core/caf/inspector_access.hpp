@@ -26,15 +26,11 @@
 #ifdef __has_include
 #  if __has_include(<optional>)
 #    include <optional>
-#    if __cpp_lib_optional >= 201606
-#      define CAF_HAS_STD_OPTIONAL
-#    endif
+#    define CAF_HAS_STD_OPTIONAL
 #  endif
 #  if __has_include(<variant>)
 #    include <variant>
-#    if __cpp_lib_variant >= 201606
-#      define CAF_HAS_STD_VARIANT
-#    endif
+#    define CAF_HAS_STD_VARIANT
 #  endif
 #endif
 
@@ -167,9 +163,13 @@ bool load_value(Inspector& f, T& x, inspector_access_type::map) {
           && load_value(f, val)    //
           && f.end_key_value_pair()))
       return false;
-    if (!x.emplace(std::move(key), std::move(val)).second) {
-      f.emplace_error(sec::runtime_error, "multiple key definitions");
-      return false;
+    // A multimap returns an iterator, a regular map returns a pair.
+    auto emplace_result = x.emplace(std::move(key), std::move(val));
+    if constexpr (is_pair<decltype(emplace_result)>::value) {
+      if (!emplace_result.second) {
+        f.emplace_error(sec::runtime_error, "multiple key definitions");
+        return false;
+      }
     }
   }
   return f.end_associative_array();
