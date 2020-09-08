@@ -84,7 +84,7 @@ CAF_TEST(lookup) {
 }
 
 CAF_TEST(parse with ref syncing) {
-  using ls = vector<string>; // list of strings
+  using ls = vector<string>;     // list of strings
   using ds = dictionary<string>; // dictionary of strings
   auto foo_i = 0;
   auto foo_f = 0.f;
@@ -240,7 +240,6 @@ CAF_TEST(CLI arguments may use custom types) {
   settings cfg;
   opts.add<foobar>("global", "foobar,f", "test option");
   CAF_CHECK_EQUAL(read<foobar>(cfg, {"-f{foo=\"hello\",bar=\"world\"}"}), none);
-  CAF_MESSAGE("CFG: "<<cfg);
   auto fb = get_if<foobar>(&cfg, "foobar");
   if (CAF_CHECK(fb))
     CAF_CHECK_EQUAL(*fb, foobar("hello", "world"));
