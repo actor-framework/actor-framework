@@ -100,8 +100,8 @@ CAF_TEST(to_string converts messages to strings) {
                   svec{"five", "six", "seven"}),
     R"__(message(std::vector<std::string>(["one", "two"]), "three", "four", )__"
     R"__(std::vector<std::string>(["five", "six", "seven"])))__");
-  CAF_CHECK_EQUAL(msg_as_string(R"(this is a "test")"),
-                  R"__(message("this is a \"test\""))__");
+  auto teststr = R"__(message("this is a \"test\""))__"; // fails inline on MSVC
+  CAF_CHECK_EQUAL(msg_as_string(R"__(this is a "test")__"), teststr);
   CAF_CHECK_EQUAL(msg_as_string(make_tuple(1, 2, 3), 4, 5),
                   "message(std::tuple<int32_t, int32_t, int32_t>([1, 2, 3]), "
                   "int32_t(4), int32_t(5))");
