@@ -102,6 +102,11 @@ bool load_value(Inspector& f, T& x, inspector_access_type::integral) {
 
 template <class Inspector, class T>
 bool load_value(Inspector& f, T& x, inspector_access_type::builtin) {
+  return f.builtin_inspect(x);
+}
+
+template <class Inspector, class T>
+bool load_value(Inspector& f, T& x, inspector_access_type::trivial) {
   return f.value(x);
 }
 
@@ -280,6 +285,11 @@ bool save_value(Inspector& f, T& x, inspector_access_type::integral) {
 
 template <class Inspector, class T>
 bool save_value(Inspector& f, T& x, inspector_access_type::builtin) {
+  return f.builtin_inspect(x);
+}
+
+template <class Inspector, class T>
+bool save_value(Inspector& f, T& x, inspector_access_type::trivial) {
   return f.value(x);
 }
 

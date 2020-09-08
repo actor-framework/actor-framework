@@ -18,11 +18,15 @@
 
 #pragma once
 
+#include <string>
 #include <type_traits>
+#include <vector>
 
 #include "caf/detail/is_complete.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
+#include "caf/span.hpp"
+#include "caf/string_view.hpp"
 
 namespace caf {
 
@@ -40,8 +44,11 @@ struct inspector_access_type {
   /// Flags builtin integral types.
   struct integral {};
 
-  /// Flags types with builtin support via `.value()`.
+  /// Flags types with builtin support via `Inspector::builtin_inspect`.
   struct builtin {};
+
+  /// Flags types with builtin support via `Inspector::value`.
+  struct trivial {};
 
   /// Flags `enum` types.
   struct enumeration {};
@@ -74,69 +81,73 @@ struct inspector_access_type {
 /// @relates inspector_access_type
 template <class Inspector, class T>
 constexpr auto inspect_object_access_type() {
-  // Order: inspector_access > inspect > defaults.
   using namespace detail;
-  if constexpr (is_allowed_unsafe_message_type_v<T>) {
+  // Order: unsafe (error) > C Array > builtin_inspect > inspector_access >
+  // inspect > trivial > defaults.
+  if constexpr (is_allowed_unsafe_message_type_v<T>)
     return inspector_access_type::unsafe{};
-  } else if constexpr (detail::is_complete<inspector_access<T>>) {
-    return inspector_access_type::specialization{};
-  } else if constexpr (has_inspect_overload<Inspector, T>::value) {
-    return inspector_access_type::inspect{};
-  } else if constexpr (std::is_integral<T>::value
-                       && !std::is_same<T, bool>::value) {
-    return inspector_access_type::integral{};
-  } else if constexpr (std::is_array<T>::value) {
+  else if constexpr (std::is_array<T>::value)
     return inspector_access_type::array{};
-  } else if constexpr (std::is_enum<T>::value) {
+  else if constexpr (has_builtin_inspect<Inspector, T>::value)
+    return inspector_access_type::builtin{};
+  else if constexpr (detail::is_complete<inspector_access<T>>)
+    return inspector_access_type::specialization{};
+  else if constexpr (has_inspect_overload<Inspector, T>::value)
+    return inspector_access_type::inspect{};
+  else if constexpr (is_trivial_inspector_value_v<Inspector::is_loading, T>)
+    return inspector_access_type::trivial{};
+  else if constexpr (std::is_integral<T>::value)
+    return inspector_access_type::integral{};
+  else if constexpr (std::is_enum<T>::value)
     return inspector_access_type::enumeration{};
-  } else if constexpr (std::is_empty<T>::value) {
+  else if constexpr (std::is_empty<T>::value)
     return inspector_access_type::empty{};
-  } else if constexpr (is_stl_tuple_type_v<T>) {
+  else if constexpr (is_stl_tuple_type_v<T>)
     return inspector_access_type::tuple{};
-  } else if constexpr (is_map_like_v<T>) {
+  else if constexpr (is_map_like_v<T>)
     return inspector_access_type::map{};
-  } else if constexpr (is_list_like_v<T>) {
+  else if constexpr (is_list_like_v<T>)
     return inspector_access_type::list{};
-  } else {
+  else
     return inspector_access_type::none{};
-  }
 }
 
 /// @relates inspector_access_type
 template <class Inspector, class T>
 constexpr auto inspect_value_access_type() {
-  // Order: .value > inspector_access > inspect_value > inspect > defaults.
-  // However, C-arrays convert easily into something that .value overloads might
-  // pick up. Hence, we single them out above all else.
+  // Order: unsafe (error) > C Array > builtin_inspect > inspector_access >
+  // inspect_value > inspect > defaults.
+  // This is the same as in inspect_object_access_type, except that we pick up
+  // inspect_value overloads.
   using namespace detail;
-  if constexpr (is_allowed_unsafe_message_type_v<T>) {
+  if constexpr (is_allowed_unsafe_message_type_v<T>)
     return inspector_access_type::unsafe{};
-  } else if constexpr (std::is_array<T>::value) {
+  else if constexpr (std::is_array<T>::value)
     return inspector_access_type::array{};
-  } else if constexpr (is_trivially_inspectable<Inspector, T>::value) {
+  else if constexpr (has_builtin_inspect<Inspector, T>::value)
     return inspector_access_type::builtin{};
-  } else if constexpr (detail::is_complete<inspector_access<T>>) {
+  else if constexpr (detail::is_complete<inspector_access<T>>)
     return inspector_access_type::specialization{};
-  } else if constexpr (has_inspect_value_overload<Inspector, T>::value) {
+  else if constexpr (has_inspect_value_overload<Inspector, T>::value)
     return inspector_access_type::inspect_value{};
-  } else if constexpr (has_inspect_overload<Inspector, T>::value) {
+  else if constexpr (has_inspect_overload<Inspector, T>::value)
     return inspector_access_type::inspect{};
-  } else if constexpr (std::is_integral<T>::value
-                       && !std::is_same<T, bool>::value) {
+  else if constexpr (is_trivial_inspector_value_v<Inspector::is_loading, T>)
+    return inspector_access_type::trivial{};
+  else if constexpr (std::is_integral<T>::value)
     return inspector_access_type::integral{};
-  } else if constexpr (std::is_enum<T>::value) {
+  else if constexpr (std::is_enum<T>::value)
     return inspector_access_type::enumeration{};
-  } else if constexpr (std::is_empty<T>::value) {
+  else if constexpr (std::is_empty<T>::value)
     return inspector_access_type::empty{};
-  } else if constexpr (is_stl_tuple_type_v<T>) {
+  else if constexpr (is_stl_tuple_type_v<T>)
     return inspector_access_type::tuple{};
-  } else if constexpr (is_map_like_v<T>) {
+  else if constexpr (is_map_like_v<T>)
     return inspector_access_type::map{};
-  } else if constexpr (is_list_like_v<T>) {
+  else if constexpr (is_list_like_v<T>)
     return inspector_access_type::list{};
-  } else {
+  else
     return inspector_access_type::none{};
-  }
 }
 
 } // namespace caf

@@ -228,7 +228,7 @@ bool stringification_inspector::value(const std::vector<bool>& xs) {
   return end_sequence();
 }
 
-bool stringification_inspector::value(const char* x) {
+bool stringification_inspector::builtin_inspect(const char* x) {
   return value(string_view{x, strlen(x)});
 }
 

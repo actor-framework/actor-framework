@@ -831,15 +831,16 @@ public:
   static constexpr bool value = result_type::value;
 };
 
-/// Checks whether the inspector has a `value` overload for `T`.
+/// Checks whether the inspector has a `builtin_inspect` overload for `T`.
 template <class Inspector, class T>
-class is_trivially_inspectable {
+class has_builtin_inspect {
 private:
-  template <class U>
-  static auto sfinae(Inspector& f, U& x)
-    -> decltype(f.value(x), std::true_type{});
+  template <class I, class U>
+  static auto sfinae(I& f, U& x)
+    -> decltype(f.builtin_inspect(x), std::true_type{});
 
-  static std::false_type sfinae(Inspector&, ...);
+  template <class I>
+  static std::false_type sfinae(I&, ...);
 
   using sfinae_result
     = decltype(sfinae(std::declval<Inspector&>(), std::declval<T&>()));
@@ -847,6 +848,57 @@ private:
 public:
   static constexpr bool value = sfinae_result::value;
 };
+
+/// Checks whether inspectors are required to provide a `value` overload for T.
+template <bool IsLoading, class T>
+struct is_trivial_inspector_value;
+
+template <class T>
+struct is_trivial_inspector_value<true, T> {
+  static constexpr bool value = false;
+};
+
+template <class T>
+struct is_trivial_inspector_value<false, T> {
+  static constexpr bool value = std::is_convertible<T, string_view>::value;
+};
+
+#define CAF_ADD_TRIVIAL_LOAD_INSPECTOR_VALUE(type)                             \
+  template <>                                                                  \
+  struct is_trivial_inspector_value<true, type> {                              \
+    static constexpr bool value = true;                                        \
+  };
+
+#define CAF_ADD_TRIVIAL_SAVE_INSPECTOR_VALUE(type)                             \
+  template <>                                                                  \
+  struct is_trivial_inspector_value<false, type> {                             \
+    static constexpr bool value = true;                                        \
+  };
+
+#define CAF_ADD_TRIVIAL_INSPECTOR_VALUE(type)                                  \
+  CAF_ADD_TRIVIAL_LOAD_INSPECTOR_VALUE(type)                                   \
+  CAF_ADD_TRIVIAL_SAVE_INSPECTOR_VALUE(type)
+
+CAF_ADD_TRIVIAL_INSPECTOR_VALUE(bool);
+CAF_ADD_TRIVIAL_INSPECTOR_VALUE(float);
+CAF_ADD_TRIVIAL_INSPECTOR_VALUE(double);
+CAF_ADD_TRIVIAL_INSPECTOR_VALUE(long double);
+CAF_ADD_TRIVIAL_INSPECTOR_VALUE(std::u16string);
+CAF_ADD_TRIVIAL_INSPECTOR_VALUE(std::u32string);
+CAF_ADD_TRIVIAL_INSPECTOR_VALUE(std::vector<bool>);
+CAF_ADD_TRIVIAL_INSPECTOR_VALUE(span<byte>);
+
+CAF_ADD_TRIVIAL_SAVE_INSPECTOR_VALUE(span<const byte>);
+
+CAF_ADD_TRIVIAL_LOAD_INSPECTOR_VALUE(std::string);
+
+#undef CAF_ADD_TRIVIAL_INSPECTOR_VALUE
+#undef CAF_ADD_TRIVIAL_SAVE_INSPECTOR_VALUE
+#undef CAF_ADD_TRIVIAL_LOAD_INSPECTOR_VALUE
+
+template <bool IsLoading, class T>
+constexpr bool is_trivial_inspector_value_v
+  = is_trivial_inspector_value<IsLoading, T>::value;
 
 /// Checks whether the inspector has an `opaque_value` overload for `T`.
 template <class Inspector, class T>

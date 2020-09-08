@@ -127,13 +127,16 @@ public:
 
   bool value(const std::vector<bool>& xs);
 
+  // -- builtin inspection to pick up to_string or provide nicer formatting ----
+
   template <class Rep, class Period>
-  bool value(const std::chrono::duration<Rep, Period> x) {
+  bool builtin_inspect(const std::chrono::duration<Rep, Period> x) {
     return value(std::chrono::duration_cast<timespan>(x));
   }
 
   template <class T>
-  std::enable_if_t<detail::is_map_like_v<T>, bool> value(const T& xs) {
+  std::enable_if_t<detail::is_map_like_v<T>, bool>
+  builtin_inspect(const T& xs) {
     sep();
     auto i = xs.begin();
     auto last = xs.end();
@@ -159,7 +162,7 @@ public:
   std::enable_if_t<has_to_string<T>::value
                      && !std::is_convertible<T, string_view>::value,
                    bool>
-  value(const T& x) {
+  builtin_inspect(const T& x) {
     auto str = to_string(x);
     if constexpr (std::is_convertible<decltype(str), const char*>::value) {
       const char* cstr = str;
@@ -171,10 +174,10 @@ public:
     return true;
   }
 
-  bool value(const char* x);
+  bool builtin_inspect(const char* x);
 
   template <class T>
-  bool value(const T* x) {
+  bool builtin_inspect(const T* x) {
     sep();
     if (!x) {
       result_ += "null";
@@ -186,7 +189,7 @@ public:
   }
 
   template <class T>
-  bool value(const optional<T>& x) {
+  bool builtin_inspect(const optional<T>& x) {
     sep();
     if (!x) {
       result_ += "null";
@@ -197,17 +200,7 @@ public:
     return true;
   }
 
-  template <class T>
-  void append(T&& str) {
-    sep();
-    result_.insert(result_.end(), str.begin(), str.end());
-  }
-
-  template <class... Ts>
-  bool opaque_value(variant<Ts...>& val) {
-    auto f = [this](auto& x) { return save_value(*this, x); };
-    return visit(f, val);
-  }
+  // -- fallbacks --------------------------------------------------------------
 
   template <class T>
   bool opaque_value(T& val) {
@@ -221,6 +214,12 @@ public:
   }
 
 private:
+  template <class T>
+  void append(T&& str) {
+    sep();
+    result_.insert(result_.end(), str.begin(), str.end());
+  }
+
   template <class Iterator, class Sentinel>
   void print_list(Iterator first, Sentinel sentinel) {
     sep();

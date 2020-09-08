@@ -150,6 +150,11 @@ struct to_string_visitor {
     f.value(x);
   }
 
+  void operator()(const uri& x) {
+    auto x_str = x.str();
+    str.insert(str.end(), x_str.begin(), x_str.end());
+  }
+
   void operator()(const config_value::list& xs) {
     if (xs.empty()) {
       str += "[]";
