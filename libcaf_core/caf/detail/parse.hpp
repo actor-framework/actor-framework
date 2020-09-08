@@ -115,6 +115,8 @@ CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv6_endpoint& x);
 
 CAF_CORE_EXPORT void parse(string_parser_state& ps, uri& x);
 
+CAF_CORE_EXPORT void parse(string_parser_state& ps, config_value& x);
+
 // -- variadic utility ---------------------------------------------------------
 
 template <class... Ts>

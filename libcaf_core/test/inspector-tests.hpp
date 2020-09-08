@@ -108,7 +108,7 @@ public:
     // nop
   }
 
-  const std::string& foo() {
+  const std::string& foo() const {
     return foo_;
   }
 
@@ -116,7 +116,7 @@ public:
     foo_ = std::move(value);
   }
 
-  const std::string& bar() {
+  const std::string& bar() const {
     return bar_;
   }
 
@@ -128,6 +128,10 @@ private:
   std::string foo_;
   std::string bar_;
 };
+
+[[maybe_unused]] bool operator==(const foobar& x, const foobar& y) {
+  return std::tie(x.foo(), x.bar()) == std::tie(y.foo(), y.bar());
+}
 
 template <class Inspector>
 bool inspect(Inspector& f, foobar& x) {

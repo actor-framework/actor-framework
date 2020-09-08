@@ -489,8 +489,17 @@ CAF_TEST(config values pick up user defined inspect overloads) {
   CAF_MESSAGE("read 'line' via get_if and verify the object");
   {
     auto l = get_if<line>(&x);
-    CAF_CHECK_NOT_EQUAL(l, none);
-    if (l)
+    if (CAF_CHECK_NOT_EQUAL(l, none))
       CAF_CHECK_EQUAL(*l, (line{{1, 2, 3}, {10, 20, 30}}));
+  }
+  CAF_MESSAGE("parse config value directly from string input");
+  {
+    auto val = config_value::parse("{p1{x=1,y=2,z=3},p2{x=10,y=20,z=30}}");
+    CAF_CHECK(val);
+    if (val) {
+      auto l = get_if<line>(std::addressof(*val));
+      if (CAF_CHECK_NOT_EQUAL(l, none))
+        CAF_CHECK_EQUAL(*l, (line{{1, 2, 3}, {10, 20, 30}}));
+    }
   }
 }

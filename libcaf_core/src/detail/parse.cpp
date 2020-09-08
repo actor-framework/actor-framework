@@ -18,9 +18,11 @@
 
 #include "caf/detail/parse.hpp"
 
+#include "caf/detail/config_consumer.hpp"
 #include "caf/detail/consumer.hpp"
 #include "caf/detail/parser/chars.hpp"
 #include "caf/detail/parser/read_bool.hpp"
+#include "caf/detail/parser/read_config.hpp"
 #include "caf/detail/parser/read_floating_point.hpp"
 #include "caf/detail/parser/read_ipv4_address.hpp"
 #include "caf/detail/parser/read_ipv6_address.hpp"
@@ -159,6 +161,21 @@ void parse(string_parser_state& ps, uri& x) {
   }
   if (ps.code <= pec::trailing_character)
     x = builder.make();
+}
+
+void parse(string_parser_state& ps, config_value& x) {
+  ps.skip_whitespaces();
+  if (ps.at_end()) {
+    ps.code = pec::unexpected_eof;
+    return;
+  }
+  // Safe the string as fallback.
+  string_view str{ps.i, ps.e};
+  // Dispatch to parser.
+  detail::config_value_consumer f;
+  parser::read_config_value(ps, f);
+  if (ps.code <= pec::trailing_character)
+    x = std::move(f.result);
 }
 
 PARSE_IMPL(ipv4_address, ipv4_address)

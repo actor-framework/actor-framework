@@ -785,47 +785,6 @@ private:
   }
 };
 
-template <class T>
-struct inspect_config_value_access {
-  static std::string type_name() {
-    return to_string(type_name_or_anonymous<T>());
-  }
-
-  static optional<T> get_if(const config_value* x) {
-    config_value_reader reader{x};
-    auto tmp = T{};
-    if (detail::load_value(reader, tmp))
-      return optional<T>{std::move(tmp)};
-    return none;
-  }
-
-  static bool is(const config_value& x) {
-    return get_if(&x) != none;
-  }
-
-  static T get(const config_value& x) {
-    auto result = get_if(&x);
-    if (!result)
-      CAF_RAISE_ERROR("invalid type found");
-    return std::move(*result);
-  }
-
-  template <class Nested>
-  static void parse_cli(string_parser_state& ps, T&, Nested) {
-    // TODO: we could try to read a config_value here and then deserialize the
-    //       value from that.
-    ps.code = pec::invalid_argument;
-  }
-
-  static config_value convert(const T& x) {
-    config_value result;
-    config_value_writer writer{&result};
-    if (!detail::save_value(writer, x))
-      CAF_RAISE_ERROR("unable to convert type to a config_value");
-    return result;
-  }
-};
-
 } // namespace detail
 
 // -- SumType access of dictionary values --------------------------------------
@@ -931,6 +890,68 @@ config_value make_config_value_list(Ts&&... xs) {
 }
 
 // -- inspection API -----------------------------------------------------------
+
+namespace detail {
+
+template <class T>
+struct inspect_config_value_access {
+  static std::string type_name() {
+    return to_string(type_name_or_anonymous<T>());
+  }
+
+  static optional<T> get_if(const config_value* x) {
+    config_value_reader reader{x};
+    auto tmp = T{};
+    if (detail::load_value(reader, tmp))
+      return optional<T>{std::move(tmp)};
+    return none;
+  }
+
+  static bool is(const config_value& x) {
+    return get_if(&x) != none;
+  }
+
+  static T get(const config_value& x) {
+    auto result = get_if(&x);
+    if (!result)
+      CAF_RAISE_ERROR("invalid type found");
+    return std::move(*result);
+  }
+
+  template <class Nested>
+  static void parse_cli(string_parser_state& ps, T& x, Nested token) {
+    auto first = ps.i;
+    config_value tmp;
+    detail::parse(ps, tmp);
+    // If the first attempt fails, rewind the parser state and try parsing the
+    // input as a string. This allows unescaped inputs.
+    if (ps.code != pec::success) {
+      ps.code = pec::success;
+      ps.i = first;
+      std::string str;
+      config_value_access_t<std::string>::parse_cli(ps, str, token);
+      if (ps.code == pec::success)
+        tmp = config_value{std::move(str)};
+    }
+    if (ps.code == pec::success) {
+      if (auto res = caf::get_if<T>(&tmp)) {
+        x = detail::move_if_not_ptr(res);
+      } else {
+        ps.code = pec::invalid_argument;
+      }
+    }
+  }
+
+  static config_value convert(const T& x) {
+    config_value result;
+    config_value_writer writer{&result};
+    if (!detail::save_value(writer, x))
+      CAF_RAISE_ERROR("unable to convert type to a config_value");
+    return result;
+  }
+};
+
+} // namespace detail
 
 template <>
 struct variant_inspector_traits<config_value> {
