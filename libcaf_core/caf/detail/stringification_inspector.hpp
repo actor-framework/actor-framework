@@ -53,7 +53,7 @@ public:
     return true;
   }
 
-  bool always_quote_strings = false;
+  bool always_quote_strings = true;
 
   // -- serializer interface ---------------------------------------------------
 
@@ -236,6 +236,8 @@ private:
   void sep();
 
   std::string& result_;
+
+  bool in_string_object_ = false;
 };
 
 } // namespace caf::detail

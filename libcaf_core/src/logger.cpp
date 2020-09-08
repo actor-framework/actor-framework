@@ -602,7 +602,6 @@ void logger::log_first_line() {
     msg += to_string(system_.node());
     msg += ", excluded-components = ";
     detail::stringification_inspector f{msg};
-    f.always_quote_strings = true;
     detail::save_value(f, filter);
     return msg;
   };

@@ -141,9 +141,9 @@ CAF_TEST(n_ary_visit) {
   variant<float, int, std::string> b{"bar"s};
   variant<int, std::string, double> c{123};
   test_visitor f;
-  CAF_CHECK_EQUAL(visit(f, a), "[42]");
-  CAF_CHECK_EQUAL(visit(f, a, b), "[42, bar]");
-  CAF_CHECK_EQUAL(visit(f, a, b, c), "[42, bar, 123]");
+  CAF_CHECK_EQUAL(visit(f, a), R"__([42])__");
+  CAF_CHECK_EQUAL(visit(f, a, b), R"__([42, "bar"])__");
+  CAF_CHECK_EQUAL(visit(f, a, b, c), R"__([42, "bar", 123])__");
 }
 
 CAF_TEST(get_if) {

@@ -274,10 +274,50 @@ struct config_value_access;
 
 CAF_DEFAULT_CONFIG_VALUE_ACCESS(bool, "boolean");
 CAF_DEFAULT_CONFIG_VALUE_ACCESS(double, "real64");
-CAF_DEFAULT_CONFIG_VALUE_ACCESS(timespan, "timespan");
 CAF_DEFAULT_CONFIG_VALUE_ACCESS(uri, "uri");
 
 #undef CAF_DEFAULT_CONFIG_VALUE_ACCESS
+
+template <>
+struct CAF_CORE_EXPORT config_value_access<timespan> {
+  static std::string type_name() {
+    return "timespan";
+  }
+
+  static bool is(const config_value& x) {
+    return static_cast<bool>(get_if(&x));
+  }
+
+  static optional<timespan> get_if(const config_value* x) {
+    auto data_ptr = std::addressof(x->get_data());
+    if (auto res = caf::get_if<timespan>(data_ptr))
+      return static_cast<timespan>(*res);
+    if (auto str = caf::get_if<std::string>(data_ptr)) {
+      string_view sv{*str};
+      timespan result;
+      string_parser_state ps{sv.begin(), sv.end()};
+      detail::parse(ps, result);
+      if (ps.code == pec::success)
+        return result;
+    }
+    return none;
+  }
+
+  static timespan get(const config_value& x) {
+    auto result = get_if(&x);
+    CAF_ASSERT(result);
+    return *result;
+  }
+
+  static timespan convert(timespan x) {
+    return x;
+  }
+
+  template <class Nested>
+  static void parse_cli(string_parser_state& ps, timespan& x, Nested) {
+    detail::parse(ps, x);
+  }
+};
 
 template <>
 struct CAF_CORE_EXPORT config_value_access<float> {

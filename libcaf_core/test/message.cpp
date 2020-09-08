@@ -91,17 +91,17 @@ CAF_TEST(to_string converts messages to strings) {
   using svec = vector<string>;
   CAF_CHECK_EQUAL(msg_as_string(), "message()");
   CAF_CHECK_EQUAL(msg_as_string("hello", "world"),
-                  R"__(message(std::string(hello), std::string(world)))__");
+                  R"__(message("hello", "world"))__");
   CAF_CHECK_EQUAL(
     msg_as_string(svec{"one", "two", "three"}),
-    R"__(message(std::vector<std::string>([one, two, three])))__");
+    R"__(message(std::vector<std::string>(["one", "two", "three"])))__");
   CAF_CHECK_EQUAL(
     msg_as_string(svec{"one", "two"}, "three", "four",
                   svec{"five", "six", "seven"}),
-    "message(std::vector<std::string>([one, two]), std::string(three), "
-    "std::string(four), std::vector<std::string>([five, six, seven]))");
+    R"__(message(std::vector<std::string>(["one", "two"]), "three", "four", )__"
+    R"__(std::vector<std::string>(["five", "six", "seven"])))__");
   CAF_CHECK_EQUAL(msg_as_string(R"(this is a "test")"),
-                  "message(std::string(\"this is a \\\"test\\\"\"))");
+                  R"__(message("this is a \"test\""))__");
   CAF_CHECK_EQUAL(msg_as_string(make_tuple(1, 2, 3), 4, 5),
                   "message(std::tuple<int32_t, int32_t, int32_t>([1, 2, 3]), "
                   "int32_t(4), int32_t(5))");

@@ -146,7 +146,6 @@ struct to_string_visitor {
   template <class T>
   void operator()(const T& x) {
     detail::stringification_inspector f{str};
-    f.always_quote_strings = true;
     f.value(x);
   }
 

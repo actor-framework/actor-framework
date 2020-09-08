@@ -167,16 +167,16 @@ CAF_TEST(profilers record asynchronous messaging) {
   sys.spawn(foo);
   run();
   CAF_CHECK_EQUAL(string_list({
-                    "new: foo",
-                    "new: bar, parent: foo",
-                    "foo sends: message(std::string(\"hello bar\"))",
-                    "bar got: message(std::string(\"hello bar\"))",
-                    "bar sends: message(std::string(\"hello foo\"))",
-                    "bar consumed the message",
-                    "foo got: message(std::string(\"hello foo\"))",
-                    "delete: bar",
-                    "foo consumed the message",
-                    "delete: foo",
+                    R"__(new: foo)__",
+                    R"__(new: bar, parent: foo)__",
+                    R"__(foo sends: message("hello bar"))__",
+                    R"__(bar got: message("hello bar"))__",
+                    R"__(bar sends: message("hello foo"))__",
+                    R"__(bar consumed the message)__",
+                    R"__(foo got: message("hello foo"))__",
+                    R"__(delete: bar)__",
+                    R"__(foo consumed the message)__",
+                    R"__(delete: foo)__",
                   }),
                   rec.log);
 }

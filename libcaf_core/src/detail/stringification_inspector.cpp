@@ -51,13 +51,20 @@ namespace caf::detail {
 
 bool stringification_inspector::begin_object(string_view name) {
   sep();
-  result_.insert(result_.end(), name.begin(), name.end());
-  result_ += '(';
+  if (name != "std::string") {
+    result_.insert(result_.end(), name.begin(), name.end());
+    result_ += '(';
+  } else {
+    in_string_object_ = true;
+  }
   return ok;
 }
 
 bool stringification_inspector::end_object() {
-  result_ += ')';
+  if (!in_string_object_)
+    result_ += ')';
+  else
+    in_string_object_ = false;
   return ok;
 }
 
