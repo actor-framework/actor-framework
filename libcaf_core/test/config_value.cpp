@@ -21,6 +21,7 @@
 #include "caf/config_value.hpp"
 
 #include "core-test.hpp"
+#include "nasty.hpp"
 
 #include <list>
 #include <map>
@@ -475,9 +476,9 @@ bool inspect(Inspector& f, line& x) {
 } // namespace
 
 CAF_TEST(config values pick up user defined inspect overloads) {
-  config_value x;
-  CAF_MESSAGE("fill config value with the fields necessary for a 'line'");
+  CAF_MESSAGE("users can fill dictionaries with field contents");
   {
+    config_value x;
     auto& dict = x.as_dictionary();
     put(dict, "p1.x", 1);
     put(dict, "p1.y", 2);
@@ -485,14 +486,11 @@ CAF_TEST(config values pick up user defined inspect overloads) {
     put(dict, "p2.x", 10);
     put(dict, "p2.y", 20);
     put(dict, "p2.z", 30);
-  }
-  CAF_MESSAGE("read 'line' via get_if and verify the object");
-  {
     auto l = get_if<line>(&x);
     if (CAF_CHECK_NOT_EQUAL(l, none))
       CAF_CHECK_EQUAL(*l, (line{{1, 2, 3}, {10, 20, 30}}));
   }
-  CAF_MESSAGE("parse config value directly from string input");
+  CAF_MESSAGE("users can pass objects as dictionaries on the command line");
   {
     auto val = config_value::parse("{p1{x=1,y=2,z=3},p2{x=10,y=20,z=30}}");
     CAF_CHECK(val);
@@ -501,5 +499,12 @@ CAF_TEST(config values pick up user defined inspect overloads) {
       if (CAF_CHECK_NOT_EQUAL(l, none))
         CAF_CHECK_EQUAL(*l, (line{{1, 2, 3}, {10, 20, 30}}));
     }
+  }
+  CAF_MESSAGE("value readers appear as inspectors with human-readable format");
+  {
+    config_value x{std::string{"saturday"}};
+    auto val = get_if<weekday>(&x);
+    if (CAF_CHECK(val))
+      CAF_CHECK_EQUAL(*val, weekday::saturday);
   }
 }

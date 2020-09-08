@@ -57,9 +57,15 @@ public:
   }
 
   template <class Get, class Set>
-  bool apply_value(Get&& get, Set&&) {
-    auto&& x = get();
-    return detail::load_value(dref(), x);
+  bool apply_value(Get&& get, Set&& set) {
+    using field_type = std::decay_t<decltype(get())>;
+    auto tmp = field_type{};
+    if (apply_value(tmp)) {
+      if (set(std::move(tmp)))
+        return true;
+      this->set_error(sec::load_callback_failed);
+    }
+    return false;
   }
 
 private:
