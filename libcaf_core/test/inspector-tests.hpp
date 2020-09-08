@@ -47,6 +47,10 @@ struct point_3d {
   int32_t z;
 };
 
+[[maybe_unused]] bool operator==(const point_3d& x, const point_3d& y) {
+  return std::tie(x.x, x.y, x.z) == std::tie(y.x, y.y, y.z);
+}
+
 template <class Inspector>
 bool inspect(Inspector& f, point_3d& x) {
   return f.object(x).fields(f.field("x", x.x), f.field("y", x.y),
@@ -57,6 +61,10 @@ struct line {
   point_3d p1;
   point_3d p2;
 };
+
+[[maybe_unused]] bool operator==(const line& x, const line& y) {
+  return std::tie(x.p1, x.p2) == std::tie(y.p1, y.p2);
+}
 
 template <class Inspector>
 bool inspect(Inspector& f, line& x) {
@@ -140,6 +148,11 @@ bool inspect(Inspector& f, foobar& x) {
 struct dummy_message {
   caf::variant<std::string, double> content;
 };
+
+[[maybe_unused]] bool operator==(const dummy_message& x,
+                                 const dummy_message& y) {
+  return x.content == y.content;
+}
 
 template <class Inspector>
 bool inspect(Inspector& f, dummy_message& x) {

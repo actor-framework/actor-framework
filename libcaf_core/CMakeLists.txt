@@ -68,6 +68,8 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/config_option_adder.cpp
   src/config_option_set.cpp
   src/config_value.cpp
+  src/config_value_reader.cpp
+  src/config_value_writer.cpp
   src/credit_controller.cpp
   src/decorator/sequencer.cpp
   src/default_attachable.cpp
@@ -160,7 +162,6 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/sec_strings.cpp
   src/serializer.cpp
   src/settings.cpp
-  src/settings_writer.cpp
   src/skip.cpp
   src/stream_aborter.cpp
   src/stream_manager.cpp
@@ -232,7 +233,8 @@ caf_add_test_suites(caf-core-test
   config_option
   config_option_set
   config_value
-  config_value_adaptor
+  config_value_reader
+  config_value_writer
   const_typed_message_view
   constructor_attach
   continuous_streaming
@@ -288,7 +290,6 @@ caf_add_test_suites(caf-core-test
   local_group
   logger
   mailbox_element
-  make_config_value_field
   message
   message_builder
   message_id
@@ -312,7 +313,6 @@ caf_add_test_suites(caf-core-test
   serial_reply
   serialization
   settings
-  settings_writer
   simple_timeout
   span
   stateful_actor

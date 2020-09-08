@@ -28,6 +28,8 @@
 #include <type_traits>
 #include <vector>
 
+#include "caf/config_value_reader.hpp"
+#include "caf/config_value_writer.hpp"
 #include "caf/detail/bounds_checker.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/move_if_not_ptr.hpp"
@@ -257,11 +259,9 @@ struct default_config_value_access {
   }
 };
 
-struct config_value_access_unspecialized {};
-
 /// @relates config_value
 template <class T>
-struct config_value_access : config_value_access_unspecialized {};
+struct config_value_access;
 
 #define CAF_DEFAULT_CONFIG_VALUE_ACCESS(type, name)                            \
   template <>                                                                  \
@@ -278,6 +278,36 @@ CAF_DEFAULT_CONFIG_VALUE_ACCESS(timespan, "timespan");
 CAF_DEFAULT_CONFIG_VALUE_ACCESS(uri, "uri");
 
 #undef CAF_DEFAULT_CONFIG_VALUE_ACCESS
+
+template <>
+struct CAF_CORE_EXPORT config_value_access<float> {
+  static std::string type_name() {
+    return "real32";
+  }
+
+  static bool is(const config_value& x) {
+    return holds_alternative<double>(x.get_data());
+  }
+
+  static optional<float> get_if(const config_value* x) {
+    if (auto res = caf::get_if<double>(&(x->get_data())))
+      return static_cast<float>(*res);
+    return none;
+  }
+
+  static float get(const config_value& x) {
+    return static_cast<float>(caf::get<double>(x.get_data()));
+  }
+
+  static double convert(float x) {
+    return x;
+  }
+
+  template <class Nested>
+  static void parse_cli(string_parser_state& ps, float& x, Nested) {
+    detail::parse(ps, x);
+  }
+};
 
 template <>
 struct CAF_CORE_EXPORT config_value_access<std::string> {
@@ -313,380 +343,317 @@ struct CAF_CORE_EXPORT config_value_access<std::string> {
   }
 };
 
-enum class select_config_value_hint {
-  is_integral,
-  is_map,
-  is_list,
-  is_custom,
-  is_missing,
+// -- implementation details for get/get_if/holds_alternative ------------------
+
+namespace detail {
+
+/// Wraps tag types for static dispatching.
+/// @relates config_value_access_type
+struct config_value_access_type {
+  /// Flags types that provide a `config_value_access` specialization.
+  struct specialization {};
+
+  /// Flags builtin integral types.
+  struct integral {};
+
+  /// Flags types with `std::tuple`-like API.
+  struct tuple {};
+
+  /// Flags types with `std::map`-like API.
+  struct map {};
+
+  /// Flags types with `std::vector`-like API.
+  struct list {};
+
+  /// Flags types without default access that shall fall back to using the
+  /// inspection API.
+  struct inspect {};
 };
 
+/// @relates config_value_access_type
 template <class T>
-constexpr select_config_value_hint select_config_value_oracle() {
-  return std::is_integral<T>::value && !std::is_same<T, bool>::value
-           ? select_config_value_hint::is_integral
-           : (detail::is_map_like<T>::value
-                ? select_config_value_hint::is_map
-                : (detail::is_list_like<T>::value
-                     ? select_config_value_hint::is_list
-                     : (!std::is_base_of<config_value_access_unspecialized,
-                                         config_value_access<T>>::value
-                          ? select_config_value_hint::is_custom
-                          : select_config_value_hint::is_missing)));
+constexpr auto config_value_access_token() {
+  if constexpr (detail::is_complete<config_value_access<T>>)
+    return config_value_access_type::specialization{};
+  else if constexpr (std::is_integral<T>::value)
+    return config_value_access_type::integral{};
+  else if constexpr (detail::is_stl_tuple_type_v<T>)
+    return config_value_access_type::tuple{};
+  else if constexpr (detail::is_map_like<T>::value)
+    return config_value_access_type::map{};
+  else if constexpr (detail::is_list_like<T>::value)
+    return config_value_access_type::list{};
+  else
+    return config_value_access_type::inspect{};
 }
 
-/// Delegates to config_value_access for all specialized versions.
-template <class T,
-          select_config_value_hint Hint = select_config_value_oracle<T>()>
-struct select_config_value_access {
-  static_assert(Hint == select_config_value_hint::is_custom,
-                "no default or specialization for config_value_access found");
+template <class T>
+struct integral_config_value_access;
+
+template <class T>
+struct tuple_config_value_access;
+
+template <class T>
+struct map_config_value_access;
+
+template <class T>
+struct list_config_value_access;
+
+template <class T>
+struct inspect_config_value_access;
+
+template <class T, class Token>
+struct config_value_access_oracle;
+
+template <class T>
+struct config_value_access_oracle<T, config_value_access_type::specialization> {
   using type = config_value_access<T>;
 };
 
+#define CAF_CONFIG_VALUE_ACCESS_ORACLE(access_type)                            \
+  template <class T>                                                           \
+  struct config_value_access_oracle<T,                                         \
+                                    config_value_access_type::access_type> {   \
+    using type = access_type##_config_value_access<T>;                         \
+  }
+
+CAF_CONFIG_VALUE_ACCESS_ORACLE(integral);
+CAF_CONFIG_VALUE_ACCESS_ORACLE(tuple);
+CAF_CONFIG_VALUE_ACCESS_ORACLE(map);
+CAF_CONFIG_VALUE_ACCESS_ORACLE(list);
+CAF_CONFIG_VALUE_ACCESS_ORACLE(inspect);
+
+#undef CAF_CONFIG_VALUE_ACCESS_ORACLE
+
 template <class T>
-using select_config_value_access_t =
-  typename select_config_value_access<T>::type;
+using config_value_access_t = typename config_value_access_oracle<
+  T, decltype(config_value_access_token<T>())>::type;
 
-template <>
-struct sum_type_access<config_value> {
-  using types = typename config_value::types;
+template <class T>
+struct integral_config_value_access {
+  using integer_type = config_value::integer;
 
-  using type0 = typename detail::tl_head<types>::type;
-
-  static constexpr bool specialized = true;
-
-  template <class U, int Pos>
-  static bool is(const config_value& x, sum_type_token<U, Pos> token) {
-    return x.get_data().is(pos(token));
+  static std::string type_name() {
+    std::string result;
+    if (std::is_signed<T>::value)
+      result = "int";
+    else
+      result = "uint";
+    result += std::to_string(sizeof(T) * 8);
+    return result;
   }
 
-  template <class U>
-  static bool is(const config_value& x, sum_type_token<U, -1>) {
-    return select_config_value_access_t<U>::is(x);
+  static bool is(const config_value& x) {
+    auto ptr = caf::get_if<integer_type>(x.get_data_ptr());
+    return ptr != nullptr && detail::bounds_checker<T>::check(*ptr);
   }
 
-  template <class U, int Pos>
-  static U& get(config_value& x, sum_type_token<U, Pos> token) {
-    return x.get_data().get(pos(token));
+  static optional<T> get_if(const config_value* x) {
+    auto ptr = caf::get_if<integer_type>(x->get_data_ptr());
+    if (ptr != nullptr && detail::bounds_checker<T>::check(*ptr))
+      return static_cast<T>(*ptr);
+    return none;
   }
 
-  template <class U>
-  static U get(config_value& x, sum_type_token<U, -1>) {
-    return select_config_value_access_t<U>::get(x);
+  static T get(const config_value& x) {
+    auto res = get_if(&x);
+    CAF_ASSERT(res != none);
+    return *res;
   }
 
-  template <class U, int Pos>
-  static const U& get(const config_value& x, sum_type_token<U, Pos> token) {
-    return x.get_data().get(pos(token));
+  static T convert(T x) {
+    return x;
   }
 
-  template <class U>
-  static U get(const config_value& x, sum_type_token<U, -1>) {
-    return select_config_value_access_t<U>::get(x);
-  }
-
-  template <class U, int Pos>
-  static U* get_if(config_value* x, sum_type_token<U, Pos> token) {
-    return is(*x, token) ? &get(*x, token) : nullptr;
-  }
-
-  template <class U>
-  static optional<U> get_if(config_value* x, sum_type_token<U, -1>) {
-    return select_config_value_access_t<U>::get_if(x);
-  }
-
-  template <class U, int Pos>
-  static const U* get_if(const config_value* x, sum_type_token<U, Pos> token) {
-    return is(*x, token) ? &get(*x, token) : nullptr;
-  }
-
-  template <class U>
-  static optional<U> get_if(const config_value* x, sum_type_token<U, -1>) {
-    return select_config_value_access_t<U>::get_if(x);
-  }
-
-  template <class Result, class Visitor, class... Ts>
-  static Result apply(config_value& x, Visitor&& visitor, Ts&&... xs) {
-    return x.get_data().template apply<Result>(std::forward<Visitor>(visitor),
-                                               std::forward<Ts>(xs)...);
-  }
-
-  template <class Result, class Visitor, class... Ts>
-  static Result apply(const config_value& x, Visitor&& visitor, Ts&&... xs) {
-    return x.get_data().template apply<Result>(std::forward<Visitor>(visitor),
-                                               std::forward<Ts>(xs)...);
+  template <class Nested>
+  static void parse_cli(string_parser_state& ps, T& x, Nested) {
+    detail::parse(ps, x);
   }
 };
 
-/// Catches all non-specialized integer types.
 template <class T>
-struct select_config_value_access<T, select_config_value_hint::is_integral> {
-  struct type {
-    using integer_type = config_value::integer;
+struct list_config_value_access {
+  using list_type = T;
 
-    static std::string type_name() {
-      std::string result;
-      if (std::is_signed<T>::value)
-        result = "int";
-      else
-        result = "uint";
-      result += std::to_string(sizeof(T) * 8);
-      return result;
-    }
+  using value_type = typename list_type::value_type;
 
-    static bool is(const config_value& x) {
-      auto ptr = caf::get_if<integer_type>(x.get_data_ptr());
-      return ptr != nullptr && detail::bounds_checker<T>::check(*ptr);
-    }
+  using value_access = config_value_access_t<value_type>;
 
-    static optional<T> get_if(const config_value* x) {
-      auto ptr = caf::get_if<integer_type>(x->get_data_ptr());
-      if (ptr != nullptr && detail::bounds_checker<T>::check(*ptr))
-        return static_cast<T>(*ptr);
-      return none;
-    }
+  static std::string type_name() {
+    return "list of " + value_access::type_name();
+  }
 
-    static T get(const config_value& x) {
-      auto res = get_if(&x);
-      CAF_ASSERT(res != none);
-      return *res;
-    }
+  static bool is(const config_value& x) {
+    auto lst = caf::get_if<config_value::list>(&(x.get_data()));
+    return lst != nullptr
+           && std::all_of(lst->begin(), lst->end(), [](const config_value& y) {
+                return caf::holds_alternative<value_type>(y);
+              });
+    return false;
+  }
 
-    static T convert(T x) {
-      return x;
-    }
-
-    template <class Nested>
-    static void parse_cli(string_parser_state& ps, T& x, Nested) {
-      detail::parse(ps, x);
-    }
-  };
-};
-
-/// Catches all non-specialized list types.
-template <class T>
-struct select_config_value_access<T, select_config_value_hint::is_list> {
-  struct type {
-    using list_type = T;
-
-    using value_type = typename list_type::value_type;
-
-    using value_trait = select_config_value_access_t<value_type>;
-
-    static std::string type_name() {
-      return "list of " + value_trait::type_name();
-    }
-
-    static bool is(const config_value& x) {
-      auto lst = caf::get_if<config_value::list>(&x);
-      return lst != nullptr
-             && std::all_of(lst->begin(), lst->end(),
-                            [](const config_value& y) {
-                              return caf::holds_alternative<value_type>(y);
-                            });
+  static optional<list_type> get_if(const config_value* x) {
+    list_type result;
+    auto out = std::inserter(result, result.end());
+    auto extract = [&](const config_value& y) {
+      if (auto opt = caf::get_if<value_type>(&y)) {
+        *out++ = move_if_optional(opt);
+        return true;
+      }
       return false;
-    }
-
-    static optional<list_type> get_if(const config_value* x) {
-      list_type result;
-      auto out = std::inserter(result, result.end());
-      auto extract = [&](const config_value& y) {
-        if (auto opt = caf::get_if<value_type>(&y)) {
-          *out++ = move_if_optional(opt);
-          return true;
-        }
-        return false;
-      };
-      auto lst = caf::get_if<config_value::list>(x);
-      if (lst != nullptr && std::all_of(lst->begin(), lst->end(), extract))
-        return result;
-      return none;
-    }
-
-    static list_type get(const config_value& x) {
-      auto result = get_if(&x);
-      if (!result)
-        CAF_RAISE_ERROR("invalid type found");
-      return std::move(*result);
-    }
-
-    static config_value::list convert(const list_type& xs) {
-      config_value::list result;
-      for (const auto& x : xs)
-        result.emplace_back(value_trait::convert(x));
+    };
+    auto lst = caf::get_if<config_value::list>(&(x->get_data()));
+    if (lst != nullptr && std::all_of(lst->begin(), lst->end(), extract))
       return result;
-    }
+    return none;
+  }
 
-    static void parse_cli(string_parser_state& ps, T& xs,
-                          top_level_cli_parsing_t) {
-      bool has_open_token;
-      auto subtype = select_config_value_oracle<value_type>();
-      if (subtype == select_config_value_hint::is_list) {
-        // The outer square brackets are optional in nested lists. This means we
-        // need to check for "[[" at the beginning and otherwise we assume the
-        // leading '[' was omitted.
-        string_parser_state tmp{ps.i, ps.e};
-        has_open_token = tmp.consume('[') && tmp.consume('[');
-        if (has_open_token)
-          ps.consume('[');
-      } else {
-        has_open_token = ps.consume('[');
-      }
-      do {
-        ps.skip_whitespaces();
-        if (has_open_token) {
-          if (ps.consume(']')) {
-            ps.skip_whitespaces();
-            ps.code = ps.at_end() ? pec::success : pec::trailing_character;
-            return;
-          }
-        } else if (ps.at_end()) {
-          // Allow trailing commas and empty strings.
-          ps.code = pec::success;
-          return;
-        }
-        value_type tmp;
-        value_trait::parse_cli(ps, tmp, nested_cli_parsing);
-        if (ps.code > pec::trailing_character)
-          return;
-        xs.insert(xs.end(), std::move(tmp));
-      } while (ps.consume(','));
-      if (has_open_token && !ps.consume(']')) {
-        ps.code = ps.at_end() ? pec::unexpected_eof : pec::unexpected_character;
-        return;
-      }
+  static list_type get(const config_value& x) {
+    auto result = get_if(&x);
+    if (!result)
+      CAF_RAISE_ERROR("invalid type found");
+    return std::move(*result);
+  }
+
+  static config_value::list convert(const list_type& xs) {
+    config_value::list result;
+    for (const auto& x : xs)
+      result.emplace_back(value_access::convert(x));
+    return result;
+  }
+
+  static void parse_cli(string_parser_state& ps, T& xs,
+                        top_level_cli_parsing_t) {
+    bool has_open_token;
+    auto val_token = config_value_access_token<value_type>();
+    if constexpr (std::is_same<decltype(val_token),
+                               config_value_access_type::list>::value) {
+      // The outer square brackets are optional in nested lists. This means we
+      // need to check for "[[" at the beginning and otherwise we assume the
+      // leading '[' was omitted.
+      string_parser_state tmp{ps.i, ps.e};
+      has_open_token = tmp.consume('[') && tmp.consume('[');
+      if (has_open_token)
+        ps.consume('[');
+    } else {
+      has_open_token = ps.consume('[');
+    }
+    do {
       ps.skip_whitespaces();
-      ps.code = ps.at_end() ? pec::success : pec::trailing_character;
-    }
-
-    static void parse_cli(string_parser_state& ps, T& xs,
-                          nested_cli_parsing_t) {
-      if (!ps.consume('[')) {
-        ps.code = ps.at_end() ? pec::unexpected_eof : pec::unexpected_character;
-        return;
-      }
-      do {
+      if (has_open_token) {
         if (ps.consume(']')) {
           ps.skip_whitespaces();
           ps.code = ps.at_end() ? pec::success : pec::trailing_character;
           return;
         }
-        value_type tmp;
-        value_trait::parse_cli(ps, tmp, nested_cli_parsing);
-        if (ps.code > pec::trailing_character)
-          return;
-        xs.insert(xs.end(), std::move(tmp));
-      } while (ps.consume(','));
-      if (!ps.consume(']')) {
-        ps.code = ps.at_end() ? pec::unexpected_eof : pec::unexpected_character;
+      } else if (ps.at_end()) {
+        // Allow trailing commas and empty strings.
+        ps.code = pec::success;
         return;
       }
-      ps.skip_whitespaces();
-      ps.code = ps.at_end() ? pec::success : pec::trailing_character;
+      value_type tmp;
+      value_access::parse_cli(ps, tmp, nested_cli_parsing);
+      if (ps.code > pec::trailing_character)
+        return;
+      xs.insert(xs.end(), std::move(tmp));
+    } while (ps.consume(','));
+    if (has_open_token && !ps.consume(']')) {
+      ps.code = ps.at_end() ? pec::unexpected_eof : pec::unexpected_character;
+      return;
     }
-  };
+    ps.skip_whitespaces();
+    ps.code = ps.at_end() ? pec::success : pec::trailing_character;
+  }
+
+  static void parse_cli(string_parser_state& ps, T& xs, nested_cli_parsing_t) {
+    if (!ps.consume('[')) {
+      ps.code = ps.at_end() ? pec::unexpected_eof : pec::unexpected_character;
+      return;
+    }
+    do {
+      if (ps.consume(']')) {
+        ps.skip_whitespaces();
+        ps.code = ps.at_end() ? pec::success : pec::trailing_character;
+        return;
+      }
+      value_type tmp;
+      value_access::parse_cli(ps, tmp, nested_cli_parsing);
+      if (ps.code > pec::trailing_character)
+        return;
+      xs.insert(xs.end(), std::move(tmp));
+    } while (ps.consume(','));
+    if (!ps.consume(']')) {
+      ps.code = ps.at_end() ? pec::unexpected_eof : pec::unexpected_character;
+      return;
+    }
+    ps.skip_whitespaces();
+    ps.code = ps.at_end() ? pec::success : pec::trailing_character;
+  }
 };
 
-/// Catches all non-specialized map types.
 template <class T>
-struct select_config_value_access<T, select_config_value_hint::is_map> {
-  struct type {
-    using map_type = T;
+struct map_config_value_access {
+  using map_type = T;
 
-    using mapped_type = typename map_type::mapped_type;
+  using mapped_type = typename map_type::mapped_type;
 
-    using mapped_trait = select_config_value_access_t<mapped_type>;
+  using mapped_access = config_value_access_t<mapped_type>;
 
-    static std::string type_name() {
-      std::string result = "dictionary of ";
-      auto nested_name = mapped_trait::type_name();
-      result.insert(result.end(), nested_name.begin(), nested_name.end());
-      return result;
-    }
-
-    static bool is(const config_value& x) {
-      using value_type = config_value::dictionary::value_type;
-      auto is_mapped_type = [](const value_type& y) {
-        return caf::holds_alternative<mapped_type>(y.second);
-      };
-      if (auto dict = caf::get_if<config_value::dictionary>(&x))
-        return std::all_of(dict->begin(), dict->end(), is_mapped_type);
-      return false;
-    }
-
-    static optional<map_type> get_if(const config_value* x) {
-      using value_type = config_value::dictionary::value_type;
-      map_type result;
-      auto extract = [&](const value_type& y) {
-        if (auto opt = caf::get_if<mapped_type>(&y.second)) {
-          result.emplace(y.first, move_if_optional(opt));
-          return true;
-        }
-        return false;
-      };
-      if (auto dict = caf::get_if<config_value::dictionary>(x))
-        if (std::all_of(dict->begin(), dict->end(), extract))
-          return result;
-      return none;
-    }
-
-    static map_type get(const config_value& x) {
-      auto result = get_if(&x);
-      if (!result)
-        CAF_RAISE_ERROR("invalid type found");
-      return std::move(*result);
-    }
-
-    template <class Nested>
-    static void parse_cli(string_parser_state& ps, map_type& xs, Nested) {
-      detail::parse(ps, xs);
-    }
-
-    static config_value::dictionary convert(const map_type& xs) {
-      config_value::dictionary result;
-      for (const auto& x : xs)
-        result.emplace(x.first, mapped_trait::convert(x.second));
-      return result;
-    }
-  };
-};
-
-template <>
-struct config_value_access<float> {
   static std::string type_name() {
-    return "real32";
+    std::string result = "dictionary of ";
+    auto nested_name = mapped_access::type_name();
+    result.insert(result.end(), nested_name.begin(), nested_name.end());
+    return result;
   }
 
   static bool is(const config_value& x) {
-    return holds_alternative<double>(x.get_data());
+    using value_type = config_value::dictionary::value_type;
+    auto is_mapped_type = [](const value_type& y) {
+      return caf::holds_alternative<mapped_type>(y.second);
+    };
+    if (auto dict = caf::get_if<config_value::dictionary>(&(x.get_data())))
+      return std::all_of(dict->begin(), dict->end(), is_mapped_type);
+    return false;
   }
 
-  static optional<float> get_if(const config_value* x) {
-    if (auto res = caf::get_if<double>(&(x->get_data())))
-      return static_cast<float>(*res);
+  static optional<map_type> get_if(const config_value* x) {
+    using value_type = config_value::dictionary::value_type;
+    map_type result;
+    auto extract = [&](const value_type& y) {
+      if (auto opt = caf::get_if<mapped_type>(&y.second)) {
+        result.emplace(y.first, move_if_optional(opt));
+        return true;
+      }
+      return false;
+    };
+    if (auto dict = caf::get_if<config_value::dictionary>(&(x->get_data())))
+      if (std::all_of(dict->begin(), dict->end(), extract))
+        return result;
     return none;
   }
 
-  static float get(const config_value& x) {
-    return static_cast<float>(caf::get<double>(x.get_data()));
-  }
-
-  static double convert(float x) {
-    return x;
+  static map_type get(const config_value& x) {
+    auto result = get_if(&x);
+    if (!result)
+      CAF_RAISE_ERROR("invalid type found");
+    return std::move(*result);
   }
 
   template <class Nested>
-  static void parse_cli(string_parser_state& ps, float& x, Nested) {
-    detail::parse(ps, x);
+  static void parse_cli(string_parser_state& ps, map_type& xs, Nested) {
+    detail::parse(ps, xs);
+  }
+
+  static config_value::dictionary convert(const map_type& xs) {
+    config_value::dictionary result;
+    for (const auto& x : xs)
+      result.emplace(x.first, mapped_access::convert(x.second));
+    return result;
   }
 };
 
-/// Implements automagic unboxing of `std::tuple<Ts...>` from a heterogeneous
-///`config_value::list`.
-/// @relates config_value
 template <class... Ts>
-struct config_value_access<std::tuple<Ts...>> {
+struct tuple_config_value_access<std::tuple<Ts...>> {
   using tuple_type = std::tuple<Ts...>;
 
   static std::string type_name() {
@@ -697,7 +664,7 @@ struct config_value_access<std::tuple<Ts...>> {
   }
 
   static bool is(const config_value& x) {
-    if (auto lst = caf::get_if<config_value::list>(&x)) {
+    if (auto lst = caf::get_if<config_value::list>(&(x.get_data()))) {
       if (lst->size() != sizeof...(Ts))
         return false;
       return rec_is(*lst, detail::int_token<0>(), detail::type_list<Ts...>());
@@ -706,7 +673,7 @@ struct config_value_access<std::tuple<Ts...>> {
   }
 
   static optional<tuple_type> get_if(const config_value* x) {
-    if (auto lst = caf::get_if<config_value::list>(x)) {
+    if (auto lst = caf::get_if<config_value::list>(&(x->get_data()))) {
       if (lst->size() != sizeof...(Ts))
         return none;
       tuple_type result;
@@ -793,7 +760,7 @@ private:
   template <int Pos, class U, class... Us>
   static void rec_convert(config_value::list& result, const tuple_type& xs,
                           detail::int_token<Pos>, detail::type_list<U, Us...>) {
-    using trait = select_config_value_access_t<U>;
+    using trait = config_value_access_t<U>;
     result.emplace_back(trait::convert(std::get<Pos>(xs)));
     return rec_convert(result, xs, detail::int_token<Pos + 1>(),
                        detail::type_list<Us...>());
@@ -808,7 +775,7 @@ private:
   template <int Pos, class U, class... Us>
   static void rec_parse(string_parser_state& ps, tuple_type& xs,
                         detail::int_token<Pos>, detail::type_list<U, Us...>) {
-    using trait = select_config_value_access_t<U>;
+    using trait = config_value_access_t<U>;
     trait::parse_cli(std::get<Pos>(xs), nested_cli_parsing);
     if (ps.code > pec::trailing_character)
       return;
@@ -818,7 +785,121 @@ private:
   }
 };
 
-// -- SumType-like access of dictionary values ---------------------------------
+template <class T>
+struct inspect_config_value_access {
+  static std::string type_name() {
+    return to_string(type_name_or_anonymous<T>());
+  }
+
+  static optional<T> get_if(const config_value* x) {
+    config_value_reader reader{x};
+    auto tmp = T{};
+    if (detail::load_value(reader, tmp))
+      return optional<T>{std::move(tmp)};
+    return none;
+  }
+
+  static bool is(const config_value& x) {
+    return get_if(&x) != none;
+  }
+
+  static T get(const config_value& x) {
+    auto result = get_if(&x);
+    if (!result)
+      CAF_RAISE_ERROR("invalid type found");
+    return std::move(*result);
+  }
+
+  template <class Nested>
+  static void parse_cli(string_parser_state& ps, T&, Nested) {
+    // TODO: we could try to read a config_value here and then deserialize the
+    //       value from that.
+    ps.code = pec::invalid_argument;
+  }
+
+  static config_value convert(const T& x) {
+    config_value result;
+    config_value_writer writer{&result};
+    if (!detail::save_value(writer, x))
+      CAF_RAISE_ERROR("unable to convert type to a config_value");
+    return result;
+  }
+};
+
+} // namespace detail
+
+// -- SumType access of dictionary values --------------------------------------
+
+template <>
+struct sum_type_access<config_value> {
+  using types = typename config_value::types;
+
+  using type0 = typename detail::tl_head<types>::type;
+
+  static constexpr bool specialized = true;
+
+  template <class U, int Pos>
+  static bool is(const config_value& x, sum_type_token<U, Pos> token) {
+    return x.get_data().is(pos(token));
+  }
+
+  template <class U>
+  static bool is(const config_value& x, sum_type_token<U, -1>) {
+    return detail::config_value_access_t<U>::is(x);
+  }
+
+  template <class U, int Pos>
+  static U& get(config_value& x, sum_type_token<U, Pos> token) {
+    return x.get_data().get(pos(token));
+  }
+
+  template <class U>
+  static U get(config_value& x, sum_type_token<U, -1>) {
+    return detail::config_value_access_t<U>::get(x);
+  }
+
+  template <class U, int Pos>
+  static const U& get(const config_value& x, sum_type_token<U, Pos> token) {
+    return x.get_data().get(pos(token));
+  }
+
+  template <class U>
+  static U get(const config_value& x, sum_type_token<U, -1>) {
+    return detail::config_value_access_t<U>::get(x);
+  }
+
+  template <class U, int Pos>
+  static U* get_if(config_value* x, sum_type_token<U, Pos> token) {
+    return is(*x, token) ? &get(*x, token) : nullptr;
+  }
+
+  template <class U>
+  static optional<U> get_if(config_value* x, sum_type_token<U, -1>) {
+    return detail::config_value_access_t<U>::get_if(x);
+  }
+
+  template <class U, int Pos>
+  static const U* get_if(const config_value* x, sum_type_token<U, Pos> token) {
+    return is(*x, token) ? &get(*x, token) : nullptr;
+  }
+
+  template <class U>
+  static optional<U> get_if(const config_value* x, sum_type_token<U, -1>) {
+    return detail::config_value_access_t<U>::get_if(x);
+  }
+
+  template <class Result, class Visitor, class... Ts>
+  static Result apply(config_value& x, Visitor&& visitor, Ts&&... xs) {
+    return x.get_data().template apply<Result>(std::forward<Visitor>(visitor),
+                                               std::forward<Ts>(xs)...);
+  }
+
+  template <class Result, class Visitor, class... Ts>
+  static Result apply(const config_value& x, Visitor&& visitor, Ts&&... xs) {
+    return x.get_data().template apply<Result>(std::forward<Visitor>(visitor),
+                                               std::forward<Ts>(xs)...);
+  }
+};
 
 /// @relates config_value
 CAF_CORE_EXPORT bool operator<(const config_value& x, const config_value& y);
@@ -855,15 +936,16 @@ template <>
 struct variant_inspector_traits<config_value> {
   using value_type = config_value;
 
-  static constexpr type_id_t allowed_types[]
-    = {type_id_v<config_value::integer>,
-       type_id_v<config_value::boolean>,
-       type_id_v<config_value::real>,
-       type_id_v<config_value::timespan>,
-       type_id_v<uri>,
-       type_id_v<config_value::string>,
-       type_id_v<config_value::list>,
-       type_id_v<config_value::dictionary>};
+  static constexpr type_id_t allowed_types[] = {
+    type_id_v<config_value::integer>,
+    type_id_v<config_value::boolean>,
+    type_id_v<config_value::real>,
+    type_id_v<config_value::timespan>,
+    type_id_v<uri>,
+    type_id_v<config_value::string>,
+    type_id_v<config_value::list>,
+    type_id_v<config_value::dictionary>,
+  };
 
   static auto type_index(const config_value& x) {
     return x.get_data().index();

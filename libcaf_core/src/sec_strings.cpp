@@ -137,6 +137,8 @@ std::string to_string(sec x) {
       return "save_callback_failed";
     case sec::load_callback_failed:
       return "load_callback_failed";
+    case sec::conversion_failed:
+      return "conversion_failed";
   };
 }
 

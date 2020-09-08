@@ -48,7 +48,7 @@ void store_impl(void* ptr, const config_value& x) {
 
 template <class T>
 config_value get_impl(const void* ptr) {
-  using trait = select_config_value_access_t<T>;
+  using trait = detail::config_value_access_t<T>;
   return config_value{trait::convert(*reinterpret_cast<const T*>(ptr))};
 }
 
@@ -60,7 +60,7 @@ expected<config_value> parse_impl(T* ptr, string_view str) {
   }
   if constexpr (detail::has_clear_member<T>::value)
     ptr->clear();
-  using trait = select_config_value_access_t<T>;
+  using trait = detail::config_value_access_t<T>;
   string_parser_state ps{str.begin(), str.end()};
   trait::parse_cli(ps, *ptr, top_level_cli_parsing);
   if (ps.code != pec::success)
@@ -78,7 +78,7 @@ expected<config_value> parse_impl_delegate(void* ptr, string_view str) {
 
 template <class T>
 config_option::meta_state* option_meta_state_instance() {
-  using trait = select_config_value_access_t<T>;
+  using trait = detail::config_value_access_t<T>;
   static config_option::meta_state obj{check_impl<T>, store_impl<T>,
                                        get_impl<T>, parse_impl_delegate<T>,
                                        trait::type_name()};
