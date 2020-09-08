@@ -19,6 +19,7 @@
 #pragma once
 
 #include "caf/deserializer.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"
 
@@ -27,8 +28,8 @@
 
 namespace caf {
 
-/// Extracts objects from @ref settings.
-class config_value_reader : public deserializer {
+/// Extracts objects from a @ref config_value.
+class CAF_CORE_EXPORT config_value_reader final : public deserializer {
 public:
   // -- member types------------------------------------------------------------
 

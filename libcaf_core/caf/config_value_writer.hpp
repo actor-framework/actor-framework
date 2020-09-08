@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/serializer.hpp"
 
@@ -27,7 +28,7 @@
 namespace caf {
 
 /// Serializes an objects into a @ref config_value.
-class config_value_writer final : public serializer {
+class CAF_CORE_EXPORT config_value_writer final : public serializer {
 public:
   // -- member types------------------------------------------------------------
 
