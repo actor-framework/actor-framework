@@ -48,6 +48,8 @@
 #include "caf/config_option.hpp"
 #include "caf/config_option_adder.hpp"
 #include "caf/config_value.hpp"
+#include "caf/config_value_reader.hpp"
+#include "caf/config_value_writer.hpp"
 #include "caf/const_typed_message_view.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/defaults.hpp"
