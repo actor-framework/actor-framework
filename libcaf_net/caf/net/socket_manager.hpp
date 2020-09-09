@@ -94,6 +94,8 @@ public:
 
   // -- pure virtual member functions ------------------------------------------
 
+  virtual error init(const settings& config) = 0;
+
   /// Called whenever the socket received new data.
   virtual bool handle_read_event() = 0;
 
@@ -120,9 +122,18 @@ template <class Protocol>
 class socket_manager_impl : public socket_manager {
 public:
   template <class... Ts>
-  socket_manager_impl(Ts&&... xs) : protocol_(std::forward<Ts>(xs)...) {
+  socket_manager_impl(socket handle, const multiplexer_ptr& mpx, Ts&&... xs)
+    : socket_manager{handle, mpx}, protocol_(std::forward<Ts>(xs)...) {
     // nop
   }
+
+  // -- initialization ---------------------------------------------------------
+
+  error init(const settings& config) override {
+    protocol_.init(*this, config);
+  }
+
+  // -- event callbacks --------------------------------------------------------
 
   bool handle_read_event() override {
     return protocol_.handle_read_event(*this);
@@ -153,6 +164,24 @@ private:
 using socket_manager_ptr = intrusive_ptr<socket_manager>;
 
 template <class B, template <class> class... Layers>
+struct socket_type_helper;
+
+template <class B>
+struct socket_type_helper<B> {
+  using type = typename B::socket_type;
+};
+
+template <class B, template <class> class Layer,
+          template <class> class... Layers>
+struct socket_type_helper<B, Layer, Layers...>
+  : socket_type_helper<Layer<B>, Layers...> {
+  // no content
+};
+
+template <class B, template <class> class... Layers>
+using socket_type_t = typename socket_type_helper<B, Layers...>::type;
+
+template <class B, template <class> class... Layers>
 struct make_socket_manager_helper;
 
 template <class B>
@@ -167,10 +196,17 @@ struct make_socket_manager_helper<B, Layer, Layers...>
   // no content
 };
 
+template <class B, template <class> class... Layers>
+using make_socket_manager_helper_t =
+  typename make_socket_manager_helper<B, Layers...>::type;
+
 template <class App, template <class> class... Layers, class... Ts>
-auto make_socket_manager(Ts&&... xs) {
-  using impl = make_socket_manager_helper<App, Layers..., socket_manager_impl>;
-  return make_counted<impl>(std::forward<Ts>(xs)...);
+auto make_socket_manager(socket_type_t<App, Layers...> handle,
+                         const multiplexer_ptr& mpx, Ts&&... xs) {
+  static_assert(std::is_base_of<socket, socket_type_t<App, Layers...>>::value);
+  using impl
+    = make_socket_manager_helper_t<App, Layers..., socket_manager_impl>;
+  return make_counted<impl>(std::move(handle), mpx, std::forward<Ts>(xs)...);
 }
 
 } // namespace caf::net

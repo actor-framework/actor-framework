@@ -42,6 +42,8 @@ public:
 
   using output_tag = tag::stream_oriented;
 
+  using socket_type = stream_socket;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class... Ts>

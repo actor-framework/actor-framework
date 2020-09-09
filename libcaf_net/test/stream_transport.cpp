@@ -147,13 +147,13 @@ CAF_TEST_FIXTURE_SCOPE(endpoint_manager_tests, fixture)
 
 CAF_TEST(receive) {
   using transport_type = stream_transport<dummy_application>;
-  auto mgr = make_endpoint_manager(
-    mpx, sys,
-    transport_type{recv_socket_guard.release(), dummy_application{shared_buf}});
-  CAF_CHECK_EQUAL(mgr->init(), none);
-  auto mgr_impl = mgr.downcast<endpoint_manager_impl<transport_type>>();
-  CAF_CHECK(mgr_impl != nullptr);
-  auto& transport = mgr_impl->transport();
+  auto mgr = make_socket_manager<dummy_application, stream_transport>(
+    recv_socket_guard.release(), mpx, shared_buf);
+  settings config;
+  CAF_CHECK_EQUAL(mgr->init(config), none);
+  // auto mgr_impl = mgr.downcast<endpoint_manager_impl<transport_type>>();
+  // CAF_CHECK(mgr_impl != nullptr);
+  auto& transport = mgr->protocol();
   transport.configure_read(receive_policy::exactly(hello_manager.size()));
   CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
   CAF_CHECK_EQUAL(write(send_socket_guard.socket(),

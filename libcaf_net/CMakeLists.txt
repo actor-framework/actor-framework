@@ -50,8 +50,8 @@ add_library(libcaf_net_obj OBJECT ${CAF_NET_HEADERS}
   src/ip.cpp
   src/message_queue.cpp
   src/multiplexer.cpp
-  src/net/backend/test.cpp
-  src/net/backend/tcp.cpp
+  #src/net/backend/test.cpp
+  #src/net/backend/tcp.cpp
   src/net/endpoint_manager_queue.cpp
   src/net/middleman.cpp
   src/net/middleman_backend.cpp
@@ -124,28 +124,28 @@ target_link_libraries(caf-net-test PRIVATE CAF::test)
 
 caf_incubator_add_test_suites(caf-net-test
   accept_socket
-  application
+  #application
   convert_ip_endpoint
   datagram_socket
-  datagram_transport
-  doorman
-  endpoint_manager
+  #datagram_transport
+  #doorman
+  #endpoint_manager
   header
   ip
   multiplexer
-  net.backend.tcp
-  net.basp.message_queue
-  net.basp.ping_pong
-  net.basp.worker
+  #net.backend.tcp
+  #net.basp.message_queue
+  #net.basp.ping_pong
+  #net.basp.worker
   net.length_prefix_framing
   network_socket
   pipe_socket
   socket
   socket_guard
-  stream_application
+  #stream_application
   stream_socket
   stream_transport
-  string_application
+  #string_application
   tcp_sockets
   transport_worker
   transport_worker_dispatcher

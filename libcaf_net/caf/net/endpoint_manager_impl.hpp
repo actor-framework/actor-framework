@@ -40,8 +40,8 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   endpoint_manager_impl(const multiplexer_ptr& parent, actor_system& sys,
-                        Transport trans)
-    : super(trans.handle(), parent, sys), transport_(std::move(trans)) {
+                        socket handle, Transport trans)
+    : super(handle, parent, sys), transport_(std::move(trans)) {
     // nop
   }
 
