@@ -77,11 +77,15 @@ struct header {
 
 /// @relates header
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, header& hdr) {
+bool inspect(Inspector& f, header& x) {
   uint8_t pad = 0;
-  return f(meta::type_name("header"), hdr.operation, meta::omittable(), pad,
-           meta::omittable(), pad, hdr.flags, hdr.payload_len,
-           hdr.operation_data, hdr.source_actor, hdr.dest_actor);
+  return f.object(x).fields(f.field("operation", x.operation),
+                            f.field("pad1", pad), f.field("pad2", pad),
+                            f.field("flags", x.flags),
+                            f.field("payload_len", x.payload_len),
+                            f.field("operation_data", x.operation_data),
+                            f.field("source_actor", x.source_actor),
+                            f.field("dest_actor", x.dest_actor));
 }
 
 /// @relates header

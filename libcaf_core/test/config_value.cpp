@@ -21,6 +21,7 @@
 #include "caf/config_value.hpp"
 
 #include "core-test.hpp"
+#include "nasty.hpp"
 
 #include <list>
 #include <map>
@@ -438,4 +439,72 @@ CAF_TEST(conversion to std::unordered_multimap) {
   auto ys = get_if<map_type>(&xs);
   CAF_REQUIRE(ys);
   CAF_CHECK_EQUAL(*ys, map_type({{"a", 1}, {"b", 2}, {"c", 3}, {"d", 4}}));
+}
+
+namespace {
+
+struct point_3d {
+  int32_t x;
+  int32_t y;
+  int32_t z;
+};
+
+[[maybe_unused]] bool operator==(const point_3d& x, const point_3d& y) {
+  return std::tie(x.x, x.y, x.z) == std::tie(y.x, y.y, y.z);
+}
+
+template <class Inspector>
+bool inspect(Inspector& f, point_3d& x) {
+  return f.object(x).fields(f.field("x", x.x), f.field("y", x.y),
+                            f.field("z", x.z));
+}
+
+struct line {
+  point_3d p1;
+  point_3d p2;
+};
+
+[[maybe_unused]] bool operator==(const line& x, const line& y) {
+  return std::tie(x.p1, x.p2) == std::tie(y.p1, y.p2);
+}
+
+template <class Inspector>
+bool inspect(Inspector& f, line& x) {
+  return f.object(x).fields(f.field("p1", x.p1), f.field("p2", x.p2));
+}
+
+} // namespace
+
+CAF_TEST(config values pick up user defined inspect overloads) {
+  CAF_MESSAGE("users can fill dictionaries with field contents");
+  {
+    config_value x;
+    auto& dict = x.as_dictionary();
+    put(dict, "p1.x", 1);
+    put(dict, "p1.y", 2);
+    put(dict, "p1.z", 3);
+    put(dict, "p2.x", 10);
+    put(dict, "p2.y", 20);
+    put(dict, "p2.z", 30);
+    auto l = get_if<line>(&x);
+    if (CAF_CHECK_NOT_EQUAL(l, none))
+      CAF_CHECK_EQUAL(*l, (line{{1, 2, 3}, {10, 20, 30}}));
+  }
+  CAF_MESSAGE("users can pass objects as dictionaries on the command line");
+  {
+    auto val = config_value::parse("{p1{x=1,y=2,z=3},p2{x=10,y=20,z=30}}");
+    CAF_CHECK(val);
+    if (val) {
+      auto l = get_if<line>(std::addressof(*val));
+      if (CAF_CHECK_NOT_EQUAL(l, none))
+        CAF_CHECK_EQUAL(*l, (line{{1, 2, 3}, {10, 20, 30}}));
+    }
+  }
+  CAF_MESSAGE("value readers appear as inspectors with human-readable format");
+  {
+    config_value x{std::string{"saturday"}};
+    auto val = get_if<weekday>(&x);
+    if (CAF_CHECK(val))
+      CAF_CHECK_EQUAL(*val, weekday::saturday);
+  }
 }

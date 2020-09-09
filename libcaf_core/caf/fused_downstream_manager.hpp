@@ -257,6 +257,16 @@ public:
     return result;
   }
 
+  size_t buffered(stream_slot slot) const noexcept override {
+    // We don't know which nested manager stores this path. Only one will give a
+    // valid answer, though. Everyone else always responds with 0. Hence, we can
+    // simply call all managers and sum up the results.
+    size_t result = 0;
+    for (auto ptr : ptrs_)
+      result += ptr->buffered(slot);
+    return result;
+  }
+
   void clear_paths() override {
     CAF_LOG_TRACE("");
     for (auto ptr : ptrs_)

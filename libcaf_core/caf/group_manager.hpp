@@ -79,6 +79,11 @@ public:
   /// Returns the module named `name` if it exists, otherwise `none`.
   optional<group_module&> get_module(const std::string& x) const;
 
+  /// @private
+  expected<group> get(const std::string& module_name,
+                      const std::string& group_identifier,
+                      const caf::actor& dispatcher) const;
+
 private:
   // -- constructors, destructors, and assignment operators --------------------
 

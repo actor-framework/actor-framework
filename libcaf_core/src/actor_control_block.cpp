@@ -119,7 +119,7 @@ void append_to_string_impl(std::string& x, const actor_control_block* y) {
       append_to_string(x, y->nid);
     }
   } else {
-    x += "null:pointer";
+    x += "null";
   }
 }
 

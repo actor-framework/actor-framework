@@ -60,6 +60,14 @@ public:
 
   int compare(const ipv4_subnet& other) const noexcept;
 
+  // -- inspection -------------------------------------------------------------
+
+  template <class Inspector>
+  friend bool inspect(Inspector& f, ipv4_subnet& x) {
+    return f.object(x).fields(f.field("address", x.address_),
+                              f.field("prefix_length", x.prefix_length_));
+  }
+
 private:
   // -- member variables -------------------------------------------------------
 

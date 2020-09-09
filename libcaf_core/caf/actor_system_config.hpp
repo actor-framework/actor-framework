@@ -38,7 +38,6 @@
 #include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"
 #include "caf/is_typed_actor.hpp"
-#include "caf/named_actor_config.hpp"
 #include "caf/settings.hpp"
 #include "caf/stream.hpp"
 #include "caf/thread_hook.hpp"
@@ -74,8 +73,6 @@ public:
   using config_map = dictionary<config_value::dictionary>;
 
   using string_list = std::vector<std::string>;
-
-  using named_actor_config_map = hash_map<std::string, named_actor_config>;
 
   using opt_group = config_option_adder;
 
@@ -246,9 +243,6 @@ public:
   std::string config_file_path;
 
   // -- utility for caf-run ----------------------------------------------------
-
-  // Config parameter for individual actor types.
-  named_actor_config_map named_actor_configs;
 
   int (*slave_mode_fun)(actor_system&, const actor_system_config&);
 

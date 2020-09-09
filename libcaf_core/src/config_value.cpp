@@ -126,6 +126,8 @@ const char* config_value::type_name_at_index(size_t index) noexcept {
   return type_names[index];
 }
 
+// -- related free functions ---------------------------------------------------
+
 bool operator<(const config_value& x, const config_value& y) {
   return x.get_data() < y.get_data();
 }
@@ -134,8 +136,71 @@ bool operator==(const config_value& x, const config_value& y) {
   return x.get_data() == y.get_data();
 }
 
+namespace {
+
+void to_string_impl(std::string& str, const config_value& x);
+
+struct to_string_visitor {
+  std::string& str;
+
+  template <class T>
+  void operator()(const T& x) {
+    detail::stringification_inspector f{str};
+    f.value(x);
+  }
+
+  void operator()(const uri& x) {
+    auto x_str = x.str();
+    str.insert(str.end(), x_str.begin(), x_str.end());
+  }
+
+  void operator()(const config_value::list& xs) {
+    if (xs.empty()) {
+      str += "[]";
+      return;
+    }
+    str += '[';
+    auto i = xs.begin();
+    to_string_impl(str, *i);
+    for (++i; i != xs.end(); ++i) {
+      str += ", ";
+      to_string_impl(str, *i);
+    }
+    str += ']';
+  }
+
+  void operator()(const config_value::dictionary& xs) {
+    if (xs.empty()) {
+      str += "{}";
+      return;
+    }
+    detail::stringification_inspector f{str};
+    str += '{';
+    auto i = xs.begin();
+    f.value(i->first);
+    str += " = ";
+    to_string_impl(str, i->second);
+    for (++i; i != xs.end(); ++i) {
+      str += ", ";
+      f.value(i->first);
+      str += " = ";
+      to_string_impl(str, i->second);
+    }
+    str += '}';
+  }
+};
+
+void to_string_impl(std::string& str, const config_value& x) {
+  to_string_visitor f{str};
+  visit(f, x.get_data());
+}
+
+} // namespace
+
 std::string to_string(const config_value& x) {
-  return deep_to_string(x.get_data());
+  std::string result;
+  to_string_impl(result, x);
+  return result;
 }
 
 std::ostream& operator<<(std::ostream& out, const config_value& x) {

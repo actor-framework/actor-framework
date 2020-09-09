@@ -18,15 +18,15 @@
 
 #define CAF_SUITE config_option_set
 
+#include "caf/config_option_set.hpp"
+
+#include "core-test.hpp"
+#include "inspector-tests.hpp"
+
 #include <map>
 #include <string>
 #include <vector>
 
-#include "caf/config.hpp"
-
-#include "core-test.hpp"
-
-#include "caf/config_option_set.hpp"
 #include "caf/detail/move_if_not_ptr.hpp"
 #include "caf/settings.hpp"
 
@@ -84,7 +84,7 @@ CAF_TEST(lookup) {
 }
 
 CAF_TEST(parse with ref syncing) {
-  using ls = vector<string>; // list of strings
+  using ls = vector<string>;     // list of strings
   using ds = dictionary<string>; // dictionary of strings
   auto foo_i = 0;
   auto foo_f = 0.f;
@@ -234,6 +234,15 @@ CAF_TEST(CLI arguments override defaults) {
     CAF_CHECK_EQUAL(get<string_list>(cfg, "foo"),
                     string_list({"hello", "world"}));
   }
+}
+
+CAF_TEST(CLI arguments may use custom types) {
+  settings cfg;
+  opts.add<foobar>("global", "foobar,f", "test option");
+  CAF_CHECK_EQUAL(read<foobar>(cfg, {"-f{foo=\"hello\",bar=\"world\"}"}), none);
+  auto fb = get_if<foobar>(&cfg, "foobar");
+  if (CAF_CHECK(fb))
+    CAF_CHECK_EQUAL(*fb, foobar("hello", "world"));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

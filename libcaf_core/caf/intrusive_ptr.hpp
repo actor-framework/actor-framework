@@ -49,6 +49,8 @@ public:
 
   using element_type = T;
 
+  using value_type = T;
+
   using reference = T&;
 
   using const_reference = const T&;
@@ -115,6 +117,11 @@ public:
     set_ptr(new_value, add_ref);
     if (old)
       intrusive_ptr_release(old);
+  }
+
+  template <class... Ts>
+  void emplace(Ts&&... xs) {
+    reset(new T(std::forward<Ts>(xs)...), false);
   }
 
   intrusive_ptr& operator=(pointer ptr) noexcept {

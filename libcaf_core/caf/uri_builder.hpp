@@ -32,7 +32,7 @@ public:
   // -- member types -----------------------------------------------------------
 
   /// Pointer to implementation.
-  using impl_ptr = intrusive_ptr<detail::uri_impl>;
+  using impl_ptr = intrusive_ptr<uri::impl_type>;
 
   // -- constructors, destructors, and assignment operators --------------------
 

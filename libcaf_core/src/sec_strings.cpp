@@ -125,6 +125,20 @@ std::string to_string(sec x) {
       return "no_tracing_context";
     case sec::all_requests_failed:
       return "all_requests_failed";
+    case sec::field_invariant_check_failed:
+      return "field_invariant_check_failed";
+    case sec::field_value_synchronization_failed:
+      return "field_value_synchronization_failed";
+    case sec::invalid_field_type:
+      return "invalid_field_type";
+    case sec::unsafe_type:
+      return "unsafe_type";
+    case sec::save_callback_failed:
+      return "save_callback_failed";
+    case sec::load_callback_failed:
+      return "load_callback_failed";
+    case sec::conversion_failed:
+      return "conversion_failed";
   };
 }
 

@@ -70,9 +70,12 @@ connection_state instance::handle(execution_unit* ctx, new_data_msg& dm,
       return err(malformed_basp_message);
     }
   } else {
-    binary_deserializer bd{ctx, dm.buf};
-    auto e = bd(hdr);
-    if (e || !valid(hdr)) {
+    binary_deserializer source{ctx, dm.buf};
+    if (!source.apply_object(hdr)) {
+      CAF_LOG_WARNING("failed to receive header:" << source.get_error());
+      return err(malformed_basp_message);
+    }
+    if (!valid(hdr)) {
       CAF_LOG_WARNING("received invalid header:" << CAF_ARG(hdr));
       return err(malformed_basp_message);
     }
@@ -180,7 +183,7 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
                sender ? sender->id() : invalid_actor_id,
                dest_actor};
     auto writer = make_callback([&](binary_serializer& sink) { //
-      return sink(forwarding_stack, msg);
+      return sink.apply_objects(forwarding_stack, msg);
     });
     write(ctx, callee_.get_buffer(path->hdl), hdr, &writer);
   } else {
@@ -191,7 +194,10 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
                sender ? sender->id() : invalid_actor_id,
                dest_actor};
     auto writer = make_callback([&](binary_serializer& sink) {
-      return sink(source_node, dest_node, forwarding_stack, msg);
+      CAF_LOG_DEBUG("send routed message: "
+                    << CAF_ARG(source_node) << CAF_ARG(dest_node)
+                    << CAF_ARG(forwarding_stack) << CAF_ARG(msg));
+      return sink.apply_objects(source_node, dest_node, forwarding_stack, msg);
     });
     write(ctx, callee_.get_buffer(path->hdl), hdr, &writer);
   }
@@ -207,14 +213,16 @@ void instance::write(execution_unit* ctx, byte_buffer& buf, header& hdr,
     // Write the BASP header after the payload.
     auto header_offset = buf.size();
     sink.skip(header_size);
-    if (auto err = (*pw)(sink))
-      CAF_LOG_ERROR(CAF_ARG(err));
+    if (!(*pw)(sink)) {
+      CAF_LOG_ERROR(sink.get_error());
+      return;
+    }
     sink.seek(header_offset);
     auto payload_len = buf.size() - (header_offset + basp::header_size);
     hdr.payload_len = static_cast<uint32_t>(payload_len);
   }
-  if (auto err = sink(hdr))
-    CAF_LOG_ERROR(CAF_ARG(err));
+  if (!sink.apply_objects(hdr))
+    CAF_LOG_ERROR(sink.get_error());
 }
 
 void instance::write_server_handshake(execution_unit* ctx, byte_buffer& out_buf,
@@ -242,7 +250,7 @@ void instance::write_server_handshake(execution_unit* ctx, byte_buffer& out_buf,
       aid = pa->first->id();
       iface = pa->second;
     }
-    return sink(this_node_, app_ids, aid, iface);
+    return sink.apply_objects(this_node_, app_ids, aid, iface);
   });
   header hdr{message_type::server_handshake,
              0,
@@ -255,7 +263,7 @@ void instance::write_server_handshake(execution_unit* ctx, byte_buffer& out_buf,
 
 void instance::write_client_handshake(execution_unit* ctx, byte_buffer& buf) {
   auto writer = make_callback([&](binary_serializer& sink) { //
-    return sink(this_node_);
+    return sink.apply_objects(this_node_);
   });
   header hdr{message_type::client_handshake,
              0,
@@ -270,7 +278,7 @@ void instance::write_monitor_message(execution_unit* ctx, byte_buffer& buf,
                                      const node_id& dest_node, actor_id aid) {
   CAF_LOG_TRACE(CAF_ARG(dest_node) << CAF_ARG(aid));
   auto writer = make_callback([&](binary_serializer& sink) { //
-    return sink(this_node_, dest_node);
+    return sink.apply_objects(this_node_, dest_node);
   });
   header hdr{message_type::monitor_message, 0, 0, 0, invalid_actor_id, aid};
   write(ctx, buf, hdr, &writer);
@@ -281,7 +289,7 @@ void instance::write_down_message(execution_unit* ctx, byte_buffer& buf,
                                   const error& rsn) {
   CAF_LOG_TRACE(CAF_ARG(dest_node) << CAF_ARG(aid) << CAF_ARG(rsn));
   auto writer = make_callback([&](binary_serializer& sink) { //
-    return sink(this_node_, dest_node, rsn);
+    return sink.apply_objects(this_node_, dest_node, rsn);
   });
   header hdr{message_type::down_message, 0, 0, 0, aid, invalid_actor_id};
   write(ctx, buf, hdr, &writer);
@@ -312,14 +320,14 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
     case message_type::server_handshake: {
       using string_list = std::vector<std::string>;
       // Deserialize payload.
-      binary_deserializer bd{ctx, *payload};
+      binary_deserializer source{ctx, *payload};
       node_id source_node;
       string_list app_ids;
       actor_id aid = invalid_actor_id;
       std::set<std::string> sigs;
-      if (auto err = bd(source_node, app_ids, aid, sigs)) {
+      if (!source.apply_objects(source_node, app_ids, aid, sigs)) {
         CAF_LOG_WARNING("unable to deserialize payload of server handshake:"
-                        << to_string(err));
+                        << source.get_error());
         return serializing_basp_payload_failed;
       }
       // Check the application ID.
@@ -365,11 +373,11 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
     }
     case message_type::client_handshake: {
       // Deserialize payload.
-      binary_deserializer bd{ctx, *payload};
+      binary_deserializer source{ctx, *payload};
       node_id source_node;
-      if (auto err = bd(source_node)) {
+      if (!source.apply_objects(source_node)) {
         CAF_LOG_WARNING("unable to deserialize payload of client handshake:"
-                        << to_string(err));
+                        << source.get_error());
         return serializing_basp_payload_failed;
       }
       // Drop repeated handshakes.
@@ -387,13 +395,13 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
     }
     case message_type::routed_message: {
       // Deserialize payload.
-      binary_deserializer bd{ctx, *payload};
+      binary_deserializer source{ctx, *payload};
       node_id source_node;
       node_id dest_node;
-      if (auto err = bd(source_node, dest_node)) {
+      if (!source.apply_objects(source_node, dest_node)) {
         CAF_LOG_WARNING(
           "unable to deserialize source and destination for routed message:"
-          << to_string(err));
+          << source.get_error());
         return serializing_basp_payload_failed;
       }
       if (dest_node != this_node_) {
@@ -446,12 +454,12 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
     }
     case message_type::monitor_message: {
       // Deserialize payload.
-      binary_deserializer bd{ctx, *payload};
+      binary_deserializer source{ctx, *payload};
       node_id source_node;
       node_id dest_node;
-      if (auto err = bd(source_node, dest_node)) {
+      if (!source.apply_objects(source_node, dest_node)) {
         CAF_LOG_WARNING("unable to deserialize payload of monitor message:"
-                        << to_string(err));
+                        << source.get_error());
         return serializing_basp_payload_failed;
       }
       if (dest_node == this_node_)
@@ -462,13 +470,13 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
     }
     case message_type::down_message: {
       // Deserialize payload.
-      binary_deserializer bd{ctx, *payload};
+      binary_deserializer source{ctx, *payload};
       node_id source_node;
       node_id dest_node;
       error fail_state;
-      if (auto err = bd(source_node, dest_node, fail_state)) {
-        CAF_LOG_WARNING(
-          "unable to deserialize payload of down message:" << to_string(err));
+      if (!source.apply_objects(source_node, dest_node, fail_state)) {
+        CAF_LOG_WARNING("unable to deserialize payload of down message:"
+                        << source.get_error());
         return serializing_basp_payload_failed;
       }
       if (dest_node == this_node_) {
@@ -503,12 +511,12 @@ void instance::forward(execution_unit* ctx, const node_id& dest_node,
   CAF_LOG_TRACE(CAF_ARG(dest_node) << CAF_ARG(hdr) << CAF_ARG(payload));
   auto path = lookup(dest_node);
   if (path) {
-    binary_serializer bs{ctx, callee_.get_buffer(path->hdl)};
-    if (auto err = bs(hdr)) {
-      CAF_LOG_ERROR("unable to serialize BASP header");
+    binary_serializer sink{ctx, callee_.get_buffer(path->hdl)};
+    if (!sink.apply_object(hdr)) {
+      CAF_LOG_ERROR("unable to serialize BASP header:" << sink.get_error());
       return;
     }
-    bs.apply(span<const byte>{payload.data(), payload.size()});
+    sink.value(span<const byte>{payload.data(), payload.size()});
     flush(*path);
   } else {
     CAF_LOG_WARNING("cannot forward message, no route to destination");

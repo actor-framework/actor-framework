@@ -28,7 +28,7 @@
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/padded_size.hpp"
 #include "caf/detail/stringification_inspector.hpp"
-#include "caf/error.hpp"
+#include "caf/inspector_access.hpp"
 #include "caf/serializer.hpp"
 
 namespace caf::detail::default_function {
@@ -45,33 +45,34 @@ void default_construct(void* ptr) {
 
 template <class T>
 void copy_construct(void* ptr, const void* src) {
-  new (ptr) T(*reinterpret_cast<const T*>(src));
+  new (ptr) T(*static_cast<const T*>(src));
 }
 
 template <class T>
-error_code<sec> save_binary(caf::binary_serializer& sink, const void* ptr) {
-  return sink(*reinterpret_cast<const T*>(ptr));
+bool save_binary(binary_serializer& sink, const void* ptr) {
+  return sink.apply_object(*static_cast<const T*>(ptr));
 }
 
 template <class T>
-error_code<sec> load_binary(caf::binary_deserializer& source, void* ptr) {
-  return source(*reinterpret_cast<T*>(ptr));
+bool load_binary(binary_deserializer& source, void* ptr) {
+  return source.apply_object(*static_cast<T*>(ptr));
 }
 
 template <class T>
-caf::error save(caf::serializer& sink, const void* ptr) {
-  return sink(*reinterpret_cast<const T*>(ptr));
+bool save(serializer& sink, const void* ptr) {
+  return sink.apply_object(*static_cast<const T*>(ptr));
 }
 
 template <class T>
-caf::error load(caf::deserializer& source, void* ptr) {
-  return source(*reinterpret_cast<T*>(ptr));
+bool load(deserializer& source, void* ptr) {
+  return source.apply_object(*static_cast<T*>(ptr));
 }
 
 template <class T>
 void stringify(std::string& buf, const void* ptr) {
   stringification_inspector f{buf};
-  f(*reinterpret_cast<const T*>(ptr));
+  auto unused = f.apply_object(*static_cast<const T*>(ptr));
+  static_cast<void>(unused);
 }
 
 } // namespace caf::detail::default_function
@@ -79,7 +80,7 @@ void stringify(std::string& buf, const void* ptr) {
 namespace caf::detail {
 
 template <class T>
-meta_object make_meta_object(const char* type_name) {
+meta_object make_meta_object(string_view type_name) {
   return {
     type_name,
     padded_size_v<T>,

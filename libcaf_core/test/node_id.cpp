@@ -22,7 +22,34 @@
 
 #include "caf/test/dsl.hpp"
 
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
+
 using namespace caf;
+
+namespace {
+
+node_id roundtrip(node_id nid) {
+  byte_buffer buf;
+  {
+    binary_serializer sink{nullptr, buf};
+    if (!sink.apply_object(nid))
+      CAF_FAIL("serialization failed: " << sink.get_error());
+  }
+  if (buf.empty())
+    CAF_FAIL("serializer produced no output");
+  node_id result;
+  {
+    binary_deserializer source{nullptr, buf};
+    if (!source.apply_object(result))
+      CAF_FAIL("deserialization failed: " << source.get_error());
+    if (source.remaining() > 0)
+      CAF_FAIL("binary_serializer ignored part of its input");
+  }
+  return result;
+}
+
+} // namespace
 
 #define CHECK_PARSE_OK(str, ...)                                               \
   do {                                                                         \
@@ -44,10 +71,29 @@ CAF_TEST(node IDs are convertible from string) {
 
 #define CHECK_PARSE_FAIL(str) CAF_CHECK(!node_id::can_parse(str))
 
-CAF_TEST(node IDs are not convertible from malformed strings) {
+CAF_TEST(node IDs reject malformed strings) {
   // not URIs
   CHECK_PARSE_FAIL("foobar");
   CHECK_PARSE_FAIL("CAF#1");
   // uint32_t overflow on the process ID
   CHECK_PARSE_FAIL("0102030405060708090A0B0C0D0E0F1011121314#42949672950");
+}
+
+CAF_TEST(node IDs are serializable) {
+  CAF_MESSAGE("empty node IDs remain empty");
+  {
+    node_id nil_id;
+    CAF_CHECK_EQUAL(nil_id, roundtrip(nil_id));
+  }
+  CAF_MESSAGE("hash-based node IDs remain intact");
+  {
+    auto tmp = make_node_id(42, "0102030405060708090A0B0C0D0E0F1011121314");
+    auto hash_based_id = unbox(tmp);
+    CAF_CHECK_EQUAL(hash_based_id, roundtrip(hash_based_id));
+  }
+  CAF_MESSAGE("URI-based node IDs remain intact");
+  {
+    auto uri_based_id = make_node_id(unbox(make_uri("foo:bar")));
+    CAF_CHECK_EQUAL(uri_based_id, roundtrip(uri_based_id));
+  }
 }

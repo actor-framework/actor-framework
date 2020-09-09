@@ -25,6 +25,7 @@
 #include "caf/optional.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/string_view.hpp"
+#include "caf/sum_type.hpp"
 
 namespace caf {
 
@@ -50,7 +51,7 @@ auto get_if(const settings* xs, string_view name) {
 /// @relates config_value
 template <class T>
 bool holds_alternative(const settings& xs, string_view name) {
-  using access = select_config_value_access_t<T>;
+  using access = detail::config_value_access_t<T>;
   if (auto value = get_if(&xs, name))
     return access::is(*value);
   return false;

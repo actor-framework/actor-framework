@@ -378,37 +378,6 @@ void middleman::init(actor_system_config& cfg) {
     cfg.set("caf.middleman.attach-utility-actors", true)
       .set("caf.middleman.manual-multiplexing", true);
   }
-  // Add remote group module to config.
-  struct remote_groups : group_module {
-  public:
-    remote_groups(middleman& parent)
-      : group_module(parent.system(), "remote"), parent_(parent) {
-      // nop
-    }
-
-    void stop() override {
-      // nop
-    }
-
-    expected<group> get(const std::string& group_name) override {
-      return parent_.remote_group(group_name);
-    }
-
-    error load(deserializer&, group&) override {
-      // never called, because we hand out group instances of the local module
-      return sec::no_such_group_module;
-    }
-
-    error_code<sec> load(binary_deserializer&, group&) override {
-      // never called, because we hand out group instances of the local module
-      return sec::no_such_group_module;
-    }
-
-  private:
-    middleman& parent_;
-  };
-  auto gfactory = [=]() -> group_module* { return new remote_groups(*this); };
-  cfg.group_module_factories.emplace_back(gfactory);
   // Compute and set ID for this network node.
   auto this_node = node_id::default_data::local(cfg);
   system().node_.swap(this_node);

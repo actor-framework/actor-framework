@@ -82,4 +82,11 @@ auto make_const_typed_message_view(const message& msg) {
   return const_typed_message_view<Ts...>{};
 }
 
+template <class... Ts>
+optional<std::tuple<Ts...>> to_tuple(const message& msg) {
+  if (auto view = make_const_typed_message_view<Ts...>(msg))
+    return to_tuple(view);
+  return none;
+}
+
 } // namespace caf

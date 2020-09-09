@@ -39,52 +39,61 @@ tracing_data::~tracing_data() {
 namespace {
 
 template <class Serializer>
-auto inspect_impl(Serializer& sink, const tracing_data_ptr& x) {
-  if (x == nullptr) {
-    uint8_t dummy = 0;
-    return sink(dummy);
+bool serialize_impl(Serializer& sink, const tracing_data_ptr& x) {
+  if (!x) {
+    return sink.begin_object("tracing_data")   //
+           && sink.begin_field("value", false) //
+           && sink.end_field()                 //
+           && sink.end_object();
   }
-  uint8_t dummy = 1;
-  if (auto err = sink(dummy))
-    return err;
-  return x->serialize(sink);
+  return sink.begin_object("tracing_data")  //
+         && sink.begin_field("value", true) //
+         && x->serialize(sink)              //
+         && sink.end_field()                //
+         && sink.end_object();
 }
 
 template <class Deserializer>
-typename Deserializer::result_type
-inspect_impl(Deserializer& source, tracing_data_ptr& x) {
-  uint8_t dummy = 0;
-  if (auto err = source(dummy))
-    return err;
-  if (dummy == 0) {
-    x.reset();
-    return {};
-  }
+bool deserialize_impl(Deserializer& source, tracing_data_ptr& x) {
+  bool is_present = false;
+  if (!source.begin_object("tracing_data")
+      || !source.begin_field("value", is_present))
+    return false;
+  if (!is_present)
+    return source.end_field() && source.end_object();
   auto ctx = source.context();
-  if (ctx == nullptr)
-    return sec::no_context;
+  if (ctx == nullptr) {
+    source.emplace_error(sec::no_context,
+                         "cannot deserialize tracing data without context");
+    return false;
+  }
   auto tc = ctx->system().tracing_context();
-  if (tc == nullptr)
-    return sec::no_tracing_context;
-  return tc->deserialize(source, x);
+  if (tc == nullptr) {
+    source.emplace_error(sec::no_tracing_context,
+                         "cannot deserialize tracing data without context");
+    return false;
+  }
+  return tc->deserialize(source, x) //
+         && source.end_field()      //
+         && source.end_object();
 }
 
 } // namespace
 
-error inspect(serializer& sink, const tracing_data_ptr& x) {
-  return inspect_impl(sink, x);
+bool inspect(serializer& sink, const tracing_data_ptr& x) {
+  return serialize_impl(sink, x);
 }
 
-error_code<sec> inspect(binary_serializer& sink, const tracing_data_ptr& x) {
-  return inspect_impl(sink, x);
+bool inspect(binary_serializer& sink, const tracing_data_ptr& x) {
+  return serialize_impl(sink, x);
 }
 
-error inspect(deserializer& source, tracing_data_ptr& x) {
-  return inspect_impl(source, x);
+bool inspect(deserializer& source, tracing_data_ptr& x) {
+  return deserialize_impl(source, x);
 }
 
-error_code<sec> inspect(binary_deserializer& source, tracing_data_ptr& x) {
-  return inspect_impl(source, x);
+bool inspect(binary_deserializer& source, tracing_data_ptr& x) {
+  return deserialize_impl(source, x);
 }
 
 } // namespace caf

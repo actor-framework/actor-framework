@@ -49,16 +49,16 @@ struct fixture : test_coordinator_fixture<> {
   auto serialize(T& x, Ts&... xs) {
     byte_buffer buf;
     binary_serializer sink{sys, buf};
-    if (auto err = sink(x, xs...))
-      CAF_FAIL("serialization failed: " << err);
+    if (!sink.apply_objects(x, xs...))
+      CAF_FAIL("serialization failed: " << sink.get_error());
     return buf;
   }
 
   template <class Buffer, class T, class... Ts>
   void deserialize(const Buffer& buf, T& x, Ts&... xs) {
     binary_deserializer source{sys, buf};
-    if (auto err = source(x, xs...))
-      CAF_FAIL("serialization failed: " << err);
+    if (!source.apply_objects(x, xs...))
+      CAF_FAIL("serialization failed: " << source.get_error());
   }
 };
 

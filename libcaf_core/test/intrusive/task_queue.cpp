@@ -39,7 +39,7 @@ struct inode : singly_linked<inode> {
   }
 };
 
-std::string to_string(const inode& x) {
+[[maybe_unused]] std::string to_string(const inode& x) {
   return std::to_string(x.value);
 }
 

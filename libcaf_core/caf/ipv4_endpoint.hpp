@@ -72,9 +72,9 @@ public:
   long compare(ipv4_endpoint x) const noexcept;
 
   template <class Inspector>
-  friend typename Inspector::result_type
-  inspect(Inspector& f, ipv4_endpoint& x) {
-    return f(meta::type_name("ipv4_endpoint"), x.address_, x.port_);
+  friend bool inspect(Inspector& f, ipv4_endpoint& x) {
+    return f.object(x).fields(f.field("address", x.address_),
+                              f.field("port", x.port_));
   }
 
 private:

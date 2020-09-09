@@ -106,13 +106,13 @@ public:
 
 /// @relates mailbox_element
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, mailbox_element& x) {
-  return f(meta::type_name("mailbox_element"), x.sender, x.mid,
-           meta::omittable_if_empty(), x.stages,
+bool inspect(Inspector& f, mailbox_element& x) {
+  return f.object(x).fields(f.field("sender", x.sender), f.field("mid", x.mid),
+                            f.field("stages", x.stages),
 #ifdef CAF_ENABLE_ACTOR_PROFILER
-           x.tracing_id,
+                            f.field("tracing_id", x.tracing_id),
 #endif // CAF_ENABLE_ACTOR_PROFILER
-           x.payload);
+                            f.field("payload", x.payload));
 }
 
 /// @relates mailbox_element

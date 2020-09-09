@@ -65,10 +65,8 @@ public:
           this->sample_counter_ = 0;
           this->inspector_.result = 0;
           this->sampled_elements_ += x.xs_size;
-          for (auto& element : x.xs.get_as<std::vector<T>>(0)) {
-            auto res = this->inspector_(element);
-            static_cast<void>(res); // This inspector never produces an error.
-          }
+          for (auto& element : x.xs.get_as<std::vector<T>>(0))
+            detail::save_value(this->inspector_, element);
           this->sampled_total_size_
             += static_cast<int64_t>(this->inspector_.result);
         }

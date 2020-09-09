@@ -236,8 +236,8 @@ public:
   }
 
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f, typed_actor& x) {
-    return f(x.ptr_);
+  friend bool inspect(Inspector& f, typed_actor& x) {
+    return inspect(f, x.ptr_);
   }
 
   /// Releases the reference held by handle `x`. Using the

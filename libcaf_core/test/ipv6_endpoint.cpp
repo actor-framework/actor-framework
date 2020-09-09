@@ -54,12 +54,12 @@ struct fixture {
   T roundtrip(T x) {
     byte_buffer buf;
     binary_serializer sink(sys, buf);
-    if (auto err = sink(x))
-      CAF_FAIL("serialization failed: " << err);
+    if (!sink.apply_object(x))
+      CAF_FAIL("serialization failed: " << sink.get_error());
     binary_deserializer source(sys, make_span(buf));
     T y;
-    if (auto err = source(y))
-      CAF_FAIL("deserialization failed: " << err);
+    if (!source.apply_object(y))
+      CAF_FAIL("serialization failed: " << source.get_error());
     return y;
   }
 };

@@ -68,6 +68,8 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/config_option_adder.cpp
   src/config_option_set.cpp
   src/config_value.cpp
+  src/config_value_reader.cpp
+  src/config_value_writer.cpp
   src/credit_controller.cpp
   src/decorator/sequencer.cpp
   src/default_attachable.cpp
@@ -90,6 +92,7 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/detail/parse.cpp
   src/detail/parser/chars.cpp
   src/detail/pretty_type_name.cpp
+  src/detail/print.cpp
   src/detail/private_thread.cpp
   src/detail/ripemd_160.cpp
   src/detail/serialized_size.cpp
@@ -105,7 +108,6 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/detail/token_based_credit_controller.cpp
   src/detail/token_based_credit_controller.cpp
   src/detail/type_id_list_builder.cpp
-  src/detail/uri_impl.cpp
   src/downstream_manager.cpp
   src/downstream_manager_base.cpp
   src/error.cpp
@@ -127,6 +129,7 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/ipv6_address.cpp
   src/ipv6_endpoint.cpp
   src/ipv6_subnet.cpp
+  src/load_inspector.cpp
   src/local_actor.cpp
   src/logger.cpp
   src/mailbox_element.cpp
@@ -150,6 +153,7 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/replies_to.cpp
   src/response_promise.cpp
   src/resumable.cpp
+  src/save_inspector.cpp
   src/scheduled_actor.cpp
   src/scheduler/abstract_coordinator.cpp
   src/scheduler/test_coordinator.cpp
@@ -175,6 +179,7 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/timestamp.cpp
   src/tracing_data.cpp
   src/tracing_data_factory.cpp
+  src/type_id.cpp
   src/type_id_list.cpp
   src/uri.cpp
   src/uri_builder.cpp
@@ -198,6 +203,7 @@ endif()
 
 add_executable(caf-core-test
   test/core-test.cpp
+  test/nasty.cpp
   $<TARGET_OBJECTS:libcaf_core_obj>)
 
 caf_core_set_default_properties(caf-core-test)
@@ -227,7 +233,8 @@ caf_add_test_suites(caf-core-test
   config_option
   config_option_set
   config_value
-  config_value_adaptor
+  config_value_reader
+  config_value_writer
   const_typed_message_view
   constructor_attach
   continuous_streaming
@@ -265,7 +272,6 @@ caf_add_test_suites(caf-core-test
   fused_downstream_manager
   handles
   hash.fnv
-  inspector
   intrusive.drr_cached_queue
   intrusive.drr_queue
   intrusive.fifo_inbox
@@ -280,10 +286,10 @@ caf_add_test_suites(caf-core-test
   ipv6_address
   ipv6_endpoint
   ipv6_subnet
+  load_inspector
   local_group
   logger
   mailbox_element
-  make_config_value_field
   message
   message_builder
   message_id
@@ -302,6 +308,7 @@ caf_add_test_suites(caf-core-test
   policy.select_any
   request_timeout
   result
+  save_inspector
   selective_streaming
   serial_reply
   serialization

@@ -415,8 +415,28 @@ void logger::render_fun_name(std::ostream& out, const event& e) {
   out << e.simple_fun;
 }
 
+namespace {
+
+struct print_adapter {
+  std::ostream& out;
+  void push_back(char c) {
+    out.put(c);
+  }
+  int end() {
+    return 0;
+  }
+  template <class Iterator, class Sentinel>
+  void insert(int, Iterator iter, Sentinel sentinel) {
+    while (iter != sentinel)
+      out.put(*iter++);
+  }
+};
+
+} // namespace
+
 void logger::render_date(std::ostream& out, timestamp x) {
-  out << deep_to_string(x);
+  print_adapter adapter{out};
+  detail::print(adapter, x);
 }
 
 void logger::render(std::ostream& out, const line_format& lf,
@@ -581,7 +601,8 @@ void logger::log_first_line() {
     msg += ", node = ";
     msg += to_string(system_.node());
     msg += ", excluded-components = ";
-    msg += deep_to_string(filter);
+    detail::stringification_inspector f{msg};
+    detail::save_value(f, filter);
     return msg;
   };
   namespace lg = defaults::logger;

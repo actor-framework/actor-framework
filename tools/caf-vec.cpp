@@ -207,9 +207,11 @@ struct entity {
 };
 
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, entity& x) {
-  return f(meta::type_name("entity"), x.aid, x.tid, x.nid, x.vid, x.hidden,
-           x.pretty_name);
+bool inspect(Inspector& f, entity& x) {
+  return f.object(x).fields(f.field("aid", x.aid), f.field("tid", x.tid),
+                            f.field("nid", x.nid), f.field("vid", x.vid),
+                            f.field("hidden", x.hidden),
+                            f.field("pretty_name", x.pretty_name));
 }
 
 mailbox_id to_mailbox_id(const entity& x) {
@@ -423,11 +425,11 @@ struct se_event {
 string to_string(const se_event& x) {
   string res;
   res += "node{";
-  res += to_string(*x.source);
+  res += deep_to_string(*x.source);
   res += ", ";
   res += deep_to_string(x.vstamp);
   res += ", ";
-  res += to_string(x.type);
+  res += deep_to_string(x.type);
   res += ", ";
   res += deep_to_string(x.fields);
   res += "}";

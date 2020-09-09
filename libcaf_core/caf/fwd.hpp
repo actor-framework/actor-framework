@@ -30,10 +30,10 @@ namespace caf {
 
 // -- 1 param templates --------------------------------------------------------
 
+template <class> class [[nodiscard]] error_code;
 template <class> class behavior_type_of;
 template <class> class dictionary;
 template <class> class downstream;
-template <class> class [[nodiscard]] error_code;
 template <class> class expected;
 template <class> class intrusive_cow_ptr;
 template <class> class intrusive_ptr;
@@ -45,6 +45,7 @@ template <class> class stream_sink;
 template <class> class stream_source;
 template <class> class weak_intrusive_ptr;
 
+template <class> struct inspector_access;
 template <class> struct timeout_definition;
 template <class> struct type_id;
 
@@ -81,6 +82,7 @@ template <class...> class variant;
 
 // -- classes ------------------------------------------------------------------
 
+class [[nodiscard]] error;
 class abstract_actor;
 class abstract_group;
 class actor;
@@ -106,12 +108,12 @@ class config_value;
 class deserializer;
 class downstream_manager;
 class downstream_manager_base;
-class [[nodiscard]] error;
 class event_based_actor;
 class execution_unit;
 class forwarding_actor_proxy;
 class group;
 class group_module;
+class hashed_node_id;
 class inbound_path;
 class ipv4_address;
 class ipv4_endpoint;
@@ -126,6 +128,7 @@ class message_builder;
 class message_handler;
 class message_id;
 class node_id;
+class node_id_data;
 class outbound_path;
 class proxy_registry;
 class ref_counted;
@@ -163,12 +166,17 @@ struct illegal_message_element;
 struct invalid_actor_addr_t;
 struct invalid_actor_t;
 struct node_down_msg;
+struct none_t;
 struct open_stream_msg;
 struct prohibit_top_level_spawn_marker;
 struct stream_slots;
 struct timeout_msg;
 struct unit_t;
 struct upstream_msg;
+struct upstream_msg_ack_batch;
+struct upstream_msg_ack_open;
+struct upstream_msg_drop;
+struct upstream_msg_forced_drop;
 
 // -- free template functions --------------------------------------------------
 
@@ -353,13 +361,8 @@ class dynamic_message_data;
 class group_manager;
 class message_data;
 class private_thread;
-class uri_impl;
 
 struct meta_object;
-
-// enable intrusive_ptr<uri_impl> with forward declaration only
-CAF_CORE_EXPORT void intrusive_ptr_add_ref(const uri_impl*);
-CAF_CORE_EXPORT void intrusive_ptr_release(const uri_impl*);
 
 // enable intrusive_cow_ptr<dynamic_message_data> with forward declaration only
 CAF_CORE_EXPORT void intrusive_ptr_add_ref(const dynamic_message_data*);

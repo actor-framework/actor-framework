@@ -45,8 +45,8 @@ inline std::string to_string(protocol::network x) {
 }
 
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, protocol& x) {
-  return f(meta::type_name("protocol"), x.trans, x.net);
+bool inspect(Inspector& f, protocol& x) {
+  return f.object(x).fields(f.field("trans", x.trans), f.field("net", x.net));
 }
 
 /// Converts a protocol into a transport/network string representation, e.g.,

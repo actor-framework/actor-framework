@@ -28,10 +28,6 @@
 #include "caf/fwd.hpp"
 #include "caf/is_error_code_enum.hpp"
 #include "caf/message.hpp"
-#include "caf/meta/load_callback.hpp"
-#include "caf/meta/omittable_if_empty.hpp"
-#include "caf/meta/save_callback.hpp"
-#include "caf/meta/type_name.hpp"
 #include "caf/none.hpp"
 #include "caf/type_id.hpp"
 
@@ -67,6 +63,21 @@ namespace caf {
 /// instead.
 class CAF_CORE_EXPORT error : detail::comparable<error> {
 public:
+  // -- nested classes ---------------------------------------------------------
+
+  struct data {
+    uint8_t code;
+    type_id_t category;
+    message context;
+
+    template <class Inspector>
+    friend bool inspect(Inspector& f, data& x) {
+      return f.object(x).fields(f.field("code", x.code),
+                                f.field("category", x.category),
+                                f.field("context", x.context));
+    }
+  };
+
   // -- constructors, destructors, and assignment operators --------------------
 
   error() noexcept = default;
@@ -139,6 +150,11 @@ public:
     return data_ == nullptr;
   }
 
+  /// Returns whether this error was default-constructed.
+  bool empty() const noexcept {
+    return data_ == nullptr;
+  }
+
   int compare(const error&) const noexcept;
 
   int compare(uint8_t code, type_id_t category) const noexcept;
@@ -162,31 +178,8 @@ public:
   // -- friend functions -------------------------------------------------------
 
   template <class Inspector>
-  friend auto inspect(Inspector& f, error& x) {
-    using result_type = typename Inspector::result_type;
-    if constexpr (Inspector::reads_state) {
-      if (!x) {
-        uint8_t code = 0;
-        return f(code);
-      }
-      return f(x.code(), x.category(), x.context());
-    } else {
-      uint8_t code = 0;
-      auto cb = meta::load_callback([&] {
-        if (code == 0) {
-          x.data_.reset();
-          if constexpr (std::is_same<result_type, void>::value)
-            return;
-          else
-            return result_type{};
-        }
-        if (!x.data_)
-          x.data_.reset(new data);
-        x.data_->code = code;
-        return f(x.data_->category, x.data_->context);
-      });
-      return f(code, cb);
-    }
+  friend bool inspect(Inspector& f, error& x) {
+    return f.object(x).fields(f.field("data", x.data_));
   }
 
 private:
@@ -195,14 +188,6 @@ private:
   error(uint8_t code, type_id_t category);
 
   error(uint8_t code, type_id_t category, message context);
-
-  // -- nested classes ---------------------------------------------------------
-
-  struct data {
-    uint8_t code;
-    type_id_t category;
-    message context;
-  };
 
   // -- member variables -------------------------------------------------------
 

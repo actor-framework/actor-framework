@@ -43,8 +43,9 @@ constexpr bool operator!=(new_round_result x, new_round_result y) {
 }
 
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, new_round_result& x) {
-  return f(meta::type_name("new_round_result"), x.consumed_items, x.stop_all);
+bool inspect(Inspector& f, new_round_result& x) {
+  return f.object(x).fields(f.field("consumed_items", x.consumed_items),
+                            f.field("stop_all", x.stop_all));
 }
 
 } // namespace caf::intrusive

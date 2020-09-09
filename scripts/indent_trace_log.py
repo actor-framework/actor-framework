@@ -42,7 +42,7 @@ def main():
     args = parser.parse_args()
     filepath = args.log
     if filepath == '-':
-        read_lines(fileinput.input(), args.ids)
+        read_lines(sys.stdin, args.ids)
     else:
         if not os.path.isfile(filepath):
             sys.exit()

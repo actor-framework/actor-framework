@@ -30,32 +30,27 @@ namespace caf {
 /// `to_string` for user-defined types via argument-dependent
 /// loopkup (ADL). Any user-defined type that does not
 /// provide a `to_string` is mapped to `<unprintable>`.
-template <class... Ts>
-std::string deep_to_string(const Ts&... xs) {
+template <class T>
+std::string deep_to_string(const T& x) {
+  using inspector_type = detail::stringification_inspector;
   std::string result;
-  detail::stringification_inspector f{result};
-  f(xs...);
+  inspector_type f{result};
+  detail::save_value(f, detail::as_mutable_ref(x));
   return result;
 }
-
-/// Wrapper to `deep_to_string` for using the function as an inspector.
-struct deep_to_string_t {
-  using result_type = std::string;
-
-  static constexpr bool reads_state = true;
-
-  static constexpr bool writes_state = false;
-
-  template <class... Ts>
-  result_type operator()(const Ts&... xs) const {
-    return deep_to_string(xs...);
-  }
-};
 
 /// Convenience function for `deep_to_string(std::forward_as_tuple(xs...))`.
 template <class... Ts>
 std::string deep_to_string_as_tuple(const Ts&... xs) {
   return deep_to_string(std::forward_as_tuple(xs...));
 }
+
+/// Wraps `deep_to_string` into a function object.
+struct deep_to_string_t {
+  template <class... Ts>
+  std::string operator()(const Ts&... xs) const {
+    return deep_to_string(xs...);
+  }
+};
 
 } // namespace caf

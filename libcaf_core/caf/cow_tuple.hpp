@@ -21,6 +21,7 @@
 #include <tuple>
 
 #include "caf/detail/comparable.hpp"
+#include "caf/inspector_access.hpp"
 #include "caf/make_copy_on_write.hpp"
 #include "caf/ref_counted.hpp"
 
@@ -114,22 +115,6 @@ private:
   intrusive_cow_ptr<impl> ptr_;
 };
 
-/// @relates cow_tuple
-template <class Inspector, class... Ts>
-typename std::enable_if<Inspector::reads_state,
-                        typename Inspector::result_type>::type
-inspect(Inspector& f, const cow_tuple<Ts...>& x) {
-  return f(x.data());
-}
-
-/// @relates cow_tuple
-template <class Inspector, class... Ts>
-typename std::enable_if<Inspector::writes_state,
-                        typename Inspector::result_type>::type
-inspect(Inspector& f, cow_tuple<Ts...>& x) {
-  return f(x.unshared());
-}
-
 /// Creates a new copy-on-write tuple from given arguments.
 /// @relates cow_tuple
 template <class... Ts>
@@ -143,5 +128,65 @@ template <size_t N, class... Ts>
 auto get(const cow_tuple<Ts...>& xs) -> decltype(std::get<N>(xs.data())) {
   return std::get<N>(xs.data());
 }
+
+// -- inspection ---------------------------------------------------------------
+
+template <class... Ts>
+struct inspector_access<cow_tuple<Ts...>> {
+  using value_type = cow_tuple<Ts...>;
+
+  template <class Inspector>
+  static bool apply_object(Inspector& f, value_type& x) {
+    if constexpr (Inspector::is_loading)
+      return detail::load_object(f, x.unshared());
+    else
+      return detail::save_object(f, detail::as_mutable_ref(x.data()));
+  }
+
+  template <class Inspector>
+  static bool apply_value(Inspector& f, value_type& x) {
+    if constexpr (Inspector::is_loading)
+      return detail::load_value(f, x.unshared());
+    else
+      return detail::save_value(f, detail::as_mutable_ref(x.data()));
+  }
+
+  template <class Inspector>
+  static bool save_field(Inspector& f, string_view field_name, value_type& x) {
+    return detail::save_field(f, field_name, detail::as_mutable_ref(x.data()));
+  }
+
+  template <class Inspector, class IsPresent, class Get>
+  static bool save_field(Inspector& f, string_view field_name,
+                         IsPresent& is_present, Get& get) {
+    if constexpr (std::is_lvalue_reference<decltype(get())>::value) {
+      auto get_data = [&get]() -> decltype(auto) {
+        return detail::as_mutable_ref(get().data());
+      };
+      return detail::save_field(f, field_name, is_present, get_data);
+    } else {
+      auto get_data = [&get] {
+        auto tmp = get();
+        return std::move(tmp.unshared());
+      };
+      return detail::save_field(f, field_name, is_present, get_data);
+    }
+  }
+
+  template <class Inspector, class IsValid, class SyncValue>
+  static bool load_field(Inspector& f, string_view field_name, value_type& x,
+                         IsValid& is_valid, SyncValue& sync_value) {
+    return detail::load_field(f, field_name, x.unshared(), is_valid,
+                              sync_value);
+  }
+
+  template <class Inspector, class IsValid, class SyncValue, class SetFallback>
+  static bool load_field(Inspector& f, string_view field_name, value_type& x,
+                         IsValid& is_valid, SyncValue& sync_value,
+                         SetFallback& set_fallback) {
+    return detail::load_field(f, field_name, x.unshared(), is_valid, sync_value,
+                              set_fallback);
+  }
+};
 
 } // namespace caf

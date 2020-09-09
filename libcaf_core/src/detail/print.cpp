@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2015                                                  *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,26 +16,32 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#pragma once
+#include "caf/detail/print.hpp"
 
-#include <cstddef>
+#include "caf/config.hpp"
 
-#include "caf/deep_to_string.hpp"
-#include "caf/meta/type_name.hpp"
+namespace caf::detail {
 
-namespace caf {
-
-/// Stores a flow-control configuration.
-struct named_actor_config {
-  std::string strategy;
-  size_t low_watermark;
-  size_t max_pending;
-};
-
-template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, named_actor_config& x) {
-  return f(meta::type_name("named_actor_config"), x.strategy, x.low_watermark,
-           x.max_pending);
+size_t print_timestamp(char* buf, size_t buf_size, time_t ts, size_t ms) {
+  tm time_buf;
+#ifdef CAF_MSVC
+  localtime_s(&time_buf, &ts);
+#else
+  localtime_r(&ts, &time_buf);
+#endif
+  auto pos = strftime(buf, buf_size, "%FT%T", &time_buf);
+  buf[pos++] = '.';
+  if (ms > 0) {
+    CAF_ASSERT(ms < 1000);
+    buf[pos++] = static_cast<char>((ms / 100) + '0');
+    buf[pos++] = static_cast<char>(((ms % 100) / 10) + '0');
+    buf[pos++] = static_cast<char>((ms % 10) + '0');
+  } else {
+    for (int i = 0; i < 3; ++i)
+      buf[pos++] = '0';
+  }
+  buf[pos] = '\0';
+  return pos;
 }
 
-} // namespace caf
+} // namespace caf::detail
