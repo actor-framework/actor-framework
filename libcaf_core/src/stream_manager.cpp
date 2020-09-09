@@ -154,7 +154,9 @@ void stream_manager::push() {
   } while (generate_messages());
 }
 
-bool stream_manager::congested() const noexcept {
+bool stream_manager::congested(const inbound_path&) const noexcept {
+  // By default, we assume all inbound paths write to the same output. Hence,
+  // the answer is independent of who is asking.
   return out().capacity() == 0;
 }
 

@@ -45,9 +45,10 @@ auto downstream_messages::id_of(mailbox_element& x) noexcept -> key_type {
 }
 
 bool downstream_messages::enabled(const nested_queue_type& q) noexcept {
-  auto congested = q.policy().handler->mgr->congested();
-  CAF_LOG_DEBUG_IF(congested, "path is congested:" << CAF_ARG2(
-                                "slot", q.policy().handler->slots.receiver));
+  auto path = q.policy().handler.get();
+  auto congested = path->mgr->congested(*path);
+  CAF_LOG_DEBUG_IF(congested, "path is congested:"
+                                << CAF_ARG2("slot", path->slots.receiver));
   return !congested;
 }
 
