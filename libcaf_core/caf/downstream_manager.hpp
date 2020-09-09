@@ -111,6 +111,24 @@ public:
     for_each_path_impl(g);
   }
 
+  /// Applies `f` to each path.
+  template <class F>
+  void for_each_path(F f) const {
+    struct impl : path_visitor {
+      F fun;
+      impl(F x) : fun(std::move(x)) {
+        // nop
+      }
+      void operator()(outbound_path& x) override {
+        fun(const_cast<const outbound_path&>(x));
+      }
+    };
+    impl g{std::move(f)};
+    // This const_cast is safe, because we restore the const in our overload for
+    // operator() above.
+    const_cast<downstream_manager*>(this)->for_each_path_impl(g);
+  }
+
   /// Returns all used slots.
   std::vector<stream_slot> path_slots();
 
