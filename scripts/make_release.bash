@@ -4,7 +4,7 @@
 set -e
 
 usage_string="\
-Usage: $0 VERSION
+Usage: $0 [--rc=NUM] VERSION
 "
 
 function usage() {
@@ -74,6 +74,25 @@ function ask_permission() {
   fi
 }
 
+rc_version=""
+
+# Parse user input.
+
+while [[ "$1" =~ ^-- ]]; do
+  case "$1" in
+    --*=*) optarg=$(echo "$1" | sed 's/[-_a-zA-Z0-9]*=//') ;;
+  esac
+  case "$1" in
+    --rc=*)
+      rc_version=$optarg
+      ;;
+    *)
+      raise_error "unrecognized CLI option"
+      ;;
+  esac
+  shift
+done
+
 if [ $# -ne 1  ] ; then
   usage
 fi
@@ -124,17 +143,29 @@ assert_exists "$token_path" "$config_hpp_path" "$github_msg"
 
 # check for a clean state
 assert_exists_not .make-release-steps.bash
-assert_git_status_clean "."
+# assert_git_status_clean "."
 
 if [ ! -f "$blog_msg"  ]; then
   ask_permission "$blog_msg missing, continue without blog post [y] or abort [n]?"
 else
   # target files
   assert_exists "$blog_posts_path"
+  if [ -z "$rc_version" ]; then
+    blog_release_version="$1"
+  else
+    blog_release_version="$1-rc.$rc_version"
+  fi
   blog_target_file="$blog_posts_path/$(date +%F)-version-$1-released.md"
   assert_exists_not "$blog_target_file"
   assert_git_status_clean "../blog/"
 fi
+
+# add scaffold for release script
+echo "\
+#!/bin/bash
+set -e
+" > .make-release-steps.bash
+
 
 # convert major.minor.patch version given as first argument into JJIIPP with:
 #   JJ: two-digit (zero padded) major version
@@ -145,16 +176,30 @@ version_str=$(echo "$1" | awk -F. '{ if ($1 > 0) printf("%d%02d%02d\n", $1, $2, 
 
 echo ">>> patching config.hpp"
 sed "s/#define CAF_VERSION [0-9]*/#define CAF_VERSION ${version_str}/g" < "$config_hpp_path" > .tmp_conf_hpp
-mv .tmp_conf_hpp "$config_hpp_path"
 
-echo ; echo
-echo ">>> please review the diff reported by Git for patching config.hpp:"
-git diff
-echo ; echo
-ask_permission "type [n] to abort or [y] to proceed"
+# check whether the version actually changed
+if cmp --silent .tmp_conf_hpp "$config_hpp_path" ; then
+  rm .tmp_conf_hpp
+  ask_permission "version already matches in config.hpp, continue pushing tag [y] or abort [n]?"
+else
+  mv .tmp_conf_hpp "$config_hpp_path"
+  echo ; echo
+  echo ">>> please review the diff reported by Git for patching config.hpp:"
+  git diff
+  echo ; echo
+  ask_permission "type [n] to abort or [y] to proceed"
+  echo "\
+git commit -a -m \"Change version to $1\"
+" >> .make-release-steps.bash
+fi
+
 
 # piping through AWK/printf makes sure 0.15 is expanded to 0.15.0
 tag_version=$(echo "$1" | awk -F. '{ printf("%d.%d.%d", $1, $2, $3)  }')
+
+if [ -n "$rc_version" ]; then
+  tag_version="$tag_version-rc.$rc_version"
+fi
 
 token=$(cat "$token_path")
 tag_descr=$(awk 1 ORS='\\r\\n' "$github_msg")
@@ -164,21 +209,20 @@ github_json=$(printf '{"tag_name": "%s","name": "%s","body": "%s","draft": false
 anchor="$PWD"
 
 echo "\
-#!/bin/bash
-set -e
-git commit -a -m \"Change version to $1\"
 git push
 git tag $tag_version
 git push origin --tags
 curl --data '$github_json' https://api.github.com/repos/actor-framework/actor-framework/releases?access_token=$token
-" > .make-release-steps.bash
+" >> .make-release-steps.bash
 
-if which brew &>/dev/null ; then
-  file_url="https://github.com/actor-framework/actor-framework/archive/$tag_version.tar.gz"
-  echo "\
+if [ -z "$rc_version" ]; then
+  if which brew &>/dev/null ; then
+    file_url="https://github.com/actor-framework/actor-framework/archive/$tag_version.tar.gz"
+    echo "\
 export HOMEBREW_GITHUB_API_TOKEN=\$(cat "$token_path")
 brew bump-formula-pr --message=\"Update CAF to version $tag_version\" --url=\"$file_url\" caf
 " >> .make-release-steps.bash
+  fi
 fi
 
 if [ -f "$blog_msg"  ]; then
@@ -186,14 +230,14 @@ if [ -f "$blog_msg"  ]; then
   cp "$blog_msg" "$blog_target_file"
   cd ../blog
   git add _posts
-  git commit -m \"$1 announcement\"
+  git commit -m \"$tag_version announcement\"
   git push
   cd "$anchor"
   " >> .make-release-steps.bash
 fi
 
 echo ; echo
-echo ">>> please review the final steps for releasing $1"
+echo ">>> please review the final steps for releasing $tag_version "
 cat .make-release-steps.bash
 echo ; echo
 ask_permission "type [y] to execute the steps above or [n] to abort"

@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com).
 
-## [0.18.0] - Unreleased
+## [0.18.0-rc.1] - 2020-09-09
 
 ### Added
 
@@ -519,7 +519,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Setting the log level to `quiet` now properly suppresses any log output.
 - Configuring colored terminal output should now print colored output.
 
-[0.18.0]: https://github.com/actor-framework/actor-framework/compare/0.17.3...master
+[0.18.0-rc.1]: https://github.com/actor-framework/actor-framework/releases/0.18.0-rc.1
 [0.17.7]: https://github.com/actor-framework/actor-framework/compare/0.17.6...release/0.17
 [0.17.6]: https://github.com/actor-framework/actor-framework/releases/0.17.6
 [0.17.5]: https://github.com/actor-framework/actor-framework/releases/0.17.5
