@@ -40,6 +40,10 @@ pollset_updater::~pollset_updater() {
   // nop
 }
 
+error pollset_updater::init(const settings&) {
+  return none;
+}
+
 bool pollset_updater::handle_read_event() {
   for (;;) {
     auto num_bytes = read(handle(), make_span(buf_.data() + buf_size_,

@@ -73,7 +73,7 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
-  error init() override {
+  error init() /*override*/ {
     this->register_reading();
     return transport_.init(*this);
   }

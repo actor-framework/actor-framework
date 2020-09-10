@@ -52,6 +52,10 @@ public:
     --count_;
   }
 
+  error init(const settings&) override {
+    return none;
+  }
+
   stream_socket handle() const noexcept {
     return socket_cast<stream_socket>(handle_);
   }

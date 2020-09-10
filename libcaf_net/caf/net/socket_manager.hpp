@@ -47,8 +47,9 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Returns the managed socket.
-  socket handle() const noexcept {
-    return handle_;
+  template <class Socket = socket>
+  Socket handle() const {
+    return socket_cast<Socket>(handle_);
   }
 
   /// Returns a pointer to the multiplexer running this `socket_manager`.
@@ -122,7 +123,8 @@ template <class Protocol>
 class socket_manager_impl : public socket_manager {
 public:
   template <class... Ts>
-  socket_manager_impl(socket handle, const multiplexer_ptr& mpx, Ts&&... xs)
+  socket_manager_impl(typename Protocol::socket_type handle,
+                      const multiplexer_ptr& mpx, Ts&&... xs)
     : socket_manager{handle, mpx}, protocol_(std::forward<Ts>(xs)...) {
     // nop
   }
@@ -130,7 +132,7 @@ public:
   // -- initialization ---------------------------------------------------------
 
   error init(const settings& config) override {
-    protocol_.init(*this, config);
+    return protocol_.init(*this, config);
   }
 
   // -- event callbacks --------------------------------------------------------
