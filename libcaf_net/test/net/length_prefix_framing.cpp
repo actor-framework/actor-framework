@@ -23,12 +23,12 @@
 #include "caf/test/dsl.hpp"
 
 #include <deque>
-#include <vector>
 #include <numeric>
+#include <vector>
 
+#include "caf/binary_serializer.hpp"
 #include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
-#include "caf/binary_serializer.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/span.hpp"
 #include "caf/tag/message_oriented.hpp"
@@ -71,7 +71,6 @@ struct ul_expect_messages {
 /// lower layer: offer stream for message parsing
 template <class UpperLayer>
 struct ll_provide_stream_for_messages {
-
   using output_tag = tag::stream_oriented;
 
   void set_expectations(std::vector<byte> data,
@@ -141,8 +140,7 @@ void encode_message(std::vector<byte>& data, const byte_buffer& message) {
 
 struct fixture {
   using test_layers = ll_provide_stream_for_messages<
-                        net::length_prefix_framing<
-                          ul_expect_messages>>;
+    net::length_prefix_framing<ul_expect_messages>>;
 
   void generate_messages(size_t num, size_t factor = 10) {
     for (size_t n = 1; n <= num; n += 1) {
