@@ -145,6 +145,20 @@ assert_exists "$token_path" "$config_hpp_path" "$github_msg"
 assert_exists_not .make-release-steps.bash
 # assert_git_status_clean "."
 
+# convert major.minor.patch version given as first argument into JJIIPP with:
+#   JJ: two-digit (zero padded) major version
+#   II: two-digit (zero padded) minor version
+#   PP: two-digit (zero padded) patch version
+# but omit leading zeros
+version_str=$(echo "$1" | awk -F. '{ if ($1 > 0) printf("%d%02d%02d\n", $1, $2, $3); else printf("%02d%02d\n", $2, $3)  }')
+
+# piping through AWK/printf makes sure 0.15 is expanded to 0.15.0
+tag_version=$(echo "$1" | awk -F. '{ printf("%d.%d.%d", $1, $2, $3)  }')
+
+if [ -n "$rc_version" ]; then
+  tag_version="$tag_version-rc.$rc_version"
+fi
+
 if [ ! -f "$blog_msg"  ]; then
   ask_permission "$blog_msg missing, continue without blog post [y] or abort [n]?"
 else
@@ -155,7 +169,7 @@ else
   else
     blog_release_version="$1-rc.$rc_version"
   fi
-  blog_target_file="$blog_posts_path/$(date +%F)-version-$1-released.md"
+  blog_target_file="$blog_posts_path/$(date +%F)-version-$tag_version-released.md"
   assert_exists_not "$blog_target_file"
   assert_git_status_clean "../blog/"
 fi
@@ -165,14 +179,6 @@ echo "\
 #!/bin/bash
 set -e
 " > .make-release-steps.bash
-
-
-# convert major.minor.patch version given as first argument into JJIIPP with:
-#   JJ: two-digit (zero padded) major version
-#   II: two-digit (zero padded) minor version
-#   PP: two-digit (zero padded) patch version
-# but omit leading zeros
-version_str=$(echo "$1" | awk -F. '{ if ($1 > 0) printf("%d%02d%02d\n", $1, $2, $3); else printf("%02d%02d\n", $2, $3)  }')
 
 echo ">>> patching config.hpp"
 sed "s/#define CAF_VERSION [0-9]*/#define CAF_VERSION ${version_str}/g" < "$config_hpp_path" > .tmp_conf_hpp
@@ -193,13 +199,6 @@ git commit -a -m \"Change version to $1\"
 " >> .make-release-steps.bash
 fi
 
-
-# piping through AWK/printf makes sure 0.15 is expanded to 0.15.0
-tag_version=$(echo "$1" | awk -F. '{ printf("%d.%d.%d", $1, $2, $3)  }')
-
-if [ -n "$rc_version" ]; then
-  tag_version="$tag_version-rc.$rc_version"
-fi
 
 token=$(cat "$token_path")
 tag_descr=$(awk 1 ORS='\\r\\n' "$github_msg")
