@@ -52,7 +52,7 @@ public:
   }
 
   template <class... Ts>
-  [[nodiscard]] bool apply_objects(Ts&... xs) {
+  [[nodiscard]] bool apply_objects(Ts&&... xs) {
     return (apply_object(xs) && ...);
   }
 
