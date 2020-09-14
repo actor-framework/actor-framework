@@ -25,6 +25,7 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/byte_buffer.hpp"
+#include "caf/deep_to_string.hpp"
 
 using namespace caf;
 using namespace caf::net;
@@ -34,7 +35,7 @@ CAF_TEST(serialization) {
   byte_buffer buf;
   {
     binary_serializer sink{nullptr, buf};
-    CAF_CHECK_EQUAL(sink(x), none);
+    CAF_CHECK(sink.apply_object(x));
   }
   CAF_CHECK_EQUAL(buf.size(), basp::header_size);
   auto buf2 = to_bytes(x);
@@ -43,7 +44,7 @@ CAF_TEST(serialization) {
   basp::header y;
   {
     binary_deserializer source{nullptr, buf};
-    CAF_CHECK_EQUAL(source(y), none);
+    CAF_CHECK(source.apply_object(y));
   }
   CAF_CHECK_EQUAL(x, y);
   auto z = basp::header::from_bytes(buf);
@@ -53,5 +54,5 @@ CAF_TEST(serialization) {
 
 CAF_TEST(to_string) {
   basp::header x{basp::message_type::handshake, 42, 4};
-  CAF_CHECK_EQUAL(to_string(x), "basp::header(handshake, 42, 4)");
+  CAF_CHECK_EQUAL(deep_to_string(x), "basp::header(handshake, 42, 4)");
 }

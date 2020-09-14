@@ -83,9 +83,10 @@ CAF_NET_EXPORT void to_bytes(header x, byte_buffer& buf);
 
 /// @relates header
 template <class Inspector>
-typename Inspector::result_type inspect(Inspector& f, header& x) {
-  return f(meta::type_name("basp::header"), x.type, x.payload_len,
-           x.operation_data);
+bool inspect(Inspector& f, header& x) {
+  return f.object(x).fields(f.field("type", x.type),
+                            f.field("payload_len", x.payload_len),
+                            f.field("operation_data", x.operation_data));
 }
 
 /// @}

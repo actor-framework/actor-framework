@@ -75,8 +75,8 @@ public:
                       std::unique_ptr<endpoint_manager_queue::message> ptr) {
     auto payload_buf = parent.next_payload_buffer();
     binary_serializer sink(parent.system(), payload_buf);
-    if (auto err = sink(ptr->msg->content()))
-      CAF_FAIL("serializing failed: " << err);
+    if (!sink.apply_objects(ptr->msg->content()))
+      CAF_FAIL("failed to serialize content: " << sink.get_error());
     CAF_MESSAGE("before sending: " << CAF_ARG(ptr->msg->content()));
     parent.write_packet(payload_buf);
     return none;
@@ -209,7 +209,7 @@ CAF_TEST(write_message) {
   auto& buf = transport_results->packet_buffer;
   binary_deserializer source{sys, buf};
   caf::message received_msg;
-  CAF_CHECK_EQUAL(source(received_msg), none);
+  CAF_CHECK(source.apply_objects(received_msg));
   CAF_MESSAGE(CAF_ARG(received_msg));
   auto received_str = received_msg.get_as<std::string>(0);
   string_view result{received_str};

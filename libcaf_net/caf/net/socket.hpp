@@ -55,9 +55,8 @@ struct CAF_NET_EXPORT socket : detail::comparable<socket> {
 
 /// @relates socket
 template <class Inspector>
-typename Inspector::result_type CAF_NET_EXPORT inspect(Inspector& f,
-                                                       socket& x) {
-  return f(x.id);
+bool inspect(Inspector& f, socket& x) {
+  return f.object(x).fields(f.field("id", x.id));
 }
 
 /// Denotes the invalid socket.

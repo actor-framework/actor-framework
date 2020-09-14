@@ -65,9 +65,8 @@ struct string_application_header {
 
 /// @relates header
 template <class Inspector>
-typename Inspector::result_type
-inspect(Inspector& f, string_application_header& hdr) {
-  return f(meta::type_name("sa_header"), hdr.payload);
+bool inspect(Inspector& f, string_application_header& x) {
+  return f.fields(f.field("payload", x.payload));
 }
 
 class string_application {
