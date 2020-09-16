@@ -18,34 +18,29 @@
 
 #pragma once
 
-#include <cstdint>
-#include <type_traits>
-
+#include "caf/byte.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/ieee_754.hpp"
-#include "caf/inspector_access.hpp"
 #include "caf/save_inspector_base.hpp"
 #include "caf/span.hpp"
 #include "caf/string_view.hpp"
 #include "caf/type_id.hpp"
 
+#include <array>
+#include <cstdint>
+
 namespace caf::hash {
 
-/// Non-cryptographic hash algorithm (variant 1a) named after Glenn Fowler,
-/// Landon Curt Noll, and Kiem-Phong Vo.
-///
-/// For more details regarding the public domain algorithm, see:
-/// - https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
-/// - http://www.isthe.com/chongo/tech/comp/fnv/index.html
-///
-/// @tparam T One of `uint32_t`, `uint64_t`, or `size_t`.
-template <class T>
-class fnv : public save_inspector_base<fnv<T>> {
+/// US Secure Hash Algorithm 1 (SHA1) as defined in RFC 3174.
+class CAF_CORE_EXPORT sha1 : public save_inspector_base<sha1> {
 public:
-  static_assert(sizeof(T) == 4 || sizeof(T) == 8);
+  /// Hash size in bytes.
+  static constexpr size_t hash_size = 20;
 
-  constexpr fnv() noexcept : result(init()) {
-    // nop
-  }
+  /// Array type for storing a 160-bit hash.
+  using result_type = std::array<byte, hash_size>;
+
+  sha1() noexcept;
 
   static constexpr bool has_human_readable_format() noexcept {
     return false;
@@ -148,35 +143,41 @@ public:
     return true;
   }
 
-  /// Convenience function for computing an FNV1a hash value for given
-  /// arguments in one shot.
+  /// Seals this SHA-1 context and returns the 160-bit message digest.
+  result_type result() noexcept;
+
+  /// Convenience function for computing a SHA-1 hash value for given arguments
+  /// in one shot.
   template <class... Ts>
-  static T compute(Ts&&... xs) noexcept {
+  static result_type compute(Ts&&... xs) noexcept {
     using detail::as_mutable_ref;
-    fnv f;
+    sha1 f;
     auto unused = f.apply_objects(xs...);
     static_cast<void>(unused); // Always true.
-    return f.result;
+    return f.result();
   }
-
-  T result;
 
 private:
-  static constexpr T init() noexcept {
-    if constexpr (sizeof(T) == 4)
-      return 0x811C9DC5u;
-    else
-      return 0xCBF29CE484222325ull;
-  }
+  bool append(const uint8_t* begin, const uint8_t* end) noexcept;
 
-  void append(const uint8_t* begin, const uint8_t* end) noexcept {
-    if constexpr (sizeof(T) == 4)
-      while (begin != end)
-        result = (*begin++ ^ result) * 0x01000193u;
-    else
-      while (begin != end)
-        result = (*begin++ ^ result) * 1099511628211ull;
-  }
+  void process_message_block();
+
+  void pad_message();
+
+  /// Stores whether `result()` has been called.
+  bool sealed_ = 0;
+
+  /// Stores the message digest so far.
+  std::array<uint32_t, hash_size / 4> intermediate_;
+
+  /// Stores the message length in bits.
+  uint64_t length_ = 0;
+
+  /// Stores the current index in `message_block_`.
+  int_least16_t message_block_index_ = 0;
+
+  /// Stores 512-bit message blocks.
+  std::array<uint8_t, 64> message_block_;
 };
 
 } // namespace caf::hash

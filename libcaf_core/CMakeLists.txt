@@ -106,7 +106,6 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/detail/thread_safe_actor_clock.cpp
   src/detail/tick_emitter.cpp
   src/detail/token_based_credit_controller.cpp
-  src/detail/token_based_credit_controller.cpp
   src/detail/type_id_list_builder.cpp
   src/downstream_manager.cpp
   src/downstream_manager_base.cpp
@@ -118,6 +117,7 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/group.cpp
   src/group_manager.cpp
   src/group_module.cpp
+  src/hash/sha1.cpp
   src/inbound_path.cpp
   src/init_global_meta_objects.cpp
   src/intrusive/inbox_result_strings.cpp
@@ -272,6 +272,7 @@ caf_add_test_suites(caf-core-test
   fused_downstream_manager
   handles
   hash.fnv
+  hash.sha1
   intrusive.drr_cached_queue
   intrusive.drr_queue
   intrusive.fifo_inbox
