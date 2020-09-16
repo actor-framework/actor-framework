@@ -19,6 +19,7 @@
 #pragma once
 
 #include "caf/byte.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/detail/ieee_754.hpp"
 #include "caf/save_inspector_base.hpp"
 #include "caf/span.hpp"
@@ -26,11 +27,12 @@
 #include "caf/type_id.hpp"
 
 #include <array>
+#include <cstdint>
 
 namespace caf::hash {
 
 /// US Secure Hash Algorithm 1 (SHA1) as defined in RFC 3174.
-class sha1 : public save_inspector_base<sha1> {
+class CAF_CORE_EXPORT sha1 : public save_inspector_base<sha1> {
 public:
   /// Hash size in bytes.
   static constexpr size_t hash_size = 20;
