@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "caf/all.hpp"
+#include "caf/detail/encode_base64.hpp"
 #include "caf/io/all.hpp"
 
 using namespace caf;
@@ -36,38 +37,6 @@ using std::endl;
 using std::string;
 using std::vector;
 
-static constexpr const char base64_tbl[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                           "abcdefghijklmnopqrstuvwxyz"
-                                           "0123456789+/";
-
-std::string encode_base64(const string& str) {
-  std::string result;
-  // consumes three characters from input
-  auto consume = [&](const char* i) {
-    int buf[]{
-      (i[0] & 0xfc) >> 2,
-      ((i[0] & 0x03) << 4) + ((i[1] & 0xf0) >> 4),
-      ((i[1] & 0x0f) << 2) + ((i[2] & 0xc0) >> 6),
-      i[2] & 0x3f,
-    };
-    for (auto x : buf)
-      result += base64_tbl[x];
-  };
-  // iterate string in chunks of three characters
-  auto i = str.begin();
-  for (; std::distance(i, str.end()) >= 3; i += 3)
-    consume(&(*i));
-  if (i != str.end()) {
-    // "fill" string with 0s
-    char cbuf[] = {0, 0, 0};
-    std::copy(i, str.end(), cbuf);
-    consume(cbuf);
-    // override filled characters (garbage) with '='
-    for (auto j = result.end() - (3 - (str.size() % 3)); j != result.end(); ++j)
-      *j = '=';
-  }
-  return result;
-}
 
 class host_desc {
 public:
@@ -117,7 +86,7 @@ bool run_ssh(actor_system& system, const string& wdir, const string& cmd,
   full_cmd += wdir;
   full_cmd += '\n';
   full_cmd += cmd;
-  auto packed = encode_base64(full_cmd);
+  auto packed = detail::encode_base64(full_cmd);
   std::ostringstream oss;
   oss << "ssh -Y -o ServerAliveInterval=60 " << host << R"( "echo )" << packed
       << R"( | base64 --decode | /bin/sh")";
