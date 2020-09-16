@@ -81,6 +81,7 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/detail/behavior_stack.cpp
   src/detail/blocking_behavior.cpp
   src/detail/config_consumer.cpp
+  src/detail/encode_base64.cpp
   src/detail/get_mac_addresses.cpp
   src/detail/get_process_id.cpp
   src/detail/get_root_uuid.cpp
@@ -244,6 +245,7 @@ caf_add_test_suites(caf-core-test
   detached_actors
   detail.bounds_checker
   detail.config_consumer
+  detail.encode_base64
   detail.ieee_754
   detail.limited_vector
   detail.meta_object
