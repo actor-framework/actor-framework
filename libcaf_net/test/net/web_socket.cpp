@@ -42,7 +42,7 @@ struct app_t {
   settings cfg;
 
   template <class LowerLayer>
-  error init(LowerLayer&, const settings& init_cfg) {
+  error init(net::socket_manager*, LowerLayer&, const settings& init_cfg) {
     cfg = init_cfg;
     return none;
   }

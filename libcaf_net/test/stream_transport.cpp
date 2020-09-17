@@ -87,7 +87,7 @@ public:
   ~dummy_application() = default;
 
   template <class Parent>
-  error init(Parent& parent, const settings&) {
+  error init(socket_manager*, Parent& parent, const settings&) {
     parent.configure_read(receive_policy::exactly(hello_manager.size()));
     return none;
   }

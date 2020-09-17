@@ -59,7 +59,7 @@ public:
 
   caf::error init(const caf::settings& config) {
     access this_layer{this};
-    return upper_layer.init(this_layer, config);
+    return upper_layer.init(nullptr, this_layer, config);
   }
 
   caf::error init() {

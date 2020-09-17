@@ -131,7 +131,7 @@ public:
   // -- initialization ---------------------------------------------------------
 
   template <class Parent>
-  error init(Parent& parent, const settings& config) {
+  error init(socket_manager* owner, Parent& parent, const settings& config) {
     namespace mm = defaults::middleman;
     auto default_max_reads = static_cast<uint32_t>(mm::max_consecutive_reads);
     max_consecutive_reads_ = get_or(
@@ -153,7 +153,7 @@ public:
       return std::move(socket_buf_size.error());
     }
     access<Parent> this_layer{&parent, this};
-    return upper_layer_.init(this_layer, config);
+    return upper_layer_.init(owner, this_layer, config);
   }
 
   // -- event callbacks --------------------------------------------------------

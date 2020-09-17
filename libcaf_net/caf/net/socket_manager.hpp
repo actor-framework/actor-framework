@@ -132,7 +132,7 @@ public:
   // -- initialization ---------------------------------------------------------
 
   error init(const settings& config) override {
-    return protocol_.init(*this, config);
+    return protocol_.init(static_cast<socket_manager*>(this), *this, config);
   }
 
   // -- event callbacks --------------------------------------------------------

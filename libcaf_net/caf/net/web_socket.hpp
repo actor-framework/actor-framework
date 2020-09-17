@@ -21,9 +21,9 @@
 #include <algorithm>
 
 #include "caf/detail/encode_base64.hpp"
-#include "caf/detail/move_if_not_ptr.hpp"
 #include "caf/error.hpp"
 #include "caf/hash/sha1.hpp"
+#include "caf/net/fwd.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/pec.hpp"
 #include "caf/settings.hpp"
@@ -87,7 +87,8 @@ public:
   // -- initialization ---------------------------------------------------------
 
   template <class LowerLayer>
-  error init(LowerLayer& down, const settings& config) {
+  error init(socket_manager* owner, LowerLayer& down, const settings& config) {
+    owner_ = owner;
     cfg_ = config;
     down.configure_read(net::receive_policy::up_to(max_header_size));
     return none;
@@ -199,7 +200,7 @@ private:
       return false;
     }
     // Try initializing the upper layer.
-    if (auto err = upper_layer_.init(down, cfg_)) {
+    if (auto err = upper_layer_.init(owner_, down, cfg_)) {
       down.abort_reason(std::move(err));
       return false;
     }
@@ -265,6 +266,9 @@ private:
 
   /// Stores the upper layer.
   UpperLayer upper_layer_;
+
+  /// Stores a pointer to the owning manager for the delayed initialization.
+  socket_manager* owner_ = nullptr;
 
   /// Holds a copy of the settings in order to delay initialization of the upper
   /// layer until the handshake completed.
