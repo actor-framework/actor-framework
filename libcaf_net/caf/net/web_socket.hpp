@@ -20,8 +20,11 @@
 
 #include <algorithm>
 
+#include "caf/detail/encode_base64.hpp"
 #include "caf/detail/move_if_not_ptr.hpp"
 #include "caf/error.hpp"
+#include "caf/hash/sha1.hpp"
+#include "caf/net/receive_policy.hpp"
 #include "caf/pec.hpp"
 #include "caf/settings.hpp"
 #include "caf/tag/stream_oriented.hpp"
@@ -42,6 +45,24 @@ public:
 
   using output_tag = tag::stream_oriented;
 
+  // -- constants --------------------------------------------------------------
+
+  static constexpr std::array<byte, 4> end_of_header{{
+    byte{'\r'},
+    byte{'\n'},
+    byte{'\r'},
+    byte{'\n'},
+  }};
+
+  // A handshake should usually fit into 200-300 Bytes. 2KB is more than enough.
+  static constexpr uint32_t max_header_size = 2048;
+
+  static constexpr string_view header_too_large
+    = "HTTP/1.1 431 Request Header Fields Too Large\r\n"
+      "Content-Type: text/plain\r\n"
+      "\r\n"
+      "Header exceeds 2048 Bytes.\r\n";
+
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class... Ts>
@@ -52,15 +73,6 @@ public:
   virtual ~web_socket() {
     // nop
   }
-
-  // -- constants --------------------------------------------------------------
-
-  static constexpr std::array<byte, 4> end_of_header{{
-    byte{'\r'},
-    byte{'\n'},
-    byte{'\r'},
-    byte{'\n'},
-  }};
 
   // -- properties -------------------------------------------------------------
 
@@ -74,9 +86,10 @@ public:
 
   // -- initialization ---------------------------------------------------------
 
-  template <class Parent>
-  error init(Parent&, const settings& config) {
+  template <class LowerLayer>
+  error init(LowerLayer& down, const settings& config) {
     cfg_ = config;
+    down.configure_read(net::receive_policy::up_to(max_header_size));
     return none;
   }
 
@@ -84,24 +97,18 @@ public:
 
   template <class LowerLayer>
   bool prepare_send(LowerLayer& down) {
-    if (handshake_complete_)
-      return upper_layer_.prepare_send(down);
-    // TODO: implement me.
-    return false;
+    return handshake_complete_ ? upper_layer_.prepare_send(down) : true;
   }
 
   template <class LowerLayer>
   bool done_sending(LowerLayer& down) {
-    if (handshake_complete_)
-      return upper_layer_.done_sending(down);
-    // TODO: implement me.
-    return false;
+    return handshake_complete_ ? upper_layer_.done_sending(down) : true;
   }
 
   template <class LowerLayer>
   void abort(LowerLayer& down, const error& reason) {
     if (handshake_complete_)
-      return upper_layer_.abort(down, reason);
+      upper_layer_.abort(down, reason);
   }
 
   template <class LowerLayer>
@@ -111,8 +118,16 @@ public:
     // TODO: we could avoid repeated scans by using the delta parameter.
     auto i = std::search(buffer.begin(), buffer.end(),
                              end_of_header.begin(), end_of_header.end());
-    if (i == buffer.end())
+    if (i == buffer.end()) {
+      if (buffer.size() == max_header_size) {
+        write(down, header_too_large);
+        auto err = make_error(pec::too_many_characters,
+                              "exceeded maximum header size");
+        down.abort_reason(std::move(err));
+        return -1;
+      }
       return 0;
+    }
     auto offset = static_cast<size_t>(std::distance(buffer.begin(), i));
     offset += end_of_header.size();
     // Take all but the last two bytes (to avoid an empty line) as input for
@@ -121,10 +136,29 @@ public:
                        offset - 2};
     if (!handle_header(down, header))
       return -1;
-    return offset + upper_layer_.consume(down, buffer.subspan(offset), {});
+    ptrdiff_t sub_result = 0;
+    if (offset < buffer.size()) {
+      sub_result = upper_layer_.consume(down, buffer.subspan(offset), {});
+      if (sub_result < 0)
+        return sub_result;
+    }
+    return static_cast<ptrdiff_t>(offset) + sub_result;
+  }
+
+  bool handshake_complete() const noexcept {
+    return handshake_complete_;
   }
 
 private:
+  template <class LowerLayer>
+  static void write(LowerLayer& down, string_view output) {
+    auto out = as_bytes(make_span(output));
+    down.begin_output();
+    auto& buf = down.output_buffer();
+    buf.insert(buf.end(), out.begin(), out.end());
+    down.end_output();
+  }
+
   template <class LowerLayer>
   bool handle_header(LowerLayer& down, string_view input) {
     // Parse the first line, i.e., "METHOD REQUEST-URI VERSION".
@@ -156,7 +190,8 @@ private:
     // Check whether the mandatory fields exist.
     std::string sec_key;
     if (auto skey_field = get_if<std::string>(&fields, "Sec-WebSocket-Key")) {
-      sec_key = detail::move_if_not_ptr(skey_field);
+      auto field_hash = hash::sha1::compute(*skey_field);
+      sec_key = detail::encode_base64(field_hash);
     } else {
       auto err = make_error(pec::missing_field,
                             "Mandatory field Sec-WebSocket-Key not found");
@@ -169,7 +204,21 @@ private:
       return false;
     }
     // Send server handshake.
+    down.begin_output();
+    auto& buf = down.output_buffer();
+    auto append = [&buf](string_view output) {
+      auto out = as_bytes(make_span(output));
+      buf.insert(buf.end(), out.begin(), out.end());
+    };
+    append("HTTP/1.1 101 Switching Protocols\r\n"
+           "Upgrade: websocket\r\n"
+           "Connection: Upgrade\r\n"
+           "Sec-WebSocket-Accept: ");
+    append(sec_key);
+    append("\r\n\r\n");
+    down.end_output();
     // Done.
+    handshake_complete_ = true;
     return true;
   }
 
@@ -187,8 +236,9 @@ private:
 
   static string_view trim(string_view str) {
     str.remove_prefix(std::min(str.find_first_not_of(' '), str.size()));
-    str.remove_suffix(str.size()
-                      - std::min(str.find_last_not_of(' '), str.size()));
+    auto trim_pos = str.find_last_not_of(' ');
+    if (trim_pos != str.npos)
+      str.remove_suffix(str.size() - (trim_pos + 1));
     return str;
   }
 

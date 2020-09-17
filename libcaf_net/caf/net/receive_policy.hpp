@@ -38,6 +38,10 @@ struct receive_policy {
     return {size, size};
   }
 
+  static constexpr receive_policy up_to(uint32_t max_size) {
+    return {1, max_size};
+  }
+
   static constexpr receive_policy stop() {
     return {0, 0};
   }

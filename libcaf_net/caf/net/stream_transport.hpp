@@ -170,9 +170,9 @@ public:
     };
     access<Parent> this_layer{&parent, this};
     for (size_t i = 0; max_read_size_ > 0 && i < max_consecutive_reads_; ++i) {
-      CAF_ASSERT(min_read_size_ > read_size_);
+      CAF_ASSERT(max_read_size_ > read_size_);
       auto buf = read_buf_.data() + read_size_;
-      size_t len = min_read_size_ - read_size_;
+      size_t len = max_read_size_ - read_size_;
       CAF_LOG_DEBUG(CAF_ARG2("missing", len));
       auto num_bytes = read(parent.template handle<socket_type>(),
                             make_span(buf, len));
