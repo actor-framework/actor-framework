@@ -120,7 +120,7 @@ CAF_TEST(read / write using span<byte>) {
   if (CAF_CHECK(holds_alternative<sec>(read_res)))
     CAF_CHECK(get<sec>(read_res) == sec::unavailable_or_would_block);
   CAF_MESSAGE("sending data to " << to_string(ep));
-  auto write_res=write(send_socket, as_bytes(make_span(hello_test)), ep);
+  auto write_res = write(send_socket, as_bytes(make_span(hello_test)), ep);
   if (CAF_CHECK(holds_alternative<size_t>(write_res)))
     CAF_CHECK_EQUAL(get<size_t>(write_res), hello_test.size());
   CAF_CHECK_EQUAL(read_from_socket(receive_socket, buf), none);

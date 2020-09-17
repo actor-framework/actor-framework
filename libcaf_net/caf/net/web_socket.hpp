@@ -116,8 +116,8 @@ public:
     if (handshake_complete_)
       return upper_layer_.consume(down, buffer, delta);
     // TODO: we could avoid repeated scans by using the delta parameter.
-    auto i = std::search(buffer.begin(), buffer.end(),
-                             end_of_header.begin(), end_of_header.end());
+    auto i = std::search(buffer.begin(), buffer.end(), end_of_header.begin(),
+                         end_of_header.end());
     if (i == buffer.end()) {
       if (buffer.size() == max_header_size) {
         write(down, header_too_large);
