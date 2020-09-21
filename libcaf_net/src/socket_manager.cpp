@@ -19,6 +19,7 @@
 #include "caf/net/socket_manager.hpp"
 
 #include "caf/config.hpp"
+#include "caf/net/actor_shell.hpp"
 #include "caf/net/multiplexer.hpp"
 
 namespace caf::net {
@@ -61,6 +62,12 @@ void socket_manager::register_writing() {
   if ((mask() & operation::write) == operation::write)
     return;
   parent_->register_writing(this);
+}
+
+actor_shell_ptr socket_manager::make_actor_shell() {
+  CAF_ASSERT(parent_ != nullptr);
+  auto hdl = parent_->system().spawn<actor_shell>(this);
+  return actor_shell_ptr{actor_cast<strong_actor_ptr>(std::move(hdl))};
 }
 
 } // namespace caf::net

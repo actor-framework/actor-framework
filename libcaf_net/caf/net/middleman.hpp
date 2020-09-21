@@ -50,6 +50,8 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
+  explicit middleman(actor_system& sys);
+
   ~middleman() override;
 
   // -- interface functions ----------------------------------------------------
@@ -142,10 +144,6 @@ public:
   expected<uint16_t> port(string_view scheme) const;
 
 private:
-  // -- constructors, destructors, and assignment operators --------------------
-
-  explicit middleman(actor_system& sys);
-
   // -- utility functions ------------------------------------------------------
 
   static void create_backends(middleman&, detail::type_list<>) {

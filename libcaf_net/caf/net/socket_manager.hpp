@@ -92,6 +92,10 @@ public:
     return abort_reason_;
   }
 
+  // -- factories --------------------------------------------------------------
+
+  actor_shell_ptr make_actor_shell();
+
   // -- event loop management --------------------------------------------------
 
   void register_reading();
@@ -163,7 +167,35 @@ public:
     return protocol_;
   }
 
+  auto& top_layer() noexcept {
+    return climb(protocol_);
+  }
+
+  const auto& top_layer() const noexcept {
+    return climb(protocol_);
+  }
+
 private:
+  template <class FinalLayer>
+  static FinalLayer& climb(FinalLayer& layer) {
+    return layer;
+  }
+
+  template <class FinalLayer>
+  static const FinalLayer& climb(const FinalLayer& layer) {
+    return layer;
+  }
+
+  template <template <class> class Layer, class Next>
+  static auto& climb(Layer<Next>& layer) {
+    return climb(layer.upper_layer());
+  }
+
+  template <template <class> class Layer, class Next>
+  static const auto& climb(const Layer<Next>& layer) {
+    return climb(layer.upper_layer());
+  }
+
   Protocol protocol_;
 };
 
