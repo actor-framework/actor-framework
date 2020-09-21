@@ -32,6 +32,7 @@ namespace caf {
 
 template <class> class [[nodiscard]] error_code;
 template <class> class behavior_type_of;
+template <class> class callback;
 template <class> class dictionary;
 template <class> class downstream;
 template <class> class expected;
