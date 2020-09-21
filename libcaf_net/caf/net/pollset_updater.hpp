@@ -38,7 +38,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  pollset_updater(pipe_socket read_handle, const multiplexer_ptr& parent);
+  pollset_updater(pipe_socket read_handle, multiplexer* parent);
 
   ~pollset_updater() override;
 
@@ -61,7 +61,7 @@ public:
 
 private:
   msg_buf buf_;
-  size_t buf_size_;
+  size_t buf_size_ = 0;
 };
 
 } // namespace caf::net

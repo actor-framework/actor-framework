@@ -23,10 +23,10 @@
 
 namespace caf::net {
 
-socket_manager::socket_manager(socket handle, const multiplexer_ptr& parent)
+socket_manager::socket_manager(socket handle, multiplexer* parent)
   : handle_(handle), mask_(operation::none), parent_(parent) {
-  CAF_ASSERT(parent != nullptr);
   CAF_ASSERT(handle_ != invalid_socket);
+  CAF_ASSERT(parent != nullptr);
 }
 
 socket_manager::~socket_manager() {
@@ -54,17 +54,13 @@ bool socket_manager::mask_del(operation flag) noexcept {
 void socket_manager::register_reading() {
   if ((mask() & operation::read) == operation::read)
     return;
-  auto ptr = parent_.lock();
-  if (ptr != nullptr)
-    ptr->register_reading(this);
+  parent_->register_reading(this);
 }
 
 void socket_manager::register_writing() {
   if ((mask() & operation::write) == operation::write)
     return;
-  auto ptr = parent_.lock();
-  if (ptr != nullptr)
-    ptr->register_writing(this);
+  parent_->register_writing(this);
 }
 
 } // namespace caf::net

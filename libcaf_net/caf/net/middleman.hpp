@@ -29,6 +29,7 @@
 #include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/middleman_backend.hpp"
+#include "caf/net/multiplexer.hpp"
 #include "caf/scoped_actor.hpp"
 
 namespace caf::net {
@@ -128,7 +129,11 @@ public:
     return sys_.config();
   }
 
-  const multiplexer_ptr& mpx() const noexcept {
+  multiplexer& mpx() noexcept {
+    return mpx_;
+  }
+
+  const multiplexer& mpx() const noexcept {
     return mpx_;
   }
 
@@ -159,7 +164,7 @@ private:
   actor_system& sys_;
 
   /// Stores the global socket I/O multiplexer.
-  multiplexer_ptr mpx_;
+  multiplexer mpx_;
 
   /// Stores all available backends for managing peers.
   middleman_backend_list backends_;

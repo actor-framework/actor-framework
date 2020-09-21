@@ -154,23 +154,23 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
   using worker_type = transport_worker<dummy_application, ip_endpoint>;
 
   fixture()
-    : transport_results{std::make_shared<transport_result>()},
+    : mpx(nullptr),
+      transport_results{std::make_shared<transport_result>()},
       application_results{std::make_shared<application_result>()},
       transport(sys, transport_results),
       worker{dummy_application{application_results}} {
-    mpx = std::make_shared<multiplexer>();
-    if (auto err = mpx->init())
-      CAF_FAIL("mpx->init failed: " << err);
+    if (auto err = mpx.init())
+      CAF_FAIL("mpx.init failed: " << err);
     if (auto err = parse("[::1]:12345", ep))
       CAF_FAIL("parse returned an error: " << err);
     worker = worker_type{dummy_application{application_results}, ep};
   }
 
   bool handle_io_event() override {
-    return mpx->poll_once(false);
+    return mpx.poll_once(false);
   }
 
-  multiplexer_ptr mpx;
+  multiplexer mpx;
   std::shared_ptr<transport_result> transport_results;
   std::shared_ptr<application_result> application_results;
   dummy_transport transport;

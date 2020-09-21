@@ -46,14 +46,14 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
   using byte_buffer_ptr = std::shared_ptr<byte_buffer>;
 
   fixture()
-    : recv_buf(1024),
+    : mpx(nullptr),
+      recv_buf(1024),
       shared_recv_buf{std::make_shared<byte_buffer>()},
       shared_send_buf{std::make_shared<byte_buffer>()} {
-    mpx = std::make_shared<multiplexer>();
-    if (auto err = mpx->init())
-      CAF_FAIL("mpx->init failed: " << err);
-    mpx->set_thread_id();
-    CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
+    if (auto err = mpx.init())
+      CAF_FAIL("mpx.init failed: " << err);
+    mpx.set_thread_id();
+    CAF_CHECK_EQUAL(mpx.num_socket_managers(), 1u);
     auto sockets = unbox(make_stream_socket_pair());
     send_socket_guard.reset(sockets.first);
     recv_socket_guard.reset(sockets.second);
@@ -62,11 +62,11 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
   }
 
   bool handle_io_event() override {
-    return mpx->poll_once(false);
+    return mpx.poll_once(false);
   }
 
   settings config;
-  multiplexer_ptr mpx;
+  multiplexer mpx;
   byte_buffer recv_buf;
   socket_guard<stream_socket> send_socket_guard;
   socket_guard<stream_socket> recv_socket_guard;
@@ -75,9 +75,11 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
 };
 
 class dummy_application {
+public:
   using byte_buffer_ptr = std::shared_ptr<byte_buffer>;
 
-public:
+  using input_tag = tag::stream_oriented;
+
   explicit dummy_application(byte_buffer_ptr recv_buf, byte_buffer_ptr send_buf)
     : recv_buf_(std::move(recv_buf)),
       send_buf_(std::move(send_buf)){
@@ -164,9 +166,9 @@ CAF_TEST_FIXTURE_SCOPE(endpoint_manager_tests, fixture)
 
 CAF_TEST(receive) {
   auto mgr = make_socket_manager<dummy_application, stream_transport>(
-    recv_socket_guard.release(), mpx, shared_recv_buf, shared_send_buf);
+    recv_socket_guard.release(), &mpx, shared_recv_buf, shared_send_buf);
   CAF_CHECK_EQUAL(mgr->init(config), none);
-  CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
+  CAF_CHECK_EQUAL(mpx.num_socket_managers(), 2u);
   CAF_CHECK_EQUAL(
     static_cast<size_t>(
       write(send_socket_guard.socket(), as_bytes(make_span(hello_manager)))),
@@ -180,9 +182,9 @@ CAF_TEST(receive) {
 
 CAF_TEST(send) {
   auto mgr = make_socket_manager<dummy_application, stream_transport>(
-    recv_socket_guard.release(), mpx, shared_recv_buf, shared_send_buf);
+    recv_socket_guard.release(), &mpx, shared_recv_buf, shared_send_buf);
   CAF_CHECK_EQUAL(mgr->init(config), none);
-  CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
+  CAF_CHECK_EQUAL(mpx.num_socket_managers(), 2u);
   mgr->register_writing();
   while (handle_io_event())
     ;

@@ -40,15 +40,15 @@ namespace {
 class dummy_manager : public socket_manager {
 public:
   dummy_manager(size_t& manager_count, stream_socket handle,
-                multiplexer_ptr parent)
-    : socket_manager(handle, std::move(parent)),
-      count_(manager_count),
-      rd_buf_pos_(0) {
+                multiplexer* parent)
+    : socket_manager(handle, parent), count_(manager_count) {
+    CAF_MESSAGE("created new dummy manager");
     ++count_;
     rd_buf_.resize(1024);
   }
 
   ~dummy_manager() {
+    CAF_MESSAGE("destroyed dummy manager");
     --count_;
   }
 
@@ -114,7 +114,7 @@ private:
 
   size_t& count_;
 
-  size_t rd_buf_pos_;
+  size_t rd_buf_pos_ = 0;
 
   byte_buffer wr_buf_;
 
@@ -124,23 +124,22 @@ private:
 using dummy_manager_ptr = intrusive_ptr<dummy_manager>;
 
 struct fixture : host_fixture {
-  fixture() : manager_count(0), mpx(std::make_shared<multiplexer>()) {
-    mpx->set_thread_id();
+  fixture() : mpx(nullptr) {
+    mpx.set_thread_id();
   }
 
   ~fixture() {
-    mpx.reset();
     CAF_REQUIRE_EQUAL(manager_count, 0u);
   }
 
   void exhaust() {
-    while (mpx->poll_once(false))
+    while (mpx.poll_once(false))
       ; // Repeat.
   }
 
-  size_t manager_count;
+  size_t manager_count = 0;
 
-  multiplexer_ptr mpx;
+  multiplexer mpx;
 };
 
 } // namespace
@@ -148,32 +147,36 @@ struct fixture : host_fixture {
 CAF_TEST_FIXTURE_SCOPE(multiplexer_tests, fixture)
 
 CAF_TEST(default construction) {
-  CAF_CHECK_EQUAL(mpx->num_socket_managers(), 0u);
+  CAF_CHECK_EQUAL(mpx.num_socket_managers(), 0u);
 }
 
 CAF_TEST(init) {
-  CAF_CHECK_EQUAL(mpx->num_socket_managers(), 0u);
-  CAF_REQUIRE_EQUAL(mpx->init(), none);
-  CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
-  mpx->close_pipe();
+  CAF_CHECK_EQUAL(mpx.num_socket_managers(), 0u);
+  CAF_REQUIRE_EQUAL(mpx.init(), none);
+  CAF_CHECK_EQUAL(mpx.num_socket_managers(), 1u);
+  mpx.close_pipe();
   exhaust();
-  CAF_CHECK_EQUAL(mpx->num_socket_managers(), 0u);
+  CAF_CHECK_EQUAL(mpx.num_socket_managers(), 0u);
   // Calling run must have no effect now.
-  mpx->run();
+  mpx.run();
 }
 
 CAF_TEST(send and receive) {
-  CAF_REQUIRE_EQUAL(mpx->init(), none);
+  CAF_REQUIRE_EQUAL(mpx.init(), none);
   auto sockets = unbox(make_stream_socket_pair());
-  auto alice = make_counted<dummy_manager>(manager_count, sockets.first, mpx);
-  auto bob = make_counted<dummy_manager>(manager_count, sockets.second, mpx);
-  alice->register_reading();
-  bob->register_reading();
-  CAF_CHECK_EQUAL(mpx->num_socket_managers(), 3u);
-  alice->send("hello bob");
-  alice->register_writing();
-  exhaust();
-  CAF_CHECK_EQUAL(bob->receive(), "hello bob");
+  { // Lifetime scope of alice and bob.
+    auto alice = make_counted<dummy_manager>(manager_count, sockets.first,
+                                             &mpx);
+    auto bob = make_counted<dummy_manager>(manager_count, sockets.second, &mpx);
+    alice->register_reading();
+    bob->register_reading();
+    CAF_CHECK_EQUAL(mpx.num_socket_managers(), 3u);
+    alice->send("hello bob");
+    alice->register_writing();
+    exhaust();
+    CAF_CHECK_EQUAL(bob->receive(), "hello bob");
+  }
+  mpx.shutdown();
 }
 
 CAF_TEST(shutdown) {
@@ -181,26 +184,27 @@ CAF_TEST(shutdown) {
   std::condition_variable cv;
   bool thread_id_set = false;
   auto run_mpx = [&] {
-    std::unique_lock<std::mutex> lk(m);
-    mpx->set_thread_id();
-    thread_id_set = true;
-    lk.unlock();
-    cv.notify_one();
-    mpx->run();
+    {
+      std::unique_lock<std::mutex> guard(m);
+      mpx.set_thread_id();
+      thread_id_set = true;
+      cv.notify_one();
+    }
+    mpx.run();
   };
-  CAF_REQUIRE_EQUAL(mpx->init(), none);
+  CAF_REQUIRE_EQUAL(mpx.init(), none);
   auto sockets = unbox(make_stream_socket_pair());
-  auto alice = make_counted<dummy_manager>(manager_count, sockets.first, mpx);
-  auto bob = make_counted<dummy_manager>(manager_count, sockets.second, mpx);
+  auto alice = make_counted<dummy_manager>(manager_count, sockets.first, &mpx);
+  auto bob = make_counted<dummy_manager>(manager_count, sockets.second, &mpx);
   alice->register_reading();
   bob->register_reading();
-  CAF_REQUIRE_EQUAL(mpx->num_socket_managers(), 3u);
+  CAF_REQUIRE_EQUAL(mpx.num_socket_managers(), 3u);
   std::thread mpx_thread{run_mpx};
   std::unique_lock<std::mutex> lk(m);
   cv.wait(lk, [&] { return thread_id_set; });
-  mpx->shutdown();
+  mpx.shutdown();
   mpx_thread.join();
-  CAF_REQUIRE_EQUAL(mpx->num_socket_managers(), 0u);
+  CAF_REQUIRE_EQUAL(mpx.num_socket_managers(), 0u);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

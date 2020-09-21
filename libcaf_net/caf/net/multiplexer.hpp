@@ -38,8 +38,7 @@ struct pollfd;
 namespace caf::net {
 
 /// Multiplexes any number of ::socket_manager objects with a ::socket.
-class CAF_NET_EXPORT multiplexer
-  : public std::enable_shared_from_this<multiplexer> {
+class CAF_NET_EXPORT multiplexer {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -49,9 +48,15 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  multiplexer();
+  /// @param parent Points to the owning middleman instance. May be `nullptr`
+  ///               only for the purpose of unit testing if no @ref
+  ///               socket_manager requires access to the @ref middleman or the
+  ///               @ref actor_system.
+  explicit multiplexer(middleman* parent);
 
   ~multiplexer();
+
+  // -- initialization ---------------------------------------------------------
 
   error init();
 
@@ -62,6 +67,12 @@ public:
 
   /// Returns the index of `mgr` in the pollset or `-1`.
   ptrdiff_t index_of(const socket_manager_ptr& mgr);
+
+  /// Returns the owning @ref middleman instance.
+  middleman& owner();
+
+  /// Returns the enclosing @ref actor_system.
+  actor_system& system();
 
   // -- thread-safe signaling --------------------------------------------------
 
@@ -123,20 +134,17 @@ protected:
   /// calling `init()`.
   std::thread::id tid_;
 
-  /// Used for pushing updates to the multiplexer's thread.
-  pipe_socket write_handle_;
-
   /// Guards `write_handle_`.
   std::mutex write_lock_;
 
-  /// Signals shutdown has been requested.
-  bool shutting_down_;
+  /// Used for pushing updates to the multiplexer's thread.
+  pipe_socket write_handle_;
+
+  /// Points to the owning middleman.
+  middleman* owner_;
+
+  /// Signals whether shutdown has been requested.
+  bool shutting_down_ = false;
 };
-
-/// @relates multiplexer
-using multiplexer_ptr = std::shared_ptr<multiplexer>;
-
-/// @relates multiplexer
-using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
 
 } // namespace caf::net

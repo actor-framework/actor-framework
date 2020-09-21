@@ -34,9 +34,9 @@ class CAF_NET_EXPORT socket_manager : public ref_counted {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  /// @pre `parent != nullptr`
   /// @pre `handle != invalid_socket`
-  socket_manager(socket handle, const multiplexer_ptr& parent);
+  /// @pre `parent != nullptr`
+  socket_manager(socket handle, multiplexer* parent);
 
   ~socket_manager() override;
 
@@ -52,9 +52,14 @@ public:
     return socket_cast<Socket>(handle_);
   }
 
-  /// Returns a pointer to the multiplexer running this `socket_manager`.
-  multiplexer_ptr multiplexer() const {
-    return parent_.lock();
+  /// Returns the owning @ref multiplexer instance.
+  multiplexer& mpx() noexcept {
+    return *parent_;
+  }
+
+  /// Returns the owning @ref multiplexer instance.
+  const multiplexer& mpx() const noexcept {
+    return *parent_;
   }
 
   /// Returns registered operations (read, write, or both).
@@ -114,7 +119,7 @@ protected:
 
   operation mask_;
 
-  weak_multiplexer_ptr parent_;
+  multiplexer* parent_;
 
   error abort_reason_;
 };
@@ -123,8 +128,8 @@ template <class Protocol>
 class socket_manager_impl : public socket_manager {
 public:
   template <class... Ts>
-  socket_manager_impl(typename Protocol::socket_type handle,
-                      const multiplexer_ptr& mpx, Ts&&... xs)
+  socket_manager_impl(typename Protocol::socket_type handle, multiplexer* mpx,
+                      Ts&&... xs)
     : socket_manager{handle, mpx}, protocol_(std::forward<Ts>(xs)...) {
     // nop
   }
@@ -177,7 +182,9 @@ template <class B, template <class> class Layer,
           template <class> class... Layers>
 struct socket_type_helper<B, Layer, Layers...>
   : socket_type_helper<Layer<B>, Layers...> {
-  // no content
+  using upper_input = typename B::input_tag;
+  using lower_output = typename Layer<B>::output_tag;
+  static_assert(std::is_same<upper_input, lower_output>::value);
 };
 
 template <class B, template <class> class... Layers>
@@ -203,8 +210,8 @@ using make_socket_manager_helper_t =
   typename make_socket_manager_helper<B, Layers...>::type;
 
 template <class App, template <class> class... Layers, class... Ts>
-auto make_socket_manager(socket_type_t<App, Layers...> handle,
-                         const multiplexer_ptr& mpx, Ts&&... xs) {
+auto make_socket_manager(socket_type_t<App, Layers...> handle, multiplexer* mpx,
+                         Ts&&... xs) {
   static_assert(std::is_base_of<socket, socket_type_t<App, Layers...>>::value);
   using impl
     = make_socket_manager_helper_t<App, Layers..., socket_manager_impl>;
