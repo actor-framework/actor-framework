@@ -32,7 +32,8 @@ struct CAF_CORE_EXPORT sync_request_bouncer {
   error rsn;
   explicit sync_request_bouncer(error r);
   void operator()(const strong_actor_ptr& sender, const message_id& mid) const;
-  void operator()(const mailbox_element& e) const;
+
+  intrusive::task_result operator()(const mailbox_element& e) const;
 
   /// Unwrap WDRR queues. Nesting WDRR queues results in a Key/Queue prefix for
   /// each layer of nesting.

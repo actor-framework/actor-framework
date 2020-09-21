@@ -42,8 +42,10 @@ void sync_request_bouncer::operator()(const strong_actor_ptr& sender,
                     nullptr);
 }
 
-void sync_request_bouncer::operator()(const mailbox_element& e) const {
+intrusive::task_result
+sync_request_bouncer::operator()(const mailbox_element& e) const {
   (*this)(e.sender, e.mid);
+  return intrusive::task_result::resume;
 }
 
 } // namespace caf::detail
