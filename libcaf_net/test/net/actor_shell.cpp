@@ -30,6 +30,8 @@
 
 using namespace caf;
 
+using namespace std::string_literals;
+
 namespace {
 
 using byte_span = span<const byte>;
@@ -39,8 +41,14 @@ using svec = std::vector<std::string>;
 struct app_t {
   using input_tag = tag::stream_oriented;
 
+  app_t() = default;
+
+  explicit app_t(actor hdl) : worker(std::move(hdl)) {
+    // nop
+  }
+
   template <class LowerLayer>
-  error init(net::socket_manager* mgr, LowerLayer&, const settings&) {
+  error init(net::socket_manager* mgr, LowerLayer& down, const settings&) {
     self = mgr->make_actor_shell();
     bhvr = behavior{
       [this](std::string& line) { lines.emplace_back(std::move(line)); },
@@ -49,6 +57,7 @@ struct app_t {
       CAF_FAIL("unexpected message: " << msg);
       return make_error(sec::unexpected_message);
     });
+    down.configure_read(net::receive_policy::up_to(2048));
     return none;
   }
 
@@ -70,18 +79,80 @@ struct app_t {
   }
 
   template <class LowerLayer>
-  ptrdiff_t consume(LowerLayer&, byte_span, byte_span) {
-    CAF_FAIL("received unexpected data");
-    return -1;
+  ptrdiff_t consume(LowerLayer& down, byte_span buf, byte_span) {
+    // Seek newline character.
+    constexpr auto nl = byte{'\n'};
+    if (auto i = std::find(buf.begin(), buf.end(), nl); i != buf.end()) {
+      // Skip empty lines.
+      if (i == buf.begin()) {
+        consumed_bytes += 1;
+        auto sub_res = consume(down, buf.subspan(1), {});
+        return sub_res >= 0 ? sub_res + 1 : sub_res;
+      }
+      // Deserialize config value from received line.
+      auto num_bytes = std::distance(buf.begin(), i) + 1;
+      string_view line{reinterpret_cast<const char*>(buf.data()),
+                       static_cast<size_t>(num_bytes) - 1};
+      config_value val;
+      if (auto parsed_res = config_value::parse(line)) {
+        val = std::move(*parsed_res);
+      } else {
+        down.abort_reason(std::move(parsed_res.error()));
+        return -1;
+      }
+      if (!holds_alternative<settings>(val)) {
+        down.abort_reason(
+          make_error(pec::type_mismatch,
+                     "expected a dictionary, got a "s + val.type_name()));
+        return -1;
+      }
+      // Deserialize message from received dictionary.
+      config_value_reader reader{&val};
+      caf::message msg;
+      if (!reader.apply_object(msg)) {
+        down.abort_reason(reader.get_error());
+        return -1;
+      }
+      // Dispatch message to worker.
+      CAF_MESSAGE("app received a message from its socket: " << msg);
+      self->request(worker, std::chrono::seconds{1}, std::move(msg))
+        .then(
+          [this](int32_t value) {
+            ++received_responses;
+            CAF_CHECK_EQUAL(value, 246);
+          },
+          [](error&) {
+            // TODO: implement me
+          });
+      // Try consuming more from the buffer.
+      consumed_bytes += static_cast<size_t>(num_bytes);
+      auto sub_buf = buf.subspan(num_bytes);
+      auto sub_res = consume(down, sub_buf, {});
+      return sub_res >= 0 ? num_bytes + sub_res : sub_res;
+    }
+    return 0;
   }
 
+  // Handle to the worker-under-test.
+  actor worker;
+
+  // Lines received as asynchronous messages.
   std::vector<std::string> lines;
 
+  // Actor shell representing this app.
   net::actor_shell_ptr self;
 
+  // Handler for consuming messages from the mailbox.
   behavior bhvr;
 
+  // Handler for unexpected messages.
   unique_callback_ptr<result<message>(message&)> fallback;
+
+  // Counts how many bytes we've consumed in total.
+  size_t consumed_bytes = 0;
+
+  // Counts how many response messages we've received from the worker.
+  size_t received_responses = 0;
 };
 
 struct fixture : host_fixture, test_coordinator_fixture<> {
@@ -108,11 +179,22 @@ struct fixture : host_fixture, test_coordinator_fixture<> {
     }
     CAF_FAIL("reached max repeat rate without meeting the predicate");
   }
+
+  void send(string_view str) {
+    auto res = write(self_socket_guard.socket(), as_bytes(make_span(str)));
+    if (res != static_cast<ptrdiff_t>(str.size()))
+      CAF_FAIL("expected write() to return " << str.size() << ", got: " << res);
+  }
+
   net::middleman mm;
   net::multiplexer mpx;
   net::socket_guard<net::stream_socket> self_socket_guard;
   net::socket_guard<net::stream_socket> testee_socket_guard;
 };
+
+constexpr std::string_view input = R"__(
+{ values = [ { "@type" : "int32_t", value: 123 } ] }
+)__";
 
 } // namespace
 
@@ -130,6 +212,24 @@ CAF_TEST(actor shells expose their mailbox to their owners) {
   anon_send(hdl, "line 3");
   run_while([&] { return app.lines.size() != 3; });
   CAF_CHECK_EQUAL(app.lines, svec({"line 1", "line 2", "line 3"}));
+}
+
+CAF_TEST(actor shells can send requests and receive responses) {
+  auto worker = sys.spawn([] {
+    return behavior{
+      [](int32_t value) { return value * 2; },
+    };
+  });
+  auto sck = testee_socket_guard.release();
+  auto mgr = net::make_socket_manager<app_t, net::stream_transport>(sck, &mpx,
+                                                                    worker);
+  if (auto err = mgr->init(content(cfg)))
+    CAF_FAIL("mgr->init() failed: " << err);
+  auto& app = mgr->top_layer();
+  send(input);
+  run_while([&] { return app.consumed_bytes != input.size(); });
+  expect((int32_t), to(worker).with(123));
+  run_while([&] { return app.received_responses != 1; });
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

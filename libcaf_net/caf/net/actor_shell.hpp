@@ -19,11 +19,13 @@
 #pragma once
 
 #include "caf/actor_traits.hpp"
+#include "caf/detail/unordered_flat_map.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/drr_queue.hpp"
 #include "caf/intrusive/fifo_inbox.hpp"
 #include "caf/local_actor.hpp"
+#include "caf/mixin/requester.hpp"
 #include "caf/mixin/sender.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/none.hpp"
@@ -33,7 +35,8 @@ namespace caf::net {
 
 ///
 class actor_shell
-  : public extend<local_actor, actor_shell>::with<mixin::sender>,
+  : public extend<local_actor, actor_shell>::with<mixin::sender,
+                                                  mixin::requester>,
     public dynamically_typed_actor_base,
     public non_blocking_actor_base {
 public:
@@ -43,7 +46,8 @@ public:
 
   // -- member types -----------------------------------------------------------
 
-  using super = extend<local_actor, actor_shell>::with<mixin::sender>;
+  using super
+    = extend<local_actor, actor_shell>::with<mixin::sender, mixin::requester>;
 
   using signatures = none_t;
 
@@ -82,6 +86,12 @@ public:
   /// `nullptr` if the mailbox is empty.
   mailbox_element_ptr next_message();
 
+  /// Tries to put the mailbox into the `blocked` state, causing the next
+  /// enqueue to register the owning socket manager for write events.
+  bool try_block_mailbox();
+
+  // -- message processing -----------------------------------------------------
+
   /// Dequeues and processes the next message from the mailbox.
   /// @param bhvr Available message handlers.
   /// @param fallback Callback for processing message that failed to match
@@ -91,9 +101,8 @@ public:
   bool consume_message(behavior& bhvr,
                        callback<result<message>(message&)>& fallback);
 
-  /// Tries to put the mailbox into the `blocked` state, causing the next
-  /// enqueue to register the owning socket manager for write events.
-  bool try_block_mailbox();
+  /// Adds a callback for a multiplexed response.
+  void add_multiplexed_response_handler(message_id response_id, behavior bhvr);
 
   // -- overridden functions of abstract_actor ---------------------------------
 
@@ -120,6 +129,9 @@ private:
 
   // Points to the owning manager (nullptr after quit was called).
   socket_manager* owner_;
+
+  // Stores callbacks for multiplexed responses.
+  detail::unordered_flat_map<message_id, behavior> multiplexed_responses_;
 };
 
 /// An "owning" pointer to an actor shell in the sense that it calls `quit()` on

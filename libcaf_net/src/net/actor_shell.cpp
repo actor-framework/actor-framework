@@ -29,6 +29,8 @@
 
 namespace caf::net {
 
+// -- constructors, destructors, and assignment operators ----------------------
+
 actor_shell::actor_shell(actor_config& cfg, socket_manager* owner)
   : super(cfg), mailbox_(policy::normal_messages{}), owner_(owner) {
   mailbox_.try_block();
@@ -38,9 +40,13 @@ actor_shell::~actor_shell() {
   // nop
 }
 
+// -- state modifiers ----------------------------------------------------------
+
 void actor_shell::quit(error reason) {
   cleanup(std::move(reason), nullptr);
 }
+
+// -- mailbox access -----------------------------------------------------------
 
 mailbox_element_ptr actor_shell::next_message() {
   mailbox_.fetch_more();
@@ -52,6 +58,12 @@ mailbox_element_ptr actor_shell::next_message() {
   return nullptr;
 }
 
+bool actor_shell::try_block_mailbox() {
+  return mailbox_.try_block();
+}
+
+// -- message processing -------------------------------------------------------
+
 bool actor_shell::consume_message(
   behavior& bhvr, callback<result<message>(message&)>& fallback) {
   CAF_LOG_TRACE("");
@@ -59,12 +71,26 @@ bool actor_shell::consume_message(
     current_element_ = msg.get();
     CAF_LOG_RECEIVE_EVENT(current_element_);
     CAF_BEFORE_PROCESSING(this, *msg);
-    detail::default_invoke_result_visitor<actor_shell> visitor{this};
-    if (auto result = bhvr(msg->payload)) {
-      visitor(*result);
-    } else {
-      auto fallback_result = fallback(msg->payload);
-      visit(visitor, fallback_result);
+    auto mid = msg->mid;
+    if (!mid.is_response()) {
+      detail::default_invoke_result_visitor<actor_shell> visitor{this};
+      if (auto result = bhvr(msg->payload)) {
+        visitor(*result);
+      } else {
+        auto fallback_result = fallback(msg->payload);
+        visit(visitor, fallback_result);
+      }
+    } else if (auto i = multiplexed_responses_.find(mid);
+               i != multiplexed_responses_.end()) {
+      auto bhvr = std::move(i->second);
+      multiplexed_responses_.erase(i);
+      auto res = bhvr(msg->payload);
+      if (!res) {
+        CAF_LOG_DEBUG("got unexpected_response");
+        auto err_msg = make_message(
+          make_error(sec::unexpected_response, std::move(msg->payload)));
+        bhvr(err_msg);
+      }
     }
     CAF_AFTER_PROCESSING(this, invoke_message_result::consumed);
     CAF_LOG_SKIP_OR_FINALIZE_EVENT(invoke_message_result::consumed);
@@ -73,9 +99,14 @@ bool actor_shell::consume_message(
   return false;
 }
 
-bool actor_shell::try_block_mailbox() {
-  return mailbox_.try_block();
+void actor_shell::add_multiplexed_response_handler(message_id response_id,
+                                                   behavior bhvr) {
+  if (bhvr.timeout() != infinite)
+    request_response_timeout(bhvr.timeout(), response_id);
+  multiplexed_responses_.emplace(response_id, std::move(bhvr));
 }
+
+// -- overridden functions of abstract_actor -----------------------------------
 
 void actor_shell::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   CAF_ASSERT(ptr != nullptr);
