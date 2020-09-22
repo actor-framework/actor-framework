@@ -685,6 +685,70 @@ public:
   static constexpr bool value = sfinae_type::value;
 };
 
+template <class T>
+class has_call_error_handler {
+private:
+  template <class Actor>
+  static auto sfinae(Actor* self)
+    -> decltype(self->call_error_handler(std::declval<error&>()),
+                std::true_type());
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using sfinae_type = decltype(sfinae<T>(nullptr));
+
+public:
+  static constexpr bool value = sfinae_type::value;
+};
+
+template <class T>
+constexpr bool has_call_error_handler_v = has_call_error_handler<T>::value;
+
+template <class T>
+class has_add_awaited_response_handler {
+private:
+  template <class Actor>
+  static auto sfinae(Actor* self)
+    -> decltype(self->add_awaited_response_handler(std::declval<message_id>(),
+                                                   std::declval<behavior&>()),
+                std::true_type());
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using sfinae_type = decltype(sfinae<T>(nullptr));
+
+public:
+  static constexpr bool value = sfinae_type::value;
+};
+
+template <class T>
+constexpr bool has_add_awaited_response_handler_v
+  = has_add_awaited_response_handler<T>::value;
+
+template <class T>
+class has_add_multiplexed_response_handler {
+private:
+  template <class Actor>
+  static auto sfinae(Actor* self)
+    -> decltype(self->add_multiplexed_response_handler(
+                  std::declval<message_id>(), std::declval<behavior&>()),
+                std::true_type());
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using sfinae_type = decltype(sfinae<T>(nullptr));
+
+public:
+  static constexpr bool value = sfinae_type::value;
+};
+
+template <class T>
+constexpr bool has_add_multiplexed_response_handler_v
+  = has_add_multiplexed_response_handler<T>::value;
+
 /// Checks whether T behaves like `std::vector`, `std::list`, or `std::set`.
 template <class T>
 struct is_list_like {

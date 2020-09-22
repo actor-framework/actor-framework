@@ -68,11 +68,13 @@ public:
 
   // -- non-blocking API -------------------------------------------------------
 
-  template <class T = traits, class F = none_t, class OnError = none_t,
-            class = detail::enable_if_t<T::is_non_blocking>>
-  void await(F f, OnError g) const {
-    static_assert(detail::is_callable<F>::value, "F must provide a single, "
-                                                 "non-template operator()");
+  template <class T = traits, class F, class OnError>
+  detail::enable_if_t<T::is_non_blocking> await(F f, OnError g) const {
+    static_assert(detail::has_add_awaited_response_handler_v<ActorType>,
+                  "this actor type does not support awaiting responses, "
+                  "try using .then instead");
+    static_assert(detail::is_callable<F>::value,
+                  "F must provide a single, non-template operator()");
     static_assert(detail::is_callable_with<OnError, error&>::value,
                   "OnError must provide an operator() that takes a caf::error");
     using result_type = typename detail::get_callable_trait<F>::result_type;
@@ -83,18 +85,21 @@ public:
     policy_.await(self_, std::move(f), std::move(g));
   }
 
-  template <class T = traits, class F = none_t,
-            class = detail::enable_if_t<T::is_non_blocking>>
-  void await(F f) const {
+  template <class T = traits, class F>
+  detail::enable_if_t<detail::has_call_error_handler_v<ActorType> //
+                      && T::is_non_blocking>
+  await(F f) const {
     auto self = self_;
     await(std::move(f), [self](error& err) { self->call_error_handler(err); });
   }
 
-  template <class T = traits, class F = none_t, class OnError = none_t,
-            class = detail::enable_if_t<T::is_non_blocking>>
-  void then(F f, OnError g) const {
-    static_assert(detail::is_callable<F>::value, "F must provide a single, "
-                                                 "non-template operator()");
+  template <class T = traits, class F, class OnError>
+  detail::enable_if_t<T::is_non_blocking> then(F f, OnError g) const {
+    static_assert(detail::has_add_multiplexed_response_handler_v<ActorType>,
+                  "this actor type does not support multiplexed responses, "
+                  "try using .await instead");
+    static_assert(detail::is_callable<F>::value,
+                  "F must provide a single, non-template operator()");
     static_assert(detail::is_callable_with<OnError, error&>::value,
                   "OnError must provide an operator() that takes a caf::error");
     using result_type = typename detail::get_callable_trait<F>::result_type;
@@ -105,9 +110,10 @@ public:
     policy_.then(self_, std::move(f), std::move(g));
   }
 
-  template <class T = traits, class F = none_t,
-            class = detail::enable_if_t<T::is_non_blocking>>
-  void then(F f) const {
+  template <class T = traits, class F>
+  detail::enable_if_t<detail::has_call_error_handler_v<ActorType> //
+                      && T::is_non_blocking>
+  then(F f) const {
     auto self = self_;
     then(std::move(f), [self](error& err) { self->call_error_handler(err); });
   }

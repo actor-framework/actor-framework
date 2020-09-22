@@ -741,7 +741,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
       auto bhvr = std::move(mrh->second);
       multiplexed_responses_.erase(mrh);
       if (!invoke(this, bhvr, x)) {
-        CAF_LOG_DEBUG("got unexpected_response, invoke unexpected_response");
+        CAF_LOG_DEBUG("got unexpected_response");
         auto msg = make_message(
           make_error(sec::unexpected_response, std::move(x.payload)));
         bhvr(msg);
