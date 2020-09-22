@@ -54,16 +54,16 @@ stack *up*. Outgoing data always travels the protocol stack *down*.
     /// from event queues, etc.
     /// @returns `true` if the lower layers may proceed, `false` otherwise
     ///          (aborts execution).
-    template <class LowerLayer>
-    bool prepare_send(LowerLayer& down);
+    template <class LowerLayerPtr>
+    bool prepare_send(LowerLayerPtr down);
 
     /// Called whenever the underlying transport finished writing all buffered
     /// data for output to query whether an upper layer still has pending events
     /// or may produce output data on the next call to `prepare_send`.
     /// @returns `true` if the underlying socket may get removed from the I/O
     ///          event loop, `false` otherwise.
-    template <class LowerLayer>
-    bool done_sending(LowerLayer& down);
+    template <class LowerLayerPtr>
+    bool done_sending(LowerLayerPtr down);
   }
 
   interface base [role: lower layer] {
@@ -73,8 +73,8 @@ stack *up*. Outgoing data always travels the protocol stack *down*.
 
   interface stream_oriented [role: upper layer] {
     /// Called by the lower layer for cleaning up any state in case of an error.
-    template <class LowerLayer>
-    void abort(LowerLayer& down, const error& reason);
+    template <class LowerLayerPtr>
+    void abort(LowerLayerPtr down, const error& reason);
 
     /// Consumes bytes from the lower layer.
     /// @param down Reference to the lower layer that received the data.
@@ -84,8 +84,8 @@ stack *up*. Outgoing data always travels the protocol stack *down*.
     ///          input or negative to signal an error.
     /// @note When returning a negative value, clients should also call
     ///       `down.abort_reason(...)` with an appropriate error code.
-    template <class LowerLayer>
-    ptrdiff_t consume(LowerLayer& down, byte_span buffer, byte_span delta);
+    template <class LowerLayerPtr>
+    ptrdiff_t consume(LowerLayerPtr down, byte_span buffer, byte_span delta);
   }
 
   interface stream_oriented [role: lower layer] {
@@ -109,8 +109,11 @@ stack *up*. Outgoing data always travels the protocol stack *down*.
 
     /// Propagates an abort reason to the lower layers. After processing the
     /// current read or write event, the lowest layer will call `abort` on its
-    // upper layer.
+    /// upper layer.
     void abort_reason(error reason);
+
+    /// Returns the last recent abort reason or `none` if no error occurred.
+    const error& abort_reason();
   }
 
   interface datagram_oriented [role: upper layer] {
@@ -123,8 +126,8 @@ stack *up*. Outgoing data always travels the protocol stack *down*.
     /// @note When returning a negative value for the number of consumed bytes,
     ///       clients must also call `down.set_read_error(...)` with an
     ///       appropriate error code.
-    template <class LowerLayer>
-    ptrdiff_t consume(LowerLayer& down, byte_span buffer);
+    template <class LowerLayerPtr>
+    ptrdiff_t consume(LowerLayerPtr down, byte_span buffer);
   }
 
   interface datagram_oriented [role: lower layer] {
@@ -153,8 +156,8 @@ stack *up*. Outgoing data always travels the protocol stack *down*.
     /// @note When returning a negative value for the number of consumed bytes,
     ///       clients must also call `down.set_read_error(...)` with an
     ///       appropriate error code.
-    template <class LowerLayer>
-    ptrdiff_t consume(LowerLayer& down, byte_span buffer);
+    template <class LowerLayerPtr>
+    ptrdiff_t consume(LowerLayerPtr down, byte_span buffer);
   }
 
   interface message_oriented [role: lower layer] {
@@ -172,7 +175,7 @@ stack *up*. Outgoing data always travels the protocol stack *down*.
     /// Seals and prepares a message for transfer.
     /// @note When returning `false`, clients must also call
     ///       `down.set_read_error(...)` with an appropriate error code.
-    template <class LowerLayer>
+    template <class LowerLayerPtr>
     bool end_message();
   }
 

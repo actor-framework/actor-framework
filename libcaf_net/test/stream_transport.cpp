@@ -88,29 +88,29 @@ public:
 
   ~dummy_application() = default;
 
-  template <class Parent>
-  error init(socket_manager*, Parent& parent, const settings&) {
-    parent.configure_read(receive_policy::exactly(hello_manager.size()));
+  template <class ParentPtr>
+  error init(socket_manager*, ParentPtr parent, const settings&) {
+    parent->configure_read(receive_policy::exactly(hello_manager.size()));
     return none;
   }
 
-  template <class Parent>
-  bool prepare_send(Parent& parent) {
+  template <class ParentPtr>
+  bool prepare_send(ParentPtr parent) {
     CAF_MESSAGE("prepare_send called");
-    auto& buf = parent.output_buffer();
+    auto& buf = parent->output_buffer();
     auto data = as_bytes(make_span(hello_manager));
     buf.insert(buf.end(), data.begin(), data.end());
     return true;
   }
 
-  template <class Parent>
-  bool done_sending(Parent&) {
+  template <class ParentPtr>
+  bool done_sending(ParentPtr) {
     CAF_MESSAGE("done_sending called");
     return true;
   }
 
-  template <class Parent>
-  size_t consume(Parent&, span<const byte> data, span<const byte>) {
+  template <class ParentPtr>
+  size_t consume(ParentPtr, span<const byte> data, span<const byte>) {
     recv_buf_->clear();
     recv_buf_->insert(recv_buf_->begin(), data.begin(), data.end());
     CAF_MESSAGE("Received " << recv_buf_->size()
@@ -118,40 +118,25 @@ public:
     return recv_buf_->size();
   }
 
-  template <class Parent>
-  void resolve(Parent& parent, string_view path, const actor& listener) {
+  template <class ParentPtr>
+  void resolve(ParentPtr parent, string_view path, const actor& listener) {
     actor_id aid = 42;
     auto hid = string_view("0011223344556677889900112233445566778899");
     auto nid = unbox(make_node_id(42, hid));
     actor_config cfg;
-    endpoint_manager_ptr ptr{&parent.manager()};
+    endpoint_manager_ptr ptr{&parent->manager()};
     auto p = make_actor<actor_proxy_impl, strong_actor_ptr>(
-      aid, nid, &parent.system(), cfg, std::move(ptr));
+      aid, nid, &parent->system(), cfg, std::move(ptr));
     anon_send(listener, resolve_atom_v, std::string{path.begin(), path.end()},
               p);
-  }
-
-  template <class Parent>
-  void timeout(Parent&, const std::string&, uint64_t) {
-    // nop
-  }
-
-  template <class Parent>
-  void new_proxy(Parent&, actor_id) {
-    // nop
-  }
-
-  template <class Parent>
-  void local_actor_down(Parent&, actor_id, const error&) {
-    // nop
   }
 
   static void handle_error(sec code) {
     CAF_FAIL("handle_error called with " << CAF_ARG(code));
   }
 
-  template <class Parent>
-  static void abort(Parent&, const error& reason) {
+  template <class ParentPtr>
+  static void abort(ParentPtr, const error& reason) {
     CAF_FAIL("abort called with " << CAF_ARG(reason));
   }
 

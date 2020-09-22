@@ -18,48 +18,39 @@ public:
 
   // -- interface for the upper layer ------------------------------------------
 
-  class access {
-  public:
-    explicit access(mock_stream_transport* transport) : transport_(transport) {
-      // nop
-    }
+  void begin_output() {
+    // nop
+  }
 
-    void begin_output() {
-      // nop
-    }
+  auto& output_buffer() {
+    return output;
+  }
 
-    auto& output_buffer() {
-      return transport_->output;
-    }
+  constexpr void end_output() {
+    // nop
+  }
 
-    constexpr void end_output() {
-      // nop
-    }
+  bool can_send_more() const noexcept {
+    return true;
+  }
 
-    bool can_send_more() const noexcept {
-      return true;
-    }
+  const caf::error& abort_reason() {
+    return abort_reason_;
+  }
 
-    void abort_reason(caf::error reason) {
-      transport_->abort_reason = std::move(reason);
-    }
+  void abort_reason(caf::error reason) {
+    abort_reason_ = std::move(reason);
+  }
 
-    void configure_read(caf::net::receive_policy policy) {
-      transport_->min_read_size = policy.min_size;
-      transport_->max_read_size = policy.max_size;
-    }
-
-  private:
-    mock_stream_transport* transport_;
-  };
-
-  friend class access;
+  void configure_read(caf::net::receive_policy policy) {
+    min_read_size = policy.min_size;
+    max_read_size = policy.max_size;
+  }
 
   // -- initialization ---------------------------------------------------------
 
   caf::error init(const caf::settings& config) {
-    access this_layer{this};
-    return upper_layer.init(nullptr, this_layer, config);
+    return upper_layer.init(nullptr, this, config);
   }
 
   caf::error init() {
@@ -89,7 +80,6 @@ public:
 
   ptrdiff_t handle_input() {
     ptrdiff_t result = 0;
-    access this_layer{this};
     while (max_read_size > 0) {
       CAF_ASSERT(max_read_size > static_cast<size_t>(read_size_));
       size_t len = max_read_size - static_cast<size_t>(read_size_);
@@ -106,16 +96,16 @@ public:
         return result;
       auto delta = make_span(read_buf_.data() + delta_offset,
                              read_size_ - delta_offset);
-      auto consumed = upper_layer.consume(this_layer, caf::make_span(read_buf_),
+      auto consumed = upper_layer.consume(this, caf::make_span(read_buf_),
                                           delta);
       if (consumed > 0) {
         result += static_cast<ptrdiff_t>(consumed);
         read_buf_.erase(read_buf_.begin(), read_buf_.begin() + consumed);
         read_size_ -= consumed;
       } else if (consumed < 0) {
-        if (!abort_reason)
-          abort_reason = caf::sec::runtime_error;
-        upper_layer.abort(this_layer, abort_reason);
+        if (!abort_reason_)
+          abort_reason_ = caf::sec::runtime_error;
+        upper_layer.abort(this, abort_reason_);
         return -1;
       }
     }
@@ -123,8 +113,6 @@ public:
   }
 
   // -- member variables -------------------------------------------------------
-
-  caf::error abort_reason;
 
   UpperLayer upper_layer;
 
@@ -140,4 +128,6 @@ private:
   std::vector<caf::byte> read_buf_;
 
   ptrdiff_t read_size_ = 0;
+
+  caf::error abort_reason_;
 };

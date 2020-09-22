@@ -141,22 +141,22 @@ public:
   // -- initialization ---------------------------------------------------------
 
   error init(const settings& config) override {
-    return protocol_.init(static_cast<socket_manager*>(this), *this, config);
+    return protocol_.init(static_cast<socket_manager*>(this), this, config);
   }
 
   // -- event callbacks --------------------------------------------------------
 
   bool handle_read_event() override {
-    return protocol_.handle_read_event(*this);
+    return protocol_.handle_read_event(this);
   }
 
   bool handle_write_event() override {
-    return protocol_.handle_write_event(*this);
+    return protocol_.handle_write_event(this);
   }
 
   void handle_error(sec code) override {
     abort_reason_ = code;
-    return protocol_.abort(*this, abort_reason_);
+    return protocol_.abort(this, abort_reason_);
   }
 
   auto& protocol() noexcept {

@@ -41,29 +41,29 @@ struct app_t {
 
   settings cfg;
 
-  template <class LowerLayer>
-  error init(net::socket_manager*, LowerLayer&, const settings& init_cfg) {
+  template <class LowerLayerPtr>
+  error init(net::socket_manager*, LowerLayerPtr, const settings& init_cfg) {
     cfg = init_cfg;
     return none;
   }
 
-  template <class LowerLayer>
-  bool prepare_send(LowerLayer&) {
+  template <class LowerLayerPtr>
+  bool prepare_send(LowerLayerPtr) {
     return true;
   }
 
-  template <class LowerLayer>
-  bool done_sending(LowerLayer&) {
+  template <class LowerLayerPtr>
+  bool done_sending(LowerLayerPtr) {
     return true;
   }
 
-  template <class LowerLayer>
-  void abort(LowerLayer&, const error& reason) {
+  template <class LowerLayerPtr>
+  void abort(LowerLayerPtr, const error& reason) {
     CAF_FAIL("app::abort called: " << reason);
   }
 
-  template <class LowerLayer>
-  ptrdiff_t consume(LowerLayer& down, byte_span buffer, byte_span) {
+  template <class LowerLayerPtr>
+  ptrdiff_t consume(LowerLayerPtr down, byte_span buffer, byte_span) {
     constexpr auto nl = byte{'\n'};
     auto e = buffer.end();
     if (auto i = std::find(buffer.begin(), e, nl); i != e) {
@@ -120,7 +120,7 @@ CAF_TEST(applications receive handshake data via config) {
   {
     auto consumed = transport.handle_input();
     if (consumed < 0)
-      CAF_FAIL("error handling input: " << transport.abort_reason);
+      CAF_FAIL("error handling input: " << transport.abort_reason());
     CAF_CHECK_EQUAL(consumed, static_cast<ptrdiff_t>(opening_handshake.size()));
   }
   CAF_CHECK_EQUAL(transport.input.size(), 0u);

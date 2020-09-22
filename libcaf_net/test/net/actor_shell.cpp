@@ -47,39 +47,46 @@ struct app_t {
     // nop
   }
 
-  template <class LowerLayer>
-  error init(net::socket_manager* mgr, LowerLayer& down, const settings&) {
+  template <class LowerLayerPtr>
+  error init(net::socket_manager* mgr, LowerLayerPtr down, const settings&) {
     self = mgr->make_actor_shell();
     bhvr = behavior{
-      [this](std::string& line) { lines.emplace_back(std::move(line)); },
+      [this](std::string& line) {
+        CAF_MESSAGE("received an asynchronous message: " << line);
+        lines.emplace_back(std::move(line));
+      },
     };
     fallback = make_type_erased_callback([](message& msg) -> result<message> {
       CAF_FAIL("unexpected message: " << msg);
       return make_error(sec::unexpected_message);
     });
-    down.configure_read(net::receive_policy::up_to(2048));
+    down->configure_read(net::receive_policy::up_to(2048));
     return none;
   }
 
-  template <class LowerLayer>
-  bool prepare_send(LowerLayer&) {
-    while (self->consume_message(bhvr, *fallback))
-      ; // Repeat.
+  template <class LowerLayerPtr>
+  bool prepare_send(LowerLayerPtr down) {
+    while (self->consume_message(bhvr, *fallback)) {
+      // We set abort_reason in our response handlers in case of an error.
+      if (down->abort_reason())
+        return false;
+      // else: repeat.
+    }
     return true;
   }
 
-  template <class LowerLayer>
-  bool done_sending(LowerLayer&) {
+  template <class LowerLayerPtr>
+  bool done_sending(LowerLayerPtr) {
     return self->try_block_mailbox();
   }
 
-  template <class LowerLayer>
-  void abort(LowerLayer&, const error& reason) {
+  template <class LowerLayerPtr>
+  void abort(LowerLayerPtr, const error& reason) {
     CAF_FAIL("app::abort called: " << reason);
   }
 
-  template <class LowerLayer>
-  ptrdiff_t consume(LowerLayer& down, byte_span buf, byte_span) {
+  template <class LowerLayerPtr>
+  ptrdiff_t consume(LowerLayerPtr down, byte_span buf, byte_span) {
     // Seek newline character.
     constexpr auto nl = byte{'\n'};
     if (auto i = std::find(buf.begin(), buf.end(), nl); i != buf.end()) {
@@ -97,11 +104,11 @@ struct app_t {
       if (auto parsed_res = config_value::parse(line)) {
         val = std::move(*parsed_res);
       } else {
-        down.abort_reason(std::move(parsed_res.error()));
+        down->abort_reason(std::move(parsed_res.error()));
         return -1;
       }
       if (!holds_alternative<settings>(val)) {
-        down.abort_reason(
+        down->abort_reason(
           make_error(pec::type_mismatch,
                      "expected a dictionary, got a "s + val.type_name()));
         return -1;
@@ -110,20 +117,25 @@ struct app_t {
       config_value_reader reader{&val};
       caf::message msg;
       if (!reader.apply_object(msg)) {
-        down.abort_reason(reader.get_error());
+        down->abort_reason(reader.get_error());
         return -1;
       }
       // Dispatch message to worker.
       CAF_MESSAGE("app received a message from its socket: " << msg);
       self->request(worker, std::chrono::seconds{1}, std::move(msg))
         .then(
-          [this](int32_t value) {
+          [this, down](int32_t value) mutable {
             ++received_responses;
-            CAF_CHECK_EQUAL(value, 246);
+            // Respond with the value as string.
+            auto str_response = std::to_string(value);
+            str_response += '\n';
+            down->begin_output();
+            auto& buf = down->output_buffer();
+            auto bytes = as_bytes(make_span(str_response));
+            buf.insert(buf.end(), bytes.begin(), bytes.end());
+            down->end_output();
           },
-          [](error&) {
-            // TODO: implement me
-          });
+          [down](error& err) mutable { down->abort_reason(std::move(err)); });
       // Try consuming more from the buffer.
       consumed_bytes += static_cast<size_t>(num_bytes);
       auto sub_buf = buf.subspan(num_bytes);
@@ -163,6 +175,8 @@ struct fixture : host_fixture, test_coordinator_fixture<> {
     auto sockets = unbox(net::make_stream_socket_pair());
     self_socket_guard.reset(sockets.first);
     testee_socket_guard.reset(sockets.second);
+    if (auto err = nonblocking(self_socket_guard.socket(), true))
+      CAF_FAIL("nonblocking returned an error: " << err);
     if (auto err = nonblocking(testee_socket_guard.socket(), true))
       CAF_FAIL("nonblocking returned an error: " << err);
   }
@@ -173,6 +187,10 @@ struct fixture : host_fixture, test_coordinator_fixture<> {
       return;
     for (size_t i = 0; i < 1000; ++i) {
       mpx.poll_once(false);
+      byte tmp[1024];
+      auto bytes = read(self_socket_guard.socket(), make_span(tmp, 1024));
+      if (bytes > 0)
+        recv_buf.insert(recv_buf.end(), tmp, tmp + bytes);
       if (!predicate())
         return;
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -190,6 +208,7 @@ struct fixture : host_fixture, test_coordinator_fixture<> {
   net::multiplexer mpx;
   net::socket_guard<net::stream_socket> self_socket_guard;
   net::socket_guard<net::stream_socket> testee_socket_guard;
+  std::vector<byte> recv_buf;
 };
 
 constexpr std::string_view input = R"__(
@@ -229,7 +248,11 @@ CAF_TEST(actor shells can send requests and receive responses) {
   send(input);
   run_while([&] { return app.consumed_bytes != input.size(); });
   expect((int32_t), to(worker).with(123));
-  run_while([&] { return app.received_responses != 1; });
+  string_view expected_response = "246\n";
+  run_while([&] { return recv_buf.size() < expected_response.size(); });
+  string_view received_response{reinterpret_cast<char*>(recv_buf.data()),
+                                recv_buf.size()};
+  CAF_CHECK_EQUAL(received_response, expected_response);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

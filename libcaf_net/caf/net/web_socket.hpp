@@ -86,34 +86,35 @@ public:
 
   // -- initialization ---------------------------------------------------------
 
-  template <class LowerLayer>
-  error init(socket_manager* owner, LowerLayer& down, const settings& config) {
+  template <class LowerLayerPtr>
+  error
+  init(socket_manager* owner, LowerLayerPtr down, const settings& config) {
     owner_ = owner;
     cfg_ = config;
-    down.configure_read(net::receive_policy::up_to(max_header_size));
+    down->configure_read(net::receive_policy::up_to(max_header_size));
     return none;
   }
 
   // -- role: upper layer ------------------------------------------------------
 
-  template <class LowerLayer>
-  bool prepare_send(LowerLayer& down) {
+  template <class LowerLayerPtr>
+  bool prepare_send(LowerLayerPtr down) {
     return handshake_complete_ ? upper_layer_.prepare_send(down) : true;
   }
 
-  template <class LowerLayer>
-  bool done_sending(LowerLayer& down) {
+  template <class LowerLayerPtr>
+  bool done_sending(LowerLayerPtr down) {
     return handshake_complete_ ? upper_layer_.done_sending(down) : true;
   }
 
-  template <class LowerLayer>
-  void abort(LowerLayer& down, const error& reason) {
+  template <class LowerLayerPtr>
+  void abort(LowerLayerPtr down, const error& reason) {
     if (handshake_complete_)
       upper_layer_.abort(down, reason);
   }
 
-  template <class LowerLayer>
-  ptrdiff_t consume(LowerLayer& down, byte_span buffer, byte_span delta) {
+  template <class LowerLayerPtr>
+  ptrdiff_t consume(LowerLayerPtr down, byte_span buffer, byte_span delta) {
     if (handshake_complete_)
       return upper_layer_.consume(down, buffer, delta);
     // TODO: we could avoid repeated scans by using the delta parameter.
@@ -124,7 +125,7 @@ public:
         write(down, header_too_large);
         auto err = make_error(pec::too_many_characters,
                               "exceeded maximum header size");
-        down.abort_reason(std::move(err));
+        down->abort_reason(std::move(err));
         return -1;
       }
       return 0;
@@ -151,17 +152,17 @@ public:
   }
 
 private:
-  template <class LowerLayer>
-  static void write(LowerLayer& down, string_view output) {
+  template <class LowerLayerPtr>
+  static void write(LowerLayerPtr down, string_view output) {
     auto out = as_bytes(make_span(output));
-    down.begin_output();
-    auto& buf = down.output_buffer();
+    down->begin_output();
+    auto& buf = down->output_buffer();
     buf.insert(buf.end(), out.begin(), out.end());
-    down.end_output();
+    down->end_output();
   }
 
-  template <class LowerLayer>
-  bool handle_header(LowerLayer& down, string_view input) {
+  template <class LowerLayerPtr>
+  bool handle_header(LowerLayerPtr down, string_view input) {
     // Parse the first line, i.e., "METHOD REQUEST-URI VERSION".
     auto [first_line, remainder] = split(input, "\r\n");
     auto [method, request_uri, version] = split2(first_line, " ");
@@ -170,7 +171,7 @@ private:
       auto err = make_error(pec::invalid_argument,
                             "invalid operation: expected GET, got "
                               + to_string(method));
-      down.abort_reason(std::move(err));
+      down->abort_reason(std::move(err));
       return false;
     }
     // Store the request information in the settings for the upper layer.
@@ -196,17 +197,17 @@ private:
     } else {
       auto err = make_error(pec::missing_field,
                             "Mandatory field Sec-WebSocket-Key not found");
-      down.abort_reason(std::move(err));
+      down->abort_reason(std::move(err));
       return false;
     }
     // Try initializing the upper layer.
     if (auto err = upper_layer_.init(owner_, down, cfg_)) {
-      down.abort_reason(std::move(err));
+      down->abort_reason(std::move(err));
       return false;
     }
     // Send server handshake.
-    down.begin_output();
-    auto& buf = down.output_buffer();
+    down->begin_output();
+    auto& buf = down->output_buffer();
     auto append = [&buf](string_view output) {
       auto out = as_bytes(make_span(output));
       buf.insert(buf.end(), out.begin(), out.end());
@@ -217,7 +218,7 @@ private:
            "Sec-WebSocket-Accept: ");
     append(sec_key);
     append("\r\n\r\n");
-    down.end_output();
+    down->end_output();
     // Done.
     handshake_complete_ = true;
     return true;
