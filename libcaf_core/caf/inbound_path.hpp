@@ -78,9 +78,11 @@ public:
         controller_ = detail::token_based_credit_controller::make(self(), in);
       else if (*str == "size-based")
         set_default();
-      else
+      else {
+        set_default();
         CAF_LOG_WARNING("unrecognized credit policy:"
                         << *str << "(falling back to 'size-based')");
+      }
     } else {
       set_default();
     }

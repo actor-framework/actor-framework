@@ -14,6 +14,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - When using `CAF_MAIN`, CAF now looks for the correct default config file name,
   i.e., `caf-application.conf`.
 
+### Fixed
+
+- Setting an invalid credit policy no longer results in a segfault (#1140).
+
 ## [0.18.0-rc.1] - 2020-09-09
 
 ### Added
