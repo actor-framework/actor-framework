@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com).
 
+## [Unreleased]
+
+### Changed
+
+- When using `CAF_MAIN`, CAF now looks for the correct default config file name,
+  i.e., `caf-application.conf`.
+
 ## [0.18.0-rc.1] - 2020-09-09
 
 ### Added
@@ -519,6 +526,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Setting the log level to `quiet` now properly suppresses any log output.
 - Configuring colored terminal output should now print colored output.
 
+[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.18.0-rc.1...master
 [0.18.0-rc.1]: https://github.com/actor-framework/actor-framework/releases/0.18.0-rc.1
 [0.17.7]: https://github.com/actor-framework/actor-framework/compare/0.17.6...release/0.17
 [0.17.6]: https://github.com/actor-framework/actor-framework/releases/0.17.6

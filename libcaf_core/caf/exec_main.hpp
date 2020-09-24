@@ -70,7 +70,7 @@ void exec_main_load_module(actor_system_config& cfg) {
 
 template <class... Ts, class F = void (*)(actor_system&)>
 int exec_main(F fun, int argc, char** argv,
-              const char* config_file_name = "caf-application.ini") {
+              const char* config_file_name = "caf-application.conf") {
   using trait = typename detail::get_callable_trait<F>::type;
   using arg_types = typename trait::arg_types;
   static_assert(detail::tl_size<arg_types>::value == 1
