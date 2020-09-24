@@ -41,7 +41,7 @@ namespace caf::net {
 template <class UpperLayer>
 class length_prefix_framing {
 public:
-  using byte_span = span<const byte>;
+  using byte_span = span<byte>;
 
   using input_tag = tag::stream_oriented;
 

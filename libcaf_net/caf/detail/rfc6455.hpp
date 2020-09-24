@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2019 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,60 +18,56 @@
 
 #pragma once
 
-#include <array>
-#include <cstdint>
-#include <mutex>
-
 #include "caf/byte.hpp"
-#include "caf/net/pipe_socket.hpp"
-#include "caf/net/socket_manager.hpp"
+#include "caf/detail/net_export.hpp"
 
-namespace caf::net {
+#include <cstdint>
+#include <vector>
 
-class pollset_updater : public socket_manager {
-public:
+namespace caf::detail {
+
+struct CAF_NET_EXPORT rfc6455 {
   // -- member types -----------------------------------------------------------
 
-  using super = socket_manager;
+  using binary_buffer = std::vector<byte>;
 
-  using msg_buf = std::array<byte, sizeof(intptr_t) + 1>;
+  struct header {
+    bool fin;
+    uint8_t opcode;
+    uint32_t mask_key;
+    uint64_t payload_len;
+  };
 
   // -- constants --------------------------------------------------------------
 
-  static constexpr uint8_t register_reading_code = 0x00;
+  static constexpr uint8_t continuation_frame = 0x00;
 
-  static constexpr uint8_t register_writing_code = 0x01;
+  static constexpr uint8_t text_frame = 0x01;
 
-  static constexpr uint8_t init_manager_code = 0x02;
+  static constexpr uint8_t binary_frame = 0x02;
 
-  static constexpr uint8_t shutdown_code = 0x04;
+  static constexpr uint8_t connection_close = 0x08;
 
-  // -- constructors, destructors, and assignment operators --------------------
+  static constexpr uint8_t ping = 0x09;
 
-  pollset_updater(pipe_socket read_handle, multiplexer* parent);
+  static constexpr uint8_t pong = 0x0A;
 
-  ~pollset_updater() override;
+  // -- utility functions ------------------------------------------------------
 
-  // -- properties -------------------------------------------------------------
+  static void mask_data(uint32_t key, span<char> data);
 
-  /// Returns the managed socket.
-  pipe_socket handle() const noexcept {
-    return socket_cast<pipe_socket>(handle_);
-  }
+  static void mask_data(uint32_t key, span<byte> data);
 
-  // -- interface functions ----------------------------------------------------
+  static void assemble_frame(uint32_t mask_key, span<const char> data,
+                             binary_buffer& out);
 
-  error init(const settings& config) override;
+  static void assemble_frame(uint32_t mask_key, span<const byte> data,
+                             binary_buffer& out);
 
-  bool handle_read_event() override;
+  static void assemble_frame(uint8_t opcode, uint32_t mask_key,
+                             span<const byte> data, binary_buffer& out);
 
-  bool handle_write_event() override;
-
-  void handle_error(sec code) override;
-
-private:
-  msg_buf buf_;
-  size_t buf_size_ = 0;
+  static ptrdiff_t decode_header(span<const byte> data, header& hdr);
 };
 
-} // namespace caf::net
+} // namespace caf::detail

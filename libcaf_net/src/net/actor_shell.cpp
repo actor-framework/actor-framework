@@ -49,11 +49,13 @@ void actor_shell::quit(error reason) {
 // -- mailbox access -----------------------------------------------------------
 
 mailbox_element_ptr actor_shell::next_message() {
-  mailbox_.fetch_more();
-  auto& q = mailbox_.queue();
-  if (q.total_task_size() > 0) {
-    q.inc_deficit(1);
-    return q.next();
+  if (!mailbox_.blocked()) {
+    mailbox_.fetch_more();
+    auto& q = mailbox_.queue();
+    if (q.total_task_size() > 0) {
+      q.inc_deficit(1);
+      return q.next();
+    }
   }
   return nullptr;
 }
@@ -64,8 +66,7 @@ bool actor_shell::try_block_mailbox() {
 
 // -- message processing -------------------------------------------------------
 
-bool actor_shell::consume_message(
-  behavior& bhvr, callback<result<message>(message&)>& fallback) {
+bool actor_shell::consume_message() {
   CAF_LOG_TRACE("");
   if (auto msg = next_message()) {
     current_element_ = msg.get();
@@ -74,10 +75,10 @@ bool actor_shell::consume_message(
     auto mid = msg->mid;
     if (!mid.is_response()) {
       detail::default_invoke_result_visitor<actor_shell> visitor{this};
-      if (auto result = bhvr(msg->payload)) {
+      if (auto result = bhvr_(msg->payload)) {
         visitor(*result);
       } else {
-        auto fallback_result = fallback(msg->payload);
+        auto fallback_result = (*fallback_)(msg->payload);
         visit(visitor, fallback_result);
       }
     } else if (auto i = multiplexed_responses_.find(mid);

@@ -64,7 +64,7 @@ void socket_manager::register_writing() {
   parent_->register_writing(this);
 }
 
-actor_shell_ptr socket_manager::make_actor_shell() {
+actor_shell_ptr socket_manager::make_actor_shell_impl() {
   CAF_ASSERT(parent_ != nullptr);
   auto hdl = parent_->system().spawn<actor_shell>(this);
   return actor_shell_ptr{actor_cast<strong_actor_ptr>(std::move(hdl))};

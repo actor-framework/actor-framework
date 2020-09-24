@@ -169,11 +169,13 @@ error nodelay(stream_socket x, bool new_value) {
 }
 
 ptrdiff_t read(stream_socket x, span<byte> buf) {
+  CAF_LOG_TRACE(CAF_ARG2("socket", x.id) << CAF_ARG2("bytes", buf.size()));
   return ::recv(x.id, reinterpret_cast<socket_recv_ptr>(buf.data()), buf.size(),
                 no_sigpipe_io_flag);
 }
 
 ptrdiff_t write(stream_socket x, span<const byte> buf) {
+  CAF_LOG_TRACE(CAF_ARG2("socket", x.id) << CAF_ARG2("bytes", buf.size()));
   return ::send(x.id, reinterpret_cast<socket_send_ptr>(buf.data()), buf.size(),
                 no_sigpipe_io_flag);
 }

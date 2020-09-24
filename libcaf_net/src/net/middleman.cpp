@@ -76,7 +76,7 @@ void middleman::init(actor_system_config& cfg) {
     auto this_node = make_node_id(std::move(*node_uri));
     sys_.node_.swap(this_node);
   } else {
-    CAF_RAISE_ERROR("no valid entry for caf.middleman.this-node found");
+    // CAF_RAISE_ERROR("no valid entry for caf.middleman.this-node found");
   }
   for (auto& backend : backends_)
     if (auto err = backend->init()) {

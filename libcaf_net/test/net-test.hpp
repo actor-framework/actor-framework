@@ -2,6 +2,7 @@
 
 #include "caf/error.hpp"
 #include "caf/net/receive_policy.hpp"
+#include "caf/net/socket.hpp"
 #include "caf/net/test/host_fixture.hpp"
 #include "caf/settings.hpp"
 #include "caf/span.hpp"
@@ -28,6 +29,10 @@ public:
 
   constexpr void end_output() {
     // nop
+  }
+
+  constexpr caf::net::socket handle() noexcept {
+    return caf::net::invalid_socket;
   }
 
   bool can_send_more() const noexcept {

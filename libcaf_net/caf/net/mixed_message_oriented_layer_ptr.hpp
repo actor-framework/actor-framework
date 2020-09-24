@@ -27,9 +27,9 @@ namespace caf::net {
 
 /// Wraps a pointer to a stream-oriented layer with a pointer to its lower
 /// layer. Both pointers are then used to implement the interface required for a
-/// stream-oriented layer when calling into its upper layer.
+/// mixed-message-oriented layer when calling into its upper layer.
 template <class Layer, class LowerLayerPtr>
-class stream_oriented_layer_ptr {
+class mixed_message_oriented_layer_ptr {
 public:
   class access {
   public:
@@ -45,16 +45,28 @@ public:
       return lptr_->handle(llptr_);
     }
 
-    void begin_output() {
-      lptr_->begin_output(llptr_);
+    void begin_binary_message() {
+      lptr_->begin_binary_message(llptr_);
     }
 
-    byte_buffer& output_buffer() {
-      return lptr_->output_buffer(llptr_);
+    auto& binary_message_buffer() {
+      return lptr_->binary_message_buffer(llptr_);
     }
 
-    void end_output() {
-      lptr_->end_output(llptr_);
+    void end_binary_message() {
+      lptr_->end_binary_message(llptr_);
+    }
+
+    void begin_text_message() {
+      lptr_->begin_text_message(llptr_);
+    }
+
+    auto& text_message_buffer() {
+      return lptr_->text_message_buffer(llptr_);
+    }
+
+    void end_text_message() {
+      lptr_->end_text_message(llptr_);
     }
 
     void abort_reason(error reason) {
@@ -65,21 +77,18 @@ public:
       return lptr_->abort_reason(llptr_);
     }
 
-    void configure_read(receive_policy policy) {
-      lptr_->configure_read(llptr_, policy);
-    }
-
   private:
     Layer* lptr_;
     LowerLayerPtr llptr_;
   };
 
-  stream_oriented_layer_ptr(Layer* layer, LowerLayerPtr down)
+  mixed_message_oriented_layer_ptr(Layer* layer, LowerLayerPtr down)
     : access_(layer, down) {
     // nop
   }
 
-  stream_oriented_layer_ptr(const stream_oriented_layer_ptr&) = default;
+  mixed_message_oriented_layer_ptr(const mixed_message_oriented_layer_ptr&)
+    = default;
 
   explicit operator bool() const noexcept {
     return true;
@@ -98,8 +107,10 @@ private:
 };
 
 template <class Layer, class LowerLayerPtr>
-auto make_stream_oriented_layer_ptr(Layer* this_layer, LowerLayerPtr down) {
-  return stream_oriented_layer_ptr<Layer, LowerLayerPtr>{this_layer, down};
+auto make_mixed_message_oriented_layer_ptr(Layer* this_layer,
+                                           LowerLayerPtr down) {
+  using result_t = mixed_message_oriented_layer_ptr<Layer, LowerLayerPtr>;
+  return result_t{this_layer, down};
 }
 
 } // namespace caf::net

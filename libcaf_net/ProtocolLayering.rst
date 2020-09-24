@@ -69,6 +69,9 @@ stack *up*. Outgoing data always travels the protocol stack *down*.
   interface base [role: lower layer] {
     /// Returns whether the layer has output slots available.
     bool can_send_more() const noexcept;
+
+    /// Returns the managed socket.
+    auto handle() const noexcept;
   }
 
   interface stream_oriented [role: upper layer] {
@@ -177,5 +180,68 @@ stack *up*. Outgoing data always travels the protocol stack *down*.
     ///       `down.set_read_error(...)` with an appropriate error code.
     template <class LowerLayerPtr>
     bool end_message();
+  }
+
+  interface mixed_message_oriented [role: upper layer] {
+    /// Consumes a binary message from the lower layer.
+    /// @param down Reference to the lower layer that received the message.
+    /// @param buffer Payload of the received message.
+    /// @returns The number of consumed bytes or a negative value to signal an
+    ///          error.
+    /// @note Discarded data is lost permanently.
+    /// @note When returning a negative value for the number of consumed bytes,
+    ///       clients must also call `down.set_read_error(...)` with an
+    ///       appropriate error code.
+    template <class LowerLayerPtr>
+    ptrdiff_t consume_binary(LowerLayerPtr down, byte_span buffer);
+
+    /// Consumes a text message from the lower layer.
+    /// @param down Reference to the lower layer that received the message.
+    /// @param text Payload of the received message. The encoding depends on the
+    ///             application.
+    /// @returns The number of consumed characters or a negative value to signal
+    ///          an error.
+    /// @note Discarded data is lost permanently.
+    /// @note When returning a negative value for the number of consumed
+    ///       characters, clients must also call `down.set_read_error(...)` with
+    ///       an appropriate error code.
+    template <class LowerLayerPtr>
+    ptrdiff_t consume_text(LowerLayerPtr down, string_view text);
+  }
+
+  interface mixed_message_oriented [role: lower layer] {
+    /// Prepares the layer for an outgoing binary message, e.g., by allocating
+    /// an output buffer as necessary.
+    void begin_binary_message();
+
+    /// Returns a reference to the buffer for assembling the current message.
+    /// Users may only call this function and write to the buffer between
+    /// calling `begin_binary_message()` and `end_binary_message()`.
+    /// @note Lower layers may pre-fill the buffer, e.g., to prefix custom
+    ///       headers.
+    byte_buffer& binary_message_buffer();
+
+    /// Seals and prepares a binary message for transfer.
+    /// @note When returning `false`, clients must also call
+    ///       `down.set_read_error(...)` with an appropriate error code.
+    template <class LowerLayerPtr>
+    bool end_binary_message();
+
+    /// Prepares the layer for an outgoing text message, e.g., by allocating
+    /// an output buffer as necessary.
+    void begin_text_message();
+
+    /// Returns a reference to the buffer for assembling the current message.
+    /// Users may only call this function and write to the buffer between
+    /// calling `begin_text_message()` and `end_text_message()`.
+    /// @note Lower layers may pre-fill the buffer, e.g., to prefix custom
+    ///       headers.
+    std::vector<char>& text_message_buffer();
+
+    /// Seals and prepares a text message for transfer.
+    /// @note When returning `false`, clients must also call
+    ///       `down.set_read_error(...)` with an appropriate error code.
+    template <class LowerLayerPtr>
+    bool end_text_message();
   }
 

@@ -19,6 +19,8 @@
 #pragma once
 
 #include "caf/actor_traits.hpp"
+#include "caf/callback.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/detail/unordered_flat_map.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
@@ -34,7 +36,7 @@
 namespace caf::net {
 
 ///
-class actor_shell
+class CAF_NET_EXPORT actor_shell
   : public extend<local_actor, actor_shell>::with<mixin::sender,
                                                   mixin::requester>,
     public dynamically_typed_actor_base,
@@ -65,9 +67,11 @@ public:
 
   using mailbox_type = intrusive::fifo_inbox<mailbox_policy>;
 
+  using fallback_handler = unique_callback_ptr<result<message>(message&)>;
+
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit actor_shell(actor_config& cfg, socket_manager* owner);
+  actor_shell(actor_config& cfg, socket_manager* owner);
 
   ~actor_shell() override;
 
@@ -75,6 +79,18 @@ public:
 
   /// Detaches the shell from its owner and closes the mailbox.
   void quit(error reason);
+
+  /// Overrides the callbacks for incoming messages.
+  template <class... Fs>
+  void set_behavior(Fs... fs) {
+    bhvr_ = behavior{std::move(fs)...};
+  }
+
+  /// Overrides the default handler for unexpected messages.
+  template <class F>
+  void set_fallback(F f) {
+    fallback_ = make_type_erased_callback(std::move(f));
+  }
 
   // -- mailbox access ---------------------------------------------------------
 
@@ -93,13 +109,9 @@ public:
   // -- message processing -----------------------------------------------------
 
   /// Dequeues and processes the next message from the mailbox.
-  /// @param bhvr Available message handlers.
-  /// @param fallback Callback for processing message that failed to match
-  ///                 `bhvr`.
   /// @returns `true` if a message was dequeued and process, `false` if the
   ///          mailbox was empty.
-  bool consume_message(behavior& bhvr,
-                       callback<result<message>(message&)>& fallback);
+  bool consume_message();
 
   /// Adds a callback for a multiplexed response.
   void add_multiplexed_response_handler(message_id response_id, behavior bhvr);
@@ -130,13 +142,19 @@ private:
   // Points to the owning manager (nullptr after quit was called).
   socket_manager* owner_;
 
+  // Handler for consuming messages from the mailbox.
+  behavior bhvr_;
+
+  // Handler for unexpected messages.
+  fallback_handler fallback_;
+
   // Stores callbacks for multiplexed responses.
   detail::unordered_flat_map<message_id, behavior> multiplexed_responses_;
 };
 
 /// An "owning" pointer to an actor shell in the sense that it calls `quit()` on
 /// the shell when going out of scope.
-class actor_shell_ptr {
+class CAF_NET_EXPORT actor_shell_ptr {
 public:
   friend class socket_manager;
 

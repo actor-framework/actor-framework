@@ -18,20 +18,27 @@
 
 #pragma once
 
+#include "caf/callback.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/make_counted.hpp"
+#include "caf/net/actor_shell.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/operation.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/ref_counted.hpp"
+#include "caf/tag/io_event_oriented.hpp"
 
 namespace caf::net {
 
 /// Manages the lifetime of a single socket and handles any I/O events on it.
 class CAF_NET_EXPORT socket_manager : public ref_counted {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using fallback_handler = unique_callback_ptr<result<message>(message&)>;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   /// @pre `handle != invalid_socket`
@@ -47,9 +54,8 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Returns the managed socket.
-  template <class Socket = socket>
-  Socket handle() const {
-    return socket_cast<Socket>(handle_);
+  socket handle() const {
+    return handle_;
   }
 
   /// Returns the owning @ref multiplexer instance.
@@ -60,6 +66,16 @@ public:
   /// Returns the owning @ref multiplexer instance.
   const multiplexer& mpx() const noexcept {
     return *parent_;
+  }
+
+  /// Returns a pointer to the owning @ref multiplexer instance.
+  multiplexer* mpx_ptr() noexcept {
+    return parent_;
+  }
+
+  /// Returns a pointer to the owning @ref multiplexer instance.
+  const multiplexer* mpx_ptr() const noexcept {
+    return parent_;
   }
 
   /// Returns registered operations (read, write, or both).
@@ -94,7 +110,20 @@ public:
 
   // -- factories --------------------------------------------------------------
 
-  actor_shell_ptr make_actor_shell();
+  template <class LowerLayerPtr, class FallbackHandler>
+  actor_shell_ptr make_actor_shell(LowerLayerPtr, FallbackHandler f) {
+    auto ptr = make_actor_shell_impl();
+    ptr->set_fallback(std::move(f));
+    return ptr;
+  }
+
+  template <class LowerLayerPtr>
+  actor_shell_ptr make_actor_shell(LowerLayerPtr down) {
+    return make_actor_shell(down, [down](message& msg) -> result<message> {
+      down->abort_reason(make_error(sec::unexpected_message, std::move(msg)));
+      return make_error(sec::unexpected_message);
+    });
+  }
 
   // -- event loop management --------------------------------------------------
 
@@ -126,22 +155,44 @@ protected:
   multiplexer* parent_;
 
   error abort_reason_;
+
+private:
+  actor_shell_ptr make_actor_shell_impl();
 };
 
 template <class Protocol>
 class socket_manager_impl : public socket_manager {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using output_tag = tag::io_event_oriented;
+
+  using socket_type = typename Protocol::socket_type;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
   template <class... Ts>
-  socket_manager_impl(typename Protocol::socket_type handle, multiplexer* mpx,
-                      Ts&&... xs)
-    : socket_manager{handle, mpx}, protocol_(std::forward<Ts>(xs)...) {
+  socket_manager_impl(socket_type handle, multiplexer* mpx, Ts&&... xs)
+    : socket_manager(handle, mpx), protocol_(std::forward<Ts>(xs)...) {
     // nop
   }
 
   // -- initialization ---------------------------------------------------------
 
   error init(const settings& config) override {
+    CAF_LOG_TRACE("");
+    if (auto err = nonblocking(handle(), true)) {
+      CAF_LOG_ERROR("failed to set nonblocking flag in socket:" << err);
+      return err;
+    }
     return protocol_.init(static_cast<socket_manager*>(this), this, config);
+  }
+
+  // -- properties -------------------------------------------------------------
+
+  /// Returns the managed socket.
+  socket_type handle() const {
+    return socket_cast<socket_type>(this->handle_);
   }
 
   // -- event callbacks --------------------------------------------------------
@@ -203,26 +254,6 @@ private:
 using socket_manager_ptr = intrusive_ptr<socket_manager>;
 
 template <class B, template <class> class... Layers>
-struct socket_type_helper;
-
-template <class B>
-struct socket_type_helper<B> {
-  using type = typename B::socket_type;
-};
-
-template <class B, template <class> class Layer,
-          template <class> class... Layers>
-struct socket_type_helper<B, Layer, Layers...>
-  : socket_type_helper<Layer<B>, Layers...> {
-  using upper_input = typename B::input_tag;
-  using lower_output = typename Layer<B>::output_tag;
-  static_assert(std::is_same<upper_input, lower_output>::value);
-};
-
-template <class B, template <class> class... Layers>
-using socket_type_t = typename socket_type_helper<B, Layers...>::type;
-
-template <class B, template <class> class... Layers>
 struct make_socket_manager_helper;
 
 template <class B>
@@ -234,19 +265,26 @@ template <class B, template <class> class Layer,
           template <class> class... Layers>
 struct make_socket_manager_helper<B, Layer, Layers...>
   : make_socket_manager_helper<Layer<B>, Layers...> {
-  // no content
+  using upper_input = typename B::input_tag;
+  using lower_output = typename Layer<B>::output_tag;
+  static_assert(std::is_same<upper_input, lower_output>::value);
 };
 
 template <class B, template <class> class... Layers>
 using make_socket_manager_helper_t =
   typename make_socket_manager_helper<B, Layers...>::type;
 
+template <class B, template <class> class... Layers>
+using socket_type_t =
+  typename make_socket_manager_helper_t<B, Layers...,
+                                        socket_manager_impl>::socket_type;
+
 template <class App, template <class> class... Layers, class... Ts>
 auto make_socket_manager(socket_type_t<App, Layers...> handle, multiplexer* mpx,
                          Ts&&... xs) {
-  static_assert(std::is_base_of<socket, socket_type_t<App, Layers...>>::value);
   using impl
     = make_socket_manager_helper_t<App, Layers..., socket_manager_impl>;
+  static_assert(std::is_base_of<socket, typename impl::socket_type>::value);
   return make_counted<impl>(std::move(handle), mpx, std::forward<Ts>(xs)...);
 }
 

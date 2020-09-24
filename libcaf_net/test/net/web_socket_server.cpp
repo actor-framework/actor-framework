@@ -16,9 +16,9 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE net.web_socket
+#define CAF_SUITE net.web_socket_server
 
-#include "caf/net/web_socket.hpp"
+#include "caf/net/web_socket_server.hpp"
 
 #include "net-test.hpp"
 
@@ -28,16 +28,19 @@
 #include "caf/net/stream_transport.hpp"
 
 using namespace caf;
+using namespace caf::literals;
 using namespace std::literals::string_literals;
 
 namespace {
 
-using byte_span = span<const byte>;
+using byte_span = span<byte>;
 
 using svec = std::vector<std::string>;
 
 struct app_t {
-  std::vector<std::string> lines;
+  std::string text_input;
+
+  std::vector<byte> binary_input;
 
   settings cfg;
 
@@ -63,20 +66,15 @@ struct app_t {
   }
 
   template <class LowerLayerPtr>
-  ptrdiff_t consume(LowerLayerPtr down, byte_span buffer, byte_span) {
-    constexpr auto nl = byte{'\n'};
-    auto e = buffer.end();
-    if (auto i = std::find(buffer.begin(), e, nl); i != e) {
-      std::string str;
-      auto string_size = static_cast<size_t>(std::distance(buffer.begin(), i));
-      str.reserve(string_size);
-      auto num_bytes = string_size + 1; // Also consume the newline character.
-      std::transform(buffer.begin(), i, std::back_inserter(str),
-                     [](byte x) { return static_cast<char>(x); });
-      lines.emplace_back(std::move(str));
-      return num_bytes + consume(down, buffer.subspan(num_bytes), {});
-    }
-    return 0;
+  ptrdiff_t consume_text(LowerLayerPtr, string_view text) {
+    text_input.insert(text_input.end(), text.begin(), text.end());
+    return static_cast<ptrdiff_t>(text.size());
+  }
+
+  template <class LowerLayerPtr>
+  ptrdiff_t consume_binary(LowerLayerPtr, byte_span bytes) {
+    binary_input.insert(binary_input.end(), bytes.begin(), bytes.end());
+    return static_cast<ptrdiff_t>(bytes.size());
   }
 };
 
@@ -87,16 +85,49 @@ struct fixture : host_fixture {
     app = std::addressof(ws->upper_layer());
     if (auto err = transport.init())
       CAF_FAIL("failed to initialize mock transport: " << err);
+    rng.seed(0xD3ADC0D3);
   }
 
-  mock_stream_transport<net::web_socket<app_t>> transport;
+  void rfc6455_append(uint8_t opcode, span<const byte> bytes,
+                      std::vector<byte>& out) {
+    std::vector<byte> payload{bytes.begin(), bytes.end()};
+    auto key = static_cast<uint32_t>(rng());
+    detail::rfc6455::mask_data(key, payload);
+    detail::rfc6455::assemble_frame(opcode, key, payload, out);
+  }
 
-  net::web_socket<app_t>* ws;
+  void rfc6455_append(span<const byte> bytes, std::vector<byte>& out) {
+    rfc6455_append(detail::rfc6455::binary_frame, bytes, out);
+  }
+
+  void rfc6455_append(string_view text, std::vector<byte>& out) {
+    rfc6455_append(detail::rfc6455::text_frame, as_bytes(make_span(text)), out);
+  }
+
+  void push(uint8_t opcode, span<const byte> bytes) {
+    std::vector<byte> frame;
+    rfc6455_append(opcode, bytes, frame);
+    transport.push(frame);
+  }
+
+  void push(span<const byte> bytes) {
+    push(detail::rfc6455::binary_frame, bytes);
+  }
+
+  void push(string_view str) {
+    push(detail::rfc6455::text_frame, as_bytes(make_span(str)));
+  }
+
+  mock_stream_transport<net::web_socket_server<app_t>> transport;
+
+  net::web_socket_server<app_t>* ws;
 
   app_t* app;
+
+  std::minstd_rand rng;
 };
 
-constexpr string_view opening_handshake
+constexpr auto opening_handshake
   = "GET /chat HTTP/1.1\r\n"
     "Host: server.example.com\r\n"
     "Upgrade: websocket\r\n"
@@ -105,7 +136,7 @@ constexpr string_view opening_handshake
     "Origin: http://example.com\r\n"
     "Sec-WebSocket-Protocol: chat, superchat\r\n"
     "Sec-WebSocket-Version: 13\r\n"
-    "\r\n";
+    "\r\n"_sv;
 
 } // namespace
 
@@ -172,13 +203,14 @@ CAF_TEST(handshakes may arrive in chunks) {
 }
 
 CAF_TEST(data may follow the handshake immediately) {
-  std::string buf{opening_handshake.begin(), opening_handshake.end()};
-  buf += "Hello WebSocket!\n";
-  buf += "Bye WebSocket!\n";
+  auto hs_bytes = as_bytes(make_span(opening_handshake));
+  std::vector<byte> buf{hs_bytes.begin(), hs_bytes.end()};
+  rfc6455_append("Hello WebSocket!\n"_sv, buf);
+  rfc6455_append("Bye WebSocket!\n"_sv, buf);
   transport.push(buf);
   CAF_CHECK_EQUAL(transport.handle_input(), static_cast<ptrdiff_t>(buf.size()));
   CAF_CHECK(ws->handshake_complete());
-  CAF_CHECK_EQUAL(app->lines, svec({"Hello WebSocket!", "Bye WebSocket!"}));
+  CAF_CHECK_EQUAL(app->text_input, "Hello WebSocket!\nBye WebSocket!\n");
 }
 
 CAF_TEST(data may arrive later) {
@@ -186,10 +218,9 @@ CAF_TEST(data may arrive later) {
   CAF_CHECK_EQUAL(transport.handle_input(),
                   static_cast<ptrdiff_t>(opening_handshake.size()));
   CAF_CHECK(ws->handshake_complete());
-  auto buf = "Hello WebSocket!\nBye WebSocket!\n"s;
-  transport.push(buf);
-  CAF_CHECK_EQUAL(transport.handle_input(), static_cast<ptrdiff_t>(buf.size()));
-  CAF_CHECK_EQUAL(app->lines, svec({"Hello WebSocket!", "Bye WebSocket!"}));
+  push("Hello WebSocket!\nBye WebSocket!\n"_sv);
+  transport.handle_input();
+  CAF_CHECK_EQUAL(app->text_input, "Hello WebSocket!\nBye WebSocket!\n");
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

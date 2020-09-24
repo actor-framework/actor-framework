@@ -40,7 +40,7 @@ namespace {
 /// upper layer: expect messages
 /// Needs to be initilized by the layer two steps down.
 struct ul_expect_messages {
-  using byte_span = span<const byte>;
+  using byte_span = span<byte>;
 
   using input_tag = tag::message_oriented;
 

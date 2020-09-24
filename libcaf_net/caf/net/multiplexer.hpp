@@ -84,6 +84,10 @@ public:
   /// @thread-safe
   void register_writing(const socket_manager_ptr& mgr);
 
+  /// Registers `mgr` for initialization in the multiplexer's thread.
+  /// @thread-safe
+  void init(const socket_manager_ptr& mgr);
+
   /// Closes the pipe for signaling updates to the multiplexer. After closing
   /// the pipe, calls to `update` no longer have any effect.
   /// @thread-safe

@@ -34,7 +34,7 @@ using namespace std::string_literals;
 
 namespace {
 
-using byte_span = span<const byte>;
+using byte_span = span<byte>;
 
 using svec = std::vector<std::string>;
 
@@ -49,14 +49,12 @@ struct app_t {
 
   template <class LowerLayerPtr>
   error init(net::socket_manager* mgr, LowerLayerPtr down, const settings&) {
-    self = mgr->make_actor_shell();
-    bhvr = behavior{
-      [this](std::string& line) {
-        CAF_MESSAGE("received an asynchronous message: " << line);
-        lines.emplace_back(std::move(line));
-      },
-    };
-    fallback = make_type_erased_callback([](message& msg) -> result<message> {
+    self = mgr->make_actor_shell(down);
+    self->set_behavior([this](std::string& line) {
+      CAF_MESSAGE("received an asynchronous message: " << line);
+      lines.emplace_back(std::move(line));
+    });
+    self->set_fallback([](message& msg) -> result<message> {
       CAF_FAIL("unexpected message: " << msg);
       return make_error(sec::unexpected_message);
     });
@@ -66,7 +64,7 @@ struct app_t {
 
   template <class LowerLayerPtr>
   bool prepare_send(LowerLayerPtr down) {
-    while (self->consume_message(bhvr, *fallback)) {
+    while (self->consume_message()) {
       // We set abort_reason in our response handlers in case of an error.
       if (down->abort_reason())
         return false;
@@ -153,12 +151,6 @@ struct app_t {
 
   // Actor shell representing this app.
   net::actor_shell_ptr self;
-
-  // Handler for consuming messages from the mailbox.
-  behavior bhvr;
-
-  // Handler for unexpected messages.
-  unique_callback_ptr<result<message>(message&)> fallback;
 
   // Counts how many bytes we've consumed in total.
   size_t consumed_bytes = 0;

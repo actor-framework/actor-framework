@@ -34,10 +34,12 @@ endfunction()
 # -- add library targets -------------------------------------------------------
 
 add_library(libcaf_net_obj OBJECT ${CAF_NET_HEADERS}
-  #src/net/backend/tcp.cpp
-  #src/net/backend/test.cpp
   #src/actor_proxy_impl.cpp
   #src/basp/application.cpp
+  #src/endpoint_manager.cpp
+  #src/net/backend/tcp.cpp
+  #src/net/backend/test.cpp
+  #src/net/endpoint_manager_queue.cpp
   src/basp/connection_state_strings.cpp
   src/basp/ec_strings.cpp
   src/basp/message_type_strings.cpp
@@ -45,14 +47,13 @@ add_library(libcaf_net_obj OBJECT ${CAF_NET_HEADERS}
   src/convert_ip_endpoint.cpp
   src/datagram_socket.cpp
   src/defaults.cpp
-  #src/endpoint_manager.cpp
+  src/detail/rfc6455.cpp
   src/header.cpp
   src/host.cpp
   src/ip.cpp
   src/message_queue.cpp
   src/multiplexer.cpp
   src/net/actor_shell.cpp
-  #src/net/endpoint_manager_queue.cpp
   src/net/middleman.cpp
   src/net/middleman_backend.cpp
   src/net/packet_writer.cpp
@@ -80,7 +81,8 @@ set_property(TARGET libcaf_net_obj PROPERTY POSITION_INDEPENDENT_CODE ON)
 caf_net_set_default_properties(libcaf_net_obj libcaf_net)
 
 target_include_directories(libcaf_net INTERFACE
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
 
 add_library(CAF::net ALIAS libcaf_net)
 
@@ -127,6 +129,7 @@ caf_incubator_add_test_suites(caf-net-test
   #application
   convert_ip_endpoint
   datagram_socket
+  detail.rfc6455
   #datagram_transport
   #doorman
   #endpoint_manager
@@ -139,7 +142,7 @@ caf_incubator_add_test_suites(caf-net-test
   #net.basp.ping_pong
   #net.basp.worker
   net.length_prefix_framing
-  net.web_socket
+  net.web_socket_server
   network_socket
   pipe_socket
   socket

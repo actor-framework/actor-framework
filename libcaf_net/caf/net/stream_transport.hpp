@@ -31,6 +31,7 @@
 #include "caf/sec.hpp"
 #include "caf/settings.hpp"
 #include "caf/span.hpp"
+#include "caf/tag/io_event_oriented.hpp"
 #include "caf/tag/stream_oriented.hpp"
 
 namespace caf::net {
@@ -41,6 +42,8 @@ class stream_transport {
 public:
   // -- member types -----------------------------------------------------------
 
+  using input_tag = tag::io_event_oriented;
+
   using output_tag = tag::stream_oriented;
 
   using socket_type = stream_socket;
@@ -48,7 +51,8 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class... Ts>
-  stream_transport(Ts&&... xs) : upper_layer_(std::forward<Ts>(xs)...) {
+  explicit stream_transport(Ts&&... xs)
+    : upper_layer_(std::forward<Ts>(xs)...) {
     // nop
   }
 
@@ -64,6 +68,11 @@ public:
   }
 
   template <class ParentPtr>
+  static socket_type handle(ParentPtr parent) noexcept {
+    return parent->handle();
+  }
+
+  template <class ParentPtr>
   void begin_output(ParentPtr parent) {
     if (write_buf_.empty())
       parent->register_writing();
@@ -75,17 +84,17 @@ public:
   }
 
   template <class ParentPtr>
-  constexpr void end_output(ParentPtr) {
+  static constexpr void end_output(ParentPtr) {
     // nop
   }
 
   template <class ParentPtr>
-  void abort_reason(ParentPtr parent, error reason) {
+  static void abort_reason(ParentPtr parent, error reason) {
     return parent->abort_reason(std::move(reason));
   }
 
   template <class ParentPtr>
-  const error& abort_reason(ParentPtr parent) {
+  static const error& abort_reason(ParentPtr parent) {
     return parent->abort_reason();
   }
 
@@ -95,7 +104,6 @@ public:
       parent->register_reading();
     min_read_size_ = policy.min_size;
     max_read_size_ = policy.max_size;
-    read_buf_.resize(policy.max_size);
   }
 
   // -- properties -------------------------------------------------------------
@@ -132,15 +140,14 @@ public:
     auto default_max_reads = static_cast<uint32_t>(mm::max_consecutive_reads);
     max_consecutive_reads_ = get_or(
       config, "caf.middleman.max-consecutive-reads", default_max_reads);
-    // TODO: Tests fail, since nodelay can not be set on unix domain sockets.
-    // Maybe we can check for test runs using `if constexpr`?
-    /*    if (auto err = nodelay(socket_cast<stream_socket>(parent.handle()),
-                               true)) {
-          CAF_LOG_ERROR("nodelay failed: " << err);
-          return err;
-        }*/
-    if (auto socket_buf_size
-        = send_buffer_size(parent->template handle<network_socket>())) {
+    auto sock = parent->handle();
+    if constexpr (std::is_base_of<tcp_stream_socket, decltype(sock)>::value) {
+      if (auto err = nodelay(sock, true)) {
+        CAF_LOG_ERROR("nodelay failed: " << err);
+        return err;
+      }
+    }
+    if (auto socket_buf_size = send_buffer_size(parent->handle())) {
       max_write_buf_size_ = *socket_buf_size;
       CAF_ASSERT(max_write_buf_size_ > 0);
       write_buf_.reserve(max_write_buf_size_ * 2);
@@ -164,35 +171,72 @@ public:
       upper_layer_.abort(this_layer_ptr, parent->abort_reason());
       return false;
     };
+    if (read_buf_.size() < max_read_size_)
+      read_buf_.resize(max_read_size_);
     auto this_layer_ptr = make_stream_oriented_layer_ptr(this, parent);
     for (size_t i = 0; max_read_size_ > 0 && i < max_consecutive_reads_; ++i) {
-      CAF_ASSERT(max_read_size_ > read_size_);
-      auto buf = read_buf_.data() + read_size_;
-      size_t len = max_read_size_ - read_size_;
-      CAF_LOG_DEBUG(CAF_ARG2("missing", len));
-      auto num_bytes = read(parent->template handle<socket_type>(),
-                            make_span(buf, len));
-      CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG2("handle", parent->handle().id)
-                                 << CAF_ARG(num_bytes));
+      // Calling configure_read(read_policy::stop()) halts receive events.
+      if (max_read_size_ == 0) {
+        return false;
+      } else if (offset_ >= max_read_size_) {
+        auto old_max = max_read_size_;
+        // This may happen if the upper layer changes it receive policy to a
+        // smaller max. size than what was already available. In this case, the
+        // upper layer must consume bytes before we can receive new data.
+        auto bytes = make_span(read_buf_.data(), max_read_size_);
+        ptrdiff_t consumed = upper_layer_.consume(this_layer_ptr, bytes, {});
+        CAF_LOG_DEBUG(CAF_ARG2("socket", parent->handle().id)
+                      << CAF_ARG(consumed));
+        if (consumed < 0) {
+          upper_layer_.abort(this_layer_ptr,
+                             parent->abort_reason_or(caf::sec::runtime_error));
+          return false;
+        } else if (consumed == 0) {
+          // At the very least, the upper layer must accept more data next time.
+          if (old_max >= max_read_size_) {
+            upper_layer_.abort(this_layer_ptr, parent->abort_reason_or(
+                                                 caf::sec::runtime_error,
+                                                 "unable to make progress"));
+            return false;
+          }
+        }
+        // Try again.
+        continue;
+      }
+      auto rd_buf = make_span(read_buf_.data() + offset_,
+                              max_read_size_ - static_cast<size_t>(offset_));
+      auto read_res = read(parent->handle(), rd_buf);
+      CAF_LOG_DEBUG(CAF_ARG2("socket", parent->handle().id) //
+                    << CAF_ARG(max_read_size_) << CAF_ARG(offset_)
+                    << CAF_ARG(read_res));
       // Update state.
-      if (num_bytes > 0) {
-        read_size_ += num_bytes;
-        if (read_size_ < min_read_size_)
+      if (read_res > 0) {
+        offset_ += read_res;
+        if (offset_ < min_read_size_)
           continue;
-        auto delta = make_span(read_buf_.data() + delta_offset_,
-                               read_size_ - delta_offset_);
-        auto consumed = upper_layer_.consume(this_layer_ptr,
-                                             make_span(read_buf_), delta);
+        auto bytes = make_span(read_buf_.data(), offset_);
+        auto delta = bytes.subspan(delta_offset_);
+        ptrdiff_t consumed = upper_layer_.consume(this_layer_ptr, bytes, delta);
+        CAF_LOG_DEBUG(CAF_ARG2("socket", parent->handle().id)
+                      << CAF_ARG(consumed));
         if (consumed > 0) {
-          read_buf_.erase(read_buf_.begin(), read_buf_.begin() + consumed);
-          read_size_ -= consumed;
+          // Shift unconsumed bytes to the beginning of the buffer.
+          if (consumed < offset_)
+            std::copy(read_buf_.begin() + consumed, read_buf_.begin() + offset_,
+                      read_buf_.begin());
+          offset_ -= consumed;
+          delta_offset_ = offset_;
         } else if (consumed < 0) {
           upper_layer_.abort(this_layer_ptr,
                              parent->abort_reason_or(caf::sec::runtime_error));
           return false;
         }
-        delta_offset_ = read_size_;
-      } else if (num_bytes < 0) {
+        // Our thresholds may have changed if the upper layer called
+        // configure_read. Shrink/grow buffer as necessary.
+        if (read_buf_.size() != max_read_size_)
+          if (offset_ < max_read_size_)
+            read_buf_.resize(max_read_size_);
+      } else if (read_res < 0) {
         // Try again later on temporary errors such as EWOULDBLOCK and
         // stop reading on the socket on hard errors.
         return last_socket_error_is_temporary()
@@ -227,7 +271,7 @@ public:
     }
     if (write_buf_.empty())
       return !upper_layer_.done_sending(this_layer_ptr);
-    auto written = write(parent->template handle<socket_type>(), write_buf_);
+    auto written = write(parent->handle(), write_buf_);
     if (written > 0) {
       write_buf_.erase(write_buf_.begin(), write_buf_.begin() + written);
       return !write_buf_.empty() || !upper_layer_.done_sending(this_layer_ptr);
@@ -251,14 +295,31 @@ public:
   }
 
 private:
+  // Caches the config parameter for limiting max. socket operations.
   uint32_t max_consecutive_reads_ = 0;
+
+  // Caches the write buffer size of the socket.
   uint32_t max_write_buf_size_ = 0;
+
+  // Stores what the user has configured as read threshold.
   uint32_t min_read_size_ = 0;
+
+  // Stores what the user has configured as max. number of bytes to receive.
   uint32_t max_read_size_ = 0;
-  ptrdiff_t read_size_ = 0;
+
+  // Stores the current offset in `read_buf_`.
+  ptrdiff_t offset_ = 0;
+
+  // Stores the offset in `read_buf_` since last calling `upper_layer_.consume`.
   ptrdiff_t delta_offset_ = 0;
+
+  // Caches incoming data.
   byte_buffer read_buf_;
+
+  // Caches outgoing data.
   byte_buffer write_buf_;
+
+  // Processes incoming data and generates outgoing data.
   UpperLayer upper_layer_;
 };
 

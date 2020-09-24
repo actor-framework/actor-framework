@@ -20,6 +20,7 @@
 
 #include <cstring>
 
+#include "caf/actor_system.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/sec.hpp"
@@ -38,11 +39,14 @@ pollset_updater::~pollset_updater() {
 }
 
 error pollset_updater::init(const settings&) {
+  CAF_LOG_TRACE("");
   return nonblocking(handle(), true);
 }
 
 bool pollset_updater::handle_read_event() {
+  CAF_LOG_TRACE("");
   for (;;) {
+    CAF_ASSERT((buf_.size() - buf_size_) > 0);
     auto num_bytes = read(handle(), make_span(buf_.data() + buf_size_,
                                               buf_.size() - buf_size_));
     if (num_bytes > 0) {
@@ -54,13 +58,16 @@ bool pollset_updater::handle_read_event() {
         memcpy(&value, buf_.data() + 1, sizeof(intptr_t));
         socket_manager_ptr mgr{reinterpret_cast<socket_manager*>(value), false};
         switch (opcode) {
-          case 0:
+          case register_reading_code:
             parent_->register_reading(mgr);
             break;
-          case 1:
+          case register_writing_code:
             parent_->register_writing(mgr);
             break;
-          case 4:
+          case init_manager_code:
+            parent_->init(mgr);
+            break;
+          case shutdown_code:
             parent_->shutdown();
             break;
           default:

@@ -57,7 +57,7 @@ class CAF_NET_EXPORT application {
 public:
   // -- member types -----------------------------------------------------------
 
-  using byte_span = span<const byte>;
+  using byte_span = span<byte>;
 
   using hub_type = detail::worker_hub<worker>;
 

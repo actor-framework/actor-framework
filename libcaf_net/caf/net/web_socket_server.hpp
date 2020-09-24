@@ -23,27 +23,30 @@
 #include "caf/detail/encode_base64.hpp"
 #include "caf/error.hpp"
 #include "caf/hash/sha1.hpp"
+#include "caf/logger.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/receive_policy.hpp"
+#include "caf/net/web_socket_framing.hpp"
 #include "caf/pec.hpp"
 #include "caf/settings.hpp"
+#include "caf/tag/mixed_message_oriented.hpp"
 #include "caf/tag/stream_oriented.hpp"
 
 namespace caf::net {
 
 /// Implements the WebSocket Protocol as defined in RFC 6455. Initially, the
-/// layer performs the WebSocket handshake. Once completed, this layer becomes
-/// fully transparent and forwards any data to the `UpperLayer`.
+/// layer performs the WebSocket handshake. Once completed, this layer decodes
+/// RFC 6455 frames and forwards binary and text messages to `UpperLayer`.
 template <class UpperLayer>
-class web_socket {
+class web_socket_server {
 public:
   // -- member types -----------------------------------------------------------
 
-  using byte_span = span<const byte>;
+  using byte_span = span<byte>;
 
   using input_tag = tag::stream_oriented;
 
-  using output_tag = tag::stream_oriented;
+  using output_tag = tag::mixed_message_oriented;
 
   // -- constants --------------------------------------------------------------
 
@@ -66,33 +69,31 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class... Ts>
-  web_socket(Ts&&... xs) : upper_layer_(std::forward<Ts>(xs)...) {
-    // nop
-  }
-
-  virtual ~web_socket() {
-    // nop
-  }
-
-  // -- properties -------------------------------------------------------------
-
-  auto& upper_layer() noexcept {
-    return upper_layer_;
-  }
-
-  const auto& upper_layer() const noexcept {
-    return upper_layer_;
+  explicit web_socket_server(Ts&&... xs)
+    : upper_layer_(std::forward<Ts>(xs)...) {
+    // > A server MUST NOT mask any frames that it sends to the client.
+    // See RFC 6455, Section 5.1.
+    upper_layer_.mask_outgoing_frames = false;
   }
 
   // -- initialization ---------------------------------------------------------
 
   template <class LowerLayerPtr>
-  error
-  init(socket_manager* owner, LowerLayerPtr down, const settings& config) {
+  error init(socket_manager* owner, LowerLayerPtr down, const settings& cfg) {
     owner_ = owner;
-    cfg_ = config;
+    cfg_ = cfg;
     down->configure_read(net::receive_policy::up_to(max_header_size));
     return none;
+  }
+
+  // -- properties -------------------------------------------------------------
+
+  auto& upper_layer() noexcept {
+    return upper_layer_.upper_layer();
+  }
+
+  const auto& upper_layer() const noexcept {
+    return upper_layer_.upper_layer();
   }
 
   // -- role: upper layer ------------------------------------------------------
@@ -115,6 +116,9 @@ public:
 
   template <class LowerLayerPtr>
   ptrdiff_t consume(LowerLayerPtr down, byte_span buffer, byte_span delta) {
+    CAF_LOG_TRACE(CAF_ARG2("socket", down->handle().id)
+                  << CAF_ARG2("bytes", buffer.size())
+                  << CAF_ARG2("delta", delta.size()));
     if (handshake_complete_)
       return upper_layer_.consume(down, buffer, delta);
     // TODO: we could avoid repeated scans by using the delta parameter.
@@ -140,7 +144,10 @@ public:
       return -1;
     ptrdiff_t sub_result = 0;
     if (offset < buffer.size()) {
-      sub_result = upper_layer_.consume(down, buffer.subspan(offset), {});
+      auto remainder = buffer.subspan(offset);
+      CAF_LOG_TRACE(CAF_ARG2("socket", down->handle().id)
+                    << CAF_ARG2("remainder", remainder.size()));
+      sub_result = upper_layer_.consume(down, remainder, remainder);
       if (sub_result < 0)
         return sub_result;
     }
@@ -192,16 +199,14 @@ private:
     // Check whether the mandatory fields exist.
     std::string sec_key;
     if (auto skey_field = get_if<std::string>(&fields, "Sec-WebSocket-Key")) {
-      auto field_hash = hash::sha1::compute(*skey_field);
+      auto magic = *skey_field + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+      auto field_hash = hash::sha1::compute(magic);
       sec_key = detail::encode_base64(field_hash);
+      CAF_LOG_DEBUG("received Sec-WebSocket-Key" << *skey_field
+                                                 << "respond with" << sec_key);
     } else {
       auto err = make_error(pec::missing_field,
                             "Mandatory field Sec-WebSocket-Key not found");
-      down->abort_reason(std::move(err));
-      return false;
-    }
-    // Try initializing the upper layer.
-    if (auto err = upper_layer_.init(owner_, down, cfg_)) {
       down->abort_reason(std::move(err));
       return false;
     }
@@ -219,7 +224,13 @@ private:
     append(sec_key);
     append("\r\n\r\n");
     down->end_output();
+    // Try initializing the upper layer.
+    if (auto err = upper_layer_.init(owner_, down, cfg_)) {
+      down->abort_reason(std::move(err));
+      return false;
+    }
     // Done.
+    CAF_LOG_DEBUG("handshake completed");
     handshake_complete_ = true;
     return true;
   }
@@ -266,7 +277,7 @@ private:
   bool handshake_complete_ = false;
 
   /// Stores the upper layer.
-  UpperLayer upper_layer_;
+  web_socket_framing<UpperLayer> upper_layer_;
 
   /// Stores a pointer to the owning manager for the delayed initialization.
   socket_manager* owner_ = nullptr;
