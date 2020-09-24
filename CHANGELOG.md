@@ -5,6 +5,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Added
+
+- The enum `caf::sec` received an additional error code: `connection_closed`.
+
 ### Changed
 
 - When using `CAF_MAIN`, CAF now looks for the correct default config file name,

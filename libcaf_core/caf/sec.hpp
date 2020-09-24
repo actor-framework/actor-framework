@@ -160,6 +160,8 @@ enum class sec : uint8_t {
   load_callback_failed = 60,
   /// Converting between two types failed.
   conversion_failed,
+  /// A network connection was closed by the remote side.
+  connection_closed,
 };
 
 /// @relates sec
