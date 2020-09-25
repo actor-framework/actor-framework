@@ -407,8 +407,8 @@ public:
   ///               as well as prefixes starting with an underscore are
   ///               reserved.
   /// @param name The human-readable name of the metric, e.g., `requests`.
-  /// @param label_names Names for all label dimensions of the metric.
-  /// @param default_upper_bounds Upper bounds for the metric buckets.
+  /// @param labels Names for all label dimensions of the metric.
+  /// @param upper_bounds Upper bounds for the metric buckets.
   /// @param helptext Short explanation of the metric.
   /// @param unit Unit of measurement. Please use base units such as `bytes` or
   ///             `seconds` (prefer lowercase). The pseudo-unit `1` identifies
