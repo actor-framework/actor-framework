@@ -39,6 +39,12 @@ config = [
             builds: ['debug', 'release'],
             extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
         ]],
+        ['centos-8', [
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['debug', 'release'],
+            extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
+        ]],
         ['debian-9', [
             numCores: 4,
             tags: ['docker'],
@@ -59,12 +65,17 @@ config = [
             tags: ['docker'],
             builds: ['debug', 'release'],
         ]],
-        ['fedora-30', [
+        ['ubuntu-20.04', [
             numCores: 4,
             tags: ['docker'],
             builds: ['debug', 'release'],
         ]],
         ['fedora-31', [
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['debug', 'release'],
+        ]],
+        ['fedora-32', [
             numCores: 4,
             tags: ['docker'],
             builds: ['debug', 'release'],
