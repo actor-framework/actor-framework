@@ -70,11 +70,6 @@ config = [
             tags: ['docker'],
             builds: ['debug', 'release'],
         ]],
-        ['fedora-30', [
-            numCores: 4,
-            tags: ['docker'],
-            builds: ['debug', 'release'],
-        ]],
         ['fedora-31', [
             numCores: 4,
             tags: ['docker'],
