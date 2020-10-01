@@ -25,6 +25,8 @@
 
 namespace caf::net {
 
+// -- constructors, destructors, and assignment operators ----------------------
+
 endpoint_manager::endpoint_manager(socket handle, const multiplexer_ptr& parent,
                                    actor_system& sys)
   : super(handle, parent), sys_(sys), queue_(unit, unit, unit) {
@@ -33,6 +35,18 @@ endpoint_manager::endpoint_manager(socket handle, const multiplexer_ptr& parent,
 
 endpoint_manager::~endpoint_manager() {
   // nop
+}
+
+// -- properties ---------------------------------------------------------------
+
+const actor_system_config& endpoint_manager::config() const noexcept {
+  return sys_.config();
+}
+
+// -- queue access -------------------------------------------------------------
+
+bool endpoint_manager::at_end_of_message_queue() {
+  return queue_.empty() && queue_.try_block();
 }
 
 endpoint_manager_queue::message_ptr endpoint_manager::next_message() {
@@ -49,6 +63,8 @@ endpoint_manager_queue::message_ptr endpoint_manager::next_message() {
     queue_.try_block();
   return result;
 }
+
+// -- event management ---------------------------------------------------------
 
 void endpoint_manager::resolve(uri locator, actor listener) {
   using intrusive::inbox_result;

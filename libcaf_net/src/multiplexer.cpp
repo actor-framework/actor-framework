@@ -26,6 +26,7 @@
 #include "caf/expected.hpp"
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
+#include "caf/net/middleman.hpp"
 #include "caf/net/operation.hpp"
 #include "caf/net/pollset_updater.hpp"
 #include "caf/net/socket_manager.hpp"
@@ -78,7 +79,9 @@ short to_bitmask(operation op) {
 
 } // namespace
 
-multiplexer::multiplexer() : shutting_down_(false) {
+// -- constructors, destructors, and assignment operators ----------------------
+
+multiplexer::multiplexer(middleman* owner) : owner_(owner) {
   // nop
 }
 
@@ -86,14 +89,22 @@ multiplexer::~multiplexer() {
   // nop
 }
 
+// -- initialization -----------------------------------------------------------
+
 error multiplexer::init() {
   auto pipe_handles = make_pipe();
   if (!pipe_handles)
     return std::move(pipe_handles.error());
-  add(make_counted<pollset_updater>(pipe_handles->first, shared_from_this()));
+  auto updater = make_counted<pollset_updater>(pipe_handles->first, this);
+  settings dummy;
+  if (auto err = updater->init(dummy))
+    return err;
+  add(std::move(updater));
   write_handle_ = pipe_handles->second;
   return none;
 }
+
+// -- properties ---------------------------------------------------------------
 
 size_t multiplexer::num_socket_managers() const noexcept {
   return managers_.size();
@@ -106,7 +117,19 @@ ptrdiff_t multiplexer::index_of(const socket_manager_ptr& mgr) {
   return i == last ? -1 : std::distance(first, i);
 }
 
+middleman& multiplexer::owner() {
+  CAF_ASSERT(owner_ != nullptr);
+  return *owner_;
+}
+
+actor_system& multiplexer::system() {
+  return owner().system();
+}
+
+// -- thread-safe signaling ----------------------------------------------------
+
 void multiplexer::register_reading(const socket_manager_ptr& mgr) {
+  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
   if (std::this_thread::get_id() == tid_) {
     if (shutting_down_) {
       // discard
@@ -120,11 +143,12 @@ void multiplexer::register_reading(const socket_manager_ptr& mgr) {
       add(mgr);
     }
   } else {
-    write_to_pipe(0, mgr);
+    write_to_pipe(pollset_updater::register_reading_code, mgr);
   }
 }
 
 void multiplexer::register_writing(const socket_manager_ptr& mgr) {
+  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
   if (std::this_thread::get_id() == tid_) {
     if (shutting_down_) {
       // discard
@@ -138,11 +162,30 @@ void multiplexer::register_writing(const socket_manager_ptr& mgr) {
       add(mgr);
     }
   } else {
-    write_to_pipe(1, mgr);
+    write_to_pipe(pollset_updater::register_writing_code, mgr);
+  }
+}
+
+void multiplexer::init(const socket_manager_ptr& mgr) {
+  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
+  if (std::this_thread::get_id() == tid_) {
+    if (shutting_down_) {
+      // discard
+    } else {
+      if (auto err = mgr->init(content(system().config()))) {
+        CAF_LOG_ERROR("mgr->init failed: " << err);
+        // The socket manager should not register itself for any events if
+        // initialization fails. So there's probably nothing we could do
+        // here other than discarding the manager.
+      }
+    }
+  } else {
+    write_to_pipe(pollset_updater::init_manager_code, mgr);
   }
 }
 
 void multiplexer::close_pipe() {
+  CAF_LOG_TRACE("");
   std::lock_guard<std::mutex> guard{write_lock_};
   if (write_handle_ != invalid_socket) {
     close(write_handle_);
@@ -150,7 +193,10 @@ void multiplexer::close_pipe() {
   }
 }
 
+// -- control flow -------------------------------------------------------------
+
 bool multiplexer::poll_once(bool blocking) {
+  CAF_LOG_TRACE(CAF_ARG(blocking));
   if (pollset_.empty())
     return false;
   // We'll call poll() until poll() succeeds or fails.
@@ -216,6 +262,7 @@ bool multiplexer::poll_once(bool blocking) {
 }
 
 void multiplexer::set_thread_id() {
+  CAF_LOG_TRACE("");
   tid_ = std::this_thread::get_id();
 }
 
@@ -226,7 +273,9 @@ void multiplexer::run() {
 }
 
 void multiplexer::shutdown() {
+  CAF_LOG_TRACE("");
   if (std::this_thread::get_id() == tid_) {
+    CAF_LOG_DEBUG("initiate shutdown");
     shutting_down_ = true;
     // First manager is the pollset_updater. Skip it and delete later.
     for (size_t i = 1; i < managers_.size();) {
@@ -242,9 +291,12 @@ void multiplexer::shutdown() {
     }
     close_pipe();
   } else {
+    CAF_LOG_DEBUG("push shutdown event to pipe");
     write_to_pipe(4, nullptr);
   }
 }
+
+// -- utility functions --------------------------------------------------------
 
 short multiplexer::handle(const socket_manager_ptr& mgr, short events,
                           short revents) {
@@ -279,6 +331,7 @@ short multiplexer::handle(const socket_manager_ptr& mgr, short events,
 }
 
 void multiplexer::add(socket_manager_ptr mgr) {
+  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle()));
   CAF_ASSERT(index_of(mgr) == -1);
   pollfd new_entry{socket_cast<socket_id>(mgr->handle()),
                    to_bitmask(mgr->mask()), 0};
@@ -293,10 +346,13 @@ void multiplexer::del(ptrdiff_t index) {
 }
 
 void multiplexer::write_to_pipe(uint8_t opcode, const socket_manager_ptr& mgr) {
-  CAF_ASSERT(opcode == 0 || opcode == 1 || opcode == 4);
-  CAF_ASSERT(mgr != nullptr || opcode == 4);
+  CAF_ASSERT(opcode == pollset_updater::register_reading_code
+             || opcode == pollset_updater::register_writing_code
+             || opcode == pollset_updater::init_manager_code
+             || opcode == pollset_updater::shutdown_code);
+  CAF_ASSERT(mgr != nullptr || opcode == pollset_updater::shutdown_code);
   pollset_updater::msg_buf buf;
-  if (opcode != 4)
+  if (opcode != pollset_updater::shutdown_code)
     mgr->ref();
   buf[0] = static_cast<byte>(opcode);
   auto value = reinterpret_cast<intptr_t>(mgr.get());
@@ -307,7 +363,7 @@ void multiplexer::write_to_pipe(uint8_t opcode, const socket_manager_ptr& mgr) {
     if (write_handle_ != invalid_socket)
       res = write(write_handle_, buf);
   }
-  if (res <= 0 && opcode != 4)
+  if (res <= 0 && opcode != pollset_updater::shutdown_code)
     mgr->deref();
 }
 

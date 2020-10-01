@@ -30,11 +30,9 @@
 #include "caf/detail/scope_guard.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/net/actor_proxy_impl.hpp"
-#include "caf/net/endpoint_manager.hpp"
-#include "caf/net/endpoint_manager_impl.hpp"
-#include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_guard.hpp"
+#include "caf/net/socket_manager.hpp"
 #include "caf/net/stream_socket.hpp"
 #include "caf/span.hpp"
 
@@ -47,12 +45,15 @@ constexpr string_view hello_manager = "hello manager!";
 struct fixture : test_coordinator_fixture<>, host_fixture {
   using byte_buffer_ptr = std::shared_ptr<byte_buffer>;
 
-  fixture() : recv_buf(1024), shared_buf{std::make_shared<byte_buffer>()} {
-    mpx = std::make_shared<multiplexer>();
-    if (auto err = mpx->init())
-      CAF_FAIL("mpx->init failed: " << err);
-    mpx->set_thread_id();
-    CAF_CHECK_EQUAL(mpx->num_socket_managers(), 1u);
+  fixture()
+    : mpx(nullptr),
+      recv_buf(1024),
+      shared_recv_buf{std::make_shared<byte_buffer>()},
+      shared_send_buf{std::make_shared<byte_buffer>()} {
+    if (auto err = mpx.init())
+      CAF_FAIL("mpx.init failed: " << err);
+    mpx.set_thread_id();
+    CAF_CHECK_EQUAL(mpx.num_socket_managers(), 1u);
     auto sockets = unbox(make_stream_socket_pair());
     send_socket_guard.reset(sockets.first);
     recv_socket_guard.reset(sockets.second);
@@ -61,84 +62,87 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
   }
 
   bool handle_io_event() override {
-    return mpx->poll_once(false);
+    return mpx.poll_once(false);
   }
 
-  multiplexer_ptr mpx;
+  settings config;
+  multiplexer mpx;
   byte_buffer recv_buf;
   socket_guard<stream_socket> send_socket_guard;
   socket_guard<stream_socket> recv_socket_guard;
-  byte_buffer_ptr shared_buf;
+  byte_buffer_ptr shared_recv_buf;
+  byte_buffer_ptr shared_send_buf;
 };
 
 class dummy_application {
+public:
   using byte_buffer_ptr = std::shared_ptr<byte_buffer>;
 
-public:
-  dummy_application(byte_buffer_ptr rec_buf)
-    : rec_buf_(std::move(rec_buf)){
-      // nop
-    };
+  using input_tag = tag::stream_oriented;
+
+  explicit dummy_application(byte_buffer_ptr recv_buf, byte_buffer_ptr send_buf)
+    : recv_buf_(std::move(recv_buf)),
+      send_buf_(std::move(send_buf)){
+        // nop
+      };
 
   ~dummy_application() = default;
 
-  template <class Parent>
-  error init(Parent&) {
+  template <class ParentPtr>
+  error init(socket_manager*, ParentPtr parent, const settings&) {
+    parent->configure_read(receive_policy::exactly(hello_manager.size()));
     return none;
   }
 
-  template <class Parent>
-  error write_message(Parent& parent,
-                      std::unique_ptr<endpoint_manager_queue::message> msg) {
-    auto payload_buf = parent.next_payload_buffer();
-    binary_serializer sink{parent.system(), payload_buf};
-    if (auto err = sink(msg->msg->payload))
-      CAF_FAIL("serializing failed: " << err);
-    parent.write_packet(payload_buf);
-    return none;
+  template <class ParentPtr>
+  bool prepare_send(ParentPtr parent) {
+    CAF_MESSAGE("prepare_send called");
+    auto& buf = parent->output_buffer();
+    auto data = as_bytes(make_span(hello_manager));
+    buf.insert(buf.end(), data.begin(), data.end());
+    return true;
   }
 
-  template <class Parent>
-  error handle_data(Parent&, span<const byte> data) {
-    rec_buf_->clear();
-    rec_buf_->insert(rec_buf_->begin(), data.begin(), data.end());
-    return none;
+  template <class ParentPtr>
+  bool done_sending(ParentPtr) {
+    CAF_MESSAGE("done_sending called");
+    return true;
   }
 
-  template <class Parent>
-  void resolve(Parent& parent, string_view path, const actor& listener) {
+  template <class ParentPtr>
+  size_t consume(ParentPtr, span<const byte> data, span<const byte>) {
+    recv_buf_->clear();
+    recv_buf_->insert(recv_buf_->begin(), data.begin(), data.end());
+    CAF_MESSAGE("Received " << recv_buf_->size()
+                            << " bytes in dummy_application");
+    return recv_buf_->size();
+  }
+
+  template <class ParentPtr>
+  void resolve(ParentPtr parent, string_view path, const actor& listener) {
     actor_id aid = 42;
     auto hid = string_view("0011223344556677889900112233445566778899");
     auto nid = unbox(make_node_id(42, hid));
     actor_config cfg;
-    endpoint_manager_ptr ptr{&parent.manager()};
+    endpoint_manager_ptr ptr{&parent->manager()};
     auto p = make_actor<actor_proxy_impl, strong_actor_ptr>(
-      aid, nid, &parent.system(), cfg, std::move(ptr));
+      aid, nid, &parent->system(), cfg, std::move(ptr));
     anon_send(listener, resolve_atom_v, std::string{path.begin(), path.end()},
               p);
   }
 
-  template <class Parent>
-  void timeout(Parent&, const std::string&, uint64_t) {
-    // nop
+  static void handle_error(sec code) {
+    CAF_FAIL("handle_error called with " << CAF_ARG(code));
   }
 
-  template <class Parent>
-  void new_proxy(Parent&, actor_id) {
-    // nop
-  }
-
-  template <class Parent>
-  void local_actor_down(Parent&, actor_id, error) {
-    // nop
-  }
-
-  void handle_error(sec) {
-    // nop
+  template <class ParentPtr>
+  static void abort(ParentPtr, const error& reason) {
+    CAF_FAIL("abort called with " << CAF_ARG(reason));
   }
 
 private:
-  byte_buffer_ptr rec_buf_;
+  byte_buffer_ptr recv_buf_;
+  byte_buffer_ptr send_buf_;
 };
 
 } // namespace
@@ -146,57 +150,36 @@ private:
 CAF_TEST_FIXTURE_SCOPE(endpoint_manager_tests, fixture)
 
 CAF_TEST(receive) {
-  using transport_type = stream_transport<dummy_application>;
-  auto mgr = make_endpoint_manager(
-    mpx, sys,
-    transport_type{recv_socket_guard.release(), dummy_application{shared_buf}});
-  CAF_CHECK_EQUAL(mgr->init(), none);
-  auto mgr_impl = mgr.downcast<endpoint_manager_impl<transport_type>>();
-  CAF_CHECK(mgr_impl != nullptr);
-  auto& transport = mgr_impl->transport();
-  transport.configure_read(receive_policy::exactly(hello_manager.size()));
-  CAF_CHECK_EQUAL(mpx->num_socket_managers(), 2u);
-  CAF_CHECK_EQUAL(write(send_socket_guard.socket(),
-                        as_bytes(make_span(hello_manager))),
-                  hello_manager.size());
+  auto mgr = make_socket_manager<dummy_application, stream_transport>(
+    recv_socket_guard.release(), &mpx, shared_recv_buf, shared_send_buf);
+  CAF_CHECK_EQUAL(mgr->init(config), none);
+  CAF_CHECK_EQUAL(mpx.num_socket_managers(), 2u);
+  CAF_CHECK_EQUAL(
+    static_cast<size_t>(
+      write(send_socket_guard.socket(), as_bytes(make_span(hello_manager)))),
+    hello_manager.size());
   CAF_MESSAGE("wrote " << hello_manager.size() << " bytes.");
   run();
-  CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(shared_buf->data()),
-                              shared_buf->size()),
+  CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(shared_recv_buf->data()),
+                              shared_recv_buf->size()),
                   hello_manager);
 }
 
-CAF_TEST(resolve and proxy communication) {
-  using transport_type = stream_transport<dummy_application>;
-  auto mgr = make_endpoint_manager(
-    mpx, sys,
-    transport_type{send_socket_guard.release(), dummy_application{shared_buf}});
-  CAF_CHECK_EQUAL(mgr->init(), none);
-  run();
-  mgr->resolve(unbox(make_uri("test:/id/42")), self);
-  run();
-  self->receive(
-    [&](resolve_atom, const std::string&, const strong_actor_ptr& p) {
-      CAF_MESSAGE("got a proxy, send a message to it");
-      self->send(actor_cast<actor>(p), "hello proxy!");
-    },
-    after(std::chrono::seconds(0)) >>
-      [&] { CAF_FAIL("manager did not respond with a proxy."); });
-  run();
-  auto read_res = read(recv_socket_guard.socket(), recv_buf);
-  if (read_res < 0)
-    CAF_FAIL("read() returned an error: " << last_socket_error_as_string);
-  else if (read_res == 0)
-    CAF_FAIL("read() returned 0 (socket closed)");
-  recv_buf.resize(static_cast<size_t>(read_res));
-  CAF_MESSAGE("receive buffer contains " << recv_buf.size() << " bytes");
-  message msg;
-  binary_deserializer source{sys, recv_buf};
-  CAF_CHECK_EQUAL(source(msg), none);
-  if (msg.match_elements<std::string>())
-    CAF_CHECK_EQUAL(msg.get_as<std::string>(0), "hello proxy!");
-  else
-    CAF_ERROR("expected a string, got: " << to_string(msg));
+CAF_TEST(send) {
+  auto mgr = make_socket_manager<dummy_application, stream_transport>(
+    recv_socket_guard.release(), &mpx, shared_recv_buf, shared_send_buf);
+  CAF_CHECK_EQUAL(mgr->init(config), none);
+  CAF_CHECK_EQUAL(mpx.num_socket_managers(), 2u);
+  mgr->register_writing();
+  while (handle_io_event())
+    ;
+  recv_buf.resize(hello_manager.size());
+  auto res = read(send_socket_guard.socket(), make_span(recv_buf));
+  CAF_MESSAGE("received " << res << " bytes");
+  recv_buf.resize(res);
+  CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(recv_buf.data()),
+                              recv_buf.size()),
+                  hello_manager);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

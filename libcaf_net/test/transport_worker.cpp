@@ -75,8 +75,8 @@ public:
                       std::unique_ptr<endpoint_manager_queue::message> ptr) {
     auto payload_buf = parent.next_payload_buffer();
     binary_serializer sink(parent.system(), payload_buf);
-    if (auto err = sink(ptr->msg->content()))
-      CAF_FAIL("serializing failed: " << err);
+    if (!sink.apply_objects(ptr->msg->content()))
+      CAF_FAIL("failed to serialize content: " << sink.get_error());
     CAF_MESSAGE("before sending: " << CAF_ARG(ptr->msg->content()));
     parent.write_packet(payload_buf);
     return none;
@@ -154,23 +154,23 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
   using worker_type = transport_worker<dummy_application, ip_endpoint>;
 
   fixture()
-    : transport_results{std::make_shared<transport_result>()},
+    : mpx(nullptr),
+      transport_results{std::make_shared<transport_result>()},
       application_results{std::make_shared<application_result>()},
       transport(sys, transport_results),
       worker{dummy_application{application_results}} {
-    mpx = std::make_shared<multiplexer>();
-    if (auto err = mpx->init())
-      CAF_FAIL("mpx->init failed: " << err);
+    if (auto err = mpx.init())
+      CAF_FAIL("mpx.init failed: " << err);
     if (auto err = parse("[::1]:12345", ep))
       CAF_FAIL("parse returned an error: " << err);
     worker = worker_type{dummy_application{application_results}, ep};
   }
 
   bool handle_io_event() override {
-    return mpx->poll_once(false);
+    return mpx.poll_once(false);
   }
 
-  multiplexer_ptr mpx;
+  multiplexer mpx;
   std::shared_ptr<transport_result> transport_results;
   std::shared_ptr<application_result> application_results;
   dummy_transport transport;
@@ -209,7 +209,7 @@ CAF_TEST(write_message) {
   auto& buf = transport_results->packet_buffer;
   binary_deserializer source{sys, buf};
   caf::message received_msg;
-  CAF_CHECK_EQUAL(source(received_msg), none);
+  CAF_CHECK(source.apply_objects(received_msg));
   CAF_MESSAGE(CAF_ARG(received_msg));
   auto received_str = received_msg.get_as<std::string>(0);
   string_view result{received_str};

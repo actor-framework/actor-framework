@@ -26,6 +26,7 @@
 #include "caf/detail/socket_sys_aliases.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/expected.hpp"
+#include "caf/logger.hpp"
 #include "caf/message.hpp"
 #include "caf/net/stream_socket.hpp"
 #include "caf/sec.hpp"
@@ -81,11 +82,13 @@ expected<std::pair<pipe_socket, pipe_socket>> make_pipe() {
 }
 
 ptrdiff_t write(pipe_socket x, span<const byte> buf) {
+  CAF_LOG_TRACE(CAF_ARG2("socket", x.id) << CAF_ARG2("bytes", buf.size()));
   return ::write(x.id, reinterpret_cast<socket_send_ptr>(buf.data()),
                  buf.size());
 }
 
 ptrdiff_t read(pipe_socket x, span<byte> buf) {
+  CAF_LOG_TRACE(CAF_ARG2("socket", x.id) << CAF_ARG2("bytes", buf.size()));
   return ::read(x.id, reinterpret_cast<socket_recv_ptr>(buf.data()),
                 buf.size());
 }

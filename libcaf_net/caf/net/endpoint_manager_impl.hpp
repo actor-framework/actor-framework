@@ -40,8 +40,8 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   endpoint_manager_impl(const multiplexer_ptr& parent, actor_system& sys,
-                        Transport trans)
-    : super(trans.handle(), parent, sys), transport_(std::move(trans)) {
+                        socket handle, Transport trans)
+    : super(handle, parent, sys), transport_(std::move(trans)) {
     // nop
   }
 
@@ -73,7 +73,7 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
-  error init() override {
+  error init() /*override*/ {
     this->register_reading();
     return transport_.init(*this);
   }
@@ -124,6 +124,8 @@ private:
 
   /// Stores the id for the next timeout.
   uint64_t next_timeout_id_;
+
+  error err_;
 };
 
 } // namespace caf::net

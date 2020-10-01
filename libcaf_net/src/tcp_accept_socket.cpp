@@ -98,21 +98,23 @@ expected<tcp_accept_socket> make_tcp_accept_socket(ip_endpoint node,
                                                    bool reuse_addr) {
   CAF_LOG_TRACE(CAF_ARG(node));
   auto addr = to_string(node.address());
-  auto make_acceptor = node.address().embeds_v4()
-                         ? new_tcp_acceptor_impl<AF_INET>
-                         : new_tcp_acceptor_impl<AF_INET6>;
-  auto p = make_acceptor(node.port(), addr.c_str(), reuse_addr,
-                         node.address().zero());
-  if (!p) {
-    CAF_LOG_WARNING("could not create tcp socket for: " << to_string(node));
+  bool is_v4 = node.address().embeds_v4();
+  bool is_zero = is_v4 ? node.address().embedded_v4().bits() == 0
+                       : node.address().zero();
+  auto make_acceptor = is_v4 ? new_tcp_acceptor_impl<AF_INET>
+                             : new_tcp_acceptor_impl<AF_INET6>;
+  if (auto p = make_acceptor(node.port(), addr.c_str(), reuse_addr, is_zero)) {
+    auto sock = socket_cast<tcp_accept_socket>(*p);
+    auto sguard = make_socket_guard(sock);
+    CAF_NET_SYSCALL("listen", tmp, !=, 0, listen(sock.id, SOMAXCONN));
+    CAF_LOG_DEBUG(CAF_ARG(sock.id));
+    return sguard.release();
+  } else {
+    CAF_LOG_WARNING("could not create tcp socket:" << CAF_ARG(node)
+                                                   << CAF_ARG(p.error()));
     return make_error(sec::cannot_open_port, "tcp socket creation failed",
-                      to_string(node));
+                      to_string(node), std::move(p.error()));
   }
-  auto sock = socket_cast<tcp_accept_socket>(*p);
-  auto sguard = make_socket_guard(sock);
-  CAF_NET_SYSCALL("listen", tmp, !=, 0, listen(sock.id, SOMAXCONN));
-  CAF_LOG_DEBUG(CAF_ARG(sock.id));
-  return sguard.release();
 }
 
 expected<tcp_accept_socket>

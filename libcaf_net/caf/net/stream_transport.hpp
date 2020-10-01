@@ -21,82 +21,222 @@
 #include <deque>
 
 #include "caf/byte_buffer.hpp"
+#include "caf/defaults.hpp"
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
-#include "caf/net/endpoint_manager.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/receive_policy.hpp"
+#include "caf/net/stream_oriented_layer_ptr.hpp"
 #include "caf/net/stream_socket.hpp"
-#include "caf/net/transport_base.hpp"
-#include "caf/net/transport_worker.hpp"
 #include "caf/sec.hpp"
+#include "caf/settings.hpp"
 #include "caf/span.hpp"
+#include "caf/tag/io_event_oriented.hpp"
+#include "caf/tag/stream_oriented.hpp"
 
 namespace caf::net {
 
-template <class Application>
-using stream_transport_base
-  = transport_base<stream_transport<Application>, transport_worker<Application>,
-                   stream_socket, Application, unit_t>;
-
 /// Implements a stream_transport that manages a stream socket.
-template <class Application>
-class stream_transport : public stream_transport_base<Application> {
+template <class UpperLayer>
+class stream_transport {
 public:
   // -- member types -----------------------------------------------------------
 
-  using application_type = Application;
+  using input_tag = tag::io_event_oriented;
 
-  using worker_type = transport_worker<application_type>;
+  using output_tag = tag::stream_oriented;
 
-  using super = stream_transport_base<application_type>;
-
-  using id_type = typename super::id_type;
-
-  using write_queue_type = std::deque<std::pair<bool, byte_buffer>>;
+  using socket_type = stream_socket;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  stream_transport(stream_socket handle, application_type application)
-    : super(handle, std::move(application)),
-      written_(0),
-      read_threshold_(1024),
-      collected_(0),
-      max_(1024),
-      rd_flag_(net::receive_policy_flag::exactly) {
-    CAF_ASSERT(handle != invalid_socket);
-    if (auto err = nodelay(handle, true))
-      CAF_LOG_ERROR("nodelay failed: " << err);
+  template <class... Ts>
+  explicit stream_transport(Ts&&... xs)
+    : upper_layer_(std::forward<Ts>(xs)...) {
+    // nop
   }
 
-  // -- member functions -------------------------------------------------------
+  virtual ~stream_transport() {
+    // nop
+  }
 
-  bool handle_read_event(endpoint_manager&) override {
-    CAF_LOG_TRACE(CAF_ARG2("handle", this->handle().id));
-    auto fail = [this](sec err) {
-      CAF_LOG_DEBUG("read failed" << CAF_ARG(err));
-      this->next_layer_.handle_error(err);
+  // -- interface for stream_oriented_layer_ptr --------------------------------
+
+  template <class ParentPtr>
+  bool can_send_more(ParentPtr) const noexcept {
+    return write_buf_.size() < max_write_buf_size_;
+  }
+
+  template <class ParentPtr>
+  static socket_type handle(ParentPtr parent) noexcept {
+    return parent->handle();
+  }
+
+  template <class ParentPtr>
+  void begin_output(ParentPtr parent) {
+    if (write_buf_.empty())
+      parent->register_writing();
+  }
+
+  template <class ParentPtr>
+  byte_buffer& output_buffer(ParentPtr) {
+    return write_buf_;
+  }
+
+  template <class ParentPtr>
+  static constexpr void end_output(ParentPtr) {
+    // nop
+  }
+
+  template <class ParentPtr>
+  static void abort_reason(ParentPtr parent, error reason) {
+    return parent->abort_reason(std::move(reason));
+  }
+
+  template <class ParentPtr>
+  static const error& abort_reason(ParentPtr parent) {
+    return parent->abort_reason();
+  }
+
+  template <class ParentPtr>
+  void configure_read(ParentPtr parent, receive_policy policy) {
+    if (policy.max_size > 0 && max_read_size_ == 0)
+      parent->register_reading();
+    min_read_size_ = policy.min_size;
+    max_read_size_ = policy.max_size;
+  }
+
+  // -- properties -------------------------------------------------------------
+
+  auto& read_buffer() noexcept {
+    return read_buf_;
+  }
+
+  const auto& read_buffer() const noexcept {
+    return read_buf_;
+  }
+
+  auto& write_buffer() noexcept {
+    return write_buf_;
+  }
+
+  const auto& write_buffer() const noexcept {
+    return write_buf_;
+  }
+
+  auto& upper_layer() noexcept {
+    return upper_layer_;
+  }
+
+  const auto& upper_layer() const noexcept {
+    return upper_layer_;
+  }
+
+  // -- initialization ---------------------------------------------------------
+
+  template <class ParentPtr>
+  error init(socket_manager* owner, ParentPtr parent, const settings& config) {
+    namespace mm = defaults::middleman;
+    auto default_max_reads = static_cast<uint32_t>(mm::max_consecutive_reads);
+    max_consecutive_reads_ = get_or(
+      config, "caf.middleman.max-consecutive-reads", default_max_reads);
+    auto sock = parent->handle();
+    if constexpr (std::is_base_of<tcp_stream_socket, decltype(sock)>::value) {
+      if (auto err = nodelay(sock, true)) {
+        CAF_LOG_ERROR("nodelay failed: " << err);
+        return err;
+      }
+    }
+    if (auto socket_buf_size = send_buffer_size(parent->handle())) {
+      max_write_buf_size_ = *socket_buf_size;
+      CAF_ASSERT(max_write_buf_size_ > 0);
+      write_buf_.reserve(max_write_buf_size_ * 2);
+    } else {
+      CAF_LOG_ERROR("send_buffer_size: " << socket_buf_size.error());
+      return std::move(socket_buf_size.error());
+    }
+    auto this_layer_ptr = make_stream_oriented_layer_ptr(this, parent);
+    return upper_layer_.init(owner, this_layer_ptr, config);
+  }
+
+  // -- event callbacks --------------------------------------------------------
+
+  template <class ParentPtr>
+  bool handle_read_event(ParentPtr parent) {
+    CAF_LOG_TRACE(CAF_ARG2("handle", parent->handle().id));
+    auto fail = [this, parent](auto reason) {
+      CAF_LOG_DEBUG("read failed" << CAF_ARG(reason));
+      parent->abort_reason(std::move(reason));
+      auto this_layer_ptr = make_stream_oriented_layer_ptr(this, parent);
+      upper_layer_.abort(this_layer_ptr, parent->abort_reason());
       return false;
     };
-    for (size_t reads = 0; reads < this->max_consecutive_reads_; ++reads) {
-      auto buf = this->read_buf_.data() + collected_;
-      size_t len = read_threshold_ - collected_;
-      CAF_LOG_DEBUG(CAF_ARG2("missing", len));
-      auto num_bytes = read(this->handle_, make_span(buf, len));
-      CAF_LOG_DEBUG(CAF_ARG(len) << CAF_ARG2("handle", this->handle().id)
-                                 << CAF_ARG(num_bytes));
-      // Update state.
-      if (num_bytes > 0) {
-        collected_ += num_bytes;
-        if (collected_ >= read_threshold_) {
-          if (auto err = this->next_layer_.handle_data(
-                *this, make_span(this->read_buf_))) {
-            CAF_LOG_ERROR("handle_data failed: " << CAF_ARG(err));
+    if (read_buf_.size() < max_read_size_)
+      read_buf_.resize(max_read_size_);
+    auto this_layer_ptr = make_stream_oriented_layer_ptr(this, parent);
+    for (size_t i = 0; max_read_size_ > 0 && i < max_consecutive_reads_; ++i) {
+      // Calling configure_read(read_policy::stop()) halts receive events.
+      if (max_read_size_ == 0) {
+        return false;
+      } else if (offset_ >= max_read_size_) {
+        auto old_max = max_read_size_;
+        // This may happen if the upper layer changes it receive policy to a
+        // smaller max. size than what was already available. In this case, the
+        // upper layer must consume bytes before we can receive new data.
+        auto bytes = make_span(read_buf_.data(), max_read_size_);
+        ptrdiff_t consumed = upper_layer_.consume(this_layer_ptr, bytes, {});
+        CAF_LOG_DEBUG(CAF_ARG2("socket", parent->handle().id)
+                      << CAF_ARG(consumed));
+        if (consumed < 0) {
+          upper_layer_.abort(this_layer_ptr,
+                             parent->abort_reason_or(caf::sec::runtime_error));
+          return false;
+        } else if (consumed == 0) {
+          // At the very least, the upper layer must accept more data next time.
+          if (old_max >= max_read_size_) {
+            upper_layer_.abort(this_layer_ptr, parent->abort_reason_or(
+                                                 caf::sec::runtime_error,
+                                                 "unable to make progress"));
             return false;
           }
-          this->prepare_next_read();
         }
-      } else if (num_bytes < 0) {
+        // Try again.
+        continue;
+      }
+      auto rd_buf = make_span(read_buf_.data() + offset_,
+                              max_read_size_ - static_cast<size_t>(offset_));
+      auto read_res = read(parent->handle(), rd_buf);
+      CAF_LOG_DEBUG(CAF_ARG2("socket", parent->handle().id) //
+                    << CAF_ARG(max_read_size_) << CAF_ARG(offset_)
+                    << CAF_ARG(read_res));
+      // Update state.
+      if (read_res > 0) {
+        offset_ += read_res;
+        if (offset_ < min_read_size_)
+          continue;
+        auto bytes = make_span(read_buf_.data(), offset_);
+        auto delta = bytes.subspan(delta_offset_);
+        ptrdiff_t consumed = upper_layer_.consume(this_layer_ptr, bytes, delta);
+        CAF_LOG_DEBUG(CAF_ARG2("socket", parent->handle().id)
+                      << CAF_ARG(consumed));
+        if (consumed > 0) {
+          // Shift unconsumed bytes to the beginning of the buffer.
+          if (consumed < offset_)
+            std::copy(read_buf_.begin() + consumed, read_buf_.begin() + offset_,
+                      read_buf_.begin());
+          offset_ -= consumed;
+          delta_offset_ = offset_;
+        } else if (consumed < 0) {
+          upper_layer_.abort(this_layer_ptr,
+                             parent->abort_reason_or(caf::sec::runtime_error));
+          return false;
+        }
+        // Our thresholds may have changed if the upper layer called
+        // configure_read. Shrink/grow buffer as necessary.
+        if (read_buf_.size() != max_read_size_)
+          if (offset_ < max_read_size_)
+            read_buf_.resize(max_read_size_);
+      } else if (read_res < 0) {
         // Try again later on temporary errors such as EWOULDBLOCK and
         // stop reading on the socket on hard errors.
         return last_socket_error_is_temporary()
@@ -108,127 +248,79 @@ public:
         return fail(sec::socket_disconnected);
       }
     }
-    return true;
+    // Calling configure_read(read_policy::stop()) halts receive events.
+    return max_read_size_ > 0;
   }
 
-  bool handle_write_event(endpoint_manager& manager) override {
-    CAF_LOG_TRACE(CAF_ARG2("handle", this->handle_.id)
-                  << CAF_ARG2("queue-size", write_queue_.size()));
-    auto drain_write_queue = [this]() -> error_code<sec> {
-      // Helper function to sort empty buffers back into the right caches.
-      auto recycle = [this]() {
-        auto& front = this->write_queue_.front();
-        auto& is_header = front.first;
-        auto& buf = front.second;
-        written_ = 0;
-        buf.clear();
-        if (is_header) {
-          if (this->header_bufs_.size() < this->header_bufs_.capacity())
-            this->header_bufs_.emplace_back(std::move(buf));
-        } else if (this->payload_bufs_.size()
-                   < this->payload_bufs_.capacity()) {
-          this->payload_bufs_.emplace_back(std::move(buf));
-        }
-        write_queue_.pop_front();
-      };
-      auto fail = [this](sec err) {
-        CAF_LOG_DEBUG("write failed" << CAF_ARG(err));
-        this->next_layer_.handle_error(err);
-        return err;
-      };
-      // Write buffers from the write_queue_ for as long as possible.
-      while (!write_queue_.empty()) {
-        auto& buf = write_queue_.front().second;
-        CAF_ASSERT(!buf.empty());
-        auto data = buf.data() + written_;
-        auto len = buf.size() - written_;
-        auto num_bytes = write(this->handle(), make_span(data, len));
-        if (num_bytes > 0) {
-          CAF_LOG_DEBUG(CAF_ARG(this->handle_.id) << CAF_ARG(num_bytes));
-          written_ += num_bytes;
-          if (written_ >= static_cast<ptrdiff_t>(buf.size())) {
-            recycle();
-            written_ = 0;
-          }
-        } else if (num_bytes < 0) {
-          return last_socket_error_is_temporary()
-                   ? sec::unavailable_or_would_block
-                   : fail(sec::socket_operation_failed);
-
-        } else {
-          // write() returns 0 iff the connection was closed.
-          return fail(sec::socket_disconnected);
-        }
-      }
-      return none;
-    };
-    auto fetch_next_message = [&] {
-      if (auto msg = manager.next_message()) {
-        this->next_layer_.write_message(*this, std::move(msg));
-        return true;
-      }
+  template <class ParentPtr>
+  bool handle_write_event(ParentPtr parent) {
+    CAF_LOG_TRACE(CAF_ARG2("handle", parent->handle().id));
+    auto fail = [this, parent](sec reason) {
+      CAF_LOG_DEBUG("read failed" << CAF_ARG(reason));
+      parent->abort_reason(reason);
+      auto this_layer_ptr = make_stream_oriented_layer_ptr(this, parent);
+      upper_layer_.abort(this_layer_ptr, reason);
       return false;
     };
-    do {
-      if (auto err = drain_write_queue())
-        return err == sec::unavailable_or_would_block;
-    } while (fetch_next_message());
-    CAF_ASSERT(write_queue_.empty());
-    return false;
-  }
+    // Allow the upper layer to add extra data to the write buffer.
+    auto this_layer_ptr = make_stream_oriented_layer_ptr(this, parent);
+    if (!upper_layer_.prepare_send(this_layer_ptr)) {
+      upper_layer_.abort(this_layer_ptr,
+                         parent->abort_reason_or(caf::sec::runtime_error));
+      return false;
+    }
+    if (write_buf_.empty())
+      return !upper_layer_.done_sending(this_layer_ptr);
+    auto written = write(parent->handle(), write_buf_);
+    if (written > 0) {
+      write_buf_.erase(write_buf_.begin(), write_buf_.begin() + written);
+      return !write_buf_.empty() || !upper_layer_.done_sending(this_layer_ptr);
+    } else if (written < 0) {
+      // Try again later on temporary errors such as EWOULDBLOCK and
+      // stop writing to the socket on hard errors.
+      return last_socket_error_is_temporary()
+               ? true
+               : fail(sec::socket_operation_failed);
 
-  void write_packet(id_type, span<byte_buffer*> buffers) override {
-    CAF_LOG_TRACE("");
-    CAF_ASSERT(!buffers.empty());
-    if (this->write_queue_.empty())
-      this->manager().register_writing();
-    // By convention, the first buffer is a header buffer. Every other buffer is
-    // a payload buffer.
-    auto i = buffers.begin();
-    this->write_queue_.emplace_back(true, std::move(*(*i++)));
-    while (i != buffers.end())
-      this->write_queue_.emplace_back(false, std::move(*(*i++)));
-  }
-
-  void configure_read(receive_policy::config cfg) override {
-    rd_flag_ = cfg.first;
-    max_ = cfg.second;
-    prepare_next_read();
-  }
-
-private:
-  // -- utility functions ------------------------------------------------------
-
-  void prepare_next_read() {
-    collected_ = 0;
-    switch (rd_flag_) {
-      case net::receive_policy_flag::exactly:
-        if (this->read_buf_.size() != max_)
-          this->read_buf_.resize(max_);
-        read_threshold_ = max_;
-        break;
-      case net::receive_policy_flag::at_most:
-        if (this->read_buf_.size() != max_)
-          this->read_buf_.resize(max_);
-        read_threshold_ = 1;
-        break;
-      case net::receive_policy_flag::at_least: {
-        // read up to 10% more, but at least allow 100 bytes more
-        auto max_size = max_ + std::max<size_t>(100, max_ / 10);
-        if (this->read_buf_.size() != max_size)
-          this->read_buf_.resize(max_size);
-        read_threshold_ = max_;
-        break;
-      }
+    } else {
+      // write() returns 0 iff the connection was closed.
+      return fail(sec::socket_disconnected);
     }
   }
 
-  write_queue_type write_queue_;
-  ptrdiff_t written_;
-  ptrdiff_t read_threshold_;
-  ptrdiff_t collected_;
-  size_t max_;
-  receive_policy_flag rd_flag_;
+  template <class ParentPtr>
+  void abort(ParentPtr parent, const error& reason) {
+    auto this_layer_ptr = make_stream_oriented_layer_ptr(this, parent);
+    upper_layer_.abort(this_layer_ptr, reason);
+  }
+
+private:
+  // Caches the config parameter for limiting max. socket operations.
+  uint32_t max_consecutive_reads_ = 0;
+
+  // Caches the write buffer size of the socket.
+  uint32_t max_write_buf_size_ = 0;
+
+  // Stores what the user has configured as read threshold.
+  uint32_t min_read_size_ = 0;
+
+  // Stores what the user has configured as max. number of bytes to receive.
+  uint32_t max_read_size_ = 0;
+
+  // Stores the current offset in `read_buf_`.
+  ptrdiff_t offset_ = 0;
+
+  // Stores the offset in `read_buf_` since last calling `upper_layer_.consume`.
+  ptrdiff_t delta_offset_ = 0;
+
+  // Caches incoming data.
+  byte_buffer read_buf_;
+
+  // Caches outgoing data.
+  byte_buffer write_buf_;
+
+  // Processes incoming data and generates outgoing data.
+  UpperLayer upper_layer_;
 };
 
 } // namespace caf::net

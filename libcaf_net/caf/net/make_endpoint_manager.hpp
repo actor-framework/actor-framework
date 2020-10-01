@@ -26,8 +26,8 @@
 namespace caf::net {
 
 template <class Transport>
-endpoint_manager_ptr CAF_NET_EXPORT make_endpoint_manager(
-  const multiplexer_ptr& mpx, actor_system& sys, Transport trans) {
+endpoint_manager_ptr make_endpoint_manager(const multiplexer_ptr& mpx,
+                                           actor_system& sys, Transport trans) {
   using impl = endpoint_manager_impl<Transport>;
   return make_counted<impl>(mpx, sys, std::move(trans));
 }

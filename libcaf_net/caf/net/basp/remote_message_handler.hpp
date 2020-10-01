@@ -53,8 +53,9 @@ public:
     std::vector<strong_actor_ptr> fwd_stack;
     message content;
     binary_deserializer source{ctx, payload};
-    if (auto err = source(src_node, src_id, dst_id, fwd_stack, content)) {
-      CAF_LOG_ERROR("could not deserialize payload: " << CAF_ARG(err));
+    if (!source.apply_objects(src_node, src_id, dst_id, fwd_stack, content)) {
+      CAF_LOG_ERROR(
+        "failed to deserialize payload:" << CAF_ARG(source.get_error()));
       return;
     }
     // Sanity checks.

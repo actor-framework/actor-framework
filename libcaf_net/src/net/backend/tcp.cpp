@@ -25,6 +25,7 @@
 #include "caf/net/basp/application.hpp"
 #include "caf/net/basp/application_factory.hpp"
 #include "caf/net/basp/ec.hpp"
+#include "caf/net/defaults.hpp"
 #include "caf/net/doorman.hpp"
 #include "caf/net/ip.hpp"
 #include "caf/net/make_endpoint_manager.hpp"

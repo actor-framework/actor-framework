@@ -52,9 +52,15 @@ public:
 
   // -- properties -------------------------------------------------------------
 
-  actor_system& system() {
+  actor_system& system() noexcept {
     return sys_;
   }
+
+  const actor_system_config& config() const noexcept;
+
+  // -- queue access -----------------------------------------------------------
+
+  bool at_end_of_message_queue();
 
   endpoint_manager_queue::message_ptr next_message();
 
@@ -75,7 +81,7 @@ public:
   // -- pure virtual member functions ------------------------------------------
 
   /// Initializes the manager before adding it to the multiplexer's event loop.
-  virtual error init() = 0;
+  // virtual error init() = 0;
 
 protected:
   bool enqueue(endpoint_manager_queue::element* ptr);

@@ -20,6 +20,7 @@
 
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
+#include "caf/ip_endpoint.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/network_socket.hpp"
 #include "caf/uri.hpp"
@@ -31,6 +32,8 @@ struct CAF_NET_EXPORT tcp_accept_socket : network_socket {
   using super = network_socket;
 
   using super::super;
+
+  using connected_socket_type = tcp_stream_socket;
 };
 
 /// Creates a new TCP socket to accept connections on a given port.

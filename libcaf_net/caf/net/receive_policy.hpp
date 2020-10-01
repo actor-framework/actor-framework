@@ -18,45 +18,32 @@
 
 #pragma once
 
-#include <cstddef>
-#include <string>
-#include <utility>
-
-#include "caf/config.hpp"
+#include <cstdint>
 
 namespace caf::net {
 
-enum class CAF_NET_EXPORT receive_policy_flag : unsigned {
-  at_least,
-  at_most,
-  exactly
-};
+struct receive_policy {
+  uint32_t min_size;
+  uint32_t max_size;
 
-inline std::string to_string(receive_policy_flag x) {
-  return x == receive_policy_flag::at_least
-           ? "at_least"
-           : (x == receive_policy_flag::at_most ? "at_most" : "exactly");
-}
-
-class CAF_NET_EXPORT receive_policy {
-public:
-  receive_policy() = delete;
-
-  using config = std::pair<receive_policy_flag, size_t>;
-
-  static config at_least(size_t num_bytes) {
-    CAF_ASSERT(num_bytes > 0);
-    return {receive_policy_flag::at_least, num_bytes};
+  /// @pre `min_size > 0`
+  /// @pre `min_size <= max_size`
+  static constexpr receive_policy between(uint32_t min_size,
+                                          uint32_t max_size) {
+    return {min_size, max_size};
   }
 
-  static config at_most(size_t num_bytes) {
-    CAF_ASSERT(num_bytes > 0);
-    return {receive_policy_flag::at_most, num_bytes};
+  /// @pre `size > 0`
+  static constexpr receive_policy exactly(uint32_t size) {
+    return {size, size};
   }
 
-  static config exactly(size_t num_bytes) {
-    CAF_ASSERT(num_bytes > 0);
-    return {receive_policy_flag::exactly, num_bytes};
+  static constexpr receive_policy up_to(uint32_t max_size) {
+    return {1, max_size};
+  }
+
+  static constexpr receive_policy stop() {
+    return {0, 0};
   }
 };
 

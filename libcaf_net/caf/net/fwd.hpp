@@ -42,6 +42,8 @@ enum class ec : uint8_t;
 
 // -- classes ------------------------------------------------------------------
 
+class actor_shell;
+class actor_shell_ptr;
 class endpoint_manager;
 class middleman;
 class middleman_backend;

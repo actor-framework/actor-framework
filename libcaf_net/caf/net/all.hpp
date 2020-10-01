@@ -23,7 +23,6 @@
 #include "caf/net/datagram_transport.hpp"
 #include "caf/net/defaults.hpp"
 #include "caf/net/endpoint_manager.hpp"
-#include "caf/net/endpoint_manager_impl.hpp"
 #include "caf/net/endpoint_manager_queue.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/host.hpp"

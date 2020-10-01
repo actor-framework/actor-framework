@@ -93,8 +93,8 @@ struct header {
   }
 
   template <class Inspector>
-  friend typename Inspector::result_type inspect(Inspector& f, header& x) {
-    return f(meta::type_name("header"), x.payload_size);
+  friend bool inspect(Inspector& f, header& x) {
+    return f.object(x).fields(f.field("payload_size", x.payload_size));
   }
 
   size_t payload_size;
@@ -116,10 +116,13 @@ CAF_TEST(socket creation) {
 CAF_TEST(read / write using span<byte>) {
   if (auto err = nonblocking(socket_cast<net::socket>(receive_socket), true))
     CAF_FAIL("setting socket to nonblocking failed: " << err);
-  CAF_CHECK_EQUAL(read(receive_socket, buf), sec::unavailable_or_would_block);
+  auto read_res = read(receive_socket, buf);
+  if (CAF_CHECK(holds_alternative<sec>(read_res)))
+    CAF_CHECK(get<sec>(read_res) == sec::unavailable_or_would_block);
   CAF_MESSAGE("sending data to " << to_string(ep));
-  CAF_CHECK_EQUAL(write(send_socket, as_bytes(make_span(hello_test)), ep),
-                  hello_test.size());
+  auto write_res = write(send_socket, as_bytes(make_span(hello_test)), ep);
+  if (CAF_CHECK(holds_alternative<size_t>(write_res)))
+    CAF_CHECK_EQUAL(get<size_t>(write_res), hello_test.size());
   CAF_CHECK_EQUAL(read_from_socket(receive_socket, buf), none);
   string_view received{reinterpret_cast<const char*>(buf.data()), buf.size()};
   CAF_CHECK_EQUAL(received, hello_test);
@@ -130,21 +133,23 @@ CAF_TEST(read / write using span<byte_buffer*>) {
   header hdr{hello_test.size()};
   byte_buffer hdr_buf;
   binary_serializer sink(sys, hdr_buf);
-  if (auto err = sink(hdr))
-    CAF_FAIL("serializing payload failed" << err);
+  if (!sink.apply_object(hdr))
+    CAF_FAIL("failed to serialize payload: " << sink.get_error());
   auto bytes = as_bytes(make_span(hello_test));
   byte_buffer payload_buf(bytes.begin(), bytes.end());
   auto packet_size = hdr_buf.size() + payload_buf.size();
   std::vector<byte_buffer*> bufs{&hdr_buf, &payload_buf};
-  CAF_CHECK_EQUAL(write(send_socket, bufs, ep), packet_size);
+  auto write_res = write(send_socket, bufs, ep);
+  if (CAF_CHECK(holds_alternative<size_t>(write_res)))
+    CAF_CHECK_EQUAL(get<size_t>(write_res), packet_size);
   // receive both as one single packet.
   buf.resize(packet_size);
   CAF_CHECK_EQUAL(read_from_socket(receive_socket, buf), none);
   CAF_CHECK_EQUAL(buf.size(), packet_size);
   binary_deserializer source(nullptr, buf);
   header recv_hdr;
-  if (auto err = source(recv_hdr))
-    CAF_FAIL("serializing failed: " << err);
+  if (!source.apply_objects(recv_hdr))
+    CAF_FAIL("failed to deserialize header: " << source.get_error());
   CAF_CHECK_EQUAL(hdr.payload_size, recv_hdr.payload_size);
   string_view received{reinterpret_cast<const char*>(buf.data())
                          + sizeof(header),

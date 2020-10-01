@@ -36,4 +36,9 @@ CAF_NET_EXPORT extern const size_t max_header_buffers;
 /// Port to listen on for tcp.
 CAF_NET_EXPORT extern const uint16_t tcp_port;
 
+/// Caps how much Bytes a stream transport pushes to its write buffer before
+/// stopping to read from its message queue. Default TCP send buffer is 16kB (at
+/// least on Linux).
+constexpr auto stream_output_buf_cap = size_t{32768};
+
 } // namespace caf::defaults::middleman

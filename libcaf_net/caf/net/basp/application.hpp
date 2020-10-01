@@ -29,6 +29,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/byte.hpp"
+#include "caf/byte_span.hpp"
 #include "caf/callback.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/net_export.hpp"
@@ -56,8 +57,6 @@ namespace caf::net::basp {
 class CAF_NET_EXPORT application {
 public:
   // -- member types -----------------------------------------------------------
-
-  using byte_span = span<const byte>;
 
   using hub_type = detail::worker_hub<worker>;
 

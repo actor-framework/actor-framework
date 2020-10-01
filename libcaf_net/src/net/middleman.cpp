@@ -25,7 +25,6 @@
 #include "caf/net/basp/ec.hpp"
 #include "caf/net/endpoint_manager.hpp"
 #include "caf/net/middleman_backend.hpp"
-#include "caf/net/multiplexer.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/sec.hpp"
 #include "caf/send.hpp"
@@ -37,8 +36,8 @@ void middleman::init_global_meta_objects() {
   caf::init_global_meta_objects<id_block::net_module>();
 }
 
-middleman::middleman(actor_system& sys) : sys_(sys) {
-  mpx_ = std::make_shared<multiplexer>();
+middleman::middleman(actor_system& sys) : sys_(sys), mpx_(this) {
+  // nop
 }
 
 middleman::~middleman() {
@@ -47,15 +46,13 @@ middleman::~middleman() {
 
 void middleman::start() {
   if (!get_or(config(), "caf.middleman.manual-multiplexing", false)) {
-    auto mpx = mpx_;
-    auto sys_ptr = &system();
-    mpx_thread_ = std::thread{[mpx, sys_ptr] {
-      CAF_SET_LOGGER_SYS(sys_ptr);
-      detail::set_thread_name("caf.multiplexer");
-      sys_ptr->thread_started();
-      mpx->set_thread_id();
-      mpx->run();
-      sys_ptr->thread_terminates();
+    mpx_thread_ = std::thread{[this] {
+      CAF_SET_LOGGER_SYS(&sys_);
+      detail::set_thread_name("caf.net.mpx");
+      sys_.thread_started();
+      mpx_.set_thread_id();
+      mpx_.run();
+      sys_.thread_terminates();
     }};
   }
 }
@@ -63,23 +60,23 @@ void middleman::start() {
 void middleman::stop() {
   for (const auto& backend : backends_)
     backend->stop();
-  mpx_->shutdown();
+  mpx_.shutdown();
   if (mpx_thread_.joinable())
     mpx_thread_.join();
   else
-    mpx_->run();
+    mpx_.run();
 }
 
 void middleman::init(actor_system_config& cfg) {
-  if (auto err = mpx_->init()) {
-    CAF_LOG_ERROR("mgr->init() failed: " << err);
-    CAF_RAISE_ERROR("mpx->init() failed");
+  if (auto err = mpx_.init()) {
+    CAF_LOG_ERROR("mpx_.init() failed: " << err);
+    CAF_RAISE_ERROR("mpx_.init() failed");
   }
   if (auto node_uri = get_if<uri>(&cfg, "caf.middleman.this-node")) {
     auto this_node = make_node_id(std::move(*node_uri));
     sys_.node_.swap(this_node);
   } else {
-    CAF_RAISE_ERROR("no valid entry for caf.middleman.this-node found");
+    // CAF_RAISE_ERROR("no valid entry for caf.middleman.this-node found");
   }
   for (auto& backend : backends_)
     if (auto err = backend->init()) {

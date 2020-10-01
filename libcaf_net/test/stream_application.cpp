@@ -61,7 +61,7 @@ struct fixture : host_fixture, test_coordinator_fixture<config> {
     mm.mpx()->set_thread_id();
     auto backend = dynamic_cast<backend::test*>(mm.backend("test"));
     auto mgr = backend->peer(mars);
-    auto& dref = dynamic_cast<endpoint_manager_impl<transport_type>&>(*mgr);
+    auto& dref = dynamic_cast<socket_manager_impl<transport_type>&>(*mgr);
     app = &dref.transport().application();
     sock = backend->socket(mars);
   }

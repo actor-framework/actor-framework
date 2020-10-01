@@ -34,8 +34,12 @@ endfunction()
 # -- add library targets -------------------------------------------------------
 
 add_library(libcaf_net_obj OBJECT ${CAF_NET_HEADERS}
-  src/actor_proxy_impl.cpp
-  src/basp/application.cpp
+  #src/actor_proxy_impl.cpp
+  #src/basp/application.cpp
+  #src/endpoint_manager.cpp
+  #src/net/backend/tcp.cpp
+  #src/net/backend/test.cpp
+  #src/net/endpoint_manager_queue.cpp
   src/basp/connection_state_strings.cpp
   src/basp/ec_strings.cpp
   src/basp/message_type_strings.cpp
@@ -43,16 +47,13 @@ add_library(libcaf_net_obj OBJECT ${CAF_NET_HEADERS}
   src/convert_ip_endpoint.cpp
   src/datagram_socket.cpp
   src/defaults.cpp
-  src/defaults.cpp
-  src/endpoint_manager.cpp
+  src/detail/rfc6455.cpp
   src/header.cpp
   src/host.cpp
   src/ip.cpp
   src/message_queue.cpp
   src/multiplexer.cpp
-  src/net/backend/test.cpp
-  src/net/backend/tcp.cpp
-  src/net/endpoint_manager_queue.cpp
+  src/net/actor_shell.cpp
   src/net/middleman.cpp
   src/net/middleman_backend.cpp
   src/net/packet_writer.cpp
@@ -80,7 +81,8 @@ set_property(TARGET libcaf_net_obj PROPERTY POSITION_INDEPENDENT_CODE ON)
 caf_net_set_default_properties(libcaf_net_obj libcaf_net)
 
 target_include_directories(libcaf_net INTERFACE
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}>)
 
 add_library(CAF::net ALIAS libcaf_net)
 
@@ -123,30 +125,34 @@ target_include_directories(caf-net-test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/tes
 target_link_libraries(caf-net-test PRIVATE CAF::test)
 
 caf_incubator_add_test_suites(caf-net-test
-  net.basp.message_queue
-  net.basp.ping_pong
-  net.basp.worker
   accept_socket
-  pipe_socket
-  application
-  socket
+  #application
   convert_ip_endpoint
-  socket_guard
   datagram_socket
-  stream_application
-  datagram_transport
-  stream_socket
-  doorman
-  stream_transport
-  endpoint_manager
-  string_application
+  detail.rfc6455
+  #datagram_transport
+  #doorman
+  #endpoint_manager
   header
-  tcp_sockets
   ip
-  transport_worker
   multiplexer
-  transport_worker_dispatcher
-  udp_datagram_socket
+  net.actor_shell
+  #net.backend.tcp
+  #net.basp.message_queue
+  #net.basp.ping_pong
+  #net.basp.worker
+  net.length_prefix_framing
+  net.web_socket_server
   network_socket
-  net.backend.tcp
+  pipe_socket
+  socket
+  socket_guard
+  #stream_application
+  stream_socket
+  stream_transport
+  #string_application
+  tcp_sockets
+  #transport_worker
+  #transport_worker_dispatcher
+  udp_datagram_socket
 )

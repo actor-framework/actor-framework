@@ -20,6 +20,7 @@
 
 #include <cstring>
 
+#include "caf/actor_system.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/sec.hpp"
@@ -28,20 +29,24 @@
 
 namespace caf::net {
 
-pollset_updater::pollset_updater(pipe_socket read_handle,
-                                 const multiplexer_ptr& parent)
-  : super(read_handle, parent), buf_size_(0) {
+pollset_updater::pollset_updater(pipe_socket read_handle, multiplexer* parent)
+  : super(read_handle, parent) {
   mask_ = operation::read;
-  if (auto err = nonblocking(read_handle, true))
-    CAF_LOG_ERROR("nonblocking failed: " << err);
 }
 
 pollset_updater::~pollset_updater() {
   // nop
 }
 
+error pollset_updater::init(const settings&) {
+  CAF_LOG_TRACE("");
+  return nonblocking(handle(), true);
+}
+
 bool pollset_updater::handle_read_event() {
+  CAF_LOG_TRACE("");
   for (;;) {
+    CAF_ASSERT((buf_.size() - buf_size_) > 0);
     auto num_bytes = read(handle(), make_span(buf_.data() + buf_size_,
                                               buf_.size() - buf_size_));
     if (num_bytes > 0) {
@@ -52,25 +57,29 @@ bool pollset_updater::handle_read_event() {
         intptr_t value;
         memcpy(&value, buf_.data() + 1, sizeof(intptr_t));
         socket_manager_ptr mgr{reinterpret_cast<socket_manager*>(value), false};
-        if (auto ptr = parent_.lock()) {
-          switch (opcode) {
-            case 0:
-              ptr->register_reading(mgr);
-              break;
-            case 1:
-              ptr->register_writing(mgr);
-              break;
-            case 4:
-              ptr->shutdown();
-              break;
-            default:
-              CAF_LOG_DEBUG("opcode not recognized: " << CAF_ARG(opcode));
-              break;
-          }
+        switch (opcode) {
+          case register_reading_code:
+            parent_->register_reading(mgr);
+            break;
+          case register_writing_code:
+            parent_->register_writing(mgr);
+            break;
+          case init_manager_code:
+            parent_->init(mgr);
+            break;
+          case shutdown_code:
+            parent_->shutdown();
+            break;
+          default:
+            CAF_LOG_ERROR("opcode not recognized: " << CAF_ARG(opcode));
+            break;
         }
       }
+    } else if (num_bytes == 0) {
+      CAF_LOG_DEBUG("pipe closed, assume shutdown");
+      return false;
     } else {
-      return num_bytes < 0 && last_socket_error_is_temporary();
+      return last_socket_error_is_temporary();
     }
   }
 }

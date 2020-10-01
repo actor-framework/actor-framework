@@ -27,8 +27,11 @@
 #include "caf/detail/net_export.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
+#include "caf/net/connection_acceptor.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/middleman_backend.hpp"
+#include "caf/net/multiplexer.hpp"
+#include "caf/net/socket_manager.hpp"
 #include "caf/scoped_actor.hpp"
 
 namespace caf::net {
@@ -49,7 +52,31 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
+  explicit middleman(actor_system& sys);
+
   ~middleman() override;
+
+  // -- socket manager functions -----------------------------------------------
+
+  ///
+  /// @param sock An accept socket in listening mode. For a TCP socket, this
+  ///             socket must already listen to an address plus port.
+  /// @param factory
+  template <class Socket, class Factory>
+  auto make_acceptor(Socket sock, Factory factory) {
+    using connected_socket_type = typename Socket::connected_socket_type;
+    if constexpr (detail::is_callable_with<Factory, connected_socket_type,
+                                           multiplexer*>::value) {
+      connection_acceptor_factory_adapter<Factory> adapter{std::move(factory)};
+      return make_acceptor(std::move(sock), std::move(adapter));
+    } else {
+      using impl = connection_acceptor<Socket, Factory>;
+      auto ptr = make_socket_manager<impl>(std::move(sock), &mpx_,
+                                           std::move(factory));
+      mpx_.init(ptr);
+      return ptr;
+    }
+  }
 
   // -- interface functions ----------------------------------------------------
 
@@ -128,7 +155,11 @@ public:
     return sys_.config();
   }
 
-  const multiplexer_ptr& mpx() const noexcept {
+  multiplexer& mpx() noexcept {
+    return mpx_;
+  }
+
+  const multiplexer& mpx() const noexcept {
     return mpx_;
   }
 
@@ -137,10 +168,6 @@ public:
   expected<uint16_t> port(string_view scheme) const;
 
 private:
-  // -- constructors, destructors, and assignment operators --------------------
-
-  explicit middleman(actor_system& sys);
-
   // -- utility functions ------------------------------------------------------
 
   static void create_backends(middleman&, detail::type_list<>) {
@@ -159,7 +186,7 @@ private:
   actor_system& sys_;
 
   /// Stores the global socket I/O multiplexer.
-  multiplexer_ptr mpx_;
+  multiplexer mpx_;
 
   /// Stores all available backends for managing peers.
   middleman_backend_list backends_;

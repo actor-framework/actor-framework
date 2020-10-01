@@ -19,14 +19,15 @@
 #include "caf/net/socket_manager.hpp"
 
 #include "caf/config.hpp"
+#include "caf/net/actor_shell.hpp"
 #include "caf/net/multiplexer.hpp"
 
 namespace caf::net {
 
-socket_manager::socket_manager(socket handle, const multiplexer_ptr& parent)
+socket_manager::socket_manager(socket handle, multiplexer* parent)
   : handle_(handle), mask_(operation::none), parent_(parent) {
-  CAF_ASSERT(parent != nullptr);
   CAF_ASSERT(handle_ != invalid_socket);
+  CAF_ASSERT(parent != nullptr);
 }
 
 socket_manager::~socket_manager() {
@@ -54,17 +55,19 @@ bool socket_manager::mask_del(operation flag) noexcept {
 void socket_manager::register_reading() {
   if ((mask() & operation::read) == operation::read)
     return;
-  auto ptr = parent_.lock();
-  if (ptr != nullptr)
-    ptr->register_reading(this);
+  parent_->register_reading(this);
 }
 
 void socket_manager::register_writing() {
   if ((mask() & operation::write) == operation::write)
     return;
-  auto ptr = parent_.lock();
-  if (ptr != nullptr)
-    ptr->register_writing(this);
+  parent_->register_writing(this);
+}
+
+actor_shell_ptr socket_manager::make_actor_shell_impl() {
+  CAF_ASSERT(parent_ != nullptr);
+  auto hdl = parent_->system().spawn<actor_shell>(this);
+  return actor_shell_ptr{actor_cast<strong_actor_ptr>(std::move(hdl))};
 }
 
 } // namespace caf::net

@@ -55,9 +55,8 @@ struct CAF_NET_EXPORT socket : detail::comparable<socket> {
 
 /// @relates socket
 template <class Inspector>
-typename Inspector::result_type CAF_NET_EXPORT inspect(Inspector& f,
-                                                       socket& x) {
-  return f(x.id);
+bool inspect(Inspector& f, socket& x) {
+  return f.object(x).fields(f.field("id", x.id));
 }
 
 /// Denotes the invalid socket.
@@ -65,7 +64,7 @@ constexpr auto invalid_socket = socket{invalid_socket_id};
 
 /// Converts between different socket types.
 template <class To, class From>
-To CAF_NET_EXPORT socket_cast(From x) {
+To socket_cast(From x) {
   return To{x.id};
 }
 

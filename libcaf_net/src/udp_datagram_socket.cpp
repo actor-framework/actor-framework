@@ -114,8 +114,8 @@ variant<size_t, sec> write(udp_datagram_socket x, span<const byte> buf,
                            ip_endpoint ep) {
   sockaddr_storage addr = {};
   detail::convert(ep, addr);
-  auto len = ep.address().embeds_v4() ? sizeof(sockaddr_in)
-                                      : sizeof(sockaddr_in6);
+  auto len = static_cast<socklen_t>(
+    ep.address().embeds_v4() ? sizeof(sockaddr_in) : sizeof(sockaddr_in6));
   auto res = ::sendto(x.id, reinterpret_cast<socket_send_ptr>(buf.data()),
                       buf.size(), 0, reinterpret_cast<sockaddr*>(&addr), len);
   auto ret = check_udp_datagram_socket_io_res(res);
@@ -172,7 +172,7 @@ variant<size_t, sec> write(udp_datagram_socket x, span<byte_buffer*> bufs,
   message.msg_namelen = ep.address().embeds_v4() ? sizeof(sockaddr_in)
                                                  : sizeof(sockaddr_in6);
   message.msg_iov = buf_array;
-  message.msg_iovlen = bufs.size();
+  message.msg_iovlen = static_cast<int>(bufs.size());
   auto res = sendmsg(x.id, &message, 0);
   return check_udp_datagram_socket_io_res(res);
 }
