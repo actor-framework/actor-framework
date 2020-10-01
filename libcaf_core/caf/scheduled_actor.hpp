@@ -56,7 +56,6 @@
 #include "caf/policy/upstream_messages.hpp"
 #include "caf/policy/urgent_messages.hpp"
 #include "caf/response_handle.hpp"
-#include "caf/scheduled_actor.hpp"
 #include "caf/sec.hpp"
 #include "caf/stream_manager.hpp"
 #include "caf/telemetry/timer.hpp"
