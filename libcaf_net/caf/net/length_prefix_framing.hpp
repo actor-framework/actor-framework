@@ -23,6 +23,7 @@
 #include <memory>
 
 #include "caf/byte.hpp"
+#include "caf/byte_span.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/error.hpp"
 #include "caf/net/receive_policy.hpp"
@@ -41,8 +42,6 @@ namespace caf::net {
 template <class UpperLayer>
 class length_prefix_framing {
 public:
-  using byte_span = span<byte>;
-
   using input_tag = tag::stream_oriented;
 
   using output_tag = tag::message_oriented;

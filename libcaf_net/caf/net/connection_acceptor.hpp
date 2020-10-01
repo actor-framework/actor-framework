@@ -55,6 +55,7 @@ public:
   error init(socket_manager* owner, ParentPtr parent, const settings& config) {
     CAF_LOG_TRACE("");
     owner_ = owner;
+    cfg_ = config;
     if (auto err = factory_.init(owner, config))
       return err;
     parent->register_reading();

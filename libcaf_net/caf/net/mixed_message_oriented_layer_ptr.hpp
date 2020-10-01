@@ -25,9 +25,9 @@
 
 namespace caf::net {
 
-/// Wraps a pointer to a stream-oriented layer with a pointer to its lower
-/// layer. Both pointers are then used to implement the interface required for a
-/// mixed-message-oriented layer when calling into its upper layer.
+/// Wraps a pointer to a mixed-message-oriented layer with a pointer to its
+/// lower layer. Both pointers are then used to implement the interface required
+/// for a mixed-message-oriented layer when calling into its upper layer.
 template <class Layer, class LowerLayerPtr>
 class mixed_message_oriented_layer_ptr {
 public:

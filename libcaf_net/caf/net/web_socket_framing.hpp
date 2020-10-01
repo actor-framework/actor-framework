@@ -19,6 +19,7 @@
 #pragma once
 
 #include "caf/byte.hpp"
+#include "caf/byte_span.hpp"
 #include "caf/detail/rfc6455.hpp"
 #include "caf/net/mixed_message_oriented_layer_ptr.hpp"
 #include "caf/sec.hpp"
@@ -38,8 +39,6 @@ template <class UpperLayer>
 class web_socket_framing {
 public:
   // -- member types -----------------------------------------------------------
-
-  using byte_span = span<byte>;
 
   using binary_buffer = std::vector<byte>;
 

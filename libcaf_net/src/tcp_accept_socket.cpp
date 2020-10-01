@@ -55,9 +55,6 @@ template <int Family>
 expected<tcp_accept_socket> new_tcp_acceptor_impl(uint16_t port,
                                                   const char* addr,
                                                   bool reuse_addr, bool any) {
-  auto bts = [](bool x) { return x ? "true" : "false"; };
-  printf("%s(%d, %s, %s, %s)\n", __func__, (int) port, addr, bts(reuse_addr),
-         bts(any));
   static_assert(Family == AF_INET || Family == AF_INET6, "invalid family");
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
   int socktype = SOCK_STREAM;

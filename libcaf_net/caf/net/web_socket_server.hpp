@@ -20,6 +20,7 @@
 
 #include <algorithm>
 
+#include "caf/byte_span.hpp"
 #include "caf/detail/encode_base64.hpp"
 #include "caf/error.hpp"
 #include "caf/hash/sha1.hpp"
@@ -41,8 +42,6 @@ template <class UpperLayer>
 class web_socket_server {
 public:
   // -- member types -----------------------------------------------------------
-
-  using byte_span = span<byte>;
 
   using input_tag = tag::stream_oriented;
 

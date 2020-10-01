@@ -29,6 +29,7 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
+#include "caf/byte_span.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/span.hpp"
 #include "caf/tag/message_oriented.hpp"
@@ -40,8 +41,6 @@ namespace {
 /// upper layer: expect messages
 /// Needs to be initilized by the layer two steps down.
 struct ul_expect_messages {
-  using byte_span = span<byte>;
-
   using input_tag = tag::message_oriented;
 
   void set_expected_messages(std::vector<byte_buffer> messages) {

@@ -20,10 +20,6 @@
 
 namespace caf::tag {
 
-class mixed_message_oriented {
-public:
-  mixed_message_oriented();
-  ~mixed_message_oriented();
-};
+struct mixed_message_oriented {};
 
 } // namespace caf::tag

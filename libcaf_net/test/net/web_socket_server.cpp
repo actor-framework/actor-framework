@@ -22,6 +22,7 @@
 
 #include "net-test.hpp"
 
+#include "caf/byte_span.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/stream_socket.hpp"
@@ -32,8 +33,6 @@ using namespace caf::literals;
 using namespace std::literals::string_literals;
 
 namespace {
-
-using byte_span = span<byte>;
 
 using svec = std::vector<std::string>;
 
