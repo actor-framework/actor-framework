@@ -202,6 +202,8 @@ enum class stream_priority;
 
 using actor_id = uint64_t;
 using byte_buffer = std::vector<byte>;
+using byte_span = span<byte>;
+using const_byte_span = span<const byte>;
 using ip_address = ipv6_address;
 using ip_endpoint = ipv6_endpoint;
 using ip_subnet = ipv6_subnet;

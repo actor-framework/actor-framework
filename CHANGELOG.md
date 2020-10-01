@@ -8,6 +8,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 ### Added
 
 - The enum `caf::sec` received an additional error code: `connection_closed`.
+- The new `byte_span` and `const_byte_span` aliases provide convenient
+  definitions when working with sequences of bytes.
 
 ### Changed
 
