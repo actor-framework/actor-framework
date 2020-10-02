@@ -118,6 +118,44 @@ CAF_TEST(parsing - with CLI cfg.remainder) {
   CAF_MESSAGE("invalid cfg.remainder");
 }
 
+CAF_TEST(file input overrides defaults but CLI args always win) {
+  const char* file_input = R"__(
+    group1 {
+      arg1 = 'foobar'
+    }
+    group2 {
+      arg1 = 'hello world'
+      arg2 = 2
+    }
+  )__";
+  struct grp {
+    std::string arg1 = "default";
+    int arg2 = 42;
+  };
+  grp grp1;
+  grp grp2;
+  config_option_adder{cfg.custom_options(), "group1"}
+    .add(grp1.arg1, "arg1", "")
+    .add(grp1.arg2, "arg2", "");
+  config_option_adder{cfg.custom_options(), "group2"}
+    .add(grp2.arg1, "arg1", "")
+    .add(grp2.arg2, "arg2", "");
+  string_list args{"--group1.arg2=123", "--group2.arg1=bye"};
+  std::istringstream input{file_input};
+  auto err = cfg.parse(std::move(args), input);
+  CAF_CHECK_EQUAL(err, error{});
+  CAF_CHECK_EQUAL(grp1.arg1, "foobar");
+  CAF_CHECK_EQUAL(grp1.arg2, 123);
+  CAF_CHECK_EQUAL(grp2.arg1, "bye");
+  CAF_CHECK_EQUAL(grp2.arg2, 2);
+  settings res;
+  put(res, "group1.arg1", "foobar");
+  put(res, "group1.arg2", 123);
+  put(res, "group2.arg1", "bye");
+  put(res, "group2.arg2", 2);
+  CAF_CHECK_EQUAL(content(cfg), res);
+}
+
 // Checks whether both a synced variable and the corresponding entry in
 // content(cfg) are equal to `value`.
 #define CHECK_SYNCED(var, value)                                               \

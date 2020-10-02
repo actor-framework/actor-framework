@@ -129,7 +129,7 @@ void config_consumer::end_map() {
 }
 
 std::string config_consumer::qualified_key() {
-  if (category_.empty())
+  if (category_.empty() || category_ == "global")
     return current_key_;
   auto result = category_;
   result += '.';
