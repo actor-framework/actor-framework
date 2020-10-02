@@ -19,6 +19,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 ### Fixed
 
 - Setting an invalid credit policy no longer results in a segfault (#1140).
+- RC 1 of version 0.18 introduced a regression that prevented CAF from writing
+  parameters parsed from configuration files back to variables. The original
+  behavior has been restored, i.e., variables synchronize with user input from
+  configuration files and CLI arguments (#1145).
 
 ## [0.18.0-rc.1] - 2020-09-09
 
