@@ -50,6 +50,7 @@
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/node_id.hpp"
+#include "caf/others.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/scoped_actor.hpp"
 #include "caf/sec.hpp"
@@ -281,12 +282,16 @@ strong_actor_ptr middleman::remote_lookup(std::string name,
   scoped_actor self{system(), true};
   auto id = basp::header::config_server_id;
   self->send(basp, forward_atom_v, nid, id,
-             make_message(get_atom_v, std::move(name)));
-  self->receive([&](strong_actor_ptr& addr) { result = std::move(addr); },
-                after(std::chrono::minutes(5)) >>
-                  [] {
-                    // nop
-                  });
+             make_message(registry_lookup_atom_v, std::move(name)));
+  self->receive(
+    [&](strong_actor_ptr& addr) { result = std::move(addr); },
+    others >> [](message& msg) -> skippable_result {
+      CAF_LOG_ERROR(
+        "middleman received unexpected remote_lookup result:" << msg);
+      return message{};
+    },
+    after(std::chrono::minutes(5)) >>
+      [&] { CAF_LOG_WARNING("remote_lookup for" << name << "timed out"); });
   return result;
 }
 

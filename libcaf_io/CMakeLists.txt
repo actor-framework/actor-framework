@@ -111,3 +111,7 @@ caf_add_test_suites(caf-io-test
   io.unpublish
   io.worker
 )
+
+if(NOT WIN32)
+  caf_add_test_suites(caf-io-test io.middleman)
+endif()
