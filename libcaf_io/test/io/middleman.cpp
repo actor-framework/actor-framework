@@ -52,7 +52,7 @@ struct node_fixture {
   };
 
   node_fixture() : sys(cfg), mm(sys.middleman()), mpx(mm.backend()), self(sys) {
-    basp_broker=mm.get_named_broker("BASP");
+    basp_broker = mm.get_named_broker("BASP");
   }
 
   config cfg;
