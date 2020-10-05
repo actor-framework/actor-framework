@@ -101,7 +101,6 @@ caf_add_test_suites(caf-io-test
   io.basp_broker
   io.broker
   io.http_broker
-  $<$<NOT:$<PLATFORM_ID:Windows>>:io.middleman>
   io.monitor
   io.network.default_multiplexer
   io.network.ip_endpoint
@@ -112,3 +111,7 @@ caf_add_test_suites(caf-io-test
   io.unpublish
   io.worker
 )
+
+if(NOT WIN32)
+  caf_add_test_suites(caf-io-test io.middleman)
+endif()
