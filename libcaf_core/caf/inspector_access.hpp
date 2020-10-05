@@ -459,13 +459,7 @@ struct default_inspector_access : inspector_access_base<T> {
   template <class Inspector>
   [[nodiscard]] static bool apply_object(Inspector& f, T& x) {
     // Dispatch to user-provided `inspect` overload or assume a trivial type.
-    if constexpr (detail::has_inspect_overload<Inspector, T>::value) {
-      using result_type = decltype(inspect(f, x));
-      if constexpr (std::is_same<result_type, bool>::value)
-        return inspect(f, x);
-      else
-        return apply_deprecated(f, x);
-    } else if constexpr (std::is_empty<T>::value) {
+    if constexpr (std::is_empty<T>::value) {
       return f.object(x).fields();
     } else {
       return f.object(x).fields(f.field("value", x));
@@ -475,7 +469,7 @@ struct default_inspector_access : inspector_access_base<T> {
   /// Applies `x` as a single value to `f`.
   template <class Inspector>
   [[nodiscard]] static bool apply_value(Inspector& f, T& x) {
-    constexpr auto token = inspect_value_access_type<Inspector, T>();
+    constexpr auto token = nested_inspect_value_access_type<Inspector, T>();
     if constexpr (Inspector::is_loading)
       return detail::load_value(f, x, token);
     else
@@ -881,8 +875,6 @@ struct inspector_access<std::chrono::duration<Rep, Period>>
   : inspector_access_base<std::chrono::duration<Rep, Period>> {
   using value_type = std::chrono::duration<Rep, Period>;
 
-  using default_impl = default_inspector_access<value_type>;
-
   template <class Inspector>
   static bool apply_object(Inspector& f, value_type& x) {
     return f.object(x).fields(f.field("value", x));
@@ -918,8 +910,6 @@ struct inspector_access<
       std::chrono::time_point<std::chrono::system_clock, Duration>> {
   using value_type
     = std::chrono::time_point<std::chrono::system_clock, Duration>;
-
-  using default_impl = default_inspector_access<value_type>;
 
   template <class Inspector>
   static bool apply_object(Inspector& f, value_type& x) {

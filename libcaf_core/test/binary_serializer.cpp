@@ -21,6 +21,7 @@
 #include "caf/binary_serializer.hpp"
 
 #include "core-test.hpp"
+#include "nasty.hpp"
 
 #include <cstring>
 #include <vector>
@@ -203,6 +204,10 @@ CAF_TEST(binary serializer picks up inspect functions) {
                'L'_b, 'o'_b, 'r'_b, 'e'_b, 'm'_b, ' '_b, 'i'_b, 'p'_b, 's'_b,
                'u'_b, 'm'_b, ' '_b, 'd'_b, 'o'_b, 'l'_b, 'o'_b, 'r'_b, ' '_b,
                's'_b, 'i'_b, 't'_b, ' '_b, 'a'_b, 'm'_b, 'e'_b, 't'_b, '.'_b);
+  }
+  SUBTEST("enum class with non-default overload") {
+    auto day = weekday::friday;
+    CHECK_SAVE(weekday, day, 0x04_b);
   }
 }
 
