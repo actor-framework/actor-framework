@@ -68,6 +68,12 @@ public:
     return *this;
   }
 
+  /// Adds elements `n` elements from `msg` to the buffer, starting at index
+  /// `first`.
+  /// @note Always appends *copies* of the elements.
+  message_builder& append_from(const caf::message& msg, size_t first,
+                               size_t n = 1);
+
   template <class... Ts>
   message_builder& append_all(Ts&&... xs) {
     (append(std::forward<Ts>(xs)), ...);

@@ -18,6 +18,7 @@
 
 #include "caf/message_builder.hpp"
 
+#include "caf/detail/meta_object.hpp"
 #include "caf/raise_error.hpp"
 
 namespace caf {
@@ -54,7 +55,44 @@ message to_message_impl(size_t storage_size, TypeListBuilder& types,
   return message{std::move(ptr)};
 }
 
+class message_builder_element_adapter final : public message_builder_element {
+public:
+  message_builder_element_adapter(message src, size_t index)
+    : src_(std::move(src)), index_(index) {
+    // nop
+  }
+
+  byte* copy_init(byte* storage) const override {
+    auto* meta = global_meta_object(src_.type_at(index_));
+    meta->copy_construct(storage, src_.data().at(index_));
+    return storage + meta->padded_size;
+  }
+
+  byte* move_init(byte* storage) override {
+    return copy_init(storage);
+  }
+
+private:
+  message src_;
+  size_t index_;
+};
+
 } // namespace
+
+message_builder& message_builder::append_from(const caf::message& msg,
+                                              size_t first, size_t n) {
+  if (!msg || first >= msg.size())
+    return *this;
+  auto end = std::min(msg.size(), first + n);
+  for (size_t index = first; index < end; ++index) {
+    auto tid = msg.type_at(index);
+    auto* meta = detail::global_meta_object(tid);
+    storage_size_ += meta->padded_size;
+    types_.push_back(tid);
+    elements_.emplace_back(new message_builder_element_adapter(msg, index));
+  }
+  return *this;
+}
 
 void message_builder::clear() noexcept {
   storage_size_ = 0;
