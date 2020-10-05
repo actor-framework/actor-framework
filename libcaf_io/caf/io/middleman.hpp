@@ -286,6 +286,13 @@ public:
     return new impl(sys);
   }
 
+  /// @private
+  actor get_named_broker(const std::string& name) {
+    if (auto i = named_brokers_.find(name); i != named_brokers_.end())
+      return i->second;
+    return {};
+  }
+
 protected:
   middleman(actor_system& sys);
 

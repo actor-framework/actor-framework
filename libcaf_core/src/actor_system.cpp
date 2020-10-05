@@ -131,8 +131,8 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
       self->state.subscribers[subscriber].erase(key);
       self->state.data[key].second.erase(subscriber);
     },
-    // get a 'named' actor from local registry
-    [=](get_atom, const std::string& name) {
+    // get a 'named' actor from the local registry
+    [=](registry_lookup_atom, const std::string& name) {
       return self->home_system().registry().get(name);
     },
   };
