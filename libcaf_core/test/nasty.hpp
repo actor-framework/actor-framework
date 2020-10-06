@@ -9,7 +9,7 @@
 #include "caf/string_view.hpp"
 #include "caf/variant.hpp"
 
-enum class weekday {
+enum class weekday : uint8_t {
   monday,
   tuesday,
   wednesday,

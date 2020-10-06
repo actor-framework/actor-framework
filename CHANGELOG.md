@@ -25,6 +25,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   configuration files and CLI arguments (#1145).
 - Restore correct functionality of `middleman::remote_lookup` (#1146). This
   fixes a regression introduced in version 0.18.0-rc.1
+- Fixed an endless recursion when using the `default_inspector` from `inspect`
+  overloads (#1147).
 
 ## [0.18.0-rc.1] - 2020-09-09
 
