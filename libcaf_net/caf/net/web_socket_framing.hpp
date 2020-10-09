@@ -261,10 +261,10 @@ private:
       case detail::rfc6455::text_frame: {
         string_view text{reinterpret_cast<const char*>(payload.data()),
                          payload.size()};
-        return upper_layer_.consume_text(this_layer_ptr(down), text);
+        return upper_layer_.consume_text(this_layer_ptr(down), text) >= 0;
       }
       case detail::rfc6455::binary_frame:
-        return upper_layer_.consume_binary(this_layer_ptr(down), payload);
+        return upper_layer_.consume_binary(this_layer_ptr(down), payload) >= 0;
       case detail::rfc6455::connection_close:
         down->abort_reason(sec::connection_closed);
         return false;
