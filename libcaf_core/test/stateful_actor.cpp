@@ -209,4 +209,24 @@ CAF_TEST(typed actors can use typed_actor_pointer as self pointer) {
   expect((int), from(testee).to(self).with(11));
 }
 
+CAF_TEST(returned behaviors take precedence over make_behavior in the state) {
+  struct state_type : named_state {
+    behavior make_behavior() {
+      CAF_LOG_TRACE("");
+      return {
+        [](int32_t x, int32_t y) { return x - y; },
+      };
+    }
+  };
+  auto fun = [](stateful_actor<state_type>*, int32_t num) -> behavior {
+    CAF_LOG_TRACE(CAF_ARG(num));
+    return {
+      [num](int32_t x, int32_t y) { return x + y + num; },
+    };
+  };
+  auto testee = sys.spawn<lazy_init>(fun, 10);
+  inject((int32_t, int32_t), from(self).to(testee).with(1, 2));
+  expect((int32_t), from(testee).to(self).with(13));
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()

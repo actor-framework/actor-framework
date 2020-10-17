@@ -24,6 +24,7 @@
 #include "caf/message_handler.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/timespan.hpp"
+#include "caf/unsafe_behavior_init.hpp"
 
 #include "caf/detail/typed_actor_util.hpp"
 
@@ -151,12 +152,6 @@ struct partial_behavior_init_t {};
 
 constexpr partial_behavior_init_t partial_behavior_init
   = partial_behavior_init_t{};
-
-/// Empty struct tag for constructing from an untyped behavior.
-struct unsafe_behavior_init_t {};
-
-constexpr unsafe_behavior_init_t unsafe_behavior_init
-  = unsafe_behavior_init_t{};
 
 template <class... Sigs>
 class typed_behavior {
