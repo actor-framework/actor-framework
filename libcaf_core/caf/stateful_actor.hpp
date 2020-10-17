@@ -23,6 +23,7 @@
 
 #include "caf/fwd.hpp"
 #include "caf/sec.hpp"
+#include "caf/unsafe_behavior_init.hpp"
 
 #include "caf/detail/type_traits.hpp"
 
@@ -113,6 +114,13 @@ namespace caf::detail {
 
 template <class State, class Base>
 typename Base::behavior_type stateful_actor_base<State, Base>::make_behavior() {
+  // When spawning function-based actors, CAF sets `initial_behavior_fac_` to
+  // wrap the function invocation. This always has the highest priority.
+  if (this->initial_behavior_fac_) {
+    auto res = this->initial_behavior_fac_(this);
+    this->initial_behavior_fac_ = nullptr;
+    return {unsafe_behavior_init, std::move(res)};
+  }
   auto dptr = static_cast<stateful_actor<State, Base>*>(this);
   return dptr->state.make_behavior();
 }

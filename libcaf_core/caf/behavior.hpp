@@ -28,6 +28,7 @@
 #include "caf/none.hpp"
 #include "caf/timeout_definition.hpp"
 #include "caf/timespan.hpp"
+#include "caf/unsafe_behavior_init.hpp"
 
 namespace caf {
 
@@ -44,6 +45,11 @@ public:
   behavior(const behavior&) = default;
   behavior& operator=(behavior&&) = default;
   behavior& operator=(const behavior&) = default;
+
+  // Convenience overload to allow "unsafe" initialization of any behavior_type.
+  behavior(unsafe_behavior_init_t, behavior from) : behavior(std::move(from)) {
+    // nop
+  }
 
   /// Creates a behavior from `fun` without timeout.
   behavior(const message_handler& mh);

@@ -27,6 +27,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   fixes a regression introduced in version 0.18.0-rc.1
 - Fixed an endless recursion when using the `default_inspector` from `inspect`
   overloads (#1147).
+- CAF 0.18 added support for `make_behavior` in state classes. However, CAF
+  erroneously picked this member function over running the function body when
+  spawning function-based actors (#1149).
 
 ## [0.18.0-rc.1] - 2020-09-09
 
