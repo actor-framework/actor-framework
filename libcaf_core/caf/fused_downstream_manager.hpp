@@ -99,6 +99,11 @@ struct init_ptr_array<I, I> {
 template <class T, class... Ts>
 class fused_downstream_manager : public downstream_manager {
 public:
+  // -- sanity checks ----------------------------------------------------------
+
+  static_assert(sizeof...(Ts) > 0,
+                "fusing requires at least two nested implementations");
+
   // -- member and nested types ------------------------------------------------
 
   /// Base type.
@@ -141,18 +146,12 @@ public:
 
   template <class U>
   U& get() {
-    static constexpr auto i = detail::tl_index_of<param_list, U>::value;
-    return std::get<i>(nested_);
-    // TODO: replace with this line when switching to C++14
-    // return std::get<U>(substreams_);
+    return std::get<U>(nested_);
   }
 
   template <class U>
   const U& get() const {
-    static constexpr auto i = detail::tl_index_of<param_list, U>::value;
-    return std::get<i>(nested_);
-    // TODO: replace with this line when switching to C++14
-    // return std::get<U>(substreams_);
+    return std::get<U>(nested_);
   }
 
   /// Requires a previous call to `add_path` for given slot.
@@ -183,6 +182,16 @@ public:
       owner->remove_path(slot, sec::invalid_stream_state, false);
       return;
     }
+  }
+
+  /// Removes only the paths for type `U` with an error message.
+  template <class U>
+  void abort_one(error reason) {
+    auto* owner = std::addressof(get<U>());
+    owner->abort(std::move(reason));
+    auto pred = [owner](auto& kvp) { return kvp.second.owner == owner; };
+    auto& xs = paths_.container();
+    xs.erase(std::remove_if(xs.begin(), xs.end(), pred), xs.end());
   }
 
   // -- overridden functions ---------------------------------------------------
