@@ -73,22 +73,21 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
              && source.end_field()           //
              && source.end_object();
     }
+    auto gmos = detail::global_meta_objects();
+    size_t data_size = 0;
     detail::type_id_list_builder ids;
     ids.reserve(msg_size);
     for (size_t i = 0; i < msg_size; ++i) {
       type_id_t id = 0;
       GUARDED(source.value(id));
-      ids.push_back(id);
+      if (id < gmos.size() && valid(gmos[id])) {
+        ids.push_back(id);
+        data_size += gmos[id].padded_size;
+      } else {
+        STOP(sec::unknown_type);
+      }
     }
     GUARDED(source.end_sequence());
-    CAF_ASSERT(ids.size() == msg_size);
-    size_t data_size = 0;
-    for (auto id : ids) {
-      if (auto meta_obj = detail::global_meta_object(id))
-        data_size += meta_obj->padded_size;
-      else
-        STOP(sec::unknown_type);
-    }
     intrusive_ptr<detail::message_data> ptr;
     if (auto vptr = malloc(sizeof(detail::message_data) + data_size)) {
       // We don't need to worry about exceptions here: the message_data
@@ -99,7 +98,6 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
     }
     auto pos = ptr->storage();
     auto types = ptr->types();
-    auto gmos = detail::global_meta_objects();
     GUARDED(source.begin_field("values"));
     GUARDED(source.begin_tuple(msg_size));
     for (size_t i = 0; i < msg_size; ++i) {

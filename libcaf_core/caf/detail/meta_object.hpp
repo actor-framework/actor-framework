@@ -65,6 +65,10 @@ struct meta_object {
   void (*stringify)(std::string&, const void*);
 };
 
+inline bool valid(const meta_object& obj) {
+  return !obj.type_name.empty();
+}
+
 /// Returns the global storage for all meta objects. The ::type_id of an object
 /// is the index for accessing the corresonding meta object.
 CAF_CORE_EXPORT span<const meta_object> global_meta_objects();
