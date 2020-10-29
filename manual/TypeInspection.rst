@@ -458,7 +458,7 @@ an ``enum class`` otherwise.
     if (f.has_human_readable_format()) {
       auto get = [&x] { return to_string(x); };
       auto set = [&x](std::string str) { return parse(str, x); };
-      f.object(x).fields(f.field("value", get, set));
+      return f.object(x).fields(f.field("value", get, set));
     } else {
       using default_impl = caf::default_inspector_access<weekday>;
       return default_impl::apply_object(f, x);
