@@ -30,6 +30,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - CAF 0.18 added support for `make_behavior` in state classes. However, CAF
   erroneously picked this member function over running the function body when
   spawning function-based actors (#1149).
+- When passing `nullptr` or custom types with implicit conversions to
+  `const char*` to `deep_to_string`, CAF could run into a segfault in the former
+  case or do unexpected things in the latter case. The stringification inspector
+  now matches precisely on pointer types to stop the compiler from doing
+  implicit conversions in the first place.
 
 ## [0.18.0-rc.1] - 2020-09-09
 

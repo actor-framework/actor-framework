@@ -19,6 +19,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstring>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -174,18 +175,20 @@ public:
     return true;
   }
 
-  bool builtin_inspect(const char* x);
-
   template <class T>
   bool builtin_inspect(const T* x) {
-    sep();
-    if (!x) {
+    if (x == nullptr) {
+      sep();
       result_ += "null";
+      return true;
+    } else if constexpr (std::is_same<T, char>::value) {
+      return value(string_view{x, strlen(x)});
     } else {
+      sep();
       result_ += '*';
       save_value(*this, detail::as_mutable_ref(*x));
+      return true;
     }
-    return true;
   }
 
   template <class T>
