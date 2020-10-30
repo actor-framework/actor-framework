@@ -223,6 +223,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   parent broker on creation, which prevented proper system shutdown in some
   cases. Adding all servants consistently to the broker should make sure UDP
   brokers terminate correctly (#1133).
+- Backport stream manager fix from CAF 0.18 for fused downstream managers that
+  prevent loss of messages during regular actor shutdown.
 
 ## [0.17.6] - 2020-07-24
 
