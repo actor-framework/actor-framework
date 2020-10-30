@@ -65,6 +65,16 @@ public:
 
   // -- properties -------------------------------------------------------------
 
+  template <class... Ts>
+  bool push_to(stream_slot slot, Ts&&... xs) {
+    auto i = states().find(slot);
+    if (i != states().end()) {
+      i->second.buf.emplace_back(std::forward<Ts>(xs)...);
+      return true;
+    }
+    return false;
+  }
+
   size_t buffered() const noexcept override {
     // We have a central buffer, but also an additional buffer at each path. We
     // return the maximum size to reflect the current worst case.
