@@ -11,6 +11,13 @@ CAF_PUSH_WARNINGS
 #include <QTextEdit>
 CAF_POP_WARNINGS
 
+CAF_BEGIN_TYPE_ID_BLOCK(qt_support, first_custom_type_id)
+
+  CAF_ADD_ATOM(qt_support, set_name_atom)
+  CAF_ADD_ATOM(qt_support, quit_atom)
+
+CAF_END_TYPE_ID_BLOCK(qt_support)
+
 class ChatWidget : public caf::mixin::actor_widget<QWidget> {
 private:
   // -- Qt boilerplate code ----------------------------------------------------
@@ -21,10 +28,6 @@ public:
   // -- member types -----------------------------------------------------------
 
   using super = caf::mixin::actor_widget<QWidget>;
-
-  using set_name_atom = caf::atom_constant<caf::atom("setName")>;
-
-  using quit_atom = caf::atom_constant<caf::atom("quit")>;
 
   ChatWidget(QWidget* parent = nullptr, Qt::WindowFlags f = 0);
 

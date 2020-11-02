@@ -81,10 +81,10 @@ void ChatWidget::sendChatMessage() {
           print("*** error: "
                 + QString::fromUtf8(to_string(x.error()).c_str()));
         else
-          self()->send(self(), atom("join"), std::move(*x));
+          self()->send(self(), join_atom_v, std::move(*x));
       },
-      [=](set_name_atom atm, string& name) {
-        send_as(as_actor(), as_actor(), atm, std::move(name));
+      [=](set_name_atom, string& name) {
+        send_as(as_actor(), as_actor(), set_name_atom_v, std::move(name));
       }
     });
     if (! res)
@@ -130,12 +130,12 @@ void ChatWidget::joinGroup() {
   if (! x)
     QMessageBox::critical(this, "Error", to_string(x.error()).c_str());
   else
-    self()->send(self(), join_atom::value, std::move(*x));
+    self()->send(self(), join_atom_v, std::move(*x));
 }
 
 void ChatWidget::changeName() {
   auto name = QInputDialog::getText(this, "Change Name",
                                     "Please enter a new name");
   if (! name.isEmpty())
-    send_as(as_actor(), as_actor(), atom("setName"), name.toUtf8().constData());
+    send_as(as_actor(), as_actor(), set_name_atom_v, name.toUtf8().constData());
 }

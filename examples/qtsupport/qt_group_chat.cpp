@@ -40,6 +40,7 @@ public:
     .add(group_id, "group,g", "join group (format: <module>:<id>");
     parse(argc, argv);
     load<io::middleman>();
+    io::middleman::init_global_meta_objects();
   }
 };
 
@@ -74,9 +75,9 @@ int main(int argc, char** argv) {
   helper.chatwidget->init(system);
   auto client = helper.chatwidget->as_actor();
   if (! name.empty())
-    send_as(client, client, atom("setName"), move(name));
+    send_as(client, client, set_name_atom_v, move(name));
   if (grp)
-    send_as(client, client, atom("join"), std::move(grp));
+    send_as(client, client, join_atom_v, std::move(grp));
   mw.show();
   return app.exec();
 }
