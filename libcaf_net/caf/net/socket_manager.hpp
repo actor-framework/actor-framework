@@ -18,7 +18,10 @@
 
 #pragma once
 
+#include "caf/actor.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/callback.hpp"
+#include "caf/detail/infer_actor_shell_ptr_type.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
@@ -27,6 +30,7 @@
 #include "caf/net/fwd.hpp"
 #include "caf/net/operation.hpp"
 #include "caf/net/socket.hpp"
+#include "caf/net/typed_actor_shell.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/tag/io_event_oriented.hpp"
 
@@ -57,6 +61,9 @@ public:
   socket handle() const {
     return handle_;
   }
+
+  /// Returns a reference to the hosting @ref actor_system instance.
+  actor_system& system() noexcept;
 
   /// Returns the owning @ref multiplexer instance.
   multiplexer& mpx() noexcept {
@@ -110,19 +117,23 @@ public:
 
   // -- factories --------------------------------------------------------------
 
-  template <class LowerLayerPtr, class FallbackHandler>
-  actor_shell_ptr make_actor_shell(LowerLayerPtr, FallbackHandler f) {
-    auto ptr = make_actor_shell_impl();
+  template <class Handle = actor, class LowerLayerPtr, class FallbackHandler>
+  auto make_actor_shell(LowerLayerPtr, FallbackHandler f) {
+    using ptr_type = detail::infer_actor_shell_ptr_type<Handle>;
+    using impl_type = typename ptr_type::element_type;
+    auto hdl = system().spawn<impl_type>(this);
+    auto ptr = ptr_type{actor_cast<strong_actor_ptr>(std::move(hdl))};
     ptr->set_fallback(std::move(f));
     return ptr;
   }
 
-  template <class LowerLayerPtr>
-  actor_shell_ptr make_actor_shell(LowerLayerPtr down) {
-    return make_actor_shell(down, [down](message& msg) -> result<message> {
+  template <class Handle = actor, class LowerLayerPtr>
+  auto make_actor_shell(LowerLayerPtr down) {
+    auto f = [down](message& msg) -> result<message> {
       down->abort_reason(make_error(sec::unexpected_message, std::move(msg)));
       return make_error(sec::unexpected_message);
-    });
+    };
+    return make_actor_shell<Handle>(down, std::move(f));
   }
 
   // -- event loop management --------------------------------------------------
@@ -155,9 +166,6 @@ protected:
   multiplexer* parent_;
 
   error abort_reason_;
-
-private:
-  actor_shell_ptr make_actor_shell_impl();
 };
 
 template <class Protocol>

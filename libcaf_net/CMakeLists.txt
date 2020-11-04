@@ -53,6 +53,7 @@ add_library(libcaf_net_obj OBJECT ${CAF_NET_HEADERS}
   src/ip.cpp
   src/message_queue.cpp
   src/multiplexer.cpp
+  src/net/abstract_actor_shell.cpp
   src/net/actor_shell.cpp
   src/net/middleman.cpp
   src/net/middleman_backend.cpp
@@ -142,6 +143,7 @@ caf_incubator_add_test_suites(caf-net-test
   #net.basp.ping_pong
   #net.basp.worker
   net.length_prefix_framing
+  net.typed_actor_shell
   net.web_socket_server
   network_socket
   pipe_socket

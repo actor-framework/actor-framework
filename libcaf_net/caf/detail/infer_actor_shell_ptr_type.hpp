@@ -16,55 +16,28 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/net/actor_shell.hpp"
+#pragma once
 
-namespace caf::net {
+#include "caf/fwd.hpp"
+#include "caf/net/fwd.hpp"
 
-// -- actor_shell --------------------------------------------------------------
+namespace caf::detail {
 
-actor_shell::actor_shell(actor_config& cfg, socket_manager* owner)
-  : super(cfg, owner) {
-  // nop
-}
+template <class T>
+struct actor_shell_ptr_type_oracle;
 
-actor_shell::~actor_shell() {
-  // nop
-}
+template <>
+struct actor_shell_ptr_type_oracle<actor> {
+  using type = net::actor_shell_ptr;
+};
 
-const char* actor_shell::name() const {
-  return "caf.net.actor-shell";
-}
+template <class... Sigs>
+struct actor_shell_ptr_type_oracle<typed_actor<Sigs...>> {
+  using type = net::typed_actor_shell_ptr<Sigs...>;
+};
 
-// -- actor_shell_ptr ----------------------------------------------------------
+template <class T>
+using infer_actor_shell_ptr_type =
+  typename actor_shell_ptr_type_oracle<T>::type;
 
-actor_shell_ptr::actor_shell_ptr(strong_actor_ptr ptr) noexcept
-  : ptr_(std::move(ptr)) {
-  // nop
-}
-
-actor_shell_ptr::~actor_shell_ptr() {
-  if (auto ptr = get())
-    ptr->quit(exit_reason::normal);
-}
-
-actor_shell_ptr::handle_type actor_shell_ptr::as_actor() const noexcept {
-  return actor_cast<actor>(ptr_);
-}
-
-void actor_shell_ptr::detach(error reason) {
-  if (auto ptr = get()) {
-    ptr->quit(std::move(reason));
-    ptr_.release();
-  }
-}
-
-actor_shell_ptr::element_type* actor_shell_ptr::get() const noexcept {
-  if (ptr_) {
-    auto ptr = actor_cast<abstract_actor*>(ptr_);
-    return static_cast<actor_shell*>(ptr);
-  } else {
-    return nullptr;
-  }
-}
-
-} // namespace caf::net
+} // namespace caf::detail
