@@ -30,36 +30,67 @@ config = [
     ],
     // Our build matrix. Keys are the operating system labels and values are build configurations.
     buildMatrix: [
-        ['Linux', [
-            builds: ['debug'],
-            tools: ['gcc7'],
-        ]],
-        ['Linux', [
-            builds: ['debug'],
-            tools: ['gcc8'],
-        ]],
-        ['Linux', [
-            builds: ['debug'],
-            tools: ['gcc8'],
-            extraFlags: ['EXTRA_FLAGS=-std=c++17']
-        ]],
-        ['Linux', [
-            builds: ['release'],
-            tools: ['gcc8'],
-        ]],
-        ['macOS', [
+        // Various Linux builds for debug and release.
+        ['centos-7', [
+            numCores: 4,
+            tags: ['docker'],
             builds: ['debug', 'release'],
-            tools: ['clang'],
+        ]],
+        ['centos-8', [
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['debug', 'release'],
+        ]],
+        ['debian-10', [
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['debug', 'release'],
+        ]],
+        ['ubuntu-16.04', [
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['debug', 'release'],
+        ]],
+        ['ubuntu-18.04', [
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['debug', 'release'],
+        ]],
+        ['ubuntu-20.04', [
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['debug', 'release'],
+        ]],
+        ['fedora-31', [
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['debug', 'release'],
+        ]],
+        ['fedora-32', [
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['debug', 'release'],
+        ]],
+        // Other UNIX systems.
+        ['macOS', [
+            numCores: 4,
+            builds: ['debug', 'release'],
+            extraFlags: [
+                'OPENSSL_ROOT_DIR=/usr/local/opt/openssl',
+                'OPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include',
+            ],
         ]],
         ['FreeBSD', [
+            numCores: 4,
             builds: ['debug', 'release'],
-            tools: ['clang'],
         ]],
+        // Non-UNIX systems.
         ['Windows', [
-            // TODO: debug build currently broken
-            //builds: ['debug', 'release'],
+            numCores: 4,
             builds: ['release'],
-            tools: ['msvc'],
+            extraFlags: [
+                'CAF_BUILD_STATIC_ONLY:BOOL=yes',
+            ],
         ]],
     ],
     // Platform-specific environment settings.
@@ -73,24 +104,7 @@ config = [
     ],
     // CMake flags by OS and build type to override defaults for individual builds.
     buildFlags: [
-        macOS: [
-            debug: defaultDebugBuildFlags + [
-                'OPENSSL_ROOT_DIR=/usr/local/opt/openssl',
-                'OPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include',
-            ],
-            release: defaultReleaseBuildFlags + [
-                'OPENSSL_ROOT_DIR=/usr/local/opt/openssl',
-                'OPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include',
-            ],
-        ],
-        Windows: [
-            debug: defaultDebugBuildFlags + [
-                'CAF_BUILD_STATIC_ONLY:BOOL=yes',
-            ],
-            release: defaultReleaseBuildFlags + [
-                'CAF_BUILD_STATIC_ONLY:BOOL=yes',
-            ],
-        ],
+        nop: [],
     ],
 ]
 
@@ -143,35 +157,6 @@ pipeline {
                 buildParallel(config, PrettyJobBaseName)
             }
         }
-        // TODO: generate PDF from reStructuredText
-        // stage('Documentation') {
-        //     agent { label 'pandoc' }
-        //     steps {
-        //         deleteDir()
-        //         unstash('sources')
-        //         dir('sources') {
-        //             // Configure and build.
-        //             cmakeBuild([
-        //                 buildDir: 'build',
-        //                 installation: 'cmake in search path',
-        //                 sourceDir: '.',
-        //                 cmakeArgs: '-DCAF_BUILD_TEX_MANUAL=yes',
-        //                 steps: [[
-        //                     args: '--target doc',
-        //                     withCmake: true,
-        //                 ]],
-        //             ])
-        //             sshagent(['84d71a75-cbb6-489a-8f4c-d0e2793201e9']) {
-        //                 sh """
-        //                     if [ "${env.GIT_BRANCH}" = "master" ]; then
-        //                         rsync -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" -r -z --delete build/doc/html/ www.inet.haw-hamburg.de:/users/www/www.actor-framework.org/html/doc
-        //                         scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null build/doc/manual.pdf www.inet.haw-hamburg.de:/users/www/www.actor-framework.org/html/pdf/manual.pdf
-        //                     fi
-        //                 """
-        //             }
-        //         }
-        //     }
-        // }
         stage('Notify') {
             steps {
                 collectResults(config, PrettyJobName)
