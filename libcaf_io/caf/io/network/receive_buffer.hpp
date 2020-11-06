@@ -20,6 +20,7 @@
 
 #include <cstddef>
 #include <cstring>
+#include <limits>
 #include <memory>
 
 #include "caf/allowed_unsafe_message_type.hpp"
