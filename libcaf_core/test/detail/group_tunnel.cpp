@@ -34,7 +34,28 @@ public:
     // nop
   }
 
-  void stop() {
+  void stop() override {
+    drop_instances();
+  }
+
+  expected<group> get(const std::string& group_name) override {
+    auto result = get_impl(group_name);
+    return group{result.get()};
+  }
+
+  detail::group_tunnel_ptr get_unconnected(const std::string& group_name,
+                                           const node_id& origin) {
+    if (auto i = instances.find(group_name); i != instances.end()) {
+      return i->second;
+    } else {
+      auto result = make_counted<detail::group_tunnel>(this, group_name,
+                                                       origin);
+      instances.emplace(group_name, result);
+      return result;
+    }
+  }
+
+  void drop_instances() {
     for (auto& kvp : instances)
       kvp.second->stop();
     instances.clear();
@@ -50,11 +71,6 @@ public:
       instances.emplace(group_name, result);
       return result;
     }
-  }
-
-  expected<group> get(const std::string& group_name) {
-    auto result = get_impl(group_name);
-    return group{result.get()};
   }
 
   std::map<std::string, detail::group_tunnel_ptr> instances;
@@ -90,6 +106,19 @@ struct fixture : test_coordinator_fixture<> {
     for (auto& kvp : uut->instances)
       kvp.second->stop();
     sys.groups().get_module("local")->stop();
+  }
+
+  void make_unconnected() {
+    uut->drop_instances();
+    tunnel = uut->get_unconnected("test", intermediary.node());
+    proxy = group{tunnel.get()};
+    worker = actor{};
+    run();
+  }
+
+  void connect_proxy() {
+    tunnel->connect(intermediary);
+    worker = tunnel->worker();
   }
 
   intrusive_ptr<mock_module> uut;
@@ -198,6 +227,45 @@ CAF_TEST(tunnels automatically unsubscribe from their origin) {
     expect((put_atom, int), from(self).to(t1).with(_, 42));
     expect((put_atom, int), from(self).to(t2).with(_, 42));
     disallow((put_atom, int), from(self).to(worker).with(_, 42));
+    CAF_CHECK(!sched.has_job());
+  }
+}
+
+CAF_TEST(tunnels cache messages until connected) {
+  CAF_MESSAGE("Given an unconnected tunnel with two subscribers.");
+  make_unconnected();
+  auto t1 = sys.spawn_in_group<lazy_init>(proxy, testee_impl);
+  auto t2 = sys.spawn_in_group<lazy_init>(proxy, testee_impl);
+  { // Subtest.
+    CAF_MESSAGE("When an actors sends to the group.");
+    self->send(proxy, put_atom_v, 1);
+    self->send(proxy, put_atom_v, 2);
+    self->send(proxy, put_atom_v, 3);
+    CAF_MESSAGE("Then unconnected tunnel caches the messages.");
+    CAF_CHECK(!sched.has_job());
+  }
+  { // Subtest.
+    CAF_MESSAGE("When the tunnel becomes connected.");
+    connect_proxy();
+    CAF_MESSAGE("Then tunnel subscribes upstream and flushes its cache.");
+    expect((sys_atom, join_atom), to(worker));
+    expect((sys_atom, forward_atom, message), from(self).to(worker));
+    expect((sys_atom, forward_atom, message), from(self).to(worker));
+    expect((sys_atom, forward_atom, message), from(self).to(worker));
+    expect((join_atom, strong_actor_ptr),
+           from(worker).to(intermediary).with(_, worker));
+    expect((forward_atom, message), from(self).to(intermediary));
+    expect((forward_atom, message), from(self).to(intermediary));
+    expect((forward_atom, message), from(self).to(intermediary));
+    expect((put_atom, int), from(self).to(worker).with(_, 1));
+    expect((put_atom, int), from(self).to(worker).with(_, 2));
+    expect((put_atom, int), from(self).to(worker).with(_, 3));
+    expect((put_atom, int), from(self).to(t1).with(_, 1));
+    expect((put_atom, int), from(self).to(t1).with(_, 2));
+    expect((put_atom, int), from(self).to(t1).with(_, 3));
+    expect((put_atom, int), from(self).to(t2).with(_, 1));
+    expect((put_atom, int), from(self).to(t2).with(_, 2));
+    expect((put_atom, int), from(self).to(t2).with(_, 3));
     CAF_CHECK(!sched.has_job());
   }
 }

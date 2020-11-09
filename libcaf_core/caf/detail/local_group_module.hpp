@@ -33,7 +33,7 @@ namespace caf::detail {
 /// ID as prefix. Each group instance spins up an intermediary actor to enable
 /// remote access to the group. The default module is used internally by the
 /// "local" as well as the "remote" module.
-class local_group_module : public group_module {
+class CAF_CORE_EXPORT local_group_module : public group_module {
 public:
   using super = group_module;
 
@@ -54,13 +54,15 @@ public:
   using intermediary_actor = stateful_actor<intermediary_actor_state>;
 
   /// Implementation of the group interface for instances of this module.
-  class impl : public abstract_group {
+  class CAF_CORE_EXPORT impl : public abstract_group {
   public:
     friend local_group_module;
 
     using super = abstract_group;
 
     using subscriber_set = std::set<strong_actor_ptr, std::less<>>;
+
+    impl(group_module_ptr mod, std::string id, node_id origin);
 
     impl(group_module_ptr mod, std::string id);
 
@@ -79,7 +81,7 @@ public:
 
   protected:
     template <class F>
-    auto critical_section(F&& fun) {
+    auto critical_section(F&& fun) const {
       std::unique_lock<std::mutex> guard{mtx_};
       return fun();
     }

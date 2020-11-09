@@ -34,9 +34,6 @@ struct group_worker_actor_state {
   behavior make_behavior() {
     self->set_down_handler([this](const down_msg& dm) {
       if (dm.source == intermediary) {
-        gptr->upstream_enqueue(nullptr, make_message_id(),
-                               make_message(group_down_msg{group{gptr.get()}}),
-                               self->context());
         gptr->stop();
       }
     });
@@ -74,9 +71,14 @@ using group_worker_actor = stateful_actor<group_worker_actor_state>;
 
 group_tunnel::group_tunnel(group_module_ptr mod, std::string id,
                            actor upstream_intermediary)
-  : super(std::move(mod), std::move(id)) {
+  : super(std::move(mod), std::move(id), upstream_intermediary.node()) {
   intermediary_ = std::move(upstream_intermediary);
-  worker_ = system().spawn<group_worker_actor>(this, intermediary_);
+  worker_ = system().spawn<group_worker_actor, hidden>(this, intermediary_);
+}
+
+group_tunnel::group_tunnel(group_module_ptr mod, std::string id, node_id nid)
+  : super(std::move(mod), std::move(id), std::move(nid)) {
+  // nop
 }
 
 group_tunnel::~group_tunnel() {
@@ -102,36 +104,86 @@ void group_tunnel::unsubscribe(const actor_control_block* who) {
 
 void group_tunnel::enqueue(strong_actor_ptr sender, message_id mid,
                            message content, execution_unit* host) {
+  CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(content));
   std::unique_lock<std::mutex> guard{mtx_};
-  if (!stopped_) {
+  if (worker_ != nullptr) {
     auto wrapped = make_message(sys_atom_v, forward_atom_v, std::move(content));
     worker_->enqueue(std::move(sender), mid, std::move(wrapped), host);
+  } else if (!stopped_) {
+    auto wrapped = make_message(sys_atom_v, forward_atom_v, std::move(content));
+    cached_messages_.emplace_back(std::move(sender), mid, std::move(wrapped));
   }
 }
 
 void group_tunnel::stop() {
+  CAF_LOG_TRACE("");
   CAF_LOG_DEBUG("stop group tunnel:" << CAF_ARG2("module", module().name())
                                      << CAF_ARG2("identifier", identifier_));
   auto hdl = actor{};
   auto subs = subscriber_set{};
-  auto stopped = critical_section([this, &hdl, &subs] {
+  auto cache = cached_message_list{};
+  auto stopped = critical_section([this, &hdl, &subs, &cache] {
     using std::swap;
     if (!stopped_) {
       stopped_ = true;
       swap(subs, subscribers_);
       swap(hdl, worker_);
+      swap(cache, cached_messages_);
       return true;
     } else {
       return false;
     }
   });
-  if (stopped)
+  if (stopped) {
     anon_send_exit(hdl, exit_reason::user_shutdown);
+    if (!subs.empty()) {
+      auto bye = make_message(group_down_msg{group{this}});
+      for (auto& sub : subs)
+        sub->enqueue(nullptr, make_message_id(), bye, nullptr);
+    }
+  }
+}
+
+std::string group_tunnel::stringify() const {
+  std::string result;
+  result = "remote:";
+  result += identifier();
+  result += '@';
+  result += to_string(origin());
+  return result;
 }
 
 void group_tunnel::upstream_enqueue(strong_actor_ptr sender, message_id mid,
                                     message content, execution_unit* host) {
+  CAF_LOG_TRACE(CAF_ARG(sender) << CAF_ARG(content));
   super::enqueue(std::move(sender), mid, std::move(content), host);
+}
+
+bool group_tunnel::connect(actor upstream_intermediary) {
+  CAF_LOG_TRACE(CAF_ARG(upstream_intermediary));
+  return critical_section([this, &upstream_intermediary] {
+    if (stopped_ || worker_ != nullptr) {
+      return false;
+    } else {
+      intermediary_ = upstream_intermediary;
+      worker_ = system().spawn<group_worker_actor, hidden>(
+        this, upstream_intermediary);
+      if (!subscribers_.empty())
+        anon_send(worker_, sys_atom_v, join_atom_v);
+      for (auto& [sender, mid, content] : cached_messages_)
+        worker_->enqueue(std::move(sender), mid, std::move(content), nullptr);
+      cached_messages_.clear();
+      return true;
+    }
+  });
+}
+
+bool group_tunnel::connected() const noexcept {
+  return critical_section([this] { return worker_ != nullptr; });
+}
+
+actor group_tunnel::worker() const noexcept {
+  return critical_section([this] { return worker_; });
 }
 
 } // namespace caf::detail

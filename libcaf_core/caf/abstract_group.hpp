@@ -79,7 +79,7 @@ public:
   }
 
   /// Returns a human-readable string representation of the group ID.
-  virtual std::string to_string() const;
+  virtual std::string stringify() const;
 
   /// Returns the intermediary actor for the group if applicable.
   virtual actor intermediary() const noexcept;

@@ -65,13 +65,19 @@ behavior local_group_module::intermediary_actor_state::make_behavior() {
 
 // -- local group impl ---------------------------------------------------------
 
+local_group_module::impl::impl(group_module_ptr mod, std::string id,
+                               node_id origin)
+  : super(mod, std::move(id), origin) {
+  // nop
+}
+
 local_group_module::impl::impl(group_module_ptr mod, std::string id)
-  : super(mod, std::move(id), mod->system().node()) {
+  : impl(mod, std::move(id), mod->system().node()) {
   CAF_LOG_DEBUG("created new local group:" << identifier_);
 }
 
 local_group_module::impl::~impl() {
-  CAF_LOG_DEBUG("destroyed local group:" << identifier_);
+  // nop
 }
 
 void local_group_module::impl::enqueue(strong_actor_ptr sender, message_id mid,
@@ -152,7 +158,7 @@ expected<group> local_group_module::get(const std::string& group_name) {
     return make_error(sec::runtime_error,
                       "cannot get a group from on a stopped module");
   } else if (auto i = instances_.find(group_name); i != instances_.end()) {
-    return group{i->second.get()};
+    return group{i->second};
   } else {
     auto ptr = make_counted<impl>(this, group_name);
     ptr->intermediary_ = system().spawn<intermediary_actor, hidden>(ptr);

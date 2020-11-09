@@ -44,7 +44,7 @@ actor_system& abstract_group::system() const noexcept {
   return module().system();
 }
 
-std::string abstract_group::to_string() const {
+std::string abstract_group::stringify() const {
   auto result = module().name();
   result += ':';
   result += identifier();

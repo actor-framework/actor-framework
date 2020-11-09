@@ -53,17 +53,15 @@ public:
 
   group(const group&) = default;
 
-  group(const invalid_group_t&);
+  group(invalid_group_t);
+
+  explicit group(intrusive_ptr<abstract_group> gptr);
 
   group& operator=(group&&) = default;
 
   group& operator=(const group&) = default;
 
-  group& operator=(const invalid_group_t&);
-
-  explicit group(abstract_group*);
-
-  group(intrusive_ptr<abstract_group> gptr);
+  group& operator=(invalid_group_t);
 
   explicit operator bool() const noexcept {
     return static_cast<bool>(ptr_);
