@@ -335,6 +335,9 @@ public:
   /// Removes a monitor from `whom`.
   void demonitor(const actor_addr& whom);
 
+  /// Removes a monitor from `whom`.
+  void demonitor(const strong_actor_ptr& whom);
+
   /// Removes a monitor from `node`.
   void demonitor(const node_id& node);
 
