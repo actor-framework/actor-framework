@@ -35,6 +35,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   case or do unexpected things in the latter case. The stringification inspector
   now matches precisely on pointer types to stop the compiler from doing
   implicit conversions in the first place.
+- Fixed a regression for remote groups introduced in 0.18.0-rc.1 (#1157).
 
 ## [0.18.0-rc.1] - 2020-09-09
 
