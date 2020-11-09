@@ -45,10 +45,11 @@ behavior client(event_based_actor* self, const std::string& name) {
       }
     },
     [=](join_atom, const group& what) {
-      for (const auto& g : self->joined_groups()) {
-        std::cout << "*** leave " << to_string(g) << std::endl;
-        self->send(g, name + " has left the chatroom");
-        self->leave(g);
+      auto groups = self->joined_groups();
+      for (auto&& grp : groups) {
+        std::cout << "*** leave " << to_string(grp) << std::endl;
+        self->send(grp, name + " has left the chatroom");
+        self->leave(grp);
       }
       std::cout << "*** join " << to_string(what) << std::endl;
       self->join(what);
@@ -62,20 +63,28 @@ behavior client(event_based_actor* self, const std::string& name) {
     [=](const group_down_msg& g) {
       std::cout << "*** chatroom offline: " << to_string(g.source) << std::endl;
     },
+    [=](leave_atom) {
+      auto groups = self->joined_groups();
+      for (auto&& grp : groups) {
+        std::cout << "*** leave " << to_string(grp) << std::endl;
+        self->send(grp, name + " has left the chatroom");
+        self->leave(grp);
+      }
+    },
   };
 }
 
 class config : public actor_system_config {
 public:
   std::string name;
-  std::vector<std::string> group_uris;
+  std::vector<std::string> group_locators;
   uint16_t port = 0;
   bool server_mode = false;
 
   config() {
     opt_group{custom_options_, "global"}
       .add(name, "name,n", "set name")
-      .add(group_uris, "group,g", "join group")
+      .add(group_locators, "group,g", "join group")
       .add(server_mode, "server,s", "run in server mode")
       .add(port, "port,p", "set port (ignored in client mode)");
   }
@@ -105,13 +114,13 @@ void run_client(actor_system& system, const config& cfg) {
     }
   }
   auto client_actor = system.spawn(client, name);
-  for (auto& uri : cfg.group_uris) {
-    if (auto grp = system.groups().get(uri)) {
-      std::cout << "*** join " << to_string(grp) << '\n';
+  for (auto& locator : cfg.group_locators) {
+    if (auto grp = system.groups().get(locator)) {
       anon_send(client_actor, join_atom_v, std::move(*grp));
     } else {
-      std::cerr << R"(*** failed to parse ")" << uri << R"(" as group URI: )"
-                << to_string(grp.error()) << std::endl;
+      std::cerr << R"(*** failed to parse ")" << locator
+                << R"(" as group locator: )" << to_string(grp.error())
+                << std::endl;
     }
   }
   std::cout << "*** starting client, type '/help' for a list of commands\n";
@@ -129,7 +138,7 @@ void run_client(actor_system& system, const config& cfg) {
         else
           std::cerr << "*** failed to join group: " << to_string(grp.error())
                     << std::endl;
-      } else if (words.size() == 1 && words[0] == "quit") {
+      } else if (words.size() == 1 && words[0] == "/quit") {
         std::cin.setstate(std::ios_base::eofbit);
       } else {
         std::cout << "*** available commands:\n"
@@ -141,7 +150,7 @@ void run_client(actor_system& system, const config& cfg) {
       anon_send(client_actor, broadcast_atom_v, i->str);
     }
   }
-  // force actor to quit
+  anon_send(client_actor, leave_atom_v);
   anon_send_exit(client_actor, exit_reason::user_shutdown);
 }
 
