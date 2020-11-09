@@ -31,7 +31,7 @@
 namespace caf {
 
 /// Interface for user-defined multicast implementations.
-class CAF_CORE_EXPORT group_module {
+class CAF_CORE_EXPORT group_module : public ref_counted {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -41,7 +41,7 @@ public:
 
   group_module& operator=(const group_module&) = delete;
 
-  virtual ~group_module();
+  ~group_module() override;
 
   // -- pure virtual member functions ------------------------------------------
 
@@ -52,26 +52,23 @@ public:
   /// @threadsafe
   virtual expected<group> get(const std::string& group_name) = 0;
 
-  /// Returns a pointer to the group associated with the name `group_name`.
-  /// @threadsafe
-  virtual expected<group>
-  get(const std::string& group_name, const caf::actor& dispatcher) = 0;
-
   // -- observers --------------------------------------------------------------
 
   /// Returns the hosting actor system.
-  actor_system& system() const {
-    return system_;
+  actor_system& system() const noexcept {
+    return *system_;
   }
 
   /// Returns the name of this module implementation.
-  const std::string& name() const {
+  const std::string& name() const noexcept {
     return name_;
   }
 
 private:
-  actor_system& system_;
+  actor_system* system_;
   std::string name_;
 };
+
+using group_module_ptr = intrusive_ptr<group_module>;
 
 } // namespace caf

@@ -104,53 +104,42 @@ void run_client(actor_system& system, const config& cfg) {
       return;
     }
   }
-  std::cout << "*** starting client, type '/help' for a list of commands\n";
   auto client_actor = system.spawn(client, name);
   for (auto& uri : cfg.group_uris) {
-    auto tmp = system.groups().get(uri);
-    if (tmp)
-      anon_send(client_actor, join_atom_v, std::move(*tmp));
-    else
+    if (auto grp = system.groups().get(uri)) {
+      std::cout << "*** join " << to_string(grp) << '\n';
+      anon_send(client_actor, join_atom_v, std::move(*grp));
+    } else {
       std::cerr << R"(*** failed to parse ")" << uri << R"(" as group URI: )"
-                << to_string(tmp.error()) << std::endl;
+                << to_string(grp.error()) << std::endl;
+    }
   }
+  std::cout << "*** starting client, type '/help' for a list of commands\n";
   std::istream_iterator<line> eof;
   std::vector<std::string> words;
   for (std::istream_iterator<line> i{std::cin}; i != eof; ++i) {
-    auto send_input = [&] {
-      if (!i->str.empty())
-        anon_send(client_actor, broadcast_atom_v, i->str);
-    };
-    words.clear();
-    split(words, i->str, is_any_of(" "));
-    message_handler f{
-      [&](const std::string& cmd, const std::string& mod,
-          const std::string& id) {
-        if (cmd == "/join") {
-          auto grp = system.groups().get(mod, id);
-          if (grp)
-            anon_send(client_actor, join_atom_v, *grp);
-        } else {
-          send_input();
-        }
-      },
-      [&](const std::string& cmd) {
-        if (cmd == "/quit") {
-          std::cin.setstate(std::ios_base::eofbit);
-        } else if (cmd[0] == '/') {
-          std::cout << "*** available commands:\n"
-                       "  /join <module> <group> join a new chat channel\n"
-                       "  /quit          quit the program\n"
-                       "  /help          print this text\n";
-        } else {
-          send_input();
-        }
-      },
-    };
-    auto msg = message_builder(words.begin(), words.end()).move_to_message();
-    auto res = f(msg);
-    if (!res)
-      send_input();
+    if (i->str.empty()) {
+      // Ignore empty lines.
+    } else if (i->str[0] == '/') {
+      words.clear();
+      split(words, i->str, is_any_of(" "));
+      if (words.size() == 3 && words[0] == "/join") {
+        if (auto grp = system.groups().get(words[1], words[2]))
+          anon_send(client_actor, join_atom_v, *grp);
+        else
+          std::cerr << "*** failed to join group: " << to_string(grp.error())
+                    << std::endl;
+      } else if (words.size() == 1 && words[0] == "quit") {
+        std::cin.setstate(std::ios_base::eofbit);
+      } else {
+        std::cout << "*** available commands:\n"
+                     "  /join <module> <group> join a new chat channel\n"
+                     "  /quit                  quit the program\n"
+                     "  /help                  print this text\n";
+      }
+    } else {
+      anon_send(client_actor, broadcast_atom_v, i->str);
+    }
   }
   // force actor to quit
   anon_send_exit(client_actor, exit_reason::user_shutdown);

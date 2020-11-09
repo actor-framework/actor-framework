@@ -21,8 +21,7 @@
 namespace caf {
 
 group_module::group_module(actor_system& sys, std::string mname)
-    : system_(sys),
-      name_(std::move(mname)) {
+  : system_(&sys), name_(std::move(mname)) {
   // nop
 }
 

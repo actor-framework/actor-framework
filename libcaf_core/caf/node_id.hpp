@@ -150,8 +150,13 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Queries whether this node is not default-constructed.
-  explicit operator bool() const {
+  explicit operator bool() const noexcept {
     return static_cast<bool>(data_);
+  }
+
+  /// Queries whether this node is default-constructed.
+  bool operator!() const noexcept {
+    return !data_;
   }
 
   /// Compares this instance to `other`.

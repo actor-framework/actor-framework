@@ -114,6 +114,14 @@ public:
     return !data_;
   }
 
+  /// Checks whether this messages contains the types `Ts...` with values
+  /// `values...`. Users may pass `std::ignore` as a wildcard for individual
+  /// elements. Elements are compared using `operator==`.
+  template <class... Ts>
+  bool matches(const Ts&... values) const {
+    return matches_impl(std::index_sequence_for<Ts...>{}, values...);
+  }
+
   // -- serialization ----------------------------------------------------------
 
   bool save(serializer& sink) const;
@@ -174,6 +182,19 @@ public:
   }
 
 private:
+  template <size_t Pos, class T>
+  bool matches_at(const T& value) const {
+    if constexpr (std::is_same<T, decltype(std::ignore)>::value)
+      return true;
+    else
+      return match_element<T>(Pos) && get_as<T>(Pos) == value;
+  }
+
+  template <size_t... Is, class... Ts>
+  bool matches_impl(std::index_sequence<Is...>, const Ts&... values) const {
+    return (matches_at<Is>(values) && ...);
+  }
+
   data_ptr data_;
 };
 

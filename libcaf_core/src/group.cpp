@@ -58,13 +58,23 @@ intptr_t group::compare(const group& other) const noexcept {
   return compare(ptr_.get(), other.ptr_.get());
 }
 
+expected<group> group::load_impl(actor_system& sys, const node_id& origin,
+                                 const std::string& mod,
+                                 const std::string& id) {
+  if (!origin || origin == sys.node())
+    return sys.groups().get(mod, id);
+  else if (auto& get_remote = sys.groups().get_remote)
+    return get_remote(origin, mod, id);
+  else
+    return make_error(sec::feature_disabled,
+                      "cannot access remote group: middleman not loaded");
+}
+
 std::string to_string(const group& x) {
   if (x == invalid_group)
     return "<invalid-group>";
-  std::string result = x.get()->module().name();
-  result += ":";
-  result += x.get()->identifier();
-  return result;
+  else
+    return x.get()->to_string();
 }
 
 } // namespace caf

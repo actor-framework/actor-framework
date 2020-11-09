@@ -60,13 +60,16 @@ public:
   // -- observers --------------------------------------------------------------
 
   /// Returns the hosting system.
-  actor_system& system() const {
-    return system_;
-  }
+  actor_system& system() const noexcept;
 
   /// Returns the parent module.
-  group_module& module() const {
-    return parent_;
+  group_module& module() const noexcept {
+    return *parent_;
+  }
+
+  /// Returns the origin node of the group if applicable.
+  node_id origin() const noexcept {
+    return origin_;
   }
 
   /// Returns a string representation of the group identifier, e.g.,
@@ -75,19 +78,18 @@ public:
     return identifier_;
   }
 
-  /// @private
-  const actor& dispatcher() {
-    return dispatcher_;
-  }
+  /// Returns a human-readable string representation of the group ID.
+  virtual std::string to_string() const;
+
+  /// Returns the intermediary actor for the group if applicable.
+  virtual actor intermediary() const noexcept;
 
 protected:
-  abstract_group(group_module& mod, std::string id, node_id nid);
+  abstract_group(group_module_ptr mod, std::string id, node_id nid);
 
-  actor_system& system_;
-  group_module& parent_;
-  std::string identifier_;
+  group_module_ptr parent_;
   node_id origin_;
-  actor dispatcher_;
+  std::string identifier_;
 };
 
 /// A smart pointer type that manages instances of {@link group}.

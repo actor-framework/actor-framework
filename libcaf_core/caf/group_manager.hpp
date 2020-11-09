@@ -18,18 +18,15 @@
 
 #pragma once
 
-#include <map>
-#include <mutex>
-#include <thread>
+#include <atomic>
+#include <functional>
 #include <unordered_map>
 
 #include "caf/abstract_group.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/shared_spinlock.hpp"
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
 #include "caf/group_module.hpp"
-#include "caf/optional.hpp"
 
 namespace caf {
 
@@ -38,11 +35,17 @@ public:
   // -- friends ----------------------------------------------------------------
 
   friend class actor_system;
+  friend class group;
+  friend class io::middleman;
 
   // -- member types -----------------------------------------------------------
 
-  using modules_map
-    = std::unordered_map<std::string, std::unique_ptr<group_module>>;
+  using modules_map = std::unordered_map<std::string, group_module_ptr>;
+
+  using get_remote_fun
+    = std::function<expected<group>(const node_id& origin,
+                                    const std::string& module_name,
+                                    const std::string& group_identifier)>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -57,34 +60,31 @@ public:
   /// Get a handle to the group associated with given URI scheme.
   /// @threadsafe
   /// @experimental
-  expected<group> get(std::string group_uri) const;
+  expected<group> get(std::string group_uri);
 
   /// Get a handle to the group associated with
   /// `identifier` from the module `mod_name`.
   /// @threadsafe
   expected<group> get(const std::string& module_name,
-                      const std::string& group_identifier) const;
+                      const std::string& group_identifier);
 
   /// Get a pointer to the group associated with
   /// `identifier` from the module `local`.
   /// @threadsafe
-  group get_local(const std::string& group_identifier) const;
+  group get_local(const std::string& group_identifier);
 
   /// Returns an anonymous group.
   /// Each calls to this member function returns a new instance
   /// of an anonymous group. Anonymous groups can be used whenever
   /// a set of actors wants to communicate using an exclusive channel.
-  group anonymous() const;
+  group anonymous();
 
   /// Returns the module named `name` if it exists, otherwise `none`.
-  optional<group_module&> get_module(const std::string& x) const;
-
-  /// @private
-  expected<group> get(const std::string& module_name,
-                      const std::string& group_identifier,
-                      const caf::actor& dispatcher) const;
+  group_module_ptr get_module(const std::string& x) const;
 
 private:
+  get_remote_fun get_remote;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit group_manager(actor_system& sys);
@@ -100,7 +100,8 @@ private:
   // -- data members -----------------------------------------------------------
 
   modules_map mmap_;
-  actor_system& system_;
+  actor_system* system_;
+  std::atomic<size_t> ad_hoc_id_;
 };
 
 } // namespace caf
