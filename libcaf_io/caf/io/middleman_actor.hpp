@@ -101,6 +101,8 @@ using middleman_actor = typed_actor<
   replies_to<spawn_atom, node_id, std::string, message,
              std::set<std::string>>::with<strong_actor_ptr>,
 
+  replies_to<get_atom, group_atom, node_id, std::string>::with<actor>,
+
   replies_to<get_atom, node_id>::with<node_id, std::string, uint16_t>>;
 
 /// Spawns the default implementation for the `middleman_actor` interface.

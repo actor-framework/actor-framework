@@ -29,6 +29,7 @@ endfunction()
 
 add_library(libcaf_io_obj OBJECT ${CAF_IO_HEADERS}
   src/detail/prometheus_broker.cpp
+  src/detail/remote_group_module.cpp
   src/detail/socket_guard.cpp
   src/io/abstract_broker.cpp
   src/io/basp/header.cpp

@@ -29,6 +29,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/config_value.hpp"
 #include "caf/detail/io_export.hpp"
+#include "caf/detail/remote_group_module.hpp"
 #include "caf/detail/unique_function.hpp"
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
@@ -111,11 +112,21 @@ public:
     return actor_cast<ActorHandle>(std::move(*x));
   }
 
-  /// <group-name>@<host>:<port>
-  expected<group> remote_group(const std::string& group_uri);
+  /// Tries to connect to a group that runs on a different node in the network.
+  /// @param group_locator Locator in the format `<group-name>@<host>:<port>`.
+  expected<group> remote_group(const std::string& group_locator);
 
+  /// Tries to connect to a group that runs on a different node in the network.
+  /// @param group_identifier Unique identifier of the group.
+  /// @param host Hostname or IP address of the remote CAF node.
+  /// @param port TCP port for connecting to the group name server of the node.
   expected<group> remote_group(const std::string& group_identifier,
                                const std::string& host, uint16_t port);
+
+  /// @private
+  void resolve_remote_group_intermediary(const node_id& origin,
+                                         const std::string& group_identifier,
+                                         std::function<void(actor)> callback);
 
   /// Returns the enclosing actor system.
   actor_system& system() {
@@ -371,6 +382,9 @@ private:
   /// Stores hidden background actors that get killed automatically when the
   /// actor systems shuts down.
   std::list<actor> background_brokers_;
+
+  /// Manages groups that run on a different node in the network.
+  detail::remote_group_module_ptr remote_groups_;
 };
 
 } // namespace caf::io

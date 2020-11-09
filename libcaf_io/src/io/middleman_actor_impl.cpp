@@ -148,7 +148,7 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
       delegate(broker_, atm, p);
       return {};
     },
-    [=](spawn_atom atm, node_id& nid, std::string& name, message& args,
+    [=](spawn_atom, node_id& nid, std::string& name, message& args,
         std::set<std::string>& ifs) -> result<strong_actor_ptr> {
       CAF_LOG_TRACE("");
       if (!nid)
@@ -168,14 +168,25 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
       // reference but spawn_server_id is constexpr).
       auto id = basp::header::spawn_server_id;
       delegate(broker_, forward_atom_v, nid, id,
-               make_message(atm, std::move(name), std::move(args),
+               make_message(spawn_atom_v, std::move(name), std::move(args),
                             std::move(ifs)));
       return delegated<strong_actor_ptr>{};
     },
-    [=](get_atom atm,
-        node_id nid) -> delegated<node_id, std::string, uint16_t> {
+    [=](get_atom, group_atom, node_id& nid,
+        std::string& group_id) -> result<actor> {
       CAF_LOG_TRACE("");
-      delegate(broker_, atm, std::move(nid));
+      if (!nid)
+        return make_error(sec::invalid_argument,
+                          "cannot get group intermediaries from invalid nodes");
+      auto id = basp::header::config_server_id;
+      delegate(broker_, forward_atom_v, nid, id,
+               make_message(get_atom_v, group_atom_v, std::move(nid),
+                            std::move(group_id)));
+      return delegated<actor>{};
+    },
+    [=](get_atom, node_id& nid) -> delegated<node_id, std::string, uint16_t> {
+      CAF_LOG_TRACE("");
+      delegate(broker_, get_atom_v, std::move(nid));
       return {};
     },
   };

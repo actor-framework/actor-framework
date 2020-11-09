@@ -40,6 +40,7 @@
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/function_view.hpp"
+#include "caf/group_module.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/io/basp/header.hpp"
 #include "caf/io/basp_broker.hpp"
@@ -118,7 +119,7 @@ actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
 }
 
 middleman::middleman(actor_system& sys) : system_(sys) {
-  // nop
+  remote_groups_ = make_counted<detail::remote_group_module>(this);
 }
 
 expected<strong_actor_ptr>
@@ -168,19 +169,20 @@ expected<uint16_t> middleman::publish_local_groups(uint16_t port,
   CAF_LOG_TRACE(CAF_ARG(port) << CAF_ARG(in));
   auto group_nameserver = [](event_based_actor* self) -> behavior {
     return {
-      [self](get_atom, const std::string& name) {
-        return self->system().groups().get_local(name);
+      [self](get_atom, const std::string& id) {
+        auto grp = self->system().groups().get_local(id);
+        return grp.get()->intermediary();
       },
     };
   };
-  auto gn = system().spawn<hidden + lazy_init>(group_nameserver);
-  auto result = publish(gn, port, in, reuse);
-  // link gn to our manager
-  if (result)
-    manager_->add_link(actor_cast<abstract_actor*>(gn));
-  else
-    anon_send_exit(gn, exit_reason::user_shutdown);
-  return result;
+  auto ns = system().spawn<hidden + lazy_init>(group_nameserver);
+  if (auto result = publish(ns, port, in, reuse)) {
+    manager_->add_link(actor_cast<abstract_actor*>(ns));
+    return *result;
+  } else {
+    anon_send_exit(ns, exit_reason::user_shutdown);
+    return std::move(result.error());
+  }
 }
 
 expected<void> middleman::unpublish(const actor_addr& whom, uint16_t port) {
@@ -228,8 +230,8 @@ expected<group> middleman::remote_group(const std::string& group_identifier,
   CAF_LOG_TRACE(CAF_ARG(group_identifier) << CAF_ARG(host) << CAF_ARG(port));
   // Helper actor that first connects to the remote actor at `host:port` and
   // then tries to get a valid group from that actor.
-  auto two_step_lookup = [=](event_based_actor* self,
-                             middleman_actor mm) -> behavior {
+  auto two_step_lookup = [=](event_based_actor* self, middleman_actor mm,
+                             detail::remote_group_module_ptr rgm) -> behavior {
     return {
       [=](get_atom) {
         /// We won't receive a second message, so we drop our behavior here to
@@ -242,9 +244,12 @@ expected<group> middleman::remote_group(const std::string& group_identifier,
             CAF_LOG_DEBUG("received handle to target node:" << CAF_ARG(ptr));
             auto hdl = actor_cast<actor>(ptr);
             self->request(hdl, infinite, get_atom_v, group_identifier)
-              .then([=](group& grp) mutable {
-                CAF_LOG_DEBUG("received remote group handle:" << CAF_ARG(grp));
-                rp.deliver(std::move(grp));
+              .then([=](actor intermediary) mutable {
+                CAF_LOG_DEBUG("lookup successful:" << CAF_ARG(group_identifier)
+                                                   << CAF_ARG(intermediary));
+                auto ptr = rgm->get_impl(intermediary, group_identifier);
+                auto result = group{ptr.get()};
+                rp.deliver(std::move(result));
               });
           });
       },
@@ -254,7 +259,8 @@ expected<group> middleman::remote_group(const std::string& group_identifier,
   expected<group> result{sec::cannot_connect_to_node};
   scoped_actor self{system(), true};
   auto worker = self->spawn<lazy_init + monitored>(two_step_lookup,
-                                                   actor_handle());
+                                                   actor_handle(),
+                                                   remote_groups_);
   self->send(worker, get_atom_v);
   self->receive(
     [&](group& grp) {
@@ -270,6 +276,20 @@ expected<group> middleman::remote_group(const std::string& group_identifier,
       result = std::move(dm.reason);
     });
   return result;
+}
+
+void middleman::resolve_remote_group_intermediary(
+  const node_id& origin, const std::string& group_identifier,
+  std::function<void(actor)> callback) {
+  auto lookup = [=, cb{std::move(callback)}](event_based_actor* self,
+                                             middleman_actor mm) {
+    self
+      ->request(mm, std::chrono::minutes(1), get_atom_v, group_atom_v, origin,
+                group_identifier)
+      .then([cb](actor& hdl) { cb(std::move(hdl)); },
+            [cb](const error&) { cb(actor{}); });
+  };
+  system().spawn(lookup, actor_handle());
 }
 
 strong_actor_ptr middleman::remote_lookup(std::string name,
@@ -334,6 +354,19 @@ void middleman::start() {
   if (auto prom = get_if<dict>(&system().config(),
                                "caf.middleman.prometheus-http"))
     expose_prometheus_metrics(*prom);
+  // Enable deserialization of groups.
+  system().groups().get_remote
+    = [this](const node_id& origin, const std::string& module_name,
+             const std::string& group_identifier) -> expected<group> {
+    if (module_name == "local" || module_name == "remote") {
+      auto ptr = remote_groups_->get_impl(origin, group_identifier);
+      return group{ptr.get()};
+    } else {
+      return make_error(
+        sec::runtime_error,
+        "currently, only 'local' groups are accessible remotely");
+    }
+  };
 }
 
 void middleman::stop() {
@@ -388,6 +421,13 @@ void middleman::init(actor_system_config& cfg) {
   system().node_.swap(this_node);
   // Give config access to slave mode implementation.
   cfg.slave_mode_fun = &middleman::exec_slave_mode;
+  // Enable users to use 'remote:foo@bar' notation for remote groups.
+  auto dummy_fac = [ptr{remote_groups_}]() -> group_module* {
+    auto raw = ptr.get();
+    raw->ref();
+    return raw;
+  };
+  cfg.group_module_factories.emplace_back(dummy_fac);
 }
 
 expected<uint16_t> middleman::expose_prometheus_metrics(uint16_t port,

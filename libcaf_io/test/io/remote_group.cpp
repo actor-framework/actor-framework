@@ -16,10 +16,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
+#define CAF_SUITE io.remote_group
+
 #include "caf/config.hpp"
 
-#define CAF_SUITE io_dynamic_remote_group
-#include "caf/test/io_dsl.hpp"
+#include "io-test.hpp"
 
 #include <algorithm>
 #include <vector>
@@ -48,7 +49,9 @@ size_t received_messages = 0u;
 
 behavior group_receiver(event_based_actor* self) {
   self->set_default_handler(reflect_and_quit);
-  return {[](ok_atom) { ++received_messages; }};
+  return {
+    [](ok_atom) { ++received_messages; },
+  };
 }
 
 // Our server is `mars` and our client is `earth`.
@@ -90,7 +93,7 @@ CAF_TEST(connecting to remote group) {
   CAF_CHECK_EQUAL(grp->get()->identifier(), group_name);
 }
 
-CAF_TEST_DISABLED(message transmission) {
+CAF_TEST(message transmission) {
   CAF_MESSAGE("spawn 5 receivers on mars");
   auto mars_grp = mars.sys.groups().get_local(group_name);
   spawn_receivers(mars, mars_grp, 5u);
@@ -102,19 +105,18 @@ CAF_TEST_DISABLED(message transmission) {
   auto earth_grp = unbox(earth.mm.remote_group(group_name, server, port));
   CAF_MESSAGE("spawn 5 more receivers on earth");
   spawn_receivers(earth, earth_grp, 5u);
+  exec_all();
   CAF_MESSAGE("send message on mars and expect 10 handled messages total");
   {
     received_messages = 0u;
-    scoped_actor self{mars.sys};
-    self->send(mars_grp, ok_atom_v);
+    mars.self->send(mars_grp, ok_atom_v);
     exec_all();
     CAF_CHECK_EQUAL(received_messages, 10u);
   }
   CAF_MESSAGE("send message on earth and again expect 10 handled messages");
   {
     received_messages = 0u;
-    scoped_actor self{earth.sys};
-    self->send(earth_grp, ok_atom_v);
+    earth.self->send(earth_grp, ok_atom_v);
     exec_all();
     CAF_CHECK_EQUAL(received_messages, 10u);
   }
