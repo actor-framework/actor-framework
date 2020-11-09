@@ -83,15 +83,12 @@ void local_group_module::impl::enqueue(strong_actor_ptr sender, message_id mid,
 
 bool local_group_module::impl::subscribe(strong_actor_ptr who) {
   std::unique_lock<std::mutex> guard{mtx_};
-  return !stopped_ && subscribers_.emplace(who).second;
+  return subscribe_impl(who).first;
 }
 
 void local_group_module::impl::unsubscribe(const actor_control_block* who) {
   std::unique_lock<std::mutex> guard{mtx_};
-  // Note: can't call erase with `who` directly, because only set::find has an
-  // overload for any K that is less-comparable to Key.
-  if (auto i = subscribers_.find(who); i != subscribers_.end())
-    subscribers_.erase(i);
+  unsubscribe_impl(who);
 }
 
 actor local_group_module::impl::intermediary() const noexcept {
@@ -103,16 +100,39 @@ void local_group_module::impl::stop() {
   CAF_LOG_DEBUG("stop local group:" << identifier_);
   auto hdl = actor{};
   auto subs = subscriber_set{};
-  {
+  auto stopped = critical_section([this, &hdl, &subs] {
     using std::swap;
-    std::unique_lock<std::mutex> guard{mtx_};
-    if (stopped_)
-      return;
-    stopped_ = true;
-    swap(subs, subscribers_);
-    swap(hdl, intermediary_);
+    if (!stopped_) {
+      stopped_ = true;
+      swap(subs, subscribers_);
+      swap(hdl, intermediary_);
+      return true;
+    } else {
+      return false;
+    }
+  });
+  if (stopped)
+    anon_send_exit(hdl, exit_reason::user_shutdown);
+}
+
+std::pair<bool, size_t>
+local_group_module::impl::subscribe_impl(strong_actor_ptr who) {
+  if (!stopped_) {
+    auto added = subscribers_.emplace(who).second;
+    return {added, subscribers_.size()};
+  } else {
+    return {false, subscribers_.size()};
   }
-  anon_send_exit(hdl, exit_reason::user_shutdown);
+}
+
+std::pair<bool, size_t>
+local_group_module::impl::unsubscribe_impl(const actor_control_block* who) {
+  if (auto i = subscribers_.find(who); i != subscribers_.end()) {
+    subscribers_.erase(i);
+    return {true, subscribers_.size()};
+  } else {
+    return {false, subscribers_.size()};
+  }
 }
 
 // -- local group module -------------------------------------------------------

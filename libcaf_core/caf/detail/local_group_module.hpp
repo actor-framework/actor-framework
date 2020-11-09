@@ -78,6 +78,18 @@ public:
     void stop() override;
 
   protected:
+    template <class F>
+    auto critical_section(F&& fun) {
+      std::unique_lock<std::mutex> guard{mtx_};
+      return fun();
+    }
+
+    /// @pre `mtx_` is locked
+    std::pair<bool, size_t> subscribe_impl(strong_actor_ptr who);
+
+    /// @pre `mtx_` is locked
+    std::pair<bool, size_t> unsubscribe_impl(const actor_control_block* who);
+
     mutable std::mutex mtx_;
     actor intermediary_;
     bool stopped_ = false;
