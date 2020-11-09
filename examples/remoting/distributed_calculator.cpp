@@ -4,10 +4,10 @@
 // The client auto-reconnects and also allows for server reconfiguration.
 //
 // Run server at port 4242:
-// - ./build/bin/distributed_math_actor -s -p 4242
+// - ./build/examples/distributed_calculator -s -p 4242
 //
 // Run client at the same host:
-// - ./build/bin/distributed_math_actor -c -p 4242
+// - ./build/examples/distributed_calculator -c -p 4242
 
 // Manual refs: 206-218 (ConfiguringActorSystems)
 
