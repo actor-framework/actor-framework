@@ -458,24 +458,24 @@ public:
   void with(Ts... xs) {
     if (dest_ == nullptr)
       CAF_FAIL("missing .to() in inject() statement");
+    auto msg = caf::make_message(std::move(xs)...);
     if (src_ == nullptr)
-      caf::anon_send(caf::actor_cast<caf::actor>(dest_), xs...);
+      caf::anon_send(caf::actor_cast<caf::actor>(dest_), msg);
     else
       caf::send_as(caf::actor_cast<caf::actor>(src_),
-                   caf::actor_cast<caf::actor>(dest_), xs...);
-    CAF_REQUIRE(sched_.prioritize(dest_));
+                   caf::actor_cast<caf::actor>(dest_), msg);
+    if (!sched_.prioritize(dest_))
+      CAF_FAIL("inject: failed to schedule destination actor");
     auto dest_ptr = &sched_.next_job<caf::abstract_actor>();
     auto ptr = dest_ptr->peek_at_next_mailbox_element();
-    CAF_REQUIRE(ptr != nullptr);
-    CAF_REQUIRE_EQUAL(ptr->sender, src_);
-    // TODO: replace this workaround with the make_tuple() line when dropping
-    //       support for GCC 4.8.
-    std::tuple<Ts...> tmp{std::move(xs)...};
-    using namespace caf::detail;
-    elementwise_compare_inspector<decltype(tmp)> inspector{tmp};
-    auto ys = extract<Ts...>(dest_);
-    auto ys_indices = get_indices(ys);
-    CAF_REQUIRE(apply_args(inspector, ys_indices, ys));
+    if (ptr == nullptr)
+      CAF_FAIL("inject: failed to get next message from destination actor");
+    if (ptr->sender != src_)
+      CAF_FAIL("inject: found unexpected sender for the next message");
+    if (ptr->payload.cptr() != msg.cptr())
+      CAF_FAIL("inject: found unexpected message => " << ptr->payload << " !! "
+                                                      << msg);
+    msg.reset(); // drop local reference before running the actor
     run_once();
   }
 
