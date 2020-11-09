@@ -68,31 +68,22 @@ void ChatWidget::sendChatMessage() {
   if (line.startsWith('/')) {
     vector<string> words;
     split(words, line.midRef(1).toUtf8().constData(), is_any_of(" "));
-    message_builder mb;
-    if (words.size() > 1) {
-      // convert first word to an atom
-      mb.append(atom_from_string(words.front()))
-        .append(words.begin() + 1, words.end());
-    };
-    auto res = mb.apply({
-      [=](join_atom, const string& mod, const string& g) {
-        auto x = system().groups().get(mod, g);
-        if (! x)
-          print("*** error: "
-                + QString::fromUtf8(to_string(x.error()).c_str()));
-        else
-          self()->send(self(), join_atom_v, std::move(*x));
-      },
-      [=](set_name_atom, string& name) {
-        send_as(as_actor(), as_actor(), set_name_atom_v, std::move(name));
+    if (words.size() > 1)
+      if (words.front() == "join" && words.size() == 3) {
+          auto x = system().groups().get(words[1], words[2]);
+          if (!x)
+            print("*** error: "
+                  + QString::fromUtf8(to_string(x.error()).c_str()));
+          else
+            self()->send(self(), join_atom_v, std::move(*x));
+      } else if (words.front() == "setName" && words.size() == 2)
+          send_as(as_actor(), as_actor(), set_name_atom_v, std::move(words[1]));
+      } else {
+        print("*** list of commands:\n"
+              "/join <module> <group id>\n"
+              "/setName <new name>\n");
+        return;
       }
-    });
-    if (! res)
-      print("*** list of commands:\n"
-            "/join <module> <group id>\n"
-            "/setName <new name>\n");
-    return;
-  }
   if (name_.empty()) {
     print("*** please set a name before sending messages");
     return;

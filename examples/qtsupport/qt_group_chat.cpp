@@ -4,9 +4,9 @@
  * terminal version in remote_actors/group_chat.cpp.                          *
  *                                                                            *
  * Setup for a minimal chat between "alice" and "bob":                        *
- * - ./build/bin/group_server -p 4242                                         *
- * - ./build/bin/qt_group_chat -g remote:chatroom@localhost:4242 -n alice     *
- * - ./build/bin/qt_group_chat -g remote:chatroom@localhost:4242 -n bob       *
+ * - ./build/examples/group_server -p 4242                                    *
+ * - ./build/examples/qt_group_chat -g remote:chatroom@localhost:4242 -n alice*
+ * - ./build/examples/qt_group_chat -g remote:chatroom@localhost:4242 -n bob  *
 \******************************************************************************/
 
 #include <set>
@@ -36,18 +36,22 @@ public:
   std::string name;
   std::string group_id;
 
-  config(int argc, char** argv) {
+  config() {
     opt_group{custom_options_, "global"}
-    .add(name, "name,n", "set name")
-    .add(group_id, "group,g", "join group (format: <module>:<id>");
-    parse(argc, argv);
-    load<io::middleman>();
-    io::middleman::init_global_meta_objects();
+      .add(name, "name,n", "set name")
+      .add(group_id, "group,g", "join group (format: <module>:<id>)");
   }
 };
 
 int main(int argc, char** argv) {
-  config cfg{argc, argv};
+  init_global_meta_objects<id_block::qt_support>();
+  core::init_global_meta_objects();
+  io::middleman::init_global_meta_objects();
+  config cfg{};
+  auto err = cfg.parse(argc, argv);
+  if (cfg.cli_helptext_printed)
+    return 0;
+  cfg.load<io::middleman>();
   actor_system system{cfg};
   auto name = cfg.name;
   group grp;
