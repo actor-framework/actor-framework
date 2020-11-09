@@ -5,6 +5,7 @@ project(CAF CXX)
 
 include(CMakeDependentOption)      # Conditional default values
 include(CMakePackageConfigHelpers) # For creating .cmake files
+include(CheckCXXSourceCompiles)    # For checking whether some C++ features work
 include(GNUInstallDirs)            # Sets default install paths
 include(GenerateExportHeader)      # Auto-generates dllexport macros
 

@@ -35,6 +35,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   case or do unexpected things in the latter case. The stringification inspector
   now matches precisely on pointer types to stop the compiler from doing
   implicit conversions in the first place.
+- Building executables that link to CAF on 32-bit Linux versions using GCC
+  failed due to undefined references to `__atomic_fetch` symbols. Adding a CMake
+  dependency for `caf_core` to libatomic gets executables to compile and link as
+  expected (#1153).
 - Fixed a regression for remote groups introduced in 0.18.0-rc.1 (#1157).
 
 ## [0.18.0-rc.1] - 2020-09-09

@@ -196,7 +196,26 @@ caf_core_set_default_properties(libcaf_core_obj libcaf_core)
 
 caf_export_and_install_lib(core)
 install(FILES "${CMAKE_BINARY_DIR}/caf/detail/build_config.hpp"
-          DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail")
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail")
+
+# Check whether we need to link against libatomic.
+if(NOT CMAKE_CROSSCOMPILING)
+  set(snippet "#include <cstdint>
+               #include <atomic>
+               std::atomic<uint64_t> x;
+               int main(int, char**) { return static_cast<int>(x.load()); }")
+  check_cxx_source_compiles("${snippet}" has_64bit_atomic)
+  if(NOT has_64bit_atomic)
+    set(required_libs_backup "${CMAKE_REQUIRED_LIBRARIES}")
+    list(APPEND CMAKE_REQUIRED_LIBRARIES "atomic")
+    check_cxx_source_compiles("${snippet}" has_64bit_atomic_with_libatomic)
+    set(CMAKE_REQUIRED_LIBRARIES "${required_libs_backup}")
+    if(NOT has_64bit_atomic_with_libatomic)
+      message(FATAL_ERROR "Unable to compile code with std::atomic<uint64_t>")
+    endif()
+    target_link_libraries(libcaf_core INTERFACE atomic)
+  endif()
+endif()
 
 # -- build unit tests ----------------------------------------------------------
 
