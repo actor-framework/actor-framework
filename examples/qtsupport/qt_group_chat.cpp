@@ -26,6 +26,8 @@ CAF_PUSH_WARNINGS
 #include "ui_chatwindow.h" // auto generated from chatwindow.ui
 CAF_POP_WARNINGS
 
+#include "chatwidget.hpp"
+
 using namespace std;
 using namespace caf;
 

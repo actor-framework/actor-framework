@@ -29,7 +29,7 @@ public:
 
   using super = caf::mixin::actor_widget<QWidget>;
 
-  ChatWidget(QWidget* parent = nullptr, Qt::WindowFlags f = 0);
+  ChatWidget(QWidget* parent = nullptr);
 
   ~ChatWidget();
 

@@ -14,8 +14,8 @@ CAF_POP_WARNINGS
 using namespace std;
 using namespace caf;
 
-ChatWidget::ChatWidget(QWidget* parent, Qt::WindowFlags f)
-    : super(parent, f),
+ChatWidget::ChatWidget(QWidget* parent)
+    : super(parent),
       input_(nullptr),
       output_(nullptr) {
   // nop
