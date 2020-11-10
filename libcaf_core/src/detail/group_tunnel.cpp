@@ -43,6 +43,7 @@ struct group_worker_actor_state {
                              self->context());
       return message{};
     });
+    self->monitor(intermediary);
     return {
       [this](sys_atom, join_atom) {
         self->send(intermediary, join_atom_v, self->ctrl());
