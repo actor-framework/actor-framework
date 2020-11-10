@@ -85,14 +85,14 @@ group_tunnel_ptr remote_group_module::get_impl(actor intermediary,
     } else {
       auto& instances = nodes_[intermediary.node()];
       if (auto i = instances.find(group_name); i != instances.end()) {
-        auto result = i->second;
-        result->connect(std::move(intermediary));
-        return result;
+        auto instance = i->second;
+        instance->connect(std::move(intermediary));
+        return instance;
       } else {
-        auto result = make_counted<detail::group_tunnel>(
+        auto instance = make_counted<detail::group_tunnel>(
           this, group_name, std::move(intermediary));
-        instances.emplace(group_name, result);
-        return result;
+        instances.emplace(group_name, instance);
+        return instance;
       }
     }
   });

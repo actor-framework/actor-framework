@@ -76,22 +76,18 @@ behavior client(event_based_actor* self, const std::string& name) {
 
 class config : public actor_system_config {
 public:
-  std::string name;
-  std::vector<std::string> group_locators;
-  uint16_t port = 0;
-  bool server_mode = false;
-
   config() {
     opt_group{custom_options_, "global"}
-      .add(name, "name,n", "set name")
-      .add(group_locators, "group,g", "join group")
-      .add(server_mode, "server,s", "run in server mode")
-      .add(port, "port,p", "set port (ignored in client mode)");
+      .add<std::string>("name,n", "set name")
+      .add<std::string>("group,g", "join group")
+      .add<bool>("server,s", "run in server mode")
+      .add<uint16_t>("port,p", "set port (ignored in client mode)");
   }
 };
 
-void run_server(actor_system& system, const config& cfg) {
-  auto res = system.middleman().publish_local_groups(cfg.port);
+void run_server(actor_system& sys) {
+  auto port = get_or(sys.config(), "port", uint16_t{0});
+  auto res = sys.middleman().publish_local_groups(port);
   if (!res) {
     std::cerr << "*** publishing local groups failed: "
               << to_string(res.error()) << std::endl;
@@ -104,8 +100,10 @@ void run_server(actor_system& system, const config& cfg) {
   std::cout << "... cya" << std::endl;
 }
 
-void run_client(actor_system& system, const config& cfg) {
-  auto name = cfg.name;
+void run_client(actor_system& sys) {
+  std::string name;
+  if (auto config_name = get_if<std::string>(&sys.config(), "name"))
+    name = *config_name;
   while (name.empty()) {
     std::cout << "please enter your name: " << std::flush;
     if (!std::getline(std::cin, name)) {
@@ -113,12 +111,12 @@ void run_client(actor_system& system, const config& cfg) {
       return;
     }
   }
-  auto client_actor = system.spawn(client, name);
-  for (auto& locator : cfg.group_locators) {
-    if (auto grp = system.groups().get(locator)) {
+  auto client_actor = sys.spawn(client, name);
+  if (auto locator = get_if<std::string>(&sys.config(), "group")) {
+    if (auto grp = sys.groups().get(*locator)) {
       anon_send(client_actor, join_atom_v, std::move(*grp));
     } else {
-      std::cerr << R"(*** failed to parse ")" << locator
+      std::cerr << R"(*** failed to parse ")" << *locator
                 << R"(" as group locator: )" << to_string(grp.error())
                 << std::endl;
     }
@@ -133,7 +131,7 @@ void run_client(actor_system& system, const config& cfg) {
       words.clear();
       split(words, i->str, is_any_of(" "));
       if (words.size() == 3 && words[0] == "/join") {
-        if (auto grp = system.groups().get(words[1], words[2]))
+        if (auto grp = sys.groups().get(words[1], words[2]))
           anon_send(client_actor, join_atom_v, *grp);
         else
           std::cerr << "*** failed to join group: " << to_string(grp.error())
@@ -154,9 +152,9 @@ void run_client(actor_system& system, const config& cfg) {
   anon_send_exit(client_actor, exit_reason::user_shutdown);
 }
 
-void caf_main(actor_system& system, const config& cfg) {
-  auto f = cfg.server_mode ? run_server : run_client;
-  f(system, cfg);
+void caf_main(actor_system& sys, const config& cfg) {
+  auto f = get_or(cfg, "server", false) ? run_server : run_client;
+  f(sys);
 }
 
 CAF_MAIN(id_block::group_chat, io::middleman)

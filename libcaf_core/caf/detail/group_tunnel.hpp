@@ -30,7 +30,7 @@
 
 namespace caf::detail {
 
-/// Represents a group that runs on a different CAF node.
+/// Represents a group that runs on a remote CAF node.
 class CAF_CORE_EXPORT group_tunnel : public local_group_module::impl {
 public:
   using super = local_group_module::impl;

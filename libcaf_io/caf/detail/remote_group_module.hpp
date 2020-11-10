@@ -63,7 +63,7 @@ private:
     return fun();
   }
 
-  // Removes an instance when connecting it failed.
+  // Stops an instance and removes it from this module.
   void drop(const group_tunnel_ptr& instance);
 
   // Connects an instance when it is still associated to this module.
