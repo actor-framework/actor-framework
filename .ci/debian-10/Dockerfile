@@ -1,14 +1,12 @@
-FROM debian:buster
+FROM debian:10
 
 RUN apt update -y && \
   apt upgrade -y
 
 RUN apt install -y \
   cmake \
-  g++-8 \
+  g++ \
   git \
   libssl-dev \
   make \
  && apt autoclean
-
-ENV CXX=/usr/bin/g++-8
