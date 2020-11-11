@@ -119,11 +119,15 @@ void local_actor::monitor(const node_id& node) {
 
 void local_actor::demonitor(const actor_addr& whom) {
   CAF_LOG_TRACE(CAF_ARG(whom));
-  auto ptr = actor_cast<strong_actor_ptr>(whom);
-  if (ptr) {
+  demonitor(actor_cast<strong_actor_ptr>(whom));
+}
+
+void local_actor::demonitor(const strong_actor_ptr& whom) {
+  CAF_LOG_TRACE(CAF_ARG(whom));
+  if (whom) {
     default_attachable::observe_token tk{address(),
                                          default_attachable::monitor};
-    ptr->get()->detach(tk);
+    whom->get()->detach(tk);
   }
 }
 

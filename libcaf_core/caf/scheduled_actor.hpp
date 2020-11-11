@@ -309,7 +309,7 @@ public:
   /// Sets a custom handler for unexpected messages.
   template <class F>
   typename std::enable_if<std::is_convertible<
-    F, std::function<result<message>(message&)>>::value>::type
+    F, std::function<skippable_result(message&)>>::value>::type
   set_default_handler(F fun) {
     default_handler_ = [=](scheduled_actor*, message& xs) { return fun(xs); };
   }

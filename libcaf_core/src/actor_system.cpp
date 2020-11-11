@@ -135,6 +135,10 @@ behavior config_serv_impl(stateful_actor<kvstate>* self) {
     [=](registry_lookup_atom, const std::string& name) {
       return self->home_system().registry().get(name);
     },
+    // get the intermediary of a local group
+    [=](get_atom, group_atom, const std::string& id) {
+      return self->home_system().groups().get_local(id).get()->intermediary();
+    },
   };
 }
 

@@ -381,8 +381,9 @@ using weak_actor_ptr = weak_intrusive_ptr<actor_control_block>;
 
 // -- intrusive pointer aliases ------------------------------------------------
 
-using strong_actor_ptr = intrusive_ptr<actor_control_block>;
+using group_module_ptr = intrusive_ptr<group_module>;
 using stream_manager_ptr = intrusive_ptr<stream_manager>;
+using strong_actor_ptr = intrusive_ptr<actor_control_block>;
 
 // -- unique pointer aliases ---------------------------------------------------
 

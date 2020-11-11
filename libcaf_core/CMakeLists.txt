@@ -86,7 +86,9 @@ add_library(libcaf_core_obj OBJECT ${CAF_CORE_HEADERS}
   src/detail/get_process_id.cpp
   src/detail/get_root_uuid.cpp
   src/detail/glob_match.cpp
+  src/detail/group_tunnel.cpp
   src/detail/invoke_result_visitor.cpp
+  src/detail/local_group_module.cpp
   src/detail/message_builder_element.cpp
   src/detail/message_data.cpp
   src/detail/meta_object.cpp
@@ -265,8 +267,10 @@ caf_add_test_suites(caf-core-test
   detail.bounds_checker
   detail.config_consumer
   detail.encode_base64
+  detail.group_tunnel
   detail.ieee_754
   detail.limited_vector
+  detail.local_group_module
   detail.meta_object
   detail.parse
   detail.parser.read_bool
@@ -309,7 +313,6 @@ caf_add_test_suites(caf-core-test
   ipv6_endpoint
   ipv6_subnet
   load_inspector
-  local_group
   logger
   mailbox_element
   message

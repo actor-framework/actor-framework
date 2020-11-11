@@ -42,7 +42,8 @@ struct invalid_group_t {
 constexpr invalid_group_t invalid_group = invalid_group_t{};
 
 class CAF_CORE_EXPORT group : detail::comparable<group>,
-                              detail::comparable<group, invalid_group_t> {
+                              detail::comparable<group, invalid_group_t>,
+                              detail::comparable<group, std::nullptr_t> {
 public:
   using signatures = none_t;
 
@@ -52,17 +53,15 @@ public:
 
   group(const group&) = default;
 
-  group(const invalid_group_t&);
+  group(invalid_group_t);
+
+  explicit group(intrusive_ptr<abstract_group> gptr);
 
   group& operator=(group&&) = default;
 
   group& operator=(const group&) = default;
 
-  group& operator=(const invalid_group_t&);
-
-  group(abstract_group*);
-
-  group(intrusive_ptr<abstract_group> gptr);
+  group& operator=(invalid_group_t);
 
   explicit operator bool() const noexcept {
     return static_cast<bool>(ptr_);
@@ -76,7 +75,11 @@ public:
 
   intptr_t compare(const group& other) const noexcept;
 
-  intptr_t compare(const invalid_group_t&) const noexcept {
+  intptr_t compare(invalid_group_t) const noexcept {
+    return ptr_ ? 1 : 0;
+  }
+
+  intptr_t compare(std::nullptr_t) const noexcept {
     return ptr_ ? 1 : 0;
   }
 
@@ -116,22 +119,20 @@ public:
 
   template <class Inspector>
   friend bool inspect(Inspector& f, group& x) {
-    std::string module_name;
-    std::string group_name;
-    actor dispatcher;
+    node_id origin;
+    std::string mod;
+    std::string id;
     if constexpr (!Inspector::is_loading) {
       if (x) {
-        module_name = x.get()->module().name();
-        group_name = x.get()->identifier();
-        dispatcher = x.get()->dispatcher();
+        origin = x.get()->origin();
+        mod = x.get()->module().name();
+        id = x.get()->identifier();
       }
     }
     auto load_cb = [&] {
       if constexpr (detail::has_context<Inspector>::value) {
-        auto ctx = f.context();
-        if (ctx != nullptr) {
-          if (auto grp = ctx->system().groups().get(module_name, group_name,
-                                                    dispatcher)) {
+        if (auto ctx = f.context()) {
+          if (auto grp = load_impl(ctx->system(), origin, mod, id)) {
             x = std::move(*grp);
             return true;
           } else {
@@ -144,15 +145,19 @@ public:
       return false;
     };
     return f.object(x)
-      .on_load(load_cb) //
-      .fields(f.field("module_name", module_name),
-              f.field("group_name", group_name),
-              f.field("dispatcher", dispatcher));
+      .on_load(load_cb)                  //
+      .fields(f.field("origin", origin), //
+              f.field("module", mod),    //
+              f.field("identifier", id));
   }
 
   /// @endcond
 
 private:
+  static expected<group> load_impl(actor_system& sys, const node_id& origin,
+                                   const std::string& mod,
+                                   const std::string& id);
+
   abstract_group* release() noexcept {
     return ptr_.release();
   }
