@@ -47,8 +47,10 @@ set(CAF_LOG_LEVEL "QUIET" CACHE STRING "Set log verbosity of CAF components")
 set(CAF_SANITIZERS "" CACHE STRING
     "Comma separated sanitizers, e.g., 'address,undefined'")
 set(CAF_INSTALL_CMAKEDIR
-    "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/CAF" CACHE STRING
+    "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/CAF" CACHE PATH
     "Path for installing CMake files, enables 'find_package(CAF)'")
+  set(CAF_BUILD_INFO_FILE_PATH "" CACHE FILEPATH
+    "Optional path for writing CMake and compiler version information")
 
 # -- macOS-specific options ----------------------------------------------------
 
@@ -370,3 +372,11 @@ install(
     "${CMAKE_CURRENT_BINARY_DIR}/CAFConfigVersion.cmake"
   DESTINATION
     "${CAF_INSTALL_CMAKEDIR}")
+
+# -- extra file output (primarily for CAF CI) ----------------------------------
+
+if(CAF_BUILD_INFO_FILE_PATH)
+  configure_file("${PROJECT_SOURCE_DIR}/cmake/caf-build-info.txt.in"
+                 "${CAF_BUILD_INFO_FILE_PATH}"
+                 @ONLY)
+endif()
