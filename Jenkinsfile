@@ -164,7 +164,7 @@ pipeline {
     environment {
         PrettyJobBaseName = env.JOB_BASE_NAME.replace('%2F', '/')
         PrettyJobName = "CAF/$PrettyJobBaseName #${env.BUILD_NUMBER}"
-        ASAN_OPTIONS = 'detect_leaks=0'
+        ASAN_OPTIONS = 'detect_leaks=1'
     }
     stages {
         stage('Checkout') {
