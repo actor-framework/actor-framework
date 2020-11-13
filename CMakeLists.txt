@@ -283,22 +283,17 @@ install(TARGETS libcaf_test
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT test
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT test)
 
-# -- provide an uinstall target ------------------------------------------------
+# -- add uninstall target if it does not exist yet -----------------------------
 
-# process cmake_uninstall.cmake.in
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
-               "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
-               IMMEDIATE @ONLY)
-
-# add uninstall target if it does not exist yet
 if(NOT TARGET uninstall)
-  add_custom_target(uninstall)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/uninstall.cmake.in"
+                 "${CMAKE_CURRENT_BINARY_DIR}/uninstall.cmake"
+                 IMMEDIATE @ONLY)
+  add_custom_target(
+    uninstall
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/uninstall.cmake)
 endif()
 
-add_custom_command(TARGET uninstall
-                   PRE_BUILD
-                   COMMAND "${CMAKE_COMMAND}" -P
-                   "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
 
 # -- utility function for installing library targets ---------------------------
 
