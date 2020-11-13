@@ -340,8 +340,8 @@ private:
   // Configures verbosity and output generation.
   config cfg_;
 
-  // Filters events by component name before enqueuing a log event. Union of
-  // file_filter_ and console_filter_ if both outputs are enabled.
+  // Filters events by component name before enqueuing a log event. Intersection
+  // of file_filter_ and console_filter_ if both outputs are enabled.
   std::vector<std::string> global_filter_;
 
   // Filters events by component name for file output.
