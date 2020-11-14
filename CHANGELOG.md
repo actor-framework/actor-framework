@@ -40,6 +40,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   dependency for `caf_core` to libatomic gets executables to compile and link as
   expected (#1153).
 - Fixed a regression for remote groups introduced in 0.18.0-rc.1 (#1157).
+- CAF 0.18 introduced the option to set different `excluded-components` filters
+  for file and console log output. However, CAF rejected all events that matched
+  either filter. The new implementation uses the *intersection* of both filters
+  to reject log messages immediately (before enqueueing it to the logger's
+  queue) and then applies the filters individually when generating file or
+  console output.
 
 ## [0.18.0-rc.1] - 2020-09-09
 

@@ -324,9 +324,9 @@ void logger::init(actor_system_config& cfg) {
     read_filter(console_filter_, "caf.logger.console.excluded-components");
     std::sort(file_filter_.begin(), file_filter_.end());
     std::sort(console_filter_.begin(), console_filter_.end());
-    std::set_union(file_filter_.begin(), file_filter_.end(),
-                   console_filter_.begin(), console_filter_.end(),
-                   std::back_inserter(global_filter_));
+    std::set_intersection(file_filter_.begin(), file_filter_.end(),
+                          console_filter_.begin(), console_filter_.end(),
+                          std::back_inserter(global_filter_));
   } else if (cfg_.file_verbosity > CAF_LOG_LEVEL_QUIET) {
     read_filter(file_filter_, "caf.logger.file.excluded-components");
     global_filter_ = file_filter_;
