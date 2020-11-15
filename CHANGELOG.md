@@ -40,6 +40,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   dependency for `caf_core` to libatomic gets executables to compile and link as
   expected (#1153).
 - Fixed a regression for remote groups introduced in 0.18.0-rc.1 (#1157).
+- Fix memory leaks when deserializing URIs and when detaching the content of
+  messages (#1160).
 
 ## [0.18.0-rc.1] - 2020-09-09
 
