@@ -274,10 +274,8 @@ struct inspector_access<uri> : inspector_access_base<uri> {
       return f.object(x).fields(f.field("value", get, set));
     } else {
       if constexpr (Inspector::is_loading)
-        if (!x.impl_->unique()) {
-          x.impl_.reset();
-          x.impl_ = make_counted<uri::impl_type>();
-        }
+        if (!x.impl_->unique())
+          x.impl_.reset(new uri::impl_type, false);
       return inspect(f, *x.impl_);
     }
   }
@@ -293,10 +291,8 @@ struct inspector_access<uri> : inspector_access_base<uri> {
       return detail::split_save_load(f, get, set);
     } else {
       if constexpr (Inspector::is_loading)
-        if (!x.impl_->unique()){
-          x.impl_.reset();
-          x.impl_ = make_counted<uri::impl_type>();
-        }
+        if (!x.impl_->unique())
+          x.impl_.reset(new uri::impl_type, false);
       return inspect(f, *x.impl_);
     }
   }
