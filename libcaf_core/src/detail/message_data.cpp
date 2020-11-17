@@ -69,6 +69,7 @@ message_data* message_data::copy() const {
     auto& meta = gmos[id];
     // TODO: exception handling.
     meta.copy_construct(dst, src);
+    ++ptr->constructed_elements_;
     src += meta.padded_size;
     dst += meta.padded_size;
   }

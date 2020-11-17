@@ -32,7 +32,7 @@ public:
     // nop
   }
 
-  explicit typed_message_view(message& msg) : ptr_(&msg.data()) {
+  explicit typed_message_view(message& msg) : ptr_(msg.ptr()) {
     // nop
   }
 

@@ -163,7 +163,7 @@ expected<group> local_group_module::get(const std::string& group_name) {
     auto ptr = make_counted<impl>(this, group_name);
     ptr->intermediary_ = system().spawn<intermediary_actor, hidden>(ptr);
     instances_.emplace(group_name, ptr);
-    return group{ptr.release()};
+    return group{std::move(ptr)};
   }
 }
 

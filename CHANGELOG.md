@@ -46,6 +46,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   to reject log messages immediately (before enqueueing it to the logger's
   queue) and then applies the filters individually when generating file or
   console output.
+- Fix memory leaks when deserializing URIs and when detaching the content of
+  messages (#1160).
 
 ## [0.18.0-rc.1] - 2020-09-09
 

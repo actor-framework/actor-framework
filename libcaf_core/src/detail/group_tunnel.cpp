@@ -120,15 +120,17 @@ void group_tunnel::stop() {
   CAF_LOG_TRACE("");
   CAF_LOG_DEBUG("stop group tunnel:" << CAF_ARG2("module", module().name())
                                      << CAF_ARG2("identifier", identifier_));
-  auto hdl = actor{};
+  auto worker_hdl = actor{};
+  auto intermediary_hdl = actor{};
   auto subs = subscriber_set{};
   auto cache = cached_message_list{};
-  auto stopped = critical_section([this, &hdl, &subs, &cache] {
+  auto stopped = critical_section([&, this] {
     using std::swap;
     if (!stopped_) {
       stopped_ = true;
       swap(subs, subscribers_);
-      swap(hdl, worker_);
+      swap(worker_hdl, worker_);
+      swap(intermediary_hdl, intermediary_);
       swap(cache, cached_messages_);
       return true;
     } else {
@@ -136,7 +138,7 @@ void group_tunnel::stop() {
     }
   });
   if (stopped) {
-    anon_send_exit(hdl, exit_reason::user_shutdown);
+    anon_send_exit(worker_hdl, exit_reason::user_shutdown);
     if (!subs.empty()) {
       auto bye = make_message(group_down_msg{group{this}});
       for (auto& sub : subs)

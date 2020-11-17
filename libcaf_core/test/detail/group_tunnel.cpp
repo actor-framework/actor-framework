@@ -83,8 +83,9 @@ struct testee_state {
 
 behavior testee_impl(stateful_actor<testee_state>* self) {
   return {
-    [=](put_atom, int x) { self->state.x = x; },
-    [=](get_atom) { return self->state.x; },
+    [self](put_atom, int x) { self->state.x = x; },
+    [self](get_atom) { return self->state.x; },
+    [self](const group_down_msg&) { self->quit(); },
   };
 }
 
@@ -103,9 +104,11 @@ struct fixture : test_coordinator_fixture<> {
     // Groups keep their subscribers alive (on purpose). Since we don't want to
     // manually kill all our testee actors, we simply force the group modules to
     // stop here.
+    uut->stop();
     for (auto& kvp : uut->instances)
       kvp.second->stop();
     sys.groups().get_module("local")->stop();
+    run();
   }
 
   void make_unconnected() {

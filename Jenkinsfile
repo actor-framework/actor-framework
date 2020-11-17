@@ -31,13 +31,11 @@ config = [
             numCores: 4,
             tags: ['docker'],
             builds: ['debug', 'release'],
-            extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
         ]],
         ['centos-8', [
             numCores: 4,
             tags: ['docker'],
             builds: ['debug', 'release'],
-            extraDebugFlags: ['CAF_SANITIZERS:STRING=address,undefined'],
         ]],
         ['debian-9', [
             numCores: 4,
@@ -73,6 +71,7 @@ config = [
             numCores: 4,
             tags: ['docker'],
             builds: ['debug', 'release'],
+            extraDebugFlags: ['CAF_SANITIZERS:STRING=address'],
         ]],
         // One extra debug build with exceptions disabled.
         ['centos-7', [
@@ -119,6 +118,10 @@ config = [
     ],
     // Platform-specific environment settings.
     buildEnvironments: [
+        'fedora-32 && debug': [
+            'CAF_CHECK_LEAKS=ON',
+            'ASAN_OPTIONS=detect_leaks=1',
+        ],
         nop: [], // Dummy value for getting the proper types.
     ],
     // Default CMake flags by build type.
@@ -164,7 +167,7 @@ pipeline {
     environment {
         PrettyJobBaseName = env.JOB_BASE_NAME.replace('%2F', '/')
         PrettyJobName = "CAF/$PrettyJobBaseName #${env.BUILD_NUMBER}"
-        ASAN_OPTIONS = 'detect_leaks=0'
+        ASAN_OPTIONS = 'detect_leaks=1'
     }
     stages {
         stage('Checkout') {

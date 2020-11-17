@@ -61,6 +61,24 @@ CAF_TEST(messages allow index - based access) {
   CAF_CHECK_EQUAL(msg.cdata().get_reference_count(), 1u);
 }
 
+CAF_TEST(message detach their content on mutating access) {
+  CAF_MESSAGE("Given to messages pointing to the same content.");
+  auto msg1 = make_message("one", uint32_t{1});
+  auto msg2 = msg1;
+  CAF_CHECK_EQUAL(msg1.cdata().get_reference_count(), 2u);
+  CAF_CHECK_EQUAL(msg1.cptr(), msg2.cptr());
+  CAF_MESSAGE("When calling a non-const member function of message.");
+  msg1.ptr();
+  CAF_MESSAGE("Then the messages point to separate contents but remain equal.");
+  CAF_CHECK_NOT_EQUAL(msg1.cptr(), msg2.cptr());
+  CAF_CHECK_EQUAL(msg1.cdata().get_reference_count(), 1u);
+  CAF_CHECK_EQUAL(msg2.cdata().get_reference_count(), 1u);
+  CAF_CHECK(msg1.match_elements<std::string, uint32_t>());
+  CAF_CHECK(msg2.match_elements<std::string, uint32_t>());
+  CAF_CHECK_EQUAL(msg1.get_as<std::string>(0), msg2.get_as<std::string>(0));
+  CAF_CHECK_EQUAL(msg1.get_as<uint32_t>(1), msg2.get_as<uint32_t>(1));
+}
+
 CAF_TEST(compare_custom_types) {
   s2 tmp;
   tmp.value[0][1] = 100;

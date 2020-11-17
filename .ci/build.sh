@@ -5,6 +5,7 @@ set -e
 # This script expects the CAF source tree under 'sources', builds in 'build' and
 # installs to 'bundle'. Additionally, the script expects the CMake pre-load
 # script 'cmake-init.txt' in the current working directorys.
+BaseDir="$PWD"
 InitFile="$PWD/cmake-init.txt"
 SourceDir="$PWD/sources"
 BuildDir="$PWD/build"
@@ -23,6 +24,28 @@ else
   exit 1
 fi
 
+LeakSanCheck="
+#include <cstdlib>
+int main() {
+  int* ptr = new int(EXIT_SUCCESS);
+  return *ptr;
+}
+"
+
+# Check that LeakSanitizer works if configured for this build.
+if [ "${CAF_CHECK_LEAKS}" == "ON" ]; then
+  mkdir -p "$BaseDir/LeakCheck"
+  cd "$BaseDir/LeakCheck"
+  echo "${LeakSanCheck}" > check.cpp
+  c++ check.cpp -o check -fsanitize=address -fno-omit-frame-pointer
+  out=`./check 2>&1 | grep -o LeakSanitizer`
+  if [ "$out" != "LeakSanitizer" ]; then
+    echo "unable to detected memory leaks on this platform!"
+    return 1
+  fi
+  cd "$BaseDir"
+fi
+
 # Make sure all directories exist, then enter build directory.
 mkdir -p "$BuildDir"
 cd "$BuildDir"
@@ -34,4 +57,4 @@ if [ -z "$CAF_NUM_CORES" ]; then
 else
   $CMakeCommand --build . --target install -- -j $CAF_NUM_CORES
 fi
-$CTestCommand
+$CTestCommand --output-on-failure

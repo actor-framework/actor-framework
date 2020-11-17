@@ -30,6 +30,7 @@
 #include "caf/intrusive_cow_ptr.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/ip_address.hpp"
+#include "caf/make_counted.hpp"
 #include "caf/string_view.hpp"
 #include "caf/variant.hpp"
 
@@ -274,7 +275,7 @@ struct inspector_access<uri> : inspector_access_base<uri> {
     } else {
       if constexpr (Inspector::is_loading)
         if (!x.impl_->unique())
-          x.impl_.reset(new uri::impl_type);
+          x.impl_.reset(new uri::impl_type, false);
       return inspect(f, *x.impl_);
     }
   }
@@ -291,7 +292,7 @@ struct inspector_access<uri> : inspector_access_base<uri> {
     } else {
       if constexpr (Inspector::is_loading)
         if (!x.impl_->unique())
-          x.impl_.reset(new uri::impl_type);
+          x.impl_.reset(new uri::impl_type, false);
       return inspect(f, *x.impl_);
     }
   }
