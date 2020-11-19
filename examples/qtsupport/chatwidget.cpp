@@ -15,9 +15,7 @@ using namespace std;
 using namespace caf;
 
 ChatWidget::ChatWidget(QWidget* parent)
-    : super(parent),
-      input_(nullptr),
-      output_(nullptr) {
+  : super(parent), input_(nullptr), output_(nullptr) {
   // nop
 }
 
@@ -78,14 +76,14 @@ void ChatWidget::sendChatMessage() {
     split(words, line.midRef(1).toUtf8().constData(), is_any_of(" "));
     if (words.size() > 1) {
       if (words.front() == "join" && words.size() == 3) {
-          auto x = system().groups().get(words[1], words[2]);
-          if (!x)
-            print("*** error: "
-                  + QString::fromUtf8(to_string(x.error()).c_str()));
-          else
-            self()->send(self(), join_atom_v, std::move(*x));
+        auto x = system().groups().get(words[1], words[2]);
+        if (!x)
+          print("*** error: "
+                + QString::fromUtf8(to_string(x.error()).c_str()));
+        else
+          self()->send(self(), join_atom_v, std::move(*x));
       } else if (words.front() == "setName" && words.size() == 2)
-          send_as(as_actor(), as_actor(), set_name_atom_v, std::move(words[1]));
+        send_as(as_actor(), as_actor(), set_name_atom_v, std::move(words[1]));
     } else {
       print("*** list of commands:\n"
             "/join <module> <group id>\n"
