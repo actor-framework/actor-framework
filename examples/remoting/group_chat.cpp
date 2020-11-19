@@ -3,9 +3,9 @@
  * based on group communication.                                              *
  *                                                                            *
  * Setup for a minimal chat between "alice" and "bob":                        *
- * - ./build/bin/group_chat -s -p 4242                                        *
- * - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n alice        *
- * - ./build/bin/group_chat -g remote:chatroom@localhost:4242 -n bob          *
+ * - ./build/example/group_chat -s -p 4242                                    *
+ * - ./build/example/group_chat -g remote:chatroom@localhost:4242 -n alice    *
+ * - ./build/example/group_chat -g remote:chatroom@localhost:4242 -n bob      *
 \******************************************************************************/
 
 #include <cstdlib>
