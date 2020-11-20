@@ -29,7 +29,7 @@ void ChatWidget::init(actor_system& system) {
     return {
       [=](join_atom, const group& what) {
         auto groups = self->joined_groups();
-        for (auto&& grp : groups) {
+        for (const auto& grp : groups) {
           print(("*** leave " + to_string(grp)).c_str());
           self->send(grp, name_ + " has left the chatroom");
           self->leave(grp);
@@ -56,7 +56,7 @@ void ChatWidget::init(actor_system& system) {
       },
       [=](leave_atom) {
         auto groups = self->joined_groups();
-        for (auto&& grp : groups) {
+        for (const auto& grp : groups) {
           std::cout << "*** leave " << to_string(grp) << std::endl;
           self->send(grp, name_ + " has left the chatroom");
           self->leave(grp);
@@ -75,14 +75,13 @@ void ChatWidget::sendChatMessage() {
     vector<string> words;
     split(words, line.midRef(1).toUtf8().constData(), is_any_of(" "));
     if (words.size() > 1) {
-      if (words.front() == "join" && words.size() == 3) {
-        auto x = system().groups().get(words[1], words[2]);
-        if (!x)
+      if (words[0] == "join" && words.size() == 3) {
+        if (auto x = system().groups().get(words[1], words[2]))
+          self()->send(self(), join_atom_v, std::move(*x));
+        else
           print("*** error: "
                 + QString::fromUtf8(to_string(x.error()).c_str()));
-        else
-          self()->send(self(), join_atom_v, std::move(*x));
-      } else if (words.front() == "setName" && words.size() == 2)
+      } else if (words[0] == "setName" && words.size() == 2)
         send_as(as_actor(), as_actor(), set_name_atom_v, std::move(words[1]));
     } else {
       print("*** list of commands:\n"

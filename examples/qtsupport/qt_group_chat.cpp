@@ -41,7 +41,7 @@ public:
 };
 
 int main(int argc, char** argv) {
-  init_global_meta_objects<id_block::qt_support>();
+  init_global_meta_objects<id_block::qtsupport>();
   core::init_global_meta_objects();
   io::middleman::init_global_meta_objects();
   config cfg{};
@@ -63,11 +63,11 @@ int main(int argc, char** argv) {
   group grp;
   // evaluate group parameters
   if (auto locator = get_if<std::string>(&cfg, "group")) {
-    if (auto grp_p = sys.groups().get(*locator)) {
-      grp = std::move(*grp_p);
+    if (auto maybe_grp = sys.groups().get(*locator)) {
+      grp = std::move(*maybe_grp);
     } else {
       std::cerr << R"(*** failed to parse ")" << *locator
-                << R"(" as group locator: )" << to_string(grp_p.error())
+                << R"(" as group locator: )" << to_string(maybe_grp.error())
                 << std::endl;
     }
   }

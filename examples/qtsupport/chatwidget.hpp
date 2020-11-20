@@ -11,12 +11,12 @@ CAF_PUSH_WARNINGS
 #include <QTextEdit>
 CAF_POP_WARNINGS
 
-CAF_BEGIN_TYPE_ID_BLOCK(qt_support, first_custom_type_id)
+CAF_BEGIN_TYPE_ID_BLOCK(qtsupport, first_custom_type_id)
 
-  CAF_ADD_ATOM(qt_support, set_name_atom)
-  CAF_ADD_ATOM(qt_support, quit_atom)
+  CAF_ADD_ATOM(qtsupport, set_name_atom)
+  CAF_ADD_ATOM(qtsupport, quit_atom)
 
-CAF_END_TYPE_ID_BLOCK(qt_support)
+CAF_END_TYPE_ID_BLOCK(qtsupport)
 
 class ChatWidget : public caf::mixin::actor_widget<QWidget> {
 private:
