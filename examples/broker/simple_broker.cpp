@@ -3,8 +3,8 @@
  * a broker. Server and client exchange integers in a 'ping-pong protocol'.   *
  *                                                                            *
  * Minimal setup:                                                             *
- * - ./build/example/simple_broker -s 4242                                    *
- * - ./build/example/simple_broker -c localhost 4242                          *
+ * - simple_broker -s 4242                                                    *
+ * - simple_broker -c localhost 4242                                          *
 \******************************************************************************/
 
 // Manual refs: 42-47 (Actors.tex)

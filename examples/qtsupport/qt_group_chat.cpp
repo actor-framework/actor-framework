@@ -4,9 +4,9 @@
  * terminal version in remote_actors/group_chat.cpp.                          *
  *                                                                            *
  * Setup for a minimal chat between "alice" and "bob":                        *
- * - ./build/examples/group_server -p 4242                                    *
- * - ./build/examples/qt_group_chat -g remote:chatroom@localhost:4242 -n alice*
- * - ./build/examples/qt_group_chat -g remote:chatroom@localhost:4242 -n bob  *
+ * - group_server -p 4242                                                     *
+ * - qt_group_chat -g remote:chatroom@localhost:4242 -n alice                 *
+ * - qt_group_chat -g remote:chatroom@localhost:4242 -n bob                   *
 \******************************************************************************/
 
 #include <set>
