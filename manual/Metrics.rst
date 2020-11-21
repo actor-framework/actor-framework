@@ -435,17 +435,17 @@ Base Metrics
 
 The actor system collects this set of metrics always by default.
 
-caf.running-actors
+caf.system.running-actors
   - Tracks the current number of running actors in the system.
   - **Type**: ``int_gauge``
   - **Label dimensions**: none.
 
-caf.processed-messages
+caf.system.processed-messages
   - Counts the total number of processed messages.
   - **Type**: ``int_counter``
   - **Label dimensions**: none.
 
-caf.rejected-messages
+caf.system.rejected-messages
   - Counts the number of messages that where rejected because the target mailbox
     was closed or did not exist.
   - **Type**: ``int_counter``
@@ -499,29 +499,29 @@ The configuration above would select all actors with names that start with
 For all actors that are selected by the user-defined filters, CAF collects this
 set of metrics:
 
-caf.processing-time
+caf.actor.processing-time
   - Samples how long the actor needs to process messages.
   - **Type**: ``dbl_histogram``
   - **Unit**: ``seconds``
   - **Label dimensions**: name.
 
-caf.mailbox-time
+caf.actor.mailbox-time
   - Samples how long messages wait in the mailbox before being processed.
   - **Type**: ``dbl_histogram``
   - **Unit**: ``seconds``
   - **Label dimensions**: name.
 
-caf.mailbox-size
+caf.actor.mailbox-size
   - Counts how many messages are currently waiting in the mailbox.
   - **Type**: ``int_gauge``
   - **Label dimensions**: name.
 
-caf.stream.processed-elements
+caf.actor.stream.processed-elements
   - Counts the total number of processed stream elements from upstream.
   - **Type**: ``int_counter``
   - **Label dimensions**: name, type.
 
-caf.stream.input-buffer-size
+caf.actor.stream.input-buffer-size
   - Tracks how many stream elements from upstream are currently buffered.
   - **Type**: ``int_gauge``
   - **Label dimensions**: name, type.
