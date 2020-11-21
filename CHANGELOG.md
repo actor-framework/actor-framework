@@ -49,6 +49,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix memory leaks when deserializing URIs and when detaching the content of
   messages (#1160).
 - Fix undefined behavior in `string_view::compare` (#1164).
+- Fix undefined behavior when passing `--config-file=` (i.e., without actual
+  argument) to CAF applications (#1167).
+- Protect against self-assignment in a couple of CAF classes (#1169).
+- Skipping high-priority messages resulted in CAF lowering the priority to
+  normal. This unintentional demotion has been fixed (#1171).
+- Fix undefined behavior in the experimental datagram brokers (#1174).
 
 ## [0.18.0-rc.1] - 2020-09-09
 
