@@ -62,9 +62,11 @@ ip_endpoint::ip_endpoint(const ip_endpoint& other) {
 }
 
 ip_endpoint& ip_endpoint::operator=(const ip_endpoint& other) {
-  ptr_.reset(new ip_endpoint::impl);
-  memcpy(address(), other.caddress(), sizeof(sockaddr_storage));
-  *length() = *other.clength();
+  if (this != &other) {
+    ptr_.reset(new ip_endpoint::impl);
+    memcpy(address(), other.caddress(), sizeof(sockaddr_storage));
+    *length() = *other.clength();
+  }
   return *this;
 }
 

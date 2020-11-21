@@ -39,7 +39,9 @@ error::error(const error& x) : data_(x ? new data(*x.data_) : nullptr) {
 }
 
 error& error::operator=(const error& x) {
-  if (x) {
+  if (this == &x) {
+    // nop
+  } else if (x) {
     if (data_ == nullptr)
       data_.reset(new data(*x.data_));
     else

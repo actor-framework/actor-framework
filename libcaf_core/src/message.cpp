@@ -131,15 +131,17 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
       swap(meta, other.meta);
     }
     object_ptr& operator=(object_ptr&& other) noexcept {
-      if (obj) {
-        meta->destroy(obj);
-        free(obj);
-        obj = nullptr;
-        meta = nullptr;
+      if (this != &other) {
+        if (obj) {
+          meta->destroy(obj);
+          free(obj);
+          obj = nullptr;
+          meta = nullptr;
+        }
+        using std::swap;
+        swap(obj, other.obj);
+        swap(meta, other.meta);
       }
-      using std::swap;
-      swap(obj, other.obj);
-      swap(meta, other.meta);
       return *this;
     }
     ~object_ptr() noexcept {
