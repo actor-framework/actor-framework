@@ -78,7 +78,6 @@ CAF_TEST(move_assignment) {
   x = std::move(y);
   CAF_CHECK_EQUAL(x, make_tuple(3, 4));
   CAF_CHECK_EQUAL(x.unique(), true);
-  CAF_CHECK_EQUAL(y.ptr(), nullptr);
 }
 
 CAF_TEST(make_cow_tuple) {
