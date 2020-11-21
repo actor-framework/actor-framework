@@ -75,27 +75,25 @@ abstract_broker::~abstract_broker() {
 void abstract_broker::configure_read(connection_handle hdl,
                                      receive_policy::config cfg) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(cfg));
-  auto x = by_id(hdl);
-  if (x)
+  if (auto x = by_id(hdl))
     x->configure_read(cfg);
 }
 
 void abstract_broker::ack_writes(connection_handle hdl, bool enable) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(enable));
-  auto x = by_id(hdl);
-  if (x)
+  if (auto x = by_id(hdl))
     x->ack_writes(enable);
 }
 
 byte_buffer& abstract_broker::wr_buf(connection_handle hdl) {
   CAF_ASSERT(hdl != invalid_connection_handle);
-  auto x = by_id(hdl);
-  if (!x) {
+  if (auto x = by_id(hdl)) {
+    return x->wr_buf();
+  } else {
     CAF_LOG_ERROR("tried to access wr_buf() of an unknown connection_handle:"
                   << CAF_ARG(hdl));
     return dummy_wr_buf_;
   }
-  return x->wr_buf();
 }
 
 void abstract_broker::write(connection_handle hdl, size_t bs, const void* buf) {
@@ -110,34 +108,32 @@ void abstract_broker::write(connection_handle hdl, span<const byte> buf) {
 }
 
 void abstract_broker::flush(connection_handle hdl) {
-  auto x = by_id(hdl);
-  if (x)
+  if (auto x = by_id(hdl))
     x->flush();
 }
 
 void abstract_broker::ack_writes(datagram_handle hdl, bool enable) {
   CAF_LOG_TRACE(CAF_ARG(hdl) << CAF_ARG(enable));
-  auto x = by_id(hdl);
-  if (x)
+  if (auto x = by_id(hdl))
     x->ack_writes(enable);
 }
 
 byte_buffer& abstract_broker::wr_buf(datagram_handle hdl) {
-  auto x = by_id(hdl);
-  if (!x) {
+  if (auto x = by_id(hdl)) {
+    return x->wr_buf(hdl);
+  } else {
     CAF_LOG_ERROR("tried to access wr_buf() of an unknown"
                   "datagram_handle");
     return dummy_wr_buf_;
   }
-  return x->wr_buf(hdl);
 }
 
 void abstract_broker::enqueue_datagram(datagram_handle hdl, byte_buffer buf) {
-  auto x = by_id(hdl);
-  if (!x)
+  if (auto x = by_id(hdl))
+    x->enqueue_datagram(hdl, std::move(buf));
+  else
     CAF_LOG_ERROR("tried to access datagram_buffer() of an unknown"
                   "datagram_handle");
-  x->enqueue_datagram(hdl, std::move(buf));
 }
 
 void abstract_broker::write(datagram_handle hdl, size_t bs, const void* buf) {
@@ -148,8 +144,7 @@ void abstract_broker::write(datagram_handle hdl, size_t bs, const void* buf) {
 }
 
 void abstract_broker::flush(datagram_handle hdl) {
-  auto x = by_id(hdl);
-  if (x)
+  if (auto x = by_id(hdl))
     x->flush();
 }
 
@@ -337,11 +332,12 @@ uint16_t abstract_broker::local_port(datagram_handle hdl) {
 }
 
 bool abstract_broker::remove_endpoint(datagram_handle hdl) {
-  auto x = by_id(hdl);
-  if (!x)
+  if (auto x = by_id(hdl)) {
+    x->remove_endpoint(hdl);
+    return true;
+  } else {
     return false;
-  x->remove_endpoint(hdl);
-  return true;
+  }
 }
 
 void abstract_broker::close_all() {
