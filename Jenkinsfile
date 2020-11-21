@@ -93,13 +93,18 @@ config = [
                 'ASAN_OPTIONS=detect_leaks=1',
             ],
         ]],
-        // One extra debug build with static libraries.
-        ['debian-10', [
+        // One extra debug build with static libraries and UBSanitizer.
+        ['fedora-32', [
             numCores: 4,
-            tags: ['docker'],
+            tags: ['docker', 'UBSanitizer'],
             builds: ['debug'],
             extraBuildFlags: [
                 'BUILD_SHARED_LIBS:BOOL=OFF',
+                'CAF_SANITIZERS:STRING=address,undefined',
+            ],
+            extraBuildEnv: [
+                'CXXFLAGS=-fno-sanitize-recover=undefined',
+                'LDFLAGS=-fno-sanitize-recover=undefined',
             ],
         ]],
         // Other UNIX systems.

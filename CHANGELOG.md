@@ -48,6 +48,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   console output.
 - Fix memory leaks when deserializing URIs and when detaching the content of
   messages (#1160).
+- Fix undefined behavior in `string_view::compare` (#1164).
 
 ## [0.18.0-rc.1] - 2020-09-09
 

@@ -102,16 +102,18 @@ string_view string_view::substr(size_type pos, size_type n) const noexcept {
 }
 
 int string_view::compare(string_view str) const noexcept {
-  auto s0 = size();
-  auto s1 = str.size();
-  auto fallback = [](int x, int y) {
-    return x == 0 ? y : x;
-  };
-  if (s0 == s1)
-    return strncmp(data(), str.data(), s0);
-  else if (s0 < s1)
-    return fallback(strncmp(data(), str.data(), s0), -1);
-  return fallback(strncmp(data(), str.data(), s1), 1);
+  // TODO: use lexicographical_compare_three_way when switching to C++20
+  auto i0 = begin();
+  auto e0 = end();
+  auto i1 = str.begin();
+  auto e1 = str.end();
+  while (i0 != e0 && i1 != e1)
+    if (auto diff = *i0++ - *i1++; diff != 0)
+      return diff;
+  if (i0 == e0)
+    return i1 != e1 ? -1 : 0;
+  else
+    return i1 == e1 ? 1 : 0;
 }
 
 int string_view::compare(size_type pos1, size_type n1,

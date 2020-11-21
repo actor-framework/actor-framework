@@ -28,8 +28,9 @@ elif [ $# = 2 ]; then
   if [ "$1" = 'test' ] && [ -d "$2" ]; then
     Mode='test'
     BuildDir="$2"
-  elif [ "$1" = 'assert' ] && [ "$2" = 'LeakSanitizer' ]; then
+  elif [ "$1" = 'assert' ]; then
     Mode='assert'
+    What="$2"
   else
     usage
   fi
@@ -85,10 +86,37 @@ runLeakSanitizerCheck() {
   fi
 }
 
+runUBSanitizerCheck() {
+  UBSanCheckStr="
+    int main(int argc, char**) {
+      int k = 0x7fffffff;
+      k += argc;
+      return 0;
+    }
+  "
+  echo "${UBSanCheckStr}" > UBSanCheck.cpp
+  c++ UBSanCheck.cpp -o UBSanCheck -fsanitize=undefined -fno-omit-frame-pointer
+  out=`./UBSanCheck 2>&1 | grep -o 'signed integer overflow'`
+  if [ -z "$out" ]; then
+    echo "unable to detected undefined behavior on this platform!"
+    return 1
+  fi
+}
+
 if [ "$Mode" = 'build' ]; then
   runBuild
 elif [ "$Mode" = 'test' ]; then
   runTest
 else
-  runLeakSanitizerCheck
+  case "$What" in
+    LeakSanitizer)
+      runLeakSanitizerCheck
+      ;;
+    UBSanitizer)
+      runUBSanitizerCheck
+      ;;
+    *)
+    echo "unrecognized tag: $What!"
+    return 1
+  esac
 fi
