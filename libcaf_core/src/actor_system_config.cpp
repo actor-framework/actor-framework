@@ -409,8 +409,9 @@ error actor_system_config::extract_config_file_path(string_list& args) {
   if (i == args.end())
     return none;
   if (path.empty()) {
+    auto str = std::move(*i);
     args.erase(i);
-    return make_error(pec::missing_argument, std::string{*i});
+    return make_error(pec::missing_argument, std::move(str));
   }
   auto evalue = ptr->parse(path);
   if (!evalue)
