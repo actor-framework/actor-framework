@@ -56,14 +56,22 @@ CAF_TEST(string conversion) {
 }
 
 CAF_TEST(substrings) {
+  auto without_prefix = [](string_view str, size_t n) {
+    str.remove_prefix(n);
+    return str;
+  };
+  auto without_suffix = [](string_view str, size_t n) {
+    str.remove_suffix(n);
+    return str;
+  };
   auto x = "abcdefghi"_sv;
-  CAF_CHECK(x.remove_prefix(3), "defghi");
-  CAF_CHECK(x.remove_suffix(3), "abcdef");
-  CAF_CHECK(x.substr(3, 3), "def");
-  CAF_CHECK(x.remove_prefix(9), "");
-  CAF_CHECK(x.remove_suffix(9), "");
-  CAF_CHECK(x.substr(9), "");
-  CAF_CHECK(x.substr(0, 0), "");
+  CAF_CHECK_EQUAL(without_prefix(x, 3), "defghi");
+  CAF_CHECK_EQUAL(without_suffix(x, 3), "abcdef");
+  CAF_CHECK_EQUAL(x.substr(3, 3), "def");
+  CAF_CHECK_EQUAL(without_prefix(x, 9), "");
+  CAF_CHECK_EQUAL(without_suffix(x, 9), "");
+  CAF_CHECK_EQUAL(x.substr(9), "");
+  CAF_CHECK_EQUAL(x.substr(0, 0), "");
 }
 
 CAF_TEST(compare) {
