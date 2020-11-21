@@ -23,6 +23,7 @@
 #include "core-test.hpp"
 
 using namespace caf;
+using namespace caf::literals;
 
 CAF_TEST(default construction) {
   string_view x;
@@ -34,7 +35,7 @@ CAF_TEST(default construction) {
 }
 
 CAF_TEST(cstring conversion) {
-  string_view x = "abc";
+  auto x = "abc"_sv;
   CAF_CHECK_EQUAL(x.size(), 3u);
   CAF_CHECK_EQUAL(x[0], 'a');
   CAF_CHECK_EQUAL(x[1], 'b');
@@ -50,14 +51,12 @@ CAF_TEST(string conversion) {
   string_view y;
   y = x;
   CAF_CHECK_EQUAL(x, y);
-  auto f = [&](string_view z) {
-    CAF_CHECK_EQUAL(x, z);
-  };
+  auto f = [&](string_view z) { CAF_CHECK_EQUAL(x, z); };
   f(x);
 }
 
 CAF_TEST(substrings) {
-  string_view x = "abcdefghi";
+  auto x = "abcdefghi"_sv;
   CAF_CHECK(x.remove_prefix(3), "defghi");
   CAF_CHECK(x.remove_suffix(3), "abcdef");
   CAF_CHECK(x.substr(3, 3), "def");
@@ -69,9 +68,9 @@ CAF_TEST(substrings) {
 
 CAF_TEST(compare) {
   // testees
-  string_view x = "abc";
-  string_view y = "bcd";
-  string_view z = "cde";
+  auto x = "abc"_sv;
+  auto y = "bcd"_sv;
+  auto z = "cde"_sv;
   // x.compare full strings
   CAF_CHECK(x.compare("abc") == 0);
   CAF_CHECK(x.compare(y) < 0);
@@ -88,14 +87,15 @@ CAF_TEST(compare) {
   CAF_CHECK(x.compare(0, 3, "abc") == 0);
   CAF_CHECK(x.compare(1, 2, y, 0, 2) == 0);
   CAF_CHECK(x.compare(2, 1, z, 0, 1) == 0);
-  CAF_CHECK(x.compare(2, 1, z, 0, 1) == 0);
   // make sure substrings aren't equal
-  CAF_CHECK(string_view("a/") != string_view("a/b"));
+  CAF_CHECK("a/"_sv != "a/b"_sv);
+  CAF_CHECK(z.compare("cdef"_sv) < 0);
+  CAF_CHECK("cdef"_sv.compare(z) > 0);
 }
 
 CAF_TEST(copy) {
   char buf[10];
-  string_view str = "hello";
+  auto str = "hello"_sv;
   auto n = str.copy(buf, str.size());
   CAF_CHECK_EQUAL(n, 5u);
   buf[n] = '\0';
@@ -109,7 +109,7 @@ CAF_TEST(copy) {
 
 CAF_TEST(find) {
   // Check whether string_view behaves exactly like std::string.
-  string_view x = "abcdef";
+  auto x = "abcdef"_sv;
   std::string y = "abcdef";
   CAF_CHECK_EQUAL(x.find('a'), y.find('a'));
   CAF_CHECK_EQUAL(x.find('b'), y.find('b'));
@@ -126,7 +126,7 @@ CAF_TEST(find) {
 
 CAF_TEST(rfind) {
   // Check whether string_view behaves exactly like std::string.
-  string_view x = "abccba";
+  auto x = "abccba"_sv;
   std::string y = "abccba";
   CAF_CHECK_EQUAL(x.rfind('a'), y.rfind('a'));
   CAF_CHECK_EQUAL(x.rfind('b'), y.rfind('b'));
@@ -143,7 +143,7 @@ CAF_TEST(rfind) {
 
 CAF_TEST(find_first_of) {
   // Check whether string_view behaves exactly like std::string.
-  string_view x = "abcdef";
+  auto x = "abcdef"_sv;
   std::string y = "abcdef";
   CAF_CHECK_EQUAL(x.find_first_of('a'), y.find_first_of('a'));
   CAF_CHECK_EQUAL(x.find_first_of('b'), y.find_first_of('b'));
@@ -160,7 +160,7 @@ CAF_TEST(find_first_of) {
 
 CAF_TEST(find_last_of) {
   // Check whether string_view behaves exactly like std::string.
-  string_view x = "abcdef";
+  auto x = "abcdef"_sv;
   std::string y = "abcdef";
   CAF_CHECK_EQUAL(x.find_last_of('a'), y.find_last_of('a'));
   CAF_CHECK_EQUAL(x.find_last_of('b'), y.find_last_of('b'));
@@ -177,7 +177,7 @@ CAF_TEST(find_last_of) {
 
 CAF_TEST(find_first_not_of) {
   // Check whether string_view behaves exactly like std::string.
-  string_view x = "abcdef";
+  auto x = "abcdef"_sv;
   std::string y = "abcdef";
   CAF_CHECK_EQUAL(x.find_first_not_of('a'), y.find_first_not_of('a'));
   CAF_CHECK_EQUAL(x.find_first_not_of('b'), y.find_first_not_of('b'));
@@ -197,7 +197,7 @@ CAF_TEST(find_first_not_of) {
 
 CAF_TEST(find_last_not_of) {
   // Check whether string_view behaves exactly like std::string.
-  string_view x = "abcdef";
+  auto x = "abcdef"_sv;
   std::string y = "abcdef";
   CAF_CHECK_EQUAL(x.find_last_not_of('a'), y.find_last_not_of('a'));
   CAF_CHECK_EQUAL(x.find_last_not_of('b'), y.find_last_not_of('b'));
