@@ -130,15 +130,13 @@ bool stringification_inspector::value(float x) {
 
 bool stringification_inspector::value(double x) {
   sep();
-  auto str = std::to_string(x);
-  result_ += str;
+  detail::print(result_, x);
   return true;
 }
 
 bool stringification_inspector::value(long double x) {
   sep();
-  auto str = std::to_string(x);
-  result_ += str;
+  detail::print(result_, x);
   return true;
 }
 

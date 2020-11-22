@@ -22,6 +22,8 @@
 
 namespace caf {
 
+// note: to_string is implemented in config_value.cpp
+
 const config_value* get_if(const settings* xs, string_view name) {
   // Access the key directly unless the user specified a dot-separated path.
   auto pos = name.find('.');

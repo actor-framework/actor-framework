@@ -330,14 +330,6 @@ private:
   map_type xs_;
 };
 
-// -- free functions -----------------------------------------------------------
-
-// @relates dictionary
-template <class T>
-std::string to_string(const dictionary<T>& xs) {
-  return deep_to_string(xs.container());
-}
-
 // -- operators ----------------------------------------------------------------
 
 // @relates dictionary
@@ -374,12 +366,6 @@ bool operator>(const dictionary<T>& xs, const dictionary<T>& ys) {
 template <class T>
 bool operator>=(const dictionary<T>& xs, const dictionary<T>& ys) {
   return xs.container() >= ys.container();
-}
-
-// @relates dictionary
-template <class T>
-std::ostream& operator<<(std::ostream& out, const dictionary<T>& xs) {
-  return out << to_string(xs);
 }
 
 } // namespace caf

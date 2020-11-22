@@ -108,8 +108,12 @@ struct i64_wrapper {
 };
 
 struct my_request {
-  int32_t a;
-  int32_t b;
+  int32_t a = 0;
+  int32_t b = 0;
+  my_request() = default;
+  my_request(int a, int b) : a(a), b(b) {
+    // nop
+  }
 };
 
 [[maybe_unused]] inline bool operator==(const my_request& x,
