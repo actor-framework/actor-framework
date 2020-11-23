@@ -352,8 +352,13 @@ public:
   // -- observers --------------------------------------------------------------
 
   /// Returns the number of open connections.
-  size_t num_connections() const {
+  size_t num_connections() const noexcept {
     return scribes_.size();
+  }
+
+  /// Returns the number of attached doorman for accepting incoming connections.
+  size_t num_doormen() const noexcept {
+    return doormen_.size();
   }
 
   /// Returns all handles of all `scribe` instances attached to this broker.

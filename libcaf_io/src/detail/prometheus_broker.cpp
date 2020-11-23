@@ -264,12 +264,14 @@ behavior prometheus_broker::make_behavior() {
       configure_read(msg.handle, io::receive_policy::at_most(1024));
     },
     [=](const io::connection_closed_msg& msg) {
-      // No further action required other than cleaning up the state.
       requests_.erase(msg.handle);
+      if (num_connections() + num_doormen() == 0)
+        quit();
     },
     [=](const io::acceptor_closed_msg&) {
-      // Shoud not happen.
-      quit(sec::socket_operation_failed);
+      CAF_LOG_ERROR("Prometheus Broker lost its acceptor!");
+      if (num_connections() + num_doormen() == 0)
+        quit();
     },
   };
 }

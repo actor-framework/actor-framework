@@ -48,6 +48,14 @@ class CAF_IO_EXPORT middleman : public actor_system::networking_module {
 public:
   friend class ::caf::actor_system;
 
+  /// Independent tasks that run in the background, usually in their own thread.
+  struct background_task {
+    virtual ~background_task();
+    virtual bool start(const config_value::dictionary& cfg) = 0;
+  };
+
+  using background_task_ptr = std::unique_ptr<background_task>;
+
   /// Adds message types of the I/O module to the global meta object table.
   static void init_global_meta_objects();
 
@@ -265,13 +273,6 @@ public:
                                        std::forward<Ts>(xs)...);
   }
 
-  /// Tries to open a port for exposing system metrics in the Prometheus text
-  /// format via HTTP.
-  /// @experimental
-  expected<uint16_t> expose_prometheus_metrics(uint16_t port,
-                                               const char* in = nullptr,
-                                               bool reuse = false);
-
   /// Adds module-specific options to the config before loading the module.
   static void add_module_options(actor_system_config& cfg);
 
@@ -344,6 +345,10 @@ private:
     return system().spawn_class<Impl, Os>(cfg);
   }
 
+  expected<uint16_t> expose_prometheus_metrics(uint16_t port,
+                                               const char* in = nullptr,
+                                               bool reuse = false);
+
   void expose_prometheus_metrics(const config_value::dictionary& cfg);
 
   expected<strong_actor_ptr>
@@ -376,12 +381,8 @@ private:
   /// Offers an asynchronous IO by managing this singleton instance.
   middleman_actor manager_;
 
-  /// Protects `background_brokers_`.
-  mutable std::mutex background_brokers_mx_;
-
-  /// Stores hidden background actors that get killed automatically when the
-  /// actor systems shuts down.
-  std::list<actor> background_brokers_;
+  /// Handles to tasks that we spin up in start() and destroy in stop().
+  std::vector<background_task_ptr> background_tasks_;
 
   /// Manages groups that run on a different node in the network.
   detail::remote_group_module_ptr remote_groups_;
