@@ -45,6 +45,8 @@ struct dyn_type_id_list {
     other.hash = 0;
   }
 
+  dyn_type_id_list& operator=(dyn_type_id_list&&) noexcept = delete;
+
   ~dyn_type_id_list() {
     free(storage);
   }

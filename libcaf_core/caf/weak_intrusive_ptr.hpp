@@ -105,8 +105,13 @@ public:
     return *this;
   }
 
-  weak_intrusive_ptr& operator=(weak_intrusive_ptr other) noexcept {
+  weak_intrusive_ptr& operator=(weak_intrusive_ptr&& other) noexcept {
     swap(other);
+    return *this;
+  }
+
+  weak_intrusive_ptr& operator=(const weak_intrusive_ptr& other) noexcept {
+    reset(other.ptr_);
     return *this;
   }
 

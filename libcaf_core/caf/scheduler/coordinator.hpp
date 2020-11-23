@@ -67,7 +67,8 @@ protected:
     workers_.reserve(num);
     // Create worker instanes.
     for (size_t i = 0; i < num; ++i)
-      workers_.emplace_back(new worker_type(i, this, init, max_throughput_));
+      workers_.emplace_back(
+        std::make_unique<worker_type>(i, this, init, max_throughput_));
     // Start all workers.
     for (auto& w : workers_)
       w->start();

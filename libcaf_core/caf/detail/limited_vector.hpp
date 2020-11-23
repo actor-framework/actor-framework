@@ -51,7 +51,7 @@ public:
   }
 
   explicit limited_vector(size_t initial_size) : size_(initial_size) {
-    T tmp;
+    auto tmp = T{};
     std::fill_n(begin(), initial_size, tmp);
   }
 

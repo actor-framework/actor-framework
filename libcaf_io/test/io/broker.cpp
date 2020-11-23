@@ -78,8 +78,8 @@ behavior pong(event_based_actor* self, suite_state_ptr ssp) {
 
 behavior peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
   CAF_MESSAGE("peer_fun called");
+  CAF_REQUIRE(self != nullptr);
   CAF_REQUIRE(self->subtype() == resumable::io_actor);
-  CAF_CHECK(self != nullptr);
   self->monitor(buddy);
   self->set_down_handler([self](down_msg& dm) {
     // Stop if buddy is done.

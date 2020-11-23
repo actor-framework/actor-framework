@@ -129,8 +129,13 @@ public:
     return *this;
   }
 
-  intrusive_ptr& operator=(intrusive_ptr other) noexcept {
+  intrusive_ptr& operator=(intrusive_ptr&& other) noexcept {
     swap(other);
+    return *this;
+  }
+
+  intrusive_ptr& operator=(const intrusive_ptr& other) noexcept {
+    reset(other.ptr_);
     return *this;
   }
 

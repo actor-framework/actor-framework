@@ -932,16 +932,14 @@ void scheduled_actor::push_to_cache(mailbox_element_ptr ptr) {
   using namespace intrusive;
   auto& p = mailbox_.queue().policy();
   auto& qs = mailbox_.queue().queues();
-  // TODO: use generic lambda to avoid code duplication when switching to C++14
-  if (p.id_of(*ptr) == normal_queue_index) {
-    auto& q = std::get<normal_queue_index>(qs);
+  auto push = [&ptr](auto& q) {
     q.inc_total_task_size(q.policy().task_size(*ptr));
     q.cache().push_back(ptr.release());
-  } else {
-    auto& q = std::get<normal_queue_index>(qs);
-    q.inc_total_task_size(q.policy().task_size(*ptr));
-    q.cache().push_back(ptr.release());
-  }
+  };
+  if (p.id_of(*ptr) == normal_queue_index)
+    push(std::get<normal_queue_index>(qs));
+  else
+    push(std::get<urgent_queue_index>(qs));
 }
 
 scheduled_actor::urgent_queue& scheduled_actor::get_urgent_queue() {

@@ -120,7 +120,11 @@ void close_socket(native_socket fd) {
 }
 
 bool would_block_or_temporarily_unavailable(int errcode) {
+#  if EAGAIN != EWOULDBLOCK
   return errcode == EAGAIN || errcode == EWOULDBLOCK;
+#  else
+  return errcode == EAGAIN;
+#  endif
 }
 
 string last_socket_error_as_string() {

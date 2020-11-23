@@ -89,7 +89,8 @@ message_builder& message_builder::append_from(const caf::message& msg,
     auto* meta = detail::global_meta_object(tid);
     storage_size_ += meta->padded_size;
     types_.push_back(tid);
-    elements_.emplace_back(new message_builder_element_adapter(msg, index));
+    elements_.emplace_back(
+      std::make_unique<message_builder_element_adapter>(msg, index));
   }
   return *this;
 }
