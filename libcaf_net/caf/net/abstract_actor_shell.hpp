@@ -90,7 +90,7 @@ public:
   // -- message processing -----------------------------------------------------
 
   /// Dequeues and processes the next message from the mailbox.
-  /// @returns `true` if a message was dequeued and process, `false` if the
+  /// @returns `true` if a message was dequeued and processed, `false` if the
   ///          mailbox was empty.
   bool consume_message();
 
