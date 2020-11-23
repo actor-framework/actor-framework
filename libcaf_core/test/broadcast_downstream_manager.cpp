@@ -342,7 +342,7 @@ receive_checker<F> operator<<(receive_checker<F> xs, not_empty_t) {
 
 #define BATCH(first, last) make_batch(first, last)
 
-#define AND <<
+#define AND_RECEIVED <<
 
 // -- unit tests ---------------------------------------------------------------
 
@@ -367,7 +367,7 @@ CAF_TEST(one_path_force) {
   }
   // Give 11 credit (more than 10).
   AFTER ENTITY alice TRIED FORCE_SENDING 11 ELEMENTS {
-    ENTITY bob RECEIVED BATCH(14, 23) AND BATCH(24, 24);
+    ENTITY bob RECEIVED BATCH(14, 23) AND_RECEIVED BATCH(24, 24);
     ENTITY alice HAS 0u CREDIT FOR bob;
   }
   // Drain all elements except the last 5.
@@ -444,15 +444,15 @@ CAF_TEST(two_paths_different_sizes_force) {
   // Give exactly 10 credit.
   AFTER ENTITY alice TRIED FORCE_SENDING 10 ELEMENTS {
     ENTITY bob RECEIVED BATCH(4, 13);
-    ENTITY carl RECEIVED BATCH(4, 10) AND BATCH(11, 13);
+    ENTITY carl RECEIVED BATCH(4, 10) AND_RECEIVED BATCH(11, 13);
     ENTITY alice HAS 0u CREDIT FOR bob;
     ENTITY alice HAS 0u CREDIT FOR carl;
     ENTITY alice HAS 0u CREDIT TOTAL;
   }
   // Give 11 credit (more than 10).
   AFTER ENTITY alice TRIED FORCE_SENDING 11 ELEMENTS {
-    ENTITY bob RECEIVED BATCH(14, 23) AND BATCH(24, 24);
-    ENTITY carl RECEIVED BATCH(14, 20) AND BATCH(21, 24);
+    ENTITY bob RECEIVED BATCH(14, 23) AND_RECEIVED BATCH(24, 24);
+    ENTITY carl RECEIVED BATCH(14, 20) AND_RECEIVED BATCH(21, 24);
     ENTITY alice HAS 0u CREDIT TOTAL;
   }
   // Drain all elements except the last 5.
@@ -511,7 +511,7 @@ CAF_TEST(two_paths_different_sizes_without_force) {
   // Give 11 credit.
   AFTER ENTITY alice TRIED SENDING 11 ELEMENTS {
     ENTITY bob RECEIVED BATCH(11, 20);
-    ENTITY carl RECEIVED BATCH(8, 14) AND BATCH(15, 21);
+    ENTITY carl RECEIVED BATCH(8, 14) AND_RECEIVED BATCH(15, 21);
     ENTITY alice HAS 1u CREDIT FOR bob;
     ENTITY alice HAS 0u CREDIT FOR carl;
     ENTITY alice HAS 1u CREDIT TOTAL;
