@@ -53,6 +53,7 @@ actor_system_config::~actor_system_config() {
 
 actor_system_config::actor_system_config()
   : cli_helptext_printed(false),
+    program_name("unknown-caf-app"),
     slave_mode(false),
     config_file_path(default_config_file),
     slave_mode_fun(nullptr) {
@@ -187,16 +188,43 @@ settings actor_system_config::dump_content() const {
 error actor_system_config::parse(int argc, char** argv,
                                  const char* config_file_cstr) {
   string_list args;
-  if (argc > 1)
-    args.assign(argv + 1, argv + argc);
+  if (argc > 0) {
+    program_name = argv[0];
+    if (argc > 1)
+      args.assign(argv + 1, argv + argc);
+  }
   return parse(std::move(args), config_file_cstr);
 }
 
 error actor_system_config::parse(int argc, char** argv, std::istream& conf) {
   string_list args;
-  if (argc > 1)
-    args.assign(argv + 1, argv + argc);
+  if (argc > 0) {
+    program_name = argv[0];
+    if (argc > 1)
+      args.assign(argv + 1, argv + argc);
+  }
   return parse(std::move(args), conf);
+}
+
+std::pair<int, char**> actor_system_config::c_args_remainder() {
+  if (c_args_remainder_.empty()) {
+    c_args_remainder_buf_.assign(program_name.begin(), program_name.end());
+    c_args_remainder_buf_.emplace_back('\0');
+    for (const auto& arg : remainder) {
+      c_args_remainder_buf_.insert(c_args_remainder_buf_.end(), //
+                                   arg.begin(), arg.end());
+      c_args_remainder_buf_.emplace_back('\0');
+    }
+    auto ptr = c_args_remainder_buf_.data();
+    auto end = ptr + c_args_remainder_buf_.size();
+    auto advance_ptr = [&ptr] {
+      while (*ptr++ != '\0')
+        ; // nop
+    };
+    for (; ptr != end; advance_ptr())
+      c_args_remainder_.emplace_back(ptr);
+  }
+  return {static_cast<int>(c_args_remainder_.size()), c_args_remainder_.data()};
 }
 
 namespace {
