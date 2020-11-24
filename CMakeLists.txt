@@ -434,14 +434,14 @@ if(CAF_SANITIZERS)
     target_compile_options(${target} INTERFACE
                            -fsanitize=${CAF_SANITIZERS}
                            -fno-omit-frame-pointer)
-    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.13)
-      target_link_options(${target} INTERFACE
-                          -fsanitize=${CAF_SANITIZERS}
-                          -fno-omit-frame-pointer)
-    else()
+    if(CMAKE_VERSION VERSION_LESS 3.13)
       target_link_libraries(${target} INTERFACE
                             -fsanitize=${CAF_SANITIZERS}
                             -fno-omit-frame-pointer)
+    else()
+      target_link_options(${target} INTERFACE
+                          -fsanitize=${CAF_SANITIZERS}
+                          -fno-omit-frame-pointer)
     endif()
   endforeach()
 endif()
