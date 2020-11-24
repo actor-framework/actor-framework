@@ -34,6 +34,11 @@ socket_manager::~socket_manager() {
   close(handle_);
 }
 
+actor_system& socket_manager::system() noexcept {
+  CAF_ASSERT(parent_ != nullptr);
+  return parent_->system();
+}
+
 bool socket_manager::mask_add(operation flag) noexcept {
   CAF_ASSERT(flag != operation::none);
   auto x = mask();
@@ -62,12 +67,6 @@ void socket_manager::register_writing() {
   if ((mask() & operation::write) == operation::write)
     return;
   parent_->register_writing(this);
-}
-
-actor_shell_ptr socket_manager::make_actor_shell_impl() {
-  CAF_ASSERT(parent_ != nullptr);
-  auto hdl = parent_->system().spawn<actor_shell>(this);
-  return actor_shell_ptr{actor_cast<strong_actor_ptr>(std::move(hdl))};
 }
 
 } // namespace caf::net
