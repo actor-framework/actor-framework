@@ -225,11 +225,17 @@ bool prometheus_broker::has_process_metrics() noexcept {
 behavior prometheus_broker::make_behavior() {
   return {
     [=](const io::new_data_msg& msg) {
+      auto flush_and_close = [this, &msg] {
+        flush(msg.handle);
+        close(msg.handle);
+        requests_.erase(msg.handle);
+        if (num_connections() + num_doormen() == 0)
+          quit();
+      };
       auto& req = requests_[msg.handle];
       if (req.size() + msg.buf.size() > max_request_size) {
         write(msg.handle, as_bytes(make_span(request_too_large)));
-        flush(msg.handle);
-        close(msg.handle);
+        flush_and_close();
         return;
       }
       req.insert(req.end(), msg.buf.begin(), msg.buf.end());
@@ -242,8 +248,7 @@ behavior prometheus_broker::make_behavior() {
       // Everything else, we ignore for now.
       if (!starts_with(req_str, "GET /metrics HTTP/1.")) {
         write(msg.handle, as_bytes(make_span(request_not_supported)));
-        flush(msg.handle);
-        close(msg.handle);
+        flush_and_close();
         return;
       }
       // Collect metrics, ship response, and close.
@@ -254,8 +259,7 @@ behavior prometheus_broker::make_behavior() {
       auto& dst = wr_buf(msg.handle);
       dst.insert(dst.end(), hdr.begin(), hdr.end());
       dst.insert(dst.end(), payload.begin(), payload.end());
-      flush(msg.handle);
-      close(msg.handle);
+      flush_and_close();
     },
     [=](const io::new_connection_msg& msg) {
       // Pre-allocate buffer for maximum request size.
