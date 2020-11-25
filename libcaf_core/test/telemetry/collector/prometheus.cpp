@@ -73,9 +73,9 @@ other_value_seconds_total{x="true"} 31337 42000
 some_request_duration_seconds_bucket{x="get",le="1"} 0 42000
 some_request_duration_seconds_bucket{x="get",le="2"} 0 42000
 some_request_duration_seconds_bucket{x="get",le="4"} 2 42000
-some_request_duration_seconds_bucket{x="get",le="+Inf"} 1 42000
+some_request_duration_seconds_bucket{x="get",le="+Inf"} 3 42000
 some_request_duration_seconds_sum{x="get"} 14 42000
-some_request_duration_seconds_count{x="get"} 1 42000
+some_request_duration_seconds_count{x="get"} 3 42000
 )"_sv);
   CAF_MESSAGE("multiple runs generate the same output");
   std::string res1;
