@@ -10,6 +10,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The enum `caf::sec` received an additional error code: `connection_closed`.
 - The new `byte_span` and `const_byte_span` aliases provide convenient
   definitions when working with sequences of bytes.
+- The base metrics now include four new histograms for illuminating the I/O
+  module: `caf.middleman.inbound-messages-size`,
+  `caf.middleman.outbound-messages-size`, `caf.middleman.deserialization-time`
+  and `caf.middleman.serialization-time`.
 
 ### Changed
 

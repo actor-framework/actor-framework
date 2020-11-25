@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <vector>
 
 #include "caf/actor_control_block.hpp"
@@ -29,10 +30,13 @@
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/execution_unit.hpp"
 #include "caf/io/basp/header.hpp"
+#include "caf/io/middleman.hpp"
 #include "caf/logger.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
 #include "caf/node_id.hpp"
+#include "caf/telemetry/histogram.hpp"
+#include "caf/telemetry/timer.hpp"
 
 namespace caf::io::basp {
 
@@ -108,10 +112,15 @@ public:
       CAF_LOG_ERROR("failed to read stages:" << source.get_error());
       return;
     }
+    auto& mm_metrics = ctx->system().middleman().metric_singletons;
+    auto t0 = telemetry::timer::clock_type::now();
     if (!source.apply_objects(msg)) {
       CAF_LOG_ERROR("failed to read message content:" << source.get_error());
       return;
     }
+    telemetry::timer::observe(mm_metrics.deserialization_time, t0);
+    auto signed_size = static_cast<int64_t>(dref.payload_.size());
+    mm_metrics.inbound_messages_size->observe(signed_size);
     // Intercept link messages. Forwarding actor proxies signalize linking
     // by sending link_atom/unlink_atom message with src == dest.
     if (auto view

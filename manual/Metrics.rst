@@ -433,7 +433,8 @@ configuration by the user.
 Base Metrics
 ~~~~~~~~~~~~
 
-The actor system collects this set of metrics always by default.
+The actor system collects this set of metrics always by default (note that all
+``caf.middleman`` metrics only appear when loading the I/O module).
 
 caf.system.running-actors
   - Tracks the current number of running actors in the system.
@@ -449,6 +450,30 @@ caf.system.rejected-messages
   - Counts the number of messages that where rejected because the target mailbox
     was closed or did not exist.
   - **Type**: ``int_counter``
+  - **Label dimensions**: none.
+
+caf.middleman.inbound-messages-size
+  - Samples the size of inbound messages before deserializing them.
+  - **Type**: ``int_histogram``
+  - **Unit**: ``bytes``
+  - **Label dimensions**: none.
+
+caf.middleman.outbound-messages-size
+  - Samples the size of outbound messages after serializing them.
+  - **Type**: ``int_histogram``
+  - **Unit**: ``bytes``
+  - **Label dimensions**: none.
+
+caf.middleman.deserialization-time
+  - Samples how long the middleman needs to deserialize inbound messages.
+  - **Type**: ``dbl_histogram``
+  - **Unit**: ``seconds``
+  - **Label dimensions**: none.
+
+caf.middleman.serialization-time
+  - Samples how long the middleman needs to serialize outbound messages.
+  - **Type**: ``dbl_histogram``
+  - **Unit**: ``seconds``
   - **Label dimensions**: none.
 
 Actor Metrics and Filters

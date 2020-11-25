@@ -67,6 +67,45 @@ namespace caf::io {
 
 namespace {
 
+auto make_metrics(telemetry::metric_registry& reg) {
+  std::array<double, 9> default_time_buckets{{
+    .0002, //  20us
+    .0004, //  40us
+    .0006, //  60us
+    .0008, //  80us
+    .001,  //   1ms
+    .005,  //   5ms
+    .01,   //  10ms
+    .05,   //  50ms
+    .1,    // 100ms
+  }};
+  std::array<int64_t, 9> default_size_buckets{{
+    100,
+    500,
+    1'000,
+    5'000,
+    10'000,
+    50'000,
+    100'000,
+    500'000,
+    1'000'000,
+  }};
+  return middleman::metric_singletons_t{
+    reg.histogram_singleton(
+      "caf.middleman", "inbound-messages-size", default_size_buckets,
+      "The size of inbound messages before deserializing them.", "bytes"),
+    reg.histogram_singleton<double>(
+      "caf.middleman", "deserialization-time", default_time_buckets,
+      "Time the middleman needs to deserialize inbound messages.", "seconds"),
+    reg.histogram_singleton(
+      "caf.middleman", "outbound-messages-size", default_size_buckets,
+      "The size of outbound messages after serializing them.", "bytes"),
+    reg.histogram_singleton<double>(
+      "caf.middleman", "serialization-time", default_time_buckets,
+      "Time the middleman needs to serialize outbound messages.", "seconds"),
+  };
+}
+
 template <class T>
 class mm_impl : public middleman {
 public:
@@ -82,7 +121,67 @@ private:
   T backend_;
 };
 
+class prometheus_scraping : public middleman::background_task {
+public:
+  prometheus_scraping(actor_system& sys) : mpx_(&sys) {
+    // nop
+  }
+
+  bool start(const config_value::dictionary& cfg) override {
+    // Read port, address and reuse flag from the config.
+    uint16_t port = 0;
+    if (auto cfg_port = get_if<uint16_t>(&cfg, "port")) {
+      port = *cfg_port;
+    } else {
+      return false;
+    }
+    const char* addr = nullptr;
+    if (const std::string* cfg_addr = get_if<std::string>(&cfg, "address"))
+      if (*cfg_addr != "" && *cfg_addr != "0.0.0.0")
+        addr = cfg_addr->c_str();
+    auto reuse = get_or(cfg, "reuse", false);
+    if (auto res = start(port, addr, reuse)) {
+      CAF_LOG_INFO("expose Prometheus metrics at port" << *res);
+      return true;
+    } else {
+      CAF_LOG_ERROR("failed to expose Prometheus metrics:" << res.error());
+      return false;
+    }
+  }
+
+  expected<uint16_t> start(uint16_t port, const char* in, bool reuse) {
+    doorman_ptr dptr;
+    if (auto maybe_dptr = mpx_.new_tcp_doorman(port, in, reuse))
+      dptr = std::move(*maybe_dptr);
+    else
+      return std::move(maybe_dptr.error());
+    auto actual_port = dptr->port();
+    // Spawn the actor and store its handle in background_brokers_.
+    using impl = detail::prometheus_broker;
+    actor_config cfg{&mpx_};
+    broker_ = mpx_.system().spawn_impl<impl, hidden>(cfg, std::move(dptr));
+    thread_ = std::thread{[this] { mpx_.run(); }};
+    return actual_port;
+  }
+
+  ~prometheus_scraping() {
+    if (broker_) {
+      anon_send_exit(broker_, exit_reason::user_shutdown);
+      thread_.join();
+    }
+  }
+
+private:
+  network::default_multiplexer mpx_;
+  actor broker_;
+  std::thread thread_;
+};
+
 } // namespace
+
+middleman::background_task::~background_task() {
+  // nop
+}
 
 void middleman::init_global_meta_objects() {
   caf::init_global_meta_objects<id_block::io_module>();
@@ -120,6 +219,7 @@ actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
 
 middleman::middleman(actor_system& sys) : system_(sys) {
   remote_groups_ = make_counted<detail::remote_group_module>(this);
+  metric_singletons = make_metrics(sys.metrics());
 }
 
 expected<strong_actor_ptr>
@@ -317,6 +417,13 @@ strong_actor_ptr middleman::remote_lookup(std::string name,
 
 void middleman::start() {
   CAF_LOG_TRACE("");
+  // Launch background tasks.
+  if (auto prom = get_if<config_value::dictionary>(
+        &system().config(), "caf.middleman.prometheus-http")) {
+    auto ptr = std::make_unique<prometheus_scraping>(system());
+    if (ptr->start(*prom))
+      background_tasks_.emplace_back(std::move(ptr));
+  }
   // Launch backend.
   if (!get_or(config(), "caf.middleman.manual-multiplexing", false))
     backend_supervisor_ = backend().make_supervisor();
@@ -349,11 +456,6 @@ void middleman::start() {
   // Spawn utility actors.
   auto basp = named_broker<basp_broker>("BASP");
   manager_ = make_middleman_actor(system(), basp);
-  // Launch metrics exporters.
-  using dict = config_value::dictionary;
-  if (auto prom = get_if<dict>(&system().config(),
-                               "caf.middleman.prometheus-http"))
-    expose_prometheus_metrics(*prom);
   // Enable deserialization of groups.
   system().groups().get_remote
     = [this](const node_id& origin, const std::string& module_name,
@@ -371,12 +473,6 @@ void middleman::start() {
 
 void middleman::stop() {
   CAF_LOG_TRACE("");
-  {
-    std::unique_lock<std::mutex> guard{background_brokers_mx_};
-    for (auto& hdl : background_brokers_)
-      anon_send_exit(hdl, exit_reason::user_shutdown);
-    background_brokers_.clear();
-  }
   backend().dispatch([=] {
     CAF_LOG_TRACE("");
     // managers_ will be modified while we are stopping each manager,
@@ -405,6 +501,7 @@ void middleman::stop() {
   if (!get_or(config(), "caf.middleman.attach-utility-actors", false))
     self->wait_for(manager_);
   destroy(manager_);
+  background_tasks_.clear();
 }
 
 void middleman::init(actor_system_config& cfg) {
@@ -428,49 +525,6 @@ void middleman::init(actor_system_config& cfg) {
     return raw;
   };
   cfg.group_module_factories.emplace_back(dummy_fac);
-}
-
-expected<uint16_t> middleman::expose_prometheus_metrics(uint16_t port,
-                                                        const char* in,
-                                                        bool reuse) {
-  // Create the doorman for the broker.
-  doorman_ptr dptr;
-  if (auto maybe_dptr = backend().new_tcp_doorman(port, in, reuse))
-    dptr = std::move(*maybe_dptr);
-  else
-    return std::move(maybe_dptr.error());
-  auto actual_port = dptr->port();
-  // Spawn the actor and store its handle in background_brokers_.
-  using impl = detail::prometheus_broker;
-  actor_config cfg{&backend()};
-  auto hdl = system().spawn_impl<impl, hidden>(cfg, std::move(dptr));
-  std::list<actor> ls{std::move(hdl)};
-  std::unique_lock<std::mutex> guard{background_brokers_mx_};
-  background_brokers_.splice(background_brokers_.end(), ls);
-  return actual_port;
-}
-
-void middleman::expose_prometheus_metrics(const config_value::dictionary& cfg) {
-  // Read port, address and reuse flag from the config.
-  uint16_t port = 0;
-  if (auto cfg_port = get_if<uint16_t>(&cfg, "port")) {
-    port = *cfg_port;
-  } else {
-    CAF_LOG_ERROR("missing mandatory config field: "
-                  "metrics.export.prometheus-http.port");
-    return;
-  }
-  const char* addr = nullptr;
-  if (auto cfg_addr = get_if<std::string>(&cfg, "address"))
-    if (*cfg_addr != "" && *cfg_addr != "0.0.0.0")
-      addr = cfg_addr->c_str();
-  auto reuse = get_or(cfg, "reuse", false);
-  if (auto res = expose_prometheus_metrics(port, addr, reuse)) {
-    CAF_LOG_INFO("expose Prometheus metrics at port" << *res);
-  } else {
-    CAF_LOG_ERROR("failed to expose Prometheus metrics:" << res.error());
-    return;
-  }
 }
 
 actor_system::module::id_t middleman::id() const {

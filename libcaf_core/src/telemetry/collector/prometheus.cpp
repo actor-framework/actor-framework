@@ -299,15 +299,14 @@ void prometheus::append_histogram(const metric_family* family,
   set_current_family(family, "histogram");
   auto& vm = i->second;
   auto buckets = val->buckets();
-  size_t index = 0;
-  for (; index < buckets.size() - 1; ++index) {
-    append(buf_, vm[index], buckets[index].count.value(), ' ',
-           ms_timestamp{now_}, '\n');
+  auto acc = ValueType{0};
+  auto index = size_t{0};
+  for (; index < buckets.size(); ++index) {
+    acc += buckets[index].count.value();
+    append(buf_, vm[index], acc, ' ', ms_timestamp{now_}, '\n');
   }
-  auto count = buckets[index].count.value();
-  append(buf_, vm[index], count, ' ', ms_timestamp{now_}, '\n');
-  append(buf_, vm[++index], val->sum(), ' ', ms_timestamp{now_}, '\n');
-  append(buf_, vm[++index], count, ' ', ms_timestamp{now_}, '\n');
+  append(buf_, vm[index++], val->sum(), ' ', ms_timestamp{now_}, '\n');
+  append(buf_, vm[index++], acc, ' ', ms_timestamp{now_}, '\n');
 }
 
 } // namespace caf::telemetry::collector

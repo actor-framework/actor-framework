@@ -27,6 +27,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/io/basp/message_queue.hpp"
+#include "caf/io/network/test_multiplexer.hpp"
 #include "caf/make_actor.hpp"
 #include "caf/proxy_registry.hpp"
 
@@ -35,10 +36,19 @@ using namespace caf;
 namespace {
 
 behavior testee_impl() {
-  return {[](ok_atom) {
-    // nop
-  }};
+  return {
+    [](ok_atom) {
+      // nop
+    },
+  };
 }
+
+struct config : actor_system_config {
+  config() {
+    test_coordinator_fixture<>::init_config(*this);
+    load<io::middleman>();
+  }
+};
 
 class mock_actor_proxy : public actor_proxy {
 public:
@@ -74,7 +84,7 @@ private:
   actor_system& sys_;
 };
 
-struct fixture : test_coordinator_fixture<> {
+struct fixture : test_coordinator_fixture<config> {
   detail::worker_hub<io::basp::worker> hub;
   io::basp::message_queue queue;
   mock_proxy_registry_backend proxies_backend;
@@ -87,6 +97,7 @@ struct fixture : test_coordinator_fixture<> {
     last_hop = unbox(std::move(tmp));
     testee = sys.spawn<lazy_init>(testee_impl);
     sys.registry().put(testee.id(), testee);
+    run();
   }
 
   ~fixture() {
