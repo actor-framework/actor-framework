@@ -28,6 +28,8 @@
 #include "caf/io/basp/version.hpp"
 #include "caf/io/basp/worker.hpp"
 #include "caf/settings.hpp"
+#include "caf/telemetry/histogram.hpp"
+#include "caf/telemetry/timer.hpp"
 
 namespace caf::io::basp {
 
@@ -207,18 +209,24 @@ bool instance::dispatch(execution_unit* ctx, const strong_actor_ptr& sender,
 
 void instance::write(execution_unit* ctx, byte_buffer& buf, header& hdr,
                      payload_writer* pw) {
+  CAF_ASSERT(ctx != nullptr);
   CAF_LOG_TRACE(CAF_ARG(hdr));
   binary_serializer sink{ctx, buf};
   if (pw != nullptr) {
     // Write the BASP header after the payload.
     auto header_offset = buf.size();
     sink.skip(header_size);
+    auto& mm_metrics = ctx->system().middleman().metric_singletons;
+    auto t0 = telemetry::timer::clock_type::now();
     if (!(*pw)(sink)) {
       CAF_LOG_ERROR(sink.get_error());
       return;
     }
+    telemetry::timer::observe(mm_metrics.serialization_time, t0);
     sink.seek(header_offset);
     auto payload_len = buf.size() - (header_offset + basp::header_size);
+    auto signed_payload_len = static_cast<uint32_t>(payload_len);
+    mm_metrics.outbound_messages_size->observe(signed_payload_len);
     hdr.payload_len = static_cast<uint32_t>(payload_len);
   }
   if (!sink.apply_objects(hdr))

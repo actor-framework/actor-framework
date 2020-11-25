@@ -67,6 +67,45 @@ namespace caf::io {
 
 namespace {
 
+auto make_metrics(telemetry::metric_registry& reg) {
+  std::array<double, 9> default_time_buckets{{
+    .0002, //  20us
+    .0004, //  40us
+    .0006, //  60us
+    .0008, //  80us
+    .001,  //   1ms
+    .005,  //   5ms
+    .01,   //  10ms
+    .05,   //  50ms
+    .1,    // 100ms
+  }};
+  std::array<int64_t, 9> default_size_buckets{{
+    100,
+    500,
+    1'000,
+    5'000,
+    10'000,
+    50'000,
+    100'000,
+    500'000,
+    1'000'000,
+  }};
+  return middleman::metric_singletons_t{
+    reg.histogram_singleton(
+      "caf.middleman", "inbound-messages-size", default_size_buckets,
+      "The size of inbound messages before deserializing them.", "bytes"),
+    reg.histogram_singleton<double>(
+      "caf.middleman", "deserialization-time", default_time_buckets,
+      "Time the middleman needs to deserialize inbound messages.", "seconds"),
+    reg.histogram_singleton(
+      "caf.middleman", "outbound-messages-size", default_size_buckets,
+      "The size of outbound messages after serializing them.", "bytes"),
+    reg.histogram_singleton<double>(
+      "caf.middleman", "serialization-time", default_time_buckets,
+      "Time the middleman needs to serialize outbound messages.", "seconds"),
+  };
+}
+
 template <class T>
 class mm_impl : public middleman {
 public:
@@ -180,6 +219,7 @@ actor_system::module* middleman::make(actor_system& sys, detail::type_list<>) {
 
 middleman::middleman(actor_system& sys) : system_(sys) {
   remote_groups_ = make_counted<detail::remote_group_module>(this);
+  metric_singletons = make_metrics(sys.metrics());
 }
 
 expected<strong_actor_ptr>

@@ -48,6 +48,21 @@ class CAF_IO_EXPORT middleman : public actor_system::networking_module {
 public:
   friend class ::caf::actor_system;
 
+  /// Metrics that the middleman collects by default.
+  struct metric_singletons_t {
+    /// Samples the size of inbound messages before deserializing them.
+    telemetry::int_histogram* inbound_messages_size = nullptr;
+
+    /// Samples how long the middleman needs to deserialize inbound messages.
+    telemetry::dbl_histogram* deserialization_time = nullptr;
+
+    /// Samples the size of outbound messages after serializing them.
+    telemetry::int_histogram* outbound_messages_size = nullptr;
+
+    /// Samples how long the middleman needs to serialize outbound messages.
+    telemetry::dbl_histogram* serialization_time = nullptr;
+  };
+
   /// Independent tasks that run in the background, usually in their own thread.
   struct background_task {
     virtual ~background_task();
@@ -304,6 +319,9 @@ public:
       return i->second;
     return {};
   }
+
+  /// @private
+  metric_singletons_t metric_singletons;
 
 protected:
   middleman(actor_system& sys);
