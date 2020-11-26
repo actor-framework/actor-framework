@@ -83,7 +83,7 @@ endif()
 # -- base target setup ---------------------------------------------------------
 
 # This target propagates compiler flags, extra dependencies, etc. All other CAF
-# targets pull this target in as PRIVATE dependency. Users that embed CAF into
+# targets pull this target in as a PRIVATE dependency. Users that embed CAF into
 # their own CMake scaffold (e.g., via FetchContent) may pass this target in with
 # some properties predefined in order to force compiler flags or dependencies.
 if(NOT TARGET caf_internal)
