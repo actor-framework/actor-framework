@@ -40,16 +40,7 @@ public:
   }
 };
 
-int main(int argc, char** argv) {
-  init_global_meta_objects<id_block::qtsupport>();
-  core::init_global_meta_objects();
-  io::middleman::init_global_meta_objects();
-  config cfg{};
-  auto err = cfg.parse(argc, argv);
-  if (cfg.cli_helptext_printed)
-    return 0;
-  cfg.load<io::middleman>();
-  actor_system sys{cfg};
+int caf_main(actor_system& sys, const config& cfg) {
   std::string name;
   if (auto config_name = get_if<std::string>(&cfg, "name"))
     name = *config_name;
@@ -71,6 +62,8 @@ int main(int argc, char** argv) {
                 << std::endl;
     }
   }
+
+  auto [argc, argv] = const_cast<config&>(cfg).c_args_remainder();
   QApplication app{argc, argv};
   app.setQuitOnLastWindowClosed(true);
   QMainWindow mw;
@@ -85,3 +78,5 @@ int main(int argc, char** argv) {
   mw.show();
   return app.exec();
 }
+
+CAF_MAIN(id_block::qtsupport, io::middleman)
