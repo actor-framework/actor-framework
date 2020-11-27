@@ -71,38 +71,39 @@ void ChatWidget::sendChatMessage() {
     input()->setText(QString());
   });
   QString line = input()->text();
-  if (line.startsWith('/')) {
+  if (line.isEmpty()) {
+    // Ignore empty lines.
+  } else if (line.startsWith('/')) {
     vector<string> words;
     split(words, line.midRef(1).toUtf8().constData(), is_any_of(" "));
-    if (words.size() > 1) {
-      if (words[0] == "join" && words.size() == 3) {
-        if (auto x = system().groups().get(words[1], words[2]))
-          self()->send(self(), join_atom_v, std::move(*x));
-        else
-          print("*** error: "
-                + QString::fromUtf8(to_string(x.error()).c_str()));
-      } else if (words[0] == "setName" && words.size() == 2)
-        send_as(as_actor(), as_actor(), set_name_atom_v, std::move(words[1]));
-    } else {
+    if (words.size() == 3 && words[0] == "join") {
+      if (auto x = system().groups().get(words[1], words[2]))
+        send_as(as_actor(), as_actor(), join_atom_v, std::move(*x));
+      else
+        print("*** error: " + QString::fromUtf8(to_string(x.error()).c_str()));
+    } else if (words.size() == 2 && words[0] == "setName")
+      send_as(as_actor(), as_actor(), set_name_atom_v, std::move(words[1]));
+    else {
       print("*** list of commands:\n"
             "/join <module> <group id>\n"
             "/setName <new name>\n");
       return;
     }
+  } else {
+    if (name_.empty()) {
+      print("*** please set a name before sending messages");
+      return;
+    }
+    if (!chatroom_) {
+      print("*** no one is listening... please join a group");
+      return;
+    }
+    string msg = name_;
+    msg += ": ";
+    msg += line.toUtf8().constData();
+    print("<you>: " + input()->text());
+    send_as(as_actor(), chatroom_, std::move(msg));
   }
-  if (name_.empty()) {
-    print("*** please set a name before sending messages");
-    return;
-  }
-  if (! chatroom_) {
-    print("*** no one is listening... please join a group");
-    return;
-  }
-  string msg = name_;
-  msg += ": ";
-  msg += line.toUtf8().constData();
-  print("<you>: " + input()->text());
-  send_as(as_actor(), chatroom_, std::move(msg));
 }
 
 void ChatWidget::joinGroup() {
