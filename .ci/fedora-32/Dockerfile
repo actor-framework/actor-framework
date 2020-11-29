@@ -11,4 +11,7 @@ RUN dnf install -y \
   openssl-devel \
   libasan \
   libubsan \
+  libcurl-devel \
+  qt5-devel \
+  protobuf-devel \
  && dnf clean all
