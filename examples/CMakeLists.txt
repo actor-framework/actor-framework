@@ -102,7 +102,8 @@ if(TARGET CAF::io)
                           Qt5::Core
                           Qt5::Gui
                           Qt5::Widgets
-                          CAF::io)
+                          CAF::io
+                          CAF::internal)
     add_dependencies(qt_group_chat all_examples)
   endif()
 
@@ -110,7 +111,7 @@ if(TARGET CAF::io)
     find_package(CURL REQUIRED)
     add_executable(curl_fuse curl/curl_fuse.cpp)
     include_directories(${CURL_INCLUDE_DIRS})
-    target_link_libraries(curl_fuse ${CURL_LIBRARY} CAF::io)
+    target_link_libraries(curl_fuse ${CURL_LIBRARY} CAF::io CAF::internal)
     add_dependencies(curl_fuse all_examples)
   endif()
 
