@@ -107,6 +107,18 @@ config = [
                 'LDFLAGS=-fno-sanitize-recover=undefined',
             ],
         ]],
+        // One extra debug build with all examples.
+        ['fedora-32', [
+            numCores: 4,
+            tags: ['docker'],
+            builds: ['debug'],
+            extraBuildFlags: [
+                'CAF_ENABLE_EXAMPLES:BOOL=ON',
+                'CAF_ENABLE_QT5_EXAMPLES:BOOL=ON',
+                'CAF_ENABLE_CURL_EXAMPLES:BOOL=ON',
+                'CAF_ENABLE_PROTOBUF_EXAMPLES:BOOL=ON',
+            ],
+        ]],
         // Other UNIX systems.
         ['macOS', [
             numCores: 4,
