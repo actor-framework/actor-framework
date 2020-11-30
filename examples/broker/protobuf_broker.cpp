@@ -17,15 +17,18 @@ CAF_PUSH_WARNINGS
 #include "pingpong.pb.h"
 CAF_POP_WARNINGS
 
+CAF_BEGIN_TYPE_ID_BLOCK(protobuf_example, first_custom_type_id)
+
+  CAF_ADD_ATOM(protobuf_example, kickoff_atom)
+
+CAF_END_TYPE_ID_BLOCK(protobuf_example)
+
 namespace {
 
 using namespace std;
 using namespace caf;
 using namespace caf::io;
 
-using ping_atom = atom_constant<atom("ping")>;
-using pong_atom = atom_constant<atom("pong")>;
-using kickoff_atom = atom_constant<atom("kickoff")>;
 
 // utility function to print an exit message with custom name
 void print_on_exit(scheduled_actor* self, const std::string& name) {
@@ -40,26 +43,20 @@ struct ping_state {
 
 behavior ping(stateful_actor<ping_state>* self, size_t num_pings) {
   print_on_exit(self, "ping");
-  return {
-    [=](kickoff_atom, const actor& pong) {
-      self->send(pong, ping_atom::value, 1);
-      self->become (
-        [=](pong_atom, int value) -> message {
-          if (++(self->state.count) >= num_pings)
-            self->quit();
-          return make_message(ping_atom::value, value + 1);
-        }
-      );
-    }
-  };
+  return {[=](kickoff_atom, const actor& pong) {
+    self->send(pong, ping_atom_v, 1);
+    self->become([=](pong_atom, int value) -> message {
+      if (++(self->state.count) >= num_pings)
+        self->quit();
+      return make_message(ping_atom_v, value + 1);
+    });
+  }};
 }
 
 behavior pong(event_based_actor* self) {
   print_on_exit(self, "pong");
   return {
-    [=](ping_atom, int value) {
-      return make_message(pong_atom::value, value);
-    }
+    [=](ping_atom, int value) { return make_message(pong_atom_v, value); },
   };
 }
 
@@ -105,10 +102,10 @@ void protobuf_io(broker* self, connection_handle hdl, const actor& buddy) {
       org::libcppa::PingOrPong p;
       p.ParseFromArray(msg.buf.data(), static_cast<int>(msg.buf.size()));
       if (p.has_ping()) {
-        self->send(buddy, ping_atom::value, p.ping().id());
+        self->send(buddy, ping_atom_v, p.ping().id());
       }
       else if (p.has_pong()) {
-        self->send(buddy, pong_atom::value, p.pong().id());
+        self->send(buddy, pong_atom_v, p.pong().id());
       }
       else {
         self->quit(exit_reason::user_shutdown);
@@ -187,7 +184,7 @@ void run_client(actor_system& system, const config& cfg) {
          << to_string(io_actor.error()) << endl;
     return;
   }
-  send_as(*io_actor, ping_actor, kickoff_atom::value, *io_actor);
+  send_as(*io_actor, ping_actor, kickoff_atom_v, *io_actor);
 }
 
 void caf_main(actor_system& system, const config& cfg) {
@@ -197,4 +194,4 @@ void caf_main(actor_system& system, const config& cfg) {
 
 } // namespace
 
-CAF_MAIN(io::middleman)
+CAF_MAIN(id_block::protobuf_example, io::middleman)
