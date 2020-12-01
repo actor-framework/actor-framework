@@ -53,44 +53,6 @@ config_value::~config_value() {
   // nop
 }
 
-// -- parsing ------------------------------------------------------------------
-
-expected<config_value> config_value::parse(string_view::iterator first,
-                                           string_view::iterator last) {
-  using namespace detail;
-  auto i = first;
-  // Sanity check.
-  if (i == last)
-    return make_error(pec::unexpected_eof);
-  // Skip to beginning of the argument.
-  while (isspace(*i))
-    if (++i == last)
-      return make_error(pec::unexpected_eof);
-  // Dispatch to parser.
-  detail::config_value_consumer f;
-  string_parser_state res{i, last};
-  parser::read_config_value(res, f);
-  if (res.code == pec::success)
-    return std::move(f.result);
-  // Assume an unescaped string unless the first character clearly indicates
-  // otherwise.
-  switch (*i) {
-    case '[':
-    case '{':
-    case '"':
-    case '\'':
-      return make_error(res.code);
-    default:
-      if (isdigit(*i))
-        return make_error(res.code);
-      return config_value{std::string{first, last}};
-  }
-}
-
-expected<config_value> config_value::parse(string_view str) {
-  return parse(str.begin(), str.end());
-}
-
 // -- properties ---------------------------------------------------------------
 
 void config_value::convert_to_list() {
