@@ -196,7 +196,7 @@ enum class exit_reason : uint8_t;
 enum class invoke_message_result;
 enum class pec : uint8_t;
 enum class sec : uint8_t;
-enum class stream_priority;
+enum class stream_priority : uint8_t;
 
 // -- aliases ------------------------------------------------------------------
 

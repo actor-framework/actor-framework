@@ -18,6 +18,10 @@
 
 #pragma once
 
+#include <array>
+#include <tuple>
+#include <utility>
+
 #include "caf/inspector_access.hpp"
 #include "caf/load_inspector.hpp"
 
@@ -37,35 +41,131 @@ public:
     return super::object_t<Subtype>{type_name_or_anonymous<T>(), dptr()};
   }
 
+  template <class T>
+  bool list(T& xs) {
+    xs.clear();
+    auto size = size_t{0};
+    if (!dref().begin_sequence(size))
+      return false;
+    for (size_t i = 0; i < size; ++i) {
+      auto val = typename T::value_type{};
+      if (!detail::load(dref(), val))
+        return false;
+      xs.insert(xs.end(), std::move(val));
+    }
+    return dref().end_sequence();
+  }
+
+  template <class T>
+  bool map(T& xs) {
+    xs.clear();
+    auto size = size_t{0};
+    if (!dref().begin_associative_array(size))
+      return false;
+    for (size_t i = 0; i < size; ++i) {
+      auto key = typename T::key_type{};
+      auto val = typename T::mapped_type{};
+      if (!(dref().begin_key_value_pair() //
+            && detail::load(dref(), key)  //
+            && detail::load(dref(), val)  //
+            && dref().end_key_value_pair()))
+        return false;
+      // A multimap returns an iterator, a regular map returns a pair.
+      auto emplace_result = xs.emplace(std::move(key), std::move(val));
+      if constexpr (detail::is_pair<decltype(emplace_result)>::value) {
+        if (!emplace_result.second) {
+          dref().emplace_error(sec::runtime_error, "multiple key definitions");
+          return false;
+        }
+      }
+    }
+    return dref().end_associative_array();
+  }
+
+  template <class T, size_t... Is>
+  bool tuple(T& xs, std::index_sequence<Is...>) {
+    return dref().begin_tuple(sizeof...(Is))
+           && (detail::load(dref(), get<Is>(xs)) && ...) //
+           && dref().end_tuple();
+  }
+
+  template <class T>
+  bool tuple(T& xs) {
+    return tuple(xs, std::make_index_sequence<std::tuple_size<T>::value>{});
+  }
+
+  template <class T, size_t N>
+  bool tuple(T (&xs)[N]) {
+    if (!dref().begin_tuple(N))
+      return false;
+    for (size_t index = 0; index < N; ++index)
+      if (!detail::load(dref(), xs[index]))
+        return false;
+    return dref().end_tuple();
+  }
+
   // -- dispatching to load/load functions -------------------------------------
 
   template <class T>
-  [[nodiscard]] bool apply_object(T& x) {
+  [[nodiscard]] bool apply(T& x) {
     static_assert(!std::is_const<T>::value);
-    constexpr auto token = inspect_object_access_type<Subtype, T>();
-    return detail::load_object(dref(), x, token);
+    return detail::load(dref(), x);
   }
 
-  template <class... Ts>
-  [[nodiscard]] bool apply_objects(Ts&... xs) {
-    return (apply_object(xs) && ...);
+  /// Deerializes a primitive value with getter / setter access.
+  template <class Get, class Set>
+  [[nodiscard]] bool apply(Get&& get, Set&& set) {
+    using value_type = std::decay_t<decltype(get())>;
+    auto tmp = value_type{};
+    using setter_result = decltype(set(std::move(tmp)));
+    if constexpr (std::is_same<setter_result, bool>::value) {
+      if (dref().value(tmp))
+        return set(std::move(tmp));
+      else
+        return false;
+    } else {
+      static_assert(std::is_convertible<setter_result, error>::value);
+      if (dref().value(tmp)) {
+        if (auto err = set(std::move(tmp)); !err) {
+          return true;
+        } else {
+          this->emplace_error(std::move(err));
+          return false;
+        }
+      } else {
+        return false;
+      }
+    }
+  }
+
+  // -- deprecated API: remove with CAF 0.19 -----------------------------------
+
+  template <class T>
+  [[deprecated("auto-conversion to underlying type is unsafe, add inspect")]] //
+  std::enable_if_t<std::is_enum<T>::value, bool>
+  opaque_value(T& val) {
+    auto tmp = std::underlying_type_t<T>{0};
+    if (dref().value(tmp)) {
+      val = static_cast<T>(tmp);
+      return true;
+    } else {
+      return false;
+    }
   }
 
   template <class T>
-  bool apply_value(T& x) {
-    return detail::load_value(dref(), x);
+  [[deprecated("use apply instead")]] bool apply_object(T& x) {
+    return detail::save(dref(), x);
   }
 
-  template <class Get, class Set>
-  bool apply_value(Get&& get, Set&& set) {
-    using field_type = std::decay_t<decltype(get())>;
-    auto tmp = field_type{};
-    if (apply_value(tmp)) {
-      if (set(std::move(tmp)))
-        return true;
-      this->set_error(sec::load_callback_failed);
-    }
-    return false;
+  template <class... Ts>
+  [[deprecated("use apply instead")]] bool apply_objects(Ts&... xs) {
+    return (apply(xs) && ...);
+  }
+
+  template <class T>
+  [[deprecated("use apply instead")]] bool apply_value(T& x) {
+    return detail::save(dref(), x);
   }
 
 private:

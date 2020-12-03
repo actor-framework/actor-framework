@@ -58,6 +58,8 @@ public:
 
   bool end_sequence() override;
 
+  bool value(byte x) override;
+
   bool value(bool x) override;
 
   bool value(int8_t x) override;
@@ -90,13 +92,15 @@ public:
 
   bool value(span<const byte> x) override;
 
-  bool value(const std::vector<bool>& xs) override;
+  using super::list;
+
+  bool list(const std::vector<bool>& xs) override;
 };
 
 template <class T>
 size_t serialized_size(const T& x) {
   serialized_size_inspector f;
-  auto unused = f.apply_object(x);
+  auto unused = f.apply(x);
   static_cast<void>(unused); // Always true.
   return f.result;
 }
@@ -104,7 +108,7 @@ size_t serialized_size(const T& x) {
 template <class T>
 size_t serialized_size(actor_system& sys, const T& x) {
   serialized_size_inspector f{sys};
-  auto unused = f.apply_object(x);
+  auto unused = f.apply(x);
   static_cast<void>(unused); // Always true.
   return f.result;
 }

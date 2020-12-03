@@ -942,7 +942,7 @@ struct inspect_config_value_access {
   static optional<T> get_if(const config_value* x) {
     config_value_reader reader{x};
     auto tmp = T{};
-    if (detail::load_value(reader, tmp))
+    if (detail::load(reader, tmp))
       return optional<T>{std::move(tmp)};
     return none;
   }
@@ -985,7 +985,7 @@ struct inspect_config_value_access {
   static config_value convert(const T& x) {
     config_value result;
     config_value_writer writer{&result};
-    if (!detail::save_value(writer, x))
+    if (!detail::save(writer, x))
       CAF_RAISE_ERROR("unable to convert type to a config_value");
     return result;
   }

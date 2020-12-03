@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright 2011-2018 Dominik Charousset                                     *
+ * Copyright 2011-2020 Dominik Charousset                                     *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -16,53 +16,39 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/deserializer.hpp"
+#pragma once
 
-#include "caf/actor_system.hpp"
+#include <string>
+#include <type_traits>
+
+#include "caf/string_view.hpp"
 
 namespace caf {
 
-deserializer::deserializer(actor_system& x) noexcept
-  : context_(x.dummy_execution_unit()) {
-  // nop
-}
-
-deserializer::deserializer(execution_unit* x) noexcept : context_(x) {
-  // nop
-}
-
-deserializer::~deserializer() {
-  // nop
-}
-
-bool deserializer::begin_key_value_pair() {
-  return begin_tuple(2);
-}
-
-bool deserializer::end_key_value_pair() {
-  return end_tuple();
-}
-
-bool deserializer::begin_associative_array(size_t& size) {
-  return begin_sequence(size);
-}
-
-bool deserializer::end_associative_array() {
-  return end_sequence();
-}
-
-bool deserializer::list(std::vector<bool>& x) {
-  x.clear();
-  size_t size = 0;
-  if (!begin_sequence(size))
-    return false;
-  for (size_t i = 0; i < size; ++i) {
-    bool tmp = false;
-    if (!value(tmp))
-      return false;
-    x.emplace_back(tmp);
+/// Convenience function for providing a default inspection scaffold for custom
+/// enumeration types.
+///
+/// The enumeration type must provide the following interface based on free
+/// functions:
+///
+/// ~~~(cpp)
+/// enum class Enumeration : ... { ... };
+/// std::string to_string(Enumeration);
+/// bool from_string(string_view, Enumeration&);
+/// bool from_integer(std::underlying_type_t<Enumeration>, Enumeration&);
+/// ~~~
+template <class Inspector, class Enumeration>
+bool default_enum_inspect(Inspector& f, Enumeration& x) {
+  using integer_type = std::underlying_type_t<Enumeration>;
+  if (f.has_human_readable_format()) {
+    auto get = [&x] { return to_string(x); };
+    auto set = [&x](string_view str) { return from_string(str, x); };
+    return f.apply(get, set);
+  } else {
+    auto get = [&x] { return static_cast<integer_type>(x); };
+    auto set = [&x](integer_type val) { return from_integer(val, x); };
+    return f.apply(get, set);
   }
-  return end_sequence();
 }
 
 } // namespace caf

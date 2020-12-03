@@ -448,6 +448,17 @@ bool pull(config_value_reader& reader, T& x) {
 
 } // namespace
 
+bool config_value_reader::value(byte& x) {
+  CHECK_NOT_EMPTY();
+  auto tmp = uint8_t{0};
+  if (pull(*this, tmp)) {
+    x = static_cast<byte>(tmp);
+    return true;
+  } else {
+    return false;
+  }
+}
+
 bool config_value_reader::value(bool& x) {
   CHECK_NOT_EMPTY();
   return pull(*this, x);

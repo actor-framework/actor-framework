@@ -24,7 +24,9 @@
 
 #include <cstdint>
 #include <string>
+#include <type_traits>
 
+#include "caf/default_enum_inspect.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/is_error_code_enum.hpp"
@@ -166,6 +168,18 @@ enum class sec : uint8_t {
 
 /// @relates sec
 CAF_CORE_EXPORT std::string to_string(sec);
+
+/// @relates sec
+CAF_CORE_EXPORT bool from_string(string_view, sec&);
+
+/// @relates sec
+CAF_CORE_EXPORT bool from_integer(std::underlying_type_t<sec>, sec&);
+
+/// @relates sec
+template <class Inssector>
+bool inspect(Inssector& f, sec& x) {
+  return default_enum_inspect(f, x);
+}
 
 } // namespace caf
 

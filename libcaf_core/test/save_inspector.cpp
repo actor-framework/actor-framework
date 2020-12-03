@@ -54,7 +54,7 @@ struct testee : serializer {
     log += "next object type: ";
     auto tn = detail::global_meta_object(type)->type_name;
     log.insert(log.end(), tn.begin(), tn.end());
-    return ok;
+    return true;
   }
 
   bool begin_object(string_view object_name) override {
@@ -62,7 +62,7 @@ struct testee : serializer {
     indent += 2;
     log += "begin object ";
     log.insert(log.end(), object_name.begin(), object_name.end());
-    return ok;
+    return true;
   }
 
   bool end_object() override {
@@ -71,7 +71,7 @@ struct testee : serializer {
     indent -= 2;
     new_line();
     log += "end object";
-    return ok;
+    return true;
   }
 
   bool begin_field(string_view name) override {
@@ -79,7 +79,7 @@ struct testee : serializer {
     indent += 2;
     log += "begin field ";
     log.insert(log.end(), name.begin(), name.end());
-    return ok;
+    return true;
   }
 
   bool begin_field(string_view name, bool) override {
@@ -87,7 +87,7 @@ struct testee : serializer {
     indent += 2;
     log += "begin optional field ";
     log.insert(log.end(), name.begin(), name.end());
-    return ok;
+    return true;
   }
 
   bool begin_field(string_view name, span<const type_id_t>, size_t) override {
@@ -95,7 +95,7 @@ struct testee : serializer {
     indent += 2;
     log += "begin variant field ";
     log.insert(log.end(), name.begin(), name.end());
-    return ok;
+    return true;
   }
 
   bool begin_field(string_view name, bool, span<const type_id_t>,
@@ -104,7 +104,7 @@ struct testee : serializer {
     indent += 2;
     log += "begin optional variant field ";
     log.insert(log.end(), name.begin(), name.end());
-    return ok;
+    return true;
   }
 
   bool end_field() override {
@@ -113,7 +113,7 @@ struct testee : serializer {
     indent -= 2;
     new_line();
     log += "end field";
-    return ok;
+    return true;
   }
 
   bool begin_tuple(size_t size) override {
@@ -121,7 +121,7 @@ struct testee : serializer {
     indent += 2;
     log += "begin tuple of size ";
     log += std::to_string(size);
-    return ok;
+    return true;
   }
 
   bool end_tuple() override {
@@ -130,14 +130,14 @@ struct testee : serializer {
     indent -= 2;
     new_line();
     log += "end tuple";
-    return ok;
+    return true;
   }
 
   bool begin_key_value_pair() override {
     new_line();
     indent += 2;
     log += "begin key-value pair";
-    return ok;
+    return true;
   }
 
   bool end_key_value_pair() override {
@@ -146,7 +146,7 @@ struct testee : serializer {
     indent -= 2;
     new_line();
     log += "end key-value pair";
-    return ok;
+    return true;
   }
 
   bool begin_sequence(size_t size) override {
@@ -154,7 +154,7 @@ struct testee : serializer {
     indent += 2;
     log += "begin sequence of size ";
     log += std::to_string(size);
-    return ok;
+    return true;
   }
 
   bool end_sequence() override {
@@ -163,7 +163,7 @@ struct testee : serializer {
     indent -= 2;
     new_line();
     log += "end sequence";
-    return ok;
+    return true;
   }
 
   bool begin_associative_array(size_t size) override {
@@ -171,7 +171,7 @@ struct testee : serializer {
     indent += 2;
     log += "begin associative array of size ";
     log += std::to_string(size);
-    return ok;
+    return true;
   }
 
   bool end_associative_array() override {
@@ -180,103 +180,109 @@ struct testee : serializer {
     indent -= 2;
     new_line();
     log += "end associative array";
-    return ok;
+    return true;
+  }
+
+  bool value(byte) override {
+    new_line();
+    log += "byte value";
+    return true;
   }
 
   bool value(bool) override {
     new_line();
     log += "bool value";
-    return ok;
+    return true;
   }
 
   bool value(int8_t) override {
     new_line();
     log += "int8_t value";
-    return ok;
+    return true;
   }
 
   bool value(uint8_t) override {
     new_line();
     log += "uint8_t value";
-    return ok;
+    return true;
   }
 
   bool value(int16_t) override {
     new_line();
     log += "int16_t value";
-    return ok;
+    return true;
   }
 
   bool value(uint16_t) override {
     new_line();
     log += "uint16_t value";
-    return ok;
+    return true;
   }
 
   bool value(int32_t) override {
     new_line();
     log += "int32_t value";
-    return ok;
+    return true;
   }
 
   bool value(uint32_t) override {
     new_line();
     log += "uint32_t value";
-    return ok;
+    return true;
   }
 
   bool value(int64_t) override {
     new_line();
     log += "int64_t value";
-    return ok;
+    return true;
   }
 
   bool value(uint64_t) override {
     new_line();
     log += "uint64_t value";
-    return ok;
+    return true;
   }
 
   bool value(float) override {
     new_line();
     log += "float value";
-    return ok;
+    return true;
   }
 
   bool value(double) override {
     new_line();
     log += "double value";
-    return ok;
+    return true;
   }
 
   bool value(long double) override {
     new_line();
     log += "long double value";
-    return ok;
+    return true;
   }
 
   bool value(string_view) override {
     new_line();
     log += "std::string value";
-    return ok;
+    return true;
   }
 
   bool value(const std::u16string&) override {
     new_line();
     log += "std::u16string value";
-    return ok;
+    return true;
   }
 
   bool value(const std::u32string&) override {
     new_line();
     log += "std::u32string value";
-    return ok;
+    return true;
   }
 
   bool value(span<const byte>) override {
     new_line();
     log += "byte_span value";
-    return ok;
+    return true;
   }
 };
 
@@ -290,7 +296,7 @@ CAF_TEST_FIXTURE_SCOPE(load_inspector_tests, fixture)
 
 CAF_TEST(save inspectors can visit C arrays) {
   int32_t xs[] = {1, 2, 3};
-  CAF_CHECK_EQUAL(detail::save_value(f, xs), true);
+  CAF_CHECK_EQUAL(detail::save(f, xs), true);
   CAF_CHECK_EQUAL(f.log, R"_(
 begin tuple of size 3
   int32_t value
@@ -436,7 +442,7 @@ end object)_");
 
 CAF_TEST(save inspectors support optional) {
   optional<int32_t> x;
-  CAF_CHECK_EQUAL(f.apply_object(x), true);
+  CAF_CHECK_EQUAL(f.apply(x), true);
   CAF_CHECK_EQUAL(f.log, R"_(
 begin object anonymous
   begin optional field value
@@ -717,21 +723,9 @@ begin object message
   end field
   begin field values
     begin tuple of size 3
-      begin object int32_t
-        begin field value
-          int32_t value
-        end field
-      end object
-      begin object std::string
-        begin field value
-          std::string value
-        end field
-      end object
-      begin object double
-        begin field value
-          double value
-        end field
-      end object
+      int32_t value
+      std::string value
+      double value
     end tuple
   end field
 end object)_");
@@ -744,23 +738,11 @@ begin object message
   begin field values
     begin sequence of size 3
       next object type: int32_t
-      begin object int32_t
-        begin field value
-          int32_t value
-        end field
-      end object
+      int32_t value
       next object type: std::string
-      begin object std::string
-        begin field value
-          std::string value
-        end field
-      end object
+      std::string value
       next object type: double
-      begin object double
-        begin field value
-          double value
-        end field
-      end object
+      double value
     end sequence
   end field
 end object)_");

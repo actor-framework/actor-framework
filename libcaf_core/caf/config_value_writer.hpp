@@ -102,6 +102,8 @@ public:
 
   bool end_associative_array() override;
 
+  bool value(byte x) override;
+
   bool value(bool x) override;
 
   bool value(int8_t x) override;

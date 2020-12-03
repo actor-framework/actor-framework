@@ -260,35 +260,14 @@ CAF_CORE_EXPORT expected<uri> make_uri(string_view str);
 template <>
 struct inspector_access<uri> : inspector_access_base<uri> {
   template <class Inspector>
-  static bool apply_object(Inspector& f, uri& x) {
-    if (f.has_human_readable_format()) {
-      // TODO: extend the inspector DSL to promote string_view to std::string
-      //       automatically to avoid unnecessary to_string conversions.
-      auto get = [&x] { return to_string(x); };
-      // TODO: setters should be able to return the error directly to avoid loss
-      //       of information.
-      auto set = [&x](std::string str) {
-        auto err = parse(str, x);
-        return err.empty();
-      };
-      return f.object(x).fields(f.field("value", get, set));
-    } else {
-      if constexpr (Inspector::is_loading)
-        if (!x.impl_->unique())
-          x.impl_.reset(new uri::impl_type, false);
-      return inspect(f, *x.impl_);
-    }
-  }
-
-  template <class Inspector>
-  static bool apply_value(Inspector& f, uri& x) {
+  static bool apply(Inspector& f, uri& x) {
     if (f.has_human_readable_format()) {
       auto get = [&x] { return to_string(x); };
       auto set = [&x](std::string str) {
         auto err = parse(str, x);
-        return err.empty();
+        return !err;
       };
-      return detail::split_save_load(f, get, set);
+      return f.apply(get, set);
     } else {
       if constexpr (Inspector::is_loading)
         if (!x.impl_->unique())

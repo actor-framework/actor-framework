@@ -66,7 +66,7 @@ public:
           this->inspector_.result = 0;
           this->sampled_elements_ += x.xs_size;
           for (auto& element : x.xs.get_as<std::vector<T>>(0))
-            detail::save_value(this->inspector_, element);
+            detail::save(this->inspector_, element);
           this->sampled_total_size_
             += static_cast<int64_t>(this->inspector_.result);
         }

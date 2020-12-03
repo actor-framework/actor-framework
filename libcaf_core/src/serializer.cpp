@@ -51,7 +51,7 @@ bool serializer::end_associative_array() {
   return end_sequence();
 }
 
-bool serializer::value(const std::vector<bool>& xs) {
+bool serializer::list(const std::vector<bool>& xs) {
   if (!begin_sequence(xs.size()))
     return false;
   for (bool x : xs)

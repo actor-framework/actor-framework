@@ -6,20 +6,36 @@ Type Inspection
 We designed CAF with distributed systems in mind. Hence, all message types must
 be serializable. Using a message type that is not serializable causes a compiler
 error unless explicitly listed as unsafe message type by the user (see
-:ref:`unsafe-message-type`).
+:ref:`unsafe-message-type`). Any unsafe message type may used only for messages
+that remain local, i.e., never cross the wire.
 
 .. _type-inspection-data-model:
 
 Data Model
 ----------
 
-Type inspection in CAF uses a hierarchical, object-oriented data model. The main
-abstraction is the *object*. An object has one or more *fields*. Fields have a
-*name* and may be *optional*. Further, fields can take on several different (but
-fixed) *types*.
+Type inspection in CAF uses a hierarchical data model with the following
+building blocks:
 
-Depending on its type, a field contains: a single *value*, a variable-length
-*sequence*, or a fixed-size *tuple*.
+built-in types
+  - Signed and unsigned integer types for 8, 16, 32 and 64 bit
+  - The floating point types ``float``, ``double`` and ``long double``
+  - Bytes, booleans, and strings
+
+lists
+  Dynamically-sized container types such as ``std::vector``.
+
+tuples
+  Fixed-sized container types such as ``std::tuple`` or ``std::array`` as well
+  as builtin C array types.
+
+maps
+  Dynamically-sized container types with key/value pairs such as ``std::map``.
+
+objects
+  User-defined types. An object has one or more *fields*. Fields have a *name*
+  and may be *optional*. Further, fields may take on a fixed number of different
+  types.
 
 To see how this maps to C++ types, consider the following type definition:
 
@@ -32,25 +48,25 @@ To see how this maps to C++ types, consider the following type definition:
   };
 
 Here, field ``x1`` is either a ``string`` or a ``double`` at runtime. The field
-``x2`` is optional and may contain a fixed-size tuple with two elements. Lastly,
-field ``x3`` contains any number of string values at runtime.
-
-Numbers and strings are primitive types in the inspector API.
+``x2`` is optional and may contain a fixed-size tuple with two elements
+(built-in types). Lastly, field ``x3`` contains any number of string values at
+runtime.
 
 Inspecting Objects
 ------------------
 
-The inspection API allows CAF to deconstruct C++ objects into fields and values.
-Users can either provide free functions named ``inspect`` that CAF picks up via
-`ADL <https://en.wikipedia.org/wiki/Argument-dependent_name_lookup>`_ or
-specialize ``caf::inspector_access``.
+The inspection API allows CAF to deconstruct C++ objects. Users can either
+provide free functions named ``inspect`` that CAF picks up via `ADL
+<https://en.wikipedia.org/wiki/Argument-dependent_name_lookup>`_ or specialize
+``caf::inspector_access``.
 
 In both cases, users call members and member functions on an ``Inspector`` that
 provides a domain-specific language (DSL) for describing the structure of a C++
 object.
 
 After listing a custom type ``T`` in a type ID block and either providing a free
-``inspect`` overload or specializing ``inspector_access``, CAF is able to:
+``inspect`` function overload or specializing ``inspector_access``, CAF is able
+to:
 
 - Serialize and deserialize objects of type ``T`` to/from Byte sequences.
 - Render objects of type ``T`` as a human-readable string via
@@ -65,10 +81,17 @@ the inspection API.
 .. code-block:: C++
 
   struct point_3d {
-    int x;
-    int y;
-    int z;
+    int32_t x;
+    int32_t y;
+    int32_t z;
   };
+
+.. note::
+
+  We strongly recommend using the fixed-width integer types in all user-defined
+  messaging types. Consistently using these types over ``short``, ``int``,
+  ``long``, etc. avoids bugs in heterogeneous environemnts that are hard to
+  debug.
 
 .. _writing-inspect-overloads:
 
@@ -92,15 +115,13 @@ the inspector:
                               f.field("z", x.z));
   }
 
-Writing ``inspect_value`` Overloads
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+As mentioned in the section on the :ref:`data model
+<type-inspection-data-model>`, objects are containers for fields that in turn
+contain values. When providing an ``inspect`` overload, CAF recursively
+traverses all fields.
 
-The free function ``inspect`` models the object-level type inspection. As
-mentioned in the section on the :ref:`data model <type-inspection-data-model>`,
-objects are containers for fields that in turn contain a value. When providing
-an ``inspect`` overload, CAF recursively visits a value as an object.
-
-For example, consider the following ID type that simply wraps a string:
+Not every type needs to expose itself as ``object``, though. For example,
+consider the following ID type that simply wraps a string:
 
 .. code-block:: C++
 
@@ -111,14 +132,16 @@ For example, consider the following ID type that simply wraps a string:
     return f.object(x).fields(f.field("value", x.value));
   }
 
-The type ``id`` is basically a *strong typedef* to improve type safety. To a
-type inspector, ID objects look as follows:
+The type ``id`` is basically a *strong typedef* to improve type safety when
+writing code. To a type inspector, ID objects look as follows:
 
 .. code-block:: none
 
   object(type: "id") {
     field(name: "value") {
-      value(type: "string")
+      value(type: "string") {
+        ...
+      }
     }
   }
 
@@ -138,7 +161,7 @@ By providing the ``inspect`` overload for ID, inspectors can recursively visit
 an ``id`` as an object. Hence, the above implementations work as expected. When
 using ``person`` in human-readable data formats such as CAF configurations,
 however, allowing CAF to look "inside" a strong typedef can simplify working
-with types.
+with such types.
 
 With the current implementation, we could read the key ``manager.ceo`` from a
 configuration file with this content:
@@ -154,20 +177,23 @@ configuration file with this content:
     }
   }
 
-This clearly is more verbose than it needs to be. By also providing an overload
-for ``inspect_value``, we can teach CAF how to inspect an ID directly as a
-*value* without having to recursively visit it as an object:
+This clearly appears more verbose than it needs to be. Users generally need not
+care about such internal types like ``id`` that only exist as a safeguard during
+programming.
+
+Hence, we generally recommend making such types transparent to CAF inspectors.
+For our ``id`` type, the ``inspect`` overload may instead look as follows:
 
 .. code-block:: C++
 
   template <class Inspector>
-  bool inspect_value(Inspector& f, id& x) {
-    return f.apply_value(x.value);
+  bool inspect(Inspector& f, id& x) {
+    return f.apply(x.value);
   }
 
-With this overload in place, inspectors can now remove one level of indirection
-and read or write strings whenever they encounter an ``id`` as value. This
-allows us to simply our config file from before:
+With this implementation instead of the previous one, inspectors simply read or
+write strings whenever they encounter an ``id`` as value. This simplifies our
+config file from before and thus gives a much cleaner interface to users:
 
 .. code-block:: none
 
@@ -184,7 +210,7 @@ Specializing ``inspector_access``
 Working with 3rd party libraries usually rules out adding free functions for
 existing classes, because the namespace belongs to a another project. Hence, CAF
 also allows specializing ``inspector_access`` instead. This requires writing
-more boilerplate code and allows customizing every step of the inspection
+more boilerplate code but allows customizing every step of the inspection
 process.
 
 The full interface of ``inspector_access`` looks as follows:
@@ -194,10 +220,7 @@ The full interface of ``inspector_access`` looks as follows:
   template <class T>
   struct inspector_access {
     template <class Inspector>
-    static bool apply_object(Inspector& f, T& x);
-
-    template <class Inspector>
-    static bool apply_value(Inspector& f, T& x);
+    static bool apply(Inspector& f, T& x);
 
     template <class Inspector>
     static bool save_field(Inspector& f, string_view field_name, T& x);
@@ -216,11 +239,8 @@ The full interface of ``inspector_access`` looks as follows:
                            SetFallback& set_fallback);
   };
 
-The static member function ``apply_object`` has the same role as the free
-``inspect`` function. Likewise, ``apply_value`` corresponds to the free
-``inspect_value`` function.
-
-For most types, we can implement only ``apply_object`` and use default
+The static member function ``apply`` has the same role as the free ``inspect``
+function. For most types, we can implement only ``apply`` and use a default
 implementation for the other member functions. For example, specializing
 ``inspector_access`` for our ``point_3d`` would look as follows:
 
@@ -231,15 +251,10 @@ implementation for the other member functions. For example, specializing
   template <>
   struct inspector_access<point_3d> : inspector_access_base<point_3d> {
     template <class Inspector>
-    static bool apply_object(Inspector& f, point_3d& x) {
+    static bool apply(Inspector& f, point_3d& x) {
       return f.object(x).fields(f.field("x", x.x),
                                 f.field("y", x.y),
                                 f.field("z", x.z));
-    }
-
-    template <class Inspector>
-    static bool apply_value(Inspector& f, point_3d& x) {
-      return apply_object(f, x);
     }
   };
 
@@ -254,13 +269,6 @@ becomes necessary when integration custom types that have semantics similar to
 
   Please refer to the Doxygen documentation for more details on ``save_field``
   and ``load_field``.
-
-In :ref:`our previous example <writing-inspect-overloads>`, we provided an
-``inspect`` overload that was similar to our implementation of ``apply_object``.
-Most of the time, we only need to implement ``apply_object`` and can call it
-from ``apply_value``. The latter customizes how CAF inspects a value inside a
-field. By calling ``apply_object``, we simply recursively visit ``x`` as an
-object again.
 
 Types with Getter and Setter Access
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -433,13 +441,13 @@ machine-to-machine communication, using the underlying integer representation
 gives the best performance. However, using the constant names results in a much
 better user experience in all other cases.
 
-The following code illustrates how to use a string representation for inspectors
-that operate on human-readable data representation and the underlying type for
-an ``enum class`` otherwise.
+The following code illustrates how to provide a string representation for
+inspectors that operate on human-readable data representation and the underlying
+type for an ``enum class`` otherwise.
 
 .. code-block:: C++
 
-  enum class weekday {
+  enum class weekday : uint8_t {
     monday,
     tuesday,
     wednesday,
@@ -458,34 +466,24 @@ an ``enum class`` otherwise.
     if (f.has_human_readable_format()) {
       auto get = [&x] { return to_string(x); };
       auto set = [&x](std::string str) { return parse(str, x); };
-      return f.object(x).fields(f.field("value", get, set));
+      return f.apply(get, set);
     } else {
-      using default_impl = caf::default_inspector_access<weekday>;
-      return default_impl::apply_object(f, x);
+      auto get = [&x] { return static_cast<uint8_t>(x); };
+      auto set = [&x](uint8_t val) {
+        if (val < 7) {
+          x = static_cast<weekday>(val);
+          return true;
+        } else {
+          return false;
+        }
+      };
+      return f.apply(get, set);
     }
   }
 
-  template <class Inspector>
-  bool inspect_value(Inspector& f, weekday& x) {
-    if (f.has_human_readable_format()) {
-      auto get = [&x] { return to_string(x); };
-      auto set = [&x](std::string str) { return parse(str, x); };
-      return f.apply_value(get, set);
-    } else {
-      using default_impl = caf::default_inspector_access<weekday>;
-      return default_impl::apply_value(f, x);
-    }
-  }
-
-When inspecting an object of type ``weekday``, we treat it as if we were
-inspecting an object with a single field named ``value``. However, usually we
-are going to inspect other objects that contain values of type ``weekday``. In
-both cases, we provide getter and setter functions that convert between strings
-and enumeration values.
-
-For inspectors that operate on machine-to-machine data formats, we simply fall
-back to the default implementation that is going to use the underlying integer
-values.
+When inspecting an object of type ``weekday``, we treat is as if it were a
+string for inspectors with human-readable data formats. Otherwise, we treat the
+weekday as if it were an integer between 0 and 6.
 
 .. _unsafe-message-type:
 

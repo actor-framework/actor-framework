@@ -339,6 +339,10 @@ bool config_value_writer::end_associative_array() {
   return true;
 }
 
+bool config_value_writer::value(byte x) {
+  return push(config_value{static_cast<config_value::integer>(x)});
+}
+
 bool config_value_writer::value(bool x) {
   return push(config_value{x});
 }

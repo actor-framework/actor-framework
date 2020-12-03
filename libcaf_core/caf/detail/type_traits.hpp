@@ -878,23 +878,6 @@ public:
   static constexpr bool value = result_type::value;
 };
 
-/// Checks whether `T` provides an `inspect_value` overload for `Inspector`.
-template <class Inspector, class T>
-class has_inspect_value_overload {
-private:
-  template <class U>
-  static auto sfinae(Inspector& x, U& y)
-    -> decltype(inspect_value(x, y), std::true_type{});
-
-  static std::false_type sfinae(Inspector&, ...);
-
-  using result_type
-    = decltype(sfinae(std::declval<Inspector&>(), std::declval<T&>()));
-
-public:
-  static constexpr bool value = result_type::value;
-};
-
 /// Checks whether the inspector has a `builtin_inspect` overload for `T`.
 template <class Inspector, class T>
 class has_builtin_inspect {
@@ -978,6 +961,48 @@ private:
 
 public:
   static constexpr bool value = sfinae_result::value;
+};
+
+/// Checks whether `T` is primitive, i.e., either an arithmetic type or
+/// convertible to one of STL's string types.
+template <class T, bool IsLoading>
+struct is_builtin_inspector_type {
+  static constexpr bool value = std::is_arithmetic<T>::value;
+};
+
+template <bool IsLoading>
+struct is_builtin_inspector_type<byte, IsLoading> {
+  static constexpr bool value = true;
+};
+
+template <bool IsLoading>
+struct is_builtin_inspector_type<span<byte>, IsLoading> {
+  static constexpr bool value = true;
+};
+
+template <bool IsLoading>
+struct is_builtin_inspector_type<std::string, IsLoading> {
+  static constexpr bool value = true;
+};
+
+template <bool IsLoading>
+struct is_builtin_inspector_type<std::u16string, IsLoading> {
+  static constexpr bool value = true;
+};
+
+template <bool IsLoading>
+struct is_builtin_inspector_type<std::u32string, IsLoading> {
+  static constexpr bool value = true;
+};
+
+template <>
+struct is_builtin_inspector_type<string_view, false> {
+  static constexpr bool value = true;
+};
+
+template <>
+struct is_builtin_inspector_type<span<const byte>, false> {
+  static constexpr bool value = true;
 };
 
 } // namespace caf::detail

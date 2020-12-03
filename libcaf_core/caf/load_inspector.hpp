@@ -37,16 +37,9 @@ class CAF_CORE_EXPORT load_inspector {
 public:
   // -- member types -----------------------------------------------------------
 
-  using result_type = bool;
+  using result_type [[deprecated("inspectors always return bool")]] = bool;
 
   // -- constants --------------------------------------------------------------
-
-  /// Convenience constant to indicate success of a processing step.
-  static constexpr bool ok = true;
-
-  /// Convenience constant to indicate that a processing step failed and no
-  /// further processing steps should take place.
-  static constexpr bool stop = false;
 
   /// Enables dispatching on the inspector type.
   static constexpr bool is_loading = true;

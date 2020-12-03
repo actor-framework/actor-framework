@@ -20,11 +20,13 @@
 
 #include <cstddef>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/squashed_int.hpp"
 #include "caf/fwd.hpp"
 #include "caf/save_inspector_base.hpp"
 #include "caf/span.hpp"
@@ -36,6 +38,8 @@ class CAF_CORE_EXPORT binary_serializer
   : public save_inspector_base<binary_serializer> {
 public:
   // -- member types -----------------------------------------------------------
+
+  using super = save_inspector_base<binary_serializer>;
 
   using container_type = byte_buffer;
 
@@ -94,15 +98,15 @@ public:
   bool inject_next_object_type(type_id_t type);
 
   constexpr bool begin_object(string_view) {
-    return ok;
+    return true;
   }
 
   constexpr bool end_object() {
-    return ok;
+    return true;
   }
 
   constexpr bool begin_field(string_view) noexcept {
-    return ok;
+    return true;
   }
 
   bool begin_field(string_view, bool is_present);
@@ -113,29 +117,29 @@ public:
                    size_t index);
 
   constexpr bool end_field() {
-    return ok;
+    return true;
   }
 
   constexpr bool begin_tuple(size_t) {
-    return ok;
+    return true;
   }
 
   constexpr bool end_tuple() {
-    return ok;
+    return true;
   }
 
   constexpr bool begin_key_value_pair() {
-    return ok;
+    return true;
   }
 
   constexpr bool end_key_value_pair() {
-    return ok;
+    return true;
   }
 
   bool begin_sequence(size_t list_size);
 
   constexpr bool end_sequence() {
-    return ok;
+    return true;
   }
 
   bool begin_associative_array(size_t size) {
@@ -165,6 +169,11 @@ public:
   bool value(int64_t x);
 
   bool value(uint64_t x);
+
+  template <class T>
+  std::enable_if_t<std::is_integral<T>::value, bool> value(T x) {
+    return value(static_cast<detail::squashed_int_t<T>>(x));
+  }
 
   bool value(float x);
 

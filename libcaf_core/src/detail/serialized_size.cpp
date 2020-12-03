@@ -107,6 +107,11 @@ bool serialized_size_inspector::end_sequence() {
   return true;
 }
 
+bool serialized_size_inspector::value(byte x) {
+  result += sizeof(x);
+  return true;
+}
+
 bool serialized_size_inspector::value(bool) {
   result += sizeof(uint8_t);
   return true;
@@ -194,7 +199,7 @@ bool serialized_size_inspector::value(span<const byte> x) {
   return true;
 }
 
-bool serialized_size_inspector::value(const std::vector<bool>& xs) {
+bool serialized_size_inspector::list(const std::vector<bool>& xs) {
   CAF_IGNORE_UNUSED(begin_sequence(xs.size()));
   result += (xs.size() + static_cast<size_t>(xs.size() % 8 != 0)) / 8;
   return end_sequence();

@@ -28,22 +28,18 @@ bool inspect(Inspector& f, weekday& x) {
   if (f.has_human_readable_format()) {
     auto get = [&x] { return to_string(x); };
     auto set = [&x](std::string str) { return parse(str, x); };
-    return f.object(x).fields(f.field("value", get, set));
+    return f.apply(get, set);
   } else {
-    using default_impl = caf::default_inspector_access<weekday>;
-    return default_impl::apply_object(f, x);
-  }
-}
-
-template <class Inspector>
-bool inspect_value(Inspector& f, weekday& x) {
-  if (f.has_human_readable_format()) {
-    auto get = [&x] { return to_string(x); };
-    auto set = [&x](std::string str) { return parse(str, x); };
-    return f.apply_value(get, set);
-  } else {
-    using default_impl = caf::default_inspector_access<weekday>;
-    return default_impl::apply_value(f, x);
+    auto get = [&x] { return static_cast<uint8_t>(x); };
+    auto set = [&x](uint8_t val) {
+      if (val < 7) {
+        x = static_cast<weekday>(val);
+        return true;
+      } else {
+        return false;
+      }
+    };
+    return f.apply(get, set);
   }
 }
 
