@@ -104,6 +104,15 @@ public:
 
   ~config_value();
 
+  // -- parsing ----------------------------------------------------------------
+
+  /// Tries to parse a value from `str`.
+  static expected<config_value> parse(string_view::iterator first,
+                                      string_view::iterator last);
+
+  /// Tries to parse a value from `str`.
+  static expected<config_value> parse(string_view str);
+
   // -- properties -------------------------------------------------------------
 
   /// Converts the value to a list with one element. Does nothing if the value
