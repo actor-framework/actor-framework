@@ -1,5 +1,5 @@
 #include "caf/fwd.hpp"
-#include "caf/test/dsl.hpp"
+#include "caf/test/bdd_dsl.hpp"
 #include "caf/type_id.hpp"
 #include "caf/typed_actor.hpp"
 

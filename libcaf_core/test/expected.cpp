@@ -26,16 +26,6 @@
 
 using namespace caf;
 
-#define CHECK(x) CAF_CHECK(x);
-
-#define CHECK_EQ(x, y)                                                         \
-  CAF_CHECK(x == y);                                                           \
-  CAF_CHECK(y == x);
-
-#define CHECK_NEQ(x, y)                                                        \
-  CAF_CHECK(x != y);                                                           \
-  CAF_CHECK(y != x);
-
 namespace {
 
 using e_int = expected<int>;
@@ -58,9 +48,9 @@ CAF_TEST(both_engaged_not_equal) {
   e_int y{24};
   CHECK(x);
   CHECK(y);
-  CHECK_NEQ(x, y);
-  CHECK_NEQ(x, sec::unexpected_message);
-  CHECK_NEQ(y, sec::unexpected_message);
+  CHECK_NE(x, y);
+  CHECK_NE(x, sec::unexpected_message);
+  CHECK_NE(y, sec::unexpected_message);
   CHECK_EQ(x, 42);
   CHECK_EQ(y, 24);
 }
@@ -72,10 +62,10 @@ CAF_TEST(engaged_plus_not_engaged) {
   CHECK(!y);
   CHECK_EQ(x, 42);
   CHECK_EQ(y, sec::unexpected_message);
-  CHECK_NEQ(x, sec::unexpected_message);
-  CHECK_NEQ(x, y);
-  CHECK_NEQ(y, 42);
-  CHECK_NEQ(y, sec::unsupported_sys_key);
+  CHECK_NE(x, sec::unexpected_message);
+  CHECK_NE(x, y);
+  CHECK_NE(y, 42);
+  CHECK_NE(y, sec::unsupported_sys_key);
 }
 
 CAF_TEST(both_not_engaged) {
@@ -87,15 +77,15 @@ CAF_TEST(both_not_engaged) {
   CHECK_EQ(x, sec::unexpected_message);
   CHECK_EQ(y, sec::unexpected_message);
   CHECK_EQ(x.error(), y.error());
-  CHECK_NEQ(x, sec::unsupported_sys_key);
-  CHECK_NEQ(y, sec::unsupported_sys_key);
+  CHECK_NE(x, sec::unsupported_sys_key);
+  CHECK_NE(y, sec::unsupported_sys_key);
 }
 
 CAF_TEST(move_and_copy) {
   e_str x{sec::unexpected_message};
   e_str y{"hello"};
   x = "hello";
-  CHECK_NEQ(x, sec::unexpected_message);
+  CHECK_NE(x, sec::unexpected_message);
   CHECK_EQ(x, "hello");
   CHECK_EQ(x, y);
   y = "world";
@@ -107,7 +97,7 @@ CAF_TEST(move_and_copy) {
   CHECK_EQ(z_cpy, "world");
   CHECK_EQ(z, z_cpy);
   z = e_str{sec::unsupported_sys_key};
-  CHECK_NEQ(z, z_cpy);
+  CHECK_NE(z, z_cpy);
   CHECK_EQ(z, sec::unsupported_sys_key);
 }
 

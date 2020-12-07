@@ -20,7 +20,7 @@
 
 #include "caf/detail/group_tunnel.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 using namespace caf;
 
@@ -136,140 +136,144 @@ struct fixture : test_coordinator_fixture<> {
 
 CAF_TEST_FIXTURE_SCOPE(group_tunnel_tests, fixture)
 
-CAF_TEST(tunnels automatically subscribe to their origin on first subscribe) {
-  CAF_MESSAGE("Given a group with two subscribers and a tunnel.");
-  sys.spawn_in_group<lazy_init>(origin, testee_impl);
-  sys.spawn_in_group<lazy_init>(origin, testee_impl);
-  { // Subtest.
-    CAF_MESSAGE("When an actors joins the tunnel.");
-    sys.spawn_in_group<lazy_init>(proxy, testee_impl);
-    CAF_MESSAGE("Then the tunnel worker joins the origin group.");
-    expect((sys_atom, join_atom), to(worker));
-    expect((join_atom, strong_actor_ptr),
-           from(worker).to(intermediary).with(_, worker));
-    CAF_CHECK(!sched.has_job());
-  }
-  { // Subtest.
-    CAF_MESSAGE("When a second actor joins the tunnel.");
-    sys.spawn_in_group<lazy_init>(proxy, testee_impl);
-    CAF_MESSAGE("Then no messaging occurs.");
-    CAF_CHECK(!sched.has_job());
-  }
-}
-
-CAF_TEST("tunnels dispatch published messages") {
-  CAF_MESSAGE("Given a group with two local subscribers locally and tunneled.");
-  auto t1 = sys.spawn_in_group<lazy_init>(origin, testee_impl);
-  auto t2 = sys.spawn_in_group<lazy_init>(origin, testee_impl);
-  auto t3 = sys.spawn_in_group<lazy_init>(proxy, testee_impl);
-  auto t4 = sys.spawn_in_group<lazy_init>(proxy, testee_impl);
-  run();
-  { // Subtest.
-    CAF_MESSAGE("When an actors sends to the group.");
-    self->send(origin, put_atom_v, 42);
-    CAF_MESSAGE("Then tunnel subscribers receive the forwarded message.");
-    expect((put_atom, int), from(self).to(t1).with(_, 42));
-    expect((put_atom, int), from(self).to(t2).with(_, 42));
-    expect((put_atom, int), from(self).to(worker).with(_, 42));
-    expect((put_atom, int), from(self).to(t3).with(_, 42));
-    expect((put_atom, int), from(self).to(t4).with(_, 42));
-    CAF_CHECK(!sched.has_job());
-  }
-  { // Subtest.
-    CAF_MESSAGE("When an actors sends to the tunnel.");
-    self->send(proxy, put_atom_v, 42);
-    CAF_MESSAGE("Then the message travels to the origin.");
-    CAF_MESSAGE("And tunnel subscribers get the forwarded message eventually.");
-    expect((sys_atom, forward_atom, message), from(self).to(worker));
-    expect((forward_atom, message), from(self).to(intermediary));
-    expect((put_atom, int), from(self).to(t1).with(_, 42));
-    expect((put_atom, int), from(self).to(t2).with(_, 42));
-    expect((put_atom, int), from(self).to(worker).with(_, 42));
-    expect((put_atom, int), from(self).to(t3).with(_, 42));
-    expect((put_atom, int), from(self).to(t4).with(_, 42));
-    CAF_CHECK(!sched.has_job());
+SCENARIO("tunnels automatically subscribe to their origin on first subscribe") {
+  GIVEN("a group with two subscribers and a tunnel") {
+    sys.spawn_in_group<lazy_init>(origin, testee_impl);
+    sys.spawn_in_group<lazy_init>(origin, testee_impl);
+    WHEN("an actors joins the tunnel") {
+      sys.spawn_in_group<lazy_init>(proxy, testee_impl);
+      THEN("the tunnel worker joins the origin group") {
+        expect((sys_atom, join_atom), to(worker));
+        expect((join_atom, strong_actor_ptr),
+               from(worker).to(intermediary).with(_, worker));
+        CHECK(!sched.has_job());
+      }
+    }
+    WHEN("a second actor joins the tunnel") {
+      sys.spawn_in_group<lazy_init>(proxy, testee_impl);
+      THEN("no messaging occurs") {
+        CHECK(!sched.has_job());
+      }
+    }
   }
 }
 
-CAF_TEST(tunnels automatically unsubscribe from their origin) {
-  CAF_MESSAGE("Given a group with two local subscribers locally and tunneled.");
-  auto t1 = sys.spawn_in_group<lazy_init>(origin, testee_impl);
-  auto t2 = sys.spawn_in_group<lazy_init>(origin, testee_impl);
-  auto t3 = sys.spawn_in_group<lazy_init>(proxy, testee_impl);
-  auto t4 = sys.spawn_in_group<lazy_init>(proxy, testee_impl);
-  run();
-  { // Subtest.
-    CAF_MESSAGE("When the first actor leaves the tunnel.");
-    proxy.unsubscribe(actor_cast<actor_control_block*>(t3));
-    CAF_MESSAGE("Then no messaging occurs.");
-    CAF_CHECK(!sched.has_job());
-  }
-  { // Subtest.
-    CAF_MESSAGE("When an actors sends to the group after the unsubscribe.");
-    self->send(origin, put_atom_v, 42);
-    CAF_MESSAGE("Then the unsubscribed actor no longer receives the message.");
-    expect((put_atom, int), from(self).to(t1).with(_, 42));
-    expect((put_atom, int), from(self).to(t2).with(_, 42));
-    expect((put_atom, int), from(self).to(worker).with(_, 42));
-    disallow((put_atom, int), from(self).to(t3).with(_, 42));
-    expect((put_atom, int), from(self).to(t4).with(_, 42));
-    CAF_CHECK(!sched.has_job());
-  }
-  { // Subtest.
-    CAF_MESSAGE("When the second actor also unsubscribes from the tunnel.");
-    proxy.unsubscribe(actor_cast<actor_control_block*>(t4));
-    CAF_MESSAGE("Then the tunnel unsubscribes from its origin.");
-    expect((sys_atom, leave_atom), to(worker));
-    expect((leave_atom, strong_actor_ptr),
-           from(worker).to(intermediary).with(_, worker));
-  }
-  { // Subtest.
-    CAF_MESSAGE("When an actors sends to the group after the tunnel left.");
-    self->send(origin, put_atom_v, 42);
-    CAF_MESSAGE("Then no message arrives at the tunnel.");
-    expect((put_atom, int), from(self).to(t1).with(_, 42));
-    expect((put_atom, int), from(self).to(t2).with(_, 42));
-    disallow((put_atom, int), from(self).to(worker).with(_, 42));
-    CAF_CHECK(!sched.has_job());
+SCENARIO("tunnels dispatch published messages") {
+  GIVEN("a group with two local subscribers locally and tunneled") {
+    auto t1 = sys.spawn_in_group<lazy_init>(origin, testee_impl);
+    auto t2 = sys.spawn_in_group<lazy_init>(origin, testee_impl);
+    auto t3 = sys.spawn_in_group<lazy_init>(proxy, testee_impl);
+    auto t4 = sys.spawn_in_group<lazy_init>(proxy, testee_impl);
+    run();
+    WHEN("an actors sends to the group") {
+      self->send(origin, put_atom_v, 42);
+      THEN("tunnel subscribers receive the forwarded message") {
+        expect((put_atom, int), from(self).to(t1).with(_, 42));
+        expect((put_atom, int), from(self).to(t2).with(_, 42));
+        expect((put_atom, int), from(self).to(worker).with(_, 42));
+        expect((put_atom, int), from(self).to(t3).with(_, 42));
+        expect((put_atom, int), from(self).to(t4).with(_, 42));
+        CHECK(!sched.has_job());
+      }
+    }
+    WHEN("an actors sends to the tunnel") {
+      self->send(proxy, put_atom_v, 42);
+      THEN("the message travels to the origin")
+      AND("tunnel subscribers get the forwarded message eventually") {
+        expect((sys_atom, forward_atom, message), from(self).to(worker));
+        expect((forward_atom, message), from(self).to(intermediary));
+        expect((put_atom, int), from(self).to(t1).with(_, 42));
+        expect((put_atom, int), from(self).to(t2).with(_, 42));
+        expect((put_atom, int), from(self).to(worker).with(_, 42));
+        expect((put_atom, int), from(self).to(t3).with(_, 42));
+        expect((put_atom, int), from(self).to(t4).with(_, 42));
+        CHECK(!sched.has_job());
+      }
+    }
   }
 }
 
-CAF_TEST(tunnels cache messages until connected) {
-  CAF_MESSAGE("Given an unconnected tunnel with two subscribers.");
-  make_unconnected();
-  auto t1 = sys.spawn_in_group<lazy_init>(proxy, testee_impl);
-  auto t2 = sys.spawn_in_group<lazy_init>(proxy, testee_impl);
-  { // Subtest.
-    CAF_MESSAGE("When an actors sends to the group.");
-    self->send(proxy, put_atom_v, 1);
-    self->send(proxy, put_atom_v, 2);
-    self->send(proxy, put_atom_v, 3);
-    CAF_MESSAGE("Then unconnected tunnel caches the messages.");
-    CAF_CHECK(!sched.has_job());
+SCENARIO("tunnels automatically unsubscribe from their origin") {
+  GIVEN("a group with two local subscribers locally and tunneled") {
+    auto t1 = sys.spawn_in_group<lazy_init>(origin, testee_impl);
+    auto t2 = sys.spawn_in_group<lazy_init>(origin, testee_impl);
+    auto t3 = sys.spawn_in_group<lazy_init>(proxy, testee_impl);
+    auto t4 = sys.spawn_in_group<lazy_init>(proxy, testee_impl);
+    run();
+    WHEN("the first actor leaves the tunnel") {
+      proxy.unsubscribe(actor_cast<actor_control_block*>(t3));
+      THEN("no messaging occurs") {
+        CHECK(!sched.has_job());
+      }
+    }
+    WHEN("an actors sends to the group after the unsubscribe") {
+      self->send(origin, put_atom_v, 42);
+      THEN("the unsubscribed actor no longer receives the message") {
+        expect((put_atom, int), from(self).to(t1).with(_, 42));
+        expect((put_atom, int), from(self).to(t2).with(_, 42));
+        expect((put_atom, int), from(self).to(worker).with(_, 42));
+        disallow((put_atom, int), from(self).to(t3).with(_, 42));
+        expect((put_atom, int), from(self).to(t4).with(_, 42));
+        CHECK(!sched.has_job());
+      }
+    }
+    WHEN("the second actor also unsubscribes from the tunnel") {
+      proxy.unsubscribe(actor_cast<actor_control_block*>(t4));
+      THEN("the tunnel unsubscribes from its origin") {
+        expect((sys_atom, leave_atom), to(worker));
+        expect((leave_atom, strong_actor_ptr),
+               from(worker).to(intermediary).with(_, worker));
+      }
+    }
+    WHEN("an actors sends to the group after the tunnel left") {
+      self->send(origin, put_atom_v, 42);
+      THEN("no message arrives at the tunnel") {
+        expect((put_atom, int), from(self).to(t1).with(_, 42));
+        expect((put_atom, int), from(self).to(t2).with(_, 42));
+        disallow((put_atom, int), from(self).to(worker).with(_, 42));
+        CHECK(!sched.has_job());
+      }
+    }
   }
-  { // Subtest.
-    CAF_MESSAGE("When the tunnel becomes connected.");
-    connect_proxy();
-    CAF_MESSAGE("Then tunnel subscribes upstream and flushes its cache.");
-    expect((sys_atom, join_atom), to(worker));
-    expect((sys_atom, forward_atom, message), from(self).to(worker));
-    expect((sys_atom, forward_atom, message), from(self).to(worker));
-    expect((sys_atom, forward_atom, message), from(self).to(worker));
-    expect((join_atom, strong_actor_ptr),
-           from(worker).to(intermediary).with(_, worker));
-    expect((forward_atom, message), from(self).to(intermediary));
-    expect((forward_atom, message), from(self).to(intermediary));
-    expect((forward_atom, message), from(self).to(intermediary));
-    expect((put_atom, int), from(self).to(worker).with(_, 1));
-    expect((put_atom, int), from(self).to(worker).with(_, 2));
-    expect((put_atom, int), from(self).to(worker).with(_, 3));
-    expect((put_atom, int), from(self).to(t1).with(_, 1));
-    expect((put_atom, int), from(self).to(t1).with(_, 2));
-    expect((put_atom, int), from(self).to(t1).with(_, 3));
-    expect((put_atom, int), from(self).to(t2).with(_, 1));
-    expect((put_atom, int), from(self).to(t2).with(_, 2));
-    expect((put_atom, int), from(self).to(t2).with(_, 3));
-    CAF_CHECK(!sched.has_job());
+}
+
+SCENARIO("tunnels cache messages until connected") {
+  GIVEN("an unconnected tunnel with two subscribers") {
+    make_unconnected();
+    auto t1 = sys.spawn_in_group<lazy_init>(proxy, testee_impl);
+    auto t2 = sys.spawn_in_group<lazy_init>(proxy, testee_impl);
+    WHEN("an actors sends to the group") {
+      self->send(proxy, put_atom_v, 1);
+      self->send(proxy, put_atom_v, 2);
+      self->send(proxy, put_atom_v, 3);
+      THEN("unconnected tunnel caches the messages") {
+        CHECK(!sched.has_job());
+      }
+    }
+    WHEN("the tunnel becomes connected") {
+      connect_proxy();
+      THEN("tunnel subscribes upstream and flushes its cache") {
+        expect((sys_atom, join_atom), to(worker));
+        expect((sys_atom, forward_atom, message), from(self).to(worker));
+        expect((sys_atom, forward_atom, message), from(self).to(worker));
+        expect((sys_atom, forward_atom, message), from(self).to(worker));
+        expect((join_atom, strong_actor_ptr),
+               from(worker).to(intermediary).with(_, worker));
+        expect((forward_atom, message), from(self).to(intermediary));
+        expect((forward_atom, message), from(self).to(intermediary));
+        expect((forward_atom, message), from(self).to(intermediary));
+        expect((put_atom, int), from(self).to(worker).with(_, 1));
+        expect((put_atom, int), from(self).to(worker).with(_, 2));
+        expect((put_atom, int), from(self).to(worker).with(_, 3));
+        expect((put_atom, int), from(self).to(t1).with(_, 1));
+        expect((put_atom, int), from(self).to(t1).with(_, 2));
+        expect((put_atom, int), from(self).to(t1).with(_, 3));
+        expect((put_atom, int), from(self).to(t2).with(_, 1));
+        expect((put_atom, int), from(self).to(t2).with(_, 2));
+        expect((put_atom, int), from(self).to(t2).with(_, 3));
+        CHECK(!sched.has_job());
+      }
+    }
   }
 }
 
