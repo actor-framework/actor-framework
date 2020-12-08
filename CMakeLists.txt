@@ -355,10 +355,7 @@ function(caf_add_component name)
     set(targets ${pub_lib_target} ${obj_lib_target} ${tst_bin_target})
     add_library(${obj_lib_target} OBJECT
                 ${CAF_ADD_COMPONENT_HEADERS} ${CAF_ADD_COMPONENT_SOURCES})
-    if(BUILD_SHARED_LIBS)
-      set_property(TARGET ${obj_lib_target}
-                   PROPERTY POSITION_INDEPENDENT_CODE ON)
-    endif()
+    set_property(TARGET ${obj_lib_target} PROPERTY POSITION_INDEPENDENT_CODE ON)
     caf_target_link_libraries(${obj_lib_target}
                               ${CAF_ADD_COMPONENT_DEPENDENCIES})
     add_library(${pub_lib_target}
@@ -378,6 +375,7 @@ function(caf_add_component name)
     set(targets ${pub_lib_target})
     add_library(${pub_lib_target}
                 ${CAF_ADD_COMPONENT_HEADERS} ${CAF_ADD_COMPONENT_SOURCES})
+    set_property(TARGET ${pub_lib_target} PROPERTY POSITION_INDEPENDENT_CODE ON)
   endif()
   target_link_libraries(${pub_lib_target} ${CAF_ADD_COMPONENT_DEPENDENCIES})
   foreach(target ${targets})
