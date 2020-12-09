@@ -113,7 +113,6 @@ config = [
             builds: ['debug', 'release'],
             extraBuildFlags: [
                 'OPENSSL_ROOT_DIR:PATH=/usr/local/opt/openssl',
-                'OPENSSL_INCLUDE_DIR:PATH=/usr/local/opt/openssl/include',
             ],
             extraDebugBuildFlags: [
                 'CAF_SANITIZERS:STRING=address',
@@ -133,7 +132,7 @@ config = [
             //builds: ['debug', 'release'],
             builds: ['release'],
             extraBuildFlags: [
-                'CAF_ENABLE_OPENSSL_MODULE:BOOL=OFF'
+                'OPENSSL_ROOT_DIR:PATH=C:\\Program Files\\OpenSSL-Win64',
             ],
         ]],
     ],
@@ -142,7 +141,6 @@ config = [
 // Declarative pipeline for triggering all stages.
 pipeline {
     options {
-        // Store no more than 50 logs and 10 artifacts.
         buildDiscarder(logRotator(numToKeepStr: '50', artifactNumToKeepStr: '3'))
     }
     agent {
