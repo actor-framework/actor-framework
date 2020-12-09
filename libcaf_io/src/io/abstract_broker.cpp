@@ -18,39 +18,36 @@
 
 #include "caf/actor_system.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/scope_guard.hpp"
+#include "caf/detail/sync_request_bouncer.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/io/broker.hpp"
+#include "caf/io/network/multiplexer.hpp"
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/none.hpp"
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/span.hpp"
 
-#include "caf/io/broker.hpp"
-#include "caf/io/middleman.hpp"
-
-#include "caf/detail/scope_guard.hpp"
-#include "caf/detail/sync_request_bouncer.hpp"
-
-#include "caf/event_based_actor.hpp"
-
 namespace caf::io {
 
 void abstract_broker::enqueue(strong_actor_ptr src, message_id mid, message msg,
                               execution_unit*) {
   enqueue(make_mailbox_element(std::move(src), mid, {}, std::move(msg)),
-          &backend());
+          backend_);
 }
 
 void abstract_broker::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   CAF_PUSH_AID(id());
-  scheduled_actor::enqueue(std::move(ptr), &backend());
+  scheduled_actor::enqueue(std::move(ptr), backend_);
 }
 
 void abstract_broker::launch(execution_unit* eu, bool lazy, bool hide) {
   CAF_PUSH_AID_FROM_PTR(this);
   CAF_ASSERT(eu != nullptr);
-  CAF_ASSERT(eu == &backend());
+  CAF_ASSERT(dynamic_cast<network::multiplexer*>(eu) != nullptr);
+  backend_ = static_cast<network::multiplexer*>(eu);
   CAF_LOG_TRACE(CAF_ARG(lazy) << CAF_ARG(hide));
-  // add implicit reference count held by middleman/multiplexer
   if (!hide)
     register_at_system();
   if (lazy && mailbox().try_block())
@@ -359,7 +356,7 @@ resumable::subtype_t abstract_broker::subtype() const {
 resumable::resume_result
 abstract_broker::resume(execution_unit* ctx, size_t mt) {
   CAF_ASSERT(ctx != nullptr);
-  CAF_ASSERT(ctx == &backend());
+  CAF_ASSERT(ctx == backend_);
   return scheduled_actor::resume(ctx, mt);
 }
 
@@ -378,10 +375,6 @@ void abstract_broker::init_broker() {
 
 abstract_broker::abstract_broker(actor_config& cfg) : scheduled_actor(cfg) {
   // nop
-}
-
-network::multiplexer& abstract_broker::backend() {
-  return system().middleman().backend();
 }
 
 void abstract_broker::launch_servant(doorman_ptr& ptr) {
