@@ -49,8 +49,8 @@ resumable* pipe_reader::try_read_next() {
   std::intptr_t ptrval;
   // on windows, we actually have sockets, otherwise we have file handles
 #ifdef CAF_WINDOWS
-  auto res
-    = recv(fd(), reinterpret_cast<socket_recv_ptr>(&ptrval), sizeof(ptrval), 0);
+  auto res = recv(fd(), reinterpret_cast<socket_recv_ptr>(&ptrval),
+                  sizeof(ptrval), 0);
 #else
   auto res = read(fd(), &ptrval, sizeof(ptrval));
 #endif
@@ -67,6 +67,10 @@ void pipe_reader::handle_event(operation op) {
       backend().resume({ptr, false});
   }
   // else: ignore errors
+}
+
+std::pair<size_t, size_t> pipe_reader::buffer_sizes() const noexcept {
+  return {0, 0};
 }
 
 void pipe_reader::init(native_socket sock_fd) {

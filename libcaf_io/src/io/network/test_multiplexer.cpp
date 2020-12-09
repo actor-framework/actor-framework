@@ -100,6 +100,10 @@ scribe_ptr test_multiplexer::new_scribe(connection_handle hdl) {
     byte_buffer& rd_buf() override {
       return mpx_->input_buffer(hdl());
     }
+    std::pair<size_t, size_t> buffer_sizes() const noexcept override {
+      return {mpx_->input_buffer(hdl()).size(),
+              mpx_->output_buffer(hdl()).size()};
+    }
     void graceful_shutdown() override {
       mpx_->stopped_reading(hdl()) = true;
       detach(mpx_, false);

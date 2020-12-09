@@ -24,6 +24,8 @@
 #include "caf/io/network/operation.hpp"
 #include "caf/io/receive_policy.hpp"
 
+#include <utility>
+
 namespace caf::io::network {
 
 /// A socket I/O event handler.
@@ -63,6 +65,11 @@ public:
   /// Shuts down communication on the managed socket, eventually removing
   /// this event handler from the I/O loop.
   virtual void graceful_shutdown() = 0;
+
+  /// Returns the current size of any input (first) and output (second) buffer
+  /// managed by this handler. Always returns `(0, 0)` for event handlers
+  /// without buffers.
+  virtual std::pair<size_t, size_t> buffer_sizes() const noexcept = 0;
 
   /// Returns the native socket handle for this handler.
   native_socket fd() const {

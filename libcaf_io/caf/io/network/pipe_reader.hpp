@@ -38,6 +38,8 @@ public:
 
   void handle_event(operation op) override;
 
+  std::pair<size_t, size_t> buffer_sizes() const noexcept override;
+
   void init(native_socket sock_fd);
 
   resumable* try_read_next();

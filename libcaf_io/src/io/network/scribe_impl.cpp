@@ -53,6 +53,10 @@ byte_buffer& scribe_impl::rd_buf() {
   return stream_.rd_buf();
 }
 
+std::pair<size_t, size_t> scribe_impl::buffer_sizes() const noexcept {
+  return stream_.buffer_sizes();
+}
+
 void scribe_impl::graceful_shutdown() {
   CAF_LOG_TRACE("");
   stream_.graceful_shutdown();

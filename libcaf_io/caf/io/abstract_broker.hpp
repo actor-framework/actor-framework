@@ -339,6 +339,8 @@ public:
     elements.erase(i);
     return result;
   }
+
+  std::pair<size_t, size_t> buffer_sizes();
   /// @endcond
 
   // -- overridden observers of abstract_actor ---------------------------------
@@ -396,6 +398,7 @@ protected:
   datagram_servant_map& get_map(datagram_handle) {
     return datagram_servants_;
   }
+
   /// @endcond
 
   /// Returns a `scribe` or `doorman` identified by `hdl`.

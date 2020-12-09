@@ -54,6 +54,11 @@ public:
   /// Returns the current input buffer.
   virtual byte_buffer& rd_buf() = 0;
 
+  /// Returns the current size of any input (first) and output (second) buffer
+  /// managed by this handler. Always returns `(0, 0)` for event handlers
+  /// without buffers.
+  virtual std::pair<size_t, size_t> buffer_sizes() const noexcept = 0;
+
   /// Flushes the output buffer, i.e., sends the
   /// content of the buffer via the network.
   virtual void flush() = 0;

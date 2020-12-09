@@ -23,7 +23,15 @@ namespace caf::io::network {
 
 multiplexer::multiplexer(actor_system* sys)
   : execution_unit(sys), tid_(std::this_thread::get_id()) {
-  // nop
+  auto& reg = sys->metrics();
+  inbound_buffers_size_
+    = reg.gauge_singleton("caf.middleman", "inbound-buffers-size",
+                          "The size of all inbound buffers combined.", "bytes",
+                          true);
+  outbound_buffers_size_
+    = reg.gauge_singleton("caf.middleman", "outbound-buffers-size",
+                          "The size of all outbound buffers combined.", "bytes",
+                          true);
 }
 
 multiplexer_ptr multiplexer::make(actor_system& sys) {
@@ -49,6 +57,17 @@ void multiplexer::runnable::intrusive_ptr_add_ref_impl() {
 
 void multiplexer::runnable::intrusive_ptr_release_impl() {
   intrusive_ptr_release(this);
+}
+
+void multiplexer::update_buffer_metrics(std::pair<size_t, size_t> prev,
+                                        std::pair<size_t, size_t> now) {
+  auto delta = [](size_t x, size_t y) {
+    return static_cast<int64_t>(y) - static_cast<int64_t>(x);
+  };
+  if (auto din = delta(prev.first, now.first); din != 0)
+    inbound_buffers_size_->inc(din);
+  if (auto dout = delta(prev.second, now.second); dout != 0)
+    outbound_buffers_size_->inc(dout);
 }
 
 } // namespace caf::io::network

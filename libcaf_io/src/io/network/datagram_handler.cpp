@@ -152,6 +152,17 @@ void datagram_handler::graceful_shutdown() {
   // registered for reading or writing.
 }
 
+std::pair<size_t, size_t> datagram_handler::buffer_sizes() const noexcept {
+  // Note: we could consider separate bookkeeping for avoiding O(n) here.
+  auto pending_bytes_total = size_t{0};
+  for (auto& wr_buf : wr_offline_buf_)
+    pending_bytes_total += wr_buf.second.size();
+  return {
+    0, // This handler does not cache data, only reads full datagrams.
+    pending_bytes_total,
+  };
+}
+
 void datagram_handler::prepare_next_read() {
   CAF_LOG_TRACE(CAF_ARG(wr_buf_.second.size())
                 << CAF_ARG(wr_offline_buf_.size()));

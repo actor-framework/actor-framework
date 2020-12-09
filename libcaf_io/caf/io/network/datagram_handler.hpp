@@ -93,6 +93,8 @@ public:
 
   void graceful_shutdown() override;
 
+  std::pair<size_t, size_t> buffer_sizes() const noexcept override;
+
   void add_endpoint(datagram_handle hdl, const ip_endpoint& ep,
                     const manager_ptr mgr);
 

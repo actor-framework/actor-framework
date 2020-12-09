@@ -377,6 +377,16 @@ abstract_broker::abstract_broker(actor_config& cfg) : scheduled_actor(cfg) {
   // nop
 }
 
+std::pair<size_t, size_t> abstract_broker::buffer_sizes() {
+  auto result = std::make_pair(size_t{0}, size_t{0});
+  for (auto& kvp : scribes_) {
+    auto [in_bufsize, out_bufsize] = kvp.second->buffer_sizes();
+    result.first += in_bufsize;
+    result.second += out_bufsize;
+  }
+  return result;
+}
+
 void abstract_broker::launch_servant(doorman_ptr& ptr) {
   // A doorman needs to be launched in addition to being initialized. This
   // allows CAF to assign doorman to uninitialized brokers.

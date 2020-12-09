@@ -40,6 +40,8 @@ public:
 
   byte_buffer& rd_buf() override;
 
+  std::pair<size_t, size_t> buffer_sizes() const noexcept override;
+
   void graceful_shutdown() override;
 
   void flush() override;

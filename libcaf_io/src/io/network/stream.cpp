@@ -100,6 +100,10 @@ void stream::graceful_shutdown() {
   // Otherwise, send_fin() gets called after draining the send buffer.
 }
 
+std::pair<size_t, size_t> stream::buffer_sizes() const noexcept {
+  return {rd_buf_.size(), wr_buf_.size() + wr_offline_buf_.size()};
+}
+
 void stream::force_empty_write(const manager_ptr& mgr) {
   if (!state_.writing) {
     backend().add(operation::write, fd(), this);

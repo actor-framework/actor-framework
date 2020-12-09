@@ -56,4 +56,8 @@ void acceptor::graceful_shutdown() {
   shutdown_both(fd_);
 }
 
+std::pair<size_t, size_t> acceptor::buffer_sizes() const noexcept {
+  return {0, 0};
+}
+
 } // namespace caf::io::network

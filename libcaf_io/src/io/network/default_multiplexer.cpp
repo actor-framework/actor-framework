@@ -154,6 +154,7 @@ default_multiplexer::default_multiplexer(actor_system* sys)
     pipe_reader_(*this),
     servant_ids_(0),
     max_throughput_(0) {
+  CAF_ASSERT(sys != nullptr);
   init();
   epollfd_ = epoll_create1(EPOLL_CLOEXEC);
   if (epollfd_ == -1) {
@@ -237,10 +238,14 @@ void default_multiplexer::handle(const default_multiplexer::event& e) {
                                               << " from epoll");
     op = EPOLL_CTL_DEL;
     --shadow_;
+    if (e.ptr != nullptr)
+      update_buffer_metrics(e.ptr->buffer_sizes(), {0, 0});
   } else if (old == 0) {
     CAF_LOG_DEBUG("attempt to add socket " << CAF_ARG(e.fd) << " to epoll");
     op = EPOLL_CTL_ADD;
     ++shadow_;
+    if (e.ptr != nullptr)
+      update_buffer_metrics({0, 0}, e.ptr->buffer_sizes());
   } else {
     CAF_LOG_DEBUG("modify epoll event mask for socket "
                   << CAF_ARG(e.fd) << ": " << CAF_ARG(old) << " -> "
@@ -253,6 +258,8 @@ void default_multiplexer::handle(const default_multiplexer::event& e) {
       case EEXIST:
         CAF_LOG_ERROR("file descriptor registered twice");
         --shadow_;
+        if (e.ptr != nullptr)
+          update_buffer_metrics(e.ptr->buffer_sizes(), {0, 0});
         break;
       // op was EPOLL_CTL_MOD or EPOLL_CTL_DEL,
       // and fd is not registered with this epoll instance.
@@ -261,6 +268,8 @@ void default_multiplexer::handle(const default_multiplexer::event& e) {
                       "because it isn't registered");
         if (e.mask == 0) {
           ++shadow_;
+          if (e.ptr != nullptr)
+            update_buffer_metrics({0, 0}, e.ptr->buffer_sizes());
         }
         break;
       default:
@@ -423,10 +432,14 @@ void default_multiplexer::handle(const default_multiplexer::event& e) {
     if (e.mask != 0) {
       pollset_.push_back(new_element);
       shadow_.push_back(e.ptr);
+      if (e.ptr != nullptr)
+        update_buffer_metrics({0, 0}, e.ptr->buffer_sizes());
     }
   } else if (i->fd == e.fd) { // modify
     if (e.mask == 0) {
       // delete item
+      if (*j != nullptr)
+        update_buffer_metrics((*j)->buffer_sizes(), {0, 0});
       pollset_.erase(i);
       shadow_.erase(j);
     } else {
@@ -446,6 +459,8 @@ void default_multiplexer::handle(const default_multiplexer::event& e) {
   } else { // insert at iterator pos
     pollset_.insert(i, new_element);
     shadow_.insert(j, e.ptr);
+    if (e.ptr != nullptr)
+      update_buffer_metrics({0, 0}, e.ptr->buffer_sizes());
   }
 }
 
@@ -559,6 +574,7 @@ void default_multiplexer::handle_socket_event(native_socket fd, int mask,
                                               event_handler* ptr) {
   CAF_LOG_TRACE(CAF_ARG(fd) << CAF_ARG(mask));
   CAF_ASSERT(ptr != nullptr);
+  auto prev_buffer_sizes = ptr->buffer_sizes();
   bool checkerror = true;
   if ((mask & input_mask) != 0) {
     checkerror = false;
@@ -579,6 +595,7 @@ void default_multiplexer::handle_socket_event(native_socket fd, int mask,
     del(operation::read, fd, ptr);
     del(operation::write, fd, ptr);
   }
+  update_buffer_metrics(prev_buffer_sizes, ptr->buffer_sizes());
 }
 
 void default_multiplexer::init() {
@@ -616,16 +633,27 @@ bool default_multiplexer::poll_once(bool block) {
 
 void default_multiplexer::resume(intrusive_ptr<resumable> ptr) {
   CAF_LOG_TRACE("");
-  switch (ptr->resume(this, max_throughput_)) {
-    case resumable::resume_later:
-      // Delay resumable until next cycle.
-      internally_posted_.emplace_back(ptr.release(), false);
-      break;
-    case resumable::shutdown_execution_unit:
-      // Don't touch reference count of shutdown helpers.
-      ptr.release();
-      break;
-    default:; // Done. Release reference to resumable.
+  auto impl = [&ptr, this](auto&& after_resume) {
+    switch (ptr->resume(this, max_throughput_)) {
+      case resumable::resume_later:
+        // Delay resumable until next cycle.
+        internally_posted_.emplace_back(ptr.release(), false);
+        break;
+      case resumable::shutdown_execution_unit:
+        // Don't touch reference count of shutdown helpers.
+        ptr.release();
+        break;
+      default:
+        after_resume();
+    }
+  };
+  if (ptr->subtype() == resumable::io_actor) {
+    auto dptr = static_cast<abstract_broker*>(ptr.get());
+    impl([this, dptr, prev_buffer_sizes{dptr->buffer_sizes()}] {
+      update_buffer_metrics(prev_buffer_sizes, dptr->buffer_sizes());
+    });
+  } else {
+    impl([] {});
   }
 }
 

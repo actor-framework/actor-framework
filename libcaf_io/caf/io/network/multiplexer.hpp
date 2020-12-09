@@ -163,9 +163,18 @@ public:
   }
 
 protected:
+  void update_buffer_metrics(std::pair<size_t, size_t> prev,
+                             std::pair<size_t, size_t> now);
+
   /// Identifies the thread this multiplexer
   /// is running in. Must be set by the subclass.
   std::thread::id tid_;
+
+  /// Caches middleman::metric_singletons.inbound_buffers_size.
+  telemetry::int_gauge* inbound_buffers_size_;
+
+  /// Caches middleman::metric_singletons.outbound_buffers_size.
+  telemetry::int_gauge* outbound_buffers_size_;
 };
 
 using multiplexer_ptr = std::unique_ptr<multiplexer>;

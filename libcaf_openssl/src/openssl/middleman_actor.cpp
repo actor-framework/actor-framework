@@ -157,6 +157,10 @@ public:
     return stream_.rd_buf();
   }
 
+  std::pair<size_t, size_t> buffer_sizes() const noexcept override {
+    return stream_.buffer_sizes();
+  }
+
   void graceful_shutdown() override {
     CAF_LOG_TRACE("");
     stream_.graceful_shutdown();

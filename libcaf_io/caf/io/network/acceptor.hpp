@@ -58,6 +58,8 @@ public:
 
   void graceful_shutdown() override;
 
+  std::pair<size_t, size_t> buffer_sizes() const noexcept override;
+
 protected:
   template <class Policy>
   void handle_event_impl(io::network::operation op, Policy& policy) {

@@ -80,6 +80,8 @@ public:
 
   void graceful_shutdown() override;
 
+  std::pair<size_t, size_t> buffer_sizes() const noexcept override;
+
   /// Forces this stream to subscribe to write events if no data is in the
   /// write buffer.
   void force_empty_write(const manager_ptr& mgr);
