@@ -58,7 +58,7 @@ public:
 
   // -- serializer interface ---------------------------------------------------
 
-  bool begin_object(string_view name);
+  bool begin_object(type_id_t, string_view name);
 
   bool end_object();
 

@@ -41,22 +41,22 @@ namespace {
 template <class Serializer>
 bool serialize_impl(Serializer& sink, const tracing_data_ptr& x) {
   if (!x) {
-    return sink.begin_object("tracing_data")   //
-           && sink.begin_field("value", false) //
-           && sink.end_field()                 //
+    return sink.begin_object(invalid_type_id, "tracing_data") //
+           && sink.begin_field("value", false)                //
+           && sink.end_field()                                //
            && sink.end_object();
   }
-  return sink.begin_object("tracing_data")  //
-         && sink.begin_field("value", true) //
-         && x->serialize(sink)              //
-         && sink.end_field()                //
+  return sink.begin_object(invalid_type_id, "tracing_data") //
+         && sink.begin_field("value", true)                 //
+         && x->serialize(sink)                              //
+         && sink.end_field()                                //
          && sink.end_object();
 }
 
 template <class Deserializer>
 bool deserialize_impl(Deserializer& source, tracing_data_ptr& x) {
   bool is_present = false;
-  if (!source.begin_object("tracing_data")
+  if (!source.begin_object(invalid_type_id, "tracing_data")
       || !source.begin_field("value", is_present))
     return false;
   if (!is_present)

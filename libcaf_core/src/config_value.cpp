@@ -149,6 +149,21 @@ const char* config_value::type_name_at_index(size_t index) noexcept {
 
 // -- utility ------------------------------------------------------------------
 
+type_id_t config_value::type_id() const noexcept {
+  static constexpr type_id_t allowed_types[] = {
+    type_id_v<none_t>,
+    type_id_v<config_value::integer>,
+    type_id_v<config_value::boolean>,
+    type_id_v<config_value::real>,
+    type_id_v<timespan>,
+    type_id_v<uri>,
+    type_id_v<config_value::string>,
+    type_id_v<config_value::list>,
+    type_id_v<config_value::dictionary>,
+  };
+  return allowed_types[data_.index()];
+}
+
 error_code<sec> config_value::default_construct(type_id_t id) {
   switch (id) {
     case type_id_v<bool>:

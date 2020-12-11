@@ -58,7 +58,7 @@ struct testee : deserializer {
     return false;
   }
 
-  bool begin_object(string_view object_name) override {
+  bool begin_object(type_id_t, string_view object_name) override {
     new_line();
     indent += 2;
     log += "begin object ";

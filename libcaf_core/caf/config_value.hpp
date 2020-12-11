@@ -173,6 +173,9 @@ public:
   // -- utility ----------------------------------------------------------------
 
   /// @private
+  type_id_t type_id() const noexcept;
+
+  /// @private
   error_code<sec> default_construct(type_id_t);
 
   /// @private
@@ -205,6 +208,16 @@ public:
       return {std::move(tmp)};
     else
       return {reader.move_error()};
+  }
+
+  /// @experimental
+  template <class T>
+  error assign(const T& x) {
+    config_value_writer writer{this};
+    if (detail::save(writer, x))
+      return {};
+    else
+      return {writer.move_error()};
   }
 
 private:

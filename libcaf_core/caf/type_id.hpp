@@ -108,6 +108,15 @@ string_view type_name_or_anonymous() {
     return "anonymous";
 }
 
+/// Returns `type_id_v<T>` if available, `invalid_type_id` otherwise.
+template <class T>
+type_id_t type_id_or_invalid() {
+  if constexpr (detail::is_complete<type_id<T>>)
+    return type_id<T>::value;
+  else
+    return invalid_type_id;
+}
+
 /// Returns the type name of given `type` or an empty string if `type` is an
 /// invalid ID.
 CAF_CORE_EXPORT string_view query_type_name(type_id_t type);

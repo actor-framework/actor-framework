@@ -672,11 +672,48 @@ SCENARIO("config values can default-construct all registered types") {
         auto val = from(type_id_v<my_request>);
         CHECK_EQ(val.get_data().index(), 8u);
         auto& dict = val.as_dictionary();
-        CHECK_EQ(keys(dict), std::vector<std::string>({"a", "b"}));
+        CHECK_EQ(keys(dict), std::vector<std::string>({"@type", "a", "b"}));
+        CHECK_EQ(dict["@type"].get_data().index(), 6u);
+        CHECK_EQ(get_as<std::string>(dict["@type"]), "my_request"s);
         CHECK_EQ(dict["a"].get_data().index(), 1u);
         CHECK_EQ(get_as<int32_t>(dict["a"]), 0);
         CHECK_EQ(dict["b"].get_data().index(), 1u);
         CHECK_EQ(get_as<int32_t>(dict["b"]), 0);
+      }
+    }
+  }
+}
+
+#define CHECK_ROUNDTRIP(init_val, expected_str)                                \
+  do {                                                                         \
+    config_value x;                                                            \
+    if (auto assign_failed = x.assign(init_val); CHECK(!assign_failed)) {      \
+      auto str = to_string(x);                                                 \
+      CHECK_EQ(str, expected_str);                                             \
+      auto parsed = config_value::parse(str);                                  \
+      using init_val_type = decltype(init_val);                                \
+      if (CHECK(parsed)) {                                                     \
+        if constexpr (!std::is_same<init_val_type, message>::value)            \
+          CHECK_EQ(get_as<init_val_type>(*parsed), init_val);                  \
+        else                                                                   \
+          CHECK_EQ(to_string(*parsed), str);                                   \
+      }                                                                        \
+    }                                                                          \
+  } while (false)
+
+SCENARIO("config values can parse their own to_string output") {
+  GIVEN("a config value") {
+    WHEN("assigning a value and then calling to_string on it") {
+      THEN("then config_value::parse reconstitutes the original value") {
+        CHECK_ROUNDTRIP(0, "0");
+        CHECK_ROUNDTRIP("hello world"s, "hello world");
+        CHECK_ROUNDTRIP(std::vector<int>({1, 2, 3}), "[1, 2, 3]");
+        CHECK_ROUNDTRIP(my_request(1, 2),
+                        R"_({"@type" = "my_request", a = 1, b = 2})_");
+        CHECK_ROUNDTRIP(std::make_tuple(add_atom_v, 1, 2),
+                        R"_([{"@type" = "caf::add_atom"}, 1, 2])_");
+        CHECK_ROUNDTRIP(make_message(add_atom_v, 1, 2),
+                        R"_([{"@type" = "caf::add_atom"}, 1, 2])_");
       }
     }
   }

@@ -164,6 +164,12 @@ enum class sec : uint8_t {
   conversion_failed,
   /// A network connection was closed by the remote side.
   connection_closed,
+  /// An operation failed because run-time type information diverged from the
+  /// expected type.
+  type_clash,
+  /// An operation failed because the callee does not implement this
+  /// functionality.
+  unsupported_operation,
 };
 
 /// @relates sec

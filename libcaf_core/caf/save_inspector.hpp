@@ -171,6 +171,7 @@ public:
 
   template <class Inspector, class SaveCallback>
   struct object_with_save_callback_t {
+    type_id_t object_type;
     string_view object_name;
     Inspector* f;
     SaveCallback save_callback;
@@ -178,7 +179,7 @@ public:
     template <class... Fields>
     bool fields(Fields&&... fs) {
       using save_callback_result = decltype(save_callback());
-      if (!(f->begin_object(object_name) && (fs(*f) && ...)))
+      if (!(f->begin_object(object_type, object_name) && (fs(*f) && ...)))
         return false;
       if constexpr (std::is_same<save_callback_result, bool>::value) {
         if (!save_callback()) {
@@ -206,16 +207,19 @@ public:
 
   template <class Inspector>
   struct object_t {
+    type_id_t object_type;
     string_view object_name;
     Inspector* f;
 
     template <class... Fields>
     bool fields(Fields&&... fs) {
-      return f->begin_object(object_name) && (fs(*f) && ...) && f->end_object();
+      return f->begin_object(object_type, object_name) //
+             && (fs(*f) && ...)                        //
+             && f->end_object();
     }
 
     auto pretty_name(string_view name) && {
-      return object_t{name, f};
+      return object_t{object_type, name, f};
     }
 
     template <class F>
@@ -226,6 +230,7 @@ public:
     template <class F>
     auto on_save(F fun) && {
       return object_with_save_callback_t<Inspector, F>{
+        object_type,
         object_name,
         f,
         std::move(fun),

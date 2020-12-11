@@ -49,7 +49,7 @@ public:
     return false;
   }
 
-  constexpr bool begin_object(string_view) {
+  constexpr bool begin_object(type_id_t, string_view) {
     return true;
   }
 

@@ -275,6 +275,7 @@ public:
 
   template <class Inspector, class LoadCallback>
   struct object_with_load_callback_t {
+    type_id_t object_type;
     string_view object_name;
     Inspector* f;
     LoadCallback load_callback;
@@ -282,7 +283,7 @@ public:
     template <class... Fields>
     bool fields(Fields&&... fs) {
       using load_callback_result = decltype(load_callback());
-      if (!(f->begin_object(object_name) && (fs(*f) && ...)))
+      if (!(f->begin_object(object_type, object_name) && (fs(*f) && ...)))
         return false;
       if constexpr (std::is_same<load_callback_result, bool>::value) {
         if (!load_callback()) {
@@ -299,7 +300,7 @@ public:
     }
 
     auto pretty_name(string_view name) && {
-      return object_t{name, f};
+      return object_t{object_type, name, f};
     }
 
     template <class F>
@@ -310,16 +311,19 @@ public:
 
   template <class Inspector>
   struct object_t {
+    type_id_t object_type;
     string_view object_name;
     Inspector* f;
 
     template <class... Fields>
     bool fields(Fields&&... fs) {
-      return f->begin_object(object_name) && (fs(*f) && ...) && f->end_object();
+      return f->begin_object(object_type, object_name) //
+             && (fs(*f) && ...)                        //
+             && f->end_object();
     }
 
     auto pretty_name(string_view name) && {
-      return object_t{name, f};
+      return object_t{object_type, name, f};
     }
 
     template <class F>
@@ -330,6 +334,7 @@ public:
     template <class F>
     auto on_load(F fun) && {
       return object_with_load_callback_t<Inspector, F>{
+        object_type,
         object_name,
         f,
         std::move(fun),

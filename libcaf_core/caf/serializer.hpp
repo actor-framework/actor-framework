@@ -66,15 +66,10 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
-  /// Injects run-time-type information for the *next* object, i.e., causes the
-  /// next call to `begin_object` to write additional meta information. Allows a
-  /// @ref deserializer to retrieve the type for the next object via
-  /// @ref deserializer::fetch_next_object_type.
-  virtual bool inject_next_object_type(type_id_t type) = 0;
-
-  /// Begins processing of an object. Saves the type information
-  /// to the underlying storage.
-  virtual bool begin_object(string_view name) = 0;
+  /// Begins processing of an object. May save the type information to the
+  /// underlying storage to allow a @ref deserializer to retrieve and check the
+  /// type information for data formats that provide deserialization.
+  virtual bool begin_object(type_id_t type, string_view name) = 0;
 
   /// Ends processing of an object.
   virtual bool end_object() = 0;

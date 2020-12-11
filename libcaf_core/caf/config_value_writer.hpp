@@ -68,9 +68,7 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
-  bool inject_next_object_type(type_id_t type) override;
-
-  bool begin_object(string_view name) override;
+  bool begin_object(type_id_t type, string_view name) override;
 
   bool end_object() override;
 
@@ -140,7 +138,6 @@ private:
   bool push(config_value&& x);
 
   stack_type st_;
-  string_view type_hint_;
 };
 
 } // namespace caf

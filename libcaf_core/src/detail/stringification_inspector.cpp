@@ -49,7 +49,7 @@ void escape(std::string& result, char c) {
 
 namespace caf::detail {
 
-bool stringification_inspector::begin_object(string_view name) {
+bool stringification_inspector::begin_object(type_id_t, string_view name) {
   sep();
   if (name != "std::string") {
     result_.insert(result_.end(), name.begin(), name.end());

@@ -59,7 +59,7 @@ template <class Deserializer>
 bool load_data(Deserializer& source, message::data_ptr& data) {
   // For machine-to-machine data formats, we prefix the type information.
   if (!source.has_human_readable_format()) {
-    GUARDED(source.begin_object("message"));
+    GUARDED(source.begin_object(type_id_v<message>, "message"));
     GUARDED(source.begin_field("types"));
     size_t msg_size = 0;
     GUARDED(source.begin_sequence(msg_size));
@@ -159,8 +159,6 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
   using unique_void_ptr = std::unique_ptr<void, free_t>;
   auto msg_size = size_t{0};
   std::vector<object_ptr> objects;
-  GUARDED(source.begin_object("message"));
-  GUARDED(source.begin_field("values"));
   GUARDED(source.begin_sequence(msg_size));
   if (msg_size > 0) {
     // Deserialize message elements individually.
@@ -185,7 +183,7 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
         STOP(sec::unknown_type);
       }
     }
-    GUARDED(source.end_field() && source.end_sequence());
+    GUARDED(source.end_sequence());
     // Merge elements into a single message data object.
     intrusive_ptr<detail::message_data> ptr;
     if (auto vptr = malloc(sizeof(detail::message_data) + data_size)) {
@@ -203,13 +201,11 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
       pos += x.meta->padded_size;
     }
     data.reset(ptr.release(), false);
-    return source.end_object();
+    return true;
   } else {
     data.reset();
+    return source.end_sequence();
   }
-  return source.end_sequence() //
-         && source.end_field() //
-         && source.end_object();
 }
 
 } // namespace
@@ -242,18 +238,18 @@ save_data(Serializer& sink, const message::data_ptr& data) {
   if (!sink.has_human_readable_format()) {
     if (data == nullptr) {
       // Short-circuit empty tuples.
-      return sink.begin_object("message")  //
-             && sink.begin_field("types")  //
-             && sink.begin_sequence(0)     //
-             && sink.end_sequence()        //
-             && sink.end_field()           //
-             && sink.begin_field("values") //
-             && sink.begin_tuple(0)        //
-             && sink.end_tuple()           //
-             && sink.end_field()           //
+      return sink.begin_object(type_id_v<message>, "message") //
+             && sink.begin_field("types")                     //
+             && sink.begin_sequence(0)                        //
+             && sink.end_sequence()                           //
+             && sink.end_field()                              //
+             && sink.begin_field("values")                    //
+             && sink.begin_tuple(0)                           //
+             && sink.end_tuple()                              //
+             && sink.end_field()                              //
              && sink.end_object();
     }
-    GUARDED(sink.begin_object("message"));
+    GUARDED(sink.begin_object(type_id_v<message>, "message"));
     auto type_ids = data->types();
     // Write type information.
     GUARDED(sink.begin_field("types") && sink.begin_sequence(type_ids.size()));
@@ -274,25 +270,17 @@ save_data(Serializer& sink, const message::data_ptr& data) {
   // dynamically-typed objects.
   if (data == nullptr) {
     // Short-circuit empty tuples.
-    return sink.begin_object("message")  //
-           && sink.begin_field("values") //
-           && sink.begin_sequence(0)     //
-           && sink.end_sequence()        //
-           && sink.end_field()           //
-           && sink.end_object();
+    return sink.begin_sequence(0) && sink.end_sequence();
   }
   auto type_ids = data->types();
-  GUARDED(sink.begin_object("message")  //
-          && sink.begin_field("values") //
-          && sink.begin_sequence(type_ids.size()));
+  GUARDED(sink.begin_sequence(type_ids.size()));
   auto storage = data->storage();
   for (auto id : type_ids) {
     auto& meta = gmos[id];
-    GUARDED(sink.inject_next_object_type(id) //
-            && save(meta, sink, storage));
+    GUARDED(save(meta, sink, storage));
     storage += meta.padded_size;
   }
-  return sink.end_sequence() && sink.end_field() && sink.end_object();
+  return sink.end_sequence();
 }
 
 } // namespace
