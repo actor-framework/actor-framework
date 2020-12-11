@@ -14,6 +14,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   module: `caf.middleman.inbound-messages-size`,
   `caf.middleman.outbound-messages-size`, `caf.middleman.deserialization-time`
   and `caf.middleman.serialization-time`.
+- The macro `CAF_ADD_TYPE_ID` now accepts an optional third parameter for
+  allowing users to override the default type name.
 
 ### Changed
 

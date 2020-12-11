@@ -56,6 +56,6 @@ CAF_TEST(make_type_id_list constructs a list from types) {
 }
 
 CAF_TEST(type ID lists are convertible to strings) {
-  auto xs = make_type_id_list<uint16_t, bool, float>();
-  CAF_CHECK_EQUAL(to_string(xs), "[uint16_t, bool, float]");
+  auto xs = make_type_id_list<uint16_t, bool, float, long double>();
+  CAF_CHECK_EQUAL(to_string(xs), "[uint16_t, bool, float, ldouble]");
 }

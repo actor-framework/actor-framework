@@ -134,51 +134,71 @@ CAF_CORE_EXPORT type_id_t query_type_id(string_view name);
   }
 
 #ifdef CAF_MSVC
-/// Assigns the next free type ID to `fully_qualified_name`.
-#  define CAF_ADD_TYPE_ID(project_name, fully_qualified_name)                  \
-    namespace caf {                                                            \
+#  define CAF_DETAIL_NEXT_TYPE_ID(project_name, fully_qualified_name)          \
     template <>                                                                \
     struct type_id<CAF_PP_EXPAND fully_qualified_name> {                       \
       static constexpr type_id_t value                                         \
         = id_block::project_name##_first_type_id                               \
           + (CAF_PP_CAT(CAF_PP_COUNTER, ())                                    \
              - id_block::project_name##_type_id_counter_init - 1);             \
-    };                                                                         \
-    template <>                                                                \
-    struct type_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value> {    \
-      using type = CAF_PP_EXPAND fully_qualified_name;                         \
-    };                                                                         \
-    template <>                                                                \
-    struct type_name<CAF_PP_EXPAND fully_qualified_name> {                     \
-      static constexpr string_view value                                       \
-        = CAF_PP_STR(CAF_PP_EXPAND fully_qualified_name);                      \
-    };                                                                         \
-    template <>                                                                \
-    struct type_name_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value> \
-      : type_name<CAF_PP_EXPAND fully_qualified_name> {};                      \
-    }
+    };
 #else
-#  define CAF_ADD_TYPE_ID(project_name, fully_qualified_name)                  \
-    namespace caf {                                                            \
+#  define CAF_DETAIL_NEXT_TYPE_ID(project_name, fully_qualified_name)          \
     template <>                                                                \
     struct type_id<CAF_PP_EXPAND fully_qualified_name> {                       \
       static constexpr type_id_t value                                         \
         = id_block::project_name##_first_type_id                               \
           + (__COUNTER__ - id_block::project_name##_type_id_counter_init - 1); \
-    };                                                                         \
-    template <>                                                                \
-    struct type_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value> {    \
-      using type = CAF_PP_EXPAND fully_qualified_name;                         \
-    };                                                                         \
-    template <>                                                                \
-    struct type_name<CAF_PP_EXPAND fully_qualified_name> {                     \
-      static constexpr string_view value                                       \
-        = CAF_PP_STR(CAF_PP_EXPAND fully_qualified_name);                      \
-    };                                                                         \
-    template <>                                                                \
-    struct type_name_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value> \
-      : type_name<CAF_PP_EXPAND fully_qualified_name> {};                      \
-    }
+    };
+#endif
+
+#define CAF_ADD_TYPE_ID_2(project_name, fully_qualified_name)                  \
+  namespace caf {                                                              \
+  CAF_DETAIL_NEXT_TYPE_ID(project_name, fully_qualified_name)                  \
+  template <>                                                                  \
+  struct type_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value> {      \
+    using type = CAF_PP_EXPAND fully_qualified_name;                           \
+  };                                                                           \
+  template <>                                                                  \
+  struct type_name<CAF_PP_EXPAND fully_qualified_name> {                       \
+    static constexpr string_view value                                         \
+      = CAF_PP_STR(CAF_PP_EXPAND fully_qualified_name);                        \
+  };                                                                           \
+  template <>                                                                  \
+  struct type_name_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value>   \
+    : type_name<CAF_PP_EXPAND fully_qualified_name> {};                        \
+  }
+
+#define CAF_ADD_TYPE_ID_3(project_name, fully_qualified_name, user_type_name)  \
+  namespace caf {                                                              \
+  CAF_DETAIL_NEXT_TYPE_ID(project_name, fully_qualified_name)                  \
+  template <>                                                                  \
+  struct type_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value> {      \
+    using type = CAF_PP_EXPAND fully_qualified_name;                           \
+  };                                                                           \
+  template <>                                                                  \
+  struct type_name<CAF_PP_EXPAND fully_qualified_name> {                       \
+    static constexpr string_view value = user_type_name;                       \
+  };                                                                           \
+  template <>                                                                  \
+  struct type_name_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value>   \
+    : type_name<CAF_PP_EXPAND fully_qualified_name> {};                        \
+  }
+
+/// @def CAF_ADD_TYPE_ID(project_name, fully_qualified_name, user_type_name)
+/// Assigns the next free type ID to `fully_qualified_name`.
+/// @param project_name User-defined name for type ID block.
+/// @param fully_qualified_name Name of the type enclosed in parens and
+///                             including namespaces, e.g., `(std::string)`.
+/// @param user_type_name Optional parameter. If present, defines the content of
+///                       `caf::type_name`. Defaults to `fully_qualified_name`.
+#ifdef CAF_MSVC
+#  define CAF_ADD_TYPE_ID(...)                                                 \
+    CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_ADD_TYPE_ID_, __VA_ARGS__)(__VA_ARGS__),    \
+               CAF_PP_EMPTY())
+#else
+#  define CAF_ADD_TYPE_ID(...)                                                 \
+    CAF_PP_OVERLOAD(CAF_ADD_TYPE_ID_, __VA_ARGS__)(__VA_ARGS__)
 #endif
 
 /// Creates a new tag type (atom) in the global namespace and assigns the next
@@ -272,7 +292,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
   CAF_ADD_TYPE_ID(core_module, (int32_t))
   CAF_ADD_TYPE_ID(core_module, (int64_t))
   CAF_ADD_TYPE_ID(core_module, (int8_t))
-  CAF_ADD_TYPE_ID(core_module, (long double) )
+  CAF_ADD_TYPE_ID(core_module, (long double), "ldouble")
   CAF_ADD_TYPE_ID(core_module, (uint16_t))
   CAF_ADD_TYPE_ID(core_module, (uint32_t))
   CAF_ADD_TYPE_ID(core_module, (uint64_t))
