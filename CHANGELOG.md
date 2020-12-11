@@ -19,6 +19,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 - When using `CAF_MAIN`, CAF now looks for the correct default config file name,
   i.e., `caf-application.conf`.
+- Simplify the type inspection API by removing the distinction between
+  `apply_object` and `apply_value`. Instead, inspectors only offer `apply` and
+  users may now also call `map`, `list`, `tuple` and `value` for unboxing simple
+  wrapper types. Furthermore, CAF no longer automatically serializes enumeration
+  types using their underlying value because this is fundamentally unsafe.
 
 ### Fixed
 
