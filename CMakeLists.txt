@@ -50,7 +50,7 @@ set(CAF_LOG_LEVEL "QUIET" CACHE STRING "Set log verbosity of CAF components")
 set(CAF_SANITIZERS "" CACHE STRING
     "Comma separated sanitizers, e.g., 'address,undefined'")
 set(CAF_INSTALL_CMAKEDIR
-    "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake/CAF" CACHE PATH
+    "${CMAKE_INSTALL_FULL_LIBDIR}/cmake/CAF" CACHE PATH
     "Path for installing CMake files, enables 'find_package(CAF)'")
   set(CAF_BUILD_INFO_FILE_PATH "" CACHE FILEPATH
     "Optional path for writing CMake and compiler version information")
