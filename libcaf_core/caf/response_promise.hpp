@@ -73,6 +73,8 @@ public:
         make_message(std::forward<T>(x), std::forward<Ts>(xs)...));
   }
 
+  /// Satisfies the promise by sending either an error or a non-erorr response
+  /// message.
   template <class T>
   void deliver(expected<T> x) {
     if (x)
@@ -92,8 +94,7 @@ public:
       typename std::decay<Ts>::type>::type...>;
     static_assert(response_type_unbox<signatures_of_t<Handle>, token>::valid,
                   "receiver does not accept given message");
-    // TODO: use `if constexpr` when switching to C++17
-    if (P == message_priority::high)
+    if constexpr (P == message_priority::high)
       id_ = id_.with_high_priority();
     if constexpr (std::is_same<detail::type_list<message>,
                                detail::type_list<std::decay_t<Ts>...>>::value)
@@ -105,6 +106,7 @@ public:
   }
 
   /// Satisfies the promise by sending an error response message.
+  /// For non-requests, nothing is done.
   void deliver(error x);
 
   /// Satisfies the promise by sending an empty message if this promise has a
