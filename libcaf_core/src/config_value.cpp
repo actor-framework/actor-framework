@@ -422,6 +422,43 @@ bool config_value::can_convert_to_dictionary() const {
   return visit(f, data_);
 }
 
+optional<message>
+config_value::parse_msg_impl(string_view str,
+                             span<const type_id_list> allowed_types) {
+  if (auto val = parse(str)) {
+    auto ls_size = val->as_list().size();
+    message result;
+    auto converts = [&val, &result, ls_size](type_id_list ls) {
+      if (ls.size() != ls_size)
+        return false;
+      config_value_reader reader{std::addressof(*val)};
+      auto unused = size_t{0};
+      reader.begin_sequence(unused);
+      CAF_ASSERT(unused == ls_size);
+      intrusive_ptr<detail::message_data> ptr;
+      if (auto vptr = malloc(sizeof(detail::message_data) + ls.data_size()))
+        ptr.reset(new (vptr) detail::message_data(ls), false);
+      else
+        return false;
+      auto pos = ptr->storage();
+      for (auto type : ls) {
+        auto meta = detail::global_meta_object(type);
+        CAF_ASSERT(meta != nullptr);
+        meta->default_construct(pos);
+        ptr->inc_constructed_elements();
+        if (!meta->load(reader, pos))
+          return false;
+        pos += meta->padded_size;
+      }
+      result.reset(ptr.release(), false);
+      return reader.end_sequence();
+    };
+    if (std::any_of(allowed_types.begin(), allowed_types.end(), converts))
+      return {std::move(result)};
+  }
+  return {};
+}
+
 // -- related free functions ---------------------------------------------------
 
 bool operator<(const config_value& x, const config_value& y) {

@@ -114,12 +114,20 @@ public:
 
   // -- parsing ----------------------------------------------------------------
 
-  /// Tries to parse a value from `str`.
+  /// Tries to parse a value from given characters.
   static expected<config_value> parse(string_view::iterator first,
                                       string_view::iterator last);
 
   /// Tries to parse a value from `str`.
   static expected<config_value> parse(string_view str);
+
+  /// Tries to parse a config value (list) from `str` and then converting it to
+  /// an allowed input message type for `Handle`.
+  template <class Handle>
+  static optional<message> parse_msg(string_view str, const Handle&) {
+    auto allowed = Handle::allowed_inputs();
+    return parse_msg_impl(str, allowed);
+  }
 
   // -- properties -------------------------------------------------------------
 
@@ -227,6 +235,9 @@ private:
   // -- properties -------------------------------------------------------------
 
   static const char* type_name_at_index(size_t index) noexcept;
+
+  static optional<message>
+  parse_msg_impl(string_view str, span<const type_id_list> allowed_types);
 
   // -- auto conversion of related types ---------------------------------------
 

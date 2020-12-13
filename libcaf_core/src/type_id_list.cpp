@@ -22,6 +22,15 @@
 
 namespace caf {
 
+size_t type_id_list::data_size() const noexcept {
+  auto result = size_t{0};
+  for (auto type : *this) {
+    auto meta_obj = detail::global_meta_object(type);
+    result += meta_obj->padded_size;
+  }
+  return result;
+}
+
 std::string to_string(type_id_list xs) {
   if (!xs || xs.size() == 0)
     return "[]";

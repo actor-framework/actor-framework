@@ -745,6 +745,61 @@ SCENARIO("config values can convert lists of tuples to dictionaries") {
   }
 }
 
+SCENARIO("config values can parse messages") {
+  using testee_t = typed_actor<result<void>(int16_t),                     //
+                               result<void>(int32_t, int32_t),            //
+                               result<void>(my_request),                  //
+                               result<void>(add_atom, int32_t, int32_t)>; //
+  auto parse = [](string_view str) {
+    testee_t testee;
+    return config_value::parse_msg(str, testee);
+  };
+  GIVEN("a typed actor handle and valid input strings") {
+    THEN("config_value::parse_msg generates matching message types") {
+      if (auto msg = parse("16000"); CHECK(msg)) {
+        if (CHECK((msg->match_elements<int16_t>()))) {
+          CHECK_EQ(msg->get_as<int16_t>(0), 16000);
+        }
+      }
+      if (auto msg = parse("[16000]"); CHECK(msg)) {
+        if (CHECK((msg->match_elements<int16_t>()))) {
+          CHECK_EQ(msg->get_as<int16_t>(0), 16000);
+        }
+      }
+      if (auto msg = parse("[1, 2]"); CHECK(msg)) {
+        if (CHECK((msg->match_elements<int32_t, int32_t>()))) {
+          CHECK_EQ(msg->get_as<int32_t>(0), 1);
+          CHECK_EQ(msg->get_as<int32_t>(1), 2);
+        }
+      }
+      if (auto msg = parse("{a = 1, b = 2}"); CHECK(msg)) {
+        if (CHECK((msg->match_elements<my_request>()))) {
+          CHECK_EQ(msg->get_as<my_request>(0), my_request(1, 2));
+        }
+      }
+      if (auto msg = parse("[{a = 1, b = 2}]"); CHECK(msg)) {
+        if (CHECK((msg->match_elements<my_request>()))) {
+          CHECK_EQ(msg->get_as<my_request>(0), my_request(1, 2));
+        }
+      }
+      if (auto msg = parse(R"_([{"@type" = "caf::add_atom"}, 1, 2])_");
+          CHECK(msg)) {
+        if (CHECK((msg->match_elements<add_atom, int32_t, int32_t>()))) {
+          CHECK_EQ(msg->get_as<int32_t>(1), 1);
+          CHECK_EQ(msg->get_as<int32_t>(2), 2);
+        }
+      }
+    }
+  }
+  GIVEN("a typed actor handle and invalid input strings") {
+    THEN("config_value::parse_msg returns nullopt") {
+      CHECK(!parse("65000"));
+      CHECK(!parse("[1, 2, 3]"));
+      CHECK(!parse("[{a = 1.1, b = 2.2}]"));
+    }
+  }
+}
+
 CAF_TEST(default_constructed) {
   config_value x;
   CAF_CHECK_EQUAL(holds_alternative<none_t>(x), true);
