@@ -719,6 +719,32 @@ SCENARIO("config values can parse their own to_string output") {
   }
 }
 
+SCENARIO("config values can convert lists of tuples to dictionaries") {
+  GIVEN("a config value containing a list of key-value pairs (lists)") {
+    WHEN("calling as_dictionary on the object") {
+      THEN("the config value lifts the key-value pair list to a dictionary") {
+        auto x = make_config_value_list(make_config_value_list("one", 1),
+                                        make_config_value_list(2, "two"));
+        auto& dict = x.as_dictionary();
+        CHECK_EQ(dict.size(), 2u);
+        CHECK_EQ(dict["one"], 1);
+        CHECK_EQ(dict["2"], "two"s);
+      }
+    }
+  }
+  GIVEN("a config value containing a string representing a kvp list") {
+    WHEN("calling as_dictionary on the object") {
+      THEN("the config value lifts the key-value pair list to a dictionary") {
+        auto x = config_value{R"_([["one", 1], [2, "two"]])_"};
+        auto& dict = x.as_dictionary();
+        CHECK_EQ(dict.size(), 2u);
+        CHECK_EQ(dict["one"], 1);
+        CHECK_EQ(dict["2"], "two"s);
+      }
+    }
+  }
+}
+
 CAF_TEST(default_constructed) {
   config_value x;
   CAF_CHECK_EQUAL(holds_alternative<none_t>(x), true);

@@ -129,9 +129,15 @@ config_value::list& config_value::as_list() {
 }
 
 config_value::dictionary& config_value::as_dictionary() {
-  if (!holds_alternative<dictionary>(*this))
-    *this = dictionary{};
-  return get<dictionary>(*this);
+  if (auto dict = get_if<config_value::dictionary>(&data_)) {
+    return *dict;
+  } else if (auto lifted = to_dictionary()) {
+    data_ = std::move(*lifted);
+    return get<config_value::dictionary>(data_);
+  } else {
+    data_ = config_value::dictionary{};
+    return get<config_value::dictionary>(data_);
+  }
 }
 
 void config_value::append(config_value x) {
@@ -366,12 +372,34 @@ expected<config_value::list> config_value::to_list() const {
 expected<config_value::dictionary> config_value::to_dictionary() const {
   using result_type = expected<dictionary>;
   auto f = detail::make_overload(
-    no_conversions<dictionary, none_t, bool, integer, timespan, real, uri,
-                   list>(),
-    [](const std::string& x) {
+    no_conversions<dictionary, none_t, bool, integer, timespan, real, uri>(),
+    [](const list& x) {
       dictionary tmp;
-      if (detail::parse(x, tmp, detail::require_opening_char) == none)
+      auto lift = [&tmp](const config_value& element) {
+        auto ls = element.to_list();
+        if (ls && ls->size() == 2)
+          return tmp.emplace(to_string((*ls)[0]), std::move((*ls)[1])).second;
+        else
+          return false;
+      };
+      if (std::all_of(x.begin(), x.end(), lift)) {
         return result_type{std::move(tmp)};
+      } else {
+        auto err = make_error(sec::conversion_failed,
+                              "cannot convert list to dictionary unless each "
+                              "element in the list is a key-value pair");
+        return result_type{std::move(err)};
+      }
+    },
+    [](const std::string& x) {
+      if (dictionary tmp; detail::parse(x, tmp) == none) {
+        return result_type{std::move(tmp)};
+      }
+      if (list tmp; detail::parse(x, tmp) == none) {
+        config_value ls{std::move(tmp)};
+        if (auto res = ls.to_dictionary())
+          return res;
+      }
       std::string msg = "cannot convert ";
       detail::print_escaped(msg, x);
       msg += " to a dictionary";

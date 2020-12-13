@@ -179,9 +179,16 @@ bool config_value_reader::begin_object(type_id_t type, string_view) {
     },
     [this](const config_value* val) {
       if (auto obj = get_if<settings>(val)) {
-        // Morph into an object. This value gets "consumed" by
-        // begin_object/end_object.
+        // Unbox the dictionary.
         st_.top() = obj;
+        return true;
+      } else if (auto dict = val->to_dictionary()) {
+        // Replace the actual config value on the stack with the on-the-fly
+        // converted dictionary.
+        auto ptr = std::make_unique<config_value>(std::move(*dict));
+        const settings* unboxed = std::addressof(get<settings>(*ptr));
+        st_.top() = unboxed;
+        scratch_space_.emplace_back(std::move(ptr));
         return true;
       } else {
         emplace_error(sec::conversion_failed, "cannot read input as object");

@@ -23,6 +23,7 @@
 #include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"
 
+#include <memory>
 #include <stack>
 #include <vector>
 
@@ -169,6 +170,9 @@ private:
   bool fetch_object_type(const settings* obj, type_id_t& type);
 
   stack_type st_;
+
+  // Stores on-the-fly converted values.
+  std::vector<std::unique_ptr<config_value>> scratch_space_;
 };
 
 } // namespace caf

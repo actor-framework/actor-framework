@@ -130,7 +130,10 @@ public:
   /// Returns the value as a list, converting it to one if needed.
   list& as_list();
 
-  /// Returns the value as a dictionary, converting it to one if needed.
+  /// Returns the value as a dictionary, converting it to one if needed. The
+  /// only data structure that CAF can convert to a dictionary is a list of
+  /// lists, where each nested list contains exactly two elements (key and
+  /// value). In all other cases, the conversion results in an empty dictionary.
   dictionary& as_dictionary();
 
   /// Appends `x` to a list. Converts this config value to a list first by
