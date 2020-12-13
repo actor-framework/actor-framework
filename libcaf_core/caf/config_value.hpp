@@ -540,11 +540,10 @@ auto get_or(const config_value& x, Fallback&& fallback) {
     else
       return guide::convert(std::forward<Fallback>(fallback));
   } else {
-    using value_type = std::decay_t<Fallback>;
-    if (auto val = get_as<value_type>(x))
+    if (auto val = get_as<To>(x))
       return std::move(*val);
     else
-      return std::forward<Fallback>(fallback);
+      return To{std::forward<Fallback>(fallback)};
   }
 }
 

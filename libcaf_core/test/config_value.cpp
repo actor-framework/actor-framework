@@ -585,7 +585,7 @@ SCENARIO("get_as can convert config values to custom types") {
 SCENARIO("get_or converts or returns a fallback value") {
   using namespace caf::literals;
   GIVEN("the config value 42") {
-    config_value x{42};
+    auto x = config_value{42};
     WHEN("using get_or with type int") {
       THEN("CAF ignores the default value") {
         CHECK_EQ(get_or(x, 10), 42);
@@ -608,6 +608,21 @@ SCENARIO("get_or converts or returns a fallback value") {
         auto result = get_or(x, fallback);
         static_assert(std::is_same<decltype(result), std::vector<int>>::value);
         CHECK_EQ(result, std::vector<int>({10, 20, 30}));
+      }
+    }
+    WHEN("using get_or with type i64_wrapper") {
+      THEN("CAF returns i64_wrapper{42}") {
+        auto result = get_or<i64_wrapper>(x, 10);
+        CHECK_EQ(result.value, 42);
+      }
+    }
+  }
+  GIVEN("the config value 'hello world'") {
+    auto x = config_value{"hello world"};
+    WHEN("using get_or with type i64_wrapper") {
+      THEN("CAF returns the fallback value") {
+        auto result = get_or<i64_wrapper>(x, 10);
+        CHECK_EQ(result.value, 10);
       }
     }
   }

@@ -83,7 +83,7 @@ struct i32_wrapper {
 
   template <class Inspector>
   friend bool inspect(Inspector& f, i32_wrapper& x) {
-    return f.object(x).fields(f.field("value", x.value));
+    return f.apply(x.value);
   }
 };
 
@@ -97,13 +97,17 @@ struct i64_wrapper {
     ++instances;
   }
 
+  explicit i64_wrapper(int64_t val) : value(val) {
+    ++instances;
+  }
+
   ~i64_wrapper() {
     --instances;
   }
 
   template <class Inspector>
   friend bool inspect(Inspector& f, i64_wrapper& x) {
-    return f.object(x).fields(f.field("value", x.value));
+    return f.apply(x.value);
   }
 };
 
