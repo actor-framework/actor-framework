@@ -76,7 +76,7 @@ public:
     return *this;
   }
 
-  /// Satisfies the promise by sending either an error or a non-erorr response
+  /// Satisfies the promise by sending either an error or a non-error response
   /// message.
   template <class T>
   void deliver(expected<T> x) {
@@ -98,12 +98,6 @@ public:
   typed_response_promise deliver(error x) {
     promise_.deliver(std::move(x));
     return *this;
-  }
-
-  /// Satisfies the promise by sending an empty message if this promise has a
-  /// valid message ID, i.e., `async() == false`.
-  void deliver(unit_t x) {
-    promise_.deliver(x);
   }
 
   /// Returns whether this response promise replies to an asynchronous message.

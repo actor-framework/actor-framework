@@ -73,7 +73,7 @@ public:
         make_message(std::forward<T>(x), std::forward<Ts>(xs)...));
   }
 
-  /// Satisfies the promise by sending either an error or a non-erorr response
+  /// Satisfies the promise by sending either an error or a non-error response
   /// message.
   template <class T>
   void deliver(expected<T> x) {
@@ -106,7 +106,6 @@ public:
   }
 
   /// Satisfies the promise by sending an error response message.
-  /// For non-requests, nothing is done.
   void deliver(error x);
 
   /// Satisfies the promise by sending an empty message if this promise has a
