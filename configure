@@ -44,6 +44,7 @@ Convenience options:
                               --sanitizers=address,undefined
                               --disable-examples
                               --disable-tools
+                              --disable-shared-libs
                               --enable-utility-targets
                               --enable-runtime-checks
 
@@ -163,14 +164,14 @@ while [ $# -ne 0 ]; do
       append_cache_entry CAF_SANITIZERS STRING "$optarg"
       ;;
     --dev-mode)
-      append_cache_entry CAF_LOG_LEVEL STRING "$optarg"
-      append_cache_entry CMAKE_BUILD_TYPE STRING 'Debug'
       append_cache_entry CAF_LOG_LEVEL STRING 'TRACE'
       append_cache_entry CAF_SANITIZERS STRING 'address,undefined'
+      append_cache_entry CMAKE_BUILD_TYPE STRING 'Debug'
       set_build_flag examples OFF
+      set_build_flag shared-libs OFF
       set_build_flag tools OFF
-      set_build_flag utility-targets ON
       set_build_flag runtime-checks ON
+      set_build_flag utility-targets ON
       ;;
    --enable-*)
       set_build_flag $optarg ON
