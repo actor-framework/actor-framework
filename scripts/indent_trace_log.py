@@ -6,7 +6,7 @@
 # usage (read file): indent_trace_log.py FILENAME
 #      (read stdin): indent_trace_log.py -
 
-import argparse, sys, os, fileinput, re
+import argparse, sys, os, re
 
 def is_entry(line):
     return 'TRACE' in line and 'ENTRY' in line

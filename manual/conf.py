@@ -17,10 +17,9 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 # import os
-# import sys
 # sys.path.insert(0, os.path.abspath('.'))
 
-import os, sys, git, re, pathlib
+import os, git, re, pathlib
 
 # -- CAF-specific variables ---------------------------------------------------
 
@@ -30,7 +29,7 @@ root_dir = conf_dir.parent.absolute()
 # Fetch the CAF version.
 with open(os.path.join(root_dir, "libcaf_core/caf/config.hpp")) as f:
     match = re.search('^#define CAF_VERSION ([0-9]+)$', f.read(), re.MULTILINE)
-    if match == None:
+    if match is None:
         raise RuntimeError("unable to locate CAF_VERSION string in config.hpp")
     raw_version = int(match.group(1))
     major = int(raw_version / 10000)
