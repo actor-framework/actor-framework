@@ -144,7 +144,6 @@ class string_view;
 class tracing_data;
 class tracing_data_factory;
 class type_id_list;
-class type_id_list_builder;
 class uri;
 class uri_builder;
 class uuid;

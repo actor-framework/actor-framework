@@ -59,3 +59,35 @@ CAF_TEST(type ID lists are convertible to strings) {
   auto xs = make_type_id_list<uint16_t, bool, float, long double>();
   CAF_CHECK_EQUAL(to_string(xs), "[uint16_t, bool, float, ldouble]");
 }
+
+CAF_TEST(type ID lists are concatenable) {
+  // 1 + 0
+  CHECK_EQ((make_type_id_list<int8_t>()),
+           type_id_list::concat(make_type_id_list<int8_t>(),
+                                make_type_id_list<>()));
+  CHECK_EQ((make_type_id_list<int8_t>()),
+           type_id_list::concat(make_type_id_list<>(),
+                                make_type_id_list<int8_t>()));
+  // 1 + 1
+  CHECK_EQ((make_type_id_list<int8_t, int16_t>()),
+           type_id_list::concat(make_type_id_list<int8_t>(),
+                                make_type_id_list<int16_t>()));
+  // 2 + 0
+  CHECK_EQ((make_type_id_list<int8_t, int16_t>()),
+           type_id_list::concat(make_type_id_list<int8_t, int16_t>(),
+                                make_type_id_list<>()));
+  CHECK_EQ((make_type_id_list<int8_t, int16_t>()),
+           type_id_list::concat(make_type_id_list<>(),
+                                make_type_id_list<int8_t, int16_t>()));
+  // 2 + 1
+  CHECK_EQ((make_type_id_list<int8_t, int16_t, int32_t>()),
+           type_id_list::concat(make_type_id_list<int8_t, int16_t>(),
+                                make_type_id_list<int32_t>()));
+  CHECK_EQ((make_type_id_list<int8_t, int16_t, int32_t>()),
+           type_id_list::concat(make_type_id_list<int8_t>(),
+                                make_type_id_list<int16_t, int32_t>()));
+  // 2 + 2
+  CHECK_EQ((make_type_id_list<int8_t, int16_t, int32_t, int64_t>()),
+           type_id_list::concat(make_type_id_list<int8_t, int16_t>(),
+                                make_type_id_list<int32_t, int64_t>()));
+}
