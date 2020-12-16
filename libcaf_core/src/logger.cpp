@@ -602,7 +602,7 @@ void logger::log_first_line() {
     msg += to_string(system_.node());
     msg += ", excluded-components = ";
     detail::stringification_inspector f{msg};
-    detail::save_value(f, filter);
+    detail::save(f, filter);
     return msg;
   };
   namespace lg = defaults::logger;

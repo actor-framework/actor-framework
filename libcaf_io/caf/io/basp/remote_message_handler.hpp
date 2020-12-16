@@ -79,12 +79,12 @@ public:
     if (dref.hdr_.operation == basp::message_type::routed_message) {
       node_id src_node;
       node_id dst_node;
-      if (!source.apply_object(src_node)) {
+      if (!source.apply(src_node)) {
         CAF_LOG_ERROR(
           "failed to read source of routed message:" << source.get_error());
         return;
       }
-      if (!source.apply_object(dst_node)) {
+      if (!source.apply(dst_node)) {
         CAF_LOG_ERROR("failed to read destination of routed message:"
                       << source.get_error());
         return;
@@ -108,13 +108,13 @@ public:
       return;
     }
     // Get the remainder of the message.
-    if (!source.apply_object(stages)) {
+    if (!source.apply(stages)) {
       CAF_LOG_ERROR("failed to read stages:" << source.get_error());
       return;
     }
     auto& mm_metrics = ctx->system().middleman().metric_singletons;
     auto t0 = telemetry::timer::clock_type::now();
-    if (!source.apply_objects(msg)) {
+    if (!source.apply(msg)) {
       CAF_LOG_ERROR("failed to read message content:" << source.get_error());
       return;
     }

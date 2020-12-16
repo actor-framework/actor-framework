@@ -139,7 +139,7 @@ bool binary_serializer::value(span<const byte> x) {
   }
   write_pos_ += x.size();
   CAF_ASSERT(write_pos_ <= buf_.size());
-  return ok;
+  return true;
 }
 
 bool binary_serializer::value(byte x) {
@@ -148,7 +148,7 @@ bool binary_serializer::value(byte x) {
   else
     buf_[write_pos_] = x;
   ++write_pos_;
-  return ok;
+  return true;
 }
 
 bool binary_serializer::value(bool x) {

@@ -35,7 +35,7 @@ std::string deep_to_string(const T& x) {
   using inspector_type = detail::stringification_inspector;
   std::string result;
   inspector_type f{result};
-  detail::save_value(f, detail::as_mutable_ref(x));
+  detail::save(f, detail::as_mutable_ref(x));
   return result;
 }
 

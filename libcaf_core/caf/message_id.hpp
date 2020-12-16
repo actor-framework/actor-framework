@@ -229,28 +229,15 @@ constexpr message_id make_message_id(message_priority p) {
 
 // -- inspection support -------------------------------------------------------
 
-template <>
-struct inspector_access<message_id> : inspector_access_base<message_id> {
-  template <class Inspector>
-  static bool apply_object(Inspector& f, message_id& x) {
-    auto get = [&x] { return x.integer_value(); };
-    auto set = [&x](uint64_t val) {
-      x = message_id{val};
-      return true;
-    };
-    return f.object(x).fields(f.field("value", get, set));
-  }
-
-  template <class Inspector>
-  static bool apply_value(Inspector& f, message_id& x) {
-    auto get = [&x] { return x.integer_value(); };
-    auto set = [&x](uint64_t val) {
-      x = message_id{val};
-      return true;
-    };
-    return detail::split_save_load(f, get, set);
-  }
-};
+template <class Inspector>
+bool inspect(Inspector& f, message_id& x) {
+  auto get = [&x] { return x.integer_value(); };
+  auto set = [&x](uint64_t val) {
+    x = message_id{val};
+    return true;
+  };
+  return f.apply(get, set);
+}
 
 } // namespace caf
 

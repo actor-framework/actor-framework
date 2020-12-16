@@ -21,9 +21,11 @@
 #include <cstddef>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/squashed_int.hpp"
 #include "caf/error_code.hpp"
 #include "caf/fwd.hpp"
 #include "caf/load_inspector_base.hpp"
@@ -37,6 +39,10 @@ namespace caf {
 class CAF_CORE_EXPORT binary_deserializer
   : public load_inspector_base<binary_deserializer> {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using super = load_inspector_base<binary_deserializer>;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class Container>
@@ -107,11 +113,11 @@ public:
   bool fetch_next_object_type(type_id_t& type) noexcept;
 
   constexpr bool begin_object(string_view) noexcept {
-    return ok;
+    return true;
   }
 
   constexpr bool end_object() noexcept {
-    return ok;
+    return true;
   }
 
   constexpr bool begin_field(string_view) noexcept {
@@ -127,29 +133,29 @@ public:
                    span<const type_id_t> types, size_t& index) noexcept;
 
   constexpr bool end_field() {
-    return ok;
+    return true;
   }
 
   constexpr bool begin_tuple(size_t) noexcept {
-    return ok;
+    return true;
   }
 
   constexpr bool end_tuple() noexcept {
-    return ok;
+    return true;
   }
 
   constexpr bool begin_key_value_pair() noexcept {
-    return ok;
+    return true;
   }
 
   constexpr bool end_key_value_pair() noexcept {
-    return ok;
+    return true;
   }
 
   bool begin_sequence(size_t& list_size) noexcept;
 
   constexpr bool end_sequence() noexcept {
-    return ok;
+    return true;
   }
 
   bool begin_associative_array(size_t& size) noexcept {
@@ -179,6 +185,17 @@ public:
   bool value(int64_t& x) noexcept;
 
   bool value(uint64_t& x) noexcept;
+
+  template <class T>
+  std::enable_if_t<std::is_integral<T>::value, bool> value(T& x) noexcept {
+    auto tmp = detail::squashed_int_t<T>{0};
+    if (value(tmp)) {
+      x = static_cast<T>(tmp);
+      return true;
+    } else {
+      return false;
+    }
+  }
 
   bool value(float& x) noexcept;
 

@@ -43,6 +43,8 @@ class fnv : public save_inspector_base<fnv<T>> {
 public:
   static_assert(sizeof(T) == 4 || sizeof(T) == 8);
 
+  using super = save_inspector_base<fnv<T>>;
+
   constexpr fnv() noexcept : result(init()) {
     // nop
   }
@@ -154,7 +156,7 @@ public:
   static T compute(Ts&&... xs) noexcept {
     using detail::as_mutable_ref;
     fnv f;
-    auto unused = f.apply_objects(xs...);
+    auto unused = (f.apply(xs) && ...);
     static_cast<void>(unused); // Always true.
     return f.result;
   }

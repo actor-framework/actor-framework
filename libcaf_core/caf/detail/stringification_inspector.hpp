@@ -40,7 +40,7 @@ class CAF_CORE_EXPORT stringification_inspector
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = save_inspector;
+  using super = save_inspector_base<stringification_inspector>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -100,6 +100,8 @@ public:
     return end_sequence();
   }
 
+  bool value(byte x);
+
   bool value(bool x);
 
   template <class Integral>
@@ -126,7 +128,11 @@ public:
 
   bool value(const std::u32string& x);
 
-  bool value(const std::vector<bool>& xs);
+  bool value(span<const byte> x);
+
+  using super::list;
+
+  bool list(const std::vector<bool>& xs);
 
   // -- builtin inspection to pick up to_string or provide nicer formatting ----
 
@@ -146,14 +152,14 @@ public:
       return true;
     }
     result_ += '{';
-    save_value(*this, i->first);
+    save(*this, i->first);
     result_ += " = ";
-    save_value(*this, i->second);
+    save(*this, i->second);
     while (++i != last) {
       sep();
-      save_value(*this, i->first);
+      save(*this, i->first);
       result_ += " = ";
-      save_value(*this, i->second);
+      save(*this, i->second);
     }
     result_ += '}';
     return true;
@@ -186,7 +192,7 @@ public:
     } else {
       sep();
       result_ += '*';
-      save_value(*this, detail::as_mutable_ref(*x));
+      save(*this, detail::as_mutable_ref(*x));
       return true;
     }
   }
@@ -198,7 +204,7 @@ public:
       result_ += "null";
     } else {
       result_ += '*';
-      save_value(*this, detail::as_mutable_ref(*x));
+      save(*this, detail::as_mutable_ref(*x));
     }
     return true;
   }
@@ -228,7 +234,7 @@ private:
     sep();
     result_ += '[';
     while (first != sentinel)
-      save_value(*this, *first++);
+      save(*this, *first++);
     result_ += ']';
   }
 

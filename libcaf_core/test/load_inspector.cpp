@@ -44,7 +44,7 @@ struct testee : deserializer {
 
   bool load_field_failed(string_view, sec code) {
     set_error(make_error(code));
-    return stop;
+    return false;
   }
 
   size_t indent = 0;
@@ -63,14 +63,14 @@ struct testee : deserializer {
     indent += 2;
     log += "begin object ";
     log.insert(log.end(), object_name.begin(), object_name.end());
-    return ok;
+    return true;
   }
 
   bool end_object() override {
     indent -= 2;
     new_line();
     log += "end object";
-    return ok;
+    return true;
   }
 
   bool begin_field(string_view name) override {
@@ -78,7 +78,7 @@ struct testee : deserializer {
     indent += 2;
     log += "begin field ";
     log.insert(log.end(), name.begin(), name.end());
-    return ok;
+    return true;
   }
 
   bool begin_field(string_view name, bool& is_present) override {
@@ -87,7 +87,7 @@ struct testee : deserializer {
     log += "begin optional field ";
     log.insert(log.end(), name.begin(), name.end());
     is_present = false;
-    return ok;
+    return true;
   }
 
   bool begin_field(string_view name, span<const type_id_t>,
@@ -97,7 +97,7 @@ struct testee : deserializer {
     log += "begin variant field ";
     log.insert(log.end(), name.begin(), name.end());
     type_index = 0;
-    return ok;
+    return true;
   }
 
   bool begin_field(string_view name, bool& is_present, span<const type_id_t>,
@@ -107,14 +107,14 @@ struct testee : deserializer {
     log += "begin optional variant field ";
     log.insert(log.end(), name.begin(), name.end());
     is_present = false;
-    return ok;
+    return true;
   }
 
   bool end_field() override {
     indent -= 2;
     new_line();
     log += "end field";
-    return ok;
+    return true;
   }
 
   bool begin_tuple(size_t size) override {
@@ -122,28 +122,28 @@ struct testee : deserializer {
     indent += 2;
     log += "begin tuple of size ";
     log += std::to_string(size);
-    return ok;
+    return true;
   }
 
   bool end_tuple() override {
     indent -= 2;
     new_line();
     log += "end tuple";
-    return ok;
+    return true;
   }
 
   bool begin_key_value_pair() override {
     new_line();
     indent += 2;
     log += "begin key-value pair";
-    return ok;
+    return true;
   }
 
   bool end_key_value_pair() override {
     indent -= 2;
     new_line();
     log += "end key-value pair";
-    return ok;
+    return true;
   }
 
   bool begin_sequence(size_t& size) override {
@@ -152,14 +152,14 @@ struct testee : deserializer {
     indent += 2;
     log += "begin sequence of size ";
     log += std::to_string(size);
-    return ok;
+    return true;
   }
 
   bool end_sequence() override {
     indent -= 2;
     new_line();
     log += "end sequence";
-    return ok;
+    return true;
   }
 
   bool begin_associative_array(size_t& size) override {
@@ -168,21 +168,21 @@ struct testee : deserializer {
     indent += 2;
     log += "begin associative array of size ";
     log += std::to_string(size);
-    return ok;
+    return true;
   }
 
   bool end_associative_array() override {
     indent -= 2;
     new_line();
     log += "end associative array";
-    return ok;
+    return true;
   }
 
   bool value(bool& x) override {
     new_line();
     log += "bool value";
     x = false;
-    return ok;
+    return true;
   }
 
   template <class T>
@@ -192,7 +192,14 @@ struct testee : deserializer {
     log.insert(log.end(), tn.begin(), tn.end());
     log += " value";
     x = T{};
-    return ok;
+    return true;
+  }
+
+  bool value(byte& x) override {
+    new_line();
+    log += "byte value";
+    x = byte{};
+    return true;
   }
 
   bool value(int8_t& x) override {
@@ -256,7 +263,7 @@ struct testee : deserializer {
     log += "caf::span<caf::byte> value";
     for (auto& x : xs)
       x = byte{0};
-    return ok;
+    return true;
   }
 };
 
@@ -330,7 +337,7 @@ end object)_");
 
 CAF_TEST(load inspectors support optional) {
   optional<int32_t> x;
-  CAF_CHECK_EQUAL(f.apply_object(x), true);
+  CAF_CHECK_EQUAL(f.apply(x), true);
   CAF_CHECK_EQUAL(f.log, R"_(
 begin object anonymous
   begin optional field value

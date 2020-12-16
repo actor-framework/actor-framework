@@ -70,140 +70,97 @@ constexpr auto always_true = always_true_t{};
 template <class>
 constexpr bool assertion_failed_v = false;
 
+// TODO: remove with CAF 0.19
+template <class T, class Inspector, class Obj>
+class has_static_apply {
+private:
+  template <class U>
+  static auto sfinae(Inspector* f, Obj* x)
+    -> decltype(U::apply(*f, *x), std::true_type());
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using sfinae_type = decltype(sfinae<T>(nullptr, nullptr));
+
+public:
+  static constexpr bool value = sfinae_type::value;
+};
+
+template <class T, class Inspector, class Obj>
+constexpr bool has_static_apply_v = has_static_apply<T, Inspector, Obj>::value;
+
 // -- loading ------------------------------------------------------------------
 
+// TODO: remove with CAF 0.19
 template <class Inspector, class T>
-bool load_value(Inspector& f, T& x);
-
-template <class Inspector, class T>
-bool load_value(Inspector& f, T& x, inspector_access_type::specialization) {
+[[deprecated("please provide apply instead of apply_object/apply_value")]] //
+std::enable_if_t<!has_static_apply_v<inspector_access<T>, Inspector, T>, bool>
+load(Inspector& f, T& x, inspector_access_type::specialization) {
   return inspector_access<T>::apply_value(f, x);
 }
 
 template <class Inspector, class T>
-bool load_value(Inspector& f, T& x, inspector_access_type::inspect_value) {
-  return inspect_value(f, x);
+std::enable_if_t<has_static_apply_v<inspector_access<T>, Inspector, T>, bool>
+load(Inspector& f, T& x, inspector_access_type::specialization) {
+  return inspector_access<T>::apply(f, x);
 }
 
 template <class Inspector, class T>
-bool load_value(Inspector& f, T& x, inspector_access_type::inspect) {
+bool load(Inspector& f, T& x, inspector_access_type::inspect) {
   return inspect(f, x);
 }
 
 template <class Inspector, class T>
-bool load_value(Inspector& f, T& x, inspector_access_type::integral) {
-  auto tmp = detail::squashed_int_t<T>{0};
-  if (f.value(tmp)) {
-    x = static_cast<T>(tmp);
-    return true;
-  }
-  return false;
-}
-
-template <class Inspector, class T>
-bool load_value(Inspector& f, T& x, inspector_access_type::builtin) {
-  return f.builtin_inspect(x);
-}
-
-template <class Inspector, class T>
-bool load_value(Inspector& f, T& x, inspector_access_type::trivial) {
+bool load(Inspector& f, T& x, inspector_access_type::builtin) {
   return f.value(x);
 }
 
 template <class Inspector, class T>
-bool load_value(Inspector& f, T& x, inspector_access_type::enumeration) {
-  auto tmp = detail::squashed_int_t<std::underlying_type_t<T>>{0};
-  if (f.value(tmp)) {
-    x = static_cast<T>(tmp);
-    return true;
-  }
-  return false;
+bool load(Inspector& f, T& x, inspector_access_type::builtin_inspect) {
+  return f.builtin_inspect(x);
 }
 
 template <class Inspector, class T>
-bool load_value(Inspector& f, T& x, inspector_access_type::empty) {
+bool load(Inspector& f, T& x, inspector_access_type::empty) {
   return f.object(x).fields();
 }
 
 template <class Inspector, class T>
-bool load_value(Inspector& f, T&, inspector_access_type::unsafe) {
+bool load(Inspector& f, T&, inspector_access_type::unsafe) {
   f.emplace_error(sec::unsafe_type);
   return false;
 }
 
 template <class Inspector, class T, size_t N>
-bool load_value(Inspector& f, T (&xs)[N], inspector_access_type::array) {
-  if (!f.begin_tuple(N))
-    return false;
-  for (size_t index = 0; index < N; ++index)
-    if (!load_value(f, xs[index]))
-      return false;
-  return f.end_tuple();
-}
-
-template <class Inspector, class T, size_t... Ns>
-bool load_tuple(Inspector& f, T& xs, std::index_sequence<Ns...>) {
-  return f.begin_tuple(sizeof...(Ns))           //
-         && (load_value(f, get<Ns>(xs)) && ...) //
-         && f.end_tuple();
+bool load(Inspector& f, T (&xs)[N], inspector_access_type::tuple) {
+  return f.tuple(xs);
 }
 
 template <class Inspector, class T>
-bool load_value(Inspector& f, T& x, inspector_access_type::tuple) {
-  return load_tuple(f, x,
-                    std::make_index_sequence<std::tuple_size<T>::value>{});
+bool load(Inspector& f, T& xs, inspector_access_type::tuple) {
+  return f.tuple(xs);
 }
 
 template <class Inspector, class T>
-bool load_value(Inspector& f, T& x, inspector_access_type::map) {
-  x.clear();
-  size_t size = 0;
-  if (!f.begin_associative_array(size))
-    return false;
-  for (size_t i = 0; i < size; ++i) {
-    auto key = typename T::key_type{};
-    auto val = typename T::mapped_type{};
-    if (!(f.begin_key_value_pair() //
-          && load_value(f, key)    //
-          && load_value(f, val)    //
-          && f.end_key_value_pair()))
-      return false;
-    // A multimap returns an iterator, a regular map returns a pair.
-    auto emplace_result = x.emplace(std::move(key), std::move(val));
-    if constexpr (is_pair<decltype(emplace_result)>::value) {
-      if (!emplace_result.second) {
-        f.emplace_error(sec::runtime_error, "multiple key definitions");
-        return false;
-      }
-    }
-  }
-  return f.end_associative_array();
+bool load(Inspector& f, T& x, inspector_access_type::map) {
+  return f.map(x);
 }
 
 template <class Inspector, class T>
-bool load_value(Inspector& f, T& x, inspector_access_type::list) {
-  x.clear();
-  size_t size = 0;
-  if (!f.begin_sequence(size))
-    return false;
-  for (size_t i = 0; i < size; ++i) {
-    auto val = typename T::value_type{};
-    if (!detail::load_value(f, val))
-      return false;
-    x.insert(x.end(), std::move(val));
-  }
-  return f.end_sequence();
+bool load(Inspector& f, T& x, inspector_access_type::list) {
+  return f.list(x);
 }
 
 template <class Inspector, class T>
 std::enable_if_t<accepts_opaque_value<Inspector, T>::value, bool>
-load_value(Inspector& f, T& x, inspector_access_type::none) {
+load(Inspector& f, T& x, inspector_access_type::none) {
   return f.opaque_value(x);
 }
 
 template <class Inspector, class T>
 std::enable_if_t<!accepts_opaque_value<Inspector, T>::value, bool>
-load_value(Inspector&, T&, inspector_access_type::none) {
+load(Inspector&, T&, inspector_access_type::none) {
   static_assert(
     detail::assertion_failed_v<T>,
     "please provide an inspect overload for T or specialize inspector_access");
@@ -211,28 +168,8 @@ load_value(Inspector&, T&, inspector_access_type::none) {
 }
 
 template <class Inspector, class T>
-bool load_value(Inspector& f, T& x) {
-  return load_value(f, x, inspect_value_access_type<Inspector, T>());
-}
-
-template <class Inspector, class T>
-bool load_object(Inspector& f, T& x, inspector_access_type::specialization) {
-  return inspector_access<T>::apply_object(f, x);
-}
-
-template <class Inspector, class T>
-bool load_object(Inspector& f, T& x, inspector_access_type::inspect) {
-  return inspect(f, x);
-}
-
-template <class Inspector, class T, class Token>
-bool load_object(Inspector& f, T& x, Token) {
-  return f.object(x).fields(f.field("value", x));
-}
-
-template <class Inspector, class T>
-bool load_object(Inspector& f, T& x) {
-  return load_object(f, x, inspect_object_access_type<Inspector, T>());
+bool load(Inspector& f, T& x) {
+  return load(f, x, inspect_access_type<Inspector, T>());
 }
 
 template <class Inspector, class T, class IsValid, class SyncValue>
@@ -256,117 +193,75 @@ bool load_field(Inspector& f, string_view field_name, T& x, IsValid& is_valid,
 
 // -- saving -------------------------------------------------------------------
 
+// TODO: remove with CAF 0.19
 template <class Inspector, class T>
-bool save_value(Inspector& f, T& x);
-
-template <class Inspector, class T>
-bool save_value(Inspector& f, const T& x);
-
-template <class Inspector, class T>
-bool save_value(Inspector& f, T& x, inspector_access_type::specialization) {
+[[deprecated("please provide apply instead of apply_object/apply_value")]] //
+std::enable_if_t<!has_static_apply_v<inspector_access<T>, Inspector, T>, bool>
+save(Inspector& f, T& x, inspector_access_type::specialization) {
   return inspector_access<T>::apply_value(f, x);
 }
 
 template <class Inspector, class T>
-bool save_value(Inspector& f, T& x, inspector_access_type::inspect_value) {
-  return inspect_value(f, x);
+std::enable_if_t<has_static_apply_v<inspector_access<T>, Inspector, T>, bool>
+save(Inspector& f, T& x, inspector_access_type::specialization) {
+  return inspector_access<T>::apply(f, x);
 }
 
 template <class Inspector, class T>
-bool save_value(Inspector& f, T& x, inspector_access_type::inspect) {
+bool save(Inspector& f, T& x, inspector_access_type::inspect) {
   return inspect(f, x);
 }
 
 template <class Inspector, class T>
-bool save_value(Inspector& f, T& x, inspector_access_type::integral) {
-  auto tmp = static_cast<detail::squashed_int_t<T>>(x);
-  return f.value(tmp);
-}
-
-template <class Inspector, class T>
-bool save_value(Inspector& f, T& x, inspector_access_type::builtin) {
-  return f.builtin_inspect(x);
-}
-
-template <class Inspector, class T>
-bool save_value(Inspector& f, T& x, inspector_access_type::trivial) {
+bool save(Inspector& f, T& x, inspector_access_type::builtin) {
   return f.value(x);
 }
 
 template <class Inspector, class T>
-bool save_value(Inspector& f, T& x, inspector_access_type::enumeration) {
-  auto tmp = static_cast<detail::squashed_int_t<std::underlying_type_t<T>>>(x);
-  return f.value(tmp);
+bool save(Inspector& f, T& x, inspector_access_type::builtin_inspect) {
+  return f.builtin_inspect(x);
 }
 
 template <class Inspector, class T>
-bool save_value(Inspector& f, T& x, inspector_access_type::empty) {
+bool save(Inspector& f, T& x, inspector_access_type::empty) {
   return f.object(x).fields();
 }
 
 template <class Inspector, class T>
-bool save_value(Inspector& f, T&, inspector_access_type::unsafe) {
+bool save(Inspector& f, T&, inspector_access_type::unsafe) {
   f.emplace_error(sec::unsafe_type);
   return false;
 }
 
 template <class Inspector, class T, size_t N>
-bool save_value(Inspector& f, T (&xs)[N], inspector_access_type::array) {
-  if (!f.begin_tuple(N))
-    return false;
-  for (size_t index = 0; index < N; ++index)
-    if (!save_value(f, xs[index]))
-      return false;
-  return f.end_tuple();
-}
-
-template <class Inspector, class T, size_t... Ns>
-bool save_tuple(Inspector& f, T& xs, std::index_sequence<Ns...>) {
-  return f.begin_tuple(sizeof...(Ns))           //
-         && (save_value(f, get<Ns>(xs)) && ...) //
-         && f.end_tuple();
+bool save(Inspector& f, T (&xs)[N], inspector_access_type::tuple) {
+  return f.tuple(xs);
 }
 
 template <class Inspector, class T>
-bool save_value(Inspector& f, T& x, inspector_access_type::tuple) {
-  return save_tuple(f, x,
-                    std::make_index_sequence<std::tuple_size<T>::value>{});
+bool save(Inspector& f, const T& xs, inspector_access_type::tuple) {
+  return f.tuple(xs);
 }
 
 template <class Inspector, class T>
-bool save_value(Inspector& f, T& x, inspector_access_type::map) {
-  if (!f.begin_associative_array(x.size()))
-    return false;
-  for (auto&& kvp : x) {
-    if (!(f.begin_key_value_pair()     //
-          && save_value(f, kvp.first)  //
-          && save_value(f, kvp.second) //
-          && f.end_key_value_pair()))
-      return false;
-  }
-  return f.end_associative_array();
+bool save(Inspector& f, T& x, inspector_access_type::map) {
+  return f.map(x);
 }
 
 template <class Inspector, class T>
-bool save_value(Inspector& f, T& x, inspector_access_type::list) {
-  auto size = x.size();
-  if (!f.begin_sequence(size))
-    return false;
-  for (auto&& val : x)
-    if (!save_value(f, val))
-      return false;
-  return f.end_sequence();
+bool save(Inspector& f, T& x, inspector_access_type::list) {
+  return f.list(x);
 }
 
 template <class Inspector, class T>
 std::enable_if_t<accepts_opaque_value<Inspector, T>::value, bool>
-save_value(Inspector& f, T& x, inspector_access_type::none) {
+save(Inspector& f, T& x, inspector_access_type::none) {
   return f.opaque_value(x);
 }
 
 template <class Inspector, class T>
 std::enable_if_t<!accepts_opaque_value<Inspector, T>::value, bool>
-save_value(Inspector&, T&, inspector_access_type::none) {
+save(Inspector&, T&, inspector_access_type::none) {
   static_assert(
     detail::assertion_failed_v<T>,
     "please provide an inspect overload for T or specialize inspector_access");
@@ -374,34 +269,13 @@ save_value(Inspector&, T&, inspector_access_type::none) {
 }
 
 template <class Inspector, class T>
-bool save_value(Inspector& f, T& x) {
-  return save_value(f, x, inspect_value_access_type<Inspector, T>());
+bool save(Inspector& f, T& x) {
+  return save(f, x, inspect_access_type<Inspector, T>());
 }
 
 template <class Inspector, class T>
-bool save_value(Inspector& f, const T& x) {
-  return save_value(f, as_mutable_ref(x),
-                    inspect_value_access_type<Inspector, T>());
-}
-
-template <class Inspector, class T>
-bool save_object(Inspector& f, T& x, inspector_access_type::specialization) {
-  return inspector_access<T>::apply_object(f, x);
-}
-
-template <class Inspector, class T>
-bool save_object(Inspector& f, T& x, inspector_access_type::inspect) {
-  return inspect(f, x);
-}
-
-template <class Inspector, class T, class Token>
-bool save_object(Inspector& f, T& x, Token) {
-  return f.object(x).fields(f.field("value", x));
-}
-
-template <class Inspector, class T>
-bool save_object(Inspector& f, T& x) {
-  return save_object(f, x, inspect_object_access_type<Inspector, T>());
+bool save(Inspector& f, const T& x) {
+  return save(f, as_mutable_ref(x), inspect_access_type<Inspector, T>());
 }
 
 template <class Inspector, class T>
@@ -422,77 +296,13 @@ bool save_field(Inspector& f, string_view field_name, IsPresent& is_present,
   return impl::save_field(f, field_name, is_present, get);
 }
 
-// -- dispatching to save or load using getter/setter API ----------------------
-
-template <class Inspector, class T>
-bool split_save_load(Inspector& f, T& x) {
-  if constexpr (Inspector::is_loading)
-    return load_value(f, x);
-  else
-    return save_value(f, x);
-}
-
-template <class Inspector, class Get, class Set>
-bool split_save_load(Inspector& f, Get&& get, Set&& set) {
-  using value_type = std::decay_t<decltype(get())>;
-  if constexpr (Inspector::is_loading) {
-    auto tmp = value_type{};
-    if (load_value(f, tmp))
-      return set(std::move(tmp));
-    return false;
-  } else {
-    auto&& x = get();
-    return save_value(f, x);
-  }
-}
-
 } // namespace caf::detail
 
 namespace caf {
 
-/// Default implementation for @ref inspector_access.
-template <class T>
-struct default_inspector_access : inspector_access_base<T> {
-  // -- interface functions ----------------------------------------------------
+// -- customization points -----------------------------------------------------
 
-  /// Applies `x` as an object to `f`.
-  template <class Inspector>
-  [[nodiscard]] static bool apply_object(Inspector& f, T& x) {
-    // Dispatch to user-provided `inspect` overload or assume a trivial type.
-    if constexpr (std::is_empty<T>::value) {
-      return f.object(x).fields();
-    } else {
-      return f.object(x).fields(f.field("value", x));
-    }
-  }
-
-  /// Applies `x` as a single value to `f`.
-  template <class Inspector>
-  [[nodiscard]] static bool apply_value(Inspector& f, T& x) {
-    constexpr auto token = nested_inspect_value_access_type<Inspector, T>();
-    if constexpr (Inspector::is_loading)
-      return detail::load_value(f, x, token);
-    else
-      return detail::save_value(f, x, token);
-  }
-
-  // -- deprecated API ---------------------------------------------------------
-
-  template <class Inspector>
-  [[deprecated("inspect() overloads should return bool")]] //
-  [[nodiscard]] static bool
-  apply_deprecated(Inspector& f, T& x) {
-    if (auto err = inspect(f, x)) {
-      f.emplace_error(std::move(err));
-      return false;
-    }
-    return true;
-  }
-};
-
-/// Customization point for adding support for a custom type. The default
-/// implementation requires an `inspect` overload for `T` that is available via
-/// ADL.
+/// Customization point for adding support for a custom type.
 template <class T>
 struct inspector_access;
 
@@ -559,13 +369,20 @@ struct optional_inspector_access {
   using value_type = typename traits::value_type;
 
   template <class Inspector>
-  [[nodiscard]] static bool apply_object(Inspector& f, container_type& x) {
+  [[nodiscard]] static bool apply(Inspector& f, container_type& x) {
     return f.object(x).fields(f.field("value", x));
   }
 
   template <class Inspector>
-  [[nodiscard]] static bool apply_value(Inspector& f, container_type& x) {
-    return apply_object(f, x);
+  [[deprecated("use apply instead")]] static bool
+  apply_object(Inspector& f, container_type& x) {
+    return apply(f, x);
+  }
+
+  template <class Inspector>
+  [[deprecated("use apply instead")]] static bool
+  apply_value(Inspector& f, container_type& x) {
+    return apply(f, x);
   }
 
   template <class Inspector>
@@ -696,18 +513,25 @@ struct variant_inspector_access {
   using traits = variant_inspector_traits<T>;
 
   template <class Inspector>
-  [[nodiscard]] static bool apply_object(Inspector& f, value_type& x) {
+  [[nodiscard]] static bool apply(Inspector& f, value_type& x) {
     return f.object(x).fields(f.field("value", x));
   }
 
   template <class Inspector>
-  [[nodiscard]] static bool apply_value(Inspector& f, value_type& x) {
-    return apply_object(f, x);
+  [[deprecated("use apply instead")]] static bool
+  apply_object(Inspector& f, T& x) {
+    return apply(f, x);
+  }
+
+  template <class Inspector>
+  [[deprecated("use apply instead")]] static bool
+  apply_value(Inspector& f, T& x) {
+    return apply(f, x);
   }
 
   template <class Inspector>
   static bool save_field(Inspector& f, string_view field_name, value_type& x) {
-    auto g = [&f](auto& y) { return detail::save_value(f, y); };
+    auto g = [&f](auto& y) { return detail::save(f, y); };
     return f.begin_field(field_name, make_span(traits::allowed_types),
                          traits::type_index(x)) //
            && traits::visit(g, x)               //
@@ -720,7 +544,7 @@ struct variant_inspector_access {
     auto allowed_types = make_span(traits::allowed_types);
     if (is_present()) {
       auto&& x = get();
-      auto g = [&f](auto& y) { return detail::save_value(f, y); };
+      auto g = [&f](auto& y) { return detail::save(f, y); };
       return f.begin_field(field_name, true, allowed_types,
                            traits::type_index(x)) //
              && traits::visit(g, x)               //
@@ -735,7 +559,7 @@ struct variant_inspector_access {
                                  value_type& x, type_id_t runtime_type) {
     auto res = false;
     auto type_found = traits::load(runtime_type, [&](auto& tmp) {
-      if (!detail::load_value(f, tmp))
+      if (!detail::load(f, tmp))
         return;
       traits::assign(x, std::move(tmp));
       res = true;
@@ -876,12 +700,7 @@ struct inspector_access<std::chrono::duration<Rep, Period>>
   using value_type = std::chrono::duration<Rep, Period>;
 
   template <class Inspector>
-  static bool apply_object(Inspector& f, value_type& x) {
-    return f.object(x).fields(f.field("value", x));
-  }
-
-  template <class Inspector>
-  static bool apply_value(Inspector& f, value_type& x) {
+  static bool apply(Inspector& f, value_type& x) {
     if (f.has_human_readable_format()) {
       auto get = [&x] {
         std::string str;
@@ -892,14 +711,27 @@ struct inspector_access<std::chrono::duration<Rep, Period>>
         auto err = detail::parse(str, x);
         return !err;
       };
-      return detail::split_save_load(f, get, set);
+      return f.apply(get, set);
+    } else {
+      auto get = [&x] { return x.count(); };
+      auto set = [&x](Rep value) {
+        x = std::chrono::duration<Rep, Period>{value};
+        return true;
+      };
+      return f.apply(get, set);
     }
-    auto get = [&x] { return x.count(); };
-    auto set = [&x](Rep value) {
-      x = std::chrono::duration<Rep, Period>{value};
-      return true;
-    };
-    return detail::split_save_load(f, get, set);
+  }
+
+  template <class Inspector>
+  [[deprecated("use apply instead")]] static bool
+  apply_object(Inspector& f, value_type& x) {
+    return apply(f, x);
+  }
+
+  template <class Inspector>
+  [[deprecated("use apply instead")]] static bool
+  apply_value(Inspector& f, value_type& x) {
+    return apply(f, x);
   }
 };
 
@@ -912,12 +744,7 @@ struct inspector_access<
     = std::chrono::time_point<std::chrono::system_clock, Duration>;
 
   template <class Inspector>
-  static bool apply_object(Inspector& f, value_type& x) {
-    return f.object(x).fields(f.field("value", x));
-  }
-
-  template <class Inspector>
-  static bool apply_value(Inspector& f, value_type& x) {
+  static bool apply(Inspector& f, value_type& x) {
     if (f.has_human_readable_format()) {
       auto get = [&x] {
         std::string str;
@@ -928,15 +755,45 @@ struct inspector_access<
         auto err = detail::parse(str, x);
         return !err;
       };
-      return detail::split_save_load(f, get, set);
+      return f.apply(get, set);
+    } else {
+      using rep_type = typename Duration::rep;
+      auto get = [&x] { return x.time_since_epoch().count(); };
+      auto set = [&x](rep_type value) {
+        x = value_type{Duration{value}};
+        return true;
+      };
+      return f.apply(get, set);
     }
-    using rep_type = typename Duration::rep;
-    auto get = [&x] { return x.time_since_epoch().count(); };
-    auto set = [&x](rep_type value) {
-      x = value_type{Duration{value}};
-      return true;
-    };
-    return detail::split_save_load(f, get, set);
+  }
+
+  template <class Inspector>
+  [[deprecated("use apply instead")]] static bool
+  apply_object(Inspector& f, value_type& x) {
+    return apply(f, x);
+  }
+
+  template <class Inspector>
+  [[deprecated("use apply instead")]] static bool
+  apply_value(Inspector& f, value_type& x) {
+    return apply(f, x);
+  }
+};
+
+// -- deprecated API -----------------------------------------------------------
+
+template <class T>
+struct default_inspector_access : inspector_access_base<T> {
+  template <class Inspector>
+  [[deprecated("call f.apply(x) instead")]] static bool
+  apply_object(Inspector& f, T& x) {
+    return f.apply(x);
+  }
+
+  template <class Inspector>
+  [[deprecated("call f.apply(x) instead")]] static bool
+  apply_value(Inspector& f, T& x) {
+    return f.apply(x);
   }
 };
 

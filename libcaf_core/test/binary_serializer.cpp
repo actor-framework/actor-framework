@@ -58,7 +58,7 @@ struct fixture {
   auto save(const Ts&... xs) {
     byte_buffer result;
     binary_serializer sink{nullptr, result};
-    if (!sink.apply_objects(xs...))
+    if (!(sink.apply(xs) && ...))
       CAF_FAIL("binary_serializer failed to save: " << sink.get_error());
     return result;
   }
@@ -66,7 +66,7 @@ struct fixture {
   template <class... Ts>
   void save_to_buf(byte_buffer& data, const Ts&... xs) {
     binary_serializer sink{nullptr, data};
-    if (!sink.apply_objects(xs...))
+    if (!(sink.apply(xs) && ...))
       CAF_FAIL("binary_serializer failed to save: " << sink.get_error());
   }
 };

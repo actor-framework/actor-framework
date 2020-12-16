@@ -20,7 +20,9 @@
 
 #include <cstdint>
 #include <string>
+#include <type_traits>
 
+#include "caf/default_enum_inspect.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/is_error_code_enum.hpp"
@@ -80,7 +82,20 @@ enum class pec : uint8_t {
   invalid_state,
 };
 
+/// @relates pec
 CAF_CORE_EXPORT std::string to_string(pec);
+
+/// @relates pec
+CAF_CORE_EXPORT bool from_string(string_view, pec&);
+
+/// @relates pec
+CAF_CORE_EXPORT bool from_integer(std::underlying_type_t<pec>, pec&);
+
+/// @relates pec
+template <class Inspector>
+bool inspect(Inspector& f, pec& x) {
+  return default_enum_inspect(f, x);
+}
 
 } // namespace caf
 

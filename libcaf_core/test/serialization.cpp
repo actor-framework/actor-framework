@@ -30,6 +30,7 @@
 #include <limits>
 #include <list>
 #include <locale>
+#include <map>
 #include <memory>
 #include <new>
 #include <set>
@@ -52,16 +53,65 @@
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/safe_equal.hpp"
+#include "caf/detail/stringification_inspector.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/message.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/ref_counted.hpp"
+#include "caf/sec.hpp"
 #include "caf/serializer.hpp"
 #include "caf/variant.hpp"
 
+struct opaque {
+  int secret;
+};
+
+CAF_ALLOW_UNSAFE_MESSAGE_TYPE(opaque)
+
+struct the_great_unknown {
+  int secret;
+};
+
 using namespace caf;
+
+using bs = binary_serializer;
+
+using si = detail::stringification_inspector;
+
+using iat = inspector_access_type;
+
+template <class Inspector, class T>
+struct access_of {
+  template <class What>
+  static constexpr bool is
+    = std::is_same<decltype(inspect_access_type<Inspector, T>()), What>::value;
+};
+
+static_assert(access_of<bs, variant<int, double>>::is<iat::specialization>);
+
+static_assert(access_of<bs, sec>::is<iat::inspect>);
+
+static_assert(access_of<bs, int>::is<iat::builtin>);
+
+static_assert(access_of<bs, dummy_tag_type>::is<iat::empty>);
+
+static_assert(access_of<bs, opaque>::is<iat::unsafe>);
+
+static_assert(access_of<bs, std::tuple<int, double>>::is<iat::tuple>);
+
+static_assert(access_of<bs, std::map<int, int>>::is<iat::map>);
+
+static_assert(access_of<bs, std::vector<bool>>::is<iat::list>);
+
+static_assert(access_of<bs, the_great_unknown>::is<iat::none>);
+
+// The stringification inspector picks up to_string via builtin_inspect.
+
+static_assert(access_of<si, sec>::is<iat::builtin_inspect>);
+
+static_assert(access_of<si, timespan>::is<iat::builtin_inspect>);
 
 const char* test_enum_strings[] = {
   "a",
@@ -111,7 +161,7 @@ struct fixture : test_coordinator_fixture<> {
   byte_buffer serialize(const Ts&... xs) {
     byte_buffer buf;
     binary_serializer sink{sys, buf};
-    if (!sink.apply_objects(xs...))
+    if (!(sink.apply(xs) && ...))
       CAF_FAIL("serialization failed: "
                << sink.get_error()
                << ", data: " << deep_to_string(std::forward_as_tuple(xs...)));
@@ -121,7 +171,7 @@ struct fixture : test_coordinator_fixture<> {
   template <class... Ts>
   void deserialize(const byte_buffer& buf, Ts&... xs) {
     binary_deserializer source{sys, buf};
-    if (!source.apply_objects(xs...))
+    if (!(source.apply(xs) && ...))
       CAF_FAIL("deserialization failed: " << source.get_error());
   }
 

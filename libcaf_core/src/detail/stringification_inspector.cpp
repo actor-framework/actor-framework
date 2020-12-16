@@ -57,7 +57,7 @@ bool stringification_inspector::begin_object(string_view name) {
   } else {
     in_string_object_ = true;
   }
-  return ok;
+  return true;
 }
 
 bool stringification_inspector::end_object() {
@@ -65,11 +65,11 @@ bool stringification_inspector::end_object() {
     result_ += ')';
   else
     in_string_object_ = false;
-  return ok;
+  return true;
 }
 
 bool stringification_inspector::begin_field(string_view) {
-  return ok;
+  return true;
 }
 
 bool stringification_inspector::begin_field(string_view, bool is_present) {
@@ -78,12 +78,12 @@ bool stringification_inspector::begin_field(string_view, bool is_present) {
     result_ += "null";
   else
     result_ += '*';
-  return ok;
+  return true;
 }
 
 bool stringification_inspector::begin_field(string_view, span<const type_id_t>,
                                             size_t) {
-  return ok;
+  return true;
 }
 
 bool stringification_inspector::begin_field(string_view, bool is_present,
@@ -93,22 +93,26 @@ bool stringification_inspector::begin_field(string_view, bool is_present,
     result_ += "null";
   else
     result_ += '*';
-  return ok;
+  return true;
 }
 
 bool stringification_inspector::end_field() {
-  return ok;
+  return true;
 }
 
 bool stringification_inspector::begin_sequence(size_t) {
   sep();
   result_ += '[';
-  return ok;
+  return true;
 }
 
 bool stringification_inspector::end_sequence() {
   result_ += ']';
-  return ok;
+  return true;
+}
+
+bool stringification_inspector::value(byte x) {
+  return value(span<const byte>(&x, 1));
 }
 
 bool stringification_inspector::value(bool x) {
@@ -228,7 +232,13 @@ bool stringification_inspector::int_value(uint64_t x) {
   return true;
 }
 
-bool stringification_inspector::value(const std::vector<bool>& xs) {
+bool stringification_inspector::value(span<const byte> x) {
+  sep();
+  detail::append_hex(result_, x.data(), x.size());
+  return true;
+}
+
+bool stringification_inspector::list(const std::vector<bool>& xs) {
   begin_sequence(xs.size());
   for (bool x : xs)
     value(x);

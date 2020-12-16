@@ -41,17 +41,13 @@ constexpr i64 operator""_i64(unsigned long long int x) {
 using i64_list = std::vector<i64>;
 
 struct fixture {
-  settings xs;
+  config_value x;
 
   template <class T>
   void set(const T& value) {
-    config_value val;
-    config_value_writer writer{&val};
-    if (!detail::save_value(writer, value))
+    config_value_writer writer{&x};
+    if (!detail::save(writer, value))
       CAF_FAIL("failed two write to settings: " << writer.get_error());
-    if (!holds_alternative<settings>(val))
-      CAF_FAIL("serializing T did not result in a dictionary");
-    xs = std::move(caf::get<settings>(val));
   }
 
   template <class T>
@@ -63,7 +59,10 @@ struct fixture {
 
   template <class T>
   optional<T> get(string_view key) {
-    return get<T>(xs, key);
+    if (auto* xs = get_if<settings>(&x))
+      return get<T>(*xs, key);
+    else
+      CAF_FAIL("fixture does not contain a dictionary");
   }
 };
 
@@ -101,7 +100,6 @@ CAF_TEST(empty types and maps become dictionaries) {
   tst.v7["two"] = 2;
   tst.v7["three"] = 3;
   set(tst);
-  CAF_MESSAGE(xs);
   CAF_CHECK_EQUAL(get<settings>("v1"), settings{});
   CAF_CHECK_EQUAL(get<i64>("v2"), 42_i64);
   CAF_CHECK_EQUAL(get<i64_list>("v3"), i64_list({-1, -2, -3, -4}));
@@ -126,6 +124,12 @@ CAF_TEST(empty types and maps become dictionaries) {
   CAF_CHECK_EQUAL(get<i64>("v7.two"), 2_i64);
   CAF_CHECK_EQUAL(get<i64>("v7.three"), 3_i64);
   CAF_CHECK_EQUAL(get<config_value::list>("v8"), config_value::list());
+}
+
+CAF_TEST(custom inspect overloads may produce single values) {
+  auto tue = weekday::tuesday;
+  set(tue);
+  CAF_CHECK_EQUAL(x, "tuesday"s);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

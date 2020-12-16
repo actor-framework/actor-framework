@@ -136,19 +136,11 @@ struct inspector_access<cow_tuple<Ts...>> {
   using value_type = cow_tuple<Ts...>;
 
   template <class Inspector>
-  static bool apply_object(Inspector& f, value_type& x) {
+  static bool apply(Inspector& f, value_type& x) {
     if constexpr (Inspector::is_loading)
-      return detail::load_object(f, x.unshared());
+      return f.tuple(x.unshared());
     else
-      return detail::save_object(f, detail::as_mutable_ref(x.data()));
-  }
-
-  template <class Inspector>
-  static bool apply_value(Inspector& f, value_type& x) {
-    if constexpr (Inspector::is_loading)
-      return detail::load_value(f, x.unshared());
-    else
-      return detail::save_value(f, detail::as_mutable_ref(x.data()));
+      return f.tuple(x.data());
   }
 
   template <class Inspector>

@@ -37,6 +37,9 @@ public:
   /// Hash size in bytes.
   static constexpr size_t hash_size = 20;
 
+  /// Alias to the super types.
+  using super = save_inspector_base<sha1>;
+
   /// Array type for storing a 160-bit hash.
   using result_type = std::array<byte, hash_size>;
 
@@ -152,7 +155,7 @@ public:
   static result_type compute(Ts&&... xs) noexcept {
     using detail::as_mutable_ref;
     sha1 f;
-    auto unused = f.apply_objects(xs...);
+    auto unused = f.apply(xs...);
     static_cast<void>(unused); // Always true.
     return f.result();
   }

@@ -40,8 +40,30 @@ inline std::string to_string(protocol::transport x) {
   return x == protocol::tcp ? "TCP" : "UDP";
 }
 
+template <class Inspector>
+bool inspect(Inspector& f, protocol::transport& x) {
+  using integer_type = std::underlying_type_t<protocol::transport>;
+  auto get = [&x] { return static_cast<integer_type>(x); };
+  auto set = [&x](integer_type val) {
+    x = static_cast<protocol::transport>(val);
+    return true;
+  };
+  return f.apply(get, set);
+}
+
 inline std::string to_string(protocol::network x) {
   return x == protocol::ipv4 ? "IPv4" : "IPv6";
+}
+
+template <class Inspector>
+bool inspect(Inspector& f, protocol::network& x) {
+  using integer_type = std::underlying_type_t<protocol::network>;
+  auto get = [&x] { return static_cast<integer_type>(x); };
+  auto set = [&x](integer_type val) {
+    x = static_cast<protocol::network>(val);
+    return true;
+  };
+  return f.apply(get, set);
 }
 
 template <class Inspector>

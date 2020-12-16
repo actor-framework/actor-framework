@@ -22,10 +22,12 @@
 #include <cstdint>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 #include "caf/byte.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/squashed_int.hpp"
 #include "caf/fwd.hpp"
 #include "caf/meta/annotation.hpp"
 #include "caf/meta/save_callback.hpp"
@@ -40,6 +42,10 @@ namespace caf {
 /// Technology-independent serialization interface.
 class CAF_CORE_EXPORT serializer : public save_inspector_base<serializer> {
 public:
+  // -- member types -----------------------------------------------------------
+
+  using super = save_inspector_base<serializer>;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit serializer(actor_system& sys) noexcept;
@@ -116,9 +122,12 @@ public:
   /// @note the default implementation calls `end_sequence()`.
   virtual bool end_associative_array();
 
-  /// Adds the primitive type `x` to the output.
-  /// @param x The primitive value.
-  /// @returns A non-zero error code on failure, `sec::success` otherwise.
+  /// Adds `x` to the output.
+  /// @param x A value for a builtin type.
+  /// @returns `true` on success, `false` otherwise.
+  virtual bool value(byte x) = 0;
+
+  /// @copydoc value
   virtual bool value(bool x) = 0;
 
   /// @copydoc value
@@ -146,6 +155,12 @@ public:
   virtual bool value(uint64_t x) = 0;
 
   /// @copydoc value
+  template <class T>
+  std::enable_if_t<std::is_integral<T>::value, bool> value(T x) {
+    return value(static_cast<detail::squashed_int_t<T>>(x));
+  }
+
+  /// @copydoc value
   virtual bool value(float x) = 0;
 
   /// @copydoc value
@@ -168,10 +183,12 @@ public:
   /// @returns A non-zero error code on failure, `sec::success` otherwise.
   virtual bool value(span<const byte> x) = 0;
 
+  using super::list;
+
   /// Adds each boolean in `xs` to the output. Derived classes can override this
   /// member function to pack the booleans, for example to avoid using one byte
   /// for each value in a binary output format.
-  virtual bool value(const std::vector<bool>& xs);
+  virtual bool list(const std::vector<bool>& xs);
 
 protected:
   /// Provides access to the ::proxy_registry and to the ::actor_system.

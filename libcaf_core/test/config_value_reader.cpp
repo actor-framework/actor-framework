@@ -43,13 +43,13 @@ constexpr i64 operator""_i64(unsigned long long int x) {
 using i64_list = std::vector<i64>;
 
 struct fixture {
-  settings xs;
+  config_value x;
 
   template <class T>
   void deserialize(const config_value& src, T& value) {
     config_value_reader reader{&src};
-    if (!detail::load_value(reader, value))
-      CAF_FAIL("failed to deserialize from settings: " << reader.get_error());
+    if (!detail::load(reader, value))
+      CAF_FAIL("deserialization failed: " << reader.get_error());
   }
 
   template <class T>
@@ -59,7 +59,7 @@ struct fixture {
 
   template <class T>
   void deserialize(T& value) {
-    return deserialize(xs, value);
+    return deserialize(x, value);
   }
 
   template <class T>
@@ -71,7 +71,10 @@ struct fixture {
 
   template <class T>
   optional<T> get(string_view key) {
-    return get<T>(xs, key);
+    if (auto* xs = get_if<settings>(&x))
+      return get<T>(*xs, key);
+    else
+      CAF_FAIL("fixture does not contain a dictionary");
   }
 };
 
@@ -81,12 +84,14 @@ CAF_TEST_FIXTURE_SCOPE(config_value_reader_tests, fixture)
 
 CAF_TEST(readers deserialize builtin types from config values) {
   std::string value;
+  auto& xs = x.as_dictionary();
   put(xs, "foo", "bar");
   deserialize(xs["foo"], value);
   CAF_CHECK_EQUAL(value, "bar");
 }
 
 CAF_TEST(readers deserialize simple objects from configs) {
+  auto& xs = x.as_dictionary();
   put(xs, "foo", "hello");
   put(xs, "bar", "world");
   foobar fb;
@@ -97,6 +102,7 @@ CAF_TEST(readers deserialize simple objects from configs) {
 
 CAF_TEST(readers deserialize complex objects from configs) {
   CAF_MESSAGE("fill a dictionary with data for a 'basics' object");
+  auto& xs = x.as_dictionary();
   put(xs, "v1", settings{});
   put(xs, "v2", 42_i64);
   put(xs, "v3", i64_list({1, 2, 3, 4}));
@@ -140,11 +146,11 @@ CAF_TEST(readers deserialize objects from the output of writers) {
     line l{{10, 20, 30}, {70, 60, 50}};
     config_value tmp;
     config_value_writer writer{&tmp};
-    if (!detail::save_value(writer, l))
+    if (!detail::save(writer, l))
       CAF_FAIL("failed two write to settings: " << writer.get_error());
     if (!holds_alternative<settings>(tmp))
       CAF_FAIL("writer failed to produce a dictionary");
-    xs = std::move(caf::get<settings>(tmp));
+    x.as_dictionary() = std::move(caf::get<settings>(tmp));
   }
   CAF_MESSAGE("serialize and verify the 'line' object");
   {

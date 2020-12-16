@@ -200,6 +200,20 @@ enum class test_enum : int32_t {
 // Implemented in serialization.cpp
 std::string to_string(test_enum x);
 
+template <class Inspector>
+bool inspect(Inspector& f, test_enum& x) {
+  auto get = [&x] { return static_cast<int32_t>(x); };
+  auto set = [&x](int32_t val) {
+    if (val >= 0 && val <= 2) {
+      x = static_cast<test_enum>(val);
+      return true;
+    } else {
+      return false;
+    }
+  };
+  return f.apply(get, set);
+}
+
 // Used in serializer.cpp and deserializer.cpp
 struct test_data {
   int32_t i32;
@@ -231,9 +245,53 @@ enum class dummy_enum_class : short { foo, bar };
   return x == dummy_enum_class::foo ? "foo" : "bar";
 }
 
+template <class Inspector>
+bool inspect(Inspector& f, dummy_enum_class& x) {
+  auto get = [&x] { return static_cast<short>(x); };
+  auto set = [&x](short val) {
+    if (val >= 0 && val <= 1) {
+      x = static_cast<dummy_enum_class>(val);
+      return true;
+    } else {
+      return false;
+    }
+  };
+  return f.apply(get, set);
+}
+
 enum class level { all, trace, debug, warning, error };
 
+template <class Inspector>
+bool inspect(Inspector& f, level& x) {
+  using integer_type = std::underlying_type_t<level>;
+  auto get = [&x] { return static_cast<integer_type>(x); };
+  auto set = [&x](integer_type val) {
+    if (val >= 0 && val <= 4) {
+      x = static_cast<level>(val);
+      return true;
+    } else {
+      return false;
+    }
+  };
+  return f.apply(get, set);
+}
+
 enum dummy_enum { de_foo, de_bar };
+
+template <class Inspector>
+bool inspect(Inspector& f, dummy_enum& x) {
+  using integer_type = std::underlying_type_t<dummy_enum>;
+  auto get = [&x] { return static_cast<integer_type>(x); };
+  auto set = [&x](integer_type val) {
+    if (val >= 0 && val <= 1) {
+      x = static_cast<dummy_enum>(val);
+      return true;
+    } else {
+      return false;
+    }
+  };
+  return f.apply(get, set);
+}
 
 // -- type IDs for for all unit test suites ------------------------------------
 

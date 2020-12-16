@@ -32,7 +32,7 @@ struct inspector_access_base {
   template <class Inspector, class IsValid, class SyncValue>
   static bool load_field(Inspector& f, string_view field_name, T& x,
                          IsValid& is_valid, SyncValue& sync_value) {
-    if (f.begin_field(field_name) && f.apply_value(x)) {
+    if (f.begin_field(field_name) && f.apply(x)) {
       if (!is_valid(x)) {
         f.emplace_error(sec::field_invariant_check_failed,
                         to_string(field_name));
@@ -58,7 +58,7 @@ struct inspector_access_base {
     if (!f.begin_field(field_name, is_present))
       return false;
     if (is_present) {
-      if (!f.apply_value(x))
+      if (!f.apply(x))
         return false;
       if (!is_valid(x)) {
         f.emplace_error(sec::field_invariant_check_failed,
@@ -80,7 +80,7 @@ struct inspector_access_base {
   template <class Inspector>
   static bool save_field(Inspector& f, string_view field_name, T& x) {
     return f.begin_field(field_name) //
-           && f.apply_value(x)       //
+           && f.apply(x)             //
            && f.end_field();
   }
 
@@ -91,7 +91,7 @@ struct inspector_access_base {
     if (is_present()) {
       auto&& x = get();
       return f.begin_field(field_name, true) //
-             && f.apply_value(x)             //
+             && f.apply(x)                   //
              && f.end_field();
     }
     return f.begin_field(field_name, false) && f.end_field();
