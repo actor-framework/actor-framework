@@ -47,9 +47,9 @@ bool from_integer(std::underlying_type_t<inbox_result> in,
   switch(result) {
     default:
       return false;
-  case inbox_result::success:
-  case inbox_result::unblocked_reader:
-  case inbox_result::queue_closed:
+    case inbox_result::success:
+    case inbox_result::unblocked_reader:
+    case inbox_result::queue_closed:
       out = result;
       return true;
   };

@@ -166,7 +166,7 @@ int main(int argc, char** argv) {
       << "    default:\n"
       << "      return false;\n";
   for (auto& val : enum_values)
-    out << "  case " << case_label_prefix << val << ":\n";
+    out << "    case " << case_label_prefix << val << ":\n";
   out << "      out = result;\n"
       << "      return true;\n"
       << "  };\n"

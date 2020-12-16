@@ -71,14 +71,14 @@ bool from_integer(std::underlying_type_t<exit_reason> in,
   switch(result) {
     default:
       return false;
-  case exit_reason::normal:
-  case exit_reason::unhandled_exception:
-  case exit_reason::unknown:
-  case exit_reason::out_of_workers:
-  case exit_reason::user_shutdown:
-  case exit_reason::kill:
-  case exit_reason::remote_link_unreachable:
-  case exit_reason::unreachable:
+    case exit_reason::normal:
+    case exit_reason::unhandled_exception:
+    case exit_reason::unknown:
+    case exit_reason::out_of_workers:
+    case exit_reason::user_shutdown:
+    case exit_reason::kill:
+    case exit_reason::remote_link_unreachable:
+    case exit_reason::unreachable:
       out = result;
       return true;
   };

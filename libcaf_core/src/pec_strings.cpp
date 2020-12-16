@@ -146,29 +146,29 @@ bool from_integer(std::underlying_type_t<pec> in,
   switch(result) {
     default:
       return false;
-  case pec::success:
-  case pec::trailing_character:
-  case pec::unexpected_eof:
-  case pec::unexpected_character:
-  case pec::timespan_overflow:
-  case pec::fractional_timespan:
-  case pec::too_many_characters:
-  case pec::invalid_escape_sequence:
-  case pec::unexpected_newline:
-  case pec::integer_overflow:
-  case pec::integer_underflow:
-  case pec::exponent_underflow:
-  case pec::exponent_overflow:
-  case pec::type_mismatch:
-  case pec::not_an_option:
-  case pec::invalid_argument:
-  case pec::missing_argument:
-  case pec::invalid_category:
-  case pec::invalid_field_name:
-  case pec::repeated_field_name:
-  case pec::missing_field:
-  case pec::invalid_range_expression:
-  case pec::invalid_state:
+    case pec::success:
+    case pec::trailing_character:
+    case pec::unexpected_eof:
+    case pec::unexpected_character:
+    case pec::timespan_overflow:
+    case pec::fractional_timespan:
+    case pec::too_many_characters:
+    case pec::invalid_escape_sequence:
+    case pec::unexpected_newline:
+    case pec::integer_overflow:
+    case pec::integer_underflow:
+    case pec::exponent_underflow:
+    case pec::exponent_overflow:
+    case pec::type_mismatch:
+    case pec::not_an_option:
+    case pec::invalid_argument:
+    case pec::missing_argument:
+    case pec::invalid_category:
+    case pec::invalid_field_name:
+    case pec::repeated_field_name:
+    case pec::missing_field:
+    case pec::invalid_range_expression:
+    case pec::invalid_state:
       out = result;
       return true;
   };

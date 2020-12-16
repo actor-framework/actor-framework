@@ -48,9 +48,9 @@ bool from_integer(std::underlying_type_t<operation> in,
   switch(result) {
     default:
       return false;
-  case operation::read:
-  case operation::write:
-  case operation::propagate_error:
+    case operation::read:
+    case operation::write:
+    case operation::propagate_error:
       out = result;
       return true;
   };

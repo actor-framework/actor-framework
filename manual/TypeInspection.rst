@@ -6,8 +6,8 @@ Type Inspection
 We designed CAF with distributed systems in mind. Hence, all message types must
 be serializable. Using a message type that is not serializable causes a compiler
 error unless explicitly listed as unsafe message type by the user (see
-:ref:`unsafe-message-type`). Any unsafe message type may used only for messages
-that remain local, i.e., never cross the wire.
+:ref:`unsafe-message-type`). Any unsafe message type may be used only for
+messages that remain local, i.e., never cross the wire.
 
 .. _type-inspection-data-model:
 
@@ -27,7 +27,7 @@ lists
 
 tuples
   Fixed-sized container types such as ``std::tuple`` or ``std::array`` as well
-  as builtin C array types.
+  as built-in C array types.
 
 maps
   Dynamically-sized container types with key/value pairs such as ``std::map``.
@@ -191,8 +191,8 @@ For our ``id`` type, the ``inspect`` overload may instead look as follows:
     return f.apply(x.value);
   }
 
-With this implementation instead of the previous one, inspectors simply read or
-write strings whenever they encounter an ``id`` as value. This simplifies our
+In contrast to the previous implementation, inspectors now simply read or write
+the strings as values whenever they encounter an ``id``. This simplifies our
 config file from before and thus gives a much cleaner interface to users:
 
 .. code-block:: none
@@ -442,8 +442,8 @@ gives the best performance. However, using the constant names results in a much
 better user experience in all other cases.
 
 The following code illustrates how to provide a string representation for
-inspectors that operate on human-readable data representation and the underlying
-type for an ``enum class`` otherwise.
+inspectors that operate on human-readable data representations while operating
+directly on the underlying type of the ``enum class`` otherwise.
 
 .. code-block:: C++
 

@@ -112,7 +112,7 @@ public:
     return detail::load(dref(), x);
   }
 
-  /// Deerializes a primitive value with getter / setter access.
+  /// Deserializes a primitive value with getter / setter access.
   template <class Get, class Set>
   [[nodiscard]] bool apply(Get&& get, Set&& set) {
     using value_type = std::decay_t<decltype(get())>;

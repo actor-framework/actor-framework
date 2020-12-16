@@ -46,9 +46,9 @@ bool from_integer(std::underlying_type_t<invoke_message_result> in,
   switch(result) {
     default:
       return false;
-  case invoke_message_result::consumed:
-  case invoke_message_result::skipped:
-  case invoke_message_result::dropped:
+    case invoke_message_result::consumed:
+    case invoke_message_result::skipped:
+    case invoke_message_result::dropped:
       out = result;
       return true;
   };

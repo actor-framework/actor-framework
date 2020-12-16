@@ -52,10 +52,10 @@ bool from_integer(std::underlying_type_t<task_result> in,
   switch(result) {
     default:
       return false;
-  case task_result::resume:
-  case task_result::skip:
-  case task_result::stop:
-  case task_result::stop_all:
+    case task_result::resume:
+    case task_result::skip:
+    case task_result::stop:
+    case task_result::stop_all:
       out = result;
       return true;
   };

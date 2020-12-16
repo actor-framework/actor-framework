@@ -56,11 +56,11 @@ bool from_integer(std::underlying_type_t<stream_priority> in,
   switch(result) {
     default:
       return false;
-  case stream_priority::very_high:
-  case stream_priority::high:
-  case stream_priority::normal:
-  case stream_priority::low:
-  case stream_priority::very_low:
+    case stream_priority::very_high:
+    case stream_priority::high:
+    case stream_priority::normal:
+    case stream_priority::low:
+    case stream_priority::very_low:
       out = result;
       return true;
   };

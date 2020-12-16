@@ -41,8 +41,8 @@ bool from_integer(std::underlying_type_t<message_priority> in,
   switch(result) {
     default:
       return false;
-  case message_priority::high:
-  case message_priority::normal:
+    case message_priority::high:
+    case message_priority::normal:
       out = result;
       return true;
   };

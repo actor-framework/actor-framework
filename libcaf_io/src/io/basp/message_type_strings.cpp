@@ -68,13 +68,13 @@ bool from_integer(std::underlying_type_t<message_type> in,
   switch(result) {
     default:
       return false;
-  case message_type::server_handshake:
-  case message_type::client_handshake:
-  case message_type::direct_message:
-  case message_type::routed_message:
-  case message_type::monitor_message:
-  case message_type::down_message:
-  case message_type::heartbeat:
+    case message_type::server_handshake:
+    case message_type::client_handshake:
+    case message_type::direct_message:
+    case message_type::routed_message:
+    case message_type::monitor_message:
+    case message_type::down_message:
+    case message_type::heartbeat:
       out = result;
       return true;
   };
