@@ -62,18 +62,17 @@ message_data* message_data::copy() const {
   auto vptr = malloc(total_size);
   if (vptr == nullptr)
     CAF_RAISE_ERROR(std::bad_alloc, "bad_alloc");
-  auto ptr = new (vptr) message_data(types_);
+  intrusive_ptr<message_data> ptr{new (vptr) message_data(types_), false};
   auto src = storage();
   auto dst = ptr->storage();
   for (auto id : types_) {
     auto& meta = gmos[id];
-    // TODO: exception handling.
     meta.copy_construct(dst, src);
     ++ptr->constructed_elements_;
     src += meta.padded_size;
     dst += meta.padded_size;
   }
-  return ptr;
+  return ptr.release();
 }
 
 byte* message_data::at(size_t index) noexcept {
