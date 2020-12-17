@@ -25,6 +25,7 @@
 
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/implicit_conversions.hpp"
 #include "caf/span.hpp"
 #include "caf/type_id.hpp"
 
@@ -124,6 +125,14 @@ constexpr type_id_list make_type_id_list() {
 
 /// @relates type_id_list
 CAF_CORE_EXPORT std::string to_string(type_id_list xs);
+
+/// @relates type_id_list
+CAF_CORE_EXPORT type_id_list types_of(const message& msg);
+
+template <class... Ts>
+type_id_list types_of(const std::tuple<Ts...>&) {
+  return make_type_id_list<detail::strip_and_convert_t<Ts>...>();
+}
 
 } // namespace caf
 

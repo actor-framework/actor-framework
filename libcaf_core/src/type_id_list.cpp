@@ -20,6 +20,7 @@
 
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/type_id_list_builder.hpp"
+#include "caf/message.hpp"
 
 namespace caf {
 
@@ -60,6 +61,10 @@ type_id_list type_id_list::concat(span<type_id_list> lists) {
     for (auto id : ls)
       builder.push_back(id);
   return builder.move_to_list();
+}
+
+type_id_list types_of(const message& msg) {
+  return msg.types();
 }
 
 } // namespace caf

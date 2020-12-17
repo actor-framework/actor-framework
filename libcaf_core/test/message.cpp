@@ -135,3 +135,15 @@ CAF_TEST(match_elements exposes element types) {
   CAF_CHECK((msg.match_element<int64_t>(2)));
   CAF_CHECK((msg.match_elements<put_atom, string, int64_t>()));
 }
+
+CAF_TEST(messages are concatenable) {
+  using std::make_tuple;
+  CHECK(message::concat(make_tuple(int16_t{1}), make_tuple(uint8_t{2}))
+          .matches(int16_t{1}, uint8_t{2}));
+  CHECK(message::concat(make_message(int16_t{1}), make_message(uint8_t{2}))
+          .matches(int16_t{1}, uint8_t{2}));
+  CHECK(message::concat(make_message(int16_t{1}), make_tuple(uint8_t{2}))
+          .matches(int16_t{1}, uint8_t{2}));
+  CHECK(message::concat(make_tuple(int16_t{1}), make_message(uint8_t{2}))
+          .matches(int16_t{1}, uint8_t{2}));
+}
