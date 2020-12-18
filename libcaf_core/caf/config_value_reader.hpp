@@ -86,6 +86,10 @@ public:
 
   ~config_value_reader() override;
 
+  config_value_reader(const config_value_reader&) = delete;
+
+  config_value_reader& operator=(const config_value_reader&) = delete;
+
   // -- stack access -----------------------------------------------------------
 
   value_type& top() {
