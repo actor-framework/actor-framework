@@ -80,6 +80,10 @@ if(MSVC AND CAF_SANITIZERS)
   message(FATAL_ERROR "Sanitizer builds are currently not supported on MSVC")
 endif()
 
+if (NOT IS_ABSOLUTE "${CMAKE_INSTALL_PREFIX}")
+  message(FATAL_ERROR "CMAKE_INSTALL_PREFIX must be absolute")
+endif ()
+
 # -- base target setup ---------------------------------------------------------
 
 # This target propagates compiler flags, extra dependencies, etc. All other CAF
