@@ -121,8 +121,8 @@ public:
   /// Tries to parse a value from `str`.
   static expected<config_value> parse(string_view str);
 
-  /// Tries to parse a config value (list) from `str` and then converting it to
-  /// an allowed input message type for `Handle`.
+  /// Tries to parse a config value (list) from `str` and to convert it to an
+  /// allowed input message type for `Handle`.
   template <class Handle>
   static optional<message> parse_msg(string_view str, const Handle&) {
     auto allowed = Handle::allowed_inputs();

@@ -593,6 +593,7 @@ bool config_value_reader::value(span<byte> bytes) {
 bool config_value_reader::fetch_object_type(const settings* obj,
                                             type_id_t& type) {
   if (auto str = get_if<std::string>(obj, "@type"); str == nullptr) {
+    // fetch_next_object_type only calls this function
     type = type_id_v<config_value::dictionary>;
     return true;
   } else if (auto id = query_type_id(*str); id != invalid_type_id) {

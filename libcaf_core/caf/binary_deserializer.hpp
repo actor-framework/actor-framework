@@ -35,8 +35,8 @@
 
 namespace caf {
 
-/// Deserializes objects from sequence of bytes. Does not perform run-time type
-/// checks.
+/// Deserializes C++ objects from sequence of bytes. Does not perform run-time
+/// type checks.
 class CAF_CORE_EXPORT binary_deserializer
   : public load_inspector_base<binary_deserializer> {
 public:

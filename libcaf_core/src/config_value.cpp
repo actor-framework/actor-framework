@@ -308,12 +308,7 @@ expected<timespan> config_value::to_timespan() const {
   auto f = detail::make_overload(
     no_conversions<timespan, none_t, bool, integer, real, uri,
                    config_value::list, config_value::dictionary>(),
-    [](timespan x) {
-      // This cast may lose precision on the value. We could try and check that,
-      // but refusing to convert on loss of precision could also be unexpected
-      // behavior. So we rather always convert, even if it costs precision.
-      return result_type{x};
-    },
+    [](timespan x) { return result_type{x}; },
     [](const std::string& x) {
       auto tmp = timespan{};
       if (detail::parse(x, tmp) == none)
@@ -328,9 +323,18 @@ expected<timespan> config_value::to_timespan() const {
 
 expected<config_value::list> config_value::to_list() const {
   using result_type = expected<list>;
+  auto dict_to_list = [](const dictionary& dict, list& result) {
+    for (const auto& [key, val] : dict) {
+      list kvp;
+      kvp.reserve(2);
+      kvp.emplace_back(key);
+      kvp.emplace_back(val);
+      result.emplace_back(std::move(kvp));
+    }
+  };
   auto f = detail::make_overload(
     no_conversions<list, none_t, bool, integer, real, timespan, uri>(),
-    [](const std::string& x) {
+    [dict_to_list](const std::string& x) {
       // Check whether we can parse the string as a list. If that fails, try
       // whether we can parse it as a dictionary instead (and then convert that
       // to a list).
@@ -340,13 +344,7 @@ expected<config_value::list> config_value::to_list() const {
       config_value::dictionary dict;
       if (detail::parse(x, dict, detail::require_opening_char) == none) {
         tmp.clear();
-        for (const auto& [key, val] : dict) {
-          list kvp;
-          kvp.reserve(2);
-          kvp.emplace_back(key);
-          kvp.emplace_back(val);
-          tmp.emplace_back(std::move(kvp));
-        }
+        dict_to_list(dict, tmp);
         return result_type{std::move(tmp)};
       }
       std::string msg = "cannot convert ";
@@ -355,15 +353,9 @@ expected<config_value::list> config_value::to_list() const {
       return result_type{make_error(sec::conversion_failed, std::move(msg))};
     },
     [](const list& x) { return result_type{x}; },
-    [](const dictionary& x) {
+    [dict_to_list](const dictionary& x) {
       list tmp;
-      for (const auto& [key, val] : x) {
-        list kvp;
-        kvp.reserve(2);
-        kvp.emplace_back(key);
-        kvp.emplace_back(val);
-        tmp.emplace_back(std::move(kvp));
-      }
+      dict_to_list(x, tmp);
       return result_type{std::move(tmp)};
     });
   return visit(f, data_);

@@ -296,7 +296,7 @@ SCENARIO("get_as can convert config values to floating point numbers") {
     }
   }
   GIVEN("config_values of null, URI, boolean, list or dictionary") {
-    WHEN("using get_as with floating point types") {
+    WHEN("using get_as with integer types") {
       THEN("conversion fails") {
         CHECK_EQ(get_as<int64_t>(cv_null), sec::conversion_failed);
         CHECK_EQ(get_as<int64_t>(cv_true), sec::conversion_failed);
@@ -323,7 +323,7 @@ SCENARIO("get_as can convert config values to timespans") {
       THEN("conversion fails") {
         CHECK_EQ(get_as<int64_t>(x), sec::conversion_failed);
         CHECK_EQ(get_as<double>(x), sec::conversion_failed);
-        // CHECK_EQ(get_as<uri>(x), sec::conversion_failed);
+        CHECK_EQ(get_as<uri>(x), sec::conversion_failed);
         CHECK_EQ(get_as<config_value::list>(x), sec::conversion_failed);
         CHECK_EQ(get_as<config_value::dictionary>(x), sec::conversion_failed);
       }
