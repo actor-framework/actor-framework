@@ -66,18 +66,7 @@ config_value_writer::~config_value_writer() {
 
 // -- interface functions ------------------------------------------------------
 
-bool config_value_writer::inject_next_object_type(type_id_t type) {
-  CHECK_NOT_EMPTY();
-  type_hint_ = query_type_name(type);
-  if (type_hint_.empty()) {
-    emplace_error(sec::runtime_error,
-                  "query_type_name returned an empty string for type ID");
-    return false;
-  }
-  return true;
-}
-
-bool config_value_writer::begin_object(string_view) {
+bool config_value_writer::begin_object(type_id_t type, string_view) {
   CHECK_NOT_EMPTY();
   auto f = detail::make_overload(
     [this](config_value* x) {
@@ -118,10 +107,8 @@ bool config_value_writer::begin_object(string_view) {
     });
   if (!visit(f, st_.top()))
     return false;
-  if (!type_hint_.empty()) {
-    put(*get<settings*>(st_.top()), "@type", type_hint_);
-    type_hint_ = string_view{};
-  }
+  if (type != invalid_type_id)
+    put(*get<settings*>(st_.top()), "@type", query_type_name(type));
   return true;
 }
 

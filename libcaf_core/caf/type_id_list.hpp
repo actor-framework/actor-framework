@@ -88,6 +88,10 @@ public:
     return begin() + size();
   }
 
+  /// Returns the number of bytes that a buffer needs to allocate for storing a
+  /// type-erased tuple for the element types stored in this list.
+  size_t data_size() const noexcept;
+
 private:
   pointer data_;
 };
@@ -110,3 +114,22 @@ constexpr type_id_list make_type_id_list() {
 CAF_CORE_EXPORT std::string to_string(type_id_list xs);
 
 } // namespace caf
+
+namespace caf::detail {
+
+template <class F>
+struct argument_type_id_list_factory;
+
+template <class R, class... Ts>
+struct argument_type_id_list_factory<R(Ts...)> {
+  static type_id_list make() {
+    return make_type_id_list<Ts...>();
+  }
+};
+
+template <class F>
+type_id_list make_argument_type_id_list() {
+  return argument_type_id_list_factory<F>::make();
+}
+
+} // namespace caf::detail

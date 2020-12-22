@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "caf/none.hpp"
 #include "caf/string_view.hpp"
 
 #include <chrono>
@@ -58,6 +59,13 @@ void print_escaped(Buffer& buf, string_view str) {
     }
   }
   buf.push_back('"');
+}
+
+template <class Buffer>
+void print(Buffer& buf, none_t) {
+  using namespace caf::literals;
+  auto str = "null"_sv;
+  buf.insert(buf.end(), str.begin(), str.end());
 }
 
 template <class Buffer>

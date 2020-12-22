@@ -33,6 +33,13 @@ struct bounds_checker {
   }
 };
 
+template <>
+struct bounds_checker<int64_t, false> {
+  static constexpr bool check(int64_t) noexcept {
+    return true;
+  }
+};
+
 template <class To>
 struct bounds_checker<To, true> {
   static constexpr bool check(int64_t x) noexcept {

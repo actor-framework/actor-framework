@@ -26,11 +26,7 @@
 
 namespace caf::detail {
 
-bool serialized_size_inspector::inject_next_object_type(type_id_t type) {
-  return value(type);
-}
-
-bool serialized_size_inspector::begin_object(string_view) {
+bool serialized_size_inspector::begin_object(type_id_t, string_view) {
   return true;
 }
 

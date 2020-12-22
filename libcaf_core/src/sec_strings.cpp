@@ -142,6 +142,10 @@ std::string to_string(sec x) {
       return "conversion_failed";
     case sec::connection_closed:
       return "connection_closed";
+    case sec::type_clash:
+      return "type_clash";
+    case sec::unsupported_operation:
+      return "unsupported_operation";
   };
 }
 
@@ -335,6 +339,12 @@ bool from_string(string_view in, sec& out) {
   } else if (in == "connection_closed") {
     out = sec::connection_closed;
     return true;
+  } else if (in == "type_clash") {
+    out = sec::type_clash;
+    return true;
+  } else if (in == "unsupported_operation") {
+    out = sec::unsupported_operation;
+    return true;
   } else {
     return false;
   }
@@ -409,6 +419,8 @@ bool from_integer(std::underlying_type_t<sec> in,
     case sec::load_callback_failed:
     case sec::conversion_failed:
     case sec::connection_closed:
+    case sec::type_clash:
+    case sec::unsupported_operation:
       out = result;
       return true;
   };

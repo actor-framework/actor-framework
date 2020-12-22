@@ -122,11 +122,12 @@ bool config_value_reader::fetch_next_object_type(type_id_t& type) {
         return false;
       },
       [this, &type](const config_value* val) {
-        if (auto obj = get_if<settings>(val); obj == nullptr) {
-          emplace_error(sec::conversion_failed, "cannot read input as object");
-          return false;
+        auto tid = val->type_id();
+        if (tid != type_id_v<config_value::dictionary>) {
+          type = tid;
+          return true;
         } else {
-          return fetch_object_type(obj, type);
+          return fetch_object_type(get_if<settings>(val), type);
         }
       },
       [this](key_ptr) {
@@ -146,11 +147,13 @@ bool config_value_reader::fetch_next_object_type(type_id_t& type) {
           emplace_error(sec::runtime_error, "list index out of bounds");
           return false;
         }
-        if (auto obj = get_if<settings>(std::addressof(seq.current())); !obj) {
-          emplace_error(sec::conversion_failed, "cannot read input as object");
-          return false;
+        auto& val = seq.current();
+        auto tid = val.type_id();
+        if (tid != type_id_v<config_value::dictionary>) {
+          type = tid;
+          return true;
         } else {
-          return fetch_object_type(obj, type);
+          return fetch_object_type(get_if<settings>(&val), type);
         }
       },
       [this](associative_array&) {
@@ -162,7 +165,7 @@ bool config_value_reader::fetch_next_object_type(type_id_t& type) {
   }
 }
 
-bool config_value_reader::begin_object(string_view) {
+bool config_value_reader::begin_object(type_id_t type, string_view) {
   if (st_.empty()) {
     emplace_error(sec::runtime_error,
                   "tried to read multiple objects from the root object");
@@ -176,9 +179,16 @@ bool config_value_reader::begin_object(string_view) {
     },
     [this](const config_value* val) {
       if (auto obj = get_if<settings>(val)) {
-        // Morph into an object. This value gets "consumed" by
-        // begin_object/end_object.
+        // Unbox the dictionary.
         st_.top() = obj;
+        return true;
+      } else if (auto dict = val->to_dictionary()) {
+        // Replace the actual config value on the stack with the on-the-fly
+        // converted dictionary.
+        auto ptr = std::make_unique<config_value>(std::move(*dict));
+        const settings* unboxed = std::addressof(get<settings>(*ptr));
+        st_.top() = unboxed;
+        scratch_space_.emplace_back(std::move(ptr));
         return true;
       } else {
         emplace_error(sec::conversion_failed, "cannot read input as object");
@@ -216,7 +226,27 @@ bool config_value_reader::begin_object(string_view) {
                     "fetch_next_object_type called inside associative array");
       return false;
     });
-  return visit(f, st_.top());
+  if (visit(f, st_.top())) {
+    // Perform a type check if type is a valid ID and the object contains an
+    // "@type" field.
+    if (type != invalid_type_id) {
+      CAF_ASSERT(holds_alternative<const settings*>(st_.top()));
+      auto obj = get<const settings*>(st_.top());
+      auto want = query_type_name(type);
+      if (auto i = obj->find("@type"); i != obj->end()) {
+        if (auto got = get_if<std::string>(std::addressof(i->second))) {
+          if (want != *got) {
+            emplace_error(sec::type_clash, "expected type: " + to_string(want),
+                          "found type: " + *got);
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  } else {
+    return false;
+  }
 }
 
 bool config_value_reader::end_object() {
@@ -563,15 +593,15 @@ bool config_value_reader::value(span<byte> bytes) {
 bool config_value_reader::fetch_object_type(const settings* obj,
                                             type_id_t& type) {
   if (auto str = get_if<std::string>(obj, "@type"); str == nullptr) {
-    emplace_error(sec::runtime_error,
-                  "cannot fetch object type: no '@type' entry found");
-    return false;
-  } else if (auto id = query_type_id(*str); id == invalid_type_id) {
-    emplace_error(sec::runtime_error, "no such type: " + *str);
-    return false;
-  } else {
+    // fetch_next_object_type only calls this function
+    type = type_id_v<config_value::dictionary>;
+    return true;
+  } else if (auto id = query_type_id(*str); id != invalid_type_id) {
     type = id;
     return true;
+  } else {
+    emplace_error(sec::runtime_error, "unknown type: " + *str);
+    return false;
   }
 }
 

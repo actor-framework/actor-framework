@@ -35,19 +35,23 @@ namespace {
 template <class T>
 bool int_value(binary_deserializer& source, T& x) {
   auto tmp = std::make_unsigned_t<T>{};
-  if (!source.value(as_writable_bytes(make_span(&tmp, 1))))
+  if (source.value(as_writable_bytes(make_span(&tmp, 1)))) {
+    x = static_cast<T>(detail::from_network_order(tmp));
+    return true;
+  } else {
     return false;
-  x = static_cast<T>(detail::from_network_order(tmp));
-  return true;
+  }
 }
 
 template <class T>
 bool float_value(binary_deserializer& source, T& x) {
   auto tmp = typename detail::ieee_754_trait<T>::packed_type{};
-  if (!int_value(source, tmp))
+  if (int_value(source, tmp)) {
+    x = detail::unpack754(tmp);
+    return true;
+  } else {
     return false;
-  x = detail::unpack754(tmp);
-  return true;
+  }
 }
 
 // Does not perform any range checks.
@@ -67,7 +71,10 @@ binary_deserializer::binary_deserializer(actor_system& sys) noexcept
 }
 
 bool binary_deserializer::fetch_next_object_type(type_id_t& type) noexcept {
-  return value(type);
+  type = invalid_type_id;
+  emplace_error(sec::unsupported_operation,
+                "the default binary format does not embed type information");
+  return false;
 }
 
 bool binary_deserializer::begin_sequence(size_t& list_size) noexcept {

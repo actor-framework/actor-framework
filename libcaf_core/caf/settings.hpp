@@ -33,6 +33,9 @@ namespace caf {
 /// @relates config_value
 using settings = dictionary<config_value>;
 
+/// @relates config_value
+CAF_CORE_EXPORT std::string to_string(const settings& xs);
+
 /// Tries to retrieve the value associated to `name` from `xs`.
 /// @relates config_value
 CAF_CORE_EXPORT const config_value*

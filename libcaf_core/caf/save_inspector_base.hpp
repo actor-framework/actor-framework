@@ -34,7 +34,8 @@ public:
 
   template <class T>
   constexpr auto object(T&) noexcept {
-    return super::object_t<Subtype>{type_name_or_anonymous<T>(), dptr()};
+    return super::object_t<Subtype>{type_id_or_invalid<T>(),
+                                    type_name_or_anonymous<T>(), dptr()};
   }
 
   template <class T>

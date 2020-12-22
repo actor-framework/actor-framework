@@ -32,9 +32,7 @@ public:
 
   size_t result = 0;
 
-  bool inject_next_object_type(type_id_t type) override;
-
-  bool begin_object(string_view) override;
+  bool begin_object(type_id_t, string_view) override;
 
   bool end_object() override;
 

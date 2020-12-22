@@ -62,13 +62,15 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
-  /// Reads run-time-type information for the next object. Requires that the
-  /// @ref serializer provided this information via
-  /// @ref serializer::inject_next_object_type.
+  /// Reads run-time-type information for the next object if available.
   virtual bool fetch_next_object_type(type_id_t& type) = 0;
 
-  /// Begins processing of an object.
-  virtual bool begin_object(string_view type) = 0;
+  /// Begins processing of an object, may perform a type check depending on the
+  /// data format.
+  /// @param type 16-bit ID for known types, @ref invalid_type_id otherwise.
+  /// @param pretty_class_name Either the output of @ref type_name_or_anonymous
+  ///                          or the optionally defined pretty name.
+  virtual bool begin_object(type_id_t type, string_view pretty_class_name) = 0;
 
   /// Ends processing of an object.
   virtual bool end_object() = 0;

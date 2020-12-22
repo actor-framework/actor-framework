@@ -31,6 +31,7 @@
 #include "caf/make_actor.hpp"
 #include "caf/replies_to.hpp"
 #include "caf/stateful_actor.hpp"
+#include "caf/type_id_list.hpp"
 #include "caf/typed_actor_view_base.hpp"
 #include "caf/typed_behavior.hpp"
 #include "caf/typed_response_promise.hpp"
@@ -244,6 +245,10 @@ public:
   /// handle after invalidating it is undefined behavior.
   friend void destroy(typed_actor& x) {
     x.ptr_.reset();
+  }
+
+  static std::array<type_id_list, sizeof...(Sigs)> allowed_inputs() {
+    return {{detail::make_argument_type_id_list<Sigs>()...}};
   }
 
   /// @endcond

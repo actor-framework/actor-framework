@@ -222,8 +222,15 @@ template <class First, class Second, size_t N>
 void parse_element(string_parser_state& ps, std::pair<First, Second>& kvp,
                    const char (&char_blacklist)[N]);
 
-template <class T>
-enable_if_tt<is_iterable<T>> parse(string_parser_state& ps, T& xs) {
+struct require_opening_char_t {};
+constexpr auto require_opening_char = require_opening_char_t{};
+
+struct allow_omitting_opening_char_t {};
+constexpr auto allow_omitting_opening_char = allow_omitting_opening_char_t{};
+
+template <class T, class Policy = allow_omitting_opening_char_t>
+enable_if_tt<is_iterable<T>>
+parse(string_parser_state& ps, T& xs, Policy = {}) {
   using value_type = deconst_kvp_t<typename T::value_type>;
   static constexpr auto is_map_type = is_pair<value_type>::value;
   static constexpr auto opening_char = is_map_type ? '{' : '[';
@@ -252,19 +259,23 @@ enable_if_tt<is_iterable<T>> parse(string_parser_state& ps, T& xs) {
     }
     return;
   }
-  // An empty string simply results in an empty list/map.
-  if (ps.at_end())
-    return;
-  // List/map without [] or {}.
-  do {
-    char char_blacklist[] = {',', '\0'};
-    value_type tmp;
-    parse_element(ps, tmp, char_blacklist);
-    if (ps.code > pec::trailing_character)
+  if constexpr (std::is_same<Policy, require_opening_char_t>::value) {
+    ps.code = pec::unexpected_character;
+  } else {
+    // An empty string simply results in an empty list/map.
+    if (ps.at_end())
       return;
-    *out++ = std::move(tmp);
-  } while (ps.consume(','));
-  ps.code = ps.at_end() ? pec::success : pec::trailing_character;
+    // List/map without [] or {}.
+    do {
+      char char_blacklist[] = {',', '\0'};
+      value_type tmp;
+      parse_element(ps, tmp, char_blacklist);
+      if (ps.code > pec::trailing_character)
+        return;
+      *out++ = std::move(tmp);
+    } while (ps.consume(','));
+    ps.code = ps.at_end() ? pec::success : pec::trailing_character;
+  }
 }
 
 template <class T>
@@ -303,6 +314,13 @@ template <class T>
 auto parse(string_view str, T& x) {
   string_parser_state ps{str.begin(), str.end()};
   parse(ps, x);
+  return parse_result(ps, str);
+}
+
+template <class T, class Policy>
+auto parse(string_view str, T& x, Policy policy) {
+  string_parser_state ps{str.begin(), str.end()};
+  parse(ps, x, policy);
   return parse_result(ps, str);
 }
 

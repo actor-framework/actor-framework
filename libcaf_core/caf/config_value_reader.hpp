@@ -23,6 +23,7 @@
 #include "caf/dictionary.hpp"
 #include "caf/fwd.hpp"
 
+#include <memory>
 #include <stack>
 #include <vector>
 
@@ -85,6 +86,10 @@ public:
 
   ~config_value_reader() override;
 
+  config_value_reader(const config_value_reader&) = delete;
+
+  config_value_reader& operator=(const config_value_reader&) = delete;
+
   // -- stack access -----------------------------------------------------------
 
   value_type& top() {
@@ -99,7 +104,7 @@ public:
 
   bool fetch_next_object_type(type_id_t& type) override;
 
-  bool begin_object(string_view name) override;
+  bool begin_object(type_id_t type, string_view name) override;
 
   bool end_object() override;
 
@@ -166,9 +171,14 @@ public:
   bool value(span<byte> x) override;
 
 private:
+  // Sets `type` according to the `@type` field in `obj` or to the type ID of
+  // `settings` as fallback if no such field exists.
   bool fetch_object_type(const settings* obj, type_id_t& type);
 
   stack_type st_;
+
+  // Stores on-the-fly converted values.
+  std::vector<std::unique_ptr<config_value>> scratch_space_;
 };
 
 } // namespace caf

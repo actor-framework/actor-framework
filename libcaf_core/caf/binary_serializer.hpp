@@ -33,7 +33,10 @@
 
 namespace caf {
 
-/// Serializes objects into a sequence of bytes.
+/// Serializes C++ objects into a sequence of bytes.
+/// @note The binary data format may change between CAF versions and does not
+///       perform any type checking at run-time. Thus the output of this
+///       serializer is unsuitable for persistence layers.
 class CAF_CORE_EXPORT binary_serializer
   : public save_inspector_base<binary_serializer> {
 public:
@@ -95,9 +98,7 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
-  bool inject_next_object_type(type_id_t type);
-
-  constexpr bool begin_object(string_view) {
+  constexpr bool begin_object(type_id_t, string_view) noexcept {
     return true;
   }
 

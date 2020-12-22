@@ -49,15 +49,7 @@ struct testee : serializer {
     log.insert(log.end(), indent, ' ');
   }
 
-  bool inject_next_object_type(type_id_t type) override {
-    new_line();
-    log += "next object type: ";
-    auto tn = detail::global_meta_object(type)->type_name;
-    log.insert(log.end(), tn.begin(), tn.end());
-    return true;
-  }
-
-  bool begin_object(string_view object_name) override {
+  bool begin_object(type_id_t, string_view object_name) override {
     new_line();
     indent += 2;
     log += "begin object ";
@@ -734,18 +726,11 @@ end object)_");
   f.set_has_human_readable_format(true);
   CAF_CHECK(inspect(f, x));
   CAF_CHECK_EQUAL(f.log, R"_(
-begin object message
-  begin field values
-    begin sequence of size 3
-      next object type: int32_t
-      int32_t value
-      next object type: std::string
-      std::string value
-      next object type: double
-      double value
-    end sequence
-  end field
-end object)_");
+begin sequence of size 3
+  int32_t value
+  std::string value
+  double value
+end sequence)_");
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
