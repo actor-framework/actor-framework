@@ -251,14 +251,26 @@ SCENARIO("get_as can convert config values to integers") {
     }
   }
   GIVEN("config_values of null, URI, boolean, list or dictionary") {
-    WHEN("using get_as with integer types") {
+    WHEN("using get_as with floating point types") {
       THEN("conversion fails") {
-        CHECK_EQ(get_as<int64_t>(cv_null), sec::conversion_failed);
-        CHECK_EQ(get_as<int64_t>(cv_true), sec::conversion_failed);
-        CHECK_EQ(get_as<int64_t>(cv_false), sec::conversion_failed);
-        CHECK_EQ(get_as<int64_t>(cv_empty_uri), sec::conversion_failed);
-        CHECK_EQ(get_as<int64_t>(cv_empty_list), sec::conversion_failed);
-        CHECK_EQ(get_as<int64_t>(cv_empty_dict), sec::conversion_failed);
+        CHECK_EQ(get_as<float>(cv_null), sec::conversion_failed);
+        CHECK_EQ(get_as<float>(cv_true), sec::conversion_failed);
+        CHECK_EQ(get_as<float>(cv_false), sec::conversion_failed);
+        CHECK_EQ(get_as<float>(cv_empty_uri), sec::conversion_failed);
+        CHECK_EQ(get_as<float>(cv_empty_list), sec::conversion_failed);
+        CHECK_EQ(get_as<float>(cv_empty_dict), sec::conversion_failed);
+        CHECK_EQ(get_as<double>(cv_null), sec::conversion_failed);
+        CHECK_EQ(get_as<double>(cv_true), sec::conversion_failed);
+        CHECK_EQ(get_as<double>(cv_false), sec::conversion_failed);
+        CHECK_EQ(get_as<double>(cv_empty_uri), sec::conversion_failed);
+        CHECK_EQ(get_as<double>(cv_empty_list), sec::conversion_failed);
+        CHECK_EQ(get_as<double>(cv_empty_dict), sec::conversion_failed);
+        CHECK_EQ(get_as<long double>(cv_null), sec::conversion_failed);
+        CHECK_EQ(get_as<long double>(cv_true), sec::conversion_failed);
+        CHECK_EQ(get_as<long double>(cv_false), sec::conversion_failed);
+        CHECK_EQ(get_as<long double>(cv_empty_uri), sec::conversion_failed);
+        CHECK_EQ(get_as<long double>(cv_empty_list), sec::conversion_failed);
+        CHECK_EQ(get_as<long double>(cv_empty_dict), sec::conversion_failed);
       }
     }
   }

@@ -171,6 +171,8 @@ public:
   bool value(span<byte> x) override;
 
 private:
+  // Sets `type` according to the `@type` field in `obj` or to the type ID of
+  // `settings` as fallback if no such field exists.
   bool fetch_object_type(const settings* obj, type_id_t& type);
 
   stack_type st_;
