@@ -340,7 +340,7 @@ actor_system_config& actor_system_config::set_impl(string_view name,
   if (opt == nullptr) {
     std::cerr << "*** failed to set config parameter " << name
               << ": invalid name" << std::endl;
-  } else if (auto err = opt->store(value)) {
+  } else if (auto err = opt->sync(value)) {
     std::cerr << "*** failed to set config parameter " << name << ": "
               << to_string(err) << std::endl;
   } else {
@@ -412,12 +412,13 @@ error actor_system_config::extract_config_file_path(string_list& args) {
     args.erase(i);
     return make_error(pec::missing_argument, std::move(str));
   }
-  auto evalue = ptr->parse(path);
-  if (!evalue)
-    return std::move(evalue.error());
-  put(content, "config-file", *evalue);
-  ptr->store(*evalue);
-  return none;
+  config_value val{path};
+  if (auto err = ptr->sync(val); !err) {
+    put(content, "config-file", std::move(val));
+    return none;
+  } else {
+    return err;
+  }
 }
 
 const settings& content(const actor_system_config& cfg) {

@@ -137,6 +137,12 @@ auto config_option_set::parse(settings& config, argument_iterator first,
   // Parses an argument.
   using iter = string::const_iterator;
   auto consume = [&](const config_option& opt, iter arg_begin, iter arg_end) {
+    auto to_pec_code = [](const error& err) {
+      if (err.category() == type_id_v<pec>)
+        return static_cast<pec>(err.code());
+      else
+        return pec::invalid_argument;
+    };
     // Extract option name and category.
     auto opt_name = opt.long_name();
     auto opt_ctg = opt.category();
@@ -144,27 +150,31 @@ auto config_option_set::parse(settings& config, argument_iterator first,
     auto& entry = opt_ctg == "global" ? config : select_entry(config, opt_ctg);
     // Flags only consume the current element.
     if (opt.is_flag()) {
-      if (arg_begin != arg_end)
-        return pec::invalid_argument;
-      config_value cfg_true{true};
-      opt.store(cfg_true);
-      entry[opt_name] = cfg_true;
-    } else {
-      if (arg_begin == arg_end)
-        return pec::missing_argument;
-      auto slice_size = static_cast<size_t>(std::distance(arg_begin, arg_end));
-      string_view slice{&*arg_begin, slice_size};
-      auto val = opt.parse(slice);
-      if (!val) {
-        auto& err = val.error();
-        if (err.category() == type_id_v<pec>)
-          return static_cast<pec>(err.code());
+      if (arg_begin == arg_end) {
+        config_value cfg_true{true};
+        if (auto err = opt.sync(cfg_true); !err) {
+          entry[opt_name] = cfg_true;
+          return pec::success;
+        } else {
+          return to_pec_code(err);
+        }
+      } else {
         return pec::invalid_argument;
       }
-      opt.store(*val);
-      entry[opt_name] = std::move(*val);
+    } else {
+      if (arg_begin != arg_end) {
+        auto arg_size = static_cast<size_t>(std::distance(arg_begin, arg_end));
+        config_value val{string_view{std::addressof(*arg_begin), arg_size}};
+        if (auto err = opt.sync(val); !err) {
+          entry[opt_name] = std::move(val);
+          return pec::success;
+        } else {
+          return to_pec_code(err);
+        }
+      } else {
+        return pec::missing_argument;
+      }
     }
-    return pec::success;
   };
   // We loop over the first N-1 values, because we always consider two
   // arguments at once.

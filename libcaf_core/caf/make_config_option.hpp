@@ -22,7 +22,6 @@
 
 #include "caf/config_option.hpp"
 #include "caf/config_value.hpp"
-#include "caf/detail/parse.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
@@ -33,51 +32,32 @@
 namespace caf::detail {
 
 template <class T>
-error store_impl(void* ptr, const config_value& x) {
-  if (holds_alternative<T>(x)) {
-    if (ptr)
-      *static_cast<T*>(ptr) = get<T>(x);
-    return none;
+error sync_impl(void* ptr, config_value& x) {
+  if (auto val = get_as<T>(x)) {
+    if (auto err = x.assign(*val); !err) {
+      if (ptr)
+        *static_cast<T*>(ptr) = std::move(*val);
+      return none;
+    } else {
+      return err;
+    }
   } else {
-    return make_error(pec::type_mismatch);
+    return std::move(val.error());
   }
 }
 
 template <class T>
 config_value get_impl(const void* ptr) {
-  using trait = detail::config_value_access_t<T>;
-  return config_value{trait::convert(*reinterpret_cast<const T*>(ptr))};
-}
-
-template <class T>
-expected<config_value> parse_impl(T* ptr, string_view str) {
-  if (!ptr) {
-    T tmp;
-    return parse_impl(&tmp, str);
-  }
-  if constexpr (detail::has_clear_member<T>::value)
-    ptr->clear();
-  using trait = detail::config_value_access_t<T>;
-  string_parser_state ps{str.begin(), str.end()};
-  trait::parse_cli(ps, *ptr, top_level_cli_parsing);
-  if (ps.code != pec::success)
-    return make_error(ps);
-  return config_value{trait::convert(*ptr)};
-}
-
-CAF_CORE_EXPORT expected<config_value> parse_impl(std::string* ptr,
-                                                  string_view str);
-
-template <class T>
-expected<config_value> parse_impl_delegate(void* ptr, string_view str) {
-  return parse_impl(reinterpret_cast<T*>(ptr), str);
+  config_value result;
+  auto err = result.assign(*static_cast<const T*>(ptr));
+  static_cast<void>(err); // Safe to discard because sync() fails otherwise.
+  return result;
 }
 
 template <class T>
 config_option::meta_state* option_meta_state_instance() {
   using trait = detail::config_value_access_t<T>;
-  static config_option::meta_state obj{store_impl<T>, get_impl<T>,
-                                       parse_impl_delegate<T>,
+  static config_option::meta_state obj{sync_impl<T>, get_impl<T>,
                                        trait::type_name()};
   return &obj;
 }
@@ -109,12 +89,12 @@ make_negated_config_option(bool& storage, string_view category,
                            string_view name, string_view description);
 
 // Reads timespans, but stores an integer representing microsecond resolution.
-CAF_CORE_EXPORT config_option
+[[deprecated("use timespan options instead")]] CAF_CORE_EXPORT config_option
 make_us_resolution_config_option(size_t& storage, string_view category,
                                  string_view name, string_view description);
 
 // Reads timespans, but stores an integer representing millisecond resolution.
-CAF_CORE_EXPORT config_option
+[[deprecated("use timespan options instead")]] CAF_CORE_EXPORT config_option
 make_ms_resolution_config_option(size_t& storage, string_view category,
                                  string_view name, string_view description);
 

@@ -225,7 +225,7 @@ public:
   template <class T>
   error assign(const T& x) {
     config_value_writer writer{this};
-    if (detail::save(writer, x))
+    if (writer.apply(x))
       return {};
     else
       return {writer.move_error()};
@@ -305,22 +305,6 @@ private:
 
 /// @relates config_value
 CAF_CORE_EXPORT std::string to_string(const config_value& x);
-
-// -- convenience constants ----------------------------------------------------
-
-/// Type of the `top_level_cli_parsing` constant.
-using top_level_cli_parsing_t = std::false_type;
-
-/// Signals parsing of top-level config values when used as third argument to
-/// `parse_cli`.
-constexpr auto top_level_cli_parsing = top_level_cli_parsing_t{};
-
-/// Type of the `top_level_cli_parsing` constant.
-using nested_cli_parsing_t = std::true_type;
-
-/// Signals parsing of nested config values when used as third argument to
-/// `parse_cli`.
-constexpr auto nested_cli_parsing = nested_cli_parsing_t{};
 
 // -- conversion via get_as ----------------------------------------------------
 
@@ -464,12 +448,17 @@ expected<T> get_as(const config_value& x, inspector_access_type::list) {
   if (auto wrapped_values = x.to_list()) {
     using value_type = typename T::value_type;
     T result;
-    result.reserve(wrapped_values->size());
+    if constexpr (detail::has_reserve_t<T>)
+      result.reserve(wrapped_values->size());
     for (const auto& wrapped_value : *wrapped_values)
-      if (auto maybe_value = get_as<value_type>(wrapped_value))
-        result.emplace_back(std::move(*maybe_value));
-      else
+      if (auto maybe_value = get_as<value_type>(wrapped_value)) {
+        if constexpr (detail::has_emplace_back_t<T>)
+          result.emplace_back(std::move(*maybe_value));
+        else
+          result.insert(result.end(), std::move(*maybe_value));
+      } else {
         return {std::move(maybe_value.error())};
+      }
     return {std::move(result)};
   } else {
     return {std::move(wrapped_values.error())};
@@ -566,11 +555,6 @@ struct default_config_value_access {
   static T convert(T x) {
     return x;
   }
-
-  template <class Nested>
-  static void parse_cli(string_parser_state& ps, T& x, Nested) {
-    detail::parse(ps, x);
-  }
 };
 
 /// @relates config_value
@@ -626,11 +610,6 @@ struct CAF_CORE_EXPORT config_value_access<timespan> {
   static timespan convert(timespan x) {
     return x;
   }
-
-  template <class Nested>
-  static void parse_cli(string_parser_state& ps, timespan& x, Nested) {
-    detail::parse(ps, x);
-  }
 };
 
 template <>
@@ -656,11 +635,6 @@ struct CAF_CORE_EXPORT config_value_access<float> {
   static double convert(float x) {
     return x;
   }
-
-  template <class Nested>
-  static void parse_cli(string_parser_state& ps, float& x, Nested) {
-    detail::parse(ps, x);
-  }
 };
 
 template <>
@@ -685,15 +659,6 @@ struct CAF_CORE_EXPORT config_value_access<std::string> {
 
   static std::string convert(std::string x) {
     return x;
-  }
-
-  template <bool IsNested>
-  static void parse_cli(string_parser_state& ps, std::string& x,
-                        std::integral_constant<bool, IsNested>) {
-    if constexpr (IsNested)
-      detail::parse_element(ps, x, ",={}[]");
-    else
-      detail::parse(ps, x);
   }
 };
 
@@ -818,11 +783,6 @@ struct integral_config_value_access {
   static T convert(T x) {
     return x;
   }
-
-  template <class Nested>
-  static void parse_cli(string_parser_state& ps, T& x, Nested) {
-    detail::parse(ps, x);
-  }
 };
 
 template <class T>
@@ -875,74 +835,6 @@ struct list_config_value_access {
       result.emplace_back(value_access::convert(x));
     return result;
   }
-
-  static void parse_cli(string_parser_state& ps, T& xs,
-                        top_level_cli_parsing_t) {
-    bool has_open_token;
-    auto val_token = config_value_access_token<value_type>();
-    if constexpr (std::is_same<decltype(val_token),
-                               config_value_access_type::list>::value) {
-      // The outer square brackets are optional in nested lists. This means we
-      // need to check for "[[" at the beginning and otherwise we assume the
-      // leading '[' was omitted.
-      string_parser_state tmp{ps.i, ps.e};
-      has_open_token = tmp.consume('[') && tmp.consume('[');
-      if (has_open_token)
-        ps.consume('[');
-    } else {
-      has_open_token = ps.consume('[');
-    }
-    do {
-      ps.skip_whitespaces();
-      if (has_open_token) {
-        if (ps.consume(']')) {
-          ps.skip_whitespaces();
-          ps.code = ps.at_end() ? pec::success : pec::trailing_character;
-          return;
-        }
-      } else if (ps.at_end()) {
-        // Allow trailing commas and empty strings.
-        ps.code = pec::success;
-        return;
-      }
-      value_type tmp;
-      value_access::parse_cli(ps, tmp, nested_cli_parsing);
-      if (ps.code > pec::trailing_character)
-        return;
-      xs.insert(xs.end(), std::move(tmp));
-    } while (ps.consume(','));
-    if (has_open_token && !ps.consume(']')) {
-      ps.code = ps.at_end() ? pec::unexpected_eof : pec::unexpected_character;
-      return;
-    }
-    ps.skip_whitespaces();
-    ps.code = ps.at_end() ? pec::success : pec::trailing_character;
-  }
-
-  static void parse_cli(string_parser_state& ps, T& xs, nested_cli_parsing_t) {
-    if (!ps.consume('[')) {
-      ps.code = ps.at_end() ? pec::unexpected_eof : pec::unexpected_character;
-      return;
-    }
-    do {
-      if (ps.consume(']')) {
-        ps.skip_whitespaces();
-        ps.code = ps.at_end() ? pec::success : pec::trailing_character;
-        return;
-      }
-      value_type tmp;
-      value_access::parse_cli(ps, tmp, nested_cli_parsing);
-      if (ps.code > pec::trailing_character)
-        return;
-      xs.insert(xs.end(), std::move(tmp));
-    } while (ps.consume(','));
-    if (!ps.consume(']')) {
-      ps.code = ps.at_end() ? pec::unexpected_eof : pec::unexpected_character;
-      return;
-    }
-    ps.skip_whitespaces();
-    ps.code = ps.at_end() ? pec::success : pec::trailing_character;
-  }
 };
 
 template <class T>
@@ -991,11 +883,6 @@ struct map_config_value_access {
     if (!result)
       CAF_RAISE_ERROR("invalid type found");
     return std::move(*result);
-  }
-
-  template <class Nested>
-  static void parse_cli(string_parser_state& ps, map_type& xs, Nested) {
-    detail::parse(ps, xs);
   }
 
   static config_value::dictionary convert(const map_type& xs) {
@@ -1048,11 +935,6 @@ struct tuple_config_value_access<std::tuple<Ts...>> {
     config_value::list result;
     rec_convert(result, xs, detail::int_token<0>(), detail::type_list<Ts...>());
     return result;
-  }
-
-  template <class Nested>
-  static void parse_cli(string_parser_state& ps, tuple_type& xs, Nested) {
-    rec_parse(ps, xs, detail::int_token<0>(), detail::type_list<Ts...>());
   }
 
 private:
@@ -1118,24 +1000,6 @@ private:
     result.emplace_back(trait::convert(std::get<Pos>(xs)));
     return rec_convert(result, xs, detail::int_token<Pos + 1>(),
                        detail::type_list<Us...>());
-  }
-
-  template <int Pos>
-  static void rec_parse(string_parser_state&, tuple_type&,
-                        detail::int_token<Pos>, detail::type_list<>) {
-    // nop
-  }
-
-  template <int Pos, class U, class... Us>
-  static void rec_parse(string_parser_state& ps, tuple_type& xs,
-                        detail::int_token<Pos>, detail::type_list<U, Us...>) {
-    using trait = config_value_access_t<U>;
-    trait::parse_cli(std::get<Pos>(xs), nested_cli_parsing);
-    if (ps.code > pec::trailing_character)
-      return;
-    if (sizeof...(Us) > 0 && !ps.consume(','))
-      ps.code = ps.at_end() ? pec::unexpected_eof : pec::unexpected_character;
-    rec_parse(ps, xs, detail::int_token<Pos + 1>(), detail::type_list<Us...>());
   }
 };
 
@@ -1287,30 +1151,6 @@ struct inspect_config_value_access {
     if (!result)
       CAF_RAISE_ERROR("invalid type found");
     return std::move(*result);
-  }
-
-  template <class Nested>
-  static void parse_cli(string_parser_state& ps, T& x, Nested token) {
-    auto first = ps.i;
-    config_value tmp;
-    detail::parse(ps, tmp);
-    // If the first attempt fails, rewind the parser state and try parsing the
-    // input as a string. This allows unescaped inputs.
-    if (ps.code != pec::success) {
-      ps.code = pec::success;
-      ps.i = first;
-      std::string str;
-      config_value_access_t<std::string>::parse_cli(ps, str, token);
-      if (ps.code == pec::success)
-        tmp = config_value{std::move(str)};
-    }
-    if (ps.code == pec::success) {
-      if (auto res = caf::get_if<T>(&tmp)) {
-        x = detail::move_if_not_ptr(res);
-      } else {
-        ps.code = pec::invalid_argument;
-      }
-    }
   }
 
   static config_value convert(const T& x) {

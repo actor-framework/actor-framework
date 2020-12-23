@@ -48,13 +48,13 @@ constexpr int64_t underflow() {
 
 template <class T>
 optional<T> read(string_view arg) {
-  auto co = make_config_option<T>(category, name, explanation);
-  auto res = co.parse(arg);
-  if (res && holds_alternative<T>(*res)) {
-    if (auto err = co.store(*res); !err)
-      return get<T>(*res);
-  }
-  return none;
+  auto result = T{};
+  auto co = make_config_option<T>(result, category, name, explanation);
+  config_value val{arg};
+  if (auto err = co.sync(val); !err)
+    return {std::move(result)};
+  else
+    return none;
 }
 
 // Unsigned integers.

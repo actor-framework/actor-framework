@@ -159,7 +159,7 @@ pec config_consumer::value_impl(config_value&& x) {
   // Sync with config option object if available.
   if (options_ != nullptr)
     if (auto opt = options_->qualified_name_lookup(category_, current_key_))
-      if (auto err = opt->store(x))
+      if (auto err = opt->sync(x))
         return pec::type_mismatch;
   // Insert / replace value in the map.
   if (auto dict = get_if<settings>(&x)) {
