@@ -128,16 +128,9 @@ string_view config_option::full_name() const noexcept {
   return buf_slice(buf_[0] == '?' ? 1 : 0, long_name_separator_);
 }
 
-error config_option::check(const config_value& x) const {
-  CAF_ASSERT(meta_->check != nullptr);
-  return meta_->check(x);
-}
-
-void config_option::store(const config_value& x) const {
-  if (value_ != nullptr) {
-    CAF_ASSERT(meta_->store != nullptr);
-    meta_->store(value_, x);
-  }
+error config_option::store(const config_value& x) const {
+  CAF_ASSERT(meta_->store != nullptr);
+  return meta_->store(value_, x);
 }
 
 string_view config_option::type_name() const noexcept {

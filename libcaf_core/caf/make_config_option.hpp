@@ -30,20 +30,17 @@
 #include "caf/pec.hpp"
 #include "caf/string_view.hpp"
 
-namespace caf {
-
-namespace detail {
+namespace caf::detail {
 
 template <class T>
-error check_impl(const config_value& x) {
-  if (holds_alternative<T>(x))
+error store_impl(void* ptr, const config_value& x) {
+  if (holds_alternative<T>(x)) {
+    if (ptr)
+      *static_cast<T*>(ptr) = get<T>(x);
     return none;
-  return make_error(pec::type_mismatch);
-}
-
-template <class T>
-void store_impl(void* ptr, const config_value& x) {
-  *static_cast<T*>(ptr) = get<T>(x);
+  } else {
+    return make_error(pec::type_mismatch);
+  }
 }
 
 template <class T>
@@ -68,8 +65,8 @@ expected<config_value> parse_impl(T* ptr, string_view str) {
   return config_value{trait::convert(*ptr)};
 }
 
-CAF_CORE_EXPORT expected<config_value>
-parse_impl(std::string* ptr, string_view str);
+CAF_CORE_EXPORT expected<config_value> parse_impl(std::string* ptr,
+                                                  string_view str);
 
 template <class T>
 expected<config_value> parse_impl_delegate(void* ptr, string_view str) {
@@ -79,13 +76,15 @@ expected<config_value> parse_impl_delegate(void* ptr, string_view str) {
 template <class T>
 config_option::meta_state* option_meta_state_instance() {
   using trait = detail::config_value_access_t<T>;
-  static config_option::meta_state obj{check_impl<T>, store_impl<T>,
-                                       get_impl<T>, parse_impl_delegate<T>,
+  static config_option::meta_state obj{store_impl<T>, get_impl<T>,
+                                       parse_impl_delegate<T>,
                                        trait::type_name()};
   return &obj;
 }
 
-} // namespace detail
+} // namespace caf::detail
+
+namespace caf {
 
 /// Creates a config option that synchronizes with `storage`.
 template <class T>

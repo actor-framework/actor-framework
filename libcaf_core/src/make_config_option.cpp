@@ -67,28 +67,33 @@ namespace {
 
 using meta_state = config_option::meta_state;
 
-void bool_store_neg(void* ptr, const config_value& x) {
-  *static_cast<bool*>(ptr) = !get<bool>(x);
+error bool_store_neg(void* ptr, const config_value& x) {
+  if (holds_alternative<bool>(x)) {
+    if (ptr)
+      *static_cast<bool*>(ptr) = !get<bool>(x);
+    return none;
+  } else {
+    return make_error(pec::type_mismatch);
+  }
 }
 
 config_value bool_get_neg(const void* ptr) {
   return config_value{!*static_cast<const bool*>(ptr)};
 }
 
-meta_state bool_neg_meta{detail::check_impl<bool>, bool_store_neg, bool_get_neg,
-                         nullptr,
+meta_state bool_neg_meta{bool_store_neg, bool_get_neg, nullptr,
                          detail::config_value_access_t<bool>::type_name()};
 
-error check_timespan(const config_value& x) {
-  if (holds_alternative<timespan>(x))
-    return none;
-  return make_error(pec::type_mismatch);
-}
-
 template <uint64_t Denominator>
-void store_timespan(void* ptr, const config_value& x) {
-  *static_cast<size_t*>(ptr) = static_cast<size_t>(get<timespan>(x).count())
-                               / Denominator;
+error store_timespan(void* ptr, const config_value& x) {
+  if (holds_alternative<timespan>(x)) {
+    if (ptr)
+      *static_cast<size_t*>(ptr) = static_cast<size_t>(get<timespan>(x).count())
+                                   / Denominator;
+    return none;
+  } else {
+    return make_error(pec::type_mismatch);
+  }
 }
 template <uint64_t Denominator>
 config_value get_timespan(const void* ptr) {
@@ -97,12 +102,10 @@ config_value get_timespan(const void* ptr) {
   return config_value{val};
 }
 
-meta_state us_res_meta{check_timespan, store_timespan<1000>, get_timespan<1000>,
-                       nullptr,
+meta_state us_res_meta{store_timespan<1000>, get_timespan<1000>, nullptr,
                        detail::config_value_access_t<timespan>::type_name()};
 
-meta_state ms_res_meta{check_timespan, store_timespan<1000000>,
-                       get_timespan<1000000>, nullptr,
+meta_state ms_res_meta{store_timespan<1000000>, get_timespan<1000000>, nullptr,
                        detail::config_value_access_t<timespan>::type_name()};
 
 } // namespace

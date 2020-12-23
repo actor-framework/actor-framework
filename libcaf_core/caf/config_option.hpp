@@ -36,11 +36,10 @@ public:
   /// Custom vtable-like struct for delegating to type-specific functions and
   /// storing type-specific information shared by several config options.
   struct meta_state {
-    /// Checks whether a value matches the option's type.
-    error (*check)(const config_value&);
-
-    /// Stores a value in the given location.
-    void (*store)(void*, const config_value&);
+    /// Performs a type check on the config value and then stores the converted
+    /// value in the given storage location unless the storage pointer was set
+    /// to `nullptr`.
+    error (*store)(void*, const config_value&);
 
     /// Tries to extract a value from the given location. Exists for backward
     /// compatibility only and will get removed with CAF 0.17.
@@ -89,12 +88,9 @@ public:
   /// Returns the full name for this config option as "<category>.<long name>".
   string_view full_name() const noexcept;
 
-  /// Checks whether `x` holds a legal value for this option.
-  error check(const config_value& x) const;
-
-  /// Stores `x` in this option unless it is stateless.
-  /// @pre `check(x) == none`.
-  void store(const config_value& x) const;
+  /// Performs a type check for `x` and then stores `x` in this option unless it
+  /// is stateless.
+  error store(const config_value& x) const;
 
   /// Returns a human-readable representation of this option's expected type.
   string_view type_name() const noexcept;

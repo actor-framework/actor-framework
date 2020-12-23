@@ -51,9 +51,8 @@ optional<T> read(string_view arg) {
   auto co = make_config_option<T>(category, name, explanation);
   auto res = co.parse(arg);
   if (res && holds_alternative<T>(*res)) {
-    if (co.check(*res) != none)
-      CAF_ERROR("co.parse() produced the wrong type!");
-    return get<T>(*res);
+    if (auto err = co.store(*res); !err)
+      return get<T>(*res);
   }
   return none;
 }

@@ -340,11 +340,10 @@ actor_system_config& actor_system_config::set_impl(string_view name,
   if (opt == nullptr) {
     std::cerr << "*** failed to set config parameter " << name
               << ": invalid name" << std::endl;
-  } else if (auto err = opt->check(value)) {
+  } else if (auto err = opt->store(value)) {
     std::cerr << "*** failed to set config parameter " << name << ": "
               << to_string(err) << std::endl;
   } else {
-    opt->store(value);
     auto category = opt->category();
     if (category == "global")
       content[opt->long_name()] = std::move(value);

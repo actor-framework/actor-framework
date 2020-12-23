@@ -156,16 +156,11 @@ void merge_into_place(settings& src, settings& dst) {
 } // namespace
 
 pec config_consumer::value_impl(config_value&& x) {
-  // See whether there's a config_option associated to this key and perform a
-  // type check if necessary.
-  const config_option* opt;
-  if (options_ == nullptr) {
-    opt = nullptr;
-  } else {
-    opt = options_->qualified_name_lookup(category_, current_key_);
-    if (opt && opt->check(x) != none)
-      return pec::type_mismatch;
-  }
+  // Sync with config option object if available.
+  if (options_ != nullptr)
+    if (auto opt = options_->qualified_name_lookup(category_, current_key_))
+      if (auto err = opt->store(x))
+        return pec::type_mismatch;
   // Insert / replace value in the map.
   if (auto dict = get_if<settings>(&x)) {
     // Merge values into the destination, because it can already contain any
@@ -177,13 +172,6 @@ pec config_consumer::value_impl(config_value&& x) {
       merge_into_place(*dict, get<settings>(i->second));
   } else {
     cfg_->insert_or_assign(current_key_, std::move(x));
-  }
-  // Sync with config option if needed.
-  if (opt) {
-    if (auto i = cfg_->find(current_key_); i != cfg_->end())
-      opt->store(i->second);
-    else
-      return pec::invalid_state;
   }
   return pec::success;
 }
