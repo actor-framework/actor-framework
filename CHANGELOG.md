@@ -16,6 +16,18 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   and `caf.middleman.serialization-time`.
 - The macro `CAF_ADD_TYPE_ID` now accepts an optional third parameter for
   allowing users to override the default type name.
+- The new function pair `get_as` and `get_or` model type conversions on a
+  `config_value`. For example, `get_as<int>(x)` would convert the content of `x`
+  to an `int` by either casting numeric values to `int` (with bound checks) or
+  trying to parse the input of `x` if it contains a string. The function
+  `get_or` already existed for `settings`, but we have added new overloads for
+  generalizing the function to `config_value` as well.
+
+### Deprecated
+
+- The new `get_as` and `get_or` function pair makes type conversions on a
+  `config_value` via `get`, `get_if`, etc. obsolete. We will retain the
+  STL-style interface for treating a `config_value` as a `variant`-like type.
 
 ### Changed
 
@@ -23,9 +35,15 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   i.e., `caf-application.conf`.
 - Simplify the type inspection API by removing the distinction between
   `apply_object` and `apply_value`. Instead, inspectors only offer `apply` and
-  users may now also call `map`, `list`, `tuple` and `value` for unboxing simple
-  wrapper types. Furthermore, CAF no longer automatically serializes enumeration
-  types using their underlying value because this is fundamentally unsafe.
+  users may now also call `map`, `list`, and `tuple` for unboxing simple wrapper
+  types. Furthermore, CAF no longer automatically serializes enumeration types
+  using their underlying value because this is fundamentally unsafe.
+- CAF no longer parses the input to string options on the command line. For
+  example, `my_app '--msg="hello"'` results in CAF storing `"hello"` (including
+  the quotes) for the config option `msg`. Previously, CAF tried to parse any
+  string input on the command-line that starts with quotes in the same way it
+  would parse strings from a config file, leading to very unintuitive results in
+  some cases (#1113).
 
 ### Fixed
 
