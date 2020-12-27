@@ -46,7 +46,7 @@ instance::instance(abstract_broker* parent, callee& lstnr)
   : tbl_(parent), this_node_(parent->system().node()), callee_(lstnr) {
   CAF_ASSERT(this_node_ != none);
   size_t workers;
-  if (auto workers_cfg = get_if<size_t>(&config(), "caf.middleman.workers"))
+  if (auto workers_cfg = get_as<size_t>(config(), "caf.middleman.workers"))
     workers = *workers_cfg;
   else
     workers = std::min(3u, std::thread::hardware_concurrency() / 4u) + 1;
@@ -250,7 +250,7 @@ void instance::write_server_handshake(execution_unit* ctx, byte_buffer& out_buf,
   auto writer = make_callback([&](binary_serializer& sink) {
     using string_list = std::vector<std::string>;
     string_list app_ids;
-    if (auto ids = get_if<string_list>(&config(),
+    if (auto ids = get_as<string_list>(config(),
                                        "caf.middleman.app-identifiers"))
       app_ids = std::move(*ids);
     else
@@ -349,7 +349,7 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
       }
       // Check the application ID.
       string_list whitelist;
-      if (auto ls = get_if<string_list>(&config(),
+      if (auto ls = get_as<string_list>(config(),
                                         "caf.middleman.app-identifiers"))
         whitelist = std::move(*ls);
       else

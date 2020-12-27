@@ -54,6 +54,32 @@
 #include "caf/uri.hpp"
 #include "caf/variant.hpp"
 
+namespace caf::detail {
+
+template <class T>
+struct is_config_value_type : std::false_type {};
+
+#define CAF_ADD_CONFIG_VALUE_TYPE(type_name)                                   \
+  template <>                                                                  \
+  struct is_config_value_type<type_name> : std::true_type {}
+
+CAF_ADD_CONFIG_VALUE_TYPE(none_t);
+CAF_ADD_CONFIG_VALUE_TYPE(int64_t);
+CAF_ADD_CONFIG_VALUE_TYPE(bool);
+CAF_ADD_CONFIG_VALUE_TYPE(double);
+CAF_ADD_CONFIG_VALUE_TYPE(timespan);
+CAF_ADD_CONFIG_VALUE_TYPE(uri);
+CAF_ADD_CONFIG_VALUE_TYPE(std::string);
+CAF_ADD_CONFIG_VALUE_TYPE(std::vector<config_value>);
+CAF_ADD_CONFIG_VALUE_TYPE(dictionary<config_value>);
+
+#undef CAF_ADD_CONFIG_VALUE_TYPE
+
+template <class T>
+constexpr bool is_config_value_type_v = is_config_value_type<T>::value;
+
+}; // namespace caf::detail
+
 namespace caf {
 
 /// A type for config parameters with similar interface to a `variant`. This
@@ -61,11 +87,6 @@ namespace caf {
 /// contain lists of themselves.
 class CAF_CORE_EXPORT config_value {
 public:
-  // -- friends ----------------------------------------------------------------
-
-  template <class T>
-  friend expected<T> get_as(const config_value& value);
-
   // -- member types -----------------------------------------------------------
 
   using integer = int64_t;
@@ -181,6 +202,9 @@ public:
     return data_.index() == 0;
   }
 
+  /// @private
+  ptrdiff_t signed_index() const noexcept;
+
   // -- utility ----------------------------------------------------------------
 
   /// @private
@@ -202,6 +226,9 @@ public:
   expected<timespan> to_timespan() const;
 
   /// @private
+  expected<uri> to_uri() const;
+
+  /// @private
   expected<list> to_list() const;
 
   /// @private
@@ -221,14 +248,29 @@ public:
       return {reader.move_error()};
   }
 
-  /// @experimental
   template <class T>
   error assign(const T& x) {
-    config_value_writer writer{this};
-    if (writer.apply(x))
+    if constexpr (detail::is_config_value_type_v<T>) {
+      data_ = x;
       return {};
-    else
-      return {writer.move_error()};
+    } else {
+      config_value_writer writer{this};
+      if (writer.apply(x))
+        return {};
+      else
+        return {writer.move_error()};
+    }
+  }
+
+  template <class T>
+  static constexpr string_view mapped_type_name() {
+    if constexpr (detail::is_complete<caf::type_name<T>>) {
+      return caf::type_name<T>::value;
+    } else if constexpr (detail::is_list_like_v<T>) {
+      return "list";
+    } else {
+      return "dictionary";
+    }
   }
 
 private:
@@ -241,12 +283,34 @@ private:
 
   // -- auto conversion of related types ---------------------------------------
 
-  void set(none_t) {
-    data_ = none;
+  template <class T>
+  void set_range(T& xs, std::true_type) {
+    auto& dict = as_dictionary();
+    dict.clear();
+    for (auto& [key, val] : xs)
+      dict.emplace(key, std::move(val));
   }
 
-  void set(bool x) {
-    data_ = x;
+  template <class T>
+  void set_range(T& xs, std::false_type) {
+    auto& ls = as_list();
+    ls.clear();
+    ls.insert(ls.end(), std::make_move_iterator(xs.begin()),
+              std::make_move_iterator(xs.end()));
+  }
+
+  template <class T>
+  void set(T x) {
+    if constexpr (detail::is_config_value_type_v<T>) {
+      data_ = std::move(x);
+    } else if constexpr (std::is_integral<T>::value) {
+      data_ = static_cast<int64_t>(x);
+    } else {
+      static_assert(detail::is_iterable<T>::value);
+      using value_type = typename T::value_type;
+      detail::bool_token<detail::is_pair<value_type>::value> is_map_type;
+      set_range(x, is_map_type);
+    }
   }
 
   void set(float x) {
@@ -261,43 +325,6 @@ private:
     data_ = std::string{x.begin(), x.end()};
   }
 
-  template <class T>
-  detail::enable_if_t<
-    detail::is_one_of<T, real, timespan, uri, string, list, dictionary>::value>
-  set(T x) {
-    data_ = std::move(x);
-  }
-
-  template <class T>
-  void set_range(T& xs, std::true_type) {
-    auto& dict = as_dictionary();
-    dict.clear();
-    for (auto& kvp : xs)
-      dict.emplace(kvp.first, std::move(kvp.second));
-  }
-
-  template <class T>
-  void set_range(T& xs, std::false_type) {
-    auto& ls = as_list();
-    ls.clear();
-    ls.insert(ls.end(), std::make_move_iterator(xs.begin()),
-              std::make_move_iterator(xs.end()));
-  }
-
-  template <class T>
-  detail::enable_if_t<detail::is_iterable<T>::value
-                      && !detail::is_one_of<T, string, list, dictionary>::value>
-  set(T xs) {
-    using value_type = typename T::value_type;
-    detail::bool_token<detail::is_pair<value_type>::value> is_map_type;
-    set_range(xs, is_map_type);
-  }
-
-  template <class T>
-  detail::enable_if_t<std::is_integral<T>::value> set(T x) {
-    data_ = static_cast<int64_t>(x);
-  }
-
   // -- member variables -------------------------------------------------------
 
   variant_type data_;
@@ -307,9 +334,6 @@ private:
 CAF_CORE_EXPORT std::string to_string(const config_value& x);
 
 // -- conversion via get_as ----------------------------------------------------
-
-template <class T>
-expected<T> get_as(const config_value& value);
 
 template <class T>
 expected<T> get_as(const config_value&, inspector_access_type::none) {
@@ -476,6 +500,8 @@ expected<T> get_as(const config_value& value) {
     return value.to_list();
   } else if constexpr (std::is_same<T, config_value::dictionary>::value) {
     return value.to_dictionary();
+  } else if constexpr (std::is_same<T, uri>::value) {
+    return value.to_uri();
   } else {
     auto token = inspect_access_type<config_value_reader, T>();
     return get_as<T>(value, token);
@@ -502,6 +528,14 @@ struct get_or_deduction_guide<string_view> {
   using value_type = std::string;
   static value_type convert(string_view str) {
     return {str.begin(), str.end()};
+  }
+};
+
+template <>
+struct get_or_deduction_guide<const char*> {
+  using value_type = std::string;
+  static value_type convert(const char* str) {
+    return {str};
   }
 };
 
@@ -539,575 +573,93 @@ auto get_or(const config_value& x, Fallback&& fallback) {
 // -- SumType-like access ------------------------------------------------------
 
 template <class T>
-struct default_config_value_access {
-  static bool is(const config_value& x) {
-    return holds_alternative<T>(x.get_data());
-  }
-
-  static const T* get_if(const config_value* x) {
-    return caf::get_if<T>(&(x->get_data()));
-  }
-
-  static T get(const config_value& x) {
-    return caf::get<T>(x.get_data());
-  }
-
-  static T convert(T x) {
-    return x;
-  }
-};
-
-/// @relates config_value
-template <class T>
-struct config_value_access;
-
-#define CAF_DEFAULT_CONFIG_VALUE_ACCESS(type, name)                            \
-  template <>                                                                  \
-  struct CAF_CORE_EXPORT config_value_access<type>                             \
-    : default_config_value_access<type> {                                      \
-    static std::string type_name() {                                           \
-      return name;                                                             \
-    }                                                                          \
-  }
-
-CAF_DEFAULT_CONFIG_VALUE_ACCESS(bool, "boolean");
-CAF_DEFAULT_CONFIG_VALUE_ACCESS(double, "real64");
-CAF_DEFAULT_CONFIG_VALUE_ACCESS(uri, "uri");
-
-#undef CAF_DEFAULT_CONFIG_VALUE_ACCESS
-
-template <>
-struct CAF_CORE_EXPORT config_value_access<timespan> {
-  static std::string type_name() {
-    return "timespan";
-  }
-
-  static bool is(const config_value& x) {
-    return static_cast<bool>(get_if(&x));
-  }
-
-  static optional<timespan> get_if(const config_value* x) {
-    auto data_ptr = std::addressof(x->get_data());
-    if (auto res = caf::get_if<timespan>(data_ptr))
-      return static_cast<timespan>(*res);
-    if (auto str = caf::get_if<std::string>(data_ptr)) {
-      string_view sv{*str};
-      timespan result;
-      string_parser_state ps{sv.begin(), sv.end()};
-      detail::parse(ps, result);
-      if (ps.code == pec::success)
-        return result;
-    }
-    return none;
-  }
-
-  static timespan get(const config_value& x) {
-    auto result = get_if(&x);
-    CAF_ASSERT(result);
-    return *result;
-  }
-
-  static timespan convert(timespan x) {
-    return x;
-  }
-};
-
-template <>
-struct CAF_CORE_EXPORT config_value_access<float> {
-  static std::string type_name() {
-    return "real32";
-  }
-
-  static bool is(const config_value& x) {
-    return holds_alternative<double>(x.get_data());
-  }
-
-  static optional<float> get_if(const config_value* x) {
-    if (auto res = caf::get_if<double>(&(x->get_data())))
-      return static_cast<float>(*res);
-    return none;
-  }
-
-  static float get(const config_value& x) {
-    return static_cast<float>(caf::get<double>(x.get_data()));
-  }
-
-  static double convert(float x) {
-    return x;
-  }
-};
-
-template <>
-struct CAF_CORE_EXPORT config_value_access<std::string> {
-  using super = default_config_value_access<std::string>;
-
-  static std::string type_name() {
-    return "string";
-  }
-
-  static bool is(const config_value& x) {
-    return holds_alternative<std::string>(x.get_data());
-  }
-
-  static const std::string* get_if(const config_value* x) {
-    return caf::get_if<std::string>(&(x->get_data()));
-  }
-
-  static std::string get(const config_value& x) {
-    return caf::get<std::string>(x.get_data());
-  }
-
-  static std::string convert(std::string x) {
-    return x;
-  }
-};
-
-// -- implementation details for get/get_if/holds_alternative ------------------
-
-namespace detail {
-
-/// Wraps tag types for static dispatching.
-/// @relates config_value_access_type
-struct config_value_access_type {
-  /// Flags types that provide a `config_value_access` specialization.
-  struct specialization {};
-
-  /// Flags builtin integral types.
-  struct integral {};
-
-  /// Flags types with `std::tuple`-like API.
-  struct tuple {};
-
-  /// Flags types with `std::map`-like API.
-  struct map {};
-
-  /// Flags types with `std::vector`-like API.
-  struct list {};
-
-  /// Flags types without default access that shall fall back to using the
-  /// inspection API.
-  struct inspect {};
-};
-
-/// @relates config_value_access_type
-template <class T>
-constexpr auto config_value_access_token() {
-  if constexpr (detail::is_complete<config_value_access<T>>)
-    return config_value_access_type::specialization{};
-  else if constexpr (std::is_integral<T>::value)
-    return config_value_access_type::integral{};
-  else if constexpr (detail::is_stl_tuple_type_v<T>)
-    return config_value_access_type::tuple{};
-  else if constexpr (detail::is_map_like<T>::value)
-    return config_value_access_type::map{};
-  else if constexpr (detail::is_list_like<T>::value)
-    return config_value_access_type::list{};
+[[deprecated("use get_as or get_or instead")]] optional<T>
+legacy_get_if(const config_value* x) {
+  if (auto val = get_as<T>(*x))
+    return {std::move(*val)};
   else
-    return config_value_access_type::inspect{};
+    return {};
 }
 
 template <class T>
-struct integral_config_value_access;
+auto get_if(const config_value* x) {
+  if constexpr (detail::is_config_value_type_v<T>) {
+    return get_if<T>(x->get_data_ptr());
+  } else {
+    return legacy_get_if<T>(x);
+  }
+}
 
 template <class T>
-struct tuple_config_value_access;
+auto get_if(config_value* x) {
+  if constexpr (detail::is_config_value_type_v<T>) {
+    return get_if<T>(x->get_data_ptr());
+  } else {
+    return legacy_get_if<T>(x);
+  }
+}
 
 template <class T>
-struct map_config_value_access;
+[[deprecated("use get_as or get_or instead")]] T
+legacy_get(const config_value& x) {
+  auto val = get_as<T>(x);
+  if (!val)
+    CAF_RAISE_ERROR("legacy_get: conversion failed");
+  return std::move(*val);
+}
 
 template <class T>
-struct list_config_value_access;
+decltype(auto) get(const config_value& x) {
+  if constexpr (detail::is_config_value_type_v<T>) {
+    return get<T>(x.get_data());
+  } else {
+    return legacy_get<T>(x);
+  }
+}
 
 template <class T>
-struct inspect_config_value_access;
-
-template <class T, class Token>
-struct config_value_access_oracle;
+decltype(auto) get(config_value& x) {
+  if constexpr (detail::is_config_value_type_v<T>) {
+    return get<T>(x.get_data());
+  } else {
+    return legacy_get<T>(x);
+  }
+}
 
 template <class T>
-struct config_value_access_oracle<T, config_value_access_type::specialization> {
-  using type = config_value_access<T>;
-};
-
-#define CAF_CONFIG_VALUE_ACCESS_ORACLE(access_type)                            \
-  template <class T>                                                           \
-  struct config_value_access_oracle<T,                                         \
-                                    config_value_access_type::access_type> {   \
-    using type = access_type##_config_value_access<T>;                         \
-  }
-
-CAF_CONFIG_VALUE_ACCESS_ORACLE(integral);
-CAF_CONFIG_VALUE_ACCESS_ORACLE(tuple);
-CAF_CONFIG_VALUE_ACCESS_ORACLE(map);
-CAF_CONFIG_VALUE_ACCESS_ORACLE(list);
-CAF_CONFIG_VALUE_ACCESS_ORACLE(inspect);
-
-#undef CAF_CONFIG_VALUE_ACCESS_ORACLE
-
-template <class T>
-using config_value_access_t = typename config_value_access_oracle<
-  T, decltype(config_value_access_token<T>())>::type;
-
-template <class T>
-struct integral_config_value_access {
-  using integer_type = config_value::integer;
-
-  static std::string type_name() {
-    std::string result;
-    if (std::is_signed<T>::value)
-      result = "int";
-    else
-      result = "uint";
-    result += std::to_string(sizeof(T) * 8);
-    return result;
-  }
-
-  static bool is(const config_value& x) {
-    auto ptr = caf::get_if<integer_type>(x.get_data_ptr());
-    return ptr != nullptr && detail::bounds_checker<T>::check(*ptr);
-  }
-
-  static optional<T> get_if(const config_value* x) {
-    auto ptr = caf::get_if<integer_type>(x->get_data_ptr());
-    if (ptr != nullptr && detail::bounds_checker<T>::check(*ptr))
-      return static_cast<T>(*ptr);
-    return none;
-  }
-
-  static T get(const config_value& x) {
-    auto res = get_if(&x);
-    CAF_ASSERT(res != none);
-    return *res;
-  }
-
-  static T convert(T x) {
-    return x;
-  }
-};
-
-template <class T>
-struct list_config_value_access {
-  using list_type = T;
-
-  using value_type = typename list_type::value_type;
-
-  using value_access = config_value_access_t<value_type>;
-
-  static std::string type_name() {
-    return "list of " + value_access::type_name();
-  }
-
-  static bool is(const config_value& x) {
-    auto lst = caf::get_if<config_value::list>(&(x.get_data()));
-    return lst != nullptr
-           && std::all_of(lst->begin(), lst->end(), [](const config_value& y) {
-                return caf::holds_alternative<value_type>(y);
-              });
-    return false;
-  }
-
-  static optional<list_type> get_if(const config_value* x) {
-    list_type result;
-    auto out = std::inserter(result, result.end());
-    auto extract = [&](const config_value& y) {
-      if (auto opt = caf::get_if<value_type>(&y)) {
-        *out++ = move_if_optional(opt);
-        return true;
-      }
-      return false;
-    };
-    auto lst = caf::get_if<config_value::list>(&(x->get_data()));
-    if (lst != nullptr && std::all_of(lst->begin(), lst->end(), extract))
-      return result;
-    return none;
-  }
-
-  static list_type get(const config_value& x) {
-    auto result = get_if(&x);
-    if (!result)
-      CAF_RAISE_ERROR("invalid type found");
-    return std::move(*result);
-  }
-
-  static config_value::list convert(const list_type& xs) {
-    config_value::list result;
-    for (const auto& x : xs)
-      result.emplace_back(value_access::convert(x));
-    return result;
-  }
-};
-
-template <class T>
-struct map_config_value_access {
-  using map_type = T;
-
-  using mapped_type = typename map_type::mapped_type;
-
-  using mapped_access = config_value_access_t<mapped_type>;
-
-  static std::string type_name() {
-    std::string result = "dictionary of ";
-    auto nested_name = mapped_access::type_name();
-    result.insert(result.end(), nested_name.begin(), nested_name.end());
-    return result;
-  }
-
-  static bool is(const config_value& x) {
-    using value_type = config_value::dictionary::value_type;
-    auto is_mapped_type = [](const value_type& y) {
-      return caf::holds_alternative<mapped_type>(y.second);
-    };
-    if (auto dict = caf::get_if<config_value::dictionary>(&(x.get_data())))
-      return std::all_of(dict->begin(), dict->end(), is_mapped_type);
-    return false;
-  }
-
-  static optional<map_type> get_if(const config_value* x) {
-    using value_type = config_value::dictionary::value_type;
-    map_type result;
-    auto extract = [&](const value_type& y) {
-      if (auto opt = caf::get_if<mapped_type>(&y.second)) {
-        result.emplace(y.first, move_if_optional(opt));
-        return true;
-      }
-      return false;
-    };
-    if (auto dict = caf::get_if<config_value::dictionary>(&(x->get_data())))
-      if (std::all_of(dict->begin(), dict->end(), extract))
-        return result;
-    return none;
-  }
-
-  static map_type get(const config_value& x) {
-    auto result = get_if(&x);
-    if (!result)
-      CAF_RAISE_ERROR("invalid type found");
-    return std::move(*result);
-  }
-
-  static config_value::dictionary convert(const map_type& xs) {
-    config_value::dictionary result;
-    for (const auto& x : xs)
-      result.emplace(x.first, mapped_access::convert(x.second));
-    return result;
-  }
-};
-
-template <class... Ts>
-struct tuple_config_value_access<std::tuple<Ts...>> {
-  using tuple_type = std::tuple<Ts...>;
-
-  static std::string type_name() {
-    auto result = "tuple[";
-    rec_name(result, true, detail::int_token<0>(), detail::type_list<Ts...>());
-    result += ']';
-    return result;
-  }
-
-  static bool is(const config_value& x) {
-    if (auto lst = caf::get_if<config_value::list>(&(x.get_data()))) {
-      if (lst->size() != sizeof...(Ts))
-        return false;
-      return rec_is(*lst, detail::int_token<0>(), detail::type_list<Ts...>());
-    }
-    return false;
-  }
-
-  static optional<tuple_type> get_if(const config_value* x) {
-    if (auto lst = caf::get_if<config_value::list>(&(x->get_data()))) {
-      if (lst->size() != sizeof...(Ts))
-        return none;
-      tuple_type result;
-      if (rec_get(*lst, result, detail::int_token<0>(),
-                  detail::type_list<Ts...>()))
-        return result;
-    }
-    return none;
-  }
-
-  static tuple_type get(const config_value& x) {
-    if (auto result = get_if(&x))
-      return std::move(*result);
-    CAF_RAISE_ERROR("invalid type found");
-  }
-
-  static config_value::list convert(const tuple_type& xs) {
-    config_value::list result;
-    rec_convert(result, xs, detail::int_token<0>(), detail::type_list<Ts...>());
-    return result;
-  }
-
-private:
-  template <int Pos>
-  static void
-  rec_name(std::string&, bool, detail::int_token<Pos>, detail::type_list<>) {
-    // nop
-  }
-
-  template <int Pos, class U, class... Us>
-  static void rec_name(std::string& result, bool is_first,
-                       detail::int_token<Pos>, detail::type_list<U, Us...>) {
-    if (!is_first)
-      result += ", ";
-    using nested = config_value_access<U>;
-    auto nested_name = nested::type_name();
-    result.insert(result.end(), nested_name.begin(), nested_name.end());
-    return rec_name(result, false, detail::int_token<Pos + 1>(),
-                    detail::type_list<Us...>());
-  }
-
-  template <int Pos>
-  static bool rec_is(const config_value::list&, detail::int_token<Pos>,
-                     detail::type_list<>) {
+[[deprecated("use get_as or get_or instead")]] bool
+legacy_holds_alternative(const config_value& x) {
+  if (auto val = get_as<T>(x))
     return true;
-  }
-
-  template <int Pos, class U, class... Us>
-  static bool rec_is(const config_value::list& xs, detail::int_token<Pos>,
-                     detail::type_list<U, Us...>) {
-    if (!holds_alternative<U>(xs[Pos]))
-      return false;
-    return rec_is(xs, detail::int_token<Pos + 1>(), detail::type_list<Us...>());
-  }
-
-  template <int Pos>
-  static bool rec_get(const config_value::list&, tuple_type&,
-                      detail::int_token<Pos>, detail::type_list<>) {
-    return true;
-  }
-
-  template <int Pos, class U, class... Us>
-  static bool rec_get(const config_value::list& xs, tuple_type& result,
-                      detail::int_token<Pos>, detail::type_list<U, Us...>) {
-    if (auto value = caf::get_if<U>(&xs[Pos])) {
-      std::get<Pos>(result) = detail::move_if_not_ptr(value);
-      return rec_get(xs, result, detail::int_token<Pos + 1>(),
-                     detail::type_list<Us...>());
-    }
+  else
     return false;
-  }
-
-  template <int Pos>
-  static void rec_convert(config_value::list&, const tuple_type&,
-                          detail::int_token<Pos>, detail::type_list<>) {
-    // nop
-  }
-
-  template <int Pos, class U, class... Us>
-  static void rec_convert(config_value::list& result, const tuple_type& xs,
-                          detail::int_token<Pos>, detail::type_list<U, Us...>) {
-    using trait = config_value_access_t<U>;
-    result.emplace_back(trait::convert(std::get<Pos>(xs)));
-    return rec_convert(result, xs, detail::int_token<Pos + 1>(),
-                       detail::type_list<Us...>());
-  }
-};
-
-} // namespace detail
-
-// -- SumType access of dictionary values --------------------------------------
-
-template <>
-struct sum_type_access<config_value> {
-  using types = typename config_value::types;
-
-  using type0 = typename detail::tl_head<types>::type;
-
-  static constexpr bool specialized = true;
-
-  template <class U, int Pos>
-  static bool is(const config_value& x, sum_type_token<U, Pos> token) {
-    return x.get_data().is(pos(token));
-  }
-
-  template <class U>
-  static bool is(const config_value& x, sum_type_token<U, -1>) {
-    return detail::config_value_access_t<U>::is(x);
-  }
-
-  template <class U, int Pos>
-  static U& get(config_value& x, sum_type_token<U, Pos> token) {
-    return x.get_data().get(pos(token));
-  }
-
-  template <class U>
-  static U get(config_value& x, sum_type_token<U, -1>) {
-    return detail::config_value_access_t<U>::get(x);
-  }
-
-  template <class U, int Pos>
-  static const U& get(const config_value& x, sum_type_token<U, Pos> token) {
-    return x.get_data().get(pos(token));
-  }
-
-  template <class U>
-  static U get(const config_value& x, sum_type_token<U, -1>) {
-    return detail::config_value_access_t<U>::get(x);
-  }
-
-  template <class U, int Pos>
-  static U* get_if(config_value* x, sum_type_token<U, Pos> token) {
-    return is(*x, token) ? &get(*x, token) : nullptr;
-  }
-
-  template <class U>
-  static optional<U> get_if(config_value* x, sum_type_token<U, -1>) {
-    return detail::config_value_access_t<U>::get_if(x);
-  }
-
-  template <class U, int Pos>
-  static const U* get_if(const config_value* x, sum_type_token<U, Pos> token) {
-    return is(*x, token) ? &get(*x, token) : nullptr;
-  }
-
-  template <class U>
-  static optional<U> get_if(const config_value* x, sum_type_token<U, -1>) {
-    return detail::config_value_access_t<U>::get_if(x);
-  }
-
-  template <class Result, class Visitor, class... Ts>
-  static Result apply(config_value& x, Visitor&& visitor, Ts&&... xs) {
-    return x.get_data().template apply<Result>(std::forward<Visitor>(visitor),
-                                               std::forward<Ts>(xs)...);
-  }
-
-  template <class Result, class Visitor, class... Ts>
-  static Result apply(const config_value& x, Visitor&& visitor, Ts&&... xs) {
-    return x.get_data().template apply<Result>(std::forward<Visitor>(visitor),
-                                               std::forward<Ts>(xs)...);
-  }
-};
-
-/// @relates config_value
-inline bool operator==(const config_value& x, std::nullptr_t) noexcept {
-  return x.get_data().index() == 0;
 }
 
-/// @relates config_value
-inline bool operator==(std::nullptr_t, const config_value& x) noexcept {
-  return x.get_data().index() == 0;
+template <class T>
+auto holds_alternative(const config_value& x) {
+  if constexpr (detail::is_config_value_type_v<T>) {
+    return holds_alternative<T>(x.get_data());
+  } else {
+    return legacy_holds_alternative<T>(x);
+  }
 }
 
-/// @relates config_value
-inline bool operator!=(const config_value& x, std::nullptr_t) noexcept {
-  return x.get_data().index() != 0;
-}
-
-/// @relates config_value
-inline bool operator!=(std::nullptr_t, const config_value& x) noexcept {
-  return x.get_data().index() != 0;
-}
+// -- comparison operator overloads --------------------------------------------
 
 /// @relates config_value
 CAF_CORE_EXPORT bool operator<(const config_value& x, const config_value& y);
 
 /// @relates config_value
+CAF_CORE_EXPORT bool operator<=(const config_value& x, const config_value& y);
+
+/// @relates config_value
 CAF_CORE_EXPORT bool operator==(const config_value& x, const config_value& y);
 
 /// @relates config_value
-inline bool operator>=(const config_value& x, const config_value& y) {
-  return !(x < y);
-}
+CAF_CORE_EXPORT bool operator>(const config_value& x, const config_value& y);
+
+/// @relates config_value
+CAF_CORE_EXPORT bool operator>=(const config_value& x, const config_value& y);
 
 /// @relates config_value
 inline bool operator!=(const config_value& x, const config_value& y) {
@@ -1118,6 +670,8 @@ inline bool operator!=(const config_value& x, const config_value& y) {
 CAF_CORE_EXPORT std::ostream& operator<<(std::ostream& out,
                                          const config_value& x);
 
+// -- convenience APIs ---------------------------------------------------------
+
 template <class... Ts>
 config_value make_config_value_list(Ts&&... xs) {
   std::vector<config_value> lst{config_value{std::forward<Ts>(xs)}...};
@@ -1125,44 +679,6 @@ config_value make_config_value_list(Ts&&... xs) {
 }
 
 // -- inspection API -----------------------------------------------------------
-
-namespace detail {
-
-template <class T>
-struct inspect_config_value_access {
-  static std::string type_name() {
-    return to_string(type_name_or_anonymous<T>());
-  }
-
-  static optional<T> get_if(const config_value* x) {
-    config_value_reader reader{x};
-    auto tmp = T{};
-    if (detail::load(reader, tmp))
-      return optional<T>{std::move(tmp)};
-    return none;
-  }
-
-  static bool is(const config_value& x) {
-    return get_if(&x) != none;
-  }
-
-  static T get(const config_value& x) {
-    auto result = get_if(&x);
-    if (!result)
-      CAF_RAISE_ERROR("invalid type found");
-    return std::move(*result);
-  }
-
-  static config_value convert(const T& x) {
-    config_value result;
-    config_value_writer writer{&result};
-    if (!detail::save(writer, x))
-      CAF_RAISE_ERROR("unable to convert type to a config_value");
-    return result;
-  }
-};
-
-} // namespace detail
 
 template <>
 struct variant_inspector_traits<config_value> {
@@ -1186,7 +702,7 @@ struct variant_inspector_traits<config_value> {
 
   template <class F, class Value>
   static auto visit(F&& f, Value&& x) {
-    return caf::visit(std::forward<F>(f), std::forward<Value>(x));
+    return caf::visit(std::forward<F>(f), x.get_data());
   }
 
   template <class U>

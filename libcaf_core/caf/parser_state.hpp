@@ -58,6 +58,10 @@ struct parser_state {
     e = last;
   }
 
+  parser_state(const parser_state&) noexcept = default;
+
+  parser_state& operator=(const parser_state&) noexcept = default;
+
   /// Returns the null terminator when reaching the end of the string,
   /// otherwise the next character.
   char next() noexcept {

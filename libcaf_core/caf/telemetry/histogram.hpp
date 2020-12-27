@@ -128,7 +128,7 @@ private:
       return false;
     for (const auto& lbl : labels) {
       if (auto ptr = get_if<settings>(cfg, lbl.str())) {
-        if (auto bounds = get_if<std::vector<value_type>>(ptr, "buckets")) {
+        if (auto bounds = get_as<std::vector<value_type>>(*ptr, "buckets")) {
           std::sort(bounds->begin(), bounds->end());
           bounds->erase(std::unique(bounds->begin(), bounds->end()),
                         bounds->end());

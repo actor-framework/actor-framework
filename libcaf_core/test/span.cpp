@@ -86,10 +86,10 @@ CAF_TEST(subspans) {
 
 CAF_TEST(free iterator functions) {
   auto xs = make_span(chars);
-  CAF_CHECK_EQUAL(xs.begin(), begin(xs));
-  CAF_CHECK_EQUAL(xs.cbegin(), cbegin(xs));
-  CAF_CHECK_EQUAL(xs.end(), end(xs));
-  CAF_CHECK_EQUAL(xs.cend(), cend(xs));
+  CAF_CHECK(xs.begin() == begin(xs));
+  CAF_CHECK(xs.cbegin() == cbegin(xs));
+  CAF_CHECK(xs.end() == end(xs));
+  CAF_CHECK(xs.cend() == cend(xs));
 }
 
 CAF_TEST(as bytes) {
@@ -108,10 +108,10 @@ CAF_TEST(make_span) {
   CAF_CHECK(std::equal(xs.begin(), xs.end(), chars.begin()));
   CAF_CHECK(std::equal(ys.begin(), ys.end(), chars.begin()));
   CAF_CHECK(std::equal(zs.begin(), zs.end(), chars.begin()));
-  CAF_CHECK_EQUAL(end(xs), end(ys));
-  CAF_CHECK_EQUAL(end(ys), end(zs));
-  CAF_CHECK_EQUAL(begin(xs), begin(ys));
-  CAF_CHECK_EQUAL(begin(ys), begin(zs));
+  CAF_CHECK(end(xs) == end(ys));
+  CAF_CHECK(end(ys) == end(zs));
+  CAF_CHECK(begin(xs) == begin(ys));
+  CAF_CHECK(begin(ys) == begin(zs));
 }
 
 CAF_TEST(spans are convertible from compatible containers) {

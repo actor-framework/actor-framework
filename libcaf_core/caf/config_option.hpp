@@ -48,7 +48,7 @@ public:
     config_value (*get)(const void*);
 
     /// Human-readable name of the option's type.
-    std::string type_name;
+    string_view type_name;
   };
 
   // -- constructors, destructors, and assignment operators --------------------

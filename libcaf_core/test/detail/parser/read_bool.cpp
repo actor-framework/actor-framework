@@ -48,7 +48,8 @@ struct bool_parser {
     detail::parser::read_bool(res, f);
     if (res.code == pec::success)
       return f.x;
-    return res.code;
+    else
+      return res.code;
   }
 };
 
@@ -61,23 +62,23 @@ struct fixture {
 CAF_TEST_FIXTURE_SCOPE(read_bool_tests, fixture)
 
 CAF_TEST(valid booleans) {
-  CAF_CHECK_EQUAL(p("true"), true);
-  CAF_CHECK_EQUAL(p("false"), false);
+  CAF_CHECK_EQUAL(p("true"), res_t{true});
+  CAF_CHECK_EQUAL(p("false"), res_t{false});
 }
 
 CAF_TEST(invalid booleans) {
-  CAF_CHECK_EQUAL(p(""), pec::unexpected_eof);
-  CAF_CHECK_EQUAL(p("t"), pec::unexpected_eof);
-  CAF_CHECK_EQUAL(p("tr"), pec::unexpected_eof);
-  CAF_CHECK_EQUAL(p("tru"), pec::unexpected_eof);
-  CAF_CHECK_EQUAL(p(" true"), pec::unexpected_character);
-  CAF_CHECK_EQUAL(p("f"), pec::unexpected_eof);
-  CAF_CHECK_EQUAL(p("fa"), pec::unexpected_eof);
-  CAF_CHECK_EQUAL(p("fal"), pec::unexpected_eof);
-  CAF_CHECK_EQUAL(p("fals"), pec::unexpected_eof);
-  CAF_CHECK_EQUAL(p(" false"), pec::unexpected_character);
-  CAF_CHECK_EQUAL(p("tr\nue"), pec::unexpected_newline);
-  CAF_CHECK_EQUAL(p("trues"), pec::trailing_character);
+  CAF_CHECK_EQUAL(p(""), res_t{pec::unexpected_eof});
+  CAF_CHECK_EQUAL(p("t"), res_t{pec::unexpected_eof});
+  CAF_CHECK_EQUAL(p("tr"), res_t{pec::unexpected_eof});
+  CAF_CHECK_EQUAL(p("tru"), res_t{pec::unexpected_eof});
+  CAF_CHECK_EQUAL(p(" true"), res_t{pec::unexpected_character});
+  CAF_CHECK_EQUAL(p("f"), res_t{pec::unexpected_eof});
+  CAF_CHECK_EQUAL(p("fa"), res_t{pec::unexpected_eof});
+  CAF_CHECK_EQUAL(p("fal"), res_t{pec::unexpected_eof});
+  CAF_CHECK_EQUAL(p("fals"), res_t{pec::unexpected_eof});
+  CAF_CHECK_EQUAL(p(" false"), res_t{pec::unexpected_character});
+  CAF_CHECK_EQUAL(p("tr\nue"), res_t{pec::unexpected_newline});
+  CAF_CHECK_EQUAL(p("trues"), res_t{pec::trailing_character});
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

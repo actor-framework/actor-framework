@@ -33,6 +33,7 @@
 #include <vector>
 
 using namespace caf;
+using namespace caf::literals;
 
 using namespace std::string_literals;
 
@@ -161,12 +162,19 @@ CAF_TEST(file input overrides defaults but CLI args always win) {
 #define CHECK_SYNCED(var, value)                                               \
   do {                                                                         \
     CAF_CHECK_EQUAL(var, value);                                               \
-    CAF_CHECK_EQUAL(get<decltype(var)>(cfg, #var), value);                     \
+    if (auto maybe_val = get_as<decltype(var)>(cfg, #var)) {                   \
+      CAF_CHECK_EQUAL(*maybe_val, value);                                      \
+    } else {                                                                   \
+      auto cv = get_if(std::addressof(cfg.content), #var);                     \
+      CAF_ERROR("expected type "                                               \
+                << config_value::mapped_type_name<decltype(var)>()             \
+                << ", got: " << cv->type_name());                              \
+    }                                                                          \
   } while (false)
 
 // Checks whether an entry in content(cfg) is equal to `value`.
 #define CHECK_TEXT_ONLY(type, var, value)                                      \
-  CAF_CHECK_EQUAL(get<type>(cfg, #var), value)
+  CAF_CHECK_EQUAL(get_as<type>(cfg, #var), value)
 
 #define ADD(var) add(var, #var, "...")
 

@@ -189,6 +189,13 @@ public:
       return true;
     } else if constexpr (std::is_same<T, char>::value) {
       return value(string_view{x, strlen(x)});
+    } else if constexpr (std::is_same<T, void>::value) {
+      sep();
+      result_ += "*<";
+      auto addr = reinterpret_cast<intptr_t>(x);
+      result_ += std::to_string(addr);
+      result_ += '>';
+      return true;
     } else {
       sep();
       result_ += '*';

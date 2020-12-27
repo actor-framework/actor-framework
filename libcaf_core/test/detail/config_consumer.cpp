@@ -82,12 +82,11 @@ CAF_TEST(config_consumer) {
   detail::parser::read_config(res, consumer);
   CAF_CHECK_EQUAL(res.code, pec::success);
   CAF_CHECK_EQUAL(string_view(res.i, res.e), string_view());
-  CAF_CHECK_EQUAL(get<bool>(config, "is_server"), true);
-  CAF_CHECK_EQUAL(get<uint16_t>(config, "port"), 4242u);
-  CAF_CHECK_EQUAL(get<ls>(config, "nodes"), ls({"sun", "venus"}));
-  CAF_CHECK_EQUAL(get<string>(config, "logger.file-name"), "foobar.conf");
-  CAF_MESSAGE(config);
-  CAF_CHECK_EQUAL(get<timespan>(config, "scheduler.timing"), timespan(2000));
+  CAF_CHECK_EQUAL(get_as<bool>(config, "is_server"), true);
+  CAF_CHECK_EQUAL(get_as<uint16_t>(config, "port"), 4242u);
+  CAF_CHECK_EQUAL(get_as<ls>(config, "nodes"), ls({"sun", "venus"}));
+  CAF_CHECK_EQUAL(get_as<string>(config, "logger.file-name"), "foobar.conf");
+  CAF_CHECK_EQUAL(get_as<timespan>(config, "scheduler.timing"), timespan(2000));
 }
 
 CAF_TEST(simplified syntax) {

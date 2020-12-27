@@ -44,8 +44,7 @@ config_value bool_get_neg(const void* ptr) {
   return config_value{!*static_cast<const bool*>(ptr)};
 }
 
-meta_state bool_neg_meta{bool_sync_neg, bool_get_neg,
-                         detail::config_value_access_t<bool>::type_name()};
+meta_state bool_neg_meta{bool_sync_neg, bool_get_neg, "bool"};
 
 template <uint64_t Denominator>
 error sync_timespan(void* ptr, config_value& x) {
@@ -67,11 +66,10 @@ config_value get_timespan(const void* ptr) {
   return config_value{val};
 }
 
-meta_state us_res_meta{sync_timespan<1000>, get_timespan<1000>,
-                       detail::config_value_access_t<timespan>::type_name()};
+meta_state us_res_meta{sync_timespan<1000>, get_timespan<1000>, "timespan"};
 
 meta_state ms_res_meta{sync_timespan<1000000>, get_timespan<1000000>,
-                       detail::config_value_access_t<timespan>::type_name()};
+                       "timespan"};
 
 } // namespace
 

@@ -43,14 +43,14 @@ config_list_consumer::config_list_consumer(config_value_consumer* parent)
 }
 
 pec config_list_consumer::end_list() {
-  auto f = make_overload(
-    [this](config_consumer* ptr) {
-      return ptr->value(config_value{std::move(xs_)});
-    },
-    [this](auto* ptr) {
-      ptr->value(config_value{std::move(xs_)});
-      return pec::success;
-    });
+  auto f = make_overload([](none_t) { return pec::success; },
+                         [this](config_consumer* ptr) {
+                           return ptr->value(config_value{std::move(result)});
+                         },
+                         [this](auto* ptr) {
+                           ptr->value(config_value{std::move(result)});
+                           return pec::success;
+                         });
   return visit(f, parent_);
 }
 
@@ -59,7 +59,8 @@ config_consumer config_list_consumer::begin_map() {
 }
 
 std::string config_list_consumer::qualified_key() {
-  auto f = make_overload([](config_value_consumer*) { return std::string{}; },
+  auto f = make_overload([](none_t) { return std::string{}; },
+                         [](config_value_consumer*) { return std::string{}; },
                          [](auto* ptr) { return ptr->qualified_key(); });
   return visit(f, parent_);
 }

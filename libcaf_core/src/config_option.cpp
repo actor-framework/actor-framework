@@ -142,7 +142,7 @@ string_view config_option::type_name() const noexcept {
 }
 
 bool config_option::is_flag() const noexcept {
-  return type_name() == "boolean";
+  return type_name() == "bool";
 }
 
 bool config_option::has_flat_cli_name() const noexcept {

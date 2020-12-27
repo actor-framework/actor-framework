@@ -56,9 +56,8 @@ config_value get_impl(const void* ptr) {
 
 template <class T>
 config_option::meta_state* option_meta_state_instance() {
-  using trait = detail::config_value_access_t<T>;
   static config_option::meta_state obj{sync_impl<T>, get_impl<T>,
-                                       trait::type_name()};
+                                       config_value::mapped_type_name<T>()};
   return &obj;
 }
 

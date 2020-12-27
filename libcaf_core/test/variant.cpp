@@ -81,8 +81,7 @@ using v20 = variant<i01, i02, i03, i04, i05, i06, i07, i08, i09, i10,
   do {                                                                         \
     using type = std::decay_t<decltype(y)>;                                    \
     auto&& tmp = x;                                                            \
-    CAF_CHECK(holds_alternative<type>(tmp));                                   \
-    if (holds_alternative<type>(tmp))                                          \
+    if (CAF_CHECK(holds_alternative<type>(tmp)))                               \
       CAF_CHECK_EQUAL(get<type>(tmp), y);                                      \
   } while (false)
 
@@ -102,9 +101,6 @@ using v20 = variant<i01, i02, i03, i04, i05, i06, i07, i08, i09, i10,
 CAF_TEST(copying_moving_roundtrips) {
   actor_system_config cfg;
   actor_system sys{cfg};
-  // default construction
-  variant<none_t> x1;
-  CAF_CHECK_EQUAL(x1, none);
   variant<int, none_t> x2;
   VARIANT_EQ(x2, 0);
   v20 x3;
@@ -129,11 +125,10 @@ CAF_TEST(constructors) {
   variant<float, int, std::string> b{"bar"s};
   variant<int, std::string, double> c{123};
   variant<bool, uint8_t> d{uint8_t{252}};
-  CAF_CHECK_EQUAL(a, 42);
-  CAF_CHECK_EQUAL(b, "bar"s);
-  CAF_CHECK_EQUAL(c, 123);
-  CAF_CHECK_NOT_EQUAL(c, "123"s);
-  CAF_CHECK_EQUAL(d, uint8_t{252});
+  VARIANT_EQ(a, 42);
+  VARIANT_EQ(b, "bar"s);
+  VARIANT_EQ(c, 123);
+  VARIANT_EQ(d, uint8_t{252});
 }
 
 CAF_TEST(n_ary_visit) {
@@ -152,8 +147,7 @@ CAF_TEST(get_if) {
   CAF_CHECK_EQUAL(get_if<int>(&b), nullptr);
   CAF_CHECK_NOT_EQUAL(get_if<std::string>(&b), nullptr);
   CAF_MESSAGE("test get_if via unit test framework");
-  CAF_CHECK_NOT_EQUAL(b, 42);
-  CAF_CHECK_EQUAL(b, "foo"s);
+  VARIANT_EQ(b, "foo"s);
 }
 
 CAF_TEST(less_than) {

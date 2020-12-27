@@ -130,7 +130,7 @@ public:
   bool start(const config_value::dictionary& cfg) override {
     // Read port, address and reuse flag from the config.
     uint16_t port = 0;
-    if (auto cfg_port = get_if<uint16_t>(&cfg, "port")) {
+    if (auto cfg_port = get_as<uint16_t>(cfg, "port")) {
       port = *cfg_port;
     } else {
       return false;

@@ -101,21 +101,25 @@ CAF_CORE_EXPORT void parse(string_parser_state& ps, long double& x);
 
 // -- CAF types ----------------------------------------------------------------
 
-CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv4_address& x);
+CAF_CORE_EXPORT void parse(string_parser_state&, ipv4_address&);
 
-CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv4_subnet& x);
+CAF_CORE_EXPORT void parse(string_parser_state&, ipv4_subnet&);
 
-CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv4_endpoint& x);
+CAF_CORE_EXPORT void parse(string_parser_state&, ipv4_endpoint&);
 
-CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv6_address& x);
+CAF_CORE_EXPORT void parse(string_parser_state&, ipv6_address&);
 
-CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv6_subnet& x);
+CAF_CORE_EXPORT void parse(string_parser_state&, ipv6_subnet&);
 
-CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv6_endpoint& x);
+CAF_CORE_EXPORT void parse(string_parser_state&, ipv6_endpoint&);
 
-CAF_CORE_EXPORT void parse(string_parser_state& ps, uri& x);
+CAF_CORE_EXPORT void parse(string_parser_state&, uri&);
 
-CAF_CORE_EXPORT void parse(string_parser_state& ps, config_value& x);
+CAF_CORE_EXPORT void parse(string_parser_state&, config_value&);
+
+CAF_CORE_EXPORT void parse(string_parser_state&, std::vector<config_value>&);
+
+CAF_CORE_EXPORT void parse(string_parser_state&, dictionary<config_value>&);
 
 // -- variadic utility ---------------------------------------------------------
 
@@ -209,6 +213,7 @@ void parse(string_parser_state& ps,
   x = value_type{since_epoch};
 }
 
+/*
 // -- container types ----------------------------------------------------------
 
 CAF_CORE_EXPORT void parse_element(string_parser_state& ps, std::string& x,
@@ -304,6 +309,7 @@ void parse_element(string_parser_state& ps, std::pair<First, Second>& kvp,
   }
   parse_element(ps, kvp.second, char_blacklist);
 }
+*/
 
 // -- convenience functions ----------------------------------------------------
 

@@ -42,6 +42,7 @@ using i64_list = std::vector<i64>;
 
 struct fixture {
   config_value x;
+  settings dummy;
 
   template <class T>
   void set(const T& value) {
@@ -50,19 +51,11 @@ struct fixture {
       CAF_FAIL("failed two write to settings: " << writer.get_error());
   }
 
-  template <class T>
-  optional<T> get(const settings& cfg, string_view key) {
-    if (auto ptr = get_if<T>(&cfg, key))
+  const settings& xs() const {
+    if (auto* ptr = get_if<settings>(&x))
       return *ptr;
-    return none;
-  }
-
-  template <class T>
-  optional<T> get(string_view key) {
-    if (auto* xs = get_if<settings>(&x))
-      return get<T>(*xs, key);
     else
-      CAF_FAIL("fixture does not contain a dictionary");
+      return dummy;
   }
 };
 
@@ -72,18 +65,18 @@ CAF_TEST_FIXTURE_SCOPE(config_value_writer_tests, fixture)
 
 CAF_TEST(structs become dictionaries) {
   set(foobar{"hello", "world"});
-  CAF_CHECK_EQUAL(get<std::string>("foo"), "hello"s);
-  CAF_CHECK_EQUAL(get<std::string>("bar"), "world"s);
+  CAF_CHECK_EQUAL(get_as<std::string>(xs(), "foo"), "hello"s);
+  CAF_CHECK_EQUAL(get_as<std::string>(xs(), "bar"), "world"s);
 }
 
 CAF_TEST(nested structs become nested dictionaries) {
   set(line{{10, 20, 30}, {70, 60, 50}});
-  CAF_CHECK_EQUAL(get<i64>("p1.x"), 10_i64);
-  CAF_CHECK_EQUAL(get<i64>("p1.y"), 20_i64);
-  CAF_CHECK_EQUAL(get<i64>("p1.z"), 30_i64);
-  CAF_CHECK_EQUAL(get<i64>("p2.x"), 70_i64);
-  CAF_CHECK_EQUAL(get<i64>("p2.y"), 60_i64);
-  CAF_CHECK_EQUAL(get<i64>("p2.z"), 50_i64);
+  CAF_CHECK_EQUAL(get_as<i64>(xs(), "p1.x"), 10_i64);
+  CAF_CHECK_EQUAL(get_as<i64>(xs(), "p1.y"), 20_i64);
+  CAF_CHECK_EQUAL(get_as<i64>(xs(), "p1.z"), 30_i64);
+  CAF_CHECK_EQUAL(get_as<i64>(xs(), "p2.x"), 70_i64);
+  CAF_CHECK_EQUAL(get_as<i64>(xs(), "p2.y"), 60_i64);
+  CAF_CHECK_EQUAL(get_as<i64>(xs(), "p2.z"), 50_i64);
 }
 
 CAF_TEST(empty types and maps become dictionaries) {
@@ -100,36 +93,36 @@ CAF_TEST(empty types and maps become dictionaries) {
   tst.v7["two"] = 2;
   tst.v7["three"] = 3;
   set(tst);
-  CAF_CHECK_EQUAL(get<settings>("v1"), settings{});
-  CAF_CHECK_EQUAL(get<i64>("v2"), 42_i64);
-  CAF_CHECK_EQUAL(get<i64_list>("v3"), i64_list({-1, -2, -3, -4}));
-  if (auto v4 = get<config_value::list>("v4");
-      CAF_CHECK_EQUAL(v4->size(), 2u)) {
+  CAF_CHECK_EQUAL(get_as<settings>(xs(), "v1"), settings{});
+  CAF_CHECK_EQUAL(get_as<i64>(xs(), "v2"), 42_i64);
+  CAF_CHECK_EQUAL(get_as<i64_list>(xs(), "v3"), i64_list({-1, -2, -3, -4}));
+  if (auto v4 = get_as<config_value::list>(xs(), "v4");
+      CAF_CHECK(v4 && v4->size() == 2u)) {
     if (auto v1 = v4->front(); CAF_CHECK(holds_alternative<settings>(v1))) {
-      auto& v1_xs = caf::get<settings>(v1);
+      auto& v1_xs = get<settings>(v1);
       CAF_CHECK_EQUAL(get<double>(v1_xs, "content"), 0.0);
       CAF_CHECK_EQUAL(get<std::string>(v1_xs, "@content-type"),
                       to_string(type_name_v<double>));
     }
     if (auto v2 = v4->back(); CAF_CHECK(holds_alternative<settings>(v2))) {
-      auto& v2_xs = caf::get<settings>(v2);
+      auto& v2_xs = get<settings>(v2);
       CAF_CHECK_EQUAL(get<double>(v2_xs, "content"), 1.0);
       CAF_CHECK_EQUAL(get<std::string>(v2_xs, "@content-type"),
                       to_string(type_name_v<double>));
     }
   }
-  CAF_CHECK_EQUAL(get<i64_list>("v5"), i64_list({10, 20}));
+  CAF_CHECK_EQUAL(get_as<i64_list>(xs(), "v5"), i64_list({10, 20}));
   // TODO: check v6
-  CAF_CHECK_EQUAL(get<i64>("v7.one"), 1_i64);
-  CAF_CHECK_EQUAL(get<i64>("v7.two"), 2_i64);
-  CAF_CHECK_EQUAL(get<i64>("v7.three"), 3_i64);
-  CAF_CHECK_EQUAL(get<config_value::list>("v8"), config_value::list());
+  CAF_CHECK_EQUAL(get_as<i64>(xs(), "v7.one"), 1_i64);
+  CAF_CHECK_EQUAL(get_as<i64>(xs(), "v7.two"), 2_i64);
+  CAF_CHECK_EQUAL(get_as<i64>(xs(), "v7.three"), 3_i64);
+  CAF_CHECK_EQUAL(get_as<config_value::list>(xs(), "v8"), config_value::list());
 }
 
 CAF_TEST(custom inspect overloads may produce single values) {
   auto tue = weekday::tuesday;
   set(tue);
-  CAF_CHECK_EQUAL(x, "tuesday"s);
+  CAF_CHECK_EQUAL(get_as<std::string>(x), "tuesday"s);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

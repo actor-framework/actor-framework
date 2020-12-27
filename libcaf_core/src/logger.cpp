@@ -310,7 +310,7 @@ void logger::init(actor_system_config& cfg) {
     return CAF_LOG_LEVEL_QUIET;
   };
   auto read_filter = [&cfg](string_list& var, string_view key) {
-    if (auto lst = get_if<string_list>(&cfg, key))
+    if (auto lst = get_as<string_list>(cfg, key))
       var = std::move(*lst);
   };
   cfg_.file_verbosity = get_verbosity("caf.logger.file.verbosity");
