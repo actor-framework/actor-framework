@@ -305,6 +305,8 @@ private:
       data_ = std::move(x);
     } else if constexpr (std::is_integral<T>::value) {
       data_ = static_cast<int64_t>(x);
+    } else if constexpr (std::is_convertible<T, const char*>::value) {
+      data_ = std::string{x};
     } else {
       static_assert(detail::is_iterable<T>::value);
       using value_type = typename T::value_type;
