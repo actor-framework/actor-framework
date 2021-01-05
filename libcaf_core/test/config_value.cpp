@@ -84,10 +84,12 @@ CAF_TEST_FIXTURE_SCOPE(config_value_tests, fixture)
 SCENARIO("default-constructed config values represent null") {
   GIVEN("a default-constructed config value") {
     config_value x;
-    THEN("its type is none and its to_string output is 'null'") {
-      CHECK(holds_alternative<none_t>(x));
-      CHECK_EQ(x.type_name(), "none"s);
-      CHECK_EQ(to_string(x), "null"s);
+    WHEN("inspecting the config value") {
+      THEN("its type is none and its to_string output is 'null'") {
+        CHECK(holds_alternative<none_t>(x));
+        CHECK_EQ(x.type_name(), "none"s);
+        CHECK_EQ(to_string(x), "null"s);
+      }
     }
   }
 }
