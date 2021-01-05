@@ -53,27 +53,31 @@ public:
                   "mixing expected<T> with regular values is not supported");
     if constexpr (sizeof...(Ts) == 0
                   && std::is_same<message, std::decay_t<T>>::value)
-      return deliver_impl(std::forward<T>(x));
+      deliver_impl(std::forward<T>(x));
     else
-      return deliver_impl(
-        make_message(std::forward<T>(x), std::forward<Ts>(xs)...));
+      deliver_impl(make_message(std::forward<T>(x), std::forward<Ts>(xs)...));
   }
 
   /// Satisfies the promise by sending either an error or a non-error response
   /// message.
   template <class T>
   void deliver(expected<T> x) {
-    if (x)
-      return deliver(std::move(*x));
-    return deliver(std::move(x.error()));
+    if (x) {
+      if constexpr (std::is_same<T, void>::value)
+        deliver_impl(make_message());
+      else
+        deliver(std::move(*x));
+    } else {
+      deliver(std::move(x.error()));
+    }
   }
 
   /// Satisfies the promise by delegating to another actor.
   template <message_priority P = message_priority::normal, class Handle = actor,
             class... Ts>
-  typename response_type<typename Handle::signatures,
-                         detail::implicit_conversions_t<
-                           typename std::decay<Ts>::type>...>::delegated_type
+  delegated_response_type_t<
+    typename Handle::signatures,
+    detail::implicit_conversions_t<typename std::decay<Ts>::type>...>
   delegate(const Handle& dest, Ts&&... xs) {
     static_assert(sizeof...(Ts) > 0, "nothing to delegate");
     using token = detail::type_list<typename detail::implicit_conversions<
@@ -96,7 +100,13 @@ public:
 
   /// Satisfies the promise by sending an empty message if this promise has a
   /// valid message ID, i.e., `async() == false`.
-  void deliver(unit_t x);
+  void deliver();
+
+  /// Satisfies the promise by sending an empty message if this promise has a
+  /// valid message ID, i.e., `async() == false`.
+  void deliver(unit_t) {
+    deliver();
+  }
 
   /// Returns whether this response promise replies to an asynchronous message.
   bool async() const;

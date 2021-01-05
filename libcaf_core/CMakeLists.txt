@@ -308,6 +308,7 @@ caf_add_component(
     policy.select_all
     policy.select_any
     request_timeout
+    response_promise
     result
     save_inspector
     selective_streaming
