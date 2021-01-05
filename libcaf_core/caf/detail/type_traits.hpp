@@ -701,7 +701,7 @@ public:
 };
 
 template <class T>
-constexpr bool has_reserve_t = has_reserve<T>::value;
+constexpr bool has_reserve_v = has_reserve<T>::value;
 
 template <class T>
 struct has_emplace_back {
@@ -721,7 +721,7 @@ public:
 };
 
 template <class T>
-constexpr bool has_emplace_back_t = has_emplace_back<T>::value;
+constexpr bool has_emplace_back_v = has_emplace_back<T>::value;
 
 template <class T>
 class has_call_error_handler {

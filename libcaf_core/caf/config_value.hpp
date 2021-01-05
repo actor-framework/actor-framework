@@ -474,11 +474,11 @@ expected<T> get_as(const config_value& x, inspector_access_type::list) {
   if (auto wrapped_values = x.to_list()) {
     using value_type = typename T::value_type;
     T result;
-    if constexpr (detail::has_reserve_t<T>)
+    if constexpr (detail::has_reserve_v<T>)
       result.reserve(wrapped_values->size());
     for (const auto& wrapped_value : *wrapped_values)
       if (auto maybe_value = get_as<value_type>(wrapped_value)) {
-        if constexpr (detail::has_emplace_back_t<T>)
+        if constexpr (detail::has_emplace_back_v<T>)
           result.emplace_back(std::move(*maybe_value));
         else
           result.insert(result.end(), std::move(*maybe_value));

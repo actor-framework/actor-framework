@@ -551,13 +551,13 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
   } while (false)
 
 #define CAF_CHECK(...)                                                         \
-  ([](bool expr_result) {                                                      \
+  [](bool expr_result) {                                                       \
     return ::caf::test::detail::check_un(expr_result, __FILE__, __LINE__,      \
                                          #__VA_ARGS__);                        \
-  })(static_cast<bool>(__VA_ARGS__))
+  }(static_cast<bool>(__VA_ARGS__))
 
 #define CAF_CHECK_FUNC(func, x_expr, y_expr)                                   \
-  ([](auto&& x_val, auto&& y_val) {                                            \
+  [](auto&& x_val, auto&& y_val) {                                             \
     func comparator;                                                           \
     auto caf_check_res                                                         \
       = ::caf::test::detail::check(::caf::test::engine::current_test(),        \
@@ -567,7 +567,7 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
     ::caf::test::engine::last_check_file(__FILE__);                            \
     ::caf::test::engine::last_check_line(__LINE__);                            \
     return caf_check_res;                                                      \
-  })(x_expr, y_expr)
+  }(x_expr, y_expr)
 
 #define CAF_CHECK_FAIL(...)                                                    \
   do {                                                                         \
@@ -643,80 +643,80 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 // -- CAF_CHECK* predicate family ----------------------------------------------
 
 #define CAF_CHECK_EQUAL(x_expr, y_expr)                                        \
-  ([](const auto& x_val, const auto& y_val) {                                  \
+  [](const auto& x_val, const auto& y_val) {                                   \
     return ::caf::test::detail::check_bin(x_val == y_val, __FILE__, __LINE__,  \
                                           #x_expr " == " #y_expr,              \
                                           caf::deep_to_string(x_val),          \
                                           caf::deep_to_string(y_val));         \
-  })(x_expr, y_expr)
+  }(x_expr, y_expr)
 
 #define CAF_CHECK_NOT_EQUAL(x_expr, y_expr)                                    \
-  ([](const auto& x_val, const auto& y_val) {                                  \
+  [](const auto& x_val, const auto& y_val) {                                   \
     return ::caf::test::detail::check_bin(x_val != y_val, __FILE__, __LINE__,  \
                                           #x_expr " != " #y_expr,              \
                                           caf::deep_to_string(x_val),          \
                                           caf::deep_to_string(y_val));         \
-  })(x_expr, y_expr)
+  }(x_expr, y_expr)
 
 #define CAF_CHECK_LESS(x_expr, y_expr)                                         \
-  ([](const auto& x_val, const auto& y_val) {                                  \
+  [](const auto& x_val, const auto& y_val) {                                   \
     return ::caf::test::detail::check_bin(x_val < y_val, __FILE__, __LINE__,   \
                                           #x_expr " < " #y_expr,               \
                                           caf::deep_to_string(x_val),          \
                                           caf::deep_to_string(y_val));         \
-  })(x_expr, y_expr)
+  }(x_expr, y_expr)
 
 #define CAF_CHECK_NOT_LESS(x_expr, y_expr)                                     \
-  ([](const auto& x_val, const auto& y_val) {                                  \
+  [](const auto& x_val, const auto& y_val) {                                   \
     return ::caf::test::detail::check_bin(                                     \
       !(x_val < y_val), __FILE__, __LINE__, "not " #x_expr " < " #y_expr,      \
       caf::deep_to_string(x_val), caf::deep_to_string(y_val));                 \
-  })(x_expr, y_expr)
+  }(x_expr, y_expr)
 
 #define CAF_CHECK_LESS_OR_EQUAL(x_expr, y_expr)                                \
-  ([](const auto& x_val, const auto& y_val) {                                  \
+  [](const auto& x_val, const auto& y_val) {                                   \
     return ::caf::test::detail::check_bin(x_val <= y_val, __FILE__, __LINE__,  \
                                           #x_expr " <= " #y_expr,              \
                                           caf::deep_to_string(x_val),          \
                                           caf::deep_to_string(y_val));         \
-  })(x_expr, y_expr)
+  }(x_expr, y_expr)
 
 #define CAF_CHECK_NOT_LESS_OR_EQUAL(x_expr, y_expr)                            \
-  ([](const auto& x_val, const auto& y_val) {                                  \
+  [](const auto& x_val, const auto& y_val) {                                   \
     return ::caf::test::detail::check_bin(                                     \
       !(x_val <= y_val), __FILE__, __LINE__, "not " #x_expr " <= " #y_expr,    \
       caf::deep_to_string(x_val), caf::deep_to_string(y_val));                 \
-  })(x_expr, y_expr)
+  }(x_expr, y_expr)
 
 #define CAF_CHECK_GREATER(x_expr, y_expr)                                      \
-  ([](const auto& x_val, const auto& y_val) {                                  \
+  [](const auto& x_val, const auto& y_val) {                                   \
     return ::caf::test::detail::check_bin(x_val > y_val, __FILE__, __LINE__,   \
                                           #x_expr " > " #y_expr,               \
                                           caf::deep_to_string(x_val),          \
                                           caf::deep_to_string(y_val));         \
-  })(x_expr, y_expr)
+  }(x_expr, y_expr)
 
 #define CAF_CHECK_NOT_GREATER(x_expr, y_expr)                                  \
-  ([](const auto& x_val, const auto& y_val) {                                  \
+  [](const auto& x_val, const auto& y_val) {                                   \
     return ::caf::test::detail::check_bin(                                     \
       !(x_val > y_val), __FILE__, __LINE__, "not " #x_expr " > " #y_expr,      \
       caf::deep_to_string(x_val), caf::deep_to_string(y_val));                 \
-  })(x_expr, y_expr)
+  }(x_expr, y_expr)
 
 #define CAF_CHECK_GREATER_OR_EQUAL(x_expr, y_expr)                             \
-  ([](const auto& x_val, const auto& y_val) {                                  \
+  [](const auto& x_val, const auto& y_val) {                                   \
     return ::caf::test::detail::check_bin(x_val >= y_val, __FILE__, __LINE__,  \
                                           #x_expr " >= " #y_expr,              \
                                           caf::deep_to_string(x_val),          \
                                           caf::deep_to_string(y_val));         \
-  })(x_expr, y_expr)
+  }(x_expr, y_expr)
 
 #define CAF_CHECK_NOT_GREATER_OR_EQUAL(x_expr, y_expr)                         \
-  ([](const auto& x_val, const auto& y_val) {                                  \
+  [](const auto& x_val, const auto& y_val) {                                   \
     return ::caf::test::detail::check_bin(                                     \
       !(x_val >= y_val), __FILE__, __LINE__, "not " #x_expr " >= " #y_expr,    \
       caf::deep_to_string(x_val), caf::deep_to_string(y_val));                 \
-  })(x_expr, y_expr)
+  }(x_expr, y_expr)
 
 // -- CAF_CHECK* predicate family ----------------------------------------------
 

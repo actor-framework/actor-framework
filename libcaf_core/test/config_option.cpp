@@ -70,7 +70,7 @@ struct state {
       .add(my_app_request, "request,r", "")
       .add(my_app_request_pair, "request-pair,R", "");
     config_option_adder{options, "sys"}
-      .add<std::string>("path,p", "")
+      .add<std::string>("query,q", "")
       .add<int8_t>("threads,tTd", "");
   }
 
@@ -162,6 +162,13 @@ struct fixture {
              "",
              R"_(my { app { request-pair {  first { a = 1, b = 2 },
                                     second { a = 3, b = 4 } } } })_");
+    add_test({}, "sys{threads=2}", R"_(sys { threads = 2 })_");
+    add_test({"-t", "1"}, "sys{threads=2}", R"_(sys { threads = 1 })_");
+    add_test({"-T", "1"}, "sys{threads=2}", R"_(sys { threads = 1 })_");
+    add_test({"-d", "1"}, "sys{threads=2}", R"_(sys { threads = 1 })_");
+    add_test({"--sys.threads=1"}, "sys{threads=2}", R"_(sys { threads = 1 })_");
+    add_test({"--sys.query=foo"}, "", R"_(sys { query = "foo" })_");
+    add_test({"-q", "\"a\" in b"}, "", R"_(sys { query = "\"a\" in b" })_");
   }
 };
 
