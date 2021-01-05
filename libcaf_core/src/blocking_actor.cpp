@@ -10,6 +10,7 @@
 #include "caf/actor_system.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/invoke_result_visitor.hpp"
+#include "caf/detail/private_thread.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/invoke_message_result.hpp"
@@ -84,49 +85,75 @@ const char* blocking_actor::name() const {
   return "user.blocking-actor";
 }
 
+namespace {
+
+// Runner for passing a blocking actor to a private_thread. We don't actually
+// need a reference count here, because the private thread calls
+// intrusive_ptr_release_impl exactly once after running this function object.
+class blocking_actor_runner : public resumable {
+public:
+  explicit blocking_actor_runner(blocking_actor* self,
+                                 detail::private_thread* thread)
+    : self_(self), thread_(thread) {
+    intrusive_ptr_add_ref(self->ctrl());
+  }
+
+  resumable::subtype_t subtype() const override {
+    return resumable::function_object;
+  }
+
+  resumable::resume_result resume(execution_unit* ctx, size_t) override {
+    CAF_PUSH_AID_FROM_PTR(self_);
+    self_->context(ctx);
+    self_->initialize();
+    error rsn;
+#ifdef CAF_ENABLE_EXCEPTIONS
+    try {
+      self_->act();
+      rsn = self_->fail_state();
+    } catch (...) {
+      auto ptr = std::current_exception();
+      rsn = scheduled_actor::default_exception_handler(self_, ptr);
+    }
+    try {
+      self_->on_exit();
+    } catch (...) {
+      // simply ignore exception
+    }
+#else
+    self_->act();
+    rsn = self_->fail_state();
+    self_->on_exit();
+#endif
+    self_->cleanup(std::move(rsn), ctx);
+    intrusive_ptr_release(self_->ctrl());
+    ctx->system().release_private_thread(thread_);
+    return resumable::done;
+  }
+
+  void intrusive_ptr_add_ref_impl() override {
+    // nop
+  }
+
+  void intrusive_ptr_release_impl() override {
+    delete this;
+  }
+
+private:
+  blocking_actor* self_;
+  detail::private_thread* thread_;
+};
+
+} // namespace
+
 void blocking_actor::launch(execution_unit*, bool, bool hide) {
   CAF_PUSH_AID_FROM_PTR(this);
   CAF_LOG_TRACE(CAF_ARG(hide));
   CAF_ASSERT(getf(is_blocking_flag));
   if (!hide)
     register_at_system();
-  home_system().inc_detached_threads();
-  std::thread(
-    [](strong_actor_ptr ptr) {
-      // actor lives in its own thread
-      detail::set_thread_name("caf.actor");
-      ptr->home_system->thread_started();
-      auto this_ptr = ptr->get();
-      CAF_ASSERT(dynamic_cast<blocking_actor*>(this_ptr) != nullptr);
-      auto self = static_cast<blocking_actor*>(this_ptr);
-      CAF_SET_LOGGER_SYS(ptr->home_system);
-      CAF_PUSH_AID_FROM_PTR(self);
-      self->initialize();
-      error rsn;
-#ifdef CAF_ENABLE_EXCEPTIONS
-      try {
-        self->act();
-        rsn = self->fail_state_;
-      } catch (...) {
-        auto eptr = std::current_exception();
-        rsn = scheduled_actor::default_exception_handler(self, eptr);
-      }
-      try {
-        self->on_exit();
-      } catch (...) {
-        // simply ignore exception
-      }
-#else
-      self->act();
-      rsn = self->fail_state_;
-      self->on_exit();
-#endif
-      self->cleanup(std::move(rsn), self->context());
-      ptr->home_system->thread_terminates();
-      ptr->home_system->dec_detached_threads();
-    },
-    strong_actor_ptr{ctrl()})
-    .detach();
+  auto thread = home_system().acquire_private_thread();
+  thread->resume(new blocking_actor_runner(this, thread));
 }
 
 blocking_actor::receive_while_helper

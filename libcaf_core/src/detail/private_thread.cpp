@@ -4,102 +4,75 @@
 
 #include "caf/detail/private_thread.hpp"
 
+#include "caf/actor_system.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/logger.hpp"
-#include "caf/scheduled_actor.hpp"
+#include "caf/resumable.hpp"
+#include "caf/scoped_execution_unit.hpp"
 
 namespace caf::detail {
 
-private_thread::private_thread(scheduled_actor* self)
-  : self_destroyed_(false),
-    self_(self),
-    state_(active),
-    system_(self->system()) {
-  intrusive_ptr_add_ref(self->ctrl());
-  system_.inc_detached_threads();
-}
-
-void private_thread::run() {
-  auto job = self_.load();
-  CAF_ASSERT(job != nullptr);
-  CAF_SET_LOGGER_SYS(&job->system());
-  CAF_PUSH_AID(job->id());
+void private_thread::run(actor_system* sys) {
   CAF_LOG_TRACE("");
-  scoped_execution_unit ctx{&job->system()};
-  auto max_throughput = std::numeric_limits<size_t>::max();
-  bool resume_later;
+  scoped_execution_unit ctx{sys};
+  auto resume = [&ctx](resumable* job) {
+    auto res = job->resume(&ctx, std::numeric_limits<size_t>::max());
+    while (res == resumable::resume_later)
+      res = job->resume(&ctx, std::numeric_limits<size_t>::max());
+    return res;
+  };
   for (;;) {
-    state_ = await_resume_or_shutdown;
-    do {
-      resume_later = false;
-      switch (job->resume(&ctx, max_throughput)) {
-        case resumable::resume_later:
-          resume_later = true;
-          break;
-        case resumable::done:
-          intrusive_ptr_release(job->ctrl());
-          return;
-        case resumable::awaiting_message:
-          intrusive_ptr_release(job->ctrl());
-          break;
-        case resumable::shutdown_execution_unit:
-          return;
-      }
-    } while (resume_later);
-    // wait until actor becomes ready again or was destroyed
-    if (!await_resume())
+    auto [job, done] = await();
+    if (job) {
+      CAF_ASSERT(job->subtype() != resumable::io_actor);
+      resume(job);
+      intrusive_ptr_release(job);
+    }
+    if (done)
       return;
   }
 }
 
-bool private_thread::await_resume() {
+void private_thread::resume(resumable* ptr) {
+  std::unique_lock<std::mutex> guard{mtx_};
+  CAF_ASSERT(job_ == nullptr);
+  job_ = ptr;
+  cv_.notify_all();
+}
+
+bool private_thread::stop() {
+  {
+    std::unique_lock<std::mutex> guard{mtx_};
+    shutdown_ = true;
+    cv_.notify_all();
+  }
+  thread_.join();
+  return true;
+}
+
+std::pair<resumable*, bool> private_thread::await() {
   std::unique_lock<std::mutex> guard(mtx_);
-  while (state_ == await_resume_or_shutdown)
+  while (job_ == nullptr && !shutdown_)
     cv_.wait(guard);
-  return state_ == active;
+  auto ptr = job_;
+  if (ptr)
+    job_ = nullptr;
+  return {ptr, shutdown_};
 }
 
-void private_thread::resume() {
-  std::unique_lock<std::mutex> guard(mtx_);
-  state_ = active;
-  cv_.notify_one();
+private_thread* private_thread::launch(actor_system* sys) {
+  auto ptr = std::make_unique<private_thread>();
+  ptr->thread_ = std::thread{exec, sys, ptr.get()};
+  return ptr.release();
 }
 
-void private_thread::shutdown() {
-  std::unique_lock<std::mutex> guard(mtx_);
-  state_ = shutdown_requested;
-  cv_.notify_one();
-}
-
-void private_thread::exec(private_thread* this_ptr) {
-  detail::set_thread_name("caf.actor");
-  this_ptr->system_.thread_started();
-  this_ptr->run();
-  // make sure to not destroy the private thread object before the
-  // detached actor is destroyed and this object is unreachable
-  this_ptr->await_self_destroyed();
-  // signalize destruction of detached thread to registry
-  this_ptr->system_.thread_terminates();
-  this_ptr->system_.dec_detached_threads();
-  // done
-  delete this_ptr;
-}
-
-void private_thread::notify_self_destroyed() {
-  std::unique_lock<std::mutex> guard(mtx_);
-  self_destroyed_ = true;
-  cv_.notify_one();
-}
-
-void private_thread::await_self_destroyed() {
-  std::unique_lock<std::mutex> guard(mtx_);
-  while (!self_destroyed_)
-    cv_.wait(guard);
-}
-
-void private_thread::start() {
-  std::thread{exec, this}.detach();
+void private_thread::exec(actor_system* sys, private_thread* this_ptr) {
+  CAF_SET_LOGGER_SYS(sys);
+  detail::set_thread_name("caf.thread");
+  sys->thread_started();
+  this_ptr->run(sys);
+  sys->thread_terminates();
 }
 
 } // namespace caf::detail

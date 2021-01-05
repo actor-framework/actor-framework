@@ -327,6 +327,8 @@ public:
     });
   }
 
+  using super::fail_state;
+
   /// Sets a user-defined exit reason `err`. This reason
   /// is signalized to other actors after `act()` returns.
   void fail_state(error err);

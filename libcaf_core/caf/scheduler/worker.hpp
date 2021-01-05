@@ -99,7 +99,6 @@ private:
       auto job = policy_.dequeue(this);
       CAF_ASSERT(job != nullptr);
       CAF_ASSERT(job->subtype() != resumable::io_actor);
-      CAF_PUSH_AID_FROM_PTR(dynamic_cast<abstract_actor*>(job));
       policy_.before_resume(this, job);
       auto res = job->resume(this, max_throughput_);
       policy_.after_resume(this, job);
