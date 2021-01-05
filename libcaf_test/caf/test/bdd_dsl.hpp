@@ -46,3 +46,8 @@
 #define REQUIRE_GE(lhs, rhs) CAF_REQUIRE_GREATER_OR_EQUAL(lhs, rhs)
 
 #define MESSAGE(what) CAF_MESSAGE(what)
+
+#define BEGIN_FIXTURE_SCOPE(fixture_class)                                     \
+  CAF_TEST_FIXTURE_SCOPE(CAF_UNIFYN(tests), fixture_class)
+
+#define END_FIXTURE_SCOPE() CAF_TEST_FIXTURE_SCOPE_END()

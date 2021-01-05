@@ -36,22 +36,19 @@ public:
   /// Custom vtable-like struct for delegating to type-specific functions and
   /// storing type-specific information shared by several config options.
   struct meta_state {
-    /// Checks whether a value matches the option's type.
-    error (*check)(const config_value&);
-
-    /// Stores a value in the given location.
-    void (*store)(void*, const config_value&);
+    /// Tries to perform this sequence of steps:
+    /// - Convert the config value to the type of the config option.
+    /// - Assign the converted value back to the config value to synchronize
+    ///   conversions back to the caller.
+    /// - Store the converted value in the pointer unless it is `nullptr`.
+    error (*sync)(void*, config_value&);
 
     /// Tries to extract a value from the given location. Exists for backward
     /// compatibility only and will get removed with CAF 0.17.
     config_value (*get)(const void*);
 
-    /// Tries to parse an input string. Stores and returns the parsed value on
-    /// success, returns an error otherwise.
-    expected<config_value> (*parse)(void*, string_view);
-
     /// Human-readable name of the option's type.
-    std::string type_name;
+    string_view type_name;
   };
 
   // -- constructors, destructors, and assignment operators --------------------
@@ -89,12 +86,19 @@ public:
   /// Returns the full name for this config option as "<category>.<long name>".
   string_view full_name() const noexcept;
 
-  /// Checks whether `x` holds a legal value for this option.
-  error check(const config_value& x) const;
+  /// Synchronizes the value of this config option with `x` and vice versa.
+  ///
+  /// Tries to perform this sequence of steps:
+  /// - Convert the config value to the type of the config option.
+  /// - Assign the converted value back to the config value to synchronize
+  ///   conversions back to the caller.
+  /// - Store the converted value unless this option is stateless.
+  error sync(config_value& x) const;
 
-  /// Stores `x` in this option unless it is stateless.
-  /// @pre `check(x) == none`.
-  void store(const config_value& x) const;
+  [[deprecated("use sync instead")]] error store(const config_value& x) const;
+
+  [[deprecated("use sync instead")]] expected<config_value>
+  parse(string_view input) const;
 
   /// Returns a human-readable representation of this option's expected type.
   string_view type_name() const noexcept;
@@ -104,10 +108,6 @@ public:
 
   /// Returns whether the category is optional for CLI options.
   bool has_flat_cli_name() const noexcept;
-
-  /// Tries to parse an input string. Stores and returns the parsed value on
-  /// success, returns an error otherwise.
-  expected<config_value> parse(string_view input) const;
 
   /// @private
   // TODO: remove with CAF 0.17

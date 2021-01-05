@@ -22,6 +22,8 @@
 
 #include "core-test.hpp"
 
+#include <sstream>
+
 #include "caf/make_config_option.hpp"
 #include "caf/config_value.hpp"
 #include "caf/expected.hpp"
@@ -31,6 +33,155 @@ using namespace caf;
 using std::string;
 
 namespace {
+
+struct state;
+
+struct baseline {
+  std::vector<std::string> cli;
+  std::string conf;
+  settings res;
+  std::function<bool(const state&)> predicate;
+};
+
+struct request_pair {
+  my_request first;
+  my_request second;
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, request_pair& x) {
+  return f.object(x).fields(f.field("first", x.first),
+                            f.field("second", x.second));
+}
+
+struct state {
+  s1 my_app_s1;
+  std::vector<int32_t> my_app_vector;
+  level my_app_severity = level::trace;
+  my_request my_app_request;
+  request_pair my_app_request_pair;
+  config_option_set options;
+
+  state() {
+    config_option_adder{options, "?my.app"}
+      .add(my_app_s1, "s1", "")
+      .add(my_app_vector, "vector,v", "")
+      .add(my_app_severity, "severity,s", "")
+      .add(my_app_request, "request,r", "")
+      .add(my_app_request_pair, "request-pair,R", "");
+    config_option_adder{options, "sys"}
+      .add<std::string>("query,q", "")
+      .add<int8_t>("threads,tTd", "");
+  }
+
+  void run(baseline& x, size_t index) {
+    settings res;
+    std::istringstream src{x.conf};
+    if (auto parsed = actor_system_config::parse_config(src, options)) {
+      res = std::move(*parsed);
+    } else {
+      CAF_ERROR("failed to parse baseline at index " << index << ": "
+                                                     << parsed.error());
+      return;
+    }
+    auto [code, pos] = options.parse(res, x.cli);
+    if (pos != x.cli.end()) {
+      CAF_ERROR("failed to parse all arguments for baseline at index "
+                << index << ", stopped at: " << *pos << " (" << code << ')');
+      return;
+    }
+    if (code != pec::success) {
+      CAF_ERROR("CLI arguments for baseline at index "
+                << index << " failed to parse: " << code);
+      return;
+    }
+    if (!x.predicate(*this)) {
+      CAF_ERROR("predicate for baseline at index " << index << "failed! ");
+      return;
+    }
+    MESSAGE("all checks for baseline at index " << index << " passed");
+  }
+};
+
+struct fixture {
+  std::vector<baseline> baselines;
+
+  template <class Predicate>
+  void add_test(std::vector<std::string> cli, std::string conf, settings res,
+                Predicate f) {
+    baselines.emplace_back(baseline{
+      std::move(cli),
+      std::move(conf),
+      std::move(res),
+      f,
+    });
+  }
+
+  template <class Predicate>
+  void add_test(std::vector<std::string> cli, std::string conf, std::string res,
+                Predicate f) {
+    config_value cv_res{res};
+    if (auto parsed = get_as<settings>(cv_res))
+      add_test(std::move(cli), std::move(conf), std::move(*parsed),
+               std::move(f));
+    else
+      CAF_FAIL("failed to parse result settings: " << parsed.error()
+                                                   << "\nINPUT:\n"
+                                                   << res << '\n');
+  }
+
+  template <class Res>
+  void add_test(std::vector<std::string> cli, std::string conf, Res&& res) {
+    return add_test(std::move(cli), std::move(conf), std::forward<Res>(res),
+                    [](const state&) { return true; });
+  }
+
+  fixture() {
+    using ivec = std::vector<int32_t>;
+    add_test({"-s", "error"}, "", R"_(my { app { severity = "error" } })_",
+             [](auto& st) {
+               return CHECK_EQ(st.my_app_severity, level::error);
+             });
+    add_test({"-v", "1, 2, 3"}, "", R"_(my { app { vector = [1, 2, 3] } })_",
+             [](auto& st) {
+               return CHECK_EQ(st.my_app_vector, ivec({1, 2, 3}));
+             });
+    add_test({"-v", "[1, 2, 3]"}, "", R"_(my { app { vector = [1, 2, 3] } })_");
+    add_test({"-v[1, 2, 3]"}, "", R"_(my { app { vector = [1, 2, 3] } })_");
+    add_test({"-v1, 2, 3,"}, "", R"_(my { app { vector = [1, 2, 3] } })_");
+    add_test({"-r", R"_({"a":1,"b":2})_"}, "",
+             R"_(my { app { request { a = 1, b = 2 } } })_");
+    add_test({"-r", R"_(a=1,b=2)_"}, "",
+             R"_(my { app { request { a = 1, b = 2 } } })_");
+    add_test({R"_(--my.app.request={a=1,b=2})_"}, "",
+             R"_(my { app { request { a = 1, b = 2 } } })_");
+    add_test({R"_(--my.app.request=a=1,b=2,)_"}, "",
+             R"_(my { app { request { a = 1, b = 2 } } })_");
+    add_test({"-R",
+              R"_({"first": {"a": 1, "b": 2}, "second": {"a": 3, "b": 4}})_"},
+             "",
+             R"_(my { app { request-pair {  first { a = 1, b = 2 },
+                                    second { a = 3, b = 4 } } } })_");
+    add_test({}, "sys{threads=2}", R"_(sys { threads = 2 })_");
+    add_test({"-t", "1"}, "sys{threads=2}", R"_(sys { threads = 1 })_");
+    add_test({"-T", "1"}, "sys{threads=2}", R"_(sys { threads = 1 })_");
+    add_test({"-d", "1"}, "sys{threads=2}", R"_(sys { threads = 1 })_");
+    add_test({"--sys.threads=1"}, "sys{threads=2}", R"_(sys { threads = 1 })_");
+    add_test({"--sys.query=foo"}, "", R"_(sys { query = "foo" })_");
+    add_test({"-q", "\"a\" in b"}, "", R"_(sys { query = "\"a\" in b" })_");
+  }
+};
+
+} // namespace
+
+BEGIN_FIXTURE_SCOPE(fixture)
+
+SCENARIO("options on the CLI override config files that override defaults") {
+  for (size_t index = 0; index < baselines.size(); ++index) {
+    state st;
+    st.run(baselines[index], index);
+  }
+}
 
 constexpr string_view category = "category";
 constexpr string_view name = "name";
@@ -48,14 +199,13 @@ constexpr int64_t underflow() {
 
 template <class T>
 optional<T> read(string_view arg) {
-  auto co = make_config_option<T>(category, name, explanation);
-  auto res = co.parse(arg);
-  if (res && holds_alternative<T>(*res)) {
-    if (co.check(*res) != none)
-      CAF_ERROR("co.parse() produced the wrong type!");
-    return get<T>(*res);
-  }
-  return none;
+  auto result = T{};
+  auto co = make_config_option<T>(result, category, name, explanation);
+  config_value val{arg};
+  if (auto err = co.sync(val); !err)
+    return {std::move(result)};
+  else
+    return none;
 }
 
 // Unsigned integers.
@@ -97,8 +247,6 @@ void compare(const config_option& lhs, const config_option& rhs) {
   CAF_CHECK_EQUAL(lhs.description(), rhs.description());
   CAF_CHECK_EQUAL(lhs.full_name(), rhs.full_name());
 }
-
-} // namespace
 
 CAF_TEST(copy constructor) {
   auto one = make_config_option<int>("cat1", "one", "option 1");
@@ -166,12 +314,12 @@ CAF_TEST(type double) {
   CAF_CHECK_EQUAL(unbox(read<double>("-1.0")),  -1.0);
   CAF_CHECK_EQUAL(unbox(read<double>("-0.1")),  -0.1);
   CAF_CHECK_EQUAL(read<double>("0"), 0.);
-  CAF_CHECK_EQUAL(read<double>("\"0.1\""),  none);
+  CAF_CHECK_EQUAL(read<double>("\"0.1\""), none);
 }
 
 CAF_TEST(type string) {
   CAF_CHECK_EQUAL(unbox(read<string>("foo")), "foo");
-  CAF_CHECK_EQUAL(unbox(read<string>("\"foo\"")), "foo");
+  CAF_CHECK_EQUAL(unbox(read<string>(R"_("foo")_")), R"_("foo")_");
 }
 
 CAF_TEST(type timespan) {
@@ -231,3 +379,5 @@ CAF_TEST(find by long opt) {
   // No options to look through.
   check({}, false, false);
 }
+
+END_FIXTURE_SCOPE()

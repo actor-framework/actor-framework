@@ -428,7 +428,7 @@ bool pull(config_value_reader& reader, T& x) {
   auto& top = reader.top();
   if (holds_alternative<const config_value*>(top)) {
     auto ptr = get<const config_value*>(top);
-    if (auto val = get_if<internal_type>(ptr)) {
+    if (auto val = get_as<internal_type>(*ptr)) {
       assign(*val);
       reader.pop();
       return true;
@@ -446,7 +446,7 @@ bool pull(config_value_reader& reader, T& x) {
       return false;
     }
     auto ptr = std::addressof(seq.current());
-    if (auto val = get_if<internal_type>(ptr)) {
+    if (auto val = get_as<internal_type>(*ptr)) {
       assign(*val);
       seq.advance();
       return true;

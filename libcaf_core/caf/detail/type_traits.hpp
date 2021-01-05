@@ -686,6 +686,44 @@ public:
 };
 
 template <class T>
+struct has_reserve {
+private:
+  template <class List>
+  static auto sfinae(List* l) -> decltype(l->reserve(10), std::true_type());
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using sfinae_type = decltype(sfinae<T>(nullptr));
+
+public:
+  static constexpr bool value = sfinae_type::value;
+};
+
+template <class T>
+constexpr bool has_reserve_v = has_reserve<T>::value;
+
+template <class T>
+struct has_emplace_back {
+private:
+  template <class List>
+  static auto sfinae(List* l)
+    -> decltype(l->emplace_back(std::declval<typename List::value_type>()),
+                std::true_type());
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using sfinae_type = decltype(sfinae<T>(nullptr));
+
+public:
+  static constexpr bool value = sfinae_type::value;
+};
+
+template <class T>
+constexpr bool has_emplace_back_v = has_emplace_back<T>::value;
+
+template <class T>
 class has_call_error_handler {
 private:
   template <class Actor>

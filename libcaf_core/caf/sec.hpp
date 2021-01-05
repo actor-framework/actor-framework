@@ -170,6 +170,8 @@ enum class sec : uint8_t {
   /// An operation failed because the callee does not implement this
   /// functionality.
   unsupported_operation,
+  /// A key lookup failed.
+  no_such_key = 65,
 };
 
 /// @relates sec

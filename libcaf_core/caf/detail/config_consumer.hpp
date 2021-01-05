@@ -36,6 +36,8 @@ class CAF_CORE_EXPORT config_list_consumer {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
+  config_list_consumer() = default;
+
   config_list_consumer(const config_option_set* options,
                        config_consumer* parent);
 
@@ -60,8 +62,10 @@ public:
 
   template <class T>
   void value(T&& x) {
-    xs_.emplace_back(std::forward<T>(x));
+    result.emplace_back(std::forward<T>(x));
   }
+
+  config_value::list result;
 
   std::string qualified_key();
 
@@ -69,9 +73,9 @@ private:
   // -- member variables -------------------------------------------------------
 
   const config_option_set* options_ = nullptr;
-  variant<config_consumer*, config_list_consumer*, config_value_consumer*>
+  variant<none_t, config_consumer*, config_list_consumer*,
+          config_value_consumer*>
     parent_;
-  config_value::list xs_;
 };
 
 /// Consumes a series of key-value pairs from an application configuration.

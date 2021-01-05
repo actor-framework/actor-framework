@@ -53,10 +53,11 @@ struct fixture {
     settings cfg;
     auto res = opts.parse(cfg, std::move(args));
     if (res.first != pec::success)
-      return res.first;
-    if (auto x = get_if<T>(&cfg, key))
-      return detail::move_if_not_ptr(x);
-    return sec::invalid_argument;
+      return {res.first};
+    else if (auto x = get_as<T>(cfg, key))
+      return {std::move(*x)};
+    else
+      return {sec::invalid_argument};
   }
 
   std::string key = "value";
@@ -101,7 +102,7 @@ CAF_TEST(parse with ref syncing) {
   settings cfg;
   vector<string> args{"-i42",
                       "-f",
-                      "1e12",
+                      "1e2",
                       "-shello",
                       "--bar.l=[\"hello\", \"world\"]",
                       "-d",
@@ -114,34 +115,20 @@ CAF_TEST(parse with ref syncing) {
     CAF_FAIL("parser stopped at: " << *res.second);
   CAF_MESSAGE("verify referenced values");
   CAF_CHECK_EQUAL(foo_i, 42);
-  CAF_CHECK_EQUAL(foo_f, 1e12);
+  CAF_CHECK_EQUAL(foo_f, 1e2);
   CAF_CHECK_EQUAL(foo_b, true);
   CAF_CHECK_EQUAL(bar_s, "hello");
   CAF_CHECK_EQUAL(bar_l, ls({"hello", "world"}));
   CAF_CHECK_EQUAL(bar_d, ds({{"a", "a"}, {"b", "b"}}));
   CAF_MESSAGE("verify dictionary content");
-  CAF_CHECK_EQUAL(get<int>(cfg, "foo.i"), 42);
+  CAF_CHECK_EQUAL(get_as<int>(cfg, "foo.i"), 42);
 }
 
 CAF_TEST(string parameters) {
   opts.add<std::string>("value,v", "some value");
-  CAF_MESSAGE("test string option with and without quotes");
-  CAF_CHECK_EQUAL(read<std::string>({"--value=\"foo\\tbar\""}), "foo\tbar");
   CAF_CHECK_EQUAL(read<std::string>({"--value=foobar"}), "foobar");
-  CAF_CHECK_EQUAL(read<std::string>({"-v", "\"foobar\""}), "foobar");
   CAF_CHECK_EQUAL(read<std::string>({"-v", "foobar"}), "foobar");
-  CAF_CHECK_EQUAL(read<std::string>({"-v\"foobar\""}), "foobar");
   CAF_CHECK_EQUAL(read<std::string>({"-vfoobar"}), "foobar");
-  CAF_CHECK_EQUAL(read<std::string>({"--value=\"'abc'\""}), "'abc'");
-  CAF_CHECK_EQUAL(read<std::string>({"--value='abc'"}), "'abc'");
-  CAF_CHECK_EQUAL(read<std::string>({"-v", "\"'abc'\""}), "'abc'");
-  CAF_CHECK_EQUAL(read<std::string>({"-v", "'abc'"}), "'abc'");
-  CAF_CHECK_EQUAL(read<std::string>({"-v'abc'"}), "'abc'");
-  CAF_CHECK_EQUAL(read<std::string>({"--value=\"123\""}), "123");
-  CAF_CHECK_EQUAL(read<std::string>({"--value=123"}), "123");
-  CAF_CHECK_EQUAL(read<std::string>({"-v", "\"123\""}), "123");
-  CAF_CHECK_EQUAL(read<std::string>({"-v", "123"}), "123");
-  CAF_CHECK_EQUAL(read<std::string>({"-v123"}), "123");
 }
 
 CAF_TEST(flat CLI options) {
@@ -202,18 +189,19 @@ CAF_TEST(CLI arguments override defaults) {
     CAF_MESSAGE("test integer lists");
     ints = int_list{1, 2, 3};
     cfg["bar"] = config_value{ints};
-    CAF_CHECK_EQUAL(get<int_list>(cfg, "bar"), int_list({1, 2, 3}));
+    CAF_CHECK_EQUAL(get_as<int_list>(cfg, "bar"), int_list({1, 2, 3}));
     CAF_CHECK_EQUAL(read<int_list>(cfg, {"--bar=[10, 20, 30]"}), none);
     CAF_CHECK_EQUAL(ints, int_list({10, 20, 30}));
-    CAF_CHECK_EQUAL(get<int_list>(cfg, "bar"), int_list({10, 20, 30}));
+    CAF_CHECK_EQUAL(get_as<int_list>(cfg, "bar"), int_list({10, 20, 30}));
     CAF_MESSAGE("test string lists");
     strings = string_list{"one", "two", "three"};
     cfg["foo"] = config_value{strings};
-    CAF_CHECK_EQUAL(get<string_list>(cfg, "foo"),
+    CAF_CHECK_EQUAL(get_as<string_list>(cfg, "foo"),
                     string_list({"one", "two", "three"}));
-    CAF_CHECK_EQUAL(read<string_list>(cfg, {"--foo=[hello, world]"}), none);
+    CAF_CHECK_EQUAL(read<string_list>(cfg, {R"_(--foo=["hello", "world"])_"}),
+                    none);
     CAF_CHECK_EQUAL(strings, string_list({"hello", "world"}));
-    CAF_CHECK_EQUAL(get<string_list>(cfg, "foo"),
+    CAF_CHECK_EQUAL(get_as<string_list>(cfg, "foo"),
                     string_list({"hello", "world"}));
   }
   SUBTEST("without ref syncing") {
@@ -223,15 +211,16 @@ CAF_TEST(CLI arguments override defaults) {
     opts.add<int_list>("global", "bar,b", "some list");
     CAF_MESSAGE("test integer lists");
     cfg["bar"] = config_value{int_list{1, 2, 3}};
-    CAF_CHECK_EQUAL(get<int_list>(cfg, "bar"), int_list({1, 2, 3}));
+    CAF_CHECK_EQUAL(get_as<int_list>(cfg, "bar"), int_list({1, 2, 3}));
     CAF_CHECK_EQUAL(read<int_list>(cfg, {"--bar=[10, 20, 30]"}), none);
-    CAF_CHECK_EQUAL(get<int_list>(cfg, "bar"), int_list({10, 20, 30}));
+    CAF_CHECK_EQUAL(get_as<int_list>(cfg, "bar"), int_list({10, 20, 30}));
     CAF_MESSAGE("test string lists");
     cfg["foo"] = config_value{string_list{"one", "two", "three"}};
-    CAF_CHECK_EQUAL(get<string_list>(cfg, "foo"),
+    CAF_CHECK_EQUAL(get_as<string_list>(cfg, "foo"),
                     string_list({"one", "two", "three"}));
-    CAF_CHECK_EQUAL(read<string_list>(cfg, {"--foo=[hello, world]"}), none);
-    CAF_CHECK_EQUAL(get<string_list>(cfg, "foo"),
+    CAF_CHECK_EQUAL(read<string_list>(cfg, {R"_(--foo=["hello", "world"])_"}),
+                    none);
+    CAF_CHECK_EQUAL(get_as<string_list>(cfg, "foo"),
                     string_list({"hello", "world"}));
   }
 }
@@ -240,8 +229,7 @@ CAF_TEST(CLI arguments may use custom types) {
   settings cfg;
   opts.add<foobar>("global", "foobar,f", "test option");
   CAF_CHECK_EQUAL(read<foobar>(cfg, {"-f{foo=\"hello\",bar=\"world\"}"}), none);
-  auto fb = get_if<foobar>(&cfg, "foobar");
-  if (CAF_CHECK(fb))
+  if (auto fb = get_as<foobar>(cfg, "foobar"); CAF_CHECK(fb))
     CAF_CHECK_EQUAL(*fb, foobar("hello", "world"));
 }
 

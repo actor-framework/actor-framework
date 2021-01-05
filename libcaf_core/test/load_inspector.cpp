@@ -409,9 +409,10 @@ end object)_");
 
 CAF_TEST(load inspectors support variant fields with fallbacks) {
   fallback_dummy_message d;
+  using content_type = decltype(d.content);
   d.content = std::string{"hello world"};
   CAF_CHECK(inspect(f, d));
-  CAF_CHECK_EQUAL(d.content, 42.0);
+  CAF_CHECK_EQUAL(d.content, content_type{42.0});
   CAF_CHECK_EQUAL(f.log, R"_(
 begin object fallback_dummy_message
   begin optional variant field content

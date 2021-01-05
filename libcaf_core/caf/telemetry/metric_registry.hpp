@@ -367,7 +367,7 @@ public:
       if (auto grp = get_if<settings>(config_, prefix)) {
         if (sub_settings = get_if<settings>(grp, name);
             sub_settings != nullptr) {
-          if (auto lst = get_if<upper_bounds_list>(sub_settings, "buckets")) {
+          if (auto lst = get_as<upper_bounds_list>(*sub_settings, "buckets")) {
             std::sort(lst->begin(), lst->end());
             lst->erase(std::unique(lst->begin(), lst->end()), lst->end());
             if (!lst->empty())

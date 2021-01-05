@@ -93,7 +93,7 @@ CAF_TEST(requests without result) {
     run_once();
     expect((int, int), from(client).to(server).with(1, 2));
     expect((void), from(server).to(client));
-    CAF_CHECK_EQUAL(*result, unit);
+    CAF_CHECK_EQUAL(*result, result_type{unit});
   }
   SUBTEST("request.await") {
     auto client = sys.spawn([=](event_based_actor* self) {
@@ -102,13 +102,13 @@ CAF_TEST(requests without result) {
     run_once();
     expect((int, int), from(client).to(server).with(1, 2));
     expect((void), from(server).to(client));
-    CAF_CHECK_EQUAL(*result, unit);
+    CAF_CHECK_EQUAL(*result, result_type{unit});
   }
   SUBTEST("request.receive") {
     auto res_hdl = self->request(server, infinite, 1, 2);
     run();
     res_hdl.receive([&] { *result = unit; }, ERROR_HANDLER);
-    CAF_CHECK_EQUAL(*result, unit);
+    CAF_CHECK_EQUAL(*result, result_type{unit});
   }
 }
 
@@ -121,7 +121,7 @@ CAF_TEST(requests with integer result) {
     run_once();
     expect((int, int), from(client).to(server).with(1, 2));
     expect((int), from(server).to(client).with(3));
-    CAF_CHECK_EQUAL(*result, 3);
+    CAF_CHECK_EQUAL(*result, result_type{3});
   }
   SUBTEST("request.await") {
     auto client = sys.spawn([=](event_based_actor* self) {
@@ -130,13 +130,13 @@ CAF_TEST(requests with integer result) {
     run_once();
     expect((int, int), from(client).to(server).with(1, 2));
     expect((int), from(server).to(client).with(3));
-    CAF_CHECK_EQUAL(*result, 3);
+    CAF_CHECK_EQUAL(*result, result_type{3});
   }
   SUBTEST("request.receive") {
     auto res_hdl = self->request(server, infinite, 1, 2);
     run();
     res_hdl.receive([&](int x) { *result = x; }, ERROR_HANDLER);
-    CAF_CHECK_EQUAL(*result, 3);
+    CAF_CHECK_EQUAL(*result, result_type{3});
   }
 }
 
@@ -150,7 +150,7 @@ CAF_TEST(delegated request with integer result) {
   expect((int, int), from(client).to(server).with(1, 2));
   expect((int, int), from(client).to(worker).with(1, 2));
   expect((int), from(worker).to(client).with(3));
-  CAF_CHECK_EQUAL(*result, 3);
+  CAF_CHECK_EQUAL(*result, result_type{3});
 }
 
 CAF_TEST(requesters support fan_out_request) {

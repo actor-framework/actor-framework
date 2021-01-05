@@ -62,6 +62,11 @@ auto no_conversions() {
   return detail::make_overload(no_conversion<To, From>()...);
 }
 
+template <class T>
+constexpr ptrdiff_t signed_index_of() {
+  return detail::tl_index_of<typename config_value::types, T>::value;
+}
+
 } // namespace
 
 // -- constructors, destructors, and assignment operators ----------------------
@@ -151,6 +156,10 @@ const char* config_value::type_name() const noexcept {
 
 const char* config_value::type_name_at_index(size_t index) noexcept {
   return type_names[index];
+}
+
+ptrdiff_t config_value::signed_index() const noexcept {
+  return static_cast<ptrdiff_t>(data_.index());
 }
 
 // -- utility ------------------------------------------------------------------
@@ -321,6 +330,16 @@ expected<timespan> config_value::to_timespan() const {
   return visit(f, data_);
 }
 
+expected<uri> config_value::to_uri() const {
+  using result_type = expected<uri>;
+  auto f = detail::make_overload(
+    no_conversions<uri, none_t, bool, integer, real, timespan,
+                   config_value::list, config_value::dictionary>(),
+    [](const uri& x) { return result_type{x}; },
+    [](const std::string& x) { return make_uri(x); });
+  return visit(f, data_);
+}
+
 expected<config_value::list> config_value::to_list() const {
   using result_type = expected<list>;
   auto dict_to_list = [](const dictionary& dict, list& result) {
@@ -335,18 +354,17 @@ expected<config_value::list> config_value::to_list() const {
   auto f = detail::make_overload(
     no_conversions<list, none_t, bool, integer, real, timespan, uri>(),
     [dict_to_list](const std::string& x) {
-      // Check whether we can parse the string as a list. If that fails, try
-      // whether we can parse it as a dictionary instead (and then convert that
-      // to a list).
-      config_value::list tmp;
-      if (detail::parse(x, tmp, detail::require_opening_char) == none)
-        return result_type{std::move(tmp)};
-      config_value::dictionary dict;
-      if (detail::parse(x, dict, detail::require_opening_char) == none) {
-        tmp.clear();
+      // Check whether we can parse the string as a list. However, we also
+      // accept dictionaries that we convert to lists of key-value pairs. We
+      // need to try converting to dictionary *first*, because detail::parse for
+      // the list otherwise produces a list with one dictionary.
+      if (config_value::dictionary dict; detail::parse(x, dict) == none) {
+        config_value::list tmp;
         dict_to_list(dict, tmp);
         return result_type{std::move(tmp)};
       }
+      if (config_value::list tmp; detail::parse(x, tmp) == none)
+        return result_type{std::move(tmp)};
       std::string msg = "cannot convert ";
       detail::print_escaped(msg, x);
       msg += " to a list";
@@ -383,12 +401,11 @@ expected<config_value::dictionary> config_value::to_dictionary() const {
         return result_type{std::move(err)};
       }
     },
-    [](const std::string& x) {
-      if (dictionary tmp; detail::parse(x, tmp) == none) {
+    [this](const std::string& x) {
+      if (dictionary tmp; detail::parse(x, tmp) == none)
         return result_type{std::move(tmp)};
-      }
-      if (list tmp; detail::parse(x, tmp) == none) {
-        config_value ls{std::move(tmp)};
+      if (auto lst = to_list()) {
+        config_value ls{std::move(*lst)};
         if (auto res = ls.to_dictionary())
           return res;
       }
@@ -453,12 +470,64 @@ config_value::parse_msg_impl(string_view str,
 
 // -- related free functions ---------------------------------------------------
 
+bool operator<(double x, const config_value& y) {
+  return config_value{x} < y;
+}
+
+bool operator<=(double x, const config_value& y) {
+  return config_value{x} <= y;
+}
+
+bool operator==(double x, const config_value& y) {
+  return config_value{x} == y;
+}
+
+bool operator>(double x, const config_value& y) {
+  return config_value{x} > y;
+}
+
+bool operator>=(double x, const config_value& y) {
+  return config_value{x} >= y;
+}
+
+bool operator<(const config_value& x, double y) {
+  return x < config_value{y};
+}
+
+bool operator<=(const config_value& x, double y) {
+  return x <= config_value{y};
+}
+
+bool operator==(const config_value& x, double y) {
+  return x == config_value{y};
+}
+
+bool operator>(const config_value& x, double y) {
+  return x > config_value{y};
+}
+
+bool operator>=(const config_value& x, double y) {
+  return x >= config_value{y};
+}
+
 bool operator<(const config_value& x, const config_value& y) {
   return x.get_data() < y.get_data();
 }
 
+bool operator<=(const config_value& x, const config_value& y) {
+  return x.get_data() <= y.get_data();
+}
+
 bool operator==(const config_value& x, const config_value& y) {
   return x.get_data() == y.get_data();
+}
+
+bool operator>(const config_value& x, const config_value& y) {
+  return x.get_data() > y.get_data();
+}
+
+bool operator>=(const config_value& x, const config_value& y) {
+  return x.get_data() >= y.get_data();
 }
 
 namespace {

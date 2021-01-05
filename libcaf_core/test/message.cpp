@@ -120,12 +120,12 @@ CAF_TEST(to_string converts messages to strings) {
   CAF_CHECK_EQUAL(msg_as_string(R"__(this is a "test")__"), teststr);
   CAF_CHECK_EQUAL(msg_as_string(make_tuple(1, 2, 3), 4, 5),
                   "message([1, 2, 3], 4, 5)");
-  CAF_CHECK_EQUAL(msg_as_string(s1{}), "message(s1([10, 20, 30]))");
+  CAF_CHECK_EQUAL(msg_as_string(s1{}), "message([10, 20, 30])");
   s2 tmp;
   tmp.value[0][1] = 100;
   CAF_CHECK_EQUAL(msg_as_string(s2{}),
-                  "message(s2([[1, 10], [2, 20], [3, 30], [4, 40]]))");
-  CAF_CHECK_EQUAL(msg_as_string(s3{}), "message(s3([1, 2, 3, 4]))");
+                  "message([[1, 10], [2, 20], [3, 30], [4, 40]])");
+  CAF_CHECK_EQUAL(msg_as_string(s3{}), "message([1, 2, 3, 4])");
 }
 
 CAF_TEST(match_elements exposes element types) {

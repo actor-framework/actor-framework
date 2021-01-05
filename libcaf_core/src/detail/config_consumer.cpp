@@ -43,14 +43,14 @@ config_list_consumer::config_list_consumer(config_value_consumer* parent)
 }
 
 pec config_list_consumer::end_list() {
-  auto f = make_overload(
-    [this](config_consumer* ptr) {
-      return ptr->value(config_value{std::move(xs_)});
-    },
-    [this](auto* ptr) {
-      ptr->value(config_value{std::move(xs_)});
-      return pec::success;
-    });
+  auto f = make_overload([](none_t) { return pec::success; },
+                         [this](config_consumer* ptr) {
+                           return ptr->value(config_value{std::move(result)});
+                         },
+                         [this](auto* ptr) {
+                           ptr->value(config_value{std::move(result)});
+                           return pec::success;
+                         });
   return visit(f, parent_);
 }
 
@@ -59,7 +59,8 @@ config_consumer config_list_consumer::begin_map() {
 }
 
 std::string config_list_consumer::qualified_key() {
-  auto f = make_overload([](config_value_consumer*) { return std::string{}; },
+  auto f = make_overload([](none_t) { return std::string{}; },
+                         [](config_value_consumer*) { return std::string{}; },
                          [](auto* ptr) { return ptr->qualified_key(); });
   return visit(f, parent_);
 }
@@ -156,16 +157,11 @@ void merge_into_place(settings& src, settings& dst) {
 } // namespace
 
 pec config_consumer::value_impl(config_value&& x) {
-  // See whether there's a config_option associated to this key and perform a
-  // type check if necessary.
-  const config_option* opt;
-  if (options_ == nullptr) {
-    opt = nullptr;
-  } else {
-    opt = options_->qualified_name_lookup(category_, current_key_);
-    if (opt && opt->check(x) != none)
-      return pec::type_mismatch;
-  }
+  // Sync with config option object if available.
+  if (options_ != nullptr)
+    if (auto opt = options_->qualified_name_lookup(category_, current_key_))
+      if (auto err = opt->sync(x))
+        return pec::type_mismatch;
   // Insert / replace value in the map.
   if (auto dict = get_if<settings>(&x)) {
     // Merge values into the destination, because it can already contain any
@@ -177,13 +173,6 @@ pec config_consumer::value_impl(config_value&& x) {
       merge_into_place(*dict, get<settings>(i->second));
   } else {
     cfg_->insert_or_assign(current_key_, std::move(x));
-  }
-  // Sync with config option if needed.
-  if (opt) {
-    if (auto i = cfg_->find(current_key_); i != cfg_->end())
-      opt->store(i->second);
-    else
-      return pec::invalid_state;
   }
   return pec::success;
 }

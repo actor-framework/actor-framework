@@ -295,10 +295,10 @@ actor_system::actor_system(actor_system_config& cfg)
     hook->init(*this);
   // Cache some configuration parameters for faster lookups at runtime.
   using string_list = std::vector<std::string>;
-  if (auto lst = get_if<string_list>(&cfg,
+  if (auto lst = get_as<string_list>(cfg,
                                      "caf.metrics-filters.actors.includes"))
     metrics_actors_includes_ = std::move(*lst);
-  if (auto lst = get_if<string_list>(&cfg,
+  if (auto lst = get_as<string_list>(cfg,
                                      "caf.metrics-filters.actors.excludes"))
     metrics_actors_excludes_ = std::move(*lst);
   if (!metrics_actors_includes_.empty())

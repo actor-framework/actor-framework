@@ -146,6 +146,8 @@ std::string to_string(sec x) {
       return "type_clash";
     case sec::unsupported_operation:
       return "unsupported_operation";
+    case sec::no_such_key:
+      return "no_such_key";
   };
 }
 
@@ -345,6 +347,9 @@ bool from_string(string_view in, sec& out) {
   } else if (in == "unsupported_operation") {
     out = sec::unsupported_operation;
     return true;
+  } else if (in == "no_such_key") {
+    out = sec::no_such_key;
+    return true;
   } else {
     return false;
   }
@@ -421,6 +426,7 @@ bool from_integer(std::underlying_type_t<sec> in,
     case sec::connection_closed:
     case sec::type_clash:
     case sec::unsupported_operation:
+    case sec::no_such_key:
       out = result;
       return true;
   };

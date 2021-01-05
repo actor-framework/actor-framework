@@ -128,16 +128,13 @@ string_view config_option::full_name() const noexcept {
   return buf_slice(buf_[0] == '?' ? 1 : 0, long_name_separator_);
 }
 
-error config_option::check(const config_value& x) const {
-  CAF_ASSERT(meta_->check != nullptr);
-  return meta_->check(x);
+error config_option::sync(config_value& x) const {
+  return meta_->sync(value_, x);
 }
 
-void config_option::store(const config_value& x) const {
-  if (value_ != nullptr) {
-    CAF_ASSERT(meta_->store != nullptr);
-    meta_->store(value_, x);
-  }
+error config_option::store(const config_value& x) const {
+  auto cpy = x;
+  return sync(cpy);
 }
 
 string_view config_option::type_name() const noexcept {
@@ -145,7 +142,7 @@ string_view config_option::type_name() const noexcept {
 }
 
 bool config_option::is_flag() const noexcept {
-  return type_name() == "boolean";
+  return type_name() == "bool";
 }
 
 bool config_option::has_flat_cli_name() const noexcept {
@@ -153,7 +150,11 @@ bool config_option::has_flat_cli_name() const noexcept {
 }
 
 expected<config_value> config_option::parse(string_view input) const {
-  return meta_->parse(value_, input);
+  config_value val{input};
+  if (auto err = sync(val))
+    return {std::move(err)};
+  else
+    return {std::move(val)};
 }
 
 optional<config_value> config_option::get() const {

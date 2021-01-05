@@ -268,11 +268,12 @@ bool config_value_writer::begin_associative_array(size_t) {
   CHECK_NOT_EMPTY();
   settings* inner = nullptr;
   auto f = detail::make_overload(
-    [this](config_value* val) {
+    [this, &inner](config_value* val) {
       // Morph the top element into a dictionary.
       auto& dict = val->as_dictionary();
       dict.clear();
       st_.top() = &dict;
+      inner = &dict;
       return true;
     },
     [this](settings*) {

@@ -165,6 +165,51 @@ bool check(test* parent, const char* file, size_t line, const char* expr,
   return result;
 }
 
+bool check_un(bool result, const char* file, size_t line, const char* expr) {
+  string_view rel_up = "../";
+  while (strncmp(file, rel_up.data(), rel_up.size()) == 0)
+    file += rel_up.size();
+  auto parent = engine::current_test();
+  auto out = logger::instance().massive();
+  if (result) {
+    out << term::green << "** " << term::blue << file << term::yellow << ":"
+        << term::blue << line << fill(line) << term::reset << "passed" << '\n';
+    parent->pass();
+  } else {
+    out << term::red << "!! " << term::blue << file << term::yellow << ":"
+        << term::blue << line << fill(line) << term::red
+        << "check failed: " << expr << term::reset << '\n';
+    parent->fail(false);
+  }
+  engine::last_check_file(file);
+  engine::last_check_line(line);
+  return result;
+}
+
+bool check_bin(bool result, const char* file, size_t line, const char* expr,
+               const std::string& lhs, const std::string& rhs) {
+  string_view rel_up = "../";
+  while (strncmp(file, rel_up.data(), rel_up.size()) == 0)
+    file += rel_up.size();
+  auto parent = engine::current_test();
+  auto out = logger::instance().massive();
+  if (result) {
+    out << term::green << "** " << term::blue << file << term::yellow << ":"
+        << term::blue << line << fill(line) << term::reset << "passed" << '\n';
+    parent->pass();
+  } else {
+    out << term::red << "!! " << term::blue << file << term::yellow << ":"
+        << term::blue << line << fill(line) << term::red
+        << "check failed: " << expr << term::reset << '\n'
+        << "  lhs: " << lhs << '\n'
+        << "  rhs: " << rhs << '\n';
+    parent->fail(false);
+  }
+  engine::last_check_file(file);
+  engine::last_check_line(line);
+  return result;
+}
+
 } // namespace detail
 
 logger::stream::stream(logger& parent, logger::level lvl)

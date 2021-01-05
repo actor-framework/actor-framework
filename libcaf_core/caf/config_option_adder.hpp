@@ -52,14 +52,10 @@ public:
   config_option_adder&
   add_neg(bool& ref, string_view name, string_view description);
 
-  /// For backward compatibility only. Do not use for new code!
-  /// @private
-  config_option_adder&
+  [[deprecated("use timespan options instead")]] config_option_adder&
   add_us(size_t& ref, string_view name, string_view description);
 
-  /// For backward compatibility only. Do not use for new code!
-  /// @private
-  config_option_adder&
+  [[deprecated("use timespan options instead")]] config_option_adder&
   add_ms(size_t& ref, string_view name, string_view description);
 
 private:

@@ -101,21 +101,25 @@ CAF_CORE_EXPORT void parse(string_parser_state& ps, long double& x);
 
 // -- CAF types ----------------------------------------------------------------
 
-CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv4_address& x);
+CAF_CORE_EXPORT void parse(string_parser_state&, ipv4_address&);
 
-CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv4_subnet& x);
+CAF_CORE_EXPORT void parse(string_parser_state&, ipv4_subnet&);
 
-CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv4_endpoint& x);
+CAF_CORE_EXPORT void parse(string_parser_state&, ipv4_endpoint&);
 
-CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv6_address& x);
+CAF_CORE_EXPORT void parse(string_parser_state&, ipv6_address&);
 
-CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv6_subnet& x);
+CAF_CORE_EXPORT void parse(string_parser_state&, ipv6_subnet&);
 
-CAF_CORE_EXPORT void parse(string_parser_state& ps, ipv6_endpoint& x);
+CAF_CORE_EXPORT void parse(string_parser_state&, ipv6_endpoint&);
 
-CAF_CORE_EXPORT void parse(string_parser_state& ps, uri& x);
+CAF_CORE_EXPORT void parse(string_parser_state&, uri&);
 
-CAF_CORE_EXPORT void parse(string_parser_state& ps, config_value& x);
+CAF_CORE_EXPORT void parse(string_parser_state&, config_value&);
+
+CAF_CORE_EXPORT void parse(string_parser_state&, std::vector<config_value>&);
+
+CAF_CORE_EXPORT void parse(string_parser_state&, dictionary<config_value>&);
 
 // -- variadic utility ---------------------------------------------------------
 
@@ -207,102 +211,6 @@ void parse(string_parser_state& ps,
   auto since_epoch = sc::duration_cast<Duration>(tstamp.time_since_epoch());
   since_epoch += sc::milliseconds{milliseconds};
   x = value_type{since_epoch};
-}
-
-// -- container types ----------------------------------------------------------
-
-CAF_CORE_EXPORT void parse_element(string_parser_state& ps, std::string& x,
-                                   const char* char_blacklist);
-
-template <class T>
-enable_if_t<!is_pair<T>::value>
-parse_element(string_parser_state& ps, T& x, const char*);
-
-template <class First, class Second, size_t N>
-void parse_element(string_parser_state& ps, std::pair<First, Second>& kvp,
-                   const char (&char_blacklist)[N]);
-
-struct require_opening_char_t {};
-constexpr auto require_opening_char = require_opening_char_t{};
-
-struct allow_omitting_opening_char_t {};
-constexpr auto allow_omitting_opening_char = allow_omitting_opening_char_t{};
-
-template <class T, class Policy = allow_omitting_opening_char_t>
-enable_if_tt<is_iterable<T>>
-parse(string_parser_state& ps, T& xs, Policy = {}) {
-  using value_type = deconst_kvp_t<typename T::value_type>;
-  static constexpr auto is_map_type = is_pair<value_type>::value;
-  static constexpr auto opening_char = is_map_type ? '{' : '[';
-  static constexpr auto closing_char = is_map_type ? '}' : ']';
-  auto out = std::inserter(xs, xs.end());
-  // List/map using [] or {} notation.
-  if (ps.consume(opening_char)) {
-    char char_blacklist[] = {closing_char, ',', '\0'};
-    do {
-      if (ps.consume(closing_char)) {
-        ps.skip_whitespaces();
-        ps.code = ps.at_end() ? pec::success : pec::trailing_character;
-        return;
-      }
-      value_type tmp;
-      parse_element(ps, tmp, char_blacklist);
-      if (ps.code > pec::trailing_character)
-        return;
-      *out++ = std::move(tmp);
-    } while (ps.consume(','));
-    if (ps.consume(closing_char)) {
-      ps.skip_whitespaces();
-      ps.code = ps.at_end() ? pec::success : pec::trailing_character;
-    } else {
-      ps.code = pec::unexpected_character;
-    }
-    return;
-  }
-  if constexpr (std::is_same<Policy, require_opening_char_t>::value) {
-    ps.code = pec::unexpected_character;
-  } else {
-    // An empty string simply results in an empty list/map.
-    if (ps.at_end())
-      return;
-    // List/map without [] or {}.
-    do {
-      char char_blacklist[] = {',', '\0'};
-      value_type tmp;
-      parse_element(ps, tmp, char_blacklist);
-      if (ps.code > pec::trailing_character)
-        return;
-      *out++ = std::move(tmp);
-    } while (ps.consume(','));
-    ps.code = ps.at_end() ? pec::success : pec::trailing_character;
-  }
-}
-
-template <class T>
-enable_if_t<!is_pair<T>::value>
-parse_element(string_parser_state& ps, T& x, const char*) {
-  parse(ps, x);
-}
-
-template <class First, class Second, size_t N>
-void parse_element(string_parser_state& ps, std::pair<First, Second>& kvp,
-                   const char (&char_blacklist)[N]) {
-  static_assert(N > 0, "empty array");
-  // TODO: consider to guard the blacklist computation with
-  //       `if constexpr (is_same_v<First, string>)` when switching to C++17.
-  char key_blacklist[N + 1];
-  if (N > 1)
-    memcpy(key_blacklist, char_blacklist, N - 1);
-  key_blacklist[N - 1] = '=';
-  key_blacklist[N] = '\0';
-  parse_element(ps, kvp.first, key_blacklist);
-  if (ps.code > pec::trailing_character)
-    return;
-  if (!ps.consume('=')) {
-    ps.code = pec::unexpected_character;
-    return;
-  }
-  parse_element(ps, kvp.second, char_blacklist);
 }
 
 // -- convenience functions ----------------------------------------------------

@@ -150,7 +150,7 @@ struct s1 {
 
 template <class Inspector>
 bool inspect(Inspector& f, s1& x) {
-  return f.object(x).fields(f.field("value", x.value));
+  return f.apply(x.value);
 }
 
 struct s2 {
@@ -159,7 +159,7 @@ struct s2 {
 
 template <class Inspector>
 bool inspect(Inspector& f, s2& x) {
-  return f.object(x).fields(f.field("value", x.value));
+  return f.apply(x.value);
 }
 
 struct s3 {
@@ -171,7 +171,7 @@ struct s3 {
 
 template <class Inspector>
 bool inspect(Inspector& f, s3& x) {
-  return f.object(x).fields(f.field("value", x.value));
+  return f.apply(x.value);
 }
 
 struct test_array {
@@ -267,21 +267,17 @@ bool inspect(Inspector& f, dummy_enum_class& x) {
   return f.apply(get, set);
 }
 
-enum class level { all, trace, debug, warning, error };
+enum class level : uint8_t { all, trace, debug, warning, error };
+
+std::string to_string(level);
+
+bool from_string(caf::string_view, level&);
+
+bool from_integer(uint8_t, level&);
 
 template <class Inspector>
 bool inspect(Inspector& f, level& x) {
-  using integer_type = std::underlying_type_t<level>;
-  auto get = [&x] { return static_cast<integer_type>(x); };
-  auto set = [&x](integer_type val) {
-    if (val >= 0 && val <= 4) {
-      x = static_cast<level>(val);
-      return true;
-    } else {
-      return false;
-    }
-  };
-  return f.apply(get, set);
+  return caf::default_enum_inspect(f, x);
 }
 
 enum dummy_enum { de_foo, de_bar };

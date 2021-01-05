@@ -23,73 +23,42 @@
 #include "caf/config_value.hpp"
 #include "caf/optional.hpp"
 
-#define DEFAULT_META(type, parse_fun)                                          \
-  config_option::meta_state type##_meta_state{                                 \
-    default_config_option_check<type>, default_config_option_store<type>,      \
-    get_impl<type>, parse_fun,                                                 \
-    detail::config_value_access_t<type>::type_name()};
-
-using std::string;
-
 namespace caf {
-
-namespace detail {
-
-expected<config_value> parse_impl(std::string* ptr, string_view str) {
-  // Parse quoted strings, otherwise consume the entire string.
-  auto e = str.end();
-  auto i = std::find_if(str.begin(), e, [](char c) { return !isspace(c); });
-  if (i == e) {
-    if (ptr != nullptr)
-      ptr->assign(i, e);
-    return config_value{std::string{i, e}};
-  }
-  if (*i == '"') {
-    if (ptr == nullptr) {
-      std::string tmp;
-      if (auto err = parse(str, tmp))
-        return err;
-      return config_value{std::move(tmp)};
-    } else {
-      if (auto err = parse(str, *ptr))
-        return err;
-      return config_value{*ptr};
-    }
-  }
-  if (ptr != nullptr)
-    ptr->assign(str.begin(), str.end());
-  return config_value{std::string{str.begin(), str.end()}};
-}
-
-} // namespace detail
 
 namespace {
 
 using meta_state = config_option::meta_state;
 
-void bool_store_neg(void* ptr, const config_value& x) {
-  *static_cast<bool*>(ptr) = !get<bool>(x);
+error bool_sync_neg(void* ptr, config_value& x) {
+  if (auto val = get_as<bool>(x)) {
+    x = config_value{*val};
+    if (ptr)
+      *static_cast<bool*>(ptr) = !*val;
+    return none;
+  } else {
+    return std::move(val.error());
+  }
 }
 
 config_value bool_get_neg(const void* ptr) {
   return config_value{!*static_cast<const bool*>(ptr)};
 }
 
-meta_state bool_neg_meta{detail::check_impl<bool>, bool_store_neg, bool_get_neg,
-                         nullptr,
-                         detail::config_value_access_t<bool>::type_name()};
-
-error check_timespan(const config_value& x) {
-  if (holds_alternative<timespan>(x))
-    return none;
-  return make_error(pec::type_mismatch);
-}
+meta_state bool_neg_meta{bool_sync_neg, bool_get_neg, "bool"};
 
 template <uint64_t Denominator>
-void store_timespan(void* ptr, const config_value& x) {
-  *static_cast<size_t*>(ptr) = static_cast<size_t>(get<timespan>(x).count())
-                               / Denominator;
+error sync_timespan(void* ptr, config_value& x) {
+  if (auto val = get_as<timespan>(x)) {
+    x = config_value{*val};
+    if (ptr)
+      *static_cast<size_t*>(ptr) = static_cast<size_t>(get<timespan>(x).count())
+                                   / Denominator;
+    return none;
+  } else {
+    return std::move(val.error());
+  }
 }
+
 template <uint64_t Denominator>
 config_value get_timespan(const void* ptr) {
   auto ival = static_cast<int64_t>(*static_cast<const size_t*>(ptr));
@@ -97,13 +66,10 @@ config_value get_timespan(const void* ptr) {
   return config_value{val};
 }
 
-meta_state us_res_meta{check_timespan, store_timespan<1000>, get_timespan<1000>,
-                       nullptr,
-                       detail::config_value_access_t<timespan>::type_name()};
+meta_state us_res_meta{sync_timespan<1000>, get_timespan<1000>, "timespan"};
 
-meta_state ms_res_meta{check_timespan, store_timespan<1000000>,
-                       get_timespan<1000000>, nullptr,
-                       detail::config_value_access_t<timespan>::type_name()};
+meta_state ms_res_meta{sync_timespan<1000000>, get_timespan<1000000>,
+                       "timespan"};
 
 } // namespace
 

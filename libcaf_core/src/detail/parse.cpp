@@ -165,17 +165,62 @@ void parse(string_parser_state& ps, uri& x) {
 
 void parse(string_parser_state& ps, config_value& x) {
   ps.skip_whitespaces();
-  if (ps.at_end()) {
+  if (!ps.at_end()) {
+    detail::config_value_consumer f;
+    parser::read_config_value(ps, f);
+    if (ps.code <= pec::trailing_character)
+      x = std::move(f.result);
+  } else {
     ps.code = pec::unexpected_eof;
-    return;
   }
-  // Safe the string as fallback.
-  string_view str{ps.i, ps.e};
-  // Dispatch to parser.
-  detail::config_value_consumer f;
-  parser::read_config_value(ps, f);
-  if (ps.code <= pec::trailing_character)
-    x = std::move(f.result);
+}
+
+void parse(string_parser_state& ps, std::vector<config_value>& x) {
+  ps.skip_whitespaces();
+  if (!ps.at_end()) {
+    detail::config_list_consumer f;
+    auto fallback = ps;
+    if (ps.consume('[')) {
+      parser::read_config_list(ps, f);
+      if (ps.code == pec::success) {
+        x = std::move(f.result);
+      } else {
+        // Rewind parser state and try parsing again as a list without
+        // surrounding '[]' characters. This catches edge cases like
+        // '[1, 2], [3, 4]'. On error, we restore the parser state after the
+        // first error.
+        auto first_failure = ps;
+        ps = fallback;
+        f.result.clear();
+        parser::lift_config_list(ps, f);
+        if (ps.code <= pec::trailing_character)
+          x = std::move(f.result);
+        else
+          ps = first_failure;
+      }
+    } else {
+      // If the string isn't surrounded by '[]' in the first place, we call
+      // lift_config_list and keep it's result in any case.
+      parser::lift_config_list(ps, f);
+      if (ps.code == pec::success)
+        x = std::move(f.result);
+    }
+  } else {
+    ps.code = pec::unexpected_eof;
+  }
+}
+
+void parse(string_parser_state& ps, dictionary<config_value>& x) {
+  ps.skip_whitespaces();
+  if (!ps.at_end()) {
+    detail::config_consumer f{x};
+    if (ps.consume('{'))
+      parser::read_config_map(ps, f);
+    else
+      parser::read_config_map<false>(ps, f);
+  } else {
+    ps.code = pec::unexpected_eof;
+  }
 }
 
 PARSE_IMPL(ipv4_address, ipv4_address)

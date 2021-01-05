@@ -171,41 +171,14 @@ CAF_TEST(strings) {
   CAF_CHECK_EQUAL(read<std::string>("  \"  foo\t\"  "), "  foo\t");
 }
 
-CAF_TEST(lists) {
-  using int_list = std::vector<int>;
-  using string_list = std::vector<std::string>;
-  CAF_CHECK_EQUAL(read<int_list>("1"), int_list({1}));
-  CAF_CHECK_EQUAL(read<int_list>("1, 2, 3"), int_list({1, 2, 3}));
-  CAF_CHECK_EQUAL(read<int_list>("[1, 2, 3]"), int_list({1, 2, 3}));
-  CAF_CHECK_EQUAL(read<string_list>("a, b , \" c \""),
-                  string_list({"a", "b", " c "}));
-}
-
-CAF_TEST(maps) {
-  using int_map = std::map<std::string, int>;
-  CAF_CHECK_EQUAL(read<int_map>(R"(a=1, "b" = 42)"),
-                  int_map({{"a", 1}, {"b", 42}}));
-  CAF_CHECK_EQUAL(read<int_map>(R"({   a  = 1  , b   =    42   ,} )"),
-                  int_map({{"a", 1}, {"b", 42}}));
-}
-
 CAF_TEST(uris) {
-  using uri_list = std::vector<uri>;
-  auto x_res = read<uri>("foo:bar");
-  if (x_res == none) {
+  if (auto x_res = read<uri>("foo:bar")) {
+    auto x = *x_res;
+    CAF_CHECK_EQUAL(x.scheme(), "foo");
+    CAF_CHECK_EQUAL(x.path(), "bar");
+  } else {
     CAF_ERROR("my:path not recognized as URI");
-    return;
   }
-  auto x = *x_res;
-  CAF_CHECK_EQUAL(x.scheme(), "foo");
-  CAF_CHECK_EQUAL(x.path(), "bar");
-  auto ls = unbox(read<uri_list>("foo:bar, <http://actor-framework.org/doc>"));
-  CAF_REQUIRE_EQUAL(ls.size(), 2u);
-  CAF_CHECK_EQUAL(ls[0].scheme(), "foo");
-  CAF_CHECK_EQUAL(ls[0].path(), "bar");
-  CAF_CHECK_EQUAL(ls[1].scheme(), "http");
-  CAF_CHECK_EQUAL(ls[1].authority().host, std::string{"actor-framework.org"});
-  CAF_CHECK_EQUAL(ls[1].path(), "doc");
 }
 
 CAF_TEST(IPv4 address) {

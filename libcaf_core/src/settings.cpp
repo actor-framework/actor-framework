@@ -43,12 +43,12 @@ const config_value* get_if(const settings* xs, string_view name) {
                 name.substr(pos + 1));
 }
 
-std::string get_or(const settings& xs, string_view name,
-                   string_view default_value) {
-  auto result = get_if<std::string>(&xs, name);
-  if (result)
-    return std::move(*result);
-  return std::string{default_value.begin(), default_value.end()};
+expected<std::string> get_or(const settings& xs, string_view name,
+                             const char* fallback) {
+  if (auto ptr = get_if(&xs, name))
+    return get_as<std::string>(*ptr);
+  else
+    return {std::string{fallback}};
 }
 
 config_value& put_impl(settings& dict, const std::vector<string_view>& path,

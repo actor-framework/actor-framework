@@ -102,6 +102,28 @@ void read_config_list(State& ps, Consumer&& consumer) {
   // clang-format on
 }
 
+// Like read_config_list, but without surrounding '[]'.
+template <class State, class Consumer>
+void lift_config_list(State& ps, Consumer&& consumer) {
+  // clang-format off
+  start();
+  state(init) {
+    epsilon(before_value)
+  }
+  term_state(before_value) {
+    transition(before_value, " \t\n")
+    fsm_epsilon(read_config_comment(ps, consumer), before_value, '#')
+    fsm_epsilon(read_config_value(ps, consumer, std::true_type{}), after_value)
+  }
+  term_state(after_value) {
+    transition(after_value, " \t\n")
+    transition(before_value, ',')
+    fsm_epsilon(read_config_comment(ps, consumer), after_value, '#')
+  }
+  fin();
+  // clang-format on
+}
+
 template <bool Nested = true, class State, class Consumer>
 void read_config_map(State& ps, Consumer&& consumer) {
   std::string key;
@@ -140,6 +162,7 @@ void read_config_map(State& ps, Consumer&& consumer) {
   unstable_state(after_value) {
     transition(after_value, " \t")
     transition(had_newline, "\n")
+    transition_if(!Nested, after_comma, ',')
     transition(await_key_name, ',')
     transition_if(Nested, done, '}', consumer.end_map())
     fsm_epsilon(read_config_comment(ps, consumer), had_newline, '#')
@@ -156,6 +179,9 @@ void read_config_map(State& ps, Consumer&& consumer) {
     epsilon(read_key_name, alnum_or_dash)
     epsilon_if(!Nested, done)
     epsilon(unexpected_end_of_input)
+  }
+  term_state(after_comma) {
+    epsilon(await_key_name)
   }
   state(unexpected_end_of_input) {
     // no transitions, only needed for the unstable states
