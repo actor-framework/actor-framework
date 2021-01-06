@@ -75,7 +75,10 @@ void ChatWidget::sendChatMessage() {
     // Ignore empty lines.
   } else if (line.startsWith('/')) {
     vector<string> words;
-    split(words, line.midRef(1).toUtf8().constData(), is_any_of(" "));
+    auto utf8 = line.midRef(1).toUtf8();
+    auto sv = caf::string_view{utf8.constData(),
+                               static_cast<size_t>(utf8.size())};
+    split(words, sv, is_any_of(" "));
     if (words.size() == 3 && words[0] == "join") {
       if (auto x = system().groups().get(words[1], words[2]))
         send_as(as_actor(), as_actor(), join_atom_v, std::move(*x));

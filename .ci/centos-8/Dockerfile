@@ -1,11 +1,12 @@
 FROM centos:8
 
-RUN yum install -y \
-  cmake \
-  gcc-c++ \
-  libasan \
-  libubsan \
-  git \
-  make \
-  openssl-devel \
- && yum clean all
+RUN dnf update -y \
+    && dnf install -y \
+         cmake \
+         gcc-c++ \
+         git \
+         libasan \
+         libubsan \
+         make \
+         openssl-devel \
+    && dnf clean all

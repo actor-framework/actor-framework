@@ -1,4 +1,6 @@
-package org.libcppa;
+syntax = "proto2";
+
+package org.caf;
 
 message Ping {
   required int32 id = 1;

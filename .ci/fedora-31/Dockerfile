@@ -1,14 +1,13 @@
 FROM fedora:31
 
-RUN dnf update -y && \
-  dnf clean all
-
-RUN dnf install -y \
-  git \
-  make \
-  cmake \
-  gcc-c++ \
-  openssl-devel \
-  libasan \
-  libubsan \
- && dnf clean all
+RUN dnf update -y \
+    && dnf clean all \
+    && dnf install -y \
+         cmake \
+         gcc-c++ \
+         git \
+         libasan \
+         libubsan \
+         make \
+         openssl-devel \
+    && dnf clean all

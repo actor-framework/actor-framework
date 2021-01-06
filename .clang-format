@@ -59,4 +59,7 @@ SpacesInParentheses: false
 SpacesInSquareBrackets: false
 Standard: Cpp11
 UseTab: Never
+---
+Language: Proto
+DisableFormat: true
 ...

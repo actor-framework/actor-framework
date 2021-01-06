@@ -17,8 +17,9 @@ config = [
     ],
     // Default CMake flags by build type.
     buildFlags: [
-        'CAF_ENABLE_RUNTIME_CHECKS:BOOL=ON',
         'CAF_ENABLE_ACTOR_PROFILER:BOOL=ON',
+        'CAF_ENABLE_EXAMPLES:BOOL=ON',
+        'CAF_ENABLE_RUNTIME_CHECKS:BOOL=ON',
     ],
     extraDebugFlags: [
         'CAF_LOG_LEVEL:STRING=TRACE',
@@ -107,25 +108,16 @@ config = [
                 'LDFLAGS=-fno-sanitize-recover=undefined',
             ],
         ]],
-        // One extra debug build with all examples.
-        ['fedora-32', [
-            numCores: 4,
-            tags: ['docker'],
-            builds: ['debug'],
-            extraBuildFlags: [
-                'CAF_ENABLE_EXAMPLES:BOOL=ON',
-                'CAF_ENABLE_QT5_EXAMPLES:BOOL=ON',
-                'CAF_ENABLE_CURL_EXAMPLES:BOOL=ON',
-                'CAF_ENABLE_PROTOBUF_EXAMPLES:BOOL=ON',
-            ],
-        ]],
-        // Other UNIX systems.
+        // Other UNIX systems. On macOS, we also build *all* examples.
         ['macOS', [
             numCores: 4,
             builds: ['debug', 'release'],
             extraBuildFlags: [
+                'CAF_ENABLE_CURL_EXAMPLES:BOOL=ON',
+                'CAF_ENABLE_PROTOBUF_EXAMPLES:BOOL=ON',
+                'CAF_ENABLE_QT5_EXAMPLES:BOOL=ON',
                 'OPENSSL_ROOT_DIR:PATH=/usr/local/opt/openssl',
-                'OPENSSL_INCLUDE_DIR:PATH=/usr/local/opt/openssl/include',
+                'Qt5_DIR:PATH=/usr/local/opt/qt/lib/cmake/Qt5',
             ],
             extraDebugBuildFlags: [
                 'CAF_SANITIZERS:STRING=address',
@@ -145,7 +137,7 @@ config = [
             //builds: ['debug', 'release'],
             builds: ['release'],
             extraBuildFlags: [
-                'CAF_ENABLE_OPENSSL_MODULE:BOOL=OFF'
+                'CAF_ENABLE_OPENSSL_MODULE:BOOL=OFF',
             ],
         ]],
     ],

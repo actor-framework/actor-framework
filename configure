@@ -70,7 +70,6 @@ Influential Environment Variables (only on first invocation):
   CXX                       C++ compiler command
   CXXFLAGS                  Additional C++ compiler flags
   LDFLAGS                   Additional linker flags
-  CMAKE_GENERATOR           Selects a custom generator
 "
 
 # Appends a CMake cache entry definition to the CMakeCacheEntries variable.
