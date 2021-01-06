@@ -9,26 +9,25 @@
  * - qt_group_chat -g remote:chatroom@localhost:4242 -n bob                   *
 \******************************************************************************/
 
-#include <set>
-#include <map>
-#include <vector>
+#include <cstdlib>
 #include <iostream>
+#include <map>
+#include <set>
 #include <sstream>
 #include <time.h>
-#include <cstdlib>
+#include <vector>
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 
 CAF_PUSH_WARNINGS
-#include <QMainWindow>
-#include <QApplication>
 #include "ui_chatwindow.h" // auto generated from chatwindow.ui
+#include <QApplication>
+#include <QMainWindow>
 CAF_POP_WARNINGS
 
 #include "chatwidget.hpp"
 
-using namespace std;
 using namespace caf;
 
 class config : public actor_system_config {
@@ -43,7 +42,7 @@ public:
 int caf_main(actor_system& sys, const config& cfg) {
   std::string name;
   if (auto config_name = get_if<std::string>(&cfg, "name"))
-    name = *config_name;
+    name = std::move(*config_name);
   while (name.empty()) {
     std::cout << "please enter your name: " << std::flush;
     if (!std::getline(std::cin, name)) {
@@ -62,8 +61,7 @@ int caf_main(actor_system& sys, const config& cfg) {
                 << std::endl;
     }
   }
-
-  auto [argc, argv] = const_cast<config&>(cfg).c_args_remainder();
+  auto [argc, argv] = cfg.c_args_remainder();
   QApplication app{argc, argv};
   app.setQuitOnLastWindowClosed(true);
   QMainWindow mw;
@@ -71,10 +69,8 @@ int caf_main(actor_system& sys, const config& cfg) {
   helper.setupUi(&mw);
   helper.chatwidget->init(sys);
   auto client = helper.chatwidget->as_actor();
-  if (! name.empty())
-    send_as(client, client, set_name_atom_v, move(name));
-  if (grp)
-    send_as(client, client, join_atom_v, std::move(grp));
+  anon_send(client, set_name_atom_v, move(name));
+  anon_send(client, join_atom_v, std::move(grp));
   mw.show();
   return app.exec();
 }

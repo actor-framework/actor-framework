@@ -197,7 +197,7 @@ public:
   /// necessary buffers lazily on first call.
   /// @note The returned pointer remains valid only as long as the
   ///       `actor_system_config` object exists.
-  std::pair<int, char**> c_args_remainder();
+  std::pair<int, char**> c_args_remainder() const noexcept;
 
   // -- caf-run parameters -----------------------------------------------------
 
@@ -328,7 +328,9 @@ protected:
   config_option_set custom_options_;
 
 private:
-  std::vector<char*> c_args_remainder_;
+  void set_remainder(string_list args);
+
+  mutable std::vector<char*> c_args_remainder_;
   std::vector<char> c_args_remainder_buf_;
 
   actor_system_config& set_impl(string_view name, config_value value);
