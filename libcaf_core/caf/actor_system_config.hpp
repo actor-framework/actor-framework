@@ -185,8 +185,19 @@ public:
   /// and instead return from `main` immediately.
   bool cli_helptext_printed;
 
+  /// Stores the content of `argv[0]` from the arguments passed to `parse`.
+  std::string program_name;
+
   /// Stores CLI arguments that were not consumed by CAF.
   string_list remainder;
+
+  /// Returns the remainder including the program name (`argv[0]`) suitable for
+  /// passing the returned pair of arguments to C-style functions that usually
+  /// accept `(argc, argv)` input as passed to `main`. This function creates the
+  /// necessary buffers lazily on first call.
+  /// @note The returned pointer remains valid only as long as the
+  ///       `actor_system_config` object exists.
+  std::pair<int, char**> c_args_remainder() const noexcept;
 
   // -- caf-run parameters -----------------------------------------------------
 
@@ -317,6 +328,11 @@ protected:
   config_option_set custom_options_;
 
 private:
+  void set_remainder(string_list args);
+
+  mutable std::vector<char*> c_args_remainder_;
+  std::vector<char> c_args_remainder_buf_;
+
   actor_system_config& set_impl(string_view name, config_value value);
 
   error extract_config_file_path(string_list& args);

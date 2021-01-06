@@ -86,6 +86,9 @@ CAF_TEST(parsing - without CLI arguments) {
   parse(text);
   CAF_CHECK(cfg.remainder.empty());
   CAF_CHECK_EQUAL(get_or(cfg, "foo.bar", ""), "hello");
+  auto [argc, argv] = cfg.c_args_remainder();
+  CAF_REQUIRE_EQUAL(argc, 1);
+  CAF_CHECK_EQUAL(argv[0], cfg.program_name);
 }
 
 CAF_TEST(parsing - without CLI cfg.remainder) {
@@ -112,11 +115,15 @@ CAF_TEST(parsing - without CLI cfg.remainder) {
 CAF_TEST(parsing - with CLI cfg.remainder) {
   auto text = "foo{\nbar=\"hello\"}";
   options("?foo").add<std::string>("bar,b", "some string parameter");
-  CAF_MESSAGE("valid cfg.remainder");
   parse(text, {"-b", "test", "hello", "world"});
+  CAF_REQUIRE_EQUAL(cfg.remainder.size(), 2u);
   CAF_CHECK_EQUAL(get_or(cfg, "foo.bar", ""), "test");
   CAF_CHECK_EQUAL(cfg.remainder, string_list({"hello", "world"}));
-  CAF_MESSAGE("invalid cfg.remainder");
+  auto [argc, argv] = cfg.c_args_remainder();
+  CAF_REQUIRE_EQUAL(argc, 3);
+  CAF_CHECK_EQUAL(argv[0], cfg.program_name);
+  CAF_CHECK_EQUAL(argv[1], cfg.remainder[0]);
+  CAF_CHECK_EQUAL(argv[2], cfg.remainder[1]);
 }
 
 CAF_TEST(file input overrides defaults but CLI args always win) {

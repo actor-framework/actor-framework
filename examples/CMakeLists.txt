@@ -82,27 +82,31 @@ if(TARGET CAF::io)
 
   if(CAF_ENABLE_QT5_EXAMPLES)
     find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
-    message(STATUS "Found Qt5")
-    #include(${QT_USE_FILE})
-    QT5_ADD_RESOURCES(GROUP_CHAT_RCS )
-    QT5_WRAP_UI(GROUP_CHAT_UI_HDR qtsupport/chatwindow.ui)
-    QT5_WRAP_CPP(GROUP_CHAT_MOC_SRC qtsupport/chatwidget.hpp)
+    qt5_wrap_ui(GROUP_CHAT_UI_HDR qtsupport/chatwindow.ui)
+    qt5_wrap_cpp(GROUP_CHAT_MOC_SRC qtsupport/chatwidget.hpp)
     # generated headers will be in cmake build directory
-    include_directories(qtsupport
-                        ${CMAKE_CURRENT_BINARY_DIR}
-                        ${Qt5Core_INCLUDE_DIRS}
-                        ${Qt5Gui_INCLUDE_DIRS}
-                        ${Qt5Widgets_INCLUDE_DIRS})
-    set(GROUP_CHAT_SRC qtsupport/qt_group_chat.cpp qtsupport/chatwidget.cpp)
     add_executable(qt_group_chat
-                   ${GROUP_CHAT_SRC}
+                   qtsupport/qt_group_chat.cpp
+                   qtsupport/chatwidget.cpp
                    ${GROUP_CHAT_MOC_SRC}
                    ${GROUP_CHAT_UI_HDR})
     target_link_libraries(qt_group_chat
+                          CAF::io
+                          CAF::internal
                           Qt5::Core
                           Qt5::Gui
-                          Qt5::Widgets
-                          CAF::io)
+                          Qt5::Widgets)
+    target_include_directories(qt_group_chat PRIVATE
+                               qtsupport
+                               ${CMAKE_CURRENT_BINARY_DIR}
+                               ${Qt5Core_INCLUDE_DIRS}
+                               ${Qt5Gui_INCLUDE_DIRS}
+                               ${Qt5Widgets_INCLUDE_DIRS})
+    if (CMAKE_VERSION VERSION_LESS 3.8)
+      message(STATUS "Note: build fails if Qt5 sets incompatible -std=ARG flag")
+    else()
+      set_property(TARGET qt_group_chat PROPERTY CXX_STANDARD 17)
+    endif()
     add_dependencies(qt_group_chat all_examples)
   endif()
 
@@ -110,7 +114,7 @@ if(TARGET CAF::io)
     find_package(CURL REQUIRED)
     add_executable(curl_fuse curl/curl_fuse.cpp)
     include_directories(${CURL_INCLUDE_DIRS})
-    target_link_libraries(curl_fuse ${CURL_LIBRARY} CAF::io)
+    target_link_libraries(curl_fuse ${CURL_LIBRARY} CAF::io CAF::internal)
     add_dependencies(curl_fuse all_examples)
   endif()
 

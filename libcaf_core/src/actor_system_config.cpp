@@ -53,6 +53,7 @@ actor_system_config::~actor_system_config() {
 
 actor_system_config::actor_system_config()
   : cli_helptext_printed(false),
+    program_name("unknown-caf-app"),
     slave_mode(false),
     config_file_path(default_config_file),
     slave_mode_fun(nullptr) {
@@ -187,16 +188,45 @@ settings actor_system_config::dump_content() const {
 error actor_system_config::parse(int argc, char** argv,
                                  const char* config_file_cstr) {
   string_list args;
-  if (argc > 1)
-    args.assign(argv + 1, argv + argc);
+  if (argc > 0) {
+    program_name = argv[0];
+    if (argc > 1)
+      args.assign(argv + 1, argv + argc);
+  }
   return parse(std::move(args), config_file_cstr);
 }
 
 error actor_system_config::parse(int argc, char** argv, std::istream& conf) {
   string_list args;
-  if (argc > 1)
-    args.assign(argv + 1, argv + argc);
+  if (argc > 0) {
+    program_name = argv[0];
+    if (argc > 1)
+      args.assign(argv + 1, argv + argc);
+  }
   return parse(std::move(args), conf);
+}
+
+std::pair<int, char**> actor_system_config::c_args_remainder() const noexcept {
+  return {static_cast<int>(c_args_remainder_.size()), c_args_remainder_.data()};
+}
+
+void actor_system_config::set_remainder(string_list args) {
+  remainder.swap(args);
+  c_args_remainder_buf_.assign(program_name.begin(), program_name.end());
+  c_args_remainder_buf_.emplace_back('\0');
+  for (const auto& arg : remainder) {
+    c_args_remainder_buf_.insert(c_args_remainder_buf_.end(), //
+                                 arg.begin(), arg.end());
+    c_args_remainder_buf_.emplace_back('\0');
+  }
+  auto ptr = c_args_remainder_buf_.data();
+  auto end = ptr + c_args_remainder_buf_.size();
+  auto advance_ptr = [&ptr] {
+    while (*ptr++ != '\0')
+      ; // nop
+  };
+  for (; ptr != end; advance_ptr())
+    c_args_remainder_.emplace_back(ptr);
 }
 
 namespace {
@@ -288,15 +318,16 @@ error actor_system_config::parse(string_list args, std::istream& config) {
   using std::make_move_iterator;
   auto res = custom_options_.parse(content, args);
   if (res.second != args.end()) {
-    if (res.first != pec::success && starts_with(*res.second, "-"))
+    if (res.first != pec::success && starts_with(*res.second, "-")) {
       return make_error(res.first, *res.second);
-    auto first = args.begin();
-    first += std::distance(args.cbegin(), res.second);
-    remainder.insert(remainder.end(), make_move_iterator(first),
-                     make_move_iterator(args.end()));
+    } else {
+      args.erase(args.begin(), res.second);
+      set_remainder(std::move(args));
+    }
   } else {
     cli_helptext_printed = get_or(content, "help", false)
                            || get_or(content, "long-help", false);
+    set_remainder(string_list{});
   }
   // Generate help text if needed.
   if (cli_helptext_printed) {
