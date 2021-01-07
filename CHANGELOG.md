@@ -84,6 +84,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Skipping high-priority messages resulted in CAF lowering the priority to
   normal. This unintentional demotion has been fixed (#1171).
 - Fix undefined behavior in the experimental datagram brokers (#1174).
+- `CAF_ADD_TYPE_ID` now works with types that live in namespaces that also exist
+  as nested namespace in CAF such as `detail` or `io` (#1195).
 
 ## [0.18.0-rc.1] - 2020-09-09
 
