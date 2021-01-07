@@ -183,7 +183,8 @@ CAF_TEST(handshakes may arrive in chunks) {
   CAF_CHECK_EQUAL(transport.handle_input(), 0u);
   CAF_CHECK(!ws->handshake_complete());
   transport.push(bufs[2]);
-  CAF_CHECK_EQUAL(transport.handle_input(), opening_handshake.size());
+  CAF_CHECK_EQUAL(static_cast<size_t>(transport.handle_input()),
+                  opening_handshake.size());
   CAF_CHECK(ws->handshake_complete());
 }
 

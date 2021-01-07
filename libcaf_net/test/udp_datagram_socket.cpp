@@ -119,7 +119,7 @@ CAF_TEST(read / write using span<byte_buffer*>) {
   header hdr{hello_test.size()};
   byte_buffer hdr_buf;
   binary_serializer sink(sys, hdr_buf);
-  if (!sink.apply_object(hdr))
+  if (!sink.apply(hdr))
     CAF_FAIL("failed to serialize payload: " << sink.get_error());
   auto bytes = as_bytes(make_span(hello_test));
   byte_buffer payload_buf(bytes.begin(), bytes.end());
@@ -134,7 +134,7 @@ CAF_TEST(read / write using span<byte_buffer*>) {
   CAF_CHECK_EQUAL(buf.size(), packet_size);
   binary_deserializer source(nullptr, buf);
   header recv_hdr;
-  if (!source.apply_objects(recv_hdr))
+  if (!source.apply(recv_hdr))
     CAF_FAIL("failed to deserialize header: " << source.get_error());
   CAF_CHECK_EQUAL(hdr.payload_size, recv_hdr.payload_size);
   string_view received{reinterpret_cast<const char*>(buf.data())

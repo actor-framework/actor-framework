@@ -21,7 +21,7 @@ CAF_TEST(serialization) {
   byte_buffer buf;
   {
     binary_serializer sink{nullptr, buf};
-    CAF_CHECK(sink.apply_object(x));
+    CAF_CHECK(sink.apply(x));
   }
   CAF_CHECK_EQUAL(buf.size(), basp::header_size);
   auto buf2 = to_bytes(x);
@@ -30,7 +30,7 @@ CAF_TEST(serialization) {
   basp::header y;
   {
     binary_deserializer source{nullptr, buf};
-    CAF_CHECK(source.apply_object(y));
+    CAF_CHECK(source.apply(y));
   }
   CAF_CHECK_EQUAL(x, y);
   auto z = basp::header::from_bytes(buf);
