@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.5...3.18 FATAL_ERROR)
 project(CAF CXX)
 
-cmake_policy(PUSH)
-cmake_policy(VERSION 3.5...3.18)
-
 # -- includes ------------------------------------------------------------------
 
 include(CMakeDependentOption)
@@ -49,11 +46,8 @@ cmake_dependent_option(CAF_ENABLE_OPENSSL_MODULE "Build OpenSSL module" ON
 set(CAF_LOG_LEVEL "QUIET" CACHE STRING "Set log verbosity of CAF components")
 set(CAF_SANITIZERS "" CACHE STRING
     "Comma separated sanitizers, e.g., 'address,undefined'")
-set(CAF_INSTALL_CMAKEDIR
-    "${CMAKE_INSTALL_FULL_LIBDIR}/cmake/CAF" CACHE PATH
-    "Path for installing CMake files, enables 'find_package(CAF)'")
-  set(CAF_BUILD_INFO_FILE_PATH "" CACHE FILEPATH
-    "Optional path for writing CMake and compiler version information")
+set(CAF_BUILD_INFO_FILE_PATH "" CACHE FILEPATH
+  "Optional path for writing CMake and compiler version information")
 
 # -- macOS-specific options ----------------------------------------------------
 
@@ -450,7 +444,7 @@ endif()
 export(EXPORT CAFTargets FILE CAFTargets.cmake NAMESPACE CAF::)
 
 install(EXPORT CAFTargets
-        DESTINATION "${CAF_INSTALL_CMAKEDIR}"
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/CAF"
         NAMESPACE CAF::)
 
 write_basic_package_version_file(
@@ -461,15 +455,14 @@ write_basic_package_version_file(
 configure_package_config_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CAFConfig.cmake.in"
   "${CMAKE_CURRENT_BINARY_DIR}/CAFConfig.cmake"
-  INSTALL_DESTINATION "${CAF_INSTALL_CMAKEDIR}")
+  INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/CAF")
 
 install(
   FILES
     "${CMAKE_CURRENT_BINARY_DIR}/CAFConfig.cmake"
     "${CMAKE_CURRENT_BINARY_DIR}/CAFConfigVersion.cmake"
   DESTINATION
-    "${CAF_INSTALL_CMAKEDIR}")
-
+    "${CMAKE_INSTALL_LIBDIR}/cmake/CAF")
 
 # -- extra file output (primarily for CAF CI) ----------------------------------
 
@@ -478,5 +471,3 @@ if(CAF_BUILD_INFO_FILE_PATH)
                  "${CAF_BUILD_INFO_FILE_PATH}"
                  @ONLY)
 endif()
-
-cmake_policy(POP)
