@@ -84,16 +84,16 @@ CAF_TEST(read on empty sockets) {
 CAF_TEST(transfer data from first to second socket) {
   byte_buffer wr_buf{1_b, 2_b, 4_b, 8_b, 16_b, 32_b, 64_b};
   CAF_MESSAGE("transfer data from first to second socket");
-  CAF_CHECK_EQUAL(write(first, wr_buf), wr_buf.size());
-  CAF_CHECK_EQUAL(read(second, rd_buf), wr_buf.size());
+  CAF_CHECK_EQUAL(static_cast<size_t>(write(first, wr_buf)), wr_buf.size());
+  CAF_CHECK_EQUAL(static_cast<size_t>(read(second, rd_buf)), wr_buf.size());
   CAF_CHECK(std::equal(wr_buf.begin(), wr_buf.end(), rd_buf.begin()));
   rd_buf.assign(rd_buf.size(), byte(0));
 }
 
 CAF_TEST(transfer data from second to first socket) {
   byte_buffer wr_buf{1_b, 2_b, 4_b, 8_b, 16_b, 32_b, 64_b};
-  CAF_CHECK_EQUAL(write(second, wr_buf), wr_buf.size());
-  CAF_CHECK_EQUAL(read(first, rd_buf), wr_buf.size());
+  CAF_CHECK_EQUAL(static_cast<size_t>(write(second, wr_buf)), wr_buf.size());
+  CAF_CHECK_EQUAL(static_cast<size_t>(read(first, rd_buf)), wr_buf.size());
   CAF_CHECK(std::equal(wr_buf.begin(), wr_buf.end(), rd_buf.begin()));
 }
 
@@ -109,9 +109,10 @@ CAF_TEST(transfer data using multiple buffers) {
   byte_buffer full_buf;
   full_buf.insert(full_buf.end(), wr_buf_1.begin(), wr_buf_1.end());
   full_buf.insert(full_buf.end(), wr_buf_2.begin(), wr_buf_2.end());
-  CAF_CHECK_EQUAL(write(second, {make_span(wr_buf_1), make_span(wr_buf_2)}),
+  CAF_CHECK_EQUAL(static_cast<size_t>(
+                    write(second, {make_span(wr_buf_1), make_span(wr_buf_2)})),
                   full_buf.size());
-  CAF_CHECK_EQUAL(read(first, rd_buf), full_buf.size());
+  CAF_CHECK_EQUAL(static_cast<size_t>(read(first, rd_buf)), full_buf.size());
   CAF_CHECK(std::equal(full_buf.begin(), full_buf.end(), rd_buf.begin()));
 }
 

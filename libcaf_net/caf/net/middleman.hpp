@@ -61,7 +61,7 @@ public:
   ///
   /// @param sock An accept socket in listening mode. For a TCP socket, this
   ///             socket must already listen to an address plus port.
-  /// @param factory
+  /// @param factory An application stack factory.
   template <class Socket, class Factory>
   auto make_acceptor(Socket sock, Factory factory) {
     using connected_socket_type = typename Socket::connected_socket_type;

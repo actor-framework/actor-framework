@@ -87,7 +87,7 @@ struct ll_provide_stream_for_messages {
   }
 
   void run() {
-    CAF_CHECK(data_stream.size() != 0);
+    CAF_CHECK(!data_stream.empty());
     while (processed != data_stream.size()) {
       auto all_data = make_span(data_stream.data() + processed,
                                 data_stream.size() - processed);
@@ -104,7 +104,7 @@ struct ll_provide_stream_for_messages {
         offered -= processed;
         processed = 0;
       }
-      if (consumed == 0 || data_stream.size() == 0)
+      if (consumed == 0 || data_stream.empty())
         return;
     }
   }
@@ -121,7 +121,7 @@ template <class... Ts>
 byte_buffer to_buf(const Ts&... xs) {
   byte_buffer buf;
   binary_serializer sink{nullptr, buf};
-  if (!sink.apply_objects(xs...))
+  if (!(sink.apply(xs) && ...))
     CAF_FAIL("to_buf failed: " << sink.get_error());
   return buf;
 }
