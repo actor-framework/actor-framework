@@ -64,7 +64,7 @@ CAF_ADD_CONFIG_VALUE_TYPE(dictionary<config_value>);
 template <class T>
 constexpr bool is_config_value_type_v = is_config_value_type<T>::value;
 
-}; // namespace caf::detail
+} // namespace caf::detail
 
 namespace caf {
 

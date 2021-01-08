@@ -391,7 +391,7 @@ strong_actor_ptr middleman::remote_lookup(std::string name,
              make_message(registry_lookup_atom_v, std::move(name)));
   self->receive(
     [&](strong_actor_ptr& addr) { result = std::move(addr); },
-    others >> [](message& msg) -> skippable_result {
+    others >> []([[maybe_unused]] message& msg) -> skippable_result {
       CAF_LOG_ERROR(
         "middleman received unexpected remote_lookup result:" << msg);
       return message{};
