@@ -3,18 +3,12 @@
 Message Passing
 ===============
 
-Message passing in CAF is always asynchronous. Further, CAF neither guarantees
-message delivery nor message ordering in a distributed setting. CAF uses TCP
-per default, but also enables nodes to send messages to other nodes without
-having a direct connection.  In this case, messages are forwarded by
-intermediate nodes and can get lost if one of the forwarding nodes fails.
-Likewise, forwarding paths can change dynamically and thus cause messages to
-arrive out of order.
-
 The messaging layer of CAF has three primitives for sending messages: ``send``,
 ``request``, and ``delegate``. The former simply enqueues a message to the
 mailbox the receiver. The latter two are discussed in more detail in
-:ref:`request` and :ref:`delegate`.
+:ref:`request` and :ref:`delegate`. Before we go into the details of the message
+passing API itself, we first discuss the building blocks that enable message
+passing in the first place.
 
 .. _mailbox-element:
 
@@ -37,16 +31,11 @@ request. The ``stages`` vector stores the path of the message. Response
 messages, i.e., the returned values of a message handler, are sent to
 ``stages.back()`` after calling ``stages.pop_back()``. This allows CAF to build
 pipelines of arbitrary size. If no more stage is left, the response reaches the
-sender. Finally, ``content()`` grants access to the type-erased tuple storing
-the message itself.
+sender. Finally, ``payload`` is the actual content of the message.
 
 Mailbox elements are created by CAF automatically and are usually invisible to
 the programmer. However, understanding how messages are processed internally
 helps understanding the behavior of the message passing layer.
-
-It is worth mentioning that CAF usually wraps the mailbox element and its
-content into a single object in order to reduce the number of memory
-allocations.
 
 .. _copy-on-write:
 
@@ -65,19 +54,15 @@ Requirements for Message Types
 
 Message types in CAF must meet the following requirements:
 
-1. Serializable or inspectable (see :ref:`type-inspection`)
+1. Inspectable (see :ref:`type-inspection`)
 2. Default constructible
 3. Copy constructible
 
-A type is serializable if it provides free function
-``serialize(Serializer&, T&)`` or
-``serialize(Serializer&, T&, const unsigned int)``. Accordingly, a type is
-inspectable if it provides a free function ``inspect(Inspector&, T&)``.
-
+A type ``T`` is inspectable if it provides a free function
+``inspect(Inspector&, T&)`` or specializes ``inspector_access``.
 Requirement 2 is a consequence of requirement 1, because CAF needs to be able to
-create an object of a type before it can call ``serialize`` or ``inspect`` on
-it. Requirement 3 allows CAF to implement Copy on Write (see
-:ref:`copy-on-write`).
+create an object for ``T`` when deserializing incoming messages. Requirement 3
+allows CAF to implement Copy on Write (see :ref:`copy-on-write`).
 
 .. _special-handler:
 
@@ -158,12 +143,12 @@ Requests
 --------
 
 A main feature of CAF is its ability to couple input and output types via the
-type system. For example, a ``typed_actor<replies_to<int>::with<int>>``
-essentially behaves like a function. It receives a single ``int`` as
-input and responds with another ``int``. CAF embraces this functional
-take on actors by simply creating response messages from the result of message
-handlers. This allows CAF to match *request* to *response* messages
-and to provide a convenient API for this style of communication.
+type system. For example, a ``typed_actor<result<int32_t>(int32_t)>``
+essentially behaves like a function. It receives a single ``int32_t`` as input
+and responds with another ``int32_t``. CAF embraces this functional take on
+actors by simply creating response messages from the result of message handlers.
+This allows CAF to match *request* to *response* messages and to provide a
+convenient API for this style of communication.
 
 .. _handling-response:
 
@@ -181,42 +166,31 @@ responses arrive and handles requests in LIFO order. Blocking actors always use
 Actors receive a ``sec::request_timeout`` (see :ref:`sec`) error message (see
 :ref:`error-message`) if a timeout occurs. Users can set the timeout to
 ``infinite`` for unbound operations. This is only recommended if the receiver is
-running locally.
+known to run locally.
 
-In our following example, we use the simple cell actors shown below as
-communication endpoints.
-
-.. literalinclude:: /examples/message_passing/request.cpp
-   :language: C++
-   :lines: 20-37
-
-The first part of the example illustrates how event-based actors can use either
-``then`` or ``await``.
+In our following example, we use the simple cell actor shown below as
+communication endpoint.
 
 .. literalinclude:: /examples/message_passing/request.cpp
    :language: C++
-   :lines: 39-51
+   :start-after: --(rst-cell-begin)--
+   :end-before: --(rst-cell-end)--
 
-The second half of the example shows a blocking actor making use of
-``receive``. Note that blocking actors have no special-purpose handler
-for error messages and therefore are required to pass a callback for error
-messages when handling response messages.
-
-.. literalinclude:: /examples/message_passing/request.cpp
-   :language: C++
-   :lines: 53-64
-
-We spawn five cells and assign the values 0, 1, 4, 9, and 16.
+To showcase the slight differences in API and processing order, we implement
+three testee actors that all operate on a list of cell actors.
 
 .. literalinclude:: /examples/message_passing/request.cpp
    :language: C++
-   :lines: 67-69
+   :start-after: --(rst-testees-begin)--
+   :end-before: --(rst-testees-end)--
 
-When passing the ``cells`` vector to our three different
-implementations, we observe three outputs. Our ``waiting_testee`` actor
-will always print:
+Our ``caf_main`` for the examples spawns five cells and assign the initial
+values 0, 1, 4, 9, and 16. Then it spawns one instance for each of our testee
+implementations and we can observe the different outputs.
 
-.. ::
+Our ``waiting_testee`` actor will always print:
+
+.. code-block:: none
 
    cell #9 -> 16
    cell #8 -> 9
@@ -225,15 +199,17 @@ will always print:
    cell #5 -> 0
 
 This is because ``await`` puts the one-shots handlers onto a stack and
-enforces LIFO order by re-ordering incoming response messages.
+enforces LIFO order by re-ordering incoming response messages as necessary.
 
 The ``multiplexed_testee`` implementation does not print its results in
 a predicable order. Response messages arrive in arbitrary order and are handled
 immediately.
 
-Finally, the ``blocking_testee`` implementation will always print:
+Finally, the ``blocking_testee`` has a deterministic output again. This is
+because it blocks on each request until receiving the result before making the
+next request.
 
-.. ::
+.. code-block:: none
 
    cell #5 -> 0
    cell #6 -> 1
@@ -254,17 +230,17 @@ manager fans-out the request to all of its workers and then collects the
 results. The function ``fan_out_request`` combined with the merge policy
 ``select_all`` streamlines this exact use case.
 
-In the following snippet, we have a matrix actor (``self``) that stores
-worker actors for each cell (each simply storing an integer). For computing the
-average over a row, we use ``fan_out_request``. The result handler
-passed to ``then`` now gets called only once with a ``vector``
-holding all collected results. Using a response promise promise_ further
-allows us to delay responding to the client until we have collected all worker
-results.
+In the following snippet, we have a matrix actor ``self`` that stores worker
+actors for each cell (each simply storing an integer). For computing the average
+over a row, we use ``fan_out_request``. The result handler passed to ``then``
+now gets called only once with a ``vector`` holding all collected results. Using
+a response promise promise_ further allows us to delay responding to the client
+until we have collected all worker results.
 
 .. literalinclude:: /examples/message_passing/fan_out_request.cpp
    :language: C++
-   :lines: 86-98
+   :start-after: --(rst-fan-out-begin)--
+   :end-before: --(rst-fan-out-end)--
 
 The policy ``select_any`` models a second common use case: sending a
 request to multiple receivers but only caring for the first arriving response.
@@ -286,26 +262,32 @@ by zero. This examples uses a custom error category (see :ref:`error`).
 
 .. literalinclude:: /examples/message_passing/divider.cpp
    :language: C++
-   :lines: 17-19,49-59
+   :start-after: --(rst-divider-begin)--
+   :end-before: --(rst-divider-end)--
 
-When sending requests to the divider, we use a custom error handlers to report
-errors to the user.
+When sending requests to the divider, we can use a custom error handlers to
+report errors to the user like this:
 
 .. literalinclude:: /examples/message_passing/divider.cpp
    :language: C++
-   :lines: 70-76
+   :start-after: --(rst-request-begin)--
+   :end-before: --(rst-request-end)--
 
 .. _delay-message:
 
 Delaying Messages
 -----------------
 
-Messages can be delayed by using the function ``delayed_send``, as
-illustrated in the following time-based loop example.
+Messages can be delayed by using the function ``delayed_send``, as illustrated
+in the following time-based loop example.
 
 .. literalinclude:: /examples/message_passing/dancing_kirby.cpp
    :language: C++
-   :lines: 58-75
+   :start-after: --(rst-delayed-send-begin)--
+   :end-before: --(rst-delayed-send-end)--
+
+Delayed send schedules messages based on relative timeouts. For absolute
+timeouts, use ``scheduled_send`` instead.
 
 .. _delegate:
 
@@ -318,7 +300,7 @@ by returning a value from its message handler---and the original sender of the
 message will receive the response. The following diagram illustrates request
 delegation from actor B to actor C.
 
-.. ::
+.. code-block:: none
 
                   A                  B                  C
                   |                  |                  |
@@ -330,11 +312,6 @@ delegation from actor B to actor C.
                   |                                     |<--/
                   | <-------------(reply)-------------- |
                   |                                     X
-                  |---\
-                  |   | handle
-                  |   | response
-                  |<--/
-                  |
                   X
 
 Returning the result of ``delegate(...)`` from a message handler, as
@@ -343,7 +320,8 @@ the compiler to check the result type when using statically typed actors.
 
 .. literalinclude:: /examples/message_passing/delegating.cpp
    :language: C++
-   :lines: 15-36
+   :start-after: --(rst-delegate-begin)--
+   :end-before: --(rst-delegate-end)--
 
 .. _promise:
 
@@ -360,14 +338,36 @@ a promise, an actor can fulfill it by calling the member function
 
 .. literalinclude:: /examples/message_passing/promises.cpp
    :language: C++
-   :lines: 18-43
+   :start-after: --(rst-promise-begin)--
+   :end-before: --(rst-promise-end)--
+
+This example is almost identical to the example for delegating messages.
+However, there is a big difference in the flow of messages. In our first
+version, the worker (C) directly responded to the client (A). This time, the
+worker sends the result to the server (B), which then fulfills the promise and
+thereby sends the result to the client:
+
+.. code-block:: none
+
+                  A                  B                  C
+                  |                  |                  |
+                  | ---(request)---> |                  |
+                  |                  | ---(request)---> |
+                  |                  |                  |---\
+                  |                  |                  |   | compute
+                  |                  |                  |   | result
+                  |                  |                  |<--/
+                  |                  | <----(reply)---- |
+                  |                  |                  X
+                  | <----(reply)---- |
+                  |                  X
+                  X
 
 Message Priorities
 ------------------
 
 By default, all messages have the default priority, i.e.,
-``message_priority::normal``. Actors can send urgent messages by
-setting the priority explicitly:
-``send<message_priority::high>(dst,...)``. Urgent messages are put into
-a different queue of the receiver's mailbox. Hence, long wait delays can be
-avoided for urgent communication.
+``message_priority::normal``. Actors can send urgent messages by setting the
+priority explicitly: ``send<message_priority::high>(dst, ...)``. Urgent messages
+are put into a different queue of the receiver's mailbox. Hence, long wait
+delays can be avoided for urgent communication.

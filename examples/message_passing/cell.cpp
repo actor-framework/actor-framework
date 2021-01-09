@@ -40,7 +40,7 @@ behavior unchecked_cell(stateful_actor<cell_state>* self) {
 // --(rst-cell-end)--
 
 void caf_main(actor_system& system) {
-  // --(rst-spawn-cell-end)--
+  // --(rst-spawn-cell-begin)--
   // Create one cell for each implementation.
   auto cell1 = system.spawn(type_checked_cell);
   auto cell2 = system.spawn(unchecked_cell);
@@ -50,7 +50,7 @@ void caf_main(actor_system& system) {
   f(put_atom_v, 20);
   cout << "cell value (after setting to 20): " << f(get_atom_v) << endl;
   // Get an unchecked cell and send it some garbage. Triggers an "unexpected
-  // message" error.
+  // message" error (and terminates cell2!).
   anon_send(cell2, "hello there!");
 }
 

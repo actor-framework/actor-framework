@@ -45,7 +45,7 @@ add_core_example(custom_type custom_types_3)
 # testing DSL
 add_example(testing ping_pong)
 target_link_libraries(ping_pong PRIVATE CAF::internal CAF::core CAF::test)
-
+add_test(NAME "examples.ping-pong" COMMAND ping_pong -r300 -n -v5)
 
 # -- examples for CAF::io ------------------------------------------------------
 

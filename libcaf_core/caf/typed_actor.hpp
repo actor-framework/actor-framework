@@ -54,6 +54,9 @@ public:
   // tell actor_cast which semantic this type uses
   static constexpr bool has_weak_ptr_semantics = false;
 
+  /// Stores the template parameter pack.
+  using signatures = detail::type_list<Sigs...>;
+
   /// Creates a new `typed_actor` type by extending this one with `Es...`.
   template <class... Es>
   using extend = typed_actor<Sigs..., Es...>;
@@ -68,32 +71,37 @@ public:
   /// for their behavior stack.
   using behavior_type = typed_behavior<Sigs...>;
 
-  /// Identifies pointers to instances of this kind of actor.
-  using pointer = typed_event_based_actor<Sigs...>*;
+  /// The default, event-based type for implementing this messaging interface.
+  using impl = typed_event_based_actor<Sigs...>;
 
-  /// Allows a view to an actor implementing this messaging interface without
-  /// knowledge of the actual type..
+  /// Identifies pointers to instances of this kind of actor.
+  using pointer = impl*;
+
+  /// A view to an actor that implements this messaging interface without
+  /// knowledge of the actual type.
   using pointer_view = typed_actor_pointer<Sigs...>;
 
-  /// Identifies the base class for this kind of actor.
-  using base = typed_event_based_actor<Sigs...>;
+  /// A class type suitable as base type class-based implementations.
+  using base = impl;
+
+  /// The default, event-based type for implementing this messaging interface as
+  /// a stateful actor.
+  template <class State>
+  using stateful_impl = stateful_actor<State, impl>;
+
+  template <class State>
+  using stateful_base [[deprecated("use stateful_impl instead")]]
+  = stateful_actor<State, base>;
+
+  /// Convenience alias for `stateful_impl<State>*`.
+  template <class State>
+  using stateful_pointer = stateful_impl<State>*;
 
   /// Identifies pointers to brokers implementing this interface.
   using broker_pointer = io::typed_broker<Sigs...>*;
 
   /// Identifies the base class of brokers implementing this interface.
   using broker_base = io::typed_broker<Sigs...>;
-
-  /// Stores the template parameter pack.
-  using signatures = detail::type_list<Sigs...>;
-
-  /// Identifies the base class for this kind of actor with actor.
-  template <class State>
-  using stateful_base = stateful_actor<State, base>;
-
-  /// Identifies the base class for this kind of actor with actor.
-  template <class State>
-  using stateful_pointer = stateful_actor<State, base>*;
 
   /// Identifies the broker_base class for this kind of actor with actor.
   template <class State>

@@ -5,9 +5,7 @@ Errors
 
 Errors in CAF have a code and a category, similar to ``std::error_code`` and
 ``std::error_condition``. Unlike its counterparts from the C++ standard library,
-``error`` is plattform-neutral and serializable. Instead of using category
-singletons, CAF stores categories as atoms (see :ref:`atom`). Errors can also
-include a message to provide additional context information.
+``error`` is plattform-neutral and serializable.
 
 Class Interface
 ---------------
@@ -15,19 +13,17 @@ Class Interface
 +-----------------------------------------+--------------------------------------------------------------------+
 | **Constructors**                        |                                                                    |
 +-----------------------------------------+--------------------------------------------------------------------+
-| ``(Enum x)``                            | Construct error by calling ``make_error(x)``                       |
+| ``(Enum code)``                         | Constructs an error with given error code.                         |
 +-----------------------------------------+--------------------------------------------------------------------+
-| ``(uint8_t x, atom_value y)``           | Construct error with code ``x`` and category ``y``                 |
-+-----------------------------------------+--------------------------------------------------------------------+
-| ``(uint8_t x, atom_value y, message z)``| Construct error with code ``x``, category ``y``, and context ``z`` |
+| ``(Enum code, messag context)``         | Constructs an error with given error code and additional context.  |
 +-----------------------------------------+--------------------------------------------------------------------+
 |                                         |                                                                    |
 +-----------------------------------------+--------------------------------------------------------------------+
 | **Observers**                           |                                                                    |
 +-----------------------------------------+--------------------------------------------------------------------+
-| ``uint8_t code()``                      | Returns the error code                                             |
+| ``uint8_t code()``                      | Returns the error code as 8-bit integer.                           |
 +-----------------------------------------+--------------------------------------------------------------------+
-| ``atom_value category()``               | Returns the error category                                         |
+| ``type_id_t category()``                | Returns the type ID of the Enum type used to construct this error. |
 +-----------------------------------------+--------------------------------------------------------------------+
 | ``message context()``                   | Returns additional context information                             |
 +-----------------------------------------+--------------------------------------------------------------------+
@@ -39,11 +35,19 @@ Class Interface
 Add Custom Error Categories
 ---------------------------
 
-Adding custom error categories requires three steps: (1) declare an enum class
-of type ``uint8_t`` with the first value starting at 1, (2) specialize
-``error_category`` to give your type a custom ID (value 0-99 are
-reserved by CAF), and (3) add your error category to the actor system config.
-The following example adds custom error codes for math errors.
+Adding custom error categories requires these steps:
+
+* Declare an enum class of type ``uint8_t`` with error codes starting at 1. CAF
+  always interprets the value 0 as *no error*.
+
+* Assign a type ID to your enum type.
+
+* Specialize ``caf::is_error_code_enum`` for your enum type. For this step, CAF
+  offers the macro ``CAF_ERROR_CODE_ENUM`` to generate the boilerplate code
+  necessary.
+
+The following example illustrates all these steps for a custom error code enum
+called ``math_error``.
 
 .. literalinclude:: /examples/message_passing/divider.cpp
    :language: C++
@@ -51,31 +55,31 @@ The following example adds custom error codes for math errors.
 
 .. _sec:
 
-System Error Codes
-------------------
+Default Error Codes
+-------------------
 
-System Error Codes (SECs) use the error category ``"system"``. They
-represent errors in the actor system or one of its modules and are defined as
-follows.
+The enum type ``sec`` (for System Error Code) provides many error codes for
+common failures in actor systems:
 
 .. literalinclude:: /libcaf_core/caf/sec.hpp
    :language: C++
-   :lines: 32-117
+   :start-after: --(rst-sec-begin)--
+   :end-before: --(rst-sec-end)--
 
 .. _exit-reason:
 
 Default Exit Reasons
 --------------------
 
-CAF uses the error category ``"exit"`` for default exit reasons. These errors
-are usually fail states set by the actor system itself. The two exceptions are
+A special kind of error codes are exit reasons of actors. These errors are
+usually fail states set by the actor system itself. The two exceptions are
 ``exit_reason::user_shutdown`` and ``exit_reason::kill``. The former is used in
 CAF to signalize orderly, user-requested shutdown and can be used by programmers
 in the same way. The latter terminates an actor unconditionally when used in
-``send_exit``, even if the default handler for exit messages (see
-:ref:`exit-message`) is overridden.
+``send_exit``, even for actors that override the default handler (see
+:ref:`exit-message`).
 
 .. literalinclude:: /libcaf_core/caf/exit_reason.hpp
    :language: C++
-   :lines: 29-49
-
+   :start-after: --(rst-exit-reason-begin)--
+   :end-before: --(rst-exit-reason-end)--

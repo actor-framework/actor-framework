@@ -85,10 +85,9 @@ This policy models split/join or scatter/gather work flows, where a work item
 is split into as many tasks as workers are available and then the individuals
 results are joined together before sending the full result back to the client.
 
-The join function is responsible for ``glueing'' all result messages together
-to create a single result. The function is called with the result object
-(initialed using ``init``) and the current result messages from a
-worker.
+The join function is responsible for "glueing" all result messages together to
+create a single result. The function is called with the result object (initialed
+using ``init``) and the current result messages from a worker.
 
 The first argument of a split function is a mapping from actors (workers) to
 tasks (messages). The second argument is the input message. The default split

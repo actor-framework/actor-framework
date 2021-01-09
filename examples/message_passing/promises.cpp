@@ -1,46 +1,40 @@
-/******************************************************************************\
- * Illustrates response promises.                                             *
-\******************************************************************************/
-
-// This file is partially included in the manual, do not modify
-// without updating the references in the *.tex files!
-// Manual references: lines 18-43 (MessagePassing.tex)
-
-#include <iostream>
-
 #include "caf/all.hpp"
-
-using std::cout;
-using std::endl;
 
 using namespace caf;
 
-using adder = typed_actor<result<int32_t>(add_atom, int32_t, int32_t)>;
+// --(rst-promise-begin)--
+using adder_actor = typed_actor<result<int32_t>(add_atom, int32_t, int32_t)>;
 
-// function-based, statically typed, event-based API
-adder::behavior_type worker() {
+adder_actor::behavior_type worker_impl() {
   return {
-    [](add_atom, int32_t a, int32_t b) { return a + b; },
+    [](add_atom, int32_t x, int32_t y) { return x + y; },
   };
 }
-
-// function-based, statically typed, event-based API
-adder::behavior_type calculator_master(adder::pointer self) {
-  auto w = self->spawn(worker);
+adder_actor::behavior_type server_impl(adder_actor::pointer self,
+                                       adder_actor worker) {
   return {
-    [=](add_atom x, int32_t y, int32_t z) -> result<int32_t> {
+    [=](add_atom, int32_t y, int32_t z) {
       auto rp = self->make_response_promise<int32_t>();
-      self->request(w, infinite, x, y, z).then([=](int32_t result) mutable {
-        rp.deliver(result);
-      });
+      self->request(worker, infinite, add_atom_v, y, z)
+        .then([rp](int32_t result) mutable { rp.deliver(result); });
       return rp;
     },
   };
 }
 
-void caf_main(actor_system& system) {
-  auto f = make_function_view(system.spawn(calculator_master));
-  cout << "12 + 13 = " << f(add_atom_v, 12, 13) << endl;
+void client_impl(event_based_actor* self, adder_actor adder, int32_t x,
+                 int32_t y) {
+  using namespace std::literals::chrono_literals;
+  self->request(adder, 10s, add_atom_v, x, y).then([=](int32_t result) {
+    aout(self) << x << " + " << y << " = " << result << std::endl;
+  });
 }
+
+void caf_main(actor_system& sys) {
+  auto worker = sys.spawn(worker_impl);
+  auto server = sys.spawn(server_impl, sys.spawn(worker_impl));
+  sys.spawn(client_impl, server, 1, 2);
+}
+// --(rst-promise-end)--
 
 CAF_MAIN()

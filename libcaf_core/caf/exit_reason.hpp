@@ -19,6 +19,7 @@
 
 namespace caf {
 
+// --(rst-exit-reason-begin)--
 /// This error category represents fail conditions for actors.
 enum class exit_reason : uint8_t {
   /// Indicates that an actor finished execution without error.
@@ -40,6 +41,7 @@ enum class exit_reason : uint8_t {
   /// Indicates that an actor was killed because it became unreachable.
   unreachable
 };
+// --(rst-exit-reason-end)--
 
 /// @relates exit_reason
 CAF_CORE_EXPORT std::string to_string(exit_reason);

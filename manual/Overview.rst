@@ -1,26 +1,20 @@
 Overview
 ========
 
-Compiling CAF requires CMake and a C++11-compatible compiler. To get and
-compile the sources on UNIX-like systems, type the following in a terminal:
+Compiling CAF requires CMake and a recent C++ compiler. To get and compile the
+sources on UNIX-like systems, type the following in a terminal:
 
-.. ::
+.. code-block:: bash
 
    git clone https://github.com/actor-framework/actor-framework
    cd actor-framework
    ./configure
-   make
-   make install [as root, optional]
+   make -C build
+   make -C build install [as root, optional]
 
-We recommended to run the unit tests as well:
-
-.. ::
-
-   make test
-
-If the output indicates an error, please submit a bug report that includes (a)
-your compiler version, (b) your OS, and (c) the content of the file
-``build/Testing/Temporary/LastTest.log``.
+Running ``configure`` is not a mandatory step. The script merely automates the
+CMake setup and makes setting build options slightly more convenient. On
+Windows, use CMake directly to generate an MSVC project file.
 
 Features
 --------
@@ -32,19 +26,13 @@ Features
 * Thread-mapped actors for soft migration of existing applications
 * Publish/subscribe group communication
 
-Minimal Compiler Versions
--------------------------
-
-* GCC 4.8
-* Clang 3.4
-* Visual Studio 2015, Update 3
-
 Supported Operating Systems
 ---------------------------
 
 * Linux
-* Mac OS X
-* Windows (static library only)
+* Windows
+* macOS
+* FreeBSD
 
 Hello World Example
 -------------------

@@ -10,10 +10,8 @@ name, joining, and leaving.
 
 .. code-block:: C++
 
-   std::string module = "local";
-   std::string id = "foo";
-   auto expected_grp = system.groups().get(module, id);
-   if (! expected_grp) {
+   auto expected_grp = system.groups().get("local", "foo");
+   if (!expected_grp) {
      std::cerr << "*** cannot load group: " << to_string(expected_grp.error())
                << std::endl;
      return;

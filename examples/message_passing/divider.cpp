@@ -35,6 +35,7 @@ CAF_END_TYPE_ID_BLOCK(divider)
 
 CAF_ERROR_CODE_ENUM(math_error)
 
+// --(rst-divider-begin)--
 using divider = typed_actor<result<double>(div_atom, double, double)>;
 
 divider::behavior_type divider_impl() {
@@ -46,6 +47,7 @@ divider::behavior_type divider_impl() {
     },
   };
 }
+// --(rst-divider-end)--
 
 void caf_main(actor_system& system) {
   double x;
@@ -54,6 +56,7 @@ void caf_main(actor_system& system) {
   std::cin >> x;
   cout << "y: " << flush;
   std::cin >> y;
+  // --(rst-request-begin)--
   auto div = system.spawn(divider_impl);
   scoped_actor self{system};
   self->request(div, std::chrono::seconds(10), div_atom_v, x, y)
@@ -63,6 +66,7 @@ void caf_main(actor_system& system) {
         aout(self) << "*** cannot compute " << x << " / " << y << " => "
                    << to_string(err) << endl;
       });
+  // --(rst-request-end)--
 }
 
 CAF_MAIN(id_block::divider)

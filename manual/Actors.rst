@@ -250,14 +250,15 @@ messaging interface for a simple calculator.
 
 .. literalinclude:: /examples/message_passing/calculator.cpp
    :language: C++
-   :lines: 17-18
+   :start-after: --(rst-calculator-actor-begin)--
+   :end-before: --(rst-calculator-actor-end)--
 
 It is not required to create a type alias such as ``calculator_actor``,
 but it makes dealing with statically typed actors much easier. Also, a central
 alias definition eases refactoring later on.
 
 Interfaces have set semantics. This means the following two type aliases
-``i1`` and ``i2`` are equal:
+``i1`` and ``i2`` are considered equal by CAF:
 
 .. code-block:: C++
 
@@ -300,13 +301,15 @@ parameter. For example, the following functions and classes represent actors.
 
 .. literalinclude:: /examples/message_passing/calculator.cpp
    :language: C++
-   :lines: 21-26
+   :start-after: --(rst-prototypes-begin)--
+   :end-before: --(rst-prototypes-end)--
 
 Spawning an actor for each implementation is illustrated below.
 
 .. literalinclude:: /examples/message_passing/calculator.cpp
    :language: C++
-   :lines: 123-128
+   :start-after: --(rst-spawn-begin)--
+   :end-before: --(rst-spawn-end)--
 
 Additional arguments to ``spawn`` are passed to the constructor of a
 class or used as additional function arguments, respectively. In the example
@@ -344,7 +347,8 @@ dynamically typed).
 
 .. literalinclude:: /examples/message_passing/calculator.cpp
    :language: C++
-   :lines: 28-56
+   :start-after: --(rst-function-based-begin)--
+   :end-before: --(rst-function-based-end)--
 
 .. _class-based:
 
@@ -364,6 +368,14 @@ Implementing actors with classes works for all kinds of actors and allows
 simple management of state via member variables. However, composing states via
 inheritance can get quite tedious. For dynamically typed actors, composing
 states is particularly hard, because the compiler cannot provide much help.
+
+The following three classes implement the prototypes shown in spawn_ by
+delegating to the function-based implementations we have seen before:
+
+.. literalinclude:: /examples/message_passing/calculator.cpp
+   :language: C++
+   :start-after: --(rst-class-based-begin)--
+   :end-before: --(rst-class-based-end)--
 
 .. _stateful-actor:
 
@@ -405,7 +417,8 @@ printing a custom string on exit.
 
 .. literalinclude:: /examples/broker/simple_broker.cpp
    :language: C++
-   :lines: 42-47
+   :start-after: --(rst-attach-begin)--
+   :end-before: --(rst-attach-end)--
 
 It is possible to attach code to remote actors. However, the cleanup code will
 run on the local machine.
@@ -461,7 +474,7 @@ before the optional timeout, as shown in the example below.
      [&](const exit_msg& x) {
        // ...
      },
-     others >> [](message_view& x) -> result<message> {
+     others >> [](message& x) -> skippable_result {
        // report unexpected message back to client
        return sec::unexpected_message;
      }
