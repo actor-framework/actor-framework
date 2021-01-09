@@ -5,6 +5,8 @@
 #include "caf/type_id_list.hpp"
 
 #include "caf/detail/meta_object.hpp"
+#include "caf/detail/type_id_list_builder.hpp"
+#include "caf/message.hpp"
 
 namespace caf {
 
@@ -33,6 +35,22 @@ std::string to_string(type_id_list xs) {
   }
   result += ']';
   return result;
+}
+
+type_id_list type_id_list::concat(span<type_id_list> lists) {
+  auto total_size = size_t{0};
+  for (auto ls : lists)
+    total_size += ls.size();
+  detail::type_id_list_builder builder;
+  builder.reserve(total_size);
+  for (auto ls : lists)
+    for (auto id : ls)
+      builder.push_back(id);
+  return builder.move_to_list();
+}
+
+type_id_list types_of(const message& msg) {
+  return msg.types();
 }
 
 } // namespace caf

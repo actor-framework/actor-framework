@@ -6,6 +6,7 @@
 
 #include <atomic>
 #include <cstdlib>
+#include <new>
 
 #include "caf/byte.hpp"
 #include "caf/config.hpp"
@@ -45,6 +46,8 @@ public:
   ~message_data() noexcept;
 
   message_data* copy() const;
+
+  static intrusive_ptr<message_data> make_uninitialized(type_id_list types);
 
   // -- reference counting -----------------------------------------------------
 
@@ -110,9 +113,53 @@ public:
     init_impl(storage(), std::forward<Ts>(xs)...);
   }
 
+  byte* stepwise_init(byte* pos) {
+    return pos;
+  }
+
+  template <class T, class... Ts>
+  byte* stepwise_init(byte* pos, T&& x, Ts&&... xs) {
+    using type = strip_and_convert_t<T>;
+    new (pos) type(std::forward<T>(x));
+    ++constructed_elements_;
+    return stepwise_init(pos + padded_size_v<type>, std::forward<Ts>(xs)...);
+  }
+
+  byte* stepwise_init_from(byte* pos, const message& msg);
+
+  byte* stepwise_init_from(byte* pos, const message_data* other);
+
+  template <class Tuple, size_t... Is>
+  byte* stepwise_init_from(byte* pos, Tuple&& tup, std::index_sequence<Is...>) {
+    return stepwise_init(pos, std::get<Is>(std::forward<Tuple>(tup))...);
+  }
+
+  template <class... Ts>
+  byte* stepwise_init_from(byte* pos, std::tuple<Ts...>&& tup) {
+    return stepwise_init_from(pos, std::move(tup),
+                              std::make_index_sequence<sizeof...(Ts)>{});
+  }
+
+  template <class... Ts>
+  byte* stepwise_init_from(byte* pos, std::tuple<Ts...>& tup) {
+    return stepwise_init_from(pos, tup,
+                              std::make_index_sequence<sizeof...(Ts)>{});
+  }
+
+  template <class... Ts>
+  byte* stepwise_init_from(byte* pos, const std::tuple<Ts...>& tup) {
+    return stepwise_init_from(pos, tup,
+                              std::make_index_sequence<sizeof...(Ts)>{});
+  }
+
+  template <class... Ts>
+  void init_from(Ts&&... xs) {
+    init_from_impl(storage(), std::forward<Ts>(xs)...);
+  }
+
 private:
   void init_impl(byte*) {
-    // nop
+    // End of recursion.
   }
 
   template <class T, class... Ts>
@@ -121,6 +168,16 @@ private:
     new (storage) type(std::forward<T>(x));
     ++constructed_elements_;
     init_impl(storage + padded_size_v<type>, std::forward<Ts>(xs)...);
+  }
+
+  void init_from_impl(byte*) {
+    // End of recursion.
+  }
+
+  template <class T, class... Ts>
+  void init_from_impl(byte* pos, T&& x, Ts&&... xs) {
+    init_from_impl(stepwise_init_from(pos, std::forward<T>(x)),
+                   std::forward<Ts>(xs)...);
   }
 
   mutable std::atomic<size_t> rc_;
