@@ -51,7 +51,8 @@ called ``math_error``.
 
 .. literalinclude:: /examples/message_passing/divider.cpp
    :language: C++
-   :lines: 17-47
+   :start-after: --(rst-math-error-begin)--
+   :end-before: --(rst-math-error-end)--
 
 .. _sec:
 

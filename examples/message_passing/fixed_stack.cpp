@@ -19,6 +19,43 @@ CAF_END_TYPE_ID_BLOCK(fixed_stack)
 
 CAF_ERROR_CODE_ENUM(fixed_stack_errc)
 
+std::string to_string(fixed_stack_errc x) {
+  switch (x) {
+    case fixed_stack_errc::push_to_full:
+      return "push_to_full";
+    case fixed_stack_errc::pop_from_empty:
+      return "pop_from_empty";
+    default:
+      return "-unknown-error-";
+  }
+}
+
+bool from_string(caf::string_view in, fixed_stack_errc& out) {
+  if (in == "push_to_full") {
+    out = fixed_stack_errc::push_to_full;
+    return true;
+  } else if (in == "pop_from_empty") {
+    out = fixed_stack_errc::pop_from_empty;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool from_integer(uint8_t in, fixed_stack_errc& out) {
+  if (in > 0 && in < 1) {
+    out = static_cast<fixed_stack_errc>(in);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+template <class Inspector>
+bool inspect(Inspector& f, fixed_stack_errc& x) {
+  return caf::default_enum_inspect(f, x);
+}
+
 using std::endl;
 using namespace caf;
 

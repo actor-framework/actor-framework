@@ -172,8 +172,8 @@ CAF_CORE_EXPORT bool from_string(string_view, sec&);
 CAF_CORE_EXPORT bool from_integer(std::underlying_type_t<sec>, sec&);
 
 /// @relates sec
-template <class Inssector>
-bool inspect(Inssector& f, sec& x) {
+template <class Inspector>
+bool inspect(Inspector& f, sec& x) {
   return default_enum_inspect(f, x);
 }
 

@@ -2,18 +2,11 @@
  * A very basic, interactive divider.                                         *
 \******************************************************************************/
 
-// Manual refs: 17-19, 49-59, 70-76 (MessagePassing);
-//              17-47 (Error)
-
 #include <iostream>
 
 #include "caf/all.hpp"
 
-using std::cout;
-using std::endl;
-using std::flush;
-using namespace caf;
-
+// --(rst-math-error-begin)--
 enum class math_error : uint8_t {
   division_by_zero = 1,
 };
@@ -27,6 +20,29 @@ std::string to_string(math_error x) {
   }
 }
 
+bool from_string(caf::string_view in, math_error& out) {
+  if (in == "division_by_zero") {
+    out = math_error::division_by_zero;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool from_integer(uint8_t in, math_error& out) {
+  if (in == 1) {
+    out = math_error::division_by_zero;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+template <class Inspector>
+bool inspect(Inspector& f, math_error& x) {
+  return caf::default_enum_inspect(f, x);
+}
+
 CAF_BEGIN_TYPE_ID_BLOCK(divider, first_custom_type_id)
 
   CAF_ADD_TYPE_ID(divider, (math_error))
@@ -34,6 +50,13 @@ CAF_BEGIN_TYPE_ID_BLOCK(divider, first_custom_type_id)
 CAF_END_TYPE_ID_BLOCK(divider)
 
 CAF_ERROR_CODE_ENUM(math_error)
+// --(rst-math-error-end)--
+
+using std::cout;
+using std::endl;
+using std::flush;
+
+using namespace caf;
 
 // --(rst-divider-begin)--
 using divider = typed_actor<result<double>(div_atom, double, double)>;
