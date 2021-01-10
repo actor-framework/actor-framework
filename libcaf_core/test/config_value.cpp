@@ -97,6 +97,16 @@ SCENARIO("get_as can convert config values to boolean") {
       }
     }
   }
+  GIVEN("a config value with type annotation 'bool' and the value \"true\"") {
+    config_value x;
+    x.as_dictionary().emplace("@type", "bool");
+    x.as_dictionary().emplace("value", "true");
+    WHEN("using get_as with bool") {
+      THEN("conversion succeeds") {
+        CHECK_EQ(get_as<bool>(x), true);
+      }
+    }
+  }
   GIVEN("non-boolean config_values") {
     WHEN("using get_as with bool") {
       THEN("conversion fails") {

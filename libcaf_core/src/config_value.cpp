@@ -220,7 +220,7 @@ expected<bool> config_value::to_boolean() const {
   using result_type = expected<bool>;
   auto f = detail::make_overload(
     no_conversions<bool, none_t, integer, real, timespan, uri,
-                   config_value::list, config_value::dictionary>(),
+                   config_value::list>(),
     [](boolean x) { return result_type{x}; },
     [](const std::string& x) {
       if (x == "true") {
@@ -231,6 +231,31 @@ expected<bool> config_value::to_boolean() const {
         std::string msg = "cannot convert ";
         detail::print_escaped(msg, x);
         msg += " to a boolean";
+        return result_type{make_error(sec::conversion_failed, std::move(msg))};
+      }
+    },
+    [](const dictionary& x) {
+      if (auto i = x.find("@type");
+          i != x.end() && holds_alternative<std::string>(i->second)) {
+        const auto& tn = get<std::string>(i->second);
+        if (tn == type_name_v<bool>) {
+          if (auto j = x.find("value"); j != x.end()) {
+            return j->second.to_boolean();
+          } else {
+            std::string msg = "missing value for object of type ";
+            msg += tn;
+            return result_type{
+              make_error(sec::conversion_failed, std::move(msg))};
+          }
+        } else {
+          std::string msg = "cannot convert ";
+          msg += tn;
+          msg += " to a boolean";
+          return result_type{
+            make_error(sec::conversion_failed, std::move(msg))};
+        }
+      } else {
+        std::string msg = "cannot convert a dictionary to a boolean";
         return result_type{make_error(sec::conversion_failed, std::move(msg))};
       }
     });
