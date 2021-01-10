@@ -94,12 +94,6 @@ struct app_t {
         down->abort_reason(std::move(parsed_res.error()));
         return -1;
       }
-      if (!holds_alternative<settings>(val)) {
-        down->abort_reason(
-          make_error(pec::type_mismatch,
-                     "expected a dictionary, got a "s + val.type_name()));
-        return -1;
-      }
       // Deserialize message from received dictionary.
       config_value_reader reader{&val};
       caf::message msg;
@@ -193,7 +187,7 @@ struct fixture : host_fixture, test_coordinator_fixture<> {
 };
 
 constexpr std::string_view input = R"__(
-{ values = [ { "@type" : "int32_t", value: 123 } ] }
+[ { "@type" : "int32_t", value: 123 } ]
 )__";
 
 } // namespace

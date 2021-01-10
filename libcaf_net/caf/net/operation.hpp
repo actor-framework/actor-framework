@@ -4,7 +4,14 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string>
+#include <type_traits>
+
+#include "caf/default_enum_inspect.hpp"
+#include "caf/detail/net_export.hpp"
+#include "caf/fwd.hpp"
+#include "caf/is_error_code_enum.hpp"
 
 namespace caf::net {
 
@@ -17,22 +24,39 @@ enum class operation {
   shutdown = 0x04,
 };
 
+/// @relates operation
 constexpr operation operator|(operation x, operation y) {
   return static_cast<operation>(static_cast<int>(x) | static_cast<int>(y));
 }
 
+/// @relates operation
 constexpr operation operator&(operation x, operation y) {
   return static_cast<operation>(static_cast<int>(x) & static_cast<int>(y));
 }
 
+/// @relates operation
 constexpr operation operator^(operation x, operation y) {
   return static_cast<operation>(static_cast<int>(x) ^ static_cast<int>(y));
 }
 
+/// @relates operation
 constexpr operation operator~(operation x) {
   return static_cast<operation>(~static_cast<int>(x));
 }
 
-std::string to_string(operation x);
+/// @relates operation
+CAF_NET_EXPORT std::string to_string(operation x);
+
+/// @relates operation
+CAF_NET_EXPORT bool from_string(string_view, operation&);
+
+/// @relates operation
+CAF_NET_EXPORT bool from_integer(std::underlying_type_t<operation>, operation&);
+
+/// @relates operation
+template <class Inspector>
+bool inspect(Inspector& f, operation& x) {
+  return default_enum_inspect(f, x);
+}
 
 } // namespace caf::net

@@ -80,10 +80,10 @@ struct app_t {
         auto sub_res = consume(down, buf.subspan(1), {});
         return sub_res >= 0 ? sub_res + 1 : sub_res;
       }
-      // Deserialize config value from received line.
       auto num_bytes = std::distance(buf.begin(), i) + 1;
       string_view line{reinterpret_cast<const char*>(buf.data()),
                        static_cast<size_t>(num_bytes) - 1};
+      CAF_MESSAGE("deserialize config value from : " << line);
       config_value val;
       if (auto parsed_res = config_value::parse(line)) {
         val = std::move(*parsed_res);
@@ -91,13 +91,7 @@ struct app_t {
         down->abort_reason(std::move(parsed_res.error()));
         return -1;
       }
-      if (!holds_alternative<settings>(val)) {
-        down->abort_reason(
-          make_error(pec::type_mismatch,
-                     "expected a dictionary, got a "s + val.type_name()));
-        return -1;
-      }
-      // Deserialize message from received dictionary.
+      CAF_MESSAGE("deserialize message from: " << val);
       config_value_reader reader{&val};
       caf::message msg;
       if (!reader.apply(msg)) {
@@ -190,7 +184,7 @@ struct fixture : host_fixture, test_coordinator_fixture<> {
 };
 
 constexpr std::string_view input = R"__(
-{ values = [ { "@type" : "int32_t", value: 123 } ] }
+[{"@type": "int32_t", "value": 123}]
 )__";
 
 } // namespace

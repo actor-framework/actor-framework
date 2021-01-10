@@ -4,14 +4,20 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string>
+#include <type_traits>
+
+#include "caf/default_enum_inspect.hpp"
+#include "caf/detail/net_export.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf::net::basp {
 
 /// @addtogroup BASP
 
 /// Stores the state of a connection in a `basp::application`.
-enum class connection_state {
+enum class connection_state : uint8_t {
   /// Initial state for any connection to wait for the peer's handshake.
   await_handshake_header,
   /// Indicates that the header for the peer's handshake arrived and BASP
@@ -28,7 +34,20 @@ enum class connection_state {
 };
 
 /// @relates connection_state
-std::string to_string(connection_state x);
+CAF_NET_EXPORT std::string to_string(connection_state x);
+
+/// @relates connection_state
+CAF_NET_EXPORT bool from_string(string_view, connection_state&);
+
+/// @relates connection_state
+CAF_NET_EXPORT bool from_integer(std::underlying_type_t<connection_state>,
+                                 connection_state&);
+
+/// @relates connection_state
+template <class Inspector>
+bool inspect(Inspector& f, connection_state& x) {
+  return default_enum_inspect(f, x);
+}
 
 /// @}
 

@@ -7,7 +7,9 @@
 #include <cstdint>
 #include <string>
 
+#include "caf/default_enum_inspect.hpp"
 #include "caf/detail/net_export.hpp"
+#include "caf/fwd.hpp"
 #include "caf/is_error_code_enum.hpp"
 
 namespace caf::net::basp {
@@ -32,6 +34,18 @@ enum class ec : uint8_t {
 
 /// @relates ec
 CAF_NET_EXPORT std::string to_string(ec x);
+
+/// @relates ec
+CAF_NET_EXPORT bool from_string(string_view, ec&);
+
+/// @relates ec
+CAF_NET_EXPORT bool from_integer(std::underlying_type_t<ec>, ec&);
+
+/// @relates ec
+template <class Inspector>
+bool inspect(Inspector& f, ec& x) {
+  return default_enum_inspect(f, x);
+}
 
 } // namespace caf::net::basp
 

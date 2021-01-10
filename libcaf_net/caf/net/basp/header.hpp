@@ -14,6 +14,7 @@
 #include "caf/meta/type_name.hpp"
 #include "caf/net/basp/constants.hpp"
 #include "caf/net/basp/message_type.hpp"
+#include "caf/type_id.hpp"
 
 namespace caf::net::basp {
 
@@ -78,3 +79,12 @@ bool inspect(Inspector& f, header& x) {
 /// @}
 
 } // namespace caf::net::basp
+
+namespace caf {
+
+template <>
+struct type_name<net::basp::header> {
+  static constexpr string_view value = "caf::net::basp::header";
+};
+
+} // namespace caf

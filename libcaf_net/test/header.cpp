@@ -40,5 +40,6 @@ CAF_TEST(serialization) {
 
 CAF_TEST(to_string) {
   basp::header x{basp::message_type::handshake, 42, 4};
-  CAF_CHECK_EQUAL(deep_to_string(x), "basp::header(handshake, 42, 4)");
+  CAF_CHECK_EQUAL(deep_to_string(x),
+                  "caf::net::basp::header(handshake, 42, 4)");
 }

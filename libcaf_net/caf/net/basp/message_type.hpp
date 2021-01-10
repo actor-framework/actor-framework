@@ -6,6 +6,12 @@
 
 #include <cstdint>
 #include <string>
+#include <type_traits>
+
+#include "caf/default_enum_inspect.hpp"
+#include "caf/detail/net_export.hpp"
+#include "caf/fwd.hpp"
+#include "caf/is_error_code_enum.hpp"
 
 namespace caf::net::basp {
 
@@ -55,7 +61,20 @@ enum class message_type : uint8_t {
 };
 
 /// @relates message_type
-std::string to_string(message_type);
+CAF_NET_EXPORT std::string to_string(message_type x);
+
+/// @relates message_type
+CAF_NET_EXPORT bool from_string(string_view, message_type&);
+
+/// @relates message_type
+CAF_NET_EXPORT bool from_integer(std::underlying_type_t<message_type>,
+                                 message_type&);
+
+/// @relates message_type
+template <class Inspector>
+bool inspect(Inspector& f, message_type& x) {
+  return default_enum_inspect(f, x);
+}
 
 /// @}
 
