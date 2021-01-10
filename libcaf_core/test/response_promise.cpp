@@ -140,6 +140,21 @@ SCENARIO("response promises allow delaying of response messages") {
   }
 }
 
+SCENARIO("response promises send errors when broken") {
+  auto adder_hdl = sys.spawn(adder);
+  auto hdl = sys.spawn(requester_v1, adder_hdl);
+  GIVEN("a dispatcher, and adder and a client") {
+    WHEN("the dispatcher terminates before calling deliver on its promise") {
+      inject((int, int), from(self).to(hdl).with(3, 4));
+      inject((exit_msg),
+             to(hdl).with(exit_msg{hdl.address(), exit_reason::kill}));
+      THEN("clients receive a broken_promise error") {
+        expect((error), from(hdl).to(self).with(sec::broken_promise));
+      }
+    }
+  }
+}
+
 SCENARIO("response promises allow delegation") {
   GIVEN("a dispatcher that calls delegate on its promise") {
     auto adder_hdl = sys.spawn(adder);

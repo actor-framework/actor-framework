@@ -148,6 +148,8 @@ std::string to_string(sec x) {
       return "unsupported_operation";
     case sec::no_such_key:
       return "no_such_key";
+    case sec::broken_promise:
+      return "broken_promise";
   };
 }
 
@@ -350,6 +352,9 @@ bool from_string(string_view in, sec& out) {
   } else if (in == "no_such_key") {
     out = sec::no_such_key;
     return true;
+  } else if (in == "broken_promise") {
+    out = sec::broken_promise;
+    return true;
   } else {
     return false;
   }
@@ -427,6 +432,7 @@ bool from_integer(std::underlying_type_t<sec> in,
     case sec::type_clash:
     case sec::unsupported_operation:
     case sec::no_such_key:
+    case sec::broken_promise:
       out = result;
       return true;
   };

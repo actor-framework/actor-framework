@@ -12,20 +12,18 @@
 
 namespace caf {
 
-/// A response promise can be used to deliver a uniquely identifiable
-/// response message from the server (i.e. receiver of the request)
-/// to the client (i.e. the sender of the request).
+/// Enables statically typed actors to delay a response message by capturing the
+/// context of a request message. This is particularly useful when an actor
+/// needs to communicate to other actors in order to fulfill a request for a
+/// client.
 template <class... Ts>
 class typed_response_promise {
 public:
+  // -- member types -----------------------------------------------------------
+
   using forwarding_stack = response_promise::forwarding_stack;
 
-  /// Constructs an invalid response promise.
-  typed_response_promise() = default;
-
-  typed_response_promise(none_t x) : promise_(x) {
-    // nop
-  }
+  // -- constructors, destructors, and assignment operators --------------------
 
   typed_response_promise(strong_actor_ptr self, strong_actor_ptr source,
                          forwarding_stack stages, message_id id)
@@ -38,16 +36,60 @@ public:
     // nop
   }
 
+  typed_response_promise() = default;
+
   typed_response_promise(typed_response_promise&&) = default;
+
   typed_response_promise(const typed_response_promise&) = default;
+
   typed_response_promise& operator=(typed_response_promise&&) = default;
+
   typed_response_promise& operator=(const typed_response_promise&) = default;
 
-  /// Implicitly convertible to untyped response promise.
-  [[deprecated("Use the typed_response_promise directly.")]]
+  [[deprecated("use the default constructor instead")]] //
+  typed_response_promise(none_t x)
+    : promise_(x) {
+    // nop
+  }
+
+  // -- properties -------------------------------------------------------------
+
+  /// @copydoc response_promise::async
+  bool async() const {
+    return promise_.async();
+  }
+
+  /// @copydoc response_promise::pending
+  bool pending() const {
+    return promise_.pending();
+  }
+
+  /// @copydoc response_promise::source
+  strong_actor_ptr source() const {
+    return promise_.source();
+  }
+
+  /// @copydoc response_promise::stages
+  forwarding_stack stages() const {
+    return promise_.stages();
+  }
+
+  /// @copydoc response_promise::next
+  strong_actor_ptr next() const {
+    return promise_.next();
+  }
+
+  /// @copydoc response_promise::id
+  message_id id() const {
+    return promise_.id();
+  }
+
+  [[deprecated("use the typed_response_promise directly")]]
   operator response_promise&() {
     return promise_;
   }
+
+  // -- delivery ---------------------------------------------------------------
 
   /// Satisfies the promise by sending a non-error response message.
   template <class... Us>
@@ -77,42 +119,13 @@ public:
     promise_.deliver(std::move(x));
   }
 
+  // -- delegation -------------------------------------------------------------
+
   /// Satisfies the promise by delegating to another actor.
   template <message_priority P = message_priority::normal, class Handle = actor,
             class... Us>
   auto delegate(const Handle& dest, Us&&... xs) {
     return promise_.template delegate<P>(dest, std::forward<Us>(xs)...);
-  }
-
-  /// Returns whether this response promise replies to an asynchronous message.
-  bool async() const {
-    return promise_.async();
-  }
-
-  /// Queries whether this promise is a valid promise that is not satisfied yet.
-  bool pending() const {
-    return promise_.pending();
-  }
-
-  /// Returns the source of the corresponding request.
-  const strong_actor_ptr& source() const {
-    return promise_.source();
-  }
-
-  /// Returns the remaining stages for the corresponding request.
-  const forwarding_stack& stages() const {
-    return promise_.stages();
-  }
-
-  /// Returns the actor that will receive the response, i.e.,
-  /// `stages().front()` if `!stages().empty()` or `source()` otherwise.
-  strong_actor_ptr next() const {
-    return promise_.next();
-  }
-
-  /// Returns the message ID of the corresponding request.
-  message_id id() const {
-    return promise_.id();
   }
 
 private:
