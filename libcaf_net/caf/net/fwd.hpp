@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "caf/intrusive_ptr.hpp"
+#include "caf/type_id.hpp"
 
 namespace caf::net {
 
