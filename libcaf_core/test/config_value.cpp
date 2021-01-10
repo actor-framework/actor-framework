@@ -161,6 +161,23 @@ SCENARIO("get_as can convert config values to integers") {
       }
     }
   }
+  GIVEN("a config value x with type annotation 'int32_t' and the value 50") {
+    config_value x;
+    x.as_dictionary().emplace("@type", "int32_t");
+    x.as_dictionary().emplace("value", 50);
+    WHEN("using get_as with integer types") {
+      THEN("CAF parses the integer and performs a bound check") {
+        CHECK_EQ(get_as<uint64_t>(x), 50u);
+        CHECK_EQ(get_as<int64_t>(x), 50);
+        CHECK_EQ(get_as<uint32_t>(x), 50u);
+        CHECK_EQ(get_as<int32_t>(x), 50);
+        CHECK_EQ(get_as<uint16_t>(x), 50u);
+        CHECK_EQ(get_as<int16_t>(x), 50);
+        CHECK_EQ(get_as<uint8_t>(x), 50u);
+        CHECK_EQ(get_as<int8_t>(x), 50);
+      }
+    }
+  }
   GIVEN("a config value x with value 50.0") {
     auto x = config_value{50.0};
     WHEN("using get_as with integer types") {
@@ -272,6 +289,18 @@ SCENARIO("get_as can convert config values to floating point numbers") {
     auto x = config_value{123};
     WHEN("using get_as with floating point types") {
       THEN("CAF converts the value") {
+        CHECK_EQ(get_as<long double>(x), 123.0);
+        CHECK_EQ(get_as<double>(x), 123.0);
+        CHECK_EQ(get_as<float>(x), 123.f);
+      }
+    }
+  }
+  GIVEN("a config value x with type annotation 'float' and the value 50") {
+    config_value x;
+    x.as_dictionary().emplace("@type", "float");
+    x.as_dictionary().emplace("value", 123.0);
+    WHEN("using get_as with floating point types") {
+      THEN("CAF parses the value and performs a bound check") {
         CHECK_EQ(get_as<long double>(x), 123.0);
         CHECK_EQ(get_as<double>(x), 123.0);
         CHECK_EQ(get_as<float>(x), 123.f);
