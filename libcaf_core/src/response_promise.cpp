@@ -46,7 +46,7 @@ void response_promise::deliver(error x) {
   deliver_impl(make_message(std::move(x)));
 }
 
-void response_promise::deliver(unit_t) {
+void response_promise::deliver() {
   deliver_impl(make_message());
 }
 
@@ -73,6 +73,11 @@ void response_promise::deliver_impl(message msg) {
   CAF_LOG_TRACE(CAF_ARG(msg));
   if (self_ == nullptr) {
     CAF_LOG_DEBUG("drop response: invalid promise");
+    return;
+  }
+  if (msg.empty() && id_.is_async()) {
+    CAF_LOG_DEBUG("drop response: empty response to asynchronous input");
+    self_.reset();
     return;
   }
   auto dptr = self_dptr();

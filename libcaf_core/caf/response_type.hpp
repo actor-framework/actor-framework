@@ -58,10 +58,17 @@ struct response_type<detail::type_list<Out(In...), Fs...>, In...> {
   using delegated_type = delegated<Out>;
 };
 
-/// Computes the response message for input `In...` from the list of message
-/// passing interfaces `Fs`.
+/// Computes the response message type for input `In...` from the list of
+/// message passing interfaces `Fs`.
 template <class Fs, class... In>
 using response_type_t = typename response_type<Fs, In...>::type;
+
+/// Computes the response message type for input `In...` from the list of
+/// message passing interfaces `Fs` and returns the corresponding
+/// `delegated<T>`.
+template <class Fs, class... In>
+using delegated_response_type_t =
+  typename response_type<Fs, In...>::delegated_type;
 
 /// Unboxes `Xs` and calls `response_type`.
 template <class Ts, class Xs>
