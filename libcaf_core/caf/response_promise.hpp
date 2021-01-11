@@ -64,7 +64,7 @@ public:
   void deliver(expected<T> x) {
     if (x) {
       if constexpr (std::is_same<T, void>::value)
-        deliver_impl(make_message());
+        deliver();
       else
         deliver(std::move(*x));
     } else {
