@@ -44,11 +44,12 @@ SCENARIO("the JSON writer converts builtin types to strings") {
     }
   }
   GIVEN("a string") {
-    auto x = R"_(hello "world"!)_"s;
+    std::string x = R"_(hello "world"!)_";
     WHEN("converting it to JSON with any indentation factor") {
       THEN("the JSON output is the escaped string") {
-        CHECK_EQ(to_json_string(x, 0), R"_("hello \"world\"!")_"s);
-        CHECK_EQ(to_json_string(x, 2), R"_("hello \"world\"!")_"s);
+        std::string out = R"_("hello \"world\"!")_";
+        CHECK_EQ(to_json_string(x, 0), out);
+        CHECK_EQ(to_json_string(x, 2), out);
       }
     }
   }
@@ -56,16 +57,17 @@ SCENARIO("the JSON writer converts builtin types to strings") {
     auto x = std::vector<int>{1, 2, 3};
     WHEN("converting it to JSON with indentation factor 0") {
       THEN("the JSON output is a single line") {
-        CHECK_EQ(to_json_string(x, 0), "[1, 2, 3]"s);
+        std::string out = "[1, 2, 3]";
+        CHECK_EQ(to_json_string(x, 0), out);
       }
     }
     WHEN("converting it to JSON with indentation factor 2") {
       THEN("the JSON output uses multiple lines") {
-        auto out = R"_([
+        std::string out = R"_([
   1,
   2,
   3
-])_"s;
+])_";
         CHECK_EQ(to_json_string(x, 2), out);
       }
     }
@@ -82,11 +84,11 @@ SCENARIO("the JSON writer converts builtin types to strings") {
     }
     WHEN("converting it to JSON with indentation factor 2") {
       THEN("the JSON output uses multiple lines") {
-        auto out = R"_({
+        std::string out = R"_({
   "a": "A",
   "b": "B",
   "c": "C"
-})_"s;
+})_";
         CHECK_EQ(to_json_string(x, 2), out);
       }
     }
@@ -95,19 +97,19 @@ SCENARIO("the JSON writer converts builtin types to strings") {
     auto x = make_message(put_atom_v, "foo", 42);
     WHEN("converting it to JSON with indentation factor 0") {
       THEN("the JSON output is a single line") {
-        CHECK_EQ(to_json_string(x, 0),
-                 R"_([{"@type": "caf::put_atom"}, "foo", 42])_"s);
+        std::string out = R"_([{"@type": "caf::put_atom"}, "foo", 42])_";
+        CHECK_EQ(to_json_string(x, 0), out);
       }
     }
     WHEN("converting it to JSON with indentation factor 2") {
       THEN("the JSON output uses multiple lines") {
-        auto out = R"_([
+        std::string out = R"_([
   {
     "@type": "caf::put_atom"
   },
   "foo",
   42
-])_"s;
+])_";
         CHECK_EQ(to_json_string(x, 2), out);
       }
     }
@@ -119,17 +121,17 @@ SCENARIO("the JSON writer converts simple structs to strings") {
     dummy_struct x{10, "foo"};
     WHEN("converting it to JSON with indentation factor 0") {
       THEN("the JSON output is a single line") {
-        auto out = R"_({"@type": "dummy_struct", "a": 10, "b": "foo"})_"s;
+        std::string out = R"_({"@type": "dummy_struct", "a": 10, "b": "foo"})_";
         CHECK_EQ(to_json_string(x, 0), out);
       }
     }
     WHEN("converting it to JSON with indentation factor 2") {
       THEN("the JSON output uses multiple lines") {
-        auto out = R"_({
+        std::string out = R"_({
   "@type": "dummy_struct",
   "a": 10,
   "b": "foo"
-})_"s;
+})_";
         CHECK_EQ(to_json_string(x, 2), out);
       }
     }
