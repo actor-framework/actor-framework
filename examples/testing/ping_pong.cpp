@@ -13,11 +13,9 @@ namespace {
 behavior ping(event_based_actor* self, actor pong_actor, int n) {
   self->send(pong_actor, ping_atom_v, n);
   return {
-    [=](pong_atom, int x) -> result<ping_atom, int> {
+    [=](pong_atom, int x) {
       if (x > 1)
-        return {ping_atom_v, x - 1};
-      else
-        return {};
+        self->send(pong_actor, ping_atom_v, x - 1);
     },
   };
 }

@@ -19,22 +19,15 @@ namespace caf {
 template <class... Ts>
 class typed_response_promise {
 public:
+  // -- friends ----------------------------------------------------------------
+
+  friend class local_actor;
+
   // -- member types -----------------------------------------------------------
 
   using forwarding_stack = response_promise::forwarding_stack;
 
   // -- constructors, destructors, and assignment operators --------------------
-
-  typed_response_promise(strong_actor_ptr self, strong_actor_ptr source,
-                         forwarding_stack stages, message_id id)
-    : promise_(std::move(self), std::move(source), std::move(stages), id) {
-    // nop
-  }
-
-  typed_response_promise(strong_actor_ptr self, mailbox_element& src)
-    : promise_(std::move(self), src) {
-    // nop
-  }
 
   typed_response_promise() = default;
 
@@ -129,6 +122,21 @@ public:
   }
 
 private:
+  // -- constructors that are visible only to friends --------------------------
+
+  typed_response_promise(local_actor* self, strong_actor_ptr source,
+                         forwarding_stack stages, message_id id)
+    : promise_(self, std::move(source), std::move(stages), id) {
+    // nop
+  }
+
+  typed_response_promise(local_actor* self, mailbox_element& src)
+    : promise_(self, src) {
+    // nop
+  }
+
+  // -- member variables -------------------------------------------------------
+
   response_promise promise_;
 };
 

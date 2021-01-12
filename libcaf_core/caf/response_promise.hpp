@@ -23,16 +23,20 @@ namespace caf {
 /// communicate to other actors in order to fulfill a request for a client.
 class CAF_CORE_EXPORT response_promise {
 public:
+  // -- friends ----------------------------------------------------------------
+
+  friend class local_actor;
+
+  friend class stream_manager;
+
+  template <class...>
+  friend class typed_response_promise;
+
   // -- member types -----------------------------------------------------------
 
   using forwarding_stack = std::vector<strong_actor_ptr>;
 
   // -- constructors, destructors, and assignment operators --------------------
-
-  response_promise(strong_actor_ptr self, strong_actor_ptr source,
-                   forwarding_stack stages, message_id id);
-
-  response_promise(strong_actor_ptr self, mailbox_element& src);
 
   response_promise() = default;
 
@@ -161,6 +165,27 @@ public:
   }
 
 private:
+  // -- constructors that are visible only to friends --------------------------
+
+  response_promise(local_actor* self, strong_actor_ptr source,
+                   forwarding_stack stages, message_id id);
+
+  response_promise(local_actor* self, mailbox_element& src);
+
+  // -- utility functions that are visible only to friends ---------------------
+
+  /// Sends @p response as if creating a response promise from @p self and
+  /// @p request and then calling `deliver` on it but avoids extra overhead such
+  /// as heap allocations for the promise.
+  static void respond_to(local_actor* self, mailbox_element* request,
+                         message& response);
+
+  /// @copydoc respond_to
+  static void respond_to(local_actor* self, mailbox_element* request,
+                         error& response);
+
+  // -- nested types -----------------------------------------------------------
+
   // Note: response promises must remain local to their owner. Hence, we don't
   //       need a thread-safe reference count for the state.
   class CAF_CORE_EXPORT state {
@@ -177,7 +202,7 @@ private:
     void delegate_impl(abstract_actor* receiver, message msg);
 
     mutable size_t ref_count = 1;
-    strong_actor_ptr self;
+    local_actor* self;
     strong_actor_ptr source;
     forwarding_stack stages;
     message_id id;
@@ -191,6 +216,8 @@ private:
         delete ptr;
     }
   };
+
+  // -- member variables -------------------------------------------------------
 
   intrusive_ptr<state> state_;
 };
