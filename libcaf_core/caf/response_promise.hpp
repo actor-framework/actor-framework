@@ -163,7 +163,7 @@ public:
 private:
   // Note: response promises must remain local to their owner. Hence, we don't
   //       need a thread-safe reference count for the state.
-  class state {
+  class CAF_CORE_EXPORT state {
   public:
     state() = default;
     state(const state&) = delete;
