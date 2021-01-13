@@ -203,6 +203,7 @@ optional<int> toint(const string& str) {
   return none;
 }
 
+// --(rst-config-begin)--
 class config : public actor_system_config {
 public:
   uint16_t port = 0;
@@ -216,6 +217,7 @@ public:
       .add(server_mode, "server-mode,s", "enable server mode");
   }
 };
+// --(rst-config-end)--
 
 void client_repl(actor_system& system, const config& cfg) {
   // keeps track of requests and tries to reconnect on server failures

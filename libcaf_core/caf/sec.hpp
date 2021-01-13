@@ -19,6 +19,7 @@
 
 namespace caf {
 
+// --(rst-sec-begin)--
 /// SEC stands for "System Error Code". This enum contains error codes for
 /// ::actor_system and its modules.
 enum class sec : uint8_t {
@@ -159,6 +160,7 @@ enum class sec : uint8_t {
   /// A key lookup failed.
   no_such_key = 65,
 };
+// --(rst-sec-end)--
 
 /// @relates sec
 CAF_CORE_EXPORT std::string to_string(sec);
@@ -170,8 +172,8 @@ CAF_CORE_EXPORT bool from_string(string_view, sec&);
 CAF_CORE_EXPORT bool from_integer(std::underlying_type_t<sec>, sec&);
 
 /// @relates sec
-template <class Inssector>
-bool inspect(Inssector& f, sec& x) {
+template <class Inspector>
+bool inspect(Inspector& f, sec& x) {
   return default_enum_inspect(f, x);
 }
 

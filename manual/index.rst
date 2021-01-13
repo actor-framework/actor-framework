@@ -21,7 +21,6 @@ Contents
    ReferenceCounting
    Error
    ConfiguringActorApplications
-   Messages
    GroupCommunication
    ManagingGroupsOfWorkers
    Streaming

@@ -139,6 +139,7 @@ The following example implements two actors, ``ping`` and
 
 .. literalinclude:: /examples/testing/ping_pong.cpp
    :language: C++
-   :lines: 12-60
+   :start-after: --(rst-ping-pong-begin)--
+   :end-before: --(rst-ping-pong-end)--
 
 

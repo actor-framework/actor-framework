@@ -27,16 +27,15 @@ struct is_string_like {
   template <class U>
   static bool sfinae(
     const U* x,
-    // check if `(*x)[0]` returns `const char&`
-    typename std::enable_if<
-      std::is_same<const char&, decltype((*x)[0])>::value>::type* = nullptr,
+    // check if `x->data()` returns  const char*
+    std::enable_if_t<
+      std::is_same<const char*, decltype(x->data())>::value>* = nullptr,
     // check if `x->size()` returns an integer
-    typename std::enable_if<
-      std::is_integral<decltype(x->size())>::value>::type* = nullptr,
+    std::enable_if_t<std::is_integral<decltype(x->size())>::value>* = nullptr,
     // check if `x->find('?', 0)` is well-formed and returns an integer
     // (distinguishes vectors from strings)
-    typename std::enable_if<
-      std::is_integral<decltype(x->find('?', 0))>::value>::type* = nullptr);
+    std::enable_if_t<
+      std::is_integral<decltype(x->find('?', 0))>::value>* = nullptr);
 
   // SFINAE fallback.
   static void sfinae(void*);
@@ -105,15 +104,9 @@ public:
 
   template <class T, class = typename std::enable_if<
                        detail::is_string_like<T>::value>::type>
-  string_view(const T& str) noexcept {
-    auto len = str.size();
-    if (len == 0) {
-      data_ = nullptr;
-      size_ = 0;
-    } else {
-      data_ = &(str[0]);
-      size_ = str.size();
-    }
+  constexpr string_view(const T& str) noexcept
+    : data_(str.data()), size_(str.size()) {
+    // nop
   }
 
   string_view& operator=(const string_view&) noexcept = default;

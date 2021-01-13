@@ -2,10 +2,6 @@
  * Illustrates semantics of request().{then|await|receive}.                   *
 \******************************************************************************/
 
-// This file is partially included in the manual, do not modify
-// without updating the references in the *.tex files!
-// Manual references: lines 20-37, 39-51, 53-64, 67-69 (MessagePassing.tex)
-
 #include <chrono>
 #include <cstdint>
 #include <iostream>
@@ -18,22 +14,38 @@ using std::vector;
 using std::chrono::seconds;
 using namespace caf;
 
+// --(rst-cell-begin)--
 using cell
-  = typed_actor<result<void>(put_atom, int32_t), result<int32_t>(get_atom)>;
+  = typed_actor<result<void>(put_atom, int32_t), // 'put' writes to the cell
+                result<int32_t>(get_atom)>;      // 'get 'reads from the cell
 
 struct cell_state {
-  int32_t value = 0;
+  static constexpr inline const char* name = "cell";
+
+  cell::pointer self;
+
+  int32_t value;
+
+  cell_state(cell::pointer ptr, int32_t val) : self(ptr), value(val) {
+    // nop
+  }
+
+  cell_state(const cell_state&) = delete;
+
+  cell_state& operator=(const cell_state&) = delete;
+
+  cell::behavior_type make_behavior() {
+    return {
+      [=](put_atom, int32_t val) { value = val; },
+      [=](get_atom) { return value; },
+    };
+  }
 };
 
-cell::behavior_type cell_impl(cell::stateful_pointer<cell_state> self,
-                              int32_t x0) {
-  self->state.value = x0;
-  return {
-    [=](put_atom, int32_t val) { self->state.value = val; },
-    [=](get_atom) { return self->state.value; },
-  };
-}
+using cell_impl = cell::stateful_impl<cell_state>;
+// --(rst-cell-end)--
 
+// --(rst-testees-begin)--
 void waiting_testee(event_based_actor* self, vector<cell> cells) {
   for (auto& x : cells)
     self->request(x, seconds(1), get_atom_v).await([=](int32_t y) {
@@ -59,11 +71,13 @@ void blocking_testee(blocking_actor* self, vector<cell> cells) {
           aout(self) << "cell #" << x.id() << " -> " << to_string(err) << endl;
         });
 }
+// --(rst-testees-end)--
 
+// --(rst-main-begin)--
 void caf_main(actor_system& system) {
   vector<cell> cells;
-  for (auto i = 0; i < 5; ++i)
-    cells.emplace_back(system.spawn(cell_impl, i * i));
+  for (int32_t i = 0; i < 5; ++i)
+    cells.emplace_back(system.spawn<cell_impl>(i * i));
   scoped_actor self{system};
   aout(self) << "waiting_testee" << endl;
   auto x1 = self->spawn(waiting_testee, cells);
@@ -74,5 +88,6 @@ void caf_main(actor_system& system) {
   aout(self) << "blocking_testee" << endl;
   system.spawn(blocking_testee, cells);
 }
+// --(rst-main-end)--
 
 CAF_MAIN()

@@ -2,9 +2,9 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE typed_response_promise
+#define CAF_SUITE response_promise
 
-#include "caf/typed_response_promise.hpp"
+#include "caf/response_promise.hpp"
 
 #include "core-test.hpp"
 
@@ -12,34 +12,30 @@ using namespace caf;
 
 namespace {
 
-using testee_actor = typed_actor<result<int>(int, int), result<void>(ok_atom)>;
-
-testee_actor::behavior_type adder() {
+behavior adder() {
   return {
     [](int x, int y) { return x + y; },
     [](ok_atom) {},
   };
 }
 
-testee_actor::behavior_type delegator(testee_actor::pointer self,
-                                      testee_actor worker) {
+behavior delegator(event_based_actor* self, actor worker) {
   return {
     [=](int x, int y) {
-      auto promise = self->make_response_promise<int>();
+      auto promise = self->make_response_promise();
       return promise.delegate(worker, x, y);
     },
     [=](ok_atom) {
-      auto promise = self->make_response_promise<void>();
+      auto promise = self->make_response_promise();
       return promise.delegate(worker, ok_atom_v);
     },
   };
 }
 
-testee_actor::behavior_type requester_v1(testee_actor::pointer self,
-                                         testee_actor worker) {
+behavior requester_v1(event_based_actor* self, actor worker) {
   return {
     [=](int x, int y) {
-      auto rp = self->make_response_promise<int>();
+      auto rp = self->make_response_promise();
       self->request(worker, infinite, x, y)
         .then(
           [rp](int result) mutable {
@@ -53,7 +49,7 @@ testee_actor::behavior_type requester_v1(testee_actor::pointer self,
       return rp;
     },
     [=](ok_atom) {
-      auto rp = self->make_response_promise<void>();
+      auto rp = self->make_response_promise();
       self->request(worker, infinite, ok_atom_v)
         .then(
           [rp]() mutable {
@@ -69,11 +65,10 @@ testee_actor::behavior_type requester_v1(testee_actor::pointer self,
   };
 }
 
-testee_actor::behavior_type requester_v2(testee_actor::pointer self,
-                                         testee_actor worker) {
+behavior requester_v2(event_based_actor* self, actor worker) {
   return {
     [=](int x, int y) {
-      auto rp = self->make_response_promise<int>();
+      auto rp = self->make_response_promise();
       auto deliver = [rp](expected<int> x) mutable {
         CHECK(rp.pending());
         rp.deliver(std::move(x));
@@ -84,7 +79,7 @@ testee_actor::behavior_type requester_v2(testee_actor::pointer self,
       return rp;
     },
     [=](ok_atom) {
-      auto rp = self->make_response_promise<void>();
+      auto rp = self->make_response_promise();
       auto deliver = [rp](expected<void> x) mutable {
         CHECK(rp.pending());
         rp.deliver(std::move(x));
@@ -99,11 +94,11 @@ testee_actor::behavior_type requester_v2(testee_actor::pointer self,
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(typed_response_promise_tests, test_coordinator_fixture<>)
+CAF_TEST_FIXTURE_SCOPE(response_promise_tests, test_coordinator_fixture<>)
 
 SCENARIO("response promises allow delaying of response messages") {
   auto adder_hdl = sys.spawn(adder);
-  std::map<std::string, testee_actor> impls;
+  std::map<std::string, actor> impls;
   impls["with a value or an error"] = sys.spawn(requester_v1, adder_hdl);
   impls["with an expected<T>"] = sys.spawn(requester_v2, adder_hdl);
   for (auto& [desc, hdl] : impls) {

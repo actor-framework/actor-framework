@@ -17,9 +17,9 @@ change its behavior when not receiving message after a certain amount of time.
 .. code-block:: C++
 
    message_handler x1{
-     [](int i) { /*...*/ },
+     [](int32_t i) { /*...*/ },
      [](double db) { /*...*/ },
-     [](int a, int b, int c) { /*...*/ }
+     [](int32_t a, int32_t b, int32_t c) { /*...*/ }
    };
 
 In our first example, ``x1`` models a behavior accepting messages that consist
@@ -70,48 +70,33 @@ introduced an approach to use non-numerical constants, so-called
 *atoms*, which have an unambiguous, special-purpose type and do not have
 the runtime overhead of string constants.
 
-Atoms in CAF are mapped to integer values at compile time. This mapping is
-guaranteed to be collision-free and invertible, but limits atom literals to ten
-characters and prohibits special characters. Legal characters are
-``_0-9A-Za-z`` and the whitespace character. Atoms are created using
-the ``constexpr`` function ``atom``, as the following example
-illustrates.
+Atoms in CAF are tag types, i.e., usually defined as en empty ``struct``. These
+types carry no data on their own and only exist to annotate messages. For
+example, we could create the two tag types ``add_atom`` and ``multiply_atom``
+for implementing a simple math actor like this:
 
 .. code-block:: C++
 
-   atom_value a1 = atom("add");
-   atom_value a2 = atom("multiply");
+  CAF_BEGIN_TYPE_ID_BLOCK(my_project, caf::first_custom_type_id)
 
-**Warning**: The compiler cannot enforce the restrictions at compile time,
-except for a length check. The assertion ``atom("!?") != atom("?!")``
-is not true, because each invalid character translates to a whitespace
-character.
+    CAF_ADD_ATOM(my_project, add_atom)
+    CAF_ADD_ATOM(my_project, multiply_atom)
 
-While the ``atom_value`` is computed at compile time, it is not
-uniquely typed and thus cannot be used in the signature of a callback. To
-accomplish this, CAF offers compile-time *atom constants*.
-
-.. code-block:: C++
-
-   using add_atom = atom_constant<atom("add")>;
-   using multiply_atom = atom_constant<atom("multiply")>;
-
-Using these constants, we can now define message passing interfaces in a
-convenient way:
-
-.. code-block:: C++
+  CAF_END_TYPE_ID_BLOCK(my_project)
 
    behavior do_math{
-     [](add_atom, int a, int b) {
+     [](add_atom, int32_t a, int32_t b) {
        return a + b;
      },
-     [](multiply_atom, int a, int b) {
+     [](multiply_atom, int32_t a, int32_t b) {
        return a * b;
      }
    };
 
-   // caller side: send(math_actor, add_atom::value, 1, 2)
 
-Atom constants define a static member ``value``. Please note that this
-static ``value`` member does *not* have the type
-``atom_value``, unlike ``std::integral_constant`` for example.
+   // caller side: send(math_actor, add_atom_v, int32_t{1}, int32_t{2})
+
+The macro ``CAF_ADD_ATOM`` defined an empty ``struct`` with the given name as
+well as a ``constexpr`` variable for conveniently creating a value of that type
+that uses the type name plus a ``_v`` suffix. In the example above,
+``atom_value`` is the type name and ``atom_value_v`` is the constant.

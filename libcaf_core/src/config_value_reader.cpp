@@ -381,7 +381,7 @@ bool config_value_reader::begin_associative_array(size_t& size) {
     st_.top() = associative_array{dict->begin(), dict->end()};
     return true;
   }
-  std::string msg = "expected a dictionary, got a ";
+  std::string msg = "begin_associative_array: expected a dictionary, got a ";
   msg += top->type_name();
   emplace_error(sec::conversion_failed, std::move(msg));
   return false;
@@ -419,13 +419,10 @@ bool pull(config_value_reader& reader, T& x) {
       reader.pop();
       return true;
     } else {
-      std::string msg = "expected a dictionary, got a ";
-      msg += to_string(type_name_v<T>);
-      reader.emplace_error(sec::conversion_failed, std::move(msg));
+      reader.set_error(std::move(val.error()));
       return false;
     }
-  }
-  if (holds_alternative<config_value_reader::sequence>(top)) {
+  } else if (holds_alternative<config_value_reader::sequence>(top)) {
     auto& seq = get<config_value_reader::sequence>(top);
     if (seq.at_end()) {
       reader.emplace_error(sec::runtime_error, "value: sequence out of bounds");
@@ -437,13 +434,10 @@ bool pull(config_value_reader& reader, T& x) {
       seq.advance();
       return true;
     } else {
-      std::string msg = "expected a dictionary, got a ";
-      msg += to_string(type_name_v<T>);
-      reader.emplace_error(sec::conversion_failed, std::move(msg));
+      reader.set_error(std::move(val.error()));
       return false;
     }
-  }
-  if (holds_alternative<config_value_reader::key_ptr>(top)) {
+  } else if (holds_alternative<config_value_reader::key_ptr>(top)) {
     auto ptr = get<config_value_reader::key_ptr>(top);
     if constexpr (std::is_same<std::string, T>::value) {
       x = *ptr;
@@ -453,8 +447,9 @@ bool pull(config_value_reader& reader, T& x) {
       if (auto err = detail::parse(*ptr, x)) {
         reader.set_error(std::move(err));
         return false;
+      } else {
+        return true;
       }
-      return true;
     }
   }
   reader.emplace_error(sec::conversion_failed,

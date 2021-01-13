@@ -3,8 +3,6 @@
  * for both the blocking and the event-based API.                             *
 \******************************************************************************/
 
-// Manual refs: lines 17-18, 21-26, 28-56, 58-92, 123-128 (Actor)
-
 #include <iostream>
 
 #include "caf/all.hpp"
@@ -14,18 +12,22 @@ using namespace caf;
 
 namespace {
 
+// --(rst-calculator-actor-begin)--
 using calculator_actor
   = typed_actor<result<int32_t>(add_atom, int32_t, int32_t),
                 result<int32_t>(sub_atom, int32_t, int32_t)>;
+// --(rst-calculator-actor-end)--
 
-// prototypes and forward declarations
+// --(rst-prototypes-begin)--
 behavior calculator_fun(event_based_actor* self);
 void blocking_calculator_fun(blocking_actor* self);
 calculator_actor::behavior_type typed_calculator_fun();
 class calculator;
 class blocking_calculator;
 class typed_calculator;
+// --(rst-prototypes-end)--
 
+// --(rst-function-based-begin)--
 // function-based, dynamically typed, event-based API
 behavior calculator_fun(event_based_actor*) {
   return {
@@ -55,7 +57,9 @@ calculator_actor::behavior_type typed_calculator_fun() {
     [](sub_atom, int32_t a, int32_t b) { return a - b; },
   };
 }
+// --(rst-function-based-end)--
 
+// --(rst-class-based-begin)--
 // class-based, dynamically typed, event-based API
 class calculator : public event_based_actor {
 public:
@@ -91,6 +95,7 @@ public:
     return typed_calculator_fun();
   }
 };
+// --(rst-class-based-end)--
 
 void tester(scoped_actor&) {
   // end of recursion
@@ -120,14 +125,16 @@ void tester(scoped_actor& self, const Handle& hdl, int32_t x, int32_t y,
   tester(self, std::forward<Ts>(xs)...);
 }
 
-void caf_main(actor_system& system) {
-  auto a1 = system.spawn(blocking_calculator_fun);
-  auto a2 = system.spawn(calculator_fun);
-  auto a3 = system.spawn(typed_calculator_fun);
-  auto a4 = system.spawn<blocking_calculator>();
-  auto a5 = system.spawn<calculator>();
-  auto a6 = system.spawn<typed_calculator>();
-  scoped_actor self{system};
+void caf_main(actor_system& sys) {
+  // --(rst-spawn-begin)--
+  auto a1 = sys.spawn(blocking_calculator_fun);
+  auto a2 = sys.spawn(calculator_fun);
+  auto a3 = sys.spawn(typed_calculator_fun);
+  auto a4 = sys.spawn<blocking_calculator>();
+  auto a5 = sys.spawn<calculator>();
+  auto a6 = sys.spawn<typed_calculator>();
+  // --(rst-spawn-end)--
+  scoped_actor self{sys};
   tester(self, a1, 1, 2, a2, 3, 4, a3, 5, 6, a4, 7, 8, a5, 9, 10, a6, 11, 12);
   self->send_exit(a1, exit_reason::user_shutdown);
   self->send_exit(a4, exit_reason::user_shutdown);

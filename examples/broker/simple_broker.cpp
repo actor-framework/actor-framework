@@ -7,8 +7,6 @@
  * - simple_broker -c localhost 4242                                          *
 \******************************************************************************/
 
-// Manual refs: 42-47 (Actors.tex)
-
 #include "caf/config.hpp"
 
 #ifdef CAF_WINDOWS
@@ -38,12 +36,14 @@ using namespace caf::io;
 
 namespace {
 
+// --(rst-attach-begin)--
 // Utility function to print an exit message with custom name.
 void print_on_exit(const actor& hdl, const std::string& name) {
   hdl->attach_functor([=](const error& reason) {
     cout << name << " exited: " << to_string(reason) << endl;
   });
 }
+// --(rst-attach-end)--
 
 enum class op : uint8_t {
   ping,

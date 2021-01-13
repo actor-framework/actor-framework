@@ -32,6 +32,7 @@
 #include "caf/blocking_actor.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/byte_span.hpp"
+#include "caf/caf_main.hpp"
 #include "caf/config_option.hpp"
 #include "caf/config_option_adder.hpp"
 #include "caf/config_value.hpp"

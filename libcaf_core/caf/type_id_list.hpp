@@ -11,6 +11,8 @@
 
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/implicit_conversions.hpp"
+#include "caf/span.hpp"
 #include "caf/type_id.hpp"
 
 namespace caf {
@@ -78,6 +80,17 @@ public:
   /// type-erased tuple for the element types stored in this list.
   size_t data_size() const noexcept;
 
+  /// Concatenates all `lists` into a single type ID list.
+  static type_id_list concat(span<type_id_list> lists);
+
+  /// Concatenates all `lists` into a single type ID list.
+  template <class... Ts>
+  static type_id_list
+  concat(type_id_list list1, type_id_list list2, Ts... lists) {
+    type_id_list arr[] = {list1, list2, lists...};
+    return concat(arr);
+  }
+
 private:
   pointer data_;
 };
@@ -99,6 +112,14 @@ constexpr type_id_list make_type_id_list() {
 /// @relates type_id_list
 CAF_CORE_EXPORT std::string to_string(type_id_list xs);
 
+/// @relates type_id_list
+CAF_CORE_EXPORT type_id_list types_of(const message& msg);
+
+template <class... Ts>
+type_id_list types_of(const std::tuple<Ts...>&) {
+  return make_type_id_list<detail::strip_and_convert_t<Ts>...>();
+}
+
 } // namespace caf
 
 namespace caf::detail {
@@ -116,6 +137,21 @@ struct argument_type_id_list_factory<R(Ts...)> {
 template <class F>
 type_id_list make_argument_type_id_list() {
   return argument_type_id_list_factory<F>::make();
+}
+
+template <class List>
+struct to_type_id_list_helper;
+
+template <class... Ts>
+struct to_type_id_list_helper<type_list<Ts...>> {
+  static constexpr type_id_list get() {
+    return make_type_id_list<typename strip_param<Ts>::type...>();
+  }
+};
+
+template <class List>
+constexpr type_id_list to_type_id_list() {
+  return to_type_id_list_helper<List>::get();
 }
 
 } // namespace caf::detail

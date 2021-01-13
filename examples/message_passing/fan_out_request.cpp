@@ -1,7 +1,3 @@
-// This file is partially included in the manual, do not modify
-// without updating the references in the *.tex files!
-// Manual references: lines 86-98 (MessagePassing.tex)
-
 #include <cassert>
 #include <chrono>
 #include <iomanip>
@@ -101,6 +97,7 @@ matrix::behavior_type matrix_actor(matrix::stateful_pointer<matrix_state> self,
           [=](error& err) mutable { rp.deliver(std::move(err)); });
       return rp;
     },
+    // --(rst-fan-out-begin)--
     [=](get_atom get, average_atom, column_atom, int column) {
       assert(column < columns);
       std::vector<cell> columns;
@@ -118,6 +115,7 @@ matrix::behavior_type matrix_actor(matrix::stateful_pointer<matrix_state> self,
           [=](error& err) mutable { rp.deliver(std::move(err)); });
       return rp;
     },
+    // --(rst-fan-out-end)--
   };
 }
 

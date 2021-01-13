@@ -10,6 +10,7 @@
 #include "caf/detail/meta_object.hpp"
 #include "caf/error.hpp"
 #include "caf/error_code.hpp"
+#include "caf/message.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
@@ -48,18 +49,30 @@ message_data* message_data::copy() const {
   auto vptr = malloc(total_size);
   if (vptr == nullptr)
     CAF_RAISE_ERROR(std::bad_alloc, "bad_alloc");
-  auto ptr = new (vptr) message_data(types_);
+  intrusive_ptr<message_data> ptr{new (vptr) message_data(types_), false};
   auto src = storage();
   auto dst = ptr->storage();
   for (auto id : types_) {
     auto& meta = gmos[id];
-    // TODO: exception handling.
     meta.copy_construct(dst, src);
     ++ptr->constructed_elements_;
     src += meta.padded_size;
     dst += meta.padded_size;
   }
-  return ptr;
+  return ptr.release();
+}
+
+intrusive_ptr<message_data>
+message_data::make_uninitialized(type_id_list types) {
+  auto gmos = global_meta_objects();
+  size_t storage_size = 0;
+  for (auto id : types)
+    storage_size += gmos[id].padded_size;
+  auto total_size = sizeof(message_data) + storage_size;
+  auto vptr = malloc(total_size);
+  if (vptr == nullptr)
+    CAF_RAISE_ERROR(std::bad_alloc, "bad_alloc");
+  return {new (vptr) message_data(types), false};
 }
 
 byte* message_data::at(size_t index) noexcept {
@@ -80,6 +93,25 @@ const byte* message_data::at(size_t index) const noexcept {
   for (size_t i = 0; i < index; ++i)
     ptr += gmos[types_[i]].padded_size;
   return ptr;
+}
+
+byte* message_data::stepwise_init_from(byte* pos, const message& msg) {
+  return stepwise_init_from(pos, msg.cptr());
+}
+
+byte* message_data::stepwise_init_from(byte* pos, const message_data* other) {
+  CAF_ASSERT(other != nullptr);
+  CAF_ASSERT(other != this);
+  auto gmos = global_meta_objects();
+  auto src = other->storage();
+  for (auto id : other->types()) {
+    auto& meta = gmos[id];
+    meta.copy_construct(pos, src);
+    ++constructed_elements_;
+    src += meta.padded_size;
+    pos += meta.padded_size;
+  }
+  return pos;
 }
 
 } // namespace caf::detail

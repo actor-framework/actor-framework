@@ -22,6 +22,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   trying to parse the input of `x` if it contains a string. The function
   `get_or` already existed for `settings`, but we have added new overloads for
   generalizing the function to `config_value` as well.
+- The `typed_response_promise` received additional member functions to mirror
+  the interface of the untyped `response_promise`.
 
 ### Deprecated
 
@@ -84,6 +86,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Skipping high-priority messages resulted in CAF lowering the priority to
   normal. This unintentional demotion has been fixed (#1171).
 - Fix undefined behavior in the experimental datagram brokers (#1174).
+- Response promises no longer send empty messages in response to asynchronous
+  messages.
 - `CAF_ADD_TYPE_ID` now works with types that live in namespaces that also exist
   as nested namespace in CAF such as `detail` or `io` (#1195).
 

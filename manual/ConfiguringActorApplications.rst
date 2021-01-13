@@ -135,7 +135,8 @@ adds three options to the ``global`` category.
 
 .. literalinclude:: /examples/remoting/distributed_calculator.cpp
    :language: C++
-   :lines: 206-218
+   :begin-after: --(rst-config-begin)--
+   :end-before: --(rst-config-end)--
 
 We create a new ``global`` category in ``custom_options_``. Each following call
 to ``add`` then appends individual options to the category. The first argument

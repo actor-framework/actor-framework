@@ -36,19 +36,5 @@ generation, CAF also offers ``message_builder``:
 What Debugging Tools Exist?
 ---------------------------
 
-The ``scripts/`` and ``tools/`` directories contain some useful tools to aid in
-development and debugging.
-
-``scripts/atom.py`` converts integer atom values back into strings.
-
-``scripts/demystify.py`` replaces cryptic ``typed_mpi<...>``
-templates with ``replies_to<...>::with<...>`` and
-``atom_constant<...>`` with a human-readable representation of the
-actual atom.
-
-``scripts/caf-prof`` is an R script that generates plots from CAF
-profiler output.
-
-``caf-vec`` is a (highly) experimental tool that annotates CAF logs
-with vector timestamps. It gives you happens-before relations and a nice
-visualization via `ShiViz <https://bestchai.bitbucket.io/shiviz/>`_.
+The ``scripts/`` directory contains some useful tools to aid in analyzing CAF
+log output.

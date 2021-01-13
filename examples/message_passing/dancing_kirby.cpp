@@ -55,24 +55,28 @@ void draw_kirby(const animation_step& animation) {
   cout.flush();
 }
 
+// --(rst-delayed-send-begin)--
 // uses a message-based loop to iterate over all animation steps
-void dancing_kirby(event_based_actor* self) {
+behavior dancing_kirby(event_based_actor* self) {
+  using namespace std::literals::chrono_literals;
   // let's get it started
   self->send(self, update_atom_v, size_t{0});
-  self->become([=](update_atom, size_t step) {
-    if (step == sizeof(animation_step)) {
-      // we've printed all animation steps (done)
-      cout << endl;
-      self->quit();
-      return;
-    }
-    // print given step
-    draw_kirby(animation_steps[step]);
-    // animate next step in 150ms
-    self->delayed_send(self, std::chrono::milliseconds(150), update_atom_v,
-                       step + 1);
-  });
+  return {
+    [=](update_atom, size_t step) {
+      if (step == sizeof(animation_step)) {
+        // we've printed all animation steps (done)
+        cout << endl;
+        self->quit();
+        return;
+      }
+      // print given step
+      draw_kirby(animation_steps[step]);
+      // schedule next animation step
+      self->delayed_send(self, 150ms, update_atom_v, step + 1);
+    },
+  };
 }
+// --(rst-delayed-send-end)--
 
 void caf_main(actor_system& system) {
   system.spawn(dancing_kirby);
