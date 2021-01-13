@@ -113,6 +113,7 @@ caf_add_component(
     src/detail/message_builder_element.cpp
     src/detail/message_data.cpp
     src/detail/meta_object.cpp
+    src/detail/monotonic_buffer_resource.cpp
     src/detail/parse.cpp
     src/detail/parser/chars.cpp
     src/detail/pretty_type_name.cpp
@@ -250,6 +251,7 @@ caf_add_component(
     detail.limited_vector
     detail.local_group_module
     detail.meta_object
+    detail.monotonic_buffer_resource
     detail.parse
     detail.parser.read_bool
     detail.parser.read_config
