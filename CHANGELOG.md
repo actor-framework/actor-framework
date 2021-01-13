@@ -88,6 +88,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix undefined behavior in the experimental datagram brokers (#1174).
 - Response promises no longer send empty messages in response to asynchronous
   messages.
+- `CAF_ADD_TYPE_ID` now works with types that live in namespaces that also exist
+  as nested namespace in CAF such as `detail` or `io` (#1195).
 
 ## [0.18.0-rc.1] - 2020-09-09
 

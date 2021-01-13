@@ -8,6 +8,44 @@
 
 #include "core-test.hpp"
 
+namespace detail {
+
+struct my_secret {
+  int value;
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, my_secret& x) {
+  return f.object(x).fields(f.field("value", x.value));
+}
+
+} // namespace detail
+
+namespace io {
+
+struct protocol {
+  std::string name;
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, protocol& x) {
+  return f.object(x).fields(f.field("name", x.name));
+}
+
+} // namespace io
+
+// A type ID block with types that live in namespaces that also exist as nested
+// CAF namespaces. This is a regression test for
+// https://github.com/actor-framework/actor-framework/issues/1195. We don't need
+// to actually use these types, only check whether the code compiles.
+
+CAF_BEGIN_TYPE_ID_BLOCK(type_id_test, caf::id_block::core_test::end)
+
+  CAF_ADD_TYPE_ID(type_id_test, (detail::my_secret))
+  CAF_ADD_TYPE_ID(type_id_test, (io::protocol))
+
+CAF_END_TYPE_ID_BLOCK(type_id_test)
+
 using namespace caf;
 
 CAF_TEST(lists store the size at index 0) {

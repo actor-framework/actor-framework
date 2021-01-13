@@ -131,7 +131,7 @@ CAF_CORE_EXPORT type_id_t query_type_id(string_view name);
 #ifdef CAF_MSVC
 #  define CAF_DETAIL_NEXT_TYPE_ID(project_name, fully_qualified_name)          \
     template <>                                                                \
-    struct type_id<CAF_PP_EXPAND fully_qualified_name> {                       \
+    struct type_id<::CAF_PP_EXPAND fully_qualified_name> {                     \
       static constexpr type_id_t value                                         \
         = id_block::project_name##_first_type_id                               \
           + (CAF_PP_CAT(CAF_PP_COUNTER, ())                                    \
@@ -140,7 +140,7 @@ CAF_CORE_EXPORT type_id_t query_type_id(string_view name);
 #else
 #  define CAF_DETAIL_NEXT_TYPE_ID(project_name, fully_qualified_name)          \
     template <>                                                                \
-    struct type_id<CAF_PP_EXPAND fully_qualified_name> {                       \
+    struct type_id<::CAF_PP_EXPAND fully_qualified_name> {                     \
       static constexpr type_id_t value                                         \
         = id_block::project_name##_first_type_id                               \
           + (__COUNTER__ - id_block::project_name##_type_id_counter_init - 1); \
@@ -151,33 +151,33 @@ CAF_CORE_EXPORT type_id_t query_type_id(string_view name);
   namespace caf {                                                              \
   CAF_DETAIL_NEXT_TYPE_ID(project_name, fully_qualified_name)                  \
   template <>                                                                  \
-  struct type_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value> {      \
-    using type = CAF_PP_EXPAND fully_qualified_name;                           \
+  struct type_by_id<type_id<::CAF_PP_EXPAND fully_qualified_name>::value> {    \
+    using type = ::CAF_PP_EXPAND fully_qualified_name;                         \
   };                                                                           \
   template <>                                                                  \
-  struct type_name<CAF_PP_EXPAND fully_qualified_name> {                       \
+  struct type_name<::CAF_PP_EXPAND fully_qualified_name> {                     \
     static constexpr string_view value                                         \
       = CAF_PP_STR(CAF_PP_EXPAND fully_qualified_name);                        \
   };                                                                           \
   template <>                                                                  \
-  struct type_name_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value>   \
-    : type_name<CAF_PP_EXPAND fully_qualified_name> {};                        \
+  struct type_name_by_id<type_id<::CAF_PP_EXPAND fully_qualified_name>::value> \
+    : type_name<::CAF_PP_EXPAND fully_qualified_name> {};                      \
   }
 
 #define CAF_ADD_TYPE_ID_3(project_name, fully_qualified_name, user_type_name)  \
   namespace caf {                                                              \
   CAF_DETAIL_NEXT_TYPE_ID(project_name, fully_qualified_name)                  \
   template <>                                                                  \
-  struct type_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value> {      \
-    using type = CAF_PP_EXPAND fully_qualified_name;                           \
+  struct type_by_id<type_id<::CAF_PP_EXPAND fully_qualified_name>::value> {    \
+    using type = ::CAF_PP_EXPAND fully_qualified_name;                         \
   };                                                                           \
   template <>                                                                  \
-  struct type_name<CAF_PP_EXPAND fully_qualified_name> {                       \
+  struct type_name<::CAF_PP_EXPAND fully_qualified_name> {                     \
     static constexpr string_view value = user_type_name;                       \
   };                                                                           \
   template <>                                                                  \
-  struct type_name_by_id<type_id<CAF_PP_EXPAND fully_qualified_name>::value>   \
-    : type_name<CAF_PP_EXPAND fully_qualified_name> {};                        \
+  struct type_name_by_id<type_id<::CAF_PP_EXPAND fully_qualified_name>::value> \
+    : type_name<::CAF_PP_EXPAND fully_qualified_name> {};                      \
   }
 
 /// @def CAF_ADD_TYPE_ID(project_name, fully_qualified_name, user_type_name)
@@ -276,22 +276,32 @@ CAF_CORE_EXPORT type_id_t query_type_id(string_view name);
   };                                                                           \
   }
 
+namespace caf::detail {
+
+// We can't pass a builtin type such as `bool` to CAF_ADD_TYPE_ID because it
+// expands to `::bool`, which for some reason is invalid in C++. This alias only
+// exists to work around this limitation.
+template <class T>
+using id_t = T;
+
+} // namespace caf::detail
+
 CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
 
   // -- C types
 
-  CAF_ADD_TYPE_ID(core_module, (bool) )
-  CAF_ADD_TYPE_ID(core_module, (double) )
-  CAF_ADD_TYPE_ID(core_module, (float) )
-  CAF_ADD_TYPE_ID(core_module, (int16_t))
-  CAF_ADD_TYPE_ID(core_module, (int32_t))
-  CAF_ADD_TYPE_ID(core_module, (int64_t))
-  CAF_ADD_TYPE_ID(core_module, (int8_t))
-  CAF_ADD_TYPE_ID(core_module, (long double), "ldouble")
-  CAF_ADD_TYPE_ID(core_module, (uint16_t))
-  CAF_ADD_TYPE_ID(core_module, (uint32_t))
-  CAF_ADD_TYPE_ID(core_module, (uint64_t))
-  CAF_ADD_TYPE_ID(core_module, (uint8_t))
+  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<bool>), "bool")
+  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<double>), "double")
+  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<float>), "float")
+  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<int16_t>), "int16_t")
+  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<int32_t>), "int32_t")
+  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<int64_t>), "int64_t")
+  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<int8_t>), "int8_t")
+  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<long double>), "ldouble")
+  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<uint16_t>), "uint16_t")
+  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<uint32_t>), "uint32_t")
+  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<uint64_t>), "uint64_t")
+  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<uint8_t>), "uint8_t")
 
   // -- STL types
 
