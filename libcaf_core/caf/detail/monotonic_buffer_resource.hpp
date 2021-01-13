@@ -157,6 +157,18 @@ private:
   std::map<size_t, bucket> var_;
 };
 
+template <class T, class U>
+bool operator==(monotonic_buffer_resource::allocator<T> x,
+                monotonic_buffer_resource::allocator<U> y) {
+  return x.resource() == y.resource();
+}
+
+template <class T, class U>
+bool operator!=(monotonic_buffer_resource::allocator<T> x,
+                monotonic_buffer_resource::allocator<U> y) {
+  return x.resource() != y.resource();
+}
+
 } // namespace caf::detail
 
 #ifdef CAF_CLANG
