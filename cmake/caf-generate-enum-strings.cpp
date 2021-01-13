@@ -94,6 +94,12 @@ int main(int argc, char** argv) {
     cerr << "enum found outside of a namespace\n";
     return EXIT_FAILURE;
   }
+  auto full_namespace = namespaces[0];
+  for (size_t index = 1; index < namespaces.size(); ++index) {
+    full_namespace += "::";
+    full_namespace += namespaces[index];
+  }
+  auto full_namespace_prefix = full_namespace + "::";
   if (enum_name.empty()) {
     cerr << "empty enum name found\n";
     return EXIT_FAILURE;
@@ -115,7 +121,7 @@ int main(int argc, char** argv) {
       break;
     if (line[0] != '/') {
       keep_alnum(line);
-      enum_values.emplace_back(line);
+      enum_values.emplace_back(enum_name + "::" + line);
     }
   }
   // Generate output file.
@@ -137,9 +143,7 @@ int main(int argc, char** argv) {
     out << '/' << namespaces[i];
   out << '/' << enum_name << ".hpp\"\n\n"
       << "#include <string>\n\n"
-      << "namespace " << namespaces[0] << " {\n";
-  for (size_t i = 1; i < namespaces.size(); ++i)
-    out << "namespace " << namespaces[i] << " {\n";
+      << "namespace " << full_namespace << " {\n";
   out << '\n';
   // Generate to_string implementation.
   out << "std::string to_string(" << enum_name << " x) {\n"
@@ -147,15 +151,15 @@ int main(int argc, char** argv) {
       << "    default:\n"
       << "      return \"???\";\n";
   for (auto& val : enum_values)
-    out << "    case " << case_label_prefix << val << ":\n"
-        << "      return \"" << val << "\";\n";
+    out << "    case " << val << ":\n"
+        << "      return \"" << full_namespace_prefix << val << "\";\n";
   out << "  };\n"
       << "}\n\n";
   // Generate from_string implementation.
   out << "bool from_string(string_view in, " << enum_name << "& out) {\n  ";
   for (auto& val : enum_values)
-    out << "if (in == \"" << val << "\") {\n"
-        << "    out = " << case_label_prefix << val << ";\n"
+    out << "if (in == \"" << full_namespace_prefix << val << "\") {\n"
+        << "    out = " << val << ";\n"
         << "    return true;\n"
         << "  } else ";
   out << "{\n"
@@ -170,14 +174,13 @@ int main(int argc, char** argv) {
       << "    default:\n"
       << "      return false;\n";
   for (auto& val : enum_values)
-    out << "    case " << case_label_prefix << val << ":\n";
+    out << "    case " << val << ":\n";
   out << "      out = result;\n"
       << "      return true;\n"
       << "  };\n"
       << "}\n\n";
   // Done. Print file footer and exit.
-  for (auto i = namespaces.rbegin(); i != namespaces.rend(); ++i)
-    out << "} // namespace " << *i << '\n';
+  out << "} // namespace " << full_namespace << '\n';
   out << "\nCAF_POP_WARNINGS\n";
   return EXIT_SUCCESS;
 }

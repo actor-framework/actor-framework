@@ -17,22 +17,22 @@ std::string to_string(invoke_message_result x) {
     default:
       return "???";
     case invoke_message_result::consumed:
-      return "consumed";
+      return "caf::invoke_message_result::consumed";
     case invoke_message_result::skipped:
-      return "skipped";
+      return "caf::invoke_message_result::skipped";
     case invoke_message_result::dropped:
-      return "dropped";
+      return "caf::invoke_message_result::dropped";
   };
 }
 
 bool from_string(string_view in, invoke_message_result& out) {
-  if (in == "consumed") {
+  if (in == "caf::invoke_message_result::consumed") {
     out = invoke_message_result::consumed;
     return true;
-  } else if (in == "skipped") {
+  } else if (in == "caf::invoke_message_result::skipped") {
     out = invoke_message_result::skipped;
     return true;
-  } else if (in == "dropped") {
+  } else if (in == "caf::invoke_message_result::dropped") {
     out = invoke_message_result::dropped;
     return true;
   } else {

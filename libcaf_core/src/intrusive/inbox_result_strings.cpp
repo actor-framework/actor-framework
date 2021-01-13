@@ -10,30 +10,29 @@ CAF_PUSH_DEPRECATED_WARNING
 
 #include <string>
 
-namespace caf {
-namespace intrusive {
+namespace caf::intrusive {
 
 std::string to_string(inbox_result x) {
   switch(x) {
     default:
       return "???";
     case inbox_result::success:
-      return "success";
+      return "caf::intrusive::inbox_result::success";
     case inbox_result::unblocked_reader:
-      return "unblocked_reader";
+      return "caf::intrusive::inbox_result::unblocked_reader";
     case inbox_result::queue_closed:
-      return "queue_closed";
+      return "caf::intrusive::inbox_result::queue_closed";
   };
 }
 
 bool from_string(string_view in, inbox_result& out) {
-  if (in == "success") {
+  if (in == "caf::intrusive::inbox_result::success") {
     out = inbox_result::success;
     return true;
-  } else if (in == "unblocked_reader") {
+  } else if (in == "caf::intrusive::inbox_result::unblocked_reader") {
     out = inbox_result::unblocked_reader;
     return true;
-  } else if (in == "queue_closed") {
+  } else if (in == "caf::intrusive::inbox_result::queue_closed") {
     out = inbox_result::queue_closed;
     return true;
   } else {
@@ -55,7 +54,6 @@ bool from_integer(std::underlying_type_t<inbox_result> in,
   };
 }
 
-} // namespace intrusive
-} // namespace caf
+} // namespace caf::intrusive
 
 CAF_POP_WARNINGS

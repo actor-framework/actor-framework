@@ -10,31 +10,29 @@ CAF_PUSH_DEPRECATED_WARNING
 
 #include <string>
 
-namespace caf {
-namespace io {
-namespace network {
+namespace caf::io::network {
 
 std::string to_string(operation x) {
   switch(x) {
     default:
       return "???";
     case operation::read:
-      return "read";
+      return "caf::io::network::operation::read";
     case operation::write:
-      return "write";
+      return "caf::io::network::operation::write";
     case operation::propagate_error:
-      return "propagate_error";
+      return "caf::io::network::operation::propagate_error";
   };
 }
 
 bool from_string(string_view in, operation& out) {
-  if (in == "read") {
+  if (in == "caf::io::network::operation::read") {
     out = operation::read;
     return true;
-  } else if (in == "write") {
+  } else if (in == "caf::io::network::operation::write") {
     out = operation::write;
     return true;
-  } else if (in == "propagate_error") {
+  } else if (in == "caf::io::network::operation::propagate_error") {
     out = operation::propagate_error;
     return true;
   } else {
@@ -56,8 +54,6 @@ bool from_integer(std::underlying_type_t<operation> in,
   };
 }
 
-} // namespace network
-} // namespace io
-} // namespace caf
+} // namespace caf::io::network
 
 CAF_POP_WARNINGS

@@ -17,32 +17,32 @@ std::string to_string(stream_priority x) {
     default:
       return "???";
     case stream_priority::very_high:
-      return "very_high";
+      return "caf::stream_priority::very_high";
     case stream_priority::high:
-      return "high";
+      return "caf::stream_priority::high";
     case stream_priority::normal:
-      return "normal";
+      return "caf::stream_priority::normal";
     case stream_priority::low:
-      return "low";
+      return "caf::stream_priority::low";
     case stream_priority::very_low:
-      return "very_low";
+      return "caf::stream_priority::very_low";
   };
 }
 
 bool from_string(string_view in, stream_priority& out) {
-  if (in == "very_high") {
+  if (in == "caf::stream_priority::very_high") {
     out = stream_priority::very_high;
     return true;
-  } else if (in == "high") {
+  } else if (in == "caf::stream_priority::high") {
     out = stream_priority::high;
     return true;
-  } else if (in == "normal") {
+  } else if (in == "caf::stream_priority::normal") {
     out = stream_priority::normal;
     return true;
-  } else if (in == "low") {
+  } else if (in == "caf::stream_priority::low") {
     out = stream_priority::low;
     return true;
-  } else if (in == "very_low") {
+  } else if (in == "caf::stream_priority::very_low") {
     out = stream_priority::very_low;
     return true;
   } else {
