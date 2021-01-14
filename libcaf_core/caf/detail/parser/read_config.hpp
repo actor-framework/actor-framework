@@ -116,6 +116,15 @@ void read_config_map(State& ps, Consumer&& consumer) {
   auto alnum_or_dash = [](char x) {
     return isalnum(x) || x == '-' || x == '_';
   };
+  auto set_key = [&consumer, &key] {
+    std::string tmp;
+    tmp.swap(key);
+    consumer.key(std::move(tmp));
+  };
+  auto recurse = [&consumer, &set_key]() -> decltype(auto) {
+    set_key();
+    return consumer.begin_map();
+  };
   // clang-format off
   start();
   term_state(init) {
@@ -131,13 +140,14 @@ void read_config_map(State& ps, Consumer&& consumer) {
   // Reads a key of a "key=value" line.
   state(read_key_name) {
     transition(read_key_name, alnum_or_dash, key += ch)
+    fsm_transition(read_config_map(ps, recurse()), done, '.')
     epsilon(await_assignment)
   }
   // Reads the assignment operator in a "key=value" line.
   state(await_assignment) {
     transition(await_assignment, " \t")
-    transition(await_value, "=:", consumer.key(std::move(key)))
-    epsilon(await_value, '{', consumer.key(std::move(key)))
+    transition(await_value, "=:", set_key())
+    epsilon(await_value, '{', set_key())
   }
   // Reads the value in a "key=value" line.
   state(await_value) {

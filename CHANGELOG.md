@@ -24,6 +24,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   generalizing the function to `config_value` as well.
 - The `typed_response_promise` received additional member functions to mirror
   the interface of the untyped `response_promise`.
+- Configuration files now allow dot-separated notation for keys. For example,
+  users may write `caf.scheduler.max-threads = 4` instead of the nested form
+  `caf { scheduler { max-threads = 4 } }`.
 
 ### Deprecated
 
