@@ -297,4 +297,44 @@ CAF_TEST(basic and basic containers options) {
                string_map({{"a", "1"}, {"b", "2"}, {"c", "3"}}));
 }
 
+SCENARIO("config files allow both nested and dot-separated values") {
+  GIVEN("the option my.answer.value") {
+    config_option_adder{cfg.custom_options(), "my.answer"}
+      .add<int32_t>("first", "the first answer")
+      .add<int32_t>("second", "the second answer");
+    std::vector<std::string> allowed_input_strings{
+      "my { answer { first = 1, second = 2 } }",
+      "my.answer { first = 1, second = 2 }",
+      "my { answer.first = 1, answer.second = 2  }",
+      "my.answer.first = 1, my.answer.second = 2",
+      "my { answer { first = 1 }, answer.second = 2 }",
+      "my { answer.first = 1, answer { second = 2} }",
+      "my.answer.first = 1, my { answer { second = 2 } }",
+    };
+    auto make_result = [] {
+      settings answer;
+      answer["first"] = 1;
+      answer["second"] = 2;
+      settings my;
+      my["answer"] = std::move(answer);
+      settings result;
+      result["my"] = std::move(my);
+      return result;
+    };
+    auto result = make_result();
+    for (const auto& input_string : allowed_input_strings) {
+      WHEN("parsing the file input '" << input_string << "'") {
+        std::istringstream input{input_string};
+        auto err = cfg.parse(string_list{}, input);
+        THEN("the actor system contains values for my.answer.(first|second)") {
+          CHECK_EQ(err, error{});
+          CHECK_EQ(get_or(cfg, "my.answer.first", -1), 1);
+          CHECK_EQ(get_or(cfg, "my.answer.second", -1), 2);
+          CHECK_EQ(content(cfg), result);
+        }
+      }
+    }
+  }
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()
