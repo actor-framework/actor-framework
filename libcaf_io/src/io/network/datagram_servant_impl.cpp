@@ -94,6 +94,14 @@ std::string datagram_servant_impl::addr() const {
   return *x;
 }
 
+std::string datagram_servant_impl::remote_addr(datagram_handle hdl) const {
+  auto& eps = handler_.endpoints();
+  auto itr = eps.find(hdl);
+  if (itr == eps.end())
+    return 0;
+  return network::host(itr->second);
+}
+
 uint16_t datagram_servant_impl::port(datagram_handle hdl) const {
   auto& eps = handler_.endpoints();
   auto itr = eps.find(hdl);

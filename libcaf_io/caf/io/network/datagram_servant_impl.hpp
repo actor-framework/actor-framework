@@ -18,11 +18,11 @@
 
 #pragma once
 
-#include "caf/io/fwd.hpp"
 #include "caf/io/datagram_servant.hpp"
+#include "caf/io/fwd.hpp"
 
-#include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/datagram_handler_impl.hpp"
+#include "caf/io/network/native_socket.hpp"
 
 #include "caf/policy/udp.hpp"
 
@@ -51,6 +51,8 @@ public:
   void graceful_shutdown() override;
 
   void flush() override;
+
+  std::string remote_addr(datagram_handle hdl) const override;
 
   std::string addr() const override;
 

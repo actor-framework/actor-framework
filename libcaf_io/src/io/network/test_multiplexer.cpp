@@ -373,6 +373,9 @@ datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle hdl,
     void flush() override {
       // nop
     }
+    std::string remote_addr(datagram_handle) const override {
+      return "test";
+    }
     std::string addr() const override {
       return "test";
     }
