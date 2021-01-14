@@ -40,6 +40,20 @@ public:
   using data_type
     = std::variant<null_t, int64_t, double, bool, string_view, array, object>;
 
+  static constexpr size_t null_index = 0;
+
+  static constexpr size_t integer_index = 1;
+
+  static constexpr size_t double_index = 2;
+
+  static constexpr size_t bool_index = 3;
+
+  static constexpr size_t string_index = 4;
+
+  static constexpr size_t array_index = 5;
+
+  static constexpr size_t object_index = 6;
+
   data_type data;
 };
 

@@ -42,7 +42,7 @@ public:
 
   template <class... Ts>
   void emplace_error(Ts&&... xs) {
-    err_ = make_error(xs...);
+    err_ = make_error(std::forward<Ts>(xs)...);
   }
 
   const error& get_error() const noexcept {
