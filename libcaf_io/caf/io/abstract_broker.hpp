@@ -18,24 +18,24 @@
 
 #pragma once
 
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
-#include "caf/scheduled_actor.hpp"
 #include "caf/prohibit_top_level_spawn_marker.hpp"
+#include "caf/scheduled_actor.hpp"
 
-#include "caf/io/fwd.hpp"
 #include "caf/io/accept_handle.hpp"
-#include "caf/io/receive_policy.hpp"
-#include "caf/io/datagram_handle.hpp"
-#include "caf/io/system_messages.hpp"
 #include "caf/io/connection_handle.hpp"
+#include "caf/io/datagram_handle.hpp"
+#include "caf/io/fwd.hpp"
+#include "caf/io/receive_policy.hpp"
+#include "caf/io/system_messages.hpp"
 
+#include "caf/io/network/acceptor_manager.hpp"
+#include "caf/io/network/datagram_manager.hpp"
 #include "caf/io/network/ip_endpoint.hpp"
 #include "caf/io/network/native_socket.hpp"
 #include "caf/io/network/stream_manager.hpp"
-#include "caf/io/network/acceptor_manager.hpp"
-#include "caf/io/network/datagram_manager.hpp"
 
 namespace caf {
 namespace io {
@@ -223,10 +223,11 @@ public:
   add_datagram_servant_for_endpoint(network::native_socket fd,
                                     const network::ip_endpoint& ep);
 
-  /// Creates a new `datagram_servant` for the remote endpoint `host` and `port`.
+  /// Creates a new `datagram_servant` for the remote endpoint `host` and
+  /// `port`.
   /// @returns The handle to the new `datagram_servant`.
-  expected<datagram_handle>
-  add_udp_datagram_servant(const std::string& host, uint16_t port);
+  expected<datagram_handle> add_udp_datagram_servant(const std::string& host,
+                                                     uint16_t port);
 
   /// Tries to open a local port and creates a `datagram_servant` managing it on
   /// success. If `port == 0`, then the broker will ask the operating system to
@@ -264,6 +265,10 @@ public:
   /// Returns the remote address associated with `hdl`
   /// or an empty string if `hdl` is invalid.
   std::string remote_addr(datagram_handle hdl);
+
+  /// Returns the local address associated with `hdl`
+  /// or empty string if `hdl` is invalid.
+  std::string local_addr(datagram_handle hdl);
 
   /// Returns the remote port associated with `hdl`
   /// or `0` if `hdl` is invalid.
@@ -358,8 +363,8 @@ protected:
 
   using doorman_map = std::unordered_map<accept_handle, intrusive_ptr<doorman>>;
 
-  using scribe_map = std::unordered_map<connection_handle,
-                                        intrusive_ptr<scribe>>;
+  using scribe_map
+    = std::unordered_map<connection_handle, intrusive_ptr<scribe>>;
 
   using datagram_servant_map
     = std::unordered_map<datagram_handle, intrusive_ptr<datagram_servant>>;
@@ -428,4 +433,3 @@ private:
 
 } // namespace io
 } // namespace caf
-

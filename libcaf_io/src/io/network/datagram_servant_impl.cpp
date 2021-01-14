@@ -87,19 +87,19 @@ void datagram_servant_impl::flush() {
   handler_.flush(this);
 }
 
-std::string datagram_servant_impl::addr() const {
-  auto x = remote_addr_of_fd(handler_.fd());
-  if (!x)
-    return "";
-  return *x;
-}
-
-std::string datagram_servant_impl::remote_addr(datagram_handle hdl) const {
+std::string datagram_servant_impl::addr(datagram_handle hdl) const {
   auto& eps = handler_.endpoints();
   auto itr = eps.find(hdl);
   if (itr == eps.end())
     return 0;
   return network::host(itr->second);
+}
+
+std::string datagram_servant_impl::local_addr() const {
+  auto x = local_addr_of_fd(handler_.fd());
+  if (!x)
+    return 0;
+  return *x;
 }
 
 uint16_t datagram_servant_impl::port(datagram_handle hdl) const {

@@ -320,8 +320,12 @@ datagram_handle abstract_broker::datagram_hdl_by_port(uint16_t port) {
 
 std::string abstract_broker::remote_addr(datagram_handle hdl) {
   auto i = datagram_servants_.find(hdl);
-  return i != datagram_servants_.end() ? i->second->remote_addr(hdl)
-                                       : std::string{};
+  return i != datagram_servants_.end() ? i->second->addr(hdl) : std::string{};
+}
+
+std::string abstract_broker::local_addr(datagram_handle hdl) {
+  auto i = datagram_servants_.find(hdl);
+  return i != datagram_servants_.end() ? i->second->local_addr() : 0;
 }
 
 uint16_t abstract_broker::remote_port(datagram_handle hdl) {

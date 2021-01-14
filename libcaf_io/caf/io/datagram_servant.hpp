@@ -63,7 +63,7 @@ public:
   virtual uint16_t local_port() const = 0;
 
   /// Returns the address of the remote endpoint for the handle.
-  virtual std::string remote_addr(datagram_handle) const = 0;
+  virtual std::string local_addr() const = 0;
 
   /// Returns all the handles associated with this servant
   virtual std::vector<datagram_handle> hdls() const = 0;

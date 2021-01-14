@@ -18,9 +18,9 @@
 
 #pragma once
 
+#include "caf/intrusive_ptr.hpp"
 #include "caf/message.hpp"
 #include "caf/ref_counted.hpp"
-#include "caf/intrusive_ptr.hpp"
 
 #include "caf/io/fwd.hpp"
 #include "caf/io/network/operation.hpp"
@@ -65,9 +65,6 @@ public:
   /// Detaches this manager from its parent in case of an error.
   void io_failure(execution_unit* ctx, operation op);
 
-  /// Get the address of the underlying I/O device.
-  virtual std::string addr() const = 0;
-
 protected:
   /// Creates a message signalizing a disconnect to the parent.
   virtual message detach_message() = 0;
@@ -81,4 +78,3 @@ protected:
 } // namespace network
 } // namespace io
 } // namespace caf
-
