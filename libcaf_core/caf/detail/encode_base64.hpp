@@ -4,17 +4,22 @@
 
 #pragma once
 
-#include "caf/byte.hpp"
-#include "caf/detail/core_export.hpp"
-#include "caf/span.hpp"
+#include "caf/byte_span.hpp"
+#include "caf/detail/base64.hpp"
 #include "caf/string_view.hpp"
 
 #include <string>
 
 namespace caf::detail {
 
-CAF_CORE_EXPORT std::string encode_base64(string_view str);
+[[deprecated("use base64::encode instead")]] inline std::string
+encode_base64(string_view str) {
+  return base64::encode(str);
+}
 
-CAF_CORE_EXPORT std::string encode_base64(span<const byte> bytes);
+[[deprecated("use base64::encode instead")]] inline std::string
+encode_base64(const_byte_span bytes) {
+  return base64::encode(bytes);
+}
 
 } // namespace caf::detail
