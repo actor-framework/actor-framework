@@ -27,38 +27,15 @@ public:
 
   void operator()(error& x) override {
     CAF_LOG_TRACE(CAF_ARG(x));
-    delegate(x);
+    self_->respond(x);
   }
 
   void operator()(message& x) override {
     CAF_LOG_TRACE(CAF_ARG(x));
-    delegate(x);
+    self_->respond(x);
   }
 
 private:
-  void deliver(response_promise& rp, error& x) {
-    CAF_LOG_DEBUG("report error back to requesting actor");
-    rp.deliver(std::move(x));
-  }
-
-  void deliver(response_promise& rp, message& x) {
-    CAF_LOG_DEBUG("respond via response_promise");
-    // suppress empty messages for asynchronous messages
-    if (x.empty() && rp.async())
-      return;
-    rp.deliver(std::move(x));
-  }
-
-  template <class T>
-  void delegate(T& x) {
-    auto rp = self_->make_response_promise();
-    if (!rp.pending()) {
-      CAF_LOG_DEBUG("suppress response message: invalid response promise");
-      return;
-    }
-    deliver(rp, x);
-  }
-
   Self* self_;
 };
 

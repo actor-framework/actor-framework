@@ -43,7 +43,7 @@ bool from_string(caf::string_view in, fixed_stack_errc& out) {
 }
 
 bool from_integer(uint8_t in, fixed_stack_errc& out) {
-  if (in > 0 && in < 1) {
+  if (in > 0 && in < 3) {
     out = static_cast<fixed_stack_errc>(in);
     return true;
   } else {

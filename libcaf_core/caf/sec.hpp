@@ -159,6 +159,8 @@ enum class sec : uint8_t {
   unsupported_operation,
   /// A key lookup failed.
   no_such_key = 65,
+  /// An destroyed a response promise without calling deliver or delegate on it.
+  broken_promise,
 };
 // --(rst-sec-end)--
 

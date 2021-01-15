@@ -49,6 +49,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   string input on the command-line that starts with quotes in the same way it
   would parse strings from a config file, leading to very unintuitive results in
   some cases (#1113).
+- Response promises now implicitly share their state when copied. Once the
+  reference count for the state reaches zero, CAF now produces a
+  `broken_promise` error if the actor failed to fulfill the promise by calling
+  either `dispatch` or `delegate`.
 
 ### Fixed
 

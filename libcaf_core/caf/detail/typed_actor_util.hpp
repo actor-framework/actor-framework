@@ -23,13 +23,17 @@ struct make_response_promise_helper {
 };
 
 template <class... Ts>
-struct make_response_promise_helper<typed_response_promise<Ts...>>
-  : make_response_promise_helper<Ts...> {};
+struct make_response_promise_helper<typed_response_promise<Ts...>> {
+  using type = typed_response_promise<Ts...>;
+};
 
 template <>
 struct make_response_promise_helper<response_promise> {
   using type = response_promise;
 };
+
+template <class... Ts>
+using response_promise_t = typename make_response_promise_helper<Ts...>::type;
 
 template <class Output, class F>
 struct type_checker {

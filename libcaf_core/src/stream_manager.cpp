@@ -240,7 +240,7 @@ stream_slot
 stream_manager::add_unchecked_outbound_path_impl(strong_actor_ptr next,
                                                  message handshake) {
   CAF_LOG_TRACE(CAF_ARG(next) << CAF_ARG(handshake));
-  response_promise rp{self_->ctrl(), self_->ctrl(), {next}, make_message_id()};
+  response_promise rp{self_, self_->ctrl(), {next}, make_message_id()};
   return add_unchecked_outbound_path_impl(rp, std::move(handshake));
 }
 

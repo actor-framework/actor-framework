@@ -16,7 +16,8 @@ adder_actor::behavior_type server_impl(adder_actor::pointer self,
     [=](add_atom, int32_t y, int32_t z) {
       auto rp = self->make_response_promise<int32_t>();
       self->request(worker, infinite, add_atom_v, y, z)
-        .then([rp](int32_t result) mutable { rp.deliver(result); });
+        .then([rp](int32_t result) mutable { rp.deliver(result); },
+              [rp](error& err) mutable { rp.deliver(std::move(err)); });
       return rp;
     },
   };

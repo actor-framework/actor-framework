@@ -341,11 +341,15 @@ public:
   /// `make_response_promise<typed_response_promise<int, int>>()`
   /// is equivalent to `make_response_promise<int, int>()`.
   template <class... Ts>
-  typename detail::make_response_promise_helper<Ts...>::type
-  make_response_promise() {
-    if (current_element_ == nullptr || current_element_->mid.is_answered())
+  detail::response_promise_t<Ts...> make_response_promise() {
+    using result_t = typename detail::make_response_promise_helper<Ts...>::type;
+    if (current_element_ != nullptr && !current_element_->mid.is_answered()) {
+      auto result = result_t{this, *current_element_};
+      current_element_->mid.mark_as_answered();
+      return result;
+    } else {
       return {};
-    return {this->ctrl(), *current_element_};
+    }
   }
 
   /// Creates a `response_promise` to respond to a request later on.
@@ -353,16 +357,15 @@ public:
     return make_response_promise<response_promise>();
   }
 
-  /// Creates a `typed_response_promise` and responds immediately.
-  /// Return type is deduced from arguments.
-  /// Return value is implicitly convertible to untyped response promise.
-  template <class... Ts,
-            class R = typename detail::make_response_promise_helper<
-              typename std::decay<Ts>::type...>::type>
-  R response(Ts&&... xs) {
-    auto promise = make_response_promise<R>();
-    promise.deliver(std::forward<Ts>(xs)...);
-    return promise;
+  template <class... Ts>
+  [[deprecated("simply return the result from the message handler")]] //
+  detail::response_promise_t<std::decay_t<Ts>...>
+  response(Ts&&... xs) {
+    if (current_element_) {
+      response_promise::respond_to(this, current_element_,
+                                   make_message(std::forward<Ts>(xs)...));
+    }
+    return {};
   }
 
   const char* name() const override;
@@ -428,6 +431,11 @@ public:
   bool cleanup(error&& fail_state, execution_unit* host) override;
 
   message_id new_request_id(message_priority mp);
+
+  template <class T>
+  void respond(T& x) {
+    response_promise::respond_to(this, current_mailbox_element(), x);
+  }
 
   /// @endcond
 
