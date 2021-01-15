@@ -9,30 +9,6 @@
 #include <algorithm>
 #include <ctime>
 
-namespace {
-
-void escape(std::string& result, char c) {
-  switch (c) {
-    default:
-      result += c;
-      break;
-    case '\n':
-      result += R"(\n)";
-      break;
-    case '\t':
-      result += R"(\t)";
-      break;
-    case '\\':
-      result += R"(\\)";
-      break;
-    case '"':
-      result += R"(\")";
-      break;
-  }
-}
-
-} // namespace
-
 namespace caf::detail {
 
 bool stringification_inspector::begin_object(type_id_t, string_view name) {
@@ -181,8 +157,7 @@ bool stringification_inspector::value(string_view str) {
   if (always_quote_strings
       || std::any_of(str.begin(), str.end(), needs_escaping)) {
     result_ += '"';
-    for (char c : str)
-      escape(result_, c);
+    detail::print_escaped(result_, str);
     result_ += '"';
   } else {
     result_.insert(result_.end(), str.begin(), str.end());

@@ -26,17 +26,33 @@ void print_escaped(Buffer& buf, string_view str) {
       default:
         buf.push_back(c);
         break;
+      case '\\':
+        buf.push_back('\\');
+        buf.push_back('\\');
+        break;
+      case '\b':
+        buf.push_back('\\');
+        buf.push_back('b');
+        break;
+      case '\f':
+        buf.push_back('\\');
+        buf.push_back('f');
+        break;
       case '\n':
         buf.push_back('\\');
         buf.push_back('n');
+        break;
+      case '\r':
+        buf.push_back('\\');
+        buf.push_back('r');
         break;
       case '\t':
         buf.push_back('\\');
         buf.push_back('t');
         break;
-      case '\\':
+      case '\v':
         buf.push_back('\\');
-        buf.push_back('\\');
+        buf.push_back('v');
         break;
       case '"':
         buf.push_back('\\');
