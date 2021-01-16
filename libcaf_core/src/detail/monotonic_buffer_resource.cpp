@@ -29,17 +29,25 @@ void monotonic_buffer_resource::release() {
   reset(small_);
   release(medium_);
   reset(medium_);
-  for (auto& kvp : var_) {
+  for (auto& kvp : var_)
     release(kvp.second);
-    reset(kvp.second);
-  }
+  var_.clear();
 }
 
 void monotonic_buffer_resource::reclaim() {
+  // Only reclaim the small and medium buffers. They have a high chance of
+  // actually reducing future heap allocations. Because of the relatively small
+  // bucket sizes, the variable buckets have a higher change of not producing
+  // 'hits' in future runs. We can get smarter about managing larger
+  // allocations, but ultimately this custom memory resource implementation is a
+  // placeholder until we can use the new `std::pmr` utilities. So as long as
+  // performance is "good enough", we keep our implementation simple and err on
+  // the side of caution for now.
   reclaim(small_);
   reclaim(medium_);
   for (auto& kvp : var_)
-    reclaim(kvp.second);
+    release(kvp.second);
+  var_.clear();
 }
 
 void* monotonic_buffer_resource::allocate(size_t bytes, size_t alignment) {
