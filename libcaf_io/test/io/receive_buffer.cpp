@@ -63,13 +63,13 @@ CAF_TEST(reserve) {
   CAF_CHECK_EQUAL(a.size(), 0ul);
   CAF_CHECK_EQUAL(a.capacity(), 1024ul);
   CAF_CHECK(a.data() != nullptr);
-  CAF_CHECK_EQUAL(a.begin(), a.end());
+  CAF_CHECK(a.begin() == a.end());
   CAF_CHECK(a.empty());
   a.reserve(512);
   CAF_CHECK_EQUAL(a.size(), 0ul);
   CAF_CHECK_EQUAL(a.capacity(), 1024ul);
   CAF_CHECK(a.data() != nullptr);
-  CAF_CHECK_EQUAL(a.begin(), a.end());
+  CAF_CHECK(a.begin() == a.end());
   CAF_CHECK(a.empty());
 }
 

@@ -11,6 +11,7 @@
 #include <fstream>
 #include <ios>
 #include <iostream>
+#include <memory>
 #include <thread>
 #include <unordered_map>
 
@@ -38,95 +39,46 @@ namespace {
 
 using string_sink = std::function<void(std::string&&)>;
 
-// the first value is the use count, the last ostream_handle that
-// decrements it to 0 removes the ostream pointer from the map
-using counted_sink = std::pair<size_t, string_sink>;
+using string_sink_ptr = std::shared_ptr<string_sink>;
 
-using sink_cache = std::map<std::string, counted_sink>;
-
-class sink_handle {
-public:
-  using iterator = sink_cache::iterator;
-
-  sink_handle() : cache_(nullptr) {
-    // nop
-  }
-
-  sink_handle(sink_cache* fc, iterator iter) : cache_(fc), iter_(iter) {
-    if (cache_ != nullptr)
-      ++iter_->second.first;
-  }
-
-  sink_handle(const sink_handle& other) : cache_(nullptr) {
-    *this = other;
-  }
-
-  sink_handle& operator=(const sink_handle& other) {
-    if (cache_ != other.cache_ || iter_ != other.iter_) {
-      clear();
-      cache_ = other.cache_;
-      if (cache_ != nullptr) {
-        iter_ = other.iter_;
-        ++iter_->second.first;
-      }
-    }
-    return *this;
-  }
-
-  ~sink_handle() {
-    clear();
-  }
-
-  explicit operator bool() const {
-    return cache_ != nullptr;
-  }
-
-  string_sink& operator*() {
-    CAF_ASSERT(iter_->second.second != nullptr);
-    return iter_->second.second;
-  }
-
-private:
-  void clear() {
-    if (cache_ != nullptr && --iter_->second.first == 0) {
-      cache_->erase(iter_);
-      cache_ = nullptr;
-    }
-  }
-
-  sink_cache* cache_;
-  sink_cache::iterator iter_;
-};
+using sink_cache = std::map<std::string, string_sink_ptr>;
 
 string_sink make_sink(actor_system& sys, const std::string& fn, int flags) {
-  if (fn.empty())
+  if (fn.empty()) {
     return nullptr;
-  if (fn.front() == ':') {
+  } else if (fn.front() == ':') {
     // "virtual file" name given, translate this to group communication
     auto grp = sys.groups().get_local(fn);
     return [grp, fn](std::string&& out) { anon_send(grp, fn, std::move(out)); };
+  } else {
+    auto append = (flags & actor_ostream::append) != 0;
+    auto fs = std::make_shared<std::ofstream>();
+    fs->open(fn, append ? std::ios_base::out | std::ios_base::app
+                        : std::ios_base::out);
+    if (fs->is_open()) {
+      return [fs](std::string&& out) { *fs << out; };
+    } else {
+      std::cerr << "cannot open file: " << fn << std::endl;
+      return nullptr;
+    }
   }
-  auto append = (flags & actor_ostream::append) != 0;
-  auto fs = std::make_shared<std::ofstream>();
-  fs->open(fn, append ? std::ios_base::out | std::ios_base::app
-                      : std::ios_base::out);
-  if (fs->is_open())
-    return [fs](std::string&& out) { *fs << out; };
-  std::cerr << "cannot open file: " << fn << std::endl;
-  return nullptr;
 }
 
-sink_handle get_sink_handle(actor_system& sys, sink_cache& fc,
-                            const std::string& fn, int flags) {
-  auto i = fc.find(fn);
-  if (i != fc.end())
-    return {&fc, i};
-  auto fs = make_sink(sys, fn, flags);
-  if (fs) {
-    i = fc.emplace(fn, sink_cache::mapped_type{0, std::move(fs)}).first;
-    return {&fc, i};
+string_sink_ptr get_or_add_sink_ptr(actor_system& sys, sink_cache& fc,
+                                    const std::string& fn, int flags) {
+  if (auto i = fc.find(fn); i != fc.end()) {
+    return i->second;
+  } else if (auto fs = make_sink(sys, fn, flags)) {
+    if (fs) {
+      auto ptr = std::make_shared<string_sink>(std::move(fs));
+      fc.emplace(fn, ptr);
+      return ptr;
+    } else {
+      return nullptr;
+    }
+  } else {
+    return nullptr;
   }
-  return {};
 }
 
 class printer_actor : public blocking_actor {
@@ -138,14 +90,14 @@ public:
   void act() override {
     struct actor_data {
       std::string current_line;
-      sink_handle redirect;
+      string_sink_ptr redirect;
       actor_data() {
         // nop
       }
     };
     using data_map = std::unordered_map<actor_id, actor_data>;
     sink_cache fcache;
-    sink_handle global_redirect;
+    string_sink_ptr global_redirect;
     data_map data;
     auto get_data = [&](actor_id addr, bool insert_missing) -> actor_data* {
       if (addr == invalid_actor_id)
@@ -191,12 +143,12 @@ public:
         }
       },
       [&](redirect_atom, const std::string& fn, int flag) {
-        global_redirect = get_sink_handle(system(), fcache, fn, flag);
+        global_redirect = get_or_add_sink_ptr(system(), fcache, fn, flag);
       },
       [&](redirect_atom, actor_id aid, const std::string& fn, int flag) {
         auto d = get_data(aid, true);
         if (d != nullptr)
-          d->redirect = get_sink_handle(system(), fcache, fn, flag);
+          d->redirect = get_or_add_sink_ptr(system(), fcache, fn, flag);
       },
       [&](exit_msg& em) {
         fail_state(std::move(em.reason));

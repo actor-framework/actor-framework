@@ -94,7 +94,7 @@ config = [
                 'ASAN_OPTIONS=detect_leaks=1',
             ],
         ]],
-        // One extra debug build with static libraries and UBSanitizer.
+        // One extra debug build with static libs, UBSan and hardening flags.
         ['fedora-32', [
             numCores: 4,
             tags: ['docker', 'UBSanitizer'],
@@ -104,7 +104,7 @@ config = [
                 'CAF_SANITIZERS:STRING=address,undefined',
             ],
             extraBuildEnv: [
-                'CXXFLAGS=-fno-sanitize-recover=undefined',
+                'CXXFLAGS=-fno-sanitize-recover=undefined -D_GLIBCXX_DEBUG',
                 'LDFLAGS=-fno-sanitize-recover=undefined',
             ],
         ]],
