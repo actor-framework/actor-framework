@@ -114,7 +114,7 @@ public:
   template <size_t... Is>
   bool invoke_impl(detail::invoke_result_visitor& f, message& msg,
                    std::index_sequence<Is...>) {
-    auto dispatch = [&](auto& fun) {
+    [[maybe_unused]] auto dispatch = [&](auto& fun) {
       using fun_type = std::decay_t<decltype(fun)>;
       using trait = get_callable_trait_t<fun_type>;
       auto arg_types = to_type_id_list<typename trait::decayed_arg_types>();

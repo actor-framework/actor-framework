@@ -19,4 +19,5 @@ struct type_name_t : annotation {
 [[deprecated]] type_name_t constexpr type_name(const char* cstr) {
   return {cstr};
 }
+
 } // namespace caf::meta

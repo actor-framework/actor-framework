@@ -17,7 +17,7 @@ using namespace std::string_literals;
 namespace {
 
 using typed_adder_actor
-  = typed_actor<reacts_to<add_atom, int>, replies_to<get_atom>::with<int>>;
+  = typed_actor<result<void>(add_atom, int), result<int>(get_atom)>;
 
 struct counter {
   int value = 0;
@@ -49,9 +49,9 @@ typed_adder(typed_adder_actor::stateful_pointer<counter> self) {
   };
 }
 
-class typed_adder_class : public typed_adder_actor::stateful_base<counter> {
+class typed_adder_class : public typed_adder_actor::stateful_impl<counter> {
 public:
-  using super = typed_adder_actor::stateful_base<counter>;
+  using super = typed_adder_actor::stateful_impl<counter>;
 
   typed_adder_class(actor_config& cfg) : super(cfg) {
     // nop
@@ -185,7 +185,7 @@ CAF_TEST(typed actors can use typed_actor_pointer as self pointer) {
                                  [=](get_atom) { return value; });
     }
   };
-  using actor_type = typed_adder_actor::stateful_base<state_type>;
+  using actor_type = typed_adder_actor::stateful_impl<state_type>;
   auto testee = sys.spawn<actor_type>(10);
   auto& state = deref<actor_type>(testee).state;
   CAF_CHECK(state.self == &deref<actor_type>(testee));

@@ -8,7 +8,9 @@
 
 namespace caf {
 
-class CAF_CORE_EXPORT [[deprecated]] memory_managed {
+class [[deprecated]] memory_managed;
+
+class CAF_CORE_EXPORT memory_managed {
 public:
   virtual void request_deletion(bool decremented_rc) const noexcept;
 
