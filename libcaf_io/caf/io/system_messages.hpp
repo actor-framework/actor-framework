@@ -15,8 +15,6 @@
 #include "caf/io/datagram_handle.hpp"
 #include "caf/io/handle.hpp"
 #include "caf/io/network/receive_buffer.hpp"
-#include "caf/meta/hex_formatted.hpp"
-#include "caf/meta/type_name.hpp"
 
 namespace caf::io {
 

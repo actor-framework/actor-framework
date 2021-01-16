@@ -14,8 +14,7 @@ struct hex_formatted_t : annotation {
   }
 };
 
-/// Advises the inspector to format the following data field in hex format.
-constexpr hex_formatted_t hex_formatted() {
+[[deprecated]] constexpr hex_formatted_t hex_formatted() {
   return {};
 }
 

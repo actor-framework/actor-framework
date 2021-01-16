@@ -16,7 +16,6 @@
 #include "caf/abstract_channel.hpp"
 #include "caf/attachable.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/disposer.hpp"
 #include "caf/detail/functor_attachable.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/execution_unit.hpp"

@@ -14,7 +14,6 @@
 #include "caf/error.hpp"
 #include "caf/inspector_access.hpp"
 #include "caf/message_priority.hpp"
-#include "caf/meta/type_name.hpp"
 
 namespace caf {
 

@@ -10,8 +10,6 @@
 #include "caf/detail/io_export.hpp"
 #include "caf/error.hpp"
 #include "caf/io/basp/message_type.hpp"
-#include "caf/meta/omittable.hpp"
-#include "caf/meta/type_name.hpp"
 #include "caf/node_id.hpp"
 
 namespace caf::io::basp {

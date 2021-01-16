@@ -7,10 +7,7 @@
 #include <functional>
 
 #include "caf/error.hpp"
-
 #include "caf/io/handle.hpp"
-
-#include "caf/meta/type_name.hpp"
 
 namespace caf::io {
 

@@ -16,8 +16,7 @@ struct type_name_t : annotation {
   const char* value;
 };
 
-/// Returns a type name annotation.
-type_name_t constexpr type_name(const char* cstr) {
+[[deprecated]] type_name_t constexpr type_name(const char* cstr) {
   return {cstr};
 }
 } // namespace caf::meta

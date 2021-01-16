@@ -15,7 +15,6 @@
 #include "caf/downstream_msg.hpp"
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
-#include "caf/meta/type_name.hpp"
 #include "caf/stream_aborter.hpp"
 #include "caf/stream_slot.hpp"
 #include "caf/system_messages.hpp"

@@ -7,7 +7,6 @@
 #include <type_traits>
 
 #include "caf/fwd.hpp"
-#include "caf/meta/type_name.hpp"
 
 namespace caf::intrusive {
 

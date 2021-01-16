@@ -12,7 +12,6 @@
 #include "caf/config.hpp"
 #include "caf/detail/gcd.hpp"
 #include "caf/init_global_meta_objects.hpp"
-#include "caf/meta/annotation.hpp"
 #include "caf/test/unit_test.hpp"
 
 CAF_PUSH_WARNINGS

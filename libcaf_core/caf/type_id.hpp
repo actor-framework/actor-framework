@@ -14,7 +14,6 @@
 #include "caf/detail/pp.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/fwd.hpp"
-#include "caf/meta/type_name.hpp"
 #include "caf/string_view.hpp"
 #include "caf/timespan.hpp"
 #include "caf/timestamp.hpp"
