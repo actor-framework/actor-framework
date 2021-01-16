@@ -16,15 +16,16 @@ namespace caf {
 
 namespace {
 
-bool requires_response(const strong_actor_ptr& source,
-                       const mailbox_element::forwarding_stack& stages,
-                       message_id mid) {
-  return !mid.is_response() && !mid.is_answered()
-         && (source || !stages.empty());
+bool requires_response(message_id mid) {
+  return !mid.is_response() && !mid.is_answered();
 }
 
 bool requires_response(const mailbox_element& src) {
-  return requires_response(src.sender, src.stages, src.mid);
+  return requires_response(src.mid);
+}
+
+bool has_response_receiver(const mailbox_element& src) {
+  return src.sender || !src.stages.empty();
 }
 
 } // namespace
@@ -37,7 +38,7 @@ response_promise::response_promise(local_actor* self, strong_actor_ptr source,
   // Form an invalid request promise when initialized from a response ID, since
   // we always drop messages in this case. Also don't create promises for
   // anonymous messages since there's nowhere to send the message to anyway.
-  if (requires_response(source, stages, mid)) {
+  if (requires_response(mid)) {
     state_ = make_counted<state>();
     state_->self = self;
     state_->source.swap(source);
@@ -118,7 +119,8 @@ void response_promise::deliver() {
 
 void response_promise::respond_to(local_actor* self, mailbox_element* request,
                                   message& response) {
-  if (request && requires_response(*request)) {
+  if (request && requires_response(*request)
+      && has_response_receiver(*request)) {
     state tmp;
     tmp.self = self;
     tmp.source.swap(request->sender);
@@ -131,7 +133,8 @@ void response_promise::respond_to(local_actor* self, mailbox_element* request,
 
 void response_promise::respond_to(local_actor* self, mailbox_element* request,
                                   error& response) {
-  if (request && requires_response(*request)) {
+  if (request && requires_response(*request)
+      && has_response_receiver(*request)) {
     state tmp;
     tmp.self = self;
     tmp.source.swap(request->sender);
@@ -159,17 +162,14 @@ void response_promise::state::deliver_impl(message msg) {
   CAF_LOG_TRACE(CAF_ARG(msg));
   if (msg.empty() && id.is_async()) {
     CAF_LOG_DEBUG("drop response: empty response to asynchronous input");
-  } else {
-    if (stages.empty()) {
-      detail::profiled_send(self, self->ctrl(), source, id.response_id(),
-                            forwarding_stack{}, self->context(),
-                            std::move(msg));
-    } else {
-      auto next = std::move(stages.back());
-      stages.pop_back();
-      detail::profiled_send(self, std::move(source), next, id,
-                            std::move(stages), self->context(), std::move(msg));
-    }
+  } else if (!stages.empty()) {
+    auto next = std::move(stages.back());
+    stages.pop_back();
+    detail::profiled_send(self, std::move(source), next, id, std::move(stages),
+                          self->context(), std::move(msg));
+  } else if (source != nullptr) {
+    detail::profiled_send(self, self->ctrl(), source, id.response_id(),
+                          forwarding_stack{}, self->context(), std::move(msg));
   }
   cancel();
 }

@@ -152,8 +152,10 @@ CAF_TEST(file input overrides defaults but CLI args always win) {
 
 // Checks whether both a synced variable and the corresponding entry in
 // content(cfg) are equal to `value`.
-#define CHECK_SYNCED(var, value)                                               \
+#define CHECK_SYNCED(var, ...)                                                 \
   do {                                                                         \
+    using ref_value_type = std::decay_t<decltype(var)>;                        \
+    ref_value_type value{__VA_ARGS__};                                         \
     CAF_CHECK_EQUAL(var, value);                                               \
     if (auto maybe_val = get_as<decltype(var)>(cfg, #var)) {                   \
       CAF_CHECK_EQUAL(*maybe_val, value);                                      \
@@ -206,14 +208,12 @@ CAF_TEST(integers and integer containers options) {
   CHECK_SYNCED(some_int, 42);
   CHECK_SYNCED(some_other_int, 23);
   CHECK_TEXT_ONLY(int, yet_another_int, 123);
-  CHECK_SYNCED(some_int_list, int_list({1, 2, 3}));
-  CHECK_SYNCED(some_int_list_list, int_list_list({{1, 2, 3}, {4, 5, 6}}));
-  CHECK_SYNCED(some_int_map, int_map({{{"a", 1}, {"b", 2}, {"c", 3}}}));
-  CHECK_SYNCED(some_int_list_map,
-               int_list_map({{{"a", {1, 2, 3}}, {"b", {4, 5, 6}}}}));
-  CHECK_SYNCED(some_int_map_list,
-               int_map_list({{{"a", 1}, {"b", 2}, {"c", 3}},
-                             {{"d", 4}, {"e", 5}, {"f", 6}}}));
+  CHECK_SYNCED(some_int_list, 1, 2, 3);
+  CHECK_SYNCED(some_int_list_list, {1, 2, 3}, {4, 5, 6});
+  CHECK_SYNCED(some_int_map, {{"a", 1}, {"b", 2}, {"c", 3}});
+  CHECK_SYNCED(some_int_list_map, {{"a", {1, 2, 3}}, {"b", {4, 5, 6}}});
+  CHECK_SYNCED(some_int_map_list, {{"a", 1}, {"b", 2}, {"c", 3}},
+               {{"d", 4}, {"e", 5}, {"f", 6}});
 }
 
 CAF_TEST(basic and basic containers options) {
@@ -279,22 +279,20 @@ CAF_TEST(basic and basic containers options) {
   CHECK_SYNCED(some_uri, "foo:bar"_u);
   CHECK_SYNCED(some_string, "string"s);
   CAF_MESSAGE("check list types");
-  CHECK_SYNCED(some_int_list, int_list({1, 2, 3}));
-  CHECK_SYNCED(some_bool_list, bool_list({false, true}));
-  CHECK_SYNCED(some_double_list, double_list({1., 2., 3.}));
-  CHECK_SYNCED(some_timespan_list, timespan_list({123_ms, 234_ms, 345_ms}));
-  CHECK_SYNCED(some_uri_list, uri_list({"foo:a"_u, "foo:b"_u, "foo:c"_u}));
-  CHECK_SYNCED(some_string_list, string_list({"a", "b", "c"}));
+  CHECK_SYNCED(some_int_list, 1, 2, 3);
+  CHECK_SYNCED(some_bool_list, false, true);
+  CHECK_SYNCED(some_double_list, 1., 2., 3.);
+  CHECK_SYNCED(some_timespan_list, 123_ms, 234_ms, 345_ms);
+  CHECK_SYNCED(some_uri_list, "foo:a"_u, "foo:b"_u, "foo:c"_u);
+  CHECK_SYNCED(some_string_list, "a", "b", "c");
   CAF_MESSAGE("check dictionary types");
-  CHECK_SYNCED(some_int_map, int_map({{"a", 1}, {"b", 2}, {"c", 3}}));
-  CHECK_SYNCED(some_bool_map, bool_map({{"a", true}, {"b", false}}));
-  CHECK_SYNCED(some_double_map, double_map({{"a", 1.}, {"b", 2.}, {"c", 3.}}));
-  CHECK_SYNCED(some_timespan_map,
-               timespan_map({{"a", 123_ms}, {"b", 234_ms}, {"c", 345_ms}}));
-  CHECK_SYNCED(some_uri_map,
-               uri_map({{"a", "foo:a"_u}, {"b", "foo:b"_u}, {"c", "foo:c"_u}}));
-  CHECK_SYNCED(some_string_map,
-               string_map({{"a", "1"}, {"b", "2"}, {"c", "3"}}));
+  CHECK_SYNCED(some_int_map, {"a", 1}, {"b", 2}, {"c", 3});
+  CHECK_SYNCED(some_bool_map, {"a", true}, {"b", false});
+  CHECK_SYNCED(some_double_map, {"a", 1.}, {"b", 2.}, {"c", 3.});
+  CHECK_SYNCED(some_timespan_map, {"a", 123_ms}, {"b", 234_ms}, {"c", 345_ms});
+  CHECK_SYNCED(some_uri_map, {"a", "foo:a"_u}, {"b", "foo:b"_u},
+               {"c", "foo:c"_u});
+  CHECK_SYNCED(some_string_map, {"a", "1"}, {"b", "2"}, {"c", "3"});
 }
 
 SCENARIO("config files allow both nested and dot-separated values") {

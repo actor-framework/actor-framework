@@ -88,7 +88,7 @@ public:
   template <class... Us>
   std::enable_if_t<(std::is_constructible<Ts, Us>::value && ...)>
   deliver(Us... xs) {
-    promise_.deliver(make_message(Ts{std::forward<Us>(xs)}...));
+    promise_.deliver(Ts{std::forward<Us>(xs)}...);
   }
 
   /// Satisfies the promise by sending an empty response message.

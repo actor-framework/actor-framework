@@ -20,17 +20,17 @@ public:
 
   behavior make_behavior() override {
     return {
-      [=](delete_atom) { quit(exit_reason::user_shutdown); },
+      [=](delete_atom) {
+        CAF_MESSAGE("testee received delete");
+        quit(exit_reason::user_shutdown);
+      },
     };
   }
 };
 
 class spawner : public event_based_actor {
 public:
-  spawner(actor_config& cfg)
-    : event_based_actor(cfg),
-      downs_(0),
-      testee_(spawn<testee, monitored>(this)) {
+  spawner(actor_config& cfg) : event_based_actor(cfg), downs_(0) {
     set_down_handler([=](down_msg& msg) {
       CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
       CAF_CHECK_EQUAL(msg.source, testee_.address());
@@ -40,6 +40,7 @@ public:
   }
 
   behavior make_behavior() override {
+    testee_ = spawn<testee, monitored>(this);
     return {
       [=](ok_atom, const error& reason) {
         CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
@@ -47,12 +48,15 @@ public:
           quit(reason);
         }
       },
-      [=](delete_atom x) { return delegate(testee_, x); },
+      [=](delete_atom x) {
+        CAF_MESSAGE("spawner received delete");
+        return delegate(testee_, x);
+      },
     };
   }
 
   void on_exit() override {
-    destroy(testee_);
+    testee_ = nullptr;
   }
 
 private:
@@ -62,8 +66,11 @@ private:
 
 } // namespace
 
+BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
+
 CAF_TEST(constructor_attach) {
-  actor_system_config cfg;
-  actor_system system{cfg};
-  anon_send(system.spawn<spawner>(), delete_atom_v);
+  anon_send(sys.spawn<spawner>(), delete_atom_v);
+  run();
 }
+
+END_FIXTURE_SCOPE()
