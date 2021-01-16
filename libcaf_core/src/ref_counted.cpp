@@ -24,13 +24,8 @@ ref_counted& ref_counted::operator=(const ref_counted&) {
 }
 
 void ref_counted::deref() const noexcept {
-  if (unique()) {
-    request_deletion(false);
-    return;
-  }
-  if (rc_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-    request_deletion(true);
-  }
+  if (unique() || rc_.fetch_sub(1, std::memory_order_acq_rel) == 1)
+    delete this;
 }
 
 } // namespace caf

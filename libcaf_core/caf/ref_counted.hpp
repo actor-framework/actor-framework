@@ -8,7 +8,6 @@
 #include <cstddef>
 
 #include "caf/detail/core_export.hpp"
-#include "caf/memory_managed.hpp"
 
 namespace caf {
 
@@ -16,9 +15,9 @@ namespace caf {
 /// Serves the requirements of {@link intrusive_ptr}.
 /// @note *All* instances of `ref_counted` start with a reference count of 1.
 /// @relates intrusive_ptr
-class CAF_CORE_EXPORT ref_counted : public memory_managed {
+class CAF_CORE_EXPORT ref_counted {
 public:
-  ~ref_counted() override;
+  virtual ~ref_counted();
 
   ref_counted();
   ref_counted(const ref_counted&);

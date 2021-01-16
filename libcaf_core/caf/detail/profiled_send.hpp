@@ -35,7 +35,7 @@ void profiled_send(Self* self, SelfHandle&& src, const Handle& dst,
 template <class Self, class SelfHandle, class Handle, class... Ts>
 void profiled_send(Self* self, SelfHandle&& src, const Handle& dst,
                    actor_clock& clock, actor_clock::time_point timeout,
-                   message_id msg_id, Ts&&... xs) {
+                   [[maybe_unused]] message_id msg_id, Ts&&... xs) {
   if (dst) {
     if constexpr (std::is_same<Handle, group>::value) {
       clock.schedule_message(timeout, dst, std::forward<SelfHandle>(src),

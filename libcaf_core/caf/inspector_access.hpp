@@ -61,8 +61,7 @@ template <class T, class Inspector, class Obj>
 class has_static_apply {
 private:
   template <class U>
-  static auto sfinae(Inspector* f, Obj* x)
-    -> decltype(U::apply(*f, *x), std::true_type());
+  static auto sfinae(Inspector* f, Obj* x) -> decltype(U::apply(*f, *x));
 
   template <class U>
   static auto sfinae(...) -> std::false_type;
@@ -70,7 +69,8 @@ private:
   using sfinae_type = decltype(sfinae<T>(nullptr, nullptr));
 
 public:
-  static constexpr bool value = sfinae_type::value;
+  static constexpr bool value
+    = !std::is_same<sfinae_type, std::false_type>::value;
 };
 
 template <class T, class Inspector, class Obj>

@@ -8,7 +8,6 @@
 #include <string>
 
 #include "caf/detail/io_export.hpp"
-#include "caf/meta/type_name.hpp"
 
 namespace caf::io::network {
 

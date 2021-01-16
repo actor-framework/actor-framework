@@ -8,7 +8,6 @@
 #include <memory>
 
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/disposer.hpp"
 #include "caf/detail/shared_spinlock.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"

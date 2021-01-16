@@ -15,7 +15,6 @@
 #include "caf/detail/token_based_credit_controller.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/logger.hpp"
-#include "caf/meta/type_name.hpp"
 #include "caf/settings.hpp"
 #include "caf/stream_aborter.hpp"
 #include "caf/stream_priority.hpp"
@@ -180,9 +179,12 @@ private:
 
 /// @relates inbound_path
 template <class Inspector>
-typename Inspector::return_type inspect(Inspector& f, inbound_path& x) {
-  return f(meta::type_name("inbound_path"), x.hdl, x.slots, x.prio,
-           x.last_acked_batch_id, x.last_batch_id, x.assigned_credit);
+bool inspect(Inspector& f, inbound_path& x) {
+  return f.object(x).fields(
+    f.field("hdl", x.hdl), f.field("slots", x.slots), f.field("prio", x.prio),
+    f.field("last_acked_batch_id", x.last_acked_batch_id),
+    f.field("last_batch_id", x.last_batch_id),
+    f.field("assigned_credit", x.assigned_credit));
 }
 
 } // namespace caf

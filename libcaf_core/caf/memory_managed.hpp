@@ -8,18 +8,10 @@
 
 namespace caf {
 
-/// This base enables derived classes to enforce a different
-/// allocation strategy than new/delete by providing a virtual
-/// protected `request_deletion()` function and non-public destructor.
+class [[deprecated]] memory_managed;
+
 class CAF_CORE_EXPORT memory_managed {
 public:
-  /// Default implementations calls `delete this, but can
-  /// be overridden in case deletion depends on some condition or
-  /// the class doesn't use default new/delete.
-  /// @param decremented_rc Indicates whether the caller did reduce the
-  ///                       reference of this object before calling this member
-  ///                       function. This information is important when
-  ///                       implementing a type with support for weak pointers.
   virtual void request_deletion(bool decremented_rc) const noexcept;
 
 protected:

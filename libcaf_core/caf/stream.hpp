@@ -5,7 +5,6 @@
 #pragma once
 
 #include "caf/fwd.hpp"
-#include "caf/meta/type_name.hpp"
 #include "caf/type_id.hpp"
 
 namespace caf {

@@ -14,9 +14,7 @@ struct omittable_t : annotation {
   }
 };
 
-/// Allows an inspector to omit the following data field
-/// unconditionally when producing human-friendly output.
-constexpr omittable_t omittable() {
+[[deprecated]] constexpr omittable_t omittable() {
   return {};
 }
 

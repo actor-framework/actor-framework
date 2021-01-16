@@ -6,7 +6,6 @@
 
 #include "caf/abstract_actor.hpp"
 #include "caf/actor_system.hpp"
-#include "caf/detail/disposer.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/message.hpp"
 #include "caf/proxy_registry.hpp"

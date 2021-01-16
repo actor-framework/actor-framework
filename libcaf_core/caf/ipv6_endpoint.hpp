@@ -11,7 +11,6 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/ipv6_address.hpp"
-#include "caf/meta/type_name.hpp"
 
 namespace caf {
 

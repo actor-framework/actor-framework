@@ -13,8 +13,6 @@
 #include "caf/intrusive/singly_linked.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
-#include "caf/meta/omittable_if_empty.hpp"
-#include "caf/meta/type_name.hpp"
 #include "caf/tracing_data.hpp"
 
 namespace caf {

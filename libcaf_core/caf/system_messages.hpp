@@ -12,7 +12,6 @@
 #include "caf/deep_to_string.hpp"
 #include "caf/fwd.hpp"
 #include "caf/group.hpp"
-#include "caf/meta/type_name.hpp"
 #include "caf/stream_slot.hpp"
 
 namespace caf {

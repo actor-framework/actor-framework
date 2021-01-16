@@ -15,8 +15,6 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/fwd.hpp"
-#include "caf/meta/annotation.hpp"
-#include "caf/meta/save_callback.hpp"
 #include "caf/save_inspector_base.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"

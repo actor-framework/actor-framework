@@ -280,9 +280,9 @@ types shown below to grant access to derived types.
 +------------------------+---------------------------------------------------------------+
 | ``pointer``            | A pointer of type ``base*``.                                  |
 +------------------------+---------------------------------------------------------------+
-| ``stateful_base<T>``   | See stateful-actor_.                                          |
+| ``stateful_impl<T>``   | See stateful-actor_.                                          |
 +------------------------+---------------------------------------------------------------+
-| ``stateful_pointer<T>``| A pointer of type ``stateful_base<T>*``.                      |
+| ``stateful_pointer<T>``| A pointer of type ``stateful_impl<T>*``.                      |
 +------------------------+---------------------------------------------------------------+
 | ``extend<Ts...>``      | Extend this typed actor with ``Ts...``.                       |
 +------------------------+---------------------------------------------------------------+

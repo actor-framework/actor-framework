@@ -66,7 +66,7 @@ constexpr size_t max_value = static_cast<size_t>(std::numeric_limits<T>::max());
 
 bool binary_serializer::begin_field(string_view, span<const type_id_t> types,
                                     size_t index) {
-  CAF_ASSERT(index >= 0 && index < types.size());
+  CAF_ASSERT(index < types.size());
   if (types.size() < max_value<int8_t>) {
     return value(static_cast<int8_t>(index));
   } else if (types.size() < max_value<int16_t>) {
@@ -91,7 +91,7 @@ T compress_index(bool is_present, size_t value) {
 
 bool binary_serializer::begin_field(string_view, bool is_present,
                                     span<const type_id_t> types, size_t index) {
-  CAF_ASSERT(!is_present || (index >= 0 && index < types.size()));
+  CAF_ASSERT(!is_present || index < types.size());
   if (types.size() < max_value<int8_t>) {
     return value(compress_index<int8_t>(is_present, index));
   } else if (types.size() < max_value<int16_t>) {

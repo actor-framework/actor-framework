@@ -14,8 +14,7 @@ struct omittable_if_empty_t : annotation {
   }
 };
 
-/// Allows an inspector to omit the following data field if it is empty.
-constexpr omittable_if_empty_t omittable_if_empty() {
+[[deprecated]] constexpr omittable_if_empty_t omittable_if_empty() {
   return {};
 }
 
