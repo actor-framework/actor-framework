@@ -8,7 +8,7 @@
 #include "caf/span.hpp"
 #include "caf/string_view.hpp"
 #include "caf/tag/stream_oriented.hpp"
-#include "caf/test/dsl.hpp"
+#include "caf/test/bdd_dsl.hpp"
 
 template <class UpperLayer>
 class mock_stream_transport {
@@ -16,6 +16,14 @@ public:
   // -- member types -----------------------------------------------------------
 
   using output_tag = caf::tag::stream_oriented;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  template <class... Ts>
+  explicit mock_stream_transport(Ts&&... xs)
+    : upper_layer(std::forward<Ts>(xs)...) {
+    // nop
+  }
 
   // -- interface for the upper layer ------------------------------------------
 
