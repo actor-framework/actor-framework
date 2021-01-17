@@ -21,6 +21,44 @@ deserializer::~deserializer() {
   // nop
 }
 
+bool deserializer::fetch_next_object_name(string_view& type_name) {
+  auto t = type_id_t{};
+  if (fetch_next_object_type(t)) {
+    type_name = query_type_name(t);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool deserializer::next_object_name_matches(string_view type_name) {
+  string_view found;
+  if (fetch_next_object_name(found)) {
+    return type_name == found;
+  } else {
+    return false;
+  }
+}
+
+bool deserializer::assert_next_object_name(string_view type_name) {
+  string_view found;
+  if (fetch_next_object_name(found)) {
+    if (type_name == found) {
+      return true;
+    } else {
+      std::string str = "required type ";
+      str.insert(str.end(), type_name.begin(), type_name.end());
+      str += ", got ";
+      str.insert(str.end(), found.begin(), found.end());
+      emplace_error(sec::type_clash, __func__, std::move(str));
+      return false;
+    }
+  } else {
+    emplace_error(sec::runtime_error, __func__, "no type name available");
+    return false;
+  }
+}
+
 bool deserializer::begin_key_value_pair() {
   return begin_tuple(2);
 }

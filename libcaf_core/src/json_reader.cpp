@@ -120,11 +120,6 @@ json_reader::~json_reader() {
 
 // -- modifiers --------------------------------------------------------------
 
-void json_reader::reset() {
-  buf_.reclaim();
-  st_ = nullptr;
-}
-
 bool json_reader::load(string_view json_text) {
   reset();
   string_parser_state ps{json_text.begin(), json_text.end()};
@@ -152,25 +147,40 @@ void json_reader::revert() {
   }
 }
 
+void json_reader::reset() {
+  buf_.reclaim();
+  st_ = nullptr;
+  err_.reset();
+}
+
 // -- interface functions ------------------------------------------------------
 
 bool json_reader::fetch_next_object_type(type_id_t& type) {
+  string_view type_name;
+  if (fetch_next_object_name(type_name)) {
+    if (auto id = query_type_id(type_name); id != invalid_type_id) {
+      type = id;
+      return true;
+    } else {
+      std::string what = "no type ID available for @type: ";
+      what.insert(what.end(), type_name.begin(), type_name.end());
+      emplace_error(sec::runtime_error, class_name, __func__, std::move(what));
+      return false;
+    }
+  } else {
+    return false;
+  }
+}
+
+bool json_reader::fetch_next_object_name(string_view& type_name) {
   FN_DECL;
-  return consume<false>(fn, [this, &type](const detail::json::value& val) {
+  return consume<false>(fn, [this, &type_name](const detail::json::value& val) {
     if (val.data.index() == detail::json::value::object_index) {
       auto& obj = get<detail::json::object>(val.data);
       if (auto mem_ptr = find_member(&obj, "@type")) {
         if (mem_ptr->val->data.index() == detail::json::value::string_index) {
-          auto str = std::get<string_view>(mem_ptr->val->data);
-          if (auto id = query_type_id(str); id != invalid_type_id) {
-            type = id;
-            return true;
-          } else {
-            std::string what = "found an unknown @type: ";
-            what.insert(what.end(), str.begin(), str.end());
-            emplace_error(sec::runtime_error, class_name, fn, std::move(what));
-            return false;
-          }
+          type_name = std::get<string_view>(mem_ptr->val->data);
+          return true;
         } else {
           emplace_error(sec::runtime_error, class_name, fn,
                         "expected a string argument to @type");

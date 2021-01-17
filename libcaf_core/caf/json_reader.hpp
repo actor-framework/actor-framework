@@ -95,9 +95,6 @@ public:
 
   // -- modifiers --------------------------------------------------------------
 
-  /// Removes any loaded JSON data and reclaims all memory resources.
-  void reset();
-
   /// Parses @p json_text into an internal representation. After loading the
   /// JSON input, the reader is ready for attempting to deserialize inspectable
   /// objects.
@@ -112,9 +109,14 @@ public:
   ///       inspectable object.
   void revert();
 
+  /// Removes any loaded JSON data and reclaims memory resources.
+  void reset();
+
   // -- overrides --------------------------------------------------------------
 
   bool fetch_next_object_type(type_id_t& type) override;
+
+  bool fetch_next_object_name(string_view& type_name) override;
 
   bool begin_object(type_id_t type, string_view name) override;
 

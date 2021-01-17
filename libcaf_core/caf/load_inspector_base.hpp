@@ -29,6 +29,10 @@ public:
                                     type_name_or_anonymous<T>(), dptr()};
   }
 
+  constexpr auto virtual_object(string_view type_name) noexcept {
+    return super::object_t<Subtype>{invalid_type_id, type_name, dptr()};
+  }
+
   template <class T>
   bool list(T& xs) {
     xs.clear();
