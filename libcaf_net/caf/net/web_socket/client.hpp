@@ -49,11 +49,11 @@ public:
   error init(socket_manager* owner, LowerLayerPtr down, const settings& cfg) {
     CAF_ASSERT(handshake_ != nullptr);
     owner_ = owner;
-    if (!handshake_->has_valid_key())
-      return make_error(sec::runtime_error, "handshake data lacks a valid key");
     if (!handshake_->has_mandatory_fields())
       return make_error(sec::runtime_error,
                         "handshake data lacks mandatory fields");
+    if (!handshake_->has_valid_key())
+      handshake_->randomize_key();
     cfg_ = cfg;
     down->begin_output();
     handshake_->write_http_1_request(down->output_buffer());

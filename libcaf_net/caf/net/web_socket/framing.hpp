@@ -97,8 +97,8 @@ public:
   }
 
   template <class LowerLayerPtr>
-  void end_binary_message() {
-    ship_frame(binary_buf_);
+  void end_binary_message(LowerLayerPtr down) {
+    ship_frame(down, binary_buf_);
   }
 
   template <class LowerLayerPtr>
