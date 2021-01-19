@@ -38,6 +38,20 @@ public:
 
   event_based_mtl& operator=(const event_based_mtl&) noexcept = default;
 
+  // -- properties -------------------------------------------------------------
+
+  auto self() {
+    return self_;
+  }
+
+  auto& adapter() {
+    return adapter_;
+  }
+
+  auto& reader() {
+    return *reader_;
+  }
+
   // -- messaging --------------------------------------------------------------
 
   /// Tries to get a message from the reader that matches any of the accepted
