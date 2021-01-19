@@ -1,0 +1,5 @@
+# LGTM file format: https://lgtm.com/help/lgtm/lgtm.yml-configuration-file
+
+# Disable noisy/false alerts.
+queries:
+  - exclude: cpp/use-of-goto

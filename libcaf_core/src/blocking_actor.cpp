@@ -108,8 +108,8 @@ void blocking_actor::launch(execution_unit*, bool, bool hide) {
         self->act();
         rsn = self->fail_state_;
       } catch (...) {
-        auto ptr = std::current_exception();
-        rsn = scheduled_actor::default_exception_handler(self, ptr);
+        auto eptr = std::current_exception();
+        rsn = scheduled_actor::default_exception_handler(self, eptr);
       }
       try {
         self->on_exit();

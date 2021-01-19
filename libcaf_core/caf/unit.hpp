@@ -18,6 +18,8 @@ struct unit_t : detail::comparable<unit_t> {
 
   constexpr unit_t(const unit_t&) noexcept = default;
 
+  constexpr unit_t& operator=(const unit_t&) noexcept = default;
+
   template <class T>
   explicit constexpr unit_t(T&&) noexcept {
     // nop
