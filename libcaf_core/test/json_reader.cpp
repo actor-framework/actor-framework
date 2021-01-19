@@ -36,7 +36,16 @@ struct fixture {
 
   template <class T, class... Ts>
   std::vector<T> ls(Ts... xs) {
-    return {std::move(xs)...};
+    std::vector<T> result;
+    (result.emplace_back(std::move(xs)), ...);
+    return result;
+  }
+
+  template <class T, class... Ts>
+  std::set<T> set(Ts... xs) {
+    std::set<T> result;
+    (result.emplace(std::move(xs)), ...);
+    return result;
   }
 
   template <class T>
@@ -50,17 +59,29 @@ struct fixture {
 };
 
 fixture::fixture() {
+  using i32_list = std::vector<int32_t>;
+  using str_list = std::vector<std::string>;
+  using str_set = std::set<std::string>;
   add_test_case(R"_(true)_", true);
   add_test_case(R"_(false)_", false);
   add_test_case(R"_([true, false])_", ls<bool>(true, false));
   add_test_case(R"_(42)_", int32_t{42});
   add_test_case(R"_([1, 2, 3])_", ls<int32_t>(1, 2, 3));
+  add_test_case(R"_([[1, 2], [3], []])_",
+                ls<i32_list>(ls<int32_t>(1, 2), ls<int32_t>(3), ls<int32_t>()));
   add_test_case(R"_(2.0)_", 2.0);
   add_test_case(R"_([2.0, 4.0, 8.0])_", ls<double>(2.0, 4.0, 8.0));
   add_test_case(R"_("hello \"world\"!")_", std::string{R"_(hello "world"!)_"});
   add_test_case(R"_(["hello", "world"])_", ls<std::string>("hello", "world"));
+  add_test_case(R"_(["hello", "world"])_", set<std::string>("hello", "world"));
   add_test_case(R"_({"a": 1, "b": 2})_", my_request(1, 2));
   add_test_case(R"_({"a": 1, "b": 2})_", dict<int>({{"a", 1}, {"b", 2}}));
+  add_test_case(R"_({"xs": ["x1", "x2"], "ys": ["y1", "y2"]})_",
+                dict<str_list>({{"xs", ls<std::string>("x1", "x2")},
+                                {"ys", ls<std::string>("y1", "y2")}}));
+  add_test_case(R"_({"xs": ["x1", "x2"], "ys": ["y1", "y2"]})_",
+                dict<str_set>({{"xs", set<std::string>("x1", "x2")},
+                               {"ys", set<std::string>("y1", "y2")}}));
   add_test_case(R"_([{"@type": "my_request", "a": 1, "b": 2}])_",
                 make_message(my_request(1, 2)));
 }

@@ -341,7 +341,10 @@ bool json_reader::end_sequence() {
   SCOPE(position::sequence);
   if (top<position::sequence>().at_end()) {
     pop();
-    return true;
+    // We called consume<false> at first, so we need to call it again with
+    // <true> for advancing the position now.
+    return consume<true>(__func__,
+                         [](const detail::json::value&) { return true; });
   } else {
     emplace_error(sec::runtime_error, class_name, __func__,
                   "failed to consume all elements from json::array");
