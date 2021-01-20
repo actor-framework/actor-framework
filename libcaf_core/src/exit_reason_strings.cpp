@@ -17,47 +17,47 @@ std::string to_string(exit_reason x) {
     default:
       return "???";
     case exit_reason::normal:
-      return "normal";
+      return "caf::exit_reason::normal";
     case exit_reason::unhandled_exception:
-      return "unhandled_exception";
+      return "caf::exit_reason::unhandled_exception";
     case exit_reason::unknown:
-      return "unknown";
+      return "caf::exit_reason::unknown";
     case exit_reason::out_of_workers:
-      return "out_of_workers";
+      return "caf::exit_reason::out_of_workers";
     case exit_reason::user_shutdown:
-      return "user_shutdown";
+      return "caf::exit_reason::user_shutdown";
     case exit_reason::kill:
-      return "kill";
+      return "caf::exit_reason::kill";
     case exit_reason::remote_link_unreachable:
-      return "remote_link_unreachable";
+      return "caf::exit_reason::remote_link_unreachable";
     case exit_reason::unreachable:
-      return "unreachable";
+      return "caf::exit_reason::unreachable";
   };
 }
 
 bool from_string(string_view in, exit_reason& out) {
-  if (in == "normal") {
+  if (in == "caf::exit_reason::normal") {
     out = exit_reason::normal;
     return true;
-  } else if (in == "unhandled_exception") {
+  } else if (in == "caf::exit_reason::unhandled_exception") {
     out = exit_reason::unhandled_exception;
     return true;
-  } else if (in == "unknown") {
+  } else if (in == "caf::exit_reason::unknown") {
     out = exit_reason::unknown;
     return true;
-  } else if (in == "out_of_workers") {
+  } else if (in == "caf::exit_reason::out_of_workers") {
     out = exit_reason::out_of_workers;
     return true;
-  } else if (in == "user_shutdown") {
+  } else if (in == "caf::exit_reason::user_shutdown") {
     out = exit_reason::user_shutdown;
     return true;
-  } else if (in == "kill") {
+  } else if (in == "caf::exit_reason::kill") {
     out = exit_reason::kill;
     return true;
-  } else if (in == "remote_link_unreachable") {
+  } else if (in == "caf::exit_reason::remote_link_unreachable") {
     out = exit_reason::remote_link_unreachable;
     return true;
-  } else if (in == "unreachable") {
+  } else if (in == "caf::exit_reason::unreachable") {
     out = exit_reason::unreachable;
     return true;
   } else {

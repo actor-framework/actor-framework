@@ -18,6 +18,16 @@ namespace {
 
 using string_list = std::vector<std::string>;
 
+std::string short_string(invoke_message_result result) {
+  auto str = to_string(result);
+  string_list components;
+  split(components, str, "::", false);
+  if (components.empty())
+    return str;
+  else
+    return std::move(components.back());
+}
+
 struct recorder : actor_profiler {
   void add_actor(const local_actor& self, const local_actor* parent) override {
     log.emplace_back("new: ");
@@ -47,7 +57,7 @@ struct recorder : actor_profiler {
     log.emplace_back(self.name());
     auto& str = log.back();
     str += " ";
-    str += to_string(result);
+    str += short_string(result);
     str += " the message";
   }
 

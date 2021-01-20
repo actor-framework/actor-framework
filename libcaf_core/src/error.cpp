@@ -64,15 +64,29 @@ int error::compare(uint8_t code, type_id_t category) const noexcept {
 // -- inspection support -----------------------------------------------------
 
 std::string to_string(const error& x) {
+  using const_void_ptr = const void*;
+  using const_meta_ptr = const detail::meta_object*;
   if (!x)
     return "none";
   std::string result;
+  auto append = [&result](const_void_ptr ptr,
+                          const_meta_ptr meta) -> const_void_ptr {
+    meta->stringify(result, ptr);
+    return static_cast<const byte*>(ptr) + meta->padded_size;
+  };
   auto code = x.code();
-  auto mobj = detail::global_meta_object(x.category());
-  mobj->stringify(result, &code);
-  auto ctx = x.context();
-  if (ctx)
-    result += to_string(ctx);
+  append(&code, detail::global_meta_object(x.category()));
+  if (auto& ctx = x.context()) {
+    result += '(';
+    auto ptr = static_cast<const_void_ptr>(ctx.cdata().storage());
+    auto types = ctx.types();
+    ptr = append(ptr, detail::global_meta_object(types[0]));
+    for (size_t index = 1; index < types.size(); ++index) {
+      result += ", ";
+      ptr = append(ptr, detail::global_meta_object(types[index]));
+    }
+    result += ')';
+  }
   return result;
 }
 

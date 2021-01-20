@@ -10,51 +10,49 @@ CAF_PUSH_DEPRECATED_WARNING
 
 #include <string>
 
-namespace caf {
-namespace io {
-namespace basp {
+namespace caf::io::basp {
 
 std::string to_string(message_type x) {
   switch(x) {
     default:
       return "???";
     case message_type::server_handshake:
-      return "server_handshake";
+      return "caf::io::basp::message_type::server_handshake";
     case message_type::client_handshake:
-      return "client_handshake";
+      return "caf::io::basp::message_type::client_handshake";
     case message_type::direct_message:
-      return "direct_message";
+      return "caf::io::basp::message_type::direct_message";
     case message_type::routed_message:
-      return "routed_message";
+      return "caf::io::basp::message_type::routed_message";
     case message_type::monitor_message:
-      return "monitor_message";
+      return "caf::io::basp::message_type::monitor_message";
     case message_type::down_message:
-      return "down_message";
+      return "caf::io::basp::message_type::down_message";
     case message_type::heartbeat:
-      return "heartbeat";
+      return "caf::io::basp::message_type::heartbeat";
   };
 }
 
 bool from_string(string_view in, message_type& out) {
-  if (in == "server_handshake") {
+  if (in == "caf::io::basp::message_type::server_handshake") {
     out = message_type::server_handshake;
     return true;
-  } else if (in == "client_handshake") {
+  } else if (in == "caf::io::basp::message_type::client_handshake") {
     out = message_type::client_handshake;
     return true;
-  } else if (in == "direct_message") {
+  } else if (in == "caf::io::basp::message_type::direct_message") {
     out = message_type::direct_message;
     return true;
-  } else if (in == "routed_message") {
+  } else if (in == "caf::io::basp::message_type::routed_message") {
     out = message_type::routed_message;
     return true;
-  } else if (in == "monitor_message") {
+  } else if (in == "caf::io::basp::message_type::monitor_message") {
     out = message_type::monitor_message;
     return true;
-  } else if (in == "down_message") {
+  } else if (in == "caf::io::basp::message_type::down_message") {
     out = message_type::down_message;
     return true;
-  } else if (in == "heartbeat") {
+  } else if (in == "caf::io::basp::message_type::heartbeat") {
     out = message_type::heartbeat;
     return true;
   } else {
@@ -80,8 +78,6 @@ bool from_integer(std::underlying_type_t<message_type> in,
   };
 }
 
-} // namespace basp
-} // namespace io
-} // namespace caf
+} // namespace caf::io::basp
 
 CAF_POP_WARNINGS

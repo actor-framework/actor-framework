@@ -17,17 +17,17 @@ std::string to_string(message_priority x) {
     default:
       return "???";
     case message_priority::high:
-      return "high";
+      return "caf::message_priority::high";
     case message_priority::normal:
-      return "normal";
+      return "caf::message_priority::normal";
   };
 }
 
 bool from_string(string_view in, message_priority& out) {
-  if (in == "high") {
+  if (in == "caf::message_priority::high") {
     out = message_priority::high;
     return true;
-  } else if (in == "normal") {
+  } else if (in == "caf::message_priority::normal") {
     out = message_priority::normal;
     return true;
   } else {
