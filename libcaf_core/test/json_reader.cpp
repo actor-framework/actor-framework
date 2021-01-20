@@ -58,6 +58,36 @@ struct fixture {
   std::vector<std::function<bool()>> test_cases;
 };
 
+struct point {
+  int x;
+  int y;
+};
+
+bool operator==(point a, point b) noexcept {
+  return std::tie(a.x, a.y) == std::tie(b.x, b.y);
+}
+
+template <class Inspector>
+bool inspect(Inspector& f, point& x) {
+  return f.object(x).fields(f.field("x", x.x), f.field("y", x.y));
+}
+
+struct rectangle {
+  point top_left;
+  point bottom_right;
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, rectangle& x) {
+  return f.object(x).fields(f.field("top-left", x.top_left),
+                            f.field("bottom-right", x.bottom_right));
+}
+
+bool operator==(const rectangle& x, const rectangle& y) noexcept {
+  return std::tie(x.top_left, x.bottom_right)
+         == std::tie(y.top_left, y.bottom_right);
+}
+
 fixture::fixture() {
   using i32_list = std::vector<int32_t>;
   using str_list = std::vector<std::string>;
@@ -84,6 +114,9 @@ fixture::fixture() {
                                {"ys", set<std::string>("y1", "y2")}}));
   add_test_case(R"_([{"@type": "my_request", "a": 1, "b": 2}])_",
                 make_message(my_request(1, 2)));
+  add_test_case(
+    R"_({"top-left":{"x":100,"y":200},"bottom-right":{"x":10,"y":20}})_",
+    rectangle{{100, 200}, {10, 20}});
 }
 
 } // namespace
