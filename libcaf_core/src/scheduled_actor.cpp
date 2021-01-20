@@ -129,10 +129,7 @@ scheduled_actor::scheduled_actor(actor_config& cfg)
 }
 
 scheduled_actor::~scheduled_actor() {
-  // signalize to the private thread object that it is
-  // unreachable and can be destroyed as well
-  if (private_thread_ != nullptr)
-    private_thread_->notify_self_destroyed();
+  // nop
 }
 
 // -- overridden functions of abstract_actor -----------------------------------
@@ -152,17 +149,13 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
   switch (mailbox().push_back(std::move(ptr))) {
     case intrusive::inbox_result::unblocked_reader: {
       CAF_LOG_ACCEPT_EVENT(true);
-      // add a reference count to this actor and re-schedule it
       intrusive_ptr_add_ref(ctrl());
-      if (getf(is_detached_flag)) {
-        CAF_ASSERT(private_thread_ != nullptr);
-        private_thread_->resume();
-      } else {
-        if (eu != nullptr)
-          eu->exec_later(this);
-        else
-          home_system().scheduler().enqueue(this);
-      }
+      if (private_thread_)
+        private_thread_->resume(this);
+      else if (eu != nullptr)
+        eu->exec_later(this);
+      else
+        home_system().scheduler().enqueue(this);
       break;
     }
     case intrusive::inbox_result::queue_closed: {
@@ -192,35 +185,31 @@ const char* scheduled_actor::name() const {
   return "user.scheduled-actor";
 }
 
-void scheduled_actor::launch(execution_unit* eu, bool lazy, bool hide) {
+void scheduled_actor::launch(execution_unit* ctx, bool lazy, bool hide) {
+  CAF_ASSERT(ctx != nullptr);
   CAF_PUSH_AID_FROM_PTR(this);
   CAF_LOG_TRACE(CAF_ARG(lazy) << CAF_ARG(hide));
   CAF_ASSERT(!getf(is_blocking_flag));
   if (!hide)
     register_at_system();
+  auto delay_first_scheduling = lazy && mailbox().try_block();
   if (getf(is_detached_flag)) {
-    private_thread_ = new detail::private_thread(this);
-    private_thread_->start();
-    return;
+    private_thread_ = ctx->system().acquire_private_thread();
+    if (!delay_first_scheduling) {
+      intrusive_ptr_add_ref(ctrl());
+      private_thread_->resume(this);
+    }
+  } else if (!delay_first_scheduling) {
+    intrusive_ptr_add_ref(ctrl());
+    ctx->exec_later(this);
   }
-  CAF_ASSERT(eu != nullptr);
-  // do not schedule immediately when spawned with `lazy_init`
-  // mailbox could be set to blocked
-  if (lazy && mailbox().try_block())
-    return;
-  // scheduler has a reference count to the actor as long as
-  // it is waiting to get scheduled
-  intrusive_ptr_add_ref(ctrl());
-  eu->exec_later(this);
 }
 
 bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
   CAF_LOG_TRACE(CAF_ARG(fail_state));
   // Shutdown hosting thread when running detached.
-  if (getf(is_detached_flag)) {
-    CAF_ASSERT(private_thread_ != nullptr);
-    private_thread_->shutdown();
-  }
+  if (private_thread_)
+    home_system().release_private_thread(private_thread_);
   // Clear state for open requests.
   awaited_responses_.clear();
   multiplexed_responses_.clear();

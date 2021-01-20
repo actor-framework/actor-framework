@@ -97,6 +97,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   messages.
 - `CAF_ADD_TYPE_ID` now works with types that live in namespaces that also exist
   as nested namespace in CAF such as `detail` or `io` (#1195).
+- Solved a race condition on detached actors that blocked ordinary shutdown of
+  actor systems in some cases (#1196).
 
 ## [0.18.0-rc.1] - 2020-09-09
 
