@@ -86,9 +86,10 @@ SCENARIO("private threads rerun their resumable when it returns resume_later") {
       THEN("t calls resume until f returns something other than resume_later") {
         using namespace std::literals::chrono_literals;
         sys.release_private_thread(t);
+        while (f.runs != 2u)
+          std::this_thread::sleep_for(1ms);
         while (sys.detached_actors() != 0)
           std::this_thread::sleep_for(1ms);
-        CHECK_EQ(f.runs, 2u);
         CHECK_EQ(f.refs_added, 0u);
         CHECK_EQ(f.refs_released, 1u);
       }
