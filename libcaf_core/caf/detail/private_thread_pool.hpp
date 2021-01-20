@@ -33,7 +33,8 @@ public:
   struct node {
     virtual ~node();
     node* next = nullptr;
-    // Returns false to signal to the thread pool that it should shut down.
+    // Called by the private thread pool to stop the node. Regular nodes should
+    // return true. Returning false signals the thread pool to shut down.
     virtual bool stop() = 0;
   };
 
