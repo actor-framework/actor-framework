@@ -42,6 +42,8 @@
 #include "caf/detail/stringification_inspector.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/event_based_actor.hpp"
+#include "caf/json_reader.hpp"
+#include "caf/json_writer.hpp"
 #include "caf/message.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/proxy_registry.hpp"
@@ -143,6 +145,10 @@ struct fixture : test_coordinator_fixture<> {
   message msg;
   message recursive;
 
+  json_writer jwriter;
+
+  json_reader jreader;
+
   template <class... Ts>
   byte_buffer serialize(const Ts&... xs) {
     byte_buffer buf;
@@ -161,12 +167,39 @@ struct fixture : test_coordinator_fixture<> {
       CAF_FAIL("deserialization failed: " << source.get_error());
   }
 
+  template <class... Ts>
+  std::string serialize_json(const Ts&... xs) {
+    jwriter.reset();
+    if (!(jwriter.apply(xs) && ...))
+      CAF_FAIL("JSON serialization failed: "
+               << jwriter.get_error()
+               << ", data: " << deep_to_string(std::forward_as_tuple(xs...)));
+    auto str = jwriter.str();
+    return std::string{str.begin(), str.end()};
+  }
+
+  template <class... Ts>
+  void deserialize_json(const std::string& str, Ts&... xs) {
+    if (!jreader.load(str))
+      CAF_FAIL("JSON loading failed: " << jreader.get_error()
+                                       << "\n     input: " << str);
+    if (!(jreader.apply(xs) && ...))
+      CAF_FAIL("JSON deserialization failed: " << jreader.get_error()
+                                               << "\n     input: " << str);
+  }
+
   // serializes `x` and then deserializes and returns the serialized value
   template <class T>
-  T roundtrip(T x) {
-    T result;
-    deserialize(serialize(x), result);
-    return result;
+  T roundtrip(T x, bool enable_json = true) {
+    auto r1 = T{};
+    deserialize(serialize(x), r1);
+    if (enable_json) {
+      auto r2 = T{};
+      deserialize_json(serialize_json(x), r2);
+      if (!CAF_CHECK_EQUAL(r1, r2))
+        CAF_MESSAGE("generated JSON: " << serialize_json(x));
+    }
+    return r1;
   }
 
   // converts `x` to a message, serialize it, then deserializes it, and
@@ -184,7 +217,7 @@ struct fixture : test_coordinator_fixture<> {
     return result.get_as<T>(0);
   }
 
-  fixture() {
+  fixture() : jwriter(sys), jreader(sys) {
     rs.str.assign(std::string(str.rbegin(), str.rend()));
     msg = make_message(i32, i64, ts, te, str, rs);
     config_value::dictionary dict;
@@ -217,12 +250,20 @@ struct is_message {
 
 } // namespace
 
-#define CHECK_RT(val) CAF_CHECK_EQUAL(val, roundtrip(val))
+#define CHECK_RT(val)                                                          \
+  do {                                                                         \
+    CAF_MESSAGE(#val);                                                         \
+    CAF_CHECK_EQUAL(val, roundtrip(val));                                      \
+  } while (false)
 
-#define CHECK_PRED_RT(pred, value) CAF_CHECK(pred(roundtrip(value)))
+#define CHECK_PRED_RT(pred, value)                                             \
+  do {                                                                         \
+    CAF_MESSAGE(#pred "(" #value ")");                                         \
+    CAF_CHECK(pred(roundtrip(value, false)));                                  \
+  } while (false)
 
 #define CHECK_SIGN_RT(value)                                                   \
-  CAF_CHECK_EQUAL(std::signbit(roundtrip(value)), std::signbit(value))
+  CAF_CHECK_EQUAL(std::signbit(roundtrip(value, false)), std::signbit(value))
 
 #define CHECK_MSG_RT(val) CAF_CHECK_EQUAL(val, msg_roundtrip(val))
 
@@ -328,7 +369,7 @@ CAF_TEST(messages) {
   deserialize(buf2, y);
   CAF_CHECK_EQUAL(to_string(msg), to_string(y));
   CAF_CHECK(is_message(y).equal(i32, i64, ts, te, str, rs));
-  CAF_CHECK_EQUAL(to_string(recursive), to_string(roundtrip(recursive)));
+  CAF_CHECK_EQUAL(to_string(recursive), to_string(roundtrip(recursive, false)));
 }
 
 CAF_TEST(multiple_messages) {
@@ -370,11 +411,11 @@ CAF_TEST(variant_with_tree_types) {
   CAF_MESSAGE("deserializing into a non-empty vector overrides any content");
   using test_variant = variant<int, double, std::string>;
   test_variant x{42};
-  CAF_CHECK_EQUAL(x, roundtrip(x));
+  CAF_CHECK_EQUAL(x, roundtrip(x, false));
   x = 12.34;
-  CAF_CHECK_EQUAL(x, roundtrip(x));
+  CAF_CHECK_EQUAL(x, roundtrip(x, false));
   x = std::string{"foobar"};
-  CAF_CHECK_EQUAL(x, roundtrip(x));
+  CAF_CHECK_EQUAL(x, roundtrip(x, false));
 }
 
 // -- our vector<bool> serialization packs into an uint64_t. Hence, the
@@ -456,10 +497,10 @@ CAF_TEST(serializers handle actor handles) {
       [](int i) { return i; },
     };
   });
-  CAF_CHECK_EQUAL(dummy, roundtrip(dummy));
+  CAF_CHECK_EQUAL(dummy, roundtrip(dummy, false));
   CAF_CHECK_EQUAL(dummy, msg_roundtrip(dummy));
   std::vector<strong_actor_ptr> wrapped{actor_cast<strong_actor_ptr>(dummy)};
-  CAF_CHECK_EQUAL(wrapped, roundtrip(wrapped));
+  CAF_CHECK_EQUAL(wrapped, roundtrip(wrapped, false));
   CAF_CHECK_EQUAL(wrapped, msg_roundtrip(wrapped));
   anon_send_exit(dummy, exit_reason::user_shutdown);
 }

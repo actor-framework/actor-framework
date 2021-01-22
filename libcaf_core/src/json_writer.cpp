@@ -11,6 +11,8 @@ namespace caf {
 
 namespace {
 
+static constexpr const char class_name[] = "caf::json_writer";
+
 constexpr bool can_morph(json_writer::type from, json_writer::type to) {
   return from == json_writer::type::element && to != json_writer::type::member;
 }
@@ -31,11 +33,10 @@ template <class T>
 bool json_writer::number(T x) {
   switch (top()) {
     case type::element:
-      unsafe_morph(type::number);
       detail::print(buf_, x);
+      pop();
       return true;
-    case type::member:
-      unsafe_morph(type::element);
+    case type::key:
       add('"');
       detail::print(buf_, x);
       add("\": ");
@@ -80,8 +81,12 @@ void json_writer::reset() {
 
 bool json_writer::begin_object(type_id_t, string_view name) {
   auto add_type_annotation = [this, name] {
+    CAF_ASSERT(top() == type::key);
     add(R"_("@type": )_");
+    pop();
+    CAF_ASSERT(top() == type::element);
     detail::print_escaped(buf_, name);
+    pop();
     return true;
   };
   return begin_associative_array(0) // Put opening paren, ...
@@ -96,9 +101,11 @@ bool json_writer::end_object() {
 
 bool json_writer::begin_field(string_view name) {
   if (begin_key_value_pair()) {
+    CAF_ASSERT(top() == type::key);
     detail::print_escaped(buf_, name);
     add(": ");
-    unsafe_morph(type::element);
+    pop();
+    CAF_ASSERT(top() == type::element);
     return true;
   } else {
     return false;
@@ -107,12 +114,15 @@ bool json_writer::begin_field(string_view name) {
 
 bool json_writer::begin_field(string_view name, bool is_present) {
   if (begin_key_value_pair()) {
+    CAF_ASSERT(top() == type::key);
     detail::print_escaped(buf_, name);
     add(": ");
-    if (is_present)
-      unsafe_morph(type::element);
-    else
+    pop();
+    CAF_ASSERT(top() == type::element);
+    if (!is_present) {
       add("null");
+      pop();
+    }
     return true;
   } else {
     return false;
@@ -129,7 +139,7 @@ bool json_writer::begin_field(string_view name, bool is_present,
 }
 
 bool json_writer::end_field() {
-  return pop_if_next(type::object);
+  return end_key_value_pair();
 }
 
 bool json_writer::begin_tuple(size_t size) {
@@ -142,14 +152,24 @@ bool json_writer::end_tuple() {
 
 bool json_writer::begin_key_value_pair() {
   sep();
-  return push_if(type::object, type::member);
+  auto t = top();
+  switch (t) {
+    case type::object:
+      push(type::member);
+      push(type::element);
+      push(type::key);
+      return true;
+    default: {
+      std::string str = "expected object, found ";
+      str += json_type_name(t);
+      emplace_error(sec::runtime_error, class_name, __func__, std::move(str));
+      return false;
+    }
+  }
 }
 
 bool json_writer::end_key_value_pair() {
-  // Note: can't check for `type::member` here, because it has been morphed to
-  // whatever the value type has been. But after popping the current type, there
-  // still has to be the `object` entry below.
-  return pop_if_next(type::object);
+  return pop_if(type::member);
 }
 
 bool json_writer::begin_sequence(size_t) {
@@ -184,18 +204,14 @@ bool json_writer::end_sequence() {
 bool json_writer::begin_associative_array(size_t) {
   switch (top()) {
     default:
-      emplace_error(sec::runtime_error,
+      emplace_error(sec::runtime_error, class_name, __func__,
                     "unexpected begin_object or begin_associative_array");
-      return false;
-    case type::member:
-      emplace_error(sec::runtime_error,
-                    "unimplemented: json_writer currently does not support "
-                    "complex types as dictionary keys");
       return false;
     case type::element:
       unsafe_morph(type::object);
       break;
     case type::array:
+      sep();
       push(type::object);
       break;
   }
@@ -210,8 +226,8 @@ bool json_writer::end_associative_array() {
     --indentation_level_;
     nl();
     add('}');
-    if (top() == type::array)
-      sep();
+    if (!stack_.empty())
+      stack_.back().filled = true;
     return true;
   } else {
     return false;
@@ -223,7 +239,30 @@ bool json_writer::value(byte x) {
 }
 
 bool json_writer::value(bool x) {
-  return number(x);
+  auto add_str = [this, x] {
+    if (x)
+      add("true");
+    else
+      add("false");
+  };
+  switch (top()) {
+    case type::element:
+      add_str();
+      pop();
+      return true;
+    case type::key:
+      add('"');
+      add_str();
+      add("\": ");
+      return true;
+    case type::array:
+      sep();
+      add_str();
+      return true;
+    default:
+      fail(type::boolean);
+      return false;
+  }
 }
 
 bool json_writer::value(int8_t x) {
@@ -273,13 +312,13 @@ bool json_writer::value(long double x) {
 bool json_writer::value(string_view x) {
   switch (top()) {
     case type::element:
-      unsafe_morph(type::string);
       detail::print_escaped(buf_, x);
+      pop();
       return true;
-    case type::member:
-      unsafe_morph(type::element);
+    case type::key:
       detail::print_escaped(buf_, x);
       add(": ");
+      pop();
       return true;
     case type::array:
       sep();
@@ -306,18 +345,19 @@ bool json_writer::value(const std::u32string&) {
 bool json_writer::value(span<const byte> x) {
   switch (top()) {
     case type::element:
-      unsafe_morph(type::string);
       add('"');
       detail::append_hex(buf_, reinterpret_cast<const void*>(x.data()),
                          x.size());
       add('"');
+      pop();
       return true;
-    case type::member:
+    case type::key:
       unsafe_morph(type::element);
       add('"');
       detail::append_hex(buf_, reinterpret_cast<const void*>(x.data()),
                          x.size());
       add("\": ");
+      pop();
       return true;
     case type::array:
       sep();
@@ -342,7 +382,7 @@ void json_writer::init() {
   buf_.reserve(1024);
   // Even heavily nested objects should fit into 32 levels of nesting.
   stack_.reserve(32);
-  // The concrete type of the output is yet unknown.
+  // Placeholder for what is to come.
   push();
 }
 
@@ -356,20 +396,6 @@ json_writer::type json_writer::top() {
 // Enters a new level of nesting.
 void json_writer::push(type t) {
   stack_.push_back({t, false});
-}
-
-bool json_writer::push_if(type expected, type t) {
-  if (!stack_.empty() && stack_.back() == expected) {
-    stack_.push_back({t, false});
-    return true;
-  } else {
-    std::string str = "push_if failed: expected = ";
-    str += json_type_name(expected);
-    str += ", found = ";
-    str += json_type_name(t);
-    emplace_error(sec::runtime_error, std::move(str));
-    return false;
-  }
 }
 
 // Backs up one level of nesting.
@@ -389,12 +415,12 @@ bool json_writer::pop_if(type t) {
     stack_.pop_back();
     return true;
   } else {
-    std::string str = "pop_if failed: expected = ";
+    std::string str = "pop_if failed: expected ";
     str += json_type_name(t);
     if (stack_.empty()) {
       str += ", found an empty stack";
     } else {
-      str += ", found = ";
+      str += ", found ";
       str += json_type_name(stack_.back().t);
     }
     emplace_error(sec::runtime_error, std::move(str));
@@ -403,17 +429,19 @@ bool json_writer::pop_if(type t) {
 }
 
 bool json_writer::pop_if_next(type t) {
-  if (stack_.size() > 1 && stack_[stack_.size() - 2] == t) {
+  if (stack_.size() > 1
+      && (stack_[stack_.size() - 2] == t
+          || can_morph(stack_[stack_.size() - 2].t, t))) {
     stack_.pop_back();
     return true;
   } else {
-    std::string str = "pop_if_next failed: expected = ";
+    std::string str = "pop_if_next failed: expected ";
     str += json_type_name(t);
     if (stack_.size() < 2) {
       str += ", found a stack of size ";
       detail::print(str, stack_.size());
     } else {
-      str += ", found = ";
+      str += ", found ";
       str += json_type_name(stack_[stack_.size() - 2].t);
     }
     emplace_error(sec::runtime_error, std::move(str));
@@ -469,7 +497,8 @@ void json_writer::nl() {
 }
 
 void json_writer::sep() {
-  CAF_ASSERT(top() == type::object || top() == type::array);
+  CAF_ASSERT(top() == type::element || top() == type::object
+             || top() == type::array);
   if (stack_.back().filled) {
     if (indentation_factor_ > 0) {
       add(",\n");

@@ -95,10 +95,18 @@ obj_consumer val_consumer::begin_object() {
 
 void read_value(string_parser_state& ps, val_consumer consumer);
 
-void read_json_null(string_parser_state& ps, val_consumer consumer) {
+template <class Consumer>
+void read_json_null_or_nan(string_parser_state& ps, Consumer consumer) {
+  enum { nil, is_null, is_nan };
+  auto res_type = nil;
   auto g = make_scope_guard([&] {
-    if (ps.code <= pec::trailing_character)
-      consumer.value(json::null_t{});
+    if (ps.code <= pec::trailing_character) {
+      CAF_ASSERT(res_type != nil);
+      if (res_type == is_null)
+        consumer.value(json::null_t{});
+      else
+        consumer.value(std::numeric_limits<double>::quiet_NaN());
+    }
   });
   // clang-format off
   start();
@@ -108,12 +116,16 @@ void read_json_null(string_parser_state& ps, val_consumer consumer) {
   }
   state(has_n) {
     transition(has_nu, 'u')
+    transition(has_na, 'a')
   }
   state(has_nu) {
     transition(has_nul, 'l')
   }
   state(has_nul) {
-    transition(done, 'l')
+    transition(done, 'l', res_type = is_null)
+  }
+  state(has_na) {
+    transition(done, 'n', res_type = is_nan)
   }
   term_state(done) {
     transition(init, " \t\n")
@@ -228,7 +240,7 @@ void read_value(string_parser_state& ps, val_consumer consumer) {
     transition(init, " \t\n")
     fsm_epsilon(read_json_string(ps, consumer), done, '"')
     fsm_epsilon(read_bool(ps, consumer), done, "ft")
-    fsm_epsilon(read_json_null(ps, consumer), done, "n")
+    fsm_epsilon(read_json_null_or_nan(ps, consumer), done, "n")
     fsm_epsilon(read_number(ps, consumer), done, "+-.0123456789")
     fsm_epsilon(read_json_object(ps, consumer.begin_object()), done, '{')
     fsm_epsilon(read_json_array(ps, consumer.begin_array()), done, '[')

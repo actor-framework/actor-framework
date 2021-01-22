@@ -24,7 +24,8 @@ public:
   enum class type : uint8_t {
     element, /// Can morph into any other type except `member`.
     object,  /// Contains any number of members.
-    member,  /// A single object member (key/value pair).
+    member,  /// A single key-value pair.
+    key,     /// The key of a field.
     array,   /// Contains any number of elements.
     string,  /// A character sequence (terminal type).
     number,  /// An integer or floating point (terminal type).
@@ -160,9 +161,6 @@ private:
 
   // Enters a new level of nesting.
   void push(type = type::element);
-
-  // Enters a new level of nesting if the current top is `expected`.
-  bool push_if(type expected, type = type::element);
 
   // Backs up one level of nesting.
   bool pop();

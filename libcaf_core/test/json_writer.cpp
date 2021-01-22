@@ -138,4 +138,37 @@ SCENARIO("the JSON writer converts simple structs to strings") {
   }
 }
 
+SCENARIO("the JSON writer converts nested structs to strings") {
+  GIVEN("a rectangle object") {
+    auto x = rectangle{{100, 200}, {10, 20}};
+    WHEN("converting it to JSON with indentation factor 0") {
+      THEN("the JSON output is a single line") {
+        std::string out
+          = R"({"@type": "rectangle", )"
+            R"("top-left": {"@type": "point", "x": 100, "y": 200}, )"
+            R"("bottom-right": {"@type": "point", "x": 10, "y": 20}})";
+        CHECK_EQ(to_json_string(x, 0), out);
+      }
+    }
+    WHEN("converting it to JSON with indentation factor 2") {
+      THEN("the JSON output uses multiple lines") {
+        std::string out = R"_({
+  "@type": "rectangle",
+  "top-left": {
+    "@type": "point",
+    "x": 100,
+    "y": 200
+  },
+  "bottom-right": {
+    "@type": "point",
+    "x": 10,
+    "y": 20
+  }
+})_";
+        CHECK_EQ(to_json_string(x, 2), out);
+      }
+    }
+  }
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()

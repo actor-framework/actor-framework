@@ -125,7 +125,7 @@ bool json_reader::load(string_view json_text) {
   string_parser_state ps{json_text.begin(), json_text.end()};
   root_ = detail::json::parse(ps, &buf_);
   if (ps.code != pec::success) {
-    err_ = make_error(ps);
+    set_error(make_error(ps));
     st_ = nullptr;
     return false;
   } else {
@@ -500,7 +500,7 @@ bool json_reader::value(uint64_t& x) {
 bool json_reader::value(float& x) {
   auto tmp = 0.0;
   if (value(tmp)) {
-    x = static_cast<float>(x);
+    x = static_cast<float>(tmp);
     return true;
   } else {
     return false;
@@ -524,7 +524,7 @@ bool json_reader::value(double& x) {
 bool json_reader::value(long double& x) {
   auto tmp = 0.0;
   if (value(tmp)) {
-    x = static_cast<long double>(x);
+    x = static_cast<long double>(tmp);
     return true;
   } else {
     return false;

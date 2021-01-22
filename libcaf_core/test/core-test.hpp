@@ -297,6 +297,45 @@ bool inspect(Inspector& f, dummy_enum& x) {
   return f.apply(get, set);
 }
 
+struct point {
+  int x;
+  int y;
+};
+
+[[maybe_unused]] constexpr bool operator==(point a, point b) noexcept {
+  return a.x == b.x && a.y == b.y;
+}
+
+[[maybe_unused]] constexpr bool operator!=(point a, point b) noexcept {
+  return !(a == b);
+}
+
+template <class Inspector>
+bool inspect(Inspector& f, point& x) {
+  return f.object(x).fields(f.field("x", x.x), f.field("y", x.y));
+}
+
+struct rectangle {
+  point top_left;
+  point bottom_right;
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, rectangle& x) {
+  return f.object(x).fields(f.field("top-left", x.top_left),
+                            f.field("bottom-right", x.bottom_right));
+}
+
+[[maybe_unused]] constexpr bool operator==(const rectangle& x,
+                                           const rectangle& y) noexcept {
+  return x.top_left == y.top_left && x.bottom_right == y.bottom_right;
+}
+
+[[maybe_unused]] constexpr bool operator!=(const rectangle& x,
+                                           const rectangle& y) noexcept {
+  return !(x == y);
+}
+
 // -- type IDs for for all unit test suites ------------------------------------
 
 #define ADD_TYPE_ID(type) CAF_ADD_TYPE_ID(core_test, type)
@@ -319,7 +358,9 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_test, caf::first_custom_type_id)
   ADD_TYPE_ID((int_actor))
   ADD_TYPE_ID((level))
   ADD_TYPE_ID((my_request))
+  ADD_TYPE_ID((point))
   ADD_TYPE_ID((raw_struct))
+  ADD_TYPE_ID((rectangle))
   ADD_TYPE_ID((s1))
   ADD_TYPE_ID((s2))
   ADD_TYPE_ID((s3))
