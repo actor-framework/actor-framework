@@ -22,6 +22,7 @@ template <class> class callback;
 template <class> class dictionary;
 template <class> class downstream;
 template <class> class expected;
+template <class> class inbound_stream_slot;
 template <class> class intrusive_cow_ptr;
 template <class> class intrusive_ptr;
 template <class> class optional;
@@ -64,6 +65,8 @@ template <class...> class typed_event_based_actor;
 template <class...> class typed_message_view;
 template <class...> class typed_response_promise;
 template <class...> class variant;
+
+template <class, class...> class outbound_stream_slot;
 
 // clang-format on
 
