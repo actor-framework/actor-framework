@@ -5,6 +5,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+## [0.18.0] - 2021-01-25
+
 ### Added
 
 - The enum `caf::sec` received an additional error code: `connection_closed`.
@@ -618,7 +620,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Setting the log level to `quiet` now properly suppresses any log output.
 - Configuring colored terminal output should now print colored output.
 
-[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.18.0-rc.1...master
+[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.18.0...master
+[0.18.0]: https://github.com/actor-framework/actor-framework/releases/0.18.0
 [0.18.0-rc.1]: https://github.com/actor-framework/actor-framework/releases/0.18.0-rc.1
 [0.17.7]: https://github.com/actor-framework/actor-framework/compare/0.17.6...release/0.17
 [0.17.6]: https://github.com/actor-framework/actor-framework/releases/0.17.6
