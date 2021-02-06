@@ -156,9 +156,7 @@ bool stringification_inspector::value(string_view str) {
   };
   if (always_quote_strings
       || std::any_of(str.begin(), str.end(), needs_escaping)) {
-    result_ += '"';
     detail::print_escaped(result_, str);
-    result_ += '"';
   } else {
     result_.insert(result_.end(), str.begin(), str.end());
   }
