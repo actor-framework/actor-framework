@@ -113,7 +113,20 @@ bool json_writer::begin_field(string_view name) {
 }
 
 bool json_writer::begin_field(string_view name, bool is_present) {
-  if (begin_key_value_pair()) {
+  if (skip_empty_fields_ && !is_present) {
+    auto t = top();
+    switch (t) {
+      case type::object:
+        push(type::member);
+        return true;
+      default: {
+        std::string str = "expected object, found ";
+        str += json_type_name(t);
+        emplace_error(sec::runtime_error, class_name, __func__, std::move(str));
+        return false;
+      }
+    }
+  } else if (begin_key_value_pair()) {
     CAF_ASSERT(top() == type::key);
     detail::print_escaped(buf_, name);
     add(": ");

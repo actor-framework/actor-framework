@@ -336,6 +336,17 @@ bool inspect(Inspector& f, rectangle& x) {
   return !(x == y);
 }
 
+struct dummy_user {
+  std::string name;
+  caf::optional<std::string> nickname;
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, dummy_user& x) {
+  return f.object(x).fields(f.field("name", x.name),
+                            f.field("nickname", x.nickname));
+}
+
 // -- type IDs for for all unit test suites ------------------------------------
 
 #define ADD_TYPE_ID(type) CAF_ADD_TYPE_ID(core_test, type)
@@ -350,6 +361,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_test, caf::first_custom_type_id)
   ADD_TYPE_ID((dummy_enum_class))
   ADD_TYPE_ID((dummy_struct))
   ADD_TYPE_ID((dummy_tag_type))
+  ADD_TYPE_ID((dummy_user))
   ADD_TYPE_ID((fail_on_copy))
   ADD_TYPE_ID((float_actor))
   ADD_TYPE_ID((foo_actor))

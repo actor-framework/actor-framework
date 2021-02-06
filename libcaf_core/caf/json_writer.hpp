@@ -33,6 +33,12 @@ public:
     null,    /// The literal "null" (terminal type).
   };
 
+  // -- constants --------------------------------------------------------------
+
+  /// The value returned for `skip_empty_fields()` for a default-constructed
+  /// JSON writer.
+  static constexpr bool skip_empty_fields_default = true;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   json_writer();
@@ -69,6 +75,17 @@ public:
   /// spaces or newlines to separate values.
   [[nodiscard]] bool compact() const noexcept {
     return indentation_factor_ == 0;
+  }
+
+  /// Returns whether the writer omits empty fields entirely (true) or renders
+  /// empty fields as `$field: null` (false).
+  [[nodiscard]] bool skip_empty_fields() const noexcept {
+    return skip_empty_fields_;
+  }
+
+  /// Configures whether the writer omits empty fields.
+  void skip_empty_fields(bool value) noexcept {
+    skip_empty_fields_ = value;
   }
 
   // -- modifiers --------------------------------------------------------------
@@ -225,6 +242,10 @@ private:
 
   // Bookkeeping for where we are in the current object.
   std::vector<entry> stack_;
+
+  // Configures whether we omit empty fields entirely (true) or render empty
+  // fields as `$field: null` (false).
+  bool skip_empty_fields_ = skip_empty_fields_default;
 };
 
 } // namespace caf

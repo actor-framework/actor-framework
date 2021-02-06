@@ -16,9 +16,13 @@ namespace {
 
 struct fixture {
   template <class T>
-  expected<std::string> to_json_string(T&& x, size_t indentation_factor) {
+  expected<std::string>
+  to_json_string(T&& x, size_t indentation,
+                 bool skip_empty_fields
+                 = json_writer::skip_empty_fields_default) {
     json_writer writer;
-    writer.indentation(indentation_factor);
+    writer.indentation(indentation);
+    writer.skip_empty_fields(skip_empty_fields);
     if (writer.apply(std::forward<T>(x))) {
       auto buf = writer.str();
       return {std::string{buf.begin(), buf.end()}};
@@ -166,6 +170,26 @@ SCENARIO("the JSON writer converts nested structs to strings") {
   }
 })_";
         CHECK_EQ(to_json_string(x, 2), out);
+      }
+    }
+  }
+}
+
+SCENARIO("the JSON writer omits or nulls missing values") {
+  GIVEN("a dummy_user object without nickname") {
+    dummy_user user;
+    user.name = "Bjarne";
+    WHEN("converting it to JSON with skip_empty_fields = true (default)") {
+      THEN("the JSON output omits the field 'nickname'") {
+        std::string out = R"({"@type": "dummy_user", "name": "Bjarne"})";
+        CHECK_EQ(to_json_string(user, 0), out);
+      }
+    }
+    WHEN("converting it to JSON with skip_empty_fields = false") {
+      THEN("the JSON output includes the field 'nickname' with a null value") {
+        std::string out
+          = R"({"@type": "dummy_user", "name": "Bjarne", "nickname": null})";
+        CHECK_EQ(to_json_string(user, 0, false), out);
       }
     }
   }
