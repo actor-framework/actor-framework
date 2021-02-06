@@ -60,7 +60,7 @@ SCENARIO("monotonic buffers group allocations") {
   }
 }
 
-SCENARIO("monotonic buffers re-use memory after calling reclaim") {
+SCENARIO("monotonic buffers re-use small memory blocks after calling reclaim") {
   std::vector<void*> locations;
   GIVEN("a monotonic buffer resource with some allocations performed on it") {
     detail::monotonic_buffer_resource mbr;
@@ -68,23 +68,15 @@ SCENARIO("monotonic buffers re-use memory after calling reclaim") {
     locations.push_back(mbr.allocate(64));
     locations.push_back(mbr.allocate(65));
     locations.push_back(mbr.allocate(512));
-    locations.push_back(mbr.allocate(513));
-    locations.push_back(mbr.allocate(1023));
-    locations.push_back(mbr.allocate(1'048'577));
-    locations.push_back(mbr.allocate(1'048'577));
     WHEN("calling reclaim on the resource") {
       mbr.reclaim();
       THEN("performing the same allocations returns the same addresses again") {
-        if (CHECK_EQ(mbr.blocks(), 5u)) {
+        if (CHECK_EQ(mbr.blocks(), 2u)) {
           CHECK_EQ(locations[0], mbr.allocate(64));
           CHECK_EQ(locations[1], mbr.allocate(64));
           CHECK_EQ(locations[2], mbr.allocate(65));
           CHECK_EQ(locations[3], mbr.allocate(512));
-          CHECK_EQ(locations[4], mbr.allocate(513));
-          CHECK_EQ(locations[5], mbr.allocate(1023));
-          CHECK_EQ(locations[6], mbr.allocate(1'048'577));
-          CHECK_EQ(locations[7], mbr.allocate(1'048'577));
-          CHECK_EQ(mbr.blocks(), 5u);
+          CHECK_EQ(mbr.blocks(), 2u);
         }
       }
     }
