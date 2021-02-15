@@ -347,6 +347,27 @@ bool inspect(Inspector& f, dummy_user& x) {
                             f.field("nickname", x.nickname));
 }
 
+struct phone_book {
+  std::string city;
+  std::map<std::string, int64_t> entries;
+};
+
+[[maybe_unused]] constexpr bool operator==(const phone_book& x,
+                                           const phone_book& y) noexcept {
+  return std::tie(x.city, x.entries) == std::tie(y.city, y.entries);
+}
+
+[[maybe_unused]] constexpr bool operator!=(const phone_book& x,
+                                           const phone_book& y) noexcept {
+  return !(x == y);
+}
+
+template <class Inspector>
+bool inspect(Inspector& f, phone_book& x) {
+  return f.object(x).fields(f.field("city", x.city),
+                            f.field("entries", x.entries));
+}
+
 // -- type IDs for for all unit test suites ------------------------------------
 
 #define ADD_TYPE_ID(type) CAF_ADD_TYPE_ID(core_test, type)
@@ -370,6 +391,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_test, caf::first_custom_type_id)
   ADD_TYPE_ID((int_actor))
   ADD_TYPE_ID((level))
   ADD_TYPE_ID((my_request))
+  ADD_TYPE_ID((phone_book))
   ADD_TYPE_ID((point))
   ADD_TYPE_ID((raw_struct))
   ADD_TYPE_ID((rectangle))

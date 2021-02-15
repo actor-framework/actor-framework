@@ -175,6 +175,38 @@ SCENARIO("the JSON writer converts nested structs to strings") {
   }
 }
 
+SCENARIO("the JSON writer converts structs with member dictionaries") {
+  GIVEN("a phone_book object") {
+    phone_book x;
+    x.city = "Model City";
+    x.entries["Bob"] = 555'6837;
+    x.entries["Jon"] = 555'9347;
+    WHEN("converting it to JSON with indentation factor 0") {
+      THEN("the JSON output is a single line") {
+        std::string out = R"({"@type": "phone_book",)"
+                          R"( "city": "Model City",)"
+                          R"( "entries": )"
+                          R"({"Bob": 5556837,)"
+                          R"( "Jon": 5559347}})";
+        CHECK_EQ(to_json_string(x, 0), out);
+      }
+    }
+    WHEN("converting it to JSON with indentation factor 2") {
+      THEN("the JSON output uses multiple lines") {
+        std::string out = R"({
+  "@type": "phone_book",
+  "city": "Model City",
+  "entries": {
+    "Bob": 5556837,
+    "Jon": 5559347
+  }
+})";
+        CHECK_EQ(to_json_string(x, 2), out);
+      }
+    }
+  }
+}
+
 SCENARIO("the JSON writer omits or nulls missing values") {
   GIVEN("a dummy_user object without nickname") {
     dummy_user user;

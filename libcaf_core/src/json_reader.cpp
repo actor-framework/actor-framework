@@ -356,9 +356,10 @@ bool json_reader::begin_associative_array(size_t& size) {
   FN_DECL;
   return consume<false>(fn, [this, &size](const detail::json::value& val) {
     if (val.data.index() == detail::json::value::object_index) {
-      auto& obj = get<detail::json::object>(val.data);
-      size = obj.size();
-      push(members{obj.begin(), obj.end()});
+      auto* obj = std::addressof(get<detail::json::object>(val.data));
+      pop();
+      size = obj->size();
+      push(members{obj->begin(), obj->end()});
       return true;
     } else {
       emplace_error(sec::runtime_error, class_name, fn,

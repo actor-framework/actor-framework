@@ -87,6 +87,12 @@ fixture::fixture() {
   add_test_case(
     R"_({"top-left":{"x":100,"y":200},"bottom-right":{"x":10,"y":20}})_",
     rectangle{{100, 200}, {10, 20}});
+  add_test_case(R"({"@type": "phone_book",)"
+                R"( "city": "Model City",)"
+                R"( "entries": )"
+                R"({"Bob": 5556837,)"
+                R"( "Jon": 5559347}})",
+                phone_book{"Model City", {{"Bob", 5556837}, {"Jon", 5559347}}});
 }
 
 } // namespace
