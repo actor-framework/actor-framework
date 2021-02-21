@@ -57,7 +57,9 @@ private:
 };
 
 behavior testee(event_based_actor* self) {
-  return {[=](const foo& x) { aout(self) << deep_to_string(x) << endl; }};
+  return {
+    [=](const foo& x) { aout(self) << deep_to_string(x) << endl; },
+  };
 }
 
 void caf_main(actor_system& sys) {

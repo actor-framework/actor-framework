@@ -54,33 +54,6 @@ private:
 };
 // --(rst-foo-end)--
 
-// A lightweight scope guard implementation.
-template <class Fun>
-class scope_guard {
-public:
-  scope_guard(Fun f) : fun_(std::move(f)), enabled_(true) {
-  }
-
-  scope_guard(scope_guard&& x) : fun_(std::move(x.fun_)), enabled_(x.enabled_) {
-    x.enabled_ = false;
-  }
-
-  ~scope_guard() {
-    if (enabled_)
-      fun_();
-  }
-
-private:
-  Fun fun_;
-  bool enabled_;
-};
-
-// Creates a guard that executes `f` as soon as it goes out of scope.
-template <class Fun>
-scope_guard<Fun> make_scope_guard(Fun f) {
-  return {std::move(f)};
-}
-
 // --(rst-inspect-begin)--
 template <class Inspector>
 bool inspect(Inspector& f, foo& x) {
