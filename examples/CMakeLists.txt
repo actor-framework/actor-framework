@@ -41,6 +41,7 @@ add_core_example(dynamic_behavior dining_philosophers)
 add_core_example(custom_type custom_types_1)
 add_core_example(custom_type custom_types_2)
 add_core_example(custom_type custom_types_3)
+add_core_example(custom_type custom_types_4)
 
 # testing DSL
 add_example(testing ping_pong)
