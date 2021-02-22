@@ -89,10 +89,13 @@ bool json_writer::begin_object(type_id_t, string_view name) {
     pop();
     return true;
   };
-  return begin_associative_array(0) // Put opening paren, ...
-         && begin_key_value_pair()  // ... add implicit @type member, ..
-         && add_type_annotation()   // ... write content ...
-         && end_key_value_pair();   // ... and wait for next field.
+  if (inside_object())
+    return begin_associative_array(0);
+  else
+    return begin_associative_array(0) // Put opening paren, ...
+           && begin_key_value_pair()  // ... add implicit @type member, ..
+           && add_type_annotation()   // ... write content ...
+           && end_key_value_pair();   // ... and wait for next field.
 }
 
 bool json_writer::end_object() {
@@ -498,6 +501,11 @@ void json_writer::fail(type t) {
   str += json_type_name(t);
   str += ": invalid position (begin/end mismatch?)";
   emplace_error(sec::runtime_error, std::move(str));
+}
+
+bool json_writer::inside_object() const noexcept {
+  auto is_object = [](const entry& x) { return x.t == type::object; };
+  return std::any_of(stack_.begin(), stack_.end(), is_object);
 }
 
 // -- printing ---------------------------------------------------------------

@@ -147,10 +147,9 @@ SCENARIO("the JSON writer converts nested structs to strings") {
     auto x = rectangle{{100, 200}, {10, 20}};
     WHEN("converting it to JSON with indentation factor 0") {
       THEN("the JSON output is a single line") {
-        std::string out
-          = R"({"@type": "rectangle", )"
-            R"("top-left": {"@type": "point", "x": 100, "y": 200}, )"
-            R"("bottom-right": {"@type": "point", "x": 10, "y": 20}})";
+        std::string out = R"({"@type": "rectangle", )"
+                          R"("top-left": {"x": 100, "y": 200}, )"
+                          R"("bottom-right": {"x": 10, "y": 20}})";
         CHECK_EQ(to_json_string(x, 0), out);
       }
     }
@@ -159,12 +158,10 @@ SCENARIO("the JSON writer converts nested structs to strings") {
         std::string out = R"_({
   "@type": "rectangle",
   "top-left": {
-    "@type": "point",
     "x": 100,
     "y": 200
   },
   "bottom-right": {
-    "@type": "point",
     "x": 10,
     "y": 20
   }

@@ -201,6 +201,9 @@ private:
   // Sets an error reason that the inspector failed to write a t.
   void fail(type t);
 
+  // Checks whether any element in the stack has the type `object`.
+  bool inside_object() const noexcept;
+
   // -- printing ---------------------------------------------------------------
 
   // Adds a newline unless `compact() == true`.
