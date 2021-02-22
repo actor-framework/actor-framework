@@ -35,9 +35,11 @@ public:
 
   // -- constants --------------------------------------------------------------
 
-  /// The value returned for `skip_empty_fields()` for a default-constructed
-  /// JSON writer.
+  /// The default value for `skip_empty_fields()`.
   static constexpr bool skip_empty_fields_default = true;
+
+  /// The value value for `field_type_suffix()`.
+  static constexpr string_view field_type_suffix_default = "-type";
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -86,6 +88,18 @@ public:
   /// Configures whether the writer omits empty fields.
   void skip_empty_fields(bool value) noexcept {
     skip_empty_fields_ = value;
+  }
+
+  /// Returns the suffix for generating type annotation fields for variant
+  /// fields. For example, CAF inserts field called "@foo${field_type_suffix}"
+  /// for a variant field called "foo".
+  [[nodiscard]] string_view field_type_suffix() const noexcept {
+    return field_type_suffix_;
+  }
+
+  /// Configures whether the writer omits empty fields.
+  void field_type_suffix(string_view suffix) noexcept {
+    field_type_suffix_ = suffix;
   }
 
   // -- modifiers --------------------------------------------------------------
@@ -249,6 +263,8 @@ private:
   // Configures whether we omit empty fields entirely (true) or render empty
   // fields as `$field: null` (false).
   bool skip_empty_fields_ = skip_empty_fields_default;
+
+  string_view field_type_suffix_ = field_type_suffix_default;
 };
 
 } // namespace caf

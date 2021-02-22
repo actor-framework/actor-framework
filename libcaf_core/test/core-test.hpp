@@ -298,8 +298,8 @@ bool inspect(Inspector& f, dummy_enum& x) {
 }
 
 struct point {
-  int x;
-  int y;
+  int32_t x;
+  int32_t y;
 };
 
 [[maybe_unused]] constexpr bool operator==(point a, point b) noexcept {
@@ -333,6 +333,48 @@ bool inspect(Inspector& f, rectangle& x) {
 
 [[maybe_unused]] constexpr bool operator!=(const rectangle& x,
                                            const rectangle& y) noexcept {
+  return !(x == y);
+}
+
+struct circle {
+  point center;
+  int32_t radius;
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, circle& x) {
+  return f.object(x).fields(f.field("center", x.center),
+                            f.field("radius", x.radius));
+}
+
+[[maybe_unused]] constexpr bool operator==(const circle& x,
+                                           const circle& y) noexcept {
+  return x.center == y.center && x.radius == y.radius;
+}
+
+[[maybe_unused]] constexpr bool operator!=(const circle& x,
+                                           const circle& y) noexcept {
+  return !(x == y);
+}
+
+struct widget {
+  std::string color;
+  caf::variant<rectangle, circle> shape;
+};
+
+template <class Inspector>
+bool inspect(Inspector& f, widget& x) {
+  return f.object(x).fields(f.field("color", x.color),
+                            f.field("shape", x.shape));
+}
+
+[[maybe_unused]] inline bool operator==(const widget& x,
+                                        const widget& y) noexcept {
+  return x.color == y.color && x.shape == y.shape;
+}
+
+[[maybe_unused]] inline bool operator!=(const widget& x,
+                                        const widget& y) noexcept {
   return !(x == y);
 }
 
@@ -378,6 +420,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_test, caf::first_custom_type_id)
   ADD_TYPE_ID((caf::stream<int32_t>) )
   ADD_TYPE_ID((caf::stream<std::pair<level, std::string>>) )
   ADD_TYPE_ID((caf::stream<std::string>) )
+  ADD_TYPE_ID((circle))
   ADD_TYPE_ID((dummy_enum))
   ADD_TYPE_ID((dummy_enum_class))
   ADD_TYPE_ID((dummy_struct))
@@ -410,6 +453,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_test, caf::first_custom_type_id)
   ADD_TYPE_ID((test_array))
   ADD_TYPE_ID((test_empty_non_pod))
   ADD_TYPE_ID((test_enum))
+  ADD_TYPE_ID((widget))
 
   ADD_ATOM(abc_atom)
   ADD_ATOM(get_state_atom)

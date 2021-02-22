@@ -224,4 +224,76 @@ SCENARIO("the JSON writer omits or nulls missing values") {
   }
 }
 
+SCENARIO("the JSON writer annotates variant fields") {
+  GIVEN("a widget object with rectangle shape") {
+    widget x;
+    x.color = "red";
+    x.shape = rectangle{{10, 10}, {20, 20}};
+    WHEN("converting it to JSON with indentation factor 0") {
+      THEN("the JSON is a single line containing '@shape-type = rectangle'") {
+        std::string out = R"({"@type": "widget", )"
+                          R"("color": "red", )"
+                          R"("@shape-type": "rectangle", )"
+                          R"("shape": )"
+                          R"({"top-left": {"x": 10, "y": 10}, )"
+                          R"("bottom-right": {"x": 20, "y": 20}}})";
+        CHECK_EQ(to_json_string(x, 0), out);
+      }
+    }
+    WHEN("converting it to JSON with indentation factor 2") {
+      THEN("the JSON is multiple lines containing '@shape-type = rectangle'") {
+        std::string out = R"({
+  "@type": "widget",
+  "color": "red",
+  "@shape-type": "rectangle",
+  "shape": {
+    "top-left": {
+      "x": 10,
+      "y": 10
+    },
+    "bottom-right": {
+      "x": 20,
+      "y": 20
+    }
+  }
+})";
+        CHECK_EQ(to_json_string(x, 2), out);
+      }
+    }
+  }
+  GIVEN("a widget object with circle shape") {
+    widget x;
+    x.color = "red";
+    x.shape = circle{{15, 15}, 5};
+    WHEN("converting it to JSON with indentation factor 0") {
+      THEN("the JSON is a single line containing '@shape-type = circle'") {
+        std::string out = R"({"@type": "widget", )"
+                          R"("color": "red", )"
+                          R"("@shape-type": "circle", )"
+                          R"("shape": )"
+                          R"({"center": {"x": 15, "y": 15}, )"
+                          R"("radius": 5}})";
+        CHECK_EQ(to_json_string(x, 0), out);
+      }
+    }
+    WHEN("converting it to JSON with indentation factor 2") {
+      THEN("the JSON is multiple lines containing '@shape-type = circle'") {
+        std::string out = R"({
+  "@type": "widget",
+  "color": "red",
+  "@shape-type": "circle",
+  "shape": {
+    "center": {
+      "x": 15,
+      "y": 15
+    },
+    "radius": 5
+  }
+})";
+        CHECK_EQ(to_json_string(x, 2), out);
+      }
+    }
+  }
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()

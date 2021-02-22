@@ -79,13 +79,21 @@ void json_writer::reset() {
 
 // -- overrides ----------------------------------------------------------------
 
-bool json_writer::begin_object(type_id_t, string_view name) {
-  auto add_type_annotation = [this, name] {
+bool json_writer::begin_object(type_id_t id, string_view name) {
+  auto add_type_annotation = [this, id, name] {
     CAF_ASSERT(top() == type::key);
     add(R"_("@type": )_");
     pop();
     CAF_ASSERT(top() == type::element);
-    detail::print_escaped(buf_, name);
+    if (auto tname = query_type_name(id); !tname.empty()) {
+      add('"');
+      add(tname);
+      add('"');
+    } else {
+      add('"');
+      add(name);
+      add('"');
+    }
     pop();
     return true;
   };
@@ -105,8 +113,9 @@ bool json_writer::end_object() {
 bool json_writer::begin_field(string_view name) {
   if (begin_key_value_pair()) {
     CAF_ASSERT(top() == type::key);
-    detail::print_escaped(buf_, name);
-    add(": ");
+    add('"');
+    add(name);
+    add("\": ");
     pop();
     CAF_ASSERT(top() == type::element);
     return true;
@@ -131,8 +140,9 @@ bool json_writer::begin_field(string_view name, bool is_present) {
     }
   } else if (begin_key_value_pair()) {
     CAF_ASSERT(top() == type::key);
-    detail::print_escaped(buf_, name);
-    add(": ");
+    add('"');
+    add(name);
+    add("\": ");
     pop();
     CAF_ASSERT(top() == type::element);
     if (!is_present) {
@@ -145,13 +155,41 @@ bool json_writer::begin_field(string_view name, bool is_present) {
   }
 }
 
-bool json_writer::begin_field(string_view name, span<const type_id_t>, size_t) {
-  return begin_field(name);
+bool json_writer::begin_field(string_view name, span<const type_id_t> types,
+                              size_t index) {
+  if (index >= types.size()) {
+    emplace_error(sec::runtime_error, "index >= types.size()");
+    return false;
+  }
+  if (begin_key_value_pair()) {
+    CAF_ASSERT(top() == type::key);
+    add("\"@");
+    add(name);
+    add(field_type_suffix_);
+    add("\": ");
+    pop();
+    CAF_ASSERT(top() == type::element);
+    pop();
+    if (auto tname = query_type_name(types[index]); !tname.empty()) {
+      add('"');
+      add(tname);
+      add('"');
+    } else {
+      emplace_error(sec::runtime_error, "query_type_name failed");
+      return false;
+    }
+    return end_key_value_pair() && begin_field(name);
+  } else {
+    return false;
+  }
 }
 
 bool json_writer::begin_field(string_view name, bool is_present,
-                              span<const type_id_t>, size_t) {
-  return begin_field(name, is_present);
+                              span<const type_id_t> types, size_t index) {
+  if (is_present)
+    return begin_field(name, types, index);
+  else
+    return begin_field(name, is_present);
 }
 
 bool json_writer::end_field() {
