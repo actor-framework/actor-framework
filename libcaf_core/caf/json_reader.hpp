@@ -79,6 +79,11 @@ public:
     invalid,
   };
 
+  // -- constants --------------------------------------------------------------
+
+  /// The value value for `field_type_suffix()`.
+  static constexpr string_view field_type_suffix_default = "-type";
+
   // -- constructors, destructors, and assignment operators --------------------
 
   json_reader();
@@ -92,6 +97,20 @@ public:
   json_reader& operator=(const json_reader&) = delete;
 
   ~json_reader() override;
+
+  // -- properties -------------------------------------------------------------
+
+  /// Returns the suffix for generating type annotation fields for variant
+  /// fields. For example, CAF inserts field called "@foo${field_type_suffix}"
+  /// for a variant field called "foo".
+  [[nodiscard]] string_view field_type_suffix() const noexcept {
+    return field_type_suffix_;
+  }
+
+  /// Configures whether the writer omits empty fields.
+  void field_type_suffix(string_view suffix) noexcept {
+    field_type_suffix_ = suffix;
+  }
 
   // -- modifiers --------------------------------------------------------------
 
@@ -217,6 +236,8 @@ private:
   stack_type* st_ = nullptr;
 
   detail::json::value* root_ = nullptr;
+
+  string_view field_type_suffix_ = field_type_suffix_default;
 };
 
 } // namespace caf

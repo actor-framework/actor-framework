@@ -93,6 +93,20 @@ fixture::fixture() {
                 R"({"Bob": 5556837,)"
                 R"( "Jon": 5559347}})",
                 phone_book{"Model City", {{"Bob", 5556837}, {"Jon", 5559347}}});
+  add_test_case(R"({"@type": "widget", )"
+                R"("color": "red", )"
+                R"("@shape-type": "circle", )"
+                R"("shape": )"
+                R"({"center": {"x": 15, "y": 15}, )"
+                R"("radius": 5}})",
+                widget{"red", circle{{15, 15}, 5}});
+  add_test_case(R"({"@type": "widget", )"
+                R"("color": "blue", )"
+                R"("@shape-type": "rectangle", )"
+                R"("shape": )"
+                R"({"top-left": {"x": 10, "y": 10}, )"
+                R"("bottom-right": {"x": 20, "y": 20}}})",
+                widget{"blue", rectangle{{10, 10}, {20, 20}}});
 }
 
 } // namespace

@@ -6,6 +6,7 @@
 
 #include "caf/detail/bounds_checker.hpp"
 #include "caf/detail/print.hpp"
+#include "caf/string_algorithms.hpp"
 
 namespace {
 
@@ -75,6 +76,24 @@ find_member(const caf::detail::json::object* obj, caf::string_view key) {
     if (member.key == key)
       return &member;
   return nullptr;
+}
+
+caf::string_view field_type(const caf::detail::json::object* obj,
+                            caf::string_view name, caf::string_view suffix) {
+  namespace json = caf::detail::json;
+  for (const auto& member : *obj) {
+    if (member.val && member.val->data.index() == json::value::string_index
+        && !member.key.empty() && member.key[0] == '@') {
+      auto key = member.key;
+      key.remove_prefix(1);
+      if (caf::starts_with(key, name)) {
+        key.remove_prefix(name.size());
+        if (key == suffix)
+          return std::get<caf::string_view>(member.val->data);
+      }
+    }
+  }
+  return {};
 }
 
 } // namespace
@@ -258,17 +277,41 @@ bool json_reader::begin_field(string_view name, bool& is_present) {
   return true;
 }
 
-bool json_reader::begin_field(string_view, span<const type_id_t>, size_t&) {
-  emplace_error(sec::runtime_error, class_name, __func__,
-                "variant fields are currently not supported for JSON input");
-  return false;
+bool json_reader::begin_field(string_view name, span<const type_id_t> types,
+                              size_t& index) {
+  bool is_present = false;
+  if (begin_field(name, is_present, types, index)) {
+    if (is_present) {
+      return true;
+    } else {
+      emplace_error(sec::runtime_error, class_name, __func__,
+                    "mandatory field missing");
+      return false;
+    }
+  } else {
+    return false;
+  }
 }
 
-bool json_reader::begin_field(string_view, bool&, span<const type_id_t>,
-                              size_t&) {
-  emplace_error(sec::runtime_error, class_name, __func__,
-                "variant fields are currently not supported for JSON input");
-  return false;
+bool json_reader::begin_field(string_view name, bool& is_present,
+                              span<const type_id_t> types, size_t& index) {
+  SCOPE(position::object);
+  if (auto member = find_member(top<position::object>(), name);
+      member != nullptr
+      && member->val->data.index() != detail::json::value::null_index) {
+    auto ft = field_type(top<position::object>(), name, field_type_suffix_);
+    if (auto id = query_type_id(ft); id != invalid_type_id) {
+      if (auto i = std::find(types.begin(), types.end(), id);
+          i != types.end()) {
+        index = static_cast<size_t>(std::distance(types.begin(), i));
+        push(member->val);
+        is_present = true;
+        return true;
+      }
+    }
+  }
+  is_present = false;
+  return true;
 }
 
 bool json_reader::end_field() {
