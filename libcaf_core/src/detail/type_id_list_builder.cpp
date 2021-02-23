@@ -20,9 +20,12 @@ namespace {
 struct dyn_type_id_list {
   explicit dyn_type_id_list(type_id_t* storage) noexcept : storage(storage) {
     CAF_ASSERT(storage != nullptr);
-    auto first = reinterpret_cast<const byte*>(storage);
-    auto last = first + ((storage[0] + 1) * sizeof(type_id_t));
-    hash = caf::hash::fnv<size_t>::compute(make_span(first, last));
+    auto first = storage + 1;
+    auto last = first + storage[0];
+    caf::hash::fnv<size_t> h;
+    for (auto i = first; i != last; ++i)
+      h.value(*i);
+    hash = h.result;
   }
 
   dyn_type_id_list(dyn_type_id_list&& other) noexcept

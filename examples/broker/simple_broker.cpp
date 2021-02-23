@@ -54,7 +54,7 @@ behavior ping(event_based_actor* self, size_t num_pings) {
   auto count = std::make_shared<size_t>(0);
   return {
     [=](ok_atom, const actor& pong) {
-      self->send(pong, ping_atom_v, int32_t(1));
+      self->send(pong, ping_atom_v, int32_t{1});
       self->become([=](pong_atom, int32_t value) -> result<ping_atom, int32_t> {
         if (++*count >= num_pings)
           self->quit();
@@ -76,17 +76,21 @@ behavior pong() {
 template <class T>
 void write_int(broker* self, connection_handle hdl, T value) {
   using unsigned_type = typename std::make_unsigned<T>::type;
-  auto cpy = static_cast<T>(htonl(static_cast<unsigned_type>(value)));
-  self->write(hdl, sizeof(T), &cpy);
-  self->flush(hdl);
+  if constexpr (sizeof(T) > 1) {
+    auto cpy = static_cast<T>(htonl(static_cast<unsigned_type>(value)));
+    self->write(hdl, sizeof(T), &cpy);
+  } else {
+    self->write(hdl, sizeof(T), &value);
+  }
 }
 
-// Utility function for reading an ingeger from incoming data.
+// Utility function for reading an integer from incoming data.
 template <class T>
 void read_int(const void* data, T& storage) {
   using unsigned_type = typename std::make_unsigned<T>::type;
   memcpy(&storage, data, sizeof(T));
-  storage = static_cast<T>(ntohl(static_cast<unsigned_type>(storage)));
+  if constexpr (sizeof(T) > 1)
+    storage = static_cast<T>(ntohl(static_cast<unsigned_type>(storage)));
 }
 
 // Implementation of our broker.
@@ -103,10 +107,10 @@ behavior broker_impl(broker* self, connection_handle hdl, const actor& buddy) {
       self->quit(dm.reason);
     }
   });
-  // Setup: we are exchanging only messages consisting of an atom
-  // (as uint64_t) and an integer value (int32_t).
-  self->configure_read(
-    hdl, receive_policy::exactly(sizeof(uint64_t) + sizeof(int32_t)));
+  // Setup: we are exchanging only messages consisting of an operation
+  // (as uint8_t) and an integer value (int32_t).
+  self->configure_read(hdl, receive_policy::exactly(sizeof(uint8_t)
+                                                    + sizeof(int32_t)));
   // Our message handlers.
   return {
     [=](const connection_closed_msg& msg) {
@@ -124,28 +128,33 @@ behavior broker_impl(broker* self, connection_handle hdl, const actor& buddy) {
       aout(self) << "send {ping, " << i << "}" << endl;
       write_int(self, hdl, static_cast<uint8_t>(op::ping));
       write_int(self, hdl, i);
+      self->flush(hdl);
     },
     [=](pong_atom, int32_t i) {
       aout(self) << "send {pong, " << i << "}" << endl;
       write_int(self, hdl, static_cast<uint8_t>(op::pong));
       write_int(self, hdl, i);
+      self->flush(hdl);
     },
     [=](const new_data_msg& msg) {
-      // Read the operation value as uint8_t from buffer.
-      uint8_t op_val;
-      read_int(msg.buf.data(), op_val);
-      // Read integer value from buffer, jumping to the correct
-      // position via offset_data(...).
-      int32_t ival;
-      read_int(msg.buf.data() + sizeof(uint8_t), ival);
+      // Keeps track of our position in the buffer.
+      auto rd_pos = msg.buf.data();
+      // Read the operation value as uint8_t from the buffer.
+      auto op_val = uint8_t{0};
+      read_int(rd_pos, op_val);
+      ++rd_pos;
+      // Read the integer value from the buffer.
+      auto ival = int32_t{0};
+      read_int(rd_pos, ival);
       // Show some output.
-      aout(self) << "received {" << op_val << ", " << ival << "}" << endl;
       // Send composed message to our buddy.
       switch (static_cast<op>(op_val)) {
         case op::ping:
+          aout(self) << "received {ping, " << ival << "}" << endl;
           self->send(buddy, ping_atom_v, ival);
           break;
         case op::pong:
+          aout(self) << "received {pong, " << ival << "}" << endl;
           self->send(buddy, pong_atom_v, ival);
           break;
         default:
@@ -208,8 +217,8 @@ void run_client(actor_system& system, const config& cfg) {
               << endl;
     return;
   }
-  print_on_exit(ping_actor, "ping");
-  print_on_exit(*io_actor, "protobuf_io");
+  print_on_exit(ping_actor, "ping actor");
+  print_on_exit(*io_actor, "broker");
   send_as(*io_actor, ping_actor, ok_atom_v, *io_actor);
 }
 
