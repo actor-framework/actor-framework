@@ -7,7 +7,7 @@ transparent messaging, and more.
 [![Gitter][gitter-badge]](https://gitter.im/actor-framework/chat)
 [![Jenkins][jenkins-badge]](https://jenkins.inet.haw-hamburg.de/job/CAF/job/actor-framework/job/master)
 [![Documentation Status][docs-badge]](http://actor-framework.readthedocs.io/en/latest/?badge=latest)
-[![Coverity][coverity-badge]](https://scan.coverity.com/projects/5555)
+[![Language grade: C/C++][lgtm-badge]](https://lgtm.com/projects/g/actor-framework/actor-framework/context:cpp)
 
 ## Online Resources
 
@@ -193,6 +193,6 @@ http://dx.doi.org/10.1016/j.cl.2016.01.002.
 
 [docs-badge]: https://readthedocs.org/projects/actor-framework/badge/?version=latest
 
-[coverity-badge]: https://scan.coverity.com/projects/5555/badge.svg?flat=1
+[lgtm-badge]: https://img.shields.io/lgtm/grade/cpp/g/actor-framework/actor-framework.svg?logo=lgtm&logoWidth=18
 
 [gitter-badge]: https://img.shields.io/badge/gitter-join%20chat%20%E2%86%92-brightgreen.svg
