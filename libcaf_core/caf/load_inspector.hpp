@@ -155,7 +155,7 @@ public:
     template <class Inspector>
     bool operator()(Inspector& f) {
       auto tmp = T{};
-      auto sync = [this, &tmp] { return set(std::move(tmp)); };
+      auto sync = detail::bind_setter(f, set, tmp);
       auto reset = [this] { set(std::move(fallback)); };
       return detail::load_field(f, field_name, tmp, predicate, sync, reset);
     }
@@ -170,7 +170,7 @@ public:
     template <class Inspector>
     bool operator()(Inspector& f) {
       auto tmp = T{};
-      auto sync = [this, &tmp] { return set(std::move(tmp)); };
+      auto sync = detail::bind_setter(f, set, tmp);
       auto reset = [this] { set(std::move(fallback)); };
       return detail::load_field(f, field_name, tmp, detail::always_true, sync,
                                 reset);
@@ -196,7 +196,7 @@ public:
     template <class Inspector>
     bool operator()(Inspector& f) {
       auto tmp = T{};
-      auto sync = [this, &tmp] { return set(std::move(tmp)); };
+      auto sync = detail::bind_setter(f, set, tmp);
       return detail::load_field(f, field_name, tmp, predicate, sync);
     }
 
@@ -219,7 +219,7 @@ public:
     template <class Inspector>
     bool operator()(Inspector& f) {
       auto tmp = T{};
-      auto sync = [this, &tmp] { return set(std::move(tmp)); };
+      auto sync = detail::bind_setter(f, set, tmp);
       return detail::load_field(f, field_name, tmp, detail::always_true, sync);
     }
 
@@ -251,7 +251,7 @@ public:
     template <class Inspector>
     bool operator()(Inspector& f) {
       auto tmp = T{};
-      auto sync = [this, &tmp] { return set(std::move(tmp)); };
+      auto sync = detail::bind_setter(f, set, tmp);
       return detail::load_field(f, field_name, tmp, detail::always_true, sync,
                                 reset);
     }
@@ -339,14 +339,43 @@ public:
   template <class Get, class Set>
   static auto field(string_view name, Get get, Set set) {
     using field_type = std::decay_t<decltype(get())>;
-    return virt_field_t<field_type, Set>{name, set};
+    using setter_result = decltype(set(std::declval<field_type&&>()));
+    if constexpr (std::is_same<setter_result, error>::value
+                  || std::is_same<setter_result, bool>::value) {
+      return virt_field_t<field_type, Set>{name, std::move(set)};
+    } else {
+      static_assert(std::is_same<setter_result, void>::value,
+                    "setter must return caf::error, bool or void");
+      auto set_fun = [f{std::move(set)}](field_type&& val) {
+        f(std::move(val));
+        return true;
+      };
+      return virt_field_t<field_type, decltype(set_fun)>{name,
+                                                         std::move(set_fun)};
+    }
   }
 
   template <class IsPresent, class Get, class Reset, class Set>
   static auto
   field(string_view name, IsPresent&&, Get&& get, Reset reset, Set set) {
     using field_type = std::decay_t<decltype(get())>;
-    return optional_virt_field_t<field_type, Reset, Set>{name, reset, set};
+    using setter_result = decltype(set(std::declval<field_type&&>()));
+    if constexpr (std::is_same<setter_result, error>::value
+                  || std::is_same<setter_result, bool>::value) {
+      return optional_virt_field_t<field_type, Reset, Set>{name,
+                                                           std::move(reset),
+                                                           std::move(set)};
+    } else {
+      static_assert(std::is_same<setter_result, void>::value,
+                    "setter must return caf::error, bool or void");
+      auto set_fun = [f{std::move(set)}](field_type&& val) {
+        f(std::move(val));
+        return true;
+      };
+      return optional_virt_field_t<field_type, Reset, Set>{name,
+                                                           std::move(reset),
+                                                           std::move(set_fun)};
+    }
   }
 
 protected:

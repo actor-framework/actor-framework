@@ -6,7 +6,7 @@
 
 #include "caf/load_inspector.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <array>
 #include <cstdint>
@@ -34,6 +34,12 @@ struct testee : deserializer {
   }
 
   size_t indent = 0;
+
+  void reset() {
+    log.clear();
+    indent = 0;
+    set_error(error{});
+  }
 
   void new_line() {
     log += '\n';
@@ -565,6 +571,179 @@ end object)_");
 
 CAF_TEST(load inspectors support messages) {
   auto msg = make_message(1, "two", 3.0);
+}
+
+SCENARIO("load inspectors support apply with a getter and setter") {
+  std::string baseline = R"_(
+begin object line
+  begin field p1
+    begin object point_3d
+      begin field x
+        int32_t value
+      end field
+      begin field y
+        int32_t value
+      end field
+      begin field z
+        int32_t value
+      end field
+    end object
+  end field
+  begin field p2
+    begin object point_3d
+      begin field x
+        int32_t value
+      end field
+      begin field y
+        int32_t value
+      end field
+      begin field z
+        int32_t value
+      end field
+    end object
+  end field
+end object)_";
+  GIVEN("a line object") {
+    WHEN("passing a void setter") {
+      f.reset();
+      auto x = line{{10, 10, 10}, {20, 20, 20}};
+      auto get = [&x] { return x; };
+      auto set = [&x](line val) { x = val; };
+      THEN("the inspector overrides the state using the setter") {
+        CHECK(f.apply(get, set));
+        CHECK_EQ(f.log, baseline);
+        line default_line{{0, 0, 0}, {0, 0, 0}};
+        CHECK_EQ(x, default_line);
+      }
+    }
+    WHEN("passing a setter returning true") {
+      f.reset();
+      auto x = line{{10, 10, 10}, {20, 20, 20}};
+      auto get = [&x] { return x; };
+      auto set = [&x](line val) {
+        x = val;
+        return true;
+      };
+      THEN("the inspector overrides the state using the setter") {
+        CHECK(f.apply(get, set));
+        CHECK_EQ(f.log, baseline);
+        line default_line{{0, 0, 0}, {0, 0, 0}};
+        CHECK_EQ(x, default_line);
+      }
+    }
+    WHEN("passing a setter returning false") {
+      f.reset();
+      auto x = line{{10, 10, 10}, {20, 20, 20}};
+      auto get = [&x] { return x; };
+      auto set = [](line) { return false; };
+      THEN("the inspection fails") {
+        CHECK(!f.apply(get, set));
+        CHECK_EQ(f.get_error(), sec::save_callback_failed);
+      }
+    }
+    WHEN("passing a setter returning a default-constructed error") {
+      f.reset();
+      auto x = line{{10, 10, 10}, {20, 20, 20}};
+      auto get = [&x] { return x; };
+      auto set = [&x](line val) {
+        x = val;
+        return error{};
+      };
+      THEN("the inspector overrides the state using the setter") {
+        CHECK(f.apply(get, set));
+        CHECK_EQ(f.log, baseline);
+        line default_line{{0, 0, 0}, {0, 0, 0}};
+        CHECK_EQ(x, default_line);
+      }
+    }
+    WHEN("passing a setter returning an error") {
+      f.reset();
+      auto x = line{{10, 10, 10}, {20, 20, 20}};
+      auto get = [&x] { return x; };
+      auto set = [](line) { return error{sec::runtime_error}; };
+      THEN("the inspector overrides the state using the setter") {
+        CHECK(!f.apply(get, set));
+        CHECK_EQ(f.get_error(), sec::runtime_error);
+      }
+    }
+  }
+}
+
+SCENARIO("load inspectors support fields with a getter and setter") {
+  std::string baseline = R"_(
+begin object person
+  begin field name
+    std::string value
+  end field
+  begin optional field phone
+  end field
+end object)_";
+  GIVEN("a person object") {
+    WHEN("passing a name setter returning void") {
+      f.reset();
+      auto x = person{"John Doe", {}};
+      auto get_name = [&x] { return x.name; };
+      auto set_name = [&x](std::string val) { x.name = std::move(val); };
+      THEN("the inspector overrides the state using the setter") {
+        CHECK(f.object(x).fields(f.field("name", get_name, set_name),
+                                 f.field("phone", x.phone)));
+        CHECK_EQ(f.log, baseline);
+        CHECK_EQ(x.name, "");
+      }
+    }
+    WHEN("passing a name setter returning true") {
+      f.reset();
+      auto x = person{"John Doe", {}};
+      auto get_name = [&x] { return x.name; };
+      auto set_name = [&x](std::string val) {
+        x.name = std::move(val);
+        return true;
+      };
+      THEN("the inspector overrides the state using the setter") {
+        CHECK(f.object(x).fields(f.field("name", get_name, set_name),
+                                 f.field("phone", x.phone)));
+        CHECK_EQ(f.log, baseline);
+        CHECK_EQ(x.name, "");
+      }
+    }
+    WHEN("passing a name setter returning false") {
+      f.reset();
+      auto x = person{"John Doe", {}};
+      auto get_name = [&x] { return x.name; };
+      auto set_name = [](std::string&&) { return false; };
+      THEN("the inspection fails") {
+        CHECK(!f.object(x).fields(f.field("name", get_name, set_name),
+                                  f.field("phone", x.phone)));
+        CHECK_EQ(f.get_error(), sec::field_value_synchronization_failed);
+      }
+    }
+    WHEN("passing a name setter returning a default-constructed error") {
+      f.reset();
+      auto x = person{"John Doe", {}};
+      auto get_name = [&x] { return x.name; };
+      auto set_name = [&x](std::string val) {
+        x.name = std::move(val);
+        return error{};
+      };
+      THEN("the inspector overrides the state using the setter") {
+        CHECK(f.object(x).fields(f.field("name", get_name, set_name),
+                                 f.field("phone", x.phone)));
+        CHECK_EQ(f.log, baseline);
+        CHECK_EQ(x.name, "");
+      }
+    }
+    WHEN("passing a name setter returning an error") {
+      f.reset();
+      auto x = person{"John Doe", {}};
+      auto get_name = [&x] { return x.name; };
+      auto set_name = [](std::string&&) { return error{sec::runtime_error}; };
+      THEN("the inspection fails") {
+        CHECK(!f.object(x).fields(f.field("name", get_name, set_name),
+                                  f.field("phone", x.phone)));
+        CHECK_EQ(f.get_error(), sec::runtime_error);
+      }
+    }
+  }
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

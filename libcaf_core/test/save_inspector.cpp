@@ -6,7 +6,7 @@
 
 #include "caf/save_inspector.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <cstdint>
 #include <string>
@@ -717,6 +717,70 @@ begin sequence of size 3
   std::string value
   double value
 end sequence)_");
+}
+
+SCENARIO("save inspectors support apply with a getter and setter") {
+  GIVEN("a line object") {
+    line x{{10, 10, 10}, {20, 20, 20}};
+    WHEN("passing the line to a save inspector with a getter and setter pair") {
+      auto get = [&x] { return x; };
+      auto set = [&x](line val) { x = val; };
+      THEN("the inspector reads the state from the getter") {
+        CHECK(f.apply(get, set));
+        CHECK_EQ(f.log, R"_(
+begin object line
+  begin field p1
+    begin object point_3d
+      begin field x
+        int32_t value
+      end field
+      begin field y
+        int32_t value
+      end field
+      begin field z
+        int32_t value
+      end field
+    end object
+  end field
+  begin field p2
+    begin object point_3d
+      begin field x
+        int32_t value
+      end field
+      begin field y
+        int32_t value
+      end field
+      begin field z
+        int32_t value
+      end field
+    end object
+  end field
+end object)_");
+      }
+    }
+  }
+}
+
+SCENARIO("load inspectors support fields with a getter and setter") {
+  GIVEN("a person object") {
+    auto x = person{"John Doe", {}};
+    WHEN("passing a setter and setter pair for the member name") {
+      auto get_name = [&x] { return x.name; };
+      auto set_name = [&x](std::string val) { x.name = std::move(val); };
+      THEN("the inspector reads the state from the getter") {
+        CHECK(f.object(x).fields(f.field("name", get_name, set_name),
+                                 f.field("phone", x.phone)));
+        CHECK_EQ(f.log, R"_(
+begin object person
+  begin field name
+    std::string value
+  end field
+  begin optional field phone
+  end field
+end object)_");
+      }
+    }
+  }
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
