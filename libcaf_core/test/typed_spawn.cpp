@@ -372,6 +372,34 @@ CAF_TEST(check_signature) {
   run();
 }
 
+SCENARIO("state-classes may use typed pointers") {
+  GIVEN("a state class for a statically typed actor type") {
+    using foo_type = typed_actor<result<int32_t>(get_atom)>;
+    struct foo_state {
+      foo_state(foo_type::pointer_view selfptr) : self(selfptr) {
+        foo_type hdl{self};
+        CHECK_EQ(selfptr, actor_cast<abstract_actor*>(hdl));
+        foo_type hdl2{selfptr};
+        CHECK_EQ(hdl, hdl2);
+      }
+      foo_type::behavior_type make_behavior() {
+        return {
+          [](get_atom) { return int32_t{42}; },
+        };
+      }
+      foo_type::pointer_view self;
+    };
+    using foo_impl = stateful_actor<foo_state, foo_type::impl>;
+    WHEN("spawning a stateful actor using the state class") {
+      auto foo = sys.spawn<foo_impl>();
+      THEN("the actor calls make_behavior of the state class") {
+        inject((get_atom), from(self).to(foo).with(get_atom_v));
+        expect((int32_t), from(foo).to(self).with(42));
+      }
+    }
+  }
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()
 
 #endif // CAF_WINDOWS
