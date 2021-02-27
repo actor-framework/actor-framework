@@ -372,7 +372,7 @@ CAF_TEST(check_signature) {
   run();
 }
 
-SCENARIO("state-classes may use typed pointers") {
+SCENARIO("state classes may use typed pointers") {
   GIVEN("a state class for a statically typed actor type") {
     using foo_type = typed_actor<result<int32_t>(get_atom)>;
     struct foo_state {
