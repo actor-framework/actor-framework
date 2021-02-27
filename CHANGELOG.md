@@ -5,6 +5,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Fixed
+
+- The handle type `typed_actor` now can construct from a `typed_actor_pointer`.
+  This resolves a compiler error when trying to initialize a handle for
+  `my_handle` from a self pointer of type `my_handle::pointer_view`.
+
 ## [0.18.0] - 2021-01-25
 
 ### Added

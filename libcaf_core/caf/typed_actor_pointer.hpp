@@ -86,6 +86,11 @@ public:
   }
 
   /// @private
+  actor_control_block* ctrl() const noexcept {
+    return view_.ctrl();
+  }
+
+  /// @private
   scheduled_actor* internal_ptr() const noexcept {
     return view_.internal_ptr();
   }

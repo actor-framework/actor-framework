@@ -268,7 +268,6 @@ public:
   actor_control_block* ctrl() const noexcept {
     CAF_ASSERT(self_ != nullptr);
     return actor_control_block::from(self_);
-    ;
   }
 
   /// @private
