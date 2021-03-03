@@ -10,6 +10,7 @@
 
 #include "caf/inspector_access.hpp"
 #include "caf/load_inspector.hpp"
+#include "caf/sec.hpp"
 
 namespace caf {
 
@@ -61,7 +62,7 @@ public:
       auto emplace_result = xs.emplace(std::move(key), std::move(val));
       if constexpr (detail::is_pair<decltype(emplace_result)>::value) {
         if (!emplace_result.second) {
-          dref().emplace_error(sec::runtime_error, "multiple key definitions");
+          super::emplace_error(sec::runtime_error, "multiple key definitions");
           return false;
         }
       }
@@ -106,17 +107,31 @@ public:
     auto tmp = value_type{};
     using setter_result = decltype(set(std::move(tmp)));
     if constexpr (std::is_same<setter_result, bool>::value) {
-      if (dref().value(tmp))
-        return set(std::move(tmp));
-      else
+      if (dref().apply(tmp)) {
+        if (set(std::move(tmp))) {
+          return true;
+        } else {
+          super::emplace_error(sec::save_callback_failed);
+          return false;
+        }
+      } else {
         return false;
+      }
+    } else if constexpr (std::is_same<setter_result, void>::value) {
+      if (dref().apply(tmp)) {
+        set(std::move(tmp));
+        return true;
+      } else {
+        return false;
+      }
     } else {
-      static_assert(std::is_convertible<setter_result, error>::value);
-      if (dref().value(tmp)) {
+      static_assert(std::is_convertible<setter_result, error>::value,
+                    "a setter must return caf::error, bool or void");
+      if (dref().apply(tmp)) {
         if (auto err = set(std::move(tmp)); !err) {
           return true;
         } else {
-          this->emplace_error(std::move(err));
+          super::set_error(std::move(err));
           return false;
         }
       } else {

@@ -78,6 +78,32 @@ constexpr bool has_static_apply_v = has_static_apply<T, Inspector, Obj>::value;
 
 // -- loading ------------------------------------------------------------------
 
+// Converts a setter that returns void, error or bool to a sync function object
+// taking no arguments that always returns a bool.
+template <class Inspector, class Set, class ValueType>
+auto bind_setter(Inspector& f, Set& set, ValueType& tmp) {
+  using set_result_type = decltype(set(std::move(tmp)));
+  if constexpr (std::is_same<set_result_type, bool>::value) {
+    return [&] { return set(std::move(tmp)); };
+  } else if constexpr (std::is_same<set_result_type, error>::value) {
+    return [&] {
+      if (auto err = set(std::move(tmp)); !err) {
+        return true;
+      } else {
+        f.set_error(std::move(err));
+        return false;
+      }
+    };
+  } else {
+    static_assert(std::is_same<set_result_type, void>::value,
+                  "a setter must return caf::error, bool or void");
+    return [&] {
+      set(std::move(tmp));
+      return true;
+    };
+  }
+}
+
 // TODO: remove with CAF 0.19
 template <class Inspector, class T>
 [[deprecated("please provide apply instead of apply_object/apply_value")]] //
@@ -390,9 +416,8 @@ struct optional_inspector_access {
                          container_type& x, IsValid& is_valid,
                          SyncValue& sync_value) {
     traits::emplace(x);
-    auto set_x = [&] { return sync_value(); };
     auto reset = [&x] { x.reset(); };
-    return detail::load_field(f, field_name, *x, is_valid, set_x, reset);
+    return detail::load_field(f, field_name, *x, is_valid, sync_value, reset);
   }
 
   template <class Inspector, class IsValid, class SyncValue, class SetFallback>
@@ -400,8 +425,8 @@ struct optional_inspector_access {
                          container_type& x, IsValid& is_valid,
                          SyncValue& sync_value, SetFallback& set_fallback) {
     traits::emplace(x);
-    auto set_x = [&] { return sync_value(); };
-    return detail::load_field(f, field_name, *x, is_valid, set_x, set_fallback);
+    return detail::load_field(f, field_name, *x, is_valid, sync_value,
+                              set_fallback);
   }
 };
 
@@ -575,8 +600,9 @@ struct variant_inspector_access {
       return false;
     }
     if (!sync_value()) {
-      f.emplace_error(sec::field_value_synchronization_failed,
-                      to_string(field_name));
+      if (!f.get_error())
+        f.emplace_error(sec::field_value_synchronization_failed,
+                        to_string(field_name));
       return false;
     }
     return f.end_field();
@@ -605,8 +631,9 @@ struct variant_inspector_access {
         return false;
       }
       if (!sync_value()) {
-        f.emplace_error(sec::field_value_synchronization_failed,
-                        to_string(field_name));
+        if (!f.get_error())
+          f.emplace_error(sec::field_value_synchronization_failed,
+                          to_string(field_name));
         return false;
       }
     } else {

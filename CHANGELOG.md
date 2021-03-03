@@ -5,11 +5,19 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Changed
+
+- Setter functions for fields may now return either `bool`, `caf::error` or
+  `void`. Previously, CAF only allowed `bool`.
+
 ### Fixed
 
+- Passing a getter and setter pair to an inspector via `apply` produced a
+  compiler error for non-builtin types. The inspection API now recursively
+  inspects user-defined types instead, as was the original intend (#1216).
 - The handle type `typed_actor` now can construct from a `typed_actor_pointer`.
   This resolves a compiler error when trying to initialize a handle for
-  `my_handle` from a self pointer of type `my_handle::pointer_view`.
+  `my_handle` from a self pointer of type `my_handle::pointer_view` (#1218).
 
 ## [0.18.0] - 2021-01-25
 

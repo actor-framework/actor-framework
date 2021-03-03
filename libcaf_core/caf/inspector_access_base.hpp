@@ -25,8 +25,9 @@ struct inspector_access_base {
         return false;
       }
       if (!sync_value()) {
-        f.emplace_error(sec::field_value_synchronization_failed,
-                        to_string(field_name));
+        if (!f.get_error())
+          f.emplace_error(sec::field_value_synchronization_failed,
+                          to_string(field_name));
         return false;
       }
       return f.end_field();
@@ -52,8 +53,9 @@ struct inspector_access_base {
         return false;
       }
       if (!sync_value()) {
-        f.emplace_error(sec::field_value_synchronization_failed,
-                        to_string(field_name));
+        if (!f.get_error())
+          f.emplace_error(sec::field_value_synchronization_failed,
+                          to_string(field_name));
         return false;
       }
       return f.end_field();
