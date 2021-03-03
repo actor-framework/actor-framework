@@ -661,7 +661,7 @@ end object)_";
       auto x = line{{10, 10, 10}, {20, 20, 20}};
       auto get = [&x] { return x; };
       auto set = [](line) { return error{sec::runtime_error}; };
-      THEN("the inspector overrides the state using the setter") {
+      THEN("the inspection fails") {
         CHECK(!f.apply(get, set));
         CHECK_EQ(f.get_error(), sec::runtime_error);
       }

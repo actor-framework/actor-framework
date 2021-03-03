@@ -345,7 +345,7 @@ public:
       return virt_field_t<field_type, Set>{name, std::move(set)};
     } else {
       static_assert(std::is_same<setter_result, void>::value,
-                    "setter must return caf::error, bool or void");
+                    "a setter must return caf::error, bool or void");
       auto set_fun = [f{std::move(set)}](field_type&& val) {
         f(std::move(val));
         return true;
@@ -367,7 +367,7 @@ public:
                                                            std::move(set)};
     } else {
       static_assert(std::is_same<setter_result, void>::value,
-                    "setter must return caf::error, bool or void");
+                    "a setter must return caf::error, bool or void");
       auto set_fun = [f{std::move(set)}](field_type&& val) {
         f(std::move(val));
         return true;
