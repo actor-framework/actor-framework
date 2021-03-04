@@ -39,8 +39,9 @@ metric_registry::~metric_registry() {
 void metric_registry::merge(metric_registry& other) {
   if (this == &other)
     return;
-  std::unique_lock<std::mutex> guard1{families_mx_};
-  std::unique_lock<std::mutex> guard2{other.families_mx_};
+  std::unique_lock<std::mutex> guard1{families_mx_, std::defer_lock};
+  std::unique_lock<std::mutex> guard2{other.families_mx_, std::defer_lock};
+  std::lock(guard1, guard2);
   families_.reserve(families_.size() + other.families_.size());
   for (auto& fptr : other.families_)
     if (fetch(fptr->prefix(), fptr->name()) != nullptr)
