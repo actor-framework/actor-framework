@@ -124,30 +124,45 @@ CAF_TEST(states with static C string names override the default name) {
   test_name<named_state>("testee");
 }
 
+namespace {
+
+int32_t add_operation(int32_t x, int32_t y) {
+  return x + y;
+}
+
+} // namespace
+
 CAF_TEST(states can accept constructor arguments and provide a behavior) {
   struct state_type {
-    int x;
-    int y;
-    state_type(int x, int y) : x(x), y(y) {
+    using operation_type = int32_t (*)(int32_t, int32_t);
+    int32_t x;
+    int32_t y;
+    operation_type f;
+    state_type(int32_t x, int32_t y, operation_type f) : x(x), y(y), f(f) {
       // nop
     }
     behavior make_behavior() {
       return {
-        [=](int x, int y) {
+        [=](int32_t x, int32_t y) {
           this->x = x;
           this->y = y;
         },
+        [=](get_atom) { return f(x, y); },
       };
     }
   };
   using actor_type = stateful_actor<state_type>;
-  auto testee = sys.spawn<actor_type>(10, 20);
+  auto testee = sys.spawn<actor_type>(10, 20, add_operation);
   auto& state = deref<actor_type>(testee).state;
   CAF_CHECK_EQUAL(state.x, 10);
   CAF_CHECK_EQUAL(state.y, 20);
-  inject((int, int), to(testee).with(1, 2));
+  inject((get_atom), from(self).to(testee).with(get_atom_v));
+  expect((int32_t), from(testee).to(self).with(30));
+  inject((int32_t, int32_t), to(testee).with(1, 2));
   CAF_CHECK_EQUAL(state.x, 1);
   CAF_CHECK_EQUAL(state.y, 2);
+  inject((get_atom), from(self).to(testee).with(get_atom_v));
+  expect((int32_t), from(testee).to(self).with(3));
 }
 
 CAF_TEST(states optionally take the self pointer as first argument) {
