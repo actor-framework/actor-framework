@@ -219,7 +219,13 @@ public:
 
   template <class T>
   static std::string render(const T& x) {
-    if constexpr (std::is_constructible<string_view, T>::value) {
+    if constexpr (std::is_same<std::nullptr_t, T>::value) {
+      return "null";
+    } else if constexpr (std::is_constructible<string_view, T>::value) {
+      if constexpr (std::is_pointer<T>::value) {
+        if (x == nullptr)
+          return "null";
+      }
       auto str = string_view{x};
       return std::string{str.begin(), str.end()};
     } else {

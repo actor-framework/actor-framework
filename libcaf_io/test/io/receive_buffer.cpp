@@ -40,7 +40,7 @@ CAF_TEST_FIXTURE_SCOPE(receive_buffer_tests, fixture)
 CAF_TEST(constructors) {
   CAF_CHECK_EQUAL(a.size(), 0ul);
   CAF_CHECK_EQUAL(a.capacity(), 0ul);
-  CAF_CHECK_EQUAL(a.data(), nullptr);
+  CAF_CHECK(a.data() == nullptr);
   CAF_CHECK(a.empty());
   CAF_CHECK_EQUAL(b.size(), 1024ul);
   CAF_CHECK_EQUAL(b.capacity(), 1024ul);
