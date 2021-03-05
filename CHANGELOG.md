@@ -5,6 +5,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Added
+
+- CAF includes two new inspector types for consuming and generating
+  JSON-formatted text: `json_writer` and `json_reader`.
+
 ### Changed
 
 - Setter functions for fields may now return either `bool`, `caf::error` or
