@@ -23,6 +23,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The handle type `typed_actor` now can construct from a `typed_actor_pointer`.
   This resolves a compiler error when trying to initialize a handle for
   `my_handle` from a self pointer of type `my_handle::pointer_view` (#1218).
+- Passing a function reference to the constructor of an actor caused a compiler
+  error when building with logging enabled. CAF now properly handles this edge
+  case and logs such constructor arguments as `<unprintable>` (#1229).
 
 ## [0.18.0] - 2021-01-25
 

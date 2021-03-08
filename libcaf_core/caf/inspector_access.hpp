@@ -287,7 +287,15 @@ bool save(Inspector& f, T& x) {
 
 template <class Inspector, class T>
 bool save(Inspector& f, const T& x) {
-  return save(f, as_mutable_ref(x), inspect_access_type<Inspector, T>());
+  if constexpr (!std::is_function<T>::value) {
+    return save(f, as_mutable_ref(x), inspect_access_type<Inspector, T>());
+  } else {
+    // Only inspector such as the stringification_inspector are going to accept
+    // function pointers. Most other inspectors are going to trigger a static
+    // assertion when passing `inspector_access_type::none`.
+    auto fptr = std::add_pointer_t<T>{x};
+    return save(f, fptr, inspector_access_type::none{});
+  }
 }
 
 template <class Inspector, class T>
