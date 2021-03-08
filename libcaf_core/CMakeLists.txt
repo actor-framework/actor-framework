@@ -98,21 +98,23 @@ caf_add_component(
     src/detail/abstract_worker.cpp
     src/detail/abstract_worker_hub.cpp
     src/detail/append_percent_encoded.cpp
+    src/detail/base64.cpp
     src/detail/behavior_impl.cpp
     src/detail/behavior_stack.cpp
     src/detail/blocking_behavior.cpp
     src/detail/config_consumer.cpp
-    src/detail/encode_base64.cpp
     src/detail/get_mac_addresses.cpp
     src/detail/get_process_id.cpp
     src/detail/get_root_uuid.cpp
     src/detail/glob_match.cpp
     src/detail/group_tunnel.cpp
     src/detail/invoke_result_visitor.cpp
+    src/detail/json.cpp
     src/detail/local_group_module.cpp
     src/detail/message_builder_element.cpp
     src/detail/message_data.cpp
     src/detail/meta_object.cpp
+    src/detail/monotonic_buffer_resource.cpp
     src/detail/parse.cpp
     src/detail/parser/chars.cpp
     src/detail/pretty_type_name.cpp
@@ -154,6 +156,8 @@ caf_add_component(
     src/ipv6_address.cpp
     src/ipv6_endpoint.cpp
     src/ipv6_subnet.cpp
+    src/json_reader.cpp
+    src/json_writer.cpp
     src/load_inspector.cpp
     src/local_actor.cpp
     src/logger.cpp
@@ -241,14 +245,16 @@ caf_add_component(
     decorator.sequencer
     deep_to_string
     detached_actors
+    detail.base64
     detail.bounds_checker
     detail.config_consumer
-    detail.encode_base64
     detail.group_tunnel
     detail.ieee_754
+    detail.json
     detail.limited_vector
     detail.local_group_module
     detail.meta_object
+    detail.monotonic_buffer_resource
     detail.parse
     detail.parser.read_bool
     detail.parser.read_config
@@ -290,6 +296,8 @@ caf_add_component(
     ipv6_address
     ipv6_endpoint
     ipv6_subnet
+    json_reader
+    json_writer
     load_inspector
     logger
     mailbox_element
@@ -301,6 +309,7 @@ caf_add_component(
     mixin.requester
     mixin.sender
     mock_streaming_classes
+    mtl
     native_streaming_classes
     node_id
     optional

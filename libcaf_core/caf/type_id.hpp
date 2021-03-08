@@ -111,6 +111,8 @@ CAF_CORE_EXPORT type_id_t query_type_id(string_view name);
 
 } // namespace caf
 
+// -- CAF_BEGIN_TYPE_ID_BLOCK --------------------------------------------------
+
 /// Starts a code block for registering custom types to CAF. Stores the first ID
 /// for the project as `caf::id_block::${project_name}_first_type_id`. Usually,
 /// users should use `caf::first_custom_type_id` as `first_id`. However, this
@@ -126,6 +128,8 @@ CAF_CORE_EXPORT type_id_t query_type_id(string_view name);
   constexpr type_id_t project_name##_type_id_counter_init = __COUNTER__;       \
   constexpr type_id_t project_name##_first_type_id = first_id;                 \
   }
+
+// -- CAF_ADD_TYPE_ID ----------------------------------------------------------
 
 #ifdef CAF_MSVC
 #  define CAF_DETAIL_NEXT_TYPE_ID(project_name, fully_qualified_name)          \
@@ -195,6 +199,78 @@ CAF_CORE_EXPORT type_id_t query_type_id(string_view name);
     CAF_PP_OVERLOAD(CAF_ADD_TYPE_ID_, __VA_ARGS__)(__VA_ARGS__)
 #endif
 
+// -- CAF_ADD_TYPE_ID_FROM_EXPR ------------------------------------------------
+
+#ifdef CAF_MSVC
+#  define CAF_DETAIL_NEXT_TYPE_ID_FROM_EXPR(project_name, type_expr)           \
+    template <>                                                                \
+    struct type_id<CAF_PP_EXPAND type_expr> {                                  \
+      static constexpr type_id_t value                                         \
+        = id_block::project_name##_first_type_id                               \
+          + (CAF_PP_CAT(CAF_PP_COUNTER, ())                                    \
+             - id_block::project_name##_type_id_counter_init - 1);             \
+    };
+#else
+#  define CAF_DETAIL_NEXT_TYPE_ID_FROM_EXPR(project_name, type_expr)           \
+    template <>                                                                \
+    struct type_id<CAF_PP_EXPAND type_expr> {                                  \
+      static constexpr type_id_t value                                         \
+        = id_block::project_name##_first_type_id                               \
+          + (__COUNTER__ - id_block::project_name##_type_id_counter_init - 1); \
+    };
+#endif
+
+#define CAF_ADD_TYPE_ID_FROM_EXPR_2(project_name, type_expr)                   \
+  namespace caf {                                                              \
+  CAF_DETAIL_NEXT_TYPE_ID_FROM_EXPR(project_name, type_expr)                   \
+  template <>                                                                  \
+  struct type_by_id<type_id<CAF_PP_EXPAND type_expr>::value> {                 \
+    using type = CAF_PP_EXPAND type_expr;                                      \
+  };                                                                           \
+  template <>                                                                  \
+  struct type_name<CAF_PP_EXPAND type_expr> {                                  \
+    static constexpr string_view value = CAF_PP_STR(CAF_PP_EXPAND type_expr);  \
+  };                                                                           \
+  template <>                                                                  \
+  struct type_name_by_id<type_id<CAF_PP_EXPAND type_expr>::value>              \
+    : type_name<CAF_PP_EXPAND type_expr> {};                                   \
+  }
+
+#define CAF_ADD_TYPE_ID_FROM_EXPR_3(project_name, type_expr, user_type_name)   \
+  namespace caf {                                                              \
+  CAF_DETAIL_NEXT_TYPE_ID_FROM_EXPR(project_name, type_expr)                   \
+  template <>                                                                  \
+  struct type_by_id<type_id<CAF_PP_EXPAND type_expr>::value> {                 \
+    using type = CAF_PP_EXPAND type_expr;                                      \
+  };                                                                           \
+  template <>                                                                  \
+  struct type_name<CAF_PP_EXPAND type_expr> {                                  \
+    static constexpr string_view value = user_type_name;                       \
+  };                                                                           \
+  template <>                                                                  \
+  struct type_name_by_id<type_id<CAF_PP_EXPAND type_expr>::value>              \
+    : type_name<CAF_PP_EXPAND type_expr> {};                                   \
+  }
+
+/// @def CAF_ADD_TYPE_ID_FROM_EXPR(project_name, type_expr, user_type_name)
+/// Assigns the next free type ID to the type resulting from `type_expr`.
+/// @param project_name User-defined name for type ID block.
+/// @param type_expr A compile-time expression resulting in a type, e.g., a
+///                  `decltype` statement.
+/// @param user_type_name Optional parameter. If present, defines the content of
+///                       `caf::type_name`. Defaults to `type_expr`.
+#ifdef CAF_MSVC
+#  define CAF_ADD_TYPE_ID_FROM_EXPR(...)                                       \
+    CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_ADD_TYPE_ID_FROM_EXPR_,                     \
+                               __VA_ARGS__)(__VA_ARGS__),                      \
+               CAF_PP_EMPTY())
+#else
+#  define CAF_ADD_TYPE_ID_FROM_EXPR(...)                                       \
+    CAF_PP_OVERLOAD(CAF_ADD_TYPE_ID_FROM_EXPR_, __VA_ARGS__)(__VA_ARGS__)
+#endif
+
+// -- CAF_ADD_ATOM -------------------------------------------------------------
+
 /// Creates a new tag type (atom) in the global namespace and assigns the next
 /// free type ID to it.
 #define CAF_ADD_ATOM_2(project_name, atom_name)                                \
@@ -260,6 +336,8 @@ CAF_CORE_EXPORT type_id_t query_type_id(string_view name);
     CAF_PP_OVERLOAD(CAF_ADD_ATOM_, __VA_ARGS__)(__VA_ARGS__)
 #endif
 
+// -- CAF_END_TYPE_ID_BLOCK ----------------------------------------------------
+
 /// Finalizes a code block for registering custom types to CAF. Defines a struct
 /// `caf::type_id::${project_name}` with two static members `begin` and `end`.
 /// The former stores the first assigned type ID. The latter stores the last
@@ -275,32 +353,24 @@ CAF_CORE_EXPORT type_id_t query_type_id(string_view name);
   };                                                                           \
   }
 
-namespace caf::detail {
-
-// We can't pass a builtin type such as `bool` to CAF_ADD_TYPE_ID because it
-// expands to `::bool`, which for some reason is invalid in C++. This alias only
-// exists to work around this limitation.
-template <class T>
-using id_t = T;
-
-} // namespace caf::detail
+// -- type ID block for the core module ----------------------------------------
 
 CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
 
   // -- C types
 
-  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<bool>), "bool")
-  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<double>), "double")
-  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<float>), "float")
-  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<int16_t>), "int16_t")
-  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<int32_t>), "int32_t")
-  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<int64_t>), "int64_t")
-  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<int8_t>), "int8_t")
-  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<long double>), "ldouble")
-  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<uint16_t>), "uint16_t")
-  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<uint32_t>), "uint32_t")
-  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<uint64_t>), "uint64_t")
-  CAF_ADD_TYPE_ID(core_module, (caf::detail::id_t<uint8_t>), "uint8_t")
+  CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (bool) )
+  CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (double) )
+  CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (float) )
+  CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (int16_t))
+  CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (int32_t))
+  CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (int64_t))
+  CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (int8_t))
+  CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (long double), "ldouble")
+  CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (uint16_t))
+  CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (uint32_t))
+  CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (uint64_t))
+  CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (uint8_t))
 
   // -- STL types
 

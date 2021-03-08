@@ -764,10 +764,7 @@ struct inspector_access<
         detail::print(str, x);
         return str;
       };
-      auto set = [&x](std::string str) {
-        auto err = detail::parse(str, x);
-        return !err;
-      };
+      auto set = [&x](std::string str) { return detail::parse(str, x); };
       return f.apply(get, set);
     } else {
       using rep_type = typename Duration::rep;

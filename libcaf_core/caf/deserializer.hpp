@@ -51,6 +51,26 @@ public:
   /// Reads run-time-type information for the next object if available.
   virtual bool fetch_next_object_type(type_id_t& type) = 0;
 
+  /// Reads run-time-type information for the next object if available. The
+  /// default implementation calls `fetch_next_object_type` and queries the CAF
+  /// type name. However, implementations of the interface may retrieve the type
+  /// name differently and the type name may not correspond to any type known to
+  /// CAF. For example. the @ref json_reader returns the content of the `@type`
+  /// field of the current object if available.
+  /// @warning the characters in `type_name` may point to an internal buffer
+  ///          that becomes invalid as soon as calling *any* other member
+  ///          function on the deserializer. Convert the `type_name` to a string
+  ///          before storing it.
+  virtual bool fetch_next_object_name(string_view& type_name);
+
+  /// Convenience function for querying `fetch_next_object_name` comparing the
+  /// result to `type_name` in one shot.
+  bool next_object_name_matches(string_view type_name);
+
+  /// Like `next_object_name_matches`, but sets an error on the deserializer
+  /// on a mismatch.
+  bool assert_next_object_name(string_view type_name);
+
   /// Begins processing of an object, may perform a type check depending on the
   /// data format.
   /// @param type 16-bit ID for known types, @ref invalid_type_id otherwise.

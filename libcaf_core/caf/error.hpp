@@ -145,6 +145,13 @@ public:
 
   int compare(uint8_t code, type_id_t category) const noexcept;
 
+  // -- modifiers --------------------------------------------------------------
+
+  /// Reverts this error to "not an error" as if calling `*this = error{}`.
+  void reset() noexcept {
+    data_.reset();
+  }
+
   // -- static convenience functions -------------------------------------------
 
   /// @cond PRIVATE

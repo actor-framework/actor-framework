@@ -573,9 +573,10 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 
 #define CAF_REQUIRE(...)                                                       \
   do {                                                                         \
-    auto CAF_UNIQUE(__result) = ::caf::test::detail::check(                    \
-      ::caf::test::engine::current_test(), __FILE__, __LINE__, #__VA_ARGS__,   \
-      false, static_cast<bool>(__VA_ARGS__));                                  \
+    auto CAF_UNIQUE(__result)                                                  \
+      = ::caf::test::detail::check(::caf::test::engine::current_test(),        \
+                                   __FILE__, __LINE__, #__VA_ARGS__, false,    \
+                                   static_cast<bool>(__VA_ARGS__));            \
     if (!CAF_UNIQUE(__result))                                                 \
       ::caf::test::detail::requirement_failed(#__VA_ARGS__);                   \
     ::caf::test::engine::last_check_file(__FILE__);                            \
@@ -630,78 +631,82 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 
 #define CAF_CHECK_EQUAL(x_expr, y_expr)                                        \
   [](const auto& x_val, const auto& y_val) {                                   \
-    return ::caf::test::detail::check_bin(x_val == y_val, __FILE__, __LINE__,  \
-                                          #x_expr " == " #y_expr,              \
-                                          caf::deep_to_string(x_val),          \
-                                          caf::deep_to_string(y_val));         \
+    return ::caf::test::detail::check_bin(                                     \
+      x_val == y_val, __FILE__, __LINE__, #x_expr " == " #y_expr,              \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
   }(x_expr, y_expr)
 
 #define CAF_CHECK_NOT_EQUAL(x_expr, y_expr)                                    \
   [](const auto& x_val, const auto& y_val) {                                   \
-    return ::caf::test::detail::check_bin(x_val != y_val, __FILE__, __LINE__,  \
-                                          #x_expr " != " #y_expr,              \
-                                          caf::deep_to_string(x_val),          \
-                                          caf::deep_to_string(y_val));         \
+    return ::caf::test::detail::check_bin(                                     \
+      x_val != y_val, __FILE__, __LINE__, #x_expr " != " #y_expr,              \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
   }(x_expr, y_expr)
 
 #define CAF_CHECK_LESS(x_expr, y_expr)                                         \
   [](const auto& x_val, const auto& y_val) {                                   \
-    return ::caf::test::detail::check_bin(x_val < y_val, __FILE__, __LINE__,   \
-                                          #x_expr " < " #y_expr,               \
-                                          caf::deep_to_string(x_val),          \
-                                          caf::deep_to_string(y_val));         \
+    return ::caf::test::detail::check_bin(                                     \
+      x_val < y_val, __FILE__, __LINE__, #x_expr " < " #y_expr,                \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
   }(x_expr, y_expr)
 
 #define CAF_CHECK_NOT_LESS(x_expr, y_expr)                                     \
   [](const auto& x_val, const auto& y_val) {                                   \
     return ::caf::test::detail::check_bin(                                     \
       !(x_val < y_val), __FILE__, __LINE__, "not " #x_expr " < " #y_expr,      \
-      caf::deep_to_string(x_val), caf::deep_to_string(y_val));                 \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
   }(x_expr, y_expr)
 
 #define CAF_CHECK_LESS_OR_EQUAL(x_expr, y_expr)                                \
   [](const auto& x_val, const auto& y_val) {                                   \
-    return ::caf::test::detail::check_bin(x_val <= y_val, __FILE__, __LINE__,  \
-                                          #x_expr " <= " #y_expr,              \
-                                          caf::deep_to_string(x_val),          \
-                                          caf::deep_to_string(y_val));         \
+    return ::caf::test::detail::check_bin(                                     \
+      x_val <= y_val, __FILE__, __LINE__, #x_expr " <= " #y_expr,              \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
   }(x_expr, y_expr)
 
 #define CAF_CHECK_NOT_LESS_OR_EQUAL(x_expr, y_expr)                            \
   [](const auto& x_val, const auto& y_val) {                                   \
     return ::caf::test::detail::check_bin(                                     \
       !(x_val <= y_val), __FILE__, __LINE__, "not " #x_expr " <= " #y_expr,    \
-      caf::deep_to_string(x_val), caf::deep_to_string(y_val));                 \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
   }(x_expr, y_expr)
 
 #define CAF_CHECK_GREATER(x_expr, y_expr)                                      \
   [](const auto& x_val, const auto& y_val) {                                   \
-    return ::caf::test::detail::check_bin(x_val > y_val, __FILE__, __LINE__,   \
-                                          #x_expr " > " #y_expr,               \
-                                          caf::deep_to_string(x_val),          \
-                                          caf::deep_to_string(y_val));         \
+    return ::caf::test::detail::check_bin(                                     \
+      x_val > y_val, __FILE__, __LINE__, #x_expr " > " #y_expr,                \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
   }(x_expr, y_expr)
 
 #define CAF_CHECK_NOT_GREATER(x_expr, y_expr)                                  \
   [](const auto& x_val, const auto& y_val) {                                   \
     return ::caf::test::detail::check_bin(                                     \
       !(x_val > y_val), __FILE__, __LINE__, "not " #x_expr " > " #y_expr,      \
-      caf::deep_to_string(x_val), caf::deep_to_string(y_val));                 \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
   }(x_expr, y_expr)
 
 #define CAF_CHECK_GREATER_OR_EQUAL(x_expr, y_expr)                             \
   [](const auto& x_val, const auto& y_val) {                                   \
-    return ::caf::test::detail::check_bin(x_val >= y_val, __FILE__, __LINE__,  \
-                                          #x_expr " >= " #y_expr,              \
-                                          caf::deep_to_string(x_val),          \
-                                          caf::deep_to_string(y_val));         \
+    return ::caf::test::detail::check_bin(                                     \
+      x_val >= y_val, __FILE__, __LINE__, #x_expr " >= " #y_expr,              \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
   }(x_expr, y_expr)
 
 #define CAF_CHECK_NOT_GREATER_OR_EQUAL(x_expr, y_expr)                         \
   [](const auto& x_val, const auto& y_val) {                                   \
     return ::caf::test::detail::check_bin(                                     \
       !(x_val >= y_val), __FILE__, __LINE__, "not " #x_expr " >= " #y_expr,    \
-      caf::deep_to_string(x_val), caf::deep_to_string(y_val));                 \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
   }(x_expr, y_expr)
 
 // -- CAF_CHECK* predicate family ----------------------------------------------
