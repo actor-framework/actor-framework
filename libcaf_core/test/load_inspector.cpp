@@ -746,4 +746,33 @@ end object)_";
   }
 }
 
+#ifdef __cpp_lib_byte
+
+SCENARIO("load inspectors support std::byte") {
+  GIVEN("a struct with std::byte") {
+    struct byte_test {
+      std::byte v1 = std::byte{0};
+      optional<std::byte> v2;
+    };
+    auto x = byte_test{};
+    WHEN("inspecting the struct") {
+      THEN("CAF treats std::byte like an unsigned integer") {
+        CHECK(f.object(x).fields(f.field("v1", x.v1), f.field("v2", x.v2)));
+        CHECK(!f.get_error());
+        std::string baseline = R"_(
+begin object anonymous
+  begin field v1
+    uint8_t value
+  end field
+  begin optional field v2
+  end field
+end object)_";
+        CHECK_EQ(f.log, baseline);
+      }
+    }
+  }
+}
+
+#endif
+
 CAF_TEST_FIXTURE_SCOPE_END()

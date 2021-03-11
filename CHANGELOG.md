@@ -26,6 +26,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Passing a function reference to the constructor of an actor caused a compiler
   error when building with logging enabled. CAF now properly handles this edge
   case and logs such constructor arguments as `<unprintable>` (#1229).
+- Silence a deprecated-enum-conversion warning for `std::byte` (#1230).
 
 ## [0.18.0] - 2021-01-25
 
