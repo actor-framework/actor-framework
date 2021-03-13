@@ -101,6 +101,16 @@ public:
     }
   }
 
+  template <class LowerLayerPtr>
+  static void abort_reason(LowerLayerPtr down, error reason) {
+    return down->abort_reason(std::move(reason));
+  }
+
+  template <class LowerLayerPtr>
+  static const error& abort_reason(LowerLayerPtr down) {
+    return down->abort_reason();
+  }
+
   // -- interface for the lower layer ------------------------------------------
 
   template <class LowerLayerPtr>
