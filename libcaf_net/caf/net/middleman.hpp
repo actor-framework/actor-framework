@@ -149,6 +149,14 @@ public:
     return mpx_;
   }
 
+  multiplexer* mpx_ptr() noexcept {
+    return &mpx_;
+  }
+
+  const multiplexer* mpx_ptr() const noexcept {
+    return &mpx_;
+  }
+
   middleman_backend* backend(string_view scheme) const noexcept;
 
   expected<uint16_t> port(string_view scheme) const;

@@ -2,9 +2,9 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE net.web_socket_server
+#define CAF_SUITE net.web_socket.server
 
-#include "caf/net/web_socket_server.hpp"
+#include "caf/net/web_socket/server.hpp"
 
 #include "net-test.hpp"
 
@@ -103,9 +103,9 @@ struct fixture : host_fixture {
     push(detail::rfc6455::text_frame, as_bytes(make_span(str)));
   }
 
-  mock_stream_transport<net::web_socket_server<app_t>> transport;
+  mock_stream_transport<net::web_socket::server<app_t>> transport;
 
-  net::web_socket_server<app_t>* ws;
+  net::web_socket::server<app_t>* ws;
 
   app_t* app;
 

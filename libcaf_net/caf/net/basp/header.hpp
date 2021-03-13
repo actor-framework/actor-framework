@@ -10,8 +10,6 @@
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/meta/hex_formatted.hpp"
-#include "caf/meta/type_name.hpp"
 #include "caf/net/basp/constants.hpp"
 #include "caf/net/basp/message_type.hpp"
 #include "caf/type_id.hpp"

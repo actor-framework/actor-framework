@@ -38,6 +38,7 @@ caf_incubator_add_component(
     src/net/middleman.cpp
     src/net/middleman_backend.cpp
     src/net/packet_writer.cpp
+    src/net/web_socket/handshake.cpp
     src/network_socket.cpp
     src/pipe_socket.cpp
     src/pollset_updater.cpp
@@ -61,7 +62,9 @@ caf_incubator_add_component(
     net.actor_shell
     net.length_prefix_framing
     net.typed_actor_shell
-    net.web_socket_server
+    net.web_socket.client
+    net.web_socket.handshake
+    net.web_socket.server
     network_socket
     pipe_socket
     socket
