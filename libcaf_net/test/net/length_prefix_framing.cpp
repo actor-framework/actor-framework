@@ -6,9 +6,9 @@
 
 #include "caf/net/length_prefix_framing.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "net-test.hpp"
 
-#include <deque>
+#include <cctype>
 #include <numeric>
 #include <vector>
 
@@ -21,179 +21,106 @@
 #include "caf/tag/message_oriented.hpp"
 
 using namespace caf;
+using namespace std::literals;
 
 namespace {
 
-/// upper layer: expect messages
-/// Needs to be initilized by the layer two steps down.
-struct ul_expect_messages {
+using string_list = std::vector<std::string>;
+
+struct app {
   using input_tag = tag::message_oriented;
 
-  void set_expected_messages(std::vector<byte_buffer> messages) {
-    expected_messages.clear();
-    for (auto& msg : messages)
-      expected_messages.emplace_back(std::move(msg));
+  template <class LowerLayerPtr>
+  caf::error init(net::socket_manager*, LowerLayerPtr, const settings&) {
+    return none;
   }
 
-  void add_expected_messages(std::vector<byte_buffer> messages) {
-    for (auto& msg : messages)
-      expected_messages.emplace_back(std::move(msg));
+  template <class LowerLayerPtr>
+  bool prepare_send(LowerLayerPtr) {
+    return true;
   }
 
-  template <class LowerLayer>
-  ptrdiff_t consume(LowerLayer&, byte_span buffer) {
-    CAF_REQUIRE(expected_messages.size() > 0);
-    auto& next = expected_messages.front();
-    CAF_CHECK_EQUAL(next.size(), buffer.size());
-    CAF_CHECK(std::equal(next.begin(), next.end(), buffer.begin()));
-    expected_messages.pop_front();
-    return buffer.size();
+  template <class LowerLayerPtr>
+  bool done_sending(LowerLayerPtr) {
+    return true;
   }
 
-  std::deque<byte_buffer> expected_messages;
-};
-
-/// lower layer: offer stream for message parsing
-template <class UpperLayer>
-struct ll_provide_stream_for_messages {
-  using output_tag = tag::stream_oriented;
-
-  void set_expectations(std::vector<byte> data,
-                        std::vector<byte_buffer> messages) {
-    data_stream = std::move(data);
-    auto& checking_layer = upper_layer.upper_layer();
-    checking_layer.set_expected_messages(messages);
+  template <class LowerLayerPtr>
+  void abort(LowerLayerPtr, const error&) {
+    // nop
   }
 
-  void add_expectations(const std::vector<byte>& data,
-                        std::vector<byte_buffer> messages) {
-    data_stream.insert(data_stream.end(), data.begin(), data.end());
-    auto& checking_layer = upper_layer.upper_layer();
-    checking_layer.add_expect_messages(messages);
-  }
-
-  void run() {
-    CAF_CHECK(!data_stream.empty());
-    while (processed != data_stream.size()) {
-      auto all_data = make_span(data_stream.data() + processed,
-                                data_stream.size() - processed);
-      auto new_data = make_span(data_stream.data() + offered,
-                                data_stream.size() - offered);
-      auto newly_offered = new_data.size();
-      auto consumed = upper_layer.consume(*this, all_data, new_data);
-      CAF_CHECK(consumed >= 0);
-      CAF_CHECK(static_cast<size_t>(consumed) <= data_stream.size());
-      offered += newly_offered;
-      processed += consumed;
-      if (consumed > 0) {
-        data_stream.erase(data_stream.begin(), data_stream.begin() + consumed);
-        offered -= processed;
-        processed = 0;
-      }
-      if (consumed == 0 || data_stream.empty())
-        return;
+  template <class LowerLayerPtr>
+  ptrdiff_t consume(LowerLayerPtr down, byte_span buf) {
+    auto printable = [](byte x) { return ::isprint(static_cast<uint8_t>(x)); };
+    if (CHECK(std::all_of(buf.begin(), buf.end(), printable))) {
+      auto str_buf = reinterpret_cast<char*>(buf.data());
+      inputs.emplace_back(std::string{str_buf, buf.size()});
+      std::string response = "ok ";
+      response += std::to_string(inputs.size());
+      auto response_bytes = as_bytes(make_span(response));
+      down->begin_message();
+      auto& buf = down->message_buffer();
+      buf.insert(buf.end(), response_bytes.begin(), response_bytes.end());
+      CHECK(down->end_message());
+      return static_cast<ptrdiff_t>(buf.size());
+    } else {
+      return -1;
     }
   }
 
-  size_t processed = 0;
-  size_t offered = 0;
-
-  std::vector<byte> data_stream;
-
-  UpperLayer upper_layer;
+  std::vector<std::string> inputs;
 };
 
-template <class... Ts>
-byte_buffer to_buf(const Ts&... xs) {
-  byte_buffer buf;
-  binary_serializer sink{nullptr, buf};
-  if (!(sink.apply(xs) && ...))
-    CAF_FAIL("to_buf failed: " << sink.get_error());
-  return buf;
-}
-
-void encode_message(std::vector<byte>& data, const byte_buffer& message) {
+void encode(byte_buffer& buf, string_view msg) {
   using detail::to_network_order;
-  auto current_size = data.size();
-  data.insert(data.end(), 4, byte{0});
-  auto msg_begin = data.begin() + current_size;
-  auto msg_size = message.size();
-  auto u32_size = to_network_order(static_cast<uint32_t>(msg_size));
-  memcpy(std::addressof(*msg_begin), &u32_size, 4);
-  data.insert(data.end(), message.begin(), message.end());
+  auto prefix = to_network_order(static_cast<uint32_t>(msg.size()));
+  auto prefix_bytes = as_bytes(make_span(&prefix, 1));
+  buf.insert(buf.end(), prefix_bytes.begin(), prefix_bytes.end());
+  auto bytes = as_bytes(make_span(msg));
+  buf.insert(buf.end(), bytes.begin(), bytes.end());
 }
 
-struct fixture {
-  using test_layers = ll_provide_stream_for_messages<
-    net::length_prefix_framing<ul_expect_messages>>;
-
-  void generate_messages(size_t num, size_t factor = 10) {
-    for (size_t n = 1; n <= num; n += 1) {
-      std::vector<int> buf(n * factor);
-      std::iota(buf.begin(), buf.end(), n);
-      messages.emplace_back(to_buf(buf));
+auto decode(byte_buffer& buf) {
+  auto printable = [](byte x) { return ::isprint(static_cast<uint8_t>(x)); };
+  string_list result;
+  auto input = make_span(buf);
+  while (!input.empty()) {
+    auto [msg_size, msg] = net::length_prefix_framing<app>::split(input);
+    if (msg_size > msg.size()) {
+      CAF_FAIL("cannot decode buffer: invalid message size");
+    } else if (!std::all_of(msg.begin(), msg.begin() + msg_size, printable)) {
+      CAF_FAIL("cannot decode buffer: unprintable characters found in message");
+    } else {
+      auto str = std::string{reinterpret_cast<char*>(msg.data()), msg_size};
+      result.emplace_back(std::move(str));
+      input = msg.subspan(msg_size);
     }
-    for (auto& msg : messages)
-      encode_message(data, msg);
   }
-
-  void set_expectations() {
-    layers.set_expectations(data, messages);
-  }
-
-  void test_receive_data() {
-    layers.run();
-  }
-
-  void clear() {
-    data.clear();
-    messages.clear();
-  }
-
-  test_layers layers;
-
-  std::vector<byte> data;
-  std::vector<byte_buffer> messages;
-};
+  return result;
+}
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(length_prefix_framing_tests, fixture)
-
-CAF_TEST(process messages) {
-  // Single message.
-  generate_messages(1);
-  set_expectations();
-  test_receive_data();
-  clear();
-  // Multiple messages.
-  generate_messages(10);
-  set_expectations();
-  test_receive_data();
+SCENARIO("length-prefix framing reads data with 32-bit size headers") {
+  GIVEN("a length_prefix_framing with an app that consumed strings") {
+    mock_stream_transport<net::length_prefix_framing<app>> uut;
+    CHECK_EQ(uut.init(), error{});
+    WHEN("pushing data into the unit-under-test") {
+      encode(uut.input, "hello");
+      encode(uut.input, "world");
+      auto input_size = static_cast<ptrdiff_t>(uut.input.size());
+      CHECK_EQ(uut.handle_input(), input_size);
+      THEN("the app receives all strings as individual messages") {
+        auto& state = uut.upper_layer.upper_layer();
+        if (CHECK_EQ(state.inputs.size(), 2u)) {
+          CHECK_EQ(state.inputs[0], "hello");
+          CHECK_EQ(state.inputs[1], "world");
+        }
+        auto response = string_view{reinterpret_cast<char*>(uut.output.data()),
+                                    uut.output.size()};
+        CHECK_EQ(decode(uut.output), string_list({"ok 1", "ok 2"}));
+      }
+    }
+  }
 }
-
-CAF_TEST(incomplete message) {
-  generate_messages(1, 1000);
-  CAF_MESSAGE("data.size() = " << data.size());
-  auto initial_size = data.size();
-  auto data_copy = data;
-  auto mid = data.size() / 2;
-  data.resize(mid);
-  CAF_MESSAGE("data.size() = " << data.size());
-  data_copy.erase(data_copy.begin(), data_copy.begin() + mid);
-  CAF_MESSAGE("data_copy.size() = " << data_copy.size());
-  CAF_REQUIRE(data.size() + data_copy.size() == initial_size);
-  // Don't set expectations because there shouldn't be a complete message
-  // in the bytes.
-  auto messages_copy = messages;
-  messages.clear();
-  CAF_REQUIRE(messages.empty());
-  set_expectations();
-  test_receive_data();
-  data.insert(data.end(), data_copy.begin(), data_copy.end());
-  messages = messages_copy;
-  set_expectations();
-  test_receive_data();
-}
-
-CAF_TEST_FIXTURE_SCOPE_END()
