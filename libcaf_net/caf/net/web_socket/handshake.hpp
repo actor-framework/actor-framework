@@ -8,6 +8,7 @@
 
 #include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/string_view.hpp"
 
@@ -15,7 +16,7 @@ namespace caf::net::web_socket {
 
 /// Wraps state and algorithms for the WebSocket client handshake as defined in
 /// RFC 6455.
-class handshake {
+class CAF_NET_EXPORT handshake {
 public:
   // -- member types -----------------------------------------------------------
 
