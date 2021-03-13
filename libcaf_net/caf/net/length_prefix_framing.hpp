@@ -36,6 +36,14 @@ public:
 
   static constexpr size_t max_message_length = INT32_MAX;
 
+  // -- constructors, destructors, and assignment operators --------------------
+
+  template <class... Ts>
+  explicit length_prefix_framing(Ts&&... xs)
+    : upper_layer_(std::forward<Ts>(xs)...) {
+    // nop
+  }
+
   // -- interface for the upper layer ------------------------------------------
 
   template <class LowerLayer>
