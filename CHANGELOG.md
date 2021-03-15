@@ -26,6 +26,10 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Passing a function reference to the constructor of an actor caused a compiler
   error when building with logging enabled. CAF now properly handles this edge
   case and logs such constructor arguments as `<unprintable>` (#1229).
+- The CLI parser did not recognize metrics filters. Hence, passing
+  `--caf.metrics-filters.actors.includes=...` to a CAF application resulted in
+  an error. The `includes` and `excludes` filters are now consistently handled
+  and accepted in config files as well as on the command line (#1238).
 - Silence a deprecated-enum-conversion warning for `std::byte` (#1230).
 
 ## [0.18.0] - 2021-01-25

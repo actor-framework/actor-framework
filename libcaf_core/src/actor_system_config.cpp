@@ -101,6 +101,9 @@ actor_system_config::actor_system_config()
     .add<string>("format", "format for printed console lines")
     .add<string>("verbosity", "minimum severity level for console output")
     .add<string_list>("excluded-components", "excluded components on console");
+  opt_group{custom_options_, "caf.metrics-filters.actors"}
+    .add<string_list>("includes", "selects actors for run-time metrics")
+    .add<string_list>("excludes", "excludes actors from run-time metrics");
 }
 
 settings actor_system_config::dump_content() const {
