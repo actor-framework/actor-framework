@@ -30,6 +30,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `--caf.metrics-filters.actors.includes=...` to a CAF application resulted in
   an error. The `includes` and `excludes` filters are now consistently handled
   and accepted in config files as well as on the command line (#1238).
+- Silence a deprecated-enum-conversion warning for `std::byte` (#1230).
 
 ## [0.18.0] - 2021-01-25
 

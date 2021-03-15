@@ -5,6 +5,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstddef>
 #include <memory>
 #include <tuple>
 #include <utility>
@@ -474,6 +475,23 @@ struct inspector_access<std::unique_ptr<error::data>>
   : optional_inspector_access<std::unique_ptr<error::data>> {
   // nop
 };
+
+// -- inspection support for std::byte -----------------------------------------
+
+#ifdef __cpp_lib_byte
+
+template <>
+struct inspector_access<std::byte> : inspector_access_base<std::byte> {
+  template <class Inspector>
+  [[nodiscard]] static bool apply(Inspector& f, std::byte& x) {
+    using integer_type = std::underlying_type_t<std::byte>;
+    auto get = [&x] { return static_cast<integer_type>(x); };
+    auto set = [&x](integer_type val) { x = static_cast<std::byte>(val); };
+    return f.apply(get, set);
+  }
+};
+
+#endif
 
 // -- inspection support for variant<Ts...> ------------------------------------
 

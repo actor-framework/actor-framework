@@ -10,8 +10,7 @@
 
 namespace caf {
 
-/// Provides default implementations for `save_field`, `load_field`, and
-/// `apply_value`.
+/// Provides default implementations for `save_field` and `load_field`.
 template <class T>
 struct inspector_access_base {
   /// Loads a mandatory field from `f`.
