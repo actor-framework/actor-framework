@@ -112,7 +112,8 @@ behavior basp_broker::make_behavior() {
     CAF_LOG_DEBUG("enable heartbeat" << CAF_ARG(heartbeat_interval));
     auto now = clock().now();
     auto first_tick = now + heartbeat_interval;
-    auto connection_timeout = get_or(config(), "middleman.connection-timeout",
+    auto connection_timeout = get_or(config(),
+                                     "caf.middleman.connection-timeout",
                                      defaults::middleman::connection_timeout);
     // Note: we send the scheduled time as integer representation to avoid
     //       having to assign a type ID to the time_point type.
