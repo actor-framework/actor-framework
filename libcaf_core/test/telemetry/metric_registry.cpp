@@ -6,7 +6,7 @@
 
 #include "caf/telemetry/metric_registry.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include "caf/string_view.hpp"
 #include "caf/telemetry/counter.hpp"
@@ -191,6 +191,25 @@ CAF_TEST(counter_instance is a shortcut for using the family manually) {
     = registry.counter_instance("http", "requests", {{"method", "put"}},
                                 "Number of HTTP requests.", "seconds", true);
   CAF_CHECK_EQUAL(count, count2);
+}
+
+SCENARIO("metric registries can merge families from other registries") {
+  GIVEN("a registry with some metrics") {
+    metric_registry tmp;
+    auto foo_bar = tmp.counter_singleton("foo", "bar", "test metric");
+    auto bar_foo = tmp.counter_singleton("bar", "foo", "test metric");
+    WHEN("merging the registry into another one") {
+      registry.merge(tmp);
+      THEN("all metrics move into the new location") {
+        CHECK_EQ(foo_bar,
+                 registry.counter_singleton("foo", "bar", "test metric"));
+        CHECK_EQ(bar_foo,
+                 registry.counter_singleton("bar", "foo", "test metric"));
+        tmp.collect(collector);
+        CHECK(collector.result.empty());
+      }
+    }
+  }
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -471,6 +471,12 @@ public:
       visit_family(f, ptr.get());
   }
 
+  // -- modifiers --------------------------------------------------------------
+
+  /// Takes ownership of all metric families in `other`.
+  /// @pre `other` *must not* contain any duplicated metric family
+  void merge(metric_registry& other);
+
 private:
   /// @pre `families_mx_` is locked.
   metric_family* fetch(const string_view& prefix, const string_view& name);

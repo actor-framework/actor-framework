@@ -6,6 +6,7 @@
 
 #include "caf/actor_system_config.hpp"
 #include "caf/config.hpp"
+#include "caf/raise_error.hpp"
 #include "caf/telemetry/dbl_gauge.hpp"
 #include "caf/telemetry/int_gauge.hpp"
 #include "caf/telemetry/metric_family_impl.hpp"
@@ -33,6 +34,22 @@ metric_registry::metric_registry(const actor_system_config& cfg) {
 
 metric_registry::~metric_registry() {
   // nop
+}
+
+void metric_registry::merge(metric_registry& other) {
+  if (this == &other)
+    return;
+  std::unique_lock<std::mutex> guard1{families_mx_, std::defer_lock};
+  std::unique_lock<std::mutex> guard2{other.families_mx_, std::defer_lock};
+  std::lock(guard1, guard2);
+  families_.reserve(families_.size() + other.families_.size());
+  for (auto& fptr : other.families_)
+    if (fetch(fptr->prefix(), fptr->name()) != nullptr)
+      CAF_RAISE_ERROR("failed to merge metrics: duplicated family found");
+  families_.insert(families_.end(),
+                   std::make_move_iterator(other.families_.begin()),
+                   std::make_move_iterator(other.families_.end()));
+  other.families_.clear();
 }
 
 metric_family* metric_registry::fetch(const string_view& prefix,
