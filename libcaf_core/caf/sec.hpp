@@ -161,6 +161,8 @@ enum class sec : uint8_t {
   no_such_key = 65,
   /// An destroyed a response promise without calling deliver or delegate on it.
   broken_promise,
+  /// Disconnected from a BASP node after reaching the connection timeout.
+  connection_timeout,
 };
 // --(rst-sec-end)--
 

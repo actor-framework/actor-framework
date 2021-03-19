@@ -184,6 +184,9 @@ void middleman::add_module_options(actor_system_config& cfg) {
     .add<size_t>("max-consecutive-reads",
                  "max. number of consecutive reads per broker")
     .add<timespan>("heartbeat-interval", "interval of heartbeat messages")
+    .add<timespan>("connection-timeout",
+                   "max. time between messages before declaring a node dead "
+                   "(disabled if 0, ignored if heartbeats are disabled)")
     .add<bool>("attach-utility-actors",
                "schedule utility actors instead of dedicating threads")
     .add<bool>("manual-multiplexing",

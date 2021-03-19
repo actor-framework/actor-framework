@@ -93,6 +93,8 @@ public:
   fixture(bool autoconn = false)
     : sys(cfg.load<io::middleman, network::test_multiplexer>()
             .set("caf.middleman.enable-automatic-connections", autoconn)
+            .set("caf.middleman.heartbeat-interval", timespan{0})
+            .set("caf.middleman.connection-timeout", timespan{0})
             .set("caf.middleman.workers", size_t{0})
             .set("caf.scheduler.policy", autoconn ? "testing" : "stealing")
             .set("caf.logger.inline-output", true)

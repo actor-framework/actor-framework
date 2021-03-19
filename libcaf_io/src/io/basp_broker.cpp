@@ -108,9 +108,19 @@ behavior basp_broker::make_behavior() {
   }
   auto heartbeat_interval = get_or(config(), "caf.middleman.heartbeat-interval",
                                    defaults::middleman::heartbeat_interval);
-  if (heartbeat_interval > 0) {
-    CAF_LOG_DEBUG("enable heartbeat" << CAF_ARG(heartbeat_interval));
-    send(this, tick_atom_v, heartbeat_interval);
+  if (heartbeat_interval.count() > 0) {
+    auto now = clock().now();
+    auto first_tick = now + heartbeat_interval;
+    auto connection_timeout = get_or(config(),
+                                     "caf.middleman.connection-timeout",
+                                     defaults::middleman::connection_timeout);
+    CAF_LOG_DEBUG("enable heartbeat" << CAF_ARG(heartbeat_interval)
+                                     << CAF_ARG(connection_timeout));
+    // Note: we send the scheduled time as integer representation to avoid
+    //       having to assign a type ID to the time_point type.
+    scheduled_send(this, first_tick, tick_atom_v,
+                   first_tick.time_since_epoch().count(), heartbeat_interval,
+                   connection_timeout);
   }
   return behavior{
     // received from underlying broker implementation
@@ -361,10 +371,50 @@ behavior basp_broker::make_behavior() {
       }
       return {x, std::move(addr), port};
     },
-    [=](tick_atom, size_t interval) {
+    [=](tick_atom, actor_clock::time_point::rep scheduled_rep,
+        timespan heartbeat_interval, timespan connection_timeout) {
+      auto scheduled_tse = actor_clock::time_point::duration{scheduled_rep};
+      auto scheduled = actor_clock::time_point{scheduled_tse};
+      auto now = clock().now();
+      if (now < scheduled) {
+        CAF_LOG_WARNING("received tick before its time, reschedule");
+        scheduled_send(this, scheduled, tick_atom_v,
+                       scheduled.time_since_epoch().count(), heartbeat_interval,
+                       connection_timeout);
+        return;
+      }
+      auto next_tick = scheduled + heartbeat_interval;
+      if (now >= next_tick) {
+        CAF_LOG_ERROR("Lagging a full heartbeat interval behind! "
+                      "Interval too low or BASP actor overloaded! "
+                      "Other nodes may disconnect.");
+        while (now >= next_tick)
+          next_tick += heartbeat_interval;
+
+      } else if (now >= scheduled + (heartbeat_interval / 2)) {
+        CAF_LOG_WARNING("Lagging more than 50% of a heartbeat interval behind! "
+                        "Interval too low or BASP actor overloaded!");
+      }
+      // Send out heartbeats.
       instance.handle_heartbeat(context());
-      delayed_send(this, std::chrono::milliseconds{interval}, tick_atom_v,
-                   interval);
+      // Check whether any node reached the disconnect timeout.
+      for (auto i = ctx.begin(); i != ctx.end();) {
+        if (i->second.last_seen + connection_timeout < now) {
+          CAF_LOG_WARNING("Disconnect BASP node: reached connection timeout!");
+          auto hdl = i->second.hdl;
+          // connection_cleanup below calls ctx.erase, so we need to increase
+          // the iterator now, before it gets invalidated.
+          ++i;
+          connection_cleanup(hdl, sec::connection_timeout);
+          close(hdl);
+        } else {
+          ++i;
+        }
+      }
+      // Schedule next tick.
+      scheduled_send(this, next_tick, tick_atom_v,
+                     next_tick.time_since_epoch().count(), heartbeat_interval,
+                     connection_timeout);
     }};
 }
 
@@ -587,6 +637,7 @@ void basp_broker::learned_new_node_indirectly(const node_id& nid) {
 
 void basp_broker::set_context(connection_handle hdl) {
   CAF_LOG_TRACE(CAF_ARG(hdl));
+  auto now = clock().now();
   auto i = ctx.find(hdl);
   if (i == ctx.end()) {
     CAF_LOG_DEBUG("create new BASP context:" << CAF_ARG(hdl));
@@ -598,8 +649,10 @@ void basp_broker::set_context(connection_handle hdl) {
                      invalid_actor_id};
     i = ctx
           .emplace(hdl, basp::endpoint_context{basp::await_header, hdr, hdl,
-                                               node_id{}, 0, 0, none})
+                                               node_id{}, 0, 0, none, now})
           .first;
+  } else {
+    i->second.last_seen = now;
   }
   this_context = &i->second;
   t_last_hop = &i->second.id;

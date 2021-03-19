@@ -668,6 +668,7 @@ public:
       cfg.set("caf.middleman.network-backend", "testing");
       cfg.set("caf.middleman.manual-multiplexing", true);
       cfg.set("caf.middleman.workers", size_t{0});
+      cfg.set("caf.middleman.heartbeat-interval", caf::timespan{0});
     }
     cfg.set("caf.stream.credit-policy", "token-based");
     cfg.set("caf.stream.token-based-policy.batch-size", 50);
