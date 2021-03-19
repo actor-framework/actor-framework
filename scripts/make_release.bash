@@ -126,7 +126,7 @@ with the developer blog checked out one level above, i.e.:
 "
 
 if [ $(git rev-parse --abbrev-ref HEAD) != "master" ]; then
-  raise_error "not in master branch"
+  ask_permission "not in master branch, continue on branch [y] or abort [n]?"
 fi
 
 # assumed files
