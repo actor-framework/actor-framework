@@ -656,6 +656,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Configuring colored terminal output should now print colored output.
 
 [Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.18.0...master
+[0.18.1]: https://github.com/actor-framework/actor-framework/releases/0.18.1
 [0.18.0]: https://github.com/actor-framework/actor-framework/releases/0.18.0
 [0.18.0-rc.1]: https://github.com/actor-framework/actor-framework/releases/0.18.0-rc.1
 [0.17.7]: https://github.com/actor-framework/actor-framework/compare/0.17.6...release/0.17
