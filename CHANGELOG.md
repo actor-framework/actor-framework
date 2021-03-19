@@ -3,7 +3,13 @@
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com).
 
-## [Unreleased]
+## [0.18.1] - 2021-03-19
+
+### Fixed
+
+- Version 0.18.0 introduced a regression on the system parameter
+  `caf.middleman.heartbeat-interval` (#1235). We have addressed the issue by
+  porting the original fix for CAF 0.17.5 (#1095) to the 0.18 series.
 
 ## [0.18.0] - 2021-01-25
 
