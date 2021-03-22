@@ -68,7 +68,7 @@ template <class Hook>
 struct config : actor_system_config {
   config() {
     add_thread_hook<Hook>();
-    set("logger.verbosity", "quiet");
+    set("caf.logger.verbosity", "quiet");
   }
 };
 
@@ -103,7 +103,7 @@ CAF_TEST(counting_system_without_actor) {
   assumed_init_calls = 1;
   auto fallback = scheduler::abstract_coordinator::default_thread_count();
   assumed_thread_count = get_or(cfg, "caf.scheduler.max-threads", fallback)
-                         + 1; // caf.clock
+                         + 2; // clock and private thread pool
   auto& sched = sys.scheduler();
   if (sched.detaches_utility_actors())
     assumed_thread_count += sched.num_utility_actors();
@@ -113,7 +113,7 @@ CAF_TEST(counting_system_with_actor) {
   assumed_init_calls = 1;
   auto fallback = scheduler::abstract_coordinator::default_thread_count();
   assumed_thread_count = get_or(cfg, "caf.scheduler.max-threads", fallback)
-                         + 2; // caf.clock and detached actor
+                         + 3; // clock, private thread pool, and  detached actor
   auto& sched = sys.scheduler();
   if (sched.detaches_utility_actors())
     assumed_thread_count += sched.num_utility_actors();
@@ -122,4 +122,3 @@ CAF_TEST(counting_system_with_actor) {
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
-

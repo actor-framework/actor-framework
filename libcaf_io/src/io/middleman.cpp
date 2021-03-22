@@ -146,7 +146,8 @@ public:
     using impl = detail::prometheus_broker;
     actor_config cfg{&mpx_};
     broker_ = mpx_.system().spawn_impl<impl, hidden>(cfg, std::move(dptr));
-    thread_ = std::thread{[this] { mpx_.run(); }};
+    thread_ = mpx_.system().launch_thread("caf.io.prom",
+                                          [this] { mpx_.run(); });
     return actual_port;
   }
 
@@ -424,10 +425,7 @@ void middleman::start() {
     std::atomic<bool> init_done{false};
     std::mutex mtx;
     std::condition_variable cv;
-    thread_ = std::thread{[&, this] {
-      CAF_SET_LOGGER_SYS(&system());
-      detail::set_thread_name("caf.multiplexer");
-      system().thread_started();
+    auto run_backend = [this, &mtx, &cv, &init_done] {
       CAF_LOG_TRACE("");
       {
         std::unique_lock<std::mutex> guard{mtx};
@@ -436,8 +434,8 @@ void middleman::start() {
         cv.notify_one();
       }
       backend().run();
-      system().thread_terminates();
-    }};
+    };
+    thread_ = system().launch_thread("caf.io.mpx", run_backend);
     std::unique_lock<std::mutex> guard{mtx};
     while (init_done == false)
       cv.wait(guard);

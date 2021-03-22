@@ -642,12 +642,16 @@ void logger::start() {
     open_file();
     log_first_line();
   } else {
-    thread_ = std::thread{[this] {
+    // Note: we don't call system_->launch_thread here since we don't want to
+    //       set a logger context in the logger thread.
+    auto f = [this](auto guard) {
+      CAF_IGNORE_UNUSED(guard);
       detail::set_thread_name("caf.logger");
       this->system_.thread_started();
       this->run();
       this->system_.thread_terminates();
-    }};
+    };
+    thread_ = std::thread{f, global_meta_objects_guard()};
   }
 }
 

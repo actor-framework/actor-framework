@@ -12,6 +12,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <typeinfo>
 
 #include "caf/abstract_actor.hpp"
@@ -24,6 +25,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/init_fun_factory.hpp"
 #include "caf/detail/private_thread_pool.hpp"
+#include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/spawn_fwd.hpp"
 #include "caf/detail/spawnable.hpp"
 #include "caf/fwd.hpp"
@@ -82,6 +84,20 @@ std::string get_rtti_from_mpi() {
 } // namespace caf::detail
 
 namespace caf {
+
+/// An opaque type for shared object lifetime management of the global meta
+/// objects table.
+using global_meta_objects_guard_type = intrusive_ptr<ref_counted>;
+
+// Note: for technical reasons (dependencies), `global_meta_objects_guard` is
+//       implemented in src/detail/meta_object.cpp.
+
+/// Returns a shared ownership wrapper for global state to manage meta objects.
+/// Any thread that accesses the actor system should participate in the lifetime
+/// management of the global state by using a meta objects guard.
+/// @warning The guard does *not* extend the lifetime of the actor system.
+/// @relates actor_system
+CAF_CORE_EXPORT global_meta_objects_guard_type global_meta_objects_guard();
 
 /// Actor environment including scheduler, registry, and optional components
 /// such as a middleman.
@@ -542,6 +558,19 @@ public:
   /// Calls all thread terminates hooks
   /// @warning must be called by thread which is about to terminate
   void thread_terminates();
+
+  template <class F>
+  std::thread launch_thread(const char* thread_name, F fun) {
+    auto body = [this, thread_name, f{std::move(fun)}](auto guard) {
+      CAF_IGNORE_UNUSED(guard);
+      CAF_SET_LOGGER_SYS(this);
+      detail::set_thread_name(thread_name);
+      thread_started();
+      f();
+      thread_terminates();
+    };
+    return std::thread{std::move(body), global_meta_objects_guard()};
+  }
 
   const auto& metrics_actors_includes() const noexcept {
     return metrics_actors_includes_;

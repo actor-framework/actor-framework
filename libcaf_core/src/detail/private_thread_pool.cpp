@@ -18,6 +18,7 @@
 
 #include "caf/detail/private_thread_pool.hpp"
 
+#include "caf/actor_system.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/private_thread.hpp"
 
@@ -28,7 +29,7 @@ private_thread_pool::node::~node() {
 }
 
 void private_thread_pool::start() {
-  loop_ = std::thread{[](private_thread_pool* ptr) { ptr->run_loop(); }, this};
+  loop_ = sys_->launch_thread("caf.pool", [this] { run_loop(); });
 }
 
 void private_thread_pool::stop() {

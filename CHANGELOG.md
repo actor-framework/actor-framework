@@ -31,6 +31,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   an error. The `includes` and `excludes` filters are now consistently handled
   and accepted in config files as well as on the command line (#1238).
 - Silence a deprecated-enum-conversion warning for `std::byte` (#1230).
+- Fix heap-use-after-free when accessing the meta objects table in applications
+  that leave the `main` function while the actor system and its worker threads
+  are still running (#1241).
 
 ## [0.18.1] - 2021-03-19
 

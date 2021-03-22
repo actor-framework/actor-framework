@@ -25,8 +25,6 @@ public:
 private:
   void run(actor_system* sys);
 
-  static void exec(actor_system* sys, private_thread* this_ptr);
-
   std::pair<resumable*, bool> await();
 
   std::thread thread_;

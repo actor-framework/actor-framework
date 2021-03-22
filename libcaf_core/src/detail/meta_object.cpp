@@ -9,16 +9,19 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "caf/actor_system.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/config.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/error.hpp"
 #include "caf/error_code.hpp"
+#include "caf/make_counted.hpp"
+#include "caf/ref_counted.hpp"
 #include "caf/serializer.hpp"
 #include "caf/span.hpp"
 
-namespace caf::detail {
+namespace caf {
 
 #define fatal(str)                                                             \
   do {                                                                         \
@@ -29,19 +32,30 @@ namespace caf::detail {
 namespace {
 
 // Stores global type information.
-meta_object* meta_objects;
+detail::meta_object* meta_objects;
 
 // Stores the size of `meta_objects`.
 size_t meta_objects_size;
 
 // Make sure to clean up all meta objects on program exit.
-struct meta_objects_cleanup {
-  ~meta_objects_cleanup() {
+struct meta_objects_cleanup : ref_counted {
+  ~meta_objects_cleanup() override {
     delete[] meta_objects;
   }
-} cleanup_helper;
+};
+
+global_meta_objects_guard_type cleanup_helper
+  = make_counted<meta_objects_cleanup>();
 
 } // namespace
+
+global_meta_objects_guard_type global_meta_objects_guard() {
+  return cleanup_helper;
+}
+
+} // namespace caf
+
+namespace caf::detail {
 
 span<const meta_object> global_meta_objects() {
   return {meta_objects, meta_objects_size};

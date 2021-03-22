@@ -22,6 +22,7 @@
 #include "caf/config_option_adder.hpp"
 #include "caf/config_option_set.hpp"
 #include "caf/config_value.hpp"
+#include "caf/detail/set_thread_name.hpp"
 #include "caf/settings.hpp"
 #include "caf/string_algorithms.hpp"
 #include "caf/test/unit_test.hpp"
@@ -36,6 +37,7 @@ public:
 private:
   watchdog(int secs) {
     thread_ = std::thread{[=] {
+      caf::detail::set_thread_name("test.watchdog");
       auto tp = std::chrono::high_resolution_clock::now()
                 + std::chrono::seconds(secs);
       std::unique_lock<std::mutex> guard{mtx_};
