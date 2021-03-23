@@ -20,6 +20,7 @@
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/get_process_id.hpp"
+#include "caf/detail/meta_object.hpp"
 #include "caf/detail/pretty_type_name.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/intrusive/task_result.hpp"
@@ -651,7 +652,7 @@ void logger::start() {
       this->run();
       this->system_.thread_terminates();
     };
-    thread_ = std::thread{f, global_meta_objects_guard()};
+    thread_ = std::thread{f, detail::global_meta_objects_guard()};
   }
 }
 

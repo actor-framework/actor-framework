@@ -85,20 +85,6 @@ std::string get_rtti_from_mpi() {
 
 namespace caf {
 
-/// An opaque type for shared object lifetime management of the global meta
-/// objects table.
-using global_meta_objects_guard_type = intrusive_ptr<ref_counted>;
-
-// Note: for technical reasons (dependencies), `global_meta_objects_guard` is
-//       implemented in src/detail/meta_object.cpp.
-
-/// Returns a shared ownership wrapper for global state to manage meta objects.
-/// Any thread that accesses the actor system should participate in the lifetime
-/// management of the global state by using a meta objects guard.
-/// @warning The guard does *not* extend the lifetime of the actor system.
-/// @relates actor_system
-CAF_CORE_EXPORT global_meta_objects_guard_type global_meta_objects_guard();
-
 /// Actor environment including scheduler, registry, and optional components
 /// such as a middleman.
 class CAF_CORE_EXPORT actor_system {
@@ -569,7 +555,11 @@ public:
       f();
       thread_terminates();
     };
-    return std::thread{std::move(body), global_meta_objects_guard()};
+    return std::thread{std::move(body), meta_objects_guard_};
+  }
+
+  auto meta_objects_guard() const noexcept {
+    return meta_objects_guard_;
   }
 
   const auto& metrics_actors_includes() const noexcept {
@@ -751,6 +741,9 @@ private:
 
   /// Manages threads for detached actors.
   detail::private_thread_pool private_threads_;
+
+  /// Ties the lifetime of the meta objects table to the actor system.
+  detail::global_meta_objects_guard_type meta_objects_guard_;
 };
 
 } // namespace caf

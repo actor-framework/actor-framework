@@ -277,6 +277,9 @@ actor_system::actor_system(actor_system_config& cfg)
     tracing_context_(cfg.tracing_context),
     private_threads_(this) {
   CAF_SET_LOGGER_SYS(this);
+  meta_objects_guard_ = detail::global_meta_objects_guard();
+  if (!meta_objects_guard_)
+    CAF_CRITICAL("unable to obtain the global meta objects guard");
   for (auto& hook : cfg.thread_hooks_)
     hook->init(*this);
   // Cache some configuration parameters for faster lookups at runtime.

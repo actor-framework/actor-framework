@@ -21,13 +21,7 @@
 #include "caf/serializer.hpp"
 #include "caf/span.hpp"
 
-namespace caf {
-
-#define fatal(str)                                                             \
-  do {                                                                         \
-    fprintf(stderr, "FATAL: " str "\n");                                       \
-    abort();                                                                   \
-  } while (false)
+namespace caf::detail {
 
 namespace {
 
@@ -53,10 +47,6 @@ global_meta_objects_guard_type global_meta_objects_guard() {
   return cleanup_helper;
 }
 
-} // namespace caf
-
-namespace caf::detail {
-
 span<const meta_object> global_meta_objects() {
   return {meta_objects, meta_objects_size};
 }
@@ -79,8 +69,8 @@ void clear_global_meta_objects() {
 
 span<meta_object> resize_global_meta_objects(size_t size) {
   if (size <= meta_objects_size)
-    fatal("resize_global_meta_objects called with a new size that does not "
-          "grow the array");
+    CAF_CRITICAL("resize_global_meta_objects called with a new size that does "
+                 "not grow the array");
   auto new_storage = new meta_object[size];
   std::copy(meta_objects, meta_objects + meta_objects_size, new_storage);
   delete[] meta_objects;
@@ -93,9 +83,9 @@ void set_global_meta_objects(type_id_t first_id, span<const meta_object> xs) {
   auto new_size = first_id + xs.size();
   if (first_id < meta_objects_size) {
     if (new_size > meta_objects_size)
-      fatal("set_global_meta_objects called with "
-            "'first_id < meta_objects_size' and "
-            "'new_size > meta_objects_size'");
+      CAF_CRITICAL("set_global_meta_objects called with "
+                   "'first_id < meta_objects_size' and "
+                   "'new_size > meta_objects_size'");
     auto out = meta_objects + first_id;
     for (const auto& x : xs) {
       if (out->type_name.empty()) {
@@ -108,12 +98,10 @@ void set_global_meta_objects(type_id_t first_id, span<const meta_object> xs) {
         // Get null-terminated strings.
         auto name1 = to_string(out->type_name);
         auto name2 = to_string(x.type_name);
-        fprintf(stderr,
-                "FATAL: type ID %d already assigned to %s (tried to override "
-                "with %s)\n",
-                static_cast<int>(std::distance(meta_objects, out)),
-                name1.c_str(), name2.c_str());
-        abort();
+        CAF_CRITICAL_FMT("type ID %d already assigned to %s "
+                         "(tried to override with %s)",
+                         static_cast<int>(std::distance(meta_objects, out)),
+                         name1.c_str(), name2.c_str());
       }
       ++out;
     }

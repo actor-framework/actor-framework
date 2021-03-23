@@ -51,6 +51,15 @@ struct meta_object {
   void (*stringify)(std::string&, const void*);
 };
 
+/// An opaque type for shared object lifetime management of the global meta
+/// objects table.
+using global_meta_objects_guard_type = intrusive_ptr<ref_counted>;
+
+/// Returns a shared ownership wrapper for global state to manage meta objects.
+/// Any thread that accesses the actor system should participate in the lifetime
+/// management of the global state by using a meta objects guard.
+CAF_CORE_EXPORT global_meta_objects_guard_type global_meta_objects_guard();
+
 /// Returns the global storage for all meta objects. The ::type_id of an object
 /// is the index for accessing the corresonding meta object.
 CAF_CORE_EXPORT span<const meta_object> global_meta_objects();
