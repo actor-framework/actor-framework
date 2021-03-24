@@ -20,6 +20,7 @@
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/get_process_id.hpp"
+#include "caf/detail/meta_object.hpp"
 #include "caf/detail/pretty_type_name.hpp"
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/intrusive/task_result.hpp"
@@ -642,12 +643,16 @@ void logger::start() {
     open_file();
     log_first_line();
   } else {
-    thread_ = std::thread{[this] {
+    // Note: we don't call system_->launch_thread here since we don't want to
+    //       set a logger context in the logger thread.
+    auto f = [this](auto guard) {
+      CAF_IGNORE_UNUSED(guard);
       detail::set_thread_name("caf.logger");
-      this->system_.thread_started();
-      this->run();
-      this->system_.thread_terminates();
-    }};
+      system_.thread_started();
+      run();
+      system_.thread_terminates();
+    };
+    thread_ = std::thread{f, detail::global_meta_objects_guard()};
   }
 }
 

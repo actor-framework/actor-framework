@@ -240,9 +240,18 @@ struct IUnknown;
 // Convenience macros.
 #define CAF_IGNORE_UNUSED(x) static_cast<void>(x)
 
+/// Prints `error` to `stderr` and aborts program execution.
 #define CAF_CRITICAL(error)                                                    \
   do {                                                                         \
-    fprintf(stderr, "[FATAL] %s:%u: critical error: '%s'\n", __FILE__,         \
+    fprintf(stderr, "[FATAL] critical error (%s:%d): %s\n", __FILE__,          \
             __LINE__, error);                                                  \
+    ::abort();                                                                 \
+  } while (false)
+
+/// Prints `error` to `stderr` and aborts program execution.
+#define CAF_CRITICAL_FMT(fmt_str, ...)                                         \
+  do {                                                                         \
+    fprintf(stderr, "[FATAL] critical error (%s:%d): " fmt_str "\n", __FILE__, \
+            __LINE__, __VA_ARGS__);                                            \
     ::abort();                                                                 \
   } while (false)

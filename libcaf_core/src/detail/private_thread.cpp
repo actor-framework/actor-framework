@@ -63,16 +63,10 @@ std::pair<resumable*, bool> private_thread::await() {
 
 private_thread* private_thread::launch(actor_system* sys) {
   auto ptr = std::make_unique<private_thread>();
-  ptr->thread_ = std::thread{exec, sys, ptr.get()};
+  auto raw_ptr = ptr.get();
+  ptr->thread_ = sys->launch_thread("caf.thread",
+                                    [raw_ptr, sys] { raw_ptr->run(sys); });
   return ptr.release();
-}
-
-void private_thread::exec(actor_system* sys, private_thread* this_ptr) {
-  CAF_SET_LOGGER_SYS(sys);
-  detail::set_thread_name("caf.thread");
-  sys->thread_started();
-  this_ptr->run(sys);
-  sys->thread_terminates();
 }
 
 } // namespace caf::detail

@@ -361,6 +361,8 @@ CAF_CORE_EXPORT void intrusive_ptr_release(const dynamic_message_data*);
 CAF_CORE_EXPORT dynamic_message_data*
 intrusive_cow_ptr_unshare(dynamic_message_data*&);
 
+using global_meta_objects_guard_type = intrusive_ptr<ref_counted>;
+
 } // namespace detail
 
 // -- weak pointer aliases -----------------------------------------------------

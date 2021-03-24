@@ -12,6 +12,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <typeinfo>
 
 #include "caf/abstract_actor.hpp"
@@ -24,6 +25,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/init_fun_factory.hpp"
 #include "caf/detail/private_thread_pool.hpp"
+#include "caf/detail/set_thread_name.hpp"
 #include "caf/detail/spawn_fwd.hpp"
 #include "caf/detail/spawnable.hpp"
 #include "caf/fwd.hpp"
@@ -543,6 +545,23 @@ public:
   /// @warning must be called by thread which is about to terminate
   void thread_terminates();
 
+  template <class F>
+  std::thread launch_thread(const char* thread_name, F fun) {
+    auto body = [this, thread_name, f{std::move(fun)}](auto guard) {
+      CAF_IGNORE_UNUSED(guard);
+      CAF_SET_LOGGER_SYS(this);
+      detail::set_thread_name(thread_name);
+      thread_started();
+      f();
+      thread_terminates();
+    };
+    return std::thread{std::move(body), meta_objects_guard_};
+  }
+
+  auto meta_objects_guard() const noexcept {
+    return meta_objects_guard_;
+  }
+
   const auto& metrics_actors_includes() const noexcept {
     return metrics_actors_includes_;
   }
@@ -722,6 +741,9 @@ private:
 
   /// Manages threads for detached actors.
   detail::private_thread_pool private_threads_;
+
+  /// Ties the lifetime of the meta objects table to the actor system.
+  detail::global_meta_objects_guard_type meta_objects_guard_;
 };
 
 } // namespace caf

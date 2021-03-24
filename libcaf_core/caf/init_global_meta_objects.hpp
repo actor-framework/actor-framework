@@ -12,6 +12,7 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/make_meta_object.hpp"
 #include "caf/detail/meta_object.hpp"
+#include "caf/fwd.hpp"
 #include "caf/span.hpp"
 #include "caf/type_id.hpp"
 

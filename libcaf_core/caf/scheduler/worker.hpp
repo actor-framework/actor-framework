@@ -37,14 +37,7 @@ public:
 
   void start() {
     CAF_ASSERT(this_thread_.get_id() == std::thread::id{});
-    auto this_worker = this;
-    this_thread_ = std::thread{[this_worker] {
-      CAF_SET_LOGGER_SYS(&this_worker->system());
-      detail::set_thread_name("caf.worker");
-      this_worker->system().thread_started();
-      this_worker->run();
-      this_worker->system().thread_terminates();
-    }};
+    this_thread_ = system().launch_thread("caf.worker", [this] { run(); });
   }
 
   worker(const worker&) = delete;

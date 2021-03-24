@@ -60,13 +60,8 @@ protected:
       w->start();
     // Launch an additional background thread for dispatching timeouts and
     // delayed messages.
-    timer_ = std::thread{[&] {
-      CAF_SET_LOGGER_SYS(&system());
-      detail::set_thread_name("caf.clock");
-      system().thread_started();
-      clock_.run_dispatch_loop();
-      system().thread_terminates();
-    }};
+    timer_ = system().launch_thread("caf.clock",
+                                    [this] { clock_.run_dispatch_loop(); });
     // Run remaining startup code.
     super::start();
   }
