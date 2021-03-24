@@ -648,9 +648,9 @@ void logger::start() {
     auto f = [this](auto guard) {
       CAF_IGNORE_UNUSED(guard);
       detail::set_thread_name("caf.logger");
-      this->system_.thread_started();
-      this->run();
-      this->system_.thread_terminates();
+      system_.thread_started();
+      run();
+      system_.thread_terminates();
     };
     thread_ = std::thread{f, detail::global_meta_objects_guard()};
   }
