@@ -6,7 +6,7 @@
 
 #include "caf/mixin/requester.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <numeric>
 
@@ -186,5 +186,38 @@ CAF_TEST(exceptions while processing requests trigger error messages) {
 }
 
 #endif // CAF_ENABLE_EXCEPTIONS
+
+SCENARIO("request.await enforces a processing order") {
+  GIVEN("an actor that is waiting for a request.await handler") {
+    auto server = sys.spawn([]() -> behavior {
+      return {
+        [](int32_t x) { return x * x; },
+      };
+    });
+    run();
+    auto client = sys.spawn([server](event_based_actor* self) -> behavior {
+      self->request(server, infinite, int32_t{3}).await([](int32_t res) {
+        CHECK_EQ(res, 9);
+      });
+      return {
+        [](const std::string& str) {
+          // Received from self.
+          CHECK_EQ(str, "hello");
+        },
+      };
+    });
+    sched.run_once();
+    WHEN("sending it a message before the response arrives") {
+      THEN("the actor handles the asynchronous message later") {
+        self->send(client, "hello");
+        disallow((std::string), from(self).to(client));     // not processed yet
+        expect((int32_t), from(client).to(server).with(3)); // client -> server
+        disallow((std::string), from(self).to(client));     // not processed yet
+        expect((int32_t), from(server).to(client).with(9)); // server -> client
+        expect((std::string), from(self).to(client).with("hello")); // at last
+      }
+    }
+  }
+}
 
 CAF_TEST_FIXTURE_SCOPE_END()

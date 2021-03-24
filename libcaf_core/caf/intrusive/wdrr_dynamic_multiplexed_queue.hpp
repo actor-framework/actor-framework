@@ -154,6 +154,14 @@ public:
       kvp.second.peek_all(f);
   }
 
+  template <class Predicate>
+  pointer find_if(Predicate pred) {
+    for (auto& kvp : qs_)
+      if (auto ptr = kvp.second.find_if(pred))
+        return ptr;
+    return nullptr;
+  }
+
   /// Returns `true` if all queues are empty, `false` otherwise.
   bool empty() const noexcept {
     return total_task_size() == 0;

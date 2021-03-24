@@ -80,6 +80,11 @@ public:
     return peek_recursion<0>();
   }
 
+  template <class Predicate>
+  pointer find_if(Predicate pred) {
+    return find_if_recursion<0>(pred);
+  }
+
   /// Applies `f` to each element in the queue.
   template <class F>
   void peek_all(F f) const {
@@ -202,6 +207,20 @@ private:
     if (ptr != nullptr)
       return ptr;
     return peek_recursion<I + 1>();
+  }
+
+  template <size_t I, class Predicate>
+  detail::enable_if_t<I == num_queues, pointer> find_if_recursion(Predicate) {
+    return nullptr;
+  }
+
+  template <size_t I, class Predicate>
+  detail::enable_if_t<I != num_queues, pointer>
+  find_if_recursion(Predicate pred) {
+    if (auto ptr = std::get<I>(qs_).find_if(pred))
+      return ptr;
+    else
+      return find_if_recursion<I + 1>(std::move(pred));
   }
 
   template <size_t I, class F>

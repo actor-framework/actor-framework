@@ -102,6 +102,13 @@ public:
     list_.peek_all(f);
   }
 
+  /// Tries to find the next element in the queue (excluding cached elements)
+  /// that matches the given predicate.
+  template <class Predicate>
+  pointer find_if(Predicate pred) {
+    return list_.find_if(pred);
+  }
+
   // -- modifiers -------------------------------------------------------------
 
   /// Removes all elements from the queue.

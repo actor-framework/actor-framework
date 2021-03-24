@@ -124,6 +124,14 @@ public:
       f(*i);
   }
 
+  template <class Predicate>
+  pointer find_if(Predicate pred) {
+    for (auto i = begin(); i != end(); ++i)
+      if (pred(*i))
+        return promote(i.ptr);
+    return nullptr;
+  }
+
   // -- modifiers -------------------------------------------------------------
 
   /// Removes all elements from the queue.

@@ -161,6 +161,12 @@ public:
     return queue_.peek();
   }
 
+  template <class Predicate>
+  pointer find_if(Predicate pred) {
+    fetch_more();
+    return queue_.find_if(pred);
+  }
+
   queue_type& queue() noexcept {
     return queue_;
   }
