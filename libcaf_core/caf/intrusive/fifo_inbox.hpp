@@ -161,6 +161,7 @@ public:
     return queue_.peek();
   }
 
+  /// Tries to find an element in the queue that matches the given predicate.
   template <class Predicate>
   pointer find_if(Predicate pred) {
     fetch_more();

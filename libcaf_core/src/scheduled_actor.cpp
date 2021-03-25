@@ -175,6 +175,7 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
       break;
   }
 }
+
 mailbox_element* scheduled_actor::peek_at_next_mailbox_element() {
   if (mailbox().closed() || mailbox().blocked()) {
     return nullptr;

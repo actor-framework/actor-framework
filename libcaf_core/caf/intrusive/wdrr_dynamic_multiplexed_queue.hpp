@@ -154,6 +154,7 @@ public:
       kvp.second.peek_all(f);
   }
 
+  /// Tries to find an element in the queue that matches the given predicate.
   template <class Predicate>
   pointer find_if(Predicate pred) {
     for (auto& kvp : qs_)

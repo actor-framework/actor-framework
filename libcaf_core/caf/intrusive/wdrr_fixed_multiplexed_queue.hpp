@@ -80,6 +80,7 @@ public:
     return peek_recursion<0>();
   }
 
+  /// Tries to find an element in the queue that matches the given predicate.
   template <class Predicate>
   pointer find_if(Predicate pred) {
     return find_if_recursion<0>(pred);
