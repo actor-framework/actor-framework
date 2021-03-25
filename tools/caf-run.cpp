@@ -72,7 +72,7 @@ bool run_ssh(actor_system& system, const string& wdir, const string& cmd,
   full_cmd += wdir;
   full_cmd += '\n';
   full_cmd += cmd;
-  auto packed = detail::encode_base64(full_cmd);
+  auto packed = detail::base64::encode(full_cmd);
   std::ostringstream oss;
   oss << "ssh -Y -o ServerAliveInterval=60 " << host << R"( "echo )" << packed
       << R"( | base64 --decode | /bin/sh")";
