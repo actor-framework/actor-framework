@@ -1,4 +1,4 @@
-# CAF: C++ Actor Framework
+# CAF: the C++ Actor Framework
 
 CAF is an open source implementation of the actor model for C++ featuring
 lightweight & fast actor implementations, pattern matching for messages, network
@@ -11,8 +11,9 @@ transparent messaging, and more.
 
 ## Online Resources
 
-* __Homepage__: http://www.actor-framework.org
-* __Developer Blog__: http://blog.actor-framework.org
+* __Homepage__: https://www.actor-framework.org
+* __Developer Blog__: https://www.actor-framework.org/blog
+* __Guides and Tutorials__: https://www.cafcademy.com/articles
 * __Manual__: https://actor-framework.readthedocs.io
 * __Doxygen__: https://codedocs.xyz/actor-framework/actor-framework
 
@@ -26,116 +27,93 @@ transparent messaging, and more.
 * __Chat__: https://gitter.im/actor-framework/chat
 * __Twitter__: https://twitter.com/actor_framework
 * __User Mailing List__: https://groups.google.com/d/forum/actor-framework
-* __Developer Mailing List__: https://groups.google.com/d/forum/caf-devel
-* __Feature Proposals__: https://github.com/actor-framework/evolution
 
 ## Get CAF
 
-### FreeBSD Ports
+We currently officially maintain only the CAF package available on
+[Homebrew](https://formulae.brew.sh/formula/caf).
 
-We maintain a port for CAF, which you can install as follows:
+More package managers are supported by community members:
 
-```sh
-pkg install caf
-```
+- [Conan](https://conan.io/center/caf)
+- [FreeBSD Ports](https://svnweb.freebsd.org/ports/head/devel/caf)
+- [VCPKG](https://github.com/microsoft/vcpkg/tree/master/ports/caf)
 
-Alternatively, you can go to `/usr/ports/devel/caf` and tweak a few
-configuration options before installing the port:
-
-```sh
-make config
-make install clean
-```
-
-### Homebrew
-
-You can install the latest stable release with:
-
-```sh
-brew install caf
-```
-
-Alternatively, you can use the current development version by using:
-
-```sh
-brew install caf --HEAD
-```
-
-### Conan
-
-A [Conan](https://conan.io/) recipe for CAF along with pre-built libraries
-for most platforms are available at [Conan Center](https://conan.io/center/caf/stable/?user=bincrafters&channel=stable).
-
-### VCPKG
-
-You can build and install CAF using [vcpkg](https://github.com/Microsoft/vcpkg/) dependency manager with a single command:
-
-```sh
-vcpkg install caf
-```
-
-The caf port in vcpkg is kept up to date by Microsoft team members and community contributors.
 
 ## Get the Sources
 
-* git clone https://github.com/actor-framework/actor-framework.git
-* cd actor-framework
+```sh
+git clone https://github.com/actor-framework/actor-framework.git
+cd actor-framework
+```
 
 ## Build CAF from Source
 
-The easiest way to build CAF is to use the `configure` script. Other available
-options are using [CMake](http://www.cmake.org/) directly or
-[SNocs](https://github.com/airutech/snocs).
+CAF uses [CMake](http://www.cmake.org) as its build system of choice. To make
+building CAF more convenient from the command line, we provide a `configure`
+script that wraps the CMake invocation. The script only works on UNIX systems.
+On Windows, we recommend generating an MSVC project file via CMake for native
+builds.
 
 ### Using the `configure` Script
 
-The script is a convenient frontend for `CMake`. See `configure -h`
-for a list of available options or read the
-[online documentation](https://github.com/actor-framework/actor-framework/wiki/Configure-Options).
+The script is a convenient frontend for `CMake`. See `configure -h` for a list
+of available options. By default, the script creates a `build` directory and
+asks CMake to generate a `Makefile`. A build with default settings generally
+follows these steps:
 
 ```sh
 ./configure
 cd build
 make
-make test
+make test [optional]
 make install [as root, optional]
 ```
 
 ### Using CMake
 
-All available CMake variables are available
-[online](https://github.com/actor-framework/actor-framework/wiki/CMake-Options).
-CAF also can be included as CMake submodule or added as dependency to other
-CMake-based projects. The latter can be achieved by calling
-```cmake
-find_package(CAF REQUIRED)
+To generate a Makefile for building CAF with default settings, either use a
+CMake GUI or perform these steps on the command line:
+
+```sh
+mkdir build
+cd build
+cmake ..
 ```
-in respective project's CMake file. CAF's install location (e.g. by providing
-the `CMAKE_PREFIX_PATH` option) has to be known.
 
-### Using SNocs
+After this step, `cmake -LH` prints the most useful configuration options for
+CAF, their default value, and a helptext.
 
-A SNocs workspace is provided by GitHub user
-[osblinnikov](https://github.com/osblinnikov) and documented
-[online](https://github.com/actor-framework/actor-framework/wiki/Using-SNocs).
+Other CMake projects can add CAF as a dependency by using `find_package` and
+listing the required modules (e.g., `core` or `io`) . When installing CAF to a
+non-standard location, set `CAF_ROOT` prior to calling `find_package`.
 
 ## Dependencies
 
-* CMake
-* Pthread (until C++11 compilers support the new `thread_local` keyword)
+* CMake (for building CAF)
+* OpenSSL (only when building the OpenSSL module)
 
-## Supported Compilers
+## Supported Platforms
 
-* GCC >= 7
-* Clang >= 4
-* MSVC >= 2019
+C++ is an evolving language. Compiler vendors constantly add more language and
+standard library features. Since CAF runs on many platforms, this means we need
+a policy that on the one hand ensures that we only use a widely supported subset
+of C++ and on the other hand that we naturally progress with the shifting
+landscape to eventually catch up to more recent C++ additions (in order to not
+"get stuck").
 
-## Supported Operating Systems
+So instead of singling out individual compiler versions, we build CAF for each
+commit on all platforms that we currently deem relevant. Everything that passes
+our CI is "fair game".
 
-* Linux
-* Mac OS X
-* FreeBSD 10
-* Windows >= 7 (currently static builds only)
+Our CI covers Windows (latest MSVC release), macOS (latest Xcode release),
+FreeBSD (latest) and several Linux distributions (via the Docker images found
+[here](https://github.com/actor-framework/actor-framework/tree/master/.ci)). For
+Linux, we aim to support the current releases (that still receive active
+support) for the major distributions. Note that we do not build on Linux
+distributions with rolling releases, because they generally provide more recent
+build tools than distributions with traditional release schedules and thus would
+only add redundancy.
 
 ## Build Documentation Locally
 
@@ -177,8 +155,7 @@ If you use CAF in a scientific context, please use one of the following citation
 }
 ```
 
-You can find the papers online at
-http://dx.doi.org/10.1145/2541329.2541336 and
+You can find the papers online at http://dx.doi.org/10.1145/2541329.2541336 and
 http://dx.doi.org/10.1016/j.cl.2016.01.002.
 
 [obs]: https://software.opensuse.org/download.html?project=devel%3Alibraries%3Acaf&package=caf
