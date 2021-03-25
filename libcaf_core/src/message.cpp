@@ -49,7 +49,8 @@ bool load_data(Deserializer& source, message::data_ptr& data) {
     GUARDED(source.begin_field("types"));
     size_t msg_size = 0;
     GUARDED(source.begin_sequence(msg_size));
-    if (msg_size > std::numeric_limits<uint16_t>::max() - 1)
+    using uint16_limits = std::numeric_limits<uint16_t>;
+    if (msg_size > static_cast<size_t>(uint16_limits::max() - 1))
       STOP(sec::invalid_argument, "too many types for message");
     if (msg_size == 0) {
       data.reset();
