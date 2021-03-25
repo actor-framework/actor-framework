@@ -34,6 +34,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Fix heap-use-after-free when accessing the meta objects table in applications
   that leave the `main` function while the actor system and its worker threads
   are still running (#1241).
+- The testing DSL now properly accounts for the message prioritization of actors
+  (suspending regular behavior until receiving the response) when using
+  `request.await` (#1232).
 
 ## [0.18.1] - 2021-03-19
 

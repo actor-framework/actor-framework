@@ -175,8 +175,17 @@ void scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
       break;
   }
 }
+
 mailbox_element* scheduled_actor::peek_at_next_mailbox_element() {
-  return mailbox().closed() || mailbox().blocked() ? nullptr : mailbox().peek();
+  if (mailbox().closed() || mailbox().blocked()) {
+    return nullptr;
+  } else if (awaited_responses_.empty()) {
+    return mailbox().peek();
+  } else {
+    auto mid = awaited_responses_.begin()->first;
+    auto pred = [mid](mailbox_element& x) { return x.mid == mid; };
+    return mailbox().find_if(pred);
+  }
 }
 
 // -- overridden functions of local_actor --------------------------------------
