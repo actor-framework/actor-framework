@@ -131,7 +131,6 @@ fi
 
 # assumed files
 token_path="$HOME/.github-oauth-token"
-blog_msg="blog_release_note.md"
 github_msg="github_release_note.md"
 config_hpp_path="libcaf_core/caf/config.hpp"
 
@@ -139,7 +138,7 @@ config_hpp_path="libcaf_core/caf/config.hpp"
 blog_posts_path="../blog/_posts"
 
 # check whether all expected files and directories exist
-assert_exists "$token_path" "$config_hpp_path" "$github_msg"
+assert_exists "$token_path" "$config_hpp_path"
 
 # check for a clean state
 assert_exists_not .make-release-steps.bash
@@ -159,19 +158,16 @@ if [ -n "$rc_version" ]; then
   tag_version="$tag_version-rc.$rc_version"
 fi
 
-if [ ! -f "$blog_msg"  ]; then
-  ask_permission "$blog_msg missing, continue without blog post [y] or abort [n]?"
+# extract the release notes from the changelog
+sed -n "/^## \[$tag_version\]*/,/^##[^#]/p" CHANGELOG.md | sed '$d' > "$github_msg"
+
+if [[ -s "$github_msg" ]] ; then
+  echo ">>> please review the GitHub release notes as extracted from the changelog"
+  cat "$github_msg"
+  echo ; echo
+  ask_permission "type [n] to abort or [y] to proceed"
 else
-  # target files
-  assert_exists "$blog_posts_path"
-  if [ -z "$rc_version" ]; then
-    blog_release_version="$1"
-  else
-    blog_release_version="$1-rc.$rc_version"
-  fi
-  blog_target_file="$blog_posts_path/$(date +%F)-version-$tag_version-released.md"
-  assert_exists_not "$blog_target_file"
-  assert_git_status_clean "../blog/"
+  raise_error 'empty GitHub release notes'
 fi
 
 # add scaffold for release script
@@ -211,7 +207,7 @@ echo "\
 git push
 git tag $tag_version
 git push origin --tags
-curl --data '$github_json' https://api.github.com/repos/actor-framework/actor-framework/releases?access_token=$token
+curl --data '$github_json' -H 'Authorization: token $token' https://api.github.com/repos/actor-framework/actor-framework/releases
 " >> .make-release-steps.bash
 
 if [ -z "$rc_version" ]; then
@@ -222,17 +218,6 @@ export HOMEBREW_GITHUB_API_TOKEN=\$(cat "$token_path")
 brew bump-formula-pr --message=\"Update CAF to version $tag_version\" --url=\"$file_url\" caf
 " >> .make-release-steps.bash
   fi
-fi
-
-if [ -f "$blog_msg"  ]; then
-  echo "\
-  cp "$blog_msg" "$blog_target_file"
-  cd ../blog
-  git add _posts
-  git commit -m \"$tag_version announcement\"
-  git push
-  cd "$anchor"
-  " >> .make-release-steps.bash
 fi
 
 echo ; echo
@@ -247,9 +232,6 @@ chmod +x .make-release-steps.bash
 echo ; echo
 echo ">>> cleaning up"
 rm "$github_msg" .make-release-steps.bash
-if [ -f "$blog_msg" ]; then
-  rm "$blog_msg"
-fi
 
 echo ; echo
 echo ">>> done"
