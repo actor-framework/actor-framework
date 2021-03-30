@@ -158,7 +158,7 @@ public:
   // -- friend functions -------------------------------------------------------
 
   template <class Inspector>
-  friend bool inspect(Inspector& f, node_id& x) {
+  friend bool default_inspect(Inspector& f, node_id& x) {
     auto is_present = [&x] { return x.data_ != nullptr; };
     auto get = [&]() -> const auto& {
       return x.data_->content;
@@ -172,6 +172,11 @@ public:
       return true;
     };
     return f.object(x).fields(f.field("data", is_present, get, reset, set));
+  }
+
+  template <class Inspector>
+  friend bool inspect(Inspector& f, node_id& x) {
+    return default_inspect(f, x);
   }
 
   // -- private API ------------------------------------------------------------
@@ -199,6 +204,9 @@ public:
 private:
   intrusive_ptr<node_id_data> data_;
 };
+
+/// @relates node_id
+CAF_CORE_EXPORT bool inspect(binary_deserializer& f, node_id& x);
 
 /// Returns whether `x` contains an URI.
 /// @relates node_id

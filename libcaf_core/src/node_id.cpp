@@ -19,6 +19,7 @@
 #include "caf/detail/get_mac_addresses.hpp"
 #include "caf/detail/get_process_id.hpp"
 #include "caf/detail/get_root_uuid.hpp"
+#include "caf/detail/network_order.hpp"
 #include "caf/detail/parse.hpp"
 #include "caf/detail/parser/ascii_to_int.hpp"
 #include "caf/detail/ripemd_160.hpp"
@@ -160,6 +161,65 @@ void node_id::swap(node_id& x) noexcept {
 
 bool node_id::can_parse(string_view str) noexcept {
   return default_data::can_parse(str) || uri::can_parse(str);
+}
+
+namespace {
+
+constexpr size_t packed_size = 24; // 20 bytes host ID + 4 bytes process ID
+
+using packed_hashed_node_id = std::array<uint8_t, packed_size>;
+
+struct fnv_hasher {
+  size_t operator()(const packed_hashed_node_id& x) const noexcept {
+    return hash::fnv<size_t>::compute(x);
+  }
+};
+
+constexpr size_t max_node_id_cache_size = 500;
+
+thread_local std::unordered_map<packed_hashed_node_id, node_id, fnv_hasher>
+  node_id_cache;
+
+} // namespace
+
+bool inspect(binary_deserializer& f, node_id& x) {
+  auto pos = f.current();
+  auto eos = f.end();
+  if (pos == eos) {
+    f.emplace_error(sec::end_of_stream);
+    return false;
+  }
+  // The first byte is the index for the variant:
+  // * -1 means invalid ID (is_present in default_inspect would return false)
+  // * 0 means URI-based ID
+  // * 1 means hash-based ID
+  if (static_cast<int8_t>(*pos) == 1) {
+    ++pos;
+    if (eos - pos < static_cast<ptrdiff_t>(packed_size)) {
+      f.emplace_error(sec::end_of_stream);
+      return false;
+    }
+    packed_hashed_node_id packed;
+    for (size_t index = 0; index < packed_size; ++index)
+      packed[index] = static_cast<uint8_t>(*pos++);
+    if (auto i = node_id_cache.find(packed); i != node_id_cache.end()) {
+      x = i->second;
+    } else {
+      uint32_t proc_id;
+      memcpy(&proc_id, packed.data(), sizeof(uint32_t));
+      proc_id = detail::from_network_order(proc_id);
+      hashed_node_id::host_id_type host_id;
+      memcpy(host_id.data(), packed.data() + sizeof(uint32_t), host_id.size());
+      x = make_node_id(proc_id, host_id);
+      if (node_id_cache.size() == max_node_id_cache_size)
+        node_id_cache.clear();
+      node_id_cache.emplace(packed, x);
+    }
+    f.skip(packed_size + 1);
+    return true;
+  } else {
+    return default_inspect(f, x);
+  }
 }
 
 void append_to_string(std::string& str, const node_id& x) {
