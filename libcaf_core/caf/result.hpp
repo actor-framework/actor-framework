@@ -184,7 +184,9 @@ public:
 
   using super::super;
 
-  result(T x) : super(detail::result_base_message_init{}, std::move(x)) {
+  template <class U, class = std::enable_if_t<std::is_constructible_v<T, U>>>
+  result(U&& x)
+    : super(detail::result_base_message_init{}, T{std::forward<U>(x)}) {
     // nop
   }
 
