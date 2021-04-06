@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com).
 
+## [Unreleased]
+
+### Fixed
+
+- For types that offer implicit type conversion, trying to construct a
+  `result<T>` could result in ambiguity since compilers could construct either
+  `T` itself or `expected<T>` for calling a constructor of `result<T>`. To fix
+  the ambiguity, `result<T>` now accepts any type that allows constructing a `T`
+  internally without requiring a type conversion to `T` as an argument (#1245).
+
 ## [0.18.2] - 2021-03-26
 
 ### Added
