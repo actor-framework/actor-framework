@@ -5,6 +5,23 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Added
+
+- The `actor_system_config` now has an additional member called
+  `config_file_path_alternatives`. With this, users can configure fallback paths
+  for locating a configuration file. For example, an application `my-app` on a
+  UNIX-like system could set `config_file_path` to `my-app.conf` and then add
+  `/etc/my-app.conf` to `config_file_path_alternatives` in order to follow the
+  common practice of looking into the current directory first before looking for
+  a system-wide configuration file.
+
+### Deprecated
+
+- All `parse` function overloads in `actor_system_config` that took a custom
+  configuration file path as argument were deprecated in favor of consistently
+  asking users to use the `config_file_path` and `config_file_path_alternatives`
+  member variables instead
+
 ### Fixed
 
 - For types that offer implicit type conversion, trying to construct a
