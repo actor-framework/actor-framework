@@ -356,6 +356,8 @@ error actor_system_config::parse(string_list args) {
     } else {
       // Try config_file_path and if that fails try the alternative paths.
       auto try_open = [this, &conf](const auto& what) {
+        if (what.empty())
+          return false;
         conf.open(what);
         if (conf.is_open()) {
           set("global.config-file", what);
