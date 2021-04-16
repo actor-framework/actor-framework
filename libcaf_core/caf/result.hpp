@@ -184,7 +184,10 @@ public:
 
   using super::super;
 
-  template <class U, class = std::enable_if_t<std::is_constructible_v<T, U>>>
+  template <
+    class U,
+    class = std::enable_if_t<
+      std::is_constructible_v<T, U> && !std::is_constructible_v<super, U>>>
   result(U&& x)
     : super(detail::result_base_message_init{}, T{std::forward<U>(x)}) {
     // nop
