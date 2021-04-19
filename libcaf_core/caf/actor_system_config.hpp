@@ -94,7 +94,7 @@ public:
   /// configuration file.
   error parse(string_list args, std::istream& config);
 
-  /// Parses `args` as CLI options and tries locate a config file via
+  /// Parses `args` as CLI options and tries to locate a config file via
   /// `config_file_path` and `config_file_path_alternative` unless the user
   /// provides a config file path on the command line.
   error parse(string_list args);
@@ -105,9 +105,9 @@ public:
   /// Parses the CLI options `{argc, argv}` and `config` as configuration file.
   error parse(int argc, char** argv, std::istream& config);
 
-  /// Parses the CLI options `{argc, argv}` and tries to open `config_file_cstr`
-  /// as config file. The parsers tries to open `caf-application.conf` if
-  /// `config_file_cstr` is `nullptr`.
+  /// Parses the CLI options `{argc, argv}` and tries to locate a config file
+  /// via `config_file_path` and `config_file_path_alternative` unless the user
+  /// provides a config file path on the command line.
   error parse(int argc, char** argv);
 
   [[deprecated("set the config_file_path member instead")]] error
@@ -241,7 +241,7 @@ public:
 
   // -- parsing parameters -----------------------------------------------------
 
-  /// Configures a path for the default configuration file.
+  /// Configures the default path of the configuration file.
   std::string config_file_path;
 
   /// Configures alternative paths for locating a config file when unable to

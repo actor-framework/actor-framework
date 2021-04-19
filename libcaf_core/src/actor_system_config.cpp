@@ -350,7 +350,7 @@ error actor_system_config::parse(string_list args, std::istream& config) {
 error actor_system_config::parse(string_list args) {
   if (auto&& [err, path] = extract_config_file_path(args); !err) {
     std::ifstream conf;
-    // No error but an empty path means --config-file=ARG was missing.
+    // No error. An empty path simply means no --config-file=ARG was passed.
     if (!path.empty()) {
       conf.open(path);
     } else {
