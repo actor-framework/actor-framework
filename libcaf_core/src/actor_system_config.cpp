@@ -26,7 +26,7 @@ namespace caf {
 
 namespace {
 
-constexpr const char* default_config_file = "$DEFAULT";
+constexpr const char* default_config_file = "caf-application.conf";
 
 } // namespace
 
@@ -53,8 +53,7 @@ actor_system_config::actor_system_config()
     .add<bool>("help,h?", "print help text to STDERR and exit")
     .add<bool>("long-help", "print long help text to STDERR and exit")
     .add<bool>("dump-config", "print configuration to STDERR and exit")
-    .add<string>(config_file_path, "config-file",
-                 "set config file (default: caf-application.conf)");
+    .add<string>("config-file", "sets a path to a configuration file");
   opt_group{custom_options_, "caf.stream"}
     .add<timespan>(stream_max_batch_delay, "max-batch-delay",
                    "maximum delay for partial batches")
@@ -174,15 +173,31 @@ settings actor_system_config::dump_content() const {
   return result;
 }
 
-error actor_system_config::parse(int argc, char** argv,
-                                 const char* config_file_cstr) {
+error actor_system_config::parse(int argc, char** argv) {
   string_list args;
   if (argc > 0) {
     program_name = argv[0];
     if (argc > 1)
       args.assign(argv + 1, argv + argc);
   }
-  return parse(std::move(args), config_file_cstr);
+  return parse(std::move(args));
+}
+
+error actor_system_config::parse(int argc, char** argv,
+                                 const char* config_file_cstr) {
+  if (config_file_cstr == nullptr) {
+    return parse(argc, argv);
+  } else {
+    string_list args;
+    if (argc > 0) {
+      program_name = argv[0];
+      if (argc > 1)
+        args.assign(argv + 1, argv + argc);
+    }
+    CAF_PUSH_DEPRECATED_WARNING
+    return parse(std::move(args), config_file_cstr);
+    CAF_POP_WARNINGS
+  }
 }
 
 error actor_system_config::parse(int argc, char** argv, std::istream& conf) {
@@ -332,20 +347,52 @@ error actor_system_config::parse(string_list args, std::istream& config) {
   return none;
 }
 
+error actor_system_config::parse(string_list args) {
+  if (auto&& [err, path] = extract_config_file_path(args); !err) {
+    std::ifstream conf;
+    // No error. An empty path simply means no --config-file=ARG was passed.
+    if (!path.empty()) {
+      conf.open(path);
+    } else {
+      // Try config_file_path and if that fails try the alternative paths.
+      auto try_open = [this, &conf](const auto& what) {
+        if (what.empty())
+          return false;
+        conf.open(what);
+        if (conf.is_open()) {
+          set("global.config-file", what);
+          return true;
+        } else {
+          return false;
+        }
+      };
+      try_open(config_file_path)
+        || std::any_of(config_file_path_alternatives.begin(),
+                       config_file_path_alternatives.end(), try_open);
+    }
+    return parse(std::move(args), conf);
+  } else {
+    return err;
+  }
+}
+
 error actor_system_config::parse(string_list args,
                                  const char* config_file_cstr) {
-  // Override default config file name if set by user.
-  if (config_file_cstr != nullptr)
-    config_file_path = config_file_cstr;
-  // CLI arguments always win.
-  if (auto err = extract_config_file_path(args))
-    return err;
-  if (config_file_path == "$DEFAULT") {
-    std::ifstream conf{"caf-application.conf"};
+  if (config_file_cstr == nullptr) {
+    return parse(std::move(args));
+  } else if (auto&& [err, path] = extract_config_file_path(args); !err) {
+    std::ifstream conf;
+    if (!path.empty()) {
+      conf.open(path);
+    } else {
+      conf.open(config_file_cstr);
+      if (conf.is_open())
+        set("global.config-file", config_file_cstr);
+    }
     return parse(std::move(args), conf);
+  } else {
+    return err;
   }
-  std::ifstream conf{config_file_path};
-  return parse(std::move(args), conf);
 }
 
 actor_system_config& actor_system_config::add_actor_factory(std::string name,
@@ -419,25 +466,28 @@ error actor_system_config::parse_config(std::istream& source,
   return none;
 }
 
-error actor_system_config::extract_config_file_path(string_list& args) {
+std::pair<error, std::string>
+actor_system_config::extract_config_file_path(string_list& args) {
   auto ptr = custom_options_.qualified_name_lookup("global.config-file");
   CAF_ASSERT(ptr != nullptr);
   string_list::iterator i;
   string_view path;
   std::tie(i, path) = find_by_long_name(*ptr, args.begin(), args.end());
-  if (i == args.end())
-    return none;
-  if (path.empty()) {
-    auto str = std::move(*i);
-    args.erase(i);
-    return make_error(pec::missing_argument, std::move(str));
-  }
-  config_value val{path};
-  if (auto err = ptr->sync(val); !err) {
-    put(content, "config-file", std::move(val));
-    return none;
+  if (i == args.end()) {
+    return {none, std::string{}};
+  } else if (path.empty()) {
+    return {make_error(pec::missing_argument, "no argument to --config-file"),
+            std::string{}};
   } else {
-    return err;
+    auto path_str = std::string{path.begin(), path.end()};
+    args.erase(i);
+    config_value val{path_str};
+    if (auto err = ptr->sync(val); !err) {
+      put(content, "config-file", std::move(val));
+      return {none, std::move(path_str)};
+    } else {
+      return {std::move(err), std::string{}};
+    }
   }
 }
 

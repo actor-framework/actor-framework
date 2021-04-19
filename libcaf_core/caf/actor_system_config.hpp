@@ -94,18 +94,24 @@ public:
   /// configuration file.
   error parse(string_list args, std::istream& config);
 
-  /// Parses `args` as tuple of strings containing CLI options and tries to open
-  /// `config_file_cstr` as config file. The parsers tries to open
-  /// `caf-application.conf` if `config_file_cstr` is `nullptr`.
-  error parse(string_list args, const char* config_file_cstr = nullptr);
+  /// Parses `args` as CLI options and tries to locate a config file via
+  /// `config_file_path` and `config_file_path_alternative` unless the user
+  /// provides a config file path on the command line.
+  error parse(string_list args);
+
+  [[deprecated("set the config_file_path member instead")]] error
+  parse(string_list args, const char* config_file_cstr);
 
   /// Parses the CLI options `{argc, argv}` and `config` as configuration file.
   error parse(int argc, char** argv, std::istream& config);
 
-  /// Parses the CLI options `{argc, argv}` and tries to open `config_file_cstr`
-  /// as config file. The parsers tries to open `caf-application.conf` if
-  /// `config_file_cstr` is `nullptr`.
-  error parse(int argc, char** argv, const char* config_file_cstr = nullptr);
+  /// Parses the CLI options `{argc, argv}` and tries to locate a config file
+  /// via `config_file_path` and `config_file_path_alternative` unless the user
+  /// provides a config file path on the command line.
+  error parse(int argc, char** argv);
+
+  [[deprecated("set the config_file_path member instead")]] error
+  parse(int argc, char** argv, const char* config_file_cstr);
 
   /// Allows other nodes to spawn actors created by `fun`
   /// dynamically by using `name` as identifier.
@@ -235,9 +241,12 @@ public:
 
   // -- parsing parameters -----------------------------------------------------
 
-  /// Configures the file path for the config file, `caf-application.conf` per
-  /// default.
+  /// Configures the default path of the configuration file.
   std::string config_file_path;
+
+  /// Configures alternative paths for locating a config file when unable to
+  /// open the default `config_file_path`.
+  std::vector<std::string> config_file_path_alternatives;
 
   // -- utility for caf-run ----------------------------------------------------
 
@@ -321,7 +330,7 @@ private:
 
   actor_system_config& set_impl(string_view name, config_value value);
 
-  error extract_config_file_path(string_list& args);
+  std::pair<error, std::string> extract_config_file_path(string_list& args);
 };
 
 /// Returns all user-provided configuration parameters.
