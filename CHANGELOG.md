@@ -29,6 +29,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `T` itself or `expected<T>` for calling a constructor of `result<T>`. To fix
   the ambiguity, `result<T>` now accepts any type that allows constructing a `T`
   internally without requiring a type conversion to `T` as an argument (#1245).
+- Fix configuration parameter lookup for the `work-stealing` scheduler policy.
 
 ## [0.18.2] - 2021-03-26
 

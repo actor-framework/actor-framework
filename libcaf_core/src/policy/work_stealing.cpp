@@ -10,7 +10,7 @@
 #include "caf/scheduler/abstract_coordinator.hpp"
 
 #define CONFIG(str_name, var_name)                                             \
-  get_or(p->config(), "work-stealing." str_name,                               \
+  get_or(p->config(), "caf.work-stealing." str_name,                           \
          defaults::work_stealing::var_name)
 
 namespace caf::policy {
