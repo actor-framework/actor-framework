@@ -14,6 +14,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   `/etc/my-app.conf` to `config_file_path_alternatives` in order to follow the
   common practice of looking into the current directory first before looking for
   a system-wide configuration file.
+- The class `cow_tuple` now supports structured bindings.
 
 ### Deprecated
 

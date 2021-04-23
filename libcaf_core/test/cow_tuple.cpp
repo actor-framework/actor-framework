@@ -13,6 +13,7 @@ using std::string;
 using std::tuple;
 
 using namespace caf;
+using namespace std::literals;
 
 CAF_TEST(default_construction) {
   cow_tuple<string, string> x;
@@ -89,6 +90,31 @@ CAF_TEST(unsharing) {
 CAF_TEST(to_string) {
   auto x = make_cow_tuple(1, string{"abc"});
   CAF_CHECK_EQUAL(deep_to_string(x), R"__([1, "abc"])__");
+}
+
+SCENARIO("COW tuples support structured bindings") {
+  GIVEN("a COW tuple") {
+    auto xs = make_cow_tuple(1, "hello"s);
+    WHEN("using structured bindings to decompose the tuple into values") {
+      THEN("all variables bind to const lvalue references") {
+        auto [a, b] = xs;
+        static_assert(std::is_same_v<const int&, decltype(a)>);
+        static_assert(std::is_same_v<const std::string&, decltype(b)>);
+        CHECK_EQ(a, 1);
+        CHECK_EQ(b, "hello");
+        auto& [c, d] = xs;
+        static_assert(std::is_same_v<const int&, decltype(c)>);
+        static_assert(std::is_same_v<const std::string&, decltype(d)>);
+        CHECK_EQ(c, 1);
+        CHECK_EQ(d, "hello");
+        auto&& [e, f] = xs;
+        static_assert(std::is_same_v<const int&, decltype(e)>);
+        static_assert(std::is_same_v<const std::string&, decltype(f)>);
+        CHECK_EQ(e, 1);
+        CHECK_EQ(f, "hello");
+      }
+    }
+  }
 }
 
 CAF_TEST_FIXTURE_SCOPE(cow_tuple_tests, test_coordinator_fixture<>)

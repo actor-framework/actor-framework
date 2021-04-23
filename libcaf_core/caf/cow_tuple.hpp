@@ -18,6 +18,12 @@ template <class... Ts>
 class cow_tuple : detail::comparable<cow_tuple<Ts...>>,
                   detail::comparable<cow_tuple<Ts...>, std::tuple<Ts...>> {
 public:
+  // -- sanity checking --------------------------------------------------------
+
+  static_assert(!(std::is_reference_v<Ts> || ...)
+                  && !(std::is_pointer_v<Ts> || ...),
+                "cow_tuple may only store values (no pointers, no references)");
+
   // -- member types -----------------------------------------------------------
 
   using data_type = std::tuple<Ts...>;
@@ -104,8 +110,8 @@ private:
 /// Creates a new copy-on-write tuple from given arguments.
 /// @relates cow_tuple
 template <class... Ts>
-cow_tuple<typename std::decay<Ts>::type...> make_cow_tuple(Ts&&... xs) {
-  return cow_tuple<typename std::decay<Ts>::type...>{std::forward<Ts>(xs)...};
+cow_tuple<std::decay_t<Ts>...> make_cow_tuple(Ts&&... xs) {
+  return cow_tuple<std::decay_t<Ts>...>{std::forward<Ts>(xs)...};
 }
 
 /// Convenience function for calling `get<N>(xs.data())`.
@@ -168,3 +174,19 @@ struct inspector_access<cow_tuple<Ts...>> {
 };
 
 } // namespace caf
+
+// Structured binding support.
+namespace std {
+
+template <class... Ts>
+struct tuple_size<caf::cow_tuple<Ts...>> {
+  static constexpr std::size_t value = sizeof...(Ts);
+};
+
+template <std::size_t I, class... Ts>
+struct tuple_element<I, caf::cow_tuple<Ts...>> {
+  // Our only overload to `get` always returns a const lvalue reference.
+  using type = const typename tuple_element<I, tuple<Ts...>>::type&;
+};
+
+} // namespace std
