@@ -32,7 +32,7 @@ namespace caf::io {
 /// Manages brokers and network backends.
 class CAF_IO_EXPORT middleman : public actor_system::networking_module {
 public:
-  friend class ::caf::actor_system;
+  friend class actor_system;
 
   /// Metrics that the middleman collects by default.
   struct metric_singletons_t {
@@ -52,7 +52,6 @@ public:
   /// Independent tasks that run in the background, usually in their own thread.
   struct background_task {
     virtual ~background_task();
-    virtual bool start(const config_value::dictionary& cfg) = 0;
   };
 
   using background_task_ptr = std::unique_ptr<background_task>;
@@ -309,6 +308,11 @@ public:
   /// @private
   metric_singletons_t metric_singletons;
 
+  /// @private
+  uint16_t prometheus_scraping_port() const noexcept {
+    return prometheus_scraping_port_;
+  }
+
 protected:
   middleman(actor_system& sys);
 
@@ -349,12 +353,6 @@ private:
     return system().spawn_class<Impl, Os>(cfg);
   }
 
-  expected<uint16_t> expose_prometheus_metrics(uint16_t port,
-                                               const char* in = nullptr,
-                                               bool reuse = false);
-
-  void expose_prometheus_metrics(const config_value::dictionary& cfg);
-
   expected<strong_actor_ptr>
   remote_spawn_impl(const node_id& nid, std::string& name, message& args,
                     std::set<std::string> s, timespan timeout);
@@ -390,6 +388,10 @@ private:
 
   /// Manages groups that run on a different node in the network.
   detail::remote_group_module_ptr remote_groups_;
+
+  /// Stores the port where the Prometheus scraper is listening at (0 if no
+  /// scraper is running in the background).
+  uint16_t prometheus_scraping_port_ = 0;
 };
 
 } // namespace caf::io
