@@ -15,6 +15,8 @@ using namespace caf;
 using namespace caf::literals;
 using namespace caf::telemetry;
 
+using namespace std::literals;
+
 namespace {
 
 struct fixture {
@@ -44,7 +46,7 @@ CAF_TEST(the Prometheus collector generates text output) {
   h->observe(3);
   h->observe(4);
   h->observe(7);
-  CAF_CHECK_EQUAL(exporter.collect_from(registry, 42),
+  CAF_CHECK_EQUAL(exporter.collect_from(registry, timestamp{42s}),
                   R"(# HELP foo_bar_seconds Some value without labels.
 # TYPE foo_bar_seconds gauge
 foo_bar_seconds 123 42000
