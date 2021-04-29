@@ -6,7 +6,10 @@
 
 #include "caf/uuid.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
+
+#include "caf/json_reader.hpp"
+#include "caf/json_writer.hpp"
 
 using namespace caf;
 
@@ -122,6 +125,39 @@ CAF_TEST(version 1 defines UUIDs that are based on time) {
     CAF_CHECK_EQUAL(x.timestamp(), 0x0FFFFFFFFFFFFFFFull);
     CAF_CHECK_EQUAL(x.clock_sequence(), 0x3FFFu);
     CAF_CHECK_EQUAL(x.node(), 0x334455667788ull);
+  }
+}
+
+SCENARIO("UUIDs are inspectable") {
+  auto id = "2ee4ded7-69c0-4dd6-876d-02e446b21784"_uuid;
+  GIVEN("a binary serializer") {
+    byte_buffer buf;
+    binary_serializer sink{nullptr, buf};
+    WHEN("applying an UUID to the serializer") {
+      CHECK(sink.apply(id));
+      THEN("a binary deserializer reproduces the UUID") {
+        binary_deserializer source{nullptr, buf};
+        uuid id_copy;
+        CHECK(source.apply(id_copy));
+        CHECK_EQ(id, id_copy);
+      }
+    }
+  }
+  GIVEN("a JSON writer") {
+    json_writer sink;
+    WHEN("applying an UUID to the writer") {
+      CHECK(sink.apply(id));
+      THEN("the writer renders the UUID as string") {
+        CHECK_EQ(sink.str(), R"("2ee4ded7-69c0-4dd6-876d-02e446b21784")");
+      }
+      AND("a JSON reader reproduces the UUID") {
+        json_reader source;
+        uuid id_copy;
+        CHECK(source.load(sink.str()));
+        CHECK(source.apply(id_copy));
+        CHECK_EQ(id, id_copy);
+      }
+    }
   }
 }
 
