@@ -28,13 +28,11 @@ public:
 
   using gauge_type = gauge<value_type>;
 
-  using counter_type = counter<value_type>;
-
   using family_setting = std::vector<value_type>;
 
   struct bucket_type {
     value_type upper_bound;
-    counter_type count;
+    int_counter count;
   };
 
   // -- constants --------------------------------------------------------------
