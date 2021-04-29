@@ -25,13 +25,14 @@ struct ms_timestamp {
   int64_t value;
 
   /// Converts seconds-since-epoch to milliseconds-since-epoch
-  explicit ms_timestamp(time_t from) : value(from * int64_t{1000}) {
-    // nop
+  explicit ms_timestamp(timestamp from) noexcept {
+    using ms_dur = std::chrono::duration<int64_t, std::milli>;
+    value = std::chrono::duration_cast<ms_dur>(from.time_since_epoch()).count();
   }
 
-  ms_timestamp(const ms_timestamp&) = default;
+  ms_timestamp(const ms_timestamp&) noexcept = default;
 
-  ms_timestamp& operator=(const ms_timestamp&) = default;
+  ms_timestamp& operator=(const ms_timestamp&) noexcept = default;
 };
 
 // Converts separators such as '.' and '-' to underlines to follow the
@@ -171,67 +172,69 @@ void append(prometheus::char_buffer& buf, const prometheus::char_buffer& x,
 
 } // namespace
 
-string_view prometheus::collect_from(const metric_registry& registry,
-                                     time_t now) {
-  if (!buf_.empty() && now - now_ < min_scrape_interval_)
-    return {buf_.data(), buf_.size()};
+// -- properties ---------------------------------------------------------------
+
+void prometheus::reset() {
   buf_.clear();
-  now_ = now;
-  registry.collect(*this);
+  last_scrape_ = timestamp{timespan{0}};
+  family_info_.clear();
+  histogram_info_.clear();
   current_family_ = nullptr;
-  return {buf_.data(), buf_.size()};
+  min_scrape_interval_ = timespan{0};
 }
 
-string_view prometheus::collect_from(const metric_registry& registry) {
-  return collect_from(registry, time(NULL));
+// -- scraping API -------------------------------------------------------------
+
+bool prometheus::begin_scrape(timestamp now) {
+  if (buf_.empty() || last_scrape_ + min_scrape_interval_ <= now) {
+    buf_.clear();
+    last_scrape_ = now;
+    current_family_ = nullptr;
+    return true;
+  } else {
+    return false;
+  }
 }
 
-void prometheus::operator()(const metric_family* family, const metric* instance,
-                            const dbl_counter* counter) {
-  set_current_family(family, "counter");
-  append(buf_, family, instance, ' ', counter->value(), ' ', ms_timestamp{now_},
-         '\n');
+void prometheus::end_scrape() {
+  // nop
 }
 
-void prometheus::operator()(const metric_family* family, const metric* instance,
-                            const int_counter* counter) {
-  set_current_family(family, "counter");
-  append(buf_, family, instance, ' ', counter->value(), ' ', ms_timestamp{now_},
-         '\n');
+// -- appending into the internal buffer ---------------------------------------
+
+void prometheus::append_histogram(
+  const metric_family* family, const metric* instance,
+  span<const int_histogram::bucket_type> buckets, int64_t sum) {
+  append_histogram_impl(family, instance, buckets, sum);
 }
 
-void prometheus::operator()(const metric_family* family, const metric* instance,
-                            const dbl_gauge* gauge) {
-  set_current_family(family, "gauge");
-  append(buf_, family, instance, ' ', gauge->value(), ' ', ms_timestamp{now_},
-         '\n');
+void prometheus::append_histogram(
+  const metric_family* family, const metric* instance,
+  span<const dbl_histogram::bucket_type> buckets, double sum) {
+  append_histogram_impl(family, instance, buckets, sum);
 }
 
-void prometheus::operator()(const metric_family* family, const metric* instance,
-                            const int_gauge* gauge) {
-  set_current_family(family, "gauge");
-  append(buf_, family, instance, ' ', gauge->value(), ' ', ms_timestamp{now_},
-         '\n');
+// -- collect API --------------------------------------------------------------
+
+string_view prometheus::collect_from(const metric_registry& registry,
+                                     timestamp now) {
+  if (begin_scrape(now)) {
+    registry.collect(*this);
+    end_scrape();
+  }
+  return str();
 }
 
-void prometheus::operator()(const metric_family* family, const metric* instance,
-                            const dbl_histogram* val) {
-  append_histogram(family, instance, val);
-}
-
-void prometheus::operator()(const metric_family* family, const metric* instance,
-                            const int_histogram* val) {
-  append_histogram(family, instance, val);
-}
+// -- implementation details ---------------------------------------------------
 
 void prometheus::set_current_family(const metric_family* family,
                                     string_view prometheus_type) {
   if (current_family_ == family)
     return;
   current_family_ = family;
-  auto i = meta_info_.find(family);
-  if (i == meta_info_.end()) {
-    i = meta_info_.emplace(family, char_buffer{}).first;
+  auto i = family_info_.find(family);
+  if (i == family_info_.end()) {
+    i = family_info_.emplace(family, char_buffer{}).first;
     if (!family->helptext().empty())
       append(i->second, "# HELP ", family, ' ', family->helptext(), '\n');
     append(i->second, "# TYPE ", family, ' ', prometheus_type, '\n');
@@ -239,17 +242,32 @@ void prometheus::set_current_family(const metric_family* family,
   buf_.insert(buf_.end(), i->second.begin(), i->second.end());
 }
 
+void prometheus::append_impl(const metric_family* family,
+                             string_view prometheus_type,
+                             const metric* instance, int64_t value) {
+  set_current_family(family, prometheus_type);
+  append(buf_, family, instance, ' ', value, ' ', ms_timestamp{last_scrape_},
+         '\n');
+}
+
+void prometheus::append_impl(const metric_family* family,
+                             string_view prometheus_type,
+                             const metric* instance, double value) {
+  set_current_family(family, prometheus_type);
+  append(buf_, family, instance, ' ', value, ' ', ms_timestamp{last_scrape_},
+         '\n');
+}
+
 namespace {
 
-template <class ValueType>
-auto make_virtual_metrics(const metric_family* family, const metric* instance,
-                          const histogram<ValueType>* val) {
+template <class BucketType>
+auto make_histogram_info(const metric_family* family, const metric* instance,
+                         span<const BucketType> buckets) {
   std::vector<prometheus::char_buffer> result;
   auto add_result = [&](auto&&... xs) {
     result.emplace_back();
     append(result.back(), std::forward<decltype(xs)>(xs)...);
   };
-  auto buckets = val->buckets();
   auto num_buckets = buckets.size();
   CAF_ASSERT(num_buckets > 1);
   auto labels = instance->labels();
@@ -273,26 +291,26 @@ auto make_virtual_metrics(const metric_family* family, const metric* instance,
 
 } // namespace
 
-template <class ValueType>
-void prometheus::append_histogram(const metric_family* family,
-                                  const metric* instance,
-                                  const histogram<ValueType>* val) {
-  auto i = virtual_metrics_.find(instance);
-  if (i == virtual_metrics_.end()) {
-    auto metrics = make_virtual_metrics(family, instance, val);
-    i = virtual_metrics_.emplace(instance, std::move(metrics)).first;
+template <class BucketType, class ValueType>
+void prometheus::append_histogram_impl(const metric_family* family,
+                                       const metric* instance,
+                                       span<const BucketType> buckets,
+                                       ValueType sum) {
+  auto i = histogram_info_.find(instance);
+  if (i == histogram_info_.end()) {
+    auto info = make_histogram_info(family, instance, buckets);
+    i = histogram_info_.emplace(instance, std::move(info)).first;
   }
   set_current_family(family, "histogram");
   auto& vm = i->second;
-  auto buckets = val->buckets();
   auto acc = ValueType{0};
   auto index = size_t{0};
   for (; index < buckets.size(); ++index) {
     acc += buckets[index].count.value();
-    append(buf_, vm[index], acc, ' ', ms_timestamp{now_}, '\n');
+    append(buf_, vm[index], acc, ' ', ms_timestamp{last_scrape_}, '\n');
   }
-  append(buf_, vm[index++], val->sum(), ' ', ms_timestamp{now_}, '\n');
-  append(buf_, vm[index++], acc, ' ', ms_timestamp{now_}, '\n');
+  append(buf_, vm[index++], sum, ' ', ms_timestamp{last_scrape_}, '\n');
+  append(buf_, vm[index++], acc, ' ', ms_timestamp{last_scrape_}, '\n');
 }
 
 } // namespace caf::telemetry::collector
