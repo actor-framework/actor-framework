@@ -15,6 +15,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   common practice of looking into the current directory first before looking for
   a system-wide configuration file.
 
+### Changed
+
+- Counters in histogram buckets are now always integers, independently on the
+  value type of the histogram. Buckets can never increase by fractional values.
+
 ### Deprecated
 
 - All `parse` function overloads in `actor_system_config` that took a custom
