@@ -65,13 +65,14 @@ some_request_duration_seconds_bucket{x="get",le="+Inf"} 3 42000
 some_request_duration_seconds_sum{x="get"} 14 42000
 some_request_duration_seconds_count{x="get"} 3 42000
 )"_sv);
-  CAF_MESSAGE("multiple runs generate the same output");
+  CAF_MESSAGE("multiple runs with the same timestamp generate the same output");
+  auto ts = make_timestamp();
   std::string res1;
   {
-    auto buf = exporter.collect_from(registry);
+    auto buf = exporter.collect_from(registry, ts);
     res1.assign(buf.begin(), buf.end());
   }
-  CAF_CHECK_EQUAL(res1, exporter.collect_from(registry));
+  CAF_CHECK_EQUAL(res1, exporter.collect_from(registry, ts));
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
