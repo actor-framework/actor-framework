@@ -15,9 +15,13 @@ namespace caf {
 /// Represents a disposable resource.
 class CAF_CORE_EXPORT disposable {
 public:
+  // -- member types -----------------------------------------------------------
+
   /// Internal implementation class of a `disposable`.
   class impl {
   public:
+    CAF_INTRUSIVE_PTR_FRIENDS_SFX(impl, _disposable)
+
     virtual ~impl();
 
     virtual void dispose() = 0;
@@ -29,14 +33,6 @@ public:
     virtual void ref_disposable() const noexcept = 0;
 
     virtual void deref_disposable() const noexcept = 0;
-
-    friend void intrusive_ptr_add_ref(const impl* ptr) noexcept {
-      ptr->ref_disposable();
-    }
-
-    friend void intrusive_ptr_release(const impl* ptr) noexcept {
-      ptr->deref_disposable();
-    }
   };
 
   explicit disposable(intrusive_ptr<impl> pimpl) noexcept
@@ -44,16 +40,26 @@ public:
     // nop
   }
 
+  // -- constructors, destructors, and assignment operators --------------------
+
   disposable() noexcept = default;
+
   disposable(disposable&&) noexcept = default;
+
   disposable(const disposable&) noexcept = default;
+
   disposable& operator=(disposable&&) noexcept = default;
+
   disposable& operator=(const disposable&) noexcept = default;
+
+  // -- factories --------------------------------------------------------------
 
   /// Combines multiple disposables into a single disposable. The new disposable
   /// is disposed if all of its elements are disposed. Disposing the composite
   /// disposes all elements individually.
   static disposable make_composite(std::vector<disposable> entries);
+
+  // -- mutators ---------------------------------------------------------------
 
   /// Disposes the resource. Calling `dispose()` on a disposed resource is a
   /// no-op.
@@ -63,6 +69,13 @@ public:
       pimpl_ = nullptr;
     }
   }
+
+  /// Exchanges the content of this handle with `other`.
+  void swap(disposable& other) {
+    pimpl_.swap(other.pimpl_);
+  }
+
+  // -- properties -------------------------------------------------------------
 
   /// Returns whether the resource has been disposed.
   [[nodiscard]] bool disposed() const noexcept {
@@ -89,6 +102,8 @@ public:
     return pimpl_.get();
   }
 
+  // -- conversions ------------------------------------------------------------
+
   /// Returns a smart pointer to the implementation.
   [[nodiscard]] intrusive_ptr<impl>&& as_intrusive_ptr() && noexcept {
     return std::move(pimpl_);
@@ -97,11 +112,6 @@ public:
   /// Returns a smart pointer to the implementation.
   [[nodiscard]] intrusive_ptr<impl> as_intrusive_ptr() const& noexcept {
     return pimpl_;
-  }
-
-  /// Exchanges the content of this handle with `other`.
-  void swap(disposable& other) {
-    pimpl_.swap(other.pimpl_);
   }
 
 private:

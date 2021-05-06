@@ -164,8 +164,7 @@ SCENARIO("tunnels dispatch published messages") {
     }
     WHEN("an actors sends to the tunnel") {
       self->send(proxy, put_atom_v, 42);
-      THEN("the message travels to the origin")
-      AND("tunnel subscribers get the forwarded message eventually") {
+      THEN("the message travels to the origin and eventually to subscribers") {
         expect((sys_atom, forward_atom, message), from(self).to(worker));
         expect((forward_atom, message), from(self).to(intermediary));
         expect((put_atom, int), from(self).to(t1).with(_, 42));

@@ -20,8 +20,16 @@
   CAF_MESSAGE("WHEN " description);                                            \
   if (true)
 
+#define AND_WHEN(description)                                                  \
+  CAF_MESSAGE("AND WHEN " description);                                        \
+  if (true)
+
 #define THEN(description)                                                      \
   CAF_MESSAGE("THEN " description);                                            \
+  if (true)
+
+#define AND_THEN(description)                                                  \
+  CAF_MESSAGE("AND THEN " description);                                        \
   if (true)
 
 #define AND(description)                                                       \

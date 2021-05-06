@@ -231,6 +231,13 @@ bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
   stream_managers_.clear();
   pending_stream_managers_.clear();
   get_downstream_queue().cleanup();
+  // Cancel any active flow.
+  while (!watched_disposables_.empty()) {
+    for (auto& ptr : watched_disposables_)
+      ptr.dispose();
+    watched_disposables_.clear();
+    run_actions();
+  }
   // Clear mailbox.
   if (!mailbox_.closed()) {
     mailbox_.close();
@@ -452,8 +459,10 @@ proxy_registry* scheduled_actor::proxy_registry_ptr() {
 void scheduled_actor::quit(error x) {
   CAF_LOG_TRACE(CAF_ARG(x));
   // Make sure repeated calls to quit don't do anything.
-  if (getf(is_shutting_down_flag))
+  if (getf(is_shutting_down_flag)) {
+    CAF_LOG_DEBUG("already shutting down");
     return;
+  }
   // Mark this actor as about-to-die.
   setf(is_shutting_down_flag);
   // Store shutdown reason.
@@ -468,6 +477,13 @@ void scheduled_actor::quit(error x) {
   set_error_handler(silently_ignore<error>);
   // Drop future messages and produce sec::request_receiver_down for requests.
   set_default_handler(drop_after_quit);
+  // Cancel any active flow.
+  while (!watched_disposables_.empty()) {
+    for (auto& ptr : watched_disposables_)
+      ptr.dispose();
+    watched_disposables_.clear();
+    run_actions();
+  }
   // Tell all streams to shut down.
   std::vector<stream_manager_ptr> managers;
   for (auto& smm : {stream_managers_, pending_stream_managers_})
@@ -567,6 +583,24 @@ void scheduled_actor::set_stream_timeout(actor_clock::time_point x) {
     auto next_timeout = advance_streams(clock().now());
     set_stream_timeout(next_timeout);
   });
+}
+
+// -- caf::flow API ------------------------------------------------------------
+
+void scheduled_actor::ref_coordinator() const noexcept {
+  intrusive_ptr_add_ref(ctrl());
+}
+
+void scheduled_actor::deref_coordinator() const noexcept {
+  intrusive_ptr_release(ctrl());
+}
+
+void scheduled_actor::schedule(action what) {
+  enqueue(nullptr, make_message_id(), make_message(std::move(what)), nullptr);
+}
+
+void scheduled_actor::post_internally(action what) {
+  actions_.emplace_back(std::move(what));
 }
 
 // -- message processing -------------------------------------------------------
@@ -868,8 +902,9 @@ bool scheduled_actor::finalize() {
         ++i;
     }
   }
-  // An actor is considered alive as long as it has a behavior and didn't set
-  // the terminated flag.
+  // An actor is considered alive as long as it has a behavior, didn't set
+  // the terminated flag and has no watched flows remaining.
+  run_actions();
   if (alive())
     return false;
   CAF_LOG_DEBUG("actor has no behavior and is ready for cleanup");
@@ -1185,6 +1220,35 @@ std::vector<stream_manager*> scheduled_actor::active_stream_managers() {
   std::vector<stream_manager*> result;
   active_stream_managers(result);
   return result;
+}
+
+// -- scheduling of caf::flow events -------------------------------------------
+
+void scheduled_actor::watch(disposable obj) {
+  CAF_ASSERT(obj.valid());
+  watched_disposables_.emplace_back(std::move(obj));
+  CAF_LOG_DEBUG("now watching" << watched_disposables_.size() << "disposables");
+}
+
+void scheduled_actor::run_actions() {
+  if (!actions_.empty()) {
+    // Note: can't use iterators here since actions may add to the vector.
+    for (auto index = size_t{0}; index < actions_.size(); ++index) {
+      auto f = std::move(actions_[index]);
+      f.run();
+    }
+    actions_.clear();
+  }
+  update_watched_disposables();
+}
+
+void scheduled_actor::update_watched_disposables() {
+  auto disposed = [](auto& hdl) { return hdl.disposed(); };
+  auto& xs = watched_disposables_;
+  if (auto e = std::remove_if(xs.begin(), xs.end(), disposed); e != xs.end()) {
+    xs.erase(e, xs.end());
+    CAF_LOG_DEBUG("now watching" << xs.size() << "disposables");
+  }
 }
 
 } // namespace caf

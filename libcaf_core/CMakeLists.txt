@@ -42,7 +42,7 @@ configure_file("${PROJECT_SOURCE_DIR}/cmake/build_config.hpp.in"
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail/")
 
-# -- add targets ---------------------------------------------------------------
+#-- add targets ----------------------------------------------------------------
 
 caf_add_component(
   core
@@ -81,6 +81,9 @@ caf_add_component(
     src/actor_registry.cpp
     src/actor_system.cpp
     src/actor_system_config.cpp
+    src/async/batch.cpp
+    src/async/consumer.cpp
+    src/async/producer.cpp
     src/attachable.cpp
     src/behavior.cpp
     src/binary_deserializer.cpp
@@ -141,6 +144,9 @@ caf_add_component(
     src/error.cpp
     src/event_based_actor.cpp
     src/execution_unit.cpp
+    src/flow/coordinator.cpp
+    src/flow/scoped_coordinator.cpp
+    src/flow/subscription.cpp
     src/forwarding_actor_proxy.cpp
     src/group.cpp
     src/group_manager.cpp
@@ -221,6 +227,7 @@ caf_add_component(
     actor_system_config
     actor_termination
     aout
+    async.bounded_buffer
     behavior
     binary_deserializer
     binary_serializer
@@ -273,6 +280,13 @@ caf_add_component(
     dynamic_spawn
     error
     expected
+    flow.concat
+    flow.concat_map
+    flow.flat_map
+    flow.for_each
+    flow.merge
+    flow.observe_on
+    flow.single
     function_view
     fused_downstream_manager
     handles
@@ -315,6 +329,7 @@ caf_add_component(
     policy.select_all
     policy.select_any
     request_timeout
+    response_handle
     response_promise
     result
     save_inspector

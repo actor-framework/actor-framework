@@ -48,6 +48,8 @@ public:
   /// Required by `spawn` for type deduction.
   using behavior_type = behavior;
 
+  using handle_type = actor;
+
   // -- constructors, destructors ----------------------------------------------
 
   explicit event_based_actor(actor_config& cfg);

@@ -41,18 +41,16 @@ public:
     return rc_;
   }
 
+  friend void intrusive_ptr_add_ref(const ref_counted* p) noexcept {
+    p->ref();
+  }
+
+  friend void intrusive_ptr_release(const ref_counted* p) noexcept {
+    p->deref();
+  }
+
 protected:
   mutable std::atomic<size_t> rc_;
 };
-
-/// @relates ref_counted
-inline void intrusive_ptr_add_ref(const ref_counted* p) {
-  p->ref();
-}
-
-/// @relates ref_counted
-inline void intrusive_ptr_release(const ref_counted* p) {
-  p->deref();
-}
 
 } // namespace caf

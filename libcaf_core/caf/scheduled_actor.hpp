@@ -20,8 +20,11 @@
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/unordered_flat_map.hpp"
+#include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/extend.hpp"
+#include "caf/flow/coordinator.hpp"
+#include "caf/flow/fwd.hpp"
 #include "caf/fwd.hpp"
 #include "caf/inbound_path.hpp"
 #include "caf/intrusive/drr_cached_queue.hpp"
@@ -72,8 +75,14 @@ CAF_CORE_EXPORT skippable_result drop(scheduled_actor*, message&);
 /// A cooperatively scheduled, event-based actor implementation.
 class CAF_CORE_EXPORT scheduled_actor : public local_actor,
                                         public resumable,
-                                        public non_blocking_actor_base {
+                                        public non_blocking_actor_base,
+                                        public flow::coordinator {
 public:
+  // -- friends ----------------------------------------------------------------
+
+  template <class, class>
+  friend class response_handle;
+
   // -- nested enums -----------------------------------------------------------
 
   /// Categorizes incoming messages.
@@ -472,6 +481,18 @@ public:
   /// Returns the queue of the mailbox that stores `downstream_msg` messages.
   downstream_queue& get_downstream_queue();
 
+  // -- caf::flow API ----------------------------------------------------------
+
+  void ref_coordinator() const noexcept override;
+
+  void deref_coordinator() const noexcept override;
+
+  void schedule(action what) override;
+
+  void post_internally(action what) override;
+
+  void watch(disposable what) override;
+
   // -- inbound_path management ------------------------------------------------
 
   /// Creates a new path for incoming stream traffic from `sender`.
@@ -660,7 +681,8 @@ public:
   bool alive() const noexcept {
     return !bhvr_stack_.empty() || !awaited_responses_.empty()
            || !multiplexed_responses_.empty() || !stream_managers_.empty()
-           || !pending_stream_managers_.empty();
+           || !pending_stream_managers_.empty()
+           || !watched_disposables_.empty();
   }
 
   auto max_batch_delay() const noexcept {
@@ -670,6 +692,13 @@ public:
   void active_stream_managers(std::vector<stream_manager*>& result);
 
   std::vector<stream_manager*> active_stream_managers();
+
+  /// Runs all pending actions.
+  void run_actions();
+
+  std::vector<disposable> watched_disposables() const {
+    return watched_disposables_;
+  }
 
   /// @endcond
 
@@ -735,6 +764,8 @@ protected:
 #endif // CAF_ENABLE_EXCEPTIONS
 
 private:
+  // -- utilities for instrumenting actors -------------------------------------
+
   template <class F>
   intrusive::task_result run_with_metrics(mailbox_element& x, F body) {
     if (metrics_.mailbox_time) {
@@ -752,9 +783,31 @@ private:
     }
   }
 
+  // -- timeout management -----------------------------------------------------
+
   disposable run_scheduled(timestamp when, action what);
   disposable run_scheduled(actor_clock::time_point when, action what);
   disposable run_delayed(timespan delay, action what);
+
+  // -- caf::flow bindings -----------------------------------------------------
+
+  template <class T, class Policy>
+  flow::single<T> single_from_response(Policy& policy) {
+    return single_from_response_impl<T>(policy);
+  }
+
+  template <class T, class Policy>
+  flow::single<T> single_from_response_impl(Policy& policy);
+
+  /// Removes any watched object that became disposed since the last update.
+  void update_watched_disposables();
+
+  /// Stores actions that the actor executes after processing the current
+  /// message.
+  std::vector<action> actions_;
+
+  /// Stores resources that block the actor from terminating.
+  std::vector<disposable> watched_disposables_;
 };
 
 } // namespace caf

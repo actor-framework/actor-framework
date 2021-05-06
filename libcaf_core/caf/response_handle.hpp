@@ -8,6 +8,7 @@
 
 #include "caf/actor_traits.hpp"
 #include "caf/catch_all.hpp"
+#include "caf/flow/fwd.hpp"
 #include "caf/message_id.hpp"
 #include "caf/none.hpp"
 #include "caf/sec.hpp"
@@ -102,6 +103,18 @@ public:
   then(F f) {
     auto self = self_;
     then(std::move(f), [self](error& err) { self->call_error_handler(err); });
+  }
+
+  template <class T>
+  flow::assert_scheduled_actor_hdr_t<flow::single<T>> as_single() && {
+    static_assert(std::is_same_v<response_type, message>);
+    return self_->template single_from_response<T>(policy_);
+  }
+
+  template <class T>
+  flow::assert_scheduled_actor_hdr_t<flow::observable<T>> as_observable() && {
+    static_assert(std::is_same_v<response_type, message>);
+    return self_->template single_from_response<T>(policy_).as_observable();
   }
 
   // -- blocking API -----------------------------------------------------------

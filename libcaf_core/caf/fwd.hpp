@@ -381,4 +381,8 @@ using strong_actor_ptr = intrusive_ptr<actor_control_block>;
 using mailbox_element_ptr = std::unique_ptr<mailbox_element>;
 using tracing_data_ptr = std::unique_ptr<tracing_data>;
 
+// -- shared pointer aliases ---------------------------------------------------
+
+using shared_action_ptr = std::shared_ptr<callback<void()>>;
+
 } // namespace caf

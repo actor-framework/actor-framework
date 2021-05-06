@@ -166,6 +166,11 @@ enum class sec : uint8_t {
   /// Signals that an actor fell behind a periodic action trigger. After raising
   /// this error, an @ref actor_clock stops scheduling the action.
   action_reschedule_failed,
+  /// Attaching to an observable failed because the target is invalid.
+  invalid_observable,
+  /// Signals to a component that is has been discarded by its parent or the
+  /// consumer/producer that was attached to the component.
+  discarded = 70,
 };
 // --(rst-sec-end)--
 

@@ -587,6 +587,61 @@ public:
     return res;
   }
 
+  /// Creates a new, cooperatively scheduled `flow::coordinator`. The returned
+  /// coordinator is constructed but has not been added to the scheduler yet to
+  /// allow the caller to set up flows.
+  /// @returns A pointer to the new coordinator and a function object that the
+  ///          caller must invoke to launch the coordinator. After the
+  ///          coordinator started running, the caller *must not* access the
+  ///          pointer again.
+  template <class Impl, spawn_options = no_spawn_options, class... Ts>
+  auto make_flow_coordinator(Ts&&... xs) {
+    static_assert(std::is_base_of_v<scheduled_actor, Impl>,
+                  "make_flow_coordinator only supports scheduled actors ATM");
+    CAF_SET_LOGGER_SYS(this);
+    actor_config cfg{dummy_execution_unit(), nullptr};
+    auto res = make_actor<Impl>(next_actor_id(), node(), this, cfg,
+                                std::forward<Ts>(xs)...);
+    auto ptr = static_cast<Impl*>(actor_cast<abstract_actor*>(res));
+#ifdef CAF_ENABLE_ACTOR_PROFILER
+    profiler_add_actor(*ptr, cfg.parent);
+#endif
+    auto launch = [res, host{cfg.host}] {
+      // Note: we pass `res` to this lambda instead of `ptr` to keep a strong
+      //       reference to the actor.
+      static_cast<Impl*>(actor_cast<abstract_actor*>(res))
+        ->launch(host, false, false);
+    };
+    return std::make_tuple(ptr, launch);
+  }
+
+  /// Creates a new, cooperatively scheduled actor. The returned actor is
+  /// constructed but has not been added to the scheduler yet to allow the
+  /// caller to set up any additional logic on the actor before it starts.
+  /// @returns A pointer to the new actor and a function object that the caller
+  ///          must invoke to launch the actor. After the actor started running,
+  ///          the caller *must not* access the pointer again.
+  template <class Impl, spawn_options = no_spawn_options, class... Ts>
+  auto spawn_inactive(Ts&&... xs) {
+    static_assert(std::is_base_of_v<scheduled_actor, Impl>,
+                  "only scheduled actors may get spawned inactively");
+    CAF_SET_LOGGER_SYS(this);
+    actor_config cfg{dummy_execution_unit(), nullptr};
+    auto res = make_actor<Impl>(next_actor_id(), node(), this, cfg,
+                                std::forward<Ts>(xs)...);
+    auto ptr = static_cast<Impl*>(actor_cast<abstract_actor*>(res));
+#ifdef CAF_ENABLE_ACTOR_PROFILER
+    profiler_add_actor(*ptr, cfg.parent);
+#endif
+    auto launch = [res, host{cfg.host}] {
+      // Note: we pass `res` to this lambda instead of `ptr` to keep a strong
+      //       reference to the actor.
+      static_cast<Impl*>(actor_cast<abstract_actor*>(res))
+        ->launch(host, false, false);
+    };
+    return std::make_tuple(ptr, launch);
+  }
+
   void profiler_add_actor(const local_actor& self, const local_actor* parent) {
     if (profiler_)
       profiler_->add_actor(self, parent);

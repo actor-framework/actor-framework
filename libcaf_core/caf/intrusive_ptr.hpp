@@ -271,3 +271,22 @@ std::string to_string(const intrusive_ptr<T>& x) {
 
 } // namespace caf
 
+/// Convenience macro for adding `intrusive_ptr_add_ref` and
+/// `intrusive_ptr_release` as free friend functions.
+#define CAF_INTRUSIVE_PTR_FRIENDS(class_name)                                  \
+  friend void intrusive_ptr_add_ref(const class_name* ptr) noexcept {          \
+    ptr->ref();                                                                \
+  }                                                                            \
+  friend void intrusive_ptr_release(const class_name* ptr) noexcept {          \
+    ptr->deref();                                                              \
+  }
+
+/// Convenience macro for adding `intrusive_ptr_add_ref` and
+/// `intrusive_ptr_release` as free friend functions with a custom suffix.
+#define CAF_INTRUSIVE_PTR_FRIENDS_SFX(class_name, suffix)                      \
+  friend void intrusive_ptr_add_ref(const class_name* ptr) noexcept {          \
+    ptr->ref##suffix();                                                        \
+  }                                                                            \
+  friend void intrusive_ptr_release(const class_name* ptr) noexcept {          \
+    ptr->deref##suffix();                                                      \
+  }

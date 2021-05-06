@@ -10,6 +10,7 @@
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/byte_buffer.hpp"
+#include "caf/callback.hpp"
 #include "caf/config_value.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/error.hpp"
