@@ -10,6 +10,7 @@
 
 #include "caf/byte.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/string_view.hpp"
 
@@ -155,5 +156,17 @@ CAF_CORE_EXPORT std::string to_string(const uuid& x);
 
 /// @relates uuid
 CAF_CORE_EXPORT expected<uuid> make_uuid(string_view str);
+
+/// @relates uuid
+template <class Inspector>
+bool inspect(Inspector& f, uuid& x) {
+  if (f.has_human_readable_format()) {
+    auto get = [&x] { return to_string(x); };
+    auto set = [&x](std::string str) { return parse(str, x); };
+    return f.apply(get, set);
+  } else {
+    return f.apply(x.bytes());
+  }
+}
 
 } // namespace caf
