@@ -110,6 +110,7 @@ caf_add_component(
     src/detail/group_tunnel.cpp
     src/detail/invoke_result_visitor.cpp
     src/detail/json.cpp
+    src/detail/latch.cpp
     src/detail/local_group_module.cpp
     src/detail/message_builder_element.cpp
     src/detail/message_data.cpp
@@ -251,6 +252,7 @@ caf_add_component(
     detail.group_tunnel
     detail.ieee_754
     detail.json
+    detail.latch
     detail.limited_vector
     detail.local_group_module
     detail.meta_object

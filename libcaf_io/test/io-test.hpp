@@ -1,3 +1,4 @@
+#include "caf/test/bdd_dsl.hpp"
 #include "caf/test/io_dsl.hpp"
 
 using calculator = caf::typed_actor<

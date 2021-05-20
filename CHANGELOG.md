@@ -35,6 +35,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   the ambiguity, `result<T>` now accepts any type that allows constructing a `T`
   internally without requiring a type conversion to `T` as an argument (#1245).
 - Fix configuration parameter lookup for the `work-stealing` scheduler policy.
+- Applications that expose metrics to Prometheus properly terminate now.
 
 ## [0.18.2] - 2021-03-26
 

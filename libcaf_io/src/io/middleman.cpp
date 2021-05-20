@@ -20,6 +20,7 @@
 #include "caf/defaults.hpp"
 #include "caf/detail/get_mac_addresses.hpp"
 #include "caf/detail/get_root_uuid.hpp"
+#include "caf/detail/latch.hpp"
 #include "caf/detail/prometheus_broker.hpp"
 #include "caf/detail/ripemd_160.hpp"
 #include "caf/detail/safe_equal.hpp"
@@ -113,7 +114,7 @@ public:
     // nop
   }
 
-  bool start(const config_value::dictionary& cfg) override {
+  expected<uint16_t> start(const config_value::dictionary& cfg) {
     // Read port, address and reuse flag from the config.
     uint16_t port = 0;
     if (auto cfg_port = get_as<uint16_t>(cfg, "port")) {
@@ -125,41 +126,54 @@ public:
     if (const std::string* cfg_addr = get_if<std::string>(&cfg, "address"))
       if (*cfg_addr != "" && *cfg_addr != "0.0.0.0")
         addr = cfg_addr->c_str();
-    auto reuse = get_or(cfg, "reuse", false);
-    if (auto res = start(port, addr, reuse)) {
-      CAF_LOG_INFO("expose Prometheus metrics at port" << *res);
-      return true;
-    } else {
-      CAF_LOG_ERROR("failed to expose Prometheus metrics:" << res.error());
-      return false;
-    }
+    return start(port, addr, get_or(cfg, "reuse", false));
   }
 
   expected<uint16_t> start(uint16_t port, const char* in, bool reuse) {
     doorman_ptr dptr;
-    if (auto maybe_dptr = mpx_.new_tcp_doorman(port, in, reuse))
+    if (auto maybe_dptr = mpx_.new_tcp_doorman(port, in, reuse)) {
       dptr = std::move(*maybe_dptr);
-    else
-      return std::move(maybe_dptr.error());
+    } else {
+      auto& err = maybe_dptr.error();
+      CAF_LOG_ERROR("failed to expose Prometheus metrics:" << err);
+      return std::move(err);
+    }
     auto actual_port = dptr->port();
-    // Spawn the actor and store its handle in background_brokers_.
     using impl = detail::prometheus_broker;
+    mpx_supervisor_ = mpx_.make_supervisor();
     actor_config cfg{&mpx_};
     broker_ = mpx_.system().spawn_impl<impl, hidden>(cfg, std::move(dptr));
-    thread_ = mpx_.system().launch_thread("caf.io.prom",
-                                          [this] { mpx_.run(); });
+    detail::latch sync{1};
+    auto run_mpx = [this, sync_ptr{&sync}] {
+      CAF_LOG_TRACE("");
+      mpx_.thread_id(std::this_thread::get_id());
+      sync_ptr->count_down();
+      mpx_.run();
+    };
+    thread_ = mpx_.system().launch_thread("caf.io.prom", run_mpx);
+    sync.wait();
+    CAF_LOG_INFO("expose Prometheus metrics at port" << actual_port);
     return actual_port;
   }
 
   ~prometheus_scraping() {
-    if (broker_) {
-      anon_send_exit(broker_, exit_reason::user_shutdown);
+    if (mpx_supervisor_) {
+      mpx_.dispatch([=] {
+        auto ptr = static_cast<broker*>(actor_cast<abstract_actor*>(broker_));
+        if (!ptr->getf(abstract_actor::is_terminated_flag)) {
+          ptr->context(&mpx_);
+          ptr->quit();
+          ptr->finalize();
+        }
+      });
+      mpx_supervisor_.reset();
       thread_.join();
     }
   }
 
 private:
   network::default_multiplexer mpx_;
+  network::multiplexer::supervisor_ptr mpx_supervisor_;
   actor broker_;
   std::thread thread_;
 };
@@ -411,8 +425,11 @@ void middleman::start() {
   if (auto prom = get_if<config_value::dictionary>(
         &system().config(), "caf.middleman.prometheus-http")) {
     auto ptr = std::make_unique<prometheus_scraping>(system());
-    if (ptr->start(*prom))
+    if (auto port = ptr->start(*prom)) {
+      CAF_ASSERT(*port != 0);
+      prometheus_scraping_port_ = *port;
       background_tasks_.emplace_back(std::move(ptr));
+    }
   }
   // Launch backend.
   if (!get_or(config(), "caf.middleman.manual-multiplexing", false))
@@ -422,23 +439,15 @@ void middleman::start() {
   // thread instead. Other backends can set `middleman_detach_multiplexer` to
   // false to suppress creation of the supervisor.
   if (backend_supervisor_ != nullptr) {
-    std::atomic<bool> init_done{false};
-    std::mutex mtx;
-    std::condition_variable cv;
-    auto run_backend = [this, &mtx, &cv, &init_done] {
+    detail::latch sync{1};
+    auto run_backend = [this, sync_ptr{&sync}] {
       CAF_LOG_TRACE("");
-      {
-        std::unique_lock<std::mutex> guard{mtx};
-        backend().thread_id(std::this_thread::get_id());
-        init_done = true;
-        cv.notify_one();
-      }
+      backend().thread_id(std::this_thread::get_id());
+      sync_ptr->count_down();
       backend().run();
     };
     thread_ = system().launch_thread("caf.io.mpx", run_backend);
-    std::unique_lock<std::mutex> guard{mtx};
-    while (init_done == false)
-      cv.wait(guard);
+    sync.wait();
   }
   // Spawn utility actors.
   auto basp = named_broker<basp_broker>("BASP");
