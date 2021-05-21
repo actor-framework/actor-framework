@@ -517,9 +517,10 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 #define CAF_CHECK_PASSED(msg)                                                  \
   do {                                                                         \
     auto out = ::caf::test::logger::instance().massive();                      \
-    out << term::green << "** " << term::blue << __FILE__ << term::yellow      \
-        << ":" << term::blue << __LINE__                                       \
-        << ::caf::test::detail::fill(__LINE__) << term::reset << msg << '\n';  \
+    out << ::caf::term::green << "** " << ::caf::term::blue << __FILE__        \
+        << ::caf::term::yellow << ":" << ::caf::term::blue << __LINE__         \
+        << ::caf::test::detail::fill(__LINE__) << ::caf::term::reset << msg    \
+        << '\n';                                                               \
     ::caf::test::engine::current_test()->pass();                               \
     ::caf::test::engine::last_check_file(__FILE__);                            \
     ::caf::test::engine::last_check_line(__LINE__);                            \
@@ -528,9 +529,10 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 #define CAF_CHECK_FAILED(msg)                                                  \
   do {                                                                         \
     auto out = ::caf::test::logger::instance().massive();                      \
-    out << term::red << "!! " << term::blue << __FILE__ << term::yellow << ":" \
-        << term::blue << __LINE__ << ::caf::test::detail::fill(__LINE__)       \
-        << term::reset << msg << '\n';                                         \
+    out << ::caf::term::red << "!! " << ::caf::term::blue << __FILE__          \
+        << ::caf::term::yellow << ":" << ::caf::term::blue << __LINE__         \
+        << ::caf::test::detail::fill(__LINE__) << ::caf::term::reset << msg    \
+        << '\n';                                                               \
     ::caf::test::engine::current_test()->fail(false);                          \
     ::caf::test::engine::last_check_file(__FILE__);                            \
     ::caf::test::engine::last_check_line(__LINE__);                            \
