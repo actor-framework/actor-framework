@@ -159,7 +159,7 @@ if [ -n "$rc_version" ]; then
 fi
 
 # extract the release notes from the changelog
-sed -n "/^## \[$tag_version\]*/,/^##[^#]/p" CHANGELOG.md | sed '$d' > "$github_msg"
+sed -n "/^## \[$tag_version\]*/,/^##[^#]/p" CHANGELOG.md | sed '$d' | awk '{ if (NR > 2) print $0}' > "$github_msg"
 
 if [[ -s "$github_msg" ]] ; then
   echo ">>> please review the GitHub release notes as extracted from the changelog"
