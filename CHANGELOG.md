@@ -5,6 +5,14 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+## Fixed
+
+- Printing a `config_value` that contains a zero duration `timespan` now
+  properly prints `0s` instead of `1s` (#1262). This bug most notably showed up
+  when setting a `timespan` parameter such as `caf.middleman.heartbeat-interval`
+  via config file or CLI to `0s` and then printing the config parameter, e.g.,
+  via `--dump-config`.
+
 ## [0.18.3] - 2021-05-21
 
 ### Added

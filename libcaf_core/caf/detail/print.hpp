@@ -188,7 +188,7 @@ template <class Buffer, class Rep, class Period>
 void print(Buffer& buf, std::chrono::duration<Rep, Period> x) {
   using namespace caf::literals;
   if (x.count() == 0) {
-    auto str = "1s"_sv;
+    auto str = "0s"_sv;
     buf.insert(buf.end(), str.begin(), str.end());
     return;
   }
