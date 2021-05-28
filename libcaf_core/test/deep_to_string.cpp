@@ -13,6 +13,8 @@ using namespace caf;
 #define CHECK_DEEP_TO_STRING(val, str) CAF_CHECK_EQUAL(deep_to_string(val), str)
 
 CAF_TEST(timespans use the highest unit available when printing) {
+  CHECK_EQ(to_string(config_value{timespan{0}}), "0s");
+  CHECK_DEEP_TO_STRING(timespan{0}, "0s");
   CHECK_DEEP_TO_STRING(timespan{1}, "1ns");
   CHECK_DEEP_TO_STRING(timespan{1'000}, "1us");
   CHECK_DEEP_TO_STRING(timespan{1'000'000}, "1ms");

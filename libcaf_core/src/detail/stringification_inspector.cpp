@@ -102,33 +102,9 @@ bool stringification_inspector::value(long double x) {
   return true;
 }
 
-namespace {
-
-template <class Duration>
-auto dcast(timespan x) {
-  return std::chrono::duration_cast<Duration>(x);
-}
-
-} // namespace
-
 bool stringification_inspector::value(timespan x) {
-  namespace sc = std::chrono;
   sep();
-  auto try_print = [this](auto converted, const char* suffix) {
-    if (converted.count() < 1)
-      return false;
-    value(converted.count());
-    result_ += suffix;
-    return true;
-  };
-  if (try_print(dcast<sc::hours>(x), "h")
-      || try_print(dcast<sc::minutes>(x), "min")
-      || try_print(dcast<sc::seconds>(x), "s")
-      || try_print(dcast<sc::milliseconds>(x), "ms")
-      || try_print(dcast<sc::microseconds>(x), "us"))
-    return true;
-  value(x.count());
-  result_ += "ns";
+  detail::print(result_, x);
   return true;
 }
 

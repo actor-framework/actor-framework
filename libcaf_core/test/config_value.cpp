@@ -335,7 +335,7 @@ SCENARIO("get_as can convert config values to timespans") {
   using namespace std::chrono_literals;
   GIVEN("a config value with value 42s") {
     auto x = config_value{timespan{42s}};
-    WHEN("using get_as with timespan") {
+    WHEN("using get_as with timespan or string") {
       THEN("conversion succeeds") {
         CHECK_EQ(get_as<timespan>(x), timespan{42s});
         CHECK_EQ(get_as<std::string>(x), "42s");
@@ -348,6 +348,15 @@ SCENARIO("get_as can convert config values to timespans") {
         CHECK_EQ(get_as<uri>(x), sec::conversion_failed);
         CHECK_EQ(get_as<config_value::list>(x), sec::conversion_failed);
         CHECK_EQ(get_as<config_value::dictionary>(x), sec::conversion_failed);
+      }
+    }
+  }
+  GIVEN("a config value with value 0s") {
+    auto x = config_value{timespan{0s}};
+    WHEN("using get_as with timespan or string") {
+      THEN("conversion succeeds") {
+        CHECK_EQ(get_as<timespan>(x), timespan{0});
+        CHECK_EQ(get_as<std::string>(x), "0s");
       }
     }
   }
