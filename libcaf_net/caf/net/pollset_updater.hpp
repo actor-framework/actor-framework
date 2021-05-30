@@ -30,6 +30,8 @@ public:
 
   static constexpr uint8_t init_manager_code = 0x02;
 
+  static constexpr uint8_t discard_manager_code = 0x03;
+
   static constexpr uint8_t shutdown_code = 0x04;
 
   // -- constructors, destructors, and assignment operators --------------------

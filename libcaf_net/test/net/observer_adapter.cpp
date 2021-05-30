@@ -2,13 +2,13 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE net.subscriber_adapter
+#define CAF_SUITE net.observer_adapter
 
-#include "caf/net/subscriber_adapter.hpp"
+#include "caf/net/observer_adapter.hpp"
 
 #include "net-test.hpp"
 
-#include "caf/flow/async/publisher.hpp"
+#include "caf/async/publisher.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/socket_guard.hpp"
 #include "caf/net/stream_socket.hpp"
@@ -21,8 +21,6 @@ namespace {
 class reader {
 public:
   reader(net::stream_socket fd, size_t n) : sg_(fd) {
-    if (auto err = nonblocking(fd, true))
-      FAIL("unable to set nonblocking flag: " << err);
     buf_.resize(n);
   }
 
@@ -60,14 +58,14 @@ class app_t {
 public:
   using input_tag = tag::stream_oriented;
 
-  explicit app_t(flow::async::publisher_ptr<int32_t> input) : input_(input) {
+  explicit app_t(async::publisher<int32_t> input) : input_(std::move(input)) {
     // nop
   }
 
   template <class LowerLayerPtr>
   error init(net::socket_manager* owner, LowerLayerPtr, const settings&) {
-    adapter_ = make_counted<net::subscriber_adapter<int32_t>>(owner);
-    input_->async_subscribe(adapter_);
+    adapter_ = make_counted<net::observer_adapter<int32_t>>(owner);
+    input_.subscribe(adapter_->as_observer());
     input_ = nullptr;
     return none;
   }
@@ -126,8 +124,8 @@ private:
   bool done_ = false;
   std::vector<int32_t> written_values_;
   std::vector<byte> written_bytes_;
-  net::subscriber_adapter_ptr<int32_t> adapter_;
-  flow::async::publisher_ptr<int32_t> input_;
+  net::observer_adapter_ptr<int32_t> adapter_;
+  async::publisher<int32_t> input_;
 };
 
 struct fixture : test_coordinator_fixture<>, host_fixture {
@@ -151,8 +149,8 @@ BEGIN_FIXTURE_SCOPE(fixture)
 SCENARIO("subscriber adapters wake up idle socket managers") {
   GIVEN("a publisher<T>") {
     static constexpr size_t num_items = 4211;
-    auto src = flow::async::publisher_from(sys, [](auto* self) {
-      return self->make_publisher()->repeat(42)->take(num_items);
+    auto src = async::publisher_from<event_based_actor>(sys, [](auto* self) {
+      return self->make_observable().repeat(42).take(num_items);
     });
     WHEN("sending items of the stream over a socket") {
       auto [fd1, fd2] = unbox(net::make_stream_socket_pair());

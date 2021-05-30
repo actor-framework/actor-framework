@@ -22,6 +22,10 @@ public:
       // nop
     }
 
+    void suspend_reading() {
+      return lptr_->suspend_reading(llptr_);
+    }
+
     bool can_send_more() const noexcept {
       return lptr_->can_send_more(llptr_);
     }

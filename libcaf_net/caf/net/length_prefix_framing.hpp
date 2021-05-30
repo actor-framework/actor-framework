@@ -7,9 +7,11 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <type_traits>
 
 #include "caf/byte.hpp"
 #include "caf/byte_span.hpp"
+#include "caf/detail/has_after_reading.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/error.hpp"
 #include "caf/net/message_oriented_layer_ptr.hpp"
@@ -35,9 +37,9 @@ public:
 
   using length_prefix_type = uint32_t;
 
-  static constexpr size_t max_message_length = INT32_MAX - sizeof(uint32_t);
+  static constexpr size_t hdr_size = sizeof(uint32_t);
 
-  static constexpr uint32_t default_receive_size = 4 * 1024; // 4kb.
+  static constexpr size_t max_message_length = INT32_MAX - sizeof(uint32_t);
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -51,8 +53,7 @@ public:
 
   template <class LowerLayerPtr>
   error init(socket_manager* owner, LowerLayerPtr down, const settings& cfg) {
-    down->configure_read(
-      receive_policy::between(sizeof(uint32_t), default_receive_size));
+    down->configure_read(receive_policy::exactly(hdr_size));
     return upper_layer_.init(owner, this_layer_ptr(down), cfg);
   }
 
@@ -76,6 +77,11 @@ public:
   template <class LowerLayerPtr>
   static auto handle(LowerLayerPtr down) noexcept {
     return down->handle();
+  }
+
+  template <class LowerLayerPtr>
+  static void suspend_reading(LowerLayerPtr down) {
+    return down->suspend_reading();
   }
 
   template <class LowerLayerPtr>
@@ -124,6 +130,14 @@ public:
   // -- interface for the lower layer ------------------------------------------
 
   template <class LowerLayerPtr>
+  std::enable_if_t<detail::has_after_reading_v<
+    UpperLayer,
+    message_oriented_layer_ptr<length_prefix_framing, LowerLayerPtr>>>
+  after_reading(LowerLayerPtr down) {
+    return upper_layer_.after_reading(this_layer_ptr(down));
+  }
+
+  template <class LowerLayerPtr>
   bool prepare_send(LowerLayerPtr down) {
     return upper_layer_.prepare_send(this_layer_ptr(down));
   }
@@ -140,40 +154,41 @@ public:
 
   template <class LowerLayerPtr>
   ptrdiff_t consume(LowerLayerPtr down, byte_span input, byte_span) {
-    auto buffer = input;
-    auto consumed = ptrdiff_t{0};
     auto this_layer = this_layer_ptr(down);
-    for (;;) {
-      if (input.size() < sizeof(uint32_t)) {
-        return consumed;
+    if (input.size() < sizeof(uint32_t)) {
+      auto err = make_error(sec::runtime_error,
+                            "received too few bytes from underlying transport");
+      down->abort_reason(std::move(err));
+      return -1;
+    } else if (input.size() == sizeof(uint32_t)) {
+      auto u32_size = uint32_t{0};
+      memcpy(&u32_size, input.data(), sizeof(uint32_t));
+      auto msg_size = static_cast<size_t>(detail::from_network_order(u32_size));
+      if (msg_size == 0) {
+        // Ignore empty messages.
+        return static_cast<ptrdiff_t>(input.size());
+      } else if (msg_size > max_message_length) {
+        auto err = make_error(sec::runtime_error,
+                              "maximum message size exceeded");
+        down->abort_reason(std::move(err));
+        return -1;
       } else {
-        auto [msg_size, sub_buffer] = split(input);
-        if (msg_size == 0) {
-          consumed += static_cast<ptrdiff_t>(sizeof(uint32_t));
-          input = sub_buffer;
-        } else if (msg_size > max_message_length) {
-          auto err = make_error(sec::runtime_error,
-                                "maximum message size exceeded");
-          down->abort_reason(std::move(err));
-          return -1;
-        } else if (msg_size > sub_buffer.size()) {
-          if (msg_size + sizeof(uint32_t) > receive_buf_upper_bound_) {
-            auto min_read_size = static_cast<uint32_t>(sizeof(uint32_t));
-            receive_buf_upper_bound_
-              = static_cast<uint32_t>(msg_size + sizeof(uint32_t));
-            down->configure_read(
-              receive_policy::between(min_read_size, receive_buf_upper_bound_));
-          }
-          return consumed;
+        down->configure_read(receive_policy::exactly(hdr_size + msg_size));
+        return 0;
+      }
+    } else {
+      auto [msg_size, msg] = split(input);
+      if (msg_size == msg.size() && msg_size + hdr_size == input.size()) {
+        if (upper_layer_.consume(this_layer, msg) >= 0) {
+          down->configure_read(receive_policy::exactly(hdr_size));
+          return static_cast<ptrdiff_t>(input.size());
         } else {
-          auto msg = sub_buffer.subspan(0, msg_size);
-          if (auto res = upper_layer_.consume(this_layer, msg); res >= 0) {
-            consumed += static_cast<ptrdiff_t>(msg.size()) + sizeof(uint32_t);
-            input = sub_buffer.subspan(msg_size);
-          } else {
-            return -1;
-          }
+          return -1;
         }
+      } else {
+        auto err = make_error(sec::runtime_error, "received malformed message");
+        down->abort_reason(std::move(err));
+        return -1;
       }
     }
   }
@@ -200,7 +215,6 @@ private:
 
   UpperLayer upper_layer_;
   size_t message_offset_ = 0;
-  uint32_t receive_buf_upper_bound_ = default_receive_size;
 };
 
 } // namespace caf::net

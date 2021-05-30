@@ -8,6 +8,7 @@
 
 #include "caf/byte_buffer.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/has_after_reading.hpp"
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/fwd.hpp"
@@ -47,6 +48,11 @@ public:
   }
 
   // -- interface for stream_oriented_layer_ptr --------------------------------
+
+  template <class ParentPtr>
+  void suspend_reading(ParentPtr) {
+    suspend_reading_ = true;
+  }
 
   template <class ParentPtr>
   bool can_send_more(ParentPtr) const noexcept {
@@ -160,9 +166,13 @@ public:
     if (read_buf_.size() < max_read_size_)
       read_buf_.resize(max_read_size_);
     auto this_layer_ptr = make_stream_oriented_layer_ptr(this, parent);
+    static constexpr bool has_after_reading
+      = detail::has_after_reading_v<UpperLayer, decltype(this_layer_ptr)>;
     for (size_t i = 0; max_read_size_ > 0 && i < max_consecutive_reads_; ++i) {
       // Calling configure_read(read_policy::stop()) halts receive events.
       if (max_read_size_ == 0) {
+        if constexpr (has_after_reading)
+          upper_layer_.after_reading(this_layer_ptr);
         return false;
       } else if (offset_ >= max_read_size_) {
         auto old_max = max_read_size_;
@@ -223,19 +233,31 @@ public:
         if (read_buf_.size() != max_read_size_)
           if (offset_ < max_read_size_)
             read_buf_.resize(max_read_size_);
+        // Upper layer may have called suspend_reading().
+        if (suspend_reading_) {
+          suspend_reading_ = false;
+          if constexpr (has_after_reading)
+            upper_layer_.after_reading(this_layer_ptr);
+          return false;
+        }
       } else if (read_res < 0) {
         // Try again later on temporary errors such as EWOULDBLOCK and
         // stop reading on the socket on hard errors.
-        return last_socket_error_is_temporary()
-                 ? true
-                 : fail(sec::socket_operation_failed);
-
+        if (last_socket_error_is_temporary()) {
+          if constexpr (has_after_reading)
+            upper_layer_.after_reading(this_layer_ptr);
+          return true;
+        } else {
+          return fail(sec::socket_operation_failed);
+        }
       } else {
         // read() returns 0 iff the connection was closed.
         return fail(sec::socket_disconnected);
       }
     }
     // Calling configure_read(read_policy::stop()) halts receive events.
+    if constexpr (has_after_reading)
+      upper_layer_.after_reading(this_layer_ptr);
     return max_read_size_ > 0;
   }
 
@@ -300,6 +322,9 @@ private:
 
   // Stores the offset in `read_buf_` since last calling `upper_layer_.consume`.
   ptrdiff_t delta_offset_ = 0;
+
+  //  Stores whether the user called `suspend_reading()`.
+  bool suspend_reading_ = false;
 
   // Caches incoming data.
   byte_buffer read_buf_;

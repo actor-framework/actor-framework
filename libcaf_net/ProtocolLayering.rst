@@ -64,6 +64,12 @@ stack *up*. Outgoing data always travels the protocol stack *down*.
     ///          event loop, `false` otherwise.
     template <class LowerLayerPtr>
     bool done_sending(LowerLayerPtr down);
+
+    /// When provided, the underlying transport calls this member function
+    /// before leaving `handle_read_event`. The primary use case for this
+    /// callback is flushing buffers.
+    template <class LowerLayerPtr>
+    [[optional]] void after_reading(LowerLayerPtr down);
   }
 
   interface base [role: lower layer] {

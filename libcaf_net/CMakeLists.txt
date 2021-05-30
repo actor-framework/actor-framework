@@ -61,7 +61,8 @@ caf_incubator_add_component(
     multiplexer
     net.actor_shell
     net.length_prefix_framing
-    net.subscriber_adapter
+    net.observer_adapter
+    net.publisher_adapter
     net.typed_actor_shell
     net.web_socket.client
     net.web_socket.handshake

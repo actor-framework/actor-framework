@@ -70,6 +70,10 @@ public:
   /// @thread-safe
   void register_writing(const socket_manager_ptr& mgr);
 
+  /// Schedules a call to `mgr->handle_error(sec::discarded)`.
+  /// @thread-safe
+  void discard(const socket_manager_ptr& mgr);
+
   /// Registers `mgr` for initialization in the multiplexer's thread.
   /// @thread-safe
   void init(const socket_manager_ptr& mgr);

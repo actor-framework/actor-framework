@@ -13,7 +13,7 @@ namespace caf::net {
 
 // -- templates ----------------------------------------------------------------
 
-template <class Application>
+template <class UpperLayer>
 class stream_transport;
 
 template <class Factory>

@@ -53,6 +53,9 @@ bool pollset_updater::handle_read_event() {
           case init_manager_code:
             parent_->init(mgr);
             break;
+          case discard_manager_code:
+            parent_->discard(mgr);
+            break;
           case shutdown_code:
             parent_->shutdown();
             break;

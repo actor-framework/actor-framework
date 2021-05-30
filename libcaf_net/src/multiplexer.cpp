@@ -118,7 +118,7 @@ void multiplexer::register_reading(const socket_manager_ptr& mgr) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
   if (std::this_thread::get_id() == tid_) {
     if (shutting_down_) {
-      // discard
+      // nop
     } else if (mgr->mask() != operation::none) {
       if (auto index = index_of(mgr);
           index != -1 && mgr->mask_add(operation::read)) {
@@ -137,7 +137,7 @@ void multiplexer::register_writing(const socket_manager_ptr& mgr) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
   if (std::this_thread::get_id() == tid_) {
     if (shutting_down_) {
-      // discard
+      // nop
     } else if (mgr->mask() != operation::none) {
       if (auto index = index_of(mgr);
           index != -1 && mgr->mask_add(operation::write)) {
@@ -152,11 +152,24 @@ void multiplexer::register_writing(const socket_manager_ptr& mgr) {
   }
 }
 
+void multiplexer::discard(const socket_manager_ptr& mgr) {
+  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
+  if (std::this_thread::get_id() == tid_) {
+    if (shutting_down_) {
+      // nop
+    } else {
+       mgr->handle_error(sec::discarded);
+    }
+  } else {
+    write_to_pipe(pollset_updater::discard_manager_code, mgr);
+  }
+}
+
 void multiplexer::init(const socket_manager_ptr& mgr) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
   if (std::this_thread::get_id() == tid_) {
     if (shutting_down_) {
-      // discard
+      // nop
     } else {
       if (auto err = mgr->init(content(system().config()))) {
         CAF_LOG_ERROR("mgr->init failed: " << err);
@@ -293,14 +306,12 @@ short multiplexer::handle(const socket_manager_ptr& mgr, short events,
     checkerror = false;
     if (!mgr->handle_read_event()) {
       mgr->mask_del(operation::read);
-      events &= ~input_mask;
     }
   }
   if ((revents & output_mask) != 0) {
     checkerror = false;
     if (!mgr->handle_write_event()) {
       mgr->mask_del(operation::write);
-      events &= ~output_mask;
     }
   }
   if (checkerror && ((revents & error_mask) != 0)) {
@@ -312,6 +323,20 @@ short multiplexer::handle(const socket_manager_ptr& mgr, short events,
       mgr->handle_error(sec::socket_operation_failed);
     mgr->mask_del(operation::read_write);
     events = 0;
+  } else {
+    switch (mgr->mask()){
+      case operation::read:
+        events = input_mask;
+        break;
+      case operation::write:
+        events = output_mask;
+        break;
+      case operation::read_write:
+        events = input_mask | output_mask;
+        break;
+      default:
+        events = 0;
+    }
   }
   return events;
 }
