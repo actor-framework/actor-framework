@@ -5,7 +5,7 @@ Message Passing
 
 The messaging layer of CAF has three primitives for sending messages: ``send``,
 ``request``, and ``delegate``. The former simply enqueues a message to the
-mailbox the receiver. The latter two are discussed in more detail in
+mailbox of the receiver. The latter two are discussed in more detail in
 :ref:`request` and :ref:`delegate`. Before we go into the details of the message
 passing API itself, we first discuss the building blocks that enable message
 passing in the first place.
