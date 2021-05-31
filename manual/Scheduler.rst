@@ -4,7 +4,7 @@ Scheduler
 =========
 
 The CAF runtime maps N actors to M threads on the local machine. Applications
-build with CAF scale by decomposing tasks into many independent steps that are
+built with CAF scale by decomposing tasks into many independent steps that are
 spawned as actors. In this way, sequential computations performed by individual
 actors are small compared to the total runtime of the application, and the
 attainable speedup on multi-core hardware is maximized in agreement with
