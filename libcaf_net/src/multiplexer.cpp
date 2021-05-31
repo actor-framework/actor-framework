@@ -159,6 +159,8 @@ void multiplexer::discard(const socket_manager_ptr& mgr) {
       // nop
     } else {
        mgr->handle_error(sec::discarded);
+       if (auto mgr_index = index_of(mgr); mgr_index != -1)
+         del(mgr_index);
     }
   } else {
     write_to_pipe(pollset_updater::discard_manager_code, mgr);
