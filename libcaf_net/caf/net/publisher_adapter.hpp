@@ -181,12 +181,12 @@ private:
   void deliver(uint32_t n) {
     auto first = buf_ + rd_pos_;
     auto last = first + n;
-    sink_.on_next(span<const T>{first, n});
-    std::destroy(first, last);
     CAF_ASSERT(rd_pos_ + n <= wr_pos_);
     rd_pos_ += n;
     CAF_ASSERT(credit_ >= n);
     credit_ -= n;
+    sink_.on_next(span<const T>{first, n});
+    std::destroy(first, last);
   }
 
   void shift_elements() {
