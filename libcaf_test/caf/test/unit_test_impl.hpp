@@ -150,6 +150,8 @@ bool check(test* parent, const char* file, size_t line, const char* expr,
         << term::blue << line << fill(line) << term::reset << expr << '\n';
     parent->fail(should_fail);
   }
+  engine::last_check_file(file);
+  engine::last_check_line(line);
   return result;
 }
 

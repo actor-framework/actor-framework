@@ -13,6 +13,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   via config file or CLI to `0s` and then printing the config parameter, e.g.,
   via `--dump-config`.
 
+### Removed
+
+- Dropped three obsolete (and broken) macros in the `unit_test.hpp` header:
+  `CAF_CHECK_FAILED`, `CAF_CHECK_FAIL` and `CAF_CHECK_PASSED`.
+
 ## [0.18.3] - 2021-05-21
 
 ### Added
