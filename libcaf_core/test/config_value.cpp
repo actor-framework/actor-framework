@@ -877,7 +877,7 @@ CAF_TEST_FIXTURE_SCOPE_END()
       auto res = make_config_value_list(__VA_ARGS__);                          \
       CHECK_EQ(*converted, get<config_value::list>(res));                      \
     } else {                                                                   \
-      CAF_CHECK_FAILED(converted.error());                                     \
+      CAF_ERROR(converted.error());                                            \
     }                                                                          \
   })()
 
@@ -898,7 +898,7 @@ CAF_TEST(list baseline testing) {
       auto res = config_value::dictionary{__VA_ARGS__};                        \
       CHECK_EQ(*converted, res);                                               \
     } else {                                                                   \
-      CAF_CHECK_FAILED(converted.error());                                     \
+      CAF_ERROR(converted.error());                                            \
     }                                                                          \
   })()
 

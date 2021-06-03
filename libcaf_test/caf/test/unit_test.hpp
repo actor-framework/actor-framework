@@ -514,28 +514,6 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
     ::caf::test::engine::last_check_line(__LINE__);                            \
   } while (false)
 
-#define CAF_CHECK_PASSED(msg)                                                  \
-  do {                                                                         \
-    auto out = ::caf::test::logger::instance().massive();                      \
-    out << term::green << "** " << term::blue << __FILE__ << term::yellow      \
-        << ":" << term::blue << __LINE__                                       \
-        << ::caf::test::detail::fill(__LINE__) << term::reset << msg << '\n';  \
-    ::caf::test::engine::current_test()->pass();                               \
-    ::caf::test::engine::last_check_file(__FILE__);                            \
-    ::caf::test::engine::last_check_line(__LINE__);                            \
-  } while (false)
-
-#define CAF_CHECK_FAILED(msg)                                                  \
-  do {                                                                         \
-    auto out = ::caf::test::logger::instance().massive();                      \
-    out << term::red << "!! " << term::blue << __FILE__ << term::yellow << ":" \
-        << term::blue << __LINE__ << ::caf::test::detail::fill(__LINE__)       \
-        << term::reset << msg << '\n';                                         \
-    ::caf::test::engine::current_test()->fail(false);                          \
-    ::caf::test::engine::last_check_file(__FILE__);                            \
-    ::caf::test::engine::last_check_line(__LINE__);                            \
-  } while (false)
-
 #define CAF_CHECK(...)                                                         \
   [](bool expr_result) {                                                       \
     return ::caf::test::detail::check_un(expr_result, __FILE__, __LINE__,      \
@@ -550,19 +528,8 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
                                    __FILE__, __LINE__,                         \
                                    CAF_FUNC_EXPR(func, x_expr, y_expr), false, \
                                    comparator(x_val, y_val), x_val, y_val);    \
-    ::caf::test::engine::last_check_file(__FILE__);                            \
-    ::caf::test::engine::last_check_line(__LINE__);                            \
     return caf_check_res;                                                      \
   }(x_expr, y_expr)
-
-#define CAF_CHECK_FAIL(...)                                                    \
-  do {                                                                         \
-    static_cast<void>(::caf::test::detail::check(                              \
-      ::caf::test::engine::current_test(), __FILE__, __LINE__, #__VA_ARGS__,   \
-      true, static_cast<bool>(__VA_ARGS__)));                                  \
-    ::caf::test::engine::last_check_file(__FILE__);                            \
-    ::caf::test::engine::last_check_line(__LINE__);                            \
-  } while (false)
 
 #define CAF_FAIL(msg)                                                          \
   do {                                                                         \
@@ -579,8 +546,6 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
                                    static_cast<bool>(__VA_ARGS__));            \
     if (!CAF_UNIQUE(__result))                                                 \
       ::caf::test::detail::requirement_failed(#__VA_ARGS__);                   \
-    ::caf::test::engine::last_check_file(__FILE__);                            \
-    ::caf::test::engine::last_check_line(__LINE__);                            \
   } while (false)
 
 #define CAF_REQUIRE_FUNC(func, x_expr, y_expr)                                 \
@@ -595,8 +560,6 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
     if (!CAF_UNIQUE(__result))                                                 \
       ::caf::test::detail::requirement_failed(                                 \
         CAF_FUNC_EXPR(func, x_expr, y_expr));                                  \
-    ::caf::test::engine::last_check_file(__FILE__);                            \
-    ::caf::test::engine::last_check_line(__LINE__);                            \
   } while (false)
 
 #define CAF_TEST_IMPL(name, disabled_by_default)                               \
