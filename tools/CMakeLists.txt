@@ -2,7 +2,7 @@ add_custom_target(all_tools)
 
 macro(add name)
   add_executable(${name} ${name}.cpp ${ARGN})
-  install(FILES ${name}.cpp DESTINATION ${CMAKE_INSTALL_DATADIR}/caf/tools)
+  install(TARGETS ${name} DESTINATION ${CMAKE_INSTALL_DATADIR}/caf/tools)
   add_dependencies(${name} all_tools)
 endmacro()
 
