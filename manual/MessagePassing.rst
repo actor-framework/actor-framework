@@ -70,7 +70,7 @@ Default and System Message Handlers
 -----------------------------------
 
 CAF has three system-level message types (``down_msg``, ``exit_msg``, and
-``error``) that all actor should handle regardless of there current state.
+``error``) that all actor should handle regardless of their current state.
 Consequently, event-based actors handle such messages in special-purpose message
 handlers. Additionally, event-based actors have a fallback handler for unmatched
 messages. Note that blocking actors have neither of those special-purpose
