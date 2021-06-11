@@ -186,7 +186,7 @@ lightweight as event-based actors and thus do not scale up to large numbers.
 The primary use case for blocking actors is to use a ``scoped_actor``
 for ad-hoc communication to selected actors. Unlike scheduled actors, CAF does
 **not** dispatch system messages to special-purpose handlers. A blocking
-actors receives *all* messages regularly through its mailbox. A blocking
+actor receives *all* messages regularly through its mailbox. A blocking
 actor is considered *done* only after it returned from ``act`` (or
 from the implementation in function-based actors). A ``scoped_actor``
 sends its exit messages as part of its destruction.
