@@ -59,7 +59,7 @@ constexpr auto calibration_interval = int32_t{20};
 
 /// Value between 0 and 1 representing the degree of weighting decrease for
 /// adjusting batch sizes. A higher factor discounts older observations faster.
-constexpr auto smoothing_factor = float{0.6};
+constexpr auto smoothing_factor = 0.6f;
 
 } // namespace caf::defaults::stream::size_policy
 

@@ -362,7 +362,7 @@ expected<T> get_as(const config_value& x, inspector_access_type::builtin) {
   } else if constexpr (std::is_integral<T>::value) {
     if (auto result = x.to_integer()) {
       if (detail::bounds_checker<T>::check(*result))
-        return *result;
+        return static_cast<T>(*result);
       else
         return make_error(sec::conversion_failed, "narrowing error");
     } else {
