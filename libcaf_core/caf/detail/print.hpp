@@ -231,7 +231,8 @@ void print(Buffer& buf,
   // We print in ISO 8601 format, e.g., "2020-09-01T15:58:42.372". 32-Bytes are
   // more than enough space.
   char stack_buffer[32];
-  auto pos = print_timestamp(stack_buffer, 32, secs, msecs);
+  auto pos = print_timestamp(stack_buffer, 32, secs,
+                             static_cast<size_t>(msecs));
   buf.insert(buf.end(), stack_buffer, stack_buffer + pos);
 }
 

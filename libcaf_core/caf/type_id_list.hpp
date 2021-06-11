@@ -62,7 +62,8 @@ public:
     int s2 = other.data_[0];
     int diff = s1 - s2;
     if (diff == 0)
-      return memcmp(begin(), other.begin(), s1 * sizeof(type_id_t));
+      return memcmp(begin(), other.begin(),
+                    static_cast<unsigned>(s1) * sizeof(type_id_t));
     return diff;
   }
 
