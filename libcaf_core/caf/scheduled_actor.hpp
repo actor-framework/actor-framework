@@ -294,10 +294,12 @@ public:
 
   /// Sets a custom handler for unexpected messages.
   template <class F>
-  typename std::enable_if<std::is_convertible<
-    F, std::function<skippable_result(message&)>>::value>::type
+  std::enable_if_t<std::is_invocable_r_v<skippable_result, F, message&>>
   set_default_handler(F fun) {
-    default_handler_ = [=](scheduled_actor*, message& xs) { return fun(xs); };
+    using std::move;
+    default_handler_ = [fn{move(fun)}](scheduled_actor*, message& xs) mutable {
+      return fn(xs);
+    };
   }
 
   /// Sets a custom handler for error messages.
@@ -309,9 +311,11 @@ public:
   }
 
   /// Sets a custom handler for error messages.
-  template <class T>
-  auto set_error_handler(T fun) -> decltype(fun(std::declval<error&>())) {
-    set_error_handler([fun](scheduled_actor*, error& x) { fun(x); });
+  template <class F>
+  std::enable_if_t<std::is_invocable_v<F, error&>> set_error_handler(F fun) {
+    error_handler_ = [fn{std::move(fun)}](scheduled_actor*, error& x) mutable {
+      fn(x);
+    };
   }
 
   /// Sets a custom handler for down messages.
@@ -323,9 +327,12 @@ public:
   }
 
   /// Sets a custom handler for down messages.
-  template <class T>
-  auto set_down_handler(T fun) -> decltype(fun(std::declval<down_msg&>())) {
-    set_down_handler([fun](scheduled_actor*, down_msg& x) { fun(x); });
+  template <class F>
+  std::enable_if_t<std::is_invocable_v<F, down_msg&>> set_down_handler(F fun) {
+    using std::move;
+    down_handler_ = [fn{move(fun)}](scheduled_actor*, down_msg& x) mutable {
+      fn(x);
+    };
   }
 
   /// Sets a custom handler for node down messages.
@@ -337,11 +344,13 @@ public:
   }
 
   /// Sets a custom handler for down messages.
-  template <class T>
-  auto set_node_down_handler(T fun)
-    -> decltype(fun(std::declval<node_down_msg&>())) {
-    set_node_down_handler(
-      [fun](scheduled_actor*, node_down_msg& x) { fun(x); });
+  template <class F>
+  std::enable_if_t<std::is_invocable_v<F, node_down_msg&>>
+  set_node_down_handler(F fun) {
+    node_down_handler_ = [fn{std::move(fun)}](scheduled_actor*,
+                                              node_down_msg& x) mutable {
+      fn(x);
+    };
   }
 
   /// Sets a custom handler for error messages.
@@ -353,9 +362,12 @@ public:
   }
 
   /// Sets a custom handler for exit messages.
-  template <class T>
-  auto set_exit_handler(T fun) -> decltype(fun(std::declval<exit_msg&>())) {
-    set_exit_handler([fun](scheduled_actor*, exit_msg& x) { fun(x); });
+  template <class F>
+  std::enable_if_t<std::is_invocable_v<F, exit_msg&>> set_exit_handler(F fun) {
+    using std::move;
+    exit_handler_ = [fn{move(fun)}](scheduled_actor*, exit_msg& x) mutable {
+      fn(x);
+    };
   }
 
 #ifdef CAF_ENABLE_EXCEPTIONS
@@ -371,11 +383,12 @@ public:
   /// Sets a custom exception handler for this actor. If multiple handlers are
   /// defined, only the functor that was added *last* is being executed.
   template <class F>
-  typename std::enable_if<std::is_convertible<
-    F, std::function<error(std::exception_ptr&)>>::value>::type
-  set_exception_handler(F f) {
-    set_exception_handler(
-      [f](scheduled_actor*, std::exception_ptr& x) { return f(x); });
+  std::enable_if_t<std::is_invocable_r_v<error, F, std::exception_ptr&>>
+  set_exception_handler(F fun) {
+    exception_handler_ = [fn{std::move(fun)}](scheduled_actor*,
+                                              std::exception_ptr& x) mutable {
+      return fn(x);
+    };
   }
 #endif // CAF_ENABLE_EXCEPTIONS
 
