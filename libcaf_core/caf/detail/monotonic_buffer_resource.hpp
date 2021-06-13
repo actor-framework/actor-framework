@@ -24,7 +24,7 @@
 namespace caf::detail {
 
 /// Replacement for `std::pmr::monotonic_buffer_resource`, which sadly is not
-/// available on all platforms CAF currenlty supports. This resource does not
+/// available on all platforms CAF currently supports. This resource does not
 /// support upstream resources and instead always uses `malloc` and `free`.
 class CAF_CORE_EXPORT monotonic_buffer_resource {
 public:

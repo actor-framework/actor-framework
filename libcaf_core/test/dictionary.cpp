@@ -16,7 +16,7 @@ using int_dict = dictionary<int>;
 
 } // namespace
 
-CAF_TEST(construction and comparions) {
+CAF_TEST(construction and comparison) {
   int_dict xs;
   CAF_CHECK_EQUAL(xs.empty(), true);
   CAF_CHECK_EQUAL(xs.size(), 0u);

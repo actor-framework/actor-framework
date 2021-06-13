@@ -12,7 +12,7 @@ namespace {
 
 using int_fun = caf::detail::unique_function<int()>;
 
-int fourty_two() {
+int forty_two() {
   return 42;
 }
 
@@ -61,7 +61,7 @@ CAF_TEST(default construction) {
 }
 
 CAF_TEST(raw function pointer construction) {
-  int_fun f{fourty_two};
+  int_fun f{forty_two};
   CHECK_VALID(f);
 }
 
@@ -90,7 +90,7 @@ CAF_TEST(custom wrapper construction) {
 }
 
 CAF_TEST(function move construction) {
-  int_fun f{fourty_two};
+  int_fun f{forty_two};
   int_fun g{std::move(f)};
   CHECK_INVALID(f);
   CHECK_VALID(g);
@@ -122,15 +122,15 @@ CAF_TEST(custom wrapper move construction) {
 CAF_TEST(function assign) {
   size_t instances = 0;
   int_fun f;
-  int_fun g{fourty_two};
+  int_fun g{forty_two};
   int_fun h{new instance_counting_wrapper(&instances)};
   CAF_CHECK(instances == 1);
   CHECK_INVALID(f);
   CHECK_VALID(g);
   CHECK_VALID(h);
-  f = fourty_two;
-  g = fourty_two;
-  h = fourty_two;
+  f = forty_two;
+  g = forty_two;
+  h = forty_two;
   CAF_CHECK(instances == 0);
   CHECK_VALID(f);
   CHECK_VALID(g);
@@ -140,7 +140,7 @@ CAF_TEST(function assign) {
 CAF_TEST(move assign) {
   size_t instances = 0;
   int_fun f;
-  int_fun g{fourty_two};
+  int_fun g{forty_two};
   int_fun h{new instance_counting_wrapper(&instances)};
   CAF_CHECK(instances == 1);
   CHECK_INVALID(f);

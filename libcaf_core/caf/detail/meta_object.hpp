@@ -14,7 +14,7 @@
 
 namespace caf::detail {
 
-/// Enables destroying, construcing and serializing objects through type-erased
+/// Enables destroying, constructing and serializing objects through type-erased
 /// pointers.
 struct meta_object {
   /// Stores a human-readable representation of the type's name.
