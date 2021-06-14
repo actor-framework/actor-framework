@@ -13,7 +13,9 @@ enum class rw_state {
   /// Reports that the socket is closed or faulty.
   failure,
   /// Reports that an empty buffer is in use and no operation was performed.
-  indeterminate
+  indeterminate,
+  /// Reports an ssl error: ssl_error_want_read
+  ssl_error_want_read
 };
 
 } // namespace caf::io::network

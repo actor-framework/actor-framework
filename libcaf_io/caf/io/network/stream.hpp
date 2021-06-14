@@ -136,6 +136,7 @@ private:
   size_t written_;
   byte_buffer wr_buf_;
   byte_buffer wr_offline_buf_;
+  bool wr_op_backoff_;
 };
 
 } // namespace caf::io::network
