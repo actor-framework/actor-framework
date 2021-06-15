@@ -14,8 +14,8 @@ enum class rw_state {
   failure,
   /// Reports that an empty buffer is in use and no operation was performed.
   indeterminate,
-  /// Reports an ssl error: ssl_error_want_read
-  ssl_error_want_read
+  /// Reports that the transport wants to read data before it can write again.
+  want_read
 };
 
 } // namespace caf::io::network

@@ -144,13 +144,12 @@ bool stream::handle_read_result(rw_state read_result, size_t rb) {
     case rw_state::indeterminate:
       return false;
     case rw_state::success:
-      // if it is the first rw_state::success after SSL_connect,
-      // the ssl connection is established. We recover previous pending write OP.
-      if(wr_op_backoff_) {
+      // Recover previous pending write if it is the first successful read after
+      // want_read was reported.
+      if (wr_op_backoff_) {
         backend().add(operation::write, fd(), this);
         wr_op_backoff_ = false;
       }
-    case rw_state::ssl_error_want_read:
       if (rb == 0)
         return false;
       collected_ += rb;
@@ -163,6 +162,9 @@ bool stream::handle_read_result(rw_state read_result, size_t rb) {
         }
       }
       break;
+    case rw_state::want_read:
+      CAF_LOG_ERROR("handle_read_result encountered rw_state::want_read");
+      return false;
   }
   return true;
 }
@@ -176,13 +178,15 @@ void stream::handle_write_result(rw_state write_result, size_t wb) {
     case rw_state::indeterminate:
       prepare_next_write();
       break;
-    case rw_state::ssl_error_want_read:
-      // if write op returns ssl_error_want_read, don't write until SSL connection is established.
-      // otherwise, any write OP will get ssl_error_want_read immediately, causing spinning and high CPU usage.
+    case rw_state::want_read:
+      // If the write operation returns want_read, we need to suspend writing to
+      // the socket until the next successful read. Otherwise, we may cause
+      // spinning and high CPU usage.
       backend().del(operation::write, fd(), this);
       wr_op_backoff_ = true;
-      if(wb == 0)
+      if (wb == 0)
         break;
+      [[fallthrough]];
     case rw_state::success:
       written_ += wb;
       CAF_ASSERT(written_ <= wr_buf_.size());

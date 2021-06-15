@@ -94,7 +94,7 @@ rw_state session::do_some(int (*f)(SSL*, void*, int), size_t& result, void* buf,
         return rw_state::failure;
       case SSL_ERROR_WANT_READ:
         CAF_LOG_DEBUG("SSL_ERROR_WANT_READ reported");
-        return rw_state::ssl_error_want_read;
+        return rw_state::want_read;
       case SSL_ERROR_WANT_WRITE:
         CAF_LOG_DEBUG("SSL_ERROR_WANT_WRITE reported");
         // Report success to poll on this socket.
