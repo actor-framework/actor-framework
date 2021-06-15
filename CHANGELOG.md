@@ -12,6 +12,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   when setting a `timespan` parameter such as `caf.middleman.heartbeat-interval`
   via config file or CLI to `0s` and then printing the config parameter, e.g.,
   via `--dump-config`.
+- When using the OpenSSL module, CAF could run into a state where the SSL layer
+  wants to read data while CAF is trying to send data. In this case, CAF did not
+  properly back off, causing high CPU load due to spinning and in some scenarios
+  never recovering. This issue has been resolved by properly handling
+  `SSL_ERROR_WANT_READ` on the transport (#1060).
 
 ### Removed
 
