@@ -67,7 +67,19 @@ private_thread* private_thread_pool::acquire() {
     std::unique_lock guard{mtx_};
     ++running_;
   }
+#ifdef CAF_ENABLE_EXCEPTIONS
+  try {
+    return private_thread::launch(sys_);
+  } catch (...) {
+    {
+      std::unique_lock guard{mtx_};
+      --running_;
+    }
+    throw;
+  }
+#else
   return private_thread::launch(sys_);
+#endif
 }
 
 void private_thread_pool::release(private_thread* ptr) {

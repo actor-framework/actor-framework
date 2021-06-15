@@ -12,6 +12,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   when setting a `timespan` parameter such as `caf.middleman.heartbeat-interval`
   via config file or CLI to `0s` and then printing the config parameter, e.g.,
   via `--dump-config`.
+- Blocking actors now release their private thread before decrementing the
+  running-actors count to resolve a race condition during system shutdown that
+  could result in the system hanging (#1266).
 
 ### Removed
 
