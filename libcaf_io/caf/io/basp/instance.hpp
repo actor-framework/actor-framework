@@ -102,7 +102,7 @@ public:
   instance(abstract_broker* parent, callee& lstnr);
 
   /// Handles received data and returns a config for receiving the
-  /// next data or `none` if an error occured.
+  /// next data or `none` if an error occurred.
   connection_state handle(execution_unit* ctx,
                           new_data_msg& dm, header& hdr, bool is_payload);
 

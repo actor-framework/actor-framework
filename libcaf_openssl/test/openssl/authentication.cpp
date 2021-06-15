@@ -124,7 +124,7 @@ struct fixture {
              skip_client_side_ca ? &dummy : &client_side_config.openssl_cafile},
             {"cert.2.pem", &client_side_config.openssl_certificate},
             {"key.2.pem", &client_side_config.openssl_key}};
-    // return if any file is unreadable or non-existend
+    // return if any file is unreadable or non-existent
     for (auto& x : cfg) {
       auto path = cd + x.first;
       if (access(path.c_str(), F_OK) == -1) {
