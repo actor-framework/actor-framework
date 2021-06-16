@@ -150,6 +150,8 @@ bool stream::handle_read_result(rw_state read_result, size_t rb) {
         backend().add(operation::write, fd(), this);
         wr_op_backoff_ = false;
       }
+      [[fallthrough]];
+    case rw_state::want_read:
       if (rb == 0)
         return false;
       collected_ += rb;
@@ -162,9 +164,6 @@ bool stream::handle_read_result(rw_state read_result, size_t rb) {
         }
       }
       break;
-    case rw_state::want_read:
-      CAF_LOG_ERROR("handle_read_result encountered rw_state::want_read");
-      return false;
   }
   return true;
 }
