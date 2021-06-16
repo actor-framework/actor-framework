@@ -90,7 +90,7 @@ the inspection API.
 
   We strongly recommend using the fixed-width integer types in all user-defined
   messaging types. Consistently using these types over ``short``, ``int``,
-  ``long``, etc. avoids bugs in heterogeneous environemnts that are hard to
+  ``long``, etc. avoids bugs in heterogeneous environments that are hard to
   debug.
 
 .. _writing-inspect-overloads:

@@ -93,8 +93,8 @@ namespace {
 class blocking_actor_runner : public resumable {
 public:
   explicit blocking_actor_runner(blocking_actor* self,
-                                 detail::private_thread* thread)
-    : self_(self), thread_(thread) {
+                                 detail::private_thread* thread, bool hidden)
+    : self_(self), thread_(thread), hidden_(hidden) {
     intrusive_ptr_add_ref(self->ctrl());
   }
 
@@ -127,7 +127,13 @@ public:
 #endif
     self_->cleanup(std::move(rsn), ctx);
     intrusive_ptr_release(self_->ctrl());
-    ctx->system().release_private_thread(thread_);
+    auto& sys = ctx->system();
+    sys.release_private_thread(thread_);
+    if (!hidden_) {
+      [[maybe_unused]] auto count = sys.registry().dec_running();
+      CAF_LOG_DEBUG("actor" << self_->id() << "decreased running count to"
+                            << count);
+    }
     return resumable::done;
   }
 
@@ -142,6 +148,7 @@ public:
 private:
   blocking_actor* self_;
   detail::private_thread* thread_;
+  bool hidden_;
 };
 
 } // namespace
@@ -150,10 +157,17 @@ void blocking_actor::launch(execution_unit*, bool, bool hide) {
   CAF_PUSH_AID_FROM_PTR(this);
   CAF_LOG_TRACE(CAF_ARG(hide));
   CAF_ASSERT(getf(is_blocking_flag));
-  if (!hide)
-    register_at_system();
-  auto thread = home_system().acquire_private_thread();
-  thread->resume(new blocking_actor_runner(this, thread));
+  // Try to acquire a thread before incrementing the running count, since this
+  // may throw.
+  auto& sys = home_system();
+  auto thread = sys.acquire_private_thread();
+  // Note: must *not* call register_at_system() to stop actor cleanup from
+  // decrementing the count before releasing the thread.
+  if (!hide) {
+    [[maybe_unused]] auto count = sys.registry().inc_running();
+    CAF_LOG_DEBUG("actor" << id() << "increased running count to" << count);
+  }
+  thread->resume(new blocking_actor_runner(this, thread, hide));
 }
 
 blocking_actor::receive_while_helper

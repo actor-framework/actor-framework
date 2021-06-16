@@ -20,7 +20,7 @@ using namespace std::string_literals;
 
 using namespace caf;
 
-// 20 integer wrappers for building a variant with 20 distint types
+// 20 integer wrappers for building a variant with 20 distinct types
 #define i_n(n)                                                                 \
   class i##n {                                                                 \
   public:                                                                      \

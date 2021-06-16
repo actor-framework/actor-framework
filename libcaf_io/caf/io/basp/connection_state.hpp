@@ -37,7 +37,7 @@ enum connection_state {
   no_route_to_receiving_node,
 };
 
-/// Returns whether the connection state requries a shutdown of the socket
+/// Returns whether the connection state requires a shutdown of the socket
 /// connection.
 constexpr bool requires_shutdown(connection_state x) noexcept {
   // Any enum value other than await_header (0) and await_payload (1) signal the
