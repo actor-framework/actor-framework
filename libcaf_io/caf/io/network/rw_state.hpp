@@ -13,7 +13,9 @@ enum class rw_state {
   /// Reports that the socket is closed or faulty.
   failure,
   /// Reports that an empty buffer is in use and no operation was performed.
-  indeterminate
+  indeterminate,
+  /// Reports that the transport wants to read data before it can write again.
+  want_read
 };
 
 } // namespace caf::io::network

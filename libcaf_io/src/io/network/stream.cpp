@@ -21,7 +21,8 @@ stream::stream(default_multiplexer& backend_ref, native_socket sockfd)
                                   defaults::middleman::max_consecutive_reads)),
     read_threshold_(1),
     collected_(0),
-    written_(0) {
+    written_(0),
+    wr_op_backoff_(false) {
   configure_read(receive_policy::at_most(1024));
 }
 
@@ -143,6 +144,14 @@ bool stream::handle_read_result(rw_state read_result, size_t rb) {
     case rw_state::indeterminate:
       return false;
     case rw_state::success:
+      // Recover previous pending write if it is the first successful read after
+      // want_read was reported.
+      if (wr_op_backoff_) {
+        backend().add(operation::write, fd(), this);
+        wr_op_backoff_ = false;
+      }
+      [[fallthrough]];
+    case rw_state::want_read:
       if (rb == 0)
         return false;
       collected_ += rb;
@@ -168,6 +177,15 @@ void stream::handle_write_result(rw_state write_result, size_t wb) {
     case rw_state::indeterminate:
       prepare_next_write();
       break;
+    case rw_state::want_read:
+      // If the write operation returns want_read, we need to suspend writing to
+      // the socket until the next successful read. Otherwise, we may cause
+      // spinning and high CPU usage.
+      backend().del(operation::write, fd(), this);
+      wr_op_backoff_ = true;
+      if (wb == 0)
+        break;
+      [[fallthrough]];
     case rw_state::success:
       written_ += wb;
       CAF_ASSERT(written_ <= wr_buf_.size());

@@ -15,6 +15,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Blocking actors now release their private thread before decrementing the
   running-actors count to resolve a race condition during system shutdown that
   could result in the system hanging (#1266).
+- When using the OpenSSL module, CAF could run into a state where the SSL layer
+  wants to read data while CAF is trying to send data. In this case, CAF did not
+  properly back off, causing high CPU load due to spinning and in some scenarios
+  never recovering. This issue has been resolved by properly handling
+  `SSL_ERROR_WANT_READ` on the transport (#1060).
 
 ### Removed
 
