@@ -324,6 +324,7 @@ caf_add_component(
     response_promise
     result
     save_inspector
+    scheduled_actor
     selective_streaming
     serial_reply
     serialization
