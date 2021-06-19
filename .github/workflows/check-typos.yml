@@ -9,4 +9,4 @@ jobs:
     - name: Spell checking over all files
       uses: crate-ci/typos@master
       with:
-        config: ./typos-config.toml
+        config: .typos-config.toml
