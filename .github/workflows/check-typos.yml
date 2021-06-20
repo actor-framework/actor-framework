@@ -1,0 +1,12 @@
+name: check-typos
+on: [push, pull_request]
+jobs:
+  typos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - uses: actions/checkout@v2
+    - name: Spell checking over all files
+      uses: crate-ci/typos@master
+      with:
+        config: .typos-config.toml
