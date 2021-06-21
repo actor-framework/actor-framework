@@ -20,6 +20,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   properly back off, causing high CPU load due to spinning and in some scenarios
   never recovering. This issue has been resolved by properly handling
   `SSL_ERROR_WANT_READ` on the transport (#1060).
+- Scheduled actors now accept default handlers for down messages etc. with
+  non-const apply operator such as lambda expressions declared as `mutable`.
 
 ### Removed
 
