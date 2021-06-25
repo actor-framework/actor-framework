@@ -13,6 +13,7 @@
 #include "caf/fwd.hpp"
 #include "caf/io/broker.hpp"
 #include "caf/telemetry/collector/prometheus.hpp"
+#include "caf/telemetry/importer/process.hpp"
 
 namespace caf::detail {
 
@@ -27,7 +28,9 @@ public:
 
   const char* name() const override;
 
-  static bool has_process_metrics() noexcept;
+  static bool has_process_metrics() noexcept {
+    return telemetry::importer::process::platform_supported();
+  }
 
   behavior make_behavior() override;
 
@@ -37,9 +40,7 @@ private:
   std::unordered_map<io::connection_handle, byte_buffer> requests_;
   telemetry::collector::prometheus collector_;
   time_t last_scrape_ = 0;
-  telemetry::dbl_gauge* cpu_time_ = nullptr;
-  telemetry::int_gauge* mem_size_ = nullptr;
-  telemetry::int_gauge* virt_mem_size_ = nullptr;
+  telemetry::importer::process proc_importer_;
 };
 
 } // namespace caf::detail

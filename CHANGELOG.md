@@ -5,6 +5,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Added
+
+- The new class `caf::telemetry::importer::process` allows users to get access
+  to process metrics even when not configuring CAF to export metrics to
+  Prometheus via HTTP.
+
 ## Fixed
 
 - Printing a `config_value` that contains a zero duration `timespan` now
