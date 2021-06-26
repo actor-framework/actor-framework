@@ -191,7 +191,7 @@ const char* actor_system::module::name() const noexcept {
     case openssl_manager:
       return "openssl-manager";
     case network_manager:
-      return "metwork-manager";
+      return "network-manager";
     default:
       return "???";
   }
@@ -458,7 +458,7 @@ bool actor_system::has_network_manager() const noexcept {
 net::middleman& actor_system::network_manager() {
   auto& clptr = modules_[module::network_manager];
   if (!clptr)
-    CAF_RAISE_ERROR("cannot access openssl manager: module not loaded");
+    CAF_RAISE_ERROR("cannot access network manager: module not loaded");
   return *reinterpret_cast<net::middleman*>(clptr->subtype_ptr());
 }
 
