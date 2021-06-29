@@ -89,8 +89,8 @@ sys_stats read_sys_stats() {
   {
     mach_task_basic_info info;
     mach_msg_type_number_t count = MACH_TASK_BASIC_INFO_COUNT;
-    if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t) &info,
-                  &count)
+    if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO,
+                  reinterpret_cast<task_info_t>(&info), &count)
         == KERN_SUCCESS) {
       result.rss = info.resident_size;
       result.vms = info.virtual_size;
@@ -100,8 +100,8 @@ sys_stats read_sys_stats() {
   {
     task_thread_times_info info;
     mach_msg_type_number_t count = TASK_THREAD_TIMES_INFO_COUNT;
-    if (task_info(mach_task_self(), TASK_THREAD_TIMES_INFO, (task_info_t) &info,
-                  &count)
+    if (task_info(mach_task_self(), TASK_THREAD_TIMES_INFO,
+                  reinterpret_cast<task_info_t>(&info), &count)
         == KERN_SUCCESS) {
       // Round to milliseconds.
       result.cpu_time += info.user_time.seconds;
