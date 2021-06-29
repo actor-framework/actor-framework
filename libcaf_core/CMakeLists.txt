@@ -204,6 +204,7 @@ caf_add_component(
     src/telemetry/metric.cpp
     src/telemetry/metric_family.cpp
     src/telemetry/metric_registry.cpp
+    src/telemetry/importer/process.cpp
     src/term.cpp
     src/thread_hook.cpp
     src/timestamp.cpp
