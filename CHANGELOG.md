@@ -5,6 +5,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Changed
+
+- Message views now perform the type-check in their constructor. With this
+  change, the `make_*` utility functions are no longer mandatory and users may
+  instead simply construct the view directly.
+
 ## Fixed
 
 - Printing a `config_value` that contains a zero duration `timespan` now
