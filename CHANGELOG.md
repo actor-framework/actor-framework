@@ -5,6 +5,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Added
+
+- The new class `caf::telemetry::importer::process` allows users to get access
+  to process metrics even when not configuring CAF to export metrics to
+  Prometheus via HTTP.
+
 ### Changed
 
 - Message views now perform the type-check in their constructor. With this
