@@ -18,7 +18,8 @@ public:
     // nop
   }
 
-  explicit typed_message_view(message& msg) : ptr_(msg.ptr()) {
+  explicit typed_message_view(message& msg)
+    : ptr_(msg.types() == make_type_id_list<Ts...>() ? msg.ptr() : nullptr) {
     // nop
   }
 
@@ -48,9 +49,7 @@ auto& get(typed_message_view<Ts...> x) {
 
 template <class... Ts>
 auto make_typed_message_view(message& msg) {
-  if (msg.types() == make_type_id_list<Ts...>())
-    return typed_message_view<Ts...>{msg};
-  return typed_message_view<Ts...>{};
+  return typed_message_view<Ts...>{msg};
 }
 
 } // namespace caf

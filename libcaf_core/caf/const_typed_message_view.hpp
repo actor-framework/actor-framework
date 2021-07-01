@@ -21,7 +21,7 @@ public:
   }
 
   explicit const_typed_message_view(const message& msg) noexcept
-    : ptr_(msg.cptr()) {
+    : ptr_(msg.types() == make_type_id_list<Ts...>() ? msg.cptr() : nullptr) {
     // nop
   }
 
@@ -63,9 +63,7 @@ auto to_tuple(const_typed_message_view<Ts...> xs) {
 
 template <class... Ts>
 auto make_const_typed_message_view(const message& msg) {
-  if (msg.types() == make_type_id_list<Ts...>())
-    return const_typed_message_view<Ts...>{msg};
-  return const_typed_message_view<Ts...>{};
+  return const_typed_message_view<Ts...>{msg};
 }
 
 template <class... Ts>
