@@ -38,14 +38,12 @@ constexpr actor_id invalid_actor_id = 0;
 /// Base class for all actor implementations.
 class CAF_CORE_EXPORT abstract_actor : public abstract_channel {
 public:
-  // allow placement new (only)
-  void* operator new(std::size_t, void* ptr) {
-    return ptr;
-  }
-
   actor_control_block* ctrl() const;
 
   ~abstract_actor() override;
+
+  abstract_actor(const abstract_actor&) = delete;
+  abstract_actor& operator=(const abstract_actor&) = delete;
 
   /// Cleans up any remaining state before the destructor is called.
   /// This function makes sure it is safe to call virtual functions
@@ -199,19 +197,11 @@ public:
   /// @endcond
 
 protected:
-  /// Creates a new actor instance.
   explicit abstract_actor(actor_config& cfg);
 
   // Guards potentially concurrent access to the state. For example,
   // `exit_state_`, `attachables_`, and `links_` in a `monitorable_actor`.
   mutable std::mutex mtx_;
-
-private:
-  // prohibit copies, assignments, and heap allocations
-  void* operator new(size_t);
-  void* operator new[](size_t);
-  abstract_actor(const abstract_actor&) = delete;
-  abstract_actor& operator=(const abstract_actor&) = delete;
 };
 
 } // namespace caf

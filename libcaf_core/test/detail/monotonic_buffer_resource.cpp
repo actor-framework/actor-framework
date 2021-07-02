@@ -55,6 +55,7 @@ SCENARIO("monotonic buffers group allocations") {
         CHECK_EQ(mbr.blocks(), 4u);
         unused = mbr.allocate(1'048'577);
         CHECK_EQ(mbr.blocks(), 5u);
+        static_cast<void>(unused);
       }
     }
   }

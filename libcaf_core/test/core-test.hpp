@@ -287,7 +287,7 @@ bool inspect(Inspector& f, dummy_enum& x) {
   using integer_type = std::underlying_type_t<dummy_enum>;
   auto get = [&x] { return static_cast<integer_type>(x); };
   auto set = [&x](integer_type val) {
-    if (val >= 0 && val <= 1) {
+    if (val <= 1) {
       x = static_cast<dummy_enum>(val);
       return true;
     } else {
