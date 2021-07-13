@@ -6,9 +6,11 @@
 
 #include <array>
 #include <cstdint>
+#include <cstring>
 #include <string>
 
 #include "caf/byte.hpp"
+#include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
@@ -19,7 +21,7 @@ namespace caf {
 /// A universally unique identifier according to
 /// [RFC 4122](https://tools.ietf.org/html/rfc4122). While this implementation
 /// can read all UUID versions, it can only create random-generated ones.
-class CAF_CORE_EXPORT uuid {
+class CAF_CORE_EXPORT uuid : detail::comparable<uuid> {
 public:
   using array_type = std::array<byte, 16>;
 
@@ -119,6 +121,13 @@ public:
   /// Returns whether `parse` would produce a valid UUID.
   static bool can_parse(string_view str) noexcept;
 
+  /// Lexicographically compares `this` and `other`.
+  /// @returns a negative value if `*this < other`, zero if `*this == other`
+  ///          and a positive number if `*this > other`.
+  int compare(const uuid& other) const noexcept {
+    return memcmp(bytes_.data(), other.bytes_.data(), 16u);
+  }
+
 private:
   /// Stores the fields, encoded as 16 octets:
   ///
@@ -137,16 +146,6 @@ private:
   /// ```
   array_type bytes_;
 };
-
-/// @relates uuid
-inline bool operator==(const uuid& x, const uuid& y) noexcept {
-  return x.bytes() == y.bytes();
-}
-
-/// @relates uuid
-inline bool operator!=(const uuid& x, const uuid& y) noexcept {
-  return x.bytes() != y.bytes();
-}
 
 /// @relates uuid
 CAF_CORE_EXPORT error parse(string_view str, uuid& dest);
