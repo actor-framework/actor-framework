@@ -384,8 +384,6 @@ actor_system::~actor_system() {
     };
     drop(spawn_serv_);
     drop(config_serv_);
-    registry_.erase("SpawnServ");
-    registry_.erase("ConfigServ");
     // group module is the first one, relies on MM
     groups_.stop();
     // stop modules in reverse order
