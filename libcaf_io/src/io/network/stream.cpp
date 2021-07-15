@@ -54,7 +54,7 @@ void stream::write(const void* buf, size_t num_bytes) {
 void stream::flush(const manager_ptr& mgr) {
   CAF_ASSERT(mgr != nullptr);
   CAF_LOG_TRACE(CAF_ARG(wr_offline_buf_.size()));
-  if (!wr_offline_buf_.empty() && !state_.writing) {
+  if (!wr_offline_buf_.empty() && !state_.writing && !wr_op_backoff_) {
     backend().add(operation::write, fd(), this);
     writer_ = mgr;
     state_.writing = true;
@@ -125,7 +125,7 @@ void stream::prepare_next_write() {
   CAF_LOG_TRACE(CAF_ARG(wr_buf_.size()) << CAF_ARG(wr_offline_buf_.size()));
   written_ = 0;
   wr_buf_.clear();
-  if (wr_offline_buf_.empty()) {
+  if (wr_offline_buf_.empty() || wr_op_backoff_) {
     state_.writing = false;
     backend().del(operation::write, fd(), this);
     if (state_.shutting_down)
@@ -147,7 +147,10 @@ bool stream::handle_read_result(rw_state read_result, size_t rb) {
       // Recover previous pending write if it is the first successful read after
       // want_read was reported.
       if (wr_op_backoff_) {
+        CAF_ASSERT(reader_ != nullptr);
         backend().add(operation::write, fd(), this);
+        writer_ = reader_;
+        state_.writing = true;
         wr_op_backoff_ = false;
       }
       [[fallthrough]];
