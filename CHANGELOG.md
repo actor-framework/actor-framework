@@ -11,6 +11,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   encountering `SSL_ERROR_WANT_READ`. The crash manifested if CAF resumed a
   write operation but failed to fully reset its state. The state management (and
   consequently the crash) has been fixed.
+- CAF now clears the actor registry before calling the destructors of loaded
+  modules. This fixes undefined behavior that could occur in rare cases where
+  actor cleanup code could run after loaded modules had been destroyed.
 
 ## [0.18.4] - 2021-07-07
 
