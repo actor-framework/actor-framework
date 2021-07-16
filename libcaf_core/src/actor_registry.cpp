@@ -148,7 +148,14 @@ void actor_registry::start() {
 }
 
 void actor_registry::stop() {
-  // nop
+  {
+    exclusive_guard guard{instances_mtx_};
+    entries_.clear();
+  }
+  {
+    exclusive_guard guard{named_entries_mtx_};
+    named_entries_.clear();
+  }
 }
 
 } // namespace caf
