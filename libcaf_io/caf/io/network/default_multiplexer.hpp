@@ -190,7 +190,7 @@ private:
       auto bf = i->mask;
       i->mask = fun(op, bf);
       if (i->mask == bf) {
-        // didn'""t do a thing
+        // didn't do a thing
         CAF_LOG_DEBUG("squashing did not change the event");
       } else if (i->mask == old_bf) {
         // just turned into a nop
