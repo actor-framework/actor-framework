@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com).
 
+## Unreleased
+
+### Fixed
+
+- 0.18.4 introduced a potential crash when using the OpenSSL module and
+  encountering `SSL_ERROR_WANT_READ`. The crash manifested if CAF resumed a
+  write operation but failed to fully reset its state. The state management (and
+  consequently the crash) has been fixed.
+
 ## [0.18.4] - 2021-07-07
 
 ### Added
