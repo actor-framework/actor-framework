@@ -86,6 +86,11 @@ public:
     discard();
   }
 
+  bool disposed() const noexcept override {
+    std::unique_lock guard{mtx_};
+    return mgr_ == nullptr;
+  }
+
   void on_complete() {
     std::unique_lock guard{mtx_};
     if (sink_) {
@@ -206,7 +211,7 @@ private:
     }
   }
 
-  std::recursive_mutex mtx_;
+  mutable std::recursive_mutex mtx_;
 
   /// Allocated to max_in_flight_ * 2, but at most holds max_in_flight_ elements
   /// at any point in time. We dynamically shift elements into the first half of
