@@ -214,7 +214,8 @@ public:
           delta_offset_ = offset_;
         } else if (consumed < 0) {
           upper_layer_.abort(this_layer_ptr,
-                             parent->abort_reason_or(caf::sec::runtime_error));
+                             parent->abort_reason_or(caf::sec::runtime_error,
+                                                     "consumed < 0"));
           return false;
         }
         // Our thresholds may have changed if the upper layer called
@@ -252,7 +253,8 @@ public:
     auto this_layer_ptr = make_stream_oriented_layer_ptr(this, parent);
     if (!upper_layer_.prepare_send(this_layer_ptr)) {
       upper_layer_.abort(this_layer_ptr,
-                         parent->abort_reason_or(caf::sec::runtime_error));
+                         parent->abort_reason_or(caf::sec::runtime_error,
+                                                 "prepare_send failed"));
       return false;
     }
     if (write_buf_.empty())
