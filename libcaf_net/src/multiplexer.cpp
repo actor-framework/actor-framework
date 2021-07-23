@@ -120,8 +120,8 @@ void multiplexer::register_reading(const socket_manager_ptr& mgr) {
     if (shutting_down_) {
       // discard
     } else if (mgr->mask() != operation::none) {
-      CAF_ASSERT(index_of(mgr) != -1);
-      if (mgr->mask_add(operation::read)) {
+      if (auto index = index_of(mgr);
+          index != -1 && mgr->mask_add(operation::read)) {
         auto& fd = pollset_[index_of(mgr)];
         fd.events |= input_mask;
       }
@@ -139,8 +139,8 @@ void multiplexer::register_writing(const socket_manager_ptr& mgr) {
     if (shutting_down_) {
       // discard
     } else if (mgr->mask() != operation::none) {
-      CAF_ASSERT(index_of(mgr) != -1);
-      if (mgr->mask_add(operation::write)) {
+      if (auto index = index_of(mgr);
+          index != -1 && mgr->mask_add(operation::write)) {
         auto& fd = pollset_[index_of(mgr)];
         fd.events |= output_mask;
       }
