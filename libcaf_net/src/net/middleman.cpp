@@ -40,6 +40,8 @@ void middleman::start() {
       mpx_.run();
       sys_.thread_terminates();
     }};
+  } else {
+    mpx_.set_thread_id();
   }
 }
 
@@ -89,6 +91,10 @@ void middleman::add_module_options(actor_system_config& cfg) {
     .add<bool>("manual-multiplexing",
                "disables background activity of the multiplexer")
     .add<size_t>("workers", "number of deserialization workers")
+    .add<timespan>("heartbeat-interval", "interval of heartbeat messages")
+    .add<timespan>("connection-timeout",
+                   "max. time between messages before declaring a node dead "
+                   "(disabled if 0, ignored if heartbeats are disabled)")
     .add<std::string>("network-backend", "legacy option");
 }
 
