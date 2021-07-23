@@ -69,6 +69,16 @@ public:
   // -- interface for the upper layer ------------------------------------------
 
   template <class LowerLayerPtr>
+  static bool can_send_more(LowerLayerPtr down) noexcept {
+    return down->can_send_more();
+  }
+
+  template <class LowerLayerPtr>
+  static auto handle(LowerLayerPtr down) noexcept {
+    return down->handle();
+  }
+
+  template <class LowerLayerPtr>
   void begin_message(LowerLayerPtr down) {
     down->begin_output();
     auto& buf = down->output_buffer();
