@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <type_traits>
 
+#include "caf/byte.hpp"
 #include "caf/detail/ieee_754.hpp"
 #include "caf/inspector_access.hpp"
 #include "caf/save_inspector_base.hpp"
@@ -109,6 +110,10 @@ public:
     auto begin = reinterpret_cast<const uint8_t*>(&x);
     append(begin, begin + sizeof(Integral));
     return true;
+  }
+
+  bool value(byte x) noexcept {
+    return value(static_cast<uint8_t>(x));
   }
 
   bool value(bool x) noexcept {

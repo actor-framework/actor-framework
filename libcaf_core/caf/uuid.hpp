@@ -107,6 +107,9 @@ public:
   /// (`randomized` UUIDs).
   uint64_t node() const noexcept;
 
+  /// Returns a platform-specific hash value for this UUID.
+  size_t hash() const noexcept;
+
   /// Creates a random UUID.
   static uuid random() noexcept;
 
@@ -169,3 +172,14 @@ bool inspect(Inspector& f, uuid& x) {
 }
 
 } // namespace caf
+
+namespace std {
+
+template <>
+struct hash<caf::uuid> {
+  size_t operator()(const caf::uuid& x) const noexcept {
+    return x.hash();
+  }
+};
+
+} // namespace std

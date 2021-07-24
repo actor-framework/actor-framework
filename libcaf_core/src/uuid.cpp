@@ -12,6 +12,7 @@
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/parser/add_ascii.hpp"
 #include "caf/expected.hpp"
+#include "caf/hash/fnv.hpp"
 #include "caf/message.hpp"
 #include "caf/parser_state.hpp"
 
@@ -105,6 +106,10 @@ uint64_t uuid::node() const noexcept {
   uint64_t result;
   memcpy(&result, n, 8);
   return detail::from_network_order(result);
+}
+
+size_t uuid::hash() const noexcept {
+  return hash::fnv<size_t>::compute(bytes_);
 }
 
 namespace {

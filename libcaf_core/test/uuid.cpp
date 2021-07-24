@@ -161,4 +161,19 @@ SCENARIO("UUIDs are inspectable") {
   }
 }
 
+SCENARIO("UUIDs are hashable") {
+  GIVEN("two UUIDs ") {
+    auto id1 = "2ee4ded7-69c0-4dd6-876d-02e446b21784"_uuid;
+    auto id2 = "a6155548-2994-4833-b4e3-9823f5f15fe9"_uuid;
+    WHEN("retrieving a hash value for the UUIDs") {
+      THEN("the UUIDs return different hash values") {
+        std::hash<uuid> f;
+        CHECK_EQ(id1.hash(), f(id1));
+        CHECK_EQ(id2.hash(), f(id2));
+        CHECK_NE(f(id1), f(id2));
+      }
+    }
+  }
+}
+
 CAF_TEST_FIXTURE_SCOPE_END()
