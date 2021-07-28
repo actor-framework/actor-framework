@@ -59,7 +59,6 @@
 #include "caf/logger.hpp"
 #include "caf/make_config_option.hpp"
 #include "caf/may_have_timeout.hpp"
-#include "caf/memory_managed.hpp"
 #include "caf/message.hpp"
 #include "caf/message_builder.hpp"
 #include "caf/message_handler.hpp"

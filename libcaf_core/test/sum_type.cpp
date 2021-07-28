@@ -8,14 +8,13 @@
 
 #include "core-test.hpp"
 
-#include <new>
 #include <map>
+#include <new>
 #include <string>
 
 #include "caf/default_sum_type_access.hpp"
 #include "caf/detail/overload.hpp"
 #include "caf/raise_error.hpp"
-#include "caf/static_visitor.hpp"
 #include "caf/sum_type_access.hpp"
 
 namespace {
@@ -106,9 +105,12 @@ private:
   template <class Result, class Visitor, class... Ts>
   inline Result apply(Visitor&& f, Ts&&... xs) const {
     switch (index_) {
-      case 0: return f(std::forward<Ts>(xs)..., v0);
-      case 1: return f(std::forward<Ts>(xs)..., v1);
-      case 2: return f(std::forward<Ts>(xs)..., v2);
+      case 0:
+        return f(std::forward<Ts>(xs)..., v0);
+      case 1:
+        return f(std::forward<Ts>(xs)..., v1);
+      case 2:
+        return f(std::forward<Ts>(xs)..., v2);
     }
     CAF_RAISE_ERROR("invalid index in union_type");
   }
@@ -159,12 +161,12 @@ struct stringify_t {
 
   template <class T0, class T1>
   string operator()(const T0& x0, const T1& x1) const {
-    return (*this)(x0) + ", " + (*this)(x1);
+    return (*this) (x0) + ", " + (*this) (x1);
   }
 
   template <class T0, class T1, class T2>
   string operator()(const T0& x0, const T1& x1, const T2& x2) const {
-    return (*this)(x0, x1) + ", " + (*this)(x2);
+    return (*this) (x0, x1) + ", " + (*this) (x2);
   }
 };
 
@@ -235,7 +237,7 @@ CAF_TEST(ternary visit) {
   union_type x;
   union_type y;
   union_type z;
-  //CAF_CHECK_EQUAL(visit(stringify, x, y, z), "0, 0, 0");
+  // CAF_CHECK_EQUAL(visit(stringify, x, y, z), "0, 0, 0");
   x = 42;
   y = string{"foo"};
   z = map_type{{1, 1}, {2, 2}};
