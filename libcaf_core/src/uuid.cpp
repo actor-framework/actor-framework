@@ -185,13 +185,13 @@ uuid uuid::random() noexcept {
   return random(rd());
 }
 
-bool uuid::can_parse(string_view str) noexcept {
+bool uuid::can_parse(std::string_view str) noexcept {
   array_type bytes;
   string_parser_state ps{str.begin(), str.end()};
   return parse_impl(ps, bytes) == valid_uuid;
 }
 
-error parse(string_view str, uuid& dest) {
+error parse(std::string_view str, uuid& dest) {
   string_parser_state ps{str.begin(), str.end()};
   switch (parse_impl(ps, dest.bytes())) {
     case valid_uuid:
@@ -220,7 +220,7 @@ std::string to_string(const uuid& x) {
   return result;
 }
 
-expected<uuid> make_uuid(string_view str) {
+expected<uuid> make_uuid(std::string_view str) {
   uuid result;
   if (auto err = parse(str, result))
     return err;

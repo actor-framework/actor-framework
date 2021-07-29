@@ -4,13 +4,14 @@
 
 #pragma once
 
+#include "caf/detail/core_export.hpp"
 #include "caf/none.hpp"
-#include "caf/string_view.hpp"
 
 #include <chrono>
 #include <cstdint>
 #include <ctime>
 #include <limits>
+#include <string_view>
 #include <type_traits>
 
 namespace caf::detail {
@@ -19,7 +20,7 @@ CAF_CORE_EXPORT
 size_t print_timestamp(char* buf, size_t buf_size, time_t ts, size_t ms);
 
 template <class Buffer>
-void print_escaped(Buffer& buf, string_view str) {
+void print_escaped(Buffer& buf, std::string_view str) {
   buf.push_back('"');
   for (auto c : str) {
     switch (c) {
@@ -64,7 +65,7 @@ void print_escaped(Buffer& buf, string_view str) {
 }
 
 template <class Buffer>
-void print_unescaped(Buffer& buf, string_view str) {
+void print_unescaped(Buffer& buf, std::string_view str) {
   buf.reserve(buf.size() + str.size());
   auto i = str.begin();
   auto e = str.end();
@@ -112,15 +113,15 @@ void print_unescaped(Buffer& buf, string_view str) {
 
 template <class Buffer>
 void print(Buffer& buf, none_t) {
-  using namespace caf::literals;
-  auto str = "null"_sv;
+  using namespace std::literals::string_view_literals;
+  auto str = "null"sv;
   buf.insert(buf.end(), str.begin(), str.end());
 }
 
 template <class Buffer>
 void print(Buffer& buf, bool x) {
-  using namespace caf::literals;
-  auto str = x ? "true"_sv : "false"_sv;
+  using namespace std::literals::string_view_literals;
+  auto str = x ? "true"sv : "false"sv;
   buf.insert(buf.end(), str.begin(), str.end());
 }
 
@@ -132,20 +133,20 @@ std::enable_if_t<std::is_integral<T>::value> print(Buffer& buf, T x) {
   // Convert negative values into positives as necessary.
   if constexpr (std::is_signed<T>::value) {
     if (x == std::numeric_limits<T>::min()) {
-      using namespace caf::literals;
+      using namespace std::literals::string_view_literals;
       // The code below would fail for the smallest value, because this value
       // has no positive counterpart. For example, an int8_t ranges from -128 to
       // 127. Hence, an int8_t cannot represent `abs(-128)`.
-      string_view result;
+      std::string_view result;
       if constexpr (sizeof(T) == 1) {
-        result = "-128"_sv;
+        result = "-128"sv;
       } else if constexpr (sizeof(T) == 2) {
-        result = "-32768"_sv;
+        result = "-32768"sv;
       } else if constexpr (sizeof(T) == 4) {
-        result = "-2147483648"_sv;
+        result = "-2147483648"sv;
       } else {
         static_assert(sizeof(T) == 8);
-        result = "-9223372036854775808"_sv;
+        result = "-9223372036854775808"sv;
       }
       buf.insert(buf.end(), result.begin(), result.end());
       return;
@@ -186,13 +187,13 @@ std::enable_if_t<std::is_floating_point<T>::value> print(Buffer& buf, T x) {
 
 template <class Buffer, class Rep, class Period>
 void print(Buffer& buf, std::chrono::duration<Rep, Period> x) {
-  using namespace caf::literals;
+  using namespace std::literals::string_view_literals;
   if (x.count() == 0) {
-    auto str = "0s"_sv;
+    auto str = "0s"sv;
     buf.insert(buf.end(), str.begin(), str.end());
     return;
   }
-  auto try_print = [&buf](auto converted, string_view suffix) {
+  auto try_print = [&buf](auto converted, std::string_view suffix) {
     if (converted.count() < 1)
       return false;
     print(buf, converted.count());
@@ -213,7 +214,7 @@ void print(Buffer& buf, std::chrono::duration<Rep, Period> x) {
     return;
   auto converted = sc::duration_cast<sc::nanoseconds>(x);
   print(buf, converted.count());
-  auto suffix = "ns"_sv;
+  auto suffix = "ns"sv;
   buf.insert(buf.end(), suffix.begin(), suffix.end());
 }
 

@@ -401,7 +401,7 @@ actor_system_config& actor_system_config::add_actor_factory(std::string name,
   return *this;
 }
 
-actor_system_config& actor_system_config::set_impl(string_view name,
+actor_system_config& actor_system_config::set_impl(std::string_view name,
                                                    config_value value) {
   auto opt = custom_options_.qualified_name_lookup(name);
   if (opt == nullptr) {
@@ -471,7 +471,7 @@ actor_system_config::extract_config_file_path(string_list& args) {
   auto ptr = custom_options_.qualified_name_lookup("global.config-file");
   CAF_ASSERT(ptr != nullptr);
   string_list::iterator i;
-  string_view path;
+  std::string_view path;
   std::tie(i, path) = find_by_long_name(*ptr, args.begin(), args.end());
   if (i == args.end()) {
     return {none, std::string{}};

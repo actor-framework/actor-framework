@@ -47,16 +47,16 @@ struct kvp_field_name;
 
 template <>
 struct kvp_field_name<std::string> {
-  static constexpr string_view value = "key";
+  static constexpr std::string_view value = "key";
 };
 
 template <>
 struct kvp_field_name<int32_t> {
-  static constexpr string_view value = "value";
+  static constexpr std::string_view value = "value";
 };
 
 template <class T>
-constexpr string_view kvp_field_name_v = kvp_field_name<T>::value;
+constexpr std::string_view kvp_field_name_v = kvp_field_name<T>::value;
 
 // Adapter for converting atom-prefixed message to pseudo-objects.
 struct adapter {

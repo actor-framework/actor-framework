@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <string_view>
 #include <vector>
 
 #include "caf/detail/core_export.hpp"
@@ -171,12 +172,14 @@ struct upstream_msg_forced_drop;
 // -- free template functions --------------------------------------------------
 
 template <class T>
-config_option make_config_option(string_view category, string_view name,
-                                 string_view description);
+config_option make_config_option(std::string_view category,
+                                 std::string_view name,
+                                 std::string_view description);
 
 template <class T>
-config_option make_config_option(T& storage, string_view category,
-                                 string_view name, string_view description);
+config_option make_config_option(T& storage, std::string_view category,
+                                 std::string_view name,
+                                 std::string_view description);
 
 // -- enums --------------------------------------------------------------------
 

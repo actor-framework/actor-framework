@@ -28,7 +28,7 @@ namespace {
 struct testee : deserializer {
   std::string log;
 
-  bool load_field_failed(string_view, sec code) {
+  bool load_field_failed(std::string_view, sec code) {
     set_error(make_error(code));
     return false;
   }
@@ -50,7 +50,7 @@ struct testee : deserializer {
     return false;
   }
 
-  bool begin_object(type_id_t, string_view object_name) override {
+  bool begin_object(type_id_t, std::string_view object_name) override {
     new_line();
     indent += 2;
     log += "begin object ";
@@ -65,7 +65,7 @@ struct testee : deserializer {
     return true;
   }
 
-  bool begin_field(string_view name) override {
+  bool begin_field(std::string_view name) override {
     new_line();
     indent += 2;
     log += "begin field ";
@@ -73,7 +73,7 @@ struct testee : deserializer {
     return true;
   }
 
-  bool begin_field(string_view name, bool& is_present) override {
+  bool begin_field(std::string_view name, bool& is_present) override {
     new_line();
     indent += 2;
     log += "begin optional field ";
@@ -82,7 +82,7 @@ struct testee : deserializer {
     return true;
   }
 
-  bool begin_field(string_view name, span<const type_id_t>,
+  bool begin_field(std::string_view name, span<const type_id_t>,
                    size_t& type_index) override {
     new_line();
     indent += 2;
@@ -92,8 +92,8 @@ struct testee : deserializer {
     return true;
   }
 
-  bool begin_field(string_view name, bool& is_present, span<const type_id_t>,
-                   size_t&) override {
+  bool begin_field(std::string_view name, bool& is_present,
+                   span<const type_id_t>, size_t&) override {
     new_line();
     indent += 2;
     log += "begin optional variant field ";

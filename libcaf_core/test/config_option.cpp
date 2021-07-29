@@ -15,6 +15,7 @@
 #include "caf/make_config_option.hpp"
 
 using namespace caf;
+using namespace std::literals::string_view_literals;
 
 using std::string;
 
@@ -169,9 +170,9 @@ SCENARIO("options on the CLI override config files that override defaults") {
   }
 }
 
-constexpr string_view category = "category";
-constexpr string_view name = "name";
-constexpr string_view explanation = "explanation";
+constexpr std::string_view category = "category";
+constexpr std::string_view name = "name";
+constexpr std::string_view explanation = "explanation";
 
 template <class T>
 constexpr int64_t overflow() {
@@ -184,7 +185,7 @@ constexpr int64_t underflow() {
 }
 
 template <class T>
-std::optional<T> read(string_view arg) {
+std::optional<T> read(std::string_view arg) {
   auto result = T{};
   auto co = make_config_option<T>(result, category, name, explanation);
   config_value val{arg};
@@ -235,14 +236,14 @@ void compare(const config_option& lhs, const config_option& rhs) {
 }
 
 CAF_TEST(copy constructor) {
-  auto one = make_config_option<int>("cat1", "one", "option 1");
+  auto one = make_config_option<int>("cat1"sv, "one"sv, "option 1"sv);
   auto two = one;
   compare(one, two);
 }
 
 CAF_TEST(copy assignment) {
-  auto one = make_config_option<int>("cat1", "one", "option 1");
-  auto two = make_config_option<int>("cat2", "two", "option 2");
+  auto one = make_config_option<int>("cat1"sv, "one"sv, "option 1"sv);
+  auto two = make_config_option<int>("cat2"sv, "two"sv, "option 2"sv);
   two = one;
   compare(one, two);
 }
@@ -321,7 +322,8 @@ CAF_TEST(lists) {
 }
 
 CAF_TEST(flat CLI parsing) {
-  auto x = make_config_option<std::string>("?foo", "bar,b", "test option");
+  auto x = make_config_option<std::string>("?foo"sv, "bar,b"sv,
+                                           "test option"sv);
   CAF_CHECK_EQUAL(x.category(), "foo");
   CAF_CHECK_EQUAL(x.long_name(), "bar");
   CAF_CHECK_EQUAL(x.short_names(), "b");
@@ -330,7 +332,8 @@ CAF_TEST(flat CLI parsing) {
 }
 
 CAF_TEST(flat CLI parsing with nested categories) {
-  auto x = make_config_option<std::string>("?foo.goo", "bar,b", "test option");
+  auto x = make_config_option<std::string>("?foo.goo"sv, "bar,b"sv,
+                                           "test option"sv);
   CAF_CHECK_EQUAL(x.category(), "foo.goo");
   CAF_CHECK_EQUAL(x.long_name(), "bar");
   CAF_CHECK_EQUAL(x.short_names(), "b");
@@ -339,7 +342,8 @@ CAF_TEST(flat CLI parsing with nested categories) {
 }
 
 CAF_TEST(find by long opt) {
-  auto needle = make_config_option<std::string>("?foo", "bar,b", "test option");
+  auto needle = make_config_option<std::string>("?foo"sv, "bar,b"sv,
+                                                "test option"sv);
   auto check = [&](std::vector<string> args, bool found_opt, bool has_opt) {
     auto res = find_by_long_name(needle, std::begin(args), std::end(args));
     CAF_CHECK_EQUAL(res.first != std::end(args), found_opt);

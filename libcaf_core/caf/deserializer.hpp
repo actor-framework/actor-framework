@@ -60,35 +60,36 @@ public:
   ///          that becomes invalid as soon as calling *any* other member
   ///          function on the deserializer. Convert the `type_name` to a string
   ///          before storing it.
-  virtual bool fetch_next_object_name(string_view& type_name);
+  virtual bool fetch_next_object_name(std::string_view& type_name);
 
   /// Convenience function for querying `fetch_next_object_name` comparing the
   /// result to `type_name` in one shot.
-  bool next_object_name_matches(string_view type_name);
+  bool next_object_name_matches(std::string_view type_name);
 
   /// Like `next_object_name_matches`, but sets an error on the deserializer
   /// on a mismatch.
-  bool assert_next_object_name(string_view type_name);
+  bool assert_next_object_name(std::string_view type_name);
 
   /// Begins processing of an object, may perform a type check depending on the
   /// data format.
   /// @param type 16-bit ID for known types, @ref invalid_type_id otherwise.
   /// @param pretty_class_name Either the output of @ref type_name_or_anonymous
   ///                          or the optionally defined pretty name.
-  virtual bool begin_object(type_id_t type, string_view pretty_class_name) = 0;
+  virtual bool begin_object(type_id_t type, std::string_view pretty_class_name)
+    = 0;
 
   /// Ends processing of an object.
   virtual bool end_object() = 0;
 
-  virtual bool begin_field(string_view name) = 0;
+  virtual bool begin_field(std::string_view name) = 0;
 
-  virtual bool begin_field(string_view, bool& is_present) = 0;
+  virtual bool begin_field(std::string_view, bool& is_present) = 0;
 
   virtual bool
-  begin_field(string_view name, span<const type_id_t> types, size_t& index)
+  begin_field(std::string_view name, span<const type_id_t> types, size_t& index)
     = 0;
 
-  virtual bool begin_field(string_view name, bool& is_present,
+  virtual bool begin_field(std::string_view name, bool& is_present,
                            span<const type_id_t> types, size_t& index)
     = 0;
 

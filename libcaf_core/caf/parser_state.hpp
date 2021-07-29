@@ -6,10 +6,10 @@
 
 #include <cctype>
 #include <cstdint>
+#include <string_view>
 
 #include "caf/fwd.hpp"
 #include "caf/pec.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf {
 
@@ -137,6 +137,6 @@ auto make_error(const parser_state<Iterator, Sentinel>& ps, Ts&&... xs)
 }
 
 /// Specialization for parsers operating on string views.
-using string_parser_state = parser_state<string_view::iterator>;
+using string_parser_state = parser_state<std::string_view::iterator>;
 
 } // namespace caf

@@ -9,12 +9,12 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
+#include <string_view>
 
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf {
 
@@ -122,7 +122,7 @@ public:
   }
 
   /// Returns whether `parse` would produce a valid UUID.
-  static bool can_parse(string_view str) noexcept;
+  static bool can_parse(std::string_view str) noexcept;
 
   /// Lexicographically compares `this` and `other`.
   /// @returns a negative value if `*this < other`, zero if `*this == other`
@@ -151,13 +151,13 @@ private:
 };
 
 /// @relates uuid
-CAF_CORE_EXPORT error parse(string_view str, uuid& dest);
+CAF_CORE_EXPORT error parse(std::string_view str, uuid& dest);
 
 /// @relates uuid
 CAF_CORE_EXPORT std::string to_string(const uuid& x);
 
 /// @relates uuid
-CAF_CORE_EXPORT expected<uuid> make_uuid(string_view str);
+CAF_CORE_EXPORT expected<uuid> make_uuid(std::string_view str);
 
 /// @relates uuid
 template <class Inspector>

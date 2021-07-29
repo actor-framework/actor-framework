@@ -3,10 +3,11 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <tuple>
 
 #include "caf/inspector_access.hpp"
-#include "caf/string_view.hpp"
+#include "caf/optional.hpp"
 #include "caf/variant.hpp"
 
 enum class weekday : uint8_t {
@@ -21,7 +22,7 @@ enum class weekday : uint8_t {
 
 std::string to_string(weekday x);
 
-bool parse(caf::string_view input, weekday& dest);
+bool parse(std::string_view input, weekday& dest);
 
 template <class Inspector>
 bool inspect(Inspector& f, weekday& x) {
@@ -58,7 +59,7 @@ public:                                                                        \
 // A mean data type designed for maximum coverage of the inspect API.
 class nasty {
 public:
-  static inline caf::string_view tname = "nasty";
+  static inline std::string_view tname = "nasty";
 
   using optional_type = std::optional<int32_t>;
 

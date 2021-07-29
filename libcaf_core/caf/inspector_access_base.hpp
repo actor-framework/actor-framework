@@ -4,9 +4,11 @@
 
 #pragma once
 
+#include <string>
+#include <string_view>
+
 #include "caf/detail/as_mutable_ref.hpp"
 #include "caf/sec.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf {
 
@@ -15,18 +17,18 @@ template <class T>
 struct inspector_access_base {
   /// Loads a mandatory field from `f`.
   template <class Inspector, class IsValid, class SyncValue>
-  static bool load_field(Inspector& f, string_view field_name, T& x,
+  static bool load_field(Inspector& f, std::string_view field_name, T& x,
                          IsValid& is_valid, SyncValue& sync_value) {
     if (f.begin_field(field_name) && f.apply(x)) {
       if (!is_valid(x)) {
         f.emplace_error(sec::field_invariant_check_failed,
-                        to_string(field_name));
+                        std::string(field_name));
         return false;
       }
       if (!sync_value()) {
         if (!f.get_error())
           f.emplace_error(sec::field_value_synchronization_failed,
-                          to_string(field_name));
+                          std::string(field_name));
         return false;
       }
       return f.end_field();
@@ -37,7 +39,7 @@ struct inspector_access_base {
   /// Loads an optional field from `f`, calling `set_fallback` if the source
   /// contains no value for `x`.
   template <class Inspector, class IsValid, class SyncValue, class SetFallback>
-  static bool load_field(Inspector& f, string_view field_name, T& x,
+  static bool load_field(Inspector& f, std::string_view field_name, T& x,
                          IsValid& is_valid, SyncValue& sync_value,
                          SetFallback& set_fallback) {
     bool is_present = false;
@@ -48,13 +50,13 @@ struct inspector_access_base {
         return false;
       if (!is_valid(x)) {
         f.emplace_error(sec::field_invariant_check_failed,
-                        to_string(field_name));
+                        std::string(field_name));
         return false;
       }
       if (!sync_value()) {
         if (!f.get_error())
           f.emplace_error(sec::field_value_synchronization_failed,
-                          to_string(field_name));
+                          std::string(field_name));
         return false;
       }
       return f.end_field();
@@ -65,7 +67,7 @@ struct inspector_access_base {
 
   /// Saves a mandatory field to `f`.
   template <class Inspector>
-  static bool save_field(Inspector& f, string_view field_name, T& x) {
+  static bool save_field(Inspector& f, std::string_view field_name, T& x) {
     return f.begin_field(field_name) //
            && f.apply(x)             //
            && f.end_field();
@@ -73,7 +75,7 @@ struct inspector_access_base {
 
   /// Saves an optional field to `f`.
   template <class Inspector, class IsPresent, class Get>
-  static bool save_field(Inspector& f, string_view field_name,
+  static bool save_field(Inspector& f, std::string_view field_name,
                          IsPresent& is_present, Get& get) {
     if (is_present()) {
       auto&& x = get();

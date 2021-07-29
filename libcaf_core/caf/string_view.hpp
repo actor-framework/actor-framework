@@ -12,6 +12,7 @@
 #include <string>
 #include <type_traits>
 
+#include "caf/config.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 
@@ -49,6 +50,8 @@ struct is_string_like {
 };
 
 } // namespace detail
+
+class [[deprecated("Use `std::string_view instead`")]] string_view;
 
 /// Drop-in replacement for C++17 std::string_view.
 class CAF_CORE_EXPORT string_view : detail::comparable<string_view> {
@@ -200,8 +203,8 @@ public:
 
   int compare(size_type pos, size_type n, const_pointer str) const noexcept;
 
-  int compare(size_type pos1, size_type n1, const_pointer s, size_type n2) const
-    noexcept;
+  int compare(size_type pos1, size_type n1, const_pointer s,
+              size_type n2) const noexcept;
 
   size_type find(string_view str, size_type pos = 0) const noexcept;
 
@@ -223,8 +226,8 @@ public:
 
   size_type find_first_of(value_type ch, size_type pos = 0) const noexcept;
 
-  size_type find_first_of(const_pointer str, size_type pos, size_type n) const
-    noexcept;
+  size_type find_first_of(const_pointer str, size_type pos,
+                          size_type n) const noexcept;
 
   size_type find_first_of(const_pointer str, size_type pos = 0) const noexcept;
 
@@ -232,39 +235,41 @@ public:
 
   size_type find_last_of(value_type ch, size_type pos = npos) const noexcept;
 
-  size_type find_last_of(const_pointer str, size_type pos, size_type n) const
-    noexcept;
+  size_type find_last_of(const_pointer str, size_type pos,
+                         size_type n) const noexcept;
 
-  size_type find_last_of(const_pointer str, size_type pos = npos) const
-    noexcept;
+  size_type find_last_of(const_pointer str,
+                         size_type pos = npos) const noexcept;
 
-  size_type find_first_not_of(string_view str, size_type pos = 0) const
-    noexcept;
+  size_type find_first_not_of(string_view str,
+                              size_type pos = 0) const noexcept;
 
   size_type find_first_not_of(value_type ch, size_type pos = 0) const noexcept;
 
   size_type find_first_not_of(const_pointer str, size_type pos,
                               size_type n) const noexcept;
 
-  size_type find_first_not_of(const_pointer str, size_type pos = 0) const
-    noexcept;
+  size_type find_first_not_of(const_pointer str,
+                              size_type pos = 0) const noexcept;
 
-  size_type find_last_not_of(string_view str, size_type pos = npos) const
-    noexcept;
+  size_type find_last_not_of(string_view str,
+                             size_type pos = npos) const noexcept;
 
-  size_type find_last_not_of(value_type ch, size_type pos = npos) const
-    noexcept;
+  size_type find_last_not_of(value_type ch,
+                             size_type pos = npos) const noexcept;
 
   size_type find_last_not_of(const_pointer str, size_type pos,
                              size_type n) const noexcept;
 
-  size_type find_last_not_of(const_pointer str, size_type pos = npos) const
-    noexcept;
+  size_type find_last_not_of(const_pointer str,
+                             size_type pos = npos) const noexcept;
 
 private:
   const char* data_;
   size_t size_;
 };
+
+CAF_PUSH_DEPRECATED_WARNING
 
 /// @relates string_view
 inline std::string to_string(string_view x) {
@@ -286,3 +291,5 @@ namespace std {
 CAF_CORE_EXPORT std::ostream& operator<<(std::ostream& out, caf::string_view);
 
 } // namespace std
+
+CAF_POP_WARNINGS

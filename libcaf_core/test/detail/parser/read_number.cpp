@@ -9,13 +9,13 @@
 #include "caf/test/unit_test.hpp"
 
 #include <string>
+#include <string_view>
 
 #include "caf/detail/parser/add_ascii.hpp"
 #include "caf/detail/parser/sub_ascii.hpp"
 #include "caf/expected.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
-#include "caf/string_view.hpp"
 #include "caf/variant.hpp"
 
 using namespace caf;
@@ -69,7 +69,7 @@ bool operator==(const res_t& x, const res_t& y) {
 }
 
 struct numbers_parser {
-  res_t operator()(string_view str) {
+  res_t operator()(std::string_view str) {
     number_consumer f;
     string_parser_state res{str.begin(), str.end()};
     detail::parser::read_number(res, f);
@@ -80,7 +80,7 @@ struct numbers_parser {
 };
 
 struct range_parser {
-  expected<std::vector<int64_t>> operator()(string_view str) {
+  expected<std::vector<int64_t>> operator()(std::string_view str) {
     range_consumer f;
     string_parser_state res{str.begin(), str.end()};
     detail::parser::read_number(res, f, std::true_type{}, std::true_type{});
@@ -114,7 +114,7 @@ CAF_TEST_FIXTURE_SCOPE(read_number_tests, fixture)
 
 CAF_TEST(add ascii - unsigned) {
   using detail::parser::add_ascii;
-  auto rd = [](string_view str) -> expected<uint8_t> {
+  auto rd = [](std::string_view str) -> expected<uint8_t> {
     uint8_t x = 0;
     for (auto c : str)
       if (!add_ascii<10>(x, c))
@@ -128,7 +128,7 @@ CAF_TEST(add ascii - unsigned) {
 }
 
 CAF_TEST(add ascii - signed) {
-  auto rd = [](string_view str) -> expected<int8_t> {
+  auto rd = [](std::string_view str) -> expected<int8_t> {
     int8_t x = 0;
     for (auto c : str)
       if (!detail::parser::add_ascii<10>(x, c))
@@ -142,7 +142,7 @@ CAF_TEST(add ascii - signed) {
 }
 
 CAF_TEST(sub ascii) {
-  auto rd = [](string_view str) -> expected<int8_t> {
+  auto rd = [](std::string_view str) -> expected<int8_t> {
     int8_t x = 0;
     for (auto c : str)
       if (!detail::parser::sub_ascii<10>(x, c))

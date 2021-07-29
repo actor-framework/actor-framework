@@ -11,6 +11,8 @@
 using namespace caf;
 using namespace caf::literals;
 
+CAF_PUSH_DEPRECATED_WARNING
+
 CAF_TEST(default construction) {
   string_view x;
   string_view y;
@@ -208,3 +210,5 @@ CAF_TEST(find_last_not_of) {
   CAF_CHECK_EQUAL(x.find_last_not_of("bc", 2, 2),
                   y.find_last_not_of("bc", 2, 2));
 }
+
+CAF_POP_WARNINGS

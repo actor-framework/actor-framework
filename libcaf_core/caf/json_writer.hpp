@@ -39,7 +39,7 @@ public:
   static constexpr bool skip_empty_fields_default = true;
 
   /// The value value for `field_type_suffix()`.
-  static constexpr string_view field_type_suffix_default = "-type";
+  static constexpr std::string_view field_type_suffix_default = "-type";
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -56,7 +56,7 @@ public:
   /// Returns a string view into the internal buffer.
   /// @warning This view becomes invalid when calling any non-const member
   ///          function on the writer object.
-  [[nodiscard]] string_view str() const noexcept {
+  [[nodiscard]] std::string_view str() const noexcept {
     return {buf_.data(), buf_.size()};
   }
 
@@ -93,12 +93,12 @@ public:
   /// Returns the suffix for generating type annotation fields for variant
   /// fields. For example, CAF inserts field called "@foo${field_type_suffix}"
   /// for a variant field called "foo".
-  [[nodiscard]] string_view field_type_suffix() const noexcept {
+  [[nodiscard]] std::string_view field_type_suffix() const noexcept {
     return field_type_suffix_;
   }
 
   /// Configures whether the writer omits empty fields.
-  void field_type_suffix(string_view suffix) noexcept {
+  void field_type_suffix(std::string_view suffix) noexcept {
     field_type_suffix_ = suffix;
   }
 
@@ -111,18 +111,18 @@ public:
 
   // -- overrides --------------------------------------------------------------
 
-  bool begin_object(type_id_t type, string_view name) override;
+  bool begin_object(type_id_t type, std::string_view name) override;
 
   bool end_object() override;
 
-  bool begin_field(string_view) override;
+  bool begin_field(std::string_view) override;
 
-  bool begin_field(string_view name, bool is_present) override;
+  bool begin_field(std::string_view name, bool is_present) override;
 
-  bool begin_field(string_view name, span<const type_id_t> types,
+  bool begin_field(std::string_view name, span<const type_id_t> types,
                    size_t index) override;
 
-  bool begin_field(string_view name, bool is_present,
+  bool begin_field(std::string_view name, bool is_present,
                    span<const type_id_t> types, size_t index) override;
 
   bool end_field() override;
@@ -169,7 +169,7 @@ public:
 
   bool value(long double x) override;
 
-  bool value(string_view x) override;
+  bool value(std::string_view x) override;
 
   bool value(const std::u16string& x) override;
 
@@ -229,7 +229,7 @@ private:
   }
 
   // Adds `str` to the output buffer.
-  void add(string_view str) {
+  void add(std::string_view str) {
     buf_.insert(buf_.end(), str.begin(), str.end());
   }
 
@@ -264,7 +264,7 @@ private:
   // fields as `$field: null` (false).
   bool skip_empty_fields_ = skip_empty_fields_default;
 
-  string_view field_type_suffix_ = field_type_suffix_default;
+  std::string_view field_type_suffix_ = field_type_suffix_default;
 };
 
 } // namespace caf

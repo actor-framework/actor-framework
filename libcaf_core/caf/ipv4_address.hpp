@@ -121,6 +121,6 @@ CAF_CORE_EXPORT std::string to_string(const ipv4_address& x);
 
 /// Tries to parse the content of `str` into `dest`.
 /// @relates ipv4_address
-CAF_CORE_EXPORT error parse(string_view str, ipv4_address& dest);
+CAF_CORE_EXPORT error parse(std::string_view str, ipv4_address& dest);
 
 } // namespace caf

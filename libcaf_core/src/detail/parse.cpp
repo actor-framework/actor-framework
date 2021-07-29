@@ -309,7 +309,7 @@ void parse_element(string_parser_state& ps, std::string& x,
 
 // -- convenience functions ----------------------------------------------------
 
-error parse_result(const string_parser_state& ps, string_view input) {
+error parse_result(const string_parser_state& ps, std::string_view input) {
   if (ps.code == pec::success)
     return {};
   auto msg = to_string(ps.code);

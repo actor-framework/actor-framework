@@ -5,12 +5,12 @@
 #pragma once
 
 #include <ctime>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
-#include "caf/string_view.hpp"
 #include "caf/telemetry/counter.hpp"
 #include "caf/telemetry/gauge.hpp"
 #include "caf/telemetry/histogram.hpp"
@@ -51,7 +51,7 @@ public:
   /// Returns a string view into the internal buffer.
   /// @warning This view may become invalid when calling any non-const member
   ///          function on the collector object.
-  [[nodiscard]] string_view str() const noexcept {
+  [[nodiscard]] std::string_view str() const noexcept {
     return {buf_.data(), buf_.size()};
   }
 
@@ -100,8 +100,8 @@ public:
   /// @param registry Source for the metrics.
   /// @param now Current system time.
   /// @returns a view into the filled buffer.
-  string_view collect_from(const metric_registry& registry,
-                           timestamp now = make_timestamp());
+  std::string_view collect_from(const metric_registry& registry,
+                                timestamp now = make_timestamp());
 
   // -- call operators for the metric registry ---------------------------------
 
@@ -141,13 +141,15 @@ private:
   /// Sets `current_family_` if not pointing to `family` already. When setting
   /// the member variable, also writes meta information to `buf_`.
   void set_current_family(const metric_family* family,
-                          string_view prometheus_type);
+                          std::string_view prometheus_type);
 
-  void append_impl(const metric_family* family, string_view prometheus_type,
-                   const metric* instance, int64_t value);
+  void append_impl(const metric_family* family,
+                   std::string_view prometheus_type, const metric* instance,
+                   int64_t value);
 
-  void append_impl(const metric_family* family, string_view prometheus_type,
-                   const metric* instance, double value);
+  void append_impl(const metric_family* family,
+                   std::string_view prometheus_type, const metric* instance,
+                   double value);
 
   template <class BucketType, class ValueType>
   void append_histogram_impl(const metric_family* family,

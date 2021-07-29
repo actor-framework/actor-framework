@@ -156,7 +156,7 @@ bool check(test* parent, const char* file, size_t line, const char* expr,
 }
 
 bool check_un(bool result, const char* file, size_t line, const char* expr) {
-  string_view rel_up = "../";
+  std::string_view rel_up = "../";
   while (strncmp(file, rel_up.data(), rel_up.size()) == 0)
     file += rel_up.size();
   auto parent = engine::current_test();
@@ -178,7 +178,7 @@ bool check_un(bool result, const char* file, size_t line, const char* expr) {
 
 bool check_bin(bool result, const char* file, size_t line, const char* expr,
                const std::string& lhs, const std::string& rhs) {
-  string_view rel_up = "../";
+  std::string_view rel_up = "../";
   while (strncmp(file, rel_up.data(), rel_up.size()) == 0)
     file += rel_up.size();
   auto parent = engine::current_test();
@@ -515,8 +515,8 @@ std::string engine::render(std::chrono::microseconds t) {
   return t.count() > 1000000
            ? (std::to_string(t.count() / 1000000) + '.'
               + std::to_string((t.count() % 1000000) / 10000) + " s")
-           : t.count() > 1000 ? (std::to_string(t.count() / 1000) + " ms")
-                              : (std::to_string(t.count()) + " us");
+         : t.count() > 1000 ? (std::to_string(t.count() / 1000) + " ms")
+                            : (std::to_string(t.count()) + " us");
 }
 
 int main(int argc, char** argv) {

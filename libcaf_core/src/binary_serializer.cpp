@@ -52,7 +52,7 @@ bool binary_serializer::begin_sequence(size_t list_size) {
   return value(as_bytes(make_span(buf, static_cast<size_t>(i - buf))));
 }
 
-bool binary_serializer::begin_field(string_view, bool is_present) {
+bool binary_serializer::begin_field(std::string_view, bool is_present) {
   auto val = static_cast<uint8_t>(is_present);
   return value(val);
 }
@@ -64,8 +64,8 @@ constexpr size_t max_value = static_cast<size_t>(std::numeric_limits<T>::max());
 
 } // namespace
 
-bool binary_serializer::begin_field(string_view, span<const type_id_t> types,
-                                    size_t index) {
+bool binary_serializer::begin_field(std::string_view,
+                                    span<const type_id_t> types, size_t index) {
   CAF_ASSERT(index < types.size());
   if (types.size() < max_value<int8_t>) {
     return value(static_cast<int8_t>(index));
@@ -89,7 +89,7 @@ T compress_index(bool is_present, size_t value) {
 
 } // namespace
 
-bool binary_serializer::begin_field(string_view, bool is_present,
+bool binary_serializer::begin_field(std::string_view, bool is_present,
                                     span<const type_id_t> types, size_t index) {
   CAF_ASSERT(!is_present || index < types.size());
   if (types.size() < max_value<int8_t>) {
@@ -188,7 +188,7 @@ bool binary_serializer::value(long double x) {
   return value(tmp);
 }
 
-bool binary_serializer::value(string_view x) {
+bool binary_serializer::value(std::string_view x) {
   if (!begin_sequence(x.size()))
     return false;
   value(as_bytes(make_span(x)));

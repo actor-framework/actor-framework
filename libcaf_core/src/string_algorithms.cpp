@@ -9,7 +9,8 @@ namespace caf {
 namespace {
 
 template <class F>
-void split_impl(F consume, string_view str, string_view delims, bool keep_all) {
+void split_impl(F consume, std::string_view str, std::string_view delims,
+                bool keep_all) {
   size_t pos = 0;
   size_t prev = 0;
   while ((pos = str.find_first_of(delims, prev)) != std::string::npos) {
@@ -21,38 +22,37 @@ void split_impl(F consume, string_view str, string_view delims, bool keep_all) {
   if (prev < str.size())
     consume(str.substr(prev));
   else if (keep_all)
-    consume(string_view{});
+    consume(std::string_view{});
 }
 
 } // namespace
 
-void split(std::vector<std::string>& result, string_view str,
-           string_view delims, bool keep_all) {
-  auto f = [&](string_view sv) {
+void split(std::vector<std::string>& result, std::string_view str,
+           std::string_view delims, bool keep_all) {
+  auto f = [&](std::string_view sv) {
     result.emplace_back(sv.begin(), sv.end());
   };
   return split_impl(f, str, delims, keep_all);
 }
 
-void split(std::vector<string_view>& result, string_view str,
-           string_view delims, bool keep_all) {
-  auto f = [&](string_view sv) {
-    result.emplace_back(sv);
-  };
+void split(std::vector<std::string_view>& result, std::string_view str,
+           std::string_view delims, bool keep_all) {
+  auto f = [&](std::string_view sv) { result.emplace_back(sv); };
   return split_impl(f, str, delims, keep_all);
 }
 
-void split(std::vector<std::string>& result, string_view str, char delim,
+void split(std::vector<std::string>& result, std::string_view str, char delim,
            bool keep_all) {
-  split(result, str, string_view{&delim, 1}, keep_all);
+  split(result, str, std::string_view{&delim, 1}, keep_all);
 }
 
-void split(std::vector<string_view>& result, string_view str, char delim,
-           bool keep_all) {
-  split(result, str, string_view{&delim, 1}, keep_all);
+void split(std::vector<std::string_view>& result, std::string_view str,
+           char delim, bool keep_all) {
+  split(result, str, std::string_view{&delim, 1}, keep_all);
 }
 
-void replace_all(std::string& str, string_view what, string_view with) {
+void replace_all(std::string& str, std::string_view what,
+                 std::string_view with) {
   // end(what) - 1 points to the null-terminator
   auto next = [&](std::string::iterator pos) -> std::string::iterator {
     return std::search(pos, str.end(), what.begin(), what.end());
@@ -67,11 +67,11 @@ void replace_all(std::string& str, string_view what, string_view with) {
   }
 }
 
-bool starts_with(string_view str, string_view prefix) {
+bool starts_with(std::string_view str, std::string_view prefix) {
   return str.compare(0, prefix.size(), prefix) == 0;
 }
 
-bool ends_with(string_view str, string_view suffix) {
+bool ends_with(std::string_view str, std::string_view suffix) {
   auto n = str.size();
   auto m = suffix.size();
   return n >= m ? str.compare(n - m, m, suffix) == 0 : false;

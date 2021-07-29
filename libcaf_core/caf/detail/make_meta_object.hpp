@@ -66,7 +66,7 @@ void stringify(std::string& buf, const void* ptr) {
 namespace caf::detail {
 
 template <class T>
-meta_object make_meta_object(string_view type_name) {
+meta_object make_meta_object(std::string_view type_name) {
   return {
     type_name,
     padded_size_v<T>,

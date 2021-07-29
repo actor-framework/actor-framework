@@ -6,11 +6,11 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string_view>
 
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/span.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf::detail {
 
@@ -18,7 +18,7 @@ namespace caf::detail {
 /// pointers.
 struct meta_object {
   /// Stores a human-readable representation of the type's name.
-  string_view type_name;
+  std::string_view type_name;
 
   /// Stores how many Bytes objects of this type require, including padding for
   /// aligning to `max_align_t`.

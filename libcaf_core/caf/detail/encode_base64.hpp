@@ -6,14 +6,14 @@
 
 #include "caf/byte_span.hpp"
 #include "caf/detail/base64.hpp"
-#include "caf/string_view.hpp"
 
 #include <string>
+#include <string_view>
 
 namespace caf::detail {
 
 [[deprecated("use base64::encode instead")]] inline std::string
-encode_base64(string_view str) {
+encode_base64(std::string_view str) {
   return base64::encode(str);
 }
 

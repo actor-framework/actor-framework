@@ -10,6 +10,7 @@
 #include <iterator>
 #include <random>
 #include <sstream>
+#include <string_view>
 
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
@@ -74,7 +75,7 @@ bool hashed_node_id::valid(const host_id_type& x) noexcept {
   return !std::all_of(x.begin(), x.end(), is_zero);
 }
 
-bool hashed_node_id::can_parse(string_view str) noexcept {
+bool hashed_node_id::can_parse(std::string_view str) noexcept {
   // Our format is "<20-byte-hex>#<pid>". With 2 characters per byte, this means
   // a valid node ID has at least 42 characters.
   if (str.size() < 42)
@@ -158,7 +159,7 @@ void node_id::swap(node_id& x) noexcept {
   data_.swap(x.data_);
 }
 
-bool node_id::can_parse(string_view str) noexcept {
+bool node_id::can_parse(std::string_view str) noexcept {
   return default_data::can_parse(str) || uri::can_parse(str);
 }
 
@@ -191,7 +192,7 @@ node_id make_node_id(uint32_t process_id,
 }
 
 std::optional<node_id> make_node_id(uint32_t process_id,
-                                    string_view host_hash) {
+                                    std::string_view host_hash) {
   using id_type = hashed_node_id::host_id_type;
   if (host_hash.size() != std::tuple_size<id_type>::value * 2)
     return std::nullopt;
@@ -211,7 +212,7 @@ std::optional<node_id> make_node_id(uint32_t process_id,
   return make_node_id(process_id, host_id);
 }
 
-error parse(string_view str, node_id& dest) {
+error parse(std::string_view str, node_id& dest) {
   if (node_id::default_data::can_parse(str)) {
     CAF_ASSERT(str.size() >= 42);
     auto host_hash = str.substr(0, 40);

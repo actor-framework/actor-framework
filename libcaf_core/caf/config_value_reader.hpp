@@ -90,18 +90,18 @@ public:
 
   bool fetch_next_object_type(type_id_t& type) override;
 
-  bool begin_object(type_id_t type, string_view name) override;
+  bool begin_object(type_id_t type, std::string_view name) override;
 
   bool end_object() override;
 
-  bool begin_field(string_view) override;
+  bool begin_field(std::string_view) override;
 
-  bool begin_field(string_view name, bool& is_present) override;
+  bool begin_field(std::string_view name, bool& is_present) override;
 
-  bool begin_field(string_view name, span<const type_id_t> types,
+  bool begin_field(std::string_view name, span<const type_id_t> types,
                    size_t& index) override;
 
-  bool begin_field(string_view name, bool& is_present,
+  bool begin_field(std::string_view name, bool& is_present,
                    span<const type_id_t> types, size_t& index) override;
 
   bool end_field() override;

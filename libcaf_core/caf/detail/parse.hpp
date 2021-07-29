@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iterator>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -19,7 +20,6 @@
 #include "caf/message.hpp"
 #include "caf/none.hpp"
 #include "caf/parser_state.hpp"
-#include "caf/string_view.hpp"
 #include "caf/unit.hpp"
 
 namespace caf::detail {
@@ -39,7 +39,7 @@ enum class time_unit {
 CAF_CORE_EXPORT void parse(string_parser_state& ps, time_unit& x);
 
 struct literal {
-  string_view str;
+  std::string_view str;
 };
 
 CAF_CORE_EXPORT void parse(string_parser_state& ps, literal x);
@@ -230,17 +230,17 @@ void parse(string_parser_state& ps,
 // -- convenience functions ----------------------------------------------------
 
 CAF_CORE_EXPORT
-error parse_result(const string_parser_state& ps, string_view input);
+error parse_result(const string_parser_state& ps, std::string_view input);
 
 template <class T>
-auto parse(string_view str, T& x) {
+auto parse(std::string_view str, T& x) {
   string_parser_state ps{str.begin(), str.end()};
   parse(ps, x);
   return parse_result(ps, str);
 }
 
 template <class T, class Policy>
-auto parse(string_view str, T& x, Policy policy) {
+auto parse(std::string_view str, T& x, Policy policy) {
   string_parser_state ps{str.begin(), str.end()};
   parse(ps, x, policy);
   return parse_result(ps, str);

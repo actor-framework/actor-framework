@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -17,7 +18,6 @@
 #include "caf/load_inspector_base.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf {
 
@@ -99,7 +99,7 @@ public:
 
   bool fetch_next_object_type(type_id_t& type) noexcept;
 
-  constexpr bool begin_object(type_id_t, string_view) noexcept {
+  constexpr bool begin_object(type_id_t, std::string_view) noexcept {
     return true;
   }
 
@@ -107,16 +107,16 @@ public:
     return true;
   }
 
-  constexpr bool begin_field(string_view) noexcept {
+  constexpr bool begin_field(std::string_view) noexcept {
     return true;
   }
 
-  bool begin_field(string_view name, bool& is_present) noexcept;
+  bool begin_field(std::string_view name, bool& is_present) noexcept;
 
-  bool begin_field(string_view name, span<const type_id_t> types,
+  bool begin_field(std::string_view name, span<const type_id_t> types,
                    size_t& index) noexcept;
 
-  bool begin_field(string_view name, bool& is_present,
+  bool begin_field(std::string_view name, bool& is_present,
                    span<const type_id_t> types, size_t& index) noexcept;
 
   constexpr bool end_field() {

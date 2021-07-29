@@ -5,6 +5,7 @@
 #include "caf/ipv6_address.hpp"
 
 #include <cstring>
+#include <string_view>
 
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/parser/read_ipv6_address.hpp"
@@ -13,7 +14,6 @@
 #include "caf/message.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf {
 
@@ -45,9 +45,7 @@ void append_v6_hex(std::string& result, const uint8_t* xs) {
     buf[j++] = tbl[c >> 4];
     buf[j++] = tbl[c & 0x0F];
   }
-  auto pred = [](char c) {
-    return c != '0';
-  };
+  auto pred = [](char c) { return c != '0'; };
   auto first_non_zero = std::find_if(buf.begin(), buf.end(), pred);
   CAF_ASSERT(first_non_zero != buf.end());
   if (*first_non_zero != '\0')
@@ -133,8 +131,8 @@ bool ipv6_address::is_loopback() const noexcept {
   // IPv6 defines "::1" as the loopback address, when embedding a v4 we
   // dispatch accordingly.
   return embeds_v4()
-         ? embedded_v4().is_loopback()
-         : half_segments_[0] == 0 && half_segments_[1] == net_order_64(1u);
+           ? embedded_v4().is_loopback()
+           : half_segments_[0] == 0 && half_segments_[1] == net_order_64(1u);
 }
 
 // -- related free functions ---------------------------------------------------
@@ -146,12 +144,8 @@ using u16_iterator = ipv6_address::u16_array_type::const_iterator;
 using u16_range = std::pair<u16_iterator, u16_iterator>;
 
 u16_range longest_streak(u16_iterator first, u16_iterator last) {
-  auto two_zeros = [](uint16_t x, uint16_t y) {
-    return x == 0 && y == 0;
-  };
-  auto not_zero = [](uint16_t x) {
-    return x != 0;
-  };
+  auto two_zeros = [](uint16_t x, uint16_t y) { return x == 0 && y == 0; };
+  auto not_zero = [](uint16_t x) { return x != 0; };
   u16_range result;
   result.first = std::adjacent_find(first, last, two_zeros);
   if (result.first == last)
@@ -205,7 +199,7 @@ std::string to_string(ipv6_address x) {
   return result;
 }
 
-error parse(string_view str, ipv6_address& dest) {
+error parse(std::string_view str, ipv6_address& dest) {
   using namespace detail;
   ipv6_address_consumer f{dest};
   string_parser_state res{str.begin(), str.end()};

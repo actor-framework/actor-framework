@@ -18,19 +18,19 @@ public:
 
   size_t result = 0;
 
-  bool begin_object(type_id_t, string_view) override;
+  bool begin_object(type_id_t, std::string_view) override;
 
   bool end_object() override;
 
-  bool begin_field(string_view) override;
+  bool begin_field(std::string_view) override;
 
-  bool begin_field(string_view, bool is_present) override;
+  bool begin_field(std::string_view, bool is_present) override;
 
-  bool begin_field(string_view, span<const type_id_t> types,
+  bool begin_field(std::string_view, span<const type_id_t> types,
                    size_t index) override;
 
-  bool begin_field(string_view, bool is_present, span<const type_id_t> types,
-                   size_t index) override;
+  bool begin_field(std::string_view, bool is_present,
+                   span<const type_id_t> types, size_t index) override;
 
   bool end_field() override;
 
@@ -68,7 +68,7 @@ public:
 
   bool value(long double x) override;
 
-  bool value(string_view x) override;
+  bool value(std::string_view x) override;
 
   bool value(const std::u16string& x) override;
 

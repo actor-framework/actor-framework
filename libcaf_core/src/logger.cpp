@@ -41,42 +41,24 @@ thread_local actor_id current_actor_id;
 // Stores a pointer to the system-wide logger.
 thread_local intrusive_ptr<logger> current_logger_ptr;
 
-constexpr string_view log_level_name[] = {
-  "QUIET",
-  "",
-  "",
-  "ERROR",
-  "",
-  "",
-  "WARN",
-  "",
-  "",
-  "INFO",
-  "",
-  "",
-  "DEBUG",
-  "",
-  "",
-  "TRACE",
+constexpr std::string_view log_level_name[] = {
+  "QUIET", "",     "", "ERROR", "",      "", "WARN", "",
+  "",      "INFO", "", "",      "DEBUG", "", "",     "TRACE",
 };
 
-constexpr string_view fun_prefixes[] = {
-  "virtual ",
-  "static ",
-  "const ",
-  "signed ",
-  "unsigned ",
+constexpr std::string_view fun_prefixes[] = {
+  "virtual ", "static ", "const ", "signed ", "unsigned ",
 };
 
 // Various spellings of the anonymous namespace as reported by CAF_PRETTY_FUN.
-constexpr string_view anon_ns[] = {
+constexpr std::string_view anon_ns[] = {
   "(anonymous namespace)", // Clang
-  "{anonymous}", // GCC
+  "{anonymous}",           // GCC
   "`anonymous-namespace'", // MSVC
 };
 
 /// Converts a verbosity level to its integer counterpart.
-unsigned to_level_int(string_view x) {
+unsigned to_level_int(std::string_view x) {
   if (x == "error")
     return CAF_LOG_LEVEL_ERROR;
   if (x == "warning")
@@ -93,8 +75,8 @@ unsigned to_level_int(string_view x) {
 // Reduces symbol by printing all prefixes to `out` and returning the
 // remainder. For example, "ns::foo::bar" prints "ns.foo" to `out` and returns
 // "bar".
-string_view reduce_symbol(std::ostream& out, string_view symbol) {
-  auto skip = [&](string_view str) {
+std::string_view reduce_symbol(std::ostream& out, std::string_view symbol) {
+  auto skip = [&](std::string_view str) {
     if (starts_with(symbol, str))
       symbol.remove_prefix(str.size());
   };
@@ -102,10 +84,10 @@ string_view reduce_symbol(std::ostream& out, string_view symbol) {
   // void __cdecl `anonymous-namespace'::foo::tpl<struct T>::run(void)
   //                                              ^~~~~~
   skip("struct ");
-  string_view last = "";
+  std::string_view last = "";
   bool printed = false;
   // Prints the content of `last` and then replaces it with `y`.
-  auto set_last = [&](string_view y) {
+  auto set_last = [&](std::string_view y) {
     if (!last.empty()) {
       if (printed)
         out << ".";
@@ -145,7 +127,7 @@ string_view reduce_symbol(std::ostream& out, string_view symbol) {
       case '`':
       case '{':
       case '(': {
-        auto pred = [&](string_view x) { return starts_with(symbol, x); };
+        auto pred = [&](std::string_view x) { return starts_with(symbol, x); };
         auto i = std::find_if(std::begin(anon_ns), std::end(anon_ns), pred);
         if (i != std::end(anon_ns)) {
           set_last("$");
@@ -180,18 +162,18 @@ string_view reduce_symbol(std::ostream& out, string_view symbol) {
 } // namespace
 
 logger::config::config()
-    : verbosity(CAF_LOG_LEVEL),
-      file_verbosity(CAF_LOG_LEVEL),
-      console_verbosity(CAF_LOG_LEVEL),
-      inline_output(false),
-      console_coloring(false) {
+  : verbosity(CAF_LOG_LEVEL),
+    file_verbosity(CAF_LOG_LEVEL),
+    console_verbosity(CAF_LOG_LEVEL),
+    inline_output(false),
+    console_coloring(false) {
   // nop
 }
 
-logger::event::event(unsigned lvl, unsigned line, string_view cat,
-                     string_view full_fun, string_view fun, string_view fn,
-                     std::string msg, std::thread::id t, actor_id a,
-                     timestamp ts)
+logger::event::event(unsigned lvl, unsigned line, std::string_view cat,
+                     std::string_view full_fun, std::string_view fun,
+                     std::string_view fn, std::string msg, std::thread::id t,
+                     actor_id a, timestamp ts)
   : level(lvl),
     line_number(line),
     category_name(cat),
@@ -209,8 +191,8 @@ logger::line_builder::line_builder() {
   // nop
 }
 
-logger::line_builder& logger::line_builder::
-operator<<(const local_actor* self) {
+logger::line_builder&
+logger::line_builder::operator<<(const local_actor* self) {
   return *this << self->name();
 }
 
@@ -218,7 +200,7 @@ logger::line_builder& logger::line_builder::operator<<(const std::string& str) {
   return *this << str.c_str();
 }
 
-logger::line_builder& logger::line_builder::operator<<(string_view str) {
+logger::line_builder& logger::line_builder::operator<<(std::string_view str) {
   if (!str_.empty() && str_.back() != ' ')
     str_ += " ";
   str_.insert(str_.end(), str.begin(), str.end());
@@ -267,11 +249,11 @@ logger* logger::current_logger() {
   return current_logger_ptr.get();
 }
 
-bool logger::accepts(unsigned level, string_view cname) {
+bool logger::accepts(unsigned level, std::string_view cname) {
   if (level > cfg_.verbosity)
     return false;
   return std::none_of(global_filter_.begin(), global_filter_.end(),
-                      [=](string_view name) { return name == cname; });
+                      [=](std::string_view name) { return name == cname; });
 }
 
 logger::logger(actor_system& sys) : system_(sys), t0_(make_timestamp()) {
@@ -291,12 +273,12 @@ void logger::init(actor_system_config& cfg) {
   namespace lg = defaults::logger;
   using std::string;
   using string_list = std::vector<std::string>;
-  auto get_verbosity = [&cfg](string_view key) -> unsigned {
+  auto get_verbosity = [&cfg](std::string_view key) -> unsigned {
     if (auto str = get_if<string>(&cfg, key))
       return to_level_int(*str);
     return CAF_LOG_LEVEL_QUIET;
   };
-  auto read_filter = [&cfg](string_list& var, string_view key) {
+  auto read_filter = [&cfg](string_list& var, std::string_view key) {
     if (auto lst = get_as<string_list>(cfg, key))
       var = std::move(*lst);
   };
@@ -351,7 +333,7 @@ void logger::render_fun_prefix(std::ostream& out, const event& x) {
   // Here, we output Java-style "my.namespace" to `out`.
   auto reduced = x.pretty_fun;
   // Skip all prefixes that can precede the return type.
-  auto skip = [&](string_view str) {
+  auto skip = [&](std::string_view str) {
     if (starts_with(reduced, str)) {
       reduced.remove_prefix(str.size());
       return true;
@@ -490,8 +472,8 @@ logger::line_format logger::parse_format(const std::string& format_str) {
     } else {
       if (*i == '%') {
         if (plain_text_first != i)
-          res.emplace_back(field{plain_text_field,
-                                 std::string{plain_text_first, i}});
+          res.emplace_back(
+            field{plain_text_field, std::string{plain_text_first, i}});
         read_percent_sign = true;
       }
     }
@@ -501,9 +483,9 @@ logger::line_format logger::parse_format(const std::string& format_str) {
   return res;
 }
 
-string_view logger::skip_path(string_view path) {
+std::string_view logger::skip_path(std::string_view path) {
   auto find_slash = [&] { return path.find('/'); };
-  for (auto p = find_slash(); p != string_view::npos; p = find_slash())
+  for (auto p = find_slash(); p != std::string_view::npos; p = find_slash())
     path.remove_prefix(p + 1);
   return path;
 }
@@ -536,7 +518,9 @@ void logger::handle_file_event(const event& x) {
   // Print to file if available.
   if (file_ && x.level <= file_verbosity()
       && none_of(file_filter_.begin(), file_filter_.end(),
-                 [&x](string_view name) { return name == x.category_name; }))
+                 [&x](std::string_view name) {
+                   return name == x.category_name;
+                 }))
     render(file_, file_format_, x);
 }
 
@@ -544,7 +528,9 @@ void logger::handle_console_event(const event& x) {
   if (x.level > console_verbosity())
     return;
   if (std::any_of(console_filter_.begin(), console_filter_.end(),
-                  [&x](string_view name) { return name == x.category_name; }))
+                  [&x](std::string_view name) {
+                    return name == x.category_name;
+                  }))
     return;
   if (cfg_.console_coloring) {
     switch (x.level) {
@@ -669,10 +655,10 @@ void logger::stop() {
 }
 
 std::string to_string(logger::field_type x) {
-  static constexpr const char* names[] = {
-    "invalid", "category", "class_name", "date",         "file",
-    "line",    "message",  "method",     "newline",      "priority",
-    "runtime", "thread",   "actor",      "percent_sign", "plain_text"};
+  static constexpr const char* names[]
+    = {"invalid", "category", "class_name", "date",         "file",
+       "line",    "message",  "method",     "newline",      "priority",
+       "runtime", "thread",   "actor",      "percent_sign", "plain_text"};
   return names[static_cast<size_t>(x)];
 }
 

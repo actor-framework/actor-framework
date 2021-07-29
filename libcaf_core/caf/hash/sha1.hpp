@@ -8,12 +8,12 @@
 #include "caf/detail/ieee_754.hpp"
 #include "caf/save_inspector_base.hpp"
 #include "caf/span.hpp"
-#include "caf/string_view.hpp"
 #include "caf/type_id.hpp"
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <string_view>
 
 namespace caf::hash {
 
@@ -35,7 +35,7 @@ public:
     return false;
   }
 
-  constexpr bool begin_object(type_id_t, string_view) {
+  constexpr bool begin_object(type_id_t, std::string_view) {
     return true;
   }
 
@@ -43,19 +43,19 @@ public:
     return true;
   }
 
-  bool begin_field(string_view) {
+  bool begin_field(std::string_view) {
     return true;
   }
 
-  bool begin_field(string_view, bool is_present) {
+  bool begin_field(std::string_view, bool is_present) {
     return value(static_cast<uint8_t>(is_present));
   }
 
-  bool begin_field(string_view, span<const type_id_t>, size_t index) {
+  bool begin_field(std::string_view, span<const type_id_t>, size_t index) {
     return value(index);
   }
 
-  bool begin_field(string_view, bool is_present, span<const type_id_t>,
+  bool begin_field(std::string_view, bool is_present, span<const type_id_t>,
                    size_t index) {
     value(static_cast<uint8_t>(is_present));
     if (is_present)
@@ -120,7 +120,7 @@ public:
     return value(detail::pack754(x));
   }
 
-  bool value(string_view x) noexcept {
+  bool value(std::string_view x) noexcept {
     auto begin = reinterpret_cast<const uint8_t*>(x.data());
     append(begin, begin + x.size());
     return true;
