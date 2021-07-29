@@ -38,7 +38,7 @@ class middleman;
 ///
 /// Brokers do *not* operate on sockets or other platform-dependent
 /// communication primitives. Instead, brokers use a `connection_handle`
-/// to identify a reliable, end-to-end byte stream (e.g. a TCP connection)
+/// to identify a reliable, end-to-end std::byte stream (e.g. a TCP connection)
 /// and `accept_handle` to identify a communication endpoint others can
 /// connect to via its port.
 ///
@@ -145,7 +145,7 @@ public:
   void write(connection_handle hdl, size_t bs, const void* buf);
 
   /// Writes `buf` into the buffer for a given connection.
-  void write(connection_handle hdl, span<const byte> buf);
+  void write(connection_handle hdl, span<const std::byte> buf);
 
   /// Sends the content of the buffer for a given connection.
   void flush(connection_handle hdl);
@@ -179,8 +179,8 @@ public:
   /// Tries to connect to `host` on given `port` and creates
   /// a new scribe describing the connection afterwards.
   /// @returns The handle of the new `scribe` on success.
-  expected<connection_handle>
-  add_tcp_scribe(const std::string& host, uint16_t port);
+  expected<connection_handle> add_tcp_scribe(const std::string& host,
+                                             uint16_t port);
 
   /// Moves the initialized `scribe` instance `ptr` from another broker to this
   /// broker.
@@ -207,8 +207,8 @@ public:
   void add_datagram_servant(datagram_servant_ptr ptr);
 
   /// Adds the `datagram_servant` under an additional `hdl`.
-  void
-  add_hdl_for_datagram_servant(datagram_servant_ptr ptr, datagram_handle hdl);
+  void add_hdl_for_datagram_servant(datagram_servant_ptr ptr,
+                                    datagram_handle hdl);
 
   /// Creates and assigns a new `datagram_servant` from a given socket `fd`.
   datagram_handle add_datagram_servant(network::native_socket fd);
@@ -222,8 +222,8 @@ public:
   /// Creates a new `datagram_servant` for the remote endpoint `host` and
   /// `port`.
   /// @returns The handle to the new `datagram_servant`.
-  expected<datagram_handle>
-  add_udp_datagram_servant(const std::string& host, uint16_t port);
+  expected<datagram_handle> add_udp_datagram_servant(const std::string& host,
+                                                     uint16_t port);
 
   /// Tries to open a local port and creates a `datagram_servant` managing it on
   /// success. If `port == 0`, then the broker will ask the operating system to

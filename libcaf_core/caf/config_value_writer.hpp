@@ -86,7 +86,7 @@ public:
 
   bool end_associative_array() override;
 
-  bool value(byte x) override;
+  bool value(std::byte x) override;
 
   bool value(bool x) override;
 
@@ -118,7 +118,7 @@ public:
 
   bool value(const std::u32string& x) override;
 
-  bool value(span<const byte> x) override;
+  bool value(span<const std::byte> x) override;
 
 private:
   bool push(config_value&& x);

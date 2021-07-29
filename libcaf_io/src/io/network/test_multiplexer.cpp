@@ -119,8 +119,8 @@ scribe_ptr test_multiplexer::new_scribe(connection_handle hdl) {
   return sptr;
 }
 
-expected<scribe_ptr>
-test_multiplexer::new_tcp_scribe(const std::string& host, uint16_t port) {
+expected<scribe_ptr> test_multiplexer::new_tcp_scribe(const std::string& host,
+                                                      uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port));
   connection_handle hdl;
   { // lifetime scope of guard
@@ -198,8 +198,8 @@ doorman_ptr test_multiplexer::new_doorman(accept_handle hdl, uint16_t port) {
   return dptr;
 }
 
-expected<doorman_ptr>
-test_multiplexer::new_tcp_doorman(uint16_t desired_port, const char*, bool) {
+expected<doorman_ptr> test_multiplexer::new_tcp_doorman(uint16_t desired_port,
+                                                        const char*, bool) {
   CAF_LOG_TRACE(CAF_ARG(desired_port));
   accept_handle hdl;
   uint16_t port = 0;
@@ -304,8 +304,8 @@ test_multiplexer::new_local_udp_endpoint(uint16_t desired_port, const char*,
   return new_datagram_servant(hdl, port);
 }
 
-datagram_servant_ptr
-test_multiplexer::new_datagram_servant(datagram_handle hdl, uint16_t port) {
+datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle hdl,
+                                                            uint16_t port) {
   CAF_LOG_TRACE(CAF_ARG(hdl));
   class impl : public datagram_servant {
   public:
@@ -416,9 +416,9 @@ test_multiplexer::new_datagram_servant(datagram_handle hdl, uint16_t port) {
   return dptr;
 }
 
-datagram_servant_ptr
-test_multiplexer::new_datagram_servant(datagram_handle, const std::string&,
-                                       uint16_t) {
+datagram_servant_ptr test_multiplexer::new_datagram_servant(datagram_handle,
+                                                            const std::string&,
+                                                            uint16_t) {
   CAF_CRITICAL("This has no implementation in the test multiplexer");
 }
 
@@ -427,8 +427,9 @@ int64_t test_multiplexer::next_endpoint_id() {
 }
 
 bool test_multiplexer::is_known_port(uint16_t x) const {
-  auto pred1
-    = [&](const doorman_data_map::value_type& y) { return x == y.second.port; };
+  auto pred1 = [&](const doorman_data_map::value_type& y) {
+    return x == y.second.port;
+  };
   auto pred2 = [&](const datagram_data_map::value_type& y) {
     return x == y.second->port;
   };
@@ -438,8 +439,9 @@ bool test_multiplexer::is_known_port(uint16_t x) const {
 }
 
 bool test_multiplexer::is_known_handle(accept_handle x) const {
-  auto pred
-    = [&](const pending_doorman_map::value_type& y) { return x == y.second; };
+  auto pred = [&](const pending_doorman_map::value_type& y) {
+    return x == y.second;
+  };
   return doorman_data_.count(x) > 0
          || std::any_of(doormen_.begin(), doormen_.end(), pred);
 }
@@ -887,7 +889,7 @@ bool test_multiplexer::read_data(datagram_handle hdl) {
   CAF_ASSERT(to.second.capacity() > from.second.size());
   to.second.resize(from.second.size());
   std::transform(from.second.begin(), from.second.end(), to.second.begin(),
-                 [](byte x) { return caf::to_integer<char>(x); });
+                 [](std::byte x) { return static_cast<char>(x); });
   data->vn_buf.pop_front();
   auto sitr = datagram_data_.find(data->rd_buf.first);
   if (sitr == datagram_data_.end()) {

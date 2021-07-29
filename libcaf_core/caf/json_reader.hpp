@@ -169,7 +169,7 @@ public:
 
   bool end_associative_array() override;
 
-  bool value(byte& x) override;
+  bool value(std::byte& x) override;
 
   bool value(bool& x) override;
 
@@ -201,7 +201,7 @@ public:
 
   bool value(std::u32string& x) override;
 
-  bool value(span<byte> x) override;
+  bool value(span<std::byte> x) override;
 
 private:
   [[nodiscard]] position pos() const noexcept;

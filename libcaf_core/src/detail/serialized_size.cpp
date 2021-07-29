@@ -89,7 +89,7 @@ bool serialized_size_inspector::end_sequence() {
   return true;
 }
 
-bool serialized_size_inspector::value(byte x) {
+bool serialized_size_inspector::value(std::byte x) {
   result += sizeof(x);
   return true;
 }
@@ -176,7 +176,7 @@ bool serialized_size_inspector::value(const std::u32string& x) {
   return end_sequence();
 }
 
-bool serialized_size_inspector::value(span<const byte> x) {
+bool serialized_size_inspector::value(span<const std::byte> x) {
   result += x.size();
   return true;
 }

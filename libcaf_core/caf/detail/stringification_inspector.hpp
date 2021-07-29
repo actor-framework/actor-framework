@@ -86,7 +86,7 @@ public:
     return end_sequence();
   }
 
-  bool value(byte x);
+  bool value(std::byte x);
 
   bool value(bool x);
 
@@ -114,7 +114,7 @@ public:
 
   bool value(const std::u32string& x);
 
-  bool value(span<const byte> x);
+  bool value(span<const std::byte> x);
 
   using super::list;
 

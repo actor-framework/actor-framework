@@ -313,7 +313,7 @@ bool config_value_writer::end_associative_array() {
   return true;
 }
 
-bool config_value_writer::value(byte x) {
+bool config_value_writer::value(std::byte x) {
   return push(config_value{static_cast<config_value::integer>(x)});
 }
 
@@ -384,7 +384,7 @@ bool config_value_writer::value(const std::u32string&) {
   return false;
 }
 
-bool config_value_writer::value(span<const byte> x) {
+bool config_value_writer::value(span<const std::byte> x) {
   std::string str;
   detail::append_hex(str, x.data(), x.size());
   return push(config_value{std::move(str)});

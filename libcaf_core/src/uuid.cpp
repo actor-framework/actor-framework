@@ -20,7 +20,7 @@ namespace caf {
 
 namespace {
 
-byte nil_bytes[16];
+std::byte nil_bytes[16];
 
 } // namespace
 
@@ -67,40 +67,40 @@ uuid::variant_field variant_table[] = {
 } // namespace
 
 uuid::variant_field uuid::variant() const noexcept {
-  return variant_table[to_integer<size_t>(bytes_[8]) >> 5];
+  return variant_table[static_cast<size_t>(bytes_[8]) >> 5];
 }
 
 uuid::version_field uuid::version() const noexcept {
-  return static_cast<version_field>(to_integer<int>(bytes_[6]) >> 4);
+  return static_cast<version_field>(static_cast<int>(bytes_[6]) >> 4);
 }
 
 uint64_t uuid::timestamp() const noexcept {
   // Assemble octets like this (L = low, M = mid, H = high):
   // 0H HH MM MM LL LL LL LL
-  byte ts[8];
+  std::byte ts[8];
   memcpy(ts + 4, bytes_.data() + 0, 4);
   memcpy(ts + 2, bytes_.data() + 4, 2);
   memcpy(ts + 0, bytes_.data() + 6, 2);
-  ts[0] &= byte{0x0F};
+  ts[0] &= std::byte{0x0F};
   uint64_t result;
   memcpy(&result, ts, 8);
-  // UUIDs are stored in network byte order.
+  // UUIDs are stored in network std::byte order.
   return detail::from_network_order(result);
 }
 
 uint16_t uuid::clock_sequence() const noexcept {
   // Read clk_seq_(hi|low) fields and strip the variant bits.
-  byte cs[2];
+  std::byte cs[2];
   memcpy(cs, bytes_.data() + 8, 2);
-  cs[0] &= byte{0x3F};
+  cs[0] &= std::byte{0x3F};
   uint16_t result;
   memcpy(&result, cs, 2);
-  // UUIDs are stored in network byte order.
+  // UUIDs are stored in network std::byte order.
   return detail::from_network_order(result);
 }
 
 uint64_t uuid::node() const noexcept {
-  byte n[8];
+  std::byte n[8];
   memset(n, 0, 2);
   memcpy(n + 2, bytes_.data() + 10, 6);
   uint64_t result;
@@ -132,7 +132,7 @@ parse_result parse_impl(string_parser_state& ps, uuid::array_type& x) noexcept {
     if (!isxdigit(c2) || !detail::parser::add_ascii<16>(value, c2))
       return false;
     ps.next();
-    *pos++ = static_cast<byte>(value);
+    *pos++ = static_cast<std::byte>(value);
     return true;
   };
   // Parse the formatted string.
@@ -153,7 +153,7 @@ parse_result parse_impl(string_parser_state& ps, uuid::array_type& x) noexcept {
   // Check whether the bytes form a valid UUID.
   if (memcmp(x.data(), nil_bytes, 16) == 0)
     return valid_uuid;
-  if (auto subtype = to_integer<long>(x[6]) >> 4; subtype == 0 || subtype > 5)
+  if (auto subtype = static_cast<long>(x[6]) >> 4; subtype == 0 || subtype > 5)
     return invalid_version;
   return valid_uuid;
 }
@@ -173,9 +173,9 @@ uuid uuid::random(unsigned seed) noexcept {
   std::uniform_int_distribution<> rng{0, 255};
   uuid result;
   for (size_t index = 0; index < 16; ++index)
-    result.bytes_[index] = static_cast<byte>(rng(engine));
-  result.bytes_[6] = (result.bytes_[6] & byte{0x0F}) | byte{0x50};
-  result.bytes_[8] = (result.bytes_[8] & byte{0x3F}) | byte{0x80};
+    result.bytes_[index] = static_cast<std::byte>(rng(engine));
+  result.bytes_[6] = (result.bytes_[6] & std::byte{0x0F}) | std::byte{0x50};
+  result.bytes_[8] = (result.bytes_[8] & std::byte{0x3F}) | std::byte{0x80};
   return result;
 }
 

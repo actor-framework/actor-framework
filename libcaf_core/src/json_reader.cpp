@@ -424,10 +424,10 @@ bool json_reader::end_associative_array() {
   }
 }
 
-bool json_reader::value(byte& x) {
+bool json_reader::value(std::byte& x) {
   auto tmp = uint8_t{0};
   if (value(tmp)) {
-    x = static_cast<byte>(tmp);
+    x = static_cast<std::byte>(tmp);
     return true;
   } else {
     return false;
@@ -601,9 +601,9 @@ bool json_reader::value(std::u32string&) {
   return false;
 }
 
-bool json_reader::value(span<byte>) {
+bool json_reader::value(span<std::byte>) {
   emplace_error(sec::runtime_error, class_name, __func__,
-                "byte span support not implemented yet");
+                "std::byte span support not implemented yet");
   return false;
 }
 

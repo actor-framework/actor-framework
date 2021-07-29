@@ -38,8 +38,8 @@ struct sum_type_index {
 
 template <class Trait, class T>
 struct sum_type_index<Trait, T, true> {
-  static constexpr int value =
-    detail::tl_index_of<typename Trait::types, T>::value;
+  static constexpr int value
+    = detail::tl_index_of<typename Trait::types, T>::value;
 };
 
 template <class Trait, class T>
@@ -47,7 +47,6 @@ constexpr sum_type_token<T, sum_type_index<Trait, T>::value>
 make_sum_type_token() {
   return {};
 }
-
 
 /// Returns a reference to the value of a sum type.
 /// @pre `holds_alternative<T>(x)`
@@ -60,7 +59,7 @@ auto get(U& x) -> decltype(Trait::get(x, make_sum_type_token<Trait, T>())) {
 /// @pre `holds_alternative<T>(x)`
 template <class T, class U, class Trait = sum_type_access<U>>
 auto get(const U& x)
--> decltype(Trait::get(x, make_sum_type_token<Trait, T>())) {
+  -> decltype(Trait::get(x, make_sum_type_token<Trait, T>())) {
   return Trait::get(x, make_sum_type_token<Trait, T>());
 }
 
@@ -68,7 +67,7 @@ auto get(const U& x)
 /// `nullptr` otherwise.
 template <class T, class U, class Trait = sum_type_access<U>>
 auto get_if(U* x)
--> decltype(Trait::get_if(x, make_sum_type_token<Trait, T>())) {
+  -> decltype(Trait::get_if(x, make_sum_type_token<Trait, T>())) {
   return Trait::get_if(x, make_sum_type_token<Trait, T>());
 }
 
@@ -76,7 +75,7 @@ auto get_if(U* x)
 /// `nullptr` otherwise.
 template <class T, class U, class Trait = sum_type_access<U>>
 auto get_if(const U* x)
--> decltype(Trait::get_if(x, make_sum_type_token<Trait, T>())) {
+  -> decltype(Trait::get_if(x, make_sum_type_token<Trait, T>())) {
   return Trait::get_if(x, make_sum_type_token<Trait, T>());
 }
 
@@ -99,8 +98,8 @@ struct sum_type_visit_result_impl<false, F, Ts...> {};
 
 template <class F, class... Ts>
 struct sum_type_visit_result
-    : sum_type_visit_result_impl<
-        detail::conjunction<SumType<Ts>()...>::value, F, Ts...> {};
+  : sum_type_visit_result_impl<detail::conjunction<SumType<Ts>()...>::value, F,
+                               Ts...> {};
 
 template <class F, class... Ts>
 using sum_type_visit_result_t =
@@ -128,7 +127,6 @@ struct visit_impl<Result, 0> {
     return f(std::forward<Ts>(xs)...);
   }
 };
-
 
 template <class Result, size_t I, class Visitor>
 struct visit_impl_continuation {

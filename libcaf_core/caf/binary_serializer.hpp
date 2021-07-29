@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/squashed_int.hpp"
@@ -32,7 +31,7 @@ public:
 
   using container_type = byte_buffer;
 
-  using value_type = byte;
+  using value_type = std::byte;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -137,7 +136,7 @@ public:
     return end_sequence();
   }
 
-  bool value(byte x);
+  bool value(std::byte x);
 
   bool value(bool x);
 
@@ -174,7 +173,7 @@ public:
 
   bool value(const std::u32string& x);
 
-  bool value(span<const byte> x);
+  bool value(span<const std::byte> x);
 
   bool value(const std::vector<bool>& x);
 

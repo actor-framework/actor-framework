@@ -15,7 +15,7 @@ namespace {
 template <class... Ts>
 auto make_hash(Ts... xs) {
   static_assert(sizeof...(Ts) == 20);
-  return hash::sha1::result_type{{static_cast<byte>(xs)...}};
+  return hash::sha1::result_type{{static_cast<std::byte>(xs)...}};
 }
 
 } // namespace

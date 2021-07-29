@@ -28,7 +28,8 @@ uuid operator"" _uuid(const char* cstr, size_t cstr_len) {
   for (size_t index = 0; index < 16; ++index) {
     auto input_index = index * 2;
     char buf[] = {str[input_index], str[input_index + 1], '\0'};
-    result.bytes().at(index) = static_cast<byte>(std::stoi(buf, nullptr, 16));
+    result.bytes().at(index)
+      = static_cast<std::byte>(std::stoi(buf, nullptr, 16));
   }
   return result;
 }
@@ -58,7 +59,7 @@ CAF_TEST_FIXTURE_SCOPE(uuid_tests, fixture)
 CAF_TEST(default generated UUIDs have all 128 bits set to zero) {
   uuid nil;
   CAF_CHECK(!nil);
-  auto zero = [](byte x) { return to_integer<int>(x) == 0; };
+  auto zero = [](std::byte x) { return static_cast<int>(x) == 0; };
   CAF_CHECK(std::all_of(nil.bytes().begin(), nil.bytes().end(), zero));
   CAF_CHECK(nil == uuid::nil());
 }

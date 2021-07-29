@@ -288,8 +288,8 @@ bool json_writer::end_associative_array() {
   }
 }
 
-bool json_writer::value(byte x) {
-  return number(to_integer<uint8_t>(x));
+bool json_writer::value(std::byte x) {
+  return number(static_cast<uint8_t>(x));
 }
 
 bool json_writer::value(bool x) {
@@ -396,7 +396,7 @@ bool json_writer::value(const std::u32string&) {
   return false;
 }
 
-bool json_writer::value(span<const byte> x) {
+bool json_writer::value(span<const std::byte> x) {
   switch (top()) {
     case type::element:
       add('"');

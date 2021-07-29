@@ -33,7 +33,7 @@ binary_serializer::binary_serializer(actor_system& sys,
 void binary_serializer::skip(size_t num_bytes) {
   auto remaining = buf_.size() - write_pos_;
   if (remaining < num_bytes)
-    buf_.insert(buf_.end(), num_bytes - remaining, byte{0});
+    buf_.insert(buf_.end(), num_bytes - remaining, std::byte{0});
   write_pos_ += num_bytes;
 }
 
@@ -103,7 +103,7 @@ bool binary_serializer::begin_field(string_view, bool is_present,
   }
 }
 
-bool binary_serializer::value(span<const byte> x) {
+bool binary_serializer::value(span<const std::byte> x) {
   CAF_ASSERT(write_pos_ <= buf_.size());
   auto buf_size = buf_.size();
   if (write_pos_ == buf_size) {
@@ -124,7 +124,7 @@ bool binary_serializer::value(span<const byte> x) {
   return true;
 }
 
-bool binary_serializer::value(byte x) {
+bool binary_serializer::value(std::byte x) {
   if (write_pos_ == buf_.size())
     buf_.emplace_back(x);
   else
@@ -138,11 +138,11 @@ bool binary_serializer::value(bool x) {
 }
 
 bool binary_serializer::value(int8_t x) {
-  return value(static_cast<byte>(x));
+  return value(static_cast<std::byte>(x));
 }
 
 bool binary_serializer::value(uint8_t x) {
-  return value(static_cast<byte>(x));
+  return value(static_cast<std::byte>(x));
 }
 
 bool binary_serializer::value(int16_t x) {
