@@ -115,9 +115,10 @@ config = [
             extraBuildFlags: [
                 'CAF_ENABLE_CURL_EXAMPLES:BOOL=ON',
                 'CAF_ENABLE_PROTOBUF_EXAMPLES:BOOL=ON',
-                'CAF_ENABLE_QT5_EXAMPLES:BOOL=ON',
+                // Fix QT5 version problem before reenabling
+                'CAF_ENABLE_QT5_EXAMPLES:BOOL=OFF',
                 'OPENSSL_ROOT_DIR:PATH=/usr/local/opt/openssl',
-                'Qt5_DIR:PATH=/usr/local/opt/qt/lib/cmake/Qt5',
+                'Qt5_DIR:PATH=/usr/local/opt/qt@5/lib/cmake/Qt5',
             ],
             extraDebugBuildFlags: [
                 'CAF_SANITIZERS:STRING=address',
