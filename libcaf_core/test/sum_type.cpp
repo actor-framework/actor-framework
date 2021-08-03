@@ -161,12 +161,12 @@ struct stringify_t {
 
   template <class T0, class T1>
   string operator()(const T0& x0, const T1& x1) const {
-    return (*this) (x0) + ", " + (*this) (x1);
+    return (*this)(x0) + ", " + (*this)(x1);
   }
 
   template <class T0, class T1, class T2>
   string operator()(const T0& x0, const T1& x1, const T2& x2) const {
-    return (*this) (x0, x1) + ", " + (*this) (x2);
+    return (*this)(x0, x1) + ", " + (*this)(x2);
   }
 };
 
