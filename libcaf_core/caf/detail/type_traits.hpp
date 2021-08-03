@@ -367,7 +367,7 @@ template <class F, class... Ts>
 struct is_callable_with {
   template <class U>
   static auto sfinae(U*)
-    -> decltype((std::declval<U&>()) (std::declval<Ts>()...), std::true_type());
+    -> decltype((std::declval<U&>())(std::declval<Ts>()...), std::true_type());
 
   template <class U>
   static auto sfinae(...) -> std::false_type;

@@ -136,7 +136,7 @@ void read_json_null_or_nan(string_parser_state& ps, Consumer consumer) {
 
 template <class Consumer>
 void read_json_string(string_parser_state& ps, Consumer consumer) {
-  auto first = std::string_view::iterator{};
+  std::string_view::iterator first;
   // clang-format off
   start();
   state(init) {
@@ -145,7 +145,9 @@ void read_json_string(string_parser_state& ps, Consumer consumer) {
   }
   state(read_chars) {
     transition(escape, '\\')
-    transition(done, '"', consumer.value(std::string_view{first, static_cast<size_t>(ps.i-first)}))
+    transition(done, '"',
+               consumer.value(std::string_view{
+                 std::addressof(*first), static_cast<size_t>(ps.i - first)}))
     transition(read_chars, any_char)
   }
   state(escape) {
