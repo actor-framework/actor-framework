@@ -47,7 +47,7 @@ function would resemble the following (pseudo) code:
 .. code-block:: C++
 
   int main(int argc, char** argv) {
-    // Initialze the global type information before anything else.
+    // Initialize the global type information before anything else.
     init_global_meta_objects<...>();
     core::init_global_meta_objects();
     // Create the config.
@@ -263,7 +263,7 @@ following POD type ``foo``.
 By assigning type IDs and providing ``inspect`` overloads, we provide static and
 compile-time information for all our types. However, CAF also needs some
 information at run-time for deserializing received data. The function
-``init_global_meta_objects`` takes care fo registering all the state we need at
+``init_global_meta_objects`` takes care of registering all the state we need at
 run-time. This function usually gets called by ``CAF_MAIN`` automatically. When
 not using this macro, users **must** call ``init_global_meta_objects`` before
 any other CAF function.

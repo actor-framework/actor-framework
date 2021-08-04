@@ -65,7 +65,7 @@ CAF_TEST(joining) {
 
 CAF_TEST(starts with) {
   CAF_CHECK(starts_with("foobar", "f"));
-  CAF_CHECK(starts_with("foobar", "fo"));
+  CAF_CHECK(starts_with("foobar", "foo"));
   CAF_CHECK(starts_with("foobar", "fooba"));
   CAF_CHECK(starts_with("foobar", "foobar"));
   CAF_CHECK(!starts_with("foobar", "o"));

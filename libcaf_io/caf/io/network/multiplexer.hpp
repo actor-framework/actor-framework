@@ -82,7 +82,7 @@ public:
     void intrusive_ptr_release_impl() override;
   };
 
-  /// Makes sure the multipler does not exit its event loop until
+  /// Makes sure the multiplier does not exit its event loop until
   /// the destructor of `supervisor` has been called.
   class CAF_IO_EXPORT supervisor {
   public:

@@ -17,7 +17,7 @@
 namespace caf {
 
 /// The default downstream manager base stores outbound paths in an unordered
-/// map. It always takes ownership of the pahts by using unique pointers.
+/// map. It always takes ownership of the paths by using unique pointers.
 class CAF_CORE_EXPORT downstream_manager_base : public downstream_manager {
 public:
   // -- member types -----------------------------------------------------------

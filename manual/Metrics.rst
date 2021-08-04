@@ -252,7 +252,7 @@ counters instead.
 
 Gauges are owned (and created) by a gauge family object. We can either get the
 family object explicitly by calling ``gauge_family``, or we can use one of the
-two shortcut functions ``gauge_intance`` or ``gauge_singleton``. The C++
+two shortcut functions ``gauge_instance`` or ``gauge_singleton``. The C++
 prototypes for the registry member functions look as follows:
 
 .. code-block:: C++

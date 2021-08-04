@@ -875,10 +875,10 @@ void caf_main(actor_system& sys, const config& cfg) {
   out << endl;
   std::mutex out_mtx;
   auto grp = sys.groups().anonymous();
-  for (auto& fpr : intermediate_results) {
+  for (auto& res : intermediate_results) {
     sys.spawn_in_group(grp, [&](blocking_actor* self) {
-      second_pass(self, grp, entities, fpr.res.this_node, entity_names,
-                  *fpr.fstream, out, out_mtx, !cfg.include_hidden_actors, vl);
+      second_pass(self, grp, entities, res.res.this_node, entity_names,
+                  *res.fstream, out, out_mtx, !cfg.include_hidden_actors, vl);
     });
   }
   sys.await_all_actors_done();

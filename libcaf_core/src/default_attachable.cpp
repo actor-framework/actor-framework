@@ -34,8 +34,8 @@ void default_attachable::actor_exited(const error& rsn, execution_unit* host) {
 bool default_attachable::matches(const token& what) {
   if (what.subtype != attachable::token::observer)
     return false;
-  auto& ot = *reinterpret_cast<const observe_token*>(what.ptr);
-  return ot.observer == observer_ && ot.type == type_;
+  auto& ref = *reinterpret_cast<const observe_token*>(what.ptr);
+  return ref.observer == observer_ && ref.type == type_;
 }
 
 default_attachable::default_attachable(actor_addr observed, actor_addr observer,

@@ -359,7 +359,7 @@ CAF_TEST(depth_2_pipeline_error_at_source) {
   CAF_CHECK_EQUAL(deref<sum_up_actor>(snk).state.fin_called, 1);
 }
 
-CAF_TEST(depth_2_pipelin_error_at_sink) {
+CAF_TEST(depth_2_pipeline_error_at_sink) {
   CAF_MESSAGE("streams must abort if a sink fails at runtime");
   auto src = sys.spawn(file_reader, 500u);
   auto snk = sys.spawn(sum_up);

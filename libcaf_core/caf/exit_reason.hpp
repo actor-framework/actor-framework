@@ -35,7 +35,7 @@ enum class exit_reason : uint8_t {
   user_shutdown,
   /// Indicates that an actor was killed unconditionally.
   kill,
-  /// Indicates that an actor finishied execution because a connection
+  /// Indicates that an actor finished execution because a connection
   /// to a remote link was closed unexpectedly.
   remote_link_unreachable,
   /// Indicates that an actor was killed because it became unreachable.

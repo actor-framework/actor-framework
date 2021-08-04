@@ -51,7 +51,7 @@ protected:
     // Prepare workers vector.
     auto num = num_workers();
     workers_.reserve(num);
-    // Create worker instanes.
+    // Create worker instances.
     for (size_t i = 0; i < num; ++i)
       workers_.emplace_back(
         std::make_unique<worker_type>(i, this, init, max_throughput_));

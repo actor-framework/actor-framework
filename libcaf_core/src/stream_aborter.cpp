@@ -41,8 +41,8 @@ void stream_aborter::actor_exited(const error& rsn, execution_unit* host) {
 bool stream_aborter::matches(const attachable::token& what) {
   if (what.subtype != attachable::token::stream_aborter)
     return false;
-  auto& ot = *reinterpret_cast<const token*>(what.ptr);
-  return ot.observer == observer_ && ot.slot == slot_;
+  auto& ref = *reinterpret_cast<const token*>(what.ptr);
+  return ref.observer == observer_ && ref.slot == slot_;
 }
 
 stream_aborter::stream_aborter(actor_addr&& observed, actor_addr&& observer,

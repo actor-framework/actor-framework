@@ -589,7 +589,7 @@ bool default_multiplexer::poll_once(bool block) {
     for (auto& ptr : xs)
       resume(std::move(ptr));
     handle_internal_events();
-    // Try to swap back to internall_posted_ to re-use allocated memory.
+    // Try to swap back to internally_posted_ to re-use allocated memory.
     if (internally_posted_.empty()) {
       xs.swap(internally_posted_);
       internally_posted_.clear();
