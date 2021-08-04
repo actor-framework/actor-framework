@@ -235,9 +235,10 @@ auto make_actor_metric_families(telemetry::metric_registry& reg) {
     5.,     // 5s
   }};
   return actor_system::actor_metric_families_t{
-    reg.histogram_family<double>(
-      "caf.actor", "processing-time", {"name"}, default_buckets,
-      "Time an actor needs to process messages.", "seconds"),
+    reg.histogram_family<double>("caf.actor", "processing-time", {"name"},
+                                 default_buckets,
+                                 "Time an actor needs to process messages.",
+                                 "seconds"),
     reg.histogram_family<double>(
       "caf.actor", "mailbox-time", {"name"}, default_buckets,
       "Time a message waits in the mailbox before processing.", "seconds"),
@@ -515,7 +516,7 @@ void actor_system::thread_terminates() {
 expected<strong_actor_ptr>
 actor_system::dyn_spawn_impl(const std::string& name, message& args,
                              execution_unit* ctx, bool check_interface,
-                             optional<const mpi&> expected_ifs) {
+                             std::optional<const mpi*> expected_ifs) {
   CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(args) << CAF_ARG(check_interface)
                               << CAF_ARG(expected_ifs));
   if (name.empty())
@@ -528,7 +529,7 @@ actor_system::dyn_spawn_impl(const std::string& name, message& args,
   auto res = i->second(cfg, args);
   if (!res.first)
     return sec::cannot_spawn_actor_from_arguments;
-  if (check_interface && !assignable(res.second, *expected_ifs))
+  if (check_interface && !assignable(res.second, **expected_ifs))
     return sec::unexpected_actor_messaging_interface;
   return std::move(res.first);
 }

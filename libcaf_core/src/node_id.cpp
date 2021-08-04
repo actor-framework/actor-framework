@@ -190,23 +190,24 @@ node_id make_node_id(uint32_t process_id,
   return node_id{node_id::default_data{process_id, host_id}};
 }
 
-optional<node_id> make_node_id(uint32_t process_id, string_view host_hash) {
+std::optional<node_id> make_node_id(uint32_t process_id,
+                                    string_view host_hash) {
   using id_type = hashed_node_id::host_id_type;
   if (host_hash.size() != std::tuple_size<id_type>::value * 2)
-    return none;
+    return std::nullopt;
   detail::parser::ascii_to_int<16, uint8_t> xvalue;
   id_type host_id;
   auto in = host_hash.begin();
   for (auto& byte : host_id) {
     if (!isxdigit(*in))
-      return none;
+      return std::nullopt;
     auto first_nibble = (xvalue(*in++) << 4);
     if (!isxdigit(*in))
-      return none;
+      return std::nullopt;
     byte = static_cast<uint8_t>(first_nibble | xvalue(*in++));
   }
   if (!hashed_node_id::valid(host_id))
-    return none;
+    return std::nullopt;
   return make_node_id(process_id, host_id);
 }
 

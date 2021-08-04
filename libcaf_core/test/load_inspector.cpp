@@ -328,7 +328,7 @@ end object)_");
 }
 
 CAF_TEST(load inspectors support optional) {
-  optional<int32_t> x;
+  std::optional<int32_t> x;
   CAF_CHECK_EQUAL(f.apply(x), true);
   CAF_CHECK_EQUAL(f.log, R"_(
 begin object anonymous
@@ -356,7 +356,7 @@ CAF_TEST(load inspectors support fields with optional values) {
   person p{"Bruce Almighty", std::string{"776-2323"}};
   CAF_CHECK_EQUAL(inspect(f, p), true);
   CAF_CHECK_EQUAL(p.name, "");
-  CAF_CHECK_EQUAL(p.phone, none);
+  CAF_CHECK_EQUAL(p.phone, std::nullopt);
   CAF_CHECK_EQUAL(f.log, R"_(
 begin object person
   begin field name
@@ -752,7 +752,7 @@ SCENARIO("load inspectors support std::byte") {
   GIVEN("a struct with std::byte") {
     struct byte_test {
       std::byte v1 = std::byte{0};
-      optional<std::byte> v2;
+      std::optional<std::byte> v2;
     };
     auto x = byte_test{};
     WHEN("inspecting the struct") {

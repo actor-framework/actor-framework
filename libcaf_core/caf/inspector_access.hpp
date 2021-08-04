@@ -329,6 +329,8 @@ struct inspector_access;
 
 // -- inspection support for optional values -----------------------------------
 
+CAF_PUSH_DEPRECATED_WARNING
+
 template <class T>
 struct optional_inspector_traits;
 
@@ -343,6 +345,8 @@ struct optional_inspector_traits<optional<T>> {
     container.emplace(std::forward<Ts>(xs)...);
   }
 };
+
+CAF_POP_WARNINGS
 
 template <class T>
 struct optional_inspector_traits<intrusive_ptr<T>> {
@@ -441,10 +445,14 @@ struct optional_inspector_access {
 
 // -- inspection support for optional<T> ---------------------------------------
 
+CAF_PUSH_DEPRECATED_WARNING
+
 template <class T>
 struct inspector_access<optional<T>> : optional_inspector_access<optional<T>> {
   // nop
 };
+
+CAF_POP_WARNINGS
 
 #ifdef CAF_HAS_STD_OPTIONAL
 

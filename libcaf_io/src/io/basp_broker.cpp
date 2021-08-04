@@ -191,7 +191,7 @@ behavior basp_broker::make_behavior() {
         return;
       }
       auto route = instance.tbl().lookup(proxy->node());
-      if (route == none) {
+      if (route == std::nullopt) {
         CAF_LOG_DEBUG("connection to origin already lost, kill proxy");
         instance.proxies().erase(proxy->node(), proxy->id());
         return;
@@ -217,7 +217,7 @@ behavior basp_broker::make_behavior() {
       }
       // Check whether the node is still connected at the moment and send the
       // observer a message immediately otherwise.
-      if (instance.tbl().lookup(node) == none) {
+      if (instance.tbl().lookup(node) == std::nullopt) {
         if (auto hdl = actor_cast<actor>(observer)) {
           // TODO: we might want to consider keeping the exit reason for nodes,
           //       at least for some time. Otherwise, we'll have to send a
@@ -343,9 +343,8 @@ behavior basp_broker::make_behavior() {
     },
     [=](unpublish_atom, const actor_addr& whom, uint16_t port) -> result<void> {
       CAF_LOG_TRACE(CAF_ARG(whom) << CAF_ARG(port));
-      auto cb = make_callback([&](const strong_actor_ptr&, uint16_t x) {
-        close(hdl_by_port(x));
-      });
+      auto cb = make_callback(
+        [&](const strong_actor_ptr&, uint16_t x) { close(hdl_by_port(x)); });
       if (instance.remove_published_actor(whom, port, &cb) == 0)
         return sec::no_actor_published_at_port;
       return unit;
@@ -446,8 +445,9 @@ strong_actor_ptr basp_broker::make_proxy(node_id nid, actor_id aid) {
   // create proxy and add functor that will be called if we
   // receive a basp::down_message
   actor_config cfg;
-  auto res = make_actor<forwarding_actor_proxy, strong_actor_ptr>(
-    aid, nid, &(system()), cfg, this);
+  auto res = make_actor<forwarding_actor_proxy, strong_actor_ptr>(aid, nid,
+                                                                  &(system()),
+                                                                  cfg, this);
   strong_actor_ptr selfptr{ctrl()};
   res->get()->attach_functor([=](const error& rsn) {
     mm->backend().post([=] {
@@ -472,7 +472,7 @@ void basp_broker::finalize_handshake(const node_id& nid, actor_id aid,
   CAF_ASSERT(this_context != nullptr);
   this_context->id = nid;
   auto& cb = this_context->callback;
-  if (cb == none)
+  if (cb == std::nullopt)
     return;
   strong_actor_ptr ptr;
   // aid can be invalid when connecting to the default port of a node
@@ -487,7 +487,7 @@ void basp_broker::finalize_handshake(const node_id& nid, actor_id aid,
     }
   }
   cb->deliver(nid, std::move(ptr), std::move(sigs));
-  cb = none;
+  cb = std::nullopt;
 }
 
 void basp_broker::purge_state(const node_id& nid) {

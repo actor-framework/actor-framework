@@ -10,12 +10,12 @@
 
 #include <functional>
 
-#include "caf/send.hpp"
-#include "caf/behavior.hpp"
 #include "caf/actor_system.hpp"
-#include "caf/message_handler.hpp"
-#include "caf/event_based_actor.hpp"
 #include "caf/actor_system_config.hpp"
+#include "caf/behavior.hpp"
+#include "caf/event_based_actor.hpp"
+#include "caf/message_handler.hpp"
+#include "caf/send.hpp"
 
 using namespace caf;
 
@@ -39,13 +39,13 @@ public:
 };
 
 struct fixture {
-  optional<int32_t> res_of(behavior& bhvr, message& msg) {
+  std::optional<int32_t> res_of(behavior& bhvr, message& msg) {
     auto res = bhvr(msg);
     if (!res)
-      return none;
+      return std::nullopt;
     if (auto view = make_const_typed_message_view<int32_t>(*res))
       return get<0>(view);
-    return none;
+    return std::nullopt;
   }
 
   message m1 = make_message(int32_t{1});
@@ -61,33 +61,35 @@ CAF_TEST_FIXTURE_SCOPE(behavior_tests, fixture)
 
 CAF_TEST(default_construct) {
   behavior f;
-  CAF_CHECK_EQUAL(f(m1), none);
-  CAF_CHECK_EQUAL(f(m2), none);
-  CAF_CHECK_EQUAL(f(m3), none);
+  CAF_CHECK_EQUAL(f(m1), std::nullopt);
+  CAF_CHECK_EQUAL(f(m2), std::nullopt);
+  CAF_CHECK_EQUAL(f(m3), std::nullopt);
 }
 
 CAF_TEST(nocopy_function_object) {
   behavior f{nocopy_fun{}};
-  CAF_CHECK_EQUAL(f(m1), none);
+  CAF_CHECK_EQUAL(f(m1), std::nullopt);
   CAF_CHECK_EQUAL(res_of(f, m2), 3);
-  CAF_CHECK_EQUAL(f(m3), none);
+  CAF_CHECK_EQUAL(f(m3), std::nullopt);
 }
 
 CAF_TEST(single_lambda_construct) {
-  behavior f{[](int x) { return x + 1; }};
+  behavior f{
+    [](int x) { return x + 1; },
+  };
   CAF_CHECK_EQUAL(res_of(f, m1), 2);
-  CAF_CHECK_EQUAL(res_of(f, m2), none);
-  CAF_CHECK_EQUAL(res_of(f, m3), none);
+  CAF_CHECK_EQUAL(res_of(f, m2), std::nullopt);
+  CAF_CHECK_EQUAL(res_of(f, m3), std::nullopt);
 }
 
 CAF_TEST(multiple_lambda_construct) {
   behavior f{
     [](int x) { return x + 1; },
-    [](int x, int y) { return x * y; }
+    [](int x, int y) { return x * y; },
   };
   CAF_CHECK_EQUAL(res_of(f, m1), 2);
   CAF_CHECK_EQUAL(res_of(f, m2), 2);
-  CAF_CHECK_EQUAL(res_of(f, m3), none);
+  CAF_CHECK_EQUAL(res_of(f, m3), std::nullopt);
 }
 
 CAF_TEST(become_empty_behavior) {
@@ -95,7 +97,7 @@ CAF_TEST(become_empty_behavior) {
   actor_system sys{cfg};
   auto make_bhvr = [](event_based_actor* self) -> behavior {
     return {
-      [=](int) { self->become(behavior{}); }
+      [=](int) { self->become(behavior{}); },
     };
   };
   anon_send(sys.spawn(make_bhvr), int{5});

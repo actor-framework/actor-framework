@@ -16,7 +16,8 @@ routing_table::~routing_table() {
   // nop
 }
 
-optional<routing_table::route> routing_table::lookup(const node_id& target) {
+std::optional<routing_table::route>
+routing_table::lookup(const node_id& target) {
   std::unique_lock<std::mutex> guard{mtx_};
   // Check whether we have a direct path first.
   { // Lifetime scope of first iterator.
@@ -37,7 +38,7 @@ optional<routing_table::route> routing_table::lookup(const node_id& target) {
       hops.erase(hops.begin());
     }
   }
-  return none;
+  return std::nullopt;
 }
 
 node_id routing_table::lookup_direct(const connection_handle& hdl) const {
@@ -48,13 +49,13 @@ node_id routing_table::lookup_direct(const connection_handle& hdl) const {
   return {};
 }
 
-optional<connection_handle>
+std::optional<connection_handle>
 routing_table::lookup_direct(const node_id& nid) const {
   std::unique_lock<std::mutex> guard{mtx_};
   auto i = direct_by_nid_.find(nid);
   if (i != direct_by_nid_.end())
     return i->second;
-  return {};
+  return std::nullopt;
 }
 
 node_id routing_table::lookup_indirect(const node_id& nid) const {

@@ -31,7 +31,7 @@ struct endpoint_context {
   uint16_t remote_port;
   uint16_t local_port;
   // pending operations to be performed after handshake completed
-  optional<response_promise> callback;
+  std::optional<response_promise> callback;
   // keeps track of when we've last received a message from this endpoint
   actor_clock::time_point last_seen;
 };

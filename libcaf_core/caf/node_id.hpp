@@ -279,8 +279,8 @@ CAF_CORE_EXPORT node_id make_node_id(
 /// @param process_id System-wide unique process identifier.
 /// @param host_hash Unique node ID as hexadecimal string representation.
 /// @relates node_id
-CAF_CORE_EXPORT optional<node_id> make_node_id(uint32_t process_id,
-                                               string_view host_hash);
+CAF_CORE_EXPORT std::optional<node_id> make_node_id(uint32_t process_id,
+                                                    string_view host_hash);
 
 /// @relates node_id
 CAF_CORE_EXPORT error parse(string_view str, node_id& dest);

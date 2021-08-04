@@ -28,12 +28,12 @@ struct signed_integer_consumer {
 };
 
 template <class T>
-optional<T> read(string_view str) {
+std::optional<T> read(string_view str) {
   signed_integer_consumer<T> consumer;
   string_parser_state ps{str.begin(), str.end()};
   detail::parser::read_signed_integer(ps, consumer);
   if (ps.code != pec::success)
-    return none;
+    return std::nullopt;
   return consumer.x;
 }
 

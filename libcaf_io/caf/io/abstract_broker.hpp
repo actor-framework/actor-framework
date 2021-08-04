@@ -179,8 +179,8 @@ public:
   /// Tries to connect to `host` on given `port` and creates
   /// a new scribe describing the connection afterwards.
   /// @returns The handle of the new `scribe` on success.
-  expected<connection_handle>
-  add_tcp_scribe(const std::string& host, uint16_t port);
+  expected<connection_handle> add_tcp_scribe(const std::string& host,
+                                             uint16_t port);
 
   /// Moves the initialized `scribe` instance `ptr` from another broker to this
   /// broker.
@@ -207,8 +207,8 @@ public:
   void add_datagram_servant(datagram_servant_ptr ptr);
 
   /// Adds the `datagram_servant` under an additional `hdl`.
-  void
-  add_hdl_for_datagram_servant(datagram_servant_ptr ptr, datagram_handle hdl);
+  void add_hdl_for_datagram_servant(datagram_servant_ptr ptr,
+                                    datagram_handle hdl);
 
   /// Creates and assigns a new `datagram_servant` from a given socket `fd`.
   datagram_handle add_datagram_servant(network::native_socket fd);
@@ -222,8 +222,8 @@ public:
   /// Creates a new `datagram_servant` for the remote endpoint `host` and
   /// `port`.
   /// @returns The handle to the new `datagram_servant`.
-  expected<datagram_handle>
-  add_udp_datagram_servant(const std::string& host, uint16_t port);
+  expected<datagram_handle> add_udp_datagram_servant(const std::string& host,
+                                                     uint16_t port);
 
   /// Tries to open a local port and creates a `datagram_servant` managing it on
   /// success. If `port == 0`, then the broker will ask the operating system to
@@ -283,7 +283,7 @@ public:
     auto x = by_id(hdl);
     if (!x)
       return false;
-    x->graceful_shutdown();
+    (*x)->graceful_shutdown();
     return true;
   }
 
@@ -386,12 +386,12 @@ protected:
 
   /// Returns a `scribe` or `doorman` identified by `hdl`.
   template <class Handle>
-  auto by_id(Handle hdl) -> optional<decltype(*ptr_of(hdl))> {
+  auto by_id(Handle hdl) -> std::optional<decltype(ptr_of(hdl))> {
     auto& elements = get_map(hdl);
     auto i = elements.find(hdl);
     if (i == elements.end())
-      return none;
-    return *(i->second);
+      return std::nullopt;
+    return std::addressof(*(i->second));
   }
 
 private:

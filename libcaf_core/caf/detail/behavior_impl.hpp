@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <optional>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -19,7 +20,6 @@
 #include "caf/make_counted.hpp"
 #include "caf/message.hpp"
 #include "caf/none.hpp"
-#include "caf/optional.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/skip.hpp"
@@ -51,7 +51,7 @@ public:
 
   virtual bool invoke(detail::invoke_result_visitor& f, message& xs) = 0;
 
-  optional<message> invoke(message&);
+  std::optional<message> invoke(message&);
 
   virtual void handle_timeout();
 

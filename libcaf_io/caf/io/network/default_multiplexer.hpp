@@ -101,13 +101,13 @@ public:
 
   scribe_ptr new_scribe(native_socket fd) override;
 
-  expected<scribe_ptr>
-  new_tcp_scribe(const std::string& host, uint16_t port) override;
+  expected<scribe_ptr> new_tcp_scribe(const std::string& host,
+                                      uint16_t port) override;
 
   doorman_ptr new_doorman(native_socket fd) override;
 
-  expected<doorman_ptr>
-  new_tcp_doorman(uint16_t port, const char* in, bool reuse_addr) override;
+  expected<doorman_ptr> new_tcp_doorman(uint16_t port, const char* in,
+                                        bool reuse_addr) override;
 
   datagram_servant_ptr new_datagram_servant(native_socket fd) override;
 
@@ -261,18 +261,20 @@ inline accept_handle accept_hdl_from_socket(native_socket fd) {
 
 CAF_IO_EXPORT expected<native_socket>
 new_tcp_connection(const std::string& host, uint16_t port,
-                   optional<protocol::network> preferred = none);
+                   std::optional<protocol::network> preferred = std::nullopt);
 
 CAF_IO_EXPORT expected<native_socket>
 new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr);
 
 expected<std::pair<native_socket, ip_endpoint>>
 new_remote_udp_endpoint_impl(const std::string& host, uint16_t port,
-                             optional<protocol::network> preferred = none);
+                             std::optional<protocol::network> preferred
+                             = std::nullopt);
 
 expected<std::pair<native_socket, protocol::network>>
 new_local_udp_endpoint_impl(uint16_t port, const char* addr,
                             bool reuse_addr = false,
-                            optional<protocol::network> preferred = none);
+                            std::optional<protocol::network> preferred
+                            = std::nullopt);
 
 } // namespace caf::io::network

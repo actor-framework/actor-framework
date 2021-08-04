@@ -7,10 +7,10 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/optional.hpp"
 #include "caf/span.hpp"
 #include "caf/string_view.hpp"
 
+#include <optional>
 #include <string>
 
 namespace caf::detail {
@@ -45,7 +45,7 @@ public:
 
   static bool decode(const_byte_span bytes, byte_buffer& out);
 
-  static optional<std::string> decode(string_view in) {
+  static std::optional<std::string> decode(string_view in) {
     std::string result;
     if (decode(in, result))
       return {std::move(result)};
@@ -53,7 +53,7 @@ public:
       return {};
   }
 
-  static optional<std::string> decode(const_byte_span in) {
+  static std::optional<std::string> decode(const_byte_span in) {
     std::string result;
     if (decode(in, result))
       return {std::move(result)};

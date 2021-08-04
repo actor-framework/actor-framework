@@ -5,6 +5,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "caf/detail/core_export.hpp"
@@ -97,7 +98,7 @@ public:
 
   /// @private
   // TODO: remove with CAF 0.17
-  optional<config_value> get() const;
+  std::optional<config_value> get() const;
 
 private:
   string_view buf_slice(size_t from, size_t to) const noexcept;

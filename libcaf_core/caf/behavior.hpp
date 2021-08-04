@@ -21,7 +21,7 @@ namespace caf {
 class message_handler;
 
 /// Describes the behavior of an actor, i.e., provides a message
-/// handler and an optional timeout.
+/// handler and an std::optional timeout.
 class CAF_CORE_EXPORT behavior {
 public:
   friend class message_handler;
@@ -86,8 +86,8 @@ public:
   }
 
   /// Runs this handler and returns its (optional) result.
-  optional<message> operator()(message& xs) {
-    return impl_ ? impl_->invoke(xs) : none;
+  std::optional<message> operator()(message& xs) {
+    return impl_ ? impl_->invoke(xs) : std::nullopt;
   }
 
   /// Runs this handler with callback.

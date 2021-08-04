@@ -4,6 +4,8 @@
 
 #include "caf/uri.hpp"
 
+#include <optional>
+
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/deserializer.hpp"
@@ -15,7 +17,6 @@
 #include "caf/expected.hpp"
 #include "caf/hash/fnv.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/optional.hpp"
 #include "caf/serializer.hpp"
 
 namespace {
@@ -78,9 +79,9 @@ size_t uri::hash_code() const noexcept {
   return hash::fnv<size_t>::compute(str());
 }
 
-optional<uri> uri::authority_only() const {
+std::optional<uri> uri::authority_only() const {
   if (empty() || authority().empty())
-    return none;
+    return std::nullopt;
   auto result = make_counted<uri::impl_type>();
   result->scheme = impl_->scheme;
   result->authority = impl_->authority;

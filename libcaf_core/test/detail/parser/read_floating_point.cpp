@@ -28,12 +28,12 @@ struct double_consumer {
   double x;
 };
 
-optional<double> read(string_view str) {
+std::optional<double> read(string_view str) {
   double_consumer consumer;
   string_parser_state ps{str.begin(), str.end()};
   detail::parser::read_floating_point(ps, consumer);
   if (ps.code != pec::success)
-    return none;
+    return std::nullopt;
   return consumer.x;
 }
 

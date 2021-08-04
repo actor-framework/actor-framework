@@ -191,7 +191,7 @@ public:
   }
 
   template <class T>
-  bool builtin_inspect(const optional<T>& x) {
+  bool builtin_inspect(const std::optional<T>& x) {
     sep();
     if (!x) {
       result_ += "null";

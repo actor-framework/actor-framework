@@ -32,12 +32,12 @@ public:
   }
 
   void halt() {
-    activity_tokens_ = none;
+    activity_tokens_ = std::nullopt;
     this->remove_from_loop();
   }
 
   void trigger() {
-    activity_tokens_ = none;
+    activity_tokens_ = std::nullopt;
     this->add_to_loop();
   }
 
@@ -50,7 +50,7 @@ public:
     this->add_to_loop();
   }
 
-  optional<size_t> activity_tokens() const {
+  std::optional<size_t> activity_tokens() const {
     return activity_tokens_;
   }
 
@@ -105,7 +105,7 @@ protected:
 
   handle_type hdl_;
   mailbox_element value_;
-  optional<size_t> activity_tokens_;
+  std::optional<size_t> activity_tokens_;
 };
 
 } // namespace caf::io

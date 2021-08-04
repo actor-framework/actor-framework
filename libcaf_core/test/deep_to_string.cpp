@@ -43,8 +43,8 @@ CAF_TEST(pointers and optionals use dereference syntax) {
   auto i = 42;
   CHECK_DEEP_TO_STRING(&i, "*42");
   CHECK_DEEP_TO_STRING(static_cast<int*>(nullptr), "null");
-  CHECK_DEEP_TO_STRING(optional<int>{}, "null");
-  CHECK_DEEP_TO_STRING(optional<int>{23}, "*23");
+  CHECK_DEEP_TO_STRING(std::optional<int>{}, "null");
+  CHECK_DEEP_TO_STRING(std::optional<int>{23}, "*23");
 }
 
 CAF_TEST(buffers) {
