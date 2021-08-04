@@ -23,7 +23,7 @@ option(THREADS_PREFER_PTHREAD_FLAG "Prefer -pthread flag if available " ON)
 
 option(CAF_ENABLE_CURL_EXAMPLES "Build examples with libcurl" OFF)
 option(CAF_ENABLE_PROTOBUF_EXAMPLES "Build examples with Google Protobuf" OFF)
-option(CAF_ENABLE_QT5_EXAMPLES "Build examples with the Qt5 framework" OFF)
+option(CAF_ENABLE_QT6_EXAMPLES "Build examples with the Qt6 framework" OFF)
 option(CAF_ENABLE_RUNTIME_CHECKS "Build CAF with extra runtime assertions" OFF)
 option(CAF_ENABLE_UTILITY_TARGETS "Include targets like consistency-check" OFF)
 option(CAF_ENABLE_ACTOR_PROFILER "Enable experimental profiler API" OFF)
