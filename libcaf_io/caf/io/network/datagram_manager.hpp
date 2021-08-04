@@ -30,7 +30,7 @@ public:
 
   /// Called by the underlying I/O device to indicate that a new remote
   /// endpoint has been detected, passing in the received datagram.
-  /// @returns `true` if the manager accepts further enpoints,
+  /// @returns `true` if the manager accepts further endpoints,
   ///          otherwise `false`.
   virtual bool new_endpoint(receive_buffer& buf) = 0;
 

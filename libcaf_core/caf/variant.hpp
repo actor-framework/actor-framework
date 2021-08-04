@@ -120,7 +120,7 @@ public:
 
   /// Stores whether all types are nothrow assignable *and* constructible. We
   /// need to check both, since assigning to a variant results in a
-  /// move-contruct unless the before and after types are the same.
+  /// move-construct unless the before and after types are the same.
   static constexpr bool nothrow_move_assign =
     nothrow_move_construct
     && detail::conjunction<

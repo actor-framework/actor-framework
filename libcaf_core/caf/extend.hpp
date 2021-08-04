@@ -25,8 +25,8 @@ struct extend_helper<D, B, M, Ms...> : extend_helper<D, M<B, D>, Ms...> {
 } // namespace detail
 
 /// Allows convenient definition of types using mixins.
-/// For example, `extend<ar, T>::with<ob, fo>` is an alias for
-/// `fo<ob<ar, T>, T>`.
+/// For example, `extend<one, T>::with<two, three>` is an alias for
+/// `three<two<one, T>, T>`.
 ///
 /// Mixins always have two template parameters: base type and
 /// derived type. This allows mixins to make use of the curiously recurring

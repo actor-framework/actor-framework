@@ -182,7 +182,7 @@ public:
   void push_back(value_type value);
 
 private:
-  // Increse the buffer capacity, maintaining its data. May invalidate
+  // Increase the buffer capacity, maintaining its data. May invalidate
   // iterators.
   void increase_by(size_t bytes);
 

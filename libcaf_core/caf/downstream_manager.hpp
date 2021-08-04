@@ -19,7 +19,7 @@ namespace caf {
 /// manager owns the `outbound_path` objects, has a buffer for storing pending
 /// output and is responsible for the dispatching policy (broadcasting, for
 /// example). The default implementation terminates the stream and never
-/// accepts any pahts.
+/// accepts any paths.
 class CAF_CORE_EXPORT downstream_manager {
 public:
   // -- member types -----------------------------------------------------------

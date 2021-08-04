@@ -5,7 +5,7 @@ Errors
 
 Errors in CAF have a code and a category, similar to ``std::error_code`` and
 ``std::error_condition``. Unlike its counterparts from the C++ standard library,
-``error`` is plattform-neutral and serializable.
+``error`` is platform-neutral and serializable.
 
 Class Interface
 ---------------

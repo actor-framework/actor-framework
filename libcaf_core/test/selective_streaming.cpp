@@ -41,7 +41,7 @@ buf make_log(level lvl) {
   buf result{{level::trace, "trace1"},
              {level::trace, "trace2"},
              {level::debug, "debug1"},
-             {level::error, "errro1"},
+             {level::error, "error1"},
              {level::trace, "trace3"}};
   auto predicate = [=](const value_type& x) { return !select::apply(lvl, x); };
   auto e = result.end();

@@ -28,7 +28,7 @@ public:
   // -- member types -----------------------------------------------------------
 
   /// Forces the compiler to use the type `span<const T>` instead of trying to
-  /// match paremeters to a `span`.
+  /// match parameters to a `span`.
   template <class T>
   struct span_type {
     using type = span<const T>;

@@ -61,7 +61,7 @@ using global_meta_objects_guard_type = intrusive_ptr<ref_counted>;
 CAF_CORE_EXPORT global_meta_objects_guard_type global_meta_objects_guard();
 
 /// Returns the global storage for all meta objects. The ::type_id of an object
-/// is the index for accessing the corresonding meta object.
+/// is the index for accessing the corresponding meta object.
 CAF_CORE_EXPORT span<const meta_object> global_meta_objects();
 
 /// Returns the global meta object for given type ID.
