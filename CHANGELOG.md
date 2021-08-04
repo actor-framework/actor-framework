@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file. The format
 is based on [Keep a Changelog](https://keepachangelog.com).
 
+## [Unreleased]
+
+### Changed
+
+- Since support of Qt 5 expired, we have ported the Qt examples to version 6.
+  Hence, building the Qt examples now requires Qt in version 6.
+
 ## [0.18.5] - 2021-07-16
 
 ### Fixed

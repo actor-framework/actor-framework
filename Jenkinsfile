@@ -115,9 +115,9 @@ config = [
             extraBuildFlags: [
                 'CAF_ENABLE_CURL_EXAMPLES:BOOL=ON',
                 'CAF_ENABLE_PROTOBUF_EXAMPLES:BOOL=ON',
-                'CAF_ENABLE_QT5_EXAMPLES:BOOL=ON',
+                'CAF_ENABLE_QT6_EXAMPLES:BOOL=ON',
                 'OPENSSL_ROOT_DIR:PATH=/usr/local/opt/openssl',
-                'Qt5_DIR:PATH=/usr/local/opt/qt/lib/cmake/Qt5',
+                'Qt6_DIR:PATH=/usr/local/opt/qt/lib/cmake/Qt6',
             ],
             extraDebugBuildFlags: [
                 'CAF_SANITIZERS:STRING=address',

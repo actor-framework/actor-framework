@@ -75,7 +75,7 @@ void ChatWidget::sendChatMessage() {
     // Ignore empty lines.
   } else if (line.startsWith('/')) {
     vector<string> words;
-    auto utf8 = line.midRef(1).toUtf8();
+    auto utf8 = QStringView{line}.mid(1).toUtf8();
     auto sv = caf::string_view{utf8.constData(),
                                static_cast<size_t>(utf8.size())};
     split(words, sv, is_any_of(" "));
@@ -126,7 +126,7 @@ void ChatWidget::joinGroup() {
     return;
   }
   string mod = gname.left(pos).toUtf8().constData();
-  string gid = gname.midRef(pos+1).toUtf8().constData();
+  string gid = QStringView{gname}.mid(pos+1).toUtf8().constData();
   auto x = system().groups().get(mod, gid);
   if (! x)
     QMessageBox::critical(this, "Error", to_string(x.error()).c_str());

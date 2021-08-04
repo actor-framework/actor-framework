@@ -81,10 +81,10 @@ if(TARGET CAF::io)
     add_dependencies(protobuf_broker all_examples)
   endif()
 
-  if(CAF_ENABLE_QT5_EXAMPLES)
-    find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
-    qt5_wrap_ui(GROUP_CHAT_UI_HDR qtsupport/chatwindow.ui)
-    qt5_wrap_cpp(GROUP_CHAT_MOC_SRC qtsupport/chatwidget.hpp)
+  if(CAF_ENABLE_QT6_EXAMPLES)
+    find_package(Qt6 COMPONENTS Core Gui Widgets REQUIRED)
+    qt6_wrap_ui(GROUP_CHAT_UI_HDR qtsupport/chatwindow.ui)
+    qt6_wrap_cpp(GROUP_CHAT_MOC_SRC qtsupport/chatwidget.hpp)
     # generated headers will be in cmake build directory
     add_executable(qt_group_chat
                    qtsupport/qt_group_chat.cpp
@@ -94,17 +94,17 @@ if(TARGET CAF::io)
     target_link_libraries(qt_group_chat
                           CAF::io
                           CAF::internal
-                          Qt5::Core
-                          Qt5::Gui
-                          Qt5::Widgets)
+                          Qt6::Core
+                          Qt6::Gui
+                          Qt6::Widgets)
     target_include_directories(qt_group_chat PRIVATE
                                qtsupport
                                ${CMAKE_CURRENT_BINARY_DIR}
-                               ${Qt5Core_INCLUDE_DIRS}
-                               ${Qt5Gui_INCLUDE_DIRS}
-                               ${Qt5Widgets_INCLUDE_DIRS})
+                               ${Qt6Core_INCLUDE_DIRS}
+                               ${Qt6Gui_INCLUDE_DIRS}
+                               ${Qt6Widgets_INCLUDE_DIRS})
     if (CMAKE_VERSION VERSION_LESS 3.8)
-      message(STATUS "Note: build fails if Qt5 sets incompatible -std=ARG flag")
+      message(STATUS "Note: build fails if Qt6 sets incompatible -std=ARG flag")
     else()
       set_property(TARGET qt_group_chat PROPERTY CXX_STANDARD 17)
     endif()

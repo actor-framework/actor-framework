@@ -55,7 +55,7 @@ Flags (use --enable-<name> to activate and --disable-<name> to deactivate):
   prefer-pthread-flag       prefer -pthread flag if available  [ON]
   curl-examples             build examples with libcurl [OFF]
   protobuf-examples         build examples with Google Protobuf [OFF]
-  qt5-examples              build examples with the Qt5 framework [OFF]
+  qt6-examples              build examples with the Qt6 framework [OFF]
   runtime-checks            build CAF with extra runtime assertions [OFF]
   utility-targets           include targets like consistency-check [OFF]
   actor-profiler            enable experimental proiler API [OFF]
@@ -101,7 +101,7 @@ set_build_flag() {
     prefer-pthread-flag)     FlagName='THREADS_PREFER_PTHREAD_FLAG' ;;
     curl-examples)           FlagName='CAF_ENABLE_CURL_EXAMPLES' ;;
     protobuf-examples)       FlagName='CAF_ENABLE_PROTOBUF_EXAMPLES' ;;
-    qt5-examples)            FlagName='CAF_ENABLE_QT5_EXAMPLES' ;;
+    qt6-examples)            FlagName='CAF_ENABLE_QT6_EXAMPLES' ;;
     runtime-checks)          FlagName='CAF_ENABLE_RUNTIME_CHECKS' ;;
     utility-targets)         FlagName='CAF_ENABLE_UTILITY_TARGETS' ;;
     actor-profiler)          FlagName='CAF_ENABLE_ACTOR_PROFILER' ;;
