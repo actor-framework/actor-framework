@@ -5,8 +5,8 @@
 #include "caf/detail/scope_guard.hpp"
 
 CAF_PUSH_WARNINGS
-#include <QMessageBox>
 #include <QInputDialog>
+#include <QMessageBox>
 CAF_POP_WARNINGS
 
 #include "chatwidget.hpp"
@@ -67,9 +67,7 @@ void ChatWidget::init(actor_system& system) {
 }
 
 void ChatWidget::sendChatMessage() {
-  auto cleanup = detail::make_scope_guard([=] {
-    input()->setText(QString());
-  });
+  auto cleanup = detail::make_scope_guard([=] { input()->setText(QString()); });
   QString line = input()->text();
   if (line.isEmpty()) {
     // Ignore empty lines.
@@ -115,8 +113,7 @@ void ChatWidget::joinGroup() {
                              "Please set a name first.");
     return;
   }
-  auto gname = QInputDialog::getText(this,
-                                     "Join Group",
+  auto gname = QInputDialog::getText(this, "Join Group",
                                      "Please enter a group as <module>:<id>",
                                      QLineEdit::Normal,
                                      "remote:chatroom@localhost:4242");
@@ -126,9 +123,9 @@ void ChatWidget::joinGroup() {
     return;
   }
   string mod = gname.left(pos).toUtf8().constData();
-  string gid = QStringView{gname}.mid(pos+1).toUtf8().constData();
+  string gid = QStringView{gname}.mid(pos + 1).toUtf8().constData();
   auto x = system().groups().get(mod, gid);
-  if (! x)
+  if (!x)
     QMessageBox::critical(this, "Error", to_string(x.error()).c_str());
   else
     self()->send(self(), join_atom_v, std::move(*x));
@@ -137,6 +134,6 @@ void ChatWidget::joinGroup() {
 void ChatWidget::changeName() {
   auto name = QInputDialog::getText(this, "Change Name",
                                     "Please enter a new name");
-  if (! name.isEmpty())
+  if (!name.isEmpty())
     send_as(as_actor(), as_actor(), set_name_atom_v, name.toUtf8().constData());
 }
