@@ -500,7 +500,7 @@ expected<T> get_as(const config_value& value) {
 
 /// Customization point for configuring automatic mappings from default value
 /// types to deduced types. For example, `get_or(value, "foo"sv)` must return a
-/// `string` rather than a `std::string_view`. However, user-defined overloads
+/// `string` rather than a `string_view`. However, user-defined overloads
 /// *must not* specialize this class for any type from the namespaces `std` or
 /// `caf`.
 template <class T>

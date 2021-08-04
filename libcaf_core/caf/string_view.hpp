@@ -51,8 +51,6 @@ struct is_string_like {
 
 } // namespace detail
 
-class [[deprecated("Use `std::string_view instead`")]] string_view;
-
 /// Drop-in replacement for C++17 std::string_view.
 class CAF_CORE_EXPORT string_view : detail::comparable<string_view> {
 public:

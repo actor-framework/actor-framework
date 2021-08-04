@@ -499,8 +499,7 @@ public:
     config_ = ptr;
   }
 
-  // -- observers
-  // --------------------------------------------------------------
+  // -- observers --------------------------------------------------------------
 
   template <class Collector>
   void collect(Collector& collector) const {
@@ -510,8 +509,7 @@ public:
       visit_family(f, ptr.get());
   }
 
-  // -- modifiers
-  // --------------------------------------------------------------
+  // -- modifiers --------------------------------------------------------------
 
   /// Takes ownership of all metric families in `other`.
   /// @pre `other` *must not* contain any duplicated metric family

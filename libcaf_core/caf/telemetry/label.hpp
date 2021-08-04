@@ -58,7 +58,7 @@ public:
 private:
   size_t name_length_;
   std::string str_;
-}; // namespace caf::telemetry
+};
 
 /// Returns the @ref label in `name=value` notation.
 /// @relates label

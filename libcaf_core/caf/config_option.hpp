@@ -115,8 +115,8 @@ private:
 
 /// Finds `config_option` string with a matching long name in (`first`, `last`],
 /// where each entry is a pointer to a string. Returns a `ForwardIterator` to
-/// the match and a `caf::std::string_view` of the option value if the entry is
-/// found and a `ForwardIterator` to `last` with an empty `std::string_view`
+/// the match and a `string_view` of the option value if the entry is
+/// found and a `ForwardIterator` to `last` with an empty `string_view`
 /// otherwise.
 template <class ForwardIterator, class Sentinel>
 std::pair<ForwardIterator, std::string_view>

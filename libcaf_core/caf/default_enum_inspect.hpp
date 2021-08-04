@@ -19,7 +19,7 @@ namespace caf {
 /// ~~~(cpp)
 /// enum class Enumeration : ... { ... };
 /// std::string to_string(Enumeration);
-/// bool from_string(std::string_view, Enumeration&);
+/// bool from_string(string_view, Enumeration&);
 /// bool from_integer(std::underlying_type_t<Enumeration>, Enumeration&);
 /// ~~~
 template <class Inspector, class Enumeration>

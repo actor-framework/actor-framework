@@ -67,8 +67,9 @@ CAF_TEST(config_consumer) {
   string_parser_state res{str.begin(), str.end()};
   detail::parser::read_config(res, consumer);
   CAF_CHECK_EQUAL(res.code, pec::success);
-  // TODO: empty constructor not present in std::string_view
-  // CAF_CHECK_EQUAL(std::string_view(res.i, res.e), std::string_view());
+  CAF_CHECK_EQUAL(std::string_view(std::addressof(*res.i),
+                                   static_cast<size_t>(res.e - res.i)),
+                  std::string_view());
   CAF_CHECK_EQUAL(get_as<bool>(config, "is_server"), true);
   CAF_CHECK_EQUAL(get_as<uint16_t>(config, "port"), 4242u);
   CAF_CHECK_EQUAL(get_as<ls>(config, "nodes"), ls({"sun", "venus"}));
