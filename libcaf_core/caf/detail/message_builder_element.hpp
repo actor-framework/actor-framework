@@ -21,13 +21,13 @@ public:
 
   /// Uses placement new to create a copy of the wrapped value at given memory
   /// region.
-  /// @returns the past-the-end pointer of the object, i.e., the first std::byte
+  /// @returns the past-the-end pointer of the object, i.e., the first byte
   /// for
   ///          the *next* object.
   virtual std::byte* copy_init(std::byte* storage) const = 0;
 
   /// Uses placement new to move the wrapped value to given memory region.
-  /// @returns the past-the-end pointer of the object, i.e., the first std::byte
+  /// @returns the past-the-end pointer of the object, i.e., the first byte
   /// for
   ///          the *next* object.
   virtual std::byte* move_init(std::byte* storage) = 0;

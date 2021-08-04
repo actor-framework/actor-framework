@@ -184,8 +184,8 @@ public:
   /// @copydoc value
   virtual bool value(std::u32string&) = 0;
 
-  /// Reads a std::byte sequence from the input.
-  /// @param x The std::byte sequence.
+  /// Reads a byte sequence from the input.
+  /// @param x The byte sequence.
   /// @returns A non-zero error code on failure, `sec::success` otherwise.
   virtual bool value(span<std::byte> x) = 0;
 
@@ -193,7 +193,7 @@ public:
 
   /// Adds each boolean in `xs` to the output. Derived classes can override this
   /// member function to pack the booleans, for example to avoid using one
-  /// std::byte for each value in a binary output format.
+  /// byte for each value in a binary output format.
   virtual bool list(std::vector<bool>& xs);
 
 protected:

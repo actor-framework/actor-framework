@@ -64,7 +64,7 @@ public:
     return static_cast<size_t>(end_ - current_);
   }
 
-  /// Returns the remaining std::bytes.
+  /// Returns the remaining bytes.
   span<const std::byte> remainder() const noexcept {
     return make_span(current_, end_);
   }
@@ -203,7 +203,7 @@ public:
 private:
   explicit binary_deserializer(actor_system& sys) noexcept;
 
-  /// Checks whether we can read `read_size` more std::bytes.
+  /// Checks whether we can read `read_size` more bytes.
   bool range_check(size_t read_size) const noexcept {
     return current_ + read_size <= end_;
   }

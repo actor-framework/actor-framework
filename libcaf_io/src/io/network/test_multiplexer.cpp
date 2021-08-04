@@ -889,7 +889,7 @@ bool test_multiplexer::read_data(datagram_handle hdl) {
   CAF_ASSERT(to.second.capacity() > from.second.size());
   to.second.resize(from.second.size());
   std::transform(from.second.begin(), from.second.end(), to.second.begin(),
-                 [](std::byte x) { return static_cast<char>(x); });
+                 [](std::byte x) { return std::to_integer<char>(x); });
   data->vn_buf.pop_front();
   auto sitr = datagram_data_.find(data->rd_buf.first);
   if (sitr == datagram_data_.end()) {

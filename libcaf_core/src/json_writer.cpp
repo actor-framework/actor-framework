@@ -289,7 +289,7 @@ bool json_writer::end_associative_array() {
 }
 
 bool json_writer::value(std::byte x) {
-  return number(static_cast<uint8_t>(x));
+  return number(std::to_integer<uint8_t>(x));
 }
 
 bool json_writer::value(bool x) {

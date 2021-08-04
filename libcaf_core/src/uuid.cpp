@@ -67,11 +67,11 @@ uuid::variant_field variant_table[] = {
 } // namespace
 
 uuid::variant_field uuid::variant() const noexcept {
-  return variant_table[static_cast<size_t>(bytes_[8]) >> 5];
+  return variant_table[std::to_integer<size_t>(bytes_[8]) >> 5];
 }
 
 uuid::version_field uuid::version() const noexcept {
-  return static_cast<version_field>(static_cast<int>(bytes_[6]) >> 4);
+  return static_cast<version_field>(std::to_integer<int>(bytes_[6]) >> 4);
 }
 
 uint64_t uuid::timestamp() const noexcept {
@@ -84,7 +84,7 @@ uint64_t uuid::timestamp() const noexcept {
   ts[0] &= std::byte{0x0F};
   uint64_t result;
   memcpy(&result, ts, 8);
-  // UUIDs are stored in network std::byte order.
+  // UUIDs are stored in network byte order.
   return detail::from_network_order(result);
 }
 
@@ -95,7 +95,7 @@ uint16_t uuid::clock_sequence() const noexcept {
   cs[0] &= std::byte{0x3F};
   uint16_t result;
   memcpy(&result, cs, 2);
-  // UUIDs are stored in network std::byte order.
+  // UUIDs are stored in network byte order.
   return detail::from_network_order(result);
 }
 
@@ -153,7 +153,8 @@ parse_result parse_impl(string_parser_state& ps, uuid::array_type& x) noexcept {
   // Check whether the bytes form a valid UUID.
   if (memcmp(x.data(), nil_bytes, 16) == 0)
     return valid_uuid;
-  if (auto subtype = static_cast<long>(x[6]) >> 4; subtype == 0 || subtype > 5)
+  if (auto subtype = std::to_integer<long>(x[6]) >> 4;
+      subtype == 0 || subtype > 5)
     return invalid_version;
   return valid_uuid;
 }

@@ -38,7 +38,7 @@ class middleman;
 ///
 /// Brokers do *not* operate on sockets or other platform-dependent
 /// communication primitives. Instead, brokers use a `connection_handle`
-/// to identify a reliable, end-to-end std::byte stream (e.g. a TCP connection)
+/// to identify a reliable, end-to-end byte stream (e.g. a TCP connection)
 /// and `accept_handle` to identify a communication endpoint others can
 /// connect to via its port.
 ///

@@ -59,7 +59,7 @@ CAF_TEST_FIXTURE_SCOPE(uuid_tests, fixture)
 CAF_TEST(default generated UUIDs have all 128 bits set to zero) {
   uuid nil;
   CAF_CHECK(!nil);
-  auto zero = [](std::byte x) { return static_cast<int>(x) == 0; };
+  auto zero = [](std::byte x) { return std::to_integer<int>(x) == 0; };
   CAF_CHECK(std::all_of(nil.bytes().begin(), nil.bytes().end(), zero));
   CAF_CHECK(nil == uuid::nil());
 }

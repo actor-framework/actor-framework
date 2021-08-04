@@ -603,7 +603,7 @@ bool json_reader::value(std::u32string&) {
 
 bool json_reader::value(span<std::byte>) {
   emplace_error(sec::runtime_error, class_name, __func__,
-                "std::byte span support not implemented yet");
+                "byte span support not implemented yet");
   return false;
 }
 
