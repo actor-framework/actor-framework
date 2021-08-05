@@ -113,14 +113,14 @@ void print_unescaped(Buffer& buf, std::string_view str) {
 
 template <class Buffer>
 void print(Buffer& buf, none_t) {
-  using namespace std::literals::string_view_literals;
+  using namespace std::literals;
   auto str = "null"sv;
   buf.insert(buf.end(), str.begin(), str.end());
 }
 
 template <class Buffer>
 void print(Buffer& buf, bool x) {
-  using namespace std::literals::string_view_literals;
+  using namespace std::literals;
   auto str = x ? "true"sv : "false"sv;
   buf.insert(buf.end(), str.begin(), str.end());
 }
@@ -133,7 +133,7 @@ std::enable_if_t<std::is_integral<T>::value> print(Buffer& buf, T x) {
   // Convert negative values into positives as necessary.
   if constexpr (std::is_signed<T>::value) {
     if (x == std::numeric_limits<T>::min()) {
-      using namespace std::literals::string_view_literals;
+      using namespace std::literals;
       // The code below would fail for the smallest value, because this value
       // has no positive counterpart. For example, an int8_t ranges from -128 to
       // 127. Hence, an int8_t cannot represent `abs(-128)`.
@@ -187,7 +187,7 @@ std::enable_if_t<std::is_floating_point<T>::value> print(Buffer& buf, T x) {
 
 template <class Buffer, class Rep, class Period>
 void print(Buffer& buf, std::chrono::duration<Rep, Period> x) {
-  using namespace std::literals::string_view_literals;
+  using namespace std::literals;
   if (x.count() == 0) {
     auto str = "0s"sv;
     buf.insert(buf.end(), str.begin(), str.end());

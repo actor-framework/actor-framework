@@ -11,7 +11,7 @@
 #include "core-test.hpp"
 
 using namespace caf;
-using namespace std::literals::string_view_literals;
+using namespace std::literals;
 using namespace std::literals::string_literals;
 
 using caf::detail::base64;

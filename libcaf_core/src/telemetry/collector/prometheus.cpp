@@ -14,7 +14,7 @@
 #include "caf/telemetry/metric_family.hpp"
 #include "caf/telemetry/metric_registry.hpp"
 
-using namespace std::literals::string_view_literals;
+using namespace std::literals;
 
 namespace caf::telemetry::collector {
 

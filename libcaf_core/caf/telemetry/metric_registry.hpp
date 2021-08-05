@@ -51,18 +51,17 @@ public:
   /// Returns a gauge metric family. Creates the family lazily if necessary, but
   /// fails if the full name already belongs to a different family.
   /// @param prefix The prefix (namespace) this family belongs to. Usually the
-  ///               application or protocol name, e.g., `http`. The prefix `caf`
-  ///               as well as prefixes starting with an underscore are
-  ///               reserved.
+  /// application or protocol name, e.g., `http`. The prefix `caf` as well as
+  /// prefixes starting with an underscore are reserved.
   /// @param name The human-readable name of the metric, e.g., `requests`.
   /// @param labels Names for all label dimensions of the metric.
   /// @param helptext Short explanation of the metric.
   /// @param unit Unit of measurement. Please use base units such as `bytes` or
-  ///             `seconds` (prefer lowercase). The pseudo-unit `1` identifies
-  ///             dimensionless counts.
+  /// `seconds` (prefer lowercase). The pseudo-unit `1` identifies dimensionless
+  /// counts.
   /// @param is_sum Setting this to `true` indicates that this metric adds
-  ///               something up to a total, where only the total value is of
-  ///               interest. For example, the total number of HTTP requests.
+  /// something up to a total, where only the total value is of interest. For
+  /// example, the total number of HTTP requests.
   template <class ValueType = int64_t>
   metric_family_impl<gauge<ValueType>>*
   gauge_family(std::string_view prefix, std::string_view name,
@@ -118,22 +117,18 @@ public:
 
   /// Returns a gauge. Creates all objects lazily if necessary, but fails if
   /// the full name already belongs to a different family.
-  /// @param prefix The prefix (namespace) this family belongs to. Usually
-  /// the
-  ///               application or protocol name, e.g., `http`. The prefix
-  ///               `caf` as well as prefixes starting with an underscore
-  ///               are reserved.
+  /// @param prefix The prefix (namespace) this family belongs to. Usually the
+  /// application or protocol name, e.g., `http`. The prefix `caf` as well as
+  /// prefixes starting with an underscore are reserved.
   /// @param name The human-readable name of the metric, e.g., `requests`.
   /// @param labels Values for all label dimensions of the metric.
   /// @param helptext Short explanation of the metric.
-  /// @param unit Unit of measurement. Please use base units such as `bytes`
-  /// or
-  ///             `seconds` (prefer lowercase). The pseudo-unit `1`
-  ///             identifies dimensionless counts.
+  /// @param unit Unit of measurement. Please use base units such as `bytes` or
+  /// `seconds` (prefer lowercase). The pseudo-unit `1` identifies dimensionless
+  /// counts.
   /// @param is_sum Setting this to `true` indicates that this metric adds
-  ///               something up to a total, where only the total value is
-  ///               of interest. For example, the total number of HTTP
-  ///               requests.
+  /// something up to a total, where only the total value is of interest. For
+  /// example, the total number of HTTP requests.
   template <class ValueType = int64_t>
   gauge<ValueType>*
   gauge_instance(std::string_view prefix, std::string_view name,
@@ -160,21 +155,17 @@ public:
   /// family without label dimensions. Creates all objects lazily if
   /// necessary, but fails if the full name already belongs to a different
   /// family.
-  /// @param prefix The prefix (namespace) this family belongs to. Usually
-  /// the
-  ///               application or protocol name, e.g., `http`. The prefix
-  ///               `caf` as well as prefixes starting with an underscore
-  ///               are reserved.
+  /// @param prefix The prefix (namespace) this family belongs to. Usually the
+  /// application or protocol name, e.g., `http`. The prefix `caf` as well as
+  /// prefixes starting with an underscore are reserved.
   /// @param name The human-readable name of the metric, e.g., `requests`.
   /// @param helptext Short explanation of the metric.
   /// @param unit Unit of measurement. Please use base units such as `bytes`
-  /// or
-  ///             `seconds` (prefer lowercase). The pseudo-unit `1`
-  ///             identifies dimensionless counts.
+  /// or `seconds` (prefer lowercase). The pseudo-unit `1` identifies
+  /// dimensionless counts.
   /// @param is_sum Setting this to `true` indicates that this metric adds
-  ///               something up to a total, where only the total value is
-  ///               of interest. For example, the total number of HTTP
-  ///               requests.
+  /// something up to a total, where only the total value is of interest. For
+  /// example, the total number of HTTP requests.
   template <class ValueType = int64_t>
   gauge<ValueType>*
   gauge_singleton(std::string_view prefix, std::string_view name,
@@ -190,21 +181,17 @@ public:
   /// necessary, but fails if the full name already belongs to a different
   /// family.
   /// @param prefix The prefix (namespace) this family belongs to. Usually
-  /// the
-  ///               application or protocol name, e.g., `http`. The prefix
-  ///               `caf` as well as prefixes starting with an underscore
-  ///               are reserved.
+  /// the application or protocol name, e.g., `http`. The prefix `caf` as well
+  /// as prefixes starting with an underscore are reserved.
   /// @param name The human-readable name of the metric, e.g., `requests`.
   /// @param labels Names for all label dimensions of the metric.
   /// @param helptext Short explanation of the metric.
-  /// @param unit Unit of measurement. Please use base units such as `bytes`
-  /// or
-  ///             `seconds` (prefer lowercase). The pseudo-unit `1`
-  ///             identifies dimensionless counts.
+  /// @param unit Unit of measurement. Please use base units such as `bytes` or
+  /// `seconds` (prefer lowercase). The pseudo-unit `1` identifies dimensionless
+  /// counts.
   /// @param is_sum Setting this to `true` indicates that this metric adds
-  ///               something up to a total, where only the total value is
-  ///               of interest. For example, the total number of HTTP
-  ///               requests.
+  /// something up to a total, where only the total value is of interest. For
+  /// example, the total number of HTTP requests.
   template <class ValueType = int64_t>
   metric_family_impl<counter<ValueType>>*
   counter_family(std::string_view prefix, std::string_view name,
@@ -260,22 +247,18 @@ public:
 
   /// Returns a counter. Creates all objects lazily if necessary, but fails
   /// if the full name already belongs to a different family.
-  /// @param prefix The prefix (namespace) this family belongs to. Usually
-  /// the
-  ///               application or protocol name, e.g., `http`. The prefix
-  ///               `caf` as well as prefixes starting with an underscore
-  ///               are reserved.
+  /// @param prefix The prefix (namespace) this family belongs to. Usually the
+  /// application or protocol name, e.g., `http`. The prefix `caf` as well as
+  /// prefixes starting with an underscore are reserved.
   /// @param name The human-readable name of the metric, e.g., `requests`.
   /// @param labels Values for all label dimensions of the metric.
   /// @param helptext Short explanation of the metric.
-  /// @param unit Unit of measurement. Please use base units such as `bytes`
-  /// or
-  ///             `seconds` (prefer lowercase). The pseudo-unit `1`
-  ///             identifies dimensionless counts.
+  /// @param unit Unit of measurement. Please use base units such as `bytes` or
+  /// `seconds` (prefer lowercase). The pseudo-unit `1` identifies dimensionless
+  /// counts.
   /// @param is_sum Setting this to `true` indicates that this metric adds
-  ///               something up to a total, where only the total value is
-  ///               of interest. For example, the total number of HTTP
-  ///               requests.
+  /// something up to a total, where only the total value is of interest. For
+  /// example, the total number of HTTP requests.
   template <class ValueType = int64_t>
   counter<ValueType>*
   counter_instance(std::string_view prefix, std::string_view name,
@@ -302,21 +285,17 @@ public:
   /// family without label dimensions. Creates all objects lazily if
   /// necessary, but fails if the full name already belongs to a different
   /// family.
-  /// @param prefix The prefix (namespace) this family belongs to. Usually
-  /// the
-  ///               application or protocol name, e.g., `http`. The prefix
-  ///               `caf` as well as prefixes starting with an underscore
-  ///               are reserved.
+  /// @param prefix The prefix (namespace) this family belongs to. Usually the
+  /// application or protocol name, e.g., `http`. The prefix `caf` as well as
+  /// prefixes starting with an underscore are reserved.
   /// @param name The human-readable name of the metric, e.g., `requests`.
   /// @param helptext Short explanation of the metric.
   /// @param unit Unit of measurement. Please use base units such as `bytes`
-  /// or
-  ///             `seconds` (prefer lowercase). The pseudo-unit `1`
-  ///             identifies dimensionless counts.
+  /// or `seconds` (prefer lowercase). The pseudo-unit `1` identifies
+  /// dimensionless counts.
   /// @param is_sum Setting this to `true` indicates that this metric adds
-  ///               something up to a total, where only the total value is
-  ///               of interest. For example, the total number of HTTP
-  ///               requests.
+  /// something up to a total, where only the total value is of interest. For
+  /// example, the total number of HTTP requests.
   template <class ValueType = int64_t>
   counter<ValueType>*
   counter_singleton(std::string_view prefix, std::string_view name,
@@ -331,27 +310,22 @@ public:
   /// Returns a histogram metric family. Creates the family lazily if
   /// necessary, but fails if the full name already belongs to a different
   /// family.
-  /// @param prefix The prefix (namespace) this family belongs to. Usually
-  /// the
-  ///               application or protocol name, e.g., `http`. The prefix
-  ///               `caf` as well as prefixes starting with an underscore
-  ///               are reserved.
+  /// @param prefix The prefix (namespace) this family belongs to. Usually the
+  /// application or protocol name, e.g., `http`. The prefix `caf` as well as
+  /// prefixes starting with an underscore are reserved.
   /// @param name The human-readable name of the metric, e.g., `requests`.
   /// @param label_names Names for all label dimensions of the metric.
   /// @param default_upper_bounds Upper bounds for the metric buckets.
   /// @param helptext Short explanation of the metric.
-  /// @param unit Unit of measurement. Please use base units such as `bytes`
-  /// or
-  ///             `seconds` (prefer lowercase). The pseudo-unit `1`
-  ///             identifies dimensionless counts.
+  /// @param unit Unit of measurement. Please use base units such as `bytes` or
+  /// `seconds` (prefer lowercase). The pseudo-unit `1` identifies dimensionless
+  /// counts.
   /// @param is_sum Setting this to `true` indicates that this metric adds
-  ///               something up to a total, where only the total value is
-  ///               of interest. For example, the total number of HTTP
-  ///               requests.
-  /// @note The first call wins when calling this function multiple times
-  /// with
-  ///       different bucket settings. Later calls skip checking the bucket
-  ///       settings, mainly because this check would be rather expensive.
+  /// something up to a total, where only the total value is of interest. For
+  /// example, the total number of HTTP requests.
+  /// @note The first call wins when calling this function multiple times with
+  /// different bucket settings. Later calls skip checking the bucket settings,
+  /// mainly because this check would be rather expensive.
   /// @note The actor system config may override `upper_bounds`.
   template <class ValueType = int64_t>
   metric_family_impl<histogram<ValueType>>*
@@ -413,30 +387,23 @@ public:
   /// Returns a histogram. Creates the family lazily if necessary,
   /// but fails if the full name already belongs to a different
   /// family.
-  /// @param prefix The prefix (namespace) this family belongs to.
-  /// Usually the
-  ///               application or protocol name, e.g., `http`. The
-  ///               prefix `caf` as well as prefixes starting with
-  ///               an underscore are reserved.
+  /// @param prefix The prefix (namespace) this family belongs to. Usually the
+  /// application or protocol name, e.g., `http`. The prefix `caf` as well as
+  /// prefixes starting with an underscore are reserved.
   /// @param name The human-readable name of the metric, e.g.,
   /// `requests`.
   /// @param labels Names for all label dimensions of the metric.
   /// @param upper_bounds Upper bounds for the metric buckets.
   /// @param helptext Short explanation of the metric.
-  /// @param unit Unit of measurement. Please use base units such as
-  /// `bytes` or
-  ///             `seconds` (prefer lowercase). The pseudo-unit `1`
-  ///             identifies dimensionless counts.
-  /// @param is_sum Setting this to `true` indicates that this
-  /// metric adds
-  ///               something up to a total, where only the total
-  ///               value is of interest. For example, the total
-  ///               number of HTTP requests.
-  /// @note The first call wins when calling this function multiple
-  /// times with
-  ///       different bucket settings. Later calls skip checking the
-  ///       bucket settings, mainly because this check would be
-  ///       rather expensive.
+  /// @param unit Unit of measurement. Please use base units such as`bytes` or
+  /// `seconds` (prefer lowercase). The pseudo-unit `1` identifies dimensionless
+  /// counts.
+  /// @param is_sum Setting this to `true` indicates that this metric adds
+  /// something up to a total, where only the total value is of interest. For
+  /// example, the total number of HTTP requests.
+  /// @note The first call wins when calling this function multiple times with
+  /// different bucket settings. Later calls skip checking the bucket settings,
+  /// mainly because this check would be rather expensive.
   /// @note The actor system config may override `upper_bounds`.
   template <class ValueType = int64_t>
   histogram<ValueType>*
@@ -465,23 +432,17 @@ public:
   /// instance of a family without label dimensions. Creates all
   /// objects lazily if necessary, but fails if the full name
   /// already belongs to a different family.
-  /// @param prefix The prefix (namespace) this family belongs to.
-  /// Usually the
-  ///               application or protocol name, e.g., `http`. The
-  ///               prefix `caf` as well as prefixes starting with
-  ///               an underscore are reserved.
-  /// @param name The human-readable name of the metric, e.g.,
-  /// `requests`.
+  /// @param prefix The prefix (namespace) this family belongs to. Usually the
+  /// application or protocol name, e.g., `http`. The prefix `caf` as well as
+  /// prefixes starting with an underscore are reserved.
+  /// @param name The human-readable name of the metric, e.g., `requests`.
   /// @param helptext Short explanation of the metric.
-  /// @param unit Unit of measurement. Please use base units such as
-  /// `bytes` or
-  ///             `seconds` (prefer lowercase). The pseudo-unit `1`
-  ///             identifies dimensionless counts.
-  /// @param is_sum Setting this to `true` indicates that this
-  /// metric adds
-  ///               something up to a total, where only the total
-  ///               value is of interest. For example, the total
-  ///               number of HTTP requests.
+  /// @param unit Unit of measurement. Please use base units such as `bytes` or
+  /// `seconds` (prefer lowercase). The pseudo-unit `1` identifies dimensionless
+  /// counts.
+  /// @param is_sum Setting this to `true` indicates that this metric adds
+  /// something up to a total, where only the total value is of interest. For
+  /// example, the total number of HTTP requests.
   /// @note The actor system config may override `upper_bounds`.
   template <class ValueType = int64_t>
   histogram<ValueType>*

@@ -41,15 +41,15 @@ void encode_impl(std::string_view in, Storage& out) {
     for (auto x : buf)
       out.push_back(static_cast<value_type>(encoding_tbl[x]));
   };
-  auto end = [](std::string_view str) { return str.data() + str.size(); };
   // Iterate the input in chunks of three bytes.
-  auto i = in.data();
-  for (; std::distance(i, end(in)) >= 3; i += 3)
-    consume(i);
+  auto ptr = in.data();
+  const auto end = ptr + in.size();
+  for (; std::distance(ptr, end) >= 3; ptr += 3)
+    consume(ptr);
   // Deal with any leftover: pad the input with zeros and then fixup the output.
-  if (i != end(in)) {
+  if (ptr != end) {
     char buf[] = {0, 0, 0};
-    std::copy(i, end(in), buf);
+    std::copy(ptr, end, buf);
     consume(buf);
     for (auto j = out.end() - (3 - (in.size() % 3)); j != out.end(); ++j)
       *j = static_cast<value_type>('=');

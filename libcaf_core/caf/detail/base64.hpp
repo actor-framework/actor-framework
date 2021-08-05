@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <string_view>
-
 #include "caf/byte_buffer.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/detail/core_export.hpp"
@@ -13,6 +11,7 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 
 namespace caf::detail {
 

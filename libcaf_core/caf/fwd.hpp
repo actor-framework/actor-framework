@@ -131,7 +131,7 @@ class scoped_actor;
 class serializer;
 class skip_t;
 class stream_manager;
-class [[deprecated("Use `std::string_view instead`")]] string_view;
+class [[deprecated("use std::string_view instead")]] string_view;
 class tracing_data;
 class tracing_data_factory;
 class type_id_list;

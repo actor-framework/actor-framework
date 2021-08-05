@@ -50,7 +50,7 @@ std::string type_clash(caf::json_reader::position want,
 
 std::string type_clash(std::string_view want,
                        const caf::detail::json::value& got) {
-  using namespace std::literals::string_view_literals;
+  using namespace std::literals;
   using caf::detail::json::value;
   switch (got.data.index()) {
     case value::integer_index:
