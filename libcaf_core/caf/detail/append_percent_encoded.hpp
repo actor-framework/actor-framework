@@ -13,7 +13,8 @@ namespace caf::detail {
 
 // Escapes all reserved characters according to RFC 3986 in `x` and
 // adds the encoded string to `str`.
-CAF_CORE_EXPORT void append_percent_encoded(std::string& str, string_view x,
+CAF_CORE_EXPORT void append_percent_encoded(std::string& str,
+                                            std::string_view x,
                                             bool is_path = false);
 
 } // namespace caf::detail

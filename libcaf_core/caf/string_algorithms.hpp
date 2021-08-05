@@ -8,38 +8,43 @@
 #include <limits>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <vector>
 
 #include "caf/config.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/type_traits.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf {
 
 // provide boost::split compatible interface
 
-constexpr string_view is_any_of(string_view arg) noexcept {
+constexpr std::string_view is_any_of(std::string_view arg) noexcept {
   return arg;
 }
 
 constexpr bool token_compress_on = false;
 
-CAF_CORE_EXPORT void split(std::vector<std::string>& result, string_view str,
-                           string_view delims, bool keep_all = true);
+CAF_CORE_EXPORT void split(std::vector<std::string>& result,
+                           std::string_view str, std::string_view delims,
+                           bool keep_all = true);
 
-CAF_CORE_EXPORT void split(std::vector<string_view>& result, string_view str,
-                           string_view delims, bool keep_all = true);
+CAF_CORE_EXPORT void split(std::vector<std::string_view>& result,
+                           std::string_view str, std::string_view delims,
+                           bool keep_all = true);
 
-CAF_CORE_EXPORT void split(std::vector<std::string>& result, string_view str,
-                           char delim, bool keep_all = true);
+CAF_CORE_EXPORT void split(std::vector<std::string>& result,
+                           std::string_view str, char delim,
+                           bool keep_all = true);
 
-CAF_CORE_EXPORT void split(std::vector<string_view>& result, string_view str,
-                           char delim, bool keep_all = true);
+CAF_CORE_EXPORT void split(std::vector<std::string_view>& result,
+                           std::string_view str, char delim,
+                           bool keep_all = true);
 
 template <class InputIterator>
-std::string join(InputIterator first, InputIterator last, string_view glue) {
+std::string
+join(InputIterator first, InputIterator last, std::string_view glue) {
   if (first == last)
     return {};
   std::ostringstream oss;
@@ -50,18 +55,18 @@ std::string join(InputIterator first, InputIterator last, string_view glue) {
 }
 
 template <class Container>
-std::string join(const Container& c, string_view glue) {
+std::string join(const Container& c, std::string_view glue) {
   return join(c.begin(), c.end(), glue);
 }
 
 /// Replaces all occurrences of `what` by `with` in `str`.
-CAF_CORE_EXPORT void
-replace_all(std::string& str, string_view what, string_view with);
+CAF_CORE_EXPORT void replace_all(std::string& str, std::string_view what,
+                                 std::string_view with);
 
 /// Returns whether `str` begins with `prefix`.
-CAF_CORE_EXPORT bool starts_with(string_view str, string_view prefix);
+CAF_CORE_EXPORT bool starts_with(std::string_view str, std::string_view prefix);
 
 /// Returns whether `str` ends with `suffix`.
-CAF_CORE_EXPORT bool ends_with(string_view str, string_view suffix);
+CAF_CORE_EXPORT bool ends_with(std::string_view str, std::string_view suffix);
 
 } // namespace caf

@@ -8,7 +8,8 @@
 
 namespace caf::telemetry {
 
-label::label(string_view name, string_view value) : name_length_(name.size()) {
+label::label(std::string_view name, std::string_view value)
+  : name_length_(name.size()) {
   str_.reserve(name.size() + value.size() + 1);
   str_.insert(str_.end(), name.begin(), name.end());
   str_ += '=';
@@ -19,7 +20,7 @@ label::label(const label_view& view) : label(view.name(), view.value()) {
   // nop
 }
 
-void label::value(string_view new_value) {
+void label::value(std::string_view new_value) {
   str_.erase(name_length_ + 1);
   str_.insert(str_.end(), new_value.begin(), new_value.end());
 }

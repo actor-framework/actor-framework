@@ -35,7 +35,7 @@ struct testee : serializer {
     log.insert(log.end(), indent, ' ');
   }
 
-  bool begin_object(type_id_t, string_view object_name) override {
+  bool begin_object(type_id_t, std::string_view object_name) override {
     new_line();
     indent += 2;
     log += "begin object ";
@@ -52,7 +52,7 @@ struct testee : serializer {
     return true;
   }
 
-  bool begin_field(string_view name) override {
+  bool begin_field(std::string_view name) override {
     new_line();
     indent += 2;
     log += "begin field ";
@@ -60,7 +60,7 @@ struct testee : serializer {
     return true;
   }
 
-  bool begin_field(string_view name, bool) override {
+  bool begin_field(std::string_view name, bool) override {
     new_line();
     indent += 2;
     log += "begin optional field ";
@@ -68,7 +68,8 @@ struct testee : serializer {
     return true;
   }
 
-  bool begin_field(string_view name, span<const type_id_t>, size_t) override {
+  bool begin_field(std::string_view name, span<const type_id_t>,
+                   size_t) override {
     new_line();
     indent += 2;
     log += "begin variant field ";
@@ -76,7 +77,7 @@ struct testee : serializer {
     return true;
   }
 
-  bool begin_field(string_view name, bool, span<const type_id_t>,
+  bool begin_field(std::string_view name, bool, span<const type_id_t>,
                    size_t) override {
     new_line();
     indent += 2;
@@ -239,7 +240,7 @@ struct testee : serializer {
     return true;
   }
 
-  bool value(string_view) override {
+  bool value(std::string_view) override {
     new_line();
     log += "std::string value";
     return true;

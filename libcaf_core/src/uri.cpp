@@ -136,7 +136,7 @@ public:
 
 } // namespace
 
-bool uri::can_parse(string_view str) noexcept {
+bool uri::can_parse(std::string_view str) noexcept {
   string_parser_state ps{str.begin(), str.end()};
   nop_builder builder;
   if (ps.consume('<')) {
@@ -186,7 +186,7 @@ std::string to_string(const uri::authority_type& x) {
   return str;
 }
 
-error parse(string_view str, uri& dest) {
+error parse(std::string_view str, uri& dest) {
   string_parser_state ps{str.begin(), str.end()};
   parse(ps, dest);
   if (ps.code == pec::success)
@@ -194,7 +194,7 @@ error parse(string_view str, uri& dest) {
   return make_error(ps);
 }
 
-expected<uri> make_uri(string_view str) {
+expected<uri> make_uri(std::string_view str) {
   uri result;
   if (auto err = parse(str, result))
     return err;

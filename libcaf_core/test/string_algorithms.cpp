@@ -17,13 +17,13 @@ namespace {
 
 using str_list = std::vector<std::string>;
 
-str_list split(string_view str) {
+str_list split(std::string_view str) {
   str_list result;
   caf::split(result, str, ",");
   return result;
 }
 
-str_list compressed_split(string_view str) {
+str_list compressed_split(std::string_view str) {
   str_list result;
   caf::split(result, str, ",", token_compress_on);
   return result;

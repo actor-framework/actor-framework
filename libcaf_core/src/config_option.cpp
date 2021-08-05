@@ -20,20 +20,22 @@ namespace caf {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-config_option::config_option(string_view category, string_view name,
-                             string_view description, const meta_state* meta,
-                             void* value)
+config_option::config_option(std::string_view category, std::string_view name,
+                             std::string_view description,
+                             const meta_state* meta, void* value)
   : meta_(meta), value_(value) {
   using std::accumulate;
   using std::copy;
   auto comma = name.find(',');
   auto long_name = name.substr(0, comma);
-  auto short_names = comma == string_view::npos ? string_view{}
-                                                : name.substr(comma + 1);
-  auto total_size = [](std::initializer_list<string_view> xs) {
+  auto short_names = comma == std::string_view::npos ? std::string_view{}
+                                                     : name.substr(comma + 1);
+  auto total_size = [](std::initializer_list<std::string_view> xs) {
     return (xs.size() - 1) // one separator between all fields
            + accumulate(xs.begin(), xs.end(), size_t{0},
-                        [](size_t x, string_view sv) { return x + sv.size(); });
+                        [](size_t x, std::string_view sv) {
+                          return x + sv.size();
+                        });
   };
   auto ts = total_size({category, long_name, short_names, description});
   CAF_ASSERT(ts <= std::numeric_limits<uint16_t>::max());
@@ -90,23 +92,23 @@ void swap(config_option& first, config_option& second) noexcept {
 
 // -- properties ---------------------------------------------------------------
 
-string_view config_option::category() const noexcept {
+std::string_view config_option::category() const noexcept {
   return buf_slice(buf_[0] == '?' ? 1 : 0, category_separator_);
 }
 
-string_view config_option::long_name() const noexcept {
+std::string_view config_option::long_name() const noexcept {
   return buf_slice(category_separator_ + 1, long_name_separator_);
 }
 
-string_view config_option::short_names() const noexcept {
+std::string_view config_option::short_names() const noexcept {
   return buf_slice(long_name_separator_ + 1, short_names_separator_);
 }
 
-string_view config_option::description() const noexcept {
+std::string_view config_option::description() const noexcept {
   return buf_slice(short_names_separator_ + 1, buf_size_);
 }
 
-string_view config_option::full_name() const noexcept {
+std::string_view config_option::full_name() const noexcept {
   return buf_slice(buf_[0] == '?' ? 1 : 0, long_name_separator_);
 }
 
@@ -119,7 +121,7 @@ error config_option::store(const config_value& x) const {
   return sync(cpy);
 }
 
-string_view config_option::type_name() const noexcept {
+std::string_view config_option::type_name() const noexcept {
   return meta_->type_name;
 }
 
@@ -131,7 +133,7 @@ bool config_option::has_flat_cli_name() const noexcept {
   return buf_[0] == '?' || category() == "global";
 }
 
-expected<config_value> config_option::parse(string_view input) const {
+expected<config_value> config_option::parse(std::string_view input) const {
   config_value val{input};
   if (auto err = sync(val))
     return {std::move(err)};
@@ -145,7 +147,8 @@ std::optional<config_value> config_option::get() const {
   return std::nullopt;
 }
 
-string_view config_option::buf_slice(size_t from, size_t to) const noexcept {
+std::string_view config_option::buf_slice(size_t from,
+                                          size_t to) const noexcept {
   CAF_ASSERT(from <= to);
   return {buf_.get() + from, to - from};
 }

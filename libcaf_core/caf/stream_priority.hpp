@@ -32,7 +32,7 @@ enum class stream_priority : uint8_t {
 CAF_CORE_EXPORT std::string to_string(stream_priority x);
 
 /// @relates stream_priority
-CAF_CORE_EXPORT bool from_string(string_view, stream_priority&);
+CAF_CORE_EXPORT bool from_string(std::string_view, stream_priority&);
 
 /// @relates stream_priority
 CAF_CORE_EXPORT bool from_integer(std::underlying_type_t<stream_priority>,

@@ -496,7 +496,7 @@ auto scheduled_actor::inbound_stream_metrics(type_id_t type)
       i != inbound_stream_metrics_.end())
     return i->second;
   auto actor_name_cstr = name();
-  auto actor_name = string_view{actor_name_cstr, strlen(actor_name_cstr)};
+  auto actor_name = std::string_view{actor_name_cstr, strlen(actor_name_cstr)};
   auto tname = query_type_name(type);
   auto fs = system().actor_metric_families().stream;
   inbound_stream_metrics_t result{
@@ -515,7 +515,7 @@ auto scheduled_actor::outbound_stream_metrics(type_id_t type)
       i != outbound_stream_metrics_.end())
     return i->second;
   auto actor_name_cstr = name();
-  auto actor_name = string_view{actor_name_cstr, strlen(actor_name_cstr)};
+  auto actor_name = std::string_view{actor_name_cstr, strlen(actor_name_cstr)};
   auto tname = query_type_name(type);
   auto fs = system().actor_metric_families().stream;
   outbound_stream_metrics_t result{

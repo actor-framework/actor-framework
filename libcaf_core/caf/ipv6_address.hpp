@@ -119,6 +119,6 @@ private:
   };
 };
 
-CAF_CORE_EXPORT error parse(string_view str, ipv6_address& dest);
+CAF_CORE_EXPORT error parse(std::string_view str, ipv6_address& dest);
 
 } // namespace caf

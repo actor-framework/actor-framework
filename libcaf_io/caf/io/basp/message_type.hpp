@@ -64,7 +64,7 @@ enum class message_type : uint8_t {
 
 CAF_IO_EXPORT std::string to_string(message_type);
 
-CAF_IO_EXPORT bool from_string(string_view, message_type&);
+CAF_IO_EXPORT bool from_string(std::string_view, message_type&);
 
 CAF_IO_EXPORT bool from_integer(std::underlying_type_t<message_type>,
                                 message_type&);

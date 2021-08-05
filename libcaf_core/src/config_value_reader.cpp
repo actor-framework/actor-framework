@@ -151,7 +151,7 @@ bool config_value_reader::fetch_next_object_type(type_id_t& type) {
   }
 }
 
-bool config_value_reader::begin_object(type_id_t type, string_view) {
+bool config_value_reader::begin_object(type_id_t type, std::string_view) {
   if (st_.empty()) {
     emplace_error(sec::runtime_error,
                   "tried to read multiple objects from the root object");
@@ -241,7 +241,7 @@ bool config_value_reader::end_object() {
   return true;
 }
 
-bool config_value_reader::begin_field(string_view name) {
+bool config_value_reader::begin_field(std::string_view name) {
   SCOPE(const settings*);
   if (auto i = top->find(name); i != top->end()) {
     st_.push(std::addressof(i->second));
@@ -252,7 +252,7 @@ bool config_value_reader::begin_field(string_view name) {
   }
 }
 
-bool config_value_reader::begin_field(string_view name, bool& is_present) {
+bool config_value_reader::begin_field(std::string_view name, bool& is_present) {
   SCOPE(const settings*);
   if (auto i = top->find(name); i != top->end()) {
     is_present = true;
@@ -263,7 +263,7 @@ bool config_value_reader::begin_field(string_view name, bool& is_present) {
   return true;
 }
 
-bool config_value_reader::begin_field(string_view name,
+bool config_value_reader::begin_field(std::string_view name,
                                       span<const type_id_t> types,
                                       size_t& index) {
   SCOPE(const settings*);
@@ -289,7 +289,7 @@ bool config_value_reader::begin_field(string_view name,
   return begin_field(name);
 }
 
-bool config_value_reader::begin_field(string_view name, bool& is_present,
+bool config_value_reader::begin_field(std::string_view name, bool& is_present,
                                       span<const type_id_t> types,
                                       size_t& index) {
   SCOPE(const settings*);

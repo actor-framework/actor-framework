@@ -240,7 +240,7 @@ void instance::write_server_handshake(execution_unit* ctx, byte_buffer& out_buf,
                                        "caf.middleman.app-identifiers"))
       app_ids = std::move(*ids);
     else
-      app_ids.emplace_back(to_string(defaults::middleman::app_identifier));
+      app_ids.emplace_back(std::string{defaults::middleman::app_identifier});
     auto aid = invalid_actor_id;
     auto iface = std::set<std::string>{};
     if (pa != nullptr && pa->first != nullptr) {
@@ -339,7 +339,8 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
                                         "caf.middleman.app-identifiers"))
         whitelist = std::move(*ls);
       else
-        whitelist.emplace_back(to_string(defaults::middleman::app_identifier));
+        whitelist.emplace_back(
+          std::string{defaults::middleman::app_identifier});
       auto i = std::find_first_of(app_ids.begin(), app_ids.end(),
                                   whitelist.begin(), whitelist.end());
       if (i == app_ids.end()) {

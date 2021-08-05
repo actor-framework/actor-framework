@@ -52,7 +52,7 @@ config_value_writer::~config_value_writer() {
 
 // -- interface functions ------------------------------------------------------
 
-bool config_value_writer::begin_object(type_id_t type, string_view) {
+bool config_value_writer::begin_object(type_id_t type, std::string_view) {
   CHECK_NOT_EMPTY();
   auto f = detail::make_overload(
     [this](config_value* x) {
@@ -104,22 +104,22 @@ bool config_value_writer::end_object() {
   return true;
 }
 
-bool config_value_writer::begin_field(string_view name) {
+bool config_value_writer::begin_field(std::string_view name) {
   SCOPE(settings*);
-  st_.push(present_field{top, name, string_view{}});
+  st_.push(present_field{top, name, std::string_view{}});
   return true;
 }
 
-bool config_value_writer::begin_field(string_view name, bool is_present) {
+bool config_value_writer::begin_field(std::string_view name, bool is_present) {
   SCOPE(settings*);
   if (is_present)
-    st_.push(present_field{top, name, string_view{}});
+    st_.push(present_field{top, name, std::string_view{}});
   else
     st_.push(absent_field{});
   return true;
 }
 
-bool config_value_writer::begin_field(string_view name,
+bool config_value_writer::begin_field(std::string_view name,
                                       span<const type_id_t> types,
                                       size_t index) {
   SCOPE(settings*);
@@ -139,7 +139,7 @@ bool config_value_writer::begin_field(string_view name,
   return true;
 }
 
-bool config_value_writer::begin_field(string_view name, bool is_present,
+bool config_value_writer::begin_field(std::string_view name, bool is_present,
                                       span<const type_id_t> types,
                                       size_t index) {
   if (is_present)
@@ -370,7 +370,7 @@ bool config_value_writer::value(long double x) {
   return push(config_value{std::to_string(x)});
 }
 
-bool config_value_writer::value(string_view x) {
+bool config_value_writer::value(std::string_view x) {
   return push(config_value{to_string(x)});
 }
 

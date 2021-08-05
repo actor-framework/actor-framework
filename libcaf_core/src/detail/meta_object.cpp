@@ -96,8 +96,8 @@ void set_global_meta_objects(type_id_t first_id, span<const meta_object> xs) {
         // nop: set_global_meta_objects implements idempotency.
       } else {
         // Get null-terminated strings.
-        auto name1 = to_string(out->type_name);
-        auto name2 = to_string(x.type_name);
+        auto name1 = std::string{out->type_name};
+        auto name2 = std::string{x.type_name};
         CAF_CRITICAL_FMT("type ID %d already assigned to %s "
                          "(tried to override with %s)",
                          static_cast<int>(std::distance(meta_objects, out)),

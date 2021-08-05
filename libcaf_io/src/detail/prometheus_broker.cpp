@@ -4,9 +4,10 @@
 
 #include "caf/detail/prometheus_broker.hpp"
 
+#include <string_view>
+
 #include "caf/span.hpp"
 #include "caf/string_algorithms.hpp"
-#include "caf/string_view.hpp"
 #include "caf/telemetry/dbl_gauge.hpp"
 #include "caf/telemetry/int_gauge.hpp"
 
@@ -18,18 +19,19 @@ namespace {
 constexpr size_t max_request_size = 512 * 1024;
 
 // HTTP response for requests that exceed the size limit.
-constexpr string_view request_too_large
+constexpr std::string_view request_too_large
   = "HTTP/1.1 413 Request Entity Too Large\r\n"
     "Connection: Closed\r\n\r\n";
 
 // HTTP response for requests that aren't "GET /metrics HTTP/1.1".
-constexpr string_view request_not_supported = "HTTP/1.1 501 Not Implemented\r\n"
-                                              "Connection: Closed\r\n\r\n";
+constexpr std::string_view request_not_supported
+  = "HTTP/1.1 501 Not Implemented\r\n"
+    "Connection: Closed\r\n\r\n";
 
 // HTTP header when sending a payload.
-constexpr string_view request_ok = "HTTP/1.1 200 OK\r\n"
-                                   "Content-Type: text/plain\r\n"
-                                   "Connection: Closed\r\n\r\n";
+constexpr std::string_view request_ok = "HTTP/1.1 200 OK\r\n"
+                                        "Content-Type: text/plain\r\n"
+                                        "Connection: Closed\r\n\r\n";
 
 } // namespace
 
@@ -68,8 +70,8 @@ behavior prometheus_broker::make_behavior() {
         return;
       }
       req.insert(req.end(), msg.buf.begin(), msg.buf.end());
-      auto req_str = string_view{reinterpret_cast<char*>(req.data()),
-                                 req.size()};
+      auto req_str = std::string_view{reinterpret_cast<char*>(req.data()),
+                                      req.size()};
       // Stop here if the header isn't complete yet.
       if (!ends_with(req_str, "\r\n\r\n"))
         return;

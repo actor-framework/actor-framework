@@ -5,12 +5,12 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/hash/fnv.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf::telemetry {
 
@@ -30,22 +30,21 @@ public:
   label& operator=(const label&) = default;
 
   /// @pre `name` matches the regex `[a-zA-Z_:][a-zA-Z0-9_:]*`
-  label(string_view name, string_view value);
+  label(std::string_view name, std::string_view value);
 
   explicit label(const label_view& view);
 
   // -- properties -------------------------------------------------------------
 
-  string_view name() const noexcept {
-    return string_view{str_.data(), name_length_};
+  std::string_view name() const noexcept {
+    return {str_.data(), name_length_};
   }
 
-  string_view value() const noexcept {
-    return string_view{str_.data() + name_length_ + 1,
-                       str_.size() - name_length_ - 1};
+  std::string_view value() const noexcept {
+    return {str_.data() + name_length_ + 1, str_.size() - name_length_ - 1};
   }
 
-  void value(string_view new_value);
+  void value(std::string_view new_value);
 
   /// Returns the label in `name=value` notation.
   const std::string& str() const noexcept {

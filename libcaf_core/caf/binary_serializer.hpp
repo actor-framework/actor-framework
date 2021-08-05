@@ -83,7 +83,7 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
-  constexpr bool begin_object(type_id_t, string_view) noexcept {
+  constexpr bool begin_object(type_id_t, std::string_view) noexcept {
     return true;
   }
 
@@ -91,16 +91,16 @@ public:
     return true;
   }
 
-  constexpr bool begin_field(string_view) noexcept {
+  constexpr bool begin_field(std::string_view) noexcept {
     return true;
   }
 
-  bool begin_field(string_view, bool is_present);
+  bool begin_field(std::string_view, bool is_present);
 
-  bool begin_field(string_view, span<const type_id_t> types, size_t index);
+  bool begin_field(std::string_view, span<const type_id_t> types, size_t index);
 
-  bool begin_field(string_view, bool is_present, span<const type_id_t> types,
-                   size_t index);
+  bool begin_field(std::string_view, bool is_present,
+                   span<const type_id_t> types, size_t index);
 
   constexpr bool end_field() {
     return true;
@@ -167,7 +167,7 @@ public:
 
   bool value(long double x);
 
-  bool value(string_view x);
+  bool value(std::string_view x);
 
   bool value(const std::u16string& x);
 

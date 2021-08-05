@@ -10,7 +10,7 @@ namespace caf {
 
 // note: to_string is implemented in config_value.cpp
 
-const config_value* get_if(const settings* xs, string_view name) {
+const config_value* get_if(const settings* xs, std::string_view name) {
   // Access the key directly unless the user specified a dot-separated path.
   auto pos = name.find('.');
   if (pos == std::string::npos) {
@@ -29,7 +29,7 @@ const config_value* get_if(const settings* xs, string_view name) {
                 name.substr(pos + 1));
 }
 
-expected<std::string> get_or(const settings& xs, string_view name,
+expected<std::string> get_or(const settings& xs, std::string_view name,
                              const char* fallback) {
   if (auto ptr = get_if(&xs, name))
     return get_as<std::string>(*ptr);
@@ -37,14 +37,15 @@ expected<std::string> get_or(const settings& xs, string_view name,
     return {std::string{fallback}};
 }
 
-config_value& put_impl(settings& dict, const std::vector<string_view>& path,
+config_value& put_impl(settings& dict,
+                       const std::vector<std::string_view>& path,
                        config_value& value) {
   // Sanity check.
   CAF_ASSERT(!path.empty());
   // TODO: We implicitly swallow the `global.` suffix as a hotfix, but we
   // actually should drop `global.` on the upper layers.
   if (path.front() == "global") {
-    std::vector<string_view> new_path{path.begin() + 1, path.end()};
+    std::vector<std::string_view> new_path{path.begin() + 1, path.end()};
     return put_impl(dict, new_path, value);
   }
   // Navigate path.
@@ -67,8 +68,9 @@ config_value& put_impl(settings& dict, const std::vector<string_view>& path,
   return iter->second;
 }
 
-config_value& put_impl(settings& dict, string_view key, config_value& value) {
-  std::vector<string_view> path;
+config_value& put_impl(settings& dict, std::string_view key,
+                       config_value& value) {
+  std::vector<std::string_view> path;
   split(path, key, ".");
   return put_impl(dict, path, value);
 }

@@ -7,6 +7,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -15,7 +16,6 @@
 #include "caf/fwd.hpp"
 #include "caf/make_config_option.hpp"
 #include "caf/pec.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf {
 
@@ -50,21 +50,21 @@ public:
   ///             `<prefix>#<category>.<long-name>`. Users can omit `<prefix>`
   ///             for options that have an empty prefix and `<category>`
   ///             if the category is "global".
-  option_pointer cli_long_name_lookup(string_view name) const;
+  option_pointer cli_long_name_lookup(std::string_view name) const;
 
   /// Returns the first `config_option` that matches the CLI short option name.
   option_pointer cli_short_name_lookup(char short_name) const;
 
   /// Returns the first `config_option` that matches category and long name.
-  option_pointer
-  qualified_name_lookup(string_view category, string_view long_name) const;
+  option_pointer qualified_name_lookup(std::string_view category,
+                                       std::string_view long_name) const;
 
   /// Returns the first `config_option` that matches the qualified name.
   /// @param name Config option name formatted as `<category>.<long-name>`.
-  option_pointer qualified_name_lookup(string_view name) const;
+  option_pointer qualified_name_lookup(std::string_view name) const;
 
   /// Returns whether a @ref config_option for the given category exists.
-  bool has_category(string_view category) const noexcept;
+  bool has_category(std::string_view category) const noexcept;
 
   /// Returns the number of stored config options.
   size_t size() const noexcept {
@@ -98,54 +98,59 @@ public:
 
   /// Adds a config option to the set.
   template <class T>
-  config_option_set&
-  add(string_view category, string_view name, string_view description) & {
+  config_option_set& add(std::string_view category, std::string_view name,
+                         std::string_view description) & {
     return add(make_config_option<T>(category, name, description));
   }
 
   /// Adds a config option to the set.
   template <class T>
-  config_option_set& add(string_view name, string_view description) & {
+  config_option_set&
+  add(std::string_view name, std::string_view description) & {
     return add(make_config_option<T>("global", name, description));
   }
 
   /// Adds a config option to the set.
   template <class T>
-  config_option_set&&
-  add(string_view category, string_view name, string_view description) && {
+  config_option_set&& add(std::string_view category, std::string_view name,
+                          std::string_view description) && {
     return std::move(add<T>(category, name, description));
   }
 
   /// Adds a config option to the set.
   template <class T>
-  config_option_set&& add(string_view name, string_view description) && {
+  config_option_set&&
+  add(std::string_view name, std::string_view description) && {
     return std::move(add<T>("global", name, description));
   }
 
   /// Adds a config option to the set that synchronizes its value with `ref`.
   template <class T>
-  config_option_set& add(T& ref, string_view category, string_view name,
-                         string_view description) & {
+  config_option_set& add(T& ref, std::string_view category,
+                         std::string_view name,
+                         std::string_view description) & {
     return add(make_config_option<T>(ref, category, name, description));
   }
 
   /// Adds a config option to the set that synchronizes its value with `ref`.
   template <class T>
-  config_option_set& add(T& ref, string_view name, string_view description) & {
+  config_option_set&
+  add(T& ref, std::string_view name, std::string_view description) & {
     return add(ref, "global", name, description);
   }
 
   /// Adds a config option to the set that synchronizes its value with `ref`.
   template <class T>
-  config_option_set&& add(T& ref, string_view category, string_view name,
-                          string_view description) && {
+  config_option_set&& add(T& ref, std::string_view category,
+                          std::string_view name,
+                          std::string_view description) && {
     return std::move(add(ref, category, name, description));
   }
 
   /// Adds a config option to the set that synchronizes its value with `ref`.
   template <class T>
   config_option_set&&
-  add(T& ref, string_view name, string_view description) && {
+  add(T& ref, std::string_view name, std::string_view description) && {
     return std::move(add(ref, "global", name, description));
   }
 
@@ -163,12 +168,12 @@ public:
   // -- parsing ----------------------------------------------------------------
 
   /// Parses a given range as CLI arguments into `config`.
-  parse_result
-  parse(settings& config, argument_iterator begin, argument_iterator end) const;
+  parse_result parse(settings& config, argument_iterator begin,
+                     argument_iterator end) const;
 
   /// Parses a given range as CLI arguments into `config`.
-  parse_result
-  parse(settings& config, const std::vector<std::string>& args) const;
+  parse_result parse(settings& config,
+                     const std::vector<std::string>& args) const;
 
 private:
   // -- member variables -------------------------------------------------------

@@ -26,8 +26,8 @@ ipv6_address addr(std::initializer_list<uint16_t> prefix,
 } // namespace
 
 CAF_TEST(constructing) {
-  ipv6_address::array_type localhost_bytes{{0, 0, 0, 0, 0, 0, 0, 0,
-                                            0, 0, 0, 0, 0, 0, 0, 1}};
+  ipv6_address::array_type localhost_bytes{
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}};
   ipv6_address localhost{localhost_bytes};
   CAF_CHECK_EQUAL(localhost.data(), localhost_bytes);
   CAF_CHECK_EQUAL(localhost, addr({}, {0x01}));
@@ -41,7 +41,7 @@ CAF_TEST(comparison) {
 }
 
 CAF_TEST(from string) {
-  auto from_string = [](string_view str) {
+  auto from_string = [](std::string_view str) {
     ipv6_address result;
     auto err = parse(str, result);
     if (err)
@@ -61,10 +61,13 @@ CAF_TEST(from string) {
   CAF_CHECK_EQUAL(from_string("0.1.0.1"), addr({}, {0xFFFF, 0x01, 0x01}));
   CAF_CHECK_EQUAL(from_string("::ffff:127.0.0.1"),
                   addr({}, {0xFFFF, 0x7F00, 0x0001}));
-  CAF_CHECK_EQUAL(from_string("1:2:3:4:5:6:7:8"), addr({1,2,3,4,5,6,7,8}));
-  CAF_CHECK_EQUAL(from_string("1:2:3:4::5:6:7:8"), addr({1,2,3,4,5,6,7,8}));
-  CAF_CHECK_EQUAL(from_string("1:2:3:4:5:6:0.7.0.8"), addr({1,2,3,4,5,6,7,8}));
-  auto invalid = [](string_view str) {
+  CAF_CHECK_EQUAL(from_string("1:2:3:4:5:6:7:8"),
+                  addr({1, 2, 3, 4, 5, 6, 7, 8}));
+  CAF_CHECK_EQUAL(from_string("1:2:3:4::5:6:7:8"),
+                  addr({1, 2, 3, 4, 5, 6, 7, 8}));
+  CAF_CHECK_EQUAL(from_string("1:2:3:4:5:6:0.7.0.8"),
+                  addr({1, 2, 3, 4, 5, 6, 7, 8}));
+  auto invalid = [](std::string_view str) {
     ipv6_address result;
     auto err = parse(str, result);
     return err != none;
@@ -80,4 +83,3 @@ CAF_TEST(to string) {
   CAF_CHECK_EQUAL(to_string(addr({0x01})), "1::");
   CAF_CHECK_EQUAL(to_string(addr({}, {0xFFFF, 0x01, 0x01})), "0.1.0.1");
 }
-

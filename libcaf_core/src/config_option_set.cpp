@@ -25,7 +25,7 @@ string_builder& operator<<(string_builder& builder, char ch) {
   return builder;
 }
 
-string_builder& operator<<(string_builder& builder, caf::string_view str) {
+string_builder& operator<<(string_builder& builder, std::string_view str) {
   builder.result.append(str.data(), str.size());
   return builder;
 }
@@ -70,15 +70,15 @@ std::string config_option_set::help_text(bool global_only) const {
   };
   // Sort argument + description by category.
   using pair = std::pair<std::string, option_pointer>;
-  std::set<string_view> categories;
-  std::multimap<string_view, pair> args;
+  std::set<std::string_view> categories;
+  std::multimap<std::string_view, pair> args;
   size_t max_arg_size = 0;
   for (auto& opt : opts_) {
     // We treat all options with flat name as-if the category was 'global'.
     if (!global_only || opt.has_flat_cli_name()) {
       auto arg = build_argument(opt);
       max_arg_size = std::max(max_arg_size, arg.size());
-      string_view category = "global";
+      std::string_view category = "global";
       if (!opt.has_flat_cli_name())
         category = opt.category();
       categories.emplace(category);
@@ -103,9 +103,9 @@ std::string config_option_set::help_text(bool global_only) const {
 
 namespace {
 
-settings& select_entry(settings& config, string_view key){
+settings& select_entry(settings& config, std::string_view key) {
   auto sep = key.find('.');
-  if (sep == string_view::npos)
+  if (sep == std::string_view::npos)
     return config[key].as_dictionary();
   auto prefix = key.substr(0, sep);
   auto suffix = key.substr(sep + 1);
@@ -150,7 +150,8 @@ auto config_option_set::parse(settings& config, argument_iterator first,
     } else {
       if (arg_begin != arg_end) {
         auto arg_size = static_cast<size_t>(std::distance(arg_begin, arg_end));
-        config_value val{string_view{std::addressof(*arg_begin), arg_size}};
+        config_value val{
+          std::string_view{std::addressof(*arg_begin), arg_size}};
         if (auto err = opt.sync(val); !err) {
           entry[opt_name] = std::move(val);
           return pec::success;
@@ -164,10 +165,10 @@ auto config_option_set::parse(settings& config, argument_iterator first,
   };
   // We loop over the first N-1 values, because we always consider two
   // arguments at once.
-  for (auto i =  first; i != last;) {
+  for (auto i = first; i != last;) {
     if (i->size() < 2)
       return {pec::not_an_option, i};
-    if (*i== "--")
+    if (*i == "--")
       return {pec::success, std::next(first)};
     if (i->compare(0, 2, "--") == 0) {
       // Long options use the syntax "--<name>=<value>" and consume only a
@@ -179,11 +180,12 @@ auto config_option_set::parse(settings& config, argument_iterator first,
       auto opt = cli_long_name_lookup(name);
       if (opt == nullptr)
         return {pec::not_an_option, i};
-      auto code = consume(*opt,
-                          assign_op == npos
-                          ? i->end()
-                          : i->begin() + static_cast<ptrdiff_t>(assign_op + 1),
-                          i->end());
+      auto code
+        = consume(*opt,
+                  assign_op == npos
+                    ? i->end()
+                    : i->begin() + static_cast<ptrdiff_t>(assign_op + 1),
+                  i->end());
       if (code != pec::success)
         return {code, i};
       ++i;
@@ -232,10 +234,10 @@ config_option_set::parse(settings& config,
 }
 
 config_option_set::option_pointer
-config_option_set::cli_long_name_lookup(string_view name) const {
+config_option_set::cli_long_name_lookup(std::string_view name) const {
   // Extract category and long name.
-  string_view category;
-  string_view long_name;
+  std::string_view category;
+  std::string_view long_name;
   auto sep = name.find_last_of('.');
   if (sep == string::npos) {
     long_name = name;
@@ -261,22 +263,22 @@ config_option_set::cli_short_name_lookup(char short_name) const {
 }
 
 config_option_set::option_pointer
-config_option_set::qualified_name_lookup(string_view category,
-                                         string_view long_name) const {
+config_option_set::qualified_name_lookup(std::string_view category,
+                                         std::string_view long_name) const {
   return detail::ptr_find_if(opts_, [&](const config_option& opt) {
     return opt.category() == category && opt.long_name() == long_name;
   });
 }
 
 config_option_set::option_pointer
-config_option_set::qualified_name_lookup(string_view name) const {
+config_option_set::qualified_name_lookup(std::string_view name) const {
   auto sep = name.rfind('.');
   if (sep == string::npos)
     return nullptr;
   return qualified_name_lookup(name.substr(0, sep), name.substr(sep + 1));
 }
 
-bool config_option_set::has_category(string_view category) const noexcept {
+bool config_option_set::has_category(std::string_view category) const noexcept {
   auto predicate = [category](const config_option& opt) {
     return opt.category() == category;
   };

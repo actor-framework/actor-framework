@@ -157,8 +157,8 @@ CAF_TEST(rendering) {
   timestamp t0;
   time_t t0_t = 0;
   char t0_buf[50];
-  CAF_REQUIRE(strftime(t0_buf, sizeof(t0_buf),
-                       "%Y-%m-%dT%H:%M:%S.000", localtime(&t0_t)));
+  CAF_REQUIRE(strftime(t0_buf, sizeof(t0_buf), "%Y-%m-%dT%H:%M:%S.000",
+                       localtime(&t0_t)));
   CAF_CHECK_EQUAL(render(logger::render_date, t0), t0_buf);
   // Rendering of events.
   logger::event e{
@@ -173,9 +173,9 @@ CAF_TEST(rendering) {
     0,
     t0,
   };
-  CAF_CHECK_EQUAL(render(logger::render_fun_name, e), string_view{"bar"});
+  CAF_CHECK_EQUAL(render(logger::render_fun_name, e), std::string_view{"bar"});
   CAF_CHECK_EQUAL(render(logger::render_fun_prefix, e),
-                  string_view{"ns.foo"});
+                  std::string_view{"ns.foo"});
   // Exclude %r and %t from rendering test because they are nondeterministic.
   actor_system sys{cfg};
   auto lf = logger::parse_format("%c %p %a %C %M %F:%L %m");

@@ -32,7 +32,7 @@ CAF_TEST(to string) {
 }
 
 CAF_TEST(from string - valid inputs) {
-  auto from_string = [](string_view str) -> expected<ipv4_address> {
+  auto from_string = [](std::string_view str) -> expected<ipv4_address> {
     ipv4_address result;
     if (auto err = parse(str, result))
       return err;
@@ -43,7 +43,7 @@ CAF_TEST(from string - valid inputs) {
 }
 
 CAF_TEST(from string - invalid inputs) {
-  auto should_fail = [](string_view str) {
+  auto should_fail = [](std::string_view str) {
     ipv4_address result;
     auto err = parse(str, result);
     if (!err)
@@ -123,4 +123,3 @@ CAF_TEST(operators) {
   CAF_CHECK_EQUAL(addr(16, 0, 0, 8) | addr(255, 2, 4, 6), addr(255, 2, 4, 14));
   CAF_CHECK_EQUAL(addr(16, 0, 0, 8) ^ addr(255, 2, 4, 6), addr(239, 2, 4, 14));
 }
-

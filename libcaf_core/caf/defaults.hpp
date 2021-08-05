@@ -8,11 +8,11 @@
 #include <cstddef>
 #include <limits>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "caf/detail/build_config.hpp"
 #include "caf/detail/log_level.hpp"
-#include "caf/string_view.hpp"
 #include "caf/timestamp.hpp"
 
 // -- hard-coded default values for various CAF options ------------------------
@@ -29,7 +29,7 @@ constexpr auto max_batch_delay = timespan{1'000'000};
 /// The `token-based` controller associates each stream element with one token.
 /// Input buffer and batch sizes are then statically defined in terms of tokens.
 /// This strategy makes no dynamic adjustment or sampling.
-constexpr auto credit_policy = string_view{"size-based"};
+constexpr auto credit_policy = std::string_view{"size-based"};
 
 [[deprecated("this parameter no longer has any effect")]] //
 constexpr auto credit_round_interval
@@ -75,8 +75,8 @@ constexpr auto buffer_size = int32_t{4096}; // // 32 KB for elements of size 8.
 
 namespace caf::defaults::scheduler {
 
-constexpr auto policy = string_view{"stealing"};
-constexpr auto profiling_output_file = string_view{""};
+constexpr auto policy = std::string_view{"stealing"};
+constexpr auto profiling_output_file = std::string_view{""};
 constexpr auto max_throughput = std::numeric_limits<size_t>::max();
 constexpr auto profiling_resolution = timespan(100'000'000);
 
@@ -96,22 +96,23 @@ constexpr auto relaxed_sleep_duration = timespan{10'000'000};
 
 namespace caf::defaults::logger::file {
 
-constexpr auto format = string_view{"%r %c %p %a %t %C %M %F:%L %m%n"};
-constexpr auto path = string_view{"actor_log_[PID]_[TIMESTAMP]_[NODE].log"};
+constexpr auto format = std::string_view{"%r %c %p %a %t %C %M %F:%L %m%n"};
+constexpr auto path
+  = std::string_view{"actor_log_[PID]_[TIMESTAMP]_[NODE].log"};
 
 } // namespace caf::defaults::logger::file
 
 namespace caf::defaults::logger::console {
 
 constexpr auto colored = true;
-constexpr auto format = string_view{"[%c:%p] %d %m"};
+constexpr auto format = std::string_view{"[%c:%p] %d %m"};
 
 } // namespace caf::defaults::logger::console
 
 namespace caf::defaults::middleman {
 
-constexpr auto app_identifier = string_view{"generic-caf-app"};
-constexpr auto network_backend = string_view{"default"};
+constexpr auto app_identifier = std::string_view{"generic-caf-app"};
+constexpr auto network_backend = std::string_view{"default"};
 constexpr auto max_consecutive_reads = size_t{50};
 constexpr auto heartbeat_interval = timespan{10'000'000'000};
 constexpr auto connection_timeout = timespan{30'000'000'000};

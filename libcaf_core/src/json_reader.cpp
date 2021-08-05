@@ -12,7 +12,7 @@ namespace {
 
 static constexpr const char class_name[] = "caf::json_reader";
 
-caf::string_view pretty_name(caf::json_reader::position pos) {
+std::string_view pretty_name(caf::json_reader::position pos) {
   switch (pos) {
     default:
       return "invalid input";
@@ -31,7 +31,7 @@ caf::string_view pretty_name(caf::json_reader::position pos) {
   }
 }
 
-std::string type_clash(caf::string_view want, caf::string_view got) {
+std::string type_clash(std::string_view want, std::string_view got) {
   std::string result = "type clash: expected ";
   result.insert(result.end(), want.begin(), want.end());
   result += ", got ";
@@ -39,7 +39,7 @@ std::string type_clash(caf::string_view want, caf::string_view got) {
   return result;
 }
 
-std::string type_clash(caf::string_view want, caf::json_reader::position got) {
+std::string type_clash(std::string_view want, caf::json_reader::position got) {
   return type_clash(want, pretty_name(got));
 }
 
@@ -48,38 +48,38 @@ std::string type_clash(caf::json_reader::position want,
   return type_clash(pretty_name(want), pretty_name(got));
 }
 
-std::string type_clash(caf::string_view want,
+std::string type_clash(std::string_view want,
                        const caf::detail::json::value& got) {
-  using namespace caf::literals;
+  using namespace std::literals;
   using caf::detail::json::value;
   switch (got.data.index()) {
     case value::integer_index:
-      return type_clash(want, "json::integer"_sv);
+      return type_clash(want, "json::integer"sv);
     case value::double_index:
-      return type_clash(want, "json::real"_sv);
+      return type_clash(want, "json::real"sv);
     case value::bool_index:
-      return type_clash(want, "json::boolean"_sv);
+      return type_clash(want, "json::boolean"sv);
     case value::string_index:
-      return type_clash(want, "json::string"_sv);
+      return type_clash(want, "json::string"sv);
     case value::array_index:
-      return type_clash(want, "json::array"_sv);
+      return type_clash(want, "json::array"sv);
     case value::object_index:
-      return type_clash(want, "json::object"_sv);
+      return type_clash(want, "json::object"sv);
     default:
-      return type_clash(want, "json::null"_sv);
+      return type_clash(want, "json::null"sv);
   }
 }
 
 const caf::detail::json::member*
-find_member(const caf::detail::json::object* obj, caf::string_view key) {
+find_member(const caf::detail::json::object* obj, std::string_view key) {
   for (const auto& member : *obj)
     if (member.key == key)
       return &member;
   return nullptr;
 }
 
-caf::string_view field_type(const caf::detail::json::object* obj,
-                            caf::string_view name, caf::string_view suffix) {
+std::string_view field_type(const caf::detail::json::object* obj,
+                            std::string_view name, std::string_view suffix) {
   namespace json = caf::detail::json;
   for (const auto& member : *obj) {
     if (member.val && member.val->data.index() == json::value::string_index
@@ -89,7 +89,7 @@ caf::string_view field_type(const caf::detail::json::object* obj,
       if (caf::starts_with(key, name)) {
         key.remove_prefix(name.size());
         if (key == suffix)
-          return std::get<caf::string_view>(member.val->data);
+          return std::get<std::string_view>(member.val->data);
       }
     }
   }
@@ -139,7 +139,7 @@ json_reader::~json_reader() {
 
 // -- modifiers --------------------------------------------------------------
 
-bool json_reader::load(string_view json_text) {
+bool json_reader::load(std::string_view json_text) {
   reset();
   string_parser_state ps{json_text.begin(), json_text.end()};
   root_ = detail::json::parse(ps, &buf_);
@@ -175,7 +175,7 @@ void json_reader::reset() {
 // -- interface functions ------------------------------------------------------
 
 bool json_reader::fetch_next_object_type(type_id_t& type) {
-  string_view type_name;
+  std::string_view type_name;
   if (fetch_next_object_name(type_name)) {
     if (auto id = query_type_id(type_name); id != invalid_type_id) {
       type = id;
@@ -191,14 +191,14 @@ bool json_reader::fetch_next_object_type(type_id_t& type) {
   }
 }
 
-bool json_reader::fetch_next_object_name(string_view& type_name) {
+bool json_reader::fetch_next_object_name(std::string_view& type_name) {
   FN_DECL;
   return consume<false>(fn, [this, &type_name](const detail::json::value& val) {
     if (val.data.index() == detail::json::value::object_index) {
       auto& obj = get<detail::json::object>(val.data);
       if (auto mem_ptr = find_member(&obj, "@type")) {
         if (mem_ptr->val->data.index() == detail::json::value::string_index) {
-          type_name = std::get<string_view>(mem_ptr->val->data);
+          type_name = std::get<std::string_view>(mem_ptr->val->data);
           return true;
         } else {
           emplace_error(sec::runtime_error, class_name, fn,
@@ -218,7 +218,7 @@ bool json_reader::fetch_next_object_name(string_view& type_name) {
   });
 }
 
-bool json_reader::begin_object(type_id_t, string_view) {
+bool json_reader::begin_object(type_id_t, std::string_view) {
   FN_DECL;
   return consume<false>(fn, [this](const detail::json::value& val) {
     if (val.data.index() == detail::json::value::object_index) {
@@ -252,7 +252,7 @@ bool json_reader::end_object() {
   }
 }
 
-bool json_reader::begin_field(string_view name) {
+bool json_reader::begin_field(std::string_view name) {
   SCOPE(position::object);
   if (auto member = find_member(top<position::object>(), name)) {
     push(member->val);
@@ -264,7 +264,7 @@ bool json_reader::begin_field(string_view name) {
   }
 }
 
-bool json_reader::begin_field(string_view name, bool& is_present) {
+bool json_reader::begin_field(std::string_view name, bool& is_present) {
   SCOPE(position::object);
   if (auto member = find_member(top<position::object>(), name);
       member != nullptr
@@ -277,8 +277,8 @@ bool json_reader::begin_field(string_view name, bool& is_present) {
   return true;
 }
 
-bool json_reader::begin_field(string_view name, span<const type_id_t> types,
-                              size_t& index) {
+bool json_reader::begin_field(std::string_view name,
+                              span<const type_id_t> types, size_t& index) {
   bool is_present = false;
   if (begin_field(name, is_present, types, index)) {
     if (is_present) {
@@ -293,7 +293,7 @@ bool json_reader::begin_field(string_view name, span<const type_id_t> types,
   }
 }
 
-bool json_reader::begin_field(string_view name, bool& is_present,
+bool json_reader::begin_field(std::string_view name, bool& is_present,
                               span<const type_id_t> types, size_t& index) {
   SCOPE(position::object);
   if (auto member = find_member(top<position::object>(), name);
@@ -579,7 +579,7 @@ bool json_reader::value(std::string& x) {
   FN_DECL;
   return consume<true>(fn, [this, &x](const detail::json::value& val) {
     if (val.data.index() == detail::json::value::string_index) {
-      detail::print_unescaped(x, std::get<string_view>(val.data));
+      detail::print_unescaped(x, std::get<std::string_view>(val.data));
       return true;
     } else {
       emplace_error(sec::runtime_error, class_name, fn,

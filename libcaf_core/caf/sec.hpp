@@ -170,7 +170,7 @@ enum class sec : uint8_t {
 CAF_CORE_EXPORT std::string to_string(sec);
 
 /// @relates sec
-CAF_CORE_EXPORT bool from_string(string_view, sec&);
+CAF_CORE_EXPORT bool from_string(std::string_view, sec&);
 
 /// @relates sec
 CAF_CORE_EXPORT bool from_integer(std::underlying_type_t<sec>, sec&);

@@ -4,14 +4,16 @@
 
 #include "caf/detail/append_percent_encoded.hpp"
 
+#include <string_view>
+
 #include "caf/byte.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/append_hex.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf::detail {
 
-void append_percent_encoded(std::string& str, string_view x, bool is_path) {
+void append_percent_encoded(std::string& str, std::string_view x,
+                            bool is_path) {
   for (auto ch : x)
     switch (ch) {
       case ':':

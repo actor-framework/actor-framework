@@ -89,7 +89,8 @@ void binary_deserializer::reset(span<const std::byte> bytes) noexcept {
   end_ = current_ + bytes.size();
 }
 
-bool binary_deserializer::begin_field(string_view, bool& is_present) noexcept {
+bool binary_deserializer::begin_field(std::string_view,
+                                      bool& is_present) noexcept {
   auto tmp = uint8_t{0};
   if (!value(tmp))
     return false;
@@ -104,7 +105,8 @@ constexpr size_t max_value = static_cast<size_t>(std::numeric_limits<T>::max());
 
 } // namespace
 
-bool binary_deserializer::begin_field(string_view, span<const type_id_t> types,
+bool binary_deserializer::begin_field(std::string_view,
+                                      span<const type_id_t> types,
                                       size_t& index) noexcept {
   auto f = [&](auto tmp) {
     if (!value(tmp))
@@ -128,7 +130,7 @@ bool binary_deserializer::begin_field(string_view, span<const type_id_t> types,
   }
 }
 
-bool binary_deserializer::begin_field(string_view, bool& is_present,
+bool binary_deserializer::begin_field(std::string_view, bool& is_present,
                                       span<const type_id_t> types,
                                       size_t& index) noexcept {
   auto f = [&](auto tmp) {

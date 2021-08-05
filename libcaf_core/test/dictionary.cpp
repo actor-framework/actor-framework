@@ -82,7 +82,7 @@ CAF_TEST(insertion) {
 CAF_TEST(insertion with hint) {
   int_dict xs;
   auto xs_last = xs.end();
-  auto xs_insert = [&](string_view key, int val) {
+  auto xs_insert = [&](std::string_view key, int val) {
     xs_last = xs.insert(xs_last, key, val);
   };
   xs_insert("a", 1);
@@ -91,7 +91,7 @@ CAF_TEST(insertion with hint) {
   xs_insert("c", 4);
   int_dict ys;
   auto ys_last = ys.end();
-  auto ys_insert_or_assign = [&](string_view key, int val) {
+  auto ys_insert_or_assign = [&](std::string_view key, int val) {
     ys_last = ys.insert_or_assign(ys_last, key, val);
   };
   ys_insert_or_assign("a", 1);

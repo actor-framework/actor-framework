@@ -16,9 +16,11 @@ using namespace caf;
 
 namespace {
 
-struct authority_separator_t {} authority_separator;
+struct authority_separator_t {
+} authority_separator;
 
-struct path_separator_t {} path_separator;
+struct path_separator_t {
+} path_separator;
 
 struct uri_str_builder {
   std::string res;
@@ -60,7 +62,7 @@ struct uri_str_builder {
   }
 
   uri_str_builder& host(ip_address addr) {
-    return add(authority_separator, '[', to_string(addr),  ']');
+    return add(authority_separator, '[', to_string(addr), ']');
   }
 
   uri_str_builder& port(uint16_t value) {
@@ -133,42 +135,48 @@ struct fixture {
   }
 };
 
-struct me_t {} me;
+struct me_t {
+} me;
 
 template <class T>
 T& operator<<(T& builder, me_t) {
   return builder.userinfo("me");
 }
 
-struct node_t {} node;
+struct node_t {
+} node;
 
 template <class T>
 T& operator<<(T& builder, node_t) {
   return builder.host("node");
 }
 
-struct port80_t {} port80;
+struct port80_t {
+} port80;
 
 template <class T>
 T& operator<<(T& builder, port80_t) {
   return builder.port(80);
 }
 
-struct file_t {} file;
+struct file_t {
+} file;
 
 template <class T>
 T& operator<<(T& builder, file_t) {
   return builder.path("file");
 }
 
-struct frag_t {} frag;
+struct frag_t {
+} frag;
 
 template <class T>
 T& operator<<(T& builder, frag_t) {
   return builder.fragment("42");
 }
 
-struct kvp_t {} kvp;
+struct kvp_t {
+} kvp;
 
 template <class T>
 T& operator<<(T& builder, kvp_t) {
@@ -183,18 +191,18 @@ uri operator*(uri_builder& builder) {
   return result;
 }
 
-uri operator "" _u(const char* cstr, size_t cstr_len) {
+uri operator"" _u(const char* cstr, size_t cstr_len) {
   uri result;
-  string_view str{cstr, cstr_len};
+  std::string_view str{cstr, cstr_len};
   auto err = parse(str, result);
   if (err)
     CAF_FAIL("error while parsing " << str << ": " << to_string(err));
   return result;
 }
 
-bool operator "" _i(const char* cstr, size_t cstr_len) {
+bool operator"" _i(const char* cstr, size_t cstr_len) {
   uri result;
-  string_view str{cstr, cstr_len};
+  std::string_view str{cstr, cstr_len};
   CAF_CHECK(!uri::can_parse(str));
   auto err = parse(str, result);
   return err != none;

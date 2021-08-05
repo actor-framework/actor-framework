@@ -26,7 +26,7 @@ struct basics;
   namespace caf {                                                              \
   template <>                                                                  \
   struct type_name<type> {                                                     \
-    static constexpr string_view value = #type;                                \
+    static constexpr std::string_view value = #type;                           \
   };                                                                           \
   }
 

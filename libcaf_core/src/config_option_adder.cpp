@@ -12,28 +12,30 @@ CAF_PUSH_DEPRECATED_WARNING
 namespace caf {
 
 config_option_adder::config_option_adder(config_option_set& target,
-                                         string_view category)
-    : xs_(target),
-      category_(category) {
+                                         std::string_view category)
+  : xs_(target), category_(category) {
   // nop
 }
 
-config_option_adder& config_option_adder::add_neg(bool& ref, string_view name,
-                                                  string_view description) {
-  return add_impl(make_negated_config_option(ref, category_,
-                                             name, description));
+config_option_adder&
+config_option_adder::add_neg(bool& ref, std::string_view name,
+                             std::string_view description) {
+  return add_impl(
+    make_negated_config_option(ref, category_, name, description));
 }
 
-config_option_adder& config_option_adder::add_us(size_t& ref, string_view name,
-                                                 string_view description) {
-  return add_impl(make_us_resolution_config_option(ref, category_,
-                                                   name, description));
+config_option_adder& config_option_adder::add_us(size_t& ref,
+                                                 std::string_view name,
+                                                 std::string_view description) {
+  return add_impl(
+    make_us_resolution_config_option(ref, category_, name, description));
 }
 
-config_option_adder& config_option_adder::add_ms(size_t& ref, string_view name,
-                                                 string_view description) {
-  return add_impl(make_ms_resolution_config_option(ref, category_,
-                                                   name, description));
+config_option_adder& config_option_adder::add_ms(size_t& ref,
+                                                 std::string_view name,
+                                                 std::string_view description) {
+  return add_impl(
+    make_ms_resolution_config_option(ref, category_, name, description));
 }
 
 config_option_adder& config_option_adder::add_impl(config_option&& opt) {

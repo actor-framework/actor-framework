@@ -8,6 +8,8 @@
 
 #include "caf/test/dsl.hpp"
 
+#include <string_view>
+
 #include "caf/expected.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/ipv4_endpoint.hpp"
@@ -15,7 +17,6 @@
 #include "caf/ipv6_address.hpp"
 #include "caf/ipv6_endpoint.hpp"
 #include "caf/ipv6_subnet.hpp"
-#include "caf/string_view.hpp"
 #include "caf/uri.hpp"
 
 using namespace caf;
@@ -45,7 +46,7 @@ timespan operator"" _h(unsigned long long x) {
 }
 
 template <class T>
-expected<T> read(string_view str) {
+expected<T> read(std::string_view str) {
   T result;
   string_parser_state ps{str.begin(), str.end()};
   detail::parse(ps, result);

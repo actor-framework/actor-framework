@@ -130,12 +130,13 @@ struct inspector_access<cow_tuple<Ts...>> {
   }
 
   template <class Inspector>
-  static bool save_field(Inspector& f, string_view field_name, value_type& x) {
+  static bool
+  save_field(Inspector& f, std::string_view field_name, value_type& x) {
     return detail::save_field(f, field_name, detail::as_mutable_ref(x.data()));
   }
 
   template <class Inspector, class IsPresent, class Get>
-  static bool save_field(Inspector& f, string_view field_name,
+  static bool save_field(Inspector& f, std::string_view field_name,
                          IsPresent& is_present, Get& get) {
     if constexpr (std::is_lvalue_reference<decltype(get())>::value) {
       auto get_data = [&get]() -> decltype(auto) {
@@ -152,16 +153,17 @@ struct inspector_access<cow_tuple<Ts...>> {
   }
 
   template <class Inspector, class IsValid, class SyncValue>
-  static bool load_field(Inspector& f, string_view field_name, value_type& x,
-                         IsValid& is_valid, SyncValue& sync_value) {
+  static bool load_field(Inspector& f, std::string_view field_name,
+                         value_type& x, IsValid& is_valid,
+                         SyncValue& sync_value) {
     return detail::load_field(f, field_name, x.unshared(), is_valid,
                               sync_value);
   }
 
   template <class Inspector, class IsValid, class SyncValue, class SetFallback>
-  static bool load_field(Inspector& f, string_view field_name, value_type& x,
-                         IsValid& is_valid, SyncValue& sync_value,
-                         SetFallback& set_fallback) {
+  static bool load_field(Inspector& f, std::string_view field_name,
+                         value_type& x, IsValid& is_valid,
+                         SyncValue& sync_value, SetFallback& set_fallback) {
     return detail::load_field(f, field_name, x.unshared(), is_valid, sync_value,
                               set_fallback);
   }
