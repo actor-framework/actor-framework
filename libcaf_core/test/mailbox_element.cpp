@@ -24,44 +24,44 @@ using namespace caf;
 namespace {
 
 template <class... Ts>
-optional<tuple<Ts...>> fetch(const message& x) {
+std::optional<tuple<Ts...>> fetch(const message& x) {
   if (auto view = make_const_typed_message_view<Ts...>(x))
     return to_tuple(view);
-  return none;
+  return std::nullopt;
 }
 
 template <class... Ts>
-optional<tuple<Ts...>> fetch(const mailbox_element& x) {
+std::optional<tuple<Ts...>> fetch(const mailbox_element& x) {
   return fetch<Ts...>(x.content());
 }
 
 } // namespace
 
 CAF_TEST(empty_message) {
-  auto m1 = make_mailbox_element(nullptr, make_message_id(),
-                                 no_stages, make_message());
+  auto m1 = make_mailbox_element(nullptr, make_message_id(), no_stages,
+                                 make_message());
   CAF_CHECK(m1->mid.is_async());
   CAF_CHECK(m1->mid.category() == message_id::normal_message_category);
   CAF_CHECK(m1->content().empty());
 }
 
 CAF_TEST(non_empty_message) {
-  auto m1 = make_mailbox_element(nullptr, make_message_id(),
-                                 no_stages, make_message(1, 2, 3));
+  auto m1 = make_mailbox_element(nullptr, make_message_id(), no_stages,
+                                 make_message(1, 2, 3));
   CAF_CHECK(m1->mid.is_async());
   CAF_CHECK(m1->mid.category() == message_id::normal_message_category);
   CAF_CHECK(!m1->content().empty());
-  CAF_CHECK_EQUAL((fetch<int, int>(*m1)), none);
+  CAF_CHECK_EQUAL((fetch<int, int>(*m1)), std::nullopt);
   CAF_CHECK_EQUAL((fetch<int, int, int>(*m1)), make_tuple(1, 2, 3));
 }
 
 CAF_TEST(tuple) {
-  auto m1 = make_mailbox_element(nullptr, make_message_id(),
-                                 no_stages, 1, 2, 3);
+  auto m1 = make_mailbox_element(nullptr, make_message_id(), no_stages, 1, 2,
+                                 3);
   CAF_CHECK(m1->mid.is_async());
   CAF_CHECK(m1->mid.category() == message_id::normal_message_category);
   CAF_CHECK(!m1->content().empty());
-  CAF_CHECK_EQUAL((fetch<int, int>(*m1)), none);
+  CAF_CHECK_EQUAL((fetch<int, int>(*m1)), std::nullopt);
   CAF_CHECK_EQUAL((fetch<int, int, int>(*m1)), make_tuple(1, 2, 3));
 }
 
@@ -79,9 +79,9 @@ CAF_TEST(upstream_msg_static) {
 }
 
 CAF_TEST(upstream_msg_dynamic) {
-  auto m1 = make_mailbox_element(
-    nullptr, make_message_id(), no_stages,
-    make_message(make<upstream_msg::drop>({0, 0}, nullptr)));
+  auto m1 = make_mailbox_element(nullptr, make_message_id(), no_stages,
+                                 make_message(
+                                   make<upstream_msg::drop>({0, 0}, nullptr)));
   CAF_CHECK(m1->mid.category() == message_id::upstream_message_category);
 }
 

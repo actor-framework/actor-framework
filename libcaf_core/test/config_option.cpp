@@ -10,9 +10,9 @@
 
 #include <sstream>
 
-#include "caf/make_config_option.hpp"
 #include "caf/config_value.hpp"
 #include "caf/expected.hpp"
+#include "caf/make_config_option.hpp"
 
 using namespace caf;
 
@@ -173,25 +173,25 @@ constexpr string_view category = "category";
 constexpr string_view name = "name";
 constexpr string_view explanation = "explanation";
 
-template<class T>
+template <class T>
 constexpr int64_t overflow() {
   return static_cast<int64_t>(std::numeric_limits<T>::max()) + 1;
 }
 
-template<class T>
+template <class T>
 constexpr int64_t underflow() {
   return static_cast<int64_t>(std::numeric_limits<T>::min()) - 1;
 }
 
 template <class T>
-optional<T> read(string_view arg) {
+std::optional<T> read(string_view arg) {
   auto result = T{};
   auto co = make_config_option<T>(result, category, name, explanation);
   config_value val{arg};
   if (auto err = co.sync(val); !err)
     return {std::move(result)};
   else
-    return none;
+    return std::nullopt;
 }
 
 // Unsigned integers.
@@ -203,7 +203,7 @@ void check_integer_options(std::true_type) {
   T xmax = std::numeric_limits<T>::max();
   CAF_CHECK_EQUAL(read<T>(to_string(xzero)), xzero);
   CAF_CHECK_EQUAL(read<T>(to_string(xmax)), xmax);
-  CAF_CHECK_EQUAL(read<T>(to_string(overflow<T>())), none);
+  CAF_CHECK_EQUAL(read<T>(to_string(overflow<T>())), std::nullopt);
 }
 
 // Signed integers.
@@ -216,7 +216,7 @@ void check_integer_options(std::false_type) {
   // Run tests for negative integers.
   auto xmin = std::numeric_limits<T>::min();
   CAF_CHECK_EQUAL(read<T>(to_string(xmin)), xmin);
-  CAF_CHECK_EQUAL(read<T>(to_string(underflow<T>())), none);
+  CAF_CHECK_EQUAL(read<T>(to_string(underflow<T>())), std::nullopt);
 }
 
 // only works with an integral types and double
@@ -250,8 +250,8 @@ CAF_TEST(copy assignment) {
 CAF_TEST(type_bool) {
   CAF_CHECK_EQUAL(read<bool>("true"), true);
   CAF_CHECK_EQUAL(read<bool>("false"), false);
-  CAF_CHECK_EQUAL(read<bool>("0"), none);
-  CAF_CHECK_EQUAL(read<bool>("1"), none);
+  CAF_CHECK_EQUAL(read<bool>("0"), std::nullopt);
+  CAF_CHECK_EQUAL(read<bool>("1"), std::nullopt);
 }
 
 CAF_TEST(type int8_t) {
@@ -280,27 +280,27 @@ CAF_TEST(type uint32_t) {
 
 CAF_TEST(type uint64_t) {
   CAF_CHECK_EQUAL(unbox(read<uint64_t>("0")), 0u);
-  CAF_CHECK_EQUAL(read<uint64_t>("-1"), none);
+  CAF_CHECK_EQUAL(read<uint64_t>("-1"), std::nullopt);
 }
 
 CAF_TEST(type int64_t) {
   CAF_CHECK_EQUAL(unbox(read<int64_t>("-1")), -1);
-  CAF_CHECK_EQUAL(unbox(read<int64_t>("0")),  0);
-  CAF_CHECK_EQUAL(unbox(read<int64_t>("1")),  1);
+  CAF_CHECK_EQUAL(unbox(read<int64_t>("0")), 0);
+  CAF_CHECK_EQUAL(unbox(read<int64_t>("1")), 1);
 }
 
 CAF_TEST(type float) {
-  CAF_CHECK_EQUAL(unbox(read<float>("-1.0")),  -1.0f);
+  CAF_CHECK_EQUAL(unbox(read<float>("-1.0")), -1.0f);
   CAF_CHECK_EQUAL(unbox(read<float>("-0.1")), -0.1f);
   CAF_CHECK_EQUAL(read<float>("0"), 0.f);
-  CAF_CHECK_EQUAL(read<float>("\"0.1\""),  none);
+  CAF_CHECK_EQUAL(read<float>("\"0.1\""), std::nullopt);
 }
 
 CAF_TEST(type double) {
-  CAF_CHECK_EQUAL(unbox(read<double>("-1.0")),  -1.0);
-  CAF_CHECK_EQUAL(unbox(read<double>("-0.1")),  -0.1);
+  CAF_CHECK_EQUAL(unbox(read<double>("-1.0")), -1.0);
+  CAF_CHECK_EQUAL(unbox(read<double>("-0.1")), -0.1);
   CAF_CHECK_EQUAL(read<double>("0"), 0.);
-  CAF_CHECK_EQUAL(read<double>("\"0.1\""), none);
+  CAF_CHECK_EQUAL(read<double>("\"0.1\""), std::nullopt);
 }
 
 CAF_TEST(type string) {

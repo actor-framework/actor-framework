@@ -499,7 +499,7 @@ bool config_value::can_convert_to_dictionary() const {
   return visit(f, data_);
 }
 
-optional<message>
+std::optional<message>
 config_value::parse_msg_impl(string_view str,
                              span<const type_id_list> allowed_types) {
   if (auto val = parse(str)) {
@@ -533,7 +533,7 @@ config_value::parse_msg_impl(string_view str,
     if (std::any_of(allowed_types.begin(), allowed_types.end(), converts))
       return {std::move(result)};
   }
-  return {};
+  return std::nullopt;
 }
 
 // -- related free functions ---------------------------------------------------

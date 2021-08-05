@@ -43,7 +43,7 @@ struct maybe {
     // nop
   }
 
-  caf::optional<T> val;
+  std::optional<T> val;
 };
 
 template <class T>
@@ -241,7 +241,7 @@ public:
     return {hdr, std::move(payload)};
   }
 
-  void connect_node(node& n, optional<accept_handle> ax = none,
+  void connect_node(node& n, std::optional<accept_handle> ax = std::nullopt,
                     actor_id published_actor_id = invalid_actor_id,
                     const std::set<std::string>& published_actor_ifs = {}) {
     auto src = ax ? *ax : ahdl_;
@@ -436,7 +436,7 @@ CAF_TEST(empty_server_handshake) {
   // test whether basp instance correctly sends a
   // server handshake when there's no actor published
   byte_buffer buf;
-  instance().write_server_handshake(mpx(), buf, none);
+  instance().write_server_handshake(mpx(), buf, std::nullopt);
   basp::header hdr;
   byte_buffer payload;
   std::tie(hdr, payload) = from_buf(buf);

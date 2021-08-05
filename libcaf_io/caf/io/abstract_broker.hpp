@@ -386,12 +386,12 @@ protected:
 
   /// Returns a `scribe` or `doorman` identified by `hdl`.
   template <class Handle>
-  auto by_id(Handle hdl) -> optional<decltype(*ptr_of(hdl))> {
+  auto by_id(Handle hdl) -> decltype(ptr_of(hdl)) {
     auto& elements = get_map(hdl);
     auto i = elements.find(hdl);
     if (i == elements.end())
-      return none;
-    return *(i->second);
+      return nullptr;
+    return std::addressof(*(i->second));
   }
 
 private:

@@ -67,6 +67,7 @@
 #include "caf/message_priority.hpp"
 #include "caf/mtl.hpp"
 #include "caf/node_id.hpp"
+#include "caf/optional.hpp"
 #include "caf/others.hpp"
 #include "caf/proxy_registry.hpp"
 #include "caf/raise_error.hpp"

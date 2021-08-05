@@ -4,9 +4,9 @@
 
 #define CAF_SUITE optional
 
-#include "caf/optional.hpp"
-
 #include "core-test.hpp"
+
+#include "caf/optional.hpp"
 
 using namespace caf;
 
@@ -25,6 +25,8 @@ bool operator==(const qwertz& lhs, const qwertz& rhs) {
 }
 
 } // namespace
+
+CAF_PUSH_DEPRECATED_WARNING
 
 CAF_TEST(empty) {
   optional<int> x;
@@ -70,7 +72,9 @@ CAF_TEST(custom_type_engaged) {
   optional<qwertz> x = obj;
   CAF_CHECK(x != none);
   CAF_CHECK(obj == x);
-  CAF_CHECK(x == obj );
+  CAF_CHECK(x == obj);
   CAF_CHECK(obj == *x);
   CAF_CHECK(*x == obj);
 }
+
+CAF_POP_WARNINGS

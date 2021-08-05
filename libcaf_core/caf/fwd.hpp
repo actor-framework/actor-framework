@@ -26,7 +26,7 @@ template <class> class expected;
 template <class> class inbound_stream_slot;
 template <class> class intrusive_cow_ptr;
 template <class> class intrusive_ptr;
-template <class> class optional;
+template <class> class [[deprecated ("use std::optional instead")]] optional;
 template <class> class param;
 template <class> class span;
 template <class> class stream;

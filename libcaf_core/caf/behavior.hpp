@@ -86,8 +86,8 @@ public:
   }
 
   /// Runs this handler and returns its (optional) result.
-  optional<message> operator()(message& xs) {
-    return impl_ ? impl_->invoke(xs) : none;
+  std::optional<message> operator()(message& xs) {
+    return impl_ ? impl_->invoke(xs) : std::nullopt;
   }
 
   /// Runs this handler with callback.

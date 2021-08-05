@@ -419,7 +419,7 @@ end object)_");
 }
 
 CAF_TEST(save inspectors support optional) {
-  optional<int32_t> x;
+  std::optional<int32_t> x;
   CAF_CHECK_EQUAL(f.apply(x), true);
   CAF_CHECK_EQUAL(f.log, R"_(
 begin object anonymous
@@ -429,7 +429,7 @@ end object)_");
 }
 
 CAF_TEST(save inspectors support fields with optional values) {
-  person p1{"Eduard Example", none};
+  person p1{"Eduard Example", std::nullopt};
   CAF_CHECK_EQUAL(inspect(f, p1), true);
   CAF_CHECK_EQUAL(f.log, R"_(
 begin object person

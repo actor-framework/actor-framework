@@ -195,12 +195,12 @@ string trim(std::string s) {
 }
 
 // tries to convert `str` to an int
-optional<int> toint(const string& str) {
+std::optional<int> toint(const string& str) {
   char* end;
   auto result = static_cast<int>(strtol(str.c_str(), &end, 10));
   if (end == str.c_str() + str.size())
     return result;
-  return none;
+  return std::nullopt;
 }
 
 // --(rst-config-begin)--

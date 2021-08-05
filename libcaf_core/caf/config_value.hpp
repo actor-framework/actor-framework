@@ -11,6 +11,7 @@
 #include <iosfwd>
 #include <iterator>
 #include <map>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -28,7 +29,6 @@
 #include "caf/fwd.hpp"
 #include "caf/inspector_access.hpp"
 #include "caf/inspector_access_type.hpp"
-#include "caf/optional.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/string_algorithms.hpp"
 #include "caf/string_view.hpp"
@@ -131,7 +131,7 @@ public:
   /// Tries to parse a config value (list) from `str` and to convert it to an
   /// allowed input message type for `Handle`.
   template <class Handle>
-  static optional<message> parse_msg(string_view str, const Handle&) {
+  static std::optional<message> parse_msg(string_view str, const Handle&) {
     auto allowed = Handle::allowed_inputs();
     return parse_msg_impl(str, allowed);
   }
@@ -264,7 +264,7 @@ private:
 
   static const char* type_name_at_index(size_t index) noexcept;
 
-  static optional<message>
+  static std::optional<message>
   parse_msg_impl(string_view str, span<const type_id_list> allowed_types);
 
   // -- auto conversion of related types ---------------------------------------
@@ -561,7 +561,7 @@ auto get_or(const config_value& x, Fallback&& fallback) {
 // -- SumType-like access ------------------------------------------------------
 
 template <class T>
-[[deprecated("use get_as or get_or instead")]] optional<T>
+[[deprecated("use get_as or get_or instead")]] std::optional<T>
 legacy_get_if(const config_value* x) {
   if (auto val = get_as<T>(*x))
     return {std::move(*val)};

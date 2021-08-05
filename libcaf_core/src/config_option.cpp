@@ -12,7 +12,6 @@
 #include "caf/config_value.hpp"
 #include "caf/error.hpp"
 #include "caf/expected.hpp"
-#include "caf/optional.hpp"
 
 using std::move;
 using std::string;
@@ -24,10 +23,9 @@ namespace caf {
 config_option::config_option(string_view category, string_view name,
                              string_view description, const meta_state* meta,
                              void* value)
-    : meta_(meta),
-      value_(value) {
-  using std::copy;
+  : meta_(meta), value_(value) {
   using std::accumulate;
+  using std::copy;
   auto comma = name.find(',');
   auto long_name = name.substr(0, comma);
   auto short_names = comma == string_view::npos ? string_view{}
@@ -44,9 +42,7 @@ config_option::config_option(string_view category, string_view name,
   // fill the buffer with "<category>.<long-name>,<short-name>,<descriptions>"
   auto first = buf_.get();
   auto i = first;
-  auto pos = [&] {
-    return static_cast<uint16_t>(std::distance(first, i));
-  };
+  auto pos = [&] { return static_cast<uint16_t>(std::distance(first, i)); };
   // <category>.
   i = copy(category.begin(), category.end(), i);
   category_separator_ = pos();
@@ -143,10 +139,10 @@ expected<config_value> config_option::parse(string_view input) const {
     return {std::move(val)};
 }
 
-optional<config_value> config_option::get() const {
+std::optional<config_value> config_option::get() const {
   if (value_ != nullptr && meta_->get != nullptr)
     return meta_->get(value_);
-  return none;
+  return std::nullopt;
 }
 
 string_view config_option::buf_slice(size_t from, size_t to) const noexcept {

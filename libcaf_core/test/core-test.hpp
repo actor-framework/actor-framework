@@ -380,7 +380,7 @@ bool inspect(Inspector& f, widget& x) {
 
 struct dummy_user {
   std::string name;
-  caf::optional<std::string> nickname;
+  std::optional<std::string> nickname;
 };
 
 template <class Inspector>

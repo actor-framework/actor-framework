@@ -50,12 +50,12 @@ struct timespan_consumer {
   timespan x;
 };
 
-optional<timespan> read(string_view str) {
+std::optional<timespan> read(string_view str) {
   timespan_consumer consumer;
   string_parser_state ps{str.begin(), str.end()};
   detail::parser::read_timespan(ps, consumer);
   if (ps.code != pec::success)
-    return none;
+    return std::nullopt;
   return consumer.x;
 }
 
