@@ -38,7 +38,7 @@ void read_floating_point(State& ps, Consumer&& consumer,
   enum sign_t { plus, minus };
   sign_t sign;
   ValueType result;
-  if (start_value == std::nullopt) {
+  if (!start_value) {
     sign = plus;
     result = 0;
   } else if (*start_value < 0) {
@@ -97,7 +97,7 @@ void read_floating_point(State& ps, Consumer&& consumer,
   // Definition of our parser FSM.
   start();
   unstable_state(init) {
-    epsilon_if(start_value == std::nullopt, regular_init)
+    epsilon_if(!start_value, regular_init)
     epsilon(after_dec, "eE.")
     epsilon(after_dot, any_char)
   }

@@ -191,7 +191,7 @@ behavior basp_broker::make_behavior() {
         return;
       }
       auto route = instance.tbl().lookup(proxy->node());
-      if (route == std::nullopt) {
+      if (!route) {
         CAF_LOG_DEBUG("connection to origin already lost, kill proxy");
         instance.proxies().erase(proxy->node(), proxy->id());
         return;
@@ -217,7 +217,7 @@ behavior basp_broker::make_behavior() {
       }
       // Check whether the node is still connected at the moment and send the
       // observer a message immediately otherwise.
-      if (instance.tbl().lookup(node) == std::nullopt) {
+      if (!instance.tbl().lookup(node)) {
         if (auto hdl = actor_cast<actor>(observer)) {
           // TODO: we might want to consider keeping the exit reason for nodes,
           //       at least for some time. Otherwise, we'll have to send a
@@ -472,7 +472,7 @@ void basp_broker::finalize_handshake(const node_id& nid, actor_id aid,
   CAF_ASSERT(this_context != nullptr);
   this_context->id = nid;
   auto& cb = this_context->callback;
-  if (cb == std::nullopt)
+  if (!cb)
     return;
   strong_actor_ptr ptr;
   // aid can be invalid when connecting to the default port of a node

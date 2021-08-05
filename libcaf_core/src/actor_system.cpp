@@ -516,7 +516,7 @@ void actor_system::thread_terminates() {
 expected<strong_actor_ptr>
 actor_system::dyn_spawn_impl(const std::string& name, message& args,
                              execution_unit* ctx, bool check_interface,
-                             std::optional<const mpi*> expected_ifs) {
+                             const mpi* expected_ifs) {
   CAF_LOG_TRACE(CAF_ARG(name) << CAF_ARG(args) << CAF_ARG(check_interface)
                               << CAF_ARG(expected_ifs));
   if (name.empty())
@@ -529,7 +529,7 @@ actor_system::dyn_spawn_impl(const std::string& name, message& args,
   auto res = i->second(cfg, args);
   if (!res.first)
     return sec::cannot_spawn_actor_from_arguments;
-  if (check_interface && !assignable(res.second, **expected_ifs))
+  if (check_interface && !assignable(res.second, *expected_ifs))
     return sec::unexpected_actor_messaging_interface;
   return std::move(res.first);
 }

@@ -79,14 +79,14 @@ auto middleman_actor_impl::make_behavior() -> behavior_type {
       auto x = cached_tcp(key);
       if (x) {
         CAF_LOG_DEBUG("found cached entry" << CAF_ARG(*x));
-        rp.deliver(get<0>(**x), get<1>(**x), get<2>(**x));
+        rp.deliver(get<0>(*x), get<1>(*x), get<2>(*x));
         return get_delegated{};
       }
       // attach this promise to a pending request if possible
       auto rps = pending(key);
       if (rps) {
         CAF_LOG_DEBUG("attach to pending request");
-        (*rps)->emplace_back(std::move(rp));
+        rps->emplace_back(std::move(rp));
         return get_delegated{};
       }
       // connect to endpoint and initiate handhsake etc.
@@ -216,28 +216,28 @@ middleman_actor_impl::put_udp(uint16_t port, strong_actor_ptr& whom,
   return actual_port;
 }
 
-std::optional<middleman_actor_impl::endpoint_data*>
+middleman_actor_impl::endpoint_data*
 middleman_actor_impl::cached_tcp(const endpoint& ep) {
   auto i = cached_tcp_.find(ep);
   if (i != cached_tcp_.end())
     return std::addressof(i->second);
-  return std::nullopt;
+  return nullptr;
 }
 
-std::optional<middleman_actor_impl::endpoint_data*>
+middleman_actor_impl::endpoint_data*
 middleman_actor_impl::cached_udp(const endpoint& ep) {
   auto i = cached_udp_.find(ep);
   if (i != cached_udp_.end())
     return std::addressof(i->second);
-  return std::nullopt;
+  return nullptr;
 }
 
-std::optional<std::vector<response_promise>*>
+std::vector<response_promise>*
 middleman_actor_impl::pending(const endpoint& ep) {
   auto i = pending_.find(ep);
   if (i != pending_.end())
     return std::addressof(i->second);
-  return std::nullopt;
+  return nullptr;
 }
 
 expected<scribe_ptr> middleman_actor_impl::connect(const std::string& host,

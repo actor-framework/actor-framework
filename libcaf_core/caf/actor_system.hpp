@@ -660,7 +660,7 @@ private:
 
   expected<strong_actor_ptr>
   dyn_spawn_impl(const std::string& name, message& args, execution_unit* ctx,
-                 bool check_interface, std::optional<const mpi*> expected_ifs);
+                 bool check_interface, const mpi* expected_ifs);
 
   /// Sets the internal actor for dynamic spawn operations.
   void spawn_serv(strong_actor_ptr x) {

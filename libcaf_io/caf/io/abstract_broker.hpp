@@ -283,7 +283,7 @@ public:
     auto x = by_id(hdl);
     if (!x)
       return false;
-    (*x)->graceful_shutdown();
+    x->graceful_shutdown();
     return true;
   }
 
@@ -386,11 +386,11 @@ protected:
 
   /// Returns a `scribe` or `doorman` identified by `hdl`.
   template <class Handle>
-  auto by_id(Handle hdl) -> std::optional<decltype(ptr_of(hdl))> {
+  auto by_id(Handle hdl) -> decltype(ptr_of(hdl)) {
     auto& elements = get_map(hdl);
     auto i = elements.find(hdl);
     if (i == elements.end())
-      return std::nullopt;
+      return nullptr;
     return std::addressof(*(i->second));
   }
 

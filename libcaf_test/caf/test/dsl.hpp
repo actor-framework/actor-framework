@@ -229,7 +229,7 @@ std::optional<std::tuple<Ts...>> default_extract(caf_handle x) {
 template <class T>
 std::optional<std::tuple<T>> unboxing_extract(caf_handle x) {
   auto tup = default_extract<typename T::outer_type>(x);
-  if (tup == std::nullopt || !is<T>(get<0>(*tup)))
+  if (!tup || !is<T>(get<0>(*tup)))
     return std::nullopt;
   return std::make_tuple(get<T>(get<0>(*tup)));
 }
@@ -266,7 +266,7 @@ std::optional<std::tuple<T, Ts...>> try_extract(caf_handle x) {
 template <class T, class... Ts>
 std::tuple<T, Ts...> extract(caf_handle x) {
   auto result = try_extract<T, Ts...>(x);
-  if (result == std::nullopt) {
+  if (!result) {
     auto ptr = x->peek_at_next_mailbox_element();
     if (ptr == nullptr)
       CAF_FAIL("Mailbox is empty");
