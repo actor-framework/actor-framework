@@ -5,11 +5,11 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <string>
 
-#include "caf/byte.hpp"
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
@@ -23,7 +23,7 @@ namespace caf {
 /// can read all UUID versions, it can only create random-generated ones.
 class CAF_CORE_EXPORT uuid : detail::comparable<uuid> {
 public:
-  using array_type = std::array<byte, 16>;
+  using array_type = std::array<std::byte, 16>;
 
   /// Creates the nil UUID with all 128 bits set to zero.
   uuid() noexcept;

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -179,7 +180,6 @@ config_option make_config_option(T& storage, string_view category,
 
 // -- enums --------------------------------------------------------------------
 
-enum class byte : uint8_t;
 enum class exit_reason : uint8_t;
 enum class invoke_message_result;
 enum class pec : uint8_t;
@@ -189,9 +189,10 @@ enum class stream_priority : uint8_t;
 // -- aliases ------------------------------------------------------------------
 
 using actor_id = uint64_t;
-using byte_buffer = std::vector<byte>;
-using byte_span = span<byte>;
-using const_byte_span = span<const byte>;
+using byte [[deprecated("use std::byte instead")]] = std::byte;
+using byte_buffer = std::vector<std::byte>;
+using byte_span = span<std::byte>;
+using const_byte_span = span<const std::byte>;
 using ip_address = ipv6_address;
 using ip_endpoint = ipv6_endpoint;
 using ip_subnet = ipv6_subnet;

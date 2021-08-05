@@ -521,7 +521,7 @@ void instance::forward(execution_unit* ctx, const node_id& dest_node,
       CAF_LOG_ERROR("unable to serialize BASP header:" << sink.get_error());
       return;
     }
-    sink.value(span<const byte>{payload.data(), payload.size()});
+    sink.value(span<const std::byte>{payload.data(), payload.size()});
     flush(*path);
   } else {
     CAF_LOG_WARNING("cannot forward message, no route to destination");

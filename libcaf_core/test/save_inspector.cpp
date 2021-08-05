@@ -161,7 +161,7 @@ struct testee : serializer {
     return true;
   }
 
-  bool value(byte) override {
+  bool value(std::byte) override {
     new_line();
     log += "byte value";
     return true;
@@ -257,7 +257,7 @@ struct testee : serializer {
     return true;
   }
 
-  bool value(span<const byte>) override {
+  bool value(span<const std::byte>) override {
     new_line();
     log += "byte_span value";
     return true;
@@ -799,10 +799,10 @@ SCENARIO("save inspectors support std::byte") {
         std::string baseline = R"_(
 begin object anonymous
   begin field v1
-    uint8_t value
+    byte value
   end field
   begin optional field v2
-    uint8_t value
+    byte value
   end field
 end object)_";
         CHECK_EQ(f.log, baseline);

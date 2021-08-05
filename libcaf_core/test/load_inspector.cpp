@@ -187,10 +187,10 @@ struct testee : deserializer {
     return true;
   }
 
-  bool value(byte& x) override {
+  bool value(std::byte& x) override {
     new_line();
-    log += "byte value";
-    x = byte{};
+    log += "std::byte value";
+    x = std::byte{};
     return true;
   }
 
@@ -250,11 +250,11 @@ struct testee : deserializer {
     return primitive_value(x);
   }
 
-  bool value(span<byte> xs) override {
+  bool value(span<std::byte> xs) override {
     new_line();
-    log += "caf::span<caf::byte> value";
+    log += "caf::span<caf::std::byte> value";
     for (auto& x : xs)
-      x = byte{0};
+      x = std::byte{0};
     return true;
   }
 };
@@ -762,7 +762,7 @@ SCENARIO("load inspectors support std::byte") {
         std::string baseline = R"_(
 begin object anonymous
   begin field v1
-    uint8_t value
+    std::byte value
   end field
   begin optional field v2
   end field

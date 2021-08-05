@@ -459,11 +459,11 @@ bool pull(config_value_reader& reader, T& x) {
 
 } // namespace
 
-bool config_value_reader::value(byte& x) {
+bool config_value_reader::value(std::byte& x) {
   CHECK_NOT_EMPTY();
   auto tmp = uint8_t{0};
   if (pull(*this, tmp)) {
-    x = static_cast<byte>(tmp);
+    x = static_cast<std::byte>(tmp);
     return true;
   } else {
     return false;
@@ -545,7 +545,7 @@ bool config_value_reader::value(std::u32string&) {
   return false;
 }
 
-bool config_value_reader::value(span<byte> bytes) {
+bool config_value_reader::value(span<std::byte> bytes) {
   CHECK_NOT_EMPTY();
   std::string x;
   if (!pull(*this, x))
@@ -566,7 +566,7 @@ bool config_value_reader::value(span<byte> bytes) {
       }
       detail::parser::add_ascii<16>(value, c);
     }
-    bytes[index / 2] = static_cast<byte>(value);
+    bytes[index / 2] = static_cast<std::byte>(value);
   }
   return true;
 }

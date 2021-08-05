@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <type_traits>
 
-#include "caf/byte.hpp"
 #include "caf/detail/ieee_754.hpp"
 #include "caf/inspector_access.hpp"
 #include "caf/save_inspector_base.hpp"
@@ -112,7 +112,7 @@ public:
     return true;
   }
 
-  bool value(byte x) noexcept {
+  bool value(std::byte x) noexcept {
     return value(static_cast<uint8_t>(x));
   }
 
@@ -135,7 +135,7 @@ public:
     return true;
   }
 
-  bool value(span<const byte> x) noexcept {
+  bool value(span<const std::byte> x) noexcept {
     auto begin = reinterpret_cast<const uint8_t*>(x.data());
     append(begin, begin + x.size());
     return true;

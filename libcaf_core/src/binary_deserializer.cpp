@@ -84,7 +84,7 @@ void binary_deserializer::skip(size_t num_bytes) {
   current_ += num_bytes;
 }
 
-void binary_deserializer::reset(span<const byte> bytes) noexcept {
+void binary_deserializer::reset(span<const std::byte> bytes) noexcept {
   current_ = bytes.data();
   end_ = current_ + bytes.size();
 }
@@ -166,7 +166,7 @@ bool binary_deserializer::value(bool& x) noexcept {
   return true;
 }
 
-bool binary_deserializer::value(byte& x) noexcept {
+bool binary_deserializer::value(std::byte& x) noexcept {
   if (range_check(1)) {
     x = *current_++;
     return true;
@@ -240,7 +240,7 @@ bool binary_deserializer::value(long double& x) {
   return false;
 }
 
-bool binary_deserializer::value(span<byte> x) noexcept {
+bool binary_deserializer::value(span<std::byte> x) noexcept {
   if (!range_check(x.size())) {
     emplace_error(sec::end_of_stream);
     return false;

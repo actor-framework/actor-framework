@@ -1,73 +1,17 @@
-// This file is part of CAF, the C++ Actor Framework. See the file LICENSE in
-// the main distribution directory for license terms and copyright or visit
-// https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
+// Deprecated include. The next CAF release won't include this header.
 
-#include <cstdint>
+#include <cstddef>
 #include <type_traits>
 
 #pragma once
 
 namespace caf {
 
-/// A C++11/14 drop-in replacement for C++17's `std::byte`.
-enum class byte : uint8_t {};
-
 template <class IntegerType,
           class = std::enable_if_t<std::is_integral<IntegerType>::value>>
-constexpr IntegerType to_integer(byte x) noexcept {
+[[deprecated("use std::to_integer instead")]] constexpr IntegerType
+to_integer(std::byte x) noexcept {
   return static_cast<IntegerType>(x);
-}
-
-template <class IntegerType,
-          class E = std::enable_if_t<std::is_integral<IntegerType>::value>>
-constexpr byte& operator<<=(byte& x, IntegerType shift) noexcept {
-  return x = static_cast<byte>(to_integer<uint8_t>(x) << shift);
-}
-
-template <class IntegerType,
-          class E = std::enable_if_t<std::is_integral<IntegerType>::value>>
-constexpr byte operator<<(byte x, IntegerType shift) noexcept {
-  return static_cast<byte>(to_integer<uint8_t>(x) << shift);
-}
-
-template <class IntegerType,
-          class E = std::enable_if_t<std::is_integral<IntegerType>::value>>
-constexpr byte& operator>>=(byte& x, IntegerType shift) noexcept {
-  return x = static_cast<byte>(to_integer<uint8_t>(x) >> shift);
-}
-
-template <class IntegerType,
-          class E = std::enable_if_t<std::is_integral<IntegerType>::value>>
-constexpr byte operator>>(byte x, IntegerType shift) noexcept {
-  return static_cast<byte>(static_cast<unsigned char>(x) >> shift);
-}
-
-inline byte& operator|=(byte& x, byte y) noexcept {
-  return x = static_cast<byte>(to_integer<uint8_t>(x) | to_integer<uint8_t>(y));
-}
-
-constexpr byte operator|(byte x, byte y) noexcept {
-  return static_cast<byte>(to_integer<uint8_t>(x) | to_integer<uint8_t>(y));
-}
-
-inline byte& operator&=(byte& x, byte y) noexcept {
-  return x = static_cast<byte>(to_integer<uint8_t>(x) & to_integer<uint8_t>(y));
-}
-
-constexpr byte operator&(byte x, byte y) noexcept {
-  return static_cast<byte>(to_integer<uint8_t>(x) & to_integer<uint8_t>(y));
-}
-
-inline byte& operator^=(byte& x, byte y) noexcept {
-  return x = static_cast<byte>(to_integer<uint8_t>(x) ^ to_integer<uint8_t>(y));
-}
-
-constexpr byte operator^(byte x, byte y) noexcept {
-  return static_cast<byte>(to_integer<uint8_t>(x) ^ to_integer<uint8_t>(y));
-}
-
-constexpr byte operator~(byte x) noexcept {
-  return static_cast<byte>(~to_integer<uint8_t>(x));
 }
 
 } // namespace caf

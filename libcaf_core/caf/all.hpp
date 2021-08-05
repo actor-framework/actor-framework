@@ -30,6 +30,7 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/blocking_actor.hpp"
+#include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/caf_main.hpp"

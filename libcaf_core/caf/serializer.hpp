@@ -11,7 +11,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "caf/byte.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/fwd.hpp"
@@ -104,7 +103,7 @@ public:
   /// Adds `x` to the output.
   /// @param x A value for a builtin type.
   /// @returns `true` on success, `false` otherwise.
-  virtual bool value(byte x) = 0;
+  virtual bool value(std::byte x) = 0;
 
   /// @copydoc value
   virtual bool value(bool x) = 0;
@@ -160,13 +159,13 @@ public:
   /// Adds `x` as raw byte block to the output.
   /// @param x The byte sequence.
   /// @returns A non-zero error code on failure, `sec::success` otherwise.
-  virtual bool value(span<const byte> x) = 0;
+  virtual bool value(span<const std::byte> x) = 0;
 
   using super::list;
 
   /// Adds each boolean in `xs` to the output. Derived classes can override this
-  /// member function to pack the booleans, for example to avoid using one byte
-  /// for each value in a binary output format.
+  /// member function to pack the booleans, for example to avoid using one
+  /// byte for each value in a binary output format.
   virtual bool list(const std::vector<bool>& xs);
 
 protected:

@@ -9,12 +9,12 @@
 #include "core-test.hpp"
 #include "nasty.hpp"
 
+#include <cstddef>
 #include <cstring>
 #include <vector>
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/timestamp.hpp"
 
@@ -22,12 +22,12 @@ using namespace caf;
 
 namespace {
 
-byte operator"" _b(unsigned long long int x) {
-  return static_cast<byte>(x);
+std::byte operator"" _b(unsigned long long int x) {
+  return static_cast<std::byte>(x);
 }
 
-byte operator"" _b(char x) {
-  return static_cast<byte>(x);
+std::byte operator"" _b(char x) {
+  return static_cast<std::byte>(x);
 }
 
 struct arr {
@@ -165,13 +165,8 @@ CAF_TEST(binary serializer picks up inspect functions) {
   }
   SUBTEST("custom struct") {
     caf::timestamp ts{caf::timestamp::duration{1478715821 * 1000000000ll}};
-    test_data value{-345,
-                    -1234567890123456789ll,
-                    3.45,
-                    54.3,
-                    ts,
-                    test_enum::b,
-                    "Lorem ipsum dolor sit amet."};
+    test_data value{-345,         -1234567890123456789ll,       3.45, 54.3, ts,
+                    test_enum::b, "Lorem ipsum dolor sit amet."};
     CHECK_SAVE(test_data, value,
                // 32-bit i32_ member: -345
                0xFF_b, 0xFF_b, 0xFE_b, 0xA7_b,

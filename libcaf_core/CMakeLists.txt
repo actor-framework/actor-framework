@@ -232,7 +232,6 @@ caf_add_component(
     binary_serializer
     blocking_actor
     broadcast_downstream_manager
-    byte
     composition
     config_option
     config_option_set

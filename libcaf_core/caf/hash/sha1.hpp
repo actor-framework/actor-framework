@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/byte.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/ieee_754.hpp"
 #include "caf/save_inspector_base.hpp"
@@ -13,6 +12,7 @@
 #include "caf/type_id.hpp"
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 
 namespace caf::hash {
@@ -27,7 +27,7 @@ public:
   using super = save_inspector_base<sha1>;
 
   /// Array type for storing a 160-bit hash.
-  using result_type = std::array<byte, hash_size>;
+  using result_type = std::array<std::byte, hash_size>;
 
   sha1() noexcept;
 
@@ -126,7 +126,7 @@ public:
     return true;
   }
 
-  bool value(span<const byte> x) noexcept {
+  bool value(span<const std::byte> x) noexcept {
     auto begin = reinterpret_cast<const uint8_t*>(x.data());
     append(begin, begin + x.size());
     return true;
