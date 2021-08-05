@@ -1,4 +1,5 @@
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "caf/all.hpp"
@@ -74,7 +75,7 @@ void ChatWidget::sendChatMessage() {
   } else if (line.startsWith('/')) {
     vector<string> words;
     auto utf8 = QStringView{line}.mid(1).toUtf8();
-    auto sv = caf::string_view{utf8.constData(),
+    auto sv = std::string_view{utf8.constData(),
                                static_cast<size_t>(utf8.size())};
     split(words, sv, is_any_of(" "));
     if (words.size() == 3 && words[0] == "join") {
