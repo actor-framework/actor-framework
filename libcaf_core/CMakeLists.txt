@@ -97,6 +97,7 @@ caf_add_component(
     src/deserializer.cpp
     src/detail/abstract_worker.cpp
     src/detail/abstract_worker_hub.cpp
+    src/detail/action.cpp
     src/detail/append_percent_encoded.cpp
     src/detail/base64.cpp
     src/detail/behavior_impl.cpp
@@ -135,6 +136,7 @@ caf_add_component(
     src/detail/tick_emitter.cpp
     src/detail/token_based_credit_controller.cpp
     src/detail/type_id_list_builder.cpp
+    src/disposable.cpp
     src/downstream_manager.cpp
     src/downstream_manager_base.cpp
     src/error.cpp
@@ -239,6 +241,7 @@ caf_add_component(
     decorator.sequencer
     deep_to_string
     detached_actors
+    detail.action
     detail.base64
     detail.bounds_checker
     detail.config_consumer

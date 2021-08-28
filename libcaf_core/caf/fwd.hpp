@@ -347,6 +347,7 @@ class stream_distribution_tree;
 
 class abstract_worker;
 class abstract_worker_hub;
+class action;
 class disposer;
 class dynamic_message_data;
 class group_manager;
