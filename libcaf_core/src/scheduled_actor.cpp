@@ -8,6 +8,7 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/action.hpp"
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/private_thread.hpp"
@@ -664,6 +665,13 @@ scheduled_actor::categorize(mailbox_element& x) {
   if (auto view = make_typed_message_view<down_msg>(content)) {
     auto& dm = get<0>(view);
     call_handler(down_handler_, this, dm);
+    return message_category::internal;
+  }
+  if (auto view = make_typed_message_view<detail::action>(content)) {
+    if (auto ptr = get<0>(view).ptr()) {
+      CAF_LOG_DEBUG("run action");
+      ptr->run();
+    }
     return message_category::internal;
   }
   if (auto view = make_typed_message_view<node_down_msg>(content)) {

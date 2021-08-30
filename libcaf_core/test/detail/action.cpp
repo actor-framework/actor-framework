@@ -10,6 +10,14 @@
 
 using namespace caf;
 
+namespace {
+
+using fixture = test_coordinator_fixture<>;
+
+} // namespace
+
+BEGIN_FIXTURE_SCOPE(fixture)
+
 SCENARIO("actions wrap function calls") {
   GIVEN("an action wrapping a lambda") {
     WHEN("running the action") {
@@ -69,3 +77,23 @@ SCENARIO("actions wrap function calls") {
     }
   }
 }
+
+SCENARIO("actors run actions that they receive") {
+  GIVEN("a scheduled actor") {
+    WHEN("sending it an action") {
+      THEN("the actor runs the action regardless of its behavior") {
+        auto aut = sys.spawn([](caf::event_based_actor*) -> behavior {
+          return {
+            [](int32_t x) { return x; },
+          };
+        });
+        auto n = 0;
+        inject((detail::action),
+               to(aut).with(detail::make_action([&n] { ++n; })));
+        CHECK_EQ(n, 1);
+      }
+    }
+  }
+}
+
+END_FIXTURE_SCOPE()
