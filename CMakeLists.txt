@@ -211,13 +211,13 @@ function(caf_add_enum_type target enum_name)
   string(REPLACE "." "/" path "${enum_name}")
   set(hpp_file "${CMAKE_CURRENT_SOURCE_DIR}/caf/${path}.hpp")
   set(cpp_file "${CMAKE_CURRENT_BINARY_DIR}/src/${path}_strings.cpp")
+  set(gen_file "${PROJECT_SOURCE_DIR}/cmake/caf-generate-enum-strings.cmake")
   add_custom_command(OUTPUT "${cpp_file}"
                      COMMAND ${CMAKE_COMMAND}
                        "-DINPUT_FILE=${hpp_file}"
                        "-DOUTPUT_FILE=${cpp_file}"
-                       -P "${PROJECT_SOURCE_DIR}/cmake/caf-generate-enum-strings.cmake"
-                     DEPENDS "${hpp_file}")
-  get_filename_component(target_name "${input}" NAME_WE)
+                       -P "${gen_file}"
+                     DEPENDS "${hpp_file}" "${gen_file}")
   target_sources(${target} PRIVATE "${cpp_file}")
 endfunction()
 
