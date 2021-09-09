@@ -2,9 +2,9 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE detail.action
+#define CAF_SUITE action
 
-#include "caf/detail/action.hpp"
+#include "caf/action.hpp"
 
 #include "core-test.hpp"
 
@@ -23,7 +23,7 @@ SCENARIO("actions wrap function calls") {
     WHEN("running the action") {
       THEN("it calls the lambda and transitions from scheduled to invoked") {
         auto called = false;
-        auto uut = detail::make_action([&called] { called = true; });
+        auto uut = make_action([&called] { called = true; });
         CHECK(uut.scheduled());
         uut.run();
         CHECK(called);
@@ -33,7 +33,7 @@ SCENARIO("actions wrap function calls") {
     WHEN("disposing the action") {
       THEN("it transitions to disposed and run no longer calls the lambda") {
         auto called = false;
-        auto uut = detail::make_action([&called] { called = true; });
+        auto uut = make_action([&called] { called = true; });
         CHECK(uut.scheduled());
         uut.dispose();
         CHECK(uut.disposed());
@@ -45,7 +45,7 @@ SCENARIO("actions wrap function calls") {
     WHEN("running the action multiple times") {
       THEN("any call after the first becomes a no-op") {
         auto n = 0;
-        auto uut = detail::make_action([&n] { ++n; });
+        auto uut = make_action([&n] { ++n; });
         uut.run();
         uut.run();
         uut.run();
@@ -56,10 +56,10 @@ SCENARIO("actions wrap function calls") {
     WHEN("re-scheduling an action after running it") {
       THEN("then the lambda gets invoked twice") {
         auto n = 0;
-        auto uut = detail::make_action([&n] { ++n; });
+        auto uut = make_action([&n] { ++n; });
         uut.run();
         uut.run();
-        CHECK_EQ(uut.reschedule(), detail::action::state::scheduled);
+        CHECK_EQ(uut.reschedule(), action::transition::success);
         uut.run();
         uut.run();
         CHECK(uut.invoked());
@@ -68,9 +68,9 @@ SCENARIO("actions wrap function calls") {
     }
     WHEN("converting an action to a disposable") {
       THEN("the disposable and the action point to the same impl object") {
-        auto uut = detail::make_action([] {});
-        auto d1 = uut.as_disposable();                 // const& overload
-        auto d2 = detail::action{uut}.as_disposable(); // && overload
+        auto uut = make_action([] {});
+        auto d1 = uut.as_disposable();         // const& overload
+        auto d2 = action{uut}.as_disposable(); // && overload
         CHECK_EQ(uut.ptr(), d1.ptr());
         CHECK_EQ(uut.ptr(), d2.ptr());
       }
@@ -88,8 +88,7 @@ SCENARIO("actors run actions that they receive") {
           };
         });
         auto n = 0;
-        inject((detail::action),
-               to(aut).with(detail::make_action([&n] { ++n; })));
+        inject((action), to(aut).with(make_action([&n] { ++n; })));
         CHECK_EQ(n, 1);
       }
     }

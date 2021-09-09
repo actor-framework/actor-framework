@@ -31,12 +31,19 @@ struct fixture : test_coordinator_fixture<> {
     return sys.spawn(init);
   }
 
-  std::function<void(const error&)> make_error_handler() {
+  auto make_error_handler() {
     return [](const error& err) { CAF_FAIL("unexpected error: " << err); };
   }
 
-  std::function<void(const error&)> make_counting_error_handler(size_t* count) {
+  auto make_counting_error_handler(size_t* count) {
     return [count](const error&) { *count += 1; };
+  }
+
+  template <class... ResponseHandles>
+  auto fuse(ResponseHandles&... handles) {
+    return select_all<detail::type_list<int>>{
+      {handles.id()...},
+      disposable::make_composite({handles.policy().pending_timeouts()...})};
   }
 };
 
@@ -58,7 +65,7 @@ CAF_TEST(select_all combines two integer results into one vector) {
     SUBTEST("vector of int") {
       auto r1 = self->request(server1, infinite, 1, 2);
       auto r2 = self->request(server2, infinite, 2, 3);
-      select_all<detail::type_list<int>> merge{{r1.id(), r2.id()}};
+      auto merge = fuse(r1, r2);
       run();
       merge.receive(
         self.ptr(),
@@ -72,15 +79,14 @@ CAF_TEST(select_all combines two integer results into one vector) {
       using std::make_tuple;
       auto r1 = self->request(server1, infinite, 1, 2);
       auto r2 = self->request(server2, infinite, 2, 3);
-      select_all<detail::type_list<int>> merge{{r1.id(), r2.id()}};
+      auto merge = fuse(r1, r2);
       run();
-      using results_vector = std::vector<std::tuple<int>>;
+      using results_vector = std::vector<int>;
       merge.receive(
         self.ptr(),
         [](results_vector results) {
           std::sort(results.begin(), results.end());
-          CAF_CHECK_EQUAL(results,
-                          results_vector({make_tuple(3), make_tuple(5)}));
+          CAF_CHECK_EQUAL(results, results_vector({3, 5}));
         },
         make_error_handler());
     }
@@ -90,7 +96,7 @@ CAF_TEST(select_all combines two integer results into one vector) {
     auto client = sys.spawn([=, &results](event_based_actor* client_ptr) {
       auto r1 = client_ptr->request(server1, infinite, 1, 2);
       auto r2 = client_ptr->request(server2, infinite, 2, 3);
-      select_all<detail::type_list<int>> merge{{r1.id(), r2.id()}};
+      auto merge = fuse(r1, r2);
       merge.then(
         client_ptr, [&results](int_list xs) { results = std::move(xs); },
         make_error_handler());
@@ -108,7 +114,7 @@ CAF_TEST(select_all combines two integer results into one vector) {
     auto client = sys.spawn([=, &results](event_based_actor* client_ptr) {
       auto r1 = client_ptr->request(server1, infinite, 1, 2);
       auto r2 = client_ptr->request(server2, infinite, 2, 3);
-      select_all<detail::type_list<int>> merge{{r1.id(), r2.id()}};
+      auto merge = fuse(r1, r2);
       merge.await(
         client_ptr, [&results](int_list xs) { results = std::move(xs); },
         make_error_handler());
@@ -133,7 +139,7 @@ CAF_TEST(select_all calls the error handler at most once) {
   SUBTEST("request.receive") {
     auto r1 = self->request(server1, infinite, 1, 2);
     auto r2 = self->request(server2, infinite, 2, 3);
-    select_all<detail::type_list<int>> merge{{r1.id(), r2.id()}};
+    auto merge = fuse(r1, r2);
     run();
     size_t errors = 0;
     merge.receive(
@@ -147,7 +153,7 @@ CAF_TEST(select_all calls the error handler at most once) {
     auto client = sys.spawn([=, &errors](event_based_actor* client_ptr) {
       auto r1 = client_ptr->request(server1, infinite, 1, 2);
       auto r2 = client_ptr->request(server2, infinite, 2, 3);
-      select_all<detail::type_list<int>> merge{{r1.id(), r2.id()}};
+      auto merge = fuse(r1, r2);
       merge.then(
         client_ptr,
         [](int_list) { CAF_FAIL("fan-in policy called the result handler"); },
@@ -165,7 +171,7 @@ CAF_TEST(select_all calls the error handler at most once) {
     auto client = sys.spawn([=, &errors](event_based_actor* client_ptr) {
       auto r1 = client_ptr->request(server1, infinite, 1, 2);
       auto r2 = client_ptr->request(server2, infinite, 2, 3);
-      select_all<detail::type_list<int>> merge{{r1.id(), r2.id()}};
+      auto merge = fuse(r1, r2);
       merge.await(
         client_ptr,
         [](int_list) { CAF_FAIL("fan-in policy called the result handler"); },

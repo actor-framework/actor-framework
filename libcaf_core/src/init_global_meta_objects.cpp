@@ -4,13 +4,13 @@
 
 #include "caf/init_global_meta_objects.hpp"
 
+#include "caf/action.hpp"
 #include "caf/actor.hpp"
 #include "caf/actor_addr.hpp"
 #include "caf/actor_control_block.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/config_value.hpp"
-#include "caf/detail/action.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/error.hpp"
 #include "caf/group.hpp"

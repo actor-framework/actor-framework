@@ -110,7 +110,7 @@ public:
 
   /// Requests a new timeout for `mid`.
   /// @pre `mid.is_request()`
-  void request_response_timeout(timespan d, message_id mid);
+  disposable request_response_timeout(timespan d, message_id mid);
 
   // -- spawn functions --------------------------------------------------------
 

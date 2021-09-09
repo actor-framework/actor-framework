@@ -163,6 +163,9 @@ enum class sec : uint8_t {
   broken_promise,
   /// Disconnected from a BASP node after reaching the connection timeout.
   connection_timeout,
+  /// Signals that an actor fell behind a periodic action trigger. After raising
+  /// this error, an @ref actor_clock stops scheduling the action.
+  action_reschedule_failed,
 };
 // --(rst-sec-end)--
 

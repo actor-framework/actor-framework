@@ -23,7 +23,7 @@ public:
   virtual ~abstract_channel();
 
   /// Enqueues a new message without forwarding stack to the channel.
-  virtual void enqueue(strong_actor_ptr sender, message_id mid, message content,
+  virtual bool enqueue(strong_actor_ptr sender, message_id mid, message content,
                        execution_unit* host = nullptr)
     = 0;
 

@@ -11,6 +11,7 @@
 #include "caf/actor.hpp"
 #include "caf/check_typed_input.hpp"
 #include "caf/detail/profiled_send.hpp"
+#include "caf/disposable.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
 #include "caf/message_id.hpp"
@@ -54,10 +55,11 @@ public:
                   "receiver does not accept given message");
     auto self = static_cast<Subtype*>(this);
     auto req_id = self->new_request_id(P);
+    auto pending_msg = disposable{};
     if (dest) {
       detail::profiled_send(self, self->ctrl(), dest, req_id, {},
                             self->context(), std::forward<Ts>(xs)...);
-      self->request_response_timeout(timeout, req_id);
+      pending_msg = self->request_response_timeout(timeout, req_id);
     } else {
       self->eq_impl(req_id.response_id(), self->ctrl(), self->context(),
                     make_error(sec::invalid_argument));
@@ -68,7 +70,7 @@ public:
                         detail::implicit_conversions_t<detail::decay_t<Ts>>...>;
     using handle_type
       = response_handle<Subtype, policy::single_response<response_type>>;
-    return handle_type{self, req_id.response_id()};
+    return handle_type{self, req_id.response_id(), std::move(pending_msg)};
   }
 
   /// Sends `{xs...}` to each actor in the range `destinations` as a synchronous
@@ -106,13 +108,16 @@ public:
     auto dptr = static_cast<Subtype*>(this);
     std::vector<message_id> ids;
     ids.reserve(destinations.size());
+    std::vector<disposable> pending_msgs;
+    pending_msgs.reserve(destinations.size());
     for (const auto& dest : destinations) {
       if (!dest)
         continue;
       auto req_id = dptr->new_request_id(Prio);
       dest->eq_impl(req_id, dptr->ctrl(), dptr->context(),
                     std::forward<Ts>(xs)...);
-      dptr->request_response_timeout(timeout, req_id);
+      pending_msgs.emplace_back(
+        dptr->request_response_timeout(timeout, req_id));
       ids.emplace_back(req_id.response_id());
     }
     if (ids.empty()) {
@@ -125,7 +130,8 @@ public:
       = response_type_t<typename handle_type::signatures,
                         detail::implicit_conversions_t<detail::decay_t<Ts>>...>;
     using result_type = response_handle<Subtype, MergePolicy<response_type>>;
-    return result_type{dptr, std::move(ids)};
+    return result_type{dptr, std::move(ids),
+                       disposable::make_composite(std::move(pending_msgs))};
   }
 };
 

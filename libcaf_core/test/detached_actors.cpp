@@ -9,76 +9,109 @@
 #include "core-test.hpp"
 
 using namespace caf;
+using namespace std::literals;
 
-using std::endl;
-
-namespace {
-
-struct fixture {
-  actor_system_config cfg;
-  actor_system sys;
-  scoped_actor self;
-
-  fixture() : sys(cfg), self(sys, true) {
-    // nop
+SCENARIO("an actor system shuts down after the last actor terminates") {
+  GIVEN("an actor system and a detached actor") {
+    WHEN("the actor sets no behavior") {
+      auto ran = std::make_shared<bool>(false);
+      THEN("the actor terminates immediately and the system shuts down") {
+        actor_system_config cfg;
+        actor_system sys{cfg};
+        sys.spawn<detached>([=] { *ran = true; });
+      }
+      CHECK(*ran);
+    }
+    WHEN("the actor uses delayed_send but ignores the message") {
+      auto ran = std::make_shared<bool>(false);
+      THEN("the actor terminates immediately and the system shuts down") {
+        actor_system_config cfg;
+        actor_system sys{cfg};
+        sys.spawn<detached>([=](event_based_actor* self) {
+          *ran = true;
+          self->delayed_send(self, 1h, ok_atom_v);
+        });
+      }
+      CHECK(*ran);
+    }
+    WHEN("the actor uses delayed_send and waits for the message") {
+      auto ran = std::make_shared<bool>(false);
+      auto message_handled = std::make_shared<bool>(false);
+      THEN("the system waits for the actor to handle its message") {
+        actor_system_config cfg;
+        actor_system sys{cfg};
+        sys.spawn<detached>([=](event_based_actor* self) -> behavior {
+          *ran = true;
+          self->delayed_send(self, 1ns, ok_atom_v);
+          return {
+            [=](ok_atom) {
+              *message_handled = true;
+              self->quit();
+            },
+          };
+        });
+      }
+      CHECK(*ran);
+      CHECK(*message_handled);
+    }
+    WHEN("the actor uses run_delayed() to wait some time") {
+      auto ran = std::make_shared<bool>(false);
+      auto timeout_handled = std::make_shared<bool>(false);
+      THEN("the system waits for the actor to handle the timeout") {
+        actor_system_config cfg;
+        actor_system sys{cfg};
+        sys.spawn<detached>([=](event_based_actor* self) -> behavior {
+          *ran = true;
+          self->run_delayed(1ns, [=] {
+            *timeout_handled = true;
+            self->quit();
+          });
+          return {
+            [](int) {
+              // Dummy handler to force the actor to stay alive until we call
+              // self->quit in the run_delayed lambda.
+            },
+          };
+        });
+      }
+      CHECK(*ran);
+      CHECK(*timeout_handled);
+    }
+    WHEN("the actor uses after() to wait some time") {
+      auto ran = std::make_shared<bool>(false);
+      auto timeout_handled = std::make_shared<bool>(false);
+      THEN("the system waits for the actor to handle the timeout") {
+        actor_system_config cfg;
+        actor_system sys{cfg};
+        sys.spawn<detached>([=](event_based_actor* self) -> behavior {
+          *ran = true;
+          return {
+            after(1ns) >>
+              [=] {
+                *timeout_handled = true;
+                self->quit();
+              },
+          };
+        });
+      }
+      CHECK(*ran);
+      CHECK(*timeout_handled);
+    }
   }
-};
-
-} // namespace
-
-CAF_TEST_FIXTURE_SCOPE(detached_actors, fixture)
-
-CAF_TEST(shutdown) {
-  CAF_MESSAGE("does sys shut down after spawning a detached actor?");
-  sys.spawn<detached>([] {});
 }
 
-CAF_TEST(shutdown_with_delayed_send) {
-  CAF_MESSAGE("does sys shut down after spawning a detached actor that used "
-              "delayed_send?");
-  auto f = [](event_based_actor* self) -> behavior {
-    self->delayed_send(self, std::chrono::nanoseconds(1), ok_atom_v);
-    return {
-      [=](ok_atom) { self->quit(); },
-    };
-  };
-  sys.spawn<detached>(f);
-}
-
-CAF_TEST(shutdown_with_unhandled_delayed_send) {
-  CAF_MESSAGE("does sys shut down after spawning a detached actor that used "
-              "delayed_send but didn't bother waiting for it?");
-  auto f = [](event_based_actor* self) {
-    self->delayed_send(self, std::chrono::nanoseconds(1), ok_atom_v);
-  };
-  sys.spawn<detached>(f);
-}
-
-CAF_TEST(shutdown_with_after) {
-  CAF_MESSAGE("does sys shut down after spawning a detached actor that used "
-              "after()?");
-  auto f = [](event_based_actor* self) -> behavior {
-    return {
-      after(std::chrono::nanoseconds(1)) >> [=] { self->quit(); },
-    };
-  };
-  sys.spawn<detached>(f);
-}
-
-CAF_TEST(shutdown_delayed_send_loop) {
-  CAF_MESSAGE("does sys shut down after spawning a detached actor that used "
-              "a delayed send loop and was interrupted via exit message?");
-  auto f = [](event_based_actor* self) -> behavior {
-    self->delayed_send(self, std::chrono::milliseconds(1), ok_atom_v);
-    return {
-      [=](ok_atom) {
-        self->delayed_send(self, std::chrono::milliseconds(1), ok_atom_v);
-      },
-    };
-  };
-  auto a = sys.spawn<detached>(f);
-  auto g = detail::make_scope_guard(
-    [&] { self->send_exit(a, exit_reason::user_shutdown); });
-}
-
-CAF_TEST_FIXTURE_SCOPE_END()
+// CAF_TEST(shutdown_delayed_send_loop) {
+//   CAF_MESSAGE("does sys shut down after spawning a detached actor that used "
+//               "a delayed send loop and was interrupted via exit message?");
+//   auto f = [](event_based_actor* self) -> behavior {
+//     self->delayed_send(self, 1ns, ok_atom_v);
+//     return {
+//       [=](ok_atom) {
+//         self->delayed_send(self, 1ns, ok_atom_v);
+//       },
+//     };
+//   };
+//   auto a = sys.spawn<detached>(f);
+//   auto g = detail::make_scope_guard(
+//     [&] { self->send_exit(a, exit_reason::user_shutdown); });
+// }

@@ -31,13 +31,13 @@ sequencer::sequencer(strong_actor_ptr f, strong_actor_ptr g,
   }
 }
 
-void sequencer::enqueue(mailbox_element_ptr what, execution_unit* context) {
+bool sequencer::enqueue(mailbox_element_ptr what, execution_unit* context) {
   auto down_msg_handler = [&](down_msg& dm) {
     // quit if either `f` or `g` are no longer available
     cleanup(std::move(dm.reason), context);
   };
   if (handle_system_message(*what, context, false, down_msg_handler))
-    return;
+    return true;
   strong_actor_ptr f;
   strong_actor_ptr g;
   error err;
@@ -49,13 +49,13 @@ void sequencer::enqueue(mailbox_element_ptr what, execution_unit* context) {
   if (!f) {
     // f and g are invalid only after the sequencer terminated
     bounce(what, err);
-    return;
+    return false;
   }
   // process and forward the non-system message;
   // store `f` as the next stage in the forwarding chain
   what->stages.push_back(std::move(f));
   // forward modified message to `g`
-  g->enqueue(std::move(what), context);
+  return g->enqueue(std::move(what), context);
 }
 
 sequencer::message_types_set sequencer::message_types() const {

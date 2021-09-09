@@ -55,7 +55,7 @@ public:
   // -- non-blocking API -------------------------------------------------------
 
   template <class T = traits, class F, class OnError>
-  detail::enable_if_t<T::is_non_blocking> await(F f, OnError g) const {
+  detail::enable_if_t<T::is_non_blocking> await(F f, OnError g) {
     static_assert(detail::has_add_awaited_response_handler_v<ActorType>,
                   "this actor type does not support awaiting responses, "
                   "try using .then instead");
@@ -74,13 +74,13 @@ public:
   template <class T = traits, class F>
   detail::enable_if_t<detail::has_call_error_handler_v<ActorType> //
                       && T::is_non_blocking>
-  await(F f) const {
+  await(F f) {
     auto self = self_;
     await(std::move(f), [self](error& err) { self->call_error_handler(err); });
   }
 
   template <class T = traits, class F, class OnError>
-  detail::enable_if_t<T::is_non_blocking> then(F f, OnError g) const {
+  detail::enable_if_t<T::is_non_blocking> then(F f, OnError g) {
     static_assert(detail::has_add_multiplexed_response_handler_v<ActorType>,
                   "this actor type does not support multiplexed responses, "
                   "try using .await instead");
@@ -99,7 +99,7 @@ public:
   template <class T = traits, class F>
   detail::enable_if_t<detail::has_call_error_handler_v<ActorType> //
                       && T::is_non_blocking>
-  then(F f) const {
+  then(F f) {
     auto self = self_;
     then(std::move(f), [self](error& err) { self->call_error_handler(err); });
   }
@@ -150,6 +150,10 @@ public:
 
   actor_type* self() noexcept {
     return self_;
+  }
+
+  policy_type& policy() noexcept {
+    return policy_;
   }
 
 private:

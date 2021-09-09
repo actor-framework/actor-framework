@@ -67,8 +67,9 @@ public:
     // nop
   }
 
-  void enqueue(mailbox_element_ptr what, execution_unit*) override {
+  bool enqueue(mailbox_element_ptr what, execution_unit*) override {
     mbox.push_back(std::move(what->payload));
+    return true;
   }
 
   void attach(attachable_ptr) override {

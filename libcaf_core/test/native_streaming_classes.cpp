@@ -152,10 +152,11 @@ public:
     CAF_ASSERT(global_time_ != nullptr);
   }
 
-  void enqueue(mailbox_element_ptr what, execution_unit*) override {
+  bool enqueue(mailbox_element_ptr what, execution_unit*) override {
     auto push_back_result = mbox.push_back(std::move(what));
     CAF_CHECK_EQUAL(push_back_result, true);
     CAF_ASSERT(push_back_result);
+    return true;
   }
 
   void attach(attachable_ptr) override {

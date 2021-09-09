@@ -5,147 +5,69 @@
 #include "caf/detail/thread_safe_actor_clock.hpp"
 
 #include "caf/actor_control_block.hpp"
+#include "caf/actor_system.hpp"
 #include "caf/logger.hpp"
 #include "caf/sec.hpp"
 #include "caf/system_messages.hpp"
 
 namespace caf::detail {
 
-void thread_safe_actor_clock::set_ordinary_timeout(time_point t,
-                                                   abstract_actor* self,
-                                                   std::string type,
-                                                   uint64_t id) {
-  push(new ordinary_timeout(t, self->ctrl(), type, id));
+thread_safe_actor_clock::thread_safe_actor_clock() {
+  tbl_.reserve(buffer_size * 2);
 }
 
-void thread_safe_actor_clock::set_request_timeout(time_point t,
-                                                  abstract_actor* self,
-                                                  message_id id) {
-  push(new request_timeout(t, self->ctrl(), id));
+disposable
+thread_safe_actor_clock::schedule_periodically(time_point first_run, action f,
+                                               duration_type period) {
+  queue_.emplace_back(new schedule_entry{first_run, f, period});
+  return std::move(f).as_disposable();
 }
 
-void thread_safe_actor_clock::set_multi_timeout(time_point t,
-                                                abstract_actor* self,
-                                                std::string type, uint64_t id) {
-  push(new multi_timeout(t, self->ctrl(), type, id));
-}
-
-void thread_safe_actor_clock::cancel_ordinary_timeout(abstract_actor* self,
-                                                      std::string type) {
-  push(new ordinary_timeout_cancellation(self->id(), type));
-}
-
-void thread_safe_actor_clock::cancel_request_timeout(abstract_actor* self,
-                                                     message_id id) {
-  push(new request_timeout_cancellation(self->id(), id));
-}
-
-void thread_safe_actor_clock::cancel_timeouts(abstract_actor* self) {
-  push(new timeouts_cancellation(self->id()));
-}
-
-void thread_safe_actor_clock::schedule_message(time_point t,
-                                               strong_actor_ptr receiver,
-                                               mailbox_element_ptr content) {
-  push(new actor_msg(t, std::move(receiver), std::move(content)));
-}
-
-void thread_safe_actor_clock::schedule_message(time_point t, group target,
-                                               strong_actor_ptr sender,
-                                               message content) {
-  auto ptr = new group_msg(t, std::move(target), std::move(sender),
-                           std::move(content));
-  push(ptr);
-}
-
-void thread_safe_actor_clock::cancel_all() {
-  push(new drop_all);
-}
-
-void thread_safe_actor_clock::run_dispatch_loop() {
-  for (;;) {
-    // Wait until queue is non-empty.
-    if (schedule_.empty()) {
+void thread_safe_actor_clock::run() {
+  CAF_LOG_TRACE("");
+  auto is_disposed = [](auto& x) { return !x || x->f.disposed(); };
+  auto by_timeout = [](auto& x, auto& y) { return x->t < y->t; };
+  while (running_) {
+    if (tbl_.empty()) {
       queue_.wait_nonempty();
+      queue_.get_all(std::back_inserter(tbl_));
+      std::sort(tbl_.begin(), tbl_.end(), by_timeout);
     } else {
-      auto t = schedule_.begin()->second->due;
-      if (!queue_.wait_nonempty(t)) {
-        // Handle timeout by shipping timed-out events and starting anew.
-        trigger_expired_timeouts();
-        continue;
+      auto next_timeout = (*tbl_.begin())->t;
+      if (queue_.wait_nonempty(next_timeout)) {
+        queue_.get_all(std::back_inserter(tbl_));
+        std::sort(tbl_.begin(), tbl_.end(), by_timeout);
       }
     }
-    // Push all elements from the queue to the events buffer.
-    auto i = events_.begin();
-    auto e = queue_.get_all(i);
-    for (; i != e; ++i) {
-      auto& x = *i;
-      CAF_ASSERT(x != nullptr);
-      switch (x->subtype) {
-        case ordinary_timeout_cancellation_type: {
-          handle(static_cast<ordinary_timeout_cancellation&>(*x));
-          break;
+    auto n = now();
+    for (auto i = tbl_.begin(); i != tbl_.end() && (*i)->t <= n; ++i) {
+      auto& entry = **i;
+      if (entry.f.run() == action::transition::success) {
+        if (entry.period.count() > 0) {
+          auto next = entry.t + entry.period;
+          while (next <= n) {
+            CAF_LOG_WARNING("clock lagging behind, skipping a tick!");
+            next += entry.period;
+          }
+        } else {
+          i->reset(); // Remove from tbl_ after the for-loop body.
         }
-        case request_timeout_cancellation_type: {
-          handle(static_cast<request_timeout_cancellation&>(*x));
-          break;
-        }
-        case timeouts_cancellation_type: {
-          handle(static_cast<timeouts_cancellation&>(*x));
-          break;
-        }
-        case drop_all_type: {
-          schedule_.clear();
-          actor_lookup_.clear();
-          break;
-        }
-        case shutdown_type: {
-          schedule_.clear();
-          actor_lookup_.clear();
-          // Call it a day.
-          return;
-        }
-        case ordinary_timeout_type: {
-          auto dptr = static_cast<ordinary_timeout*>(x.release());
-          add_schedule_entry(std::unique_ptr<ordinary_timeout>{dptr});
-          break;
-        }
-        case multi_timeout_type: {
-          auto dptr = static_cast<multi_timeout*>(x.release());
-          add_schedule_entry(std::unique_ptr<multi_timeout>{dptr});
-          break;
-        }
-        case request_timeout_type: {
-          auto dptr = static_cast<request_timeout*>(x.release());
-          add_schedule_entry(std::unique_ptr<request_timeout>{dptr});
-          break;
-        }
-        case actor_msg_type: {
-          auto dptr = static_cast<actor_msg*>(x.release());
-          add_schedule_entry(std::unique_ptr<actor_msg>{dptr});
-          break;
-        }
-        case group_msg_type: {
-          auto dptr = static_cast<group_msg*>(x.release());
-          add_schedule_entry(std::unique_ptr<group_msg>{dptr});
-          break;
-        }
-        default: {
-          CAF_LOG_ERROR("unexpected event type");
-          break;
-        }
+      } else {
+        i->reset(); // Remove from tbl_ after the for-loop body.
       }
-      x.reset();
     }
+    tbl_.erase(std::remove_if(tbl_.begin(), tbl_.end(), is_disposed),
+               tbl_.end());
   }
 }
 
-void thread_safe_actor_clock::cancel_dispatch_loop() {
-  push(new shutdown);
+void thread_safe_actor_clock::start_dispatch_loop(caf::actor_system& sys) {
+  dispatcher_ = sys.launch_thread("caf.clock", [this] { run(); });
 }
 
-void thread_safe_actor_clock::push(event* ptr) {
-  queue_.push_back(unique_event_ptr{ptr});
+void thread_safe_actor_clock::stop_dispatch_loop() {
+  schedule(make_action([this] { running_ = false; }));
+  dispatcher_.join();
 }
 
 } // namespace caf::detail

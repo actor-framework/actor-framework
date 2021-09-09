@@ -4,21 +4,20 @@
 
 #pragma once
 
-#include <array>
-#include <atomic>
-#include <condition_variable>
 #include <memory>
-#include <mutex>
-#include <string>
+#include <thread>
+#include <vector>
 
-#include "caf/abstract_actor.hpp"
+#include "caf/action.hpp"
+#include "caf/actor_clock.hpp"
+#include "caf/actor_control_block.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/ringbuffer.hpp"
-#include "caf/detail/simple_actor_clock.hpp"
+#include "caf/fwd.hpp"
 
 namespace caf::detail {
 
-class CAF_CORE_EXPORT thread_safe_actor_clock : public simple_actor_clock {
+class CAF_CORE_EXPORT thread_safe_actor_clock : public actor_clock {
 public:
   // -- constants --------------------------------------------------------------
 
@@ -26,45 +25,47 @@ public:
 
   // -- member types -----------------------------------------------------------
 
-  using super = simple_actor_clock;
+  /// Stores actions along with their scheduling period.
+  struct schedule_entry {
+    time_point t;
+    action f;
+    duration_type period;
+  };
 
-  // -- member functions -------------------------------------------------------
+  /// @relates schedule_entry
+  using schedule_entry_ptr = std::unique_ptr<schedule_entry>;
 
-  void set_ordinary_timeout(time_point t, abstract_actor* self,
-                            std::string type, uint64_t id) override;
+  // -- constructors, destructors, and assignment operators --------------------
 
-  void set_request_timeout(time_point t, abstract_actor* self,
-                           message_id id) override;
+  thread_safe_actor_clock();
 
-  void set_multi_timeout(time_point t, abstract_actor* self, std::string type,
-                         uint64_t id) override;
+  // -- overrides --------------------------------------------------------------
 
-  void cancel_ordinary_timeout(abstract_actor* self, std::string type) override;
+  disposable schedule_periodically(time_point first_run, action f,
+                                   duration_type period) override;
 
-  void cancel_request_timeout(abstract_actor* self, message_id id) override;
+  // -- thread management ------------------------------------------------------
 
-  void cancel_timeouts(abstract_actor* self) override;
+  void start_dispatch_loop(caf::actor_system& sys);
 
-  void schedule_message(time_point t, strong_actor_ptr receiver,
-                        mailbox_element_ptr content) override;
-
-  void schedule_message(time_point t, group target, strong_actor_ptr sender,
-                        message content) override;
-
-  void cancel_all() override;
-
-  void run_dispatch_loop();
-
-  void cancel_dispatch_loop();
+  void stop_dispatch_loop();
 
 private:
-  void push(event* ptr);
+  void run();
 
-  /// Receives timer events from other threads.
-  detail::ringbuffer<unique_event_ptr, buffer_size> queue_;
+  // -- member variables -------------------------------------------------------
 
-  /// Locally caches events for processing.
-  std::array<unique_event_ptr, buffer_size> events_;
+  /// Communication to the dispatcher thread.
+  detail::ringbuffer<schedule_entry_ptr, buffer_size> queue_;
+
+  /// Handle to the dispatcher thread.
+  std::thread dispatcher_;
+
+  /// Internal data of the dispatcher.
+  bool running_ = true;
+
+  /// Internal data of the dispatcher.
+  std::vector<schedule_entry_ptr> tbl_;
 };
 
 } // namespace caf::detail

@@ -79,9 +79,9 @@ public:
 
   // -- overridden modifiers of abstract_actor ---------------------------------
 
-  void enqueue(mailbox_element_ptr, execution_unit*) override;
+  bool enqueue(mailbox_element_ptr, execution_unit*) override;
 
-  void enqueue(strong_actor_ptr, message_id, message, execution_unit*) override;
+  bool enqueue(strong_actor_ptr, message_id, message, execution_unit*) override;
 
   // -- overridden modifiers of local_actor ------------------------------------
 

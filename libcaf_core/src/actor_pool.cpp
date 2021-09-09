@@ -101,11 +101,12 @@ actor actor_pool::make(execution_unit* eu, size_t num_workers,
   return res;
 }
 
-void actor_pool::enqueue(mailbox_element_ptr what, execution_unit* eu) {
+bool actor_pool::enqueue(mailbox_element_ptr what, execution_unit* eu) {
   upgrade_lock<detail::shared_spinlock> guard{workers_mtx_};
   if (filter(guard, what->sender, what->mid, what->payload, eu))
-    return;
+    return false;
   policy_(home_system(), guard, workers_, what, eu);
+  return true;
 }
 
 actor_pool::actor_pool(actor_config& cfg)

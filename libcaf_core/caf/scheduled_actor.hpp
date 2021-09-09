@@ -15,6 +15,7 @@
 #include <type_traits>
 #include <unordered_map>
 
+#include "caf/action.hpp"
 #include "caf/actor_traits.hpp"
 #include "caf/detail/behavior_stack.hpp"
 #include "caf/detail/core_export.hpp"
@@ -217,7 +218,7 @@ public:
 
   using abstract_actor::enqueue;
 
-  void enqueue(mailbox_element_ptr ptr, execution_unit* eu) override;
+  bool enqueue(mailbox_element_ptr ptr, execution_unit* eu) override;
 
   mailbox_element* peek_at_next_mailbox_element() override;
 
@@ -396,20 +397,11 @@ public:
 
   // -- timeout management -----------------------------------------------------
 
-  /// Requests a new timeout and returns its ID.
-  uint64_t set_receive_timeout(actor_clock::time_point x);
-
   /// Requests a new timeout for the current behavior and returns its ID.
-  uint64_t set_receive_timeout();
-
-  /// Resets the timeout if `timeout_id` is the active timeout.
-  void reset_receive_timeout(uint64_t timeout_id);
-
-  /// Returns whether `timeout_id` is currently active.
-  bool is_active_receive_timeout(uint64_t tid) const;
+  void set_receive_timeout();
 
   /// Requests a new timeout and returns its ID.
-  uint64_t set_stream_timeout(actor_clock::time_point x);
+  void set_stream_timeout(actor_clock::time_point x);
 
   // -- message processing -----------------------------------------------------
 
@@ -574,10 +566,46 @@ public:
     call_handler(error_handler_, this, err);
   }
 
-  // -- timeout management -----------------------------------------------------
+  // -- scheduling actions -----------------------------------------------------
 
-  /// Requests a new timeout and returns its ID.
-  uint64_t set_timeout(std::string type, actor_clock::time_point x);
+  /// Runs `what` asynchronously at some point after `when`.
+  /// @param when The local time until the actor waits before invoking the
+  ///             action. Due to scheduling delays, there will always be some
+  ///             additional wait time. Passing the current time or a past times
+  ///             immediately schedules the action for execution.
+  /// @param what The action to invoke after waiting on the timeout.
+  /// @returns A @ref disposable that allows the actor to cancel the action.
+  template <class Duration, class F>
+  disposable run_scheduled(
+    std::chrono::time_point<std::chrono::system_clock, Duration> when, F what) {
+    using std::chrono::time_point_cast;
+    return run_scheduled(time_point_cast<timespan>(when),
+                         make_action(what, action::state::waiting));
+  }
+
+  /// @copydoc run_scheduled
+  template <class Duration, class F>
+  disposable
+  run_scheduled(std::chrono::time_point<actor_clock::clock_type, Duration> when,
+                F what) {
+    using std::chrono::time_point_cast;
+    using duration_t = actor_clock::duration_type;
+    return run_scheduled(time_point_cast<duration_t>(when),
+                         make_action(what, action::state::waiting));
+  }
+
+  /// Runs `what` asynchronously after the `delay`.
+  /// @param delay Minimum amount of time that actor waits before invoking the
+  ///              action. Due to scheduling delays, there will always be some
+  ///              additional wait time.
+  /// @param what The action to invoke after the delay.
+  /// @returns A @ref disposable that allows the actor to cancel the action.
+  template <class Rep, class Period, class F>
+  disposable run_delayed(std::chrono::duration<Rep, Period> delay, F what) {
+    using std::chrono::duration_cast;
+    return run_delayed(duration_cast<timespan>(delay),
+                       make_action(what, action::state::waiting));
+  }
 
   // -- stream processing ------------------------------------------------------
 
@@ -654,8 +682,8 @@ protected:
   /// Stores user-defined callbacks for message handling.
   detail::behavior_stack bhvr_stack_;
 
-  /// Identifies the timeout messages we are currently waiting for.
-  uint64_t timeout_id_;
+  /// Allows us to cancel our current in-flight timeout.
+  disposable pending_timeout_;
 
   /// Stores callbacks for awaited responses.
   std::forward_list<pending_response> awaited_responses_;
@@ -723,6 +751,10 @@ private:
       return body();
     }
   }
+
+  disposable run_scheduled(timestamp when, action what);
+  disposable run_scheduled(actor_clock::time_point when, action what);
+  disposable run_delayed(timespan delay, action what);
 };
 
 } // namespace caf

@@ -52,12 +52,12 @@ public:
   /// implementation is required to call `super::destroy()` at the end.
   virtual void on_destroy();
 
-  void enqueue(strong_actor_ptr sender, message_id mid, message msg,
+  bool enqueue(strong_actor_ptr sender, message_id mid, message msg,
                execution_unit* host) override;
 
   /// Enqueues a new message wrapped in a `mailbox_element` to the actor.
   /// This `enqueue` variant allows to define forwarding chains.
-  virtual void enqueue(mailbox_element_ptr what, execution_unit* host) = 0;
+  virtual bool enqueue(mailbox_element_ptr what, execution_unit* host) = 0;
 
   /// Attaches `ptr` to this actor. The actor will call `ptr->detach(...)` on
   /// exit, or immediately if it already finished execution.
@@ -103,15 +103,14 @@ public:
   virtual mailbox_element* peek_at_next_mailbox_element();
 
   template <class... Ts>
-  void eq_impl(message_id mid, strong_actor_ptr sender, execution_unit* ctx,
+  bool eq_impl(message_id mid, strong_actor_ptr sender, execution_unit* ctx,
                Ts&&... xs) {
-    enqueue(make_mailbox_element(std::move(sender), mid, {},
-                                 std::forward<Ts>(xs)...),
-            ctx);
+    return enqueue(make_mailbox_element(std::move(sender), mid, {},
+                                        std::forward<Ts>(xs)...),
+                   ctx);
   }
 
   // flags storing runtime information                      used by ...
-  static constexpr int has_timeout_flag = 0x0004;      // single_timeout
   static constexpr int is_registered_flag = 0x0008;    // (several actors)
   static constexpr int is_initialized_flag = 0x0010;   // event-based actors
   static constexpr int is_blocking_flag = 0x0020;      // blocking_actor

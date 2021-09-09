@@ -58,16 +58,13 @@ protected:
     // Start all workers.
     for (auto& w : workers_)
       w->start();
-    // Launch an additional background thread for dispatching timeouts and
-    // delayed messages.
-    timer_ = system().launch_thread("caf.clock",
-                                    [this] { clock_.run_dispatch_loop(); });
     // Run remaining startup code.
+    clock_.start_dispatch_loop(system());
     super::start();
   }
 
   void stop() override {
-    // shutdown workers
+    // Shutdown workers.
     class shutdown_helper : public resumable, public ref_counted {
     public:
       resumable::resume_result resume(execution_unit* ptr, size_t) override {
@@ -91,18 +88,18 @@ protected:
       std::condition_variable cv;
       execution_unit* last_worker;
     };
-    // use a set to keep track of remaining workers
+    // Use a set to keep track of remaining workers.
     shutdown_helper sh;
     std::set<worker_type*> alive_workers;
     auto num = num_workers();
     for (size_t i = 0; i < num; ++i) {
       alive_workers.insert(worker_by_id(i));
-      sh.ref(); // make sure reference count is high enough
+      sh.ref(); // Make sure reference count is high enough.
     }
     while (!alive_workers.empty()) {
       (*alive_workers.begin())->external_enqueue(&sh);
-      // since jobs can be stolen, we cannot assume that we have
-      // actually shut down the worker we've enqueued sh to
+      // Since jobs can be stolen, we cannot assume that we have actually shut
+      // down the worker we've enqueued sh to.
       { // lifetime scope of guard
         std::unique_lock<std::mutex> guard(sh.mtx);
         sh.cv.wait(guard, [&] { return sh.last_worker != nullptr; });
@@ -110,20 +107,19 @@ protected:
       alive_workers.erase(static_cast<worker_type*>(sh.last_worker));
       sh.last_worker = nullptr;
     }
-    // shutdown utility actors
+    // Shutdown utility actors.
     stop_actors();
-    // wait until all workers are done
+    // Wait until all workers are done.
     for (auto& w : workers_) {
       w->get_thread().join();
     }
-    // run cleanup code for each resumable
+    // Run cleanup code for each resumable.
     auto f = &abstract_coordinator::cleanup_and_release;
     for (auto& w : workers_)
       policy_.foreach_resumable(w.get(), f);
     policy_.foreach_central_resumable(this, f);
-    // stop timer thread
-    clock_.cancel_dispatch_loop();
-    timer_.join();
+    // Stop timer thread.
+    clock_.stop_dispatch_loop();
   }
 
   void enqueue(resumable* ptr) override {

@@ -94,6 +94,11 @@ public:
       cv_empty_.notify_all();
   }
 
+  template <class... Us>
+  void emplace_back(Us&&... xs) {
+    push_back(T{std::forward<Us>(xs)...});
+  }
+
   bool empty() const noexcept {
     return rd_pos_ == wr_pos_;
   }

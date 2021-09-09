@@ -106,22 +106,6 @@ bool inspect(Inspector& f, node_down_msg& x) {
                             f.field("reason", x.reason));
 }
 
-/// Signalizes a timeout event.
-/// @note This message is handled implicitly by the runtime system.
-struct timeout_msg {
-  /// Type of the timeout (usually either "receive" or "cycle").
-  std::string type;
-  /// Actor-specific timeout ID.
-  uint64_t timeout_id;
-};
-
-/// @relates timeout_msg
-template <class Inspector>
-bool inspect(Inspector& f, timeout_msg& x) {
-  return f.object(x).fields(f.field("type", x.type),
-                            f.field("timeout_id", x.timeout_id));
-}
-
 /// Demands the receiver to open a new stream from the sender to the receiver.
 struct open_stream_msg {
   /// Reserved slot on the source.

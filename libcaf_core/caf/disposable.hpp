@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "caf/detail/core_export.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/ref_counted.hpp"
@@ -48,6 +50,11 @@ public:
   disposable& operator=(disposable&&) noexcept = default;
   disposable& operator=(const disposable&) noexcept = default;
 
+  /// Combines multiple disposable into a single disposable. The new disposable
+  /// is disposed if all of its elements are disposed. Disposing the composite
+  /// disposes all elements individually.
+  static disposable make_composite(std::vector<disposable> entries);
+
   /// Disposes the resource. Calling `dispose()` on a disposed resource is a
   /// no-op.
   void dispose() {
@@ -78,12 +85,7 @@ public:
   }
 
   /// Returns a pointer to the implementation.
-  [[nodiscard]] impl* ptr() noexcept {
-    return pimpl_.get();
-  }
-
-  /// Returns a pointer to the implementation.
-  [[nodiscard]] const impl* ptr() const noexcept {
+  [[nodiscard]] impl* ptr() const noexcept {
     return pimpl_.get();
   }
 

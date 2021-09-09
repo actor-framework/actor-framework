@@ -230,7 +230,7 @@ public:
     return self_->new_request_id(mp);
   }
 
-  void request_response_timeout(timespan d, message_id mid) {
+  disposable request_response_timeout(timespan d, message_id mid) {
     return self_->request_response_timeout(d, mid);
   }
 

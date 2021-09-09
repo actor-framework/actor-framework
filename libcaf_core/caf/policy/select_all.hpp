@@ -15,58 +15,52 @@
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/typed_actor_util.hpp"
+#include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
 #include "caf/message_id.hpp"
 
 namespace caf::detail {
 
-template <class F, class T>
-struct select_all_helper {
-  std::vector<T> results;
-  std::shared_ptr<size_t> pending;
-  F f;
-
-  void operator()(T& x) {
-    CAF_LOG_TRACE(CAF_ARG2("pending", *pending));
-    if (*pending > 0) {
-      results.emplace_back(std::move(x));
-      if (--*pending == 0)
-        f(std::move(results));
-    }
-  }
-
-  template <class Fun>
-  select_all_helper(size_t pending, Fun&& f)
-    : pending(std::make_shared<size_t>(pending)), f(std::forward<Fun>(f)) {
-    results.reserve(pending);
-  }
-
-  auto wrap() {
-    return [this](T& x) { (*this)(x); };
-  }
+template <class... Ts>
+struct select_all_helper_value_oracle {
+  using type = std::tuple<Ts...>;
 };
 
+template <class T>
+struct select_all_helper_value_oracle<T> {
+  using type = T;
+};
+
+template <class... Ts>
+using select_all_helper_value_t =
+  typename select_all_helper_value_oracle<Ts...>::type;
+
 template <class F, class... Ts>
-struct select_all_tuple_helper {
-  using value_type = std::tuple<Ts...>;
+struct select_all_helper {
+  using value_type = select_all_helper_value_t<Ts...>;
   std::vector<value_type> results;
   std::shared_ptr<size_t> pending;
+  disposable timeouts;
   F f;
+
+  template <class Fun>
+  select_all_helper(size_t pending, disposable timeouts, Fun&& f)
+    : pending(std::make_shared<size_t>(pending)),
+      timeouts(std::move(timeouts)),
+      f(std::forward<Fun>(f)) {
+    results.reserve(pending);
+  }
 
   void operator()(Ts&... xs) {
     CAF_LOG_TRACE(CAF_ARG2("pending", *pending));
     if (*pending > 0) {
       results.emplace_back(std::move(xs)...);
-      if (--*pending == 0)
+      if (--*pending == 0) {
+        timeouts.dispose();
         f(std::move(results));
+      }
     }
-  }
-
-  template <class Fun>
-  select_all_tuple_helper(size_t pending, Fun&& f)
-    : pending(std::make_shared<size_t>(pending)), f(std::forward<Fun>(f)) {
-    results.reserve(pending);
   }
 
   auto wrap() {
@@ -80,7 +74,7 @@ struct select_select_all_helper;
 template <class F, class... Ts>
 struct select_select_all_helper<
   F, detail::type_list<std::vector<std::tuple<Ts...>>>> {
-  using type = select_all_tuple_helper<F, Ts...>;
+  using type = select_all_helper<F, Ts...>;
 };
 
 template <class F, class T>
@@ -113,7 +107,8 @@ public:
     = detail::type_checker<response_type,
                            detail::select_all_helper_t<detail::decay_t<Fun>>>;
 
-  explicit select_all(message_id_list ids) : ids_(std::move(ids)) {
+  explicit select_all(message_id_list ids, disposable pending_timeouts)
+    : ids_(std::move(ids)), pending_timeouts_(std::move(pending_timeouts)) {
     CAF_ASSERT(ids_.size()
                <= static_cast<size_t>(std::numeric_limits<int>::max()));
   }
@@ -123,7 +118,7 @@ public:
   select_all& operator=(select_all&&) noexcept = default;
 
   template <class Self, class F, class OnError>
-  void await(Self* self, F&& f, OnError&& g) const {
+  void await(Self* self, F&& f, OnError&& g) {
     CAF_LOG_TRACE(CAF_ARG(ids_));
     auto bhvr = make_behavior(std::forward<F>(f), std::forward<OnError>(g));
     for (auto id : ids_)
@@ -131,7 +126,7 @@ public:
   }
 
   template <class Self, class F, class OnError>
-  void then(Self* self, F&& f, OnError&& g) const {
+  void then(Self* self, F&& f, OnError&& g) {
     CAF_LOG_TRACE(CAF_ARG(ids_));
     auto bhvr = make_behavior(std::forward<F>(f), std::forward<OnError>(g));
     for (auto id : ids_)
@@ -139,12 +134,13 @@ public:
   }
 
   template <class Self, class F, class G>
-  void receive(Self* self, F&& f, G&& g) const {
+  void receive(Self* self, F&& f, G&& g) {
     CAF_LOG_TRACE(CAF_ARG(ids_));
     using helper_type = detail::select_all_helper_t<detail::decay_t<F>>;
-    helper_type helper{ids_.size(), std::forward<F>(f)};
-    auto error_handler = [&](error& err) {
+    helper_type helper{ids_.size(), pending_timeouts_, std::forward<F>(f)};
+    auto error_handler = [&](error& err) mutable {
       if (*helper.pending > 0) {
+        pending_timeouts_.dispose();
         *helper.pending = 0;
         helper.results.clear();
         g(err);
@@ -161,28 +157,35 @@ public:
     return ids_;
   }
 
+  disposable pending_timeouts() {
+    return pending_timeouts_;
+  }
+
 private:
   template <class F, class OnError>
-  behavior make_behavior(F&& f, OnError&& g) const {
+  behavior make_behavior(F&& f, OnError&& g) {
     using namespace detail;
     using helper_type = select_all_helper_t<decay_t<F>>;
-    helper_type helper{ids_.size(), std::move(f)};
+    helper_type helper{ids_.size(), pending_timeouts_, std::move(f)};
     auto pending = helper.pending;
     auto error_handler = [pending{std::move(pending)},
+                          timeouts{pending_timeouts_},
                           g{std::forward<OnError>(g)}](error& err) mutable {
       CAF_LOG_TRACE(CAF_ARG2("pending", *pending));
       if (*pending > 0) {
+        timeouts.dispose();
         *pending = 0;
         g(err);
       }
     };
     return {
       std::move(helper),
-      std::move(error_handler),
+      std::move(error_handler)
     };
   }
 
   message_id_list ids_;
+  disposable pending_timeouts_;
 };
 
 } // namespace caf::policy

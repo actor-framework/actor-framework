@@ -36,6 +36,13 @@ struct fixture : test_coordinator_fixture<> {
   auto make_counting_error_handler(size_t* count) {
     return [count](const error&) { *count += 1; };
   }
+
+  template <class... ResponseHandles>
+  auto fuse(ResponseHandles&... handles) {
+    return select_any<detail::type_list<int>>{
+      {handles.id()...},
+      disposable::make_composite({handles.policy().pending_timeouts()...})};
+  }
 };
 
 } // namespace
@@ -55,7 +62,7 @@ CAF_TEST(select_any picks the first arriving integer) {
     SUBTEST("single integer") {
       auto r1 = self->request(server1, infinite, 1, 2);
       auto r2 = self->request(server2, infinite, 2, 3);
-      select_any<detail::type_list<int>> choose{{r1.id(), r2.id()}};
+      auto choose = fuse(r1, r2);
       run();
       choose.receive(
         self.ptr(), [](int result) { CAF_CHECK_EQUAL(result, 3); },
@@ -67,7 +74,7 @@ CAF_TEST(select_any picks the first arriving integer) {
     auto client = sys.spawn([=, &result](event_based_actor* client_ptr) {
       auto r1 = client_ptr->request(server1, infinite, 1, 2);
       auto r2 = client_ptr->request(server2, infinite, 2, 3);
-      select_any<detail::type_list<int>> choose{{r1.id(), r2.id()}};
+      auto choose = fuse(r1, r2);
       choose.then(
         client_ptr, [&result](int x) { result = x; }, make_error_handler());
     });
@@ -84,7 +91,7 @@ CAF_TEST(select_any picks the first arriving integer) {
     auto client = sys.spawn([=, &result](event_based_actor* client_ptr) {
       auto r1 = client_ptr->request(server1, infinite, 1, 2);
       auto r2 = client_ptr->request(server2, infinite, 2, 3);
-      select_any<detail::type_list<int>> choose{{r1.id(), r2.id()}};
+      auto choose = fuse(r1, r2);
       choose.await(
         client_ptr, [&result](int x) { result = x; }, make_error_handler());
     });
@@ -107,7 +114,7 @@ CAF_TEST(select_any calls the error handler at most once) {
   SUBTEST("request.receive") {
     auto r1 = self->request(server1, infinite, 1, 2);
     auto r2 = self->request(server2, infinite, 2, 3);
-    select_any<detail::type_list<int>> choose{{r1.id(), r2.id()}};
+    auto choose = fuse(r1, r2);
     run();
     size_t errors = 0;
     choose.receive(
@@ -121,7 +128,7 @@ CAF_TEST(select_any calls the error handler at most once) {
     auto client = sys.spawn([=, &errors](event_based_actor* client_ptr) {
       auto r1 = client_ptr->request(server1, infinite, 1, 2);
       auto r2 = client_ptr->request(server2, infinite, 2, 3);
-      select_any<detail::type_list<int>> choose{{r1.id(), r2.id()}};
+      auto choose = fuse(r1, r2);
       choose.then(
         client_ptr,
         [](int) { CAF_FAIL("fan-in policy called the result handler"); },
@@ -139,7 +146,7 @@ CAF_TEST(select_any calls the error handler at most once) {
     auto client = sys.spawn([=, &errors](event_based_actor* client_ptr) {
       auto r1 = client_ptr->request(server1, infinite, 1, 2);
       auto r2 = client_ptr->request(server2, infinite, 2, 3);
-      select_any<detail::type_list<int>> choose{{r1.id(), r2.id()}};
+      auto choose = fuse(r1, r2);
       choose.await(
         client_ptr,
         [](int) { CAF_FAIL("fan-in policy called the result handler"); },
