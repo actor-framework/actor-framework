@@ -23,7 +23,7 @@ namespace {
 struct testee_state {
   event_based_actor* self;
   disposable pending;
-  bool run_delayed_called=false;
+  bool run_delayed_called = false;
 
   testee_state(event_based_actor* self) : self(self) {
     // nop

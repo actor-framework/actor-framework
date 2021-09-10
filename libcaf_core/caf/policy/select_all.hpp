@@ -180,7 +180,7 @@ private:
     };
     return {
       std::move(helper),
-      std::move(error_handler)
+      std::move(error_handler),
     };
   }
 
