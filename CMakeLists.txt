@@ -25,7 +25,6 @@ option(CAF_ENABLE_CURL_EXAMPLES "Build examples with libcurl" OFF)
 option(CAF_ENABLE_PROTOBUF_EXAMPLES "Build examples with Google Protobuf" OFF)
 option(CAF_ENABLE_QT6_EXAMPLES "Build examples with the Qt6 framework" OFF)
 option(CAF_ENABLE_RUNTIME_CHECKS "Build CAF with extra runtime assertions" OFF)
-option(CAF_ENABLE_UTILITY_TARGETS "Include targets like consistency-check" OFF)
 option(CAF_ENABLE_ACTOR_PROFILER "Enable experimental profiler API" OFF)
 
 # -- CAF options that are on by default ----------------------------------------
@@ -204,50 +203,23 @@ if(NOT TARGET uninstall)
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/uninstall.cmake)
 endif()
 
-# -- utility targets -----------------------------------------------------------
-
-if(CAF_ENABLE_UTILITY_TARGETS)
-  add_executable(caf-generate-enum-strings
-                 EXCLUDE_FROM_ALL
-                 cmake/caf-generate-enum-strings.cpp)
-  target_link_libraries(caf-generate-enum-strings PRIVATE CAF::internal)
-  add_custom_target(consistency-check)
-  add_custom_target(update-enum-strings)
-  # adds a consistency check that verifies that `cpp_file` is still valid by
-  # re-generating the file and comparing it to the existing file
-  function(caf_add_enum_consistency_check hpp_file cpp_file)
-    set(input "${CMAKE_CURRENT_SOURCE_DIR}/${hpp_file}")
-    set(file_under_test "${CMAKE_CURRENT_SOURCE_DIR}/${cpp_file}")
-    set(output "${CMAKE_CURRENT_BINARY_DIR}/check/${cpp_file}")
-    get_filename_component(output_dir "${output}" DIRECTORY)
-    file(MAKE_DIRECTORY "${output_dir}")
-    add_custom_command(OUTPUT "${output}"
-                       COMMAND caf-generate-enum-strings "${input}" "${output}"
-                       DEPENDS caf-generate-enum-strings "${input}")
-    get_filename_component(target_name "${input}" NAME_WE)
-    add_custom_target("${target_name}"
-                      COMMAND
-                        "${CMAKE_COMMAND}"
-                        "-Dfile_under_test=${file_under_test}"
-                        "-Dgenerated_file=${output}"
-                        -P "${PROJECT_SOURCE_DIR}/cmake/check-consistency.cmake"
-                      DEPENDS "${output}")
-    add_dependencies(consistency-check "${target_name}")
-    add_custom_target("${target_name}-update"
-                      COMMAND
-                        caf-generate-enum-strings
-                        "${input}"
-                        "${file_under_test}"
-                       DEPENDS caf-generate-enum-strings "${input}")
-    add_dependencies(update-enum-strings "${target_name}-update")
-  endfunction()
-else()
-  function(caf_add_enum_consistency_check hpp_file cpp_file)
-    # nop
-  endfunction()
-endif()
-
 # -- utility functions ---------------------------------------------------------
+
+# generates the implementation file for the enum that contains to_string,
+# from_string and from_integer
+function(caf_add_enum_type target enum_name)
+  string(REPLACE "." "/" path "${enum_name}")
+  set(hpp_file "${CMAKE_CURRENT_SOURCE_DIR}/caf/${path}.hpp")
+  set(cpp_file "${CMAKE_CURRENT_BINARY_DIR}/src/${path}_strings.cpp")
+  set(gen_file "${PROJECT_SOURCE_DIR}/cmake/caf-generate-enum-strings.cmake")
+  add_custom_command(OUTPUT "${cpp_file}"
+                     COMMAND ${CMAKE_COMMAND}
+                       "-DINPUT_FILE=${hpp_file}"
+                       "-DOUTPUT_FILE=${cpp_file}"
+                       -P "${gen_file}"
+                     DEPENDS "${hpp_file}" "${gen_file}")
+  target_sources(${target} PRIVATE "${cpp_file}")
+endfunction()
 
 function(caf_export_and_install_lib component)
   add_library(CAF::${component} ALIAS libcaf_${component})
@@ -328,8 +300,7 @@ endfunction()
 #     ...
 # )
 function(caf_add_component name)
-  set(varargs DEPENDENCIES HEADERS SOURCES TEST_SOURCES TEST_SUITES
-              ENUM_CONSISTENCY_CHECKS)
+  set(varargs DEPENDENCIES HEADERS SOURCES TEST_SOURCES TEST_SUITES ENUM_TYPES)
   cmake_parse_arguments(CAF_ADD_COMPONENT "" "" "${varargs}" ${ARGN})
   if(NOT CAF_ADD_COMPONENT_HEADERS)
     message(FATAL_ERROR "Cannot add CAF component without at least one header.")
@@ -372,6 +343,11 @@ function(caf_add_component name)
     set_property(TARGET ${pub_lib_target} PROPERTY POSITION_INDEPENDENT_CODE ON)
   endif()
   target_link_libraries(${pub_lib_target} ${CAF_ADD_COMPONENT_DEPENDENCIES})
+  if(CAF_ADD_COMPONENT_ENUM_TYPES)
+    foreach(enum_name ${CAF_ADD_COMPONENT_ENUM_TYPES})
+      caf_add_enum_type(${obj_lib_target} ${enum_name})
+    endforeach()
+  endif()
   foreach(target ${targets})
     target_compile_definitions(${target} PRIVATE "libcaf_${name}_EXPORTS")
     target_include_directories(${target} PRIVATE
@@ -384,13 +360,6 @@ function(caf_add_component name)
     endif()
   endforeach()
   caf_export_and_install_lib(${name})
-  if(CAF_ADD_COMPONENT_ENUM_CONSISTENCY_CHECKS)
-    foreach(enum_name ${CAF_ADD_COMPONENT_ENUM_CONSISTENCY_CHECKS})
-      string(REPLACE "." "/" path "${enum_name}")
-      caf_add_enum_consistency_check("caf/${path}.hpp"
-                                     "src/${path}_strings.cpp")
-    endforeach()
-  endif()
 endfunction()
 
 # -- build all components the user asked for -----------------------------------
