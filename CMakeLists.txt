@@ -205,8 +205,8 @@ endif()
 
 # -- utility functions ---------------------------------------------------------
 
-# adds a consistency check that verifies that `cpp_file` is still valid by
-# re-generating the file and comparing it to the existing file
+# generates the implementation file for the enum that contains to_string,
+# from_string and from_integer
 function(caf_add_enum_type target enum_name)
   string(REPLACE "." "/" path "${enum_name}")
   set(hpp_file "${CMAKE_CURRENT_SOURCE_DIR}/caf/${path}.hpp")
