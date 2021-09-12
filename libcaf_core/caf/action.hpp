@@ -58,7 +58,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  action(impl_ptr ptr) noexcept : pimpl_(std::move(ptr)) {
+  explicit action(impl_ptr ptr) noexcept : pimpl_(std::move(ptr)) {
     // nop
   }
 
