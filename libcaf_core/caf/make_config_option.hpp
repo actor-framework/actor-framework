@@ -73,14 +73,4 @@ CAF_CORE_EXPORT config_option
 make_negated_config_option(bool& storage, string_view category,
                            string_view name, string_view description);
 
-// Reads timespans, but stores an integer representing microsecond resolution.
-[[deprecated("use timespan options instead")]] CAF_CORE_EXPORT config_option
-make_us_resolution_config_option(size_t& storage, string_view category,
-                                 string_view name, string_view description);
-
-// Reads timespans, but stores an integer representing millisecond resolution.
-[[deprecated("use timespan options instead")]] CAF_CORE_EXPORT config_option
-make_ms_resolution_config_option(size_t& storage, string_view category,
-                                 string_view name, string_view description);
-
 } // namespace caf

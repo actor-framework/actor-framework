@@ -144,36 +144,6 @@ public:
     }
   }
 
-  // -- deprecated API: remove with CAF 0.19 -----------------------------------
-
-  template <class T>
-  [[deprecated("auto-conversion to underlying type is unsafe, add inspect")]] //
-  std::enable_if_t<std::is_enum<T>::value, bool>
-  opaque_value(T& val) {
-    auto tmp = std::underlying_type_t<T>{0};
-    if (dref().value(tmp)) {
-      val = static_cast<T>(tmp);
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  template <class T>
-  [[deprecated("use apply instead")]] bool apply_object(T& x) {
-    return detail::save(dref(), x);
-  }
-
-  template <class... Ts>
-  [[deprecated("use apply instead")]] bool apply_objects(Ts&... xs) {
-    return (apply(xs) && ...);
-  }
-
-  template <class T>
-  [[deprecated("use apply instead")]] bool apply_value(T& x) {
-    return detail::save(dref(), x);
-  }
-
 private:
   Subtype* dptr() {
     return static_cast<Subtype*>(this);

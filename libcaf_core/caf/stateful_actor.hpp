@@ -71,8 +71,6 @@ public:
                                           const char*>::value) {
           return State::name;
         }
-      } else {
-        non_static_name_member(state.name);
       }
     }
     return Base::name();
@@ -84,14 +82,6 @@ public:
     /// its reference count drops to zero.
     State state;
   };
-
-  template <class T>
-  [[deprecated("non-static 'State::name' members have no effect since 0.18")]]
-  // This function only exists to raise a deprecated warning.
-  static void
-  non_static_name_member(const T&) {
-    // nop
-  }
 };
 
 } // namespace caf

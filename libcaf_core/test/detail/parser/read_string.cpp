@@ -16,6 +16,7 @@
 #include "caf/variant.hpp"
 
 using namespace caf;
+using namespace std::literals;
 
 namespace {
 
@@ -41,58 +42,51 @@ struct fixture {
   string_parser p;
 };
 
-// TODO: remove and use "..."s from the STL when switching to C++14
-std::string operator"" _s(const char* str, size_t str_len) {
-  std::string result;
-  result.assign(str, str_len);
-  return result;
-}
-
 } // namespace
 
 CAF_TEST_FIXTURE_SCOPE(read_string_tests, fixture)
 
 CAF_TEST(empty string) {
-  CAF_CHECK_EQUAL(p(R"("")"), ""_s);
-  CAF_CHECK_EQUAL(p(R"( "")"), ""_s);
-  CAF_CHECK_EQUAL(p(R"(  "")"), ""_s);
-  CAF_CHECK_EQUAL(p(R"("" )"), ""_s);
-  CAF_CHECK_EQUAL(p(R"(""  )"), ""_s);
-  CAF_CHECK_EQUAL(p(R"(  ""  )"), ""_s);
-  CAF_CHECK_EQUAL(p("\t \"\" \t\t\t "), ""_s);
-  CAF_CHECK_EQUAL(p(R"('')"), ""_s);
-  CAF_CHECK_EQUAL(p(R"( '')"), ""_s);
-  CAF_CHECK_EQUAL(p(R"(  '')"), ""_s);
-  CAF_CHECK_EQUAL(p(R"('' )"), ""_s);
-  CAF_CHECK_EQUAL(p(R"(''  )"), ""_s);
-  CAF_CHECK_EQUAL(p(R"(  ''  )"), ""_s);
-  CAF_CHECK_EQUAL(p("\t '' \t\t\t "), ""_s);
+  CAF_CHECK_EQUAL(p(R"("")"), ""s);
+  CAF_CHECK_EQUAL(p(R"( "")"), ""s);
+  CAF_CHECK_EQUAL(p(R"(  "")"), ""s);
+  CAF_CHECK_EQUAL(p(R"("" )"), ""s);
+  CAF_CHECK_EQUAL(p(R"(""  )"), ""s);
+  CAF_CHECK_EQUAL(p(R"(  ""  )"), ""s);
+  CAF_CHECK_EQUAL(p("\t \"\" \t\t\t "), ""s);
+  CAF_CHECK_EQUAL(p(R"('')"), ""s);
+  CAF_CHECK_EQUAL(p(R"( '')"), ""s);
+  CAF_CHECK_EQUAL(p(R"(  '')"), ""s);
+  CAF_CHECK_EQUAL(p(R"('' )"), ""s);
+  CAF_CHECK_EQUAL(p(R"(''  )"), ""s);
+  CAF_CHECK_EQUAL(p(R"(  ''  )"), ""s);
+  CAF_CHECK_EQUAL(p("\t '' \t\t\t "), ""s);
 }
 
 CAF_TEST(nonempty quoted string) {
-  CAF_CHECK_EQUAL(p(R"("abc")"), "abc"_s);
-  CAF_CHECK_EQUAL(p(R"("a b c")"), "a b c"_s);
-  CAF_CHECK_EQUAL(p(R"(   "abcdefABCDEF"   )"), "abcdefABCDEF"_s);
-  CAF_CHECK_EQUAL(p(R"('abc')"), "abc"_s);
-  CAF_CHECK_EQUAL(p(R"('a b c')"), "a b c"_s);
-  CAF_CHECK_EQUAL(p(R"(   'abcdefABCDEF'   )"), "abcdefABCDEF"_s);
+  CAF_CHECK_EQUAL(p(R"("abc")"), "abc"s);
+  CAF_CHECK_EQUAL(p(R"("a b c")"), "a b c"s);
+  CAF_CHECK_EQUAL(p(R"(   "abcdefABCDEF"   )"), "abcdefABCDEF"s);
+  CAF_CHECK_EQUAL(p(R"('abc')"), "abc"s);
+  CAF_CHECK_EQUAL(p(R"('a b c')"), "a b c"s);
+  CAF_CHECK_EQUAL(p(R"(   'abcdefABCDEF'   )"), "abcdefABCDEF"s);
 }
 
 CAF_TEST(quoted string with escaped characters) {
-  CAF_CHECK_EQUAL(p(R"("a\tb\tc")"), "a\tb\tc"_s);
-  CAF_CHECK_EQUAL(p(R"("a\nb\r\nc")"), "a\nb\r\nc"_s);
-  CAF_CHECK_EQUAL(p(R"("a\\b")"), "a\\b"_s);
-  CAF_CHECK_EQUAL(p("\"'hello' \\\"world\\\"\""), "'hello' \"world\""_s);
-  CAF_CHECK_EQUAL(p(R"('a\tb\tc')"), "a\tb\tc"_s);
-  CAF_CHECK_EQUAL(p(R"('a\nb\r\nc')"), "a\nb\r\nc"_s);
-  CAF_CHECK_EQUAL(p(R"('a\\b')"), "a\\b"_s);
-  CAF_CHECK_EQUAL(p(R"('\'hello\' "world"')"), "'hello' \"world\""_s);
+  CAF_CHECK_EQUAL(p(R"("a\tb\tc")"), "a\tb\tc"s);
+  CAF_CHECK_EQUAL(p(R"("a\nb\r\nc")"), "a\nb\r\nc"s);
+  CAF_CHECK_EQUAL(p(R"("a\\b")"), "a\\b"s);
+  CAF_CHECK_EQUAL(p("\"'hello' \\\"world\\\"\""), "'hello' \"world\""s);
+  CAF_CHECK_EQUAL(p(R"('a\tb\tc')"), "a\tb\tc"s);
+  CAF_CHECK_EQUAL(p(R"('a\nb\r\nc')"), "a\nb\r\nc"s);
+  CAF_CHECK_EQUAL(p(R"('a\\b')"), "a\\b"s);
+  CAF_CHECK_EQUAL(p(R"('\'hello\' "world"')"), "'hello' \"world\""s);
 }
 
 CAF_TEST(unquoted strings) {
-  CAF_CHECK_EQUAL(p(R"(foo)"), "foo"_s);
-  CAF_CHECK_EQUAL(p(R"( foo )"), "foo"_s);
-  CAF_CHECK_EQUAL(p(R"( 123 )"), "123"_s);
+  CAF_CHECK_EQUAL(p(R"(foo)"), "foo"s);
+  CAF_CHECK_EQUAL(p(R"( foo )"), "foo"s);
+  CAF_CHECK_EQUAL(p(R"( 123 )"), "123"s);
 }
 
 CAF_TEST(invalid strings) {

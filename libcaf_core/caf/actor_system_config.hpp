@@ -99,9 +99,6 @@ public:
   /// provides a config file path on the command line.
   error parse(string_list args);
 
-  [[deprecated("set the config_file_path member instead")]] error
-  parse(string_list args, const char* config_file_cstr);
-
   /// Parses the CLI options `{argc, argv}` and `config` as configuration file.
   error parse(int argc, char** argv, std::istream& config);
 
@@ -109,9 +106,6 @@ public:
   /// via `config_file_path` and `config_file_path_alternative` unless the user
   /// provides a config file path on the command line.
   error parse(int argc, char** argv);
-
-  [[deprecated("set the config_file_path member instead")]] error
-  parse(int argc, char** argv, const char* config_file_cstr);
 
   /// Allows other nodes to spawn actors created by `fun`
   /// dynamically by using `name` as identifier.
@@ -251,11 +245,6 @@ public:
   // -- utility for caf-run ----------------------------------------------------
 
   int (*slave_mode_fun)(actor_system&, const actor_system_config&);
-
-  // -- default error rendering functions --------------------------------------
-
-  [[deprecated("please use to_string() on the error")]] static std::string
-  render(const error& err);
 
   // -- config file parsing ----------------------------------------------------
 

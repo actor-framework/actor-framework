@@ -59,7 +59,6 @@
 #include "caf/logger.hpp"
 #include "caf/make_config_option.hpp"
 #include "caf/may_have_timeout.hpp"
-#include "caf/memory_managed.hpp"
 #include "caf/message.hpp"
 #include "caf/message_builder.hpp"
 #include "caf/message_handler.hpp"
@@ -104,12 +103,6 @@
 #include "caf/uuid.hpp"
 
 #include "caf/decorator/sequencer.hpp"
-
-#include "caf/meta/annotation.hpp"
-#include "caf/meta/load_callback.hpp"
-#include "caf/meta/omittable_if_empty.hpp"
-#include "caf/meta/save_callback.hpp"
-#include "caf/meta/type_name.hpp"
 
 #include "caf/scheduler/abstract_coordinator.hpp"
 #include "caf/scheduler/test_coordinator.hpp"

@@ -560,76 +560,29 @@ auto get_or(const config_value& x, Fallback&& fallback) {
 
 // -- SumType-like access ------------------------------------------------------
 
-template <class T>
-[[deprecated("use get_as or get_or instead")]] optional<T>
-legacy_get_if(const config_value* x) {
-  if (auto val = get_as<T>(*x))
-    return {std::move(*val)};
-  else
-    return {};
-}
-
-template <class T>
+template <class T, class = std::enable_if_t<detail::is_config_value_type_v<T>>>
 auto get_if(const config_value* x) {
-  if constexpr (detail::is_config_value_type_v<T>) {
-    return get_if<T>(x->get_data_ptr());
-  } else {
-    return legacy_get_if<T>(x);
-  }
+  return get_if<T>(x->get_data_ptr());
 }
 
-template <class T>
+template <class T, class = std::enable_if_t<detail::is_config_value_type_v<T>>>
 auto get_if(config_value* x) {
-  if constexpr (detail::is_config_value_type_v<T>) {
-    return get_if<T>(x->get_data_ptr());
-  } else {
-    return legacy_get_if<T>(x);
-  }
+  return get_if<T>(x->get_data_ptr());
 }
 
-template <class T>
-[[deprecated("use get_as or get_or instead")]] T
-legacy_get(const config_value& x) {
-  auto val = get_as<T>(x);
-  if (!val)
-    CAF_RAISE_ERROR("legacy_get: conversion failed");
-  return std::move(*val);
-}
-
-template <class T>
+template <class T, class = std::enable_if_t<detail::is_config_value_type_v<T>>>
 decltype(auto) get(const config_value& x) {
-  if constexpr (detail::is_config_value_type_v<T>) {
-    return get<T>(x.get_data());
-  } else {
-    return legacy_get<T>(x);
-  }
+  return get<T>(x.get_data());
 }
 
-template <class T>
+template <class T, class = std::enable_if_t<detail::is_config_value_type_v<T>>>
 decltype(auto) get(config_value& x) {
-  if constexpr (detail::is_config_value_type_v<T>) {
-    return get<T>(x.get_data());
-  } else {
-    return legacy_get<T>(x);
-  }
+  return get<T>(x.get_data());
 }
 
-template <class T>
-[[deprecated("use get_as or get_or instead")]] bool
-legacy_holds_alternative(const config_value& x) {
-  if (auto val = get_as<T>(x))
-    return true;
-  else
-    return false;
-}
-
-template <class T>
+template <class T, class = std::enable_if_t<detail::is_config_value_type_v<T>>>
 auto holds_alternative(const config_value& x) {
-  if constexpr (detail::is_config_value_type_v<T>) {
-    return holds_alternative<T>(x.get_data());
-  } else {
-    return legacy_holds_alternative<T>(x);
-  }
+  return holds_alternative<T>(x.get_data());
 }
 
 // -- comparison operator overloads --------------------------------------------

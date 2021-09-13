@@ -357,17 +357,6 @@ public:
     return make_response_promise<response_promise>();
   }
 
-  template <class... Ts>
-  [[deprecated("simply return the result from the message handler")]] //
-  detail::response_promise_t<std::decay_t<Ts>...>
-  response(Ts&&... xs) {
-    if (current_element_) {
-      response_promise::respond_to(this, current_element_,
-                                   make_message(std::forward<Ts>(xs)...));
-    }
-    return {};
-  }
-
   const char* name() const override;
 
   /// Serializes the state of this actor to `sink`. This function is

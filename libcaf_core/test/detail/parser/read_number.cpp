@@ -158,7 +158,6 @@ CAF_TEST(sub ascii) {
 }
 
 CAF_TEST(binary numbers) {
-  /* TODO: use this implementation when switching to C++14
   CHECK_NUMBER(0b0);
   CHECK_NUMBER(0b10);
   CHECK_NUMBER(0b101);
@@ -166,14 +165,6 @@ CAF_TEST(binary numbers) {
   CHECK_NUMBER(-0b0);
   CHECK_NUMBER(-0b101);
   CHECK_NUMBER(-0B1001);
-  */
-  CAF_CHECK_EQUAL(p("0b0"), res(0));
-  CAF_CHECK_EQUAL(p("0b10"), res(2));
-  CAF_CHECK_EQUAL(p("0b101"), res(5));
-  CAF_CHECK_EQUAL(p("0B1001"), res(9));
-  CAF_CHECK_EQUAL(p("-0b0"), res(0));
-  CAF_CHECK_EQUAL(p("-0b101"), res(-5));
-  CAF_CHECK_EQUAL(p("-0B1001"), res(-9));
 }
 
 CAF_TEST(octal numbers) {

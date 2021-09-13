@@ -78,12 +78,6 @@ constexpr type_id_t first_custom_type_id = 200;
 template <class T>
 constexpr bool has_type_id_v = detail::is_complete<type_id<T>>;
 
-// TODO: remove with CAF 0.19 (this exists for compatibility with CAF 0.17).
-template <class T>
-struct has_type_id {
-  static constexpr bool value = detail::is_complete<type_id<T>>;
-};
-
 /// Returns `type_name_v<T>` if available, "anonymous" otherwise.
 template <class T>
 string_view type_name_or_anonymous() {

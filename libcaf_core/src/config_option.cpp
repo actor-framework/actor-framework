@@ -118,11 +118,6 @@ error config_option::sync(config_value& x) const {
   return meta_->sync(value_, x);
 }
 
-error config_option::store(const config_value& x) const {
-  auto cpy = x;
-  return sync(cpy);
-}
-
 string_view config_option::type_name() const noexcept {
   return meta_->type_name;
 }
@@ -133,20 +128,6 @@ bool config_option::is_flag() const noexcept {
 
 bool config_option::has_flat_cli_name() const noexcept {
   return buf_[0] == '?' || category() == "global";
-}
-
-expected<config_value> config_option::parse(string_view input) const {
-  config_value val{input};
-  if (auto err = sync(val))
-    return {std::move(err)};
-  else
-    return {std::move(val)};
-}
-
-optional<config_value> config_option::get() const {
-  if (value_ != nullptr && meta_->get != nullptr)
-    return meta_->get(value_);
-  return none;
 }
 
 string_view config_option::buf_slice(size_t from, size_t to) const noexcept {

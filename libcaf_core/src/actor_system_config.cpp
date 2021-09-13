@@ -183,23 +183,6 @@ error actor_system_config::parse(int argc, char** argv) {
   return parse(std::move(args));
 }
 
-error actor_system_config::parse(int argc, char** argv,
-                                 const char* config_file_cstr) {
-  if (config_file_cstr == nullptr) {
-    return parse(argc, argv);
-  } else {
-    string_list args;
-    if (argc > 0) {
-      program_name = argv[0];
-      if (argc > 1)
-        args.assign(argv + 1, argv + argc);
-    }
-    CAF_PUSH_DEPRECATED_WARNING
-    return parse(std::move(args), config_file_cstr);
-    CAF_POP_WARNINGS
-  }
-}
-
 error actor_system_config::parse(int argc, char** argv, std::istream& conf) {
   string_list args;
   if (argc > 0) {
@@ -376,25 +359,6 @@ error actor_system_config::parse(string_list args) {
   }
 }
 
-error actor_system_config::parse(string_list args,
-                                 const char* config_file_cstr) {
-  if (config_file_cstr == nullptr) {
-    return parse(std::move(args));
-  } else if (auto&& [err, path] = extract_config_file_path(args); !err) {
-    std::ifstream conf;
-    if (!path.empty()) {
-      conf.open(path);
-    } else {
-      conf.open(config_file_cstr);
-      if (conf.is_open())
-        set("global.config-file", config_file_cstr);
-    }
-    return parse(std::move(args), conf);
-  } else {
-    return err;
-  }
-}
-
 actor_system_config& actor_system_config::add_actor_factory(std::string name,
                                                             actor_factory fun) {
   actor_factories.emplace(std::move(name), std::move(fun));
@@ -418,10 +382,6 @@ actor_system_config& actor_system_config::set_impl(string_view name,
       put(content, name, std::move(value));
   }
   return *this;
-}
-
-std::string actor_system_config::render(const error& x) {
-  return to_string(x);
 }
 
 expected<settings>

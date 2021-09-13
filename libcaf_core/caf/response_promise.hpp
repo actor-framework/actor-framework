@@ -48,11 +48,6 @@ public:
 
   response_promise& operator=(const response_promise&) = default;
 
-  [[deprecated("use the default constructor instead")]] response_promise(none_t)
-    : response_promise() {
-    // nop
-  }
-
   // -- properties -------------------------------------------------------------
 
   /// Returns whether this response promise replies to an asynchronous message.

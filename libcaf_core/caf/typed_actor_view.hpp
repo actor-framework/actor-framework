@@ -238,13 +238,6 @@ public:
     return self_->make_response_promise();
   }
 
-  template <class... Ts,
-            class R = typename detail::make_response_promise_helper<
-              typename std::decay<Ts>::type...>::type>
-  R response(Ts&&... xs) {
-    return self_->response(std::forward<Ts>(xs)...);
-  }
-
   template <class... Ts>
   void eq_impl(Ts&&... xs) {
     self_->eq_impl(std::forward<Ts>(xs)...);

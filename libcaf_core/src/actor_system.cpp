@@ -419,10 +419,6 @@ actor_registry& actor_system::registry() {
   return registry_;
 }
 
-std::string actor_system::render(const error& x) const {
-  return to_string(x);
-}
-
 group_manager& actor_system::groups() {
   return groups_;
 }

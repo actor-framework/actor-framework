@@ -160,7 +160,6 @@ caf_add_component(
     src/logger.cpp
     src/mailbox_element.cpp
     src/make_config_option.cpp
-    src/memory_managed.cpp
     src/message.cpp
     src/message_builder.cpp
     src/message_handler.cpp
