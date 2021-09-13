@@ -127,18 +127,12 @@ public:
 
   template <class U>
   U& get() {
-    static constexpr auto i = detail::tl_index_of<param_list, U>::value;
-    return std::get<i>(nested_);
-    // TODO: replace with this line when switching to C++14
-    // return std::get<U>(substreams_);
+    return std::get<U>(nested_);
   }
 
   template <class U>
   const U& get() const {
-    static constexpr auto i = detail::tl_index_of<param_list, U>::value;
-    return std::get<i>(nested_);
-    // TODO: replace with this line when switching to C++14
-    // return std::get<U>(substreams_);
+    return std::get<U>(nested_);
   }
 
   /// Requires a previous call to `add_path` for given slot.

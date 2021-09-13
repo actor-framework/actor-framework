@@ -298,10 +298,6 @@ public:
   /// Returns the system-wide actor registry.
   actor_registry& registry();
 
-  /// Returns a string representation for `err`.
-  [[deprecated("please use to_string() on the error")]] std::string
-  render(const error& x) const;
-
   /// Returns the system-wide group manager.
   group_manager& groups();
 
@@ -574,10 +570,9 @@ public:
   infer_handle_from_class_t<C> spawn_impl(actor_config& cfg, Ts&&... xs) {
     static_assert(is_unbound(Os),
                   "top-level spawns cannot have monitor or link flag");
-    // TODO: use `if constexpr` when switching to C++17
-    if (has_detach_flag(Os) || std::is_base_of<blocking_actor, C>::value)
+    if constexpr (has_detach_flag(Os) || std::is_base_of_v<blocking_actor, C>)
       cfg.flags |= abstract_actor::is_detached_flag;
-    if (has_hide_flag(Os))
+    if constexpr (has_hide_flag(Os))
       cfg.flags |= abstract_actor::is_hidden_flag;
     if (cfg.host == nullptr)
       cfg.host = dummy_execution_unit();

@@ -218,8 +218,7 @@ bool save(const detail::meta_object& meta, caf::binary_serializer& sink,
 }
 
 template <class Serializer>
-typename Serializer::result_type
-save_data(Serializer& sink, const message::data_ptr& data) {
+bool save_data(Serializer& sink, const message::data_ptr& data) {
   auto gmos = detail::global_meta_objects();
   // For machine-to-machine data formats, we prefix the type information.
   if (!sink.has_human_readable_format()) {

@@ -31,10 +31,6 @@ constexpr auto max_batch_delay = timespan{1'000'000};
 /// This strategy makes no dynamic adjustment or sampling.
 constexpr auto credit_policy = string_view{"size-based"};
 
-[[deprecated("this parameter no longer has any effect")]] //
-constexpr auto credit_round_interval
-  = max_batch_delay;
-
 } // namespace caf::defaults::stream
 
 namespace caf::defaults::stream::size_policy {

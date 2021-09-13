@@ -111,14 +111,7 @@ private:
   }
 
   template <size_t X, class T, class... Ts>
-  typename std::enable_if<caf::meta::is_annotation<T>::value, bool>::type
-  iterate(pos<X> pos, const T&, const Ts&... ys) {
-    return iterate(pos, ys...);
-  }
-
-  template <size_t X, class T, class... Ts>
-  typename std::enable_if<!caf::meta::is_annotation<T>::value, bool>::type
-  iterate(pos<X>, const T& y, const Ts&... ys) {
+  bool iterate(pos<X>, const T& y, const Ts&... ys) {
     std::integral_constant<size_t, X + 1> next;
     check(y, get<X>(xs_));
     return iterate(next, ys...);
@@ -330,12 +323,7 @@ public:
 
   template <class... Us>
   void with(Us&&... xs) {
-    // TODO: replace this workaround with the make_tuple() line when dropping
-    //       support for GCC 4.8.
-    std::tuple<typename std::decay<Us>::type...> tmp{std::forward<Us>(xs)...};
-    // auto tmp = std::make_tuple(std::forward<Us>(xs)...);
-    // TODO: move tmp into lambda when switching to C++14
-    peek_ = [=] {
+    peek_ = [this, tmp = std::make_tuple(std::forward<Us>(xs)...)] {
       using namespace caf::detail;
       elementwise_compare_inspector<decltype(tmp)> inspector{tmp};
       auto ys = extract<Ts...>(dest_);
@@ -516,11 +504,7 @@ public:
 
   template <class... Us>
   void with(Us&&... xs) {
-    // TODO: replace this workaround with make_tuple() when dropping support
-    //       for GCC 4.8.
-    std::tuple<typename std::decay<Us>::type...> tmp{std::forward<Us>(xs)...};
-    // TODO: move tmp into lambda when switching to C++14
-    peek_ = [=] {
+    peek_ = [this, tmp = std::make_tuple(std::forward<Us>(xs)...)] {
       using namespace caf::detail;
       elementwise_compare_inspector<decltype(tmp)> inspector{tmp};
       auto ys = try_extract<Ts...>(dest_);
@@ -596,11 +580,7 @@ public:
 
   template <class... Us>
   void with(Us&&... xs) {
-    // TODO: replace this workaround with make_tuple() when dropping support
-    //       for GCC 4.8.
-    std::tuple<typename std::decay<Us>::type...> tmp{std::forward<Us>(xs)...};
-    // TODO: move tmp into lambda when switching to C++14
-    check_ = [=] {
+    check_ = [this, tmp = std::make_tuple(std::forward<Us>(xs)...)] {
       auto ptr = dest_->peek_at_next_mailbox_element();
       if (ptr == nullptr)
         return;

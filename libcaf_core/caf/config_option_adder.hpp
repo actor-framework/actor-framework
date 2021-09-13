@@ -38,12 +38,6 @@ public:
   config_option_adder&
   add_neg(bool& ref, string_view name, string_view description);
 
-  [[deprecated("use timespan options instead")]] config_option_adder&
-  add_us(size_t& ref, string_view name, string_view description);
-
-  [[deprecated("use timespan options instead")]] config_option_adder&
-  add_ms(size_t& ref, string_view name, string_view description);
-
 private:
   // -- properties -------------------------------------------------------------
 
