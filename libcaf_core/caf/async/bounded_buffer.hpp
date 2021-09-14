@@ -72,6 +72,7 @@ public:
     std::unique_lock guard{mtx_};
     CAF_ASSERT(producer_ != nullptr);
     CAF_ASSERT(!closed_);
+    CAF_ASSERT(wr_pos_ + items.size() < max_in_flight_ * 2);
     std::uninitialized_copy(items.begin(), items.end(), buf_ + wr_pos_);
     wr_pos_ += items.size();
     if (size() == items.size() && consumer_)
@@ -204,6 +205,7 @@ private:
     consumer_->on_producer_ready();
     if (!empty())
       consumer_->on_producer_wakeup();
+    signal_demand(max_in_flight_);
   }
 
   size_t empty() const noexcept {

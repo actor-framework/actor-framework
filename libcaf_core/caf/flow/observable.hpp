@@ -152,6 +152,24 @@ public:
   template <class Step>
   transformation<Step> transform(Step step);
 
+  /// Registers a callback for `on_complete` events.
+  template <class F>
+  auto do_on_complete(F f) {
+    return transform(on_complete_step<T, F>{std::move(f)});
+  }
+
+  /// Registers a callback for `on_error` events.
+  template <class F>
+  auto do_on_error(F f) {
+    return transform(on_error_step<T, F>{std::move(f)});
+  }
+
+  /// Registers a callback that runs on `on_complete` or `on_error`.
+  template <class F>
+  auto do_finally(F f) {
+    return transform(finally_step<T, F>{std::move(f)});
+  }
+
   /// Returns a transformation that selects only the first `n` items.
   transformation<limit_step<T>> take(size_t n);
 
@@ -969,19 +987,19 @@ public:
   }
 
   template <class F>
-  auto do_on_complete(F f) {
+  auto do_on_complete(F f) && {
     return std::move(*this) //
       .transform(on_complete_step<output_type, F>{std::move(f)});
   }
 
   template <class F>
-  auto do_on_error(F f) {
+  auto do_on_error(F f) && {
     return std::move(*this) //
       .transform(on_error_step<output_type, F>{std::move(f)});
   }
 
   template <class F>
-  auto do_finally(F f) {
+  auto do_finally(F f) && {
     return std::move(*this) //
       .transform(finally_step<output_type, F>{std::move(f)});
   }

@@ -21,10 +21,12 @@ void scoped_coordinator::run() {
   };
   for (;;) {
     auto hdl = next(!watched_disposables_.empty());
-    if (hdl.ptr() != nullptr)
+    if (hdl.ptr() != nullptr) {
       hdl.run();
-    else
+      drop_disposed_flows();
+    } else {
       return;
+    }
   }
 }
 
