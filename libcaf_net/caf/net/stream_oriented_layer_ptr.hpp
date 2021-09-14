@@ -23,10 +23,6 @@ public:
       // nop
     }
 
-    void suspend_reading() {
-      return lptr_->suspend_reading(llptr_);
-    }
-
     bool can_send_more() const noexcept {
       return lptr_->can_send_more(llptr_);
     }
@@ -57,6 +53,10 @@ public:
 
     void configure_read(receive_policy policy) {
       lptr_->configure_read(llptr_, policy);
+    }
+
+    bool stopped() const noexcept {
+      return lptr_->stopped(llptr_);
     }
 
   private:

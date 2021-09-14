@@ -60,6 +60,11 @@ struct app_t {
   }
 
   template <class LowerLayerPtr>
+  void continue_reading(LowerLayerPtr) {
+    CAF_FAIL("continue_reading called");
+  }
+
+  template <class LowerLayerPtr>
   bool done_sending(LowerLayerPtr) {
     return self->try_block_mailbox();
   }

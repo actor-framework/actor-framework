@@ -87,6 +87,14 @@ public:
   }
 
   template <class LowerLayerPtr>
+  static void suspend_reading(LowerLayerPtr) {
+    CAF_RAISE_ERROR("suspending / resuming a WebSocket not implemented yet");
+    // TODO: uncommenting this isn't enough since consume() also must make sure
+    //       to not override the configure_read.
+    // down->configure_read(receive_policy::stop());
+  }
+
+  template <class LowerLayerPtr>
   static constexpr void begin_binary_message(LowerLayerPtr) {
     // nop
   }
@@ -136,6 +144,11 @@ public:
   template <class LowerLayerPtr>
   bool done_sending(LowerLayerPtr down) {
     return upper_layer_.done_sending(down);
+  }
+
+  template <class LowerLayerPtr>
+  static void continue_reading(LowerLayerPtr down) {
+    down->configure_read(receive_policy::up_to(2048));
   }
 
   template <class LowerLayerPtr>

@@ -76,6 +76,11 @@ public:
   }
 
   template <class LowerLayerPtr>
+  static void continue_reading(LowerLayerPtr down) {
+    down->configure_read(receive_policy::up_to(handshake::max_http_size));
+  }
+
+  template <class LowerLayerPtr>
   void abort(LowerLayerPtr down, const error& reason) {
     if (handshake_complete_)
       upper_layer_.abort(down, reason);

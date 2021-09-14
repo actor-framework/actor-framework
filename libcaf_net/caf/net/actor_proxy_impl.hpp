@@ -18,7 +18,7 @@ public:
 
   ~actor_proxy_impl() override;
 
-  void enqueue(mailbox_element_ptr what, execution_unit* context) override;
+  bool enqueue(mailbox_element_ptr what, execution_unit* context) override;
 
   void kill_proxy(execution_unit* ctx, error rsn) override;
 

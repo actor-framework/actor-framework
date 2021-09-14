@@ -24,16 +24,16 @@ public:
 
   // -- constants --------------------------------------------------------------
 
-  static constexpr uint8_t register_reading_code = 0x00;
-
-  static constexpr uint8_t register_writing_code = 0x01;
-
-  static constexpr uint8_t init_manager_code = 0x02;
-
-  static constexpr uint8_t discard_manager_code = 0x03;
-
-  static constexpr uint8_t shutdown_code = 0x04;
-
+  enum class code : uint8_t {
+    register_reading,
+    register_writing,
+    init_manager,
+    discard_manager,
+    shutdown_reading,
+    shutdown_writing,
+    run_action,
+    shutdown,
+  };
   // -- constructors, destructors, and assignment operators --------------------
 
   pollset_updater(pipe_socket read_handle, multiplexer* parent);
@@ -56,6 +56,8 @@ public:
   bool handle_write_event() override;
 
   void handle_error(sec code) override;
+
+  void continue_reading() override;
 
 private:
   msg_buf buf_;

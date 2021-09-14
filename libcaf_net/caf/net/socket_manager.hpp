@@ -48,6 +48,11 @@ public:
     return handle_;
   }
 
+  /// @private
+  void handle(socket new_handle) {
+    handle_ = new_handle;
+  }
+
   /// Returns a reference to the hosting @ref actor_system instance.
   actor_system& system() noexcept;
 
@@ -128,6 +133,10 @@ public:
 
   void register_writing();
 
+  void shutdown_reading();
+
+  void shutdown_writing();
+
   // -- pure virtual member functions ------------------------------------------
 
   virtual error init(const settings& config) = 0;
@@ -141,6 +150,10 @@ public:
   /// Called when the remote side becomes unreachable due to an error.
   /// @param code The error code as reported by the operating system.
   virtual void handle_error(sec code) = 0;
+
+  /// Restarts a socket manager that suspended reads. Calling this member
+  /// function on active managers is a no-op.
+  virtual void continue_reading() = 0;
 
 protected:
   // -- member variables -------------------------------------------------------
@@ -202,6 +215,10 @@ public:
   void handle_error(sec code) override {
     abort_reason_ = code;
     return protocol_.abort(this, abort_reason_);
+  }
+
+  void continue_reading() override {
+    return protocol_.continue_reading(this);
   }
 
   auto& protocol() noexcept {

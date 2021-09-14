@@ -96,6 +96,11 @@ public:
   }
 
   template <class ParentPtr>
+  void continue_reading(ParentPtr) {
+    CAF_FAIL("continue_reading called");
+  }
+
+  template <class ParentPtr>
   size_t consume(ParentPtr, span<const byte> data, span<const byte>) {
     recv_buf_->clear();
     recv_buf_->insert(recv_buf_->begin(), data.begin(), data.end());

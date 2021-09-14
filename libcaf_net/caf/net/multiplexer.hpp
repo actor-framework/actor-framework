@@ -74,6 +74,25 @@ public:
   /// @thread-safe
   void discard(const socket_manager_ptr& mgr);
 
+  /// Stops further reading by `mgr`.
+  /// @thread-safe
+  void shutdown_reading(const socket_manager_ptr& mgr);
+
+  /// Stops further writing by `mgr`.
+  /// @thread-safe
+  void shutdown_writing(const socket_manager_ptr& mgr);
+
+  /// Schedules an action for execution on this multiplexer.
+  /// @thread-safe
+  void schedule(const action& what);
+
+  /// Schedules an action for execution on this multiplexer.
+  /// @thread-safe
+  template <class F>
+  void schedule_fn(F f) {
+    schedule(make_action(std::move(f)));
+  }
+
   /// Registers `mgr` for initialization in the multiplexer's thread.
   /// @thread-safe
   void init(const socket_manager_ptr& mgr);
@@ -111,10 +130,6 @@ protected:
   /// Deletes a known socket manager from the pollset.
   void del(ptrdiff_t index);
 
-  /// Writes `opcode` and pointer to `mgr` the the pipe for handling an event
-  /// later via the pollset updater.
-  void write_to_pipe(uint8_t opcode, const socket_manager_ptr& mgr);
-
   // -- member variables -------------------------------------------------------
 
   /// Bookkeeping data for managed sockets.
@@ -139,6 +154,17 @@ protected:
 
   /// Signals whether shutdown has been requested.
   bool shutting_down_ = false;
+
+private:
+  /// Writes `opcode` and pointer to `mgr` the the pipe for handling an event
+  /// later via the pollset updater.
+  template <class T>
+  void write_to_pipe(uint8_t opcode, T* ptr);
+
+  template <class Enum, class T>
+  std::enable_if_t<std::is_enum_v<Enum>> write_to_pipe(Enum opcode, T* ptr) {
+    write_to_pipe(static_cast<uint8_t>(opcode), ptr);
+  }
 };
 
 } // namespace caf::net

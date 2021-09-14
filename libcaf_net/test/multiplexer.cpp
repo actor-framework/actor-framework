@@ -74,6 +74,10 @@ public:
     CAF_FAIL("handle_error called with code " << code);
   }
 
+  void continue_reading() override {
+    CAF_FAIL("continue_reading called");
+  }
+
   void send(string_view x) {
     auto x_bytes = as_bytes(make_span(x));
     wr_buf_.insert(wr_buf_.end(), x_bytes.begin(), x_bytes.end());

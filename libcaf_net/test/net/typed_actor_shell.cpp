@@ -68,6 +68,11 @@ struct app_t {
   }
 
   template <class LowerLayerPtr>
+  void continue_reading(LowerLayerPtr) {
+    CAF_FAIL("continue_reading called");
+  }
+
+  template <class LowerLayerPtr>
   void abort(LowerLayerPtr, const error& reason) {
     CAF_FAIL("app::abort called: " << reason);
   }

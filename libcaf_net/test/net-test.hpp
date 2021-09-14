@@ -55,6 +55,10 @@ public:
     abort_reason_ = std::move(reason);
   }
 
+  bool stopped() const noexcept {
+    return max_read_size == 0;
+  }
+
   void configure_read(caf::net::receive_policy policy) {
     min_read_size = policy.min_size;
     max_read_size = policy.max_size;

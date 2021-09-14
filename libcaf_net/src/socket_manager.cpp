@@ -55,4 +55,12 @@ void socket_manager::register_writing() {
   parent_->register_writing(this);
 }
 
+void socket_manager::shutdown_reading() {
+  parent_->shutdown_reading(this);
+}
+
+void socket_manager::shutdown_writing() {
+  parent_->shutdown_writing(this);
+}
+
 } // namespace caf::net

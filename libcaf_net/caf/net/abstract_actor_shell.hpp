@@ -87,7 +87,7 @@ public:
 
   using abstract_actor::enqueue;
 
-  void enqueue(mailbox_element_ptr ptr, execution_unit* eu) override;
+  bool enqueue(mailbox_element_ptr ptr, execution_unit* eu) override;
 
   mailbox_element* peek_at_next_mailbox_element() override;
 

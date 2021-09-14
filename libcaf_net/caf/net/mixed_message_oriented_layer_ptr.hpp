@@ -30,6 +30,10 @@ public:
       return lptr_->handle(llptr_);
     }
 
+    void suspend_reading() {
+      return lptr_->suspend_reading(llptr_);
+    }
+
     void begin_binary_message() {
       lptr_->begin_binary_message(llptr_);
     }

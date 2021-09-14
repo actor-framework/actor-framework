@@ -19,6 +19,7 @@
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
 #include "caf/tag/message_oriented.hpp"
+#include "caf/tag/no_auto_reading.hpp"
 #include "caf/tag/stream_oriented.hpp"
 
 namespace caf::net {
@@ -53,7 +54,8 @@ public:
 
   template <class LowerLayerPtr>
   error init(socket_manager* owner, LowerLayerPtr down, const settings& cfg) {
-    down->configure_read(receive_policy::exactly(hdr_size));
+    if constexpr (!std::is_base_of_v<tag::no_auto_reading, UpperLayer>)
+      down->configure_read(receive_policy::exactly(hdr_size));
     return upper_layer_.init(owner, this_layer_ptr(down), cfg);
   }
 
@@ -81,7 +83,7 @@ public:
 
   template <class LowerLayerPtr>
   static void suspend_reading(LowerLayerPtr down) {
-    return down->suspend_reading();
+    down->configure_read(receive_policy::stop());
   }
 
   template <class LowerLayerPtr>
@@ -128,6 +130,11 @@ public:
   }
 
   // -- interface for the lower layer ------------------------------------------
+
+  template <class LowerLayerPtr>
+  void continue_reading(LowerLayerPtr down) {
+    down->configure_read(receive_policy::exactly(hdr_size));
+  }
 
   template <class LowerLayerPtr>
   std::enable_if_t<detail::has_after_reading_v<
@@ -180,7 +187,8 @@ public:
       auto [msg_size, msg] = split(input);
       if (msg_size == msg.size() && msg_size + hdr_size == input.size()) {
         if (upper_layer_.consume(this_layer, msg) >= 0) {
-          down->configure_read(receive_policy::exactly(hdr_size));
+          if (!down->stopped())
+            down->configure_read(receive_policy::exactly(hdr_size));
           return static_cast<ptrdiff_t>(input.size());
         } else {
           return -1;

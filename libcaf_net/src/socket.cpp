@@ -179,4 +179,14 @@ error nonblocking(socket x, bool new_value) {
 
 #endif // CAF_WINDOWS
 
+error shutdown_read(socket x) {
+  CAF_NET_SYSCALL("shutdown", res, !=, 0, shutdown(x.id, 0));
+  return caf::none;
+}
+
+error shutdown_write(socket x) {
+  CAF_NET_SYSCALL("shutdown", res, !=, 0, shutdown(x.id, 1));
+  return caf::none;
+}
+
 } // namespace caf::net

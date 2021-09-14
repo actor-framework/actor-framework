@@ -6,6 +6,7 @@
 
 #include <cstring>
 
+#include "caf/action.hpp"
 #include "caf/actor_system.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/multiplexer.hpp"
@@ -29,6 +30,21 @@ error pollset_updater::init(const settings&) {
   return nonblocking(handle(), true);
 }
 
+namespace {
+
+auto as_mgr(intptr_t ptr) {
+  CAF_LOG_TRACE(CAF_ARG(ptr));
+  return intrusive_ptr{reinterpret_cast<socket_manager*>(ptr), false};
+};
+
+void run_action(intptr_t ptr) {
+  CAF_LOG_TRACE(CAF_ARG(ptr));
+  auto f = action{intrusive_ptr{reinterpret_cast<action::impl*>(ptr), false}};
+  f.run();
+};
+
+} // namespace
+
 bool pollset_updater::handle_read_event() {
   CAF_LOG_TRACE("");
   for (;;) {
@@ -40,23 +56,32 @@ bool pollset_updater::handle_read_event() {
       if (buf_.size() == buf_size_) {
         buf_size_ = 0;
         auto opcode = static_cast<uint8_t>(buf_[0]);
-        intptr_t value;
-        memcpy(&value, buf_.data() + 1, sizeof(intptr_t));
-        socket_manager_ptr mgr{reinterpret_cast<socket_manager*>(value), false};
-        switch (opcode) {
-          case register_reading_code:
-            parent_->register_reading(mgr);
+        intptr_t ptr;
+        memcpy(&ptr, buf_.data() + 1, sizeof(intptr_t));
+        switch (static_cast<code>(opcode)) {
+          case code::register_reading:
+            parent_->register_reading(as_mgr(ptr));
             break;
-          case register_writing_code:
-            parent_->register_writing(mgr);
+          case code::register_writing:
+            parent_->register_writing(as_mgr(ptr));
             break;
-          case init_manager_code:
-            parent_->init(mgr);
+          case code::init_manager:
+            parent_->init(as_mgr(ptr));
             break;
-          case discard_manager_code:
-            parent_->discard(mgr);
+          case code::discard_manager:
+            parent_->discard(as_mgr(ptr));
             break;
-          case shutdown_code:
+          case code::shutdown_reading:
+            parent_->shutdown_reading(as_mgr(ptr));
+            break;
+          case code::shutdown_writing:
+            parent_->shutdown_writing(as_mgr(ptr));
+            break;
+          case code::run_action:
+            run_action(ptr);
+            break;
+          case code::shutdown:
+            CAF_ASSERT(ptr == 0);
             parent_->shutdown();
             break;
           default:
@@ -79,6 +104,10 @@ bool pollset_updater::handle_write_event() {
 
 void pollset_updater::handle_error(sec) {
   // nop
+}
+
+void pollset_updater::continue_reading() {
+  register_reading();
 }
 
 } // namespace caf::net

@@ -91,6 +91,12 @@ public:
   }
 
   template <class LowerLayerPtr>
+  void continue_reading(LowerLayerPtr down) {
+    if (handshake_complete())
+      upper_layer_.continue_reading(down);
+  }
+
+  template <class LowerLayerPtr>
   ptrdiff_t consume(LowerLayerPtr down, byte_span input, byte_span delta) {
     CAF_LOG_TRACE(CAF_ARG2("socket", down->handle().id)
                   << CAF_ARG2("bytes", input.size()));

@@ -37,8 +37,8 @@ public:
 
   // -- member functions -------------------------------------------------------
 
-  template <class ParentPtr>
-  error init(socket_manager* owner, ParentPtr parent, const settings& config) {
+  template <class LowerLayerPtr>
+  error init(socket_manager* owner, LowerLayerPtr parent, const settings& config) {
     CAF_LOG_TRACE("");
     owner_ = owner;
     cfg_ = config;
@@ -48,8 +48,8 @@ public:
     return none;
   }
 
-  template <class ParentPtr>
-  bool handle_read_event(ParentPtr parent) {
+  template <class LowerLayerPtr>
+  bool handle_read_event(LowerLayerPtr parent) {
     CAF_LOG_TRACE("");
     if (auto x = accept(parent->handle())) {
       socket_manager_ptr child = factory_.make(*x, owner_->mpx_ptr());
@@ -66,14 +66,19 @@ public:
     }
   }
 
-  template <class ParentPtr>
-  bool handle_write_event(ParentPtr) {
+  template <class LowerLayerPtr>
+  static void continue_reading(LowerLayerPtr) {
+    // nop
+  }
+
+  template <class LowerLayerPtr>
+  bool handle_write_event(LowerLayerPtr) {
     CAF_LOG_ERROR("connection_acceptor received write event");
     return false;
   }
 
-  template <class ParentPtr>
-  void abort(ParentPtr, const error& reason) {
+  template <class LowerLayerPtr>
+  void abort(LowerLayerPtr, const error& reason) {
     CAF_LOG_ERROR("connection_acceptor aborts due to an error: " << reason);
     factory_.abort(reason);
   }

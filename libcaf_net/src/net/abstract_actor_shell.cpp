@@ -96,7 +96,7 @@ void abstract_actor_shell::add_multiplexed_response_handler(
 
 // -- overridden functions of abstract_actor -----------------------------------
 
-void abstract_actor_shell::enqueue(mailbox_element_ptr ptr, execution_unit*) {
+bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   CAF_ASSERT(ptr != nullptr);
   CAF_ASSERT(!getf(is_blocking_flag));
   CAF_LOG_TRACE(CAF_ARG(*ptr));
@@ -118,7 +118,7 @@ void abstract_actor_shell::enqueue(mailbox_element_ptr ptr, execution_unit*) {
       // skip any further processing.
       if (owner_)
         owner_->mpx().register_writing(owner_);
-      break;
+      return true;
     }
     case intrusive::inbox_result::queue_closed: {
       CAF_LOG_REJECT_EVENT();
@@ -129,12 +129,12 @@ void abstract_actor_shell::enqueue(mailbox_element_ptr ptr, execution_unit*) {
         detail::sync_request_bouncer f{exit_reason()};
         f(sender, mid);
       }
-      break;
+      return false;
     }
     case intrusive::inbox_result::success:
       // Enqueued to a running actors' mailbox: nothing to do.
       CAF_LOG_ACCEPT_EVENT(false);
-      break;
+      return true;
   }
 }
 

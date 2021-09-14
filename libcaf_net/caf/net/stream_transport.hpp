@@ -50,11 +50,6 @@ public:
   // -- interface for stream_oriented_layer_ptr --------------------------------
 
   template <class ParentPtr>
-  void suspend_reading(ParentPtr) {
-    suspend_reading_ = true;
-  }
-
-  template <class ParentPtr>
   bool can_send_more(ParentPtr) const noexcept {
     return write_buf_.size() < max_write_buf_size_;
   }
@@ -96,6 +91,11 @@ public:
       parent->register_reading();
     min_read_size_ = policy.min_size;
     max_read_size_ = policy.max_size;
+  }
+
+  template <class ParentPtr>
+  bool stopped(ParentPtr) const noexcept {
+    return max_read_size_ == 0;
   }
 
   // -- properties -------------------------------------------------------------
@@ -233,13 +233,6 @@ public:
         if (read_buf_.size() != max_read_size_)
           if (offset_ < max_read_size_)
             read_buf_.resize(max_read_size_);
-        // Upper layer may have called suspend_reading().
-        if (suspend_reading_) {
-          suspend_reading_ = false;
-          if constexpr (has_after_reading)
-            upper_layer_.after_reading(this_layer_ptr);
-          return false;
-        }
       } else if (read_res < 0) {
         // Try again later on temporary errors such as EWOULDBLOCK and
         // stop reading on the socket on hard errors.
@@ -299,6 +292,14 @@ public:
   }
 
   template <class ParentPtr>
+  void continue_reading(ParentPtr parent) {
+    if (max_read_size_ == 0) {
+      auto this_layer_ptr = make_stream_oriented_layer_ptr(this, parent);
+      upper_layer_.continue_reading(this_layer_ptr);
+    }
+  }
+
+  template <class ParentPtr>
   void abort(ParentPtr parent, const error& reason) {
     auto this_layer_ptr = make_stream_oriented_layer_ptr(this, parent);
     upper_layer_.abort(this_layer_ptr, reason);
@@ -322,9 +323,6 @@ private:
 
   // Stores the offset in `read_buf_` since last calling `upper_layer_.consume`.
   ptrdiff_t delta_offset_ = 0;
-
-  //  Stores whether the user called `suspend_reading()`.
-  bool suspend_reading_ = false;
 
   // Caches incoming data.
   byte_buffer read_buf_;

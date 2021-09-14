@@ -83,4 +83,12 @@ error CAF_NET_EXPORT child_process_inherit(socket x, bool new_value);
 /// @relates socket
 error CAF_NET_EXPORT nonblocking(socket x, bool new_value);
 
+/// Disallows further reads from the socket.
+/// @relates socket
+error CAF_NET_EXPORT shutdown_read(socket x);
+
+/// Disallows further writes to the socket.
+/// @relates socket
+error CAF_NET_EXPORT shutdown_write(socket x);
+
 } // namespace caf::net
