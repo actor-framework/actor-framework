@@ -8,6 +8,7 @@
 #include <mutex>
 #include <thread>
 
+#include "caf/action.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/operation.hpp"

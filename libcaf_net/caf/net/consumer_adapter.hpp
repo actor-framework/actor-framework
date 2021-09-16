@@ -23,7 +23,9 @@ public:
   }
 
   void on_producer_wakeup() override {
-    mgr_->mpx().register_writing(mgr_);
+    mgr_->mpx().schedule_fn([adapter = strong_this()] { //
+      adapter->on_wakeup();
+    });
   }
 
   void ref_consumer() const noexcept override {
@@ -74,6 +76,15 @@ private:
   consumer_adapter(socket_manager* owner, buf_ptr buf)
     : mgr_(owner), buf_(std::move(buf)) {
     // nop
+  }
+
+  auto strong_this() {
+    return intrusive_ptr{this};
+  }
+
+  void on_wakeup() {
+    if (has_data())
+      mgr_->mpx().register_writing(mgr_);
   }
 
   intrusive_ptr<socket_manager> mgr_;
