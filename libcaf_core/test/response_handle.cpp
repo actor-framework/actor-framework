@@ -33,7 +33,6 @@ using dummy_actor = stateful_actor<dummy_state>;
 
 struct fixture : test_coordinator_fixture<> {
   actor dummy;
-  actor aut;
 
   fixture() {
     dummy = sys.spawn<dummy_actor>();
@@ -56,6 +55,7 @@ SCENARIO("response handles are convertible to observables and singles") {
           .as_single<int32_t>()
           .subscribe([&result](int32_t val) { result = val; },
                      [&result](const error& what) { result = what; });
+        auto aut = actor{self};
         launch();
         expect((int32_t), from(aut).to(dummy).with(42));
         expect((int32_t), from(dummy).to(aut).with(84));
@@ -79,6 +79,7 @@ SCENARIO("response handles are convertible to observables and singles") {
             },
             [&](const error& what) { result = what; },
             [&] { completed = true; });
+        auto aut = actor{self};
         launch();
         expect((int32_t), from(aut).to(dummy).with(42));
         expect((int32_t), from(dummy).to(aut).with(84));
@@ -99,6 +100,7 @@ SCENARIO("response handles are convertible to observables and singles") {
           .as_single<int32_t>()
           .subscribe([&result](int32_t val) { result = val; },
                      [&result](const error& what) { result = what; });
+        auto aut = actor{self};
         launch();
         expect((int32_t), from(aut).to(dummy).with(13));
         expect((error), from(dummy).to(aut));
@@ -122,6 +124,7 @@ SCENARIO("response handles are convertible to observables and singles") {
             },
             [&](const error& what) { result = what; },
             [&] { completed = true; });
+        auto aut = actor{self};
         launch();
         expect((int32_t), from(aut).to(dummy).with(13));
         expect((error), from(dummy).to(aut));
