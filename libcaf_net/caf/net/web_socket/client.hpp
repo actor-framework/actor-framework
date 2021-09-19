@@ -7,14 +7,14 @@
 #include <algorithm>
 
 #include "caf/byte_span.hpp"
-#include "caf/detail/encode_base64.hpp"
+#include "caf/detail/base64.hpp"
 #include "caf/error.hpp"
 #include "caf/hash/sha1.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/receive_policy.hpp"
-#include "caf/net/web_socket/handshake.hpp"
 #include "caf/net/web_socket/framing.hpp"
+#include "caf/net/web_socket/handshake.hpp"
 #include "caf/pec.hpp"
 #include "caf/settings.hpp"
 #include "caf/tag/mixed_message_oriented.hpp"

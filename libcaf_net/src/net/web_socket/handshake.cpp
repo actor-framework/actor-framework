@@ -11,7 +11,7 @@
 #include <tuple>
 
 #include "caf/config.hpp"
-#include "caf/detail/encode_base64.hpp"
+#include "caf/detail/base64.hpp"
 #include "caf/hash/sha1.hpp"
 #include "caf/string_algorithms.hpp"
 
