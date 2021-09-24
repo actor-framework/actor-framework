@@ -46,61 +46,61 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(byte_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(to integer) {
-  CAF_CHECK_EQUAL(to_integer<int>("0110'1001"_b), 0x69);
+  CHECK_EQ(to_integer<int>("0110'1001"_b), 0x69);
 }
 
 CAF_TEST(left shift) {
   auto x = "0000'0001"_b;
   x <<= 1;
-  CAF_CHECK_EQUAL(x, "0000'0010"_b);
-  CAF_CHECK_EQUAL("0000'0010"_b << 1, "0000'0100"_b);
-  CAF_CHECK_EQUAL("0000'0010"_b << 2, "0000'1000"_b);
-  CAF_CHECK_EQUAL("0000'0010"_b << 3, "0001'0000"_b);
-  CAF_CHECK_EQUAL("0000'0010"_b << 4, "0010'0000"_b);
-  CAF_CHECK_EQUAL("0000'0010"_b << 5, "0100'0000"_b);
-  CAF_CHECK_EQUAL("0000'0010"_b << 6, "1000'0000"_b);
-  CAF_CHECK_EQUAL("0000'0010"_b << 7, "0000'0000"_b);
+  CHECK_EQ(x, "0000'0010"_b);
+  CHECK_EQ("0000'0010"_b << 1, "0000'0100"_b);
+  CHECK_EQ("0000'0010"_b << 2, "0000'1000"_b);
+  CHECK_EQ("0000'0010"_b << 3, "0001'0000"_b);
+  CHECK_EQ("0000'0010"_b << 4, "0010'0000"_b);
+  CHECK_EQ("0000'0010"_b << 5, "0100'0000"_b);
+  CHECK_EQ("0000'0010"_b << 6, "1000'0000"_b);
+  CHECK_EQ("0000'0010"_b << 7, "0000'0000"_b);
 }
 
 CAF_TEST(right shift) {
   auto x = "0100'0000"_b;
   x >>= 1;
-  CAF_CHECK_EQUAL(x, "0010'0000"_b);
-  CAF_CHECK_EQUAL("0100'0000"_b >> 1, "0010'0000"_b);
-  CAF_CHECK_EQUAL("0100'0000"_b >> 2, "0001'0000"_b);
-  CAF_CHECK_EQUAL("0100'0000"_b >> 3, "0000'1000"_b);
-  CAF_CHECK_EQUAL("0100'0000"_b >> 4, "0000'0100"_b);
-  CAF_CHECK_EQUAL("0100'0000"_b >> 5, "0000'0010"_b);
-  CAF_CHECK_EQUAL("0100'0000"_b >> 6, "0000'0001"_b);
-  CAF_CHECK_EQUAL("0100'0000"_b >> 7, "0000'0000"_b);
+  CHECK_EQ(x, "0010'0000"_b);
+  CHECK_EQ("0100'0000"_b >> 1, "0010'0000"_b);
+  CHECK_EQ("0100'0000"_b >> 2, "0001'0000"_b);
+  CHECK_EQ("0100'0000"_b >> 3, "0000'1000"_b);
+  CHECK_EQ("0100'0000"_b >> 4, "0000'0100"_b);
+  CHECK_EQ("0100'0000"_b >> 5, "0000'0010"_b);
+  CHECK_EQ("0100'0000"_b >> 6, "0000'0001"_b);
+  CHECK_EQ("0100'0000"_b >> 7, "0000'0000"_b);
 }
 
 CAF_TEST(bitwise or) {
   auto x = "0001'1110"_b;
   x |= "0111'1000"_b;
-  CAF_CHECK_EQUAL(x, "0111'1110"_b);
-  CAF_CHECK_EQUAL("0001'1110"_b | "0111'1000"_b, "0111'1110"_b);
+  CHECK_EQ(x, "0111'1110"_b);
+  CHECK_EQ("0001'1110"_b | "0111'1000"_b, "0111'1110"_b);
 }
 
 CAF_TEST(bitwise and) {
   auto x = "0001'1110"_b;
   x &= "0111'1000"_b;
-  CAF_CHECK_EQUAL(x, "0001'1000"_b);
-  CAF_CHECK_EQUAL("0001'1110"_b & "0111'1000"_b, "0001'1000"_b);
+  CHECK_EQ(x, "0001'1000"_b);
+  CHECK_EQ("0001'1110"_b & "0111'1000"_b, "0001'1000"_b);
 }
 
 CAF_TEST(bitwise xor) {
   auto x = "0001'1110"_b;
   x ^= "0111'1000"_b;
-  CAF_CHECK_EQUAL(x, "0110'0110"_b);
-  CAF_CHECK_EQUAL("0001'1110"_b ^ "0111'1000"_b, "0110'0110"_b);
+  CHECK_EQ(x, "0110'0110"_b);
+  CHECK_EQ("0001'1110"_b ^ "0111'1000"_b, "0110'0110"_b);
 }
 
-CAF_TEST(bitwise not) {
-  CAF_CHECK_EQUAL(~"0111'1110"_b, "1000'0001"_b);
+CAF_TEST(bitwise not ) {
+  CHECK_EQ(~"0111'1110"_b, "1000'0001"_b);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

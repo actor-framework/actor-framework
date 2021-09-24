@@ -64,38 +64,38 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(actor_system_config_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(parsing - without CLI arguments) {
   auto text = "foo{\nbar=\"hello\"}";
   options("?foo").add<std::string>("bar,b", "some string parameter");
   parse(text);
-  CAF_CHECK(cfg.remainder.empty());
-  CAF_CHECK_EQUAL(get_or(cfg, "foo.bar", ""), "hello");
+  CHECK(cfg.remainder.empty());
+  CHECK_EQ(get_or(cfg, "foo.bar", ""), "hello");
   auto [argc, argv] = cfg.c_args_remainder();
   CAF_REQUIRE_EQUAL(argc, 1);
-  CAF_CHECK_EQUAL(argv[0], cfg.program_name);
+  CHECK_EQ(argv[0], cfg.program_name);
 }
 
 CAF_TEST(parsing - without CLI cfg.remainder) {
   auto text = "foo{\nbar=\"hello\"}";
   options("?foo").add<std::string>("bar,b", "some string parameter");
-  CAF_MESSAGE("CLI long name");
+  MESSAGE("CLI long name");
   parse(text, {"--foo.bar=test"});
-  CAF_CHECK(cfg.remainder.empty());
-  CAF_CHECK_EQUAL(get_or(cfg, "foo.bar", ""), "test");
-  CAF_MESSAGE("CLI abbreviated long name");
+  CHECK(cfg.remainder.empty());
+  CHECK_EQ(get_or(cfg, "foo.bar", ""), "test");
+  MESSAGE("CLI abbreviated long name");
   parse(text, {"--bar=test"});
-  CAF_CHECK(cfg.remainder.empty());
-  CAF_CHECK_EQUAL(get_or(cfg, "foo.bar", ""), "test");
-  CAF_MESSAGE("CLI short name");
+  CHECK(cfg.remainder.empty());
+  CHECK_EQ(get_or(cfg, "foo.bar", ""), "test");
+  MESSAGE("CLI short name");
   parse(text, {"-b", "test"});
-  CAF_CHECK(cfg.remainder.empty());
-  CAF_CHECK_EQUAL(get_or(cfg, "foo.bar", ""), "test");
-  CAF_MESSAGE("CLI short name without whitespace");
+  CHECK(cfg.remainder.empty());
+  CHECK_EQ(get_or(cfg, "foo.bar", ""), "test");
+  MESSAGE("CLI short name without whitespace");
   parse(text, {"-btest"});
-  CAF_CHECK(cfg.remainder.empty());
-  CAF_CHECK_EQUAL(get_or(cfg, "foo.bar", ""), "test");
+  CHECK(cfg.remainder.empty());
+  CHECK_EQ(get_or(cfg, "foo.bar", ""), "test");
 }
 
 CAF_TEST(parsing - with CLI cfg.remainder) {
@@ -103,13 +103,13 @@ CAF_TEST(parsing - with CLI cfg.remainder) {
   options("?foo").add<std::string>("bar,b", "some string parameter");
   parse(text, {"-b", "test", "hello", "world"});
   CAF_REQUIRE_EQUAL(cfg.remainder.size(), 2u);
-  CAF_CHECK_EQUAL(get_or(cfg, "foo.bar", ""), "test");
-  CAF_CHECK_EQUAL(cfg.remainder, string_list({"hello", "world"}));
+  CHECK_EQ(get_or(cfg, "foo.bar", ""), "test");
+  CHECK_EQ(cfg.remainder, string_list({"hello", "world"}));
   auto [argc, argv] = cfg.c_args_remainder();
   CAF_REQUIRE_EQUAL(argc, 3);
-  CAF_CHECK_EQUAL(argv[0], cfg.program_name);
-  CAF_CHECK_EQUAL(argv[1], cfg.remainder[0]);
-  CAF_CHECK_EQUAL(argv[2], cfg.remainder[1]);
+  CHECK_EQ(argv[0], cfg.program_name);
+  CHECK_EQ(argv[1], cfg.remainder[0]);
+  CHECK_EQ(argv[2], cfg.remainder[1]);
 }
 
 CAF_TEST(file input overrides defaults but CLI args always win) {
@@ -137,17 +137,17 @@ CAF_TEST(file input overrides defaults but CLI args always win) {
   string_list args{"--group1.arg2=123", "--group2.arg1=bye"};
   std::istringstream input{file_input};
   auto err = cfg.parse(std::move(args), input);
-  CAF_CHECK_EQUAL(err, error{});
-  CAF_CHECK_EQUAL(grp1.arg1, "foobar");
-  CAF_CHECK_EQUAL(grp1.arg2, 123);
-  CAF_CHECK_EQUAL(grp2.arg1, "bye");
-  CAF_CHECK_EQUAL(grp2.arg2, 2);
+  CHECK_EQ(err, error{});
+  CHECK_EQ(grp1.arg1, "foobar");
+  CHECK_EQ(grp1.arg2, 123);
+  CHECK_EQ(grp2.arg1, "bye");
+  CHECK_EQ(grp2.arg2, 2);
   settings res;
   put(res, "group1.arg1", "foobar");
   put(res, "group1.arg2", 123);
   put(res, "group2.arg1", "bye");
   put(res, "group2.arg2", 2);
-  CAF_CHECK_EQUAL(content(cfg), res);
+  CHECK_EQ(content(cfg), res);
 }
 
 // Checks whether both a synced variable and the corresponding entry in
@@ -156,9 +156,9 @@ CAF_TEST(file input overrides defaults but CLI args always win) {
   do {                                                                         \
     using ref_value_type = std::decay_t<decltype(var)>;                        \
     ref_value_type value{__VA_ARGS__};                                         \
-    CAF_CHECK_EQUAL(var, value);                                               \
+    CHECK_EQ(var, value);                                                      \
     if (auto maybe_val = get_as<decltype(var)>(cfg, #var)) {                   \
-      CAF_CHECK_EQUAL(*maybe_val, value);                                      \
+      CHECK_EQ(*maybe_val, value);                                             \
     } else {                                                                   \
       auto cv = get_if(std::addressof(cfg.content), #var);                     \
       CAF_ERROR("expected type "                                               \
@@ -169,7 +169,7 @@ CAF_TEST(file input overrides defaults but CLI args always win) {
 
 // Checks whether an entry in content(cfg) is equal to `value`.
 #define CHECK_TEXT_ONLY(type, var, value)                                      \
-  CAF_CHECK_EQUAL(get_as<type>(cfg, #var), value)
+  CHECK_EQ(get_as<type>(cfg, #var), value)
 
 #define ADD(var) add(var, #var, "...")
 
@@ -271,21 +271,21 @@ CAF_TEST(basic and basic containers options) {
   VAR(uri_map);
   VAR(string_map);
   parse(text);
-  CAF_MESSAGE("check primitive types");
+  MESSAGE("check primitive types");
   CHECK_SYNCED(some_int, 42);
   CHECK_SYNCED(some_bool, true);
   CHECK_SYNCED(some_double, 1e23);
   CHECK_SYNCED(some_timespan, 123_ms);
   CHECK_SYNCED(some_uri, "foo:bar"_u);
   CHECK_SYNCED(some_string, "string"s);
-  CAF_MESSAGE("check list types");
+  MESSAGE("check list types");
   CHECK_SYNCED(some_int_list, 1, 2, 3);
   CHECK_SYNCED(some_bool_list, false, true);
   CHECK_SYNCED(some_double_list, 1., 2., 3.);
   CHECK_SYNCED(some_timespan_list, 123_ms, 234_ms, 345_ms);
   CHECK_SYNCED(some_uri_list, "foo:a"_u, "foo:b"_u, "foo:c"_u);
   CHECK_SYNCED(some_string_list, "a", "b", "c");
-  CAF_MESSAGE("check dictionary types");
+  MESSAGE("check dictionary types");
   CHECK_SYNCED(some_int_map, {"a", 1}, {"b", 2}, {"c", 3});
   CHECK_SYNCED(some_bool_map, {"a", true}, {"b", false});
   CHECK_SYNCED(some_double_map, {"a", 1.}, {"b", 2.}, {"c", 3.});
@@ -335,4 +335,4 @@ SCENARIO("config files allow both nested and dot-separated values") {
   }
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

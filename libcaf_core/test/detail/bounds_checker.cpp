@@ -6,7 +6,7 @@
 
 #include "caf/detail/bounds_checker.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 namespace {
 
@@ -18,26 +18,26 @@ bool check(int64_t x) {
 } // namespace
 
 CAF_TEST(small integers) {
-  CAF_CHECK_EQUAL(check<int8_t>(128), false);
-  CAF_CHECK_EQUAL(check<int8_t>(127), true);
-  CAF_CHECK_EQUAL(check<int8_t>(-128), true);
-  CAF_CHECK_EQUAL(check<int8_t>(-129), false);
-  CAF_CHECK_EQUAL(check<uint8_t>(-1), false);
-  CAF_CHECK_EQUAL(check<uint8_t>(0), true);
-  CAF_CHECK_EQUAL(check<uint8_t>(255), true);
-  CAF_CHECK_EQUAL(check<uint8_t>(256), false);
-  CAF_CHECK_EQUAL(check<int16_t>(-32769), false);
-  CAF_CHECK_EQUAL(check<int16_t>(-32768), true);
-  CAF_CHECK_EQUAL(check<int16_t>(32767), true);
-  CAF_CHECK_EQUAL(check<int16_t>(32768), false);
-  CAF_CHECK_EQUAL(check<uint16_t>(-1), false);
-  CAF_CHECK_EQUAL(check<uint16_t>(0), true);
-  CAF_CHECK_EQUAL(check<uint16_t>(65535), true);
-  CAF_CHECK_EQUAL(check<uint16_t>(65536), false);
+  CHECK_EQ(check<int8_t>(128), false);
+  CHECK_EQ(check<int8_t>(127), true);
+  CHECK_EQ(check<int8_t>(-128), true);
+  CHECK_EQ(check<int8_t>(-129), false);
+  CHECK_EQ(check<uint8_t>(-1), false);
+  CHECK_EQ(check<uint8_t>(0), true);
+  CHECK_EQ(check<uint8_t>(255), true);
+  CHECK_EQ(check<uint8_t>(256), false);
+  CHECK_EQ(check<int16_t>(-32769), false);
+  CHECK_EQ(check<int16_t>(-32768), true);
+  CHECK_EQ(check<int16_t>(32767), true);
+  CHECK_EQ(check<int16_t>(32768), false);
+  CHECK_EQ(check<uint16_t>(-1), false);
+  CHECK_EQ(check<uint16_t>(0), true);
+  CHECK_EQ(check<uint16_t>(65535), true);
+  CHECK_EQ(check<uint16_t>(65536), false);
 }
 
 CAF_TEST(large unsigned integers) {
-  CAF_CHECK_EQUAL(check<uint64_t>(-1), false);
-  CAF_CHECK_EQUAL(check<uint64_t>(0), true);
-  CAF_CHECK_EQUAL(check<uint64_t>(std::numeric_limits<int64_t>::max()), true);
+  CHECK_EQ(check<uint64_t>(-1), false);
+  CHECK_EQ(check<uint64_t>(0), true);
+  CHECK_EQ(check<uint64_t>(std::numeric_limits<int64_t>::max()), true);
 }

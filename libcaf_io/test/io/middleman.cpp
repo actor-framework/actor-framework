@@ -9,7 +9,7 @@
 
 #include "caf/io/middleman.hpp"
 
-#include "caf/test/io_dsl.hpp"
+#include "io-test.hpp"
 
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -80,7 +80,7 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(middleman_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(remote_lookup allows registry lookups on other nodes) {
   auto testee_impl = []() -> behavior {
@@ -92,13 +92,13 @@ CAF_TEST(remote_lookup allows registry lookups on other nodes) {
   earth.sys.registry().put("testee", testee);
   auto testee_proxy_ptr = mars.mm.remote_lookup("testee", earth.sys.node());
   auto testee_proxy = actor_cast<actor>(testee_proxy_ptr);
-  CAF_CHECK_EQUAL(testee->node(), testee_proxy.node());
-  CAF_CHECK_EQUAL(testee->id(), testee_proxy.id());
+  CHECK_EQ(testee->node(), testee_proxy.node());
+  CHECK_EQ(testee->id(), testee_proxy.id());
   mars.self
     ->request(testee_proxy, std::chrono::minutes(1), int32_t{7}, int32_t{8})
-    .receive([](int32_t result) { CAF_CHECK_EQUAL(result, 15); },
+    .receive([](int32_t result) { CHECK_EQ(result, 15); },
              [](caf::error& err) { CAF_FAIL("request failed: " << err); });
   anon_send_exit(testee, exit_reason::user_shutdown);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

@@ -6,7 +6,7 @@
 
 #include "caf/io/broker.hpp"
 
-#include "caf/test/io_dsl.hpp"
+#include "io-test.hpp"
 
 #include <cstdint>
 #include <iostream>
@@ -31,16 +31,16 @@ using suite_state_ptr = std::shared_ptr<suite_state>;
 behavior ping(event_based_actor* self, suite_state_ptr ssp) {
   return {
     [=](ok_atom, const actor& pong) {
-      CAF_MESSAGE("received `ok_atom`");
+      MESSAGE("received `ok_atom`");
       ++ssp->pings;
       self->send(pong, ping_atom_v);
       self->become({
         [=](pong_atom) {
-          CAF_MESSAGE("ping: received pong");
+          MESSAGE("ping: received pong");
           self->send(pong, ping_atom_v);
           if (++ssp->pings == 10) {
             self->quit();
-            CAF_MESSAGE("ping is done");
+            MESSAGE("ping is done");
           }
         },
         [=](ping_atom) { CAF_FAIL("ping received a ping message"); },
@@ -52,10 +52,10 @@ behavior ping(event_based_actor* self, suite_state_ptr ssp) {
 behavior pong(event_based_actor* self, suite_state_ptr ssp) {
   return {
     [=](ping_atom) -> pong_atom {
-      CAF_MESSAGE("pong: received ping");
+      MESSAGE("pong: received ping");
       if (++ssp->pongs == 10) {
         self->quit();
-        CAF_MESSAGE("pong is done");
+        MESSAGE("pong is done");
       }
       return pong_atom_v;
     },
@@ -63,7 +63,7 @@ behavior pong(event_based_actor* self, suite_state_ptr ssp) {
 }
 
 behavior peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
-  CAF_MESSAGE("peer_fun called");
+  MESSAGE("peer_fun called");
   CAF_REQUIRE(self != nullptr);
   CAF_REQUIRE(self->subtype() == resumable::io_actor);
   self->monitor(buddy);
@@ -82,11 +82,11 @@ behavior peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
   };
   return {
     [=](const connection_closed_msg&) {
-      CAF_MESSAGE("received connection_closed_msg");
+      MESSAGE("received connection_closed_msg");
       self->quit();
     },
     [=](const new_data_msg& msg) {
-      CAF_MESSAGE("received new_data_msg");
+      MESSAGE("received new_data_msg");
       CAF_REQUIRE_EQUAL(msg.buf.size(), sizeof(type_id_t));
       type_id_t type = 0;
       memcpy(&type, msg.buf.data(), sizeof(type_id_t));
@@ -105,10 +105,10 @@ behavior peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
 }
 
 behavior peer_acceptor_fun(broker* self, const actor& buddy) {
-  CAF_MESSAGE("peer_acceptor_fun");
+  MESSAGE("peer_acceptor_fun");
   return {
     [=](const new_connection_msg& msg) {
-      CAF_MESSAGE("received `new_connection_msg`");
+      MESSAGE("received `new_connection_msg`");
       self->fork(peer_fun, msg.handle, buddy);
       self->quit();
     },
@@ -130,7 +130,7 @@ int_peer::behavior_type int_peer_fun(int_peer::broker_pointer) {
     },
     [=](const new_data_msg&) { CAF_FAIL("received new_data_msg"); },
     [=](int value) {
-      CAF_MESSAGE("received: " << value);
+      MESSAGE("received: " << value);
       return value;
     },
   };
@@ -138,24 +138,24 @@ int_peer::behavior_type int_peer_fun(int_peer::broker_pointer) {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(broker_tests, point_to_point_fixture<>)
+BEGIN_FIXTURE_SCOPE(point_to_point_fixture<>)
 
 CAF_TEST(test broker to broker communication) {
   prepare_connection(mars, earth, "mars", 8080);
-  CAF_MESSAGE("spawn peer acceptor on mars");
+  MESSAGE("spawn peer acceptor on mars");
   auto ssp = std::make_shared<suite_state>();
   auto server = mars.mm.spawn_broker(peer_acceptor_fun,
                                      mars.sys.spawn(pong, ssp));
   mars.self->send(server, publish_atom_v);
   run();
   expect_on(mars, (uint16_t), from(server).to(mars.self).with(8080));
-  CAF_MESSAGE("spawn ping and client on earth");
+  MESSAGE("spawn ping and client on earth");
   auto pinger = earth.sys.spawn(ping, ssp);
   auto client = unbox(earth.mm.spawn_client(peer_fun, "mars", 8080, pinger));
   anon_send(pinger, ok_atom_v, client);
   run();
-  CAF_CHECK_EQUAL(ssp->pings, 10);
-  CAF_CHECK_EQUAL(ssp->pongs, 10);
+  CHECK_EQ(ssp->pings, 10);
+  CHECK_EQ(ssp->pongs, 10);
 }
 
 CAF_TEST(test whether we can spawn typed broker) {
@@ -165,4 +165,4 @@ CAF_TEST(test whether we can spawn typed broker) {
   expect_on(mars, (int), from(peer).to(mars.self).with(42));
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

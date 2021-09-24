@@ -29,7 +29,7 @@ using std::string;
                                            << prefix << " instead of "         \
                                            << PrefixName);                     \
     else                                                                       \
-      CAF_CHECK_EQUAL(prefix, PrefixName);                                     \
+      CHECK_EQ(prefix, PrefixName);                                            \
   } while (false)
 
 void global_fun() {
@@ -122,7 +122,7 @@ constexpr const char* file_format = "%r %c %p %a %t %C %M %F:%L %m%n";
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(logger_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 // copy construction, copy assign, move construction, move assign
 // and finally serialization round-trip
@@ -148,8 +148,8 @@ CAF_TEST(parse_default_format_strings) {
   add(logger::plain_text_field, " ");
   add(logger::message_field);
   add(logger::newline_field);
-  CAF_CHECK_EQUAL(logger::parse_format(file_format), lf);
-  CAF_CHECK_EQUAL(sys.logger().file_format(), lf);
+  CHECK_EQ(logger::parse_format(file_format), lf);
+  CHECK_EQ(sys.logger().file_format(), lf);
 }
 
 CAF_TEST(rendering) {
@@ -157,9 +157,9 @@ CAF_TEST(rendering) {
   timestamp t0;
   time_t t0_t = 0;
   char t0_buf[50];
-  CAF_REQUIRE(strftime(t0_buf, sizeof(t0_buf),
-                       "%Y-%m-%dT%H:%M:%S.000", localtime(&t0_t)));
-  CAF_CHECK_EQUAL(render(logger::render_date, t0), t0_buf);
+  CAF_REQUIRE(strftime(t0_buf, sizeof(t0_buf), "%Y-%m-%dT%H:%M:%S.000",
+                       localtime(&t0_t)));
+  CHECK_EQ(render(logger::render_date, t0), t0_buf);
   // Rendering of events.
   logger::event e{
     CAF_LOG_LEVEL_WARNING,
@@ -173,17 +173,16 @@ CAF_TEST(rendering) {
     0,
     t0,
   };
-  CAF_CHECK_EQUAL(render(logger::render_fun_name, e), string_view{"bar"});
-  CAF_CHECK_EQUAL(render(logger::render_fun_prefix, e),
-                  string_view{"ns.foo"});
+  CHECK_EQ(render(logger::render_fun_name, e), string_view{"bar"});
+  CHECK_EQ(render(logger::render_fun_prefix, e), string_view{"ns.foo"});
   // Exclude %r and %t from rendering test because they are nondeterministic.
   actor_system sys{cfg};
   auto lf = logger::parse_format("%c %p %a %C %M %F:%L %m");
   auto& lg = sys.logger();
   using namespace std::placeholders;
   auto render_event = bind(&logger::render, &lg, _1, _2, _3);
-  CAF_CHECK_EQUAL(render(render_event, lf, e),
-                  "unit_test WARN actor0 ns.foo bar foo.cpp:42 hello world");
+  CHECK_EQ(render(render_event, lf, e),
+           "unit_test WARN actor0 ns.foo bar foo.cpp:42 hello world");
 }
 
 CAF_TEST(render_fun_prefix) {
@@ -199,4 +198,4 @@ CAF_TEST(render_fun_prefix) {
   foo::tpl<T>::run();
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

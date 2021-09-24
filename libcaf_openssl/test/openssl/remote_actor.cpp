@@ -51,24 +51,24 @@ behavior make_pong_behavior() {
   return {
     [](int val) -> int {
       ++val;
-      CAF_MESSAGE("pong with " << val);
+      MESSAGE("pong with " << val);
       return val;
     },
   };
 }
 
 behavior make_ping_behavior(event_based_actor* self, const actor& pong) {
-  CAF_MESSAGE("ping with " << 0);
+  MESSAGE("ping with " << 0);
   self->send(pong, 0);
   return {
     [=](int val) -> int {
       if (val == 3) {
-        CAF_MESSAGE("ping with exit");
+        MESSAGE("ping with exit");
         self->send_exit(self->current_sender(), exit_reason::user_shutdown);
-        CAF_MESSAGE("ping quits");
+        MESSAGE("ping quits");
         self->quit();
       }
-      CAF_MESSAGE("ping with " << val);
+      MESSAGE("ping with " << val);
       return val;
     },
   };
@@ -85,9 +85,9 @@ std::string to_string(const std::vector<int>& vec) {
 behavior make_sort_behavior() {
   return {
     [](std::vector<int>& vec) -> std::vector<int> {
-      CAF_MESSAGE("sorter received: " << to_string(vec));
+      MESSAGE("sorter received: " << to_string(vec));
       std::sort(vec.begin(), vec.end());
-      CAF_MESSAGE("sorter sent: " << to_string(vec));
+      MESSAGE("sorter sent: " << to_string(vec));
       return std::move(vec);
     },
   };
@@ -98,9 +98,9 @@ behavior make_sort_requester_behavior(event_based_actor* self,
   self->send(sorter, std::vector<int>{5, 4, 3, 2, 1});
   return {
     [=](const std::vector<int>& vec) {
-      CAF_MESSAGE("sort requester received: " << to_string(vec));
+      MESSAGE("sort requester received: " << to_string(vec));
       for (size_t i = 1; i < vec.size(); ++i)
-        CAF_CHECK_EQUAL(static_cast<int>(i), vec[i - 1]);
+        CHECK_EQ(static_cast<int>(i), vec[i - 1]);
       self->send_exit(sorter, exit_reason::user_shutdown);
       self->quit();
     },
@@ -117,17 +117,17 @@ behavior fragile_mirror(event_based_actor* self) {
 }
 
 behavior linking_actor(event_based_actor* self, const actor& buddy) {
-  CAF_MESSAGE("link to mirror and send dummy message");
+  MESSAGE("link to mirror and send dummy message");
   self->link_to(buddy);
   self->send(buddy, 42);
   return {
-    [](int i) { CAF_CHECK_EQUAL(i, 42); },
+    [](int i) { CHECK_EQ(i, 42); },
   };
 }
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(dynamic_remote_actor_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 using openssl::publish;
 using openssl::remote_actor;
@@ -140,18 +140,18 @@ CAF_TEST_DISABLED(identity_semantics) {
   CAF_REQUIRE_NOT_EQUAL(port1, port2);
   auto same_server = unbox(remote_actor(server_side, local_host, port2));
   CAF_REQUIRE_EQUAL(same_server, server);
-  CAF_CHECK_EQUAL(same_server->node(), server_side.node());
+  CHECK_EQ(same_server->node(), server_side.node());
   auto server1 = unbox(remote_actor(client_side, local_host, port1));
   auto server2 = unbox(remote_actor(client_side, local_host, port2));
-  CAF_CHECK_EQUAL(server1, remote_actor(client_side, local_host, port1));
-  CAF_CHECK_EQUAL(server2, remote_actor(client_side, local_host, port2));
+  CHECK_EQ(server1, remote_actor(client_side, local_host, port1));
+  CHECK_EQ(server2, remote_actor(client_side, local_host, port2));
   anon_send_exit(server, exit_reason::user_shutdown);
 }
 
 CAF_TEST_DISABLED(ping_pong) {
   // server side
-  auto port = unbox(
-    publish(server_side.spawn(make_pong_behavior), 0, local_host));
+  auto port
+    = unbox(publish(server_side.spawn(make_pong_behavior), 0, local_host));
   // client side
   auto pong = unbox(remote_actor(client_side, local_host, port));
   client_side.spawn(make_ping_behavior, pong);
@@ -159,8 +159,8 @@ CAF_TEST_DISABLED(ping_pong) {
 
 CAF_TEST_DISABLED(custom_message_type) {
   // server side
-  auto port = unbox(
-    publish(server_side.spawn(make_sort_behavior), 0, local_host));
+  auto port
+    = unbox(publish(server_side.spawn(make_sort_behavior), 0, local_host));
   // client side
   auto sorter = unbox(remote_actor(client_side, local_host, port));
   client_side.spawn(make_sort_requester_behavior, sorter);
@@ -174,9 +174,9 @@ CAF_TEST_DISABLED(remote_link) {
   auto linker = client_side.spawn(linking_actor, mirror);
   scoped_actor self{client_side};
   self->wait_for(linker);
-  CAF_MESSAGE("linker exited");
+  MESSAGE("linker exited");
   self->wait_for(mirror);
-  CAF_MESSAGE("mirror exited");
+  MESSAGE("mirror exited");
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

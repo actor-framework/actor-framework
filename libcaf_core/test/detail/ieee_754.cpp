@@ -6,7 +6,7 @@
 
 #include "caf/detail/ieee_754.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <limits>
 
@@ -26,15 +26,15 @@ using dlimits = std::numeric_limits<double>;
 
 } // namespace
 
-#define CHECK_RT(value) CAF_CHECK_EQUAL(roundtrip(value), value)
+#define CHECK_RT(value) CHECK_EQ(roundtrip(value), value)
 
-#define CHECK_PRED_RT(pred, value) CAF_CHECK(pred(roundtrip(value)))
+#define CHECK_PRED_RT(pred, value) CHECK(pred(roundtrip(value)))
 
 #define CHECK_SIGN_RT(value)                                                   \
-  CAF_CHECK_EQUAL(std::signbit(roundtrip(value)), std::signbit(value))
+  CHECK_EQ(std::signbit(roundtrip(value)), std::signbit(value))
 
 CAF_TEST(packing and then unpacking floats returns the original value) {
-  CAF_MESSAGE("finite values compare equal");
+  MESSAGE("finite values compare equal");
   CHECK_RT(0.f);
   CHECK_RT(0xCAFp1);
   CHECK_RT(flimits::epsilon());
@@ -45,11 +45,11 @@ CAF_TEST(packing and then unpacking floats returns the original value) {
   CHECK_RT(-flimits::epsilon());
   CHECK_RT(-flimits::min());
   CHECK_RT(-flimits::max());
-  CAF_MESSAGE("packing and unpacking preserves infinity and NaN");
+  MESSAGE("packing and unpacking preserves infinity and NaN");
   CHECK_PRED_RT(std::isinf, flimits::infinity());
   CHECK_PRED_RT(std::isinf, -flimits::infinity());
   CHECK_PRED_RT(std::isnan, flimits::quiet_NaN());
-  CAF_MESSAGE("packing and unpacking preserves the sign bit");
+  MESSAGE("packing and unpacking preserves the sign bit");
   CHECK_SIGN_RT(0.f);
   CHECK_SIGN_RT(0xCAFp1);
   CHECK_SIGN_RT(flimits::epsilon());
@@ -65,7 +65,7 @@ CAF_TEST(packing and then unpacking floats returns the original value) {
 }
 
 CAF_TEST(packing and then unpacking doubles returns the original value) {
-  CAF_MESSAGE("finite values compare equal");
+  MESSAGE("finite values compare equal");
   CHECK_RT(0.);
   CHECK_RT(0xCAFp1);
   CHECK_RT(dlimits::epsilon());
@@ -76,11 +76,11 @@ CAF_TEST(packing and then unpacking doubles returns the original value) {
   CHECK_RT(-dlimits::epsilon());
   CHECK_RT(-dlimits::min());
   CHECK_RT(-dlimits::max());
-  CAF_MESSAGE("packing and unpacking preserves infinity and NaN");
+  MESSAGE("packing and unpacking preserves infinity and NaN");
   CHECK_PRED_RT(std::isinf, dlimits::infinity());
   CHECK_PRED_RT(std::isinf, -dlimits::infinity());
   CHECK_PRED_RT(std::isnan, dlimits::quiet_NaN());
-  CAF_MESSAGE("packing and unpacking preserves the sign bit");
+  MESSAGE("packing and unpacking preserves the sign bit");
   CHECK_SIGN_RT(0.);
   CHECK_SIGN_RT(0xCAFp1);
   CHECK_SIGN_RT(dlimits::epsilon());

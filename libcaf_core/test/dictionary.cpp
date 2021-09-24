@@ -18,20 +18,20 @@ using int_dict = dictionary<int>;
 
 CAF_TEST(construction and comparison) {
   int_dict xs;
-  CAF_CHECK_EQUAL(xs.empty(), true);
-  CAF_CHECK_EQUAL(xs.size(), 0u);
+  CHECK_EQ(xs.empty(), true);
+  CHECK_EQ(xs.size(), 0u);
   int_dict ys{{"foo", 1}, {"bar", 2}};
-  CAF_CHECK_EQUAL(ys.empty(), false);
-  CAF_CHECK_EQUAL(ys.size(), 2u);
-  CAF_CHECK_NOT_EQUAL(xs, ys);
+  CHECK_EQ(ys.empty(), false);
+  CHECK_EQ(ys.size(), 2u);
+  CHECK_NE(xs, ys);
   int_dict zs{ys.begin(), ys.end()};
-  CAF_CHECK_EQUAL(zs.empty(), false);
-  CAF_CHECK_EQUAL(zs.size(), 2u);
-  CAF_CHECK_EQUAL(ys, zs);
+  CHECK_EQ(zs.empty(), false);
+  CHECK_EQ(zs.size(), 2u);
+  CHECK_EQ(ys, zs);
   zs.clear();
-  CAF_CHECK_EQUAL(zs.empty(), true);
-  CAF_CHECK_EQUAL(zs.size(), 0u);
-  CAF_CHECK_EQUAL(xs, zs);
+  CHECK_EQ(zs.empty(), true);
+  CHECK_EQ(zs.size(), 0u);
+  CHECK_EQ(xs, zs);
 }
 
 CAF_TEST(iterators) {
@@ -39,44 +39,44 @@ CAF_TEST(iterators) {
   using vector_type = std::vector<int_dict::value_type>;
   int_dict xs{{"a", 1}, {"b", 2}, {"c", 3}};
   vector_type ys{{"a", 1}, {"b", 2}, {"c", 3}};
-  CAF_CHECK(equal(xs.begin(), xs.end(), ys.begin()));
-  CAF_CHECK(equal(xs.cbegin(), xs.cend(), ys.cbegin()));
-  CAF_CHECK(equal(xs.rbegin(), xs.rend(), ys.rbegin()));
-  CAF_CHECK(equal(xs.crbegin(), xs.crend(), ys.crbegin()));
+  CHECK(equal(xs.begin(), xs.end(), ys.begin()));
+  CHECK(equal(xs.cbegin(), xs.cend(), ys.cbegin()));
+  CHECK(equal(xs.rbegin(), xs.rend(), ys.rbegin()));
+  CHECK(equal(xs.crbegin(), xs.crend(), ys.crbegin()));
 }
 
 CAF_TEST(swapping) {
   int_dict xs{{"foo", 1}, {"bar", 2}};
   int_dict ys;
   int_dict zs{{"foo", 1}, {"bar", 2}};
-  CAF_CHECK_NOT_EQUAL(xs, ys);
-  CAF_CHECK_NOT_EQUAL(ys, zs);
-  CAF_CHECK_EQUAL(xs, zs);
+  CHECK_NE(xs, ys);
+  CHECK_NE(ys, zs);
+  CHECK_EQ(xs, zs);
   xs.swap(ys);
-  CAF_CHECK_NOT_EQUAL(xs, ys);
-  CAF_CHECK_EQUAL(ys, zs);
-  CAF_CHECK_NOT_EQUAL(xs, zs);
+  CHECK_NE(xs, ys);
+  CHECK_EQ(ys, zs);
+  CHECK_NE(xs, zs);
 }
 
 CAF_TEST(emplacing) {
   int_dict xs;
-  CAF_CHECK_EQUAL(xs.emplace("x", 1).second, true);
-  CAF_CHECK_EQUAL(xs.emplace("y", 2).second, true);
-  CAF_CHECK_EQUAL(xs.emplace("y", 3).second, false);
+  CHECK_EQ(xs.emplace("x", 1).second, true);
+  CHECK_EQ(xs.emplace("y", 2).second, true);
+  CHECK_EQ(xs.emplace("y", 3).second, false);
 }
 
 CAF_TEST(insertion) {
   int_dict xs;
-  CAF_CHECK_EQUAL(xs.insert("a", 1).second, true);
-  CAF_CHECK_EQUAL(xs.insert("b", 2).second, true);
-  CAF_CHECK_EQUAL(xs.insert("c", 3).second, true);
-  CAF_CHECK_EQUAL(xs.insert("c", 4).second, false);
+  CHECK_EQ(xs.insert("a", 1).second, true);
+  CHECK_EQ(xs.insert("b", 2).second, true);
+  CHECK_EQ(xs.insert("c", 3).second, true);
+  CHECK_EQ(xs.insert("c", 4).second, false);
   int_dict ys;
-  CAF_CHECK_EQUAL(ys.insert_or_assign("a", 1).second, true);
-  CAF_CHECK_EQUAL(ys.insert_or_assign("b", 2).second, true);
-  CAF_CHECK_EQUAL(ys.insert_or_assign("c", 0).second, true);
-  CAF_CHECK_EQUAL(ys.insert_or_assign("c", 3).second, false);
-  CAF_CHECK_EQUAL(xs, ys);
+  CHECK_EQ(ys.insert_or_assign("a", 1).second, true);
+  CHECK_EQ(ys.insert_or_assign("b", 2).second, true);
+  CHECK_EQ(ys.insert_or_assign("c", 0).second, true);
+  CHECK_EQ(ys.insert_or_assign("c", 3).second, false);
+  CHECK_EQ(xs, ys);
 }
 
 CAF_TEST(insertion with hint) {
@@ -98,32 +98,32 @@ CAF_TEST(insertion with hint) {
   ys_insert_or_assign("c", 0);
   ys_insert_or_assign("b", 2);
   ys_insert_or_assign("c", 3);
-  CAF_CHECK_EQUAL(xs, ys);
+  CHECK_EQ(xs, ys);
 }
 
 CAF_TEST(bounds) {
   int_dict xs{{"a", 1}, {"b", 2}, {"c", 3}, {"d", 4}};
   const int_dict& const_xs = xs;
-  CAF_CHECK_EQUAL(xs.lower_bound("c")->first, "c");
-  CAF_CHECK_EQUAL(xs.upper_bound("c")->first, "d");
-  CAF_CHECK_EQUAL(const_xs.lower_bound("c")->first, "c");
-  CAF_CHECK_EQUAL(const_xs.upper_bound("c")->first, "d");
+  CHECK_EQ(xs.lower_bound("c")->first, "c");
+  CHECK_EQ(xs.upper_bound("c")->first, "d");
+  CHECK_EQ(const_xs.lower_bound("c")->first, "c");
+  CHECK_EQ(const_xs.upper_bound("c")->first, "d");
 }
 
 CAF_TEST(find) {
   int_dict xs{{"a", 1}, {"b", 2}, {"c", 3}, {"d", 4}};
   const int_dict& const_xs = xs;
-  CAF_CHECK_EQUAL(xs.find("e"), xs.end());
-  CAF_CHECK_EQUAL(xs.find("a")->second, 1);
-  CAF_CHECK_EQUAL(xs.find("c")->second, 3);
-  CAF_CHECK_EQUAL(const_xs.find("e"), xs.end());
-  CAF_CHECK_EQUAL(const_xs.find("a")->second, 1);
-  CAF_CHECK_EQUAL(const_xs.find("c")->second, 3);
+  CHECK_EQ(xs.find("e"), xs.end());
+  CHECK_EQ(xs.find("a")->second, 1);
+  CHECK_EQ(xs.find("c")->second, 3);
+  CHECK_EQ(const_xs.find("e"), xs.end());
+  CHECK_EQ(const_xs.find("a")->second, 1);
+  CHECK_EQ(const_xs.find("c")->second, 3);
 }
 
 CAF_TEST(element access) {
   int_dict xs{{"a", 1}, {"b", 2}, {"c", 3}, {"d", 4}};
-  CAF_CHECK_EQUAL(xs["a"], 1);
-  CAF_CHECK_EQUAL(xs["b"], 2);
-  CAF_CHECK_EQUAL(xs["e"], 0);
+  CHECK_EQ(xs["a"], 1);
+  CHECK_EQ(xs["b"], 2);
+  CHECK_EQ(xs["e"], 0);
 }

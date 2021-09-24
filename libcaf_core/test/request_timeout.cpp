@@ -87,7 +87,7 @@ behavior ping_nested1(ping_actor* self, bool* had_timeout, const actor& buddy) {
     [=](timeout_atom) {
       self->state.had_first_timeout = true;
       self->become(after(milliseconds(100)) >> [=] {
-        CAF_CHECK(self->state.had_first_timeout);
+        CHECK(self->state.had_first_timeout);
         *had_timeout = true;
         self->quit();
       });
@@ -105,7 +105,7 @@ behavior ping_nested2(ping_actor* self, bool* had_timeout, const actor& buddy) {
       [=] {
         self->state.had_first_timeout = true;
         self->become(after(milliseconds(100)) >> [=] {
-          CAF_CHECK(self->state.had_first_timeout);
+          CHECK(self->state.had_first_timeout);
           *had_timeout = true;
           self->quit();
         });
@@ -129,7 +129,7 @@ behavior ping_nested3(ping_actor* self, bool* had_timeout, const actor& buddy) {
   return {
     after(milliseconds(100)) >>
       [=] {
-        CAF_CHECK(self->state.had_first_timeout);
+        CHECK(self->state.had_first_timeout);
         *had_timeout = true;
         self->quit();
       },
@@ -210,7 +210,7 @@ behavior ping_multiplexed3(ping_actor* self, bool* had_timeout,
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(request_timeout_tests, test_coordinator_fixture<>)
+BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
 
 CAF_TEST(single_timeout) {
   test_vec fs{{ping_single1, "ping_single1"},
@@ -218,7 +218,7 @@ CAF_TEST(single_timeout) {
               {ping_single3, "ping_single3"}};
   for (auto f : fs) {
     bool had_timeout = false;
-    CAF_MESSAGE("test implementation " << f.second);
+    MESSAGE("test implementation " << f.second);
     auto testee = sys.spawn(f.first, &had_timeout, sys.spawn<lazy_init>(pong));
     CAF_REQUIRE_EQUAL(sched.jobs.size(), 1u);
     CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), "ping"s);
@@ -229,8 +229,8 @@ CAF_TEST(single_timeout) {
     CAF_REQUIRE_EQUAL(sched.jobs.size(), 2u);
     // now, the timeout message is already dispatched, while pong did
     // not respond to the message yet, i.e., timeout arrives before response
-    CAF_CHECK_EQUAL(sched.run(), 2u);
-    CAF_CHECK(had_timeout);
+    CHECK_EQ(sched.run(), 2u);
+    CHECK(had_timeout);
   }
 }
 
@@ -240,7 +240,7 @@ CAF_TEST(nested_timeout) {
               {ping_nested3, "ping_nested3"}};
   for (auto f : fs) {
     bool had_timeout = false;
-    CAF_MESSAGE("test implementation " << f.second);
+    MESSAGE("test implementation " << f.second);
     auto testee = sys.spawn(f.first, &had_timeout, sys.spawn<lazy_init>(pong));
     CAF_REQUIRE_EQUAL(sched.jobs.size(), 1u);
     CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), "ping"s);
@@ -255,10 +255,10 @@ CAF_TEST(nested_timeout) {
     // dispatch second timeout
     CAF_REQUIRE_EQUAL(sched.trigger_timeout(), true);
     CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), "ping"s);
-    CAF_CHECK(!had_timeout);
-    CAF_CHECK(sched.next_job<ping_actor>().state.had_first_timeout);
+    CHECK(!had_timeout);
+    CHECK(sched.next_job<ping_actor>().state.had_first_timeout);
     sched.run();
-    CAF_CHECK(had_timeout);
+    CHECK(had_timeout);
   }
 }
 
@@ -268,7 +268,7 @@ CAF_TEST(multiplexed_timeout) {
               {ping_multiplexed3, "ping_multiplexed3"}};
   for (auto f : fs) {
     bool had_timeout = false;
-    CAF_MESSAGE("test implementation " << f.second);
+    MESSAGE("test implementation " << f.second);
     auto testee = sys.spawn(f.first, &had_timeout, sys.spawn<lazy_init>(pong));
     CAF_REQUIRE_EQUAL(sched.jobs.size(), 1u);
     CAF_REQUIRE_EQUAL(sched.next_job<local_actor>().name(), "ping"s);
@@ -280,8 +280,8 @@ CAF_TEST(multiplexed_timeout) {
     // now, the timeout message is already dispatched, while pong did
     // not respond to the message yet, i.e., timeout arrives before response
     sched.run();
-    CAF_CHECK(had_timeout);
+    CHECK(had_timeout);
   }
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

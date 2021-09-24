@@ -75,7 +75,7 @@ actor spawn_event_testee2(scoped_actor& parent) {
       return {
         after(std::chrono::milliseconds(1)) >>
           [=] {
-            CAF_MESSAGE("remaining: " << std::to_string(remaining));
+            MESSAGE("remaining: " << std::to_string(remaining));
             if (remaining == 1) {
               send(parent, ok_atom_v);
               quit();
@@ -191,7 +191,7 @@ public:
 behavior master(event_based_actor* self) {
   return {
     [=](ok_atom) {
-      CAF_MESSAGE("master: received done");
+      MESSAGE("master: received done");
       self->quit(exit_reason::user_shutdown);
     },
   };
@@ -200,7 +200,7 @@ behavior master(event_based_actor* self) {
 behavior slave(event_based_actor* self, const actor& master) {
   self->link_to(master);
   self->set_exit_handler([=](exit_msg& msg) {
-    CAF_MESSAGE("slave: received exit message");
+    MESSAGE("slave: received exit message");
     self->quit(msg.reason);
   });
   return {
@@ -224,11 +224,11 @@ public:
     for (int i = 0; i < 100; ++i) {
       send(this, ok_atom_v);
     }
-    CAF_CHECK_EQUAL(mailbox().size(), 100u);
+    CHECK_EQ(mailbox().size(), 100u);
     for (int i = 0; i < 100; ++i) {
       send(this, ok_atom_v);
     }
-    CAF_CHECK_EQUAL(mailbox().size(), 200u);
+    CHECK_EQ(mailbox().size(), 200u);
     return {};
   }
 };
@@ -248,21 +248,20 @@ struct fixture {
     system.~actor_system();
     // destructor of actor_system must make sure all
     // destructors of all actors have been run
-    CAF_CHECK_EQUAL(s_actor_instances.load(), 0);
-    CAF_MESSAGE("max. # of actor instances: " << s_max_actor_instances.load());
+    CHECK_EQ(s_actor_instances.load(), 0);
+    MESSAGE("max. # of actor instances: " << s_max_actor_instances.load());
   }
 };
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(dynamic_spawn_tests, test_coordinator_fixture<>)
+BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
 
 CAF_TEST(mirror) {
   auto mirror = self->spawn<simple_mirror>();
   auto dummy = self->spawn([=](event_based_actor* ptr) -> behavior {
     ptr->send(mirror, "hello mirror");
-    return {
-      [](const std::string& msg) { CAF_CHECK_EQUAL(msg, "hello mirror"); }};
+    return {[](const std::string& msg) { CHECK_EQ(msg, "hello mirror"); }};
   });
   run();
   /*
@@ -270,15 +269,15 @@ CAF_TEST(mirror) {
   run();
   self->receive (
     [](const std::string& msg) {
-      CAF_CHECK_EQUAL(msg, "hello mirror");
+      CHECK_EQ(msg, "hello mirror");
     }
   );
   */
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()
 
-CAF_TEST_FIXTURE_SCOPE(atom_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(count_mailbox) {
   system.spawn<counting_actor>();
@@ -306,18 +305,17 @@ CAF_TEST(detached_mirror) {
   scoped_actor self{system};
   auto mirror = self->spawn<simple_mirror, detached>();
   self->send(mirror, "hello mirror");
-  self->receive(
-    [](const std::string& msg) { CAF_CHECK_EQUAL(msg, "hello mirror"); });
+  self->receive([](const std::string& msg) { CHECK_EQ(msg, "hello mirror"); });
 }
 
 CAF_TEST(send_to_self) {
   scoped_actor self{system};
   self->send(self, 1, 2, 3, true);
   self->receive([](int a, int b, int c, bool d) {
-    CAF_CHECK_EQUAL(a, 1);
-    CAF_CHECK_EQUAL(b, 2);
-    CAF_CHECK_EQUAL(c, 3);
-    CAF_CHECK_EQUAL(d, true);
+    CHECK_EQ(a, 1);
+    CHECK_EQ(b, 2);
+    CHECK_EQ(c, 3);
+    CHECK_EQ(d, true);
   });
   self->send(self, message{});
   self->receive([] {});
@@ -327,17 +325,16 @@ CAF_TEST(echo_actor_messaging) {
   scoped_actor self{system};
   auto mecho = system.spawn<echo_actor>();
   self->send(mecho, "hello echo");
-  self->receive(
-    [](const std::string& arg) { CAF_CHECK_EQUAL(arg, "hello echo"); });
+  self->receive([](const std::string& arg) { CHECK_EQ(arg, "hello echo"); });
 }
 
 CAF_TEST(delayed_send) {
   scoped_actor self{system};
   self->delayed_send(self, std::chrono::milliseconds(1), 1, 2, 3);
   self->receive([](int a, int b, int c) {
-    CAF_CHECK_EQUAL(a, 1);
-    CAF_CHECK_EQUAL(b, 2);
-    CAF_CHECK_EQUAL(c, 3);
+    CHECK_EQ(a, 1);
+    CHECK_EQ(b, 2);
+    CHECK_EQ(c, 3);
   });
 }
 
@@ -350,7 +347,7 @@ CAF_TEST(delayed_spawn) {
 CAF_TEST(spawn_event_testee2_test) {
   scoped_actor self{system};
   spawn_event_testee2(self);
-  self->receive([](ok_atom) { CAF_MESSAGE("Received 'ok'"); });
+  self->receive([](ok_atom) { MESSAGE("Received 'ok'"); });
 }
 
 CAF_TEST(function_spawn) {
@@ -361,12 +358,11 @@ CAF_TEST(function_spawn) {
   auto a1 = system.spawn(f, "alice");
   auto a2 = system.spawn(f, "bob");
   self->send(a1, get_atom_v);
-  self->receive([&](name_atom, const std::string& name) {
-    CAF_CHECK_EQUAL(name, "alice");
-  });
+  self->receive(
+    [&](name_atom, const std::string& name) { CHECK_EQ(name, "alice"); });
   self->send(a2, get_atom_v);
   self->receive(
-    [&](name_atom, const std::string& name) { CAF_CHECK_EQUAL(name, "bob"); });
+    [&](name_atom, const std::string& name) { CHECK_EQ(name, "bob"); });
   self->send_exit(a1, exit_reason::user_shutdown);
   self->send_exit(a2, exit_reason::user_shutdown);
 }
@@ -375,7 +371,7 @@ using typed_testee = typed_actor<replies_to<abc_atom>::with<std::string>>;
 
 typed_testee::behavior_type testee() {
   return {[](abc_atom) {
-    CAF_MESSAGE("received 'abc'");
+    MESSAGE("received 'abc'");
     return "abc";
   }};
 }
@@ -383,7 +379,7 @@ typed_testee::behavior_type testee() {
 CAF_TEST(typed_await) {
   scoped_actor self{system};
   auto f = make_function_view(system.spawn(testee));
-  CAF_CHECK_EQUAL(f(abc_atom_v), "abc");
+  CHECK_EQ(f(abc_atom_v), "abc");
 }
 
 // tests attach_functor() inside of an actor's constructor
@@ -418,7 +414,7 @@ CAF_TEST(constructor_attach) {
         downs_(0),
         testee_(spawn<testee, monitored>(this)) {
       set_down_handler([=](down_msg& msg) {
-        CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
+        CHECK_EQ(msg.reason, exit_reason::user_shutdown);
         if (++downs_ == 2)
           quit(msg.reason);
       });
@@ -429,7 +425,7 @@ CAF_TEST(constructor_attach) {
     behavior make_behavior() override {
       return {
         [=](ok_atom, const error& reason) {
-          CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
+          CHECK_EQ(reason, exit_reason::user_shutdown);
           if (++downs_ == 2)
             quit(reason);
         },
@@ -437,7 +433,7 @@ CAF_TEST(constructor_attach) {
     }
 
     void on_exit() override {
-      CAF_MESSAGE("spawner::on_exit()");
+      MESSAGE("spawner::on_exit()");
       destroy(testee_);
     }
 
@@ -477,7 +473,7 @@ CAF_TEST(move_only_argument) {
     };
   };
   auto f = make_function_view(system.spawn(wrapper, std::move(uptr)));
-  CAF_CHECK_EQUAL(to_tuple<int>(unbox(f(1.f))), std::make_tuple(42));
+  CHECK_EQ(to_tuple<int>(unbox(f(1.f))), std::make_tuple(42));
 }
 
 CAF_TEST(move - only function object) {
@@ -496,4 +492,4 @@ CAF_TEST(move - only function object) {
   sys.spawn(std::move(f));
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

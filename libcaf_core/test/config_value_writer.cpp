@@ -6,7 +6,7 @@
 
 #include "caf/config_value_writer.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include "inspector-tests.hpp"
 
@@ -47,22 +47,22 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(config_value_writer_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(structs become dictionaries) {
   set(foobar{"hello", "world"});
-  CAF_CHECK_EQUAL(get_as<std::string>(xs(), "foo"), "hello"s);
-  CAF_CHECK_EQUAL(get_as<std::string>(xs(), "bar"), "world"s);
+  CHECK_EQ(get_as<std::string>(xs(), "foo"), "hello"s);
+  CHECK_EQ(get_as<std::string>(xs(), "bar"), "world"s);
 }
 
 CAF_TEST(nested structs become nested dictionaries) {
   set(line{{10, 20, 30}, {70, 60, 50}});
-  CAF_CHECK_EQUAL(get_as<i64>(xs(), "p1.x"), 10_i64);
-  CAF_CHECK_EQUAL(get_as<i64>(xs(), "p1.y"), 20_i64);
-  CAF_CHECK_EQUAL(get_as<i64>(xs(), "p1.z"), 30_i64);
-  CAF_CHECK_EQUAL(get_as<i64>(xs(), "p2.x"), 70_i64);
-  CAF_CHECK_EQUAL(get_as<i64>(xs(), "p2.y"), 60_i64);
-  CAF_CHECK_EQUAL(get_as<i64>(xs(), "p2.z"), 50_i64);
+  CHECK_EQ(get_as<i64>(xs(), "p1.x"), 10_i64);
+  CHECK_EQ(get_as<i64>(xs(), "p1.y"), 20_i64);
+  CHECK_EQ(get_as<i64>(xs(), "p1.z"), 30_i64);
+  CHECK_EQ(get_as<i64>(xs(), "p2.x"), 70_i64);
+  CHECK_EQ(get_as<i64>(xs(), "p2.y"), 60_i64);
+  CHECK_EQ(get_as<i64>(xs(), "p2.z"), 50_i64);
 }
 
 CAF_TEST(empty types and maps become dictionaries) {
@@ -79,36 +79,36 @@ CAF_TEST(empty types and maps become dictionaries) {
   tst.v7["two"] = 2;
   tst.v7["three"] = 3;
   set(tst);
-  CAF_CHECK_EQUAL(get_as<settings>(xs(), "v1"), settings{});
-  CAF_CHECK_EQUAL(get_as<i64>(xs(), "v2"), 42_i64);
-  CAF_CHECK_EQUAL(get_as<i64_list>(xs(), "v3"), i64_list({-1, -2, -3, -4}));
+  CHECK_EQ(get_as<settings>(xs(), "v1"), settings{});
+  CHECK_EQ(get_as<i64>(xs(), "v2"), 42_i64);
+  CHECK_EQ(get_as<i64_list>(xs(), "v3"), i64_list({-1, -2, -3, -4}));
   if (auto v4 = get_as<config_value::list>(xs(), "v4");
-      CAF_CHECK(v4 && v4->size() == 2u)) {
-    if (auto v1 = v4->front(); CAF_CHECK(holds_alternative<settings>(v1))) {
+      CHECK(v4 && v4->size() == 2u)) {
+    if (auto v1 = v4->front(); CHECK(holds_alternative<settings>(v1))) {
       auto& v1_xs = get<settings>(v1);
-      CAF_CHECK_EQUAL(get<double>(v1_xs, "content"), 0.0);
-      CAF_CHECK_EQUAL(get<std::string>(v1_xs, "@content-type"),
-                      to_string(type_name_v<double>));
+      CHECK_EQ(get<double>(v1_xs, "content"), 0.0);
+      CHECK_EQ(get<std::string>(v1_xs, "@content-type"),
+               to_string(type_name_v<double>));
     }
-    if (auto v2 = v4->back(); CAF_CHECK(holds_alternative<settings>(v2))) {
+    if (auto v2 = v4->back(); CHECK(holds_alternative<settings>(v2))) {
       auto& v2_xs = get<settings>(v2);
-      CAF_CHECK_EQUAL(get<double>(v2_xs, "content"), 1.0);
-      CAF_CHECK_EQUAL(get<std::string>(v2_xs, "@content-type"),
-                      to_string(type_name_v<double>));
+      CHECK_EQ(get<double>(v2_xs, "content"), 1.0);
+      CHECK_EQ(get<std::string>(v2_xs, "@content-type"),
+               to_string(type_name_v<double>));
     }
   }
-  CAF_CHECK_EQUAL(get_as<i64_list>(xs(), "v5"), i64_list({10, 20}));
+  CHECK_EQ(get_as<i64_list>(xs(), "v5"), i64_list({10, 20}));
   // TODO: check v6
-  CAF_CHECK_EQUAL(get_as<i64>(xs(), "v7.one"), 1_i64);
-  CAF_CHECK_EQUAL(get_as<i64>(xs(), "v7.two"), 2_i64);
-  CAF_CHECK_EQUAL(get_as<i64>(xs(), "v7.three"), 3_i64);
-  CAF_CHECK_EQUAL(get_as<config_value::list>(xs(), "v8"), config_value::list());
+  CHECK_EQ(get_as<i64>(xs(), "v7.one"), 1_i64);
+  CHECK_EQ(get_as<i64>(xs(), "v7.two"), 2_i64);
+  CHECK_EQ(get_as<i64>(xs(), "v7.three"), 3_i64);
+  CHECK_EQ(get_as<config_value::list>(xs(), "v8"), config_value::list());
 }
 
 CAF_TEST(custom inspect overloads may produce single values) {
   auto tue = weekday::tuesday;
   set(tue);
-  CAF_CHECK_EQUAL(get_as<std::string>(x), "tuesday"s);
+  CHECK_EQ(get_as<std::string>(x), "tuesday"s);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

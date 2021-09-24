@@ -18,7 +18,7 @@
 
 #include "caf/detail/tick_emitter.hpp"
 
-#include "caf/test/unit_test.hpp"
+#include "core-test.hpp"
 
 #include <vector>
 
@@ -43,22 +43,22 @@ CAF_TEST(start_and_stop) {
   detail::tick_emitter y{time_point{timespan{100}}};
   detail::tick_emitter z;
   z.start(time_point{timespan{100}});
-  CAF_CHECK_EQUAL(x.started(), false);
-  CAF_CHECK_EQUAL(y.started(), true);
-  CAF_CHECK_EQUAL(z.started(), true);
+  CHECK_EQ(x.started(), false);
+  CHECK_EQ(y.started(), true);
+  CHECK_EQ(z.started(), true);
   for (auto t : {&x, &y, &z})
     t->stop();
-  CAF_CHECK_EQUAL(x.started(), false);
-  CAF_CHECK_EQUAL(y.started(), false);
-  CAF_CHECK_EQUAL(z.started(), false);
+  CHECK_EQ(x.started(), false);
+  CHECK_EQ(y.started(), false);
+  CHECK_EQ(z.started(), false);
 }
 
 CAF_TEST(ticks) {
   auto cycle = detail::gcd(credit_interval.count(),
                            force_batch_interval.count());
-  CAF_CHECK_EQUAL(cycle, 50);
-  auto force_batch_frequency = static_cast<size_t>(force_batch_interval.count()
-                                                   / cycle);
+  CHECK_EQ(cycle, 50);
+  auto force_batch_frequency
+    = static_cast<size_t>(force_batch_interval.count() / cycle);
   auto credit_frequency = static_cast<size_t>(credit_interval.count() / cycle);
   detail::tick_emitter tctrl{time_point{timespan{100}}};
   tctrl.interval(timespan{cycle});
@@ -72,16 +72,16 @@ CAF_TEST(ticks) {
     if (tick_id % credit_frequency == 0)
       ++credit_triggers;
   };
-  CAF_MESSAGE("trigger 4 ticks");
+  MESSAGE("trigger 4 ticks");
   tctrl.update(time_point{timespan{300}}, f);
-  CAF_CHECK_EQUAL(deep_to_string(ticks), "[1, 2, 3, 4]");
-  CAF_CHECK_EQUAL(force_batch_triggers, 4lu);
-  CAF_CHECK_EQUAL(credit_triggers, 1lu);
-  CAF_MESSAGE("trigger 3 more ticks");
+  CHECK_EQ(deep_to_string(ticks), "[1, 2, 3, 4]");
+  CHECK_EQ(force_batch_triggers, 4lu);
+  CHECK_EQ(credit_triggers, 1lu);
+  MESSAGE("trigger 3 more ticks");
   tctrl.update(time_point{timespan{475}}, f);
-  CAF_CHECK_EQUAL(deep_to_string(ticks), "[1, 2, 3, 4, 5, 6, 7]");
-  CAF_CHECK_EQUAL(force_batch_triggers, 7lu);
-  CAF_CHECK_EQUAL(credit_triggers, 1lu);
+  CHECK_EQ(deep_to_string(ticks), "[1, 2, 3, 4, 5, 6, 7]");
+  CHECK_EQ(force_batch_triggers, 7lu);
+  CHECK_EQ(credit_triggers, 1lu);
 }
 
 CAF_TEST(timeouts) {
@@ -90,26 +90,26 @@ CAF_TEST(timeouts) {
   auto now = start;
   detail::tick_emitter tctrl{now};
   tctrl.interval(interval);
-  CAF_MESSAGE("advance until the first 5-tick-period ends");
+  MESSAGE("advance until the first 5-tick-period ends");
   now += interval * 5;
   auto bitmask = tctrl.timeouts(now, {5, 7});
-  CAF_CHECK_EQUAL(bitmask, 0x01u);
-  CAF_MESSAGE("advance until the first 7-tick-period ends");
+  CHECK_EQ(bitmask, 0x01u);
+  MESSAGE("advance until the first 7-tick-period ends");
   now += interval * 2;
   bitmask = tctrl.timeouts(now, {5, 7});
-  CAF_CHECK_EQUAL(bitmask, 0x02u);
-  CAF_MESSAGE("advance until both tick period ends");
+  CHECK_EQ(bitmask, 0x02u);
+  MESSAGE("advance until both tick period ends");
   now += interval * 7;
   bitmask = tctrl.timeouts(now, {5, 7});
-  CAF_CHECK_EQUAL(bitmask, 0x03u);
-  CAF_MESSAGE("advance until both tick period end multiple times");
+  CHECK_EQ(bitmask, 0x03u);
+  MESSAGE("advance until both tick period end multiple times");
   now += interval * 21;
   bitmask = tctrl.timeouts(now, {5, 7});
-  CAF_CHECK_EQUAL(bitmask, 0x03u);
-  CAF_MESSAGE("advance without any timeout");
+  CHECK_EQ(bitmask, 0x03u);
+  MESSAGE("advance without any timeout");
   now += interval * 1;
   bitmask = tctrl.timeouts(now, {5, 7});
-  CAF_CHECK_EQUAL(bitmask, 0x00u);
+  CHECK_EQ(bitmask, 0x00u);
 }
 
 CAF_TEST(next_timeout) {
@@ -118,19 +118,19 @@ CAF_TEST(next_timeout) {
   auto now = start;
   detail::tick_emitter tctrl{now};
   tctrl.interval(interval);
-  CAF_MESSAGE("advance until the first 5-tick-period ends");
+  MESSAGE("advance until the first 5-tick-period ends");
   auto next = tctrl.next_timeout(now, {5, 7});
-  CAF_CHECK_EQUAL(next, start + timespan(5 * interval));
-  CAF_MESSAGE("advance until the first 7-tick-period ends");
+  CHECK_EQ(next, start + timespan(5 * interval));
+  MESSAGE("advance until the first 7-tick-period ends");
   now = start + timespan(5 * interval);
   next = tctrl.next_timeout(now, {5, 7});
-  CAF_CHECK_EQUAL(next, start + timespan(7 * interval));
-  CAF_MESSAGE("advance until the second 5-tick-period ends");
+  CHECK_EQ(next, start + timespan(7 * interval));
+  MESSAGE("advance until the second 5-tick-period ends");
   now = start + timespan(7 * interval);
   next = tctrl.next_timeout(now, {5, 7});
-  CAF_CHECK_EQUAL(next, start + timespan((2 * 5) * interval));
-  CAF_MESSAGE("advance until the second 7-tick-period ends");
+  CHECK_EQ(next, start + timespan((2 * 5) * interval));
+  MESSAGE("advance until the second 7-tick-period ends");
   now = start + timespan(11 * interval);
   next = tctrl.next_timeout(now, {5, 7});
-  CAF_CHECK_EQUAL(next, start + timespan((2 * 7) * interval));
+  CHECK_EQ(next, start + timespan((2 * 7) * interval));
 }

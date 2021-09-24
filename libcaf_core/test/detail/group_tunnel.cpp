@@ -120,7 +120,7 @@ struct fixture : test_coordinator_fixture<> {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(group_tunnel_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 SCENARIO("tunnels automatically subscribe to their origin on first subscribe") {
   GIVEN("a group with two subscribers and a tunnel") {
@@ -263,4 +263,4 @@ SCENARIO("tunnels cache messages until connected") {
   }
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

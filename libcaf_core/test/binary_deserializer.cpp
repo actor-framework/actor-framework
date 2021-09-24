@@ -60,16 +60,13 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(binary_deserializer_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 #define SUBTEST(msg)                                                           \
-  CAF_MESSAGE(msg);                                                            \
-  for (int subtest_dummy = 0; subtest_dummy < 1; ++subtest_dummy)
+  MESSAGE(msg);                                                                \
+  if (true)
 
-#define CHECK_EQ(lhs, rhs) CAF_CHECK_EQUAL(lhs, rhs)
-
-#define CHECK_LOAD(type, value, ...)                                           \
-  CAF_CHECK_EQUAL(load<type>({__VA_ARGS__}), value)
+#define CHECK_LOAD(type, value, ...) CHECK_EQ(load<type>({__VA_ARGS__}), value)
 
 CAF_TEST(binary deserializer handles all primitive types) {
   SUBTEST("8-bit integers") {
@@ -112,8 +109,8 @@ CAF_TEST(concatenation) {
     int8_t x = 0;
     int16_t y = 0;
     load(byte_buffer({7_b, 0x80_b, 0x55_b}), x, y);
-    CAF_CHECK_EQUAL(x, 7);
-    CAF_CHECK_EQUAL(y, -32683);
+    CHECK_EQ(x, 7);
+    CHECK_EQ(y, -32683);
     load(byte_buffer({0x80_b, 0x55_b, 7_b}), y, x);
     load(byte_buffer({7_b, 0x80_b, 0x55_b}), x, y);
   }
@@ -136,9 +133,9 @@ CAF_TEST(concatenation) {
   SUBTEST("arrays behave like tuples") {
     arr xs{{0, 0, 0}};
     load(byte_buffer({1_b, 2_b, 3_b}), xs);
-    CAF_CHECK_EQUAL(xs[0], 1);
-    CAF_CHECK_EQUAL(xs[1], 2);
-    CAF_CHECK_EQUAL(xs[2], 3);
+    CHECK_EQ(xs[0], 1);
+    CHECK_EQ(xs[1], 2);
+    CHECK_EQ(xs[2], 3);
   }
 }
 
@@ -166,14 +163,14 @@ CAF_TEST(binary serializer picks up inspect functions) {
                10_b, 11_b, 12_b, 13_b, 14_b, 15_b, 16_b, 17_b, 18_b, 19_b);
   }
   SUBTEST("custom struct") {
-    test_data value{
-      -345,
-      -1234567890123456789ll,
-      3.45,
-      54.3,
-      caf::timestamp{caf::timestamp::duration{1478715821 * 1000000000ll}},
-      test_enum::b,
-      "Lorem ipsum dolor sit amet."};
+    test_data value{-345,
+                    -1234567890123456789ll,
+                    3.45,
+                    54.3,
+                    caf::timestamp{
+                      caf::timestamp::duration{1478715821 * 1000000000ll}},
+                    test_enum::b,
+                    "Lorem ipsum dolor sit amet."};
     CHECK_LOAD(test_data, value,
                // 32-bit i32_ member: -345
                0xFF_b, 0xFF_b, 0xFE_b, 0xA7_b,
@@ -199,4 +196,4 @@ CAF_TEST(binary serializer picks up inspect functions) {
   }
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

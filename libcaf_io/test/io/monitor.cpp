@@ -6,7 +6,7 @@
 
 #include "caf/io/middleman.hpp"
 
-#include "caf/test/io_dsl.hpp"
+#include "io-test.hpp"
 
 using namespace caf;
 
@@ -25,8 +25,8 @@ struct fixture : point_to_point_fixture<> {
     auto acc = next_accept_handle();
     std::tie(earth_conn, mars_conn)
       = prepare_connection(earth, mars, "localhost", 8080, acc);
-    CAF_CHECK_EQUAL(earth.publish(actor{earth.self}, 8080), 8080);
-    CAF_CHECK(mars.remote_actor("localhost", 8080));
+    CHECK_EQ(earth.publish(actor{earth.self}, 8080), 8080);
+    CHECK(mars.remote_actor("localhost", 8080));
   }
 
   void disconnect() {
@@ -43,7 +43,7 @@ struct fixture : point_to_point_fixture<> {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(monitor_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(disconnects cause node_down_msg) {
   connect();
@@ -52,7 +52,7 @@ CAF_TEST(disconnects cause node_down_msg) {
   disconnect();
   expect_on(earth, (node_down_msg),
             to(earth.self).with(node_down_msg{mars_id, error{}}));
-  CAF_CHECK(earth.self->mailbox().empty());
+  CHECK(earth.self->mailbox().empty());
 }
 
 CAF_TEST(node_down_msg calls the special node_down_handler) {
@@ -61,7 +61,7 @@ CAF_TEST(node_down_msg calls the special node_down_handler) {
   auto observer = earth.sys.spawn([&](event_based_actor* self) -> behavior {
     self->monitor(mars_id);
     self->set_node_down_handler([&](node_down_msg& dm) {
-      CAF_CHECK_EQUAL(dm.node, mars_id);
+      CHECK_EQ(dm.node, mars_id);
       node_down_handler_called = true;
     });
     return [] {};
@@ -70,7 +70,7 @@ CAF_TEST(node_down_msg calls the special node_down_handler) {
   disconnect();
   expect_on(earth, (node_down_msg),
             to(observer).with(node_down_msg{mars_id, error{}}));
-  CAF_CHECK(node_down_handler_called);
+  CHECK(node_down_handler_called);
 }
 
 CAF_TEST(calling monitor n times produces n node_down_msg) {
@@ -82,7 +82,7 @@ CAF_TEST(calling monitor n times produces n node_down_msg) {
   for (int i = 0; i < 5; ++i)
     expect_on(earth, (node_down_msg),
               to(earth.self).with(node_down_msg{mars_id, error{}}));
-  CAF_CHECK_EQUAL(earth.self->mailbox().size(), 0u);
+  CHECK_EQ(earth.self->mailbox().size(), 0u);
 }
 
 CAF_TEST(each demonitor only cancels one node_down_msg) {
@@ -96,7 +96,7 @@ CAF_TEST(each demonitor only cancels one node_down_msg) {
   for (int i = 0; i < 4; ++i)
     expect_on(earth, (node_down_msg),
               to(earth.self).with(node_down_msg{mars_id, error{}}));
-  CAF_CHECK_EQUAL(earth.self->mailbox().size(), 0u);
+  CHECK_EQ(earth.self->mailbox().size(), 0u);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

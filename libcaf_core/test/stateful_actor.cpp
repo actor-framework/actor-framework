@@ -93,7 +93,7 @@ struct fixture : test_coordinator_fixture<> {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(dynamic_stateful_actor_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(stateful actors can be dynamically typed) {
   test_adder(sys.spawn(adder));
@@ -154,13 +154,13 @@ CAF_TEST(states can accept constructor arguments and provide a behavior) {
   using actor_type = stateful_actor<state_type>;
   auto testee = sys.spawn<actor_type>(10, 20, add_operation);
   auto& state = deref<actor_type>(testee).state;
-  CAF_CHECK_EQUAL(state.x, 10);
-  CAF_CHECK_EQUAL(state.y, 20);
+  CHECK_EQ(state.x, 10);
+  CHECK_EQ(state.y, 20);
   inject((get_atom), from(self).to(testee).with(get_atom_v));
   expect((int32_t), from(testee).to(self).with(30));
   inject((int32_t, int32_t), to(testee).with(1, 2));
-  CAF_CHECK_EQUAL(state.x, 1);
-  CAF_CHECK_EQUAL(state.y, 2);
+  CHECK_EQ(state.x, 1);
+  CHECK_EQ(state.y, 2);
   inject((get_atom), from(self).to(testee).with(get_atom_v));
   expect((int32_t), from(testee).to(self).with(3));
 }
@@ -181,8 +181,8 @@ CAF_TEST(states optionally take the self pointer as first argument) {
   using actor_type = stateful_actor<state_type>;
   auto testee = sys.spawn<actor_type>(10);
   auto& state = deref<actor_type>(testee).state;
-  CAF_CHECK(state.self == &deref<actor_type>(testee));
-  CAF_CHECK_EQUAL(state.x, 10);
+  CHECK(state.self == &deref<actor_type>(testee));
+  CHECK_EQ(state.x, 10);
   inject((get_atom), from(self).to(testee).with(get_atom_v));
   expect((std::string), from(testee).to(self).with("testee"s));
 }
@@ -203,8 +203,8 @@ CAF_TEST(typed actors can use typed_actor_pointer as self pointer) {
   using actor_type = typed_adder_actor::stateful_impl<state_type>;
   auto testee = sys.spawn<actor_type>(10);
   auto& state = deref<actor_type>(testee).state;
-  CAF_CHECK(state.self == &deref<actor_type>(testee));
-  CAF_CHECK_EQUAL(state.value, 10);
+  CHECK(state.self == &deref<actor_type>(testee));
+  CHECK_EQ(state.value, 10);
   inject((add_atom, int), from(self).to(testee).with(add_atom_v, 1));
   inject((get_atom), from(self).to(testee).with(get_atom_v));
   expect((int), from(testee).to(self).with(11));
@@ -230,4 +230,4 @@ CAF_TEST(returned behaviors take precedence over make_behavior in the state) {
   expect((int32_t), from(testee).to(self).with(13));
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

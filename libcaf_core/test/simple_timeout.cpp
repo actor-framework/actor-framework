@@ -29,12 +29,12 @@ timer::behavior_type timer_impl(timer::stateful_pointer<timer_state> self) {
   self->delayed_send(self, ms(100), reset_atom_v);
   return {
     [=](reset_atom) {
-      CAF_MESSAGE("timer reset");
+      MESSAGE("timer reset");
       self->state.had_reset = true;
     },
     after(ms(600)) >>
       [=] {
-        CAF_MESSAGE("timer expired");
+        MESSAGE("timer expired");
         CAF_REQUIRE(self->state.had_reset);
         self->quit();
       },
@@ -46,12 +46,12 @@ timer::behavior_type timer_impl2(timer::pointer self) {
   delayed_anon_send(self, ms(100), reset_atom_v);
   return {
     [=](reset_atom) {
-      CAF_MESSAGE("timer reset");
+      MESSAGE("timer reset");
       *had_reset = true;
     },
     after(ms(600)) >>
       [=] {
-        CAF_MESSAGE("timer expired");
+        MESSAGE("timer expired");
         CAF_REQUIRE(*had_reset);
         self->quit();
       },
@@ -60,7 +60,7 @@ timer::behavior_type timer_impl2(timer::pointer self) {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(simple_timeout_tests, test_coordinator_fixture<>)
+BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
 
 CAF_TEST(single_timeout) {
   sys.spawn(timer_impl);
@@ -70,4 +70,4 @@ CAF_TEST(single_anon_timeout) {
   sys.spawn(timer_impl2);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

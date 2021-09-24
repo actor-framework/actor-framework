@@ -6,7 +6,7 @@
 
 #include "caf/intrusive/drr_cached_queue.hpp"
 
-#include "caf/test/unit_test.hpp"
+#include "core-test.hpp"
 
 #include <memory>
 
@@ -68,7 +68,7 @@ auto make_new_round_result(size_t consumed_items, bool stop_all) {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(drr_cached_queue_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(default_constructed) {
   CAF_REQUIRE_EQUAL(queue.empty(), true);
@@ -97,14 +97,14 @@ CAF_TEST(new_round) {
   fill(queue, 1, 2, 3, 4, 5, 6, 7, 8, 9);
   // Allow f to consume 2, 4, and 6.
   auto round_result = queue.new_round(3, f);
-  CAF_CHECK_EQUAL(round_result, make_new_round_result(3, false));
-  CAF_CHECK_EQUAL(fseq, "246");
-  CAF_CHECK_EQUAL(queue.deficit(), 0);
+  CHECK_EQ(round_result, make_new_round_result(3, false));
+  CHECK_EQ(fseq, "246");
+  CHECK_EQ(queue.deficit(), 0);
   // Allow g to consume 1, 3, 5, and 7.
   round_result = queue.new_round(4, g);
-  CAF_CHECK_EQUAL(round_result, make_new_round_result(4, false));
-  CAF_CHECK_EQUAL(gseq, "1357");
-  CAF_CHECK_EQUAL(queue.deficit(), 0);
+  CHECK_EQ(round_result, make_new_round_result(4, false));
+  CHECK_EQ(gseq, "1357");
+  CHECK_EQ(queue.deficit(), 0);
 }
 
 CAF_TEST(skipping) {
@@ -116,23 +116,23 @@ CAF_TEST(skipping) {
     seq += to_string(x);
     return task_result::resume;
   };
-  CAF_MESSAGE("make a round on an empty queue");
-  CAF_CHECK_EQUAL(queue.new_round(10, f), make_new_round_result(0, false));
-  CAF_MESSAGE("make a round on a queue with only odd numbers (skip all)");
+  MESSAGE("make a round on an empty queue");
+  CHECK_EQ(queue.new_round(10, f), make_new_round_result(0, false));
+  MESSAGE("make a round on a queue with only odd numbers (skip all)");
   fill(queue, 1, 3, 5);
-  CAF_CHECK_EQUAL(queue.new_round(10, f), make_new_round_result(0, false));
-  CAF_MESSAGE("make a round on a queue with an even number at the front");
+  CHECK_EQ(queue.new_round(10, f), make_new_round_result(0, false));
+  MESSAGE("make a round on a queue with an even number at the front");
   fill(queue, 2);
-  CAF_CHECK_EQUAL(queue.new_round(10, f), make_new_round_result(1, false));
-  CAF_CHECK_EQUAL(seq, "2");
-  CAF_MESSAGE("make a round on a queue with an even number in between");
+  CHECK_EQ(queue.new_round(10, f), make_new_round_result(1, false));
+  CHECK_EQ(seq, "2");
+  MESSAGE("make a round on a queue with an even number in between");
   fill(queue, 7, 9, 4, 11, 13);
-  CAF_CHECK_EQUAL(queue.new_round(10, f), make_new_round_result(1, false));
-  CAF_CHECK_EQUAL(seq, "24");
-  CAF_MESSAGE("make a round on a queue with an even number at the back");
+  CHECK_EQ(queue.new_round(10, f), make_new_round_result(1, false));
+  CHECK_EQ(seq, "24");
+  MESSAGE("make a round on a queue with an even number at the back");
   fill(queue, 15, 17, 6);
-  CAF_CHECK_EQUAL(queue.new_round(10, f), make_new_round_result(1, false));
-  CAF_CHECK_EQUAL(seq, "246");
+  CHECK_EQ(queue.new_round(10, f), make_new_round_result(1, false));
+  CHECK_EQ(seq, "246");
 }
 
 CAF_TEST(take_front) {
@@ -142,19 +142,19 @@ CAF_TEST(take_front) {
     seq += to_string(x);
     return task_result::resume;
   };
-  CAF_CHECK_EQUAL(queue.deficit(), 0);
+  CHECK_EQ(queue.deficit(), 0);
   while (!queue.empty()) {
     auto ptr = queue.take_front();
     f(*ptr);
   }
-  CAF_CHECK_EQUAL(seq, "123456");
+  CHECK_EQ(seq, "123456");
   fill(queue, 5, 4, 3, 2, 1);
   while (!queue.empty()) {
     auto ptr = queue.take_front();
     f(*ptr);
   }
-  CAF_CHECK_EQUAL(seq, "12345654321");
-  CAF_CHECK_EQUAL(queue.deficit(), 0);
+  CHECK_EQ(seq, "12345654321");
+  CHECK_EQ(queue.deficit(), 0);
 }
 
 CAF_TEST(alternating_consumer) {
@@ -185,10 +185,10 @@ CAF_TEST(alternating_consumer) {
   // sequences and no odd value to read after 7 is available.
   fill(queue, 1, 2, 3, 4, 5, 6, 7, 8, 9);
   auto round_result = queue.new_round(1000, h);
-  CAF_CHECK_EQUAL(round_result, make_new_round_result(8, false));
-  CAF_CHECK_EQUAL(seq, "21436587");
-  CAF_CHECK_EQUAL(queue.deficit(), 0);
-  CAF_CHECK_EQUAL(deep_to_string(queue.cache()), "[9]");
+  CHECK_EQ(round_result, make_new_round_result(8, false));
+  CHECK_EQ(seq, "21436587");
+  CHECK_EQ(queue.deficit(), 0);
+  CHECK_EQ(deep_to_string(queue.cache()), "[9]");
 }
 
 CAF_TEST(peek_all) {
@@ -202,25 +202,25 @@ CAF_TEST(peek_all) {
     queue.peek_all(peek_fun);
     return str;
   };
-  CAF_CHECK_EQUAL(queue_to_string(), "");
+  CHECK_EQ(queue_to_string(), "");
   queue.emplace_back(2);
-  CAF_CHECK_EQUAL(queue_to_string(), "2");
+  CHECK_EQ(queue_to_string(), "2");
   queue.cache().emplace_back(1);
-  CAF_CHECK_EQUAL(queue_to_string(), "2");
+  CHECK_EQ(queue_to_string(), "2");
   queue.emplace_back(3);
-  CAF_CHECK_EQUAL(queue_to_string(), "2, 3");
+  CHECK_EQ(queue_to_string(), "2, 3");
   queue.flush_cache();
-  CAF_CHECK_EQUAL(queue_to_string(), "1, 2, 3");
+  CHECK_EQ(queue_to_string(), "1, 2, 3");
 }
 
 CAF_TEST(to_string) {
-  CAF_CHECK_EQUAL(deep_to_string(queue.items()), "[]");
+  CHECK_EQ(deep_to_string(queue.items()), "[]");
   fill(queue, 3, 4);
-  CAF_CHECK_EQUAL(deep_to_string(queue.items()), "[3, 4]");
+  CHECK_EQ(deep_to_string(queue.items()), "[3, 4]");
   fill(queue.cache(), 1, 2);
-  CAF_CHECK_EQUAL(deep_to_string(queue.items()), "[3, 4]");
+  CHECK_EQ(deep_to_string(queue.items()), "[3, 4]");
   queue.flush_cache();
-  CAF_CHECK_EQUAL(deep_to_string(queue.items()), "[1, 2, 3, 4]");
+  CHECK_EQ(deep_to_string(queue.items()), "[1, 2, 3, 4]");
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

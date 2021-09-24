@@ -66,18 +66,18 @@ public:
 behavior make_pong_behavior() {
   return {[](int val) -> int {
     ++val;
-    CAF_MESSAGE("pong " << val);
+    MESSAGE("pong " << val);
     return val;
   }};
 }
 
 behavior make_ping_behavior(event_based_actor* self, const actor& pong) {
-  CAF_MESSAGE("ping " << 0);
+  MESSAGE("ping " << 0);
   self->send(pong, 0);
   return {[=](int val) -> int {
-    CAF_MESSAGE("ping " << val);
+    MESSAGE("ping " << val);
     if (val >= 3) {
-      CAF_MESSAGE("terminate ping");
+      MESSAGE("terminate ping");
       self->quit();
     }
     return val;
@@ -116,26 +116,26 @@ struct fixture {
     server_side_config.openssl_passphrase = "12345";
     // check whether all files exist before setting config parameters
     std::string dummy;
-    std::pair<const char*, std::string*>
-      cfg[]{{"ca.pem", &server_side_config.openssl_cafile},
-            {"cert.1.pem", &server_side_config.openssl_certificate},
-            {"key.1.enc.pem", &server_side_config.openssl_key},
-            {"ca.pem",
-             skip_client_side_ca ? &dummy : &client_side_config.openssl_cafile},
-            {"cert.2.pem", &client_side_config.openssl_certificate},
-            {"key.2.pem", &client_side_config.openssl_key}};
+    std::pair<const char*, std::string*> cfg[]{
+      {"ca.pem", &server_side_config.openssl_cafile},
+      {"cert.1.pem", &server_side_config.openssl_certificate},
+      {"key.1.enc.pem", &server_side_config.openssl_key},
+      {"ca.pem",
+       skip_client_side_ca ? &dummy : &client_side_config.openssl_cafile},
+      {"cert.2.pem", &client_side_config.openssl_certificate},
+      {"key.2.pem", &client_side_config.openssl_key}};
     // return if any file is unreadable or non-existent
     for (auto& x : cfg) {
       auto path = cd + x.first;
       if (access(path.c_str(), F_OK) == -1) {
-        CAF_MESSAGE("pem files missing, skip test");
+        MESSAGE("pem files missing, skip test");
         return false;
       }
       *x.second = std::move(path);
     }
-    CAF_MESSAGE("initialize server side");
+    MESSAGE("initialize server side");
     new (&server_side) actor_system(server_side_config);
-    CAF_MESSAGE("initialize client side");
+    MESSAGE("initialize client side");
     new (&client_side) actor_system(client_side_config);
     ssched = &dynamic_cast<sched_t&>(server_side.scheduler());
     csched = &dynamic_cast<sched_t&>(client_side.scheduler());
@@ -176,7 +176,7 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(authentication, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 using openssl::publish;
 using openssl::remote_actor;
@@ -185,22 +185,22 @@ CAF_TEST(authentication_success) {
   if (!init(false))
     return;
   // server side
-  CAF_MESSAGE("spawn pong on server");
+  MESSAGE("spawn pong on server");
   auto spong = server_side.spawn(make_pong_behavior);
   exec_loop();
-  CAF_MESSAGE("publish pong");
+  MESSAGE("publish pong");
   loop_after_next_enqueue(server_side);
   auto port = unbox(publish(spong, 0, local_host));
   exec_loop();
   // client side
-  CAF_MESSAGE("connect to pong via port " << port);
+  MESSAGE("connect to pong via port " << port);
   loop_after_next_enqueue(client_side);
   auto pong = unbox(remote_actor(client_side, local_host, port));
-  CAF_MESSAGE("spawn ping and exchange messages");
+  MESSAGE("spawn ping and exchange messages");
   auto sping = client_side.spawn(make_ping_behavior, pong);
   while (!terminated(sping))
     exec_loop();
-  CAF_MESSAGE("terminate pong");
+  MESSAGE("terminate pong");
   anon_send_exit(spong, exit_reason::user_shutdown);
   exec_loop();
 }
@@ -209,21 +209,21 @@ CAF_TEST(authentication_failure) {
   if (!init(true))
     return;
   // server side
-  CAF_MESSAGE("spawn pong on server");
+  MESSAGE("spawn pong on server");
   auto spong = server_side.spawn(make_pong_behavior);
   exec_loop();
   loop_after_next_enqueue(server_side);
-  CAF_MESSAGE("publish pong");
+  MESSAGE("publish pong");
   auto port = unbox(publish(spong, 0, local_host));
   exec_loop();
   // client side
-  CAF_MESSAGE("connect to pong via port " << port);
+  MESSAGE("connect to pong via port " << port);
   loop_after_next_enqueue(client_side);
   auto remote_pong = remote_actor(client_side, local_host, port);
-  CAF_CHECK(!remote_pong);
-  CAF_MESSAGE("terminate pong");
+  CHECK(!remote_pong);
+  MESSAGE("terminate pong");
   anon_send_exit(spong, exit_reason::user_shutdown);
   exec_loop();
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

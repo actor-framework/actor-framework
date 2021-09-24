@@ -6,7 +6,7 @@
 
 #include "caf/typed_behavior.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <cstdint>
 #include <string>
