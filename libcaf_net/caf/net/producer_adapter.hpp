@@ -16,6 +16,7 @@
 
 namespace caf::net {
 
+/// Connects a socket manager to an asynchronous producer resource.
 template <class Buffer>
 class producer_adapter final : public ref_counted, public async::producer {
 public:
@@ -127,8 +128,11 @@ private:
   }
 
   void on_cancel() {
-    if (buf_)
+    if (buf_) {
       mgr_->mpx().shutdown_reading(mgr_);
+      buf_ = nullptr;
+      mgr_ = nullptr;
+    }
   }
 
   auto strong_this() {

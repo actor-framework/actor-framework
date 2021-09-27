@@ -70,14 +70,14 @@ public:
 
   using adapter_type = adapter_ptr::element_type;
 
-  explicit app_t(resource_type input) : input_(std::move(input)) {
+  explicit app_t(resource_type input) : input(std::move(input)) {
     // nop
   }
 
   template <class LowerLayerPtr>
   error init(net::socket_manager* mgr, LowerLayerPtr, const settings&) {
-    if (auto ptr = adapter_type::try_open(mgr, std::move(input_))) {
-      adapter_ = std::move(ptr);
+    if (auto ptr = adapter_type::try_open(mgr, std::move(input))) {
+      adapter = std::move(ptr);
       return none;
     } else {
       FAIL("unable to open the resource");
@@ -85,40 +85,58 @@ public:
   }
 
   template <class LowerLayerPtr>
-  bool prepare_send(LowerLayerPtr down) {
-    bool run = !done_;
-    while (run && down->can_send_more()) {
-      bool on_next_called = false;
-      auto fin = adapter_->consume(
-        async::ignore_errors, 1,
-        [this, down, &on_next_called](span<const int32_t> items) {
-          REQUIRE_EQ(items.size(), 1u);
-          auto val = items[0];
-          written_values_.emplace_back(val);
-          auto offset = written_bytes_.size();
-          binary_serializer sink{nullptr, written_bytes_};
-          if (!sink.apply(val))
-            FAIL("sink.apply failed: " << sink.get_error());
-          auto bytes = make_span(written_bytes_).subspan(offset);
-          down->begin_output();
-          auto& buf = down->output_buffer();
-          buf.insert(buf.end(), bytes.begin(), bytes.end());
-          down->end_output();
-          on_next_called = true;
-        });
-      if (fin) {
-        MESSAGE("adapter signaled end-of-buffer");
-        done_ = true;
-      }
-      run = !done_ && on_next_called;
+  struct send_helper {
+    app_t* thisptr;
+    LowerLayerPtr down;
+    bool on_next_called;
+    bool aborted;
+
+    void on_next(span<const int32_t> items) {
+      REQUIRE_EQ(items.size(), 1u);
+      auto val = items[0];
+      thisptr->written_values.emplace_back(val);
+      auto offset = thisptr->written_bytes.size();
+      binary_serializer sink{nullptr, thisptr->written_bytes};
+      if (!sink.apply(val))
+        FAIL("sink.apply failed: " << sink.get_error());
+      auto bytes = make_span(thisptr->written_bytes).subspan(offset);
+      down->begin_output();
+      auto& buf = down->output_buffer();
+      buf.insert(buf.end(), bytes.begin(), bytes.end());
+      down->end_output();
     }
-    MESSAGE(written_bytes_.size() << " bytes written");
+
+    void on_complete() {
+      // nop
+    }
+
+    void on_error(const error&) {
+      aborted = true;
+    }
+  };
+
+  template <class LowerLayerPtr>
+  bool prepare_send(LowerLayerPtr down) {
+    if (done)
+      return true;
+    auto helper = send_helper<LowerLayerPtr>{this, down, false, false};
+    while (down->can_send_more()) {
+      auto [ok, consumed] = adapter->pull(async::delay_errors, 1, helper);
+      if (!ok) {
+        MESSAGE("adapter signaled end-of-buffer");
+        done = true;
+        break;
+      } else if (consumed == 0) {
+        break;
+      }
+    }
+    MESSAGE(written_bytes.size() << " bytes written");
     return true;
   }
 
   template <class LowerLayerPtr>
   bool done_sending(LowerLayerPtr) {
-    return done_ || !adapter_->has_data();
+    return done || !adapter->has_data();
   }
 
   template <class LowerLayerPtr>
@@ -136,20 +154,11 @@ public:
     FAIL("app::consume called: unexpected data");
   }
 
-  auto& written_values() {
-    return written_values_;
-  }
-
-  auto& written_bytes() {
-    return written_bytes_;
-  }
-
-private:
-  bool done_ = false;
-  std::vector<int32_t> written_values_;
-  std::vector<byte> written_bytes_;
-  adapter_ptr adapter_;
-  resource_type input_;
+  bool done = false;
+  std::vector<int32_t> written_values;
+  std::vector<byte> written_bytes;
+  adapter_ptr adapter;
+  resource_type input;
 };
 
 struct fixture : test_coordinator_fixture<>, host_fixture {
@@ -199,10 +208,10 @@ SCENARIO("subscriber adapters wake up idle socket managers") {
           run();
           rd.read_some();
         }
-        CHECK_EQ(app.written_values(), std::vector<int32_t>(num_items, 42));
-        CHECK_EQ(app.written_bytes().size(), num_items * sizeof(int32_t));
+        CHECK_EQ(app.written_values, std::vector<int32_t>(num_items, 42));
+        CHECK_EQ(app.written_bytes.size(), num_items * sizeof(int32_t));
         CHECK_EQ(rd.buf().size(), num_items * sizeof(int32_t));
-        CHECK_EQ(app.written_bytes(), rd.buf());
+        CHECK_EQ(app.written_bytes, rd.buf());
       }
     }
   }

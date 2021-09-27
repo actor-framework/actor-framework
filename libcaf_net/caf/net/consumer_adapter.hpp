@@ -14,7 +14,7 @@ namespace caf::net {
 /// Connects a socket manager to an asynchronous consumer resource. Whenever new
 /// data becomes ready, the adapter registers the socket manager for writing.
 template <class Buffer>
-class consumer_adapter : public async::consumer, public ref_counted {
+class consumer_adapter final : public ref_counted, public async::consumer {
 public:
   using buf_ptr = intrusive_ptr<Buffer>;
 
@@ -36,11 +36,14 @@ public:
     this->deref();
   }
 
-  template <class Policy, class OnNext, class OnError = unit_t>
-  bool consume(Policy policy, size_t demand, OnNext&& on_next,
-               OnError on_error = OnError{}) {
-    return buf_->consume(policy, demand, std::forward<OnNext>(on_next),
-                         std::move(on_error));
+  template <class Policy, class Observer>
+  std::pair<bool, size_t> pull(Policy policy, size_t demand, Observer& dst) {
+    return buf_->pull(policy, demand, dst);
+  }
+
+  void cancel() {
+    buf_->cancel();
+    buf_ = nullptr;
   }
 
   bool has_data() const noexcept {
@@ -83,7 +86,7 @@ private:
   }
 
   void on_wakeup() {
-    if (has_data())
+    if (buf_ && buf_->has_consumer_event())
       mgr_->mpx().register_writing(mgr_);
   }
 

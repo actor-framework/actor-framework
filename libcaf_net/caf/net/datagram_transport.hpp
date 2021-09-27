@@ -93,7 +93,7 @@ public:
   }
 
   bool handle_write_event(endpoint_manager& manager) override {
-    CAF_LOG_TRACE(CAF_ARG2("handle", this->handle_.id)
+    CAF_LOG_TRACE(CAF_ARG2("socket", this->handle_.id)
                   << CAF_ARG2("queue-size", packet_queue_.size()));
     auto fetch_next_message = [&] {
       if (auto msg = manager.next_message()) {

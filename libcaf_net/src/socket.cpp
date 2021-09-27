@@ -18,6 +18,7 @@ namespace caf::net {
 #ifdef CAF_WINDOWS
 
 void close(socket fd) {
+  CAF_LOG_DEBUG("close" << CAF_ARG2("socket", fd.id));
   closesocket(fd.id);
 }
 
@@ -131,6 +132,7 @@ error nonblocking(socket x, bool new_value) {
 #else // CAF_WINDOWS
 
 void close(socket fd) {
+  CAF_LOG_DEBUG("close" << CAF_ARG2("socket", fd.id));
   ::close(fd.id);
 }
 

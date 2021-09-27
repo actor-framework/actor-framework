@@ -155,7 +155,7 @@ public:
 
   template <class ParentPtr>
   bool handle_read_event(ParentPtr parent) {
-    CAF_LOG_TRACE(CAF_ARG2("handle", parent->handle().id));
+    CAF_LOG_TRACE(CAF_ARG2("socket", parent->handle().id));
     auto fail = [this, parent](auto reason) {
       CAF_LOG_DEBUG("read failed" << CAF_ARG(reason));
       parent->abort_reason(std::move(reason));
@@ -256,7 +256,7 @@ public:
 
   template <class ParentPtr>
   bool handle_write_event(ParentPtr parent) {
-    CAF_LOG_TRACE(CAF_ARG2("handle", parent->handle().id));
+    CAF_LOG_TRACE(CAF_ARG2("socket", parent->handle().id));
     auto fail = [this, parent](sec reason) {
       CAF_LOG_DEBUG("read failed" << CAF_ARG(reason));
       parent->abort_reason(reason);

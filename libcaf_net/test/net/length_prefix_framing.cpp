@@ -174,10 +174,9 @@ SCENARIO("calling suspend_reading removes message apps temporarily") {
         CHECK_EQ(state.inputs[1], "second");
         CHECK_EQ(state.inputs[2], "pause");
       }
-      THEN("users can resume it via register_reading ") {
-        mpx.register_reading(mgr);
+      THEN("users can resume it via continue_reading ") {
+        mgr->continue_reading();
         CHECK_EQ(mgr->mask(), net::operation::read);
-        //mgr->register_reading();
         while (mpx.num_socket_managers() > 1u)
           mpx.poll_once(true);
         if (CHECK_EQ(state.inputs.size(), 5u)) {
