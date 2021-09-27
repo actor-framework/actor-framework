@@ -40,14 +40,6 @@ struct delay_errors_t {
 /// @relates delay_errors_t
 constexpr auto delay_errors = delay_errors_t{};
 
-/// Policy type for having `consume` treat errors as ordinary shutdowns.
-struct ignore_errors_t {
-  static constexpr bool calls_on_error = false;
-};
-
-/// @relates ignore_errors_t
-constexpr auto ignore_errors = ignore_errors_t{};
-
 /// A bounded buffer for transmitting events from one producer to one consumer.
 template <class T>
 class bounded_buffer : public ref_counted {
@@ -68,6 +60,7 @@ public:
 
   /// Appends to the buffer and calls `on_producer_wakeup` on the consumer if
   /// the buffer becomes non-empty.
+  /// @returns the remaining capacity after inserting the items.
   size_t push(span<const T> items) {
     std::unique_lock guard{mtx_};
     CAF_ASSERT(producer_ != nullptr);
@@ -84,37 +77,30 @@ public:
     return push(make_span(&item, 1));
   }
 
-  /// Consumes up to `demand` items from the buffer with `on_next`, ignoring any
-  /// errors set by the producer.
-  /// @tparam Policy Either `instant_error_t` or `delay_error_t`. Instant
-  ///                error propagation requires also passing `on_error` handler.
-  ///                Delaying errors without passing an `on_error` handler
-  ///                effectively suppresses errors.
-  /// @returns `true` if no more elements are available, `false` otherwise.
-  template <class Policy, class OnNext, class OnError = unit_t>
-  bool
-  consume(Policy, size_t demand, OnNext on_next, OnError on_error = OnError{}) {
+  /// Consumes up to `demand` items from the buffer.
+  /// @tparam Policy Either `instant_error_t`, `delay_error_t` or
+  ///                `ignore_errors_t`. The former two policies require also
+  ///                passing an `on_error` handler.
+  /// @returns true if the consumer may call `pull` again, otherwise `false`.
+  ///          When returning `false`, the function has called `on_complete` or
+  ///          `on_error` on the observer.
+  template <class Policy, class Observer>
+  std::pair<bool, size_t> pull(Policy, size_t demand, Observer& dst) {
     static constexpr size_t local_buf_size = 16;
-    if constexpr (Policy::calls_on_error)
-      static_assert(!std::is_same_v<OnError, unit_t>,
-                    "Policy requires an on_error handler");
-    else
-      static_assert(std::is_same_v<OnError, unit_t>,
-                    "Policy prohibits an on_error handler");
     T local_buf[local_buf_size];
     std::unique_lock guard{mtx_};
-    CAF_ASSERT(demand > 0);
     CAF_ASSERT(consumer_ != nullptr);
     if constexpr (std::is_same_v<Policy, prioritize_errors_t>) {
       if (err_) {
-        on_error(err_);
         consumer_ = nullptr;
-        return true;
+        dst.on_error(err_);
+        return {false, 0};
       }
     }
     auto next_n = [this, &demand] {
       return std::min({local_buf_size, demand, size()});
     };
+    size_t consumed = 0;
     for (auto n = next_n(); n > 0; n = next_n()) {
       auto first = buf_ + rd_pos_;
       std::move(first, first + n, local_buf);
@@ -123,19 +109,20 @@ public:
       shift_elements();
       signal_demand(n);
       guard.unlock();
-      on_next(make_span(local_buf, n));
+      dst.on_next(make_span(local_buf, n));
       demand -= n;
+      consumed += n;
       guard.lock();
     }
     if (!empty() || !closed_) {
-      return false;
+      return {true, consumed};
     } else {
-      if constexpr (std::is_same_v<Policy, delay_errors_t>) {
-        if (err_)
-          on_error(err_);
-      }
       consumer_ = nullptr;
-      return true;
+      if (err_)
+        dst.on_error(err_);
+      else
+        dst.on_complete();
+      return {false, consumed};
     }
   }
 
@@ -145,34 +132,50 @@ public:
     return !empty();
   }
 
+  /// Checks whether the there is data available or the producer has closed or
+  /// aborted the flow.
+  bool has_consumer_event() const noexcept {
+    std::unique_lock guard{mtx_};
+    return !empty() || closed_;
+  }
+
+  /// Returns how many items are currently available.
+  size_t available() const noexcept {
+    std::unique_lock guard{mtx_};
+    return size();
+  }
+
   /// Closes the buffer by request of the producer.
   void close() {
     std::unique_lock guard{mtx_};
-    CAF_ASSERT(producer_ != nullptr);
-    closed_ = true;
-    producer_ = nullptr;
-    if (empty() && consumer_)
-      consumer_->on_producer_wakeup();
+    if (producer_) {
+      closed_ = true;
+      producer_ = nullptr;
+      if (empty() && consumer_)
+        consumer_->on_producer_wakeup();
+    }
   }
 
   /// Closes the buffer and signals an error by request of the producer.
   void abort(error reason) {
     std::unique_lock guard{mtx_};
-    closed_ = true;
-    err_ = std::move(reason);
-    producer_ = nullptr;
-    if (empty() && consumer_) {
-      consumer_->on_producer_wakeup();
-      consumer_ = nullptr;
+    if (producer_) {
+      closed_ = true;
+      err_ = std::move(reason);
+      producer_ = nullptr;
+      if (empty() && consumer_)
+        consumer_->on_producer_wakeup();
     }
   }
 
   /// Closes the buffer by request of the consumer.
   void cancel() {
     std::unique_lock guard{mtx_};
-    if (producer_)
-      producer_->on_consumer_cancel();
-    consumer_ = nullptr;
+    if (consumer_) {
+      consumer_ = nullptr;
+      if (producer_)
+        producer_->on_consumer_cancel();
+    }
   }
 
   void set_consumer(consumer_ptr consumer) {

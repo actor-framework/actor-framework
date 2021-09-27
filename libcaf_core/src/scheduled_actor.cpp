@@ -233,6 +233,8 @@ bool scheduled_actor::cleanup(error&& fail_state, execution_unit* host) {
   get_downstream_queue().cleanup();
   // Cancel any active flow.
   while (!watched_disposables_.empty()) {
+    CAF_LOG_DEBUG("clean up" << watched_disposables_.size()
+                             << "remaining disposables");
     for (auto& ptr : watched_disposables_)
       ptr.dispose();
     watched_disposables_.clear();
@@ -1243,6 +1245,7 @@ void scheduled_actor::run_actions() {
 }
 
 void scheduled_actor::update_watched_disposables() {
+  CAF_LOG_TRACE("");
   auto disposed = [](auto& hdl) { return hdl.disposed(); };
   auto& xs = watched_disposables_;
   if (auto e = std::remove_if(xs.begin(), xs.end(), disposed); e != xs.end()) {

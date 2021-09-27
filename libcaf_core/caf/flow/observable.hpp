@@ -55,6 +55,8 @@ public:
 
     virtual void on_cancel(observer_impl<T>* sink) = 0;
 
+    observable as_observable() noexcept;
+
   protected:
     disposable do_subscribe(observer_impl<T>* snk);
   };
@@ -268,10 +270,16 @@ private:
 };
 
 template <class T>
+observable<T> observable<T>::impl::as_observable() noexcept {
+  return observable<T>{intrusive_ptr{this}};
+}
+
+template <class T>
 disposable observable<T>::impl::do_subscribe(observer_impl<T>* snk) {
-  auto ptr = make_counted<sub_impl>(ctx(), this, snk);
-  snk->on_subscribe(subscription{ptr});
-  return disposable{std::move(ptr)};
+  snk->on_subscribe(subscription{make_counted<sub_impl>(ctx(), this, snk)});
+  // Note: we do NOT return the subscription here because this object is private
+  //       to the observer. Outside code must call dispose() on the observer.
+  return disposable{intrusive_ptr<typename disposable::impl>{snk}};
 }
 
 template <class T>
@@ -353,16 +361,8 @@ public:
       return this;
     }
 
-    observer<In> as_observer() noexcept {
-      return observer<In>{as_observer_ptr()};
-    }
-
     observable_impl<In>* as_observable_ptr() noexcept {
       return this;
-    }
-
-    observable<In> as_observable() noexcept {
-      return observable<In>{as_observable_ptr()};
     }
   };
 
@@ -522,6 +522,7 @@ public:
   // -- implementation of disposable::impl -------------------------------------
 
   void dispose() override {
+    CAF_LOG_TRACE("");
     if (!completed_) {
       completed_ = true;
       buf_.clear();
@@ -551,6 +552,7 @@ public:
   }
 
   void on_request(observer_impl<T>* sink, size_t n) override {
+    CAF_LOG_TRACE(CAF_ARG(n));
     if (auto i = find(sink); i != outputs_.end()) {
       i->demand += n;
       update_max_demand();
@@ -559,6 +561,7 @@ public:
   }
 
   void on_cancel(observer_impl<T>* sink) override {
+    CAF_LOG_TRACE("");
     if (auto i = find(sink); i != outputs_.end()) {
       outputs_.erase(i);
       if (outputs_.empty()) {
@@ -605,19 +608,25 @@ public:
 
   /// Stops the source, but allows observers to still consume buffered data.
   virtual void shutdown() {
+    CAF_LOG_TRACE("");
     if (!completed_) {
       completed_ = true;
       if (done()) {
+        CAF_LOG_DEBUG("observable done, call on_complete on" << outputs_.size()
+                                                             << "outputs");
         for (auto& out : outputs_)
           out.sink.on_complete();
         outputs_.clear();
         do_on_complete();
+      } else {
+        CAF_LOG_DEBUG("not done yet, delay on_complete calls");
       }
     }
   }
 
   /// Stops the source and drops any remaining data.
   virtual void abort(const error& reason) {
+    CAF_LOG_TRACE(CAF_ARG(reason));
     if (!completed_) {
       completed_ = true;
       for (auto& out : outputs_)
@@ -629,8 +638,10 @@ public:
 
   /// Tries to push data from the buffer downstream.
   void try_push() {
+    CAF_LOG_TRACE("");
     if (!batch_.empty()) {
-      // Can only be true if a sink calls try_push in on_next.
+      // Shortcuts nested calls to try_push. Can only be true if a sink calls
+      // try_push in on_next.
       return;
     }
     size_t batch_size = std::min(desired_capacity_, defaults::flow::batch_size);
@@ -750,6 +761,12 @@ public:
   buffered_processor_impl(coordinator* ctx, size_t max_buffer_size)
     : super(ctx, max_buffer_size) {
     // nop
+  }
+
+  // -- disambiguation ---------------------------------------------------------
+
+  observable<Out> as_observable() noexcept {
+    return super::as_observable();
   }
 
   // -- implementation of disposable::impl -------------------------------------
@@ -1062,7 +1079,7 @@ template <class T>
 template <class OnNext>
 disposable observable<T>::for_each(OnNext on_next) {
   auto obs = make_observer(std::move(on_next));
-  subscribe(obs);
+  subscribe(observer<T>{obs});
   return std::move(obs).as_disposable();
 }
 
@@ -1112,6 +1129,7 @@ public:
     }
 
     void on_complete() override {
+      CAF_LOG_TRACE("");
       if (sub) {
         sub = nullptr;
         parent->forwarder_completed(this);
@@ -1120,6 +1138,7 @@ public:
     }
 
     void on_error(const error& what) override {
+      CAF_LOG_TRACE(CAF_ARG(what));
       if (sub) {
         sub = nullptr;
         parent->forwarder_failed(this, what);
@@ -1128,6 +1147,7 @@ public:
     }
 
     void on_subscribe(subscription new_sub) override {
+      CAF_LOG_TRACE("");
       if (!sub) {
         sub = std::move(new_sub);
         parent->forwarder_subscribed(this, sub);
@@ -1137,11 +1157,13 @@ public:
     }
 
     void on_next(span<const T> items) override {
+      CAF_LOG_TRACE(CAF_ARG2("items.size", items.size()));
       if (parent)
         parent->on_batch(async::make_batch(items), this);
     }
 
     void dispose() override {
+      CAF_LOG_TRACE("");
       on_complete();
     }
 
@@ -1167,6 +1189,7 @@ public:
   }
 
   disposable add(observable<T> source, intrusive_ptr<forwarder> fwd) {
+    CAF_LOG_TRACE("");
     forwarders_.emplace_back(fwd);
     return source.subscribe(observer<T>{std::move(fwd)});
   }
@@ -1182,6 +1205,7 @@ public:
   }
 
   void dispose() override {
+    CAF_LOG_TRACE("");
     inputs_.clear();
     std::vector<fwd_ptr> fwds;
     fwds.swap(forwarders_);
@@ -1191,6 +1215,7 @@ public:
   }
 
   void cancel_inputs() {
+    CAF_LOG_TRACE("");
     if (!this->completed_) {
       std::vector<fwd_ptr> fwds;
       fwds.swap(forwarders_);
@@ -1209,26 +1234,34 @@ public:
   }
 
   void delay_error(bool value) {
+    CAF_LOG_TRACE(CAF_ARG(value));
     flags_.delay_error = value;
   }
 
   void shutdown_on_last_complete(bool value) {
+    CAF_LOG_TRACE(CAF_ARG(value));
     flags_.shutdown_on_last_complete = value;
-    if (value && done())
-      this->shutdown();
+    if (value && forwarders_.empty()) {
+      if (delayed_error_)
+        this->abort(delayed_error_);
+      else
+        this->shutdown();
+    }
   }
 
-  void on_error(const error& reason) {
+  void on_error(const error& what) {
+    CAF_LOG_TRACE(CAF_ARG(what));
     if (!flags_.delay_error) {
-      abort(reason);
+      abort(what);
       return;
     }
     if (!delayed_error_)
-      delayed_error_ = reason;
+      delayed_error_ = what;
   }
 
 protected:
   void abort(const error& reason) override {
+    CAF_LOG_TRACE(CAF_ARG(reason));
     super::abort(reason);
     inputs_.clear();
     forwarders_.clear();
@@ -1238,6 +1271,7 @@ private:
   using fwd_ptr = intrusive_ptr<forwarder>;
 
   void pull(size_t n) override {
+    CAF_LOG_TRACE(CAF_ARG(n));
     while (n > 0 && !inputs_.empty()) {
       auto& input = inputs_[0];
       auto m = std::min(input.buf.size() - input.offset, n);
@@ -1256,30 +1290,35 @@ private:
   }
 
   void on_batch(async::batch buf, fwd_ptr src) {
+    CAF_LOG_TRACE("");
     inputs_.emplace_back(buf, src);
     this->try_push();
   }
 
   void forwarder_subscribed(forwarder* ptr, subscription& sub) {
+    CAF_LOG_TRACE("");
     if (!flags_.concat_mode || (!forwarders_.empty() && forwarders_[0] == ptr))
       sub.request(defaults::flow::buffer_size);
   }
 
-  void forwarder_failed(forwarder* ptr, const error& reason) {
+  void forwarder_failed(forwarder* ptr, const error& what) {
+    CAF_LOG_TRACE(CAF_ARG(what));
     if (!flags_.delay_error) {
-      abort(reason);
+      abort(what);
       return;
     }
     if (!delayed_error_)
-      delayed_error_ = reason;
+      delayed_error_ = what;
     forwarder_completed(ptr);
   }
 
   void forwarder_completed(forwarder* ptr) {
+    CAF_LOG_TRACE("");
     auto is_ptr = [ptr](auto& x) { return x == ptr; };
     auto i = std::find_if(forwarders_.begin(), forwarders_.end(), is_ptr);
     if (i != forwarders_.end()) {
       forwarders_.erase(i);
+      CAF_LOG_DEBUG(forwarders_.size() << "forwarders remain");
       if (forwarders_.empty()) {
         if (flags_.shutdown_on_last_complete) {
           if (delayed_error_)
@@ -1472,6 +1511,8 @@ public:
   }
 
   ~observable_buffer_impl() {
+    if (buf_)
+      buf_->cancel();
     this->ctx()->deref_coordinator();
   }
 
@@ -1535,7 +1576,7 @@ public:
     }
   }
 
-  // -- implementation of consumer ---------------------------------------------
+  // -- implementation of async::consumer: these may get called concurrently ---
 
   void on_producer_ready() override {
     // nop
@@ -1563,33 +1604,35 @@ protected:
 private:
   void pull() {
     CAF_LOG_TRACE("");
-    if (!buf_ || pulling_ || !dst_ || demand_ == 0)
+    if (!buf_ || pulling_ || !dst_)
       return;
     pulling_ = true;
-    auto fin = buf_->consume(
-      async::prioritize_errors, demand_,
-      [this](span<const value_type> items) {
+    struct decorator {
+      size_t* demand;
+      typename observer<value_type>::impl* dst;
+      void on_next(span<const value_type> items) {
         CAF_LOG_TRACE(CAF_ARG(items));
         CAF_ASSERT(!items.empty());
-        CAF_ASSERT(demand_ >= items.empty());
-        demand_ -= items.size();
-        dst_.on_next(items);
-      },
-      [this](const error& what) {
-        if (dst_) {
-          dst_.on_error(what);
-          dst_ = nullptr;
-        }
-        buf_ = nullptr;
-      });
-    pulling_ = false;
-    if (fin && buf_) {
-      buf_ = nullptr;
-      if (dst_) {
-        dst_.on_complete();
-        dst_ = nullptr;
+        CAF_ASSERT(*demand >= items.empty());
+        *demand -= items.size();
+        CAF_LOG_DEBUG("got" << items.size() << "items");
+        dst->on_next(items);
       }
+      void on_complete() {
+        CAF_LOG_TRACE("");
+        dst->on_complete();
+      }
+      void on_error(const error& what) {
+        CAF_LOG_TRACE(CAF_ARG(what));
+        dst->on_error(what);
+      }
+    };
+    decorator dst{&demand_, dst_.ptr()};
+    if (!buf_->pull(async::prioritize_errors, demand_, dst).first) {
+      buf_ = nullptr;
+      dst_ = nullptr;
     }
+    pulling_ = false;
   }
 
   intrusive_ptr<observable_buffer_impl> strong_ptr() {

@@ -38,7 +38,7 @@ public:
 
     virtual void on_error(const error& what) = 0;
 
-    observer as_observer() {
+    observer as_observer() noexcept {
       return observer{intrusive_ptr<impl>(this)};
     }
   };
@@ -148,11 +148,17 @@ class buffer_writer_impl : public ref_counted,
                            public observer_impl<typename Buffer::value_type>,
                            public async::producer {
 public:
+  // -- member types -----------------------------------------------------------
+
   using buffer_ptr = intrusive_ptr<Buffer>;
 
   using value_type = typename Buffer::value_type;
 
+  // -- friends ----------------------------------------------------------------
+
   CAF_INTRUSIVE_PTR_FRIENDS(buffer_writer_impl)
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   buffer_writer_impl(coordinator* ctx, buffer_ptr buf)
     : ctx_(ctx), buf_(std::move(buf)) {
@@ -160,24 +166,20 @@ public:
     CAF_ASSERT(buf_ != nullptr);
   }
 
-  void on_consumer_ready() override {
-    // nop
+  ~buffer_writer_impl() {
+    if (buf_)
+      buf_->close();
   }
 
-  void on_consumer_cancel() override {
+  // -- implementation of disposable::impl -------------------------------------
+
+  void dispose() override {
     CAF_LOG_TRACE("");
-    ctx_->schedule_fn([ptr{strong_ptr()}] {
-      CAF_LOG_TRACE("");
-      ptr->on_cancel();
-    });
+    on_complete();
   }
 
-  void on_consumer_demand(size_t demand) override {
-    CAF_LOG_TRACE(CAF_ARG(demand));
-    ctx_->schedule_fn([ptr{strong_ptr()}, demand] { //
-      CAF_LOG_TRACE(CAF_ARG(demand));
-      ptr->on_demand(demand);
-    });
+  bool disposed() const noexcept override {
+    return buf_ == nullptr;
   }
 
   void ref_disposable() const noexcept final {
@@ -188,13 +190,7 @@ public:
     this->deref();
   }
 
-  void ref_producer() const noexcept final {
-    this->ref();
-  }
-
-  void deref_producer() const noexcept final {
-    this->deref();
-  }
+  // -- implementation of observer<T>::impl ------------------------------------
 
   void on_next(span<const value_type> items) override {
     CAF_LOG_TRACE(CAF_ARG(items));
@@ -227,18 +223,39 @@ public:
       sub_ = std::move(sub);
       sub_.request(buf_->capacity());
     } else {
-      CAF_LOG_DEBUG("already have a subscription");
+      CAF_LOG_DEBUG("already have a subscription or buffer no longer valid");
       sub.cancel();
     }
   }
 
-  void dispose() override {
-    CAF_LOG_TRACE("");
-    on_complete();
+  // -- implementation of async::producer: these may get called concurrently ---
+
+  void on_consumer_ready() override {
+    // nop
   }
 
-  bool disposed() const noexcept override {
-    return buf_ == nullptr;
+  void on_consumer_cancel() override {
+    CAF_LOG_TRACE("");
+    ctx_->schedule_fn([ptr{strong_ptr()}] {
+      CAF_LOG_TRACE("");
+      ptr->on_cancel();
+    });
+  }
+
+  void on_consumer_demand(size_t demand) override {
+    CAF_LOG_TRACE(CAF_ARG(demand));
+    ctx_->schedule_fn([ptr{strong_ptr()}, demand] { //
+      CAF_LOG_TRACE(CAF_ARG(demand));
+      ptr->on_demand(demand);
+    });
+  }
+
+  void ref_producer() const noexcept final {
+    this->ref();
+  }
+
+  void deref_producer() const noexcept final {
+    this->deref();
   }
 
 private:
