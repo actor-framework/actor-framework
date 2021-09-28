@@ -92,6 +92,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     target_compile_options(caf_internal INTERFACE
                            -Wno-missing-field-initializers)
   endif()
+elseif(MSVC)
+  target_compile_options(caf_internal INTERFACE /EHsc)
 endif()
 
 # -- unit testing setup / caf_add_test_suites function  ------------------------
