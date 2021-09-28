@@ -29,6 +29,8 @@
 
 namespace caf::test {
 
+#ifdef CAF_ENABLE_EXCEPTIONS
+
 requirement_error::requirement_error(std::string msg) : what_(std::move(msg)) {
   // nop
 }
@@ -36,6 +38,8 @@ requirement_error::requirement_error(std::string msg) : what_(std::move(msg)) {
 const char* requirement_error::what() const noexcept {
   return what_.c_str();
 }
+
+#endif // CAF_ENABLE_EXCEPTIONS
 
 class watchdog {
 public:
