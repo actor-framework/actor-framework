@@ -59,16 +59,15 @@ struct app_t {
 
 constexpr auto key = "the sample nonce"_sv;
 
-constexpr auto http_request
-  = "GET /chat HTTP/1.1\r\n"
-    "Host: server.example.com\r\n"
-    "Upgrade: websocket\r\n"
-    "Connection: Upgrade\r\n"
-    "Sec-WebSocket-Version: 13\r\n"
-    "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
-    "Origin: http://example.com\r\n"
-    "Sec-WebSocket-Protocol: chat, superchat\r\n"
-    "\r\n"_sv;
+constexpr auto http_request = "GET /chat HTTP/1.1\r\n"
+                              "Host: server.example.com\r\n"
+                              "Upgrade: websocket\r\n"
+                              "Connection: Upgrade\r\n"
+                              "Sec-WebSocket-Version: 13\r\n"
+                              "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+                              "Origin: http://example.com\r\n"
+                              "Sec-WebSocket-Protocol: chat, superchat\r\n"
+                              "\r\n"_sv;
 
 constexpr auto http_response
   = "HTTP/1.1 101 Switching Protocols\r\n"
@@ -102,7 +101,7 @@ BEGIN_FIXTURE_SCOPE(host_fixture)
 
 SCENARIO("the client performs the WebSocket handshake on startup") {
   GIVEN("valid WebSocket handshake data") {
-    WHEN("starting a WebSocket client"){
+    WHEN("starting a WebSocket client") {
       mock_client_type client{make_handshake()};
       THEN("the client sends its HTTP request when initializing it") {
         CHECK_EQ(client.init(), error{});

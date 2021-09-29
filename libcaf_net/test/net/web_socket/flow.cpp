@@ -12,9 +12,7 @@ using namespace caf;
 
 namespace {
 
-struct fixture {
-
-};
+struct fixture {};
 
 } // namespace
 

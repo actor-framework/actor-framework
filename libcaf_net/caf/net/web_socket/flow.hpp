@@ -42,7 +42,7 @@ public:
   }
 
   template <class LowerLayerPtr>
-  error init(net::socket_manager* mgr, LowerLayerPtr&&, const settings&cfg) {
+  error init(net::socket_manager* mgr, LowerLayerPtr&&, const settings& cfg) {
     if (auto err = reader_.init(cfg))
       return err;
     if (auto err = writer_.init(cfg))

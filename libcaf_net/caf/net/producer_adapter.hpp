@@ -39,9 +39,8 @@ public:
   void on_consumer_demand(size_t new_demand) override {
     auto prev = demand_.fetch_add(new_demand);
     if (prev == 0)
-      mgr_->mpx().schedule_fn([adapter = strong_this()] {
-        adapter->continue_reading();
-      });
+      mgr_->mpx().schedule_fn(
+        [adapter = strong_this()] { adapter->continue_reading(); });
   }
 
   void ref_producer() const noexcept override {

@@ -110,8 +110,8 @@ public:
       [&](auto& layer) -> decltype(layer.resolve(*this, locator, listener)) {
         return layer.resolve(*this, locator, listener);
       },
-      [&](auto& layer) -> decltype(
-                         layer.resolve(*this, locator.path(), listener)) {
+      [&](auto& layer) -> decltype(layer.resolve(*this, locator.path(),
+                                                 listener)) {
         return layer.resolve(*this, locator.path(), listener);
       });
     f(next_layer_);

@@ -38,7 +38,8 @@ public:
   // -- member functions -------------------------------------------------------
 
   template <class LowerLayerPtr>
-  error init(socket_manager* owner, LowerLayerPtr parent, const settings& config) {
+  error
+  init(socket_manager* owner, LowerLayerPtr parent, const settings& config) {
     CAF_LOG_TRACE("");
     owner_ = owner;
     cfg_ = config;

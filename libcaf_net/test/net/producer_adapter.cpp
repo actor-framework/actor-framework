@@ -147,7 +147,7 @@ SCENARIO("publisher adapters suspend reads if the buffer becomes full") {
         .from_resource(rd)
         .for_each([&outputs](int32_t x) { outputs.emplace_back(x); });
     });
-    WHEN("a producer reads from a socket and publishes to the buffer"){
+    WHEN("a producer reads from a socket and publishes to the buffer") {
       auto [fd1, fd2] = unbox(net::make_stream_socket_pair());
       auto writer_thread = std::thread{[fd1{fd1}] {
         writer out{fd1};
@@ -157,8 +157,9 @@ SCENARIO("publisher adapters suspend reads if the buffer becomes full") {
       if (auto err = nonblocking(fd2, true))
         FAIL("nonblocking(fd2) returned an error: " << err);
       auto mgr = net::make_socket_manager<app_t, net::length_prefix_framing,
-                                          net::stream_transport>(
-        fd2, mm.mpx_ptr(), std::move(wr));
+                                          net::stream_transport>(fd2,
+                                                                 mm.mpx_ptr(),
+                                                                 std::move(wr));
       if (auto err = mgr->init(content(cfg)))
         FAIL("mgr->init() failed: " << err);
       THEN("the actor receives all items from the writer (socket)") {

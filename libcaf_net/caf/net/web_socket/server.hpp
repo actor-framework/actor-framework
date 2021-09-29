@@ -36,8 +36,7 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class... Ts>
-  explicit server(Ts&&... xs)
-    : upper_layer_(std::forward<Ts>(xs)...) {
+  explicit server(Ts&&... xs) : upper_layer_(std::forward<Ts>(xs)...) {
     // > A server MUST NOT mask any frames that it sends to the client.
     // See RFC 6455, Section 5.1.
     upper_layer_.mask_outgoing_frames = false;

@@ -145,10 +145,10 @@ CAF_TEST(receive) {
     recv_socket_guard.release(), &mpx, shared_recv_buf, shared_send_buf);
   CAF_CHECK_EQUAL(mgr->init(config), none);
   CAF_CHECK_EQUAL(mpx.num_socket_managers(), 2u);
-  CAF_CHECK_EQUAL(
-    static_cast<size_t>(
-      write(send_socket_guard.socket(), as_bytes(make_span(hello_manager)))),
-    hello_manager.size());
+  CAF_CHECK_EQUAL(static_cast<size_t>(
+                    write(send_socket_guard.socket(),
+                          as_bytes(make_span(hello_manager)))),
+                  hello_manager.size());
   CAF_MESSAGE("wrote " << hello_manager.size() << " bytes.");
   run();
   CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(shared_recv_buf->data()),

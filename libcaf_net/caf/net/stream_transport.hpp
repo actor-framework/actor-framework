@@ -130,8 +130,9 @@ public:
   error init(socket_manager* owner, ParentPtr parent, const settings& config) {
     namespace mm = defaults::middleman;
     auto default_max_reads = static_cast<uint32_t>(mm::max_consecutive_reads);
-    max_consecutive_reads_ = get_or(
-      config, "caf.middleman.max-consecutive-reads", default_max_reads);
+    max_consecutive_reads_ = get_or(config,
+                                    "caf.middleman.max-consecutive-reads",
+                                    default_max_reads);
     auto sock = parent->handle();
     if constexpr (std::is_base_of<tcp_stream_socket, decltype(sock)>::value) {
       if (auto err = nodelay(sock, true)) {

@@ -177,9 +177,9 @@ void multiplexer::discard(const socket_manager_ptr& mgr) {
     if (shutting_down_) {
       // nop
     } else {
-       mgr->handle_error(sec::discarded);
-       if (auto mgr_index = index_of(mgr); mgr_index != -1)
-         del(mgr_index);
+      mgr->handle_error(sec::discarded);
+      if (auto mgr_index = index_of(mgr); mgr_index != -1)
+        del(mgr_index);
     }
   } else {
     write_to_pipe(pollset_updater::code::discard_manager, mgr.get());
@@ -387,7 +387,7 @@ short multiplexer::handle(const socket_manager_ptr& mgr, short events,
     mgr->mask_del(operation::read_write);
     events = 0;
   } else {
-    switch (mgr->mask()){
+    switch (mgr->mask()) {
       case operation::read:
         events = input_mask;
         break;
