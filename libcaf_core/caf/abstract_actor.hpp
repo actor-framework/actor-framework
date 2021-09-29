@@ -57,6 +57,14 @@ public:
 
   /// Enqueues a new message wrapped in a `mailbox_element` to the actor.
   /// This `enqueue` variant allows to define forwarding chains.
+  /// @returns `true` if the message has added to the mailbox, `false`
+  ///          otherwise. In the latter case, the actor terminated and the
+  ///          message has been dropped. Once this function returns `false`, it
+  ///          returns `false` for all future invocations.
+  /// @note The returned value is purely informational and may be used to
+  ///       discard actor handles early. Messages may still get dropped later
+  ///       even if this function returns `true`. In particular when dealing
+  ///       with remote actors.
   virtual bool enqueue(mailbox_element_ptr what, execution_unit* host) = 0;
 
   /// Attaches `ptr` to this actor. The actor will call `ptr->detach(...)` on

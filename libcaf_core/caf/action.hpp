@@ -227,6 +227,8 @@ namespace caf {
 ///                   `action::state::waiting`.
 template <class F>
 action make_action(F f, action::state init_state = action::state::scheduled) {
+  CAF_ASSERT(init_state == action::state::scheduled
+             || init_state == action::state::waiting);
   using impl_t = detail::default_action_impl<F>;
   return action{make_counted<impl_t>(std::move(f), init_state)};
 }

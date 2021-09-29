@@ -66,20 +66,20 @@ struct fixture : test_coordinator_fixture<> {
 CAF_TEST_FIXTURE_SCOPE(timer_tests, fixture)
 
 CAF_TEST(run_delayed without dispose) {
-  // Have AUT call t.set_receive_timeout().
+  // Have AUT call self->run_delayed().
   self->send(aut, ok_atom_v);
   expect((ok_atom), from(self).to(aut).with(_));
   CAF_CHECK_EQUAL(t.schedule.size(), 1u);
-  // Advance time to send timeout message.
+  // Advance time to trigger timeout.
   t.advance_time(10s);
   CAF_CHECK_EQUAL(t.schedule.size(), 0u);
-  // Have AUT receive the timeout.
+  // Have AUT receive the action.
   expect((action), to(aut));
   CAF_CHECK(state().run_delayed_called);
 }
 
 CAF_TEST(run_delayed with dispose before expire) {
-  // Have AUT call t.set_receive_timeout().
+  // Have AUT call self->run_delayed().
   self->send(aut, ok_atom_v);
   expect((ok_atom), from(self).to(aut).with(_));
   state().pending.dispose();
@@ -93,7 +93,7 @@ CAF_TEST(run_delayed with dispose before expire) {
 }
 
 CAF_TEST(run_delayed with dispose after expire) {
-  // Have AUT call t.set_receive_timeout().
+  // Have AUT call self->run_delayed().
   self->send(aut, ok_atom_v);
   expect((ok_atom), from(self).to(aut).with(_));
   CAF_CHECK_EQUAL(t.schedule.size(), 1u);

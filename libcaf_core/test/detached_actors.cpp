@@ -99,19 +99,3 @@ SCENARIO("an actor system shuts down after the last actor terminates") {
     }
   }
 }
-
-// CAF_TEST(shutdown_delayed_send_loop) {
-//   CAF_MESSAGE("does sys shut down after spawning a detached actor that used "
-//               "a delayed send loop and was interrupted via exit message?");
-//   auto f = [](event_based_actor* self) -> behavior {
-//     self->delayed_send(self, 1ns, ok_atom_v);
-//     return {
-//       [=](ok_atom) {
-//         self->delayed_send(self, 1ns, ok_atom_v);
-//       },
-//     };
-//   };
-//   auto a = sys.spawn<detached>(f);
-//   auto g = detail::make_scope_guard(
-//     [&] { self->send_exit(a, exit_reason::user_shutdown); });
-// }

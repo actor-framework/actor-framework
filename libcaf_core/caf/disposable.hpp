@@ -50,7 +50,7 @@ public:
   disposable& operator=(disposable&&) noexcept = default;
   disposable& operator=(const disposable&) noexcept = default;
 
-  /// Combines multiple disposable into a single disposable. The new disposable
+  /// Combines multiple disposables into a single disposable. The new disposable
   /// is disposed if all of its elements are disposed. Disposing the composite
   /// disposes all elements individually.
   static disposable make_composite(std::vector<disposable> entries);

@@ -397,10 +397,10 @@ public:
 
   // -- timeout management -----------------------------------------------------
 
-  /// Requests a new timeout for the current behavior and returns its ID.
+  /// Requests a new timeout for the current behavior.
   void set_receive_timeout();
 
-  /// Requests a new timeout and returns its ID.
+  /// Requests a new timeout.
   void set_stream_timeout(actor_clock::time_point x);
 
   // -- message processing -----------------------------------------------------
@@ -571,7 +571,7 @@ public:
   /// Runs `what` asynchronously at some point after `when`.
   /// @param when The local time until the actor waits before invoking the
   ///             action. Due to scheduling delays, there will always be some
-  ///             additional wait time. Passing the current time or a past times
+  ///             additional wait time. Passing the current time or a past time
   ///             immediately schedules the action for execution.
   /// @param what The action to invoke after waiting on the timeout.
   /// @returns A @ref disposable that allows the actor to cancel the action.

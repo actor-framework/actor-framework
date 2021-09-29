@@ -23,6 +23,10 @@ public:
   virtual ~abstract_channel();
 
   /// Enqueues a new message without forwarding stack to the channel.
+  /// @returns `true` if the message has been dispatches successful, `false`
+  ///          otherwise. In the latter case, the channel has been closed and
+  ///          the message has been dropped. Once this function returns `false`,
+  ///          it returns `false` for all future invocations.
   virtual bool enqueue(strong_actor_ptr sender, message_id mid, message content,
                        execution_unit* host = nullptr)
     = 0;

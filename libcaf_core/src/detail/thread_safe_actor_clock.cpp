@@ -19,7 +19,8 @@ thread_safe_actor_clock::thread_safe_actor_clock() {
 disposable
 thread_safe_actor_clock::schedule_periodically(time_point first_run, action f,
                                                duration_type period) {
-  queue_.emplace_back(new schedule_entry{first_run, f, period});
+  auto ptr = schedule_entry_ptr{new schedule_entry{first_run, f, period}};
+  queue_.emplace_back(std::move(ptr));
   return std::move(f).as_disposable();
 }
 
