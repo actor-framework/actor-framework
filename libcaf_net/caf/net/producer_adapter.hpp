@@ -78,18 +78,26 @@ public:
   /// @returns the remaining demand.
   /// @pre `demand() > 0`
   size_t push(const value_type& item) {
-    CAF_ASSERT(demand_ > 0);
-    buf_->push(item);
-    return --demand_;
+    if (buf_) {
+      CAF_ASSERT(demand_ > 0);
+      buf_->push(item);
+      return --demand_;
+    } else {
+      return 0;
+    }
   }
 
   /// Makes `items` available to the consumer.
   /// @returns the remaining demand.
   /// @pre `demand() >= items.size()`
   size_t push(span<const value_type> items) {
-    CAF_ASSERT(demand_ >= items.size());
-    buf_->push(items);
-    return demand_ -= items.size();
+    if (buf_) {
+      CAF_ASSERT(demand_ >= items.size());
+      buf_->push(items);
+      return demand_ -= items.size();
+    } else {
+      return 0;
+    }
   }
 
   void close() {
