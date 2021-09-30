@@ -24,17 +24,21 @@ void actor_companion::on_exit(on_exit_handler handler) {
   on_exit_ = std::move(handler);
 }
 
-void actor_companion::enqueue(mailbox_element_ptr ptr, execution_unit*) {
+bool actor_companion::enqueue(mailbox_element_ptr ptr, execution_unit*) {
   CAF_ASSERT(ptr);
   shared_lock<lock_type> guard(lock_);
-  if (on_enqueue_)
+  if (on_enqueue_) {
     on_enqueue_(std::move(ptr));
+    return true;
+  } else {
+    return false;
+  }
 }
 
-void actor_companion::enqueue(strong_actor_ptr src, message_id mid,
+bool actor_companion::enqueue(strong_actor_ptr src, message_id mid,
                               message content, execution_unit* eu) {
   auto ptr = make_mailbox_element(std::move(src), mid, {}, std::move(content));
-  enqueue(std::move(ptr), eu);
+  return enqueue(std::move(ptr), eu);
 }
 
 void actor_companion::launch(execution_unit*, bool, bool hide) {

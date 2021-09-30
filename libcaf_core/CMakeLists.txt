@@ -67,6 +67,7 @@ caf_add_component(
     src/abstract_actor.cpp
     src/abstract_channel.cpp
     src/abstract_group.cpp
+    src/action.cpp
     src/actor.cpp
     src/actor_addr.cpp
     src/actor_clock.cpp
@@ -126,7 +127,6 @@ caf_add_component(
     src/detail/serialized_size.cpp
     src/detail/set_thread_name.cpp
     src/detail/shared_spinlock.cpp
-    src/detail/simple_actor_clock.cpp
     src/detail/size_based_credit_controller.cpp
     src/detail/stringification_inspector.cpp
     src/detail/sync_request_bouncer.cpp
@@ -135,6 +135,7 @@ caf_add_component(
     src/detail/tick_emitter.cpp
     src/detail/token_based_credit_controller.cpp
     src/detail/type_id_list_builder.cpp
+    src/disposable.cpp
     src/downstream_manager.cpp
     src/downstream_manager_base.cpp
     src/error.cpp
@@ -190,12 +191,12 @@ caf_add_component(
     src/string_algorithms.cpp
     src/string_view.cpp
     src/telemetry/collector/prometheus.cpp
+    src/telemetry/importer/process.cpp
     src/telemetry/label.cpp
     src/telemetry/label_view.cpp
     src/telemetry/metric.cpp
     src/telemetry/metric_family.cpp
     src/telemetry/metric_registry.cpp
-    src/telemetry/importer/process.cpp
     src/term.cpp
     src/thread_hook.cpp
     src/timestamp.cpp
@@ -210,6 +211,7 @@ caf_add_component(
     test/core-test.cpp
     test/nasty.cpp
   TEST_SUITES
+    action
     actor_clock
     actor_factory
     actor_lifetime

@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cstddef>
 
+#include "caf/allowed_unsafe_message_type.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/byte.hpp"
@@ -16,6 +17,7 @@
 #include "caf/detail/stringification_inspector.hpp"
 #include "caf/inspector_access.hpp"
 #include "caf/serializer.hpp"
+#include "caf/type_id.hpp"
 
 namespace caf::detail::default_function {
 
@@ -56,9 +58,14 @@ bool load(deserializer& source, void* ptr) {
 
 template <class T>
 void stringify(std::string& buf, const void* ptr) {
-  stringification_inspector f{buf};
-  auto unused = f.apply(*static_cast<const T*>(ptr));
-  static_cast<void>(unused);
+  if constexpr (is_allowed_unsafe_message_type_v<T>) {
+    auto tn = type_name_v<T>;
+    buf.insert(buf.end(), tn.begin(), tn.end());
+  } else {
+    stringification_inspector f{buf};
+    auto unused = f.apply(*static_cast<const T*>(ptr));
+    static_cast<void>(unused);
+  }
 }
 
 } // namespace caf::detail::default_function

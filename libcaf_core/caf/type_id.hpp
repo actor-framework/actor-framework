@@ -375,6 +375,7 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
 
   // -- CAF types
 
+  CAF_ADD_TYPE_ID(core_module, (caf::action))
   CAF_ADD_TYPE_ID(core_module, (caf::actor))
   CAF_ADD_TYPE_ID(core_module, (caf::actor_addr))
   CAF_ADD_TYPE_ID(core_module, (caf::byte_buffer))
@@ -407,7 +408,6 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
   CAF_ADD_TYPE_ID(core_module, (caf::sec))
   CAF_ADD_TYPE_ID(core_module, (caf::stream_slots))
   CAF_ADD_TYPE_ID(core_module, (caf::strong_actor_ptr))
-  CAF_ADD_TYPE_ID(core_module, (caf::timeout_msg))
   CAF_ADD_TYPE_ID(core_module, (caf::timespan))
   CAF_ADD_TYPE_ID(core_module, (caf::timestamp))
   CAF_ADD_TYPE_ID(core_module, (caf::unit_t))

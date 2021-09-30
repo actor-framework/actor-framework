@@ -41,12 +41,13 @@ public:
   };
 
   template <class Coordinator>
-  void enqueue(Coordinator* self, resumable* job) {
+  bool enqueue(Coordinator* self, resumable* job) {
     queue_type l;
     l.push_back(job);
     std::unique_lock<std::mutex> guard(d(self).lock);
     d(self).queue.splice(d(self).queue.end(), l);
     d(self).cv.notify_one();
+    return true;
   }
 
   template <class Coordinator>

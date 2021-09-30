@@ -42,8 +42,9 @@ public:
     // nop
   }
 
-  void enqueue(mailbox_element_ptr, execution_unit*) override {
+  bool enqueue(mailbox_element_ptr, execution_unit*) override {
     CAF_FAIL("mock_actor_proxy::enqueue called");
+    return false;
   }
 
   void kill_proxy(execution_unit*, error) override {

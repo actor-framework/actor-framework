@@ -12,6 +12,7 @@
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/detail/typed_actor_util.hpp"
+#include "caf/disposable.hpp"
 #include "caf/logger.hpp"
 #include "caf/sec.hpp"
 
@@ -23,10 +24,14 @@ struct select_any_factory;
 template <class F, class... Ts>
 struct select_any_factory<F, type_list<Ts...>> {
   template <class Fun>
-  static auto make(std::shared_ptr<size_t> pending, Fun&& fun) {
-    return [pending, f{std::forward<Fun>(fun)}](Ts... xs) mutable {
+  static auto
+  make(std::shared_ptr<size_t> pending, disposable timeouts, Fun f) {
+    using std::move;
+    return [pending{move(pending)}, timeouts{move(timeouts)},
+            f{move(f)}](Ts... xs) mutable {
       CAF_LOG_TRACE(CAF_ARG2("pending", *pending));
       if (*pending > 0) {
+        timeouts.dispose();
         f(xs...);
         *pending = 0;
       }
@@ -54,13 +59,14 @@ public:
   using type_checker
     = detail::type_checker<response_type, detail::decay_t<Fun>>;
 
-  explicit select_any(message_id_list ids) : ids_(std::move(ids)) {
+  explicit select_any(message_id_list ids, disposable pending_timeouts)
+    : ids_(std::move(ids)), pending_timeouts_(std::move(pending_timeouts)) {
     CAF_ASSERT(ids_.size()
                <= static_cast<size_t>(std::numeric_limits<int>::max()));
   }
 
   template <class Self, class F, class OnError>
-  void await(Self* self, F&& f, OnError&& g) const {
+  void await(Self* self, F&& f, OnError&& g) {
     CAF_LOG_TRACE(CAF_ARG(ids_));
     auto bhvr = make_behavior(std::forward<F>(f), std::forward<OnError>(g));
     for (auto id : ids_)
@@ -68,7 +74,7 @@ public:
   }
 
   template <class Self, class F, class OnError>
-  void then(Self* self, F&& f, OnError&& g) const {
+  void then(Self* self, F&& f, OnError&& g) {
     CAF_LOG_TRACE(CAF_ARG(ids_));
     auto bhvr = make_behavior(std::forward<F>(f), std::forward<OnError>(g));
     for (auto id : ids_)
@@ -76,11 +82,11 @@ public:
   }
 
   template <class Self, class F, class G>
-  void receive(Self* self, F&& f, G&& g) const {
+  void receive(Self* self, F&& f, G&& g) {
     CAF_LOG_TRACE(CAF_ARG(ids_));
     using factory = detail::select_any_factory<std::decay_t<F>>;
     auto pending = std::make_shared<size_t>(ids_.size());
-    auto fw = factory::make(pending, std::forward<F>(f));
+    auto fw = factory::make(pending, pending_timeouts_, std::forward<F>(f));
     auto gw = make_error_handler(std::move(pending), std::forward<G>(g));
     for (auto id : ids_) {
       typename Self::accept_one_cond rc;
@@ -94,13 +100,19 @@ public:
     return ids_;
   }
 
+  disposable pending_timeouts() {
+    return pending_timeouts_;
+  }
+
 private:
   template <class OnError>
-  auto make_error_handler(std::shared_ptr<size_t> p, OnError&& g) const {
-    return [p{std::move(p)}, g{std::forward<OnError>(g)}](error&) mutable {
+  auto make_error_handler(std::shared_ptr<size_t> p, OnError&& g) {
+    return [p{std::move(p)}, timeouts{pending_timeouts_},
+            g{std::forward<OnError>(g)}](error&) mutable {
       if (*p == 0) {
         // nop
       } else if (*p == 1) {
+        timeouts.dispose();
         auto err = make_error(sec::all_requests_failed);
         g(err);
       } else {
@@ -110,17 +122,17 @@ private:
   }
 
   template <class F, class OnError>
-  behavior make_behavior(F&& f, OnError&& g) const {
+  behavior make_behavior(F&& f, OnError&& g) {
     using factory = detail::select_any_factory<std::decay_t<F>>;
     auto pending = std::make_shared<size_t>(ids_.size());
-    auto result_handler = factory::make(pending, std::forward<F>(f));
-    return {
-      std::move(result_handler),
-      make_error_handler(std::move(pending), std::forward<OnError>(g)),
-    };
+    auto result_handler = factory::make(pending, pending_timeouts_,
+                                        std::forward<F>(f));
+    return {std::move(result_handler),
+            make_error_handler(std::move(pending), std::forward<OnError>(g))};
   }
 
   message_id_list ids_;
+  disposable pending_timeouts_;
 };
 
 } // namespace caf::policy

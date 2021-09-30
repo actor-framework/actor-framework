@@ -29,7 +29,7 @@ public:
   // non-system messages are processed and then forwarded;
   // system messages are handled and consumed on the spot;
   // in either case, the processing is done synchronously
-  void enqueue(mailbox_element_ptr what, execution_unit* context) override;
+  bool enqueue(mailbox_element_ptr what, execution_unit* context) override;
 
   message_types_set message_types() const override;
 
