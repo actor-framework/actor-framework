@@ -48,14 +48,8 @@ public:
 
   bounded_buffer(uint32_t max_in_flight, uint32_t min_pull_size)
     : max_in_flight_(max_in_flight), min_pull_size_(min_pull_size) {
-    buf_ = reinterpret_cast<T*>(malloc(sizeof(T) * max_in_flight * 2));
-  }
-
-  ~bounded_buffer() {
-    auto first = buf_ + rd_pos_;
-    auto last = buf_ + wr_pos_;
-    std::destroy(first, last);
-    free(buf_);
+    buf_.reserve(max_in_flight);
+    consumer_buf_.reserve(max_in_flight);
   }
 
   /// Appends to the buffer and calls `on_producer_wakeup` on the consumer if
@@ -65,12 +59,11 @@ public:
     std::unique_lock guard{mtx_};
     CAF_ASSERT(producer_ != nullptr);
     CAF_ASSERT(!closed_);
-    CAF_ASSERT(wr_pos_ + items.size() < max_in_flight_ * 2);
-    std::uninitialized_copy(items.begin(), items.end(), buf_ + wr_pos_);
-    wr_pos_ += items.size();
-    if (size() == items.size() && consumer_)
+    CAF_ASSERT(buf_.size() + items.size() <= max_in_flight_);
+    buf_.insert(buf_.end(), items.begin(), items.end());
+    if (buf_.size() == items.size() && consumer_)
       consumer_->on_producer_wakeup();
-    return capacity() - size();
+    return capacity() - buf_.size();
   }
 
   size_t push(const T& item) {
@@ -86,10 +79,9 @@ public:
   ///          `on_error` on the observer.
   template <class Policy, class Observer>
   std::pair<bool, size_t> pull(Policy, size_t demand, Observer& dst) {
-    static constexpr size_t local_buf_size = 16;
-    T local_buf[local_buf_size];
     std::unique_lock guard{mtx_};
     CAF_ASSERT(consumer_ != nullptr);
+    CAF_ASSERT(consumer_buf_.empty());
     if constexpr (std::is_same_v<Policy, prioritize_errors_t>) {
       if (err_) {
         consumer_ = nullptr;
@@ -97,24 +89,22 @@ public:
         return {false, 0};
       }
     }
-    auto next_n = [this, &demand] {
-      return std::min({local_buf_size, demand, size()});
-    };
+    auto next_n = [this, &demand] { return std::min(demand, buf_.size()); };
     size_t consumed = 0;
     for (auto n = next_n(); n > 0; n = next_n()) {
-      auto first = buf_ + rd_pos_;
-      std::move(first, first + n, local_buf);
-      std::destroy(first, first + n);
-      rd_pos_ += n;
-      shift_elements();
+      using std::make_move_iterator;
+      consumer_buf_.assign(make_move_iterator(buf_.begin()),
+                           make_move_iterator(buf_.begin() + n));
+      buf_.erase(buf_.begin(), buf_.begin() + n);
       signal_demand(n);
       guard.unlock();
-      dst.on_next(make_span(local_buf, n));
+      dst.on_next(span<const T>{consumer_buf_.data(), n});
       demand -= n;
       consumed += n;
+      consumer_buf_.clear();
       guard.lock();
     }
-    if (!empty() || !closed_) {
+    if (!buf_.empty() || !closed_) {
       return {true, consumed};
     } else {
       consumer_ = nullptr;
@@ -129,20 +119,20 @@ public:
   /// Checks whether there is any pending data in the buffer.
   bool has_data() const noexcept {
     std::unique_lock guard{mtx_};
-    return !empty();
+    return !buf_.empty();
   }
 
   /// Checks whether the there is data available or the producer has closed or
   /// aborted the flow.
   bool has_consumer_event() const noexcept {
     std::unique_lock guard{mtx_};
-    return !empty() || closed_;
+    return !buf_.empty() || closed_;
   }
 
   /// Returns how many items are currently available.
   size_t available() const noexcept {
     std::unique_lock guard{mtx_};
-    return size();
+    return buf_.size();
   }
 
   /// Closes the buffer by request of the producer.
@@ -151,7 +141,7 @@ public:
     if (producer_) {
       closed_ = true;
       producer_ = nullptr;
-      if (empty() && consumer_)
+      if (buf_.empty() && consumer_)
         consumer_->on_producer_wakeup();
     }
   }
@@ -163,7 +153,7 @@ public:
       closed_ = true;
       err_ = std::move(reason);
       producer_ = nullptr;
-      if (empty() && consumer_)
+      if (buf_.empty() && consumer_)
         consumer_->on_producer_wakeup();
     }
   }
@@ -206,37 +196,9 @@ private:
   void ready() {
     producer_->on_consumer_ready();
     consumer_->on_producer_ready();
-    if (!empty())
+    if (!buf_.empty())
       consumer_->on_producer_wakeup();
     signal_demand(max_in_flight_);
-  }
-
-  size_t empty() const noexcept {
-    CAF_ASSERT(wr_pos_ >= rd_pos_);
-    return wr_pos_ == rd_pos_;
-  }
-
-  size_t size() const noexcept {
-    CAF_ASSERT(wr_pos_ >= rd_pos_);
-    return wr_pos_ - rd_pos_;
-  }
-
-  void shift_elements() {
-    if (rd_pos_ >= max_in_flight_) {
-      if (empty()) {
-        rd_pos_ = 0;
-        wr_pos_ = 0;
-      } else {
-        // No need to check for overlap: the first half of the buffer is
-        // empty.
-        auto first = buf_ + rd_pos_;
-        auto last = buf_ + wr_pos_;
-        std::uninitialized_move(first, last, buf_);
-        std::destroy(first, last);
-        wr_pos_ -= rd_pos_;
-        rd_pos_ = 0;
-      }
-    }
   }
 
   void signal_demand(uint32_t new_demand) {
@@ -253,7 +215,7 @@ private:
   /// Allocated to max_in_flight_ * 2, but at most holds max_in_flight_
   /// elements at any point in time. We dynamically shift elements into the
   /// first half of the buffer whenever rd_pos_ crosses the midpoint.
-  T* buf_;
+  std::vector<T> buf_;
 
   /// Stores how many items the buffer may hold at any time.
   uint32_t max_in_flight_;
@@ -261,12 +223,6 @@ private:
   /// Configures the minimum amount of free buffer slots that we signal to the
   /// producer.
   uint32_t min_pull_size_;
-
-  /// Stores the read position of the consumer.
-  uint32_t rd_pos_ = 0;
-
-  /// Stores the write position of the producer.
-  uint32_t wr_pos_ = 0;
 
   /// Demand that has not yet been signaled back to the producer.
   uint32_t demand_ = 0;
@@ -282,6 +238,9 @@ private:
 
   /// Callback handle to the producer.
   producer_ptr producer_;
+
+  /// Caches elements before passing them to the consumer (without lock).
+  std::vector<T> consumer_buf_;
 };
 
 /// @relates bounded_buffer
