@@ -97,19 +97,6 @@ public:
       worker->local_actor_down(parent, nid, id, std::move(reason));
   }
 
-  template <class... Ts>
-  void set_timeout(uint64_t timeout_id, id_type id, Ts&&...) {
-    workers_by_timeout_id_.emplace(timeout_id, workers_by_id_.at(id));
-  }
-
-  template <class Parent>
-  void timeout(Parent& parent, std::string tag, uint64_t id) {
-    if (auto worker = workers_by_timeout_id_.at(id)) {
-      worker->timeout(parent, std::move(tag), id);
-      workers_by_timeout_id_.erase(id);
-    }
-  }
-
   void handle_error(sec error) {
     for (const auto& p : workers_by_id_) {
       auto worker = p.second;

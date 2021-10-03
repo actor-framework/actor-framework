@@ -254,13 +254,6 @@ struct fixture : host_fixture {
     memcmp(buf->data() + 1, hello_test.data(), hello_test.size()), 0);         \
   buf->clear();
 
-#define CHECK_TIMEOUT(testcase)                                                \
-  dispatcher.set_timeout(1u, testcase.ep);                                     \
-  dispatcher.timeout(dummy, "dummy", 1u);                                      \
-  CAF_CHECK_EQUAL(buf->size(), 1u);                                            \
-  CAF_CHECK_EQUAL(static_cast<byte>(testcase.worker_id), buf->at(0));          \
-  buf->clear();
-
 } // namespace
 
 CAF_TEST_FIXTURE_SCOPE(transport_worker_dispatcher_test, fixture)
@@ -286,13 +279,6 @@ CAF_TEST(write_message write_packet) {
 
 CAF_TEST(resolve) {
   // TODO think of a test for this
-}
-
-CAF_TEST(timeout) {
-  CHECK_TIMEOUT(test_data.at(0));
-  CHECK_TIMEOUT(test_data.at(1));
-  CHECK_TIMEOUT(test_data.at(2));
-  CHECK_TIMEOUT(test_data.at(3));
 }
 
 CAF_TEST(handle_error) {

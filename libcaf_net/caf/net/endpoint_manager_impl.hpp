@@ -45,18 +45,6 @@ public:
     return *this;
   }
 
-  // -- timeout management -----------------------------------------------------
-
-  template <class... Ts>
-  uint64_t
-  set_timeout(actor_clock::time_point tp, std::string type, Ts&&... xs) {
-    auto act = actor_cast<abstract_actor*>(timeout_proxy_);
-    CAF_ASSERT(act != nullptr);
-    sys_.clock().set_multi_timeout(tp, act, std::move(type), next_timeout_id_);
-    transport_.set_timeout(next_timeout_id_, std::forward<Ts>(xs)...);
-    return next_timeout_id_++;
-  }
-
   // -- interface functions ----------------------------------------------------
 
   error init() /*override*/ {

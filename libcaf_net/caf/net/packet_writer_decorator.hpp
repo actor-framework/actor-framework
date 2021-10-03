@@ -51,17 +51,6 @@ public:
     return transport().next_payload_buffer();
   }
 
-  // -- member functions -------------------------------------------------------
-
-  void cancel_timeout(std::string tag, uint64_t id) {
-    parent_.cancel_timeout(std::move(tag), id);
-  }
-
-  template <class... Ts>
-  uint64_t set_timeout(timestamp tout, std::string tag, Ts&&... xs) {
-    return parent_.set_timeout(tout, std::move(tag), std::forward<Ts>(xs)...);
-  }
-
 protected:
   void write_impl(span<byte_buffer*> buffers) override {
     parent_.write_packet(object_.id(), buffers);

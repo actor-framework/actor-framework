@@ -133,24 +133,6 @@ public:
     next_layer_.local_actor_down(*this, peer, id, std::move(reason));
   }
 
-  /// Notifies the transport that the timeout identified by `value` plus `id`
-  /// was triggered.
-  /// @param tag The type tag of the timeout.
-  /// @param id The timeout id of the timeout.
-  void timeout(endpoint_manager&, std::string tag, uint64_t id) {
-    next_layer_.timeout(*this, std::move(tag), id);
-  }
-
-  /// Callback for setting a timeout. Will be called after setting a timeout to
-  /// get the timeout id for local use.
-  /// @param timeout_id The id of the previously set timeout.
-  /// @param ts Any further information that was passed when setting the
-  /// timeout.
-  template <class... Ts>
-  void set_timeout(uint64_t timeout_id, Ts&&... ts) {
-    next_layer_.set_timeout(timeout_id, std::forward<Ts>(ts)...);
-  }
-
   /// Callback for when an error occurs.
   /// @param code The error code to handle.
   void handle_error(sec code) {
