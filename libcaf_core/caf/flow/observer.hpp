@@ -221,7 +221,6 @@ public:
     if (buf_ && !sub_) {
       CAF_LOG_DEBUG("add subscription");
       sub_ = std::move(sub);
-      sub_.request(buf_->capacity());
     } else {
       CAF_LOG_DEBUG("already have a subscription or buffer no longer valid");
       sub.cancel();
