@@ -19,7 +19,7 @@ public:
   // -- nested types -----------------------------------------------------------
 
   /// Internal impl of a `disposable`.
-  class impl : public disposable::impl {
+  class CAF_CORE_EXPORT impl : public disposable::impl {
   public:
     ~impl() override;
 

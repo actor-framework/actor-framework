@@ -18,7 +18,7 @@ public:
   // -- member types -----------------------------------------------------------
 
   /// Internal implementation class of a `disposable`.
-  class impl {
+  class CAF_CORE_EXPORT impl {
   public:
     CAF_INTRUSIVE_PTR_FRIENDS_SFX(impl, _disposable)
 

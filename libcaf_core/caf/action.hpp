@@ -37,7 +37,7 @@ public:
   };
 
   /// Internal interface of `action`.
-  class impl : public disposable::impl {
+  class CAF_CORE_EXPORT impl : public disposable::impl {
   public:
     virtual transition reschedule() = 0;
 
