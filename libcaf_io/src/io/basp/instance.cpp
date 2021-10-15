@@ -353,12 +353,16 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
         callee_.finalize_handshake(source_node, aid, sigs);
         return redundant_connection;
       }
-      // Close this connection if we already have a direct connection.
-      if (tbl_.lookup_direct(source_node)) {
-        CAF_LOG_DEBUG(
-          "close redundant direct connection:" << CAF_ARG(source_node));
-        callee_.finalize_handshake(source_node, aid, sigs);
-        return redundant_connection;
+      if (auto old_hdl = tbl_.lookup_direct(source_node)) {
+        // Close this connection if we already have a direct connection.
+        if (*old_hdl == hdl) {
+          CAF_LOG_DEBUG(
+            "close redundant direct connection:" << CAF_ARG(source_node));
+          callee_.finalize_handshake(source_node, aid, sigs);
+          return redundant_connection;
+        }
+        CAF_LOG_DEBUG("Replace socket handle:" << CAF_ARG(source_node) << "from:" << CAF_ARG(*old_hdl) << "to:" << CAF_ARG(hdl));
+        tbl_.erase_direct(*old_hdl);
       }
       // Add direct route to this node and remove any indirect entry.
       CAF_LOG_DEBUG("new direct connection:" << CAF_ARG(source_node));
@@ -383,11 +387,16 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
                         << source.get_error());
         return serializing_basp_payload_failed;
       }
-      // Drop repeated handshakes.
-      if (tbl_.lookup_direct(source_node)) {
-        CAF_LOG_DEBUG(
-          "received repeated client handshake:" << CAF_ARG(source_node));
-        break;
+      if (auto old_hdl = tbl_.lookup_direct(source_node)) {
+        // Drop repeated handshakes.
+        if (*old_hdl == hdl) {
+          CAF_LOG_DEBUG(
+            "received repeated client handshake:" << CAF_ARG(source_node));
+          break;
+        }
+        // Same actor node but handshake from a different socket. Replace the old one with the new one.
+        CAF_LOG_DEBUG("Replace socket handle:" << CAF_ARG(source_node) << "from:" << CAF_ARG(*old_hdl) << "to:" << CAF_ARG(hdl));
+        tbl_.erase_direct(*old_hdl);
       }
       // Add direct route to this node and remove any indirect entry.
       CAF_LOG_DEBUG("new direct connection:" << CAF_ARG(source_node));
