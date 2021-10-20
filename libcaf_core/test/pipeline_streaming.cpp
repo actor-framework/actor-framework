@@ -310,8 +310,9 @@ CAF_TEST(depth_2_pipeline_500_items) {
     }
     MESSAGE("trigger timeouts");
     tick();
-    allow((action), from(snk).to(snk));
-    allow((action), from(src).to(src));
+    while (allow((action), to(snk)) || allow((action), to(src))) {
+      // repeat
+    }
     MESSAGE("process ack_batch in source");
     expect((upstream_msg::ack_batch), from(snk).to(src));
   } while (!received<downstream_msg::close>(snk));
