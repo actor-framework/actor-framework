@@ -746,8 +746,6 @@ end object)_";
   }
 }
 
-#ifdef __cpp_lib_byte
-
 SCENARIO("load inspectors support std::byte") {
   GIVEN("a struct with std::byte") {
     struct byte_test {
@@ -772,7 +770,5 @@ end object)_";
     }
   }
 }
-
-#endif
 
 CAF_TEST_FIXTURE_SCOPE_END()
