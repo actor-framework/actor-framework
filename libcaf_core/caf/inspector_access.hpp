@@ -428,8 +428,6 @@ struct inspector_access<std::unique_ptr<error::data>>
 
 // -- inspection support for std::byte -----------------------------------------
 
-#ifdef __cpp_lib_byte
-
 template <>
 struct inspector_access<std::byte> : inspector_access_base<std::byte> {
   template <class Inspector>
@@ -440,8 +438,6 @@ struct inspector_access<std::byte> : inspector_access_base<std::byte> {
     return f.apply(get, set);
   }
 };
-
-#endif
 
 // -- inspection support for variant<Ts...> ------------------------------------
 
