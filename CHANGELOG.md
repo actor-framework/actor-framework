@@ -16,7 +16,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ### Fixed
 
-- The DSL function `run_until` miscounted the number executed events, also
+- The DSL function `run_until` miscounted the number of executed events, also
   causing `run_once` to report a wrong value. Both functions now return the
   correct result.
 - Using `allow(...).with(...)` in unit tests without a matching message crashed

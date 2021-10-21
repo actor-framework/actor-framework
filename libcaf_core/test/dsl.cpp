@@ -83,7 +83,7 @@ SCENARIO("unsuccessful checks increment the 'bad' counter") {
         results << CHECK_GE(1, 2);
         caf::test::logger::instance().levels(bk);
         auto failed_checks = this_test->bad();
-        this_test->reset(); // Prevent the unit test from actually failing.
+        this_test->reset_bad(); // Prevent the unit test from actually failing.
         CHECK_EQ(failed_checks, 7u);
         REQUIRE_EQ(results.values.size(), 7u);
         auto is_false = [](bool x) { return !x; };
@@ -205,6 +205,8 @@ SCENARIO("tests may check for exceptions") {
         CHECK_THROWS_WITH(f(), "foo");
         CHECK_THROWS_WITH_AS(f(), "foo", std::runtime_error);
         CHECK_NOTHROW([] {}());
+        CHECK_EQ(this_test->good(), 4u);
+        CHECK_EQ(this_test->bad(), 0u);
       }
     }
     WHEN("using any CHECK_THROWS macro with a unexpected exception") {
@@ -261,8 +263,8 @@ SCENARIO("passing requirements increment the 'good' counter") {
 SCENARIO("failing requirements increment the 'bad' counter and throw") {
   GIVEN("a unit test") {
     auto this_test = test::engine::current_test();
-    WHEN("using any REQUIRE macro with a true statement") {
-      THEN("the 'good' counter increments by one per requirement") {
+    WHEN("using any REQUIRE macro with a false statement") {
+      THEN("the 'bad' counter increments by one per failed requirement") {
         CHECK_FAILS(REQUIRE_EQ(1, 2));
         CHECK_FAILS(REQUIRE_EQ(this_test->good(), 42u));
         CHECK_FAILS(REQUIRE(false));
