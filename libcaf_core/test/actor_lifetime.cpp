@@ -55,16 +55,16 @@ behavior tester(event_based_actor* self, const actor& aut) {
   if (std::is_same<ExitMsgType, exit_msg>::value) {
     self->set_exit_handler([self](exit_msg& msg) {
       // must be still alive at this point
-      CAF_CHECK_EQUAL(s_testees.load(), 1);
-      CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
+      CHECK_EQ(s_testees.load(), 1);
+      CHECK_EQ(msg.reason, exit_reason::user_shutdown);
       self->send(self, ok_atom_v);
     });
     self->link_to(aut);
   } else {
     self->set_down_handler([self](down_msg& msg) {
       // must be still alive at this point
-      CAF_CHECK_EQUAL(s_testees.load(), 1);
-      CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
+      CHECK_EQ(s_testees.load(), 1);
+      CHECK_EQ(msg.reason, exit_reason::user_shutdown);
       // testee might be still running its cleanup code in
       // another worker thread; by waiting some milliseconds, we make sure
       // testee had enough time to return control to the scheduler
@@ -86,8 +86,8 @@ behavior tester(event_based_actor* self, const actor& aut) {
         while (!s_testee_cleanup_done.load())
           s_cv.wait(guard);
       }
-      CAF_CHECK_EQUAL(s_testees.load(), 0);
-      CAF_CHECK_EQUAL(s_pending_on_exits.load(), 0);
+      CHECK_EQ(s_testees.load(), 0);
+      CHECK_EQ(s_pending_on_exits.load(), 0);
       self->quit();
     },
   };
@@ -166,11 +166,11 @@ CAF_TEST(destructor_call) {
     actor_system system{cfg};
     system.spawn<testee>();
   }
-  CAF_CHECK_EQUAL(s_testees.load(), 0);
-  CAF_CHECK_EQUAL(s_pending_on_exits.load(), 0);
+  CHECK_EQ(s_testees.load(), 0);
+  CHECK_EQ(s_pending_on_exits.load(), 0);
 }
 
-CAF_TEST_FIXTURE_SCOPE(actor_lifetime_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(no_spawn_options_and_exit_msg) {
   tst<exit_msg, no_spawn_options, no_spawn_options>();
@@ -188,4 +188,4 @@ CAF_TEST(mixed_spawn_options_and_down_msg) {
   tst<down_msg, detached, no_spawn_options>();
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

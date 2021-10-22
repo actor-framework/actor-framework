@@ -59,7 +59,7 @@ struct fixture {
     system.await_all_actors_done();
     context.~scoped_execution_unit();
     system.~actor_system();
-    CAF_CHECK_EQUAL(s_dtors.load(), s_ctors.load());
+    CHECK_EQ(s_dtors.load(), s_ctors.load());
   }
 };
 
@@ -70,7 +70,7 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(actor_pool_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(round_robin_actor_pool) {
   scoped_actor self{system};
@@ -82,28 +82,28 @@ CAF_TEST(round_robin_actor_pool) {
     self->request(pool, infinite, i, i)
       .receive(
         [&](int32_t res) {
-          CAF_CHECK_EQUAL(res, i + i);
+          CHECK_EQ(res, i + i);
           auto sender = actor_cast<strong_actor_ptr>(self->current_sender());
           CAF_REQUIRE(sender);
           workers.push_back(actor_cast<actor>(std::move(sender)));
         },
         HANDLE_ERROR);
   }
-  CAF_CHECK_EQUAL(workers.size(), 6u);
-  CAF_CHECK(std::unique(workers.begin(), workers.end()) == workers.end());
+  CHECK_EQ(workers.size(), 6u);
+  CHECK(std::unique(workers.begin(), workers.end()) == workers.end());
   self->request(pool, infinite, sys_atom_v, get_atom_v)
     .receive(
       [&](std::vector<actor>& ws) {
         std::sort(workers.begin(), workers.end());
         std::sort(ws.begin(), ws.end());
         CAF_REQUIRE_EQUAL(workers.size(), ws.size());
-        CAF_CHECK(std::equal(workers.begin(), workers.end(), ws.begin()));
+        CHECK(std::equal(workers.begin(), workers.end(), ws.begin()));
       },
       HANDLE_ERROR);
-  CAF_MESSAGE("await last worker");
+  MESSAGE("await last worker");
   anon_send_exit(workers.back(), exit_reason::user_shutdown);
   self->wait_for(workers.back());
-  CAF_MESSAGE("last worker shut down");
+  MESSAGE("last worker shut down");
   workers.pop_back();
   // poll actor pool up to 10 times or until it removes the failed worker
   bool success = false;
@@ -115,7 +115,7 @@ CAF_TEST(round_robin_actor_pool) {
           success = workers.size() == ws.size();
           if (success) {
             std::sort(ws.begin(), ws.end());
-            CAF_CHECK_EQUAL(workers, ws);
+            CHECK_EQ(workers, ws);
           } else {
             // wait a bit until polling again
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -124,7 +124,7 @@ CAF_TEST(round_robin_actor_pool) {
         HANDLE_ERROR);
   }
   CAF_REQUIRE_EQUAL(success, true);
-  CAF_MESSAGE("about to send exit to workers");
+  MESSAGE("about to send exit to workers");
   self->send_exit(pool, exit_reason::user_shutdown);
   self->wait_for(workers);
 }
@@ -135,18 +135,18 @@ CAF_TEST(broadcast_actor_pool) {
     return actor_pool::make(&context, 5, fixture::spawn_worker,
                             actor_pool::broadcast());
   };
-  CAF_CHECK_EQUAL(system.registry().running(), 1u);
+  CHECK_EQ(system.registry().running(), 1u);
   auto pool = actor_pool::make(&context, 5, spawn5, actor_pool::broadcast());
-  CAF_CHECK_EQUAL(system.registry().running(), 32u);
+  CHECK_EQ(system.registry().running(), 32u);
   self->send(pool, 1, 2);
   std::vector<int> results;
   int i = 0;
   self->receive_for(i, 25)([&](int res) { results.push_back(res); },
                            after(std::chrono::milliseconds(250)) >>
                              [] { CAF_ERROR("didn't receive a result"); });
-  CAF_CHECK_EQUAL(results.size(), 25u);
-  CAF_CHECK(std::all_of(results.begin(), results.end(),
-                        [](int res) { return res == 3; }));
+  CHECK_EQ(results.size(), 25u);
+  CHECK(std::all_of(results.begin(), results.end(),
+                    [](int res) { return res == 3; }));
   self->send_exit(pool, exit_reason::user_shutdown);
 }
 
@@ -155,9 +155,9 @@ CAF_TEST(random_actor_pool) {
   auto pool = actor_pool::make(&context, 5, spawn_worker, actor_pool::random());
   for (int i = 0; i < 5; ++i) {
     self->request(pool, std::chrono::milliseconds(250), 1, 2)
-      .receive([&](int res) { CAF_CHECK_EQUAL(res, 3); }, HANDLE_ERROR);
+      .receive([&](int res) { CHECK_EQ(res, 3); }, HANDLE_ERROR);
   }
   self->send_exit(pool, exit_reason::user_shutdown);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

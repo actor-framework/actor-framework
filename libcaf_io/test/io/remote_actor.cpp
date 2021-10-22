@@ -4,7 +4,7 @@
 
 #define CAF_SUITE io.remote_actor
 
-#include "caf/test/io_dsl.hpp"
+#include "io-test.hpp"
 
 #include <algorithm>
 #include <sstream>
@@ -30,15 +30,15 @@ using suite_state_ptr = std::shared_ptr<suite_state>;
 behavior ping(event_based_actor* self, suite_state_ptr ssp) {
   return {
     [=](ok_atom, const actor& pong) {
-      CAF_MESSAGE("received `ok_atom`");
+      MESSAGE("received `ok_atom`");
       ++ssp->pings;
       self->send(pong, ping_atom_v);
       self->become([=](pong_atom) {
-        CAF_MESSAGE("ping: received pong");
+        MESSAGE("ping: received pong");
         self->send(pong, ping_atom_v);
         if (++ssp->pings == 10) {
           self->quit();
-          CAF_MESSAGE("ping is done");
+          MESSAGE("ping is done");
         }
       });
     },
@@ -48,10 +48,10 @@ behavior ping(event_based_actor* self, suite_state_ptr ssp) {
 behavior pong(event_based_actor* self, suite_state_ptr ssp) {
   return {
     [=](ping_atom) -> pong_atom {
-      CAF_MESSAGE("pong: received ping");
+      MESSAGE("pong: received ping");
       if (++ssp->pongs == 10) {
         self->quit();
-        CAF_MESSAGE("pong is done");
+        MESSAGE("pong is done");
       }
       return pong_atom_v;
     },
@@ -72,7 +72,7 @@ fragile_mirror(fragile_mirror_actor::pointer self) {
 
 behavior linking_actor(event_based_actor* self,
                        const fragile_mirror_actor& buddy, suite_state_ptr ssp) {
-  CAF_MESSAGE("link to mirror and send dummy message");
+  MESSAGE("link to mirror and send dummy message");
   self->send(buddy, 42);
   self->link_to(buddy);
   self->set_exit_handler([=](exit_msg& msg) {
@@ -81,7 +81,7 @@ behavior linking_actor(event_based_actor* self,
     self->quit(std::move(msg.reason));
   });
   return {
-    [](int i) { CAF_CHECK_EQUAL(i, 42); },
+    [](int i) { CHECK_EQ(i, 42); },
   };
 }
 
@@ -96,12 +96,12 @@ struct fixture : point_to_point_fixture<> {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(dynamic_remote_actor_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(identity_semantics) {
   auto server = mars.sys.spawn(pong, ssp);
   auto port = mars.publish(server, 8080);
-  CAF_CHECK_EQUAL(port, 8080u);
+  CHECK_EQ(port, 8080u);
   auto same_server = earth.remote_actor("mars", 8080);
   CAF_REQUIRE_EQUAL(same_server, server);
   anon_send_exit(server, exit_reason::user_shutdown);
@@ -109,21 +109,21 @@ CAF_TEST(identity_semantics) {
 
 CAF_TEST(ping_pong) {
   auto port = mars.publish(mars.sys.spawn(pong, ssp), 8080);
-  CAF_CHECK_EQUAL(port, 8080u);
+  CHECK_EQ(port, 8080u);
   auto remote_pong = earth.remote_actor("mars", 8080);
   anon_send(earth.sys.spawn(ping, ssp), ok_atom_v, remote_pong);
   run();
-  CAF_CHECK_EQUAL(ssp->pings, 10);
-  CAF_CHECK_EQUAL(ssp->pongs, 10);
+  CHECK_EQ(ssp->pings, 10);
+  CHECK_EQ(ssp->pongs, 10);
 }
 
 CAF_TEST(remote_link) {
   auto port = mars.publish(mars.sys.spawn(fragile_mirror), 8080);
-  CAF_CHECK_EQUAL(port, 8080u);
+  CHECK_EQ(port, 8080u);
   auto mirror = earth.remote_actor<fragile_mirror_actor>("mars", 8080);
   earth.sys.spawn(linking_actor, mirror, ssp);
   run();
-  CAF_CHECK_EQUAL(ssp->linking_result, exit_reason::user_shutdown);
+  CHECK_EQ(ssp->linking_result, exit_reason::user_shutdown);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

@@ -6,7 +6,7 @@
 
 #include "caf/detail/type_id_list_builder.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 using namespace caf;
 
@@ -16,10 +16,10 @@ struct fixture {};
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(type_id_list_builder_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(todo) {
   // implement me
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

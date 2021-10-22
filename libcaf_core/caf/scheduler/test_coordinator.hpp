@@ -46,14 +46,18 @@ public:
   }
 
   /// Peeks into the mailbox of `next_job<scheduled_actor>()`.
-  template <class T>
-  const T& peek() {
+  template <class... Ts>
+  decltype(auto) peek() {
     auto ptr = next_job<scheduled_actor>().mailbox().peek();
     CAF_ASSERT(ptr != nullptr);
-    auto view = make_typed_message_view<T>(ptr->content());
-    if (!view)
-      CAF_RAISE_ERROR("Mailbox element does not match T.");
-    return get<0>(view);
+    if (auto view = make_const_typed_message_view<Ts...>(ptr->payload)) {
+      if constexpr (sizeof...(Ts) == 1)
+        return get<0>(view);
+      else
+        return to_tuple(view);
+    } else {
+      CAF_RAISE_ERROR("Mailbox element does not match.");
+    }
   }
 
   /// Puts `x` at the front of the queue unless it cannot be found in the queue.

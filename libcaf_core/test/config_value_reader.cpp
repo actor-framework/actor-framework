@@ -6,7 +6,7 @@
 
 #include "caf/config_value_reader.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include "inspector-tests.hpp"
 
@@ -66,14 +66,14 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(config_value_reader_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(readers deserialize builtin types from config values) {
   std::string value;
   auto& xs = x.as_dictionary();
   put(xs, "foo", "bar");
   deserialize(xs["foo"], value);
-  CAF_CHECK_EQUAL(value, "bar");
+  CHECK_EQ(value, "bar");
 }
 
 CAF_TEST(readers deserialize simple objects from configs) {
@@ -82,12 +82,12 @@ CAF_TEST(readers deserialize simple objects from configs) {
   put(xs, "bar", "world");
   foobar fb;
   deserialize(fb);
-  CAF_CHECK_EQUAL(fb.foo(), "hello"s);
-  CAF_CHECK_EQUAL(fb.bar(), "world"s);
+  CHECK_EQ(fb.foo(), "hello"s);
+  CHECK_EQ(fb.bar(), "world"s);
 }
 
 CAF_TEST(readers deserialize complex objects from configs) {
-  CAF_MESSAGE("fill a dictionary with data for a 'basics' object");
+  MESSAGE("fill a dictionary with data for a 'basics' object");
   auto& xs = x.as_dictionary();
   put(xs, "v1", settings{});
   put(xs, "v2", 42_i64);
@@ -108,26 +108,26 @@ CAF_TEST(readers deserialize complex objects from configs) {
   put(xs, "v7.two", i64{2});
   put(xs, "v7.three", i64{3});
   put(xs, "v8", i64_list());
-  CAF_MESSAGE("deserialize and verify the 'basics' object");
+  MESSAGE("deserialize and verify the 'basics' object");
   basics obj;
   deserialize(obj);
-  CAF_CHECK_EQUAL(obj.v2, 42);
-  CAF_CHECK_EQUAL(obj.v3[0], 1);
-  CAF_CHECK_EQUAL(obj.v3[1], 2);
-  CAF_CHECK_EQUAL(obj.v3[2], 3);
-  CAF_CHECK_EQUAL(obj.v3[3], 4);
-  CAF_CHECK_EQUAL(obj.v4[0], dummy_message{{2.0}});
-  CAF_CHECK_EQUAL(obj.v4[1], dummy_message{{"foobar"s}});
-  CAF_CHECK_EQUAL(obj.v5[0], i64{10});
-  CAF_CHECK_EQUAL(obj.v5[1], i64{20});
-  CAF_CHECK_EQUAL(obj.v6, std::make_tuple(int32_t{123}, dummy_message{{2.0}}));
-  CAF_CHECK_EQUAL(obj.v7["one"], 1);
-  CAF_CHECK_EQUAL(obj.v7["two"], 2);
-  CAF_CHECK_EQUAL(obj.v7["three"], 3);
+  CHECK_EQ(obj.v2, 42);
+  CHECK_EQ(obj.v3[0], 1);
+  CHECK_EQ(obj.v3[1], 2);
+  CHECK_EQ(obj.v3[2], 3);
+  CHECK_EQ(obj.v3[3], 4);
+  CHECK_EQ(obj.v4[0], dummy_message{{2.0}});
+  CHECK_EQ(obj.v4[1], dummy_message{{"foobar"s}});
+  CHECK_EQ(obj.v5[0], i64{10});
+  CHECK_EQ(obj.v5[1], i64{20});
+  CHECK_EQ(obj.v6, std::make_tuple(int32_t{123}, dummy_message{{2.0}}));
+  CHECK_EQ(obj.v7["one"], 1);
+  CHECK_EQ(obj.v7["two"], 2);
+  CHECK_EQ(obj.v7["three"], 3);
 }
 
 CAF_TEST(readers deserialize objects from the output of writers) {
-  CAF_MESSAGE("serialize the 'line' object");
+  MESSAGE("serialize the 'line' object");
   {
     line l{{10, 20, 30}, {70, 60, 50}};
     config_value tmp;
@@ -138,17 +138,17 @@ CAF_TEST(readers deserialize objects from the output of writers) {
       CAF_FAIL("writer failed to produce a dictionary");
     x.as_dictionary() = std::move(caf::get<settings>(tmp));
   }
-  CAF_MESSAGE("serialize and verify the 'line' object");
+  MESSAGE("serialize and verify the 'line' object");
   {
     line l{{0, 0, 0}, {0, 0, 0}};
     deserialize(l);
-    CAF_CHECK_EQUAL(l.p1.x, 10);
-    CAF_CHECK_EQUAL(l.p1.y, 20);
-    CAF_CHECK_EQUAL(l.p1.z, 30);
-    CAF_CHECK_EQUAL(l.p2.x, 70);
-    CAF_CHECK_EQUAL(l.p2.y, 60);
-    CAF_CHECK_EQUAL(l.p2.z, 50);
+    CHECK_EQ(l.p1.x, 10);
+    CHECK_EQ(l.p1.y, 20);
+    CHECK_EQ(l.p1.z, 30);
+    CHECK_EQ(l.p2.x, 70);
+    CHECK_EQ(l.p2.y, 60);
+    CHECK_EQ(l.p2.z, 50);
   }
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

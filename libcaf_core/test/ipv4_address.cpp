@@ -22,13 +22,13 @@ const auto addr = make_ipv4_address;
 
 CAF_TEST(constructing) {
   auto localhost = addr(127, 0, 0, 1);
-  CAF_CHECK_EQUAL(localhost.bits(), to_network_order(0x7F000001u));
+  CHECK_EQ(localhost.bits(), to_network_order(0x7F000001u));
   ipv4_address zero;
-  CAF_CHECK_EQUAL(zero.bits(), 0u);
+  CHECK_EQ(zero.bits(), 0u);
 }
 
 CAF_TEST(to string) {
-  CAF_CHECK_EQUAL(to_string(addr(255, 255, 255, 255)), "255.255.255.255");
+  CHECK_EQ(to_string(addr(255, 255, 255, 255)), "255.255.255.255");
 }
 
 CAF_TEST(from string - valid inputs) {
@@ -38,8 +38,8 @@ CAF_TEST(from string - valid inputs) {
       return err;
     return result;
   };
-  CAF_CHECK_EQUAL(from_string("136.12.12.12"), addr(136, 12, 12, 12));
-  CAF_CHECK_EQUAL(from_string("255.255.255.255"), addr(255, 255, 255, 255));
+  CHECK_EQ(from_string("136.12.12.12"), addr(136, 12, 12, 12));
+  CHECK_EQ(from_string("255.255.255.255"), addr(255, 255, 255, 255));
 }
 
 CAF_TEST(from string - invalid inputs) {
@@ -58,69 +58,68 @@ CAF_TEST(from string - invalid inputs) {
 }
 
 CAF_TEST(properties) {
-  CAF_CHECK_EQUAL(addr(127, 0, 0, 1).is_loopback(), true);
-  CAF_CHECK_EQUAL(addr(127, 0, 0, 254).is_loopback(), true);
-  CAF_CHECK_EQUAL(addr(127, 0, 1, 1).is_loopback(), true);
-  CAF_CHECK_EQUAL(addr(128, 0, 0, 1).is_loopback(), false);
+  CHECK_EQ(addr(127, 0, 0, 1).is_loopback(), true);
+  CHECK_EQ(addr(127, 0, 0, 254).is_loopback(), true);
+  CHECK_EQ(addr(127, 0, 1, 1).is_loopback(), true);
+  CHECK_EQ(addr(128, 0, 0, 1).is_loopback(), false);
   // Checks multicast according to BCP 51, Section 3.
-  CAF_CHECK_EQUAL(addr(223, 255, 255, 255).is_multicast(), false);
+  CHECK_EQ(addr(223, 255, 255, 255).is_multicast(), false);
   // 224.0.0.0 - 224.0.0.255       (/24)      Local Network Control Block
-  CAF_CHECK_EQUAL(addr(224, 0, 0, 1).is_multicast(), true);
-  CAF_CHECK_EQUAL(addr(224, 0, 0, 255).is_multicast(), true);
+  CHECK_EQ(addr(224, 0, 0, 1).is_multicast(), true);
+  CHECK_EQ(addr(224, 0, 0, 255).is_multicast(), true);
   // 224.0.1.0 - 224.0.1.255       (/24)      Internetwork Control Block
-  CAF_CHECK_EQUAL(addr(224, 0, 1, 0).is_multicast(), true);
-  CAF_CHECK_EQUAL(addr(224, 0, 1, 255).is_multicast(), true);
+  CHECK_EQ(addr(224, 0, 1, 0).is_multicast(), true);
+  CHECK_EQ(addr(224, 0, 1, 255).is_multicast(), true);
   // 224.0.2.0 - 224.0.255.255     (65024)    AD-HOC Block I
-  CAF_CHECK_EQUAL(addr(224, 0, 2, 0).is_multicast(), true);
-  CAF_CHECK_EQUAL(addr(224, 0, 255, 255).is_multicast(), true);
+  CHECK_EQ(addr(224, 0, 2, 0).is_multicast(), true);
+  CHECK_EQ(addr(224, 0, 255, 255).is_multicast(), true);
   // 224.1.0.0 - 224.1.255.255     (/16)      RESERVED
-  CAF_CHECK_EQUAL(addr(224, 1, 0, 0).is_multicast(), true);
-  CAF_CHECK_EQUAL(addr(224, 1, 255, 255).is_multicast(), true);
+  CHECK_EQ(addr(224, 1, 0, 0).is_multicast(), true);
+  CHECK_EQ(addr(224, 1, 255, 255).is_multicast(), true);
   // 224.2.0.0 - 224.2.255.255     (/16)      SDP/SAP Block
-  CAF_CHECK_EQUAL(addr(224, 2, 0, 0).is_multicast(), true);
-  CAF_CHECK_EQUAL(addr(224, 2, 255, 255).is_multicast(), true);
+  CHECK_EQ(addr(224, 2, 0, 0).is_multicast(), true);
+  CHECK_EQ(addr(224, 2, 255, 255).is_multicast(), true);
   // 224.3.0.0 - 224.4.255.255     (2 /16s)   AD-HOC Block II
-  CAF_CHECK_EQUAL(addr(224, 3, 0, 0).is_multicast(), true);
-  CAF_CHECK_EQUAL(addr(224, 4, 255, 255).is_multicast(), true);
+  CHECK_EQ(addr(224, 3, 0, 0).is_multicast(), true);
+  CHECK_EQ(addr(224, 4, 255, 255).is_multicast(), true);
   // 224.5.0.0 - 224.255.255.255   (251 /16s) RESERVED
-  CAF_CHECK_EQUAL(addr(224, 5, 0, 0).is_multicast(), true);
-  CAF_CHECK_EQUAL(addr(224, 255, 255, 255).is_multicast(), true);
+  CHECK_EQ(addr(224, 5, 0, 0).is_multicast(), true);
+  CHECK_EQ(addr(224, 255, 255, 255).is_multicast(), true);
   // 225.0.0.0 - 231.255.255.255   (7 /8s)    RESERVED
-  CAF_CHECK_EQUAL(addr(225, 0, 0, 0).is_multicast(), true);
-  CAF_CHECK_EQUAL(addr(231, 255, 255, 255).is_multicast(), true);
+  CHECK_EQ(addr(225, 0, 0, 0).is_multicast(), true);
+  CHECK_EQ(addr(231, 255, 255, 255).is_multicast(), true);
   // 232.0.0.0 - 232.255.255.255   (/8)       Source-Specific Multicast Block
-  CAF_CHECK_EQUAL(addr(232, 0, 0, 0).is_multicast(), true);
-  CAF_CHECK_EQUAL(addr(232, 255, 255, 255).is_multicast(), true);
+  CHECK_EQ(addr(232, 0, 0, 0).is_multicast(), true);
+  CHECK_EQ(addr(232, 255, 255, 255).is_multicast(), true);
   // 233.0.0.0 - 233.251.255.255   (16515072) GLOP Block
-  CAF_CHECK_EQUAL(addr(233, 0, 0, 0).is_multicast(), true);
-  CAF_CHECK_EQUAL(addr(233, 251, 255, 255).is_multicast(), true);
+  CHECK_EQ(addr(233, 0, 0, 0).is_multicast(), true);
+  CHECK_EQ(addr(233, 251, 255, 255).is_multicast(), true);
   // 233.252.0.0 - 233.255.255.255 (/14)      AD-HOC Block III
-  CAF_CHECK_EQUAL(addr(233, 252, 0, 0).is_multicast(), true);
-  CAF_CHECK_EQUAL(addr(233, 255, 255, 255).is_multicast(), true);
+  CHECK_EQ(addr(233, 252, 0, 0).is_multicast(), true);
+  CHECK_EQ(addr(233, 255, 255, 255).is_multicast(), true);
   // 234.0.0.0 - 238.255.255.255   (5 /8s)    RESERVED
-  CAF_CHECK_EQUAL(addr(234, 0, 0, 0).is_multicast(), true);
-  CAF_CHECK_EQUAL(addr(238, 255, 255, 255).is_multicast(), true);
+  CHECK_EQ(addr(234, 0, 0, 0).is_multicast(), true);
+  CHECK_EQ(addr(238, 255, 255, 255).is_multicast(), true);
   // 239.0.0.0 - 239.255.255.255   (/8)       Administratively Scoped Block
-  CAF_CHECK_EQUAL(addr(239, 0, 0, 0).is_multicast(), true);
-  CAF_CHECK_EQUAL(addr(239, 255, 255, 255).is_multicast(), true);
+  CHECK_EQ(addr(239, 0, 0, 0).is_multicast(), true);
+  CHECK_EQ(addr(239, 255, 255, 255).is_multicast(), true);
   // One above.
-  CAF_CHECK_EQUAL(addr(240, 0, 0, 0).is_multicast(), false);
+  CHECK_EQ(addr(240, 0, 0, 0).is_multicast(), false);
 }
 
 CAF_TEST(network addresses) {
   auto all1 = addr(255, 255, 255, 255);
-  CAF_CHECK_EQUAL(all1.network_address(0), addr(0x00, 0x00, 0x00, 0x00));
-  CAF_CHECK_EQUAL(all1.network_address(7), addr(0xFE, 0x00, 0x00, 0x00));
-  CAF_CHECK_EQUAL(all1.network_address(8), addr(0xFF, 0x00, 0x00, 0x00));
-  CAF_CHECK_EQUAL(all1.network_address(9), addr(0xFF, 0x80, 0x00, 0x00));
-  CAF_CHECK_EQUAL(all1.network_address(31), addr(0xFF, 0xFF, 0xFF, 0xFE));
-  CAF_CHECK_EQUAL(all1.network_address(32), addr(0xFF, 0xFF, 0xFF, 0xFF));
-  CAF_CHECK_EQUAL(all1.network_address(33), addr(0xFF, 0xFF, 0xFF, 0xFF));
+  CHECK_EQ(all1.network_address(0), addr(0x00, 0x00, 0x00, 0x00));
+  CHECK_EQ(all1.network_address(7), addr(0xFE, 0x00, 0x00, 0x00));
+  CHECK_EQ(all1.network_address(8), addr(0xFF, 0x00, 0x00, 0x00));
+  CHECK_EQ(all1.network_address(9), addr(0xFF, 0x80, 0x00, 0x00));
+  CHECK_EQ(all1.network_address(31), addr(0xFF, 0xFF, 0xFF, 0xFE));
+  CHECK_EQ(all1.network_address(32), addr(0xFF, 0xFF, 0xFF, 0xFF));
+  CHECK_EQ(all1.network_address(33), addr(0xFF, 0xFF, 0xFF, 0xFF));
 }
 
 CAF_TEST(operators) {
-  CAF_CHECK_EQUAL(addr(16, 0, 0, 8) & addr(255, 2, 4, 6), addr(16, 0, 0, 0));
-  CAF_CHECK_EQUAL(addr(16, 0, 0, 8) | addr(255, 2, 4, 6), addr(255, 2, 4, 14));
-  CAF_CHECK_EQUAL(addr(16, 0, 0, 8) ^ addr(255, 2, 4, 6), addr(239, 2, 4, 14));
+  CHECK_EQ(addr(16, 0, 0, 8) & addr(255, 2, 4, 6), addr(16, 0, 0, 0));
+  CHECK_EQ(addr(16, 0, 0, 8) | addr(255, 2, 4, 6), addr(255, 2, 4, 14));
+  CHECK_EQ(addr(16, 0, 0, 8) ^ addr(255, 2, 4, 6), addr(239, 2, 4, 14));
 }
-

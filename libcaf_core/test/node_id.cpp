@@ -6,7 +6,7 @@
 
 #include "caf/node_id.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
@@ -39,10 +39,10 @@ node_id roundtrip(node_id nid) {
 
 #define CHECK_PARSE_OK(str, ...)                                               \
   do {                                                                         \
-    CAF_CHECK(node_id::can_parse(str));                                        \
+    CHECK(node_id::can_parse(str));                                            \
     node_id nid;                                                               \
-    CAF_CHECK_EQUAL(parse(str, nid), none);                                    \
-    CAF_CHECK_EQUAL(nid, make_node_id(__VA_ARGS__));                           \
+    CHECK_EQ(parse(str, nid), none);                                           \
+    CHECK_EQ(nid, make_node_id(__VA_ARGS__));                                  \
   } while (false)
 
 CAF_TEST(node IDs are convertible from string) {
@@ -55,7 +55,7 @@ CAF_TEST(node IDs are convertible from string) {
   CHECK_PARSE_OK("ip://foo:8080", uri_id);
 }
 
-#define CHECK_PARSE_FAIL(str) CAF_CHECK(!node_id::can_parse(str))
+#define CHECK_PARSE_FAIL(str) CHECK(!node_id::can_parse(str))
 
 CAF_TEST(node IDs reject malformed strings) {
   // not URIs
@@ -66,20 +66,20 @@ CAF_TEST(node IDs reject malformed strings) {
 }
 
 CAF_TEST(node IDs are serializable) {
-  CAF_MESSAGE("empty node IDs remain empty");
+  MESSAGE("empty node IDs remain empty");
   {
     node_id nil_id;
-    CAF_CHECK_EQUAL(nil_id, roundtrip(nil_id));
+    CHECK_EQ(nil_id, roundtrip(nil_id));
   }
-  CAF_MESSAGE("hash-based node IDs remain intact");
+  MESSAGE("hash-based node IDs remain intact");
   {
     auto tmp = make_node_id(42, "0102030405060708090A0B0C0D0E0F1011121314");
     auto hash_based_id = unbox(tmp);
-    CAF_CHECK_EQUAL(hash_based_id, roundtrip(hash_based_id));
+    CHECK_EQ(hash_based_id, roundtrip(hash_based_id));
   }
-  CAF_MESSAGE("URI-based node IDs remain intact");
+  MESSAGE("URI-based node IDs remain intact");
   {
     auto uri_based_id = make_node_id(unbox(make_uri("foo:bar")));
-    CAF_CHECK_EQUAL(uri_based_id, roundtrip(uri_based_id));
+    CHECK_EQ(uri_based_id, roundtrip(uri_based_id));
   }
 }

@@ -6,7 +6,7 @@
 
 #include "caf/detail/parser/read_config.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include "caf/config_value.hpp"
 #include "caf/parser_state.hpp"
@@ -70,8 +70,8 @@ struct fixture {
     string_parser_state res{str.begin(), str.end()};
     detail::parser::read_config(res, f);
     if ((res.code == pec::success) != expect_success) {
-      CAF_MESSAGE("unexpected parser result state: " << res.code);
-      CAF_MESSAGE("input remainder: " << std::string(res.i, res.e));
+      MESSAGE("unexpected parser result state: " << res.code);
+      MESSAGE("input remainder: " << std::string(res.i, res.e));
     }
     return std::move(f.log);
   }
@@ -213,11 +213,11 @@ const auto conf1_log = make_log(
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(read_config_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(read_config feeds into a consumer) {
-  CAF_CHECK_EQUAL(parse(conf0), conf0_log);
-  CAF_CHECK_EQUAL(parse(conf1), conf1_log);
+  CHECK_EQ(parse(conf0), conf0_log);
+  CHECK_EQ(parse(conf1), conf1_log);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

@@ -21,34 +21,34 @@ behavior dummy() {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(actor_registry_tests, test_coordinator_fixture<>)
+BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
 
 CAF_TEST(erase) {
   // CAF registers a few actors by itself.
   auto baseline = sys.registry().named_actors().size();
   sys.registry().put("foo", sys.spawn(dummy));
-  CAF_CHECK_EQUAL(sys.registry().named_actors().size(), baseline + 1u);
+  CHECK_EQ(sys.registry().named_actors().size(), baseline + 1u);
   self->send(sys.registry().get<actor>("foo"), 42);
   run();
   expect((int), from(_).to(self).with(42));
   sys.registry().erase("foo");
-  CAF_CHECK_EQUAL(sys.registry().named_actors().size(), baseline);
+  CHECK_EQ(sys.registry().named_actors().size(), baseline);
 }
 
 CAF_TEST(serialization roundtrips go through the registry) {
   auto hdl = sys.spawn(dummy);
-  CAF_MESSAGE("hdl.id: " << hdl->id());
+  MESSAGE("hdl.id: " << hdl->id());
   byte_buffer buf;
   binary_serializer sink{sys, buf};
   if (!sink.apply(hdl))
     CAF_FAIL("serialization failed: " << sink.get_error());
-  CAF_MESSAGE("buf: " << buf);
+  MESSAGE("buf: " << buf);
   actor hdl2;
   binary_deserializer source{sys, buf};
   if (!source.apply(hdl2))
     CAF_FAIL("deserialization failed: " << source.get_error());
-  CAF_CHECK_EQUAL(hdl, hdl2);
+  CHECK_EQ(hdl, hdl2);
   anon_send_exit(hdl, exit_reason::user_shutdown);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

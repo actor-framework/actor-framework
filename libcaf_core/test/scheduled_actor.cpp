@@ -6,7 +6,7 @@
 
 #include "caf/scheduled_actor.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 using namespace caf;
 

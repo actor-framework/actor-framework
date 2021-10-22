@@ -62,7 +62,7 @@ TESTEE(log_producer) {
         [=](buf& xs) { xs = make_log(lvl); },
         // get next element
         [](buf& xs, downstream<value_type>& out, size_t num) {
-          CAF_MESSAGE("push " << num << " messages downstream");
+          MESSAGE("push " << num << " messages downstream");
           auto n = std::min(num, xs.size());
           for (size_t i = 0; i < n; ++i)
             out.push(xs[i]);
@@ -71,7 +71,7 @@ TESTEE(log_producer) {
         // check whether we reached the end
         [=](const buf& xs) {
           if (xs.empty()) {
-            CAF_MESSAGE(self->name() << " is done");
+            MESSAGE(self->name() << " is done");
             return true;
           }
           return false;
@@ -102,12 +102,12 @@ TESTEE(log_dispatcher) {
       out.push(std::move(x));
     },
     // cleanup
-    [=](unit_t&, const error&) { CAF_MESSAGE(self->name() << " is done"); },
+    [=](unit_t&, const error&) { MESSAGE(self->name() << " is done"); },
     policy::arg<manager_type>::value);
   return {
     [=](join_atom, level lvl) {
       auto& stg = self->state.stage;
-      CAF_MESSAGE("received 'join' request");
+      MESSAGE("received 'join' request");
       auto result = stg->add_outbound_path();
       stg->out().set_filter(result, lvl);
       return result;
@@ -138,9 +138,7 @@ TESTEE(log_consumer) {
           self->state.log.emplace_back(std::move(x));
         },
         // cleanup and produce result message
-        [=](unit_t&, const error&) {
-          CAF_MESSAGE(self->name() << " is done");
-        });
+        [=](unit_t&, const error&) { MESSAGE(self->name() << " is done"); });
     },
   };
 }
@@ -149,28 +147,26 @@ TESTEE(log_consumer) {
 
 // -- unit tests ---------------------------------------------------------------
 
-CAF_TEST_FIXTURE_SCOPE(selective_streaming_tests, test_coordinator_fixture<>)
+BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
 
 CAF_TEST(select_all) {
   auto src = sys.spawn(log_producer);
   auto snk = sys.spawn(log_consumer);
-  CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
-  CAF_MESSAGE("initiate stream handshake");
+  MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
+  MESSAGE("initiate stream handshake");
   self->send(snk * src, level::all);
   run();
-  CAF_CHECK_EQUAL(deref<log_consumer_actor>(snk).state.log,
-                  make_log(level::all));
+  CHECK_EQ(deref<log_consumer_actor>(snk).state.log, make_log(level::all));
 }
 
 CAF_TEST(select_trace) {
   auto src = sys.spawn(log_producer);
   auto snk = sys.spawn(log_consumer);
-  CAF_MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
-  CAF_MESSAGE("initiate stream handshake");
+  MESSAGE(CAF_ARG(self) << CAF_ARG(src) << CAF_ARG(snk));
+  MESSAGE("initiate stream handshake");
   self->send(snk * src, level::trace);
   run();
-  CAF_CHECK_EQUAL(deref<log_consumer_actor>(snk).state.log,
-                  make_log(level::trace));
+  CHECK_EQ(deref<log_consumer_actor>(snk).state.log, make_log(level::trace));
 }
 
 CAF_TEST(forking) {
@@ -187,11 +183,9 @@ CAF_TEST(forking) {
   run_until([&] {
     return st.stage->inbound_paths().empty() && st.stage->out().clean();
   });
-  CAF_CHECK_EQUAL(deref<log_consumer_actor>(snk1).state.log,
-                  make_log(level::trace));
-  CAF_CHECK_EQUAL(deref<log_consumer_actor>(snk2).state.log,
-                  make_log(level::error));
+  CHECK_EQ(deref<log_consumer_actor>(snk1).state.log, make_log(level::trace));
+  CHECK_EQ(deref<log_consumer_actor>(snk2).state.log, make_log(level::error));
   self->send(stg, exit_reason::kill);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

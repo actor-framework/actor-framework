@@ -5,10 +5,34 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Added
+
+- When adding CAF with exceptions enabled (default), the unit test framework now
+  offers new check macros:
+  - `CAF_CHECK_NOTHROW(expr)`
+  - `CAF_CHECK_THROWS_AS(expr, type)`
+  - `CAF_CHECK_THROWS_WITH(expr, str)`
+  - `CAF_CHECK_THROWS_WITH_AS(expr, str, type)`
+
+### Fixed
+
+- The DSL function `run_until` miscounted the number of executed events, also
+  causing `run_once` to report a wrong value. Both functions now return the
+  correct result.
+- Using `allow(...).with(...)` in unit tests without a matching message crashed
+  the program. By adding a missing NULL-check, `allow` is now always safe to
+  use.
+
 ### Changed
 
 - Since support of Qt 5 expired, we have ported the Qt examples to version 6.
   Hence, building the Qt examples now requires Qt in version 6.
+- When compiling CAF with exceptions enabled (default), `REQUIRE*` macros,
+  `expect` and `disallow` no longer call `abort()`. Instead, they throw an
+  exception that only stops the current test instead of stopping the entire test
+  program.
+- Reporting of several unit test macros has been improved to show correct line
+  numbers and provide better diagnostic of test errors.
 
 ## [0.18.5] - 2021-07-16
 

@@ -69,15 +69,15 @@ struct fixture : point_to_point_fixture<test_coordinator_fixture<config>> {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(dynamic_remote_actor_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(nodes can spawn actors remotely) {
   loop_after_next_enqueue(mars);
-  CAF_CHECK_EQUAL(unbox(mars.mm.open(8080)), 8080);
+  CHECK_EQ(unbox(mars.mm.open(8080)), 8080);
   loop_after_next_enqueue(earth);
   auto nid = unbox(earth.mm.connect("mars", 8080));
   CAF_REQUIRE_EQUAL(nid, mars.sys.node());
-  CAF_MESSAGE("remote_spawn perform type checks on the handle");
+  MESSAGE("remote_spawn perform type checks on the handle");
   loop_after_next_enqueue(earth);
   auto calc = earth.mm.remote_spawn<calculator>(nid, "calculator",
                                                 make_message());
@@ -85,7 +85,7 @@ CAF_TEST(nodes can spawn actors remotely) {
   loop_after_next_enqueue(earth);
   calc = earth.mm.remote_spawn<calculator>(nid, "typed_calculator",
                                            make_message());
-  CAF_MESSAGE("remotely spawned actors respond to messages");
+  MESSAGE("remotely spawned actors respond to messages");
   earth.self->send(*calc, add_atom_v, 10, 20);
   run();
   expect_on(earth, (int), from(*calc).to(earth.self).with(30));
@@ -93,7 +93,7 @@ CAF_TEST(nodes can spawn actors remotely) {
   run();
   expect_on(earth, (int), from(*calc).to(earth.self).with(-10));
   anon_send_exit(*calc, exit_reason::user_shutdown);
-  CAF_MESSAGE("remote_spawn works with class-based actors as well");
+  MESSAGE("remote_spawn works with class-based actors as well");
   loop_after_next_enqueue(earth);
   auto dyn_calc = earth.mm.remote_spawn<actor>(nid, "calculator-class",
                                                make_message());
@@ -104,4 +104,4 @@ CAF_TEST(nodes can spawn actors remotely) {
   anon_send_exit(*dyn_calc, exit_reason::user_shutdown);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

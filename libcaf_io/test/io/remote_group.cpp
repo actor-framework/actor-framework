@@ -61,51 +61,51 @@ struct fixture : point_to_point_fixture<test_coordinator_fixture<config>> {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(dynamic_remote_group_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(publish_local_groups) {
   loop_after_next_enqueue(mars);
-  CAF_CHECK_EQUAL(mars.sys.middleman().publish_local_groups(port), port);
+  CHECK_EQ(mars.sys.middleman().publish_local_groups(port), port);
 }
 
 CAF_TEST(connecting to remote group) {
-  CAF_MESSAGE("publish local groups on mars");
+  MESSAGE("publish local groups on mars");
   loop_after_next_enqueue(mars);
-  CAF_CHECK_EQUAL(mars.sys.middleman().publish_local_groups(port), port);
-  CAF_MESSAGE("call remote_group on earth");
+  CHECK_EQ(mars.sys.middleman().publish_local_groups(port), port);
+  MESSAGE("call remote_group on earth");
   loop_after_next_enqueue(earth);
   auto grp = unbox(earth.mm.remote_group(group_name, server, port));
   CAF_REQUIRE(grp != nullptr);
-  CAF_CHECK_EQUAL(grp->get()->identifier(), group_name);
+  CHECK_EQ(grp->get()->identifier(), group_name);
 }
 
 CAF_TEST(message transmission) {
-  CAF_MESSAGE("spawn 5 receivers on mars");
+  MESSAGE("spawn 5 receivers on mars");
   auto mars_grp = mars.sys.groups().get_local(group_name);
   spawn_receivers(mars, mars_grp, 5u);
-  CAF_MESSAGE("publish local groups on mars");
+  MESSAGE("publish local groups on mars");
   loop_after_next_enqueue(mars);
-  CAF_CHECK_EQUAL(mars.sys.middleman().publish_local_groups(port), port);
-  CAF_MESSAGE("call remote_group on earth");
+  CHECK_EQ(mars.sys.middleman().publish_local_groups(port), port);
+  MESSAGE("call remote_group on earth");
   loop_after_next_enqueue(earth);
   auto earth_grp = unbox(earth.mm.remote_group(group_name, server, port));
-  CAF_MESSAGE("spawn 5 more receivers on earth");
+  MESSAGE("spawn 5 more receivers on earth");
   spawn_receivers(earth, earth_grp, 5u);
   exec_all();
-  CAF_MESSAGE("send message on mars and expect 10 handled messages total");
+  MESSAGE("send message on mars and expect 10 handled messages total");
   {
     received_messages = 0u;
     mars.self->send(mars_grp, ok_atom_v);
     exec_all();
-    CAF_CHECK_EQUAL(received_messages, 10u);
+    CHECK_EQ(received_messages, 10u);
   }
-  CAF_MESSAGE("send message on earth and again expect 10 handled messages");
+  MESSAGE("send message on earth and again expect 10 handled messages");
   {
     received_messages = 0u;
     earth.self->send(earth_grp, ok_atom_v);
     exec_all();
-    CAF_CHECK_EQUAL(received_messages, 10u);
+    CHECK_EQ(received_messages, 10u);
   }
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

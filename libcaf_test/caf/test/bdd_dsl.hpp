@@ -37,6 +37,16 @@
 #define CHECK_GT(lhs, rhs) CAF_CHECK_GREATER(lhs, rhs)
 #define CHECK_GE(lhs, rhs) CAF_CHECK_GREATER_OR_EQUAL(lhs, rhs)
 
+#ifdef CAF_ENABLE_EXCEPTIONS
+
+#  define CHECK_NOTHROW(expr) CAF_CHECK_NOTHROW(expr)
+#  define CHECK_THROWS_AS(expr, type) CAF_CHECK_THROWS_AS(expr, type)
+#  define CHECK_THROWS_WITH(expr, msg) CAF_CHECK_THROWS_WITH(expr, msg)
+#  define CHECK_THROWS_WITH_AS(expr, msg, type)                                \
+    CAF_CHECK_THROWS_WITH_AS(expr, msg, type)
+
+#endif // CAF_ENABLE_EXCEPTIONS
+
 #define REQUIRE(what) CAF_REQUIRE(what)
 #define REQUIRE_EQ(lhs, rhs) CAF_REQUIRE_EQUAL(lhs, rhs)
 #define REQUIRE_NE(lhs, rhs) CAF_REQUIRE_NOT_EQUAL(lhs, rhs)

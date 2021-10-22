@@ -13,40 +13,24 @@ using namespace caf;
 namespace {
 
 behavior multiplier(int x) {
-  return {
-    [=](int y) {
-      return x * y;
-    },
-    [=](int y1, int y2) {
-      return x * y1 * y2;
-    }
-  };
+  return {[=](int y) { return x * y; },
+          [=](int y1, int y2) { return x * y1 * y2; }};
 }
 
 behavior adder(int x) {
-  return {
-    [=](int y) {
-      return x + y;
-    },
-    [=](int y1, int y2) {
-      return x + y1 + y2;
-    }
-  };
+  return {[=](int y) { return x + y; },
+          [=](int y1, int y2) { return x + y1 + y2; }};
 }
 
 behavior float_adder(float x) {
-  return {
-    [=](float y) {
-      return x + y;
-    }
-  };
+  return {[=](float y) { return x + y; }};
 }
 
 using fixture = test_coordinator_fixture<>;
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(composition_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(depth2) {
   auto stage1 = sys.spawn(multiplier, 4);
@@ -79,4 +63,4 @@ CAF_TEST(depth2_type_mismatch) {
   expect((error), from(stage2).to(self).with(sec::unexpected_message));
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

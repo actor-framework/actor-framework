@@ -94,7 +94,7 @@ behavior requester_v2(event_based_actor* self, actor worker) {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(response_promise_tests, test_coordinator_fixture<>)
+BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
 
 SCENARIO("response promises allow delaying of response messages") {
   auto adder_hdl = sys.spawn(adder);
@@ -169,4 +169,4 @@ SCENARIO("response promises allow delegation") {
   }
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

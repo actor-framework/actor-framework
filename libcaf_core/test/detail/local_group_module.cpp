@@ -48,78 +48,78 @@ struct fixture : test_coordinator_fixture<> {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(group_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(local groups are singletons) {
   auto ptr1 = unbox(uut->get("test"));
   auto ptr2 = unbox(uut->get("test"));
-  CAF_CHECK_EQUAL(ptr1.get(), ptr2.get());
+  CHECK_EQ(ptr1.get(), ptr2.get());
   auto ptr3 = sys.groups().get_local("test");
-  CAF_CHECK_EQUAL(ptr1.get(), ptr3.get());
+  CHECK_EQ(ptr1.get(), ptr3.get());
 }
 
 CAF_TEST(local groups forward messages to all subscribers) {
-  CAF_MESSAGE("Given two subscribers to the group 'test'.");
+  MESSAGE("Given two subscribers to the group 'test'.");
   auto grp = unbox(uut->get("test"));
   auto t1 = sys.spawn_in_group(grp, testee_impl);
   auto t2 = sys.spawn_in_group(grp, testee_impl);
   { // Subtest.
-    CAF_MESSAGE("When an actors sends to the group.");
+    MESSAGE("When an actors sends to the group.");
     self->send(grp, put_atom_v, 42);
-    CAF_MESSAGE("Then both subscribers receive the message.");
+    MESSAGE("Then both subscribers receive the message.");
     expect((put_atom, int), from(self).to(t1).with(_, 42));
     expect((put_atom, int), from(self).to(t2).with(_, 42));
   }
   { // Subtest.
-    CAF_MESSAGE("When an actors leaves the group.");
-    CAF_MESSAGE("And an actors sends to the group.");
+    MESSAGE("When an actors leaves the group.");
+    MESSAGE("And an actors sends to the group.");
     grp->unsubscribe(actor_cast<actor_control_block*>(t1));
     self->send(grp, put_atom_v, 23);
-    CAF_MESSAGE("Then only one remaining actor receives the message.");
+    MESSAGE("Then only one remaining actor receives the message.");
     disallow((put_atom, int), from(self).to(t1).with(_, 23));
     expect((put_atom, int), from(self).to(t2).with(_, 23));
   }
 }
 
 CAF_TEST(local group intermediaries manage groups) {
-  CAF_MESSAGE("Given two subscribers to the group 'test'.");
+  MESSAGE("Given two subscribers to the group 'test'.");
   auto grp = unbox(uut->get("test"));
   auto intermediary = grp.get()->intermediary();
   auto t1 = sys.spawn_in_group(grp, testee_impl);
   auto t2 = sys.spawn_in_group(grp, testee_impl);
   { // Subtest.
-    CAF_MESSAGE("When an actors sends to the group's intermediary.");
+    MESSAGE("When an actors sends to the group's intermediary.");
     inject((forward_atom, message),
            from(self)
              .to(intermediary)
              .with(forward_atom_v, make_message(put_atom_v, 42)));
-    CAF_MESSAGE("Then both subscribers receive the message.");
+    MESSAGE("Then both subscribers receive the message.");
     expect((put_atom, int), from(self).to(t1).with(_, 42));
     expect((put_atom, int), from(self).to(t2).with(_, 42));
   }
   auto t3 = sys.spawn(testee_impl);
   { // Subtest.
-    CAF_MESSAGE("When an actor sends 'join' to the group's intermediary.");
-    CAF_MESSAGE("And an actors sends to the group's intermediary.");
+    MESSAGE("When an actor sends 'join' to the group's intermediary.");
+    MESSAGE("And an actors sends to the group's intermediary.");
     inject((join_atom, strong_actor_ptr),
            from(self)
              .to(intermediary)
              .with(join_atom_v, actor_cast<strong_actor_ptr>(t3)));
     self->send(grp, put_atom_v, 23);
-    CAF_MESSAGE("Then all three subscribers receive the message.");
+    MESSAGE("Then all three subscribers receive the message.");
     expect((put_atom, int), from(self).to(t1).with(_, 23));
     expect((put_atom, int), from(self).to(t2).with(_, 23));
     expect((put_atom, int), from(self).to(t3).with(_, 23));
   }
   { // Subtest.
-    CAF_MESSAGE("When an actor sends 'leave' to the group's intermediary.");
-    CAF_MESSAGE("And an actors sends to the group's intermediary.");
+    MESSAGE("When an actor sends 'leave' to the group's intermediary.");
+    MESSAGE("And an actors sends to the group's intermediary.");
     inject((leave_atom, strong_actor_ptr),
            from(self)
              .to(intermediary)
              .with(leave_atom_v, actor_cast<strong_actor_ptr>(t3)));
     self->send(grp, put_atom_v, 37337);
-    CAF_MESSAGE("Then only the two remaining subscribers receive the message.");
+    MESSAGE("Then only the two remaining subscribers receive the message.");
     self->send(grp, put_atom_v, 37337);
     expect((put_atom, int), from(self).to(t1).with(_, 37337));
     expect((put_atom, int), from(self).to(t2).with(_, 37337));
@@ -127,4 +127,4 @@ CAF_TEST(local group intermediaries manage groups) {
   }
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

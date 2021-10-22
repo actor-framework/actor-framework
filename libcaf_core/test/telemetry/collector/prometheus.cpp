@@ -6,7 +6,7 @@
 
 #include "caf/telemetry/collector/prometheus.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include "caf/telemetry/metric_registry.hpp"
 #include "caf/telemetry/metric_type.hpp"
@@ -26,7 +26,7 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(prometheus_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(the Prometheus collector generates text output) {
   auto fb = registry.gauge_family("foo", "bar", {},
@@ -46,8 +46,8 @@ CAF_TEST(the Prometheus collector generates text output) {
   h->observe(3);
   h->observe(4);
   h->observe(7);
-  CAF_CHECK_EQUAL(exporter.collect_from(registry, timestamp{42s}),
-                  R"(# HELP foo_bar_seconds Some value without labels.
+  CHECK_EQ(exporter.collect_from(registry, timestamp{42s}),
+           R"(# HELP foo_bar_seconds Some value without labels.
 # TYPE foo_bar_seconds gauge
 foo_bar_seconds 123 42000
 # HELP some_value_total Some (total) value with two labels.
@@ -65,14 +65,14 @@ some_request_duration_seconds_bucket{x="get",le="+Inf"} 3 42000
 some_request_duration_seconds_sum{x="get"} 14 42000
 some_request_duration_seconds_count{x="get"} 3 42000
 )"_sv);
-  CAF_MESSAGE("multiple runs with the same timestamp generate the same output");
+  MESSAGE("multiple runs with the same timestamp generate the same output");
   auto ts = make_timestamp();
   std::string res1;
   {
     auto buf = exporter.collect_from(registry, ts);
     res1.assign(buf.begin(), buf.end());
   }
-  CAF_CHECK_EQUAL(res1, exporter.collect_from(registry, ts));
+  CHECK_EQ(res1, exporter.collect_from(registry, ts));
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

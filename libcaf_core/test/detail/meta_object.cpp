@@ -35,15 +35,15 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(meta_object_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(meta objects allow construction and destruction of objects) {
   auto meta_i32_wrapper = make_meta_object<i32_wrapper>("i32_wrapper");
   std::aligned_storage_t<sizeof(i32_wrapper), alignof(i32_wrapper)> storage;
   meta_i32_wrapper.default_construct(&storage);
-  CAF_CHECK_EQUAL(i32_wrapper::instances, 1u);
+  CHECK_EQ(i32_wrapper::instances, 1u);
   meta_i32_wrapper.destroy(&storage);
-  CAF_CHECK_EQUAL(i32_wrapper::instances, 0u);
+  CHECK_EQ(i32_wrapper::instances, 0u);
 }
 
 CAF_TEST(meta objects allow serialization of objects) {
@@ -52,32 +52,32 @@ CAF_TEST(meta objects allow serialization of objects) {
   std::aligned_storage_t<sizeof(i32_wrapper), alignof(i32_wrapper)> storage;
   binary_serializer sink{nullptr, buf};
   meta_i32_wrapper.default_construct(&storage);
-  CAF_CHECK_EQUAL(i32_wrapper::instances, 1u);
-  CAF_CHECK(meta_i32_wrapper.save_binary(sink, &storage));
+  CHECK_EQ(i32_wrapper::instances, 1u);
+  CHECK(meta_i32_wrapper.save_binary(sink, &storage));
   i32_wrapper copy;
-  CAF_CHECK_EQUAL(i32_wrapper::instances, 2u);
+  CHECK_EQ(i32_wrapper::instances, 2u);
   copy.value = 42;
   binary_deserializer source{nullptr, buf};
-  CAF_CHECK(meta_i32_wrapper.load_binary(source, &copy));
-  CAF_CHECK_EQUAL(copy.value, 0);
+  CHECK(meta_i32_wrapper.load_binary(source, &copy));
+  CHECK_EQ(copy.value, 0);
   meta_i32_wrapper.destroy(&storage);
-  CAF_CHECK_EQUAL(i32_wrapper::instances, 1u);
+  CHECK_EQ(i32_wrapper::instances, 1u);
 }
 
 CAF_TEST(init_global_meta_objects takes care of creating a meta object table) {
   auto xs = global_meta_objects();
   CAF_REQUIRE_EQUAL(xs.size(), caf::id_block::core_test::end);
-  CAF_CHECK_EQUAL(type_name_by_id_v<type_id_v<i32_wrapper>>, "i32_wrapper"s);
-  CAF_CHECK_EQUAL(type_name_by_id_v<type_id_v<i64_wrapper>>, "i64_wrapper"s);
-  CAF_CHECK_EQUAL(xs[type_id_v<i32_wrapper>].type_name, "i32_wrapper"s);
-  CAF_CHECK_EQUAL(xs[type_id_v<i64_wrapper>].type_name, "i64_wrapper"s);
-  CAF_MESSAGE("calling init_global_meta_objects again is a no-op");
+  CHECK_EQ(type_name_by_id_v<type_id_v<i32_wrapper>>, "i32_wrapper"s);
+  CHECK_EQ(type_name_by_id_v<type_id_v<i64_wrapper>>, "i64_wrapper"s);
+  CHECK_EQ(xs[type_id_v<i32_wrapper>].type_name, "i32_wrapper"s);
+  CHECK_EQ(xs[type_id_v<i64_wrapper>].type_name, "i64_wrapper"s);
+  MESSAGE("calling init_global_meta_objects again is a no-op");
   init_global_meta_objects<id_block::core_test>();
   auto ys = global_meta_objects();
   auto same = [](const auto& x, const auto& y) {
     return x.type_name == y.type_name;
   };
-  CAF_CHECK(std::equal(xs.begin(), xs.end(), ys.begin(), ys.end(), same));
+  CHECK(std::equal(xs.begin(), xs.end(), ys.begin(), ys.end(), same));
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

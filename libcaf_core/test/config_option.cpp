@@ -10,9 +10,9 @@
 
 #include <sstream>
 
-#include "caf/make_config_option.hpp"
 #include "caf/config_value.hpp"
 #include "caf/expected.hpp"
+#include "caf/make_config_option.hpp"
 
 using namespace caf;
 
@@ -173,12 +173,12 @@ constexpr string_view category = "category";
 constexpr string_view name = "name";
 constexpr string_view explanation = "explanation";
 
-template<class T>
+template <class T>
 constexpr int64_t overflow() {
   return static_cast<int64_t>(std::numeric_limits<T>::max()) + 1;
 }
 
-template<class T>
+template <class T>
 constexpr int64_t underflow() {
   return static_cast<int64_t>(std::numeric_limits<T>::min()) - 1;
 }
@@ -201,9 +201,9 @@ void check_integer_options(std::true_type) {
   // Run tests for positive integers.
   T xzero = 0;
   T xmax = std::numeric_limits<T>::max();
-  CAF_CHECK_EQUAL(read<T>(to_string(xzero)), xzero);
-  CAF_CHECK_EQUAL(read<T>(to_string(xmax)), xmax);
-  CAF_CHECK_EQUAL(read<T>(to_string(overflow<T>())), none);
+  CHECK_EQ(read<T>(to_string(xzero)), xzero);
+  CHECK_EQ(read<T>(to_string(xmax)), xmax);
+  CHECK_EQ(read<T>(to_string(overflow<T>())), none);
 }
 
 // Signed integers.
@@ -215,8 +215,8 @@ void check_integer_options(std::false_type) {
   check_integer_options<T>(tk);
   // Run tests for negative integers.
   auto xmin = std::numeric_limits<T>::min();
-  CAF_CHECK_EQUAL(read<T>(to_string(xmin)), xmin);
-  CAF_CHECK_EQUAL(read<T>(to_string(underflow<T>())), none);
+  CHECK_EQ(read<T>(to_string(xmin)), xmin);
+  CHECK_EQ(read<T>(to_string(underflow<T>())), none);
 }
 
 // only works with an integral types and double
@@ -227,11 +227,11 @@ void check_integer_options() {
 }
 
 void compare(const config_option& lhs, const config_option& rhs) {
-  CAF_CHECK_EQUAL(lhs.category(), rhs.category());
-  CAF_CHECK_EQUAL(lhs.long_name(), rhs.long_name());
-  CAF_CHECK_EQUAL(lhs.short_names(), rhs.short_names());
-  CAF_CHECK_EQUAL(lhs.description(), rhs.description());
-  CAF_CHECK_EQUAL(lhs.full_name(), rhs.full_name());
+  CHECK_EQ(lhs.category(), rhs.category());
+  CHECK_EQ(lhs.long_name(), rhs.long_name());
+  CHECK_EQ(lhs.short_names(), rhs.short_names());
+  CHECK_EQ(lhs.description(), rhs.description());
+  CHECK_EQ(lhs.full_name(), rhs.full_name());
 }
 
 CAF_TEST(copy constructor) {
@@ -248,10 +248,10 @@ CAF_TEST(copy assignment) {
 }
 
 CAF_TEST(type_bool) {
-  CAF_CHECK_EQUAL(read<bool>("true"), true);
-  CAF_CHECK_EQUAL(read<bool>("false"), false);
-  CAF_CHECK_EQUAL(read<bool>("0"), none);
-  CAF_CHECK_EQUAL(read<bool>("1"), none);
+  CHECK_EQ(read<bool>("true"), true);
+  CHECK_EQ(read<bool>("false"), false);
+  CHECK_EQ(read<bool>("0"), none);
+  CHECK_EQ(read<bool>("1"), none);
 }
 
 CAF_TEST(type int8_t) {
@@ -279,74 +279,74 @@ CAF_TEST(type uint32_t) {
 }
 
 CAF_TEST(type uint64_t) {
-  CAF_CHECK_EQUAL(unbox(read<uint64_t>("0")), 0u);
-  CAF_CHECK_EQUAL(read<uint64_t>("-1"), none);
+  CHECK_EQ(unbox(read<uint64_t>("0")), 0u);
+  CHECK_EQ(read<uint64_t>("-1"), none);
 }
 
 CAF_TEST(type int64_t) {
-  CAF_CHECK_EQUAL(unbox(read<int64_t>("-1")), -1);
-  CAF_CHECK_EQUAL(unbox(read<int64_t>("0")),  0);
-  CAF_CHECK_EQUAL(unbox(read<int64_t>("1")),  1);
+  CHECK_EQ(unbox(read<int64_t>("-1")), -1);
+  CHECK_EQ(unbox(read<int64_t>("0")), 0);
+  CHECK_EQ(unbox(read<int64_t>("1")), 1);
 }
 
 CAF_TEST(type float) {
-  CAF_CHECK_EQUAL(unbox(read<float>("-1.0")),  -1.0f);
-  CAF_CHECK_EQUAL(unbox(read<float>("-0.1")), -0.1f);
-  CAF_CHECK_EQUAL(read<float>("0"), 0.f);
-  CAF_CHECK_EQUAL(read<float>("\"0.1\""),  none);
+  CHECK_EQ(unbox(read<float>("-1.0")), -1.0f);
+  CHECK_EQ(unbox(read<float>("-0.1")), -0.1f);
+  CHECK_EQ(read<float>("0"), 0.f);
+  CHECK_EQ(read<float>("\"0.1\""), none);
 }
 
 CAF_TEST(type double) {
-  CAF_CHECK_EQUAL(unbox(read<double>("-1.0")),  -1.0);
-  CAF_CHECK_EQUAL(unbox(read<double>("-0.1")),  -0.1);
-  CAF_CHECK_EQUAL(read<double>("0"), 0.);
-  CAF_CHECK_EQUAL(read<double>("\"0.1\""), none);
+  CHECK_EQ(unbox(read<double>("-1.0")), -1.0);
+  CHECK_EQ(unbox(read<double>("-0.1")), -0.1);
+  CHECK_EQ(read<double>("0"), 0.);
+  CHECK_EQ(read<double>("\"0.1\""), none);
 }
 
 CAF_TEST(type string) {
-  CAF_CHECK_EQUAL(unbox(read<string>("foo")), "foo");
-  CAF_CHECK_EQUAL(unbox(read<string>(R"_("foo")_")), R"_("foo")_");
+  CHECK_EQ(unbox(read<string>("foo")), "foo");
+  CHECK_EQ(unbox(read<string>(R"_("foo")_")), R"_("foo")_");
 }
 
 CAF_TEST(type timespan) {
   timespan dur{500};
-  CAF_CHECK_EQUAL(read<timespan>("500ns"), dur);
+  CHECK_EQ(read<timespan>("500ns"), dur);
 }
 
 CAF_TEST(lists) {
   using int_list = std::vector<int>;
-  CAF_CHECK_EQUAL(read<int_list>("[]"), int_list({}));
-  CAF_CHECK_EQUAL(read<int_list>("1, 2, 3"), int_list({1, 2, 3}));
-  CAF_CHECK_EQUAL(read<int_list>("[1, 2, 3]"), int_list({1, 2, 3}));
+  CHECK_EQ(read<int_list>("[]"), int_list({}));
+  CHECK_EQ(read<int_list>("1, 2, 3"), int_list({1, 2, 3}));
+  CHECK_EQ(read<int_list>("[1, 2, 3]"), int_list({1, 2, 3}));
 }
 
 CAF_TEST(flat CLI parsing) {
   auto x = make_config_option<std::string>("?foo", "bar,b", "test option");
-  CAF_CHECK_EQUAL(x.category(), "foo");
-  CAF_CHECK_EQUAL(x.long_name(), "bar");
-  CAF_CHECK_EQUAL(x.short_names(), "b");
-  CAF_CHECK_EQUAL(x.full_name(), "foo.bar");
-  CAF_CHECK_EQUAL(x.has_flat_cli_name(), true);
+  CHECK_EQ(x.category(), "foo");
+  CHECK_EQ(x.long_name(), "bar");
+  CHECK_EQ(x.short_names(), "b");
+  CHECK_EQ(x.full_name(), "foo.bar");
+  CHECK_EQ(x.has_flat_cli_name(), true);
 }
 
 CAF_TEST(flat CLI parsing with nested categories) {
   auto x = make_config_option<std::string>("?foo.goo", "bar,b", "test option");
-  CAF_CHECK_EQUAL(x.category(), "foo.goo");
-  CAF_CHECK_EQUAL(x.long_name(), "bar");
-  CAF_CHECK_EQUAL(x.short_names(), "b");
-  CAF_CHECK_EQUAL(x.full_name(), "foo.goo.bar");
-  CAF_CHECK_EQUAL(x.has_flat_cli_name(), true);
+  CHECK_EQ(x.category(), "foo.goo");
+  CHECK_EQ(x.long_name(), "bar");
+  CHECK_EQ(x.short_names(), "b");
+  CHECK_EQ(x.full_name(), "foo.goo.bar");
+  CHECK_EQ(x.has_flat_cli_name(), true);
 }
 
 CAF_TEST(find by long opt) {
   auto needle = make_config_option<std::string>("?foo", "bar,b", "test option");
   auto check = [&](std::vector<string> args, bool found_opt, bool has_opt) {
     auto res = find_by_long_name(needle, std::begin(args), std::end(args));
-    CAF_CHECK_EQUAL(res.first != std::end(args), found_opt);
+    CHECK_EQ(res.first != std::end(args), found_opt);
     if (has_opt)
-      CAF_CHECK_EQUAL(res.second, "val2");
+      CHECK_EQ(res.second, "val2");
     else
-      CAF_CHECK(res.second.empty());
+      CHECK(res.second.empty());
   };
   // Well formed, find val2.
   check({"--foo=val1", "--bar=val2", "--baz=val3"}, true, true);
