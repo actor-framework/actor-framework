@@ -12,7 +12,7 @@ caf_incubator_add_component(
       $<$<CXX_COMPILER_ID:MSVC>:ws2_32>
     PRIVATE
       CAF::internal
-  ENUM_CONSISTENCY_CHECKS
+  ENUM_TYPES
     net.basp.connection_state
     net.basp.ec
     net.basp.message_type
@@ -30,10 +30,6 @@ caf_incubator_add_component(
     src/multiplexer.cpp
     src/net/abstract_actor_shell.cpp
     src/net/actor_shell.cpp
-    src/net/basp/connection_state_strings.cpp
-    src/net/basp/ec_strings.cpp
-    src/net/basp/message_type_strings.cpp
-    src/net/basp/operation_strings.cpp
     src/net/middleman.cpp
     src/net/middleman_backend.cpp
     src/net/packet_writer.cpp
