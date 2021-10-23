@@ -69,6 +69,7 @@ SCENARIO("for_each iterates all values in a stream") {
           CHECK_EQ(inputs, outputs);
         }
         /* subtest */ {
+          auto completed = false;
           auto inputs = std::vector<int>{21, 21, 21, 21, 21, 21, 21};
           auto outputs = std::vector<int>{};
           ctx->make_observable()
@@ -76,8 +77,13 @@ SCENARIO("for_each iterates all values in a stream") {
             .as_observable()
             .take(7)
             .map([](int x) { return x * 3; })
-            .for_each([&outputs](int x) { outputs.emplace_back(x); });
+            .for_each([&outputs](int x) { outputs.emplace_back(x); },
+                      [](const error& reason) {
+                        FAIL("on_error called: " << reason);
+                      },
+                      [&completed] { completed = true; });
           ctx->run();
+          CHECK(completed);
           CHECK_EQ(inputs, outputs);
         }
       }

@@ -651,7 +651,7 @@ public:
         pull(batch_size - buf_.size());
       auto n = std::min(max_demand_, buf_.size());
       if (n == 0)
-        break;
+        return;
       batch_.assign(std::make_move_iterator(buf_.begin()),
                     std::make_move_iterator(buf_.begin() + n));
       buf_.erase(buf_.begin(), buf_.begin() + n);
@@ -666,7 +666,8 @@ public:
         for (auto& out : outputs_)
           out.sink.on_complete();
         outputs_.clear();
-        break;
+        do_on_complete();
+        return;
       }
     }
   }
@@ -790,11 +791,11 @@ public:
   }
 
   void ref_disposable() const noexcept override {
-    return super::ref_disposable();
+    this->ref();
   }
 
   void deref_disposable() const noexcept override {
-    return super::ref_disposable();
+    this->deref();
   }
 
   // -- implementation of observable<T>::impl ----------------------------------
@@ -827,10 +828,16 @@ public:
 
   void on_next(span<const In> items) final {
     CAF_ASSERT(in_flight_ >= items.size());
-    in_flight_ -= items.size();
-    do_on_next(items);
-    this->try_push();
-    try_fetch_more();
+    if (!this->completed_) {
+      in_flight_ -= items.size();
+      if (!do_on_next(items)) {
+        this->try_push();
+        shutdown();
+      } else {
+        this->try_push();
+        try_fetch_more();
+      }
+    }
   }
 
   void on_complete() override {
@@ -879,7 +886,7 @@ private:
   }
 
   /// Transforms input items to outputs.
-  virtual void do_on_next(span<const In> items) = 0;
+  virtual bool do_on_next(span<const In> items) = 0;
 };
 
 /// Broadcasts its input to all observers without modifying it.
@@ -891,8 +898,9 @@ public:
   using super::super;
 
 private:
-  void do_on_next(span<const T> items) override {
+  bool do_on_next(span<const T> items) override {
     this->append_to_buf(items.begin(), items.end());
+    return true;
   }
 };
 
@@ -940,14 +948,15 @@ public:
     std::tuple<Step, Steps...> steps;
 
   private:
-    void do_on_next(span<const input_type> items) override {
+    bool do_on_next(span<const input_type> items) override {
       auto f = [this, items](auto& step, auto&... steps) {
         term_step<output_type> term{this};
         for (auto&& item : items)
           if (!step.on_next(item, steps..., term))
-            return;
+            return false;
+        return true;
       };
-      std::apply(f, steps);
+      return std::apply(f, steps);
     }
 
     void do_on_complete() override {
@@ -1025,6 +1034,7 @@ public:
     auto pimpl = make_counted<impl>(source_.ptr()->ctx(), std::move(steps_));
     auto res = pimpl->as_observable();
     source_.subscribe(observer<input_type>{std::move(pimpl)});
+    source_ = nullptr;
     return res;
   }
 
