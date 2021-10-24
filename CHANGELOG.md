@@ -5,6 +5,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Fixed
+
+- Passing a response promise to a run-delayed continuation could result in a
+  heap-use-after-free if the actor terminates before the action runs. The
+  destructor of the promise now checks for this case.
+
 ### Changed
 
 - Since support of Qt 5 expired, we have ported the Qt examples to version 6.
