@@ -25,34 +25,50 @@ actor_system& socket_manager::system() noexcept {
   return parent_->system();
 }
 
-bool socket_manager::mask_add(operation flag) noexcept {
-  CAF_ASSERT(flag != operation::none);
-  auto x = mask();
-  if ((x & flag) == flag)
-    return false;
-  mask_ = x | flag;
-  return true;
+bool socket_manager::set_read_flag() noexcept {
+  auto old = mask_;
+  mask_ = add_read_flag(mask_);
+  return old != mask_;
 }
 
-bool socket_manager::mask_del(operation flag) noexcept {
-  CAF_ASSERT(flag != operation::none);
-  auto x = mask();
-  if ((x & flag) == operation::none)
-    return false;
-  mask_ = x & ~flag;
-  return true;
+bool socket_manager::set_write_flag() noexcept {
+  auto old = mask_;
+  mask_ = add_write_flag(mask_);
+  return old != mask_;
+}
+
+bool socket_manager::unset_read_flag() noexcept {
+  auto old = mask_;
+  mask_ = remove_read_flag(mask_);
+  return old != mask_;
+}
+
+bool socket_manager::unset_write_flag() noexcept {
+  auto old = mask_;
+  mask_ = remove_write_flag(mask_);
+  return old != mask_;
+}
+
+void socket_manager::block_reads() noexcept {
+  mask_ = net::block_reads(mask_);
+}
+
+void socket_manager::block_writes() noexcept {
+  mask_ = net::block_writes(mask_);
+}
+
+void socket_manager::block_reads_and_writes() noexcept {
+  mask_ = operation::shutdown;
 }
 
 void socket_manager::register_reading() {
-  if ((mask() & operation::read) == operation::read)
-    return;
-  parent_->register_reading(this);
+  if (!net::is_reading(mask_) && !is_read_blocked(mask_))
+    parent_->register_reading(this);
 }
 
 void socket_manager::register_writing() {
-  if ((mask() & operation::write) == operation::write)
-    return;
-  parent_->register_writing(this);
+  if (!net::is_writing(mask_) && !is_write_blocked(mask_))
+    parent_->register_writing(this);
 }
 
 void socket_manager::shutdown_reading() {

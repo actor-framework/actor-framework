@@ -57,6 +57,7 @@ caf_incubator_add_component(
     net.actor_shell
     net.consumer_adapter
     net.length_prefix_framing
+    net.operation
     net.producer_adapter
     net.typed_actor_shell
     net.web_socket.client

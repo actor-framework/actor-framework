@@ -81,15 +81,38 @@ public:
     return mask_;
   }
 
-  /// Adds given flag(s) to the event mask.
-  /// @returns `false` if `mask() | flag == mask()`, `true` otherwise.
-  /// @pre `flag != operation::none`
-  bool mask_add(operation flag) noexcept;
+  /// Convenience function for checking whether `mask()` contains the read bit.
+  bool is_reading() const noexcept {
+    return net::is_reading(mask_);
+  }
 
-  /// Tries to clear given flag(s) from the event mask.
-  /// @returns `false` if `mask() & ~flag == mask()`, `true` otherwise.
-  /// @pre `flag != operation::none`
-  bool mask_del(operation flag) noexcept;
+  /// Convenience function for checking whether `mask()` contains the write bit.
+  bool is_writing() const noexcept {
+    return net::is_writing(mask_);
+  }
+
+  /// Tries to add the read flag to the event mask.
+  /// @returns `true` if the flag was added, `false` if this call had no effect.
+  bool set_read_flag() noexcept;
+
+  /// Tries to add the write flag to the event mask.
+  /// @returns `true` if the flag was added, `false` if this call had no effect.
+  bool set_write_flag() noexcept;
+
+  /// Removes the read flag from the event mask if present.
+  bool unset_read_flag() noexcept;
+
+  /// Removes the write flag from the event mask if present.
+  bool unset_write_flag() noexcept;
+
+  /// Adds the `block_read` flag to the event mask.
+  void block_reads() noexcept;
+
+  /// Adds the `block_write` flag to the event mask.
+  void block_writes() noexcept;
+
+  /// Blocks reading and writing in the event mask.
+  void block_reads_and_writes() noexcept;
 
   const error& abort_reason() const noexcept {
     return abort_reason_;
@@ -205,14 +228,17 @@ public:
   // -- event callbacks --------------------------------------------------------
 
   bool handle_read_event() override {
+    CAF_LOG_TRACE("");
     return protocol_.handle_read_event(this);
   }
 
   bool handle_write_event() override {
+    CAF_LOG_TRACE("");
     return protocol_.handle_write_event(this);
   }
 
   void handle_error(sec code) override {
+    CAF_LOG_TRACE(CAF_ARG(code));
     abort_reason_ = code;
     return protocol_.abort(this, abort_reason_);
   }

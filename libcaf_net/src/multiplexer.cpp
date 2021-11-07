@@ -51,17 +51,9 @@ const short error_mask = POLLRDHUP | POLLERR | POLLHUP | POLLNVAL;
 
 const short output_mask = POLLOUT;
 
-short to_bitmask(operation op) {
-  switch (op) {
-    case operation::read:
-      return input_mask;
-    case operation::write:
-      return output_mask;
-    case operation::read_write:
-      return input_mask | output_mask;
-    default:
-      return 0;
-  }
+short to_bitmask(operation mask) {
+  return static_cast<short>((is_reading(mask) ? input_mask : 0)
+                            | (is_writing(mask) ? output_mask : 0));
 }
 
 } // namespace
@@ -138,13 +130,12 @@ void multiplexer::register_reading(const socket_manager_ptr& mgr) {
   if (std::this_thread::get_id() == tid_) {
     if (shutting_down_ || mgr->abort_reason()) {
       // nop
-    } else if (mgr->mask() != operation::none) {
-      if (auto index = index_of(mgr);
-          index != -1 && mgr->mask_add(operation::read)) {
+    } else if (!is_idle(mgr->mask())) {
+      if (auto index = index_of(mgr); index != -1 && mgr->set_read_flag()) {
         auto& fd = pollset_[index];
         fd.events |= input_mask;
       }
-    } else if (mgr->mask_add(operation::read)) {
+    } else if (mgr->set_read_flag()) {
       add(mgr);
     }
   } else {
@@ -155,15 +146,14 @@ void multiplexer::register_reading(const socket_manager_ptr& mgr) {
 void multiplexer::register_writing(const socket_manager_ptr& mgr) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
   if (std::this_thread::get_id() == tid_) {
-    if (shutting_down_) {
+    if (mgr->abort_reason()) {
       // nop
-    } else if (mgr->mask() != operation::none) {
-      if (auto index = index_of(mgr);
-          index != -1 && mgr->mask_add(operation::write)) {
+    } else if (!is_idle(mgr->mask())) {
+      if (auto index = index_of(mgr); index != -1 && mgr->set_write_flag()) {
         auto& fd = pollset_[index];
         fd.events |= output_mask;
       }
-    } else if (mgr->mask_add(operation::write)) {
+    } else if (mgr->set_write_flag()) {
       add(mgr);
     }
   } else {
@@ -192,7 +182,7 @@ void multiplexer::shutdown_reading(const socket_manager_ptr& mgr) {
     if (shutting_down_) {
       // nop
     } else if (auto index = index_of(mgr); index != -1) {
-      mgr->mask_del(operation::read);
+      mgr->block_reads();
       auto& entry = pollset_[index];
       std::ignore = shutdown_read(socket{entry.fd});
       entry.events &= ~input_mask;
@@ -210,7 +200,7 @@ void multiplexer::shutdown_writing(const socket_manager_ptr& mgr) {
     if (shutting_down_) {
       // nop
     } else if (auto index = index_of(mgr); index != -1) {
-      mgr->mask_del(operation::write);
+      mgr->block_writes();
       auto& entry = pollset_[index];
       std::ignore = shutdown_write(socket{entry.fd});
       entry.events &= ~output_mask;
@@ -329,8 +319,9 @@ void multiplexer::set_thread_id() {
 
 void multiplexer::run() {
   CAF_LOG_TRACE("");
-  while (!pollset_.empty())
+  while (!shutting_down_ || pollset_.size() > 1)
     poll_once(true);
+  close_pipe();
 }
 
 void multiplexer::shutdown() {
@@ -341,16 +332,16 @@ void multiplexer::shutdown() {
     // First manager is the pollset_updater. Skip it and delete later.
     for (size_t i = 1; i < managers_.size();) {
       auto& mgr = managers_[i];
-      if (mgr->mask_del(operation::read)) {
+      if (mgr->unset_read_flag()) {
         auto& fd = pollset_[index_of(mgr)];
         fd.events &= ~input_mask;
       }
-      if (mgr->mask() == operation::none)
+      mgr->block_reads();
+      if (is_idle(mgr->mask()))
         del(i);
       else
         ++i;
     }
-    close_pipe();
   } else {
     CAF_LOG_DEBUG("push shutdown event to pipe");
     write_to_pipe(pollset_updater::code::shutdown,
@@ -362,20 +353,23 @@ void multiplexer::shutdown() {
 
 short multiplexer::handle(const socket_manager_ptr& mgr, short events,
                           short revents) {
-  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle()));
+  CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id)
+                << CAF_ARG(events) << CAF_ARG(revents));
   CAF_ASSERT(mgr != nullptr);
   bool checkerror = true;
-  if ((revents & input_mask) != 0) {
+  // Note: we double-check whether the manager is actually reading because a
+  // previous action from the pipe may have called shutdown_reading.
+  if ((revents & input_mask) != 0 && mgr->is_reading()) {
     checkerror = false;
-    if (!mgr->handle_read_event()) {
-      mgr->mask_del(operation::read);
-    }
+    if (!mgr->handle_read_event())
+      mgr->unset_read_flag();
   }
-  if ((revents & output_mask) != 0) {
+  // Similar reasoning than before: double-check whether this event should still
+  // get dispatched.
+  if ((revents & output_mask) != 0 && mgr->is_writing()) {
     checkerror = false;
-    if (!mgr->handle_write_event()) {
-      mgr->mask_del(operation::write);
-    }
+    if (!mgr->handle_write_event())
+      mgr->unset_write_flag();
   }
   if (checkerror && ((revents & error_mask) != 0)) {
     if (revents & POLLNVAL)
@@ -384,24 +378,11 @@ short multiplexer::handle(const socket_manager_ptr& mgr, short events,
       mgr->handle_error(sec::socket_disconnected);
     else
       mgr->handle_error(sec::socket_operation_failed);
-    mgr->mask_del(operation::read_write);
-    events = 0;
+    mgr->block_reads_and_writes();
+    return 0;
   } else {
-    switch (mgr->mask()) {
-      case operation::read:
-        events = input_mask;
-        break;
-      case operation::write:
-        events = output_mask;
-        break;
-      case operation::read_write:
-        events = input_mask | output_mask;
-        break;
-      default:
-        events = 0;
-    }
+    return to_bitmask(mgr->mask());
   }
-  return events;
 }
 
 void multiplexer::add(socket_manager_ptr mgr) {

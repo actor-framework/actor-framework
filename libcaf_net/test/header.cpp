@@ -6,7 +6,7 @@
 
 #include "caf/net/basp/header.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "net-test.hpp"
 
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
@@ -21,25 +21,26 @@ CAF_TEST(serialization) {
   byte_buffer buf;
   {
     binary_serializer sink{nullptr, buf};
-    CAF_CHECK(sink.apply(x));
+    CHECK(sink.apply(x));
   }
-  CAF_CHECK_EQUAL(buf.size(), basp::header_size);
+  CHECK_EQ(buf.size(), basp::header_size);
   auto buf2 = to_bytes(x);
-  CAF_REQUIRE_EQUAL(buf.size(), buf2.size());
-  CAF_CHECK(std::equal(buf.begin(), buf.end(), buf2.begin()));
+  REQUIRE_EQ(buf.size(), buf2.size());
+  CHECK(std::equal(buf.begin(), buf.end(), buf2.begin()));
   basp::header y;
   {
     binary_deserializer source{nullptr, buf};
-    CAF_CHECK(source.apply(y));
+    CHECK(source.apply(y));
   }
-  CAF_CHECK_EQUAL(x, y);
+  CHECK_EQ(x, y);
   auto z = basp::header::from_bytes(buf);
-  CAF_CHECK_EQUAL(x, z);
-  CAF_CHECK_EQUAL(y, z);
+  CHECK_EQ(x, z);
+  CHECK_EQ(y, z);
 }
 
 CAF_TEST(to_string) {
   basp::header x{basp::message_type::handshake, 42, 4};
-  CAF_CHECK_EQUAL(deep_to_string(x),
-                  "caf::net::basp::header(handshake, 42, 4)");
+  CHECK_EQ(
+    deep_to_string(x),
+    "caf::net::basp::header(caf::net::basp::message_type::handshake, 42, 4)");
 }
