@@ -144,9 +144,8 @@ CAF_TEST(init) {
   CAF_CHECK_EQUAL(mpx.num_socket_managers(), 0u);
   CAF_REQUIRE_EQUAL(mpx.init(), none);
   CAF_CHECK_EQUAL(mpx.num_socket_managers(), 1u);
-  mpx.close_pipe();
+  mpx.shutdown();
   exhaust();
-  CAF_CHECK_EQUAL(mpx.num_socket_managers(), 0u);
   // Calling run must have no effect now.
   mpx.run();
 }
@@ -194,7 +193,6 @@ CAF_TEST(shutdown) {
   cv.wait(lk, [&] { return thread_id_set; });
   mpx.shutdown();
   mpx_thread.join();
-  CAF_REQUIRE_EQUAL(mpx.num_socket_managers(), 0u);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()
