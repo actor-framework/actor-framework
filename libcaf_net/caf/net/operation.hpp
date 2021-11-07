@@ -66,14 +66,14 @@ enum class operation {
 /// Adds the `block_read` flag to `x` and removes the `read` flag if present.
 /// @relates operation
 [[nodiscard]] constexpr operation block_reads(operation x) noexcept {
-  auto bits = to_integer(x) | 0b0100;;
+  auto bits = to_integer(x) | 0b0100;
   return static_cast<operation>(bits & 0b1110);
 }
 
 /// Adds the `block_write` flag to `x` and removes the `write` flag if present.
 /// @relates operation
 [[nodiscard]] constexpr operation block_writes(operation x) noexcept {
-  auto bits = to_integer(x) | 0b1000;;
+  auto bits = to_integer(x) | 0b1000;
   return static_cast<operation>(bits & 0b1101);
 }
 

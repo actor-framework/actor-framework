@@ -34,7 +34,7 @@ SCENARIO("add_write_flag adds the write bit unless block_write prevents it") {
         CHECK_EQ(add_wr(operation::none), operation::write);
         CHECK_EQ(add_wr(operation::read), operation::read_write);
         CHECK_EQ(add_wr(operation::write), operation::write);
-        CHECK_EQ(add_wr(operation::block_read ), operation::write_only);
+        CHECK_EQ(add_wr(operation::block_read), operation::write_only);
         CHECK_EQ(add_wr(operation::block_write), operation::block_write);
         CHECK_EQ(add_wr(operation::read_write), operation::read_write);
         CHECK_EQ(add_wr(operation::read_only), operation::read_only);
