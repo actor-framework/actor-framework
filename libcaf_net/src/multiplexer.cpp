@@ -184,7 +184,6 @@ void multiplexer::shutdown_reading(const socket_manager_ptr& mgr) {
     } else if (auto index = index_of(mgr); index != -1) {
       mgr->block_reads();
       auto& entry = pollset_[index];
-      std::ignore = shutdown_read(socket{entry.fd});
       entry.events &= ~input_mask;
       if (entry.events == 0)
         del(index);
@@ -202,7 +201,6 @@ void multiplexer::shutdown_writing(const socket_manager_ptr& mgr) {
     } else if (auto index = index_of(mgr); index != -1) {
       mgr->block_writes();
       auto& entry = pollset_[index];
-      std::ignore = shutdown_write(socket{entry.fd});
       entry.events &= ~output_mask;
       if (entry.events == 0)
         del(index);
