@@ -18,6 +18,9 @@ endfunction()
 add_core_example(. aout)
 add_core_example(. hello_world)
 
+# configuration API
+add_core_example(config read-json)
+
 # basic message passing primitives
 add_core_example(message_passing calculator)
 add_core_example(message_passing cell)
