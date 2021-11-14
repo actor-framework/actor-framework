@@ -192,6 +192,17 @@ public:
     return max_in_flight_;
   }
 
+  /// Returns the mutex for this object.
+  auto& mtx() const noexcept {
+    return mtx_;
+  }
+
+  /// Returns how many items are currently available.
+  /// @pre 'mtx()' is locked.
+  size_t available_unsafe() const noexcept {
+    return buf_.size();
+  }
+
 private:
   void ready() {
     producer_->on_consumer_ready();
