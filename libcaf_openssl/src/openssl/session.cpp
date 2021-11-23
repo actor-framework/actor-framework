@@ -231,13 +231,7 @@ SSL_CTX* session::create_ssl_context() {
 #if defined(CAF_SSL_HAS_ECDH_AUTO) && (OPENSSL_VERSION_NUMBER < 0x10100000L)
     SSL_CTX_set_ecdh_auto(ctx, 1);
 #else
-    auto ecdh = EC_KEY_new_by_curve_name(NID_secp384r1);
-    if (!ecdh)
-      CAF_RAISE_ERROR("cannot get ECDH curve");
-    CAF_PUSH_WARNINGS
-    SSL_CTX_set_tmp_ecdh(ctx, ecdh);
-    EC_KEY_free(ecdh);
-    CAF_POP_WARNINGS
+    SSL_CTX_set1_groups_list(ctx, "P-384");
 #endif
 #ifdef CAF_SSL_HAS_SECURITY_LEVEL
     const char* cipher = "AECDH-AES256-SHA@SECLEVEL=0";
