@@ -137,6 +137,10 @@ return an input. The next two functions drop unexpected messages with or
 without printing a warning beforehand. Finally, ``skip`` leaves the
 input message in the mailbox. The default is ``print_and_drop``.
 
+*Note:* ``print_and_drop`` and ``drop`` return an error message that is
+delivered to the sender of the unexpected message. If that actor does not have
+an explicit handler for error messages it will terminate.
+
 .. _request:
 
 Requests
