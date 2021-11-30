@@ -139,8 +139,8 @@ rw_state session::do_some(int (*f)(SSL*, void*, int), size_t& result, void* buf,
   return handle_ssl_result(ret) ? rw_state::success : rw_state::failure;
 }
 
-rw_state
-session::read_some(size_t& result, native_socket, void* buf, size_t len) {
+rw_state session::read_some(size_t& result, native_socket, void* buf,
+                            size_t len) {
   CAF_LOG_TRACE(CAF_ARG(len));
   return do_some(SSL_read, result, buf, len, "read_some");
 }
@@ -231,7 +231,7 @@ SSL_CTX* session::create_ssl_context() {
 #if defined(CAF_SSL_HAS_ECDH_AUTO) && (OPENSSL_VERSION_NUMBER < 0x10100000L)
     SSL_CTX_set_ecdh_auto(ctx, 1);
 #else
-#if OPENSSL_VERSION_NUMBER < 0x10101000L
+#  if OPENSSL_VERSION_NUMBER < 0x10101000L
     auto ecdh = EC_KEY_new_by_curve_name(NID_secp384r1);
     if (!ecdh)
       CAF_RAISE_ERROR("cannot get ECDH curve");
@@ -239,9 +239,9 @@ SSL_CTX* session::create_ssl_context() {
     SSL_CTX_set_tmp_ecdh(ctx, ecdh);
     EC_KEY_free(ecdh);
     CAF_POP_WARNINGS
-#else /* OPENSSL_VERSION_NUMBER < 0x10101000L */
+#  else  /* OPENSSL_VERSION_NUMBER < 0x10101000L */
     SSL_CTX_set1_groups_list(ctx, "P-384");
-#endif /* OPENSSL_VERSION_NUMBER < 0x10101000L */
+#  endif /* OPENSSL_VERSION_NUMBER < 0x10101000L */
 #endif
 #ifdef CAF_SSL_HAS_SECURITY_LEVEL
     const char* cipher = "AECDH-AES256-SHA@SECLEVEL=0";
@@ -284,8 +284,8 @@ bool session::handle_ssl_result(int ret) {
   }
 }
 
-session_ptr
-make_session(actor_system& sys, native_socket fd, bool from_accepted_socket) {
+session_ptr make_session(actor_system& sys, native_socket fd,
+                         bool from_accepted_socket) {
   session_ptr ptr{new session(sys)};
   if (!ptr->init())
     return nullptr;
