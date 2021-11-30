@@ -25,6 +25,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Passing a response promise to a run-delayed continuation could result in a
   heap-use-after-free if the actor terminates before the action runs. The
   destructor of the promise now checks for this case.
+- Fix OpenSSL 3.0 warnings when building the OpenSSL module by switching to
+  newer EC-curve API.
 
 ### Changed
 
