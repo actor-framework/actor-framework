@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/async/bounded_buffer.hpp"
+#include "caf/async/spsc_buffer.hpp"
 #include "caf/defaults.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observable.hpp"

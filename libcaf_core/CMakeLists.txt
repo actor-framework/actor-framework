@@ -227,7 +227,7 @@ caf_add_component(
     actor_system_config
     actor_termination
     aout
-    async.bounded_buffer
+    async.spsc_buffer
     behavior
     binary_deserializer
     binary_serializer

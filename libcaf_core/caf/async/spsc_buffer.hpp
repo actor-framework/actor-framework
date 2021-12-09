@@ -23,7 +23,7 @@
 namespace caf::async {
 
 /// Policy type for having `consume` call `on_error` immediately after the
-/// producer has aborted even if the buffer still contains events.
+/// producer has aborted even if the buffer still contains items.
 struct prioritize_errors_t {
   static constexpr bool calls_on_error = true;
 };
@@ -32,7 +32,7 @@ struct prioritize_errors_t {
 constexpr auto prioritize_errors = prioritize_errors_t{};
 
 /// Policy type for having `consume` call `on_error` only after processing all
-/// events from the buffer.
+/// items from the buffer.
 struct delay_errors_t {
   static constexpr bool calls_on_error = true;
 };
@@ -40,16 +40,30 @@ struct delay_errors_t {
 /// @relates delay_errors_t
 constexpr auto delay_errors = delay_errors_t{};
 
-/// A bounded buffer for transmitting events from one producer to one consumer.
+/// A Single Producer Single Consumer buffer. The buffer uses a "soft bound",
+/// which means that the producer announces a desired maximum for in-flight
+/// items that the buffer uses for its bookkeeping, but the producer may add
+/// more than that number of items. Allowing producers to go "beyond the limit"
+/// is intended for producer that transform inputs into outputs where one input
+/// event can produce multiple output items.
+///
+/// Aside from providing storage, this buffer also resumes the consumer if data
+/// is available and signals demand to the producer whenever the consumer takes
+/// data out of the buffer.
 template <class T>
-class bounded_buffer : public ref_counted {
+class spsc_buffer : public ref_counted {
 public:
   using value_type = T;
 
-  bounded_buffer(uint32_t max_in_flight, uint32_t min_pull_size)
-    : max_in_flight_(max_in_flight), min_pull_size_(min_pull_size) {
-    buf_.reserve(max_in_flight);
-    consumer_buf_.reserve(max_in_flight);
+  spsc_buffer(uint32_t capacity, uint32_t min_pull_size)
+    : capacity_(capacity), min_pull_size_(min_pull_size) {
+    // Allocate some extra space in the buffer in case the producer goes beyond
+    // the announced capacity.
+    buf_.reserve(capacity + (capacity / 2));
+    // Note: this buffer can never go above its limit since it's a short-term
+    // buffer for the consumer that cannot ask for more than capacity
+    // items.
+    consumer_buf_.reserve(capacity);
   }
 
   /// Appends to the buffer and calls `on_producer_wakeup` on the consumer if
@@ -59,11 +73,13 @@ public:
     std::unique_lock guard{mtx_};
     CAF_ASSERT(producer_ != nullptr);
     CAF_ASSERT(!closed_);
-    CAF_ASSERT(buf_.size() + items.size() <= max_in_flight_);
     buf_.insert(buf_.end(), items.begin(), items.end());
     if (buf_.size() == items.size() && consumer_)
       consumer_->on_producer_wakeup();
-    return capacity() - buf_.size();
+    if (capacity_ >= buf_.size())
+      return capacity_ - buf_.size();
+    else
+      return 0;
   }
 
   size_t push(const T& item) {
@@ -72,10 +88,10 @@ public:
 
   /// Consumes up to `demand` items from the buffer.
   /// @tparam Policy Either `instant_error_t`, `delay_error_t` or
-  ///                `ignore_errors_t`. The former two policies require also
-  ///                passing an `on_error` handler.
-  /// @returns true if the consumer may call `pull` again, otherwise `false`.
-  ///          When returning `false`, the function has called `on_complete` or
+  ///                `ignore_errors_t`.
+  /// @returns a tuple indicating whether the consumer may call pull again and
+  ///          how many items were consumed. When returning `false` for the
+  ///          first tuple element, the function has called `on_complete` or
   ///          `on_error` on the observer.
   template <class Policy, class Observer>
   std::pair<bool, size_t> pull(Policy, size_t demand, Observer& dst) {
@@ -89,6 +105,10 @@ public:
         return {false, 0};
       }
     }
+    // We must not signal demand to the producer when reading excess elements
+    // from the buffer. Otherwise, we end up generating more demand than
+    // capacity_ allows us to.
+    auto overflow = buf_.size() <= capacity_ ? 0u : buf_.size() - capacity_;
     auto next_n = [this, &demand] { return std::min(demand, buf_.size()); };
     size_t consumed = 0;
     for (auto n = next_n(); n > 0; n = next_n()) {
@@ -96,7 +116,14 @@ public:
       consumer_buf_.assign(make_move_iterator(buf_.begin()),
                            make_move_iterator(buf_.begin() + n));
       buf_.erase(buf_.begin(), buf_.begin() + n);
-      signal_demand(n);
+      if (overflow == 0) {
+        signal_demand(n);
+      } else if (n <= overflow) {
+        overflow -= n;
+      } else {
+        signal_demand(n - overflow);
+        overflow = 0;
+      }
       guard.unlock();
       dst.on_next(span<const T>{consumer_buf_.data(), n});
       demand -= n;
@@ -122,14 +149,15 @@ public:
     return !buf_.empty();
   }
 
-  /// Checks whether the there is data available or the producer has closed or
-  /// aborted the flow.
+  /// Checks whether the there is data available or whether the producer has
+  /// closed or aborted the flow.
   bool has_consumer_event() const noexcept {
     std::unique_lock guard{mtx_};
     return !buf_.empty() || closed_;
   }
 
-  /// Returns how many items are currently available.
+  /// Returns how many items are currently available. This may be greater than
+  /// the `capacity`.
   size_t available() const noexcept {
     std::unique_lock guard{mtx_};
     return buf_.size();
@@ -146,7 +174,8 @@ public:
     }
   }
 
-  /// Closes the buffer and signals an error by request of the producer.
+  /// Closes the buffer by request of the producer and signals an error to the
+  /// consumer.
   void abort(error reason) {
     std::unique_lock guard{mtx_};
     if (producer_) {
@@ -168,28 +197,31 @@ public:
     }
   }
 
+  /// Consumer callback for the initial handshake between producer and consumer.
   void set_consumer(consumer_ptr consumer) {
     CAF_ASSERT(consumer != nullptr);
     std::unique_lock guard{mtx_};
     if (consumer_)
-      CAF_RAISE_ERROR("producer-consumer queue already has a consumer");
+      CAF_RAISE_ERROR("SPSC buffer already has a consumer");
     consumer_ = std::move(consumer);
     if (producer_)
       ready();
   }
 
+  /// Producer callback for the initial handshake between producer and consumer.
   void set_producer(producer_ptr producer) {
     CAF_ASSERT(producer != nullptr);
     std::unique_lock guard{mtx_};
     if (producer_)
-      CAF_RAISE_ERROR("producer-consumer queue already has a producer");
+      CAF_RAISE_ERROR("SPSC buffer already has a producer");
     producer_ = std::move(producer);
     if (consumer_)
       ready();
   }
 
+  /// Returns the capacity as passed to the constructor of the buffer.
   size_t capacity() const noexcept {
-    return max_in_flight_;
+    return capacity_;
   }
 
   /// Returns the mutex for this object.
@@ -209,7 +241,7 @@ private:
     consumer_->on_producer_ready();
     if (!buf_.empty())
       consumer_->on_producer_wakeup();
-    signal_demand(max_in_flight_);
+    signal_demand(capacity_);
   }
 
   void signal_demand(uint32_t new_demand) {
@@ -223,13 +255,11 @@ private:
   /// Guards access to all other member variables.
   mutable std::mutex mtx_;
 
-  /// Allocated to max_in_flight_ * 2, but at most holds max_in_flight_
-  /// elements at any point in time. We dynamically shift elements into the
-  /// first half of the buffer whenever rd_pos_ crosses the midpoint.
+  /// Caches in-flight items.
   std::vector<T> buf_;
 
   /// Stores how many items the buffer may hold at any time.
-  uint32_t max_in_flight_;
+  uint32_t capacity_;
 
   /// Configures the minimum amount of free buffer slots that we signal to the
   /// producer.
@@ -250,18 +280,18 @@ private:
   /// Callback handle to the producer.
   producer_ptr producer_;
 
-  /// Caches elements before passing them to the consumer (without lock).
+  /// Caches items before passing them to the consumer (without lock).
   std::vector<T> consumer_buf_;
 };
 
-/// @relates bounded_buffer
+/// @relates spsc_buffer
 template <class T>
-using bounded_buffer_ptr = intrusive_ptr<bounded_buffer<T>>;
+using spsc_buffer_ptr = intrusive_ptr<spsc_buffer<T>>;
 
-/// @relates bounded_buffer
+/// @relates spsc_buffer
 template <class T, bool IsProducer>
 struct resource_ctrl : ref_counted {
-  using buffer_ptr = bounded_buffer_ptr<T>;
+  using buffer_ptr = spsc_buffer_ptr<T>;
 
   explicit resource_ctrl(buffer_ptr ptr) : buf(std::move(ptr)) {
     // nop
@@ -296,15 +326,15 @@ struct resource_ctrl : ref_counted {
 /// Grants read access to the first consumer that calls `open` on the resource.
 /// Cancels consumption of items on the buffer if the resources gets destroyed
 /// before opening it.
-/// @relates bounded_buffer
+/// @relates spsc_buffer
 template <class T>
 class consumer_resource {
 public:
   using value_type = T;
 
-  using buffer_type = bounded_buffer<T>;
+  using buffer_type = spsc_buffer<T>;
 
-  using buffer_ptr = bounded_buffer_ptr<T>;
+  using buffer_ptr = spsc_buffer_ptr<T>;
 
   explicit consumer_resource(buffer_ptr buf) {
     ctrl_.emplace(std::move(buf));
@@ -335,15 +365,15 @@ private:
 
 /// Grants access to a buffer to the first producer that calls `open`. Aborts
 /// writes on the buffer if the resources gets destroyed before opening it.
-/// @relates bounded_buffer
+/// @relates spsc_buffer
 template <class T>
 class producer_resource {
 public:
   using value_type = T;
 
-  using buffer_type = bounded_buffer<T>;
+  using buffer_type = spsc_buffer<T>;
 
-  using buffer_ptr = bounded_buffer_ptr<T>;
+  using buffer_ptr = spsc_buffer_ptr<T>;
 
   explicit producer_resource(buffer_ptr buf) {
     ctrl_.emplace(std::move(buf));
@@ -372,21 +402,21 @@ private:
   intrusive_ptr<resource_ctrl<T, true>> ctrl_;
 };
 
-/// Creates bounded buffer and returns two resources connected by that buffer.
+/// Creates spsc buffer and returns two resources connected by that buffer.
 template <class T>
 std::pair<consumer_resource<T>, producer_resource<T>>
-make_bounded_buffer_resource(size_t buffer_size, size_t min_request_size) {
-  using buffer_type = bounded_buffer<T>;
+make_spsc_buffer_resource(size_t buffer_size, size_t min_request_size) {
+  using buffer_type = spsc_buffer<T>;
   auto buf = make_counted<buffer_type>(buffer_size, min_request_size);
   return {async::consumer_resource<T>{buf}, async::producer_resource<T>{buf}};
 }
 
-/// Creates bounded buffer and returns two resources connected by that buffer.
+/// Creates spsc buffer and returns two resources connected by that buffer.
 template <class T>
 std::pair<consumer_resource<T>, producer_resource<T>>
-make_bounded_buffer_resource() {
-  return make_bounded_buffer_resource<T>(defaults::flow::buffer_size,
-                                         defaults::flow::min_demand);
+make_spsc_buffer_resource() {
+  return make_spsc_buffer_resource<T>(defaults::flow::buffer_size,
+                                      defaults::flow::min_demand);
 }
 
 } // namespace caf::async

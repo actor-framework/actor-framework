@@ -17,7 +17,7 @@ class producer;
 // -- template classes ---------------------------------------------------------
 
 template <class T>
-class bounded_buffer;
+class spsc_buffer;
 
 template <class T>
 class consumer_resource;

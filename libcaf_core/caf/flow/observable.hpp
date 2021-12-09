@@ -9,9 +9,9 @@
 #include <type_traits>
 #include <vector>
 
-#include "caf/async/bounded_buffer.hpp"
 #include "caf/async/consumer.hpp"
 #include "caf/async/producer.hpp"
+#include "caf/async/spsc_buffer.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/disposable.hpp"
@@ -209,7 +209,7 @@ public:
   auto concat_map(F f);
 
   /// Creates an asynchronous resource that makes emitted items available in a
-  /// bounded buffer.
+  /// spsc buffer.
   async::consumer_resource<T> to_resource(size_t buffer_size,
                                           size_t min_request_size);
 
@@ -1662,7 +1662,7 @@ private:
 template <class T>
 async::consumer_resource<T>
 observable<T>::to_resource(size_t buffer_size, size_t min_request_size) {
-  using buffer_type = async::bounded_buffer<T>;
+  using buffer_type = async::spsc_buffer<T>;
   auto buf = make_counted<buffer_type>(buffer_size, min_request_size);
   auto up = make_counted<buffer_writer_impl<buffer_type>>(pimpl_->ctx(), buf);
   buf->set_producer(up);
@@ -1675,7 +1675,7 @@ observable<T>::to_resource(size_t buffer_size, size_t min_request_size) {
 template <class T>
 observable<T> observable<T>::observe_on(coordinator* other, size_t buffer_size,
                                         size_t min_request_size) {
-  using buffer_type = async::bounded_buffer<T>;
+  using buffer_type = async::spsc_buffer<T>;
   auto buf = make_counted<buffer_type>(buffer_size, min_request_size);
   auto up = make_counted<buffer_writer_impl<buffer_type>>(pimpl_->ctx(), buf);
   auto down = make_counted<observable_buffer_impl<buffer_type>>(other, buf);
