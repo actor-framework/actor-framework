@@ -8,7 +8,7 @@
 
 #include "net-test.hpp"
 
-#include "caf/async/bounded_buffer.hpp"
+#include "caf/async/spsc_buffer.hpp"
 #include "caf/net/middleman.hpp"
 #include "caf/net/socket_guard.hpp"
 #include "caf/net/stream_socket.hpp"
@@ -182,7 +182,7 @@ BEGIN_FIXTURE_SCOPE(fixture)
 SCENARIO("subscriber adapters wake up idle socket managers") {
   GIVEN("an actor pushing into a buffer resource") {
     static constexpr size_t num_items = 79;
-    auto [rd, wr] = async::make_bounded_buffer_resource<int32_t>(8, 2);
+    auto [rd, wr] = async::make_spsc_buffer_resource<int32_t>(8, 2);
     sys.spawn([wr{wr}](event_based_actor* self) {
       self->make_observable().repeat(42).take(num_items).subscribe(wr);
     });

@@ -140,7 +140,7 @@ SCENARIO("publisher adapters suspend reads if the buffer becomes full") {
   GIVEN("an actor reading from a buffer resource") {
     static constexpr size_t num_items = 13;
     std::vector<int32_t> outputs;
-    auto [rd, wr] = async::make_bounded_buffer_resource<int32_t>(8, 2);
+    auto [rd, wr] = async::make_spsc_buffer_resource<int32_t>(8, 2);
     sys.spawn([rd{rd}, &outputs](event_based_actor* self) {
       self //
         ->make_observable()
