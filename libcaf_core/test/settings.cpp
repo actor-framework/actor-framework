@@ -171,4 +171,28 @@ CAF_TEST(read_config accepts the to_string output of settings) {
   CHECK_EQ(x, y);
 }
 
+SCENARIO("put_missing normalizes 'global' suffixes") {
+  GIVEN("empty settings") {
+    settings uut;
+    WHEN("calling put_missing with and without 'global' suffix") {
+      THEN("put_missing drops the 'global' suffix") {
+        put_missing(uut, "global.foo", "bar"s);
+        CHECK_EQ(get_as<std::string>(uut, "foo"), "bar"s);
+        CHECK_EQ(get_as<std::string>(uut, "global.foo"), "bar"s);
+      }
+    }
+  }
+  GIVEN("settings with a value for 'foo'") {
+    settings uut;
+    uut["foo"] = "bar"s;
+    WHEN("calling put_missing 'global.foo'") {
+      THEN("the function call results in a no-op") {
+        put_missing(uut, "global.foo", "baz"s);
+        CHECK_EQ(get_as<std::string>(uut, "foo"), "bar"s);
+        CHECK_EQ(get_as<std::string>(uut, "global.foo"), "bar"s);
+      }
+    }
+  }
+}
+
 END_FIXTURE_SCOPE()
