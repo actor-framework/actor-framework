@@ -10,6 +10,7 @@
 
 namespace caf::detail {
 
+/// Always evaluates to `Left`.
 template <class Left, class Right>
 struct left_oracle {
   using type = Left;

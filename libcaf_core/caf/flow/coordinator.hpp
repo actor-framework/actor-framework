@@ -20,38 +20,11 @@ namespace caf::flow {
 /// objects since the coordinator guarantees synchronous execution.
 class CAF_CORE_EXPORT coordinator {
 public:
-  // class CAF_CORE_EXPORT subscription_impl : public subscription::impl {
-  // public:
-  //   friend class coordinator;
-
-  //   subscription_impl(coordinator* ctx, observable_base_ptr src,
-  //                     observer_base_ptr snk)
-  //     : ctx_(ctx), src_(std::move(src)), snk_(std::move(snk)) {
-  //     // nop
-  //   }
-
-  //   void request(size_t n) final;
-
-  //   void cancel() final;
-
-  //   bool disposed() const noexcept final;
-
-  //   auto* ctx() const noexcept {
-  //     return ctx_;
-  //   }
-
-  // private:
-  //   coordinator* ctx_;
-  //   observable_base_ptr src_;
-  //   observer_base_ptr snk_;
-  // };
-
-  // using subscription_impl_ptr = intrusive_ptr<subscription_impl>;
-
   friend class subscription_impl;
 
   virtual ~coordinator();
 
+  /// Returns a factory object for new observable objects on this coordinator.
   [[nodiscard]] observable_builder make_observable();
 
   /// Increases the reference count of the coordinator.
