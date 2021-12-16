@@ -27,6 +27,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   destructor of the promise now checks for this case.
 - Fix OpenSSL 3.0 warnings when building the OpenSSL module by switching to
   newer EC-curve API.
+- When working with settings, `put`, `put_missing`, `get_if`, etc. now
+  gracefully handle the `global` category when explicitly using it.
 
 ### Changed
 
