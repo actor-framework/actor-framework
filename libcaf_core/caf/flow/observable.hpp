@@ -1677,14 +1677,11 @@ observable<T> observable<T>::observe_on(coordinator* other, size_t buffer_size,
                                         size_t min_request_size) {
   using buffer_type = async::spsc_buffer<T>;
   auto buf = make_counted<buffer_type>(buffer_size, min_request_size);
-  auto up = make_counted<buffer_writer_impl<buffer_type>>(pimpl_->ctx(), buf);
-  auto down = make_counted<observable_buffer_impl<buffer_type>>(other, buf);
-  buf->set_producer(up);
-  buf->set_consumer(down);
-  subscribe(up->as_observer());
-  auto hdl = observable<T>{std::move(down)};
-  pimpl_->ctx()->watch(hdl.as_disposable());
-  return hdl;
+  subscribe(async::producer_resource<T>{buf});
+  auto adapter = make_counted<observable_buffer_impl<buffer_type>>(other, buf);
+  buf->set_consumer(adapter);
+  other->watch(adapter->as_disposable());
+  return observable<T>{std::move(adapter)};
 }
 
 // -- observable::subscribe ----------------------------------------------------
