@@ -1,5 +1,5 @@
-// Non-interactive example to illustrate how to connect flows over an SPSC
-// (Single Producer Single Consumer) buffer.
+// Non-interactive example to illustrate how to connect flows over an
+// asynchronous SPSC (Single Producer Single Consumer) buffer.
 
 #include "caf/actor_system.hpp"
 #include "caf/async/spsc_buffer.hpp"
@@ -13,8 +13,8 @@ namespace {
 
 // --(rst-source-begin)--
 // Simple source for generating a stream of integers from 1 to n.
-void int_source(caf::event_based_actor* self,
-                caf::async::producer_resource<int> out, size_t n) {
+void source(caf::event_based_actor* self,
+            caf::async::producer_resource<int> out, size_t n) {
   self
     // Get an observable factory.
     ->make_observable()
@@ -29,8 +29,7 @@ void int_source(caf::event_based_actor* self,
 
 // --(rst-sink-begin)--
 // Simple sink for consuming a stream of integers, printing it to stdout.
-void int_sink(caf::event_based_actor* self,
-              caf::async::consumer_resource<int> in) {
+void sink(caf::event_based_actor* self, caf::async::consumer_resource<int> in) {
   self
     // Get an observable factory.
     ->make_observable()
@@ -53,8 +52,8 @@ struct config : caf::actor_system_config {
 // --(rst-main-begin)--
 void caf_main(caf::actor_system& sys, const config& cfg) {
   auto [snk_res, src_res] = caf::async::make_spsc_buffer_resource<int>();
-  sys.spawn(int_sink, std::move(snk_res));
-  sys.spawn(int_source, std::move(src_res), cfg.n);
+  sys.spawn(sink, std::move(snk_res));
+  sys.spawn(source, std::move(src_res), cfg.n);
 }
 // --(rst-main-end)--
 
