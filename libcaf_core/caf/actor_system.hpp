@@ -587,6 +587,69 @@ public:
     return res;
   }
 
+  /// Utility function object that allows users to explicitly launch an action
+  /// by calling `operator()` but calls it implicitly at scope exit.
+  template <class F>
+  class launcher {
+  public:
+    launcher() : ready(false) {
+      // nop
+    }
+
+    explicit launcher(F&& f) : ready(true) {
+      new (&fn) F(std::move(f));
+    }
+
+    launcher(launcher&& other) : ready(other.ready) {
+      if (ready) {
+        new (&fn) F(std::move(other.fn));
+        other.reset();
+      }
+    }
+
+    launcher& operator=(launcher&& other) {
+      if (this != &other) {
+        if (ready)
+          reset();
+        if (other.ready) {
+          ready = true;
+          new (&fn) F(std::move(other.fn));
+          other.reset();
+        }
+      }
+      return *this;
+    }
+
+    launcher(const launcher&) = delete;
+
+    launcher& operator=(const launcher&) = delete;
+
+    ~launcher() {
+      if (ready)
+        fn();
+    }
+
+    void operator()() {
+      if (ready) {
+        fn();
+        reset();
+      }
+    }
+
+  private:
+    // @pre `ready == true`
+    void reset() {
+      CAF_ASSERT(ready);
+      ready = false;
+      fn.~F();
+    }
+
+    bool ready;
+    union {
+      F fn;
+    };
+  };
+
   /// Creates a new, cooperatively scheduled actor. The returned actor is
   /// constructed but has not been added to the scheduler yet to allow the
   /// caller to set up any additional logic on the actor before it starts.
@@ -611,7 +674,7 @@ public:
       static_cast<Impl*>(actor_cast<abstract_actor*>(res))
         ->launch(host, false, false);
     };
-    return std::make_tuple(ptr, launch);
+    return std::make_tuple(ptr, launcher<decltype(launch)>(std::move(launch)));
   }
 
   void profiler_add_actor(const local_actor& self, const local_actor* parent) {
