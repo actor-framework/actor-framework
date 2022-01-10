@@ -18,7 +18,7 @@ struct config : caf::actor_system_config {
   size_t n = 10;
 };
 
-// --(rst-from-callable-begin)--
+// --(rst-main-begin)--
 void caf_main(caf::actor_system& sys, const config& cfg) {
   // Create two actors without actually running them yet.
   using actor_t = caf::event_based_actor;
@@ -43,7 +43,7 @@ void caf_main(caf::actor_system& sys, const config& cfg) {
   launch_src();
   launch_snk();
 }
-// --(rst-from-callable-end)--
+// --(rst-main-end)--
 
 } // namespace
 

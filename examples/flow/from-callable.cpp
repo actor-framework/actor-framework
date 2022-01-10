@@ -18,7 +18,7 @@ struct config : caf::actor_system_config {
   size_t n = 10;
 };
 
-// --(rst-from-callable-begin)--
+// --(rst-main-begin)--
 void caf_main(caf::actor_system& sys, const config& cfg) {
   sys.spawn([n = cfg.n](caf::event_based_actor* self) {
     self
@@ -32,7 +32,7 @@ void caf_main(caf::actor_system& sys, const config& cfg) {
       .for_each([](int x) { std::cout << x << '\n'; });
   });
 }
-// --(rst-from-callable-end)--
+// --(rst-main-end)--
 
 } // namespace
 

@@ -23,7 +23,7 @@ Contents
    ConfiguringActorApplications
    GroupCommunication
    ManagingGroupsOfWorkers
-   Streaming
+   DataFlows
    Testing
    Metrics
 

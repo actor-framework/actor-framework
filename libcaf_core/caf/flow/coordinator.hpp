@@ -15,7 +15,7 @@
 
 namespace caf::flow {
 
-/// Coordinates any number of co-located publishers and observers. The
+/// Coordinates any number of co-located observables and observers. The
 /// co-located objects never need to synchronize calls to other co-located
 /// objects since the coordinator guarantees synchronous execution.
 class CAF_CORE_EXPORT coordinator {
@@ -49,7 +49,7 @@ public:
   /// `schedule` for coordinators that use a single work queue.
   virtual void post_internally(action what) = 0;
 
-  ///@copydoc schedule
+  ///@copydoc post_internally
   template <class F>
   void post_internally_fn(F&& what) {
     return post_internally(make_action(std::forward<F>(what)));
