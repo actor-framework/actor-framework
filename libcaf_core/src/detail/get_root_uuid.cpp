@@ -192,7 +192,7 @@ std::string get_root_uuid() {
 } // namespace detail
 } // namespace caf
 
-#elif defined(CAF_IOS) || defined(CAF_ANDROID)
+#elif defined(CAF_IOS) || defined(CAF_ANDROID) || defined(CAF_NETBSD)
 
 // return a randomly-generated UUID on mobile devices
 

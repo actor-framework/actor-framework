@@ -34,6 +34,8 @@ void set_thread_name(const char* name) {
   prctl(PR_SET_NAME, name, 0, 0, 0);
 #  elif defined(CAF_BSD)
   pthread_set_name_np(pthread_self(), name);
+#  elif defined(CAF_NETBSD)
+  pthread_setname_np(pthread_self(), name, NULL);
 #  endif // defined(...)
 #endif   // CAF_WINDOWS
 }

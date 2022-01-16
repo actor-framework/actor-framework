@@ -191,6 +191,8 @@
 #  endif
 #elif defined(__FreeBSD__)
 #  define CAF_BSD
+#elif defined(__NetBSD__)
+#  define CAF_NETBSD
 #elif defined(__OpenBSD__)
 #  define CAF_BSD
 #elif defined(__CYGWIN__)
@@ -201,7 +203,7 @@
 #  error Platform and/or compiler not supported
 #endif
 #if defined(CAF_MACOS) || defined(CAF_LINUX) || defined(CAF_BSD)               \
-  || defined(CAF_CYGWIN)
+  || defined(CAF_CYGWIN) || defined(CAF_NETBSD)
 #  define CAF_POSIX
 #endif
 

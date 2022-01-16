@@ -10,7 +10,7 @@
 
 // -- detect supported platforms -----------------------------------------------
 
-#if defined(CAF_MACOS) || defined(CAF_LINUX)
+#if defined(CAF_MACOS) || defined(CAF_LINUX) || defined(CAF_NETBSD)
 #  define CAF_HAS_PROCESS_METRICS
 #endif
 
@@ -211,6 +211,51 @@ sys_stats read_sys_stats() {
 } // namespace
 
 #endif // CAF_LINUX
+
+#if defined(CAF_NETBSD)
+
+#include <sys/sysctl.h>
+#include <unistd.h>
+
+namespace {
+
+sys_stats read_sys_stats() {
+  sys_stats result{0, 0, 0};
+  int mib[6];
+  struct kinfo_proc2 kip2;
+  size_t kip2_size = sizeof(kip2);
+
+  mib[0] = CTL_KERN;
+  mib[1] = KERN_PROC2;
+  mib[2] = KERN_PROC_PID;
+  mib[3] = getpid();
+  mib[4] = kip2_size;
+  mib[5] = 1;
+
+  auto page_size = sysconf(_SC_PAGE_SIZE);
+  if (page_size == -1) {
+    CAF_LOG_ERROR(
+      "getting _SC_PAGE_SIZE from sysconf failed in read_sys_stats");
+    return result;
+  }
+
+
+  if (sysctl(mib, 6, &kip2, &kip2_size, NULL, (size_t)0)) {
+    CAF_LOG_ERROR("sysctl failed in read_sys_stats");
+    return result;
+  }
+
+  result.rss = static_cast<int64_t>(kip2.p_vm_rssize) * page_size;
+  result.vms = static_cast<int64_t>(kip2.p_vm_vsize) * page_size;
+  result.cpu_time = kip2.p_rtime_sec;
+  result.cpu_time += static_cast<double>(kip2.p_rtime_usec) / 1000000;
+
+  return result;
+}
+
+} // namepace
+
+#endif // CAF_NETBSD
 
 namespace caf::telemetry::importer {
 
