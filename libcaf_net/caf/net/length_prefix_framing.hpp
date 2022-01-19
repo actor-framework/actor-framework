@@ -14,8 +14,10 @@
 #include "caf/detail/has_after_reading.hpp"
 #include "caf/detail/network_order.hpp"
 #include "caf/error.hpp"
+#include "caf/net/message_flow_bridge.hpp"
 #include "caf/net/message_oriented_layer_ptr.hpp"
 #include "caf/net/receive_policy.hpp"
+#include "caf/net/socket_manager.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
 #include "caf/tag/message_oriented.hpp"
@@ -211,6 +213,7 @@ public:
     return std::make_pair(msg_size, buffer.subspan(sizeof(uint32_t)));
   }
 
+
 private:
   // -- implementation details -------------------------------------------------
 
@@ -224,5 +227,28 @@ private:
   UpperLayer upper_layer_;
   size_t message_offset_ = 0;
 };
+
+// -- high-level factory functions -------------------------------------------
+
+/// Runs a WebSocket server on the connected socket `fd`.
+/// @param mpx The multiplexer that takes ownership of the socket.
+/// @param fd A connected stream socket.
+/// @param cfg Additional configuration parameters for the protocol stack.
+/// @param in Inputs for writing to the socket.
+/// @param out Outputs from the socket.
+/// @param trait Converts between the native and the wire format.
+/// @relates length_prefix_framing
+template <template <class> class Transport = stream_transport, class T,
+          class Socket, class Trait>
+error run_with_length_prefix_framing(multiplexer& mpx, Socket fd,
+                                     const settings& cfg,
+                                     async::consumer_resource<T> in,
+                                     async::producer_resource<T> out,
+                                     Trait trait) {
+  using app_t = length_prefix_framing<message_flow_bridge<T, Trait>>;
+  auto mgr = make_socket_manager<app_t, Transport>(fd, &mpx, std::move(trait));
+  mgr->top_layer().connect_flows(mgr.get(), std::move(in), std::move(out));
+  return mgr->init(cfg);
+}
 
 } // namespace caf::net
