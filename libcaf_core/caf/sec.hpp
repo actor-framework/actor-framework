@@ -171,6 +171,8 @@ enum class sec : uint8_t {
   /// Signals to a component that is has been discarded by its parent or the
   /// consumer/producer that was attached to the component.
   discarded = 70,
+  /// Failed to open a resource.
+  cannot_open_resource,
 };
 // --(rst-sec-end)--
 
