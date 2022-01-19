@@ -201,6 +201,11 @@ public:
     return std::move(*this).transform(map_step<Fn>{std::move(fn)});
   }
 
+  template <class F>
+  auto flat_map_optional(F f) && {
+    return std::move(*this).transform(flat_map_optional_step<F>{std::move(f)});
+  }
+
   observable<output_type> as_observable() && override {
     auto pimpl = make_counted<impl>(ctx_, std::move(gen_), std::move(steps_));
     return observable<output_type>{std::move(pimpl)};

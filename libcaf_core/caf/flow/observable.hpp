@@ -203,6 +203,11 @@ public:
   template <class F>
   auto flat_map(F f);
 
+  /// Returns a transformation that emits items from optional values returned by
+  /// `f`.
+  template <class F>
+  transformation<flat_map_optional_step<F>> flat_map_optional(F f);
+
   /// Returns a transformation that emits items by concatenating the outputs of
   /// all observables returned by `f`.
   template <class F>
@@ -1013,6 +1018,11 @@ public:
   }
 
   template <class F>
+  auto flat_map_optional(F f) && {
+    return std::move(*this).transform(flat_map_optional_step<F>{std::move(f)});
+  }
+
+  template <class F>
   auto do_on_complete(F f) && {
     return std::move(*this) //
       .transform(on_complete_step<output_type, F>{std::move(f)});
@@ -1049,7 +1059,7 @@ template <class T>
 template <class Step>
 transformation<Step> observable<T>::transform(Step step) {
   static_assert(std::is_same_v<typename Step::input_type, T>,
-                "step object does not match the output type");
+                "step object does not match the input type");
   return {*this, std::forward_as_tuple(std::move(step))};
 }
 
@@ -1068,7 +1078,7 @@ transformation<filter_step<Predicate>>
 observable<T>::filter(Predicate predicate) {
   using step_type = filter_step<Predicate>;
   static_assert(std::is_same_v<typename step_type::input_type, T>,
-                "predicate does not match the output type");
+                "predicate does not match the input type");
   return {*this, std::forward_as_tuple(step_type{std::move(predicate)})};
 }
 
@@ -1079,7 +1089,7 @@ template <class F>
 transformation<map_step<F>> observable<T>::map(F f) {
   using step_type = map_step<F>;
   static_assert(std::is_same_v<typename step_type::input_type, T>,
-                "map function does not match the output type");
+                "map function does not match the input type");
   return {*this, std::forward_as_tuple(step_type{std::move(f)})};
 }
 
@@ -1472,6 +1482,18 @@ auto observable<T>::flat_map(F f) {
   auto obs = make_counted<impl_t>(pimpl_->ctx(), std::move(f));
   pimpl_->subscribe(obs->as_observer());
   return obs->merger();
+}
+
+// -- observable::flat_map_optional --------------------------------------------
+
+template <class T>
+template <class F>
+transformation<flat_map_optional_step<F>>
+observable<T>::flat_map_optional(F f) {
+  using step_type = flat_map_optional_step<F>;
+  static_assert(std::is_same_v<typename step_type::input_type, T>,
+                "flat_map_optional function does not match the input type");
+  return {*this, std::forward_as_tuple(step_type{std::move(f)})};
 }
 
 // -- observable::concat_map ---------------------------------------------------

@@ -112,6 +112,43 @@ struct map_step {
   }
 };
 
+template <class Fn>
+struct flat_map_optional_step {
+  using trait = detail::get_callable_trait_t<Fn>;
+
+  static_assert(!std::is_same_v<typename trait::result_type, void>,
+                "flat_map_optional functions may not return void");
+
+  static_assert(trait::num_args == 1,
+                "flat_map_optional functions must take exactly one argument");
+
+  using input_type = std::decay_t<detail::tl_head_t<typename trait::arg_types>>;
+
+  using intermediate_type = std::decay_t<typename trait::result_type>;
+
+  using output_type = typename intermediate_type::value_type;
+
+  Fn fn;
+
+  template <class Next, class... Steps>
+  bool on_next(const input_type& item, Next& next, Steps&... steps) {
+    if (auto val = fn(item))
+      return next.on_next(*val, steps...);
+    else
+      return true;
+  }
+
+  template <class Next, class... Steps>
+  void on_complete(Next& next, Steps&... steps) {
+    next.on_complete(steps...);
+  }
+
+  template <class Next, class... Steps>
+  void on_error(const error& what, Next& next, Steps&... steps) {
+    next.on_error(what, steps...);
+  }
+};
+
 template <class T, class Fn>
 struct on_complete_step {
   using input_type = T;
