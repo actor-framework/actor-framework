@@ -45,6 +45,32 @@ std::string get_root_uuid() {
 } // namespace detail
 } // namespace caf
 
+#elif defined(CAF_IOS) || defined(CAF_ANDROID) || defined(CAF_NET_BSD)
+
+// Return a randomly-generated UUID on mobile devices or NetBSD (requires root
+// access to get UUID from disk).
+
+#  include <random>
+
+namespace caf {
+namespace detail {
+
+std::string get_root_uuid() {
+  std::random_device rd;
+  std::uniform_int_distribution<int> dist(0, 15);
+  std::string uuid = uuid_format;
+  for (auto& c : uuid) {
+    if (c != '-') {
+      auto n = dist(rd);
+      c = static_cast<char>((n < 10) ? n + '0' : (n - 10) + 'A');
+    }
+  }
+  return uuid;
+}
+
+} // namespace detail
+} // namespace caf
+
 #elif defined(CAF_LINUX) || defined(CAF_BSD) || defined(CAF_CYGWIN)
 
 #  include <algorithm>
@@ -184,31 +210,6 @@ std::string get_root_uuid() {
           }
         }
       }
-    }
-  }
-  return uuid;
-}
-
-} // namespace detail
-} // namespace caf
-
-#elif defined(CAF_IOS) || defined(CAF_ANDROID) || defined(CAF_NETBSD)
-
-// return a randomly-generated UUID on mobile devices
-
-#  include <random>
-
-namespace caf {
-namespace detail {
-
-std::string get_root_uuid() {
-  std::random_device rd;
-  std::uniform_int_distribution<int> dist(0, 15);
-  std::string uuid = uuid_format;
-  for (auto& c : uuid) {
-    if (c != '-') {
-      auto n = dist(rd);
-      c = static_cast<char>((n < 10) ? n + '0' : (n - 10) + 'A');
     }
   }
   return uuid;

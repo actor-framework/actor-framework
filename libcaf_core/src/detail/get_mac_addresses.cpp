@@ -7,8 +7,7 @@
 #include "caf/config.hpp"
 #include "caf/detail/scope_guard.hpp"
 
-#if defined(CAF_MACOS) || defined(CAF_BSD) || defined(CAF_IOS)                 \
-  || defined(CAF_NETBSD)
+#if defined(CAF_MACOS) || defined(CAF_BSD) || defined(CAF_IOS)
 
 #  include <arpa/inet.h>
 #  include <cerrno>
