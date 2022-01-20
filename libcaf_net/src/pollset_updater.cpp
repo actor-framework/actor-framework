@@ -35,13 +35,13 @@ namespace {
 auto as_mgr(intptr_t ptr) {
   CAF_LOG_TRACE(CAF_ARG(ptr));
   return intrusive_ptr{reinterpret_cast<socket_manager*>(ptr), false};
-};
+}
 
 void run_action(intptr_t ptr) {
   CAF_LOG_TRACE(CAF_ARG(ptr));
   auto f = action{intrusive_ptr{reinterpret_cast<action::impl*>(ptr), false}};
   f.run();
-};
+}
 
 } // namespace
 

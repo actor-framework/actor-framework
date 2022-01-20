@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/actor_system.hpp"
+#include "caf/async/spsc_buffer.hpp"
 #include "caf/net/consumer_adapter.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/producer_adapter.hpp"
@@ -33,30 +34,17 @@ class message_flow_bridge : public caf::tag::no_auto_reading {
 public:
   using input_tag = caf::tag::message_oriented;
 
-  using consumer_resource = async::consumer_resource<T>;
-
-  using consumer_buffer = typename consumer_resource::buffer_type;
-
-  using consumer_adapter_ptr = consumer_adapter_ptr<consumer_buffer>;
-
-  using consumer_adapter = typename consumer_adapter_ptr::element_type;
-
-  using producer_resource = async::producer_resource<T>;
-
-  using producer_buffer = typename producer_resource::buffer_type;
-
-  using producer_adapter_ptr = producer_adapter_ptr<producer_buffer>;
-
-  using producer_adapter = typename producer_adapter_ptr::element_type;
+  using buffer_type = caf::async::spsc_buffer<T>;
 
   explicit message_flow_bridge(Trait trait) : trait_(std::move(trait)) {
     // nop
   }
 
-  void connect_flows(caf::net::socket_manager* mgr, consumer_resource in,
-                     producer_resource out) {
-    in_ = consumer_adapter::try_open(mgr, in);
-    out_ = producer_adapter::try_open(mgr, out);
+  void connect_flows(caf::net::socket_manager* mgr,
+                     async::consumer_resource<T> in,
+                     async::producer_resource<T> out) {
+    in_ = consumer_adapter<buffer_type>::try_open(mgr, in);
+    out_ = producer_adapter<buffer_type>::try_open(mgr, out);
   }
 
   template <class LowerLayerPtr>
@@ -171,10 +159,10 @@ private:
   caf::net::socket_manager* mgr_ = nullptr;
 
   /// Incoming messages, serialized to the socket.
-  consumer_adapter_ptr in_;
+  consumer_adapter_ptr<buffer_type> in_;
 
   /// Outgoing messages, deserialized from the socket.
-  producer_adapter_ptr out_;
+  producer_adapter_ptr<buffer_type> out_;
 
   /// Converts between raw bytes and items.
   Trait trait_;

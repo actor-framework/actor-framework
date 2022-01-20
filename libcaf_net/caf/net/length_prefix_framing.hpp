@@ -213,7 +213,6 @@ public:
     return std::make_pair(msg_size, buffer.subspan(sizeof(uint32_t)));
   }
 
-
 private:
   // -- implementation details -------------------------------------------------
 
