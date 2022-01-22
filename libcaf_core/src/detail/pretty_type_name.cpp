@@ -6,7 +6,7 @@
 
 #include "caf/config.hpp"
 
-#if defined(CAF_LINUX) || defined(CAF_MACOS) || defined(CAF_NET_BSD)
+#if defined(CAF_LINUX) || defined(CAF_MACOS) || defined(CAF_BSD)
 #  define CAF_HAS_CXX_ABI
 #endif
 
