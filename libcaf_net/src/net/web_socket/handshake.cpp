@@ -10,6 +10,11 @@
 #include <random>
 #include <tuple>
 
+
+
+
+#include <iostream>
+
 #include "caf/config.hpp"
 #include "caf/detail/base64.hpp"
 #include "caf/hash/sha1.hpp"
@@ -115,6 +120,15 @@ void handshake::write_http_1_response(byte_buffer& buf) const {
          "Connection: Upgrade\r\n"
          "Sec-WebSocket-Accept: "
       << response_key() << "\r\n\r\n";
+}
+
+void handshake::write_http_1_bad_request(byte_buffer& buf, string_view descr) {
+  std::cout<<"BAD REQUEST: "<<descr<<'\n';
+  writer out{&buf};
+  out << "HTTP/1.1 400 Bad Request\r\n"
+         "Content-Type: text/plain\r\n"
+         "\r\n"
+      << descr << "\r\n";
 }
 
 void handshake::write_http_1_header_too_large(byte_buffer& buf) {

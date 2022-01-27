@@ -125,6 +125,10 @@ public:
   /// @pre `has_valid_key()`
   void write_http_1_response(byte_buffer& buf) const;
 
+  /// Writes an HTTP 1.1 'Bad Request' error to `buf` with `descr` providing
+  /// additional information to the client.
+  static void write_http_1_bad_request(byte_buffer& buf, string_view descr);
+
   /// Writes a HTTP 1.1 431 (Request Header Fields Too Large) response.
   static void write_http_1_header_too_large(byte_buffer& buf);
 

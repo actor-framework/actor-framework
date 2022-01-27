@@ -42,8 +42,8 @@ public:
       return lptr_->binary_message_buffer(llptr_);
     }
 
-    void end_binary_message() {
-      lptr_->end_binary_message(llptr_);
+    bool end_binary_message() {
+      return lptr_->end_binary_message(llptr_);
     }
 
     void begin_text_message() {
@@ -54,8 +54,13 @@ public:
       return lptr_->text_message_buffer(llptr_);
     }
 
-    void end_text_message() {
-      lptr_->end_text_message(llptr_);
+    bool end_text_message() {
+      return lptr_->end_text_message(llptr_);
+    }
+
+    template <class... Ts>
+    bool send_close_message(Ts&&... xs) {
+      return lptr_->send_close_message(llptr_, std::forward<Ts>(xs)...);
     }
 
     void abort_reason(error reason) {

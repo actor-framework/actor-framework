@@ -46,6 +46,11 @@ public:
       return lptr_->end_message(llptr_);
     }
 
+    template <class... Ts>
+    bool send_close_message(Ts&&... xs) {
+      return lptr_->send_close_message(llptr_, std::forward<Ts>(xs)...);
+    }
+
     void abort_reason(error reason) {
       return lptr_->abort_reason(llptr_, std::move(reason));
     }

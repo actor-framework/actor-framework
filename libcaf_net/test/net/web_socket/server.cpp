@@ -113,7 +113,7 @@ struct fixture : host_fixture {
 };
 
 constexpr auto opening_handshake
-  = "GET /chat HTTP/1.1\r\n"
+  = "GET /chat?room=lounge HTTP/1.1\r\n"
     "Host: server.example.com\r\n"
     "Upgrade: websocket\r\n"
     "Connection: Upgrade\r\n"
@@ -143,7 +143,7 @@ CAF_TEST(applications receive handshake data via config) {
   CAF_CHECK_EQUAL(transport.unconsumed(), 0u);
   CAF_CHECK(ws->handshake_complete());
   CHECK_SETTING("web-socket.method", "GET");
-  CHECK_SETTING("web-socket.request-uri", "/chat");
+  CHECK_SETTING("web-socket.path", "/chat");
   CHECK_SETTING("web-socket.http-version", "HTTP/1.1");
   CHECK_SETTING("web-socket.fields.Host", "server.example.com");
   CHECK_SETTING("web-socket.fields.Upgrade", "websocket");
@@ -153,6 +153,10 @@ CAF_TEST(applications receive handshake data via config) {
   CHECK_SETTING("web-socket.fields.Sec-WebSocket-Version", "13");
   CHECK_SETTING("web-socket.fields.Sec-WebSocket-Key",
                 "dGhlIHNhbXBsZSBub25jZQ==");
+  using str_map = std::map<std::string, std::string>;
+  if (auto query = get_as<str_map>(app->cfg, "web-socket.query");
+      CAF_CHECK(query))
+    CAF_CHECK_EQUAL(*query, str_map({{"room"s, "lounge"s}}));
 }
 
 CAF_TEST(the server responds with an HTTP response on success) {

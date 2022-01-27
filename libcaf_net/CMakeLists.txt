@@ -17,6 +17,7 @@ caf_incubator_add_component(
     net.basp.ec
     net.basp.message_type
     net.operation
+    net.web_socket.status
   HEADERS
     ${CAF_NET_HEADERS}
   SOURCES

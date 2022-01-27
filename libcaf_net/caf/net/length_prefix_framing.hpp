@@ -122,6 +122,18 @@ public:
   }
 
   template <class LowerLayerPtr>
+  bool send_close_message(LowerLayerPtr) {
+    // nop; this framing layer has no close handshake
+    return true;
+  }
+
+  template <class LowerLayerPtr>
+  bool send_close_message(LowerLayerPtr, const error&) {
+    // nop; this framing layer has no close handshake
+    return true;
+  }
+
+  template <class LowerLayerPtr>
   static void abort_reason(LowerLayerPtr down, error reason) {
     return down->abort_reason(std::move(reason));
   }
@@ -237,8 +249,8 @@ private:
 /// @param out Outputs from the socket.
 /// @param trait Converts between the native and the wire format.
 /// @relates length_prefix_framing
-template <template <class> class Transport = stream_transport, class T,
-          class Socket, class Trait>
+template <template <class> class Transport = stream_transport, class Socket,
+          class T, class Trait>
 error run_with_length_prefix_framing(multiplexer& mpx, Socket fd,
                                      const settings& cfg,
                                      async::consumer_resource<T> in,

@@ -31,7 +31,8 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class... Ts>
-  explicit connection_acceptor(Ts&&... xs) : factory_(std::forward<Ts>(xs)...) {
+  explicit connection_acceptor(size_t limit, Ts&&... xs)
+    : factory_(std::forward<Ts>(xs)...), limit_(limit) {
     // nop
   }
 
@@ -54,13 +55,21 @@ public:
     CAF_LOG_TRACE("");
     if (auto x = accept(parent->handle())) {
       socket_manager_ptr child = factory_.make(*x, owner_->mpx_ptr());
-      CAF_ASSERT(child != nullptr);
+      if (!child) {
+        CAF_LOG_ERROR("factory failed to create a new child");
+        parent->abort_reason(sec::runtime_error);
+        return false;
+      }
       if (auto err = child->init(cfg_)) {
         CAF_LOG_ERROR("failed to initialize new child:" << err);
         parent->abort_reason(std::move(err));
         return false;
       }
-      return true;
+      if (limit_ == 0) {
+        return true;
+      } else {
+        return ++accepted_ < limit_;
+      }
     } else {
       CAF_LOG_ERROR("accept failed:" << x.error());
       return false;
@@ -88,6 +97,10 @@ private:
   factory_type factory_;
 
   socket_manager* owner_;
+
+  size_t limit_;
+
+  size_t accepted_ = 0;
 
   settings cfg_;
 };

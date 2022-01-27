@@ -8,6 +8,7 @@
 #include "caf/byte_span.hpp"
 #include "caf/detail/rfc6455.hpp"
 #include "caf/net/mixed_message_oriented_layer_ptr.hpp"
+#include "caf/net/web_socket/status.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
 #include "caf/string_view.hpp"
@@ -20,7 +21,7 @@
 
 namespace caf::net::web_socket {
 
-/// Implements the WebProtocol framing protocol as defined in RFC-6455.
+/// Implements the WebSocket framing protocol as defined in RFC-6455.
 template <class UpperLayer>
 class framing {
 public:
@@ -87,11 +88,8 @@ public:
   }
 
   template <class LowerLayerPtr>
-  static void suspend_reading(LowerLayerPtr) {
-    CAF_RAISE_ERROR("suspending / resuming a WebSocket not implemented yet");
-    // TODO: uncommenting this isn't enough since consume() also must make sure
-    //       to not override the configure_read.
-    // down->configure_read(receive_policy::stop());
+  static void suspend_reading(LowerLayerPtr down) {
+    down->configure_read(receive_policy::stop());
   }
 
   template <class LowerLayerPtr>
@@ -105,8 +103,9 @@ public:
   }
 
   template <class LowerLayerPtr>
-  void end_binary_message(LowerLayerPtr down) {
+  bool end_binary_message(LowerLayerPtr down) {
     ship_frame(down, binary_buf_);
+    return true;
   }
 
   template <class LowerLayerPtr>
@@ -120,8 +119,28 @@ public:
   }
 
   template <class LowerLayerPtr>
-  void end_text_message(LowerLayerPtr down) {
+  bool end_text_message(LowerLayerPtr down) {
     ship_frame(down, text_buf_);
+    return true;
+  }
+
+  template <class LowerLayerPtr>
+  bool send_close_message(LowerLayerPtr down) {
+    ship_close(down);
+    return true;
+  }
+
+  template <class LowerLayerPtr>
+  bool send_close_message(LowerLayerPtr down, status code, string_view desc) {
+    ship_close(down, static_cast<uint16_t>(code), desc);
+    return true;
+  }
+
+  template <class LowerLayerPtr>
+  bool send_close_message(LowerLayerPtr down, const error& reason) {
+    ship_close(down, static_cast<uint16_t>(status::unexpected_condition),
+               to_string(reason));
+    return true;
   }
 
   template <class LowerLayerPtr>
@@ -138,12 +157,12 @@ public:
 
   template <class LowerLayerPtr>
   bool prepare_send(LowerLayerPtr down) {
-    return upper_layer_.prepare_send(down);
+    return upper_layer_.prepare_send(this_layer_ptr(down));
   }
 
   template <class LowerLayerPtr>
   bool done_sending(LowerLayerPtr down) {
-    return upper_layer_.done_sending(down);
+    return upper_layer_.done_sending(this_layer_ptr(down));
   }
 
   template <class LowerLayerPtr>
@@ -185,6 +204,9 @@ public:
       // Wait for more data if necessary.
       size_t frame_size = hdr_bytes + hdr.payload_len;
       if (buffer.size() < frame_size) {
+        // Ask for more data unless the upper layer called suspend_reading.
+        if (!down->stopped())
+          down->configure_read(receive_policy::up_to(2048));
         down->configure_read(receive_policy::exactly(frame_size));
         return consumed;
       }
@@ -196,6 +218,7 @@ public:
       }
       if (hdr.fin) {
         if (opcode_ == nil_code) {
+          // Call upper layer.
           if (!handle(down, hdr.opcode, payload))
             return -1;
         } else if (hdr.opcode != detail::rfc6455::continuation_frame) {
@@ -243,7 +266,9 @@ public:
       // Advance to next frame in the input.
       buffer = buffer.subspan(frame_size);
       if (buffer.empty()) {
-        down->configure_read(receive_policy::up_to(2048));
+        // Ask for more data unless the upper layer called suspend_reading.
+        if (!down->stopped())
+          down->configure_read(receive_policy::up_to(2048));
         return consumed + static_cast<ptrdiff_t>(frame_size);
       }
       consumed += static_cast<ptrdiff_t>(frame_size);
@@ -288,6 +313,42 @@ private:
     down->begin_output();
     detail::rfc6455::assemble_frame(detail::rfc6455::pong, mask_key, payload,
                                     down->output_buffer());
+    down->end_output();
+  }
+
+  template <class LowerLayerPtr>
+  void ship_close(LowerLayerPtr down, uint16_t code, string_view msg) {
+    uint32_t mask_key = 0;
+    std::vector<byte> payload;
+    payload.reserve(msg.size() + 2);
+    payload.push_back(static_cast<byte>((code & 0xFF00) >> 8));
+    payload.push_back(static_cast<byte>(code & 0x00FF));
+    for (auto c : msg)
+      payload.push_back(static_cast<byte>(c));
+    if (mask_outgoing_frames) {
+      mask_key = static_cast<uint32_t>(rng_());
+      detail::rfc6455::mask_data(mask_key, payload);
+    }
+    down->begin_output();
+    detail::rfc6455::assemble_frame(detail::rfc6455::connection_close, mask_key,
+                                    payload, down->output_buffer());
+    down->end_output();
+  }
+
+  template <class LowerLayerPtr>
+  void ship_close(LowerLayerPtr down) {
+    uint32_t mask_key = 0;
+    byte payload[] = {
+      byte{0x03}, byte{0xE8},            // Error code 1000: normal close.
+      byte{'E'},  byte{'O'},  byte{'F'}, // "EOF" string as goodbye message.
+    };
+    if (mask_outgoing_frames) {
+      mask_key = static_cast<uint32_t>(rng_());
+      detail::rfc6455::mask_data(mask_key, payload);
+    }
+    down->begin_output();
+    detail::rfc6455::assemble_frame(detail::rfc6455::connection_close, mask_key,
+                                    payload, down->output_buffer());
     down->end_output();
   }
 

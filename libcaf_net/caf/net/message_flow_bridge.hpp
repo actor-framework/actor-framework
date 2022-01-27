@@ -13,6 +13,7 @@
 #include "caf/sec.hpp"
 #include "caf/settings.hpp"
 #include "caf/tag/message_oriented.hpp"
+#include "caf/tag/mixed_message_oriented.hpp"
 #include "caf/tag/no_auto_reading.hpp"
 
 #include <utility>
@@ -29,56 +30,78 @@ namespace caf::net {
 ///   bool convert(const_byte_span bytes, T& value);
 /// };
 /// ~~~
-template <class T, class Trait>
-class message_flow_bridge : public caf::tag::no_auto_reading {
+template <class T, class Trait, class Tag = tag::message_oriented>
+class message_flow_bridge : public tag::no_auto_reading {
 public:
-  using input_tag = caf::tag::message_oriented;
+  using input_tag = Tag;
 
-  using buffer_type = caf::async::spsc_buffer<T>;
+  using buffer_type = async::spsc_buffer<T>;
+
+  using consumer_resource_t = async::consumer_resource<T>;
+
+  using producer_resource_t = async::producer_resource<T>;
 
   explicit message_flow_bridge(Trait trait) : trait_(std::move(trait)) {
     // nop
   }
 
-  void connect_flows(caf::net::socket_manager* mgr,
-                     async::consumer_resource<T> in,
-                     async::producer_resource<T> out) {
+  void connect_flows(net::socket_manager* mgr, consumer_resource_t in,
+                     producer_resource_t out) {
     in_ = consumer_adapter<buffer_type>::try_open(mgr, in);
     out_ = producer_adapter<buffer_type>::try_open(mgr, out);
   }
 
   template <class LowerLayerPtr>
-  caf::error
-  init(caf::net::socket_manager* mgr, LowerLayerPtr&&, const caf::settings&) {
+  error
+  init(net::socket_manager* mgr, LowerLayerPtr down, const settings& cfg) {
     mgr_ = mgr;
+    if constexpr (caf::detail::has_init_v<Trait>) {
+      if (auto err = init_res(trait_.init(cfg)))
+        return err;
+    }
     if (!in_ && !out_)
       return make_error(sec::cannot_open_resource,
                         "flow bridge cannot run without at least one resource");
-    else
-      return caf::none;
+    if (!out_)
+      down->suspend_reading();
+    return none;
   }
 
   template <class LowerLayerPtr>
   bool write(LowerLayerPtr down, const T& item) {
-    down->begin_message();
-    auto& buf = down->message_buffer();
-    return trait_.convert(item, buf) && down->end_message();
+    if constexpr (std::is_same_v<Tag, tag::message_oriented>) {
+      down->begin_message();
+      auto& buf = down->message_buffer();
+      return trait_.convert(item, buf) && down->end_message();
+    } else {
+      static_assert(std::is_same_v<Tag, tag::mixed_message_oriented>);
+      if (trait_.converts_to_binary(item)) {
+        down->begin_binary_message();
+        auto& buf = down->binary_message_buffer();
+        return trait_.convert(item, buf) && down->end_binary_message();
+      } else {
+        down->begin_text_message();
+        auto& buf = down->text_message_buffer();
+        return trait_.convert(item, buf) && down->end_text_message();
+      }
+    }
   }
 
   template <class LowerLayerPtr>
-  struct send_helper {
+  struct write_helper {
     using bridge_type = message_flow_bridge;
     bridge_type* bridge;
     LowerLayerPtr down;
     bool aborted = false;
     size_t consumed = 0;
+    error err;
 
-    send_helper(bridge_type* bridge, LowerLayerPtr down)
+    write_helper(bridge_type* bridge, LowerLayerPtr down)
       : bridge(bridge), down(down) {
       // nop
     }
 
-    void on_next(caf::span<const T> items) {
+    void on_next(span<const T> items) {
       CAF_ASSERT(items.size() == 1);
       for (const auto& item : items) {
         if (!bridge->write(down, item)) {
@@ -92,17 +115,22 @@ public:
       // nop
     }
 
-    void on_error(const caf::error&) {
-      // nop
+    void on_error(const error& x) {
+      err = x;
     }
   };
 
   template <class LowerLayerPtr>
   bool prepare_send(LowerLayerPtr down) {
-    send_helper<LowerLayerPtr> helper{this, down};
+    write_helper<LowerLayerPtr> helper{this, down};
     while (down->can_send_more() && in_) {
-      auto [again, consumed] = in_->pull(caf::async::delay_errors, 1, helper);
+      auto [again, consumed] = in_->pull(async::delay_errors, 1, helper);
       if (!again) {
+        if (helper.err) {
+          down->send_close_message(helper.err);
+        } else {
+          down->send_close_message();
+        }
         in_ = nullptr;
       } else if (helper.aborted) {
         down->abort_reason(make_error(sec::conversion_failed));
@@ -122,11 +150,10 @@ public:
   }
 
   template <class LowerLayerPtr>
-  void abort(LowerLayerPtr, const caf::error& reason) {
+  void abort(LowerLayerPtr, const error& reason) {
     CAF_LOG_TRACE(CAF_ARG(reason));
     if (out_) {
-      if (reason == caf::sec::socket_disconnected
-          || reason == caf::sec::discarded)
+      if (reason == sec::socket_disconnected || reason == sec::discarded)
         out_->close();
       else
         out_->abort(reason);
@@ -138,8 +165,29 @@ public:
     }
   }
 
-  template <class LowerLayerPtr>
-  ptrdiff_t consume(LowerLayerPtr down, caf::byte_span buf) {
+  template <class U = Tag, class LowerLayerPtr>
+  ptrdiff_t consume(LowerLayerPtr down, byte_span buf) {
+    if (!out_) {
+      down->abort_reason(make_error(sec::connection_closed));
+      return -1;
+    }
+    T val;
+    if (!trait_.convert(buf, val)) {
+      down->abort_reason(make_error(sec::conversion_failed));
+      return -1;
+    }
+    if (out_->push(std::move(val)) == 0)
+      down->suspend_reading();
+    return static_cast<ptrdiff_t>(buf.size());
+  }
+
+  template <class U = Tag, class LowerLayerPtr>
+  ptrdiff_t consume_binary(LowerLayerPtr down, byte_span buf) {
+    return consume(down, buf);
+  }
+
+  template <class U = Tag, class LowerLayerPtr>
+  ptrdiff_t consume_text(LowerLayerPtr down, string_view buf) {
     if (!out_) {
       down->abort_reason(make_error(sec::connection_closed));
       return -1;
@@ -155,8 +203,35 @@ public:
   }
 
 private:
+  error init_res(error err) {
+    return err;
+  }
+
+  error init_res(consumer_resource_t in, producer_resource_t out) {
+    connect_flows(mgr_, std::move(in), std::move(out));
+    return caf::none;
+  }
+
+  error init_res(std::tuple<consumer_resource_t, producer_resource_t> in_out) {
+    auto& [in, out] = in_out;
+    return init_res(std::move(in), std::move(out));
+  }
+
+  error init_res(std::pair<consumer_resource_t, producer_resource_t> in_out) {
+    auto& [in, out] = in_out;
+    return init_res(std::move(in), std::move(out));
+  }
+
+  template <class R>
+  error init_res(expected<R> res) {
+    if (res)
+      return init_res(*res);
+    else
+      return std::move(res.error());
+  }
+
   /// Points to the manager that runs this protocol stack.
-  caf::net::socket_manager* mgr_ = nullptr;
+  net::socket_manager* mgr_ = nullptr;
 
   /// Incoming messages, serialized to the socket.
   consumer_adapter_ptr<buffer_type> in_;

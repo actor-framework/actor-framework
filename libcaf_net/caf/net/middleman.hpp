@@ -44,20 +44,24 @@ public:
 
   // -- socket manager functions -----------------------------------------------
 
-  ///
+  /// Creates a new acceptor that accepts incoming connections from @p sock and
+  /// creates socket managers using @p factory.
   /// @param sock An accept socket in listening mode. For a TCP socket, this
   ///             socket must already listen to an address plus port.
-  /// @param factory An application stack factory.
+  /// @param factory A function object for creating socket managers that take
+  ///                ownership of incoming connections.
+  /// @param limit The maximum number of connections that this acceptor should
+  ///              establish or 0 for 'no limit'.
   template <class Socket, class Factory>
-  auto make_acceptor(Socket sock, Factory factory) {
+  auto make_acceptor(Socket sock, Factory factory, size_t limit = 0) {
     using connected_socket_type = typename Socket::connected_socket_type;
     if constexpr (detail::is_callable_with<Factory, connected_socket_type,
                                            multiplexer*>::value) {
       connection_acceptor_factory_adapter<Factory> adapter{std::move(factory)};
-      return make_acceptor(std::move(sock), std::move(adapter));
+      return make_acceptor(std::move(sock), std::move(adapter), limit);
     } else {
       using impl = connection_acceptor<Socket, Factory>;
-      auto ptr = make_socket_manager<impl>(std::move(sock), &mpx_,
+      auto ptr = make_socket_manager<impl>(std::move(sock), &mpx_, limit,
                                            std::move(factory));
       mpx_.init(ptr);
       return ptr;
