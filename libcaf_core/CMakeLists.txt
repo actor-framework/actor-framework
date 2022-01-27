@@ -101,7 +101,6 @@ caf_add_component(
     src/deserializer.cpp
     src/detail/abstract_worker.cpp
     src/detail/abstract_worker_hub.cpp
-    src/detail/append_percent_encoded.cpp
     src/detail/base64.cpp
     src/detail/behavior_impl.cpp
     src/detail/behavior_stack.cpp

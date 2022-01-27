@@ -10,6 +10,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Passing a response promise to a run-delayed continuation could result in a
   heap-use-after-free if the actor terminates before the action runs. The
   destructor of the promise now checks for this case.
+- Accessing URI fields now always returns the normalized string.
 
 ### Changed
 

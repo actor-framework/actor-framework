@@ -206,6 +206,12 @@ public:
   /// Returns whether `parse` would produce a valid URI.
   static bool can_parse(string_view str) noexcept;
 
+  // -- URI encoding, AKA Percent encoding -------------------------------------
+
+  static void encode(std::string& str, string_view x, bool is_path = false);
+
+  static void decode(std::string& str);
+
 private:
   impl_ptr impl_;
 };
