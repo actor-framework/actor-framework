@@ -53,6 +53,8 @@ caf_add_component(
     PRIVATE
       CAF::internal
   ENUM_TYPES
+    async.read_result
+    async.write_result
     exit_reason
     intrusive.inbox_result
     intrusive.task_result

@@ -227,7 +227,7 @@ public:
     }
   }
 
-  // -- implementation of async::producer: these may get called concurrently ---
+  // -- implementation of async::producer: must be thread-safe -----------------
 
   void on_consumer_ready() override {
     // nop

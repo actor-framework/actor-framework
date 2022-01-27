@@ -4,10 +4,8 @@
 
 #pragma once
 
-#include <cstdlib>
-#include <mutex>
-
 #include "caf/async/consumer.hpp"
+#include "caf/async/policy.hpp"
 #include "caf/async/producer.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
@@ -20,25 +18,10 @@
 #include "caf/span.hpp"
 #include "caf/unit.hpp"
 
+#include <cstdlib>
+#include <mutex>
+
 namespace caf::async {
-
-/// Policy type for having `consume` call `on_error` immediately after the
-/// producer has aborted even if the buffer still contains items.
-struct prioritize_errors_t {
-  static constexpr bool calls_on_error = true;
-};
-
-/// @relates prioritize_errors_t
-constexpr auto prioritize_errors = prioritize_errors_t{};
-
-/// Policy type for having `consume` call `on_error` only after processing all
-/// items from the buffer.
-struct delay_errors_t {
-  static constexpr bool calls_on_error = true;
-};
-
-/// @relates delay_errors_t
-constexpr auto delay_errors = delay_errors_t{};
 
 /// A Single Producer Single Consumer buffer. The buffer uses a "soft bound",
 /// which means that the producer announces a desired maximum for in-flight
@@ -55,6 +38,8 @@ class spsc_buffer : public ref_counted {
 public:
   using value_type = T;
 
+  using lock_type = std::unique_lock<std::mutex>;
+
   spsc_buffer(uint32_t capacity, uint32_t min_pull_size)
     : capacity_(capacity), min_pull_size_(min_pull_size) {
     // Allocate some extra space in the buffer in case the producer goes beyond
@@ -70,7 +55,7 @@ public:
   /// the buffer becomes non-empty.
   /// @returns the remaining capacity after inserting the items.
   size_t push(span<const T> items) {
-    std::unique_lock guard{mtx_};
+    lock_type guard{mtx_};
     CAF_ASSERT(producer_ != nullptr);
     CAF_ASSERT(!closed_);
     buf_.insert(buf_.end(), items.begin(), items.end());
@@ -94,8 +79,141 @@ public:
   ///          first tuple element, the function has called `on_complete` or
   ///          `on_error` on the observer.
   template <class Policy, class Observer>
-  std::pair<bool, size_t> pull(Policy, size_t demand, Observer& dst) {
-    std::unique_lock guard{mtx_};
+  std::pair<bool, size_t> pull(Policy policy, size_t demand, Observer& dst) {
+    lock_type guard{mtx_};
+    return pull_unsafe(guard, policy, demand, dst);
+  }
+
+  /// Checks whether there is any pending data in the buffer.
+  bool has_data() const noexcept {
+    lock_type guard{mtx_};
+    return !buf_.empty();
+  }
+
+  /// Checks whether the there is data available or whether the producer has
+  /// closed or aborted the flow.
+  bool has_consumer_event() const noexcept {
+    lock_type guard{mtx_};
+    return !buf_.empty() || closed_;
+  }
+
+  /// Returns how many items are currently available. This may be greater than
+  /// the `capacity`.
+  size_t available() const noexcept {
+    lock_type guard{mtx_};
+    return buf_.size();
+  }
+
+  /// Returns the error from the producer or a default-constructed error if
+  /// abort was not called yet.
+  error abort_reason() const {
+    lock_type guard{mtx_};
+    return err_;
+  }
+
+  /// Closes the buffer by request of the producer.
+  void close() {
+    lock_type guard{mtx_};
+    if (producer_) {
+      closed_ = true;
+      producer_ = nullptr;
+      if (buf_.empty() && consumer_)
+        consumer_->on_producer_wakeup();
+    }
+  }
+
+  /// Closes the buffer by request of the producer and signals an error to the
+  /// consumer.
+  void abort(error reason) {
+    lock_type guard{mtx_};
+    if (producer_) {
+      closed_ = true;
+      err_ = std::move(reason);
+      producer_ = nullptr;
+      if (buf_.empty() && consumer_)
+        consumer_->on_producer_wakeup();
+    }
+  }
+
+  /// Closes the buffer by request of the consumer.
+  void cancel() {
+    lock_type guard{mtx_};
+    if (consumer_) {
+      consumer_ = nullptr;
+      if (producer_)
+        producer_->on_consumer_cancel();
+    }
+  }
+
+  /// Consumer callback for the initial handshake between producer and consumer.
+  void set_consumer(consumer_ptr consumer) {
+    CAF_ASSERT(consumer != nullptr);
+    lock_type guard{mtx_};
+    if (consumer_)
+      CAF_RAISE_ERROR("SPSC buffer already has a consumer");
+    consumer_ = std::move(consumer);
+    if (producer_)
+      ready();
+  }
+
+  /// Producer callback for the initial handshake between producer and consumer.
+  void set_producer(producer_ptr producer) {
+    CAF_ASSERT(producer != nullptr);
+    lock_type guard{mtx_};
+    if (producer_)
+      CAF_RAISE_ERROR("SPSC buffer already has a producer");
+    producer_ = std::move(producer);
+    if (consumer_)
+      ready();
+  }
+
+  /// Returns the capacity as passed to the constructor of the buffer.
+  size_t capacity() const noexcept {
+    return capacity_;
+  }
+
+  // -- unsafe interface for manual locking ------------------------------------
+
+  /// Returns the mutex for this object.
+  auto& mtx() const noexcept {
+    return mtx_;
+  }
+
+  /// Returns how many items are currently available.
+  /// @pre 'mtx()' is locked.
+  size_t available_unsafe() const noexcept {
+    return buf_.size();
+  }
+
+  /// Returns the error from the producer.
+  /// @pre 'mtx()' is locked.
+  const error& abort_reason_unsafe() const noexcept {
+    return err_;
+  }
+
+  /// Blocks until there is at least one item available or the producer stopped.
+  /// @pre the consumer calls `cv.notify_all()` in its `on_producer_wakeup`
+  void await_consumer_ready(lock_type& guard, std::condition_variable& cv) {
+    while (!closed_ && buf_.empty()) {
+      cv.wait(guard);
+    }
+  }
+
+  /// Blocks until there is at least one item available, the producer stopped,
+  /// or a timeout occurs.
+  /// @pre the consumer calls `cv.notify_all()` in its `on_producer_wakeup`
+  template <class TimePoint>
+  bool await_consumer_ready(lock_type& guard, std::condition_variable& cv,
+                            TimePoint timeout) {
+    while (!closed_ && buf_.empty())
+      if (cv.wait_until(guard, timeout) == std::cv_status::timeout)
+        return false;
+    return true;
+  }
+
+  template <class Policy, class Observer>
+  std::pair<bool, size_t>
+  pull_unsafe(lock_type& guard, Policy, size_t demand, Observer& dst) {
     CAF_ASSERT(consumer_ != nullptr);
     CAF_ASSERT(consumer_buf_.empty());
     if constexpr (std::is_same_v<Policy, prioritize_errors_t>) {
@@ -141,98 +259,6 @@ public:
         dst.on_complete();
       return {false, consumed};
     }
-  }
-
-  /// Checks whether there is any pending data in the buffer.
-  bool has_data() const noexcept {
-    std::unique_lock guard{mtx_};
-    return !buf_.empty();
-  }
-
-  /// Checks whether the there is data available or whether the producer has
-  /// closed or aborted the flow.
-  bool has_consumer_event() const noexcept {
-    std::unique_lock guard{mtx_};
-    return !buf_.empty() || closed_;
-  }
-
-  /// Returns how many items are currently available. This may be greater than
-  /// the `capacity`.
-  size_t available() const noexcept {
-    std::unique_lock guard{mtx_};
-    return buf_.size();
-  }
-
-  /// Closes the buffer by request of the producer.
-  void close() {
-    std::unique_lock guard{mtx_};
-    if (producer_) {
-      closed_ = true;
-      producer_ = nullptr;
-      if (buf_.empty() && consumer_)
-        consumer_->on_producer_wakeup();
-    }
-  }
-
-  /// Closes the buffer by request of the producer and signals an error to the
-  /// consumer.
-  void abort(error reason) {
-    std::unique_lock guard{mtx_};
-    if (producer_) {
-      closed_ = true;
-      err_ = std::move(reason);
-      producer_ = nullptr;
-      if (buf_.empty() && consumer_)
-        consumer_->on_producer_wakeup();
-    }
-  }
-
-  /// Closes the buffer by request of the consumer.
-  void cancel() {
-    std::unique_lock guard{mtx_};
-    if (consumer_) {
-      consumer_ = nullptr;
-      if (producer_)
-        producer_->on_consumer_cancel();
-    }
-  }
-
-  /// Consumer callback for the initial handshake between producer and consumer.
-  void set_consumer(consumer_ptr consumer) {
-    CAF_ASSERT(consumer != nullptr);
-    std::unique_lock guard{mtx_};
-    if (consumer_)
-      CAF_RAISE_ERROR("SPSC buffer already has a consumer");
-    consumer_ = std::move(consumer);
-    if (producer_)
-      ready();
-  }
-
-  /// Producer callback for the initial handshake between producer and consumer.
-  void set_producer(producer_ptr producer) {
-    CAF_ASSERT(producer != nullptr);
-    std::unique_lock guard{mtx_};
-    if (producer_)
-      CAF_RAISE_ERROR("SPSC buffer already has a producer");
-    producer_ = std::move(producer);
-    if (consumer_)
-      ready();
-  }
-
-  /// Returns the capacity as passed to the constructor of the buffer.
-  size_t capacity() const noexcept {
-    return capacity_;
-  }
-
-  /// Returns the mutex for this object.
-  auto& mtx() const noexcept {
-    return mtx_;
-  }
-
-  /// Returns how many items are currently available.
-  /// @pre 'mtx()' is locked.
-  size_t available_unsafe() const noexcept {
-    return buf_.size();
   }
 
 private:
@@ -359,6 +385,10 @@ public:
     }
   }
 
+  explicit operator bool() const noexcept {
+    return ctrl_ != nullptr;
+  }
+
 private:
   intrusive_ptr<resource_ctrl<T, false>> ctrl_;
 };
@@ -396,6 +426,10 @@ public:
     } else {
       return nullptr;
     }
+  }
+
+  explicit operator bool() const noexcept {
+    return ctrl_ != nullptr;
   }
 
 private:

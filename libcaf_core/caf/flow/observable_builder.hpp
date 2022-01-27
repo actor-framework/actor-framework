@@ -11,6 +11,71 @@
 
 namespace caf::flow {
 
+// -- forward declarations -----------------------------------------------------
+
+template <class T>
+class repeater_source;
+
+template <class Container>
+class container_source;
+
+template <class T>
+class value_source;
+
+template <class F>
+class callable_source;
+
+// -- builder interface --------------------------------------------------------
+
+/// Factory for @ref observable objects.
+class observable_builder {
+public:
+  friend class coordinator;
+
+  observable_builder(const observable_builder&) noexcept = default;
+
+  observable_builder& operator=(const observable_builder&) noexcept = default;
+
+  /// Creates a @ref generation that emits `value` indefinitely.
+  template <class T>
+  [[nodiscard]] generation<repeater_source<T>> repeat(T value) const;
+
+  /// Creates a @ref generation that emits all values from `values`.
+  template <class Container>
+  [[nodiscard]] generation<container_source<Container>>
+  from_container(Container values) const;
+
+  /// Creates a @ref generation that emits `value` once.
+  template <class T>
+  [[nodiscard]] generation<value_source<T>> just(T value) const;
+
+  /// Creates a @ref generation that emits values by repeatedly calling `fn`.
+  template <class F>
+  [[nodiscard]] generation<callable_source<F>> from_callable(F fn) const;
+
+  /// Creates a @ref generation that emits values by repeatedly calling
+  /// `pullable.pull(...)`. For example implementations of the `Pullable`
+  /// concept, see @ref container_source, @ref repeater_source and
+  /// @ref callable_source.
+  template <class Pullable>
+  [[nodiscard]] generation<Pullable> lift(Pullable pullable) const;
+
+  /// Creates an @ref observable that reads and emits all values from `res`.
+  template <class T>
+  [[nodiscard]] observable<T>
+  from_resource(async::consumer_resource<T> res) const;
+
+private:
+  explicit observable_builder(coordinator* ctx) : ctx_(ctx) {
+    // nop
+  }
+
+  coordinator* ctx_;
+};
+
+// -- generation ---------------------------------------------------------------
+
+/// Implements the `Pullable` concept for emitting values from a container.
 template <class Container>
 class container_source {
 public:
@@ -43,6 +108,7 @@ private:
   typename Container::const_iterator pos_;
 };
 
+/// Implements the `Pullable` concept for emitting the same value repeatedly.
 template <class T>
 class repeater_source {
 public:
@@ -68,6 +134,33 @@ private:
   T value_;
 };
 
+/// Implements the `Pullable` concept for emitting the same value once.
+template <class T>
+class value_source {
+public:
+  using output_type = T;
+
+  explicit value_source(T value) : value_(std::move(value)) {
+    // nop
+  }
+
+  value_source(value_source&&) = default;
+  value_source(const value_source&) = default;
+  value_source& operator=(value_source&&) = default;
+  value_source& operator=(const value_source&) = default;
+
+  template <class Step, class... Steps>
+  void pull(size_t, Step& step, Steps&... steps) {
+    if (step.on_next(value_, steps...))
+      step.on_complete(steps...);
+  }
+
+private:
+  T value_;
+};
+
+/// Implements the `Pullable` concept for emitting values generated from a
+/// function object.
 template <class F>
 class callable_source {
 public:
@@ -94,45 +187,8 @@ private:
   F fn_;
 };
 
-class observable_builder {
-public:
-  friend class coordinator;
-
-  observable_builder(const observable_builder&) noexcept = default;
-  observable_builder& operator=(const observable_builder&) noexcept = default;
-
-  template <class T>
-  [[nodiscard]] generation<repeater_source<T>> repeat(T value) const;
-
-  template <class Container>
-  [[nodiscard]] generation<container_source<Container>>
-  from_container(Container values) const;
-
-  template <class T>
-  [[nodiscard]] auto just(T value) const;
-
-  template <class F>
-  [[nodiscard]] generation<callable_source<F>> from_callable(F fn) const;
-
-  /// Opens an asynchronous, buffered resource and emits all inputs from the
-  /// buffer.
-  template <class T>
-  [[nodiscard]] observable<T>
-  from_resource(async::consumer_resource<T> hdl) const;
-
-  template <class Pullable>
-  [[nodiscard]] generation<Pullable> lift(Pullable pullable) const;
-
-private:
-  explicit observable_builder(coordinator* ctx) : ctx_(ctx) {
-    // nop
-  }
-
-  coordinator* ctx_;
-};
-
-// -- generation ---------------------------------------------------------------
-
+/// Helper class for combining multiple generation and transformation steps into
+/// a single @ref observable object.
 template <class Generator, class... Steps>
 class generation final
   : public observable_def<
@@ -235,8 +291,8 @@ observable_builder::from_container(Container values) const {
 // -- observable_builder::just -------------------------------------------------
 
 template <class T>
-auto observable_builder::just(T value) const {
-  return repeat(std::move(value)).take(1);
+generation<value_source<T>> observable_builder::just(T value) const {
+  return {ctx_, value_source<T>{std::move(value)}};
 }
 
 // -- observable_builder::from_callable ----------------------------------------
