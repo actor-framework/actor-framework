@@ -18,6 +18,7 @@
 #include "caf/span.hpp"
 #include "caf/unit.hpp"
 
+#include <condition_variable>
 #include <cstdlib>
 #include <mutex>
 

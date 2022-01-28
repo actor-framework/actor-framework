@@ -58,7 +58,7 @@ public:
       return pull(policy, item, none);
     }
 
-    void on_next(span<const T>items) {
+    void on_next(span<const T> items) {
       CAF_ASSERT(items.size() == 1);
       *val_ = items[0];
     }
@@ -189,4 +189,3 @@ make_blocking_consumer(consumer_resource<T> res) {
 }
 
 } // namespace caf::async
-
