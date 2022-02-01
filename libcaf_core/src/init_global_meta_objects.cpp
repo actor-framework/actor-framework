@@ -12,6 +12,7 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/callback.hpp"
 #include "caf/config_value.hpp"
+#include "caf/cow_string.hpp"
 #include "caf/downstream_msg.hpp"
 #include "caf/error.hpp"
 #include "caf/group.hpp"

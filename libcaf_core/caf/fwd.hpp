@@ -17,6 +17,7 @@ namespace caf {
 // -- 1 param templates --------------------------------------------------------
 
 template <class> class [[nodiscard]] error_code;
+template <class> class basic_cow_string;
 template <class> class behavior_type_of;
 template <class> class callback;
 template <class> class dictionary;
@@ -193,6 +194,9 @@ using actor_id = uint64_t;
 using byte_buffer = std::vector<byte>;
 using byte_span = span<byte>;
 using const_byte_span = span<const byte>;
+using cow_string = basic_cow_string<char>;
+using cow_u16string = basic_cow_string<char16_t>;
+using cow_u32string = basic_cow_string<char32_t>;
 using ip_address = ipv6_address;
 using ip_endpoint = ipv6_endpoint;
 using ip_subnet = ipv6_subnet;

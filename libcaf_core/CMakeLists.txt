@@ -244,6 +244,7 @@ caf_add_component(
     const_typed_message_view
     constructor_attach
     continuous_streaming
+    cow_string
     cow_tuple
     decorator.sequencer
     deep_to_string
