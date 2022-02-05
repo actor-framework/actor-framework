@@ -288,6 +288,7 @@ caf_add_component(
     flow.for_each
     flow.merge
     flow.observe_on
+    flow.prefix_and_tail
     flow.single
     function_view
     fused_downstream_manager

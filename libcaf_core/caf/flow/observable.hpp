@@ -12,6 +12,7 @@
 #include "caf/async/consumer.hpp"
 #include "caf/async/producer.hpp"
 #include "caf/async/spsc_buffer.hpp"
+#include "caf/cow_tuple.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/disposable.hpp"
@@ -157,19 +158,24 @@ public:
   /// Registers a callback for `on_complete` events.
   template <class F>
   auto do_on_complete(F f) {
-    return transform(on_complete_step<T, F>{std::move(f)});
+    return transform(do_on_complete_step<T, F>{std::move(f)});
   }
 
   /// Registers a callback for `on_error` events.
   template <class F>
   auto do_on_error(F f) {
-    return transform(on_error_step<T, F>{std::move(f)});
+    return transform(do_on_error_step<T, F>{std::move(f)});
   }
 
   /// Registers a callback that runs on `on_complete` or `on_error`.
   template <class F>
   auto do_finally(F f) {
-    return transform(finally_step<T, F>{std::move(f)});
+    return transform(do_finally_step<T, F>{std::move(f)});
+  }
+
+  /// Catches errors by converting them into errors instead.
+  auto on_error_complete() {
+    return transform(on_error_complete_step<T>{});
   }
 
   /// Returns a transformation that selects only the first `n` items.
@@ -212,6 +218,18 @@ public:
   /// all observables returned by `f`.
   template <class F>
   auto concat_map(F f);
+
+  /// Takes @p prefix_size elements from this observable and emits it in a tuple
+  /// containing an observable for the remaining elements as the second value.
+  /// The returned observable either emits a single element (the tuple) or none
+  /// if this observable never produces sufficient elements for the prefix.
+  /// @pre `prefix_size > 0`
+  observable<cow_tuple<std::vector<T>, observable<T>>>
+  prefix_and_tail(size_t prefix_size);
+
+  /// Similar to `prefix_and_tail(1)` but passes the single element directly in
+  /// the tuple instead of wrapping it in a list.
+  observable<cow_tuple<T, observable<T>>> head_and_tail();
 
   /// Creates an asynchronous resource that makes emitted items available in a
   /// spsc buffer.
@@ -323,6 +341,15 @@ public:
     return lift().concat_map(std::move(f));
   }
 
+  observable<cow_tuple<std::vector<T>, observable<T>>>
+  prefix_and_tail(size_t prefix_size) && {
+    return lift().prefix_and_tail(prefix_size);
+  }
+
+  observable<cow_tuple<T, observable<T>>> head_and_tail() && {
+    return lift().head_and_tail();
+  }
+
   disposable subscribe(observer<T> what) && {
     return lift().subscribe(std::move(what));
   }
@@ -425,7 +452,7 @@ private:
   intrusive_ptr<impl> pimpl_;
 };
 
-template <class In, class Out>
+template <class In, class Out = In>
 using processor_impl = typename processor<In, Out>::impl;
 
 // -- representing an error as an observable -----------------------------------
@@ -950,6 +977,24 @@ public:
       // nop
     }
 
+    void on_complete() override {
+      super::sub_ = nullptr;
+      auto f = [this](auto& step, auto&... steps) {
+        term_step<output_type> term{this};
+        step.on_complete(steps..., term);
+      };
+      std::apply(f, steps);
+    }
+
+    void on_error(const error& what) override {
+      super::sub_ = nullptr;
+      auto f = [this, &what](auto& step, auto&... steps) {
+        term_step<output_type> term{this};
+        step.on_error(what, steps..., term);
+      };
+      std::apply(f, steps);
+    }
+
     std::tuple<Step, Steps...> steps;
 
   private:
@@ -962,22 +1007,6 @@ public:
         return true;
       };
       return std::apply(f, steps);
-    }
-
-    void do_on_complete() override {
-      auto f = [this](auto& step, auto&... steps) {
-        term_step<output_type> term{this};
-        step.on_complete(steps..., term);
-      };
-      std::apply(f, steps);
-    }
-
-    void do_on_error(const error& what) override {
-      auto f = [this, &what](auto& step, auto&... steps) {
-        term_step<output_type> term{this};
-        step.on_error(what, steps..., term);
-      };
-      std::apply(f, steps);
     }
   };
 
@@ -1025,22 +1054,26 @@ public:
   template <class F>
   auto do_on_complete(F f) && {
     return std::move(*this) //
-      .transform(on_complete_step<output_type, F>{std::move(f)});
+      .transform(do_on_complete_step<output_type, F>{std::move(f)});
   }
 
   template <class F>
   auto do_on_error(F f) && {
     return std::move(*this) //
-      .transform(on_error_step<output_type, F>{std::move(f)});
+      .transform(do_on_error_step<output_type, F>{std::move(f)});
   }
 
   template <class F>
   auto do_finally(F f) && {
     return std::move(*this) //
-      .transform(finally_step<output_type, F>{std::move(f)});
+      .transform(do_finally_step<output_type, F>{std::move(f)});
+  }
+  auto on_error_complete() {
+    return std::move(*this) //
+      .transform(on_error_complete_step<output_type>{});
   }
 
-  observable<output_type> as_observable() && override {
+  observable<output_type> as_observable() && {
     auto pimpl = make_counted<impl>(source_.ptr()->ctx(), std::move(steps_));
     auto res = pimpl->as_observable();
     source_.subscribe(observer<input_type>{std::move(pimpl)});
@@ -1509,6 +1542,219 @@ auto observable<T>::concat_map(F f) {
   obs->merger_ptr()->concat_mode(true);
   pimpl_->subscribe(obs->as_observer());
   return obs->merger();
+}
+
+// -- observable::prefix_and_tail ----------------------------------------------
+
+template <class T>
+class prefix_and_tail_observable_impl final
+  : public ref_counted,
+    public observable_impl<T>, // For the forwarding to the 'tail'.
+    public processor_impl<T, cow_tuple<std::vector<T>, observable<T>>> {
+public:
+  // -- member types -----------------------------------------------------------
+
+  using in_t = T;
+
+  using out_t = cow_tuple<std::vector<T>, observable<T>>;
+
+  using in_obs_t = observable_impl<in_t>;
+
+  using out_obs_t = observable_impl<out_t>;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  prefix_and_tail_observable_impl(coordinator* ctx, size_t prefix_size)
+    : ctx_(ctx), prefix_size_(prefix_size) {
+    // nop
+  }
+
+  // -- friends ----------------------------------------------------------------
+
+  CAF_INTRUSIVE_PTR_FRIENDS(prefix_and_tail_observable_impl)
+
+
+  // -- implementation of disposable::impl -------------------------------------
+
+  void dispose() override {
+    if (sub_) {
+      sub_.cancel();
+      sub_ = nullptr;
+    }
+    if (obs_) {
+      obs_.on_complete();
+      obs_ = nullptr;
+    }
+    if (tail_) {
+      tail_.on_complete();
+      tail_ = nullptr;
+    }
+  }
+
+  bool disposed() const noexcept override {
+    return !sub_ && !obs_ && !tail_;
+  }
+
+  void ref_disposable() const noexcept override {
+    this->ref();
+  }
+
+  void deref_disposable() const noexcept override {
+    this->deref();
+  }
+
+  // -- implementation of observable<in_t>::impl -------------------------------
+
+  coordinator* ctx() const noexcept override {
+    return ctx_;
+  }
+
+  disposable subscribe(observer<in_t> sink) override {
+    if (sink.ptr() == tail_.ptr()) {
+      return in_obs_t::do_subscribe(sink.ptr());
+    } else {
+      sink.on_error(make_error(sec::invalid_observable));
+      return disposable{};
+    }
+  }
+
+  void on_request(observer_impl<in_t>*, size_t n) override {
+    if (sub_)
+      sub_.request(n);
+  }
+
+  void on_cancel(observer_impl<in_t>*) override {
+    if (sub_) {
+      sub_.cancel();
+      sub_ = nullptr;
+    }
+  }
+
+  // -- implementation of observable<out_t>::impl ------------------------------
+
+  disposable subscribe(observer<out_t> sink) override {
+    obs_ = sink;
+    return out_obs_t::do_subscribe(sink.ptr());
+  }
+
+  void on_request(observer_impl<out_t>*, size_t) override {
+    if (sub_ && !requested_prefix_) {
+      requested_prefix_ = true;
+      sub_.request(prefix_size_);
+    }
+  }
+
+  void on_cancel(observer_impl<out_t>*) override {
+    // Only has an effect when canceling immediately. Otherwise, we forward to
+    // tail_ and the original observer no longer is of any interest since it
+    // receives at most one item anyways.
+    if (sub_ && !tail_) {
+      sub_.cancel();
+      sub_ = nullptr;
+    }
+  }
+
+  // -- implementation of observer<in_t>::impl ---------------------------------
+
+  void on_subscribe(subscription sub) override {
+    if (!had_subscriber_) {
+      had_subscriber_ = true;
+      sub_ = std::move(sub);
+    } else {
+      sub.cancel();
+    }
+  }
+
+  void on_next(span<const in_t> items) override {
+    if (tail_) {
+      tail_.on_next(items);
+    } else if (obs_) {
+      CAF_ASSERT(prefix_.size() + items.size() <= prefix_size_);
+      prefix_.insert(prefix_.end(), items.begin(), items.end());
+      if (prefix_.size() >= prefix_size_) {
+        auto tptr = make_counted<broadcaster_impl<in_t>>(ctx_);
+        tail_ = tptr->as_observer();
+        static_cast<observable_impl<in_t>*>(this)->subscribe(tail_);
+        auto item = make_cow_tuple(std::move(prefix_), tptr->as_observable());
+        obs_.on_next(make_span(&item, 1));
+        obs_.on_complete();
+        obs_ = nullptr;
+      }
+    }
+  }
+
+  void on_complete() override {
+    sub_ = nullptr;
+    if (obs_) {
+      obs_.on_complete();
+      obs_ = nullptr;
+    }
+    if (tail_) {
+      tail_.on_complete();
+      tail_ = nullptr;
+    }
+  }
+
+  void on_error(const error& what) override {
+    sub_ = nullptr;
+    if (obs_) {
+      obs_.on_error(what);
+      obs_ = nullptr;
+    }
+    if (tail_) {
+      tail_.on_error(what);
+      tail_ = nullptr;
+    }
+  }
+
+private:
+  /// Our context.
+  coordinator* ctx_;
+
+  /// Subscription to the input data.
+  subscription sub_;
+
+  /// Handle for the observer that gets the prefix + tail tuple.
+  observer<out_t> obs_;
+
+  /// Handle to the tail for forwarding any data after the prefix.
+  observer<in_t> tail_;
+
+  /// Makes sure we only respect the first subscriber.
+  bool had_subscriber_ = false;
+
+  /// Stores whether we have requested the prefix;
+  bool requested_prefix_ = false;
+
+  /// Buffer for storing the prefix elements.
+  std::vector<in_t> prefix_;
+
+  /// User-defined size of the prefix.
+  size_t prefix_size_;
+};
+
+template <class T>
+observable<cow_tuple<std::vector<T>, observable<T>>>
+observable<T>::prefix_and_tail(size_t prefix_size) {
+  using impl_t = prefix_and_tail_observable_impl<T>;
+  using out_t = cow_tuple<std::vector<T>, observable<T>>;
+  auto obs = make_counted<impl_t>(pimpl_->ctx(), prefix_size);
+  pimpl_->subscribe(obs->as_observer());
+  return static_cast<observable_impl<out_t>*>(obs.get())->as_observable();
+}
+
+// -- observable::prefix_and_tail ----------------------------------------------
+
+template <class T>
+observable<cow_tuple<T, observable<T>>> observable<T>::head_and_tail() {
+  using tuple_t = cow_tuple<std::vector<T>, observable<T>>;
+  return prefix_and_tail(1)
+    .map([](const tuple_t& tup) {
+      auto& [prefix, tail] = tup.data();
+      CAF_ASSERT(prefix.size() == 1);
+      return make_cow_tuple(prefix.front(), tail);
+    })
+    .as_observable();
 }
 
 // -- observable::to_resource --------------------------------------------------

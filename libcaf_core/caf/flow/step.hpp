@@ -150,7 +150,7 @@ struct flat_map_optional_step {
 };
 
 template <class T, class Fn>
-struct on_complete_step {
+struct do_on_complete_step {
   using input_type = T;
 
   using output_type = T;
@@ -175,7 +175,7 @@ struct on_complete_step {
 };
 
 template <class T, class Fn>
-struct on_error_step {
+struct do_on_error_step {
   using input_type = T;
 
   using output_type = T;
@@ -200,7 +200,7 @@ struct on_error_step {
 };
 
 template <class T, class Fn>
-struct finally_step {
+struct do_finally_step {
   using input_type = T;
 
   using output_type = T;
@@ -224,5 +224,29 @@ struct finally_step {
     next.on_error(what, steps...);
   }
 };
+
+/// Catches errors by converting them into complete events instead.
+template <class T>
+struct on_error_complete_step {
+  using input_type = T;
+
+  using output_type = T;
+
+  template <class Next, class... Steps>
+  bool on_next(const input_type& item, Next& next, Steps&... steps) {
+    return next.on_next(item, steps...);
+  }
+
+  template <class Next, class... Steps>
+  void on_complete(Next& next, Steps&... steps) {
+    next.on_complete(steps...);
+  }
+
+  template <class Next, class... Steps>
+  void on_error(const error&, Next& next, Steps&... steps) {
+    next.on_complete(steps...);
+  }
+};
+
 
 } // namespace caf::flow

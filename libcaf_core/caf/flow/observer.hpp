@@ -426,6 +426,10 @@ private:
 
 namespace caf::flow {
 
+/// Creates an observer from given callbacks.
+/// @param on_next Callback for handling incoming elements.
+/// @param on_error Callback for handling an error.
+/// @param on_complete Callback for handling the end-of-stream event.
 template <class OnNext, class OnError, class OnComplete>
 auto make_observer(OnNext on_next, OnError on_error, OnComplete on_complete) {
   using impl_type = detail::default_observer_impl<OnNext, OnError, OnComplete>;
@@ -435,6 +439,9 @@ auto make_observer(OnNext on_next, OnError on_error, OnComplete on_complete) {
   return observer<input_type>{std::move(ptr)};
 }
 
+/// Creates an observer from given callbacks.
+/// @param on_next Callback for handling incoming elements.
+/// @param on_error Callback for handling an error.
 template <class OnNext, class OnError>
 auto make_observer(OnNext on_next, OnError on_error) {
   using impl_type = detail::default_observer_impl<OnNext, OnError>;
@@ -443,12 +450,27 @@ auto make_observer(OnNext on_next, OnError on_error) {
   return observer<input_type>{std::move(ptr)};
 }
 
+/// Creates an observer from given callbacks.
+/// @param on_next Callback for handling incoming elements.
 template <class OnNext>
 auto make_observer(OnNext on_next) {
   using impl_type = detail::default_observer_impl<OnNext>;
   using input_type = typename impl_type::input_type;
   auto ptr = make_counted<impl_type>(std::move(on_next));
   return observer<input_type>{std::move(ptr)};
+}
+
+/// Creates an observer from a smart pointer to a custom object that implements
+/// `on_next`, `on_error` and `on_complete` as member functions.
+/// @param ptr Smart pointer to a custom object.
+template <class SmartPointer>
+auto make_observer_from_ptr(SmartPointer ptr) {
+  using obj_t = std::remove_reference_t<decltype(*ptr)>;
+  using on_next_fn = decltype(&obj_t::on_next);
+  using value_type = typename detail::on_next_trait_t<on_next_fn>::value_type;
+  return make_observer([ptr](const value_type& x) { ptr->on_next(x); },
+                       [ptr](const error& what) { ptr->on_error(what); },
+                       [ptr] { ptr->on_complete(); });
 }
 
 } // namespace caf::flow
