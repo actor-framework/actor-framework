@@ -386,6 +386,11 @@ public:
     }
   }
 
+  template <class Coordinator>
+  auto observe_on(Coordinator* ctx) {
+    return ctx->make_observable().from_resource(*this);
+  }
+
   explicit operator bool() const noexcept {
     return ctrl_ != nullptr;
   }
