@@ -90,6 +90,11 @@ public:
     return *this;
   }
 
+  template <class U = T, class... Ts>
+  void emplace(Ts&&... xs) {
+    reset(new U(std::forward<Ts>(xs)...), false);
+  }
+
   // -- comparison -------------------------------------------------------------
 
   ptrdiff_t compare(std::nullptr_t) const noexcept {
@@ -173,6 +178,26 @@ public:
 
   explicit operator bool() const noexcept {
     return get() != nullptr;
+  }
+
+  template <class C>
+  intrusive_cow_ptr<C> downcast() const noexcept {
+    using res_t = intrusive_cow_ptr<C>;
+    return (ptr_) ? res_t{ptr_.template downcast<C>()} : res_t{};
+  }
+
+  template <class C>
+  intrusive_cow_ptr<C> upcast() const noexcept {
+    using res_t = intrusive_cow_ptr<C>;
+    return (ptr_) ? res_t{ptr_.template upcast<C>()} : res_t{};
+  }
+
+  // -- factories --------------------------------------------------------------
+
+  /// Constructs an object of type `T` in an `intrusive_cow_ptr`.
+  template <class... Ts>
+  static intrusive_cow_ptr make(Ts&&... xs) {
+    return intrusive_cow_ptr{new T(std::forward<Ts>(xs)...), false};
   }
 
 private:

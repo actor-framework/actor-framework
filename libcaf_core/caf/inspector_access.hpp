@@ -30,6 +30,7 @@
 #include "caf/fwd.hpp"
 #include "caf/inspector_access_base.hpp"
 #include "caf/inspector_access_type.hpp"
+#include "caf/intrusive_cow_ptr.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/optional.hpp"
 #include "caf/sec.hpp"
@@ -291,11 +292,23 @@ struct inspector_access;
 
 // -- inspection support for optional values -----------------------------------
 
+struct optional_inspector_traits_base {
+  template <class T>
+  static auto& deref_load(T& x) {
+    return *x;
+  }
+
+  template <class T>
+  static auto& deref_save(T& x) {
+    return *x;
+  }
+};
+
 template <class T>
 struct optional_inspector_traits;
 
 template <class T>
-struct optional_inspector_traits<optional<T>> {
+struct optional_inspector_traits<optional<T>> : optional_inspector_traits_base {
   using container_type = optional<T>;
 
   using value_type = T;
@@ -307,7 +320,8 @@ struct optional_inspector_traits<optional<T>> {
 };
 
 template <class T>
-struct optional_inspector_traits<intrusive_ptr<T>> {
+struct optional_inspector_traits<intrusive_ptr<T>>
+  : optional_inspector_traits_base {
   using container_type = intrusive_ptr<T>;
 
   using value_type = T;
@@ -319,7 +333,28 @@ struct optional_inspector_traits<intrusive_ptr<T>> {
 };
 
 template <class T>
-struct optional_inspector_traits<std::unique_ptr<T>> {
+struct optional_inspector_traits<intrusive_cow_ptr<T>> {
+  using container_type = intrusive_cow_ptr<T>;
+
+  using value_type = T;
+
+  template <class... Ts>
+  static void emplace(container_type& container, Ts&&... xs) {
+    container.reset(new T(std::forward<Ts>(xs)...));
+  }
+
+  static value_type& deref_load(container_type& x) {
+    return x.unshared();
+  }
+
+  static const value_type& deref_save(container_type& x) {
+    return *x;
+  }
+};
+
+template <class T>
+struct optional_inspector_traits<std::unique_ptr<T>>
+  : optional_inspector_traits_base {
   using container_type = std::unique_ptr<T>;
 
   using value_type = T;
@@ -331,7 +366,8 @@ struct optional_inspector_traits<std::unique_ptr<T>> {
 };
 
 template <class T>
-struct optional_inspector_traits<std::shared_ptr<T>> {
+struct optional_inspector_traits<std::shared_ptr<T>>
+  : optional_inspector_traits_base {
   using container_type = std::shared_ptr<T>;
 
   using value_type = T;
@@ -360,7 +396,7 @@ struct optional_inspector_access {
   static bool
   save_field(Inspector& f, string_view field_name, container_type& x) {
     auto is_present = [&x] { return static_cast<bool>(x); };
-    auto get = [&x]() -> decltype(auto) { return *x; };
+    auto get = [&x]() -> decltype(auto) { return traits::deref_save(x); };
     return detail::save_field(f, field_name, is_present, get);
   }
 
@@ -376,7 +412,8 @@ struct optional_inspector_access {
                          SyncValue& sync_value) {
     traits::emplace(x);
     auto reset = [&x] { x.reset(); };
-    return detail::load_field(f, field_name, *x, is_valid, sync_value, reset);
+    return detail::load_field(f, field_name, traits::deref_load(x), is_valid,
+                              sync_value, reset);
   }
 
   template <class Inspector, class IsValid, class SyncValue, class SetFallback>
@@ -384,8 +421,8 @@ struct optional_inspector_access {
                          container_type& x, IsValid& is_valid,
                          SyncValue& sync_value, SetFallback& set_fallback) {
     traits::emplace(x);
-    return detail::load_field(f, field_name, *x, is_valid, sync_value,
-                              set_fallback);
+    return detail::load_field(f, field_name, traits::deref_load(x), is_valid,
+                              sync_value, set_fallback);
   }
 };
 
