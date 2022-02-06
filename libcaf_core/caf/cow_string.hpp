@@ -245,7 +245,7 @@ public:
   }
 
   int compare(const std_type& x) const noexcept {
-  	return str().compare(x);
+    return str().compare(x);
   }
 
   int compare(const cow_string& x) const noexcept {

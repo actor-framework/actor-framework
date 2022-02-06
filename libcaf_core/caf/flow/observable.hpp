@@ -1573,7 +1573,6 @@ public:
 
   CAF_INTRUSIVE_PTR_FRIENDS(prefix_and_tail_observable_impl)
 
-
   // -- implementation of disposable::impl -------------------------------------
 
   void dispose() override {

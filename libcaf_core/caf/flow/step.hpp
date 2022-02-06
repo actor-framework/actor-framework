@@ -248,5 +248,4 @@ struct on_error_complete_step {
   }
 };
 
-
 } // namespace caf::flow

@@ -144,7 +144,8 @@ SCENARIO("head_and_tail splits off the first element") {
       THEN("the observer of head_and_tail only receives on_complete") {
         auto inputs = std::vector<int>{};
         auto obs = std::make_shared<test_observer<tuple_t>>();
-        ctx->make_observable()
+        ctx //
+          ->make_observable()
           .from_container(inputs)
           .head_and_tail()
           .subscribe(flow::make_observer_from_ptr(obs));
