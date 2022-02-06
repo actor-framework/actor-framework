@@ -49,6 +49,21 @@ public:
     return std::move(err_);
   }
 
+  template <class... Ts>
+  void field_invariant_check_failed(std::string msg) {
+    emplace_error(sec::field_invariant_check_failed, std::move(msg));
+  }
+
+  template <class... Ts>
+  void field_value_synchronization_failed(std::string msg) {
+    emplace_error(sec::field_value_synchronization_failed, std::move(msg));
+  }
+
+  template <class... Ts>
+  void invalid_field_type(std::string msg) {
+    emplace_error(sec::invalid_field_type, std::move(msg));
+  }
+
   // -- DSL types for regular fields -------------------------------------------
 
   template <class T, class U, class Predicate>

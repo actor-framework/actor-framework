@@ -29,6 +29,11 @@ public:
   }
 
   template <class T>
+  bool begin_object_t() {
+    return dref().begin_object(type_id_v<T>, caf::type_name_v<T>);
+  }
+
+  template <class T>
   bool list(const T& xs) {
     using value_type = typename T::value_type;
     auto size = xs.size();
