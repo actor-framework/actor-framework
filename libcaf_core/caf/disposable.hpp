@@ -13,7 +13,7 @@
 namespace caf {
 
 /// Represents a disposable resource.
-class CAF_CORE_EXPORT disposable {
+class CAF_CORE_EXPORT disposable : detail::comparable<disposable> {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -112,6 +112,13 @@ public:
   /// Returns a smart pointer to the implementation.
   [[nodiscard]] intrusive_ptr<impl> as_intrusive_ptr() const& noexcept {
     return pimpl_;
+  }
+
+  // -- comparisons ------------------------------------------------------------
+
+  /// Compares the internal pointers.
+  [[nodiscard]] intptr_t compare(const disposable& other) const noexcept {
+    return pimpl_.compare(other.pimpl_);
   }
 
 private:
