@@ -17,7 +17,7 @@ using namespace std::literals;
 
 SCENARIO("default constructed COW strings are empty") {
   WHEN("default-constructing a COW tuple") {
-  	cow_string str;
+    cow_string str;
     THEN("the string is empty") {
       CHECK(str.empty());
       CHECK_EQ(str.size(), 0u);
