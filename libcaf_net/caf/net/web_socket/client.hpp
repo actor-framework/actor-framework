@@ -4,14 +4,13 @@
 
 #pragma once
 
-#include <algorithm>
-
 #include "caf/byte_span.hpp"
 #include "caf/detail/base64.hpp"
 #include "caf/error.hpp"
 #include "caf/hash/sha1.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/fwd.hpp"
+#include "caf/net/message_flow_bridge.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/web_socket/framing.hpp"
 #include "caf/net/web_socket/handshake.hpp"
@@ -19,6 +18,8 @@
 #include "caf/settings.hpp"
 #include "caf/tag/mixed_message_oriented.hpp"
 #include "caf/tag/stream_oriented.hpp"
+
+#include <algorithm>
 
 namespace caf::net::web_socket {
 
@@ -178,5 +179,18 @@ private:
 
   settings cfg_;
 };
+
+template <template <class> class Transport = stream_transport, class Socket,
+          class T, class Trait>
+void run_client(multiplexer& mpx, Socket fd, handshake hs,
+                async::consumer_resource<T> in, async::producer_resource<T> out,
+                Trait trait) {
+  using app_t = message_flow_bridge<T, Trait, tag::mixed_message_oriented>;
+  using stack_t = Transport<client<app_t>>;
+  auto mgr = make_socket_manager<stack_t>(fd, &mpx, std::move(hs),
+                                          std::move(trait));
+  mgr->top_layer().connect_flows(mgr.get(), std::move(in), std::move(out));
+  mpx.init(mgr);
+}
 
 } // namespace caf::net::web_socket

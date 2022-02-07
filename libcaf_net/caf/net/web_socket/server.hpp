@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <algorithm>
-
 #include "caf/byte_span.hpp"
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
@@ -22,6 +20,8 @@
 #include "caf/settings.hpp"
 #include "caf/tag/mixed_message_oriented.hpp"
 #include "caf/tag/stream_oriented.hpp"
+
+#include <algorithm>
 
 namespace caf::net::web_socket {
 
@@ -385,11 +385,11 @@ public:
     return decorated().convert(x, text);
   }
 
-  bool convert(const_byte_span bytes, int32_t&x) {
+  bool convert(const_byte_span bytes, value_type& x) {
     return decorated().convert(bytes, x);
   }
 
-  bool convert(string_view text, int32_t& x) {
+  bool convert(string_view text, value_type& x) {
     return decorated().convert(text, x);
   }
 

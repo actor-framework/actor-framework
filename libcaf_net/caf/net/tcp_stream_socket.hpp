@@ -26,11 +26,11 @@ struct CAF_NET_EXPORT tcp_stream_socket : stream_socket {
 expected<tcp_stream_socket>
   CAF_NET_EXPORT make_connected_tcp_stream_socket(ip_endpoint node);
 
-/// Create a `tcp_stream_socket` connected to `auth`.
-/// @param node Host and port of the remote node.
+/// Creates a `tcp_stream_socket` connected to @p auth.
+/// @param auth Host and port of the remote node.
 /// @returns The connected socket or an error.
 /// @relates tcp_stream_socket
 expected<tcp_stream_socket> CAF_NET_EXPORT
-make_connected_tcp_stream_socket(const uri::authority_type& node);
+make_connected_tcp_stream_socket(const uri::authority_type& auth);
 
 } // namespace caf::net

@@ -83,4 +83,12 @@ make_connected_tcp_stream_socket(const uri::authority_type& node) {
   return make_error(sec::cannot_connect_to_node, to_string(node));
 }
 
+expected<tcp_stream_socket> make_connected_tcp_stream_socket(std::string host,
+                                                             uint16_t port) {
+  uri::authority_type auth;
+  auth.host = std::move(host);
+  auth.port = port;
+  return make_connected_tcp_stream_socket(auth);
+}
+
 } // namespace caf::net
