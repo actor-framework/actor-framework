@@ -349,8 +349,8 @@ void multiplexer::shutdown() {
 
 // -- utility functions --------------------------------------------------------
 
-short multiplexer::handle(const socket_manager_ptr& mgr, short events,
-                          short revents) {
+short multiplexer::handle(const socket_manager_ptr& mgr,
+                          [[maybe_unused]] short events, short revents) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id)
                 << CAF_ARG(events) << CAF_ARG(revents));
   CAF_ASSERT(mgr != nullptr);
