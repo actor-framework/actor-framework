@@ -158,7 +158,11 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
         home_system().scheduler().enqueue(this);
       return true;
     }
-    case intrusive::inbox_result::queue_closed: {
+    case intrusive::inbox_result::success:
+      // enqueued to a running actors' mailbox; nothing to do
+      CAF_LOG_ACCEPT_EVENT(false);
+      return true;
+    default: { // intrusive::inbox_result::queue_closed
       CAF_LOG_REJECT_EVENT();
       home_system().base_metrics().rejected_messages->inc();
       if (collects_metrics)
@@ -169,10 +173,6 @@ bool scheduled_actor::enqueue(mailbox_element_ptr ptr, execution_unit* eu) {
       }
       return false;
     }
-    case intrusive::inbox_result::success:
-      // enqueued to a running actors' mailbox; nothing to do
-      CAF_LOG_ACCEPT_EVENT(false);
-      return true;
   }
 }
 
