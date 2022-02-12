@@ -120,7 +120,11 @@ bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, execution_unit*) {
         owner_->mpx().register_writing(owner_);
       return true;
     }
-    case intrusive::inbox_result::queue_closed: {
+    case intrusive::inbox_result::success:
+      // Enqueued to a running actors' mailbox: nothing to do.
+      CAF_LOG_ACCEPT_EVENT(false);
+      return true;
+    default: { // intrusive::inbox_result::queue_closed
       CAF_LOG_REJECT_EVENT();
       home_system().base_metrics().rejected_messages->inc();
       if (collects_metrics)
@@ -131,10 +135,6 @@ bool abstract_actor_shell::enqueue(mailbox_element_ptr ptr, execution_unit*) {
       }
       return false;
     }
-    case intrusive::inbox_result::success:
-      // Enqueued to a running actors' mailbox: nothing to do.
-      CAF_LOG_ACCEPT_EVENT(false);
-      return true;
   }
 }
 
