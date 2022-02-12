@@ -436,7 +436,8 @@ struct inspector_access<optional<T>> : optional_inspector_access<optional<T>> {
 #ifdef CAF_HAS_STD_OPTIONAL
 
 template <class T>
-struct optional_inspector_traits<std::optional<T>> {
+struct optional_inspector_traits<std::optional<T>>
+  : optional_inspector_traits_base {
   using container_type = std::optional<T>;
 
   using value_type = T;
