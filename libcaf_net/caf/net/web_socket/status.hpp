@@ -8,6 +8,7 @@
 #include "caf/detail/net_export.hpp"
 
 #include <cstdint>
+#include <type_traits>
 
 namespace caf::net::web_socket {
 

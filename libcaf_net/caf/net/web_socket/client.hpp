@@ -10,6 +10,7 @@
 #include "caf/hash/sha1.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/fwd.hpp"
+#include "caf/net/http/v1.hpp"
 #include "caf/net/message_flow_bridge.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/web_socket/framing.hpp"
@@ -106,12 +107,10 @@ public:
       return upper_layer_.consume(down, input, delta);
     // Check whether received a HTTP header or else wait for more data or abort
     // when exceeding the maximum size.
-    auto [hdr, remainder] = handshake::split_http_1_header(input);
+    auto [hdr, remainder] = http::v1::split_header(input);
     if (hdr.empty()) {
       if (input.size() >= handshake::max_http_size) {
-        down->begin_output();
-        handshake::write_http_1_header_too_large(down->output_buffer());
-        down->end_output();
+        CAF_LOG_ERROR("server response exceeded maximum header size");
         auto err = make_error(pec::too_many_characters,
                               "exceeded maximum header size");
         down->abort_reason(std::move(err));
@@ -188,8 +187,8 @@ void run_client(multiplexer& mpx, Socket fd, handshake hs,
   using app_t = message_flow_bridge<T, Trait, tag::mixed_message_oriented>;
   using stack_t = Transport<client<app_t>>;
   auto mgr = make_socket_manager<stack_t>(fd, &mpx, std::move(hs),
+                                          std::move(in), std::move(out),
                                           std::move(trait));
-  mgr->top_layer().connect_flows(mgr.get(), std::move(in), std::move(out));
   mpx.init(mgr);
 }
 

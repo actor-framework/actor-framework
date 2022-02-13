@@ -41,29 +41,36 @@ public:
 
   using producer_resource_t = async::producer_resource<T>;
 
+  message_flow_bridge(consumer_resource_t in_res, producer_resource_t out_res,
+                      Trait trait)
+    : in_res_(std::move(in_res)),
+      out_res_(std::move(out_res)),
+      trait_(std::move(trait)) {
+    // nop
+  }
+
   explicit message_flow_bridge(Trait trait) : trait_(std::move(trait)) {
     // nop
   }
 
-  void connect_flows(net::socket_manager* mgr, consumer_resource_t in,
-                     producer_resource_t out) {
-    in_ = consumer_adapter<buffer_type>::try_open(mgr, in);
-    out_ = producer_adapter<buffer_type>::try_open(mgr, out);
-  }
-
   template <class LowerLayerPtr>
-  error
-  init(net::socket_manager* mgr, LowerLayerPtr down, const settings& cfg) {
+  error init(net::socket_manager* mgr, LowerLayerPtr, const settings& cfg) {
     mgr_ = mgr;
     if constexpr (caf::detail::has_init_v<Trait>) {
       if (auto err = init_res(trait_.init(cfg)))
         return err;
     }
+    if (in_res_) {
+      in_ = consumer_adapter<buffer_type>::try_open(mgr, in_res_);
+      in_res_ = nullptr;
+    }
+    if (out_res_) {
+      out_ = producer_adapter<buffer_type>::try_open(mgr, out_res_);
+      out_res_ = nullptr;
+    }
     if (!in_ && !out_)
       return make_error(sec::cannot_open_resource,
                         "flow bridge cannot run without at least one resource");
-    if (!out_)
-      down->suspend_reading();
     return none;
   }
 
@@ -77,12 +84,12 @@ public:
       static_assert(std::is_same_v<Tag, tag::mixed_message_oriented>);
       if (trait_.converts_to_binary(item)) {
         down->begin_binary_message();
-        auto& buf = down->binary_message_buffer();
-        return trait_.convert(item, buf) && down->end_binary_message();
+        auto& bytes = down->binary_message_buffer();
+        return trait_.convert(item, bytes) && down->end_binary_message();
       } else {
         down->begin_text_message();
-        auto& buf = down->text_message_buffer();
-        return trait_.convert(item, buf) && down->end_text_message();
+        auto& text = down->text_message_buffer();
+        return trait_.convert(item, text) && down->end_text_message();
       }
     }
   }
@@ -208,7 +215,8 @@ private:
   }
 
   error init_res(consumer_resource_t in, producer_resource_t out) {
-    connect_flows(mgr_, std::move(in), std::move(out));
+    in_res_ = std::move(in);
+    out_res_ = std::move(out);
     return caf::none;
   }
 
@@ -241,6 +249,12 @@ private:
 
   /// Converts between raw bytes and items.
   Trait trait_;
+
+  /// Discarded after initialization.
+  consumer_resource_t in_res_;
+
+  /// Discarded after initialization.
+  producer_resource_t out_res_;
 };
 
 } // namespace caf::net

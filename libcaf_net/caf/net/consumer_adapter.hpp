@@ -86,8 +86,10 @@ private:
   }
 
   void on_wakeup() {
-    if (buf_ && buf_->has_consumer_event())
+    if (buf_ && buf_->has_consumer_event()) {
+      puts("WAKEUP");
       mgr_->mpx().register_writing(mgr_);
+    }
   }
 
   intrusive_ptr<socket_manager> mgr_;

@@ -111,6 +111,7 @@ public:
     if (msg_size > 0 && static_cast<size_t>(msg_size) < max_message_length) {
       auto u32_size = to_network_order(static_cast<uint32_t>(msg_size));
       memcpy(std::addressof(*msg_begin), &u32_size, 4);
+      down->end_output();
       return true;
     } else {
       auto err = make_error(sec::runtime_error,
@@ -256,9 +257,9 @@ error run_with_length_prefix_framing(multiplexer& mpx, Socket fd,
                                      async::consumer_resource<T> in,
                                      async::producer_resource<T> out,
                                      Trait trait) {
-  using app_t = length_prefix_framing<message_flow_bridge<T, Trait>>;
-  auto mgr = make_socket_manager<app_t, Transport>(fd, &mpx, std::move(trait));
-  mgr->top_layer().connect_flows(mgr.get(), std::move(in), std::move(out));
+  using app_t = Transport<length_prefix_framing<message_flow_bridge<T, Trait>>>;
+  auto mgr = make_socket_manager<app_t>(fd, &mpx, std::move(in), std::move(out),
+                                        std::move(trait));
   return mgr->init(cfg);
 }
 

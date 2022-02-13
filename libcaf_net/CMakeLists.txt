@@ -16,6 +16,8 @@ caf_incubator_add_component(
     net.basp.connection_state
     net.basp.ec
     net.basp.message_type
+    net.http.method
+    net.http.status
     net.operation
     net.web_socket.status
   HEADERS
@@ -31,6 +33,10 @@ caf_incubator_add_component(
     src/multiplexer.cpp
     src/net/abstract_actor_shell.cpp
     src/net/actor_shell.cpp
+    src/net/http/header.cpp
+    src/net/http/method.cpp
+    src/net/http/status.cpp
+    src/net/http/v1.cpp
     src/net/middleman.cpp
     src/net/middleman_backend.cpp
     src/net/packet_writer.cpp
@@ -57,6 +63,7 @@ caf_incubator_add_component(
     multiplexer
     net.actor_shell
     net.consumer_adapter
+    net.http.server
     net.length_prefix_framing
     net.operation
     net.producer_adapter

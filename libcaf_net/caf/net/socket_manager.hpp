@@ -18,6 +18,7 @@
 #include "caf/net/socket.hpp"
 #include "caf/net/typed_actor_shell.hpp"
 #include "caf/ref_counted.hpp"
+#include "caf/sec.hpp"
 #include "caf/tag/io_event_oriented.hpp"
 
 namespace caf::net {

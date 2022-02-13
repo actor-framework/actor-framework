@@ -9,6 +9,10 @@
 #include "caf/logger.hpp"
 #include "caf/net/connection_acceptor.hpp"
 #include "caf/net/fwd.hpp"
+#include "caf/net/http/header.hpp"
+#include "caf/net/http/method.hpp"
+#include "caf/net/http/status.hpp"
+#include "caf/net/http/v1.hpp"
 #include "caf/net/message_flow_bridge.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/receive_policy.hpp"
@@ -92,18 +96,22 @@ public:
 
   template <class LowerLayerPtr>
   ptrdiff_t consume(LowerLayerPtr down, byte_span input, byte_span delta) {
+    using namespace caf::literals;
     CAF_LOG_TRACE(CAF_ARG2("socket", down->handle().id)
                   << CAF_ARG2("bytes", input.size()));
     // Short circuit to the framing layer after the handshake completed.
     if (handshake_complete_)
       return upper_layer_.consume(down, input, delta);
-    // Check whether received a HTTP header or else wait for more data or abort
-    // when exceeding the maximum size.
-    auto [hdr, remainder] = handshake::split_http_1_header(input);
+    // Check whether we received an HTTP header or else wait for more data.
+    // Abort when exceeding the maximum size.
+    auto [hdr, remainder] = http::v1::split_header(input);
     if (hdr.empty()) {
       if (input.size() >= handshake::max_http_size) {
         down->begin_output();
-        handshake::write_http_1_header_too_large(down->output_buffer());
+        http::v1::write_response(http::status::request_header_fields_too_large,
+                                 "text/plain"_sv,
+                                 "Header exceeds maximum size."_sv,
+                                 down->output_buffer());
         down->end_output();
         auto err = make_error(pec::too_many_characters,
                               "exceeded maximum header size");
@@ -137,91 +145,67 @@ private:
   // -- HTTP request processing ------------------------------------------------
 
   template <class LowerLayerPtr>
+  void write_response(LowerLayerPtr down, http::status code, string_view msg) {
+    down->begin_output();
+    http::v1::write_response(code, "text/plain", msg, down->output_buffer());
+    down->end_output();
+  }
+
+  template <class LowerLayerPtr>
   bool handle_header(LowerLayerPtr down, string_view http) {
     using namespace std::literals;
-    // Parse the first line, i.e., "METHOD REQUEST-URI VERSION".
-    auto [first_line, remainder] = split(http, "\r\n");
-    auto [method, request_uri_str, version] = split2(first_line, " ");
-    auto& hdr = cfg_["web-socket"].as_dictionary();
-    if (method != "GET") {
-      down->begin_output();
-      handshake::write_http_1_bad_request(down->output_buffer(),
-                                          "Expected WebSocket handshake.");
-      down->end_output();
+    // Parse the header and reject invalid inputs.
+    http::header hdr;
+    auto [code, msg] = hdr.parse(http);
+    if (code != http::status::ok) {
+      write_response(down, code, msg);
+      down->abort_reason(make_error(pec::invalid_argument, "malformed header"));
+      return false;
+    }
+    if (hdr.method() != http::method::get) {
+      write_response(down, http::status::bad_request,
+                     "Expected a WebSocket handshake.");
       auto err = make_error(pec::invalid_argument,
-                            "invalid operation: expected GET, got "
-                              + to_string(method));
+                            "invalid operation: expected method get, got "
+                              + to_string(hdr.method()));
       down->abort_reason(std::move(err));
       return false;
     }
-    // The path must be absolute.
-    if (request_uri_str.empty() || request_uri_str.front() != '/') {
-      auto descr = "Malformed Request-URI path: expected absolute path."s;
-      down->begin_output();
-      handshake::write_http_1_bad_request(down->output_buffer(), descr);
-      down->end_output();
-      down->abort_reason(make_error(pec::invalid_argument, std::move(descr)));
-      return false;
-    }
-    // The path must form a valid URI when prefixing a scheme. We don't actually
-    // care about the scheme, so just use "foo" here for the validation step.
-    uri request_uri;
-    if (auto res = make_uri("foo://localhost" + to_string(request_uri_str))) {
-      request_uri = std::move(*res);
-    } else {
-      auto descr = "Malformed Request-URI path: " + to_string(res.error());
-      descr += '.';
-      down->begin_output();
-      handshake::write_http_1_bad_request(down->output_buffer(), descr);
-      down->end_output();
-      down->abort_reason(make_error(pec::invalid_argument, std::move(descr)));
-      return false;
-    }
-    // Store the request information in the settings for the upper layer.
-    put(hdr, "method", method);
-    put(hdr, "path", request_uri.path());
-    put(hdr, "query", request_uri.query());
-    put(hdr, "fragment", request_uri.fragment());
-    put(hdr, "http-version", version);
-    // Store the remaining header fields.
-    auto& fields = hdr["fields"].as_dictionary();
-    for_each_line(remainder, [&fields](string_view line) {
-      if (auto sep = std::find(line.begin(), line.end(), ':');
-          sep != line.end()) {
-        auto key = trim({line.begin(), sep});
-        auto val = trim({sep + 1, line.end()});
-        if (!key.empty())
-          put(fields, key, val);
-      }
-    });
     // Check whether the mandatory fields exist.
-    handshake hs;
-    if (auto skey_field = get_if<std::string>(&fields, "Sec-WebSocket-Key");
-        skey_field && hs.assign_key(*skey_field)) {
-      CAF_LOG_DEBUG("received Sec-WebSocket-Key" << *skey_field);
-    } else {
+    auto sec_key = hdr.field("Sec-WebSocket-Key");
+    if (sec_key.empty()) {
       auto descr = "Mandatory field Sec-WebSocket-Key missing or invalid."s;
-      down->begin_output();
-      handshake::write_http_1_bad_request(down->output_buffer(), descr);
-      down->end_output();
+      write_response(down, http::status::bad_request, descr);
       CAF_LOG_DEBUG("received invalid WebSocket handshake");
       down->abort_reason(make_error(pec::missing_field, std::move(descr)));
       return false;
     }
-    // Try initializing the upper layer.
+    // Store the request information in the settings for the upper layer.
+    auto& ws = cfg_["web-socket"].as_dictionary();
+    put(ws, "method", to_rfc_string(hdr.method()));
+    put(ws, "path", "/" + to_string(hdr.path()));
+    put(ws, "query", hdr.query());
+    put(ws, "fragment", hdr.fragment());
+    put(ws, "http-version", hdr.version());
+    if (!hdr.fields().empty()) {
+      auto& fields = ws["fields"].as_dictionary();
+      for (auto& [key, val] : hdr.fields())
+        put(fields, to_string(key), to_string(val));
+    }
+    // Try to initialize the upper layer.
     if (auto err = upper_layer_.init(owner_, down, cfg_)) {
       auto descr = to_string(err);
-      down->begin_output();
-      handshake::write_http_1_bad_request(down->output_buffer(), descr);
-      down->end_output();
+      CAF_LOG_DEBUG("upper layer rejected a WebSocket connection:" << descr);
+      write_response(down, http::status::bad_request, descr);
       down->abort_reason(std::move(err));
       return false;
     }
-    // Send server handshake.
+    // Finalize the WebSocket handshake.
+    handshake hs;
+    hs.assign_key(sec_key);
     down->begin_output();
     hs.write_http_1_response(down->output_buffer());
     down->end_output();
-    // Done.
     CAF_LOG_DEBUG("completed WebSocket handshake");
     handshake_complete_ = true;
     return true;
@@ -293,8 +277,8 @@ socket_manager_ptr make_server(multiplexer& mpx, Socket fd,
                                async::producer_resource<T> out, Trait trait) {
   using app_t = message_flow_bridge<T, Trait, tag::mixed_message_oriented>;
   using stack_t = Transport<server<app_t>>;
-  auto mgr = make_socket_manager<stack_t>(fd, &mpx, std::move(trait));
-  mgr->top_layer().connect_flows(mgr.get(), std::move(in), std::move(out));
+  auto mgr = make_socket_manager<stack_t>(fd, &mpx, std::move(in),
+                                          std::move(out), std::move(trait));
   return mgr;
 }
 

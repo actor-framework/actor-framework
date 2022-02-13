@@ -125,13 +125,6 @@ public:
   /// @pre `has_valid_key()`
   void write_http_1_response(byte_buffer& buf) const;
 
-  /// Writes an HTTP 1.1 'Bad Request' error to `buf` with `descr` providing
-  /// additional information to the client.
-  static void write_http_1_bad_request(byte_buffer& buf, string_view descr);
-
-  /// Writes a HTTP 1.1 431 (Request Header Fields Too Large) response.
-  static void write_http_1_header_too_large(byte_buffer& buf);
-
   /// Checks whether the `http_response` contains a HTTP 1.1 response to the
   /// generated HTTP GET request. A valid response contains:
   /// - HTTP status code 101 (Switching Protocols).
@@ -139,11 +132,6 @@ public:
   /// - A `Connection` field with the value `Upgrade`.
   /// - A `Sec-WebSocket-Accept` field with the value `response_key()`.
   bool is_valid_http_1_response(string_view http_response) const;
-
-  /// Tries splitting the given byte span into an HTTP header (`first`) and a
-  /// remainder (`second`). Returns an empty @ref string_view as `first` for
-  /// incomplete HTTP headers.
-  static std::pair<string_view, byte_span> split_http_1_header(byte_span bytes);
 
 private:
   // -- utility ----------------------------------------------------------------

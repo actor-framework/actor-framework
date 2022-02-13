@@ -43,10 +43,6 @@ public:
     // nop
   }
 
-  virtual ~stream_transport() {
-    // nop
-  }
-
   // -- interface for stream_oriented_layer_ptr --------------------------------
 
   template <class ParentPtr>

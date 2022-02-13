@@ -10,11 +10,6 @@
 #include <random>
 #include <tuple>
 
-
-
-
-#include <iostream>
-
 #include "caf/config.hpp"
 #include "caf/detail/base64.hpp"
 #include "caf/hash/sha1.hpp"
@@ -122,23 +117,6 @@ void handshake::write_http_1_response(byte_buffer& buf) const {
       << response_key() << "\r\n\r\n";
 }
 
-void handshake::write_http_1_bad_request(byte_buffer& buf, string_view descr) {
-  std::cout<<"BAD REQUEST: "<<descr<<'\n';
-  writer out{&buf};
-  out << "HTTP/1.1 400 Bad Request\r\n"
-         "Content-Type: text/plain\r\n"
-         "\r\n"
-      << descr << "\r\n";
-}
-
-void handshake::write_http_1_header_too_large(byte_buffer& buf) {
-  writer out{&buf};
-  out << "HTTP/1.1 431 Request Header Fields Too Large\r\n"
-         "Content-Type: text/plain\r\n"
-         "\r\n"
-         "Header exceeds 2048 Bytes.\r\n";
-}
-
 namespace {
 
 template <class F>
@@ -242,26 +220,6 @@ bool handshake::is_valid_http_1_response(string_view http_response) const {
   response_checker checker{response_key};
   for_each_http_line(http_response, checker);
   return checker.ok();
-}
-
-std::pair<string_view, byte_span>
-handshake::split_http_1_header(byte_span bytes) {
-  std::array<byte, 4> end_of_header{{
-    byte{'\r'},
-    byte{'\n'},
-    byte{'\r'},
-    byte{'\n'},
-  }};
-  if (auto i = std::search(bytes.begin(), bytes.end(), end_of_header.begin(),
-                           end_of_header.end());
-      i == bytes.end()) {
-    return {string_view{}, bytes};
-  } else {
-    auto offset = static_cast<size_t>(std::distance(bytes.begin(), i));
-    offset += end_of_header.size();
-    return {string_view{reinterpret_cast<const char*>(bytes.begin()), offset},
-            bytes.subspan(offset)};
-  }
 }
 
 // -- utility ------------------------------------------------------------------
