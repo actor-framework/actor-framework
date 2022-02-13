@@ -146,6 +146,7 @@ caf_add_component(
     src/event_based_actor.cpp
     src/execution_unit.cpp
     src/flow/coordinator.cpp
+    src/flow/observable_builder
     src/flow/scoped_coordinator.cpp
     src/flow/subscription.cpp
     src/forwarding_actor_proxy.cpp
@@ -286,6 +287,7 @@ caf_add_component(
     flow.concat_map
     flow.flat_map
     flow.for_each
+    flow.interval
     flow.merge
     flow.observe_on
     flow.prefix_and_tail

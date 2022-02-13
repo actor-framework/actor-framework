@@ -8,10 +8,8 @@
 
 namespace caf {
 
-action::transition action::run() {
-  CAF_LOG_TRACE("");
-  CAF_ASSERT(pimpl_ != nullptr);
-  return pimpl_->run();
+action::action(impl_ptr ptr) noexcept : pimpl_(std::move(ptr)) {
+  // nop
 }
 
 } // namespace caf

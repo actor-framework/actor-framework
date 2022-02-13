@@ -25,23 +25,12 @@ public:
   enum class state {
     disposed,  /// The action may no longer run.
     scheduled, /// The action is scheduled for execution.
-    invoked,   /// The action fired and needs rescheduling before running again.
-    waiting,   /// The action waits for reschedule but didn't run yet.
-  };
-
-  /// Describes the result of an attempted state transition.
-  enum class transition {
-    success,  /// Transition completed as expected.
-    disposed, /// No transition since the action has been disposed.
-    failure,  /// No transition since preconditions did not hold.
   };
 
   /// Internal interface of `action`.
   class CAF_CORE_EXPORT impl : public disposable::impl {
   public:
-    virtual transition reschedule() = 0;
-
-    virtual transition run() = 0;
+    virtual void run() = 0;
 
     virtual state current_state() const noexcept = 0;
 
@@ -58,9 +47,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit action(impl_ptr ptr) noexcept : pimpl_(std::move(ptr)) {
-    // nop
-  }
+  explicit action(impl_ptr ptr) noexcept;
 
   action() noexcept = default;
 
@@ -82,26 +69,16 @@ public:
     return pimpl_->current_state() == state::scheduled;
   }
 
-  [[nodiscard]] bool invoked() const {
-    return pimpl_->current_state() == state::invoked;
-  }
-
   // -- mutators ---------------------------------------------------------------
 
-  /// Tries to transition from `scheduled` to `invoked`, running the body of the
-  /// internal function object as a side effect on success.
-  /// @return whether the transition took place.
-  transition run();
+  /// Triggers the action.
+  void run() {
+    pimpl_->run();
+  }
 
   /// Cancel the action if it has not been invoked yet.
   void dispose() {
     pimpl_->dispose();
-  }
-
-  /// Tries setting the state from `invoked` back to `scheduled`.
-  /// @return whether the transition took place.
-  transition reschedule() {
-    return pimpl_->reschedule();
   }
 
   // -- conversion -------------------------------------------------------------
@@ -143,8 +120,8 @@ struct default_action_impl : ref_counted, action::impl {
   std::atomic<action::state> state_;
   F f_;
 
-  default_action_impl(F fn, action::state init_state)
-    : state_(init_state), f_(std::move(fn)) {
+  default_action_impl(F fn)
+    : state_(action::state::scheduled), f_(std::move(fn)) {
     // nop
   }
 
@@ -160,42 +137,12 @@ struct default_action_impl : ref_counted, action::impl {
     return state_.load();
   }
 
-  action::transition reschedule() override {
-    auto st = action::state::invoked;
-    for (;;) {
-      if (state_.compare_exchange_strong(st, action::state::scheduled))
-        return action::transition::success;
-      switch (st) {
-        case action::state::invoked:
-        case action::state::waiting:
-          break; // Try again.
-        case action::state::disposed:
-          return action::transition::disposed;
-        default:
-          return action::transition::failure;
-      }
-    }
-  }
-
-  action::transition run() override {
-    auto st = state_.load();
-    switch (st) {
-      case action::state::scheduled:
-        f_();
-        // No retry. If this action has been disposed while running, we stay
-        // in the state 'disposed'. We assume that only one thread may try to
-        // transition from scheduled to invoked, while other threads may only
-        // dispose the action.
-        if (state_.compare_exchange_strong(st, action::state::invoked)) {
-          return action::transition::success;
-        } else {
-          CAF_ASSERT(st == action::state::disposed);
-          return action::transition::disposed;
-        }
-      case action::state::disposed:
-        return action::transition::disposed;
-      default:
-        return action::transition::failure;
+  void run() override {
+    // Note: we do *not* set the state to disposed after running the function
+    // object. This allows the action to re-register itself when needed, e.g.,
+    // to implement time-based loops.
+    if (state_.load() == action::state::scheduled) {
+      f_();
     }
   }
 
@@ -220,17 +167,12 @@ struct default_action_impl : ref_counted, action::impl {
 
 namespace caf {
 
-/// Convenience function for creating @ref action objects from a function
-/// object.
+/// Convenience function for creating an @ref action from a function object.
 /// @param f The body for the action.
-/// @param init_state either `action::state::scheduled` or
-///                   `action::state::waiting`.
 template <class F>
-action make_action(F f, action::state init_state = action::state::scheduled) {
-  CAF_ASSERT(init_state == action::state::scheduled
-             || init_state == action::state::waiting);
+action make_action(F f) {
   using impl_t = detail::default_action_impl<F>;
-  return action{make_counted<impl_t>(std::move(f), init_state)};
+  return action{make_counted<impl_t>(std::move(f))};
 }
 
 } // namespace caf

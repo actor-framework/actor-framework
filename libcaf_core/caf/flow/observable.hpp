@@ -89,14 +89,14 @@ public:
 
     void request(size_t n) override {
       if (src_)
-        ctx()->post_internally_fn([src = src_, snk = snk_, n] { //
+        ctx()->delay_fn([src = src_, snk = snk_, n] { //
           src->on_request(snk.get(), n);
         });
     }
 
     void cancel() override {
       if (src_) {
-        ctx()->post_internally_fn([src = src_, snk = snk_] { //
+        ctx()->delay_fn([src = src_, snk = snk_] { //
           src->on_cancel(snk.get());
         });
         src_.reset();

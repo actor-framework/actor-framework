@@ -5,6 +5,7 @@
 #pragma once
 
 #include <condition_variable>
+#include <map>
 #include <mutex>
 
 #include "caf/flow/coordinator.hpp"
@@ -16,34 +17,54 @@ namespace caf::flow {
 class CAF_CORE_EXPORT scoped_coordinator final : public ref_counted,
                                                  public coordinator {
 public:
+  // -- factories --------------------------------------------------------------
+
+  static intrusive_ptr<scoped_coordinator> make();
+
+  // -- execution --------------------------------------------------------------
+
   void run();
+
+  // -- reference counting -----------------------------------------------------
 
   void ref_coordinator() const noexcept override;
 
   void deref_coordinator() const noexcept override;
 
-  void schedule(action what) override;
-
-  void post_internally(action what) override;
-
-  void watch(disposable what) override;
-
   friend void intrusive_ptr_add_ref(const scoped_coordinator* ptr) {
     ptr->ref();
   }
 
-  friend void intrusive_ptr_release(scoped_coordinator* ptr) {
+  friend void intrusive_ptr_release(const scoped_coordinator* ptr) {
     ptr->deref();
   }
 
-  static intrusive_ptr<scoped_coordinator> make();
+  // -- lifetime management ----------------------------------------------------
+
+  void watch(disposable what) override;
+
+  // -- time -------------------------------------------------------------------
+
+  steady_time_point steady_time() override;
+
+  // -- scheduling of actions --------------------------------------------------
+
+  void schedule(action what) override;
+
+  void delay(action what) override;
+
+  disposable delay_until(steady_time_point abs_time, action what) override;
 
 private:
   scoped_coordinator() = default;
 
+  action next(bool blocking);
+
   void drop_disposed_flows();
 
   std::vector<disposable> watched_disposables_;
+
+  std::multimap<steady_time_point, action> delayed_;
 
   mutable std::mutex mtx_;
   std::condition_variable cv_;

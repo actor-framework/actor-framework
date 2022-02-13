@@ -6,8 +6,11 @@
 
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/core_export.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observable.hpp"
+
+#include <cstdint>
 
 namespace caf::flow {
 
@@ -24,6 +27,68 @@ class value_source;
 
 template <class F>
 class callable_source;
+
+// -- special-purpose observable implementations -------------------------------
+
+class interval_action;
+
+class CAF_CORE_EXPORT interval_impl : public ref_counted,
+                                      public observable_impl<int64_t> {
+public:
+  // -- member types -----------------------------------------------------------
+
+  using output_type = int64_t;
+
+  using super = observable_impl<int64_t>;
+
+  // -- friends ----------------------------------------------------------------
+
+  CAF_INTRUSIVE_PTR_FRIENDS(interval_impl)
+
+  friend class interval_action;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  interval_impl(coordinator* ctx, timespan initial_delay, timespan period);
+
+  interval_impl(coordinator* ctx, timespan initial_delay, timespan period,
+                int64_t max_val);
+
+  ~interval_impl() override;
+
+  // -- implementation of disposable::impl -------------------------------------
+
+  void dispose() override;
+
+  bool disposed() const noexcept override;
+
+  void ref_disposable() const noexcept override;
+
+  void deref_disposable() const noexcept override;
+
+  // -- implementation of observable<T>::impl ----------------------------------
+
+  coordinator* ctx() const noexcept override;
+
+  void on_request(observer_impl<int64_t>*, size_t) override;
+
+  void on_cancel(observer_impl<int64_t>*) override;
+
+  disposable subscribe(observer<int64_t> what) override;
+
+private:
+  void fire(interval_action*);
+
+  coordinator* ctx_;
+  observer<int64_t> obs_;
+  disposable pending_;
+  timespan initial_delay_;
+  timespan period_;
+  coordinator::steady_time_point last_;
+  int64_t val_ = 0;
+  int64_t max_;
+  size_t demand_ = 0;
+};
 
 // -- builder interface --------------------------------------------------------
 
@@ -64,6 +129,17 @@ public:
   template <class T>
   [[nodiscard]] observable<T>
   from_resource(async::consumer_resource<T> res) const;
+
+  template <class Rep, class Period>
+  [[nodiscard]] observable<int64_t>
+  interval(std::chrono::duration<Rep, Period> initial_delay,
+           std::chrono::duration<Rep, Period> period) {
+    // Intervals introduce a time-dependency, so we need to watch them in order
+    // to prevent actors from shutting down while timeouts are still pending.
+    auto ptr = make_counted<interval_impl>(ctx_, initial_delay, period);
+    ctx_->watch(ptr->as_disposable());
+    return observable<int64_t>{std::move(ptr)};
+  }
 
 private:
   explicit observable_builder(coordinator* ctx) : ctx_(ctx) {

@@ -483,13 +483,17 @@ public:
 
   // -- caf::flow API ----------------------------------------------------------
 
+  steady_time_point steady_time() override;
+
   void ref_coordinator() const noexcept override;
 
   void deref_coordinator() const noexcept override;
 
   void schedule(action what) override;
 
-  void post_internally(action what) override;
+  void delay(action what) override;
+
+  disposable delay_until(steady_time_point abs_time, action what) override;
 
   void watch(disposable what) override;
 
@@ -600,8 +604,7 @@ public:
   disposable run_scheduled(
     std::chrono::time_point<std::chrono::system_clock, Duration> when, F what) {
     using std::chrono::time_point_cast;
-    return run_scheduled(time_point_cast<timespan>(when),
-                         make_action(what, action::state::waiting));
+    return run_scheduled(time_point_cast<timespan>(when), make_action(what));
   }
 
   /// @copydoc run_scheduled
@@ -611,8 +614,7 @@ public:
                 F what) {
     using std::chrono::time_point_cast;
     using duration_t = actor_clock::duration_type;
-    return run_scheduled(time_point_cast<duration_t>(when),
-                         make_action(what, action::state::waiting));
+    return run_scheduled(time_point_cast<duration_t>(when), make_action(what));
   }
 
   /// Runs `what` asynchronously after the `delay`.
@@ -624,8 +626,7 @@ public:
   template <class Rep, class Period, class F>
   disposable run_delayed(std::chrono::duration<Rep, Period> delay, F what) {
     using std::chrono::duration_cast;
-    return run_delayed(duration_cast<timespan>(delay),
-                       make_action(what, action::state::waiting));
+    return run_delayed(duration_cast<timespan>(delay), make_action(what));
   }
 
   // -- stream processing ------------------------------------------------------

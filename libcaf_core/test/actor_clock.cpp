@@ -69,10 +69,10 @@ CAF_TEST(run_delayed without dispose) {
   // Have AUT call self->run_delayed().
   self->send(aut, ok_atom_v);
   expect((ok_atom), from(self).to(aut).with(_));
-  CAF_CHECK_EQUAL(t.schedule.size(), 1u);
+  CAF_CHECK_EQUAL(t.actions.size(), 1u);
   // Advance time to trigger timeout.
   t.advance_time(10s);
-  CAF_CHECK_EQUAL(t.schedule.size(), 0u);
+  CAF_CHECK_EQUAL(t.actions.size(), 0u);
   // Have AUT receive the action.
   expect((action), to(aut));
   CAF_CHECK(state().run_delayed_called);
@@ -83,10 +83,10 @@ CAF_TEST(run_delayed with dispose before expire) {
   self->send(aut, ok_atom_v);
   expect((ok_atom), from(self).to(aut).with(_));
   state().pending.dispose();
-  CAF_CHECK_EQUAL(t.schedule.size(), 1u);
+  CAF_CHECK_EQUAL(t.actions.size(), 1u);
   // Advance time, but the clock drops the disposed callback.
   t.advance_time(10s);
-  CAF_CHECK_EQUAL(t.schedule.size(), 0u);
+  CAF_CHECK_EQUAL(t.actions.size(), 0u);
   // Have AUT receive the timeout.
   disallow((action), to(aut));
   CAF_CHECK(!state().run_delayed_called);
@@ -96,10 +96,10 @@ CAF_TEST(run_delayed with dispose after expire) {
   // Have AUT call self->run_delayed().
   self->send(aut, ok_atom_v);
   expect((ok_atom), from(self).to(aut).with(_));
-  CAF_CHECK_EQUAL(t.schedule.size(), 1u);
+  CAF_CHECK_EQUAL(t.actions.size(), 1u);
   // Advance time to send timeout message.
   t.advance_time(10s);
-  CAF_CHECK_EQUAL(t.schedule.size(), 0u);
+  CAF_CHECK_EQUAL(t.actions.size(), 0u);
   // Have AUT receive the timeout but dispose it: turns into a nop.
   state().pending.dispose();
   expect((action), to(aut));
@@ -113,10 +113,10 @@ CAF_TEST(delay_actor_message) {
   t.schedule_message(n, autptr,
                      make_mailbox_element(autptr, make_message_id(), no_stages,
                                           "foo"));
-  CAF_CHECK_EQUAL(t.schedule.size(), 1u);
+  CAF_CHECK_EQUAL(t.actions.size(), 1u);
   // Advance time to send the message.
   t.advance_time(10s);
-  CAF_CHECK_EQUAL(t.schedule.size(), 0u);
+  CAF_CHECK_EQUAL(t.actions.size(), 0u);
   // Have AUT receive the message.
   expect((std::string), from(aut).to(aut).with("foo"));
 }
@@ -130,10 +130,10 @@ CAF_TEST(delay_group_message) {
   auto n = t.now() + 10s;
   auto autptr = actor_cast<strong_actor_ptr>(aut);
   t.schedule_message(n, std::move(grp), autptr, make_message("foo"));
-  CAF_CHECK_EQUAL(t.schedule.size(), 1u);
+  CAF_CHECK_EQUAL(t.actions.size(), 1u);
   // Advance time to send the message.
   t.advance_time(10s);
-  CAF_CHECK_EQUAL(t.schedule.size(), 0u);
+  CAF_CHECK_EQUAL(t.actions.size(), 0u);
   // Have AUT receive the message.
   expect((std::string), from(aut).to(aut).with("foo"));
   // Kill AUT (necessary because the group keeps a reference around).

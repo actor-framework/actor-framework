@@ -589,6 +589,10 @@ void scheduled_actor::set_stream_timeout(actor_clock::time_point x) {
 
 // -- caf::flow API ------------------------------------------------------------
 
+flow::coordinator::steady_time_point scheduled_actor::steady_time() {
+  return clock().now();
+}
+
 void scheduled_actor::ref_coordinator() const noexcept {
   intrusive_ptr_add_ref(ctrl());
 }
@@ -601,8 +605,13 @@ void scheduled_actor::schedule(action what) {
   enqueue(nullptr, make_message_id(), make_message(std::move(what)), nullptr);
 }
 
-void scheduled_actor::post_internally(action what) {
+void scheduled_actor::delay(action what) {
   actions_.emplace_back(std::move(what));
+}
+
+disposable scheduled_actor::delay_until(steady_time_point abs_time,
+                                        action what) {
+  return clock().schedule(abs_time, std::move(what), strong_actor_ptr{ctrl()});
 }
 
 // -- message processing -------------------------------------------------------

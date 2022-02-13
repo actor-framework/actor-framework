@@ -52,6 +52,11 @@ public:
 
   disposable& operator=(const disposable&) noexcept = default;
 
+  disposable& operator=(std::nullptr_t) noexcept {
+    pimpl_ = nullptr;
+    return *this;
+  }
+
   // -- factories --------------------------------------------------------------
 
   /// Combines multiple disposables into a single disposable. The new disposable
