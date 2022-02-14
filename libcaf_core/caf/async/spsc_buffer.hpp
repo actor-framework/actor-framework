@@ -368,10 +368,19 @@ public:
   }
 
   consumer_resource() = default;
+
   consumer_resource(consumer_resource&&) = default;
+
   consumer_resource(const consumer_resource&) = default;
+
   consumer_resource& operator=(consumer_resource&&) = default;
+
   consumer_resource& operator=(const consumer_resource&) = default;
+
+  consumer_resource& operator=(std::nullptr_t) {
+    ctrl_ = nullptr;
+    return *this;
+  }
 
   /// Tries to open the resource for reading from the buffer. The first `open`
   /// wins on concurrent access.
@@ -416,10 +425,20 @@ public:
   }
 
   producer_resource() = default;
+
   producer_resource(producer_resource&&) = default;
+
   producer_resource(const producer_resource&) = default;
+
   producer_resource& operator=(producer_resource&&) = default;
+
   producer_resource& operator=(const producer_resource&) = default;
+
+  producer_resource& operator=(std::nullptr_t) {
+    ctrl_ = nullptr;
+    return *this;
+  }
+
 
   /// Tries to open the resource for writing to the buffer. The first `open`
   /// wins on concurrent access.
