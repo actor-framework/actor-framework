@@ -97,7 +97,7 @@ bool json_writer::begin_object(type_id_t id, string_view name) {
     pop();
     return true;
   };
-  if (inside_object())
+  if (inside_object() || skip_object_type_annotation_)
     return begin_associative_array(0);
   else
     return begin_associative_array(0) // Put opening paren, ...
