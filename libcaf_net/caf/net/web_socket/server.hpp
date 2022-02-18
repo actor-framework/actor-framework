@@ -183,7 +183,7 @@ private:
     // Store the request information in the settings for the upper layer.
     auto& ws = cfg_["web-socket"].as_dictionary();
     put(ws, "method", to_rfc_string(hdr.method()));
-    put(ws, "path", "/" + to_string(hdr.path()));
+    put(ws, "path", to_string(hdr.path()));
     put(ws, "query", hdr.query());
     put(ws, "fragment", hdr.fragment());
     put(ws, "http-version", hdr.version());
