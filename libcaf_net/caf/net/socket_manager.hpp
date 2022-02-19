@@ -14,7 +14,6 @@
 #include "caf/make_counted.hpp"
 #include "caf/net/actor_shell.hpp"
 #include "caf/net/fwd.hpp"
-#include "caf/net/operation.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/net/typed_actor_shell.hpp"
 #include "caf/ref_counted.hpp"
@@ -28,13 +27,48 @@ class CAF_NET_EXPORT socket_manager : public ref_counted {
 public:
   // -- member types -----------------------------------------------------------
 
+  /// A callback for unprocessed messages.
   using fallback_handler = unique_callback_ptr<result<message>(message&)>;
+
+  /// Encodes how a manager wishes to proceed after a read operation.
+  enum class read_result {
+    /// Indicates that a manager wants to read again later.
+    again,
+    /// Indicates that a manager wants to stop reading until explicitly resumed.
+    stop,
+    /// Indicates that a manager wants to write to the socket instead of reading
+    /// from the socket.
+    want_write,
+    /// Indicates that a manager is done with the socket and hands ownership to
+    /// another manager.
+    handover,
+  };
+
+  /// Encodes how a manager wishes to proceed after a write operation.
+  enum class write_result {
+    /// Indicates that a manager wants to read again later.
+    again,
+    /// Indicates that a manager wants to stop reading until explicitly resumed.
+    stop,
+    /// Indicates that a manager wants to read from the socket instead of
+    /// writing to the socket.
+    want_read,
+    /// Indicates that a manager is done with the socket and hands ownership to
+    /// another manager.
+    handover,
+  };
+
+  /// Stores manager-related flags in a single block.
+  struct flags_t {
+    bool read_closed : 1;
+    bool write_closed : 1;
+  };
 
   // -- constructors, destructors, and assignment operators --------------------
 
   /// @pre `handle != invalid_socket`
-  /// @pre `parent != nullptr`
-  socket_manager(socket handle, multiplexer* parent);
+  /// @pre `mpx!= nullptr`
+  socket_manager(socket handle, multiplexer* mpx);
 
   ~socket_manager() override;
 
@@ -59,69 +93,45 @@ public:
 
   /// Returns the owning @ref multiplexer instance.
   multiplexer& mpx() noexcept {
-    return *parent_;
+    return *mpx_;
   }
 
   /// Returns the owning @ref multiplexer instance.
   const multiplexer& mpx() const noexcept {
-    return *parent_;
+    return *mpx_;
   }
 
   /// Returns a pointer to the owning @ref multiplexer instance.
   multiplexer* mpx_ptr() noexcept {
-    return parent_;
+    return mpx_;
   }
 
   /// Returns a pointer to the owning @ref multiplexer instance.
   const multiplexer* mpx_ptr() const noexcept {
-    return parent_;
+    return mpx_;
   }
 
-  /// Returns registered operations (read, write, or both).
-  operation mask() const noexcept {
-    return mask_;
+  /// Closes the read channel of the socket.
+  void close_read() noexcept;
+
+  /// Closes the write channel of the socket.
+  void close_write() noexcept;
+
+  /// Returns whether the manager closed read operations on the socket.
+  [[nodiscard]] bool read_closed() const noexcept {
+    return flags_.read_closed;
   }
 
-  /// Convenience function for checking whether `mask()` contains the read bit.
-  bool is_reading() const noexcept {
-    return net::is_reading(mask_);
+  /// Returns whether the manager closed write operations on the socket.
+  [[nodiscard]] bool write_closed() const noexcept {
+    return flags_.write_closed;
   }
-
-  /// Convenience function for checking whether `mask()` contains the write bit.
-  bool is_writing() const noexcept {
-    return net::is_writing(mask_);
-  }
-
-  /// Tries to add the read flag to the event mask.
-  /// @returns `true` if the flag was added, `false` if this call had no effect.
-  bool set_read_flag() noexcept;
-
-  /// Tries to add the write flag to the event mask.
-  /// @returns `true` if the flag was added, `false` if this call had no effect.
-  bool set_write_flag() noexcept;
-
-  /// Removes the read flag from the event mask if present.
-  bool unset_read_flag() noexcept;
-
-  /// Removes the write flag from the event mask if present.
-  bool unset_write_flag() noexcept;
-
-  /// Adds the `block_read` flag to the event mask.
-  void block_reads() noexcept;
-
-  /// Adds the `block_write` flag to the event mask.
-  void block_writes() noexcept;
-
-  /// Blocks reading and writing in the event mask.
-  void block_reads_and_writes() noexcept;
 
   const error& abort_reason() const noexcept {
     return abort_reason_;
   }
 
-  void abort_reason(error reason) noexcept {
-    abort_reason_ = std::move(reason);
-  }
+  void abort_reason(error reason) noexcept;
 
   template <class... Ts>
   const error& abort_reason_or(Ts&&... xs) {
@@ -153,23 +163,26 @@ public:
 
   // -- event loop management --------------------------------------------------
 
+  /// Registers the manager for read operations on the @ref multiplexer.
   void register_reading();
 
+  /// Registers the manager for write operations on the @ref multiplexer.
   void register_writing();
 
-  void shutdown_reading();
-
-  void shutdown_writing();
+  /// Performs a handover to another manager after `handle_read_event` or
+  /// `handle_read_event` returned `handover`.
+  socket_manager_ptr do_handover();
 
   // -- pure virtual member functions ------------------------------------------
 
+  /// Initializes the manager and its all of its sub-components.
   virtual error init(const settings& config) = 0;
 
   /// Called whenever the socket received new data.
-  virtual bool handle_read_event() = 0;
+  virtual read_result handle_read_event() = 0;
 
   /// Called whenever the socket is allowed to send data.
-  virtual bool handle_write_event() = 0;
+  virtual write_result handle_write_event() = 0;
 
   /// Called when the remote side becomes unreachable due to an error.
   /// @param code The error code as reported by the operating system.
@@ -179,16 +192,25 @@ public:
   /// function on active managers is a no-op.
   virtual void continue_reading() = 0;
 
+  /// Returns the new manager for the socket after `handle_read_event` or
+  /// `handle_read_event` returned `handover`.
+  /// @note When returning a non-null pointer, the new manager *must* also be
+  ///       initialized.
+  virtual socket_manager_ptr make_next_manager(socket handle);
+
 protected:
-  // -- member variables -------------------------------------------------------
+  // -- protected member variables ---------------------------------------------
 
   socket handle_;
 
-  operation mask_;
+  multiplexer* mpx_;
 
-  multiplexer* parent_;
+private:
+  // -- private member variables -----------------------------------------------
 
   error abort_reason_;
+
+  flags_t flags_;
 };
 
 template <class Protocol>
@@ -196,9 +218,15 @@ class socket_manager_impl : public socket_manager {
 public:
   // -- member types -----------------------------------------------------------
 
+  using super = socket_manager;
+
   using output_tag = tag::io_event_oriented;
 
   using socket_type = typename Protocol::socket_type;
+
+  using read_result = typename super::read_result;
+
+  using write_result = typename super::write_result;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -228,20 +256,20 @@ public:
 
   // -- event callbacks --------------------------------------------------------
 
-  bool handle_read_event() override {
+  read_result handle_read_event() override {
     CAF_LOG_TRACE("");
     return protocol_.handle_read_event(this);
   }
 
-  bool handle_write_event() override {
+  write_result handle_write_event() override {
     CAF_LOG_TRACE("");
     return protocol_.handle_write_event(this);
   }
 
   void handle_error(sec code) override {
     CAF_LOG_TRACE(CAF_ARG(code));
-    abort_reason_ = code;
-    return protocol_.abort(this, abort_reason_);
+    this->abort_reason(make_error(code));
+    return protocol_.abort(this, this->abort_reason());
   }
 
   void continue_reading() override {

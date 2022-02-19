@@ -23,6 +23,10 @@ public:
 
   using application_type = typename transport_type::application_type;
 
+  using read_result = typename super::read_result;
+
+  using write_result = typename super::write_result;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   endpoint_manager_impl(const multiplexer_ptr& parent, actor_system& sys,
@@ -52,11 +56,11 @@ public:
     return transport_.init(*this);
   }
 
-  bool handle_read_event() override {
+  read_result handle_read_event() override {
     return transport_.handle_read_event(*this);
   }
 
-  bool handle_write_event() override {
+  write_result handle_write_event() override {
     if (!this->queue_.blocked()) {
       this->queue_.fetch_more();
       auto& q = std::get<0>(this->queue_.queue().queues());
@@ -83,10 +87,13 @@ public:
     }
     if (!transport_.handle_write_event(*this)) {
       if (this->queue_.blocked())
-        return false;
-      return !(this->queue_.empty() && this->queue_.try_block());
+        return write_result::stop;
+      else if (!(this->queue_.empty() && this->queue_.try_block()))
+        return write_result::again;
+      else
+        return write_result::stop;
     }
-    return true;
+    return write_result::again;
   }
 
   void handle_error(sec code) override {

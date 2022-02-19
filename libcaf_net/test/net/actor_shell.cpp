@@ -163,6 +163,7 @@ struct fixture : host_fixture, test_coordinator_fixture<> {
     if (!predicate())
       return;
     for (size_t i = 0; i < 1000; ++i) {
+      mpx.apply_updates();
       mpx.poll_once(false);
       byte tmp[1024];
       auto bytes = read(self_socket_guard.socket(), make_span(tmp, 1024));

@@ -6,8 +6,7 @@
 
 #include "caf/net/stream_transport.hpp"
 
-#include "caf/net/test/host_fixture.hpp"
-#include "caf/test/dsl.hpp"
+#include "net-test.hpp"
 
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
@@ -26,6 +25,7 @@ using namespace caf;
 using namespace caf::net;
 
 namespace {
+
 constexpr string_view hello_manager = "hello manager!";
 
 struct fixture : test_coordinator_fixture<>, host_fixture {
@@ -36,15 +36,16 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
       recv_buf(1024),
       shared_recv_buf{std::make_shared<byte_buffer>()},
       shared_send_buf{std::make_shared<byte_buffer>()} {
-    if (auto err = mpx.init())
-      CAF_FAIL("mpx.init failed: " << err);
     mpx.set_thread_id();
-    CAF_CHECK_EQUAL(mpx.num_socket_managers(), 1u);
+    mpx.apply_updates();
+    if (auto err = mpx.init())
+      FAIL("mpx.init failed: " << err);
+    REQUIRE_EQ(mpx.num_socket_managers(), 1u);
     auto sockets = unbox(make_stream_socket_pair());
     send_socket_guard.reset(sockets.first);
     recv_socket_guard.reset(sockets.second);
     if (auto err = nonblocking(recv_socket_guard.socket(), true))
-      CAF_FAIL("nonblocking returned an error: " << err);
+      FAIL("nonblocking returned an error: " << err);
   }
 
   bool handle_io_event() override {
@@ -82,7 +83,7 @@ public:
 
   template <class ParentPtr>
   bool prepare_send(ParentPtr parent) {
-    CAF_MESSAGE("prepare_send called");
+    MESSAGE("prepare_send called");
     auto& buf = parent->output_buffer();
     auto data = as_bytes(make_span(hello_manager));
     buf.insert(buf.end(), data.begin(), data.end());
@@ -91,44 +92,30 @@ public:
 
   template <class ParentPtr>
   bool done_sending(ParentPtr) {
-    CAF_MESSAGE("done_sending called");
+    MESSAGE("done_sending called");
     return true;
   }
 
   template <class ParentPtr>
   void continue_reading(ParentPtr) {
-    CAF_FAIL("continue_reading called");
+    FAIL("continue_reading called");
   }
 
   template <class ParentPtr>
   size_t consume(ParentPtr, span<const byte> data, span<const byte>) {
     recv_buf_->clear();
     recv_buf_->insert(recv_buf_->begin(), data.begin(), data.end());
-    CAF_MESSAGE("Received " << recv_buf_->size()
-                            << " bytes in dummy_application");
+    MESSAGE("Received " << recv_buf_->size() << " bytes in dummy_application");
     return recv_buf_->size();
   }
 
-  template <class ParentPtr>
-  void resolve(ParentPtr parent, string_view path, const actor& listener) {
-    actor_id aid = 42;
-    auto hid = string_view("0011223344556677889900112233445566778899");
-    auto nid = unbox(make_node_id(42, hid));
-    actor_config cfg;
-    endpoint_manager_ptr ptr{&parent->manager()};
-    auto p = make_actor<actor_proxy_impl, strong_actor_ptr>(
-      aid, nid, &parent->system(), cfg, std::move(ptr));
-    anon_send(listener, resolve_atom_v, std::string{path.begin(), path.end()},
-              p);
-  }
-
   static void handle_error(sec code) {
-    CAF_FAIL("handle_error called with " << CAF_ARG(code));
+    FAIL("handle_error called with " << CAF_ARG(code));
   }
 
   template <class ParentPtr>
   static void abort(ParentPtr, const error& reason) {
-    CAF_FAIL("abort called with " << CAF_ARG(reason));
+    FAIL("abort called with " << CAF_ARG(reason));
   }
 
 private:
@@ -138,39 +125,41 @@ private:
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(endpoint_manager_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(receive) {
   auto mgr = make_socket_manager<dummy_application, stream_transport>(
     recv_socket_guard.release(), &mpx, shared_recv_buf, shared_send_buf);
-  CAF_CHECK_EQUAL(mgr->init(config), none);
-  CAF_CHECK_EQUAL(mpx.num_socket_managers(), 2u);
-  CAF_CHECK_EQUAL(static_cast<size_t>(
-                    write(send_socket_guard.socket(),
-                          as_bytes(make_span(hello_manager)))),
-                  hello_manager.size());
-  CAF_MESSAGE("wrote " << hello_manager.size() << " bytes.");
+  CHECK_EQ(mgr->init(config), none);
+  mpx.apply_updates();
+  CHECK_EQ(mpx.num_socket_managers(), 2u);
+  CHECK_EQ(static_cast<size_t>(write(send_socket_guard.socket(),
+                                     as_bytes(make_span(hello_manager)))),
+           hello_manager.size());
+  MESSAGE("wrote " << hello_manager.size() << " bytes.");
   run();
-  CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(shared_recv_buf->data()),
-                              shared_recv_buf->size()),
-                  hello_manager);
+  CHECK_EQ(string_view(reinterpret_cast<char*>(shared_recv_buf->data()),
+                       shared_recv_buf->size()),
+           hello_manager);
 }
 
 CAF_TEST(send) {
   auto mgr = make_socket_manager<dummy_application, stream_transport>(
     recv_socket_guard.release(), &mpx, shared_recv_buf, shared_send_buf);
-  CAF_CHECK_EQUAL(mgr->init(config), none);
-  CAF_CHECK_EQUAL(mpx.num_socket_managers(), 2u);
+  CHECK_EQ(mgr->init(config), none);
+  mpx.apply_updates();
+  CHECK_EQ(mpx.num_socket_managers(), 2u);
   mgr->register_writing();
+  mpx.apply_updates();
   while (handle_io_event())
     ;
   recv_buf.resize(hello_manager.size());
   auto res = read(send_socket_guard.socket(), make_span(recv_buf));
-  CAF_MESSAGE("received " << res << " bytes");
+  MESSAGE("received " << res << " bytes");
   recv_buf.resize(res);
-  CAF_CHECK_EQUAL(string_view(reinterpret_cast<char*>(recv_buf.data()),
-                              recv_buf.size()),
-                  hello_manager);
+  CHECK_EQ(string_view(reinterpret_cast<char*>(recv_buf.data()),
+                       recv_buf.size()),
+           hello_manager);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

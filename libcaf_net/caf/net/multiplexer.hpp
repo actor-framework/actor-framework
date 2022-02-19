@@ -10,6 +10,7 @@
 
 #include "caf/action.hpp"
 #include "caf/detail/net_export.hpp"
+#include "caf/detail/unordered_flat_map.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/operation.hpp"
 #include "caf/net/pipe_socket.hpp"
@@ -24,14 +25,27 @@ struct pollfd;
 
 namespace caf::net {
 
+class pollset_updater;
+
 /// Multiplexes any number of ::socket_manager objects with a ::socket.
 class CAF_NET_EXPORT multiplexer {
 public:
   // -- member types -----------------------------------------------------------
 
+  struct poll_update {
+    short events = 0;
+    socket_manager_ptr mgr;
+  };
+
+  using poll_update_map = detail::unordered_flat_map<socket, poll_update>;
+
   using pollfd_list = std::vector<pollfd>;
 
   using manager_list = std::vector<socket_manager_ptr>;
+
+  // -- friends ----------------------------------------------------------------
+
+  friend class pollset_updater; // Needs access to the `do_*` functions.
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -55,11 +69,17 @@ public:
   /// Returns the index of `mgr` in the pollset or `-1`.
   ptrdiff_t index_of(const socket_manager_ptr& mgr);
 
+  /// Returns the index of `fd` in the pollset or `-1`.
+  ptrdiff_t index_of(socket fd);
+
   /// Returns the owning @ref middleman instance.
   middleman& owner();
 
   /// Returns the enclosing @ref actor_system.
   actor_system& system();
+
+  /// Computes the current mask for the manager. Mostly useful for testing.
+  operation mask_of(const socket_manager_ptr& mgr);
 
   // -- thread-safe signaling --------------------------------------------------
 
@@ -109,6 +129,9 @@ public:
   /// ready as a result.
   bool poll_once(bool blocking);
 
+  /// Applies all pending updates.
+  void apply_updates();
+
   /// Sets the thread ID to `std::this_thread::id()`.
   void set_thread_id();
 
@@ -123,13 +146,7 @@ protected:
   // -- utility functions ------------------------------------------------------
 
   /// Handles an I/O event on given manager.
-  short handle(const socket_manager_ptr& mgr, short events, short revents);
-
-  /// Adds a new socket manager to the pollset.
-  void add(socket_manager_ptr mgr);
-
-  /// Deletes a known socket manager from the pollset.
-  void del(ptrdiff_t index);
+  void handle(const socket_manager_ptr& mgr, short events, short revents);
 
   // -- member variables -------------------------------------------------------
 
@@ -139,6 +156,10 @@ protected:
   /// Maps sockets to their owning managers by storing the managers in the same
   /// order as their sockets appear in `pollset_`.
   manager_list managers_;
+
+  /// Caches changes to the events mask of managed sockets until they can safely
+  /// take place.
+  poll_update_map updates_;
 
   /// Stores the ID of the thread this multiplexer is running in. Set when
   /// calling `init()`.
@@ -157,15 +178,39 @@ protected:
   bool shutting_down_ = false;
 
 private:
+  /// Returns a change entry for the socket at given index. Lazily creates a new
+  /// entry before returning if necessary.
+  poll_update& update_for(ptrdiff_t index);
+
+  /// Returns a change entry for the socket of the manager.
+  poll_update& update_for(const socket_manager_ptr& mgr);
+
   /// Writes `opcode` and pointer to `mgr` the the pipe for handling an event
   /// later via the pollset updater.
   template <class T>
   void write_to_pipe(uint8_t opcode, T* ptr);
 
+  /// @copydoc write_to_pipe
   template <class Enum, class T>
   std::enable_if_t<std::is_enum_v<Enum>> write_to_pipe(Enum opcode, T* ptr) {
     write_to_pipe(static_cast<uint8_t>(opcode), ptr);
   }
+
+  // -- internal callback the pollset updater ----------------------------------
+
+  void do_shutdown();
+
+  void do_register_reading(const socket_manager_ptr& mgr);
+
+  void do_register_writing(const socket_manager_ptr& mgr);
+
+  void do_discard(const socket_manager_ptr& mgr);
+
+  void do_shutdown_reading(const socket_manager_ptr& mgr);
+
+  void do_shutdown_writing(const socket_manager_ptr& mgr);
+
+  void do_init(const socket_manager_ptr& mgr);
 };
 
 } // namespace caf::net

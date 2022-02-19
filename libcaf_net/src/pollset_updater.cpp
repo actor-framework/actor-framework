@@ -18,7 +18,7 @@ namespace caf::net {
 
 pollset_updater::pollset_updater(pipe_socket read_handle, multiplexer* parent)
   : super(read_handle, parent) {
-  mask_ = operation::read;
+  // nop
 }
 
 pollset_updater::~pollset_updater() {
@@ -45,7 +45,7 @@ void run_action(intptr_t ptr) {
 
 } // namespace
 
-bool pollset_updater::handle_read_event() {
+pollset_updater::read_result pollset_updater::handle_read_event() {
   CAF_LOG_TRACE("");
   for (;;) {
     CAF_ASSERT((buf_.size() - buf_size_) > 0);
@@ -60,29 +60,29 @@ bool pollset_updater::handle_read_event() {
         memcpy(&ptr, buf_.data() + 1, sizeof(intptr_t));
         switch (static_cast<code>(opcode)) {
           case code::register_reading:
-            parent_->register_reading(as_mgr(ptr));
+            mpx_->do_register_reading(as_mgr(ptr));
             break;
           case code::register_writing:
-            parent_->register_writing(as_mgr(ptr));
+            mpx_->do_register_writing(as_mgr(ptr));
             break;
           case code::init_manager:
-            parent_->init(as_mgr(ptr));
+            mpx_->do_init(as_mgr(ptr));
             break;
           case code::discard_manager:
-            parent_->discard(as_mgr(ptr));
+            mpx_->do_discard(as_mgr(ptr));
             break;
           case code::shutdown_reading:
-            parent_->shutdown_reading(as_mgr(ptr));
+            mpx_->do_shutdown_reading(as_mgr(ptr));
             break;
           case code::shutdown_writing:
-            parent_->shutdown_writing(as_mgr(ptr));
+            mpx_->do_shutdown_writing(as_mgr(ptr));
             break;
           case code::run_action:
             run_action(ptr);
             break;
           case code::shutdown:
             CAF_ASSERT(ptr == 0);
-            parent_->shutdown();
+            mpx_->do_shutdown();
             break;
           default:
             CAF_LOG_ERROR("opcode not recognized: " << CAF_ARG(opcode));
@@ -91,15 +91,17 @@ bool pollset_updater::handle_read_event() {
       }
     } else if (num_bytes == 0) {
       CAF_LOG_DEBUG("pipe closed, assume shutdown");
-      return false;
+      return read_result::stop;
+    } else if (last_socket_error_is_temporary()) {
+      return read_result::again;
     } else {
-      return last_socket_error_is_temporary();
+      return read_result::stop;
     }
   }
 }
 
-bool pollset_updater::handle_write_event() {
-  return false;
+pollset_updater::write_result pollset_updater::handle_write_event() {
+  return write_result::stop;
 }
 
 void pollset_updater::handle_error(sec) {

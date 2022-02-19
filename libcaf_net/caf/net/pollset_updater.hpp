@@ -51,9 +51,9 @@ public:
 
   error init(const settings& config) override;
 
-  bool handle_read_event() override;
+  read_result handle_read_event() override;
 
-  bool handle_write_event() override;
+  write_result handle_write_event() override;
 
   void handle_error(sec code) override;
 

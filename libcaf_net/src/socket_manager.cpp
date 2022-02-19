@@ -10,10 +10,11 @@
 
 namespace caf::net {
 
-socket_manager::socket_manager(socket handle, multiplexer* parent)
-  : handle_(handle), mask_(operation::none), parent_(parent) {
+socket_manager::socket_manager(socket handle, multiplexer* mpx)
+  : handle_(handle), mpx_(mpx) {
   CAF_ASSERT(handle_ != invalid_socket);
-  CAF_ASSERT(parent != nullptr);
+  CAF_ASSERT(mpx_ != nullptr);
+  memset(&flags_, 0, sizeof(flags_t));
 }
 
 socket_manager::~socket_manager() {
@@ -21,62 +22,51 @@ socket_manager::~socket_manager() {
 }
 
 actor_system& socket_manager::system() noexcept {
-  CAF_ASSERT(parent_ != nullptr);
-  return parent_->system();
+  CAF_ASSERT(mpx_ != nullptr);
+  return mpx_->system();
 }
 
-bool socket_manager::set_read_flag() noexcept {
-  auto old = mask_;
-  mask_ = add_read_flag(mask_);
-  return old != mask_;
+void socket_manager::close_read() noexcept {
+  // TODO: extend transport API for closing read operations.
+  flags_.read_closed = true;
 }
 
-bool socket_manager::set_write_flag() noexcept {
-  auto old = mask_;
-  mask_ = add_write_flag(mask_);
-  return old != mask_;
+void socket_manager::close_write() noexcept {
+  // TODO: extend transport API for closing write operations.
+  flags_.write_closed = true;
 }
 
-bool socket_manager::unset_read_flag() noexcept {
-  auto old = mask_;
-  mask_ = remove_read_flag(mask_);
-  return old != mask_;
-}
-
-bool socket_manager::unset_write_flag() noexcept {
-  auto old = mask_;
-  mask_ = remove_write_flag(mask_);
-  return old != mask_;
-}
-
-void socket_manager::block_reads() noexcept {
-  mask_ = net::block_reads(mask_);
-}
-
-void socket_manager::block_writes() noexcept {
-  mask_ = net::block_writes(mask_);
-}
-
-void socket_manager::block_reads_and_writes() noexcept {
-  mask_ = operation::shutdown;
+void socket_manager::abort_reason(error reason) noexcept {
+  abort_reason_ = std::move(reason);
+  flags_.read_closed = true;
+  flags_.write_closed = true;
 }
 
 void socket_manager::register_reading() {
-  if (!net::is_reading(mask_) && !is_read_blocked(mask_))
-    parent_->register_reading(this);
+  if (!read_closed())
+    mpx_->register_reading(this);
 }
 
 void socket_manager::register_writing() {
-  if (!net::is_writing(mask_) && !is_write_blocked(mask_))
-    parent_->register_writing(this);
+  if (!write_closed())
+    mpx_->register_writing(this);
 }
 
-void socket_manager::shutdown_reading() {
-  parent_->shutdown_reading(this);
+socket_manager_ptr socket_manager::do_handover() {
+  flags_.read_closed = true;
+  flags_.write_closed = true;
+  auto hdl = handle_;
+  handle_ = invalid_socket;
+  if (auto ptr = make_next_manager(hdl)) {
+    return ptr;
+  } else {
+    close(hdl);
+    return nullptr;
+  }
 }
 
-void socket_manager::shutdown_writing() {
-  parent_->shutdown_writing(this);
+socket_manager_ptr socket_manager::make_next_manager(socket) {
+  return {};
 }
 
 } // namespace caf::net

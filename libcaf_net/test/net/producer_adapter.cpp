@@ -89,8 +89,7 @@ public:
 
   template <class LowerLayerPtr>
   void abort(LowerLayerPtr, const error& reason) {
-    if (reason == caf::sec::socket_disconnected
-        || reason == caf::sec::discarded)
+    if (reason == caf::sec::socket_disconnected || reason == caf::sec::disposed)
       adapter_->close();
     else
       adapter_->abort(reason);

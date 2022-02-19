@@ -28,6 +28,10 @@ public:
 
   using factory_type = Factory;
 
+  using read_result = typename socket_manager::read_result;
+
+  using write_result = typename socket_manager::write_result;
+
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class... Ts>
@@ -51,28 +55,28 @@ public:
   }
 
   template <class LowerLayerPtr>
-  bool handle_read_event(LowerLayerPtr parent) {
+  read_result handle_read_event(LowerLayerPtr parent) {
     CAF_LOG_TRACE("");
     if (auto x = accept(parent->handle())) {
       socket_manager_ptr child = factory_.make(*x, owner_->mpx_ptr());
       if (!child) {
         CAF_LOG_ERROR("factory failed to create a new child");
         parent->abort_reason(sec::runtime_error);
-        return false;
+        return read_result::stop;
       }
       if (auto err = child->init(cfg_)) {
         CAF_LOG_ERROR("failed to initialize new child:" << err);
         parent->abort_reason(std::move(err));
-        return false;
+        return read_result::stop;
       }
       if (limit_ == 0) {
-        return true;
+        return read_result::again;
       } else {
-        return ++accepted_ < limit_;
+        return ++accepted_ < limit_ ? read_result::again : read_result::stop;
       }
     } else {
       CAF_LOG_ERROR("accept failed:" << x.error());
-      return false;
+      return read_result::stop;
     }
   }
 
@@ -82,9 +86,9 @@ public:
   }
 
   template <class LowerLayerPtr>
-  bool handle_write_event(LowerLayerPtr) {
+  write_result handle_write_event(LowerLayerPtr) {
     CAF_LOG_ERROR("connection_acceptor received write event");
-    return false;
+    return write_result::stop;
   }
 
   template <class LowerLayerPtr>

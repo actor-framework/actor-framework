@@ -117,7 +117,7 @@ public:
       std::string len;
       header_fields_type fields;
       if (!content.empty()) {
-        auto len = std::to_string(content.size());
+        len = std::to_string(content.size());
         fields.emplace("Content-Type", content_type);
         fields.emplace("Content-Length", len);
       }

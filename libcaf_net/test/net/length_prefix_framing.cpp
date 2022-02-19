@@ -153,22 +153,24 @@ SCENARIO("calling suspend_reading removes message apps temporarily") {
       }
     }};
     net::multiplexer mpx{nullptr};
+    mpx.set_thread_id();
     if (auto err = mpx.init())
       FAIL("mpx.init failed: " << err);
-    mpx.set_thread_id();
+    mpx.apply_updates();
     REQUIRE_EQ(mpx.num_socket_managers(), 1u);
     if (auto err = net::nonblocking(fd2, true))
       CAF_FAIL("nonblocking returned an error: " << err);
     auto mgr = net::make_socket_manager<app<true>, net::length_prefix_framing,
                                         net::stream_transport>(fd2, &mpx);
     CHECK_EQ(mgr->init(settings{}), none);
+    mpx.apply_updates();
     REQUIRE_EQ(mpx.num_socket_managers(), 2u);
-    CHECK_EQ(mgr->mask(), net::operation::read);
+    CHECK_EQ(mpx.mask_of(mgr), net::operation::read);
     auto& state = mgr->top_layer();
     WHEN("the app calls suspend_reading") {
       while (mpx.num_socket_managers() > 1u)
         mpx.poll_once(true);
-      CHECK_EQ(mgr->mask(), net::operation::none);
+      CHECK_EQ(mpx.mask_of(mgr), net::operation::none);
       if (CHECK_EQ(state.inputs.size(), 3u)) {
         CHECK_EQ(state.inputs[0], "first");
         CHECK_EQ(state.inputs[1], "second");
@@ -176,7 +178,8 @@ SCENARIO("calling suspend_reading removes message apps temporarily") {
       }
       THEN("users can resume it via continue_reading ") {
         mgr->continue_reading();
-        CHECK_EQ(mgr->mask(), net::operation::read);
+        mpx.apply_updates();
+        CHECK_EQ(mpx.mask_of(mgr), net::operation::read);
         while (mpx.num_socket_managers() > 1u)
           mpx.poll_once(true);
         if (CHECK_EQ(state.inputs.size(), 5u)) {
