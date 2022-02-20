@@ -164,10 +164,30 @@ public:
   // -- event loop management --------------------------------------------------
 
   /// Registers the manager for read operations on the @ref multiplexer.
+  /// @thread-safe
   void register_reading();
 
   /// Registers the manager for write operations on the @ref multiplexer.
+  /// @thread-safe
   void register_writing();
+
+  /// Schedules a call to `handle_continue_reading` on the @ref multiplexer.
+  /// This mechanism allows users to signal changes in the environment to the
+  /// manager that allow it to make progress, e.g., new demand in asynchronous
+  /// buffer that allow the manager to push available data downstream. The event
+  /// is a no-op if the manager is already registered for reading.
+  /// @thread-safe
+  void continue_reading();
+
+  /// Schedules a call to `handle_continue_reading` on the @ref multiplexer.
+  /// This mechanism allows users to signal changes in the environment to the
+  /// manager that allow it to make progress, e.g., new data for writing in an
+  /// asynchronous buffer. The event is a no-op if the manager is already
+  /// registered for writing.
+  /// @thread-safe
+  void continue_writing();
+
+  // -- callbacks for the multiplexer ------------------------------------------
 
   /// Performs a handover to another manager after `handle_read_event` or
   /// `handle_read_event` returned `handover`.
@@ -181,20 +201,31 @@ public:
   /// Called whenever the socket received new data.
   virtual read_result handle_read_event() = 0;
 
+  /// Called after handovers to allow the manager to process any data that is
+  /// already buffered at the transport policy and thus would not trigger a read
+  /// event on the socket.
+  virtual read_result handle_buffered_data() = 0;
+
+  /// Restarts a socket manager that suspended reads. Calling this member
+  /// function on active managers is a no-op. This function also should read any
+  /// data buffered outside of the socket.
+  virtual read_result handle_continue_reading() = 0;
+
   /// Called whenever the socket is allowed to send data.
   virtual write_result handle_write_event() = 0;
+
+  /// Restarts a socket manager that suspended writes. Calling this member
+  /// function on active managers is a no-op.
+  virtual write_result handle_continue_writing() = 0;
 
   /// Called when the remote side becomes unreachable due to an error.
   /// @param code The error code as reported by the operating system.
   virtual void handle_error(sec code) = 0;
 
-  /// Restarts a socket manager that suspended reads. Calling this member
-  /// function on active managers is a no-op.
-  virtual void continue_reading() = 0;
-
   /// Returns the new manager for the socket after `handle_read_event` or
   /// `handle_read_event` returned `handover`.
-  /// @note When returning a non-null pointer, the new manager *must* also be
+  /// @note Called from `do_handover`.
+  /// @note When returning a non-null pointer, the new manager *must* be
   ///       initialized.
   virtual socket_manager_ptr make_next_manager(socket handle);
 
@@ -236,44 +267,11 @@ public:
     // nop
   }
 
-  // -- initialization ---------------------------------------------------------
-
-  error init(const settings& config) override {
-    CAF_LOG_TRACE("");
-    if (auto err = nonblocking(handle(), true)) {
-      CAF_LOG_ERROR("failed to set nonblocking flag in socket:" << err);
-      return err;
-    }
-    return protocol_.init(static_cast<socket_manager*>(this), this, config);
-  }
-
   // -- properties -------------------------------------------------------------
 
   /// Returns the managed socket.
   socket_type handle() const {
     return socket_cast<socket_type>(this->handle_);
-  }
-
-  // -- event callbacks --------------------------------------------------------
-
-  read_result handle_read_event() override {
-    CAF_LOG_TRACE("");
-    return protocol_.handle_read_event(this);
-  }
-
-  write_result handle_write_event() override {
-    CAF_LOG_TRACE("");
-    return protocol_.handle_write_event(this);
-  }
-
-  void handle_error(sec code) override {
-    CAF_LOG_TRACE(CAF_ARG(code));
-    this->abort_reason(make_error(code));
-    return protocol_.abort(this, this->abort_reason());
-  }
-
-  void continue_reading() override {
-    return protocol_.continue_reading(this);
   }
 
   auto& protocol() noexcept {
@@ -290,6 +288,42 @@ public:
 
   const auto& top_layer() const noexcept {
     return climb(protocol_);
+  }
+
+  // -- interface functions ----------------------------------------------------
+
+  error init(const settings& config) override {
+    CAF_LOG_TRACE("");
+    if (auto err = nonblocking(handle(), true)) {
+      CAF_LOG_ERROR("failed to set nonblocking flag in socket:" << err);
+      return err;
+    }
+    return protocol_.init(static_cast<socket_manager*>(this), this, config);
+  }
+
+  read_result handle_read_event() override {
+    return protocol_.handle_read_event(this);
+  }
+
+  read_result handle_buffered_data() override {
+    return protocol_.handle_buffered_data(this);
+  }
+
+  read_result handle_continue_reading() override {
+    return protocol_.handle_continue_reading(this);
+  }
+
+  write_result handle_write_event() override {
+    return protocol_.handle_write_event(this);
+  }
+
+  write_result handle_continue_writing() override {
+    return protocol_.handle_continue_writing(this);
+  }
+
+  void handle_error(sec code) override {
+    this->abort_reason(make_error(code));
+    return protocol_.abort(this, this->abort_reason());
   }
 
 private:

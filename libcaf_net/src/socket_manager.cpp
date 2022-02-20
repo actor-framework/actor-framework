@@ -43,13 +43,19 @@ void socket_manager::abort_reason(error reason) noexcept {
 }
 
 void socket_manager::register_reading() {
-  if (!read_closed())
-    mpx_->register_reading(this);
+  mpx_->register_reading(this);
+}
+
+void socket_manager::continue_reading() {
+  mpx_->continue_reading(this);
 }
 
 void socket_manager::register_writing() {
-  if (!write_closed())
-    mpx_->register_writing(this);
+  mpx_->register_writing(this);
+}
+
+void socket_manager::continue_writing() {
+  mpx_->continue_writing(this);
 }
 
 socket_manager_ptr socket_manager::do_handover() {

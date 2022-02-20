@@ -40,33 +40,32 @@ public:
     // nop
   }
 
-  // -- member functions -------------------------------------------------------
+  // -- interface functions ----------------------------------------------------
 
   template <class LowerLayerPtr>
-  error
-  init(socket_manager* owner, LowerLayerPtr parent, const settings& config) {
+  error init(socket_manager* owner, LowerLayerPtr down, const settings& cfg) {
     CAF_LOG_TRACE("");
     owner_ = owner;
-    cfg_ = config;
-    if (auto err = factory_.init(owner, config))
+    cfg_ = cfg;
+    if (auto err = factory_.init(owner, cfg))
       return err;
-    parent->register_reading();
+    down->register_reading();
     return none;
   }
 
   template <class LowerLayerPtr>
-  read_result handle_read_event(LowerLayerPtr parent) {
+  read_result handle_read_event(LowerLayerPtr down) {
     CAF_LOG_TRACE("");
-    if (auto x = accept(parent->handle())) {
+    if (auto x = accept(down->handle())) {
       socket_manager_ptr child = factory_.make(*x, owner_->mpx_ptr());
       if (!child) {
         CAF_LOG_ERROR("factory failed to create a new child");
-        parent->abort_reason(sec::runtime_error);
+        down->abort_reason(sec::runtime_error);
         return read_result::stop;
       }
       if (auto err = child->init(cfg_)) {
         CAF_LOG_ERROR("failed to initialize new child:" << err);
-        parent->abort_reason(std::move(err));
+        down->abort_reason(std::move(err));
         return read_result::stop;
       }
       if (limit_ == 0) {
@@ -81,13 +80,24 @@ public:
   }
 
   template <class LowerLayerPtr>
-  static void continue_reading(LowerLayerPtr) {
-    // nop
+  static read_result handle_buffered_data(LowerLayerPtr) {
+    return read_result::again;
+  }
+
+  template <class LowerLayerPtr>
+  static read_result handle_continue_reading(LowerLayerPtr) {
+    return read_result::again;
   }
 
   template <class LowerLayerPtr>
   write_result handle_write_event(LowerLayerPtr) {
     CAF_LOG_ERROR("connection_acceptor received write event");
+    return write_result::stop;
+  }
+
+  template <class LowerLayerPtr>
+  static write_result handle_continue_writing(LowerLayerPtr) {
+    CAF_LOG_ERROR("connection_acceptor received continue writing event");
     return write_result::stop;
   }
 

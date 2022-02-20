@@ -47,6 +47,12 @@ public:
 
   friend class pollset_updater; // Needs access to the `do_*` functions.
 
+  // -- static utility functions -----------------------------------------------
+
+  /// Blocks the PIPE signal on the current thread when running on a POSIX
+  /// windows. Has no effect when running on Windows.
+  static void block_sigpipe();
+
   // -- constructors, destructors, and assignment operators --------------------
 
   /// @param parent Points to the owning middleman instance. May be `nullptr`
@@ -91,6 +97,14 @@ public:
   /// @thread-safe
   void register_writing(const socket_manager_ptr& mgr);
 
+  /// Triggers a continue reading event for `mgr`.
+  /// @thread-safe
+  void continue_reading(const socket_manager_ptr& mgr);
+
+  /// Triggers a continue writing event for `mgr`.
+  /// @thread-safe
+  void continue_writing(const socket_manager_ptr& mgr);
+
   /// Schedules a call to `mgr->handle_error(sec::discarded)`.
   /// @thread-safe
   void discard(const socket_manager_ptr& mgr);
@@ -118,10 +132,9 @@ public:
   /// @thread-safe
   void init(const socket_manager_ptr& mgr);
 
-  /// Closes the pipe for signaling updates to the multiplexer. After closing
-  /// the pipe, calls to `update` no longer have any effect.
+  /// Signals the multiplexer to initiate shutdown.
   /// @thread-safe
-  void close_pipe();
+  void shutdown();
 
   // -- control flow -----------------------------------------------------------
 
@@ -138,15 +151,41 @@ public:
   /// Polls until no socket event handler remains.
   void run();
 
-  /// Signals the multiplexer to initiate shutdown.
-  /// @thread-safe
-  void shutdown();
-
 protected:
   // -- utility functions ------------------------------------------------------
 
   /// Handles an I/O event on given manager.
   void handle(const socket_manager_ptr& mgr, short events, short revents);
+
+  /// Transfers socket ownership from one manager to another.
+  void do_handover(const socket_manager_ptr& mgr);
+
+  /// Returns a change entry for the socket at given index. Lazily creates a new
+  /// entry before returning if necessary.
+  poll_update& update_for(ptrdiff_t index);
+
+  /// Returns a change entry for the socket of the manager.
+  poll_update& update_for(const socket_manager_ptr& mgr);
+
+  /// Writes `opcode` and pointer to `mgr` the the pipe for handling an event
+  /// later via the pollset updater.
+  template <class T>
+  void write_to_pipe(uint8_t opcode, T* ptr);
+
+  /// @copydoc write_to_pipe
+  template <class Enum, class T>
+  std::enable_if_t<std::is_enum_v<Enum>> write_to_pipe(Enum opcode, T* ptr) {
+    write_to_pipe(static_cast<uint8_t>(opcode), ptr);
+  }
+
+  /// Queries the currently active event bitmask for `mgr`.
+  short active_mask_of(const socket_manager_ptr& mgr);
+
+  /// Queries whether `mgr` is currently registered for reading.
+  bool is_reading(const socket_manager_ptr& mgr);
+
+  /// Queries whether `mgr` is currently registered for writing.
+  bool is_writing(const socket_manager_ptr& mgr);
 
   // -- member variables -------------------------------------------------------
 
@@ -178,31 +217,17 @@ protected:
   bool shutting_down_ = false;
 
 private:
-  /// Returns a change entry for the socket at given index. Lazily creates a new
-  /// entry before returning if necessary.
-  poll_update& update_for(ptrdiff_t index);
-
-  /// Returns a change entry for the socket of the manager.
-  poll_update& update_for(const socket_manager_ptr& mgr);
-
-  /// Writes `opcode` and pointer to `mgr` the the pipe for handling an event
-  /// later via the pollset updater.
-  template <class T>
-  void write_to_pipe(uint8_t opcode, T* ptr);
-
-  /// @copydoc write_to_pipe
-  template <class Enum, class T>
-  std::enable_if_t<std::is_enum_v<Enum>> write_to_pipe(Enum opcode, T* ptr) {
-    write_to_pipe(static_cast<uint8_t>(opcode), ptr);
-  }
-
-  // -- internal callback the pollset updater ----------------------------------
+  // -- internal callbacks the pollset updater ---------------------------------
 
   void do_shutdown();
 
   void do_register_reading(const socket_manager_ptr& mgr);
 
   void do_register_writing(const socket_manager_ptr& mgr);
+
+  void do_continue_reading(const socket_manager_ptr& mgr);
+
+  void do_continue_writing(const socket_manager_ptr& mgr);
 
   void do_discard(const socket_manager_ptr& mgr);
 

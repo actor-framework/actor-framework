@@ -125,6 +125,7 @@ struct fixture : test_coordinator_fixture<>, host_fixture {
   }
 
   bool handle_io_event() override {
+    mm.mpx().apply_updates();
     return mm.mpx().poll_once(false);
   }
 

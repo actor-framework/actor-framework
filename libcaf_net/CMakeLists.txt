@@ -19,6 +19,7 @@ caf_incubator_add_component(
     net.http.method
     net.http.status
     net.operation
+    net.stream_transport_error
     net.web_socket.status
   HEADERS
     ${CAF_NET_HEADERS}
@@ -79,3 +80,9 @@ caf_incubator_add_component(
     stream_transport
     tcp_sockets
     udp_datagram_socket)
+
+if(TARGET OpenSSL::SSL AND TARGET OpenSSL::Crypto)
+  caf_incubator_add_test_suites(caf-net-test net.openssl_transport)
+  target_sources(caf-net-test PRIVATE test/net/openssl_transport_constants.cpp)
+  target_link_libraries(caf-net-test PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+endif()

@@ -22,11 +22,11 @@ public:
 
   using msg_buf = std::array<byte, sizeof(intptr_t) + 1>;
 
-  // -- constants --------------------------------------------------------------
-
   enum class code : uint8_t {
     register_reading,
+    continue_reading,
     register_writing,
+    continue_writing,
     init_manager,
     discard_manager,
     shutdown_reading,
@@ -34,6 +34,7 @@ public:
     run_action,
     shutdown,
   };
+
   // -- constructors, destructors, and assignment operators --------------------
 
   pollset_updater(pipe_socket read_handle, multiplexer* parent);
@@ -53,11 +54,15 @@ public:
 
   read_result handle_read_event() override;
 
+  read_result handle_buffered_data() override;
+
+  read_result handle_continue_reading() override;
+
   write_result handle_write_event() override;
 
-  void handle_error(sec code) override;
+  write_result handle_continue_writing() override;
 
-  void continue_reading() override;
+  void handle_error(sec code) override;
 
 private:
   msg_buf buf_;

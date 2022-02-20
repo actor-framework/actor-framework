@@ -26,6 +26,8 @@ using shared_atomic_count = std::shared_ptr<std::atomic<size_t>>;
 
 class dummy_manager : public socket_manager {
 public:
+  // -- constructors, destructors, and assignment operators --------------------
+
   dummy_manager(stream_socket handle, multiplexer* parent, std::string name,
                 shared_atomic_count count)
     : socket_manager(handle, parent), name(std::move(name)), count_(count) {
@@ -39,12 +41,29 @@ public:
     --*count_;
   }
 
-  error init(const settings&) override {
-    return none;
-  }
+  // -- properties -------------------------------------------------------------
 
   stream_socket handle() const noexcept {
     return socket_cast<stream_socket>(handle_);
+  }
+
+  // -- testing DSL ------------------------------------------------------------
+
+  void send(string_view x) {
+    auto x_bytes = as_bytes(make_span(x));
+    wr_buf_.insert(wr_buf_.end(), x_bytes.begin(), x_bytes.end());
+  }
+
+  std::string receive() {
+    std::string result(reinterpret_cast<char*>(rd_buf_.data()), rd_buf_pos_);
+    rd_buf_pos_ = 0;
+    return result;
+  }
+
+  // -- interface functions ----------------------------------------------------
+
+  error init(const settings&) override {
+    return none;
   }
 
   read_result handle_read_event() override {
@@ -67,6 +86,14 @@ public:
     }
   }
 
+  read_result handle_buffered_data() override {
+    return read_result::again;
+  }
+
+  read_result handle_continue_reading() override {
+    return read_result::again;
+  }
+
   write_result handle_write_event() override {
     if (trigger_handover) {
       MESSAGE(name << " triggered a handover");
@@ -84,12 +111,12 @@ public:
              : write_result::stop;
   }
 
-  void handle_error(sec code) override {
-    FAIL("handle_error called with code " << code);
+  write_result handle_continue_writing() override {
+    return write_result::again;
   }
 
-  void continue_reading() override {
-    FAIL("continue_reading called");
+  void handle_error(sec code) override {
+    FAIL("handle_error called with code " << code);
   }
 
   socket_manager_ptr make_next_manager(socket handle) override {
@@ -102,16 +129,7 @@ public:
     return next;
   }
 
-  void send(string_view x) {
-    auto x_bytes = as_bytes(make_span(x));
-    wr_buf_.insert(wr_buf_.end(), x_bytes.begin(), x_bytes.end());
-  }
-
-  std::string receive() {
-    std::string result(reinterpret_cast<char*>(rd_buf_.data()), rd_buf_pos_);
-    rd_buf_pos_ = 0;
-    return result;
-  }
+  // --
 
   bool trigger_handover = false;
 

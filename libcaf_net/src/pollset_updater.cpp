@@ -16,6 +16,8 @@
 
 namespace caf::net {
 
+// -- constructors, destructors, and assignment operators ----------------------
+
 pollset_updater::pollset_updater(pipe_socket read_handle, multiplexer* parent)
   : super(read_handle, parent) {
   // nop
@@ -25,28 +27,22 @@ pollset_updater::~pollset_updater() {
   // nop
 }
 
+// -- interface functions ------------------------------------------------------
+
 error pollset_updater::init(const settings&) {
   CAF_LOG_TRACE("");
   return nonblocking(handle(), true);
 }
 
-namespace {
-
-auto as_mgr(intptr_t ptr) {
-  CAF_LOG_TRACE(CAF_ARG(ptr));
-  return intrusive_ptr{reinterpret_cast<socket_manager*>(ptr), false};
-}
-
-void run_action(intptr_t ptr) {
-  CAF_LOG_TRACE(CAF_ARG(ptr));
-  auto f = action{intrusive_ptr{reinterpret_cast<action::impl*>(ptr), false}};
-  f.run();
-}
-
-} // namespace
-
 pollset_updater::read_result pollset_updater::handle_read_event() {
   CAF_LOG_TRACE("");
+  auto as_mgr = [](intptr_t ptr) {
+    return intrusive_ptr{reinterpret_cast<socket_manager*>(ptr), false};
+  };
+  auto run_action = [](intptr_t ptr) {
+    auto f = action{intrusive_ptr{reinterpret_cast<action::impl*>(ptr), false}};
+    f.run();
+  };
   for (;;) {
     CAF_ASSERT((buf_.size() - buf_size_) > 0);
     auto num_bytes = read(handle(), make_span(buf_.data() + buf_size_,
@@ -62,8 +58,14 @@ pollset_updater::read_result pollset_updater::handle_read_event() {
           case code::register_reading:
             mpx_->do_register_reading(as_mgr(ptr));
             break;
+          case code::continue_reading:
+            mpx_->do_continue_reading(as_mgr(ptr));
+            break;
           case code::register_writing:
             mpx_->do_register_writing(as_mgr(ptr));
+            break;
+          case code::continue_writing:
+            mpx_->do_continue_writing(as_mgr(ptr));
             break;
           case code::init_manager:
             mpx_->do_init(as_mgr(ptr));
@@ -100,16 +102,24 @@ pollset_updater::read_result pollset_updater::handle_read_event() {
   }
 }
 
+pollset_updater::read_result pollset_updater::handle_buffered_data() {
+  return read_result::again;
+}
+
+pollset_updater::read_result pollset_updater::handle_continue_reading() {
+  return read_result::again;
+}
+
 pollset_updater::write_result pollset_updater::handle_write_event() {
+  return write_result::stop;
+}
+
+pollset_updater::write_result pollset_updater::handle_continue_writing() {
   return write_result::stop;
 }
 
 void pollset_updater::handle_error(sec) {
   // nop
-}
-
-void pollset_updater::continue_reading() {
-  register_reading();
 }
 
 } // namespace caf::net

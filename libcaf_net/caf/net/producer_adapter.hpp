@@ -39,8 +39,7 @@ public:
   void on_consumer_demand(size_t new_demand) override {
     auto prev = demand_.fetch_add(new_demand);
     if (prev == 0)
-      mgr_->mpx().schedule_fn(
-        [adapter = strong_this()] { adapter->continue_reading(); });
+      mgr_->continue_reading();
   }
 
   void ref_producer() const noexcept override {
@@ -127,11 +126,6 @@ private:
   producer_adapter(socket_manager* owner, buf_ptr buf)
     : demand_(0), mgr_(owner), buf_(std::move(buf)) {
     // nop
-  }
-
-  void continue_reading() {
-    if (mgr_)
-      mgr_->continue_reading();
   }
 
   void on_cancel() {
