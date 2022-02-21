@@ -79,7 +79,7 @@ public:
   template <class LowerLayerPtr>
   void abort(LowerLayerPtr, const error& reason) {
     reader_output_->flush();
-    if (reason == sec::socket_disconnected || reason == sec::discarded)
+    if (reason == sec::socket_disconnected || reason == sec::disposed)
       reader_output_->on_complete();
     else
       reader_output_->on_error(reason);
