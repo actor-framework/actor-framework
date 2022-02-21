@@ -168,9 +168,11 @@ enum class sec : uint8_t {
   action_reschedule_failed,
   /// Attaching to an observable failed because the target is invalid.
   invalid_observable,
-  /// Signals to a component that is has been discarded by its parent or the
-  /// consumer/producer that was attached to the component.
-  discarded = 70,
+  /// Attaching to an observable failed because the target already reached its
+  /// maximum observer count.
+  too_many_observers = 70,
+  /// Signals that an operation failed because the target has been disposed.
+  disposed,
   /// Failed to open a resource.
   cannot_open_resource,
 };

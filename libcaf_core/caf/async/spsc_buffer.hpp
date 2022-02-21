@@ -439,7 +439,6 @@ public:
     return *this;
   }
 
-
   /// Tries to open the resource for writing to the buffer. The first `open`
   /// wins on concurrent access.
   /// @returns a pointer to the buffer on success, `nullptr` otherwise.

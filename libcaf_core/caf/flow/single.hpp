@@ -78,7 +78,7 @@ public:
 
     void dispose() override {
       if (!std::holds_alternative<error>(value_))
-        set_error(make_error(sec::discarded));
+        set_error(make_error(sec::disposed));
     }
 
     bool disposed() const noexcept override {
