@@ -111,6 +111,8 @@ auto decode(byte_buffer& buf) {
 
 } // namespace
 
+BEGIN_FIXTURE_SCOPE(host_fixture)
+
 SCENARIO("length-prefix framing reads data with 32-bit size headers") {
   GIVEN("a length_prefix_framing with an app that consumes strings") {
     WHEN("pushing data into the unit-under-test") {
@@ -194,3 +196,5 @@ SCENARIO("calling suspend_reading removes message apps temporarily") {
     writer.join();
   }
 }
+
+END_FIXTURE_SCOPE()
