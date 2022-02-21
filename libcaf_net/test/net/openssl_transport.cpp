@@ -43,7 +43,7 @@ using byte_buffer_ptr = std::shared_ptr<byte_buffer>;
 struct fixture : host_fixture {
   using byte_buffer_ptr = std::shared_ptr<byte_buffer>;
 
-  fixture(){
+  fixture() {
     multiplexer::block_sigpipe();
     OPENSSL_init_ssl(OPENSSL_INIT_SSL_DEFAULT, nullptr);
     // Make a directory name with 8 random (hex) character suffix.
@@ -174,7 +174,7 @@ void dummy_tls_server(stream_socket fd, std::string cert_file,
   if (f.accept(fd) <= 0) {
     std::cerr << "*** accept failed: " << ssl::fetch_error_str();
     return;
-    }
+  }
   // Do some ping-pong messaging.
   for (int i = 0; i < 4; ++i) {
     byte_buffer buf;

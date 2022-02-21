@@ -158,7 +158,7 @@ operation multiplexer::mask_of(const socket_manager_ptr& mgr) {
   auto fd = mgr->handle();
   if (auto i = updates_.find(fd); i != updates_.end())
     return to_operation(mgr, i->second.events);
-  else if (auto index = index_of(mgr);index!=-1)
+  else if (auto index = index_of(mgr); index != -1)
     return to_operation(mgr, pollset_[index].events);
   else
     return to_operation(mgr, std::nullopt);
@@ -281,7 +281,7 @@ bool multiplexer::poll_once(bool blocking) {
         // is allowed to modify pollset_ and managers_. Since this may very well
         // mess with the for loop below, we process this handler first.
         auto mgr = managers_[0];
-        handle(mgr,pollset_[0].events,revents);
+        handle(mgr, pollset_[0].events, revents);
         --presult;
       }
       for (size_t i = 1; i < pollset_.size() && presult > 0; ++i) {

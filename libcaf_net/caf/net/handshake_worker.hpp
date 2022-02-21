@@ -15,10 +15,10 @@ struct default_handshake_worker_factory {
   OnError abort;
 };
 
-/// An connect worker calls an asynchronous `connect` callback until it succeeds.
-/// On success, the worker calls a factory object to transfer ownership of
-/// socket and communication policy to the create the socket manager that takes
-/// care of the established connection.
+/// An connect worker calls an asynchronous `connect` callback until it
+/// succeeds. On success, the worker calls a factory object to transfer
+/// ownership of socket and communication policy to the create the socket
+/// manager that takes care of the established connection.
 template <bool IsServer, class Socket, class Policy, class Factory>
 class handshake_worker : public socket_manager {
 public:
@@ -31,7 +31,7 @@ public:
   using write_result = typename super::write_result;
 
   handshake_worker(Socket handle, multiplexer* parent, Policy policy,
-                 Factory factory)
+                   Factory factory)
     : super(handle, parent),
       policy_(std::move(policy)),
       factory_(std::move(factory)) {

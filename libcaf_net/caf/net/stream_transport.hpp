@@ -460,7 +460,8 @@ private:
   /// Stores the current offset in `read_buf_`.
   ptrdiff_t offset_ = 0;
 
-  /// Stores the offset in `read_buf_` since last calling `upper_layer_.consume`.
+  /// Stores the offset in `read_buf_` since last calling
+  /// `upper_layer_.consume`.
   ptrdiff_t delta_offset_ = 0;
 
   /// Caches incoming data.
