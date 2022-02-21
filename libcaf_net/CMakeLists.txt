@@ -81,7 +81,7 @@ caf_incubator_add_component(
     tcp_sockets
     udp_datagram_socket)
 
-if(TARGET OpenSSL::SSL AND TARGET OpenSSL::Crypto)
+if(CAF_INC_ENABLE_TESTING AND TARGET OpenSSL::SSL AND TARGET OpenSSL::Crypto)
   caf_incubator_add_test_suites(caf-net-test net.openssl_transport)
   target_sources(caf-net-test PRIVATE test/net/openssl_transport_constants.cpp)
   target_link_libraries(caf-net-test PRIVATE OpenSSL::SSL OpenSSL::Crypto)
