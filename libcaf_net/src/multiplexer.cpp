@@ -116,12 +116,11 @@ error multiplexer::init() {
   if (!pipe_handles)
     return std::move(pipe_handles.error());
   auto updater = make_counted<pollset_updater>(pipe_handles->first, this);
-  settings dummy;
-  if (auto err = updater->init(dummy))
+  if (auto err = updater->init(settings{}))
     return err;
-  register_reading(updater);
-  apply_updates();
   write_handle_ = pipe_handles->second;
+  pollset_.emplace_back(pollfd{pipe_handles->first.id, input_mask, 0});
+  managers_.emplace_back(updater);
   return none;
 }
 
