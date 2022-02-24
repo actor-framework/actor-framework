@@ -11,6 +11,7 @@
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/flow/coordinator.hpp"
+#include "caf/flow/observer_state.hpp"
 #include "caf/flow/subscription.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/logger.hpp"
@@ -139,148 +140,6 @@ private:
 
 template <class T>
 using observer_impl = typename observer<T>::impl;
-
-// -- writing observed values to a buffer --------------------------------------
-
-/// Writes observed values to a bounded buffer.
-template <class Buffer>
-class buffer_writer_impl : public ref_counted,
-                           public observer_impl<typename Buffer::value_type>,
-                           public async::producer {
-public:
-  // -- member types -----------------------------------------------------------
-
-  using buffer_ptr = intrusive_ptr<Buffer>;
-
-  using value_type = typename Buffer::value_type;
-
-  // -- friends ----------------------------------------------------------------
-
-  CAF_INTRUSIVE_PTR_FRIENDS(buffer_writer_impl)
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  buffer_writer_impl(coordinator* ctx, buffer_ptr buf)
-    : ctx_(ctx), buf_(std::move(buf)) {
-    CAF_ASSERT(ctx_ != nullptr);
-    CAF_ASSERT(buf_ != nullptr);
-  }
-
-  ~buffer_writer_impl() {
-    if (buf_)
-      buf_->close();
-  }
-
-  // -- implementation of disposable::impl -------------------------------------
-
-  void dispose() override {
-    CAF_LOG_TRACE("");
-    on_complete();
-  }
-
-  bool disposed() const noexcept override {
-    return buf_ == nullptr;
-  }
-
-  void ref_disposable() const noexcept final {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept final {
-    this->deref();
-  }
-
-  // -- implementation of observer<T>::impl ------------------------------------
-
-  void on_next(span<const value_type> items) override {
-    CAF_LOG_TRACE(CAF_ARG(items));
-    if (buf_)
-      buf_->push(items);
-  }
-
-  void on_complete() override {
-    CAF_LOG_TRACE("");
-    if (buf_) {
-      buf_->close();
-      buf_ = nullptr;
-      sub_ = nullptr;
-    }
-  }
-
-  void on_error(const error& what) override {
-    CAF_LOG_TRACE(CAF_ARG(what));
-    if (buf_) {
-      buf_->abort(what);
-      buf_ = nullptr;
-      sub_ = nullptr;
-    }
-  }
-
-  void on_subscribe(subscription sub) override {
-    CAF_LOG_TRACE("");
-    if (buf_ && !sub_) {
-      CAF_LOG_DEBUG("add subscription");
-      sub_ = std::move(sub);
-    } else {
-      CAF_LOG_DEBUG("already have a subscription or buffer no longer valid");
-      sub.cancel();
-    }
-  }
-
-  // -- implementation of async::producer: must be thread-safe -----------------
-
-  void on_consumer_ready() override {
-    // nop
-  }
-
-  void on_consumer_cancel() override {
-    CAF_LOG_TRACE("");
-    ctx_->schedule_fn([ptr{strong_ptr()}] {
-      CAF_LOG_TRACE("");
-      ptr->on_cancel();
-    });
-  }
-
-  void on_consumer_demand(size_t demand) override {
-    CAF_LOG_TRACE(CAF_ARG(demand));
-    ctx_->schedule_fn([ptr{strong_ptr()}, demand] { //
-      CAF_LOG_TRACE(CAF_ARG(demand));
-      ptr->on_demand(demand);
-    });
-  }
-
-  void ref_producer() const noexcept final {
-    this->ref();
-  }
-
-  void deref_producer() const noexcept final {
-    this->deref();
-  }
-
-private:
-  void on_demand(size_t n) {
-    CAF_LOG_TRACE(CAF_ARG(n));
-    if (sub_)
-      sub_.request(n);
-  }
-
-  void on_cancel() {
-    CAF_LOG_TRACE("");
-    if (sub_) {
-      sub_.cancel();
-      sub_ = nullptr;
-    }
-    buf_ = nullptr;
-  }
-
-  intrusive_ptr<buffer_writer_impl> strong_ptr() {
-    return {this};
-  }
-
-  coordinator_ptr ctx_;
-  buffer_ptr buf_;
-  subscription sub_;
-};
 
 } // namespace caf::flow
 
@@ -471,6 +330,318 @@ auto make_observer_from_ptr(SmartPointer ptr) {
   return make_observer([ptr](const value_type& x) { ptr->on_next(x); },
                        [ptr](const error& what) { ptr->on_error(what); },
                        [ptr] { ptr->on_complete(); });
+}
+
+// -- writing observed values to an async buffer -------------------------------
+
+/// Writes observed values to a bounded buffer.
+template <class Buffer>
+class buffer_writer_impl : public ref_counted,
+                           public observer_impl<typename Buffer::value_type>,
+                           public async::producer {
+public:
+  // -- member types -----------------------------------------------------------
+
+  using buffer_ptr = intrusive_ptr<Buffer>;
+
+  using value_type = typename Buffer::value_type;
+
+  // -- friends ----------------------------------------------------------------
+
+  CAF_INTRUSIVE_PTR_FRIENDS(buffer_writer_impl)
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  buffer_writer_impl(coordinator* ctx, buffer_ptr buf)
+    : ctx_(ctx), buf_(std::move(buf)) {
+    CAF_ASSERT(ctx_ != nullptr);
+    CAF_ASSERT(buf_ != nullptr);
+  }
+
+  ~buffer_writer_impl() {
+    if (buf_)
+      buf_->close();
+  }
+
+  // -- implementation of disposable::impl -------------------------------------
+
+  void dispose() override {
+    CAF_LOG_TRACE("");
+    on_complete();
+  }
+
+  bool disposed() const noexcept override {
+    return buf_ == nullptr;
+  }
+
+  void ref_disposable() const noexcept final {
+    this->ref();
+  }
+
+  void deref_disposable() const noexcept final {
+    this->deref();
+  }
+
+  // -- implementation of observer<T>::impl ------------------------------------
+
+  void on_next(span<const value_type> items) override {
+    CAF_LOG_TRACE(CAF_ARG(items));
+    if (buf_)
+      buf_->push(items);
+  }
+
+  void on_complete() override {
+    CAF_LOG_TRACE("");
+    if (buf_) {
+      buf_->close();
+      buf_ = nullptr;
+      sub_ = nullptr;
+    }
+  }
+
+  void on_error(const error& what) override {
+    CAF_LOG_TRACE(CAF_ARG(what));
+    if (buf_) {
+      buf_->abort(what);
+      buf_ = nullptr;
+      sub_ = nullptr;
+    }
+  }
+
+  void on_subscribe(subscription sub) override {
+    CAF_LOG_TRACE("");
+    if (buf_ && !sub_) {
+      CAF_LOG_DEBUG("add subscription");
+      sub_ = std::move(sub);
+    } else {
+      CAF_LOG_DEBUG("already have a subscription or buffer no longer valid");
+      sub.cancel();
+    }
+  }
+
+  // -- implementation of async::producer: must be thread-safe -----------------
+
+  void on_consumer_ready() override {
+    // nop
+  }
+
+  void on_consumer_cancel() override {
+    CAF_LOG_TRACE("");
+    ctx_->schedule_fn([ptr{strong_ptr()}] {
+      CAF_LOG_TRACE("");
+      ptr->on_cancel();
+    });
+  }
+
+  void on_consumer_demand(size_t demand) override {
+    CAF_LOG_TRACE(CAF_ARG(demand));
+    ctx_->schedule_fn([ptr{strong_ptr()}, demand] { //
+      CAF_LOG_TRACE(CAF_ARG(demand));
+      ptr->on_demand(demand);
+    });
+  }
+
+  void ref_producer() const noexcept final {
+    this->ref();
+  }
+
+  void deref_producer() const noexcept final {
+    this->deref();
+  }
+
+private:
+  void on_demand(size_t n) {
+    CAF_LOG_TRACE(CAF_ARG(n));
+    if (sub_)
+      sub_.request(n);
+  }
+
+  void on_cancel() {
+    CAF_LOG_TRACE("");
+    if (sub_) {
+      sub_.cancel();
+      sub_ = nullptr;
+    }
+    buf_ = nullptr;
+  }
+
+  intrusive_ptr<buffer_writer_impl> strong_ptr() {
+    return {this};
+  }
+
+  coordinator_ptr ctx_;
+  buffer_ptr buf_;
+  subscription sub_;
+};
+
+// -- utility observer ---------------------------------------------------------
+
+/// Forwards all events to a parent.
+template <class T, class Parent, class Token = unit_t>
+class forwarder : public ref_counted, public observer_impl<T> {
+public:
+  CAF_INTRUSIVE_PTR_FRIENDS(forwarder)
+
+  explicit forwarder(intrusive_ptr<Parent> parent, Token token = Token{})
+    : parent(std::move(parent)), token(std::move(token)) {
+    // nop
+  }
+
+  void on_complete() override {
+    if (parent) {
+      if constexpr (std::is_same_v<Token, unit_t>)
+        parent->fwd_on_complete(this);
+      else
+        parent->fwd_on_complete(this, token);
+      parent = nullptr;
+    }
+  }
+
+  void on_error(const error& what) override {
+    if (parent) {
+      if constexpr (std::is_same_v<Token, unit_t>)
+        parent->fwd_on_error(this, what);
+      else
+        parent->fwd_on_error(this, token, what);
+      parent = nullptr;
+    }
+  }
+
+  void on_subscribe(subscription new_sub) override {
+    if (parent) {
+      if constexpr (std::is_same_v<Token, unit_t>)
+        parent->fwd_on_subscribe(this, std::move(new_sub));
+      else
+        parent->fwd_on_subscribe(this, token, std::move(new_sub));
+    } else {
+      new_sub.cancel();
+    }
+  }
+
+  void on_next(span<const T> items) override {
+    if (parent) {
+      if constexpr (std::is_same_v<Token, unit_t>)
+        parent->fwd_on_next(this, items);
+      else
+        parent->fwd_on_next(this, token, items);
+    }
+  }
+
+  void dispose() override {
+    on_complete();
+  }
+
+  bool disposed() const noexcept override {
+    return !parent;
+  }
+
+  void ref_disposable() const noexcept final {
+    this->ref();
+  }
+
+  void deref_disposable() const noexcept final {
+    this->deref();
+  }
+
+  intrusive_ptr<Parent> parent;
+  Token token;
+};
+
+/// An observer with minimal internal logic. Useful for writing unit tests.
+template <class T>
+class passive_observer : public ref_counted, public observer_impl<T> {
+public:
+  // -- friends ----------------------------------------------------------------
+
+  CAF_INTRUSIVE_PTR_FRIENDS(passive_observer)
+
+  // -- implementation of disposable::impl -------------------------------------
+
+  void dispose() override {
+    if (!disposed()) {
+      if (sub) {
+        sub.cancel();
+        sub = nullptr;
+      }
+      state = observer_state::disposed;
+    }
+  }
+
+  bool disposed() const noexcept override {
+    switch (state) {
+      case observer_state::completed:
+      case observer_state::aborted:
+      case observer_state::disposed:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  void ref_disposable() const noexcept final {
+    this->ref();
+  }
+
+  void deref_disposable() const noexcept final {
+    this->deref();
+  }
+
+  // -- implementation of observer_impl<T> -------------------------------------
+
+  void on_complete() override {
+    if (!disposed()) {
+      if (sub) {
+        sub.cancel();
+        sub = nullptr;
+      }
+      state = observer_state::completed;
+    }
+  }
+
+  void on_error(const error& what) override {
+    if (!disposed()) {
+      if (sub) {
+        sub.cancel();
+        sub = nullptr;
+      }
+      err = what;
+      state = observer_state::aborted;
+    }
+  }
+
+  void on_subscribe(subscription new_sub) override {
+    if (state == observer_state::idle) {
+      CAF_ASSERT(!sub);
+      sub = std::move(new_sub);
+      state = observer_state::subscribed;
+    } else {
+      new_sub.cancel();
+    }
+  }
+
+  void on_next(span<const T> items) override {
+    buf.insert(buf.end(), items.begin(), items.end());
+  }
+
+  // -- member variables -------------------------------------------------------
+
+  /// The subscription for requesting additional items.
+  subscription sub;
+
+  /// Default-constructed unless on_error was called.
+  error err;
+
+  /// Represents the current state of this observer.
+  observer_state state;
+
+  /// Stores all items received via `on_next`.
+  std::vector<T> buf;
+};
+
+/// @relates passive_observer
+template <class T>
+intrusive_ptr<passive_observer<T>> make_passive_observer() {
+  return make_counted<passive_observer<T>>();
 }
 
 } // namespace caf::flow

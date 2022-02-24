@@ -130,6 +130,10 @@ public:
   [[nodiscard]] observable<T>
   from_resource(async::consumer_resource<T> res) const;
 
+  /// Creates an @ref observable that emits a sequence of integers spaced by the
+  /// @p period.
+  /// @param initial_delay Delay of the first integer after subscribing.
+  /// @param period Delay of each consecutive integer after the first value.
   template <class Rep, class Period>
   [[nodiscard]] observable<int64_t>
   interval(std::chrono::duration<Rep, Period> initial_delay,
@@ -139,6 +143,31 @@ public:
     auto ptr = make_counted<interval_impl>(ctx_, initial_delay, period);
     ctx_->watch(ptr->as_disposable());
     return observable<int64_t>{std::move(ptr)};
+  }
+
+  /// Creates an @ref observable that emits a sequence of integers spaced by the
+  /// @p delay.
+  /// @param delay Time delay between two integer values.
+  template <class Rep, class Period>
+  [[nodiscard]] observable<int64_t>
+  interval(std::chrono::duration<Rep, Period> delay) {
+    return interval(delay, delay);
+  }
+
+  /// Creates an @ref observable that emits a single item after the @p delay.
+  template <class Rep, class Period>
+  [[nodiscard]] observable<int64_t>
+  timer(std::chrono::duration<Rep, Period> delay) {
+    auto ptr = make_counted<interval_impl>(ctx_, delay, delay, 1);
+    ctx_->watch(ptr->as_disposable());
+    return observable<int64_t>{std::move(ptr)};
+  }
+
+  /// Creates an @ref observable without any values that simply calls
+  /// `on_complete` after subscribing to it.
+  template <class T>
+  [[nodiscard]] observable<T> empty() {
+    return observable<T>{make_counted<empty_observable_impl<T>>(ctx_)};
   }
 
 private:
@@ -272,9 +301,9 @@ class generation final
 public:
   using output_type = transform_processor_output_type_t<Generator, Steps...>;
 
-  class impl : public buffered_observable_impl<output_type> {
+  class impl : public observable_impl_base<output_type> {
   public:
-    using super = buffered_observable_impl<output_type>;
+    using super = observable_impl_base<output_type>;
 
     template <class... Ts>
     impl(coordinator* ctx, Generator gen, Ts&&... steps)
@@ -282,17 +311,88 @@ public:
       // nop
     }
 
+    // -- implementation of disposable::impl -----------------------------------
+
+    void dispose() override {
+      disposed_ = true;
+      if (out_) {
+        out_.on_complete();
+        out_ = nullptr;
+      }
+    }
+
+    bool disposed() const noexcept override {
+      return disposed_;
+    }
+
+    // -- implementation of observable_impl<T> ---------------------------------
+
+    disposable subscribe(observer<output_type> what) override {
+      if (out_) {
+        return super::reject_subscription(what, sec::too_many_observers);
+      } else if (disposed_) {
+        return super::reject_subscription(what, sec::disposed);
+      } else {
+        out_ = what;
+        return super::do_subscribe(what);
+      }
+    }
+
+    void on_request(observer_impl<output_type>* sink, size_t n) override {
+      if (sink == out_.ptr()) {
+        auto fn = [this, n](auto&... steps) {
+          term_step<impl> term{this};
+          gen_.pull(n, steps..., term);
+        };
+        std::apply(fn, steps_);
+        push();
+      }
+    }
+
+    void on_cancel(observer_impl<output_type>* sink) override {
+      if (sink == out_.ptr()) {
+        buf_.clear();
+        out_ = nullptr;
+        disposed_ = true;
+      }
+    }
+
+    // -- callbacks for term_step ----------------------------------------------
+
+    void append_to_buf(const output_type& item) {
+      CAF_ASSERT(out_.valid());
+      buf_.emplace_back(item);
+    }
+
+    void shutdown() {
+      CAF_ASSERT(out_.valid());
+      push();
+      out_.on_complete();
+      out_ = nullptr;
+      disposed_ = true;
+    }
+
+    void abort(const error& reason) {
+      CAF_ASSERT(out_.valid());
+      push();
+      out_.on_error(reason);
+      out_ = nullptr;
+      disposed_ = true;
+    }
+
   private:
-    virtual void pull(size_t n) {
-      auto fn = [this, n](auto&... steps) {
-        term_step<output_type> term{this};
-        gen_.pull(n, steps..., term);
-      };
-      std::apply(fn, steps_);
+    void push() {
+      if (!buf_.empty()) {
+        out_.on_next(make_span(buf_));
+        buf_.clear();
+      }
     }
 
     Generator gen_;
     std::tuple<Steps...> steps_;
+    observer<output_type> out_;
+    bool disposed_ = false;
+    std::vector<output_type> buf_;
   };
 
   template <class... Ts>
@@ -339,8 +439,17 @@ public:
   }
 
   observable<output_type> as_observable() && override {
-    auto pimpl = make_counted<impl>(ctx_, std::move(gen_), std::move(steps_));
+    auto pimpl = make_observable_impl<impl>(ctx_, std::move(gen_),
+                                            std::move(steps_));
     return observable<output_type>{std::move(pimpl)};
+  }
+
+  coordinator* ctx() const noexcept {
+    return ctx_;
+  }
+
+  constexpr bool valid() const noexcept {
+    return true;
   }
 
 private:

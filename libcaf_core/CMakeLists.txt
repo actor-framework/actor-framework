@@ -56,6 +56,8 @@ caf_add_component(
     async.read_result
     async.write_result
     exit_reason
+    flow.observable_state
+    flow.observer_state
     intrusive.inbox_result
     intrusive.task_result
     invoke_message_result
@@ -146,7 +148,7 @@ caf_add_component(
     src/event_based_actor.cpp
     src/execution_unit.cpp
     src/flow/coordinator.cpp
-    src/flow/observable_builder
+    src/flow/observable_builder.cpp
     src/flow/scoped_coordinator.cpp
     src/flow/subscription.cpp
     src/forwarding_actor_proxy.cpp
@@ -283,6 +285,7 @@ caf_add_component(
     dynamic_spawn
     error
     expected
+    flow.broadcaster
     flow.concat
     flow.concat_map
     flow.flat_map
@@ -292,6 +295,7 @@ caf_add_component(
     flow.observe_on
     flow.prefix_and_tail
     flow.single
+    flow.zip_with
     function_view
     fused_downstream_manager
     handles

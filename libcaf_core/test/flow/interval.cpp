@@ -14,6 +14,8 @@ using namespace std::literals;
 
 using namespace caf;
 
+using i64_list = std::vector<int64_t>;
+
 namespace {
 
 struct fixture : test_coordinator_fixture<> {
@@ -25,7 +27,6 @@ struct fixture : test_coordinator_fixture<> {
 CAF_TEST_FIXTURE_SCOPE(interval_tests, fixture)
 
 SCENARIO("scoped coordinators wait on observable intervals") {
-  using i64_list = std::vector<int64_t>;
   GIVEN("an observable interval") {
     WHEN("an observer subscribes to it") {
       THEN("the coordinator blocks the current thread for the delays") {
@@ -41,8 +42,7 @@ SCENARIO("scoped coordinators wait on observable intervals") {
   }
 }
 
-SCENARIO("scheduled actors schedule observable intervals delays") {
-  using i64_list = std::vector<int64_t>;
+SCENARIO("scheduled actors schedule observable intervals on the actor clock") {
   GIVEN("an observable interval") {
     WHEN("an observer subscribes to it") {
       THEN("the actor uses the actor clock to schedule flow processing") {
@@ -73,6 +73,21 @@ SCENARIO("scheduled actors schedule observable intervals delays") {
         CHECK_EQ(outputs, i64_list({0, 1, 2}));
         run();
         CHECK_EQ(outputs, i64_list({0, 1, 2}));
+      }
+    }
+  }
+}
+
+SCENARIO("a timer is an observable interval with a single value") {
+  GIVEN("an observable timer") {
+    WHEN("an observer subscribes to it") {
+      THEN("the coordinator observes a single value") {
+        auto outputs = i64_list{};
+        ctx->make_observable()
+          .timer(10ms) //
+          .for_each([&outputs](int64_t x) { outputs.emplace_back(x); });
+        ctx->run();
+        CHECK_EQ(outputs, i64_list({0}));
       }
     }
   }
