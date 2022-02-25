@@ -199,7 +199,7 @@ struct do_on_error_step {
 
   template <class Next, class... Steps>
   void on_error(const error& what, Next& next, Steps&... steps) {
-    fn();
+    fn(what);
     next.on_error(what, steps...);
   }
 };
