@@ -87,7 +87,6 @@ private:
 
   void on_wakeup() {
     if (buf_ && buf_->has_consumer_event()) {
-      puts("WAKEUP");
       mgr_->mpx().register_writing(mgr_);
     }
   }
