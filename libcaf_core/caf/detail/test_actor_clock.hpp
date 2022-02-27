@@ -49,6 +49,13 @@ public:
   /// @returns The number of triggered timeouts.
   size_t advance_time(duration_type x);
 
+  // -- properties -------------------------------------------------------------
+
+  /// @pre has_pending_timeout()
+  time_point next_timeout() const {
+    return actions.begin()->first;
+  }
+
   // -- member variables -------------------------------------------------------
 
   time_point current_time;
