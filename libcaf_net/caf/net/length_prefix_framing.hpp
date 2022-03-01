@@ -251,14 +251,16 @@ private:
 /// @param trait Converts between the native and the wire format.
 /// @relates length_prefix_framing
 template <template <class> class Transport = stream_transport, class Socket,
-          class T, class Trait>
+          class T, class Trait, class... TransportArgs>
 error run_with_length_prefix_framing(multiplexer& mpx, Socket fd,
                                      const settings& cfg,
                                      async::consumer_resource<T> in,
                                      async::producer_resource<T> out,
-                                     Trait trait) {
+                                     Trait trait, TransportArgs&&... args) {
   using app_t = Transport<length_prefix_framing<message_flow_bridge<T, Trait>>>;
-  auto mgr = make_socket_manager<app_t>(fd, &mpx, std::move(in), std::move(out),
+  auto mgr = make_socket_manager<app_t>(fd, &mpx,
+                                        std::forward<TransportArgs>(args)...,
+                                        std::move(in), std::move(out),
                                         std::move(trait));
   return mgr->init(cfg);
 }
