@@ -36,35 +36,52 @@ CAF_POP_WARNINGS
 
 // -- small wrappers to help working with OpenSSL ------------------------------
 
-namespace caf::net::openssl {
+namespace caf {
 
-/// Dispatches to the proper OpenSSL `free` function for each OpenSSL type.
-struct deleter {
-  void operator()(SSL_CTX* ptr) const {
-    SSL_CTX_free(ptr);
+template<>
+struct intrusive_ptr_access<SSL_CTX> {
+public:
+  static void add_ref(SSL_CTX* ptr) noexcept {
+    SSL_CTX_up_ref(ptr);
   }
 
-  void operator()(SSL* ptr) const {
+  static void release(SSL_CTX* ptr) noexcept {
+    SSL_CTX_free(ptr);
+  }
+};
+
+template <>
+struct intrusive_ptr_access<SSL> {
+public:
+  static void add_ref(SSL* ptr) noexcept {
+    SSL_up_ref(ptr);
+  }
+
+  static void release(SSL* ptr) noexcept {
     SSL_free(ptr);
   }
 };
+
+} // namespace caf
+
+namespace caf::net::openssl {
 
 /// A smart pointer to an `SSL_CTX` structure.
 /// @note technically, SSL structures are reference counted and we could use
 ///       `intrusive_ptr` instead. However, we have no need for shared ownership
 ///       semantics here and use `unique_ptr` for simplicity.
-using ctx_ptr = std::unique_ptr<SSL_CTX, deleter>;
+using ctx_ptr = intrusive_ptr<SSL_CTX>;
 
 /// A smart pointer to an `SSL` structure.
 /// @note technically, SSL structures are reference counted and we could use
 ///       `intrusive_ptr` instead. However, we have no need for shared ownership
 ///       semantics here and use `unique_ptr` for simplicity.
-using conn_ptr = std::unique_ptr<SSL, deleter>;
+using conn_ptr = intrusive_ptr<SSL>;
 
 /// Convenience function for creating an OpenSSL context for given method.
 inline ctx_ptr make_ctx(const SSL_METHOD* method) {
   if (auto ptr = SSL_CTX_new(method))
-    return ctx_ptr{ptr};
+    return ctx_ptr{ptr, false};
   else
     CAF_RAISE_ERROR("SSL_CTX_new failed");
 }
@@ -110,7 +127,7 @@ inline error private_key_pem_file(const ctx_ptr& ctx, const std::string& path) {
 /// Convenience function for creating a new SSL structure from given context.
 inline conn_ptr make_conn(const ctx_ptr& ctx) {
   if (auto ptr = SSL_new(ctx.get()))
-    return conn_ptr{ptr};
+    return conn_ptr{ptr, false};
   else
     CAF_RAISE_ERROR("SSL_new failed");
 }
@@ -132,9 +149,9 @@ public:
 
   policy() = delete;
 
-  policy(const policy&) = delete;
+  policy(const policy&) = default;
 
-  policy& operator=(const policy&) = delete;
+  policy& operator=(const policy&) = default;
 
   policy(policy&&) = default;
 
