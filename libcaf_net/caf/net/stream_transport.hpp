@@ -395,16 +395,25 @@ public:
                                                      "consumed < 0"));
           return read_result::stop;
         }
-        // Shift unconsumed bytes to the beginning of the buffer.
-        if (consumed < offset_)
+        if (consumed == 0) {
+          delta_offset_ = offset_;
+        } else if (consumed > 0 && consumed < offset_) {
+          // Shift unconsumed bytes to the beginning of the buffer.
           std::copy(read_buf_.begin() + consumed, read_buf_.begin() + offset_,
                     read_buf_.begin());
-        offset_ -= consumed;
-        delta_offset_ = offset_;
+          offset_ -= consumed;
+          delta_offset_ = offset_;
+        } else if (consumed == offset_) {
+          offset_ = 0;
+          delta_offset_ = 0;
+        }
         // Stop if the application asked for it.
         if (max_read_size_ == 0)
           return read_result::stop;
-        if (internal_buffer_size > 0 && offset_ < max_read_size_) {
+        if (internal_buffer_size > 0 && max_read_size_ > offset_) {
+          // Make sure our buffer has sufficient space.
+          if (read_buf_.size() < max_read_size_)
+            read_buf_.resize(max_read_size_);
           // Fetch already buffered data to 'refill' the buffer as we go.
           auto n = std::min(internal_buffer_size,
                             max_read_size_ - static_cast<size_t>(offset_));
@@ -415,7 +424,8 @@ public:
                                    "policy error: reading buffered data "
                                    "may not result in an error"));
           offset_ += rd;
-          internal_buffer_size = policy_.buffered();
+          internal_buffer_size -= rd;
+          CAF_ASSERT(internal_buffer_size == policy_.buffered());
         }
       } while (internal_buffer_size > 0);
     }
