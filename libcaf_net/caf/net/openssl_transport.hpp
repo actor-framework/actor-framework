@@ -27,61 +27,40 @@ CAF_PUSH_WARNINGS
 #include <openssl/ssl.h>
 CAF_POP_WARNINGS
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-#  error "OpenSSL version too old. CAF::net requires at least OpenSSL 1.1"
-#endif
-
+#include <memory>
 #include <string>
 #include <string_view>
 
 // -- small wrappers to help working with OpenSSL ------------------------------
 
-namespace caf {
+namespace caf::net::openssl {
 
-template<>
-struct intrusive_ptr_access<SSL_CTX> {
-public:
-  static void add_ref(SSL_CTX* ptr) noexcept {
-    SSL_CTX_up_ref(ptr);
-  }
-
-  static void release(SSL_CTX* ptr) noexcept {
+struct deleter {
+  void operator()(SSL_CTX* ptr) const noexcept {
     SSL_CTX_free(ptr);
   }
-};
 
-template <>
-struct intrusive_ptr_access<SSL> {
-public:
-  static void add_ref(SSL* ptr) noexcept {
-    SSL_up_ref(ptr);
-  }
-
-  static void release(SSL* ptr) noexcept {
+  void operator()(SSL* ptr) const noexcept {
     SSL_free(ptr);
   }
 };
-
-} // namespace caf
-
-namespace caf::net::openssl {
 
 /// A smart pointer to an `SSL_CTX` structure.
 /// @note technically, SSL structures are reference counted and we could use
 ///       `intrusive_ptr` instead. However, we have no need for shared ownership
 ///       semantics here and use `unique_ptr` for simplicity.
-using ctx_ptr = intrusive_ptr<SSL_CTX>;
+using ctx_ptr = std::unique_ptr<SSL_CTX, deleter>;
 
 /// A smart pointer to an `SSL` structure.
 /// @note technically, SSL structures are reference counted and we could use
 ///       `intrusive_ptr` instead. However, we have no need for shared ownership
 ///       semantics here and use `unique_ptr` for simplicity.
-using conn_ptr = intrusive_ptr<SSL>;
+using conn_ptr = std::unique_ptr<SSL, deleter>;
 
 /// Convenience function for creating an OpenSSL context for given method.
 inline ctx_ptr make_ctx(const SSL_METHOD* method) {
   if (auto ptr = SSL_CTX_new(method))
-    return ctx_ptr{ptr, false};
+    return ctx_ptr{ptr};
   else
     CAF_RAISE_ERROR("SSL_CTX_new failed");
 }
@@ -127,7 +106,7 @@ inline error private_key_pem_file(const ctx_ptr& ctx, const std::string& path) {
 /// Convenience function for creating a new SSL structure from given context.
 inline conn_ptr make_conn(const ctx_ptr& ctx) {
   if (auto ptr = SSL_new(ctx.get()))
-    return conn_ptr{ptr, false};
+    return conn_ptr{ptr};
   else
     CAF_RAISE_ERROR("SSL_new failed");
 }
@@ -149,39 +128,32 @@ public:
 
   policy() = delete;
 
-  policy(const policy&) = default;
+  policy(const policy&) = delete;
 
-  policy& operator=(const policy&) = default;
+  policy& operator=(const policy&) = delete;
 
   policy(policy&&) = default;
 
   policy& operator=(policy&&) = default;
 
-  policy(ctx_ptr ctx, conn_ptr conn)
-    : ctx_(std::move(ctx)), conn_(std::move(conn)) {
+  explicit policy(conn_ptr conn) : conn_(std::move(conn)) {
     // nop
   }
 
   // -- factories --------------------------------------------------------------
 
+  /// Creates a policy from an SSL context and socket.
+  static policy make(const ctx_ptr& ctx, stream_socket fd) {
+    return policy{make_conn(ctx, fd)};
+  }
+
   /// Creates a policy from an SSL method and socket.
   static policy make(const SSL_METHOD* method, stream_socket fd) {
     auto ctx = make_ctx(method);
-    auto conn = make_conn(ctx, fd);
-    return policy{std::move(ctx), std::move(conn)};
-  }
-
-  /// Creates a policy from an SSL context and socket.
-  static policy make(ctx_ptr ctx, stream_socket fd) {
-    auto conn = make_conn(ctx, fd);
-    return policy{std::move(ctx), std::move(conn)};
+    return policy{make_conn(ctx, fd)};
   }
 
   // -- properties -------------------------------------------------------------
-
-  SSL_CTX* ctx() {
-    return ctx_.get();
-  }
 
   SSL* conn() {
     return conn_.get();
@@ -270,9 +242,6 @@ public:
   }
 
 private:
-  /// Our SSL context.
-  openssl::ctx_ptr ctx_;
-
   /// Our SSL connection data.
   openssl::conn_ptr conn_;
 };
@@ -346,9 +315,8 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   template <class... Ts>
-  openssl_transport(openssl::ctx_ptr ctx, openssl::conn_ptr conn, Ts&&... xs)
-    : super(openssl::policy{std::move(ctx), std::move(conn)},
-            std::forward<Ts>(xs)...) {
+  explicit openssl_transport(openssl::conn_ptr conn, Ts&&... xs)
+    : super(openssl::policy{std::move(conn)}, std::forward<Ts>(xs)...) {
     // nop
   }
 
