@@ -314,18 +314,19 @@ function(caf_add_component name)
     endif()
   endforeach()
   set(pub_lib_target "libcaf_${name}")
+  set(obj_lib_target "libcaf_${name}_obj")
+  set(targets ${pub_lib_target} ${obj_lib_target})
+  add_library(${obj_lib_target} OBJECT
+              ${CAF_ADD_COMPONENT_HEADERS} ${CAF_ADD_COMPONENT_SOURCES})
+  set_property(TARGET ${obj_lib_target} PROPERTY POSITION_INDEPENDENT_CODE ON)
+  caf_target_link_libraries(${obj_lib_target}
+                            ${CAF_ADD_COMPONENT_DEPENDENCIES})
+  add_library(${pub_lib_target}
+              "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
+              $<TARGET_OBJECTS:${obj_lib_target}>)
   if(CAF_ENABLE_TESTING AND CAF_ADD_COMPONENT_TEST_SOURCES)
-    set(obj_lib_target "libcaf_${name}_obj")
     set(tst_bin_target "caf-${name}-test")
-    set(targets ${pub_lib_target} ${obj_lib_target} ${tst_bin_target})
-    add_library(${obj_lib_target} OBJECT
-                ${CAF_ADD_COMPONENT_HEADERS} ${CAF_ADD_COMPONENT_SOURCES})
-    set_property(TARGET ${obj_lib_target} PROPERTY POSITION_INDEPENDENT_CODE ON)
-    caf_target_link_libraries(${obj_lib_target}
-                              ${CAF_ADD_COMPONENT_DEPENDENCIES})
-    add_library(${pub_lib_target}
-                "${PROJECT_SOURCE_DIR}/cmake/dummy.cpp"
-                $<TARGET_OBJECTS:${obj_lib_target}>)
+    list(APPEND targets ${tst_bin_target})
     add_executable(${tst_bin_target}
                    ${CAF_ADD_COMPONENT_TEST_SOURCES}
                    $<TARGET_OBJECTS:${obj_lib_target}>)
@@ -336,11 +337,6 @@ function(caf_add_component name)
     if(CAF_ADD_COMPONENT_TEST_SUITES)
       caf_add_test_suites(${tst_bin_target} ${CAF_ADD_COMPONENT_TEST_SUITES})
     endif()
-  else()
-    set(targets ${pub_lib_target})
-    add_library(${pub_lib_target}
-                ${CAF_ADD_COMPONENT_HEADERS} ${CAF_ADD_COMPONENT_SOURCES})
-    set_property(TARGET ${pub_lib_target} PROPERTY POSITION_INDEPENDENT_CODE ON)
   endif()
   target_link_libraries(${pub_lib_target} ${CAF_ADD_COMPONENT_DEPENDENCIES})
   if(CAF_ADD_COMPONENT_ENUM_TYPES)
