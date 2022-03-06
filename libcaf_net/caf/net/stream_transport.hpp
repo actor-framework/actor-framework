@@ -373,6 +373,30 @@ public:
     };
     // Keep track of how many bytes of data are still pending in the policy.
     auto internal_buffer_size = policy_.buffered();
+    // Convenience lambda for refilling read_buf_ with data from the policy's
+    // internal buffer.
+    auto refill = [this, &parent, &internal_buffer_size] {
+      if (internal_buffer_size > 0 && max_read_size_ > offset_) {
+        // Make sure our buffer has sufficient space.
+        if (read_buf_.size() < max_read_size_)
+          read_buf_.resize(max_read_size_);
+        // Fetch already buffered data to 'refill' the buffer as we go.
+        auto n = std::min(internal_buffer_size,
+                          max_read_size_ - static_cast<size_t>(offset_));
+        auto rdb = make_span(read_buf_.data() + offset_, n);
+        auto rd = policy_.read(parent->handle(), rdb);
+        if (rd < 0)
+          return false;
+        offset_ += rd;
+        internal_buffer_size -= rd;
+        CAF_ASSERT(internal_buffer_size == policy_.buffered());
+      }
+      return true;
+    };
+    if (!refill())
+      return fail(make_error(caf::sec::runtime_error,
+                             "policy error: reading buffered data "
+                             "may not result in an error"));
     // The offset_ may change as a result of invoking the upper layer. Hence,
     // need to run this in a loop to push data up for as long as we have
     // buffered data available.
@@ -385,6 +409,7 @@ public:
       // sure to consume the buffer because the OS does not know about it and
       // will not trigger a read event based on data available there.
       do {
+        // Push data to the next layer.
         ptrdiff_t consumed = invoke_upper_layer(read_buf_.data(), offset_,
                                                 delta_offset_);
         CAF_LOG_DEBUG(CAF_ARG2("socket", parent->handle().id)
@@ -408,25 +433,14 @@ public:
           delta_offset_ = 0;
         }
         // Stop if the application asked for it.
-        if (max_read_size_ == 0)
+        if (max_read_size_ == 0) {
           return read_result::stop;
-        if (internal_buffer_size > 0 && max_read_size_ > offset_) {
-          // Make sure our buffer has sufficient space.
-          if (read_buf_.size() < max_read_size_)
-            read_buf_.resize(max_read_size_);
-          // Fetch already buffered data to 'refill' the buffer as we go.
-          auto n = std::min(internal_buffer_size,
-                            max_read_size_ - static_cast<size_t>(offset_));
-          auto rdb = make_span(read_buf_.data() + offset_, n);
-          auto rd = policy_.read(parent->handle(), rdb);
-          if (rd < 0)
-            return fail(make_error(caf::sec::runtime_error,
-                                   "policy error: reading buffered data "
-                                   "may not result in an error"));
-          offset_ += rd;
-          internal_buffer_size -= rd;
-          CAF_ASSERT(internal_buffer_size == policy_.buffered());
         }
+        // Prepare next loop iteration.
+        if (!refill())
+          return fail(make_error(caf::sec::runtime_error,
+                                 "policy error: reading buffered data "
+                                 "may not result in an error"));
       } while (internal_buffer_size > 0);
     }
     return read_result::again;
