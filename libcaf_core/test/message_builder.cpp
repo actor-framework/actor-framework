@@ -45,13 +45,15 @@ SCENARIO("message builders can build messages incrementally") {
           builder.append(xs.begin(), xs.end());
           CHECK_EQ(builder.size(), 3u);
           auto msg = builder.to_message();
-          CHECK_EQ(msg.types(), (make_type_id_list<int32_t, int32_t, int32_t>()));
+          CHECK_EQ(msg.types(),
+                   (make_type_id_list<int32_t, int32_t, int32_t>()));
           CHECK_EQ(to_string(msg.types()), "[int32_t, int32_t, int32_t]");
           CHECK_EQ(to_string(msg), "message(1, 2, 3)");
         }
-        STEP("moving the content to a message produces the same message again") {
+        STEP("move_to_message produces the same message again") {
           auto msg = builder.move_to_message();
-          CHECK_EQ(msg.types(), (make_type_id_list<int32_t, int32_t, int32_t>()));
+          CHECK_EQ(msg.types(),
+                   (make_type_id_list<int32_t, int32_t, int32_t>()));
           CHECK_EQ(to_string(msg.types()), "[int32_t, int32_t, int32_t]");
           CHECK_EQ(to_string(msg), "message(1, 2, 3)");
         }
