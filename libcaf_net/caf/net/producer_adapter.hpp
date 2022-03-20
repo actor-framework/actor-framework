@@ -37,9 +37,7 @@ public:
   }
 
   void on_consumer_demand(size_t new_demand) override {
-    auto prev = demand_.fetch_add(new_demand);
-    if (prev == 0)
-      mgr_->continue_reading();
+    mgr_->continue_reading();
   }
 
   void ref_producer() const noexcept override {
@@ -67,19 +65,11 @@ public:
     }
   }
 
-  /// Returns the current consumer demand.
-  size_t demand() const noexcept {
-    return demand_;
-  }
-
   /// Makes `item` available to the consumer.
   /// @returns the remaining demand.
-  /// @pre `demand() > 0`
   size_t push(const value_type& item) {
     if (buf_) {
-      CAF_ASSERT(demand_ > 0);
-      buf_->push(item);
-      return --demand_;
+      return buf_->push(item);
     } else {
       return 0;
     }
@@ -87,12 +77,9 @@ public:
 
   /// Makes `items` available to the consumer.
   /// @returns the remaining demand.
-  /// @pre `demand() >= items.size()`
   size_t push(span<const value_type> items) {
     if (buf_) {
-      CAF_ASSERT(demand_ >= items.size());
-      buf_->push(items);
-      return demand_ -= items.size();
+      return buf_->push(items);
     } else {
       return 0;
     }
@@ -124,7 +111,7 @@ public:
 
 private:
   producer_adapter(socket_manager* owner, buf_ptr buf)
-    : demand_(0), mgr_(owner), buf_(std::move(buf)) {
+    : mgr_(owner), buf_(std::move(buf)) {
     // nop
   }
 
@@ -139,9 +126,6 @@ private:
   auto strong_this() {
     return intrusive_ptr{this};
   }
-
-  atomic_count demand_;
-  char pad[CAF_CACHE_LINE_SIZE - sizeof(atomic_count)];
 
   intrusive_ptr<socket_manager> mgr_;
   intrusive_ptr<Buffer> buf_;
