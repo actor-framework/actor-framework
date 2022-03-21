@@ -34,10 +34,11 @@ message to_message_impl(size_t storage_size, TypeListBuilder& types,
   intrusive_cow_ptr<message_data> ptr{raw_ptr, false};
   auto storage = raw_ptr->storage();
   for (auto& element : elements) {
-    if constexpr (Policy == move_msg)
+    if constexpr (Policy == move_msg) {
       storage = element->move_init(storage);
-    else
+    } else {
       storage = element->copy_init(storage);
+    }
     raw_ptr->inc_constructed_elements();
   }
   return message{std::move(ptr)};

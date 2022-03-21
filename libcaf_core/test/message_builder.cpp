@@ -75,10 +75,7 @@ SCENARIO("message builders allows RAII types") {
         CHECK_EQ(to_string(msg.types()), "[std::string]");
         using view_t = const_typed_message_view<std::string>;
         if (auto tup = view_t(msg); CHECK(tup)) {
-          auto& str = get<0>(tup);
-          MESSAGE("str: " << str);
-          MESSAGE("quote: " << quote);
-          CHECK_EQ(str, quote);
+          CHECK_EQ(get<0>(tup), quote);
         }
       }
     }
