@@ -17,6 +17,10 @@ namespace caf::detail {
 /// later.
 class CAF_CORE_EXPORT message_builder_element {
 public:
+  message_builder_element() = default;
+  message_builder_element(const message_builder_element&) = delete;
+  message_builder_element& operator=(const message_builder_element&) = delete;
+
   virtual ~message_builder_element();
 
   /// Uses placement new to create a copy of the wrapped value at given memory
@@ -34,9 +38,23 @@ public:
 template <class T>
 class message_builder_element_impl : public message_builder_element {
 public:
-  message_builder_element_impl(T value) : value_(std::move(value)) {
+  template <class Value>
+  explicit message_builder_element_impl(Value&& value)
+    : value_(std::forward<Value>(value)) {
     // nop
   }
+
+  message_builder_element_impl() = delete;
+
+  message_builder_element_impl(message_builder_element_impl&&) = delete;
+
+  message_builder_element_impl(const message_builder_element_impl&) = delete;
+
+  message_builder_element_impl& operator=(message_builder_element_impl&&)
+    = delete;
+
+  message_builder_element_impl& operator=(const message_builder_element_impl&)
+    = delete;
 
   byte* copy_init(byte* storage) const override {
     new (storage) T(value_);
@@ -53,11 +71,5 @@ private:
 };
 
 using message_builder_element_ptr = std::unique_ptr<message_builder_element>;
-
-template <class T>
-auto make_message_builder_element(T&& x) {
-  using impl = message_builder_element_impl<std::decay_t<T>>;
-  return message_builder_element_ptr{new impl(std::forward<T>(x))};
-}
 
 } // namespace caf::detail

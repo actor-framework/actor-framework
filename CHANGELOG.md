@@ -29,6 +29,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   newer EC-curve API.
 - When working with settings, `put`, `put_missing`, `get_if`, etc. now
   gracefully handle the `global` category when explicitly using it.
+- Messages created from a `message_builder` did not call the destructors for
+  their values, potentially causing memory leaks (#1321).
 
 ### Changed
 

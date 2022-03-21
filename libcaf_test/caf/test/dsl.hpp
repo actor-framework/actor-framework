@@ -363,7 +363,7 @@ public:
 
   expect_clause(expect_clause&& other) = default;
 
-  void eval(const char* type_str, const char* fields_str) {
+  void eval(const char*, const char* fields_str) {
     using namespace caf;
     test::logger::instance().verbose()
       << term::yellow << "  -> " << term::reset
