@@ -108,7 +108,9 @@ public:
       FAIL("unable to parse input: " << err);
     ++received_messages;
     if (auto capacity_left = adapter_->push(val); capacity_left == 0)
+    {
       down->suspend_reading();
+    }
     return static_cast<ptrdiff_t>(buf.size());
   }
 
@@ -119,7 +121,6 @@ public:
 
 struct fixture : test_coordinator_fixture<>, host_fixture {
   fixture() : mm(sys) {
-    mm.mpx().set_thread_id();
     if (auto err = mm.mpx().init())
       CAF_FAIL("mpx.init() failed: " << err);
   }
