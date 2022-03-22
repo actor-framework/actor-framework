@@ -36,7 +36,7 @@ public:
     });
   }
 
-  void on_consumer_demand(size_t new_demand) override {
+  void on_consumer_demand(size_t) override {
     mgr_->continue_reading();
   }
 
