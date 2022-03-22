@@ -69,6 +69,16 @@ struct fixture : host_fixture {
     write_file("key.2.pem", key_1_pem);
   }
 
+  template <class SocketPair>
+  SocketPair no_sigpipe(SocketPair pair) {
+    auto [first, second] = pair;
+    if (auto err = allow_sigpipe(first, false))
+      FAIL("allow_sigpipe failed: " << err);
+    if (auto err = allow_sigpipe(second, false))
+      FAIL("allow_sigpipe failed: " << err);
+    return pair;
+  }
+
   ~fixture() {
     // Clean up our files under /tmp.
     if (!tmp_dir.empty())
@@ -214,7 +224,7 @@ BEGIN_FIXTURE_SCOPE(fixture)
 
 SCENARIO("openssl::async_connect performs the client handshake") {
   GIVEN("a connection to a TLS server") {
-    auto [serv_fd, client_fd] = unbox(make_stream_socket_pair());
+    auto [serv_fd, client_fd] = no_sigpipe(unbox(make_stream_socket_pair()));
     if (auto err = net::nonblocking(client_fd, true))
       FAIL("net::nonblocking failed: " << err);
     std::thread server{dummy_tls_server, serv_fd, abs_path("cert.1.pem"),
@@ -257,7 +267,7 @@ SCENARIO("openssl::async_connect performs the client handshake") {
 
 SCENARIO("openssl::async_accept performs the server handshake") {
   GIVEN("a socket that is connected to a client") {
-    auto [serv_fd, client_fd] = unbox(make_stream_socket_pair());
+    auto [serv_fd, client_fd] = no_sigpipe(unbox(make_stream_socket_pair()));
     if (auto err = net::nonblocking(serv_fd, true))
       FAIL("net::nonblocking failed: " << err);
     std::thread client{dummy_tls_client, client_fd};
