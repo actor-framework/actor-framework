@@ -176,31 +176,36 @@ public:
 
   template <class LowerLayerPtr>
   ptrdiff_t consume(LowerLayerPtr down, byte_span input, byte_span) {
+    CAF_LOG_TRACE("got" << input.size() << "bytes");
     auto this_layer = this_layer_ptr(down);
     if (input.size() < sizeof(uint32_t)) {
       auto err = make_error(sec::runtime_error,
                             "received too few bytes from underlying transport");
       down->abort_reason(std::move(err));
       return -1;
-    } else if (input.size() == sizeof(uint32_t)) {
+    } else if (input.size() == hdr_size) {
       auto u32_size = uint32_t{0};
       memcpy(&u32_size, input.data(), sizeof(uint32_t));
       auto msg_size = static_cast<size_t>(detail::from_network_order(u32_size));
       if (msg_size == 0) {
         // Ignore empty messages.
+        CAF_LOG_DEBUG("received empty message");
         return static_cast<ptrdiff_t>(input.size());
       } else if (msg_size > max_message_length) {
+        CAF_LOG_DEBUG("maximum message size exceeded");
         auto err = make_error(sec::runtime_error,
                               "maximum message size exceeded");
         down->abort_reason(std::move(err));
         return -1;
       } else {
+        CAF_LOG_DEBUG("wait for payload of size" << msg_size);
         down->configure_read(receive_policy::exactly(hdr_size + msg_size));
         return 0;
       }
     } else {
       auto [msg_size, msg] = split(input);
       if (msg_size == msg.size() && msg_size + hdr_size == input.size()) {
+        CAF_LOG_DEBUG("got message of size" << msg_size);
         if (upper_layer_.consume(this_layer, msg) >= 0) {
           if (!down->stopped())
             down->configure_read(receive_policy::exactly(hdr_size));
@@ -209,6 +214,7 @@ public:
           return -1;
         }
       } else {
+        CAF_LOG_DEBUG("received malformed message");
         auto err = make_error(sec::runtime_error, "received malformed message");
         down->abort_reason(std::move(err));
         return -1;
