@@ -107,8 +107,7 @@ public:
     if (auto err = detail::parse(str, val))
       FAIL("unable to parse input: " << err);
     ++received_messages;
-    if (auto capacity_left = adapter_->push(val); capacity_left == 0)
-    {
+    if (auto capacity_left = adapter_->push(val); capacity_left == 0) {
       down->suspend_reading();
     }
     return static_cast<ptrdiff_t>(buf.size());
