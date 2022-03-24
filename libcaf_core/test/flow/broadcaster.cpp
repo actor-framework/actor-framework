@@ -27,7 +27,7 @@ BEGIN_FIXTURE_SCOPE(fixture)
 
 SCENARIO("a broadcaster pushes items to all subscribers at the same time") {
   GIVEN("a broadcaster with one source and three sinks") {
-    auto uut = make_counted<flow::broadcaster_impl<int>>(ctx.get());
+    auto uut = flow::make_broadcaster_impl<int>(ctx.get());
     auto src = flow::make_passive_observable<int>(ctx.get());
     auto snk1 = flow::make_passive_observer<int>();
     auto snk2 = flow::make_passive_observer<int>();
@@ -71,7 +71,7 @@ SCENARIO("a broadcaster pushes items to all subscribers at the same time") {
 
 SCENARIO("a broadcaster emits values before propagating completion") {
   GIVEN("a broadcaster with one source and three sinks") {
-    auto uut = make_counted<flow::broadcaster_impl<int>>(ctx.get());
+    auto uut = flow::make_broadcaster_impl<int>(ctx.get());
     auto src = flow::make_passive_observable<int>(ctx.get());
     auto snk1 = flow::make_passive_observer<int>();
     auto snk2 = flow::make_passive_observer<int>();
@@ -114,7 +114,7 @@ SCENARIO("a broadcaster emits values before propagating completion") {
 
 SCENARIO("a broadcaster emits values before propagating errors") {
   GIVEN("a broadcaster with one source and three sinks") {
-    auto uut = make_counted<flow::broadcaster_impl<int>>(ctx.get());
+    auto uut = flow::make_broadcaster_impl<int>(ctx.get());
     auto src = flow::make_passive_observable<int>(ctx.get());
     auto snk1 = flow::make_passive_observer<int>();
     auto snk2 = flow::make_passive_observer<int>();

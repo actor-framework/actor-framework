@@ -17,6 +17,28 @@
 namespace caf::flow {
 
 template <class T>
+struct identity_step {
+  using input_type = T;
+
+  using output_type = T;
+
+  template <class Next, class... Steps>
+  bool on_next(const input_type& item, Next& next, Steps&... steps) {
+    return next.on_next(item, steps...);
+  }
+
+  template <class Next, class... Steps>
+  void on_complete(Next& next, Steps&... steps) {
+    next.on_complete(steps...);
+  }
+
+  template <class Next, class... Steps>
+  void on_error(const error& what, Next& next, Steps&... steps) {
+    next.on_error(what, steps...);
+  }
+};
+
+template <class T>
 struct limit_step {
   size_t remaining;
 
@@ -464,12 +486,15 @@ public:
   /// Calls `on_complete` on all observers and drops any pending data.
   void close() {
     buf_.clear();
-    if (!err_)
+    if (!err_) {
       for (auto& out : outputs_)
         out.sink.on_complete();
-    else
+      state_ = observable_state::completed;
+    } else {
       for (auto& out : outputs_)
         out.sink.on_error(err_);
+      state_ = observable_state::aborted;
+    }
     outputs_.clear();
   }
 
@@ -502,7 +527,6 @@ public:
     if (is_active(state_)) {
       if (idle()) {
         close();
-        state_ = err_ ? observable_state::aborted : observable_state::completed;
       } else {
         state_ = observable_state::completing;
       }
@@ -576,5 +600,21 @@ private:
   bool pushing_ = false;
 #endif
 };
+
+/// Utility for the observables that use one or more steps.
+template <class... Steps>
+struct steps_output_oracle;
+
+template <class Step>
+struct steps_output_oracle<Step> {
+  using type = typename Step::output_type;
+};
+
+template <class Step1, class Step2, class... Steps>
+struct steps_output_oracle<Step1, Step2, Steps...>
+  : steps_output_oracle<Step2, Steps...> {};
+
+template <class... Steps>
+using steps_output_type_t = typename steps_output_oracle<Steps...>::type;
 
 } // namespace caf::flow

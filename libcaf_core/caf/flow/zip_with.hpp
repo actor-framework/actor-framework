@@ -166,7 +166,7 @@ private:
   }
 
   template <size_t I>
-  void fwd_on_subscribe(ref_counted*, zipper_index<I> index, subscription sub) {
+  void fwd_on_subscribe(zipper_index<I> index, subscription sub) {
     if (!term_.finalized()) {
       auto& in = at(index);
       if (!in.sub) {
@@ -182,7 +182,7 @@ private:
   }
 
   template <size_t I>
-  void fwd_on_complete(ref_counted*, zipper_index<I> index) {
+  void fwd_on_complete(zipper_index<I> index) {
     if (!broken_) {
       broken_ = true;
       if (at(index).buf.empty())
@@ -192,7 +192,7 @@ private:
   }
 
   template <size_t I>
-  void fwd_on_error(ref_counted*, zipper_index<I> index, const error& what) {
+  void fwd_on_error(zipper_index<I> index, const error& what) {
     if (!term_.err())
       term_.err(what);
     if (!broken_) {
@@ -204,7 +204,7 @@ private:
   }
 
   template <size_t I, class T>
-  void fwd_on_next(ref_counted*, zipper_index<I> index, span<const T> items) {
+  void fwd_on_next(zipper_index<I> index, span<const T> items) {
     if (!term_.finalized()) {
       auto& buf = at(index).buf;
       buf.insert(buf.end(), items.begin(), items.end());

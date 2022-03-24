@@ -296,10 +296,9 @@ private:
 /// a single @ref observable object.
 template <class Generator, class... Steps>
 class generation final
-  : public observable_def<
-      transform_processor_output_type_t<Generator, Steps...>> {
+  : public observable_def<steps_output_type_t<Generator, Steps...>> {
 public:
-  using output_type = transform_processor_output_type_t<Generator, Steps...>;
+  using output_type = steps_output_type_t<Generator, Steps...>;
 
   class impl : public observable_impl_base<output_type> {
   public:

@@ -477,42 +477,33 @@ private:
 // -- utility observer ---------------------------------------------------------
 
 /// Forwards all events to a parent.
-template <class T, class Parent, class Token = unit_t>
+template <class T, class Parent, class Token>
 class forwarder : public ref_counted, public observer_impl<T> {
 public:
   CAF_INTRUSIVE_PTR_FRIENDS(forwarder)
 
-  explicit forwarder(intrusive_ptr<Parent> parent, Token token = Token{})
+  explicit forwarder(intrusive_ptr<Parent> parent, Token token)
     : parent(std::move(parent)), token(std::move(token)) {
     // nop
   }
 
   void on_complete() override {
     if (parent) {
-      if constexpr (std::is_same_v<Token, unit_t>)
-        parent->fwd_on_complete(this);
-      else
-        parent->fwd_on_complete(this, token);
+      parent->fwd_on_complete(token);
       parent = nullptr;
     }
   }
 
   void on_error(const error& what) override {
     if (parent) {
-      if constexpr (std::is_same_v<Token, unit_t>)
-        parent->fwd_on_error(this, what);
-      else
-        parent->fwd_on_error(this, token, what);
+      parent->fwd_on_error(token, what);
       parent = nullptr;
     }
   }
 
   void on_subscribe(subscription new_sub) override {
     if (parent) {
-      if constexpr (std::is_same_v<Token, unit_t>)
-        parent->fwd_on_subscribe(this, std::move(new_sub));
-      else
-        parent->fwd_on_subscribe(this, token, std::move(new_sub));
+      parent->fwd_on_subscribe(token, std::move(new_sub));
     } else {
       new_sub.cancel();
     }
@@ -520,10 +511,7 @@ public:
 
   void on_next(span<const T> items) override {
     if (parent) {
-      if constexpr (std::is_same_v<Token, unit_t>)
-        parent->fwd_on_next(this, items);
-      else
-        parent->fwd_on_next(this, token, items);
+      parent->fwd_on_next(token, items);
     }
   }
 
