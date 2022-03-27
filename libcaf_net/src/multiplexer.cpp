@@ -78,7 +78,7 @@ operation to_operation(const socket_manager_ptr& mgr,
 
 // -- static utility functions -------------------------------------------------
 
-#ifndef CAF_WINDOWS
+#ifdef CAF_LINUX
 
 void multiplexer::block_sigpipe() {
   sigset_t sigpipe_mask;
@@ -186,11 +186,7 @@ void multiplexer::register_writing(const socket_manager_ptr& mgr) {
 
 void multiplexer::continue_reading(const socket_manager_ptr& mgr) {
   CAF_LOG_TRACE(CAF_ARG2("socket", mgr->handle().id));
-  if (std::this_thread::get_id() == tid_) {
-    do_continue_reading(mgr);
-  } else {
-    write_to_pipe(pollset_updater::code::continue_reading, mgr.get());
-  }
+  write_to_pipe(pollset_updater::code::continue_reading, mgr.get());
 }
 
 void multiplexer::continue_writing(const socket_manager_ptr& mgr) {
@@ -509,11 +505,11 @@ short multiplexer::active_mask_of(const socket_manager_ptr& mgr) {
 }
 
 bool multiplexer::is_reading(const socket_manager_ptr& mgr) {
-  return (active_mask_of(mgr) & input_mask);
+  return (active_mask_of(mgr) & input_mask) != 0;
 }
 
 bool multiplexer::is_writing(const socket_manager_ptr& mgr) {
-  return (active_mask_of(mgr) & output_mask);
+  return (active_mask_of(mgr) & output_mask) != 0;
 }
 
 // -- internal callbacks the pollset updater -----------------------------------
@@ -556,7 +552,7 @@ void multiplexer::do_continue_reading(const socket_manager_ptr& mgr) {
   if (!is_reading(mgr)) {
     switch (mgr->handle_continue_reading()) {
       default: // socket_manager::read_result::stop
-        // Nothing to do, bitmask may remain unchanged (i.e., not reading).
+        update_for(mgr).events &= ~input_mask;
         break;
       case socket_manager::read_result::again:
         update_for(mgr).events |= input_mask;
@@ -566,7 +562,6 @@ void multiplexer::do_continue_reading(const socket_manager_ptr& mgr) {
         break;
       case socket_manager::read_result::handover: {
         do_handover(mgr);
-        return;
       }
     }
   }
@@ -576,7 +571,7 @@ void multiplexer::do_continue_writing(const socket_manager_ptr& mgr) {
   if (!is_writing(mgr)) {
     switch (mgr->handle_continue_writing()) {
       default: // socket_manager::read_result::stop
-        // Nothing to do, bitmask may remain unchanged (i.e., not writing).
+        update_for(mgr).events &= ~output_mask;
         break;
       case socket_manager::write_result::again:
         update_for(mgr).events |= output_mask;
@@ -586,7 +581,6 @@ void multiplexer::do_continue_writing(const socket_manager_ptr& mgr) {
         break;
       case socket_manager::write_result::handover: {
         do_handover(mgr);
-        return;
       }
     }
   }

@@ -410,8 +410,14 @@ public:
     if (max_read_size_ == 0) {
       auto this_layer_ptr = make_stream_oriented_layer_ptr(this, parent);
       upper_layer_.continue_reading(this_layer_ptr);
+      if (max_read_size_ != 0) {
+        return handle_buffered_data(parent);
+      } else {
+        return read_result::stop;
+      }
+    } else {
+      return handle_buffered_data(parent);
     }
-    return handle_buffered_data(parent);
   }
 
   template <class ParentPtr>
