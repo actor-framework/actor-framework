@@ -2137,6 +2137,64 @@ private:
   coordinator* ctx_;
 };
 
+/// An observable that never calls any callbacks on its subscribers.
+template <class T>
+class mute_observable_impl : public ref_counted, public observable_impl<T> {
+public:
+  // -- member types -----------------------------------------------------------
+
+  using output_type = T;
+
+  // -- friends ----------------------------------------------------------------
+
+  CAF_INTRUSIVE_PTR_FRIENDS(mute_observable_impl)
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  explicit mute_observable_impl(coordinator* ctx) : ctx_(ctx) {
+    // nop
+  }
+
+  // -- implementation of disposable::impl -------------------------------------
+
+  void dispose() override {
+    // nop
+  }
+
+  bool disposed() const noexcept override {
+    return true;
+  }
+
+  void ref_disposable() const noexcept override {
+    this->ref();
+  }
+
+  void deref_disposable() const noexcept override {
+    this->deref();
+  }
+
+  // -- implementation of observable<T>::impl ----------------------------------
+
+  coordinator* ctx() const noexcept override {
+    return ctx_;
+  }
+
+  void on_request(observer_impl<output_type>*, size_t) override {
+    // nop
+  }
+
+  void on_cancel(observer_impl<output_type>*) override {
+    // nop
+  }
+
+  disposable subscribe(observer<output_type> sink) override {
+    return this->do_subscribe(sink.ptr());
+  }
+
+private:
+  coordinator* ctx_;
+};
+
 /// An observable with minimal internal logic. Useful for writing unit tests.
 template <class T>
 class passive_observable : public ref_counted, public observable_impl<T> {

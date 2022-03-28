@@ -288,10 +288,13 @@ caf_add_component(
     flow.broadcaster
     flow.concat
     flow.concat_map
+    flow.empty
+    flow.error
     flow.flat_map
     flow.for_each
     flow.interval
     flow.merge
+    flow.never
     flow.observe_on
     flow.prefix_and_tail
     flow.single

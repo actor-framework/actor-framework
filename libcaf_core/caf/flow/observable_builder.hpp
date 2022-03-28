@@ -170,6 +170,19 @@ public:
     return observable<T>{make_counted<empty_observable_impl<T>>(ctx_)};
   }
 
+  /// Creates an @ref observable without any values that also never terminates.
+  template <class T>
+  [[nodiscard]] observable<T> never() {
+    return observable<T>{make_counted<mute_observable_impl<T>>(ctx_)};
+  }
+
+  /// Creates an @ref observable without any values that also never terminates.
+  template <class T>
+  [[nodiscard]] observable<T> error(caf::error what) {
+    auto ptr = make_counted<observable_error_impl<T>>(ctx_, std::move(what));
+    return observable<T>{std::move(ptr)};
+  }
+
 private:
   explicit observable_builder(coordinator* ctx) : ctx_(ctx) {
     // nop
