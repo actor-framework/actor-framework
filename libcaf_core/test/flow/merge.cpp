@@ -52,6 +52,8 @@ SCENARIO("mergers round-robin over their inputs") {
         ctx->run();
         CHECK_EQ(snk->state, flow::observer_state::subscribed);
         CHECK(snk->buf.empty());
+        uut->dispose();
+        ctx->run();
       }
     }
   }

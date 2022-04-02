@@ -14,4 +14,24 @@ void subscription::impl::dispose() {
   cancel();
 }
 
+bool subscription::nop_impl::disposed() const noexcept {
+  return disposed_;
+}
+
+void subscription::nop_impl::ref_disposable() const noexcept {
+  ref();
+}
+
+void subscription::nop_impl::deref_disposable() const noexcept {
+  deref();
+}
+
+void subscription::nop_impl::cancel() {
+  disposed_ = true;
+}
+
+void subscription::nop_impl::request(size_t) {
+  // nop
+}
+
 } // namespace caf::flow

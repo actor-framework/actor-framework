@@ -433,6 +433,7 @@ public:
   size_t on_cancel(observer_impl_t* sink) {
     if (auto i = find(sink); i != outputs_.end()) {
       outputs_.erase(i);
+      // TODO: shut down on last cancel?
       push();
       return next_demand();
     } else {

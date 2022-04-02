@@ -52,6 +52,8 @@ SCENARIO("concatenate processes inputs sequentially") {
         ctx->run();
         CHECK_EQ(snk->state, flow::observer_state::subscribed);
         CHECK(snk->buf.empty());
+        uut->dispose();
+        ctx->run();
       }
     }
   }

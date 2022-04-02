@@ -33,6 +33,28 @@ public:
     void dispose() final;
   };
 
+  /// A trivial subscription type that drops all member function calls.
+  class CAF_CORE_EXPORT nop_impl final : public ref_counted,
+                                         public subscription::impl {
+  public:
+    // -- friends --------------------------------------------------------------
+
+    CAF_INTRUSIVE_PTR_FRIENDS(nop_impl)
+
+    bool disposed() const noexcept override;
+
+    void ref_disposable() const noexcept override;
+
+    void deref_disposable() const noexcept override;
+
+    void cancel() override;
+
+    void request(size_t n) override;
+
+  private:
+    bool disposed_ = false;
+  };
+
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit subscription(intrusive_ptr<impl> pimpl) noexcept

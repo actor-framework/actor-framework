@@ -25,6 +25,33 @@ struct fixture : test_coordinator_fixture<> {
 
 BEGIN_FIXTURE_SCOPE(fixture)
 
+SCENARIO("a broadcaster pushes items to single subscribers") {
+  GIVEN("a broadcaster with one source and one sink") {
+    auto uut = flow::make_broadcaster_impl<int>(ctx.get());
+    auto src = flow::make_passive_observable<int>(ctx.get());
+    auto snk = flow::make_passive_observer<int>();
+    src->subscribe(uut->as_observer());
+    uut->subscribe(snk->as_observer());
+    WHEN("the source emits 10 items") {
+      THEN("the broadcaster forwards them to its sink") {
+        snk->sub.request(13);
+        ctx->run();
+        CHECK_EQ(src->demand, 13u);
+        snk->sub.request(7);
+        ctx->run();
+        CHECK_EQ(src->demand, 20u);
+        auto inputs = std::vector<int>{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+        src->push(make_span(inputs));
+        CHECK_EQ(src->demand, 10u);
+        CHECK_EQ(uut->buffered(), 0u);
+        CHECK_EQ(snk->buf, std::vector<int>({1, 2, 3, 4, 5, 6, 7, 8, 9, 10}));
+        src->complete();
+        ctx->run();
+      }
+    }
+  }
+}
+
 SCENARIO("a broadcaster pushes items to all subscribers at the same time") {
   GIVEN("a broadcaster with one source and three sinks") {
     auto uut = flow::make_broadcaster_impl<int>(ctx.get());
@@ -64,6 +91,8 @@ SCENARIO("a broadcaster pushes items to all subscribers at the same time") {
         snk2->sub.request(14);
         ctx->run();
         CHECK_EQ(src->demand, 18u);
+        src->complete();
+        ctx->run();
       }
     }
   }

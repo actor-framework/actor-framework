@@ -147,6 +147,13 @@ public:
   observable& operator=(observable&&) noexcept = default;
   observable& operator=(const observable&) noexcept = default;
 
+  void dispose() {
+    if (pimpl_) {
+      pimpl_->dispose();
+      pimpl_ = nullptr;
+    }
+  }
+
   disposable as_disposable() const& noexcept {
     return disposable{pimpl_};
   }
@@ -693,6 +700,7 @@ public:
         step.on_complete(steps..., term_);
       };
       std::apply(f, steps_);
+      sub_ = nullptr;
     }
   }
 
@@ -702,6 +710,7 @@ public:
         step.on_error(what, steps..., term_);
       };
       std::apply(f, steps_);
+      sub_ = nullptr;
     }
   }
 
@@ -2158,11 +2167,15 @@ public:
   // -- implementation of disposable::impl -------------------------------------
 
   void dispose() override {
-    // nop
+    if (!disposed_) {
+      disposed_ = true;
+      for (auto& obs : observers_)
+        obs.on_complete();
+    }
   }
 
   bool disposed() const noexcept override {
-    return true;
+    return disposed_;
   }
 
   void ref_disposable() const noexcept override {
@@ -2188,11 +2201,20 @@ public:
   }
 
   disposable subscribe(observer<output_type> sink) override {
-    return this->do_subscribe(sink.ptr());
+    if (!disposed_) {
+      auto ptr = make_counted<subscription::nop_impl>();
+      sink.ptr()->on_subscribe(subscription{std::move(ptr)});
+      observers_.emplace_back(sink);
+      return sink.as_disposable();
+    } else {
+      return this->reject_subscription(sink, sec::disposed);
+    }
   }
 
 private:
   coordinator* ctx_;
+  bool disposed_ = false;
+  std::vector<observer<output_type>> observers_;
 };
 
 /// An observable with minimal internal logic. Useful for writing unit tests.
