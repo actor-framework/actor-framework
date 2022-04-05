@@ -7,6 +7,7 @@
 #include <array>
 #include <chrono>
 #include <functional>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -1028,6 +1029,29 @@ template <>
 struct is_builtin_inspector_type<span<const byte>, false> {
   static constexpr bool value = true;
 };
+
+/// Checks whether `T` is a `std::optional`.
+template <class T>
+struct is_optional : std::false_type {};
+
+template <class T>
+struct is_optional<std::optional<T>> : std::true_type {};
+
+template <class T>
+constexpr bool is_optional_v = is_optional<T>::value;
+
+template <class T>
+struct unboxed_oracle {
+  using type = T;
+};
+
+template <class T>
+struct unboxed_oracle<std::optional<T>> {
+  using type = T;
+};
+
+template <class T>
+using unboxed_t = typename unboxed_oracle<T>::type;
 
 } // namespace caf::detail
 

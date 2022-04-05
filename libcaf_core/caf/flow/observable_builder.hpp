@@ -287,7 +287,11 @@ private:
 template <class F>
 class callable_source {
 public:
-  using output_type = std::decay_t<decltype(std::declval<F&>()())>;
+  using callable_res_t = std::decay_t<decltype(std::declval<F&>()())>;
+
+  static constexpr bool boxed_output = detail::is_optional_v<callable_res_t>;
+
+  using output_type = detail::unboxed_t<callable_res_t>;
 
   explicit callable_source(F fn) : fn_(std::move(fn)) {
     // nop
@@ -302,9 +306,19 @@ public:
   template <class Step, class... Steps>
   void pull(size_t n, Step& step, Steps&... steps) {
     CAF_LOG_TRACE(CAF_ARG(n));
-    for (size_t i = 0; i < n; ++i)
-      if (!step.on_next(fn_(), steps...))
-        return;
+    for (size_t i = 0; i < n; ++i) {
+      if constexpr (boxed_output) {
+        auto val = fn_();
+        if (!val) {
+          step.on_complete(steps...);
+          return;
+        } else if (!step.on_next(*val, steps...))
+          return;
+      } else {
+        if (!step.on_next(fn_(), steps...))
+          return;
+      }
+    }
   }
 
 private:

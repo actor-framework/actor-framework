@@ -26,7 +26,7 @@ struct fixture : test_coordinator_fixture<> {
 
 BEGIN_FIXTURE_SCOPE(fixture)
 
-SCENARIO("the repeater source repeats one value indefinitely") {
+SCENARIO("repeater sources repeat one value indefinitely") {
   GIVEN("a repeater source") {
     WHEN("subscribing to its output") {
       THEN("the observer receives the same value over and over again") {
@@ -51,7 +51,7 @@ SCENARIO("the repeater source repeats one value indefinitely") {
   }
 }
 
-SCENARIO("the container source streams its input values") {
+SCENARIO("container sources stream their input values") {
   GIVEN("a container source") {
     WHEN("subscribing to its output") {
       THEN("the observer receives the values from the container in order") {
@@ -59,6 +59,126 @@ SCENARIO("the container source streams its input values") {
         auto xs = ivec{1, 2, 3, 4, 5, 6, 7};
         auto snk = flow::make_passive_observer<int>();
         ctx->make_observable().from_container(xs).subscribe(snk->as_observer());
+        CHECK_EQ(snk->state, flow::observer_state::subscribed);
+        CHECK(snk->buf.empty());
+        if (CHECK(snk->sub)) {
+          snk->sub.request(3);
+          ctx->run();
+          CHECK_EQ(snk->buf, ivec({1, 2, 3}));
+          snk->sub.request(21);
+          ctx->run();
+          CHECK_EQ(snk->buf, ivec({1, 2, 3, 4, 5, 6, 7}));
+          CHECK_EQ(snk->state, flow::observer_state::completed);
+        }
+      }
+    }
+  }
+}
+
+SCENARIO("value sources produce exactly one input") {
+  GIVEN("a value source") {
+    WHEN("subscribing to its output") {
+      THEN("the observer receives one value") {
+        using ivec = std::vector<int>;
+        auto snk = flow::make_passive_observer<int>();
+        ctx->make_observable().just(42).subscribe(snk->as_observer());
+        CHECK_EQ(snk->state, flow::observer_state::subscribed);
+        CHECK(snk->buf.empty());
+        if (CHECK(snk->sub)) {
+          snk->sub.request(100);
+          ctx->run();
+          CHECK_EQ(snk->buf, ivec({42}));
+          CHECK_EQ(snk->state, flow::observer_state::completed);
+        }
+      }
+    }
+  }
+}
+
+SCENARIO("callable sources stream values generated from a function object") {
+  GIVEN("a callable source returning non-optional values") {
+    WHEN("subscribing to its output") {
+      THEN("the observer receives an indefinite amount of values") {
+        auto f = [n = 1]() mutable { return n++; };
+        using ivec = std::vector<int>;
+        auto snk = flow::make_passive_observer<int>();
+        ctx->make_observable().from_callable(f).subscribe(snk->as_observer());
+        CHECK_EQ(snk->state, flow::observer_state::subscribed);
+        CHECK(snk->buf.empty());
+        if (CHECK(snk->sub)) {
+          snk->sub.request(3);
+          ctx->run();
+          CHECK_EQ(snk->buf, ivec({1, 2, 3}));
+          snk->sub.request(4);
+          ctx->run();
+          CHECK_EQ(snk->buf, ivec({1, 2, 3, 4, 5, 6, 7}));
+          snk->sub.cancel();
+          ctx->run();
+          CHECK_EQ(snk->buf, ivec({1, 2, 3, 4, 5, 6, 7}));
+        }
+      }
+    }
+  }
+  GIVEN("a callable source returning optional values") {
+    WHEN("subscribing to its output") {
+      THEN("the observer receives value until the callable return null-opt") {
+        auto f = [n = 1]() mutable -> std::optional<int> {
+          if (n < 8)
+            return n++;
+          else
+            return std::nullopt;
+        };
+        using ivec = std::vector<int>;
+        auto snk = flow::make_passive_observer<int>();
+        ctx->make_observable().from_callable(f).subscribe(snk->as_observer());
+        CHECK_EQ(snk->state, flow::observer_state::subscribed);
+        CHECK(snk->buf.empty());
+        if (CHECK(snk->sub)) {
+          snk->sub.request(3);
+          ctx->run();
+          CHECK_EQ(snk->buf, ivec({1, 2, 3}));
+          snk->sub.request(21);
+          ctx->run();
+          CHECK_EQ(snk->buf, ivec({1, 2, 3, 4, 5, 6, 7}));
+          CHECK_EQ(snk->state, flow::observer_state::completed);
+        }
+      }
+    }
+  }
+}
+
+namespace {
+
+class custom_pullable {
+public:
+  using output_type = int;
+
+  template <class Step, class... Steps>
+  void pull(size_t n, Step& step, Steps&... steps) {
+    for (size_t i = 0; i < n; ++i) {
+      if (value_ > 7) {
+        step.on_complete(steps...);
+        return;
+      } else if (!step.on_next(value_++, steps...)) {
+        return;
+      }
+    }
+  }
+
+private:
+  int value_ = 1;
+};
+
+} // namespace
+
+SCENARIO("lifting converts a Pullable into an observable") {
+  GIVEN("a lifted implementation of the Pullable concept") {
+    WHEN("subscribing to its output") {
+      THEN("the observer receives the generated values") {
+        using ivec = std::vector<int>;
+        auto snk = flow::make_passive_observer<int>();
+        auto f = custom_pullable{};
+        ctx->make_observable().lift(f).subscribe(snk->as_observer());
         CHECK_EQ(snk->state, flow::observer_state::subscribed);
         CHECK(snk->buf.empty());
         if (CHECK(snk->sub)) {
