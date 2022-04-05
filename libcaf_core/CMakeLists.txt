@@ -292,6 +292,7 @@ caf_add_component(
     flow.error
     flow.flat_map
     flow.for_each
+    flow.generation
     flow.interval
     flow.merge
     flow.never

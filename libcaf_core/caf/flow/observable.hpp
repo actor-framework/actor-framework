@@ -544,11 +544,11 @@ using processor_impl = typename processor<In, Out>::impl;
 // -- representing an error as an observable -----------------------------------
 
 template <class T>
-class observable_error_impl : public ref_counted, public observable_impl<T> {
+class observable_error_impl : public observable_impl_base<T> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using output_type = T;
+  using super = observable_impl_base<T>;
 
   // -- friends ----------------------------------------------------------------
 
@@ -557,7 +557,7 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   observable_error_impl(coordinator* ctx, error what)
-    : ctx_(ctx), what_(std::move(what)) {
+    : super(ctx), what_(std::move(what)) {
     // nop
   }
 
@@ -571,19 +571,7 @@ public:
     return true;
   }
 
-  void ref_disposable() const noexcept override {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept override {
-    this->deref();
-  }
-
   // -- implementation of observable<T>::impl ----------------------------------
-
-  coordinator* ctx() const noexcept override {
-    return ctx_;
-  }
 
   void on_request(observer_impl<T>*, size_t) override {
     CAF_RAISE_ERROR("observable_error_impl::on_request called");
@@ -604,26 +592,6 @@ private:
 };
 
 // -- broadcasting -------------------------------------------------------------
-
-template <class Impl>
-struct term_step {
-  Impl* pimpl;
-
-  using output_type = typename Impl::output_type;
-
-  bool on_next(const output_type& item) {
-    pimpl->append_to_buf(item);
-    return true;
-  }
-
-  void on_complete() {
-    pimpl->shutdown();
-  }
-
-  void on_error(const error& what) {
-    pimpl->abort(what);
-  }
-};
 
 /// Broadcasts its input to all observers without modifying it.
 template <class Step, class... Steps>
@@ -720,6 +688,10 @@ public:
     return ctx_;
   }
 
+  disposable subscribe(observer<output_type> sink) override {
+    return term_.add(this, sink);
+  }
+
   void on_request(observer_impl<output_type>* sink, size_t n) override {
     CAF_LOG_TRACE(CAF_ARG(n));
     term_.on_request(sub_, sink, n);
@@ -728,10 +700,6 @@ public:
   void on_cancel(observer_impl<output_type>* sink) override {
     CAF_LOG_TRACE("");
     term_.on_cancel(sub_, sink);
-  }
-
-  disposable subscribe(observer<output_type> sink) override {
-    return term_.add(this, sink);
   }
 
   // -- properties -------------------------------------------------------------
@@ -962,11 +930,11 @@ struct merger_input {
 
 /// Combines items from any number of observables.
 template <class T>
-class merger_impl : public ref_counted, public observable_impl<T> {
+class merger_impl : public observable_impl_base<T> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = observable_impl<T>;
+  using super = observable_impl_base<T>;
 
   using input_t = merger_input<T>;
 
@@ -985,7 +953,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit merger_impl(coordinator* ctx) : ctx_(ctx) {
+  explicit merger_impl(coordinator* ctx) : super(ctx) {
     // nop
   }
 
@@ -1010,19 +978,7 @@ public:
     return term_.finalized();
   }
 
-  void ref_disposable() const noexcept override {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept override {
-    this->deref();
-  }
-
   // -- implementation of observable<T>::impl ----------------------------------
-
-  coordinator* ctx() const noexcept override {
-    return ctx_;
-  }
 
   void on_request(observer_impl<T>* sink, size_t demand) override {
     if (auto n = term_.on_request(sink, demand); n > 0) {
@@ -1220,9 +1176,6 @@ private:
     }
   };
 
-  /// Points to our scheduling context.
-  coordinator* ctx_;
-
   /// Fine-tunes the behavior of the merger.
   flags_t flags_;
 
@@ -1364,11 +1317,11 @@ observable<T>::flat_map_optional(F f) {
 
 /// Combines items from any number of observables.
 template <class T>
-class concat_impl : public ref_counted, public observable_impl<T> {
+class concat_impl : public observable_impl_base<T> {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = observable_impl<T>;
+  using super = observable_impl_base<T>;
 
   using input_key = size_t;
 
@@ -1381,7 +1334,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit concat_impl(coordinator* ctx) : ctx_(ctx) {
+  explicit concat_impl(coordinator* ctx) : super(ctx) {
     // nop
   }
 
@@ -1398,19 +1351,7 @@ public:
     return term_.finalized();
   }
 
-  void ref_disposable() const noexcept override {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept override {
-    this->deref();
-  }
-
   // -- implementation of observable<T>::impl ----------------------------------
-
-  coordinator* ctx() const noexcept override {
-    return ctx_;
-  }
 
   void on_request(observer_impl<T>* sink, size_t demand) override {
     if (auto n = term_.on_request(sink, demand); n > 0) {
@@ -1536,9 +1477,6 @@ private:
       // nop
     }
   };
-
-  /// Points to our scheduling context.
-  coordinator* ctx_;
 
   /// Fine-tunes the behavior of the concat.
   flags_t flags_;
@@ -1877,8 +1815,7 @@ observable<cow_tuple<T, observable<T>>> observable<T>::head_and_tail() {
 /// @note Only supports a single observer.
 template <class Buffer>
 class observable_buffer_impl
-  : public ref_counted,
-    public observable_impl<typename Buffer::value_type>,
+  : public observable_impl_base<typename Buffer::value_type>,
     public async::consumer {
 public:
   // -- member types -----------------------------------------------------------
@@ -1887,7 +1824,7 @@ public:
 
   using buffer_ptr = intrusive_ptr<Buffer>;
 
-  using super = observable_impl<value_type>;
+  using super = observable_impl_base<value_type>;
 
   // -- friends ----------------------------------------------------------------
 
@@ -1896,7 +1833,7 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   observable_buffer_impl(coordinator* ctx, buffer_ptr buf)
-    : ctx_(ctx), buf_(buf) {
+    : super(ctx), buf_(buf) {
     // Unlike regular observables, we need a strong reference to the context.
     // Otherwise, the buffer might call schedule_fn on a destroyed object.
     this->ctx()->ref_coordinator();
@@ -1909,10 +1846,6 @@ public:
   }
 
   // -- implementation of disposable::impl -------------------------------------
-
-  coordinator* ctx() const noexcept final {
-    return ctx_;
-  }
 
   void dispose() override {
     CAF_LOG_TRACE("");
@@ -1928,14 +1861,6 @@ public:
 
   bool disposed() const noexcept override {
     return buf_ == nullptr;
-  }
-
-  void ref_disposable() const noexcept override {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept override {
-    this->deref();
   }
 
   // -- implementation of observable<T>::impl ----------------------------------
@@ -2090,9 +2015,11 @@ disposable observable<T>::subscribe(async::producer_resource<T> resource) {
 /// An observable that represents an empty range. As soon as an observer
 /// requests values from this observable, it calls `on_complete`.
 template <class T>
-class empty_observable_impl : public ref_counted, public observable_impl<T> {
+class empty_observable_impl : public observable_impl_base<T> {
 public:
   // -- member types -----------------------------------------------------------
+
+  using super = observable_impl_base<T>;
 
   using output_type = T;
 
@@ -2102,7 +2029,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit empty_observable_impl(coordinator* ctx) : ctx_(ctx) {
+  explicit empty_observable_impl(coordinator* ctx) : super(ctx) {
     // nop
   }
 
@@ -2116,19 +2043,7 @@ public:
     return true;
   }
 
-  void ref_disposable() const noexcept override {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept override {
-    this->deref();
-  }
-
   // -- implementation of observable<T>::impl ----------------------------------
-
-  coordinator* ctx() const noexcept override {
-    return ctx_;
-  }
 
   void on_request(observer_impl<output_type>* snk, size_t) override {
     snk->on_complete();
@@ -2148,9 +2063,11 @@ private:
 
 /// An observable that never calls any callbacks on its subscribers.
 template <class T>
-class mute_observable_impl : public ref_counted, public observable_impl<T> {
+class mute_observable_impl : public observable_impl_base<T> {
 public:
   // -- member types -----------------------------------------------------------
+
+  using super = observable_impl_base<T>;
 
   using output_type = T;
 
@@ -2160,7 +2077,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  explicit mute_observable_impl(coordinator* ctx) : ctx_(ctx) {
+  explicit mute_observable_impl(coordinator* ctx) : super(ctx) {
     // nop
   }
 
@@ -2178,19 +2095,7 @@ public:
     return disposed_;
   }
 
-  void ref_disposable() const noexcept override {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept override {
-    this->deref();
-  }
-
   // -- implementation of observable<T>::impl ----------------------------------
-
-  coordinator* ctx() const noexcept override {
-    return ctx_;
-  }
 
   void on_request(observer_impl<output_type>*, size_t) override {
     // nop
@@ -2212,20 +2117,19 @@ public:
   }
 
 private:
-  coordinator* ctx_;
   bool disposed_ = false;
   std::vector<observer<output_type>> observers_;
 };
 
 /// An observable with minimal internal logic. Useful for writing unit tests.
 template <class T>
-class passive_observable : public ref_counted, public observable_impl<T> {
+class passive_observable : public observable_impl_base<T> {
 public:
   // -- member types -----------------------------------------------------------
 
   using output_type = T;
 
-  using super = observable_impl<T>;
+  using super = observable_impl_base<T>;
 
   // -- friends ----------------------------------------------------------------
 
@@ -2233,7 +2137,7 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  passive_observable(coordinator* ctx) : ctx_(ctx) {
+  passive_observable(coordinator* ctx) : super(ctx) {
     // nop
   }
 
@@ -2254,19 +2158,7 @@ public:
     return !is_active(state);
   }
 
-  void ref_disposable() const noexcept override {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept override {
-    this->deref();
-  }
-
   // -- implementation of observable_impl<T> -----------------------------------
-
-  coordinator* ctx() const noexcept override {
-    return ctx_;
-  }
 
   void on_request(observer_impl<output_type>* sink, size_t n) override {
     if (out.ptr() == sink) {
@@ -2342,9 +2234,6 @@ public:
   size_t demand = 0;
 
   observer<T> out;
-
-private:
-  coordinator* ctx_;
 };
 
 /// @relates passive_observable

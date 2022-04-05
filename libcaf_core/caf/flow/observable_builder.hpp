@@ -163,8 +163,8 @@ public:
     return observable<int64_t>{std::move(ptr)};
   }
 
-  /// Creates an @ref observable without any values that simply calls
-  /// `on_complete` after subscribing to it.
+  /// Creates an @ref observable without any values that calls `on_complete`
+  /// after subscribing to it.
   template <class T>
   [[nodiscard]] observable<T> empty() {
     return observable<T>{make_counted<empty_observable_impl<T>>(ctx_)};
@@ -176,7 +176,8 @@ public:
     return observable<T>{make_counted<mute_observable_impl<T>>(ctx_)};
   }
 
-  /// Creates an @ref observable without any values that also never terminates.
+  /// Creates an @ref observable without any values that calls `on_error` after
+  /// subscribing to it.
   template <class T>
   [[nodiscard]] observable<T> error(caf::error what) {
     auto ptr = make_counted<observable_error_impl<T>>(ctx_, std::move(what));
@@ -212,6 +213,7 @@ public:
 
   template <class Step, class... Steps>
   void pull(size_t n, Step& step, Steps&... steps) {
+    CAF_LOG_TRACE(CAF_ARG(n));
     while (pos_ != values_.end() && n > 0) {
       if (!step.on_next(*pos_++, steps...))
         return;
@@ -243,6 +245,7 @@ public:
 
   template <class Step, class... Steps>
   void pull(size_t n, Step& step, Steps&... steps) {
+    CAF_LOG_TRACE(CAF_ARG(n));
     for (size_t i = 0; i < n; ++i)
       if (!step.on_next(value_, steps...))
         return;
@@ -268,7 +271,9 @@ public:
   value_source& operator=(const value_source&) = default;
 
   template <class Step, class... Steps>
-  void pull(size_t, Step& step, Steps&... steps) {
+  void pull([[maybe_unused]] size_t n, Step& step, Steps&... steps) {
+    CAF_LOG_TRACE(CAF_ARG(n));
+    CAF_ASSERT(n > 0);
     if (step.on_next(value_, steps...))
       step.on_complete(steps...);
   }
@@ -296,6 +301,7 @@ public:
 
   template <class Step, class... Steps>
   void pull(size_t n, Step& step, Steps&... steps) {
+    CAF_LOG_TRACE(CAF_ARG(n));
     for (size_t i = 0; i < n; ++i)
       if (!step.on_next(fn_(), steps...))
         return;
@@ -326,85 +332,46 @@ public:
     // -- implementation of disposable::impl -----------------------------------
 
     void dispose() override {
-      disposed_ = true;
-      if (out_) {
-        out_.on_complete();
-        out_ = nullptr;
-      }
+      term_.dispose();
     }
 
     bool disposed() const noexcept override {
-      return disposed_;
+      return !term_.active();
     }
 
     // -- implementation of observable_impl<T> ---------------------------------
 
-    disposable subscribe(observer<output_type> what) override {
-      if (out_) {
-        return super::reject_subscription(what, sec::too_many_observers);
-      } else if (disposed_) {
-        return super::reject_subscription(what, sec::disposed);
-      } else {
-        out_ = what;
-        return super::do_subscribe(what);
+    disposable subscribe(observer<output_type> sink) override {
+      CAF_LOG_TRACE(CAF_ARG2("sink", sink.ptr()));
+      auto sub = term_.add(this, sink);
+      if (sub) {
+        term_.start();
       }
+      return sub;
     }
 
-    void on_request(observer_impl<output_type>* sink, size_t n) override {
-      if (sink == out_.ptr()) {
-        auto fn = [this, n](auto&... steps) {
-          term_step<impl> term{this};
-          gen_.pull(n, steps..., term);
-        };
+    void on_request(observer_impl<output_type>* sink, size_t demand) override {
+      CAF_LOG_TRACE(CAF_ARG(sink) << CAF_ARG(demand));
+      if (auto n = term_.on_request(sink, demand); n > 0) {
+        auto fn = [this, n](auto&... steps) { gen_.pull(n, steps..., term_); };
         std::apply(fn, steps_);
-        push();
+        term_.push();
       }
     }
 
     void on_cancel(observer_impl<output_type>* sink) override {
-      if (sink == out_.ptr()) {
-        buf_.clear();
-        out_ = nullptr;
-        disposed_ = true;
+      CAF_LOG_TRACE(CAF_ARG(sink));
+      if (auto n = term_.on_cancel(sink); n > 0) {
+        auto fn = [this, n](auto&... steps) { gen_.pull(n, steps..., term_); };
+        std::apply(fn, steps_);
+        term_.push();
       }
-    }
-
-    // -- callbacks for term_step ----------------------------------------------
-
-    void append_to_buf(const output_type& item) {
-      CAF_ASSERT(out_.valid());
-      buf_.emplace_back(item);
-    }
-
-    void shutdown() {
-      CAF_ASSERT(out_.valid());
-      push();
-      out_.on_complete();
-      out_ = nullptr;
-      disposed_ = true;
-    }
-
-    void abort(const error& reason) {
-      CAF_ASSERT(out_.valid());
-      push();
-      out_.on_error(reason);
-      out_ = nullptr;
-      disposed_ = true;
     }
 
   private:
-    void push() {
-      if (!buf_.empty()) {
-        out_.on_next(make_span(buf_));
-        buf_.clear();
-      }
-    }
-
     Generator gen_;
     std::tuple<Steps...> steps_;
-    observer<output_type> out_;
-    bool disposed_ = false;
-    std::vector<output_type> buf_;
+    broadcast_step<output_type> term_;
   };
 
   template <class... Ts>
