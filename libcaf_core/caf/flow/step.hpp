@@ -410,7 +410,7 @@ public:
   /// Requests `n` more items for `sink`.
   /// @returns New demand to signal upstream or 0.
   /// @note Calls @ref push.
-  size_t on_request(observer_impl_t* sink, size_t n) {
+  size_t on_request(disposable_impl* sink, size_t n) {
     if (auto i = find(sink); i != outputs_.end()) {
       i->demand += n;
       push();
@@ -422,7 +422,7 @@ public:
 
   /// Requests `n` more items for `sink`.
   /// @note Calls @ref push and may call `sub.request(n)`.
-  void on_request(subscription& sub, observer_impl_t* sink, size_t n) {
+  void on_request(subscription& sub, disposable_impl* sink, size_t n) {
     if (auto new_demand = on_request(sink, n); new_demand > 0 && sub)
       sub.request(new_demand);
   }
@@ -430,7 +430,7 @@ public:
   /// Removes `sink` from the observer set.
   /// @returns New demand to signal upstream or 0.
   /// @note Calls @ref push.
-  size_t on_cancel(observer_impl_t* sink) {
+  size_t on_cancel(disposable_impl* sink) {
     if (auto i = find(sink); i != outputs_.end()) {
       outputs_.erase(i);
       // TODO: shut down on last cancel?
@@ -443,7 +443,7 @@ public:
 
   /// Requests `n` more items for `sink`.
   /// @note Calls @ref push and may call `sub.request(n)`.
-  void on_cancel(subscription& sub, observer_impl_t* sink) {
+  void on_cancel(subscription& sub, disposable_impl* sink) {
     if (auto new_demand = on_cancel(sink); new_demand > 0 && sub)
       sub.request(new_demand);
   }
@@ -574,8 +574,7 @@ public:
   }
 
 private:
-  typename std::vector<output_t>::iterator
-  find(observer_impl<output_type>* sink) {
+  typename std::vector<output_t>::iterator find(disposable_impl* sink) {
     auto e = outputs_.end();
     auto pred = [sink](const output_t& out) { return out.sink.ptr() == sink; };
     return std::find_if(outputs_.begin(), e, pred);

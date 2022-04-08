@@ -41,14 +41,13 @@ struct zipper_input {
 
 /// Combines items from any number of observables using a zip function.
 template <class F, class... Ts>
-class zipper_impl : public ref_counted,
-                    public observable_impl<zipper_output_t<F, Ts...>> {
+class zipper_impl : public observable_impl_base<zipper_output_t<F, Ts...>> {
 public:
   // -- member types -----------------------------------------------------------
 
   using output_type = zipper_output_t<F, Ts...>;
 
-  using super = observable_impl<output_type>;
+  using super = observable_impl_base<output_type>;
 
   // -- friends ----------------------------------------------------------------
 
@@ -60,7 +59,7 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   zipper_impl(coordinator* ctx, F fn, observable<Ts>... inputs)
-    : ctx_(ctx), fn_(std::move(fn)), inputs_(inputs...) {
+    : super(ctx), fn_(std::move(fn)), inputs_(inputs...) {
     // nop
   }
 
@@ -86,21 +85,9 @@ public:
     return term_.finalized();
   }
 
-  void ref_disposable() const noexcept override {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept override {
-    this->deref();
-  }
-
   // -- implementation of observable<T>::impl ----------------------------------
 
-  coordinator* ctx() const noexcept override {
-    return ctx_;
-  }
-
-  void on_request(observer_impl<output_type>* sink, size_t demand) override {
+  void on_request(disposable_impl* sink, size_t demand) override {
     if (auto n = term_.on_request(sink, demand); n > 0) {
       demand_ += n;
       for_each_input([n](auto, auto& input) {
@@ -110,7 +97,7 @@ public:
     }
   }
 
-  void on_cancel(observer_impl<output_type>* sink) override {
+  void on_cancel(disposable_impl* sink) override {
     if (auto n = term_.on_cancel(sink); n > 0) {
       demand_ += n;
       for_each_input([n](auto, auto& input) {
@@ -241,7 +228,6 @@ private:
     term_.fin();
   }
 
-  coordinator* ctx_;
   size_t demand_ = 0;
   F fn_;
   std::tuple<zipper_input<Ts>...> inputs_;

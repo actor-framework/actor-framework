@@ -130,4 +130,7 @@ private:
   intrusive_ptr<impl> pimpl_;
 };
 
+/// @relates disposable
+using disposable_impl = disposable::impl;
+
 } // namespace caf

@@ -32,14 +32,13 @@ class callable_source;
 
 class interval_action;
 
-class CAF_CORE_EXPORT interval_impl : public ref_counted,
-                                      public observable_impl<int64_t> {
+class CAF_CORE_EXPORT interval_impl : public observable_impl_base<int64_t> {
 public:
   // -- member types -----------------------------------------------------------
 
   using output_type = int64_t;
 
-  using super = observable_impl<int64_t>;
+  using super = observable_impl_base<int64_t>;
 
   // -- friends ----------------------------------------------------------------
 
@@ -54,32 +53,23 @@ public:
   interval_impl(coordinator* ctx, timespan initial_delay, timespan period,
                 int64_t max_val);
 
-  ~interval_impl() override;
-
   // -- implementation of disposable::impl -------------------------------------
 
   void dispose() override;
 
   bool disposed() const noexcept override;
 
-  void ref_disposable() const noexcept override;
-
-  void deref_disposable() const noexcept override;
-
   // -- implementation of observable<T>::impl ----------------------------------
 
-  coordinator* ctx() const noexcept override;
+  void on_request(disposable_impl*, size_t) override;
 
-  void on_request(observer_impl<int64_t>*, size_t) override;
-
-  void on_cancel(observer_impl<int64_t>*) override;
+  void on_cancel(disposable_impl*) override;
 
   disposable subscribe(observer<int64_t> what) override;
 
 private:
   void fire(interval_action*);
 
-  coordinator* ctx_;
   observer<int64_t> obs_;
   disposable pending_;
   timespan initial_delay_;
@@ -364,7 +354,7 @@ public:
       return sub;
     }
 
-    void on_request(observer_impl<output_type>* sink, size_t demand) override {
+    void on_request(disposable_impl* sink, size_t demand) override {
       CAF_LOG_TRACE(CAF_ARG(sink) << CAF_ARG(demand));
       if (auto n = term_.on_request(sink, demand); n > 0) {
         auto fn = [this, n](auto&... steps) { gen_.pull(n, steps..., term_); };
@@ -373,7 +363,7 @@ public:
       }
     }
 
-    void on_cancel(observer_impl<output_type>* sink) override {
+    void on_cancel(disposable_impl* sink) override {
       CAF_LOG_TRACE(CAF_ARG(sink));
       if (auto n = term_.on_cancel(sink); n > 0) {
         auto fn = [this, n](auto&... steps) { gen_.pull(n, steps..., term_); };

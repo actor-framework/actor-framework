@@ -25,18 +25,14 @@ public:
   using output_type = T;
 
   /// Internal interface of a `single`.
-  class impl : public ref_counted, public observable_impl<T> {
+  class impl : public observable_impl_base<T> {
   public:
-    using super = observable_impl<T>;
+    using super = observable_impl_base<T>;
 
     CAF_INTRUSIVE_PTR_FRIENDS(impl)
 
-    explicit impl(coordinator* ctx) : ctx_(ctx) {
+    explicit impl(coordinator* ctx) : super(ctx) {
       // nop
-    }
-
-    coordinator* ctx() const noexcept override {
-      return ctx_;
     }
 
     disposable subscribe(observer<T> what) override {
@@ -50,7 +46,7 @@ public:
       }
     }
 
-    void on_request(observer_impl<T>* sink, size_t n) override {
+    void on_request(disposable_impl* sink, size_t n) override {
       auto pred = [sink](auto& entry) { return entry.first.ptr() == sink; };
       if (auto i = std::find_if(observers_.begin(), observers_.end(), pred);
           i != observers_.end()) {
@@ -69,7 +65,7 @@ public:
       }
     }
 
-    void on_cancel(observer_impl<T>* sink) override {
+    void on_cancel(disposable_impl* sink) override {
       auto pred = [sink](auto& entry) { return entry.first.ptr() == sink; };
       if (auto i = std::find_if(observers_.begin(), observers_.end(), pred);
           i != observers_.end())
@@ -83,14 +79,6 @@ public:
 
     bool disposed() const noexcept override {
       return observers_.empty() && !std::holds_alternative<none_t>(value_);
-    }
-
-    void ref_disposable() const noexcept final {
-      this->ref();
-    }
-
-    void deref_disposable() const noexcept final {
-      this->deref();
     }
 
     void set_value(T val) {
@@ -119,7 +107,6 @@ public:
     }
 
   private:
-    coordinator* ctx_;
     std::variant<none_t, T, error> value_;
     std::vector<std::pair<observer<T>, size_t>> observers_;
   };

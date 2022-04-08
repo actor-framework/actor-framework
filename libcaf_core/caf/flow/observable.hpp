@@ -39,7 +39,7 @@ public:
   using output_type = T;
 
   /// Internal interface of an `observable`.
-  class impl : public disposable::impl {
+  class impl : public disposable_impl {
   public:
     // -- member types ---------------------------------------------------------
 
@@ -49,86 +49,28 @@ public:
 
     virtual coordinator* ctx() const noexcept = 0;
 
+    // -- conversions ----------------------------------------------------------
+
+    observable as_observable() noexcept;
+
     // -- flow processing ------------------------------------------------------
 
     /// Subscribes a new observer.
     virtual disposable subscribe(observer<T> what) = 0;
 
-    virtual void on_request(observer_impl<T>* sink, size_t n) = 0;
-
-    virtual void on_cancel(observer_impl<T>* sink) = 0;
-
-    observable as_observable() noexcept;
-
-    /// Creates a subscription for `sink` and returns a @ref disposable to
-    /// cancel the observer.
-    disposable do_subscribe(observer_impl<T>* sink);
-
-    /// @copydoc do_subscribe
-    disposable do_subscribe(observer<T>& sink) {
-      return do_subscribe(sink.ptr());
-    }
+    // -- convenience functions ------------------------------------------------
 
     /// Calls `on_error` on the `sink` with given `code` and returns a
     /// default-constructed @ref disposable.
-    disposable reject_subscription(observer_impl<T>* sink, sec code);
+    disposable reject_subscription(observer_impl<T>* sink, sec code) {
+      sink->on_error(make_error(code));
+      return disposable{};
+    }
 
     /// @copydoc reject_subscription
     disposable reject_subscription(observer<T>& sink, sec code) {
       return reject_subscription(sink.ptr(), code);
     }
-  };
-
-  class sub_impl final : public ref_counted, public subscription::impl {
-  public:
-    using src_type = typename observable<T>::impl;
-
-    using snk_type = typename observer<T>::impl;
-
-    CAF_INTRUSIVE_PTR_FRIENDS(sub_impl)
-
-    sub_impl(coordinator* ctx, src_type* src, snk_type* snk)
-      : ctx_(ctx), src_(src), snk_(snk) {
-      // nop
-    }
-
-    bool disposed() const noexcept override {
-      return src_ == nullptr;
-    }
-
-    void ref_disposable() const noexcept override {
-      this->ref();
-    }
-
-    void deref_disposable() const noexcept override {
-      this->deref();
-    }
-
-    void request(size_t n) override {
-      if (src_)
-        ctx()->delay_fn([src = src_, snk = snk_, n] { //
-          src->on_request(snk.get(), n);
-        });
-    }
-
-    void cancel() override {
-      if (src_) {
-        ctx()->delay_fn([src = src_, snk = snk_] { //
-          src->on_cancel(snk.get());
-        });
-        src_.reset();
-        snk_.reset();
-      }
-    }
-
-    auto* ctx() const noexcept {
-      return ctx_;
-    }
-
-  private:
-    coordinator* ctx_;
-    intrusive_ptr<src_type> src_;
-    intrusive_ptr<snk_type> snk_;
   };
 
   explicit observable(intrusive_ptr<impl> pimpl) noexcept
@@ -326,28 +268,15 @@ observable<T> observable<T>::impl::as_observable() noexcept {
   return observable<T>{intrusive_ptr{this}};
 }
 
-template <class T>
-disposable observable<T>::impl::do_subscribe(observer_impl<T>* sink) {
-  sink->on_subscribe(subscription{make_counted<sub_impl>(ctx(), this, sink)});
-  // Note: we do NOT return the subscription here because this object is private
-  //       to the observer. Outside code must call dispose() on the observer.
-  return disposable{intrusive_ptr<typename disposable::impl>{sink}};
-}
-
-template <class T>
-disposable observable<T>::impl::reject_subscription(observer_impl<T>* sink, //
-                                                    sec code) {
-  sink->on_error(make_error(code));
-  return disposable{};
-}
-
 /// @relates observable
 template <class T>
 using observable_impl = typename observable<T>::impl;
 
 /// Default base type for observable implementation types.
 template <class T>
-class observable_impl_base : public ref_counted, public observable_impl<T> {
+class observable_impl_base : public ref_counted,
+                             public observable_impl<T>,
+                             public subscription::listener {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -361,7 +290,13 @@ public:
     // nop
   }
 
-  // -- implementation of disposable::impl -------------------------------------
+  // -- implementation of disposable_impl --------------------------------------
+
+  disposable as_disposable() noexcept {
+    // We need to implement this only for disambiguation since `as_disposable`
+    // exists in multiple base classes.
+    return subscription::listener::as_disposable();
+  }
 
   void ref_disposable() const noexcept final {
     this->ref();
@@ -371,10 +306,27 @@ public:
     this->deref();
   }
 
-  // -- implementation of observable_impl<T> ---------------------------------
+  // -- implementation of observable_impl<T> -----------------------------------
 
   coordinator* ctx() const noexcept final {
     return ctx_;
+  }
+
+  // -- convenience functions --------------------------------------------------
+
+  /// Creates a subscription for `sink` and returns a @ref disposable to cancel
+  /// the observer.
+  disposable do_subscribe(observer_impl<T>* sink) {
+    sink->on_subscribe(subscription::default_impl::make(ctx_, this, sink));
+    // Note: we do NOT return the subscription here because this object is
+    //       private to the observer. Outside code cancels flows by calling
+    //       dispose on the observer.
+    return sink->as_disposable();
+  }
+
+  /// @copydoc do_subscribe
+  disposable do_subscribe(observer<T>& sink) {
+    return do_subscribe(sink.ptr());
   }
 
 protected:
@@ -538,18 +490,81 @@ private:
   intrusive_ptr<impl> pimpl_;
 };
 
+/// @relates processor
 template <class In, class Out = In>
 using processor_impl = typename processor<In, Out>::impl;
+
+/// Default base type for processor implementation types.
+/// @relates processor
+template <class In, class Out>
+class processor_impl_base : public ref_counted,
+                            public processor_impl<In, Out>,
+                            public subscription::listener {
+public:
+  // -- member types -----------------------------------------------------------
+
+  using super = processor_impl<In, Out>;
+
+  using input_type = In;
+
+  using output_type = Out;
+
+  // -- constructors, destructors, and assignment operators --------------------
+
+  explicit processor_impl_base(coordinator* ctx) : ctx_(ctx) {
+    // nop
+  }
+
+  // -- implementation of disposable_impl --------------------------------------
+
+  disposable as_disposable() noexcept {
+    // We need to implement this only for disambiguation since `as_disposable`
+    // exists in multiple base classes.
+    return subscription::listener::as_disposable();
+  }
+
+  void ref_disposable() const noexcept final {
+    this->ref();
+  }
+
+  void deref_disposable() const noexcept final {
+    this->deref();
+  }
+
+  // -- implementation of processor_impl<T> -----------------------------------
+
+  coordinator* ctx() const noexcept final {
+    return ctx_;
+  }
+
+  // -- convenience functions --------------------------------------------------
+
+  /// Creates a subscription for `sink` and returns a @ref disposable to cancel
+  /// the observer.
+  disposable do_subscribe(observer_impl<Out>* sink) {
+    sink->on_subscribe(subscription::default_impl::make(ctx_, this, sink));
+    // Note: we do NOT return the subscription here because this object is
+    //       private to the observer. Outside code cancels flows by calling
+    //       dispose on the observer.
+    return disposable{intrusive_ptr<disposable_impl>{sink}};
+  }
+
+  /// @copydoc do_subscribe
+  disposable do_subscribe(observer<Out>& sink) {
+    return do_subscribe(sink.ptr());
+  }
+
+protected:
+  // -- member variables -------------------------------------------------------
+
+  coordinator* ctx_;
+};
 
 // -- representing an error as an observable -----------------------------------
 
 template <class T>
-class observable_error_impl : public observable_impl_base<T> {
+class observable_error_impl : public ref_counted, public observable_impl<T> {
 public:
-  // -- member types -----------------------------------------------------------
-
-  using super = observable_impl_base<T>;
-
   // -- friends ----------------------------------------------------------------
 
   CAF_INTRUSIVE_PTR_FRIENDS(observable_error_impl)
@@ -557,11 +572,19 @@ public:
   // -- constructors, destructors, and assignment operators --------------------
 
   observable_error_impl(coordinator* ctx, error what)
-    : super(ctx), what_(std::move(what)) {
+    : ctx_(ctx), what_(std::move(what)) {
     // nop
   }
 
-  // -- implementation of disposable::impl -------------------------------------
+  // -- implementation of disposable_impl --------------------------------------
+
+  void ref_disposable() const noexcept final {
+    this->ref();
+  }
+
+  void deref_disposable() const noexcept final {
+    this->deref();
+  }
 
   void dispose() override {
     // nop
@@ -573,12 +596,8 @@ public:
 
   // -- implementation of observable<T>::impl ----------------------------------
 
-  void on_request(observer_impl<T>*, size_t) override {
-    CAF_RAISE_ERROR("observable_error_impl::on_request called");
-  }
-
-  void on_cancel(observer_impl<T>*) override {
-    CAF_RAISE_ERROR("observable_error_impl::on_cancel called");
+  coordinator* ctx() const noexcept final {
+    return ctx_;
   }
 
   disposable subscribe(observer<T> what) override {
@@ -596,15 +615,16 @@ private:
 /// Broadcasts its input to all observers without modifying it.
 template <class Step, class... Steps>
 class broadcaster_impl
-  : public ref_counted,
-    public processor_impl<typename Step::input_type,
-                          steps_output_type_t<Step, Steps...>> {
+  : public processor_impl_base<typename Step::input_type,
+                               steps_output_type_t<Step, Steps...>> {
 public:
   // -- member types -----------------------------------------------------------
 
   using input_type = typename Step::input_type;
 
   using output_type = steps_output_type_t<Step, Steps...>;
+
+  using super = processor_impl_base<input_type, output_type>;
 
   // -- friends ----------------------------------------------------------------
 
@@ -614,11 +634,11 @@ public:
 
   template <class... Ts>
   explicit broadcaster_impl(coordinator* ctx, Ts&&... step_args)
-    : ctx_(ctx), steps_(std::forward<Ts>(step_args)...) {
+    : super(ctx), steps_(std::forward<Ts>(step_args)...) {
     // nop
   }
 
-  // -- implementation of disposable::impl -------------------------------------
+  // -- implementation of disposable_impl --------------------------------------
 
   void dispose() override {
     CAF_LOG_TRACE("");
@@ -627,14 +647,6 @@ public:
 
   bool disposed() const noexcept override {
     return !term_.active();
-  }
-
-  void ref_disposable() const noexcept override {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept override {
-    this->deref();
   }
 
   // -- implementation of observer<T>::impl ------------------------------------
@@ -682,24 +694,22 @@ public:
     }
   }
 
-  // -- implementation of observable<T>::impl ----------------------------------
+  // -- implementation of subscription::listener -------------------------------
 
-  coordinator* ctx() const noexcept override {
-    return ctx_;
-  }
-
-  disposable subscribe(observer<output_type> sink) override {
-    return term_.add(this, sink);
-  }
-
-  void on_request(observer_impl<output_type>* sink, size_t n) override {
+  void on_request(disposable_impl* sink, size_t n) override {
     CAF_LOG_TRACE(CAF_ARG(n));
     term_.on_request(sub_, sink, n);
   }
 
-  void on_cancel(observer_impl<output_type>* sink) override {
+  void on_cancel(disposable_impl* sink) override {
     CAF_LOG_TRACE("");
     term_.on_cancel(sub_, sink);
+  }
+
+  // -- implementation of observable<T>::impl ----------------------------------
+
+  disposable subscribe(observer<output_type> sink) override {
+    return term_.add(this, sink);
   }
 
   // -- properties -------------------------------------------------------------
@@ -717,9 +727,6 @@ public:
   }
 
 protected:
-  /// Points to the coordinator that runs this observable.
-  coordinator* ctx_;
-
   /// Allows us to request more items.
   subscription sub_;
 
@@ -957,7 +964,7 @@ public:
     // nop
   }
 
-  // -- implementation of disposable::impl -------------------------------------
+  // -- implementation of disposable_impl --------------------------------------
 
   void dispose() override {
     for (auto& kvp : inputs_) {
@@ -980,14 +987,14 @@ public:
 
   // -- implementation of observable<T>::impl ----------------------------------
 
-  void on_request(observer_impl<T>* sink, size_t demand) override {
+  void on_request(disposable_impl* sink, size_t demand) override {
     if (auto n = term_.on_request(sink, demand); n > 0) {
       pull(n);
       term_.push();
     }
   }
 
-  void on_cancel(observer_impl<T>* sink) override {
+  void on_cancel(disposable_impl* sink) override {
     if (auto n = term_.on_cancel(sink); n > 0) {
       pull(n);
       term_.push();
@@ -1338,7 +1345,7 @@ public:
     // nop
   }
 
-  // -- implementation of disposable::impl -------------------------------------
+  // -- implementation of disposable_impl --------------------------------------
 
   void dispose() override {
     if (sub_)
@@ -1351,9 +1358,9 @@ public:
     return term_.finalized();
   }
 
-  // -- implementation of observable<T>::impl ----------------------------------
+  // -- implementation of subscription::listener -------------------------------
 
-  void on_request(observer_impl<T>* sink, size_t demand) override {
+  void on_request(disposable_impl* sink, size_t demand) override {
     if (auto n = term_.on_request(sink, demand); n > 0) {
       in_flight_ += n;
       if (sub_)
@@ -1361,13 +1368,15 @@ public:
     }
   }
 
-  void on_cancel(observer_impl<T>* sink) override {
+  void on_cancel(disposable_impl* sink) override {
     if (auto n = term_.on_cancel(sink); n > 0) {
       in_flight_ += n;
       if (sub_)
         sub_.request(n);
     }
   }
+
+  // -- implementation of observable<T>::impl ----------------------------------
 
   disposable subscribe(observer<T> sink) override {
     // On the first subscribe, we subscribe to our inputs unless the user did
@@ -1602,6 +1611,7 @@ auto observable<T>::concat_map(F f) {
 template <class T>
 class prefix_and_tail_observable_impl final
   : public ref_counted,
+    public subscription::listener,
     public observable_impl<T>, // For the forwarding to the 'tail'.
     public processor_impl<T, cow_tuple<std::vector<T>, observable<T>>> {
 public:
@@ -1626,7 +1636,7 @@ public:
 
   CAF_INTRUSIVE_PTR_FRIENDS(prefix_and_tail_observable_impl)
 
-  // -- implementation of disposable::impl -------------------------------------
+  // -- implementation of disposable_impl --------------------------------------
 
   void dispose() override {
     if (sub_) {
@@ -1647,38 +1657,30 @@ public:
     return !sub_ && !obs_ && !tail_;
   }
 
-  void ref_disposable() const noexcept override {
+  void ref_disposable() const noexcept final {
     this->ref();
   }
 
-  void deref_disposable() const noexcept override {
+  void deref_disposable() const noexcept final {
     this->deref();
+  }
+
+  // -- implementation of observable<T>::impl ----------------------------------
+
+  coordinator* ctx() const noexcept final {
+    return ctx_;
   }
 
   // -- implementation of observable<in_t>::impl -------------------------------
 
-  coordinator* ctx() const noexcept override {
-    return ctx_;
-  }
-
   disposable subscribe(observer<in_t> sink) override {
     if (sink.ptr() == tail_.ptr()) {
-      return in_obs_t::do_subscribe(sink.ptr());
+      using sub_t = subscription::default_impl;
+      sink.on_subscribe(sub_t::make_unsafe(ctx_, this, sink.ptr()));
+      return sink.as_disposable();
     } else {
       sink.on_error(make_error(sec::invalid_observable));
       return disposable{};
-    }
-  }
-
-  void on_request(observer_impl<in_t>*, size_t n) override {
-    if (sub_)
-      sub_.request(n);
-  }
-
-  void on_cancel(observer_impl<in_t>*) override {
-    if (sub_) {
-      sub_.cancel();
-      sub_ = nullptr;
     }
   }
 
@@ -1686,23 +1688,39 @@ public:
 
   disposable subscribe(observer<out_t> sink) override {
     obs_ = sink;
-    return out_obs_t::do_subscribe(sink.ptr());
+    using sub_t = subscription::default_impl;
+    sink.on_subscribe(sub_t::make_unsafe(ctx_, this, sink.ptr()));
+    return sink.as_disposable();
   }
 
-  void on_request(observer_impl<out_t>*, size_t) override {
-    if (sub_ && !requested_prefix_) {
-      requested_prefix_ = true;
-      sub_.request(prefix_size_);
+  // -- implementation of subscription::listener -------------------------------
+
+  void on_request(disposable_impl* sink, size_t n) override {
+    if (sink == obs_.ptr()) {
+      if (sub_ && !requested_prefix_) {
+        requested_prefix_ = true;
+        sub_.request(prefix_size_);
+      }
+    } else if (sink == tail_.ptr()) {
+      if (sub_)
+        sub_.request(n);
     }
   }
 
-  void on_cancel(observer_impl<out_t>*) override {
-    // Only has an effect when canceling immediately. Otherwise, we forward to
-    // tail_ and the original observer no longer is of any interest since it
-    // receives at most one item anyways.
-    if (sub_ && !tail_) {
-      sub_.cancel();
-      sub_ = nullptr;
+  void on_cancel(disposable_impl* sink) override {
+    if (sink == obs_.ptr()) {
+      // Only has an effect when canceling immediately. Otherwise, we forward to
+      // tail_ and the original observer no longer is of any interest since it
+      // receives at most one item anyways.
+      if (sub_ && !tail_) {
+        sub_.cancel();
+        sub_ = nullptr;
+      }
+    } else if (sink == tail_.ptr()) {
+      if (sub_) {
+        sub_.cancel();
+        sub_ = nullptr;
+      }
     }
   }
 
@@ -1845,7 +1863,7 @@ public:
     this->ctx()->deref_coordinator();
   }
 
-  // -- implementation of disposable::impl -------------------------------------
+  // -- implementation of disposable_impl --------------------------------------
 
   void dispose() override {
     CAF_LOG_TRACE("");
@@ -1865,14 +1883,14 @@ public:
 
   // -- implementation of observable<T>::impl ----------------------------------
 
-  void on_request(observer_impl<value_type>*, size_t n) override {
+  void on_request(disposable_impl*, size_t n) override {
     CAF_LOG_TRACE(CAF_ARG(n));
     demand_ += n;
     if (demand_ == n)
       pull();
   }
 
-  void on_cancel(observer_impl<value_type>*) override {
+  void on_cancel(disposable_impl*) override {
     CAF_LOG_TRACE("");
     dst_ = nullptr;
     dispose();
@@ -2033,7 +2051,7 @@ public:
     // nop
   }
 
-  // -- implementation of disposable::impl -------------------------------------
+  // -- implementation of disposable_impl --------------------------------------
 
   void dispose() override {
     // nop
@@ -2045,11 +2063,11 @@ public:
 
   // -- implementation of observable<T>::impl ----------------------------------
 
-  void on_request(observer_impl<output_type>* snk, size_t) override {
-    snk->on_complete();
+  void on_request(disposable_impl* snk, size_t) override {
+    static_cast<observer_impl<output_type>*>(snk)->on_complete();
   }
 
-  void on_cancel(observer_impl<output_type>*) override {
+  void on_cancel(disposable_impl*) override {
     // nop
   }
 
@@ -2081,7 +2099,7 @@ public:
     // nop
   }
 
-  // -- implementation of disposable::impl -------------------------------------
+  // -- implementation of disposable_impl --------------------------------------
 
   void dispose() override {
     if (!disposed_) {
@@ -2097,11 +2115,11 @@ public:
 
   // -- implementation of observable<T>::impl ----------------------------------
 
-  void on_request(observer_impl<output_type>*, size_t) override {
+  void on_request(disposable_impl*, size_t) override {
     // nop
   }
 
-  void on_cancel(observer_impl<output_type>*) override {
+  void on_cancel(disposable_impl*) override {
     // nop
   }
 
@@ -2141,7 +2159,7 @@ public:
     // nop
   }
 
-  // -- implementation of disposable::impl -------------------------------------
+  // -- implementation of disposable_impl --------------------------------------
 
   void dispose() override {
     if (is_active(state)) {
@@ -2160,13 +2178,13 @@ public:
 
   // -- implementation of observable_impl<T> -----------------------------------
 
-  void on_request(observer_impl<output_type>* sink, size_t n) override {
+  void on_request(disposable_impl* sink, size_t n) override {
     if (out.ptr() == sink) {
       demand += n;
     }
   }
 
-  void on_cancel(observer_impl<output_type>* sink) override {
+  void on_cancel(disposable_impl* sink) override {
     if (out.ptr() == sink) {
       demand = 0;
       out = nullptr;

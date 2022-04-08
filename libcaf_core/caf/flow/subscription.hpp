@@ -4,12 +4,14 @@
 
 #pragma once
 
-#include <cstddef>
-
 #include "caf/detail/core_export.hpp"
 #include "caf/disposable.hpp"
+#include "caf/flow/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/ref_counted.hpp"
+
+#include <cstddef>
+#include <type_traits>
 
 namespace caf::flow {
 
@@ -18,7 +20,7 @@ class CAF_CORE_EXPORT subscription {
 public:
   // -- nested types -----------------------------------------------------------
 
-  /// Internal impl of a `disposable`.
+  /// Internal interface of a `subscription`.
   class CAF_CORE_EXPORT impl : public disposable::impl {
   public:
     ~impl() override;
@@ -34,8 +36,7 @@ public:
   };
 
   /// A trivial subscription type that drops all member function calls.
-  class CAF_CORE_EXPORT nop_impl final : public ref_counted,
-                                         public subscription::impl {
+  class CAF_CORE_EXPORT nop_impl final : public ref_counted, public impl {
   public:
     // -- friends --------------------------------------------------------------
 
@@ -53,6 +54,70 @@ public:
 
   private:
     bool disposed_ = false;
+  };
+
+  /// Describes a listener to the subscription that will receive an event
+  /// whenever the observer calls `request` or `cancel`.
+  class CAF_CORE_EXPORT listener : public disposable::impl {
+  public:
+    virtual ~listener();
+
+    virtual void on_request(disposable::impl* sink, size_t n) = 0;
+
+    virtual void on_cancel(disposable::impl* sink) = 0;
+  };
+
+  /// Default implementation for subscriptions that forward `request` and
+  /// `cancel` to a @ref listener.
+  class default_impl final : public ref_counted, public impl {
+  public:
+    CAF_INTRUSIVE_PTR_FRIENDS(default_impl)
+
+    default_impl(coordinator* ctx, listener* src, disposable::impl* snk)
+      : ctx_(ctx), src_(src), snk_(snk) {
+      // nop
+    }
+
+    bool disposed() const noexcept override;
+
+    void ref_disposable() const noexcept override;
+
+    void deref_disposable() const noexcept override;
+
+    void request(size_t n) override;
+
+    void cancel() override;
+
+    auto* ctx() const noexcept {
+      return ctx_;
+    }
+
+    /// Creates a new subscription object.
+    /// @param ctx The owner of @p src and @p snk.
+    /// @param src The @ref observable that emits items.
+    /// @param snk the @ref observer that consumes items.
+    /// @returns an instance of @ref default_impl in a @ref subscription handle.
+    template <class Observable, class Observer>
+    static subscription make(coordinator* ctx, Observable* src, Observer* snk) {
+      static_assert(std::is_base_of_v<listener, Observable>);
+      static_assert(std::is_base_of_v<disposable_impl, Observer>);
+      static_assert(std::is_same_v<typename Observable::output_type,
+                                   typename Observer::input_type>);
+      intrusive_ptr<impl> ptr{new default_impl(ctx, src, snk), false};
+      return subscription{std::move(ptr)};
+    }
+
+    /// Like @ref make but without any type checking.
+    static subscription make_unsafe(coordinator* ctx, listener* src,
+                                    disposable_impl* snk) {
+      intrusive_ptr<impl> ptr{new default_impl(ctx, src, snk), false};
+      return subscription{std::move(ptr)};
+    }
+
+  private:
+    coordinator* ctx_;
+    intrusive_ptr<listener> src_;
+    intrusive_ptr<disposable_impl> snk_;
   };
 
   // -- constructors, destructors, and assignment operators --------------------

@@ -62,12 +62,8 @@ interval_impl::interval_impl(coordinator* ctx, timespan initial_delay,
 
 interval_impl::interval_impl(coordinator* ctx, timespan initial_delay,
                              timespan period, int64_t max_val)
-  : ctx_(ctx), initial_delay_(initial_delay), period_(period), max_(max_val) {
+  : super(ctx), initial_delay_(initial_delay), period_(period), max_(max_val) {
   CAF_ASSERT(max_val > 0);
-}
-
-interval_impl::~interval_impl() {
-  // nop
 }
 
 void interval_impl::dispose() {
@@ -86,19 +82,7 @@ bool interval_impl::disposed() const noexcept {
   return val_ == max_;
 }
 
-void interval_impl::ref_disposable() const noexcept {
-  this->ref();
-}
-
-void interval_impl::deref_disposable() const noexcept {
-  this->deref();
-}
-
-coordinator* interval_impl::ctx() const noexcept {
-  return ctx_;
-}
-
-void interval_impl::on_request(observer_impl<int64_t>* ptr, size_t n) {
+void interval_impl::on_request(disposable_impl* ptr, size_t n) {
   if (obs_.ptr() == ptr) {
     if (demand_ == 0 && !pending_) {
       if (val_ == 0)
@@ -112,7 +96,7 @@ void interval_impl::on_request(observer_impl<int64_t>* ptr, size_t n) {
   }
 }
 
-void interval_impl::on_cancel(observer_impl<int64_t>* ptr) {
+void interval_impl::on_cancel(disposable_impl* ptr) {
   if (obs_.ptr() == ptr) {
     obs_ = nullptr;
     pending_.dispose();

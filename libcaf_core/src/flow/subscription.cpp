@@ -4,6 +4,8 @@
 
 #include "caf/flow/subscription.hpp"
 
+#include "caf/flow/coordinator.hpp"
+
 namespace caf::flow {
 
 subscription::impl::~impl() {
@@ -32,6 +34,39 @@ void subscription::nop_impl::cancel() {
 
 void subscription::nop_impl::request(size_t) {
   // nop
+}
+
+subscription::listener::~listener() {
+  // nop
+}
+
+bool subscription::default_impl::disposed() const noexcept {
+  return src_ == nullptr;
+}
+
+void subscription::default_impl::ref_disposable() const noexcept {
+  this->ref();
+}
+
+void subscription::default_impl::deref_disposable() const noexcept {
+  this->deref();
+}
+
+void subscription::default_impl::request(size_t n) {
+  if (src_)
+    ctx()->delay_fn([src = src_, snk = snk_, n] { //
+      src->on_request(snk.get(), n);
+    });
+}
+
+void subscription::default_impl::cancel() {
+  if (src_) {
+    ctx()->delay_fn([src = src_, snk = snk_] { //
+      src->on_cancel(snk.get());
+    });
+    src_.reset();
+    snk_.reset();
+  }
 }
 
 } // namespace caf::flow
