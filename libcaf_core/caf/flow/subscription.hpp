@@ -69,7 +69,7 @@ public:
 
   /// Default implementation for subscriptions that forward `request` and
   /// `cancel` to a @ref listener.
-  class default_impl final : public ref_counted, public impl {
+  class CAF_CORE_EXPORT default_impl final : public ref_counted, public impl {
   public:
     CAF_INTRUSIVE_PTR_FRIENDS(default_impl)
 
