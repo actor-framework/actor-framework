@@ -288,6 +288,7 @@ caf_add_component(
     flow.broadcaster
     flow.concat
     flow.concat_map
+    flow.defer
     flow.empty
     flow.error
     flow.flat_map

@@ -108,6 +108,12 @@ public:
   template <class F>
   [[nodiscard]] generation<callable_source<F>> from_callable(F fn) const;
 
+  /// Creates a @ref generation that emits ascending values.
+  template <class T>
+  [[nodiscard]] auto iota(T init) const {
+    return from_callable([x = std::move(init)]() mutable { return x++; });
+  }
+
   /// Creates a @ref generation that emits values by repeatedly calling
   /// `pullable.pull(...)`. For example implementations of the `Pullable`
   /// concept, see @ref container_source, @ref repeater_source and
@@ -157,21 +163,30 @@ public:
   /// after subscribing to it.
   template <class T>
   [[nodiscard]] observable<T> empty() {
-    return observable<T>{make_counted<empty_observable_impl<T>>(ctx_)};
+    return make_observable<empty_observable_impl<T>>(ctx_);
   }
 
   /// Creates an @ref observable without any values that also never terminates.
   template <class T>
   [[nodiscard]] observable<T> never() {
-    return observable<T>{make_counted<mute_observable_impl<T>>(ctx_)};
+    return make_observable<mute_observable_impl<T>>(ctx_);
   }
 
   /// Creates an @ref observable without any values that calls `on_error` after
   /// subscribing to it.
   template <class T>
   [[nodiscard]] observable<T> error(caf::error what) {
-    auto ptr = make_counted<observable_error_impl<T>>(ctx_, std::move(what));
-    return observable<T>{std::move(ptr)};
+    return make_observable<observable_error_impl<T>>(ctx_, std::move(what));
+  }
+
+  /// Create a fresh @ref observable for each @ref observer using the factory.
+  template <class Factory>
+  [[nodiscard]] auto defer(Factory factory) {
+    using res_t = decltype(factory());
+    static_assert(is_observable_v<res_t>);
+    using out_t = typename res_t::output_type;
+    using impl_t = defer_observable_impl<out_t, Factory>;
+    return make_observable<impl_t>(ctx_, std::move(factory));
   }
 
 private:
@@ -485,7 +500,7 @@ observable_builder::from_resource(async::consumer_resource<T> hdl) const {
   } else {
     auto err = make_error(sec::invalid_observable,
                           "from_resource: failed to open the resource");
-    return res_t{make_counted<observable_error_impl<T>>(ctx_, std::move(err))};
+    return make_observable<observable_error_impl<T>>(ctx_, std::move(err));
   }
 }
 

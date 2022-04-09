@@ -337,13 +337,22 @@ protected:
 
 /// Convenience function for creating a sub-type of @ref observable_impl without
 /// exposing the derived type.
-template <class T, class... Ts>
-intrusive_ptr<observable_impl<typename T::output_type>>
+template <class Impl, class... Ts>
+intrusive_ptr<observable_impl<typename Impl::output_type>>
 make_observable_impl(coordinator* ctx, Ts&&... xs) {
-  using out_t = typename T::output_type;
+  using out_t = typename Impl::output_type;
   using res_t = intrusive_ptr<observable_impl<out_t>>;
-  auto ptr = new T(ctx, std::forward<Ts>(xs)...);
-  return res_t{static_cast<observable_impl<out_t>*>(ptr), false};
+  observable_impl<out_t>* ptr = new Impl(ctx, std::forward<Ts>(xs)...);
+  return res_t{ptr, false};
+}
+
+/// Convenience function for creating an @ref observable from a concrete
+/// implementation type.
+template <class Impl, class... Ts>
+observable<typename Impl::output_type>
+make_observable(coordinator* ctx, Ts&&... xs) {
+  using res_t = observable<typename Impl::output_type>;
+  return res_t{make_observable_impl<Impl>(ctx, std::forward<Ts>(xs)...)};
 }
 
 /// Base type for classes that represent a definition of an `observable` which
@@ -565,10 +574,6 @@ protected:
 template <class T>
 class observable_error_impl : public ref_counted, public observable_impl<T> {
 public:
-  // -- friends ----------------------------------------------------------------
-
-  CAF_INTRUSIVE_PTR_FRIENDS(observable_error_impl)
-
   // -- constructors, destructors, and assignment operators --------------------
 
   observable_error_impl(coordinator* ctx, error what)
@@ -1258,8 +1263,8 @@ public:
     if (sub_) {
       sub_ = nullptr;
       merger_->shutdown_on_last_complete(true);
-      auto obs = make_counted<observable_error_impl<inner_type>>(ctx_, what);
-      merger_->add(obs->as_observable());
+      auto obs = make_observable<observable_error_impl<inner_type>>(ctx_, what);
+      merger_->add(std::move(obs));
       merger_ = nullptr;
     }
   }
@@ -1556,8 +1561,8 @@ public:
     if (sub_) {
       sub_ = nullptr;
       concat_->shutdown_on_last_complete(true);
-      auto obs = make_counted<observable_error_impl<inner_type>>(ctx_, what);
-      concat_->add(obs->as_observable());
+      auto obs = make_observable<observable_error_impl<inner_type>>(ctx_, what);
+      concat_->add(std::move(obs));
       concat_ = nullptr;
     }
   }
@@ -2041,10 +2046,6 @@ public:
 
   using output_type = T;
 
-  // -- friends ----------------------------------------------------------------
-
-  CAF_INTRUSIVE_PTR_FRIENDS(empty_observable_impl)
-
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit empty_observable_impl(coordinator* ctx) : super(ctx) {
@@ -2088,10 +2089,6 @@ public:
   using super = observable_impl_base<T>;
 
   using output_type = T;
-
-  // -- friends ----------------------------------------------------------------
-
-  CAF_INTRUSIVE_PTR_FRIENDS(mute_observable_impl)
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -2259,5 +2256,54 @@ template <class T>
 intrusive_ptr<passive_observable<T>> make_passive_observable(coordinator* ctx) {
   return make_counted<passive_observable<T>>(ctx);
 }
+
+/// Implementation of the `defer` operator.
+template <class T, class Factory>
+class defer_observable_impl : public ref_counted, public observable_impl<T> {
+public:
+  // -- constructors, destructors, and assignment operators --------------------
+
+  defer_observable_impl(coordinator* ctx, Factory factory)
+    : ctx_(ctx), factory_(std::move(factory)) {
+    // nop
+  }
+
+  // -- implementation of disposable_impl --------------------------------------
+
+  void ref_disposable() const noexcept final {
+    this->ref();
+  }
+
+  void deref_disposable() const noexcept final {
+    this->deref();
+  }
+
+  void dispose() override {
+    factory_ = std::nullopt;
+  }
+
+  bool disposed() const noexcept override {
+    return factory_.has_value();
+  }
+
+  // -- implementation of observable<T>::impl ----------------------------------
+
+  coordinator* ctx() const noexcept final {
+    return ctx_;
+  }
+
+  disposable subscribe(observer<T> what) override {
+    if (factory_) {
+      return (*factory_)().subscribe(what);
+    } else {
+      what.on_error(make_error(sec::invalid_observable));
+      return disposable{};
+    }
+  }
+
+private:
+  coordinator* ctx_;
+  std::optional<Factory> factory_;
+};
 
 } // namespace caf::flow
