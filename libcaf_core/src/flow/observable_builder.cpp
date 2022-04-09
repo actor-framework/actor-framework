@@ -117,7 +117,7 @@ disposable interval_impl::subscribe(observer<int64_t> sink) {
 void interval_impl::fire(interval_action* act) {
   if (obs_) {
     --demand_;
-    obs_.on_next(make_span(&val_, 1));
+    obs_.on_next(val_);
     if (++val_ == max_) {
       obs_.on_complete();
       obs_ = nullptr;

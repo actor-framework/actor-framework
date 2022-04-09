@@ -461,7 +461,8 @@ public:
       auto items = span<output_type>{buf_.data(), n};
       for (auto& out : outputs_) {
         out.demand -= n;
-        out.sink.on_next(items);
+        for (auto& item : items)
+          out.sink.on_next(item);
       }
       buf_.erase(buf_.begin(), buf_.begin() + n);
     }
@@ -513,15 +514,6 @@ public:
       --in_flight_;
     buf_.emplace_back(item);
     return true;
-  }
-
-  void on_next(span<const output_type> items) {
-    // Note: we may receive more data than what we have requested.
-    if (in_flight_ >= items.size())
-      in_flight_ -= items.size();
-    else
-      in_flight_ = 0;
-    buf_.insert(buf_.end(), items.begin(), items.end());
   }
 
   void fin() {

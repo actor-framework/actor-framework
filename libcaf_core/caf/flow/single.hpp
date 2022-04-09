@@ -53,7 +53,7 @@ public:
         auto f = detail::make_overload( //
           [i, n](none_t) { i->second += n; },
           [this, i](const T& val) {
-            i->first.on_next(make_span(&val, 1));
+            i->first.on_next(val);
             i->first.on_complete();
             observers_.erase(i);
           },
@@ -90,7 +90,7 @@ public:
                                         pred);
             first != observers_.end()) {
           for (auto i = first; i != observers_.end(); ++i) {
-            i->first.on_next(make_span(&ref, 1));
+            i->first.on_next(ref);
             i->first.on_complete();
           }
           observers_.erase(first, observers_.end());
@@ -151,12 +151,9 @@ public:
   template <class OnSuccess, class OnError>
   void subscribe(OnSuccess on_success, OnError on_error) {
     static_assert(std::is_invocable_v<OnSuccess, const T&>);
-    as_observable().for_each(
-      [f{std::move(on_success)}](span<const T> items) mutable {
-        CAF_ASSERT(items.size() == 1);
-        f(items[0]);
-      },
-      std::move(on_error));
+    as_observable().for_each([f{std::move(on_success)}](
+                               const T& item) mutable { f(item); },
+                             std::move(on_error));
   }
 
   void set_value(T val) {

@@ -17,7 +17,6 @@
 #include "caf/logger.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/ref_counted.hpp"
-#include "caf/span.hpp"
 #include "caf/unit.hpp"
 
 namespace caf::flow {
@@ -33,7 +32,7 @@ public:
 
     virtual void on_subscribe(subscription sub) = 0;
 
-    virtual void on_next(span<const T> items) = 0;
+    virtual void on_next(const T& item) = 0;
 
     virtual void on_complete() = 0;
 
@@ -91,8 +90,8 @@ public:
   }
 
   /// @pre `valid()`
-  void on_next(span<const T> items) {
-    pimpl_->on_next(items);
+  void on_next(const T& item) {
+    pimpl_->on_next(item);
   }
 
   /// Creates a new observer from `Impl`.
@@ -151,33 +150,11 @@ struct on_next_trait;
 template <class T>
 struct on_next_trait<void(T)> {
   using value_type = T;
-
-  template <class F>
-  static void apply(F& f, span<const T> items) {
-    for (auto&& item : items)
-      f(item);
-  }
 };
 
 template <class T>
 struct on_next_trait<void(const T&)> {
   using value_type = T;
-
-  template <class F>
-  static void apply(F& f, span<const T> items) {
-    for (auto&& item : items)
-      f(item);
-  }
-};
-
-template <class T>
-struct on_next_trait<void(span<const T>)> {
-  using value_type = T;
-
-  template <class F>
-  static void apply(F& f, span<const T> items) {
-    f(items);
-  }
 };
 
 template <class F>
@@ -226,10 +203,10 @@ public:
     this->deref();
   }
 
-  void on_next(span<const input_type> items) override {
+  void on_next(const input_type& item) override {
     if (!completed_) {
-      on_next_trait_t<OnNext>::apply(on_next_, items);
-      sub_.request(items.size());
+      on_next_(item);
+      sub_.request(1);
     }
   }
 
@@ -384,10 +361,10 @@ public:
 
   // -- implementation of observer<T>::impl ------------------------------------
 
-  void on_next(span<const value_type> items) override {
-    CAF_LOG_TRACE(CAF_ARG(items));
+  void on_next(const value_type& item) override {
+    CAF_LOG_TRACE(CAF_ARG(item));
     if (buf_)
-      buf_->push(items);
+      buf_->push(item);
   }
 
   void on_complete() override {
@@ -509,9 +486,9 @@ public:
     }
   }
 
-  void on_next(span<const T> items) override {
+  void on_next(const T& item) override {
     if (parent) {
-      parent->fwd_on_next(token, items);
+      parent->fwd_on_next(token, item);
     }
   }
 
@@ -607,8 +584,8 @@ public:
     }
   }
 
-  void on_next(span<const T> items) override {
-    buf.insert(buf.end(), items.begin(), items.end());
+  void on_next(const T& item) override {
+    buf.emplace_back(item);
   }
 
   // -- member variables -------------------------------------------------------

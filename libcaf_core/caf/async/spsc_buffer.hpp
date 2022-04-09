@@ -244,7 +244,9 @@ public:
         overflow = 0;
       }
       guard.unlock();
-      dst.on_next(span<const T>{consumer_buf_.data(), n});
+      auto items = span<const T>{consumer_buf_.data(), n};
+      for (auto& item : items)
+        dst.on_next(item);
       demand -= n;
       consumed += n;
       consumer_buf_.clear();

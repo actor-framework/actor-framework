@@ -28,7 +28,6 @@
 #include "caf/make_counted.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/sec.hpp"
-#include "caf/span.hpp"
 
 namespace caf::flow {
 
@@ -661,13 +660,10 @@ public:
       sub_ = std::move(sub);
   }
 
-  void on_next(span<const input_type> items) override {
+  void on_next(const input_type& item) override {
     if (!term_.finalized()) {
-      auto f = [this, items](auto& step, auto&... steps) {
-        for (auto&& item : items)
-          if (!step.on_next(item, steps..., term_))
-            return false;
-        return true;
+      auto f = [this, &item](auto& step, auto&... steps) {
+        return step.on_next(item, steps..., term_);
       };
       auto still_running = std::apply(f, steps_);
       term_.push();
@@ -1111,8 +1107,10 @@ private:
           drop_if_empty(i);
         } else {
           auto& in = *i->second;
-          if (!in.buf.empty())
-            term_.on_next(in.buf);
+          if (!in.buf.empty()) {
+            for (auto& item : in.buf)
+              term_.on_next(item);
+          }
           term_.fin();
           for (auto j = inputs_.begin(); j != inputs_.end(); ++j)
             if (j != i && j->second->sub)
@@ -1125,19 +1123,18 @@ private:
     }
   }
 
-  void fwd_on_next(input_key key, span<const T> items) {
+  void fwd_on_next(input_key key, const T& item) {
     if (auto i = inputs_.find(key); i != inputs_.end()) {
       auto& in = *i->second;
       if (!term_.finalized()) {
-        if (auto n = std::min(term_.min_demand(), items.size()); n > 0) {
-          term_.on_next(items.subspan(0, n));
+        if (term_.min_demand() > 0) {
+          term_.on_next(item);
           term_.push();
           if (in.sub)
-            in.sub.request(n);
-          items = items.subspan(n);
+            in.sub.request(1);
+        } else {
+          in.buf.emplace_back(item);
         }
-        if (!items.empty())
-          in.buf.insert(in.buf.end(), items.begin(), items.end());
       }
     }
   }
@@ -1158,7 +1155,8 @@ private:
       if (auto m = std::min(in.buf.size(), n); m > 0) {
         n -= m;
         auto items = make_span(in.buf.data(), m);
-        term_.on_next(items);
+        for (auto& item : items)
+          term_.on_next(item);
         in.buf.erase(in.buf.begin(), in.buf.begin() + m);
         if (in.sub) {
           in.sub.request(m);
@@ -1278,11 +1276,10 @@ public:
     }
   }
 
-  void on_next(span<const T> observables) override {
+  void on_next(const T& src) override {
     if (sub_) {
-      for (const auto& x : observables)
-        merger_->add(map_(x).as_observable());
-      sub_.request(observables.size());
+      merger_->add(map_(src).as_observable());
+      sub_.request(1);
     }
   }
 
@@ -1474,11 +1471,11 @@ private:
     }
   }
 
-  void fwd_on_next(input_key key, span<const T> items) {
+  void fwd_on_next(input_key key, const T& item) {
     if (in_key_ == key && !term_.finalized()) {
-      CAF_ASSERT(in_flight_ >= items.size());
-      in_flight_ -= items.size();
-      term_.on_next(items);
+      CAF_ASSERT(in_flight_ >= 0);
+      --in_flight_;
+      term_.on_next(item);
       term_.push();
     }
   }
@@ -1576,11 +1573,10 @@ public:
     }
   }
 
-  void on_next(span<const T> observables) override {
+  void on_next(const T& src) override {
     if (sub_) {
-      for (const auto& x : observables)
-        concat_->add(map_(x).as_observable());
-      sub_.request(observables.size());
+      concat_->add(map_(src).as_observable());
+      sub_.request(1);
     }
   }
 
@@ -1740,18 +1736,17 @@ public:
     }
   }
 
-  void on_next(span<const in_t> items) override {
+  void on_next(const in_t& item) override {
     if (tail_) {
-      tail_.on_next(items);
+      tail_.on_next(item);
     } else if (obs_) {
-      CAF_ASSERT(prefix_.size() + items.size() <= prefix_size_);
-      prefix_.insert(prefix_.end(), items.begin(), items.end());
+      prefix_.emplace_back(item);
       if (prefix_.size() >= prefix_size_) {
         auto tptr = make_broadcaster_impl<in_t>(ctx_);
         tail_ = tptr->as_observer();
         static_cast<observable_impl<in_t>*>(this)->subscribe(tail_);
-        auto item = make_cow_tuple(std::move(prefix_), tptr->as_observable());
-        obs_.on_next(make_span(&item, 1));
+        auto tup = make_cow_tuple(std::move(prefix_), tptr->as_observable());
+        obs_.on_next(tup);
         obs_.on_complete();
         obs_ = nullptr;
       }
@@ -1950,13 +1945,11 @@ private:
     struct decorator {
       size_t* demand;
       typename observer<value_type>::impl* dst;
-      void on_next(span<const value_type> items) {
-        CAF_LOG_TRACE(CAF_ARG(items));
-        CAF_ASSERT(!items.empty());
-        CAF_ASSERT(*demand >= items.empty());
-        *demand -= items.size();
-        CAF_LOG_DEBUG("got" << items.size() << "items");
-        dst->on_next(items);
+      void on_next(const value_type& item) {
+        CAF_LOG_TRACE(CAF_ARG(item));
+        CAF_ASSERT(*demand > 0);
+        --*demand;
+        dst->on_next(item);
       }
       void on_complete() {
         CAF_LOG_TRACE("");
@@ -2207,11 +2200,15 @@ public:
     if (items.size() > demand)
       CAF_RAISE_ERROR("observables must not emit more items than requested");
     demand -= items.size();
-    out.on_next(items);
+    for (auto& item : items)
+      out.on_next(item);
   }
 
   void push(const output_type& item) {
-    push(make_span(&item, 1));
+    if (demand == 0)
+      CAF_RAISE_ERROR("observables must not emit more items than requested");
+    --demand;
+    out.on_next(item);
   }
 
   template <class... Ts>

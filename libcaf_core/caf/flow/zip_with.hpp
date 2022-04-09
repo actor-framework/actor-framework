@@ -37,6 +37,12 @@ struct zipper_input {
   observable<T> in;
   subscription sub;
   std::vector<T> buf;
+  bool broken = false;
+
+  /// Returns whether the input can no longer produce additional items.
+  bool at_end() const noexcept {
+    return broken && buf.empty();
+  }
 };
 
 /// Combines items from any number of observables using a zip function.
@@ -66,11 +72,11 @@ public:
   // -- implementation of disposable::impl -------------------------------------
 
   void dispose() override {
-    broken_ = true;
     if (buffered() == 0) {
       fin();
     } else {
       for_each_input([](auto, auto& input) {
+        input.broken = true;
         input.in = nullptr;
         if (input.sub) {
           input.sub.cancel();
@@ -152,6 +158,11 @@ private:
     return fold([](auto&... x) { return std::min({x.buf.size()...}); });
   }
 
+  // A zipper reached the end if any of its inputs reached the end.
+  bool at_end() {
+    return fold([](auto&... inputs) { return (inputs.at_end() || ...); });
+  }
+
   template <size_t I>
   void fwd_on_subscribe(zipper_index<I> index, subscription sub) {
     if (!term_.finalized()) {
@@ -170,31 +181,32 @@ private:
 
   template <size_t I>
   void fwd_on_complete(zipper_index<I> index) {
-    if (!broken_) {
-      broken_ = true;
-      if (at(index).buf.empty())
+    auto& input = at(index);
+    if (!input.broken) {
+      input.broken = true;
+      input.sub = nullptr;
+      if (input.buf.empty())
         fin();
     }
-    at(index).sub = nullptr;
   }
 
   template <size_t I>
   void fwd_on_error(zipper_index<I> index, const error& what) {
-    if (!term_.err())
-      term_.err(what);
-    if (!broken_) {
-      broken_ = true;
-      if (at(index).buf.empty())
+    auto& input = at(index);
+    if (!input.broken) {
+      if (term_.active() && !term_.err())
+        term_.err(what);
+      input.broken = true;
+      input.sub = nullptr;
+      if (input.buf.empty())
         fin();
     }
-    at(index).sub = nullptr;
   }
 
   template <size_t I, class T>
-  void fwd_on_next(zipper_index<I> index, span<const T> items) {
-    if (!term_.finalized()) {
-      auto& buf = at(index).buf;
-      buf.insert(buf.end(), items.begin(), items.end());
+  void fwd_on_next(zipper_index<I> index, const T& item) {
+    if (term_.active()) {
+      at(index).buf.push_back(item);
       push();
     }
   }
@@ -211,9 +223,9 @@ private:
         x.buf.erase(x.buf.begin(), x.buf.begin() + n);
       });
       term_.push();
-      if (broken_ && buffered() == 0)
-        fin();
     }
+    if (at_end())
+      fin();
   }
 
   void fin() {
@@ -231,9 +243,6 @@ private:
   size_t demand_ = 0;
   F fn_;
   std::tuple<zipper_input<Ts>...> inputs_;
-
-  /// A zipper breaks as soon as one of its inputs signals completion or error.
-  bool broken_ = false;
 
   broadcast_step<output_type> term_;
 };
