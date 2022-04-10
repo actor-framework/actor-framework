@@ -92,7 +92,7 @@ bool json_writer::begin_object(type_id_t id, std::string_view name) {
     add(R"_("@type": )_");
     pop();
     CAF_ASSERT(top() == type::element);
-    if (auto tname = query_type_name(id); !tname.empty()) {
+    if (auto tname = (*mapper_)(id); !tname.empty()) {
       add('"');
       add(tname);
       add('"');
@@ -177,12 +177,12 @@ bool json_writer::begin_field(std::string_view name,
     pop();
     CAF_ASSERT(top() == type::element);
     pop();
-    if (auto tname = query_type_name(types[index]); !tname.empty()) {
+    if (auto tname = (*mapper_)(types[index]); !tname.empty()) {
       add('"');
       add(tname);
       add('"');
     } else {
-      emplace_error(sec::runtime_error, "query_type_name failed");
+      emplace_error(sec::runtime_error, "failed to retrieve type name");
       return false;
     }
     return end_key_value_pair() && begin_field(name);
