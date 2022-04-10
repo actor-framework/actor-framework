@@ -22,4 +22,16 @@ type_id_t query_type_id(string_view name) {
   return invalid_type_id;
 }
 
+type_id_mapper::~type_id_mapper() {
+  // nop
+}
+
+string_view default_type_id_mapper::operator()(type_id_t type) const {
+  return query_type_name(type);
+}
+
+type_id_t default_type_id_mapper::operator()(string_view name) const {
+  return query_type_id(name);
+}
+
 } // namespace caf

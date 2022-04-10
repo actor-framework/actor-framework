@@ -96,12 +96,33 @@ type_id_t type_id_or_invalid() {
     return invalid_type_id;
 }
 
-/// Returns the type name of given `type` or an empty string if `type` is an
+/// Returns the type name for @p type or an empty string if @p type is an
 /// invalid ID.
 CAF_CORE_EXPORT string_view query_type_name(type_id_t type);
 
-/// Returns the type of given `name` or `invalid_type_id` if no type matches.
+/// Returns the type for @p name or `invalid_type_id` if @p name is unknown.
 CAF_CORE_EXPORT type_id_t query_type_id(string_view name);
+
+/// Translates between human-readable type names and type IDs.
+class CAF_CORE_EXPORT type_id_mapper {
+public:
+  virtual ~type_id_mapper();
+
+  /// Returns the type name for @p type or an empty string if @p type is an
+  /// invalid ID.
+  virtual string_view operator()(type_id_t type) const = 0;
+
+  /// Returns the type for @p name or `invalid_type_id` if @p name is unknown.
+  virtual type_id_t operator()(string_view name) const = 0;
+};
+
+/// Dispatches to @ref query_type_name and @ref query_type_id.
+class default_type_id_mapper : public type_id_mapper {
+public:
+  string_view operator()(type_id_t type) const override;
+
+  type_id_t operator()(string_view name) const override;
+};
 
 } // namespace caf
 

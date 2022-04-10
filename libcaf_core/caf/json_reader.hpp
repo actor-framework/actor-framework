@@ -112,6 +112,16 @@ public:
     field_type_suffix_ = suffix;
   }
 
+  /// Returns the type ID mapper used by the writer.
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept {
+    return mapper_;
+  }
+
+  /// Changes the type ID mapper for the writer.
+  void mapper(const type_id_mapper* ptr) noexcept {
+    mapper_ = ptr;
+  }
+
   // -- modifiers --------------------------------------------------------------
 
   /// Parses @p json_text into an internal representation. After loading the
@@ -247,6 +257,12 @@ private:
 
   /// Keeps track of the current field for better debugging output.
   std::vector<string_view> field_;
+
+  /// The mapper implementation we use by default.
+  default_type_id_mapper default_mapper_;
+
+  /// Configures which ID mapper we use to translate between type IDs and names.
+  const type_id_mapper* mapper_ = &default_mapper_;
 };
 
 } // namespace caf

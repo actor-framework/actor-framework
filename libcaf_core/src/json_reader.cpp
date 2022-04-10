@@ -180,7 +180,7 @@ void json_reader::reset() {
 bool json_reader::fetch_next_object_type(type_id_t& type) {
   string_view type_name;
   if (fetch_next_object_name(type_name)) {
-    if (auto id = query_type_id(type_name); id != invalid_type_id) {
+    if (auto id = (*mapper_)(type_name); id != invalid_type_id) {
       type = id;
       return true;
     } else {
@@ -308,7 +308,7 @@ bool json_reader::begin_field(string_view name, bool& is_present,
       member != nullptr
       && member->val->data.index() != detail::json::value::null_index) {
     auto ft = field_type(top<position::object>(), name, field_type_suffix_);
-    if (auto id = query_type_id(ft); id != invalid_type_id) {
+    if (auto id = (*mapper_)(ft); id != invalid_type_id) {
       if (auto i = std::find(types.begin(), types.end(), id);
           i != types.end()) {
         index = static_cast<size_t>(std::distance(types.begin(), i));

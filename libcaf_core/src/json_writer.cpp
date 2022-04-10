@@ -7,6 +7,8 @@
 #include "caf/detail/append_hex.hpp"
 #include "caf/detail/print.hpp"
 
+#include <cctype>
+
 namespace caf {
 
 namespace {
@@ -85,7 +87,7 @@ bool json_writer::begin_object(type_id_t id, string_view name) {
     add(R"_("@type": )_");
     pop();
     CAF_ASSERT(top() == type::element);
-    if (auto tname = query_type_name(id); !tname.empty()) {
+    if (auto tname = (*mapper_)(id); !tname.empty()) {
       add('"');
       add(tname);
       add('"');
@@ -170,12 +172,12 @@ bool json_writer::begin_field(string_view name, span<const type_id_t> types,
     pop();
     CAF_ASSERT(top() == type::element);
     pop();
-    if (auto tname = query_type_name(types[index]); !tname.empty()) {
+    if (auto tname = (*mapper_)(types[index]); !tname.empty()) {
       add('"');
       add(tname);
       add('"');
     } else {
-      emplace_error(sec::runtime_error, "query_type_name failed");
+      emplace_error(sec::runtime_error, "failed to retrieve type name");
       return false;
     }
     return end_key_value_pair() && begin_field(name);
@@ -247,8 +249,7 @@ bool json_writer::begin_sequence(size_t) {
 bool json_writer::end_sequence() {
   if (pop_if(type::array)) {
     --indentation_level_;
-    nl();
-    add(']');
+    close_nested('[', ']');
     return true;
   } else {
     return false;
@@ -278,8 +279,7 @@ bool json_writer::begin_associative_array(size_t) {
 bool json_writer::end_associative_array() {
   if (pop_if(type::object)) {
     --indentation_level_;
-    nl();
-    add('}');
+    close_nested('{', '}');
     if (!stack_.empty())
       stack_.back().filled = true;
     return true;
@@ -568,6 +568,18 @@ void json_writer::sep() {
   } else {
     stack_.back().filled = true;
   }
+}
+
+void json_writer::close_nested(char open, char close) {
+  auto not_ws = [](char c) { return !std::isspace(c); };
+  auto i = std::find_if(buf_.rbegin(), buf_.rend(), not_ws);
+  if (*i == open) {
+    while (std::isspace(buf_.back()))
+      buf_.pop_back();
+  } else {
+    nl();
+  }
+  add(close);
 }
 
 } // namespace caf
