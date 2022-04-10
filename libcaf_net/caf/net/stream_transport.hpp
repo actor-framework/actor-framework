@@ -44,6 +44,19 @@ public:
                                             : stream_transport_error::permanent;
   }
 
+  /// Checks whether connecting a non-blocking socket was successful.
+  static ptrdiff_t connect(stream_socket x) {
+    // A connection is established if the OS reports a socket as ready for read
+    // or write and if there is no error on the socket.
+    return net::probe(x) ? 1 : -1;
+  }
+
+  /// Convenience function that always returns 1. Exists to make writing code
+  /// against multiple policies easier by providing the same interface.
+  static ptrdiff_t accept(stream_socket) {
+    return 1;
+  }
+
   /// Returns the number of bytes that are buffered internally and that
   /// available for immediate read.
   static constexpr size_t buffered() {

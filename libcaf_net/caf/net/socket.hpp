@@ -74,6 +74,13 @@ bool CAF_NET_EXPORT last_socket_error_is_temporary();
 /// @relates socket
 std::string CAF_NET_EXPORT last_socket_error_as_string();
 
+/// Queries whether `x` is a valid and connected socket by reading the socket
+/// option `SO_ERROR`. Sets the last socket error in case the socket entered an
+/// error state.
+/// @returns `true` if no error is pending on `x`, `false` otherwise.
+/// @relates socket
+bool CAF_NET_EXPORT probe(socket x);
+
 /// Sets x to be inherited by child processes if `new_value == true`
 /// or not if `new_value == false`.  Not implemented on Windows.
 /// @relates socket

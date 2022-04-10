@@ -91,8 +91,14 @@ std::errc last_socket_error() {
 }
 
 bool last_socket_error_is_temporary() {
-  int wsa_code = WSAGetLastError();
-  return wsa_code == WSAEWOULDBLOCK || wsa_code == WSATRY_AGAIN;
+  switch (WSAGetLastError()) {
+    case WSATRY_AGAIN:
+    case WSAEINPROGRESS:
+    case WSAEWOULDBLOCK:
+      return true;
+    default:
+      return false;
+  }
 }
 
 std::string last_socket_error_as_string() {
@@ -113,6 +119,17 @@ std::string last_socket_error_as_string() {
 
 bool would_block_or_temporarily_unavailable(int errcode) {
   return errcode == WSAEWOULDBLOCK || errcode == WSATRY_AGAIN;
+}
+
+bool probe(socket x) {
+  auto err = 0;
+  auto len = static_cast<socklen_t>(sizeof(err));
+  if (getsockopt(x.id, SOL_SOCKET, SO_ERROR, &err, &len) == 0) {
+    WSASetLastError(err);
+    return err == 0;
+  } else {
+    return false;
+  }
 }
 
 error child_process_inherit(socket x, bool) {
@@ -143,12 +160,16 @@ std::errc last_socket_error() {
 }
 
 bool last_socket_error_is_temporary() {
-  auto code = errno;
-#  if EAGAIN == EWOULDBLOCK
-  return code == EAGAIN;
-#  else
-  return code == EAGAIN || code == EWOULDBLOCK;
+  switch (errno) {
+    case EAGAIN:
+    case EINPROGRESS:
+#  if EAGAIN != EWOULDBLOCK
+    case EWOULDBLOCK:
 #  endif
+      return true;
+    default:
+      return false;
+  }
 }
 
 std::string last_socket_error_as_string() {
@@ -157,6 +178,17 @@ std::string last_socket_error_as_string() {
 
 bool would_block_or_temporarily_unavailable(int errcode) {
   return errcode == EAGAIN || errcode == EWOULDBLOCK;
+}
+
+bool probe(socket x) {
+  auto err = 0;
+  auto len = static_cast<socklen_t>(sizeof(err));
+  if (getsockopt(x.id, SOL_SOCKET, SO_ERROR, &err, &len) == 0) {
+    errno = err;
+    return err == 0;
+  } else {
+    return false;
+  }
 }
 
 error child_process_inherit(socket x, bool new_value) {
