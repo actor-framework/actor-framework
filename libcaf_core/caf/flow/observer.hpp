@@ -7,9 +7,11 @@
 #include "caf/async/batch.hpp"
 #include "caf/async/producer.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/comparable.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
+#include "caf/flow/coordinated.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observer_state.hpp"
 #include "caf/flow/subscription.hpp"
@@ -23,10 +25,10 @@ namespace caf::flow {
 
 /// Handle to a consumer of items.
 template <class T>
-class observer {
+class observer : detail::comparable<observer<T>> {
 public:
   /// Internal interface of an `observer`.
-  class impl : public disposable::impl {
+  class impl : public coordinated {
   public:
     using input_type = T;
 
@@ -60,14 +62,6 @@ public:
   observer(const observer&) noexcept = default;
   observer& operator=(observer&&) noexcept = default;
   observer& operator=(const observer&) noexcept = default;
-
-  disposable as_disposable() const& noexcept {
-    return disposable{pimpl_};
-  }
-
-  disposable as_disposable() && noexcept {
-    return disposable{std::move(pimpl_)};
-  }
 
   /// @pre `valid()`
   void on_complete() {
@@ -129,8 +123,12 @@ public:
     return std::move(pimpl_);
   }
 
-  void swap(observer& other) {
+  void swap(observer& other) noexcept {
     pimpl_.swap(other.pimpl_);
+  }
+
+  intptr_t compare(const observer& other) const noexcept {
+    return pimpl_.compare(other.pimpl_);
   }
 
 private:
@@ -166,7 +164,7 @@ using on_next_value_type = typename on_next_trait_t<F>::value_type;
 
 template <class OnNext, class OnError = unit_t, class OnComplete = unit_t>
 class default_observer_impl
-  : public ref_counted,
+  : public detail::ref_counted_base,
     public flow::observer_impl<on_next_value_type<OnNext>> {
 public:
   static_assert(std::is_invocable_v<OnError, const error&>);
@@ -174,8 +172,6 @@ public:
   static_assert(std::is_invocable_v<OnComplete>);
 
   using input_type = on_next_value_type<OnNext>;
-
-  CAF_INTRUSIVE_PTR_FRIENDS(default_observer_impl)
 
   explicit default_observer_impl(OnNext&& on_next_fn)
     : on_next_(std::move(on_next_fn)) {
@@ -195,39 +191,23 @@ public:
     // nop
   }
 
-  void ref_disposable() const noexcept final {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept final {
-    this->deref();
-  }
-
   void on_next(const input_type& item) override {
-    if (!completed_) {
-      on_next_(item);
-      sub_.request(1);
-    }
+    on_next_(item);
+    sub_.request(1);
   }
 
   void on_error(const error& what) override {
-    if (!completed_) {
-      on_error_(what);
-      sub_ = nullptr;
-      completed_ = true;
-    }
+    on_error_(what);
+    sub_ = nullptr;
   }
 
   void on_complete() override {
-    if (!completed_) {
-      on_complete_();
-      sub_ = nullptr;
-      completed_ = true;
-    }
+    on_complete_();
+    sub_ = nullptr;
   }
 
   void on_subscribe(flow::subscription sub) override {
-    if (!completed_ && !sub_) {
+    if (!sub_) {
       sub_ = std::move(sub);
       sub_.request(defaults::flow::buffer_size);
     } else {
@@ -235,23 +215,15 @@ public:
     }
   }
 
-  void dispose() override {
-    if (!completed_) {
-      on_complete_();
-      if (sub_) {
-        sub_.cancel();
-        sub_ = nullptr;
-      }
-      completed_ = true;
-    }
+  void ref_coordinated() const noexcept override {
+    this->ref();
   }
 
-  bool disposed() const noexcept override {
-    return completed_;
+  void deref_coordinated() const noexcept override {
+    this->deref();
   }
 
 private:
-  bool completed_ = false;
   OnNext on_next_;
   OnError on_error_;
   OnComplete on_complete_;
@@ -313,7 +285,7 @@ auto make_observer_from_ptr(SmartPointer ptr) {
 
 /// Writes observed values to a bounded buffer.
 template <class Buffer>
-class buffer_writer_impl : public ref_counted,
+class buffer_writer_impl : public detail::ref_counted_base,
                            public observer_impl<typename Buffer::value_type>,
                            public async::producer {
 public:
@@ -340,22 +312,13 @@ public:
       buf_->close();
   }
 
-  // -- implementation of disposable::impl -------------------------------------
+  // -- implementation of coordinated ------------------------------------------
 
-  void dispose() override {
-    CAF_LOG_TRACE("");
-    on_complete();
-  }
-
-  bool disposed() const noexcept override {
-    return buf_ == nullptr;
-  }
-
-  void ref_disposable() const noexcept final {
+  void ref_coordinated() const noexcept final {
     this->ref();
   }
 
-  void deref_disposable() const noexcept final {
+  void deref_coordinated() const noexcept final {
     this->deref();
   }
 
@@ -455,123 +418,92 @@ private:
 
 /// Forwards all events to a parent.
 template <class T, class Parent, class Token>
-class forwarder : public ref_counted, public observer_impl<T> {
+class forwarder : public detail::ref_counted_base, public observer_impl<T> {
 public:
-  CAF_INTRUSIVE_PTR_FRIENDS(forwarder)
+  // -- constructors, destructors, and assignment operators --------------------
 
   explicit forwarder(intrusive_ptr<Parent> parent, Token token)
-    : parent(std::move(parent)), token(std::move(token)) {
+    : parent_(std::move(parent)), token_(std::move(token)) {
     // nop
   }
 
-  void on_complete() override {
-    if (parent) {
-      parent->fwd_on_complete(token);
-      parent = nullptr;
-    }
-  }
+  // -- implementation of coordinated ------------------------------------------
 
-  void on_error(const error& what) override {
-    if (parent) {
-      parent->fwd_on_error(token, what);
-      parent = nullptr;
-    }
-  }
-
-  void on_subscribe(subscription new_sub) override {
-    if (parent) {
-      parent->fwd_on_subscribe(token, std::move(new_sub));
-    } else {
-      new_sub.cancel();
-    }
-  }
-
-  void on_next(const T& item) override {
-    if (parent) {
-      parent->fwd_on_next(token, item);
-    }
-  }
-
-  void dispose() override {
-    on_complete();
-  }
-
-  bool disposed() const noexcept override {
-    return !parent;
-  }
-
-  void ref_disposable() const noexcept final {
+  void ref_coordinated() const noexcept final {
     this->ref();
   }
 
-  void deref_disposable() const noexcept final {
-    this->deref();
-  }
-
-  intrusive_ptr<Parent> parent;
-  Token token;
-};
-
-/// An observer with minimal internal logic. Useful for writing unit tests.
-template <class T>
-class passive_observer : public ref_counted, public observer_impl<T> {
-public:
-  // -- friends ----------------------------------------------------------------
-
-  CAF_INTRUSIVE_PTR_FRIENDS(passive_observer)
-
-  // -- implementation of disposable::impl -------------------------------------
-
-  void dispose() override {
-    if (!disposed()) {
-      if (sub) {
-        sub.cancel();
-        sub = nullptr;
-      }
-      state = observer_state::disposed;
-    }
-  }
-
-  bool disposed() const noexcept override {
-    switch (state) {
-      case observer_state::completed:
-      case observer_state::aborted:
-      case observer_state::disposed:
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  void ref_disposable() const noexcept final {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept final {
+  void deref_coordinated() const noexcept final {
     this->deref();
   }
 
   // -- implementation of observer_impl<T> -------------------------------------
 
   void on_complete() override {
-    if (!disposed()) {
-      if (sub) {
-        sub.cancel();
-        sub = nullptr;
-      }
-      state = observer_state::completed;
+    if (parent_) {
+      parent_->fwd_on_complete(token_);
+      parent_ = nullptr;
     }
   }
 
   void on_error(const error& what) override {
-    if (!disposed()) {
-      if (sub) {
-        sub.cancel();
-        sub = nullptr;
-      }
-      err = what;
-      state = observer_state::aborted;
+    if (parent_) {
+      parent_->fwd_on_error(token_, what);
+      parent_ = nullptr;
     }
+  }
+
+  void on_subscribe(subscription new_sub) override {
+    if (parent_) {
+      parent_->fwd_on_subscribe(token_, std::move(new_sub));
+    } else {
+      new_sub.cancel();
+    }
+  }
+
+  void on_next(const T& item) override {
+    if (parent_) {
+      parent_->fwd_on_next(token_, item);
+    }
+  }
+
+private:
+  intrusive_ptr<Parent> parent_;
+  Token token_;
+};
+
+/// An observer with minimal internal logic. Useful for writing unit tests.
+template <class T>
+class passive_observer : public detail::ref_counted_base,
+                         public observer_impl<T> {
+public:
+  // -- implementation of coordinated ------------------------------------------
+
+  void ref_coordinated() const noexcept final {
+    this->ref();
+  }
+
+  void deref_coordinated() const noexcept final {
+    this->deref();
+  }
+
+  // -- implementation of observer_impl<T> -------------------------------------
+
+  void on_complete() override {
+    if (sub) {
+      sub.cancel();
+      sub = nullptr;
+    }
+    state = observer_state::completed;
+  }
+
+  void on_error(const error& what) override {
+    if (sub) {
+      sub.cancel();
+      sub = nullptr;
+    }
+    err = what;
+    state = observer_state::aborted;
   }
 
   void on_subscribe(subscription new_sub) override {
@@ -586,6 +518,23 @@ public:
 
   void on_next(const T& item) override {
     buf.emplace_back(item);
+  }
+
+  // -- convenience functions --------------------------------------------------
+
+  bool request(size_t demand) {
+    if (sub) {
+      sub.request(demand);
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  std::vector<T> sorted_buf() const {
+    auto result = buf;
+    std::sort(result.begin(), result.end());
+    return result;
   }
 
   // -- member variables -------------------------------------------------------
@@ -607,6 +556,85 @@ public:
 template <class T>
 intrusive_ptr<passive_observer<T>> make_passive_observer() {
   return make_counted<passive_observer<T>>();
+}
+
+/// Similar to @ref passive_observer but automatically requests items until
+/// completed. Useful for writing unit tests.
+template <class T>
+class auto_observer : public detail::ref_counted_base, public observer_impl<T> {
+public:
+  // -- implementation of coordinated ------------------------------------------
+
+  void ref_coordinated() const noexcept final {
+    this->ref();
+  }
+
+  void deref_coordinated() const noexcept final {
+    this->deref();
+  }
+
+  // -- implementation of observer_impl<T> -------------------------------------
+
+  void on_complete() override {
+    if (sub) {
+      sub.cancel();
+      sub = nullptr;
+    }
+    state = observer_state::completed;
+  }
+
+  void on_error(const error& what) override {
+    if (sub) {
+      sub.cancel();
+      sub = nullptr;
+    }
+    err = what;
+    state = observer_state::aborted;
+  }
+
+  void on_subscribe(subscription new_sub) override {
+    if (state == observer_state::idle) {
+      CAF_ASSERT(!sub);
+      sub = std::move(new_sub);
+      state = observer_state::subscribed;
+      sub.request(64);
+    } else {
+      new_sub.cancel();
+    }
+  }
+
+  void on_next(const T& item) override {
+    buf.emplace_back(item);
+    sub.request(1);
+  }
+
+  // -- convenience functions --------------------------------------------------
+
+  std::vector<T> sorted_buf() const {
+    auto result = buf;
+    std::sort(result.begin(), result.end());
+    return result;
+  }
+
+  // -- member variables -------------------------------------------------------
+
+  /// The subscription for requesting additional items.
+  subscription sub;
+
+  /// Default-constructed unless on_error was called.
+  error err;
+
+  /// Represents the current state of this observer.
+  observer_state state;
+
+  /// Stores all items received via `on_next`.
+  std::vector<T> buf;
+};
+
+/// @relates auto_observer
+template <class T>
+intrusive_ptr<auto_observer<T>> make_auto_observer() {
+  return make_counted<auto_observer<T>>();
 }
 
 } // namespace caf::flow

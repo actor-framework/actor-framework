@@ -4,11 +4,6 @@
 
 #pragma once
 
-#include <cstddef>
-#include <numeric>
-#include <type_traits>
-#include <vector>
-
 #include "caf/async/consumer.hpp"
 #include "caf/async/producer.hpp"
 #include "caf/async/spsc_buffer.hpp"
@@ -17,10 +12,18 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/unordered_flat_map.hpp"
 #include "caf/disposable.hpp"
+#include "caf/flow/coordinated.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/fwd.hpp"
+#include "caf/flow/observable_decl.hpp"
 #include "caf/flow/observable_state.hpp"
 #include "caf/flow/observer.hpp"
+#include "caf/flow/op/base.hpp"
+#include "caf/flow/op/concat.hpp"
+#include "caf/flow/op/from_resource.hpp"
+#include "caf/flow/op/from_steps.hpp"
+#include "caf/flow/op/merge.hpp"
+#include "caf/flow/op/prefix_and_tail.hpp"
 #include "caf/flow/step.hpp"
 #include "caf/flow/subscription.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -29,330 +32,13 @@
 #include "caf/ref_counted.hpp"
 #include "caf/sec.hpp"
 
+#include <cstddef>
+#include <functional>
+#include <numeric>
+#include <type_traits>
+#include <vector>
+
 namespace caf::flow {
-
-/// Represents a potentially unbound sequence of values.
-template <class T>
-class observable {
-public:
-  using output_type = T;
-
-  /// Internal interface of an `observable`.
-  class impl : public disposable_impl {
-  public:
-    // -- member types ---------------------------------------------------------
-
-    using output_type = T;
-
-    // -- properties -----------------------------------------------------------
-
-    virtual coordinator* ctx() const noexcept = 0;
-
-    // -- conversions ----------------------------------------------------------
-
-    observable as_observable() noexcept;
-
-    // -- flow processing ------------------------------------------------------
-
-    /// Subscribes a new observer.
-    virtual disposable subscribe(observer<T> what) = 0;
-
-    // -- convenience functions ------------------------------------------------
-
-    /// Calls `on_error` on the `sink` with given `code` and returns a
-    /// default-constructed @ref disposable.
-    disposable reject_subscription(observer_impl<T>* sink, sec code) {
-      sink->on_error(make_error(code));
-      return disposable{};
-    }
-
-    /// @copydoc reject_subscription
-    disposable reject_subscription(observer<T>& sink, sec code) {
-      return reject_subscription(sink.ptr(), code);
-    }
-  };
-
-  explicit observable(intrusive_ptr<impl> pimpl) noexcept
-    : pimpl_(std::move(pimpl)) {
-    // nop
-  }
-
-  observable& operator=(std::nullptr_t) noexcept {
-    pimpl_.reset();
-    return *this;
-  }
-
-  observable() noexcept = default;
-  observable(observable&&) noexcept = default;
-  observable(const observable&) noexcept = default;
-  observable& operator=(observable&&) noexcept = default;
-  observable& operator=(const observable&) noexcept = default;
-
-  void dispose() {
-    if (pimpl_) {
-      pimpl_->dispose();
-      pimpl_ = nullptr;
-    }
-  }
-
-  disposable as_disposable() const& noexcept {
-    return disposable{pimpl_};
-  }
-
-  disposable as_disposable() && noexcept {
-    return disposable{std::move(pimpl_)};
-  }
-
-  /// @copydoc impl::subscribe
-  disposable subscribe(observer<T> what) {
-    if (pimpl_) {
-      return pimpl_->subscribe(std::move(what));
-    } else {
-      what.on_error(make_error(sec::invalid_observable));
-      return disposable{};
-    }
-  }
-
-  /// Creates a new observer that pushes all observed items to the resource.
-  disposable subscribe(async::producer_resource<T> resource);
-
-  /// Returns a transformation that applies a step function to each input.
-  template <class Step>
-  transformation<Step> transform(Step step);
-
-  /// Registers a callback for `on_complete` events.
-  template <class F>
-  auto do_on_complete(F f) {
-    return transform(do_on_complete_step<T, F>{std::move(f)});
-  }
-
-  /// Registers a callback for `on_error` events.
-  template <class F>
-  auto do_on_error(F f) {
-    return transform(do_on_error_step<T, F>{std::move(f)});
-  }
-
-  /// Registers a callback that runs on `on_complete` or `on_error`.
-  template <class F>
-  auto do_finally(F f) {
-    return transform(do_finally_step<T, F>{std::move(f)});
-  }
-
-  /// Catches errors by converting them into errors instead.
-  auto on_error_complete() {
-    return transform(on_error_complete_step<T>{});
-  }
-
-  /// Returns a transformation that selects only the first `n` items.
-  transformation<limit_step<T>> take(size_t n);
-
-  /// Returns a transformation that selects only items that satisfy `predicate`.
-  template <class Predicate>
-  transformation<filter_step<Predicate>> filter(Predicate prediate);
-
-  /// Returns a transformation that applies `f` to each input and emits the
-  /// result of the function application.
-  template <class F>
-  transformation<map_step<F>> map(F f);
-
-  /// Calls `on_next` for each item emitted by this observable.
-  template <class OnNext>
-  disposable for_each(OnNext on_next);
-
-  /// Calls `on_next` for each item and `on_error` for each error emitted by
-  /// this observable.
-  template <class OnNext, class OnError>
-  disposable for_each(OnNext on_next, OnError on_error);
-
-  /// Calls `on_next` for each item, `on_error` for each error and `on_complete`
-  /// for each completion signal emitted by this observable.
-  template <class OnNext, class OnError, class OnComplete>
-  disposable for_each(OnNext on_next, OnError on_error, OnComplete on_complete);
-
-  /// Returns a transformation that emits items by merging the outputs of all
-  /// observables returned by `f`.
-  template <class F>
-  auto flat_map(F f);
-
-  /// Returns a transformation that emits items from optional values returned by
-  /// `f`.
-  template <class F>
-  transformation<flat_map_optional_step<F>> flat_map_optional(F f);
-
-  /// Returns a transformation that emits items by concatenating the outputs of
-  /// all observables returned by `f`.
-  template <class F>
-  auto concat_map(F f);
-
-  /// Takes @p prefix_size elements from this observable and emits it in a tuple
-  /// containing an observable for the remaining elements as the second value.
-  /// The returned observable either emits a single element (the tuple) or none
-  /// if this observable never produces sufficient elements for the prefix.
-  /// @pre `prefix_size > 0`
-  observable<cow_tuple<std::vector<T>, observable<T>>>
-  prefix_and_tail(size_t prefix_size);
-
-  /// Similar to `prefix_and_tail(1)` but passes the single element directly in
-  /// the tuple instead of wrapping it in a list.
-  observable<cow_tuple<T, observable<T>>> head_and_tail();
-
-  /// Creates an asynchronous resource that makes emitted items available in a
-  /// spsc buffer.
-  async::consumer_resource<T> to_resource(size_t buffer_size,
-                                          size_t min_request_size);
-
-  async::consumer_resource<T> to_resource() {
-    return to_resource(defaults::flow::buffer_size, defaults::flow::min_demand);
-  }
-
-  observable observe_on(coordinator* other, size_t buffer_size,
-                        size_t min_request_size);
-
-  observable observe_on(coordinator* other) {
-    return observe_on(other, defaults::flow::buffer_size,
-                      defaults::flow::min_demand);
-  }
-
-  const observable& as_observable() const& noexcept {
-    return std::move(*this);
-  }
-
-  observable&& as_observable() && noexcept {
-    return std::move(*this);
-  }
-
-  bool valid() const noexcept {
-    return pimpl_ != nullptr;
-  }
-
-  explicit operator bool() const noexcept {
-    return valid();
-  }
-
-  bool operator!() const noexcept {
-    return !valid();
-  }
-
-  impl* ptr() {
-    return pimpl_.get();
-  }
-
-  const impl* ptr() const {
-    return pimpl_.get();
-  }
-
-  const intrusive_ptr<impl>& as_intrusive_ptr() const& noexcept {
-    return pimpl_;
-  }
-
-  intrusive_ptr<impl>&& as_intrusive_ptr() && noexcept {
-    return std::move(pimpl_);
-  }
-
-  void swap(observable& other) {
-    pimpl_.swap(other.pimpl_);
-  }
-
-  /// @pre `valid()`
-  coordinator* ctx() const {
-    return pimpl_->ctx();
-  }
-
-private:
-  intrusive_ptr<impl> pimpl_;
-};
-
-template <class T>
-observable<T> observable<T>::impl::as_observable() noexcept {
-  return observable<T>{intrusive_ptr{this}};
-}
-
-/// @relates observable
-template <class T>
-using observable_impl = typename observable<T>::impl;
-
-/// Default base type for observable implementation types.
-template <class T>
-class observable_impl_base : public ref_counted,
-                             public observable_impl<T>,
-                             public subscription::listener {
-public:
-  // -- member types -----------------------------------------------------------
-
-  using super = observable_impl<T>;
-
-  using output_type = T;
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  explicit observable_impl_base(coordinator* ctx) : ctx_(ctx) {
-    // nop
-  }
-
-  // -- implementation of disposable_impl --------------------------------------
-
-  disposable as_disposable() noexcept {
-    // We need to implement this only for disambiguation since `as_disposable`
-    // exists in multiple base classes.
-    return subscription::listener::as_disposable();
-  }
-
-  void ref_disposable() const noexcept final {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept final {
-    this->deref();
-  }
-
-  // -- implementation of observable_impl<T> -----------------------------------
-
-  coordinator* ctx() const noexcept final {
-    return ctx_;
-  }
-
-  // -- convenience functions --------------------------------------------------
-
-  /// Creates a subscription for `sink` and returns a @ref disposable to cancel
-  /// the observer.
-  disposable do_subscribe(observer_impl<T>* sink) {
-    sink->on_subscribe(subscription::default_impl::make(ctx_, this, sink));
-    // Note: we do NOT return the subscription here because this object is
-    //       private to the observer. Outside code cancels flows by calling
-    //       dispose on the observer.
-    return sink->as_disposable();
-  }
-
-  /// @copydoc do_subscribe
-  disposable do_subscribe(observer<T>& sink) {
-    return do_subscribe(sink.ptr());
-  }
-
-protected:
-  // -- member variables -------------------------------------------------------
-
-  coordinator* ctx_;
-};
-
-/// Convenience function for creating a sub-type of @ref observable_impl without
-/// exposing the derived type.
-template <class Impl, class... Ts>
-intrusive_ptr<observable_impl<typename Impl::output_type>>
-make_observable_impl(coordinator* ctx, Ts&&... xs) {
-  using out_t = typename Impl::output_type;
-  using res_t = intrusive_ptr<observable_impl<out_t>>;
-  observable_impl<out_t>* ptr = new Impl(ctx, std::forward<Ts>(xs)...);
-  return res_t{ptr, false};
-}
-
-/// Convenience function for creating an @ref observable from a concrete
-/// implementation type.
-template <class Impl, class... Ts>
-observable<typename Impl::output_type>
-make_observable(coordinator* ctx, Ts&&... xs) {
-  using res_t = observable<typename Impl::output_type>;
-  return res_t{make_observable_impl<Impl>(ctx, std::forward<Ts>(xs)...)};
-}
 
 /// Base type for classes that represent a definition of an `observable` which
 /// has not yet been converted to an actual `observable`.
@@ -363,402 +49,83 @@ public:
 
   template <class OnNext>
   auto for_each(OnNext on_next) && {
-    return lift().for_each(std::move(on_next));
+    return alloc().for_each(std::move(on_next));
   }
 
   template <class OnNext, class OnError>
   auto for_each(OnNext on_next, OnError on_error) && {
-    return lift().for_each(std::move(on_next), std::move(on_error));
+    return alloc().for_each(std::move(on_next), std::move(on_error));
   }
 
   template <class OnNext, class OnError, class OnComplete>
   auto for_each(OnNext on_next, OnError on_error, OnComplete on_complete) && {
-    return lift().for_each(std::move(on_next), std::move(on_error),
-                           std::move(on_complete));
+    return alloc().for_each(std::move(on_next), std::move(on_error),
+                            std::move(on_complete));
+  }
+
+  template <class... Inputs>
+  auto merge(Inputs&&... xs) && {
+    return alloc().as_observable().merge(std::forward<Inputs>(xs)...);
+  }
+
+  template <class... Inputs>
+  auto concat(Inputs&&... xs) && {
+    return alloc().as_observable().concat(std::forward<Inputs>(xs)...);
   }
 
   template <class F>
   auto flat_map(F f) && {
-    return lift().flat_map(std::move(f));
+    return alloc().flat_map(std::move(f));
   }
 
   template <class F>
   auto concat_map(F f) && {
-    return lift().concat_map(std::move(f));
+    return alloc().concat_map(std::move(f));
   }
 
   observable<cow_tuple<std::vector<T>, observable<T>>>
   prefix_and_tail(size_t prefix_size) && {
-    return lift().prefix_and_tail(prefix_size);
+    return alloc().prefix_and_tail(prefix_size);
   }
 
   observable<cow_tuple<T, observable<T>>> head_and_tail() && {
-    return lift().head_and_tail();
+    return alloc().head_and_tail();
   }
 
   disposable subscribe(observer<T> what) && {
-    return lift().subscribe(std::move(what));
+    return alloc().subscribe(std::move(what));
   }
 
   disposable subscribe(async::producer_resource<T> resource) && {
-    return lift().subscribe(std::move(resource));
+    return alloc().subscribe(std::move(resource));
   }
 
   async::consumer_resource<T> to_resource() && {
-    return lift().to_resource();
+    return alloc().to_resource();
   }
 
   async::consumer_resource<T> to_resource(size_t buffer_size,
                                           size_t min_request_size) && {
-    return lift().to_resource(buffer_size, min_request_size);
+    return alloc().to_resource(buffer_size, min_request_size);
   }
 
   observable<T> observe_on(coordinator* other) && {
-    return lift().observe_on(other);
+    return alloc().observe_on(other);
   }
 
   observable<T> observe_on(coordinator* other, size_t buffer_size,
                            size_t min_request_size) && {
-    return lift().observe_on(other, buffer_size, min_request_size);
+    return alloc().observe_on(other, buffer_size, min_request_size);
   }
 
   virtual observable<T> as_observable() && = 0;
 
 private:
-  decltype(auto) lift() {
+  /// Allocates and returns an actual @ref observable.
+  decltype(auto) alloc() {
     return std::move(*this).as_observable();
   }
 };
-
-template <class In, class Out>
-class processor {
-public:
-  class impl : public observer_impl<In>, public observable_impl<Out> {
-  public:
-    observer_impl<In>* as_observer_ptr() noexcept {
-      return this;
-    }
-
-    observable_impl<In>* as_observable_ptr() noexcept {
-      return this;
-    }
-  };
-
-  explicit processor(intrusive_ptr<impl> pimpl) noexcept
-    : pimpl_(std::move(pimpl)) {
-    // nop
-  }
-
-  processor& operator=(std::nullptr_t) noexcept {
-    pimpl_.reset();
-    return *this;
-  }
-
-  using input_type = In;
-
-  using output_type = Out;
-
-  processor() noexcept = default;
-  processor(processor&&) noexcept = default;
-  processor(const processor&) noexcept = default;
-  processor& operator=(processor&&) noexcept = default;
-  processor& operator=(const processor&) noexcept = default;
-
-  // -- conversion -------------------------------------------------------------
-
-  disposable as_disposable() const& noexcept {
-    return as_observable().as_disposable();
-  }
-
-  disposable as_disposable() && noexcept {
-    return std::move(*this).as_observable().as_disposable();
-  }
-
-  observer<In> as_observer() const& noexcept {
-    return pimpl_->as_observer();
-  }
-
-  observer<In> as_observer() && noexcept {
-    auto raw = pimpl_.release()->as_observer_ptr();
-    auto ptr = intrusive_ptr<observer_impl<In>>{raw, false};
-    return observer<In>{std::move(ptr)};
-  }
-
-  observable<Out> as_observable() const& noexcept {
-    return pimpl_->as_observable();
-  }
-
-  observable<Out> as_observable() && noexcept {
-    auto raw = pimpl_.release()->as_observable_ptr();
-    auto ptr = intrusive_ptr<observable_impl<Out>>{raw, false};
-    return observable<Out>{std::move(ptr)};
-  }
-
-private:
-  intrusive_ptr<impl> pimpl_;
-};
-
-/// @relates processor
-template <class In, class Out = In>
-using processor_impl = typename processor<In, Out>::impl;
-
-/// Default base type for processor implementation types.
-/// @relates processor
-template <class In, class Out>
-class processor_impl_base : public ref_counted,
-                            public processor_impl<In, Out>,
-                            public subscription::listener {
-public:
-  // -- member types -----------------------------------------------------------
-
-  using super = processor_impl<In, Out>;
-
-  using input_type = In;
-
-  using output_type = Out;
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  explicit processor_impl_base(coordinator* ctx) : ctx_(ctx) {
-    // nop
-  }
-
-  // -- implementation of disposable_impl --------------------------------------
-
-  disposable as_disposable() noexcept {
-    // We need to implement this only for disambiguation since `as_disposable`
-    // exists in multiple base classes.
-    return subscription::listener::as_disposable();
-  }
-
-  void ref_disposable() const noexcept final {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept final {
-    this->deref();
-  }
-
-  // -- implementation of processor_impl<T> -----------------------------------
-
-  coordinator* ctx() const noexcept final {
-    return ctx_;
-  }
-
-  // -- convenience functions --------------------------------------------------
-
-  /// Creates a subscription for `sink` and returns a @ref disposable to cancel
-  /// the observer.
-  disposable do_subscribe(observer_impl<Out>* sink) {
-    sink->on_subscribe(subscription::default_impl::make(ctx_, this, sink));
-    // Note: we do NOT return the subscription here because this object is
-    //       private to the observer. Outside code cancels flows by calling
-    //       dispose on the observer.
-    return disposable{intrusive_ptr<disposable_impl>{sink}};
-  }
-
-  /// @copydoc do_subscribe
-  disposable do_subscribe(observer<Out>& sink) {
-    return do_subscribe(sink.ptr());
-  }
-
-protected:
-  // -- member variables -------------------------------------------------------
-
-  coordinator* ctx_;
-};
-
-// -- representing an error as an observable -----------------------------------
-
-template <class T>
-class observable_error_impl : public ref_counted, public observable_impl<T> {
-public:
-  // -- constructors, destructors, and assignment operators --------------------
-
-  observable_error_impl(coordinator* ctx, error what)
-    : ctx_(ctx), what_(std::move(what)) {
-    // nop
-  }
-
-  // -- implementation of disposable_impl --------------------------------------
-
-  void ref_disposable() const noexcept final {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept final {
-    this->deref();
-  }
-
-  void dispose() override {
-    // nop
-  }
-
-  bool disposed() const noexcept override {
-    return true;
-  }
-
-  // -- implementation of observable<T>::impl ----------------------------------
-
-  coordinator* ctx() const noexcept final {
-    return ctx_;
-  }
-
-  disposable subscribe(observer<T> what) override {
-    what.on_error(what_);
-    return {};
-  }
-
-private:
-  coordinator* ctx_;
-  error what_;
-};
-
-// -- broadcasting -------------------------------------------------------------
-
-/// Broadcasts its input to all observers without modifying it.
-template <class Step, class... Steps>
-class broadcaster_impl
-  : public processor_impl_base<typename Step::input_type,
-                               steps_output_type_t<Step, Steps...>> {
-public:
-  // -- member types -----------------------------------------------------------
-
-  using input_type = typename Step::input_type;
-
-  using output_type = steps_output_type_t<Step, Steps...>;
-
-  using super = processor_impl_base<input_type, output_type>;
-
-  // -- friends ----------------------------------------------------------------
-
-  CAF_INTRUSIVE_PTR_FRIENDS(broadcaster_impl)
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  template <class... Ts>
-  explicit broadcaster_impl(coordinator* ctx, Ts&&... step_args)
-    : super(ctx), steps_(std::forward<Ts>(step_args)...) {
-    // nop
-  }
-
-  // -- implementation of disposable_impl --------------------------------------
-
-  void dispose() override {
-    CAF_LOG_TRACE("");
-    term_.dispose();
-  }
-
-  bool disposed() const noexcept override {
-    return !term_.active();
-  }
-
-  // -- implementation of observer<T>::impl ------------------------------------
-
-  void on_subscribe(subscription sub) override {
-    if (term_.start(sub))
-      sub_ = std::move(sub);
-  }
-
-  void on_next(const input_type& item) override {
-    if (!term_.finalized()) {
-      auto f = [this, &item](auto& step, auto&... steps) {
-        return step.on_next(item, steps..., term_);
-      };
-      auto still_running = std::apply(f, steps_);
-      term_.push();
-      if (!still_running && sub_) {
-        CAF_ASSERT(!term_.active());
-        sub_.cancel();
-        sub_ = nullptr;
-      }
-    }
-  }
-
-  void on_complete() override {
-    if (term_.active()) {
-      auto f = [this](auto& step, auto&... steps) {
-        step.on_complete(steps..., term_);
-      };
-      std::apply(f, steps_);
-      sub_ = nullptr;
-    }
-  }
-
-  void on_error(const error& what) override {
-    if (term_.active()) {
-      auto f = [this, &what](auto& step, auto&... steps) {
-        step.on_error(what, steps..., term_);
-      };
-      std::apply(f, steps_);
-      sub_ = nullptr;
-    }
-  }
-
-  // -- implementation of subscription::listener -------------------------------
-
-  void on_request(disposable_impl* sink, size_t n) override {
-    CAF_LOG_TRACE(CAF_ARG(n));
-    term_.on_request(sub_, sink, n);
-  }
-
-  void on_cancel(disposable_impl* sink) override {
-    CAF_LOG_TRACE("");
-    term_.on_cancel(sub_, sink);
-  }
-
-  // -- implementation of observable<T>::impl ----------------------------------
-
-  disposable subscribe(observer<output_type> sink) override {
-    return term_.add(this, sink);
-  }
-
-  // -- properties -------------------------------------------------------------
-
-  size_t buffered() const noexcept {
-    return term_.buffered();
-  }
-
-  observable_state state() const noexcept {
-    return term_.state();
-  }
-
-  const error& err() const noexcept {
-    return term_.err();
-  }
-
-protected:
-  /// Allows us to request more items.
-  subscription sub_;
-
-  /// The processing steps that we apply before pushing data downstream.
-  std::tuple<Step, Steps...> steps_;
-
-  /// Pushes data to the observers.
-  broadcast_step<output_type> term_;
-};
-
-/// @relates broadcaster_impl
-template <class Step, class... Steps>
-using broadcaster_impl_ptr = intrusive_ptr<broadcaster_impl<Step, Steps...>>;
-
-/// @relates broadcaster_impl
-template <class T>
-broadcaster_impl_ptr<identity_step<T>> make_broadcaster_impl(coordinator* ctx) {
-  return make_counted<broadcaster_impl<identity_step<T>>>(ctx);
-}
-
-/// @relates broadcaster_impl
-template <class Step, class... Steps>
-broadcaster_impl_ptr<Step, Steps...>
-make_broadcaster_impl_from_tuple(coordinator* ctx,
-                                 std::tuple<Step, Steps...>&& tup) {
-  auto f = [ctx](Step&& step, Steps&&... steps) {
-    return make_counted<broadcaster_impl<Step, Steps...>>(ctx, std::move(step),
-                                                          std::move(steps)...);
-  };
-  return std::apply(f, std::move(tup));
-}
 
 // -- transformation -----------------------------------------------------------
 
@@ -803,6 +170,26 @@ public:
       filter_step<Predicate>{std::move(predicate)});
   }
 
+  template <class Predicate>
+  auto take_while(Predicate predicate) && {
+    return std::move(*this).transform(
+      take_while_step<Predicate>{std::move(predicate)});
+  }
+
+  template <class Reducer>
+  auto reduce(output_type init, Reducer reducer) && {
+    return std::move(*this).transform(
+      reduce_step<output_type, Reducer>{init, reducer});
+  }
+
+  auto sum() && {
+    return std::move(*this).reduce(output_type{}, std::plus<output_type>{});
+  }
+
+  auto distinct() && {
+    return std::move(*this).transform(distinct_step<output_type>{});
+  }
+
   template <class F>
   auto map(F f) && {
     return std::move(*this).transform(map_step<F>{std::move(f)});
@@ -811,6 +198,12 @@ public:
   template <class F>
   auto flat_map_optional(F f) && {
     return std::move(*this).transform(flat_map_optional_step<F>{std::move(f)});
+  }
+
+  template <class F>
+  auto do_on_next(F f) && {
+    return std::move(*this) //
+      .transform(do_on_next_step<output_type, F>{std::move(f)});
   }
 
   template <class F>
@@ -830,18 +223,16 @@ public:
     return std::move(*this) //
       .transform(do_finally_step<output_type, F>{std::move(f)});
   }
+
   auto on_error_complete() {
     return std::move(*this) //
       .transform(on_error_complete_step<output_type>{});
   }
 
   observable<output_type> as_observable() && {
-    auto pimpl = make_broadcaster_impl_from_tuple(source_.ptr()->ctx(),
-                                                  std::move(steps_));
-    auto res = pimpl->as_observable();
-    source_.subscribe(observer<input_type>{std::move(pimpl)});
-    source_ = nullptr;
-    return res;
+    using impl_t = op::from_steps<input_type, Step, Steps...>;
+    return make_observable<impl_t>(source_.ctx(), source_.pimpl(),
+                                   std::move(steps_));
   }
 
 private:
@@ -878,6 +269,34 @@ observable<T>::filter(Predicate predicate) {
   return {*this, std::forward_as_tuple(step_type{std::move(predicate)})};
 }
 
+// -- observable::take_while ---------------------------------------------------
+
+template <class T>
+template <class Predicate>
+transformation<take_while_step<Predicate>>
+observable<T>::take_while(Predicate predicate) {
+  using step_type = take_while_step<Predicate>;
+  static_assert(std::is_same_v<typename step_type::input_type, T>,
+                "predicate does not match the input type");
+  return {*this, std::forward_as_tuple(step_type{std::move(predicate)})};
+}
+
+// -- observable::sum ----------------------------------------------------------
+
+template <class T>
+template <class Reducer>
+transformation<reduce_step<T, Reducer>>
+observable<T>::reduce(T init, Reducer reducer) {
+  return {*this, reduce_step<T, Reducer>{init, reducer}};
+}
+
+// -- observable::distinct -----------------------------------------------------
+
+template <class T>
+transformation<distinct_step<T>> observable<T>::distinct() {
+  return {*this, distinct_step<T>{}};
+}
+
 // -- observable::map ----------------------------------------------------------
 
 template <class T>
@@ -895,16 +314,14 @@ template <class T>
 template <class OnNext>
 disposable observable<T>::for_each(OnNext on_next) {
   auto obs = make_observer(std::move(on_next));
-  subscribe(observer<T>{obs});
-  return std::move(obs).as_disposable();
+  return subscribe(std::move(obs));
 }
 
 template <class T>
 template <class OnNext, class OnError>
 disposable observable<T>::for_each(OnNext on_next, OnError on_error) {
   auto obs = make_observer(std::move(on_next), std::move(on_error));
-  subscribe(obs);
-  return std::move(obs).as_disposable();
+  return subscribe(std::move(obs));
 }
 
 template <class T>
@@ -913,401 +330,55 @@ disposable observable<T>::for_each(OnNext on_next, OnError on_error,
                                    OnComplete on_complete) {
   auto obs = make_observer(std::move(on_next), std::move(on_error),
                            std::move(on_complete));
-  subscribe(obs);
-  return std::move(obs).as_disposable();
+  return subscribe(std::move(obs));
+}
+
+// -- observable::merge --------------------------------------------------------
+
+template <class T>
+template <class... Inputs>
+auto observable<T>::merge(Inputs&&... xs) {
+  if constexpr (is_observable_v<output_type>) {
+    using value_t = output_type_t<output_type>;
+    using impl_t = op::merge<value_t>;
+    return make_observable<impl_t>(ctx(), *this, std::forward<Inputs>(xs)...);
+  } else {
+    static_assert(
+      sizeof...(Inputs) > 0,
+      "merge without arguments expects this observable to emit observables");
+    using impl_t = op::merge<output_type>;
+    return make_observable<impl_t>(ctx(), *this, std::forward<Inputs>(xs)...);
+  }
 }
 
 // -- observable::flat_map -----------------------------------------------------
 
-/// @relates merger_impl
-template <class T>
-struct merger_input {
-  explicit merger_input(observable<T> in) : in(std::move(in)) {
-    // nop
-  }
-
-  /// Stores a handle to the input observable for delayed subscription.
-  observable<T> in;
-
-  /// The subscription to this input.
-  subscription sub;
-
-  /// Stores received items until the merger can forward them downstream.
-  std::vector<T> buf;
-};
-
-/// Combines items from any number of observables.
-template <class T>
-class merger_impl : public observable_impl_base<T> {
-public:
-  // -- member types -----------------------------------------------------------
-
-  using super = observable_impl_base<T>;
-
-  using input_t = merger_input<T>;
-
-  using input_ptr = std::unique_ptr<input_t>;
-
-  using input_key = size_t;
-
-  using input_map = detail::unordered_flat_map<input_key, input_ptr>;
-
-  // -- friends ----------------------------------------------------------------
-
-  CAF_INTRUSIVE_PTR_FRIENDS(merger_impl)
-
-  template <class, class, class>
-  friend class flow::forwarder;
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  explicit merger_impl(coordinator* ctx) : super(ctx) {
-    // nop
-  }
-
-  // -- implementation of disposable_impl --------------------------------------
-
-  void dispose() override {
-    for (auto& kvp : inputs_) {
-      auto& input = *kvp.second;
-      if (input.in) {
-        input.in = nullptr;
-      }
-      if (input.sub) {
-        input.sub.cancel();
-        input.sub = nullptr;
-      }
-    }
-    inputs_.clear();
-    term_.dispose();
-  }
-
-  bool disposed() const noexcept override {
-    return term_.finalized();
-  }
-
-  // -- implementation of observable<T>::impl ----------------------------------
-
-  void on_request(disposable_impl* sink, size_t demand) override {
-    if (auto n = term_.on_request(sink, demand); n > 0) {
-      pull(n);
-      term_.push();
-    }
-  }
-
-  void on_cancel(disposable_impl* sink) override {
-    if (auto n = term_.on_cancel(sink); n > 0) {
-      pull(n);
-      term_.push();
-    }
-  }
-
-  disposable subscribe(observer<T> sink) override {
-    // On the first subscribe, we subscribe to our inputs unless the user did
-    // not add any inputs before that. In that case, we close immediately except
-    // when running with shutdown_on_last_complete turned off.
-    if (term_.idle() && inputs_.empty() && flags_.shutdown_on_last_complete)
-      term_.close();
-    auto res = term_.add(this, sink);
-    if (res && term_.start()) {
-      for (auto& [key, input] : inputs_) {
-        using fwd_impl = forwarder<T, merger_impl, size_t>;
-        auto fwd = make_counted<fwd_impl>(this, key);
-        input->in.subscribe(fwd->as_observer());
-      }
-    }
-    return res;
-  }
-
-  // -- dynamic input management -----------------------------------------------
-
-  template <class Observable>
-  void add(Observable source) {
-    switch (term_.state()) {
-      case observable_state::idle:
-        // Only add to the inputs but don't subscribe yet.
-        emplace(std::move(source).as_observable());
-        break;
-      case observable_state::running: {
-        // Add and subscribe.
-        auto& [key, input] = emplace(std::move(source).as_observable());
-        using fwd_impl = forwarder<T, merger_impl, size_t>;
-        auto fwd = make_counted<fwd_impl>(this, key);
-        input->in.subscribe(fwd->as_observer());
-        break;
-      }
-      default:
-        // In any other case, this turns into a no-op.
-        break;
-    }
-  }
-
-  // -- properties -------------------------------------------------------------
-
-  size_t buffered() {
-    return std::accumulate(inputs_.begin(), inputs_.end(), size_t{0},
-                           [](size_t tmp, const merger_input<T>& in) {
-                             return tmp + in.buf.size();
-                           });
-  }
-
-  bool shutdown_on_last_complete() const noexcept {
-    return flags_.shutdown_on_last_complete;
-  }
-
-  void shutdown_on_last_complete(bool new_value) noexcept {
-    flags_.shutdown_on_last_complete = new_value;
-    if (new_value && inputs_.empty())
-      term_.fin();
-  }
-
-private:
-  typename input_map::value_type& emplace(observable<T> source) {
-    auto& vec = inputs_.container();
-    vec.emplace_back(next_key_++, std::make_unique<input_t>(std::move(source)));
-    return vec.back();
-  }
-
-  void fwd_on_subscribe(input_key key, subscription sub) {
-    if (!term_.finalized()) {
-      if (auto i = inputs_.find(key); i != inputs_.end()) {
-        auto& in = *i->second;
-        sub.request(max_pending_);
-        in.sub = std::move(sub);
-      } else {
-        sub.cancel();
-      }
-    } else {
-      sub.cancel();
-    }
-  }
-
-  void drop_if_empty(typename input_map::iterator i) {
-    auto& in = *i->second;
-    if (in.buf.empty()) {
-      inputs_.erase(i);
-      if (inputs_.empty() && flags_.shutdown_on_last_complete)
-        term_.fin();
-    } else {
-      in.in = nullptr;
-      in.sub = nullptr;
-    }
-  }
-
-  void fwd_on_complete(input_key key) {
-    if (auto i = inputs_.find(key); i != inputs_.end())
-      drop_if_empty(i);
-  }
-
-  void fwd_on_error(input_key key, const error& what) {
-    if (auto i = inputs_.find(key); i != inputs_.end()) {
-      if (!term_.err()) {
-        term_.err(what);
-        if (flags_.delay_error) {
-          drop_if_empty(i);
-        } else {
-          auto& in = *i->second;
-          if (!in.buf.empty()) {
-            for (auto& item : in.buf)
-              term_.on_next(item);
-          }
-          term_.fin();
-          for (auto j = inputs_.begin(); j != inputs_.end(); ++j)
-            if (j != i && j->second->sub)
-              j->second->sub.cancel();
-          inputs_.clear();
-        }
-      } else {
-        drop_if_empty(i);
-      }
-    }
-  }
-
-  void fwd_on_next(input_key key, const T& item) {
-    if (auto i = inputs_.find(key); i != inputs_.end()) {
-      auto& in = *i->second;
-      if (!term_.finalized()) {
-        if (term_.min_demand() > 0) {
-          term_.on_next(item);
-          term_.push();
-          if (in.sub)
-            in.sub.request(1);
-        } else {
-          in.buf.emplace_back(item);
-        }
-      }
-    }
-  }
-
-  void pull(size_t n) {
-    // Must not be re-entered. Any on_request call must use the event loop.
-    CAF_ASSERT(!pulling_);
-    if (inputs_.empty()) {
-      if (flags_.shutdown_on_last_complete)
-        term_.fin();
-      return;
-    }
-    CAF_DEBUG_STMT(pulling_ = true);
-    auto& in_vec = inputs_.container();
-    for (size_t i = 0; n > 0 && i < inputs_.size(); ++i) {
-      auto index = (pos_ + 1) % inputs_.size();
-      auto& in = *in_vec[index].second;
-      if (auto m = std::min(in.buf.size(), n); m > 0) {
-        n -= m;
-        auto items = make_span(in.buf.data(), m);
-        for (auto& item : items)
-          term_.on_next(item);
-        in.buf.erase(in.buf.begin(), in.buf.begin() + m);
-        if (in.sub) {
-          in.sub.request(m);
-          pos_ = index;
-        } else if (!in.in && in.buf.empty()) {
-          in_vec.erase(in_vec.begin() + index);
-          if (in_vec.empty()) {
-            if (flags_.shutdown_on_last_complete)
-              term_.fin();
-            CAF_DEBUG_STMT(pulling_ = false);
-            return;
-          }
-        } else {
-          pos_ = index;
-        }
-      }
-    }
-    CAF_DEBUG_STMT(pulling_ = false);
-  }
-
-  struct flags_t {
-    bool delay_error : 1;
-    bool shutdown_on_last_complete : 1;
-
-    flags_t() : delay_error(false), shutdown_on_last_complete(true) {
-      // nop
-    }
-  };
-
-  /// Fine-tunes the behavior of the merger.
-  flags_t flags_;
-
-  /// Configures how many items we buffer per input.
-  size_t max_pending_ = defaults::flow::buffer_size;
-
-  /// Stores the last round-robin read position.
-  size_t pos_ = 0;
-
-  /// Associates inputs with ascending keys.
-  input_map inputs_;
-
-  /// Stores the last round-robin read position.
-  size_t next_key_ = 0;
-
-  /// Pushes items to subscribed observers.
-  broadcast_step<T> term_;
-
-#ifdef CAF_ENABLE_RUNTIME_CHECKS
-  /// Protect against re-entering `pull`.
-  bool pulling_ = false;
-#endif
-};
-
-template <class T>
-using merger_impl_ptr = intrusive_ptr<merger_impl<T>>;
-
-template <class T, class F>
-class flat_map_observer_impl : public ref_counted, public observer_impl<T> {
-public:
-  using mapped_type = decltype((std::declval<F&>())(std::declval<const T&>()));
-
-  using inner_type = typename mapped_type::output_type;
-
-  CAF_INTRUSIVE_PTR_FRIENDS(flat_map_observer_impl)
-
-  flat_map_observer_impl(coordinator* ctx, F f)
-    : ctx_(ctx), map_(std::move(f)) {
-    merger_.emplace(ctx);
-    merger_->shutdown_on_last_complete(false);
-  }
-
-  void dispose() override {
-    if (sub_) {
-      sub_.cancel();
-      sub_ = nullptr;
-      merger_->shutdown_on_last_complete(true);
-      merger_ = nullptr;
-    }
-  }
-
-  bool disposed() const noexcept override {
-    return merger_ != nullptr;
-  }
-
-  void ref_disposable() const noexcept final {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept final {
-    this->deref();
-  }
-
-  void on_complete() override {
-    if (sub_) {
-      sub_ = nullptr;
-      merger_->shutdown_on_last_complete(true);
-      merger_ = nullptr;
-    }
-  }
-
-  void on_error(const error& what) override {
-    if (sub_) {
-      sub_ = nullptr;
-      merger_->shutdown_on_last_complete(true);
-      auto obs = make_observable<observable_error_impl<inner_type>>(ctx_, what);
-      merger_->add(std::move(obs));
-      merger_ = nullptr;
-    }
-  }
-
-  void on_subscribe(subscription sub) override {
-    if (!sub_ && merger_) {
-      sub_ = std::move(sub);
-      sub_.request(10);
-    } else {
-      sub.cancel();
-    }
-  }
-
-  void on_next(const T& src) override {
-    if (sub_) {
-      merger_->add(map_(src).as_observable());
-      sub_.request(1);
-    }
-  }
-
-  observable<inner_type> merger() {
-    return observable<inner_type>{merger_};
-  }
-
-  auto& merger_ptr() {
-    return merger_;
-  }
-
-private:
-  coordinator* ctx_;
-  subscription sub_;
-  F map_;
-  intrusive_ptr<merger_impl<inner_type>> merger_;
-};
-
 template <class T>
 template <class F>
 auto observable<T>::flat_map(F f) {
-  using f_res = decltype(f(std::declval<const T&>()));
-  static_assert(is_observable_v<f_res>,
-                "mapping functions must return an observable");
-  using impl_t = flat_map_observer_impl<T, F>;
-  auto obs = make_counted<impl_t>(pimpl_->ctx(), std::move(f));
-  pimpl_->subscribe(obs->as_observer());
-  return obs->merger();
+  using res_t = decltype(f(std::declval<const output_type&>()));
+  if constexpr (is_observable_v<res_t>) {
+    return map([fn = std::move(f)](const output_type& x) mutable {
+             return fn(x).as_observable();
+           })
+      .merge();
+  } else if constexpr (detail::is_optional_v<res_t>) {
+    return map([fn = std::move(f)](const output_type& x) mutable {
+             return fn(x);
+           })
+      .filter([](const res_t& x) { return x.has_value(); })
+      .map([](const res_t& x) { return *x; });
+  } else {
+    // Here, we dispatch to concat() instead of merging the containers. Merged
+    // output is probably not what anyone would expect and since the values are
+    // all available immediately, there is no good reason to mess up the emitted
+    // order of values.
+    static_assert(detail::is_iterable_v<res_t>);
+    return map([cptr = ctx(), fn = std::move(f)](const output_type& x) mutable {
+             return cptr->make_observable().from_container(fn(x));
+           })
+      .concat();
+  }
 }
 
 // -- observable::flat_map_optional --------------------------------------------
@@ -1322,495 +393,57 @@ observable<T>::flat_map_optional(F f) {
   return {*this, std::forward_as_tuple(step_type{std::move(f)})};
 }
 
-// -- observable::concat_map ---------------------------------------------------
+// -- observable::concat -------------------------------------------------------
 
-/// Combines items from any number of observables.
 template <class T>
-class concat_impl : public observable_impl_base<T> {
-public:
-  // -- member types -----------------------------------------------------------
-
-  using super = observable_impl_base<T>;
-
-  using input_key = size_t;
-
-  // -- friends ----------------------------------------------------------------
-
-  CAF_INTRUSIVE_PTR_FRIENDS(concat_impl)
-
-  template <class, class, class>
-  friend class flow::forwarder;
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  explicit concat_impl(coordinator* ctx) : super(ctx) {
-    // nop
+template <class... Inputs>
+auto observable<T>::concat(Inputs&&... xs) {
+  if constexpr (is_observable_v<output_type>) {
+    using value_t = output_type_t<output_type>;
+    using impl_t = op::concat<value_t>;
+    return make_observable<impl_t>(ctx(), *this, std::forward<Inputs>(xs)...);
+  } else {
+    static_assert(
+      sizeof...(Inputs) > 0,
+      "merge without arguments expects this observable to emit observables");
+    using impl_t = op::concat<output_type>;
+    return make_observable<impl_t>(ctx(), *this, std::forward<Inputs>(xs)...);
   }
+}
 
-  // -- implementation of disposable_impl --------------------------------------
-
-  void dispose() override {
-    if (sub_)
-      sub_.cancel();
-    inputs_.clear();
-    term_.dispose();
-  }
-
-  bool disposed() const noexcept override {
-    return term_.finalized();
-  }
-
-  // -- implementation of subscription::listener -------------------------------
-
-  void on_request(disposable_impl* sink, size_t demand) override {
-    if (auto n = term_.on_request(sink, demand); n > 0) {
-      in_flight_ += n;
-      if (sub_)
-        sub_.request(n);
-    }
-  }
-
-  void on_cancel(disposable_impl* sink) override {
-    if (auto n = term_.on_cancel(sink); n > 0) {
-      in_flight_ += n;
-      if (sub_)
-        sub_.request(n);
-    }
-  }
-
-  // -- implementation of observable<T>::impl ----------------------------------
-
-  disposable subscribe(observer<T> sink) override {
-    // On the first subscribe, we subscribe to our inputs unless the user did
-    // not add any inputs before that. In that case, we close immediately except
-    // when running with shutdown_on_last_complete turned off.
-    if (term_.idle() && inputs_.empty() && flags_.shutdown_on_last_complete)
-      term_.close();
-    auto res = term_.add(this, sink);
-    if (res && term_.start() && !inputs_.empty())
-      subscribe_next();
-    return res;
-  }
-
-  // -- dynamic input management -----------------------------------------------
-
-  template <class Observable>
-  void add(Observable source) {
-    switch (term_.state()) {
-      case observable_state::idle:
-        inputs_.emplace_back(std::move(source).as_observable());
-        break;
-      case observable_state::running:
-        inputs_.emplace_back(std::move(source).as_observable());
-        if (inputs_.size() == 1)
-          subscribe_next();
-        break;
-      default:
-        // In any other case, this turns into a no-op.
-        break;
-    }
-  }
-
-  // -- properties -------------------------------------------------------------
-
-  bool shutdown_on_last_complete() const noexcept {
-    return flags_.shutdown_on_last_complete;
-  }
-
-  void shutdown_on_last_complete(bool new_value) noexcept {
-    flags_.shutdown_on_last_complete = new_value;
-    if (new_value && inputs_.empty())
-      term_.fin();
-  }
-
-private:
-  void subscribe_next() {
-    CAF_ASSERT(!inputs_.empty());
-    CAF_ASSERT(!sub_);
-    auto input = inputs_.front();
-    ++in_key_;
-    using fwd_impl = forwarder<T, concat_impl, size_t>;
-    auto fwd = make_counted<fwd_impl>(this, in_key_);
-    input.subscribe(fwd->as_observer());
-  }
-
-  void fwd_on_subscribe(input_key key, subscription sub) {
-    if (in_key_ == key && term_.active()) {
-      sub_ = std::move(sub);
-      if (in_flight_ > 0)
-        sub_.request(in_flight_);
-    } else {
-      sub.cancel();
-    }
-  }
-
-  void fwd_on_complete(input_key key) {
-    if (in_key_ == key) {
-      inputs_.erase(inputs_.begin());
-      sub_ = nullptr;
-      if (!inputs_.empty()) {
-        subscribe_next();
-      } else if (flags_.shutdown_on_last_complete) {
-        term_.fin();
-      }
-    }
-  }
-
-  void fwd_on_error(input_key key, const error& what) {
-    if (in_key_ == key) {
-      if (!flags_.delay_error) {
-        term_.on_error(what);
-        sub_ = nullptr;
-        inputs_.clear();
-      } else if (!term_.err()) {
-        term_.err(what);
-        fwd_on_complete(key);
-      } else {
-        fwd_on_complete(key);
-      }
-    }
-  }
-
-  void fwd_on_next(input_key key, const T& item) {
-    if (in_key_ == key && !term_.finalized()) {
-      CAF_ASSERT(in_flight_ >= 0);
-      --in_flight_;
-      term_.on_next(item);
-      term_.push();
-    }
-  }
-
-  struct flags_t {
-    bool delay_error : 1;
-    bool shutdown_on_last_complete : 1;
-
-    flags_t() : delay_error(false), shutdown_on_last_complete(true) {
-      // nop
-    }
-  };
-
-  /// Fine-tunes the behavior of the concat.
-  flags_t flags_;
-
-  /// Stores our input sources. The first input is active (subscribed to) while
-  /// the others are pending (not subscribed to).
-  std::vector<observable<T>> inputs_;
-
-  /// Our currently active subscription.
-  subscription sub_;
-
-  /// Identifies the forwarder.
-  input_key in_key_ = 0;
-
-  /// Stores how much demand we have left. When switching to a new input, we
-  /// pass any demand unused by the previous input to the new one.
-  size_t in_flight_ = 0;
-
-  /// Pushes items to subscribed observers.
-  broadcast_step<T> term_;
-};
-
-template <class T, class F>
-class concat_map_observer_impl : public ref_counted, public observer_impl<T> {
-public:
-  using mapped_type = decltype((std::declval<F&>())(std::declval<const T&>()));
-
-  using inner_type = typename mapped_type::output_type;
-
-  CAF_INTRUSIVE_PTR_FRIENDS(concat_map_observer_impl)
-
-  concat_map_observer_impl(coordinator* ctx, F f)
-    : ctx_(ctx), map_(std::move(f)) {
-    concat_.emplace(ctx);
-    concat_->shutdown_on_last_complete(false);
-  }
-
-  void dispose() override {
-    if (sub_) {
-      sub_.cancel();
-      sub_ = nullptr;
-      concat_->shutdown_on_last_complete(true);
-      concat_ = nullptr;
-    }
-  }
-
-  bool disposed() const noexcept override {
-    return concat_ != nullptr;
-  }
-
-  void ref_disposable() const noexcept final {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept final {
-    this->deref();
-  }
-
-  void on_complete() override {
-    if (sub_) {
-      sub_ = nullptr;
-      concat_->shutdown_on_last_complete(true);
-      concat_ = nullptr;
-    }
-  }
-
-  void on_error(const error& what) override {
-    if (sub_) {
-      sub_ = nullptr;
-      concat_->shutdown_on_last_complete(true);
-      auto obs = make_observable<observable_error_impl<inner_type>>(ctx_, what);
-      concat_->add(std::move(obs));
-      concat_ = nullptr;
-    }
-  }
-
-  void on_subscribe(subscription sub) override {
-    if (!sub_ && concat_) {
-      sub_ = std::move(sub);
-      sub_.request(10);
-    } else {
-      sub.cancel();
-    }
-  }
-
-  void on_next(const T& src) override {
-    if (sub_) {
-      concat_->add(map_(src).as_observable());
-      sub_.request(1);
-    }
-  }
-
-  observable<inner_type> concat() {
-    return observable<inner_type>{concat_};
-  }
-
-  auto& concat_ptr() {
-    return concat_;
-  }
-
-private:
-  coordinator* ctx_;
-  subscription sub_;
-  F map_;
-  intrusive_ptr<concat_impl<inner_type>> concat_;
-};
+// -- observable::concat_map ---------------------------------------------------
 
 template <class T>
 template <class F>
 auto observable<T>::concat_map(F f) {
-  using f_res = decltype(f(std::declval<const T&>()));
-  static_assert(is_observable_v<f_res>,
-                "mapping functions must return an observable");
-  using impl_t = concat_map_observer_impl<T, F>;
-  auto obs = make_counted<impl_t>(pimpl_->ctx(), std::move(f));
-  pimpl_->subscribe(obs->as_observer());
-  return obs->concat();
+  using res_t = decltype(f(std::declval<const output_type&>()));
+  if constexpr (is_observable_v<res_t>) {
+    return map([fn = std::move(f)](const output_type& x) mutable {
+             return fn(x).as_observable();
+           })
+      .concat();
+  } else if constexpr (detail::is_optional_v<res_t>) {
+    return map([fn = std::move(f)](const output_type& x) mutable {
+             return fn(x);
+           })
+      .filter([](const res_t& x) { return x.has_value(); })
+      .map([](const res_t& x) { return *x; });
+  } else {
+    static_assert(detail::is_iterable_v<res_t>);
+    return map([cptr = ctx(), fn = std::move(f)](const output_type& x) mutable {
+             return cptr->make_observable().from_container(fn(x));
+           })
+      .concat();
+  }
 }
 
 // -- observable::prefix_and_tail ----------------------------------------------
 
 template <class T>
-class prefix_and_tail_observable_impl final
-  : public ref_counted,
-    public subscription::listener,
-    public observable_impl<T>, // For the forwarding to the 'tail'.
-    public processor_impl<T, cow_tuple<std::vector<T>, observable<T>>> {
-public:
-  // -- member types -----------------------------------------------------------
-
-  using in_t = T;
-
-  using out_t = cow_tuple<std::vector<T>, observable<T>>;
-
-  using in_obs_t = observable_impl<in_t>;
-
-  using out_obs_t = observable_impl<out_t>;
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  prefix_and_tail_observable_impl(coordinator* ctx, size_t prefix_size)
-    : ctx_(ctx), prefix_size_(prefix_size) {
-    // nop
-  }
-
-  // -- friends ----------------------------------------------------------------
-
-  CAF_INTRUSIVE_PTR_FRIENDS(prefix_and_tail_observable_impl)
-
-  // -- implementation of disposable_impl --------------------------------------
-
-  void dispose() override {
-    if (sub_) {
-      sub_.cancel();
-      sub_ = nullptr;
-    }
-    if (obs_) {
-      obs_.on_complete();
-      obs_ = nullptr;
-    }
-    if (tail_) {
-      tail_.on_complete();
-      tail_ = nullptr;
-    }
-  }
-
-  bool disposed() const noexcept override {
-    return !sub_ && !obs_ && !tail_;
-  }
-
-  void ref_disposable() const noexcept final {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept final {
-    this->deref();
-  }
-
-  // -- implementation of observable<T>::impl ----------------------------------
-
-  coordinator* ctx() const noexcept final {
-    return ctx_;
-  }
-
-  // -- implementation of observable<in_t>::impl -------------------------------
-
-  disposable subscribe(observer<in_t> sink) override {
-    if (sink.ptr() == tail_.ptr()) {
-      using sub_t = subscription::default_impl;
-      sink.on_subscribe(sub_t::make_unsafe(ctx_, this, sink.ptr()));
-      return sink.as_disposable();
-    } else {
-      sink.on_error(make_error(sec::invalid_observable));
-      return disposable{};
-    }
-  }
-
-  // -- implementation of observable<out_t>::impl ------------------------------
-
-  disposable subscribe(observer<out_t> sink) override {
-    obs_ = sink;
-    using sub_t = subscription::default_impl;
-    sink.on_subscribe(sub_t::make_unsafe(ctx_, this, sink.ptr()));
-    return sink.as_disposable();
-  }
-
-  // -- implementation of subscription::listener -------------------------------
-
-  void on_request(disposable_impl* sink, size_t n) override {
-    if (sink == obs_.ptr()) {
-      if (sub_ && !requested_prefix_) {
-        requested_prefix_ = true;
-        sub_.request(prefix_size_);
-      }
-    } else if (sink == tail_.ptr()) {
-      if (sub_)
-        sub_.request(n);
-    }
-  }
-
-  void on_cancel(disposable_impl* sink) override {
-    if (sink == obs_.ptr()) {
-      // Only has an effect when canceling immediately. Otherwise, we forward to
-      // tail_ and the original observer no longer is of any interest since it
-      // receives at most one item anyways.
-      if (sub_ && !tail_) {
-        sub_.cancel();
-        sub_ = nullptr;
-      }
-    } else if (sink == tail_.ptr()) {
-      if (sub_) {
-        sub_.cancel();
-        sub_ = nullptr;
-      }
-    }
-  }
-
-  // -- implementation of observer<in_t>::impl ---------------------------------
-
-  void on_subscribe(subscription sub) override {
-    if (!had_subscriber_) {
-      had_subscriber_ = true;
-      sub_ = std::move(sub);
-    } else {
-      sub.cancel();
-    }
-  }
-
-  void on_next(const in_t& item) override {
-    if (tail_) {
-      tail_.on_next(item);
-    } else if (obs_) {
-      prefix_.emplace_back(item);
-      if (prefix_.size() >= prefix_size_) {
-        auto tptr = make_broadcaster_impl<in_t>(ctx_);
-        tail_ = tptr->as_observer();
-        static_cast<observable_impl<in_t>*>(this)->subscribe(tail_);
-        auto tup = make_cow_tuple(std::move(prefix_), tptr->as_observable());
-        obs_.on_next(tup);
-        obs_.on_complete();
-        obs_ = nullptr;
-      }
-    }
-  }
-
-  void on_complete() override {
-    sub_ = nullptr;
-    if (obs_) {
-      obs_.on_complete();
-      obs_ = nullptr;
-    }
-    if (tail_) {
-      tail_.on_complete();
-      tail_ = nullptr;
-    }
-  }
-
-  void on_error(const error& what) override {
-    sub_ = nullptr;
-    if (obs_) {
-      obs_.on_error(what);
-      obs_ = nullptr;
-    }
-    if (tail_) {
-      tail_.on_error(what);
-      tail_ = nullptr;
-    }
-  }
-
-private:
-  /// Our context.
-  coordinator* ctx_;
-
-  /// Subscription to the input data.
-  subscription sub_;
-
-  /// Handle for the observer that gets the prefix + tail tuple.
-  observer<out_t> obs_;
-
-  /// Handle to the tail for forwarding any data after the prefix.
-  observer<in_t> tail_;
-
-  /// Makes sure we only respect the first subscriber.
-  bool had_subscriber_ = false;
-
-  /// Stores whether we have requested the prefix;
-  bool requested_prefix_ = false;
-
-  /// Buffer for storing the prefix elements.
-  std::vector<in_t> prefix_;
-
-  /// User-defined size of the prefix.
-  size_t prefix_size_;
-};
-
-template <class T>
 observable<cow_tuple<std::vector<T>, observable<T>>>
 observable<T>::prefix_and_tail(size_t prefix_size) {
-  using impl_t = prefix_and_tail_observable_impl<T>;
-  using out_t = cow_tuple<std::vector<T>, observable<T>>;
-  auto obs = make_counted<impl_t>(pimpl_->ctx(), prefix_size);
-  pimpl_->subscribe(obs->as_observer());
-  return static_cast<observable_impl<out_t>*>(obs.get())->as_observable();
+  using impl_t = op::prefix_and_tail<T>;
+  return make_observable<impl_t>(ctx(), pimpl_, prefix_size);
 }
 
 // -- observable::prefix_and_tail ----------------------------------------------
@@ -1831,157 +464,6 @@ observable<cow_tuple<T, observable<T>>> observable<T>::head_and_tail() {
 
 /// Reads from an observable buffer and emits the consumed items.
 /// @note Only supports a single observer.
-template <class Buffer>
-class observable_buffer_impl
-  : public observable_impl_base<typename Buffer::value_type>,
-    public async::consumer {
-public:
-  // -- member types -----------------------------------------------------------
-
-  using value_type = typename Buffer::value_type;
-
-  using buffer_ptr = intrusive_ptr<Buffer>;
-
-  using super = observable_impl_base<value_type>;
-
-  // -- friends ----------------------------------------------------------------
-
-  CAF_INTRUSIVE_PTR_FRIENDS(observable_buffer_impl)
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  observable_buffer_impl(coordinator* ctx, buffer_ptr buf)
-    : super(ctx), buf_(buf) {
-    // Unlike regular observables, we need a strong reference to the context.
-    // Otherwise, the buffer might call schedule_fn on a destroyed object.
-    this->ctx()->ref_coordinator();
-  }
-
-  ~observable_buffer_impl() {
-    if (buf_)
-      buf_->cancel();
-    this->ctx()->deref_coordinator();
-  }
-
-  // -- implementation of disposable_impl --------------------------------------
-
-  void dispose() override {
-    CAF_LOG_TRACE("");
-    if (buf_) {
-      buf_->cancel();
-      buf_ = nullptr;
-      if (dst_) {
-        dst_.on_complete();
-        dst_ = nullptr;
-      }
-    }
-  }
-
-  bool disposed() const noexcept override {
-    return buf_ == nullptr;
-  }
-
-  // -- implementation of observable<T>::impl ----------------------------------
-
-  void on_request(disposable_impl*, size_t n) override {
-    CAF_LOG_TRACE(CAF_ARG(n));
-    demand_ += n;
-    if (demand_ == n)
-      pull();
-  }
-
-  void on_cancel(disposable_impl*) override {
-    CAF_LOG_TRACE("");
-    dst_ = nullptr;
-    dispose();
-  }
-
-  disposable subscribe(observer<value_type> what) override {
-    CAF_LOG_TRACE("");
-    if (buf_ && !dst_) {
-      CAF_LOG_DEBUG("add destination");
-      dst_ = std::move(what);
-      return super::do_subscribe(dst_.ptr());
-    } else {
-      CAF_LOG_DEBUG("already have a destination");
-      auto err = make_error(sec::cannot_add_upstream,
-                            "observable buffers support only one observer");
-      what.on_error(err);
-      return disposable{};
-    }
-  }
-
-  // -- implementation of async::consumer: these may get called concurrently ---
-
-  void on_producer_ready() override {
-    // nop
-  }
-
-  void on_producer_wakeup() override {
-    CAF_LOG_TRACE("");
-    this->ctx()->schedule_fn([ptr{strong_ptr()}] {
-      CAF_LOG_TRACE("");
-      ptr->pull();
-    });
-  }
-
-  void ref_consumer() const noexcept override {
-    this->ref();
-  }
-
-  void deref_consumer() const noexcept override {
-    this->deref();
-  }
-
-protected:
-  coordinator* ctx_;
-
-private:
-  void pull() {
-    CAF_LOG_TRACE("");
-    if (!buf_ || pulling_ || !dst_)
-      return;
-    pulling_ = true;
-    struct decorator {
-      size_t* demand;
-      typename observer<value_type>::impl* dst;
-      void on_next(const value_type& item) {
-        CAF_LOG_TRACE(CAF_ARG(item));
-        CAF_ASSERT(*demand > 0);
-        --*demand;
-        dst->on_next(item);
-      }
-      void on_complete() {
-        CAF_LOG_TRACE("");
-        dst->on_complete();
-      }
-      void on_error(const error& what) {
-        CAF_LOG_TRACE(CAF_ARG(what));
-        dst->on_error(what);
-      }
-    };
-    decorator dst{&demand_, dst_.ptr()};
-    if (!buf_->pull(async::prioritize_errors, demand_, dst).first) {
-      buf_ = nullptr;
-      dst_ = nullptr;
-    }
-    pulling_ = false;
-  }
-
-  intrusive_ptr<observable_buffer_impl> strong_ptr() {
-    return {this};
-  }
-
-  buffer_ptr buf_;
-
-  /// Stores a pointer to the target observer running on `remote_ctx_`.
-  observer<value_type> dst_;
-
-  bool pulling_ = false;
-
-  size_t demand_ = 0;
-};
-
 template <class T>
 async::consumer_resource<T>
 observable<T>::to_resource(size_t buffer_size, size_t min_request_size) {
@@ -1998,13 +480,10 @@ observable<T>::to_resource(size_t buffer_size, size_t min_request_size) {
 template <class T>
 observable<T> observable<T>::observe_on(coordinator* other, size_t buffer_size,
                                         size_t min_request_size) {
-  using buffer_type = async::spsc_buffer<T>;
-  auto buf = make_counted<buffer_type>(buffer_size, min_request_size);
-  subscribe(async::producer_resource<T>{buf});
-  auto adapter = make_counted<observable_buffer_impl<buffer_type>>(other, buf);
-  buf->set_consumer(adapter);
-  other->watch(adapter->as_disposable());
-  return observable<T>{std::move(adapter)};
+  auto [pull, push] = async::make_spsc_buffer_resource<T>(buffer_size,
+                                                          min_request_size);
+  subscribe(push);
+  return make_observable<op::from_resource<T>>(other, std::move(pull));
 }
 
 // -- observable::subscribe ----------------------------------------------------
@@ -2018,289 +497,13 @@ disposable observable<T>::subscribe(async::producer_resource<T> resource) {
     auto adapter = make_counted<adapter_type>(pimpl_->ctx(), buf);
     buf->set_producer(adapter);
     auto obs = adapter->as_observer();
-    pimpl_->ctx()->watch(obs.as_disposable());
-    return subscribe(std::move(obs));
+    auto sub = subscribe(std::move(obs));
+    pimpl_->ctx()->watch(sub);
+    return sub;
   } else {
     CAF_LOG_DEBUG("failed to open producer resource");
     return {};
   }
 }
-
-// -- custom operators ---------------------------------------------------------
-
-/// An observable that represents an empty range. As soon as an observer
-/// requests values from this observable, it calls `on_complete`.
-template <class T>
-class empty_observable_impl : public observable_impl_base<T> {
-public:
-  // -- member types -----------------------------------------------------------
-
-  using super = observable_impl_base<T>;
-
-  using output_type = T;
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  explicit empty_observable_impl(coordinator* ctx) : super(ctx) {
-    // nop
-  }
-
-  // -- implementation of disposable_impl --------------------------------------
-
-  void dispose() override {
-    // nop
-  }
-
-  bool disposed() const noexcept override {
-    return true;
-  }
-
-  // -- implementation of observable<T>::impl ----------------------------------
-
-  void on_request(disposable_impl* snk, size_t) override {
-    static_cast<observer_impl<output_type>*>(snk)->on_complete();
-  }
-
-  void on_cancel(disposable_impl*) override {
-    // nop
-  }
-
-  disposable subscribe(observer<output_type> sink) override {
-    return this->do_subscribe(sink.ptr());
-  }
-
-private:
-  coordinator* ctx_;
-};
-
-/// An observable that never calls any callbacks on its subscribers.
-template <class T>
-class mute_observable_impl : public observable_impl_base<T> {
-public:
-  // -- member types -----------------------------------------------------------
-
-  using super = observable_impl_base<T>;
-
-  using output_type = T;
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  explicit mute_observable_impl(coordinator* ctx) : super(ctx) {
-    // nop
-  }
-
-  // -- implementation of disposable_impl --------------------------------------
-
-  void dispose() override {
-    if (!disposed_) {
-      disposed_ = true;
-      for (auto& obs : observers_)
-        obs.on_complete();
-    }
-  }
-
-  bool disposed() const noexcept override {
-    return disposed_;
-  }
-
-  // -- implementation of observable<T>::impl ----------------------------------
-
-  void on_request(disposable_impl*, size_t) override {
-    // nop
-  }
-
-  void on_cancel(disposable_impl*) override {
-    // nop
-  }
-
-  disposable subscribe(observer<output_type> sink) override {
-    if (!disposed_) {
-      auto ptr = make_counted<subscription::nop_impl>();
-      sink.ptr()->on_subscribe(subscription{std::move(ptr)});
-      observers_.emplace_back(sink);
-      return sink.as_disposable();
-    } else {
-      return this->reject_subscription(sink, sec::disposed);
-    }
-  }
-
-private:
-  bool disposed_ = false;
-  std::vector<observer<output_type>> observers_;
-};
-
-/// An observable with minimal internal logic. Useful for writing unit tests.
-template <class T>
-class passive_observable : public observable_impl_base<T> {
-public:
-  // -- member types -----------------------------------------------------------
-
-  using output_type = T;
-
-  using super = observable_impl_base<T>;
-
-  // -- friends ----------------------------------------------------------------
-
-  CAF_INTRUSIVE_PTR_FRIENDS(passive_observable)
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  passive_observable(coordinator* ctx) : super(ctx) {
-    // nop
-  }
-
-  // -- implementation of disposable_impl --------------------------------------
-
-  void dispose() override {
-    if (is_active(state)) {
-      demand = 0;
-      if (out) {
-        out.on_complete();
-        out = nullptr;
-      }
-      state = observable_state::completed;
-    }
-  }
-
-  bool disposed() const noexcept override {
-    return !is_active(state);
-  }
-
-  // -- implementation of observable_impl<T> -----------------------------------
-
-  void on_request(disposable_impl* sink, size_t n) override {
-    if (out.ptr() == sink) {
-      demand += n;
-    }
-  }
-
-  void on_cancel(disposable_impl* sink) override {
-    if (out.ptr() == sink) {
-      demand = 0;
-      out = nullptr;
-      state = observable_state::completed;
-    }
-  }
-
-  disposable subscribe(observer<output_type> sink) override {
-    if (state == observable_state::idle) {
-      state = observable_state::running;
-      out = sink;
-      return this->do_subscribe(sink.ptr());
-    } else if (is_final(state)) {
-      return this->reject_subscription(sink, sec::disposed);
-    } else {
-      return this->reject_subscription(sink, sec::too_many_observers);
-    }
-  }
-
-  // -- pushing items ----------------------------------------------------------
-
-  void push(span<const output_type> items) {
-    if (items.size() > demand)
-      CAF_RAISE_ERROR("observables must not emit more items than requested");
-    demand -= items.size();
-    for (auto& item : items)
-      out.on_next(item);
-  }
-
-  void push(const output_type& item) {
-    if (demand == 0)
-      CAF_RAISE_ERROR("observables must not emit more items than requested");
-    --demand;
-    out.on_next(item);
-  }
-
-  template <class... Ts>
-  void push(output_type x0, output_type x1, Ts... xs) {
-    output_type items[] = {std::move(x0), std::move(x1), std::move(xs)...};
-    push(make_span(items, sizeof...(Ts) + 2));
-  }
-
-  void complete() {
-    if (is_active(state)) {
-      demand = 0;
-      if (out) {
-        out.on_complete();
-        out = nullptr;
-      }
-      state = observable_state::completed;
-    }
-  }
-
-  void abort(const error& reason) {
-    if (is_active(state)) {
-      demand = 0;
-      if (out) {
-        out.on_error(reason);
-        out = nullptr;
-      }
-      state = observable_state::aborted;
-    }
-  }
-
-  // -- member variables -------------------------------------------------------
-
-  observable_state state = observable_state::idle;
-
-  size_t demand = 0;
-
-  observer<T> out;
-};
-
-/// @relates passive_observable
-template <class T>
-intrusive_ptr<passive_observable<T>> make_passive_observable(coordinator* ctx) {
-  return make_counted<passive_observable<T>>(ctx);
-}
-
-/// Implementation of the `defer` operator.
-template <class T, class Factory>
-class defer_observable_impl : public ref_counted, public observable_impl<T> {
-public:
-  // -- constructors, destructors, and assignment operators --------------------
-
-  defer_observable_impl(coordinator* ctx, Factory factory)
-    : ctx_(ctx), factory_(std::move(factory)) {
-    // nop
-  }
-
-  // -- implementation of disposable_impl --------------------------------------
-
-  void ref_disposable() const noexcept final {
-    this->ref();
-  }
-
-  void deref_disposable() const noexcept final {
-    this->deref();
-  }
-
-  void dispose() override {
-    factory_ = std::nullopt;
-  }
-
-  bool disposed() const noexcept override {
-    return factory_.has_value();
-  }
-
-  // -- implementation of observable<T>::impl ----------------------------------
-
-  coordinator* ctx() const noexcept final {
-    return ctx_;
-  }
-
-  disposable subscribe(observer<T> what) override {
-    if (factory_) {
-      return (*factory_)().subscribe(what);
-    } else {
-      what.on_error(make_error(sec::invalid_observable));
-      return disposable{};
-    }
-  }
-
-private:
-  coordinator* ctx_;
-  std::optional<Factory> factory_;
-};
 
 } // namespace caf::flow

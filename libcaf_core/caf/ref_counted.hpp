@@ -8,6 +8,7 @@
 #include <cstddef>
 
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/ref_counted_base.hpp"
 
 namespace caf {
 
@@ -15,31 +16,13 @@ namespace caf {
 /// Serves the requirements of {@link intrusive_ptr}.
 /// @note *All* instances of `ref_counted` start with a reference count of 1.
 /// @relates intrusive_ptr
-class CAF_CORE_EXPORT ref_counted {
+class CAF_CORE_EXPORT ref_counted : public detail::ref_counted_base {
 public:
-  virtual ~ref_counted();
+  using super = ref_counted_base;
 
-  ref_counted();
-  ref_counted(const ref_counted&);
-  ref_counted& operator=(const ref_counted&);
+  using super::super;
 
-  /// Increases reference count by one.
-  void ref() const noexcept {
-    rc_.fetch_add(1, std::memory_order_relaxed);
-  }
-
-  /// Decreases reference count by one and calls `request_deletion`
-  /// when it drops to zero.
-  void deref() const noexcept;
-
-  /// Queries whether there is exactly one reference.
-  bool unique() const noexcept {
-    return rc_ == 1;
-  }
-
-  size_t get_reference_count() const noexcept {
-    return rc_;
-  }
+  ~ref_counted() override;
 
   friend void intrusive_ptr_add_ref(const ref_counted* p) noexcept {
     p->ref();
@@ -48,9 +31,6 @@ public:
   friend void intrusive_ptr_release(const ref_counted* p) noexcept {
     p->deref();
   }
-
-protected:
-  mutable std::atomic<size_t> rc_;
 };
 
 } // namespace caf

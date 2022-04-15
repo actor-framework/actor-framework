@@ -78,8 +78,8 @@ SCENARIO("concat_map merges multiple observables") {
         std::iota(inputs.begin(), inputs.end(), 0);
         self->make_observable()
           .from_container(inputs)
-          .concat_map([self{self}, add1{adder}](int32_t x) {
-            return self->request(add1, infinite, x).as_observable<int32_t>();
+          .concat_map([self = self, adder](int32_t x) {
+            return self->request(adder, infinite, x).as_observable<int32_t>();
           })
           .for_each([&outputs](int32_t x) { outputs.emplace_back(x); });
         launch();

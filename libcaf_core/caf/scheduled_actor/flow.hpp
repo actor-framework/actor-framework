@@ -10,6 +10,7 @@
 #include "caf/flow/observable.hpp"
 #include "caf/flow/observable_builder.hpp"
 #include "caf/flow/observer.hpp"
+#include "caf/flow/op/cell.hpp"
 #include "caf/flow/single.hpp"
 #include "caf/scheduled_actor.hpp"
 
@@ -26,20 +27,18 @@ namespace caf {
 
 template <class T, class Policy>
 flow::single<T> scheduled_actor::single_from_response_impl(Policy& policy) {
-  using output_type = T;
-  using impl_type = typename flow::single<output_type>::impl;
-  auto ptr = make_counted<impl_type>(this);
+  auto cell = make_counted<flow::op::cell<T>>(this);
   policy.then(
     this,
-    [this, ptr](T& val) {
-      ptr->set_value(std::move(val));
+    [this, cell](T& val) {
+      cell->set_value(std::move(val));
       run_actions();
     },
-    [this, ptr](error& err) {
-      ptr->set_error(std::move(err));
+    [this, cell](error& err) {
+      cell->set_error(std::move(err));
       run_actions();
     });
-  return flow::single<output_type>{std::move(ptr)};
+  return flow::single<T>{std::move(cell)};
 }
 
 } // namespace caf

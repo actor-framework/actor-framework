@@ -129,6 +129,7 @@ caf_add_component(
     src/detail/print.cpp
     src/detail/private_thread.cpp
     src/detail/private_thread_pool.cpp
+    src/detail/ref_counted_base.cpp
     src/detail/ripemd_160.cpp
     src/detail/serialized_size.cpp
     src/detail/set_thread_name.cpp
@@ -147,8 +148,10 @@ caf_add_component(
     src/error.cpp
     src/event_based_actor.cpp
     src/execution_unit.cpp
+    src/flow/coordinated.cpp
     src/flow/coordinator.cpp
     src/flow/observable_builder.cpp
+    src/flow/op/interval.cpp
     src/flow/scoped_coordinator.cpp
     src/flow/subscription.cpp
     src/forwarding_actor_proxy.cpp
@@ -285,17 +288,18 @@ caf_add_component(
     dynamic_spawn
     error
     expected
-    flow.broadcaster
     flow.concat
     flow.concat_map
     flow.defer
     flow.empty
-    flow.error
+    flow.fail
     flow.flat_map
     flow.for_each
     flow.generation
     flow.interval
+    flow.item_publisher
     flow.merge
+    flow.mixed
     flow.never
     flow.observe_on
     flow.prefix_and_tail

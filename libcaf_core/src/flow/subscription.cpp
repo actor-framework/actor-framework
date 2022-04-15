@@ -16,50 +16,30 @@ void subscription::impl::dispose() {
   cancel();
 }
 
-bool subscription::nop_impl::disposed() const noexcept {
-  return disposed_;
+void subscription::impl_base::ref_disposable() const noexcept {
+  this->ref();
 }
 
-void subscription::nop_impl::ref_disposable() const noexcept {
-  ref();
-}
-
-void subscription::nop_impl::deref_disposable() const noexcept {
-  deref();
-}
-
-void subscription::nop_impl::cancel() {
-  disposed_ = true;
-}
-
-void subscription::nop_impl::request(size_t) {
-  // nop
+void subscription::impl_base::deref_disposable() const noexcept {
+  this->deref();
 }
 
 subscription::listener::~listener() {
   // nop
 }
 
-bool subscription::default_impl::disposed() const noexcept {
+bool subscription::fwd_impl::disposed() const noexcept {
   return src_ == nullptr;
 }
 
-void subscription::default_impl::ref_disposable() const noexcept {
-  this->ref();
-}
-
-void subscription::default_impl::deref_disposable() const noexcept {
-  this->deref();
-}
-
-void subscription::default_impl::request(size_t n) {
+void subscription::fwd_impl::request(size_t n) {
   if (src_)
     ctx()->delay_fn([src = src_, snk = snk_, n] { //
       src->on_request(snk.get(), n);
     });
 }
 
-void subscription::default_impl::cancel() {
+void subscription::fwd_impl::cancel() {
   if (src_) {
     ctx()->delay_fn([src = src_, snk = snk_] { //
       src->on_cancel(snk.get());

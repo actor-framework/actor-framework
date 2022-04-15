@@ -121,9 +121,6 @@ struct output_type_oracle {
 template <class T>
 using output_type_t = typename output_type_oracle<T>::type;
 
-template <class T>
-class merger_impl;
-
 template <class>
 struct has_impl_include {
   static constexpr bool value = false;

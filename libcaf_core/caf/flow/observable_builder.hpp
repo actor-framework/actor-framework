@@ -7,10 +7,20 @@
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/core_export.hpp"
+#include "caf/detail/ref_counted_base.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observable.hpp"
+#include "caf/flow/op/defer.hpp"
+#include "caf/flow/op/empty.hpp"
+#include "caf/flow/op/fail.hpp"
+#include "caf/flow/op/from_generator.hpp"
+#include "caf/flow/op/from_resource.hpp"
+#include "caf/flow/op/interval.hpp"
+#include "caf/flow/op/never.hpp"
+#include "caf/flow/op/zip_with.hpp"
 
 #include <cstdint>
+#include <functional>
 
 namespace caf::flow {
 
@@ -30,60 +40,10 @@ class callable_source;
 
 // -- special-purpose observable implementations -------------------------------
 
-class interval_action;
-
-class CAF_CORE_EXPORT interval_impl : public observable_impl_base<int64_t> {
-public:
-  // -- member types -----------------------------------------------------------
-
-  using output_type = int64_t;
-
-  using super = observable_impl_base<int64_t>;
-
-  // -- friends ----------------------------------------------------------------
-
-  CAF_INTRUSIVE_PTR_FRIENDS(interval_impl)
-
-  friend class interval_action;
-
-  // -- constructors, destructors, and assignment operators --------------------
-
-  interval_impl(coordinator* ctx, timespan initial_delay, timespan period);
-
-  interval_impl(coordinator* ctx, timespan initial_delay, timespan period,
-                int64_t max_val);
-
-  // -- implementation of disposable::impl -------------------------------------
-
-  void dispose() override;
-
-  bool disposed() const noexcept override;
-
-  // -- implementation of observable<T>::impl ----------------------------------
-
-  void on_request(disposable_impl*, size_t) override;
-
-  void on_cancel(disposable_impl*) override;
-
-  disposable subscribe(observer<int64_t> what) override;
-
-private:
-  void fire(interval_action*);
-
-  observer<int64_t> obs_;
-  disposable pending_;
-  timespan initial_delay_;
-  timespan period_;
-  coordinator::steady_time_point last_;
-  int64_t val_ = 0;
-  int64_t max_;
-  size_t demand_ = 0;
-};
-
 // -- builder interface --------------------------------------------------------
 
 /// Factory for @ref observable objects.
-class observable_builder {
+class CAF_CORE_EXPORT observable_builder {
 public:
   friend class coordinator;
 
@@ -114,6 +74,13 @@ public:
     return from_callable([x = std::move(init)]() mutable { return x++; });
   }
 
+  /// Creates a @ref generation that emits `num` ascending values, starting with
+  /// `init`.
+  template <class T>
+  [[nodiscard]] auto range(T init, size_t num) const {
+    return iota(init).take(num);
+  }
+
   /// Creates a @ref generation that emits values by repeatedly calling
   /// `pullable.pull(...)`. For example implementations of the `Pullable`
   /// concept, see @ref container_source, @ref repeater_source and
@@ -134,11 +101,7 @@ public:
   [[nodiscard]] observable<int64_t>
   interval(std::chrono::duration<Rep, Period> initial_delay,
            std::chrono::duration<Rep, Period> period) {
-    // Intervals introduce a time-dependency, so we need to watch them in order
-    // to prevent actors from shutting down while timeouts are still pending.
-    auto ptr = make_counted<interval_impl>(ctx_, initial_delay, period);
-    ctx_->watch(ptr->as_disposable());
-    return observable<int64_t>{std::move(ptr)};
+    return make_observable<op::interval>(ctx_, initial_delay, period);
   }
 
   /// Creates an @ref observable that emits a sequence of integers spaced by the
@@ -154,39 +117,98 @@ public:
   template <class Rep, class Period>
   [[nodiscard]] observable<int64_t>
   timer(std::chrono::duration<Rep, Period> delay) {
-    auto ptr = make_counted<interval_impl>(ctx_, delay, delay, 1);
-    ctx_->watch(ptr->as_disposable());
-    return observable<int64_t>{std::move(ptr)};
+    return make_observable<op::interval>(ctx_, delay, delay, 1);
   }
 
   /// Creates an @ref observable without any values that calls `on_complete`
   /// after subscribing to it.
   template <class T>
   [[nodiscard]] observable<T> empty() {
-    return make_observable<empty_observable_impl<T>>(ctx_);
+    return make_observable<op::empty<T>>(ctx_);
   }
 
   /// Creates an @ref observable without any values that also never terminates.
   template <class T>
   [[nodiscard]] observable<T> never() {
-    return make_observable<mute_observable_impl<T>>(ctx_);
+    return make_observable<op::never<T>>(ctx_);
   }
 
-  /// Creates an @ref observable without any values that calls `on_error` after
-  /// subscribing to it.
+  /// Creates an @ref observable without any values that fails immediately when
+  /// subscribing to it by calling `on_error` on the subscriber.
   template <class T>
-  [[nodiscard]] observable<T> error(caf::error what) {
-    return make_observable<observable_error_impl<T>>(ctx_, std::move(what));
+  [[nodiscard]] observable<T> fail(error what) {
+    return make_observable<op::fail<T>>(ctx_, std::move(what));
   }
 
   /// Create a fresh @ref observable for each @ref observer using the factory.
   template <class Factory>
   [[nodiscard]] auto defer(Factory factory) {
-    using res_t = decltype(factory());
-    static_assert(is_observable_v<res_t>);
-    using out_t = typename res_t::output_type;
-    using impl_t = defer_observable_impl<out_t, Factory>;
-    return make_observable<impl_t>(ctx_, std::move(factory));
+    return make_observable<op::defer<Factory>>(ctx_, std::move(factory));
+  }
+
+  /// Creates an @ref observable that combines the items emitted from all passed
+  /// source observables.
+  template <class Input, class... Inputs>
+  auto merge(Input&& x, Inputs&&... xs) {
+    using in_t = std::decay_t<Input>;
+    if constexpr (is_observable_v<in_t>) {
+      using impl_t = op::merge<output_type_t<in_t>>;
+      return make_observable<impl_t>(ctx_, std::forward<Input>(x),
+                                     std::forward<Inputs>(xs)...);
+    } else {
+      static_assert(detail::is_iterable_v<in_t>);
+      using val_t = typename in_t::value_type;
+      static_assert(is_observable_v<val_t>);
+      using impl_t = op::merge<output_type_t<val_t>>;
+      return make_observable<impl_t>(ctx_, std::forward<Input>(x),
+                                     std::forward<Inputs>(xs)...);
+    }
+  }
+
+  /// Creates an @ref observable that concatenates the items emitted from all
+  /// passed source observables.
+  template <class Input, class... Inputs>
+  auto concat(Input&& x, Inputs&&... xs) {
+    using in_t = std::decay_t<Input>;
+    if constexpr (is_observable_v<in_t>) {
+      using impl_t = op::concat<output_type_t<in_t>>;
+      return make_observable<impl_t>(ctx_, std::forward<Input>(x),
+                                     std::forward<Inputs>(xs)...);
+    } else {
+      static_assert(detail::is_iterable_v<in_t>);
+      using val_t = typename in_t::value_type;
+      static_assert(is_observable_v<val_t>);
+      using impl_t = op::concat<output_type_t<val_t>>;
+      return make_observable<impl_t>(ctx_, std::forward<Input>(x),
+                                     std::forward<Inputs>(xs)...);
+    }
+  }
+
+  /// @param fn The zip function. Takes one element from each input at a time
+  ///           and reduces them into a single result.
+  /// @param input0 The input at index 0.
+  /// @param input1 The input at index 1.
+  /// @param inputs The inputs for index > 1, if any.
+  template <class F, class T0, class T1, class... Ts>
+  auto zip_with(F fn, T0 input0, T1 input1, Ts... inputs) {
+    using output_type = op::zip_with_output_t<F, //
+                                              typename T0::output_type,
+                                              typename T1::output_type,
+                                              typename Ts::output_type...>;
+    using impl_t = op::zip_with<F,                        //
+                                typename T0::output_type, //
+                                typename T1::output_type, //
+                                typename Ts::output_type...>;
+    if (input0.valid() && input1.valid() && (inputs.valid() && ...)) {
+      auto ptr = make_counted<impl_t>(ctx_, std::move(fn),
+                                      std::move(input0).as_observable(),
+                                      std::move(input1).as_observable(),
+                                      std::move(inputs).as_observable()...);
+      return observable<output_type>{std::move(ptr)};
+    } else {
+      auto ptr = make_counted<op::empty<output_type>>(ctx_);
+      return observable<output_type>{std::move(ptr)};
+    }
   }
 
 private:
@@ -209,12 +231,20 @@ public:
     pos_ = values_.begin();
   }
 
+  container_source() = default;
   container_source(container_source&&) = default;
   container_source& operator=(container_source&&) = default;
 
-  container_source() = delete;
-  container_source(const container_source&) = delete;
-  container_source& operator=(const container_source&) = delete;
+  container_source(const container_source& other) : values_(other.values_) {
+    pos_ = values_.begin();
+    std::advance(pos_, std::distance(other.values_.begin(), other.pos_));
+  }
+  container_source& operator=(const container_source& other) {
+    values_ = other.values_;
+    pos_ = values_.begin();
+    std::advance(pos_, std::distance(other.values_.begin(), other.pos_));
+    return *this;
+  }
 
   template <class Step, class... Steps>
   void pull(size_t n, Step& step, Steps&... steps) {
@@ -303,10 +333,9 @@ public:
   }
 
   callable_source(callable_source&&) = default;
+  callable_source(const callable_source&) = default;
   callable_source& operator=(callable_source&&) = default;
-
-  callable_source(const callable_source&) = delete;
-  callable_source& operator=(const callable_source&) = delete;
+  callable_source& operator=(const callable_source&) = default;
 
   template <class Step, class... Steps>
   void pull(size_t n, Step& step, Steps&... steps) {
@@ -337,61 +366,6 @@ class generation final
   : public observable_def<steps_output_type_t<Generator, Steps...>> {
 public:
   using output_type = steps_output_type_t<Generator, Steps...>;
-
-  class impl : public observable_impl_base<output_type> {
-  public:
-    using super = observable_impl_base<output_type>;
-
-    template <class... Ts>
-    impl(coordinator* ctx, Generator gen, Ts&&... steps)
-      : super(ctx), gen_(std::move(gen)), steps_(std::forward<Ts>(steps)...) {
-      // nop
-    }
-
-    // -- implementation of disposable::impl -----------------------------------
-
-    void dispose() override {
-      term_.dispose();
-    }
-
-    bool disposed() const noexcept override {
-      return !term_.active();
-    }
-
-    // -- implementation of observable_impl<T> ---------------------------------
-
-    disposable subscribe(observer<output_type> sink) override {
-      CAF_LOG_TRACE(CAF_ARG2("sink", sink.ptr()));
-      auto sub = term_.add(this, sink);
-      if (sub) {
-        term_.start();
-      }
-      return sub;
-    }
-
-    void on_request(disposable_impl* sink, size_t demand) override {
-      CAF_LOG_TRACE(CAF_ARG(sink) << CAF_ARG(demand));
-      if (auto n = term_.on_request(sink, demand); n > 0) {
-        auto fn = [this, n](auto&... steps) { gen_.pull(n, steps..., term_); };
-        std::apply(fn, steps_);
-        term_.push();
-      }
-    }
-
-    void on_cancel(disposable_impl* sink) override {
-      CAF_LOG_TRACE(CAF_ARG(sink));
-      if (auto n = term_.on_cancel(sink); n > 0) {
-        auto fn = [this, n](auto&... steps) { gen_.pull(n, steps..., term_); };
-        std::apply(fn, steps_);
-        term_.push();
-      }
-    }
-
-  private:
-    Generator gen_;
-    std::tuple<Steps...> steps_;
-    broadcast_step<output_type> term_;
-  };
 
   template <class... Ts>
   generation(coordinator* ctx, Generator gen, Ts&&... steps)
@@ -426,9 +400,39 @@ public:
       filter_step<Predicate>{std::move(predicate)});
   }
 
+  template <class Predicate>
+  auto take_while(Predicate predicate) && {
+    return std::move(*this).transform(
+      take_while_step<Predicate>{std::move(predicate)});
+  }
+
+  template <class Reducer>
+  auto reduce(output_type init, Reducer reducer) && {
+    return std::move(*this).transform(
+      reduce_step<output_type, Reducer>{init, reducer});
+  }
+
+  auto sum() && {
+    return std::move(*this).reduce(output_type{}, std::plus<output_type>{});
+  }
+
+  auto distinct() && {
+    return std::move(*this).transform(distinct_step<output_type>{});
+  }
+
   template <class Fn>
   auto map(Fn fn) && {
     return std::move(*this).transform(map_step<Fn>{std::move(fn)});
+  }
+
+  template <class... Inputs>
+  auto merge(Inputs&&... xs) && {
+    return std::move(*this).as_observable().merge(std::forward<Inputs>(xs)...);
+  }
+
+  template <class... Inputs>
+  auto concat(Inputs&&... xs) && {
+    return std::move(*this).as_observable().concat(std::forward<Inputs>(xs)...);
   }
 
   template <class F>
@@ -436,10 +440,33 @@ public:
     return std::move(*this).transform(flat_map_optional_step<F>{std::move(f)});
   }
 
+  template <class F>
+  auto do_on_next(F f) {
+    return std::move(*this) //
+      .transform(do_on_next_step<output_type, F>{std::move(f)});
+  }
+
+  template <class F>
+  auto do_on_complete(F f) && {
+    return std::move(*this).transform(
+      do_on_complete_step<output_type, F>{std::move(f)});
+  }
+
+  template <class F>
+  auto do_on_error(F f) && {
+    return std::move(*this).transform(
+      do_on_error_step<output_type, F>{std::move(f)});
+  }
+
+  template <class F>
+  auto do_finally(F f) && {
+    return std::move(*this).transform(
+      do_finally_step<output_type, F>{std::move(f)});
+  }
+
   observable<output_type> as_observable() && override {
-    auto pimpl = make_observable_impl<impl>(ctx_, std::move(gen_),
-                                            std::move(steps_));
-    return observable<output_type>{std::move(pimpl)};
+    using impl_t = op::from_generator<Generator, Steps...>;
+    return make_observable<impl_t>(ctx_, std::move(gen_), std::move(steps_));
   }
 
   coordinator* ctx() const noexcept {
@@ -490,18 +517,8 @@ generation<callable_source<F>> observable_builder::from_callable(F fn) const {
 template <class T>
 observable<T>
 observable_builder::from_resource(async::consumer_resource<T> hdl) const {
-  using buffer_type = typename async::consumer_resource<T>::buffer_type;
-  using res_t = observable<T>;
-  if (auto buf = hdl.try_open()) {
-    auto adapter = make_counted<observable_buffer_impl<buffer_type>>(ctx_, buf);
-    buf->set_consumer(adapter);
-    ctx_->watch(adapter->as_disposable());
-    return res_t{std::move(adapter)};
-  } else {
-    auto err = make_error(sec::invalid_observable,
-                          "from_resource: failed to open the resource");
-    return make_observable<observable_error_impl<T>>(ctx_, std::move(err));
-  }
+  using impl_t = op::from_resource<T>;
+  return make_observable<impl_t>(ctx_, std::move(hdl));
 }
 
 // -- observable_builder::lift -------------------------------------------------

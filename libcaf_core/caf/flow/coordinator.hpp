@@ -9,7 +9,6 @@
 #include "caf/flow/fwd.hpp"
 #include "caf/flow/subscription.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/ref_counted.hpp"
 #include "caf/timespan.hpp"
 
 #include <chrono>
@@ -22,10 +21,6 @@ namespace caf::flow {
 /// objects since the coordinator guarantees synchronous execution.
 class CAF_CORE_EXPORT coordinator {
 public:
-  // -- friends ----------------------------------------------------------------
-
-  friend class subscription_impl;
-
   // -- member types -----------------------------------------------------------
 
   /// A time point of the monotonic clock.

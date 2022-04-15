@@ -12,7 +12,6 @@
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/flow/observable.hpp"
-#include "caf/none.hpp"
 #include "caf/ref_counted.hpp"
 
 namespace caf::flow {
@@ -24,94 +23,7 @@ class single {
 public:
   using output_type = T;
 
-  /// Internal interface of a `single`.
-  class impl : public observable_impl_base<T> {
-  public:
-    using super = observable_impl_base<T>;
-
-    CAF_INTRUSIVE_PTR_FRIENDS(impl)
-
-    explicit impl(coordinator* ctx) : super(ctx) {
-      // nop
-    }
-
-    disposable subscribe(observer<T> what) override {
-      if (!std::holds_alternative<error>(value_)) {
-        auto res = super::do_subscribe(what.ptr());
-        observers_.emplace_back(std::move(what), 0u);
-        return res;
-      } else {
-        what.on_error(std::get<error>(value_));
-        return disposable{};
-      }
-    }
-
-    void on_request(disposable_impl* sink, size_t n) override {
-      auto pred = [sink](auto& entry) { return entry.first.ptr() == sink; };
-      if (auto i = std::find_if(observers_.begin(), observers_.end(), pred);
-          i != observers_.end()) {
-        auto f = detail::make_overload( //
-          [i, n](none_t) { i->second += n; },
-          [this, i](const T& val) {
-            i->first.on_next(val);
-            i->first.on_complete();
-            observers_.erase(i);
-          },
-          [this, i](const error& err) {
-            i->first.on_error(err);
-            observers_.erase(i);
-          });
-        std::visit(f, value_);
-      }
-    }
-
-    void on_cancel(disposable_impl* sink) override {
-      auto pred = [sink](auto& entry) { return entry.first.ptr() == sink; };
-      if (auto i = std::find_if(observers_.begin(), observers_.end(), pred);
-          i != observers_.end())
-        observers_.erase(i);
-    }
-
-    void dispose() override {
-      if (!std::holds_alternative<error>(value_))
-        set_error(make_error(sec::disposed));
-    }
-
-    bool disposed() const noexcept override {
-      return observers_.empty() && !std::holds_alternative<none_t>(value_);
-    }
-
-    void set_value(T val) {
-      if (std::holds_alternative<none_t>(value_)) {
-        value_ = std::move(val);
-        auto& ref = std::get<T>(value_);
-        auto pred = [](auto& entry) { return entry.second == 0; };
-        if (auto first = std::partition(observers_.begin(), observers_.end(),
-                                        pred);
-            first != observers_.end()) {
-          for (auto i = first; i != observers_.end(); ++i) {
-            i->first.on_next(ref);
-            i->first.on_complete();
-          }
-          observers_.erase(first, observers_.end());
-        }
-      }
-    }
-
-    void set_error(error err) {
-      value_ = std::move(err);
-      auto& ref = std::get<error>(value_);
-      for (auto& entry : observers_)
-        entry.first.on_error(ref);
-      observers_.clear();
-    }
-
-  private:
-    std::variant<none_t, T, error> value_;
-    std::vector<std::pair<observer<T>, size_t>> observers_;
-  };
-
-  explicit single(intrusive_ptr<impl> pimpl) noexcept
+  explicit single(intrusive_ptr<op::base<T>> pimpl) noexcept
     : pimpl_(std::move(pimpl)) {
     // nop
   }
@@ -126,13 +38,6 @@ public:
   single(const single&) noexcept = default;
   single& operator=(single&&) noexcept = default;
   single& operator=(const single&) noexcept = default;
-
-  disposable as_disposable() && {
-    return disposable{std::move(pimpl_)};
-  }
-  disposable as_disposable() const& {
-    return disposable{pimpl_};
-  }
 
   observable<T> as_observable() && {
     return observable<T>{std::move(pimpl_)};
@@ -156,16 +61,6 @@ public:
                              std::move(on_error));
   }
 
-  void set_value(T val) {
-    if (pimpl_)
-      pimpl_->set_value(std::move(val));
-  }
-
-  void set_error(error err) {
-    if (pimpl_)
-      pimpl_->set_error(std::move(err));
-  }
-
   bool valid() const noexcept {
     return pimpl_ != nullptr;
   }
@@ -178,36 +73,23 @@ public:
     return !valid();
   }
 
-  impl* ptr() {
-    return pimpl_.get();
-  }
-
-  const impl* ptr() const {
-    return pimpl_.get();
-  }
-
-  const intrusive_ptr<impl>& as_intrusive_ptr() const& noexcept {
-    return pimpl_;
-  }
-
-  intrusive_ptr<impl>&& as_intrusive_ptr() && noexcept {
-    return std::move(pimpl_);
-  }
-
   void swap(single& other) {
     pimpl_.swap(other.pimpl_);
   }
 
 private:
-  intrusive_ptr<impl> pimpl_;
+  intrusive_ptr<op::base<T>> pimpl_;
 };
 
-template <class T>
-using single_impl = typename single<T>::impl;
-
-template <class T>
-single<T> make_single(coordinator* ctx) {
-  return single<T>{make_counted<single_impl<T>>(ctx)};
+/// Convenience function for creating an @ref observable from a concrete
+/// operator type.
+template <class Operator, class... Ts>
+single<typename Operator::output_type>
+make_single(coordinator* ctx, Ts&&... xs) {
+  using out_t = typename Operator::output_type;
+  using ptr_t = intrusive_ptr<out_t>;
+  ptr_t ptr{new Operator(ctx, std::forward<Ts>(xs)...), false};
+  return single<out_t>{std::move(ptr)};
 }
 
 } // namespace caf::flow

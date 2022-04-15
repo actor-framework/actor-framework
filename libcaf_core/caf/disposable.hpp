@@ -35,12 +35,12 @@ public:
     virtual void deref_disposable() const noexcept = 0;
   };
 
+  // -- constructors, destructors, and assignment operators --------------------
+
   explicit disposable(intrusive_ptr<impl> pimpl) noexcept
     : pimpl_(std::move(pimpl)) {
     // nop
   }
-
-  // -- constructors, destructors, and assignment operators --------------------
 
   disposable() noexcept = default;
 
@@ -56,6 +56,7 @@ public:
     pimpl_ = nullptr;
     return *this;
   }
+
 
   // -- factories --------------------------------------------------------------
 

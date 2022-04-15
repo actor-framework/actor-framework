@@ -8,6 +8,7 @@
 
 #include "core-test.hpp"
 
+#include "caf/flow/op/cell.hpp"
 #include "caf/flow/scoped_coordinator.hpp"
 
 using namespace caf;
@@ -28,21 +29,23 @@ SCENARIO("singles emit at most one value") {
     WHEN("an observer subscribes before the values has been set") {
       THEN("the observer receives the value when calling set_value") {
         auto outputs = i32_list{};
-        auto single_int = flow::make_single<int32_t>(ctx.get());
+        auto cell = make_counted<flow::op::cell<int32_t>>(ctx.get());
+        auto single_int = flow::single<int32_t>{cell};
         single_int //
           .as_observable()
           .for_each([&outputs](int32_t x) { outputs.emplace_back(x); });
         ctx->run();
         CHECK_EQ(outputs, i32_list());
-        single_int.set_value(42);
+        cell->set_value(42);
         CHECK_EQ(outputs, i32_list({42}));
       }
     }
     WHEN("an observer subscribes after the values has been set") {
       THEN("the observer receives the value immediately") {
         auto outputs = i32_list{};
-        auto single_int = flow::make_single<int32_t>(ctx.get());
-        single_int.set_value(42);
+        auto cell = make_counted<flow::op::cell<int32_t>>(ctx.get());
+        auto single_int = flow::single<int32_t>{cell};
+        cell->set_value(42);
         single_int //
           .as_observable()
           .for_each([&outputs](int32_t x) { outputs.emplace_back(x); });

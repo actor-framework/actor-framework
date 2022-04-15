@@ -22,20 +22,16 @@ struct fixture : test_coordinator_fixture<> {
 
 BEGIN_FIXTURE_SCOPE(fixture)
 
-SCENARIO("a mute observable never invokes any callbacks except when disposed") {
+SCENARIO("the never operator never invokes callbacks except when disposed") {
   GIVEN("a never<int32>") {
     WHEN("an observer subscribes") {
       THEN("the observer never receives any events") {
         auto uut = ctx->make_observable().never<int32_t>();
-        auto snk = flow::make_passive_observer<int32_t>();
+        auto snk = flow::make_auto_observer<int32_t>();
         uut.subscribe(snk->as_observer());
         ctx->run();
-        if (CHECK(snk->sub)) {
-          snk->sub.request(42);
-          ctx->run();
-          CHECK_EQ(snk->state, flow::observer_state::subscribed);
-          CHECK(snk->buf.empty());
-        }
+        CHECK(snk->buf.empty());
+        CHECK_EQ(snk->state, flow::observer_state::subscribed);
       }
     }
   }
@@ -43,21 +39,19 @@ SCENARIO("a mute observable never invokes any callbacks except when disposed") {
     WHEN("an observer subscribes") {
       THEN("the observer receives on_complete") {
         auto uut = ctx->make_observable().never<int32_t>();
-        auto snk1 = flow::make_passive_observer<int32_t>();
-        auto snk2 = flow::make_passive_observer<int32_t>();
-        uut.subscribe(snk1->as_observer());
+        auto snk1 = flow::make_auto_observer<int32_t>();
+        auto snk2 = flow::make_auto_observer<int32_t>();
+        auto sub = uut.subscribe(snk1->as_observer());
         ctx->run();
-        if (CHECK(snk1->sub)) {
-          snk1->sub.request(42);
-          ctx->run();
-          CHECK_EQ(snk1->state, flow::observer_state::subscribed);
-          CHECK(snk1->buf.empty());
-          uut.dispose();
-          ctx->run();
-          CHECK_EQ(snk1->state, flow::observer_state::completed);
-          uut.subscribe(snk2->as_observer());
-          CHECK_EQ(snk2->state, flow::observer_state::aborted);
-        }
+        CHECK(snk1->buf.empty());
+        CHECK_EQ(snk1->state, flow::observer_state::subscribed);
+        sub.dispose();
+        ctx->run();
+        CHECK_EQ(snk1->state, flow::observer_state::completed);
+        MESSAGE("dispose only affects the subscription, "
+                "the never operator remains unchanged");
+        uut.subscribe(snk2->as_observer());
+        CHECK_EQ(snk2->state, flow::observer_state::subscribed);
       }
     }
   }

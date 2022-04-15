@@ -20,30 +20,14 @@ using namespace caf;
 
 namespace {
 
-template <class T>
-struct test_observer {
-  void on_next(T x) {
-    values.emplace_back(std::move(x));
-  }
-
-  void on_error(const error& what) {
-    had_error = true;
-    err = what;
-  }
-
-  void on_complete() {
-    had_complete = true;
-  }
-
-  std::vector<T> values;
-  bool had_error = false;
-  bool had_complete = false;
-  error err;
-};
-
 struct fixture : test_coordinator_fixture<> {
   flow::scoped_coordinator_ptr ctx = flow::make_scoped_coordinator();
 };
+
+template <class T, class... Ts>
+auto ls(T x, Ts... xs) {
+  return std::vector<T>{x, xs...};
+}
 
 } // namespace
 
@@ -54,84 +38,78 @@ SCENARIO("prefix_and_tail splits off initial elements") {
   GIVEN("a generation with 0 values") {
     WHEN("calling prefix_and_tail(2)") {
       THEN("the observer of prefix_and_tail only receives on_complete") {
-        auto inputs = std::vector<int>{};
-        auto obs = std::make_shared<test_observer<tuple_t>>();
+        auto snk = flow::make_auto_observer<tuple_t>();
         ctx->make_observable()
-          .from_container(inputs)
+          .empty<int>() //
           .prefix_and_tail(2)
-          .subscribe(flow::make_observer_from_ptr(obs));
+          .subscribe(snk->as_observer());
         ctx->run();
-        CHECK(obs->had_complete);
-        CHECK(!obs->had_error);
-        CHECK(obs->values.empty());
+        CHECK(snk->buf.empty());
+        CHECK_EQ(snk->state, flow::observer_state::completed);
+        CHECK_EQ(snk->err, error{});
       }
     }
   }
   GIVEN("a generation with 1 values") {
     WHEN("calling prefix_and_tail(2)") {
       THEN("the observer of prefix_and_tail only receives on_complete") {
-        auto inputs = std::vector<int>{1};
-        auto obs = std::make_shared<test_observer<tuple_t>>();
+        auto snk = flow::make_auto_observer<tuple_t>();
         ctx->make_observable()
-          .from_container(inputs)
+          .just(1) //
           .prefix_and_tail(2)
-          .subscribe(flow::make_observer_from_ptr(obs));
+          .subscribe(snk->as_observer());
         ctx->run();
-        CHECK(obs->had_complete);
-        CHECK(!obs->had_error);
-        CHECK(obs->values.empty());
+        CHECK(snk->buf.empty());
+        CHECK_EQ(snk->state, flow::observer_state::completed);
+        CHECK_EQ(snk->err, error{});
       }
     }
   }
   GIVEN("a generation with 2 values") {
     WHEN("calling prefix_and_tail(2)") {
       THEN("the observer receives the first 2 elements plus empty remainder") {
-        auto inputs = std::vector<int>{1, 2};
-        auto prefix_vals = std::vector<int>{1, 2};
-        auto tail_vals = std::vector<int>{};
-        auto obs = std::make_shared<test_observer<int>>();
+        auto snk = flow::make_auto_observer<int>();
         auto flat_map_calls = 0;
         ctx->make_observable()
-          .from_container(inputs)
+          .iota(1)
+          .take(2)
           .prefix_and_tail(2)
           .flat_map([&](const tuple_t& x) {
             ++flat_map_calls;
             auto& [prefix, tail] = x.data();
-            CHECK_EQ(prefix, prefix_vals);
+            CHECK_EQ(prefix, ls(1, 2));
             return tail;
           })
-          .subscribe(flow::make_observer_from_ptr(obs));
+          .subscribe(snk->as_observer());
         ctx->run();
+        CHECK(snk->buf.empty());
         CHECK_EQ(flat_map_calls, 1);
-        CHECK_EQ(obs->values, tail_vals);
-        CHECK(obs->had_complete);
-        CHECK(!obs->had_error);
+        CHECK_EQ(snk->state, flow::observer_state::completed);
+        CHECK_EQ(snk->err, error{});
       }
     }
   }
   GIVEN("a generation with 8 values") {
     WHEN("calling prefix_and_tail(2)") {
       THEN("the observer receives the first 2 elements plus remainder") {
-        auto inputs = std::vector<int>{1, 2, 4, 8, 16, 32, 64, 128};
-        auto prefix_vals = std::vector<int>{1, 2};
-        auto tail_vals = std::vector<int>{4, 8, 16, 32, 64, 128};
-        auto obs = std::make_shared<test_observer<int>>();
+        auto snk = flow::make_auto_observer<int>();
         auto flat_map_calls = 0;
         ctx->make_observable()
-          .from_container(inputs)
+          .iota(1)
+          .take(8)
           .prefix_and_tail(2)
           .flat_map([&](const tuple_t& x) {
             ++flat_map_calls;
             auto& [prefix, tail] = x.data();
-            CHECK_EQ(prefix, prefix_vals);
+            CHECK_EQ(prefix, ls(1, 2));
             return tail;
           })
-          .subscribe(flow::make_observer_from_ptr(obs));
+          .subscribe(snk->as_observer());
         ctx->run();
         CHECK_EQ(flat_map_calls, 1);
-        CHECK_EQ(obs->values, tail_vals);
-        CHECK(obs->had_complete);
-        CHECK(!obs->had_error);
+        CHECK_EQ(snk->buf, ls(3, 4, 5, 6, 7, 8));
+        CHECK_EQ(snk->state, flow::observer_state::completed);
+        CHECK_EQ(snk->err, error{});
       }
     }
   }
@@ -142,69 +120,62 @@ SCENARIO("head_and_tail splits off the first element") {
   GIVEN("a generation with 0 values") {
     WHEN("calling head_and_tail") {
       THEN("the observer of head_and_tail only receives on_complete") {
-        auto inputs = std::vector<int>{};
-        auto obs = std::make_shared<test_observer<tuple_t>>();
-        ctx //
-          ->make_observable()
-          .from_container(inputs)
+        auto snk = flow::make_auto_observer<tuple_t>();
+        ctx->make_observable()
+          .empty<int>() //
           .head_and_tail()
-          .subscribe(flow::make_observer_from_ptr(obs));
+          .subscribe(snk->as_observer());
         ctx->run();
-        CHECK(obs->had_complete);
-        CHECK(!obs->had_error);
-        CHECK(obs->values.empty());
+        CHECK(snk->buf.empty());
+        CHECK_EQ(snk->state, flow::observer_state::completed);
+        CHECK_EQ(snk->err, error{});
       }
     }
   }
   GIVEN("a generation with 1 values") {
     WHEN("calling head_and_tail()") {
       THEN("the observer receives the first element plus empty remainder") {
-        auto inputs = std::vector<int>{1};
-        auto prefix_val = 1;
-        auto tail_vals = std::vector<int>{};
-        auto obs = std::make_shared<test_observer<int>>();
+        auto snk = flow::make_auto_observer<int>();
         auto flat_map_calls = 0;
         ctx->make_observable()
-          .from_container(inputs)
+          .just(1)
           .head_and_tail()
           .flat_map([&](const tuple_t& x) {
             ++flat_map_calls;
             auto& [prefix, tail] = x.data();
-            CHECK_EQ(prefix, prefix_val);
+            CHECK_EQ(prefix, 1);
             return tail;
           })
-          .subscribe(flow::make_observer_from_ptr(obs));
+          .subscribe(snk->as_observer());
         ctx->run();
+        CHECK(snk->buf.empty());
         CHECK_EQ(flat_map_calls, 1);
-        CHECK_EQ(obs->values, tail_vals);
-        CHECK(obs->had_complete);
-        CHECK(!obs->had_error);
+        CHECK_EQ(snk->state, flow::observer_state::completed);
+        CHECK_EQ(snk->err, error{});
       }
     }
   }
   GIVEN("a generation with 2 values") {
     WHEN("calling head_and_tail()") {
       THEN("the observer receives the first element plus remainder") {
-        auto inputs = std::vector<int>{1, 2};
-        auto prefix_val = 1;
-        auto tail_vals = std::vector<int>{2};
-        auto obs = std::make_shared<test_observer<int>>();
+        auto snk = flow::make_auto_observer<int>();
         auto flat_map_calls = 0;
         ctx->make_observable()
-          .from_container(inputs)
+          .iota(1)
+          .take(2)
           .head_and_tail()
           .flat_map([&](const tuple_t& x) {
             ++flat_map_calls;
             auto& [prefix, tail] = x.data();
-            CHECK_EQ(prefix, prefix_val);
+            CHECK_EQ(prefix, 1);
             return tail;
           })
-          .subscribe(flow::make_observer_from_ptr(obs));
+          .subscribe(snk->as_observer());
         ctx->run();
         CHECK_EQ(flat_map_calls, 1);
-        CHECK_EQ(obs->values, tail_vals);
-        CHECK(obs->had_complete);
-        CHECK(!obs->had_error);
+        CHECK_EQ(snk->buf, ls(2));
+        CHECK_EQ(snk->state, flow::observer_state::completed);
+        CHECK_EQ(snk->err, error{});
       }
     }
   }

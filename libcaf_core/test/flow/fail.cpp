@@ -2,7 +2,7 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE flow.error
+#define CAF_SUITE flow.fail
 
 #include "caf/flow/observable_builder.hpp"
 
@@ -22,12 +22,12 @@ struct fixture : test_coordinator_fixture<> {
 
 BEGIN_FIXTURE_SCOPE(fixture)
 
-SCENARIO("an error observable immediately calls on_error on any subscriber") {
-  GIVEN("an error<int32>") {
+SCENARIO("the fail operator immediately calls on_error on any subscriber") {
+  GIVEN("a fail<int32> operator") {
     WHEN("an observer subscribes") {
       THEN("the observer receives on_error") {
-        auto uut = ctx->make_observable().error<int32_t>(sec::runtime_error);
-        auto snk = flow::make_passive_observer<int32_t>();
+        auto uut = ctx->make_observable().fail<int32_t>(sec::runtime_error);
+        auto snk = flow::make_auto_observer<int32_t>();
         uut.subscribe(snk->as_observer());
         ctx->run();
         CHECK(!snk->sub);
