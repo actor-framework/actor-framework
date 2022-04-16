@@ -533,14 +533,16 @@ CAF_CORE_EXPORT bool operator==(const logger::field& x, const logger::field& y);
                    << "; GROUPS =" << ::caf::logger::joined_groups_of(ref))
 
 #  define CAF_LOG_SEND_EVENT(ptr)                                              \
-    CAF_LOG_IMPL(                                                              \
-      CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                             \
-      "SEND ; TO ="                                                            \
-        << ::caf::deep_to_string(::caf::strong_actor_ptr{this->ctrl()})        \
-             .c_str()                                                          \
-        << "; FROM =" << ::caf::deep_to_string(ptr->sender).c_str()            \
-        << "; STAGES =" << ::caf::deep_to_string(ptr->stages).c_str()          \
-        << "; CONTENT =" << ::caf::deep_to_string(ptr->content()).c_str())
+    CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                  \
+                 "SEND ; TO ="                                                 \
+                   << ::caf::deep_to_string(                                   \
+                        ::caf::strong_actor_ptr{this->ctrl()})                 \
+                        .c_str()                                               \
+                   << "; FROM =" << ::caf::deep_to_string(ptr->sender).c_str() \
+                   << "; STAGES ="                                             \
+                   << ::caf::deep_to_string(ptr->stages).c_str()               \
+                   << "; CONTENT ="                                            \
+                   << ::caf::deep_to_string(ptr->content()).c_str())
 
 #  define CAF_LOG_RECEIVE_EVENT(ptr)                                           \
     CAF_LOG_IMPL(CAF_LOG_FLOW_COMPONENT, CAF_LOG_LEVEL_DEBUG,                  \
@@ -604,20 +606,3 @@ CAF_CORE_EXPORT bool operator==(const logger::field& x, const logger::field& y);
 #  define CAF_LOG_TERMINATE_EVENT(thisptr, rsn) CAF_VOID_STMT
 
 #endif // CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
-
-// -- macros for logging streaming-related events ------------------------------
-
-/// The log component for logging streaming-related events that are crucial for
-/// understanding handshaking, credit decisions, etc.
-#define CAF_LOG_STREAM_COMPONENT "caf_stream"
-
-#if CAF_LOG_LEVEL >= CAF_LOG_LEVEL_DEBUG
-#  define CAF_STREAM_LOG_DEBUG(output)                                         \
-    CAF_LOG_IMPL(CAF_LOG_STREAM_COMPONENT, CAF_LOG_LEVEL_DEBUG, output)
-#  define CAF_STREAM_LOG_DEBUG_IF(condition, output)                           \
-    if (condition)                                                             \
-    CAF_LOG_IMPL(CAF_LOG_STREAM_COMPONENT, CAF_LOG_LEVEL_DEBUG, output)
-#else
-#  define CAF_STREAM_LOG_DEBUG(unused) CAF_VOID_STMT
-#  define CAF_STREAM_LOG_DEBUG_IF(unused1, unused2) CAF_VOID_STMT
-#endif

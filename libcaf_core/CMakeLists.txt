@@ -42,7 +42,7 @@ configure_file("${PROJECT_SOURCE_DIR}/cmake/build_config.hpp.in"
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/caf/detail/build_config.hpp"
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/caf/detail/")
 
-#-- add targets ----------------------------------------------------------------
+# -- add targets ---------------------------------------------------------------
 
 caf_add_component(
   core
@@ -64,7 +64,6 @@ caf_add_component(
     message_priority
     pec
     sec
-    stream_priority
   HEADERS
     ${CAF_CORE_HEADERS}
   SOURCES
@@ -99,7 +98,6 @@ caf_add_component(
     src/config_value.cpp
     src/config_value_reader.cpp
     src/config_value_writer.cpp
-    src/credit_controller.cpp
     src/decorator/sequencer.cpp
     src/default_attachable.cpp
     src/deserializer.cpp
@@ -135,17 +133,12 @@ caf_add_component(
     src/detail/serialized_size.cpp
     src/detail/set_thread_name.cpp
     src/detail/shared_spinlock.cpp
-    src/detail/size_based_credit_controller.cpp
     src/detail/stringification_inspector.cpp
     src/detail/sync_request_bouncer.cpp
     src/detail/test_actor_clock.cpp
     src/detail/thread_safe_actor_clock.cpp
-    src/detail/tick_emitter.cpp
-    src/detail/token_based_credit_controller.cpp
     src/detail/type_id_list_builder.cpp
     src/disposable.cpp
-    src/downstream_manager.cpp
-    src/downstream_manager_base.cpp
     src/error.cpp
     src/event_based_actor.cpp
     src/execution_unit.cpp
@@ -160,7 +153,6 @@ caf_add_component(
     src/group_manager.cpp
     src/group_module.cpp
     src/hash/sha1.cpp
-    src/inbound_path.cpp
     src/init_global_meta_objects.cpp
     src/ipv4_address.cpp
     src/ipv4_endpoint.cpp
@@ -180,8 +172,6 @@ caf_add_component(
     src/message_handler.cpp
     src/monitorable_actor.cpp
     src/node_id.cpp
-    src/outbound_path.cpp
-    src/policy/downstream_messages.cpp
     src/policy/unprofiled.cpp
     src/policy/work_sharing.cpp
     src/policy/work_stealing.cpp
@@ -200,8 +190,6 @@ caf_add_component(
     src/serializer.cpp
     src/settings.cpp
     src/skip.cpp
-    src/stream_aborter.cpp
-    src/stream_manager.cpp
     src/string_algorithms.cpp
     src/string_view.cpp
     src/telemetry/collector/prometheus.cpp
@@ -240,7 +228,6 @@ caf_add_component(
     binary_deserializer
     binary_serializer
     blocking_actor
-    broadcast_downstream_manager
     byte
     composition
     config_option
@@ -250,7 +237,6 @@ caf_add_component(
     config_value_writer
     const_typed_message_view
     constructor_attach
-    continuous_streaming
     cow_string
     cow_tuple
     decorator.sequencer
@@ -281,7 +267,6 @@ caf_add_component(
     detail.ringbuffer
     detail.ripemd_160
     detail.serialized_size
-    detail.tick_emitter
     detail.type_id_list_builder
     detail.unique_function
     detail.unordered_flat_map
@@ -307,7 +292,6 @@ caf_add_component(
     flow.single
     flow.zip_with
     function_view
-    fused_downstream_manager
     handles
     hash.fnv
     hash.sha1
@@ -337,13 +321,10 @@ caf_add_component(
     metaprogramming
     mixin.requester
     mixin.sender
-    mock_streaming_classes
     mtl
-    native_streaming_classes
     node_id
     optional
     or_else
-    pipeline_streaming
     policy.categorized
     policy.select_all
     policy.select_any
@@ -353,7 +334,6 @@ caf_add_component(
     result
     save_inspector
     scheduled_actor
-    selective_streaming
     serial_reply
     serialization
     settings

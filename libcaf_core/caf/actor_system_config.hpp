@@ -25,7 +25,6 @@
 #include "caf/fwd.hpp"
 #include "caf/is_typed_actor.hpp"
 #include "caf/settings.hpp"
-#include "caf/stream.hpp"
 #include "caf/thread_hook.hpp"
 
 namespace caf {
@@ -196,14 +195,6 @@ public:
   /// Credentials for connecting to the bootstrap node.
   std::string bootstrap_node;
 
-  // -- stream parameters ------------------------------------------------------
-
-  /// @private
-  timespan stream_max_batch_delay;
-
-  /// @private
-  timespan stream_credit_round_interval;
-
   // -- OpenSSL parameters -----------------------------------------------------
 
   std::string openssl_certificate;
@@ -260,8 +251,8 @@ public:
   /// @param opts User-defined config options for type checking.
   /// @returns A ::settings dictionary with the parsed content of `filename` on
   ///          success, an ::error otherwise.
-  static expected<settings>
-  parse_config_file(const char* filename, const config_option_set& opts);
+  static expected<settings> parse_config_file(const char* filename,
+                                              const config_option_set& opts);
 
   /// Tries to open `filename`, parses its content as CAF config file and
   /// stores all entries in `result` (overrides conflicting entries). Also
@@ -272,9 +263,9 @@ public:
   ///               partial results if this function returns an error.
   /// @returns A default-constructed ::error on success, the error code of the
   ///          parser otherwise.
-  static error
-  parse_config_file(const char* filename, const config_option_set& opts,
-                    settings& result);
+  static error parse_config_file(const char* filename,
+                                 const config_option_set& opts,
+                                 settings& result);
 
   /// Parses the content of `source` using CAF's config format.
   /// @param source Character sequence in CAF's config format.
@@ -288,8 +279,8 @@ public:
   /// @param opts User-defined config options for type checking.
   /// @returns A ::settings dictionary with the parsed content of `source` on
   ///          success, an ::error otherwise.
-  static expected<settings>
-  parse_config(std::istream& source, const config_option_set& opts);
+  static expected<settings> parse_config(std::istream& source,
+                                         const config_option_set& opts);
 
   /// Parses the content of `source` using CAF's config format and stores all
   /// entries in `result` (overrides conflicting entries). Also type-checks

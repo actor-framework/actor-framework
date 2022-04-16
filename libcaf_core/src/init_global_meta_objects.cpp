@@ -13,7 +13,6 @@
 #include "caf/callback.hpp"
 #include "caf/config_value.hpp"
 #include "caf/cow_string.hpp"
-#include "caf/downstream_msg.hpp"
 #include "caf/error.hpp"
 #include "caf/group.hpp"
 #include "caf/ipv4_address.hpp"
@@ -29,7 +28,6 @@
 #include "caf/timespan.hpp"
 #include "caf/timestamp.hpp"
 #include "caf/unit.hpp"
-#include "caf/upstream_msg.hpp"
 #include "caf/uri.hpp"
 
 namespace caf::core {

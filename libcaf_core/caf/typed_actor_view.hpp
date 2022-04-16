@@ -118,16 +118,6 @@ public:
     return self_->mailbox();
   }
 
-  /// @copydoc scheduled_actor::stream_managers
-  auto& stream_managers() noexcept {
-    return self_->stream_managers();
-  }
-
-  /// @copydoc scheduled_actor::pending_stream_managers
-  auto& pending_stream_managers() noexcept {
-    return self_->pending_stream_managers();
-  }
-
   // -- event handlers ---------------------------------------------------------
 
   /// @copydoc scheduled_actor::set_default_handler

@@ -38,16 +38,16 @@ optional<tuple<Ts...>> fetch(const mailbox_element& x) {
 } // namespace
 
 CAF_TEST(empty_message) {
-  auto m1 = make_mailbox_element(nullptr, make_message_id(),
-                                 no_stages, make_message());
+  auto m1 = make_mailbox_element(nullptr, make_message_id(), no_stages,
+                                 make_message());
   CAF_CHECK(m1->mid.is_async());
   CAF_CHECK(m1->mid.category() == message_id::normal_message_category);
   CAF_CHECK(m1->content().empty());
 }
 
 CAF_TEST(non_empty_message) {
-  auto m1 = make_mailbox_element(nullptr, make_message_id(),
-                                 no_stages, make_message(1, 2, 3));
+  auto m1 = make_mailbox_element(nullptr, make_message_id(), no_stages,
+                                 make_message(1, 2, 3));
   CAF_CHECK(m1->mid.is_async());
   CAF_CHECK(m1->mid.category() == message_id::normal_message_category);
   CAF_CHECK(!m1->content().empty());
@@ -56,8 +56,8 @@ CAF_TEST(non_empty_message) {
 }
 
 CAF_TEST(tuple) {
-  auto m1 = make_mailbox_element(nullptr, make_message_id(),
-                                 no_stages, 1, 2, 3);
+  auto m1 = make_mailbox_element(nullptr, make_message_id(), no_stages, 1, 2,
+                                 3);
   CAF_CHECK(m1->mid.is_async());
   CAF_CHECK(m1->mid.category() == message_id::normal_message_category);
   CAF_CHECK(!m1->content().empty());
@@ -70,30 +70,4 @@ CAF_TEST(high_priority) {
                                  make_message_id(message_priority::high),
                                  no_stages, 42);
   CAF_CHECK(m1->mid.category() == message_id::urgent_message_category);
-}
-
-CAF_TEST(upstream_msg_static) {
-  auto m1 = make_mailbox_element(nullptr, make_message_id(), no_stages,
-                                 make<upstream_msg::drop>({0, 0}, nullptr));
-  CAF_CHECK(m1->mid.category() == message_id::upstream_message_category);
-}
-
-CAF_TEST(upstream_msg_dynamic) {
-  auto m1 = make_mailbox_element(
-    nullptr, make_message_id(), no_stages,
-    make_message(make<upstream_msg::drop>({0, 0}, nullptr)));
-  CAF_CHECK(m1->mid.category() == message_id::upstream_message_category);
-}
-
-CAF_TEST(downstream_msg_static) {
-  auto m1 = make_mailbox_element(nullptr, make_message_id(), no_stages,
-                                 make<downstream_msg::close>({0, 0}, nullptr));
-  CAF_CHECK(m1->mid.category() == message_id::downstream_message_category);
-}
-
-CAF_TEST(downstream_msg_dynamic) {
-  auto m1 = make_mailbox_element(
-    nullptr, make_message_id(), no_stages,
-    make_message(make<downstream_msg::close>({0, 0}, nullptr)));
-  CAF_CHECK(m1->mid.category() == message_id::downstream_message_category);
 }

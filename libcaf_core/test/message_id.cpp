@@ -19,9 +19,6 @@ CAF_TEST(default construction) {
   CAF_CHECK(x.category() == message_id::normal_message_category);
   CAF_CHECK_EQUAL(x.is_urgent_message(), false);
   CAF_CHECK_EQUAL(x.is_normal_message(), true);
-  CAF_CHECK_EQUAL(x.is_stream_message(), false);
-  CAF_CHECK_EQUAL(x.is_upstream_message(), false);
-  CAF_CHECK_EQUAL(x.is_downstream_message(), false);
   CAF_CHECK_EQUAL(x, x.response_id());
   CAF_CHECK_EQUAL(x.request_id().integer_value(), 0u);
   CAF_CHECK(x.integer_value() == message_id::default_async_value);
@@ -43,9 +40,6 @@ CAF_TEST(from integer value) {
   CAF_CHECK(x.category() == message_id::normal_message_category);
   CAF_CHECK_EQUAL(x.is_urgent_message(), false);
   CAF_CHECK_EQUAL(x.is_normal_message(), true);
-  CAF_CHECK_EQUAL(x.is_stream_message(), false);
-  CAF_CHECK_EQUAL(x.is_upstream_message(), false);
-  CAF_CHECK_EQUAL(x.is_downstream_message(), false);
   CAF_CHECK_EQUAL(x.request_id().integer_value(), 42u);
 }
 
@@ -58,9 +52,6 @@ CAF_TEST(response ID) {
   CAF_CHECK(x.category() == message_id::normal_message_category);
   CAF_CHECK_EQUAL(x.is_urgent_message(), false);
   CAF_CHECK_EQUAL(x.is_normal_message(), true);
-  CAF_CHECK_EQUAL(x.is_stream_message(), false);
-  CAF_CHECK_EQUAL(x.is_upstream_message(), false);
-  CAF_CHECK_EQUAL(x.is_downstream_message(), false);
   CAF_CHECK_EQUAL(x.request_id().integer_value(), 42u);
 }
 
@@ -73,9 +64,6 @@ CAF_TEST(request with high priority) {
   CAF_CHECK(x.category() == message_id::normal_message_category);
   CAF_CHECK_EQUAL(x.is_urgent_message(), false);
   CAF_CHECK_EQUAL(x.is_normal_message(), true);
-  CAF_CHECK_EQUAL(x.is_stream_message(), false);
-  CAF_CHECK_EQUAL(x.is_upstream_message(), false);
-  CAF_CHECK_EQUAL(x.is_downstream_message(), false);
   CAF_CHECK_EQUAL(x.request_id().integer_value(), 42u);
 }
 
@@ -83,8 +71,6 @@ CAF_TEST(with_category) {
   auto x = make_message_id();
   CAF_CHECK(x.category() == message_id::normal_message_category);
   for (auto category : {message_id::urgent_message_category,
-                        message_id::downstream_message_category,
-                        message_id::upstream_message_category,
                         message_id::normal_message_category}) {
     x = x.with_category(category);
     CAF_CHECK_EQUAL(x.category(), category);
