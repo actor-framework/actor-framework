@@ -124,7 +124,8 @@ bool would_block_or_temporarily_unavailable(int errcode) {
 bool probe(socket x) {
   auto err = 0;
   auto len = static_cast<socklen_t>(sizeof(err));
-  if (getsockopt(x.id, SOL_SOCKET, SO_ERROR, &err, &len) == 0) {
+  auto err_ptr = reinterpret_cast<char*>(&err);
+  if (getsockopt(x.id, SOL_SOCKET, SO_ERROR, err_ptr, &len) == 0) {
     WSASetLastError(err);
     return err == 0;
   } else {
