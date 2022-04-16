@@ -42,7 +42,7 @@ SCENARIO("repeater sources repeat one value indefinitely") {
           snk->sub.request(4);
           ctx->run();
           CHECK_EQ(snk->buf, ivec({42, 42, 42, 42, 42, 42, 42}));
-          snk->sub.cancel();
+          snk->sub.dispose();
           ctx->run();
           CHECK_EQ(snk->buf, ivec({42, 42, 42, 42, 42, 42, 42}));
         }
@@ -112,7 +112,7 @@ SCENARIO("callable sources stream values generated from a function object") {
           snk->sub.request(4);
           ctx->run();
           CHECK_EQ(snk->buf, ivec({1, 2, 3, 4, 5, 6, 7}));
-          snk->sub.cancel();
+          snk->sub.dispose();
           ctx->run();
           CHECK_EQ(snk->buf, ivec({1, 2, 3, 4, 5, 6, 7}));
         }

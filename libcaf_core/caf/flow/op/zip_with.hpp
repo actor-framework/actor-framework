@@ -21,13 +21,13 @@
 namespace caf::flow::op {
 
 template <class F, class... Ts>
-struct zip_wich_oracle {
+struct zip_with_oracle {
   using output_type
     = decltype(std::declval<F&>()(std::declval<const Ts&>()...));
 };
 
 template <class F, class... Ts>
-using zip_with_output_t = typename zip_wich_oracle<F, Ts...>::output_type;
+using zip_with_output_t = typename zip_with_oracle<F, Ts...>::output_type;
 
 template <size_t Index>
 using zip_index = std::integral_constant<size_t, Index>;
@@ -73,11 +73,11 @@ public:
     return !out_;
   }
 
-  void cancel() override {
+  void dispose() override {
     if (out_) {
       for_each_input([](auto, auto& input) {
         if (input.sub) {
-          input.sub.cancel();
+          input.sub.dispose();
           input.sub = nullptr;
         }
         input.buf.clear();
@@ -143,10 +143,10 @@ public:
           sub.request(demand_);
         in.sub = std::move(sub);
       } else {
-        sub.cancel();
+        sub.dispose();
       }
     } else {
-      sub.cancel();
+      sub.dispose();
     }
   }
 
@@ -203,7 +203,7 @@ private:
   void fin() {
     for_each_input([](auto, auto& input) {
       if (input.sub) {
-        input.sub.cancel();
+        input.sub.dispose();
         input.sub = nullptr;
       }
       input.buf.clear();

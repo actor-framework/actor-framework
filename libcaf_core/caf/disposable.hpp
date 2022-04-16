@@ -57,7 +57,6 @@ public:
     return *this;
   }
 
-
   // -- factories --------------------------------------------------------------
 
   /// Combines multiple disposables into a single disposable. The new disposable

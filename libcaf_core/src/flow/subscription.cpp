@@ -12,10 +12,6 @@ subscription::impl::~impl() {
   // nop
 }
 
-void subscription::impl::dispose() {
-  cancel();
-}
-
 void subscription::impl_base::ref_disposable() const noexcept {
   this->ref();
 }
@@ -39,7 +35,7 @@ void subscription::fwd_impl::request(size_t n) {
     });
 }
 
-void subscription::fwd_impl::cancel() {
+void subscription::fwd_impl::dispose() {
   if (src_) {
     ctx()->delay_fn([src = src_, snk = snk_] { //
       src->on_cancel(snk.get());

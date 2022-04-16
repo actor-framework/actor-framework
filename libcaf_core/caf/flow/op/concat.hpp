@@ -83,7 +83,7 @@ public:
       factory_sub_ = std::move(sub);
       factory_sub_.request(1);
     } else {
-      sub.cancel();
+      sub.dispose();
     }
   }
 
@@ -134,7 +134,7 @@ public:
     return !out_;
   }
 
-  void cancel() override {
+  void dispose() override {
     if (out_) {
       ctx_->delay_fn([strong_this = intrusive_ptr<concat_sub>{this}] {
         if (strong_this->out_) {
@@ -156,11 +156,11 @@ private:
   void fin() {
     CAF_ASSERT(out_);
     if (factory_sub_) {
-      factory_sub_.cancel();
+      factory_sub_.dispose();
       factory_sub_ = nullptr;
     }
     if (active_sub_) {
-      active_sub_.cancel();
+      active_sub_.dispose();
       active_sub_ = nullptr;
     }
     factory_key_ = 0;

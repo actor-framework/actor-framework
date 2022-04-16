@@ -66,7 +66,7 @@ public:
       }
     }
 
-    bool cancelled() const {
+    bool canceled() const {
       std::unique_lock<std::mutex> guard{mtx_};
       return demand_ == -1;
     }
@@ -160,9 +160,9 @@ public:
     }
   }
 
-  /// Checks whether the consumer cancelled its subscription.
-  bool cancelled() const {
-    return impl_->cancelled();
+  /// Checks whether the consumer canceled its subscription.
+  bool canceled() const {
+    return impl_->canceled();
   }
 
 private:

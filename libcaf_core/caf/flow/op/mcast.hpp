@@ -110,7 +110,7 @@ public:
     return !state_;
   }
 
-  void cancel() override {
+  void dispose() override {
     if (state_) {
       ctx_->delay_fn([state = std::move(state_)]() { state->do_dispose(); });
     }

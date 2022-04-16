@@ -29,13 +29,13 @@ public:
     return !out_;
   }
 
-  void cancel() override {
+  void dispose() override {
     if (out_)
       ctx_->delay_fn([out = std::move(out_)]() mutable { out.on_complete(); });
   }
 
   void request(size_t) override {
-    cancel();
+    dispose();
   }
 
 private:

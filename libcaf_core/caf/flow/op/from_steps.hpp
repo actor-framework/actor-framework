@@ -42,13 +42,13 @@ public:
 
     void on_complete() {
       CAF_ASSERT(sub->in_.valid());
-      sub->in_.cancel();
+      sub->in_.dispose();
       sub->in_ = nullptr;
     }
 
     void on_error(const error& what) {
       CAF_ASSERT(sub->subscribed());
-      sub->in_.cancel();
+      sub->in_.dispose();
       sub->in_ = nullptr;
       sub->err_ = what;
     }
@@ -154,7 +154,7 @@ public:
       in_ = std::move(in);
       pull();
     } else {
-      in.cancel();
+      in.dispose();
     }
   }
 
@@ -164,7 +164,7 @@ public:
     return disposed_;
   }
 
-  void cancel() override {
+  void dispose() override {
     CAF_LOG_TRACE("");
     if (!disposed_) {
       disposed_ = true;
@@ -173,7 +173,7 @@ public:
       ctx_->delay_fn([out = std::move(out_)]() mutable { out.on_complete(); });
     }
     if (in_) {
-      in_.cancel();
+      in_.dispose();
       in_ = nullptr;
     }
   }

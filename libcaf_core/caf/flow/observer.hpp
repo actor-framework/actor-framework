@@ -211,7 +211,7 @@ public:
       sub_ = std::move(sub);
       sub_.request(defaults::flow::buffer_size);
     } else {
-      sub.cancel();
+      sub.dispose();
     }
   }
 
@@ -355,7 +355,7 @@ public:
       sub_ = std::move(sub);
     } else {
       CAF_LOG_DEBUG("already have a subscription or buffer no longer valid");
-      sub.cancel();
+      sub.dispose();
     }
   }
 
@@ -399,7 +399,7 @@ private:
   void on_cancel() {
     CAF_LOG_TRACE("");
     if (sub_) {
-      sub_.cancel();
+      sub_.dispose();
       sub_ = nullptr;
     }
     buf_ = nullptr;
@@ -457,7 +457,7 @@ public:
     if (parent_) {
       parent_->fwd_on_subscribe(token_, std::move(new_sub));
     } else {
-      new_sub.cancel();
+      new_sub.dispose();
     }
   }
 
@@ -491,7 +491,7 @@ public:
 
   void on_complete() override {
     if (sub) {
-      sub.cancel();
+      sub.dispose();
       sub = nullptr;
     }
     state = observer_state::completed;
@@ -499,7 +499,7 @@ public:
 
   void on_error(const error& what) override {
     if (sub) {
-      sub.cancel();
+      sub.dispose();
       sub = nullptr;
     }
     err = what;
@@ -512,7 +512,7 @@ public:
       sub = std::move(new_sub);
       state = observer_state::subscribed;
     } else {
-      new_sub.cancel();
+      new_sub.dispose();
     }
   }
 
@@ -577,7 +577,7 @@ public:
 
   void on_complete() override {
     if (sub) {
-      sub.cancel();
+      sub.dispose();
       sub = nullptr;
     }
     state = observer_state::completed;
@@ -585,7 +585,7 @@ public:
 
   void on_error(const error& what) override {
     if (sub) {
-      sub.cancel();
+      sub.dispose();
       sub = nullptr;
     }
     err = what;
@@ -599,7 +599,7 @@ public:
       state = observer_state::subscribed;
       sub.request(64);
     } else {
-      new_sub.cancel();
+      new_sub.dispose();
     }
   }
 

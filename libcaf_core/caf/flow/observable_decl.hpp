@@ -137,28 +137,23 @@ public:
   /// Combines the output of multiple @ref observable objects into one by
   /// merging their outputs. May also be called without arguments if the `T` is
   /// an @ref observable.
-  template <class... Inputs>
+  template <class Out = output_type, class... Inputs>
   auto merge(Inputs&&... xs);
 
   /// Combines the output of multiple @ref observable objects into one by
   /// concatenating their outputs. May also be called without arguments if the
   /// `T` is an @ref observable.
-  template <class... Inputs>
+  template <class Out = output_type, class... Inputs>
   auto concat(Inputs&&...);
 
   /// Returns a transformation that emits items by merging the outputs of all
   /// observables returned by `f`.
-  template <class F>
+  template <class Out = output_type, class F>
   auto flat_map(F f);
-
-  /// Returns a transformation that emits items from optional values returned by
-  /// `f`.
-  template <class F>
-  transformation<flat_map_optional_step<F>> flat_map_optional(F f);
 
   /// Returns a transformation that emits items by concatenating the outputs of
   /// all observables returned by `f`.
-  template <class F>
+  template <class Out = output_type, class F>
   auto concat_map(F f);
 
   /// Takes @p prefix_size elements from this observable and emits it in a tuple

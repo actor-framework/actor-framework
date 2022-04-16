@@ -53,7 +53,7 @@ public:
     return !out_;
   }
 
-  void cancel() override {
+  void dispose() override {
     if (out_) {
       completed_ = true;
       buf_.clear();

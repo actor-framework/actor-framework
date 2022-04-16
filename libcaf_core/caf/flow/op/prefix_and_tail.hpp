@@ -93,7 +93,7 @@ public:
   }
 
   void on_subscribe(subscription in) override {
-    in.cancel();
+    in.dispose();
   }
 
   // -- implementation of subscription_impl ------------------------------------
@@ -102,9 +102,9 @@ public:
     return !out_;
   }
 
-  void cancel() override {
+  void dispose() override {
     if (in_) {
-      in_.cancel();
+      in_.dispose();
       in_ = nullptr;
     }
     if (out_) {
@@ -145,7 +145,7 @@ public:
 
   ~pipe() {
     if (sub_)
-      sub_->cancel();
+      sub_->dispose();
   }
 
   disposable subscribe(observer<T> out) override {

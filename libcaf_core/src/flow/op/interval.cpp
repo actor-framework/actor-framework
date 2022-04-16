@@ -69,7 +69,7 @@ public:
 
   // -- implementation of subscription_impl ------------------------------------
 
-  void cancel() override {
+  void dispose() override {
     if (out_) {
       ctx_->delay_fn([ptr = strong_this()] { ptr->do_cancel(); });
     }

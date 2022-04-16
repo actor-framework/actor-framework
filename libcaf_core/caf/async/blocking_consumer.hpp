@@ -70,7 +70,7 @@ public:
       // nop
     }
 
-    void cancel() {
+    void dispose() {
       if (buf_) {
         buf_->cancel();
         buf_ = nullptr;

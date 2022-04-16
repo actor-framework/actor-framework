@@ -23,20 +23,8 @@ struct fixture : test_coordinator_fixture<> {
 BEGIN_FIXTURE_SCOPE(fixture)
 
 SCENARIO("the never operator never invokes callbacks except when disposed") {
-  GIVEN("a never<int32>") {
-    WHEN("an observer subscribes") {
-      THEN("the observer never receives any events") {
-        auto uut = ctx->make_observable().never<int32_t>();
-        auto snk = flow::make_auto_observer<int32_t>();
-        uut.subscribe(snk->as_observer());
-        ctx->run();
-        CHECK(snk->buf.empty());
-        CHECK_EQ(snk->state, flow::observer_state::subscribed);
-      }
-    }
-  }
-  GIVEN("a never<int32> that gets disposed") {
-    WHEN("an observer subscribes") {
+  GIVEN("a never operator") {
+    WHEN("an observer subscribes and disposing the subscription") {
       THEN("the observer receives on_complete") {
         auto uut = ctx->make_observable().never<int32_t>();
         auto snk1 = flow::make_auto_observer<int32_t>();

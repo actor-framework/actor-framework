@@ -196,11 +196,6 @@ public:
   }
 
   template <class F>
-  auto flat_map_optional(F f) && {
-    return std::move(*this).transform(flat_map_optional_step<F>{std::move(f)});
-  }
-
-  template <class F>
   auto do_on_next(F f) && {
     return std::move(*this) //
       .transform(do_on_next_step<output_type, F>{std::move(f)});
@@ -336,17 +331,17 @@ disposable observable<T>::for_each(OnNext on_next, OnError on_error,
 // -- observable::merge --------------------------------------------------------
 
 template <class T>
-template <class... Inputs>
+template <class Out, class... Inputs>
 auto observable<T>::merge(Inputs&&... xs) {
-  if constexpr (is_observable_v<output_type>) {
-    using value_t = output_type_t<output_type>;
+  if constexpr (is_observable_v<Out>) {
+    using value_t = output_type_t<Out>;
     using impl_t = op::merge<value_t>;
     return make_observable<impl_t>(ctx(), *this, std::forward<Inputs>(xs)...);
   } else {
     static_assert(
       sizeof...(Inputs) > 0,
       "merge without arguments expects this observable to emit observables");
-    using impl_t = op::merge<output_type>;
+    using impl_t = op::merge<Out>;
     return make_observable<impl_t>(ctx(), *this, std::forward<Inputs>(xs)...);
   }
 }
@@ -354,18 +349,16 @@ auto observable<T>::merge(Inputs&&... xs) {
 // -- observable::flat_map -----------------------------------------------------
 
 template <class T>
-template <class F>
+template <class Out, class F>
 auto observable<T>::flat_map(F f) {
-  using res_t = decltype(f(std::declval<const output_type&>()));
+  using res_t = decltype(f(std::declval<const Out&>()));
   if constexpr (is_observable_v<res_t>) {
-    return map([fn = std::move(f)](const output_type& x) mutable {
+    return map([fn = std::move(f)](const Out& x) mutable {
              return fn(x).as_observable();
            })
       .merge();
   } else if constexpr (detail::is_optional_v<res_t>) {
-    return map([fn = std::move(f)](const output_type& x) mutable {
-             return fn(x);
-           })
+    return map([fn = std::move(f)](const Out& x) mutable { return fn(x); })
       .filter([](const res_t& x) { return x.has_value(); })
       .map([](const res_t& x) { return *x; });
   } else {
@@ -374,39 +367,27 @@ auto observable<T>::flat_map(F f) {
     // all available immediately, there is no good reason to mess up the emitted
     // order of values.
     static_assert(detail::is_iterable_v<res_t>);
-    return map([cptr = ctx(), fn = std::move(f)](const output_type& x) mutable {
+    return map([cptr = ctx(), fn = std::move(f)](const Out& x) mutable {
              return cptr->make_observable().from_container(fn(x));
            })
       .concat();
   }
 }
 
-// -- observable::flat_map_optional --------------------------------------------
-
-template <class T>
-template <class F>
-transformation<flat_map_optional_step<F>>
-observable<T>::flat_map_optional(F f) {
-  using step_type = flat_map_optional_step<F>;
-  static_assert(std::is_same_v<typename step_type::input_type, T>,
-                "flat_map_optional function does not match the input type");
-  return {*this, std::forward_as_tuple(step_type{std::move(f)})};
-}
-
 // -- observable::concat -------------------------------------------------------
 
 template <class T>
-template <class... Inputs>
+template <class Out, class... Inputs>
 auto observable<T>::concat(Inputs&&... xs) {
-  if constexpr (is_observable_v<output_type>) {
-    using value_t = output_type_t<output_type>;
+  if constexpr (is_observable_v<Out>) {
+    using value_t = output_type_t<Out>;
     using impl_t = op::concat<value_t>;
     return make_observable<impl_t>(ctx(), *this, std::forward<Inputs>(xs)...);
   } else {
     static_assert(
       sizeof...(Inputs) > 0,
       "merge without arguments expects this observable to emit observables");
-    using impl_t = op::concat<output_type>;
+    using impl_t = op::concat<Out>;
     return make_observable<impl_t>(ctx(), *this, std::forward<Inputs>(xs)...);
   }
 }
@@ -414,23 +395,21 @@ auto observable<T>::concat(Inputs&&... xs) {
 // -- observable::concat_map ---------------------------------------------------
 
 template <class T>
-template <class F>
+template <class Out, class F>
 auto observable<T>::concat_map(F f) {
-  using res_t = decltype(f(std::declval<const output_type&>()));
+  using res_t = decltype(f(std::declval<const Out&>()));
   if constexpr (is_observable_v<res_t>) {
-    return map([fn = std::move(f)](const output_type& x) mutable {
+    return map([fn = std::move(f)](const Out& x) mutable {
              return fn(x).as_observable();
            })
       .concat();
   } else if constexpr (detail::is_optional_v<res_t>) {
-    return map([fn = std::move(f)](const output_type& x) mutable {
-             return fn(x);
-           })
+    return map([fn = std::move(f)](const Out& x) mutable { return fn(x); })
       .filter([](const res_t& x) { return x.has_value(); })
       .map([](const res_t& x) { return *x; });
   } else {
     static_assert(detail::is_iterable_v<res_t>);
-    return map([cptr = ctx(), fn = std::move(f)](const output_type& x) mutable {
+    return map([cptr = ctx(), fn = std::move(f)](const Out& x) mutable {
              return cptr->make_observable().from_container(fn(x));
            })
       .concat();

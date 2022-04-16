@@ -97,7 +97,7 @@ public:
     return !state_;
   }
 
-  void cancel() override {
+  void dispose() override {
     if (state_) {
       state_->drop(out_);
       state_ = nullptr;

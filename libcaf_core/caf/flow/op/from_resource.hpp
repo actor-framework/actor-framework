@@ -55,7 +55,7 @@ public:
     return disposed_;
   }
 
-  void cancel() override {
+  void dispose() override {
     CAF_LOG_TRACE("");
     if (!disposed_) {
       disposed_ = true;

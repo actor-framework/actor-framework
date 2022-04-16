@@ -27,14 +27,8 @@ public:
   public:
     ~impl() override;
 
-    /// Causes the publisher to stop producing items for the subscriber. Any
-    /// in-flight items may still get dispatched.
-    virtual void cancel() = 0;
-
     /// Signals demand for `n` more items.
     virtual void request(size_t n) = 0;
-
-    void dispose() final;
   };
 
   /// Simple base type for all subscription implementations that implements the
@@ -71,7 +65,7 @@ public:
 
     void request(size_t n) override;
 
-    void cancel() override;
+    void dispose() override;
 
     auto* ctx() const noexcept {
       return ctx_;
@@ -125,10 +119,11 @@ public:
 
   // -- demand signaling -------------------------------------------------------
 
-  /// @copydoc impl::cancel
-  void cancel() {
+  /// Causes the publisher to stop producing items for the subscriber. Any
+  /// in-flight items may still get dispatched.
+  void dispose() {
     if (pimpl_) {
-      pimpl_->cancel();
+      pimpl_->dispose();
       pimpl_ = nullptr;
     }
   }

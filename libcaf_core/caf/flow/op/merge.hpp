@@ -77,7 +77,7 @@ public:
       sub.request(max_pending_);
       ptr->sub = std::move(sub);
     } else {
-      sub.cancel();
+      sub.dispose();
     }
   }
 
@@ -102,7 +102,7 @@ public:
         while (i != inputs_.end()) {
           auto& input = *i->second;
           if (auto& sub = input.sub) {
-            sub.cancel();
+            sub.dispose();
             sub = nullptr;
           }
           if (input.buf.empty())
@@ -138,11 +138,11 @@ public:
     return !out_;
   }
 
-  void cancel() override {
+  void dispose() override {
     if (out_) {
       for (auto& kvp : inputs_)
         if (auto& sub = kvp.second->sub)
-          sub.cancel();
+          sub.dispose();
       inputs_.clear();
       run_later();
     }
@@ -215,7 +215,7 @@ private:
     if (!inputs_.empty()) {
       for (auto& kvp : inputs_)
         if (auto& sub = kvp.second->sub)
-          sub.cancel();
+          sub.dispose();
       inputs_.clear();
     }
     if (!err_) {
