@@ -7,7 +7,6 @@
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/ref_counted_base.hpp"
 #include "caf/flow/coordinator.hpp"
 #include "caf/flow/observable.hpp"
 #include "caf/flow/op/defer.hpp"

@@ -8,6 +8,7 @@
 #include "caf/async/producer.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/comparable.hpp"
+#include "caf/detail/plain_ref_counted.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
@@ -88,13 +89,6 @@ public:
     pimpl_->on_next(item);
   }
 
-  /// Creates a new observer from `Impl`.
-  template <class Impl, class... Ts>
-  [[nodiscard]] static observer make(Ts&&... xs) {
-    static_assert(std::is_base_of_v<impl, Impl>);
-    return observer{make_counted<Impl>(std::forward<Ts>(xs)...)};
-  }
-
   bool valid() const noexcept {
     return pimpl_ != nullptr;
   }
@@ -107,22 +101,6 @@ public:
     return !valid();
   }
 
-  impl* ptr() {
-    return pimpl_.get();
-  }
-
-  const impl* ptr() const {
-    return pimpl_.get();
-  }
-
-  const intrusive_ptr<impl>& as_intrusive_ptr() const& noexcept {
-    return pimpl_;
-  }
-
-  intrusive_ptr<impl>&& as_intrusive_ptr() && noexcept {
-    return std::move(pimpl_);
-  }
-
   void swap(observer& other) noexcept {
     pimpl_.swap(other.pimpl_);
   }
@@ -131,16 +109,66 @@ public:
     return pimpl_.compare(other.pimpl_);
   }
 
+  /// Returns an observer that ignores any of its inputs.
+  static observer ignore();
+
 private:
   intrusive_ptr<impl> pimpl_;
 };
 
+/// @relates observer
 template <class T>
 using observer_impl = typename observer<T>::impl;
+
+/// Simple base type observer implementations that implements the reference
+/// counting member functions with a plain (i.e., not thread-safe) reference
+/// count.
+/// @relates observer
+template <class T>
+class observer_impl_base : public detail::plain_ref_counted,
+                           public observer_impl<T> {
+public:
+  void ref_coordinated() const noexcept final {
+    this->ref();
+  }
+
+  void deref_coordinated() const noexcept final {
+    this->deref();
+  }
+};
 
 } // namespace caf::flow
 
 namespace caf::detail {
+
+template <class T>
+class ignoring_observer : public flow::observer_impl_base<T> {
+public:
+  void on_next(const T&) override {
+    if (sub_)
+      sub_.request(1);
+  }
+
+  void on_error(const error&) override {
+    sub_ = nullptr;
+  }
+
+  void on_complete() override {
+    sub_ = nullptr;
+  }
+
+  void on_subscribe(flow::subscription sub) override {
+    if (!sub_) {
+      sub_ = std::move(sub);
+      sub_.request(defaults::flow::buffer_size);
+    } else {
+      sub.dispose();
+    }
+  }
+
+private:
+  flow::subscription sub_;
+};
 
 template <class OnNextSignature>
 struct on_next_trait;
@@ -164,8 +192,7 @@ using on_next_value_type = typename on_next_trait_t<F>::value_type;
 
 template <class OnNext, class OnError = unit_t, class OnComplete = unit_t>
 class default_observer_impl
-  : public detail::ref_counted_base,
-    public flow::observer_impl<on_next_value_type<OnNext>> {
+  : public flow::observer_impl_base<on_next_value_type<OnNext>> {
 public:
   static_assert(std::is_invocable_v<OnError, const error&>);
 
@@ -197,13 +224,17 @@ public:
   }
 
   void on_error(const error& what) override {
-    on_error_(what);
-    sub_ = nullptr;
+    if (sub_) {
+      on_error_(what);
+      sub_ = nullptr;
+    }
   }
 
   void on_complete() override {
-    on_complete_();
-    sub_ = nullptr;
+    if (sub_) {
+      on_complete_();
+      sub_ = nullptr;
+    }
   }
 
   void on_subscribe(flow::subscription sub) override {
@@ -213,14 +244,6 @@ public:
     } else {
       sub.dispose();
     }
-  }
-
-  void ref_coordinated() const noexcept override {
-    this->ref();
-  }
-
-  void deref_coordinated() const noexcept override {
-    this->deref();
   }
 
 private:
@@ -233,6 +256,11 @@ private:
 } // namespace caf::detail
 
 namespace caf::flow {
+
+template <class T>
+observer<T> observer<T>::ignore() {
+  return observer<T>{make_counted<detail::ignoring_observer<T>>()};
+}
 
 /// Creates an observer from given callbacks.
 /// @param on_next Callback for handling incoming elements.
@@ -285,7 +313,7 @@ auto make_observer_from_ptr(SmartPointer ptr) {
 
 /// Writes observed values to a bounded buffer.
 template <class Buffer>
-class buffer_writer_impl : public detail::ref_counted_base,
+class buffer_writer_impl : public detail::atomic_ref_counted,
                            public observer_impl<typename Buffer::value_type>,
                            public async::producer {
 public:
@@ -294,10 +322,6 @@ public:
   using buffer_ptr = intrusive_ptr<Buffer>;
 
   using value_type = typename Buffer::value_type;
-
-  // -- friends ----------------------------------------------------------------
-
-  CAF_INTRUSIVE_PTR_FRIENDS(buffer_writer_impl)
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -312,13 +336,29 @@ public:
       buf_->close();
   }
 
-  // -- implementation of coordinated ------------------------------------------
+  // -- intrusive_ptr interface ------------------------------------------------
+
+  friend void intrusive_ptr_add_ref(const buffer_writer_impl* ptr) noexcept {
+    ptr->ref();
+  }
+
+  friend void intrusive_ptr_release(const buffer_writer_impl* ptr) noexcept {
+    ptr->deref();
+  }
 
   void ref_coordinated() const noexcept final {
     this->ref();
   }
 
   void deref_coordinated() const noexcept final {
+    this->deref();
+  }
+
+  void ref_producer() const noexcept final {
+    this->ref();
+  }
+
+  void deref_producer() const noexcept final {
     this->deref();
   }
 
@@ -381,14 +421,6 @@ public:
     });
   }
 
-  void ref_producer() const noexcept final {
-    this->ref();
-  }
-
-  void deref_producer() const noexcept final {
-    this->deref();
-  }
-
 private:
   void on_demand(size_t n) {
     CAF_LOG_TRACE(CAF_ARG(n));
@@ -416,25 +448,15 @@ private:
 
 // -- utility observer ---------------------------------------------------------
 
-/// Forwards all events to a parent.
+/// Forwards all events to its parent.
 template <class T, class Parent, class Token>
-class forwarder : public detail::ref_counted_base, public observer_impl<T> {
+class forwarder : public observer_impl_base<T> {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
   explicit forwarder(intrusive_ptr<Parent> parent, Token token)
     : parent_(std::move(parent)), token_(std::move(token)) {
     // nop
-  }
-
-  // -- implementation of coordinated ------------------------------------------
-
-  void ref_coordinated() const noexcept final {
-    this->ref();
-  }
-
-  void deref_coordinated() const noexcept final {
-    this->deref();
   }
 
   // -- implementation of observer_impl<T> -------------------------------------
@@ -474,19 +496,8 @@ private:
 
 /// An observer with minimal internal logic. Useful for writing unit tests.
 template <class T>
-class passive_observer : public detail::ref_counted_base,
-                         public observer_impl<T> {
+class passive_observer : public observer_impl_base<T> {
 public:
-  // -- implementation of coordinated ------------------------------------------
-
-  void ref_coordinated() const noexcept final {
-    this->ref();
-  }
-
-  void deref_coordinated() const noexcept final {
-    this->deref();
-  }
-
   // -- implementation of observer_impl<T> -------------------------------------
 
   void on_complete() override {
@@ -561,18 +572,8 @@ intrusive_ptr<passive_observer<T>> make_passive_observer() {
 /// Similar to @ref passive_observer but automatically requests items until
 /// completed. Useful for writing unit tests.
 template <class T>
-class auto_observer : public detail::ref_counted_base, public observer_impl<T> {
+class auto_observer : public observer_impl_base<T> {
 public:
-  // -- implementation of coordinated ------------------------------------------
-
-  void ref_coordinated() const noexcept final {
-    this->ref();
-  }
-
-  void deref_coordinated() const noexcept final {
-    this->deref();
-  }
-
   // -- implementation of observer_impl<T> -------------------------------------
 
   void on_complete() override {

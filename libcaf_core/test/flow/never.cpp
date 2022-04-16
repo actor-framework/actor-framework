@@ -29,17 +29,19 @@ SCENARIO("the never operator never invokes callbacks except when disposed") {
         auto uut = ctx->make_observable().never<int32_t>();
         auto snk1 = flow::make_auto_observer<int32_t>();
         auto snk2 = flow::make_auto_observer<int32_t>();
-        auto sub = uut.subscribe(snk1->as_observer());
+        auto sub1 = uut.subscribe(snk1->as_observer());
         ctx->run();
         CHECK(snk1->buf.empty());
         CHECK_EQ(snk1->state, flow::observer_state::subscribed);
-        sub.dispose();
+        sub1.dispose();
         ctx->run();
         CHECK_EQ(snk1->state, flow::observer_state::completed);
         MESSAGE("dispose only affects the subscription, "
                 "the never operator remains unchanged");
-        uut.subscribe(snk2->as_observer());
+        auto sub2 = uut.subscribe(snk2->as_observer());
+        ctx->run();
         CHECK_EQ(snk2->state, flow::observer_state::subscribed);
+        sub2.dispose();
       }
     }
   }

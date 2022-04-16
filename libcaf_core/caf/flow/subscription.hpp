@@ -5,7 +5,7 @@
 #pragma once
 
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/ref_counted_base.hpp"
+#include "caf/detail/plain_ref_counted.hpp"
 #include "caf/disposable.hpp"
 #include "caf/flow/coordinated.hpp"
 #include "caf/flow/fwd.hpp"
@@ -33,7 +33,7 @@ public:
 
   /// Simple base type for all subscription implementations that implements the
   /// reference counting member functions.
-  class CAF_CORE_EXPORT impl_base : public detail::ref_counted_base,
+  class CAF_CORE_EXPORT impl_base : public detail::plain_ref_counted,
                                     public impl {
   public:
     void ref_disposable() const noexcept final;

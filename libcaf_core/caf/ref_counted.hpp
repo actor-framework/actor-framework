@@ -7,8 +7,8 @@
 #include <atomic>
 #include <cstddef>
 
+#include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/ref_counted_base.hpp"
 
 namespace caf {
 
@@ -16,9 +16,9 @@ namespace caf {
 /// Serves the requirements of {@link intrusive_ptr}.
 /// @note *All* instances of `ref_counted` start with a reference count of 1.
 /// @relates intrusive_ptr
-class CAF_CORE_EXPORT ref_counted : public detail::ref_counted_base {
+class CAF_CORE_EXPORT ref_counted : public detail::atomic_ref_counted {
 public:
-  using super = ref_counted_base;
+  using super = detail::atomic_ref_counted;
 
   using super::super;
 

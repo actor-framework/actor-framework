@@ -105,6 +105,7 @@ caf_add_component(
     src/deserializer.cpp
     src/detail/abstract_worker.cpp
     src/detail/abstract_worker_hub.cpp
+    src/detail/atomic_ref_counted.cpp
     src/detail/base64.cpp
     src/detail/behavior_impl.cpp
     src/detail/behavior_stack.cpp
@@ -125,11 +126,11 @@ caf_add_component(
     src/detail/monotonic_buffer_resource.cpp
     src/detail/parse.cpp
     src/detail/parser/chars.cpp
+    src/detail/plain_ref_counted.cpp
     src/detail/pretty_type_name.cpp
     src/detail/print.cpp
     src/detail/private_thread.cpp
     src/detail/private_thread_pool.cpp
-    src/detail/ref_counted_base.cpp
     src/detail/ripemd_160.cpp
     src/detail/serialized_size.cpp
     src/detail/set_thread_name.cpp

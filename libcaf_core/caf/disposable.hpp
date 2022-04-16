@@ -8,7 +8,6 @@
 
 #include "caf/detail/core_export.hpp"
 #include "caf/intrusive_ptr.hpp"
-#include "caf/ref_counted.hpp"
 
 namespace caf {
 
@@ -20,7 +19,13 @@ public:
   /// Internal implementation class of a `disposable`.
   class CAF_CORE_EXPORT impl {
   public:
-    CAF_INTRUSIVE_PTR_FRIENDS_SFX(impl, _disposable)
+    friend void intrusive_ptr_add_ref(const impl* ptr) noexcept {
+      ptr->ref_disposable();
+    }
+
+    friend void intrusive_ptr_release(const impl* ptr) noexcept {
+      ptr->deref_disposable();
+    }
 
     virtual ~impl();
 

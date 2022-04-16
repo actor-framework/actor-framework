@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/detail/ref_counted_base.hpp"
+#include "caf/detail/plain_ref_counted.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/base.hpp"
 #include "caf/flow/subscription.hpp"
@@ -13,7 +13,7 @@ namespace caf::flow::op {
 
 /// Convenience base type for *cold* observable types.
 template <class T>
-class cold : public detail::ref_counted_base, public base<T> {
+class cold : public detail::plain_ref_counted, public base<T> {
 public:
   // -- member types -----------------------------------------------------------
 

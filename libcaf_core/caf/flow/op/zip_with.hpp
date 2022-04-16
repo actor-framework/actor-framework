@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/detail/ref_counted_base.hpp"
 #include "caf/flow/observable_decl.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/cold.hpp"

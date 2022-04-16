@@ -1,5 +1,6 @@
 #include "caf/flow/op/interval.hpp"
 
+#include "caf/detail/plain_ref_counted.hpp"
 #include "caf/flow/subscription.hpp"
 
 #include <limits>
@@ -16,7 +17,7 @@ public:
 
 using interval_sub_ptr = intrusive_ptr<interval_sub_base>;
 
-class interval_action : public detail::ref_counted_base, public action::impl {
+class interval_action : public detail::plain_ref_counted, public action::impl {
 public:
   interval_action(interval_sub_ptr sub)
     : state_(action::state::scheduled), sub_(std::move(sub)) {

@@ -65,8 +65,8 @@ public:
 
   disposable subscribe(observer<output_type> out) override {
     auto ptr = make_counted<never_sub<T>>(super::ctx_, out);
-    out.ptr()->on_subscribe(subscription{ptr});
-    return ptr->as_disposable();
+    out.on_subscribe(subscription{ptr});
+    return disposable{std::move(ptr)};
   }
 };
 

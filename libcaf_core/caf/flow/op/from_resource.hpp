@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "caf/detail/ref_counted_base.hpp"
+#include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/hot.hpp"
@@ -17,19 +17,10 @@ namespace caf::flow::op {
 
 /// Reads from an observable buffer and emits the consumed items.
 template <class Buffer>
-class from_resource_sub : public subscription::impl_base,
+class from_resource_sub : public detail::atomic_ref_counted,
+                          public subscription::impl,
                           public async::consumer {
 public:
-  // -- intrusive_ptr interface ------------------------------------------------
-
-  friend void intrusive_ptr_add_ref(const from_resource_sub* ptr) noexcept {
-    ptr->ref();
-  }
-
-  friend void intrusive_ptr_release(const from_resource_sub* ptr) noexcept {
-    ptr->deref();
-  }
-
   // -- member types -----------------------------------------------------------
 
   using value_type = typename Buffer::value_type;
@@ -89,11 +80,29 @@ public:
     });
   }
 
-  void ref_consumer() const noexcept override {
+  // -- intrusive_ptr interface ------------------------------------------------
+
+  friend void intrusive_ptr_add_ref(const from_resource_sub* ptr) noexcept {
+    ptr->ref();
+  }
+
+  friend void intrusive_ptr_release(const from_resource_sub* ptr) noexcept {
+    ptr->deref();
+  }
+
+  void ref_consumer() const noexcept final {
     this->ref();
   }
 
-  void deref_consumer() const noexcept override {
+  void deref_consumer() const noexcept final {
+    this->deref();
+  }
+
+  void ref_disposable() const noexcept final {
+    this->ref();
+  }
+
+  void deref_disposable() const noexcept final {
     this->deref();
   }
 

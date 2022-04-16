@@ -4,42 +4,48 @@
 
 #pragma once
 
-#include <atomic>
 #include <cstddef>
 
 #include "caf/detail/core_export.hpp"
 
 namespace caf::detail {
 
-// Base class for reference counted objects with an atomic reference count.
-class CAF_CORE_EXPORT ref_counted_base {
+/// Base class for reference counted objects with an plain (i.e., thread-unsafe)
+/// reference count.
+class CAF_CORE_EXPORT plain_ref_counted {
 public:
-  virtual ~ref_counted_base();
+  virtual ~plain_ref_counted();
 
-  ref_counted_base();
-  ref_counted_base(const ref_counted_base&);
-  ref_counted_base& operator=(const ref_counted_base&);
+  plain_ref_counted();
+  plain_ref_counted(const plain_ref_counted&);
+  plain_ref_counted& operator=(const plain_ref_counted&);
 
   /// Increases reference count by one.
   void ref() const noexcept {
-    rc_.fetch_add(1, std::memory_order_relaxed);
+    ++rc_;
   }
 
   /// Decreases reference count by one and calls `request_deletion`
   /// when it drops to zero.
-  void deref() const noexcept;
+  void deref() const noexcept {
+    if (rc_ > 1)
+      --rc_;
+    else
+      delete this;
+  }
 
   /// Queries whether there is exactly one reference.
   bool unique() const noexcept {
     return rc_ == 1;
   }
 
+  /// Queries the current reference count for this object.
   size_t get_reference_count() const noexcept {
-    return rc_.load();
+    return rc_;
   }
 
 protected:
-  mutable std::atomic<size_t> rc_;
+  mutable size_t rc_;
 };
 
 } // namespace caf::detail

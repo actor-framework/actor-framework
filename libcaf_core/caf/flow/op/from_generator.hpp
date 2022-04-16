@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include "caf/detail/ref_counted_base.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/hot.hpp"
@@ -143,7 +142,6 @@ public:
   // -- implementation of observable_impl<T> ---------------------------------
 
   disposable subscribe(observer<output_type> out) override {
-    CAF_LOG_TRACE(CAF_ARG2("out", out.ptr()));
     using impl_t = from_generator_sub<Generator, Steps...>;
     auto ptr = make_counted<impl_t>(super::ctx_, out, gen_, steps_);
     auto sub = subscription{std::move(ptr)};

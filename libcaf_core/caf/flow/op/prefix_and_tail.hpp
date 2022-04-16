@@ -16,7 +16,7 @@
 namespace caf::flow::op {
 
 template <class T>
-class pipe_sub : public detail::ref_counted_base,
+class pipe_sub : public detail::plain_ref_counted,
                  public observer_impl<T>,
                  public subscription_impl {
 public:
@@ -166,7 +166,7 @@ private:
 };
 
 template <class T>
-class prefix_and_tail_fwd : public detail::ref_counted_base,
+class prefix_and_tail_fwd : public detail::plain_ref_counted,
                             public observer_impl<T> {
 public:
   // -- constructors, destructors, and assignment operators --------------------

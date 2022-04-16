@@ -5,7 +5,7 @@
 #pragma once
 
 #include "caf/defaults.hpp"
-#include "caf/detail/ref_counted_base.hpp"
+#include "caf/detail/plain_ref_counted.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/detail/type_list.hpp"
 
@@ -20,7 +20,7 @@ using from_steps_output_t =
   typename detail::tl_back_t<detail::type_list<Steps...>>::output_type;
 
 template <class Input, class... Steps>
-class from_steps_sub : public detail::ref_counted_base,
+class from_steps_sub : public detail::plain_ref_counted,
                        public observer_impl<Input>,
                        public subscription_impl {
 public:
@@ -267,7 +267,6 @@ public:
   // -- implementation of observable_impl<T> -----------------------------------
 
   disposable subscribe(observer<output_type> out) override {
-    CAF_LOG_TRACE(CAF_ARG2("out", out.ptr()));
     using sub_t = from_steps_sub<Input, Steps...>;
     auto ptr = make_counted<sub_t>(super::ctx_, out, steps_);
     input_->subscribe(observer<input_type>{ptr});

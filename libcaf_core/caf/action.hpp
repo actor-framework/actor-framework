@@ -33,14 +33,6 @@ public:
     virtual void run() = 0;
 
     virtual state current_state() const noexcept = 0;
-
-    friend void intrusive_ptr_add_ref(const impl* ptr) noexcept {
-      ptr->ref_disposable();
-    }
-
-    friend void intrusive_ptr_release(const impl* ptr) noexcept {
-      ptr->deref_disposable();
-    }
   };
 
   using impl_ptr = intrusive_ptr<impl>;
