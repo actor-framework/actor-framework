@@ -24,6 +24,7 @@
 #include "caf/flow/op/from_steps.hpp"
 #include "caf/flow/op/merge.hpp"
 #include "caf/flow/op/prefix_and_tail.hpp"
+#include "caf/flow/op/publish.hpp"
 #include "caf/flow/step.hpp"
 #include "caf/flow/subscription.hpp"
 #include "caf/intrusive_ptr.hpp"
@@ -83,6 +84,16 @@ public:
     return alloc().concat_map(std::move(f));
   }
 
+  /// @copydoc observable::publish
+  auto publish() && {
+    return alloc().publish();
+  }
+
+  /// @copydoc observable::share
+  auto share(size_t subscriber_threshold = 1) && {
+    return alloc().share(subscriber_threshold);
+  }
+
   observable<cow_tuple<std::vector<T>, observable<T>>>
   prefix_and_tail(size_t prefix_size) && {
     return alloc().prefix_and_tail(prefix_size);
@@ -127,6 +138,143 @@ private:
   }
 };
 
+// -- connectable --------------------------------------------------------------
+
+/// Resembles a regular @ref observable, except that it does not begin emitting
+/// items when it is subscribed to. Only after calling `connect` will the
+/// `connectable` start to emit items.
+template <class T>
+class connectable {
+public:
+  /// The type of emitted items.
+  using output_type = T;
+
+  /// The pointer-to-implementation type.
+  using pimpl_type = intrusive_ptr<op::publish<T>>;
+
+  explicit connectable(pimpl_type pimpl) noexcept : pimpl_(std::move(pimpl)) {
+    // nop
+  }
+
+  connectable& operator=(std::nullptr_t) noexcept {
+    pimpl_.reset();
+    return *this;
+  }
+
+  connectable() noexcept = default;
+  connectable(connectable&&) noexcept = default;
+  connectable(const connectable&) noexcept = default;
+  connectable& operator=(connectable&&) noexcept = default;
+  connectable& operator=(const connectable&) noexcept = default;
+
+  /// Returns an @ref observable that automatically connects to this
+  /// `connectable` when reaching `subscriber_threshold` subscriptions.
+  observable<T> auto_connect(size_t subscriber_threshold = 1) & {
+    auto ptr = make_counted<op::publish<T>>(ctx(), pimpl_);
+    ptr->auto_connect_threshold(subscriber_threshold);
+    return observable<T>{ptr};
+  }
+
+  /// Similar to the `lvalue` overload, but converts this `connectable` directly
+  /// if possible, thus saving one hop on the pipeline.
+  observable<T> auto_connect(size_t subscriber_threshold = 1) && {
+    if (pimpl_->unique() && !pimpl_->connected()) {
+      pimpl_->auto_connect_threshold(subscriber_threshold);
+      return observable<T>{std::move(pimpl_)};
+    } else {
+      auto ptr = make_counted<op::publish<T>>(ctx(), pimpl_);
+      ptr->auto_connect_threshold(subscriber_threshold);
+      return observable<T>{ptr};
+    }
+  }
+
+  /// Returns an @ref observable that automatically connects to this
+  /// `connectable` when reaching `subscriber_threshold` subscriptions and
+  /// disconnects automatically after the last subscriber canceled its
+  /// subscription.
+  /// @note The threshold only applies to the initial connect, not to any
+  ///       re-connects.
+  observable<T> ref_count(size_t subscriber_threshold = 1) & {
+    auto ptr = make_counted<op::publish<T>>(ctx(), pimpl_);
+    ptr->auto_connect_threshold(subscriber_threshold);
+    ptr->auto_disconnect(true);
+    return observable<T>{ptr};
+  }
+
+  /// Similar to the `lvalue` overload, but converts this `connectable` directly
+  /// if possible, thus saving one hop on the pipeline.
+  observable<T> ref_count(size_t subscriber_threshold = 1) && {
+    if (pimpl_->unique() && !pimpl_->connected()) {
+      pimpl_->auto_connect_threshold(subscriber_threshold);
+      pimpl_->auto_disconnect(true);
+      return observable<T>{std::move(pimpl_)};
+    } else {
+      auto ptr = make_counted<op::publish<T>>(ctx(), pimpl_);
+      ptr->auto_connect_threshold(subscriber_threshold);
+      ptr->auto_disconnect(true);
+      return observable<T>{ptr};
+    }
+  }
+
+  /// Connects to the source @ref observable, thus starting to emit items.
+  disposable connect() {
+    return pimpl_->connect();
+  }
+
+  /// @copydoc observable::compose
+  template <class Fn>
+  auto compose(Fn&& fn) & {
+    return fn(*this);
+  }
+
+  /// @copydoc observable::compose
+  template <class Fn>
+  auto compose(Fn&& fn) && {
+    return fn(std::move(*this));
+  }
+
+  template <class... Ts>
+  disposable subscribe(Ts&&... xs) {
+    return as_observable().subscribe(std::forward<Ts>(xs)...);
+  }
+
+  observable<T> as_observable() const& {
+    return observable<T>{pimpl_};
+  }
+
+  observable<T> as_observable() && {
+    return observable<T>{std::move(pimpl_)};
+  }
+
+  const pimpl_type& pimpl() const noexcept {
+    return pimpl_;
+  }
+
+  bool valid() const noexcept {
+    return pimpl_ != nullptr;
+  }
+
+  explicit operator bool() const noexcept {
+    return valid();
+  }
+
+  bool operator!() const noexcept {
+    return !valid();
+  }
+
+  void swap(connectable& other) {
+    pimpl_.swap(other.pimpl_);
+  }
+
+  /// @pre `valid()`
+  coordinator* ctx() const {
+    return pimpl_->ctx();
+  }
+
+private:
+  pimpl_type pimpl_;
+};
+
 // -- transformation -----------------------------------------------------------
 
 /// A special type of observer that applies a series of transformation steps to
@@ -158,6 +306,12 @@ public:
     return {std::move(source_),
             std::tuple_cat(std::move(steps_),
                            std::make_tuple(std::move(step)))};
+  }
+
+  /// @copydoc observable::compose
+  template <class Fn>
+  auto compose(Fn&& fn) && {
+    return fn(std::move(*this));
   }
 
   auto take(size_t n) && {
@@ -437,6 +591,20 @@ observable<cow_tuple<T, observable<T>>> observable<T>::head_and_tail() {
       return make_cow_tuple(prefix.front(), tail);
     })
     .as_observable();
+}
+
+// -- observable::publish ------------------------------------------------------
+
+template <class T>
+connectable<T> observable<T>::publish() {
+  return connectable<T>{make_counted<op::publish<T>>(ctx(), pimpl_)};
+}
+
+// -- observable::share --------------------------------------------------------
+
+template <class T>
+observable<T> observable<T>::share(size_t subscriber_threshold) {
+  return publish().ref_count(subscriber_threshold);
 }
 
 // -- observable::to_resource --------------------------------------------------

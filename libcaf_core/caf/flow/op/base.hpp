@@ -9,7 +9,8 @@
 
 namespace caf::flow::op {
 
-/// Abstract base type for all flow operators.
+/// Abstract base type for all flow operators that implement the *observable*
+/// concept.
 template <class T>
 class base : public coordinated {
 public:

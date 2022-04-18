@@ -168,6 +168,24 @@ public:
   /// the tuple instead of wrapping it in a list.
   observable<cow_tuple<T, observable<T>>> head_and_tail();
 
+  /// Convert this observable into a @ref connectable observable.
+  connectable<T> publish();
+
+  /// Convenience alias for `publish().ref_count(subscriber_threshold)`.
+  observable<T> share(size_t subscriber_threshold = 1);
+
+  /// Transform this `observable` by applying a function object to it.
+  template <class Fn>
+  auto compose(Fn&& fn) & {
+    return fn(*this);
+  }
+
+  /// Fn this `observable` by applying a function object to it.
+  template <class Fn>
+  auto compose(Fn&& fn) && {
+    return fn(std::move(*this));
+  }
+
   /// Creates an asynchronous resource that makes emitted items available in a
   /// spsc buffer.
   async::consumer_resource<T> to_resource(size_t buffer_size,

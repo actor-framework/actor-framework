@@ -289,6 +289,7 @@ caf_add_component(
     flow.never
     flow.observe_on
     flow.prefix_and_tail
+    flow.publish
     flow.single
     flow.zip_with
     function_view

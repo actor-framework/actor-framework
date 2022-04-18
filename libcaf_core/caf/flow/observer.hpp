@@ -542,6 +542,22 @@ public:
     }
   }
 
+  bool idle() const noexcept {
+    return state == observer_state::idle;
+  }
+
+  bool subscribed() const noexcept {
+    return state == observer_state::subscribed;
+  }
+
+  bool completed() const noexcept {
+    return state == observer_state::completed;
+  }
+
+  bool aborted() const noexcept {
+    return state == observer_state::aborted;
+  }
+
   std::vector<T> sorted_buf() const {
     auto result = buf;
     std::sort(result.begin(), result.end());
@@ -557,7 +573,7 @@ public:
   error err;
 
   /// Represents the current state of this observer.
-  observer_state state;
+  observer_state state = observer_state::idle;
 
   /// Stores all items received via `on_next`.
   std::vector<T> buf;
@@ -572,64 +588,26 @@ intrusive_ptr<passive_observer<T>> make_passive_observer() {
 /// Similar to @ref passive_observer but automatically requests items until
 /// completed. Useful for writing unit tests.
 template <class T>
-class auto_observer : public observer_impl_base<T> {
+class auto_observer : public passive_observer<T> {
 public:
   // -- implementation of observer_impl<T> -------------------------------------
 
-  void on_complete() override {
-    if (sub) {
-      sub.dispose();
-      sub = nullptr;
-    }
-    state = observer_state::completed;
-  }
-
-  void on_error(const error& what) override {
-    if (sub) {
-      sub.dispose();
-      sub = nullptr;
-    }
-    err = what;
-    state = observer_state::aborted;
-  }
-
   void on_subscribe(subscription new_sub) override {
-    if (state == observer_state::idle) {
-      CAF_ASSERT(!sub);
-      sub = std::move(new_sub);
-      state = observer_state::subscribed;
-      sub.request(64);
+    if (this->state == observer_state::idle) {
+      CAF_ASSERT(!this->sub);
+      this->sub = std::move(new_sub);
+      this->state = observer_state::subscribed;
+      this->sub.request(64);
     } else {
       new_sub.dispose();
     }
   }
 
   void on_next(const T& item) override {
-    buf.emplace_back(item);
-    sub.request(1);
+    this->buf.emplace_back(item);
+    if (this->sub)
+      this->sub.request(1);
   }
-
-  // -- convenience functions --------------------------------------------------
-
-  std::vector<T> sorted_buf() const {
-    auto result = buf;
-    std::sort(result.begin(), result.end());
-    return result;
-  }
-
-  // -- member variables -------------------------------------------------------
-
-  /// The subscription for requesting additional items.
-  subscription sub;
-
-  /// Default-constructed unless on_error was called.
-  error err;
-
-  /// Represents the current state of this observer.
-  observer_state state;
-
-  /// Stores all items received via `on_next`.
-  std::vector<T> buf;
 };
 
 /// @relates auto_observer

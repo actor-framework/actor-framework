@@ -9,6 +9,7 @@
 #include "caf/flow/op/empty.hpp"
 #include "caf/flow/op/hot.hpp"
 #include "caf/flow/subscription.hpp"
+#include "caf/intrusive_ptr.hpp"
 #include "caf/make_counted.hpp"
 
 #include <algorithm>
@@ -19,7 +20,22 @@ namespace caf::flow::op {
 
 /// State shared between one multicast operator and one subscribed observer.
 template <class T>
-struct mcast_sub_state {
+class mcast_sub_state : public detail::plain_ref_counted {
+public:
+  friend void intrusive_ptr_add_ref(const mcast_sub_state* ptr) noexcept {
+    ptr->ref();
+  }
+
+  friend void intrusive_ptr_release(const mcast_sub_state* ptr) noexcept {
+    ptr->deref();
+  }
+
+  mcast_sub_state(coordinator* ctx, observer<T> out)
+    : ctx(ctx), out(std::move(out)) {
+    // nop
+  }
+
+  coordinator* ctx;
   std::deque<T> buf;
   size_t demand = 0;
   observer<T> out;
@@ -27,6 +43,9 @@ struct mcast_sub_state {
   bool closed = false;
   bool running = false;
   error err;
+
+  action when_disposed;
+  action when_consumed_some;
 
   void push(const T& item) {
     if (disposed) {
@@ -47,6 +66,9 @@ struct mcast_sub_state {
       if (!running && buf.empty()) {
         disposed = true;
         out.on_complete();
+        out = nullptr;
+        when_disposed = nullptr;
+        when_consumed_some = nullptr;
       }
     }
   }
@@ -58,6 +80,9 @@ struct mcast_sub_state {
       if (!running && buf.empty()) {
         disposed = true;
         out.on_error(reason);
+        out = nullptr;
+        when_disposed = nullptr;
+        when_consumed_some = nullptr;
       }
     }
   }
@@ -67,6 +92,13 @@ struct mcast_sub_state {
       out.on_complete();
       out = nullptr;
     }
+    if (when_disposed) {
+      ctx->delay(std::move(when_disposed));
+    }
+    if (when_consumed_some) {
+      when_consumed_some.dispose();
+      when_consumed_some = nullptr;
+    }
     buf.clear();
     demand = 0;
     disposed = true;
@@ -75,24 +107,26 @@ struct mcast_sub_state {
   void do_run() {
     auto guard = detail::make_scope_guard([this] { running = false; });
     if (!disposed) {
-      while (demand > 0 && !buf.empty()) {
+      auto got_some = demand > 0 && !buf.empty();
+      for (bool run = got_some; run; run = demand > 0 && !buf.empty()) {
         out.on_next(buf.front());
         buf.pop_front();
         --demand;
       }
       if (buf.empty() && closed) {
-        disposed = true;
         if (err)
           out.on_error(err);
         else
           out.on_complete();
+        out = nullptr;
+        do_dispose();
       }
     }
   }
 };
 
 template <class T>
-using mcast_sub_state_ptr = std::shared_ptr<mcast_sub_state<T>>;
+using mcast_sub_state_ptr = intrusive_ptr<mcast_sub_state<T>>;
 
 template <class T>
 class mcast_sub : public subscription::impl_base {
@@ -185,7 +219,8 @@ public:
       auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
         return x->demand < y->demand;
       };
-      return std::max_element(states_.begin(), states_.end(), pred)->demand;
+      auto& ptr = *std::max_element(states_.begin(), states_.end(), pred);
+      return ptr->demand;
     }
   }
 
@@ -196,7 +231,8 @@ public:
       auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
         return x->demand < y->demand;
       };
-      return std::min_element(states_.begin(), states_.end(), pred)->demand;
+      auto& ptr = *std::min_element(states_.begin(), states_.end(), pred);
+      ptr->demand;
     }
   }
 
@@ -207,7 +243,8 @@ public:
       auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
         return x->buf.size() < y->buf.size();
       };
-      return std::max_element(states_.begin(), states_.end(), pred)->buf.size();
+      auto& ptr = *std::max_element(states_.begin(), states_.end(), pred);
+      return ptr->buf.size();
     }
   }
 
@@ -218,7 +255,8 @@ public:
       auto pred = [](const state_ptr_type& x, const state_ptr_type& y) {
         return x->buf.size() < y->buf.size();
       };
-      return std::min_element(states_.begin(), states_.end(), pred)->buf.size();
+      auto& ptr = *std::min_element(states_.begin(), states_.end(), pred);
+      ptr->buf.size();
     }
   }
 
@@ -227,9 +265,20 @@ public:
     return !states_.empty();
   }
 
+  /// Queries the current number of subscribed observers.
+  size_t observer_count() const noexcept {
+    return states_.size();
+  }
+
   state_ptr_type add_state(observer_type out) {
-    auto state = std::make_shared<state_type>();
-    state->out = std::move(out);
+    auto state = make_counted<state_type>(super::ctx_, std::move(out));
+    auto mc = strong_this();
+    state->when_disposed = make_action([mc, state]() mutable { //
+      mc->do_dispose(state);
+    });
+    state->when_consumed_some = make_action([mc, state]() mutable { //
+      mc->on_consumed_some(*state);
+    });
     states_.push_back(state);
     return state;
   }
@@ -250,7 +299,28 @@ public:
 protected:
   bool closed_ = false;
   error err_;
-  std::vector<mcast_sub_state_ptr<T>> states_;
+  std::vector<state_ptr_type> states_;
+
+private:
+  intrusive_ptr<mcast> strong_this() {
+    return {this};
+  }
+
+  void do_dispose(state_ptr_type& state) {
+    auto e = states_.end();
+    if (auto i = std::find(states_.begin(), e, state); i != e) {
+      states_.erase(i);
+      on_dispose(*state);
+    }
+  }
+
+  virtual void on_dispose(state_type&) {
+    // nop
+  }
+
+  virtual void on_consumed_some(state_type&) {
+    // nop
+  }
 };
 
 } // namespace caf::flow::op

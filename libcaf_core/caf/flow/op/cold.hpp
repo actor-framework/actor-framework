@@ -27,17 +27,17 @@ public:
 
   // -- implementation of disposable_impl --------------------------------------
 
-  void ref_coordinated() const noexcept final {
+  void ref_coordinated() const noexcept override {
     this->ref();
   }
 
-  void deref_coordinated() const noexcept final {
+  void deref_coordinated() const noexcept override {
     this->deref();
   }
 
   // -- implementation of observable_impl<T> -----------------------------------
 
-  coordinator* ctx() const noexcept final {
+  coordinator* ctx() const noexcept override {
     return ctx_;
   }
 

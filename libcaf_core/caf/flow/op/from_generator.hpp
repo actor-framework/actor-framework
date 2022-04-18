@@ -126,13 +126,17 @@ using from_generator_output_t =            //
     detail::type_list<Generator, Steps...> //
     >::output_type;
 
+/// Converts a `Generator` to an @ref observable.
+/// @note Depending on the `Generator`, this operator may turn *cold* if copying
+///       the generator results in each copy emitting the exact same sequence of
+///       values. However, we should treat it as *hot* by default.
 template <class Generator, class... Steps>
 class from_generator
-  : public op::cold<from_generator_output_t<Generator, Steps...>> {
+  : public hot<from_generator_output_t<Generator, Steps...>> {
 public:
   using output_type = from_generator_output_t<Generator, Steps...>;
 
-  using super = op::cold<output_type>;
+  using super = hot<output_type>;
 
   from_generator(coordinator* ctx, Generator gen, std::tuple<Steps...> steps)
     : super(ctx), gen_(std::move(gen)), steps_(std::move(steps)) {

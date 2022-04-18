@@ -38,6 +38,9 @@ class observer;
 template <class T>
 class observable;
 
+template <class T>
+class connectable;
+
 template <class In, class Out>
 class processor;
 

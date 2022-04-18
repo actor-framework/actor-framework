@@ -18,9 +18,7 @@ enum class observer_state {
   /// Indicates that on_complete was called.
   completed,
   /// Indicates that on_error was called.
-  aborted,
-  /// Indicates that dispose was called.
-  disposed,
+  aborted
 };
 
 /// Returns whether `x` represents a final state, i.e., `completed`, `aborted`

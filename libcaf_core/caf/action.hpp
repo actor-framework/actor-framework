@@ -6,12 +6,13 @@
 
 #include "caf/allowed_unsafe_message_type.hpp"
 #include "caf/config.hpp"
+#include "caf/detail/atomic_ref_counted.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/disposable.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/ref_counted.hpp"
 
 #include <atomic>
+#include <cstddef>
 
 namespace caf {
 
@@ -50,6 +51,11 @@ public:
   action& operator=(action&&) noexcept = default;
 
   action& operator=(const action&) noexcept = default;
+
+  action& operator=(std::nullptr_t) noexcept {
+    pimpl_ = nullptr;
+    return *this;
+  }
 
   // -- observers --------------------------------------------------------------
 
@@ -100,6 +106,14 @@ public:
     return pimpl_;
   }
 
+  explicit operator bool() const noexcept {
+    return static_cast<bool>(pimpl_);
+  }
+
+  [[nodiscard]] bool operator!() const noexcept {
+    return !pimpl_;
+  }
+
 private:
   impl_ptr pimpl_;
 };
@@ -108,7 +122,7 @@ private:
 namespace caf::detail {
 
 template <class F>
-struct default_action_impl : ref_counted, action::impl {
+struct default_action_impl : detail::atomic_ref_counted, action::impl {
   std::atomic<action::state> state_;
   F f_;
 
