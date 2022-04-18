@@ -27,10 +27,6 @@ public:
 
   using const_reverse_iterator = typename std_type::const_reverse_iterator;
 
-  // -- constants --------------------------------------------------------------
-
-  static inline const size_type npos = std_type::npos;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   cow_vector() {

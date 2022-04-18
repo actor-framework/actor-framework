@@ -487,8 +487,11 @@ transformation<Step> observable<T>::transform(Step step) {
 }
 
 template <class T>
-transformation<step::distinct<T>> observable<T>::distinct() {
-  return transform(step::distinct<T>{});
+template <class U>
+transformation<step::distinct<U>> observable<T>::distinct() {
+  static_assert(detail::is_complete<std::hash<U>>,
+                "distinct uses a hash set and thus requires std::hash<T>");
+  return transform(step::distinct<U>{});
 }
 
 template <class T>

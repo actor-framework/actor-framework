@@ -6,6 +6,7 @@
 
 #include "caf/cow_vector.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/is_complete.hpp"
 #include "caf/disposable.hpp"
 #include "caf/flow/fwd.hpp"
 #include "caf/flow/op/base.hpp"
@@ -68,7 +69,8 @@ public:
 
   /// Makes all values unique by suppressing items that have been emitted in the
   /// past.
-  transformation<step::distinct<T>> distinct();
+  template <class U = T>
+  transformation<step::distinct<U>> distinct();
 
   /// Registers a callback for `on_complete` and `on_error` events.
   template <class F>
