@@ -8,6 +8,7 @@
 #include "caf/async/producer.hpp"
 #include "caf/async/spsc_buffer.hpp"
 #include "caf/cow_tuple.hpp"
+#include "caf/cow_vector.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/unordered_flat_map.hpp"
@@ -23,9 +24,9 @@
 #include "caf/flow/op/from_resource.hpp"
 #include "caf/flow/op/from_steps.hpp"
 #include "caf/flow/op/merge.hpp"
-#include "caf/flow/op/prefix_and_tail.hpp"
+#include "caf/flow/op/prefetch.hpp"
 #include "caf/flow/op/publish.hpp"
-#include "caf/flow/step.hpp"
+#include "caf/flow/step/all.hpp"
 #include "caf/flow/subscription.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/logger.hpp"
@@ -40,103 +41,6 @@
 #include <vector>
 
 namespace caf::flow {
-
-/// Base type for classes that represent a definition of an `observable` which
-/// has not yet been converted to an actual `observable`.
-template <class T>
-class observable_def {
-public:
-  virtual ~observable_def() = default;
-
-  template <class OnNext>
-  auto for_each(OnNext on_next) && {
-    return alloc().for_each(std::move(on_next));
-  }
-
-  template <class OnNext, class OnError>
-  auto for_each(OnNext on_next, OnError on_error) && {
-    return alloc().for_each(std::move(on_next), std::move(on_error));
-  }
-
-  template <class OnNext, class OnError, class OnComplete>
-  auto for_each(OnNext on_next, OnError on_error, OnComplete on_complete) && {
-    return alloc().for_each(std::move(on_next), std::move(on_error),
-                            std::move(on_complete));
-  }
-
-  template <class... Inputs>
-  auto merge(Inputs&&... xs) && {
-    return alloc().as_observable().merge(std::forward<Inputs>(xs)...);
-  }
-
-  template <class... Inputs>
-  auto concat(Inputs&&... xs) && {
-    return alloc().as_observable().concat(std::forward<Inputs>(xs)...);
-  }
-
-  template <class F>
-  auto flat_map(F f) && {
-    return alloc().flat_map(std::move(f));
-  }
-
-  template <class F>
-  auto concat_map(F f) && {
-    return alloc().concat_map(std::move(f));
-  }
-
-  /// @copydoc observable::publish
-  auto publish() && {
-    return alloc().publish();
-  }
-
-  /// @copydoc observable::share
-  auto share(size_t subscriber_threshold = 1) && {
-    return alloc().share(subscriber_threshold);
-  }
-
-  observable<cow_tuple<std::vector<T>, observable<T>>>
-  prefix_and_tail(size_t prefix_size) && {
-    return alloc().prefix_and_tail(prefix_size);
-  }
-
-  observable<cow_tuple<T, observable<T>>> head_and_tail() && {
-    return alloc().head_and_tail();
-  }
-
-  disposable subscribe(observer<T> what) && {
-    return alloc().subscribe(std::move(what));
-  }
-
-  disposable subscribe(async::producer_resource<T> resource) && {
-    return alloc().subscribe(std::move(resource));
-  }
-
-  async::consumer_resource<T> to_resource() && {
-    return alloc().to_resource();
-  }
-
-  async::consumer_resource<T> to_resource(size_t buffer_size,
-                                          size_t min_request_size) && {
-    return alloc().to_resource(buffer_size, min_request_size);
-  }
-
-  observable<T> observe_on(coordinator* other) && {
-    return alloc().observe_on(other);
-  }
-
-  observable<T> observe_on(coordinator* other, size_t buffer_size,
-                           size_t min_request_size) && {
-    return alloc().observe_on(other, buffer_size, min_request_size);
-  }
-
-  virtual observable<T> as_observable() && = 0;
-
-private:
-  /// Allocates and returns an actual @ref observable.
-  decltype(auto) alloc() {
-    return std::move(*this).as_observable();
-  }
-};
 
 // -- connectable --------------------------------------------------------------
 
@@ -223,12 +127,6 @@ public:
 
   /// @copydoc observable::compose
   template <class Fn>
-  auto compose(Fn&& fn) & {
-    return fn(*this);
-  }
-
-  /// @copydoc observable::compose
-  template <class Fn>
   auto compose(Fn&& fn) && {
     return fn(std::move(*this));
   }
@@ -275,37 +173,34 @@ private:
   pimpl_type pimpl_;
 };
 
-// -- transformation -----------------------------------------------------------
-
-/// A special type of observer that applies a series of transformation steps to
-/// its input before broadcasting the result as output.
-template <class Step, class... Steps>
-class transformation final
-  : public observable_def<steps_output_type_t<Step, Steps...>> {
+/// Captures the *definition* of an observable that has not materialized yet.
+template <class Materializer, class... Steps>
+class observable_def {
 public:
-  using input_type = typename Step::input_type;
+  using output_type = output_type_t<Materializer, Steps...>;
 
-  using output_type = steps_output_type_t<Step, Steps...>;
+  observable_def() = delete;
+  observable_def(const observable_def&) = delete;
+  observable_def& operator=(const observable_def&) = delete;
 
-  template <class Tuple>
-  transformation(observable<input_type> source, Tuple&& steps)
-    : source_(std::move(source)), steps_(std::move(steps)) {
+  observable_def(observable_def&&) = default;
+  observable_def& operator=(observable_def&&) = default;
+
+  template <size_t N = sizeof...(Steps), class = std::enable_if_t<N == 0>>
+  explicit observable_def(Materializer&& materializer)
+    : materializer_(std::move(materializer)) {
     // nop
   }
 
-  transformation() = delete;
-  transformation(const transformation&) = delete;
-  transformation& operator=(const transformation&) = delete;
-
-  transformation(transformation&&) = default;
-  transformation& operator=(transformation&&) = default;
+  observable_def(Materializer&& materializer, std::tuple<Steps...>&& steps)
+    : materializer_(std::move(materializer)), steps_(std::move(steps)) {
+    // nop
+  }
 
   /// @copydoc observable::transform
   template <class NewStep>
-  transformation<Step, Steps..., NewStep> transform(NewStep step) && {
-    return {std::move(source_),
-            std::tuple_cat(std::move(steps_),
-                           std::make_tuple(std::move(step)))};
+  observable_def<Materializer, Steps..., NewStep> transform(NewStep step) && {
+    return add_step(std::move(step));
   }
 
   /// @copydoc observable::compose
@@ -314,175 +209,356 @@ public:
     return fn(std::move(*this));
   }
 
+  /// @copydoc observable::skip
+  auto skip(size_t n) && {
+    return add_step(step::skip<output_type>{n});
+  }
+
+  /// @copydoc observable::take
   auto take(size_t n) && {
-    return std::move(*this).transform(limit_step<output_type>{n});
+    return add_step(step::take<output_type>{n});
   }
 
   template <class Predicate>
   auto filter(Predicate predicate) && {
-    return std::move(*this).transform(
-      filter_step<Predicate>{std::move(predicate)});
+    return add_step(step::filter<Predicate>{std::move(predicate)});
   }
 
   template <class Predicate>
   auto take_while(Predicate predicate) && {
-    return std::move(*this).transform(
-      take_while_step<Predicate>{std::move(predicate)});
+    return add_step(step::take_while<Predicate>{std::move(predicate)});
   }
 
-  template <class Reducer>
-  auto reduce(output_type init, Reducer reducer) && {
-    return std::move(*this).transform(
-      reduce_step<output_type, Reducer>{init, reducer});
+  template <class Init, class Reducer>
+  auto reduce(Init init, Reducer reducer) && {
+    using val_t = output_type;
+    static_assert(std::is_invocable_r_v<Init, Reducer, Init&&, const val_t&>);
+    return add_step(step::reduce<Reducer>{std::move(init), std::move(reducer)});
   }
 
   auto sum() && {
     return std::move(*this).reduce(output_type{}, std::plus<output_type>{});
   }
 
+  auto to_vector() && {
+    using vector_type = cow_vector<output_type>;
+    auto append = [](vector_type&& xs, const output_type& x) {
+      xs.unshared().push_back(x);
+      return xs;
+    };
+    return std::move(*this)
+      .reduce(vector_type{}, append)
+      .filter([](const vector_type& xs) { return !xs.empty(); });
+  }
+
   auto distinct() && {
-    return std::move(*this).transform(distinct_step<output_type>{});
+    return add_step(step::distinct<output_type>{});
   }
 
   template <class F>
   auto map(F f) && {
-    return std::move(*this).transform(map_step<F>{std::move(f)});
+    return add_step(step::map<F>{std::move(f)});
   }
 
   template <class F>
   auto do_on_next(F f) && {
-    return std::move(*this) //
-      .transform(do_on_next_step<output_type, F>{std::move(f)});
+    return add_step(step::do_on_next<F>{std::move(f)});
   }
 
   template <class F>
   auto do_on_complete(F f) && {
-    return std::move(*this) //
-      .transform(do_on_complete_step<output_type, F>{std::move(f)});
+    return add_step(step::do_on_complete<output_type, F>{std::move(f)});
   }
 
   template <class F>
   auto do_on_error(F f) && {
-    return std::move(*this) //
-      .transform(do_on_error_step<output_type, F>{std::move(f)});
+    return add_step(step::do_on_error<output_type, F>{std::move(f)});
   }
 
   template <class F>
   auto do_finally(F f) && {
-    return std::move(*this) //
-      .transform(do_finally_step<output_type, F>{std::move(f)});
+    return add_step(step::do_finally<output_type, F>{std::move(f)});
   }
 
   auto on_error_complete() {
-    return std::move(*this) //
-      .transform(on_error_complete_step<output_type>{});
+    return add_step(step::on_error_complete<output_type>{});
   }
 
+  /// Materializes the @ref observable.
   observable<output_type> as_observable() && {
-    using impl_t = op::from_steps<input_type, Step, Steps...>;
-    return make_observable<impl_t>(source_.ctx(), source_.pimpl(),
-                                   std::move(steps_));
+    return materialize();
+  }
+
+  /// @copydoc observable::for_each
+  template <class OnNext>
+  auto for_each(OnNext on_next) && {
+    return materialize().for_each(std::move(on_next));
+  }
+
+  /// @copydoc observable::merge
+  template <class... Inputs>
+  auto merge(Inputs&&... xs) && {
+    return materialize().merge(std::forward<Inputs>(xs)...);
+  }
+
+  /// @copydoc observable::concat
+  template <class... Inputs>
+  auto concat(Inputs&&... xs) && {
+    return materialize().concat(std::forward<Inputs>(xs)...);
+  }
+
+  /// @copydoc observable::flat_map
+  template <class F>
+  auto flat_map(F f) && {
+    return materialize().flat_map(std::move(f));
+  }
+
+  /// @copydoc observable::concat_map
+  template <class F>
+  auto concat_map(F f) && {
+    return materialize().concat_map(std::move(f));
+  }
+
+  /// @copydoc observable::publish
+  auto publish() && {
+    return materialize().publish();
+  }
+
+  /// @copydoc observable::share
+  auto share(size_t subscriber_threshold = 1) && {
+    return materialize().share(subscriber_threshold);
+  }
+
+  /// @copydoc observable::prefix_and_tail
+  observable<cow_tuple<cow_vector<output_type>, observable<output_type>>>
+  prefix_and_tail(size_t prefix_size) && {
+    return materialize().prefix_and_tail(prefix_size);
+  }
+
+  /// @copydoc observable::head_and_tail
+  observable<cow_tuple<output_type, observable<output_type>>>
+  head_and_tail() && {
+    return materialize().head_and_tail();
+  }
+
+  /// @copydoc observable::subscribe
+  template <class Out>
+  disposable subscribe(Out&& out) && {
+    return materialize().subscribe(std::forward<Out>(out));
+  }
+
+  /// @copydoc observable::to_resource
+  async::consumer_resource<output_type> to_resource() && {
+    return materialize().to_resource();
+  }
+
+  /// @copydoc observable::to_resource
+  async::consumer_resource<output_type>
+  to_resource(size_t buffer_size, size_t min_request_size) && {
+    return materialize().to_resource(buffer_size, min_request_size);
+  }
+
+  /// @copydoc observable::observe_on
+  observable<output_type> observe_on(coordinator* other) && {
+    return materialize().observe_on(other);
+  }
+
+  /// @copydoc observable::observe_on
+  observable<output_type> observe_on(coordinator* other, size_t buffer_size,
+                                     size_t min_request_size) && {
+    return materialize().observe_on(other, buffer_size, min_request_size);
+  }
+
+  bool valid() const noexcept {
+    return materializer_.valid();
   }
 
 private:
-  observable<input_type> source_;
-  std::tuple<Step, Steps...> steps_;
+  template <class NewStep>
+  observable_def<Materializer, Steps..., NewStep> add_step(NewStep step) {
+    static_assert(std::is_same_v<output_type, typename NewStep::input_type>);
+    return {std::move(materializer_),
+            std::tuple_cat(std::move(steps_),
+                           std::make_tuple(std::move(step)))};
+  }
+
+  observable<output_type> materialize() {
+    return std::move(materializer_).materialize(std::move(steps_));
+  }
+
+  /// Encapsulates logic for allocating a flow operator.
+  Materializer materializer_;
+
+  /// Stores processing steps that the materializer fuses into a single flow
+  /// operator.
+  std::tuple<Steps...> steps_;
 };
 
-// -- observable::transform ----------------------------------------------------
+// -- transformation -----------------------------------------------------------
+
+/// Materializes an @ref observable from a source @ref observable and one or
+/// more processing steps.
+template <class Input>
+class transformation_materializer {
+public:
+  using output_type = Input;
+
+  explicit transformation_materializer(observable<Input> source)
+    : source_(std::move(source).pimpl()) {
+    // nop
+  }
+
+  explicit transformation_materializer(intrusive_ptr<op::base<Input>> source)
+    : source_(std::move(source)) {
+    // nop
+  }
+
+  transformation_materializer() = delete;
+  transformation_materializer(const transformation_materializer&) = delete;
+  transformation_materializer& operator=(const transformation_materializer&)
+    = delete;
+
+  transformation_materializer(transformation_materializer&&) = default;
+  transformation_materializer& operator=(transformation_materializer&&)
+    = default;
+
+  bool valid() const noexcept {
+    return source_ != nullptr;
+  }
+
+  coordinator* ctx() {
+    return source_->ctx();
+  }
+
+  template <class Step, class... Steps>
+  auto materialize(std::tuple<Step, Steps...>&& steps) && {
+    using impl_t = op::from_steps<Input, Step, Steps...>;
+    return make_observable<impl_t>(ctx(), source_, std::move(steps));
+  }
+
+private:
+  intrusive_ptr<op::base<Input>> source_;
+};
+
+// -- observable: subscribing --------------------------------------------------
+
+template <class T>
+disposable observable<T>::subscribe(observer<T> what) {
+  if (pimpl_) {
+    return pimpl_->subscribe(std::move(what));
+  } else {
+    what.on_error(make_error(sec::invalid_observable));
+    return disposable{};
+  }
+}
+
+template <class T>
+disposable observable<T>::subscribe(async::producer_resource<T> resource) {
+  using buffer_type = typename async::consumer_resource<T>::buffer_type;
+  using adapter_type = buffer_writer_impl<buffer_type>;
+  if (auto buf = resource.try_open()) {
+    CAF_LOG_DEBUG("subscribe producer resource to flow");
+    auto adapter = make_counted<adapter_type>(pimpl_->ctx(), buf);
+    buf->set_producer(adapter);
+    auto obs = adapter->as_observer();
+    auto sub = subscribe(std::move(obs));
+    pimpl_->ctx()->watch(sub);
+    return sub;
+  } else {
+    CAF_LOG_DEBUG("failed to open producer resource");
+    return {};
+  }
+}
+
+template <class T>
+template <class OnNext>
+disposable observable<T>::for_each(OnNext on_next) {
+  return subscribe(make_observer(std::move(on_next)));
+}
+
+// -- observable: transforming -------------------------------------------------
 
 template <class T>
 template <class Step>
 transformation<Step> observable<T>::transform(Step step) {
   static_assert(std::is_same_v<typename Step::input_type, T>,
                 "step object does not match the input type");
-  return {*this, std::forward_as_tuple(std::move(step))};
+  return {transformation_materializer<T>{pimpl()}, std::move(step)};
 }
-
-// -- observable::take ---------------------------------------------------------
 
 template <class T>
-transformation<limit_step<T>> observable<T>::take(size_t n) {
-  return {*this, std::forward_as_tuple(limit_step<T>{n})};
+transformation<step::distinct<T>> observable<T>::distinct() {
+  return transform(step::distinct<T>{});
 }
-
-// -- observable::filter -------------------------------------------------------
-
-template <class T>
-template <class Predicate>
-transformation<filter_step<Predicate>>
-observable<T>::filter(Predicate predicate) {
-  using step_type = filter_step<Predicate>;
-  static_assert(std::is_same_v<typename step_type::input_type, T>,
-                "predicate does not match the input type");
-  return {*this, std::forward_as_tuple(step_type{std::move(predicate)})};
-}
-
-// -- observable::take_while ---------------------------------------------------
-
-template <class T>
-template <class Predicate>
-transformation<take_while_step<Predicate>>
-observable<T>::take_while(Predicate predicate) {
-  using step_type = take_while_step<Predicate>;
-  static_assert(std::is_same_v<typename step_type::input_type, T>,
-                "predicate does not match the input type");
-  return {*this, std::forward_as_tuple(step_type{std::move(predicate)})};
-}
-
-// -- observable::sum ----------------------------------------------------------
-
-template <class T>
-template <class Reducer>
-transformation<reduce_step<T, Reducer>>
-observable<T>::reduce(T init, Reducer reducer) {
-  return {*this, reduce_step<T, Reducer>{init, reducer}};
-}
-
-// -- observable::distinct -----------------------------------------------------
-
-template <class T>
-transformation<distinct_step<T>> observable<T>::distinct() {
-  return {*this, distinct_step<T>{}};
-}
-
-// -- observable::map ----------------------------------------------------------
 
 template <class T>
 template <class F>
-transformation<map_step<F>> observable<T>::map(F f) {
-  using step_type = map_step<F>;
-  static_assert(std::is_same_v<typename step_type::input_type, T>,
-                "map function does not match the input type");
-  return {*this, std::forward_as_tuple(step_type{std::move(f)})};
-}
-
-// -- observable::for_each -----------------------------------------------------
-
-template <class T>
-template <class OnNext>
-disposable observable<T>::for_each(OnNext on_next) {
-  auto obs = make_observer(std::move(on_next));
-  return subscribe(std::move(obs));
+transformation<step::do_finally<T, F>> observable<T>::do_finally(F fn) {
+  return transform(step::do_finally<T, F>{std::move(fn)});
 }
 
 template <class T>
-template <class OnNext, class OnError>
-disposable observable<T>::for_each(OnNext on_next, OnError on_error) {
-  auto obs = make_observer(std::move(on_next), std::move(on_error));
-  return subscribe(std::move(obs));
+template <class F>
+transformation<step::do_on_complete<T, F>> observable<T>::do_on_complete(F fn) {
+  return transform(step::do_on_complete<T, F>{std::move(fn)});
 }
 
 template <class T>
-template <class OnNext, class OnError, class OnComplete>
-disposable observable<T>::for_each(OnNext on_next, OnError on_error,
-                                   OnComplete on_complete) {
-  auto obs = make_observer(std::move(on_next), std::move(on_error),
-                           std::move(on_complete));
-  return subscribe(std::move(obs));
+template <class F>
+transformation<step::do_on_error<T, F>> observable<T>::do_on_error(F fn) {
+  return transform(step::do_on_error<T, F>{std::move(fn)});
 }
 
-// -- observable::merge --------------------------------------------------------
+template <class T>
+template <class F>
+transformation<step::do_on_next<F>> observable<T>::do_on_next(F fn) {
+  return transform(step::do_on_next<F>{std::move(fn)});
+}
+
+template <class T>
+template <class Predicate>
+transformation<step::filter<Predicate>>
+observable<T>::filter(Predicate predicate) {
+  return transform(step::filter{std::move(predicate)});
+}
+
+template <class T>
+template <class F>
+transformation<step::map<F>> observable<T>::map(F f) {
+  return transform(step::map(std::move(f)));
+}
+
+template <class T>
+transformation<step::on_error_complete<T>> observable<T>::on_error_complete() {
+  return transform(step::on_error_complete<T>{});
+}
+
+template <class T>
+template <class Init, class Reducer>
+transformation<step::reduce<Reducer>>
+observable<T>::reduce(Init init, Reducer reducer) {
+  static_assert(std::is_invocable_r_v<Init, Reducer, Init&&, const T&>);
+  return transform(step::reduce<Reducer>{std::move(init), std::move(reducer)});
+}
+
+template <class T>
+transformation<step::skip<T>> observable<T>::skip(size_t n) {
+  return transform(step::skip<T>{n});
+}
+
+template <class T>
+transformation<step::take<T>> observable<T>::take(size_t n) {
+  return transform(step::take<T>{n});
+}
+
+template <class T>
+template <class Predicate>
+transformation<step::take_while<Predicate>>
+observable<T>::take_while(Predicate predicate) {
+  return transform(step::take_while{std::move(predicate)});
+}
+
+// -- observable: combining ----------------------------------------------------
 
 template <class T>
 template <class Out, class... Inputs>
@@ -500,7 +576,21 @@ auto observable<T>::merge(Inputs&&... xs) {
   }
 }
 
-// -- observable::flat_map -----------------------------------------------------
+template <class T>
+template <class Out, class... Inputs>
+auto observable<T>::concat(Inputs&&... xs) {
+  if constexpr (is_observable_v<Out>) {
+    using value_t = output_type_t<Out>;
+    using impl_t = op::concat<value_t>;
+    return make_observable<impl_t>(ctx(), *this, std::forward<Inputs>(xs)...);
+  } else {
+    static_assert(
+      sizeof...(Inputs) > 0,
+      "merge without arguments expects this observable to emit observables");
+    using impl_t = op::concat<Out>;
+    return make_observable<impl_t>(ctx(), *this, std::forward<Inputs>(xs)...);
+  }
+}
 
 template <class T>
 template <class Out, class F>
@@ -528,26 +618,6 @@ auto observable<T>::flat_map(F f) {
   }
 }
 
-// -- observable::concat -------------------------------------------------------
-
-template <class T>
-template <class Out, class... Inputs>
-auto observable<T>::concat(Inputs&&... xs) {
-  if constexpr (is_observable_v<Out>) {
-    using value_t = output_type_t<Out>;
-    using impl_t = op::concat<value_t>;
-    return make_observable<impl_t>(ctx(), *this, std::forward<Inputs>(xs)...);
-  } else {
-    static_assert(
-      sizeof...(Inputs) > 0,
-      "merge without arguments expects this observable to emit observables");
-    using impl_t = op::concat<Out>;
-    return make_observable<impl_t>(ctx(), *this, std::forward<Inputs>(xs)...);
-  }
-}
-
-// -- observable::concat_map ---------------------------------------------------
-
 template <class T>
 template <class Out, class F>
 auto observable<T>::concat_map(F f) {
@@ -570,59 +640,54 @@ auto observable<T>::concat_map(F f) {
   }
 }
 
-// -- observable::prefix_and_tail ----------------------------------------------
+// -- observable: splitting ----------------------------------------------------
 
 template <class T>
-observable<cow_tuple<std::vector<T>, observable<T>>>
-observable<T>::prefix_and_tail(size_t prefix_size) {
-  using impl_t = op::prefix_and_tail<T>;
-  return make_observable<impl_t>(ctx(), pimpl_, prefix_size);
-}
-
-// -- observable::prefix_and_tail ----------------------------------------------
-
-template <class T>
-observable<cow_tuple<T, observable<T>>> observable<T>::head_and_tail() {
-  using tuple_t = cow_tuple<std::vector<T>, observable<T>>;
-  return prefix_and_tail(1)
-    .map([](const tuple_t& tup) {
-      auto& [prefix, tail] = tup.data();
-      CAF_ASSERT(prefix.size() == 1);
-      return make_cow_tuple(prefix.front(), tail);
-    })
+observable<cow_tuple<cow_vector<T>, observable<T>>>
+observable<T>::prefix_and_tail(size_t n) {
+  using vector_t = cow_vector<T>;
+  CAF_ASSERT(n > 0);
+  auto do_prefetch = [](auto in) {
+    auto ptr = op::prefetch<T>::apply(std::move(in).as_observable().pimpl());
+    return observable<T>{std::move(ptr)};
+  };
+  auto split = share(2);
+  auto tail = split.skip(n).compose(do_prefetch);
+  return split //
+    .take(n)
+    .to_vector()
+    .filter([n](const vector_t& xs) { return xs.size() == n; })
+    .map([tail](const vector_t& xs) { return make_cow_tuple(xs, tail); })
     .as_observable();
 }
 
-// -- observable::publish ------------------------------------------------------
+template <class T>
+observable<cow_tuple<T, observable<T>>> observable<T>::head_and_tail() {
+  auto do_prefetch = [](auto in) {
+    auto ptr = op::prefetch<T>::apply(std::move(in).as_observable().pimpl());
+    return observable<T>{std::move(ptr)};
+  };
+  auto split = share(2);
+  auto tail = split.skip(1).compose(do_prefetch);
+  return split //
+    .take(1)
+    .map([tail](const T& x) { return make_cow_tuple(x, tail); })
+    .as_observable();
+}
+
+// -- observable: multicasting -------------------------------------------------
 
 template <class T>
 connectable<T> observable<T>::publish() {
   return connectable<T>{make_counted<op::publish<T>>(ctx(), pimpl_)};
 }
 
-// -- observable::share --------------------------------------------------------
-
 template <class T>
 observable<T> observable<T>::share(size_t subscriber_threshold) {
   return publish().ref_count(subscriber_threshold);
 }
 
-// -- observable::to_resource --------------------------------------------------
-
-/// Reads from an observable buffer and emits the consumed items.
-/// @note Only supports a single observer.
-template <class T>
-async::consumer_resource<T>
-observable<T>::to_resource(size_t buffer_size, size_t min_request_size) {
-  using buffer_type = async::spsc_buffer<T>;
-  auto buf = make_counted<buffer_type>(buffer_size, min_request_size);
-  auto up = make_counted<buffer_writer_impl<buffer_type>>(pimpl_->ctx(), buf);
-  buf->set_producer(up);
-  subscribe(up->as_observer());
-  return async::consumer_resource<T>{std::move(buf)};
-}
-
-// -- observable::observe_on ---------------------------------------------------
+// -- observable: observing ----------------------------------------------------
 
 template <class T>
 observable<T> observable<T>::observe_on(coordinator* other, size_t buffer_size,
@@ -633,24 +698,17 @@ observable<T> observable<T>::observe_on(coordinator* other, size_t buffer_size,
   return make_observable<op::from_resource<T>>(other, std::move(pull));
 }
 
-// -- observable::subscribe ----------------------------------------------------
+// -- observable: converting ---------------------------------------------------
 
 template <class T>
-disposable observable<T>::subscribe(async::producer_resource<T> resource) {
-  using buffer_type = typename async::consumer_resource<T>::buffer_type;
-  using adapter_type = buffer_writer_impl<buffer_type>;
-  if (auto buf = resource.try_open()) {
-    CAF_LOG_DEBUG("subscribe producer resource to flow");
-    auto adapter = make_counted<adapter_type>(pimpl_->ctx(), buf);
-    buf->set_producer(adapter);
-    auto obs = adapter->as_observer();
-    auto sub = subscribe(std::move(obs));
-    pimpl_->ctx()->watch(sub);
-    return sub;
-  } else {
-    CAF_LOG_DEBUG("failed to open producer resource");
-    return {};
-  }
+async::consumer_resource<T>
+observable<T>::to_resource(size_t buffer_size, size_t min_request_size) {
+  using buffer_type = async::spsc_buffer<T>;
+  auto buf = make_counted<buffer_type>(buffer_size, min_request_size);
+  auto up = make_counted<buffer_writer_impl<buffer_type>>(pimpl_->ctx(), buf);
+  buf->set_producer(up);
+  subscribe(up->as_observer());
+  return async::consumer_resource<T>{std::move(buf)};
 }
 
 } // namespace caf::flow

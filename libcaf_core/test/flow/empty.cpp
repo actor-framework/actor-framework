@@ -26,16 +26,14 @@ SCENARIO("an empty observable terminates normally") {
   GIVEN("an empty<int32>") {
     WHEN("an observer subscribes") {
       THEN("the observer receives on_complete") {
-        auto uut = ctx->make_observable().empty<int32_t>();
         auto snk = flow::make_passive_observer<int32_t>();
-        uut.subscribe(snk->as_observer());
+        ctx->make_observable().empty<int32_t>().subscribe(snk->as_observer());
         ctx->run();
-        if (CHECK(snk->sub)) {
-          snk->sub.request(42);
-          ctx->run();
-          CHECK_EQ(snk->state, flow::observer_state::completed);
-          CHECK(snk->buf.empty());
-        }
+        CHECK(snk->subscribed());
+        snk->request(42);
+        ctx->run();
+        CHECK(snk->completed());
+        CHECK(snk->buf.empty());
       }
     }
   }

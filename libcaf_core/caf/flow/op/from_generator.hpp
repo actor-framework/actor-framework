@@ -20,7 +20,7 @@ class from_generator_sub : public subscription::impl_base {
 public:
   // -- member types -----------------------------------------------------------
 
-  using output_type = steps_output_type_t<Generator, Steps...>;
+  using output_type = output_type_t<Generator, Steps...>;
 
   // -- constructors, destructors, and assignment operators --------------------
 

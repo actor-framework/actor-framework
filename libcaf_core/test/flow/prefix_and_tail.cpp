@@ -34,7 +34,7 @@ auto ls(T x, Ts... xs) {
 BEGIN_FIXTURE_SCOPE(fixture)
 
 SCENARIO("prefix_and_tail splits off initial elements") {
-  using tuple_t = cow_tuple<std::vector<int>, flow::observable<int>>;
+  using tuple_t = cow_tuple<cow_vector<int>, flow::observable<int>>;
   GIVEN("a generation with 0 values") {
     WHEN("calling prefix_and_tail(2)") {
       THEN("the observer of prefix_and_tail only receives on_complete") {

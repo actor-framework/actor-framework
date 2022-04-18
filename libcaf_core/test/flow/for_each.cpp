@@ -77,11 +77,9 @@ SCENARIO("for_each iterates all values in a stream") {
             .as_observable()
             .take(7)
             .map([](int x) { return x * 3; })
-            .for_each([&outputs](int x) { outputs.emplace_back(x); },
-                      [](const error& reason) {
-                        FAIL("on_error called: " << reason);
-                      },
-                      [&completed] { completed = true; });
+            .do_on_error([](const error& err) { FAIL("on_error: " << err); })
+            .do_on_complete([&completed] { completed = true; })
+            .for_each([&outputs](int x) { outputs.emplace_back(x); });
           ctx->run();
           CHECK(completed);
           CHECK_EQ(inputs, outputs);

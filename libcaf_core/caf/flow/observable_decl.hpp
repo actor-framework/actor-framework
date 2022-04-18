@@ -4,15 +4,16 @@
 
 #pragma once
 
+#include "caf/cow_vector.hpp"
+#include "caf/defaults.hpp"
 #include "caf/disposable.hpp"
 #include "caf/flow/fwd.hpp"
 #include "caf/flow/op/base.hpp"
-#include "caf/flow/step.hpp"
+#include "caf/flow/step/fwd.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 
 #include <cstddef>
-#include <functional>
 #include <utility>
 #include <vector>
 
@@ -22,11 +23,15 @@ namespace caf::flow {
 template <class T>
 class observable {
 public:
+  // -- member types -----------------------------------------------------------
+
   /// The type of emitted items.
   using output_type = T;
 
   /// The pointer-to-implementation type.
   using pimpl_type = intrusive_ptr<op::base<T>>;
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   explicit observable(pimpl_type pimpl) noexcept : pimpl_(std::move(pimpl)) {
     // nop
@@ -43,96 +48,91 @@ public:
   observable& operator=(observable&&) noexcept = default;
   observable& operator=(const observable&) noexcept = default;
 
-  /// @copydoc impl::subscribe
-  disposable subscribe(observer<T> what) {
-    if (pimpl_) {
-      return pimpl_->subscribe(std::move(what));
-    } else {
-      what.on_error(make_error(sec::invalid_observable));
-      return disposable{};
-    }
-  }
+  // -- subscribing ------------------------------------------------------------
+
+  /// Subscribes a new observer to the items emitted by this observable.
+  disposable subscribe(observer<T> what);
 
   /// Creates a new observer that pushes all observed items to the resource.
   disposable subscribe(async::producer_resource<T> resource);
-
-  /// Returns a transformation that applies a step function to each input.
-  template <class Step>
-  transformation<Step> transform(Step step);
-
-  /// Registers a callback for `on_next` events.
-  template <class F>
-  auto do_on_next(F f) {
-    return transform(do_on_next_step<T, F>{std::move(f)});
-  }
-
-  /// Registers a callback for `on_complete` events.
-  template <class F>
-  auto do_on_complete(F f) {
-    return transform(do_on_complete_step<T, F>{std::move(f)});
-  }
-
-  /// Registers a callback for `on_error` events.
-  template <class F>
-  auto do_on_error(F f) {
-    return transform(do_on_error_step<T, F>{std::move(f)});
-  }
-
-  /// Registers a callback that runs on `on_complete` or `on_error`.
-  template <class F>
-  auto do_finally(F f) {
-    return transform(do_finally_step<T, F>{std::move(f)});
-  }
-
-  /// Catches errors by converting them into errors instead.
-  auto on_error_complete() {
-    return transform(on_error_complete_step<T>{});
-  }
-
-  /// Returns a transformation that selects only the first `n` items.
-  transformation<limit_step<T>> take(size_t n);
-
-  /// Returns a transformation that selects only items that satisfy `predicate`.
-  template <class Predicate>
-  transformation<filter_step<Predicate>> filter(Predicate prediate);
-
-  /// Returns a transformation that selects all value until the `predicate`
-  /// returns false.
-  template <class Predicate>
-  transformation<take_while_step<Predicate>> take_while(Predicate prediate);
-
-  /// Reduces the entire sequence of items to a single value. Other names for
-  /// the algorithm are `accumulate` and `fold`.
-  template <class Reducer>
-  transformation<reduce_step<T, Reducer>> reduce(T init, Reducer reducer);
-
-  /// Accumulates all values and emits only the final result.
-  auto sum() {
-    return reduce(T{}, std::plus<T>{});
-  }
-
-  /// Makes all values unique by suppressing all items that have been emitted in
-  /// the past.
-  transformation<distinct_step<T>> distinct();
-
-  /// Returns a transformation that applies `f` to each input and emits the
-  /// result of the function application.
-  template <class F>
-  transformation<map_step<F>> map(F f);
 
   /// Calls `on_next` for each item emitted by this observable.
   template <class OnNext>
   disposable for_each(OnNext on_next);
 
-  /// Calls `on_next` for each item and `on_error` for each error emitted by
-  /// this observable.
-  template <class OnNext, class OnError>
-  disposable for_each(OnNext on_next, OnError on_error);
+  // -- transforming -----------------------------------------------------------
 
-  /// Calls `on_next` for each item, `on_error` for each error and `on_complete`
-  /// for each completion signal emitted by this observable.
-  template <class OnNext, class OnError, class OnComplete>
-  disposable for_each(OnNext on_next, OnError on_error, OnComplete on_complete);
+  /// Returns a transformation that applies a step function to each input.
+  template <class Step>
+  transformation<Step> transform(Step step);
+
+  /// Makes all values unique by suppressing items that have been emitted in the
+  /// past.
+  transformation<step::distinct<T>> distinct();
+
+  /// Registers a callback for `on_complete` and `on_error` events.
+  template <class F>
+  transformation<step::do_finally<T, F>> do_finally(F f);
+
+  /// Registers a callback for `on_complete` events.
+  template <class F>
+  transformation<step::do_on_complete<T, F>> do_on_complete(F f);
+
+  /// Registers a callback for `on_error` events.
+  template <class F>
+  transformation<step::do_on_error<T, F>> do_on_error(F f);
+
+  /// Registers a callback for `on_next` events.
+  template <class F>
+  transformation<step::do_on_next<F>> do_on_next(F f);
+
+  /// Returns a transformation that selects only items that satisfy `predicate`.
+  template <class Predicate>
+  transformation<step::filter<Predicate>> filter(Predicate prediate);
+
+  /// Returns a transformation that applies `f` to each input and emits the
+  /// result of the function application.
+  template <class F>
+  transformation<step::map<F>> map(F f);
+
+  /// Recovers from errors by converting `on_error` to `on_complete` events.
+  transformation<step::on_error_complete<T>> on_error_complete();
+
+  /// Reduces the entire sequence of items to a single value. Other names for
+  /// the algorithm are `accumulate` and `fold`.
+  /// @param init The initial value for the reduction.
+  /// @param reducer Binary operation function that will be applied.
+  template <class Init, class Reducer>
+  transformation<step::reduce<Reducer>> reduce(Init init, Reducer reducer);
+
+  /// Returns a transformation that selects all but the first `n` items.
+  transformation<step::skip<T>> skip(size_t n);
+
+  /// Returns a transformation that selects only the first `n` items.
+  transformation<step::take<T>> take(size_t n);
+
+  /// Returns a transformation that selects all value until the `predicate`
+  /// returns false.
+  template <class Predicate>
+  transformation<step::take_while<Predicate>> take_while(Predicate prediate);
+
+  /// Accumulates all values and emits only the final result.
+  auto sum() {
+    return reduce(T{}, [](T x, T y) { return x + y; });
+  }
+
+  /// Collects all values and emits all values at once in a @ref cow_vector.
+  auto to_vector() {
+    using vector_type = cow_vector<output_type>;
+    auto append = [](vector_type&& xs, const output_type& x) {
+      xs.unshared().push_back(x);
+      return xs;
+    };
+    return reduce(vector_type{}, append) //
+      .filter([](const vector_type& xs) { return !xs.empty(); });
+  }
+
+  // -- combining --------------------------------------------------------------
 
   /// Combines the output of multiple @ref observable objects into one by
   /// merging their outputs. May also be called without arguments if the `T` is
@@ -156,17 +156,21 @@ public:
   template <class Out = output_type, class F>
   auto concat_map(F f);
 
+  // -- splitting --------------------------------------------------------------
+
   /// Takes @p prefix_size elements from this observable and emits it in a tuple
   /// containing an observable for the remaining elements as the second value.
   /// The returned observable either emits a single element (the tuple) or none
   /// if this observable never produces sufficient elements for the prefix.
   /// @pre `prefix_size > 0`
-  observable<cow_tuple<std::vector<T>, observable<T>>>
+  observable<cow_tuple<cow_vector<T>, observable<T>>>
   prefix_and_tail(size_t prefix_size);
 
   /// Similar to `prefix_and_tail(1)` but passes the single element directly in
   /// the tuple instead of wrapping it in a list.
   observable<cow_tuple<T, observable<T>>> head_and_tail();
+
+  // -- multicasting -----------------------------------------------------------
 
   /// Convert this observable into a @ref connectable observable.
   connectable<T> publish();
@@ -174,35 +178,46 @@ public:
   /// Convenience alias for `publish().ref_count(subscriber_threshold)`.
   observable<T> share(size_t subscriber_threshold = 1);
 
-  /// Transform this `observable` by applying a function object to it.
+  // -- composing --------------------------------------------------------------
+
+  /// Transforms this `observable` by applying a function object to it.
   template <class Fn>
   auto compose(Fn&& fn) & {
     return fn(*this);
   }
 
-  /// Fn this `observable` by applying a function object to it.
+  /// Transforms this `observable` by applying a function object to it.
   template <class Fn>
   auto compose(Fn&& fn) && {
     return fn(std::move(*this));
   }
 
-  /// Creates an asynchronous resource that makes emitted items available in a
-  /// spsc buffer.
-  async::consumer_resource<T> to_resource(size_t buffer_size,
-                                          size_t min_request_size);
+  // -- observing --------------------------------------------------------------
 
-  async::consumer_resource<T> to_resource() {
-    return to_resource(defaults::flow::buffer_size, defaults::flow::min_demand);
-  }
-
+  /// Observes items from this observable on another @ref coordinator.
+  /// @warning The @p other @ref coordinator *must not* run at this point.
   observable observe_on(coordinator* other, size_t buffer_size,
                         size_t min_request_size);
 
+  /// Observes items from this observable on another @ref coordinator.
+  /// @warning The @p other @ref coordinator *must not* run at this point.
   observable observe_on(coordinator* other) {
     return observe_on(other, defaults::flow::buffer_size,
                       defaults::flow::min_demand);
   }
 
+  // -- converting -------------------------------------------------------------
+
+  /// Creates an asynchronous resource that makes emitted items available in an
+  /// SPSC buffer.
+  async::consumer_resource<T> to_resource(size_t buffer_size,
+                                          size_t min_request_size);
+
+  /// Creates an asynchronous resource that makes emitted items available in an
+  /// SPSC buffer.
+  async::consumer_resource<T> to_resource() {
+    return to_resource(defaults::flow::buffer_size, defaults::flow::min_demand);
+  }
   const observable& as_observable() const& noexcept {
     return std::move(*this);
   }
@@ -211,8 +226,14 @@ public:
     return std::move(*this);
   }
 
-  const pimpl_type& pimpl() const noexcept {
+  // -- properties -------------------------------------------------------------
+
+  const pimpl_type& pimpl() const& noexcept {
     return pimpl_;
+  }
+
+  pimpl_type pimpl() && noexcept {
+    return std::move(pimpl_);
   }
 
   bool valid() const noexcept {
@@ -227,16 +248,20 @@ public:
     return !valid();
   }
 
-  void swap(observable& other) {
-    pimpl_.swap(other.pimpl_);
-  }
-
   /// @pre `valid()`
   coordinator* ctx() const {
     return pimpl_->ctx();
   }
 
+  // -- swapping ---------------------------------------------------------------
+
+  void swap(observable& other) {
+    pimpl_.swap(other.pimpl_);
+  }
+
 private:
+  // -- member variables -------------------------------------------------------
+
   pimpl_type pimpl_;
 };
 

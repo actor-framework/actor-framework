@@ -72,13 +72,12 @@ SCENARIO("response handles are convertible to observables and singles") {
         auto [self, launch] = sys.spawn_inactive<event_based_actor>();
         self->request(dummy, infinite, int32_t{42})
           .as_observable<int32_t>()
-          .for_each(
-            [&](int32_t val) {
-              result = val;
-              ++on_next_calls;
-            },
-            [&](const error& what) { result = what; },
-            [&] { completed = true; });
+          .do_on_error([&](const error& what) { result = what; })
+          .do_on_complete([&] { completed = true; })
+          .for_each([&](int32_t val) {
+            result = val;
+            ++on_next_calls;
+          });
         auto aut = actor{self};
         launch();
         expect((int32_t), from(aut).to(dummy).with(42));
@@ -117,13 +116,12 @@ SCENARIO("response handles are convertible to observables and singles") {
         auto [self, launch] = sys.spawn_inactive<event_based_actor>();
         self->request(dummy, infinite, int32_t{13})
           .as_observable<int32_t>()
-          .for_each(
-            [&](int32_t val) {
-              result = val;
-              ++on_next_calls;
-            },
-            [&](const error& what) { result = what; },
-            [&] { completed = true; });
+          .do_on_error([&](const error& what) { result = what; })
+          .do_on_complete([&] { completed = true; })
+          .for_each([&](int32_t val) {
+            result = val;
+            ++on_next_calls;
+          });
         auto aut = actor{self};
         launch();
         expect((int32_t), from(aut).to(dummy).with(13));

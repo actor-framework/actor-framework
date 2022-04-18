@@ -149,7 +149,7 @@ SCENARIO("callable sources stream values generated from a function object") {
 
 namespace {
 
-class custom_pullable {
+class custom_generator {
 public:
   using output_type = int;
 
@@ -171,25 +171,24 @@ private:
 
 } // namespace
 
-SCENARIO("lifting converts a Pullable into an observable") {
-  GIVEN("a lifted implementation of the Pullable concept") {
+SCENARIO("lifting converts a generator into an observable") {
+  GIVEN("a lifted implementation of the generator concept") {
     WHEN("subscribing to its output") {
       THEN("the observer receives the generated values") {
         using ivec = std::vector<int>;
         auto snk = flow::make_passive_observer<int>();
-        auto f = custom_pullable{};
-        ctx->make_observable().lift(f).subscribe(snk->as_observer());
+        auto f = custom_generator{};
+        ctx->make_observable().from_generator(f).subscribe(snk->as_observer());
         CHECK_EQ(snk->state, flow::observer_state::subscribed);
         CHECK(snk->buf.empty());
-        if (CHECK(snk->sub)) {
-          snk->sub.request(3);
-          ctx->run();
-          CHECK_EQ(snk->buf, ivec({1, 2, 3}));
-          snk->sub.request(21);
-          ctx->run();
-          CHECK_EQ(snk->buf, ivec({1, 2, 3, 4, 5, 6, 7}));
-          CHECK_EQ(snk->state, flow::observer_state::completed);
-        }
+        CHECK(snk->subscribed());
+        snk->request(3);
+        ctx->run();
+        CHECK_EQ(snk->buf, ivec({1, 2, 3}));
+        snk->sub.request(21);
+        ctx->run();
+        CHECK_EQ(snk->buf, ivec({1, 2, 3, 4, 5, 6, 7}));
+        CHECK(snk->completed());
       }
     }
   }

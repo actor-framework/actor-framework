@@ -49,10 +49,6 @@ public:
 
   // -- implementation of conn<T> ----------------------------------------------
 
-  coordinator* ctx() const noexcept override {
-    return super::ctx_;
-  }
-
   disposable subscribe(observer<T> out) override {
     auto result = super::subscribe(std::move(out));
     if (!connected_ && super::observer_count() == auto_connect_threshold_) {

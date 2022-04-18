@@ -4,17 +4,89 @@
 
 #pragma once
 
-#include <algorithm>
-#include <utility>
-#include <variant>
-
 #include "caf/detail/overload.hpp"
 #include "caf/disposable.hpp"
 #include "caf/error.hpp"
 #include "caf/flow/observable.hpp"
 #include "caf/ref_counted.hpp"
 
+#include <algorithm>
+#include <optional>
+#include <type_traits>
+#include <utility>
+
 namespace caf::flow {
+
+template <class OnSuccess>
+struct on_success_orcacle {
+  using trait = detail::get_callable_trait_t<OnSuccess>;
+
+  static_assert(trait::num_args == 1,
+                "OnSuccess functions must take exactly one argument");
+
+  using arg_type = std::decay_t<detail::tl_head_t<typename trait::arg_types>>;
+};
+
+template <class OnSuccess>
+using on_success_arg_t = typename on_success_orcacle<OnSuccess>::arg_type;
+
+template <class OnSuccess, class OnError>
+class single_observer_impl
+  : public observer_impl_base<on_success_arg_t<OnSuccess>> {
+public:
+  using input_type = on_success_arg_t<OnSuccess>;
+
+  single_observer_impl(OnSuccess on_success, OnError on_error)
+    : on_success_(std::move(on_success)), on_error_(std::move(on_error)) {
+    // nop
+  }
+
+  void on_subscribe(subscription sub) {
+    // Request one additional item to detect whether the observable emits more
+    // than one item.
+    sub.request(2);
+    sub_ = std::move(sub);
+  }
+
+  void on_next(const input_type& item) {
+    if (!result_) {
+      result_.emplace(item);
+    } else {
+      sub_.dispose();
+      sub_ = nullptr;
+      auto err = make_error(sec::runtime_error,
+                            "single emitted more than one item");
+      on_error_(err);
+    }
+  }
+
+  void on_complete() {
+    if (sub_) {
+      sub_ = nullptr;
+      if (result_) {
+        on_success_(*result_);
+        result_ = std::nullopt;
+      } else {
+        auto err = make_error(sec::broken_promise,
+                              "single failed to produce an item");
+        on_error_(err);
+      }
+    }
+  }
+
+  void on_error(const error& what) {
+    if (sub_) {
+      sub_ = nullptr;
+      on_error_(what);
+    }
+  }
+
+private:
+  OnSuccess on_success_;
+  OnError on_error_;
+  std::optional<input_type> result_;
+  subscription sub_;
+};
 
 /// Similar to an `observable`, but always emits either a single value or an
 /// error.
@@ -46,19 +118,13 @@ public:
     return observable<T>{pimpl_};
   }
 
-  void subscribe(observer<T> what) {
-    if (pimpl_)
-      pimpl_->subscribe(std::move(what));
-    else
-      what.on_error(make_error(sec::invalid_observable));
-  }
-
   template <class OnSuccess, class OnError>
-  void subscribe(OnSuccess on_success, OnError on_error) {
+  disposable subscribe(OnSuccess on_success, OnError on_error) {
     static_assert(std::is_invocable_v<OnSuccess, const T&>);
-    as_observable().for_each([f{std::move(on_success)}](
-                               const T& item) mutable { f(item); },
-                             std::move(on_error));
+    static_assert(std::is_invocable_v<OnError, const error&>);
+    using impl_t = single_observer_impl<OnSuccess, OnError>;
+    auto ptr = make_counted<impl_t>(std::move(on_success), std::move(on_error));
+    return pimpl_->subscribe(observer<T>{ptr});
   }
 
   bool valid() const noexcept {
@@ -81,8 +147,7 @@ private:
   intrusive_ptr<op::base<T>> pimpl_;
 };
 
-/// Convenience function for creating an @ref observable from a concrete
-/// operator type.
+/// Convenience function for creating a @ref single from a flow operator.
 template <class Operator, class... Ts>
 single<typename Operator::output_type>
 make_single(coordinator* ctx, Ts&&... xs) {
