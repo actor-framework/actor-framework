@@ -33,7 +33,7 @@ add_core_example(message_passing request)
 add_core_example(message_passing typed_calculator)
 
 # flow API
-add_core_example(flow from-callable)
+add_core_example(flow iota)
 add_core_example(flow observe-on)
 add_core_example(flow spsc-buffer-resource)
 

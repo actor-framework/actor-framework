@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="-1 0 802 220" width="802" height="220">
+  <defs>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -3 7 6" markerWidth="7" markerHeight="6" color="black">
+      <g>
+        <path d="M 4.8 0 L 0 -1.8 L 0 1.8 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+  </defs>
+  <g id="concat_map" fill-opacity="1" fill="none" stroke-opacity="1" stroke="none" stroke-dasharray="none">
+    <title>concat_map</title>
+    <g id="concat_map_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_2">
+        <path d="M 10 80 L 790 80 C 795.52285 80 800 84.47715 800 90 L 800 130 C 800 135.52285 795.52285 140 790 140 L 10 140 C 4.4771525 140 67635375e-23 135.52285 0 130 L 17763568e-22 90 C 24527106e-22 84.47715 4.4771525 80 10 80 Z" fill="white"/>
+        <path d="M 10 80 L 790 80 C 795.52285 80 800 84.47715 800 90 L 800 130 C 800 135.52285 795.52285 140 790 140 L 10 140 C 4.4771525 140 67635375e-23 135.52285 0 130 L 17763568e-22 90 C 24527106e-22 84.47715 4.4771525 80 10 80 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_26"/>
+      <g id="Line_25">
+        <line x1="20" y1="180" x2="767.1" y2="180" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_24">
+        <line x1="726.5" y1="165" x2="726.5" y2="195" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_36"/>
+      <g id="Line_35">
+        <line x1="19.5" y1="40" x2="766.6" y2="40" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_33">
+        <path d="M 80 20 L 99.02112 33.81968 L 91.75572 56.18032 L 68.24428 56.18032 L 60.97888 33.81968 Z" fill="#80ff80"/>
+        <path d="M 80 20 L 99.02112 33.81968 L 91.75572 56.18032 L 68.24428 56.18032 L 60.97888 33.81968 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_30">
+        <path d="M 280 20 L 299.02112 33.81968 L 291.75572 56.18032 L 268.24428 56.18032 L 260.97888 33.81968 Z" fill="#ff80ff"/>
+        <path d="M 280 20 L 299.02112 33.81968 L 291.75572 56.18032 L 268.24428 56.18032 L 260.97888 33.81968 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_39">
+        <path d="M 480 20 L 499.0211 33.81968 L 491.7557 56.18032 L 468.2443 56.18032 L 460.9789 33.81968 Z" fill="#8080ff"/>
+        <path d="M 480 20 L 499.0211 33.81968 L 491.7557 56.18032 L 468.2443 56.18032 L 460.9789 33.81968 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_38">
+        <line x1="520" y1="25" x2="520" y2="55" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_51">
+        <circle cx="80" cy="180" r="20.0000319580379" fill="#80ff80"/>
+        <circle cx="80" cy="180" r="20.0000319580379" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_50">
+        <circle cx="280" cy="180" r="20.0000319580379" fill="#80ff80"/>
+        <circle cx="280" cy="180" r="20.0000319580379" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_52">
+        <circle cx="480" cy="180" r="20.0000319580379" fill="#ff80ff"/>
+        <circle cx="480" cy="180" r="20.0000319580379" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_53">
+        <circle cx="380" cy="180" r="20.0000319580379" fill="#ff80ff"/>
+        <circle cx="380" cy="180" r="20.0000319580379" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_54">
+        <circle cx="563.25" cy="180" r="20.0000319580379" fill="#8080ff"/>
+        <circle cx="563.25" cy="180" r="20.0000319580379" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_55">
+        <circle cx="686.5" cy="180" r="20.0000319580379" fill="#8080ff"/>
+        <circle cx="686.5" cy="180" r="20.0000319580379" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Group_73">
+        <g id="Graphic_72">
+          <path d="M 349.6992 105 L 356.3566 109.83689 L 353.8137 117.66311 L 345.5847 117.66311 L 343.04183 109.83689 Z" fill="#ccc"/>
+          <path d="M 349.6992 105 L 356.3566 109.83689 L 353.8137 117.66311 L 345.5847 117.66311 L 343.04183 109.83689 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        </g>
+        <g id="Group_66">
+          <g id="Graphic_71"/>
+          <g id="Line_70">
+            <line x1="462.3164" y1="112" x2="540.4164" y2="112" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          </g>
+          <g id="Graphic_69">
+            <circle cx="483.4914" cy="112" r="7.00001118531327" fill="#ccc"/>
+            <circle cx="483.4914" cy="112" r="7.00001118531327" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          </g>
+          <g id="Graphic_68">
+            <circle cx="518.4914" cy="112" r="7.00001118531327" fill="#ccc"/>
+            <circle cx="518.4914" cy="112" r="7.00001118531327" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          </g>
+          <g id="Line_67">
+            <line x1="532.4914" y1="106.75" x2="532.4914" y2="117.25" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          </g>
+        </g>
+        <g id="Graphic_65">
+          <text transform="translate(208.27734 101)" fill="black">
+            <tspan font-family="Andale Mono" font-size="16" fill="black" x="0" y="15">concat_map([](</tspan>
+          </text>
+        </g>
+        <g id="Graphic_64">
+          <text transform="translate(356.6992 101)" fill="black">
+            <tspan font-family="Andale Mono" font-size="16" fill="black" x="4.800781" y="15">) { return </tspan>
+          </text>
+        </g>
+        <g id="Graphic_63">
+          <text transform="translate(553.3164 101)" fill="black">
+            <tspan font-family="Andale Mono" font-size="16" fill="black" x="0" y="15">; })</tspan>
+          </text>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

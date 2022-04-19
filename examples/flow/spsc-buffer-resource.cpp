@@ -19,7 +19,7 @@ void source(caf::event_based_actor* self,
     // Get an observable factory.
     ->make_observable()
     // Produce an integer sequence starting at 1, i.e., 1, 2, 3, ...
-    .from_callable([i = 0]() mutable { return ++i; })
+    .iota(1)
     // Only take the requested number of items from the infinite sequence.
     .take(n)
     // Subscribe the resource to the sequence, thereby starting the stream.

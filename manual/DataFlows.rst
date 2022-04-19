@@ -7,11 +7,11 @@ Data flows, or *streams*, are potentially unbound sequences of values. The flow
 API in CAF makes it easy to generate, transform, and consume observable
 sequences with a `ReactiveX <https://reactivex.io/>`_-style interface.
 
-Flows that pass through two or more actors use backpressure to make sure that
-fast senders cannot overwhelm receivers.
+Data flows in CAF use backpressure to make sure that fast senders cannot
+overwhelm receivers.
 
 We do not assume prior experience with ReactiveX for this chapter and there are
-some key differences to ReactiveX implementations that we pointer out in
+some key differences to ReactiveX implementations that we point out in
 `Key Differences to ReactiveX`_.
 
 Introduction
@@ -27,22 +27,42 @@ and ``subscription``.
 
 ``observer``
   Subscribes to and consumes values from an observable. This interface bundles
-  callbacks for the  observable, namely ``on_subscribe``, ``on_next``,
+  callbacks for the observable, namely ``on_subscribe``, ``on_next``,
   ``on_complete`` and ``on_error``.
 
 ``subscription``
   Manages the flow of items between an observable and an observer. An observer
-  calls ``request`` to ask for more items or ``cancel`` to stop receiving data.
+  calls ``request`` to ask for more items or ``dispose`` to stop receiving data.
 
-When working with data flows, the primitive building blocks usually remain in
-the background. For example, the code snippet below illustrates a trivial data
-flow for integers inside a single actor that only uses the high-level
+When working with data flows, these interfaces usually remain hidden and
+applications leverage high-level *operators* that either generate or transform
+an ``observable``. For example, the code snippet below illustrates a trivial
+data flow for integers inside a single actor that only uses the high-level
 composition API without any manual setup for observers or subscriptions:
 
-.. literalinclude:: /examples/flow/from-callable.cpp
+.. literalinclude:: /examples/flow/iota.cpp
    :language: C++
    :start-after: --(rst-main-begin)--
    :end-before: --(rst-main-end)--
+
+In the concurrency model of CAF, all of these building blocks describe
+processing steps that happen *inside* of an actor. The actor owns all of its
+``observer``, ``observable`` and ``subscription`` objects and they cannot
+outlive their parent actor. This means that an ``observable`` *must not* be
+shared with others.
+
+To move data from one actor to another, CAF provides asynchronous buffers.
+The following figure depicts the general architecture when working with data
+flows across actor boundaries:
+
+.. image:: flow.svg
+   :alt: CAF flow running through two actors.
+
+Here, actor A creates an ``observbale`` and then applies the ``flat_map`` and
+``filter`` operators to it. The resulting items then flow into an asynchronous
+buffer that connects to actor B. Actor B then applies the ``map`` and ``filter``
+operators to the incoming data before terminating the data flow, e.g., by
+printing each value.
 
 Concurrent Processing
 ---------------------
@@ -162,14 +182,53 @@ into complex data stream operations.
 The operators presented here are available on the template classes
 ``observable``, ``generation`` and ``transformation``.
 
+Concat
+++++++
+
+The ``concat`` operator takes multiple input observables and re-emits the
+observed items as a single sequence of items without interleaving them.
+
+.. image:: op/concat.svg
+
+Concat Map
+++++++++++
+
+The ``concat_map`` operator takes a function object converts a given input to an
+``observable`` and then applies ``concat`` to all of them.
+
+.. image:: op/concat_map.svg
+
+Distinct
+++++++++
+
+The ``distinct`` operator makes all items unique by filtering all items have
+been emitted in the past.
+
+.. image:: op/distinct.svg
+
 Filter
 ++++++
 
 The ``filter`` operator re-emits items from its input observable that pass a
 predicate test.
 
-.. image:: filter.png
-   :alt: Filter operator.
+.. image:: op/filter.svg
+
+Flat Map
+++++++++
+
+The ``flat_map`` operator takes a function object converts a given input to an
+``observable`` and then applies ``merge`` to all of them.
+
+.. image:: op/flat_map.svg
+
+Head and Tail
++++++++++++++
+
+The ``head_and_tail`` operator splits an ``observable`` into its first item and
+an ``observable`` for the remainder.
+
+.. image:: op/head_and_tail.svg
 
 Map
 +++
@@ -178,16 +237,7 @@ The ``map`` operator applies a unary operation to all items of the input
 observable and re-emits the resulting items. Similar to
 `std::transform <https://en.cppreference.com/w/cpp/algorithm/transform>`_.
 
-.. image:: map.png
-   :alt: Map operator.
-
-Take
-++++
-
-The ``take`` operator re-emits the first ``n`` items from its input observable.
-
-.. image:: take.png
-   :alt: Take operator.
+.. image:: op/map.svg
 
 Merge
 +++++
@@ -195,17 +245,104 @@ Merge
 The ``merge`` operator takes multiple input observables and re-emits the
 observed items as a single sequence of items as soon as they appear.
 
-.. image:: merge.png
-   :alt: Merge operator.
+.. image:: op/merge.svg
 
-Concat
+Observe On
+++++++++++
+
+The ``observe_on`` operator pipes data from one actor to another through an
+asynchronous buffer. The target actor must not run at the point of calling this
+operator. In the image below, alice (red) and bob (blue) are two actors.
+
+.. image:: op/observe_on.svg
+
+Prefix and Tail
++++++++++++++++
+
+The ``head_and_tail`` operator splits an ``observable`` into its first ``n``
+items (stores in a ``caf::cow_vector``) and an ``observable`` for the remainder.
+
+.. image:: op/prefix_and_tail.svg
+
+Reduce
 ++++++
 
-The ``concat`` operator takes multiple input observables and re-emits the
-observed items as a single sequence of items without interleaving them.
+The ``reduce`` operator is similar to
+`std::accumulate <https://en.cppreference.com/w/cpp/algorithm/accumulate>`_,
+only that it operates on an ``observable`` instead of an iterator range.
 
-.. image:: concat.png
-   :alt: Concat operator.
+.. image:: op/reduce.svg
+
+Ref Count
++++++++++
+
+The ``ref_count`` operator turns a ``connectable`` back to a regular
+``observable`` by automatically calling ``connect`` as soon as there is an
+initial "reference" (subscription). After the last "reference" goes away (no
+more subscription), the ``ref_count`` operators unsubscribes from its source.
+
+.. image:: op/ref_count.svg
+
+Skip
+++++
+
+The ``skip`` operator re-emits all but the first ``n`` items from its input
+observable.
+
+.. image:: op/skip.svg
+
+Sum
++++
+
+The ``sum`` operator accumulates all items and emits the result after the input
+``observable`` has completed.
+
+.. image:: op/sum.svg
+
+Take
+++++
+
+The ``take`` operator re-emits the first ``n`` items from its input observable.
+
+.. image:: op/take.svg
+
+Take While
+++++++++++
+
+The ``take_while`` operator re-emits items from its input observable until its
+predicate returns ``false``.
+
+.. image:: op/take_while.svg
+
+To Vector
++++++++++
+
+The ``to_vector`` operator collects all items and emits a single vector
+containing all observed items after the source ``observable`` has completed.
+
+.. image:: op/to_vector.svg
+
+Notes on Performance
+--------------------
+
+When working with data flows in CAF, it is important to remember that values are
+frequently copied and buffered. In languages with call-by-reference semantics
+such as Java, this is not an issue since the flows basically pass pointers down
+the chain. In C++ however, programmers must choose wisely what data types are
+used in a flow.
+
+Passing down types such as ``std::string`` or ``std::vector`` will invariably
+slow down your application to a crawl. CAF offers three classes that help
+mitigate this problem: ``caf::cow_string``, ``caf::cow_vector`` and
+``caf::cow_tuple``. These type are thin wrappers around their standard library
+counterpart that add copy-on-write (COW) semantics. Internally, all COW-types
+have a pointer to the actual data with a reference count. This makes them cheap
+to copy and save to use in a data flow. Most of the time, data in a flow does
+not need to change after creating and is de-facto immutable. However, the
+COW-optimization still gives you a mutable reference if you really need it and
+you make a deep copy only if you must, i.e., if there are multiple references to
+the data.
+
 
 Key Differences to ReactiveX
 ----------------------------
@@ -224,7 +361,3 @@ such as ``SubscribeOn``. That being said, the flow API does not tie observables
 or observers to actor types. The interface ``caf::flow::coordinator`` manages
 scheduling of flow-related work and can be implemented to run CAF flows without
 actors, e.g., to integrate them into a custom event loop.
-
-Observers and observables use non-blocking backpressure by default. The protocol
-used between observers and observables to signal demand is similar to the
-`Reactive Streams <https://www.reactive-streams.org>`_ specification.

@@ -29,7 +29,7 @@ void caf_main(caf::actor_system& sys, const config& cfg) {
     // Get an observable factory.
     ->make_observable()
     // Produce an integer sequence starting at 1, i.e., 1, 2, 3, ...
-    .from_callable([i = 0]() mutable { return ++i; })
+    .iota(1)
     // Only take the requested number of items from the infinite sequence.
     .take(cfg.n)
     // Switch to `snk` for further processing.
