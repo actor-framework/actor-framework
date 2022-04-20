@@ -12,10 +12,26 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   destructor of the promise now checks for this case.
 - Accessing URI fields now always returns the normalized string.
 
+### Changed
+
+- Remote spawning of actors is no longer considered experimental.
+
 ### Deprecated
 
 - The obsolete meta-programming utilities `replies_to` and `reacts_to` no longer
   serve any purpose and are thus deprecated.
+- The types `caf::byte`, `caf::optional` and `caf::string_view` became obsolete
+  after switching to C++17. Consequently, these types are now deprecated in
+  favor of their standard library counterpart.
+
+### Removed
+
+- The template type `caf::variant` also became obsolete when switching to C++17.
+  Unfortunately, the implementation was not as standalone as its deprecated
+  companions and some of the free functions like `holds_alternative` were too
+  greedy and did not play nicely with ADL when using `std::variant` in the same
+  code base. Since fixing `caf::variant` does not seem to be worth the time
+  investment, we remove this type without a deprecation cycle.
 
 ## [0.18.6]
 
