@@ -6,7 +6,11 @@
 
 #include "caf/config.hpp"
 
-#if defined(CAF_LINUX) || defined(CAF_MACOS)
+#if defined(CAF_LINUX) || defined(CAF_MACOS) || defined(CAF_BSD)
+#  define CAF_HAS_CXX_ABI
+#endif
+
+#ifdef CAF_HAS_CXX_ABI
 #  include <cxxabi.h>
 #  include <sys/types.h>
 #  include <unistd.h>
@@ -43,7 +47,7 @@ void prettify_type_name(std::string& class_name) {
 }
 
 void prettify_type_name(std::string& class_name, const char* c_class_name) {
-#if defined(CAF_LINUX) || defined(CAF_MACOS)
+#ifdef CAF_HAS_CXX_ABI
   int stat = 0;
   std::unique_ptr<char, decltype(free)*> real_class_name{nullptr, free};
   auto tmp = abi::__cxa_demangle(c_class_name, nullptr, nullptr, &stat);

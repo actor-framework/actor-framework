@@ -6,7 +6,7 @@
 
 #include "caf/detail/unordered_flat_map.hpp"
 
-#include "caf/test/unit_test.hpp"
+#include "core-test.hpp"
 
 #include <string>
 #include <utility>
@@ -80,36 +80,36 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(unordered_flat_map_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(default_constructed) {
   // A default-constructed map must be empty, i.e., have size 0.
-  CAF_CHECK_EQUAL(xs.empty(), true);
-  CAF_CHECK_EQUAL(xs.size(), 0u);
+  CHECK_EQ(xs.empty(), true);
+  CHECK_EQ(xs.size(), 0u);
   // The begin() and end() iterators must compare equal.
-  CAF_CHECK_EQUAL(xs.begin(), xs.end());
-  CAF_CHECK_EQUAL(xs.cbegin(), xs.begin());
-  CAF_CHECK_EQUAL(xs.cend(), xs.end());
-  CAF_CHECK_EQUAL(xs.cbegin(), xs.cend());
-  CAF_CHECK_EQUAL(xs.rbegin(), xs.rend());
+  CHECK_EQ(xs.begin(), xs.end());
+  CHECK_EQ(xs.cbegin(), xs.begin());
+  CHECK_EQ(xs.cend(), xs.end());
+  CHECK_EQ(xs.cbegin(), xs.cend());
+  CHECK_EQ(xs.rbegin(), xs.rend());
   // Calling begin() and end() on a const reference must return the same as
   // cbegin() and cend().
   const auto& cxs = xs;
-  CAF_CHECK_EQUAL(cxs.begin(), xs.cbegin());
-  CAF_CHECK_EQUAL(cxs.end(), xs.cend());
+  CHECK_EQ(cxs.begin(), xs.cbegin());
+  CHECK_EQ(cxs.end(), xs.cend());
 }
 
 CAF_TEST(initializer_list_constructed) {
   unordered_flat_map<int, int> zs{{1, 10}, {2, 20}, {3, 30}, {4, 40}};
-  CAF_CHECK_EQUAL(zs.size(), 4u);
-  CAF_CHECK_EQUAL(zs, ivec({{1, 10}, {2, 20}, {3, 30}, {4, 40}}));
+  CHECK_EQ(zs.size(), 4u);
+  CHECK_EQ(zs, ivec({{1, 10}, {2, 20}, {3, 30}, {4, 40}}));
 }
 
 CAF_TEST(range_constructed) {
   kvp_vec<int> tmp{{1, 10}, {2, 20}, {3, 30}, {4, 40}};
   unordered_flat_map<int, int> zs(tmp.begin(), tmp.end());
-  CAF_CHECK_EQUAL(zs.size(), 4u);
-  CAF_CHECK_EQUAL(zs, tmp);
+  CHECK_EQ(zs.size(), 4u);
+  CHECK_EQ(zs, tmp);
 }
 
 CAF_TEST(integer_insertion) {
@@ -118,34 +118,34 @@ CAF_TEST(integer_insertion) {
   xs.insert(xs.cbegin(), kvp(1, 10));
   xs.emplace(5, 50);
   xs.emplace_hint(xs.cend() - 1, 4, 40);
-  CAF_CHECK_EQUAL(xs, ivec({{1, 10}, {2, 20}, {3, 30}, {4, 40}, {5, 50}}));
+  CHECK_EQ(xs, ivec({{1, 10}, {2, 20}, {3, 30}, {4, 40}, {5, 50}}));
 }
 
 CAF_TEST(integer_removal) {
   fill_xs();
-  CAF_CHECK_EQUAL(xs, ivec({{1, 10}, {2, 20}, {3, 30}, {4, 40}}));
+  CHECK_EQ(xs, ivec({{1, 10}, {2, 20}, {3, 30}, {4, 40}}));
   xs.erase(xs.begin());
-  CAF_CHECK_EQUAL(xs, ivec({{2, 20}, {3, 30}, {4, 40}}));
+  CHECK_EQ(xs, ivec({{2, 20}, {3, 30}, {4, 40}}));
   xs.erase(xs.begin(), xs.begin() + 2);
-  CAF_CHECK_EQUAL(xs, ivec({{4, 40}}));
+  CHECK_EQ(xs, ivec({{4, 40}}));
   xs.erase(4);
-  CAF_CHECK_EQUAL(xs.empty(), true);
-  CAF_CHECK_EQUAL(xs.size(), 0u);
+  CHECK_EQ(xs.empty(), true);
+  CHECK_EQ(xs.size(), 0u);
 }
 
 CAF_TEST(lookup) {
   fill_xs();
-  CAF_CHECK_EQUAL(xs.count(2), 1u);
-  CAF_CHECK_EQUAL(xs.count(6), 0u);
+  CHECK_EQ(xs.count(2), 1u);
+  CHECK_EQ(xs.count(6), 0u);
   // trigger non-const member functions
-  CAF_CHECK_EQUAL(xs.at(3), 30);
-  CAF_CHECK_EQUAL(xs.find(1), xs.begin());
-  CAF_CHECK_EQUAL(xs.find(2), xs.begin() + 1);
+  CHECK_EQ(xs.at(3), 30);
+  CHECK_EQ(xs.find(1), xs.begin());
+  CHECK_EQ(xs.find(2), xs.begin() + 1);
   // trigger const member functions
   const auto& cxs = xs;
-  CAF_CHECK_EQUAL(cxs.at(2), 20);
-  CAF_CHECK_EQUAL(cxs.find(4), xs.end() - 1);
-  CAF_CHECK_EQUAL(cxs.find(5), xs.end());
+  CHECK_EQ(cxs.at(2), 20);
+  CHECK_EQ(cxs.find(4), xs.end() - 1);
+  CHECK_EQ(cxs.find(5), xs.end());
 }
 
 #ifdef CAF_ENABLE_EXCEPTIONS
@@ -155,7 +155,7 @@ CAF_TEST(exceptions) {
     auto x = xs.at(10);
     CAF_FAIL("got an unexpected value: " << x);
   } catch (std::out_of_range&) {
-    CAF_MESSAGE("got expected out_of_range exception");
+    MESSAGE("got expected out_of_range exception");
   } catch (...) {
     CAF_FAIL("got an expected exception");
   }
@@ -172,19 +172,19 @@ CAF_TEST(string_insertion) {
   ys.emplace(5, "e");
   ys.emplace_hint(ys.cend() - 1, 4, "d");
   kvp_vec<string> tmp{{1, "a"}, {2, "b"}, {3, "c"}, {4, "d"}, {5, "e"}};
-  CAF_CHECK_EQUAL(ys, tmp);
+  CHECK_EQ(ys, tmp);
 }
 
 CAF_TEST(string_removal) {
   fill_ys();
-  CAF_CHECK_EQUAL(ys, svec({{1, "a"}, {2, "b"}, {3, "c"}, {4, "d"}}));
+  CHECK_EQ(ys, svec({{1, "a"}, {2, "b"}, {3, "c"}, {4, "d"}}));
   ys.erase(ys.begin());
-  CAF_CHECK_EQUAL(ys, svec({{2, "b"}, {3, "c"}, {4, "d"}}));
+  CHECK_EQ(ys, svec({{2, "b"}, {3, "c"}, {4, "d"}}));
   ys.erase(ys.begin(), ys.begin() + 2);
-  CAF_CHECK_EQUAL(ys, svec({{4, "d"}}));
+  CHECK_EQ(ys, svec({{4, "d"}}));
   ys.erase(4);
-  CAF_CHECK_EQUAL(ys.empty(), true);
-  CAF_CHECK_EQUAL(ys.size(), 0u);
+  CHECK_EQ(ys.empty(), true);
+  CHECK_EQ(ys.size(), 0u);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

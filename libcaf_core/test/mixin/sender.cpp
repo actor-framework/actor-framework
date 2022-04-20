@@ -6,7 +6,7 @@
 
 #include "caf/mixin/sender.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <chrono>
 
@@ -43,7 +43,7 @@ struct fixture : test_coordinator_fixture<> {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(sender_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(delayed actor messages receive responses) {
   self->delayed_send(testee, seconds(1), hello);
@@ -89,4 +89,4 @@ CAF_TEST(anonymous messages receive no response) {
   disallow((std::string), from(testee).to(self).with(hello));
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

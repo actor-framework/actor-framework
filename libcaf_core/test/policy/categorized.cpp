@@ -6,7 +6,7 @@
 
 #include "caf/policy/categorized.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include "caf/intrusive/drr_queue.hpp"
 #include "caf/intrusive/fifo_inbox.hpp"
@@ -61,7 +61,7 @@ struct consumer {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(categorized_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(priorities) {
   mailbox_type mbox{unit, unit, unit};
@@ -70,7 +70,7 @@ CAF_TEST(priorities) {
     nullptr, make_message_id(message_priority::high), {}, 456));
   consumer f;
   mbox.new_round(1000, f);
-  CAF_CHECK_EQUAL(f.ints, std::vector<int>({456, 123}));
+  CHECK_EQ(f.ints, std::vector<int>({456, 123}));
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

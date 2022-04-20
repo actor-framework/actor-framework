@@ -10,7 +10,7 @@
 
 using namespace caf;
 
-#define CHECK_DEEP_TO_STRING(val, str) CAF_CHECK_EQUAL(deep_to_string(val), str)
+#define CHECK_DEEP_TO_STRING(val, str) CHECK_EQ(deep_to_string(val), str)
 
 CAF_TEST(timespans use the highest unit available when printing) {
   CHECK_EQ(to_string(config_value{timespan{0}}), "0s");
@@ -50,15 +50,15 @@ CAF_TEST(pointers and optionals use dereference syntax) {
 CAF_TEST(buffers) {
   // Use `signed char` explicitly to make sure all compilers agree.
   std::vector<signed char> buf;
-  CAF_CHECK_EQUAL(deep_to_string(buf), "[]");
+  CHECK_EQ(deep_to_string(buf), "[]");
   buf.push_back(-1);
-  CAF_CHECK_EQUAL(deep_to_string(buf), "[-1]");
+  CHECK_EQ(deep_to_string(buf), "[-1]");
   buf.push_back(0);
-  CAF_CHECK_EQUAL(deep_to_string(buf), "[-1, 0]");
+  CHECK_EQ(deep_to_string(buf), "[-1, 0]");
   buf.push_back(127);
-  CAF_CHECK_EQUAL(deep_to_string(buf), "[-1, 0, 127]");
+  CHECK_EQ(deep_to_string(buf), "[-1, 0, 127]");
   buf.push_back(10);
-  CAF_CHECK_EQUAL(deep_to_string(buf), "[-1, 0, 127, 10]");
+  CHECK_EQ(deep_to_string(buf), "[-1, 0, 127, 10]");
   buf.push_back(16);
-  CAF_CHECK_EQUAL(deep_to_string(buf), "[-1, 0, 127, 10, 16]");
+  CHECK_EQ(deep_to_string(buf), "[-1, 0, 127, 10, 16]");
 }

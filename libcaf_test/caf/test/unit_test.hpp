@@ -15,10 +15,12 @@
 #include <thread>
 #include <vector>
 
+#include "caf/config.hpp"
 #include "caf/deep_to_string.hpp"
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
 #include "caf/optional.hpp"
+#include "caf/raise_error.hpp"
 #include "caf/term.hpp"
 #include "caf/variant.hpp"
 
@@ -26,6 +28,20 @@
 #include "caf/detail/type_traits.hpp"
 
 namespace caf::test {
+
+#ifdef CAF_ENABLE_EXCEPTIONS
+
+class requirement_error : public std::exception {
+public:
+  requirement_error(std::string msg);
+
+  const char* what() const noexcept override;
+
+private:
+  std::string what_;
+};
+
+#endif // CAF_ENABLE_EXCEPTIONS
 
 // -- Function objects for implementing CAF_CHECK_* macros ---------------------
 
@@ -235,6 +251,16 @@ public:
     return bad_;
   }
 
+  void reset() {
+    expected_failures_ = 0;
+    good_ = 0;
+    bad_ = 0;
+  }
+
+  void reset_bad() {
+    bad_ = 0;
+  }
+
   bool disabled() const noexcept {
     return disabled_;
   }
@@ -338,6 +364,25 @@ public:
     logger& parent_;
     level lvl_;
   };
+
+  auto levels() {
+    return std::make_pair(level_console_, level_file_);
+  }
+
+  void levels(std::pair<level, level> values) {
+    std::tie(level_console_, level_file_) = values;
+  }
+
+  void levels(level console_lvl, level file_lvl) {
+    level_console_ = console_lvl;
+    level_file_ = file_lvl;
+  }
+
+  auto make_quiet() {
+    auto res = levels();
+    levels(level::quiet, level::quiet);
+    return res;
+  }
 
   stream error();
   stream info();
@@ -474,21 +519,42 @@ bool check_un(bool result, const char* file, size_t line, const char* expr);
 bool check_bin(bool result, const char* file, size_t line, const char* expr,
                const std::string& lhs, const std::string& rhs);
 
+void require_un(bool result, const char* file, size_t line, const char* expr);
+
+void require_bin(bool result, const char* file, size_t line, const char* expr,
+                 const std::string& lhs, const std::string& rhs);
+
 } // namespace detail
 } // namespace caf::test
 
 // on the global namespace so that it can hidden via namespace-scoping
 using caf_test_case_auto_fixture = caf::test::dummy_fixture;
 
-#define CAF_TEST_PRINT(level, msg, colorcode)                                  \
+#define CAF_TEST_LOG_MSG_4(level, colorcode, msg, line)                        \
   (::caf::test::logger::instance().level()                                     \
    << ::caf::term::colorcode << "  -> " << ::caf::term::reset                  \
-   << ::caf::test::logger::stream::reset_flags_t{} << msg << " [line "         \
-   << __LINE__ << "]\n")
+   << ::caf::test::logger::stream::reset_flags_t{} << msg << " [line " << line \
+   << "]\n")
 
-#define CAF_TEST_PRINT_ERROR(msg) CAF_TEST_PRINT(info, msg, red)
-#define CAF_TEST_PRINT_INFO(msg) CAF_TEST_PRINT(info, msg, yellow)
-#define CAF_TEST_PRINT_VERBOSE(msg) CAF_TEST_PRINT(verbose, msg, yellow)
+#define CAF_TEST_LOG_MSG_3(level, colorcode, msg)                              \
+  CAF_TEST_LOG_MSG_4(level, colorcode, msg, __LINE__)
+
+#ifdef CAF_MSVC
+#  define CAF_TEST_LOG_MSG(...)                                                \
+    CAF_PP_CAT(CAF_PP_OVERLOAD(CAF_TEST_LOG_MSG_, __VA_ARGS__)(__VA_ARGS__),   \
+               CAF_PP_EMPTY())
+#else
+#  define CAF_TEST_LOG_MSG(...)                                                \
+    CAF_PP_OVERLOAD(CAF_TEST_LOG_MSG_, __VA_ARGS__)(__VA_ARGS__)
+#endif
+
+#define CAF_TEST_PRINT_ERROR(...) CAF_TEST_LOG_MSG(error, red, __VA_ARGS__)
+#define CAF_TEST_PRINT_INFO(...) CAF_TEST_LOG_MSG(info, yellow, __VA_ARGS__)
+#define CAF_TEST_PRINT_VERBOSE(...)                                            \
+  CAF_TEST_LOG_MSG(verbose, yellow, __VA_ARGS__)
+
+#define CAF_TEST_PRINT(level, msg, colorcode)                                  \
+  CAF_TEST_LOG_MSG(level, colorcode, msg)
 
 #define CAF_PASTE_CONCAT(lhs, rhs) lhs##rhs
 
@@ -514,52 +580,19 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
     ::caf::test::engine::last_check_line(__LINE__);                            \
   } while (false)
 
-#define CAF_CHECK(...)                                                         \
-  [](bool expr_result) {                                                       \
-    return ::caf::test::detail::check_un(expr_result, __FILE__, __LINE__,      \
-                                         #__VA_ARGS__);                        \
-  }(static_cast<bool>(__VA_ARGS__))
+#define CAF_CHECK(expr)                                                        \
+  ::caf::test::detail::check_un(static_cast<bool>(expr), __FILE__, __LINE__,   \
+                                #expr)
 
-#define CAF_CHECK_FUNC(func, x_expr, y_expr)                                   \
-  [](auto&& x_val, auto&& y_val) {                                             \
-    func comparator;                                                           \
-    auto caf_check_res                                                         \
-      = ::caf::test::detail::check(::caf::test::engine::current_test(),        \
-                                   __FILE__, __LINE__,                         \
-                                   CAF_FUNC_EXPR(func, x_expr, y_expr), false, \
-                                   comparator(x_val, y_val), x_val, y_val);    \
-    return caf_check_res;                                                      \
-  }(x_expr, y_expr)
+#define CAF_REQUIRE(expr)                                                      \
+  ::caf::test::detail::require_un(static_cast<bool>(expr), __FILE__, __LINE__, \
+                                  #expr)
 
-#define CAF_FAIL(msg)                                                          \
+#define CAF_FAIL(...)                                                          \
   do {                                                                         \
-    CAF_TEST_PRINT_ERROR(msg);                                                 \
+    CAF_TEST_PRINT_ERROR(__VA_ARGS__);                                         \
     ::caf::test::engine::current_test()->fail(false);                          \
     ::caf::test::detail::requirement_failed("test failure");                   \
-  } while (false)
-
-#define CAF_REQUIRE(...)                                                       \
-  do {                                                                         \
-    auto CAF_UNIQUE(__result)                                                  \
-      = ::caf::test::detail::check(::caf::test::engine::current_test(),        \
-                                   __FILE__, __LINE__, #__VA_ARGS__, false,    \
-                                   static_cast<bool>(__VA_ARGS__));            \
-    if (!CAF_UNIQUE(__result))                                                 \
-      ::caf::test::detail::requirement_failed(#__VA_ARGS__);                   \
-  } while (false)
-
-#define CAF_REQUIRE_FUNC(func, x_expr, y_expr)                                 \
-  do {                                                                         \
-    func comparator;                                                           \
-    auto&& x_val___ = x_expr;                                                  \
-    auto&& y_val___ = y_expr;                                                  \
-    auto CAF_UNIQUE(__result) = ::caf::test::detail::check(                    \
-      ::caf::test::engine::current_test(), __FILE__, __LINE__,                 \
-      CAF_FUNC_EXPR(func, x_expr, y_expr), false,                              \
-      comparator(x_val___, y_val___), x_val___, y_val___);                     \
-    if (!CAF_UNIQUE(__result))                                                 \
-      ::caf::test::detail::requirement_failed(                                 \
-        CAF_FUNC_EXPR(func, x_expr, y_expr));                                  \
   } while (false)
 
 #define CAF_TEST_IMPL(name, disabled_by_default)                               \
@@ -590,7 +623,7 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
     CAF_TEST_PRINT_VERBOSE(msg);                                               \
   } while (false)
 
-// -- CAF_CHECK* predicate family ----------------------------------------------
+// -- CAF_CHECK* macro family --------------------------------------------------
 
 #define CAF_CHECK_EQUAL(x_expr, y_expr)                                        \
   [](const auto& x_val, const auto& y_val) {                                   \
@@ -672,33 +705,139 @@ using caf_test_case_auto_fixture = caf::test::dummy_fixture;
       caf::detail::stringification_inspector::render(y_val));                  \
   }(x_expr, y_expr)
 
-// -- CAF_CHECK* predicate family ----------------------------------------------
+#ifdef CAF_ENABLE_EXCEPTIONS
 
-#define CAF_REQUIRE_EQUAL(x, y) CAF_REQUIRE_FUNC(::caf::test::equal_to, x, y)
+#  define CAF_CHECK_NOTHROW(expr)                                              \
+    [&] {                                                                      \
+      bool got_exception = false;                                              \
+      try {                                                                    \
+        static_cast<void>(expr);                                               \
+      } catch (...) {                                                          \
+        got_exception = true;                                                  \
+      }                                                                        \
+      ::caf::test::detail::check_un(!got_exception, __FILE__, __LINE__,        \
+                                    #expr " does not throw");                  \
+      return !got_exception;                                                   \
+    }()
 
-#define CAF_REQUIRE_NOT_EQUAL(x, y)                                            \
-  CAF_REQUIRE_FUNC(::caf::test::not_equal_to, x, y)
+#  define CAF_CHECK_THROWS_AS(expr, type)                                      \
+    [&] {                                                                      \
+      bool got_exception = false;                                              \
+      try {                                                                    \
+        static_cast<void>(expr);                                               \
+      } catch (type&) {                                                        \
+        got_exception = true;                                                  \
+      } catch (...) {                                                          \
+      }                                                                        \
+      ::caf::test::detail::check_un(got_exception, __FILE__, __LINE__,         \
+                                    #expr " throws " #type);                   \
+      return got_exception;                                                    \
+    }()
 
-#define CAF_REQUIRE_LESS(x, y) CAF_REQUIRE_FUNC(::caf::test::less_than, x, y)
+#  define CAF_CHECK_THROWS_WITH(expr, msg)                                     \
+    [&] {                                                                      \
+      std::string ex_what = "EX-NOT-FOUND";                                    \
+      try {                                                                    \
+        static_cast<void>(expr);                                               \
+      } catch (std::exception & ex) {                                          \
+        ex_what = ex.what();                                                   \
+      } catch (...) {                                                          \
+      }                                                                        \
+      return CHECK_EQ(ex_what, msg);                                           \
+    }()
 
-#define CAF_REQUIRE_NOT_LESS(x, y)                                             \
-  CAF_REQUIRE_FUNC(::caf::test::negated<::caf::test::less_than>, x, y)
+#  define CAF_CHECK_THROWS_WITH_AS(expr, msg, type)                            \
+    [&] {                                                                      \
+      std::string ex_what = "EX-NOT-FOUND";                                    \
+      try {                                                                    \
+        static_cast<void>(expr);                                               \
+      } catch (type & ex) {                                                    \
+        ex_what = ex.what();                                                   \
+      } catch (...) {                                                          \
+      }                                                                        \
+      return CHECK_EQ(ex_what, msg);                                           \
+    }()
 
-#define CAF_REQUIRE_LESS_OR_EQUAL(x, y)                                        \
-  CAF_REQUIRE_FUNC(::caf::test::less_than_or_equal, x, y)
+#endif // CAF_ENABLE_EXCEPTIONS
 
-#define CAF_REQUIRE_NOT_LESS_OR_EQUAL(x, y)                                    \
-  CAF_REQUIRE_FUNC(::caf::test::negated<::caf::test::less_than_or_equal>, x, y)
+// -- CAF_REQUIRE* macro family ------------------------------------------------
 
-#define CAF_REQUIRE_GREATER(x, y)                                              \
-  CAF_REQUIRE_FUNC(::caf::test::greater_than, x, y)
+#define CAF_REQUIRE_EQUAL(x_expr, y_expr)                                      \
+  [](const auto& x_val, const auto& y_val) {                                   \
+    return ::caf::test::detail::require_bin(                                   \
+      x_val == y_val, __FILE__, __LINE__, #x_expr " == " #y_expr,              \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
+  }(x_expr, y_expr)
 
-#define CAF_REQUIRE_NOT_GREATER(x, y)                                          \
-  CAF_REQUIRE_FUNC(::caf::test::negated<::caf::test::greater_than>, x, y)
+#define CAF_REQUIRE_NOT_EQUAL(x_expr, y_expr)                                  \
+  [](const auto& x_val, const auto& y_val) {                                   \
+    return ::caf::test::detail::require_bin(                                   \
+      x_val != y_val, __FILE__, __LINE__, #x_expr " != " #y_expr,              \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
+  }(x_expr, y_expr)
 
-#define CAF_REQUIRE_GREATER_OR_EQUAL(x, y)                                     \
-  CAF_REQUIRE_FUNC(::caf::test::greater_than_or_equal, x, y)
+#define CAF_REQUIRE_LESS(x_expr, y_expr)                                       \
+  [](const auto& x_val, const auto& y_val) {                                   \
+    return ::caf::test::detail::require_bin(                                   \
+      x_val < y_val, __FILE__, __LINE__, #x_expr " < " #y_expr,                \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
+  }(x_expr, y_expr)
 
-#define CAF_REQUIRE_NOT_GREATER_OR_EQUAL(x, y)                                 \
-  CAF_REQUIRE_FUNC(::caf::test::negated<::caf::test::greater_than_or_equal>,   \
-                   x, y)
+#define CAF_REQUIRE_NOT_LESS(x_expr, y_expr)                                   \
+  [](const auto& x_val, const auto& y_val) {                                   \
+    return ::caf::test::detail::require_bin(                                   \
+      !(x_val < y_val), __FILE__, __LINE__, "not " #x_expr " < " #y_expr,      \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
+  }(x_expr, y_expr)
+
+#define CAF_REQUIRE_LESS_OR_EQUAL(x_expr, y_expr)                              \
+  [](const auto& x_val, const auto& y_val) {                                   \
+    return ::caf::test::detail::require_bin(                                   \
+      x_val <= y_val, __FILE__, __LINE__, #x_expr " <= " #y_expr,              \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
+  }(x_expr, y_expr)
+
+#define CAF_REQUIRE_NOT_LESS_OR_EQUAL(x_expr, y_expr)                          \
+  [](const auto& x_val, const auto& y_val) {                                   \
+    return ::caf::test::detail::require_bin(                                   \
+      !(x_val <= y_val), __FILE__, __LINE__, "not " #x_expr " <= " #y_expr,    \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
+  }(x_expr, y_expr)
+
+#define CAF_REQUIRE_GREATER(x_expr, y_expr)                                    \
+  [](const auto& x_val, const auto& y_val) {                                   \
+    return ::caf::test::detail::require_bin(                                   \
+      x_val > y_val, __FILE__, __LINE__, #x_expr " > " #y_expr,                \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
+  }(x_expr, y_expr)
+
+#define CAF_REQUIRE_NOT_GREATER(x_expr, y_expr)                                \
+  [](const auto& x_val, const auto& y_val) {                                   \
+    return ::caf::test::detail::require_bin(                                   \
+      !(x_val > y_val), __FILE__, __LINE__, "not " #x_expr " > " #y_expr,      \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
+  }(x_expr, y_expr)
+
+#define CAF_REQUIRE_GREATER_OR_EQUAL(x_expr, y_expr)                           \
+  [](const auto& x_val, const auto& y_val) {                                   \
+    return ::caf::test::detail::require_bin(                                   \
+      x_val >= y_val, __FILE__, __LINE__, #x_expr " >= " #y_expr,              \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
+  }(x_expr, y_expr)
+
+#define CAF_REQUIRE_NOT_GREATER_OR_EQUAL(x_expr, y_expr)                       \
+  [](const auto& x_val, const auto& y_val) {                                   \
+    return ::caf::test::detail::require_bin(                                   \
+      !(x_val >= y_val), __FILE__, __LINE__, "not " #x_expr " >= " #y_expr,    \
+      caf::detail::stringification_inspector::render(x_val),                   \
+      caf::detail::stringification_inspector::render(y_val));                  \
+  }(x_expr, y_expr)

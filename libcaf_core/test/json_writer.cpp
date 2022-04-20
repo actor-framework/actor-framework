@@ -38,7 +38,7 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(json_writer_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 SCENARIO("the JSON writer converts builtin types to strings") {
   GIVEN("an integer") {
@@ -314,4 +314,4 @@ SCENARIO("the JSON writer annotates variant fields") {
   }
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

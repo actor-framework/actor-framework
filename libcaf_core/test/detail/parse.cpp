@@ -6,7 +6,7 @@
 
 #include "caf/detail/parse.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include "caf/expected.hpp"
 #include "caf/ipv4_address.hpp"
@@ -56,13 +56,12 @@ expected<T> read(string_view str) {
 
 } // namespace
 
-#define CHECK_NUMBER(type, value)                                              \
-  CAF_CHECK_EQUAL(read<type>(#value), type(value))
+#define CHECK_NUMBER(type, value) CHECK_EQ(read<type>(#value), type(value))
 
 #define CHECK_NUMBER_3(type, value, cpp_value)                                 \
-  CAF_CHECK_EQUAL(read<type>(#value), type(cpp_value))
+  CHECK_EQ(read<type>(#value), type(cpp_value))
 
-#define CHECK_INVALID(type, str, code) CAF_CHECK_EQUAL(read<type>(str), code)
+#define CHECK_INVALID(type, str, code) CHECK_EQ(read<type>(str), code)
 
 CAF_TEST(valid signed integers) {
   CHECK_NUMBER(int8_t, -128);
@@ -137,80 +136,76 @@ CAF_TEST(invalid floating point numbers) {
 }
 
 CAF_TEST(valid timespans) {
-  CAF_CHECK_EQUAL(read<timespan>("12ns"), 12_ns);
-  CAF_CHECK_EQUAL(read<timespan>("34us"), 34_us);
-  CAF_CHECK_EQUAL(read<timespan>("56ms"), 56_ms);
-  CAF_CHECK_EQUAL(read<timespan>("78s"), 78_s);
-  CAF_CHECK_EQUAL(read<timespan>("60min"), 1_h);
-  CAF_CHECK_EQUAL(read<timespan>("90h"), 90_h);
+  CHECK_EQ(read<timespan>("12ns"), 12_ns);
+  CHECK_EQ(read<timespan>("34us"), 34_us);
+  CHECK_EQ(read<timespan>("56ms"), 56_ms);
+  CHECK_EQ(read<timespan>("78s"), 78_s);
+  CHECK_EQ(read<timespan>("60min"), 1_h);
+  CHECK_EQ(read<timespan>("90h"), 90_h);
 }
 
 CAF_TEST(invalid timespans) {
-  CAF_CHECK_EQUAL(read<timespan>("12"), pec::unexpected_eof);
-  CAF_CHECK_EQUAL(read<timespan>("12nas"), pec::unexpected_character);
-  CAF_CHECK_EQUAL(read<timespan>("34usec"), pec::trailing_character);
-  CAF_CHECK_EQUAL(read<timespan>("56m"), pec::unexpected_eof);
+  CHECK_EQ(read<timespan>("12"), pec::unexpected_eof);
+  CHECK_EQ(read<timespan>("12nas"), pec::unexpected_character);
+  CHECK_EQ(read<timespan>("34usec"), pec::trailing_character);
+  CHECK_EQ(read<timespan>("56m"), pec::unexpected_eof);
 }
 
 CAF_TEST(strings) {
-  CAF_CHECK_EQUAL(read<std::string>("    foo\t  "), "foo");
-  CAF_CHECK_EQUAL(read<std::string>("  \"  foo\t\"  "), "  foo\t");
+  CHECK_EQ(read<std::string>("    foo\t  "), "foo");
+  CHECK_EQ(read<std::string>("  \"  foo\t\"  "), "  foo\t");
 }
 
 CAF_TEST(uris) {
   if (auto x_res = read<uri>("foo:bar")) {
     auto x = *x_res;
-    CAF_CHECK_EQUAL(x.scheme(), "foo");
-    CAF_CHECK_EQUAL(x.path(), "bar");
+    CHECK_EQ(x.scheme(), "foo");
+    CHECK_EQ(x.path(), "bar");
   } else {
     CAF_ERROR("my:path not recognized as URI");
   }
 }
 
 CAF_TEST(IPv4 address) {
-  CAF_CHECK_EQUAL(read<ipv4_address>("1.2.3.4"), ipv4_address({1, 2, 3, 4}));
-  CAF_CHECK_EQUAL(read<ipv4_address>("127.0.0.1"),
-                  ipv4_address({127, 0, 0, 1}));
-  CAF_CHECK_EQUAL(read<ipv4_address>("256.0.0.1"), pec::integer_overflow);
+  CHECK_EQ(read<ipv4_address>("1.2.3.4"), ipv4_address({1, 2, 3, 4}));
+  CHECK_EQ(read<ipv4_address>("127.0.0.1"), ipv4_address({127, 0, 0, 1}));
+  CHECK_EQ(read<ipv4_address>("256.0.0.1"), pec::integer_overflow);
 }
 
 CAF_TEST(IPv4 subnet) {
-  CAF_CHECK_EQUAL(read<ipv4_subnet>("1.2.3.0/24"),
-                  ipv4_subnet(ipv4_address({1, 2, 3, 0}), 24));
-  CAF_CHECK_EQUAL(read<ipv4_subnet>("1.2.3.0/33"), pec::integer_overflow);
+  CHECK_EQ(read<ipv4_subnet>("1.2.3.0/24"),
+           ipv4_subnet(ipv4_address({1, 2, 3, 0}), 24));
+  CHECK_EQ(read<ipv4_subnet>("1.2.3.0/33"), pec::integer_overflow);
 }
 
 CAF_TEST(IPv4 endpoint) {
-  CAF_CHECK_EQUAL(read<ipv4_endpoint>("127.0.0.1:0"),
-                  ipv4_endpoint(ipv4_address({127, 0, 0, 1}), 0));
-  CAF_CHECK_EQUAL(read<ipv4_endpoint>("127.0.0.1:65535"),
-                  ipv4_endpoint(ipv4_address({127, 0, 0, 1}), 65535));
-  CAF_CHECK_EQUAL(read<ipv4_endpoint>("127.0.0.1:65536"),
-                  pec::integer_overflow);
+  CHECK_EQ(read<ipv4_endpoint>("127.0.0.1:0"),
+           ipv4_endpoint(ipv4_address({127, 0, 0, 1}), 0));
+  CHECK_EQ(read<ipv4_endpoint>("127.0.0.1:65535"),
+           ipv4_endpoint(ipv4_address({127, 0, 0, 1}), 65535));
+  CHECK_EQ(read<ipv4_endpoint>("127.0.0.1:65536"), pec::integer_overflow);
 }
 
 CAF_TEST(IPv6 address) {
-  CAF_CHECK_EQUAL(read<ipv6_address>("1.2.3.4"), ipv4_address({1, 2, 3, 4}));
-  CAF_CHECK_EQUAL(read<ipv6_address>("1::"), ipv6_address({{1}, {}}));
-  CAF_CHECK_EQUAL(read<ipv6_address>("::2"), ipv6_address({{}, {2}}));
-  CAF_CHECK_EQUAL(read<ipv6_address>("1::2"), ipv6_address({{1}, {2}}));
+  CHECK_EQ(read<ipv6_address>("1.2.3.4"), ipv4_address({1, 2, 3, 4}));
+  CHECK_EQ(read<ipv6_address>("1::"), ipv6_address({{1}, {}}));
+  CHECK_EQ(read<ipv6_address>("::2"), ipv6_address({{}, {2}}));
+  CHECK_EQ(read<ipv6_address>("1::2"), ipv6_address({{1}, {2}}));
 }
 
 CAF_TEST(IPv6 subnet) {
-  CAF_CHECK_EQUAL(read<ipv6_subnet>("1.2.3.0/24"),
-                  ipv6_subnet(ipv4_address({1, 2, 3, 0}), 24));
-  CAF_CHECK_EQUAL(read<ipv6_subnet>("1::/128"),
-                  ipv6_subnet(ipv6_address({1}, {}), 128));
-  CAF_CHECK_EQUAL(read<ipv6_subnet>("1::/129"), pec::integer_overflow);
+  CHECK_EQ(read<ipv6_subnet>("1.2.3.0/24"),
+           ipv6_subnet(ipv4_address({1, 2, 3, 0}), 24));
+  CHECK_EQ(read<ipv6_subnet>("1::/128"),
+           ipv6_subnet(ipv6_address({1}, {}), 128));
+  CHECK_EQ(read<ipv6_subnet>("1::/129"), pec::integer_overflow);
 }
 
 CAF_TEST(IPv6 endpoint) {
-  CAF_CHECK_EQUAL(read<ipv6_endpoint>("127.0.0.1:0"),
-                  ipv6_endpoint(ipv4_address({127, 0, 0, 1}), 0));
-  CAF_CHECK_EQUAL(read<ipv6_endpoint>("127.0.0.1:65535"),
-                  ipv6_endpoint(ipv4_address({127, 0, 0, 1}), 65535));
-  CAF_CHECK_EQUAL(read<ipv6_endpoint>("127.0.0.1:65536"),
-                  pec::integer_overflow);
-  CAF_CHECK_EQUAL(read<ipv6_endpoint>("[1::2]:8080"),
-                  ipv6_endpoint({{1}, {2}}, 8080));
+  CHECK_EQ(read<ipv6_endpoint>("127.0.0.1:0"),
+           ipv6_endpoint(ipv4_address({127, 0, 0, 1}), 0));
+  CHECK_EQ(read<ipv6_endpoint>("127.0.0.1:65535"),
+           ipv6_endpoint(ipv4_address({127, 0, 0, 1}), 65535));
+  CHECK_EQ(read<ipv6_endpoint>("127.0.0.1:65536"), pec::integer_overflow);
+  CHECK_EQ(read<ipv6_endpoint>("[1::2]:8080"), ipv6_endpoint({{1}, {2}}, 8080));
 }

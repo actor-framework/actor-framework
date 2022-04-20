@@ -19,7 +19,7 @@ behavior mirror_impl(event_based_actor* self) {
   };
 }
 
-struct fixture :  test_coordinator_fixture<> {
+struct fixture : test_coordinator_fixture<> {
   actor mirror;
   actor testee;
 
@@ -41,7 +41,7 @@ struct fixture :  test_coordinator_fixture<> {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(actor_termination_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(single_multiplexed_request) {
   auto f = [&](event_based_actor* self, actor server) {
@@ -78,11 +78,9 @@ CAF_TEST(multiple_multiplexed_requests) {
 
 CAF_TEST(single_awaited_request) {
   auto f = [&](event_based_actor* self, actor server) {
-    self->request(server, infinite, 42).await(
-      [=](int x) {
-        CAF_REQUIRE_EQUAL(x, 42);
-      }
-    );
+    self->request(server, infinite, 42).await([=](int x) {
+      CAF_REQUIRE_EQUAL(x, 42);
+    });
   };
   spawn(f, mirror);
   // run initialization code of testee
@@ -94,12 +92,10 @@ CAF_TEST(single_awaited_request) {
 CAF_TEST(multiple_awaited_requests) {
   auto f = [&](event_based_actor* self, actor server) {
     for (int i = 0; i < 3; ++i)
-      self->request(server, infinite, i).await(
-        [=](int x) {
-          CAF_MESSAGE("received response #" << (i + 1));
-          CAF_REQUIRE_EQUAL(x, i);
-        }
-      );
+      self->request(server, infinite, i).await([=](int x) {
+        MESSAGE("received response #" << (i + 1));
+        CAF_REQUIRE_EQUAL(x, i);
+      });
   };
   spawn(f, mirror);
   // run initialization code of testee
@@ -114,4 +110,4 @@ CAF_TEST(multiple_awaited_requests) {
   expect((down_msg), from(testee).to(self).with(_));
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

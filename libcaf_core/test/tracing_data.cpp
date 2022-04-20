@@ -147,23 +147,23 @@ NAMED_ACTOR_STATE(carl);
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(actor_profiler_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(profilers inject tracing data into asynchronous messages) {
-  CAF_MESSAGE("spawn a foo and a bar");
+  MESSAGE("spawn a foo and a bar");
   auto carl_fun = [](stateful_actor<carl_state>* self) -> behavior {
     return {
       [=](const string& str) {
-        CAF_CHECK_EQUAL(str, "hello carl");
-        CAF_CHECK_EQUAL(tracing_id(self), "bob");
+        CHECK_EQ(str, "hello carl");
+        CHECK_EQ(tracing_id(self), "bob");
       },
     };
   };
   auto bob_fun = [](stateful_actor<bob_state>* self, actor carl) -> behavior {
     return {
       [=](const string& str) {
-        CAF_CHECK_EQUAL(str, "hello bob");
-        CAF_CHECK_EQUAL(tracing_id(self), "alice");
+        CHECK_EQ(str, "hello bob");
+        CHECK_EQ(tracing_id(self), "alice");
         self->send(carl, "hello carl");
       },
     };
@@ -179,14 +179,14 @@ CAF_TEST(tracing data is serializable) {
   byte_buffer buf;
   binary_serializer sink{sys, buf};
   tracing_data_ptr data{new dummy_tracing_data("iTrace")};
-  CAF_CHECK(sink.apply(data));
+  CHECK(sink.apply(data));
   binary_deserializer source{sys, buf};
   tracing_data_ptr copy;
-  CAF_CHECK(source.apply(copy));
+  CHECK(source.apply(copy));
   CAF_REQUIRE_NOT_EQUAL(copy.get(), nullptr);
-  CAF_CHECK_EQUAL(dynamic_cast<dummy_tracing_data&>(*copy).value, "iTrace");
+  CHECK_EQ(dynamic_cast<dummy_tracing_data&>(*copy).value, "iTrace");
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()
 
 #endif // CAF_ENABLE_ACTOR_PROFILER

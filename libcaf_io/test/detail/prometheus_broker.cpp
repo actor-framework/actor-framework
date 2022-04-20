@@ -60,7 +60,7 @@ constexpr string_view http_ok_header = "HTTP/1.1 200 OK\r\n"
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(prometheus_broker_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(the prometheus broker responds to HTTP get requests) {
   auto bytes = as_bytes(make_span(http_request));
@@ -69,16 +69,16 @@ CAF_TEST(the prometheus broker responds to HTTP get requests) {
   auto& response_buf = mpx.output_buffer(connection);
   string_view response{reinterpret_cast<char*>(response_buf.data()),
                        response_buf.size()};
-  CAF_CHECK(starts_with(response, http_ok_header));
-  CAF_CHECK(contains(response, "\ncaf_system_running_actors 2 "));
+  CHECK(starts_with(response, http_ok_header));
+  CHECK(contains(response, "\ncaf_system_running_actors 2 "));
   if (detail::prometheus_broker::has_process_metrics()) {
-    CAF_CHECK(contains(response, "\nprocess_cpu_seconds_total "));
-    CAF_CHECK(contains(response, "\nprocess_resident_memory_bytes "));
-    CAF_CHECK(contains(response, "\nprocess_virtual_memory_bytes "));
+    CHECK(contains(response, "\nprocess_cpu_seconds_total "));
+    CHECK(contains(response, "\nprocess_resident_memory_bytes "));
+    CHECK(contains(response, "\nprocess_virtual_memory_bytes "));
   }
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()
 
 namespace {
 
@@ -131,12 +131,12 @@ SCENARIO("setting caf.middleman.prometheus-http.port exports metrics to HTTP") {
         auto response_buf = read_all(http_request, "localhost", scraping_port);
         string_view response{reinterpret_cast<char*>(response_buf.data()),
                              response_buf.size()};
-        CAF_CHECK(starts_with(response, http_ok_header));
-        CAF_CHECK(contains(response, "\ncaf_system_running_actors "));
+        CHECK(starts_with(response, http_ok_header));
+        CHECK(contains(response, "\ncaf_system_running_actors "));
         if (detail::prometheus_broker::has_process_metrics()) {
-          CAF_CHECK(contains(response, "\nprocess_cpu_seconds_total "));
-          CAF_CHECK(contains(response, "\nprocess_resident_memory_bytes "));
-          CAF_CHECK(contains(response, "\nprocess_virtual_memory_bytes "));
+          CHECK(contains(response, "\nprocess_cpu_seconds_total "));
+          CHECK(contains(response, "\nprocess_resident_memory_bytes "));
+          CHECK(contains(response, "\nprocess_virtual_memory_bytes "));
         }
       }
     }

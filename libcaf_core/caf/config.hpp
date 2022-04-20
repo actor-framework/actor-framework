@@ -22,7 +22,7 @@
 /// Denotes version of CAF in the format {MAJOR}{MINOR}{PATCH},
 /// whereas each number is a two-digit decimal number without
 /// leading zeros (e.g. 900 is version 0.9.0).
-#define CAF_VERSION 1805
+#define CAF_VERSION 1806
 
 /// Defined to the major version number of CAF.
 #define CAF_MAJOR_VERSION (CAF_VERSION / 10000)
@@ -191,8 +191,13 @@
 #  endif
 #elif defined(__FreeBSD__)
 #  define CAF_BSD
+#  define CAF_FREE_BSD
+#elif defined(__NetBSD__)
+#  define CAF_BSD
+#  define CAF_NET_BSD
 #elif defined(__OpenBSD__)
 #  define CAF_BSD
+#  define CAF_OPEN_BSD
 #elif defined(__CYGWIN__)
 #  define CAF_CYGWIN
 #elif defined(WIN32) || defined(_WIN32)
@@ -201,7 +206,7 @@
 #  error Platform and/or compiler not supported
 #endif
 #if defined(CAF_MACOS) || defined(CAF_LINUX) || defined(CAF_BSD)               \
-  || defined(CAF_CYGWIN)
+  || defined(CAF_CYGWIN) || defined(CAF_NET_BSD)
 #  define CAF_POSIX
 #endif
 

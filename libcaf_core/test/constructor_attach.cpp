@@ -21,7 +21,7 @@ public:
   behavior make_behavior() override {
     return {
       [=](delete_atom) {
-        CAF_MESSAGE("testee received delete");
+        MESSAGE("testee received delete");
         quit(exit_reason::user_shutdown);
       },
     };
@@ -32,8 +32,8 @@ class spawner : public event_based_actor {
 public:
   spawner(actor_config& cfg) : event_based_actor(cfg), downs_(0) {
     set_down_handler([=](down_msg& msg) {
-      CAF_CHECK_EQUAL(msg.reason, exit_reason::user_shutdown);
-      CAF_CHECK_EQUAL(msg.source, testee_.address());
+      CHECK_EQ(msg.reason, exit_reason::user_shutdown);
+      CHECK_EQ(msg.source, testee_.address());
       if (++downs_ == 2)
         quit(msg.reason);
     });
@@ -43,13 +43,13 @@ public:
     testee_ = spawn<testee, monitored>(this);
     return {
       [=](ok_atom, const error& reason) {
-        CAF_CHECK_EQUAL(reason, exit_reason::user_shutdown);
+        CHECK_EQ(reason, exit_reason::user_shutdown);
         if (++downs_ == 2) {
           quit(reason);
         }
       },
       [=](delete_atom x) {
-        CAF_MESSAGE("spawner received delete");
+        MESSAGE("spawner received delete");
         return delegate(testee_, x);
       },
     };

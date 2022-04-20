@@ -9,6 +9,7 @@
 #include "core-test.hpp"
 
 using namespace caf;
+using namespace std::literals;
 
 namespace {
 
@@ -94,7 +95,7 @@ behavior requester_v2(event_based_actor* self, actor worker) {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(response_promise_tests, test_coordinator_fixture<>)
+BEGIN_FIXTURE_SCOPE(test_coordinator_fixture<>)
 
 SCENARIO("response promises allow delaying of response messages") {
   auto adder_hdl = sys.spawn(adder);
@@ -169,4 +170,26 @@ SCENARIO("response promises allow delegation") {
   }
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()
+
+CAF_TEST("GH-1306 regression") {
+  actor_system_config cfg;
+  cfg.set("caf.scheduler.max-threads", 1u);
+  actor_system sys{cfg};
+  auto aut = sys.spawn([](caf::event_based_actor* self) -> behavior {
+    return {
+      [self](int32_t x) {
+        auto rp = self->make_response_promise();
+        self->run_delayed(1h, [rp, x]() mutable { rp.deliver(x + x); });
+        return rp;
+      },
+    };
+  });
+  scoped_actor self{sys};
+  self->send(aut, 21);
+  self->send_exit(aut, exit_reason::kill);
+  aut = nullptr;
+  // Destroying the now obsolete action now destroys the promise. If the promise
+  // access the self pointer this triggers a heap-use-after-free since the AUT
+  // has been destroyed at this point.
+}

@@ -12,7 +12,7 @@
 
 #if defined(CAF_LINUX)
 #  include <sys/prctl.h>
-#elif defined(CAF_BSD)
+#elif defined(CAF_BSD) && !defined(CAF_NET_BSD)
 #  include <pthread_np.h>
 #endif // defined(...)
 
@@ -32,6 +32,8 @@ void set_thread_name(const char* name) {
   pthread_setname_np(name);
 #  elif defined(CAF_LINUX)
   prctl(PR_SET_NAME, name, 0, 0, 0);
+#  elif defined(CAF_NET_BSD)
+  pthread_setname_np(pthread_self(), name, NULL);
 #  elif defined(CAF_BSD)
   pthread_set_name_np(pthread_self(), name);
 #  endif // defined(...)

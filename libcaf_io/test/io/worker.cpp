@@ -6,7 +6,7 @@
 
 #include "caf/io/basp/worker.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "io-test.hpp"
 
 #include "caf/actor_cast.hpp"
 #include "caf/actor_control_block.hpp"
@@ -94,15 +94,15 @@ struct fixture : test_coordinator_fixture<config> {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(worker_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(deliver serialized message) {
-  CAF_MESSAGE("create the BASP worker");
+  MESSAGE("create the BASP worker");
   CAF_REQUIRE_EQUAL(hub.peek(), nullptr);
   hub.add_new_worker(queue, proxies);
   CAF_REQUIRE_NOT_EQUAL(hub.peek(), nullptr);
   auto w = hub.pop();
-  CAF_MESSAGE("create a fake message + BASP header");
+  MESSAGE("create a fake message + BASP header");
   byte_buffer payload;
   std::vector<strong_actor_ptr> stages;
   binary_serializer sink{sys, payload};
@@ -115,10 +115,10 @@ CAF_TEST(deliver serialized message) {
                        make_message_id().integer_value(),
                        42,
                        testee.id()};
-  CAF_MESSAGE("launch worker");
+  MESSAGE("launch worker");
   w->launch(last_hop, hdr, payload);
   sched.run_once();
   expect((ok_atom), from(_).to(testee));
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

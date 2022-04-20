@@ -6,7 +6,7 @@
 
 #include "caf/detail/serialized_size.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <vector>
 
@@ -34,9 +34,9 @@ struct fixture : test_coordinator_fixture<> {
 } // namespace
 
 #define CHECK_SAME_SIZE(value)                                                 \
-  CAF_CHECK_EQUAL(serialized_size(value), actual_size(value))
+  CHECK_EQ(serialized_size(value), actual_size(value))
 
-CAF_TEST_FIXTURE_SCOPE(serialized_size_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(numbers) {
   CHECK_SAME_SIZE(int8_t{42});
@@ -63,4 +63,4 @@ CAF_TEST(messages) {
   CHECK_SAME_SIZE(make_message("hello", "world"));
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

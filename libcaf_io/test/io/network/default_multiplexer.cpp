@@ -6,7 +6,7 @@
 
 #include "caf/io/network/default_multiplexer.hpp"
 
-#include "caf/test/io_dsl.hpp"
+#include "io-test.hpp"
 
 #include <algorithm>
 #include <vector>
@@ -49,20 +49,20 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(default_multiplexer_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(doorman io_failure) {
-  CAF_MESSAGE("add doorman to server");
+  MESSAGE("add doorman to server");
   // The multiplexer adds a pipe reader on startup.
-  CAF_CHECK_EQUAL(server.mpx.num_socket_handlers(), 1u);
+  CHECK_EQ(server.mpx.num_socket_handlers(), 1u);
   auto doorman = unbox(server.mpx.new_tcp_doorman(0, nullptr, false));
   doorman->add_to_loop();
   server.mpx.handle_internal_events();
-  CAF_CHECK_EQUAL(server.mpx.num_socket_handlers(), 2u);
-  CAF_MESSAGE("trigger I/O failure in doorman");
+  CHECK_EQ(server.mpx.num_socket_handlers(), 2u);
+  MESSAGE("trigger I/O failure in doorman");
   doorman->io_failure(&server.mpx, io::network::operation::propagate_error);
   server.mpx.handle_internal_events();
-  CAF_CHECK_EQUAL(server.mpx.num_socket_handlers(), 1u);
+  CHECK_EQ(server.mpx.num_socket_handlers(), 1u);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

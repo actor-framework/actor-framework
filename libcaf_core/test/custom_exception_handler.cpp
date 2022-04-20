@@ -51,7 +51,7 @@ CAF_TEST(the default exception handler includes the error message) {
       [](const error& err) {
         auto msg = err.context();
         if (auto view = make_typed_message_view<string, string>(msg)) {
-          CAF_CHECK_EQUAL(get<1>(view), "whatever");
+          CHECK_EQ(get<1>(view), "whatever");
         } else {
           CAF_FAIL("unexpected error contest: " << err.context());
         }
@@ -64,11 +64,9 @@ CAF_TEST(actors can override the default exception handler) {
   auto handler = [](std::exception_ptr& eptr) -> error {
     try {
       std::rethrow_exception(eptr);
-    }
-    catch (std::runtime_error&) {
+    } catch (std::runtime_error&) {
       return exit_reason::normal;
-    }
-    catch (...) {
+    } catch (...) {
       // "fall through"
     }
     return sec::runtime_error;

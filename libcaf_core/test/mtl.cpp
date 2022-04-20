@@ -181,7 +181,7 @@ SCENARIO("an MTL allows sending asynchronous messages") {
         inject((std::string, std::string),
                from(self).to(driver).with("try_send", get));
         expect((get_atom, std::string), from(driver).to(testee).with(_, "a"));
-        expect((int32_t), from(testee).to(driver).with(_, 1));
+        expect((int32_t), from(testee).to(driver).with(1));
         CHECK(!sched.has_job());
       }
     }
@@ -209,7 +209,7 @@ SCENARIO("an MTL allows sending requests") {
         inject((std::string, std::string),
                from(self).to(driver).with("try_request", get));
         expect((get_atom, std::string), from(driver).to(testee).with(_, "a"));
-        expect((int32_t), from(testee).to(driver).with(_, 1));
+        expect((int32_t), from(testee).to(driver).with(1));
         expect((std::string), from(driver).to(self).with("1"));
         CHECK(!sched.has_job());
       }

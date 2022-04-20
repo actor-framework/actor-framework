@@ -6,7 +6,7 @@
 
 #include "caf/detail/config_consumer.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include "caf/detail/parser/read_config.hpp"
 
@@ -59,39 +59,39 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(config_consumer_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(config_consumer) {
   string_view str = test_config1;
   detail::config_consumer consumer{options, config};
   string_parser_state res{str.begin(), str.end()};
   detail::parser::read_config(res, consumer);
-  CAF_CHECK_EQUAL(res.code, pec::success);
-  CAF_CHECK_EQUAL(string_view(res.i, res.e), string_view());
-  CAF_CHECK_EQUAL(get_as<bool>(config, "is_server"), true);
-  CAF_CHECK_EQUAL(get_as<uint16_t>(config, "port"), 4242u);
-  CAF_CHECK_EQUAL(get_as<ls>(config, "nodes"), ls({"sun", "venus"}));
-  CAF_CHECK_EQUAL(get_as<string>(config, "logger.file-name"), "foobar.conf");
-  CAF_CHECK_EQUAL(get_as<timespan>(config, "scheduler.timing"), timespan(2000));
+  CHECK_EQ(res.code, pec::success);
+  CHECK_EQ(string_view(res.i, res.e), string_view());
+  CHECK_EQ(get_as<bool>(config, "is_server"), true);
+  CHECK_EQ(get_as<uint16_t>(config, "port"), 4242u);
+  CHECK_EQ(get_as<ls>(config, "nodes"), ls({"sun", "venus"}));
+  CHECK_EQ(get_as<string>(config, "logger.file-name"), "foobar.conf");
+  CHECK_EQ(get_as<timespan>(config, "scheduler.timing"), timespan(2000));
 }
 
 CAF_TEST(simplified syntax) {
-  CAF_MESSAGE("read test_config");
+  MESSAGE("read test_config");
   {
     detail::config_consumer consumer{options, config};
     string_parser_state res{test_config1.begin(), test_config1.end()};
     detail::parser::read_config(res, consumer);
-    CAF_CHECK_EQUAL(res.code, pec::success);
+    CHECK_EQ(res.code, pec::success);
   }
   settings config2;
-  CAF_MESSAGE("read test_config2");
+  MESSAGE("read test_config2");
   {
     detail::config_consumer consumer{options, config2};
     string_parser_state res{test_config2.begin(), test_config2.end()};
     detail::parser::read_config(res, consumer);
-    CAF_CHECK_EQUAL(res.code, pec::success);
+    CHECK_EQ(res.code, pec::success);
   }
-  CAF_CHECK_EQUAL(config, config2);
+  CHECK_EQ(config, config2);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

@@ -10,7 +10,7 @@
 
 // -- detect supported platforms -----------------------------------------------
 
-#if defined(CAF_MACOS) || defined(CAF_LINUX)
+#if defined(CAF_MACOS) || defined(CAF_LINUX) || defined(CAF_NET_BSD)
 #  define CAF_HAS_PROCESS_METRICS
 #endif
 
@@ -117,19 +117,17 @@ sys_stats read_sys_stats() {
 
 #endif // CAF_MACOS
 
-// -- Linux-specific scraping logic --------------------------------------------
+// -- helper for caching the result of a syscall -------------------------------
 
-#ifdef CAF_LINUX
+#if defined(CAF_LINUX) || defined(CAF_NET_BSD)
 
-#  include <cstdio>
 #  include <unistd.h>
 
-namespace {
-
-std::atomic<long> global_ticks_per_second;
-
-std::atomic<long> global_page_size;
-
+/// Caches the result from a `sysconf` call in a cache variable to avoid
+/// frequent syscalls. Sets `cache_var` to -1 in case of an error. Initially,
+/// `cache_var` must be 0 and we assume a successful syscall would always return
+/// some value > 0. If `cache_var` is > 0 then this function simply returns the
+/// cached value directly.
 bool load_system_setting(std::atomic<long>& cache_var, long& var, int name,
                          [[maybe_unused]] const char* pretty_name) {
   var = cache_var.load();
@@ -143,9 +141,10 @@ bool load_system_setting(std::atomic<long>& cache_var, long& var, int name,
         var = -1;
         cache_var = var;
         return false;
+      } else {
+        cache_var = var;
+        return true;
       }
-      cache_var = var;
-      return true;
     default:
       return true;
   }
@@ -153,6 +152,20 @@ bool load_system_setting(std::atomic<long>& cache_var, long& var, int name,
 
 #  define TRY_LOAD(varname, confname)                                          \
     load_system_setting(global_##varname, varname, confname, #confname)
+
+#endif
+
+// -- Linux-specific scraping logic --------------------------------------------
+
+#ifdef CAF_LINUX
+
+#  include <cstdio>
+
+namespace {
+
+std::atomic<long> global_ticks_per_second;
+
+std::atomic<long> global_page_size;
 
 sys_stats read_sys_stats() {
   sys_stats result{0, 0, 0};
@@ -205,6 +218,41 @@ sys_stats read_sys_stats() {
     result.cpu_time += stime_ticks;
     result.cpu_time /= ticks_per_second;
   }
+  return result;
+}
+
+} // namespace
+
+// -- NetBSD-specific scraping logic -------------------------------------------
+
+#elif defined(CAF_NET_BSD)
+
+#  include <sys/sysctl.h>
+
+namespace {
+
+std::atomic<long> global_page_size;
+
+sys_stats read_sys_stats() {
+  auto result = sys_stats{0, 0, 0};
+  auto kip2 = kinfo_proc2{};
+  auto kip2_size = sizeof(kip2);
+  int mib[6] = {
+    CTL_KERN, KERN_PROC2, KERN_PROC_PID, getpid(), static_cast<int>(kip2_size),
+    1,
+  };
+  long page_size = 0;
+  if (!TRY_LOAD(page_size, _SC_PAGE_SIZE))
+    return result;
+  if (sysctl(mib, 6, &kip2, &kip2_size, nullptr, size_t{0}) != 0) {
+    CAF_LOG_ERROR("failed to call sysctl in read_sys_stats");
+    global_page_size = -1;
+    return result;
+  }
+  result.rss = static_cast<int64_t>(kip2.p_vm_rssize) * page_size;
+  result.vms = static_cast<int64_t>(kip2.p_vm_vsize) * page_size;
+  result.cpu_time = kip2.p_rtime_sec;
+  result.cpu_time += static_cast<double>(kip2.p_rtime_usec) / 1000000;
   return result;
 }
 

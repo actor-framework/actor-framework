@@ -6,7 +6,7 @@
 
 #include "caf/telemetry/label.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include "caf/telemetry/label_view.hpp"
 
@@ -24,24 +24,24 @@ size_t hash(const T& x) {
 } // namespace
 
 CAF_TEST(labels wrap name and value) {
-  CAF_CHECK_EQUAL(to_string(label{"foo", "bar"}), "foo=bar");
+  CHECK_EQ(to_string(label{"foo", "bar"}), "foo=bar");
   label foobar{"foo", "bar"};
-  CAF_CHECK_EQUAL(foobar.name(), "foo");
-  CAF_CHECK_EQUAL(foobar.value(), "bar");
-  CAF_CHECK_EQUAL(foobar.str(), "foo=bar");
-  CAF_CHECK_EQUAL(to_string(foobar), "foo=bar");
-  CAF_CHECK_EQUAL(foobar, label("foo", "bar"));
-  CAF_CHECK_EQUAL(hash(foobar), hash(label("foo", "bar")));
+  CHECK_EQ(foobar.name(), "foo");
+  CHECK_EQ(foobar.value(), "bar");
+  CHECK_EQ(foobar.str(), "foo=bar");
+  CHECK_EQ(to_string(foobar), "foo=bar");
+  CHECK_EQ(foobar, label("foo", "bar"));
+  CHECK_EQ(hash(foobar), hash(label("foo", "bar")));
 }
 
 CAF_TEST(labels are convertible from views) {
   label foobar{"foo", "bar"};
   label_view foobar_view{"foo", "bar"};
-  CAF_CHECK_EQUAL(foobar, foobar_view);
-  CAF_CHECK_EQUAL(foobar, label{foobar_view});
-  CAF_CHECK_EQUAL(foobar.name(), foobar_view.name());
-  CAF_CHECK_EQUAL(foobar.value(), foobar_view.value());
-  CAF_CHECK_EQUAL(to_string(foobar), to_string(foobar_view));
-  CAF_CHECK_EQUAL(hash(foobar), hash(foobar_view));
-  CAF_CHECK_EQUAL(hash(foobar), hash(label{foobar_view}));
+  CHECK_EQ(foobar, foobar_view);
+  CHECK_EQ(foobar, label{foobar_view});
+  CHECK_EQ(foobar.name(), foobar_view.name());
+  CHECK_EQ(foobar.value(), foobar_view.value());
+  CHECK_EQ(to_string(foobar), to_string(foobar_view));
+  CHECK_EQ(hash(foobar), hash(foobar_view));
+  CHECK_EQ(hash(foobar), hash(label{foobar_view}));
 }

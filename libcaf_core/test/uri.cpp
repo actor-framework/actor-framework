@@ -16,9 +16,11 @@ using namespace caf;
 
 namespace {
 
-struct authority_separator_t {} authority_separator;
+struct authority_separator_t {
+} authority_separator;
 
-struct path_separator_t {} path_separator;
+struct path_separator_t {
+} path_separator;
 
 struct uri_str_builder {
   std::string res;
@@ -60,7 +62,7 @@ struct uri_str_builder {
   }
 
   uri_str_builder& host(ip_address addr) {
-    return add(authority_separator, '[', to_string(addr),  ']');
+    return add(authority_separator, '[', to_string(addr), ']');
   }
 
   uri_str_builder& port(uint16_t value) {
@@ -133,42 +135,48 @@ struct fixture {
   }
 };
 
-struct me_t {} me;
+struct me_t {
+} me;
 
 template <class T>
 T& operator<<(T& builder, me_t) {
   return builder.userinfo("me");
 }
 
-struct node_t {} node;
+struct node_t {
+} node;
 
 template <class T>
 T& operator<<(T& builder, node_t) {
   return builder.host("node");
 }
 
-struct port80_t {} port80;
+struct port80_t {
+} port80;
 
 template <class T>
 T& operator<<(T& builder, port80_t) {
   return builder.port(80);
 }
 
-struct file_t {} file;
+struct file_t {
+} file;
 
 template <class T>
 T& operator<<(T& builder, file_t) {
   return builder.path("file");
 }
 
-struct frag_t {} frag;
+struct frag_t {
+} frag;
 
 template <class T>
 T& operator<<(T& builder, frag_t) {
   return builder.fragment("42");
 }
 
-struct kvp_t {} kvp;
+struct kvp_t {
+} kvp;
 
 template <class T>
 T& operator<<(T& builder, kvp_t) {
@@ -183,7 +191,7 @@ uri operator*(uri_builder& builder) {
   return result;
 }
 
-uri operator "" _u(const char* cstr, size_t cstr_len) {
+uri operator"" _u(const char* cstr, size_t cstr_len) {
   uri result;
   string_view str{cstr, cstr_len};
   auto err = parse(str, result);
@@ -192,40 +200,40 @@ uri operator "" _u(const char* cstr, size_t cstr_len) {
   return result;
 }
 
-bool operator "" _i(const char* cstr, size_t cstr_len) {
+bool operator"" _i(const char* cstr, size_t cstr_len) {
   uri result;
   string_view str{cstr, cstr_len};
-  CAF_CHECK(!uri::can_parse(str));
+  CHECK(!uri::can_parse(str));
   auto err = parse(str, result);
   return err != none;
 }
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(uri_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(default URIs are empty) {
   uri x;
-  CAF_CHECK_EQUAL(x.empty(), true);
-  CAF_CHECK_EQUAL(x.str(), "");
+  CHECK_EQ(x.empty(), true);
+  CHECK_EQ(x.str(), "");
 }
 
 CAF_TEST(URIs recognize IP addresses while parsing) {
   auto v6_localhost = "tcp://[::1]:8080"_u;
-  CAF_CHECK(holds_alternative<ip_address>(v6_localhost.authority().host));
+  CHECK(holds_alternative<ip_address>(v6_localhost.authority().host));
   auto v4_localhost = "tcp://127.0.0.1:8080"_u;
-  CAF_CHECK(holds_alternative<ip_address>(v4_localhost.authority().host));
+  CHECK(holds_alternative<ip_address>(v4_localhost.authority().host));
   auto str_localhost = "tcp://localhost:8080"_u;
-  CAF_CHECK(holds_alternative<std::string>(str_localhost.authority().host));
+  CHECK(holds_alternative<std::string>(str_localhost.authority().host));
 }
 
 #define BUILD(components)                                                      \
-  CAF_CHECK_EQUAL(*(http << components), *(http_str << components))
+  CHECK_EQ(*(http << components), *(http_str << components))
 
 CAF_TEST(builder construction) {
   auto minimal = *(http << file);
-  CAF_CHECK_EQUAL(minimal.empty(), false);
-  CAF_CHECK_EQUAL(minimal, "http:file");
+  CHECK_EQ(minimal.empty(), false);
+  CHECK_EQ(minimal, "http:file");
   // all combinations of components
   BUILD(file);
   BUILD(file << kvp);
@@ -271,13 +279,13 @@ CAF_TEST(builder construction) {
                    .path("file 1")
                    .fragment("[42]")
                    .make();
-  CAF_CHECK_EQUAL(escaped, "hi%20there://it%27s@me%2F/file%201#%5B42%5D");
+  CHECK_EQ(escaped, "hi%20there://it%27s@me%2F/file%201#%5B42%5D");
 }
 
 #define ROUNDTRIP(str)                                                         \
   do {                                                                         \
-    CAF_CHECK(uri::can_parse(str));                                            \
-    CAF_CHECK_EQUAL(str##_u, str);                                             \
+    CHECK(uri::can_parse(str));                                                \
+    CHECK_EQ(str##_u, str);                                                    \
   } while (false)
 
 CAF_TEST(from string) {
@@ -361,27 +369,27 @@ CAF_TEST(from string) {
 #undef ROUNDTRIP
 
 CAF_TEST(empty components) {
-  CAF_CHECK_EQUAL("foo:/"_u, "foo:/");
-  CAF_CHECK_EQUAL("foo:///"_u, "foo:/");
-  CAF_CHECK_EQUAL("foo:/#"_u, "foo:/");
-  CAF_CHECK_EQUAL("foo:/?"_u, "foo:/");
-  CAF_CHECK_EQUAL("foo:/?#"_u, "foo:/");
-  CAF_CHECK_EQUAL("foo:bar#"_u, "foo:bar");
-  CAF_CHECK_EQUAL("foo:bar?"_u, "foo:bar");
-  CAF_CHECK_EQUAL("foo:bar?#"_u, "foo:bar");
-  CAF_CHECK_EQUAL("foo://bar#"_u, "foo://bar");
-  CAF_CHECK_EQUAL("foo://bar?"_u, "foo://bar");
-  CAF_CHECK_EQUAL("foo://bar?#"_u, "foo://bar");
+  CHECK_EQ("foo:/"_u, "foo:/");
+  CHECK_EQ("foo:///"_u, "foo:/");
+  CHECK_EQ("foo:/#"_u, "foo:/");
+  CHECK_EQ("foo:/?"_u, "foo:/");
+  CHECK_EQ("foo:/?#"_u, "foo:/");
+  CHECK_EQ("foo:bar#"_u, "foo:bar");
+  CHECK_EQ("foo:bar?"_u, "foo:bar");
+  CHECK_EQ("foo:bar?#"_u, "foo:bar");
+  CHECK_EQ("foo://bar#"_u, "foo://bar");
+  CHECK_EQ("foo://bar?"_u, "foo://bar");
+  CHECK_EQ("foo://bar?#"_u, "foo://bar");
 }
 
 CAF_TEST(invalid uris) {
-  CAF_CHECK("http"_i);
-  CAF_CHECK("http://"_i);
-  CAF_CHECK("http://foo:66000"_i);
+  CHECK("http"_i);
+  CHECK("http://"_i);
+  CHECK("http://foo:66000"_i);
 }
 
 #define SERIALIZATION_ROUNDTRIP(str)                                           \
-  CAF_CHECK_EQUAL(deserialize(serialize(str##_u)), str)
+  CHECK_EQ(deserialize(serialize(str##_u)), str)
 
 CAF_TEST(serialization) {
   // all combinations of components
@@ -460,4 +468,4 @@ CAF_TEST(serialization) {
 
 #undef SERIALIZATION_ROUNDTRIP
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

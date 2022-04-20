@@ -40,34 +40,34 @@ optional<tuple<Ts...>> fetch(const mailbox_element& x) {
 CAF_TEST(empty_message) {
   auto m1 = make_mailbox_element(nullptr, make_message_id(), no_stages,
                                  make_message());
-  CAF_CHECK(m1->mid.is_async());
-  CAF_CHECK(m1->mid.category() == message_id::normal_message_category);
-  CAF_CHECK(m1->content().empty());
+  CHECK(m1->mid.is_async());
+  CHECK(m1->mid.category() == message_id::normal_message_category);
+  CHECK(m1->content().empty());
 }
 
 CAF_TEST(non_empty_message) {
   auto m1 = make_mailbox_element(nullptr, make_message_id(), no_stages,
                                  make_message(1, 2, 3));
-  CAF_CHECK(m1->mid.is_async());
-  CAF_CHECK(m1->mid.category() == message_id::normal_message_category);
-  CAF_CHECK(!m1->content().empty());
-  CAF_CHECK_EQUAL((fetch<int, int>(*m1)), none);
-  CAF_CHECK_EQUAL((fetch<int, int, int>(*m1)), make_tuple(1, 2, 3));
+  CHECK(m1->mid.is_async());
+  CHECK(m1->mid.category() == message_id::normal_message_category);
+  CHECK(!m1->content().empty());
+  CHECK_EQ((fetch<int, int>(*m1)), none);
+  CHECK_EQ((fetch<int, int, int>(*m1)), make_tuple(1, 2, 3));
 }
 
 CAF_TEST(tuple) {
   auto m1 = make_mailbox_element(nullptr, make_message_id(), no_stages, 1, 2,
                                  3);
-  CAF_CHECK(m1->mid.is_async());
-  CAF_CHECK(m1->mid.category() == message_id::normal_message_category);
-  CAF_CHECK(!m1->content().empty());
-  CAF_CHECK_EQUAL((fetch<int, int>(*m1)), none);
-  CAF_CHECK_EQUAL((fetch<int, int, int>(*m1)), make_tuple(1, 2, 3));
+  CHECK(m1->mid.is_async());
+  CHECK(m1->mid.category() == message_id::normal_message_category);
+  CHECK(!m1->content().empty());
+  CHECK_EQ((fetch<int, int>(*m1)), none);
+  CHECK_EQ((fetch<int, int, int>(*m1)), make_tuple(1, 2, 3));
 }
 
 CAF_TEST(high_priority) {
   auto m1 = make_mailbox_element(nullptr,
                                  make_message_id(message_priority::high),
                                  no_stages, 42);
-  CAF_CHECK(m1->mid.category() == message_id::urgent_message_category);
+  CHECK(m1->mid.category() == message_id::urgent_message_category);
 }

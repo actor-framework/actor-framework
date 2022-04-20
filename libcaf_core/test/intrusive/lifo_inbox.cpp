@@ -6,7 +6,7 @@
 
 #include "caf/intrusive/lifo_inbox.hpp"
 
-#include "caf/test/unit_test.hpp"
+#include "core-test.hpp"
 
 #include <memory>
 
@@ -80,7 +80,7 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(lifo_inbox_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(default_constructed) {
   CAF_REQUIRE_EQUAL(inbox.empty(), true);
@@ -126,7 +126,7 @@ CAF_TEST(timed_await) {
   fill(inbox, 1);
   res = inbox.synchronized_await(mx, cv, tout);
   CAF_REQUIRE_EQUAL(res, true);
-  CAF_CHECK_EQUAL(fetch(), "1");
+  CHECK_EQ(fetch(), "1");
   tout += std::chrono::hours(1000);
   std::thread t{[&] { inbox.synchronized_emplace_front(mx, cv, 2); }};
   res = inbox.synchronized_await(mx, cv, tout);
@@ -135,4 +135,4 @@ CAF_TEST(timed_await) {
   t.join();
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

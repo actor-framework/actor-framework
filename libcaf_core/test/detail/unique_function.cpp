@@ -6,7 +6,7 @@
 
 #include "caf/detail/unique_function.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 namespace {
 
@@ -38,22 +38,22 @@ private:
 } // namespace
 
 #define CHECK_VALID(f)                                                         \
-  CAF_CHECK(!f.is_nullptr());                                                  \
-  CAF_CHECK(f);                                                                \
-  CAF_CHECK(f != nullptr);                                                     \
-  CAF_CHECK(nullptr != f);                                                     \
-  CAF_CHECK(!(f == nullptr));                                                  \
-  CAF_CHECK(!(nullptr == f));                                                  \
-  CAF_CHECK(f() == 42)
+  CHECK(!f.is_nullptr());                                                      \
+  CHECK(f);                                                                    \
+  CHECK_NE(f, nullptr);                                                        \
+  CHECK_NE(nullptr, f);                                                        \
+  CHECK(!(f == nullptr));                                                      \
+  CHECK(!(nullptr == f));                                                      \
+  CHECK_EQ(f(), 42)
 
 #define CHECK_INVALID(f)                                                       \
-  CAF_CHECK(f.is_nullptr());                                                   \
-  CAF_CHECK(!f);                                                               \
-  CAF_CHECK(f == nullptr);                                                     \
-  CAF_CHECK(nullptr == f);                                                     \
-  CAF_CHECK(!(f != nullptr));                                                  \
-  CAF_CHECK(!(nullptr != f));                                                  \
-  CAF_CHECK(!f.holds_wrapper())
+  CHECK(f.is_nullptr());                                                       \
+  CHECK(!f);                                                                   \
+  CHECK_EQ(f, nullptr);                                                        \
+  CHECK_EQ(nullptr, f);                                                        \
+  CHECK(!(f != nullptr));                                                      \
+  CHECK(!(nullptr != f));                                                      \
+  CHECK(!f.holds_wrapper())
 
 CAF_TEST(default construction) {
   int_fun f;
@@ -68,14 +68,14 @@ CAF_TEST(raw function pointer construction) {
 CAF_TEST(stateless lambda construction) {
   int_fun f{[] { return 42; }};
   CHECK_VALID(f);
-  CAF_CHECK(!f.holds_wrapper());
+  CHECK(!f.holds_wrapper());
 }
 
 CAF_TEST(stateful lambda construction) {
   int i = 42;
   int_fun f{[=] { return i; }};
   CHECK_VALID(f);
-  CAF_CHECK(f.holds_wrapper());
+  CHECK(f.holds_wrapper());
 }
 
 CAF_TEST(custom wrapper construction) {
@@ -83,10 +83,10 @@ CAF_TEST(custom wrapper construction) {
   { // lifetime scope of our counting wrapper
     int_fun f{new instance_counting_wrapper(&instances)};
     CHECK_VALID(f);
-    CAF_CHECK(f.holds_wrapper());
-    CAF_CHECK(instances == 1);
+    CHECK(f.holds_wrapper());
+    CHECK(instances == 1);
   }
-  CAF_CHECK(instances == 0);
+  CHECK(instances == 0);
 }
 
 CAF_TEST(function move construction) {
@@ -94,7 +94,7 @@ CAF_TEST(function move construction) {
   int_fun g{std::move(f)};
   CHECK_INVALID(f);
   CHECK_VALID(g);
-  CAF_CHECK(!g.holds_wrapper());
+  CHECK(!g.holds_wrapper());
 }
 
 CAF_TEST(stateful lambda move construction) {
@@ -103,7 +103,7 @@ CAF_TEST(stateful lambda move construction) {
   int_fun g{std::move(f)};
   CHECK_INVALID(f);
   CHECK_VALID(g);
-  CAF_CHECK(g.holds_wrapper());
+  CHECK(g.holds_wrapper());
 }
 
 CAF_TEST(custom wrapper move construction) {
@@ -113,10 +113,10 @@ CAF_TEST(custom wrapper move construction) {
     int_fun g{std::move(f)};
     CHECK_INVALID(f);
     CHECK_VALID(g);
-    CAF_CHECK(g.holds_wrapper());
-    CAF_CHECK(instances == 1);
+    CHECK(g.holds_wrapper());
+    CHECK(instances == 1);
   }
-  CAF_CHECK(instances == 0);
+  CHECK(instances == 0);
 }
 
 CAF_TEST(function assign) {
@@ -124,14 +124,14 @@ CAF_TEST(function assign) {
   int_fun f;
   int_fun g{forty_two};
   int_fun h{new instance_counting_wrapper(&instances)};
-  CAF_CHECK(instances == 1);
+  CHECK(instances == 1);
   CHECK_INVALID(f);
   CHECK_VALID(g);
   CHECK_VALID(h);
   f = forty_two;
   g = forty_two;
   h = forty_two;
-  CAF_CHECK(instances == 0);
+  CHECK(instances == 0);
   CHECK_VALID(f);
   CHECK_VALID(g);
   CHECK_VALID(h);
@@ -142,22 +142,22 @@ CAF_TEST(move assign) {
   int_fun f;
   int_fun g{forty_two};
   int_fun h{new instance_counting_wrapper(&instances)};
-  CAF_CHECK(instances == 1);
+  CHECK(instances == 1);
   CHECK_INVALID(f);
   CHECK_VALID(g);
   CHECK_VALID(h);
   g = std::move(h);
-  CAF_CHECK(instances == 1);
+  CHECK(instances == 1);
   CHECK_INVALID(f);
   CHECK_VALID(g);
   CHECK_INVALID(h);
   f = std::move(g);
-  CAF_CHECK(instances == 1);
+  CHECK(instances == 1);
   CHECK_VALID(f);
   CHECK_INVALID(g);
   CHECK_INVALID(h);
   f = int_fun{};
-  CAF_CHECK(instances == 0);
+  CHECK(instances == 0);
   CHECK_INVALID(f);
   CHECK_INVALID(g);
   CHECK_INVALID(h);

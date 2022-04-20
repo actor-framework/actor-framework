@@ -271,6 +271,7 @@ caf_add_component(
     detail.unique_function
     detail.unordered_flat_map
     dictionary
+    dsl
     dynamic_spawn
     error
     expected

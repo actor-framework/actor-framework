@@ -42,23 +42,21 @@ struct fixture {
 
 } // namespace
 
-CAF_TEST_FIXTURE_SCOPE(adapter_tests, fixture)
+BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(redirect_aout_globally) {
   self->join(system.groups().get_local(global_redirect));
   actor_ostream::redirect_all(system, global_redirect);
   system.spawn(chatty_actor);
-  self->receive(
-    [](const std::string& virtual_file, std::string& line) {
-      // drop trailing '\n'
-      if (!line.empty())
-        line.pop_back();
-      CAF_CHECK_EQUAL(virtual_file, ":test");
-      CAF_CHECK_EQUAL(line, chatty_line);
-    }
-  );
+  self->receive([](const std::string& virtual_file, std::string& line) {
+    // drop trailing '\n'
+    if (!line.empty())
+      line.pop_back();
+    CHECK_EQ(virtual_file, ":test");
+    CHECK_EQ(line, chatty_line);
+  });
   self->await_all_other_actors_done();
-  CAF_CHECK_EQUAL(self->mailbox().size(), 0u);
+  CHECK_EQ(self->mailbox().size(), 0u);
 }
 
 CAF_TEST(global_and_local_redirect) {
@@ -67,24 +65,19 @@ CAF_TEST(global_and_local_redirect) {
   actor_ostream::redirect_all(system, global_redirect);
   system.spawn(chatty_actor);
   system.spawn(chattier_actor, local_redirect);
-  std::vector<std::pair<std::string, std::string>> expected {
-    {":test", chatty_line},
-    {":test", chatty_line},
-    {":test2", chattier_line}
-  };
+  std::vector<std::pair<std::string, std::string>> expected{
+    {":test", chatty_line}, {":test", chatty_line}, {":test2", chattier_line}};
   std::vector<std::pair<std::string, std::string>> lines;
   int i = 0;
-  self->receive_for(i, 3)(
-    [&](std::string& virtual_file, std::string& line) {
-      // drop trailing '\n'
-      if (!line.empty())
-        line.pop_back();
-      lines.emplace_back(std::move(virtual_file), std::move(line));
-    }
-  );
-  CAF_CHECK(std::is_permutation(lines.begin(), lines.end(), expected.begin()));
+  self->receive_for(i, 3)([&](std::string& virtual_file, std::string& line) {
+    // drop trailing '\n'
+    if (!line.empty())
+      line.pop_back();
+    lines.emplace_back(std::move(virtual_file), std::move(line));
+  });
+  CHECK(std::is_permutation(lines.begin(), lines.end(), expected.begin()));
   self->await_all_other_actors_done();
-  CAF_CHECK_EQUAL(self->mailbox().size(), 0u);
+  CHECK_EQ(self->mailbox().size(), 0u);
 }
 
-CAF_TEST_FIXTURE_SCOPE_END()
+END_FIXTURE_SCOPE()

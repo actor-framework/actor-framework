@@ -6,7 +6,7 @@
 
 #include "caf/detail/parser/read_timespan.hpp"
 
-#include "caf/test/dsl.hpp"
+#include "core-test.hpp"
 
 #include <chrono>
 
@@ -62,10 +62,10 @@ optional<timespan> read(string_view str) {
 } // namespace
 
 CAF_TEST(todo) {
-  CAF_CHECK_EQUAL(read("12ns"), 12_ns);
-  CAF_CHECK_EQUAL(read("34us"), 34_us);
-  CAF_CHECK_EQUAL(read("56ms"), 56_ms);
-  CAF_CHECK_EQUAL(read("78s"), 78_s);
-  CAF_CHECK_EQUAL(read("60min"), 1_h);
-  CAF_CHECK_EQUAL(read("90h"), 90_h);
+  CHECK_EQ(read("12ns"), 12_ns);
+  CHECK_EQ(read("34us"), 34_us);
+  CHECK_EQ(read("56ms"), 56_ms);
+  CHECK_EQ(read("78s"), 78_s);
+  CHECK_EQ(read("60min"), 1_h);
+  CHECK_EQ(read("90h"), 90_h);
 }
