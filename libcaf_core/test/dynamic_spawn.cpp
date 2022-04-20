@@ -367,7 +367,7 @@ CAF_TEST(function_spawn) {
   self->send_exit(a2, exit_reason::user_shutdown);
 }
 
-using typed_testee = typed_actor<replies_to<abc_atom>::with<std::string>>;
+using typed_testee = typed_actor<result<std::string>(abc_atom)>;
 
 typed_testee::behavior_type testee() {
   return {[](abc_atom) {

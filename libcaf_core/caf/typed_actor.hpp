@@ -15,7 +15,6 @@
 #include "caf/fwd.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/make_actor.hpp"
-#include "caf/replies_to.hpp"
 #include "caf/stateful_actor.hpp"
 #include "caf/type_id_list.hpp"
 #include "caf/typed_actor_view_base.hpp"

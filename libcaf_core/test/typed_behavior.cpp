@@ -16,9 +16,8 @@
 using namespace caf;
 
 CAF_TEST(make_typed_behavior automatically deduces its types) {
-  using handle
-    = typed_actor<reacts_to<std::string>, replies_to<int32_t>::with<int32_t>,
-                  replies_to<double>::with<double>>;
+  using handle = typed_actor<result<void>(std::string),
+                             result<int32_t>(int32_t), result<double>(double)>;
   auto bhvr = make_typed_behavior([](const std::string&) {},
                                   [](int32_t x) { return x; },
                                   [](double x) { return x; });

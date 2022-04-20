@@ -121,7 +121,7 @@ behavior peer_acceptor_fun(broker* self, const actor& buddy) {
   };
 }
 
-using int_peer = connection_handler::extend<replies_to<int>::with<int>>;
+using int_peer = connection_handler::extend<result<int>(int)>;
 
 int_peer::behavior_type int_peer_fun(int_peer::broker_pointer) {
   return {

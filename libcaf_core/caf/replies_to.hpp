@@ -17,12 +17,15 @@ replies_to_type_name(size_t input_size, const std::string* input,
                      size_t output_size, const std::string* output);
 
 template <class... Is>
-struct replies_to {
+struct [[deprecated("write 'result<foo>(bar)' instead of "
+                    "'replies_to<bar>::with<foo>'")]] replies_to {
   template <class... Os>
   using with = result<Os...>(Is...);
 };
 
 template <class... Is>
-using reacts_to = result<void>(Is...);
+using reacts_to
+  [[deprecated("write 'result<void>(foo)' instead of 'reacts_to<foo>'")]]
+  = result<void>(Is...);
 
 } // namespace caf

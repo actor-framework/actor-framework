@@ -12,35 +12,36 @@
 
 #include "caf/event_based_actor.hpp"
 #include "caf/policy/select_all.hpp"
+#include "caf/result.hpp"
 
 using namespace caf;
 
 namespace {
 
-using discarding_server_type = typed_actor<replies_to<int, int>::with<void>>;
+using discarding_server_type = typed_actor<result<void>(int, int)>;
 
-using adding_server_type = typed_actor<replies_to<int, int>::with<int>>;
+using adding_server_type = typed_actor<result<int>(int, int)>;
 
 using result_type = variant<none_t, unit_t, int>;
 
 struct fixture : test_coordinator_fixture<> {
-  fixture() {
-    result = std::make_shared<result_type>(none);
-    discarding_server = make_server([](int, int) {});
-    adding_server = make_server([](int x, int y) { return x + y; });
-    run();
-  }
-
   template <class F>
-  auto make_server(F f)
-    -> typed_actor<replies_to<int, int>::with<decltype(f(1, 2))>> {
-    using impl = typed_actor<replies_to<int, int>::with<decltype(f(1, 2))>>;
+  auto make_server(F f) {
+    using res_t = caf::result<decltype(f(1, 2))>;
+    using impl = typed_actor<res_t(int, int)>;
     auto init = [f]() -> typename impl::behavior_type {
       return {
         [f](int x, int y) { return f(x, y); },
       };
     };
     return sys.spawn(init);
+  }
+
+  fixture() {
+    result = std::make_shared<result_type>(none);
+    discarding_server = make_server([](int, int) {});
+    adding_server = make_server([](int x, int y) { return x + y; });
+    run();
   }
 
   template <class T>

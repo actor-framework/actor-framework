@@ -24,11 +24,6 @@ using namespace std::string_literals;
 
 namespace {
 
-static_assert(std::is_same<reacts_to<int, int>, result<void>(int, int)>::value);
-
-static_assert(std::is_same<replies_to<double>::with<double>,
-                           result<double>(double)>::value);
-
 // check invariants of type system
 using dummy1 = typed_actor<result<void>(int, int), result<double>(double)>;
 
@@ -38,7 +33,7 @@ static_assert(std::is_convertible<dummy2, dummy1>::value,
               "handle not assignable to narrower definition");
 
 using dummy3 = typed_actor<reacts_to<float, int>>;
-using dummy4 = typed_actor<replies_to<int>::with<double>>;
+using dummy4 = typed_actor<result<double>(int)>;
 using dummy5 = dummy4::extend_with<dummy3>;
 
 static_assert(std::is_convertible<dummy5, dummy3>::value,
@@ -51,7 +46,7 @@ static_assert(std::is_convertible<dummy5, dummy4>::value,
  *                        simple request/response test                        *
  ******************************************************************************/
 
-using server_type = typed_actor<replies_to<my_request>::with<bool>>;
+using server_type = typed_actor<result<bool>(my_request)>;
 
 server_type::behavior_type typed_server1() {
   return {
@@ -91,9 +86,8 @@ void client(event_based_actor* self, const actor& parent,
  ******************************************************************************/
 
 using event_testee_type
-  = typed_actor<replies_to<get_state_atom>::with<string>,
-                replies_to<string>::with<void>, replies_to<float>::with<void>,
-                replies_to<int>::with<int>>;
+  = typed_actor<result<string>(get_state_atom), result<void>(string),
+                result<void>(float), result<int>(int)>;
 
 class event_testee : public event_testee_type::base {
 public:
@@ -137,7 +131,7 @@ public:
  *                         simple 'forwarding' chain                          *
  ******************************************************************************/
 
-using string_actor = typed_actor<replies_to<string>::with<string>>;
+using string_actor = typed_actor<result<string>(string)>;
 
 string_actor::behavior_type string_reverter() {
   return {
@@ -160,8 +154,7 @@ string_actor::behavior_type string_delegator(string_actor::pointer self,
   };
 }
 
-using maybe_string_actor
-  = typed_actor<replies_to<string>::with<ok_atom, string>>;
+using maybe_string_actor = typed_actor<result<ok_atom, string>(string)>;
 
 maybe_string_actor::behavior_type maybe_string_reverter() {
   return {
@@ -285,7 +278,7 @@ CAF_TEST(typed_spawns) {
 CAF_TEST(event_testee_series) {
   auto et = self->spawn<event_testee>();
   MESSAGE("et->message_types() returns an interface description");
-  typed_actor<replies_to<get_state_atom>::with<string>> sub_et = et;
+  typed_actor<result<string>(get_state_atom)> sub_et = et;
   std::set<string> iface{"(get_state_atom) -> (std::string)",
                          "(std::string) -> (void)", "(float) -> (void)",
                          "(int32_t) -> (int32_t)"};
@@ -350,7 +343,7 @@ CAF_TEST(sending_typed_actors_and_down_msg) {
 }
 
 CAF_TEST(check_signature) {
-  using foo_type = typed_actor<replies_to<put_atom>::with<ok_atom>>;
+  using foo_type = typed_actor<result<ok_atom>(put_atom)>;
   using foo_result_type = result<ok_atom>;
   using bar_type = typed_actor<reacts_to<ok_atom>>;
   auto foo_action = [](foo_type::pointer ptr) -> foo_type::behavior_type {

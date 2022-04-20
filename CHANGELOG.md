@@ -12,6 +12,11 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   destructor of the promise now checks for this case.
 - Accessing URI fields now always returns the normalized string.
 
+### Deprecated
+
+- The obsolete meta-programming utilities `replies_to` and `reacts_to` no longer
+  serve any purpose and are thus deprecated.
+
 ## [0.18.6]
 
 ### Added

@@ -240,13 +240,14 @@ Statically typed actors require abstract messaging interfaces to allow the
 compiler to type-check actor communication. Interfaces in CAF are defined using
 the variadic template ``typed_actor<...>``, which defines the proper
 actor handle at the same time. Each template parameter defines one
-``input/output`` pair via
-``replies_to<X1,...,Xn>::with<Y1,...,Yn>``. For inputs that do not
-generate outputs, ``reacts_to<X1,...,Xn>`` can be used as shortcut for
-``replies_to<X1,...,Xn>::with<void>``. In the same way functions cannot
-be overloaded only by their return type, interfaces cannot accept one input
-twice (possibly mapping it to different outputs). The example below defines a
-messaging interface for a simple calculator.
+``input/output`` pair via function signature syntax with the return type wrapped
+in a ``result``. For example, ``typed_actor<result<string, string>(double)>``.
+Also, the arguments must not use any cv-qualifiers.
+
+In the same way functions cannot be overloaded only by their return type,
+interfaces cannot accept one input twice (possibly mapping it to different
+outputs). The example below defines a messaging interface for a simple
+calculator.
 
 .. literalinclude:: /examples/message_passing/calculator.cpp
    :language: C++
