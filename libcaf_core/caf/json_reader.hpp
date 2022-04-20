@@ -206,6 +206,12 @@ public:
 private:
   [[nodiscard]] position pos() const noexcept;
 
+  void append_current_field_name(std::string& str);
+
+  std::string current_field_name();
+
+  std::string mandatory_field_missing_str(string_view name);
+
   template <bool PopOrAdvanceOnSuccess, class F>
   bool consume(const char* fun_name, F f);
 
@@ -238,6 +244,9 @@ private:
   detail::json::value* root_ = nullptr;
 
   string_view field_type_suffix_ = field_type_suffix_default;
+
+  /// Keeps track of the current field for better debugging output.
+  std::vector<string_view> field_;
 };
 
 } // namespace caf

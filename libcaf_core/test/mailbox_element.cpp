@@ -71,29 +71,3 @@ CAF_TEST(high_priority) {
                                  no_stages, 42);
   CHECK(m1->mid.category() == message_id::urgent_message_category);
 }
-
-CAF_TEST(upstream_msg_static) {
-  auto m1 = make_mailbox_element(nullptr, make_message_id(), no_stages,
-                                 make<upstream_msg::drop>({0, 0}, nullptr));
-  CHECK(m1->mid.category() == message_id::upstream_message_category);
-}
-
-CAF_TEST(upstream_msg_dynamic) {
-  auto m1 = make_mailbox_element(nullptr, make_message_id(), no_stages,
-                                 make_message(
-                                   make<upstream_msg::drop>({0, 0}, nullptr)));
-  CHECK(m1->mid.category() == message_id::upstream_message_category);
-}
-
-CAF_TEST(downstream_msg_static) {
-  auto m1 = make_mailbox_element(nullptr, make_message_id(), no_stages,
-                                 make<downstream_msg::close>({0, 0}, nullptr));
-  CHECK(m1->mid.category() == message_id::downstream_message_category);
-}
-
-CAF_TEST(downstream_msg_dynamic) {
-  auto m1 = make_mailbox_element(
-    nullptr, make_message_id(), no_stages,
-    make_message(make<downstream_msg::close>({0, 0}, nullptr)));
-  CHECK(m1->mid.category() == message_id::downstream_message_category);
-}

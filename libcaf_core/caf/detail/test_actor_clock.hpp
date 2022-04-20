@@ -15,15 +15,6 @@ namespace caf::detail {
 
 class CAF_CORE_EXPORT test_actor_clock : public actor_clock {
 public:
-  // -- member types -----------------------------------------------------------
-
-  struct schedule_entry {
-    action f;
-    duration_type period;
-  };
-
-  using schedule_map = std::multimap<time_point, schedule_entry>;
-
   // -- constructors, destructors, and assignment operators --------------------
 
   test_actor_clock();
@@ -32,17 +23,14 @@ public:
 
   time_point now() const noexcept override;
 
-  disposable schedule_periodically(time_point first_run, action f,
-                                   duration_type period) override;
+  disposable schedule(time_point abs_time, action f) override;
 
   // -- testing DSL API --------------------------------------------------------
 
   /// Returns whether the actor clock has at least one pending timeout.
   bool has_pending_timeout() const {
-    auto not_disposed = [](const auto& kvp) {
-      return !kvp.second.f.disposed();
-    };
-    return std::any_of(schedule.begin(), schedule.end(), not_disposed);
+    auto not_disposed = [](const auto& kvp) { return !kvp.second.disposed(); };
+    return std::any_of(actions.begin(), actions.end(), not_disposed);
   }
 
   /// Triggers the next pending timeout regardless of its timestamp. Sets
@@ -61,11 +49,18 @@ public:
   /// @returns The number of triggered timeouts.
   size_t advance_time(duration_type x);
 
+  // -- properties -------------------------------------------------------------
+
+  /// @pre has_pending_timeout()
+  time_point next_timeout() const {
+    return actions.begin()->first;
+  }
+
   // -- member variables -------------------------------------------------------
 
   time_point current_time;
 
-  schedule_map schedule;
+  std::multimap<time_point, action> actions;
 
 private:
   bool try_trigger_once();

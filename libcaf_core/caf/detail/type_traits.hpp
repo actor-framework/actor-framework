@@ -7,6 +7,7 @@
 #include <array>
 #include <chrono>
 #include <functional>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -158,8 +159,8 @@ class is_comparable {
 
   // silences float-equal warnings caused by decltype(*arg0 == *arg1)
   template <class A, class B>
-  static bool cmp_help_fun(const A*, const B*, bool*,
-                           std::integral_constant<bool, true>);
+  static bool
+  cmp_help_fun(const A*, const B*, bool*, std::integral_constant<bool, true>);
 
   template <class A, class B, class C>
   static void cmp_help_fun(const A*, const B*, void*, C);
@@ -202,11 +203,12 @@ template <class T>
 class is_iterable {
   // this horrible code would just disappear if we had concepts
   template <class C>
-  static bool sfinae(C* cc,
-                     // check if 'C::begin()' returns a forward iterator
-                     enable_if_tt<is_forward_iterator<decltype(cc->begin())>>* = nullptr,
-                     // check if begin() and end() both exist and are comparable
-                     decltype(cc->begin() != cc->end())* = nullptr);
+  static bool
+  sfinae(C* cc,
+         // check if 'C::begin()' returns a forward iterator
+         enable_if_tt<is_forward_iterator<decltype(cc->begin())>>* = nullptr,
+         // check if begin() and end() both exist and are comparable
+         decltype(cc->begin() != cc->end())* = nullptr);
 
   // SFNINAE default
   static void sfinae(void*);
@@ -221,15 +223,18 @@ public:
 template <class T>
 constexpr bool is_iterable<T>::value;
 
+template <class T>
+constexpr bool is_iterable_v = is_iterable<T>::value;
+
 /// Checks whether `T` is a non-const reference.
 template <class T>
-struct is_mutable_ref : std::false_type { };
+struct is_mutable_ref : std::false_type {};
 
 template <class T>
-struct is_mutable_ref<const T&> : std::false_type { };
+struct is_mutable_ref<const T&> : std::false_type {};
 
 template <class T>
-struct is_mutable_ref<T&> : std::true_type { };
+struct is_mutable_ref<T&> : std::true_type {};
 
 /// Defines `result_type,` `arg_types,` and `fun_type`. Functor is
 ///    (a) a member function pointer, (b) a function,
@@ -243,7 +248,7 @@ struct callable_trait;
 
 // good ol' function
 template <class R, class... Ts>
-struct callable_trait<R (Ts...)> {
+struct callable_trait<R(Ts...)> {
   /// The result type as returned by the function.
   using result_type = R;
 
@@ -254,10 +259,10 @@ struct callable_trait<R (Ts...)> {
   using decayed_arg_types = type_list<std::decay_t<Ts>...>;
 
   /// The signature of the function.
-  using fun_sig = R (Ts...);
+  using fun_sig = R(Ts...);
 
   /// The signature of the function, wrapped into a `std::function`.
-  using fun_type = std::function<R (Ts...)>;
+  using fun_type = std::function<R(Ts...)>;
 
   /// Tells whether the function takes mutable references as argument.
   static constexpr bool mutates_args = (is_mutable_ref<Ts>::value || ...);
@@ -282,11 +287,11 @@ struct callable_trait<R (C::*)(Ts...) noexcept> : callable_trait<R(Ts...)> {};
 
 // member const function pointer
 template <class C, typename R, class... Ts>
-struct callable_trait<R (C::*)(Ts...) const> : callable_trait<R (Ts...)> {};
+struct callable_trait<R (C::*)(Ts...) const> : callable_trait<R(Ts...)> {};
 
 // member function pointer
 template <class C, typename R, class... Ts>
-struct callable_trait<R (C::*)(Ts...)> : callable_trait<R (Ts...)> {};
+struct callable_trait<R (C::*)(Ts...)> : callable_trait<R(Ts...)> {};
 
 // good ol' noexcept function pointer
 template <class R, class... Ts>
@@ -294,7 +299,7 @@ struct callable_trait<R (*)(Ts...) noexcept> : callable_trait<R(Ts...)> {};
 
 // good ol' function pointer
 template <class R, class... Ts>
-struct callable_trait<R (*)(Ts...)> : callable_trait<R (Ts...)> {};
+struct callable_trait<R (*)(Ts...)> : callable_trait<R(Ts...)> {};
 
 template <class T>
 struct has_apply_operator {
@@ -310,11 +315,10 @@ struct has_apply_operator {
 
 // matches (IsFun || IsMemberFun)
 template <class T,
-          bool IsFun = std::is_function<T>::value
-                       || std::is_function<
-                            typename std::remove_pointer<T>::type
-                          >::value
-                       || std::is_member_function_pointer<T>::value,
+          bool IsFun
+          = std::is_function<T>::value
+            || std::is_function<typename std::remove_pointer<T>::type>::value
+            || std::is_member_function_pointer<T>::value,
           bool HasApplyOp = has_apply_operator<T>::value>
 struct get_callable_trait_helper {
   using type = callable_trait<T>;
@@ -367,7 +371,7 @@ template <class F, class... Ts>
 struct is_callable_with {
   template <class U>
   static auto sfinae(U*)
-  -> decltype((std::declval<U&>())(std::declval<Ts>()...), std::true_type());
+    -> decltype((std::declval<U&>())(std::declval<Ts>()...), std::true_type());
 
   template <class U>
   static auto sfinae(...) -> std::false_type;
@@ -382,8 +386,9 @@ struct is_callable_with {
 /// mutable references.
 template <class F>
 struct is_manipulator {
-  static constexpr bool value =
-    tl_exists<typename get_callable_trait<F>::arg_types, is_mutable_ref>::value;
+  static constexpr bool value
+    = tl_exists<typename get_callable_trait<F>::arg_types,
+                is_mutable_ref>::value;
 };
 
 /// Gets the Nth element of the template parameter pack `Ts`.
@@ -435,8 +440,8 @@ template <class T>
 class has_peek_all {
 private:
   template <class U>
-  static int fun(const U*,
-                 decltype(std::declval<U&>().peek_all(unit))* = nullptr);
+  static int
+  fun(const U*, decltype(std::declval<U&>().peek_all(unit))* = nullptr);
 
   static char fun(const void*);
 
@@ -453,9 +458,9 @@ CAF_HAS_MEMBER_TRAIT(size);
 /// or `std::function<void (const T&)>`.
 template <class F, class T>
 struct is_handler_for {
-  static constexpr bool value =
-      std::is_convertible<F, std::function<void (T&)>>::value
-      || std::is_convertible<F, std::function<void (const T&)>>::value;
+  static constexpr bool value
+    = std::is_convertible<F, std::function<void(T&)>>::value
+      || std::is_convertible<F, std::function<void(const T&)>>::value;
 };
 
 template <class T>
@@ -490,10 +495,9 @@ struct strip_reference_wrapper<std::reference_wrapper<T>> {
 
 template <class T>
 constexpr bool can_insert_elements_impl(
-  T*,
-  decltype(std::declval<T&>()
-           .insert(std::declval<T&>().end(),
-                   std::declval<typename T::value_type>()))* = nullptr) {
+  T*, decltype(std::declval<T&>().insert(
+        std::declval<T&>().end(),
+        std::declval<typename T::value_type>()))* = nullptr) {
   return true;
 }
 
@@ -509,10 +513,10 @@ constexpr bool can_insert_elements() {
 
 /// Checks whether `Tpl` is a specialization of `T` or not.
 template <template <class...> class Tpl, class T>
-struct is_specialization : std::false_type { };
+struct is_specialization : std::false_type {};
 
 template <template <class...> class T, class... Ts>
-struct is_specialization<T, T<Ts...>> : std::true_type { };
+struct is_specialization<T, T<Ts...>> : std::true_type {};
 
 /// Transfers const from `T` to `U`. `U` remains unchanged if `T` is not const.
 template <class T, class U>
@@ -527,12 +531,6 @@ struct transfer_const<const T, U> {
 
 template <class T, class U>
 using transfer_const_t = typename transfer_const<T, U>::type;
-
-template <class T>
-struct is_stream : std::false_type {};
-
-template <class T>
-struct is_stream<stream<T>> : std::true_type {};
 
 template <class T>
 struct is_result : std::false_type {};
@@ -557,23 +555,19 @@ template <class T, class U,
 struct is_equal_int_type {
   static constexpr bool value = sizeof(T) == sizeof(U)
                                 && std::is_signed<T>::value
-                                   == std::is_signed<U>::value;
+                                     == std::is_signed<U>::value;
 };
 
 template <class T, typename U>
-struct is_equal_int_type<T, U, false> : std::false_type { };
+struct is_equal_int_type<T, U, false> : std::false_type {};
 
 /// Compares `T` to `U` und evaluates to `true_type` if either
 /// `T == U or if T and U are both integral types of the
 /// same size and signedness. This works around the issue that
 /// `uint8_t != unsigned char on some compilers.
 template <class T, typename U>
-struct is_same_ish
-    : std::conditional<
-        std::is_same<T, U>::value,
-        std::true_type,
-        is_equal_int_type<T, U>
-      >::type { };
+struct is_same_ish : std::conditional<std::is_same<T, U>::value, std::true_type,
+                                      is_equal_int_type<T, U>>::type {};
 
 /// Utility for fallbacks calling `static_assert`.
 template <class>
@@ -624,9 +618,9 @@ struct all_constructible<type_list<>, type_list<>> : std::true_type {};
 
 template <class T, class... Ts, class U, class... Us>
 struct all_constructible<type_list<T, Ts...>, type_list<U, Us...>> {
-  static constexpr bool value = std::is_constructible<T, U>::value
-                                && all_constructible<type_list<Ts...>,
-                                                     type_list<Us...>>::value;
+  static constexpr bool value
+    = std::is_constructible<T, U>::value
+      && all_constructible<type_list<Ts...>, type_list<Us...>>::value;
 };
 
 /// Checks whether T behaves like `std::map`.
@@ -1028,6 +1022,29 @@ template <>
 struct is_builtin_inspector_type<span<const byte>, false> {
   static constexpr bool value = true;
 };
+
+/// Checks whether `T` is a `std::optional`.
+template <class T>
+struct is_optional : std::false_type {};
+
+template <class T>
+struct is_optional<std::optional<T>> : std::true_type {};
+
+template <class T>
+constexpr bool is_optional_v = is_optional<T>::value;
+
+template <class T>
+struct unboxed_oracle {
+  using type = T;
+};
+
+template <class T>
+struct unboxed_oracle<std::optional<T>> {
+  using type = T;
+};
+
+template <class T>
+using unboxed_t = typename unboxed_oracle<T>::type;
 
 } // namespace caf::detail
 

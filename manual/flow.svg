@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xl="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="184 261 482 278" width="482" height="278">
+  <defs>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="StickArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -3 7 6" markerWidth="7" markerHeight="6" color="black">
+      <g>
+        <path d="M 4.8 0 L 0 0 M 0 -1.8 L 4.8 0 L 0 1.8" fill="none" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+  </defs>
+  <g id="Canvas_1" fill-opacity="1" stroke-dasharray="none" stroke-opacity="1" fill="none" stroke="none">
+    <title>Canvas 1</title>
+    <g id="Canvas_1_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_2">
+        <rect x="185" y="329.5" width="140" height="180" fill="white"/>
+        <path d="M 185 329.5 L 325 329.5 L 325 509.5 L 185 509.5 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4.0,4.0" stroke-width="1"/>
+      </g>
+      <g id="Graphic_7">
+        <rect x="525" y="329.5" width="140" height="180" fill="white"/>
+        <path d="M 525 329.5 L 665 329.5 L 665 509.5 L 525 509.5 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4.0,4.0" stroke-width="1"/>
+      </g>
+      <g id="Line_19">
+        <line x1="255" y1="364.5" x2="255" y2="391.6" marker-end="url(#StickArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_20">
+        <line x1="255" y1="424.5" x2="255" y2="451.6" marker-end="url(#StickArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_21">
+        <path d="M 255 484.5 L 255 538 L 361 538 L 361 299.5 L 372.1 299.5" marker-end="url(#StickArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_22">
+        <path d="M 465 299.5 L 595 299.5 L 595 341.6" marker-end="url(#StickArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_23">
+        <line x1="595" y1="374.5" x2="595" y2="401.6" marker-end="url(#StickArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Line_24">
+        <line x1="595" y1="434.5" x2="595" y2="461.6" marker-end="url(#StickArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      </g>
+      <g id="Graphic_3">
+        <path d="M 397 289.5 L 453 289.5 C 459.624 289.5 465 293.98 465 299.5 C 465 305.02 459.624 309.5 453 309.5 L 397 309.5 C 390.376 309.5 385 305.02 385 299.5 C 385 293.98 390.376 289.5 397 289.5 Z" fill="#ccc"/>
+        <path d="M 397 289.5 L 453 289.5 C 459.624 289.5 465 293.98 465 299.5 C 465 305.02 459.624 309.5 453 309.5 L 397 309.5 C 390.376 309.5 385 305.02 385 299.5 C 385 293.98 390.376 289.5 397 289.5 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(398 290.5)" fill="black">
+          <tspan font-family="Andale Mono" font-size="16" fill="black" x="2.9960938" y="15">· · ·</tspan>
+        </text>
+      </g>
+      <g id="Graphic_5">
+        <text transform="translate(190.87366 306.052)" fill="black">
+          <tspan font-family="Arial" font-size="16" fill="black" x="0" y="14">actor A</tspan>
+        </text>
+      </g>
+      <g id="Graphic_6">
+        <text transform="translate(609.3125 306.97656)" fill="black">
+          <tspan font-family="Arial" font-size="16" fill="black" x="0" y="14">actor B</tspan>
+        </text>
+      </g>
+      <g id="Graphic_8">
+        <circle cx="255" cy="359.5" r="5.00000798950945" fill="black"/>
+        <circle cx="255" cy="359.5" r="5.00000798950945" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_9">
+        <path d="M 220 404.5 L 290 404.5 C 298.28 404.5 305 408.98 305 414.5 C 305 420.02 298.28 424.5 290 424.5 L 220 424.5 C 211.72 424.5 205 420.02 205 414.5 C 205 408.98 211.72 404.5 220 404.5 Z" fill="#ffc0c0"/>
+        <path d="M 220 404.5 L 290 404.5 C 298.28 404.5 305 408.98 305 414.5 C 305 420.02 298.28 424.5 290 424.5 L 220 424.5 C 211.72 424.5 205 420.02 205 414.5 C 205 408.98 211.72 404.5 220 404.5 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(220 407.5)" fill="black">
+          <tspan font-family="Andale Mono" font-size="12" fill="black" x="6.1953125" y="11">flat_map</tspan>
+        </text>
+      </g>
+      <g id="Graphic_12">
+        <path d="M 220 464.5 L 290 464.5 C 298.28 464.5 305 468.98 305 474.5 C 305 480.02 298.28 484.5 290 484.5 L 220 484.5 C 211.72 484.5 205 480.02 205 474.5 C 205 468.98 211.72 464.5 220 464.5 Z" fill="#ffc0c0"/>
+        <path d="M 220 464.5 L 290 464.5 C 298.28 464.5 305 468.98 305 474.5 C 305 480.02 298.28 484.5 290 484.5 L 220 484.5 C 211.72 484.5 205 480.02 205 474.5 C 205 468.98 211.72 464.5 220 464.5 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(220 467.5)" fill="black">
+          <tspan font-family="Andale Mono" font-size="12" fill="black" x="13.396484" y="11">filter</tspan>
+        </text>
+      </g>
+      <g id="Graphic_17">
+        <circle cx="595" cy="479.5" r="5.00000798950945" fill="black"/>
+        <circle cx="595" cy="479.5" r="5.00000798950945" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_16">
+        <path d="M 560 354.5 L 630 354.5 C 638.28 354.5 645 358.98 645 364.5 C 645 370.02 638.28 374.5 630 374.5 L 560 374.5 C 551.72 374.5 545 370.02 545 364.5 C 545 358.98 551.72 354.5 560 354.5 Z" fill="#ffc0c0"/>
+        <path d="M 560 354.5 L 630 354.5 C 638.28 354.5 645 358.98 645 364.5 C 645 370.02 638.28 374.5 630 374.5 L 560 374.5 C 551.72 374.5 545 370.02 545 364.5 C 545 358.98 551.72 354.5 560 354.5 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(560 357.5)" fill="black">
+          <tspan font-family="Andale Mono" font-size="12" fill="black" x="24.198242" y="11">map</tspan>
+        </text>
+      </g>
+      <g id="Graphic_14">
+        <path d="M 560 414.5 L 630 414.5 C 638.28 414.5 645 418.98 645 424.5 C 645 430.02 638.28 434.5 630 434.5 L 560 434.5 C 551.72 434.5 545 430.02 545 424.5 C 545 418.98 551.72 414.5 560 414.5 Z" fill="#ffc0c0"/>
+        <path d="M 560 414.5 L 630 414.5 C 638.28 414.5 645 418.98 645 424.5 C 645 430.02 638.28 434.5 630 434.5 L 560 434.5 C 551.72 434.5 545 430.02 545 424.5 C 545 418.98 551.72 414.5 560 414.5 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(560 417.5)" fill="black">
+          <tspan font-family="Andale Mono" font-size="12" fill="black" x="13.396484" y="11">filter</tspan>
+        </text>
+      </g>
+      <g id="Graphic_27">
+        <text transform="translate(381.5664 266.97656)" fill="black">
+          <tspan font-family="Arial" font-size="16" fill="black" x="0" y="14">async buffer</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>

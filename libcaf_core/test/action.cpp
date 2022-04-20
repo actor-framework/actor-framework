@@ -27,7 +27,6 @@ SCENARIO("actions wrap function calls") {
         CHECK(uut.scheduled());
         uut.run();
         CHECK(called);
-        CHECK(uut.invoked());
       }
     }
     WHEN("disposing the action") {
@@ -43,27 +42,13 @@ SCENARIO("actions wrap function calls") {
       }
     }
     WHEN("running the action multiple times") {
-      THEN("any call after the first becomes a no-op") {
+      THEN("the action invokes its function that many times") {
         auto n = 0;
         auto uut = make_action([&n] { ++n; });
         uut.run();
         uut.run();
         uut.run();
-        CHECK(uut.invoked());
-        CHECK_EQ(n, 1);
-      }
-    }
-    WHEN("re-scheduling an action after running it") {
-      THEN("then the lambda gets invoked twice") {
-        auto n = 0;
-        auto uut = make_action([&n] { ++n; });
-        uut.run();
-        uut.run();
-        CHECK_EQ(uut.reschedule(), action::transition::success);
-        uut.run();
-        uut.run();
-        CHECK(uut.invoked());
-        CHECK_EQ(n, 2);
+        CHECK_EQ(n, 3);
       }
     }
     WHEN("converting an action to a disposable") {

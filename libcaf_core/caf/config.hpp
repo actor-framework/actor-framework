@@ -242,6 +242,14 @@ struct IUnknown;
     static_cast<void>(0)
 #endif
 
+// CAF_DEBUG_STMT(stmt): evaluates to stmt when compiling with runtime checks
+//                       and to an empty expression otherwise.
+#ifndef CAF_ENABLE_RUNTIME_CHECKS
+#  define CAF_DEBUG_STMT(stmt) static_cast<void>(0)
+#else
+#  define CAF_DEBUG_STMT(stmt) stmt
+#endif
+
 // Convenience macros.
 #define CAF_IGNORE_UNUSED(x) static_cast<void>(x)
 

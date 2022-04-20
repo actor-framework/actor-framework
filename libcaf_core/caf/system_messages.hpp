@@ -12,7 +12,6 @@
 #include "caf/deep_to_string.hpp"
 #include "caf/fwd.hpp"
 #include "caf/group.hpp"
-#include "caf/stream_slot.hpp"
 
 namespace caf {
 
@@ -104,35 +103,6 @@ template <class Inspector>
 bool inspect(Inspector& f, node_down_msg& x) {
   return f.object(x).fields(f.field("node", x.node),
                             f.field("reason", x.reason));
-}
-
-/// Demands the receiver to open a new stream from the sender to the receiver.
-struct open_stream_msg {
-  /// Reserved slot on the source.
-  stream_slot slot;
-
-  /// Contains a type-erased stream<T> object as first argument followed by
-  /// any number of user-defined additional handshake data.
-  message msg;
-
-  /// Identifies the previous stage in the pipeline.
-  strong_actor_ptr prev_stage;
-
-  /// Identifies the original receiver of this message.
-  strong_actor_ptr original_stage;
-
-  /// Configures the priority for stream elements.
-  stream_priority priority;
-};
-
-/// @relates open_stream_msg
-template <class Inspector>
-bool inspect(Inspector& f, open_stream_msg& x) {
-  return f.object(x).fields(f.field("slot", x.slot), //
-                            f.field("msg", x.msg),
-                            f.field("prev_stage", x.prev_stage),
-                            f.field("original_stage", x.original_stage),
-                            f.field("priority", x.priority));
 }
 
 } // namespace caf

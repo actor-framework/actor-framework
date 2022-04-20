@@ -2,6 +2,8 @@ add_custom_target(all_examples)
 
 function(add_example folder name)
   add_executable(${name} ${folder}/${name}.cpp ${ARGN})
+  set_target_properties(${name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+                        "${CMAKE_CURRENT_BINARY_DIR}/${folder}")
   install(FILES ${folder}/${name}.cpp
           DESTINATION ${CMAKE_INSTALL_DATADIR}/caf/examples/${folder})
   add_dependencies(${name} all_examples)
@@ -33,8 +35,10 @@ add_core_example(message_passing promises)
 add_core_example(message_passing request)
 add_core_example(message_passing typed_calculator)
 
-# streaming API
-add_core_example(streaming integer_stream)
+# flow API
+add_core_example(flow iota)
+add_core_example(flow observe-on)
+add_core_example(flow spsc-buffer-resource)
 
 # dynamic behavior changes using 'become'
 add_core_example(dynamic_behavior skip_messages)

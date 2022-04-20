@@ -587,6 +587,96 @@ public:
     return res;
   }
 
+  /// Utility function object that allows users to explicitly launch an action
+  /// by calling `operator()` but calls it implicitly at scope exit.
+  template <class F>
+  class launcher {
+  public:
+    launcher() : ready(false) {
+      // nop
+    }
+
+    explicit launcher(F&& f) : ready(true) {
+      new (&fn) F(std::move(f));
+    }
+
+    launcher(launcher&& other) : ready(other.ready) {
+      if (ready) {
+        new (&fn) F(std::move(other.fn));
+        other.reset();
+      }
+    }
+
+    launcher& operator=(launcher&& other) {
+      if (this != &other) {
+        if (ready)
+          reset();
+        if (other.ready) {
+          ready = true;
+          new (&fn) F(std::move(other.fn));
+          other.reset();
+        }
+      }
+      return *this;
+    }
+
+    launcher(const launcher&) = delete;
+
+    launcher& operator=(const launcher&) = delete;
+
+    ~launcher() {
+      if (ready)
+        fn();
+    }
+
+    void operator()() {
+      if (ready) {
+        fn();
+        reset();
+      }
+    }
+
+  private:
+    // @pre `ready == true`
+    void reset() {
+      CAF_ASSERT(ready);
+      ready = false;
+      fn.~F();
+    }
+
+    bool ready;
+    union {
+      F fn;
+    };
+  };
+
+  /// Creates a new, cooperatively scheduled actor. The returned actor is
+  /// constructed but has not been added to the scheduler yet to allow the
+  /// caller to set up any additional logic on the actor before it starts.
+  /// @returns A pointer to the new actor and a function object that the caller
+  ///          must invoke to launch the actor. After the actor started running,
+  ///          the caller *must not* access the pointer again.
+  template <class Impl, spawn_options = no_spawn_options, class... Ts>
+  auto spawn_inactive(Ts&&... xs) {
+    static_assert(std::is_base_of_v<scheduled_actor, Impl>,
+                  "only scheduled actors may get spawned inactively");
+    CAF_SET_LOGGER_SYS(this);
+    actor_config cfg{dummy_execution_unit(), nullptr};
+    auto res = make_actor<Impl>(next_actor_id(), node(), this, cfg,
+                                std::forward<Ts>(xs)...);
+    auto ptr = static_cast<Impl*>(actor_cast<abstract_actor*>(res));
+#ifdef CAF_ENABLE_ACTOR_PROFILER
+    profiler_add_actor(*ptr, cfg.parent);
+#endif
+    auto launch = [res, host{cfg.host}] {
+      // Note: we pass `res` to this lambda instead of `ptr` to keep a strong
+      //       reference to the actor.
+      static_cast<Impl*>(actor_cast<abstract_actor*>(res))
+        ->launch(host, false, false);
+    };
+    return std::make_tuple(ptr, launcher<decltype(launch)>(std::move(launch)));
+  }
+
   void profiler_add_actor(const local_actor& self, const local_actor* parent) {
     if (profiler_)
       profiler_->add_actor(self, parent);

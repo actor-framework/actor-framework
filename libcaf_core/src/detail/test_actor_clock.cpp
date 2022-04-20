@@ -13,11 +13,9 @@ test_actor_clock::test_actor_clock() : current_time(duration_type{1}) {
   // time_point, because begin-of-epoch may have special meaning.
 }
 
-disposable test_actor_clock::schedule_periodically(time_point first_run,
-                                                   action f,
-                                                   duration_type period) {
+disposable test_actor_clock::schedule(time_point abs_time, action f) {
   CAF_ASSERT(f.ptr() != nullptr);
-  schedule.emplace(first_run, schedule_entry{f, period});
+  actions.emplace(abs_time, f);
   return std::move(f).as_disposable();
 }
 
@@ -26,11 +24,11 @@ test_actor_clock::time_point test_actor_clock::now() const noexcept {
 }
 
 bool test_actor_clock::trigger_timeout() {
-  CAF_LOG_TRACE(CAF_ARG2("schedule.size", schedule.size()));
+  CAF_LOG_TRACE(CAF_ARG2("actions.size", actions.size()));
   for (;;) {
-    if (schedule.empty())
+    if (actions.empty())
       return false;
-    auto i = schedule.begin();
+    auto i = actions.begin();
     auto t = i->first;
     if (t > current_time)
       current_time = t;
@@ -40,8 +38,8 @@ bool test_actor_clock::trigger_timeout() {
 }
 
 size_t test_actor_clock::trigger_timeouts() {
-  CAF_LOG_TRACE(CAF_ARG2("schedule.size", schedule.size()));
-  if (schedule.empty())
+  CAF_LOG_TRACE(CAF_ARG2("actions.size", actions.size()));
+  if (actions.empty())
     return 0u;
   size_t result = 0;
   while (trigger_timeout())
@@ -50,33 +48,29 @@ size_t test_actor_clock::trigger_timeouts() {
 }
 
 size_t test_actor_clock::advance_time(duration_type x) {
-  CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG2("schedule.size", schedule.size()));
+  CAF_LOG_TRACE(CAF_ARG(x) << CAF_ARG2("actions.size", actions.size()));
   CAF_ASSERT(x.count() >= 0);
   current_time += x;
   auto result = size_t{0};
-  while (!schedule.empty() && schedule.begin()->first <= current_time)
+  while (!actions.empty() && actions.begin()->first <= current_time)
     if (try_trigger_once())
       ++result;
   return result;
 }
 
 bool test_actor_clock::try_trigger_once() {
-  auto i = schedule.begin();
-  auto t = i->first;
-  if (t > current_time)
-    return false;
-  auto [f, period] = i->second;
-  schedule.erase(i);
-  if (f.run() == action::transition::success) {
-    if (period.count() > 0) {
-      auto next = t + period;
-      while (next <= current_time)
-        next += period;
-      schedule.emplace(next, schedule_entry{std::move(f), period});
+  for (;;) {
+    if (actions.empty())
+      return false;
+    auto i = actions.begin();
+    auto [t, f] = *i;
+    if (t > current_time)
+      return false;
+    actions.erase(i);
+    if (!f.disposed()) {
+      f.run();
+      return true;
     }
-    return true;
-  } else {
-    return false;
   }
 }
 

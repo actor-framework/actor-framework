@@ -46,16 +46,22 @@ uri_builder& uri_builder::port(uint16_t value) {
 }
 
 uri_builder& uri_builder::path(std::string str) {
+  uri::decode(str);
   impl_->path = std::move(str);
   return *this;
 }
 
 uri_builder& uri_builder::query(uri::query_map map) {
-  impl_->query = std::move(map);
+  for (auto [key, val] : map) {
+    uri::decode(key);
+    uri::decode(val);
+    impl_->query.emplace(std::move(key), std::move(val));
+  }
   return *this;
 }
 
 uri_builder& uri_builder::fragment(std::string str) {
+  uri::decode(str);
   impl_->fragment = std::move(str);
   return *this;
 }

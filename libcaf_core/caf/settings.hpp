@@ -117,3 +117,27 @@ CAF_CORE_EXPORT config_value::dictionary& put_dictionary(settings& xs,
                                                          std::string name);
 
 } // namespace caf
+
+namespace caf::detail {
+
+template <class T>
+struct has_init {
+private:
+  template <class U>
+  static auto sfinae(U* x, settings* y = nullptr)
+    -> decltype(x->init(*y), std::true_type());
+
+  template <class U>
+  static auto sfinae(...) -> std::false_type;
+
+  using sfinae_type
+    = decltype(sfinae<T>(nullptr, static_cast<settings*>(nullptr)));
+
+public:
+  static constexpr bool value = sfinae_type::value;
+};
+
+template <class T>
+constexpr bool has_init_v = has_init<T>::value;
+
+} // namespace caf::detail

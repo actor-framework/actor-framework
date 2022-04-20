@@ -7,7 +7,7 @@
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/deserializer.hpp"
-#include "caf/detail/append_percent_encoded.hpp"
+#include "caf/detail/append_hex.hpp"
 #include "caf/detail/overload.hpp"
 #include "caf/detail/parse.hpp"
 #include "caf/detail/parser/read_uri.hpp"
@@ -32,27 +32,26 @@ uri::impl_type::impl_type() : rc_(1) {
 
 void uri::impl_type::assemble_str() {
   str.clear();
-  using detail::append_percent_encoded;
-  append_percent_encoded(str, scheme);
+  uri::encode(str, scheme);
   str += ':';
   if (authority.empty()) {
     CAF_ASSERT(!path.empty());
-    append_percent_encoded(str, path, true);
+    uri::encode(str, path, true);
   } else {
     str += "//";
     str += to_string(authority);
     if (!path.empty()) {
       str += '/';
-      append_percent_encoded(str, path, true);
+      uri::encode(str, path, true);
     }
   }
   if (!query.empty()) {
     str += '?';
     auto i = query.begin();
     auto add_kvp = [&](decltype(*i) kvp) {
-      append_percent_encoded(str, kvp.first);
+      uri::encode(str, kvp.first);
       str += '=';
-      append_percent_encoded(str, kvp.second);
+      uri::encode(str, kvp.second);
     };
     add_kvp(*i);
     for (++i; i != query.end(); ++i) {
@@ -62,7 +61,7 @@ void uri::impl_type::assemble_str() {
   }
   if (!fragment.empty()) {
     str += '#';
-    append_percent_encoded(str, fragment);
+    uri::encode(str, fragment);
   }
 }
 
@@ -150,6 +149,67 @@ bool uri::can_parse(string_view str) noexcept {
   return ps.code == pec::success;
 }
 
+// -- URI encoding -----------------------------------------------------------
+
+void uri::encode(std::string& str, string_view x, bool is_path) {
+  for (auto ch : x)
+    switch (ch) {
+      case ':':
+      case '/':
+        if (is_path) {
+          str += ch;
+          break;
+        }
+        [[fallthrough]];
+      case ' ':
+      case '?':
+      case '#':
+      case '[':
+      case ']':
+      case '@':
+      case '!':
+      case '$':
+      case '&':
+      case '\'':
+      case '"':
+      case '(':
+      case ')':
+      case '*':
+      case '+':
+      case ',':
+      case ';':
+      case '=':
+        str += '%';
+        detail::append_hex(str, ch);
+        break;
+      default:
+        str += ch;
+    }
+}
+
+void uri::decode(std::string& str) {
+  // Buffer for holding temporary strings and variable for parsing into.
+  char str_buf[2] = {' ', '\0'};
+  char hex_buf[5] = {'0', 'x', '0', '0', '\0'};
+  uint8_t val = 0;
+  // Any percent-encoded string must have at least 3 characters.
+  if (str.size() < 3)
+    return;
+  // Iterate over the string to find '%XX' entries and replace them.
+  for (size_t index = 0; index < str.size() - 2; ++index) {
+    if (str[index] == '%') {
+      hex_buf[2] = str[index + 1];
+      hex_buf[3] = str[index + 2];
+      if (auto err = detail::parse(string_view{hex_buf}, val); !err) {
+        str_buf[0] = static_cast<char>(val);
+        str.replace(index, 3, str_buf, 1);
+      } else {
+        str.replace(index, 3, "?", 1);
+      }
+    }
+  }
+}
+
 // -- related free functions ---------------------------------------------------
 
 std::string to_string(const uri& x) {
@@ -161,7 +221,7 @@ std::string to_string(const uri& x) {
 std::string to_string(const uri::authority_type& x) {
   std::string str;
   if (!x.userinfo.empty()) {
-    detail::append_percent_encoded(str, x.userinfo);
+    uri::encode(str, x.userinfo);
     str += '@';
   }
   auto f = caf::detail::make_overload(
@@ -174,9 +234,7 @@ std::string to_string(const uri::authority_type& x) {
         str += ']';
       }
     },
-    [&](const std::string& host) {
-      detail::append_percent_encoded(str, host);
-    });
+    [&](const std::string& host) { uri::encode(str, host); });
   visit(f, x.host);
   if (x.port != 0) {
     str += ':';

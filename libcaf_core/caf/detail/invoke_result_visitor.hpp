@@ -12,9 +12,6 @@
 #include "caf/detail/overload.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
-#include "caf/make_sink_result.hpp"
-#include "caf/make_source_result.hpp"
-#include "caf/make_stage_result.hpp"
 #include "caf/message.hpp"
 #include "caf/none.hpp"
 #include "caf/optional.hpp"
@@ -47,9 +44,6 @@ public:
   /// Wraps arbitrary values into a `message` and calls the visitor recursively.
   template <class... Ts>
   void operator()(Ts&... xs) {
-    static_assert(detail::conjunction<!detail::is_stream<Ts>::value...>::value,
-                  "returning a stream<T> from a message handler achieves not "
-                  "what you would expect and is most likely a mistake");
     auto tmp = make_message(std::move(xs)...);
     (*this)(tmp);
   }
@@ -84,31 +78,6 @@ public:
 
   template <class... Ts>
   void operator()(delegated<Ts...>&) {
-    // nop
-  }
-
-  template <class Out, class... Ts>
-  void operator()(outbound_stream_slot<Out, Ts...>&) {
-    // nop
-  }
-
-  template <class In>
-  void operator()(inbound_stream_slot<In>&) {
-    // nop
-  }
-
-  template <class In>
-  void operator()(make_sink_result<In>&) {
-    // nop
-  }
-
-  template <class DownstreamManager, class... Ts>
-  void operator()(make_source_result<DownstreamManager, Ts...>&) {
-    // nop
-  }
-
-  template <class In, class DownstreamManager, class... Ts>
-  void operator()(make_stage_result<In, DownstreamManager, Ts...>&) {
     // nop
   }
 };

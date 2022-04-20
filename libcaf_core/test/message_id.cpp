@@ -19,9 +19,6 @@ CAF_TEST(default construction) {
   CHECK(x.category() == message_id::normal_message_category);
   CHECK_EQ(x.is_urgent_message(), false);
   CHECK_EQ(x.is_normal_message(), true);
-  CHECK_EQ(x.is_stream_message(), false);
-  CHECK_EQ(x.is_upstream_message(), false);
-  CHECK_EQ(x.is_downstream_message(), false);
   CHECK_EQ(x, x.response_id());
   CHECK_EQ(x.request_id().integer_value(), 0u);
   CHECK(x.integer_value() == message_id::default_async_value);
@@ -43,9 +40,6 @@ CAF_TEST(from integer value) {
   CHECK(x.category() == message_id::normal_message_category);
   CHECK_EQ(x.is_urgent_message(), false);
   CHECK_EQ(x.is_normal_message(), true);
-  CHECK_EQ(x.is_stream_message(), false);
-  CHECK_EQ(x.is_upstream_message(), false);
-  CHECK_EQ(x.is_downstream_message(), false);
   CHECK_EQ(x.request_id().integer_value(), 42u);
 }
 
@@ -58,9 +52,6 @@ CAF_TEST(response ID) {
   CHECK(x.category() == message_id::normal_message_category);
   CHECK_EQ(x.is_urgent_message(), false);
   CHECK_EQ(x.is_normal_message(), true);
-  CHECK_EQ(x.is_stream_message(), false);
-  CHECK_EQ(x.is_upstream_message(), false);
-  CHECK_EQ(x.is_downstream_message(), false);
   CHECK_EQ(x.request_id().integer_value(), 42u);
 }
 
@@ -73,9 +64,6 @@ CAF_TEST(request with high priority) {
   CHECK(x.category() == message_id::normal_message_category);
   CHECK_EQ(x.is_urgent_message(), false);
   CHECK_EQ(x.is_normal_message(), true);
-  CHECK_EQ(x.is_stream_message(), false);
-  CHECK_EQ(x.is_upstream_message(), false);
-  CHECK_EQ(x.is_downstream_message(), false);
   CHECK_EQ(x.request_id().integer_value(), 42u);
 }
 
@@ -83,8 +71,6 @@ CAF_TEST(with_category) {
   auto x = make_message_id();
   CHECK(x.category() == message_id::normal_message_category);
   for (auto category : {message_id::urgent_message_category,
-                        message_id::downstream_message_category,
-                        message_id::upstream_message_category,
                         message_id::normal_message_category}) {
     x = x.with_category(category);
     CHECK_EQ(x.category(), category);

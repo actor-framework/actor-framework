@@ -40,14 +40,6 @@ public:
   /// Identifies one-to-one messages with normal priority.
   static constexpr uint64_t normal_message_category = 1;
 
-  /// Identifies stream messages that flow upstream, e.g.,
-  /// `upstream_msg::ack_batch`.
-  static constexpr uint64_t upstream_message_category = 2;
-
-  /// Identifies stream messages that flow downstream, e.g.,
-  /// `downstream_msg::batch`.
-  static constexpr uint64_t downstream_message_category = 3;
-
   /// Number of bits trailing the category.
   static constexpr uint64_t category_offset = 60;
 
@@ -71,8 +63,7 @@ public:
 
   // -- properties ------------------------------------------------------------
 
-  /// Returns the message category, i.e., one of `normal_message_category`,
-  /// `upstream_message_category`, `downstream_message_category`, or
+  /// Returns the message category, i.e., `normal_message_category` or
   /// `urgent_message_category`.
   constexpr uint64_t category() const noexcept {
     return (value_ & category_flag_mask) >> category_offset;
@@ -83,8 +74,7 @@ public:
     return message_id{(value_ & ~category_flag_mask) | (x << category_offset)};
   }
 
-  /// Returns whether a message is asynchronous, i.e., neither a request, nor a
-  /// response, nor a stream message.
+  /// Returns whether a message is asynchronous, i.e., not a request.
   constexpr bool is_async() const noexcept {
     return value_ == 0 || value_ == default_async_value;
   }
@@ -114,21 +104,6 @@ public:
     return category() == normal_message_category;
   }
 
-  /// Returns whether `category()` is an up- or downstream message.
-  constexpr bool is_stream_message() const noexcept {
-    return category() > 1;
-  }
-
-  /// Returns whether `category() == upstream_message_category`.
-  constexpr bool is_upstream_message() const noexcept {
-    return category() == upstream_message_category;
-  }
-
-  /// Returns whether `category() == downstream_message_category`.
-  constexpr bool is_downstream_message() const noexcept {
-    return category() == downstream_message_category;
-  }
-
   /// Returns a response ID for the current request or an asynchronous ID with
   /// the same priority as this ID.
   constexpr message_id response_id() const noexcept {
@@ -143,13 +118,11 @@ public:
   }
 
   /// Returns the same ID but high message priority.
-  /// @pre `!is_stream_message()`
   constexpr message_id with_high_priority() const noexcept {
     return message_id{value_ & ~category_flag_mask};
   }
 
   /// Returns the same ID with normal message priority.
-  /// @pre `!is_stream_message()`
   constexpr message_id with_normal_priority() const noexcept {
     return message_id{value_ | default_async_value};
   }
@@ -187,15 +160,15 @@ private:
 
 /// Generates a `message_id` with given integer value.
 /// @relates message_id
-constexpr message_id
-make_message_id(normal_message_priority_constant, uint64_t value) {
+constexpr message_id make_message_id(normal_message_priority_constant,
+                                     uint64_t value) {
   return message_id{value | message_id::default_async_value};
 }
 
 /// Generates a `message_id` with given integer value.
 /// @relates message_id
-constexpr message_id
-make_message_id(high_message_priority_constant, uint64_t value) {
+constexpr message_id make_message_id(high_message_priority_constant,
+                                     uint64_t value) {
   return message_id{value};
 }
 

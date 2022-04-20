@@ -4,9 +4,10 @@
 
 #pragma once
 
-#include <iterator>
-
 #include "caf/detail/type_traits.hpp"
+
+#include <cstddef>
+#include <iterator>
 
 namespace caf {
 
@@ -21,8 +22,18 @@ public:
   input_range(const input_range&) = default;
   input_range& operator=(const input_range&) = default;
 
-  class iterator : public std::iterator<std::input_iterator_tag, T> {
+  class iterator {
   public:
+    using iterator_category = std::input_iterator_tag;
+
+    using value_type = T;
+
+    using difference_type = ptrdiff_t;
+
+    using pointer = T*;
+
+    using reference = T&;
+
     iterator(input_range* range) : xs_(range) {
       if (xs_)
         advance();

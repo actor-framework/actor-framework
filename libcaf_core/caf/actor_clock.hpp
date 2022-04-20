@@ -53,18 +53,7 @@ public:
   /// @param f The action to schedule.
   /// @note The action runs on the thread of the clock worker and thus must
   ///       complete within a very short time in order to not delay other work.
-  disposable schedule(time_point t, action f);
-
-  /// Schedules an action for periodic execution.
-  /// @param first_run The local time at which the action should run initially.
-  /// @param f The action to schedule.
-  /// @param period The time to wait between two runs. A non-positive period
-  ///               disables periodic execution.
-  /// @note The action runs on the thread of the clock worker and thus must
-  ///       complete within a very short time in order to not delay other work.
-  virtual disposable
-  schedule_periodically(time_point first_run, action f, duration_type period)
-    = 0;
+  virtual disposable schedule(time_point t, action f) = 0;
 
   /// Schedules an action for execution by an actor at a later time.
   /// @param t The local time at which the action should get enqueued to the
@@ -73,34 +62,12 @@ public:
   /// @param target The actor that should run the action.
   disposable schedule(time_point t, action f, strong_actor_ptr target);
 
-  /// Schedules an action for periodic execution by an actor.
-  /// @param first_run The local time at which the action should get enqueued to
-  ///                  the mailbox of the target for the first time.
-  /// @param f The action to schedule.
-  /// @param target The actor that should run the action.
-  /// @param period The time to wait between two messages to the actor.
-  /// @param policy The strategy for dealing with a stalling target.
-  disposable schedule_periodically(time_point first_run, action f,
-                                   strong_actor_ptr target,
-                                   duration_type period, stall_policy policy);
-
   /// Schedules an action for execution by an actor at a later time.
   /// @param target The actor that should run the action.
   /// @param f The action to schedule.
   /// @param t The local time at which the action should get enqueued to the
   ///          mailbox of the target.
   disposable schedule(time_point t, action f, weak_actor_ptr target);
-
-  /// Schedules an action for periodic execution by an actor.
-  /// @param first_run The local time at which the action should get enqueued to
-  ///                  the mailbox of the target for the first time.
-  /// @param f The action to schedule.
-  /// @param target The actor that should run the action.
-  /// @param period The time to wait between two messages to the actor.
-  /// @param policy The strategy for dealing with a stalling target.
-  disposable schedule_periodically(time_point first_run, action f,
-                                   weak_actor_ptr target, duration_type period,
-                                   stall_policy policy);
 
   /// Schedules an arbitrary message to `receiver` for time point `t`.
   disposable schedule_message(time_point t, strong_actor_ptr receiver,

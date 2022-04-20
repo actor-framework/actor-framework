@@ -43,9 +43,6 @@ actor_system_config::actor_system_config()
     slave_mode(false),
     config_file_path(default_config_file),
     slave_mode_fun(nullptr) {
-  // (1) hard-coded defaults
-  stream_max_batch_delay = defaults::stream::max_batch_delay;
-  stream_credit_round_interval = 2 * stream_max_batch_delay;
   // fill our options vector for creating config file and CLI parsers
   using std::string;
   using string_list = std::vector<string>;
@@ -54,20 +51,6 @@ actor_system_config::actor_system_config()
     .add<bool>("long-help", "print long help text to STDERR and exit")
     .add<bool>("dump-config", "print configuration to STDERR and exit")
     .add<string>("config-file", "sets a path to a configuration file");
-  opt_group{custom_options_, "caf.stream"}
-    .add<timespan>(stream_max_batch_delay, "max-batch-delay",
-                   "maximum delay for partial batches")
-    .add<string>("credit-policy",
-                 "selects an implementation for credit computation");
-  opt_group{custom_options_, "caf.stream.size-based-policy"}
-    .add<int32_t>("bytes-per-batch", "desired batch size in bytes")
-    .add<int32_t>("buffer-capacity", "maximum input buffer size in bytes")
-    .add<int32_t>("sampling-rate", "frequency of collecting batch sizes")
-    .add<int32_t>("calibration-interval", "frequency of re-calibrations")
-    .add<float>("smoothing-factor", "factor for discounting older samples");
-  opt_group{custom_options_, "caf.stream.token-based-policy"}
-    .add<int32_t>("batch-size", "number of elements per batch")
-    .add<int32_t>("buffer-size", "max. number of elements in the input buffer");
   opt_group{custom_options_, "caf.scheduler"}
     .add<string>("policy", "'stealing' (default) or 'sharing'")
     .add<size_t>("max-threads", "maximum number of worker threads")
@@ -108,15 +91,6 @@ actor_system_config::actor_system_config()
 settings actor_system_config::dump_content() const {
   settings result = content;
   auto& caf_group = result["caf"].as_dictionary();
-  // -- streaming parameters
-  auto& stream_group = caf_group["stream"].as_dictionary();
-  put_missing(stream_group, "max-batch-delay",
-              defaults::stream::max_batch_delay);
-  put_missing(stream_group, "credit-policy", defaults::stream::credit_policy);
-  put_missing(stream_group, "size-policy.buffer-capacity",
-              defaults::stream::size_policy::buffer_capacity);
-  put_missing(stream_group, "size-policy.bytes-per-batch",
-              defaults::stream::size_policy::bytes_per_batch);
   // -- scheduler parameters
   auto& scheduler_group = caf_group["scheduler"].as_dictionary();
   put_missing(scheduler_group, "policy", defaults::scheduler::policy);

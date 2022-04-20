@@ -25,11 +25,12 @@ public:
 
   // -- member types -----------------------------------------------------------
 
+  using super = actor_clock;
+
   /// Stores actions along with their scheduling period.
   struct schedule_entry {
     time_point t;
     action f;
-    duration_type period;
   };
 
   /// @relates schedule_entry
@@ -41,8 +42,9 @@ public:
 
   // -- overrides --------------------------------------------------------------
 
-  disposable schedule_periodically(time_point first_run, action f,
-                                   duration_type period) override;
+  using super::schedule;
+
+  disposable schedule(time_point abs_time, action f) override;
 
   // -- thread management ------------------------------------------------------
 

@@ -363,7 +363,7 @@ CAF_TEST(from string) {
   ROUNDTRIP("http://me@[::1]:80/file?a=1&b=2#42");
   // percent encoding
   ROUNDTRIP("hi%20there://it%27s@me%21/file%201#%5B42%5D");
-  ROUNDTRIP("file://localhost/tmp/test/test.{%3A04d}.exr");
+  ROUNDTRIP("file://localhost/tmp/test/test.{:04d}.exr?q=%3A1");
 }
 
 #undef ROUNDTRIP

@@ -38,6 +38,9 @@ public:
   /// The default value for `skip_empty_fields()`.
   static constexpr bool skip_empty_fields_default = true;
 
+  /// The default value for `skip_object_type_annotation()`.
+  static constexpr bool skip_object_type_annotation_default = false;
+
   /// The value value for `field_type_suffix()`.
   static constexpr string_view field_type_suffix_default = "-type";
 
@@ -88,6 +91,16 @@ public:
   /// Configures whether the writer omits empty fields.
   void skip_empty_fields(bool value) noexcept {
     skip_empty_fields_ = value;
+  }
+
+  /// Returns whether the writer omits '@type' annotations for JSON objects.
+  [[nodiscard]] bool skip_object_type_annotation() const noexcept {
+    return skip_object_type_annotation_;
+  }
+
+  /// Configures whether the writer omits '@type' annotations for JSON objects.
+  void skip_object_type_annotation(bool value) noexcept {
+    skip_object_type_annotation_ = value;
   }
 
   /// Returns the suffix for generating type annotation fields for variant
@@ -263,6 +276,9 @@ private:
   // Configures whether we omit empty fields entirely (true) or render empty
   // fields as `$field: null` (false).
   bool skip_empty_fields_ = skip_empty_fields_default;
+
+  // Configures whether we omit the top-level '@type' annotation.
+  bool skip_object_type_annotation_ = false;
 
   string_view field_type_suffix_ = field_type_suffix_default;
 };

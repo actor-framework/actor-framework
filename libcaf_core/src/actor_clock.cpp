@@ -24,28 +24,18 @@ class action_decorator : public ref_counted, public action::impl {
 public:
   using state = action::state;
 
-  using transition = action::transition;
-
-  action_decorator(action::impl_ptr decorated, WorkerPtr worker,
-                   actor_clock::stall_policy policy)
-    : decorated_(std::move(decorated)),
-      worker_(std::move(worker)),
-      policy_(policy) {
+  action_decorator(action::impl_ptr decorated, WorkerPtr worker)
+    : decorated_(std::move(decorated)), worker_(std::move(worker)) {
     CAF_ASSERT(decorated_ != nullptr);
     CAF_ASSERT(worker_ != nullptr);
   }
 
   void dispose() override {
-    if (decorated_) {
-      decorated_->dispose();
-      decorated_ = nullptr;
-    }
-    if (worker_)
-      worker_ = nullptr;
+    decorated_->dispose();
   }
 
   bool disposed() const noexcept override {
-    return decorated_ ? decorated_->disposed() : true;
+    return decorated_->disposed();
   }
 
   void ref_disposable() const noexcept override {
@@ -56,28 +46,23 @@ public:
     deref();
   }
 
-  transition reschedule() override {
-    // Always succeeds since we implicitly reschedule in do_run.
-    return transition::success;
-  }
-
-  transition run() override {
+  void run() override {
     CAF_ASSERT(decorated_ != nullptr);
     CAF_ASSERT(worker_ != nullptr);
     if constexpr (std::is_same_v<WorkerPtr, weak_actor_ptr>) {
       if (auto ptr = actor_cast<strong_actor_ptr>(worker_)) {
-        return do_run(ptr);
+        do_run(ptr);
       } else {
-        dispose();
-        return transition::disposed;
+        decorated_->dispose();
       }
     } else {
-      return do_run(worker_);
+      do_run(worker_);
     }
+    worker_ = nullptr;
   }
 
   state current_state() const noexcept override {
-    return decorated_ ? decorated_->current_state() : action::state::disposed;
+    return decorated_->current_state();
   }
 
   friend void intrusive_ptr_add_ref(const action_decorator* ptr) noexcept {
@@ -89,44 +74,23 @@ public:
   }
 
 private:
-  transition do_run(strong_actor_ptr& ptr) {
-    switch (decorated_->reschedule()) {
-      case transition::disposed:
-        decorated_ = nullptr;
-        worker_ = nullptr;
-        return transition::disposed;
-      case transition::success:
-        if (ptr->enqueue(nullptr, make_message_id(),
-                         make_message(action{decorated_}), nullptr)) {
-          return transition::success;
-        } else {
-          dispose();
-          return transition::disposed;
-        }
-      default:
-        if (policy_ == actor_clock::stall_policy::fail) {
-          ptr->enqueue(nullptr, make_message_id(),
-                       make_message(make_error(sec::action_reschedule_failed)),
-                       nullptr);
-          dispose();
-          return transition::failure;
-        } else {
-          return transition::success;
-        }
-    }
+  void do_run(strong_actor_ptr& ptr) {
+    if (!decorated_->disposed())
+      ptr->enqueue(nullptr, make_message_id(), make_message(action{decorated_}),
+                   nullptr);
   }
 
   action::impl_ptr decorated_;
   WorkerPtr worker_;
-  actor_clock::stall_policy policy_;
 };
 
 template <class WorkerPtr>
-action decorate(action f, WorkerPtr worker, actor_clock::stall_policy policy) {
+action decorate(action f, WorkerPtr worker) {
   CAF_ASSERT(f.ptr() != nullptr);
+  CAF_ASSERT(worker != nullptr);
   using impl_t = action_decorator<WorkerPtr>;
   auto ptr = make_counted<impl_t>(std::move(f).as_intrusive_ptr(),
-                                  std::move(worker), policy);
+                                  std::move(worker));
   return action{std::move(ptr)};
 }
 
@@ -145,44 +109,19 @@ actor_clock::time_point actor_clock::now() const noexcept {
 }
 
 disposable actor_clock::schedule(action f) {
-  return schedule_periodically(time_point{duration_type{0}}, std::move(f),
-                               duration_type{0});
-}
-
-disposable actor_clock::schedule(time_point t, action f) {
-  return schedule_periodically(t, std::move(f), duration_type{0});
+  return schedule(time_point{duration_type{0}}, std::move(f));
 }
 
 disposable actor_clock::schedule(time_point t, action f,
                                  strong_actor_ptr worker) {
-  return schedule_periodically(t, std::move(f), std::move(worker),
-                               duration_type{0}, stall_policy::skip);
-}
-
-disposable actor_clock::schedule_periodically(time_point first_run, action f,
-                                              strong_actor_ptr worker,
-                                              duration_type period,
-                                              stall_policy policy) {
-  auto res = f.as_disposable();
-  auto g = decorate(std::move(f), std::move(worker), policy);
-  schedule_periodically(first_run, std::move(g), period);
-  return res;
+  schedule(t, decorate(f, std::move(worker)));
+  return std::move(f).as_disposable();
 }
 
 disposable actor_clock::schedule(time_point t, action f,
                                  weak_actor_ptr worker) {
-  return schedule_periodically(t, std::move(f), std::move(worker),
-                               duration_type{0}, stall_policy::skip);
-}
-
-disposable actor_clock::schedule_periodically(time_point first_run, action f,
-                                              weak_actor_ptr worker,
-                                              duration_type period,
-                                              stall_policy policy) {
-  auto res = f.as_disposable();
-  auto g = decorate(std::move(f), std::move(worker), policy);
-  schedule_periodically(first_run, std::move(g), period);
-  return res;
+  schedule(t, decorate(f, std::move(worker)));
+  return std::move(f).as_disposable();
 }
 
 disposable actor_clock::schedule_message(time_point t,
@@ -192,8 +131,7 @@ disposable actor_clock::schedule_message(time_point t,
     [rptr{std::move(receiver)}, cptr{std::move(content)}]() mutable {
       rptr->enqueue(std::move(cptr), nullptr);
     });
-  schedule(t, f);
-  return std::move(f).as_disposable();
+  return schedule(t, std::move(f));
 }
 
 disposable actor_clock::schedule_message(time_point t, weak_actor_ptr receiver,
@@ -203,8 +141,7 @@ disposable actor_clock::schedule_message(time_point t, weak_actor_ptr receiver,
       if (auto ptr = actor_cast<strong_actor_ptr>(rptr))
         ptr->enqueue(std::move(cptr), nullptr);
     });
-  schedule(t, f);
-  return std::move(f).as_disposable();
+  return schedule(t, std::move(f));
 }
 
 disposable actor_clock::schedule_message(time_point t, group target,
@@ -215,8 +152,7 @@ disposable actor_clock::schedule_message(time_point t, group target,
       dst->enqueue(std::move(sender), make_message_id(), std::move(content),
                    nullptr);
   });
-  schedule(t, f);
-  return std::move(f).as_disposable();
+  return schedule(t, std::move(f));
 }
 
 } // namespace caf

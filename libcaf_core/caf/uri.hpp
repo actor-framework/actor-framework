@@ -26,7 +26,7 @@ namespace caf {
 class CAF_CORE_EXPORT uri : detail::comparable<uri>,
                             detail::comparable<uri, string_view> {
 public:
-  // -- friends -
+  // -- friends ----------------------------------------------------------------
 
   template <class>
   friend struct inspector_access;
@@ -205,6 +205,12 @@ public:
 
   /// Returns whether `parse` would produce a valid URI.
   static bool can_parse(string_view str) noexcept;
+
+  // -- URI encoding, AKA Percent encoding -------------------------------------
+
+  static void encode(std::string& str, string_view x, bool is_path = false);
+
+  static void decode(std::string& str);
 
 private:
   impl_ptr impl_;
