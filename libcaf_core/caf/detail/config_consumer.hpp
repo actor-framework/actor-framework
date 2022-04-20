@@ -59,8 +59,8 @@ private:
   // -- member variables -------------------------------------------------------
 
   const config_option_set* options_ = nullptr;
-  variant<none_t, config_consumer*, config_list_consumer*,
-          config_value_consumer*>
+  std::variant<none_t, config_consumer*, config_list_consumer*,
+               config_value_consumer*>
     parent_;
 };
 
@@ -119,7 +119,7 @@ private:
   // -- member variables -------------------------------------------------------
 
   const config_option_set* options_ = nullptr;
-  variant<none_t, config_consumer*, config_list_consumer*> parent_;
+  std::variant<none_t, config_consumer*, config_list_consumer*> parent_;
   settings* cfg_ = nullptr;
   std::string current_key_;
   std::string category_;

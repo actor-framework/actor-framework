@@ -22,7 +22,7 @@ using discarding_server_type = typed_actor<result<void>(int, int)>;
 
 using adding_server_type = typed_actor<result<int>(int, int)>;
 
-using result_type = variant<none_t, unit_t, int>;
+using result_type = std::variant<none_t, unit_t, int>;
 
 struct fixture : test_coordinator_fixture<> {
   template <class F>

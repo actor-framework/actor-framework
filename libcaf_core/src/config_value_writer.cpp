@@ -17,20 +17,10 @@
     }                                                                          \
   } while (false)
 
-#define CHECK_VALID()                                                          \
-  do {                                                                         \
-    CHECK_NOT_EMPTY();                                                         \
-    if (holds_alternative<none_t>(st_.top())) {                                \
-      emplace_error(sec::runtime_error,                                        \
-                    "attempted to write to a non-existent optional field");    \
-      return false;                                                            \
-    }                                                                          \
-  } while (false)
-
 #define SCOPE(top_type)                                                        \
-  CHECK_VALID();                                                               \
+  CHECK_NOT_EMPTY();                                                           \
   if (!holds_alternative<top_type>(st_.top())) {                               \
-    if constexpr (std::is_same<top_type, settings>::value) {                   \
+    if constexpr (std::is_same<top_type, settings*>::value) {                  \
       emplace_error(sec::runtime_error,                                        \
                     "attempted to add list items before calling "              \
                     "begin_sequence or begin_tuple");                          \

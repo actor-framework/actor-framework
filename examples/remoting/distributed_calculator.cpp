@@ -70,7 +70,7 @@ namespace client {
 
 // a simple calculator task: operation + operands
 struct task {
-  caf::variant<add_atom, sub_atom> op;
+  std::variant<add_atom, sub_atom> op;
   int lhs;
   int rhs;
 };
@@ -170,7 +170,7 @@ behavior running(stateful_actor<state>* self, const actor& calculator) {
   };
   for (auto& x : self->state.tasks) {
     auto f = [&](auto op) { send_task(op, x.lhs, x.rhs); };
-    caf::visit(f, x.op);
+    std::visit(f, x.op);
   }
   self->state.tasks.clear();
   return {

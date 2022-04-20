@@ -360,7 +360,7 @@ bool inspect(Inspector& f, circle& x) {
 
 struct widget {
   std::string color;
-  caf::variant<rectangle, circle> shape;
+  std::variant<rectangle, circle> shape;
 };
 
 template <class Inspector>

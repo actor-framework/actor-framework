@@ -11,7 +11,6 @@
 #include "caf/detail/move_if_not_ptr.hpp"
 #include "caf/dictionary.hpp"
 #include "caf/raise_error.hpp"
-#include "caf/sum_type.hpp"
 
 namespace caf {
 

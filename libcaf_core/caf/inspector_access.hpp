@@ -11,17 +11,6 @@
 #include <tuple>
 #include <utility>
 
-#ifdef __has_include
-#  if __has_include(<optional>)
-#    include <optional>
-#    define CAF_HAS_STD_OPTIONAL
-#  endif
-#  if __has_include(<variant>)
-#    include <variant>
-#    define CAF_HAS_STD_VARIANT
-#  endif
-#endif
-
 #include "caf/allowed_unsafe_message_type.hpp"
 #include "caf/detail/as_mutable_ref.hpp"
 #include "caf/detail/parse.hpp"
@@ -36,8 +25,6 @@
 #include "caf/optional.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
-#include "caf/sum_type_access.hpp"
-#include "caf/variant.hpp"
 
 namespace caf::detail {
 
@@ -306,10 +293,10 @@ struct optional_inspector_traits_base {
   }
 };
 
-CAF_PUSH_DEPRECATED_WARNING
-
 template <class T>
 struct optional_inspector_traits;
+
+CAF_PUSH_DEPRECATED_WARNING
 
 template <class T>
 struct optional_inspector_traits<optional<T>> : optional_inspector_traits_base {
@@ -443,8 +430,6 @@ struct inspector_access<optional<T>> : optional_inspector_access<optional<T>> {
 
 CAF_POP_WARNINGS
 
-#ifdef CAF_HAS_STD_OPTIONAL
-
 template <class T>
 struct optional_inspector_traits<std::optional<T>>
   : optional_inspector_traits_base {
@@ -463,8 +448,6 @@ struct inspector_access<std::optional<T>>
   : optional_inspector_access<std::optional<T>> {
   // nop
 };
-
-#endif
 
 // -- inspection support for error ---------------------------------------------
 
@@ -491,51 +474,6 @@ struct inspector_access<std::byte> : inspector_access_base<std::byte> {
 
 template <class T>
 struct variant_inspector_traits;
-
-template <class... Ts>
-struct variant_inspector_traits<variant<Ts...>> {
-  static_assert(
-    (has_type_id_v<Ts> && ...),
-    "inspectors requires that each type in a variant has a type_id");
-
-  using value_type = variant<Ts...>;
-
-  static constexpr type_id_t allowed_types[] = {type_id_v<Ts>...};
-
-  static auto type_index(const value_type& x) {
-    return x.index();
-  }
-  template <class F, class Value>
-  static auto visit(F&& f, Value&& x) {
-    return caf::visit(std::forward<F>(f), std::forward<Value>(x));
-  }
-
-  template <class U>
-  static auto assign(value_type& x, U&& value) {
-    x = std::forward<U>(value);
-  }
-
-  template <class F>
-  static bool load(type_id_t, F&, detail::type_list<>) {
-    return false;
-  }
-
-  template <class F, class U, class... Us>
-  static bool
-  load(type_id_t type, F& continuation, detail::type_list<U, Us...>) {
-    if (type_id_v<U> == type) {
-      auto tmp = U{};
-      continuation(tmp);
-      return true;
-    }
-    return load(type, continuation, detail::type_list<Us...>{});
-  }
-
-  template <class F>
-  static bool load(type_id_t type, F continuation) {
-    return load(type, continuation, detail::type_list<Ts...>{});
-  }
-};
 
 template <class T>
 struct variant_inspector_access {
@@ -655,14 +593,6 @@ struct variant_inspector_access {
 };
 
 template <class... Ts>
-struct inspector_access<variant<Ts...>>
-  : variant_inspector_access<variant<Ts...>> {
-  // nop
-};
-
-#ifdef CAF_HAS_STD_VARIANT
-
-template <class... Ts>
 struct variant_inspector_traits<std::variant<Ts...>> {
   static_assert(
     (has_type_id_v<Ts> && ...),
@@ -713,8 +643,6 @@ struct inspector_access<std::variant<Ts...>>
   : variant_inspector_access<std::variant<Ts...>> {
   // nop
 };
-
-#endif
 
 // -- inspection support for std::chrono types ---------------------------------
 

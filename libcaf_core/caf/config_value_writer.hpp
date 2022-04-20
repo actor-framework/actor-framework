@@ -28,8 +28,8 @@ public:
 
   struct absent_field {};
 
-  using value_type = variant<config_value*, settings*, absent_field,
-                             present_field, std::vector<config_value>*>;
+  using value_type = std::variant<config_value*, settings*, absent_field,
+                                  present_field, std::vector<config_value>*>;
 
   using stack_type = std::stack<value_type, std::vector<value_type>>;
 

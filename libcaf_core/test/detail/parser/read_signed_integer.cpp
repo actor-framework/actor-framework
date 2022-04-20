@@ -8,10 +8,9 @@
 
 #include "core-test.hpp"
 
-#include <string_view>
-
 #include "caf/parser_state.hpp"
-#include "caf/variant.hpp"
+
+#include <string_view>
 
 using namespace caf;
 

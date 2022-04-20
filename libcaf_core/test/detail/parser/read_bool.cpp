@@ -10,9 +10,9 @@
 
 #include <string>
 #include <string_view>
+#include <variant>
 
 #include "caf/parser_state.hpp"
-#include "caf/variant.hpp"
 
 using namespace caf;
 
@@ -25,7 +25,7 @@ struct bool_parser_consumer {
   }
 };
 
-using res_t = variant<pec, bool>;
+using res_t = std::variant<pec, bool>;
 
 struct bool_parser {
   res_t operator()(std::string_view str) {

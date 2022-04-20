@@ -17,7 +17,6 @@
 #include "caf/message.hpp"
 #include "caf/span.hpp"
 #include "caf/type_id.hpp"
-#include "caf/variant.hpp"
 
 #include "inspector-tests.hpp"
 

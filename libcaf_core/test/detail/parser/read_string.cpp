@@ -13,7 +13,6 @@
 
 #include "caf/expected.hpp"
 #include "caf/parser_state.hpp"
-#include "caf/variant.hpp"
 
 using namespace caf;
 using namespace std::literals;

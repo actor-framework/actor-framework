@@ -3,9 +3,9 @@
 #pragma once
 
 #include "caf/type_id.hpp"
-#include "caf/variant.hpp"
 
 #include <optional>
+#include <variant>
 
 #include "nasty.hpp"
 
@@ -151,7 +151,7 @@ bool inspect(Inspector& f, foobar& x) {
 }
 
 struct dummy_message {
-  caf::variant<std::string, double> content;
+  std::variant<std::string, double> content;
 };
 
 [[maybe_unused]] bool operator==(const dummy_message& x,
@@ -165,7 +165,7 @@ bool inspect(Inspector& f, dummy_message& x) {
 }
 
 struct fallback_dummy_message {
-  caf::variant<std::string, double> content;
+  std::variant<std::string, double> content;
 };
 
 template <class Inspector>

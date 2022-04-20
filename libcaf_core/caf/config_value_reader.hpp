@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <stack>
+#include <variant>
 #include <vector>
 
 namespace caf {
@@ -47,8 +48,8 @@ public:
     const std::pair<const std::string, config_value>& current();
   };
 
-  using value_type = variant<const settings*, const config_value*, key_ptr,
-                             absent_field, sequence, associative_array>;
+  using value_type = std::variant<const settings*, const config_value*, key_ptr,
+                                  absent_field, sequence, associative_array>;
 
   using stack_type = std::stack<value_type, std::vector<value_type>>;
 

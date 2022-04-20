@@ -82,7 +82,7 @@ public:
   template <class T, size_t... Is>
   bool tuple(T& xs, std::index_sequence<Is...>) {
     return dref().begin_tuple(sizeof...(Is))
-           && (detail::load(dref(), get<Is>(xs)) && ...) //
+           && (detail::load(dref(), std::get<Is>(xs)) && ...) //
            && dref().end_tuple();
   }
 

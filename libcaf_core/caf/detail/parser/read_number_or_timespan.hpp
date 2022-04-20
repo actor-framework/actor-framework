@@ -17,7 +17,6 @@
 #include "caf/none.hpp"
 #include "caf/pec.hpp"
 #include "caf/timestamp.hpp"
-#include "caf/variant.hpp"
 
 CAF_PUSH_UNUSED_LABEL_WARNING
 
@@ -34,15 +33,15 @@ void read_number_or_timespan(State& ps, Consumer& consumer,
   struct interim_consumer {
     size_t invocations = 0;
     Consumer* outer = nullptr;
-    variant<none_t, int64_t, double> interim;
+    std::variant<none_t, int64_t, double> interim;
     void value(int64_t x) {
       switch (++invocations) {
         case 1:
           interim = x;
           break;
         case 2:
-          CAF_ASSERT(holds_alternative<int64_t>(interim));
-          outer->value(get<int64_t>(interim));
+          CAF_ASSERT(std::holds_alternative<int64_t>(interim));
+          outer->value(std::get<int64_t>(interim));
           interim = none;
           [[fallthrough]];
         default:
@@ -55,13 +54,13 @@ void read_number_or_timespan(State& ps, Consumer& consumer,
   };
   interim_consumer ic;
   ic.outer = &consumer;
-  auto has_int = [&] { return holds_alternative<int64_t>(ic.interim); };
-  auto has_dbl = [&] { return holds_alternative<double>(ic.interim); };
-  auto get_int = [&] { return get<int64_t>(ic.interim); };
+  auto has_int = [&] { return std::holds_alternative<int64_t>(ic.interim); };
+  auto has_dbl = [&] { return std::holds_alternative<double>(ic.interim); };
+  auto get_int = [&] { return std::get<int64_t>(ic.interim); };
   auto g = make_scope_guard([&] {
     if (ps.code <= pec::trailing_character) {
       if (has_dbl())
-        consumer.value(get<double>(ic.interim));
+        consumer.value(std::get<double>(ic.interim));
       else if (has_int())
         consumer.value(get_int());
     }

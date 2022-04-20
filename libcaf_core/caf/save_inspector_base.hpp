@@ -5,6 +5,7 @@
 #pragma once
 
 #include <string_view>
+#include <tuple>
 
 #include "caf/inspector_access.hpp"
 #include "caf/save_inspector.hpp"
@@ -72,6 +73,7 @@ public:
 
   template <class T, size_t... Is>
   bool tuple(const T& xs, std::index_sequence<Is...>) {
+    using std::get;
     return dref().begin_tuple(sizeof...(Is))             //
            && (detail::save(dref(), get<Is>(xs)) && ...) //
            && dref().end_tuple();

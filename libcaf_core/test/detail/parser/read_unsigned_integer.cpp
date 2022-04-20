@@ -11,7 +11,6 @@
 #include <string_view>
 
 #include "caf/parser_state.hpp"
-#include "caf/variant.hpp"
 
 using namespace caf;
 

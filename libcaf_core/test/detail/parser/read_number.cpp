@@ -10,20 +10,20 @@
 
 #include <string>
 #include <string_view>
+#include <variant>
 
 #include "caf/detail/parser/add_ascii.hpp"
 #include "caf/detail/parser/sub_ascii.hpp"
 #include "caf/expected.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
-#include "caf/variant.hpp"
 
 using namespace caf;
 
 namespace {
 
 struct number_consumer {
-  variant<int64_t, double> x;
+  std::variant<int64_t, double> x;
   void value(double y) {
     x = y;
   }
@@ -43,7 +43,7 @@ struct range_consumer {
 };
 
 struct res_t {
-  variant<pec, double, int64_t> val;
+  std::variant<pec, double, int64_t> val;
   template <class T>
   res_t(T&& x) : val(std::forward<T>(x)) {
     // nop
@@ -51,7 +51,7 @@ struct res_t {
 };
 
 std::string to_string(const res_t& x) {
-  return caf::visit([](auto& y) { return deep_to_string(y); }, x.val);
+  return std::visit([](auto& y) { return deep_to_string(y); }, x.val);
 }
 
 bool operator==(const res_t& x, const res_t& y) {
@@ -74,8 +74,9 @@ struct numbers_parser {
     string_parser_state res{str.begin(), str.end()};
     detail::parser::read_number(res, f);
     if (res.code == pec::success)
-      return f.x;
-    return res.code;
+      return std::visit([](auto val) { return res_t{val}; }, f.x);
+    else
+      return res_t{res.code};
   }
 };
 
@@ -85,8 +86,9 @@ struct range_parser {
     string_parser_state res{str.begin(), str.end()};
     detail::parser::read_number(res, f, std::true_type{}, std::true_type{});
     if (res.code == pec::success)
-      return std::move(f.xs);
-    return make_error(res);
+      return expected<std::vector<int64_t>>{std::move(f.xs)};
+    else
+      return make_error(res);
   }
 };
 

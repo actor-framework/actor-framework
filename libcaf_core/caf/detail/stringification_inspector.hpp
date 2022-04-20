@@ -17,7 +17,6 @@
 #include "caf/save_inspector_base.hpp"
 #include "caf/timespan.hpp"
 #include "caf/timestamp.hpp"
-#include "caf/variant.hpp"
 
 namespace caf::detail {
 

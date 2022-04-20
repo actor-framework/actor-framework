@@ -16,6 +16,7 @@
 #include <string_view>
 #include <tuple>
 #include <type_traits>
+#include <variant>
 #include <vector>
 
 #include "caf/config_value_reader.hpp"
@@ -32,13 +33,10 @@
 #include "caf/inspector_access_type.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/string_algorithms.hpp"
-#include "caf/sum_type.hpp"
-#include "caf/sum_type_access.hpp"
-#include "caf/sum_type_token.hpp"
 #include "caf/timespan.hpp"
 #include "caf/timestamp.hpp"
 #include "caf/uri.hpp"
-#include "caf/variant.hpp"
+#include "caf/variant_wrapper.hpp"
 
 namespace caf::detail {
 
@@ -90,7 +88,7 @@ public:
   using types = detail::type_list<none_t, integer, boolean, real, timespan, uri,
                                   string, list, dictionary>;
 
-  using variant_type = detail::tl_apply_t<types, variant>;
+  using variant_type = detail::tl_apply_t<types, std::variant>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -158,24 +156,19 @@ public:
   /// Returns a human-readable type name of the current value.
   const char* type_name() const noexcept;
 
-  /// Returns the underlying variant.
-  variant_type& get_data() {
+  /// @private
+  variant_type& get_data() & {
     return data_;
   }
 
-  /// Returns the underlying variant.
-  const variant_type& get_data() const {
+  /// @private
+  const variant_type& get_data() const& {
     return data_;
   }
 
-  /// Returns a pointer to the underlying variant.
-  variant_type* get_data_ptr() {
-    return &data_;
-  }
-
-  /// Returns a pointer to the underlying variant.
-  const variant_type* get_data_ptr() const {
-    return &data_;
+  /// @private
+  variant_type&& get_data() && {
+    return std::move(data_);
   }
 
   /// Checks whether this config value is not null.
@@ -320,6 +313,11 @@ private:
 
 /// @relates config_value
 CAF_CORE_EXPORT std::string to_string(const config_value& x);
+
+// -- std::variant-like access -------------------------------------------------
+
+template <>
+struct is_variant_wrapper<config_value> : std::true_type {};
 
 // -- conversion via get_as ----------------------------------------------------
 
@@ -559,33 +557,6 @@ auto get_or(const config_value& x, Fallback&& fallback) {
   }
 }
 
-// -- SumType-like access ------------------------------------------------------
-
-template <class T, class = std::enable_if_t<detail::is_config_value_type_v<T>>>
-auto get_if(const config_value* x) {
-  return get_if<T>(x->get_data_ptr());
-}
-
-template <class T, class = std::enable_if_t<detail::is_config_value_type_v<T>>>
-auto get_if(config_value* x) {
-  return get_if<T>(x->get_data_ptr());
-}
-
-template <class T, class = std::enable_if_t<detail::is_config_value_type_v<T>>>
-decltype(auto) get(const config_value& x) {
-  return get<T>(x.get_data());
-}
-
-template <class T, class = std::enable_if_t<detail::is_config_value_type_v<T>>>
-decltype(auto) get(config_value& x) {
-  return get<T>(x.get_data());
-}
-
-template <class T, class = std::enable_if_t<detail::is_config_value_type_v<T>>>
-auto holds_alternative(const config_value& x) {
-  return holds_alternative<T>(x.get_data());
-}
-
 // -- comparison operator overloads --------------------------------------------
 
 /// @relates config_value
@@ -644,7 +615,7 @@ struct variant_inspector_traits<config_value> {
 
   template <class F, class Value>
   static auto visit(F&& f, Value&& x) {
-    return caf::visit(std::forward<F>(f), x.get_data());
+    return std::visit(std::forward<F>(f), x.get_data());
   }
 
   template <class U>

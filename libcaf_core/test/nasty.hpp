@@ -1,13 +1,13 @@
 #pragma once
 
+#include "caf/inspector_access.hpp"
+
 #include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <tuple>
-
-#include "caf/inspector_access.hpp"
-#include "caf/variant.hpp"
+#include <variant>
 
 enum class weekday : uint8_t {
   monday,
@@ -62,7 +62,7 @@ public:
 
   using optional_type = std::optional<int32_t>;
 
-  using variant_type = caf::variant<std::string, int32_t>;
+  using variant_type = std::variant<std::string, int32_t>;
 
   using tuple_type = std::tuple<std::string, int32_t>;
 
@@ -200,8 +200,8 @@ public:
 
 template <class Inspector>
 bool inspect(Inspector& f, nasty& x) {
-  using caf::get;
-  using caf::get_if;
+  using std::get;
+  using std::get_if;
   struct {
     bool operator()(int32_t x) {
       return x >= 0;

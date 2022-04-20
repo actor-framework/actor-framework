@@ -10,9 +10,9 @@
 
 #include <string>
 #include <string_view>
+#include <variant>
 
 #include "caf/parser_state.hpp"
-#include "caf/variant.hpp"
 
 using namespace caf;
 

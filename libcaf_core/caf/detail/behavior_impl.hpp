@@ -27,7 +27,6 @@
 #include "caf/timespan.hpp"
 #include "caf/typed_message_view.hpp"
 #include "caf/typed_response_promise.hpp"
-#include "caf/variant.hpp"
 
 namespace caf {
 

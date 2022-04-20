@@ -26,7 +26,6 @@
 #include "caf/make_config_option.hpp"
 #include "caf/none.hpp"
 #include "caf/pec.hpp"
-#include "caf/variant.hpp"
 
 #include "caf/detail/bounds_checker.hpp"
 #include "caf/detail/overload.hpp"

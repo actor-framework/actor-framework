@@ -18,7 +18,6 @@
 #include "caf/intrusive_ptr.hpp"
 #include "caf/ip_address.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/variant.hpp"
 
 namespace caf {
 
@@ -35,7 +34,7 @@ public:
 
   /// Host subcomponent of the authority component. Either an IP address or
   /// an hostname as string.
-  using host_type = variant<std::string, ip_address>;
+  using host_type = std::variant<std::string, ip_address>;
 
   /// Bundles the authority component of the URI, i.e., userinfo, host, and
   /// port.
@@ -51,7 +50,7 @@ public:
     /// Returns whether `host` is empty, i.e., the host is not an IP address
     /// and the string is empty.
     bool empty() const noexcept {
-      auto str = get_if<std::string>(&host);
+      auto str = std::get_if<std::string>(&host);
       return str != nullptr && str->empty();
     }
   };

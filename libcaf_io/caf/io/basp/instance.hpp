@@ -19,7 +19,6 @@
 #include "caf/io/basp/routing_table.hpp"
 #include "caf/io/basp/worker.hpp"
 #include "caf/io/middleman.hpp"
-#include "caf/variant.hpp"
 
 namespace caf::io::basp {
 

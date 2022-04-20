@@ -199,7 +199,7 @@ bool json_reader::fetch_next_object_name(std::string_view& type_name) {
   FN_DECL;
   return consume<false>(fn, [this, &type_name](const detail::json::value& val) {
     if (val.data.index() == detail::json::value::object_index) {
-      auto& obj = get<detail::json::object>(val.data);
+      auto& obj = std::get<detail::json::object>(val.data);
       if (auto mem_ptr = find_member(&obj, "@type")) {
         if (mem_ptr->val->data.index() == detail::json::value::string_index) {
           type_name = std::get<std::string_view>(mem_ptr->val->data);
@@ -227,7 +227,7 @@ bool json_reader::begin_object(type_id_t, std::string_view) {
   FN_DECL;
   return consume<false>(fn, [this](const detail::json::value& val) {
     if (val.data.index() == detail::json::value::object_index) {
-      push(&get<detail::json::object>(val.data));
+      push(&std::get<detail::json::object>(val.data));
       return true;
     } else {
       emplace_error(sec::runtime_error, class_name, fn, current_field_name(),
@@ -379,7 +379,7 @@ bool json_reader::begin_sequence(size_t& size) {
   FN_DECL;
   return consume<false>(fn, [this, &size](const detail::json::value& val) {
     if (val.data.index() == detail::json::value::array_index) {
-      auto& ls = get<detail::json::array>(val.data);
+      auto& ls = std::get<detail::json::array>(val.data);
       size = ls.size();
       push(sequence{ls.begin(), ls.end()});
       return true;
@@ -410,7 +410,7 @@ bool json_reader::begin_associative_array(size_t& size) {
   FN_DECL;
   return consume<false>(fn, [this, &size](const detail::json::value& val) {
     if (val.data.index() == detail::json::value::object_index) {
-      auto* obj = std::addressof(get<detail::json::object>(val.data));
+      auto* obj = std::addressof(std::get<detail::json::object>(val.data));
       pop();
       size = obj->size();
       push(members{obj->begin(), obj->end()});

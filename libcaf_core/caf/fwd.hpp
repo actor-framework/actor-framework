@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <memory>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 #include "caf/detail/core_export.hpp"
@@ -59,7 +60,6 @@ template <class...> class typed_actor_view;
 template <class...> class typed_event_based_actor;
 template <class...> class typed_message_view;
 template <class...> class typed_response_promise;
-template <class...> class variant;
 
 // clang-format on
 
@@ -120,6 +120,7 @@ class scheduled_actor;
 class scoped_actor;
 class serializer;
 class skip_t;
+class skippable_result;
 class tracing_data;
 class tracing_data_factory;
 class type_id_list;
@@ -178,7 +179,6 @@ using ip_address = ipv6_address;
 using ip_endpoint = ipv6_endpoint;
 using ip_subnet = ipv6_subnet;
 using settings = dictionary<config_value>;
-using skippable_result = variant<delegated<message>, message, error, skip_t>;
 using type_id_t = uint16_t;
 
 // -- functions ----------------------------------------------------------------

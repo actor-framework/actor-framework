@@ -12,6 +12,8 @@
 #include "caf/none.hpp"
 #include "caf/unit.hpp"
 
+CAF_PUSH_DEPRECATED_WARNING
+
 namespace caf {
 
 /// A C++17 compatible `optional` implementation.
@@ -268,8 +270,6 @@ private:
   bool m_value;
 };
 
-CAF_PUSH_DEPRECATED_WARNING
-
 /// @relates optional
 template <class T>
 auto to_string(const optional<T>& x)
@@ -478,6 +478,6 @@ bool operator>=(const T& lhs, const optional<T>& rhs) {
   return !rhs || !(lhs < *rhs);
 }
 
-CAF_POP_WARNINGS
-
 } // namespace caf
+
+CAF_POP_WARNINGS

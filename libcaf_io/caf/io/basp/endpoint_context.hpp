@@ -13,7 +13,6 @@
 #include "caf/io/datagram_handle.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/timestamp.hpp"
-#include "caf/variant.hpp"
 
 namespace caf::io::basp {
 

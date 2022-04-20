@@ -18,7 +18,6 @@
 #include "caf/none.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/uri.hpp"
-#include "caf/variant.hpp"
 
 namespace caf {
 
@@ -74,7 +73,7 @@ class CAF_CORE_EXPORT node_id_data : public ref_counted {
 public:
   // -- member types -----------------------------------------------------------
 
-  using variant_type = variant<uri, hashed_node_id>;
+  using variant_type = std::variant<uri, hashed_node_id>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -203,7 +202,7 @@ private:
 /// Returns whether `x` contains an URI.
 /// @relates node_id
 inline bool wraps_uri(const node_id& x) noexcept {
-  return x && holds_alternative<uri>(x->content);
+  return x && std::holds_alternative<uri>(x->content);
 }
 
 /// @relates node_id
