@@ -925,7 +925,7 @@ struct is_trivial_inspector_value<true, T> {
 
 template <class T>
 struct is_trivial_inspector_value<false, T> {
-  static constexpr bool value = std::is_convertible<T, string_view>::value;
+  static constexpr bool value = std::is_convertible<T, std::string_view>::value;
 };
 
 #define CAF_ADD_TRIVIAL_LOAD_INSPECTOR_VALUE(type)                             \
@@ -951,9 +951,9 @@ CAF_ADD_TRIVIAL_INSPECTOR_VALUE(long double)
 CAF_ADD_TRIVIAL_INSPECTOR_VALUE(std::u16string)
 CAF_ADD_TRIVIAL_INSPECTOR_VALUE(std::u32string)
 CAF_ADD_TRIVIAL_INSPECTOR_VALUE(std::vector<bool>)
-CAF_ADD_TRIVIAL_INSPECTOR_VALUE(span<byte>)
+CAF_ADD_TRIVIAL_INSPECTOR_VALUE(span<std::byte>)
 
-CAF_ADD_TRIVIAL_SAVE_INSPECTOR_VALUE(span<const byte>)
+CAF_ADD_TRIVIAL_SAVE_INSPECTOR_VALUE(span<const std::byte>)
 
 CAF_ADD_TRIVIAL_LOAD_INSPECTOR_VALUE(std::string)
 
@@ -989,12 +989,12 @@ struct is_builtin_inspector_type {
 };
 
 template <bool IsLoading>
-struct is_builtin_inspector_type<byte, IsLoading> {
+struct is_builtin_inspector_type<std::byte, IsLoading> {
   static constexpr bool value = true;
 };
 
 template <bool IsLoading>
-struct is_builtin_inspector_type<span<byte>, IsLoading> {
+struct is_builtin_inspector_type<span<std::byte>, IsLoading> {
   static constexpr bool value = true;
 };
 
@@ -1014,12 +1014,12 @@ struct is_builtin_inspector_type<std::u32string, IsLoading> {
 };
 
 template <>
-struct is_builtin_inspector_type<string_view, false> {
+struct is_builtin_inspector_type<std::string_view, false> {
   static constexpr bool value = true;
 };
 
 template <>
-struct is_builtin_inspector_type<span<const byte>, false> {
+struct is_builtin_inspector_type<span<const std::byte>, false> {
   static constexpr bool value = true;
 };
 

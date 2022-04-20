@@ -5,6 +5,7 @@
 #pragma once
 
 #include <memory>
+#include <string_view>
 
 #include "caf/config_option.hpp"
 #include "caf/config_value.hpp"
@@ -13,7 +14,6 @@
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
 #include "caf/pec.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf::detail {
 
@@ -53,15 +53,17 @@ namespace caf {
 
 /// Creates a config option that synchronizes with `storage`.
 template <class T>
-config_option make_config_option(string_view category, string_view name,
-                                 string_view description) {
+config_option make_config_option(std::string_view category,
+                                 std::string_view name,
+                                 std::string_view description) {
   return {category, name, description, detail::option_meta_state_instance<T>()};
 }
 
 /// Creates a config option that synchronizes with `storage`.
 template <class T>
-config_option make_config_option(T& storage, string_view category,
-                                 string_view name, string_view description) {
+config_option make_config_option(T& storage, std::string_view category,
+                                 std::string_view name,
+                                 std::string_view description) {
   return {category, name, description, detail::option_meta_state_instance<T>(),
           std::addressof(storage)};
 }
@@ -70,7 +72,7 @@ config_option make_config_option(T& storage, string_view category,
 
 // Inverts the value when writing to `storage`.
 CAF_CORE_EXPORT config_option
-make_negated_config_option(bool& storage, string_view category,
-                           string_view name, string_view description);
+make_negated_config_option(bool& storage, std::string_view category,
+                           std::string_view name, std::string_view description);
 
 } // namespace caf

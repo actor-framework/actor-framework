@@ -43,7 +43,7 @@ local_actor::metrics_t make_instance_metrics(local_actor* self) {
     };
   self->setf(abstract_actor::collects_metrics_flag);
   const auto& families = sys.actor_metric_families();
-  string_view sv{name, strlen(name)};
+  std::string_view sv{name, strlen(name)};
   return {
     families.processing_time->get_or_add({{"name", sv}}),
     families.mailbox_time->get_or_add({{"name", sv}}),

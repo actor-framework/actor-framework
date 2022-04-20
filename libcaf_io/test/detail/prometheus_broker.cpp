@@ -41,11 +41,11 @@ struct fixture : test_node_fixture<> {
   connection_handle connection = connection_handle::from_int(1);
 };
 
-bool contains(string_view str, string_view what) {
-  return str.find(what) != string_view::npos;
+bool contains(std::string_view str, std::string_view what) {
+  return str.find(what) != std::string_view::npos;
 }
 
-constexpr string_view http_request
+constexpr std::string_view http_request
   = "GET /metrics HTTP/1.1\r\n"
     "Host: localhost:8090\r\n"
     "User-Agent: Prometheus/2.18.1\r\n"
@@ -54,9 +54,9 @@ constexpr string_view http_request
     "Accept-Encoding: gzip\r\n"
     "X-Prometheus-Scrape-Timeout-Seconds: 5.000000\r\n\r\n";
 
-constexpr string_view http_ok_header = "HTTP/1.1 200 OK\r\n"
-                                       "Content-Type: text/plain\r\n"
-                                       "Connection: Closed\r\n\r\n";
+constexpr std::string_view http_ok_header = "HTTP/1.1 200 OK\r\n"
+                                            "Content-Type: text/plain\r\n"
+                                            "Connection: Closed\r\n\r\n";
 
 } // namespace
 
@@ -67,8 +67,8 @@ CAF_TEST(the prometheus broker responds to HTTP get requests) {
   mpx.virtual_send(connection, byte_buffer{bytes.begin(), bytes.end()});
   run();
   auto& response_buf = mpx.output_buffer(connection);
-  string_view response{reinterpret_cast<char*>(response_buf.data()),
-                       response_buf.size()};
+  std::string_view response{reinterpret_cast<char*>(response_buf.data()),
+                            response_buf.size()};
   CHECK(starts_with(response, http_ok_header));
   CHECK(contains(response, "\ncaf_system_running_actors 2 "));
   if (detail::prometheus_broker::has_process_metrics()) {
@@ -86,7 +86,7 @@ static constexpr size_t chunk_size = 1024;
 
 using io::network::native_socket;
 
-std::vector<char> read_all(string_view query, native_socket fd) {
+std::vector<char> read_all(std::string_view query, native_socket fd) {
   while (!query.empty()) {
     size_t written = 0;
     policy::tcp::write_some(written, fd, query.data(), query.size());
@@ -107,7 +107,7 @@ std::vector<char> read_all(string_view query, native_socket fd) {
   }
 }
 
-std::vector<char> read_all(string_view query, const std::string& host,
+std::vector<char> read_all(std::string_view query, const std::string& host,
                            uint16_t port) {
   if (auto fd = io::network::new_tcp_connection(host, port))
     return read_all(query, *fd);
@@ -129,8 +129,8 @@ SCENARIO("setting caf.middleman.prometheus-http.port exports metrics to HTTP") {
         auto scraping_port = sys.middleman().prometheus_scraping_port();
         REQUIRE_NE(scraping_port, 0);
         auto response_buf = read_all(http_request, "localhost", scraping_port);
-        string_view response{reinterpret_cast<char*>(response_buf.data()),
-                             response_buf.size()};
+        std::string_view response{reinterpret_cast<char*>(response_buf.data()),
+                                  response_buf.size()};
         CHECK(starts_with(response, http_ok_header));
         CHECK(contains(response, "\ncaf_system_running_actors "));
         if (detail::prometheus_broker::has_process_metrics()) {

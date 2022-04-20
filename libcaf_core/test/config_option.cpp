@@ -15,6 +15,7 @@
 #include "caf/make_config_option.hpp"
 
 using namespace caf;
+using namespace std::literals;
 
 using std::string;
 
@@ -169,9 +170,9 @@ SCENARIO("options on the CLI override config files that override defaults") {
   }
 }
 
-constexpr string_view category = "category";
-constexpr string_view name = "name";
-constexpr string_view explanation = "explanation";
+constexpr std::string_view category = "category";
+constexpr std::string_view name = "name";
+constexpr std::string_view explanation = "explanation";
 
 template <class T>
 constexpr int64_t overflow() {
@@ -184,14 +185,14 @@ constexpr int64_t underflow() {
 }
 
 template <class T>
-optional<T> read(string_view arg) {
+std::optional<T> read(std::string_view arg) {
   auto result = T{};
   auto co = make_config_option<T>(result, category, name, explanation);
   config_value val{arg};
   if (auto err = co.sync(val); !err)
     return {std::move(result)};
   else
-    return none;
+    return std::nullopt;
 }
 
 // Unsigned integers.
@@ -203,7 +204,7 @@ void check_integer_options(std::true_type) {
   T xmax = std::numeric_limits<T>::max();
   CHECK_EQ(read<T>(to_string(xzero)), xzero);
   CHECK_EQ(read<T>(to_string(xmax)), xmax);
-  CHECK_EQ(read<T>(to_string(overflow<T>())), none);
+  CHECK_EQ(read<T>(to_string(overflow<T>())), std::nullopt);
 }
 
 // Signed integers.
@@ -216,7 +217,7 @@ void check_integer_options(std::false_type) {
   // Run tests for negative integers.
   auto xmin = std::numeric_limits<T>::min();
   CHECK_EQ(read<T>(to_string(xmin)), xmin);
-  CHECK_EQ(read<T>(to_string(underflow<T>())), none);
+  CHECK_EQ(read<T>(to_string(underflow<T>())), std::nullopt);
 }
 
 // only works with an integral types and double
@@ -235,14 +236,14 @@ void compare(const config_option& lhs, const config_option& rhs) {
 }
 
 CAF_TEST(copy constructor) {
-  auto one = make_config_option<int>("cat1", "one", "option 1");
+  auto one = make_config_option<int>("cat1"sv, "one"sv, "option 1"sv);
   auto two = one;
   compare(one, two);
 }
 
 CAF_TEST(copy assignment) {
-  auto one = make_config_option<int>("cat1", "one", "option 1");
-  auto two = make_config_option<int>("cat2", "two", "option 2");
+  auto one = make_config_option<int>("cat1"sv, "one"sv, "option 1"sv);
+  auto two = make_config_option<int>("cat2"sv, "two"sv, "option 2"sv);
   two = one;
   compare(one, two);
 }
@@ -250,8 +251,8 @@ CAF_TEST(copy assignment) {
 CAF_TEST(type_bool) {
   CHECK_EQ(read<bool>("true"), true);
   CHECK_EQ(read<bool>("false"), false);
-  CHECK_EQ(read<bool>("0"), none);
-  CHECK_EQ(read<bool>("1"), none);
+  CHECK_EQ(read<bool>("0"), std::nullopt);
+  CHECK_EQ(read<bool>("1"), std::nullopt);
 }
 
 CAF_TEST(type int8_t) {
@@ -280,7 +281,7 @@ CAF_TEST(type uint32_t) {
 
 CAF_TEST(type uint64_t) {
   CHECK_EQ(unbox(read<uint64_t>("0")), 0u);
-  CHECK_EQ(read<uint64_t>("-1"), none);
+  CHECK_EQ(read<uint64_t>("-1"), std::nullopt);
 }
 
 CAF_TEST(type int64_t) {
@@ -293,14 +294,14 @@ CAF_TEST(type float) {
   CHECK_EQ(unbox(read<float>("-1.0")), -1.0f);
   CHECK_EQ(unbox(read<float>("-0.1")), -0.1f);
   CHECK_EQ(read<float>("0"), 0.f);
-  CHECK_EQ(read<float>("\"0.1\""), none);
+  CHECK_EQ(read<float>("\"0.1\""), std::nullopt);
 }
 
 CAF_TEST(type double) {
   CHECK_EQ(unbox(read<double>("-1.0")), -1.0);
   CHECK_EQ(unbox(read<double>("-0.1")), -0.1);
   CHECK_EQ(read<double>("0"), 0.);
-  CHECK_EQ(read<double>("\"0.1\""), none);
+  CHECK_EQ(read<double>("\"0.1\""), std::nullopt);
 }
 
 CAF_TEST(type string) {
@@ -339,7 +340,8 @@ CAF_TEST(flat CLI parsing with nested categories) {
 }
 
 CAF_TEST(find by long opt) {
-  auto needle = make_config_option<std::string>("?foo", "bar,b", "test option");
+  auto needle = make_config_option<std::string>("?foo"sv, "bar,b"sv,
+                                                "test option"sv);
   auto check = [&](std::vector<string> args, bool found_opt, bool has_opt) {
     auto res = find_by_long_name(needle, std::begin(args), std::end(args));
     CHECK_EQ(res.first != std::end(args), found_opt);

@@ -11,7 +11,9 @@
 #include <iosfwd>
 #include <iterator>
 #include <map>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <vector>
@@ -28,10 +30,8 @@
 #include "caf/fwd.hpp"
 #include "caf/inspector_access.hpp"
 #include "caf/inspector_access_type.hpp"
-#include "caf/optional.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/string_algorithms.hpp"
-#include "caf/string_view.hpp"
 #include "caf/sum_type.hpp"
 #include "caf/sum_type_access.hpp"
 #include "caf/sum_type_token.hpp"
@@ -122,16 +122,16 @@ public:
   // -- parsing ----------------------------------------------------------------
 
   /// Tries to parse a value from given characters.
-  static expected<config_value> parse(string_view::iterator first,
-                                      string_view::iterator last);
+  static expected<config_value> parse(std::string_view::iterator first,
+                                      std::string_view::iterator last);
 
   /// Tries to parse a value from `str`.
-  static expected<config_value> parse(string_view str);
+  static expected<config_value> parse(std::string_view str);
 
   /// Tries to parse a config value (list) from `str` and to convert it to an
   /// allowed input message type for `Handle`.
   template <class Handle>
-  static optional<message> parse_msg(string_view str, const Handle&) {
+  static std::optional<message> parse_msg(std::string_view str, const Handle&) {
     auto allowed = Handle::allowed_inputs();
     return parse_msg_impl(str, allowed);
   }
@@ -249,7 +249,7 @@ public:
   }
 
   template <class T>
-  static constexpr string_view mapped_type_name() {
+  static constexpr std::string_view mapped_type_name() {
     if constexpr (detail::is_complete<caf::type_name<T>>) {
       return caf::type_name<T>::value;
     } else if constexpr (detail::is_list_like_v<T>) {
@@ -264,8 +264,8 @@ private:
 
   static const char* type_name_at_index(size_t index) noexcept;
 
-  static optional<message>
-  parse_msg_impl(string_view str, span<const type_id_list> allowed_types);
+  static std::optional<message>
+  parse_msg_impl(std::string_view str, span<const type_id_list> allowed_types);
 
   // -- auto conversion of related types ---------------------------------------
 
@@ -309,7 +309,7 @@ private:
     data_ = std::string{x};
   }
 
-  void set(string_view x) {
+  void set(std::string_view x) {
     data_ = std::string{x.begin(), x.end()};
   }
 
@@ -500,8 +500,9 @@ expected<T> get_as(const config_value& value) {
 
 /// Customization point for configuring automatic mappings from default value
 /// types to deduced types. For example, `get_or(value, "foo"sv)` must return a
-/// `string` rather than a `string_view`. However, user-defined overloads *must
-/// not* specialize this class for any type from the namespaces `std` or `caf`.
+/// `string` rather than a `string_view`. However, user-defined overloads
+/// *must not* specialize this class for any type from the namespaces `std` or
+/// `caf`.
 template <class T>
 struct get_or_deduction_guide {
   using value_type = T;
@@ -512,9 +513,9 @@ struct get_or_deduction_guide {
 };
 
 template <>
-struct get_or_deduction_guide<string_view> {
+struct get_or_deduction_guide<std::string_view> {
   using value_type = std::string;
-  static value_type convert(string_view str) {
+  static value_type convert(std::string_view str) {
     return {str.begin(), str.end()};
   }
 };

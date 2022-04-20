@@ -14,7 +14,7 @@
 #include "caf/telemetry/metric_family.hpp"
 #include "caf/telemetry/metric_registry.hpp"
 
-using namespace caf::literals;
+using namespace std::literals;
 
 namespace caf::telemetry::collector {
 
@@ -38,7 +38,7 @@ struct ms_timestamp {
 // Converts separators such as '.' and '-' to underlines to follow the
 // Prometheus naming conventions.
 struct separator_to_underline {
-  string_view str;
+  std::string_view str;
 };
 
 void append(prometheus::char_buffer&) {
@@ -46,7 +46,7 @@ void append(prometheus::char_buffer&) {
 }
 
 template <class... Ts>
-void append(prometheus::char_buffer&, string_view, Ts&&...);
+void append(prometheus::char_buffer&, std::string_view, Ts&&...);
 
 template <class... Ts>
 void append(prometheus::char_buffer&, separator_to_underline, Ts&&...);
@@ -77,7 +77,7 @@ template <class... Ts>
 void append(prometheus::char_buffer&, const prometheus::char_buffer&, Ts&&...);
 
 template <class... Ts>
-void append(prometheus::char_buffer& buf, string_view str, Ts&&... xs) {
+void append(prometheus::char_buffer& buf, std::string_view str, Ts&&... xs) {
   buf.insert(buf.end(), str.begin(), str.end());
   append(buf, std::forward<Ts>(xs)...);
 }
@@ -107,12 +107,12 @@ void append(prometheus::char_buffer& buf, char ch, Ts&&... xs) {
 template <class... Ts>
 void append(prometheus::char_buffer& buf, double val, Ts&&... xs) {
   if (std::isnan(val)) {
-    append(buf, "NaN"_sv);
+    append(buf, "NaN"sv);
   } else if (std::isinf(val)) {
     if (std::signbit(val))
-      append(buf, "+Inf"_sv);
+      append(buf, "+Inf"sv);
     else
-      append(buf, "-Inf"_sv);
+      append(buf, "-Inf"sv);
   } else {
     append(buf, std::to_string(val));
   }
@@ -131,10 +131,10 @@ void append(prometheus::char_buffer& buf, const metric_family* family,
             Ts&&... xs) {
   append(buf, separator_to_underline{family->prefix()}, '_',
          separator_to_underline{family->name()});
-  if (family->unit() != "1"_sv)
+  if (family->unit() != "1"sv)
     append(buf, '_', family->unit());
   if (family->is_sum())
-    append(buf, "_total"_sv);
+    append(buf, "_total"sv);
   append(buf, std::forward<Ts>(xs)...);
 }
 
@@ -144,7 +144,7 @@ void append(prometheus::char_buffer& buf, const std::vector<label>& labels,
   if (!labels.empty()) {
     append(buf, '{');
     auto i = labels.begin();
-    append(buf, i->name(), "=\""_sv, i->value(), '"');
+    append(buf, i->name(), "=\""sv, i->value(), '"');
     while (++i != labels.end())
       append(buf, ',', i->name(), "=\"", i->value(), '"');
     append(buf, '}');
@@ -216,8 +216,8 @@ void prometheus::append_histogram(
 
 // -- collect API --------------------------------------------------------------
 
-string_view prometheus::collect_from(const metric_registry& registry,
-                                     timestamp now) {
+std::string_view prometheus::collect_from(const metric_registry& registry,
+                                          timestamp now) {
   if (begin_scrape(now)) {
     registry.collect(*this);
     end_scrape();
@@ -228,7 +228,7 @@ string_view prometheus::collect_from(const metric_registry& registry,
 // -- implementation details ---------------------------------------------------
 
 void prometheus::set_current_family(const metric_family* family,
-                                    string_view prometheus_type) {
+                                    std::string_view prometheus_type) {
   if (current_family_ == family)
     return;
   current_family_ = family;
@@ -243,7 +243,7 @@ void prometheus::set_current_family(const metric_family* family,
 }
 
 void prometheus::append_impl(const metric_family* family,
-                             string_view prometheus_type,
+                             std::string_view prometheus_type,
                              const metric* instance, int64_t value) {
   set_current_family(family, prometheus_type);
   append(buf_, family, instance, ' ', value, ' ', ms_timestamp{last_scrape_},
@@ -251,7 +251,7 @@ void prometheus::append_impl(const metric_family* family,
 }
 
 void prometheus::append_impl(const metric_family* family,
-                             string_view prometheus_type,
+                             std::string_view prometheus_type,
                              const metric* instance, double value) {
   set_current_family(family, prometheus_type);
   append(buf_, family, instance, ' ', value, ' ', ms_timestamp{last_scrape_},

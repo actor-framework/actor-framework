@@ -19,7 +19,6 @@
 #include "caf/deep_to_string.hpp"
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
-#include "caf/optional.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/term.hpp"
 #include "caf/variant.hpp"

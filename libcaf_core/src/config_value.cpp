@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <ostream>
+#include <string_view>
 
 #include "caf/detail/config_consumer.hpp"
 #include "caf/detail/meta_object.hpp"
@@ -20,7 +21,6 @@
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
 #include "caf/settings.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf {
 
@@ -62,8 +62,8 @@ config_value::~config_value() {
 
 // -- parsing ------------------------------------------------------------------
 
-expected<config_value> config_value::parse(string_view::iterator first,
-                                           string_view::iterator last) {
+expected<config_value> config_value::parse(std::string_view::iterator first,
+                                           std::string_view::iterator last) {
   using namespace detail;
   auto i = first;
   // Sanity check.
@@ -94,7 +94,7 @@ expected<config_value> config_value::parse(string_view::iterator first,
   }
 }
 
-expected<config_value> config_value::parse(string_view str) {
+expected<config_value> config_value::parse(std::string_view str) {
   return parse(str.begin(), str.end());
 }
 
@@ -298,12 +298,12 @@ expected<config_value::integer> config_value::to_integer() const {
       if (auto i = x.find("@type");
           i != x.end() && holds_alternative<std::string>(i->second)) {
         const auto& tn = get<std::string>(i->second);
-        string_view valid_types[]
+        std::string_view valid_types[]
           = {type_name_v<int16_t>,  type_name_v<int32_t>,
              type_name_v<int64_t>,  type_name_v<int8_t>,
              type_name_v<uint16_t>, type_name_v<uint32_t>,
              type_name_v<uint64_t>, type_name_v<uint8_t>};
-        auto eq = [&tn](string_view x) { return x == tn; };
+        auto eq = [&tn](std::string_view x) { return x == tn; };
         if (std::any_of(std::begin(valid_types), std::end(valid_types), eq)) {
           if (auto j = x.find("value"); j != x.end()) {
             return j->second.to_integer();
@@ -352,9 +352,9 @@ expected<config_value::real> config_value::to_real() const {
       if (auto i = x.find("@type");
           i != x.end() && holds_alternative<std::string>(i->second)) {
         const auto& tn = get<std::string>(i->second);
-        string_view valid_types[] = {type_name_v<float>, type_name_v<double>,
-                                     type_name_v<long double>};
-        auto eq = [&tn](string_view x) { return x == tn; };
+        std::string_view valid_types[]
+          = {type_name_v<float>, type_name_v<double>, type_name_v<long double>};
+        auto eq = [&tn](std::string_view x) { return x == tn; };
         if (std::any_of(std::begin(valid_types), std::end(valid_types), eq)) {
           if (auto j = x.find("value"); j != x.end()) {
             return j->second.to_real();
@@ -499,8 +499,8 @@ bool config_value::can_convert_to_dictionary() const {
   return visit(f, data_);
 }
 
-optional<message>
-config_value::parse_msg_impl(string_view str,
+std::optional<message>
+config_value::parse_msg_impl(std::string_view str,
                              span<const type_id_list> allowed_types) {
   if (auto val = parse(str)) {
     auto ls_size = val->as_list().size();
@@ -533,7 +533,7 @@ config_value::parse_msg_impl(string_view str,
     if (std::any_of(allowed_types.begin(), allowed_types.end(), converts))
       return {std::move(result)};
   }
-  return {};
+  return std::nullopt;
 }
 
 // -- related free functions ---------------------------------------------------

@@ -51,7 +51,7 @@ public:
 
   static bool valid(const host_id_type& x) noexcept;
 
-  static bool can_parse(string_view str) noexcept;
+  static bool can_parse(std::string_view str) noexcept;
 
   static node_id local(const actor_system_config&);
 
@@ -153,7 +153,7 @@ public:
   void swap(node_id& other) noexcept;
 
   /// Returns whether `parse` would produce a valid node ID.
-  static bool can_parse(string_view str) noexcept;
+  static bool can_parse(std::string_view str) noexcept;
 
   // -- friend functions -------------------------------------------------------
 
@@ -279,11 +279,11 @@ CAF_CORE_EXPORT node_id make_node_id(
 /// @param process_id System-wide unique process identifier.
 /// @param host_hash Unique node ID as hexadecimal string representation.
 /// @relates node_id
-CAF_CORE_EXPORT optional<node_id> make_node_id(uint32_t process_id,
-                                               string_view host_hash);
+CAF_CORE_EXPORT std::optional<node_id> make_node_id(uint32_t process_id,
+                                                    std::string_view host_hash);
 
 /// @relates node_id
-CAF_CORE_EXPORT error parse(string_view str, node_id& dest);
+CAF_CORE_EXPORT error parse(std::string_view str, node_id& dest);
 
 } // namespace caf
 

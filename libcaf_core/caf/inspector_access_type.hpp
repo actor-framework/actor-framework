@@ -12,7 +12,6 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/span.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf {
 

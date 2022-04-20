@@ -15,7 +15,6 @@
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
-#include "caf/byte.hpp"
 #include "caf/ipv4_address.hpp"
 #include "caf/ipv4_endpoint.hpp"
 #include "caf/ipv6_address.hpp"
@@ -27,7 +26,7 @@ namespace {
 
 ipv6_endpoint operator"" _ep(const char* str, size_t size) {
   ipv6_endpoint result;
-  if (auto err = detail::parse(string_view{str, size}, result))
+  if (auto err = detail::parse(std::string_view{str, size}, result))
     CAF_FAIL("unable to parse input: " << err);
   return result;
 }

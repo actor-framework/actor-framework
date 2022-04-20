@@ -12,11 +12,13 @@
 #include "caf/config.hpp"
 #include "caf/raise_error.hpp"
 
+CAF_PUSH_DEPRECATED_WARNING
+
 namespace {
 
 using size_type = caf::string_view::size_type;
 
-} // namespace anonymous
+} // namespace
 
 namespace caf {
 
@@ -121,8 +123,8 @@ int string_view::compare(size_type pos, size_type n,
   return substr(pos, n).compare(str);
 }
 
-int string_view::compare(size_type pos1, size_type n1,
-                         const_pointer str, size_type n2) const noexcept {
+int string_view::compare(size_type pos1, size_type n1, const_pointer str,
+                         size_type n2) const noexcept {
   return substr(pos1, n1).compare(string_view{str, n2});
 }
 
@@ -314,3 +316,5 @@ std::ostream& operator<<(std::ostream& out, caf::string_view str) {
 }
 
 } // namespace std
+
+CAF_POP_WARNINGS

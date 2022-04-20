@@ -8,8 +8,9 @@
 
 #include "core-test.hpp"
 
+#include <string_view>
+
 #include "caf/parser_state.hpp"
-#include "caf/string_view.hpp"
 #include "caf/variant.hpp"
 
 using namespace caf;
@@ -28,17 +29,17 @@ struct unsigned_integer_consumer {
 };
 
 template <class T>
-optional<T> read(string_view str) {
+std::optional<T> read(std::string_view str) {
   unsigned_integer_consumer<T> consumer;
   string_parser_state ps{str.begin(), str.end()};
   detail::parser::read_unsigned_integer(ps, consumer);
   if (ps.code != pec::success)
-    return none;
+    return std::nullopt;
   return consumer.x;
 }
 
 template <class T>
-bool overflow(string_view str) {
+bool overflow(std::string_view str) {
   unsigned_integer_consumer<T> consumer;
   string_parser_state ps{str.begin(), str.end()};
   detail::parser::read_unsigned_integer(ps, consumer);

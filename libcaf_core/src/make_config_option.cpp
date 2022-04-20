@@ -7,7 +7,6 @@
 #include <ctype.h>
 
 #include "caf/config_value.hpp"
-#include "caf/optional.hpp"
 
 namespace caf {
 
@@ -54,9 +53,10 @@ config_value get_timespan(const void* ptr) {
 
 } // namespace
 
-config_option make_negated_config_option(bool& storage, string_view category,
-                                         string_view name,
-                                         string_view description) {
+config_option make_negated_config_option(bool& storage,
+                                         std::string_view category,
+                                         std::string_view name,
+                                         std::string_view description) {
   return {category, name, description, &bool_neg_meta, &storage};
 }
 

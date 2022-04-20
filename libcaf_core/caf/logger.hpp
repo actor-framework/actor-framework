@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <string_view>
 #include <thread>
 #include <type_traits>
 #include <typeinfo>
@@ -28,7 +29,6 @@
 #include "caf/intrusive/fifo_inbox.hpp"
 #include "caf/intrusive/singly_linked.hpp"
 #include "caf/ref_counted.hpp"
-#include "caf/string_view.hpp"
 #include "caf/timestamp.hpp"
 #include "caf/unifyn.hpp"
 
@@ -99,9 +99,9 @@ public:
 
     event& operator=(const event&) = default;
 
-    event(unsigned lvl, unsigned line, string_view cat, string_view full_fun,
-          string_view fun, string_view fn, std::string msg, std::thread::id t,
-          actor_id a, timestamp ts);
+    event(unsigned lvl, unsigned line, std::string_view cat,
+          std::string_view full_fun, std::string_view fun, std::string_view fn,
+          std::string msg, std::thread::id t, actor_id a, timestamp ts);
 
     // -- member variables -----------------------------------------------------
 
@@ -112,16 +112,16 @@ public:
     unsigned line_number;
 
     /// Name of the category (component) logging the event.
-    string_view category_name;
+    std::string_view category_name;
 
     /// Name of the current function as reported by `__PRETTY_FUNCTION__`.
-    string_view pretty_fun;
+    std::string_view pretty_fun;
 
     /// Name of the current function as reported by `__func__`.
-    string_view simple_fun;
+    std::string_view simple_fun;
 
     /// Name of the current file.
-    string_view file_name;
+    std::string_view file_name;
 
     /// User-provided message.
     std::string message;
@@ -181,7 +181,7 @@ public:
 
     line_builder& operator<<(const std::string& str);
 
-    line_builder& operator<<(string_view str);
+    line_builder& operator<<(std::string_view str);
 
     line_builder& operator<<(const char* str);
 
@@ -213,7 +213,7 @@ public:
 
   /// Returns whether the logger is configured to accept input for given
   /// component and log level.
-  bool accepts(unsigned level, string_view component_name);
+  bool accepts(unsigned level, std::string_view component_name);
 
   /// Returns the output format used for the log file.
   const line_format& file_format() const {
@@ -253,7 +253,7 @@ public:
   static line_format parse_format(const std::string& format_str);
 
   /// Skips path in `filename`.
-  static string_view skip_path(string_view filename);
+  static std::string_view skip_path(std::string_view filename);
 
   // -- utility functions ------------------------------------------------------
 

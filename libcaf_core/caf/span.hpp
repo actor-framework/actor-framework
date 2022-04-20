@@ -5,9 +5,9 @@
 #pragma once
 
 #include <array>
+#include <cstddef>
 #include <type_traits>
 
-#include "caf/byte.hpp"
 #include "caf/detail/type_traits.hpp"
 
 namespace caf {
@@ -197,13 +197,13 @@ auto cend(const span<T>& xs) -> decltype(xs.cend()) {
 }
 
 template <class T>
-span<const byte> as_bytes(span<T> xs) {
-  return {reinterpret_cast<const byte*>(xs.data()), xs.size_bytes()};
+span<const std::byte> as_bytes(span<T> xs) {
+  return {reinterpret_cast<const std::byte*>(xs.data()), xs.size_bytes()};
 }
 
 template <class T>
-span<byte> as_writable_bytes(span<T> xs) {
-  return {reinterpret_cast<byte*>(xs.data()), xs.size_bytes()};
+span<std::byte> as_writable_bytes(span<T> xs) {
+  return {reinterpret_cast<std::byte*>(xs.data()), xs.size_bytes()};
 }
 
 /// Convenience function to make using `caf::span` more convenient without the

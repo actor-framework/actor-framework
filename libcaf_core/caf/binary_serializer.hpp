@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/squashed_int.hpp"
@@ -32,7 +31,7 @@ public:
 
   using container_type = byte_buffer;
 
-  using value_type = byte;
+  using value_type = std::byte;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -84,7 +83,7 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
-  constexpr bool begin_object(type_id_t, string_view) noexcept {
+  constexpr bool begin_object(type_id_t, std::string_view) noexcept {
     return true;
   }
 
@@ -92,16 +91,16 @@ public:
     return true;
   }
 
-  constexpr bool begin_field(string_view) noexcept {
+  constexpr bool begin_field(std::string_view) noexcept {
     return true;
   }
 
-  bool begin_field(string_view, bool is_present);
+  bool begin_field(std::string_view, bool is_present);
 
-  bool begin_field(string_view, span<const type_id_t> types, size_t index);
+  bool begin_field(std::string_view, span<const type_id_t> types, size_t index);
 
-  bool begin_field(string_view, bool is_present, span<const type_id_t> types,
-                   size_t index);
+  bool begin_field(std::string_view, bool is_present,
+                   span<const type_id_t> types, size_t index);
 
   constexpr bool end_field() {
     return true;
@@ -137,7 +136,7 @@ public:
     return end_sequence();
   }
 
-  bool value(byte x);
+  bool value(std::byte x);
 
   bool value(bool x);
 
@@ -168,13 +167,13 @@ public:
 
   bool value(long double x);
 
-  bool value(string_view x);
+  bool value(std::string_view x);
 
   bool value(const std::u16string& x);
 
   bool value(const std::u32string& x);
 
-  bool value(span<const byte> x);
+  bool value(span<const std::byte> x);
 
   bool value(const std::vector<bool>& x);
 

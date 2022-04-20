@@ -16,7 +16,7 @@ namespace {
 
 struct fixture {
   template <class T>
-  void add_test_case(string_view input, T val) {
+  void add_test_case(std::string_view input, T val) {
     auto f = [this, input, obj{std::move(val)}]() -> bool {
       auto tmp = T{};
       auto res = CHECK(reader.load(input))    // parse JSON

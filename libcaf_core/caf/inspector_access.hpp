@@ -7,6 +7,7 @@
 #include <chrono>
 #include <cstddef>
 #include <memory>
+#include <string_view>
 #include <tuple>
 #include <utility>
 
@@ -158,8 +159,8 @@ bool load(Inspector& f, T& x) {
 }
 
 template <class Inspector, class T, class IsValid, class SyncValue>
-bool load_field(Inspector& f, string_view field_name, T& x, IsValid& is_valid,
-                SyncValue& sync_value) {
+bool load_field(Inspector& f, std::string_view field_name, T& x,
+                IsValid& is_valid, SyncValue& sync_value) {
   using impl = std::conditional_t<is_complete<inspector_access<T>>, // if
                                   inspector_access<T>,              // then
                                   inspector_access_base<T>>;        // else
@@ -168,8 +169,9 @@ bool load_field(Inspector& f, string_view field_name, T& x, IsValid& is_valid,
 
 template <class Inspector, class T, class IsValid, class SyncValue,
           class SetFallback>
-bool load_field(Inspector& f, string_view field_name, T& x, IsValid& is_valid,
-                SyncValue& sync_value, SetFallback& set_fallback) {
+bool load_field(Inspector& f, std::string_view field_name, T& x,
+                IsValid& is_valid, SyncValue& sync_value,
+                SetFallback& set_fallback) {
   using impl = std::conditional_t<is_complete<inspector_access<T>>, // if
                                   inspector_access<T>,              // then
                                   inspector_access_base<T>>;        // else
@@ -263,7 +265,7 @@ bool save(Inspector& f, const T& x) {
 }
 
 template <class Inspector, class T>
-bool save_field(Inspector& f, string_view field_name, T& x) {
+bool save_field(Inspector& f, std::string_view field_name, T& x) {
   using impl = std::conditional_t<is_complete<inspector_access<T>>, // if
                                   inspector_access<T>,              // then
                                   inspector_access_base<T>>;        // else
@@ -271,8 +273,8 @@ bool save_field(Inspector& f, string_view field_name, T& x) {
 }
 
 template <class Inspector, class IsPresent, class Get>
-bool save_field(Inspector& f, string_view field_name, IsPresent& is_present,
-                Get& get) {
+bool save_field(Inspector& f, std::string_view field_name,
+                IsPresent& is_present, Get& get) {
   using T = std::decay_t<decltype(get())>;
   using impl = std::conditional_t<is_complete<inspector_access<T>>, // if
                                   inspector_access<T>,              // then
@@ -304,6 +306,8 @@ struct optional_inspector_traits_base {
   }
 };
 
+CAF_PUSH_DEPRECATED_WARNING
+
 template <class T>
 struct optional_inspector_traits;
 
@@ -318,6 +322,8 @@ struct optional_inspector_traits<optional<T>> : optional_inspector_traits_base {
     container.emplace(std::forward<Ts>(xs)...);
   }
 };
+
+CAF_POP_WARNINGS
 
 template <class T>
 struct optional_inspector_traits<intrusive_ptr<T>>
@@ -394,20 +400,20 @@ struct optional_inspector_access {
 
   template <class Inspector>
   static bool
-  save_field(Inspector& f, string_view field_name, container_type& x) {
+  save_field(Inspector& f, std::string_view field_name, container_type& x) {
     auto is_present = [&x] { return static_cast<bool>(x); };
     auto get = [&x]() -> decltype(auto) { return traits::deref_save(x); };
     return detail::save_field(f, field_name, is_present, get);
   }
 
   template <class Inspector, class IsPresent, class Get>
-  static bool save_field(Inspector& f, string_view field_name,
+  static bool save_field(Inspector& f, std::string_view field_name,
                          IsPresent& is_present, Get& get) {
     return detail::save_field(f, field_name, is_present, get);
   }
 
   template <class Inspector, class IsValid, class SyncValue>
-  static bool load_field(Inspector& f, string_view field_name,
+  static bool load_field(Inspector& f, std::string_view field_name,
                          container_type& x, IsValid& is_valid,
                          SyncValue& sync_value) {
     traits::emplace(x);
@@ -417,7 +423,7 @@ struct optional_inspector_access {
   }
 
   template <class Inspector, class IsValid, class SyncValue, class SetFallback>
-  static bool load_field(Inspector& f, string_view field_name,
+  static bool load_field(Inspector& f, std::string_view field_name,
                          container_type& x, IsValid& is_valid,
                          SyncValue& sync_value, SetFallback& set_fallback) {
     traits::emplace(x);
@@ -428,10 +434,14 @@ struct optional_inspector_access {
 
 // -- inspection support for optional<T> ---------------------------------------
 
+CAF_PUSH_DEPRECATED_WARNING
+
 template <class T>
 struct inspector_access<optional<T>> : optional_inspector_access<optional<T>> {
   // nop
 };
+
+CAF_POP_WARNINGS
 
 #ifdef CAF_HAS_STD_OPTIONAL
 
@@ -539,7 +549,8 @@ struct variant_inspector_access {
   }
 
   template <class Inspector>
-  static bool save_field(Inspector& f, string_view field_name, value_type& x) {
+  static bool
+  save_field(Inspector& f, std::string_view field_name, value_type& x) {
     auto g = [&f](auto& y) { return detail::save(f, y); };
     return f.begin_field(field_name, make_span(traits::allowed_types),
                          traits::type_index(x)) //
@@ -548,7 +559,7 @@ struct variant_inspector_access {
   }
 
   template <class Inspector, class IsPresent, class Get>
-  static bool save_field(Inspector& f, string_view field_name,
+  static bool save_field(Inspector& f, std::string_view field_name,
                          IsPresent& is_present, Get& get) {
     auto allowed_types = make_span(traits::allowed_types);
     if (is_present()) {
@@ -564,7 +575,7 @@ struct variant_inspector_access {
   }
 
   template <class Inspector>
-  static bool load_variant_value(Inspector& f, string_view field_name,
+  static bool load_variant_value(Inspector& f, std::string_view field_name,
                                  value_type& x, type_id_t runtime_type) {
     auto res = false;
     auto type_found = traits::load(runtime_type, [&](auto& tmp) {
@@ -575,41 +586,43 @@ struct variant_inspector_access {
       return;
     });
     if (!type_found)
-      f.emplace_error(sec::invalid_field_type, to_string(field_name));
+      f.emplace_error(sec::invalid_field_type, std::string{field_name});
     return res;
   }
 
   template <class Inspector, class IsValid, class SyncValue>
-  static bool load_field(Inspector& f, string_view field_name, value_type& x,
-                         IsValid& is_valid, SyncValue& sync_value) {
+  static bool load_field(Inspector& f, std::string_view field_name,
+                         value_type& x, IsValid& is_valid,
+                         SyncValue& sync_value) {
     size_t type_index = std::numeric_limits<size_t>::max();
     auto allowed_types = make_span(traits::allowed_types);
     if (!f.begin_field(field_name, allowed_types, type_index))
       return false;
     if (type_index >= allowed_types.size()) {
-      f.emplace_error(sec::invalid_field_type, to_string(field_name));
+      f.emplace_error(sec::invalid_field_type, std::string{field_name});
       return false;
     }
     auto runtime_type = allowed_types[type_index];
     if (!load_variant_value(f, field_name, x, runtime_type))
       return false;
     if (!is_valid(x)) {
-      f.emplace_error(sec::field_invariant_check_failed, to_string(field_name));
+      f.emplace_error(sec::field_invariant_check_failed,
+                      std::string{field_name});
       return false;
     }
     if (!sync_value()) {
       if (!f.get_error())
         f.emplace_error(sec::field_value_synchronization_failed,
-                        to_string(field_name));
+                        std::string{field_name});
       return false;
     }
     return f.end_field();
   }
 
   template <class Inspector, class IsValid, class SyncValue, class SetFallback>
-  static bool load_field(Inspector& f, string_view field_name, value_type& x,
-                         IsValid& is_valid, SyncValue& sync_value,
-                         SetFallback& set_fallback) {
+  static bool load_field(Inspector& f, std::string_view field_name,
+                         value_type& x, IsValid& is_valid,
+                         SyncValue& sync_value, SetFallback& set_fallback) {
     bool is_present = false;
     auto allowed_types = make_span(traits::allowed_types);
     size_t type_index = std::numeric_limits<size_t>::max();
@@ -617,7 +630,7 @@ struct variant_inspector_access {
       return false;
     if (is_present) {
       if (type_index >= allowed_types.size()) {
-        f.emplace_error(sec::invalid_field_type, to_string(field_name));
+        f.emplace_error(sec::invalid_field_type, std::string{field_name});
         return false;
       }
       auto runtime_type = allowed_types[type_index];
@@ -625,13 +638,13 @@ struct variant_inspector_access {
         return false;
       if (!is_valid(x)) {
         f.emplace_error(sec::field_invariant_check_failed,
-                        to_string(field_name));
+                        std::string{field_name});
         return false;
       }
       if (!sync_value()) {
         if (!f.get_error())
           f.emplace_error(sec::field_value_synchronization_failed,
-                          to_string(field_name));
+                          std::string{field_name});
         return false;
       }
     } else {

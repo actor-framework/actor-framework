@@ -2,9 +2,10 @@
 
 #pragma once
 
-#include "caf/optional.hpp"
 #include "caf/type_id.hpp"
 #include "caf/variant.hpp"
+
+#include <optional>
 
 #include "nasty.hpp"
 
@@ -25,7 +26,7 @@ struct basics;
   namespace caf {                                                              \
   template <>                                                                  \
   struct type_name<type> {                                                     \
-    static constexpr string_view value = #type;                                \
+    static constexpr std::string_view value = #type;                           \
   };                                                                           \
   }
 
@@ -89,7 +90,7 @@ bool inspect(Inspector& f, duration& x) {
 
 struct person {
   std::string name;
-  caf::optional<std::string> phone;
+  std::optional<std::string> phone;
 };
 
 template <class Inspector>

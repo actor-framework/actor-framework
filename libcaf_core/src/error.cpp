@@ -72,7 +72,7 @@ std::string to_string(const error& x) {
   auto append = [&result](const_void_ptr ptr,
                           const_meta_ptr meta) -> const_void_ptr {
     meta->stringify(result, ptr);
-    return static_cast<const byte*>(ptr) + meta->padded_size;
+    return static_cast<const std::byte*>(ptr) + meta->padded_size;
   };
   auto code = x.code();
   append(&code, detail::global_meta_object(x.category()));

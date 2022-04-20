@@ -271,7 +271,7 @@ enum class level : uint8_t { all, trace, debug, warning, error };
 
 std::string to_string(level);
 
-bool from_string(caf::string_view, level&);
+bool from_string(std::string_view, level&);
 
 bool from_integer(uint8_t, level&);
 
@@ -380,7 +380,7 @@ bool inspect(Inspector& f, widget& x) {
 
 struct dummy_user {
   std::string name;
-  caf::optional<std::string> nickname;
+  std::optional<std::string> nickname;
 };
 
 template <class Inspector>

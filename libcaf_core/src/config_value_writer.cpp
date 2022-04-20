@@ -52,7 +52,7 @@ config_value_writer::~config_value_writer() {
 
 // -- interface functions ------------------------------------------------------
 
-bool config_value_writer::begin_object(type_id_t type, string_view) {
+bool config_value_writer::begin_object(type_id_t type, std::string_view) {
   CHECK_NOT_EMPTY();
   auto f = detail::make_overload(
     [this](config_value* x) {
@@ -77,7 +77,7 @@ bool config_value_writer::begin_object(type_id_t type, string_view) {
       auto [iter, added] = fld.parent->emplace(fld.name, settings{});
       if (!added) {
         emplace_error(sec::runtime_error,
-                      "field already defined: " + to_string(fld.name));
+                      "field already defined: " + std::string{fld.name});
         return false;
       }
       auto obj = std::addressof(get<settings>(iter->second));
@@ -104,29 +104,29 @@ bool config_value_writer::end_object() {
   return true;
 }
 
-bool config_value_writer::begin_field(string_view name) {
+bool config_value_writer::begin_field(std::string_view name) {
   SCOPE(settings*);
-  st_.push(present_field{top, name, string_view{}});
+  st_.push(present_field{top, name, std::string_view{}});
   return true;
 }
 
-bool config_value_writer::begin_field(string_view name, bool is_present) {
+bool config_value_writer::begin_field(std::string_view name, bool is_present) {
   SCOPE(settings*);
   if (is_present)
-    st_.push(present_field{top, name, string_view{}});
+    st_.push(present_field{top, name, std::string_view{}});
   else
     st_.push(absent_field{});
   return true;
 }
 
-bool config_value_writer::begin_field(string_view name,
+bool config_value_writer::begin_field(std::string_view name,
                                       span<const type_id_t> types,
                                       size_t index) {
   SCOPE(settings*);
   if (index >= types.size()) {
     emplace_error(sec::invalid_argument,
                   "index out of range in optional variant field "
-                    + to_string(name));
+                    + std::string{name});
     return false;
   }
   auto tn = query_type_name(types[index]);
@@ -139,7 +139,7 @@ bool config_value_writer::begin_field(string_view name,
   return true;
 }
 
-bool config_value_writer::begin_field(string_view name, bool is_present,
+bool config_value_writer::begin_field(std::string_view name, bool is_present,
                                       span<const type_id_t> types,
                                       size_t index) {
   if (is_present)
@@ -230,7 +230,7 @@ bool config_value_writer::begin_sequence(size_t) {
       auto [iter, added] = fld.parent->emplace(fld.name, config_value::list{});
       if (!added) {
         emplace_error(sec::runtime_error,
-                      "field already defined: " + to_string(fld.name));
+                      "field already defined: " + std::string{fld.name});
         return false;
       }
       st_.push(std::addressof(get<config_value::list>(iter->second)));
@@ -276,7 +276,7 @@ bool config_value_writer::begin_associative_array(size_t) {
                                                config_value{settings{}});
       if (!added) {
         emplace_error(sec::runtime_error,
-                      "field already defined: " + to_string(fld.name));
+                      "field already defined: " + std::string{fld.name});
         return false;
       }
       if (!fld.type.empty()) {
@@ -313,7 +313,7 @@ bool config_value_writer::end_associative_array() {
   return true;
 }
 
-bool config_value_writer::value(byte x) {
+bool config_value_writer::value(std::byte x) {
   return push(config_value{static_cast<config_value::integer>(x)});
 }
 
@@ -370,8 +370,8 @@ bool config_value_writer::value(long double x) {
   return push(config_value{std::to_string(x)});
 }
 
-bool config_value_writer::value(string_view x) {
-  return push(config_value{to_string(x)});
+bool config_value_writer::value(std::string_view x) {
+  return push(config_value{std::string{x}});
 }
 
 bool config_value_writer::value(const std::u16string&) {
@@ -384,7 +384,7 @@ bool config_value_writer::value(const std::u32string&) {
   return false;
 }
 
-bool config_value_writer::value(span<const byte> x) {
+bool config_value_writer::value(span<const std::byte> x) {
   std::string str;
   detail::append_hex(str, x.data(), x.size());
   return push(config_value{std::move(str)});
@@ -410,7 +410,7 @@ bool config_value_writer::push(config_value&& x) {
       auto [iter, added] = fld.parent->emplace(fld.name, std::move(x));
       if (!added) {
         emplace_error(sec::runtime_error,
-                      "field already defined: " + to_string(fld.name));
+                      "field already defined: " + std::string{fld.name});
         return false;
       }
       if (!fld.type.empty()) {

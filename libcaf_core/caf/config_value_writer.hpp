@@ -22,8 +22,8 @@ public:
 
   struct present_field {
     settings* parent;
-    string_view name;
-    string_view type;
+    std::string_view name;
+    std::string_view type;
   };
 
   struct absent_field {};
@@ -54,18 +54,18 @@ public:
 
   // -- interface functions ----------------------------------------------------
 
-  bool begin_object(type_id_t type, string_view name) override;
+  bool begin_object(type_id_t type, std::string_view name) override;
 
   bool end_object() override;
 
-  bool begin_field(string_view) override;
+  bool begin_field(std::string_view) override;
 
-  bool begin_field(string_view name, bool is_present) override;
+  bool begin_field(std::string_view name, bool is_present) override;
 
-  bool begin_field(string_view name, span<const type_id_t> types,
+  bool begin_field(std::string_view name, span<const type_id_t> types,
                    size_t index) override;
 
-  bool begin_field(string_view name, bool is_present,
+  bool begin_field(std::string_view name, bool is_present,
                    span<const type_id_t> types, size_t index) override;
 
   bool end_field() override;
@@ -86,7 +86,7 @@ public:
 
   bool end_associative_array() override;
 
-  bool value(byte x) override;
+  bool value(std::byte x) override;
 
   bool value(bool x) override;
 
@@ -112,13 +112,13 @@ public:
 
   bool value(long double x) override;
 
-  bool value(string_view x) override;
+  bool value(std::string_view x) override;
 
   bool value(const std::u16string& x) override;
 
   bool value(const std::u32string& x) override;
 
-  bool value(span<const byte> x) override;
+  bool value(span<const std::byte> x) override;
 
 private:
   bool push(config_value&& x);

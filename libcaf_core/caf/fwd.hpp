@@ -4,8 +4,10 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <string_view>
 #include <vector>
 
 #include "caf/detail/core_export.hpp"
@@ -25,7 +27,7 @@ template <class> class dictionary;
 template <class> class expected;
 template <class> class intrusive_cow_ptr;
 template <class> class intrusive_ptr;
-template <class> class optional;
+template <class> class [[deprecated ("use std::optional instead")]] optional;
 template <class> class param;
 template <class> class span;
 template <class> class weak_intrusive_ptr;
@@ -63,6 +65,7 @@ template <class...> class variant;
 
 // -- classes ------------------------------------------------------------------
 
+class [[deprecated("use std::string_view instead")]] string_view;
 class [[nodiscard]] error;
 class abstract_actor;
 class abstract_group;
@@ -117,7 +120,6 @@ class scheduled_actor;
 class scoped_actor;
 class serializer;
 class skip_t;
-class string_view;
 class tracing_data;
 class tracing_data_factory;
 class type_id_list;
@@ -146,16 +148,17 @@ struct unit_t;
 // -- free template functions --------------------------------------------------
 
 template <class T>
-config_option make_config_option(string_view category, string_view name,
-                                 string_view description);
+config_option make_config_option(std::string_view category,
+                                 std::string_view name,
+                                 std::string_view description);
 
 template <class T>
-config_option make_config_option(T& storage, string_view category,
-                                 string_view name, string_view description);
+config_option make_config_option(T& storage, std::string_view category,
+                                 std::string_view name,
+                                 std::string_view description);
 
 // -- enums --------------------------------------------------------------------
 
-enum class byte : uint8_t;
 enum class exit_reason : uint8_t;
 enum class invoke_message_result;
 enum class pec : uint8_t;
@@ -164,9 +167,10 @@ enum class sec : uint8_t;
 // -- aliases ------------------------------------------------------------------
 
 using actor_id = uint64_t;
-using byte_buffer = std::vector<byte>;
-using byte_span = span<byte>;
-using const_byte_span = span<const byte>;
+using byte [[deprecated("use std::byte instead")]] = std::byte;
+using byte_buffer = std::vector<std::byte>;
+using byte_span = span<std::byte>;
+using const_byte_span = span<const std::byte>;
 using cow_string = basic_cow_string<char>;
 using cow_u16string = basic_cow_string<char16_t>;
 using cow_u32string = basic_cow_string<char32_t>;

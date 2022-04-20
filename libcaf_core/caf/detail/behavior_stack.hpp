@@ -14,7 +14,6 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/mailbox_element.hpp"
 #include "caf/message_id.hpp"
-#include "caf/optional.hpp"
 
 namespace caf::detail {
 

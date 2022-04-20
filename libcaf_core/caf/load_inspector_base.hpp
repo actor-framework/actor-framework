@@ -29,7 +29,7 @@ public:
                                     type_name_or_anonymous<T>(), dptr()};
   }
 
-  constexpr auto virtual_object(string_view type_name) noexcept {
+  constexpr auto virtual_object(std::string_view type_name) noexcept {
     return super::object_t<Subtype>{invalid_type_id, type_name, dptr()};
   }
 

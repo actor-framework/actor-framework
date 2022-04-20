@@ -28,7 +28,7 @@ constexpr const char encoding_tbl[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                       "0123456789+/";
 
 template <class Storage>
-void encode_impl(string_view in, Storage& out) {
+void encode_impl(std::string_view in, Storage& out) {
   using value_type = typename Storage::value_type;
   // Consumes three characters from the input at once.
   auto consume = [&out](const char* str) {
@@ -42,13 +42,14 @@ void encode_impl(string_view in, Storage& out) {
       out.push_back(static_cast<value_type>(encoding_tbl[x]));
   };
   // Iterate the input in chunks of three bytes.
-  auto i = in.begin();
-  for (; std::distance(i, in.end()) >= 3; i += 3)
-    consume(i);
+  auto ptr = in.data();
+  const auto end = ptr + in.size();
+  for (; std::distance(ptr, end) >= 3; ptr += 3)
+    consume(ptr);
   // Deal with any leftover: pad the input with zeros and then fixup the output.
-  if (i != in.end()) {
+  if (ptr != end) {
     char buf[] = {0, 0, 0};
-    std::copy(i, in.end(), buf);
+    std::copy(ptr, end, buf);
     consume(buf);
     for (auto j = out.end() - (3 - (in.size() % 3)); j != out.end(); ++j)
       *j = static_cast<value_type>('=');
@@ -56,7 +57,7 @@ void encode_impl(string_view in, Storage& out) {
 }
 
 template <class Storage>
-bool decode_impl(string_view in, Storage& out) {
+bool decode_impl(std::string_view in, Storage& out) {
   using value_type = typename Storage::value_type;
   // Short-circuit empty inputs.
   if (in.empty())
@@ -88,17 +89,17 @@ bool decode_impl(string_view in, Storage& out) {
   return true;
 }
 
-string_view as_string_view(const_byte_span bytes) {
+std::string_view as_string_view(const_byte_span bytes) {
   return {reinterpret_cast<const char*>(bytes.data()), bytes.size()};
 }
 
 } // namespace
 
-void base64::encode(string_view str, std::string& out) {
+void base64::encode(std::string_view str, std::string& out) {
   encode_impl(str, out);
 }
 
-void base64::encode(string_view str, byte_buffer& out) {
+void base64::encode(std::string_view str, byte_buffer& out) {
   encode_impl(str, out);
 }
 
@@ -110,11 +111,11 @@ void base64::encode(const_byte_span bytes, byte_buffer& out) {
   encode_impl(as_string_view(bytes), out);
 }
 
-bool base64::decode(string_view in, std::string& out) {
+bool base64::decode(std::string_view in, std::string& out) {
   return decode_impl(in, out);
 }
 
-bool base64::decode(string_view in, byte_buffer& out) {
+bool base64::decode(std::string_view in, byte_buffer& out) {
   return decode_impl(in, out);
 }
 

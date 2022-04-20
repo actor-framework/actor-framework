@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include <cstddef>
 #include <memory>
 #include <new>
 
-#include "caf/byte.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/padded_size.hpp"
 
@@ -25,14 +25,16 @@ public:
 
   /// Uses placement new to create a copy of the wrapped value at given memory
   /// region.
-  /// @returns the past-the-end pointer of the object, i.e., the first byte for
+  /// @returns the past-the-end pointer of the object, i.e., the first byte
+  /// for
   ///          the *next* object.
-  virtual byte* copy_init(byte* storage) const = 0;
+  virtual std::byte* copy_init(std::byte* storage) const = 0;
 
   /// Uses placement new to move the wrapped value to given memory region.
-  /// @returns the past-the-end pointer of the object, i.e., the first byte for
+  /// @returns the past-the-end pointer of the object, i.e., the first byte
+  /// for
   ///          the *next* object.
-  virtual byte* move_init(byte* storage) = 0;
+  virtual std::byte* move_init(std::byte* storage) = 0;
 };
 
 template <class T>
@@ -56,12 +58,12 @@ public:
   message_builder_element_impl& operator=(const message_builder_element_impl&)
     = delete;
 
-  byte* copy_init(byte* storage) const override {
+  std::byte* copy_init(std::byte* storage) const override {
     new (storage) T(value_);
     return storage + padded_size_v<T>;
   }
 
-  byte* move_init(byte* storage) override {
+  std::byte* move_init(std::byte* storage) override {
     new (storage) T(std::move(value_));
     return storage + padded_size_v<T>;
   }

@@ -21,7 +21,7 @@ std::string to_string(level lvl) {
   }
 }
 
-bool from_string(caf::string_view str, level& lvl) {
+bool from_string(std::string_view str, level& lvl) {
   auto set = [&](level value) {
     lvl = value;
     return true;

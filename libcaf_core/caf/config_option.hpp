@@ -5,12 +5,13 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
+#include <string_view>
 
 #include "caf/detail/core_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/string_algorithms.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf {
 
@@ -34,14 +35,15 @@ public:
     config_value (*get)(const void*);
 
     /// Human-readable name of the option's type.
-    string_view type_name;
+    std::string_view type_name;
   };
 
   // -- constructors, destructors, and assignment operators --------------------
 
   ///  Constructs a config option.
-  config_option(string_view category, string_view name, string_view description,
-                const meta_state* meta, void* value = nullptr);
+  config_option(std::string_view category, std::string_view name,
+                std::string_view description, const meta_state* meta,
+                void* value = nullptr);
 
   config_option(const config_option&);
 
@@ -58,19 +60,19 @@ public:
   // -- properties -------------------------------------------------------------
 
   /// Returns the category of the option.
-  string_view category() const noexcept;
+  std::string_view category() const noexcept;
 
   /// Returns the name of the option.
-  string_view long_name() const noexcept;
+  std::string_view long_name() const noexcept;
 
   /// Returns (optional) one-letter short names of the option.
-  string_view short_names() const noexcept;
+  std::string_view short_names() const noexcept;
 
   /// Returns a human-readable description of the option.
-  string_view description() const noexcept;
+  std::string_view description() const noexcept;
 
   /// Returns the full name for this config option as "<category>.<long name>".
-  string_view full_name() const noexcept;
+  std::string_view full_name() const noexcept;
 
   /// Synchronizes the value of this config option with `x` and vice versa.
   ///
@@ -82,7 +84,7 @@ public:
   error sync(config_value& x) const;
 
   /// Returns a human-readable representation of this option's expected type.
-  string_view type_name() const noexcept;
+  std::string_view type_name() const noexcept;
 
   /// Returns whether this config option stores a boolean flag.
   bool is_flag() const noexcept;
@@ -91,7 +93,7 @@ public:
   bool has_flat_cli_name() const noexcept;
 
 private:
-  string_view buf_slice(size_t from, size_t to) const noexcept;
+  std::string_view buf_slice(size_t from, size_t to) const noexcept;
 
   std::unique_ptr<char[]> buf_;
   uint16_t category_separator_;
@@ -104,15 +106,16 @@ private:
 
 /// Finds `config_option` string with a matching long name in (`first`, `last`],
 /// where each entry is a pointer to a string. Returns a `ForwardIterator` to
-/// the match and a `caf::string_view` of the option value if the entry is found
-/// and a `ForwardIterator` to `last` with an empty `string_view` otherwise.
+/// the match and a `string_view` of the option value if the entry is
+/// found and a `ForwardIterator` to `last` with an empty `string_view`
+/// otherwise.
 template <class ForwardIterator, class Sentinel>
-std::pair<ForwardIterator, string_view>
+std::pair<ForwardIterator, std::string_view>
 find_by_long_name(const config_option& x, ForwardIterator first,
                   Sentinel last) {
   auto long_name = x.long_name();
   for (; first != last; ++first) {
-    string_view str{*first};
+    std::string_view str{*first};
     // Make sure this is a long option starting with "--".
     if (!starts_with(str, "--"))
       continue;
@@ -131,7 +134,7 @@ find_by_long_name(const config_option& x, ForwardIterator first,
     str.remove_prefix(1);
     return {first, str};
   }
-  return {first, string_view{}};
+  return {first, std::string_view{}};
 }
 
 } // namespace caf

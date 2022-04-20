@@ -50,7 +50,7 @@ void read_number(State& ps, Consumer& consumer, EnableFloat = {},
     if (ps.code <= pec::trailing_character)
       consumer.value(result);
   });
-  using odbl = optional<double>;
+  using odbl = std::optional<double>;
   // clang-format off
   // Definition of our parser FSM.
   start();
@@ -179,8 +179,8 @@ void read_number(State& ps, Consumer& consumer, EnableFloat = {},
 
 template <class State, class Consumer>
 void read_number_range(State& ps, Consumer& consumer, int64_t begin) {
-  optional<int64_t> end;
-  optional<int64_t> step;
+  std::optional<int64_t> end;
+  std::optional<int64_t> step;
   auto end_consumer = make_consumer(end);
   auto step_consumer = make_consumer(step);
   auto generate_2 = [&](int64_t n, int64_t m) {

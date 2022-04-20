@@ -9,12 +9,12 @@
 #include "core-test.hpp"
 #include "nasty.hpp"
 
+#include <cstddef>
 #include <cstring>
 #include <vector>
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/timestamp.hpp"
 
@@ -22,12 +22,12 @@ using namespace caf;
 
 namespace {
 
-byte operator"" _b(unsigned long long int x) {
-  return static_cast<byte>(x);
+std::byte operator"" _b(unsigned long long int x) {
+  return static_cast<std::byte>(x);
 }
 
-byte operator"" _b(char x) {
-  return static_cast<byte>(x);
+std::byte operator"" _b(char x) {
+  return static_cast<std::byte>(x);
 }
 
 struct arr {
@@ -44,14 +44,14 @@ bool inspect(Inspector& f, arr& x) {
 
 struct fixture {
   template <class... Ts>
-  void load(const std::vector<byte>& buf, Ts&... xs) {
+  void load(const std::vector<std::byte>& buf, Ts&... xs) {
     binary_deserializer source{nullptr, buf};
     if (!(source.apply(xs) && ...))
       CAF_FAIL("binary_deserializer failed to load: " << source.get_error());
   }
 
   template <class T>
-  auto load(const std::vector<byte>& buf) {
+  auto load(const std::vector<std::byte>& buf) {
     auto result = T{};
     load(buf, result);
     return result;

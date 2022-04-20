@@ -9,7 +9,6 @@
 #include "caf/detail/implicit_conversions.hpp"
 #include "caf/expected.hpp"
 #include "caf/fwd.hpp"
-#include "caf/optional.hpp"
 #include "caf/replies_to.hpp"
 
 namespace caf::detail {

@@ -85,7 +85,7 @@ void instance::handle_heartbeat(execution_unit* ctx) {
   }
 }
 
-optional<routing_table::route> instance::lookup(const node_id& target) {
+std::optional<routing_table::route> instance::lookup(const node_id& target) {
   return tbl_.lookup(target);
 }
 
@@ -112,8 +112,8 @@ void instance::add_published_actor(uint16_t port,
   swap(entry.second, published_interface);
 }
 
-size_t
-instance::remove_published_actor(uint16_t port, removed_published_actor* cb) {
+size_t instance::remove_published_actor(uint16_t port,
+                                        removed_published_actor* cb) {
   CAF_LOG_TRACE(CAF_ARG(port));
   auto i = published_actors_.find(port);
   if (i == published_actors_.end())
@@ -223,7 +223,7 @@ void instance::write(execution_unit* ctx, byte_buffer& buf, header& hdr,
 }
 
 void instance::write_server_handshake(execution_unit* ctx, byte_buffer& out_buf,
-                                      optional<uint16_t> port) {
+                                      std::optional<uint16_t> port) {
   CAF_LOG_TRACE(CAF_ARG(port));
   using namespace detail;
   published_actor* pa = nullptr;
@@ -240,7 +240,7 @@ void instance::write_server_handshake(execution_unit* ctx, byte_buffer& out_buf,
                                        "caf.middleman.app-identifiers"))
       app_ids = std::move(*ids);
     else
-      app_ids.emplace_back(to_string(defaults::middleman::app_identifier));
+      app_ids.emplace_back(std::string{defaults::middleman::app_identifier});
     auto aid = invalid_actor_id;
     auto iface = std::set<std::string>{};
     if (pa != nullptr && pa->first != nullptr) {
@@ -339,7 +339,8 @@ connection_state instance::handle(execution_unit* ctx, connection_handle hdl,
                                         "caf.middleman.app-identifiers"))
         whitelist = std::move(*ls);
       else
-        whitelist.emplace_back(to_string(defaults::middleman::app_identifier));
+        whitelist.emplace_back(
+          std::string{defaults::middleman::app_identifier});
       auto i = std::find_first_of(app_ids.begin(), app_ids.end(),
                                   whitelist.begin(), whitelist.end());
       if (i == app_ids.end()) {
@@ -521,7 +522,7 @@ void instance::forward(execution_unit* ctx, const node_id& dest_node,
       CAF_LOG_ERROR("unable to serialize BASP header:" << sink.get_error());
       return;
     }
-    sink.value(span<const byte>{payload.data(), payload.size()});
+    sink.value(span<const std::byte>{payload.data(), payload.size()});
     flush(*path);
   } else {
     CAF_LOG_WARNING("cannot forward message, no route to destination");

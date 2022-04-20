@@ -5,6 +5,7 @@
 #include "caf/ipv4_address.hpp"
 
 #include <cstring>
+#include <string_view>
 
 #include "caf/detail/network_order.hpp"
 #include "caf/detail/parser/read_ipv4_address.hpp"
@@ -12,7 +13,6 @@
 #include "caf/message.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf {
 
@@ -82,7 +82,7 @@ std::string to_string(const ipv4_address& x) {
   return result;
 }
 
-error parse(string_view str, ipv4_address& dest) {
+error parse(std::string_view str, ipv4_address& dest) {
   using namespace detail;
   ipv4_address_consumer f{dest};
   string_parser_state res{str.begin(), str.end()};

@@ -8,7 +8,6 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/none.hpp"
-#include "caf/optional.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/skip.hpp"
 #include "caf/static_visitor.hpp"
@@ -42,16 +41,16 @@ template <class T>
 struct optional_message_visitor_enable_tpl {
   static constexpr bool value
     = !is_one_of<typename std::remove_const<T>::type, none_t, unit_t, skip_t,
-                 optional<skip_t>>::value
+                 std::optional<skip_t>>::value
       && !is_message_id_wrapper<T>::value && !is_response_promise<T>::value;
 };
 
 class CAF_CORE_EXPORT optional_message_visitor
-  : public static_visitor<optional<message>> {
+  : public static_visitor<std::optional<message>> {
 public:
   optional_message_visitor() = default;
 
-  using opt_msg = optional<message>;
+  using opt_msg = std::optional<message>;
 
   opt_msg operator()(const none_t&) const {
     return none;
@@ -65,7 +64,7 @@ public:
     return message{};
   }
 
-  opt_msg operator()(optional<skip_t>& val) const {
+  opt_msg operator()(std::optional<skip_t>& val) const {
     if (val)
       return none;
     return message{};
@@ -101,7 +100,7 @@ public:
   }
 
   template <class T>
-  opt_msg operator()(optional<T>& value) const {
+  opt_msg operator()(std::optional<T>& value) const {
     if (value)
       return (*this)(*value);
     if (value.empty())

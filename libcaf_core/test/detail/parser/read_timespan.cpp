@@ -9,9 +9,9 @@
 #include "core-test.hpp"
 
 #include <chrono>
+#include <string_view>
 
 #include "caf/parser_state.hpp"
-#include "caf/string_view.hpp"
 #include "caf/variant.hpp"
 
 using namespace caf;
@@ -50,12 +50,12 @@ struct timespan_consumer {
   timespan x;
 };
 
-optional<timespan> read(string_view str) {
+std::optional<timespan> read(std::string_view str) {
   timespan_consumer consumer;
   string_parser_state ps{str.begin(), str.end()};
   detail::parser::read_timespan(ps, consumer);
   if (ps.code != pec::success)
-    return none;
+    return std::nullopt;
   return consumer.x;
 }
 

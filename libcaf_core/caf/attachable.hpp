@@ -12,7 +12,6 @@
 #include "caf/error.hpp"
 #include "caf/execution_unit.hpp"
 #include "caf/exit_reason.hpp"
-#include "caf/optional.hpp"
 
 namespace caf {
 

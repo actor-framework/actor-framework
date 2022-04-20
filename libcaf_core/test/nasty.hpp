@@ -1,12 +1,12 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <tuple>
 
 #include "caf/inspector_access.hpp"
-#include "caf/optional.hpp"
-#include "caf/string_view.hpp"
 #include "caf/variant.hpp"
 
 enum class weekday : uint8_t {
@@ -21,7 +21,7 @@ enum class weekday : uint8_t {
 
 std::string to_string(weekday x);
 
-bool parse(caf::string_view input, weekday& dest);
+bool parse(std::string_view input, weekday& dest);
 
 template <class Inspector>
 bool inspect(Inspector& f, weekday& x) {
@@ -58,17 +58,17 @@ public:                                                                        \
 // A mean data type designed for maximum coverage of the inspect API.
 class nasty {
 public:
-  static inline caf::string_view tname = "nasty";
+  static inline std::string_view tname = "nasty";
 
-  using optional_type = caf::optional<int32_t>;
+  using optional_type = std::optional<int32_t>;
 
   using variant_type = caf::variant<std::string, int32_t>;
 
   using tuple_type = std::tuple<std::string, int32_t>;
 
-  using optional_variant_type = caf::optional<variant_type>;
+  using optional_variant_type = std::optional<variant_type>;
 
-  using optional_tuple_type = caf::optional<tuple_type>;
+  using optional_tuple_type = std::optional<tuple_type>;
 
   // Plain, direct access.
   int32_t field_01 = 0;
@@ -135,13 +135,13 @@ public:
   // Optional, get/set access.
   ADD_GET_SET_FIELD(optional_type, field_21)
 
-  // // Optional, get/set access, fallback (0).
+  // Optional, get/set access, fallback (0).
   // ADD_GET_SET_FIELD(optional_type, field_22)
 
   // Optional, get/set access, invariant (>= 0).
   ADD_GET_SET_FIELD(optional_type, field_23)
 
-  // // Optional, get/set access, fallback (0), invariant (>= 0).
+  // Optional, get/set access, fallback (0), invariant (>= 0).
   // ADD_GET_SET_FIELD(optional_type, field_24)
 
   // Variant, get/set access.

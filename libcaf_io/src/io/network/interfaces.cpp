@@ -197,14 +197,14 @@ interfaces::list_addresses(std::initializer_list<protocol::network> procs,
   return result;
 }
 
-std::vector<std::string>
-interfaces::list_addresses(protocol::network proc, bool include_localhost) {
+std::vector<std::string> interfaces::list_addresses(protocol::network proc,
+                                                    bool include_localhost) {
   return list_addresses({proc}, include_localhost);
 }
 
-optional<std::pair<std::string, protocol::network>>
+std::optional<std::pair<std::string, protocol::network>>
 interfaces::native_address(const std::string& host,
-                           optional<protocol::network> preferred) {
+                           std::optional<protocol::network> preferred) {
   addrinfo hint;
   memset(&hint, 0, sizeof(hint));
   hint.ai_socktype = SOCK_STREAM;
@@ -212,7 +212,7 @@ interfaces::native_address(const std::string& host,
     hint.ai_family = *preferred == protocol::ipv4 ? AF_INET : AF_INET6;
   addrinfo* tmp = nullptr;
   if (getaddrinfo(host.c_str(), nullptr, &hint, &tmp) != 0)
-    return none;
+    return std::nullopt;
   std::unique_ptr<addrinfo, decltype(freeaddrinfo)*> addrs{tmp, freeaddrinfo};
   char buffer[INET6_ADDRSTRLEN];
   for (auto i = addrs.get(); i != nullptr; i = i->ai_next) {
@@ -221,12 +221,12 @@ interfaces::native_address(const std::string& host,
       return std::make_pair(buffer, family == AF_INET ? protocol::ipv4
                                                       : protocol::ipv6);
   }
-  return none;
+  return std::nullopt;
 }
 
 std::vector<std::pair<std::string, protocol::network>>
 interfaces::server_address(uint16_t port, const char* host,
-                           optional<protocol::network> preferred) {
+                           std::optional<protocol::network> preferred) {
   using addr_pair = std::pair<std::string, protocol::network>;
   addrinfo hint;
   memset(&hint, 0, sizeof(hint));
@@ -261,7 +261,7 @@ interfaces::server_address(uint16_t port, const char* host,
 
 bool interfaces::get_endpoint(const std::string& host, uint16_t port,
                               ip_endpoint& ep,
-                              optional<protocol::network> preferred) {
+                              std::optional<protocol::network> preferred) {
   static_assert(sizeof(uint16_t) == sizeof(unsigned short int),
                 "uint16_t cannot be printed with %hu in snprintf");
   addrinfo hint;

@@ -13,8 +13,6 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
-#include "caf/none.hpp"
-#include "caf/optional.hpp"
 #include "caf/result.hpp"
 #include "caf/skip.hpp"
 #include "caf/unit.hpp"

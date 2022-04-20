@@ -35,7 +35,7 @@ struct testee : serializer {
     log.insert(log.end(), indent, ' ');
   }
 
-  bool begin_object(type_id_t, string_view object_name) override {
+  bool begin_object(type_id_t, std::string_view object_name) override {
     new_line();
     indent += 2;
     log += "begin object ";
@@ -52,7 +52,7 @@ struct testee : serializer {
     return true;
   }
 
-  bool begin_field(string_view name) override {
+  bool begin_field(std::string_view name) override {
     new_line();
     indent += 2;
     log += "begin field ";
@@ -60,7 +60,7 @@ struct testee : serializer {
     return true;
   }
 
-  bool begin_field(string_view name, bool) override {
+  bool begin_field(std::string_view name, bool) override {
     new_line();
     indent += 2;
     log += "begin optional field ";
@@ -68,7 +68,8 @@ struct testee : serializer {
     return true;
   }
 
-  bool begin_field(string_view name, span<const type_id_t>, size_t) override {
+  bool begin_field(std::string_view name, span<const type_id_t>,
+                   size_t) override {
     new_line();
     indent += 2;
     log += "begin variant field ";
@@ -76,7 +77,7 @@ struct testee : serializer {
     return true;
   }
 
-  bool begin_field(string_view name, bool, span<const type_id_t>,
+  bool begin_field(std::string_view name, bool, span<const type_id_t>,
                    size_t) override {
     new_line();
     indent += 2;
@@ -161,7 +162,7 @@ struct testee : serializer {
     return true;
   }
 
-  bool value(byte) override {
+  bool value(std::byte) override {
     new_line();
     log += "byte value";
     return true;
@@ -239,7 +240,7 @@ struct testee : serializer {
     return true;
   }
 
-  bool value(string_view) override {
+  bool value(std::string_view) override {
     new_line();
     log += "std::string value";
     return true;
@@ -257,7 +258,7 @@ struct testee : serializer {
     return true;
   }
 
-  bool value(span<const byte>) override {
+  bool value(span<const std::byte>) override {
     new_line();
     log += "byte_span value";
     return true;
@@ -419,7 +420,7 @@ end object)_");
 }
 
 CAF_TEST(save inspectors support optional) {
-  optional<int32_t> x;
+  std::optional<int32_t> x;
   CHECK_EQ(f.apply(x), true);
   CHECK_EQ(f.log, R"_(
 begin object anonymous
@@ -429,7 +430,7 @@ end object)_");
 }
 
 CAF_TEST(save inspectors support fields with optional values) {
-  person p1{"Eduard Example", none};
+  person p1{"Eduard Example", std::nullopt};
   CHECK_EQ(inspect(f, p1), true);
   CHECK_EQ(f.log, R"_(
 begin object person
@@ -787,7 +788,7 @@ SCENARIO("save inspectors support std::byte") {
   GIVEN("a struct with std::byte") {
     struct byte_test {
       std::byte v1;
-      optional<std::byte> v2;
+      std::optional<std::byte> v2;
     };
     auto x = byte_test{std::byte{1}, std::byte{2}};
     WHEN("inspecting the struct") {
@@ -797,10 +798,10 @@ SCENARIO("save inspectors support std::byte") {
         std::string baseline = R"_(
 begin object anonymous
   begin field v1
-    uint8_t value
+    byte value
   end field
   begin optional field v2
-    uint8_t value
+    byte value
   end field
 end object)_";
         CHECK_EQ(f.log, baseline);

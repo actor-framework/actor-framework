@@ -7,11 +7,10 @@
 
 namespace caf {
 
-std::string replies_to_type_name(size_t input_size,
-                                 const std::string* input,
+std::string replies_to_type_name(size_t input_size, const std::string* input,
                                  size_t output_opt1_size,
                                  const std::string* output_opt1) {
-  string_view glue = ",";
+  std::string_view glue = ",";
   std::string result;
   // 'void' is not an announced type, hence we check whether uniform_typeid
   // did return a valid pointer to identify 'void' (this has the

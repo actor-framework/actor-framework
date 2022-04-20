@@ -15,7 +15,6 @@
 #include "caf/detail/parser/read_timespan.hpp"
 #include "caf/detail/scope_guard.hpp"
 #include "caf/none.hpp"
-#include "caf/optional.hpp"
 #include "caf/pec.hpp"
 #include "caf/timestamp.hpp"
 #include "caf/variant.hpp"

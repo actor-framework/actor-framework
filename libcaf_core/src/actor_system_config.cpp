@@ -129,7 +129,7 @@ settings actor_system_config::dump_content() const {
   put_missing(console_group, "excluded-components", std::vector<std::string>{});
   // -- middleman parameters
   auto& middleman_group = caf_group["middleman"].as_dictionary();
-  auto default_id = to_string(defaults::middleman::app_identifier);
+  auto default_id = std::string{defaults::middleman::app_identifier};
   put_missing(middleman_group, "app-identifiers",
               std::vector<std::string>{std::move(default_id)});
   put_missing(middleman_group, "enable-automatic-connections", false);
@@ -339,7 +339,7 @@ actor_system_config& actor_system_config::add_actor_factory(std::string name,
   return *this;
 }
 
-actor_system_config& actor_system_config::set_impl(string_view name,
+actor_system_config& actor_system_config::set_impl(std::string_view name,
                                                    config_value value) {
   auto opt = custom_options_.qualified_name_lookup(name);
   if (opt == nullptr) {
@@ -405,7 +405,7 @@ actor_system_config::extract_config_file_path(string_list& args) {
   auto ptr = custom_options_.qualified_name_lookup("global.config-file");
   CAF_ASSERT(ptr != nullptr);
   string_list::iterator i;
-  string_view path;
+  std::string_view path;
   std::tie(i, path) = find_by_long_name(*ptr, args.begin(), args.end());
   if (i == args.end()) {
     return {none, std::string{}};

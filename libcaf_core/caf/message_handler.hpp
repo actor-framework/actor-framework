@@ -72,8 +72,8 @@ public:
   void assign(message_handler what);
 
   /// Runs this handler and returns its (optional) result.
-  optional<message> operator()(message& arg) {
-    return (impl_) ? impl_->invoke(arg) : none;
+  std::optional<message> operator()(message& arg) {
+    return (impl_) ? impl_->invoke(arg) : std::nullopt;
   }
 
   /// Runs this handler with callback.
