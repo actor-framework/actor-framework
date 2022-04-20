@@ -1,7 +1,7 @@
 .. _remote-spawn:
 
-Remote Spawning of Actors  :sup:`experimental`
-==============================================
+Remote Spawning of Actors
+=========================
 
 Remote spawning is an extension of the dynamic spawn using run-time type names
 (see :ref:`add-custom-actor-type`). The following example assumes a typed actor
