@@ -4,13 +4,12 @@
 
 #pragma once
 
+#include <cstddef>
 #include <vector>
-
-#include "caf/byte.hpp"
 
 namespace caf {
 
 /// A buffer for storing binary data.
-using byte_buffer = std::vector<byte>;
+using byte_buffer = std::vector<std::byte>;
 
 } // namespace caf

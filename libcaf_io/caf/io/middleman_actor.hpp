@@ -71,25 +71,25 @@ namespace caf::io {
 ///
 /// }
 /// ~~~
-using middleman_actor = typed_actor<
-  replies_to<publish_atom, uint16_t, strong_actor_ptr, std::set<std::string>,
-             std::string, bool>::with<uint16_t>,
+using middleman_actor = typed_actor< //
+  result<uint16_t>(publish_atom, uint16_t, strong_actor_ptr,
+                   std::set<std::string>, std::string, bool),
 
-  replies_to<open_atom, uint16_t, std::string, bool>::with<uint16_t>,
+  result<uint16_t>(open_atom, uint16_t, std::string, bool),
 
-  replies_to<connect_atom, std::string,
-             uint16_t>::with<node_id, strong_actor_ptr, std::set<std::string>>,
+  result<node_id, strong_actor_ptr, std::set<std::string>>(
+    connect_atom, std::string, uint16_t),
 
-  reacts_to<unpublish_atom, actor_addr, uint16_t>,
+  result<void>(unpublish_atom, actor_addr, uint16_t),
 
-  reacts_to<close_atom, uint16_t>,
+  result<void>(close_atom, uint16_t),
 
-  replies_to<spawn_atom, node_id, std::string, message,
-             std::set<std::string>>::with<strong_actor_ptr>,
+  result<strong_actor_ptr>(spawn_atom, node_id, std::string, message,
+                           std::set<std::string>),
 
-  replies_to<get_atom, group_atom, node_id, std::string>::with<actor>,
+  result<actor>(get_atom, group_atom, node_id, std::string),
 
-  replies_to<get_atom, node_id>::with<node_id, std::string, uint16_t>>;
+  result<node_id, std::string, uint16_t>(get_atom, node_id)>;
 
 /// Spawns the default implementation for the `middleman_actor` interface.
 CAF_IO_EXPORT middleman_actor make_middleman_actor(actor_system& sys, actor db);

@@ -10,7 +10,6 @@
 #include <mutex>
 
 #include "caf/span.hpp"
-#include "caf/string_view.hpp"
 #include "caf/telemetry/label.hpp"
 #include "caf/telemetry/label_view.hpp"
 #include "caf/telemetry/metric.hpp"

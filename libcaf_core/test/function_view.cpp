@@ -15,7 +15,7 @@ using namespace caf;
 
 namespace {
 
-using calculator = typed_actor<replies_to<int, int>::with<int>>;
+using calculator = typed_actor<result<int>(int, int)>;
 
 calculator::behavior_type adder() {
   return {
@@ -39,7 +39,7 @@ calculator::behavior_type divider() {
   };
 }
 
-using doubler = typed_actor<replies_to<int>::with<int, int>>;
+using doubler = typed_actor<result<int, int>(int)>;
 
 doubler::behavior_type simple_doubler() {
   return {
@@ -49,8 +49,7 @@ doubler::behavior_type simple_doubler() {
   };
 }
 
-using cell
-  = typed_actor<reacts_to<put_atom, int>, replies_to<get_atom>::with<int>>;
+using cell = typed_actor<result<void>(put_atom, int), result<int>(get_atom)>;
 
 struct cell_state {
   int value = 0;

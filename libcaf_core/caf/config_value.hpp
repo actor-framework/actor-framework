@@ -11,9 +11,12 @@
 #include <iosfwd>
 #include <iterator>
 #include <map>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
+#include <variant>
 #include <vector>
 
 #include "caf/config_value_reader.hpp"
@@ -28,17 +31,12 @@
 #include "caf/fwd.hpp"
 #include "caf/inspector_access.hpp"
 #include "caf/inspector_access_type.hpp"
-#include "caf/optional.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/string_algorithms.hpp"
-#include "caf/string_view.hpp"
-#include "caf/sum_type.hpp"
-#include "caf/sum_type_access.hpp"
-#include "caf/sum_type_token.hpp"
 #include "caf/timespan.hpp"
 #include "caf/timestamp.hpp"
 #include "caf/uri.hpp"
-#include "caf/variant.hpp"
+#include "caf/variant_wrapper.hpp"
 
 namespace caf::detail {
 
@@ -90,7 +88,7 @@ public:
   using types = detail::type_list<none_t, integer, boolean, real, timespan, uri,
                                   string, list, dictionary>;
 
-  using variant_type = detail::tl_apply_t<types, variant>;
+  using variant_type = detail::tl_apply_t<types, std::variant>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -122,16 +120,16 @@ public:
   // -- parsing ----------------------------------------------------------------
 
   /// Tries to parse a value from given characters.
-  static expected<config_value> parse(string_view::iterator first,
-                                      string_view::iterator last);
+  static expected<config_value> parse(std::string_view::iterator first,
+                                      std::string_view::iterator last);
 
   /// Tries to parse a value from `str`.
-  static expected<config_value> parse(string_view str);
+  static expected<config_value> parse(std::string_view str);
 
   /// Tries to parse a config value (list) from `str` and to convert it to an
   /// allowed input message type for `Handle`.
   template <class Handle>
-  static optional<message> parse_msg(string_view str, const Handle&) {
+  static std::optional<message> parse_msg(std::string_view str, const Handle&) {
     auto allowed = Handle::allowed_inputs();
     return parse_msg_impl(str, allowed);
   }
@@ -158,24 +156,19 @@ public:
   /// Returns a human-readable type name of the current value.
   const char* type_name() const noexcept;
 
-  /// Returns the underlying variant.
-  variant_type& get_data() {
+  /// @private
+  variant_type& get_data() & {
     return data_;
   }
 
-  /// Returns the underlying variant.
-  const variant_type& get_data() const {
+  /// @private
+  const variant_type& get_data() const& {
     return data_;
   }
 
-  /// Returns a pointer to the underlying variant.
-  variant_type* get_data_ptr() {
-    return &data_;
-  }
-
-  /// Returns a pointer to the underlying variant.
-  const variant_type* get_data_ptr() const {
-    return &data_;
+  /// @private
+  variant_type&& get_data() && {
+    return std::move(data_);
   }
 
   /// Checks whether this config value is not null.
@@ -249,7 +242,7 @@ public:
   }
 
   template <class T>
-  static constexpr string_view mapped_type_name() {
+  static constexpr std::string_view mapped_type_name() {
     if constexpr (detail::is_complete<caf::type_name<T>>) {
       return caf::type_name<T>::value;
     } else if constexpr (detail::is_list_like_v<T>) {
@@ -264,8 +257,8 @@ private:
 
   static const char* type_name_at_index(size_t index) noexcept;
 
-  static optional<message>
-  parse_msg_impl(string_view str, span<const type_id_list> allowed_types);
+  static std::optional<message>
+  parse_msg_impl(std::string_view str, span<const type_id_list> allowed_types);
 
   // -- auto conversion of related types ---------------------------------------
 
@@ -309,7 +302,7 @@ private:
     data_ = std::string{x};
   }
 
-  void set(string_view x) {
+  void set(std::string_view x) {
     data_ = std::string{x.begin(), x.end()};
   }
 
@@ -320,6 +313,11 @@ private:
 
 /// @relates config_value
 CAF_CORE_EXPORT std::string to_string(const config_value& x);
+
+// -- std::variant-like access -------------------------------------------------
+
+template <>
+struct is_variant_wrapper<config_value> : std::true_type {};
 
 // -- conversion via get_as ----------------------------------------------------
 
@@ -500,8 +498,9 @@ expected<T> get_as(const config_value& value) {
 
 /// Customization point for configuring automatic mappings from default value
 /// types to deduced types. For example, `get_or(value, "foo"sv)` must return a
-/// `string` rather than a `string_view`. However, user-defined overloads *must
-/// not* specialize this class for any type from the namespaces `std` or `caf`.
+/// `string` rather than a `string_view`. However, user-defined overloads
+/// *must not* specialize this class for any type from the namespaces `std` or
+/// `caf`.
 template <class T>
 struct get_or_deduction_guide {
   using value_type = T;
@@ -512,9 +511,9 @@ struct get_or_deduction_guide {
 };
 
 template <>
-struct get_or_deduction_guide<string_view> {
+struct get_or_deduction_guide<std::string_view> {
   using value_type = std::string;
-  static value_type convert(string_view str) {
+  static value_type convert(std::string_view str) {
     return {str.begin(), str.end()};
   }
 };
@@ -556,33 +555,6 @@ auto get_or(const config_value& x, Fallback&& fallback) {
     else
       return To{std::forward<Fallback>(fallback)};
   }
-}
-
-// -- SumType-like access ------------------------------------------------------
-
-template <class T, class = std::enable_if_t<detail::is_config_value_type_v<T>>>
-auto get_if(const config_value* x) {
-  return get_if<T>(x->get_data_ptr());
-}
-
-template <class T, class = std::enable_if_t<detail::is_config_value_type_v<T>>>
-auto get_if(config_value* x) {
-  return get_if<T>(x->get_data_ptr());
-}
-
-template <class T, class = std::enable_if_t<detail::is_config_value_type_v<T>>>
-decltype(auto) get(const config_value& x) {
-  return get<T>(x.get_data());
-}
-
-template <class T, class = std::enable_if_t<detail::is_config_value_type_v<T>>>
-decltype(auto) get(config_value& x) {
-  return get<T>(x.get_data());
-}
-
-template <class T, class = std::enable_if_t<detail::is_config_value_type_v<T>>>
-auto holds_alternative(const config_value& x) {
-  return holds_alternative<T>(x.get_data());
 }
 
 // -- comparison operator overloads --------------------------------------------
@@ -643,7 +615,7 @@ struct variant_inspector_traits<config_value> {
 
   template <class F, class Value>
   static auto visit(F&& f, Value&& x) {
-    return caf::visit(std::forward<F>(f), x.get_data());
+    return std::visit(std::forward<F>(f), x.get_data());
   }
 
   template <class U>

@@ -9,14 +9,14 @@
 #include <map>
 #include <ostream>
 #include <string>
+#include <string_view>
 
 #include "caf/deep_to_string.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf {
 
 /// Maps strings to values of type `V`, but unlike `std::map<std::string, V>`
-/// accepts `string_view` for looking up keys efficiently.
+/// accepts `std::string_view` for looking up keys efficiently.
 template <class V>
 class dictionary {
 public:
@@ -55,7 +55,7 @@ public:
   using iterator_bool_pair = std::pair<iterator, bool>;
 
   struct mapped_type_less {
-    bool operator()(const value_type& x, string_view y) const {
+    bool operator()(const value_type& x, std::string_view y) const {
       return x.first < y;
     }
 
@@ -63,7 +63,7 @@ public:
       return x.first < y.first;
     }
 
-    bool operator()(string_view x, const value_type& y) const {
+    bool operator()(std::string_view x, const value_type& y) const {
       return x < y.first;
     }
   };
@@ -194,7 +194,7 @@ public:
   }
 
   template <class T>
-  iterator_bool_pair insert(string_view key, T&& value) {
+  iterator_bool_pair insert(std::string_view key, T&& value) {
     return emplace(key, V{std::forward<T>(value)});
   }
 
@@ -202,7 +202,7 @@ public:
   iterator emplace_hint(iterator hint, K&& key, T&& value) {
     if (hint == end() || hint->first > key)
       return xs_.emplace(copy(std::forward<K>(key)), V{std::forward<T>(value)})
-             .first;
+        .first;
     if (hint->first == key)
       return hint;
     return xs_.emplace_hint(hint, copy(std::forward<K>(key)),
@@ -210,7 +210,7 @@ public:
   }
 
   template <class T>
-  iterator insert(iterator hint, string_view key, T&& value) {
+  iterator insert(iterator hint, std::string_view key, T&& value) {
     return emplace_hint(hint, key, std::forward<T>(value));
   }
 
@@ -219,7 +219,7 @@ public:
   }
 
   template <class T>
-  iterator_bool_pair insert_or_assign(string_view key, T&& value) {
+  iterator_bool_pair insert_or_assign(std::string_view key, T&& value) {
     auto i = lower_bound(key);
     if (i == end())
       return xs_.emplace(copy(key), V{std::forward<T>(value)});
@@ -231,7 +231,7 @@ public:
   }
 
   template <class T>
-  iterator insert_or_assign(iterator hint, string_view key, T&& value) {
+  iterator insert_or_assign(iterator hint, std::string_view key, T&& value) {
     if (hint == end() || hint->first > key)
       return insert_or_assign(key, std::forward<T>(value)).first;
     hint = lower_bound(hint, key);
@@ -244,56 +244,56 @@ public:
 
   // -- lookup -----------------------------------------------------------------
 
-  bool contains(string_view key) const noexcept {
+  bool contains(std::string_view key) const noexcept {
     auto i = lower_bound(key);
     return !(i == end() || i->first != key);
   }
 
-  size_t count(string_view key) const noexcept {
+  size_t count(std::string_view key) const noexcept {
     return contains(key) ? 1u : 0u;
   }
 
-  iterator find(string_view key) noexcept {
+  iterator find(std::string_view key) noexcept {
     auto i = lower_bound(key);
     return i != end() && i->first == key ? i : end();
   }
 
-  const_iterator find(string_view key) const noexcept {
+  const_iterator find(std::string_view key) const noexcept {
     auto i = lower_bound(key);
     return i != end() && i->first == key ? i : end();
   }
 
-  iterator lower_bound(string_view key) {
+  iterator lower_bound(std::string_view key) {
     return lower_bound(begin(), key);
   }
 
-  const_iterator lower_bound(string_view key) const {
+  const_iterator lower_bound(std::string_view key) const {
     return lower_bound(begin(), key);
   }
 
-  iterator upper_bound(string_view key) {
+  iterator upper_bound(std::string_view key) {
     mapped_type_less cmp;
     return std::upper_bound(begin(), end(), key, cmp);
   }
 
-  const_iterator upper_bound(string_view key) const {
+  const_iterator upper_bound(std::string_view key) const {
     mapped_type_less cmp;
     return std::upper_bound(begin(), end(), key, cmp);
   }
 
   // -- element access ---------------------------------------------------------
 
-  mapped_type& operator[](string_view key) {
+  mapped_type& operator[](std::string_view key) {
     return insert(key, mapped_type{}).first->second;
   }
 
 private:
-  iterator lower_bound(iterator from, string_view key) {
+  iterator lower_bound(iterator from, std::string_view key) {
     mapped_type_less cmp;
     return std::lower_bound(from, end(), key, cmp);
   }
 
-  const_iterator lower_bound(const_iterator from, string_view key) const {
+  const_iterator lower_bound(const_iterator from, std::string_view key) const {
     mapped_type_less cmp;
     return std::lower_bound(from, end(), key, cmp);
   }
@@ -304,7 +304,7 @@ private:
   }
 
   // Copies the content of `str` into a new string.
-  static std::string copy(string_view str) {
+  static std::string copy(std::string_view str) {
     return std::string{str.begin(), str.end()};
   }
 

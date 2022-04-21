@@ -4,9 +4,6 @@
 
 #pragma once
 
-#include <type_traits>
-
-#include "caf/default_sum_type_access.hpp"
 #include "caf/delegated.hpp"
 #include "caf/detail/type_list.hpp"
 #include "caf/detail/type_traits.hpp"
@@ -16,8 +13,10 @@
 #include "caf/message.hpp"
 #include "caf/none.hpp"
 #include "caf/skip.hpp"
-#include "caf/sum_type.hpp"
-#include "caf/variant.hpp"
+#include "caf/variant_wrapper.hpp"
+
+#include <type_traits>
+#include <variant>
 
 namespace caf::detail {
 
@@ -71,13 +70,18 @@ public:
   }
 
   /// @private
-  auto& get_data() {
+  auto& get_data() & {
     return content_;
   }
 
   /// @private
-  const auto& get_data() const {
+  const auto& get_data() const& {
     return content_;
+  }
+
+  /// @private
+  auto&& get_data() && {
+    return std::move(content_);
   }
 
 protected:
@@ -91,7 +95,7 @@ protected:
     // nop
   }
 
-  variant<delegated<Ts...>, message, error> content_;
+  std::variant<delegated<Ts...>, message, error> content_;
 };
 
 // -- result<Ts...> and its specializations ------------------------------------
@@ -235,19 +239,73 @@ auto make_result(Ts&&... xs) {
 // -- special type alias for a skippable result<message> -----------------------
 
 /// Similar to `result<message>`, but also allows to *skip* a message.
-using skippable_result = variant<delegated<message>, message, error, skip_t>;
+class skippable_result {
+public:
+  skippable_result() = default;
+  skippable_result(skippable_result&&) = default;
+  skippable_result(const skippable_result&) = default;
+  skippable_result& operator=(skippable_result&&) = default;
+  skippable_result& operator=(const skippable_result&) = default;
 
-// -- sum type access to result<Ts...> -----------------------------------------
+  skippable_result(delegated<message> x) : content_(std::move(x)) {
+    // nop
+  }
 
-template <class... Ts>
-struct sum_type_access<result<Ts...>> : default_sum_type_access<result<Ts...>> {
-  // nop
+  skippable_result(message x) : content_(std::move(x)) {
+    // nop
+  }
+
+  skippable_result(error x) : content_(std::move(x)) {
+    // nop
+  }
+
+  skippable_result(skip_t x) : content_(std::move(x)) {
+    // nop
+  }
+
+  skippable_result(expected<message> x) {
+    if (x)
+      this->content_ = std::move(*x);
+    else
+      this->content_ = std::move(x.error());
+  }
+
+  skippable_result& operator=(expected<message> x) {
+    if (x)
+      this->content_ = std::move(*x);
+    else
+      this->content_ = std::move(x.error());
+    return *this;
+  }
+
+  /// @private
+  auto& get_data() {
+    return content_;
+  }
+
+  /// @private
+  const auto& get_data() const {
+    return content_;
+  }
+
+private:
+  std::variant<delegated<message>, message, error, skip_t> content_;
 };
+
+// -- type traits --------------------------------------------------------------
 
 template <class T>
 struct is_result : std::false_type {};
 
 template <class... Ts>
 struct is_result<result<Ts...>> : std::true_type {};
+
+// -- enable std::variant-style interface --------------------------------------
+
+template <class... Ts>
+struct is_variant_wrapper<result<Ts...>> : std::true_type {};
+
+template <>
+struct is_variant_wrapper<skippable_result> : std::true_type {};
 
 } // namespace caf

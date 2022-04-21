@@ -8,7 +8,6 @@
 
 #include "caf/delegated.hpp"
 #include "caf/fwd.hpp"
-#include "caf/replies_to.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/system_messages.hpp"
 #include "caf/typed_response_promise.hpp"

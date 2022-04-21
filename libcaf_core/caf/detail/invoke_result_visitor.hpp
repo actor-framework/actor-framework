@@ -13,8 +13,6 @@
 #include "caf/detail/type_traits.hpp"
 #include "caf/fwd.hpp"
 #include "caf/message.hpp"
-#include "caf/none.hpp"
-#include "caf/optional.hpp"
 #include "caf/result.hpp"
 #include "caf/skip.hpp"
 #include "caf/unit.hpp"
@@ -62,7 +60,7 @@ public:
   /// Dispatches on the runtime-type of `x`.
   template <class... Ts>
   void operator()(result<Ts...>& res) {
-    caf::visit([this](auto& x) { (*this)(x); }, res);
+    std::visit([this](auto& x) { (*this)(x); }, res.get_data());
   }
 
   // -- special-purpose handlers that don't produce results --------------------

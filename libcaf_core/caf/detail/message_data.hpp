@@ -5,10 +5,10 @@
 #pragma once
 
 #include <atomic>
+#include <cstddef>
 #include <cstdlib>
 #include <new>
 
-#include "caf/byte.hpp"
 #include "caf/config.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/implicit_conversions.hpp"
@@ -78,12 +78,12 @@ public:
   }
 
   /// Returns the memory region for storing the message elements.
-  byte* storage() noexcept {
+  std::byte* storage() noexcept {
     return storage_;
   }
 
   /// @copydoc storage
-  const byte* storage() const noexcept {
+  const std::byte* storage() const noexcept {
     return storage_;
   }
 
@@ -99,10 +99,10 @@ public:
 
   /// Returns the memory location for the object at given index.
   /// @pre `index < size()`
-  byte* at(size_t index) noexcept;
+  std::byte* at(size_t index) noexcept;
 
   /// @copydoc at
-  const byte* at(size_t index) const noexcept;
+  const std::byte* at(size_t index) const noexcept;
 
   void inc_constructed_elements() {
     ++constructed_elements_;
@@ -113,41 +113,42 @@ public:
     init_impl(storage(), std::forward<Ts>(xs)...);
   }
 
-  byte* stepwise_init(byte* pos) {
+  std::byte* stepwise_init(std::byte* pos) {
     return pos;
   }
 
   template <class T, class... Ts>
-  byte* stepwise_init(byte* pos, T&& x, Ts&&... xs) {
+  std::byte* stepwise_init(std::byte* pos, T&& x, Ts&&... xs) {
     using type = strip_and_convert_t<T>;
     new (pos) type(std::forward<T>(x));
     ++constructed_elements_;
     return stepwise_init(pos + padded_size_v<type>, std::forward<Ts>(xs)...);
   }
 
-  byte* stepwise_init_from(byte* pos, const message& msg);
+  std::byte* stepwise_init_from(std::byte* pos, const message& msg);
 
-  byte* stepwise_init_from(byte* pos, const message_data* other);
+  std::byte* stepwise_init_from(std::byte* pos, const message_data* other);
 
   template <class Tuple, size_t... Is>
-  byte* stepwise_init_from(byte* pos, Tuple&& tup, std::index_sequence<Is...>) {
+  std::byte*
+  stepwise_init_from(std::byte* pos, Tuple&& tup, std::index_sequence<Is...>) {
     return stepwise_init(pos, std::get<Is>(std::forward<Tuple>(tup))...);
   }
 
   template <class... Ts>
-  byte* stepwise_init_from(byte* pos, std::tuple<Ts...>&& tup) {
+  std::byte* stepwise_init_from(std::byte* pos, std::tuple<Ts...>&& tup) {
     return stepwise_init_from(pos, std::move(tup),
                               std::make_index_sequence<sizeof...(Ts)>{});
   }
 
   template <class... Ts>
-  byte* stepwise_init_from(byte* pos, std::tuple<Ts...>& tup) {
+  std::byte* stepwise_init_from(std::byte* pos, std::tuple<Ts...>& tup) {
     return stepwise_init_from(pos, tup,
                               std::make_index_sequence<sizeof...(Ts)>{});
   }
 
   template <class... Ts>
-  byte* stepwise_init_from(byte* pos, const std::tuple<Ts...>& tup) {
+  std::byte* stepwise_init_from(std::byte* pos, const std::tuple<Ts...>& tup) {
     return stepwise_init_from(pos, tup,
                               std::make_index_sequence<sizeof...(Ts)>{});
   }
@@ -158,24 +159,24 @@ public:
   }
 
 private:
-  void init_impl(byte*) {
+  void init_impl(std::byte*) {
     // End of recursion.
   }
 
   template <class T, class... Ts>
-  void init_impl(byte* storage, T&& x, Ts&&... xs) {
+  void init_impl(std::byte* storage, T&& x, Ts&&... xs) {
     using type = strip_and_convert_t<T>;
     new (storage) type(std::forward<T>(x));
     ++constructed_elements_;
     init_impl(storage + padded_size_v<type>, std::forward<Ts>(xs)...);
   }
 
-  void init_from_impl(byte*) {
+  void init_from_impl(std::byte*) {
     // End of recursion.
   }
 
   template <class T, class... Ts>
-  void init_from_impl(byte* pos, T&& x, Ts&&... xs) {
+  void init_from_impl(std::byte* pos, T&& x, Ts&&... xs) {
     init_from_impl(stepwise_init_from(pos, std::forward<T>(x)),
                    std::forward<Ts>(xs)...);
   }
@@ -183,7 +184,7 @@ private:
   mutable std::atomic<size_t> rc_;
   type_id_list types_;
   size_t constructed_elements_;
-  byte storage_[];
+  std::byte storage_[];
 };
 
 // -- related non-members ------------------------------------------------------

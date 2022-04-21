@@ -4,13 +4,13 @@
 
 #include "caf/io/network/default_multiplexer.hpp"
 
+#include <optional>
 #include <utility>
 
 #include "caf/actor_system_config.hpp"
 #include "caf/config.hpp"
 #include "caf/defaults.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/optional.hpp"
 
 #include "caf/io/broker.hpp"
 #include "caf/io/middleman.hpp"
@@ -671,9 +671,9 @@ doorman_ptr default_multiplexer::new_doorman(native_socket fd) {
   return make_counted<doorman_impl>(*this, fd);
 }
 
-expected<doorman_ptr>
-default_multiplexer::new_tcp_doorman(uint16_t port, const char* in,
-                                     bool reuse_addr) {
+expected<doorman_ptr> default_multiplexer::new_tcp_doorman(uint16_t port,
+                                                           const char* in,
+                                                           bool reuse_addr) {
   auto fd = new_tcp_acceptor_impl(port, in, reuse_addr);
   if (fd)
     return new_doorman(*fd);
@@ -745,7 +745,7 @@ bool ip_connect(native_socket fd, const std::string& host, uint16_t port) {
 
 expected<native_socket>
 new_tcp_connection(const std::string& host, uint16_t port,
-                   optional<protocol::network> preferred) {
+                   std::optional<protocol::network> preferred) {
   CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port) << CAF_ARG(preferred));
   CAF_LOG_DEBUG("try to connect to:" << CAF_ARG(host) << CAF_ARG(port));
   auto res = interfaces::native_address(host, std::move(preferred));
@@ -844,8 +844,8 @@ expected<native_socket> new_ip_acceptor_impl(uint16_t port, const char* addr,
   return sguard.release();
 }
 
-expected<native_socket>
-new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr) {
+expected<native_socket> new_tcp_acceptor_impl(uint16_t port, const char* addr,
+                                              bool reuse_addr) {
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
   auto addrs = interfaces::server_address(port, addr);
   auto addr_str = std::string{addr == nullptr ? "" : addr};
@@ -856,10 +856,10 @@ new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr) {
   auto fd = invalid_native_socket;
   for (auto& elem : addrs) {
     auto hostname = elem.first.c_str();
-    auto p
-      = elem.second == ipv4
-          ? new_ip_acceptor_impl<AF_INET>(port, hostname, reuse_addr, any)
-          : new_ip_acceptor_impl<AF_INET6>(port, hostname, reuse_addr, any);
+    auto p = elem.second == ipv4
+               ? new_ip_acceptor_impl<AF_INET>(port, hostname, reuse_addr, any)
+               : new_ip_acceptor_impl<AF_INET6>(port, hostname, reuse_addr,
+                                                any);
     if (!p) {
       CAF_LOG_DEBUG(p.error());
       continue;
@@ -882,7 +882,7 @@ new_tcp_acceptor_impl(uint16_t port, const char* addr, bool reuse_addr) {
 
 expected<std::pair<native_socket, ip_endpoint>>
 new_remote_udp_endpoint_impl(const std::string& host, uint16_t port,
-                             optional<protocol::network> preferred) {
+                             std::optional<protocol::network> preferred) {
   CAF_LOG_TRACE(CAF_ARG(host) << CAF_ARG(port) << CAF_ARG(preferred));
   auto lep = new_local_udp_endpoint_impl(0, nullptr, false, preferred);
   if (!lep)
@@ -898,7 +898,7 @@ new_remote_udp_endpoint_impl(const std::string& host, uint16_t port,
 
 expected<std::pair<native_socket, protocol::network>>
 new_local_udp_endpoint_impl(uint16_t port, const char* addr, bool reuse,
-                            optional<protocol::network> preferred) {
+                            std::optional<protocol::network> preferred) {
   CAF_LOG_TRACE(CAF_ARG(port) << ", addr = " << (addr ? addr : "nullptr"));
   auto addrs = interfaces::server_address(port, addr, preferred);
   auto addr_str = std::string{addr == nullptr ? "" : addr};

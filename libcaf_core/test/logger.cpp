@@ -14,7 +14,7 @@
 #include "caf/all.hpp"
 
 using namespace caf;
-using namespace std::chrono;
+using namespace std::literals;
 
 using std::string;
 
@@ -173,8 +173,8 @@ CAF_TEST(rendering) {
     0,
     t0,
   };
-  CHECK_EQ(render(logger::render_fun_name, e), string_view{"bar"});
-  CHECK_EQ(render(logger::render_fun_prefix, e), string_view{"ns.foo"});
+  CHECK_EQ(render(logger::render_fun_name, e), "bar"sv);
+  CHECK_EQ(render(logger::render_fun_prefix, e), "ns.foo"sv);
   // Exclude %r and %t from rendering test because they are nondeterministic.
   actor_system sys{cfg};
   auto lf = logger::parse_format("%c %p %a %C %M %F:%L %m");

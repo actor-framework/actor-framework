@@ -56,7 +56,7 @@ void datagram_handler::write(datagram_handle hdl, const void* buf,
                              size_t num_bytes) {
   wr_offline_buf_.emplace_back();
   wr_offline_buf_.back().first = hdl;
-  auto cbuf = reinterpret_cast<const byte*>(buf);
+  auto cbuf = reinterpret_cast<const std::byte*>(buf);
   wr_offline_buf_.back().second.assign(
     cbuf, cbuf + static_cast<ptrdiff_t>(num_bytes));
 }

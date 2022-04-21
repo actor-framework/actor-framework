@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <string_view>
 #include <type_traits>
 #include <utility>
 
@@ -11,7 +12,6 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/error.hpp"
 #include "caf/inspector_access.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf {
 
@@ -68,7 +68,7 @@ public:
 
   template <class T, class U, class Predicate>
   struct field_with_invariant_and_fallback_t {
-    string_view field_name;
+    std::string_view field_name;
     T* val;
     U fallback;
     Predicate predicate;
@@ -83,7 +83,7 @@ public:
 
   template <class T, class U>
   struct field_with_fallback_t {
-    string_view field_name;
+    std::string_view field_name;
     T* val;
     U fallback;
 
@@ -107,7 +107,7 @@ public:
 
   template <class T, class Predicate>
   struct field_with_invariant_t {
-    string_view field_name;
+    std::string_view field_name;
     T* val;
     Predicate predicate;
 
@@ -130,7 +130,7 @@ public:
 
   template <class T>
   struct field_t {
-    string_view field_name;
+    std::string_view field_name;
     T* val;
 
     template <class Inspector>
@@ -158,7 +158,7 @@ public:
 
   template <class T, class Set, class U, class Predicate>
   struct virt_field_with_invariant_and_fallback_t {
-    string_view field_name;
+    std::string_view field_name;
     Set set;
     U fallback;
     Predicate predicate;
@@ -174,7 +174,7 @@ public:
 
   template <class T, class Set, class U>
   struct virt_field_with_fallback_t {
-    string_view field_name;
+    std::string_view field_name;
     Set set;
     U fallback;
 
@@ -200,7 +200,7 @@ public:
 
   template <class T, class Set, class Predicate>
   struct virt_field_with_invariant_t {
-    string_view field_name;
+    std::string_view field_name;
     Set set;
     Predicate predicate;
 
@@ -224,7 +224,7 @@ public:
 
   template <class T, class Set>
   struct virt_field_t {
-    string_view field_name;
+    std::string_view field_name;
     Set set;
 
     template <class Inspector>
@@ -255,7 +255,7 @@ public:
 
   template <class T, class Reset, class Set>
   struct optional_virt_field_t {
-    string_view field_name;
+    std::string_view field_name;
     Reset reset;
     Set set;
 
@@ -273,7 +273,7 @@ public:
   template <class Inspector, class LoadCallback>
   struct object_with_load_callback_t {
     type_id_t object_type;
-    string_view object_name;
+    std::string_view object_name;
     Inspector* f;
     LoadCallback load_callback;
 
@@ -296,7 +296,7 @@ public:
       return f->end_object();
     }
 
-    auto pretty_name(string_view name) && {
+    auto pretty_name(std::string_view name) && {
       return object_t{object_type, name, f};
     }
 
@@ -309,7 +309,7 @@ public:
   template <class Inspector>
   struct object_t {
     type_id_t object_type;
-    string_view object_name;
+    std::string_view object_name;
     Inspector* f;
 
     template <class... Fields>
@@ -319,7 +319,7 @@ public:
              && f->end_object();
     }
 
-    auto pretty_name(string_view name) && {
+    auto pretty_name(std::string_view name) && {
       return object_t{object_type, name, f};
     }
 
@@ -342,13 +342,13 @@ public:
   // -- factory functions ------------------------------------------------------
 
   template <class T>
-  static auto field(string_view name, T& x) {
+  static auto field(std::string_view name, T& x) {
     static_assert(!std::is_const<T>::value);
     return field_t<T>{name, &x};
   }
 
   template <class Get, class Set>
-  static auto field(string_view name, Get get, Set set) {
+  static auto field(std::string_view name, Get get, Set set) {
     using field_type = std::decay_t<decltype(get())>;
     using setter_result = decltype(set(std::declval<field_type&&>()));
     if constexpr (std::is_same<setter_result, error>::value
@@ -368,7 +368,7 @@ public:
 
   template <class IsPresent, class Get, class Reset, class Set>
   static auto
-  field(string_view name, IsPresent&&, Get&& get, Reset reset, Set set) {
+  field(std::string_view name, IsPresent&&, Get&& get, Reset reset, Set set) {
     using field_type = std::decay_t<decltype(get())>;
     using setter_result = decltype(set(std::declval<field_type&&>()));
     if constexpr (std::is_same<setter_result, error>::value

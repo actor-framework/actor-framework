@@ -58,7 +58,7 @@ behavior pong(event_based_actor* self, suite_state_ptr ssp) {
   };
 }
 
-using fragile_mirror_actor = typed_actor<replies_to<int>::with<int>>;
+using fragile_mirror_actor = typed_actor<result<int>(int)>;
 
 fragile_mirror_actor::behavior_type
 fragile_mirror(fragile_mirror_actor::pointer self) {

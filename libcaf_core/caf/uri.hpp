@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string_view>
 #include <vector>
 
 #include "caf/detail/comparable.hpp"
@@ -17,14 +18,12 @@
 #include "caf/intrusive_ptr.hpp"
 #include "caf/ip_address.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/string_view.hpp"
-#include "caf/variant.hpp"
 
 namespace caf {
 
 /// A URI according to RFC 3986.
 class CAF_CORE_EXPORT uri : detail::comparable<uri>,
-                            detail::comparable<uri, string_view> {
+                            detail::comparable<uri, std::string_view> {
 public:
   // -- friends ----------------------------------------------------------------
 
@@ -35,7 +34,7 @@ public:
 
   /// Host subcomponent of the authority component. Either an IP address or
   /// an hostname as string.
-  using host_type = variant<std::string, ip_address>;
+  using host_type = std::variant<std::string, ip_address>;
 
   /// Bundles the authority component of the URI, i.e., userinfo, host, and
   /// port.
@@ -51,13 +50,13 @@ public:
     /// Returns whether `host` is empty, i.e., the host is not an IP address
     /// and the string is empty.
     bool empty() const noexcept {
-      auto str = get_if<std::string>(&host);
+      auto str = std::get_if<std::string>(&host);
       return str != nullptr && str->empty();
     }
   };
 
   /// Separates the query component into key-value pairs.
-  using path_list = std::vector<string_view>;
+  using path_list = std::vector<std::string_view>;
 
   /// Separates the query component into key-value pairs.
   using query_map = detail::unordered_flat_map<std::string, std::string>;
@@ -154,12 +153,12 @@ public:
   }
 
   /// Returns the full URI as provided by the user.
-  string_view str() const noexcept {
+  std::string_view str() const noexcept {
     return impl_->str;
   }
 
   /// Returns the scheme component.
-  string_view scheme() const noexcept {
+  std::string_view scheme() const noexcept {
     return impl_->scheme;
   }
 
@@ -169,7 +168,7 @@ public:
   }
 
   /// Returns the path component as provided by the user.
-  string_view path() const noexcept {
+  std::string_view path() const noexcept {
     return impl_->path;
   }
 
@@ -179,7 +178,7 @@ public:
   }
 
   /// Returns the fragment component.
-  string_view fragment() const noexcept {
+  std::string_view fragment() const noexcept {
     return impl_->fragment;
   }
 
@@ -189,7 +188,7 @@ public:
   /// Returns a new URI with the `authority` component only.
   /// @returns A new URI in the form `scheme://authority` if the authority
   ///          exists, otherwise `none`.`
-  optional<uri> authority_only() const;
+  std::optional<uri> authority_only() const;
 
   // -- comparison -------------------------------------------------------------
 
@@ -197,18 +196,19 @@ public:
     return str().compare(other.str());
   }
 
-  auto compare(string_view x) const noexcept {
+  auto compare(std::string_view x) const noexcept {
     return str().compare(x);
   }
 
   // -- parsing ----------------------------------------------------------------
 
   /// Returns whether `parse` would produce a valid URI.
-  static bool can_parse(string_view str) noexcept;
+  static bool can_parse(std::string_view str) noexcept;
 
   // -- URI encoding, AKA Percent encoding -------------------------------------
 
-  static void encode(std::string& str, string_view x, bool is_path = false);
+  static void encode(std::string& str, std::string_view x,
+                     bool is_path = false);
 
   static void decode(std::string& str);
 
@@ -244,10 +244,10 @@ CAF_CORE_EXPORT std::string to_string(const uri& x);
 CAF_CORE_EXPORT std::string to_string(const uri::authority_type& x);
 
 /// @relates uri
-CAF_CORE_EXPORT error parse(string_view str, uri& dest);
+CAF_CORE_EXPORT error parse(std::string_view str, uri& dest);
 
 /// @relates uri
-CAF_CORE_EXPORT expected<uri> make_uri(string_view str);
+CAF_CORE_EXPORT expected<uri> make_uri(std::string_view str);
 
 template <>
 struct inspector_access<uri> : inspector_access_base<uri> {

@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include <cstddef>
 #include <string>
 #include <type_traits>
 
-#include "caf/byte.hpp"
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/type_traits.hpp"
 

@@ -9,11 +9,10 @@
 #include "core-test.hpp"
 
 #include <string>
+#include <string_view>
 
 #include "caf/expected.hpp"
 #include "caf/parser_state.hpp"
-#include "caf/string_view.hpp"
-#include "caf/variant.hpp"
 
 using namespace caf;
 using namespace std::literals;
@@ -28,7 +27,7 @@ struct string_parser_consumer {
 };
 
 struct string_parser {
-  expected<std::string> operator()(string_view str) {
+  expected<std::string> operator()(std::string_view str) {
     string_parser_consumer f;
     string_parser_state res{str.begin(), str.end()};
     detail::parser::read_string(res, f);

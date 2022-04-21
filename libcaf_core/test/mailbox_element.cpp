@@ -24,14 +24,14 @@ using namespace caf;
 namespace {
 
 template <class... Ts>
-optional<tuple<Ts...>> fetch(const message& x) {
+std::optional<tuple<Ts...>> fetch(const message& x) {
   if (auto view = make_const_typed_message_view<Ts...>(x))
     return to_tuple(view);
-  return none;
+  return std::nullopt;
 }
 
 template <class... Ts>
-optional<tuple<Ts...>> fetch(const mailbox_element& x) {
+std::optional<tuple<Ts...>> fetch(const mailbox_element& x) {
   return fetch<Ts...>(x.content());
 }
 
@@ -51,7 +51,7 @@ CAF_TEST(non_empty_message) {
   CHECK(m1->mid.is_async());
   CHECK(m1->mid.category() == message_id::normal_message_category);
   CHECK(!m1->content().empty());
-  CHECK_EQ((fetch<int, int>(*m1)), none);
+  CHECK_EQ((fetch<int, int>(*m1)), std::nullopt);
   CHECK_EQ((fetch<int, int, int>(*m1)), make_tuple(1, 2, 3));
 }
 
@@ -61,7 +61,7 @@ CAF_TEST(tuple) {
   CHECK(m1->mid.is_async());
   CHECK(m1->mid.category() == message_id::normal_message_category);
   CHECK(!m1->content().empty());
-  CHECK_EQ((fetch<int, int>(*m1)), none);
+  CHECK_EQ((fetch<int, int>(*m1)), std::nullopt);
   CHECK_EQ((fetch<int, int, int>(*m1)), make_tuple(1, 2, 3));
 }
 

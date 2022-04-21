@@ -4,15 +4,13 @@
 
 #pragma once
 
-#include "caf/replies_to.hpp"
-#include "caf/local_actor.hpp"
-#include "caf/typed_actor.hpp"
 #include "caf/actor_system.hpp"
-#include "caf/typed_behavior.hpp"
-#include "caf/scheduled_actor.hpp"
-
-#include "caf/mixin/requester.hpp"
+#include "caf/local_actor.hpp"
 #include "caf/mixin/behavior_changer.hpp"
+#include "caf/mixin/requester.hpp"
+#include "caf/scheduled_actor.hpp"
+#include "caf/typed_actor.hpp"
+#include "caf/typed_behavior.hpp"
 
 namespace caf {
 

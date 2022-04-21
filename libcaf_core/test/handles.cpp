@@ -17,8 +17,8 @@ using namespace caf;
 
 namespace {
 
-// Simple int32_terface for testee actors.
-using testee_actor = typed_actor<replies_to<int32_t>::with<int32_t>>;
+// Simple int32 interface for testee actors.
+using testee_actor = typed_actor<result<int32_t>(int32_t)>;
 
 // Dynamically typed testee.
 behavior dt_testee() {

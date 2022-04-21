@@ -51,13 +51,13 @@ public:
     // nop
   }
 
-  byte* copy_init(byte* storage) const override {
+  std::byte* copy_init(std::byte* storage) const override {
     auto* meta = global_meta_object(src_.type_at(index_));
     meta->copy_construct(storage, src_.data().at(index_));
     return storage + meta->padded_size;
   }
 
-  byte* move_init(byte* storage) override {
+  std::byte* move_init(std::byte* storage) override {
     return copy_init(storage);
   }
 

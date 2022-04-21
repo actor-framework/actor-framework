@@ -4,12 +4,14 @@
 
 #define CAF_SUITE string_view
 
-#include "caf/string_view.hpp"
-
 #include "core-test.hpp"
+
+#include "caf/string_view.hpp"
 
 using namespace caf;
 using namespace caf::literals;
+
+CAF_PUSH_DEPRECATED_WARNING
 
 CAF_TEST(default construction) {
   string_view x;
@@ -202,3 +204,5 @@ CAF_TEST(find_last_not_of) {
   CHECK_EQ(x.find_last_not_of("bc", 0, 1), y.find_last_not_of("bc", 0, 1));
   CHECK_EQ(x.find_last_not_of("bc", 2, 2), y.find_last_not_of("bc", 2, 2));
 }
+
+CAF_POP_WARNINGS

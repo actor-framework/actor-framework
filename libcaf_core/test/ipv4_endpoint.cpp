@@ -9,13 +9,13 @@
 #include "core-test.hpp"
 
 #include <cassert>
+#include <cstddef>
 #include <vector>
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
-#include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/parse.hpp"
 #include "caf/ipv4_address.hpp"
@@ -27,7 +27,7 @@ namespace {
 
 ipv4_endpoint operator"" _ep(const char* str, size_t size) {
   ipv4_endpoint result;
-  if (auto err = detail::parse(string_view{str, size}, result))
+  if (auto err = detail::parse(std::string_view{str, size}, result))
     CAF_FAIL("unable to parse input: " << err);
   return result;
 }

@@ -8,11 +8,11 @@
 
 #include "core-test.hpp"
 
-#include <vector>
-
 #include "caf/binary_serializer.hpp"
-#include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
+
+#include <cstddef>
+#include <vector>
 
 using namespace caf;
 

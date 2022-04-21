@@ -4,12 +4,12 @@
 
 #define CAF_SUITE result
 
+#include "caf/result.hpp"
+
 #include "core-test.hpp"
 
-#include "caf/result.hpp"
 #include "caf/sec.hpp"
 
-using namespace std;
 using namespace caf;
 
 namespace {
@@ -24,20 +24,20 @@ void test_unit_void() {
 
 CAF_TEST(value) {
   auto x = result<int>{42};
-  CAF_REQUIRE(holds_alternative<message>(x));
+  REQUIRE(holds_alternative<message>(x));
   if (auto view = make_typed_message_view<int>(get<message>(x)))
     CHECK_EQ(get<0>(view), 42);
   else
-    CAF_FAIL("unexpected types in result message");
+    FAIL("unexpected types in result message");
 }
 
 CAF_TEST(expected) {
   auto x = result<int>{expected<int>{42}};
-  CAF_REQUIRE(holds_alternative<message>(x));
+  REQUIRE(holds_alternative<message>(x));
   if (auto view = make_typed_message_view<int>(get<message>(x)))
     CHECK_EQ(get<0>(view), 42);
   else
-    CAF_FAIL("unexpected types in result message");
+    FAIL("unexpected types in result message");
 }
 
 CAF_TEST(void_specialization) {

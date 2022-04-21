@@ -29,7 +29,7 @@ public:
                                     type_name_or_anonymous<T>(), dptr()};
   }
 
-  constexpr auto virtual_object(string_view type_name) noexcept {
+  constexpr auto virtual_object(std::string_view type_name) noexcept {
     return super::object_t<Subtype>{invalid_type_id, type_name, dptr()};
   }
 
@@ -82,7 +82,7 @@ public:
   template <class T, size_t... Is>
   bool tuple(T& xs, std::index_sequence<Is...>) {
     return dref().begin_tuple(sizeof...(Is))
-           && (detail::load(dref(), get<Is>(xs)) && ...) //
+           && (detail::load(dref(), std::get<Is>(xs)) && ...) //
            && dref().end_tuple();
   }
 

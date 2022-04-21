@@ -64,8 +64,8 @@ struct typed_mpi_access<result<Out...>(In...)> {
   std::string operator()() const {
     static_assert(sizeof...(In) > 0, "typed MPI without inputs");
     static_assert(sizeof...(Out) > 0, "typed MPI without outputs");
-    std::vector<std::string> inputs{to_string(type_name_v<In>)...};
-    std::vector<std::string> outputs1{to_string(type_name_v<Out>)...};
+    std::vector<std::string> inputs{std::string{type_name_v<In>}...};
+    std::vector<std::string> outputs1{std::string{type_name_v<Out>}...};
     std::string result = "(";
     result += join(inputs, ",");
     result += ") -> (";
@@ -85,8 +85,8 @@ std::string get_rtti_from_mpi() {
 
 namespace caf {
 
-/// Actor environment including scheduler, registry, and optional components
-/// such as a middleman.
+/// Actor environment including scheduler, registry, and optional
+/// components such as a middleman.
 class CAF_CORE_EXPORT actor_system {
 public:
   friend class logger;
@@ -146,7 +146,8 @@ public:
 
   using module_array = std::array<module_ptr, module::num_ids>;
 
-  /// An (optional) component of the actor system with networking capabilities.
+  /// An (optional) component of the actor system with networking
+  /// capabilities.
   class CAF_CORE_EXPORT networking_module : public module {
   public:
     ~networking_module() override;
@@ -744,7 +745,7 @@ private:
 
   expected<strong_actor_ptr>
   dyn_spawn_impl(const std::string& name, message& args, execution_unit* ctx,
-                 bool check_interface, optional<const mpi&> expected_ifs);
+                 bool check_interface, const mpi* expected_ifs);
 
   /// Sets the internal actor for dynamic spawn operations.
   void spawn_serv(strong_actor_ptr x) {

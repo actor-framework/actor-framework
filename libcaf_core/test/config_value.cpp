@@ -14,6 +14,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -25,8 +26,6 @@
 #include "caf/make_config_option.hpp"
 #include "caf/none.hpp"
 #include "caf/pec.hpp"
-#include "caf/string_view.hpp"
-#include "caf/variant.hpp"
 
 #include "caf/detail/bounds_checker.hpp"
 #include "caf/detail/overload.hpp"
@@ -796,7 +795,7 @@ SCENARIO("config values can parse messages") {
                                result<void>(int32_t, int32_t),            //
                                result<void>(my_request),                  //
                                result<void>(add_atom, int32_t, int32_t)>; //
-  auto parse = [](string_view str) {
+  auto parse = [](std::string_view str) {
     testee_t testee;
     return config_value::parse_msg(str, testee);
   };

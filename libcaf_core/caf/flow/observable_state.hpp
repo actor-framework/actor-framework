@@ -41,7 +41,7 @@ constexpr bool is_active(observable_state x) noexcept {
 CAF_CORE_EXPORT std::string to_string(observable_state);
 
 /// @relates observable_state
-CAF_CORE_EXPORT bool from_string(string_view, observable_state&);
+CAF_CORE_EXPORT bool from_string(std::string_view, observable_state&);
 
 /// @relates observable_state
 CAF_CORE_EXPORT bool from_integer(std::underlying_type_t<observable_state>,

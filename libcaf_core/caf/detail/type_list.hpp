@@ -321,9 +321,8 @@ struct tl_index_of<type_list<Ts...>, T> {
   static constexpr int value = tl_index_of_impl<0, T, Ts...>::value;
 };
 
-// Uncomment after having switched to C++14
-// template <class List, class T>
-// inline constexpr int tl_index_of_v = tl_index_of<List, T>::value;
+template <class List, class T>
+constexpr int tl_index_of_v = tl_index_of<List, T>::value;
 
 // int index_of(list, predicate)
 

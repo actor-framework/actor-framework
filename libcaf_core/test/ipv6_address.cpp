@@ -40,7 +40,7 @@ CAF_TEST(comparison) {
 }
 
 CAF_TEST(from string) {
-  auto from_string = [](string_view str) {
+  auto from_string = [](std::string_view str) {
     ipv6_address result;
     auto err = parse(str, result);
     if (err)
@@ -61,7 +61,7 @@ CAF_TEST(from string) {
   CHECK_EQ(from_string("1:2:3:4:5:6:7:8"), addr({1, 2, 3, 4, 5, 6, 7, 8}));
   CHECK_EQ(from_string("1:2:3:4::5:6:7:8"), addr({1, 2, 3, 4, 5, 6, 7, 8}));
   CHECK_EQ(from_string("1:2:3:4:5:6:0.7.0.8"), addr({1, 2, 3, 4, 5, 6, 7, 8}));
-  auto invalid = [](string_view str) {
+  auto invalid = [](std::string_view str) {
     ipv6_address result;
     auto err = parse(str, result);
     return err != none;

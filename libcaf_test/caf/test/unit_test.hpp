@@ -19,10 +19,8 @@
 #include "caf/deep_to_string.hpp"
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
-#include "caf/optional.hpp"
 #include "caf/raise_error.hpp"
 #include "caf/term.hpp"
-#include "caf/variant.hpp"
 
 #include "caf/detail/arg_wrapper.hpp"
 #include "caf/detail/type_traits.hpp"
@@ -148,42 +146,10 @@ struct comparison_unbox_helper {
 template <class Operator>
 class comparison {
 public:
-  // -- default case -----------------------------------------------------------
-
   template <class T, class U>
   bool operator()(const T& x, const U& y) const {
-    std::integral_constant<bool, SumType<T>()> lhs_is_sum_type;
-    std::integral_constant<bool, SumType<U>()> rhs_is_sum_type;
-    return cmp(x, y, lhs_is_sum_type, rhs_is_sum_type);
-  }
-
-private:
-  // -- automagic unboxing of sum types ----------------------------------------
-
-  template <class T, class U>
-  bool cmp(const T& x, const U& y, std::false_type, std::false_type) const {
     Operator f;
     return f(x, y);
-  }
-
-  template <class T, class U>
-  bool cmp(const T& x, const U& y, std::true_type, std::false_type) const {
-    Operator f;
-    auto inner_x = caf::get_if<U>(&x);
-    return inner_x ? f(*inner_x, y) : Operator::default_value;
-  }
-
-  template <class T, class U>
-  bool cmp(const T& x, const U& y, std::false_type, std::true_type) const {
-    Operator f;
-    auto inner_y = caf::get_if<T>(&y);
-    return inner_y ? f(x, *inner_y) : Operator::default_value;
-  }
-
-  template <class T, class U>
-  bool cmp(const T& x, const U& y, std::true_type, std::true_type) const {
-    comparison_unbox_helper<comparison, U> f{*this, y};
-    return visit(f, x);
   }
 };
 

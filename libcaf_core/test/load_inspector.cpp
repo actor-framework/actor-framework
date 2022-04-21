@@ -17,7 +17,6 @@
 #include "caf/message.hpp"
 #include "caf/span.hpp"
 #include "caf/type_id.hpp"
-#include "caf/variant.hpp"
 
 #include "inspector-tests.hpp"
 
@@ -28,7 +27,7 @@ namespace {
 struct testee : deserializer {
   std::string log;
 
-  bool load_field_failed(string_view, sec code) {
+  bool load_field_failed(std::string_view, sec code) {
     set_error(make_error(code));
     return false;
   }
@@ -50,7 +49,7 @@ struct testee : deserializer {
     return false;
   }
 
-  bool begin_object(type_id_t, string_view object_name) override {
+  bool begin_object(type_id_t, std::string_view object_name) override {
     new_line();
     indent += 2;
     log += "begin object ";
@@ -65,7 +64,7 @@ struct testee : deserializer {
     return true;
   }
 
-  bool begin_field(string_view name) override {
+  bool begin_field(std::string_view name) override {
     new_line();
     indent += 2;
     log += "begin field ";
@@ -73,7 +72,7 @@ struct testee : deserializer {
     return true;
   }
 
-  bool begin_field(string_view name, bool& is_present) override {
+  bool begin_field(std::string_view name, bool& is_present) override {
     new_line();
     indent += 2;
     log += "begin optional field ";
@@ -82,7 +81,7 @@ struct testee : deserializer {
     return true;
   }
 
-  bool begin_field(string_view name, span<const type_id_t>,
+  bool begin_field(std::string_view name, span<const type_id_t>,
                    size_t& type_index) override {
     new_line();
     indent += 2;
@@ -92,8 +91,8 @@ struct testee : deserializer {
     return true;
   }
 
-  bool begin_field(string_view name, bool& is_present, span<const type_id_t>,
-                   size_t&) override {
+  bool begin_field(std::string_view name, bool& is_present,
+                   span<const type_id_t>, size_t&) override {
     new_line();
     indent += 2;
     log += "begin optional variant field ";
@@ -187,10 +186,10 @@ struct testee : deserializer {
     return true;
   }
 
-  bool value(byte& x) override {
+  bool value(std::byte& x) override {
     new_line();
-    log += "byte value";
-    x = byte{};
+    log += "std::byte value";
+    x = std::byte{};
     return true;
   }
 
@@ -250,11 +249,11 @@ struct testee : deserializer {
     return primitive_value(x);
   }
 
-  bool value(span<byte> xs) override {
+  bool value(span<std::byte> xs) override {
     new_line();
-    log += "caf::span<caf::byte> value";
+    log += "caf::span<caf::std::byte> value";
     for (auto& x : xs)
-      x = byte{0};
+      x = std::byte{0};
     return true;
   }
 };
@@ -328,7 +327,7 @@ end object)_");
 }
 
 CAF_TEST(load inspectors support optional) {
-  optional<int32_t> x;
+  std::optional<int32_t> x;
   CHECK_EQ(f.apply(x), true);
   CHECK_EQ(f.log, R"_(
 begin object anonymous
@@ -356,7 +355,7 @@ CAF_TEST(load inspectors support fields with optional values) {
   person p{"Bruce Almighty", std::string{"776-2323"}};
   CHECK_EQ(inspect(f, p), true);
   CHECK_EQ(p.name, "");
-  CHECK_EQ(p.phone, none);
+  CHECK_EQ(p.phone, std::nullopt);
   CHECK_EQ(f.log, R"_(
 begin object person
   begin field name
@@ -750,7 +749,7 @@ SCENARIO("load inspectors support std::byte") {
   GIVEN("a struct with std::byte") {
     struct byte_test {
       std::byte v1 = std::byte{0};
-      optional<std::byte> v2;
+      std::optional<std::byte> v2;
     };
     auto x = byte_test{};
     WHEN("inspecting the struct") {
@@ -760,7 +759,7 @@ SCENARIO("load inspectors support std::byte") {
         std::string baseline = R"_(
 begin object anonymous
   begin field v1
-    uint8_t value
+    std::byte value
   end field
   begin optional field v2
   end field

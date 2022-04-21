@@ -228,7 +228,6 @@ caf_add_component(
     binary_deserializer
     binary_serializer
     blocking_actor
-    byte
     composition
     config_option
     config_option_set
@@ -344,7 +343,6 @@ caf_add_component(
     stateful_actor
     string_algorithms
     string_view
-    sum_type
     telemetry.collector.prometheus
     telemetry.counter
     telemetry.gauge
@@ -361,8 +359,7 @@ caf_add_component(
     typed_spawn
     unit
     uri
-    uuid
-    variant)
+    uuid)
 
 if(CAF_ENABLE_TESTING AND CAF_ENABLE_EXCEPTIONS)
   caf_add_test_suites(caf-core-test custom_exception_handler)

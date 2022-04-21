@@ -10,7 +10,6 @@
 #include "caf/allowed_unsafe_message_type.hpp"
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
-#include "caf/byte.hpp"
 #include "caf/deserializer.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/padded_size.hpp"
@@ -73,7 +72,7 @@ void stringify(std::string& buf, const void* ptr) {
 namespace caf::detail {
 
 template <class T>
-meta_object make_meta_object(string_view type_name) {
+meta_object make_meta_object(std::string_view type_name) {
   return {
     type_name,
     padded_size_v<T>,

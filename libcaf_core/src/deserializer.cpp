@@ -21,7 +21,7 @@ deserializer::~deserializer() {
   // nop
 }
 
-bool deserializer::fetch_next_object_name(string_view& type_name) {
+bool deserializer::fetch_next_object_name(std::string_view& type_name) {
   auto t = type_id_t{};
   if (fetch_next_object_type(t)) {
     type_name = query_type_name(t);
@@ -31,8 +31,8 @@ bool deserializer::fetch_next_object_name(string_view& type_name) {
   }
 }
 
-bool deserializer::next_object_name_matches(string_view type_name) {
-  string_view found;
+bool deserializer::next_object_name_matches(std::string_view type_name) {
+  std::string_view found;
   if (fetch_next_object_name(found)) {
     return type_name == found;
   } else {
@@ -40,8 +40,8 @@ bool deserializer::next_object_name_matches(string_view type_name) {
   }
 }
 
-bool deserializer::assert_next_object_name(string_view type_name) {
-  string_view found;
+bool deserializer::assert_next_object_name(std::string_view type_name) {
+  std::string_view found;
   if (fetch_next_object_name(found)) {
     if (type_name == found) {
       return true;

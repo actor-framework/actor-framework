@@ -77,10 +77,10 @@ template <class T>
 struct is_system_msg_handler : std::false_type {};
 
 template <>
-struct is_system_msg_handler<reacts_to<exit_msg>> : std::true_type {};
+struct is_system_msg_handler<void(exit_msg)> : std::true_type {};
 
 template <>
-struct is_system_msg_handler<reacts_to<down_msg>> : std::true_type {};
+struct is_system_msg_handler<void(down_msg)> : std::true_type {};
 
 // Tests whether the input list (IList) matches the
 // signature list (SList) for a typed actor behavior

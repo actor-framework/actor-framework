@@ -8,7 +8,6 @@
 
 #include "core-test.hpp"
 
-#include "caf/string_view.hpp"
 #include "caf/telemetry/counter.hpp"
 #include "caf/telemetry/gauge.hpp"
 #include "caf/telemetry/label_view.hpp"

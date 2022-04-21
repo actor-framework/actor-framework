@@ -30,13 +30,13 @@ timespan operator"" _ms(unsigned long long x) {
 }
 
 uri operator"" _u(const char* str, size_t size) {
-  return unbox(make_uri(string_view{str, size}));
+  return unbox(make_uri(std::string_view{str, size}));
 }
 
 using string_list = std::vector<std::string>;
 
 struct config : actor_system_config {
-  config_option_adder options(string_view category) {
+  config_option_adder options(std::string_view category) {
     return opt_group{custom_options_, category};
   }
 
@@ -49,7 +49,7 @@ struct config : actor_system_config {
 struct fixture {
   config cfg;
 
-  config_option_adder options(string_view category) {
+  config_option_adder options(std::string_view category) {
     return cfg.options(category);
   }
 

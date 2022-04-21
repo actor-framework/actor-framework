@@ -72,7 +72,7 @@ enum class pec : uint8_t {
 CAF_CORE_EXPORT std::string to_string(pec);
 
 /// @relates pec
-CAF_CORE_EXPORT bool from_string(string_view, pec&);
+CAF_CORE_EXPORT bool from_string(std::string_view, pec&);
 
 /// @relates pec
 CAF_CORE_EXPORT bool from_integer(std::underlying_type_t<pec>, pec&);

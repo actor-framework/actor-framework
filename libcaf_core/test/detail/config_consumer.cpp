@@ -19,7 +19,7 @@ using ls = std::vector<std::string>;
 
 namespace {
 
-constexpr const string_view test_config1 = R"(
+constexpr const std::string_view test_config1 = R"(
 is_server=true
 port=4242
 nodes=["sun", "venus", ]
@@ -31,7 +31,7 @@ scheduler { # more settings
 }
 )";
 
-constexpr const string_view test_config2 = R"(
+constexpr const std::string_view test_config2 = R"(
 is_server = true
 logger = {
   file-name = "foobar.conf"
@@ -62,12 +62,12 @@ struct fixture {
 BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(config_consumer) {
-  string_view str = test_config1;
+  std::string_view str = test_config1;
   detail::config_consumer consumer{options, config};
   string_parser_state res{str.begin(), str.end()};
   detail::parser::read_config(res, consumer);
+  CHECK(res.i == res.e);
   CHECK_EQ(res.code, pec::success);
-  CHECK_EQ(string_view(res.i, res.e), string_view());
   CHECK_EQ(get_as<bool>(config, "is_server"), true);
   CHECK_EQ(get_as<uint16_t>(config, "port"), 4242u);
   CHECK_EQ(get_as<ls>(config, "nodes"), ls({"sun", "venus"}));

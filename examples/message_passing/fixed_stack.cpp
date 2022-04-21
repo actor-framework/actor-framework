@@ -30,7 +30,7 @@ std::string to_string(fixed_stack_errc x) {
   }
 }
 
-bool from_string(caf::string_view in, fixed_stack_errc& out) {
+bool from_string(std::string_view in, fixed_stack_errc& out) {
   if (in == "push_to_full") {
     out = fixed_stack_errc::push_to_full;
     return true;

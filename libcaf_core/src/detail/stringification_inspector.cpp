@@ -11,7 +11,7 @@
 
 namespace caf::detail {
 
-bool stringification_inspector::begin_object(type_id_t, string_view name) {
+bool stringification_inspector::begin_object(type_id_t, std::string_view name) {
   sep();
   if (name != "std::string") {
     result_.insert(result_.end(), name.begin(), name.end());
@@ -30,11 +30,11 @@ bool stringification_inspector::end_object() {
   return true;
 }
 
-bool stringification_inspector::begin_field(string_view) {
+bool stringification_inspector::begin_field(std::string_view) {
   return true;
 }
 
-bool stringification_inspector::begin_field(string_view, bool is_present) {
+bool stringification_inspector::begin_field(std::string_view, bool is_present) {
   sep();
   if (!is_present)
     result_ += "null";
@@ -43,12 +43,12 @@ bool stringification_inspector::begin_field(string_view, bool is_present) {
   return true;
 }
 
-bool stringification_inspector::begin_field(string_view, span<const type_id_t>,
-                                            size_t) {
+bool stringification_inspector::begin_field(std::string_view,
+                                            span<const type_id_t>, size_t) {
   return true;
 }
 
-bool stringification_inspector::begin_field(string_view, bool is_present,
+bool stringification_inspector::begin_field(std::string_view, bool is_present,
                                             span<const type_id_t>, size_t) {
   sep();
   if (!is_present)
@@ -73,8 +73,8 @@ bool stringification_inspector::end_sequence() {
   return true;
 }
 
-bool stringification_inspector::value(byte x) {
-  return value(span<const byte>(&x, 1));
+bool stringification_inspector::value(std::byte x) {
+  return value(span<const std::byte>(&x, 1));
 }
 
 bool stringification_inspector::value(bool x) {
@@ -114,7 +114,7 @@ bool stringification_inspector::value(timestamp x) {
   return true;
 }
 
-bool stringification_inspector::value(string_view str) {
+bool stringification_inspector::value(std::string_view str) {
   sep();
   if (str.empty()) {
     result_ += R"("")";
@@ -165,7 +165,7 @@ bool stringification_inspector::int_value(uint64_t x) {
   return true;
 }
 
-bool stringification_inspector::value(span<const byte> x) {
+bool stringification_inspector::value(span<const std::byte> x) {
   sep();
   detail::append_hex(result_, x.data(), x.size());
   return true;

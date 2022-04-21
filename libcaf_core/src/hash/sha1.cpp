@@ -27,10 +27,10 @@ sha1::result_type sha1::result() noexcept {
     length_ = 0;
     sealed_ = true;
   }
-  std::array<byte, sha1::hash_size> buf;
+  std::array<std::byte, sha1::hash_size> buf;
   for (size_t i = 0; i < hash_size; ++i) {
     auto tmp = intermediate_[i >> 2] >> 8 * (3 - (i & 0x03));
-    buf[i] = static_cast<byte>(tmp);
+    buf[i] = static_cast<std::byte>(tmp);
   }
   return buf;
 }

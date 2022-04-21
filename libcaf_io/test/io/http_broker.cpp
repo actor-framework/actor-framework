@@ -80,8 +80,8 @@ behavior http_worker(http_broker* self, connection_handle hdl) {
       assert(!msg.buf.empty());
       assert(msg.handle == hdl);
       // interpret the received bytes as a string
-      string_view msg_buf{reinterpret_cast<const char*>(msg.buf.data()),
-                          msg.buf.size()};
+      std::string_view msg_buf{reinterpret_cast<const char*>(msg.buf.data()),
+                               msg.buf.size()};
       // extract lines from received buffer
       auto& lines = self->state.lines;
       auto i = msg_buf.begin();
@@ -130,7 +130,7 @@ behavior http_worker(http_broker* self, connection_handle hdl) {
       // end
       if (lines.size() > 1 && lines.back().empty()) {
         auto& out = self->wr_buf(hdl);
-        auto append = [&](string_view str) {
+        auto append = [&](std::string_view str) {
           auto bytes = as_bytes(make_span(str));
           out.insert(out.end(), bytes.begin(), bytes.end());
         };
@@ -210,7 +210,7 @@ public:
 
   // mocks some input for our AUT and allows to
   // check the output for this operation
-  mock_t mock(string_view what) {
+  mock_t mock(std::string_view what) {
     auto bytes = as_bytes(make_span(what));
     byte_buffer buf{bytes.begin(), bytes.end()};
     mpx_->virtual_send(connection_, std::move(buf));

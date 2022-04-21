@@ -23,8 +23,8 @@ behavior testee(event_based_actor* self) {
   };
 }
 
-using first_stage = typed_actor<replies_to<int>::with<double, double>>;
-using second_stage = typed_actor<replies_to<double, double>::with<double>>;
+using first_stage = typed_actor<result<double, double>(int)>;
+using second_stage = typed_actor<result<double>(double, double)>;
 
 first_stage::behavior_type typed_first_stage() {
   return {

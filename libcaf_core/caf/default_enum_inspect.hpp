@@ -5,9 +5,8 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <type_traits>
-
-#include "caf/string_view.hpp"
 
 namespace caf {
 
@@ -28,7 +27,7 @@ bool default_enum_inspect(Inspector& f, Enumeration& x) {
   using integer_type = std::underlying_type_t<Enumeration>;
   if (f.has_human_readable_format()) {
     auto get = [&x] { return to_string(x); };
-    auto set = [&x](string_view str) { return from_string(str, x); };
+    auto set = [&x](std::string_view str) { return from_string(str, x); };
     return f.apply(get, set);
   } else {
     auto get = [&x] { return static_cast<integer_type>(x); };

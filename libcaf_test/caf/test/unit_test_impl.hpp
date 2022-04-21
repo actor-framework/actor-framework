@@ -169,7 +169,8 @@ bool check(test* parent, const char* file, size_t line, const char* expr,
 }
 
 bool check_un(bool result, const char* file, size_t line, const char* expr) {
-  string_view rel_up = "../";
+  using namespace std::literals;
+  auto rel_up = "../"sv;
   while (strncmp(file, rel_up.data(), rel_up.size()) == 0)
     file += rel_up.size();
   auto parent = engine::current_test();
@@ -191,7 +192,8 @@ bool check_un(bool result, const char* file, size_t line, const char* expr) {
 
 bool check_bin(bool result, const char* file, size_t line, const char* expr,
                const std::string& lhs, const std::string& rhs) {
-  string_view rel_up = "../";
+  using namespace std::literals;
+  auto rel_up = "../"sv;
   while (strncmp(file, rel_up.data(), rel_up.size()) == 0)
     file += rel_up.size();
   auto parent = engine::current_test();
@@ -214,7 +216,8 @@ bool check_bin(bool result, const char* file, size_t line, const char* expr,
 }
 
 void require_un(bool result, const char* file, size_t line, const char* expr) {
-  string_view rel_up = "../";
+  using namespace std::literals;
+  auto rel_up = "../"sv;
   while (strncmp(file, rel_up.data(), rel_up.size()) == 0)
     file += rel_up.size();
   auto parent = engine::current_test();
@@ -240,7 +243,8 @@ void require_un(bool result, const char* file, size_t line, const char* expr) {
 
 void require_bin(bool result, const char* file, size_t line, const char* expr,
                  const std::string& lhs, const std::string& rhs) {
-  string_view rel_up = "../";
+  using namespace std::literals;
+  auto rel_up = "../"sv;
   while (strncmp(file, rel_up.data(), rel_up.size()) == 0)
     file += rel_up.size();
   auto parent = engine::current_test();

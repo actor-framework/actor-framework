@@ -7,6 +7,7 @@
 #include <chrono>
 #include <cstring>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <vector>
 
@@ -14,10 +15,8 @@
 #include "caf/fwd.hpp"
 #include "caf/inspector_access.hpp"
 #include "caf/save_inspector_base.hpp"
-#include "caf/string_view.hpp"
 #include "caf/timespan.hpp"
 #include "caf/timestamp.hpp"
-#include "caf/variant.hpp"
 
 namespace caf::detail {
 
@@ -44,17 +43,17 @@ public:
 
   // -- serializer interface ---------------------------------------------------
 
-  bool begin_object(type_id_t, string_view name);
+  bool begin_object(type_id_t, std::string_view name);
 
   bool end_object();
 
-  bool begin_field(string_view);
+  bool begin_field(std::string_view);
 
-  bool begin_field(string_view name, bool is_present);
+  bool begin_field(std::string_view name, bool is_present);
 
-  bool begin_field(string_view name, span<const type_id_t>, size_t);
+  bool begin_field(std::string_view name, span<const type_id_t>, size_t);
 
-  bool begin_field(string_view name, bool, span<const type_id_t>, size_t);
+  bool begin_field(std::string_view name, bool, span<const type_id_t>, size_t);
 
   bool end_field();
 
@@ -86,7 +85,7 @@ public:
     return end_sequence();
   }
 
-  bool value(byte x);
+  bool value(std::byte x);
 
   bool value(bool x);
 
@@ -108,13 +107,13 @@ public:
 
   bool value(timestamp x);
 
-  bool value(string_view x);
+  bool value(std::string_view x);
 
   bool value(const std::u16string& x);
 
   bool value(const std::u32string& x);
 
-  bool value(span<const byte> x);
+  bool value(span<const std::byte> x);
 
   using super::list;
 
@@ -153,7 +152,7 @@ public:
 
   template <class T>
   std::enable_if_t<has_to_string<T>::value
-                     && !std::is_convertible<T, string_view>::value,
+                     && !std::is_convertible<T, std::string_view>::value,
                    bool>
   builtin_inspect(const T& x) {
     auto str = to_string(x);
@@ -174,7 +173,7 @@ public:
       result_ += "null";
       return true;
     } else if constexpr (std::is_same<T, char>::value) {
-      return value(string_view{x, strlen(x)});
+      return value(std::string_view{x, strlen(x)});
     } else if constexpr (std::is_same<T, void>::value) {
       sep();
       result_ += "*<";
@@ -191,7 +190,7 @@ public:
   }
 
   template <class T>
-  bool builtin_inspect(const optional<T>& x) {
+  bool builtin_inspect(const std::optional<T>& x) {
     sep();
     if (!x) {
       result_ += "null";
@@ -221,12 +220,12 @@ public:
   static std::string render(const T& x) {
     if constexpr (std::is_same<std::nullptr_t, T>::value) {
       return "null";
-    } else if constexpr (std::is_constructible<string_view, T>::value) {
+    } else if constexpr (std::is_constructible<std::string_view, T>::value) {
       if constexpr (std::is_pointer<T>::value) {
         if (x == nullptr)
           return "null";
       }
-      auto str = string_view{x};
+      auto str = std::string_view{x};
       return std::string{str.begin(), str.end()};
     } else {
       std::string result;

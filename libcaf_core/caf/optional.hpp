@@ -12,6 +12,8 @@
 #include "caf/none.hpp"
 #include "caf/unit.hpp"
 
+CAF_PUSH_DEPRECATED_WARNING
+
 namespace caf {
 
 /// A C++17 compatible `optional` implementation.
@@ -477,3 +479,5 @@ bool operator>=(const T& lhs, const optional<T>& rhs) {
 }
 
 } // namespace caf
+
+CAF_POP_WARNINGS

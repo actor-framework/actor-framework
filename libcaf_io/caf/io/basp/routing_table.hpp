@@ -33,7 +33,7 @@ public:
   };
 
   /// Returns a route to `target` or `none` on error.
-  optional<route> lookup(const node_id& target);
+  std::optional<route> lookup(const node_id& target);
 
   /// Returns the ID of the peer connected via `hdl` or
   /// `none` if `hdl` is unknown.
@@ -41,7 +41,7 @@ public:
 
   /// Returns the handle offering a direct connection to `nid` or
   /// `invalid_connection_handle` if no direct connection to `nid` exists.
-  optional<connection_handle> lookup_direct(const node_id& nid) const;
+  std::optional<connection_handle> lookup_direct(const node_id& nid) const;
 
   /// Returns the next hop that would be chosen for `nid`
   /// or `none` if there's no indirect route to `nid`.

@@ -7,6 +7,7 @@
 #include "caf/default_enum_inspect.hpp"
 #include "caf/detail/core_export.hpp"
 
+#include <string_view>
 #include <type_traits>
 
 namespace caf::async {
@@ -27,7 +28,7 @@ enum class read_result {
 CAF_CORE_EXPORT std::string to_string(read_result);
 
 /// @relates read_result
-CAF_CORE_EXPORT bool from_string(string_view, read_result&);
+CAF_CORE_EXPORT bool from_string(std::string_view, read_result&);
 
 /// @relates read_result
 CAF_CORE_EXPORT bool from_integer(std::underlying_type_t<read_result>,

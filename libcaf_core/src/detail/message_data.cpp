@@ -75,7 +75,7 @@ message_data::make_uninitialized(type_id_list types) {
   return {new (vptr) message_data(types), false};
 }
 
-byte* message_data::at(size_t index) noexcept {
+std::byte* message_data::at(size_t index) noexcept {
   if (index == 0)
     return storage();
   auto gmos = global_meta_objects();
@@ -85,7 +85,7 @@ byte* message_data::at(size_t index) noexcept {
   return ptr;
 }
 
-const byte* message_data::at(size_t index) const noexcept {
+const std::byte* message_data::at(size_t index) const noexcept {
   if (index == 0)
     return storage();
   auto gmos = global_meta_objects();
@@ -95,11 +95,13 @@ const byte* message_data::at(size_t index) const noexcept {
   return ptr;
 }
 
-byte* message_data::stepwise_init_from(byte* pos, const message& msg) {
+std::byte* message_data::stepwise_init_from(std::byte* pos,
+                                            const message& msg) {
   return stepwise_init_from(pos, msg.cptr());
 }
 
-byte* message_data::stepwise_init_from(byte* pos, const message_data* other) {
+std::byte* message_data::stepwise_init_from(std::byte* pos,
+                                            const message_data* other) {
   CAF_ASSERT(other != nullptr);
   CAF_ASSERT(other != this);
   auto gmos = global_meta_objects();

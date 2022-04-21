@@ -76,7 +76,7 @@ behavior peer_fun(broker* self, connection_handle hdl, const actor& buddy) {
   self->configure_read(hdl, receive_policy::exactly(sizeof(type_id_t)));
   auto write = [=](type_id_t type) {
     auto& buf = self->wr_buf(hdl);
-    auto first = reinterpret_cast<byte*>(&type);
+    auto first = reinterpret_cast<std::byte*>(&type);
     buf.insert(buf.end(), first, first + sizeof(type_id_t));
     self->flush(hdl);
   };
@@ -121,7 +121,7 @@ behavior peer_acceptor_fun(broker* self, const actor& buddy) {
   };
 }
 
-using int_peer = connection_handler::extend<replies_to<int>::with<int>>;
+using int_peer = connection_handler::extend<result<int>(int)>;
 
 int_peer::behavior_type int_peer_fun(int_peer::broker_pointer) {
   return {

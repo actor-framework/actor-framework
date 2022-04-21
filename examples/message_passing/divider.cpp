@@ -20,7 +20,7 @@ std::string to_string(math_error x) {
   }
 }
 
-bool from_string(caf::string_view in, math_error& out) {
+bool from_string(std::string_view in, math_error& out) {
   if (in == "division_by_zero") {
     out = math_error::division_by_zero;
     return true;

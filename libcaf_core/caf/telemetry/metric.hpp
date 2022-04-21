@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "caf/fwd.hpp"
-#include "caf/string_view.hpp"
 #include "caf/telemetry/label.hpp"
 
 namespace caf::telemetry {

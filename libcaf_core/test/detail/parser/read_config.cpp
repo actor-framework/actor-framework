@@ -8,10 +8,11 @@
 
 #include "core-test.hpp"
 
+#include <string_view>
+
 #include "caf/config_value.hpp"
 #include "caf/parser_state.hpp"
 #include "caf/pec.hpp"
-#include "caf/string_view.hpp"
 
 using namespace caf;
 
@@ -65,7 +66,7 @@ struct test_consumer {
 };
 
 struct fixture {
-  expected<log_type> parse(string_view str, bool expect_success = true) {
+  expected<log_type> parse(std::string_view str, bool expect_success = true) {
     test_consumer f;
     string_parser_state res{str.begin(), str.end()};
     detail::parser::read_config(res, f);
@@ -83,7 +84,7 @@ log_type make_log(Ts&&... xs) {
 }
 
 // Tests basic functionality.
-constexpr const string_view conf0 = R"(
+constexpr const std::string_view conf0 = R"(
 "foo=bar" {
   foo="bar"
 }
@@ -191,7 +192,7 @@ const auto conf0_log = make_log(
   "}"
 );
 
-constexpr const string_view conf1 = R"(
+constexpr const std::string_view conf1 = R"(
 {
     "foo" : {
         "bar" : 1,

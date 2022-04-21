@@ -41,16 +41,16 @@ namespace io {
 /// Denotes a minimal "client" broker managing one or more connection
 /// handles by reacting to `new_data_msg` and `connection_closed_msg`.
 /// @relates typed_broker
-using connection_handler = typed_actor<reacts_to<new_data_msg>,
-                                       reacts_to<connection_closed_msg>>;
+using connection_handler = typed_actor<result<void>(new_data_msg),
+                                       result<void>(connection_closed_msg)>;
 
 /// Denotes a minimal "server" broker managing one or more accept
 /// handles by reacting to `new_connection_msg` and `acceptor_closed_msg`.
 /// The accept handler usually calls `self->fork(...)` when receiving
 /// a `new_connection_msg`.
 /// @relates typed_broker
-using accept_handler = typed_actor<reacts_to<new_connection_msg>,
-                                   reacts_to<acceptor_closed_msg>>;
+using accept_handler = typed_actor<result<void>(new_connection_msg),
+                                   result<void>(acceptor_closed_msg)>;
 
 /// A typed broker mediates between actor systems and other
 /// components in the network.

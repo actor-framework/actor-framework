@@ -19,7 +19,7 @@ namespace {
 
 using ms = std::chrono::milliseconds;
 
-using timer = typed_actor<reacts_to<reset_atom>>;
+using timer = typed_actor<result<void>(reset_atom)>;
 
 struct timer_state {
   bool had_reset = false;

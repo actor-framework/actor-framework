@@ -6,13 +6,13 @@
 
 #include <iomanip>
 #include <sstream>
+#include <string_view>
 
 #include "caf/error.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf::detail {
 
-bool serialized_size_inspector::begin_object(type_id_t, string_view) {
+bool serialized_size_inspector::begin_object(type_id_t, std::string_view) {
   return true;
 }
 
@@ -20,7 +20,7 @@ bool serialized_size_inspector::end_object() {
   return true;
 }
 
-bool serialized_size_inspector::begin_field(string_view, bool) {
+bool serialized_size_inspector::begin_field(std::string_view, bool) {
   result += 1;
   return true;
 }
@@ -32,11 +32,11 @@ constexpr size_t max_value = static_cast<size_t>(std::numeric_limits<T>::max());
 
 } // namespace
 
-bool serialized_size_inspector::begin_field(string_view) {
+bool serialized_size_inspector::begin_field(std::string_view) {
   return true;
 }
 
-bool serialized_size_inspector::begin_field(string_view,
+bool serialized_size_inspector::begin_field(std::string_view,
                                             span<const type_id_t> types,
                                             size_t) {
   if (types.size() < max_value<int8_t>) {
@@ -51,7 +51,7 @@ bool serialized_size_inspector::begin_field(string_view,
   return true;
 }
 
-bool serialized_size_inspector::begin_field(string_view name, bool,
+bool serialized_size_inspector::begin_field(std::string_view name, bool,
                                             span<const type_id_t> types,
                                             size_t index) {
   return begin_field(name, types, index);
@@ -89,7 +89,7 @@ bool serialized_size_inspector::end_sequence() {
   return true;
 }
 
-bool serialized_size_inspector::value(byte x) {
+bool serialized_size_inspector::value(std::byte x) {
   result += sizeof(x);
   return true;
 }
@@ -158,7 +158,7 @@ bool serialized_size_inspector::value(long double x) {
   return value(tmp);
 }
 
-bool serialized_size_inspector::value(string_view x) {
+bool serialized_size_inspector::value(std::string_view x) {
   CAF_IGNORE_UNUSED(begin_sequence(x.size()));
   result += x.size();
   return end_sequence();
@@ -176,7 +176,7 @@ bool serialized_size_inspector::value(const std::u32string& x) {
   return end_sequence();
 }
 
-bool serialized_size_inspector::value(span<const byte> x) {
+bool serialized_size_inspector::value(span<const std::byte> x) {
   result += x.size();
   return true;
 }

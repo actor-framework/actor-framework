@@ -81,12 +81,12 @@ void client_repl(function_view<calculator> f) {
       usage();
       continue;
     }
-    auto to_int32_t = [](const string& str) -> optional<int32_t> {
+    auto to_int32_t = [](const string& str) -> std::optional<int32_t> {
       char* end = nullptr;
       auto res = strtol(str.c_str(), &end, 10);
       if (end == str.c_str() + str.size())
         return static_cast<int32_t>(res);
-      return none;
+      return std::nullopt;
     };
     auto x = to_int32_t(words[0]);
     auto y = to_int32_t(words[2]);

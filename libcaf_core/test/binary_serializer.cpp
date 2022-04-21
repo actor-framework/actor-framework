@@ -9,12 +9,12 @@
 #include "core-test.hpp"
 #include "nasty.hpp"
 
+#include <cstddef>
 #include <cstring>
 #include <vector>
 
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
-#include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/timestamp.hpp"
 
@@ -22,12 +22,12 @@ using namespace caf;
 
 namespace {
 
-byte operator"" _b(unsigned long long int x) {
-  return static_cast<byte>(x);
+std::byte operator"" _b(unsigned long long int x) {
+  return static_cast<std::byte>(x);
 }
 
-byte operator"" _b(char x) {
-  return static_cast<byte>(x);
+std::byte operator"" _b(char x) {
+  return static_cast<std::byte>(x);
 }
 
 struct arr {

@@ -143,8 +143,7 @@ ostream& operator<<(ostream& out, const pair<bool, int>& x) {
 } // namespace std
 
 CAF_TEST(typed_behavior_assignment) {
-  using bh1 = typed_beh<replies_to<int>::with<double>,
-                        replies_to<double, double>::with<int, int>>;
+  using bh1 = typed_beh<result<double>(int), result<int, int>(double, double)>;
   // compatible handlers resulting in perfect match
   auto f1 = [=](int) { return 0.; };
   auto f2 = [=](double, double) -> result<int, int> { return {0, 0}; };
@@ -171,14 +170,16 @@ CAF_TEST(typed_behavior_assignment) {
   CHECK_EQ(bi_pair(false, 0), tb_assign<bh1>(e2, f2));
   CHECK_EQ(bi_pair(false, 0), tb_assign<bh1>(e2, e1));
   using bh2
-    = typed_beh<reacts_to<int>, reacts_to<int, int>, reacts_to<int, int, int>,
-                reacts_to<int, int, int, int>,
-                reacts_to<int, int, int, int, int>,
-                reacts_to<int, int, int, int, int, int>,
-                reacts_to<int, int, int, int, int, int, int>,
-                reacts_to<int, int, int, int, int, int, int, int>,
-                reacts_to<int, int, int, int, int, int, int, int, int>,
-                reacts_to<int, int, int, int, int, int, int, int, int, int>>;
+    = typed_beh<result<void>(int),           //
+                result<void>(int, int),      //
+                result<void>(int, int, int), //
+                result<void>(int, int, int, int),
+                result<void>(int, int, int, int, int),
+                result<void>(int, int, int, int, int, int),
+                result<void>(int, int, int, int, int, int, int),
+                result<void>(int, int, int, int, int, int, int, int),
+                result<void>(int, int, int, int, int, int, int, int, int),
+                result<void>(int, int, int, int, int, int, int, int, int, int)>;
   auto h0 = [](int) {};
   auto h1 = [](int, int) {};
   auto h2 = [](int, int, int) {};

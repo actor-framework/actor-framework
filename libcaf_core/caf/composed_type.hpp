@@ -6,7 +6,6 @@
 
 #include "caf/detail/type_list.hpp"
 #include "caf/fwd.hpp"
-#include "caf/replies_to.hpp"
 
 namespace caf {
 

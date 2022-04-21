@@ -151,7 +151,7 @@ bool config_value_reader::fetch_next_object_type(type_id_t& type) {
   }
 }
 
-bool config_value_reader::begin_object(type_id_t type, string_view) {
+bool config_value_reader::begin_object(type_id_t type, std::string_view) {
   if (st_.empty()) {
     emplace_error(sec::runtime_error,
                   "tried to read multiple objects from the root object");
@@ -222,7 +222,8 @@ bool config_value_reader::begin_object(type_id_t type, string_view) {
       if (auto i = obj->find("@type"); i != obj->end()) {
         if (auto got = get_if<std::string>(std::addressof(i->second))) {
           if (want != *got) {
-            emplace_error(sec::type_clash, "expected type: " + to_string(want),
+            emplace_error(sec::type_clash,
+                          "expected type: " + std::string{want},
                           "found type: " + *got);
             return false;
           }
@@ -241,18 +242,18 @@ bool config_value_reader::end_object() {
   return true;
 }
 
-bool config_value_reader::begin_field(string_view name) {
+bool config_value_reader::begin_field(std::string_view name) {
   SCOPE(const settings*);
   if (auto i = top->find(name); i != top->end()) {
     st_.push(std::addressof(i->second));
     return true;
   } else {
-    emplace_error(sec::runtime_error, "no such field: " + to_string(name));
+    emplace_error(sec::runtime_error, "no such field: " + std::string{name});
     return false;
   }
 }
 
-bool config_value_reader::begin_field(string_view name, bool& is_present) {
+bool config_value_reader::begin_field(std::string_view name, bool& is_present) {
   SCOPE(const settings*);
   if (auto i = top->find(name); i != top->end()) {
     is_present = true;
@@ -263,7 +264,7 @@ bool config_value_reader::begin_field(string_view name, bool& is_present) {
   return true;
 }
 
-bool config_value_reader::begin_field(string_view name,
+bool config_value_reader::begin_field(std::string_view name,
                                       span<const type_id_t> types,
                                       size_t& index) {
   SCOPE(const settings*);
@@ -289,7 +290,7 @@ bool config_value_reader::begin_field(string_view name,
   return begin_field(name);
 }
 
-bool config_value_reader::begin_field(string_view name, bool& is_present,
+bool config_value_reader::begin_field(std::string_view name, bool& is_present,
                                       span<const type_id_t> types,
                                       size_t& index) {
   SCOPE(const settings*);
@@ -459,11 +460,11 @@ bool pull(config_value_reader& reader, T& x) {
 
 } // namespace
 
-bool config_value_reader::value(byte& x) {
+bool config_value_reader::value(std::byte& x) {
   CHECK_NOT_EMPTY();
   auto tmp = uint8_t{0};
   if (pull(*this, tmp)) {
-    x = static_cast<byte>(tmp);
+    x = static_cast<std::byte>(tmp);
     return true;
   } else {
     return false;
@@ -545,7 +546,7 @@ bool config_value_reader::value(std::u32string&) {
   return false;
 }
 
-bool config_value_reader::value(span<byte> bytes) {
+bool config_value_reader::value(span<std::byte> bytes) {
   CHECK_NOT_EMPTY();
   std::string x;
   if (!pull(*this, x))
@@ -566,7 +567,7 @@ bool config_value_reader::value(span<byte> bytes) {
       }
       detail::parser::add_ascii<16>(value, c);
     }
-    bytes[index / 2] = static_cast<byte>(value);
+    bytes[index / 2] = static_cast<std::byte>(value);
   }
   return true;
 }

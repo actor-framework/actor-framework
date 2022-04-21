@@ -70,7 +70,7 @@ namespace client {
 
 // a simple calculator task: operation + operands
 struct task {
-  caf::variant<add_atom, sub_atom> op;
+  std::variant<add_atom, sub_atom> op;
   int lhs;
   int rhs;
 };
@@ -170,7 +170,7 @@ behavior running(stateful_actor<state>* self, const actor& calculator) {
   };
   for (auto& x : self->state.tasks) {
     auto f = [&](auto op) { send_task(op, x.lhs, x.rhs); };
-    caf::visit(f, x.op);
+    std::visit(f, x.op);
   }
   self->state.tasks.clear();
   return {
@@ -195,12 +195,12 @@ string trim(std::string s) {
 }
 
 // tries to convert `str` to an int
-optional<int> toint(const string& str) {
+std::optional<int> toint(const string& str) {
   char* end;
   auto result = static_cast<int>(strtol(str.c_str(), &end, 10));
   if (end == str.c_str() + str.size())
     return result;
-  return none;
+  return std::nullopt;
 }
 
 // --(rst-config-begin)--

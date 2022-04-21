@@ -10,11 +10,11 @@ namespace caf {
 
 // note: to_string is implemented in config_value.cpp
 
-const config_value* get_if(const settings* xs, string_view name) {
+const config_value* get_if(const settings* xs, std::string_view name) {
   // The 'global' category is special in the sense that it refers back to the
   // root. Somewhat like '::foo' in C++. This means we can just drop it here.
-  using namespace caf::literals;
-  auto gl = "global."_sv;
+  using namespace std::literals;
+  auto gl = "global."sv;
   if (starts_with(name, gl))
     name.remove_prefix(gl.size());
   // Climb down the tree. In each step, we resolve `xs` and `name` to the next
@@ -39,7 +39,7 @@ const config_value* get_if(const settings* xs, string_view name) {
   }
 }
 
-expected<std::string> get_or(const settings& xs, string_view name,
+expected<std::string> get_or(const settings& xs, std::string_view name,
                              const char* fallback) {
   if (auto ptr = get_if(&xs, name))
     return get_as<std::string>(*ptr);
@@ -47,13 +47,14 @@ expected<std::string> get_or(const settings& xs, string_view name,
     return {std::string{fallback}};
 }
 
-config_value& put_impl(settings& dict, const std::vector<string_view>& path,
+config_value& put_impl(settings& dict,
+                       const std::vector<std::string_view>& path,
                        config_value& value) {
   // Sanity check.
   CAF_ASSERT(!path.empty());
   // Like in get_if: we always drop a 'global.' suffix.
   if (path.front() == "global") {
-    std::vector<string_view> new_path{path.begin() + 1, path.end()};
+    std::vector<std::string_view> new_path{path.begin() + 1, path.end()};
     return put_impl(dict, new_path, value);
   }
   // Navigate path.
@@ -76,10 +77,11 @@ config_value& put_impl(settings& dict, const std::vector<string_view>& path,
   return iter->second;
 }
 
-config_value& put_impl(settings& dict, string_view name, config_value& value) {
+config_value& put_impl(settings& dict, std::string_view name,
+                       config_value& value) {
   // Like in get_if: we always drop a 'global.' suffix.
-  using namespace caf::literals;
-  auto gl = "global."_sv;
+  using namespace std::literals;
+  auto gl = "global."sv;
   if (starts_with(name, gl))
     name.remove_prefix(gl.size());
   // Climb down the tree, similar to get_if. Only this time, we create the
@@ -87,7 +89,7 @@ config_value& put_impl(settings& dict, string_view name, config_value& value) {
   // that point it's a trivial insertion (override).
   auto xs = &dict;
   for (;;) {
-    if (auto pos = name.find('.'); pos == string_view::npos) {
+    if (auto pos = name.find('.'); pos == std::string_view::npos) {
       return xs->insert_or_assign(name, std::move(value)).first->second;
     } else {
       auto category = name.substr(0, pos);

@@ -1,4 +1,5 @@
 #include "caf/fwd.hpp"
+#include "caf/result.hpp"
 #include "caf/test/bdd_dsl.hpp"
 #include "caf/type_id.hpp"
 #include "caf/typed_actor.hpp"
@@ -10,13 +11,13 @@
 
 // -- forward declarations for all unit test suites ----------------------------
 
-using float_actor = caf::typed_actor<caf::reacts_to<float>>;
+using float_actor = caf::typed_actor<caf::result<void>(float)>;
 
-using int_actor = caf::typed_actor<caf::replies_to<int32_t>::with<int32_t>>;
+using int_actor = caf::typed_actor<caf::result<int32_t>(int32_t)>;
 
 using foo_actor
-  = caf::typed_actor<caf::replies_to<int32_t, int32_t, int32_t>::with<int32_t>,
-                     caf::replies_to<double>::with<double, double>>;
+  = caf::typed_actor<caf::result<int32_t>(int32_t, int32_t, int32_t),
+                     caf::result<double, double>(double)>;
 
 // A simple POD type.
 struct dummy_struct {
@@ -271,7 +272,7 @@ enum class level : uint8_t { all, trace, debug, warning, error };
 
 std::string to_string(level);
 
-bool from_string(caf::string_view, level&);
+bool from_string(std::string_view, level&);
 
 bool from_integer(uint8_t, level&);
 
@@ -359,7 +360,7 @@ bool inspect(Inspector& f, circle& x) {
 
 struct widget {
   std::string color;
-  caf::variant<rectangle, circle> shape;
+  std::variant<rectangle, circle> shape;
 };
 
 template <class Inspector>
@@ -380,7 +381,7 @@ bool inspect(Inspector& f, widget& x) {
 
 struct dummy_user {
   std::string name;
-  caf::optional<std::string> nickname;
+  std::optional<std::string> nickname;
 };
 
 template <class Inspector>

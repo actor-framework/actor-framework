@@ -489,7 +489,7 @@ invoke_message_result scheduled_actor::consume(mailbox_element& x) {
     using ptr_t = scheduled_actor*;
     using fun_t = bool (*)(ptr_t, behavior&, mailbox_element&);
     auto ordinary_invoke = [](ptr_t, behavior& f, mailbox_element& in) -> bool {
-      return f(in.content()) != none;
+      return f(in.content()) != std::nullopt;
     };
     auto select_invoke_fun = [&]() -> fun_t { return ordinary_invoke; };
     // Short-circuit awaited responses.

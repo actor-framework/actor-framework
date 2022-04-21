@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -17,12 +18,11 @@
 #include "caf/load_inspector_base.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
-#include "caf/string_view.hpp"
 
 namespace caf {
 
-/// Deserializes C++ objects from sequence of bytes. Does not perform run-time
-/// type checks.
+/// Deserializes C++ objects from sequence of bytes. Does not perform
+/// run-time type checks.
 class CAF_CORE_EXPORT binary_deserializer
   : public load_inspector_base<binary_deserializer> {
 public:
@@ -46,14 +46,14 @@ public:
 
   binary_deserializer(execution_unit* ctx, const void* buf,
                       size_t size) noexcept
-    : binary_deserializer(ctx,
-                          make_span(reinterpret_cast<const byte*>(buf), size)) {
+    : binary_deserializer(
+      ctx, make_span(reinterpret_cast<const std::byte*>(buf), size)) {
     // nop
   }
 
   binary_deserializer(actor_system& sys, const void* buf, size_t size) noexcept
-    : binary_deserializer(sys,
-                          make_span(reinterpret_cast<const byte*>(buf), size)) {
+    : binary_deserializer(
+      sys, make_span(reinterpret_cast<const std::byte*>(buf), size)) {
     // nop
   }
 
@@ -65,7 +65,7 @@ public:
   }
 
   /// Returns the remaining bytes.
-  span<const byte> remainder() const noexcept {
+  span<const std::byte> remainder() const noexcept {
     return make_span(current_, end_);
   }
 
@@ -79,15 +79,15 @@ public:
   void skip(size_t num_bytes);
 
   /// Assigns a new input.
-  void reset(span<const byte> bytes) noexcept;
+  void reset(span<const std::byte> bytes) noexcept;
 
   /// Returns the current read position.
-  const byte* current() const noexcept {
+  const std::byte* current() const noexcept {
     return current_;
   }
 
   /// Returns the end of the assigned memory block.
-  const byte* end() const noexcept {
+  const std::byte* end() const noexcept {
     return end_;
   }
 
@@ -99,7 +99,7 @@ public:
 
   bool fetch_next_object_type(type_id_t& type) noexcept;
 
-  constexpr bool begin_object(type_id_t, string_view) noexcept {
+  constexpr bool begin_object(type_id_t, std::string_view) noexcept {
     return true;
   }
 
@@ -107,16 +107,16 @@ public:
     return true;
   }
 
-  constexpr bool begin_field(string_view) noexcept {
+  constexpr bool begin_field(std::string_view) noexcept {
     return true;
   }
 
-  bool begin_field(string_view name, bool& is_present) noexcept;
+  bool begin_field(std::string_view name, bool& is_present) noexcept;
 
-  bool begin_field(string_view name, span<const type_id_t> types,
+  bool begin_field(std::string_view name, span<const type_id_t> types,
                    size_t& index) noexcept;
 
-  bool begin_field(string_view name, bool& is_present,
+  bool begin_field(std::string_view name, bool& is_present,
                    span<const type_id_t> types, size_t& index) noexcept;
 
   constexpr bool end_field() {
@@ -155,7 +155,7 @@ public:
 
   bool value(bool& x) noexcept;
 
-  bool value(byte& x) noexcept;
+  bool value(std::byte& x) noexcept;
 
   bool value(uint8_t& x) noexcept;
 
@@ -196,7 +196,7 @@ public:
 
   bool value(std::u32string& x);
 
-  bool value(span<byte> x) noexcept;
+  bool value(span<std::byte> x) noexcept;
 
   bool value(std::vector<bool>& x);
 
@@ -209,10 +209,10 @@ private:
   }
 
   /// Points to the current read position.
-  const byte* current_;
+  const std::byte* current_;
 
   /// Points to the end of the assigned memory block.
-  const byte* end_;
+  const std::byte* end_;
 
   /// Provides access to the ::proxy_registry and to the ::actor_system.
   execution_unit* context_;

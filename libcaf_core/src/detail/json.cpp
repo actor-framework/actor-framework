@@ -40,9 +40,9 @@ struct val_consumer {
 };
 
 struct key_consumer {
-  string_view* ptr;
+  std::string_view* ptr;
 
-  void value(string_view str) {
+  void value(std::string_view str) {
     *ptr = str;
   }
 };
@@ -136,7 +136,7 @@ void read_json_null_or_nan(string_parser_state& ps, Consumer consumer) {
 
 template <class Consumer>
 void read_json_string(string_parser_state& ps, Consumer consumer) {
-  auto first = string_view::iterator{};
+  std::string_view::iterator first;
   // clang-format off
   start();
   state(init) {
@@ -145,7 +145,9 @@ void read_json_string(string_parser_state& ps, Consumer consumer) {
   }
   state(read_chars) {
     transition(escape, '\\')
-    transition(done, '"', consumer.value(string_view{first, ps.i}))
+    transition(done, '"',
+               consumer.value(std::string_view{
+                 std::addressof(*first), static_cast<size_t>(ps.i - first)}))
     transition(read_chars, any_char)
   }
   state(escape) {

@@ -5,12 +5,12 @@
 #pragma once
 
 #include <cstdint>
+#include <string_view>
 #include <variant>
 #include <vector>
 
 #include "caf/detail/monotonic_buffer_resource.hpp"
 #include "caf/parser_state.hpp"
-#include "caf/string_view.hpp"
 
 // This JSON abstraction is designed to allocate its entire state in a monotonic
 // buffer resource. This minimizes memory allocations and also enables us to
@@ -29,7 +29,7 @@ public:
   using array = std::vector<value, array_allocator>;
 
   struct member {
-    string_view key;
+    std::string_view key;
     value* val = nullptr;
   };
 
@@ -37,8 +37,8 @@ public:
 
   using object = std::vector<member, member_allocator>;
 
-  using data_type
-    = std::variant<null_t, int64_t, double, bool, string_view, array, object>;
+  using data_type = std::variant<null_t, int64_t, double, bool,
+                                 std::string_view, array, object>;
 
   static constexpr size_t null_index = 0;
 

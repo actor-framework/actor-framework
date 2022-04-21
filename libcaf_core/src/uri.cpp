@@ -4,6 +4,8 @@
 
 #include "caf/uri.hpp"
 
+#include <optional>
+
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
 #include "caf/deserializer.hpp"
@@ -15,7 +17,6 @@
 #include "caf/expected.hpp"
 #include "caf/hash/fnv.hpp"
 #include "caf/make_counted.hpp"
-#include "caf/optional.hpp"
 #include "caf/serializer.hpp"
 
 namespace {
@@ -77,9 +78,9 @@ size_t uri::hash_code() const noexcept {
   return hash::fnv<size_t>::compute(str());
 }
 
-optional<uri> uri::authority_only() const {
+std::optional<uri> uri::authority_only() const {
   if (empty() || authority().empty())
-    return none;
+    return std::nullopt;
   auto result = make_counted<uri::impl_type>();
   result->scheme = impl_->scheme;
   result->authority = impl_->authority;
@@ -134,7 +135,7 @@ public:
 
 } // namespace
 
-bool uri::can_parse(string_view str) noexcept {
+bool uri::can_parse(std::string_view str) noexcept {
   string_parser_state ps{str.begin(), str.end()};
   nop_builder builder;
   if (ps.consume('<')) {
@@ -151,7 +152,7 @@ bool uri::can_parse(string_view str) noexcept {
 
 // -- URI encoding -----------------------------------------------------------
 
-void uri::encode(std::string& str, string_view x, bool is_path) {
+void uri::encode(std::string& str, std::string_view x, bool is_path) {
   for (auto ch : x)
     switch (ch) {
       case ':':
@@ -200,7 +201,7 @@ void uri::decode(std::string& str) {
     if (str[index] == '%') {
       hex_buf[2] = str[index + 1];
       hex_buf[3] = str[index + 2];
-      if (auto err = detail::parse(string_view{hex_buf}, val); !err) {
+      if (auto err = detail::parse(std::string_view{hex_buf}, val); !err) {
         str_buf[0] = static_cast<char>(val);
         str.replace(index, 3, str_buf, 1);
       } else {
@@ -243,7 +244,7 @@ std::string to_string(const uri::authority_type& x) {
   return str;
 }
 
-error parse(string_view str, uri& dest) {
+error parse(std::string_view str, uri& dest) {
   string_parser_state ps{str.begin(), str.end()};
   parse(ps, dest);
   if (ps.code == pec::success)
@@ -251,7 +252,7 @@ error parse(string_view str, uri& dest) {
   return make_error(ps);
 }
 
-expected<uri> make_uri(string_view str) {
+expected<uri> make_uri(std::string_view str) {
   uri result;
   if (auto err = parse(str, result))
     return err;

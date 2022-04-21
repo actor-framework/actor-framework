@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <string_view>
+#include <tuple>
+
 #include "caf/inspector_access.hpp"
 #include "caf/save_inspector.hpp"
 
@@ -24,7 +27,7 @@ public:
                                     type_name_or_anonymous<T>(), dptr()};
   }
 
-  constexpr auto virtual_object(string_view type_name) noexcept {
+  constexpr auto virtual_object(std::string_view type_name) noexcept {
     return super::object_t<Subtype>{invalid_type_id, type_name, dptr()};
   }
 
@@ -70,6 +73,7 @@ public:
 
   template <class T, size_t... Is>
   bool tuple(const T& xs, std::index_sequence<Is...>) {
+    using std::get;
     return dref().begin_tuple(sizeof...(Is))             //
            && (detail::save(dref(), get<Is>(xs)) && ...) //
            && dref().end_tuple();

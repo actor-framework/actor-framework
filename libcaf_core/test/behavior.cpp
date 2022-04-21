@@ -8,14 +8,15 @@
 
 #include "core-test.hpp"
 
-#include <functional>
-
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/behavior.hpp"
 #include "caf/event_based_actor.hpp"
 #include "caf/message_handler.hpp"
 #include "caf/send.hpp"
+
+#include <functional>
+#include <string_view>
 
 using namespace caf;
 
@@ -39,13 +40,13 @@ public:
 };
 
 struct fixture {
-  optional<int32_t> res_of(behavior& bhvr, message& msg) {
+  std::optional<int32_t> res_of(behavior& bhvr, message& msg) {
     auto res = bhvr(msg);
     if (!res)
-      return none;
+      return std::nullopt;
     if (auto view = make_const_typed_message_view<int32_t>(*res))
       return get<0>(view);
-    return none;
+    return std::nullopt;
   }
 
   message m1 = make_message(int32_t{1});
@@ -61,37 +62,39 @@ BEGIN_FIXTURE_SCOPE(fixture)
 
 CAF_TEST(default_construct) {
   behavior f;
-  CHECK_EQ(f(m1), none);
-  CHECK_EQ(f(m2), none);
-  CHECK_EQ(f(m3), none);
+  CHECK_EQ(f(m1), std::nullopt);
+  CHECK_EQ(f(m2), std::nullopt);
+  CHECK_EQ(f(m3), std::nullopt);
 }
 
 CAF_TEST(nocopy_function_object) {
   behavior f{nocopy_fun{}};
-  CHECK_EQ(f(m1), none);
+  CHECK_EQ(f(m1), std::nullopt);
   CHECK_EQ(res_of(f, m2), 3);
-  CHECK_EQ(f(m3), none);
+  CHECK_EQ(f(m3), std::nullopt);
 }
 
 CAF_TEST(single_lambda_construct) {
   behavior f{[](int x) { return x + 1; }};
   CHECK_EQ(res_of(f, m1), 2);
-  CHECK_EQ(res_of(f, m2), none);
-  CHECK_EQ(res_of(f, m3), none);
+  CHECK_EQ(res_of(f, m2), std::nullopt);
+  CHECK_EQ(res_of(f, m3), std::nullopt);
 }
 
 CAF_TEST(multiple_lambda_construct) {
   behavior f{[](int x) { return x + 1; }, [](int x, int y) { return x * y; }};
   CHECK_EQ(res_of(f, m1), 2);
   CHECK_EQ(res_of(f, m2), 2);
-  CHECK_EQ(res_of(f, m3), none);
+  CHECK_EQ(res_of(f, m3), std::nullopt);
 }
 
 CAF_TEST(become_empty_behavior) {
   actor_system_config cfg{};
   actor_system sys{cfg};
   auto make_bhvr = [](event_based_actor* self) -> behavior {
-    return {[=](int) { self->become(behavior{}); }};
+    return {
+      [=](int) { self->become(behavior{}); },
+    };
   };
   anon_send(sys.spawn(make_bhvr), int{5});
 }

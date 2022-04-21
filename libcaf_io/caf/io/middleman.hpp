@@ -62,7 +62,6 @@ public:
   ~middleman() override;
 
   /// Tries to open a port for other CAF instances to connect to.
-  /// @experimental
   expected<uint16_t>
   open(uint16_t port, const char* in = nullptr, bool reuse = false);
 
@@ -70,7 +69,6 @@ public:
   expected<void> close(uint16_t port);
 
   /// Tries to connect to given node.
-  /// @experimental
   expected<node_id> connect(std::string host, uint16_t port);
 
   /// Tries to publish `whom` at `port` and returns either an
@@ -179,7 +177,6 @@ public:
   ///       or an error occurred.
   strong_actor_ptr remote_lookup(std::string name, const node_id& nid);
 
-  /// @experimental
   template <class Handle>
   expected<Handle>
   remote_spawn(const node_id& nid, std::string name, message args,
@@ -195,7 +192,6 @@ public:
     return actor_cast<Handle>(std::move(*res));
   }
 
-  /// @experimental
   template <class Handle, class Rep, class Period>
   expected<Handle>
   remote_spawn(const node_id& nid, std::string name, message args,
