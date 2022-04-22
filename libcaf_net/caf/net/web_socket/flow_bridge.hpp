@@ -9,10 +9,10 @@
 #include "caf/net/consumer_adapter.hpp"
 #include "caf/net/producer_adapter.hpp"
 #include "caf/net/web_socket/flow_connector.hpp"
+#include "caf/net/web_socket/lower_layer.hpp"
 #include "caf/net/web_socket/request.hpp"
+#include "caf/net/web_socket/upper_layer.hpp"
 #include "caf/sec.hpp"
-#include "caf/tag/mixed_message_oriented.hpp"
-#include "caf/tag/no_auto_reading.hpp"
 
 #include <utility>
 
@@ -20,10 +20,8 @@ namespace caf::net::web_socket {
 
 /// Translates between a message-oriented transport and data flows.
 template <class Trait>
-class flow_bridge : public tag::no_auto_reading {
+class flow_bridge : public web_socket::upper_layer {
 public:
-  using input_tag = tag::mixed_message_oriented;
-
   using input_type = typename Trait::input_type;
 
   using output_type = typename Trait::output_type;
@@ -42,8 +40,50 @@ public:
     // nop
   }
 
-  template <class LowerLayerPtr>
-  error init(net::socket_manager* mgr, LowerLayerPtr, const settings& cfg) {
+  static std::unique_ptr<flow_bridge> make(connector_pointer conn) {
+    return std::make_unique<flow_bridge>(std::move(conn));
+  }
+
+  bool write(const output_type& item) {
+    if (trait_.converts_to_binary(item)) {
+      down_->begin_binary_message();
+      auto& bytes = down_->binary_message_buffer();
+      return trait_.convert(item, bytes) && down_->end_binary_message();
+    } else {
+      down_->begin_text_message();
+      auto& text = down_->text_message_buffer();
+      return trait_.convert(item, text) && down_->end_text_message();
+    }
+  }
+
+  struct write_helper {
+    flow_bridge* thisptr;
+    bool aborted = false;
+    error err;
+
+    explicit write_helper(flow_bridge* thisptr) : thisptr(thisptr) {
+      // nop
+    }
+
+    void on_next(const output_type& item) {
+      if (!thisptr->write(item))
+        aborted = true;
+    }
+
+    void on_complete() {
+      // nop
+    }
+
+    void on_error(const error& x) {
+      err = x;
+    }
+  };
+
+  // -- implementation of web_socket::lower_layer ------------------------------
+
+  error init(net::socket_manager* mgr, web_socket::lower_layer* down,
+             const settings& cfg) override {
+    down_ = down;
     auto [err, pull, push] = conn_->on_request(cfg);
     if (!err) {
       in_ = consumer_type::try_open(mgr, pull);
@@ -58,63 +98,23 @@ public:
     }
   }
 
-  template <class LowerLayerPtr>
-  bool write(LowerLayerPtr down, const output_type& item) {
-    if (trait_.converts_to_binary(item)) {
-      down->begin_binary_message();
-      auto& bytes = down->binary_message_buffer();
-      return trait_.convert(item, bytes) && down->end_binary_message();
-    } else {
-      down->begin_text_message();
-      auto& text = down->text_message_buffer();
-      return trait_.convert(item, text) && down->end_text_message();
-    }
+  void continue_reading() override {
+    // nop
   }
 
-  template <class LowerLayerPtr>
-  struct write_helper {
-    using bridge_type = flow_bridge;
-    bridge_type* bridge;
-    LowerLayerPtr down;
-    bool aborted = false;
-    size_t consumed = 0;
-    error err;
-
-    write_helper(bridge_type* bridge, LowerLayerPtr down)
-      : bridge(bridge), down(down) {
-      // nop
-    }
-
-    void on_next(const output_type& item) {
-      if (!bridge->write(down, item)) {
-        aborted = true;
-        return;
-      }
-    }
-
-    void on_complete() {
-      // nop
-    }
-
-    void on_error(const error& x) {
-      err = x;
-    }
-  };
-
-  template <class LowerLayerPtr>
-  bool prepare_send(LowerLayerPtr down) {
-    write_helper<LowerLayerPtr> helper{this, down};
-    while (down->can_send_more() && in_) {
+  bool prepare_send() override {
+    write_helper helper{this};
+    while (down_->can_send_more() && in_) {
       auto [again, consumed] = in_->pull(async::delay_errors, 1, helper);
       if (!again) {
         if (helper.err) {
-          down->send_close_message(helper.err);
+          down_->send_close_message(helper.err);
         } else {
-          down->send_close_message();
+          down_->send_close_message();
         }
         in_ = nullptr;
+        return false;
       } else if (helper.aborted) {
-        down->abort_reason(make_error(sec::conversion_failed));
         in_->cancel();
         in_ = nullptr;
         return false;
@@ -125,13 +125,11 @@ public:
     return true;
   }
 
-  template <class LowerLayerPtr>
-  bool done_sending(LowerLayerPtr) {
+  bool done_sending() override {
     return !in_ || !in_->has_data();
   }
 
-  template <class LowerLayerPtr>
-  void abort(LowerLayerPtr, const error& reason) {
+  void abort(const error& reason) override {
     CAF_LOG_TRACE(CAF_ARG(reason));
     if (out_) {
       if (reason == sec::socket_disconnected || reason == sec::disposed)
@@ -146,39 +144,31 @@ public:
     }
   }
 
-  template <class LowerLayerPtr>
-  ptrdiff_t consume_binary(LowerLayerPtr down, byte_span buf) {
-    if (!out_) {
-      down->abort_reason(make_error(sec::connection_closed));
+  ptrdiff_t consume_binary(byte_span buf) override {
+    if (!out_)
       return -1;
-    }
     input_type val;
-    if (!trait_.convert(buf, val)) {
-      down->abort_reason(make_error(sec::conversion_failed));
+    if (!trait_.convert(buf, val))
       return -1;
-    }
     if (out_->push(std::move(val)) == 0)
-      down->suspend_reading();
+      down_->suspend_reading();
     return static_cast<ptrdiff_t>(buf.size());
   }
 
-  template <class LowerLayerPtr>
-  ptrdiff_t consume_text(LowerLayerPtr down, std::string_view buf) {
-    if (!out_) {
-      down->abort_reason(make_error(sec::connection_closed));
+  ptrdiff_t consume_text(std::string_view buf) override {
+    if (!out_)
       return -1;
-    }
     input_type val;
-    if (!trait_.convert(buf, val)) {
-      down->abort_reason(make_error(sec::conversion_failed));
+    if (!trait_.convert(buf, val))
       return -1;
-    }
     if (out_->push(std::move(val)) == 0)
-      down->suspend_reading();
+      down_->suspend_reading();
     return static_cast<ptrdiff_t>(buf.size());
   }
 
 private:
+  web_socket::lower_layer* down_;
+
   /// The output of the application. Serialized to the socket.
   intrusive_ptr<consumer_type> in_;
 

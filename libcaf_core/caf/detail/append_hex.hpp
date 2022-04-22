@@ -20,6 +20,7 @@ enum class hex_format {
 
 template <hex_format format = hex_format::uppercase, class Buf = std::string>
 void append_hex(Buf& result, const void* vptr, size_t n) {
+  using value_type = typename Buf::value_type;
   if (n == 0)
     return;
   auto xs = reinterpret_cast<const uint8_t*>(vptr);
@@ -30,8 +31,8 @@ void append_hex(Buf& result, const void* vptr, size_t n) {
     tbl = "0123456789abcdef";
   for (size_t i = 0; i < n; ++i) {
     auto c = xs[i];
-    result.push_back(tbl[c >> 4]);
-    result.push_back(tbl[c & 0x0F]);
+    result.push_back(static_cast<value_type>(tbl[c >> 4]));
+    result.push_back(static_cast<value_type>(tbl[c & 0x0F]));
   }
 }
 

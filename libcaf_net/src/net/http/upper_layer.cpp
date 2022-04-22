@@ -2,10 +2,14 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#pragma once
+#include "caf/net/http/upper_layer.hpp"
 
-namespace caf::tag {
+using namespace std::literals;
 
-struct message_oriented {};
+namespace caf::net::http {
 
-} // namespace caf::tag
+upper_layer::~upper_layer() {
+  // nop
+}
+
+} // namespace caf::net::http

@@ -17,13 +17,13 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/detail/network_order.hpp"
+#include "caf/net/message_oriented.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_guard.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/stream_socket.hpp"
 #include "caf/net/stream_transport.hpp"
 #include "caf/span.hpp"
-#include "caf/tag/message_oriented.hpp"
 
 using namespace caf;
 using namespace std::literals;
@@ -33,31 +33,38 @@ namespace {
 using string_list = std::vector<std::string>;
 
 template <bool EnableSuspend>
-struct app {
-  using input_tag = tag::message_oriented;
+class app_t : public net::message_oriented::upper_layer {
+public:
+  static auto make() {
+    return std::make_unique<app_t>();
+  }
 
-  template <class LowerLayerPtr>
-  caf::error init(net::socket_manager*, LowerLayerPtr, const settings&) {
+  caf::error init(net::socket_manager*,
+                  net::message_oriented::lower_layer* down_ptr,
+                  const settings&) override {
+    // Start reading immediately.
+    down = down_ptr;
+    down->request_messages();
     return none;
   }
 
-  template <class LowerLayerPtr>
-  bool prepare_send(LowerLayerPtr) {
+  bool prepare_send() override {
     return true;
   }
 
-  template <class LowerLayerPtr>
-  bool done_sending(LowerLayerPtr) {
+  bool done_sending() override {
     return true;
   }
 
-  template <class LowerLayerPtr>
-  void abort(LowerLayerPtr, const error&) {
+  void abort(const error&) override {
     // nop
   }
 
-  template <class LowerLayerPtr>
-  ptrdiff_t consume(LowerLayerPtr down, byte_span buf) {
+  void continue_reading() override {
+    down->request_messages();
+  }
+
+  ptrdiff_t consume(byte_span buf) override {
     auto printable = [](std::byte x) {
       return ::isprint(static_cast<uint8_t>(x));
     };
@@ -80,6 +87,8 @@ struct app {
     }
   }
 
+  net::message_oriented::lower_layer* down = nullptr;
+
   std::vector<std::string> inputs;
 };
 
@@ -99,7 +108,7 @@ auto decode(byte_buffer& buf) {
   string_list result;
   auto input = make_span(buf);
   while (!input.empty()) {
-    auto [msg_size, msg] = net::length_prefix_framing<app<false>>::split(input);
+    auto [msg_size, msg] = net::length_prefix_framing::split(input);
     if (msg_size > msg.size()) {
       CAF_FAIL("cannot decode buffer: invalid message size");
     } else if (!std::all_of(msg.begin(), msg.begin() + msg_size, printable)) {
@@ -118,19 +127,21 @@ auto decode(byte_buffer& buf) {
 SCENARIO("length-prefix framing reads data with 32-bit size headers") {
   GIVEN("a length_prefix_framing with an app that consumes strings") {
     WHEN("pushing data into the unit-under-test") {
-      mock_stream_transport<net::length_prefix_framing<app<false>>> uut;
-      CHECK_EQ(uut.init(), error{});
+      auto app = app_t<false>::make();
+      auto& state = *app;
+      auto framing = net::length_prefix_framing::make(std::move(app));
+      auto uut = mock_stream_transport::make(std::move(framing));
+      CHECK_EQ(uut->init(), error{});
       THEN("the app receives all strings as individual messages") {
-        encode(uut.input, "hello");
-        encode(uut.input, "world");
-        auto input_size = static_cast<ptrdiff_t>(uut.input.size());
-        CHECK_EQ(uut.handle_input(), input_size);
-        auto& state = uut.upper_layer.upper_layer();
+        encode(uut->input, "hello");
+        encode(uut->input, "world");
+        auto input_size = static_cast<ptrdiff_t>(uut->input.size());
+        CHECK_EQ(uut->handle_input(), input_size);
         if (CHECK_EQ(state.inputs.size(), 2u)) {
           CHECK_EQ(state.inputs[0], "hello");
           CHECK_EQ(state.inputs[1], "world");
         }
-        CHECK_EQ(decode(uut.output), string_list({"ok 1", "ok 2"}));
+        CHECK_EQ(decode(uut->output), string_list({"ok 1", "ok 2"}));
       }
     }
   }
@@ -162,13 +173,15 @@ SCENARIO("calling suspend_reading removes message apps temporarily") {
     REQUIRE_EQ(mpx.num_socket_managers(), 1u);
     if (auto err = net::nonblocking(fd2, true))
       CAF_FAIL("nonblocking returned an error: " << err);
-    auto mgr = net::make_socket_manager<app<true>, net::length_prefix_framing,
-                                        net::stream_transport>(fd2, &mpx);
+    auto app = app_t<true>::make();
+    auto& state = *app;
+    auto framing = net::length_prefix_framing::make(std::move(app));
+    auto transport = net::stream_transport::make(fd2, std::move(framing));
+    auto mgr = net::socket_manager::make(&mpx, fd2, std::move(transport));
     CHECK_EQ(mgr->init(settings{}), none);
     mpx.apply_updates();
     REQUIRE_EQ(mpx.num_socket_managers(), 2u);
     CHECK_EQ(mpx.mask_of(mgr), net::operation::read);
-    auto& state = mgr->top_layer();
     WHEN("the app calls suspend_reading") {
       while (mpx.num_socket_managers() > 1u)
         mpx.poll_once(true);

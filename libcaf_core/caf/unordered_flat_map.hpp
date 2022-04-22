@@ -10,13 +10,13 @@
 
 #include "caf/detail/comparable.hpp"
 #include "caf/detail/type_traits.hpp"
+#include "caf/fwd.hpp"
 #include "caf/raise_error.hpp"
 
-namespace caf::detail {
+namespace caf {
 
 /// A map abstraction with an unsorted `std::vector` providing `O(n)` lookup.
-template <class Key, class T,
-          class Allocator = std::allocator<std::pair<Key, T>>>
+template <class Key, class T, class Allocator>
 class unordered_flat_map {
 public:
   // -- member types ----------------------------------------------------------
@@ -209,7 +209,7 @@ public:
     auto i = find(key);
     if (i == end())
       CAF_RAISE_ERROR(std::out_of_range,
-                      "caf::detail::unordered_flat_map::at out of range");
+                      "caf::unordered_flat_map::at out of range");
     return i->second;
   }
 
@@ -278,4 +278,4 @@ bool operator>=(const unordered_flat_map<K, T, A>& xs,
   return !(xs < ys);
 }
 
-} // namespace caf::detail
+} // namespace caf

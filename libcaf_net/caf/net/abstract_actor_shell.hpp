@@ -7,7 +7,6 @@
 #include "caf/actor_traits.hpp"
 #include "caf/callback.hpp"
 #include "caf/detail/net_export.hpp"
-#include "caf/detail/unordered_flat_map.hpp"
 #include "caf/extend.hpp"
 #include "caf/fwd.hpp"
 #include "caf/intrusive/drr_queue.hpp"
@@ -18,6 +17,7 @@
 #include "caf/net/fwd.hpp"
 #include "caf/none.hpp"
 #include "caf/policy/normal_messages.hpp"
+#include "caf/unordered_flat_map.hpp"
 
 namespace caf::net {
 
@@ -40,13 +40,19 @@ public:
 
   using mailbox_type = intrusive::fifo_inbox<mailbox_policy>;
 
-  using fallback_handler = unique_callback_ptr<result<message>(message&)>;
+  using fallback_handler_sig = result<message>(abstract_actor_shell*, message&);
+
+  using fallback_handler = unique_callback_ptr<fallback_handler_sig>;
 
   // -- constructors, destructors, and assignment operators --------------------
 
   abstract_actor_shell(actor_config& cfg, socket_manager* owner);
 
   ~abstract_actor_shell() override;
+
+  // -- properties -------------------------------------------------------------
+
+  bool terminated() const noexcept;
 
   // -- state modifiers --------------------------------------------------------
 
@@ -56,7 +62,20 @@ public:
   /// Overrides the default handler for unexpected messages.
   template <class F>
   void set_fallback(F f) {
-    fallback_ = make_type_erased_callback(std::move(f));
+    using msg_res_t = result<message>;
+    using self_ptr_t = abstract_actor_shell*;
+    if constexpr (std::is_invocable_r_v<msg_res_t, F, self_ptr_t, message&>) {
+      fallback_ = make_type_erased_callback(std::move(f));
+    } else {
+      static_assert(std::is_invocable_r_v<msg_res_t, F, message&>,
+                    "illegal signature for the fallback handler: must be "
+                    "'result<message>(message&)' or "
+                    "'result<message>(abstract_actor_shell*, message&)'");
+      auto g = [f = std::move(f)](self_ptr_t, message& msg) mutable {
+        return f(msg);
+      };
+      fallback_ = make_type_erased_callback(std::move(g));
+    }
   }
 
   // -- mailbox access ---------------------------------------------------------
@@ -114,7 +133,7 @@ protected:
   fallback_handler fallback_;
 
   // Stores callbacks for multiplexed responses.
-  detail::unordered_flat_map<message_id, behavior> multiplexed_responses_;
+  unordered_flat_map<message_id, behavior> multiplexed_responses_;
 };
 
 } // namespace caf::net

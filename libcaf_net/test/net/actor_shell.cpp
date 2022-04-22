@@ -24,65 +24,67 @@ namespace {
 
 using svec = std::vector<std::string>;
 
-struct app_t {
-  using input_tag = tag::stream_oriented;
-
+class app_t : public net::stream_oriented::upper_layer {
+public:
   app_t() = default;
 
   explicit app_t(actor hdl) : worker(std::move(hdl)) {
     // nop
   }
 
-  template <class LowerLayerPtr>
-  error init(net::socket_manager* mgr, LowerLayerPtr down, const settings&) {
-    self = mgr->make_actor_shell(down);
+  static auto make() {
+    return std::make_unique<app_t>();
+  }
+
+  static auto make(actor hdl) {
+    return std::make_unique<app_t>(std::move(hdl));
+  }
+
+  error init(net::socket_manager* mgr, net::stream_oriented::lower_layer* down,
+             const settings&) override {
+    this->down = down;
+    self = mgr->make_actor_shell();
     self->set_behavior([this](std::string& line) {
       CAF_MESSAGE("received an asynchronous message: " << line);
       lines.emplace_back(std::move(line));
     });
-    self->set_fallback([](message& msg) -> result<message> {
-      CAF_FAIL("unexpected message: " << msg);
-      return make_error(sec::unexpected_message);
-    });
+    self->set_fallback(
+      [](net::abstract_actor_shell* self, message& msg) -> result<message> {
+        CAF_FAIL("unexpected message: " << msg);
+        auto err = make_error(sec::unexpected_message);
+        self->quit(err);
+        return err;
+      });
     down->configure_read(net::receive_policy::up_to(2048));
     return none;
   }
 
-  template <class LowerLayerPtr>
-  bool prepare_send(LowerLayerPtr down) {
-    while (self->consume_message()) {
-      // We set abort_reason in our response handlers in case of an error.
-      if (down->abort_reason())
-        return false;
-      // else: repeat.
-    }
-    return true;
+  bool prepare_send() override {
+    while (self->consume_message())
+      ; // repeat
+    return !self->terminated();
   }
 
-  template <class LowerLayerPtr>
-  void continue_reading(LowerLayerPtr) {
+  void continue_reading() override {
     CAF_FAIL("continue_reading called");
   }
 
-  template <class LowerLayerPtr>
-  bool done_sending(LowerLayerPtr) {
+  bool done_sending() override {
     return self->try_block_mailbox();
   }
 
-  template <class LowerLayerPtr>
-  void abort(LowerLayerPtr, const error& reason) {
+  void abort(const error& reason) override {
     CAF_FAIL("app::abort called: " << reason);
   }
 
-  template <class LowerLayerPtr>
-  ptrdiff_t consume(LowerLayerPtr down, byte_span buf, byte_span) {
+  ptrdiff_t consume(byte_span buf, byte_span) override {
     // Seek newline character.
     constexpr auto nl = std::byte{'\n'};
     if (auto i = std::find(buf.begin(), buf.end(), nl); i != buf.end()) {
       // Skip empty lines.
       if (i == buf.begin()) {
         consumed_bytes += 1;
-        auto sub_res = consume(down, buf.subspan(1), {});
+        auto sub_res = consume(buf.subspan(1), {});
         return sub_res >= 0 ? sub_res + 1 : sub_res;
       }
       auto num_bytes = std::distance(buf.begin(), i) + 1;
@@ -93,21 +95,19 @@ struct app_t {
       if (auto parsed_res = config_value::parse(line)) {
         val = std::move(*parsed_res);
       } else {
-        down->abort_reason(std::move(parsed_res.error()));
         return -1;
       }
       CAF_MESSAGE("deserialize message from: " << val);
       config_value_reader reader{&val};
       caf::message msg;
       if (!reader.apply(msg)) {
-        down->abort_reason(reader.get_error());
         return -1;
       }
       // Dispatch message to worker.
       CAF_MESSAGE("app received a message from its socket: " << msg);
       self->request(worker, std::chrono::seconds{1}, std::move(msg))
         .then(
-          [this, down](int32_t value) mutable {
+          [this](int32_t value) mutable {
             ++received_responses;
             // Respond with the value as string.
             auto str_response = std::to_string(value);
@@ -118,15 +118,18 @@ struct app_t {
             buf.insert(buf.end(), bytes.begin(), bytes.end());
             down->end_output();
           },
-          [down](error& err) mutable { down->abort_reason(std::move(err)); });
+          [this](error& err) mutable { self->quit(std::move(err)); });
       // Try consuming more from the buffer.
       consumed_bytes += static_cast<size_t>(num_bytes);
       auto sub_buf = buf.subspan(num_bytes);
-      auto sub_res = consume(down, sub_buf, {});
+      auto sub_res = consume(sub_buf, {});
       return sub_res >= 0 ? num_bytes + sub_res : sub_res;
     }
     return 0;
   }
+
+  // Pointer to the layer below.
+  net::stream_oriented::lower_layer* down;
 
   // Handle to the worker-under-test.
   actor worker;
@@ -198,17 +201,19 @@ constexpr std::string_view input = R"__(
 CAF_TEST_FIXTURE_SCOPE(actor_shell_tests, fixture)
 
 CAF_TEST(actor shells expose their mailbox to their owners) {
-  auto sck = testee_socket_guard.release();
-  auto mgr = net::make_socket_manager<app_t, net::stream_transport>(sck, &mpx);
+  auto fd = testee_socket_guard.release();
+  auto app_uptr = app_t::make();
+  auto app = app_uptr.get();
+  auto transport = net::stream_transport::make(fd, std::move(app_uptr));
+  auto mgr = net::socket_manager::make(&mpx, fd, std::move(transport));
   if (auto err = mgr->init(content(cfg)))
     CAF_FAIL("mgr->init() failed: " << err);
-  auto& app = mgr->top_layer();
-  auto hdl = app.self.as_actor();
+  auto hdl = app->self.as_actor();
   anon_send(hdl, "line 1");
   anon_send(hdl, "line 2");
   anon_send(hdl, "line 3");
-  run_while([&] { return app.lines.size() != 3; });
-  CAF_CHECK_EQUAL(app.lines, svec({"line 1", "line 2", "line 3"}));
+  run_while([&] { return app->lines.size() != 3; });
+  CAF_CHECK_EQUAL(app->lines, svec({"line 1", "line 2", "line 3"}));
 }
 
 CAF_TEST(actor shells can send requests and receive responses) {
@@ -217,14 +222,15 @@ CAF_TEST(actor shells can send requests and receive responses) {
       [](int32_t value) { return value * 2; },
     };
   });
-  auto sck = testee_socket_guard.release();
-  auto mgr = net::make_socket_manager<app_t, net::stream_transport>(sck, &mpx,
-                                                                    worker);
+  auto fd = testee_socket_guard.release();
+  auto app_uptr = app_t::make(worker);
+  auto app = app_uptr.get();
+  auto transport = net::stream_transport::make(fd, std::move(app_uptr));
+  auto mgr = net::socket_manager::make(&mpx, fd, std::move(transport));
   if (auto err = mgr->init(content(cfg)))
     CAF_FAIL("mgr->init() failed: " << err);
-  auto& app = mgr->top_layer();
   send(input);
-  run_while([&] { return app.consumed_bytes != input.size(); });
+  run_while([&] { return app->consumed_bytes != input.size(); });
   expect((int32_t), to(worker).with(123));
   std::string_view expected_response = "246\n";
   run_while([&] { return recv_buf.size() < expected_response.size(); });

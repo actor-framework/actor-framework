@@ -9,46 +9,21 @@
 #include "net-test.hpp"
 
 using namespace caf;
-using namespace caf::literals;
-using namespace std::literals::string_literals;
+using namespace std::literals;
 
 namespace {
 
-struct app_t {
+class app_t : public net::http::upper_layer {
+public:
+  // -- member variables -------------------------------------------------------
+
   net::http::header hdr;
 
   caf::byte_buffer payload;
 
-  template <class LowerLayerPtr>
-  error init(net::socket_manager*, LowerLayerPtr, const settings&) {
-    return none;
-  }
+  net::http::lower_layer* down = nullptr;
 
-  template <class LowerLayerPtr>
-  bool prepare_send(LowerLayerPtr) {
-    return true;
-  }
-
-  template <class LowerLayerPtr>
-  bool done_sending(LowerLayerPtr) {
-    return true;
-  }
-
-  template <class LowerLayerPtr>
-  void abort(LowerLayerPtr, const error& reason) {
-    CAF_FAIL("app::abort called: " << reason);
-  }
-
-  template <class LowerLayerPtr>
-  bool consume(LowerLayerPtr down, net::http::context ctx,
-               const net::http::header& request_hdr,
-               caf::const_byte_span body) {
-    hdr = request_hdr;
-    down->send_response(ctx, net::http::status::ok, "text/plain",
-                        "Hello world!");
-    payload.assign(body.begin(), body.end());
-    return true;
-  }
+  // -- properties -------------------------------------------------------------
 
   std::string_view field(std::string_view key) {
     if (auto i = hdr.fields().find(key); i != hdr.fields().end())
@@ -64,9 +39,48 @@ struct app_t {
     else
       return {};
   }
-};
 
-using mock_server_type = mock_stream_transport<net::http::server<app_t>>;
+  // -- factories --------------------------------------------------------------
+
+  static auto make() {
+    return std::make_unique<app_t>();
+  }
+
+  // -- implementation of http::upper_layer ------------------------------------
+
+  error init(net::socket_manager*, net::http::lower_layer* down_ptr,
+             const settings&) override {
+    down = down_ptr;
+    return none;
+  }
+
+  void abort(const error& reason) override {
+    CAF_FAIL("app::abort called: " << reason);
+  }
+
+  bool prepare_send() override {
+    return true;
+  }
+
+  bool done_sending() override {
+    return true;
+  }
+
+  ptrdiff_t consume(net::http::context ctx,
+                    const net::http::header& request_hdr,
+                    const_byte_span body) override {
+    hdr = request_hdr;
+    auto content = "Hello world!"sv;
+    down->send_response(ctx, net::http::status::ok, "text/plain",
+                        as_bytes(make_span(content)));
+    payload.assign(body.begin(), body.end());
+    return static_cast<ptrdiff_t>(body.size());
+  }
+
+  void continue_reading() override {
+    // nop
+  }
+};
 
 } // namespace
 
@@ -82,22 +96,24 @@ SCENARIO("the server parses HTTP GET requests into header fields") {
                            "\r\n"
                            "Hello world!";
     WHEN("sending it to an HTTP server") {
-      mock_server_type serv;
-      CHECK_EQ(serv.init(), error{});
-      serv.push(req);
+      auto app_ptr = app_t::make();
+      auto app = app_ptr.get();
+      auto http_ptr = net::http::server::make(std::move(app_ptr));
+      auto serv = mock_stream_transport::make(std::move(http_ptr));
+      CHECK_EQ(serv->init(settings{}), error{});
+      serv->push(req);
       THEN("the HTTP layer parses the data and calls the application layer") {
-        CHECK_EQ(serv.handle_input(), static_cast<ptrdiff_t>(req.size()));
-        auto& app = serv.upper_layer.upper_layer();
-        auto& hdr = app.hdr;
+        CHECK_EQ(serv->handle_input(), static_cast<ptrdiff_t>(req.size()));
+        auto& hdr = app->hdr;
         CHECK_EQ(hdr.method(), net::http::method::get);
         CHECK_EQ(hdr.version(), "HTTP/1.1");
         CHECK_EQ(hdr.path(), "/foo/bar");
-        CHECK_EQ(app.field("Host"), "localhost:8090");
-        CHECK_EQ(app.field("User-Agent"), "AwesomeLib/1.0");
-        CHECK_EQ(app.field("Accept-Encoding"), "gzip");
+        CHECK_EQ(app->field("Host"), "localhost:8090");
+        CHECK_EQ(app->field("User-Agent"), "AwesomeLib/1.0");
+        CHECK_EQ(app->field("Accept-Encoding"), "gzip");
       }
       AND("the server properly formats a response from the application layer") {
-        CHECK_EQ(serv.output_as_str(), res);
+        CHECK_EQ(serv->output_as_str(), res);
       }
     }
   }

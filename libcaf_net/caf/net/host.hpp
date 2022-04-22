@@ -9,7 +9,9 @@
 
 namespace caf::net {
 
-struct CAF_NET_EXPORT this_host {
+/// Groups functions for managing the host system.
+class CAF_NET_EXPORT this_host {
+public:
   /// Initializes the network subsystem.
   static error startup();
 

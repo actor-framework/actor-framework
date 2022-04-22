@@ -23,31 +23,44 @@ caf_add_component(
   HEADERS
     ${CAF_NET_HEADERS}
   SOURCES
-    src/datagram_socket.cpp
     src/detail/convert_ip_endpoint.cpp
     src/detail/rfc6455.cpp
-    src/host.cpp
-    src/ip.cpp
-    src/multiplexer.cpp
     src/net/abstract_actor_shell.cpp
     src/net/actor_shell.cpp
+    src/net/datagram_socket.cpp
+    src/net/host.cpp
     src/net/http/header.cpp
+    src/net/http/lower_layer.cpp
     src/net/http/method.cpp
+    src/net/http/server.cpp
     src/net/http/status.cpp
+    src/net/http/upper_layer.cpp
     src/net/http/v1.cpp
+    src/net/ip.cpp
+    src/net/length_prefix_framing.cpp
+    src/net/message_oriented.cpp
     src/net/middleman.cpp
+    src/net/multiplexer.cpp
+    src/net/network_socket.cpp
+    src/net/pipe_socket.cpp
+    src/net/pollset_updater.cpp
+    src/net/socket.cpp
+    src/net/socket_event_layer.cpp
+    src/net/socket_manager.cpp
+    src/net/stream_oriented.cpp
+    src/net/stream_socket.cpp
+    src/net/stream_transport.cpp
+    src/net/tcp_accept_socket.cpp
+    src/net/tcp_stream_socket.cpp
+    src/net/udp_datagram_socket.cpp
+    src/net/web_socket/client.cpp
     src/net/web_socket/default_trait.cpp
     src/net/web_socket/frame.cpp
+    src/net/web_socket/framing.cpp
     src/net/web_socket/handshake.cpp
-    src/network_socket.cpp
-    src/pipe_socket.cpp
-    src/pollset_updater.cpp
-    src/socket.cpp
-    src/socket_manager.cpp
-    src/stream_socket.cpp
-    src/tcp_accept_socket.cpp
-    src/tcp_stream_socket.cpp
-    src/udp_datagram_socket.cpp
+    src/net/web_socket/lower_layer.cpp
+    src/net/web_socket/server.cpp
+    src/net/web_socket/upper_layer.cpp
   TEST_SOURCES
     test/net-test.cpp
     test/pem.cpp

@@ -4,26 +4,23 @@
 
 #pragma once
 
-namespace caf::net::web_socket {
+#include "caf/fwd.hpp"
 
-template <class Trait>
-class flow_connector;
+#include <string_view>
 
-template <class OnRequest, class Trait, class... Ts>
-class flow_connector_impl;
+namespace caf::net::http {
 
-template <class Trait>
-class flow_bridge;
-
-template <class Trait, class... Ts>
-class request;
-
-class frame;
-class framing;
+class context;
+class header;
 class lower_layer;
 class server;
 class upper_layer;
 
+using header_fields_map
+  = unordered_flat_map<std::string_view, std::string_view>;
+
+enum class method : uint8_t;
+
 enum class status : uint16_t;
 
-} // namespace caf::net::web_socket
+} // namespace caf::net::http

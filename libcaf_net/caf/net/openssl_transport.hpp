@@ -7,7 +7,6 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/defaults.hpp"
-#include "caf/detail/has_after_reading.hpp"
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/fwd.hpp"
@@ -123,7 +122,7 @@ inline conn_ptr make_conn(const ctx_ptr& ctx, stream_socket fd) {
 }
 
 /// Manages an OpenSSL connection.
-class policy {
+class policy : public stream_transport::policy {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
@@ -182,65 +181,29 @@ public:
     }
   }
 
-  // -- interface functions for the stream transport ---------------------------
+  /// Graceful shutdown.
+  void notify_close() {
+    SSL_shutdown(conn_.get());
+  }
+
+  // -- implementation of stream_transport::policy -----------------------------
 
   /// Fetches a string representation for the last error.
   std::string fetch_error_str() {
     return openssl::fetch_error_str();
   }
 
-  /// Reads data from the SSL connection into the buffer.
-  ptrdiff_t read(stream_socket, byte_span buf) {
-    return SSL_read(conn_.get(), buf.data(), static_cast<int>(buf.size()));
-  }
+  ptrdiff_t read(stream_socket, byte_span) override;
 
-  /// Writes data from the buffer to the SSL connection.
-  ptrdiff_t write(stream_socket, const_byte_span buf) {
-    return SSL_write(conn_.get(), buf.data(), static_cast<int>(buf.size()));
-  }
+  ptrdiff_t write(stream_socket, const_byte_span) override;
 
-  /// Performs a TLS/SSL handshake with the server.
-  ptrdiff_t connect(stream_socket) {
-    return SSL_connect(conn_.get());
-  }
+  stream_transport_error last_error(stream_socket, ptrdiff_t) override;
 
-  /// Waits for the client to performs a TLS/SSL handshake.
-  ptrdiff_t accept(stream_socket) {
-    return SSL_accept(conn_.get());
-  }
+  ptrdiff_t connect(stream_socket) override;
 
-  /// Returns the last SSL error.
-  stream_transport_error last_error(stream_socket fd, ptrdiff_t ret) {
-    switch (SSL_get_error(conn_.get(), static_cast<int>(ret))) {
-      case SSL_ERROR_NONE:
-      case SSL_ERROR_WANT_ACCEPT:
-      case SSL_ERROR_WANT_CONNECT:
-        // For all of these, OpenSSL docs say to do the operation again later.
-        return stream_transport_error::temporary;
-      case SSL_ERROR_SYSCALL:
-        // Need to consult errno, which we just leave to the default policy.
-        return default_stream_transport_policy::last_error(fd, ret);
-      case SSL_ERROR_WANT_READ:
-        return stream_transport_error::want_read;
-      case SSL_ERROR_WANT_WRITE:
-        return stream_transport_error::want_write;
-      default:
-        // Errors like SSL_ERROR_WANT_X509_LOOKUP are technically temporary, but
-        // we do not configure any callbacks. So seeing this is a red flag.
-        return stream_transport_error::permanent;
-    }
-  }
+  ptrdiff_t accept(stream_socket) override;
 
-  /// Graceful shutdown.
-  void notify_close() {
-    SSL_shutdown(conn_.get());
-  }
-
-  /// Returns the number of bytes that are buffered internally and that are
-  /// available for immediate read.
-  size_t buffered() {
-    return static_cast<size_t>(SSL_pending(conn_.get()));
-  }
+  size_t buffered() override;
 
 private:
   /// Our SSL connection data.
@@ -305,27 +268,19 @@ namespace caf::net {
 
 /// Implements a stream_transport that manages a stream socket with encrypted
 /// communication over OpenSSL.
-template <class UpperLayer>
-class openssl_transport
-  : public stream_transport_base<openssl::policy, UpperLayer> {
+class openssl_transport : public stream_transport {
 public:
   // -- member types -----------------------------------------------------------
 
-  using super = stream_transport_base<openssl::policy, UpperLayer>;
+  using super = stream_transport;
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  template <class... Ts>
-  explicit openssl_transport(openssl::conn_ptr conn, Ts&&... xs)
-    : super(openssl::policy{std::move(conn)}, std::forward<Ts>(xs)...) {
-    // nop
-  }
+  openssl_transport(stream_socket fd, openssl::conn_ptr conn,
+                    upper_layer_ptr up);
 
-  template <class... Ts>
-  openssl_transport(openssl::policy policy, Ts&&... xs)
-    : super(std::move(policy), std::forward<Ts>(xs)...) {
-    // nop
-  }
+private:
+  openssl::policy ssl_policy_;
 };
 
 } // namespace caf::net

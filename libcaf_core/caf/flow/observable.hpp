@@ -11,7 +11,6 @@
 #include "caf/cow_vector.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/core_export.hpp"
-#include "caf/detail/unordered_flat_map.hpp"
 #include "caf/disposable.hpp"
 #include "caf/flow/coordinated.hpp"
 #include "caf/flow/coordinator.hpp"
@@ -33,6 +32,7 @@
 #include "caf/make_counted.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/sec.hpp"
+#include "caf/unordered_flat_map.hpp"
 
 #include <cstddef>
 #include <functional>

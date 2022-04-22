@@ -114,12 +114,14 @@ error multiplexer::init() {
   auto pipe_handles = make_pipe();
   if (!pipe_handles)
     return std::move(pipe_handles.error());
-  auto updater = make_counted<pollset_updater>(pipe_handles->first, this);
-  if (auto err = updater->init(settings{}))
+  auto updater = pollset_updater::make(pipe_handles->first);
+  auto mgr = socket_manager::make(this, pipe_handles->first,
+                                  std::move(updater));
+  if (auto err = mgr->init(settings{}))
     return err;
   write_handle_ = pipe_handles->second;
   pollset_.emplace_back(pollfd{pipe_handles->first.id, input_mask, 0});
-  managers_.emplace_back(updater);
+  managers_.emplace_back(mgr);
   return none;
 }
 
@@ -380,6 +382,7 @@ void multiplexer::handle(const socket_manager_ptr& mgr,
       default: // socket_manager::read_result::again
         // Nothing to do, bitmask may remain unchanged.
         break;
+      case socket_manager::read_result::abort:
       case socket_manager::read_result::stop:
         update_for(mgr).events &= ~input_mask;
         break;
@@ -399,6 +402,7 @@ void multiplexer::handle(const socket_manager_ptr& mgr,
     switch (mgr->handle_write_event()) {
       default: // socket_manager::write_result::again
         break;
+      case socket_manager::write_result::abort:
       case socket_manager::write_result::stop:
         update_for(mgr).events &= ~output_mask;
         break;
@@ -438,6 +442,7 @@ void multiplexer::do_handover(const socket_manager_ptr& mgr) {
         default: // socket_manager::read_result::again
           // Nothing to do, bitmask may remain unchanged.
           break;
+        case socket_manager::read_result::abort:
         case socket_manager::read_result::stop:
           update.events &= ~input_mask;
           break;
@@ -556,7 +561,7 @@ void multiplexer::do_register_writing(const socket_manager_ptr& mgr) {
 void multiplexer::do_continue_reading(const socket_manager_ptr& mgr) {
   if (!is_reading(mgr)) {
     switch (mgr->handle_continue_reading()) {
-      default: // socket_manager::read_result::stop
+      default: // socket_manager::read_result::(stop | abort)
         update_for(mgr).events &= ~input_mask;
         break;
       case socket_manager::read_result::again:
@@ -575,7 +580,7 @@ void multiplexer::do_continue_reading(const socket_manager_ptr& mgr) {
 void multiplexer::do_continue_writing(const socket_manager_ptr& mgr) {
   if (!is_writing(mgr)) {
     switch (mgr->handle_continue_writing()) {
-      default: // socket_manager::read_result::stop
+      default: // socket_manager::read_result::(stop | abort)
         update_for(mgr).events &= ~output_mask;
         break;
       case socket_manager::write_result::again:

@@ -2,15 +2,16 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#pragma once
-
-#include "caf/net/web_socket/server.hpp"
+#include "caf/net/stream_oriented.hpp"
 
 namespace caf::net {
 
-template <class UpperLayer>
-using web_socket_server
-  [[deprecated("use caf::net::web_socket::server instead")]]
-  = web_socket::server<UpperLayer>;
+stream_oriented::upper_layer::~upper_layer() {
+  // nop
+}
+
+stream_oriented::lower_layer::~lower_layer() {
+  // nop
+}
 
 } // namespace caf::net

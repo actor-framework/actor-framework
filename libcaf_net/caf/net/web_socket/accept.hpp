@@ -17,7 +17,7 @@
 
 namespace caf::detail {
 
-template <template <class> class Transport, class Trait>
+template <class Transport, class Trait>
 class ws_acceptor_factory {
 public:
   using connector_pointer = net::web_socket::flow_connector_ptr<Trait>;
@@ -32,10 +32,11 @@ public:
   }
 
   template <class Socket>
-  net::socket_manager_ptr make(Socket fd, net::multiplexer* mpx) {
-    using app_t = net::web_socket::flow_bridge<Trait>;
-    using stack_t = Transport<net::web_socket::server<app_t>>;
-    return net::make_socket_manager<stack_t>(fd, mpx, connector_);
+  net::socket_manager_ptr make(net::multiplexer* mpx, Socket fd) {
+    auto app = net::web_socket::flow_bridge<Trait>::make(connector_);
+    auto ws = net::web_socket::server::make(std::move(app));
+    auto transport = Transport::make(fd, std::move(ws));
+    return net::socket_manager::make(mpx, fd, std::move(transport));
   }
 
   void abort(const error&) {
@@ -80,8 +81,8 @@ auto make_accept_event_resources() {
 /// @param on_request Function object for accepting incoming requests.
 /// @param limit The maximum amount of connections before closing @p fd. Passing
 ///              0 means "no limit".
-template <template <class> class Transport = stream_transport, class Socket,
-          class... Ts, class OnRequest>
+template <class Transport = stream_transport, class Socket, class... Ts,
+          class OnRequest>
 void accept(actor_system& sys, Socket fd, acceptor_resource_t<Ts...> out,
             OnRequest on_request, size_t limit = 0) {
   using trait_t = default_trait;
@@ -95,8 +96,8 @@ void accept(actor_system& sys, Socket fd, acceptor_resource_t<Ts...> out,
     auto& mpx = sys.network_manager().mpx();
     auto conn = std::make_shared<conn_t>(std::move(on_request), std::move(buf));
     auto factory = factory_t{std::move(conn)};
-    auto ptr = make_socket_manager<impl_t>(std::move(fd), &mpx, limit,
-                                           std::move(factory));
+    auto impl = impl_t::make(fd, limit, std::move(factory));
+    auto ptr = socket_manager::make(&mpx, fd, std::move(impl));
     mpx.init(ptr);
   }
   // TODO: accept() should return a disposable to stop the WebSocket server.

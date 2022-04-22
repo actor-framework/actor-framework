@@ -27,6 +27,12 @@ abstract_actor_shell::~abstract_actor_shell() {
   // nop
 }
 
+// -- properties ---------------------------------------------------------------
+
+bool abstract_actor_shell::terminated() const noexcept {
+  return mailbox_.closed();
+}
+
 // -- state modifiers ----------------------------------------------------------
 
 void abstract_actor_shell::quit(error reason) {
@@ -65,7 +71,7 @@ bool abstract_actor_shell::consume_message() {
       if (auto result = bhvr_(msg->payload)) {
         visitor(*result);
       } else {
-        auto fallback_result = (*fallback_)(msg->payload);
+        auto fallback_result = (*fallback_)(this, msg->payload);
         visit(visitor, fallback_result);
       }
     } else if (auto i = multiplexed_responses_.find(mid);

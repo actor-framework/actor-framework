@@ -19,33 +19,33 @@
 #include <tuple>
 
 using namespace caf;
-using namespace caf::net;
 
 namespace {
 
-using shared_atomic_count = std::shared_ptr<std::atomic<size_t>>;
+using shared_count = std::shared_ptr<std::atomic<size_t>>;
 
-class dummy_manager : public socket_manager {
+class mock_event_layer : public net::socket_event_layer {
 public:
   // -- constructors, destructors, and assignment operators --------------------
 
-  dummy_manager(stream_socket handle, multiplexer* parent, std::string name,
-                shared_atomic_count count)
-    : socket_manager(handle, parent), name(std::move(name)), count_(count) {
-    MESSAGE("created new dummy manager");
+  mock_event_layer(net::stream_socket fd, std::string name, shared_count count)
+    : name(std::move(name)), fd_(fd), count_(count) {
+    MESSAGE("created new mock event layer");
     ++*count_;
     rd_buf_.resize(1024);
   }
 
-  ~dummy_manager() {
-    MESSAGE("destroyed dummy manager");
+  ~mock_event_layer() {
+    MESSAGE("destroyed mock event layer");
     --*count_;
   }
 
-  // -- properties -------------------------------------------------------------
+  // -- factories --------------------------------------------------------------
 
-  stream_socket handle() const noexcept {
-    return socket_cast<stream_socket>(handle_);
+  static auto make(net::stream_socket fd, std::string name,
+                   shared_count count) {
+    return std::make_unique<mock_event_layer>(fd, std::move(name),
+                                              std::move(count));
   }
 
   // -- testing DSL ------------------------------------------------------------
@@ -61,26 +61,26 @@ public:
     return result;
   }
 
-  // -- interface functions ----------------------------------------------------
+  // -- implementation of socket_event_layer -----------------------------------
 
-  error init(const settings&) override {
+  error init(net::socket_manager*, const settings&) override {
     return none;
   }
 
   read_result handle_read_event() override {
-    if (trigger_handover) {
-      MESSAGE(name << " triggered a handover");
-      return read_result::handover;
-    }
+    // if (trigger_handover) {
+    //   MESSAGE(name << " triggered a handover");
+    //   return read_result::handover;
+    // }
     if (read_capacity() < 1024)
       rd_buf_.resize(rd_buf_.size() + 2048);
-    auto num_bytes = read(handle(),
+    auto num_bytes = read(fd_,
                           make_span(read_position_begin(), read_capacity()));
     if (num_bytes > 0) {
       CAF_ASSERT(num_bytes > 0);
       rd_buf_pos_ += num_bytes;
       return read_result::again;
-    } else if (num_bytes < 0 && last_socket_error_is_temporary()) {
+    } else if (num_bytes < 0 && net::last_socket_error_is_temporary()) {
       return read_result::again;
     } else {
       return read_result::stop;
@@ -96,18 +96,18 @@ public:
   }
 
   write_result handle_write_event() override {
-    if (trigger_handover) {
-      MESSAGE(name << " triggered a handover");
-      return write_result::handover;
-    }
+    // if (trigger_handover) {
+    //   MESSAGE(name << " triggered a handover");
+    //   return write_result::handover;
+    // }
     if (wr_buf_.size() == 0)
       return write_result::stop;
-    auto num_bytes = write(handle(), wr_buf_);
+    auto num_bytes = write(fd_, wr_buf_);
     if (num_bytes > 0) {
       wr_buf_.erase(wr_buf_.begin(), wr_buf_.begin() + num_bytes);
       return wr_buf_.size() > 0 ? write_result::again : write_result::stop;
     }
-    return num_bytes < 0 && last_socket_error_is_temporary()
+    return num_bytes < 0 && net::last_socket_error_is_temporary()
              ? write_result::again
              : write_result::stop;
   }
@@ -116,25 +116,9 @@ public:
     return write_result::again;
   }
 
-  void handle_error(sec code) override {
-    FAIL("handle_error called with code " << code);
+  void abort(const error& reason) override {
+    FAIL("abort called: " << reason);
   }
-
-  socket_manager_ptr make_next_manager(socket handle) override {
-    if (next != nullptr)
-      FAIL("asked to do handover twice!");
-    next = make_counted<dummy_manager>(socket_cast<stream_socket>(handle), mpx_,
-                                       "Carl", count_);
-    if (auto err = next->init(settings{}))
-      FAIL("next->init failed: " << err);
-    return next;
-  }
-
-  // --
-
-  bool trigger_handover = false;
-
-  intrusive_ptr<dummy_manager> next;
 
   std::string name;
 
@@ -151,7 +135,9 @@ private:
     return rd_buf_.size() - rd_buf_pos_;
   }
 
-  shared_atomic_count count_;
+  net::stream_socket fd_;
+
+  shared_count count_;
 
   size_t rd_buf_pos_ = 0;
 
@@ -159,8 +145,6 @@ private:
 
   byte_buffer rd_buf_;
 };
-
-using dummy_manager_ptr = intrusive_ptr<dummy_manager>;
 
 struct fixture {
   fixture() : mpx(nullptr) {
@@ -184,9 +168,11 @@ struct fixture {
     mpx.apply_updates();
   }
 
-  auto make_manager(stream_socket fd, std::string name) {
-    return make_counted<dummy_manager>(fd, &mpx, std::move(name),
-                                       manager_count);
+  std::pair<mock_event_layer*, net::socket_manager_ptr>
+  make_manager(net::stream_socket fd, std::string name) {
+    auto mock = mock_event_layer::make(fd, std::move(name), manager_count);
+    auto mock_ptr = mock.get();
+    return {mock_ptr, net::socket_manager::make(&mpx, fd, std::move(mock))};
   }
 
   void init() {
@@ -195,9 +181,9 @@ struct fixture {
     exhaust();
   }
 
-  shared_atomic_count manager_count;
+  shared_count manager_count;
 
-  multiplexer mpx;
+  net::multiplexer mpx;
 };
 
 } // namespace
@@ -231,16 +217,16 @@ SCENARIO("socket managers can register for read and write operations") {
   GIVEN("an initialized multiplexer") {
     init();
     WHEN("socket managers register for read and write operations") {
-      auto [alice_fd, bob_fd] = unbox(make_stream_socket_pair());
-      auto alice = make_manager(alice_fd, "Alice");
-      auto bob = make_manager(bob_fd, "Bob");
-      alice->register_reading();
-      bob->register_reading();
+      auto [alice_fd, bob_fd] = unbox(net::make_stream_socket_pair());
+      auto [alice, alice_mgr] = make_manager(alice_fd, "Alice");
+      auto [bob, bob_mgr] = make_manager(bob_fd, "Bob");
+      alice_mgr->register_reading();
+      bob_mgr->register_reading();
       apply_updates();
       CHECK_EQ(mpx.num_socket_managers(), 3u);
       THEN("the multiplexer runs callbacks on socket activity") {
         alice->send("Hello Bob!");
-        alice->register_writing();
+        alice_mgr->register_writing();
         exhaust();
         CHECK_EQ(bob->receive(), "Hello Bob!");
       }
@@ -258,56 +244,58 @@ SCENARIO("a multiplexer terminates its thread after shutting down") {
       mpx.run();
     }};
     go_time->arrive_and_wait();
-    auto [alice_fd, bob_fd] = unbox(make_stream_socket_pair());
-    auto alice = make_manager(alice_fd, "Alice");
-    auto bob = make_manager(bob_fd, "Bob");
-    alice->register_reading();
-    bob->register_reading();
+    auto [alice_fd, bob_fd] = unbox(net::make_stream_socket_pair());
+    auto [alice, alice_mgr] = make_manager(alice_fd, "Alice");
+    auto [bob, bob_mgr] = make_manager(bob_fd, "Bob");
+    alice_mgr->register_reading();
+    bob_mgr->register_reading();
     WHEN("calling shutdown on the multiplexer") {
       mpx.shutdown();
       THEN("the thread terminates and all socket managers get shut down") {
         mpx_thread.join();
-        CHECK(alice->read_closed());
-        CHECK(bob->read_closed());
+        CHECK(alice_mgr->read_closed());
+        CHECK(bob_mgr->read_closed());
       }
     }
   }
 }
 
-SCENARIO("a multiplexer allows managers to perform socket handovers") {
-  GIVEN("an initialized multiplexer") {
-    init();
-    WHEN("socket manager triggers a handover") {
-      auto [alice_fd, bob_fd] = unbox(make_stream_socket_pair());
-      auto alice = make_manager(alice_fd, "Alice");
-      auto bob = make_manager(bob_fd, "Bob");
-      alice->register_reading();
-      bob->register_reading();
-      apply_updates();
-      CHECK_EQ(mpx.num_socket_managers(), 3u);
-      THEN("the multiplexer swaps out the socket managers for the socket") {
-        alice->send("Hello Bob!");
-        alice->register_writing();
-        exhaust();
-        CHECK_EQ(bob->receive(), "Hello Bob!");
-        bob->trigger_handover = true;
-        alice->send("Hello Carl!");
-        alice->register_writing();
-        bob->register_reading();
-        exhaust();
-        CHECK_EQ(bob->receive(), "");
-        CHECK_EQ(bob->handle(), invalid_socket);
-        if (CHECK_NE(bob->next, nullptr)) {
-          auto carl = bob->next;
-          CHECK_EQ(carl->handle(), socket{bob_fd});
-          carl->register_reading();
-          exhaust();
-          CHECK_EQ(carl->name, "Carl");
-          CHECK_EQ(carl->receive(), "Hello Carl!");
-        }
-      }
-    }
-  }
-}
+// TODO: re-implement handovers
+//
+// SCENARIO("a multiplexer allows managers to perform socket handovers") {
+//   GIVEN("an initialized multiplexer") {
+//     init();
+//     WHEN("socket manager triggers a handover") {
+//       auto [alice_fd, bob_fd] = unbox(make_stream_socket_pair());
+//       auto alice = make_manager(alice_fd, "Alice");
+//       auto bob = make_manager(bob_fd, "Bob");
+//       alice->register_reading();
+//       bob->register_reading();
+//       apply_updates();
+//       CHECK_EQ(mpx.num_socket_managers(), 3u);
+//       THEN("the multiplexer swaps out the socket managers for the socket") {
+//         alice->send("Hello Bob!");
+//         alice->register_writing();
+//         exhaust();
+//         CHECK_EQ(bob->receive(), "Hello Bob!");
+//         bob->trigger_handover = true;
+//         alice->send("Hello Carl!");
+//         alice->register_writing();
+//         bob->register_reading();
+//         exhaust();
+//         CHECK_EQ(bob->receive(), "");
+//         CHECK_EQ(bob->handle(), invalid_socket);
+//         if (CHECK_NE(bob->next, nullptr)) {
+//           auto carl = bob->next;
+//           CHECK_EQ(carl->handle(), socket{bob_fd});
+//           carl->register_reading();
+//           exhaust();
+//           CHECK_EQ(carl->name, "Carl");
+//           CHECK_EQ(carl->receive(), "Hello Carl!");
+//         }
+//       }
+//     }
+//   }
+// }
 
 END_FIXTURE_SCOPE()

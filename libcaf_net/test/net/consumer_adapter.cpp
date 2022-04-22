@@ -12,6 +12,7 @@
 #include "caf/net/middleman.hpp"
 #include "caf/net/socket_guard.hpp"
 #include "caf/net/stream_socket.hpp"
+#include "caf/net/stream_transport.hpp"
 #include "caf/scheduled_actor/flow.hpp"
 
 using namespace caf;
@@ -58,10 +59,8 @@ private:
   net::socket_guard<net::stream_socket> sg_;
 };
 
-class app_t {
+class app_t : public net::stream_oriented::upper_layer {
 public:
-  using input_tag = tag::stream_oriented;
-
   using resource_type = async::consumer_resource<int32_t>;
 
   using buffer_type = resource_type::buffer_type;
@@ -74,8 +73,14 @@ public:
     // nop
   }
 
-  template <class LowerLayerPtr>
-  error init(net::socket_manager* mgr, LowerLayerPtr, const settings&) {
+  static auto make(resource_type input) {
+    return std::make_unique<app_t>(std::move(input));
+  }
+
+  error init(net::socket_manager* mgr,
+             net::stream_oriented::lower_layer* down_ptr,
+             const settings&) override {
+    down = down_ptr;
     if (auto ptr = adapter_type::try_open(mgr, std::move(input))) {
       adapter = std::move(ptr);
       return none;
@@ -84,10 +89,8 @@ public:
     }
   }
 
-  template <class LowerLayerPtr>
   struct send_helper {
     app_t* thisptr;
-    LowerLayerPtr down;
 
     void on_next(int32_t item) {
       thisptr->written_values.emplace_back(item);
@@ -96,10 +99,10 @@ public:
       if (!sink.apply(item))
         FAIL("sink.apply failed: " << sink.get_error());
       auto bytes = make_span(thisptr->written_bytes).subspan(offset);
-      down->begin_output();
-      auto& buf = down->output_buffer();
+      thisptr->down->begin_output();
+      auto& buf = thisptr->down->output_buffer();
       buf.insert(buf.end(), bytes.begin(), bytes.end());
-      down->end_output();
+      thisptr->down->end_output();
     }
 
     void on_complete() {
@@ -111,11 +114,10 @@ public:
     }
   };
 
-  template <class LowerLayerPtr>
-  bool prepare_send(LowerLayerPtr down) {
+  bool prepare_send() override {
     if (done || !adapter)
       return true;
-    auto helper = send_helper<LowerLayerPtr>{this, down};
+    auto helper = send_helper{this};
     while (down->can_send_more()) {
       auto [again, consumed] = adapter->pull(async::delay_errors, 1, helper);
       if (!again) {
@@ -131,26 +133,23 @@ public:
     return true;
   }
 
-  template <class LowerLayerPtr>
-  bool done_sending(LowerLayerPtr) {
+  bool done_sending() override {
     return done || !adapter->has_data();
   }
 
-  template <class LowerLayerPtr>
-  void continue_reading(LowerLayerPtr) {
+  void continue_reading() override {
     CAF_FAIL("continue_reading called");
   }
 
-  template <class LowerLayerPtr>
-  void abort(LowerLayerPtr, const error& reason) {
-    FAIL("app::abort called: " << reason);
+  void abort(const error& reason) override {
+    MESSAGE("app::abort: " << reason);
   }
 
-  template <class LowerLayerPtr>
-  ptrdiff_t consume(LowerLayerPtr, byte_span, byte_span) {
+  ptrdiff_t consume(byte_span, byte_span) override {
     FAIL("app::consume called: unexpected data");
   }
 
+  net::stream_oriented::lower_layer* down = nullptr;
   bool done = false;
   std::vector<int32_t> written_values;
   byte_buffer written_bytes;
@@ -167,6 +166,10 @@ struct fixture : test_coordinator_fixture<> {
 
   bool handle_io_event() override {
     return mm.mpx().poll_once(false);
+  }
+
+  auto mpx() {
+    return mm.mpx_ptr();
   }
 
   net::middleman mm;
@@ -189,9 +192,10 @@ SCENARIO("subscriber adapters wake up idle socket managers") {
         FAIL("nonblocking(fd1) returned an error: " << err);
       if (auto err = nonblocking(fd2, true))
         FAIL("nonblocking(fd2) returned an error: " << err);
-      auto mgr = net::make_socket_manager<app_t, net::stream_transport>(
-        fd1, mm.mpx_ptr(), std::move(rd));
-      auto& app = mgr->top_layer();
+      auto app = app_t::make(std::move(rd));
+      auto& state = *app;
+      auto transport = net::stream_transport::make(fd1, std::move(app));
+      auto mgr = net::socket_manager::make(mpx(), fd1, std::move(transport));
       if (auto err = mgr->init(content(cfg)))
         FAIL("mgr->init() failed: " << err);
       THEN("the reader receives all items before the connection closes") {
@@ -205,10 +209,10 @@ SCENARIO("subscriber adapters wake up idle socket managers") {
           run();
           rd.read_some();
         }
-        CHECK_EQ(app.written_values, std::vector<int32_t>(num_items, 42));
-        CHECK_EQ(app.written_bytes.size(), num_items * sizeof(int32_t));
+        CHECK_EQ(state.written_values, std::vector<int32_t>(num_items, 42));
+        CHECK_EQ(state.written_bytes.size(), num_items * sizeof(int32_t));
         CHECK_EQ(rd.buf().size(), num_items * sizeof(int32_t));
-        CHECK_EQ(app.written_bytes, rd.buf());
+        CHECK_EQ(state.written_bytes, rd.buf());
       }
     }
   }

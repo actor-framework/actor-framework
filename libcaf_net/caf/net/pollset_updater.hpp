@@ -4,7 +4,9 @@
 
 #pragma once
 
+#include "caf/detail/net_export.hpp"
 #include "caf/net/pipe_socket.hpp"
+#include "caf/net/socket_event_layer.hpp"
 #include "caf/net/socket_manager.hpp"
 
 #include <array>
@@ -14,7 +16,7 @@
 
 namespace caf::net {
 
-class pollset_updater : public socket_manager {
+class CAF_NET_EXPORT pollset_updater : public socket_event_layer {
 public:
   // -- member types -----------------------------------------------------------
 
@@ -37,20 +39,15 @@ public:
 
   // -- constructors, destructors, and assignment operators --------------------
 
-  pollset_updater(pipe_socket read_handle, multiplexer* parent);
+  explicit pollset_updater(pipe_socket fd);
 
-  ~pollset_updater() override;
+  // -- factories --------------------------------------------------------------
 
-  // -- properties -------------------------------------------------------------
+  static std::unique_ptr<pollset_updater> make(pipe_socket fd);
 
-  /// Returns the managed socket.
-  pipe_socket handle() const noexcept {
-    return socket_cast<pipe_socket>(handle_);
-  }
+  // -- implementation of socket_event_layer -----------------------------------
 
-  // -- interface functions ----------------------------------------------------
-
-  error init(const settings& config) override;
+  error init(socket_manager* owner, const settings& cfg) override;
 
   read_result handle_read_event() override;
 
@@ -62,9 +59,11 @@ public:
 
   write_result handle_continue_writing() override;
 
-  void handle_error(sec code) override;
+  void abort(const error& reason) override;
 
 private:
+  pipe_socket fd_;
+  multiplexer* mpx_ = nullptr;
   msg_buf buf_;
   size_t buf_size_ = 0;
 };

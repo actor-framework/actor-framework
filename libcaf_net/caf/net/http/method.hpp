@@ -6,6 +6,7 @@
 
 #include "caf/default_enum_inspect.hpp"
 #include "caf/detail/net_export.hpp"
+#include "caf/net/http/fwd.hpp"
 
 #include <cstdint>
 #include <string>

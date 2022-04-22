@@ -17,20 +17,22 @@ namespace caf::net {
 
 // -- constructors, destructors, and assignment operators ----------------------
 
-pollset_updater::pollset_updater(pipe_socket read_handle, multiplexer* parent)
-  : super(read_handle, parent) {
+pollset_updater::pollset_updater(pipe_socket fd) : fd_(fd) {
   // nop
 }
 
-pollset_updater::~pollset_updater() {
-  // nop
+// -- factories ----------------------------------------------------------------
+
+std::unique_ptr<pollset_updater> pollset_updater::make(pipe_socket fd) {
+  return std::make_unique<pollset_updater>(fd);
 }
 
 // -- interface functions ------------------------------------------------------
 
-error pollset_updater::init(const settings&) {
+error pollset_updater::init(socket_manager* owner, const settings&) {
   CAF_LOG_TRACE("");
-  return nonblocking(handle(), true);
+  mpx_ = owner->mpx_ptr();
+  return nonblocking(fd_, true);
 }
 
 pollset_updater::read_result pollset_updater::handle_read_event() {
@@ -44,8 +46,8 @@ pollset_updater::read_result pollset_updater::handle_read_event() {
   };
   for (;;) {
     CAF_ASSERT((buf_.size() - buf_size_) > 0);
-    auto num_bytes = read(handle(), make_span(buf_.data() + buf_size_,
-                                              buf_.size() - buf_size_));
+    auto num_bytes
+      = read(fd_, make_span(buf_.data() + buf_size_, buf_.size() - buf_size_));
     if (num_bytes > 0) {
       buf_size_ += static_cast<size_t>(num_bytes);
       if (buf_.size() == buf_size_) {
@@ -117,7 +119,7 @@ pollset_updater::write_result pollset_updater::handle_continue_writing() {
   return write_result::stop;
 }
 
-void pollset_updater::handle_error(sec) {
+void pollset_updater::abort(const error&) {
   // nop
 }
 

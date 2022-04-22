@@ -2,9 +2,9 @@
 // the main distribution directory for license terms and copyright or visit
 // https://github.com/actor-framework/actor-framework/blob/master/LICENSE.
 
-#define CAF_SUITE detail.unordered_flat_map
+#define CAF_SUITE unordered_flat_map
 
-#include "caf/detail/unordered_flat_map.hpp"
+#include "caf/unordered_flat_map.hpp"
 
 #include "core-test.hpp"
 
@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-namespace caf::detail {
+namespace caf {
 
 template <class T>
 bool operator==(const unordered_flat_map<int, T>& xs,
@@ -26,14 +26,14 @@ bool operator==(const std::vector<std::pair<int, T>>& xs,
   return ys == xs;
 }
 
-} // namespace caf::detail
+} // namespace caf
 
 using std::make_pair;
 using std::pair;
 using std::string;
 using std::vector;
 
-using caf::detail::unordered_flat_map;
+using caf::unordered_flat_map;
 
 using namespace caf;
 
