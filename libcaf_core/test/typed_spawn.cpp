@@ -27,12 +27,12 @@ namespace {
 // check invariants of type system
 using dummy1 = typed_actor<result<void>(int, int), result<double>(double)>;
 
-using dummy2 = dummy1::extend<reacts_to<ok_atom>>;
+using dummy2 = dummy1::extend<result<void>(ok_atom)>;
 
 static_assert(std::is_convertible<dummy2, dummy1>::value,
               "handle not assignable to narrower definition");
 
-using dummy3 = typed_actor<reacts_to<float, int>>;
+using dummy3 = typed_actor<result<void>(float, int)>;
 using dummy4 = typed_actor<result<double>(int)>;
 using dummy5 = dummy4::extend_with<dummy3>;
 
@@ -345,7 +345,7 @@ CAF_TEST(sending_typed_actors_and_down_msg) {
 CAF_TEST(check_signature) {
   using foo_type = typed_actor<result<ok_atom>(put_atom)>;
   using foo_result_type = result<ok_atom>;
-  using bar_type = typed_actor<reacts_to<ok_atom>>;
+  using bar_type = typed_actor<result<void>(ok_atom)>;
   auto foo_action = [](foo_type::pointer ptr) -> foo_type::behavior_type {
     return {
       [=](put_atom) -> foo_result_type {
