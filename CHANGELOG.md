@@ -11,6 +11,9 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   heap-use-after-free if the actor terminates before the action runs. The
   destructor of the promise now checks for this case.
 - Accessing URI fields now always returns the normalized string.
+- The JSON parser no longer chokes when encountering `null` as last value before
+  the closing parenthesis.
+- The JSON reader now automatically widens integers to doubles as necessary.
 
 ### Changed
 
