@@ -1,3 +1,5 @@
+// Simple WebSocket server that sends everything it receives back to the sender.
+
 #include "caf/actor_system.hpp"
 #include "caf/actor_system_config.hpp"
 #include "caf/caf_main.hpp"
@@ -61,7 +63,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
           .subscribe(push);
       });
   });
-  // Handler for
+  // Callback for incoming WebSocket requests.
   auto on_request = [](const caf::settings& hdr, auto& req) {
     // The hdr parameter is a dictionary with fields from the WebSocket
     // handshake such as the path.
@@ -75,11 +77,12 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
     } else {
       // Calling `reject` aborts the connection with HTTP status code 400 (Bad
       // Request). The error gets converted to a string and send to the client
-      // to give some indication to the client why the request was refused.
+      // to give some indication to the client why the request was rejected.
       auto err = caf::make_error(caf::sec::invalid_argument,
                                  "unrecognized path, try '/'");
       req.reject(std::move(err));
     }
+    // Note: calling neither accept nor reject also rejects the connection.
   };
   // Set everything in motion.
   cn::web_socket::accept(sys, fd, std::move(sres), on_request);
