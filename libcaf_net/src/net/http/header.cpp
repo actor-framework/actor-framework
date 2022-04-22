@@ -123,7 +123,7 @@ std::pair<status, std::string_view> header::parse(std::string_view raw) {
   }
   // The path must form a valid URI when prefixing a scheme. We don't actually
   // care about the scheme, so just use "foo" here for the validation step.
-  if (auto res = make_uri("nil://host" + std::string{request_uri_str})) {
+  if (auto res = make_uri("nil:" + std::string{request_uri_str})) {
     uri_ = std::move(*res);
   } else {
     CAF_LOG_DEBUG("Failed to parse URI" << request_uri_str << "->"

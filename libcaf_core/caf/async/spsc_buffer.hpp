@@ -462,19 +462,23 @@ private:
   intrusive_ptr<resource_ctrl<T, true>> ctrl_;
 };
 
-/// Creates spsc buffer and returns two resources connected by that buffer.
+template <class T1, class T2 = T1>
+using resource_pair = std::pair<consumer_resource<T1>, producer_resource<T2>>;
+
+/// Creates an @ref spsc_buffer and returns two resources connected by that
+/// buffer.
 template <class T>
-std::pair<consumer_resource<T>, producer_resource<T>>
+resource_pair<T>
 make_spsc_buffer_resource(size_t buffer_size, size_t min_request_size) {
   using buffer_type = spsc_buffer<T>;
   auto buf = make_counted<buffer_type>(buffer_size, min_request_size);
   return {async::consumer_resource<T>{buf}, async::producer_resource<T>{buf}};
 }
 
-/// Creates spsc buffer and returns two resources connected by that buffer.
+/// Creates an @ref spsc_buffer and returns two resources connected by that
+/// buffer.
 template <class T>
-std::pair<consumer_resource<T>, producer_resource<T>>
-make_spsc_buffer_resource() {
+resource_pair<T> make_spsc_buffer_resource() {
   return make_spsc_buffer_resource<T>(defaults::flow::buffer_size,
                                       defaults::flow::min_demand);
 }

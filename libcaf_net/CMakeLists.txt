@@ -34,6 +34,8 @@ caf_add_component(
     src/net/http/status.cpp
     src/net/http/v1.cpp
     src/net/middleman.cpp
+    src/net/web_socket/default_trait.cpp
+    src/net/web_socket/frame.cpp
     src/net/web_socket/handshake.cpp
     src/network_socket.cpp
     src/pipe_socket.cpp
