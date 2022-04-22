@@ -13,6 +13,7 @@
 #include "caf/raise_error.hpp"
 #include "caf/type_id.hpp"
 
+#include <atomic>
 #include <cstddef>
 #include <string_view>
 
