@@ -12,7 +12,6 @@
 #include "caf/telemetry/metric_type.hpp"
 
 using namespace caf;
-using namespace caf::literals;
 using namespace caf::telemetry;
 
 using namespace std::literals;
@@ -64,7 +63,7 @@ some_request_duration_seconds_bucket{x="get",le="4"} 2 42000
 some_request_duration_seconds_bucket{x="get",le="+Inf"} 3 42000
 some_request_duration_seconds_sum{x="get"} 14 42000
 some_request_duration_seconds_count{x="get"} 3 42000
-)"_sv);
+)"sv);
   MESSAGE("multiple runs with the same timestamp generate the same output");
   auto ts = make_timestamp();
   std::string res1;
