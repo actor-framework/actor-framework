@@ -49,14 +49,15 @@ struct fixture {
   }
 
   template <class T>
-  optional<T> get(const settings& cfg, std::string_view key) {
+  std::optional<T> get(const settings& cfg, std::string_view key) {
     if (auto ptr = get_if<T>(&cfg, key))
       return *ptr;
-    return none;
+    else
+      return {};
   }
 
   template <class T>
-  optional<T> get(std::string_view key) {
+  std::optional<T> get(std::string_view key) {
     if (auto* xs = get_if<settings>(&x))
       return get<T>(*xs, key);
     else
