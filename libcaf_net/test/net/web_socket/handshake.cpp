@@ -9,38 +9,41 @@
 #include "net-test.hpp"
 
 #include <algorithm>
+#include <string_view>
 
-using namespace caf::literals;
+using namespace std::literals;
+
 using namespace caf::net;
 using namespace caf;
 
 namespace {
 
-constexpr auto key = "the sample nonce"_sv;
+constexpr auto key = "the sample nonce"sv;
 
-constexpr auto http_request = "GET /chat HTTP/1.1\r\n"
-                              "Host: server.example.com\r\n"
-                              "Upgrade: websocket\r\n"
-                              "Connection: Upgrade\r\n"
-                              "Sec-WebSocket-Version: 13\r\n"
-                              "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
-                              "Origin: http://example.com\r\n"
-                              "Sec-WebSocket-Protocol: chat, superchat\r\n"
-                              "\r\n"_sv;
+constexpr std::string_view http_request
+  = "GET /chat HTTP/1.1\r\n"
+    "Host: server.example.com\r\n"
+    "Upgrade: websocket\r\n"
+    "Connection: Upgrade\r\n"
+    "Sec-WebSocket-Version: 13\r\n"
+    "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+    "Origin: http://example.com\r\n"
+    "Sec-WebSocket-Protocol: chat, superchat\r\n"
+    "\r\n";
 
-constexpr auto http_response
+constexpr std::string_view http_response
   = "HTTP/1.1 101 Switching Protocols\r\n"
     "Upgrade: websocket\r\n"
     "Connection: Upgrade\r\n"
     "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n"
-    "\r\n"_sv;
+    "\r\n";
 
 struct fixture {
   byte_buffer& buf() {
     return bytes;
   }
 
-  string_view str() {
+  std::string_view str() {
     return {reinterpret_cast<char*>(bytes.data()), bytes.size()};
   }
 

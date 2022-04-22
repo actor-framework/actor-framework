@@ -8,7 +8,7 @@
 
 #include "caf/test/dsl.hpp"
 
-#include "caf/byte.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/span.hpp"
 #include "caf/string_view.hpp"
 
@@ -24,9 +24,9 @@ struct fixture {
   using impl = detail::rfc6455;
 
   auto bytes(std::initializer_list<uint8_t> xs) {
-    std::vector<byte> result;
+    byte_buffer result;
     for (auto x : xs)
-      result.emplace_back(static_cast<byte>(x));
+      result.emplace_back(static_cast<std::byte>(x));
     return result;
   }
 
@@ -62,7 +62,7 @@ CAF_TEST(masking) {
 
 CAF_TEST(no mask key plus small data) {
   std::vector<uint8_t> data{0x12, 0x34, 0x45, 0x67};
-  std::vector<byte> out;
+  byte_buffer out;
   impl::assemble_frame(impl::binary_frame, 0, as_bytes(make_span(data)), out);
   CAF_CHECK_EQUAL(out, bytes({
                          0x82,                   // FIN + binary frame opcode
@@ -79,7 +79,7 @@ CAF_TEST(no mask key plus small data) {
 
 CAF_TEST(valid mask key plus small data) {
   std::vector<uint8_t> data{0x12, 0x34, 0x45, 0x67};
-  std::vector<byte> out;
+  byte_buffer out;
   impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
                        as_bytes(make_span(data)), out);
   CAF_CHECK_EQUAL(out, bytes({
@@ -99,7 +99,7 @@ CAF_TEST(valid mask key plus small data) {
 CAF_TEST(no mask key plus medium data) {
   std::vector<uint8_t> data;
   data.insert(data.end(), 126, 0xFF);
-  std::vector<byte> out;
+  byte_buffer out;
   impl::assemble_frame(impl::binary_frame, 0, as_bytes(make_span(data)), out);
   CAF_CHECK_EQUAL(take(out, 8),
                   bytes({
@@ -119,7 +119,7 @@ CAF_TEST(no mask key plus medium data) {
 CAF_TEST(valid mask key plus medium data) {
   std::vector<uint8_t> data;
   data.insert(data.end(), 126, 0xFF);
-  std::vector<byte> out;
+  byte_buffer out;
   impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
                        as_bytes(make_span(data)), out);
   CAF_CHECK_EQUAL(take(out, 12),
@@ -141,7 +141,7 @@ CAF_TEST(valid mask key plus medium data) {
 CAF_TEST(no mask key plus large data) {
   std::vector<uint8_t> data;
   data.insert(data.end(), 65536, 0xFF);
-  std::vector<byte> out;
+  byte_buffer out;
   impl::assemble_frame(impl::binary_frame, 0, as_bytes(make_span(data)), out);
   CAF_CHECK_EQUAL(take(out, 14),
                   bytes({
@@ -161,7 +161,7 @@ CAF_TEST(no mask key plus large data) {
 CAF_TEST(valid mask key plus large data) {
   std::vector<uint8_t> data;
   data.insert(data.end(), 65536, 0xFF);
-  std::vector<byte> out;
+  byte_buffer out;
   impl::assemble_frame(impl::binary_frame, 0xDEADC0DE,
                        as_bytes(make_span(data)), out);
   CAF_CHECK_EQUAL(take(out, 18),

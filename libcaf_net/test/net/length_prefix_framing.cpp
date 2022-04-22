@@ -58,7 +58,9 @@ struct app {
 
   template <class LowerLayerPtr>
   ptrdiff_t consume(LowerLayerPtr down, byte_span buf) {
-    auto printable = [](byte x) { return ::isprint(static_cast<uint8_t>(x)); };
+    auto printable = [](std::byte x) {
+      return ::isprint(static_cast<uint8_t>(x));
+    };
     if (CHECK(std::all_of(buf.begin(), buf.end(), printable))) {
       auto str_buf = reinterpret_cast<char*>(buf.data());
       inputs.emplace_back(std::string{str_buf, buf.size()});
@@ -81,7 +83,7 @@ struct app {
   std::vector<std::string> inputs;
 };
 
-void encode(byte_buffer& buf, string_view msg) {
+void encode(byte_buffer& buf, std::string_view msg) {
   using detail::to_network_order;
   auto prefix = to_network_order(static_cast<uint32_t>(msg.size()));
   auto prefix_bytes = as_bytes(make_span(&prefix, 1));
@@ -91,7 +93,9 @@ void encode(byte_buffer& buf, string_view msg) {
 }
 
 auto decode(byte_buffer& buf) {
-  auto printable = [](byte x) { return ::isprint(static_cast<uint8_t>(x)); };
+  auto printable = [](std::byte x) {
+    return ::isprint(static_cast<uint8_t>(x));
+  };
   string_list result;
   auto input = make_span(buf);
   while (!input.empty()) {
@@ -111,8 +115,6 @@ auto decode(byte_buffer& buf) {
 
 } // namespace
 
-BEGIN_FIXTURE_SCOPE(host_fixture)
-
 SCENARIO("length-prefix framing reads data with 32-bit size headers") {
   GIVEN("a length_prefix_framing with an app that consumes strings") {
     WHEN("pushing data into the unit-under-test") {
@@ -128,8 +130,6 @@ SCENARIO("length-prefix framing reads data with 32-bit size headers") {
           CHECK_EQ(state.inputs[0], "hello");
           CHECK_EQ(state.inputs[1], "world");
         }
-        auto response = string_view{reinterpret_cast<char*>(uut.output.data()),
-                                    uut.output.size()};
         CHECK_EQ(decode(uut.output), string_list({"ok 1", "ok 2"}));
       }
     }
@@ -180,7 +180,7 @@ SCENARIO("calling suspend_reading removes message apps temporarily") {
       }
       THEN("users can resume it via continue_reading ") {
         mgr->continue_reading();
-        mpx.apply_updates();
+        mpx.poll();
         CHECK_EQ(mpx.mask_of(mgr), net::operation::read);
         while (mpx.num_socket_managers() > 1u)
           mpx.poll_once(true);
@@ -196,5 +196,3 @@ SCENARIO("calling suspend_reading removes message apps temporarily") {
     writer.join();
   }
 }
-
-END_FIXTURE_SCOPE()

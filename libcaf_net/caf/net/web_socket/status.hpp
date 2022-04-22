@@ -8,6 +8,8 @@
 #include "caf/detail/net_export.hpp"
 
 #include <cstdint>
+#include <string>
+#include <string_view>
 #include <type_traits>
 
 namespace caf::net::web_socket {
@@ -83,7 +85,7 @@ enum class status : uint16_t {
 CAF_NET_EXPORT std::string to_string(status);
 
 /// @relates status
-CAF_NET_EXPORT bool from_string(string_view, status&);
+CAF_NET_EXPORT bool from_string(std::string_view, status&);
 
 /// @relates status
 CAF_NET_EXPORT bool from_integer(std::underlying_type_t<status>, status&);

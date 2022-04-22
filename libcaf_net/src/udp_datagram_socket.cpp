@@ -71,15 +71,15 @@ make_udp_datagram_socket(ip_endpoint ep, bool reuse_addr) {
   return std::make_pair(sguard.release(), ntohs(port));
 }
 
-variant<std::pair<size_t, ip_endpoint>, sec> read(udp_datagram_socket x,
-                                                  span<byte> buf) {
+std::variant<std::pair<size_t, ip_endpoint>, sec> read(udp_datagram_socket x,
+                                                       byte_span buf) {
   sockaddr_storage addr = {};
   socklen_t len = sizeof(sockaddr_storage);
   auto res = ::recvfrom(x.id, reinterpret_cast<socket_recv_ptr>(buf.data()),
                         buf.size(), 0, reinterpret_cast<sockaddr*>(&addr),
                         &len);
   auto ret = check_udp_datagram_socket_io_res(res);
-  if (auto num_bytes = get_if<size_t>(&ret)) {
+  if (auto num_bytes = std::get_if<size_t>(&ret)) {
     CAF_LOG_INFO_IF(*num_bytes == 0, "Received empty datagram");
     CAF_LOG_WARNING_IF(*num_bytes > buf.size(),
                        "recvfrom cut of message, only received "
@@ -92,12 +92,12 @@ variant<std::pair<size_t, ip_endpoint>, sec> read(udp_datagram_socket x,
     }
     return std::pair<size_t, ip_endpoint>(*num_bytes, ep);
   } else {
-    return get<sec>(ret);
+    return std::get<sec>(ret);
   }
 }
 
-variant<size_t, sec> write(udp_datagram_socket x, span<const byte> buf,
-                           ip_endpoint ep) {
+std::variant<size_t, sec> write(udp_datagram_socket x, const_byte_span buf,
+                                ip_endpoint ep) {
   sockaddr_storage addr = {};
   detail::convert(ep, addr);
   auto len = static_cast<socklen_t>(
@@ -105,16 +105,16 @@ variant<size_t, sec> write(udp_datagram_socket x, span<const byte> buf,
   auto res = ::sendto(x.id, reinterpret_cast<socket_send_ptr>(buf.data()),
                       buf.size(), 0, reinterpret_cast<sockaddr*>(&addr), len);
   auto ret = check_udp_datagram_socket_io_res(res);
-  if (auto num_bytes = get_if<size_t>(&ret))
+  if (auto num_bytes = std::get_if<size_t>(&ret))
     return *num_bytes;
   else
-    return get<sec>(ret);
+    return std::get<sec>(ret);
 }
 
 #ifdef CAF_WINDOWS
 
-variant<size_t, sec> write(udp_datagram_socket x, span<byte_buffer*> bufs,
-                           ip_endpoint ep) {
+std::variant<size_t, sec> write(udp_datagram_socket x, span<byte_buffer*> bufs,
+                                ip_endpoint ep) {
   CAF_ASSERT(bufs.size() < 10);
   WSABUF buf_array[10];
   auto convert = [](byte_buffer* buf) {
@@ -142,8 +142,8 @@ variant<size_t, sec> write(udp_datagram_socket x, span<byte_buffer*> bufs,
 
 #else // CAF_WINDOWS
 
-variant<size_t, sec> write(udp_datagram_socket x, span<byte_buffer*> bufs,
-                           ip_endpoint ep) {
+std::variant<size_t, sec> write(udp_datagram_socket x, span<byte_buffer*> bufs,
+                                ip_endpoint ep) {
   CAF_ASSERT(bufs.size() < 10);
   auto convert = [](byte_buffer* buf) {
     return iovec{buf->data(), buf->size()};
@@ -165,7 +165,7 @@ variant<size_t, sec> write(udp_datagram_socket x, span<byte_buffer*> bufs,
 
 #endif // CAF_WINDOWS
 
-variant<size_t, sec>
+std::variant<size_t, sec>
 check_udp_datagram_socket_io_res(std::make_signed<size_t>::type res) {
   if (res < 0) {
     auto code = last_socket_error();

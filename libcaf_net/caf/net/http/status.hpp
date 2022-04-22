@@ -168,13 +168,13 @@ enum class status : uint16_t {
 
 /// Returns the recommended response phrase to a status code.
 /// @relates status
-CAF_NET_EXPORT string_view phrase(status);
+CAF_NET_EXPORT std::string_view phrase(status);
 
 /// @relates status
 CAF_NET_EXPORT std::string to_string(status);
 
 /// @relates status
-CAF_NET_EXPORT bool from_string(string_view, status&);
+CAF_NET_EXPORT bool from_string(std::string_view, status&);
 
 /// @relates status
 CAF_NET_EXPORT bool from_integer(std::underlying_type_t<status>, status&);

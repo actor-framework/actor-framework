@@ -4,33 +4,34 @@
 
 #include "caf/net/web_socket/handshake.hpp"
 
-#include <algorithm>
-#include <cctype>
-#include <cstring>
-#include <random>
-#include <tuple>
-
 #include "caf/config.hpp"
 #include "caf/detail/base64.hpp"
 #include "caf/hash/sha1.hpp"
 #include "caf/string_algorithms.hpp"
 
+#include <algorithm>
+#include <cctype>
+#include <cstddef>
+#include <cstring>
+#include <random>
+#include <tuple>
+
 namespace caf::net::web_socket {
 
 handshake::handshake() noexcept {
-  key_.fill(byte{0});
+  key_.fill(std::byte{0});
 }
 
 bool handshake::has_valid_key() const noexcept {
-  auto non_zero = [](byte x) { return x != byte{0}; };
+  auto non_zero = [](std::byte x) { return x != std::byte{0}; };
   return std::any_of(key_.begin(), key_.end(), non_zero);
 }
 
-bool handshake::assign_key(string_view base64_key) {
+bool handshake::assign_key(std::string_view base64_key) {
   // Base 64 produces character groups of size 4. This means our key has to use
   // six groups, but the last two characters are always padding.
   if (base64_key.size() == 24 && ends_with(base64_key, "==")) {
-    std::vector<byte> buf;
+    byte_buffer buf;
     buf.reserve(18);
     if (detail::base64::decode(base64_key, buf)) {
       CAF_ASSERT(buf.size() == 16);
@@ -62,7 +63,7 @@ void handshake::randomize_key(unsigned seed) {
   std::minstd_rand rng{seed};
   std::uniform_int_distribution<> f{0, 255};
   for (auto& x : key_)
-    x = static_cast<byte>(f(rng));
+    x = static_cast<std::byte>(f(rng));
 }
 
 bool handshake::has_mandatory_fields() const noexcept {
@@ -77,7 +78,7 @@ struct writer {
   byte_buffer* buf;
 };
 
-writer& operator<<(writer& out, string_view str) {
+writer& operator<<(writer& out, std::string_view str) {
   auto bytes = as_bytes(make_span(str));
   out.buf->insert(out.buf->end(), bytes.begin(), bytes.end());
   return out;
@@ -120,14 +121,14 @@ void handshake::write_http_1_response(byte_buffer& buf) const {
 namespace {
 
 template <class F>
-void for_each_http_line(string_view lines, F&& f) {
-  using namespace caf::literals;
-  auto nl = "\r\n"_sv;
+void for_each_http_line(std::string_view lines, F&& f) {
+  using namespace std::literals;
+  auto nl = "\r\n"sv;
   for (;;) {
-    if (auto pos = lines.find(nl); pos != string_view::npos) {
-      auto line = string_view{lines.data(), pos};
+    if (auto pos = lines.find(nl); pos != std::string_view::npos) {
+      auto line = std::string_view{lines.data(), pos};
       if (!line.empty())
-        f(string_view{lines.data(), pos});
+        f(std::string_view{lines.data(), pos});
       lines.remove_prefix(pos + 2);
     } else {
       return;
@@ -135,54 +136,14 @@ void for_each_http_line(string_view lines, F&& f) {
   }
 }
 
-// Splits `str` at the first occurrence of `sep` into the head and the
-// remainder (excluding the separator).
-std::pair<string_view, string_view> split(string_view str, string_view sep) {
-  auto i = std::search(str.begin(), str.end(), sep.begin(), sep.end());
-  if (i != str.end())
-    return {{str.begin(), i}, {i + sep.size(), str.end()}};
-  return {{str}, {}};
-}
-
-// Convenience function for splitting twice.
-std::tuple<string_view, string_view, string_view> split2(string_view str,
-                                                         string_view sep) {
-  auto [first, r1] = split(str, sep);
-  auto [second, third] = split(r1, sep);
-  return {first, second, third};
-}
-
-void trim(string_view& str) {
-  auto non_whitespace = [](char c) { return !isspace(c); };
-  if (std::any_of(str.begin(), str.end(), non_whitespace)) {
-    while (str.front() == ' ')
-      str.remove_prefix(1);
-    while (str.back() == ' ')
-      str.remove_suffix(1);
-  } else {
-    str = string_view{};
-  }
-}
-
-bool lowercase_equal(string_view x, string_view y) {
-  if (x.size() != y.size()) {
-    return false;
-  } else {
-    for (size_t index = 0; index < x.size(); ++index)
-      if (tolower(x[index]) != tolower(y[index]))
-        return false;
-    return true;
-  }
-}
-
 struct response_checker {
-  string_view ws_key;
+  std::string_view ws_key;
   bool has_status_101 = false;
   bool has_upgrade_field = false;
   bool has_connection_field = false;
   bool has_ws_accept_field = false;
 
-  response_checker(string_view key) : ws_key(key) {
+  response_checker(std::string_view key) : ws_key(key) {
     // nop
   }
 
@@ -191,19 +152,18 @@ struct response_checker {
            && has_ws_accept_field;
   }
 
-  void operator()(string_view line) noexcept {
+  void operator()(std::string_view line) noexcept {
     if (starts_with(line, "HTTP/1")) {
-      string_view code;
-      std::tie(std::ignore, code, std::ignore) = split2(line, " ");
+      auto code = split_by(split_by(line, " ").second, " ").first;
       has_status_101 = code == "101";
     } else {
-      auto [field, value] = split(line, ":");
-      trim(field);
-      trim(value);
+      auto [field, value] = split_by(line, ":");
+      field = trim(field);
+      value = trim(value);
       if (field == "Upgrade")
-        has_upgrade_field = lowercase_equal(value, "websocket");
+        has_upgrade_field = icase_equal(value, "websocket");
       else if (field == "Connection")
-        has_connection_field = lowercase_equal(value, "upgrade");
+        has_connection_field = icase_equal(value, "upgrade");
       else if (field == "Sec-WebSocket-Accept")
         has_ws_accept_field = value == ws_key;
     }
@@ -212,7 +172,7 @@ struct response_checker {
 
 } // namespace
 
-bool handshake::is_valid_http_1_response(string_view http_response) const {
+bool handshake::is_valid_http_1_response(std::string_view http_response) const {
   auto seed = detail::base64::encode(key_);
   seed += "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
   auto response_key_sha = hash::sha1::compute(seed);
@@ -224,11 +184,11 @@ bool handshake::is_valid_http_1_response(string_view http_response) const {
 
 // -- utility ------------------------------------------------------------------
 
-string_view handshake::lookup(string_view field_name) const noexcept {
+std::string_view handshake::lookup(std::string_view field_name) const noexcept {
   if (auto i = fields_.find(field_name); i != fields_.end())
     return i->second;
   else
-    return string_view{};
+    return std::string_view{};
 }
 
 } // namespace caf::net::web_socket

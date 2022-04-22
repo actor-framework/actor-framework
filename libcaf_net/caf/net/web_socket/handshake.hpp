@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <string>
-
-#include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/dictionary.hpp"
-#include "caf/string_view.hpp"
+
+#include <cstddef>
+#include <string>
+#include <string_view>
 
 namespace caf::net::web_socket {
 
@@ -20,7 +20,7 @@ class CAF_NET_EXPORT handshake {
 public:
   // -- member types -----------------------------------------------------------
 
-  using key_type = std::array<byte, 16>;
+  using key_type = std::array<std::byte, 16>;
 
   // -- constants --------------------------------------------------------------
 
@@ -53,7 +53,7 @@ public:
   }
 
   /// Tries to assign a key from base64 input.
-  bool assign_key(string_view base64_key);
+  bool assign_key(std::string_view base64_key);
 
   /// Returns the key for the response message, i.e., what the server puts into
   /// the HTTP field `Sec-WebSocket-Accept`.
@@ -131,12 +131,12 @@ public:
   /// - An `Upgrade` field  with the value `websocket`.
   /// - A `Connection` field with the value `Upgrade`.
   /// - A `Sec-WebSocket-Accept` field with the value `response_key()`.
-  bool is_valid_http_1_response(string_view http_response) const;
+  bool is_valid_http_1_response(std::string_view http_response) const;
 
 private:
   // -- utility ----------------------------------------------------------------
 
-  string_view lookup(string_view field_name) const noexcept;
+  std::string_view lookup(std::string_view field_name) const noexcept;
 
   // -- member variables -------------------------------------------------------
 

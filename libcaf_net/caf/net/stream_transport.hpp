@@ -29,12 +29,12 @@ namespace caf::net {
 struct default_stream_transport_policy {
 public:
   /// Reads data from the socket into the buffer.
-  static ptrdiff_t read(stream_socket x, span<byte> buf) {
+  static ptrdiff_t read(stream_socket x, byte_span buf) {
     return net::read(x, buf);
   }
 
   /// Writes data from the buffer to the socket.
-  static ptrdiff_t write(stream_socket x, span<const byte> buf) {
+  static ptrdiff_t write(stream_socket x, const_byte_span buf) {
     return net::write(x, buf);
   }
 

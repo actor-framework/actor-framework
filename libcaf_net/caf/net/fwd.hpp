@@ -31,17 +31,11 @@ class typed_actor_shell;
 template <class... Sigs>
 class typed_actor_shell_ptr;
 
-// -- enumerations -------------------------------------------------------------
-
-enum class ec : uint8_t;
-
 // -- classes ------------------------------------------------------------------
 
 class actor_shell;
 class actor_shell_ptr;
-class endpoint_manager;
 class middleman;
-class middleman_backend;
 class multiplexer;
 class socket_manager;
 
@@ -58,24 +52,8 @@ struct udp_datagram_socket;
 
 // -- smart pointer aliases ----------------------------------------------------
 
-using endpoint_manager_ptr = intrusive_ptr<endpoint_manager>;
-using middleman_backend_ptr = std::unique_ptr<middleman_backend>;
 using multiplexer_ptr = std::shared_ptr<multiplexer>;
 using socket_manager_ptr = intrusive_ptr<socket_manager>;
 using weak_multiplexer_ptr = std::weak_ptr<multiplexer>;
 
 } // namespace caf::net
-
-namespace caf::net::basp {
-
-enum class ec : uint8_t;
-
-} // namespace caf::net::basp
-
-CAF_BEGIN_TYPE_ID_BLOCK(net_module, detail::net_module_begin)
-
-  CAF_ADD_TYPE_ID(net_module, (caf::net::basp::ec))
-
-CAF_END_TYPE_ID_BLOCK(net_module)
-
-static_assert(caf::id_block::net_module::end == caf::detail::net_module_end);

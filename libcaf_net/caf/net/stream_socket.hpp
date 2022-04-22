@@ -6,6 +6,7 @@
 
 #include <cstddef>
 
+#include "caf/byte_span.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/network_socket.hpp"
@@ -46,7 +47,7 @@ error CAF_NET_EXPORT nodelay(stream_socket x, bool new_value);
 /// @relates stream_socket
 /// @post Either the functions returned a non-negative integer or the caller can
 ///       retrieve the error code by calling `last_socket_error()`.
-ptrdiff_t CAF_NET_EXPORT read(stream_socket x, span<byte> buf);
+ptrdiff_t CAF_NET_EXPORT read(stream_socket x, byte_span buf);
 
 /// Sends data to `x`.
 /// @param x A connected endpoint.
@@ -55,7 +56,7 @@ ptrdiff_t CAF_NET_EXPORT read(stream_socket x, span<byte> buf);
 ///          or -1 in case of an error.
 /// @relates stream_socket
 /// @post either the result is a `sec` or a positive (non-zero) integer
-ptrdiff_t CAF_NET_EXPORT write(stream_socket x, span<const byte> buf);
+ptrdiff_t CAF_NET_EXPORT write(stream_socket x, const_byte_span buf);
 
 /// Transmits data from `x` to its peer.
 /// @param x A connected endpoint.
@@ -66,6 +67,6 @@ ptrdiff_t CAF_NET_EXPORT write(stream_socket x, span<const byte> buf);
 /// @post either the result is a `sec` or a positive (non-zero) integer
 /// @pre `bufs.size() < 10`
 ptrdiff_t CAF_NET_EXPORT write(stream_socket x,
-                               std::initializer_list<span<const byte>> bufs);
+                               std::initializer_list<const_byte_span> bufs);
 
 } // namespace caf::net

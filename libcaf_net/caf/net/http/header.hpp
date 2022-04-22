@@ -9,9 +9,9 @@
 #include "caf/net/http/header_fields_map.hpp"
 #include "caf/net/http/method.hpp"
 #include "caf/net/http/status.hpp"
-#include "caf/string_view.hpp"
 #include "caf/uri.hpp"
 
+#include <string_view>
 #include <vector>
 
 namespace caf::net::http {
@@ -34,7 +34,7 @@ public:
     return method_;
   }
 
-  string_view path() const noexcept {
+  std::string_view path() const noexcept {
     return uri_.path();
   }
 
@@ -42,11 +42,11 @@ public:
     return uri_.query();
   }
 
-  string_view fragment() const noexcept {
+  std::string_view fragment() const noexcept {
     return uri_.fragment();
   }
 
-  string_view version() const noexcept {
+  std::string_view version() const noexcept {
     return version_;
   }
 
@@ -54,7 +54,7 @@ public:
     return fields_;
   }
 
-  string_view field(string_view key) const noexcept {
+  std::string_view field(std::string_view key) const noexcept {
     if (auto i = fields_.find(key); i != fields_.end())
       return i->second;
     else
@@ -62,9 +62,9 @@ public:
   }
 
   template <class T>
-  optional<T> field_as(string_view key) const noexcept {
+  std::optional<T> field_as(std::string_view key) const noexcept {
     if (auto i = fields_.find(key); i != fields_.end()) {
-      caf::config_value val{to_string(i->second)};
+      caf::config_value val{std::string{i->second}};
       if (auto res = caf::get_as<T>(val))
         return std::move(*res);
       else
@@ -78,17 +78,17 @@ public:
     return !raw_.empty();
   }
 
-  std::pair<status, string_view> parse(string_view raw);
+  std::pair<status, std::string_view> parse(std::string_view raw);
 
   bool chunked_transfer_encoding() const;
 
-  optional<size_t> content_length() const;
+  std::optional<size_t> content_length() const;
 
 private:
   std::vector<char> raw_;
   http::method method_;
   uri uri_;
-  string_view version_;
+  std::string_view version_;
   header_fields_map fields_;
 };
 

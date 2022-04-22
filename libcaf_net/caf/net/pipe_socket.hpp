@@ -36,13 +36,13 @@ expected<std::pair<pipe_socket, pipe_socket>> CAF_NET_EXPORT make_pipe();
 /// @param buf Memory region for reading the message to send.
 /// @returns The number of written bytes on success, otherwise an error code.
 /// @relates pipe_socket
-ptrdiff_t CAF_NET_EXPORT write(pipe_socket x, span<const byte> buf);
+ptrdiff_t CAF_NET_EXPORT write(pipe_socket x, const_byte_span buf);
 
 /// Receives data from `x`.
 /// @param x Connected endpoint.
 /// @param buf Memory region for storing the received bytes.
 /// @returns The number of received bytes on success, otherwise an error code.
 /// @relates pipe_socket
-ptrdiff_t CAF_NET_EXPORT read(pipe_socket x, span<byte> buf);
+ptrdiff_t CAF_NET_EXPORT read(pipe_socket x, byte_span buf);
 
 } // namespace caf::net

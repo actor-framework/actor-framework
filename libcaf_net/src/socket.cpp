@@ -11,7 +11,6 @@
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/logger.hpp"
 #include "caf/sec.hpp"
-#include "caf/variant.hpp"
 
 namespace caf::net {
 

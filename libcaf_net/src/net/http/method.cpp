@@ -3,26 +3,26 @@
 namespace caf::net::http {
 
 std::string to_rfc_string(method x) {
-  using namespace caf::literals;
+  using namespace std::literals;
   switch (x) {
     case method::get:
-      return "GET";
+      return "GET"s;
     case method::head:
-      return "HEAD";
+      return "HEAD"s;
     case method::post:
-      return "POST";
+      return "POST"s;
     case method::put:
-      return "PUT";
+      return "PUT"s;
     case method::del:
-      return "DELETE";
+      return "DELETE"s;
     case method::connect:
-      return "CONNECT";
+      return "CONNECT"s;
     case method::options:
-      return "OPTIONS";
+      return "OPTIONS"s;
     case method::trace:
-      return "TRACE";
+      return "TRACE"s;
     default:
-      return "INVALID";
+      return "INVALID"s;
   }
 }
 

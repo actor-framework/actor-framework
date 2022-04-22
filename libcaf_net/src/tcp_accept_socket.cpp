@@ -105,9 +105,9 @@ expected<tcp_accept_socket> make_tcp_accept_socket(ip_endpoint node,
 
 expected<tcp_accept_socket>
 make_tcp_accept_socket(const uri::authority_type& node, bool reuse_addr) {
-  if (auto ip = get_if<ip_address>(&node.host))
+  if (auto ip = std::get_if<ip_address>(&node.host))
     return make_tcp_accept_socket(ip_endpoint{*ip, node.port}, reuse_addr);
-  auto host = get<std::string>(node.host);
+  auto host = std::get<std::string>(node.host);
   auto addrs = ip::local_addresses(host);
   if (addrs.empty())
     return make_error(sec::cannot_open_port, "no local interface available",

@@ -142,13 +142,16 @@ public:
   /// ready as a result.
   bool poll_once(bool blocking);
 
+  /// Runs `poll_once(false)` until it returns `true`.`
+  void poll();
+
   /// Applies all pending updates.
   void apply_updates();
 
   /// Sets the thread ID to `std::this_thread::id()`.
   void set_thread_id();
 
-  /// Polls until no socket event handler remains.
+  /// Runs the multiplexer until no socket event handler remains active.
   void run();
 
 protected:

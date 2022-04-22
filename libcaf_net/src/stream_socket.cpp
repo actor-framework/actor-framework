@@ -4,7 +4,6 @@
 
 #include "caf/net/stream_socket.hpp"
 
-#include "caf/byte.hpp"
 #include "caf/detail/net_syscall.hpp"
 #include "caf/detail/socket_sys_aliases.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
@@ -13,7 +12,8 @@
 #include "caf/net/socket.hpp"
 #include "caf/net/socket_guard.hpp"
 #include "caf/span.hpp"
-#include "caf/variant.hpp"
+
+#include <cstddef>
 
 #ifdef CAF_POSIX
 #  include <sys/uio.h>
@@ -154,13 +154,13 @@ error nodelay(stream_socket x, bool new_value) {
   return none;
 }
 
-ptrdiff_t read(stream_socket x, span<byte> buf) {
+ptrdiff_t read(stream_socket x, byte_span buf) {
   CAF_LOG_TRACE(CAF_ARG2("socket", x.id) << CAF_ARG2("bytes", buf.size()));
   return ::recv(x.id, reinterpret_cast<socket_recv_ptr>(buf.data()), buf.size(),
                 no_sigpipe_io_flag);
 }
 
-ptrdiff_t write(stream_socket x, span<const byte> buf) {
+ptrdiff_t write(stream_socket x, const_byte_span buf) {
   CAF_LOG_TRACE(CAF_ARG2("socket", x.id) << CAF_ARG2("bytes", buf.size()));
   return ::send(x.id, reinterpret_cast<socket_send_ptr>(buf.data()), buf.size(),
                 no_sigpipe_io_flag);
@@ -168,10 +168,10 @@ ptrdiff_t write(stream_socket x, span<const byte> buf) {
 
 #ifdef CAF_WINDOWS
 
-ptrdiff_t write(stream_socket x, std::initializer_list<span<const byte>> bufs) {
+ptrdiff_t write(stream_socket x, std::initializer_list<const_byte_span> bufs) {
   CAF_ASSERT(bufs.size() < 10);
   WSABUF buf_array[10];
-  auto convert = [](span<const byte> buf) {
+  auto convert = [](const_byte_span buf) {
     auto data = const_cast<byte*>(buf.data());
     return WSABUF{static_cast<ULONG>(buf.size()),
                   reinterpret_cast<CHAR*>(data)};
@@ -185,11 +185,11 @@ ptrdiff_t write(stream_socket x, std::initializer_list<span<const byte>> bufs) {
 
 #else // CAF_WINDOWS
 
-ptrdiff_t write(stream_socket x, std::initializer_list<span<const byte>> bufs) {
+ptrdiff_t write(stream_socket x, std::initializer_list<const_byte_span> bufs) {
   CAF_ASSERT(bufs.size() < 10);
   iovec buf_array[10];
-  auto convert = [](span<const byte> buf) {
-    return iovec{const_cast<byte*>(buf.data()), buf.size()};
+  auto convert = [](const_byte_span buf) {
+    return iovec{const_cast<std::byte*>(buf.data()), buf.size()};
   };
   std::transform(bufs.begin(), bufs.end(), std::begin(buf_array), convert);
   return writev(x.id, buf_array, static_cast<int>(bufs.size()));

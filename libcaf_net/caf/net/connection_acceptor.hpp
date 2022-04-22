@@ -5,7 +5,6 @@
 #pragma once
 
 #include "caf/logger.hpp"
-#include "caf/net/make_endpoint_manager.hpp"
 #include "caf/net/socket.hpp"
 #include "caf/net/stream_socket.hpp"
 #include "caf/net/stream_transport.hpp"

@@ -40,7 +40,7 @@ namespace {
 
 using byte_buffer_ptr = std::shared_ptr<byte_buffer>;
 
-struct fixture : host_fixture {
+struct fixture {
   using byte_buffer_ptr = std::shared_ptr<byte_buffer>;
 
   fixture() {

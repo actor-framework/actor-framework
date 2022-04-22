@@ -98,7 +98,7 @@ public:
     /// Automatically sets the header fields 'Content-Type' and
     /// 'Content-Length'. Calls `send_header`, `send_payload` and `fin`.
     bool send_response(context_type context, status_code_type code,
-                       header_fields_type fields, string_view content_type,
+                       header_fields_type fields, std::string_view content_type,
                        const_byte_span content) {
       std::string len;
       if (!content.empty()) {
@@ -113,7 +113,7 @@ public:
     /// Automatically sets the header fields 'Content-Type' and
     /// 'Content-Length'. Calls `send_header`, `send_payload` and `fin`.
     bool send_response(context_type context, status_code_type code,
-                       string_view content_type, const_byte_span content) {
+                       std::string_view content_type, const_byte_span content) {
       std::string len;
       header_fields_type fields;
       if (!content.empty()) {
@@ -125,14 +125,15 @@ public:
     }
 
     bool send_response(context_type context, status_code_type code,
-                       header_fields_type fields, string_view content_type,
-                       string_view content) {
+                       header_fields_type fields, std::string_view content_type,
+                       std::string_view content) {
       return send_response(context, code, content_type, std::move(fields),
                            as_bytes(make_span(content)));
     }
 
     bool send_response(context_type context, status_code_type code,
-                       string_view content_type, string_view content) {
+                       std::string_view content_type,
+                       std::string_view content) {
       return send_response(context, code, content_type,
                            as_bytes(make_span(content)));
     }

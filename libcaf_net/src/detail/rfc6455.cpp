@@ -5,7 +5,6 @@
 #include "caf/detail/rfc6455.hpp"
 
 #include "caf/detail/network_order.hpp"
-#include "caf/span.hpp"
 
 #include <cstring>
 
@@ -15,9 +14,9 @@ void rfc6455::mask_data(uint32_t key, span<char> data) {
   mask_data(key, as_writable_bytes(data));
 }
 
-void rfc6455::mask_data(uint32_t key, span<byte> data) {
+void rfc6455::mask_data(uint32_t key, byte_span data) {
   auto no_key = to_network_order(key);
-  byte arr[4];
+  std::byte arr[4];
   memcpy(arr, &no_key, 4);
   size_t i = 0;
   for (auto& x : data) {
@@ -27,44 +26,44 @@ void rfc6455::mask_data(uint32_t key, span<byte> data) {
 }
 
 void rfc6455::assemble_frame(uint32_t mask_key, span<const char> data,
-                             binary_buffer& out) {
+                             byte_buffer& out) {
   assemble_frame(text_frame, mask_key, as_bytes(data), out);
 }
 
-void rfc6455::assemble_frame(uint32_t mask_key, span<const byte> data,
-                             binary_buffer& out) {
+void rfc6455::assemble_frame(uint32_t mask_key, const_byte_span data,
+                             byte_buffer& out) {
   assemble_frame(binary_frame, mask_key, data, out);
 }
 
 void rfc6455::assemble_frame(uint8_t opcode, uint32_t mask_key,
-                             span<const byte> data, binary_buffer& out) {
+                             const_byte_span data, byte_buffer& out) {
   // First 8 bits: FIN flag + opcode (we never fragment frames).
-  out.push_back(byte{static_cast<uint8_t>(0x80 | opcode)});
+  out.push_back(std::byte{static_cast<uint8_t>(0x80 | opcode)});
   // Mask flag + payload length (7 bits, 7+16 bits, or 7+64 bits)
-  auto mask_bit = byte{static_cast<uint8_t>(mask_key == 0 ? 0x00 : 0x80)};
+  auto mask_bit = std::byte{static_cast<uint8_t>(mask_key == 0 ? 0x00 : 0x80)};
   if (data.size() < 126) {
     auto len = static_cast<uint8_t>(data.size());
-    out.push_back(mask_bit | byte{len});
+    out.push_back(mask_bit | std::byte{len});
   } else if (data.size() < std::numeric_limits<uint16_t>::max()) {
     auto len = static_cast<uint16_t>(data.size());
     auto no_len = to_network_order(len);
-    byte len_data[2];
+    std::byte len_data[2];
     memcpy(len_data, &no_len, 2);
-    out.push_back(mask_bit | byte{126});
+    out.push_back(mask_bit | std::byte{126});
     for (auto x : len_data)
       out.push_back(x);
   } else {
     auto len = static_cast<uint64_t>(data.size());
     auto no_len = to_network_order(len);
-    byte len_data[8];
+    std::byte len_data[8];
     memcpy(len_data, &no_len, 8);
-    out.push_back(mask_bit | byte{127});
+    out.push_back(mask_bit | std::byte{127});
     out.insert(out.end(), len_data, len_data + 8);
   }
   // Masking key: 0 or 4 bytes.
   if (mask_key != 0) {
     auto no_key = to_network_order(mask_key);
-    byte key_data[4];
+    std::byte key_data[4];
     memcpy(key_data, &no_key, 4);
     out.insert(out.end(), key_data, key_data + 4);
   }
@@ -72,11 +71,11 @@ void rfc6455::assemble_frame(uint8_t opcode, uint32_t mask_key,
   out.insert(out.end(), data.begin(), data.end());
 }
 
-ptrdiff_t rfc6455::decode_header(span<const byte> data, header& hdr) {
+ptrdiff_t rfc6455::decode_header(const_byte_span data, header& hdr) {
   if (data.size() < 2)
     return 0;
-  auto byte1 = to_integer<uint8_t>(data[0]);
-  auto byte2 = to_integer<uint8_t>(data[1]);
+  auto byte1 = std::to_integer<uint8_t>(data[0]);
+  auto byte2 = std::to_integer<uint8_t>(data[1]);
   // Fetch FIN flag and opcode.
   hdr.fin = (byte1 & 0x80) != 0;
   hdr.opcode = byte1 & 0x0F;
@@ -96,7 +95,7 @@ ptrdiff_t rfc6455::decode_header(span<const byte> data, header& hdr) {
   if (data.size() < header_length)
     return 0;
   // Start decoding remaining header bytes.
-  const byte* p = data.data() + 2;
+  const std::byte* p = data.data() + 2;
   // Fetch payload size
   if (len_field == 126) {
     uint16_t no_len;

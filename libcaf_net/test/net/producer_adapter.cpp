@@ -30,7 +30,7 @@ public:
     return sg_.socket();
   }
 
-  byte_buffer encode(string_view msg) {
+  byte_buffer encode(std::string_view msg) {
     using detail::to_network_order;
     auto prefix = to_network_order(static_cast<uint32_t>(msg.size()));
     auto prefix_bytes = as_bytes(make_span(&prefix, 1));
@@ -41,7 +41,7 @@ public:
     return buf;
   }
 
-  void write(string_view msg) {
+  void write(std::string_view msg) {
     auto buf = encode(msg);
     if (net::write(fd(), buf) < 0)
       FAIL("failed to write: " << net::last_socket_error_as_string());
@@ -103,7 +103,8 @@ public:
   template <class LowerLayerPtr>
   ptrdiff_t consume(LowerLayerPtr down, byte_span buf) {
     auto val = int32_t{0};
-    auto str = string_view{reinterpret_cast<char*>(buf.data()), buf.size()};
+    auto str = std::string_view{reinterpret_cast<char*>(buf.data()),
+                                buf.size()};
     if (auto err = detail::parse(str, val))
       FAIL("unable to parse input: " << err);
     ++received_messages;
@@ -118,7 +119,7 @@ public:
   resource_type output_;
 };
 
-struct fixture : test_coordinator_fixture<>, host_fixture {
+struct fixture : test_coordinator_fixture<> {
   fixture() : mm(sys) {
     if (auto err = mm.mpx().init())
       CAF_FAIL("mpx.init() failed: " << err);

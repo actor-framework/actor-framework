@@ -17,7 +17,6 @@
 #include "caf/net/stream_socket.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
-#include "caf/variant.hpp"
 
 namespace caf::net {
 
@@ -36,12 +35,12 @@ expected<std::pair<pipe_socket, pipe_socket>> make_pipe() {
   }
 }
 
-ptrdiff_t write(pipe_socket x, span<const byte> buf) {
+ptrdiff_t write(pipe_socket x, const_byte_span buf) {
   // On Windows, a pipe consists of two stream sockets.
   return write(socket_cast<stream_socket>(x), buf);
 }
 
-ptrdiff_t read(pipe_socket x, span<byte> buf) {
+ptrdiff_t read(pipe_socket x, byte_span buf) {
   // On Windows, a pipe consists of two stream sockets.
   return read(socket_cast<stream_socket>(x), buf);
 }
@@ -67,13 +66,13 @@ expected<std::pair<pipe_socket, pipe_socket>> make_pipe() {
   return std::make_pair(pipe_socket{pipefds[0]}, pipe_socket{pipefds[1]});
 }
 
-ptrdiff_t write(pipe_socket x, span<const byte> buf) {
+ptrdiff_t write(pipe_socket x, const_byte_span buf) {
   CAF_LOG_TRACE(CAF_ARG2("socket", x.id) << CAF_ARG2("bytes", buf.size()));
   return ::write(x.id, reinterpret_cast<socket_send_ptr>(buf.data()),
                  buf.size());
 }
 
-ptrdiff_t read(pipe_socket x, span<byte> buf) {
+ptrdiff_t read(pipe_socket x, byte_span buf) {
   CAF_LOG_TRACE(CAF_ARG2("socket", x.id) << CAF_ARG2("bytes", buf.size()));
   return ::read(x.id, reinterpret_cast<socket_recv_ptr>(buf.data()),
                 buf.size());

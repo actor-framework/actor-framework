@@ -15,8 +15,7 @@
 #include "caf/net/stream_transport.hpp"
 
 using namespace caf;
-using namespace caf::literals;
-using namespace std::literals::string_literals;
+using namespace std::literals;
 
 namespace {
 
@@ -25,7 +24,7 @@ using svec = std::vector<std::string>;
 struct app_t {
   std::string text_input;
 
-  std::vector<byte> binary_input;
+  byte_buffer binary_input;
 
   settings cfg;
 
@@ -51,7 +50,7 @@ struct app_t {
   }
 
   template <class LowerLayerPtr>
-  ptrdiff_t consume_text(LowerLayerPtr, string_view text) {
+  ptrdiff_t consume_text(LowerLayerPtr, std::string_view text) {
     text_input.insert(text_input.end(), text.begin(), text.end());
     return static_cast<ptrdiff_t>(text.size());
   }
@@ -63,7 +62,7 @@ struct app_t {
   }
 };
 
-struct fixture : host_fixture {
+struct fixture {
   fixture() {
     using namespace caf::net;
     ws = std::addressof(transport.upper_layer);
@@ -73,33 +72,32 @@ struct fixture : host_fixture {
     rng.seed(0xD3ADC0D3);
   }
 
-  void rfc6455_append(uint8_t opcode, span<const byte> bytes,
-                      std::vector<byte>& out) {
-    std::vector<byte> payload{bytes.begin(), bytes.end()};
+  void rfc6455_append(uint8_t opcode, const_byte_span bytes, byte_buffer& out) {
+    byte_buffer payload{bytes.begin(), bytes.end()};
     auto key = static_cast<uint32_t>(rng());
     detail::rfc6455::mask_data(key, payload);
     detail::rfc6455::assemble_frame(opcode, key, payload, out);
   }
 
-  void rfc6455_append(span<const byte> bytes, std::vector<byte>& out) {
+  void rfc6455_append(const_byte_span bytes, byte_buffer& out) {
     rfc6455_append(detail::rfc6455::binary_frame, bytes, out);
   }
 
-  void rfc6455_append(string_view text, std::vector<byte>& out) {
+  void rfc6455_append(std::string_view text, byte_buffer& out) {
     rfc6455_append(detail::rfc6455::text_frame, as_bytes(make_span(text)), out);
   }
 
-  void push(uint8_t opcode, span<const byte> bytes) {
-    std::vector<byte> frame;
+  void push(uint8_t opcode, const_byte_span bytes) {
+    byte_buffer frame;
     rfc6455_append(opcode, bytes, frame);
     transport.push(frame);
   }
 
-  void push(span<const byte> bytes) {
+  void push(const_byte_span bytes) {
     push(detail::rfc6455::binary_frame, bytes);
   }
 
-  void push(string_view str) {
+  void push(std::string_view str) {
     push(detail::rfc6455::text_frame, as_bytes(make_span(str)));
   }
 
@@ -112,7 +110,7 @@ struct fixture : host_fixture {
   std::minstd_rand rng;
 };
 
-constexpr auto opening_handshake
+constexpr std::string_view opening_handshake
   = "GET /chat?room=lounge HTTP/1.1\r\n"
     "Host: server.example.com\r\n"
     "Upgrade: websocket\r\n"
@@ -121,13 +119,13 @@ constexpr auto opening_handshake
     "Origin: http://example.com\r\n"
     "Sec-WebSocket-Protocol: chat, superchat\r\n"
     "Sec-WebSocket-Version: 13\r\n"
-    "\r\n"_sv;
+    "\r\n";
 
 } // namespace
 
 #define CHECK_SETTING(key, expected_value)                                     \
-  if (CAF_CHECK(holds_alternative<std::string>(app->cfg, key)))                \
-    CAF_CHECK_EQUAL(get<std::string>(app->cfg, key), expected_value);
+  if (CHECK(holds_alternative<std::string>(app->cfg, key)))                    \
+    CHECK_EQ(get<std::string>(app->cfg, key), expected_value);
 
 CAF_TEST_FIXTURE_SCOPE(web_socket_tests, fixture)
 
@@ -137,11 +135,11 @@ CAF_TEST(applications receive handshake data via config) {
     auto consumed = transport.handle_input();
     if (consumed < 0)
       CAF_FAIL("error handling input: " << transport.abort_reason());
-    CAF_CHECK_EQUAL(consumed, static_cast<ptrdiff_t>(opening_handshake.size()));
+    CHECK_EQ(consumed, static_cast<ptrdiff_t>(opening_handshake.size()));
   }
-  CAF_CHECK_EQUAL(transport.input.size(), 0u);
-  CAF_CHECK_EQUAL(transport.unconsumed(), 0u);
-  CAF_CHECK(ws->handshake_complete());
+  CHECK_EQ(transport.input.size(), 0u);
+  CHECK_EQ(transport.unconsumed(), 0u);
+  CHECK(ws->handshake_complete());
   CHECK_SETTING("web-socket.method", "GET");
   CHECK_SETTING("web-socket.path", "chat");
   CHECK_SETTING("web-socket.http-version", "HTTP/1.1");
@@ -154,21 +152,20 @@ CAF_TEST(applications receive handshake data via config) {
   CHECK_SETTING("web-socket.fields.Sec-WebSocket-Key",
                 "dGhlIHNhbXBsZSBub25jZQ==");
   using str_map = std::map<std::string, std::string>;
-  if (auto query = get_as<str_map>(app->cfg, "web-socket.query");
-      CAF_CHECK(query))
-    CAF_CHECK_EQUAL(*query, str_map({{"room"s, "lounge"s}}));
+  if (auto query = get_as<str_map>(app->cfg, "web-socket.query"); CHECK(query))
+    CHECK_EQ(*query, str_map({{"room"s, "lounge"s}}));
 }
 
 CAF_TEST(the server responds with an HTTP response on success) {
   transport.push(opening_handshake);
-  CAF_CHECK_EQUAL(transport.handle_input(),
-                  static_cast<ptrdiff_t>(opening_handshake.size()));
-  CAF_CHECK(ws->handshake_complete());
-  CAF_CHECK(transport.output_as_str(),
-            "HTTP/1.1 101 Switching Protocols\r\n"
-            "Upgrade: websocket\r\n"
-            "Connection: Upgrade\r\n"
-            "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n");
+  CHECK_EQ(transport.handle_input(),
+           static_cast<ptrdiff_t>(opening_handshake.size()));
+  CHECK(ws->handshake_complete());
+  CHECK_EQ(transport.output_as_str(),
+           "HTTP/1.1 101 Switching Protocols\r\n"
+           "Upgrade: websocket\r\n"
+           "Connection: Upgrade\r\n"
+           "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n");
 }
 
 CAF_TEST(handshakes may arrive in chunks) {
@@ -181,36 +178,36 @@ CAF_TEST(handshakes may arrive in chunks) {
   i += chunk_size;
   bufs.emplace_back(i, opening_handshake.end());
   transport.push(bufs[0]);
-  CAF_CHECK_EQUAL(transport.handle_input(), 0u);
-  CAF_CHECK(!ws->handshake_complete());
+  CHECK_EQ(transport.handle_input(), 0u);
+  CHECK(!ws->handshake_complete());
   transport.push(bufs[1]);
-  CAF_CHECK_EQUAL(transport.handle_input(), 0u);
-  CAF_CHECK(!ws->handshake_complete());
+  CHECK_EQ(transport.handle_input(), 0u);
+  CHECK(!ws->handshake_complete());
   transport.push(bufs[2]);
-  CAF_CHECK_EQUAL(static_cast<size_t>(transport.handle_input()),
-                  opening_handshake.size());
-  CAF_CHECK(ws->handshake_complete());
+  CHECK_EQ(static_cast<size_t>(transport.handle_input()),
+           opening_handshake.size());
+  CHECK(ws->handshake_complete());
 }
 
 CAF_TEST(data may follow the handshake immediately) {
   auto hs_bytes = as_bytes(make_span(opening_handshake));
-  std::vector<byte> buf{hs_bytes.begin(), hs_bytes.end()};
-  rfc6455_append("Hello WebSocket!\n"_sv, buf);
-  rfc6455_append("Bye WebSocket!\n"_sv, buf);
+  byte_buffer buf{hs_bytes.begin(), hs_bytes.end()};
+  rfc6455_append("Hello WebSocket!\n"sv, buf);
+  rfc6455_append("Bye WebSocket!\n"sv, buf);
   transport.push(buf);
-  CAF_CHECK_EQUAL(transport.handle_input(), static_cast<ptrdiff_t>(buf.size()));
-  CAF_CHECK(ws->handshake_complete());
-  CAF_CHECK_EQUAL(app->text_input, "Hello WebSocket!\nBye WebSocket!\n");
+  CHECK_EQ(transport.handle_input(), static_cast<ptrdiff_t>(buf.size()));
+  CHECK(ws->handshake_complete());
+  CHECK_EQ(app->text_input, "Hello WebSocket!\nBye WebSocket!\n");
 }
 
 CAF_TEST(data may arrive later) {
   transport.push(opening_handshake);
-  CAF_CHECK_EQUAL(transport.handle_input(),
-                  static_cast<ptrdiff_t>(opening_handshake.size()));
-  CAF_CHECK(ws->handshake_complete());
-  push("Hello WebSocket!\nBye WebSocket!\n"_sv);
+  CHECK_EQ(transport.handle_input(),
+           static_cast<ptrdiff_t>(opening_handshake.size()));
+  CHECK(ws->handshake_complete());
+  push("Hello WebSocket!\nBye WebSocket!\n"sv);
   transport.handle_input();
-  CAF_CHECK_EQUAL(app->text_input, "Hello WebSocket!\nBye WebSocket!\n");
+  CHECK_EQ(app->text_input, "Hello WebSocket!\nBye WebSocket!\n");
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

@@ -108,13 +108,10 @@ public:
       // nop
     }
 
-    void on_next(span<const T> items) {
-      CAF_ASSERT(items.size() == 1);
-      for (const auto& item : items) {
-        if (!bridge->write(down, item)) {
-          aborted = true;
-          return;
-        }
+    void on_next(const T& item) {
+      if (!bridge->write(down, item)) {
+        aborted = true;
+        return;
       }
     }
 
@@ -194,7 +191,7 @@ public:
   }
 
   template <class U = Tag, class LowerLayerPtr>
-  ptrdiff_t consume_text(LowerLayerPtr down, string_view buf) {
+  ptrdiff_t consume_text(LowerLayerPtr down, std::string_view buf) {
     if (!out_) {
       down->abort_reason(make_error(sec::connection_closed));
       return -1;

@@ -3,7 +3,6 @@
 #include "caf/error.hpp"
 #include "caf/net/receive_policy.hpp"
 #include "caf/net/socket.hpp"
-#include "caf/net/test/host_fixture.hpp"
 #include "caf/settings.hpp"
 #include "caf/span.hpp"
 #include "caf/string_view.hpp"
@@ -77,11 +76,11 @@ public:
 
   // -- buffer management ------------------------------------------------------
 
-  void push(caf::span<const caf::byte> bytes) {
+  void push(caf::span<const std::byte> bytes) {
     input.insert(input.begin(), bytes.begin(), bytes.end());
   }
 
-  void push(caf::string_view str) {
+  void push(std::string_view str) {
     push(caf::as_bytes(caf::make_span(str)));
   }
 
@@ -89,7 +88,7 @@ public:
     return read_buf_.size();
   }
 
-  caf::string_view output_as_str() const noexcept {
+  std::string_view output_as_str() const noexcept {
     return {reinterpret_cast<const char*>(output.data()), output.size()};
   }
 
@@ -111,8 +110,8 @@ public:
       read_size_ += static_cast<ptrdiff_t>(num_bytes);
       if (static_cast<size_t>(read_size_) < min_read_size)
         return result;
-      auto delta = make_span(read_buf_.data() + delta_offset,
-                             read_size_ - delta_offset);
+      auto delta = caf::make_span(read_buf_.data() + delta_offset,
+                                  read_size_ - delta_offset);
       auto consumed = upper_layer.consume(this, caf::make_span(read_buf_),
                                           delta);
       if (consumed > 0) {
@@ -133,16 +132,16 @@ public:
 
   UpperLayer upper_layer;
 
-  std::vector<caf::byte> output;
+  caf::byte_buffer output;
 
-  std::vector<caf::byte> input;
+  caf::byte_buffer input;
 
   uint32_t min_read_size = 0;
 
   uint32_t max_read_size = 0;
 
 private:
-  std::vector<caf::byte> read_buf_;
+  caf::byte_buffer read_buf_;
 
   ptrdiff_t read_size_ = 0;
 

@@ -4,9 +4,12 @@
 
 #pragma once
 
+#include "caf/byte_span.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/network_socket.hpp"
+
+#include <vector>
 
 namespace caf::net {
 
@@ -40,8 +43,8 @@ error CAF_NET_EXPORT allow_connreset(udp_datagram_socket x, bool new_value);
 /// @relates udp_datagram_socket
 /// @post buf was modified and the resulting integer represents the length of
 ///       the received datagram, even if it did not fit into the given buffer.
-variant<std::pair<size_t, ip_endpoint>, sec>
-  CAF_NET_EXPORT read(udp_datagram_socket x, span<byte> buf);
+std::variant<std::pair<size_t, ip_endpoint>, sec>
+  CAF_NET_EXPORT read(udp_datagram_socket x, byte_span buf);
 
 /// Sends the content of `bufs` as a datagram to the endpoint `ep` on socket
 /// `x`.
@@ -52,9 +55,9 @@ variant<std::pair<size_t, ip_endpoint>, sec>
 /// @returns The number of written bytes on success, otherwise an error code.
 /// @relates udp_datagram_socket
 /// @pre `bufs.size() < 10`
-variant<size_t, sec> CAF_NET_EXPORT write(udp_datagram_socket x,
-                                          span<byte_buffer*> bufs,
-                                          ip_endpoint ep);
+std::variant<size_t, sec> CAF_NET_EXPORT write(udp_datagram_socket x,
+                                               span<byte_buffer*> bufs,
+                                               ip_endpoint ep);
 
 /// Sends the content of `buf` as a datagram to the endpoint `ep` on socket `x`.
 /// @param x The UDP socket for sending datagrams.
@@ -62,13 +65,14 @@ variant<size_t, sec> CAF_NET_EXPORT write(udp_datagram_socket x,
 /// @param ep The enpoint to send the datagram to.
 /// @returns The number of written bytes on success, otherwise an error code.
 /// @relates udp_datagram_socket
-variant<size_t, sec> CAF_NET_EXPORT write(udp_datagram_socket x,
-                                          span<const byte> buf, ip_endpoint ep);
+std::variant<size_t, sec> CAF_NET_EXPORT write(udp_datagram_socket x,
+                                               const_byte_span buf,
+                                               ip_endpoint ep);
 
 /// Converts the result from I/O operation on a ::udp_datagram_socket to either
 /// an error code or a non-zero positive integer.
 /// @relates udp_datagram_socket
-variant<size_t, sec> CAF_NET_EXPORT
+std::variant<size_t, sec> CAF_NET_EXPORT
 check_udp_datagram_socket_io_res(std::make_signed<size_t>::type res);
 
 } // namespace caf::net

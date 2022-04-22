@@ -80,7 +80,7 @@ struct app_t {
   template <class LowerLayerPtr>
   ptrdiff_t consume(LowerLayerPtr down, byte_span buf, byte_span) {
     // Seek newline character.
-    constexpr auto nl = byte{'\n'};
+    constexpr auto nl = std::byte{'\n'};
     if (auto i = std::find(buf.begin(), buf.end(), nl); i != buf.end()) {
       // Skip empty lines.
       if (i == buf.begin()) {
@@ -90,8 +90,8 @@ struct app_t {
       }
       // Deserialize config value from received line.
       auto num_bytes = std::distance(buf.begin(), i) + 1;
-      string_view line{reinterpret_cast<const char*>(buf.data()),
-                       static_cast<size_t>(num_bytes) - 1};
+      std::string_view line{reinterpret_cast<const char*>(buf.data()),
+                            static_cast<size_t>(num_bytes) - 1};
       config_value val;
       if (auto parsed_res = config_value::parse(line)) {
         val = std::move(*parsed_res);
@@ -147,7 +147,7 @@ struct app_t {
   size_t received_responses = 0;
 };
 
-struct fixture : host_fixture, test_coordinator_fixture<> {
+struct fixture : test_coordinator_fixture<> {
   fixture() : mm(sys), mpx(&mm) {
     mpx.set_thread_id();
     if (auto err = mpx.init())
@@ -168,7 +168,7 @@ struct fixture : host_fixture, test_coordinator_fixture<> {
     for (size_t i = 0; i < 1000; ++i) {
       mpx.apply_updates();
       mpx.poll_once(false);
-      byte tmp[1024];
+      std::byte tmp[1024];
       auto bytes = read(self_socket_guard.socket(), make_span(tmp, 1024));
       if (bytes > 0)
         recv_buf.insert(recv_buf.end(), tmp, tmp + bytes);
@@ -179,7 +179,7 @@ struct fixture : host_fixture, test_coordinator_fixture<> {
     CAF_FAIL("reached max repeat rate without meeting the predicate");
   }
 
-  void send(string_view str) {
+  void send(std::string_view str) {
     auto res = write(self_socket_guard.socket(), as_bytes(make_span(str)));
     if (res != static_cast<ptrdiff_t>(str.size()))
       CAF_FAIL("expected write() to return " << str.size() << ", got: " << res);
@@ -189,7 +189,7 @@ struct fixture : host_fixture, test_coordinator_fixture<> {
   net::multiplexer mpx;
   net::socket_guard<net::stream_socket> self_socket_guard;
   net::socket_guard<net::stream_socket> testee_socket_guard;
-  std::vector<byte> recv_buf;
+  byte_buffer recv_buf;
 };
 
 constexpr std::string_view input = R"__(
@@ -229,10 +229,10 @@ CAF_TEST(actor shells can send requests and receive responses) {
   send(input);
   run_while([&] { return app.consumed_bytes != input.size(); });
   expect((int32_t), to(worker).with(123));
-  string_view expected_response = "246\n";
+  std::string_view expected_response = "246\n";
   run_while([&] { return recv_buf.size() < expected_response.size(); });
-  string_view received_response{reinterpret_cast<char*>(recv_buf.data()),
-                                recv_buf.size()};
+  std::string_view received_response{reinterpret_cast<char*>(recv_buf.data()),
+                                     recv_buf.size()};
   CAF_CHECK_EQUAL(received_response, expected_response);
 }
 

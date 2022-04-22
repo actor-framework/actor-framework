@@ -4,13 +4,13 @@
 
 #pragma once
 
-#include <array>
-#include <cstdint>
-#include <mutex>
-
-#include "caf/byte.hpp"
 #include "caf/net/pipe_socket.hpp"
 #include "caf/net/socket_manager.hpp"
+
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <mutex>
 
 namespace caf::net {
 
@@ -20,7 +20,7 @@ public:
 
   using super = socket_manager;
 
-  using msg_buf = std::array<byte, sizeof(intptr_t) + 1>;
+  using msg_buf = std::array<std::byte, sizeof(intptr_t) + 1>;
 
   enum class code : uint8_t {
     register_reading,

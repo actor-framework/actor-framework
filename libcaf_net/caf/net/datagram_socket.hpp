@@ -6,7 +6,9 @@
 
 #include "caf/detail/net_export.hpp"
 #include "caf/net/network_socket.hpp"
-#include "caf/variant.hpp"
+
+#include <cstddef>
+#include <variant>
 
 namespace caf::net {
 
@@ -24,7 +26,7 @@ error CAF_NET_EXPORT allow_connreset(datagram_socket x, bool new_value);
 /// Converts the result from I/O operation on a ::datagram_socket to either an
 /// error code or a integer greater or equal to zero.
 /// @relates datagram_socket
-variant<size_t, sec> CAF_NET_EXPORT
+std::variant<size_t, sec> CAF_NET_EXPORT
 check_datagram_socket_io_res(std::make_signed<size_t>::type res);
 
 } // namespace caf::net

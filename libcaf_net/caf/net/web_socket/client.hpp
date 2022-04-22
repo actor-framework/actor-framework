@@ -143,7 +143,7 @@ private:
   // -- HTTP response processing -----------------------------------------------
 
   template <class LowerLayerPtr>
-  bool handle_header(LowerLayerPtr down, string_view http) {
+  bool handle_header(LowerLayerPtr down, std::string_view http) {
     CAF_ASSERT(handshake_ != nullptr);
     auto http_ok = handshake_->is_valid_http_1_response(http);
     handshake_.reset();

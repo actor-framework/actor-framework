@@ -12,7 +12,6 @@
 #include "caf/net/multiplexer.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
-#include "caf/variant.hpp"
 
 namespace caf::net {
 

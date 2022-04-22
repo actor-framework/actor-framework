@@ -4,19 +4,18 @@
 
 #pragma once
 
-#include "caf/byte.hpp"
+#include "caf/byte_buffer.hpp"
+#include "caf/byte_span.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
+#include "caf/span.hpp"
 
 #include <cstdint>
-#include <vector>
 
 namespace caf::detail {
 
 struct CAF_NET_EXPORT rfc6455 {
   // -- member types -----------------------------------------------------------
-
-  using binary_buffer = std::vector<byte>;
 
   struct header {
     bool fin;
@@ -43,18 +42,18 @@ struct CAF_NET_EXPORT rfc6455 {
 
   static void mask_data(uint32_t key, span<char> data);
 
-  static void mask_data(uint32_t key, span<byte> data);
+  static void mask_data(uint32_t key, byte_span data);
 
   static void assemble_frame(uint32_t mask_key, span<const char> data,
-                             binary_buffer& out);
+                             byte_buffer& out);
 
-  static void assemble_frame(uint32_t mask_key, span<const byte> data,
-                             binary_buffer& out);
+  static void assemble_frame(uint32_t mask_key, const_byte_span data,
+                             byte_buffer& out);
 
   static void assemble_frame(uint8_t opcode, uint32_t mask_key,
-                             span<const byte> data, binary_buffer& out);
+                             const_byte_span data, byte_buffer& out);
 
-  static ptrdiff_t decode_header(span<const byte> data, header& hdr);
+  static ptrdiff_t decode_header(const_byte_span data, header& hdr);
 };
 
 } // namespace caf::detail

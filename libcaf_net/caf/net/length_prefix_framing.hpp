@@ -93,7 +93,7 @@ public:
     down->begin_output();
     auto& buf = down->output_buffer();
     message_offset_ = buf.size();
-    buf.insert(buf.end(), 4, byte{0});
+    buf.insert(buf.end(), 4, std::byte{0});
   }
 
   template <class LowerLayerPtr>

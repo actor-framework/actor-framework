@@ -13,7 +13,6 @@
 #include "caf/net/ip.hpp"
 #include "caf/net/socket_guard.hpp"
 #include "caf/sec.hpp"
-#include "caf/variant.hpp"
 
 #include <algorithm>
 
@@ -158,9 +157,9 @@ make_connected_tcp_stream_socket(const uri::authority_type& node,
   if (port == 0)
     return make_error(sec::cannot_connect_to_node, "port is zero");
   std::vector<ip_address> addrs;
-  if (auto str = get_if<std::string>(&node.host))
+  if (auto str = std::get_if<std::string>(&node.host))
     addrs = ip::resolve(*str);
-  else if (auto addr = get_if<ip_address>(&node.host))
+  else if (auto addr = std::get_if<ip_address>(&node.host))
     addrs.push_back(*addr);
   if (addrs.empty())
     return make_error(sec::cannot_connect_to_node, "empty authority");

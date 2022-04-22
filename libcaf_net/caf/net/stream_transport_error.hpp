@@ -30,7 +30,7 @@ enum class stream_transport_error {
 CAF_NET_EXPORT std::string to_string(stream_transport_error);
 
 /// @relates stream_transport_error
-CAF_NET_EXPORT bool from_string(string_view, stream_transport_error&);
+CAF_NET_EXPORT bool from_string(std::string_view, stream_transport_error&);
 
 /// @relates stream_transport_error
 CAF_NET_EXPORT bool from_integer(std::underlying_type_t<stream_transport_error>,

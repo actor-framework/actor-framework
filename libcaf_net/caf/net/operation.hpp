@@ -4,14 +4,15 @@
 
 #pragma once
 
-#include <cstdint>
-#include <string>
-#include <type_traits>
-
 #include "caf/default_enum_inspect.hpp"
 #include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/is_error_code_enum.hpp"
+
+#include <cstdint>
+#include <string>
+#include <string_view>
+#include <type_traits>
 
 namespace caf::net {
 
@@ -111,7 +112,7 @@ enum class operation {
 CAF_NET_EXPORT std::string to_string(operation x);
 
 /// @relates operation
-CAF_NET_EXPORT bool from_string(string_view, operation&);
+CAF_NET_EXPORT bool from_string(std::string_view, operation&);
 
 /// @relates operation
 CAF_NET_EXPORT bool from_integer(std::underlying_type_t<operation>, operation&);

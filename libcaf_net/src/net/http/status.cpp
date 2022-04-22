@@ -1,102 +1,104 @@
 #include "caf/net/http/status.hpp"
 
+#include <string_view>
+
 namespace caf::net::http {
 
-string_view phrase(status code) {
-  using namespace caf::literals;
+std::string_view phrase(status code) {
+  using namespace std::literals;
   switch (code) {
     case status::continue_request:
-      return "Continue"_sv;
+      return "Continue"sv;
     case status::switching_protocols:
-      return "Switching Protocols"_sv;
+      return "Switching Protocols"sv;
     case status::ok:
-      return "OK"_sv;
+      return "OK"sv;
     case status::created:
-      return "Created"_sv;
+      return "Created"sv;
     case status::accepted:
-      return "Accepted"_sv;
+      return "Accepted"sv;
     case status::non_authoritative_information:
-      return "Non-Authoritative Information"_sv;
+      return "Non-Authoritative Information"sv;
     case status::no_content:
-      return "No Content"_sv;
+      return "No Content"sv;
     case status::reset_content:
-      return "Reset Content"_sv;
+      return "Reset Content"sv;
     case status::partial_content:
-      return "Partial Content"_sv;
+      return "Partial Content"sv;
     case status::multiple_choices:
-      return "Multiple Choices"_sv;
+      return "Multiple Choices"sv;
     case status::moved_permanently:
-      return "Moved Permanently"_sv;
+      return "Moved Permanently"sv;
     case status::found:
-      return "Found"_sv;
+      return "Found"sv;
     case status::see_other:
-      return "See Other"_sv;
+      return "See Other"sv;
     case status::not_modified:
-      return "Not Modified"_sv;
+      return "Not Modified"sv;
     case status::use_proxy:
-      return "Use Proxy"_sv;
+      return "Use Proxy"sv;
     case status::temporary_redirect:
-      return "Temporary Redirect"_sv;
+      return "Temporary Redirect"sv;
     case status::bad_request:
-      return "Bad Request"_sv;
+      return "Bad Request"sv;
     case status::unauthorized:
-      return "Unauthorized"_sv;
+      return "Unauthorized"sv;
     case status::payment_required:
-      return "Payment Required"_sv;
+      return "Payment Required"sv;
     case status::forbidden:
-      return "Forbidden"_sv;
+      return "Forbidden"sv;
     case status::not_found:
-      return "Not Found"_sv;
+      return "Not Found"sv;
     case status::method_not_allowed:
-      return "Method Not Allowed"_sv;
+      return "Method Not Allowed"sv;
     case status::not_acceptable:
-      return "Not Acceptable"_sv;
+      return "Not Acceptable"sv;
     case status::proxy_authentication_required:
-      return "Proxy Authentication Required"_sv;
+      return "Proxy Authentication Required"sv;
     case status::request_timeout:
-      return "Request Timeout"_sv;
+      return "Request Timeout"sv;
     case status::conflict:
-      return "Conflict"_sv;
+      return "Conflict"sv;
     case status::gone:
-      return "Gone"_sv;
+      return "Gone"sv;
     case status::length_required:
-      return "Length Required"_sv;
+      return "Length Required"sv;
     case status::precondition_failed:
-      return "Precondition Failed"_sv;
+      return "Precondition Failed"sv;
     case status::payload_too_large:
-      return "Payload Too Large"_sv;
+      return "Payload Too Large"sv;
     case status::uri_too_long:
-      return "URI Too Long"_sv;
+      return "URI Too Long"sv;
     case status::unsupported_media_type:
-      return "Unsupported Media Type"_sv;
+      return "Unsupported Media Type"sv;
     case status::range_not_satisfiable:
-      return "Range Not Satisfiable"_sv;
+      return "Range Not Satisfiable"sv;
     case status::expectation_failed:
-      return "Expectation Failed"_sv;
+      return "Expectation Failed"sv;
     case status::upgrade_required:
-      return "Upgrade Required"_sv;
+      return "Upgrade Required"sv;
     case status::precondition_required:
-      return "Precondition Required"_sv;
+      return "Precondition Required"sv;
     case status::too_many_requests:
-      return "Too Many Requests"_sv;
+      return "Too Many Requests"sv;
     case status::request_header_fields_too_large:
-      return "Request Header Fields Too Large"_sv;
+      return "Request Header Fields Too Large"sv;
     case status::internal_server_error:
-      return "Internal Server Error"_sv;
+      return "Internal Server Error"sv;
     case status::not_implemented:
-      return "Not Implemented"_sv;
+      return "Not Implemented"sv;
     case status::bad_gateway:
-      return "Bad Gateway"_sv;
+      return "Bad Gateway"sv;
     case status::service_unavailable:
-      return "Service Unavailable"_sv;
+      return "Service Unavailable"sv;
     case status::gateway_timeout:
-      return "Gateway Timeout"_sv;
+      return "Gateway Timeout"sv;
     case status::http_version_not_supported:
-      return "HTTP Version Not Supported"_sv;
+      return "HTTP Version Not Supported"sv;
     case status::network_authentication_required:
-      return "Network Authentication Required"_sv;
+      return "Network Authentication Required"sv;
     default:
-      return "Unrecognized";
+      return "Unrecognized"sv;
   }
 }
 

@@ -27,7 +27,7 @@ class framing {
 public:
   // -- member types -----------------------------------------------------------
 
-  using binary_buffer = std::vector<byte>;
+  using binary_buffer = std::vector<std::byte>;
 
   using text_buffer = std::vector<char>;
 
@@ -131,7 +131,8 @@ public:
   }
 
   template <class LowerLayerPtr>
-  bool send_close_message(LowerLayerPtr down, status code, string_view desc) {
+  bool
+  send_close_message(LowerLayerPtr down, status code, std::string_view desc) {
     ship_close(down, static_cast<uint16_t>(code), desc);
     return true;
   }
@@ -282,8 +283,8 @@ private:
   bool handle(LowerLayerPtr down, uint8_t opcode, byte_span payload) {
     switch (opcode) {
       case detail::rfc6455::text_frame: {
-        string_view text{reinterpret_cast<const char*>(payload.data()),
-                         payload.size()};
+        std::string_view text{reinterpret_cast<const char*>(payload.data()),
+                              payload.size()};
         return upper_layer_.consume_text(this_layer_ptr(down), text) >= 0;
       }
       case detail::rfc6455::binary_frame:
@@ -317,14 +318,14 @@ private:
   }
 
   template <class LowerLayerPtr>
-  void ship_close(LowerLayerPtr down, uint16_t code, string_view msg) {
+  void ship_close(LowerLayerPtr down, uint16_t code, std::string_view msg) {
     uint32_t mask_key = 0;
-    std::vector<byte> payload;
+    byte_buffer payload;
     payload.reserve(msg.size() + 2);
-    payload.push_back(static_cast<byte>((code & 0xFF00) >> 8));
-    payload.push_back(static_cast<byte>(code & 0x00FF));
+    payload.push_back(static_cast<std::byte>((code & 0xFF00) >> 8));
+    payload.push_back(static_cast<std::byte>(code & 0x00FF));
     for (auto c : msg)
-      payload.push_back(static_cast<byte>(c));
+      payload.push_back(static_cast<std::byte>(c));
     if (mask_outgoing_frames) {
       mask_key = static_cast<uint32_t>(rng_());
       detail::rfc6455::mask_data(mask_key, payload);
@@ -338,10 +339,10 @@ private:
   template <class LowerLayerPtr>
   void ship_close(LowerLayerPtr down) {
     uint32_t mask_key = 0;
-    byte payload[] = {
-      byte{0x03}, byte{0xE8},            // Error code 1000: normal close.
-      byte{'E'},  byte{'O'},  byte{'F'}, // "EOF" string as goodbye message.
-    };
+    std::byte payload[] = {// Error code 1000: normal close.
+                           std::byte{0x03}, std::byte{0xE8},
+                           // "EOF" string as goodbye message.
+                           std::byte{'E'}, std::byte{'O'}, std::byte{'F'}};
     if (mask_outgoing_frames) {
       mask_key = static_cast<uint32_t>(rng_());
       detail::rfc6455::mask_data(mask_key, payload);

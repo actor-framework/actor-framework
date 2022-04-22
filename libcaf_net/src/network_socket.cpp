@@ -14,7 +14,6 @@
 #include "caf/expected.hpp"
 #include "caf/logger.hpp"
 #include "caf/sec.hpp"
-#include "caf/variant.hpp"
 
 namespace {
 

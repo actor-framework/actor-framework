@@ -9,8 +9,6 @@
 #include "net-test.hpp"
 
 using namespace caf;
-using namespace caf::literals;
-using namespace std::literals::string_literals;
 
 namespace {
 
@@ -19,7 +17,7 @@ using svec = std::vector<std::string>;
 struct app_t {
   std::string text_input;
 
-  std::vector<byte> binary_input;
+  caf::byte_buffer binary_input;
 
   settings cfg;
 
@@ -45,7 +43,7 @@ struct app_t {
   }
 
   template <class LowerLayerPtr>
-  ptrdiff_t consume_text(LowerLayerPtr, string_view text) {
+  ptrdiff_t consume_text(LowerLayerPtr, std::string_view text) {
     text_input.insert(text_input.end(), text.begin(), text.end());
     return static_cast<ptrdiff_t>(text.size());
   }
@@ -57,24 +55,25 @@ struct app_t {
   }
 };
 
-constexpr auto key = "the sample nonce"_sv;
+constexpr std::string_view key = "the sample nonce";
 
-constexpr auto http_request = "GET /chat HTTP/1.1\r\n"
-                              "Host: server.example.com\r\n"
-                              "Upgrade: websocket\r\n"
-                              "Connection: Upgrade\r\n"
-                              "Sec-WebSocket-Version: 13\r\n"
-                              "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
-                              "Origin: http://example.com\r\n"
-                              "Sec-WebSocket-Protocol: chat, superchat\r\n"
-                              "\r\n"_sv;
+constexpr std::string_view http_request
+  = "GET /chat HTTP/1.1\r\n"
+    "Host: server.example.com\r\n"
+    "Upgrade: websocket\r\n"
+    "Connection: Upgrade\r\n"
+    "Sec-WebSocket-Version: 13\r\n"
+    "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+    "Origin: http://example.com\r\n"
+    "Sec-WebSocket-Protocol: chat, superchat\r\n"
+    "\r\n";
 
-constexpr auto http_response
+constexpr std::string_view http_response
   = "HTTP/1.1 101 Switching Protocols\r\n"
     "Upgrade: websocket\r\n"
     "Connection: Upgrade\r\n"
     "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n"
-    "\r\n"_sv;
+    "\r\n";
 
 auto key_to_bytes() {
   net::web_socket::handshake::key_type bytes;
@@ -97,8 +96,6 @@ using mock_client_type = mock_stream_transport<net::web_socket::client<app_t>>;
 
 } // namespace
 
-BEGIN_FIXTURE_SCOPE(host_fixture)
-
 SCENARIO("the client performs the WebSocket handshake on startup") {
   GIVEN("valid WebSocket handshake data") {
     WHEN("starting a WebSocket client") {
@@ -116,5 +113,3 @@ SCENARIO("the client performs the WebSocket handshake on startup") {
     }
   }
 }
-
-END_FIXTURE_SCOPE()

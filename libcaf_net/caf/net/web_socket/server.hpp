@@ -22,6 +22,7 @@
 #include "caf/net/web_socket/status.hpp"
 #include "caf/pec.hpp"
 #include "caf/settings.hpp"
+#include "caf/string_algorithms.hpp"
 #include "caf/tag/mixed_message_oriented.hpp"
 #include "caf/tag/stream_oriented.hpp"
 
@@ -96,7 +97,7 @@ public:
 
   template <class LowerLayerPtr>
   ptrdiff_t consume(LowerLayerPtr down, byte_span input, byte_span delta) {
-    using namespace caf::literals;
+    using namespace std::literals;
     CAF_LOG_TRACE(CAF_ARG2("socket", down->handle().id)
                   << CAF_ARG2("bytes", input.size()));
     // Short circuit to the framing layer after the handshake completed.
@@ -109,8 +110,8 @@ public:
       if (input.size() >= handshake::max_http_size) {
         down->begin_output();
         http::v1::write_response(http::status::request_header_fields_too_large,
-                                 "text/plain"_sv,
-                                 "Header exceeds maximum size."_sv,
+                                 "text/plain"sv,
+                                 "Header exceeds maximum size."sv,
                                  down->output_buffer());
         down->end_output();
         auto err = make_error(pec::too_many_characters,
@@ -145,14 +146,15 @@ private:
   // -- HTTP request processing ------------------------------------------------
 
   template <class LowerLayerPtr>
-  void write_response(LowerLayerPtr down, http::status code, string_view msg) {
+  void
+  write_response(LowerLayerPtr down, http::status code, std::string_view msg) {
     down->begin_output();
     http::v1::write_response(code, "text/plain", msg, down->output_buffer());
     down->end_output();
   }
 
   template <class LowerLayerPtr>
-  bool handle_header(LowerLayerPtr down, string_view http) {
+  bool handle_header(LowerLayerPtr down, std::string_view http) {
     using namespace std::literals;
     // Parse the header and reject invalid inputs.
     http::header hdr;
@@ -183,14 +185,14 @@ private:
     // Store the request information in the settings for the upper layer.
     auto& ws = cfg_["web-socket"].as_dictionary();
     put(ws, "method", to_rfc_string(hdr.method()));
-    put(ws, "path", to_string(hdr.path()));
+    put(ws, "path", std::string{hdr.path()});
     put(ws, "query", hdr.query());
     put(ws, "fragment", hdr.fragment());
     put(ws, "http-version", hdr.version());
     if (!hdr.fields().empty()) {
       auto& fields = ws["fields"].as_dictionary();
       for (auto& [key, val] : hdr.fields())
-        put(fields, to_string(key), to_string(val));
+        put(fields, std::string{key}, std::string{val});
     }
     // Try to initialize the upper layer.
     if (auto err = upper_layer_.init(owner_, down, cfg_)) {
@@ -212,41 +214,23 @@ private:
   }
 
   template <class F>
-  void for_each_line(string_view input, F&& f) {
-    constexpr string_view eol{"\r\n"};
+  void for_each_line(std::string_view input, F&& f) {
+    constexpr std::string_view eol{"\r\n"};
     for (auto pos = input.begin();;) {
       auto line_end = std::search(pos, input.end(), eol.begin(), eol.end());
       if (line_end == input.end())
         return;
-      f(string_view{pos, line_end});
+      f(make_string_view(pos, line_end));
       pos = line_end + eol.size();
     }
   }
 
-  static string_view trim(string_view str) {
+  static std::string_view trim(std::string_view str) {
     str.remove_prefix(std::min(str.find_first_not_of(' '), str.size()));
     auto trim_pos = str.find_last_not_of(' ');
     if (trim_pos != str.npos)
       str.remove_suffix(str.size() - (trim_pos + 1));
     return str;
-  }
-
-  /// Splits `str` at the first occurrence of `sep` into the head and the
-  /// remainder (excluding the separator).
-  static std::pair<string_view, string_view> split(string_view str,
-                                                   string_view sep) {
-    auto i = std::search(str.begin(), str.end(), sep.begin(), sep.end());
-    if (i != str.end())
-      return {{str.begin(), i}, {i + sep.size(), str.end()}};
-    return {{str}, {}};
-  }
-
-  /// Convenience function for splitting twice.
-  static std::tuple<string_view, string_view, string_view>
-  split2(string_view str, string_view sep) {
-    auto [first, r1] = split(str, sep);
-    auto [second, third] = split(r1, sep);
-    return {first, second, third};
   }
 
   /// Stores whether the WebSocket handshake completed successfully.
@@ -373,7 +357,7 @@ public:
     return decorated().convert(bytes, x);
   }
 
-  bool convert(string_view text, value_type& x) {
+  bool convert(std::string_view text, value_type& x) {
     return decorated().convert(text, x);
   }
 

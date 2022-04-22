@@ -8,6 +8,8 @@
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/logger.hpp"
 
+#include <variant>
+
 namespace caf::net {
 
 #ifdef CAF_WINDOWS
@@ -33,7 +35,7 @@ error allow_connreset(datagram_socket x, bool) {
 
 #endif // CAF_WINDOWS
 
-variant<size_t, sec>
+std::variant<size_t, sec>
 check_datagram_socket_io_res(std::make_signed<size_t>::type res) {
   if (res < 0) {
     auto code = last_socket_error();

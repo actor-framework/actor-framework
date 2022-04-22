@@ -51,6 +51,41 @@ void split(std::vector<std::string_view>& result, std::string_view str,
   split(result, str, std::string_view{&delim, 1}, keep_all);
 }
 
+std::string_view trim(std::string_view str) {
+  auto non_whitespace = [](char c) { return !isspace(c); };
+  if (std::any_of(str.begin(), str.end(), non_whitespace)) {
+    while (str.front() == ' ')
+      str.remove_prefix(1);
+    while (str.back() == ' ')
+      str.remove_suffix(1);
+  } else {
+    str = std::string_view{};
+  }
+  return str;
+}
+
+bool icase_equal(std::string_view x, std::string_view y) {
+  if (x.size() != y.size()) {
+    return false;
+  } else {
+    for (size_t index = 0; index < x.size(); ++index)
+      if (tolower(x[index]) != tolower(y[index]))
+        return false;
+    return true;
+  }
+}
+
+std::pair<std::string_view, std::string_view> split_by(std::string_view str,
+                                                       std::string_view sep) {
+  auto i = std::search(str.begin(), str.end(), sep.begin(), sep.end());
+  if (i != str.end()) {
+    return {make_string_view(str.begin(), i),
+            make_string_view(i + sep.size(), str.end())};
+  } else {
+    return {str, {}};
+  }
+}
+
 void replace_all(std::string& str, std::string_view what,
                  std::string_view with) {
   // end(what) - 1 points to the null-terminator

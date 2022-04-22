@@ -17,7 +17,6 @@
 #include "caf/net/socket_manager.hpp"
 #include "caf/sec.hpp"
 #include "caf/span.hpp"
-#include "caf/variant.hpp"
 
 #include <algorithm>
 #include <optional>
@@ -308,13 +307,18 @@ bool multiplexer::poll_once(bool blocking) {
           // Must not happen.
           auto int_code = static_cast<int>(code);
           auto msg = std::generic_category().message(int_code);
-          string_view prefix = "poll() failed: ";
+          std::string_view prefix = "poll() failed: ";
           msg.insert(msg.begin(), prefix.begin(), prefix.end());
           CAF_CRITICAL(msg.c_str());
         }
       }
     }
   }
+}
+
+void multiplexer::poll() {
+  while (poll_once(false))
+    ; // repeat
 }
 
 void multiplexer::apply_updates() {
@@ -478,9 +482,10 @@ multiplexer::update_for(const socket_manager_ptr& mgr) {
 template <class T>
 void multiplexer::write_to_pipe(uint8_t opcode, T* ptr) {
   pollset_updater::msg_buf buf;
-  if (ptr)
+  if (ptr) {
     intrusive_ptr_add_ref(ptr);
-  buf[0] = static_cast<byte>(opcode);
+  }
+  buf[0] = static_cast<std::byte>(opcode);
   auto value = reinterpret_cast<intptr_t>(ptr);
   memcpy(buf.data() + 1, &value, sizeof(intptr_t));
   ptrdiff_t res = -1;

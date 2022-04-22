@@ -54,7 +54,7 @@ public:
 
 private:
   size_t rd_pos_ = 0;
-  std::vector<byte> buf_;
+  byte_buffer buf_;
   net::socket_guard<net::stream_socket> sg_;
 };
 
@@ -91,13 +91,11 @@ public:
     bool on_next_called;
     bool aborted;
 
-    void on_next(span<const int32_t> items) {
-      REQUIRE_EQ(items.size(), 1u);
-      auto val = items[0];
-      thisptr->written_values.emplace_back(val);
+    void on_next(int32_t item) {
+      thisptr->written_values.emplace_back(item);
       auto offset = thisptr->written_bytes.size();
       binary_serializer sink{nullptr, thisptr->written_bytes};
-      if (!sink.apply(val))
+      if (!sink.apply(item))
         FAIL("sink.apply failed: " << sink.get_error());
       auto bytes = make_span(thisptr->written_bytes).subspan(offset);
       down->begin_output();
@@ -156,12 +154,12 @@ public:
 
   bool done = false;
   std::vector<int32_t> written_values;
-  std::vector<byte> written_bytes;
+  byte_buffer written_bytes;
   adapter_ptr adapter;
   resource_type input;
 };
 
-struct fixture : test_coordinator_fixture<>, host_fixture {
+struct fixture : test_coordinator_fixture<> {
   fixture() : mm(sys) {
     mm.mpx().set_thread_id();
     if (auto err = mm.mpx().init())

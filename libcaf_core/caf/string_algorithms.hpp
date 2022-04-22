@@ -42,6 +42,24 @@ CAF_CORE_EXPORT void split(std::vector<std::string_view>& result,
                            std::string_view str, char delim,
                            bool keep_all = true);
 
+// TODO: use the equivalent C++20 constructor instead, once available.
+constexpr std::string_view make_string_view(const char* first,
+                                            const char* last) {
+  auto n = static_cast<size_t>(std::distance(first, last));
+  return std::string_view{first, n};
+}
+
+/// Drops any leading and trailing whitespaces from `str`.
+CAF_CORE_EXPORT std::string_view trim(std::string_view str);
+
+/// Checks whether two strings are equal when ignoring upper/lower case.
+CAF_CORE_EXPORT bool icase_equal(std::string_view x, std::string_view y);
+
+/// Splits a string by a separator into a head and a tail. If `sep` was not
+/// found, the tail is empty.
+CAF_CORE_EXPORT std::pair<std::string_view, std::string_view>
+split_by(std::string_view str, std::string_view sep);
+
 template <class InputIterator>
 std::string
 join(InputIterator first, InputIterator last, std::string_view glue) {

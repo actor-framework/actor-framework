@@ -50,14 +50,14 @@ struct app_t {
     return true;
   }
 
-  string_view field(string_view key) {
+  std::string_view field(std::string_view key) {
     if (auto i = hdr.fields().find(key); i != hdr.fields().end())
       return i->second;
     else
       return {};
   }
 
-  string_view param(string_view key) {
+  std::string_view param(std::string_view key) {
     auto& qm = hdr.query();
     if (auto i = qm.find(key); i != qm.end())
       return i->second;
@@ -70,19 +70,17 @@ using mock_server_type = mock_stream_transport<net::http::server<app_t>>;
 
 } // namespace
 
-BEGIN_FIXTURE_SCOPE(host_fixture)
-
 SCENARIO("the server parses HTTP GET requests into header fields") {
   GIVEN("valid HTTP GET request") {
-    string_view req = "GET /foo/bar?user=foo&pw=bar HTTP/1.1\r\n"
-                      "Host: localhost:8090\r\n"
-                      "User-Agent: AwesomeLib/1.0\r\n"
-                      "Accept-Encoding: gzip\r\n\r\n";
-    string_view res = "HTTP/1.1 200 OK\r\n"
-                      "Content-Type: text/plain\r\n"
-                      "Content-Length: 12\r\n"
-                      "\r\n"
-                      "Hello world!";
+    std::string_view req = "GET /foo/bar?user=foo&pw=bar HTTP/1.1\r\n"
+                           "Host: localhost:8090\r\n"
+                           "User-Agent: AwesomeLib/1.0\r\n"
+                           "Accept-Encoding: gzip\r\n\r\n";
+    std::string_view res = "HTTP/1.1 200 OK\r\n"
+                           "Content-Type: text/plain\r\n"
+                           "Content-Length: 12\r\n"
+                           "\r\n"
+                           "Hello world!";
     WHEN("sending it to an HTTP server") {
       mock_server_type serv;
       CHECK_EQ(serv.init(), error{});
@@ -104,5 +102,3 @@ SCENARIO("the server parses HTTP GET requests into header fields") {
     }
   }
 }
-
-END_FIXTURE_SCOPE()

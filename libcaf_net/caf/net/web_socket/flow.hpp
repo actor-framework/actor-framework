@@ -91,7 +91,7 @@ public:
   }
 
   template <class LowerLayerPtr>
-  ptrdiff_t consume_text(LowerLayerPtr down, caf::string_view text) {
+  ptrdiff_t consume_text(LowerLayerPtr down, std::string_view text) {
     reader_msgput_type msg;
     if (reader_.deserialize_text(text, msg)) {
       if (reader_output_->push(std::move(msg)) == 0)

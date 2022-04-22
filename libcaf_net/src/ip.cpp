@@ -4,11 +4,6 @@
 
 #include "caf/net/ip.hpp"
 
-#include <cstddef>
-#include <string>
-#include <utility>
-#include <vector>
-
 #include "caf/config.hpp"
 #include "caf/detail/socket_sys_includes.hpp"
 #include "caf/error.hpp"
@@ -17,7 +12,12 @@
 #include "caf/ipv4_address.hpp"
 #include "caf/logger.hpp"
 #include "caf/string_algorithms.hpp"
-#include "caf/string_view.hpp"
+
+#include <cstddef>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 #ifdef CAF_WINDOWS
 #  ifndef _WIN32_WINNT
@@ -41,8 +41,8 @@ namespace caf::net::ip {
 namespace {
 
 // Dummy port to resolve empty string with getaddrinfo.
-constexpr string_view dummy_port = "42";
-constexpr string_view localhost = "localhost";
+constexpr std::string_view dummy_port = "42";
+constexpr std::string_view localhost = "localhost";
 
 void* fetch_in_addr(int family, sockaddr* addr) {
   if (family == AF_INET)
@@ -142,7 +142,7 @@ void for_each_adapter(F f, bool is_link_local = false) {
 
 } // namespace
 
-std::vector<ip_address> resolve(string_view host) {
+std::vector<ip_address> resolve(std::string_view host) {
   addrinfo hint;
   memset(&hint, 0, sizeof(hint));
   hint.ai_socktype = SOCK_STREAM;
@@ -180,21 +180,21 @@ std::vector<ip_address> resolve(ip_address host) {
   return resolve(to_string(host));
 }
 
-std::vector<ip_address> local_addresses(string_view host) {
+std::vector<ip_address> local_addresses(std::string_view host) {
   ip_address host_ip;
   std::vector<ip_address> results;
   if (host.empty()) {
     for_each_adapter(
-      [&](string_view, ip_address ip) { results.push_back(ip); });
+      [&](std::string_view, ip_address ip) { results.push_back(ip); });
   } else if (host == localhost) {
     auto v6_local = ip_address{{0}, {0x1}};
     auto v4_local = ip_address{make_ipv4_address(127, 0, 0, 1)};
-    for_each_adapter([&](string_view, ip_address ip) {
+    for_each_adapter([&](std::string_view, ip_address ip) {
       if (ip == v4_local || ip == v6_local)
         results.push_back(ip);
     });
   } else if (auto err = parse(host, host_ip)) {
-    for_each_adapter([&](string_view iface, ip_address ip) {
+    for_each_adapter([&](std::string_view iface, ip_address ip) {
       if (iface == host)
         results.push_back(ip);
     });
@@ -215,7 +215,7 @@ std::vector<ip_address> local_addresses(ip_address host) {
   auto is_link_local = ll_prefix.contains(host);
   std::vector<ip_address> results;
   for_each_adapter(
-    [&](string_view, ip_address ip) {
+    [&](std::string_view, ip_address ip) {
       if (host == ip)
         results.push_back(ip);
     },

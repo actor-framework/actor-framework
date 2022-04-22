@@ -15,7 +15,6 @@
 #include "caf/fwd.hpp"
 #include "caf/net/connection_acceptor.hpp"
 #include "caf/net/fwd.hpp"
-#include "caf/net/middleman_backend.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/scoped_actor.hpp"
@@ -29,8 +28,6 @@ public:
   using module = actor_system::module;
 
   using module_ptr = actor_system::module_ptr;
-
-  using middleman_backend_list = std::vector<middleman_backend_ptr>;
 
   // -- static utility functions -----------------------------------------------
 
@@ -82,58 +79,10 @@ public:
 
   // -- factory functions ------------------------------------------------------
 
-  template <class... Ts>
-  static module* make(actor_system& sys, detail::type_list<Ts...> token) {
-    std::unique_ptr<middleman> result{new middleman(sys)};
-    if (sizeof...(Ts) > 0) {
-      result->backends_.reserve(sizeof...(Ts));
-      create_backends(*result, token);
-    }
-    return result.release();
-  }
+  static module* make(actor_system& sys, detail::type_list<>);
 
   /// Adds module-specific options to the config before loading the module.
   static void add_module_options(actor_system_config& cfg);
-
-  // -- remoting ---------------------------------------------------------------
-
-  expected<endpoint_manager_ptr> connect(const uri& locator);
-
-  // Publishes an actor.
-  template <class Handle>
-  void publish(Handle whom, const std::string& path) {
-    // TODO: Currently, we can't get the interface from the registry. Either we
-    // change that, or we need to associate the handle with the interface.
-    system().registry().put(path, whom);
-  }
-
-  /// Resolves a path to a remote actor.
-  void resolve(const uri& locator, const actor& listener);
-
-  template <class Handle = actor, class Duration = std::chrono::seconds>
-  expected<Handle>
-  remote_actor(const uri& locator, Duration timeout = std::chrono::seconds(5)) {
-    scoped_actor self{sys_};
-    resolve(locator, self);
-    Handle handle;
-    error err;
-    self->receive(
-      [&handle](strong_actor_ptr& ptr, const std::set<std::string>&) {
-        // TODO: This cast is not type-safe.
-        handle = actor_cast<Handle>(std::move(ptr));
-      },
-      [&err](const error& e) { err = e; },
-      after(timeout) >>
-        [&err] {
-          err = make_error(sec::runtime_error,
-                           "manager did not respond with a proxy.");
-        });
-    if (err)
-      return err;
-    if (handle)
-      return handle;
-    return make_error(sec::runtime_error, "cast to handle-type failed");
-  }
 
   // -- properties -------------------------------------------------------------
 
@@ -161,23 +110,7 @@ public:
     return &mpx_;
   }
 
-  middleman_backend* backend(string_view scheme) const noexcept;
-
-  expected<uint16_t> port(string_view scheme) const;
-
 private:
-  // -- utility functions ------------------------------------------------------
-
-  static void create_backends(middleman&, detail::type_list<>) {
-    // End of recursion.
-  }
-
-  template <class T, class... Ts>
-  static void create_backends(middleman& mm, detail::type_list<T, Ts...>) {
-    mm.backends_.emplace_back(new T(mm));
-    create_backends(mm, detail::type_list<Ts...>{});
-  }
-
   // -- member variables -------------------------------------------------------
 
   /// Points to the parent system.
@@ -185,9 +118,6 @@ private:
 
   /// Stores the global socket I/O multiplexer.
   multiplexer mpx_;
-
-  /// Stores all available backends for managing peers.
-  middleman_backend_list backends_;
 
   /// Runs the multiplexer's event loop
   std::thread mpx_thread_;

@@ -4,7 +4,7 @@ file(GLOB_RECURSE CAF_NET_HEADERS "caf/*.hpp")
 
 # -- add targets ---------------------------------------------------------------
 
-caf_incubator_add_component(
+caf_add_component(
   net
   DEPENDENCIES
     PUBLIC
@@ -13,9 +13,6 @@ caf_incubator_add_component(
     PRIVATE
       CAF::internal
   ENUM_TYPES
-    net.basp.connection_state
-    net.basp.ec
-    net.basp.message_type
     net.http.method
     net.http.status
     net.operation
@@ -24,13 +21,11 @@ caf_incubator_add_component(
   HEADERS
     ${CAF_NET_HEADERS}
   SOURCES
-    src/convert_ip_endpoint.cpp
     src/datagram_socket.cpp
+    src/detail/convert_ip_endpoint.cpp
     src/detail/rfc6455.cpp
-    src/header.cpp
     src/host.cpp
     src/ip.cpp
-    src/message_queue.cpp
     src/multiplexer.cpp
     src/net/abstract_actor_shell.cpp
     src/net/actor_shell.cpp
@@ -39,8 +34,6 @@ caf_incubator_add_component(
     src/net/http/status.cpp
     src/net/http/v1.cpp
     src/net/middleman.cpp
-    src/net/middleman_backend.cpp
-    src/net/packet_writer.cpp
     src/net/web_socket/handshake.cpp
     src/network_socket.cpp
     src/pipe_socket.cpp
@@ -51,35 +44,33 @@ caf_incubator_add_component(
     src/tcp_accept_socket.cpp
     src/tcp_stream_socket.cpp
     src/udp_datagram_socket.cpp
-    src/worker.cpp
   TEST_SOURCES
     test/net-test.cpp
   TEST_SUITES
-    accept_socket
-    convert_ip_endpoint
-    datagram_socket
+    detail.convert_ip_endpoint
     detail.rfc6455
-    header
-    ip
-    multiplexer
+    net.accept_socket
     net.actor_shell
     net.consumer_adapter
+    net.datagram_socket
     net.http.server
+    net.ip
     net.length_prefix_framing
+    net.multiplexer
+    net.network_socket
     net.operation
+    net.pipe_socket
     net.producer_adapter
+    net.socket
+    net.socket_guard
+    net.stream_socket
+    net.stream_transport
+    net.tcp_socket
     net.typed_actor_shell
+    net.udp_datagram_socket
     net.web_socket.client
     net.web_socket.handshake
-    net.web_socket.server
-    network_socket
-    pipe_socket
-    socket
-    socket_guard
-    stream_socket
-    stream_transport
-    tcp_sockets
-    udp_datagram_socket)
+    net.web_socket.server)
 
 if(CAF_INC_ENABLE_TESTING AND TARGET OpenSSL::SSL AND TARGET OpenSSL::Crypto)
   caf_incubator_add_test_suites(caf-net-test net.openssl_transport)

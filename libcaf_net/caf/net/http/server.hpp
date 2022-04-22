@@ -130,17 +130,17 @@ public:
     auto& buf = down->output_buffer();
     auto size = bytes.size();
     detail::append_hex(buf, &size, sizeof(size));
-    buf.emplace_back(byte{'\r'});
-    buf.emplace_back(byte{'\n'});
+    buf.emplace_back(std::byte{'\r'});
+    buf.emplace_back(std::byte{'\n'});
     buf.insert(buf.end(), bytes.begin(), bytes.end());
-    buf.emplace_back(byte{'\r'});
-    buf.emplace_back(byte{'\n'});
+    buf.emplace_back(std::byte{'\r'});
+    buf.emplace_back(std::byte{'\n'});
     return down->end_output();
   }
 
   template <class LowerLayerPtr>
   bool send_end_of_chunks(LowerLayerPtr down, context) {
-    string_view str = "0\r\n\r\n";
+    std::string_view str = "0\r\n\r\n";
     auto bytes = as_bytes(make_span(str));
     down->begin_output();
     auto& buf = down->output_buffer();
@@ -272,7 +272,8 @@ private:
   }
 
   template <class LowerLayerPtr>
-  void write_response(LowerLayerPtr down, status code, string_view content) {
+  void
+  write_response(LowerLayerPtr down, status code, std::string_view content) {
     down->begin_output();
     v1::write_response(code, "text/plain", content, down->output_buffer());
     down->end_output();
@@ -293,7 +294,7 @@ private:
   // -- HTTP request processing ------------------------------------------------
 
   template <class LowerLayerPtr>
-  bool handle_header(LowerLayerPtr down, string_view http) {
+  bool handle_header(LowerLayerPtr down, std::string_view http) {
     // Parse the header and reject invalid inputs.
     auto [code, msg] = hdr_.parse(http);
     if (code != status::ok) {
