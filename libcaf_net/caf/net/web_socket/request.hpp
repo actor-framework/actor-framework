@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/async/spsc_buffer.hpp"
+#include "caf/cow_tuple.hpp"
 #include "caf/error.hpp"
 #include "caf/net/fwd.hpp"
 
@@ -12,30 +13,29 @@ namespace caf::net::web_socket {
 
 /// Represents a WebSocket connection request.
 /// @tparam Trait Converts between native and wire format.
-template <class Trait>
+template <class Trait, class... Ts>
 class request {
 public:
-  template <class>
-  friend class flow_connector;
-
-  template <class>
-  friend class flow_bridge;
+  template <class, class, class...>
+  friend class flow_connector_impl;
 
   using input_type = typename Trait::input_type;
 
   using output_type = typename Trait::output_type;
 
-  using app_res_pair_type = async::resource_pair<input_type, output_type>;
+  using app_res_type = cow_tuple<async::consumer_resource<input_type>,
+                                 async::producer_resource<output_type>, Ts...>;
 
-  using ws_res_pair_type = async::resource_pair<output_type, input_type>;
+  using ws_res_type = async::resource_pair<output_type, input_type>;
 
-  void accept() {
+  void accept(Ts... worker_args) {
     if (accepted())
       return;
     auto [app_pull, ws_push] = async::make_spsc_buffer_resource<input_type>();
     auto [ws_pull, app_push] = async::make_spsc_buffer_resource<output_type>();
     ws_resources_ = std::tie(ws_pull, ws_push);
-    app_resources_ = std::tie(app_pull, app_push);
+    app_resources_ = make_cow_tuple(app_pull, app_push,
+                                    std::move(worker_args)...);
     accepted_ = true;
   }
 
@@ -55,8 +55,8 @@ public:
 
 private:
   bool accepted_ = false;
-  ws_res_pair_type ws_resources_;
-  app_res_pair_type app_resources_;
+  ws_res_type ws_resources_;
+  app_res_type app_resources_;
   error reject_reason_;
 };
 

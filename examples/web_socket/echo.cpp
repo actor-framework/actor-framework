@@ -23,6 +23,7 @@ struct config : caf::actor_system_config {
 
 int caf_main(caf::actor_system& sys, const config& cfg) {
   namespace cn = caf::net;
+  namespace ws = cn::web_socket;
   // Open up a TCP port for incoming connections.
   auto port = caf::get_or(cfg, "port", default_port);
   cn::tcp_accept_socket fd;
@@ -36,22 +37,20 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
     return EXIT_FAILURE;
   }
   // Convenience type aliases.
-  using frame = cn::web_socket::frame;
-  using frame_res_pair = caf::async::resource_pair<frame>;
-  // Create a buffer of frame buffer pairs. Each buffer pair represents the
-  // input and output channel for a single WebSocket connection. The outer
-  // buffer transfers buffers pairs from the WebSocket server to our worker.
-  auto [wres, sres] = caf::async::make_spsc_buffer_resource<frame_res_pair>();
+  using event_t = ws::accept_event_t<>;
+  // Create buffers to signal events from the WebSocket server to the worker.
+  auto [wres, sres] = ws::make_accept_event_resources();
+  // Spin up a worker to handle the events.
   auto worker = sys.spawn([worker_res = wres](caf::event_based_actor* self) {
     // For each buffer pair, we create a new flow ...
     self->make_observable()
       .from_resource(worker_res)
-      .for_each([self](const frame_res_pair& frp) {
+      .for_each([self](const event_t& event) {
         // ... that simply pushes data back to the sender.
-        auto [pull, push] = frp;
+        auto [pull, push] = event.data();
         self->make_observable()
           .from_resource(pull)
-          .do_on_next([](const frame& x) {
+          .do_on_next([](const ws::frame& x) {
             if (x.is_binary()) {
               std::cout << "*** received a binary WebSocket frame of size "
                         << x.size() << '\n';
@@ -85,7 +84,7 @@ int caf_main(caf::actor_system& sys, const config& cfg) {
     // Note: calling neither accept nor reject also rejects the connection.
   };
   // Set everything in motion.
-  cn::web_socket::accept(sys, fd, std::move(sres), on_request);
+  ws::accept(sys, fd, std::move(sres), on_request);
   return EXIT_SUCCESS;
 }
 

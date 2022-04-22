@@ -44,9 +44,8 @@ public:
 
   template <class LowerLayerPtr>
   error init(net::socket_manager* mgr, LowerLayerPtr, const settings& cfg) {
-    request_type req;
-    if (auto err = conn_->on_request(cfg, req); !err) {
-      auto& [pull, push] = req.ws_resources_;
+    auto [err, pull, push] = conn_->on_request(cfg);
+    if (!err) {
       in_ = consumer_type::try_open(mgr, pull);
       out_ = producer_type::try_open(mgr, push);
       CAF_ASSERT(in_ != nullptr);

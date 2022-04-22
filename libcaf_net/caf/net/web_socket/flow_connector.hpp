@@ -9,6 +9,8 @@
 #include "caf/net/web_socket/request.hpp"
 #include "caf/sec.hpp"
 
+#include <tuple>
+
 namespace caf::net::web_socket {
 
 template <class Trait>
@@ -18,63 +20,57 @@ public:
 
   using output_type = typename Trait::output_type;
 
-  using app_res_pair_type = async::resource_pair<input_type, output_type>;
-
-  using ws_res_pair_type = async::resource_pair<output_type, input_type>;
-
-  using producer_type = async::blocking_producer<app_res_pair_type>;
+  using result_type = std::tuple<error, async::consumer_resource<input_type>,
+                                 async::producer_resource<output_type>>;
 
   virtual ~flow_connector() {
     // nop
   }
 
-  error on_request(const settings& cfg, request<Trait>& req) {
-    do_on_request(cfg, req);
-    if (req.accepted()) {
-      out_.push(req.app_resources_);
-      return none;
-    } else if (auto& err = req.reject_reason()) {
-      return err;
-    } else {
-      return make_error(sec::runtime_error,
-                        "WebSocket request rejected without reason");
-    }
-  }
-
-protected:
-  template <class T>
-  explicit flow_connector(T&& out) : out_(std::forward<T>(out)) {
-    // nop
-  }
-
-private:
-  virtual void do_on_request(const settings& cfg, request<Trait>& req) = 0;
-
-  producer_type out_;
+  virtual result_type on_request(const settings& cfg) = 0;
 };
 
 template <class Trait>
 using flow_connector_ptr = std::shared_ptr<flow_connector<Trait>>;
 
-template <class OnRequest, class Trait>
+template <class OnRequest, class Trait, class... Ts>
 class flow_connector_impl : public flow_connector<Trait> {
 public:
   using super = flow_connector<Trait>;
 
-  using producer_type = typename super::producer_type;
+  using result_type = typename super::result_type;
+
+  using request_type = request<Trait, Ts...>;
+
+  using app_res_type = typename request_type::app_res_type;
+
+  using producer_type = async::blocking_producer<app_res_type>;
 
   template <class T>
-  flow_connector_impl(T&& out, OnRequest on_request)
-    : super(std::forward<T>(out)), on_request_(std::move(on_request)) {
+  flow_connector_impl(OnRequest&& on_request, T&& out)
+    : on_request_(std::move(on_request)), out_(std::forward<T>(out)) {
     // nop
   }
 
-private:
-  void do_on_request(const settings& cfg, request<Trait>& req) {
+  result_type on_request(const settings& cfg) override {
+    request_type req;
     on_request_(cfg, req);
+    if (req.accepted()) {
+      out_.push(req.app_resources_);
+      auto& [pull, push] = req.ws_resources_;
+      return {error{}, std::move(pull), std::move(push)};
+    } else if (auto& err = req.reject_reason()) {
+      return {err, {}, {}};
+    } else {
+      auto def_err = make_error(sec::runtime_error,
+                                "WebSocket request rejected without reason");
+      return {std::move(def_err), {}, {}};
+    }
   }
 
+private:
   OnRequest on_request_;
+  producer_type out_;
 };
 
 } // namespace caf::net::web_socket
