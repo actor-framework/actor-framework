@@ -557,6 +557,9 @@ bool json_reader::value(double& x) {
     if (val.data.index() == detail::json::value::double_index) {
       x = std::get<double>(val.data);
       return true;
+    } else if (val.data.index() == detail::json::value::integer_index) {
+      x = std::get<int64_t>(val.data);
+      return true;
     } else {
       emplace_error(sec::runtime_error, class_name, fn,
                     type_clash("json::real", val));

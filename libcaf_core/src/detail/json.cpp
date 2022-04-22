@@ -128,7 +128,7 @@ void read_json_null_or_nan(string_parser_state& ps, Consumer consumer) {
     transition(done, 'n', res_type = is_nan)
   }
   term_state(done) {
-    transition(init, " \t\n")
+    transition(done, " \t\n")
   }
   fin();
   // clang-format on

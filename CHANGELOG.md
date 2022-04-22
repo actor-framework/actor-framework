@@ -5,6 +5,12 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Fixed
+
+- The JSON parser no longer chokes when encountering `null` as last value before
+  the closing parenthesis.
+- The JSON reader now automatically widens integers to doubles as necessary.
+
 ## [0.18.6]
 
 ### Added
