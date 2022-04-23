@@ -88,8 +88,6 @@ public:
   struct send_helper {
     app_t* thisptr;
     LowerLayerPtr down;
-    bool on_next_called;
-    bool aborted;
 
     void on_next(int32_t item) {
       thisptr->written_values.emplace_back(item);
@@ -109,19 +107,20 @@ public:
     }
 
     void on_error(const error&) {
-      aborted = true;
+      // nop
     }
   };
 
   template <class LowerLayerPtr>
   bool prepare_send(LowerLayerPtr down) {
-    if (done)
+    if (done || !adapter)
       return true;
-    auto helper = send_helper<LowerLayerPtr>{this, down, false, false};
+    auto helper = send_helper<LowerLayerPtr>{this, down};
     while (down->can_send_more()) {
-      auto [ok, consumed] = adapter->pull(async::delay_errors, 1, helper);
-      if (!ok) {
+      auto [again, consumed] = adapter->pull(async::delay_errors, 1, helper);
+      if (!again) {
         MESSAGE("adapter signaled end-of-buffer");
+        adapter = nullptr;
         done = true;
         break;
       } else if (consumed == 0) {
