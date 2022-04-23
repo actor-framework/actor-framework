@@ -51,7 +51,7 @@ std::variant<std::pair<size_t, ip_endpoint>, sec>
 /// @param x The UDP socket for sending datagrams.
 /// @param bufs Points to the datagram to send, scattered across up to 10
 ///             buffers.
-/// @param ep The enpoint to send the datagram to.
+/// @param ep The endpoint to send the datagram to.
 /// @returns The number of written bytes on success, otherwise an error code.
 /// @relates udp_datagram_socket
 /// @pre `bufs.size() < 10`
@@ -62,7 +62,7 @@ std::variant<size_t, sec> CAF_NET_EXPORT write(udp_datagram_socket x,
 /// Sends the content of `buf` as a datagram to the endpoint `ep` on socket `x`.
 /// @param x The UDP socket for sending datagrams.
 /// @param buf The buffer to send.
-/// @param ep The enpoint to send the datagram to.
+/// @param ep The endpoint to send the datagram to.
 /// @returns The number of written bytes on success, otherwise an error code.
 /// @relates udp_datagram_socket
 std::variant<size_t, sec> CAF_NET_EXPORT write(udp_datagram_socket x,

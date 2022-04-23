@@ -59,9 +59,9 @@ make_udp_datagram_socket(ip_endpoint ep, bool reuse_addr) {
                                reinterpret_cast<setsockopt_ptr>(&on),
                                static_cast<socket_size_type>(sizeof(on))));
   }
-  CAF_NET_SYSCALL("bind", err, !=, 0,
+  CAF_NET_SYSCALL("bind", err1, !=, 0,
                   ::bind(sock.id, reinterpret_cast<sockaddr*>(&addr), len));
-  CAF_NET_SYSCALL("getsockname", erro, !=, 0,
+  CAF_NET_SYSCALL("getsockname", err2, !=, 0,
                   getsockname(sock.id, reinterpret_cast<sockaddr*>(&addr),
                               &len));
   CAF_LOG_DEBUG(CAF_ARG(sock.id));
