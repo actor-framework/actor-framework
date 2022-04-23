@@ -13,6 +13,7 @@
 #include "caf/scheduled_actor/flow.hpp"
 #include "caf/span.hpp"
 
+#include <cassert>
 #include <iostream>
 #include <utility>
 
