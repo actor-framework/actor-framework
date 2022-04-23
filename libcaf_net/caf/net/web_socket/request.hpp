@@ -9,6 +9,8 @@
 #include "caf/error.hpp"
 #include "caf/net/fwd.hpp"
 
+#include <utility>
+
 namespace caf::net::web_socket {
 
 /// Represents a WebSocket connection request.
@@ -33,7 +35,7 @@ public:
       return;
     auto [app_pull, ws_push] = async::make_spsc_buffer_resource<input_type>();
     auto [ws_pull, app_push] = async::make_spsc_buffer_resource<output_type>();
-    ws_resources_ = std::tie(ws_pull, ws_push);
+    ws_resources_ = ws_res_type{ws_pull, ws_push};
     app_resources_ = make_cow_tuple(app_pull, app_push,
                                     std::move(worker_args)...);
     accepted_ = true;
