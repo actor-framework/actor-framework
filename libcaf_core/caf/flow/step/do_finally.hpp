@@ -33,15 +33,15 @@ public:
   }
 
   template <class Next, class... Steps>
-  void finally(Next& next, Steps&... steps) {
+  void on_complete(Next& next, Steps&... steps) {
     fn_();
-    next.finally(steps...);
+    next.on_complete(steps...);
   }
 
   template <class Next, class... Steps>
-  void finally(const error& what, Next& next, Steps&... steps) {
+  void on_error(const error& what, Next& next, Steps&... steps) {
     fn_();
-    next.finally(what, steps...);
+    next.on_error(what, steps...);
   }
 
 private:

@@ -124,6 +124,10 @@ public:
     // nop
   }
 
+  explicit blocking_producer(spsc_buffer_ptr<T> buf) {
+    impl_.emplace(std::move(buf));
+  }
+
   ~blocking_producer() {
     if (impl_)
       impl_->close();

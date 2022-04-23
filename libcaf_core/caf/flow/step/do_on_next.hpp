@@ -16,15 +16,12 @@ class do_on_next {
 public:
   using trait = detail::get_callable_trait_t<F>;
 
-  static_assert(!std::is_same_v<typename trait::result_type, void>,
-                "do_on_next functions may not return void");
-
   static_assert(trait::num_args == 1,
                 "do_on_next functions must take exactly one argument");
 
   using input_type = std::decay_t<detail::tl_head_t<typename trait::arg_types>>;
 
-  using output_type = std::decay_t<typename trait::result_type>;
+  using output_type = input_type;
 
   explicit do_on_next(F fn) : fn_(std::move(fn)) {
     // nop

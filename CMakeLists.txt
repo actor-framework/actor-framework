@@ -30,10 +30,11 @@ option(CAF_ENABLE_ACTOR_PROFILER "Enable experimental profiler API" OFF)
 # -- CAF options that are on by default ----------------------------------------
 
 option(CAF_ENABLE_EXAMPLES "Build small programs showcasing CAF features" ON)
-option(CAF_ENABLE_IO_MODULE "Build networking I/O module" ON)
+option(CAF_ENABLE_EXCEPTIONS "Build CAF with support for exceptions" ON)
+option(CAF_ENABLE_IO_MODULE "Build legacy networking I/O module" ON)
+option(CAF_ENABLE_NET_MODULE "Build networking I/O module" ON)
 option(CAF_ENABLE_TESTING "Build unit test suites" ON)
 option(CAF_ENABLE_TOOLS "Build utility programs such as caf-run" ON)
-option(CAF_ENABLE_EXCEPTIONS "Build CAF with support for exceptions" ON)
 
 # -- CAF options that depend on others -----------------------------------------
 
@@ -71,6 +72,14 @@ endif()
 
 if(MSVC AND CAF_SANITIZERS)
   message(FATAL_ERROR "Sanitizer builds are currently not supported on MSVC")
+endif()
+
+# -- get dependencies that are used in more than one module --------------------
+
+if(CAF_ENABLE_OPENSSL_MODULE OR CAF_ENABLE_NET_MODULE)
+  if(NOT TARGET OpenSSL::SSL OR NOT TARGET OpenSSL::Crypto)
+    find_package(OpenSSL REQUIRED)
+  endif()
 endif()
 
 # -- base target setup ---------------------------------------------------------
@@ -367,6 +376,10 @@ endfunction()
 # -- build all components the user asked for -----------------------------------
 
 add_subdirectory(libcaf_core)
+
+if(CAF_ENABLE_NET_MODULE)
+  add_subdirectory(libcaf_net)
+endif()
 
 if(CAF_ENABLE_IO_MODULE)
   add_subdirectory(libcaf_io)

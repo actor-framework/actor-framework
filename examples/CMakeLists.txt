@@ -127,3 +127,17 @@ if(TARGET CAF::io)
   endif()
 
 endif()
+
+if(TARGET CAF::net)
+  function(add_net_example folder name)
+    add_example(${folder} ${name} ${ARGN})
+    target_link_libraries(${name} PRIVATE CAF::internal CAF::net)
+  endfunction()
+else()
+  function(add_net_example)
+    # nop
+  endfunction()
+endif()
+
+add_net_example(web_socket quote-server)
+add_net_example(web_socket echo)

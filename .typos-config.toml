@@ -1,2 +1,2 @@
 [files]
-extend-exclude = ["*.pem"]
+extend-exclude = ["*.pem", "libcaf_net/test/pem.cpp"]
