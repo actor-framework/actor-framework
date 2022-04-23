@@ -180,7 +180,7 @@ SCENARIO("calling suspend_reading removes message apps temporarily") {
       }
       THEN("users can resume it via continue_reading ") {
         mgr->continue_reading();
-        mpx.poll();
+        mpx.poll_once(true);
         CHECK_EQ(mpx.mask_of(mgr), net::operation::read);
         while (mpx.num_socket_managers() > 1u)
           mpx.poll_once(true);
