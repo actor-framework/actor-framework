@@ -141,7 +141,7 @@ CAF_TEST(applications receive handshake data via config) {
   CHECK_EQ(transport.unconsumed(), 0u);
   CHECK(ws->handshake_complete());
   CHECK_SETTING("web-socket.method", "GET");
-  CHECK_SETTING("web-socket.path", "chat");
+  CHECK_SETTING("web-socket.path", "/chat");
   CHECK_SETTING("web-socket.http-version", "HTTP/1.1");
   CHECK_SETTING("web-socket.fields.Host", "server.example.com");
   CHECK_SETTING("web-socket.fields.Upgrade", "websocket");

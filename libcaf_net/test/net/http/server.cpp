@@ -91,7 +91,7 @@ SCENARIO("the server parses HTTP GET requests into header fields") {
         auto& hdr = app.hdr;
         CHECK_EQ(hdr.method(), net::http::method::get);
         CHECK_EQ(hdr.version(), "HTTP/1.1");
-        CHECK_EQ(hdr.path(), "foo/bar");
+        CHECK_EQ(hdr.path(), "/foo/bar");
         CHECK_EQ(app.field("Host"), "localhost:8090");
         CHECK_EQ(app.field("User-Agent"), "AwesomeLib/1.0");
         CHECK_EQ(app.field("Accept-Encoding"), "gzip");
