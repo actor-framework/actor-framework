@@ -77,10 +77,13 @@ bool icase_equal(std::string_view x, std::string_view y) {
 
 std::pair<std::string_view, std::string_view> split_by(std::string_view str,
                                                        std::string_view sep) {
-  auto i = std::search(str.begin(), str.end(), sep.begin(), sep.end());
-  if (i != str.end()) {
-    return {make_string_view(str.begin(), i),
-            make_string_view(i + sep.size(), str.end())};
+  // We need actual char* pointers for make_string_view. On some compilers,
+  // begin() and end() may return iterator types, so we use data() instead.
+  auto str_end = str.data() + str.size();
+  auto i = std::search(str.data(), str_end, sep.begin(), sep.end());
+  if (i != str_end) {
+    return {make_string_view(str.data(), i),
+            make_string_view(i + sep.size(), str_end)};
   } else {
     return {str, {}};
   }
