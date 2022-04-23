@@ -2,12 +2,6 @@
 
 file(GLOB_RECURSE CAF_OPENSSL_HEADERS "caf/*.hpp")
 
-# -- dependencies --------------------------------------------------------------
-
-if(NOT TARGET OpenSSL::SSL OR NOT TARGET OpenSSL::Crypto)
-  find_package(OpenSSL REQUIRED)
-endif()
-
 # -- add targets ---------------------------------------------------------------
 
 caf_add_component(

@@ -7,31 +7,17 @@
 #include "caf/net/openssl_transport.hpp"
 
 #include "net-test.hpp"
+#include "pem.hpp"
 
 #include "caf/binary_deserializer.hpp"
 #include "caf/binary_serializer.hpp"
-#include "caf/byte.hpp"
 #include "caf/byte_buffer.hpp"
-#include "caf/detail/scope_guard.hpp"
-#include "caf/make_actor.hpp"
-#include "caf/net/actor_proxy_impl.hpp"
 #include "caf/net/multiplexer.hpp"
-#include "caf/net/socket_guard.hpp"
 #include "caf/net/socket_manager.hpp"
 #include "caf/net/stream_socket.hpp"
-#include "caf/span.hpp"
 
 #include <filesystem>
 #include <random>
-
-// Note: these constants are defined in openssl_transport_constants.cpp.
-
-extern std::string_view ca_pem;
-extern std::string_view cert_1_pem;
-extern std::string_view cert_2_pem;
-extern std::string_view key_1_enc_pem;
-extern std::string_view key_1_pem;
-extern std::string_view key_2_pem;
 
 using namespace caf;
 using namespace caf::net;
@@ -139,7 +125,7 @@ public:
   }
 
   template <class ParentPtr>
-  size_t consume(ParentPtr down, span<const byte> data, span<const byte>) {
+  size_t consume(ParentPtr down, const_byte_span data, const_byte_span) {
     MESSAGE("dummy app received " << data.size() << " bytes");
     // Store the received bytes.
     recv_buf_->insert(recv_buf_->begin(), data.begin(), data.end());

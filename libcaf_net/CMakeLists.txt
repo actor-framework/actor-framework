@@ -8,8 +8,10 @@ caf_add_component(
   net
   DEPENDENCIES
     PUBLIC
-      CAF::core
       $<$<CXX_COMPILER_ID:MSVC>:ws2_32>
+      CAF::core
+      OpenSSL::Crypto
+      OpenSSL::SSL
     PRIVATE
       CAF::internal
   ENUM_TYPES
@@ -48,6 +50,7 @@ caf_add_component(
     src/udp_datagram_socket.cpp
   TEST_SOURCES
     test/net-test.cpp
+    test/pem.cpp
   TEST_SUITES
     detail.convert_ip_endpoint
     detail.rfc6455
@@ -74,8 +77,20 @@ caf_add_component(
     net.web_socket.handshake
     net.web_socket.server)
 
-if(CAF_INC_ENABLE_TESTING AND TARGET OpenSSL::SSL AND TARGET OpenSSL::Crypto)
-  caf_incubator_add_test_suites(caf-net-test net.openssl_transport)
-  target_sources(caf-net-test PRIVATE test/net/openssl_transport_constants.cpp)
-  target_link_libraries(caf-net-test PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+# Our OpenSSL test currently depends on <filesystem>.
+check_cxx_source_compiles("
+  #include <cstdlib>
+  #include <filesystem>
+  int main(int, char**) {
+    auto cwd = std::filesystem::current_path();
+    auto str = cwd.string();
+    return str.empty() ? EXIT_FAILURE : EXIT_SUCCESS;
+  }
+  "
+  CAF_NET_HAS_STD_FILESYSTEM)
+
+if(CAF_NET_HAS_STD_FILESYSTEM)
+  caf_add_test_suites(caf-net-test net.openssl_transport)
+else()
+  message(STATUS "<filesystem> not working, skip OpenSSL test in CAF::net")
 endif()

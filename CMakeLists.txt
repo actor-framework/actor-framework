@@ -74,6 +74,14 @@ if(MSVC AND CAF_SANITIZERS)
   message(FATAL_ERROR "Sanitizer builds are currently not supported on MSVC")
 endif()
 
+# -- get dependencies that are used in more than one module --------------------
+
+if(CAF_ENABLE_OPENSSL_MODULE OR CAF_ENABLE_NET_MODULE)
+  if(NOT TARGET OpenSSL::SSL OR NOT TARGET OpenSSL::Crypto)
+    find_package(OpenSSL REQUIRED)
+  endif()
+endif()
+
 # -- base target setup ---------------------------------------------------------
 
 # This target propagates compiler flags, extra dependencies, etc. All other CAF

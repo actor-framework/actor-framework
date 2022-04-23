@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/byte_buffer.hpp"
+#include "caf/byte_span.hpp"
 #include "caf/defaults.hpp"
 #include "caf/detail/has_after_reading.hpp"
 #include "caf/fwd.hpp"
@@ -189,12 +190,12 @@ public:
   }
 
   /// Reads data from the SSL connection into the buffer.
-  ptrdiff_t read(stream_socket, span<byte> buf) {
+  ptrdiff_t read(stream_socket, byte_span buf) {
     return SSL_read(conn_.get(), buf.data(), static_cast<int>(buf.size()));
   }
 
   /// Writes data from the buffer to the SSL connection.
-  ptrdiff_t write(stream_socket, span<const byte> buf) {
+  ptrdiff_t write(stream_socket, const_byte_span buf) {
     return SSL_write(conn_.get(), buf.data(), static_cast<int>(buf.size()));
   }
 
