@@ -82,7 +82,7 @@ private:
     data& operator=(const data&) = delete;
 
     explicit data(bool bin, size_t size) : rc_(1), bin_(bin), size_(size) {
-      // nop
+      static_cast<void>(padding_); // Silence unused-private-field warning.
     }
 
     // -- reference counting ---------------------------------------------------
@@ -127,7 +127,7 @@ private:
     static constexpr size_t padding_size = CAF_CACHE_LINE_SIZE
                                            - sizeof(std::atomic<size_t>);
     mutable std::atomic<size_t> rc_;
-    [[maybe_unused]] std::byte padding_[padding_size];
+    std::byte padding_[padding_size];
     bool bin_;
     size_t size_;
     std::byte storage_[];
