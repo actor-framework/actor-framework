@@ -65,7 +65,7 @@ ptrdiff_t length_prefix_framing::consume(byte_span input, byte_span) {
     if (msg_size == msg.size() && msg_size + hdr_size == input.size()) {
       CAF_LOG_DEBUG("got message of size" << msg_size);
       if (up_->consume(msg) >= 0) {
-        if (!down_->stopped())
+        if (!down_->stopped_reading())
           down_->configure_read(receive_policy::exactly(hdr_size));
         return static_cast<ptrdiff_t>(input.size());
       } else {
@@ -97,13 +97,17 @@ bool length_prefix_framing::can_send_more() const noexcept {
   return down_->can_send_more();
 }
 
-void length_prefix_framing::request_messages() {
-  if (down_->stopped())
-    down_->configure_read(receive_policy::exactly(hdr_size));
+void length_prefix_framing::suspend_reading() {
+  down_->suspend_reading();
 }
 
-void length_prefix_framing::suspend_reading() {
-  down_->configure_read(receive_policy::stop());
+bool length_prefix_framing::stopped_reading() const noexcept {
+  return down_->stopped_reading();
+}
+
+void length_prefix_framing::request_messages() {
+  if (down_->stopped_reading())
+    down_->configure_read(receive_policy::exactly(hdr_size));
 }
 
 void length_prefix_framing::begin_message() {

@@ -18,6 +18,10 @@ bool mock_stream_transport::can_send_more() const noexcept {
   return true;
 }
 
+void mock_stream_transport::suspend_reading() {
+  configure_read(net::receive_policy::stop());
+}
+
 void mock_stream_transport::configure_read(net::receive_policy policy) {
   min_read_size = policy.min_size;
   max_read_size = policy.max_size;
@@ -35,7 +39,7 @@ bool mock_stream_transport::end_output() {
   return true;
 }
 
-bool mock_stream_transport::stopped() const noexcept {
+bool mock_stream_transport::stopped_reading() const noexcept {
   return max_read_size == 0;
 }
 

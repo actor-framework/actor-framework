@@ -77,9 +77,13 @@ public:
 
   // -- web_socket::lower_layer implementation ---------------------------------
 
-  bool can_send_more() override;
+  bool can_send_more() const noexcept override;
 
   void suspend_reading() override;
+
+  bool stopped_reading() const noexcept override;
+
+  void request_messages() override;
 
   void begin_binary_message() override;
 

@@ -7,6 +7,7 @@
 #include "caf/byte_buffer.hpp"
 #include "caf/byte_span.hpp"
 #include "caf/defaults.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/fwd.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/fwd.hpp"
@@ -268,7 +269,7 @@ namespace caf::net {
 
 /// Implements a stream_transport that manages a stream socket with encrypted
 /// communication over OpenSSL.
-class openssl_transport : public stream_transport {
+class CAF_NET_EXPORT openssl_transport : public stream_transport {
 public:
   // -- member types -----------------------------------------------------------
 

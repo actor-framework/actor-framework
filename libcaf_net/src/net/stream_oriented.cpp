@@ -4,14 +4,14 @@
 
 #include "caf/net/stream_oriented.hpp"
 
-namespace caf::net {
+namespace caf::net::stream_oriented {
 
-stream_oriented::upper_layer::~upper_layer() {
+upper_layer::~upper_layer() {
   // nop
 }
 
-stream_oriented::lower_layer::~lower_layer() {
+lower_layer::~lower_layer() {
   // nop
 }
 
-} // namespace caf::net
+} // namespace caf::net::stream_oriented

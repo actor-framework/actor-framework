@@ -28,6 +28,8 @@ caf_add_component(
     src/net/abstract_actor_shell.cpp
     src/net/actor_shell.cpp
     src/net/datagram_socket.cpp
+    src/net/generic_lower_layer.cpp
+    src/net/generic_upper_layer.cpp
     src/net/host.cpp
     src/net/http/header.cpp
     src/net/http/lower_layer.cpp

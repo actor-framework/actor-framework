@@ -82,6 +82,8 @@ public:
 
   void suspend_reading() override;
 
+  bool stopped_reading() const noexcept override;
+
   bool send_header(context, status code,
                    const header_fields_map& fields) override;
 

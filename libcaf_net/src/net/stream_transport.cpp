@@ -93,7 +93,11 @@ bool stream_transport::end_output() {
   return true;
 }
 
-bool stream_transport::stopped() const noexcept {
+void stream_transport::suspend_reading() {
+  configure_read(receive_policy::stop());
+}
+
+bool stream_transport::stopped_reading() const noexcept {
   return max_read_size_ == 0;
 }
 

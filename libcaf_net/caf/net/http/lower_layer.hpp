@@ -4,24 +4,19 @@
 
 #pragma once
 
+#include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
+#include "caf/net/generic_lower_layer.hpp"
 #include "caf/net/http/fwd.hpp"
 
 namespace caf::net::http {
 
 /// Parses HTTP requests and passes them to the upper layer.
-class lower_layer {
+class CAF_NET_EXPORT lower_layer : public generic_lower_layer {
 public:
   virtual ~lower_layer();
-
-  /// Queries whether the output device can accept more data straight away.
-  virtual bool can_send_more() const noexcept = 0;
-
-  /// Stops reading until manually calling `continue_reading` on the socket
-  /// manager.
-  virtual void suspend_reading() = 0;
 
   /// Sends the next header to the client.
   virtual bool

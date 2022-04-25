@@ -18,12 +18,21 @@ void framing::init(socket_manager*, stream_oriented::lower_layer* down) {
 
 // -- web_socket::lower_layer implementation -----------------------------------
 
-bool framing::can_send_more() {
+bool framing::can_send_more() const noexcept {
   return down_->can_send_more();
 }
 
 void framing::suspend_reading() {
-  down_->configure_read(receive_policy::stop());
+  down_->suspend_reading();
+}
+
+bool framing::stopped_reading() const noexcept {
+  return down_->stopped_reading();
+}
+
+void framing::request_messages() {
+  if (down_->stopped_reading())
+    down_->configure_read(receive_policy::up_to(2048));
 }
 
 void framing::begin_binary_message() {
@@ -91,7 +100,7 @@ ptrdiff_t framing::consume(byte_span input, byte_span) {
     size_t frame_size = hdr_bytes + hdr.payload_len;
     if (buffer.size() < frame_size) {
       // Ask for more data unless the upper layer called suspend_reading.
-      if (!down_->stopped())
+      if (!down_->stopped_reading())
         down_->configure_read(receive_policy::up_to(2048));
       down_->configure_read(receive_policy::exactly(frame_size));
       return consumed;
@@ -161,7 +170,7 @@ ptrdiff_t framing::consume(byte_span input, byte_span) {
     buffer = buffer.subspan(frame_size);
     if (buffer.empty()) {
       // Ask for more data unless the upper layer called suspend_reading.
-      if (!down_->stopped())
+      if (!down_->stopped_reading())
         down_->configure_read(receive_policy::up_to(2048));
       return consumed + static_cast<ptrdiff_t>(frame_size);
     }

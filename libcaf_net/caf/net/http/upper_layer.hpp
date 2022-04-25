@@ -7,12 +7,13 @@
 #include "caf/error.hpp"
 #include "caf/fwd.hpp"
 #include "caf/net/fwd.hpp"
+#include "caf/net/generic_upper_layer.hpp"
 #include "caf/net/http/fwd.hpp"
 
 namespace caf::net::http {
 
 /// Operates on HTTP requests.
-class upper_layer {
+class CAF_NET_EXPORT upper_layer : public generic_upper_layer {
 public:
   virtual ~upper_layer();
 
@@ -25,15 +26,6 @@ public:
   virtual error
   init(socket_manager* owner, lower_layer* down, const settings& config)
     = 0;
-
-  /// Called by the lower layer for cleaning up any state in case of an error.
-  virtual void abort(const error& reason) = 0;
-
-  /// Called by the lower layer for preparing outgoing data.
-  virtual bool prepare_send() = 0;
-
-  /// Queries whether any pending sends have been completed.
-  virtual bool done_sending() = 0;
 
   /// Consumes an HTTP message.
   /// @param ctx Identifies this request. The response message must pass this
@@ -48,12 +40,6 @@ public:
   virtual ptrdiff_t
   consume(context ctx, const header& hdr, const_byte_span payload)
     = 0;
-
-  /// Called by the lower layer after some event triggered re-registering the
-  /// socket manager for read operations after it has been stopped previously
-  /// by the read policy. May restart consumption of bytes by setting a new
-  /// read policy.
-  virtual void continue_reading() = 0;
 };
 
 } // namespace caf::net::http

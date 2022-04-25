@@ -95,6 +95,8 @@ public:
 
   void suspend_reading() override;
 
+  bool stopped_reading() const noexcept override;
+
   void begin_message() override;
 
   byte_buffer& message_buffer() override;

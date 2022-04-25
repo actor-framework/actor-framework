@@ -118,7 +118,9 @@ public:
 
   bool end_output() override;
 
-  bool stopped() const noexcept override;
+  void suspend_reading() override;
+
+  bool stopped_reading() const noexcept override;
 
   // -- properties -------------------------------------------------------------
 

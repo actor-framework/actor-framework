@@ -15,7 +15,11 @@ bool server::can_send_more() const noexcept {
 }
 
 void server::suspend_reading() {
-  down_->configure_read(receive_policy::stop());
+  return down_->suspend_reading();
+}
+
+bool server::stopped_reading() const noexcept {
+  return down_->stopped_reading();
 }
 
 bool server::send_header(context, status code,

@@ -4,13 +4,14 @@
 
 #pragma once
 
+#include "caf/detail/net_export.hpp"
 #include "caf/net/fwd.hpp"
 #include "caf/net/web_socket/fwd.hpp"
 
 namespace caf::net::web_socket {
 
-// TODO: Documentation.
-class upper_layer {
+/// Consumes text and binary messages from the lower layer.
+class CAF_NET_EXPORT upper_layer {
 public:
   virtual ~upper_layer();
 
