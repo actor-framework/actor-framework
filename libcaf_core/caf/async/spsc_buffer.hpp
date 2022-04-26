@@ -329,7 +329,7 @@ struct resource_ctrl : ref_counted {
   ~resource_ctrl() {
     if (buf) {
       if constexpr (IsProducer) {
-        auto err = make_error(sec::invalid_upstream,
+        auto err = make_error(sec::disposed,
                               "producer_resource destroyed without opening it");
         buf->abort(err);
       } else {
@@ -397,9 +397,17 @@ public:
     }
   }
 
+  /// Convenience function for calling
+  /// `ctx->make_observable().from_resource(*this)`.
   template <class Coordinator>
   auto observe_on(Coordinator* ctx) {
     return ctx->make_observable().from_resource(*this);
+  }
+
+  /// Calls `try_open` and on success immediately calls `close` on the buffer.
+  void close() {
+    if (auto buf = try_open())
+      buf->close();
   }
 
   explicit operator bool() const noexcept {
@@ -452,6 +460,12 @@ public:
     } else {
       return nullptr;
     }
+  }
+
+  /// Calls `try_open` and on success immediately calls `cancel` on the buffer.
+  void cancel() {
+    if (auto buf = try_open())
+      buf->cancel();
   }
 
   explicit operator bool() const noexcept {
