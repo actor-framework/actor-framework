@@ -13,6 +13,7 @@
 
 namespace caf::net::web_socket {
 
+/// Connects a @ref flow_bridge to input and output buffers.
 template <class Trait>
 class flow_connector {
 public:
@@ -33,8 +34,10 @@ public:
 template <class Trait>
 using flow_connector_ptr = std::shared_ptr<flow_connector<Trait>>;
 
+/// Calls an `OnRequest` handler with a @ref request object and passes the
+/// generated buffers to the @ref flow_bridge.
 template <class OnRequest, class Trait, class... Ts>
-class flow_connector_impl : public flow_connector<Trait> {
+class flow_connector_request_impl : public flow_connector<Trait> {
 public:
   using super = flow_connector<Trait>;
 
@@ -47,7 +50,7 @@ public:
   using producer_type = async::blocking_producer<app_res_type>;
 
   template <class T>
-  flow_connector_impl(OnRequest&& on_request, T&& out)
+  flow_connector_request_impl(OnRequest&& on_request, T&& out)
     : on_request_(std::move(on_request)), out_(std::forward<T>(out)) {
     // nop
   }
@@ -71,6 +74,36 @@ public:
 private:
   OnRequest on_request_;
   producer_type out_;
+};
+
+/// Trivial flow connector that passes its constructor arguments to the
+/// @ref flow_bridge.
+template <class Trait>
+class flow_connector_trivial_impl : public flow_connector<Trait> {
+public:
+  using super = flow_connector<Trait>;
+
+  using input_type = typename Trait::input_type;
+
+  using output_type = typename Trait::output_type;
+
+  using pull_t = async::consumer_resource<input_type>;
+
+  using push_t = async::producer_resource<output_type>;
+
+  using result_type = typename super::result_type;
+
+  flow_connector_trivial_impl(pull_t pull, push_t push)
+    : pull_(std::move(pull)), push_(std::move(push)) { // nop
+  }
+
+  result_type on_request(const settings&) override {
+    return {{}, std::move(pull_), std::move(push_)};
+  }
+
+private:
+  pull_t pull_;
+  push_t push_;
 };
 
 } // namespace caf::net::web_socket

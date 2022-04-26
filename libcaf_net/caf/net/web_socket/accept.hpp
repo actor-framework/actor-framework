@@ -90,7 +90,7 @@ void accept(actor_system& sys, Socket fd, acceptor_resource_t<Ts...> out,
                 "invalid signature found for on_request");
   using factory_t = detail::ws_acceptor_factory<Transport, trait_t>;
   using impl_t = connection_acceptor<Socket, factory_t>;
-  using conn_t = flow_connector_impl<OnRequest, trait_t, Ts...>;
+  using conn_t = flow_connector_request_impl<OnRequest, trait_t, Ts...>;
   if (auto buf = out.try_open()) {
     auto& mpx = sys.network_manager().mpx();
     auto conn = std::make_shared<conn_t>(std::move(on_request), std::move(buf));

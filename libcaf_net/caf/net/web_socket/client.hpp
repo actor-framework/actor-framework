@@ -41,7 +41,7 @@ public:
 
   template <class... Ts>
   explicit client(handshake hs, Ts&&... xs)
-    : upper_layer_(std::forward<Ts>(xs)...) {
+    : framing_(std::forward<Ts>(xs)...) {
     handshake_.reset(new handshake(std::move(hs)));
   }
 
@@ -67,35 +67,35 @@ public:
   // -- properties -------------------------------------------------------------
 
   auto& upper_layer() noexcept {
-    return upper_layer_.upper_layer();
+    return framing_.upper_layer();
   }
 
   const auto& upper_layer() const noexcept {
-    return upper_layer_.upper_layer();
+    return framing_.upper_layer();
   }
 
   // -- role: upper layer ------------------------------------------------------
 
   template <class LowerLayerPtr>
   bool prepare_send(LowerLayerPtr down) {
-    return handshake_complete() ? upper_layer_.prepare_send(down) : true;
+    return handshake_complete() ? framing_.prepare_send(down) : true;
   }
 
   template <class LowerLayerPtr>
   bool done_sending(LowerLayerPtr down) {
-    return handshake_complete() ? upper_layer_.done_sending(down) : true;
+    return handshake_complete() ? framing_.done_sending(down) : true;
   }
 
   template <class LowerLayerPtr>
   void abort(LowerLayerPtr down, const error& reason) {
     if (handshake_complete())
-      upper_layer_.abort(down, reason);
+      framing_.abort(down, reason);
   }
 
   template <class LowerLayerPtr>
   void continue_reading(LowerLayerPtr down) {
     if (handshake_complete())
-      upper_layer_.continue_reading(down);
+      framing_.continue_reading(down);
   }
 
   template <class LowerLayerPtr>
@@ -104,7 +104,7 @@ public:
                   << CAF_ARG2("bytes", input.size()));
     // Short circuit to the framing layer after the handshake completed.
     if (handshake_complete())
-      return upper_layer_.consume(down, input, delta);
+      return framing_.consume(down, input, delta);
     // Check whether received a HTTP header or else wait for more data or abort
     // when exceeding the maximum size.
     auto [hdr, remainder] = http::v1::split_header(input);
@@ -126,7 +126,7 @@ public:
     } else {
       CAF_LOG_DEBUG(CAF_ARG2("socket", down->handle().id)
                     << CAF_ARG2("remainder", remainder.size()));
-      if (auto sub_result = upper_layer_.consume(down, remainder, remainder);
+      if (auto sub_result = framing_.consume(down, remainder, remainder);
           sub_result >= 0) {
         return hdr.size() + sub_result;
       } else {
@@ -148,7 +148,7 @@ private:
     auto http_ok = handshake_->is_valid_http_1_response(http);
     handshake_.reset();
     if (http_ok) {
-      if (auto err = upper_layer_.init(owner_, down, cfg_)) {
+      if (auto err = framing_.init(owner_, down, cfg_)) {
         CAF_LOG_DEBUG("failed to initialize WebSocket framing layer");
         down->abort_reason(std::move(err));
         return false;
@@ -171,25 +171,12 @@ private:
   std::unique_ptr<handshake> handshake_;
 
   /// Stores the upper layer.
-  framing<UpperLayer> upper_layer_;
+  framing<UpperLayer> framing_;
 
   /// Stores a pointer to the owning manager for the delayed initialization.
   socket_manager* owner_ = nullptr;
 
   settings cfg_;
 };
-
-template <template <class> class Transport = stream_transport, class Socket,
-          class T, class Trait>
-void run_client(multiplexer& mpx, Socket fd, handshake hs,
-                async::consumer_resource<T> in, async::producer_resource<T> out,
-                Trait trait) {
-  using app_t = message_flow_bridge<T, Trait, tag::mixed_message_oriented>;
-  using stack_t = Transport<client<app_t>>;
-  auto mgr = make_socket_manager<stack_t>(fd, &mpx, std::move(hs),
-                                          std::move(in), std::move(out),
-                                          std::move(trait));
-  mpx.init(mgr);
-}
 
 } // namespace caf::net::web_socket

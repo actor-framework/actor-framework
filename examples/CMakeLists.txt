@@ -139,5 +139,6 @@ else()
   endfunction()
 endif()
 
-add_net_example(web_socket quote-server)
 add_net_example(web_socket echo)
+add_net_example(web_socket hello-client)
+add_net_example(web_socket quote-server)
