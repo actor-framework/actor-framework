@@ -112,6 +112,9 @@ public:
   /// Returns an observer that ignores any of its inputs.
   static observer ignore();
 
+  /// Returns an observer that disposes its subscription immediately.
+  static observer cancel();
+
 private:
   intrusive_ptr<impl> pimpl_;
 };
@@ -168,6 +171,26 @@ public:
 
 private:
   flow::subscription sub_;
+};
+
+template <class T>
+class canceling_observer : public flow::observer_impl_base<T> {
+public:
+  void on_next(const T&) override {
+    // nop
+  }
+
+  void on_error(const error&) override {
+    // nop
+  }
+
+  void on_complete() override {
+    // nop
+  }
+
+  void on_subscribe(flow::subscription sub) override {
+    sub.dispose();
+  }
 };
 
 template <class OnNextSignature>
@@ -260,6 +283,11 @@ namespace caf::flow {
 template <class T>
 observer<T> observer<T>::ignore() {
   return observer<T>{make_counted<detail::ignoring_observer<T>>()};
+}
+
+template <class T>
+observer<T> observer<T>::cancel() {
+  return observer<T>{make_counted<detail::canceling_observer<T>>()};
 }
 
 /// Creates an observer from given callbacks.
