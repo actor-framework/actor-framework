@@ -5,6 +5,7 @@
 #pragma once
 
 #include "caf/byte_span.hpp"
+#include "caf/detail/net_export.hpp"
 #include "caf/error.hpp"
 #include "caf/logger.hpp"
 #include "caf/net/connection_acceptor.hpp"
@@ -35,7 +36,7 @@ namespace caf::net::web_socket {
 /// 6455. Initially, the layer performs the WebSocket handshake. Once completed,
 /// this layer decodes RFC 6455 frames and forwards binary and text messages to
 /// `UpperLayer`.
-class server : public stream_oriented::upper_layer {
+class CAF_NET_EXPORT server : public stream_oriented::upper_layer {
 public:
   // -- member types -----------------------------------------------------------
 

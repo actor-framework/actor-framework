@@ -90,11 +90,6 @@ public:
     return write_result::stop;
   }
 
-  write_result handle_continue_writing() override {
-    CAF_LOG_ERROR("connection_acceptor received continue writing event");
-    return write_result::stop;
-  }
-
   void abort(const error& reason) override {
     CAF_LOG_ERROR("connection_acceptor aborts due to an error: " << reason);
     factory_.abort(reason);

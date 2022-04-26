@@ -54,18 +54,25 @@ public:
     handover,
   };
 
+  /// Initializes the layer.
   virtual error init(socket_manager* owner, const settings& cfg) = 0;
 
+  /// Handles a read event on the managed socket.
   virtual read_result handle_read_event() = 0;
 
+  /// Handles internally buffered data.
   virtual read_result handle_buffered_data() = 0;
 
+  /// Handles a request to continue reading on the socket.
   virtual read_result handle_continue_reading() = 0;
 
+  /// Handles a write event on the managed socket.
   virtual write_result handle_write_event() = 0;
 
-  virtual write_result handle_continue_writing() = 0;
+  /// Called after returning `handover` from a read or write handler.
+  virtual bool do_handover(std::unique_ptr<socket_event_layer>& next);
 
+  /// Called on hard errors on the managed socket.
   virtual void abort(const error& reason) = 0;
 };
 

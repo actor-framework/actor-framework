@@ -317,13 +317,6 @@ stream_transport::read_result stream_transport::handle_continue_reading() {
   }
 }
 
-stream_transport::write_result stream_transport::handle_continue_writing() {
-  // TODO: consider whether we need another callback for the upper layer.
-  //       For now, we always return `again`, which triggers the write
-  //       handler later.
-  return write_result::again;
-}
-
 void stream_transport::abort(const error& reason) {
   up_->abort(reason);
 }

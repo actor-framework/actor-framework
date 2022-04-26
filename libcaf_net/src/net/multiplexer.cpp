@@ -431,9 +431,7 @@ void multiplexer::do_handover(const socket_manager_ptr& mgr) {
   // again. Hence, it *must not* point to the old manager.
   auto& update = update_for(mgr);
   update.events = 0;
-  auto new_mgr = mgr->do_handover(); // May alter the events mask.
-  if (new_mgr != nullptr) {
-    update.mgr = new_mgr;
+  if (mgr->do_handover()) {
     // If the new manager registered itself for reading, make sure it processes
     // whatever data is available in buffers outside of the socket that may not
     // trigger read events.
@@ -451,7 +449,7 @@ void multiplexer::do_handover(const socket_manager_ptr& mgr) {
           break;
         case socket_manager::read_result::handover: {
           // Down the rabbit hole we go!
-          do_handover(new_mgr);
+          do_handover(mgr);
         }
       }
     }
@@ -579,20 +577,7 @@ void multiplexer::do_continue_reading(const socket_manager_ptr& mgr) {
 
 void multiplexer::do_continue_writing(const socket_manager_ptr& mgr) {
   if (!is_writing(mgr)) {
-    switch (mgr->handle_continue_writing()) {
-      default: // socket_manager::read_result::(stop | abort)
-        update_for(mgr).events &= ~output_mask;
-        break;
-      case socket_manager::write_result::again:
-        update_for(mgr).events |= output_mask;
-        break;
-      case socket_manager::write_result::want_read:
-        update_for(mgr).events = input_mask;
-        break;
-      case socket_manager::write_result::handover: {
-        do_handover(mgr);
-      }
-    }
+    update_for(mgr).events |= output_mask;
   }
 }
 

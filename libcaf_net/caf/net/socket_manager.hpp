@@ -156,10 +156,6 @@ public:
   /// Closes the write channel of the socket.
   void close_write() noexcept;
 
-  /// Performs a handover to another manager after `handle_read_event` or
-  /// `handle_read_event` returned `handover`.
-  socket_manager_ptr do_handover();
-
   /// Initializes the manager and its all of its sub-components.
   error init(const settings& cfg);
 
@@ -179,20 +175,13 @@ public:
   /// Called whenever the socket is allowed to send data.
   write_result handle_write_event();
 
-  /// Restarts a socket manager that suspended writes. Calling this member
-  /// function on active managers is a no-op.
-  write_result handle_continue_writing();
-
   /// Called when the remote side becomes unreachable due to an error.
   /// @param code The error code as reported by the operating system.
   void handle_error(sec code);
 
-  /// Returns the new manager for the socket after `handle_read_event` or
+  /// Performs a handover to another transport after `handle_read_event` or
   /// `handle_read_event` returned `handover`.
-  /// @note Called from `do_handover`.
-  /// @note When returning a non-null pointer, the new manager *must* be
-  ///       initialized.
-  socket_manager_ptr make_next_manager(socket handle);
+  [[nodiscard]] bool do_handover();
 
 private:
   // -- member variables -------------------------------------------------------

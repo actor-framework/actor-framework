@@ -115,10 +115,6 @@ pollset_updater::write_result pollset_updater::handle_write_event() {
   return write_result::stop;
 }
 
-pollset_updater::write_result pollset_updater::handle_continue_writing() {
-  return write_result::stop;
-}
-
 void pollset_updater::abort(const error&) {
   // nop
 }

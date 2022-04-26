@@ -14,14 +14,11 @@
 #include "caf/net/handshake_worker.hpp"
 #include "caf/net/multiplexer.hpp"
 #include "caf/net/receive_policy.hpp"
-#include "caf/net/stream_oriented_layer_ptr.hpp"
 #include "caf/net/stream_socket.hpp"
 #include "caf/net/stream_transport.hpp"
 #include "caf/sec.hpp"
 #include "caf/settings.hpp"
 #include "caf/span.hpp"
-#include "caf/tag/io_event_oriented.hpp"
-#include "caf/tag/stream_oriented.hpp"
 
 CAF_PUSH_WARNINGS
 #include <openssl/err.h>
@@ -32,31 +29,37 @@ CAF_POP_WARNINGS
 #include <string>
 #include <string_view>
 
-// -- small wrappers to help working with OpenSSL ------------------------------
+namespace caf::net::ssl {
 
-namespace caf::net::openssl {
+/// State shared by multiple connections.
+class context {
+public:
+  struct impl;
 
-struct deleter {
-  void operator()(SSL_CTX* ptr) const noexcept {
-    SSL_CTX_free(ptr);
-  }
+  context() = delete;
 
-  void operator()(SSL* ptr) const noexcept {
-    SSL_free(ptr);
-  }
+  context(context&& other);
+
+  context& operator=(context&& other);
+
+private:
 };
 
-/// A smart pointer to an `SSL_CTX` structure.
-/// @note technically, SSL structures are reference counted and we could use
-///       `intrusive_ptr` instead. However, we have no need for shared ownership
-///       semantics here and use `unique_ptr` for simplicity.
-using ctx_ptr = std::unique_ptr<SSL_CTX, deleter>;
+/// State per connection.
+struct connection;
 
-/// A smart pointer to an `SSL` structure.
-/// @note technically, SSL structures are reference counted and we could use
-///       `intrusive_ptr` instead. However, we have no need for shared ownership
-///       semantics here and use `unique_ptr` for simplicity.
-using conn_ptr = std::unique_ptr<SSL, deleter>;
+/// Deletes an SSL object.
+struct deleter {
+  void operator()(context* ptr) const noexcept;
+
+  void operator()(connection* ptr) const noexcept;
+};
+
+/// An owning smart pointer for a @ref context.
+using ctx_ptr = std::unique_ptr<context, deleter>;
+
+/// An owning smart pointer for a @ref connection.
+using conn_ptr = std::unique_ptr<connection, deleter>;
 
 /// Convenience function for creating an OpenSSL context for given method.
 inline ctx_ptr make_ctx(const SSL_METHOD* method) {
@@ -204,84 +207,50 @@ public:
 
   ptrdiff_t accept(stream_socket) override;
 
-  size_t buffered() override;
+  size_t buffered() const noexcept override;
 
 private:
   /// Our SSL connection data.
   openssl::conn_ptr conn_;
 };
 
-/// Asynchronously starts the TLS/SSL client handshake.
-/// @param fd A connected stream socket.
-/// @param mpx Pointer to the multiplexer for managing the asynchronous events.
-/// @param pol The OpenSSL policy with properly configured SSL/TSL method.
-/// @param on_success The callback for creating a @ref socket_manager after
-///                   successfully connecting to the server.
-/// @param on_error The callback for unexpected errors.
-/// @pre `fd != invalid_socket`
-/// @pre `mpx != nullptr`
-template <class Socket, class OnSuccess, class OnError>
-void async_connect(Socket fd, multiplexer* mpx, policy pol,
-                   OnSuccess on_success, OnError on_error) {
-  using res_t = decltype(on_success(fd, mpx, std::move(pol)));
-  using err_t = decltype(on_error(error{}));
-  static_assert(std::is_convertible_v<res_t, socket_manager_ptr>,
-                "on_success must return a socket_manager_ptr");
-  static_assert(std::is_same_v<err_t, void>,
-                "on_error may not return anything");
-  using factory_t = default_handshake_worker_factory<OnSuccess, OnError>;
-  using worker_t = handshake_worker<false, Socket, policy, factory_t>;
-  auto factory = factory_t{std::move(on_success), std::move(on_error)};
-  auto mgr = make_counted<worker_t>(fd, mpx, std::move(pol),
-                                    std::move(factory));
-  mpx->init(mgr);
-}
-
-/// Asynchronously starts the TLS/SSL server handshake.
-/// @param fd A connected stream socket.
-/// @param mpx Pointer to the multiplexer for managing the asynchronous events.
-/// @param pol The OpenSSL policy with properly configured SSL/TSL method.
-/// @param on_success The callback for creating a @ref socket_manager after
-///                   successfully connecting to the client.
-/// @param on_error The callback for unexpected errors.
-/// @pre `fd != invalid_socket`
-/// @pre `mpx != nullptr`
-template <class Socket, class OnSuccess, class OnError>
-void async_accept(Socket fd, multiplexer* mpx, policy pol, OnSuccess on_success,
-                  OnError on_error) {
-  using res_t = decltype(on_success(fd, mpx, std::move(pol)));
-  using err_t = decltype(on_error(error{}));
-  static_assert(std::is_convertible_v<res_t, socket_manager_ptr>,
-                "on_success must return a socket_manager_ptr");
-  static_assert(std::is_same_v<err_t, void>,
-                "on_error may not return anything");
-  using factory_t = default_handshake_worker_factory<OnSuccess, OnError>;
-  using worker_t = handshake_worker<true, Socket, policy, factory_t>;
-  auto factory = factory_t{std::move(on_success), std::move(on_error)};
-  auto mgr = make_counted<worker_t>(fd, mpx, std::move(pol),
-                                    std::move(factory));
-  mpx->init(mgr);
-}
-
-} // namespace caf::net::openssl
-
-namespace caf::net {
-
 /// Implements a stream_transport that manages a stream socket with encrypted
 /// communication over OpenSSL.
-class CAF_NET_EXPORT openssl_transport : public stream_transport {
+class CAF_NET_EXPORT transport : public stream_transport {
 public:
   // -- member types -----------------------------------------------------------
 
   using super = stream_transport;
 
-  // -- constructors, destructors, and assignment operators --------------------
+  using openssl_transport_ptr = std::unique_ptr<openssl_transport>;
 
-  openssl_transport(stream_socket fd, openssl::conn_ptr conn,
-                    upper_layer_ptr up);
+  using worker_ptr = std::unique_ptr<socket_event_layer>;
+
+  // -- factories --------------------------------------------------------------
+
+  /// Creates a new instance of the SSL transport for a socket that has already
+  /// performed the SSL handshake.
+  static openssl_transport_ptr make(stream_socket fd, openssl::policy policy,
+                                    upper_layer_ptr up);
+
+  /// Returns a worker that performs the OpenSSL server handshake on the socket.
+  /// On success, the worker performs a handover to an `openssl_transport` that
+  /// runs `up`.
+  static worker_ptr make_server(stream_socket fd, openssl::policy policy,
+                                upper_layer_ptr up);
+
+  /// Returns a worker that performs the OpenSSL client handshake on the socket.
+  /// On success, the worker performs a handover to an `openssl_transport` that
+  /// runs `up`.
+  static worker_ptr make_client(stream_socket fd, openssl::policy policy,
+                                upper_layer_ptr up);
 
 private:
+  // -- constructors, destructors, and assignment operators --------------------
+
+  openssl_transport(stream_socket fd, openssl::policy pol, upper_layer_ptr up);
+
   openssl::policy ssl_policy_;
 };
 
-} // namespace caf::net
+} // namespace caf::net::ssl

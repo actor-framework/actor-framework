@@ -57,8 +57,6 @@ public:
 
   write_result handle_write_event() override;
 
-  write_result handle_continue_writing() override;
-
   void abort(const error& reason) override;
 
 private:

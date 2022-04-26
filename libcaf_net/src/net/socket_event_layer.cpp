@@ -10,4 +10,8 @@ socket_event_layer::~socket_event_layer() {
   // nop
 }
 
+bool socket_event_layer::do_handover(std::unique_ptr<socket_event_layer>&) {
+  return false;
+}
+
 } // namespace caf::net

@@ -112,10 +112,6 @@ public:
              : write_result::stop;
   }
 
-  write_result handle_continue_writing() override {
-    return write_result::again;
-  }
-
   void abort(const error& reason) override {
     FAIL("abort called: " << reason);
   }

@@ -70,16 +70,13 @@ void socket_manager::close_write() noexcept {
   flags_.write_closed = true;
 }
 
-socket_manager_ptr socket_manager::do_handover() {
-  flags_.read_closed = true;
-  flags_.write_closed = true;
-  auto fd = fd_;
-  fd_ = invalid_socket;
-  if (auto ptr = make_next_manager(fd)) {
-    return ptr;
+bool socket_manager::do_handover() {
+  event_handler_ptr next;
+  if (handler_->do_handover(next)) {
+    handler_.swap(next);
+    return true;
   } else {
-    close(fd);
-    return nullptr;
+    return false;
   }
 }
 
@@ -103,6 +100,7 @@ socket_manager::read_result socket_manager::handle_read_event() {
     case read_result::abort:
       flags_.read_closed = true;
       flags_.write_closed = true;
+      break;
   }
   return result;
 }
@@ -119,19 +117,11 @@ socket_manager::write_result socket_manager::handle_write_event() {
   return handler_->handle_write_event();
 }
 
-socket_manager::write_result socket_manager::handle_continue_writing() {
-  return handler_->handle_continue_writing();
-}
-
 void socket_manager::handle_error(sec code) {
   if (handler_) {
     handler_->abort(make_error(code));
     handler_ = nullptr;
   }
-}
-
-socket_manager_ptr socket_manager::make_next_manager(socket) {
-  return {};
 }
 
 } // namespace caf::net

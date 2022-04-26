@@ -160,11 +160,9 @@ public:
 
   read_result handle_continue_reading() override;
 
-  write_result handle_continue_writing() override;
-
   void abort(const error& reason) override;
 
-private:
+protected:
   /// The socket file descriptor.
   stream_socket fd_;
 
