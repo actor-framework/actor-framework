@@ -21,6 +21,7 @@ General CMake options:
   --generator=STRING        set CMake generator (see cmake --help)
   --cxx-flags=STRING        set CMAKE_CXX_FLAGS when running CMake
   --prefix=PATH             set installation directory
+  --debug-postfix           set CMAKE_DEBUG_POSTFIX
 
 Locating packages in non-standard locations:
 
@@ -50,6 +51,7 @@ Convenience options:
 
 Flags (use --enable-<name> to activate and --disable-<name> to deactivate):
 
+  cpack                     build with CPack package description [OFF]
   shared-libs               build shared library targets [ON]
   export-compile-commands   write JSON compile commands database [ON]
   prefer-pthread-flag       prefer -pthread flag if available  [ON]
@@ -96,6 +98,7 @@ append_cache_entry() {
 set_build_flag() {
   FlagName=''
   case "$1" in
+    cpack)                   FlagName='CAF_ENABLE_CPACK' ;;
     shared-libs)             FlagName='BUILD_SHARED_LIBS' ;;
     export-compile-commands) FlagName='CMAKE_EXPORT_COMPILE_COMMANDS' ;;
     prefer-pthread-flag)     FlagName='THREADS_PREFER_PTHREAD_FLAG' ;;
@@ -180,6 +183,9 @@ while [ $# -ne 0 ]; do
       ;;
     --openssl-root-dir=*)
       append_cache_entry OPENSSL_ROOT_DIR PATH "$optarg"
+      ;;
+    --debug-postfix=*)
+      append_cache_entry CMAKE_DEBUG_POSTFIX STRING "$optarg"
       ;;
     *)
       echo "Invalid option '$1'. Try $0 --help to see available options."
