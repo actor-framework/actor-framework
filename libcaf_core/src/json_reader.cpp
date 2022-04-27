@@ -166,6 +166,7 @@ void json_reader::revert() {
     err_.reset();
     st_->clear();
     st_->emplace_back(root_);
+    field_.clear();
   }
 }
 
@@ -173,6 +174,7 @@ void json_reader::reset() {
   buf_.reclaim();
   st_ = nullptr;
   err_.reset();
+  field_.clear();
 }
 
 // -- interface functions ------------------------------------------------------
@@ -260,8 +262,8 @@ bool json_reader::end_object() {
 
 bool json_reader::begin_field(std::string_view name) {
   SCOPE(position::object);
+  field_.push_back(name);
   if (auto member = find_member(top<position::object>(), name)) {
-    field_.push_back(name);
     push(member->val);
     return true;
   } else {
@@ -273,10 +275,10 @@ bool json_reader::begin_field(std::string_view name) {
 
 bool json_reader::begin_field(std::string_view name, bool& is_present) {
   SCOPE(position::object);
+  field_.push_back(name);
   if (auto member = find_member(top<position::object>(), name);
       member != nullptr
       && member->val->data.index() != detail::json::value::null_index) {
-    field_.push_back(name);
     push(member->val);
     is_present = true;
   } else {
@@ -304,6 +306,7 @@ bool json_reader::begin_field(std::string_view name,
 bool json_reader::begin_field(std::string_view name, bool& is_present,
                               span<const type_id_t> types, size_t& index) {
   SCOPE(position::object);
+  field_.push_back(name);
   if (auto member = find_member(top<position::object>(), name);
       member != nullptr
       && member->val->data.index() != detail::json::value::null_index) {
@@ -312,7 +315,6 @@ bool json_reader::begin_field(std::string_view name, bool& is_present,
       if (auto i = std::find(types.begin(), types.end(), id);
           i != types.end()) {
         index = static_cast<size_t>(std::distance(types.begin(), i));
-        field_.push_back(name);
         push(member->val);
         is_present = true;
         return true;
@@ -327,7 +329,8 @@ bool json_reader::end_field() {
   SCOPE(position::object);
   // Note: no pop() here, because the value(s) were already consumed. Only
   //       update the field_ for debugging.
-  field_.pop_back();
+  if (!field_.empty())
+    field_.pop_back();
   return true;
 }
 
