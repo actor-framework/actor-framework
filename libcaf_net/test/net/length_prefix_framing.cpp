@@ -32,11 +32,17 @@ namespace {
 
 using string_list = std::vector<std::string>;
 
+using shared_string_list = std::shared_ptr<string_list>;
+
 template <bool EnableSuspend>
 class app_t : public net::message_oriented::upper_layer {
 public:
-  static auto make() {
-    return std::make_unique<app_t>();
+  static auto make(shared_string_list inputs) {
+    return std::make_unique<app_t>(std::move(inputs));
+  }
+
+  app_t(shared_string_list ls_ptr) : inputs(std::move(ls_ptr)) {
+    // nop
   }
 
   caf::error init(net::socket_manager*,
@@ -65,17 +71,20 @@ public:
   }
 
   ptrdiff_t consume(byte_span buf) override {
+    printf("app_t::consume %d\n", __LINE__);
     auto printable = [](std::byte x) {
       return ::isprint(static_cast<uint8_t>(x));
     };
     if (CHECK(std::all_of(buf.begin(), buf.end(), printable))) {
+      printf("app_t::consume %d\n", __LINE__);
       auto str_buf = reinterpret_cast<char*>(buf.data());
-      inputs.emplace_back(std::string{str_buf, buf.size()});
+      inputs->emplace_back(std::string{str_buf, buf.size()});
+      printf("app_t::consume %d added %s\n", __LINE__, inputs->back().c_str());
       if constexpr (EnableSuspend)
-        if (inputs.back() == "pause")
+        if (inputs->back() == "pause")
           down->suspend_reading();
       std::string response = "ok ";
-      response += std::to_string(inputs.size());
+      response += std::to_string(inputs->size());
       auto response_bytes = as_bytes(make_span(response));
       down->begin_message();
       auto& buf = down->message_buffer();
@@ -83,13 +92,14 @@ public:
       CHECK(down->end_message());
       return static_cast<ptrdiff_t>(buf.size());
     } else {
+      printf("app_t::consume %d\n", __LINE__);
       return -1;
     }
   }
 
   net::message_oriented::lower_layer* down = nullptr;
 
-  std::vector<std::string> inputs;
+  shared_string_list inputs;
 };
 
 void encode(byte_buffer& buf, std::string_view msg) {
@@ -127,8 +137,8 @@ auto decode(byte_buffer& buf) {
 SCENARIO("length-prefix framing reads data with 32-bit size headers") {
   GIVEN("a length_prefix_framing with an app that consumes strings") {
     WHEN("pushing data into the unit-under-test") {
-      auto app = app_t<false>::make();
-      auto& state = *app;
+      auto buf = std::make_shared<string_list>();
+      auto app = app_t<false>::make(buf);
       auto framing = net::length_prefix_framing::make(std::move(app));
       auto uut = mock_stream_transport::make(std::move(framing));
       CHECK_EQ(uut->init(), error{});
@@ -137,9 +147,9 @@ SCENARIO("length-prefix framing reads data with 32-bit size headers") {
         encode(uut->input, "world");
         auto input_size = static_cast<ptrdiff_t>(uut->input.size());
         CHECK_EQ(uut->handle_input(), input_size);
-        if (CHECK_EQ(state.inputs.size(), 2u)) {
-          CHECK_EQ(state.inputs[0], "hello");
-          CHECK_EQ(state.inputs[1], "world");
+        if (CHECK_EQ(buf->size(), 2u)) {
+          CHECK_EQ(buf->at(0), "hello");
+          CHECK_EQ(buf->at(1), "world");
         }
         CHECK_EQ(decode(uut->output), string_list({"ok 1", "ok 2"}));
       }
@@ -173,8 +183,8 @@ SCENARIO("calling suspend_reading removes message apps temporarily") {
     REQUIRE_EQ(mpx.num_socket_managers(), 1u);
     if (auto err = net::nonblocking(fd2, true))
       CAF_FAIL("nonblocking returned an error: " << err);
-    auto app = app_t<true>::make();
-    auto& state = *app;
+    auto buf = std::make_shared<string_list>();
+    auto app = app_t<true>::make(buf);
     auto framing = net::length_prefix_framing::make(std::move(app));
     auto transport = net::stream_transport::make(fd2, std::move(framing));
     auto mgr = net::socket_manager::make(&mpx, fd2, std::move(transport));
@@ -186,23 +196,24 @@ SCENARIO("calling suspend_reading removes message apps temporarily") {
       while (mpx.num_socket_managers() > 1u)
         mpx.poll_once(true);
       CHECK_EQ(mpx.mask_of(mgr), net::operation::none);
-      if (CHECK_EQ(state.inputs.size(), 3u)) {
-        CHECK_EQ(state.inputs[0], "first");
-        CHECK_EQ(state.inputs[1], "second");
-        CHECK_EQ(state.inputs[2], "pause");
+      if (CHECK_EQ(buf->size(), 3u)) {
+        CHECK_EQ(buf->at(0), "first");
+        CHECK_EQ(buf->at(1), "second");
+        CHECK_EQ(buf->at(2), "pause");
       }
       THEN("users can resume it via continue_reading ") {
         mgr->continue_reading();
+        mpx.apply_updates();
         mpx.poll_once(true);
         CHECK_EQ(mpx.mask_of(mgr), net::operation::read);
         while (mpx.num_socket_managers() > 1u)
           mpx.poll_once(true);
-        if (CHECK_EQ(state.inputs.size(), 5u)) {
-          CHECK_EQ(state.inputs[0], "first");
-          CHECK_EQ(state.inputs[1], "second");
-          CHECK_EQ(state.inputs[2], "pause");
-          CHECK_EQ(state.inputs[3], "third");
-          CHECK_EQ(state.inputs[4], "fourth");
+        if (CHECK_EQ(buf->size(), 5u)) {
+          CHECK_EQ(buf->at(0), "first");
+          CHECK_EQ(buf->at(1), "second");
+          CHECK_EQ(buf->at(2), "pause");
+          CHECK_EQ(buf->at(3), "third");
+          CHECK_EQ(buf->at(4), "fourth");
         }
       }
     }
