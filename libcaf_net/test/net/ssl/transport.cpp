@@ -17,11 +17,6 @@
 #include "caf/net/ssl/context.hpp"
 #include "caf/net/stream_socket.hpp"
 
-CAF_PUSH_WARNINGS
-#include <openssl/err.h>
-#include <openssl/ssl.h>
-CAF_POP_WARNINGS
-
 using namespace caf;
 using namespace caf::net;
 
@@ -187,15 +182,15 @@ void dummy_tls_client(stream_socket fd) {
 
 BEGIN_FIXTURE_SCOPE(fixture)
 
-SCENARIO("openssl::async_connect performs the client handshake") {
+SCENARIO("ssl::transport::make_client performs the client handshake") {
   GIVEN("a connection to a TLS server") {
     auto [server_fd, client_fd] = no_sigpipe(unbox(make_stream_socket_pair()));
     if (auto err = net::nonblocking(client_fd, true))
       FAIL("net::nonblocking failed: " << err);
     std::thread server{dummy_tls_server, server_fd, cert_1_pem_path,
                        key_1_pem_path};
-    WHEN("connecting as a client to an OpenSSL server") {
-      THEN("openssl::async_connect transparently calls SSL_connect") {
+    WHEN("connecting as a client to an SSL server") {
+      THEN("CAF transparently calls SSL_connect") {
         net::multiplexer mpx{nullptr};
         mpx.set_thread_id();
         auto ctx = unbox(ssl::context::make_client(ssl::tls::any));
@@ -225,14 +220,14 @@ SCENARIO("openssl::async_connect performs the client handshake") {
   }
 }
 
-SCENARIO("openssl::async_accept performs the server handshake") {
+SCENARIO("ssl::transport::make_server performs the server handshake") {
   GIVEN("a socket that is connected to a client") {
     auto [server_fd, client_fd] = no_sigpipe(unbox(make_stream_socket_pair()));
     if (auto err = net::nonblocking(server_fd, true))
       FAIL("net::nonblocking failed: " << err);
     std::thread client{dummy_tls_client, client_fd};
-    WHEN("acting as the OpenSSL server") {
-      THEN("openssl::async_accept transparently calls SSL_accept") {
+    WHEN("acting as the SSL server") {
+      THEN("CAF transparently calls SSL_accept") {
         net::multiplexer mpx{nullptr};
         mpx.set_thread_id();
         auto ctx = unbox(ssl::context::make_server(ssl::tls::any));
